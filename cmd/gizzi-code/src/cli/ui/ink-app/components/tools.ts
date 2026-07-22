@@ -1,3 +1,2 @@
 // @ts-nocheck
-export * from '../../tools.js'
-export { default } from '../../tools.js'
+export * from '../tools.js'

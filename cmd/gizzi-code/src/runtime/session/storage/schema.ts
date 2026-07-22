@@ -1,5 +1,16 @@
 export { ControlAccountTable } from "@/shared/control/control.sql"
-export { SessionTable, MessageTable, PartTable, TodoTable, PermissionTable, RoutineTable, LoopTable, GoalTable } from "@/runtime/session/session.sql"
+export {
+  SessionTable,
+  MessageTable,
+  PartTable,
+  SessionTraceTable,
+  TodoTable,
+  PermissionTable,
+  BackgroundTaskTable,
+  RoutineTable,
+  LoopTable,
+  GoalTable,
+} from "@/runtime/session/session.sql"
 export { SessionShareTable } from "@/runtime/session/share/share.sql"
 export { ProjectTable } from "@/runtime/context/project/project.sql"
 export { CronJobTable, CronRunTable } from "@/runtime/automation/cron/cron.sql"

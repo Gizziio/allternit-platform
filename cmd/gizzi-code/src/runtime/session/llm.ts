@@ -23,6 +23,10 @@ import { SystemPrompt } from "@/runtime/session/system"
 import { Flag } from "@/runtime/context/flag/flag"
 import { PermissionNext } from "@/runtime/tools/guard/permission/next"
 import { Auth } from "@/runtime/integrations/auth"
+import { SessionTrace } from "@/runtime/session/trace"
+import { ContextProjector } from "@/runtime/session/context-projector"
+import { ContextAccounting } from "@/runtime/session/context-accounting"
+import { RuntimeTelemetry } from "@/runtime/telemetry"
 
 export namespace LLM {
   const log = Log.create({ service: "llm" })
@@ -171,6 +175,52 @@ export namespace LLM {
       })
     }
 
+    const projected = Flag.GIZZI_DISABLE_CONTEXT_PROJECTION
+      ? { messages: input.messages, anomalies: [] }
+      : ContextProjector.project(input.messages)
+    if (projected.anomalies.length) {
+      const counts = (kind: string) => projected.anomalies.filter((item) => item.kind === kind).length
+      RuntimeTelemetry.track("context_projection_repaired", {
+        reordered: counts("tool_result_reordered"),
+        synthesized: counts("tool_result_synthesized"),
+        dropped: projected.anomalies.filter((item) => item.kind.includes("dropped")).length,
+        merged: counts("consecutive_assistants_merged"),
+      })
+    }
+    const context = ContextAccounting.measure({
+      messages: projected.messages,
+      system,
+      tools,
+      contextWindow: input.model.limit.context,
+      reservedOutputTokens: maxOutputTokens ?? Math.min(32_000, input.model.limit.output),
+    })
+    SessionTrace.append({
+      sessionID: input.sessionID,
+      kind: "request.started",
+      messageID: input.user.id,
+      data: {
+        requestID: input.user.id,
+        providerID: input.model.providerID,
+        modelID: input.model.id,
+        agent: input.agent.name,
+        toolNames: Object.keys(tools).filter((name) => name !== "invalid"),
+        mcpToolNames: Object.keys(tools).filter((name) => name.includes(":")),
+        messageCount: input.messages.length,
+        projectedMessageCount: projected.messages.length,
+        projectionRepairs: projected.anomalies,
+        systemBlockCount: system.length,
+        context,
+        params: redactParams({
+          temperature: params.temperature,
+          topP: params.topP,
+          topK: params.topK,
+          maxOutputTokens,
+          toolChoice: input.toolChoice,
+          providerOptions: ProviderTransform.providerOptions(input.model, params.options),
+        }),
+      },
+    })
+
     return streamText({
       onError(error) {
         l.error("stream error", {
@@ -231,7 +281,7 @@ export namespace LLM {
             content: x,
           }),
         ),
-        ...input.messages,
+        ...projected.messages,
       ],
       model: wrapLanguageModel({
         model: language as any,
@@ -277,5 +327,14 @@ export namespace LLM {
       }
     }
     return false
+  }
+
+  function redactParams(input: unknown, key = ""): unknown {
+    if (/(?:key|authorization|password|secret|token|cookie|credential)/i.test(key)) return "<REDACTED>"
+    if (Array.isArray(input)) return input.map((value) => redactParams(value))
+    if (input && typeof input === "object") {
+      return Object.fromEntries(Object.entries(input).map(([name, value]) => [name, redactParams(value, name)]))
+    }
+    return input
   }
 }

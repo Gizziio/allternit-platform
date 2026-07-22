@@ -1,0 +1,15 @@
+{
+  "name": "data-sql",
+  "version": "1.0.0",
+  "description": "SQL query writing and data analysis.",
+  "author": {
+    "name": "Anthropic",
+    "email": "support@anthropic.com"
+  },
+  "keywords": [
+    "data",
+    "claude",
+    "builtin"
+  ],
+  "license": "MIT"
+}

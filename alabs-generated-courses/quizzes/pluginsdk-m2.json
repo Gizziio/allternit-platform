@@ -1,0 +1,71 @@
+{
+  "title": "Module Quiz: ALABS-ADV-PLUGINSDK-module2",
+  "questions": [
+    {
+      "question": "Which adapter method determines if the current environment can support the adapter?",
+      "options": [
+        "initialize() — it tries to start and catches errors",
+        "canActivate() — it inspects the environment before starting",
+        "start() — it returns false if the platform is unsupported",
+        "getEndpoint() — it probes the network stack"
+      ],
+      "correctIndex": 1,
+      "explanation": "Correct! <code>canActivate()</code> is the guard method. Native checks for <code>__ALLTERNIT_RUNTIME__</code>, MCP checks for <code>process</code>, CLI always returns true."
+    },
+    {
+      "question": "The MCP adapter's McpStorageBackend sets isPersistent = false. What does this mean for a plugin using host.storage.set()?",
+      "options": [
+        "The storage call throws an error",
+        "Data is stored in-memory only and lost on restart",
+        "Data is written to a temporary file",
+        "The call is silently ignored"
+      ],
+      "correctIndex": 1,
+      "explanation": "Correct! The MCP storage uses an in-memory Map. When the MCP server process restarts, all stored data is gone. Plugins should check <code>host.storage.isPersistent</code> before relying on long-term state."
+    },
+    {
+      "question": "When the HTTP adapter receives a request with options.stream = true, what protocol does it use to send real-time updates?",
+      "options": [
+        "Long-polling with repeated HTTP GETs",
+        "Server-Sent Events (SSE) with text/event-stream",
+        "gRPC streaming over HTTP/2",
+        "Raw TCP socket"
+      ],
+      "correctIndex": 1,
+      "explanation": "Correct! The HTTP adapter sets <code>Content-Type: text/event-stream</code> and sends SSE events: <code>start</code>, then <code>complete</code> (or <code>error</code>)."
+    },
+    {
+      "question": "The Native adapter checks globalThis.__ALLTERNIT_RUNTIME__. Why does it use globalThis instead of window or global?",
+      "options": [
+        "Because Allternit runs in a Service Worker",
+        "Because global is deprecated in Node.js 20+",
+        "Because it works in both browsers and Node.js without platform detection",
+        "Because window is blocked by Content Security Policy"
+      ],
+      "correctIndex": 2,
+      "explanation": "Correct! <code>globalThis</code> is the standard ECMAScript reference to the global object, working in browsers, Node.js, Deno, and Web Workers without conditional checks."
+    },
+    {
+      "question": "In the MCP adapter, what happens when a plugin function returns an artifact of type image?",
+      "options": [
+        "The adapter wraps it in an MCP { type: 'image', data, mimeType } content block",
+        "The adapter converts it to base64 text and sends type: 'text'",
+        "The adapter ignores it because MCP doesn't support images",
+        "The adapter writes it to disk and returns a file path"
+      ],
+      "correctIndex": 0,
+      "explanation": "Correct! The MCP adapter inspects <code>result.artifacts</code> and wraps image artifacts as <code>{ type: 'image', data, mimeType }</code> blocks in the MCP content array."
+    },
+    {
+      "question": "Which adapter provides session.getHistory() that returns actual conversation history rather than an empty array?",
+      "options": [
+        "HTTP Adapter — it caches history in the server",
+        "MCP Adapter — Claude provides the history",
+        "Native Adapter — it forwards to runtime.session.getHistory()",
+        "CLI Adapter — it reads from a local JSON log file"
+      ],
+      "correctIndex": 2,
+      "explanation": "Correct! Only the Native adapter forwards <code>getHistory()</code> to the Allternit runtime. All other adapters return an empty array because they don't have access to the host platform's conversation history."
+    }
+  ]
+}

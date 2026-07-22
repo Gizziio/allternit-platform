@@ -1,0 +1,38 @@
+{
+  "title": "Module Quiz: ALABS-ADV-ADAPTERS-bridge",
+  "questions": [
+    {
+      "question": "Quiz 1: What triggers a provider failover in the Allternit platform?",
+      "options": [
+        "A user explicitly clicks \"Switch Provider\" in settings",
+        "A gateway candidate returns a retryable status or throws a network error",
+        "The circuit breaker transitions from Closed to Open state",
+        "The Redis cache TTL expires for a provider response"
+      ],
+      "correctIndex": 1,
+      "explanation": "A gateway candidate returns a retryable status or throws a network error"
+    },
+    {
+      "question": "Quiz 2: Why cache responses from external APIs?",
+      "options": [
+        "To avoid paying for API requests during development",
+        "Because external APIs are always slower than local databases",
+        "To reduce latency, cost, and provider load for repeated or similar requests",
+        "To store user credentials securely across sessions"
+      ],
+      "correctIndex": 2,
+      "explanation": "To reduce latency, cost, and provider load for repeated or similar requests"
+    },
+    {
+      "question": "Quiz 3: How does the platform protect API keys from leaking in logs?",
+      "options": [
+        "By hashing all API keys with SHA-256 before every request",
+        "Server-only env vars + Zod validation + encrypted storage at rest",
+        "By rotating API keys every 60 seconds using a cron job",
+        "By Base64-encoding keys in the query string instead of headers"
+      ],
+      "correctIndex": 1,
+      "explanation": "Server-only env vars + Zod validation + encrypted storage at rest"
+    }
+  ]
+}

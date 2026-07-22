@@ -503,7 +503,7 @@ function DisabledAuthCard({
 }
 
 /** True only inside the Allternit desktop shell (preload exposes window.allternit). */
-function isDesktopShell(): boolean {
+export function isDesktopShell(): boolean {
   return typeof window !== "undefined" && Boolean((window as any).allternit?.auth?.startLogin)
 }
 

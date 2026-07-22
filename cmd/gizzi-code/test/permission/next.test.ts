@@ -276,6 +276,71 @@ test("evaluate - wildcard at end overrides earlier exact match", () => {
   expect(result.action).toBe("allow")
 })
 
+test("evaluatePolicy - configured denial outranks session approval and auto mode", () => {
+  const configured: PermissionNext.Ruleset = [
+    { permission: "bash", pattern: "rm *", action: "deny" },
+  ]
+  const approvals: PermissionNext.Ruleset = [
+    { permission: "bash", pattern: "*", action: "allow" },
+  ]
+
+  expect(PermissionNext.evaluatePolicy("bash", "rm -rf build", { configured, approvals }).action).toBe("deny")
+  expect(PermissionNext.evaluatePolicy("bash", "rm -rf build", { configured, approvals, mode: "auto" }).action).toBe("deny")
+})
+
+test("evaluatePolicy - session approval outranks configured ask but not deny", () => {
+  const configured: PermissionNext.Ruleset = [
+    { permission: "bash", pattern: "npm test", action: "ask" },
+  ]
+  const approvals: PermissionNext.Ruleset = [
+    { permission: "bash", pattern: "npm test", action: "allow" },
+  ]
+
+  expect(PermissionNext.evaluatePolicy("bash", "npm test", { configured, approvals }).action).toBe("allow")
+})
+
+test("evaluatePolicy - dontAsk denies unresolved and explicitly asked operations", () => {
+  expect(PermissionNext.evaluatePolicy("bash", "git status", {
+    configured: [],
+    mode: "dontAsk",
+  }).action).toBe("deny")
+  expect(PermissionNext.evaluatePolicy("bash", "git status", {
+    configured: [{ permission: "bash", pattern: "*", action: "ask" }],
+    mode: "dontAsk",
+  }).action).toBe("deny")
+})
+
+test("evaluatePolicy - auto denies questions, approves work, and still honors explicit denial", () => {
+  expect(PermissionNext.evaluatePolicy("question", "*", { configured: [], mode: "auto" }).action).toBe("deny")
+  expect(PermissionNext.evaluatePolicy("edit", "src/app.ts", { configured: [], mode: "auto" }).action).toBe("allow")
+})
+
+test("evaluatePolicy - plan mode denies writes but retains explicit read denial", () => {
+  expect(PermissionNext.evaluatePolicy("edit", "src/app.ts", { configured: [], mode: "plan" }).action).toBe("deny")
+  expect(PermissionNext.evaluatePolicy("read", ".env", {
+    configured: [{ permission: "read", pattern: ".env", action: "deny" }],
+    mode: "plan",
+  }).action).toBe("deny")
+})
+
+test("evaluatePolicy - yolo bypasses fallback ask but retains sensitive and user asks", () => {
+  const fallback: PermissionNext.Ruleset = [
+    { permission: "*", pattern: "*", action: "ask", source: "default" },
+  ]
+  const sensitive: PermissionNext.Ruleset = [
+    ...fallback,
+    { permission: "read", pattern: "*.env", action: "ask", source: "default" },
+  ]
+  const explicit: PermissionNext.Ruleset = [
+    ...fallback,
+    { permission: "bash", pattern: "*", action: "ask", source: "user" },
+  ]
+
+  expect(PermissionNext.evaluatePolicy("bash", "git status", { configured: fallback, mode: "yolo" }).action).toBe("allow")
+  expect(PermissionNext.evaluatePolicy("read", ".env", { configured: sensitive, mode: "yolo" }).action).toBe("ask")
+  expect(PermissionNext.evaluatePolicy("bash", "git status", { configured: explicit, mode: "yolo" }).action).toBe("ask")
+})
+
 // wildcard permission tests
 
 test("evaluate - wildcard permission matches any permission", () => {

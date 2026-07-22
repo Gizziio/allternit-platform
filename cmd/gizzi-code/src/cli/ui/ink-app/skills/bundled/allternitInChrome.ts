@@ -1,5 +1,6 @@
 // @ts-nocheck
 // Stubbed: 0
+import { BROWSER_TOOLS } from '@allternit/extension'
 import { BASE_CHROME_PROMPT } from '../../../../../shared/utils/allternitInChrome/prompt'
 import { shouldAutoEnableAllternitInChrome } from '../../../../../shared/utils/allternitInChrome/setup'
 import { registerBundledSkill } from '../bundledSkills'

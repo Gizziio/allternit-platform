@@ -37,6 +37,8 @@ import { FileAttachment } from '@/components/agent-elements/input/file-attachmen
 import { TextShimmer } from '@/components/agent-elements/text-shimmer';
 import { AgentMentionDropdown } from '@/components/chat/AgentMentionDropdown';
 import { AgentPill } from '@/components/chat/AgentPill';
+import { PluginMentionChip } from '@/components/chat/PluginMentionChip';
+import { usePluginMentionTargets, type PluginMentionTarget } from '@/lib/mentions/use-mention-targets';
 
 import { cn } from '@/lib/utils';
 import { createModuleLogger } from '@/lib/logger';
@@ -211,6 +213,8 @@ interface ChatComposerProps {
   onAgentSend?: (text: string, execution?: { modeId: CanonicalAgentModeId; templateTitle?: string }) => void;
   /** Called when the @mention agent selection changes (Phase 2: per-message routing) */
   onMentionAgentChange?: (agentId: string | null) => void;
+  /** Called when the @mention plugin/connector selection changes */
+  onPluginMentionChange?: (target: PluginMentionTarget | null) => void;
   /** External @mention agent ID to sync with parent (for persistent pill restoration) */
   mentionAgentId?: string | null;
   /** Whether to show slash command suggestions in the composer */
@@ -420,6 +424,7 @@ export function ChatComposer({
   onAddAttachment: externalAddAttachment,
   onAgentSend,
   onMentionAgentChange,
+  onPluginMentionChange,
   mentionAgentId: externalMentionAgentId,
   bottomDockContent,
   showModeToggle,
@@ -528,6 +533,8 @@ export function ChatComposer({
   const [mentionQuery, setMentionQuery] = useState('');
   const [mentionIndex, setMentionIndex] = useState(0);
   const [selectedMentionAgentId, setSelectedMentionAgentId] = useState<string | null>(externalMentionAgentId ?? null);
+  const [selectedPluginMention, setSelectedPluginMention] = useState<PluginMentionTarget | null>(null);
+  const pluginMentionTargets = usePluginMentionTargets();
 
   const [prevExternalMentionAgentId, setPrevExternalMentionAgentId] = useState(externalMentionAgentId);
   if (externalMentionAgentId !== prevExternalMentionAgentId) {
@@ -599,6 +606,21 @@ export function ChatComposer({
     );
   }, [mentionOpen, mentionQuery, agents, agentModeSurface]);
 
+  const filteredPluginTargets = useMemo(() => {
+    if (!mentionOpen) return [];
+    const q = mentionQuery.toLowerCase();
+    const matches = pluginMentionTargets.filter(
+      (t) =>
+        t.name.toLowerCase().includes(q) ||
+        (t.description ?? '').toLowerCase().includes(q),
+    );
+    // Empty query: show a compact starter set (connected connectors first,
+    // then plugins) — the full catalog is one keystroke away.
+    return q ? matches : matches.slice(0, 8);
+  }, [mentionOpen, mentionQuery, pluginMentionTargets]);
+
+  const mentionItemCount = filteredMentionAgents.length + filteredPluginTargets.length;
+
   const handleSelectMentionAgent = useCallback((agent: Agent) => {
     const lastAtIndex = input.lastIndexOf('@');
     if (lastAtIndex !== -1) {
@@ -608,6 +630,9 @@ export function ChatComposer({
     }
     setSelectedMentionAgentId(agent.id);
     onMentionAgentChange?.(agent.id);
+    // One chip at a time: clear any plugin/connector mention
+    setSelectedPluginMention(null);
+    onPluginMentionChange?.(null);
     setLocallyEnabled(true);
     setMentionOpen(false);
     setMentionQuery('');
@@ -615,7 +640,32 @@ export function ChatComposer({
     window.requestAnimationFrame(() => {
       textareaRef.current?.focus();
     });
-  }, [input, mentionQuery, onMentionAgentChange]);
+  }, [input, mentionQuery, onMentionAgentChange, onPluginMentionChange]);
+
+  const handleSelectPluginMention = useCallback((target: PluginMentionTarget) => {
+    const lastAtIndex = input.lastIndexOf('@');
+    if (lastAtIndex !== -1) {
+      const before = input.slice(0, lastAtIndex);
+      const after = input.slice(lastAtIndex + mentionQuery.length + 1);
+      setInput(before + after);
+    }
+    setSelectedPluginMention(target);
+    onPluginMentionChange?.(target);
+    // One chip at a time: clear any agent mention
+    setSelectedMentionAgentId(null);
+    onMentionAgentChange?.(null);
+    setMentionOpen(false);
+    setMentionQuery('');
+    setMentionIndex(0);
+    window.requestAnimationFrame(() => {
+      textareaRef.current?.focus();
+    });
+  }, [input, mentionQuery, onMentionAgentChange, onPluginMentionChange]);
+
+  const handleRemovePluginMention = useCallback(() => {
+    setSelectedPluginMention(null);
+    onPluginMentionChange?.(null);
+  }, [onPluginMentionChange]);
 
   const handleRemoveMentionAgent = useCallback(() => {
     setSelectedMentionAgentId(null);
@@ -728,6 +778,15 @@ export function ChatComposer({
   const [terminalModelsLoading, setTerminalModelsLoading] = useState(cachedProviderModels === null);
 
   useEffect(() => {
+    // The web client already loads the provider registry through
+    // useModelDiscovery below. A second eager GET here duplicated the same
+    // request on every composer mount and doubled the console/network noise
+    // when a runtime was offline. Keep this path only for Electron's sidecar,
+    // whose /provider response is a distinct local source.
+    if (!window.allternitSidecar) {
+      setTerminalModelsLoading(false);
+      return;
+    }
     let cancelled = false;
     async function fetchTerminalModels() {
       try {
@@ -1237,6 +1296,9 @@ export function ChatComposer({
     setMentionOpen(false);
     setMentionQuery('');
     setMentionIndex(0);
+    // Plugin/connector mentions are one-shot: sending consumes the chip.
+    setSelectedPluginMention(null);
+    onPluginMentionChange?.(null);
     if (!externalAttachments) {
       setInternalAttachments([]);
     }
@@ -1482,7 +1544,7 @@ export function ChatComposer({
   }, [onAttentionChange]);
 
   const handleTextareaKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
-    if (mentionOpen && filteredMentionAgents.length > 0) {
+    if (mentionOpen && mentionItemCount > 0) {
       if (e.key === 'Escape') {
         e.preventDefault();
         setMentionOpen(false);
@@ -1492,7 +1554,7 @@ export function ChatComposer({
       if (e.key === 'ArrowDown') {
         e.preventDefault();
         setMentionIndex((prev) =>
-          Math.min(prev + 1, filteredMentionAgents.length - 1)
+          Math.min(prev + 1, mentionItemCount - 1)
         );
         return;
       }
@@ -1503,7 +1565,11 @@ export function ChatComposer({
       }
       if (e.key === 'Enter' || e.key === 'Tab') {
         e.preventDefault();
-        handleSelectMentionAgent(filteredMentionAgents[mentionIndex]);
+        if (mentionIndex < filteredMentionAgents.length) {
+          handleSelectMentionAgent(filteredMentionAgents[mentionIndex]);
+        } else {
+          handleSelectPluginMention(filteredPluginTargets[mentionIndex - filteredMentionAgents.length]);
+        }
         return;
       }
     }
@@ -1855,6 +1921,12 @@ export function ChatComposer({
                     />
                   }
                 />
+                {selectedPluginMention && (
+                  <PluginMentionChip
+                    target={selectedPluginMention}
+                    onRemove={handleRemovePluginMention}
+                  />
+                )}
                 <textarea aria-label="Text Area" ref={textareaRef}
                   value={input}
                   onChange={(e) => {
@@ -2038,6 +2110,15 @@ export function ChatComposer({
                   />
                 </div>
               )}
+              <div className={selectedPluginMention ? 'flex items-start gap-2' : 'contents'}>
+              {selectedPluginMention && (
+                <div className="pt-0.5 shrink-0">
+                  <PluginMentionChip
+                    target={selectedPluginMention}
+                    onRemove={handleRemovePluginMention}
+                  />
+                </div>
+              )}
               <textarea aria-label="Text Area" ref={textareaRef}
                 value={input}
                 onChange={(e) => {
@@ -2066,10 +2147,11 @@ export function ChatComposer({
                 rows={1}
                 onFocus={() => setTrackingAttention(0, 0.34, 'locked-on')}
                 className={cn(
-                  'w-full bg-transparent border-none outline-none text-primary resize-none font-inherit p-0 m-0 block',
+                  'w-full min-w-0 flex-1 bg-transparent border-none outline-none text-primary resize-none font-inherit p-0 m-0 block',
                   compact ? 'text-sm' : 'text-base'
                 )}
               />
+              </div>
             </div>
           )}
           {isVoiceRecording && interimTranscript && (
@@ -2596,13 +2678,15 @@ export function ChatComposer({
         </div>
       )}
       
-      {mentionOpen && agentModeSurface && (
+      {mentionOpen && (
         <AgentMentionDropdown
-          agents={agents}
+          agents={filteredMentionAgents}
           query={mentionQuery}
           selectedIndex={mentionIndex}
           onSelect={handleSelectMentionAgent}
           onHoverIndex={setMentionIndex}
+          pluginTargets={filteredPluginTargets}
+          onSelectPluginTarget={handleSelectPluginMention}
           onClose={() => {
             setMentionOpen(false);
             setMentionQuery('');

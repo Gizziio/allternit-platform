@@ -282,6 +282,14 @@ async fn create_terminal(
                 "cols": request.cols,
                 "rows": request.rows,
                 "command": [request.shell],
+                // Set terminal capabilities explicitly at the API boundary as
+                // well as in allternit-mux. This keeps browser shells usable
+                // with an older or externally managed mux daemon whose
+                // inherited TERM may be "dumb".
+                "env": {
+                    "TERM": "xterm-256color",
+                    "COLORTERM": "truecolor",
+                },
             }),
         )
         .await;

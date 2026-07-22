@@ -11,9 +11,11 @@
       "@reduxjs/toolkit": "^2.2.7",
       "react-redux": "^9.1.2",
       "redux": "^5.0.1"
+    },
+    "patchedDependencies": {
+      "follow-redirects@1.15.11": "patches/follow-redirects@1.15.11.patch"
     }
   },
-
   "scripts": {
     "build": "pnpm -r build",
     "dev": "concurrently \"cd cmd/allternit-api && cargo run\" \"pnpm --filter @allternit/runtime serve\" \"pnpm --filter @allternit/desktop dev\"",

@@ -34,7 +34,7 @@ interface ModeButton {
 const MODE_BUTTONS: ModeButton[] = [
   { id: 'chat', label: 'Home', icon: House, accent: 'var(--accent-chat)' },
   { id: 'code', label: 'Code', icon: TerminalWindow, accent: 'var(--accent-code)' },
-  { id: 'browser', label: 'Browser', icon: Globe, accent: 'var(--accent-browser)' },
+  { id: 'browser', label: 'ACI', icon: Globe, accent: 'var(--accent-browser)' },
 ];
 
 export function RailControls({

@@ -1,0 +1,9 @@
+{
+  "data-sql-server": {
+    "type": "http",
+    "url": "https://plugins.anthropic.com/mcp/data-sql",
+    "headers": {
+      "X-Plugin": "data-sql"
+    }
+  }
+}

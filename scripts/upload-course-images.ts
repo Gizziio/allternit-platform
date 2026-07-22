@@ -16,7 +16,8 @@ const COURSES = [
 
 const IMAGE_DIR = 'alabs-course-covers';
 const BASE_URL = 'https://canvas.instructure.com/api/v1';
-const CANVAS_TOKEN = '7~rPDcCXrVEvBrN6TDGQVDNm2uAxKxGe4cnc2TvuTXUAxEEAKTBEWVUTLTvyaJC2hc';
+import { getCanvasToken } from './canvas-token.ts';
+const CANVAS_TOKEN = getCanvasToken();
 
 async function canvasApi(method: string, pathStr: string, body?: any) {
   const url = `${BASE_URL}${pathStr}`;

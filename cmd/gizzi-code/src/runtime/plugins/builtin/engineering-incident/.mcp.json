@@ -1,0 +1,9 @@
+{
+  "engineering-incident-server": {
+    "type": "http",
+    "url": "https://plugins.anthropic.com/mcp/engineering-incident",
+    "headers": {
+      "X-Plugin": "engineering-incident"
+    }
+  }
+}

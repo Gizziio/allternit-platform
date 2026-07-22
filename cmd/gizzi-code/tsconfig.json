@@ -3,7 +3,7 @@
   "extends": "@tsconfig/bun/tsconfig.json",
   "compilerOptions": {
     "jsx": "preserve",
-    "jsxImportSource": "@opentui/solid",
+    "jsxImportSource": "react",
     "lib": [
       "ESNext",
       "DOM",
@@ -89,6 +89,12 @@
       ],
       "@allternit/util": [
         "../../packages/@allternit/util/src"
+      ],
+      "@allternit/orchestrator": [
+        "../../packages/@allternit/orchestrator/src/index.ts"
+      ],
+      "@allternit/orchestrator/*": [
+        "../../packages/@allternit/orchestrator/src/*"
       ],
       "@allternit/remote-control": [
         "./packages/remote-control/src/index"

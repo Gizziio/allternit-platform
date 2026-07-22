@@ -14,6 +14,7 @@ import { Installation } from "@/shared/installation"
 import { Database, NotFoundError, eq, and, or, gte, isNull, desc, like, inArray, lt } from "@/runtime/session/storage/db"
 import type { SQL } from "@/runtime/session/storage/db"
 import { SessionTable, MessageTable, PartTable } from "@/runtime/session/session.sql"
+import { SessionTrace } from "@/runtime/session/trace"
 import { ProjectTable } from "@/runtime/context/project/project.sql"
 import { Storage } from "@/runtime/session/storage/storage"
 import { Log } from "@/shared/util/log"
@@ -757,6 +758,9 @@ export namespace Session {
       for (const child of await children(sessionID)) {
         await remove(child.id)
       }
+      await import("@/runtime/session/scratchpad")
+        .then(({ Scratchpad }) => Scratchpad.cleanup(sessionID, !session.parentID))
+        .catch((error) => log.warn("failed to clean session scratchpad", { sessionID, error }))
       await unshare(sessionID).catch(() => {})
       // CASCADE delete handles messages and parts automatically
       Database.use((db) => {
@@ -791,6 +795,7 @@ export namespace Session {
         }),
       )
     })
+    SessionTrace.append({ sessionID, kind: "message.updated", messageID: id, data: msg, time: Date.now() })
     return msg
   })
 
@@ -809,6 +814,12 @@ export namespace Session {
             messageID: input.messageID,
           }),
         )
+      })
+      SessionTrace.append({
+        sessionID: input.sessionID,
+        kind: "message.removed",
+        messageID: input.messageID,
+        data: { messageID: input.messageID },
       })
       return input.messageID
     },
@@ -830,6 +841,13 @@ export namespace Session {
             partID: input.partID,
           }),
         )
+      })
+      SessionTrace.append({
+        sessionID: input.sessionID,
+        kind: "part.removed",
+        messageID: input.messageID,
+        partID: input.partID,
+        data: input,
       })
       return input.partID
     },
@@ -854,6 +872,7 @@ export namespace Session {
       // Note: Bus.publish is called directly by the caller (e.g., processor.ts) for immediate streaming.
       // Database.effect is NOT used here to avoid duplicate events.
     })
+    SessionTrace.append({ sessionID, kind: "part.updated", messageID, partID: id, data: part, time })
     return part
   })
 
@@ -866,6 +885,13 @@ export namespace Session {
       delta: z.string(),
     }),
     async (input) => {
+      SessionTrace.append({
+        sessionID: input.sessionID,
+        kind: "part.delta",
+        messageID: input.messageID,
+        partID: input.partID,
+        data: input,
+      })
       Bus.publish(MessageV2.Event.PartDelta, input)
     },
   )

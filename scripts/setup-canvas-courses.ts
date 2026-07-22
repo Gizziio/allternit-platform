@@ -8,7 +8,8 @@
 import axios from 'axios';
 
 const CANVAS_BASE_URL = 'https://canvas.instructure.com';
-const CANVAS_API_TOKEN = '7~rPDcCXrVEvBrN6TDGQVDNm2uAxKxGe4cnc2TvuTXUAxEEAKTBEWVUTLTvyaJC2hc';
+import { getCanvasToken } from './canvas-token.ts';
+const CANVAS_API_TOKEN = getCanvasToken();
 
 const canvas = axios.create({
   baseURL: `${CANVAS_BASE_URL}/api/v1`,

@@ -1,0 +1,15 @@
+{
+  "name": "operations-runbooks",
+  "version": "1.0.0",
+  "description": "Operational procedures and runbook automation.",
+  "author": {
+    "name": "Anthropic",
+    "email": "support@anthropic.com"
+  },
+  "keywords": [
+    "operations",
+    "claude",
+    "builtin"
+  ],
+  "license": "MIT"
+}

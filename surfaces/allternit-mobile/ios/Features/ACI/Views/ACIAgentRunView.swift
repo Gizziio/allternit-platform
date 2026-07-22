@@ -1,0 +1,555 @@
+import SwiftUI
+
+/// Port of the web viewport's `KIND_COLOR` table
+/// (surfaces/ai.allternit.com/src/capsules/browser/ACIComputerUseView.tsx:53-61).
+/// Lookup is on the lowercased action kind; unknown kinds — including the
+/// ActionContract types without a dedicated color (select/wait/assert/…) —
+/// fall back to the teal default, exactly like the web.
+enum ACIActionPalette {
+    static func color(for kind: String?) -> Color {
+        switch kind?.lowercased() {
+        case "type": return Color(hex: "#A855F7")
+        case "scroll": return Color(hex: "#FBBF24")
+        case "read": return Color(hex: "#3B82F6")
+        case "navigate": return Color(hex: "#22C55E")
+        case "extract": return Color(hex: "#F97316")
+        // "click" and the default share the same teal on the web.
+        default: return Color(hex: "#63FCF1")
+        }
+    }
+}
+
+/// One line of the run's action log.
+struct ACITraceLine: Identifiable, Sendable {
+    let id: Int
+    let text: String
+    /// Lowercase action kind for color-coding; nil for plain trace messages.
+    let kind: String?
+}
+
+/// State holder for `ACIAgentRunView` — owns the run lifecycle
+/// (start → stream → stop/approve) against `ACIAgentClient`, mirroring the
+/// web store's runGoal reducer (browserAgent.store.ts:546-660).
+@MainActor
+final class ACIAgentRunViewModel: ObservableObject {
+    @Published private(set) var status: ACIRunStatus = .idle
+    @Published private(set) var lastMessage: String? = nil
+    @Published private(set) var adapterId: String? = nil
+    @Published private(set) var stepIndex: Int? = nil
+    @Published private(set) var totalSteps: Int? = nil
+    @Published private(set) var currentAction: ACIEvent.ACIAction? = nil
+    @Published private(set) var screenshot: UIImage? = nil
+    @Published private(set) var traceLines: [ACITraceLine] = []
+    /// Set when the run POST or the stream fails; drives the retry affordance.
+    @Published private(set) var errorMessage: String? = nil
+
+    let goal: String
+
+    private let client: ACIAgentClient
+    private var runId: String? = nil
+    private var streamTask: Task<Void, Never>? = nil
+    private var traceCounter = 0
+    private var hasStarted = false
+
+    init(goal: String, client: ACIAgentClient = ACIAgentClient()) {
+        self.goal = goal
+        self.client = client
+    }
+
+    var requiresApproval: Bool { status == .waitingApproval }
+
+    /// Anything before a terminal state — idle here means "connecting".
+    var isActive: Bool {
+        switch status {
+        case .idle, .running, .waitingApproval, .unknown: return true
+        case .blocked, .done, .error: return false
+        }
+    }
+
+    // MARK: - Lifecycle
+
+    /// POSTs the run and consumes the SSE stream until `done`, connection
+    /// end, or cancellation. Idempotent — the view's `onAppear` can fire more
+    /// than once.
+    func start() {
+        guard !hasStarted else { return }
+        hasStarted = true
+
+        streamTask = Task { [weak self] in
+            guard let self else { return }
+            do {
+                let run = try await self.client.startRun(goal: self.goal)
+                self.runId = run.sessionId
+                if self.adapterId == nil { self.adapterId = run.adapterId }
+
+                for try await event in self.client.stream(runId: run.sessionId) {
+                    self.apply(event)
+                }
+
+                // Connection ended without a terminal frame — the web treats
+                // a dropped EventSource on a Running agent as Done
+                // (browserAgent.store.ts:652-655).
+                if self.isActive { self.status = .done }
+            } catch is CancellationError {
+                // Intentional cancel (stop / leaving the view) stays silent.
+            } catch let error as URLError where error.code == .cancelled {
+                // URLSession surfaces task cancellation as URLError.cancelled.
+            } catch {
+                self.errorMessage = error.localizedDescription
+                self.status = .error
+            }
+        }
+    }
+
+    /// Stop button: cancels the local consumer and stops the run server-side.
+    func stop() {
+        streamTask?.cancel()
+        streamTask = nil
+        guard isActive else { return }
+        status = .done
+        lastMessage = "Stopped"
+        guard let runId else { return }
+        // Fire-and-forget like the web (`.catch(() => {})`). The client is
+        // captured strongly so the POST still fires if the view (and this
+        // view model) is torn down right after Stop/leave.
+        let client = self.client
+        Task { [client] in try? await client.stop(runId: runId) }
+    }
+
+    /// Leaving the run view abandons the run — the web closes its
+    /// EventSource on navigation; we additionally stop the server run so the
+    /// agent doesn't keep driving a browser nobody is watching.
+    func leave() {
+        guard isActive else {
+            streamTask?.cancel()
+            streamTask = nil
+            return
+        }
+        stop()
+    }
+
+    /// Approve/Deny buttons for a `WaitingApproval` run. Optimistically back
+    /// to Running; the next state frame corrects us if the server disagrees.
+    func approve(deny: Bool) {
+        guard let runId, requiresApproval else { return }
+        status = .running
+        currentAction = nil
+        let client = self.client
+        Task { [client] in try? await client.approve(runId: runId, deny: deny) }
+    }
+
+    /// Error-state retry affordance: fresh run for the same goal.
+    func retry() {
+        streamTask?.cancel()
+        streamTask = nil
+        runId = nil
+        errorMessage = nil
+        status = .idle
+        hasStarted = false
+        start()
+    }
+
+    // MARK: - Frame handling (browserAgent.store.ts:578-650)
+
+    private func apply(_ event: ACIEvent) {
+        switch event {
+        case .state(let frame):
+            if frame.status != nil { status = ACIRunStatus(frame.status) }
+            if let message = frame.lastMessage { lastMessage = message }
+            if let adapter = frame.adapterId { adapterId = adapter }
+            if let step = frame.stepIndex { stepIndex = step }
+            if let total = frame.totalSteps { totalSteps = total }
+            // Present-but-null clears the action; absent leaves it.
+            if frame.hasCurrentAction {
+                currentAction = frame.currentAction
+                if let action = frame.currentAction {
+                    appendTrace(action.label ?? action.selector ?? action.type ?? "Action",
+                                kind: action.type)
+                }
+            }
+
+        case .screenshot(let base64):
+            // Undecodable frames just leave the previous image up.
+            if let data = Data(base64Encoded: base64), let image = UIImage(data: data) {
+                screenshot = image
+            }
+
+        case .trace(let frame):
+            if let message = frame.message {
+                lastMessage = message
+                appendTrace(message, kind: nil)
+            }
+            if let adapter = frame.adapterId { adapterId = adapter }
+
+        case .done:
+            if isActive { status = .done }
+
+        case .ignored:
+            break
+        }
+    }
+
+    private func appendTrace(_ text: String, kind: String?) {
+        guard !text.isEmpty, traceLines.last?.text != text else { return }
+        traceCounter += 1
+        traceLines.append(ACITraceLine(id: traceCounter, text: text, kind: kind))
+        if traceLines.count > 100 {
+            traceLines.removeFirst(traceLines.count - 100)
+        }
+    }
+}
+
+/// The Kimi Computer-style live ACI viewport, ported from
+/// ACIComputerUseView.tsx: top status strip, aspect-fit live screenshot with
+/// color-coded element highlights, scanline overlay, action trace log, and
+/// Stop / Approve / Deny controls.
+struct ACIAgentRunView: View {
+    let goal: String
+    let onExit: () -> Void
+
+    @StateObject private var viewModel: ACIAgentRunViewModel
+
+    private let theme = ModeTheme(mode: .browser)
+
+    init(goal: String, onExit: @escaping () -> Void) {
+        self.goal = goal
+        self.onExit = onExit
+        _viewModel = StateObject(wrappedValue: ACIAgentRunViewModel(goal: goal))
+    }
+
+    var body: some View {
+        VStack(spacing: 0) {
+            topStrip
+            viewport
+            traceLog
+            controlBar
+        }
+        .background(Color("BgPrimary"))
+        .onAppear { viewModel.start() }
+        .onDisappear { viewModel.leave() }
+    }
+
+    // MARK: - Top strip (ACIComputerUseView.tsx TopStrip)
+
+    private var statusDotColor: Color {
+        switch viewModel.status {
+        case .running: return Theme.statusSuccess
+        case .waitingApproval: return Theme.statusWarning
+        case .done: return Theme.statusInfo
+        case .blocked, .error: return Color(hex: "#EF4444")
+        case .idle, .unknown: return Color("TextSecondary")
+        }
+    }
+
+    private var isPulsing: Bool {
+        viewModel.status == .running || viewModel.status == .waitingApproval
+    }
+
+    private var statusMessage: String {
+        if let message = viewModel.lastMessage, !message.isEmpty { return message }
+        if !goal.isEmpty { return goal }
+        return viewModel.status == .done ? "Task complete" : "Waiting…"
+    }
+
+    /// Web adapter label: drop the first dotted segment, falling back to the
+    /// full id (`adapterId.split('.').slice(1).join('.') || adapterId`).
+    private var adapterLabel: String? {
+        guard let adapterId = viewModel.adapterId else { return nil }
+        let tail = adapterId.split(separator: ".").dropFirst().joined(separator: ".")
+        return tail.isEmpty ? adapterId : tail
+    }
+
+    private var topStrip: some View {
+        HStack(spacing: 8) {
+            Button(action: onExit) {
+                Image(systemName: "chevron.left")
+                    .font(.system(size: 13, weight: .semibold))
+                    .foregroundColor(Color("TextSecondary"))
+            }
+            .buttonStyle(.plain)
+
+            Circle()
+                .fill(statusDotColor)
+                .frame(width: 7, height: 7)
+                .shadow(color: isPulsing ? statusDotColor.opacity(0.67) : .clear, radius: 3)
+                .phaseAnimator([false, true]) { content, phase in
+                    content.opacity(isPulsing ? (phase ? 0.45 : 1) : 1)
+                } animation: { _ in
+                    .easeInOut(duration: 0.9)
+                }
+
+            Text("COMPUTER USE")
+                .font(.system(size: 10, weight: .bold, design: .monospaced))
+                .tracking(1.2)
+                .foregroundColor(Theme.borderWarmStrong)
+
+            stripDivider
+
+            Text(statusMessage)
+                .font(.system(size: 11, weight: viewModel.requiresApproval ? .semibold : .regular))
+                .foregroundColor(viewModel.requiresApproval
+                                 ? Color(hex: "#FDE68A")
+                                 : Color("TextSecondary"))
+                .lineLimit(1)
+                .frame(maxWidth: .infinity, alignment: .leading)
+
+            if let step = viewModel.stepIndex,
+               let total = viewModel.totalSteps, total > 1 {
+                stripDivider
+                Text("\(step)/\(total)")
+                    .font(.system(size: 10, weight: .bold, design: .monospaced))
+                    .foregroundColor(Theme.borderWarmStrong)
+            }
+
+            if let adapterLabel {
+                stripDivider
+                Text(adapterLabel)
+                    .font(.system(size: 10, design: .monospaced))
+                    .foregroundColor(Color("TextSecondary").opacity(0.6))
+                    .lineLimit(1)
+            }
+        }
+        .padding(.horizontal, 12)
+        .frame(height: 34)
+        .background(Theme.glassBgThick)
+        .overlay(alignment: .bottom) {
+            Rectangle().fill(Theme.borderWarmSubtle).frame(height: 1)
+        }
+    }
+
+    private var stripDivider: some View {
+        Rectangle()
+            .fill(Color("BorderSubtle"))
+            .frame(width: 1, height: 12)
+    }
+
+    // MARK: - Viewport (screenshot + overlays)
+
+    private var viewport: some View {
+        GeometryReader { geometry in
+            ZStack {
+                if let errorMessage = viewModel.errorMessage {
+                    errorState(errorMessage)
+                } else if let screenshot = viewModel.screenshot {
+                    screenshotContent(screenshot, in: geometry.size)
+                } else {
+                    connectingState
+                }
+            }
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
+            .overlay { scanlines }
+        }
+        .clipped()
+    }
+
+    /// Aspect-fit math mirroring the web's img metrics: fit the screenshot
+    /// into the container, center it, and scale element rects from
+    /// screenshot pixel space into view space with the same factor.
+    private func screenshotContent(_ image: UIImage, in size: CGSize) -> some View {
+        let natural = image.size
+        let scale = min(size.width / max(natural.width, 1),
+                        size.height / max(natural.height, 1))
+        let displayW = natural.width * scale
+        let displayH = natural.height * scale
+        let offsetX = (size.width - displayW) / 2
+        let offsetY = (size.height - displayH) / 2
+
+        return ZStack(alignment: .topLeading) {
+            Image(uiImage: image)
+                .resizable()
+                .frame(width: displayW, height: displayH)
+                .clipShape(RoundedRectangle(cornerRadius: 3))
+                .overlay(
+                    RoundedRectangle(cornerRadius: 3)
+                        .stroke(Theme.borderWarmSubtle, lineWidth: 1)
+                )
+                .offset(x: offsetX, y: offsetY)
+
+            if let box = viewModel.currentAction?.boundingBox {
+                highlightBox(box, scale: scale, offsetX: offsetX, offsetY: offsetY)
+            }
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+    }
+
+    /// Element highlight for the current action (ElementHighlight,
+    /// ACIComputerUseView.tsx:151-207): 2px kind-colored border, 7% fill,
+    /// glow, and a `KIND · label` chip above the box.
+    private func highlightBox(_ box: CGRect, scale: CGFloat, offsetX: CGFloat, offsetY: CGFloat) -> some View {
+        let kind = viewModel.currentAction?.type
+        let color = ACIActionPalette.color(for: kind)
+        let label = viewModel.currentAction?.label ?? viewModel.currentAction?.selector
+        let x = offsetX + box.minX * scale
+        let y = offsetY + box.minY * scale
+        let width = max(box.width * scale, 1)
+        let height = max(box.height * scale, 1)
+
+        return ZStack(alignment: .topLeading) {
+            RoundedRectangle(cornerRadius: 4)
+                .stroke(color.opacity(0.85), lineWidth: 2)
+                .background(RoundedRectangle(cornerRadius: 4).fill(color.opacity(0.07)))
+                .shadow(color: color.opacity(0.25), radius: 6)
+                .frame(width: width, height: height)
+                .offset(x: x, y: y)
+                .animation(.easeOut(duration: 0.18), value: box)
+
+            if let label, !label.isEmpty {
+                Text((kind.map { "\($0.uppercased()) · " } ?? "") + label)
+                    .font(.system(size: 9, weight: .bold, design: .monospaced))
+                    .tracking(0.6)
+                    .foregroundColor(color)
+                    .padding(.horizontal, 6)
+                    .padding(.vertical, 2)
+                    .background(Theme.glassBgThick)
+                    .clipShape(RoundedRectangle(cornerRadius: 4))
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 4)
+                            .stroke(color.opacity(0.4), lineWidth: 1)
+                    )
+                    .fixedSize()
+                    .offset(x: x, y: max(y - 20, 0))
+                    .animation(.easeOut(duration: 0.18), value: box)
+            }
+        }
+        .allowsHitTesting(false)
+    }
+
+    /// Scanline texture overlay (ACIComputerUseView.tsx:372-375) — a 1px
+    /// 6%-black line every 4px, purely decorative.
+    private var scanlines: some View {
+        Canvas { context, size in
+            var y: CGFloat = 3
+            while y < size.height {
+                context.fill(
+                    Path(CGRect(x: 0, y: y, width: size.width, height: 1)),
+                    with: .color(.black.opacity(0.06))
+                )
+                y += 4
+            }
+        }
+        .allowsHitTesting(false)
+    }
+
+    private var connectingState: some View {
+        VStack(spacing: 16) {
+            ProgressView()
+                .controlSize(.regular)
+                .tint(Color("TextSecondary"))
+            Text("CONNECTING")
+                .font(.system(size: 10, design: .monospaced))
+                .tracking(3)
+                .foregroundColor(Color("TextSecondary"))
+        }
+        .opacity(0.45)
+    }
+
+    private func errorState(_ message: String) -> some View {
+        VStack(spacing: 10) {
+            Image(systemName: "bolt.trianglebadge.exclamationmark")
+                .font(.system(size: 24))
+                .foregroundColor(Color("TextSecondary"))
+            Text(message)
+                .font(.system(size: 11, design: .monospaced))
+                .foregroundColor(Color(hex: "#EF4444"))
+                .multilineTextAlignment(.center)
+            Button("Retry") { viewModel.retry() }
+                .font(.system(size: 12, weight: .semibold))
+                .foregroundColor(theme.accent)
+                .padding(.horizontal, 16)
+                .padding(.vertical, 6)
+                .overlay(
+                    RoundedRectangle(cornerRadius: Theme.radiusSM)
+                        .stroke(theme.accentGlow, lineWidth: 1)
+                )
+        }
+        .padding(24)
+    }
+
+    // MARK: - Trace log
+
+    private var traceLog: some View {
+        ScrollViewReader { proxy in
+            ScrollView {
+                LazyVStack(alignment: .leading, spacing: 2) {
+                    ForEach(viewModel.traceLines) { line in
+                        Text(line.text)
+                            .font(.system(size: 10, design: .monospaced))
+                            .foregroundColor(line.kind != nil
+                                             ? ACIActionPalette.color(for: line.kind)
+                                             : Color("TextSecondary"))
+                            .lineLimit(1)
+                            .id(line.id)
+                    }
+                }
+                .padding(.horizontal, 12)
+                .padding(.vertical, 6)
+                .frame(maxWidth: .infinity, alignment: .leading)
+            }
+            .onChange(of: viewModel.traceLines.count) { _, _ in
+                if let last = viewModel.traceLines.last {
+                    proxy.scrollTo(last.id, anchor: .bottom)
+                }
+            }
+        }
+        .frame(height: 84)
+        .background(Color("BgSecondary"))
+        .overlay(alignment: .top) {
+            Rectangle().fill(Color("BorderSubtle")).frame(height: 1)
+        }
+    }
+
+    // MARK: - Controls
+
+    private var controlBar: some View {
+        HStack(spacing: 12) {
+            if viewModel.requiresApproval {
+                Button(action: { viewModel.approve(deny: true) }) {
+                    Text("Deny")
+                        .font(.system(size: 12, weight: .semibold))
+                        .foregroundColor(Color("TextSecondary"))
+                        .padding(.horizontal, 14)
+                        .padding(.vertical, 7)
+                        .overlay(
+                            RoundedRectangle(cornerRadius: Theme.radiusSM)
+                                .stroke(Color("BorderSubtle"), lineWidth: 1)
+                        )
+                }
+                .buttonStyle(.plain)
+
+                Button(action: { viewModel.approve(deny: false) }) {
+                    Text("Approve")
+                        .font(.system(size: 12, weight: .semibold))
+                        .foregroundColor(Color("BgPrimary"))
+                        .padding(.horizontal, 14)
+                        .padding(.vertical, 7)
+                        .background(Theme.statusWarning)
+                        .clipShape(RoundedRectangle(cornerRadius: Theme.radiusSM))
+                }
+                .buttonStyle(.plain)
+            }
+
+            Spacer()
+
+            if viewModel.isActive {
+                Button(action: { viewModel.stop() }) {
+                    Label("Stop", systemImage: "stop.fill")
+                        .font(.system(size: 12, weight: .semibold))
+                        .foregroundColor(Color(hex: "#EF4444"))
+                        .padding(.horizontal, 14)
+                        .padding(.vertical, 7)
+                        .overlay(
+                            RoundedRectangle(cornerRadius: Theme.radiusSM)
+                                .stroke(Color(hex: "#EF4444").opacity(0.4), lineWidth: 1)
+                        )
+                }
+                .buttonStyle(.plain)
+            }
+        }
+        .padding(.horizontal, 16)
+        .padding(.vertical, 8)
+        .background(Theme.glassBgThick)
+        .overlay(alignment: .top) {
+            Rectangle().fill(Color("BorderSubtle")).frame(height: 1)
+        }
+    }
+}

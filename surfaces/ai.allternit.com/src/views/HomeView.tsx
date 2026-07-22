@@ -37,7 +37,7 @@ function timeGreeting(): string {
 const QUICK_ACTIONS = [
   { id: 'chat',      label: 'New Chat',  icon: ChatText,  color: tokens.colors.chat.primary,   desc: 'Start a fresh conversation' },
   { id: 'workspace', label: 'Cowork',    icon: UsersThree, color: tokens.colors.cowork.primary, desc: 'Launch collaborative workspace' },
-  { id: 'browser',   label: 'Browser',  icon: Browser,   color: 'var(--status-info)',          desc: 'Secure agent-controlled browsing' },
+  { id: 'browser',   label: 'ACI',  icon: Browser,   color: 'var(--status-info)',          desc: 'Secure agent-controlled browsing' },
   { id: 'code',      label: 'Terminal', icon: Robot,     color: tokens.colors.code.primary,    desc: 'Open external dev environment' },
 ];
 

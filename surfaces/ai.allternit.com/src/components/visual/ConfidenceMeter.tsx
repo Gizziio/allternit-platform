@@ -51,6 +51,11 @@ export const ConfidenceMeter: React.FC<ConfidenceMeterProps> = ({
   const strokeDashoffset = circumference - progress * circumference;
 
   useEffect(() => {
+    if (!animated) {
+      setDisplayConfidence(confidence);
+      return;
+    }
+
     const duration = 600;
     const start = displayConfidence;
     const diff = confidence - start;
@@ -68,7 +73,7 @@ export const ConfidenceMeter: React.FC<ConfidenceMeterProps> = ({
     };
 
     requestAnimationFrame(animate);
-  }, [confidence]);
+  }, [confidence, animated]);
 
   const containerStyle: React.CSSProperties = {
     display: 'flex',

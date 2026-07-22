@@ -101,8 +101,17 @@ enum AgentChatEvent: Decodable, Sendable {
 
     struct Finish: Decodable, Sendable {
         struct Metadata: Decodable, Sendable {
+            /// The runtime's structured error, passed through by the bridge
+            /// (v1_routes.rs) as `metadata.errorDetails` — e.g.
+            /// `{"name":"ProviderModelNotFoundError","message":"…","data":{…}}`.
+            struct ErrorDetails: Decodable, Sendable {
+                let name: String?
+                let message: String?
+            }
+
             let status: String?
             let error: String?
+            let errorDetails: ErrorDetails?
         }
 
         let messageId: String?
@@ -260,7 +269,11 @@ enum AgentChatEvent: Decodable, Sendable {
             )
 
         case "artifact", "artifact.created", "artifact-created":
-            self = .artifact(Self.normalizeArtifact(container))
+            if let artifact = Self.decodeArtifact(container) {
+                self = .artifact(artifact)
+            } else {
+                self = .ignored
+            }
 
         default:
             // Unknown frame — skip-and-continue (web parser tolerance).
@@ -295,21 +308,29 @@ enum AgentChatEvent: Decodable, Sendable {
 
     // MARK: - Artifact normalization (web parser, native-agent-api.ts:784-802)
 
-    private static func normalizeArtifact(
+    private static func decodeArtifact(
         _ container: KeyedDecodingContainer<CodingKeys>
-    ) -> Artifact {
+    ) -> Artifact? {
         // `try?` on `decodeIfPresent` yields a double-optional; flatten with `?? nil`.
-        let kind = normalizeArtifactKind((try? container.decodeIfPresent(String.self, forKey: .kind)) ?? nil)
+        guard let kind = (try? container.decodeIfPresent(String.self, forKey: .kind)) ?? nil,
+              supportedArtifactKinds.contains(kind) else {
+            return nil
+        }
         let content = (try? container.decodeIfPresent(String.self, forKey: .content)) ?? nil
         let hasDataURL = content?.hasPrefix("data:") == true
         let rawURL = (try? container.decodeIfPresent(String.self, forKey: .url)) ?? nil
 
         let rawTitle = (try? container.decodeIfPresent(String.self, forKey: .title)) ?? nil
-        let trimmedTitle = rawTitle?.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard let title = rawTitle?.trimmingCharacters(in: .whitespacesAndNewlines),
+              !title.isEmpty else {
+            return nil
+        }
 
-        let artifactId = ((try? container.decodeIfPresent(String.self, forKey: .artifactId)) ?? nil)
-            ?? ((try? container.decodeIfPresent(String.self, forKey: .id)) ?? nil)
-            ?? "artifact-\(UUID().uuidString)"
+        let decodedArtifactId = (try? container.decodeIfPresent(String.self, forKey: .artifactId)) ?? nil
+        let decodedId = (try? container.decodeIfPresent(String.self, forKey: .id)) ?? nil
+        guard let artifactId = decodedArtifactId ?? decodedId, !artifactId.isEmpty else {
+            return nil
+        }
 
         let url: String?
         let finalContent: String?
@@ -324,40 +345,14 @@ enum AgentChatEvent: Decodable, Sendable {
         return Artifact(
             artifactId: artifactId,
             kind: kind,
-            title: (trimmedTitle?.isEmpty == false) ? trimmedTitle! : defaultArtifactTitle(kind: kind),
+            title: title,
             url: url,
             content: finalContent
         )
     }
 
-    /// Kind whitelist from the web's `normalizeArtifactKind`
-    /// (native-agent-api.ts:367-384); anything else becomes "html".
-    private static func normalizeArtifactKind(_ kind: String?) -> String {
-        switch kind {
-        case "image", "svg", "mermaid", "jsx", "html", "document",
-             "slides", "sheet", "audio", "video", "podcast":
-            return kind!
-        default:
-            return "html"
-        }
-    }
-
-    /// Title fallback from the web's `formatArtifactTitle`
-    /// (native-agent-api.ts:386-417).
-    private static func defaultArtifactTitle(kind: String) -> String {
-        switch kind {
-        case "image": return "Generated image"
-        case "svg": return "Generated SVG"
-        case "mermaid": return "Generated diagram"
-        case "jsx": return "Generated component"
-        case "html": return "Generated HTML"
-        case "document": return "Generated document"
-        case "slides": return "Presentation deck"
-        case "sheet": return "Data sheet"
-        case "audio": return "Generated audio"
-        case "video": return "Generated video"
-        case "podcast": return "AI Podcast"
-        default: return "Generated artifact"
-        }
-    }
+    private static let supportedArtifactKinds: Set<String> = [
+        "image", "svg", "mermaid", "jsx", "html", "document",
+        "slides", "sheet", "audio", "video", "podcast"
+    ]
 }

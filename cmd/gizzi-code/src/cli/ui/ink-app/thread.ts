@@ -17,6 +17,7 @@ type Event = any
 
 declare global {
   const GIZZI_WORKER_PATH: string
+  const GIZZI_WORKER_CODE: string
 }
 
 type RpcClient = ReturnType<typeof Rpc.client<typeof rpc>>
@@ -57,17 +58,29 @@ function createEventSource(client: RpcClient): EventSource {
 
 export const TuiThreadCommand = cmd({
   command: "$0 [project]",
-  describe: "start gizzi-code tui",
+  describe: "start gizzi tui",
   builder: (yargs) =>
     withNetworkOptions(yargs)
       .positional("project", {
         type: "string",
-        describe: "path to start gizzi-code in",
+        describe: "path to start gizzi in",
       })
       .option("model", {
         type: "string",
         alias: ["m"],
         describe: "model to use in the format of provider/model",
+      })
+      .option("yolo", {
+        type: "boolean",
+        describe: "skip permission prompts (YOLO mode)",
+      })
+      .option("dangerously-skip-permissions", {
+        type: "boolean",
+        describe: "skip permission prompts",
+      })
+      .option("dangerously-skip-sandbox", {
+        type: "boolean",
+        describe: "run commands unsandboxed",
       })
       .option("continue", {
         alias: ["c"],
@@ -92,6 +105,14 @@ export const TuiThreadCommand = cmd({
         describe: "agent to use",
       }),
   handler: async (args) => {
+    if (args.yolo || args["dangerously-skip-permissions"]) {
+      process.env.GIZZI_PERMISSION_MODE = "yolo"
+      process.env.GIZZI_DANGEROUSLY_SKIP_PERMISSIONS = "1"
+    }
+    if (args["dangerously-skip-sandbox"]) {
+      process.env.GIZZI_SANDBOX_DISABLE = "1"
+    }
+
     // Keep ENABLE_PROCESSED_INPUT cleared even if other code flips it.
     // (Important when running under `bun run` wrappers on Windows.)
     const unguard = win32InstallCtrlCGuard()
@@ -111,12 +132,16 @@ export const TuiThreadCommand = cmd({
       const cwd = args.project ? path.resolve(baseCwd, args.project) : process.cwd()
       const localWorker = new URL("./worker.ts", import.meta.url)
       const distWorker = new URL("./worker.js", import.meta.url)
-      const workerPath = await iife(async () => {
+      const workerSpec = await iife(async () => {
+        if (typeof GIZZI_WORKER_CODE !== "undefined" && GIZZI_WORKER_CODE) {
+          const blob = new Blob([GIZZI_WORKER_CODE], { type: "application/javascript" })
+          return URL.createObjectURL(blob)
+        }
         if (typeof GIZZI_WORKER_PATH !== "undefined") return GIZZI_WORKER_PATH
         if (await Filesystem.exists(fileURLToPath(distWorker))) return distWorker
         return localWorker
       })
-      Log.Default.info("tui: using worker path", { workerPath: workerPath.toString() })
+      Log.Default.info("tui: using worker path", { workerPath: String(workerSpec) })
       try {
         process.chdir(cwd)
       } catch (e) {
@@ -126,14 +151,21 @@ export const TuiThreadCommand = cmd({
       }
 
       Log.Default.info("tui: spawning worker")
-      const worker = new Worker(workerPath, {
+      const worker = new Worker(workerSpec, {
         env: Object.fromEntries(
           Object.entries(process.env).filter((entry): entry is [string, string] => entry[1] !== undefined),
         ),
       })
       Log.Default.info("tui: worker spawned")
-      worker.onerror = (e) => {
-        Log.Default.error("tui: worker error", e)
+      worker.onerror = (e: any) => {
+        Log.Default.error("tui: worker error", {
+          message: e?.message,
+          filename: e?.filename,
+          lineno: e?.lineno,
+          colno: e?.colno,
+          error: e?.error?.stack || e?.error?.message || String(e?.error || e),
+        })
+        console.error("Worker Error:", e?.message, e?.error || e)
       }
       const client = Rpc.client<typeof rpc>(worker)
       Log.Default.info("tui: rpc client created")
@@ -148,7 +180,17 @@ export const TuiThreadCommand = cmd({
       })
 
       const prompt = await iife(async () => {
-        const piped = !process.stdin.isTTY ? await Bun.stdin.text() : undefined
+        if (process.stdin.isTTY) return args.prompt
+        const readPipedStdin = async (): Promise<string | undefined> => {
+          try {
+            const text = await Bun.stdin.text()
+            return text.trim() ? text : undefined
+          } catch {
+            return undefined
+          }
+        }
+        const timeout = new Promise<undefined>((resolve) => setTimeout(() => resolve(undefined), 100))
+        const piped = await Promise.race([readPipedStdin(), timeout])
         if (!args.prompt) return piped
         return piped ? piped + "\n" + args.prompt : args.prompt
       })

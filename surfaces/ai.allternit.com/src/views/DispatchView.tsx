@@ -189,24 +189,6 @@ function PhoneLaptopIllustration() {
   );
 }
 
-// ─── View header ──────────────────────────────────────────────────────────────
-function ViewHeader({ menu }: { menu?: React.ReactNode }) {
-  return (
-    <div className="flex items-center justify-between px-4 py-3 shrink-0">
-      <span className="text-[15px] font-semibold text-[var(--text-primary)]">Dispatch</span>
-      {menu ?? (
-        <button
-          type="button"
-          className="text-[var(--text-tertiary)] hover:text-[var(--text-secondary)] bg-transparent border-none cursor-pointer p-1 rounded-lg hover:bg-[var(--surface-hover)] transition-colors"
-          aria-label="Dispatch options"
-        >
-          <DotsThreeVertical size={18} weight="bold" />
-        </button>
-      )}
-    </div>
-  );
-}
-
 // ─── Dispatch options menu ────────────────────────────────────────────────────
 function DispatchOptionsMenu({
   onClearMemory,
@@ -453,17 +435,16 @@ export function DispatchView(): React.ReactNode {
 
   if (!setupComplete) {
     return (
-      <div className="h-full w-full overflow-y-auto bg-[var(--bg-elevated)] flex flex-col">
-        <ViewHeader />
-        <div className="w-full max-w-lg mx-auto px-6 pb-14 flex flex-col items-center">
+      <div className="h-full w-full overflow-y-auto bg-[var(--bg-elevated)] text-[var(--text-primary)] flex flex-col">
+        <div className="w-full max-w-lg mx-auto px-8 pt-10 pb-14 flex flex-col items-center">
           {/* Illustration */}
           <div className="mb-6">
             <PhoneLaptopIllustration />
           </div>
 
           <h1
-            className="text-[28px] font-bold tracking-tight text-[var(--text-primary)] m-0 mb-2 text-center"
-            style={{ fontFamily: 'var(--font-research, Georgia, serif)' }}
+            className="text-3xl font-medium tracking-tight text-[var(--text-primary)] m-0 mb-2 text-center"
+            style={{ fontFamily: 'var(--font-serif)' }}
           >
             Get ready to dispatch
           </h1>
@@ -551,11 +532,21 @@ export function DispatchView(): React.ReactNode {
 
   // ── Active dispatch session ──────────────────────────────────────────────────
   return (
-    <div className="h-full w-full flex overflow-hidden bg-[var(--bg-elevated)]">
-      {/* ── Left sidebar ── */}
-      <div className="w-[280px] shrink-0 border-r border-solid border-[var(--border-subtle)] flex flex-col overflow-y-auto">
-        <ViewHeader
-          menu={
+    <div className="h-full w-full flex flex-col overflow-hidden bg-[var(--bg-elevated)] text-[var(--text-primary)]">
+      <div className="w-full max-w-6xl mx-auto px-8 pt-10 pb-12 flex flex-col flex-1 min-h-0">
+        {/* Header — same pattern as Artifacts Library / Automation Tasks / Projects */}
+        <div className="flex items-center justify-between gap-4 shrink-0">
+          <div>
+            <h1
+              className="text-3xl font-medium tracking-tight m-0"
+              style={{ fontFamily: 'var(--font-serif)' }}
+            >
+              Dispatch
+            </h1>
+            <p className="m-0 mt-1 text-sm text-[var(--text-secondary)]">Work with Allternit, right on your computer</p>
+          </div>
+
+          <div className="flex items-center gap-2 flex-shrink-0">
             <DispatchOptionsMenu
               onClearMemory={() => setMessages([])}
               onDeleteConversation={() => {
@@ -563,9 +554,12 @@ export function DispatchView(): React.ReactNode {
                 handleRefreshToken();
               }}
             />
-          }
-        />
+          </div>
+        </div>
 
+        <div className="flex-1 flex min-h-0 mt-8 border-t border-solid border-[var(--border-subtle)]">
+      {/* ── Left sidebar ── */}
+      <div className="w-[280px] shrink-0 border-r border-solid border-[var(--border-subtle)] flex flex-col overflow-y-auto">
         {/* Settings panel */}
         <div className="border-b border-solid border-[var(--border-subtle)]">
           <div className="flex items-center justify-between px-4 py-3">
@@ -856,6 +850,8 @@ export function DispatchView(): React.ReactNode {
               </svg>
             </button>
           </div>
+        </div>
+      </div>
         </div>
       </div>
     </div>

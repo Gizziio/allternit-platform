@@ -134,6 +134,26 @@ export function useCodeSessionActions() {
   }));
 }
 
+/**
+ * A runtime switch changes the backing session database. Clear the previous
+ * runtime's in-memory records before loading, otherwise loadSessions() keeps
+ * optimistic records that are absent from the new runtime and mixes a user's
+ * local and cloud threads in one list.
+ */
+export async function reloadCodeSessionsForRuntime(): Promise<void> {
+  const store = useCodeSessionStore.getState();
+  store.disconnectSessionSync();
+  useCodeSessionStore.setState({
+    sessions: [],
+    activeSessionId: null,
+    unreadCounts: {},
+    error: null,
+    syncError: null,
+  });
+  await useCodeSessionStore.getState().loadSessions();
+  useCodeSessionStore.getState().connectSessionSync();
+}
+
 // ---------------------------------------------------------------------------
 // Session creation with memory/context parity (matches Cowork)
 // ---------------------------------------------------------------------------

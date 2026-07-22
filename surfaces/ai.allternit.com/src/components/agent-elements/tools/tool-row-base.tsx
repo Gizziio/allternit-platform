@@ -1,4 +1,4 @@
-import type { ReactNode } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 import { Collapsible } from "@base-ui/react/collapsible";
 import { TextShimmer } from "../text-shimmer";
 import { IconChevronRight } from "@tabler/icons-react";
@@ -15,6 +15,8 @@ export type ToolRowBaseProps = {
   expanded?: boolean;
   defaultOpen?: boolean;
   onToggleExpand?: () => void;
+  onBackground?: () => void;
+  backgroundAfterMs?: number;
   children?: ReactNode;
 };
 
@@ -29,11 +31,33 @@ export function ToolRowBase({
   expanded,
   defaultOpen = false,
   onToggleExpand,
+  onBackground,
+  backgroundAfterMs = 10_000,
   children,
 }: ToolRowBaseProps) {
+  const [canBackground, setCanBackground] = useState(false);
+  useEffect(() => {
+    if (!isAnimating || !onBackground) {
+      setCanBackground(false);
+      return;
+    }
+    const timer = window.setTimeout(() => setCanBackground(true), backgroundAfterMs);
+    return () => window.clearTimeout(timer);
+  }, [backgroundAfterMs, isAnimating, onBackground]);
+
   const isComplete = !isAnimating;
   const isExpanded = expanded ?? false;
   const canToggle = expandable && (isComplete || isExpanded || isAnimating);
+  const backgroundControl = canBackground ? (
+    <button
+      type="button"
+      onClick={onBackground}
+      className="shrink-0 rounded-md border border-an-border px-1.5 py-0.5 text-[11px] text-an-foreground-muted hover:bg-an-fill-secondary active:scale-[0.97]"
+      title="Let this tool continue while you work"
+    >
+      Background
+    </button>
+  ) : null;
 
   const row = (
     <div
@@ -83,7 +107,7 @@ export function ToolRowBase({
   );
 
   if (!expandable) {
-    return <div className="flex flex-col gap-1">{row}</div>;
+    return <div className="flex items-start gap-2"><div className="min-w-0 flex-1">{row}</div>{backgroundControl}</div>;
   }
 
   const rootProps =
@@ -92,7 +116,8 @@ export function ToolRowBase({
       : { open: expanded, onOpenChange: onToggleExpand };
 
   return (
-    <Collapsible.Root className="flex flex-col gap-2 w-full" {...rootProps}>
+    <div className="flex min-h-5 items-start gap-2 w-full">
+    <Collapsible.Root className="flex min-w-0 flex-1 flex-col gap-2" {...rootProps}>
       <Collapsible.Trigger
         className="group flex"
         disabled={!canToggle}
@@ -111,5 +136,7 @@ export function ToolRowBase({
         {children}
       </Collapsible.Panel>
     </Collapsible.Root>
+    {backgroundControl}
+    </div>
   );
 }

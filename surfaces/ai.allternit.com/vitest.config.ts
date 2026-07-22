@@ -6,11 +6,21 @@ export default defineConfig({
     environment: 'jsdom',
     globals: true,
     setupFiles: ['./vitest.setup.ts'],
+    exclude: [
+      '**/node_modules/**',
+      '**/dist/**',
+      // Playwright e2e specs are run separately; do not collect them under Vitest.
+      'tests/**/*.spec.ts',
+    ],
   },
   resolve: {
     alias: {
       '@': path.resolve(__dirname, './src'),
       'crypto': 'node:crypto',
+      'path': 'node:path',
+      'os': 'node:os',
+      'fs': 'node:fs',
+      'fs/promises': 'node:fs/promises',
       'js-tiktoken': path.resolve(__dirname, './src/lib/ai/__mocks__/js-tiktoken.ts'),
     },
   },

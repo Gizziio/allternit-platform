@@ -280,11 +280,153 @@ fn insert_dlp_header(response: &mut Response, value: &'static str) {
     }
 }
 
+const DLP_RESPONSE_HEADER: &str = "x-allternit-dlp-response";
+
+/// Same idea as `scan_and_redact`, but walking a chat-completion *response*
+/// body's `choices[].message.content` instead of a request's `messages[]` —
+/// an output-side guardrail so a model can't launder a secret it was fed (or
+/// hallucinate one shaped like one) past the same policy that blocks it on
+/// the way in. Both `Block` and `Redact` actions redact in place here rather
+/// than rejecting the response outright: on the request path a `Block`
+/// tells the *user* to remove the secret and retry, but there's no
+/// equivalent "ask the model to retry" primitive here, and hard-failing an
+/// otherwise-good response over one flagged span is worse than scrubbing it.
+fn for_each_response_text_field(value: &mut Value, mut f: impl FnMut(&mut String)) {
+    let Some(choices) = value.get_mut("choices").and_then(Value::as_array_mut) else {
+        return;
+    };
+    for choice in choices.iter_mut() {
+        if let Some(Value::String(text)) = choice.pointer_mut("/message/content") {
+            f(text);
+        }
+    }
+}
+
+fn scan_and_redact_response(
+    body: &mut Value,
+    actions: &HashMap<&'static str, DlpAction>,
+    customs: &[(CustomPattern, DlpAction)],
+) -> ScanOutcome {
+    let custom_patterns: Vec<CustomPattern> = customs
+        .iter()
+        .map(|(pattern, _)| CustomPattern {
+            id: pattern.id.clone(),
+            regex: pattern.regex.clone(),
+        })
+        .collect();
+    let custom_actions: HashMap<&str, DlpAction> = customs
+        .iter()
+        .map(|(pattern, action)| (pattern.id.as_str(), *action))
+        .collect();
+
+    let mut outcome = ScanOutcome::default();
+    for_each_response_text_field(body, |text| {
+        let matches = dlp_patterns::scan_text(text, &custom_patterns);
+        let mut redact_matches: Vec<PatternMatch> = Vec::new();
+        for m in matches {
+            let action = custom_actions
+                .get(m.pattern_id.as_str())
+                .copied()
+                .or_else(|| actions.get(m.pattern_id.as_str()).copied())
+                .unwrap_or(DlpAction::Block);
+            outcome
+                .matches
+                .push((m.pattern_id.clone(), m.match_hash(text), action));
+            if action == DlpAction::Redact || action == DlpAction::Block {
+                redact_matches.push(m);
+            }
+        }
+        if !redact_matches.is_empty() {
+            *text = dlp_patterns::redact_text(text, &redact_matches);
+            outcome.redacted_any = true;
+        }
+    });
+    outcome
+}
+
+/// Scans a non-streaming chat-completion response for the same secret
+/// patterns the request path blocks/redacts. Streaming (SSE) responses are
+/// passed through untouched — by the time a later chunk could be scanned,
+/// earlier chunks are already flushed to the client, so there's no safe way
+/// to redact or block a stream after the fact here; that would need
+/// per-chunk buffering with a hold-back window, which is real future work,
+/// not something to fake with a partial implementation.
+async fn scan_response(
+    state: &Arc<AppState>,
+    key: &LlmKeyContext,
+    response: Response,
+) -> Response {
+    let is_streaming = response
+        .headers()
+        .get(axum::http::header::CONTENT_TYPE)
+        .and_then(|v| v.to_str().ok())
+        .map(|v| v.contains("text/event-stream"))
+        .unwrap_or(false);
+    if !response.status().is_success() || is_streaming {
+        return response;
+    }
+
+    let (parts, body) = response.into_parts();
+    let bytes = match axum::body::to_bytes(body, MAX_BODY_BYTES).await {
+        Ok(bytes) => bytes,
+        // Body already too large / unreadable to scan — pass it through
+        // rather than fail an otherwise-successful response.
+        Err(_) => return Response::from_parts(parts, Body::empty()),
+    };
+
+    let Ok(mut body_value) = serde_json::from_slice::<Value>(&bytes) else {
+        return Response::from_parts(parts, Body::from(bytes));
+    };
+
+    let db = state.db.clone();
+    let tenant_id = key.tenant_id.clone();
+    let tenant_rules = tokio::task::spawn_blocking(move || {
+        let conn = db.connect()?;
+        load_tenant_rules(&conn, tenant_id.as_deref())
+    })
+    .await
+    .ok()
+    .and_then(Result::ok)
+    .unwrap_or_default();
+    let (actions, customs) = merge_rules(tenant_rules);
+
+    let outcome = scan_and_redact_response(&mut body_value, &actions, &customs);
+    for (pattern_id, hash, action) in &outcome.matches {
+        warn!(
+            pattern_id = %pattern_id,
+            match_sha256 = %hash,
+            action = action.as_str(),
+            key_prefix = %key.key_prefix,
+            "DLP pattern matched in model response"
+        );
+    }
+
+    let mut response = if outcome.redacted_any {
+        let redacted = serde_json::to_vec(&body_value).unwrap_or_else(|_| bytes.to_vec());
+        Response::from_parts(parts, Body::from(redacted))
+    } else {
+        Response::from_parts(parts, Body::from(bytes))
+    };
+    if outcome.redacted_any {
+        insert_dlp_header_named(&mut response, DLP_RESPONSE_HEADER, "redacted");
+    }
+    response
+}
+
+fn insert_dlp_header_named(response: &mut Response, name: &'static str, value: &'static str) {
+    if let Ok(value) = HeaderValue::from_str(value) {
+        response
+            .headers_mut()
+            .insert(HeaderName::from_static(name), value);
+    }
+}
+
 // ─── Middleware ──────────────────────────────────────────────────────────────
 
 /// Scan `POST /chat/completions` bodies for secrets and injection attempts.
 /// Runs after the virtual-key middleware (needs [`LlmKeyContext`]) and rate
 /// limiting, before the budget pre-check.
+#[tracing::instrument(skip_all, name = "llm_gateway.dlp_middleware")]
 pub async fn dlp_middleware(
     State(state): State<Arc<AppState>>,
     request: Request,
@@ -435,7 +577,7 @@ pub async fn dlp_middleware(
     } else if outcome.warned(warn_threshold()) {
         insert_dlp_header(&mut response, "warned");
     }
-    response
+    scan_response(&state, &key, response).await
 }
 
 #[cfg(test)]

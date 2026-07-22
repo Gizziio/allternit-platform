@@ -13,6 +13,9 @@ import { Agent } from "@/runtime/loop/agent"
 
 import { Provider } from "@/runtime/providers/provider"
 import { type Tool as AITool, tool, jsonSchema, type ToolCallOptions, asSchema } from "ai"
+import { ToolDispatcher } from "@/runtime/tools/dispatch"
+import { ToolDedupe } from "@/runtime/tools/dedupe"
+import { ToolSelection } from "@/runtime/tools/selection"
 import { SessionCompaction } from "@/runtime/session/compaction"
 import { Instance } from "@/runtime/context/project/instance"
 import { Bus } from "@/shared/bus"
@@ -30,6 +33,7 @@ import { LSP } from "@/runtime/integrations/lsp"
 import { ReadTool } from "@/runtime/tools/builtins/read"
 import { FileTime } from "@/shared/file/time"
 import { Flag } from "@/runtime/context/flag/flag"
+import { Config } from "@/runtime/context/config/config"
 import { ulid } from "ulid"
 import { spawn } from "child_process"
 import { Command } from "@/runtime/loop/command"
@@ -43,11 +47,15 @@ import { TaskTool } from "@/runtime/tools/builtins/task"
 import { Tool } from "@/runtime/tools/builtins/tool"
 import { PermissionNext } from "@/runtime/tools/guard/permission/next"
 import { SessionStatus } from "@/runtime/session/status"
+import { GoalEngine } from "@/runtime/automation/goal-engine"
 import { LLM } from "@/runtime/session/llm"
 import { iife } from "@/shared/util/iife"
 import { Shell } from "@/runtime/integrations/shell/shell"
 import { Truncate } from "@/runtime/tools/builtins/truncation"
 import * as WorkspaceContext from "@/runtime/session/session-context"
+import { BackgroundTask } from "@/runtime/session/background-task"
+import { HookDispatcher } from "@/runtime/hooks/dispatcher"
+import { Scratchpad } from "@/runtime/session/scratchpad"
 
 // @ts-ignore — suppress ai-sdk stdout warnings (see server.ts for details)
 globalThis.AI_SDK_LOG_WARNINGS = false
@@ -75,6 +83,7 @@ export namespace SessionPrompt {
             resolve(input: MessageV2.WithParts): void
             reject(reason?: any): void
           }[]
+          queuedTurns: number
         }
       > = {}
       return data
@@ -119,6 +128,7 @@ export namespace SessionPrompt {
     format: MessageV2.Format.optional(),
     system: z.string().optional(),
     variant: z.string().optional(),
+    backgroundPolicy: z.enum(["exit", "drain", "steer"]).optional(),
     parts: z.array(
       z.discriminatedUnion("type", [
         MessageV2.TextPart.omit({
@@ -162,6 +172,27 @@ export namespace SessionPrompt {
     const session = await Session.get(input.sessionID)
     await SessionRevert.cleanup(session)
 
+    const submittedText = input.parts
+      .filter((part) => part.type === "text" && !part.synthetic)
+      .map((part) => part.text)
+      .join("\n")
+    const submitted = submittedText
+      ? await HookDispatcher.emit({
+          name: "UserPromptSubmit",
+          timestamp: Date.now(),
+          sessionId: input.sessionID,
+          payload: { text: submittedText },
+        })
+      : { decision: "allow" as const }
+    if (submitted.decision === "deny") throw new Error(submitted.reason ?? "Prompt blocked by hook")
+    if (submitted.message) {
+      input.parts.push({ type: "text", text: `<hook_result hook_event="UserPromptSubmit">\n${submitted.message}\n</hook_result>` })
+    }
+
+    if (input.backgroundPolicy) {
+      BackgroundTask.setPrintPolicy(input.sessionID, input.backgroundPolicy)
+    }
+
 const message = await createUserMessage(input)
     await Session.touch(input.sessionID)
 
@@ -186,6 +217,12 @@ const message = await createUserMessage(input)
 
     return loop({ sessionID: input.sessionID, fallbackModels: input.fallbackModels })
   })
+
+  /** Retry the latest durable user turn without appending a duplicate prompt. */
+  export async function retry(sessionID: string): Promise<MessageV2.WithParts> {
+    assertNotBusy(sessionID)
+    return loop({ sessionID })
+  }
 
   export async function resolvePromptParts(template: string): Promise<PromptInput["parts"]> {
     const parts: PromptInput["parts"] = [
@@ -245,6 +282,7 @@ const message = await createUserMessage(input)
     s[sessionID] = {
       abort: controller,
       callbacks: [],
+      queuedTurns: 0,
     }
     return controller.signal
   }
@@ -264,6 +302,12 @@ const message = await createUserMessage(input)
       SessionStatus.set(sessionID, { type: "idle" })
       return
     }
+    void HookDispatcher.emit({
+      name: "Interrupt",
+      timestamp: Date.now(),
+      sessionId: sessionID,
+      payload: { reason: "user" },
+    })
     match.abort.abort()
     delete s[sessionID]
     SessionStatus.set(sessionID, { type: "idle" })
@@ -290,6 +334,7 @@ const message = await createUserMessage(input)
       return new Promise<MessageV2.WithParts>((resolve, reject) => {
         const callbacks = state()[sessionID].callbacks
         callbacks.push({ resolve, reject })
+        state()[sessionID].queuedTurns += 1
       })
     }
 
@@ -334,6 +379,12 @@ const message = await createUserMessage(input)
         log.info("exiting loop", { sessionID })
         break
       }
+
+      const goalAtTurnStart = GoalEngine.getCurrentGoal(sessionID)
+      const goalTurnsAtStart = goalAtTurnStart?.state === "in_progress"
+        ? goalAtTurnStart.usage.turnsUsed
+        : undefined
+      if (goalAtTurnStart?.state === "in_progress") GoalEngine.enforceBudget(goalAtTurnStart.id)
 
       step++
       if (step === 1)
@@ -692,6 +743,10 @@ const message = await createUserMessage(input)
       // Build system prompt, adding structured output instruction if needed
       // Get workspace context for the session directory (cached)
       const workspaceSystemPrompt = await WorkspaceContext.getWorkspaceSystemPrompt(session.directory)
+      const scratchpadSystemPrompt = await Scratchpad.instructions(sessionID).catch((error) => {
+        log.warn("failed to initialize session scratchpad", { sessionID, error })
+        return undefined
+      })
       const system = [
         // If user provided a full system prompt override, use only that
         ...(lastUser.system && !lastUser.system.startsWith("+")
@@ -700,6 +755,7 @@ const message = await createUserMessage(input)
               ...(await SystemPrompt.environment(model)),
               ...(await InstructionPrompt.system()),
               ...(workspaceSystemPrompt ? [workspaceSystemPrompt] : []),
+              ...(scratchpadSystemPrompt ? [scratchpadSystemPrompt] : []),
               // Append system prompt (prefixed with + or via --append-system-prompt)
               ...(lastUser.system?.startsWith("+") ? [lastUser.system.slice(1)] : []),
             ]),
@@ -708,6 +764,22 @@ const message = await createUserMessage(input)
       if (format.type === "json_schema") {
         system.push(STRUCTURED_OUTPUT_SYSTEM_PROMPT)
       }
+      const goalReminder = GoalEngine.reminder(sessionID)
+      if (goalReminder) system.push(goalReminder)
+
+      const activeGoalForDeadline = GoalEngine.getCurrentGoal(sessionID)
+      const deadlineMs = activeGoalForDeadline?.state === "in_progress"
+        ? GoalEngine.remainingWallClockMs(activeGoalForDeadline.id)
+        : null
+      const deadlineTimer = deadlineMs === null
+        ? undefined
+        : setTimeout(() => {
+            GoalEngine.blockGoal(
+              activeGoalForDeadline!.id,
+              `Blocked after goal wall-clock budget reached (${activeGoalForDeadline!.budget.wallClockBudgetMs} ms).`,
+            )
+            cancel(sessionID)
+          }, deadlineMs)
 
       const result = await processor.process({
         user: lastUser,
@@ -729,6 +801,8 @@ const message = await createUserMessage(input)
         tools,
         model,
         toolChoice: format.type === "json_schema" ? "required" : undefined,
+      }).finally(() => {
+        if (deadlineTimer !== undefined) clearTimeout(deadlineTimer)
       })
 
       // If structured output was captured, save it and exit immediately
@@ -743,7 +817,41 @@ const message = await createUserMessage(input)
       // Check if model finished (finish reason is not "tool-calls" or "unknown")
       const modelFinished = processor.message.finish && !["tool-calls", "unknown"].includes(processor.message.finish)
 
+      if (processor.message.error) {
+        await HookDispatcher.emit({
+          name: "StopFailure",
+          timestamp: Date.now(),
+          sessionId: sessionID,
+          payload: { error: processor.message.error.name ?? "Unknown", finish: processor.message.finish },
+        })
+      }
+
       if (modelFinished && !processor.message.error) {
+        const stopped = await HookDispatcher.emit({
+          name: "Stop",
+          timestamp: Date.now(),
+          sessionId: sessionID,
+          payload: { finish: processor.message.finish },
+        })
+        if (stopped.decision === "deny") {
+          const continuation = await Session.updateMessage({
+            id: Identifier.ascending("message"),
+            sessionID,
+            role: "user",
+            time: { created: Date.now() },
+            agent: lastUser.agent,
+            model: lastUser.model,
+          } as MessageV2.User)
+          await Session.updatePart({
+            id: Identifier.ascending("part"),
+            messageID: continuation.id,
+            sessionID,
+            type: "text",
+            synthetic: true,
+            text: `<hook_result hook_event="Stop">\n${stopped.reason ?? stopped.message ?? "A stop hook requested another step."}\n</hook_result>`,
+          } satisfies MessageV2.TextPart)
+          continue
+        }
         if (format.type === "json_schema") {
           // Model stopped without calling StructuredOutput tool
           processor.message.error = new MessageV2.StructuredOutputError({
@@ -752,7 +860,60 @@ const message = await createUserMessage(input)
           }).toObject()
           await Session.updateMessage(processor.message)
         }
-        // Model finished successfully - break out of the loop
+        // An active goal owns the turn boundary. Ordinary model completion is
+        // not a durable goal outcome: account the turn once, enforce budgets,
+        // then synthesize the next continuation. update_goal may already have
+        // accounted or terminated this turn, so compare durable usage first.
+        let currentGoal = goalAtTurnStart
+          ? GoalEngine.getGoal(goalAtTurnStart.id)
+          : GoalEngine.getCurrentGoal(sessionID)
+        if (currentGoal?.state === "in_progress") {
+          const baseline = goalTurnsAtStart ?? currentGoal.usage.turnsUsed
+          if (currentGoal.usage.turnsUsed === baseline) {
+            const accounted = GoalEngine.recordContinuation(currentGoal.id, {
+              tokensUsed: processor.message.tokens.output,
+            })
+            currentGoal = GoalEngine.getGoal(currentGoal.id)
+            if (!accounted.ok) log.warn("failed to account goal continuation", { goalID: currentGoal?.id, reason: accounted.reason })
+          }
+        }
+
+        // Completion can promote a queued goal in the same transaction.
+        const nextGoal = GoalEngine.getCurrentGoal(sessionID)
+        if (nextGoal?.state === "in_progress") {
+          if (isLastStep) {
+            GoalEngine.pauseGoal(nextGoal.id, "Paused after reaching the agent step ceiling.")
+            break
+          }
+          const continuationUser: MessageV2.User = {
+            id: Identifier.ascending("message"),
+            sessionID,
+            role: "user",
+            time: { created: Date.now() },
+            agent: lastUser.agent,
+            model: lastUser.model,
+          }
+          await Session.updateMessage(continuationUser)
+          await Session.updatePart({
+            id: Identifier.ascending("part"),
+            messageID: continuationUser.id,
+            sessionID,
+            type: "text",
+            text: "Continue the active durable goal. Choose the next bounded useful slice, preserve evidence, and use update_goal only for progress accounting or an audited terminal outcome.",
+            synthetic: true,
+          } satisfies MessageV2.TextPart)
+          continue
+        }
+
+        // No active goal remains.
+        const running = state()[sessionID]
+        if (running && running.queuedTurns > 0) {
+          // A user steer or background completion arrived while this turn was
+          // active. The message is already durable; drive another turn before
+          // resolving the queued callers and releasing the session.
+          running.queuedTurns = 0
+          continue
+        }
         break
       }
 
@@ -856,7 +1017,13 @@ const message = await createUserMessage(input)
               args,
             },
           )
-          const result = await item.execute(args, ctx)
+          const result = await ToolDedupe.execute({
+            sessionID: ctx.sessionID,
+            messageID: ctx.messageID,
+            tool: item.id,
+            args,
+            run: () => ToolDispatcher.executeInitialized(item.id, args, ctx, item.execute),
+          })
           const output = {
             ...result,
             attachments: result.attachments?.map((attachment) => ({
@@ -882,7 +1049,47 @@ const message = await createUserMessage(input)
     }
 
     const mcpTools = Object.entries(await MCP.tools())
+    const config = await Config.get()
+    const dynamicSelection =
+      Flag.GIZZI_DYNAMIC_TOOL_SELECTION || config.experimental?.dynamic_tool_selection === true
+    const mcpNames = mcpTools.map(([name]) => name).sort()
+    const loadedMcpTools = ToolSelection.loaded(input.session.id, input.messages)
+    if (dynamicSelection && mcpNames.length) {
+      tools["select_tools"] = tool({
+        id: "select_tools" as any,
+        description: [
+          "Load one or more MCP tool schemas for the next model step. Use this when a required integration tool is not currently available.",
+          `Loadable tools: ${mcpNames.join(", ")}`,
+        ].join("\n"),
+        inputSchema: jsonSchema({
+          type: "object",
+          additionalProperties: false,
+          required: ["names"],
+          properties: {
+            names: { type: "array", items: { type: "string" }, minItems: 1 },
+          },
+        }),
+        execute: async (args: { names: string[] }, options) => {
+          const ctx = context(args, options)
+          return ToolDedupe.execute({
+            sessionID: ctx.sessionID,
+            messageID: ctx.messageID,
+            tool: "select_tools",
+            args,
+            run: () => ToolDispatcher.executeInitialized("select_tools", args, ctx, async (nextArgs) => {
+              const result = ToolSelection.load(input.session.id, nextArgs.names, mcpNames)
+              return {
+                title: "MCP tools selected",
+                metadata: result,
+                output: JSON.stringify(result),
+              }
+            }),
+          })
+        },
+      })
+    }
     for (const [key, item] of mcpTools) {
+      if (dynamicSelection && !loadedMcpTools.has(key)) continue
       const execute = item.execute
       if (!execute) continue
 
@@ -913,7 +1120,13 @@ const message = await createUserMessage(input)
           always: ["*"],
         })
 
-        const result = await execute(args, opts)
+        const result = await ToolDedupe.execute({
+          sessionID: ctx.sessionID,
+          messageID: ctx.messageID,
+          tool: key,
+          args,
+          run: () => ToolDispatcher.executeInitialized(key, args, ctx, (nextArgs) => execute(nextArgs, opts)),
+        })
 
         await Plugin.trigger(
           "tool.execute.after",
@@ -971,7 +1184,14 @@ const message = await createUserMessage(input)
             sessionID: ctx.sessionID,
             messageID: input.processor.message.id,
           })),
-          content: result.content, // directly return content to preserve ordering when outputting to model
+          // MCP tools may provide their own toModelOutput implementation that
+          // reads `content` instead of our normalized `output`. Returning the
+          // original text here bypassed spill-to-disk truncation and could put
+          // the entire oversized result back into the model context. Once a
+          // result spills, expose one bounded text part and preserve only
+          // non-text media/resource parts; the complete text remains at
+          // metadata.outputPath.
+          content: Truncate.modelContent(result.content, truncated),
         }
       }
       tools[key] = item
@@ -1779,6 +1999,7 @@ NOTE: At any point in time through this workflow you should feel free to ask the
     arguments: z.string(),
     command: z.string(),
     variant: z.string().optional(),
+    backgroundPolicy: z.enum(["exit", "drain", "steer"]).optional(),
     parts: z
       .array(
         z.discriminatedUnion("type", [
@@ -1939,6 +2160,7 @@ NOTE: At any point in time through this workflow you should feel free to ask the
       agent: userAgent,
       parts,
       variant: input.variant,
+      backgroundPolicy: input.backgroundPolicy,
     })) as MessageV2.WithParts
 
     Bus.publish(Command.Event.Executed, {

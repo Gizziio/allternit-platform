@@ -2,9 +2,19 @@ export type HookEventName =
   | "UserPromptSubmit"
   | "PreToolUse"
   | "PostToolUse"
-  | "ToolError"
+  | "PostToolUseFailure"
+  | "PermissionRequest"
+  | "PermissionResult"
+  | "Stop"
+  | "StopFailure"
+  | "Interrupt"
   | "SessionStart"
-  | "SessionEnd";
+  | "SessionEnd"
+  | "SubagentStart"
+  | "SubagentStop"
+  | "PreCompact"
+  | "PostCompact"
+  | "Notification";
 
 export interface HookEvent<T = any> {
   name: HookEventName;
@@ -17,4 +27,5 @@ export interface HookResponse {
   decision: "allow" | "deny";
   reason?: string;
   modifiedPayload?: any;
+  message?: string;
 }

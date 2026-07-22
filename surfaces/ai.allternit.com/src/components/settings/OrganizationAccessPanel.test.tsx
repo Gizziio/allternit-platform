@@ -9,6 +9,7 @@ const authState: { orgId: string | null; orgRole: string | null } = {
 };
 
 vi.mock("@/lib/platform-auth-client", () => ({
+  isPlatformAuthDisabled: () => false,
   PlatformOrganizationSwitcher: () => <button type="button">Choose organization</button>,
   usePlatformAuth: () => ({ ...authState }),
   usePlatformOrganization: () => ({

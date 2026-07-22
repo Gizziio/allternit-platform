@@ -13,6 +13,8 @@ import { BranchIndicator } from "./BranchIndicator";
 import { TextShimmer } from "@/components/agent-elements/text-shimmer";
 import { AgentAvatar } from "@/components/Avatar";
 import { useAgentStore } from "@/lib/agents";
+import { PluginMentionChip } from "@/components/chat/PluginMentionChip";
+import type { PluginMentionTarget } from "@/lib/mentions/use-mention-targets";
 import { useAgentStreamingStatus } from "@/hooks/useAgentStreamingStatus";
 import { cn } from "@/lib/utils";
 // ============================================================================
@@ -117,7 +119,7 @@ function ThinkingIndicator({ agentName }: { agentName?: string }) {
 // User Message Card
 // ============================================================================
 
-const UserMessageCard = memo(function UserMessageCard({ text }: { text: string }) {
+const UserMessageCard = memo(function UserMessageCard({ text, pluginMention }: { text: string; pluginMention?: PluginMentionTarget }) {
   const [isExpanded, setIsExpanded] = useState(false);
   const isLongText = text.length > 400;
   const displayText = isExpanded ? text : text.slice(0, 400);
@@ -125,6 +127,11 @@ const UserMessageCard = memo(function UserMessageCard({ text }: { text: string }
   return (
     <div className="flex justify-end py-2 w-full">
       <div className="max-w-[85%] p-4 px-5 rounded-2xl bg-[var(--chat-composer-soft)] border border-solid border-[var(--ui-border-default)] text-[var(--ui-text-primary)] text-base leading-[1.75] break-words relative">
+        {pluginMention && (
+          <div className="mb-2 flex">
+            <PluginMentionChip target={pluginMention} />
+          </div>
+        )}
         <div className="whitespace-pre-wrap">
           {displayText}
           {!isExpanded && isLongText && '…'}
@@ -313,7 +320,7 @@ export const StreamingChatComposer = memo(function StreamingChatComposer({
   );
 
   if (!isAssistant) {
-    return <UserMessageCard text={fullText} />;
+    return <UserMessageCard text={fullText} pluginMention={message.metadata?.pluginMention as PluginMentionTarget | undefined} />;
   }
 
   return (

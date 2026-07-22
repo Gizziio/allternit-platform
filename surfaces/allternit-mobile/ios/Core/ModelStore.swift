@@ -1,0 +1,135 @@
+import SwiftUI
+
+/// App-wide runtime-model selection behind the composer's model pill: the
+/// catalog (`GET /api/v1/models`) plus the persisted selection. Shared —
+/// Home and Code threads hold separate ChatViewModels but must send the
+/// same model.
+///
+/// nil selection = backend default: /api/agent-chat falls back to its
+/// env-configured default model when `runtimeModelId` is absent
+/// (v1_routes.rs:182-200). The store auto-selects the first catalog entry
+/// after the initial fetch so a fresh install never sends with no model —
+/// a backend without a configured default rejects the send outright.
+@MainActor
+final class ModelStore: ObservableObject {
+    static let shared = ModelStore()
+
+    @Published var selectedModelId: String? {
+        didSet { defaults.set(selectedModelId, forKey: Keys.selectedModelId) }
+    }
+
+    /// Reasoning effort for effort-capable models (persisted, default Medium).
+    @Published var selectedEffort: ModelEffort {
+        didSet { defaults.set(selectedEffort.rawValue, forKey: Keys.selectedEffort) }
+    }
+
+    @Published private(set) var models: [RuntimeModel] = []
+    @Published private(set) var isLoading = false
+    @Published private(set) var loadError: String? = nil
+
+    private let defaults: UserDefaults
+    private let chatClient: AgentChatClient
+    private var fetchTask: Task<Void, Never>? = nil
+
+    private enum Keys {
+        static let selectedModelId = "allternit-runtime-model-id"
+        static let selectedEffort = "allternit-model-effort"
+    }
+
+    init(defaults: UserDefaults = .standard, chatClient: AgentChatClient = AgentChatClient()) {
+        self.defaults = defaults
+        self.chatClient = chatClient
+        self.selectedModelId = defaults.string(forKey: Keys.selectedModelId)
+        self.selectedEffort = ModelEffort(rawValue: defaults.string(forKey: Keys.selectedEffort) ?? "") ?? .medium
+    }
+
+    /// Composer pill label: the selected model's short name (derived from
+    /// the persisted id, so it renders before the catalog loads) plus the
+    /// effort when the model supports it ("claude-sonnet-4-6 Medium"),
+    /// or the default marker.
+    var pillLabel: String {
+        guard let selectedModelId, !selectedModelId.isEmpty else { return "Default Model" }
+        let short = selectedModelId.split(separator: "/", maxSplits: 1).last.map(String.init) ?? selectedModelId
+        let selected = models.first { $0.id == selectedModelId }
+        guard selected?.supportsEffort == true else { return short }
+        return "\(short) \(selectedEffort.label)"
+    }
+
+    /// The currently selected catalog entry, when the catalog is loaded.
+    var selectedModel: RuntimeModel? {
+        models.first { $0.id == selectedModelId }
+    }
+
+    /// Effort to attach to the next send — nil unless the selected model
+    /// actually supports it (the runtime rejects unknown parameters on some
+    /// providers, so we never send it speculatively).
+    var effortForSend: String? {
+        selectedModel?.supportsEffort == true ? selectedEffort.rawValue : nil
+    }
+
+    /// Catalog rows grouped by provider, preserving catalog order — the
+    /// selector menu renders one section per provider.
+    var providers: [(provider: String, models: [RuntimeModel])] {
+        var order: [String] = []
+        var byProvider: [String: [RuntimeModel]] = [:]
+        for model in models {
+            if byProvider[model.provider] == nil { order.append(model.provider) }
+            byProvider[model.provider, default: []].append(model)
+        }
+        return order.map { ($0, byProvider[$0] ?? []) }
+    }
+
+    /// Catalog rows grouped by tier (Flagship → Standard → Fast), with
+    /// `legacy` split out for the picker's "More models" disclosure.
+    var tiers: [(tier: RuntimeModel.Tier, models: [RuntimeModel])] {
+        var grouped: [RuntimeModel.Tier: [RuntimeModel]] = [:]
+        for model in models {
+            grouped[model.resolvedTier, default: []].append(model)
+        }
+        return [RuntimeModel.Tier.flagship, .standard, .fast]
+            .compactMap { tier in grouped[tier].map { (tier, $0) } }
+    }
+
+    var legacyModels: [RuntimeModel] {
+        models.filter { $0.resolvedTier == .legacy }
+    }
+
+    /// Fetches the catalog once per launch unless forced; concurrent callers
+    /// share the in-flight request (same idiom as AgentModeStore's registry
+    /// fetch). A fetch failure is a plain error — the picker shows its
+    /// error/retry state; there is no client-side substitute catalog.
+    func fetchModelsIfNeeded(force: Bool = false) {
+        guard force || models.isEmpty, fetchTask == nil else { return }
+        isLoading = true
+        loadError = nil
+        fetchTask = Task { [weak self] in
+            guard let self else { return }
+            defer {
+                self.isLoading = false
+                self.fetchTask = nil
+            }
+            do {
+                self.models = try await self.chatClient.listModels()
+            } catch is CancellationError {
+                // View went away mid-flight — keep current state.
+                return
+            } catch {
+                self.loadError = error.localizedDescription
+                return
+            }
+            // Never leave the selection on a dead end once the catalog is
+            // known: a nil selection sends no runtimeModelId, and a backend
+            // without a configured default fails the send outright
+            // (ProviderModelNotFoundError) — as does a persisted id the
+            // catalog no longer lists (e.g. a bare id from before the
+            // catalog carried provider-prefixed ids). First catalog entry
+            // wins; the "Default Model" row still lets the user opt back
+            // into nil explicitly.
+            let selectionIsStale = self.selectedModelId != nil
+                && !self.models.contains(where: { $0.id == self.selectedModelId })
+            if let first = self.models.first, self.selectedModelId == nil || selectionIsStale {
+                self.selectedModelId = first.id
+            }
+        }
+    }
+}

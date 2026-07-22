@@ -29,6 +29,11 @@ export function getClaudeTempDir(): string {
   return getScratchpadDir()
 }
 
+/** Directory where session-scoped memory is persisted for this user. */
+export function getSessionMemoryDir(): string {
+  return join(getScratchpadDir(), 'session-memory')
+}
+
 /** Path where session-scoped memory is persisted for this user. */
 export function getSessionMemoryPath(): string {
   return join(getScratchpadDir(), 'session-memory')

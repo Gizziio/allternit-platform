@@ -2,6 +2,9 @@
 'use client'
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { useSettingsState } from '@/hooks/useSettingsState';
+import { createModuleLogger } from '@/lib/logger';
+
+const logger = createModuleLogger('SettingsView');
 
 import { ResourceUsageDashboard } from '@/components/usage/ResourceUsageDashboard';
 import { BrainsPanel } from '@/components/settings/BrainsPanel';
@@ -473,9 +476,7 @@ function ClerkAuthPanel() {
     </div>
   );
 }
-import { createModuleLogger } from '@/lib/logger';
 
-const logger = createModuleLogger('SettingsView');
 
 
 
@@ -1204,13 +1205,13 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
   );
 
   const renderSkillsPanel = () => (
-    <SkillsSettingsPanel onBrowse={() => onOpenFullManager?.('skills')} />
+    <SkillsSettingsPanel onBrowse={() => onOpenFullManager('skills')} />
   );
 
   const renderConnectorsPanel = () => (
     <div>
       <PanelHeader title="Connectors">
-        <button type="button" className={QUIET_BUTTON_CLASS} onClick={() => onOpenFullManager?.('connectors')}>
+        <button type="button" className={QUIET_BUTTON_CLASS} onClick={() => onOpenFullManager('connectors')}>
           Open full manager
         </button>
         <button type="button" className={QUIET_BUTTON_CLASS} onClick={() => void fetchConnectors()} disabled={connectorsLoading}>
@@ -1366,7 +1367,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
   // built-in app FEATURE toggle registry), which is Extensions-shaped data,
   // not plugins; that list now lives in renderExtensionsPanel instead.
   const renderPluginsPanel = () => (
-    <PluginsSettingsPanel onBrowse={() => onOpenFullManager?.('plugins')} />
+    <PluginsSettingsPanel onBrowse={() => onOpenFullManager('plugins')} />
   );
 
   const renderContent = () => {

@@ -1,8 +1,9 @@
 // @ts-nocheck
 import React, { useMemo, useReducer, useState, useEffect, useCallback, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { usePlatformUser, isPlatformAuthDisabled } from '../lib/platform-auth-client';
+import { usePlatformUser, isPlatformAuthDisabled, isDesktopShell } from '../lib/platform-auth-client';
 import { getSession } from '../lib/auth-browser';
+import { useCompanyConfig } from '../providers/company-config-provider';
 
 import { ShellFrame } from './ShellFrame';
 import { ShellRail } from './ShellRail';
@@ -95,6 +96,8 @@ function ShellAppInner(): React.ReactNode {
   const active = selectActiveView(nav)!;
   const { mode: activeMode, setMode: setActiveMode, isLoaded: modeLoaded } = useMode();
   const { isLoaded: authLoaded, isSignedIn } = usePlatformUser();
+  const { config: companyConfig } = useCompanyConfig();
+  const desktopSelfHosted = isDesktopShell() && companyConfig?.selfHosted === true;
   const themePreference = useThemeStore((state) => state.theme);
   const setThemePreference = useThemeStore((state) => state.setTheme);
   const theme = useResolvedTheme(themePreference);
@@ -199,7 +202,7 @@ function ShellAppInner(): React.ReactNode {
   }, [])
 
   // One-time agent seeding bootstrap after auth loads
-  useAgentBootstrap({ enabled: authLoaded && (isSignedIn || isPlatformAuthDisabled()) });
+  useAgentBootstrap({ enabled: authLoaded && (isSignedIn || isPlatformAuthDisabled() || desktopSelfHosted) });
 
   // Load sessions from mode-specific stores and connect to live sync
   useEffect(() => {
@@ -299,7 +302,11 @@ function ShellAppInner(): React.ReactNode {
       return;
     }
     if (activeMode === 'chat') open('chat');
-    else if (activeMode === 'cowork') open('workspace');
+    else if (activeMode === 'cowork') {
+      // See handleModeChange: cowork always opens on the session/chat screen.
+      useAgentSurfaceModeStore.getState().setSelectedMode('cowork', 'execute');
+      open('workspace');
+    }
     else if (activeMode === 'code') open('code');
     else if (activeMode === 'design') {
       setActiveMode('chat');
@@ -477,7 +484,13 @@ function ShellAppInner(): React.ReactNode {
     modeChangeSourceRef.current = 'user';
     setActiveMode(mode);
     if (mode === 'chat') open('chat');
-    if (mode === 'cowork') open('workspace');
+    if (mode === 'cowork') {
+      // Always enter cowork on the session/chat screen — a persisted sub-mode
+      // (Routines/Loops/etc.) from a previous visit must not take over the
+      // center content.
+      useAgentSurfaceModeStore.getState().setSelectedMode('cowork', 'execute');
+      open('workspace');
+    }
     if (mode === 'code') open('code');
     if (mode === 'browser') open('browser');
   }, [setActiveMode, open]);
@@ -797,18 +810,24 @@ function OnboardingGate(): React.ReactNode | null {
 function AuthGate({ children }: { children: React.ReactNode }): React.ReactNode | null {
   const navigate = useNavigate();
   const { isLoaded, isSignedIn } = usePlatformUser();
+  const { config: companyConfig, isLoading: companyConfigLoading } = useCompanyConfig();
+  // Self-hosted desktop builds ship with no Clerk credentials and are not
+  // meant to pair with Allternit Cloud at all — without this, an unpaired
+  // self-hosted desktop app bounces every route to /sign-in, which then
+  // dead-ends because there's no Clerk key to sign in with.
+  const desktopSelfHosted = isDesktopShell() && companyConfig?.selfHosted === true;
   const [allowed, setAllowed] = useState(isPlatformAuthDisabled());
 
   useEffect(() => {
-    if (!isLoaded) return;
-    if (isSignedIn || isPlatformAuthDisabled()) {
+    if (!isLoaded || companyConfigLoading) return;
+    if (isSignedIn || isPlatformAuthDisabled() || desktopSelfHosted) {
       setAllowed(true);
     } else {
       if (window.location.pathname.startsWith('/sign-in')) return;
       const returnUrl = encodeURIComponent(window.location.pathname + window.location.search);
       navigate(`/sign-in?redirect_url=${returnUrl}`, { replace: true });
     }
-  }, [isLoaded, isSignedIn, navigate]);
+  }, [isLoaded, isSignedIn, navigate, companyConfigLoading, desktopSelfHosted]);
 
   if (!allowed) return null;
 

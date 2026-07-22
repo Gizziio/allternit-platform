@@ -180,11 +180,15 @@ export const CoworkTranscript = memo(function CoworkTranscript({
         };
       }
     }
+    const pluginMention = m.metadata?.pluginMention as
+      | { kind: 'plugin' | 'connector'; id: string; name: string }
+      | undefined;
     return {
       id: m.id,
       role: m.role as 'user' | 'assistant',
       content: typeof m.content === 'string' ? m.content : '',
       createdAt: m.timestamp ? new Date(m.timestamp) : new Date(),
+      metadata: pluginMention ? { pluginMention } : undefined,
     };
   });
 

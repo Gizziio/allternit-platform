@@ -99,6 +99,13 @@ vi.mock('@/components/ai-elements/shimmer', () => ({
   Shimmer: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
 }));
 
+vi.mock('@/lib/platform-auth-client', () => ({
+  isPlatformAuthDisabled: () => true,
+  usePlatformAuth: () => ({ orgId: null, orgRole: null }),
+  usePlatformUser: () => ({ isLoaded: true, isSignedIn: false }),
+  usePlatformOrganization: () => ({ isLoaded: true, organization: null, membership: null }),
+}));
+
 vi.mock('./CodeUsageDashboard', () => ({
   CodeUsageDashboard: ({ onClose }: { onClose?: () => void }) => (
     <div data-testid="code-usage-dashboard">
@@ -160,7 +167,7 @@ describe('CodeCanvas', () => {
     renderWithDropzone(<CodeCanvas />);
 
     expect(await screen.findByTestId('code-workspace-bar')).toBeInTheDocument();
-    expect(screen.getByTestId('code-workspace-bar-environment')).toHaveTextContent('Local');
+    expect(screen.getByTestId('code-workspace-bar-environment')).toHaveTextContent('This Device');
     expect(screen.getByTestId('code-workspace-bar-workspace')).toHaveTextContent('Allternit Platform');
     expect(screen.getByTestId('code-workspace-bar-branch')).toHaveTextContent('main');
     expect(screen.getByTestId('code-workspace-bar-worktree')).toHaveTextContent('worktree');

@@ -1,4 +1,5 @@
-const CANVAS_TOKEN = '7~rPDcCXrVEvBrN6TDGQVDNm2uAxKxGe4cnc2TvuTXUAxEEAKTBEWVUTLTvyaJC2hc';
+import { getCanvasToken } from './canvas-token.ts';
+const CANVAS_TOKEN = getCanvasToken();
 const BASE_URL = 'https://canvas.instructure.com/api/v1';
 
 const PUBLIC_DESCS: Record<string, string> = {

@@ -1,0 +1,48 @@
+import Foundation
+import UserNotifications
+
+/// Local response notifications (Phase 5).
+///
+/// When the user opts in (empty-chat card → PermissionPrimingSheet → system
+/// dialog), a completed stream posts a LOCAL notification if the app isn't
+/// active at completion time. This covers the step-away-while-streaming
+/// case where the process is still alive (the SSE connection itself is
+/// cancelled on `.background` — see ChatViewModel.handleScenePhase).
+///
+/// True APNs server push — notifying when a server-side generation
+/// completes after the app was suspended or terminated — is OUT OF SCOPE
+/// for this phase: it needs backend push plumbing (device-token
+/// registration, push pipeline) plus a notification service extension.
+enum NotificationService {
+    /// System authorization, requested only after the app-owned priming
+    /// sheet (AppPermission.notifications) got a Continue.
+    static func requestAuthorization() async -> Bool {
+        do {
+            return try await UNUserNotificationCenter.current()
+                .requestAuthorization(options: [.alert, .sound, .badge])
+        } catch {
+            return false
+        }
+    }
+
+    /// Posts a local "Allternit responded" notification when the user has
+    /// granted authorization; a no-op otherwise. Called on stream
+    /// completion when the app isn't active (the caller checks app state).
+    static func postResponseNotification(preview: String) async {
+        let center = UNUserNotificationCenter.current()
+        let settings = await center.notificationSettings()
+        guard settings.authorizationStatus == .authorized else { return }
+
+        let content = UNMutableNotificationContent()
+        content.title = "Allternit responded"
+        content.body = preview.isEmpty ? "Your response is ready." : preview
+        content.sound = .default
+
+        let request = UNNotificationRequest(
+            identifier: UUID().uuidString,
+            content: content,
+            trigger: nil // deliver immediately
+        )
+        try? await center.add(request)
+    }
+}

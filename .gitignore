@@ -87,3 +87,8 @@ surfaces/ai.allternit.com/knip-exports.json
 .playwright-cli/
 *.tmp.cjs
 services/voice/.packaging-venv/
+
+# repo reorg 2026-07-22: keep accidental/scratch output out of the tree
+Desktop/
+output/
+dispatch-screenshots/

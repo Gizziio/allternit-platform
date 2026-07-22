@@ -14,28 +14,49 @@ We use a **monorepo + satellite repo** architecture:
 The monorepo contains everything needed to build, test, and deploy the full Allternit platform.
 
 ```
-allternit-platform/
+allternit/
 ├── cmd/                      # CLI binaries and API servers
 │   ├── allternit-api/        # Main API server
 │   ├── allternit-cloud-api/  # Cloud deployment API
 │   ├── allternit-cloud-wizard/
+│   ├── allternit-mux/
+│   ├── launcher/
 │   └── gizzi-code/           # Gizzi Code CLI source
-├── packages/@allternit/      # Internal SDK packages (being consolidated into platform/)
-├── platform/                 # Contracts, protocols, SDK, and shared platform packages
-├── plugins/                  # Card plugins
-├── sdk/                      # Public SDK build target (sdk/allternit-sdk)
-├── surfaces/                 # Web apps and desktop surfaces
-│   ├── ai.allternit.com/     # Main web surface
-│   └── allternit-desktop/    # Desktop shell
-├── domains/                  # Domain logic (kernel, governance)
 ├── api/                      # Backend API services (gateway, cloud, workspace)
 ├── services/                 # Long-running services (memory, voice, registry, orchestration)
-├── infrastructure/           # Cloud providers, executors, bridges
-├── mcp/                      # Model Context Protocol crates (moved from domains/mcp/)
+├── domains/                  # Domain logic (agent, agent-swarm, cowork, governance, kernel, tenants)
+├── infrastructure/           # Cloud providers, executors, bridges (alias: infra/ symlink)
+├── mcp/                      # Model Context Protocol crates
 ├── drivers/                  # VM and hardware drivers (firecracker, apple-vf)
 ├── rails/                    # Agent Rails execution engine
-└── ...
+├── packages/@allternit/      # Internal SDK packages (being consolidated into platform/)
+├── platform/                 # Contracts, protocols, SDK, plugin runtime, shared packages
+├── sdk/                      # Public SDK packages
+├── surfaces/                 # Web apps and desktop surfaces
+│   ├── ai.allternit.com/     # Main web surface (alias: ui/ symlink → its src/)
+│   ├── allternit-desktop/    # Desktop shell (Electron)
+│   ├── allternit-extensions/ # Browser extensions
+│   ├── allternit-mobile/     # Mobile surface
+│   └── docs/                 # Docs surface
+├── docs/                     # Documentation hub (archive/, gap-analysis/, learnings/, reports/, specs/)
+├── research/                 # Active research & planning docs (+ adr/)
+├── spec/                     # Contract schemas + specs (wired into rails)
+├── scripts/                  # Repo automation (A://Labs Canvas pipeline, builds; adhoc/ for one-offs)
+├── bin/                      # Executable helpers (dev-up, ci-gate, ...)
+├── dev/                      # Dev-ops + migration scripts
+├── tests/                    # Acceptance/e2e/integration/load suites
+├── tools/                    # Misc tooling (cowork-integration, deployment, mcp-servers)
+├── config/                   # allternit.json + system config (read by live code)
+├── resources/                # company.json (config:company:write output) + vm/
+├── patches/                  # pnpm patchedDependencies
+├── archive/                  # Retired material: card plugins, orphan crates, card-templates, alabs-curator
+├── alabs-generated-courses/  # A://Labs courseware source of truth (+ demos/)
+├── alabs-module-template/    # Shared HTML shell for course modules
+├── remix-content/            # Remix pipeline course content + plans/
+└── worktree-manager/         # Git worktree management crate
 ```
+
+> Reorganized 2026-07-22: removed `plugins/` (empty; card plugins live in `archive/plugins/`, runtime in `platform/plugins/`), root `src/`, `data/`, `public/`, `proof/`, `output/`, `dispatch-screenshots/`, `Desktop/` (accidental commit), and merged `analysis/` → `docs/gap-analysis/`, `reports/` → `docs/reports/`, `alabs-demos/` → `alabs-generated-courses/demos/`, `remix-plans/` → `remix-content/plans/`, `agent/`/`templates/`/`alabs-curator/` → `archive/`.
 
 ## Satellite Repos
 

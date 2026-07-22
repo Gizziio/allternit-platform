@@ -16,12 +16,16 @@ const THEME = {
 };
 
 function ChatCoworkToggle() {
-  const { mode: appMode, setMode } = useMode();
+  const { mode: appMode } = useMode();
   if (appMode !== 'chat' && appMode !== 'cowork') return null;
   const mode = appMode === 'cowork' ? 'cowork' : 'chat';
 
   const handleSwitch = (next: 'chat' | 'cowork') => {
-    setMode(next);
+    // Route through the shell's mode-change handler (not just the persisted
+    // mode value) so the mode's home view always opens — otherwise, when the
+    // mode is already `cowork` but another view is showing (e.g. Automation
+    // Tasks), the toggle is a no-op and the user stays stuck on that view.
+    window.dispatchEvent(new CustomEvent('allternit:switch-mode', { detail: { mode: next } }));
   };
 
   return (

@@ -6,6 +6,7 @@ import { getEnterpriseUsageSummary } from "@/lib/enterprise-usage";
 import { listCloudCredentials } from "@/lib/design/cloud-credentials";
 
 vi.mock("@/lib/platform-auth-client", () => ({
+  isPlatformAuthDisabled: () => false,
   usePlatformAuth: () => ({ orgId: "org_test", orgRole: "org:admin" }),
   usePlatformUser: () => ({ isLoaded: true, isSignedIn: true }),
   usePlatformOrganization: () => ({

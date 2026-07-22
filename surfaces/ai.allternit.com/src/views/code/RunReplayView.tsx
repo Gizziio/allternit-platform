@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { apiRequest, API_BASE_URL } from '@/lib/agents/api-config';
+import { apiRequest, runtimeApiUrl } from '@/lib/agents/api-config';
 import { Wrench, Brain, User, Terminal, Play, Pause, SkipBack, SkipForward, CaretLeft, CaretRight, Clock } from '@phosphor-icons/react';
 import { GlassCard } from '../../design/glass/GlassCard';
 
@@ -59,7 +59,7 @@ export function RunReplayView({ sessionId }: { sessionId?: string } = {}) {
 
   useEffect(() => {
     if (!sessionId) return;
-    apiRequest<{ steps: ReplayStep[] }>(`${API_BASE_URL}/sessions/replay`, { method: 'POST', body: JSON.stringify({ sessionId }) })
+    apiRequest<{ steps: ReplayStep[] }>(runtimeApiUrl('/sessions/replay'), { method: 'POST', body: JSON.stringify({ sessionId }) })
       .then(({ steps: loaded }) => { setSteps(loaded); if (loaded.length > 0) setActiveStepId(loaded[0].id); })
       .catch(() => {});
   }, [sessionId]);

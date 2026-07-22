@@ -1,5 +1,8 @@
 // @ts-nocheck
-
+import "./devMacro"
+import "drizzle-orm/sqlite-core/db.js"
+import "drizzle-orm/sqlite-core/session.js"
+import "drizzle-orm/bun-sqlite/session.js"
 import yargs from "yargs"
 import { hideBin } from "yargs/helpers"
 import { RunCommand } from "@/cli/commands/run"
@@ -12,7 +15,7 @@ import { UninstallCommand } from "@/cli/commands/uninstall"
 import { ModelsCommand } from "@/cli/commands/models"
 import { UI } from "@/cli/ui"
 import { Installation } from "@/shared/installation"
-import { NamedError } from "@allternit/gizzi-util/error.js"
+import { NamedErrorBase } from "@allternit/gizzi-util/error.js"
 import { FormatError } from "@/shared/error/format"
 import { ServeCommand } from "@/cli/commands/serve"
 import { Filesystem } from "@/shared/util/filesystem"
@@ -47,6 +50,7 @@ import path from "path"
 import { Global, init as initGlobal } from "@/runtime/context/global"
 import { JsonMigration } from "@/runtime/session/storage/json-migration"
 import { Database } from "@/runtime/session/storage/db"
+import { RuntimeTelemetry } from "@/runtime/telemetry"
 // ResolveMessage is a global class from bun-types
 declare class ResolveMessage {
   readonly name: "ResolveMessage"
@@ -72,7 +76,7 @@ process.on("uncaughtException", (e) => {
 
 const cli = yargs(hideBin(process.argv))
   .parserConfiguration({ "populate--": true })
-  .scriptName("gizzi-code")
+  .scriptName("gizzi")
   .wrap(100)
   .help("help", "show help")
   .alias("help", "h")
@@ -104,6 +108,9 @@ const cli = yargs(hideBin(process.argv))
         if (Installation.isLocal()) return "DEBUG"
         return "INFO"
       })(),
+    })
+    RuntimeTelemetry.attach((record) => {
+      Log.Default.info("runtime.telemetry", record)
     })
 
     process.env.AGENT = "1"
@@ -178,7 +185,7 @@ try {
   await cli.parse()
 } catch (e) {
   let data: Record<string, any> = {}
-  if (e instanceof NamedError) {
+  if (e instanceof NamedErrorBase) {
     const obj = e.toObject()
     Object.assign(data, {
       ...obj.data,
@@ -210,15 +217,9 @@ try {
   if (formatted) UI.error(formatted)
   if (formatted === undefined) {
     UI.error("Unexpected error, check log file at " + Log.file() + " for more details" + EOL)
-    process.stderr.write((e instanceof Error ? e.message : String(e)) + EOL)
+    process.stderr.write((e instanceof Error ? (e.stack || e.message) : String(e)) + EOL)
   }
   process.exitCode = 1
-} finally {
-  // Some subprocesses don't react properly to SIGTERM and similar signals.
-  // Most notably, some docker-container-based MCP servers don't handle such signals unless
-  // run using `docker run --init`.
-  // Explicitly exit to avoid any hanging subprocesses.
-  process.exit()
 }
 // Sat Mar 14 17:36:51 CDT 2026
 // force recompile Sat Mar 14 17:51:09 CDT 2026

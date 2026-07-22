@@ -1,3 +1,4 @@
+import React from 'react';
 /**
  * PluginReviews Component Tests
  *
@@ -280,7 +281,7 @@ describe('PluginReviews', () => {
       });
 
       // Submit - button text might be 'Update Review' or 'Submit Review'
-      const submitButton = screen.getByRole('button', { name: /Submit|Update/ });
+      const submitButton = screen.getByRole('button', { name: /^(Submit Review|Update Review)$/ });
       await act(async () => {
         fireEvent.click(submitButton);
       });

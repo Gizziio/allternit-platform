@@ -1,0 +1,37 @@
+{
+  "title": "Module Quiz: ALABS-ADV-WORKFLOW-bridge",
+  "questions": [
+    {
+      "question": "Quiz 1: Why does the platform use separate queues for user-facing vs background workflows?",
+      "options": [
+        "A User-facing workflows have strict latency requirements and need priority sorting so critical paths (like onboarding) aren't blocked by background ETL jobs.",
+        "B Background workflows use a completely different engine that doesn't support DAG execution, so they must run in a separate process.",
+        "C The scheduler can only handle one queue at a time; multiple queues are a workaround for a single-threaded architecture.",
+        "D User-facing workflows are always synchronous HTTP handlers and don't need a scheduler at all."
+      ],
+      "correctIndex": null
+    },
+    {
+      "question": "Quiz 2: What information is captured in an execution trace?",
+      "options": [
+        "A Only the final workflow output and a boolean success flag.",
+        "B Per-node status transitions, start/completion timestamps, input/output data, retry counts, error codes, and the full execution path.",
+        "C The Git commit hash of the workflow definition and the CPU temperature of the host machine.",
+        "D Only the names of nodes that failed; successful nodes are not logged to save storage."
+      ],
+      "correctIndex": 0,
+      "explanation": "A Only the final workflow output and a boolean success flag."
+    },
+    {
+      "question": "Quiz 3: How does the platform handle a node that exceeds its timeout?",
+      "options": [
+        "A The workflow engine immediately crashes the entire process to free resources.",
+        "B The scheduler's AbortController signals cancellation, the node executor throws an error, and the engine either retries or fails the workflow based on errorHandling config.",
+        "C Timeouts are ignored because the engine assumes all nodes will eventually complete.",
+        "D The node is moved to the background scheduler's queue to finish without blocking user-facing work."
+      ],
+      "correctIndex": 0,
+      "explanation": "A The workflow engine immediately crashes the entire process to free resources."
+    }
+  ]
+}

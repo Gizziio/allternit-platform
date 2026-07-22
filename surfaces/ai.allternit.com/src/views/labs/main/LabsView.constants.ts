@@ -107,6 +107,13 @@ export const FALLBACK_COURSES: ALABSCourse[] = [
     capstone: 'Design and publish an MCP server with 5+ custom tools used by 10+ users.',
     coverImage: '',
   },
+  {
+    id: 'course-platform', code: 'ALABS-PLATFORM', title: 'A://Labs — Platform Architecture',
+    description: 'How the Allternit platform surface is built, from shell routing and auth to agents, design tokens, and deployment.',
+    tier: 'ADV', canvasUrl: '', modules: 5,
+    capstone: 'Trace a feature end-to-end through the platform shell, agent layer, and build pipeline.',
+    coverImage: '',
+  },
 ];
 
 export const L = {

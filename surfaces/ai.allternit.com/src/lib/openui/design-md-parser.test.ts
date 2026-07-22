@@ -47,6 +47,6 @@ High contrast mode mandatory.
 
   it('handles empty or malformed input gracefully', () => {
       const tokens = parseDesignMd('');
-      expect(tokens.colors.primary).toBe('#d4b08c'); // Should return defaults
+      expect(tokens.colors.primary).toBe('var(--accent-primary)'); // Should return defaults
   });
 });

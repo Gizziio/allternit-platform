@@ -1,0 +1,9 @@
+{
+  "data-visualization-server": {
+    "type": "http",
+    "url": "https://plugins.anthropic.com/mcp/data-visualization",
+    "headers": {
+      "X-Plugin": "data-visualization"
+    }
+  }
+}

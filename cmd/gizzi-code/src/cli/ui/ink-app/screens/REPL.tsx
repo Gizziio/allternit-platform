@@ -703,6 +703,9 @@ export function REPL({
 }: Props): React.ReactNode {
   const isRemoteSession = !!remoteSessionConfig;
 
+  // Agent definition is state so /resume can update it mid-session
+  const [mainThreadAgentDefinition, setMainThreadAgentDefinition] = useState(initialMainThreadAgentDefinition);
+
   // Initialize AllternitHarness for SDK-based streaming (when feature flag is enabled)
   const harness = useMemo(() => {
     if (shouldUseHarness()) {
@@ -743,8 +746,6 @@ export function REPL({
     return () => logForDebugging(`[REPL:unmount] REPL unmounting`);
   }, [disabled]);
 
-  // Agent definition is state so /resume can update it mid-session
-  const [mainThreadAgentDefinition, setMainThreadAgentDefinition] = useState(initialMainThreadAgentDefinition);
   const toolPermissionContext = useAppState(s => s.toolPermissionContext);
   const verbose = useAppState(s => s.verbose);
   const mcp = useAppState(s => s.mcp);
@@ -1285,7 +1286,7 @@ export function REPL({
   // session from mid-conversation context.
   const haikuTitleAttemptedRef = useRef((initialMessages?.length ?? 0) > 0);
   const agentTitle = mainThreadAgentDefinition?.agentType;
-  const terminalTitle = sessionTitle ?? agentTitle ?? haikuTitle ?? 'Claude Code';
+  const terminalTitle = sessionTitle ?? agentTitle ?? haikuTitle ?? 'Gizzi Code';
   const isWaitingForApproval = toolUseConfirmQueue.length > 0 || promptQueue.length > 0 || pendingWorkerRequest || pendingSandboxRequest;
   // Local-jsx commands (like /plugin, /config) show user-facing dialogs that
   // wait for input. Require jsx != null — if the flag is stuck true but jsx
@@ -2569,7 +2570,7 @@ export function REPL({
         debug,
         verbose: s.verbose,
         mainLoopModel,
-        thinkingConfig: s.thinkingEnabled !== false ? thinkingConfig : {
+        thinkingConfig: s.thinkingEnabled !== false ? (s.thinkingConfigOverride ?? thinkingConfig) : {
           type: 'disabled'
         },
         // Merge fresh from store rather than closing over useMergedClients'

@@ -1,0 +1,38 @@
+{
+  "title": "Module Quiz: ALABS-ADV-PLUGINSDK-module3",
+  "questions": [
+    {
+      "question": "What happens if a plugin's required permissions exceed the host's grant?",
+      "options": [
+        "The plugin runs in a degraded mode with reduced functionality",
+        "The plugin fails to initialize and the host rejects activation",
+        "The host auto-grants the missing permissions after a warning",
+        "The plugin silently ignores the missing capabilities"
+      ],
+      "correctIndex": 1,
+      "explanation": "Correct! The host's <code>checkPermissions()</code> function returns <code>ok: false</code> when any required tool is missing. The plugin fails to initialize and the host shows an error to the user. Optional tools with fallback modes can degrade gracefully, but required permissions are hard gates."
+    },
+    {
+      "question": "When is a plugin update considered \"breaking\"?",
+      "options": [
+        "When the patch version increments (e.g. 1.2.3 → 1.2.4)",
+        "When the download size increases by more than 10%",
+        "When a required permission is added or a function signature changes",
+        "When the README is rewritten with new branding"
+      ],
+      "correctIndex": 2,
+      "explanation": "Correct! A breaking change is anything that breaks existing consumers. Adding a required permission (e.g. a new mandatory tool) or changing a function's parameter schema forces hosts to update — this demands a MAJOR version bump under SemVer."
+    },
+    {
+      "question": "Why code-sign plugins instead of just hashing?",
+      "options": [
+        "Hashing is too slow for large packages",
+        "Signing proves authorship and integrity; hashing only proves integrity",
+        "Hashing doesn't work with binary files",
+        "Signatures are smaller than hashes"
+      ],
+      "correctIndex": 1,
+      "explanation": "Correct! A hash (e.g. SHA-256) only proves that the bits haven't changed since hashing. A digital signature proves both integrity <em>and</em> authenticity — it cryptographically binds the package to the publisher's identity, which is essential for trust in a distributed plugin ecosystem."
+    }
+  ]
+}

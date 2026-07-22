@@ -248,6 +248,150 @@ async fn create_evaluation(
     )
 }
 
+/// One test case in an evaluation's `dataset`. `expected`/`contains` are
+/// substring checks (case-insensitive) against the agent's reply; a case
+/// with neither is a smoke test that passes on any non-empty reply.
+#[derive(Debug, Deserialize)]
+struct EvalCase {
+    input: String,
+    #[serde(default)]
+    expected: Option<String>,
+    #[serde(default)]
+    contains: Option<Vec<String>>,
+}
+
+/// Bounded so one `run` request can't tie up the HTTP handler indefinitely —
+/// this runs synchronously inline rather than as a background job (unlike
+/// the DAG/checkpoint work elsewhere, this endpoint's existing contract
+/// returns `status: "completed"` immediately). Making this a real background
+/// job through `RunManager`/the queue would remove the need for these caps;
+/// stated as follow-on work, not built here.
+const MAX_EVAL_CASES: usize = 10;
+const EVAL_CASE_TIMEOUT_SECS: u64 = 20;
+
+fn grade(reply: &str, case: &EvalCase) -> bool {
+    let reply_lc = reply.to_lowercase();
+    if let Some(ref expected) = case.expected {
+        if !reply_lc.contains(&expected.to_lowercase()) {
+            return false;
+        }
+    }
+    if let Some(ref needles) = case.contains {
+        if !needles.iter().all(|n| reply_lc.contains(&n.to_lowercase())) {
+            return false;
+        }
+    }
+    !reply.trim().is_empty()
+}
+
+/// Runs one eval case against `agent_id` in a throwaway Gizzi session
+/// (created, used, deleted — evaluation runs shouldn't clutter the user's
+/// session list) and returns the agent's reply text.
+async fn run_eval_case(agent_id: &str, input: &str) -> Result<String, String> {
+    let client = crate::agent_session_routes::gizzi_client(&HeaderMap::new());
+    let gizzi_base = crate::config::AppConfig::load()
+        .terminal_server_url()
+        .trim_end_matches('/')
+        .to_string();
+
+    let create_payload = json!({ "title": "Evaluation run", "agentID": agent_id });
+    let create_resp = client
+        .post(format!("{gizzi_base}/v1/session"))
+        .json(&create_payload)
+        .send()
+        .await
+        .map_err(|e| format!("session create failed: {e}"))?;
+    if !create_resp.status().is_success() {
+        return Err(format!(
+            "session create failed: {}",
+            create_resp.text().await.unwrap_or_default()
+        ));
+    }
+    let session: Value = create_resp
+        .json()
+        .await
+        .map_err(|e| format!("session create response parse failed: {e}"))?;
+    let session_id = session
+        .get("id")
+        .and_then(|v| v.as_str())
+        .ok_or("session create returned no id")?
+        .to_string();
+
+    let message_result = async {
+        let msg_path = format!(
+            "{gizzi_base}/v1/session/{}/message",
+            urlencoding::encode(&session_id)
+        );
+        let msg_resp = client
+            .post(&msg_path)
+            .json(&json!({ "parts": [{ "type": "text", "text": input }] }))
+            .send()
+            .await
+            .map_err(|e| format!("message send failed: {e}"))?;
+        if !msg_resp.status().is_success() {
+            return Err(format!(
+                "message send failed: {}",
+                msg_resp.text().await.unwrap_or_default()
+            ));
+        }
+
+        let messages_path = format!(
+            "{gizzi_base}/v1/session/{}/messages",
+            urlencoding::encode(&session_id)
+        );
+        for _ in 0..EVAL_CASE_TIMEOUT_SECS {
+            tokio::time::sleep(std::time::Duration::from_secs(1)).await;
+            let messages: Vec<Value> = client
+                .get(&messages_path)
+                .send()
+                .await
+                .map_err(|e| format!("messages fetch failed: {e}"))?
+                .json()
+                .await
+                .map_err(|e| format!("messages parse failed: {e}"))?;
+            let reply = messages.iter().rev().find(|m| {
+                m.get("info").and_then(|i| i.get("role")).and_then(|v| v.as_str())
+                    == Some("assistant")
+                    && m.get("info")
+                        .and_then(|i| i.get("time"))
+                        .and_then(|t| t.get("completed"))
+                        .is_some()
+            });
+            if let Some(reply) = reply {
+                let text = reply
+                    .get("parts")
+                    .and_then(|p| p.as_array())
+                    .map(|parts| {
+                        parts
+                            .iter()
+                            .filter_map(|p| p.get("text").and_then(|t| t.as_str()))
+                            .collect::<Vec<_>>()
+                            .join("\n")
+                    })
+                    .unwrap_or_default();
+                if !text.trim().is_empty() {
+                    return Ok(text);
+                }
+            }
+        }
+        Err("timed out waiting for agent reply".to_string())
+    }
+    .await;
+
+    // Best-effort cleanup regardless of outcome — an eval run shouldn't leave
+    // a trail of throwaway sessions behind either way.
+    let _ = client
+        .delete(format!(
+            "{gizzi_base}/v1/session/{}",
+            urlencoding::encode(&session_id)
+        ))
+        .send()
+        .await;
+
+    message_result
+}
+
+#[tracing::instrument(skip_all, name = "agent_operations.run_evaluation", fields(evaluation_id = %id))]
 async fn run_evaluation(
     State(state): State<Arc<AppState>>,
     Path(id): Path<String>,
@@ -258,43 +402,104 @@ async fn run_evaluation(
         Some(u) => u,
         None => return unauthorized(),
     };
+    let (target, dataset_raw): (String, Option<String>) = {
+        let conn = match connect(&state) {
+            Ok(c) => c,
+            Err(r) => return r,
+        };
+        match conn
+            .query_row(
+                "SELECT target, dataset FROM agent_evaluations WHERE id=?1 AND user_id=?2",
+                params![id, user.user_id],
+                |r| Ok((r.get(0)?, r.get(1)?)),
+            )
+            .optional()
+        {
+            Ok(Some(row)) => row,
+            Ok(None) => {
+                return (
+                    StatusCode::NOT_FOUND,
+                    Json(json!({"error": "Evaluation not found"})),
+                )
+            }
+            Err(e) => return db_error("find evaluation", e),
+        }
+    };
+
+    let cases: Vec<EvalCase> = match dataset_raw {
+        Some(raw) => match serde_json::from_str::<Vec<EvalCase>>(&raw) {
+            Ok(cases) => cases,
+            Err(e) => {
+                return (
+                    StatusCode::UNPROCESSABLE_ENTITY,
+                    Json(json!({"error": format!("dataset is not a valid case list: {e}")})),
+                )
+            }
+        },
+        None => Vec::new(),
+    };
+
+    let started = std::time::Instant::now();
+    let mut details = Vec::new();
+    let mut passed = 0i64;
+    let mut failed = 0i64;
+
+    for case in cases.iter().take(MAX_EVAL_CASES) {
+        match run_eval_case(&target, &case.input).await {
+            Ok(reply) => {
+                let ok = grade(&reply, case);
+                if ok {
+                    passed += 1;
+                } else {
+                    failed += 1;
+                }
+                details.push(json!({
+                    "input": case.input,
+                    "reply": reply,
+                    "passed": ok,
+                }));
+            }
+            Err(e) => {
+                failed += 1;
+                details.push(json!({
+                    "input": case.input,
+                    "error": e,
+                    "passed": false,
+                }));
+            }
+        }
+    }
+    let skipped = cases.len().saturating_sub(MAX_EVAL_CASES) as i64;
+    let total = passed + failed;
+    let score = if total > 0 { (passed * 100) / total } else { 0 };
+    let duration_ms = started.elapsed().as_millis() as i64;
+
     let conn = match connect(&state) {
         Ok(c) => c,
         Err(r) => return r,
     };
-    let exists: bool = match conn.query_row(
-        "SELECT EXISTS(SELECT 1 FROM agent_evaluations WHERE id=?1 AND user_id=?2)",
-        params![id, user.user_id],
-        |r| r.get(0),
-    ) {
-        Ok(v) => v,
-        Err(e) => return db_error("find evaluation", e),
-    };
-    if !exists {
-        return (
-            StatusCode::NOT_FOUND,
-            Json(json!({"error": "Evaluation not found"})),
-        );
-    }
-
-    // No evaluation engine exists yet: record an honest empty run (zero tests, no results).
     let now = chrono::Utc::now().to_rfc3339();
     let run_id = uuid::Uuid::new_v4().to_string();
-    let details = json!([]);
-    if let Err(e) = conn.execute("INSERT INTO agent_evaluation_runs(id,evaluation_id,user_id,status,score,total,passed,failed,skipped,duration_ms,details,created_at) VALUES(?1,?2,?3,'completed',0,0,0,0,0,0,?4,?5)", params![run_id,id,user.user_id,details.to_string(),now]) {
+    let details_json = json!(details);
+    if let Err(e) = conn.execute(
+        "INSERT INTO agent_evaluation_runs(id,evaluation_id,user_id,status,score,total,passed,failed,skipped,duration_ms,details,created_at) VALUES(?1,?2,?3,'completed',?4,?5,?6,?7,?8,?9,?10,?11)",
+        params![run_id, id, user.user_id, score, total, passed, failed, skipped, duration_ms, details_json.to_string(), now],
+    ) {
         return db_error("persist evaluation run", e);
     }
     if let Err(e) = conn.execute(
-        "UPDATE agent_evaluations SET status='completed',score=0,last_run=?1 WHERE id=?2",
-        params![now, id],
+        "UPDATE agent_evaluations SET status='completed',score=?1,last_run=?2 WHERE id=?3",
+        params![score, now, id],
     ) {
         return db_error("update evaluation", e);
     }
     (
         StatusCode::OK,
-        Json(
-            json!({"runId": run_id, "evaluationId": id, "status": "completed", "summary": {"total": 0, "passed": 0, "failed": 0, "skipped": 0}, "duration": 0, "details": details}),
-        ),
+        Json(json!({
+            "runId": run_id, "evaluationId": id, "status": "completed",
+            "summary": {"total": total, "passed": passed, "failed": failed, "skipped": skipped},
+            "duration": duration_ms, "details": details_json
+        })),
     )
 }
 

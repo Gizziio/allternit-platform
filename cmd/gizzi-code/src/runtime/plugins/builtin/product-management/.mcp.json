@@ -1,0 +1,9 @@
+{
+  "product-management-server": {
+    "type": "http",
+    "url": "https://plugins.anthropic.com/mcp/product-management",
+    "headers": {
+      "X-Plugin": "product-management"
+    }
+  }
+}

@@ -18,6 +18,8 @@ import { PermissionNext } from "@/runtime/tools/guard/permission/next"
 import { Question } from "@/runtime/integrations/question"
 import { SessionUsage } from "@/runtime/session/usage"
 import { describeProviderError } from "@/shared/util/provider-error"
+import { SessionTrace } from "@/runtime/session/trace"
+import { ContextProjector } from "@/runtime/session/context-projector"
 
 export namespace SessionProcessor {
   const DOOM_LOOP_THRESHOLD = 3
@@ -40,6 +42,7 @@ export namespace SessionProcessor {
     let blocked = false
     let attempt = 0
     let needsCompaction = false
+    let mediaRecovery: "none" | "degraded" | "stripped" = "none"
 
     const result = {
       get message() {
@@ -589,6 +592,31 @@ export namespace SessionProcessor {
               error: e,
               stack: JSON.stringify(e.stack),
             })
+            const rawError = e instanceof Error ? e.message : String(e)
+            if (isPayloadTooLarge(e) && mediaRecovery !== "stripped") {
+              streamInput.messages = mediaRecovery === "none"
+                ? ContextProjector.degradeOlderMedia(streamInput.messages)
+                : ContextProjector.stripMedia(streamInput.messages)
+              mediaRecovery = mediaRecovery === "none" ? "degraded" : "stripped"
+              SessionTrace.append({
+                sessionID: input.sessionID,
+                kind: "request.failed",
+                messageID: input.assistantMessage.id,
+                data: { requestID: streamInput.user.id, recovery: mediaRecovery, reason: "payload_too_large", error: rawError },
+              })
+              continue
+            }
+            if (isUnsupportedMedia(e) && mediaRecovery !== "stripped") {
+              streamInput.messages = ContextProjector.stripMedia(streamInput.messages)
+              mediaRecovery = "stripped"
+              SessionTrace.append({
+                sessionID: input.sessionID,
+                kind: "request.failed",
+                messageID: input.assistantMessage.id,
+                data: { requestID: streamInput.user.id, recovery: mediaRecovery, reason: "unsupported_media", error: rawError },
+              })
+              continue
+            }
             const error = MessageV2.fromError(e, { providerID: input.model.providerID })
             if (MessageV2.ContextOverflowError.isInstance(error)) {
               log.warn("context overflow detected, triggering compaction", {
@@ -697,6 +725,28 @@ export namespace SessionProcessor {
           }
           input.assistantMessage.time.completed = Date.now()
           await Session.updateMessage(input.assistantMessage)
+          SessionTrace.append({
+            sessionID: input.sessionID,
+            kind: input.assistantMessage.error ? "request.failed" : "request.completed",
+            messageID: input.assistantMessage.id,
+            data: input.assistantMessage.error
+              ? {
+                  requestID: streamInput.user.id,
+                  providerID: input.model.providerID,
+                  modelID: input.model.id,
+                  attempt,
+                  error: input.assistantMessage.error,
+                }
+              : {
+                  requestID: streamInput.user.id,
+                  providerID: input.model.providerID,
+                  modelID: input.model.id,
+                  attempt,
+                  finish: input.assistantMessage.finish,
+                  tokens: input.assistantMessage.tokens,
+                  cost: input.assistantMessage.cost,
+                },
+          })
           if (needsCompaction) return "compact"
           if (blocked) return "stop"
           if (input.assistantMessage.error) return "stop"
@@ -705,5 +755,15 @@ export namespace SessionProcessor {
       },
     }
     return result
+  }
+
+  function isPayloadTooLarge(error: unknown) {
+    const value = error as { status?: number; statusCode?: number; message?: string; cause?: unknown }
+    return value?.status === 413 || value?.statusCode === 413 || /(?:413|payload|request body).*(?:too large|limit)|entity too large/i.test(value?.message ?? String(error))
+  }
+
+  function isUnsupportedMedia(error: unknown) {
+    const message = (error as { message?: string })?.message ?? String(error)
+    return /unsupported (?:image|media)|invalid image|image format|media type.*not supported/i.test(message)
   }
 }

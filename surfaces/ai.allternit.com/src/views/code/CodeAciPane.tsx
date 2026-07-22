@@ -32,7 +32,29 @@ export function CodeAciPane({ onClose }: { onClose: () => void }): React.ReactNo
 
   useEffect(() => {
     setEngineBaseUrl(getPlatformComputerUseBaseUrl());
-    queueMicrotask(() => void useBrowserAgentStore.getState().refreshEngineHealth());
+    let cancelled = false;
+    let refreshTimer: ReturnType<typeof setInterval> | null = null;
+    queueMicrotask(async () => {
+      const store = useBrowserAgentStore.getState();
+      await store.refreshEngineHealth();
+      if (cancelled || !useBrowserAgentStore.getState().engineHealthy) return;
+      // Bring up the engine browser session so the pane shows a live view
+      // instead of waiting for an agent run to produce screenshots.
+      await useBrowserAgentStore.getState().startBrowserSession();
+      // While no run is streaming screenshots over SSE, keep the idle view
+      // fresh with a slow poll.
+      refreshTimer = setInterval(() => {
+        const current = useBrowserAgentStore.getState();
+        if (!current.engineHealthy) return;
+        // An active run streams its own screenshots over SSE — don't compete.
+        if (current.status === 'Running' || current.status === 'WaitingApproval') return;
+        void current.startBrowserSession();
+      }, 5000);
+    });
+    return () => {
+      cancelled = true;
+      if (refreshTimer) clearInterval(refreshTimer);
+    };
   }, [setEngineBaseUrl]);
 
   useEffect(() => {

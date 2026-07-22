@@ -1,0 +1,15 @@
+{
+  "name": "legal-contracts",
+  "version": "1.0.0",
+  "description": "Contract review and legal analysis tools.",
+  "author": {
+    "name": "Anthropic",
+    "email": "support@anthropic.com"
+  },
+  "keywords": [
+    "legal",
+    "claude",
+    "builtin"
+  ],
+  "license": "MIT"
+}

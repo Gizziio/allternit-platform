@@ -760,6 +760,14 @@ export namespace Config {
         .positive()
         .optional()
         .describe("Maximum number of agentic iterations before forcing text-only response"),
+      summary_policy: z
+        .object({
+          min_chars: z.number().int().nonnegative(),
+          continuation_prompt: z.string().min(1),
+          retries: z.number().int().min(0).max(3),
+        })
+        .optional()
+        .describe("Require a substantive subagent handoff, with bounded continuation turns when too brief."),
       maxSteps: z.number().int().positive().optional().describe("@deprecated Use 'steps' field instead."),
       permission: Permission.optional(),
       harness: z
@@ -1310,6 +1318,10 @@ export namespace Config {
             .array(z.string())
             .optional()
             .describe("Tools that should only be available to primary agents."),
+          dynamic_tool_selection: z
+            .boolean()
+            .optional()
+            .describe("Defer MCP tool schemas until the agent loads them with select_tools."),
           continue_loop_on_deny: z.boolean().optional().describe("Continue the agent loop when a tool call is denied"),
           retry_max_attempts: z
             .number()

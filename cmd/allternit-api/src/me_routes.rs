@@ -9,7 +9,7 @@ use axum::{
     Json, Router,
 };
 use rusqlite::params;
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
 use serde_json::json;
 use std::sync::Arc;
 use tracing::warn;
@@ -21,6 +21,7 @@ use crate::AppState;
 pub fn me_router() -> Router<Arc<AppState>> {
     Router::new()
         .route("/me", get(get_current_user))
+        .route("/me/usage", get(get_my_usage))
         .route("/me/organization", post(create_personal_organization))
 }
 
@@ -133,6 +134,119 @@ async fn get_current_user(
             (
                 StatusCode::INTERNAL_SERVER_ERROR,
                 Json(json!({"error": "internal error"})),
+            )
+                .into_response()
+        }
+    }
+}
+
+/// Shape read from the cloud API's usage endpoint (the quota/entitlements
+/// service in cmd/allternit-cloud-api — quota_service.rs /
+/// hosted_entitlements.rs). Every field defaults so a partial upstream
+/// payload still yields a complete client-facing response.
+#[derive(Deserialize)]
+#[serde(rename_all = "camelCase", default)]
+struct CloudUsageResponse {
+    plan: String,
+    weekly_used: f64,
+    weekly_limit: f64,
+    resets_at: Option<String>,
+    credits: Option<f64>,
+}
+
+impl Default for CloudUsageResponse {
+    fn default() -> Self {
+        Self {
+            plan: "free".to_string(),
+            weekly_used: 0.0,
+            weekly_limit: 0.0,
+            resets_at: None,
+            credits: None,
+        }
+    }
+}
+
+/// GET /me/usage — weekly usage metering for the calling user
+/// (`{plan, weeklyUsed, weeklyLimit, resetsAt, credits}`), proxied from the
+/// cloud API's quota/entitlements service. The cloud base URL comes from
+/// `ALLTERNIT_CLOUD_API_URL` / company config `cloudApiUrl`, mirroring how
+/// `terminal_server_url` resolves (config.rs). When no cloud API is
+/// configured — or it is unreachable or answers non-2xx — the route answers
+/// 503 with a clear error instead of inventing usage numbers; clients treat
+/// 404/503 as "metering unavailable on this backend".
+async fn get_my_usage(
+    State(state): State<Arc<AppState>>,
+    Extension(user): Extension<AuthUser>,
+    headers: HeaderMap,
+) -> impl IntoResponse {
+    let Some(base_url) = state.config.cloud_api_url() else {
+        return (
+            StatusCode::SERVICE_UNAVAILABLE,
+            Json(json!({
+                "error": "usage_metering_unavailable",
+                "message": "Usage metering is not configured on this backend (no cloud API URL).",
+            })),
+        )
+            .into_response();
+    };
+
+    let url = format!("{}/api/v1/me/usage", base_url.trim_end_matches('/'));
+    let mut request = reqwest::Client::new()
+        .get(&url)
+        .header("x-allternit-user-id", &user.user_id);
+    // Forward the caller's Bearer so the cloud API resolves the same user.
+    if let Some(authorization) = headers
+        .get(axum::http::header::AUTHORIZATION)
+        .and_then(|value| value.to_str().ok())
+    {
+        request = request.header(axum::http::header::AUTHORIZATION, authorization);
+    }
+
+    let response = match request.send().await {
+        Ok(response) => response,
+        Err(e) => {
+            warn!("Usage metering proxy unreachable: {}", e);
+            return (
+                StatusCode::SERVICE_UNAVAILABLE,
+                Json(json!({
+                    "error": "usage_metering_unreachable",
+                    "message": format!("The usage metering service could not be reached: {e}"),
+                })),
+            )
+                .into_response();
+        }
+    };
+
+    if !response.status().is_success() {
+        let status = response.status();
+        warn!("Usage metering upstream returned {}", status);
+        return (
+            StatusCode::SERVICE_UNAVAILABLE,
+            Json(json!({
+                "error": "usage_metering_upstream_error",
+                "message": format!("The usage metering service returned {status}."),
+            })),
+        )
+            .into_response();
+    }
+
+    match response.json::<CloudUsageResponse>().await {
+        Ok(usage) => Json(json!({
+            "plan": usage.plan,
+            "weeklyUsed": usage.weekly_used,
+            "weeklyLimit": usage.weekly_limit,
+            "resetsAt": usage.resets_at,
+            "credits": usage.credits,
+        }))
+        .into_response(),
+        Err(e) => {
+            warn!("Usage metering upstream undecodable: {}", e);
+            (
+                StatusCode::SERVICE_UNAVAILABLE,
+                Json(json!({
+                    "error": "usage_metering_bad_response",
+                    "message": format!("The usage metering service returned an unreadable payload: {e}"),
+                })),
             )
                 .into_response()
         }

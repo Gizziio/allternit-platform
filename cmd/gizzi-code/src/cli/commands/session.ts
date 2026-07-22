@@ -9,6 +9,7 @@ import { Filesystem } from "@/shared/util/filesystem"
 import { EOL } from "os"
 import path from "path"
 import * as prompts from "@clack/prompts"
+import { SessionTrace } from "@/runtime/session/trace"
 
 function pagerCmd(): string[] {
   const lessOptions = ["-R", "-S"]
@@ -188,6 +189,10 @@ export const SessionExportCommand = cmd({
             info: msg.info,
             parts: msg.parts,
           })),
+          trace: {
+            head: SessionTrace.head(sessionID!),
+            entries: SessionTrace.list({ sessionID: sessionID!, after: 0, limit: 5_000 }),
+          },
         }
 
         process.stdout.write(JSON.stringify(exportData, null, 2))

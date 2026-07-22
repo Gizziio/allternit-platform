@@ -254,9 +254,9 @@ export function getLogoDisplayData(): {
   const cwd = serverUrl
     ? `${displayPath} in ${serverUrl.replace(/^https?:\/\//, '')}`
     : displayPath
-  const billingType = isClaudeAISubscriber()
-    ? getSubscriptionName()
-    : 'API Usage Billing'
+  // Plan/billing display comes from Clerk — not yet implemented, so show
+  // nothing rather than leftover Claude subscription labels.
+  const billingType = ''
   const agentName = getInitialSettings().agent
 
   return {

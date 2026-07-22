@@ -132,6 +132,8 @@ export interface SendMessageOptions {
   text: string;
   modelId?: string;       // e.g. "claude-cli::claude-sonnet-4-6" or "claude-sonnet-4-6"
   skipContext?: boolean;  // For internal messages
+  /** @-mentioned plugin/connector this message targets (from the composer chip). */
+  pluginMention?: { kind: 'plugin' | 'connector'; id: string; name: string };
   callbacks?: {
     onChunk?: (content: string) => void;
     onThinking?: (thinking: string) => void;
@@ -527,6 +529,29 @@ async function sendMessageWithContext(
 }
 
 /**
+ * Resolve the provider/model string the kernel expects (`provider/modelId`).
+ * Reads the composer's persisted model selection; falls back to the embedded
+ * local model (sidecar, no API key required) so offline sends always work.
+ */
+const MODEL_SELECTION_STORAGE_KEY = 'allternit:model-selection';
+const EMBEDDED_FALLBACK_MODEL_ID = 'sidecar/qwen3.5:4b';
+
+function resolveRuntimeModelId(): string {
+  try {
+    const raw = typeof window !== 'undefined'
+      ? window.localStorage.getItem(MODEL_SELECTION_STORAGE_KEY)
+      : null;
+    if (raw) {
+      const parsed = JSON.parse(raw) as { providerId?: string; modelId?: string } | null;
+      if (parsed?.providerId && parsed?.modelId) {
+        return `${parsed.providerId}/${parsed.modelId}`;
+      }
+    }
+  } catch { /* malformed or unavailable storage */ }
+  return EMBEDDED_FALLBACK_MODEL_ID;
+}
+
+/**
  * Stream message with full context pack
  */
 async function streamMessageWithContext(
@@ -536,13 +561,18 @@ async function streamMessageWithContext(
   chatApi: ChatApi,
 ): Promise<void> {
   const { text, skipContext, callbacks } = options;
+  // The kernel splits runtimeModelId into provider/model — sending nothing
+  // makes gizzi reject with ProviderModelNotFoundError and the bridge returns
+  // an empty 200, so the message vanishes. Always resolve a model: explicit
+  // option → persisted composer selection → embedded local fallback.
+  const modelId = options.modelId ?? resolveRuntimeModelId();
 
   if (
     session.metadata.executionPersistence === 'local' &&
     session.metadata.originSurface === 'code' &&
-    options.modelId
+    modelId
   ) {
-    await streamLocalCodeMessageThroughGizzi(session, text, options.modelId, callbacks, signal);
+    await streamLocalCodeMessageThroughGizzi(session, text, modelId, callbacks, signal);
     return;
   }
 
@@ -601,12 +631,28 @@ async function streamMessageWithContext(
       };
     }
   }
+
+  // A plugin/connector @-mention rides along with the message, even for
+  // regular (non-agent) sessions — AgentContext is spread verbatim into the
+  // POST body by chatApi.streamChat.
+  if (!skipContext && options.pluginMention) {
+    const mentionNote = `The user explicitly invoked the "${options.pluginMention.name}" ${options.pluginMention.kind} for this message.`;
+    agentContext = {
+      ...(agentContext ?? {}),
+      pluginId: options.pluginMention.id,
+      pluginKind: options.pluginMention.kind,
+      pluginName: options.pluginMention.name,
+      systemPrompt: agentContext?.systemPrompt
+        ? `${agentContext.systemPrompt}\n\n${mentionNote}`
+        : mentionNote,
+    };
+  }
   
   // Use chat API with context
   await chatApi.streamChat(
     session.id,
     text,
-    options.modelId,
+    modelId,
     {
       onChunk: (chunk) => {
         callbacks?.onChunk?.(chunk.chunk);
@@ -1142,6 +1188,9 @@ export function createModeSessionStore(config: StoreConfig) {
               role: 'user',
               content: options.text,
               timestamp: new Date().toISOString(),
+              ...(options.pluginMention
+                ? { metadata: { pluginMention: options.pluginMention } }
+                : {}),
             };
 
             set((state) => ({

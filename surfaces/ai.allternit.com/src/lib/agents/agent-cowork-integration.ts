@@ -6,6 +6,7 @@
  */
 
 import { useCoworkStore, Task } from '@/views/cowork/CoworkStore';
+import { useTaskStore } from '@/views/cowork/useTaskStore';
 import { HeartbeatTask, TaskExecutionResult } from './agent-heartbeat-executor';
 
 import { createModuleLogger } from '@/lib/logger';
@@ -52,30 +53,26 @@ function syncHeartbeatToCoworkTask(
   
   // Create title with prefix
   const title = `${fullConfig.taskTitlePrefix} ${formatFrequency(heartbeatTask.frequency)}: ${heartbeatTask.action}`;
-  
-  // Create the task
-  const task = coworkStore.createTask(
-    title,
-    fullConfig.defaultTaskMode,
-    fullConfig.defaultProjectId
-  );
-  
-  // Override the generated ID with our stable ID
+
+  // Create the task directly in the canonical task store so we can use a stable
+  // ID and avoid the async API sync/revert path in useTaskStore.createTask.
+  const now = new Date().toISOString();
   const customTask: Task = {
-    ...task,
     id: taskId,
+    title,
+    mode: fullConfig.defaultTaskMode,
+    projectId: fullConfig.defaultProjectId,
+    status: 'pending',
+    createdAt: now,
+    updatedAt: now,
     description: buildTaskDescription(heartbeatTask, agentId),
     recurring: heartbeatTask.frequency !== 'startup',
   };
-  
-  // Update the task in store (hacky but necessary since createTask generates its own ID)
-  const { tasks } = useCoworkStore.getState();
-  const taskIndex = tasks.findIndex(t => t.id === task.id);
-  if (taskIndex >= 0) {
-    tasks[taskIndex] = customTask;
-    useCoworkStore.setState({ tasks: [...tasks] });
-  }
-  
+
+  useTaskStore.setState((state) => ({
+    tasks: [...state.tasks, customTask],
+  }));
+
   logger.debug(`Created cowork task ${taskId} for HEARTBEAT task ${heartbeatTask.id}`);
   
   // Auto-start session if configured
@@ -93,20 +90,18 @@ function updateCoworkTaskWithResult(
   taskId: string,
   result: TaskExecutionResult
 ): void {
-  const coworkStore = useCoworkStore.getState();
+  const taskStore = useTaskStore.getState();
 
   // Find the task
-  const task = coworkStore.tasks.find(t => t.id === taskId);
+  const task = taskStore.tasks.find(t => t.id === taskId);
   if (!task) {
     logger.warn(`Task ${taskId} not found`);
     return;
   }
 
-  // Update status based on result
+  // Update status and description directly in the canonical task store to avoid
+  // the async API sync/revert path in useTaskStore.updateTaskStatus.
   const newStatus = result.success ? 'completed' : 'pending';
-  coworkStore.updateTaskStatus(taskId, newStatus);
-
-  // Update description with result
   const resultNote = result.success
     ? `✅ Completed at ${result.timestamp.toISOString()}\n\nOutput:\n${result.output || 'No output'}`
     : `❌ Failed at ${result.timestamp.toISOString()}\n\nError:\n${result.error || 'Unknown error'}`;
@@ -115,13 +110,13 @@ function updateCoworkTaskWithResult(
     ? `${task.description}\n\n---\n${resultNote}`
     : resultNote;
 
-  // Update task in store
-  const { tasks } = useCoworkStore.getState();
-  const taskIndex = tasks.findIndex(t => t.id === taskId);
-  if (taskIndex >= 0) {
-    tasks[taskIndex] = { ...task, description: updatedDescription };
-    useCoworkStore.setState({ tasks: [...tasks] });
-  }
+  useTaskStore.setState((state) => ({
+    tasks: state.tasks.map((t) =>
+      t.id === taskId
+        ? { ...task, status: newStatus, description: updatedDescription, updatedAt: new Date().toISOString() }
+        : t
+    ),
+  }));
 
   // Persist successful task output to cowork memory so future sessions have context
   if (result.success && result.output) {
@@ -175,14 +170,15 @@ export function getAgentCoworkTasks(agentId: string): Task[] {
  * Delete all HEARTBEAT tasks for an agent
  */
 function deleteAgentCoworkTasks(agentId: string): void {
-  const coworkStore = useCoworkStore.getState();
-  const tasks = getAgentCoworkTasks(agentId);
-  
-  for (const task of tasks) {
-    coworkStore.deleteTask(task.id);
-  }
-  
-  logger.debug(`Deleted ${tasks.length} cowork tasks for agent ${agentId}`);
+  const prefix = `heartbeat_${agentId}_`;
+  const tasksToDelete = getAgentCoworkTasks(agentId);
+
+  useTaskStore.setState((state) => ({
+    tasks: state.tasks.filter((t) => !t.id.startsWith(prefix)),
+    activeTaskId: state.activeTaskId?.startsWith(prefix) ? null : state.activeTaskId,
+  }));
+
+  logger.debug(`Deleted ${tasksToDelete.length} cowork tasks for agent ${agentId}`);
 }
 
 /**
@@ -292,26 +288,3 @@ class CoworkIntegrationManager {
 
 // Export singleton
 export const coworkIntegration = new CoworkIntegrationManager();
-
-// React hook for using cowork integration
-function useCoworkIntegration(agentId?: string) {
-  return {
-    syncTasks: (tasks: HeartbeatTask[], config?: Partial<CoworkIntegrationConfig>) => {
-      if (!agentId) throw new Error('agentId required');
-      return coworkIntegration.syncAgentTasks(agentId, tasks);
-    },
-    getTasks: () => agentId ? getAgentCoworkTasks(agentId) : [],
-    recordExecution: (heartbeatTaskId: string, result: TaskExecutionResult) => {
-      if (!agentId) throw new Error('agentId required');
-      coworkIntegration.recordExecution(agentId, heartbeatTaskId, result);
-    },
-    cleanup: () => {
-      if (!agentId) throw new Error('agentId required');
-      coworkIntegration.cleanupAgent(agentId);
-    },
-    setConfig: (config: Partial<CoworkIntegrationConfig>) => {
-      if (!agentId) throw new Error('agentId required');
-      coworkIntegration.setAgentConfig(agentId, config);
-    },
-  };
-}

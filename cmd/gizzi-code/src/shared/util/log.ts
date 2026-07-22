@@ -53,14 +53,16 @@ export namespace Log {
     return logpath
   }
   let write = (msg: any) => {
-    process.stderr.write(msg)
+    if (process.argv.includes("--print-logs")) {
+      process.stderr.write(msg)
+    }
     return msg.length
   }
 
-  export async function init(options: Options) {
-    if (options.level) level = options.level
+  export async function init(options: Options = { print: false }) {
+    if (options?.level) level = options.level
     cleanup(Global.Path.log)
-    if (options.print) return
+    if (options?.print) return
     logpath = path.join(
       Global.Path.log,
       options.dev ? "dev.log" : new Date().toISOString().split(".")[0].replace(/:/g, "") + ".log",

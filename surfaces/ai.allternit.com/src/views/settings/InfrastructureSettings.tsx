@@ -429,12 +429,17 @@ export const InfrastructureSettings: React.FC<InfrastructureSettingsProps> = ({ 
       });
       
       // Poll for deployment updates
-      const pollInterval = setInterval(async () => {
+      if (pollIntervalRef.current) clearInterval(pollIntervalRef.current);
+      if (pollTimeoutRef.current) clearTimeout(pollTimeoutRef.current);
+
+      pollIntervalRef.current = setInterval(async () => {
         await loadDeployments();
       }, 5000);
       
       // Stop polling after 2 minutes
-      setTimeout(() => clearInterval(pollInterval), 120000);
+      pollTimeoutRef.current = setTimeout(() => {
+        if (pollIntervalRef.current) clearInterval(pollIntervalRef.current);
+      }, 120000);
     } catch (err: any) {
       addToast({
         title: 'Error',
@@ -540,11 +545,15 @@ export const InfrastructureSettings: React.FC<InfrastructureSettingsProps> = ({ 
 
   // Use a ref to track mounted state
   const isMountedRef = React.useRef(true);
+  const pollIntervalRef = React.useRef<any>(null);
+  const pollTimeoutRef = React.useRef<any>(null);
   
   useEffect(() => {
     isMountedRef.current = true;
     return () => {
       isMountedRef.current = false;
+      if (pollIntervalRef.current) clearInterval(pollIntervalRef.current);
+      if (pollTimeoutRef.current) clearTimeout(pollTimeoutRef.current);
     };
   }, []);
 
@@ -557,6 +566,7 @@ export const InfrastructureSettings: React.FC<InfrastructureSettingsProps> = ({ 
         loadDeployments(),
         loadEnvironments(),
         loadSSHKeys(),
+        loadTemplates(),
       ]);
     };
     

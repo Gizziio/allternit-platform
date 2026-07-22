@@ -93,29 +93,19 @@ Both report **0 errors, 0 warnings** for the Agent Studio files.
 
 ## 3. Decisions Already Made for the Next Agent
 
-The next agent should read `src/views/agent-view/AGENT_STUDIO_DECISIONS.md` first. The headline decisions are:
+The decisions listed in `src/views/agent-view/AGENT_STUDIO_DECISIONS.md` have been implemented. The remaining follow-ups are:
 
-1. **Broken template/duplicate flow** — replace write-only `sessionStorage.setItem('agentTemplate', …)` with a typed `agentDraft` slice in `useAgentStore`.
-2. **`// @ts-nocheck`** — remove it from `AgentView.tsx` first, then from `CreateAgentForm.tsx` after the split.
-3. **Agent seeding** — move `useAgentSeeding` out of the hub UI into a one-time app bootstrap in `ShellApp`, guarded by `localStorage`.
-4. **Hard-coded dark UI** — migrate `AgentDetailView`, `PerformanceAnalyticsView`, and gallery/avatar/tool sub-components to platform CSS variables.
-5. **`CreateAgentForm.tsx` monolith** — split it into step components under `src/views/agent-view/steps/`.
-6. **Fake analytics trends** — remove the hard-coded `+12%`/`-8%` trend strings until real historical data exists.
-7. **Memory Kernel "View Details"** — remove the non-functional button.
-8. **Global `[data-shell-card]` override** — remove the `!important` `<style>` block from `AgentHub.tsx`.
-9. **Console logs** — replace with the module logger or inline UI feedback.
-10. **Unused `messageCount`** — remove it from `AgentSessionsTab` until it is displayed.
+1. **Extract shared form fields** — `CreateAgentForm` and `EditAgentForm` still duplicate model/harness/surface/trust UI; a shared `AgentFormFields` component would reduce duplication.
+2. **Add tests** for agent creation / editing flows.
+3. **Store reorganization** — consider moving agent-studio stores/hooks under `src/lib/agents/studio/` if the surface keeps growing.
 
 ---
 
 ## 4. Suggested Order for the Next Agent
 
-1. **Tiny wins** (Memory Kernel button, `[data-shell-card]` override, fake trends, `messageCount`, console logs).
-2. **Fix template/duplicate flow** with `agentDraft` store slice.
-3. **Move agent seeding** to app-level bootstrap.
-4. **Theme migration** for remaining hard-coded surfaces.
-5. **Remove `// @ts-nocheck`** from `AgentView.tsx`, then later from `CreateAgentForm.tsx`.
-6. **Split `CreateAgentForm.tsx`** into step components.
+1. **Extract shared form fields** into a reusable `AgentFormFields` component.
+2. **Add tests** for agent creation, editing, and bootstrapping flows.
+3. **Reorganize stores** only if the surface expands further.
 
 ---
 

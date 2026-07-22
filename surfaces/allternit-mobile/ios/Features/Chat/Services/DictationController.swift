@@ -13,8 +13,8 @@ import Speech
 ///
 /// Swift 6 notes: the audio tap runs on the render thread and the Speech
 /// result handler on an arbitrary queue, so both cross the actor boundary
-/// carrying Sendable values only; `isolated deinit` keeps MainActor-state
-/// teardown legal.
+/// carrying Sendable values only; deinit inlines resource cleanup (see its
+/// comment — `isolated deinit` is unavailable before Swift 6.1).
 @MainActor
 final class DictationController: ObservableObject {
     /// Latest transcript (partial results included); empty until Speech
@@ -25,26 +25,44 @@ final class DictationController: ObservableObject {
     /// error); cleared at the next `start()`.
     @Published var errorMessage: String? = nil
 
-    private let speechRecognizer: SFSpeechRecognizer
-    private var audioEngine: AVAudioEngine?
-    private var recognitionRequest: SFSpeechAudioBufferRecognitionRequest?
-    private var recognitionTask: SFSpeechRecognitionTask?
+    /// Recognizer is built per session from the user's speech-language
+    /// setting (Settings → Voice, or the dictation onboarding sheet); nil =
+    /// System default (Locale.current). Rebuilt at every `start()` so a
+    /// language change applies without recreating the controller.
+    /// Unsupported locales remain unavailable instead of silently switching
+    /// languages.
+    private var speechRecognizer: SFSpeechRecognizer? {
+        let locale = SettingsStore.shared.speechLanguage
+            .map { Locale(identifier: $0.rawValue) } ?? .current
+        return SFSpeechRecognizer(locale: locale)
+    }
+    // `nonisolated(unsafe)`: deinit must tear these down, and Swift 6.0's
+    // nonisolated deinit may only read Sendable stored properties (these
+    // AVFoundation/Speech types aren't). Safe by invariant: private, every
+    // other access is MainActor-isolated, and deinit has exclusive access.
+    nonisolated(unsafe) private var audioEngine: AVAudioEngine?
+    nonisolated(unsafe) private var recognitionRequest: SFSpeechAudioBufferRecognitionRequest?
+    nonisolated(unsafe) private var recognitionTask: SFSpeechRecognitionTask?
     /// Silence auto-stop; re-armed by every partial result.
     private var silenceTask: Task<Void, Never>?
 
     /// No new partials for this long → end the session (stop-on-silence).
     private static let silenceTimeoutNs: UInt64 = 2_500_000_000
 
-    init() {
-        // Locale.current follows the system language; the parameterless
-        // initializer is the fallback for locales Speech doesn't ship.
-        speechRecognizer = SFSpeechRecognizer(locale: Locale.current) ?? SFSpeechRecognizer()
-    }
-
-    /// MainActor classes can't touch isolated state from a plain deinit in
-    /// Swift 6 — `isolated deinit` keeps mic/engine teardown legal.
-    isolated deinit {
-        teardown()
+    /// `isolated deinit` needs Swift 6.1+ (Xcode 16.2 ships 6.0). A plain
+    /// deinit may still READ stored properties — the object is uniquely
+    /// referenced here — it just can't call MainActor methods like
+    /// `teardown()`, so the resource cleanup is inlined (no @Published
+    /// writes; nobody can observe them during deinit anyway).
+    deinit {
+        silenceTask?.cancel()
+        recognitionTask?.cancel()
+        recognitionRequest?.endAudio()
+        if let engine = audioEngine {
+            engine.stop()
+            engine.inputNode.removeTap(onBus: 0)
+        }
+        try? AVAudioSession.sharedInstance().setActive(false, options: .notifyOthersOnDeactivation)
     }
 
     // MARK: - Start / stop
@@ -57,13 +75,17 @@ final class DictationController: ObservableObject {
         transcript = ""
 
         guard await requestAuthorization() else { return }
+        guard let speechRecognizer else {
+            errorMessage = "Speech recognition doesn't support the current language."
+            return
+        }
         guard speechRecognizer.isAvailable else {
             errorMessage = "Speech recognition isn't available right now."
             return
         }
 
         do {
-            try beginRecording()
+            try beginRecording(using: speechRecognizer)
             isRecording = true
             scheduleSilenceStop()
         } catch {
@@ -98,6 +120,16 @@ final class DictationController: ObservableObject {
 
     // MARK: - Authorization
 
+    /// True while `start()` would still surface a system prompt (Speech or
+    /// mic not yet determined). The composer consults this BEFORE calling
+    /// `start()` so it can show the app-owned priming sheet first (Claude
+    /// iOS parity: an explainer ahead of the iOS dialogs, shown once per
+    /// permission via the AppPermission UserDefaults flag).
+    nonisolated static func systemPromptsPending() -> Bool {
+        SFSpeechRecognizer.authorizationStatus() == .notDetermined
+            || AVAudioApplication.shared.recordPermission == .undetermined
+    }
+
     /// Speech + mic authorization; returns false (with `errorMessage` set)
     /// when either is denied.
     private func requestAuthorization() async -> Bool {
@@ -121,7 +153,7 @@ final class DictationController: ObservableObject {
 
     // MARK: - Capture
 
-    private func beginRecording() throws {
+    private func beginRecording(using speechRecognizer: SFSpeechRecognizer) throws {
         recognitionTask?.cancel()
         recognitionTask = nil
 
@@ -141,7 +173,7 @@ final class DictationController: ObservableObject {
         // the non-Sendable request crosses in a box. It is only ever
         // appended there and ended on the MainActor — Speech's documented
         // producer pattern (Apple's own sample does the same).
-        let requestBox = UncheckedSendableBox(request)
+        let requestBox = UncheckedSendableBox(value: request)
         inputNode.installTap(onBus: 0, bufferSize: 1024, format: inputNode.outputFormat(forBus: 0)) { buffer, _ in
             requestBox.value.append(buffer)
         }

@@ -20,7 +20,7 @@ export namespace ModelsDev {
     release_date: z.string(),
     attachment: z.boolean(),
     reasoning: z.boolean(),
-    temperature: z.boolean(),
+    temperature: z.boolean().optional().default(false),
     tool_call: z.boolean(),
     interleaved: z
       .union([
@@ -59,9 +59,9 @@ export namespace ModelsDev {
         output: z.array(z.enum(["text", "audio", "image", "video", "pdf"])),
       })
       .optional(),
-    experimental: z.boolean().optional(),
+    experimental: z.union([z.boolean(), z.record(z.string(), z.any()), z.unknown()]).optional(),
     status: z.enum(["alpha", "beta", "deprecated"]).optional(),
-    options: z.record(z.string(), z.any()),
+    options: z.record(z.string(), z.any()).optional().default({}),
     headers: z.record(z.string(), z.string()).optional(),
     provider: z.object({ npm: z.string().optional(), api: z.string().optional() }).optional(),
     variants: z.record(z.string(), z.record(z.string(), z.any())).optional(),
@@ -79,21 +79,65 @@ export namespace ModelsDev {
 
   export type Provider = z.infer<typeof Provider>
 
+  /** Validate entries independently so one malformed provider cannot poison
+   * model selection for every other provider. */
+  export function parse(input: unknown, source = "unknown"): Record<string, Provider> {
+    if (!input || typeof input !== "object" || Array.isArray(input)) {
+      log.error("invalid models catalog payload", { source, reason: "expected an object" })
+      return {}
+    }
+
+    const catalog: Record<string, Provider> = {}
+    for (const [providerID, value] of Object.entries(input)) {
+      const result = Provider.safeParse(value)
+      if (!result.success) {
+        log.warn("skipping invalid models catalog provider", {
+          source,
+          providerID,
+          issues: result.error.issues.slice(0, 3).map((issue) => ({ path: issue.path, message: issue.message })),
+        })
+        continue
+      }
+      catalog[providerID] = result.data
+    }
+    return catalog
+  }
+
+  function populated(catalog: Record<string, Provider>) {
+    return Object.keys(catalog).length > 0
+  }
+
   function url() {
     return Flag.GIZZI_MODELS_URL || "https://models.dev"
   }
 
   export const Data = lazy(async () => {
-    const result = await Filesystem.readJson(Flag.GIZZI_MODELS_PATH ?? filepath).catch(() => {})
-    if (result) return result
+    const cachePath = Flag.GIZZI_MODELS_PATH ?? filepath
+    const cached = await Filesystem.readJson(cachePath).catch(() => undefined)
+    const cachedCatalog = cached === undefined ? {} : parse(cached, cachePath)
+    if (populated(cachedCatalog)) return cachedCatalog
+
     // @ts-ignore — models-snapshot is generated at build time, may not exist in dev
     const snapshot = await import("./models-snapshot")
       .then((m) => m.snapshot as Record<string, unknown>)
       .catch(() => undefined)
-    if (snapshot) return snapshot
+    const snapshotCatalog = snapshot === undefined ? {} : parse(snapshot, "bundled snapshot")
+    if (populated(snapshotCatalog)) return snapshotCatalog
     if (Flag.GIZZI_DISABLE_MODELS_FETCH) return {}
-    const json = await fetch(`${url()}/api.json`).then((x) => x.text())
-    return JSON.parse(json)
+
+    try {
+      const response = await fetch(`${url()}/api.json`, {
+        headers: { "User-Agent": Installation.USER_AGENT },
+        signal: AbortSignal.timeout(10 * 1000),
+      })
+      if (!response.ok) throw new Error(`HTTP ${response.status}`)
+      const catalog = parse(await response.json(), `${url()}/api.json`)
+      if (!populated(catalog)) throw new Error("catalog contains no valid providers")
+      return catalog
+    } catch (error) {
+      log.error("failed to load models catalog", { error })
+      return {}
+    }
   })
 
   export async function get() {
@@ -102,19 +146,20 @@ export namespace ModelsDev {
   }
 
   export async function refresh() {
-    const result = await fetch(`${url()}/api.json`, {
-      headers: {
-        "User-Agent": Installation.USER_AGENT,
-      },
-      signal: AbortSignal.timeout(10 * 1000),
-    }).catch((e) => {
-      log.error("Failed to fetch models.dev", {
-        error: e,
+    try {
+      const result = await fetch(`${url()}/api.json`, {
+        headers: {
+          "User-Agent": Installation.USER_AGENT,
+        },
+        signal: AbortSignal.timeout(10 * 1000),
       })
-    })
-    if (result && result.ok) {
-      await Filesystem.write(filepath, await result.text())
+      if (!result.ok) throw new Error(`HTTP ${result.status}`)
+      const catalog = parse(await result.json(), `${url()}/api.json`)
+      if (!populated(catalog)) throw new Error("catalog contains no valid providers")
+      await Filesystem.write(filepath, JSON.stringify(catalog))
       ModelsDev.Data.reset()
+    } catch (error) {
+      log.error("failed to refresh models catalog", { error })
     }
   }
 }

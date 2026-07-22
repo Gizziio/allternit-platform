@@ -1,5 +1,25 @@
 import Foundation
 
+/// Composer "+" sheet tool options, sent as `metadata.tools` on every
+/// agent-chat request (ToolOptionsStore is the persisted source).
+struct ToolOptions: Encodable, Sendable {
+    let webSearch: Bool
+    let research: Bool
+    /// "auto" | "on_demand" | "always" (ToolAccess raw values).
+    let toolAccess: String
+}
+
+/// One composer-staged attachment in the agent-chat body. `url` is the
+/// `POST /api/v1/uploads` result; `dataBase64` inlines small payloads
+/// without an upload round-trip. The bridge forwards each as a gizzi
+/// `{"type":"file","url":...}` part (v1_routes.rs agent_chat_bridge).
+struct AttachmentRef: Encodable, Sendable {
+    let url: String?
+    let dataBase64: String?
+    let mediaType: String
+    let name: String?
+}
+
 /// Client for the LIVE agent platform protocol (replaces the scaffold
 /// RepliesStreamClient):
 ///
@@ -27,13 +47,41 @@ final class AgentChatClient: @unchecked Sendable {
 
     /// Body of `POST /api/agent-chat` (native-agent-api.ts:643-648). The web
     /// also splats an `agentContext` (agentId/systemPrompt/…) into the body —
-    /// desktop-agent-only; mobile chat sends none. `runtimeModelId` stays nil
-    /// until the model selector produces real runtime ids (the backend falls
-    /// back to its configured default model when absent, v1_routes.rs:182-200).
+    /// desktop-agent-only; mobile chat sends none. `runtimeModelId` is a
+    /// catalog id ("provider/model", RuntimeModel.id); nil lets the backend
+    /// fall back to its configured default model (v1_routes.rs:182-200).
+    /// `effort` ("low"|"medium"|"high") rides along for reasoning-capable
+    /// models; the bridge forwards it to the runtime, which ignores it for
+    /// models without reasoning. `attachments` are composer-staged files
+    /// (already uploaded via `POST /api/v1/uploads`); `metadata.tools` carries
+    /// the "+" sheet's tool options. The bridge turns attachments into gizzi
+    /// file parts and stashes the tool options into the gizzi payload
+    /// metadata (v1_routes.rs agent_chat_bridge).
     private struct AgentChatRequest: Encodable {
         let chatId: String
         let message: String
         let runtimeModelId: String?
+        let effort: String?
+        let attachments: [AttachmentRef]?
+        let metadata: RequestMetadata?
+    }
+
+    /// `metadata` on the agent-chat body — currently only the composer tool
+    /// options.
+    private struct RequestMetadata: Encodable {
+        let tools: ToolOptions
+    }
+
+    /// Response of `POST /api/v1/uploads` (upload_routes.rs).
+    struct UploadResponse: Decodable {
+        let uploadId: String
+        let url: String
+    }
+
+    private struct UploadRequest: Encodable {
+        let name: String
+        let mediaType: String
+        let dataBase64: String
     }
 
     // MARK: - Sessions (REST, /api/v1/agent-sessions)
@@ -44,20 +92,38 @@ final class AgentChatClient: @unchecked Sendable {
     /// `sessionMode` is "agent" when the composer's agent pill is on
     /// (otherwise "regular"). `agentModeId` is the selected bottom-deck
     /// tile, carried as `metadata.agentModeId` like the web
-    /// (mode-session-store.ts:897-905).
+    /// (mode-session-store.ts:897-905). `projectId` is the selected cowork
+    /// project, carried as `metadata.projectId` — the backend stamps it onto
+    /// the gizzi session so list responses can group chats by project
+    /// (agent_session_routes.rs create_session). `ephemeral` marks an
+    /// incognito chat (Phase 6), carried as `metadata.ephemeral`. `persona`
+    /// is the onboarding work-profile answer (Phase 10), carried as
+    /// `metadata.persona`.
     func createSession(name: String,
                        originSurface: String,
                        sessionMode: String,
                        agentId: String? = nil,
                        agentName: String? = nil,
-                       agentModeId: String? = nil) async throws -> AgentSession {
+                       agentModeId: String? = nil,
+                       projectId: String? = nil,
+                       ephemeral: Bool = false,
+                       persona: String? = nil) async throws -> AgentSession {
+        var metadata: [String: String] = [:]
+        if let agentModeId { metadata["agentModeId"] = agentModeId }
+        if let projectId { metadata["projectId"] = projectId }
+        if let persona { metadata["persona"] = persona }
+        // Incognito chats (Phase 6): carried as `metadata.ephemeral = "true"`
+        // (the metadata bag is string-valued); the backend also accepts a
+        // top-level bool. Ephemeral sessions are excluded from list responses
+        // and purged on abort (agent_session_routes.rs create_session).
+        if ephemeral { metadata["ephemeral"] = "true" }
         let body = CreateAgentSessionRequest(
             name: name,
             originSurface: originSurface,
             sessionMode: sessionMode,
             agentId: agentId,
             agentName: agentName,
-            metadata: agentModeId.map { ["agentModeId": $0] }
+            metadata: metadata.isEmpty ? nil : metadata
         )
         return try await client.post(path: "agent-sessions", body: body)
     }
@@ -77,6 +143,12 @@ final class AgentChatClient: @unchecked Sendable {
         return response.agents
     }
 
+    /// Lists the flattened runtime-model catalog (`GET /api/v1/models`, a
+    /// bare array) — the composer model pill's data source.
+    func listModels() async throws -> [RuntimeModel] {
+        try await client.get(path: "models")
+    }
+
     /// Lists all messages of a session (history view + foreground reconcile).
     func listMessages(sessionId: String) async throws -> [AgentSessionMessage] {
         try await client.get(path: "agent-sessions/\(Self.escape(sessionId))/messages")
@@ -87,6 +159,23 @@ final class AgentChatClient: @unchecked Sendable {
         try await client.post(path: "agent-sessions/\(Self.escape(sessionId))/abort")
     }
 
+    /// Conversation revert (Phase 8 edit-resend), live on the backend
+    /// (agent_session_routes.rs — probed 2026-07: 200 on a valid session).
+    func revert(sessionId: String) async throws {
+        try await client.post(path: "agent-sessions/\(Self.escape(sessionId))/revert")
+    }
+
+    // MARK: - Uploads (POST /api/v1/uploads)
+
+    /// Uploads one staged attachment; returns the fetchable `{uploadId, url}`
+    /// ref the agent-chat body then references.
+    func upload(name: String, mediaType: String, dataBase64: String) async throws -> UploadResponse {
+        try await client.post(
+            path: "uploads",
+            body: UploadRequest(name: name, mediaType: mediaType, dataBase64: dataBase64)
+        )
+    }
+
     // MARK: - Chat streaming (POST /api/agent-chat)
 
     /// Sends `text` to the session and streams the response frames on the
@@ -94,7 +183,7 @@ final class AgentChatClient: @unchecked Sendable {
     /// (`finish` / `done` / `[DONE]`), when the connection ends, or when the
     /// consuming task is cancelled; per-frame decode failures are skipped
     /// (the web parser logs and continues on malformed frames).
-    func sendMessageStream(sessionId: String, text: String) -> AsyncThrowingStream<AgentChatEvent, Error> {
+    func sendMessageStream(sessionId: String, text: String, runtimeModelId: String? = nil, effort: String? = nil, attachments: [AttachmentRef]? = nil, tools: ToolOptions? = nil) -> AsyncThrowingStream<AgentChatEvent, Error> {
         AsyncThrowingStream { continuation in
             let task = Task {
                 do {
@@ -104,10 +193,17 @@ final class AgentChatClient: @unchecked Sendable {
                     // would kill slow generations between frames.
                     request.timeoutInterval = 600
                     request.httpBody = try JSONEncoder().encode(
-                        AgentChatRequest(chatId: sessionId, message: text, runtimeModelId: nil)
+                        AgentChatRequest(
+                            chatId: sessionId,
+                            message: text,
+                            runtimeModelId: runtimeModelId,
+                            effort: effort,
+                            attachments: attachments,
+                            metadata: tools.map { RequestMetadata(tools: $0) }
+                        )
                     )
 
-                    let (bytes, response) = try await client.session.bytes(for: request)
+                    let (bytes, response) = try await client.sendStream(request)
                     try client.validate(response)
 
                     let decoder = JSONDecoder()

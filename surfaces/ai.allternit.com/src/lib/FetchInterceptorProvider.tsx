@@ -4,6 +4,7 @@ import React, { useEffect } from 'react';
 import { installFetchInterceptor } from "./fetch-interceptor"
 import { usePlatformAuth } from '@/lib/platform-auth-client';
 import { env } from '@/lib/env';
+import { ACTIVE_RUNTIME_ID_KEY, getRuntimeExecutionTarget } from '@/lib/runtime-target';
 
 export function FetchInterceptorProvider({ children }: { children: React.ReactNode }) {
   const { getToken, isLoaded, isSignedIn } = usePlatformAuth();
@@ -27,11 +28,11 @@ export function FetchInterceptorProvider({ children }: { children: React.ReactNo
       if (!response.ok) return;
       const payload = await response.json() as { runtimes?: Array<{ id: string; status: string }> };
       const runtimes = payload.runtimes || [];
-      const selected = localStorage.getItem('allternit.active-runtime-id');
+      const selected = localStorage.getItem(ACTIVE_RUNTIME_ID_KEY);
       if (selected && runtimes.some((runtime) => runtime.id === selected && runtime.status === 'online')) return;
       const online = runtimes.find((runtime) => runtime.status === 'online');
-      if (online) localStorage.setItem('allternit.active-runtime-id', online.id);
-      else localStorage.removeItem('allternit.active-runtime-id');
+      if (online) localStorage.setItem(ACTIVE_RUNTIME_ID_KEY, online.id);
+      else if (getRuntimeExecutionTarget() === 'cloud') localStorage.removeItem(ACTIVE_RUNTIME_ID_KEY);
     };
     void refresh().catch(() => {});
     const interval = window.setInterval(() => void refresh().catch(() => {}), 30_000);

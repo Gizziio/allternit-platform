@@ -15,12 +15,17 @@ export namespace Bus {
     }),
   )
 
+  const HISTORY_LIMIT = 500
+
   const state = Instance.state(
     () => {
       const subscriptions = new Map<any, Subscription[]>()
+      const history: { seq: number; event: any }[] = []
 
       return {
         subscriptions,
+        history,
+        seq: 0,
       }
     },
     async (entry) => {
@@ -49,6 +54,17 @@ export namespace Bus {
     log.info("publishing", {
       type: def.type,
     })
+
+    // Record in the replay buffer *before* notifying subscribers, so a
+    // subscriber reading currentSeq() synchronously (e.g. the SSE route
+    // tagging its outgoing frame) observes this event's own seq number.
+    const s = state()
+    const seq = ++s.seq
+    s.history.push({ seq, event: payload })
+    if (s.history.length > HISTORY_LIMIT) {
+      s.history.splice(0, s.history.length - HISTORY_LIMIT)
+    }
+
     const pending = []
     for (const key of [def.type, "*"]) {
       const match = state().subscriptions.get(key)
@@ -61,6 +77,16 @@ export namespace Bus {
       payload,
     })
     return Promise.all(pending)
+  }
+
+  /** Events published after `seq`, oldest first — for SSE clients resuming after a drop. */
+  export function historySince(seq: number): { seq: number; event: any }[] {
+    return state().history.filter((entry) => entry.seq > seq)
+  }
+
+  /** The seq number of the most recently published event (0 if none yet). */
+  export function currentSeq(): number {
+    return state().seq
   }
 
   export function subscribe<Definition extends BusEvent.Definition>(

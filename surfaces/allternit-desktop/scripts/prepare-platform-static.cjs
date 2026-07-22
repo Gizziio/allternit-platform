@@ -102,7 +102,12 @@ function main() {
   }
 
   // Build and copy platform static export
-  runBuild(platformDir, 'build', { CLOUDFLARE_PAGES: '1' });
+  // NEXT_PUBLIC_ALLTERNIT_DESKTOP_AUTH activates the renderer's desktop
+  // runtime-pairing bridge (useDesktopSession/buildDesktopAuthValue in
+  // platform-auth-client.tsx). Without it, every packaged desktop build falls
+  // through to requiring a full Clerk sign-in and the runtime-pairing screen
+  // is a dead end even after pairing succeeds in the main process.
+  runBuild(platformDir, 'build', { CLOUDFLARE_PAGES: '1', NEXT_PUBLIC_ALLTERNIT_DESKTOP_AUTH: '1' });
   copyExport(path.join(platformDir, 'dist'), platformResourcesDir, 'Platform');
 }
 

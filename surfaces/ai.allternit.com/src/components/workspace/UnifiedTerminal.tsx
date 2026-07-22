@@ -34,6 +34,11 @@ import {
   resizeTerminal,
   subscribeTerminalStream,
 } from '@/lib/terminal-api';
+import {
+  getActiveRuntimeId,
+  getRuntimeExecutionTarget,
+  subscribeRuntimeExecutionTarget,
+} from '@/lib/runtime-target';
 
 const logger = createModuleLogger('UnifiedTerminal');
 
@@ -155,12 +160,24 @@ const disposedTerminalIds = new Set<string>();
  */
 export function disposeTerminalSessions(sessionId: string): void {
   disposedTerminalIds.add(sessionId);
-  const persisted = getPersistedTerminalState(sessionId);
+  const persistenceKey = terminalPersistenceKey(sessionId);
+  const persisted = getPersistedTerminalState(persistenceKey);
   if (!persisted) return;
-  deletePersistedTerminalState(sessionId);
+  deletePersistedTerminalState(persistenceKey);
   persisted.tabs.forEach((tab) => {
     if (tab.remoteSessionId) void closeTerminalSession(tab.remoteSessionId);
   });
+}
+
+function terminalRuntimeIdentity(): string {
+  if (getRuntimeExecutionTarget() === 'cloud') {
+    return `cloud:${getActiveRuntimeId() || 'unpaired'}`;
+  }
+  return `local:${getRuntimeGatewayBaseUrlSync()}`;
+}
+
+function terminalPersistenceKey(sessionId: string): string {
+  return `${terminalRuntimeIdentity()}:${sessionId}`;
 }
 
 export function terminalThemeFromElement(element: HTMLElement): import('xterm').ITheme {
@@ -441,7 +458,8 @@ export function UnifiedTerminal({
   const [isInitializing, setIsInitializing] = useState(true);
   const [reconnectingTabId, setReconnectingTabId] = useState<string | null>(null);
   const [serviceError, setServiceError] = useState<string | null>(null);
-  const [terminalEndpoint, setTerminalEndpoint] = useState(() => getRuntimeGatewayBaseUrlSync());
+  const [terminalEndpoint, setTerminalEndpoint] = useState(() => terminalRuntimeIdentity());
+  const persistenceKey = `${terminalEndpoint}:${sessionId}`;
   const tabsRef = useRef<TerminalSession[]>([]);
   tabsRef.current = tabs;
   const activeTabIdRef = useRef<string | null>(null);
@@ -452,7 +470,13 @@ export function UnifiedTerminal({
   startupCommandRef.current = startupCommand;
 
   useEffect(() => subscribeRuntimeBackendSnapshot((snapshot) => {
-    setTerminalEndpoint(snapshot.resolved_gateway_url);
+    if (getRuntimeExecutionTarget() === 'local') {
+      setTerminalEndpoint(`local:${snapshot.resolved_gateway_url}`);
+    }
+  }), []);
+
+  useEffect(() => subscribeRuntimeExecutionTarget(() => {
+    setTerminalEndpoint(terminalRuntimeIdentity());
   }), []);
 
   // Create the first terminal tab on mount.
@@ -468,11 +492,11 @@ export function UnifiedTerminal({
       // Reattach to sessions the mux kept alive across a remount or reload.
       // Probe each persisted id first: after a backend restart the ids are
       // dead and the tile should get a fresh shell, not an error tab.
-      const persisted = getPersistedTerminalState(sessionId);
+      const persisted = getPersistedTerminalState(persistenceKey);
       if (persisted && persisted.tabs.some((tab) => tab.remoteSessionId)) {
         const liveTabs = (
           await Promise.all(
-            persisted.tabs.map(async (tab) =>
+            persisted.tabs.map(async (tab): Promise<TerminalSession | null> =>
               tab.remoteSessionId && (await probeTerminalSession(tab.remoteSessionId))
                 ? { ...tab, status: 'connecting' as const, errorMsg: '' }
                 : null
@@ -492,7 +516,7 @@ export function UnifiedTerminal({
           setIsInitializing(false);
           return;
         }
-        deletePersistedTerminalState(sessionId);
+        deletePersistedTerminalState(persistenceKey);
       }
 
       try {
@@ -520,7 +544,7 @@ export function UnifiedTerminal({
       cancelled = true;
       // Surface destroyed for real (tile deleted while mounted): close now.
       if (disposedTerminalIds.delete(sessionId)) {
-        deletePersistedTerminalState(sessionId);
+        deletePersistedTerminalState(persistenceKey);
         tabsRef.current.forEach((tab) => {
           if (tab.remoteSessionId) void closeTerminalSession(tab.remoteSessionId);
         });
@@ -529,33 +553,33 @@ export function UnifiedTerminal({
       // Keep the PTYs alive for reattach; disposeTerminalSessions() closes
       // them when the surface is actually destroyed.
       if (tabsRef.current.some((tab) => tab.remoteSessionId)) {
-        setPersistedTerminalState(sessionId, {
+        setPersistedTerminalState(persistenceKey, {
           tabs: tabsRef.current,
           activeTabId: activeTabIdRef.current,
           startupTabId: startupTabIdRef.current,
           startupInjectedFor: startupInjectedForRef.current,
         });
       } else {
-        deletePersistedTerminalState(sessionId);
+        deletePersistedTerminalState(persistenceKey);
       }
     };
-  }, [sessionId, terminalEndpoint, workingDir]);
+  }, [sessionId, terminalEndpoint, persistenceKey, workingDir]);
 
   // Write-through while mounted: a page reload never runs effect cleanups, so
   // localStorage must already hold the latest session ids when it happens.
   useEffect(() => {
     if (isInitializing) return;
     if (tabs.some((tab) => tab.remoteSessionId)) {
-      setPersistedTerminalState(sessionId, {
+      setPersistedTerminalState(persistenceKey, {
         tabs,
         activeTabId,
         startupTabId: startupTabIdRef.current,
         startupInjectedFor: startupInjectedForRef.current,
       });
     } else {
-      deletePersistedTerminalState(sessionId);
+      deletePersistedTerminalState(persistenceKey);
     }
-  }, [tabs, activeTabId, sessionId, isInitializing]);
+  }, [tabs, activeTabId, persistenceKey, isInitializing]);
 
   const handleCreateTab = useCallback(async () => {
     setIsLoading(true);

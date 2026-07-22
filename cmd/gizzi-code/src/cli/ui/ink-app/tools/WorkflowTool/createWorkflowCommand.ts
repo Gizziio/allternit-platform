@@ -9,5 +9,5 @@ export function createWorkflowCommand(): void {
 }
 export function getWorkflowCommands(_cwd?: string): unknown[] {
   return []
-export default { createWorkflowCommand, getWorkflowCommands }
 }
+export default { createWorkflowCommand, getWorkflowCommands }

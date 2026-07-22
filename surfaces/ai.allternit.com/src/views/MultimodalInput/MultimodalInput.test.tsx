@@ -1,3 +1,4 @@
+import React from 'react';
 /**
  * Multimodal Input Component Tests
  */
@@ -117,7 +118,7 @@ describe('MultimodalInput', () => {
 
     render(<MultimodalInput />);
 
-    const cameraSwitch = screen.getByRole('switch', { name: /camera/i });
+    const cameraSwitch = screen.getByLabelText(/camera/i);
     fireEvent.click(cameraSwitch);
 
     await waitFor(() => {
@@ -132,7 +133,7 @@ describe('MultimodalInput', () => {
 
     render(<MultimodalInput />);
 
-    const cameraSwitch = screen.getByRole('switch', { name: /camera/i });
+    const cameraSwitch = screen.getByLabelText(/camera/i);
     fireEvent.click(cameraSwitch);
 
     await waitFor(() => {
@@ -148,7 +149,7 @@ describe('MultimodalInput', () => {
 
     render(<MultimodalInput />);
 
-    const micSwitch = screen.getByRole('switch', { name: /microphone/i });
+    const micSwitch = screen.getByLabelText(/microphone/i);
     fireEvent.click(micSwitch);
 
     await waitFor(() => {
@@ -163,7 +164,7 @@ describe('MultimodalInput', () => {
 
     render(<MultimodalInput />);
 
-    const micSwitch = screen.getByRole('switch', { name: /microphone/i });
+    const micSwitch = screen.getByLabelText(/microphone/i);
     fireEvent.click(micSwitch);
 
     await waitFor(() => {
@@ -221,7 +222,7 @@ describe('MultimodalInput', () => {
 
     render(<MultimodalInput />);
 
-    const cameraSwitch = screen.getByRole('switch', { name: /camera/i });
+    const cameraSwitch = screen.getByLabelText(/camera/i);
     fireEvent.click(cameraSwitch);
 
     await waitFor(() => {
@@ -237,7 +238,7 @@ describe('MultimodalInput', () => {
 
     const { unmount } = render(<MultimodalInput />);
 
-    const cameraSwitch = screen.getByRole('switch', { name: /camera/i });
+    const cameraSwitch = screen.getByLabelText(/camera/i);
     fireEvent.click(cameraSwitch);
 
     await waitFor(() => {
@@ -280,7 +281,7 @@ describe('MultimodalInput', () => {
 
     render(<MultimodalInput />);
 
-    const micSwitch = screen.getByRole('switch', { name: /microphone/i });
+    const micSwitch = screen.getByLabelText(/microphone/i);
     fireEvent.click(micSwitch);
 
     await waitFor(() => {
@@ -299,7 +300,7 @@ describe('MultimodalInput', () => {
 
     const { unmount } = render(<MultimodalInput />);
 
-    const cameraSwitch = screen.getByRole('switch', { name: /camera/i });
+    const cameraSwitch = screen.getByLabelText(/camera/i);
     fireEvent.click(cameraSwitch);
 
     await waitFor(() => {

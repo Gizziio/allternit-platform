@@ -1,0 +1,15 @@
+{
+  "name": "marketing-content",
+  "version": "1.0.0",
+  "description": "Marketing copy and content strategy.",
+  "author": {
+    "name": "Anthropic",
+    "email": "support@anthropic.com"
+  },
+  "keywords": [
+    "marketing",
+    "claude",
+    "builtin"
+  ],
+  "license": "MIT"
+}

@@ -5,6 +5,7 @@ import { bootstrap } from "@/cli/bootstrap"
 import { UI } from "@/cli/ui"
 import * as prompts from "@clack/prompts"
 import { EOL } from "os"
+import { SessionTrace } from "@/runtime/session/trace"
 
 export const ExportCommand = cmd({
   command: "export [sessionID]",
@@ -75,6 +76,10 @@ export const ExportCommand = cmd({
             info: msg.info,
             parts: msg.parts,
           })),
+          trace: {
+            head: SessionTrace.head(sessionID!),
+            entries: SessionTrace.list({ sessionID: sessionID!, after: 0, limit: 5_000 }),
+          },
         }
 
         process.stdout.write(JSON.stringify(exportData, null, 2))

@@ -1,0 +1,9 @@
+{
+  "search-knowledge-server": {
+    "type": "http",
+    "url": "https://plugins.anthropic.com/mcp/search-knowledge",
+    "headers": {
+      "X-Plugin": "search-knowledge"
+    }
+  }
+}

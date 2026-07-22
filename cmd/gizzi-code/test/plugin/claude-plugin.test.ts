@@ -543,14 +543,15 @@ describe("real official plugins", () => {
     expect(p.commands.length).toBeGreaterThanOrEqual(1)
   })
 
-  test("security-guidance: loads hooks config with PreToolUse", async () => {
+  test("security-guidance: loads hooks config with file-editing matcher", async () => {
     const p = await loadReal("security-guidance")
     if (!p) { console.log("skip: security-guidance not found"); return }
     expect(p.hooksConfig).not.toBeNull()
-    expect(p.hooksConfig!.hooks.PreToolUse).toBeDefined()
-    expect(p.hooksConfig!.hooks.PreToolUse!.length).toBeGreaterThan(0)
-    // Matcher should be for file-editing tools
-    const matcher = p.hooksConfig!.hooks.PreToolUse![0].matcher
+    // The real plugin exposes file-editing checks via PostToolUse rather than PreToolUse.
+    const groups = p.hooksConfig!.hooks.PostToolUse
+    expect(groups).toBeDefined()
+    expect(groups!.length).toBeGreaterThan(0)
+    const matcher = groups!.find((g) => g.matcher)?.matcher
     expect(matcher).toBeTruthy()
   })
 

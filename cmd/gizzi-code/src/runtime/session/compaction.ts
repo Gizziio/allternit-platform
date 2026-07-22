@@ -15,6 +15,9 @@ import { Agent } from "@/runtime/loop/agent"
 import { Plugin } from "@/runtime/integrations/plugin"
 import { Config } from "@/runtime/context/config/config"
 import { ProviderTransform } from "@/runtime/providers/adapters/transform"
+import { SessionTrace } from "@/runtime/session/trace"
+import { Todo } from "@/runtime/session/todo"
+import { HookDispatcher } from "@/runtime/hooks/dispatcher"
 
 export namespace SessionCompaction {
   const log = Log.create({ service: "session.compaction" })
@@ -95,6 +98,11 @@ export namespace SessionCompaction {
           await Session.updatePart(part)
         }
       }
+      SessionTrace.append({
+        sessionID: input.sessionID,
+        kind: "compaction.pruned",
+        data: { estimatedTokens: pruned, partIDs: toPrune.map((part) => part.id) },
+      })
       log.info("pruned", { count: toPrune.length })
     }
   }
@@ -106,7 +114,19 @@ export namespace SessionCompaction {
     abort: AbortSignal
     auto: boolean
   }) {
+    await HookDispatcher.emit({
+      name: "PreCompact",
+      timestamp: Date.now(),
+      sessionId: input.sessionID,
+      payload: { trigger: input.auto ? "auto" : "manual", messageCount: input.messages.length },
+    })
     const userMessage = input.messages.findLast((m) => m.info.id === input.parentID)!.info as MessageV2.User
+    SessionTrace.append({
+      sessionID: input.sessionID,
+      kind: "compaction.started",
+      messageID: input.parentID,
+      data: { parentID: input.parentID, auto: input.auto, messageCount: input.messages.length },
+    })
     const agent = await Agent.get("compaction")
     const model = agent.model
       ? await Provider.getModel(agent.model.providerID, agent.model.modelID)
@@ -177,28 +197,79 @@ When constructing the summary, try to stick to this template:
 [Construct a structured list of relevant files that have been read, edited, or created that pertain to the task at hand. If all the files in a directory are relevant, include the path to the directory.]
 ---`
 
-    const promptText = compacting.prompt ?? [defaultPrompt, ...compacting.context].join("\n\n")
-    const result = await processor.process({
-      user: userMessage,
-      agent,
-      abort: input.abort,
-      sessionID: input.sessionID,
-      tools: {},
-      system: [],
-      messages: [
-        ...MessageV2.toModelMessages(input.messages, model),
-        {
-          role: "user",
-          content: [
-            {
-              type: "text",
-              text: promptText,
-            },
-          ],
-        },
-      ],
-      model,
-    })
+    const todos = Todo.get(input.sessionID)
+    const todoPrompt = todos.length
+      ? ["Preserve this durable TODO list verbatim in the summary:", ...todos.map((todo) => `- [${todo.status}] (${todo.priority}) ${todo.content}`)].join("\n")
+      : ""
+    const promptText = compacting.prompt ?? [defaultPrompt, todoPrompt, ...compacting.context].filter(Boolean).join("\n\n")
+    let history = MessageV2.toModelMessages(input.messages, model)
+    let result: SessionProcessor.Result = "stop"
+    let recoveryAttempts = 0
+    let summary = ""
+    let finalTruncated = false
+    for (let compactionAttempt = 0; compactionAttempt < 3; compactionAttempt++) {
+      const before = new Set((await MessageV2.parts(msg.id)).map((part) => part.id))
+      result = await processor.process({
+        user: userMessage,
+        agent,
+        abort: input.abort,
+        sessionID: input.sessionID,
+        tools: {},
+        system: [],
+        messages: [
+          ...history,
+          { role: "user", content: [{ type: "text", text: promptText }] },
+        ],
+        model,
+      })
+      const created = (await MessageV2.parts(msg.id)).filter((part) => !before.has(part.id))
+      summary = created.filter((part) => part.type === "text").map((part) => part.text).join("").trim()
+      const truncated = ["length", "max_tokens", "truncated"].includes(processor.message.finish ?? "")
+      finalTruncated = truncated
+      const recoverable = result === "compact" || truncated || summary.length === 0
+      if (!recoverable || compactionAttempt === 2 || history.length <= 1) break
+
+      recoveryAttempts++
+      for (const part of created) {
+        await Session.removePart({ sessionID: input.sessionID, messageID: msg.id, partID: part.id })
+      }
+      delete processor.message.error
+      delete processor.message.finish
+      processor.message.time.completed = undefined
+      await Session.updateMessage(processor.message)
+      history = shrinkHistory(history, compactionAttempt)
+    }
+
+    if (processor.message.error || result !== "continue" || !summary || finalTruncated) {
+      const error = processor.message.error ?? {
+        name: "CompactionFailedError",
+        message: !summary
+          ? "The compaction response did not contain a non-empty summary."
+          : finalTruncated
+            ? "The compaction summary was truncated after recovery attempts."
+            : `Compaction stopped with result ${result}.`,
+        data: { recoveryAttempts },
+      }
+      SessionTrace.append({
+        sessionID: input.sessionID,
+        kind: "session.error",
+        messageID: processor.message.id,
+        data: error,
+      })
+      return "stop"
+    }
+
+    if (todos.length) {
+      await Session.updatePart({
+        id: Identifier.ascending("part"),
+        messageID: msg.id,
+        sessionID: input.sessionID,
+        type: "text",
+        synthetic: true,
+        text: `\n\n## TODO List\n${todos.map((todo) => `- [${todo.status}] (${todo.priority}) ${todo.content}`).join("\n")}`,
+        time: { start: Date.now(), end: Date.now() },
+      })
+    }
 
     if (result === "continue" && input.auto) {
       const continueMsg = await Session.updateMessage({
@@ -224,9 +295,34 @@ When constructing the summary, try to stick to this template:
         },
       })
     }
-    if (processor.message.error) return "stop"
+    SessionTrace.append({
+      sessionID: input.sessionID,
+      kind: "compaction.completed",
+      messageID: processor.message.id,
+      data: {
+        parentID: input.parentID,
+        summaryMessageID: processor.message.id,
+        auto: input.auto,
+        recoveryAttempts,
+        originalMessageCount: input.messages.length,
+        compactedMessageCount: history.length,
+      },
+    })
     Bus.publish(Event.Compacted, { sessionID: input.sessionID })
+    await HookDispatcher.emit({
+      name: "PostCompact",
+      timestamp: Date.now(),
+      sessionId: input.sessionID,
+      payload: { trigger: input.auto ? "auto" : "manual", recoveryAttempts },
+    })
     return "continue"
+  }
+
+  function shrinkHistory<T extends { role: string }>(messages: T[], attempt: number): T[] {
+    const ratio = attempt === 0 ? 0.75 : 0.5
+    let reduced = messages.slice(Math.min(messages.length - 1, Math.max(1, Math.floor(messages.length * (1 - ratio)))))
+    while (reduced.length > 1 && reduced[0]?.role === "tool") reduced = reduced.slice(1)
+    return reduced
   }
 
   export const create = fn(

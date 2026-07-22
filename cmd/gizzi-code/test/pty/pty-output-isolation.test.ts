@@ -1,7 +1,7 @@
 // @ts-nocheck
 import { describe, expect, test } from "bun:test"
-import { Instance } from "../../src/project/instance"
-import { Pty } from "../../src/pty"
+import { Instance } from "../../src/runtime/context/project/instance"
+import { Pty } from "../../src/runtime/integrations/pty"
 import { tmpdir } from "../fixture/fixture"
 
 describe("pty", () => {

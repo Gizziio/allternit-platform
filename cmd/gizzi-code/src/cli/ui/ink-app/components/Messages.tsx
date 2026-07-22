@@ -35,6 +35,7 @@ import { renderableSearchText } from '../utils/transcriptSearch';
 import { Divider } from './design-system/Divider';
 import type { UnseenDivider } from './FullscreenLayout';
 import { LogoV2 } from './LogoV2/LogoV2';
+import { GizziLogo } from './GizziLogo';
 import { StreamingMarkdown } from './Markdown';
 import { hasContentAfterIndex, MessageRow } from './MessageRow';
 import { InVirtualListContext, type MessageActionsNav, MessageActionsSelectedContext, type MessageActionsState } from './messageActions';
@@ -60,7 +61,7 @@ const LogoHeader = React.memo(function LogoHeader(t0) {
   } = t0;
   let t1;
   if ($[0] === Symbol.for("react.memo_cache_sentinel")) {
-    t1 = <LogoV2 />;
+    t1 = <><GizziLogo /><LogoV2 /></>;
     $[0] = t1;
   } else {
     t1 = $[0];

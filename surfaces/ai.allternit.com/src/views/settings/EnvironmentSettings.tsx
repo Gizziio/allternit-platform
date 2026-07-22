@@ -162,7 +162,7 @@ export function EnvironmentSettings(): React.ReactNode {
     try {
       const userUpdates: Partial<UserConfig> = {};
       for (const key of dirty) {
-        if (ENV_FIELDS.some((f) => f.key === key)) {
+        if (ENV_FIELDS.some((f) => f.key === key) || COMPANY_ENV_FIELDS.some((f) => f.key === key)) {
           const value = values[key];
           const trimmed = value.trim();
           (userUpdates as Record<string, unknown>)[key] = trimmed.length > 0 ? trimmed : undefined;

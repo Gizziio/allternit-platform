@@ -60,7 +60,7 @@ const MODES: ModeConfig[] = [
   },
   {
     id: 'browser',
-    label: 'Browser',
+    label: 'ACI',
     icon: Globe,
     accentColor: 'var(--accent-browser)',
     accentLight: 'var(--shell-mode-browser-soft)',

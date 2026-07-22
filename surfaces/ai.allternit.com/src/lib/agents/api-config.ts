@@ -4,6 +4,8 @@
  * This file exists to avoid circular dependencies between agent.service.ts and rails.service.ts
  */
 
+import { getActiveRuntimeId, getRuntimeExecutionTarget } from '@/lib/runtime-target';
+
 const DEFAULT_GATEWAY_URL = 'http://127.0.0.1:8013';
 
 function stripTrailingSlash(value: string): string {
@@ -72,6 +74,15 @@ export const GATEWAY_BASE_URL = resolveGatewayBaseUrl();
 
 // Canonical API base URL.
 export const API_BASE_URL = resolveApiBaseUrl();
+
+/** Build a runtime API URL without bypassing the paired-runtime relay. */
+export function runtimeApiUrl(path: string): string {
+  const normalizedPath = path.startsWith('/') ? path : `/${path}`;
+  if (getRuntimeExecutionTarget() === 'cloud' && getActiveRuntimeId()) {
+    return `/api/v1${normalizedPath}`;
+  }
+  return `${API_BASE_URL}${normalizedPath}`;
+}
 
 const DEFAULT_GIZZI_URL = 'http://127.0.0.1:4096';
 

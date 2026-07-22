@@ -96,7 +96,20 @@ use tokio::sync::RwLock;
 
 #[tokio::main]
 async fn main() {
-    // Initialize tracing with filter to suppress noisy cron-scheduler errors
+    // Initialize tracing with filter to suppress noisy cron-scheduler errors.
+    //
+    // This is structured logging + local spans (`#[tracing::instrument]` now
+    // on the LLM gateway, DLP, MCP-server, Slack-webhook, and eval-run
+    // handlers), not exported distributed tracing. The workspace Cargo.toml
+    // already pins `opentelemetry`/`opentelemetry_sdk`/`tracing-opentelemetry`/
+    // `opentelemetry-http` (used by no crate in the repo today, confirmed by
+    // grep), so the dependency choice is made — wiring a real
+    // `tracing-opentelemetry` layer + OTLP exporter here is genuine follow-on
+    // work, deliberately not attempted blind: this machine has no Rust
+    // toolchain to compile-check it, there's no existing in-repo usage of
+    // these pre-1.0 OTel crates to model the exact builder API from, and
+    // guessing at that API surface risks landing code that looks right but
+    // doesn't build against the pinned versions.
     let filter = tracing_subscriber::EnvFilter::try_from_default_env()
         .unwrap_or_else(|_| tracing_subscriber::EnvFilter::new("info,tokio_cron_scheduler=off"));
     tracing_subscriber::fmt().with_env_filter(filter).init();
@@ -289,6 +302,7 @@ async fn main() {
         .merge(allternit_api::connector_routes::connector_router())
         .merge(allternit_api::cloud_credentials_routes::cloud_credentials_router())
         .merge(allternit_api::usage_routes::usage_router())
+        .merge(allternit_api::upload_routes::upload_router())
         .merge(allternit_api::llm_gateway::gateway_keys_router())
         .merge(allternit_api::llm_gateway::admin_routes::gateway_admin_router())
         .merge(workspace_router())
@@ -315,7 +329,10 @@ async fn main() {
         .nest("/api/rails", rails_router())
         .nest("/stream", stream_router())
         .nest("/terminal", terminal_router())
-        .nest("/mcp", mcp_router())
+        .nest(
+            "/mcp",
+            mcp_router().merge(allternit_api::mcp_server_routes::mcp_server_router()),
+        )
         .nest("/metrics", metrics_router())
         .nest("/api", h5i_router())
         .nest("/api", oauth_router())
@@ -338,6 +355,10 @@ async fn main() {
         .nest("/api", web_proxy_router())
         .merge(status_router())
         .merge(webhook_router())
+        // Slack signs every request itself (`verify_slack_signature`), so
+        // this is public the same way `webhook_router()` above is — no
+        // Clerk session exists for a server-to-server call from Slack.
+        .merge(allternit_api::slack_webhook_routes::slack_webhook_router())
         // OAuth provider redirect targets — the browser arrives from the
         // provider's consent screen with no Clerk JWT, so these must be
         // public: the curated-3 loopback callback (moved out of the protected

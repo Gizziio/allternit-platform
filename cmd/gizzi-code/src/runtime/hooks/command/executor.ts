@@ -28,14 +28,17 @@ export class CommandHookExecutor {
       const exitCode = await proc.exited
       clearTimeout(timer)
 
+      const stderr = await new Response(proc.stderr).text()
+      if (exitCode === 2) {
+        return { decision: "deny", reason: stderr.trim() || "Hook blocked this operation" }
+      }
       if (exitCode !== 0) {
-        const stderr = await new Response(proc.stderr).text()
-        log.error("Command hook exited with non-zero status", {
+        log.warn("Command hook failed open", {
           command,
           exitCode,
           stderr: stderr.slice(0, 500),
         })
-        return null
+        return { decision: "allow" }
       }
 
       const stdout = await new Response(proc.stdout).text()
@@ -47,11 +50,15 @@ export class CommandHookExecutor {
       }
 
       try {
-        return JSON.parse(trimmed) as HookResponse
+        const parsed = JSON.parse(trimmed) as HookResponse & {
+          hookSpecificOutput?: { permissionDecision?: string; permissionDecisionReason?: string }
+        }
+        if (parsed.hookSpecificOutput?.permissionDecision === "deny") {
+          return { decision: "deny", reason: parsed.hookSpecificOutput.permissionDecisionReason }
+        }
+        return parsed.decision ? parsed : { decision: "allow", message: trimmed }
       } catch {
-        // Non-JSON stdout: treat non-empty as a deny reason
-        log.warn("Command hook returned non-JSON output, treating as deny", { command, output: trimmed.slice(0, 200) })
-        return { decision: "deny", reason: trimmed }
+        return { decision: "allow", message: trimmed }
       }
     } catch (e) {
       log.error("Command hook execution failed", { command, error: e })

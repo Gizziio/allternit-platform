@@ -53,15 +53,20 @@ export const TabsList: React.FC<{
   );
 };
 
-export const TabsTrigger: React.FC<{ 
-  value: string; 
+export const TabsTrigger: React.FC<{
+  value: string;
   children: React.ReactNode;
   isActive?: boolean;
   onClick?: () => void;
   className?: string;
-}> = ({ children, isActive, onClick, className }) => {
+  disabled?: boolean;
+}> = ({ children, isActive, onClick, className, disabled }) => {
   return (
-    <button type="button"
+    <button
+      type="button"
+      role="tab"
+      aria-selected={isActive}
+      disabled={disabled}
       className={className}
       onClick={onClick}
       style={{
@@ -71,7 +76,8 @@ export const TabsTrigger: React.FC<{
         background: isActive ? 'var(--ui-border-default)' : 'transparent',
         color: isActive ? '#fff' : 'var(--ui-text-muted)',
         fontSize: '14px',
-        cursor: 'pointer',
+        cursor: disabled ? 'not-allowed' : 'pointer',
+        opacity: disabled ? 0.5 : 1,
       }}
     >
       {children}

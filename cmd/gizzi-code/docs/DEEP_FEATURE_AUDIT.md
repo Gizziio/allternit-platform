@@ -270,7 +270,7 @@
 
 ### Gizzi-Code Has
 - **HTTP webhook hooks**: POST events to HTTP endpoints
-- **Events**: UserPromptSubmit, PreToolUse, PostToolUse, ToolError, SessionStart, SessionEnd
+- **Events**: UserPromptSubmit, PreToolUse, PostToolUse, PostToolUseFailure, PermissionRequest, PermissionResult, Stop, StopFailure, Interrupt, SessionStart, SessionEnd, SubagentStart, SubagentStop, PreCompact, PostCompact, Notification
 - **Actions**: allow, deny, modify (PreToolUse only supports modification)
 - **Configuration**: `config.hooks.http` array
 - **Hook dispatcher**: `dispatcher.ts` merges multiple hook responses (any deny blocks)
@@ -288,7 +288,7 @@
 
 ### What Gizzi-Code Has Extra
 - UserPromptSubmit event (Claude Code doesn't hook into prompt submission)
-- ToolError event (explicit error hook)
+- PostToolUseFailure event (explicit error or policy-block hook)
 - HTTP-first design (better for remote/serverless hook handlers)
 
 ---

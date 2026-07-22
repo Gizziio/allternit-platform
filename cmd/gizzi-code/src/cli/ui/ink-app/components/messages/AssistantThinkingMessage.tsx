@@ -5,6 +5,7 @@ import React from 'react';
 import { Box, Text } from '../../ink';
 import { CtrlOToExpand } from '../CtrlOToExpand';
 import { Markdown } from '../Markdown';
+import { ThinkingSpinner } from './ThinkingSpinner';
 type Props = {
   // Accept either full ThinkingBlock/ThinkingBlockParam or a minimal shape with just type and thinking
   param: ThinkingBlock | ThinkingBlockParam | {
@@ -18,7 +19,7 @@ type Props = {
   hideInTranscript?: boolean;
 };
 export function AssistantThinkingMessage(t0) {
-  const $ = _c(9);
+  const $ = _c(11);
   const {
     param: t1,
     addMargin: t2,
@@ -40,47 +41,55 @@ export function AssistantThinkingMessage(t0) {
   const shouldShowFullThinking = isTranscriptMode || verbose;
   if (!shouldShowFullThinking) {
     const t4 = addMargin ? 1 : 0;
+    const previewLines = thinking.split('\n').slice(0, 2).join('\n');
+    const preview = previewLines.length > 0 ? `${previewLines}\u2026` : '';
+    const cacheKey = `${thinking}\0${preview}`;
     let t5;
-    if ($[0] === Symbol.for("react.memo_cache_sentinel")) {
-      t5 = <Text dimColor={true} italic={true}>{"\u2234 Thinking"} <CtrlOToExpand /></Text>;
-      $[0] = t5;
+    if ($[0] !== cacheKey) {
+      t5 = <Box flexDirection="column" gap={0}>
+          <Text dimColor={true} italic={true}><ThinkingSpinner /> Thinking\u2026 <CtrlOToExpand /></Text>
+          {preview && <Text dimColor={true} wrap="truncate">{preview}</Text>}
+        </Box>;
+      $[0] = cacheKey;
+      $[1] = t5;
     } else {
-      t5 = $[0];
+      t5 = $[1];
     }
     let t6;
-    if ($[1] !== t4) {
+    if ($[2] !== t4 || $[3] !== t5) {
       t6 = <Box marginTop={t4}>{t5}</Box>;
-      $[1] = t4;
-      $[2] = t6;
+      $[2] = t4;
+      $[3] = t5;
+      $[4] = t6;
     } else {
-      t6 = $[2];
+      t6 = $[4];
     }
     return t6;
   }
   const t4 = addMargin ? 1 : 0;
   let t5;
-  if ($[3] === Symbol.for("react.memo_cache_sentinel")) {
-    t5 = <Text dimColor={true} italic={true}>{"\u2234 Thinking"}…</Text>;
-    $[3] = t5;
+  if ($[5] === Symbol.for("react.memo_cache_sentinel")) {
+    t5 = <Text dimColor={true} italic={true}><ThinkingSpinner /> Thinking\u2026 (ctrl+o to collapse)</Text>;
+    $[5] = t5;
   } else {
-    t5 = $[3];
+    t5 = $[5];
   }
   let t6;
-  if ($[4] !== thinking) {
+  if ($[6] !== thinking) {
     t6 = <Box paddingLeft={2}><Markdown dimColor={true}>{thinking}</Markdown></Box>;
-    $[4] = thinking;
-    $[5] = t6;
+    $[6] = thinking;
+    $[7] = t6;
   } else {
-    t6 = $[5];
+    t6 = $[7];
   }
   let t7;
-  if ($[6] !== t4 || $[7] !== t6) {
+  if ($[8] !== t4 || $[9] !== t6) {
     t7 = <Box flexDirection="column" gap={1} marginTop={t4} width="100%">{t5}{t6}</Box>;
-    $[6] = t4;
-    $[7] = t6;
-    $[8] = t7;
+    $[8] = t4;
+    $[9] = t6;
+    $[10] = t7;
   } else {
-    t7 = $[8];
+    t7 = $[10];
   }
   return t7;
 }

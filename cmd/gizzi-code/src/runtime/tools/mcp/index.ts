@@ -25,6 +25,9 @@ import { Bus } from "@/shared/bus"
 import { TuiEvent } from "@/cli/ui/ink-app/event"
 import open from "open"
 import { withBundledMcpServers } from "@/runtime/tools/mcp/bundled"
+import { createHash } from "crypto"
+import { buildMcpToolName } from "@/runtime/services/mcp/mcpStringUtils"
+import { RuntimeTelemetry } from "@/runtime/telemetry"
 
 export namespace MCP {
   const log = Log.create({ service: "mcp" })
@@ -587,8 +590,18 @@ export namespace MCP {
     s.status[name] = { status: "disabled" }
   }
 
-  export async function tools() {
+  export interface ToolDescriptor {
+    qualifiedName: string
+    serverName: string
+    originalName: string
+    normalizedBase: string
+    collision: boolean
+  }
+
+  export async function toolCatalog() {
     const result: Record<string, Tool> = {}
+    const descriptors: Record<string, ToolDescriptor> = {}
+    const collisions: Array<{ qualifiedName: string; existing: ToolDescriptor; incoming: Omit<ToolDescriptor, "qualifiedName" | "collision"> }> = []
     const s = await state()
     const cfg = await Config.get()
     const config = withBundledMcpServers(cfg.mcp ?? {})
@@ -621,12 +634,47 @@ export namespace MCP {
       const entry = isMcpConfigured(mcpConfig) ? mcpConfig : undefined
       const timeout = entry?.timeout ?? defaultTimeout
       for (const mcpTool of toolsResult.tools) {
-        const sanitizedClientName = clientName.replace(/[^a-zA-Z0-9_-]/g, "_")
-        const sanitizedToolName = mcpTool.name.replace(/[^a-zA-Z0-9_-]/g, "_")
-        result[sanitizedClientName + "_" + sanitizedToolName] = await convertMcpTool(mcpTool, client, timeout)
+        const identity = `${clientName}\0${mcpTool.name}`
+        const normalizedBase = qualifiedToolName(clientName, mcpTool.name)
+        const incoming = { serverName: clientName, originalName: mcpTool.name, normalizedBase }
+        let qualifiedName = normalizedBase
+        const existing = descriptors[qualifiedName]
+        if (existing) {
+          collisions.push({ qualifiedName, existing, incoming })
+          qualifiedName = withToolSuffix(normalizedBase, createHash("sha256").update(identity).digest("hex").slice(0, 8))
+          let counter = 2
+          while (descriptors[qualifiedName]) qualifiedName = withToolSuffix(normalizedBase, String(counter++))
+        }
+        result[qualifiedName] = await convertMcpTool(mcpTool, client, timeout)
+        descriptors[qualifiedName] = { qualifiedName, ...incoming, collision: Boolean(existing) }
       }
     }
-    return result
+    if (collisions.length) {
+      RuntimeTelemetry.track("mcp_tool_collision", {
+        count: collisions.length,
+        servers: connectedClients.length,
+      })
+    }
+    return { tools: result, descriptors, collisions }
+  }
+
+  export async function tools() {
+    return (await toolCatalog()).tools
+  }
+
+  function boundedToolName(name: string, identity: string) {
+    if (name.length <= 64) return name
+    const suffix = createHash("sha256").update(identity).digest("hex").slice(0, 8)
+    return `${name.slice(0, 55)}_${suffix}`
+  }
+
+  export function qualifiedToolName(serverName: string, toolName: string) {
+    return boundedToolName(buildMcpToolName(serverName, toolName), `${serverName}\0${toolName}`)
+  }
+
+  function withToolSuffix(base: string, suffix: string) {
+    const tail = `__${suffix}`
+    return `${base.slice(0, 64 - tail.length)}${tail}`
   }
 
   export async function prompts() {

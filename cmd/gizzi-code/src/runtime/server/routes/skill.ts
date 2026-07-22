@@ -41,6 +41,22 @@ export function SkillRoutes() {
       async (c) => c.json(await Skill.all()),
     )
 
+    .get(
+      "/catalog",
+      describeRoute({
+        summary: "Inspect skill catalog",
+        description: "List deterministic source roots and resolved name collisions.",
+        operationId: "skill.catalog",
+        responses: {
+          200: {
+            description: "Skill catalog diagnostics",
+            content: { "application/json": { schema: resolver(z.any()) } },
+          },
+        },
+      }),
+      async (c) => c.json({ skills: await Skill.all(), collisions: await Skill.collisions(), roots: await Skill.roots() }),
+    )
+
     // ── Add skill from URL ───────────────────────────────────
     .post(
       "/add",

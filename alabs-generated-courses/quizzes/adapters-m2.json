@@ -1,0 +1,38 @@
+{
+  "title": "Module Quiz: ALABS-ADV-ADAPTERS-module2",
+  "questions": [
+    {
+      "question": "Quiz 1: When should the circuit breaker transition from Open to Half-Open?",
+      "options": [
+        "Immediately after the first failure that opened it",
+        "After the configured recovery timeout has elapsed",
+        "When the upstream service sends a health-check ping",
+        "Only after manual operator intervention"
+      ],
+      "correctIndex": 1,
+      "explanation": "After the configured recovery timeout has elapsed"
+    },
+    {
+      "question": "Quiz 2: Why add jitter to exponential backoff?",
+      "options": [
+        "To make the delay longer on average",
+        "To satisfy provider API requirements",
+        "To desynchronize retries and prevent thundering herds",
+        "To reduce the total number of retry attempts"
+      ],
+      "correctIndex": 2,
+      "explanation": "To desynchronize retries and prevent thundering herds"
+    },
+    {
+      "question": "Quiz 3: What's the difference between rate limiting and concurrency limiting?",
+      "options": [
+        "There is no difference; they are synonyms",
+        "Rate limiting caps requests over time; concurrency limiting caps simultaneous requests",
+        "Rate limiting is client-side; concurrency limiting is server-side",
+        "Concurrency limiting only applies to HTTP/2 streams"
+      ],
+      "correctIndex": 1,
+      "explanation": "Rate limiting caps requests over time; concurrency limiting caps simultaneous requests"
+    }
+  ]
+}

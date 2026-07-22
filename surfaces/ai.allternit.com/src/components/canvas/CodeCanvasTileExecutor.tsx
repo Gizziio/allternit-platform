@@ -116,7 +116,7 @@ export function CodeCanvasTileExecutor({
         railsApi.receipts.query({ node_id: slug, limit: 50 }).catch(() => null),
       ]);
       setSession(status.session);
-      setTail(output.output);
+      setTail(typeof output === 'string' ? output : output.output);
       if (receiptPage) {
         setArtifacts(
           receiptPage.receipts.flatMap((receipt) => {
@@ -128,7 +128,7 @@ export function CodeCanvasTileExecutor({
               .map((reference) => ({
                 ...artifactFromReference(reference, receipt.run_id),
                 id: `${receipt.receipt_id}:${reference}`,
-                source: 'executor' as const,
+                source: 'tool' as const,
                 receiptId: receipt.receipt_id,
                 createdAt: new Date(receipt.timestamp).getTime(),
               }));

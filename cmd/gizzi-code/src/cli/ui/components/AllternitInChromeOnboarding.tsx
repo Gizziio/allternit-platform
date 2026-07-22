@@ -4,7 +4,7 @@ import React from 'react';
 import { logEvent } from 'src/services/analytics/index.js';
 // eslint-disable-next-line custom-rules/prefer-use-keybindings -- enter to continue
 import { Box, Link, Newline, Text, useInput } from '@/ink.js';
-import { isChromeExtensionInstalled } from '../../../runtime/claude-core/setup.js';
+import { isChromeExtensionInstalled } from '../../../shared/utils/allternitInChrome/setup.js';
 import { saveGlobalConfig } from '../../../shared/utils/config.js';
 import { Dialog } from './design-system/Dialog.js';
 const CHROME_EXTENSION_URL = 'https://chromewebstore.google.com/detail/chheieepkpbhkiimdmbdjmnhcooclpok';

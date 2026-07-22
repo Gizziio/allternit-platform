@@ -1,0 +1,15 @@
+{
+  "name": "finance-analysis",
+  "version": "1.0.0",
+  "description": "Financial analysis and modeling helpers.",
+  "author": {
+    "name": "Anthropic",
+    "email": "support@anthropic.com"
+  },
+  "keywords": [
+    "finance",
+    "claude",
+    "builtin"
+  ],
+  "license": "MIT"
+}

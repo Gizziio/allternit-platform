@@ -145,14 +145,14 @@ export function getShellViewRegistry(handlers: {
     ),
     browser: ({ context }: { context?: ViewContext }) => (
       <BrowserPaneWrapper>
-        <ErrorBoundary fallback={<ErrorFallbackWrapper viewName="Browser" />}>
+        <ErrorBoundary fallback={<ErrorFallbackWrapper viewName="ACI" />}>
           <BrowserCapsuleEnhanced />
         </ErrorBoundary>
       </BrowserPaneWrapper>
     ),
     browserview: ({ context }: { context?: ViewContext }) => (
       <BrowserPaneWrapper>
-        <ErrorBoundary fallback={<ErrorFallbackWrapper viewName="Browser" />}>
+        <ErrorBoundary fallback={<ErrorFallbackWrapper viewName="ACI" />}>
           <BrowserCapsuleEnhanced />
         </ErrorBoundary>
       </BrowserPaneWrapper>

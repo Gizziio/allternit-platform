@@ -11,7 +11,7 @@
  * RUN WITH: npm test -- agent-workspace.e2e.test.ts
  */
 
-import { describe, it, expect, beforeAll } from 'vitest';
+import { describe, it, expect, beforeAll, afterAll } from 'vitest';
 import * as fs from 'fs/promises';
 import * as path from 'path';
 import * as os from 'os';
@@ -20,6 +20,97 @@ import { parseHeartbeatTasks } from '../agent-heartbeat-executor';
 
 const TEST_AGENT_ID = 'test-agent';
 const TEST_WORKSPACE_PATH = path.join(os.homedir(), 'agents', TEST_AGENT_ID, '.allternit');
+
+async function setupTestWorkspace(): Promise<void> {
+  await fs.mkdir(TEST_WORKSPACE_PATH, { recursive: true });
+
+  const soulMd = `# Agent SOUL — Trust Tiers
+
+This document defines the trust tiers and permission boundaries for the agent.
+
+## Tier 1 - Autonomous
+These actions can be executed without explicit permission:
+- read files
+- view logs
+- search documentation
+
+## Tier 2 - Notify After
+These actions can be executed but the user should be notified afterwards:
+- write small files
+- run tests
+- fetch public URLs
+
+## Tier 3 - Require Permission
+These actions require explicit user permission before execution:
+- delete files
+- Shell rm -rf
+- modify production configuration
+- install packages
+`;
+
+  const heartbeatMd = `# HEARTBEAT
+
+Scheduled tasks that the agent should perform on a recurring basis.
+
+### Startup
+- Check workspace health
+- Load project context
+
+### Daily
+- Check workspace health
+- Load project context
+`;
+
+  const identityMd = `# Identity
+
+Test agent identity.
+
+This agent is a general-purpose coding assistant for the Allternit platform. It helps with software engineering tasks, code review, debugging, and architectural decisions across the workspace.
+`;
+
+  const toolsMd = `# Tools
+
+Available tools for the agent.
+
+- read_file: Read the contents of a file at a given path.
+- write_file: Write content to a file at a given path.
+- run_command: Execute a shell command in the workspace.
+- search_code: Search the codebase for symbols or patterns.
+- ask_user: Ask the user a clarifying question.
+`;
+
+  const files: Record<string, string> = {
+    'SOUL.md': soulMd,
+    'HEARTBEAT.md': heartbeatMd,
+    'IDENTITY.md': identityMd,
+    'VOICE.md': '# Voice\n\nTest agent voice.\n',
+    'POLICY.md': '# Policy\n\nTest agent policy.\n',
+    'PLAYBOOK.md': '# Playbook\n\nTest agent playbook.\n',
+    'TOOLS.md': toolsMd,
+    'SYSTEM.md': '# System\n\nTest agent system.\n',
+    'BRAIN.md': '# Brain\n\nTest agent brain.\n',
+    'MEMORY.md': '# Memory\n\nTest agent memory.\n',
+    'LESSONS.md': '# Lessons\n\nTest agent lessons.\n',
+  };
+
+  for (const [fileName, content] of Object.entries(files)) {
+    await fs.writeFile(path.join(TEST_WORKSPACE_PATH, fileName), content, 'utf-8');
+  }
+}
+
+async function teardownTestWorkspace(): Promise<void> {
+  await fs.rm(TEST_WORKSPACE_PATH, { recursive: true, force: true });
+}
+
+beforeAll(async () => {
+  await teardownTestWorkspace();
+  await setupTestWorkspace();
+  console.debug(`[E2E Test] Using workspace at: ${TEST_WORKSPACE_PATH}`);
+});
+
+afterAll(async () => {
+  await teardownTestWorkspace();
+});
 
 // Direct file system helpers for testing
 async function readWorkspaceFile(fileName: string): Promise<string | null> {
@@ -49,15 +140,6 @@ async function listWorkspaceFiles(): Promise<string[]> {
 }
 
 describe('Agent Workspace E2E', () => {
-  beforeAll(async () => {
-    // Ensure test workspace exists
-    const exists = await workspaceExists();
-    if (!exists) {
-      throw new Error(`Test workspace not found at ${TEST_WORKSPACE_PATH}. Run setup first.`);
-    }
-    console.debug(`[E2E Test] Using workspace at: ${TEST_WORKSPACE_PATH}`);
-  });
-
   describe('File System Integration', () => {
     it('should detect workspace exists', async () => {
       const exists = await workspaceExists();

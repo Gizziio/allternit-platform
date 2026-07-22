@@ -80,12 +80,23 @@ final class ACIBrowserController: ObservableObject {
 struct ACIWebBrowserView: View {
     let initialURL: URL
     let onExit: () -> Void
+    let onStartAgentRun: ((String) -> Void)?
 
     @StateObject private var controller = ACIBrowserController()
-    @State private var urlText = ""
+    @State private var urlText: String
     @FocusState private var urlFieldFocused: Bool
+    
+    @State private var isExtensionChatOpen = false
+    @State private var extensionInput = ""
 
     private let theme = ModeTheme(mode: .browser)
+
+    init(initialURL: URL, onExit: @escaping () -> Void, onStartAgentRun: ((String) -> Void)? = nil) {
+        self.initialURL = initialURL
+        self.onExit = onExit
+        self.onStartAgentRun = onStartAgentRun
+        _urlText = State(initialValue: initialURL.absoluteString)
+    }
 
     var body: some View {
         VStack(spacing: 0) {
@@ -100,6 +111,16 @@ struct ACIWebBrowserView: View {
             // Follow navigations unless the user is mid-edit in the bar.
             if !urlFieldFocused, let newURL {
                 urlText = newURL.absoluteString
+            }
+        }
+        .sheet(isPresented: $isExtensionChatOpen) {
+            extensionChatSheet
+                .presentationDetents([.height(380), .large])
+                .presentationDragIndicator(.visible)
+        }
+        .onAppear {
+            if CommandLine.arguments.contains("-extension") {
+                isExtensionChatOpen = true
             }
         }
     }
@@ -175,6 +196,33 @@ struct ACIWebBrowserView: View {
                 controller.goForward()
             }
             Spacer()
+            
+            // Allternit Extension chat panel button
+            Button(action: {
+                let generator = UIImpactFeedbackGenerator(style: .medium)
+                generator.impactOccurred()
+                isExtensionChatOpen = true
+            }) {
+                HStack(spacing: 4) {
+                    Image(systemName: "puzzlepiece.extension.fill")
+                        .font(.system(size: 14, weight: .bold))
+                    Text("Extension Chat")
+                        .font(.system(size: 12, weight: .semibold))
+                }
+                .foregroundColor(theme.accent)
+                .padding(.horizontal, 12)
+                .padding(.vertical, 6)
+                .background(theme.accentSoft)
+                .cornerRadius(8)
+                .overlay(
+                    RoundedRectangle(cornerRadius: 8)
+                        .stroke(theme.accentGlow, lineWidth: 1)
+                )
+            }
+            .buttonStyle(.plain)
+            
+            Spacer()
+            
             toolbarButton("arrow.clockwise", enabled: true) {
                 controller.reload()
             }
@@ -193,6 +241,135 @@ struct ACIWebBrowserView: View {
         }
         .buttonStyle(.plain)
         .disabled(!enabled)
+    }
+
+    // MARK: - Extension Chat Sheet
+    
+    private var extensionChatSheet: some View {
+        VStack(alignment: .leading, spacing: 16) {
+            // Header
+            HStack {
+                Image(systemName: "puzzlepiece.extension.fill")
+                    .font(.title3)
+                    .foregroundColor(theme.accent)
+                
+                VStack(alignment: .leading, spacing: 2) {
+                    Text("Allternit Extension")
+                        .font(.headline)
+                        .foregroundColor(Color("TextPrimary"))
+                    Text(controller.navigation.url?.absoluteString ?? "No active page")
+                        .font(.caption)
+                        .foregroundColor(Color("TextSecondary"))
+                        .lineLimit(1)
+                }
+                
+                Spacer()
+                
+                Button(action: { isExtensionChatOpen = false }) {
+                    Image(systemName: "xmark.circle.fill")
+                        .font(.title2)
+                        .foregroundColor(Color("TextSecondary"))
+                }
+                .buttonStyle(.plain)
+            }
+            .padding(.top, 20)
+            .padding(.horizontal, 20)
+            
+            Divider().background(Color("BorderSubtle"))
+            
+            // Illustration / Chat Intro
+            VStack(spacing: 8) {
+                Image(systemName: "sparkles.bubble.left.fill")
+                    .font(.system(size: 28))
+                    .foregroundColor(theme.accent)
+                    .padding(12)
+                    .background(theme.accentSoft)
+                    .clipShape(Circle())
+                
+                Text("What should the Computer Agent do?")
+                    .font(.subheadline)
+                    .fontWeight(.semibold)
+                    .foregroundColor(Color("TextPrimary"))
+                
+                Text("Describe a page automation task, and the agent will run ACI to automate this browser tab.")
+                    .font(.caption)
+                    .foregroundColor(Color("TextSecondary"))
+                    .multilineTextAlignment(.center)
+                    .padding(.horizontal, 24)
+            }
+            .frame(maxWidth: .infinity)
+            .padding(.vertical, 8)
+            
+            // Predefined Quick Suggestions
+            VStack(alignment: .leading, spacing: 8) {
+                Text("Suggested Tasks")
+                    .font(.system(size: 10, weight: .bold))
+                    .foregroundColor(Color("TextSecondary"))
+                    .textCase(.uppercase)
+                    .padding(.horizontal, 20)
+                
+                ScrollView(.horizontal, showsIndicators: false) {
+                    HStack(spacing: 8) {
+                        ForEach([
+                            "Extract page contact details",
+                            "Find all links on this page",
+                            "Search for specific tutorials",
+                            "Auto-fill dummy data on this form"
+                        ], id: \.self) { suggestion in
+                            Button(action: {
+                                extensionInput = suggestion
+                            }) {
+                                Text(suggestion)
+                                    .font(.system(size: 12, weight: .medium))
+                                    .padding(.horizontal, 12)
+                                    .padding(.vertical, 8)
+                                    .background(Color("BgSecondary"))
+                                    .foregroundColor(Color("TextPrimary"))
+                                    .cornerRadius(8)
+                                    .overlay(
+                                        RoundedRectangle(cornerRadius: 8)
+                                            .stroke(Color("BorderSubtle"), lineWidth: 1)
+                                    )
+                            }
+                            .buttonStyle(.plain)
+                        }
+                    }
+                    .padding(.horizontal, 20)
+                }
+            }
+            
+            Spacer()
+            
+            // Input composer
+            HStack(spacing: 8) {
+                TextField("Describe task for the browser agent...", text: $extensionInput)
+                    .padding(.horizontal, 14)
+                    .frame(height: 44)
+                    .background(Color("BgSecondary"))
+                    .foregroundColor(Color("TextPrimary"))
+                    .cornerRadius(10)
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 10)
+                            .stroke(Color("BorderSubtle"), lineWidth: 1)
+                    )
+                
+                Button(action: {
+                    let goal = extensionInput.trimmingCharacters(in: .whitespacesAndNewlines)
+                    guard !goal.isEmpty else { return }
+                    isExtensionChatOpen = false
+                    onStartAgentRun?(goal)
+                }) {
+                    Image(systemName: "arrow.up.circle.fill")
+                        .font(.system(size: 32))
+                        .foregroundColor(theme.accent)
+                }
+                .buttonStyle(.plain)
+                .disabled(extensionInput.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+            }
+            .padding(.horizontal, 20)
+            .padding(.bottom, 20)
+        }
+        .background(Color("BgPrimary"))
     }
 }
 

@@ -56,7 +56,7 @@ import {
   mapNativeMessagesToStreamMessages,
 } from '@/lib/agents';
 import { useCoworkSessionStore, createCoworkSession } from './CoworkSessionStore';
-import { CoworkModeTabs, useCoworkMode } from './CoworkModeTabs';
+import { useCoworkMode } from './CoworkModeTabs';
 import { WorkflowPipeline, type CoworkAgent } from './components/WorkflowPipeline';
 import { BrowserAgentWorkspace } from './components/BrowserAgentWorkspace';
 import { ReactFlowProvider } from '@xyflow/react';
@@ -389,7 +389,7 @@ function CoworkRootContent() {
                     <div style={{ position: 'relative', zIndex: 1, height: '100%' }}>
                       <div className="coworkShell">
                         {/* Main chat area — shrinks when rail is open */}
-                        <div className="coworkCenter" style={{ paddingRight: showRail ? 260 : 0 }}>
+                        <div className="coworkCenter" style={{ paddingRight: 0 }}>
                           {/* Dropped Files Attachment Preview */}
                           {droppedFiles.length > 0 && (
                             <div style={{
@@ -584,27 +584,32 @@ const coworkStyles = `
   pointer-events: auto;
 }
 
-/* Theme-aware rail — sits on the right edge, transparent over the animated background */
+/* Theme-aware rail — floating card anchored to the top-right of the canvas.
+   ~25–30% of the height from the top (Claude Cowork style); collapses via
+   the close icon in its header and re-opens from the thin edge handle. */
 .coworkRailOverlay {
   position: absolute;
-  top: 0;
-  right: 0;
-  bottom: 0;
-  width: 260px;
+  top: 12px;
+  right: 12px;
+  height: 28%;
+  min-height: 180px;
+  width: 300px;
   z-index: 20;
   overflow: hidden;
   display: flex;
   flex-direction: column;
-  background: color-mix(in srgb, var(--shell-panel-bg) 72%, transparent);
+  background: color-mix(in srgb, var(--shell-panel-bg) 88%, transparent);
   backdrop-filter: blur(16px);
   -webkit-backdrop-filter: blur(16px);
-  border-left: 1px solid var(--ui-border-muted);
+  border: 1px solid var(--ui-border-muted);
+  border-radius: 14px;
+  box-shadow: var(--shadow-lg, 0 12px 32px rgba(0,0,0,0.25));
   animation: coworkRailIn 0.18s ease-out;
 }
 
 @keyframes coworkRailIn {
-  from { transform: translateX(100%); opacity: 0; }
-  to   { transform: translateX(0);    opacity: 1; }
+  from { transform: translateY(-8px); opacity: 0; }
+  to   { transform: translateY(0);    opacity: 1; }
 }
 
 /* Thin tab on the right edge to re-open the rail */
@@ -1131,17 +1136,6 @@ function CoworkChat({ sessionId, initialMessage, onInitialMessageSent, onLiveUpd
           </button>
         </div>
       )}
-
-      {/* Cowork mode pills */}
-      <div style={{
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        padding: '8px 16px',
-        flexShrink: 0,
-      }}>
-        <CoworkModeTabs variant="top-pills" />
-      </div>
 
       {/* Message List */}
       <div

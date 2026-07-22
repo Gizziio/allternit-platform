@@ -56,14 +56,10 @@ async fn usage_summary(
 
         // Metered invoice data is organization-sensitive. Only active owners
         // and admins may view it, even if another member guesses the URL.
-        let member_role: Option<String> = conn
-            .query_row(
-                "SELECT role FROM organization_members WHERE organization_id = ?1 AND user_id = ?2",
-                params![organization_id, user_id],
-                |row| row.get(0),
-            )
-            .ok();
-        if !matches!(member_role.as_deref(), Some("owner") | Some("admin")) {
+        let is_admin = crate::rbac::is_org_admin(&conn, &organization_id, &user_id).map_err(|e| {
+            (StatusCode::INTERNAL_SERVER_ERROR, json!({"error": "db_error", "message": e.to_string()}))
+        })?;
+        if !is_admin {
             return Err((
                 StatusCode::FORBIDDEN,
                 json!({"error": "insufficient_role", "message": "Only organization owners/admins can view metered billing."}),

@@ -5,12 +5,13 @@ import { Flag } from "@/runtime/context/flag/flag"
 import { Identifier } from "@/shared/id/id"
 import { Instance } from "@/runtime/context/project/instance"
 import { Database, eq } from "@/runtime/session/storage/db"
-import { PermissionTable } from "@/runtime/session/session.sql"
+import { PermissionTable, SessionTable } from "@/runtime/session/session.sql"
 import { fn } from "@/shared/util/fn"
 import { Log } from "@/shared/util/log"
 import { Wildcard } from "@/shared/util/wildcard"
 import os from "os"
 import z from "zod/v4"
+import { HookDispatcher } from "@/runtime/hooks/dispatcher"
 
 export namespace PermissionNext {
   const log = Log.create({ service: "permission" })
@@ -31,14 +32,15 @@ export namespace PermissionNext {
       permission: z.string(),
       pattern: z.string(),
       action: Action,
+      source: z.enum(["default", "agent", "user", "session", "project"]).optional(),
     })
-    
+
   export type Rule = z.infer<typeof Rule>
 
   export const Ruleset = Rule.array()
   export type Ruleset = z.infer<typeof Ruleset>
 
-  export function fromConfig(permission: Config.Permission) {
+  export function fromConfig(permission: Config.Permission, source?: Rule["source"]) {
     const ruleset: Ruleset = []
     for (const [key, value] of Object.entries(permission)) {
       if (typeof value === "string") {
@@ -46,11 +48,17 @@ export namespace PermissionNext {
           permission: key,
           action: value,
           pattern: "*",
+          ...(source ? { source } : {}),
         })
         continue
       }
       ruleset.push(
-        ...Object.entries(value).map(([pattern, action]) => ({ permission: key, pattern: expand(pattern), action })),
+        ...Object.entries(value).map(([pattern, action]) => ({
+          permission: key,
+          pattern: expand(pattern),
+          action,
+          ...(source ? { source } : {}),
+        })),
       )
     }
     return ruleset
@@ -82,6 +90,9 @@ export namespace PermissionNext {
   export const Reply = z.enum(["once", "always", "reject"])
   export type Reply = z.infer<typeof Reply>
 
+  export const Mode = z.enum(["default", "manual", "plan", "acceptEdits", "dontAsk", "auto", "yolo", "bypassPermissions"])
+  export type Mode = z.infer<typeof Mode>
+
   export const Approval = z.object({
     projectID: z.string(),
     patterns: z.string().array(),
@@ -110,6 +121,7 @@ export namespace PermissionNext {
       string,
       {
         info: Request
+        ruleset: Ruleset
         resolve: () => void
         reject: (e: any) => void
       }
@@ -118,8 +130,32 @@ export namespace PermissionNext {
     return {
       pending,
       approved: stored,
+      modes: {} as Record<string, Mode>,
     }
   })
+
+  export async function getMode(sessionID: string): Promise<Mode> {
+    const s = await state()
+    if (s.modes[sessionID]) return s.modes[sessionID]
+    const row = Database.use((db) => db
+      .select({ mode: SessionTable.permission_mode })
+      .from(SessionTable)
+      .where(eq(SessionTable.id, sessionID))
+      .get())
+    const configured = Mode.safeParse(row?.mode ?? Flag.GIZZI_PERMISSION_MODE ?? "default")
+    const mode = configured.success ? configured.data : "default"
+    s.modes[sessionID] = mode
+    return mode
+  }
+
+  export async function setMode(sessionID: string, mode: Mode): Promise<void> {
+    const s = await state()
+    s.modes[sessionID] = mode
+    Database.use((db) => db.update(SessionTable)
+      .set({ permission_mode: mode, time_updated: Date.now() })
+      .where(eq(SessionTable.id, sessionID))
+      .run())
+  }
 
   export const ask = fn(
     Request.partial({ id: true }).extend({
@@ -129,12 +165,22 @@ export namespace PermissionNext {
       const s = await state()
       const { ruleset, ...request } = input
       for (const pattern of request.patterns ?? []) {
-        const rule = evaluate(request.permission, pattern, ruleset, s.approved)
+        const rule = evaluatePolicy(request.permission, pattern, {
+          configured: ruleset,
+          approvals: s.approved,
+          mode: await getMode(request.sessionID),
+        })
         log.info("evaluated", { permission: request.permission, pattern, action: rule })
         if (rule.action === "deny")
           throw new DeniedError(ruleset.filter((r) => Wildcard.match(request.permission, r.permission)))
         if (rule.action === "ask") {
           const id = input.id ?? Identifier.ascending("permission")
+          await HookDispatcher.emit({
+            name: "PermissionRequest",
+            timestamp: Date.now(),
+            sessionId: request.sessionID,
+            payload: { tool: request.permission, patterns: request.patterns, requestID: id },
+          })
           return new Promise<void>((resolve, reject) => {
             const info: Request = {
               id,
@@ -142,6 +188,7 @@ export namespace PermissionNext {
             }
             s.pending[id] = {
               info,
+              ruleset,
               resolve,
               reject,
             }
@@ -168,6 +215,12 @@ export namespace PermissionNext {
         sessionID: existing.info.sessionID,
         requestID: existing.info.id,
         reply: input.reply,
+      })
+      await HookDispatcher.emit({
+        name: "PermissionResult",
+        timestamp: Date.now(),
+        sessionId: existing.info.sessionID,
+        payload: { tool: existing.info.permission, requestID: existing.info.id, reply: input.reply },
       })
       if (input.reply === "reject") {
         existing.reject(input.message ? new CorrectedError(input.message) : new RejectedError())
@@ -202,10 +255,15 @@ export namespace PermissionNext {
         existing.resolve()
 
         const sessionID = existing.info.sessionID
+        const mode = await getMode(sessionID)
         for (const [id, pending] of Object.entries(s.pending)) {
           if (pending.info.sessionID !== sessionID) continue
           const ok = pending.info.patterns.every(
-            (pattern) => evaluate(pending.info.permission, pattern, s.approved).action === "allow",
+            (pattern) => evaluatePolicy(pending.info.permission, pattern, {
+              configured: pending.ruleset,
+              approvals: s.approved,
+              mode,
+            }).action === "allow",
           )
           if (!ok) continue
           delete s.pending[id]
@@ -241,6 +299,82 @@ export namespace PermissionNext {
     "edit", "write", "patch", "multiedit",
   ])
 
+  const AUTO_QUESTION_PERMISSIONS = new Set(["question", "askuserquestion", "ask_user_question"])
+
+  export interface PolicyInput {
+    configured: Ruleset
+    approvals?: Ruleset
+    mode?: string
+    skipPermissions?: boolean
+  }
+
+  /** Ordered runtime policy composition.
+   *
+   * Rules inside the configured ruleset retain Allternit's documented
+   * last-match behavior. Cross-policy precedence is explicit: hard host/plan
+   * modes, configured denial, unattended-mode restrictions, session approval,
+   * configured ask/allow, mode conveniences, then fallback.
+   */
+  export function evaluatePolicy(permission: string, pattern: string, input: PolicyInput): Rule {
+    const mode = input.mode ?? Flag.GIZZI_PERMISSION_MODE
+    const skipPermissions = input.skipPermissions ?? Flag.GIZZI_SKIP_PERMISSIONS
+
+    if (skipPermissions || mode === "bypassPermissions") {
+      return { action: "allow", permission, pattern: "*" }
+    }
+
+    if (mode === "plan" && !READONLY_PERMISSIONS.has(permission)) {
+      return { action: "deny", permission, pattern: "*" }
+    }
+
+    const configured = lastMatch(permission, pattern, input.configured)
+    if (configured?.action === "deny") return configured
+
+    if (mode === "auto" && AUTO_QUESTION_PERMISSIONS.has(permission.toLowerCase())) {
+      return { action: "deny", permission, pattern: "*" }
+    }
+    if (mode === "auto") return { action: "allow", permission, pattern: "*" }
+
+    const approved = lastMatch(permission, pattern, input.approvals ?? [])
+    if (approved?.action === "allow") return approved
+
+    if (configured) {
+      if (mode === "dontAsk" && configured.action === "ask") {
+        return { action: "deny", permission, pattern: configured.pattern }
+      }
+      if (
+        mode === "yolo" &&
+        configured.action === "ask" &&
+        configured.source === "default" &&
+        configured.permission === "*" &&
+        configured.pattern === "*"
+      ) {
+        return { action: "allow", permission, pattern: "*" }
+      }
+      return configured
+    }
+
+    if (mode === "plan") return { action: "allow", permission, pattern: "*" }
+
+    if (mode === "yolo") return { action: "allow", permission, pattern: "*" }
+
+    if (mode === "acceptEdits" && (READONLY_PERMISSIONS.has(permission) || EDIT_PERMISSIONS.has(permission))) {
+      return { action: "allow", permission, pattern: "*" }
+    }
+
+    // Non-interactive manual mode must never reinterpret an unresolved prompt
+    // as consent. It turns the fallback ask into a deterministic denial.
+    if (mode === "dontAsk") return { action: "deny", permission, pattern: "*" }
+
+    return { action: "ask", permission, pattern: "*" }
+  }
+
+  function lastMatch(permission: string, pattern: string, ruleset: Ruleset): Rule | undefined {
+    return ruleset.findLast(
+      (rule) => Wildcard.match(permission, rule.permission) && Wildcard.match(pattern, rule.pattern),
+    )
+  }
+
   export function evaluate(permission: string, pattern: string, ...rulesets: Ruleset[]): Rule {
     const mode = Flag.GIZZI_PERMISSION_MODE
 
@@ -257,11 +391,6 @@ export namespace PermissionNext {
       return { action: "deny", permission, pattern: "*" }
     }
 
-    // dontAsk: auto-approve everything (no prompts, but still runs through guard)
-    if (mode === "dontAsk") {
-      return { action: "allow", permission, pattern: "*" }
-    }
-
     // acceptEdits: auto-approve file edits, ask for bash/dangerous
     if (mode === "acceptEdits") {
       if (READONLY_PERMISSIONS.has(permission) || EDIT_PERMISSIONS.has(permission)) {
@@ -273,9 +402,13 @@ export namespace PermissionNext {
     // default mode (or acceptEdits fallthrough): evaluate rulesets
     const merged = merge(...rulesets)
     log.info("evaluate", { permission, pattern, ruleset: merged })
-    const match = merged.findLast(
-      (rule) => Wildcard.match(permission, rule.permission) && Wildcard.match(pattern, rule.pattern),
-    )
+    const match = lastMatch(permission, pattern, merged)
+    if (!match && mode === "dontAsk") return { action: "deny", permission, pattern: "*" }
+    if (!match && mode === "auto") {
+      return AUTO_QUESTION_PERMISSIONS.has(permission.toLowerCase())
+        ? { action: "deny", permission, pattern: "*" }
+        : { action: "allow", permission, pattern: "*" }
+    }
     return match ?? { action: "ask", permission, pattern: "*" }
   }
 
@@ -283,7 +416,8 @@ export namespace PermissionNext {
 
   export function disabled(tools: string[], ruleset: Ruleset): Set<string> {
     const mode = Flag.GIZZI_PERMISSION_MODE
-    // In bypass or dontAsk mode, nothing is disabled
+    // In bypass mode nothing is disabled. dontAsk keeps tools visible so
+    // explicitly allowed calls still work; unresolved calls are denied at use.
     if (Flag.GIZZI_SKIP_PERMISSIONS || mode === "bypassPermissions" || mode === "dontAsk") {
       return new Set<string>()
     }

@@ -193,7 +193,7 @@ export function BrowserView() {
             <webview
               src={(activeTab as WebTab).url}
               className="w-full h-full"
-              allowpopups="true"
+              allowpopups
               style={{ width: '100%', height: '100%', border: 'none' }}
             />
             

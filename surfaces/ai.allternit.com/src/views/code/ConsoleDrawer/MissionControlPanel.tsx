@@ -19,7 +19,7 @@ import {
   Terminal as TerminalIcon,
 } from '@phosphor-icons/react';
 import { useUnifiedStore } from '@/lib/agents/unified.store';
-import { API_BASE_URL } from '@/lib/agents/api-config';
+import { runtimeApiUrl } from '@/lib/agents/api-config';
 import { execEvents } from '@/integration/execution/exec.events';
 import { artifactFromReference, type CodeArtifact } from '../artifacts';
 import type { CodeWorkspaceRecord } from '../CodeModeStore';
@@ -95,7 +95,7 @@ function statusLabel(status: string): string {
 async function fetchGitStats(workingDir?: string): Promise<GitStats | null> {
   if (!workingDir) return null;
   try {
-    const response = await fetch(`${API_BASE_URL}/git/diff`, {
+    const response = await fetch(runtimeApiUrl('/git/diff'), {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ path: workingDir, staged: false }),

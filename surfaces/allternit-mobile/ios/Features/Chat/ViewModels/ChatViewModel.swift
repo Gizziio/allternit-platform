@@ -26,6 +26,14 @@ struct MessageRecord: Identifiable, Equatable, Sendable {
     var isStreaming: Bool = false
     var toolStatus: ToolStatus? = nil
     var artifacts: [ArtifactRecord] = []
+    /// Structured stream/transport failure rendered as an inline error card
+    /// (ChatErrorCardView) instead of raw backend text in the bubble.
+    var error: ChatError? = nil
+    /// Local-only record of a finished voice-mode session (Phase 7b),
+    /// rendered as the "Voice chat ended · Ns" card (VoiceSummaryCardView).
+    /// Never sent to or loaded from the backend — the row is a feed-local
+    /// marker, like the local-only 👍/👎 feedback.
+    var voiceSummary: VoiceSummary? = nil
 }
 
 /// Parameters for the NEXT session create, pushed from the view whenever
@@ -42,11 +50,32 @@ struct SessionContext: Equatable, Sendable {
     var agentName: String? = nil
     /// Selected bottom-deck tile, sent as `metadata.agentModeId`.
     var agentModeId: String? = nil
+    /// Selected cowork project, sent as `metadata.projectId` so the backend
+    /// stamps the session for project grouping (ProjectStore selection).
+    var projectId: String? = nil
+    /// Incognito chat (Phase 6), sent as `metadata.ephemeral` — ephemeral
+    /// sessions are excluded from history and purged on abort server-side.
+    var ephemeral: Bool = false
+    /// Onboarding work-profile answer (Phase 10), sent as
+    /// `metadata.persona` — mirrors how projectId/agentModeId are carried.
+    var persona: String? = nil
+}
+
+/// Send-path failures with user-meaningful messages (surfaced via the
+/// composer's transient banner through `localizedDescription`).
+enum ChatSendError: LocalizedError {
+    case attachmentUploadFailed(String)
+
+    var errorDescription: String? {
+        switch self {
+        case .attachmentUploadFailed(let name):
+            return "Couldn't upload \(name). Check the connection and try again."
+        }
+    }
 }
 
 @MainActor
-final class ChatViewModel: ObservableObject {
-    @Published var messages: [MessageRecord] = []
+final class ChatViewModel: ObservableObject {    @Published var messages: [MessageRecord] = []
     @Published var isStreaming: Bool = false
     @Published var currentSessionId: String? = nil
     /// True only during the first message's session-create POST; the
@@ -87,15 +116,58 @@ final class ChatViewModel: ObservableObject {
 
     // MARK: - Sessions
 
-    func startNewSession() {
+    /// Temporary-chat mode (ChatGPT parity): the conversation works as/// normal — streaming still needs a backing agent-session — but the
+    /// backing record is DELETEd the moment the chat is left, so nothing
+    /// lands in history. Any `currentSessionId` seen while this is true was
+    /// created inside temporary mode (loading a history chat clears it).
+    @Published var isTemporaryChat = false
+
+    /// Incognito chat (Phase 6, Claude parity): the next session create is
+    /// stamped `metadata.ephemeral` so the backend excludes it from history
+    /// and purges it on abort. Starting a normal new chat or loading a
+    /// history conversation clears this.
+    @Published var isIncognito = false
+
+    func toggleTemporaryChat() {
+        let wasTemporary = isTemporaryChat
+        startNewSession()
+        isTemporaryChat = !wasTemporary
+    }
+
+    /// Phase 7b: files the "Voice chat ended · Ns" card into the feed when a
+    /// voice-mode session ends. The voice conversation itself already went
+    /// through `sendMessage`, so only the summary marker is appended. The
+    /// row is LOCAL-ONLY (like the 👍/👎 feedback) — the backend has no
+    /// summary-card message type, so a history reload drops it.
+    func appendVoiceSummary(durationSeconds: Int) {
+        messages.append(MessageRecord(
+            id: UUID().uuidString,
+            role: "system",
+            content: "",
+            voiceSummary: VoiceSummary(durationSeconds: durationSeconds)
+        ))
+    }
+
+    /// Starts a fresh chat; `ephemeral: true` enters incognito mode (the
+    /// ghost-button path), the default false exits it.
+    func startNewSession(ephemeral: Bool = false) {
         stopStreaming()
+        discardTemporaryBackingSession()
         transientError = nil
         messages = []
         currentSessionId = nil
+        isIncognito = ephemeral
+        sessionContext.ephemeral = ephemeral
     }
 
     func loadSession(_ sessionId: String) {
         stopStreaming()
+        // Opening a real conversation exits temporary mode.
+        discardTemporaryBackingSession()
+        isTemporaryChat = false
+        // …and incognito mode — a history chat is never ephemeral.
+        isIncognito = false
+        sessionContext.ephemeral = false
         transientError = nil
         currentSessionId = sessionId
         messages = []
@@ -114,15 +186,33 @@ final class ChatViewModel: ObservableObject {
         }
     }
 
+    /// Best-effort DELETE of a temporary chat's backing session so it never
+    /// shows in history. Failures are swallowed — worst case the record
+    /// survives as an ordinary (empty-looking) history row.
+    private func discardTemporaryBackingSession() {
+        guard isTemporaryChat, let sessionId = currentSessionId else { return }
+        Task {
+            try? await APIClient.shared.delete(path: "agent-sessions/\(sessionId)")
+        }
+    }
+
     /// Maps a wire message to the view model. The backend's `content` may
     /// already include reasoning text (it also ships separately in
     /// `thinking`) — mirrored as-is, like the web's `mapBackendMessage`.
-    private static func mapRecord(_ record: AgentSessionMessage) -> MessageRecord {
-        MessageRecord(
+    ///
+    /// Reconstructs artifact cards from `metadata.parts` so file/URL
+    /// attachments survive history loads and foreground reconciles.
+    nonisolated private static func mapRecord(_ record: AgentSessionMessage) -> MessageRecord {
+        let parts = record.metadata?.parts ?? []
+        let artifacts = parts
+            .filter { $0.type == "file" }
+            .map { ArtifactRecord(part: $0, messageId: record.id) }
+        return MessageRecord(
             id: record.id,
             role: record.role,
             content: record.content,
-            reasoning: record.thinking ?? ""
+            reasoning: record.thinking ?? "",
+            artifacts: artifacts
         )
     }
 
@@ -135,13 +225,23 @@ final class ChatViewModel: ObservableObject {
             return id
         }
 
+        let defaultName: String
+        switch sessionContext.originSurface {
+        case "cowork": defaultName = "New Cowork"
+        case "code": defaultName = "New Code Thread"
+        default: defaultName = "New Chat"
+        }
+
         let session = try await chatClient.createSession(
-            name: sessionContext.originSurface == "cowork" ? "New Cowork" : "New Chat",
+            name: defaultName,
             originSurface: sessionContext.originSurface,
             sessionMode: sessionContext.sessionMode,
             agentId: sessionContext.agentId,
             agentName: sessionContext.agentName,
-            agentModeId: sessionContext.agentModeId
+            agentModeId: sessionContext.agentModeId,
+            projectId: sessionContext.projectId,
+            ephemeral: sessionContext.ephemeral,
+            persona: sessionContext.persona
         )
         currentSessionId = session.id
         return session.id
@@ -149,15 +249,109 @@ final class ChatViewModel: ObservableObject {
 
     // MARK: - Sending & streaming
 
-    func sendMessage(_ text: String) {
+    /// `runtimeModelId` is the composer pill's catalog id ("provider/model");
+    /// nil lets the backend pick its default model. `effort` is the
+    /// reasoning-effort selection for effort-capable models. `attachments`
+    /// are the composer's staged files — each is uploaded
+    /// (`POST /api/v1/uploads`) before the stream starts and referenced from
+    /// the agent-chat body; an upload failure fails the send.
+    func sendMessage(_ text: String, attachments: [StagedAttachment] = [], runtimeModelId: String? = nil, effort: String? = nil) {
         let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !trimmed.isEmpty, !isStreaming, !isCreatingSession else { return }
 
-        transientError = nil
-        draftToRestore = nil
-
         let userMessageId = UUID().uuidString
         messages.append(MessageRecord(id: userMessageId, role: "user", content: trimmed))
+
+        startStream(text: trimmed, runtimeModelId: runtimeModelId, effort: effort, stagedAttachments: attachments, userMessageId: userMessageId)
+    }
+
+    /// Error-card "Retry": drops the failed assistant placeholder and
+    /// re-streams the last sent text WITHOUT re-appending the user bubble
+    /// (it's still in the feed above the error card). Attachments ride along
+    /// as their already-uploaded refs — no second upload round-trip.
+    func retryFailedMessage(_ assistantId: String, runtimeModelId: String?, effort: String? = nil) {
+        guard let last = lastSent, !isStreaming, !isCreatingSession else { return }
+        messages.removeAll { $0.id == assistantId }
+        startStream(text: last.text,
+                    runtimeModelId: runtimeModelId ?? last.runtimeModelId,
+                    effort: effort ?? last.effort,
+                    preparedRefs: last.attachmentRefs)
+    }
+
+    // MARK: - Regenerate & edit-resend (Phase 8)
+
+    /// The most recent assistant/user message ids — drive the action bar's
+    /// retry button and the user bubble's Edit affordance.
+    var lastAssistantMessageId: String? {
+        messages.last(where: { $0.role == "assistant" })?.id
+    }
+
+    var lastUserMessageId: String? {
+        messages.last(where: { $0.role == "user" })?.id
+    }
+
+    /// Action-bar "Retry" on a SUCCESSFUL reply (Claude parity): removes the
+    /// last assistant message and re-streams the last user text through the
+    /// same `startStream` path as `retryFailedMessage`. The text comes from
+    /// `lastSent` when the reply was streamed this run; for
+    /// history-loaded conversations it falls back to the last user bubble.
+    func regenerateLastResponse(runtimeModelId: String?, effort: String? = nil) {
+        guard !isStreaming, !isCreatingSession,
+              let assistantIndex = messages.lastIndex(where: { $0.role == "assistant" }) else { return }
+        let lastUserText = messages[..<assistantIndex].last(where: { $0.role == "user" })?.content
+        let text = lastSent?.text ?? lastUserText
+        guard let text, !text.isEmpty else { return }
+        // Attachment refs only apply when re-streaming the message that
+        // carried them (this run's lastSent).
+        let refs = lastSent?.text == text ? (lastSent?.attachmentRefs ?? []) : []
+        messages.remove(at: assistantIndex)
+        startStream(text: text,
+                    runtimeModelId: runtimeModelId ?? lastSent?.runtimeModelId,
+                    effort: effort ?? lastSent?.effort,
+                    preparedRefs: refs)
+    }
+
+    /// Edit-resend: the user edited the LAST user bubble and hit send.
+    /// Truncates the conversation from that message on and re-sends the new
+    /// text as a fresh send.
+    ///
+    /// Server-side truncation: `POST /api/v1/agent-sessions/:id/revert` is
+    /// live on the backend (agent_session_routes.rs — probed 2026-07: 200 on
+    /// a valid session), so the revert call runs alongside the client-side
+    /// truncation. A failure is logged, not swallowed — the feed reload on
+    /// the next foreground reconcile is the source of truth.
+    ///
+    /// `attachments` are any newly-staged files in the composer while editing.
+    /// Original attachments from the message being edited are not currently
+    /// repopulated into the composer; this preserves at least the new ones.
+    func resendEditedMessage(_ messageId: String, newText: String, attachments: [StagedAttachment] = [], runtimeModelId: String?, effort: String? = nil) {
+        guard !isStreaming, !isCreatingSession,
+              let index = messages.firstIndex(where: { $0.id == messageId }) else { return }
+        if let sessionId = currentSessionId {
+            Task { [chatClient] in
+                do {
+                    try await chatClient.revert(sessionId: sessionId)
+                } catch {
+                    print("agent-sessions: revert failed for \(sessionId): \(error.localizedDescription)")
+                }
+            }
+        }
+        messages.removeSubrange(index...)
+        sendMessage(newText, attachments: attachments, runtimeModelId: runtimeModelId, effort: effort)
+    }
+
+    /// The last user text actually handed to the stream — the retry source.
+    private var lastSent: (text: String, runtimeModelId: String?, effort: String?, attachmentRefs: [AttachmentRef])? = nil
+
+    /// Shared send path: optimistic assistant placeholder + stream task.
+    /// `userMessageId` is the optimistic user bubble created by the caller
+    /// (nil on retry — the bubble is already in the feed); the
+    /// never-landed rollback removes it along with the placeholder.
+    /// `stagedAttachments` are uploaded first; `preparedRefs` skips the
+    /// upload step (retry of an already-uploaded send).
+    private func startStream(text trimmed: String, runtimeModelId: String?, effort: String? = nil, stagedAttachments: [StagedAttachment] = [], preparedRefs: [AttachmentRef]? = nil, userMessageId: String? = nil) {
+        transientError = nil
+        draftToRestore = nil
 
         let assistantId = UUID().uuidString
         messages.append(MessageRecord(id: assistantId, role: "assistant", content: "", isStreaming: true))
@@ -172,10 +366,42 @@ final class ChatViewModel: ObservableObject {
             // flight — the composer disables send on it (double-send guard).
             self.isCreatingSession = self.currentSessionId == nil
             do {
+                // Upload staged attachments before streaming. An upload
+                // failure fails the send — never silently drop the files and
+                // send a text-only message the user didn't ask for.
+                var attachmentRefs = preparedRefs ?? []
+                if preparedRefs == nil, !stagedAttachments.isEmpty {
+                    for attachment in stagedAttachments {
+                        do {
+                            let response = try await self.chatClient.upload(
+                                name: attachment.filename,
+                                mediaType: attachment.mediaType,
+                                dataBase64: attachment.data.base64EncodedString()
+                            )
+                            attachmentRefs.append(AttachmentRef(
+                                url: response.url,
+                                dataBase64: nil,
+                                mediaType: attachment.mediaType,
+                                name: attachment.filename
+                            ))
+                        } catch {
+                            throw ChatSendError.attachmentUploadFailed(attachment.filename)
+                        }
+                    }
+                }
+                self.lastSent = (trimmed, runtimeModelId, effort, attachmentRefs)
+
                 let sessionId = try await self.ensureSessionId()
                 self.isCreatingSession = false
                 // POST /api/agent-chat — the response body IS the frame stream.
-                for try await event in self.chatClient.sendMessageStream(sessionId: sessionId, text: trimmed) {
+                for try await event in self.chatClient.sendMessageStream(
+                    sessionId: sessionId,
+                    text: trimmed,
+                    runtimeModelId: runtimeModelId,
+                    effort: effort,
+                    attachments: attachmentRefs.isEmpty ? nil : attachmentRefs,
+                    tools: ToolOptionsStore.shared.optionsForSend
+                ) {
                     try Task.checkCancellation()
                     if self.apply(event, to: assistantId) {
                         streamFailed = true
@@ -250,27 +476,32 @@ final class ChatViewModel: ObservableObject {
         case .artifact(let artifact):
             // Typed artifact frame — no markdown-fence regex. The card
             // appears as soon as the frame arrives.
+            let record = ArtifactRecord(agentChat: artifact)
             updateMessage(messageId) { message in
-                message.artifacts.append(ArtifactRecord(agentChat: artifact))
+                message.artifacts.append(record)
             }
+            // Streams are the only artifact source (no backend list
+            // endpoint), so the library collects them as they arrive.
+            ArtifactLibraryStore.shared.record(record, sessionId: currentSessionId)
 
         case .finish(let payload):
             guard payload.status == "error" else { break }
             flushPendingDeltas()
-            let reason = payload.error ?? "The generation failed."
+            let raw = payload.metadata?.error ?? "The generation failed."
+            let card = ChatError(
+                name: payload.metadata?.errorDetails?.name,
+                message: payload.metadata?.errorDetails?.message,
+                raw: raw
+            )
             updateMessage(messageId) { message in
-                message.content += message.content.isEmpty
-                    ? "⚠️ \(reason)"
-                    : "\n\n⚠️ \(reason)"
+                message.error = card
             }
             return true
 
         case .streamError(let reason):
             flushPendingDeltas()
             updateMessage(messageId) { message in
-                message.content += message.content.isEmpty
-                    ? "⚠️ \(reason)"
-                    : "\n\n⚠️ \(reason)"
+                message.error = ChatError(name: nil, message: reason, raw: reason)
             }
             return true
 
@@ -318,6 +549,15 @@ final class ChatViewModel: ObservableObject {
             streamTask?.cancel()
             streamTask = nil
             flushPendingDeltas()
+            // The local consumer is gone; mark the streaming placeholder as
+            // no longer streaming so the UI doesn't stay stuck if the user
+            // never foregrounds. The next reconcile will settle the server
+            // state (or the abort below if the message had landed).
+            if let messageId = streamingMessageId {
+                updateMessage(messageId) { $0.isStreaming = false }
+                streamingMessageId = nil
+                isStreaming = false
+            }
         case .active:
             Task { [weak self] in
                 await self?.reconcileSession()
@@ -392,6 +632,21 @@ final class ChatViewModel: ObservableObject {
         isStreaming = false
         streamingMessageId = nil
         streamTask = nil
+
+        // Streaming consumes quota — refresh the usage meter (Phase 5;
+        // UsageStore dedupes concurrent fetches).
+        UsageStore.shared.refresh()
+
+        // Response notification (Phase 5): only when the app isn't in the
+        // foreground — foreground completion already plays a haptic, and
+        // NotificationService no-ops unless the user granted authorization
+        // via the opt-in card.
+        if UIApplication.shared.applicationState != .active {
+            let preview = messages.first(where: { $0.id == messageId })?.content ?? ""
+            Task {
+                await NotificationService.postResponseNotification(preview: String(preview.prefix(120)))
+            }
+        }
     }
 
     /// Transport/creation failure: surface the error inline, then finalize.
@@ -401,10 +656,7 @@ final class ChatViewModel: ObservableObject {
         if let urlError = error as? URLError, urlError.code == .cancelled { return }
         flushPendingDeltas()
         updateMessage(messageId) { message in
-            let reason = error.localizedDescription
-            message.content += message.content.isEmpty
-                ? "⚠️ Connection interrupted: \(reason)"
-                : "\n\n⚠️ Connection interrupted: \(reason)"
+            message.error = .connectionInterrupted(error.localizedDescription)
         }
         finishStreaming(messageId: messageId)
         let generator = UINotificationFeedbackGenerator()

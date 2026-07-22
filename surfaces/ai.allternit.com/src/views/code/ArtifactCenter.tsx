@@ -11,7 +11,9 @@ import {
   ShieldCheck,
 } from '@phosphor-icons/react';
 import { execEvents } from '@/integration/execution/exec.events';
+import { filesApi } from '@/lib/agents/files-api';
 import { useUnifiedStore } from '@/lib/agents/unified.store';
+import { Markdown } from '@/components/ai-elements/markdown';
 import { artifactFromReference, type CodeArtifact, type CodeArtifactKind } from './artifacts';
 
 export function ArtifactCenter(): React.ReactNode {
@@ -238,9 +240,120 @@ function ArtifactEmptyState(): React.ReactNode {
   );
 }
 
+const previewPre: React.CSSProperties = {
+  margin: 0,
+  padding: 10,
+  color: 'var(--text-secondary)',
+  fontFamily: 'var(--font-mono)',
+  fontSize: 10,
+  lineHeight: 1.5,
+  whiteSpace: 'pre-wrap',
+  overflowWrap: 'anywhere',
+};
+
+/** Render the artifact itself, not just its location. */
+function ArtifactPreview({ artifact }: { artifact: CodeArtifact }): React.ReactNode {
+  const isExternal = Boolean(artifact.uri && /^https?:\/\//.test(artifact.uri));
+  const isLocalPath = Boolean(artifact.uri && !isExternal);
+  // Binary kinds can't come through the text read API.
+  const isTextReadable = artifact.kind !== 'image' && artifact.kind !== 'link';
+  const [fileContent, setFileContent] = useState<string | null>(null);
+  const [loadError, setLoadError] = useState<string | null>(null);
+  const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    setFileContent(null);
+    setLoadError(null);
+    if (artifact.content || !isLocalPath || !isTextReadable || !artifact.uri) return;
+    let cancelled = false;
+    setLoading(true);
+    filesApi
+      .readFile({ path: artifact.uri })
+      .then((res) => {
+        if (!cancelled) setFileContent(res.content);
+      })
+      .catch((err) => {
+        if (!cancelled) setLoadError(err instanceof Error ? err.message : 'Failed to read artifact file');
+      })
+      .finally(() => {
+        if (!cancelled) setLoading(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [artifact.id]);
+
+  const body = artifact.content ?? fileContent;
+
+  if (artifact.kind === 'image') {
+    const src = artifact.content?.startsWith('data:')
+      ? artifact.content
+      : isExternal
+        ? artifact.uri
+        : null;
+    if (src) {
+      return (
+        <div style={{ padding: 10, textAlign: 'center' }}>
+          <img src={src} alt={artifact.name} style={{ maxWidth: '100%', borderRadius: 6 }} />
+        </div>
+      );
+    }
+    return <pre style={previewPre}>{`Image on disk — open it from:\n${artifact.uri ?? 'unknown location'}`}</pre>;
+  }
+
+  if (artifact.kind === 'link' && artifact.uri) {
+    return (
+      <iframe
+        src={artifact.uri}
+        title={artifact.name}
+        sandbox="allow-scripts allow-same-origin"
+        style={{ width: '100%', height: '100%', minHeight: 220, border: 'none', background: '#fff' }}
+      />
+    );
+  }
+
+  if (loading) {
+    return <pre style={previewPre}>Loading artifact…</pre>;
+  }
+  if (loadError) {
+    return <pre style={previewPre}>{`Could not load content (${loadError})\nLocation: ${artifact.uri ?? 'unknown'}`}</pre>;
+  }
+  if (!body) {
+    return <pre style={previewPre}>{artifact.uri ?? 'No preview data is available for this artifact.'}</pre>;
+  }
+
+  if (artifact.kind === 'html') {
+    return (
+      <iframe
+        srcDoc={body}
+        title={artifact.name}
+        sandbox=""
+        style={{ width: '100%', height: '100%', minHeight: 220, border: 'none', background: '#fff' }}
+      />
+    );
+  }
+  if (artifact.kind === 'markdown' || artifact.kind === 'report') {
+    return (
+      <div style={{ padding: 10, fontSize: 12 }}>
+        <Markdown>{body}</Markdown>
+      </div>
+    );
+  }
+  if (artifact.kind === 'json') {
+    let pretty = body;
+    try {
+      pretty = JSON.stringify(JSON.parse(body), null, 2);
+    } catch {
+      // Not valid JSON — show as-is.
+    }
+    return <pre style={previewPre}>{pretty}</pre>;
+  }
+  return <pre style={previewPre}>{body}</pre>;
+}
+
 function ArtifactInspector({ artifact }: { artifact: CodeArtifact }): React.ReactNode {
   const isExternal = Boolean(artifact.uri && /^https?:\/\//.test(artifact.uri));
-  const detail = artifact.content || artifact.uri || 'No preview data is available for this artifact.';
 
   return (
     <section style={{ minWidth: 0, minHeight: 0, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
@@ -304,22 +417,14 @@ function ArtifactInspector({ artifact }: { artifact: CodeArtifact }): React.Reac
         >
           <div style={{ height: 28, display: 'flex', alignItems: 'center', gap: 6, padding: '0 9px', borderBottom: '1px solid var(--border-subtle)', color: 'var(--text-tertiary)', fontSize: 9 }}>
             {isExternal ? <LinkIcon size={10} /> : <FileText size={10} />}
-            {artifact.content ? 'Preview' : 'Location'}
+            Preview
+            {artifact.uri ? (
+              <span style={{ marginLeft: 'auto', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: '70%' }}>
+                {artifact.uri}
+              </span>
+            ) : null}
           </div>
-          <pre
-            style={{
-              margin: 0,
-              padding: 10,
-              color: 'var(--text-secondary)',
-              fontFamily: 'var(--font-mono)',
-              fontSize: 10,
-              lineHeight: 1.5,
-              whiteSpace: 'pre-wrap',
-              overflowWrap: 'anywhere',
-            }}
-          >
-            {detail}
-          </pre>
+          <ArtifactPreview artifact={artifact} />
         </div>
       </div>
     </section>

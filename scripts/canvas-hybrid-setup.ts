@@ -1,6 +1,7 @@
 import { chromium } from 'playwright';
 
-const CANVAS_TOKEN = '7~rPDcCXrVEvBrN6TDGQVDNm2uAxKxGe4cnc2TvuTXUAxEEAKTBEWVUTLTvyaJC2hc';
+import { getCanvasToken } from './canvas-token.ts';
+const CANVAS_TOKEN = getCanvasToken();
 
 const COURSES = [
   {

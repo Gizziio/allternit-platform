@@ -17,6 +17,10 @@ const MAX_LINE_LENGTH = 2000
 const MAX_LINE_SUFFIX = `... (line truncated to ${MAX_LINE_LENGTH} chars)`
 const MAX_BYTES = 50 * 1024
 const MAX_BYTES_LABEL = `${MAX_BYTES / 1024} KB`
+const MAX_MEDIA_BYTES = 100 * 1024 * 1024
+const MAX_PDF_BYTES = 20 * 1024 * 1024
+const IMAGE_BYTE_BUDGET = 5 * 1024 * 1024
+const IMAGE_MAX_EDGE = 1568
 
 export const ReadTool = Tool.define("read", {
   description: DESCRIPTION,
@@ -24,6 +28,13 @@ export const ReadTool = Tool.define("read", {
     filePath: z.string().describe("The absolute path to the file or directory to read"),
     offset: z.coerce.number().describe("The line number to start reading from (1-indexed)").optional(),
     limit: z.coerce.number().describe("The maximum number of lines to read (defaults to 2000)").optional(),
+    region: z.object({
+      x: z.number().int().min(0),
+      y: z.number().int().min(0),
+      width: z.number().int().min(1),
+      height: z.number().int().min(1),
+    }).optional().describe("Images only: crop in original-image pixel coordinates for fine-detail inspection."),
+    fullResolution: z.boolean().optional().describe("Images only: skip downscaling; fails if the native payload exceeds the safe byte budget."),
   }),
   async execute(params, ctx) {
     if (params.offset !== undefined && params.offset < 1) {
@@ -122,20 +133,26 @@ export const ReadTool = Tool.define("read", {
     const isImage = mime.startsWith("image/") && mime !== "image/svg+xml" && mime !== "image/vnd.fastbidsheet"
     const isPdf = mime === "application/pdf"
     if (isImage || isPdf) {
-      const msg = `${isImage ? "Image" : "PDF"} read successfully`
+      if (isPdf && Number(stat.size) > MAX_PDF_BYTES) {
+        throw new Error(`PDF is ${stat.size} bytes; the safe inline limit is ${MAX_PDF_BYTES} bytes. Extract or split the needed pages first.`)
+      }
+      if (isPdf && (params.region || params.fullResolution)) throw new Error("region and fullResolution are only valid for images")
+      const prepared = isImage
+        ? await prepareImage(filepath, { region: params.region, fullResolution: params.fullResolution === true })
+        : { bytes: await Filesystem.readBytes(filepath), mime, note: "PDF read successfully." }
       return {
         title,
-        output: msg,
+        output: prepared.note,
         metadata: {
-          preview: msg,
+          preview: prepared.note,
           truncated: false,
           loaded: instructions.map((i) => i.filepath),
         },
         attachments: [
           {
             type: "file",
-            mime,
-            url: `data:${mime};base64,${Buffer.from(await Filesystem.readBytes(filepath)).toString("base64")}`,
+            mime: prepared.mime,
+            url: `data:${prepared.mime};base64,${prepared.bytes.toString("base64")}`,
           },
         ],
       }
@@ -231,6 +248,84 @@ export const ReadTool = Tool.define("read", {
     }
   },
 })
+
+async function prepareImage(filepath: string, options: {
+  region?: { x: number; y: number; width: number; height: number }
+  fullResolution: boolean
+}) {
+  const original = Buffer.from(await Filesystem.readBytes(filepath))
+  if (!original.length) throw new Error(`Image file is empty: ${filepath}`)
+  if (original.length > MAX_MEDIA_BYTES) {
+    throw new Error(`Image is ${original.length} bytes; the safe decode limit is ${MAX_MEDIA_BYTES} bytes. Create a smaller copy first.`)
+  }
+  const imported = await import("sharp")
+  const sharp = (imported.default ?? imported) as typeof imported.default
+  const source = sharp(original, { animated: false }).rotate()
+  const metadata = await source.metadata()
+  const width = metadata.width ?? 0
+  const height = metadata.height ?? 0
+  if (!width || !height) throw new Error(`Could not determine image dimensions: ${filepath}`)
+
+  const accepted = new Set(["image/png", "image/jpeg", "image/gif", "image/webp"])
+  const originalMime = normalizeImageMime(metadata.format ? `image/${metadata.format}` : Filesystem.mimeType(filepath))
+  if (options.fullResolution && options.region) throw new Error("Use either region or fullResolution, not both")
+  if (options.fullResolution && original.length > IMAGE_BYTE_BUDGET) {
+    throw new Error(`fullResolution cannot be honored: ${original.length} bytes exceeds the ${IMAGE_BYTE_BUDGET}-byte limit. Use region instead.`)
+  }
+
+  let pipeline = sharp(original, { animated: false }).rotate()
+  let delivery = "native resolution"
+  if (options.region) {
+    const { x, y, width: cropWidth, height: cropHeight } = options.region
+    if (x + cropWidth > width || y + cropHeight > height) {
+      throw new Error(`Region (${x},${y},${cropWidth},${cropHeight}) exceeds original image bounds ${width}x${height}`)
+    }
+    pipeline = pipeline.extract({ left: x, top: y, width: cropWidth, height: cropHeight })
+    delivery = `region x=${x}, y=${y}, width=${cropWidth}, height=${cropHeight} in original-image pixels`
+  } else if (!options.fullResolution && Math.max(width, height) > IMAGE_MAX_EDGE) {
+    pipeline = pipeline.resize({ width: IMAGE_MAX_EDGE, height: IMAGE_MAX_EDGE, fit: "inside", withoutEnlargement: true })
+    delivery = `downsampled to a maximum ${IMAGE_MAX_EDGE}px edge`
+  }
+
+  const shouldPreserve = !options.region &&
+    (options.fullResolution || Math.max(width, height) <= IMAGE_MAX_EDGE) &&
+    accepted.has(originalMime) && original.length <= IMAGE_BYTE_BUDGET
+  if (shouldPreserve) {
+    return {
+      bytes: original,
+      mime: originalMime,
+      note: `Image read successfully. Original ${width}x${height}, ${original.length} bytes, delivered at ${delivery}.`,
+    }
+  }
+
+  const hasAlpha = metadata.hasAlpha === true
+  let output = hasAlpha
+    ? await pipeline.clone().png({ compressionLevel: 9 }).toBuffer()
+    : await pipeline.clone().jpeg({ quality: 82, mozjpeg: true }).toBuffer()
+  let outputMime = hasAlpha ? "image/png" : "image/jpeg"
+  if (output.length > IMAGE_BYTE_BUDGET) {
+    for (const quality of [70, 50, 30]) {
+      output = await pipeline.clone().jpeg({ quality, mozjpeg: true }).toBuffer()
+      outputMime = "image/jpeg"
+      if (output.length <= IMAGE_BYTE_BUDGET) break
+    }
+  }
+  if (output.length > IMAGE_BYTE_BUDGET) {
+    throw new Error(`Image remains ${output.length} bytes after compression; limit is ${IMAGE_BYTE_BUDGET}. Use a smaller region or create a smaller copy.`)
+  }
+  const outputMeta = await sharp(output).metadata()
+  const conversion = accepted.has(originalMime) ? "" : ` Converted unsupported ${originalMime} to ${outputMime}.`
+  return {
+    bytes: output,
+    mime: outputMime,
+    note: `Image read successfully. Original ${width}x${height}, ${original.length} bytes; delivered ${outputMeta.width}x${outputMeta.height}, ${output.length} bytes (${delivery}).${conversion}`,
+  }
+}
+
+function normalizeImageMime(mime: string) {
+  const base = mime.toLowerCase().split(";", 1)[0]!.trim()
+  return base === "image/jpg" ? "image/jpeg" : base
+}
 
 async function isBinaryFile(filepath: string, fileSize: number): Promise<boolean> {
   const ext = path.extname(filepath).toLowerCase()

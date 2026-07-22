@@ -49,7 +49,7 @@ export function AgentModeGizzi(props: AgentModeGizziProps) {
   });
 
   const activeThought = thoughts[thoughtIndex] ?? thoughts[0];
-  const bubbleVisible = isHovered || isBubblePinned;
+  const bubbleVisible = isHovered || isBubblePinned || !!selectedAgentName;
   const companionMascotSize = 56;
 
   // Determine emotion based on state
@@ -125,6 +125,9 @@ export function AgentModeGizzi(props: AgentModeGizziProps) {
             <m.div
               key={uniqueKey}
               data-testid="agent-mode-gizzi"
+              data-state={animState}
+              data-emotion={emotion}
+              data-surface={surface}
               initial={initialProps}
               animate={motionProps}
               exit={{ opacity: 0, transition: { duration: 0 } }}

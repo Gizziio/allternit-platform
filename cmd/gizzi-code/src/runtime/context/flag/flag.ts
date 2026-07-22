@@ -35,6 +35,14 @@ export namespace Flag {
   export const GIZZI_SERVER_PASSWORD = env("GIZZI_SERVER_PASSWORD")
   export const GIZZI_SERVER_USERNAME = env("GIZZI_SERVER_USERNAME")
   export const GIZZI_ENABLE_QUESTION_TOOL = truthy("GIZZI_ENABLE_QUESTION_TOOL")
+  // Emergency rollback switches for the Kimi-parity runtime rollout. New
+  // installations keep these capabilities enabled; flags only suppress the
+  // corresponding projection/surface without deleting durable data.
+  export const GIZZI_DISABLE_DURABLE_TRACE = truthy("GIZZI_DISABLE_DURABLE_TRACE")
+  export const GIZZI_DISABLE_CONTEXT_PROJECTION = truthy("GIZZI_DISABLE_CONTEXT_PROJECTION")
+  export const GIZZI_DISABLE_ACP_CONFIG_OPTIONS = truthy("GIZZI_DISABLE_ACP_CONFIG_OPTIONS")
+  export const GIZZI_DYNAMIC_TOOL_SELECTION = truthy("GIZZI_DYNAMIC_TOOL_SELECTION")
+  export const GIZZI_DISABLE_SCRATCHPAD = truthy("GIZZI_DISABLE_SCRATCHPAD")
 
   // Permission modes (set from CLI flags)
   export let GIZZI_PERMISSION_MODE: string | undefined = env("GIZZI_PERMISSION_MODE")

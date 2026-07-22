@@ -1,0 +1,15 @@
+{
+  "name": "engineering-code",
+  "version": "1.0.0",
+  "description": "Code review and software engineering guidance.",
+  "author": {
+    "name": "Anthropic",
+    "email": "support@anthropic.com"
+  },
+  "keywords": [
+    "engineering",
+    "claude",
+    "builtin"
+  ],
+  "license": "MIT"
+}

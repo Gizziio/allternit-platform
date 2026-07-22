@@ -63,5 +63,5 @@ export function useApprovalGatePoller(active = true, surface: AgentModeSurface =
     poll();
     const id = setInterval(poll, POLL_INTERVAL_MS);
     return () => clearInterval(id);
-  }, [active]);
+  }, [active, surface]);
 }

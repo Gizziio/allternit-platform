@@ -89,11 +89,52 @@ enum AgentModeTile: String, CaseIterable, Sendable {
         case .research: return "book"
         case .website: return "globe"
         case .docs: return "doc.text"
-        case .data: return "cylinder"
+        case .data: return "externaldrive"
         case .slides: return "chart.bar.doc.horizontal"
         case .image: return "photo"
         case .video: return "video"
         case .code: return "chevron.left.forwardslash.chevron.right"
+        }
+    }
+
+    /// Default prompt that populates the composer when the tile is selected
+    /// (the web fills a starter task for each mode).
+    var taskPrompt: String {
+        switch self {
+        case .swarms: return "Coordinate a swarm of agents to tackle this:"
+        case .research: return "Research this topic in depth and summarize the findings:"
+        case .website: return "Explore this website and summarize what you find: https://"
+        case .docs: return "Create or edit a document about:"
+        case .data: return "Build a spreadsheet or analyze data for:"
+        case .slides: return "Create a presentation about:"
+        case .image: return "Generate or describe an image for:"
+        case .video: return "Plan or describe a video about:"
+        case .code: return "Write or review code for:"
+        }
+    }
+
+    /// Short explainer shown in the agent-mode top deck when the tile is
+    /// selected, giving the user context about what the mode will do.
+    var contextDescription: String {
+        switch self {
+        case .swarms:
+            return "Multiple agents collaborate on your task in parallel."
+        case .research:
+            return "Deep research with sources and structured summaries."
+        case .website:
+            return "Fetch, read, and act on content from any website."
+        case .docs:
+            return "Draft, edit, and refine documents with the agent."
+        case .data:
+            return "Build sheets, run analysis, and extract insights."
+        case .slides:
+            return "Generate slide decks and talking points."
+        case .image:
+            return "Create, edit, or analyze images."
+        case .video:
+            return "Plan scripts, storyboards, and video content."
+        case .code:
+            return "Write, review, and debug code in any language."
         }
     }
 

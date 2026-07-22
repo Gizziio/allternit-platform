@@ -2,9 +2,9 @@
 import type { Command } from '../../commands'
 
 export default {
-  type: 'local-jsx',
+  type: 'local',
   name: 'usage',
-  description: 'Show plan usage limits',
-  availability: ['claude-ai'],
+  description: 'Show token usage, context window, and session cost inline',
+  supportsNonInteractive: true,
   load: () => import('./usage.js'),
 } satisfies Command

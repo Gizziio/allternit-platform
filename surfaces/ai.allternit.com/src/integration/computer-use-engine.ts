@@ -147,6 +147,8 @@ export type PlatformComputerUseClient = Pick<
   AllternitComputerUseClient,
   | 'execute'
   | 'executeStream'
+  | 'executeCompatibilityAction'
+  | 'createCompatibilitySession'
   | 'getReceipts'
   | 'watchRun'
   | 'listCanonicalProviders'

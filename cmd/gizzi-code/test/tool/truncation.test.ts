@@ -122,6 +122,31 @@ describe("Truncate", () => {
       if (result.truncated) throw new Error("expected not truncated")
       expect("outputPath" in result).toBe(false)
     })
+
+    test("replaces structured MCP text after spilling while retaining media", () => {
+      const content = [
+        { type: "text", text: "full text that must not reach the model" },
+        { type: "image", data: "base64-image" },
+        { type: "resource", resource: { text: "large resource text" } },
+        { type: "resource", resource: { blob: "base64-resource" } },
+      ]
+      const result: Truncate.Result = {
+        content: "bounded preview\n\nFull output saved to: /tmp/tool-output",
+        truncated: true,
+        outputPath: "/tmp/tool-output",
+      }
+
+      expect(Truncate.modelContent(content, result)).toStrictEqual([
+        { type: "text", text: result.content },
+        { type: "image", data: "base64-image" },
+        { type: "resource", resource: { blob: "base64-resource" } },
+      ])
+    })
+
+    test("preserves structured MCP content when no spill occurred", () => {
+      const content = [{ type: "text", text: "short" }]
+      expect(Truncate.modelContent(content, { content: "short", truncated: false })).toBe(content)
+    })
   })
 
   describe("cleanup", () => {

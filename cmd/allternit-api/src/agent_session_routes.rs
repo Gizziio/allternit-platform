@@ -142,6 +142,10 @@ struct CreateSessionBody {
     #[allow(dead_code)]
     agent_name: Option<String>,
     origin_surface: Option<String>,
+    /// Incognito chat: an ephemeral session excluded from list responses and
+    /// purged on abort. Also accepted as `metadata.ephemeral` (bool or the
+    /// string "true") for clients that only carry a metadata bag.
+    ephemeral: Option<bool>,
     metadata: Option<serde_json::Value>,
 }
 
@@ -298,6 +302,10 @@ fn transform_session(info: GizziSessionInfo, db: &DbHandle) -> serde_json::Value
             "surface": info.surface,
             "originSurface": origin_surface,
             "permission": info.permission,
+            // Incognito chats (Phase 6): surfaced so clients can filter
+            // defensively even against list responses that predate the
+            // server-side exclusion.
+            "ephemeral": db.is_session_ephemeral(&info.id).unwrap_or(false),
         }
     })
 }
@@ -519,17 +527,77 @@ async fn list_sessions(
     };
 
     let surface_filter = query.get("surface").cloned();
+    let project_filter = query.get("project_id").cloned();
+    // Phase 8 chat search: `q` — case-insensitive substring ("LIKE %q%")
+    // over the session title AND message content, mirroring the
+    // surface/project filters. Title comes from the list payload; content
+    // needs a per-session messages fetch, done lazily and only for sessions
+    // whose title didn't already match. Older clients never send `q`.
+    let text_filter = query
+        .get("q")
+        .map(|q| q.trim().to_lowercase())
+        .filter(|q| !q.is_empty());
     let mut filtered = Vec::new();
     for session in sessions {
+        // Incognito chats never appear in history (Phase 6). The backing
+        // record is purged on abort; this filter also covers sessions whose
+        // client never aborted. TODO: add a TTL sweep that purges ephemeral
+        // sessions older than a threshold (e.g. 24h) so abandoned records
+        // don't linger in Gizzi.
+        if state.db.is_session_ephemeral(&session.id).unwrap_or(false) {
+            continue;
+        }
+        let session_id = session.id.clone();
         let transformed = transform_session(session, &state.db);
-        let should_include = surface_filter.as_ref().map_or(true, |sf| {
+        let surface_matches = surface_filter.as_ref().map_or(true, |sf| {
             transformed
                 .get("metadata")
                 .and_then(|m| m.get("originSurface"))
                 .and_then(|v| v.as_str())
                 == Some(sf.as_str())
         });
-        if should_include {
+        let project_matches = project_filter.as_ref().map_or(true, |pf| {
+            transformed
+                .get("metadata")
+                .and_then(|m| m.get("project_id"))
+                .and_then(|v| v.as_str())
+                == Some(pf.as_str())
+        });
+        if surface_matches && project_matches {
+            if let Some(q) = &text_filter {
+                let title_matches = transformed
+                    .get("name")
+                    .and_then(|v| v.as_str())
+                    .map_or(false, |name| name.to_lowercase().contains(q.as_str()));
+                if !title_matches {
+                    // Content half of the `q` filter: fetch the session's
+                    // messages and substring-match their extracted text
+                    // (same extraction as transform_message). A failed fetch
+                    // excludes the session rather than erroring the search.
+                    let path = format!(
+                        "/v1/session/{}/messages",
+                        urlencoding::encode(&session_id)
+                    );
+                    let content_matches = match gizzi_json::<Vec<GizziMessage>>(
+                        &client,
+                        reqwest::Method::GET,
+                        &path,
+                        None,
+                    )
+                    .await
+                    {
+                        Ok(messages) => messages.iter().any(|message| {
+                            extract_message_content(&message.parts)
+                                .to_lowercase()
+                                .contains(q.as_str())
+                        }),
+                        Err(_) => false,
+                    };
+                    if !content_matches {
+                        continue;
+                    }
+                }
+            }
             filtered.push(transformed);
         }
     }
@@ -582,6 +650,31 @@ async fn create_session(
         payload.insert("surface".to_string(), json!(normalize_surface_for_gizzi(s)));
     }
 
+    // Stamp the composer-selected cowork project onto the gizzi session so
+    // list/get responses (`metadata.project_id`) can group chats by project.
+    // Clients send it as `metadata.projectId`; accept snake_case too.
+    if let Some(project_id) = body
+        .metadata
+        .as_ref()
+        .and_then(|m| m.get("projectId").or_else(|| m.get("project_id")))
+        .and_then(|v| v.as_str())
+    {
+        payload.insert("project_id".to_string(), json!(project_id));
+    }
+
+    // Incognito chat (Phase 6): `ephemeral: true` top-level or in metadata
+    // (bool or "true"). Ephemeral sessions are excluded from list responses,
+    // purged on abort, and MUST be skipped by any memory-consolidation hook
+    // (none exists in this create path today — keep it that way).
+    let ephemeral = body.ephemeral.unwrap_or(false)
+        || body
+            .metadata
+            .as_ref()
+            .and_then(|m| m.get("ephemeral"))
+            .map_or(false, |v| {
+                v.as_bool().unwrap_or(false) || v.as_str() == Some("true")
+            });
+
     // Always set the platform default model so Gizzi sessions know which brain
     // to use, even when the frontend doesn't send an explicit model.
     let (default_provider, default_model_id) = AppConfig::load().default_model();
@@ -628,6 +721,9 @@ async fn create_session(
     // Remember the original surface so list/get responses can restore it.
     if let Some(ref s) = surface {
         let _ = state.db.set_session_origin_surface(&session.id, s);
+    }
+    if ephemeral {
+        let _ = state.db.set_session_ephemeral(&session.id);
     }
 
     (
@@ -702,11 +798,18 @@ async fn update_session(
     }
 }
 
-async fn delete_session(headers: HeaderMap, Path(session_id): Path<String>) -> impl IntoResponse {
+async fn delete_session(
+    State(state): State<Arc<AppState>>,
+    headers: HeaderMap,
+    Path(session_id): Path<String>,
+) -> impl IntoResponse {
     let client = gizzi_client(&headers);
     let path = format!("/v1/session/{}", urlencoding::encode(&session_id));
     match gizzi_no_content(&client, reqwest::Method::DELETE, &path, None).await {
-        Ok(()) => StatusCode::NO_CONTENT.into_response(),
+        Ok(()) => {
+            let _ = state.db.clear_session_ephemeral(&session_id);
+            StatusCode::NO_CONTENT.into_response()
+        }
         Err(response) => response,
     }
 }
@@ -762,48 +865,118 @@ async fn send_message(
     }
 }
 
-async fn abort_session(headers: HeaderMap, Path(session_id): Path<String>) -> impl IntoResponse {
-    let client = gizzi_client(&headers);
-    let path = format!("/v1/session/{}/abort", urlencoding::encode(&session_id));
-    match gizzi_no_content(&client, reqwest::Method::POST, &path, Some(json!({}))).await {
-        Ok(()) => Json(json!({ "success": true })).into_response(),
-        Err(response) => response,
-    }
-}
-
-async fn revert_session(
+async fn abort_session(
     State(state): State<Arc<AppState>>,
     headers: HeaderMap,
     Path(session_id): Path<String>,
 ) -> impl IntoResponse {
-    get_session(State(state), headers, Path(session_id)).await
+    let client = gizzi_client(&headers);
+    let path = format!("/v1/session/{}/abort", urlencoding::encode(&session_id));
+    match gizzi_no_content(&client, reqwest::Method::POST, &path, Some(json!({}))).await {
+        Ok(()) => {
+            // Incognito chats are purged the moment the session ends/aborts:
+            // hard-delete the backing Gizzi record and forget the flag.
+            if state.db.is_session_ephemeral(&session_id).unwrap_or(false) {
+                let delete_path =
+                    format!("/v1/session/{}", urlencoding::encode(&session_id));
+                let _ = gizzi_no_content(&client, reqwest::Method::DELETE, &delete_path, None).await;
+                let _ = state.db.clear_session_ephemeral(&session_id);
+            }
+            Json(json!({ "success": true })).into_response()
+        }
+        Err(response) => response,
+    }
 }
 
+#[derive(Debug, Deserialize)]
+struct RevertSessionBody {
+    #[serde(rename = "messageId")]
+    message_id: String,
+}
+
+/// Reverts file changes made during a session back to a given message, via
+/// Gizzi's real `/session/:id/revert` (`SessionRevert.revert`). Previously
+/// this just called `get_session` and did nothing. The frontend
+/// (`mode-session-store.ts`) feeds the response through `mapBackendSession`,
+/// so — like `get_session`/`update_session` — we re-fetch and transform the
+/// session afterward rather than passing through Gizzi's revert-result shape.
+async fn revert_session(
+    State(state): State<Arc<AppState>>,
+    headers: HeaderMap,
+    Path(session_id): Path<String>,
+    Json(body): Json<RevertSessionBody>,
+) -> impl IntoResponse {
+    let client = gizzi_client(&headers);
+    let revert_path = format!("/v1/session/{}/revert", urlencoding::encode(&session_id));
+    let payload = json!({ "messageID": body.message_id });
+    if let Err(response) =
+        gizzi_json::<serde_json::Value>(&client, reqwest::Method::POST, &revert_path, Some(payload))
+            .await
+    {
+        return response;
+    }
+    get_session(State(state), headers, Path(session_id)).await.into_response()
+}
+
+/// Undoes a prior revert, via Gizzi's real `/session/:id/unrevert`
+/// (`SessionRevert.unrevert`). Previously this just called `get_session` and
+/// did nothing. Same re-fetch rationale as `revert_session` above.
 async fn unrevert_session(
     State(state): State<Arc<AppState>>,
     headers: HeaderMap,
     Path(session_id): Path<String>,
 ) -> impl IntoResponse {
-    get_session(State(state), headers, Path(session_id)).await
+    let client = gizzi_client(&headers);
+    let unrevert_path = format!("/v1/session/{}/unrevert", urlencoding::encode(&session_id));
+    if let Err(response) =
+        gizzi_json::<serde_json::Value>(&client, reqwest::Method::POST, &unrevert_path, None).await
+    {
+        return response;
+    }
+    get_session(State(state), headers, Path(session_id)).await.into_response()
 }
 
-async fn compact_session() -> impl IntoResponse {
-    StatusCode::NO_CONTENT
+/// Condenses a session's context, via Gizzi's real `/session/:id/summarize`
+/// (`SessionSummary.summarize`). Previously this was a pure no-op (`204`,
+/// no work). Note: this is Gizzi's exposed on-demand summarize endpoint, not
+/// the same code path as the agent loop's own automatic mid-turn compaction
+/// (`SessionCompaction.process`), which is driven by an internal task queue
+/// rather than a standalone REST primitive — wiring that would mean
+/// synthesizing a compaction task into the session's turn loop, not just
+/// proxying a request.
+async fn compact_session(headers: HeaderMap, Path(session_id): Path<String>) -> impl IntoResponse {
+    let client = gizzi_client(&headers);
+    let path = format!("/v1/session/{}/summarize", urlencoding::encode(&session_id));
+    match gizzi_json::<serde_json::Value>(&client, reqwest::Method::POST, &path, None).await {
+        Ok(result) => Json(result).into_response(),
+        Err(response) => response,
+    }
 }
 
-fn parse_sse_data_block(block: &str) -> Option<String> {
-    let data_lines = block
-        .lines()
-        .filter_map(|line| {
-            line.strip_prefix("data:")
-                .map(|value| value.trim_start().to_string())
-        })
-        .collect::<Vec<_>>();
+struct ParsedSseBlock {
+    id: Option<String>,
+    data: String,
+}
+
+fn parse_sse_block(block: &str) -> Option<ParsedSseBlock> {
+    let mut id = None;
+    let mut data_lines = Vec::new();
+
+    for line in block.lines() {
+        if let Some(value) = line.strip_prefix("id:") {
+            id = Some(value.trim_start().to_string());
+        } else if let Some(value) = line.strip_prefix("data:") {
+            data_lines.push(value.trim_start().to_string());
+        }
+    }
 
     if data_lines.is_empty() {
         None
     } else {
-        Some(data_lines.join("\n"))
+        Some(ParsedSseBlock {
+            id,
+            data: data_lines.join("\n"),
+        })
     }
 }
 
@@ -930,9 +1103,24 @@ async fn sync_sessions(
     Response,
 > {
     let client = gizzi_client(&headers);
-    let response = client
+
+    // A browser EventSource that dropped and auto-reconnected sends back the
+    // last `id:` it saw via Last-Event-ID. Forward it upstream so Gizzi can
+    // replay the events published during the gap instead of the client
+    // silently missing them (see Bus.historySince in gizzi-code).
+    let last_event_id = headers
+        .get("last-event-id")
+        .and_then(|value| value.to_str().ok())
+        .map(str::to_string);
+
+    let mut request = client
         .get(format!("{}/v1/event", gizzi_base()))
-        .header("Accept", "text/event-stream")
+        .header("Accept", "text/event-stream");
+    if let Some(ref id) = last_event_id {
+        request = request.header("Last-Event-ID", id.as_str());
+    }
+
+    let response = request
         .send()
         .await
         .map_err(|error| {
@@ -977,11 +1165,12 @@ async fn sync_sessions(
             buffer = blocks.pop().unwrap_or_default();
 
             for block in blocks {
-                let Some(data) = parse_sse_data_block(&block) else {
+                let Some(parsed_block) = parse_sse_block(&block) else {
                     continue;
                 };
+                let block_id = parsed_block.id;
 
-                let Ok(parsed) = serde_json::from_str::<GizziBusEvent>(&data) else {
+                let Ok(parsed) = serde_json::from_str::<GizziBusEvent>(&parsed_block.data) else {
                     continue;
                 };
 
@@ -991,7 +1180,11 @@ async fn sync_sessions(
                 }
 
                 if let Some(payload) = transform_bus_event(&client, &state.db, parsed).await {
-                    yield Ok(axum::response::sse::Event::default().data(payload.to_string()));
+                    let mut event = axum::response::sse::Event::default().data(payload.to_string());
+                    if let Some(id) = block_id {
+                        event = event.id(id);
+                    }
+                    yield Ok(event);
                 }
             }
         }

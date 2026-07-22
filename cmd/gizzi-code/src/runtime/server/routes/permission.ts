@@ -8,6 +8,37 @@ import { lazy } from "@/shared/util/lazy"
 
 export const PermissionRoutes = lazy(() =>
   new Hono()
+    .get(
+      "/mode/:sessionID",
+      describeRoute({
+        summary: "Get session permission mode",
+        description: "Read the durable permission mode for a session.",
+        operationId: "permission.mode.get",
+        responses: { 200: { description: "Permission mode", content: { "application/json": { schema: resolver(z.any()) } } } },
+      }),
+      validator("param", z.object({ sessionID: z.string() })),
+      async (c) => {
+        const { sessionID } = c.req.valid("param")
+        return c.json({ sessionID, mode: await PermissionNext.getMode(sessionID) })
+      },
+    )
+    .put(
+      "/mode/:sessionID",
+      describeRoute({
+        summary: "Set session permission mode",
+        description: "Persist manual, plan, unattended auto, or reviewed yolo behavior for a session.",
+        operationId: "permission.mode.set",
+        responses: { 200: { description: "Permission mode updated", content: { "application/json": { schema: resolver(z.any()) } } }, ...errors(400) },
+      }),
+      validator("param", z.object({ sessionID: z.string() })),
+      validator("json", z.object({ mode: PermissionNext.Mode })),
+      async (c) => {
+        const { sessionID } = c.req.valid("param")
+        const { mode } = c.req.valid("json")
+        await PermissionNext.setMode(sessionID, mode)
+        return c.json({ sessionID, mode })
+      },
+    )
     .post(
       "/:requestID/reply",
       describeRoute({

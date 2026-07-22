@@ -49,16 +49,36 @@ const LoopUpdateSchema = z.object({
 const GoalCreateSchema = z.object({
   id: z.string().optional(),
   agent_id: z.string().optional(),
-  objective: z.string(),
+  objective: z.string().min(1),
+  completion_criterion: z.string().min(1).optional(),
+  budget: z.object({
+    turnBudget: z.number().int().positive().nullable().optional(),
+    tokenBudget: z.number().int().positive().nullable().optional(),
+    wallClockBudgetMs: z.number().int().positive().nullable().optional(),
+  }).optional(),
+  enqueue: z.boolean().optional(),
+  replace: z.boolean().optional(),
 })
 
 const GoalUpdateSchema = z.object({
-  agent_id: z.string().optional(),
-  objective: z.string().optional(),
-  milestones: z.array(z.any()).optional(),
-  validations: z.array(z.any()).optional(),
-  state: z.string().optional(),
-  progress: z.number().optional(),
+  objective: z.string().min(1).optional(),
+  completion_criterion: z.string().min(1).nullable().optional(),
+})
+
+const GoalQueueOrderSchema = z.object({
+  agent_id: z.string().nullable().optional(),
+  goalIDs: z.array(z.string()),
+})
+
+const GoalBudgetSchema = z.object({
+  turnBudget: z.number().int().positive().nullable().optional(),
+  tokenBudget: z.number().int().positive().nullable().optional(),
+  wallClockBudgetMs: z.number().int().positive().nullable().optional(),
+})
+
+const GoalContinuationSchema = z.object({
+  tokensUsed: z.number().int().nonnegative().optional(),
+  blocker: z.string().min(1).optional(),
 })
 
 const GoalMilestoneSchema = z.object({
@@ -77,8 +97,9 @@ const IdParamSchema = z.object({
   id: z.string(),
 })
 
-export const AutomationsRoutes = lazy(() =>
-  new Hono()
+export const AutomationsRoutes = lazy(() => {
+  GoalEngine.initialize()
+  return new Hono()
     // Routines CRUD
     .get(
       "/routines",
@@ -352,20 +373,18 @@ export const AutomationsRoutes = lazy(() =>
       validator("json", GoalCreateSchema),
       async (c) => {
         const body = c.req.valid("json")
-        const goal = {
-          id: body.id || crypto.randomUUID(),
-          agent_id: body.agent_id || null,
+        const id = body.id || crypto.randomUUID()
+        const result = GoalEngine.createGoal({
+          id,
+          agentId: body.agent_id,
           objective: body.objective,
-          milestones: [],
-          validations: [],
-          state: "planning",
-          progress: 0,
-          time_created: Date.now(),
-          time_updated: Date.now(),
-        }
-        Database.use((db) => db.insert(GoalTable).values(goal).run())
-        GoalEngine.startGoal(goal.id).catch(console.error)
-        return c.json(goal, 201)
+          completionCriterion: body.completion_criterion,
+          budget: body.budget,
+          enqueue: body.enqueue,
+          replace: body.replace,
+        })
+        if (!result.ok) return c.json({ success: false, error: result.reason }, 409)
+        return c.json({ id, objective: body.objective, success: true, ...result }, 201)
       },
     )
     .put(
@@ -384,17 +403,12 @@ export const AutomationsRoutes = lazy(() =>
       async (c) => {
         const { id } = c.req.valid("param")
         const body = c.req.valid("json")
-        Database.use((db) =>
-          db
-            .update(GoalTable)
-            .set({
-              ...body,
-              time_updated: Date.now(),
-            })
-            .where(eq(GoalTable.id, id))
-            .run()
-        )
-        return c.json({ success: true })
+        const result = GoalEngine.updateDetails(id, {
+          objective: body.objective,
+          completionCriterion: body.completion_criterion,
+        })
+        if (!result.ok) return c.json({ success: false, error: result.reason }, result.reason === "Goal not found" ? 404 : 409)
+        return c.json({ success: true, ...result })
       },
     )
     .delete(
@@ -411,8 +425,25 @@ export const AutomationsRoutes = lazy(() =>
       validator("param", IdParamSchema),
       async (c) => {
         const { id } = c.req.valid("param")
-        Database.use((db) => db.delete(GoalTable).where(eq(GoalTable.id, id)).run())
-        return c.json({ success: true })
+        const result = GoalEngine.deleteGoal(id)
+        if (!result.ok) return c.json({ success: false, error: result.reason }, 404)
+        return c.json({ success: true, ...result })
+      },
+    )
+    .post(
+      "/goals/queue/reorder",
+      describeRoute({
+        summary: "Reorder queued goals",
+        description: "Replace the complete queue order for one goal owner",
+        operationId: "automation.goals.queue.reorder",
+        responses: { 200: { description: "Goal queue reordered", content: { "application/json": { schema: resolver(z.any()) } } }, ...errors(409) },
+      }),
+      validator("json", GoalQueueOrderSchema),
+      async (c) => {
+        const body = c.req.valid("json")
+        const result = GoalEngine.reorderQueue(body.agent_id ?? null, body.goalIDs)
+        if (!result.ok) return c.json({ success: false, error: result.reason }, 409)
+        return c.json({ success: true, ...result })
       },
     )
     .post(
@@ -429,15 +460,9 @@ export const AutomationsRoutes = lazy(() =>
       validator("param", IdParamSchema),
       async (c) => {
         const { id } = c.req.valid("param")
-        Database.use((db) =>
-          db
-            .update(GoalTable)
-            .set({ state: "planning", progress: 0, time_updated: Date.now() })
-            .where(eq(GoalTable.id, id))
-            .run()
-        )
-        await GoalEngine.startGoal(id)
-        return c.json({ success: true, state: "in_progress" })
+        const result = GoalEngine.startGoal(id)
+        if (!result.ok) return c.json({ success: false, error: result.reason }, result.reason === "Goal not found" ? 404 : 409)
+        return c.json({ success: true, ...result })
       },
     )
     .post(
@@ -451,8 +476,43 @@ export const AutomationsRoutes = lazy(() =>
       validator("param", IdParamSchema),
       async (c) => {
         const { id } = c.req.valid("param")
-        await GoalEngine.pauseGoal(id)
-        return c.json({ success: true, state: "paused" })
+        const result = GoalEngine.pauseGoal(id)
+        if (!result.ok) return c.json({ success: false, error: result.reason }, result.reason === "Goal not found" ? 404 : 409)
+        return c.json({ success: true, ...result })
+      },
+    )
+    .post(
+      "/goals/:id/budget",
+      describeRoute({
+        summary: "Set goal budget",
+        description: "Set or clear hard turn, token, and wall-clock budgets",
+        operationId: "automation.goals.budget.set",
+        responses: { 200: { description: "Goal budget updated", content: { "application/json": { schema: resolver(z.any()) } } }, ...errors(404, 409) },
+      }),
+      validator("param", IdParamSchema),
+      validator("json", GoalBudgetSchema),
+      async (c) => {
+        const { id } = c.req.valid("param")
+        const result = GoalEngine.setBudget(id, c.req.valid("json"))
+        if (!result.ok) return c.json({ success: false, error: result.reason }, result.reason === "Goal not found" ? 404 : 409)
+        return c.json({ success: true, ...result })
+      },
+    )
+    .post(
+      "/goals/:id/continuations",
+      describeRoute({
+        summary: "Record goal continuation",
+        description: "Account an autonomous turn, enforce budgets, and audit repeated blockers",
+        operationId: "automation.goals.continuations.record",
+        responses: { 200: { description: "Goal continuation recorded", content: { "application/json": { schema: resolver(z.any()) } } }, ...errors(404, 409) },
+      }),
+      validator("param", IdParamSchema),
+      validator("json", GoalContinuationSchema),
+      async (c) => {
+        const { id } = c.req.valid("param")
+        const result = GoalEngine.recordContinuation(id, c.req.valid("json"))
+        if (!result.ok) return c.json({ success: false, error: result.reason }, result.reason === "Goal not found" ? 404 : 409)
+        return c.json({ success: true, ...result })
       },
     )
     .post(
@@ -500,8 +560,9 @@ export const AutomationsRoutes = lazy(() =>
       validator("param", IdParamSchema),
       async (c) => {
         const { id } = c.req.valid("param")
-        await GoalEngine.blockGoal(id)
-        return c.json({ success: true, state: "blocked" })
+        const result = GoalEngine.blockGoal(id)
+        if (!result.ok) return c.json({ success: false, error: result.reason }, result.reason === "Goal not found" ? 404 : 409)
+        return c.json({ success: true, ...result })
       },
     )
     .post(
@@ -517,7 +578,7 @@ export const AutomationsRoutes = lazy(() =>
         const { id } = c.req.valid("param")
         const result = await GoalEngine.completeGoal(id)
         if (!result.ok) return c.json({ success: false, error: result.reason }, result.reason === "Goal not found" ? 404 : 409)
-        return c.json({ success: true, state: "completed", progress: 100 })
+        return c.json({ success: true, ...result })
       },
     )
-)
+})

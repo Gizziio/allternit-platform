@@ -1,0 +1,9 @@
+{
+  "hr-recruiting-server": {
+    "type": "http",
+    "url": "https://plugins.anthropic.com/mcp/hr-recruiting",
+    "headers": {
+      "X-Plugin": "hr-recruiting"
+    }
+  }
+}

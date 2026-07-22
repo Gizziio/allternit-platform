@@ -65,26 +65,20 @@ This branch forks the **Open Design skill/craft/protocol layer** into Allternit 
 6. **Claude Design ZIP import** — `claude-design-import.ts` plus "Claude ZIP" tab in `DesignImportModal`.
 7. **HyperFrames / MP4 scaffolding** — `hyperframes-export.ts` captures the artifact iframe to a WebM/MP4 via `MediaRecorder`.
 
-## LTS gaps still to close
+## LTS gaps status
 
-1. **Daemon-side skill discovery**
-   - Server-side scan of `~/.claude/skills/`, `./skills/`, `./.claude/skills/` with priority merging.
-   - Expose via `/api/design/skills` or existing Allternit API surface.
-   - Watch filesystem with `chokidar` in dev; re-index on `SIGHUP` in production.
+| # | Gap | Status | Notes |
+|---|-----|--------|-------|
+| 1 | **Daemon-side skill discovery** | ✅ Implemented (dev) | `src/lib/design/design-skills-plugin.ts` mounts `/api/design/skills/discover` in the Vite dev server and scans `~/.claude/skills/`, `./skills/`, `./.claude/skills/`. `src/lib/design/skills-api.ts` already merges discovered skills into the design catalog. |
+| 2 | **Agent adapter pool** | ✅ Stub implemented | `src/lib/design/agent-adapter-pool.ts` detects `claude`, `codex`, `cursor-agent`, `kimi`, etc. on `PATH` and exposes a typed `spawnAdapter` async-generator stub. |
+| 3 | **Comment-mode surgical edits** | ⏸️ Deferred | Requires an agent comment protocol and capability gating; not started. |
+| 4 | **Full HyperFrames timeline** | ⏸️ Deferred | Keyframe timelines, WebGL compositing, layer animations beyond simple iframe capture. |
+| 5 | **Per-agent plugin install scripts** | ⏸️ Deferred | `od mcp install <agent>` equivalent wiring into agent skill directories. |
 
-2. **Agent adapter pool**
-   - Detect `claude`, `codex`, `cursor-agent`, `kimi`, etc. on `PATH`.
-   - Spawn CLI with skill context + DESIGN.md + CWD set to artifact workspace.
-   - Stream stdout/stderr as structured events.
+## Production notes
 
-3. **Comment-mode surgical edits**
-   - Targeted patching via agent comment protocol; requires agent capability gating.
-
-4. **Full HyperFrames timeline**
-   - Keyframe timelines, WebGL compositing, layer animations beyond simple iframe capture.
-
-5. **Per-agent plugin install scripts**
-   - `od mcp install <agent>` equivalent wiring into agent skill directories.
+- The Vite dev plugin is intentionally dev-only. In production the `/api/*` proxy forwards to the Allternit backend (`http://127.0.0.1:8013`), so the backend must implement `/api/design/skills/discover` with the same `DiscoverSkillsResponse` contract.
+- `chokidar`-based hot-reload and `SIGHUP` re-indexing are still future enhancements.
 
 ---
 

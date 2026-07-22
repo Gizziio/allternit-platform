@@ -43,7 +43,7 @@ describe('RailControls', () => {
 
     expect(screen.getByTestId('rail-mode-chat')).toHaveAttribute('title', 'Home');
     expect(screen.getByTestId('rail-mode-code')).toHaveAttribute('title', 'Code');
-    expect(screen.getByTestId('rail-mode-browser')).toHaveAttribute('title', 'Browser');
+    expect(screen.getByTestId('rail-mode-browser')).toHaveAttribute('title', 'ACI');
   });
 
   it('switches mode on hover over a collapsed mode button', () => {

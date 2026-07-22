@@ -101,6 +101,7 @@ import {
   CreateMenuAction
 } from './PluginManager/types';
 import { 
+  detectLanguageFromName,
   isPluginBlockedByTrustPolicy,
   slugify
 } from './PluginManager/utils';
@@ -361,30 +362,6 @@ function findFileNodeByName(nodes: FileNode[] | undefined, matcher: RegExp): Fil
     }
   }
   return null;
-}
-
-export function detectLanguageFromName(name: string): string | undefined {
-  const ext = name.split('.').pop()?.toLowerCase();
-  const map: Record<string, string> = {
-    md: 'markdown',
-    json: 'json',
-    ts: 'typescript',
-    tsx: 'typescript',
-    js: 'javascript',
-    jsx: 'javascript',
-    py: 'python',
-    rs: 'rust',
-    go: 'go',
-    html: 'html',
-    htm: 'html',
-    css: 'css',
-    yaml: 'yaml',
-    yml: 'yaml',
-    toml: 'toml',
-    sh: 'bash',
-    txt: 'text',
-  };
-  return map[ext || ''];
 }
 
 function normalizeArchivePath(rawPath: string): string | null {

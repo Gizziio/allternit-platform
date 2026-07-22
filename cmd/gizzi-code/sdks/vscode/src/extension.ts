@@ -1,138 +1,203 @@
-// @ts-nocheck
-// This method is called when your extension is deactivated
-export function deactivate() {}
-
 import * as vscode from "vscode"
 
-const TERMINAL_NAME = "opencode"
+const TERMINAL_NAME = "Gizzi Code"
+const PORT_ENV = "_EXTENSION_GIZZI_PORT"
+const LEGACY_PORT_ENV = "_EXTENSION_OPENCODE_PORT"
+const MIN_PORT = 16_384
+const MAX_PORT = 65_535
+
+let output: vscode.OutputChannel | undefined
+let status: vscode.StatusBarItem | undefined
 
 export function activate(context: vscode.ExtensionContext) {
-  let openNewTerminalDisposable = vscode.commands.registerCommand("opencode.openNewTerminal", async () => {
-    await openTerminal()
-  })
+  output = vscode.window.createOutputChannel("Gizzi Code")
+  status = vscode.window.createStatusBarItem(vscode.StatusBarAlignment.Right, 90)
+  status.command = "gizzi.openTerminal"
+  status.text = "$(sparkle) Gizzi"
+  status.tooltip = "Open Gizzi Code"
+  status.show()
+  context.subscriptions.push(output, status)
 
-  let openTerminalDisposable = vscode.commands.registerCommand("opencode.openTerminal", async () => {
-    // An opencode terminal already exists => focus it
-    const existingTerminal = vscode.window.terminals.find((t) => t.name === TERMINAL_NAME)
-    if (existingTerminal) {
-      existingTerminal.show()
-      return
-    }
-
-    await openTerminal()
-  })
-
-  let addFilepathDisposable = vscode.commands.registerCommand("opencode.addFilepathToTerminal", async () => {
-    const fileRef = getActiveFile()
-    if (!fileRef) {
-      return
-    }
-
-    const terminal = vscode.window.activeTerminal
-    if (!terminal) {
-      return
-    }
-
-    if (terminal.name === TERMINAL_NAME) {
-      // @ts-ignore
-      const port = terminal.creationOptions.env?.["_EXTENSION_OPENCODE_PORT"]
-      port ? await appendPrompt(parseInt(port), fileRef) : terminal.sendText(fileRef, false)
-      terminal.show()
-    }
-  })
-
-  context.subscriptions.push(openTerminalDisposable, addFilepathDisposable)
-
-  async function openTerminal() {
-    // Create a new terminal in split screen
-    const port = Math.floor(Math.random() * (65535 - 16384 + 1)) + 16384
-    const terminal = vscode.window.createTerminal({
-      name: TERMINAL_NAME,
-      iconPath: {
-        light: vscode.Uri.file(context.asAbsolutePath("images/button-dark.svg")),
-        dark: vscode.Uri.file(context.asAbsolutePath("images/button-light.svg")),
-      },
-      location: {
-        viewColumn: vscode.ViewColumn.Beside,
-        preserveFocus: false,
-      },
-      env: {
-        _EXTENSION_OPENCODE_PORT: port.toString(),
-        OPENCODE_CALLER: "vscode",
-      },
-    })
-
-    terminal.show()
-    terminal.sendText(`opencode --port ${port}`)
-
-    const fileRef = getActiveFile()
-    if (!fileRef) {
-      return
-    }
-
-    // Wait for the terminal to be ready
-    let tries = 10
-    let connected = false
-    do {
-      await new Promise((resolve) => setTimeout(resolve, 200))
-      try {
-        await fetch(`http://localhost:${port}/app`)
-        connected = true
-        break
-      } catch (e) {}
-
-      tries--
-    } while (tries > 0)
-
-    // If connected, append the prompt to the terminal
-    if (connected) {
-      await appendPrompt(port, `In ${fileRef}`)
-      terminal.show()
-    }
-  }
-
-  async function appendPrompt(port: number, text: string) {
-    await fetch(`http://localhost:${port}/tui/append-prompt`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({ text }),
-    })
-  }
-
-  function getActiveFile() {
-    const activeEditor = vscode.window.activeTextEditor
-    if (!activeEditor) {
-      return
-    }
-
-    const document = activeEditor.document
-    const workspaceFolder = vscode.workspace.getWorkspaceFolder(document.uri)
-    if (!workspaceFolder) {
-      return
-    }
-
-    // Get the relative path from workspace root
-    const relativePath = vscode.workspace.asRelativePath(document.uri)
-    let filepathWithAt = `@${relativePath}`
-
-    // Check if there's a selection and add line numbers
-    const selection = activeEditor.selection
-    if (!selection.isEmpty) {
-      // Convert to 1-based line numbers
-      const startLine = selection.start.line + 1
-      const endLine = selection.end.line + 1
-
-      if (startLine === endLine) {
-        // Single line selection
-        filepathWithAt += `#L${startLine}`
-      } else {
-        // Multi-line selection
-        filepathWithAt += `#L${startLine}-${endLine}`
+  const openTerminal = async (forceNew = false) => {
+    if (!forceNew) {
+      const existing = gizziTerminals()[0]
+      if (existing) {
+        existing.show()
+        return existing
       }
     }
 
-    return filepathWithAt
+    const port = randomPort()
+    const workspace = activeWorkspaceFolder()
+    const configuredCli = vscode.workspace.getConfiguration("gizzi").get<string>("cliPath", "gizzi")
+    const terminal = vscode.window.createTerminal({
+      name: TERMINAL_NAME,
+      iconPath: vscode.ThemeIcon.File,
+      cwd: workspace?.uri,
+      location: { viewColumn: vscode.ViewColumn.Beside, preserveFocus: false },
+      env: {
+        [PORT_ENV]: String(port),
+        [LEGACY_PORT_ENV]: String(port),
+        GIZZI_CALLER: "vscode",
+        OPENCODE_CALLER: "vscode",
+      },
+    })
+    terminal.show()
+    terminal.sendText(`${shellQuote(configuredCli)} --port ${port}`)
+    setStatus("connecting", port)
+
+    const connected = await waitForRuntime(port)
+    setStatus(connected ? "connected" : "unavailable", port)
+    if (!connected) {
+      log(`Runtime on port ${port} did not become ready within the startup window.`)
+      void vscode.window.showWarningMessage(
+        "Gizzi Code started, but its editor bridge is not responding yet.",
+        "Show Logs",
+      ).then((choice) => choice === "Show Logs" && output?.show())
+      return terminal
+    }
+
+    const fileRef = activeFileReference()
+    if (fileRef) await appendPrompt(port, `In ${fileRef}`)
+    return terminal
   }
+
+  const focusOrOpen = () => openTerminal(false)
+  const openNew = () => openTerminal(true)
+  const insertFile = async () => {
+    const fileRef = activeFileReference()
+    if (!fileRef) {
+      void vscode.window.showInformationMessage("Open a workspace file to add it to Gizzi Code.")
+      return
+    }
+    const terminal = vscode.window.activeTerminal?.name === TERMINAL_NAME
+      ? vscode.window.activeTerminal
+      : gizziTerminals()[0]
+    if (!terminal) {
+      await openTerminal(false)
+      return
+    }
+    const port = terminalPort(terminal)
+    if (port && await appendPrompt(port, fileRef)) {
+      terminal.show()
+      return
+    }
+    terminal.sendText(fileRef, false)
+    terminal.show()
+  }
+  const reconnect = async () => {
+    const terminals = gizziTerminals()
+    for (const terminal of terminals) terminal.dispose()
+    await openTerminal(true)
+  }
+  const showLogs = () => output?.show()
+
+  const handlers: Record<string, () => unknown> = {
+    "gizzi.openTerminal": focusOrOpen,
+    "gizzi.openNewTerminal": openNew,
+    "gizzi.addFilepathToTerminal": insertFile,
+    "gizzi.reconnect": reconnect,
+    "gizzi.showLogs": showLogs,
+    // Compatibility for users upgrading from the original opencode extension.
+    "opencode.openTerminal": focusOrOpen,
+    "opencode.openNewTerminal": openNew,
+    "opencode.addFilepathToTerminal": insertFile,
+  }
+  for (const [command, handler] of Object.entries(handlers)) {
+    context.subscriptions.push(vscode.commands.registerCommand(command, handler))
+  }
+
+  context.subscriptions.push(
+    vscode.window.onDidCloseTerminal((terminal) => {
+      if (terminal.name === TERMINAL_NAME && gizziTerminals().length === 0) setStatus("idle")
+    }),
+    vscode.window.registerUriHandler({
+      handleUri: async (uri) => {
+        if (uri.path === "/open") await focusOrOpen()
+        if (uri.path === "/new") await openNew()
+      },
+    }),
+  )
+
+  log(`Activated${vscode.env.remoteName ? ` in ${vscode.env.remoteName}` : ""}.`)
+}
+
+export function deactivate() {
+  output = undefined
+  status = undefined
+}
+
+function activeWorkspaceFolder() {
+  const editorUri = vscode.window.activeTextEditor?.document.uri
+  return (editorUri && vscode.workspace.getWorkspaceFolder(editorUri)) ?? vscode.workspace.workspaceFolders?.[0]
+}
+
+function activeFileReference() {
+  const editor = vscode.window.activeTextEditor
+  if (!editor || !vscode.workspace.getWorkspaceFolder(editor.document.uri)) return
+  let reference = `@${vscode.workspace.asRelativePath(editor.document.uri, false)}`
+  if (!editor.selection.isEmpty) {
+    const start = editor.selection.start.line + 1
+    const end = editor.selection.end.line + 1
+    reference += start === end ? `#L${start}` : `#L${start}-${end}`
+  }
+  return reference
+}
+
+function gizziTerminals() {
+  return vscode.window.terminals.filter((terminal) => terminal.name === TERMINAL_NAME)
+}
+
+function terminalPort(terminal: vscode.Terminal): number | undefined {
+  const env = terminal.creationOptions && "env" in terminal.creationOptions ? terminal.creationOptions.env : undefined
+  const raw = env?.[PORT_ENV] ?? env?.[LEGACY_PORT_ENV]
+  const port = typeof raw === "string" ? Number(raw) : NaN
+  return Number.isInteger(port) ? port : undefined
+}
+
+async function appendPrompt(port: number, text: string): Promise<boolean> {
+  try {
+    const response = await fetch(`http://127.0.0.1:${port}/tui/append-prompt`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ text }),
+      signal: AbortSignal.timeout(2_000),
+    })
+    return response.ok
+  } catch (error) {
+    log(`Unable to append editor context: ${error instanceof Error ? error.message : String(error)}`)
+    return false
+  }
+}
+
+async function waitForRuntime(port: number): Promise<boolean> {
+  for (let attempt = 0; attempt < 20; attempt++) {
+    try {
+      const response = await fetch(`http://127.0.0.1:${port}/app`, { signal: AbortSignal.timeout(500) })
+      if (response.ok) return true
+    } catch {}
+    await new Promise((resolve) => setTimeout(resolve, 250))
+  }
+  return false
+}
+
+function randomPort() {
+  return Math.floor(Math.random() * (MAX_PORT - MIN_PORT + 1)) + MIN_PORT
+}
+
+function shellQuote(value: string) {
+  return `'${value.replace(/'/g, `'"'"'`)}'`
+}
+
+function setStatus(state: "idle" | "connecting" | "connected" | "unavailable", port?: number) {
+  if (!status) return
+  if (state === "connecting") status.text = "$(sync~spin) Gizzi"
+  if (state === "connected") status.text = "$(sparkle) Gizzi"
+  if (state === "unavailable") status.text = "$(warning) Gizzi"
+  if (state === "idle") status.text = "$(sparkle) Gizzi"
+  status.tooltip = port ? `Gizzi Code editor bridge on port ${port}` : "Open Gizzi Code"
+}
+
+function log(message: string) {
+  output?.appendLine(`[${new Date().toISOString()}] ${message}`)
 }

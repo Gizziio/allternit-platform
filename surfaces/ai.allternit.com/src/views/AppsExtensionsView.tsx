@@ -436,26 +436,35 @@ function TerminalMock(): React.ReactNode {
 export function AppsExtensionsView(): React.ReactNode {
   return (
     <div className="h-full overflow-y-auto bg-[#F5F4EF]">
-      {/* Top bar */}
-      <div className="sticky top-0 z-20 flex items-center gap-4 px-6 py-4 bg-[#FAF9F5]/95 backdrop-blur border-0 border-b border-solid border-[#E5E2D9]">
-        <button
-          type="button"
-          onClick={() => switchMode('chat')}
-          aria-label="Back to home"
-          className="border-none bg-transparent p-1 cursor-pointer rounded-lg hover:bg-[#EFEDE5] transition-colors flex"
-        >
-          <ArrowLeft size={18} weight="bold" style={{ color: INK }} />
-        </button>
-        <span className="text-[16px] font-medium" style={{ color: INK }}>Apps and extensions</span>
-      </div>
+      <div className="w-full max-w-6xl mx-auto px-8 pt-10 pb-12 flex flex-col">
+        {/* Header */}
+        <div className="flex items-center justify-between gap-4">
+          <div>
+            <h1
+              className="text-3xl font-medium tracking-tight m-0"
+              style={{ color: INK, fontFamily: SERIF }}
+            >
+              Apps and extensions
+            </h1>
+            <p className="m-0 mt-1 text-sm" style={{ color: MUTED }}>
+              Do more with Allternit, everywhere you work
+            </p>
+          </div>
 
-      <div className="max-w-[1240px] mx-auto px-6 pb-24">
-        <h1
-          className="m-0 mt-14 mb-12 text-center text-[34px] md:text-[42px] font-medium tracking-[-0.01em]"
-          style={{ color: INK, fontFamily: SERIF }}
-        >
-          Do more with Allternit, everywhere you work
-        </h1>
+          <div className="flex items-center gap-2 flex-shrink-0">
+            <button
+              type="button"
+              onClick={() => switchMode('chat')}
+              className="inline-flex items-center gap-1.5 h-9 px-3.5 rounded-lg border border-solid border-[#E5E2D9] bg-[#FAF9F5] text-sm hover:border-[#D8D4C8] transition-colors cursor-pointer"
+              style={{ color: MUTED }}
+            >
+              <ArrowLeft size={14} weight="bold" />
+              Back
+            </button>
+          </div>
+        </div>
+
+        <div className="mt-10">
 
         {/* Featured: Allternit Design */}
         <Card className="mb-8 overflow-hidden">
@@ -635,6 +644,7 @@ export function AppsExtensionsView(): React.ReactNode {
               <ConnectorGridMock />
             </div>
           </Card>
+        </div>
         </div>
       </div>
     </div>

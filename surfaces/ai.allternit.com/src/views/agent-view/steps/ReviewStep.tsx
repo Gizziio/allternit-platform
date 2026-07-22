@@ -45,10 +45,10 @@ export function ReviewStep({ formData, blueprint, cardSeed, projectedStats }: Re
   const workspaceDocs = useMemo(() => {
     try {
       return generateEnhancedWorkspaceDocuments(formData.config, {
-        name: formData.name,
-        description: formData.description,
-        model: formData.model,
-        provider: formData.provider,
+        name: formData.name || '',
+        description: formData.description || '',
+        model: formData.model || '',
+        provider: formData.provider || '',
         type: formData.type,
         trustTier: formData.trustTier,
         writeScope: formData.writeScope,

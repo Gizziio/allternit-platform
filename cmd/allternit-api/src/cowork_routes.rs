@@ -3,7 +3,7 @@ use axum::{
     extract::{Path, Query, State},
     http::{HeaderMap, StatusCode},
     response::IntoResponse,
-    routing::{get, post},
+    routing::{delete, get, post},
     Json, Router,
 };
 use rusqlite::params;
@@ -51,6 +51,14 @@ pub fn cowork_router() -> Router<Arc<AppState>> {
                 .patch(update_project)
                 .delete(delete_project),
         )
+        .route(
+            "/cowork/projects/:id/files",
+            get(list_project_files).post(create_project_file),
+        )
+        .route(
+            "/cowork/projects/:id/files/:file_id",
+            delete(delete_project_file),
+        )
         .route("/cowork/memory", get(get_memory).post(store_memory))
         .route(
             "/cowork/memory/search",
@@ -97,6 +105,18 @@ struct ProjectRow {
     default_branch: Option<String>,
     created_at: String,
     updated_at: String,
+}
+
+#[derive(Serialize)]
+struct ProjectFileRow {
+    id: String,
+    project_id: String,
+    user_id: String,
+    name: String,
+    url: Option<String>,
+    upload_id: Option<String>,
+    media_type: Option<String>,
+    created_at: String,
 }
 
 #[derive(Serialize)]
@@ -1007,6 +1027,175 @@ async fn delete_project(
         Ok(Ok(())) => Json(json!({"success": true})).into_response(),
         Ok(Err(e)) => {
             warn!("DB error deleting project: {}", e);
+            (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(json!({"error": e.to_string()})),
+            )
+                .into_response()
+        }
+        Err(e) => {
+            warn!("DB task panicked: {}", e);
+            (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(json!({"error": "internal error"})),
+            )
+                .into_response()
+        }
+    }
+}
+
+// ─── Project files ────────────────────────────────────────────────────────────
+//
+// Metadata rows for files attached to a project (Claude-style project
+// knowledge). Blobs live behind /api/v1/uploads (`upload_id`) or external
+// URLs (`url`); these rows only record what belongs to which project.
+
+async fn list_project_files(
+    State(state): State<Arc<AppState>>,
+    Extension(user): Extension<AuthUser>,
+    _headers: HeaderMap,
+    Path(id): Path<String>,
+) -> impl IntoResponse {
+    let db = state.db.clone();
+    let user_id = user.user_id;
+
+    let rows = tokio::task::spawn_blocking(move || {
+        let conn = db.connect()?;
+        let mut stmt = conn.prepare(
+            "SELECT id, project_id, user_id, name, url, upload_id, media_type, created_at
+             FROM cowork_project_files WHERE project_id = ?1 AND user_id = ?2 ORDER BY created_at DESC",
+        )?;
+        let rows = stmt
+            .query_map(params![id, user_id], |row| {
+                Ok(ProjectFileRow {
+                    id: row.get(0)?,
+                    project_id: row.get(1)?,
+                    user_id: row.get(2)?,
+                    name: row.get(3)?,
+                    url: row.get(4)?,
+                    upload_id: row.get(5)?,
+                    media_type: row.get(6)?,
+                    created_at: row.get(7)?,
+                })
+            })?
+            .collect::<Result<Vec<_>, _>>()?;
+        Ok::<_, rusqlite::Error>(rows)
+    })
+    .await;
+
+    match rows {
+        Ok(Ok(files)) => Json(json!({ "files": files })).into_response(),
+        Ok(Err(e)) if is_no_such_table(&e) => {
+            // Backend predates the V28 migration — report an empty list rather
+            // than 500ing so clients can render their normal empty state.
+            Json(json!({ "files": [] })).into_response()
+        }
+        Ok(Err(e)) => {
+            warn!("DB error listing project files: {}", e);
+            (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(json!({"error": e.to_string()})),
+            )
+                .into_response()
+        }
+        Err(e) => {
+            warn!("DB task panicked: {}", e);
+            (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(json!({"error": "internal error"})),
+            )
+                .into_response()
+        }
+    }
+}
+
+#[derive(Deserialize)]
+struct CreateProjectFileBody {
+    name: String,
+    url: Option<String>,
+    upload_id: Option<String>,
+    media_type: Option<String>,
+}
+
+async fn create_project_file(
+    State(state): State<Arc<AppState>>,
+    Extension(user): Extension<AuthUser>,
+    _headers: HeaderMap,
+    Path(project_id): Path<String>,
+    Json(body): Json<CreateProjectFileBody>,
+) -> impl IntoResponse {
+    let id = uuid::Uuid::new_v4().to_string();
+    let db = state.db.clone();
+    let id2 = id.clone();
+    let user_id = user.user_id;
+
+    let result = tokio::task::spawn_blocking(move || {
+        let conn = db.connect()?;
+        conn.execute(
+            "INSERT INTO cowork_project_files (id, project_id, user_id, name, url, upload_id, media_type)
+             VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7)",
+            params![
+                id2,
+                project_id,
+                user_id,
+                body.name,
+                body.url,
+                body.upload_id,
+                body.media_type,
+            ],
+        )?;
+        Ok::<_, rusqlite::Error>(())
+    })
+    .await;
+
+    match result {
+        Ok(Ok(())) => (
+            StatusCode::CREATED,
+            Json(json!({ "file": { "id": id } })),
+        )
+            .into_response(),
+        Ok(Err(e)) => {
+            warn!("DB error creating project file: {}", e);
+            (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(json!({"error": e.to_string()})),
+            )
+                .into_response()
+        }
+        Err(e) => {
+            warn!("DB task panicked: {}", e);
+            (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(json!({"error": "internal error"})),
+            )
+                .into_response()
+        }
+    }
+}
+
+async fn delete_project_file(
+    State(state): State<Arc<AppState>>,
+    Extension(user): Extension<AuthUser>,
+    _headers: HeaderMap,
+    Path((project_id, file_id)): Path<(String, String)>,
+) -> impl IntoResponse {
+    let db = state.db.clone();
+    let user_id = user.user_id;
+
+    let result = tokio::task::spawn_blocking(move || {
+        let conn = db.connect()?;
+        conn.execute(
+            "DELETE FROM cowork_project_files WHERE id = ?1 AND project_id = ?2 AND user_id = ?3",
+            params![file_id, project_id, user_id],
+        )?;
+        Ok::<_, rusqlite::Error>(())
+    })
+    .await;
+
+    match result {
+        Ok(Ok(())) => Json(json!({"success": true})).into_response(),
+        Ok(Err(e)) => {
+            warn!("DB error deleting project file: {}", e);
             (
                 StatusCode::INTERNAL_SERVER_ERROR,
                 Json(json!({"error": e.to_string()})),

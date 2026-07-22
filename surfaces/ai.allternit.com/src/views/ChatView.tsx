@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useCallback, useState, useRef, useEffect, useMemo } from "react";
+import React, { useCallback, useState, useRef, useEffect, useLayoutEffect, useMemo } from "react";
 import { useChatId } from "@/providers/chat-id-provider";
 import { useChatStore } from "@/views/chat/ChatStore";
 import { useModelSelection } from "@/providers/model-selection-provider";
@@ -14,6 +14,7 @@ import {
   usePendingQuestions,
 } from "@/lib/agents";
 import { isSwarmAgentId, getSwarmIdFromAgent } from "@/lib/agents/swarm-as-agent";
+import type { PluginMentionTarget } from "@/lib/mentions/use-mention-targets";
 import { useAdvancedAgentStore } from "@/lib/agents/agent-advanced.store";
 import { useChatSessionStore } from "@/views/chat/ChatSessionStore";
 import { useSurfaceAgentSelection } from "@/lib/agents/surface-agent-context";
@@ -280,7 +281,36 @@ export function ChatView({
 
     setShouldAutoScroll(isAtBottom);
     setShowJumpToBottom(!isAtBottom);
-  }, []);
+    if (activeComposerSessionId && typeof sessionStorage !== "undefined") {
+      sessionStorage.setItem(
+        `allternit:session-scroll:${activeComposerSessionId}`,
+        JSON.stringify({ top: scrollTop, bottom: isAtBottom }),
+      );
+    }
+  }, [activeComposerSessionId]);
+
+  useLayoutEffect(() => {
+    const container = scrollContainerRef.current;
+    if (!container || !activeComposerSessionId) return;
+    setShouldAutoScroll(false);
+    let frame = requestAnimationFrame(() => {
+      let saved: { top?: number; bottom?: boolean } | undefined;
+      try {
+        saved = JSON.parse(
+          sessionStorage.getItem(`allternit:session-scroll:${activeComposerSessionId}`) || "null",
+        ) ?? undefined;
+      } catch {}
+      if (!saved || saved.bottom) {
+        container.scrollTop = container.scrollHeight;
+        setShouldAutoScroll(true);
+        setShowJumpToBottom(false);
+        return;
+      }
+      container.scrollTop = Math.min(saved.top ?? 0, Math.max(0, container.scrollHeight - container.clientHeight));
+      setShowJumpToBottom(true);
+    });
+    return () => cancelAnimationFrame(frame);
+  }, [activeComposerSessionId]);
 
   const scrollToBottom = useCallback((behavior: ScrollBehavior = 'auto') => {
     messagesEndRef.current?.scrollIntoView({ behavior });
@@ -296,6 +326,7 @@ export function ChatView({
   const [greeting, setGreeting] = useState(() => peekLaunchGreeting() ?? DEFAULT_LAUNCH_GREETING);
   const [launchMascotEmotion, setLaunchMascotEmotion] = useState<GizziEmotion>('steady');
   const [mentionAgentId, setMentionAgentId] = useState<string | null>(null);
+  const [pluginMention, setPluginMention] = useState<PluginMentionTarget | null>(null);
   const [sendError, setSendError] = useState<string | null>(null);
   const [launchMascotAttention, setLaunchMascotAttention] = useState<GizziAttention | null>(null);
   const mascotResetTimeoutRef = useRef<number | null>(null);
@@ -413,7 +444,12 @@ export function ChatView({
 
       if (sessionId) {
         useChatSessionStore.getState().setActiveSession(sessionId);
-        await sendNativeMessageStream(sessionId, { text: text.trim() });
+        await sendNativeMessageStream(sessionId, {
+          text: text.trim(),
+          ...(pluginMention
+            ? { pluginMention: { kind: pluginMention.kind, id: pluginMention.id, name: pluginMention.name } }
+            : {}),
+        });
       }
     } catch (error) {
       logger.error({ err: error }, 'Failed to send chat message');
@@ -424,7 +460,7 @@ export function ChatView({
           : "Couldn't send that message. Please try again."
       );
     }
-  }, [mentionAgentId, chatId, embeddedAgentSession.sessionId, sendNativeMessageStream]);
+  }, [mentionAgentId, pluginMention, chatId, embeddedAgentSession.sessionId, sendNativeMessageStream]);
 
   const handleStop = useCallback(() => {
     const activeSessionId = embeddedAgentSession.sessionId || chatId;
@@ -499,6 +535,7 @@ export function ChatView({
               agentSurface={agentSurface}
               setMentionAgentId={setMentionAgentId}
               mentionAgentId={mentionAgentId}
+              setPluginMention={setPluginMention}
               activeIsLoading={activeIsLoading}
               selectedModel={selectedModel}
               selectModel={selectModel}
@@ -551,6 +588,7 @@ export function ChatView({
         agentSurface={agentSurface}
         setMentionAgentId={setMentionAgentId}
         mentionAgentId={mentionAgentId}
+        setPluginMention={setPluginMention}
         activeIsLoading={activeIsLoading}
         handleStop={handleStop}
         selectedModel={selectedModel}

@@ -1,6 +1,6 @@
 import SwiftUI
 
-struct ArtifactRecord: Identifiable, Hashable, Sendable {
+struct ArtifactRecord: Identifiable, Hashable, Sendable, Codable {
     let id: String
     let title: String
     let fileType: String
@@ -62,6 +62,34 @@ struct ArtifactRecord: Identifiable, Hashable, Sendable {
             artifactType: artifact.kind,
             url: artifact.url,
             inlinePreview: artifact.content
+        )
+    }
+
+    /// Reconstructs an artifact card from a persisted message part
+    /// (`metadata.parts` on `AgentSessionMessage`). Used when loading history
+    /// so file/URL attachments don't disappear after a foreground reconcile.
+    init(part: AgentSessionMessage.Part, messageId: String) {
+        let title = part.filename
+            ?? part.url?.split(separator: "/").last.map(String.init)
+            ?? "Attachment"
+        let derivedFileType: String
+        if let filename = part.filename,
+           let ext = filename.split(separator: ".").last {
+            derivedFileType = String(ext).lowercased()
+        } else if let urlString = part.url,
+                  let ext = URL(string: urlString)?.pathExtension, !ext.isEmpty {
+            derivedFileType = ext.lowercased()
+        } else {
+            derivedFileType = "text"
+        }
+        self.init(
+            id: "\(messageId)-\(title)-\(part.url ?? "")",
+            title: title,
+            fileType: derivedFileType,
+            artifactId: nil,
+            artifactType: derivedFileType,
+            url: part.url,
+            inlinePreview: part.text
         )
     }
 

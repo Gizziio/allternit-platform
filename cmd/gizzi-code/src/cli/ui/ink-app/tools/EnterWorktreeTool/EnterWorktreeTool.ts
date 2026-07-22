@@ -15,6 +15,7 @@ import { saveWorktreeState } from '../../utils/sessionStorage.js'
 import {
   createWorktreeForSession,
   getCurrentWorktreeSession,
+  hasWorktreeCreateHook,
   validateWorktreeSlug,
 } from '../../utils/worktree.js'
 import { ENTER_WORKTREE_TOOL_NAME } from './constants.js'
@@ -54,6 +55,9 @@ export const EnterWorktreeTool: Tool<InputSchema, Output> = buildTool({
   name: ENTER_WORKTREE_TOOL_NAME,
   searchHint: 'create an isolated git worktree and switch into it',
   maxResultSizeChars: 100_000,
+  isEnabled() {
+    return hasWorktreeCreateHook() || !!findCanonicalGitRoot(getCwd())
+  },
   async description() {
     return 'Creates an isolated worktree (via git or configured hooks) and switches the session into it'
   },
@@ -83,6 +87,14 @@ export const EnterWorktreeTool: Tool<InputSchema, Output> = buildTool({
 
     // Resolve to main repo root so worktree creation works from within a worktree
     const mainRepoRoot = findCanonicalGitRoot(getCwd())
+    if (!mainRepoRoot && !hasWorktreeCreateHook()) {
+      return {
+        data: {
+          worktreePath: getCwd(),
+          message: `Cannot create worktree: current directory "${getCwd()}" is not in a git repository and no WorktreeCreate hooks are configured. Staying in current directory.`,
+        },
+      }
+    }
     if (mainRepoRoot && mainRepoRoot !== getCwd()) {
       process.chdir(mainRepoRoot)
       setCwd(mainRepoRoot)

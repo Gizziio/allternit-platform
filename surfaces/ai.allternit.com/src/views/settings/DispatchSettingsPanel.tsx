@@ -35,7 +35,7 @@ export function DispatchSettingsPanel(): React.ReactNode {
         lock.addEventListener('release', () => setWakeLock(null));
       }).catch(() => {});
     }
-  }, [keepAwake]);
+  }, [keepAwake, wakeLock]);
 
   const handleNotificationsToggle = async (v: boolean) => {
     if (v && 'Notification' in window) {

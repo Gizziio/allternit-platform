@@ -1,38 +1,38 @@
 {
-  "title": "Module 1 Quiz: Provider Adapters",
+  "title": "Module Quiz: ALABS-ADV-ADAPTERS-module1",
   "questions": [
     {
-      "question": "What is the main purpose of the provider adapter pattern?",
+      "question": "Why does the adapter maintain openedTextIds as a Set<string>?",
       "options": [
-        "To increase API response times",
-        "To unify different external APIs behind a common interface",
-        "To replace all external APIs with local implementations",
-        "To eliminate the need for API keys"
+        "To sort text items alphabetically",
+        "To buffer text for the consume() method",
+        "To prevent duplicate reply.item.added events for the same text item",
+        "To map toolCallIds to itemIds"
       ],
-      "correctIndex": 1,
-      "explanation": "Provider adapters abstract different external services behind a unified interface, allowing the platform to switch providers without changing consumer code."
+      "correctIndex": 2,
+      "explanation": "openedTextIds is a Set that deduplicates text item additions, ensuring reply.item.added fires exactly once per item."
     },
     {
-      "question": "Which resilience pattern prevents cascading failures when an API is down?",
+      "question": "A provider sends { type: \"tool-result\", toolCallId: \"tc1\", toolName: \"bash\", result: { stdout: \"hello\" } }. Which events does the adapter emit?",
       "options": [
-        "Rate limiting",
-        "Circuit breaker",
-        "Caching",
-        "Retry with backoff"
+        "Only tool_call.completed",
+        "tool_call.completed followed by reply.item.done",
+        "Only reply.item.done",
+        "reply.item.added(tool_call) and then tool_call.completed"
       ],
       "correctIndex": 1,
-      "explanation": "The circuit breaker pattern stops requests to a failing service, preventing cascading failures and giving the service time to recover."
+      "explanation": "tool-result always produces tool_call.completed followed by reply.item.done to close the item lifecycle."
     },
     {
-      "question": "Why add jitter to exponential backoff?",
+      "question": "The consume() method wraps stream iteration in a try/catch. What event does it emit if the AsyncIterable throws?",
       "options": [
-        "To make the code more complex",
-        "To prevent thundering herd when a service recovers",
-        "To increase overall retry time",
-        "To bypass rate limits"
+        "It re-throws the error so the caller handles it",
+        "It emits reply.completed with an error flag",
+        "It emits reply.failed with the error message",
+        "It silently swallows the error"
       ],
-      "correctIndex": 1,
-      "explanation": "Jitter randomizes retry intervals, preventing all clients from retrying simultaneously when a service comes back online (thundering herd problem)."
+      "correctIndex": 2,
+      "explanation": "consume() swallows exceptions and emits reply.failed so downstream consumers can handle errors gracefully."
     }
   ]
 }

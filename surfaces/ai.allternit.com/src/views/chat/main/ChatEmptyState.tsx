@@ -5,6 +5,7 @@ import { LAUNCH_TOP_PADDING, LAUNCH_SECTION_GAP } from "./launchScreenLayout";
 import { LaunchHeader } from "./LaunchHeader";
 import type { AgentModeSurface } from "@/stores/agent-surface-mode.store";
 import type { CanonicalAgentModeId } from "@/lib/agents/agent-mode-contracts";
+import type { PluginMentionTarget } from "@/lib/mentions/use-mention-targets";
 
 interface ChatEmptyStateProps {
   embeddedAgentStrip: React.ReactNode;
@@ -23,6 +24,7 @@ interface ChatEmptyStateProps {
   agentSurface: AgentModeSurface;
   setMentionAgentId: (id: string | null) => void;
   mentionAgentId: string | null;
+  setPluginMention: (target: PluginMentionTarget | null) => void;
   activeIsLoading: boolean;
   selectedModel: string;
   selectModel: (model: any) => void;
@@ -51,6 +53,7 @@ export const ChatEmptyState: React.FC<ChatEmptyStateProps> = ({
   agentSurface,
   setMentionAgentId,
   mentionAgentId,
+  setPluginMention,
   activeIsLoading,
   selectedModel,
   selectModel,
@@ -111,6 +114,7 @@ export const ChatEmptyState: React.FC<ChatEmptyStateProps> = ({
           onAgentSend={onOpenAgentSession ? (text, execution) => onOpenAgentSession(text, agentSurface, execution) : undefined}
           onMentionAgentChange={setMentionAgentId}
           mentionAgentId={mentionAgentId}
+          onPluginMentionChange={setPluginMention}
           isLoading={activeIsLoading}
           placeholder="What's brewing today?"
           variant="large"

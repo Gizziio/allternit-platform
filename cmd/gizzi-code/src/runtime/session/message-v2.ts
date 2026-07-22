@@ -53,6 +53,10 @@ export namespace MessageV2 {
     "ContextOverflowError",
     z.object({ message: z.string(), responseBody: z.string().optional() }),
   )
+  export const UnknownError = NamedError.create(
+    "UnknownError",
+    z.object({ message: z.string() }),
+  )
 
   export const OutputFormatText = z
     .object({
@@ -817,7 +821,20 @@ export namespace MessageV2 {
           { cause: e },
         ).toObject()
       case e instanceof Error:
-        return { name: "Unknown", message: e.toString(), data: {}, cause: e }
+        const genericParsed = ProviderError.parseUnknownProviderError({
+          providerID: ctx.providerID,
+          error: e,
+        })
+        return new MessageV2.APIError(
+          {
+            message: genericParsed.message,
+            statusCode: genericParsed.statusCode,
+            isRetryable: genericParsed.isRetryable,
+            responseBody: genericParsed.responseBody,
+            metadata: genericParsed.metadata,
+          },
+          { cause: e },
+        ).toObject()
       default:
         try {
           const parsed = ProviderError.parseStreamError(e)
@@ -843,7 +860,26 @@ export namespace MessageV2 {
             ).toObject()
           }
         } catch {}
-        return { name: "Unknown", message: JSON.stringify(e), data: {}, cause: e }
+        if (typeof e === "object" && e !== null) {
+          const parsed = ProviderError.parseUnknownProviderError({
+            providerID: ctx.providerID,
+            error: e,
+          })
+          return new MessageV2.APIError(
+            {
+              message: parsed.message,
+              statusCode: parsed.statusCode,
+              isRetryable: parsed.isRetryable,
+              responseBody: parsed.responseBody,
+              metadata: parsed.metadata,
+            },
+            { cause: e },
+          ).toObject()
+        }
+        return new MessageV2.UnknownError(
+          { message: String(e) },
+          { cause: e },
+        ).toObject()
     }
   }
 }

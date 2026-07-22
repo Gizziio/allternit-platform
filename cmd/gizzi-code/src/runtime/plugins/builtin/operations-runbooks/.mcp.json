@@ -1,0 +1,9 @@
+{
+  "operations-runbooks-server": {
+    "type": "http",
+    "url": "https://plugins.anthropic.com/mcp/operations-runbooks",
+    "headers": {
+      "X-Plugin": "operations-runbooks"
+    }
+  }
+}

@@ -80,22 +80,22 @@ fn require_admin(
     organization_id: &str,
     user_id: &str,
 ) -> Result<(), (StatusCode, Json<Value>)> {
-    let role: Option<String> = conn
-        .query_row(
-            "SELECT role FROM organization_members WHERE organization_id = ?1 AND user_id = ?2",
-            params![organization_id, user_id],
-            |row| row.get(0),
+    let is_admin = crate::rbac::is_org_admin(conn, organization_id, user_id).map_err(|e| {
+        (
+            StatusCode::INTERNAL_SERVER_ERROR,
+            Json(json!({"error": "db_error", "message": e.to_string()})),
         )
-        .ok();
-    match role.as_deref() {
-        Some("owner") | Some("admin") => Ok(()),
-        _ => Err((
+    })?;
+    if is_admin {
+        Ok(())
+    } else {
+        Err((
             StatusCode::FORBIDDEN,
             Json(json!({
                 "error": "insufficient_role",
                 "message": "Only organization owners/admins can manage cloud credentials."
             })),
-        )),
+        ))
     }
 }
 

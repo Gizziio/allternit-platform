@@ -32,6 +32,7 @@ import { Skill } from "@/runtime/skills/skill"
 import { clearWorkspaceCache } from "@/runtime/session/session-context"
 import { Filesystem } from "@/shared/util/filesystem"
 import { Log } from "@/shared/util/log"
+import { WorkspaceRegistry } from "@/runtime/workspace/registry"
 
 const log = Log.create({ service: "workspace.routes" })
 
@@ -385,6 +386,17 @@ export function WorkspaceRoutes() {
         const allSkills = await Skill.all().catch(() => [])
         return c.json(allSkills)
       },
+    )
+    .get("/registry", async (c) => c.json(await WorkspaceRegistry.list()))
+    .post(
+      "/registry",
+      validator("json", z.object({ path: z.string(), name: z.string().optional() })),
+      async (c) => c.json(await WorkspaceRegistry.register(c.req.valid("json"))),
+    )
+    .delete(
+      "/registry/:workspaceID",
+      validator("param", z.object({ workspaceID: z.string() })),
+      async (c) => c.json(await WorkspaceRegistry.remove(c.req.valid("param").workspaceID)),
     )
 }
 

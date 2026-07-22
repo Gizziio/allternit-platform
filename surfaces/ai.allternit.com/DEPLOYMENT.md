@@ -1,5 +1,7 @@
 # Allternit Platform Deployment Guide
 
+> **Reconciled 2026-07-22:** Paths updated from the old `surfaces/platform` directory to the current `surfaces/ai.allternit.com` directory. The Vercel dashboard still needs to be updated by hand.
+
 ## Current Status
 
 ✅ **Build**: Working - Next.js compiles successfully  
@@ -12,7 +14,7 @@ The Vercel project has **incorrect settings** that cause path duplication errors
 
 ```
 Error: ENOENT: no such file or directory, 
-  lstat '/.../surfaces/platform/surfaces/platform/.next/routes-manifest.json'
+  lstat '/.../surfaces/ai.allternit.com/surfaces/ai.allternit.com/.next/routes-manifest.json'
                                                      ^^^^^^^^^^^^^^^^^
                                                      Path is duplicated!
 ```
@@ -33,9 +35,9 @@ Change these values:
 
 | Setting | Current (Wrong) | Change To (Correct) |
 |---------|-----------------|---------------------|
-| **Root Directory** | `.` | `surfaces/platform` |
-| **Build Command** | `cd surfaces/platform && next build` | `next build` |
-| **Output Directory** | `surfaces/platform/out` | `.next` |
+| **Root Directory** | `.` | `surfaces/ai.allternit.com` |
+| **Build Command** | `cd surfaces/ai.allternit.com && next build` | `next build` |
+| **Output Directory** | `surfaces/ai.allternit.com/out` | `.next` |
 | **Install Command** | `pnpm install --no-frozen-lockfile` | `pnpm install --no-frozen-lockfile --ignore-scripts` |
 
 ### Step 3: Verify Environment Variables
@@ -72,8 +74,8 @@ If the CLI deployment keeps having issues, you can use Vercel's native Git integ
 3. ✅ Added missing exports for agent hooks and components
 4. ✅ Created `.vercelignore` to exclude conflicting Rust files
 5. ✅ Created GitHub Actions workflow with rate limit handling
-6. ✅ Added `vercel.json` in `surfaces/platform/` with correct settings
-7. ✅ Workflow now runs all commands from `surfaces/platform/` directory
+6. ✅ Added `vercel.json` in `surfaces/ai.allternit.com/` with correct settings
+7. ✅ Workflow now runs all commands from `surfaces/ai.allternit.com/` directory
 
 ## Workflow Details
 
@@ -100,7 +102,7 @@ Options:
 ## Testing Locally
 
 ```bash
-cd surfaces/platform
+cd surfaces/ai.allternit.com
 
 # Install dependencies
 pnpm install --ignore-scripts

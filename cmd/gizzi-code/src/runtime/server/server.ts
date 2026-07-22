@@ -73,6 +73,7 @@ import { CoworkRoutes } from "@/runtime/server/routes/cowork"
 import { AcpRoutes } from "@/runtime/server/routes/acp"
 import { PeerRoutes } from "@/runtime/server/routes/peers"
 import { OrchestratorRoutes } from "@/runtime/server/routes/orchestrator"
+import { createHash, randomUUID } from "node:crypto"
 
 // @ts-ignore This global is needed to prevent ai-sdk from logging warnings to stdout https://github.com/vercel/ai/blob/2dc67e0ef538307f21368db32d5a12345d98831b/packages/ai/src/logger/log-warnings.ts#L85
 globalThis.AI_SDK_LOG_WARNINGS = false
@@ -82,6 +83,20 @@ export namespace Server {
 
   let _url: URL | undefined
   let _corsWhitelist: string[] = []
+  let _hostname: string | undefined
+  const rateWindows = new Map<string, { startedAt: number; count: number }>()
+
+  function isLoopback(hostname: string | undefined) {
+    return hostname === "localhost" || hostname === "127.0.0.1" || hostname === "::1"
+  }
+
+  function requestID(value: string | undefined) {
+    return value && /^[a-zA-Z0-9._:-]{1,128}$/.test(value) ? value : randomUUID()
+  }
+
+  function rateKey(value: string) {
+    return createHash("sha256").update(value).digest("hex").slice(0, 16)
+  }
 
   export function url(): URL {
     return _url ?? new URL("http://localhost:4096")
@@ -92,8 +107,10 @@ export namespace Server {
     () =>
       app
         .onError((err, c) => {
+          const id = c.get("requestID") ?? randomUUID()
           log.error("failed", {
             error: err,
+            requestID: id,
           })
           if (err instanceof NamedErrorBase) {
             let status: ContentfulStatusCode
@@ -104,10 +121,48 @@ export namespace Server {
             return c.json(err.toObject(), { status })
           }
           if (err instanceof HTTPException) return err.getResponse()
-          const message = err instanceof Error && err.stack ? err.stack : err.toString()
-          return c.json(({ name: "Unknown", message, data: {} }), {
+          const message = err instanceof Error ? err.message : String(err)
+          return c.json(({ name: "Unknown", message, data: { requestID: id } }), {
             status: 500,
           })
+        })
+        .use(async (c, next) => {
+          const id = requestID(c.req.header("x-request-id"))
+          c.set("requestID", id)
+          c.header("X-Request-ID", id)
+          c.header("X-Allternit-Protocol", "1")
+          c.header("X-Content-Type-Options", "nosniff")
+          c.header("Referrer-Policy", "no-referrer")
+          c.header("Permissions-Policy", "camera=(), microphone=(), geolocation=()")
+
+          if (_hostname && isLoopback(_hostname)) {
+            const host = (c.req.header("host") ?? "").toLowerCase().replace(/:\d+$/, "")
+            const allowed = new Set(["localhost", "127.0.0.1", "[::1]", "gizzi.internal", "tauri.localhost"])
+            if (host && !allowed.has(host)) {
+              return c.json({ error: "invalid_host", requestID: id }, 421)
+            }
+          }
+
+          const identity =
+            c.req.header("cf-connecting-ip") ??
+            c.req.header("x-real-ip") ??
+            c.req.header("authorization") ??
+            c.req.header("host") ??
+            "local"
+          const sensitive = c.req.path.startsWith("/auth") || c.req.path.includes("/prompt")
+          const limit = sensitive ? 60 : 600
+          const now = Date.now()
+          const key = `${rateKey(identity)}:${sensitive ? "sensitive" : "general"}`
+          const window = rateWindows.get(key)
+          if (!window || now - window.startedAt >= 60_000) rateWindows.set(key, { startedAt: now, count: 1 })
+          else if (++window.count > limit) {
+            c.header("Retry-After", String(Math.max(1, Math.ceil((60_000 - (now - window.startedAt)) / 1000))))
+            return c.json({ error: "rate_limited", requestID: id }, 429)
+          }
+          if (rateWindows.size > 2048) {
+            for (const [entry, value] of rateWindows) if (now - value.startedAt >= 60_000) rateWindows.delete(entry)
+          }
+          await next()
         })
         // CORS must run before auth so that auth failures (401) still carry
         // Access-Control-Allow-Origin headers; otherwise browsers report the
@@ -153,6 +208,7 @@ export namespace Server {
             log.info("request", {
               method: c.req.method,
               path: c.req.path,
+              requestID: c.get("requestID"),
             })
           }
           const timer = log.time("request", {
@@ -300,6 +356,7 @@ export namespace Server {
             },
           }),
         )
+        .get("/asyncapi", (c) => c.json(asyncapi()))
         .use(validator("query", z.any()))
         .route("/project", ProjectRoutes())
         .route("/pty", PtyRoutes())
@@ -388,6 +445,7 @@ export namespace Server {
         .route(
           "/v1",
           new Hono()
+            .get("/asyncapi", (c) => c.json(asyncapi()))
             .route("/session", SessionRoutes())
             .route("/automations", AutomationsRoutes())
             .route("/peers", PeerRoutes())
@@ -475,6 +533,63 @@ export namespace Server {
     return result
   }
 
+  export function asyncapi() {
+    const base = url().toString().replace(/\/$/, "")
+    return {
+      asyncapi: "3.0.0",
+      info: {
+        title: "Allternit runtime events",
+        version: "1.0.0",
+        description: "Instance-scoped, resumable runtime event contract. REST replay cursors recover events missed during reconnect.",
+      },
+      servers: {
+        local: { host: new URL(base).host, protocol: new URL(base).protocol.replace(":", "") },
+      },
+      channels: {
+        events: {
+          address: "/v1/event",
+          messages: {
+            runtimeEvent: { $ref: "#/components/messages/runtimeEvent" },
+          },
+          description: "Server-sent runtime event stream with heartbeat messages.",
+        },
+        sessionReplay: {
+          address: "/v1/session/{sessionID}/replay",
+          parameters: { sessionID: { description: "Durable session identifier" } },
+          messages: {
+            replayPage: { $ref: "#/components/messages/replayPage" },
+          },
+          description: "Cursor-bounded recovery channel used after an event-stream reconnect.",
+        },
+      },
+      operations: {
+        receiveRuntimeEvents: { action: "receive", channel: { $ref: "#/channels/events" } },
+        receiveSessionReplay: { action: "receive", channel: { $ref: "#/channels/sessionReplay" } },
+      },
+      components: {
+        messages: {
+          runtimeEvent: {
+            payload: {
+              type: "object",
+              required: ["type", "properties"],
+              properties: { type: { type: "string" }, properties: { type: "object" } },
+            },
+          },
+          replayPage: {
+            payload: {
+              type: "object",
+              required: ["sessionID", "head", "cursor", "hasMore", "entries"],
+              properties: {
+                sessionID: { type: "string" }, head: { type: "integer" }, cursor: { type: "integer" },
+                hasMore: { type: "boolean" }, entries: { type: "array", items: { type: "object" } },
+              },
+            },
+          },
+        },
+      },
+    }
+  }
+
   export function listen(opts: {
     port: number
     hostname: string
@@ -483,6 +598,7 @@ export namespace Server {
     cors?: string[]
   }) {
     _corsWhitelist = opts.cors ?? []
+    _hostname = opts.hostname
 
     const args = {
       hostname: opts.hostname,

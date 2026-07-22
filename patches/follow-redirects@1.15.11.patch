@@ -1,0 +1,17 @@
+diff --git a/index.js b/index.js
+index a30b32cdf91b6eb501f9ad314804dcca434a9e9c..79405c9555500f733ef9a657ce80488c9a673d92 100644
+--- a/index.js
++++ b/index.js
+@@ -629,7 +629,11 @@ function createErrorType(code, message, baseClass) {
+   function CustomError(properties) {
+     // istanbul ignore else
+     if (isFunction(Error.captureStackTrace)) {
+-      Error.captureStackTrace(this, this.constructor);
++      // Bun compat: with certain global Error.prepareStackTrace hooks installed,
++      // Bun's native captureStackTrace rejects these prototype-chained error
++      // objects ("First argument must be an Error object"). Capturing a stack
++      // is best-effort; it must never break error construction.
++      try { Error.captureStackTrace(this, this.constructor); } catch {}
+     }
+     Object.assign(this, properties || {});
+     this.code = code;

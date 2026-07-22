@@ -411,6 +411,29 @@ test("defaultModel respects config model setting", async () => {
   })
 })
 
+test("defaultModel rejects an invalid pinned model instead of silently auto-routing", async () => {
+  await using tmp = await tmpdir({
+    init: async (dir) => {
+      await Bun.write(
+        path.join(dir, "opencode.json"),
+        JSON.stringify({
+          $schema: "https://opencode.ai/config.json",
+          model: "anthropic/claude-does-not-exist",
+        }),
+      )
+    },
+  })
+  await Instance.provide({
+    directory: tmp.path,
+    init: async () => {
+      Env.set("ANTHROPIC_API_KEY", "test-api-key")
+    },
+    fn: async () => {
+      expect(Provider.defaultModel()).rejects.toThrow("Model not found")
+    },
+  })
+})
+
 test("provider with baseURL from config", async () => {
   await using tmp = await tmpdir({
     init: async (dir) => {

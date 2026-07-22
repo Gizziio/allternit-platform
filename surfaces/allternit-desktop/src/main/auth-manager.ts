@@ -210,6 +210,28 @@ export class DesktopAuthManager {
     const existing = await this.getSession();
     if (existing) return existing;
 
+    if (process.env.ALLTERNIT_SKIP_PAIRING === '1') {
+      // Local-testing escape hatch: passes the startup gate and gives the
+      // renderer's desktop auth broker an in-memory stub session. Nothing is
+      // persisted, so the next launch without the env var returns to the
+      // normal pairing flow. The far-future expiry keeps refreshSessionIfNeeded
+      // from ever calling the cloud rotate endpoint for this fake identity.
+      log.warn('[Auth] ALLTERNIT_SKIP_PAIRING=1 — skipping runtime pairing for local testing');
+      this.session = {
+        accessToken: '',
+        refreshToken: '',
+        tokenType: 'Bearer',
+        scope: '',
+        expiresAt: Date.now() + 365 * 24 * 60 * 60 * 1000,
+        userId: 'local-test',
+        userEmail: 'local-test@localhost',
+        clientId: RUNTIME_CLIENT_ID,
+        runtimeId: 'local-test',
+        capabilities: [],
+      };
+      return this.session;
+    }
+
     this.splashWindow = window || BrowserWindow.getAllWindows().find((candidate) => !candidate.isDestroyed()) || null;
     this.notifySplash('auth:ready', 'Allternit account pairing is ready');
     log.info('[Auth] Startup gate is waiting for runtime pairing');

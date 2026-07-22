@@ -91,12 +91,26 @@ fn gizzi_base() -> String {
         .to_string()
 }
 
+/// Base URL of the optional off-gateway voice service (services/voice —
+/// TTS/STT). Mirrors gizzi_base's pattern; the voice routes degrade
+/// gracefully when nothing is listening there.
+fn voice_base() -> String {
+    crate::APP_CONFIG
+        .get()
+        .map(|c| c.voice_url())
+        .unwrap_or_else(|| "http://127.0.0.1:8001".to_string())
+        .trim_end_matches('/')
+        .to_string()
+}
+
 pub fn v1_router() -> Router<Arc<AppState>> {
     Router::new()
         .route("/ai/chat", post(agent_chat_bridge))
         .route("/health", get(health))
         .route("/models", get(list_available_models))
         .route("/voice/voices", get(list_voice_presets))
+        .route("/voice/tts/stream", post(proxy_voice_tts_stream))
+        .route("/voice/stt/stream", post(proxy_voice_stt_stream))
         .route("/cli-tools", get(list_cli_tools_stub))
         .route("/cli-tools/installed", get(list_cli_tools_stub))
 }
@@ -112,12 +126,112 @@ async fn list_available_models() -> impl IntoResponse {
     Json(crate::provider_routes::available_model_catalog())
 }
 
-/// GET /api/v1/voice/voices — voice presets are served by the optional desktop
-/// voice service; with none configured there are no presets. Answer 200 with an
-/// empty list instead of the 501 fallback so the wizard's voice dropdown and
-/// the console stay quiet.
-async fn list_voice_presets() -> impl IntoResponse {
-    Json(json!({ "voices": [] }))
+/// GET /api/v1/voice/voices — proxies the voice list from the optional
+/// off-gateway voice service (services/voice GET /v1/voices → a bare array).
+/// The service is optional: when it's unreachable the route keeps answering
+/// the old empty-list stub so voice pickers degrade to on-device options
+/// instead of erroring.
+async fn list_voice_presets() -> Response {
+    let stub = || Json(json!({ "voices": [] })).into_response();
+
+    let client = match reqwest::Client::builder()
+        .timeout(std::time::Duration::from_secs(3))
+        .build()
+    {
+        Ok(client) => client,
+        Err(_) => return stub(),
+    };
+
+    let resp = match client
+        .get(format!("{}/v1/voices", voice_base()))
+        .send()
+        .await
+    {
+        Ok(resp) if resp.status().is_success() => resp,
+        _ => return stub(),
+    };
+
+    match resp.json::<serde_json::Value>().await {
+        // services/voice answers a bare array; wrap it in the {voices: []}
+        // shape this route has always served.
+        Ok(serde_json::Value::Array(voices)) => Json(json!({ "voices": voices })).into_response(),
+        Ok(_) => {
+            warn!("voice service returned an unexpected /v1/voices shape; serving stub");
+            stub()
+        }
+        Err(_) => stub(),
+    }
+}
+
+/// POST /api/v1/voice/tts/stream — byte pass-through to the voice service's
+/// streaming TTS endpoint (services/voice POST /v1/tts/stream).
+async fn proxy_voice_tts_stream(body: Body) -> Response {
+    proxy_voice_stream("tts/stream", body).await
+}
+
+/// POST /api/v1/voice/stt/stream — byte pass-through to the voice service's
+/// streaming STT endpoint (services/voice POST /v1/stt/stream).
+async fn proxy_voice_stt_stream(body: Body) -> Response {
+    proxy_voice_stream("stt/stream", body).await
+}
+
+/// Shared streaming pass-through: forwards the request body verbatim and
+/// streams the upstream response back with its status and content-type.
+/// Answers 503 with a JSON error when the voice service is down so clients
+/// can fall back to on-device speech instead of hanging.
+async fn proxy_voice_stream(service_path: &str, body: Body) -> Response {
+    let body_bytes = match body_to_bytes(body).await {
+        Ok(b) => b,
+        Err(_) => {
+            return (
+                StatusCode::BAD_REQUEST,
+                Json(json!({"error": "bad request body"})),
+            )
+                .into_response();
+        }
+    };
+
+    // No overall timeout on purpose — these streams are long-lived (same
+    // reasoning as the gizzi event-stream client above).
+    let upstream = match reqwest::Client::new()
+        .post(format!("{}/v1/{}", voice_base(), service_path))
+        .header("Content-Type", "application/json")
+        .body(body_bytes)
+        .send()
+        .await
+    {
+        Ok(resp) => resp,
+        Err(e) => {
+            warn!(error = %e, path = %service_path, "voice service unavailable");
+            return (
+                StatusCode::SERVICE_UNAVAILABLE,
+                Json(json!({"error": format!("voice service unavailable: {}", e)})),
+            )
+                .into_response();
+        }
+    };
+
+    let status = StatusCode::from_u16(upstream.status().as_u16())
+        .unwrap_or(StatusCode::BAD_GATEWAY);
+    let content_type = upstream
+        .headers()
+        .get("content-type")
+        .and_then(|v| v.to_str().ok())
+        .unwrap_or("application/octet-stream")
+        .to_string();
+
+    match Response::builder()
+        .status(status)
+        .header("content-type", content_type)
+        .body(Body::from_stream(upstream.bytes_stream()))
+    {
+        Ok(response) => response,
+        Err(_) => (
+            StatusCode::INTERNAL_SERVER_ERROR,
+            Json(json!({"error": "failed to build voice proxy response"})),
+        )
+            .into_response(),
+    }
 }
 
 /// GET /api/v1/cli-tools (+ /cli-tools/installed) — the unified backend does
@@ -274,11 +388,72 @@ async fn agent_chat_bridge(_headers: HeaderMap, body: Body) -> Response {
             }
         };
 
-        // POST message to gizzi
-        let gizzi_payload = json!({
-            "parts": [{ "type": "text", "text": effective_message }],
+        // POST message to gizzi. `effort` (low|medium|high, from the mobile
+        // model picker) is forwarded verbatim — runtimes ignore it for
+        // models without reasoning support.
+        let effort = body_json
+            .get("effort")
+            .and_then(|v| v.as_str())
+            .filter(|s| !s.is_empty());
+
+        // Composer attachments (mobile "+" sheet): the client uploads each
+        // file via POST /api/v1/uploads first and sends the returned refs as
+        // `attachments: [{url?, dataBase64?, mediaType, name?}]`. Each one
+        // becomes a gizzi file part alongside the text part. A raw
+        // `dataBase64` payload (no upload round-trip) is forwarded as a data
+        // URL so small inline images still work.
+        let mut parts = vec![json!({ "type": "text", "text": effective_message })];
+        if let Some(attachments) = body_json.get("attachments").and_then(|v| v.as_array()) {
+            for attachment in attachments {
+                let media_type = attachment
+                    .get("mediaType")
+                    .and_then(|v| v.as_str())
+                    .unwrap_or("application/octet-stream");
+                let url = attachment
+                    .get("url")
+                    .and_then(|v| v.as_str())
+                    .map(str::to_string)
+                    .or_else(|| {
+                        attachment
+                            .get("dataBase64")
+                            .and_then(|v| v.as_str())
+                            .map(|data| format!("data:{};base64,{}", media_type, data))
+                    });
+                let Some(url) = url else { continue };
+                let mut part = json!({
+                    "type": "file",
+                    "url": url,
+                    "mime": media_type,
+                });
+                if let Some(name) = attachment.get("name").and_then(|v| v.as_str()) {
+                    part["filename"] = json!(name);
+                }
+                parts.push(part);
+            }
+        }
+
+        let mut gizzi_payload = json!({
+            "parts": parts,
             "model": { "providerID": provider_id, "modelID": model_id },
         });
+        if let Some(effort) = effort {
+            gizzi_payload["effort"] = json!(effort);
+        }
+
+        // Composer tool options (mobile "+" sheet): `metadata.tools` carries
+        // {webSearch, research, toolAccess: "auto"|"on_demand"|"always"}.
+        // Stashed into the gizzi payload metadata so the runtime can see the
+        // user's choices.
+        // TODO(runtime): gizzi currently ignores `metadata.tools` — wire the
+        // web-search/research tool gating and tool-access mode into the
+        // runtime once it supports per-request tool configuration.
+        if let Some(tools) = body_json
+            .get("metadata")
+            .and_then(|m| m.get("tools"))
+            .filter(|t| t.is_object())
+        {
+            gizzi_payload["metadata"] = json!({ "tools": tools.clone() });
+        }
 
         let _message_resp = match client
             .post(format!("{}/session/{}/message", gizzi, session_id))
@@ -291,11 +466,15 @@ async fn agent_chat_bridge(_headers: HeaderMap, body: Body) -> Response {
                 let status = r.status();
                 let body = r.text().await.unwrap_or_default();
                 warn!(status = %status, body = %body, "Gizzi message endpoint failed");
+                // Pass the runtime's structured error through so clients can
+                // render targeted UI (e.g. a model picker on
+                // ProviderModelNotFoundError) instead of parsing a string.
+                let details = serde_json::from_str::<serde_json::Value>(&body).ok();
                 yield Ok(Event::default().data(json!({
                     "type": "finish",
                     "messageId": msg_id,
                     "status": "error",
-                    "metadata": { "status": "error", "error": format!("gizzi message failed ({}): {}", status, body) },
+                    "metadata": { "status": "error", "error": format!("gizzi message failed ({}): {}", status, body), "errorDetails": details },
                 }).to_string()));
                 return;
             }

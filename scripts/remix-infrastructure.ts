@@ -256,7 +256,7 @@ async function generateRemixPlan(targetCode: string) {
 }
 
 async function writeRemixPlan(plan: any) {
-  const outDir = path.join('/Users/macbook/Desktop/allternit-workspace/allternit', 'remix-plans');
+  const outDir = path.join('/Users/macbook/Desktop/allternit-workspace/allternit', 'remix-content', 'plans');
   await fs.mkdir(outDir, { recursive: true });
   const outPath = path.join(outDir, `${plan.courseCode}.json`);
   await fs.writeFile(outPath, JSON.stringify(plan, null, 2));

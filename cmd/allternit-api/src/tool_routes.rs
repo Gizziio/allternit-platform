@@ -121,7 +121,10 @@ async fn execute_tool(
 
 // ─── Tool Implementations ───────────────────────────────────────────────────
 
-async fn execute_tool_internal(
+/// `pub(crate)`: also called by `mcp_server_routes.rs`'s `tools/call` handler,
+/// so the same tool set is reachable both as a plain REST call and as an
+/// MCP server tool — one registry, two front doors, same auth gate.
+pub(crate) async fn execute_tool_internal(
     request: &ExecuteToolRequest,
     _user_id: &str,
 ) -> Result<Value, String> {

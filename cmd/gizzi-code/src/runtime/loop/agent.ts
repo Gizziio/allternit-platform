@@ -84,6 +84,13 @@ export namespace Agent {
       prompt: z.string().optional(),
       options: z.record(z.string(), z.any()),
       steps: z.number().int().positive().optional(),
+      summaryPolicy: z
+        .object({
+          minChars: z.number().int().nonnegative(),
+          continuationPrompt: z.string().min(1),
+          retries: z.number().int().min(0).max(3),
+        })
+        .optional(),
       harness: HarnessConfigSchema.optional(),
     })
     
@@ -95,7 +102,24 @@ export namespace Agent {
     const skillDirs = await Skill.dirs()
     const whitelistedDirs = [Truncate.GLOB, ...skillDirs.map((dir) => path.join(dir, "*"))]
     const defaults = PermissionNext.fromConfig({
-      "*": "allow",
+      "*": "ask",
+      grep: "allow",
+      glob: "allow",
+      list: "allow",
+      codesearch: "allow",
+      websearch: "allow",
+      webfetch: "allow",
+      todoread: "allow",
+      todowrite: "allow",
+      lsp: "allow",
+      skill: "allow",
+      skill_evaluate: "allow",
+      skill_manage: "ask",
+      task: "allow",
+      task_list: "allow",
+      task_output: "allow",
+      task_stop: "ask",
+      goal_budget: "allow",
       doom_loop: "ask",
       external_directory: {
         "*": "ask",
@@ -104,14 +128,43 @@ export namespace Agent {
       question: "deny",
       plan_enter: "deny",
       plan_exit: "deny",
-      // mirrors github.com/github/gitignore Node.gitignore pattern for .env files
+      // Sensitive credentials and git control paths require review by default.
+      // Public key and environment-template variants remain ordinary project files.
       read: {
         "*": "allow",
         "*.env": "ask",
         "*.env.*": "ask",
+        "*id_rsa*": "ask",
+        "*id_ed25519*": "ask",
+        "*id_ecdsa*": "ask",
+        "*credentials*": "ask",
+        ".git/*": "ask",
+        "*/.git/*": "ask",
         "*.env.example": "allow",
+        "*.env.sample": "allow",
+        "*.env.template": "allow",
+        "*id_rsa.pub": "allow",
+        "*id_ed25519.pub": "allow",
+        "*id_ecdsa.pub": "allow",
       },
-    })
+      edit: {
+        "*": "allow",
+        "*.env": "ask",
+        "*.env.*": "ask",
+        "*id_rsa*": "ask",
+        "*id_ed25519*": "ask",
+        "*id_ecdsa*": "ask",
+        "*credentials*": "ask",
+        ".git/*": "ask",
+        "*/.git/*": "ask",
+        "*.env.example": "allow",
+        "*.env.sample": "allow",
+        "*.env.template": "allow",
+        "*id_rsa.pub": "allow",
+        "*id_ed25519.pub": "allow",
+        "*id_ecdsa.pub": "allow",
+      },
+    }, "default")
     const user = PermissionNext.fromConfig(cfg.permission ?? {})
 
     const result: Record<string, Info> = {
@@ -165,6 +218,12 @@ export namespace Agent {
           user,
         ),
         options: {},
+        summaryPolicy: {
+          minChars: 200,
+          retries: 1,
+          continuationPrompt:
+            "Expand your handoff for the parent. Include concrete findings or changes, relevant file paths, verification performed, and any remaining risks or follow-up work.",
+        },
         mode: "subagent",
         native: true,
       },
@@ -192,6 +251,12 @@ export namespace Agent {
         description: `Fast agent specialized for exploring codebases. Use this when you need to quickly find files by patterns (eg. "src/components/**/*.tsx"), search code for keywords (eg. "API endpoints"), or answer questions about the codebase (eg. "how do API endpoints work?"). When calling this agent, specify the desired thoroughness level: "quick" for basic searches, "medium" for moderate exploration, or "very thorough" for comprehensive analysis across multiple locations and naming conventions.`,
         prompt: PROMPT_EXPLORE,
         options: {},
+        summaryPolicy: {
+          minChars: 200,
+          retries: 1,
+          continuationPrompt:
+            "Expand your handoff for the parent. Include concrete findings, relevant file paths and symbols, evidence for your conclusions, and unresolved questions.",
+        },
         mode: "subagent",
         native: true,
       },
@@ -268,6 +333,13 @@ export namespace Agent {
       item.hidden = value.hidden ?? item.hidden
       item.name = value.name ?? item.name
       item.steps = value.steps ?? item.steps
+      item.summaryPolicy = value.summary_policy
+        ? {
+            minChars: value.summary_policy.min_chars,
+            continuationPrompt: value.summary_policy.continuation_prompt,
+            retries: value.summary_policy.retries,
+          }
+        : item.summaryPolicy
       item.harness = value.harness ?? item.harness
       item.options = mergeDeep(item.options, value.options ?? {})
       item.permission = PermissionNext.merge(item.permission, PermissionNext.fromConfig(value.permission ?? {}))

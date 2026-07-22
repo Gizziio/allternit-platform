@@ -1,3 +1,4 @@
+import React from 'react';
 /**
  * Evidence Card Component Tests
  */
@@ -7,11 +8,11 @@ import { render, screen, fireEvent } from '@testing-library/react';
 import { EvidenceCard } from './EvidenceCard';
 
 describe('EvidenceCard', () => {
-const mockArtifact = {
+  const mockArtifact = {
     type: 'ui_state' as const,
     confidence: 0.95,
     timestamp: new Date().toISOString(),
-    metadata: { width: 1920, height: 1080,
+    metadata: { width: 1920, height: 1080 },
     previewUrl: undefined,
   };
 
@@ -33,7 +34,7 @@ const mockArtifact = {
   it('calls onClick when card is clicked', () => {
     const handleClick = vi.fn();
     render(<EvidenceCard {...mockArtifact} onClick={handleClick} />);
-    
+
     const card = screen.getByText('UI State').closest('div');
     if (card) {
       fireEvent.click(card);
@@ -51,10 +52,10 @@ const mockArtifact = {
 
     types.forEach(({ type, label }) => {
       const { unmount } = render(
-        <EvidenceCard 
-          type={type} 
-          confidence={0.8} 
-          timestamp={isClient ? isClient ? new Date().toISOString() : "..."
+        <EvidenceCard
+          type={type}
+          confidence={0.8}
+          timestamp={new Date().toISOString()}
         />
       );
       expect(screen.getByText(label)).toBeInTheDocument();
@@ -70,7 +71,6 @@ const mockArtifact = {
 
   it('shows selected state', () => {
     render(<EvidenceCard {...mockArtifact} isSelected={true} />);
-    // Selected state is indicated by border color change
     const card = screen.getByText('UI State').closest('div');
     expect(card).toBeInTheDocument();
   });

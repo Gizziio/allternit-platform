@@ -36,7 +36,7 @@ import type { DenialTrackingState } from '../utils/permissions/denialTracking.js
 import type { PermissionMode } from '../utils/permissions/PermissionMode.js'
 import { getInitialSettings } from '../utils/settings/settings.js'
 import type { SettingsJson } from '../utils/settings/types.js'
-import { shouldEnableThinkingByDefault } from '../utils/thinking.js'
+import { shouldEnableThinkingByDefault, type ThinkingConfig } from '../utils/thinking.js'
 import type { Store } from './store.js'
 
 export type CompletionBoundary =
@@ -228,6 +228,7 @@ export type AppState = DeepImmutable<{
     queue: ElicitationRequestEvent[]
   }
   thinkingEnabled: boolean | undefined
+  thinkingConfigOverride: ThinkingConfig | undefined
   promptSuggestionEnabled: boolean
   sessionHooks: SessionHooksState
   tungstenActiveSession?: {
@@ -538,6 +539,7 @@ export function getDefaultAppState(): AppState {
       queue: [],
     },
     thinkingEnabled: shouldEnableThinkingByDefault(),
+    thinkingConfigOverride: undefined,
     promptSuggestionEnabled: shouldEnablePromptSuggestion(),
     sessionHooks: new Map(),
     inbox: {

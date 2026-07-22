@@ -56,6 +56,7 @@ import { Instance } from "@/runtime/context/project/instance"
 import { ShareNext } from "@/runtime/session/share/share-next"
 import { EOL } from "os"
 import { Filesystem } from "@/shared/util/filesystem"
+import { SessionTrace } from "@/runtime/session/trace"
 
 /** Discriminated union returned by the ShareNext API (GET /api/share/:id/data) */
 export type ShareData =
@@ -130,6 +131,7 @@ export const ImportCommand = cmd({
               info: Message
               parts: Part[]
             }>
+            trace?: { entries?: SessionTrace.Entry[] }
           }
         | undefined
 
@@ -211,6 +213,40 @@ export const ImportCommand = cmd({
               .onConflictDoNothing()
               .run(),
           )
+        }
+      }
+
+      const importedTrace = exportData.trace?.entries ?? []
+      if (importedTrace.length) {
+        for (const entry of importedTrace.toSorted((a, b) => a.sequence - b.sequence)) {
+          SessionTrace.append({
+            sessionID: exportData.info.id,
+            kind: entry.kind,
+            messageID: entry.messageID,
+            partID: entry.partID,
+            data: entry.data,
+            time: entry.time,
+          })
+        }
+      } else {
+        for (const msg of exportData.messages) {
+          SessionTrace.append({
+            sessionID: exportData.info.id,
+            kind: "message.updated",
+            messageID: msg.info.id,
+            data: msg.info,
+            time: msg.info.time?.created,
+          })
+          for (const part of msg.parts) {
+            SessionTrace.append({
+              sessionID: exportData.info.id,
+              kind: "part.updated",
+              messageID: msg.info.id,
+              partID: part.id,
+              data: part,
+              time: msg.info.time?.created,
+            })
+          }
         }
       }
 

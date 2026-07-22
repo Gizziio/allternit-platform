@@ -44,9 +44,20 @@ import { LoadAPIKeyError } from "ai"
 import type { AllternitClientLike } from "@/runtime/integrations/acp/types"
 import { Session } from "@/runtime/session"
 import { applyPatch } from "diff"
+import { RuntimeTelemetry } from "@/runtime/telemetry"
+import { Flag } from "@/runtime/context/flag/flag"
 
 type ModeOption = { id: string; name: string; description?: string }
 type ModelOption = { modelId: string; name: string }
+type SessionConfigSelectOption = { value: string; name: string; description?: string }
+type SessionConfigOption = {
+  type: "select"
+  id: "model" | "thinking" | "mode"
+  name: string
+  category: "model" | "thought_level" | "mode"
+  currentValue: string
+  options: SessionConfigSelectOption[]
+}
 
 // Define types for session message handling
 interface SessionMessageResponse {
@@ -662,6 +673,7 @@ export namespace ACP {
           sessionId,
           models: load.models,
           modes: load.modes,
+          configOptions: load.configOptions,
           _meta: load._meta,
         }
       } catch (e) {
@@ -717,6 +729,7 @@ export namespace ACP {
             result.modes.currentModeId = lastUser.agent
             this.sessionManager.setMode(sessionId, lastUser.agent)
           }
+          result.configOptions = await this.refreshSessionConfigOptions(sessionId)
         }
 
         for (const msg of messages ?? []) {
@@ -1273,6 +1286,14 @@ export namespace ACP {
           availableModels,
         },
         modes,
+        configOptions: Flag.GIZZI_DISABLE_ACP_CONFIG_OPTIONS ? undefined : buildSessionConfigOptions({
+          models: buildAvailableModels(entries as any[]),
+          model,
+          variants: availableVariants,
+          variant: this.sessionManager.getVariant(sessionId),
+          modes: modeState.availableModes,
+          modeId: currentModeId,
+        }),
         _meta: buildVariantMeta({
           model,
           variant: this.sessionManager.getVariant(sessionId),
@@ -1294,7 +1315,11 @@ export namespace ACP {
       const entries = sortProvidersByName(providers as any[])
       const availableVariants = modelVariantsFromProviders(entries as any[], selection.model)
 
+      const configOptions = await this.refreshSessionConfigOptions(session.id)
+      await this.emitConfigOptions(session.id, configOptions)
+      RuntimeTelemetry.track("acp_config_changed", { config_id: "model" })
       return {
+        configOptions,
         _meta: buildVariantMeta({
           model: selection.model,
           variant: selection.variant,
@@ -1310,6 +1335,83 @@ export namespace ACP {
         throw new Error(`Agent not found: ${params.modeId}`)
       }
       this.sessionManager.setMode(params.sessionId, params.modeId)
+      const configOptions = await this.refreshSessionConfigOptions(params.sessionId)
+      await this.emitConfigOptions(params.sessionId, configOptions)
+      RuntimeTelemetry.track("acp_config_changed", { config_id: "mode" })
+      return { configOptions } as any
+    }
+
+    async setSessionConfigOption(params: {
+      sessionId: string
+      configId: string
+      value: unknown
+    }): Promise<{ configOptions: SessionConfigOption[] }> {
+      if (Flag.GIZZI_DISABLE_ACP_CONFIG_OPTIONS) {
+        throw RequestError.invalidParams(JSON.stringify({ error: "ACP config options are disabled by rollout policy" }))
+      }
+      const value = String(params.value)
+      switch (params.configId) {
+        case "model": {
+          const result = await this.unstable_setSessionModel({ sessionId: params.sessionId, modelId: value })
+          return { configOptions: (result as any).configOptions }
+        }
+        case "mode": {
+          const result = await this.setSessionMode({ sessionId: params.sessionId, modeId: value })
+          return { configOptions: (result as any).configOptions }
+        }
+        case "thinking": {
+          const session = this.sessionManager.get(params.sessionId)
+          const providers = await this.sdk.config
+            .providers({ query: { directory: session.cwd }, throwOnError: true })
+            .then((x: any) => x.data!.providers)
+          const model = session.model ?? (await defaultModel(this.config, session.cwd))
+          const variants = modelVariantsFromProviders(sortProvidersByName(providers as any[]), model)
+          if (value !== "off" && !variants.includes(value)) {
+            throw RequestError.invalidParams(JSON.stringify({ error: `Unknown thinking level: ${value}` }))
+          }
+          this.sessionManager.setVariant(params.sessionId, value === "off" ? undefined : value)
+          RuntimeTelemetry.track("acp_config_changed", { config_id: "thinking" })
+          break
+        }
+        default:
+          throw RequestError.invalidParams(JSON.stringify({ error: `Unknown config option: ${params.configId}` }))
+      }
+
+      const configOptions = await this.refreshSessionConfigOptions(params.sessionId)
+      await this.emitConfigOptions(params.sessionId, configOptions)
+      return { configOptions }
+    }
+
+    private async refreshSessionConfigOptions(sessionId: string): Promise<SessionConfigOption[]> {
+      if (Flag.GIZZI_DISABLE_ACP_CONFIG_OPTIONS) return []
+      const session = this.sessionManager.get(sessionId)
+      const model = session.model ?? (await defaultModel(this.config, session.cwd))
+      const providers = await this.sdk.config
+        .providers({ query: { directory: session.cwd }, throwOnError: true })
+        .then((x: any) => x.data!.providers)
+      const entries = sortProvidersByName(providers as any[])
+      const modes = await this.resolveModeState(session.cwd, sessionId)
+      return buildSessionConfigOptions({
+        models: buildAvailableModels(entries),
+        model,
+        variants: modelVariantsFromProviders(entries as any[], model),
+        variant: this.sessionManager.getVariant(sessionId),
+        modes: modes.availableModes,
+        modeId: modes.currentModeId,
+      })
+    }
+
+    private async emitConfigOptions(sessionId: string, configOptions: SessionConfigOption[]) {
+      if (Flag.GIZZI_DISABLE_ACP_CONFIG_OPTIONS) return
+      await this.connection
+        .sessionUpdate({
+          sessionId,
+          update: {
+            sessionUpdate: "config_option_update",
+            configOptions,
+          } as any,
+        })
+        .catch((error: unknown) => log.error("failed to send ACP config options", { error, sessionId }))
     }
 
     async prompt(params: PromptRequest) {
@@ -1708,6 +1810,61 @@ export namespace ACP {
         return [base, ...variantOptions]
       })
     })
+  }
+
+  export function buildSessionConfigOptions(input: {
+    models: ModelOption[]
+    model: { providerID: string; modelID: string }
+    variants: string[]
+    variant?: string
+    modes: ModeOption[]
+    modeId?: string
+  }): SessionConfigOption[] {
+    const currentModelId = `${input.model.providerID}/${input.model.modelID}`
+    const result: SessionConfigOption[] = [
+      {
+        type: "select",
+        id: "model",
+        name: "Model",
+        category: "model",
+        currentValue: currentModelId,
+        options: input.models.map((model) => ({ value: model.modelId, name: model.name })),
+      },
+    ]
+
+    const variants = input.variants.filter((variant) => variant !== DEFAULT_VARIANT_VALUE)
+    if (variants.length) {
+      result.push({
+        type: "select",
+        id: "thinking",
+        name: "Thinking",
+        category: "thought_level",
+        currentValue: input.variant && variants.includes(input.variant) ? input.variant : "off",
+        options: [
+          { value: "off", name: "Thinking Off" },
+          ...variants.map((variant) => ({
+            value: variant,
+            name: variant === "on" ? "Thinking On" : `Thinking ${variant}`,
+          })),
+        ],
+      })
+    }
+
+    if (input.modeId) {
+      result.push({
+        type: "select",
+        id: "mode",
+        name: "Mode",
+        category: "mode",
+        currentValue: input.modeId,
+        options: input.modes.map((mode) => ({
+          value: mode.id,
+          name: mode.name,
+          ...(mode.description ? { description: mode.description } : {}),
+        })),
+      })
+    }
+    return result
   }
 
   function formatModelIdWithVariant(

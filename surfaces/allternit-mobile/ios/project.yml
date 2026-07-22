@@ -9,10 +9,16 @@ settings:
 packages:
   clerk-ios:
     url: https://github.com/clerk/clerk-ios
-    exactVersion: "1.3.2"
+    # 1.2.0+ need swift-tools 6.2 (beyond Xcode 16.2 on macOS 14.6);
+    # 1.1.0 is the newest tag on tools 5.10. Bump after the Xcode upgrade.
+    exactVersion: "1.1.0"
   MarkdownView:
     url: https://github.com/LiYanan2004/MarkdownView
-    from: "3.0.0"
+    # 2.6.1+ (incl. 3.x) need swift-tools 6.2, and 2.6.0 uses `@MainActor
+    # deinit` (Swift 6.1+) — both beyond Xcode 16.2's Swift 6.0, the newest
+    # Xcode this Mac's macOS 14.6 can run. Bump to 3.x (and restore the
+    # StreamingMarkdownReader path in MessageRow) after a macOS/Xcode upgrade.
+    exactVersion: "2.5.2"
   Runestone:
     url: https://github.com/simonbs/Runestone
     from: "0.5.2"
@@ -36,9 +42,21 @@ targets:
         TARGETED_DEVICE_FAMILY: "1,2"
         MARKETING_VERSION: "1.0"
         CURRENT_PROJECT_VERSION: "1"
+        CODE_SIGN_ENTITLEMENTS: Allternit.entitlements
+        # Clerk publishable key (client-public by design) — the production
+        # instance, same value the web ships in .env.production.
+        CLERK_PUBLISHABLE_KEY: pk_live_Y2xlcmsucGxhdGZvcm0uYWxsdGVybml0LmNvbSQ
         # Placeholder — set your team for device builds.
         DEVELOPMENT_TEAM: ""
         CODE_SIGN_STYLE: Automatic
+      configs:
+        debug:
+          ALLTERNIT_API_BASE_URL: http://127.0.0.1:8013/api/v1
+        release:
+          # TODO: verify the public mobile gateway host before App Store submission.
+          # The gizzi clients default to https://api.allternit.com; mobile may share
+          # it or need a dedicated host. Update this value once confirmed.
+          ALLTERNIT_API_BASE_URL: https://api.allternit.com/api/v1
     dependencies:
       - package: clerk-ios
         product: ClerkKit

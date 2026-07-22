@@ -195,6 +195,8 @@ interface ChatMessageMetadata {
   /** Phase 2: Which agent sent this message (for mixed LLM/agent threads) */
   agentId?: string;
   agentName?: string;
+  /** @-mentioned plugin/connector this user message targeted (composer chip). */
+  pluginMention?: { kind: 'plugin' | 'connector'; id: string; name: string };
 }
 
 type ReasoningTraceStepType =

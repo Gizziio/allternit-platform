@@ -12,6 +12,7 @@ import { SessionStatus } from "@/runtime/session/status"
 import { RunRegistry } from "@/runtime/session/run-registry"
 import { SessionSummary } from "@/runtime/session/summary"
 import { Todo } from "@/runtime/session/todo"
+import { BackgroundTask } from "@/runtime/session/background-task"
 import { Agent } from "@/runtime/loop/agent"
 import { Snapshot } from "@/runtime/session/snapshot"
 import { Log } from "@/shared/util/log"
@@ -19,11 +20,165 @@ import { PermissionNext } from "@/runtime/tools/guard/permission/next"
 import { Bus } from "@/shared/bus"
 import { errors } from "@/runtime/server/error"
 import { lazy } from "@/shared/util/lazy"
+import { SessionTrace } from "@/runtime/session/trace"
+import { SessionSupportBundle } from "@/runtime/session/support-bundle"
+import { Scratchpad } from "@/runtime/session/scratchpad"
 
 const log = Log.create({ service: "server" })
 
 export const SessionRoutes = lazy(() =>
   new Hono()
+    .get(
+      "/:sessionID/scratchpad",
+      describeRoute({
+        summary: "List session scratchpad files",
+        description: "List private and root-session shared scratchpad metadata without returning file contents.",
+        operationId: "session.scratchpad.list",
+        responses: { 200: { description: "Scratchpad metadata", content: { "application/json": { schema: resolver(z.any()) } } }, ...errors(404) },
+      }),
+      validator("param", z.object({ sessionID: z.string() })),
+      async (c) => {
+        const { sessionID } = c.req.valid("param")
+        await Session.get(sessionID)
+        const result = await Scratchpad.list(sessionID)
+        return c.json({
+          sessionID: result.scope.sessionID,
+          rootSessionID: result.scope.rootSessionID,
+          entries: result.entries,
+        })
+      },
+    )
+    .get(
+      "/:sessionID/scratchpad/file",
+      describeRoute({
+        summary: "Read a scratchpad file",
+        operationId: "session.scratchpad.read",
+        responses: { 200: { description: "Scratchpad file", content: { "application/json": { schema: resolver(z.any()) } } }, ...errors(404) },
+      }),
+      validator("param", z.object({ sessionID: z.string() })),
+      validator("query", z.object({ path: z.string().min(1), shared: z.enum(["true", "false"]).optional() })),
+      async (c) => {
+        const { sessionID } = c.req.valid("param")
+        const query = c.req.valid("query")
+        await Session.get(sessionID)
+        return c.json(await Scratchpad.read({ sessionID, path: query.path, shared: query.shared === "true" }))
+      },
+    )
+    .put(
+      "/:sessionID/scratchpad/file",
+      describeRoute({
+        summary: "Write a scratchpad file",
+        operationId: "session.scratchpad.write",
+        responses: { 200: { description: "Scratchpad write metadata", content: { "application/json": { schema: resolver(z.any()) } } }, ...errors(400, 404) },
+      }),
+      validator("param", z.object({ sessionID: z.string() })),
+      validator("json", z.object({ path: z.string().min(1), content: z.string(), shared: z.boolean().optional() })),
+      async (c) => {
+        const { sessionID } = c.req.valid("param")
+        const body = c.req.valid("json")
+        await Session.get(sessionID)
+        return c.json(await Scratchpad.write({ sessionID, ...body }))
+      },
+    )
+    .delete(
+      "/:sessionID/scratchpad/file",
+      describeRoute({
+        summary: "Remove a scratchpad file",
+        operationId: "session.scratchpad.remove",
+        responses: { 200: { description: "Whether the file was removed", content: { "application/json": { schema: resolver(z.boolean()) } } }, ...errors(400, 404) },
+      }),
+      validator("param", z.object({ sessionID: z.string() })),
+      validator("query", z.object({ path: z.string().min(1), shared: z.enum(["true", "false"]).optional() })),
+      async (c) => {
+        const { sessionID } = c.req.valid("param")
+        const query = c.req.valid("query")
+        await Session.get(sessionID)
+        return c.json(await Scratchpad.remove({ sessionID, path: query.path, shared: query.shared === "true" }))
+      },
+    )
+    .get(
+      "/:sessionID/replay",
+      describeRoute({
+        summary: "Replay durable session events",
+        description: "Return a cursor-bounded append-only trace, optionally with a current-state snapshot for initial hydration.",
+        operationId: "session.replay",
+        responses: { 200: { description: "Replay page", content: { "application/json": { schema: resolver(z.any()) } } }, ...errors(404) },
+      }),
+      validator("param", z.object({ sessionID: z.string() })),
+      validator("query", z.object({
+        after: z.coerce.number().int().min(0).default(0),
+        limit: z.coerce.number().int().min(1).max(5000).default(500),
+        snapshot: z.enum(["true", "false"]).optional(),
+      })),
+      async (c) => {
+        const { sessionID } = c.req.valid("param")
+        const query = c.req.valid("query")
+        const info = await Session.get(sessionID).catch(() => undefined)
+        if (!info) return c.json({ error: "Session not found" }, 404)
+        const head = SessionTrace.head(sessionID)
+        const entries = SessionTrace.list({ sessionID, after: query.after, through: head, limit: query.limit })
+        const cursor = entries.at(-1)?.sequence ?? query.after
+        const includeSnapshot = query.snapshot === "true" || (query.snapshot === undefined && query.after === 0)
+        return c.json({
+          sessionID,
+          head,
+          cursor,
+          hasMore: cursor < head,
+          snapshot: includeSnapshot ? { info, messages: await Session.messages({ sessionID }) } : undefined,
+          entries,
+        })
+      },
+    )
+    .get(
+      "/:sessionID/support-bundle",
+      describeRoute({
+        summary: "Export a redacted support bundle",
+        description: "Create a local diagnostic ZIP with session state, replay trace, task state, and bounded recent logs.",
+        operationId: "session.supportBundle",
+        responses: { 200: { description: "Redacted ZIP archive", content: { "application/zip": { schema: resolver(z.any()) } } }, ...errors(404) },
+      }),
+      validator("param", z.object({ sessionID: z.string() })),
+      async (c) => {
+        const { sessionID } = c.req.valid("param")
+        const exists = await Session.get(sessionID).catch(() => undefined)
+        if (!exists) return c.json({ error: "Session not found" }, 404)
+        const archive = await SessionSupportBundle.create(sessionID)
+        c.header("Content-Type", "application/zip")
+        c.header("Content-Disposition", `attachment; filename="gizzi-support-${sessionID}.zip"`)
+        return c.body(archive)
+      },
+    )
+    .get(
+      "/:sessionID/background-tasks",
+      describeRoute({
+        summary: "List session background tasks",
+        description: "Return durable background task lifecycle records for a parent session.",
+        operationId: "session.backgroundTasks.list",
+        responses: { 200: { description: "Background tasks", content: { "application/json": { schema: resolver(z.any()) } } } },
+      }),
+      validator("param", z.object({ sessionID: z.string() })),
+      async (c) => {
+        const { sessionID } = c.req.valid("param")
+        return c.json(await BackgroundTask.list(sessionID))
+      },
+    )
+    .post(
+      "/:sessionID/background-tasks/:taskID/cancel",
+      describeRoute({
+        summary: "Cancel a session background task",
+        description: "Cancel the owned child session and durably settle its task record.",
+        operationId: "session.backgroundTasks.cancel",
+        responses: { 200: { description: "Background task cancelled", content: { "application/json": { schema: resolver(z.any()) } } }, ...errors(404) },
+      }),
+      validator("param", z.object({ sessionID: z.string(), taskID: z.string() })),
+      async (c) => {
+        const { sessionID, taskID } = c.req.valid("param")
+        const task = await BackgroundTask.get(taskID)
+        if (!task || task.parentSessionID !== sessionID) return c.json({ error: "Background task not found" }, 404)
+        if (task.childSessionID) SessionPrompt.cancel(task.childSessionID)
+        return c.json(await BackgroundTask.cancel(taskID))
+      },
+    )
     .get(
       "/list",
       describeRoute({

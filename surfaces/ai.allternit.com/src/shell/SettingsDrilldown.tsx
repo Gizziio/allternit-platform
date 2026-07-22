@@ -21,14 +21,14 @@ import {
 } from '@phosphor-icons/react';
 import { cn } from '@/lib/utils';
 
-interface MenuItem {
+interface MenuItemData {
   id: string;
   label: string;
   icon?: React.ReactNode;
   shortcut?: string;
   hasSubmenu?: boolean;
   onClick?: () => void;
-  children?: MenuItem[];
+  children?: MenuItemData[];
 }
 
 // Submenu component that renders in a portal
@@ -40,7 +40,7 @@ function SubmenuFlyout({
   onClose,
   selectedId,
 }: {
-  items: MenuItem[];
+  items: MenuItemData[];
   title: string;
   isOpen: boolean;
   anchorRect: DOMRect | null;
@@ -183,7 +183,7 @@ export function SettingsDrilldown({ children }: { children?: React.ReactNode }):
   };
 
   // Submenu data
-  const languageItems: MenuItem[] = [
+  const languageItems: MenuItemData[] = [
     { id: 'en', label: 'English', onClick: () => saveLanguage('en') },
     { id: 'es', label: 'Español', onClick: () => saveLanguage('es') },
     { id: 'fr', label: 'Français', onClick: () => saveLanguage('fr') },
@@ -192,13 +192,13 @@ export function SettingsDrilldown({ children }: { children?: React.ReactNode }):
     { id: 'ja', label: '日本語', onClick: () => saveLanguage('ja') },
   ];
 
-  const helpItems: MenuItem[] = [
+  const helpItems: MenuItemData[] = [
     { id: 'docs', label: 'Documentation', onClick: () => openExternal('https://docs.allternit.com') },
     { id: 'support', label: 'Contact Support', onClick: () => openExternal('https://allternit.com/support') },
     { id: 'feedback', label: 'Send Feedback', onClick: () => openExternal('https://allternit.com/feedback') },
   ];
 
-  const learnItems: MenuItem[] = [
+  const learnItems: MenuItemData[] = [
     { id: 'api', label: 'API Console', onClick: () => openExternal('https://allternit-cloud-api.fly.dev') },
     { id: 'about', label: 'About Allternit', onClick: () => { setActiveSubmenuId(null); handleOpenSettings('about'); } },
     { id: 'tutorials', label: 'Tutorials', onClick: () => openExternal('https://docs.allternit.com/tutorials') },
@@ -208,7 +208,7 @@ export function SettingsDrilldown({ children }: { children?: React.ReactNode }):
     { id: 'shortcuts', label: 'Keyboard shortcuts', shortcut: '⌘?', onClick: () => { setActiveSubmenuId(null); handleOpenSettings('shortcuts'); } },
   ];
 
-  const menuItems: MenuItem[] = [
+  const menuItems: MenuItemData[] = [
     { 
       id: 'settings', 
       label: 'Settings', 
@@ -277,7 +277,7 @@ export function SettingsDrilldown({ children }: { children?: React.ReactNode }):
 
   const activeSubmenuItem = menuItems.find(item => item.id === activeSubmenuId);
 
-  const handleItemHover = (item: MenuItem, el: HTMLButtonElement): void => {
+  const handleItemHover = (item: MenuItemData, el: HTMLButtonElement): void => {
     if (submenuTimeoutRef.current) {
       clearTimeout(submenuTimeoutRef.current);
       submenuTimeoutRef.current = null;
@@ -393,9 +393,9 @@ function MenuItem({
   onHover,
   onClick
 }: { 
-  item: MenuItem; 
+  item: MenuItemData; 
   isActive: boolean;
-  onHover: (item: MenuItem, el: HTMLButtonElement) => void;
+  onHover: (item: MenuItemData, el: HTMLButtonElement) => void;
   onClick: () => void;
 }): React.ReactNode {
   const hasSubmenu = item.hasSubmenu && item.children;

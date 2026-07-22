@@ -1,0 +1,9 @@
+{
+  "legal-nda-server": {
+    "type": "http",
+    "url": "https://plugins.anthropic.com/mcp/legal-nda",
+    "headers": {
+      "X-Plugin": "legal-nda"
+    }
+  }
+}

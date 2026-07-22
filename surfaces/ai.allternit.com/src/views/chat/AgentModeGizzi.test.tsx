@@ -1,5 +1,5 @@
 import React from 'react';
-import { render, screen, act } from '@testing-library/react';
+import { render, screen, act, waitFor } from '@testing-library/react';
 import { describe, expect, it, vi, afterEach } from 'vitest';
 import { AgentModeGizzi } from './AgentModeGizzi';
 
@@ -179,11 +179,7 @@ describe('AgentModeGizzi', () => {
     );
 
     const container = screen.getByTestId('agent-mode-gizzi-container');
-    expect(container).toHaveStyle({
-      position: 'absolute',
-      bottom: '100%',
-      zIndex: '35',
-    });
+    expect(container).toHaveClass('absolute', 'bottom-full', 'z-10');
   });
 
   describe('mode switch (surface change while agent stays active)', () => {

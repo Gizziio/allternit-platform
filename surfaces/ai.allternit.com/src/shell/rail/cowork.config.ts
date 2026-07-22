@@ -83,14 +83,3 @@ export const COWORK_RAIL_CONFIG: RailConfigSection[] = [
     items: [],
   },
 ];
-
-// Plugin categories for the full-view overlay
-const PLUGIN_CATEGORIES = [
-  { id: 'skills', label: 'Skills', icon: Lightning },
-  { id: 'commands', label: 'Commands', icon: List },
-  { id: 'connectors', label: 'Connectors', icon: Robot },
-  { id: 'mcps', label: 'MCPs', icon: Clock },
-  { id: 'plugins', label: 'Plugins', icon: Plus },
-] as const;
-
-type PluginCategory = typeof PLUGIN_CATEGORIES[number]['id'];

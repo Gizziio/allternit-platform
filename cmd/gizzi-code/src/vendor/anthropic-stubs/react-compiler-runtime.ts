@@ -1,22 +1,34 @@
 // @ts-nocheck
-// Shim for React 19's `react/compiler-runtime` subpath (absent in this repo's
-// React 18). React-Compiler-compiled components call `c(size)` to allocate a
-// memo cache. This shim returns a cache that always reports a miss, so those
-// components simply recompute — semantically identical, marginally slower.
+/**
+ * react-compiler runtime compatible with the compiler output in this repo.
+ *
+ * The compiled components in src/ were produced by a react-compiler version
+ * whose cache-miss guard is `Symbol.for("react.memo_cache_sentinel")`. React
+ * 19.2's built-in `react/compiler-runtime` instead fills the memo cache with
+ * `Symbol.for("react.compiler_cache_miss")`, so every first-render guard in
+ * the compiled output silently misses and yields the sentinel itself
+ * (observed as `useMailbox()` returning a Symbol).
+ *
+ * This module implements the `c` hook with the sentinel contract the compiled
+ * output expects: a per-component-instance array, stable across renders,
+ * pre-filled with `react.memo_cache_sentinel`.
+ */
+import { useState } from 'react'
 
-const MISS = Symbol.for('react.compiler_cache_miss')
+const MEMO_CACHE_SENTINEL = Symbol.for('react.memo_cache_sentinel')
 
-export function c(size: number): unknown[] {
-  const slots: unknown[] = new Array(size).fill(MISS)
-  return new Proxy(slots, {
-    get(target, prop, receiver) {
-      if (typeof prop === 'string' && /^\d+$/.test(prop)) {
-        const v = Reflect.get(target, prop, receiver)
-        return v === undefined ? MISS : v
-      }
-      return Reflect.get(target, prop, receiver)
-    },
-  })
+function makeCache(size: number): unknown[] {
+  const cache = new Array(size)
+  for (let i = 0; i < size; i++) {
+    cache[i] = MEMO_CACHE_SENTINEL
+  }
+  return cache
 }
 
-export default { c }
+/** Memo cache hook consumed by react-compiler output (`_c`). */
+export function c(size: number): unknown[] {
+  const [cache] = useState(() => makeCache(size))
+  return cache
+}
+
+export const useMemoCache = c

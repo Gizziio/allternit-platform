@@ -142,7 +142,7 @@ export function AllternitOperatorStatus() {
               {/* Browser Automation */}
               <CapabilityItem
                 icon={Globe}
-                label="Browser"
+                label="ACI"
                 available={hasBrowser}
                 sublabel={capabilities.browserUse ? 'agent' : capabilities.playwright ? 'fast' : 'off'}
               />

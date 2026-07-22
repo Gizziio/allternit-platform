@@ -313,6 +313,22 @@ export const RunCommand = cmd({
         describe: "print response and exit (pipe-friendly, no TUI)",
         default: false,
       })
+      .option("print-background-mode", {
+        type: "string",
+        choices: ["exit", "drain", "steer"] as const,
+        default: "exit" as const,
+        describe: "background task behavior after the main print turn completes",
+      })
+      .option("print-wait-ceiling", {
+        type: "number",
+        default: 600,
+        describe: "maximum seconds to wait for print-mode background drain or steering",
+      })
+      .option("print-max-turns", {
+        type: "number",
+        default: 20,
+        describe: "maximum completion-driven parent turns in print steer mode",
+      })
       .option("output-format", {
         type: "string",
         describe: "output format: text, json, stream-json",
@@ -572,6 +588,11 @@ export const RunCommand = cmd({
       const streamJsonMode = args.outputFormat === "stream-json"
       const jsonMode = args.format === "json" || args.outputFormat === "json"
       const printBuffer: string[] = []
+      const backgroundPolicy = printMode ? args.printBackgroundMode : "steer"
+      const backgroundDeadline = Date.now() + Math.max(1, args.printWaitCeiling) * 1000
+      const pendingBackground = new Set<string>()
+      let parentIdle = false
+      let parentIdleCount = 0
 
       function emit(type: string, data: Record<string, unknown>) {
         if (streamJsonMode) {
@@ -586,6 +607,15 @@ export const RunCommand = cmd({
       }
 
       const eventStream = sdk.events()
+      let backgroundWaitTimer: ReturnType<typeof setTimeout> | undefined
+      const armBackgroundWaitCeiling = () => {
+        if (backgroundWaitTimer || !printMode || backgroundPolicy === "exit") return
+        const remaining = Math.max(1, backgroundDeadline - Date.now())
+        backgroundWaitTimer = setTimeout(() => {
+          UI.error(`Print background wait ceiling reached (${args.printWaitCeiling}s)`)
+          void (eventStream as any).return?.()
+        }, remaining)
+      }
       let error: string | undefined
       let totalCost = 0
       let totalTokensIn = 0
@@ -596,6 +626,27 @@ export const RunCommand = cmd({
         let lastMessageHeaderID = ""
 
         for await (const event of eventStream) {
+          if (event.type === "background.task.started") {
+            const task = event.properties as any
+            if (task.parentSessionID !== sessionID) continue
+            pendingBackground.add(task.id)
+            emit("background_task_started", { task })
+            continue
+          }
+
+          if (event.type === "background.task.finished") {
+            const task = event.properties as any
+            if (task.parentSessionID !== sessionID) continue
+            pendingBackground.delete(task.id)
+            emit("background_task_finished", { task })
+            if (printMode && backgroundPolicy === "drain" && parentIdle && pendingBackground.size === 0) break
+            if (printMode && Date.now() >= backgroundDeadline) {
+              UI.error(`Print background wait ceiling reached (${args.printWaitCeiling}s)`)
+              break
+            }
+            continue
+          }
+
           // Per-message assistant header
           if (
             event.type === "message.updated" &&
@@ -716,6 +767,7 @@ export const RunCommand = cmd({
             // Flush print buffer in print mode
             if (printMode && printBuffer.length > 0) {
               process.stdout.write(printBuffer.join("\n") + EOL)
+              printBuffer.length = 0
             }
             // Cost + token summary
             if (!jsonMode && !streamJsonMode && !printMode && (totalCost > 0 || totalTokensIn > 0)) {
@@ -727,7 +779,26 @@ export const RunCommand = cmd({
               UI.empty()
               UI.println(`${D}∑  ${parts.join("  ·  ")}${N}`)
             }
-            break
+            if (!printMode) {
+              if (pendingBackground.size === 0) break
+              parentIdle = true
+              continue
+            }
+
+            if (backgroundPolicy === "exit") break
+            parentIdle = true
+            parentIdleCount += 1
+            if (pendingBackground.size === 0) break
+            if (Date.now() >= backgroundDeadline) {
+              UI.error(`Print background wait ceiling reached (${args.printWaitCeiling}s)`)
+              break
+            }
+            if (backgroundPolicy === "steer" && parentIdleCount > args.printMaxTurns + 1) {
+              UI.error(`Print steer max turns reached (${args.printMaxTurns})`)
+              break
+            }
+            armBackgroundWaitCeiling()
+            continue
           }
 
           if ((event as any).type === "permission.asked") {
@@ -746,6 +817,7 @@ export const RunCommand = cmd({
             }).catch(() => {})
           }
         }
+        if (backgroundWaitTimer) clearTimeout(backgroundWaitTimer)
       }
 
       // Validate agent if specified
@@ -792,6 +864,7 @@ export const RunCommand = cmd({
             command: args.command,
             arguments: message,
             variant: args.variant,
+            backgroundPolicy,
           } as any,
         })
       } else {
@@ -865,6 +938,7 @@ export const RunCommand = cmd({
             variant: args.variant,
             ...(systemOverride ? { system: systemOverride } : {}),
             ...(format ? { format } : {}),
+            backgroundPolicy,
             parts: [...files, { type: "text", text: fullMessage }],
           } as any,
         })

@@ -111,20 +111,14 @@ impl Scope {
     }
 }
 
-/// Resolve the caller's admin scope. Mirrors the organization role check in
-/// usage_routes.rs:59-71 for org-scoped access.
+/// Resolve the caller's admin scope. Uses the same `crate::rbac::is_org_admin`
+/// check as `usage_routes.rs` and `cloud_credentials_routes.rs` for org-scoped
+/// access.
 fn admin_scope(conn: &Connection, user: &AuthUser) -> Result<Scope, ApiError> {
     if let Some(org) = &user.organization_id {
-        let role: Option<String> = conn
-            .query_row(
-                "SELECT role FROM organization_members
-                 WHERE organization_id = ?1 AND user_id = ?2",
-                params![org, user.user_id],
-                |row| row.get(0),
-            )
-            .optional()
-            .map_err(internal_error)?;
-        if !matches!(role.as_deref(), Some("owner") | Some("admin")) {
+        let is_admin =
+            crate::rbac::is_org_admin(conn, org, &user.user_id).map_err(internal_error)?;
+        if !is_admin {
             return Err(forbidden(
                 "insufficient_role",
                 "Only organization owners/admins can manage the LLM gateway.",

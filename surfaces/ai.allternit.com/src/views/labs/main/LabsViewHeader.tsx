@@ -7,8 +7,6 @@ import {
   Award,
   Settings,
 } from 'lucide-react';
-import { GlassSurface } from '@/design/glass/GlassSurface';
-import { Text } from '@/components/typography/Text';
 import { Pill } from '@/components/ui/Pill';
 import type { Tab } from "./LabsView.constants";
 
@@ -33,52 +31,48 @@ export const LabsViewHeader: React.FC<LabsViewHeaderProps> = ({
   ] as const;
 
   return (
-    <GlassSurface
-      className="flex items-center justify-between px-9 py-4 shrink-0 relative z-[2] border-b border-solid border-[var(--ui-border-muted)]"
-    >
-      <div className="flex items-center gap-6">
-        <div className="flex items-center gap-3">
-          <div className="size-10 bg-[var(--accent-primary)]/10 rounded-xl flex items-center justify-center border border-solid border-[var(--accent-primary)]/20 shadow-[0_0_20px_var(--accent-primary)/10]">
-            <span className="text-[20px] font-black italic text-[var(--accent-primary)] tracking-tighter">A:</span>
-          </div>
-          <div className="flex flex-col">
-            <Text variant="heading" className="block text-[19px] font-black m-0 tracking-tight text-[var(--ui-text-primary)] leading-none">Labs</Text>
-            <Text variant="label" className="block text-[10px] font-bold tracking-[0.2em] uppercase text-[var(--ui-text-muted)] mt-1 opacity-60">Learning Portal</Text>
-          </div>
+    <div className="w-full max-w-6xl mx-auto px-8 pt-10 shrink-0 relative z-[2]">
+      {/* Header — same pattern as Artifacts Library / Automation Tasks / Projects */}
+      <div className="flex items-center justify-between gap-4">
+        <div>
+          <h1
+            className="text-3xl font-medium tracking-tight m-0"
+            style={{ fontFamily: 'var(--font-serif)' }}
+          >
+            a://labs
+          </h1>
+          <p className="m-0 mt-1 text-sm text-[var(--text-secondary)]">Learning Portal</p>
         </div>
 
-        {/* Global Notification */}
-        {notification && (
-          <div className="animate-in fade-in slide-in-from-left-2 duration-300">
-            <Text variant="label" className="bg-[var(--status-success-bg)] text-[var(--status-success)] px-3 py-1 rounded-full text-[11px] font-bold border border-solid border-[var(--status-success)]/20">
+        <div className="flex items-center gap-2 flex-shrink-0">
+          {/* Global Notification */}
+          {notification && (
+            <span className="bg-[var(--status-success-bg)] text-[var(--status-success)] px-3 py-1 rounded-full text-[11px] font-bold border border-solid border-[var(--status-success)]/20">
               {notification}
-            </Text>
-          </div>
-        )}
-      </div>
-
-      <div className="flex items-center gap-2">
-        {TABS.map(tab => {
-          const isActive = activeTab === tab.id;
-          return (
-            <button
-              type="button"
-              key={tab.id}
-              onClick={() => setActiveTab(tab.id)}
-              data-testid={`labs-tab-${tab.id}`}
-              className="border-none bg-transparent p-0 cursor-pointer"
-            >
-              <Pill
-                active={isActive}
-                icon={<tab.icon size={13} />}
-                size="md"
+            </span>
+          )}
+          {TABS.map(tab => {
+            const isActive = activeTab === tab.id;
+            return (
+              <button
+                type="button"
+                key={tab.id}
+                onClick={() => setActiveTab(tab.id)}
+                data-testid={`labs-tab-${tab.id}`}
+                className="border-none bg-transparent p-0 cursor-pointer"
               >
-                {tab.label}
-              </Pill>
-            </button>
-          );
-        })}
+                <Pill
+                  active={isActive}
+                  icon={<tab.icon size={13} />}
+                  size="md"
+                >
+                  {tab.label}
+                </Pill>
+              </button>
+            );
+          })}
+        </div>
       </div>
-    </GlassSurface>
+    </div>
   );
 };

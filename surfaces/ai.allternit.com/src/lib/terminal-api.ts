@@ -11,6 +11,7 @@ import {
   getRuntimeGatewayBaseUrlSync,
   getRuntimeGatewayTokenSync,
 } from '@/lib/runtime-backend-client';
+import { getActiveRuntimeId, getRuntimeExecutionTarget } from '@/lib/runtime-target';
 
 const TERMINAL_SESSION_ID_PATTERN =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
@@ -38,6 +39,9 @@ function normalizeBaseUrl(value: string): string {
 }
 
 function currentTerminalConnection(): TerminalConnection {
+  if (getRuntimeExecutionTarget() === 'cloud' && getActiveRuntimeId()) {
+    return { baseUrl: '', token: null };
+  }
   return {
     baseUrl: normalizeBaseUrl(getRuntimeGatewayBaseUrlSync()),
     token: getRuntimeGatewayTokenSync(),
@@ -45,6 +49,12 @@ function currentTerminalConnection(): TerminalConnection {
 }
 
 async function resolveTerminalConnection(): Promise<TerminalConnection> {
+  if (getRuntimeExecutionTarget() === 'cloud' && getActiveRuntimeId()) {
+    // Relative /terminal paths are intercepted and carried through the
+    // authenticated runtime-device relay. An absolute gateway URL would
+    // bypass the user's selected cloud runtime.
+    return { baseUrl: '', token: null };
+  }
   return {
     baseUrl: normalizeBaseUrl(await getRuntimeGatewayBaseUrl()),
     token: getRuntimeGatewayTokenSync(),

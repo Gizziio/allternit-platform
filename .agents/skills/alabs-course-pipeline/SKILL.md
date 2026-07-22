@@ -44,9 +44,9 @@ A reusable end-to-end workflow for creating, populating, and managing A://Labs c
 | Path | Purpose |
 |------|---------|
 | `alabs-generated-courses/` | Generated HTML modules + quiz JSONs + analysis outputs |
-| `alabs-demos/` | Standalone demo site (works offline) |
+| `alabs-generated-courses/demos/` | Standalone demo site (works offline) |
 | `alabs-module-template/` | Shared template shell, build script, converter |
-| `alabs-curator/` | Generalizable CLI for any codebase (WIP) |
+| `archive/alabs-curator/` | ARCHIVED 2026-07-22 — generalizable CLI scaffold, never finished |
 | `scripts/sync-incremental.ts` | **Recommended** sync — hash-based skip |
 | `scripts/sync-course-from-package.ts` | Legacy sync (has page_url fix) |
 | `scripts/canvas-quiz-sync.ts` | Canvas Quiz API — real scored quizzes |
@@ -200,7 +200,7 @@ Expect: `Summary: 0 issue(s) across 10 course(s)`
 npx tsx scripts/generate-demo-index.ts
 ```
 
-Scans modules → generates `alabs-demos/index.html` with stats and links.
+Scans modules → generates `alabs-generated-courses/demos/index.html` with stats and links.
 
 ## New Tools (Not in Original Pipeline)
 
@@ -236,9 +236,9 @@ Scans modules → generates `alabs-demos/index.html` with stats and links.
 - `scripts/build.ts` — Builds final HTML from content JSON + shell
 - `scripts/convert-existing.ts` — Migrates old full-HTML modules to content JSON
 
-## alabs-curator CLI (Generalizable Pipeline)
+## alabs-curator CLI (Generalizable Pipeline) — ARCHIVED
 
-`alabs-curator/` is a standalone CLI for turning ANY codebase into courseware:
+`alabs-curator/` was archived to `archive/alabs-curator/` on 2026-07-22 (scaffold only; `publish` was a stub and it was never run in production). Restore from the archive if this is ever revived. Historical usage:
 
 ```bash
 alabs-curator ingest -r ./my-project -e src

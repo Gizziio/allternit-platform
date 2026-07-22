@@ -44,6 +44,12 @@ pub struct CompanyConfig {
     #[serde(rename = "terminalServerUrl")]
     pub terminal_server_url: Option<String>,
 
+    /// Base URL of the cloud API (usage metering / entitlements proxy for
+    /// GET /api/v1/me/usage). Unset means usage metering is unavailable and
+    /// the route answers 503.
+    #[serde(rename = "cloudApiUrl")]
+    pub cloud_api_url: Option<String>,
+
     /// Default encryption key for local-at-rest data.
     #[serde(rename = "encryptionKey")]
     pub encryption_key: Option<String>,
@@ -115,6 +121,12 @@ pub struct UserConfig {
     /// Allternit memory service URL.
     #[serde(rename = "memoryUrl")]
     pub memory_url: Option<String>,
+
+    /// Voice service URL (services/voice — TTS/STT). Optional off-gateway
+    /// service; the /api/v1/voice routes degrade gracefully when it's
+    /// unreachable.
+    #[serde(rename = "voiceUrl")]
+    pub voice_url: Option<String>,
 
     /// Embedding service URL.
     #[serde(rename = "embeddingUrl")]
@@ -198,15 +210,33 @@ impl AppConfig {
             .unwrap_or_else(|| "http://127.0.0.1:4096".to_string())
     }
 
+    /// Base URL of the cloud API used by the usage-metering proxy
+    /// (me_routes.rs GET /me/usage → the cloud quota/entitlements service).
+    /// `None` disables usage metering — the route answers 503 rather than
+    /// inventing numbers.
+    pub fn cloud_api_url(&self) -> Option<String> {
+        std::env::var("ALLTERNIT_CLOUD_API_URL")
+            .ok()
+            .filter(|s| !s.is_empty())
+            .or_else(|| self.company.cloud_api_url.clone())
+            .filter(|s| !s.is_empty())
+    }
+
     /// Default LLM provider/model when a request does not specify one.
-    /// Returns empty strings when nothing is configured so callers can fall back
-    /// to the local Ollama brain instead of silently routing to an unconfigured
-    /// provider.
+    /// When nothing is configured, falls back to the first entry of the model
+    /// catalog so the agent-chat bridge never forwards an empty provider/model
+    /// to the runtime (which rejects it with ProviderModelNotFoundError).
     pub fn default_model(&self) -> (String, String) {
         let raw = std::env::var("ALLTERNIT_DEFAULT_MODEL")
             .ok()
             .filter(|s| !s.is_empty())
             .or_else(|| self.user.default_model.clone())
+            .or_else(|| {
+                crate::provider_routes::available_model_catalog()
+                    .first()
+                    .and_then(|m| m.get("id").and_then(|v| v.as_str()))
+                    .map(str::to_string)
+            })
             .unwrap_or_default();
 
         if let Some((provider, model)) = raw.split_once('/') {
@@ -278,6 +308,36 @@ impl AppConfig {
                     .clone()
                     .filter(|s| !s.is_empty())
             })
+    }
+
+    /// Slack app signing secret, used by `slack_webhook_routes.rs` to verify
+    /// inbound Events API requests are really from Slack. `None` means the
+    /// webhook rejects everything rather than trusting unsigned requests.
+    pub fn slack_signing_secret(&self) -> Option<String> {
+        std::env::var("ALLTERNIT_SLACK_SIGNING_SECRET")
+            .ok()
+            .filter(|s| !s.is_empty())
+    }
+
+    /// Slack bot token (`xoxb-...`) used to post replies via
+    /// `chat.postMessage`. `None` means inbound events can be received and
+    /// routed to an agent, but the reply can't be posted back.
+    pub fn slack_bot_token(&self) -> Option<String> {
+        std::env::var("ALLTERNIT_SLACK_BOT_TOKEN")
+            .ok()
+            .filter(|s| !s.is_empty())
+    }
+
+    /// Shared secret the signed desktop process must present via
+    /// `x-allternit-desktop-access-token` to use the header-trust bootstrap
+    /// auth path (`auth::extract_desktop_bootstrap_user`). `None` disables
+    /// that path entirely — same fail-closed posture as
+    /// `internal_service_token` above. The signed desktop process injects
+    /// this through the environment, same as `encryption_key`.
+    pub fn desktop_access_token(&self) -> Option<String> {
+        std::env::var("ALLTERNIT_DESKTOP_ACCESS_TOKEN")
+            .ok()
+            .filter(|s| !s.is_empty())
     }
 
     /// Tenant identifier for this packaged deployment.
@@ -440,6 +500,17 @@ impl AppConfig {
             .unwrap_or_else(|| "http://127.0.0.1:4096".to_string())
     }
 
+    /// Voice service URL (services/voice — TTS/STT). Optional off-gateway
+    /// service; the /api/v1/voice routes answer their graceful-degradation
+    /// fallbacks when it's unreachable.
+    pub fn voice_url(&self) -> String {
+        std::env::var("ALLTERNIT_VOICE_URL")
+            .ok()
+            .filter(|s| !s.is_empty())
+            .or_else(|| self.user.voice_url.clone())
+            .unwrap_or_else(|| "http://127.0.0.1:8001".to_string())
+    }
+
     /// Embedding service URL.
     pub fn embedding_url(&self) -> String {
         std::env::var("ALLTERNIT_EMBEDDING_URL")
@@ -500,6 +571,11 @@ impl AppConfig {
         if let Ok(v) = std::env::var("ALLTERNIT_MEMORY_URL") {
             if !v.is_empty() {
                 self.user.memory_url = Some(v);
+            }
+        }
+        if let Ok(v) = std::env::var("ALLTERNIT_VOICE_URL") {
+            if !v.is_empty() {
+                self.user.voice_url = Some(v);
             }
         }
         if let Ok(v) = std::env::var("ALLTERNIT_EMBEDDING_URL") {
@@ -652,6 +728,9 @@ impl From<SaveUserConfigPayload> for UserConfig {
             ollama_url: payload.ollama_url,
             memory_url: payload.memory_url,
             embedding_url: payload.embedding_url,
+            // Voice service is env/config-file only for now — the wizard has
+            // no voice URL field yet.
+            voice_url: None,
             agent_workdir: payload.agent_workdir,
             cron_daemon_url: payload.cron_daemon_url,
             wizard: payload.wizard,

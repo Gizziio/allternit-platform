@@ -15,6 +15,7 @@ import {
   GitDiff,
   Monitor,
   Plugs,
+  Graph,
   DownloadSimple,
   UploadSimple,
   DotsThree,

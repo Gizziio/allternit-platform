@@ -229,6 +229,7 @@ interface SessionPermissionDockProps {
 
 export function SessionPermissionDock({ request, onReply }: SessionPermissionDockProps) {
   const [stage, setStage] = useState<Stage>("main");
+  const [minimized, setMinimized] = useState(false);
   const [rejectMessage, setRejectMessage] = useState("");
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
@@ -274,8 +275,35 @@ export function SessionPermissionDock({ request, onReply }: SessionPermissionDoc
         <span className="text-[12px] font-semibold uppercase tracking-wide text-[var(--status-warning)]">
           Permission required
         </span>
+        {minimized && (
+          <span className="min-w-0 flex-1 truncate text-[12px] text-[var(--text-secondary)]">
+            {meta.title}
+          </span>
+        )}
+        <button
+          type="button"
+          aria-label={minimized ? "Expand permission request" : "Minimize permission request"}
+          aria-expanded={!minimized}
+          onClick={() => setMinimized((value) => !value)}
+          className="ml-auto grid size-7 place-items-center rounded-md text-[var(--text-secondary)] hover:bg-[var(--bg-active)] active:scale-[0.96]"
+        >
+          <CaretDown
+            size={13}
+            className={cn("transition-transform duration-150", minimized ? "rotate-0" : "rotate-180")}
+          />
+        </button>
       </div>
 
+      <AnimatePresence mode="wait" initial={false}>
+        {!minimized && (
+          <motion.div
+            key="permission-content"
+            initial={{ opacity: 0, height: 0 }}
+            animate={{ opacity: 1, height: "auto" }}
+            exit={{ opacity: 0, height: 0 }}
+            transition={{ duration: 0.16 }}
+            className="overflow-hidden"
+          >
       <AnimatePresence mode="wait" initial={false}>
         {stage === "main" && (
           <motion.div
@@ -450,6 +478,9 @@ export function SessionPermissionDock({ request, onReply }: SessionPermissionDoc
                 Reject
               </button>
             </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
           </motion.div>
         )}
       </AnimatePresence>

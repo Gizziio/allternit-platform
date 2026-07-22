@@ -72,29 +72,14 @@ pnpm exec tsc --project tsconfig.typecheck.json --noEmit
 
 ## Remaining Architectural Debt
 
-1. **`CreateAgentForm.tsx` is still a ~2,100-line monolith**
-   - Contains identity, avatar, model, capabilities, tools, workspace layers, harness, voice, review, and forge animation logic.
-   - **Recommendation:** split each step into its own component under `src/views/agent-view/steps/` and keep the parent form as a thin state/router shell.
-
-2. **Heavy use of `// @ts-nocheck`**
-   - `AgentView.tsx` and `CreateAgentForm.tsx` disable TypeScript. The studio surface would be safer and easier to refactor with types enabled incrementally.
-
-3. **Mixed styling languages**
-   - Some components still rely on `STUDIO_THEME` constants and inline styles from `AgentView.constants.ts`. A full pass to replace those with CSS variables would make the studio fully theme-aware.
-
-4. **Shared form logic between Create and Edit**
+1. **Shared form logic between Create and Edit**
    - `CreateAgentForm` and `EditAgentForm` duplicate model/harness/surface/trust/etc. UI. Extracting a shared `AgentFormFields` component would reduce duplication.
 
 ## Suggested Next Steps
 
 1. **Short-term (low risk)**
-   - Enable TypeScript in `AgentView.tsx` (remove `// @ts-nocheck`) and fix the resulting errors.
-   - Audit remaining `STUDIO_THEME` usages and migrate to platform tokens.
-
-2. **Medium-term**
-   - Break `CreateAgentForm.tsx` into step components (Identity, Avatar, Model, Capabilities, Tools, Workspace, Voice, Review).
    - Extract shared form fields into a reusable `AgentFormFields` component used by both create and edit flows.
 
-3. **Long-term**
+2. **Long-term**
    - Add tests for agent creation / editing flows.
    - Move agent-related stores/hooks under a dedicated `src/lib/agents/studio/` module if the surface keeps growing.

@@ -17,6 +17,11 @@ import ClerkKit
 /// `Clerk.configure` assertion-fails in debug builds.
 @MainActor
 final class AuthManager: ObservableObject {
+    enum AuthEntryMode {
+        case signIn
+        case signUp
+    }
+
     static let shared = AuthManager()
 
     /// Whether `Clerk.configure` ran with a non-empty publishable key.
@@ -26,6 +31,7 @@ final class AuthManager: ObservableObject {
 
     /// Set true to present ClerkKitUI's `AuthView` sheet (see AllternitApp).
     @Published var isPresentingAuth = false
+    @Published private(set) var authEntryMode: AuthEntryMode = .signIn
 
     private init() {}
 
@@ -57,6 +63,14 @@ final class AuthManager: ObservableObject {
     /// Bridges to ClerkKitUI: presenting the `AuthView` sheet is the sign-in flow.
     func signIn() {
         guard isClerkConfigured else { return }
+        authEntryMode = .signIn
+        isPresentingAuth = true
+    }
+
+    /// Opens Clerk's dedicated account-creation flow.
+    func signUp() {
+        guard isClerkConfigured else { return }
+        authEntryMode = .signUp
         isPresentingAuth = true
     }
 
@@ -64,5 +78,40 @@ final class AuthManager: ObservableObject {
         guard isClerkConfigured else { return }
         try await Clerk.shared.auth.signOut()
         refreshAuthState()
+    }
+
+    /// Signed-in user's first name for the Phase-10 onboarding welcome
+    /// ("Hey, Joe!"); nil when signed out / skip-auth / no first name, so
+    /// the caller falls back to "Hey there!".
+    var firstName: String? {
+        guard isClerkConfigured,
+              let firstName = Clerk.shared.user?.firstName,
+              !firstName.isEmpty else { return nil }
+        return firstName
+    }
+
+    /// Display name for the sidebar footer: first name, full name, or the
+    /// primary email's local part — whichever resolves first.
+    var displayName: String {
+        guard let user = Clerk.shared.user else { return "" }
+        if let firstName = user.firstName, !firstName.isEmpty {
+            return firstName
+        }
+        if let email = user.emailAddresses.first?.emailAddress {
+            return email.split(separator: "@").first.map(String.init) ?? email
+        }
+        return "Account"
+    }
+
+    /// Sidebar avatar initial — the first character of `displayName`,
+    /// uppercased (matches the reference app's single-letter avatar).
+    var avatarInitial: String {
+        displayName.first.map { String($0).uppercased() } ?? "?"
+    }
+
+    /// The signed-in user's primary email address (Settings account row);
+    /// nil when signed out or the account has no email.
+    var primaryEmail: String? {
+        Clerk.shared.user?.emailAddresses.first?.emailAddress
     }
 }

@@ -19,6 +19,7 @@
 // ============================================================================
 
 import type { ArtifactUIPart } from "@/lib/ai/ui-parts.types";
+import { getActiveRuntimeId, getRuntimeExecutionTarget } from "@/lib/runtime-target";
 
 /**
  * When a cloudflared tunnel is active (set by /connect page), returns the
@@ -30,6 +31,11 @@ import type { ArtifactUIPart } from "@/lib/ai/ui-parts.types";
  */
 function getGatewayOrigin(): string {
   if (typeof window === 'undefined') return '';
+  // Paired cloud runtimes must stay on relative runtime paths so the global
+  // fetch/EventSource interceptors can relay them with the user's Clerk token.
+  // Returning the runtime's absolute gateway URL here bypasses that relay and
+  // leaks code-session traffic out of the selected execution target.
+  if (getRuntimeExecutionTarget() === 'cloud' && getActiveRuntimeId()) return '';
   const win = window as unknown as Record<string, unknown>;
   const fromWin = typeof win.__ALLTERNIT_GATEWAY_URL__ === 'string' ? win.__ALLTERNIT_GATEWAY_URL__ as string : '';
   if (fromWin && !/^https?:\/\/(?:127\.0\.0\.1|localhost)/.test(fromWin)) return fromWin;

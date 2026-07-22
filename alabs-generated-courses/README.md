@@ -32,7 +32,7 @@ alabs-generated-courses/
 ## How These Are Used
 
 1. **Canvas Sync** — Scripts upload these HTML files as Canvas wiki pages
-2. **Demo Site** — Files are copied to `alabs-demos/` for standalone browsing
+2. **Demo Site** — Files are copied to `alabs-generated-courses/demos/` for standalone browsing
 3. **Backup** — These are the master copies. Canvas is the deployment target.
 
 ## Regenerating a Module

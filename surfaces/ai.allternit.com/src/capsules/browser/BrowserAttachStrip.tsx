@@ -450,6 +450,7 @@ export function BrowserAttachStrip() {
           <button
             type="button"
             onClick={() => void refreshEngineHealth()}
+            aria-label="Refresh engine status"
             title={engineRuntimeStatus ?? 'Refresh engine status'}
             style={{
               display: 'inline-flex',

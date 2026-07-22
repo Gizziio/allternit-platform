@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { apiRequest, API_BASE_URL } from '@/lib/agents/api-config';
+import { apiRequest, runtimeApiUrl } from '@/lib/agents/api-config';
 import {
   GitBranch,
   CaretDown,
@@ -36,7 +36,7 @@ export const GitView: React.FC = () => {
 
   useEffect(() => {
     apiRequest<{ commits: Array<{ hash: string; shortHash?: string; message: string; author: string; date: string }> }>(
-      `${API_BASE_URL}/git/log`,
+      runtimeApiUrl('/git/log'),
       { method: 'POST', body: JSON.stringify({ path: '.', limit: 20 }) }
     )
       .then(({ commits: raw }) =>
@@ -51,14 +51,14 @@ export const GitView: React.FC = () => {
         })))
       )
       .catch(() => {});
-    apiRequest<{ staged: StagedFile[] }>(`${API_BASE_URL}/git/status`, { method: 'POST', body: JSON.stringify({ path: '.' }) })
+    apiRequest<{ staged: StagedFile[] }>(runtimeApiUrl('/git/status'), { method: 'POST', body: JSON.stringify({ path: '.' }) })
       .then((status) => setStagedFiles(status.staged ?? []))
       .catch(() => {});
   }, []);
 
   const refreshLog = () => {
     apiRequest<{ commits: Array<{ hash: string; shortHash?: string; message: string; author: string; date: string }> }>(
-      `${API_BASE_URL}/git/log`,
+      runtimeApiUrl('/git/log'),
       { method: 'POST', body: JSON.stringify({ path: '.', limit: 20 }) }
     )
       .then(({ commits: raw }) =>
@@ -80,7 +80,7 @@ export const GitView: React.FC = () => {
     if (!message) return;
     setCommitError(null);
     setIsCommitting(true);
-    apiRequest<{ success: boolean }>(`${API_BASE_URL}/git/commit`, {
+    apiRequest<{ success: boolean }>(runtimeApiUrl('/git/commit'), {
       method: 'POST',
       body: JSON.stringify({ path: '.', message }),
     })

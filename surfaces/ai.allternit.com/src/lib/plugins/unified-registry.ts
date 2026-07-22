@@ -23,6 +23,7 @@
 import type { ModePlugin } from './types';
 import type { PluginCategory } from './marketplace';
 import type { FeaturePlugin } from '@/plugins/feature.types';
+import { NATIVE_PLUGIN_CATALOG } from '@/plugins/catalog/native-plugins';
 import { createModuleLogger } from '@/lib/logger';
 
 const logger = createModuleLogger('UnifiedPluginRegistry');
@@ -447,6 +448,31 @@ class UnifiedPluginRegistry {
     
     for (const plugin of builtInPlugins) {
       this.plugins.set(plugin.id, plugin);
+    }
+
+    // Native catalog: Claude-native skills + Codex workflow plugins + Allternit skills,
+    // snapshotted into src/plugins/catalog/native-plugins.ts. These ship with the app.
+    for (const entry of NATIVE_PLUGIN_CATALOG) {
+      if (this.plugins.has(entry.id)) continue;
+      const seed: UnifiedPlugin = {
+        id: entry.id,
+        name: entry.name,
+        description: entry.description,
+        version: entry.version,
+        source: 'built-in',
+        status: 'installed',
+        category: entry.category,
+        author: {
+          name: entry.origin === 'claude-native' ? 'Anthropic' : entry.origin === 'codex' ? 'Codex' : 'Allternit',
+          verified: true,
+        },
+        capabilities: [],
+        deterministicActions: [],
+        runtime: { isLoaded: false },
+        accentColor: getPluginColor({ category: entry.category } as UnifiedPlugin),
+        tags: entry.tags,
+      };
+      this.plugins.set(seed.id, seed);
     }
   }
   
@@ -892,3 +918,5 @@ function getPluginColor(plugin: UnifiedPlugin): string {
 if (typeof window !== 'undefined') {
   (window as unknown as Record<string, unknown>).unifiedPluginRegistry = unifiedPluginRegistry;
 }
+
+export { unifiedPluginRegistry, useUnifiedPlugins };

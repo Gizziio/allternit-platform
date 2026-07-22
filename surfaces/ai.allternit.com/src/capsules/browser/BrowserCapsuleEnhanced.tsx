@@ -1391,9 +1391,14 @@ export function BrowserCapsuleEnhanced({
   return (
     <LazyMotion features={domAnimation}>
       <div data-testid="browser-capsule-enhanced-root" className="flex flex-col size-full flex-1 min-h-0 min-w-0 relative overflow-hidden bg-[var(--shell-view-bg,var(--view-browser-bg))] text-[var(--shell-item-fg,var(--text-primary))] font-sans select-none">
-        
+
+        {/* When the shell rail is collapsed, its floating rail controls (and the
+            frameless window's traffic lights) overlay the left end of this
+            chrome — push the Workspaces strip right so they never collide. */}
+        <style>{`[data-shell-frame][data-rail-collapsed="true"] [data-browser-workspaces-strip] { padding-left: var(--workspaces-strip-clearance, 148px); }`}</style>
+
         {/* Workspaces are browser sessions with their own tabs and Allternit context. */}
-        {!compactMode && <div className="h-9 shrink-0 flex items-center gap-1 px-2 bg-[var(--shell-rail-bg)] border-b border-solid border-[var(--shell-divider)]">
+        {!compactMode && <div data-browser-workspaces-strip="" className="h-9 shrink-0 flex items-center gap-1 px-2 bg-[var(--shell-rail-bg)] border-b border-solid border-[var(--shell-divider)]" style={{ '--workspaces-strip-clearance': isElectronShell() ? '148px' : '56px' } as React.CSSProperties}>
           <div className="flex items-center gap-1 overflow-x-auto [scrollbar-width:none] flex-1">
             <span className="px-1.5 text-[9px] font-bold uppercase tracking-[0.14em] text-[var(--shell-item-muted)]">Workspaces</span>
             {workspaces.map((workspace) => <button key={workspace.id} type="button" onClick={() => { setActiveWorkspace(workspace.id); setWorkspaceDeleteArmed(false); }} title={`Switch to ${workspace.name}`} className={cn("h-7 px-2.5 rounded-lg border border-solid flex items-center gap-1.5 cursor-pointer text-[12px] font-semibold whitespace-nowrap transition-colors relative", workspace.id === activeWorkspaceId ? "bg-[var(--shell-item-active-bg)] border-[var(--accent-browser)]/30 text-[var(--shell-item-active-fg)] after:absolute after:left-2 after:right-2 after:-bottom-[5px] after:h-0.5 after:rounded-full after:bg-[var(--accent-browser)]" : "bg-transparent border-transparent text-[var(--shell-item-muted)] hover:bg-[var(--shell-item-hover)]")}><span style={{ color: workspace.color }}>{workspace.icon}</span>{workspace.name}<span className="text-[9px] opacity-50">{tabs.filter((tab) => tab.workspaceId === workspace.id && !tab.essential).length}</span></button>)}

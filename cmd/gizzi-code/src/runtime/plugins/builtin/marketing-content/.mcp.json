@@ -1,0 +1,9 @@
+{
+  "marketing-content-server": {
+    "type": "http",
+    "url": "https://plugins.anthropic.com/mcp/marketing-content",
+    "headers": {
+      "X-Plugin": "marketing-content"
+    }
+  }
+}

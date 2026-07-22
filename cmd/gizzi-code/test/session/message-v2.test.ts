@@ -912,6 +912,50 @@ describe("session.message-v2.fromError", () => {
     expect(MessageV2.APIError.isInstance(result)).toBe(true)
   })
 
+  test("preserves plain provider Error details as a structured APIError", () => {
+    const result = MessageV2.fromError(
+      new Error("Kimi quota exceeded for this billing cycle"),
+      { providerID: "kimi-cli" },
+    )
+
+    expect(result).toStrictEqual({
+      name: "APIError",
+      data: {
+        message: "Kimi quota exceeded for this billing cycle",
+        isRetryable: false,
+        metadata: {
+          providerID: "kimi-cli",
+          code: "insufficient_balance",
+          originalName: "Error",
+        },
+      },
+    })
+  })
+
+  test("preserves unrecognized provider stream payloads as structured APIErrors", () => {
+    const result = MessageV2.fromError(
+      {
+        type: "error",
+        error: { code: "account_suspended", message: "Account is suspended" },
+        statusCode: 403,
+      },
+      { providerID: "example-provider" },
+    )
+
+    expect(result).toStrictEqual({
+      name: "APIError",
+      data: {
+        message: "Account is suspended",
+        statusCode: 403,
+        isRetryable: false,
+        metadata: {
+          providerID: "example-provider",
+          code: "generic",
+        },
+      },
+    })
+  })
+
   test("serializes unknown inputs", () => {
     const result = MessageV2.fromError(123, { providerID: "test" })
 

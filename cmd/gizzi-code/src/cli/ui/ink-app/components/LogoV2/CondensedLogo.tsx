@@ -89,7 +89,7 @@ export function CondensedLogo() {
   }
   let t5;
   if ($[8] === Symbol.for("react.memo_cache_sentinel")) {
-    t5 = <Text bold={true}>Claude Code</Text>;
+    t5 = <Text bold={true}>Gizzi Code</Text>;
     $[8] = t5;
   } else {
     t5 = $[8];
@@ -104,7 +104,7 @@ export function CondensedLogo() {
   }
   let t7;
   if ($[11] !== shouldSplit || $[12] !== truncatedBilling || $[13] !== truncatedModel) {
-    t7 = shouldSplit ? <><Text dimColor={true}>{truncatedModel}</Text><Text dimColor={true}>{truncatedBilling}</Text></> : <Text dimColor={true}>{truncatedModel} · {truncatedBilling}</Text>;
+    t7 = shouldSplit ? <><Text dimColor={true}>{truncatedModel}</Text><Text dimColor={true}>{truncatedBilling}</Text></> : <Text dimColor={true}>{[truncatedModel, truncatedBilling].filter(Boolean).join(' · ')}</Text>;
     $[11] = shouldSplit;
     $[12] = truncatedBilling;
     $[13] = truncatedModel;

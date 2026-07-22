@@ -27,6 +27,7 @@ export const SessionTable = sqliteTable(
     summary_diffs: text({ mode: "json" }).$type<Snapshot.FileDiff[]>(),
     revert: text({ mode: "json" }).$type<{ messageID: string; partID?: string; snapshot?: string; diff?: string }>(),
     permission: text({ mode: "json" }).$type<PermissionNext.Ruleset>(),
+    permission_mode: text(),
     agent_id: text(),
     surface: text(),
     harness: text({ mode: "json" }).$type<{
@@ -81,6 +82,26 @@ export const PartTable = sqliteTable(
   (table) => [index("part_message_idx").on(table.message_id), index("part_session_idx").on(table.session_id)],
 )
 
+/** Append-only replay ledger. Mutable message/part tables remain the current-state projection. */
+export const SessionTraceTable = sqliteTable(
+  "session_trace",
+  {
+    sequence: integer().primaryKey({ autoIncrement: true }),
+    session_id: text()
+      .notNull()
+      .references(() => SessionTable.id, { onDelete: "cascade" }),
+    kind: text().notNull(),
+    message_id: text(),
+    part_id: text(),
+    data: text({ mode: "json" }).notNull().$type<unknown>(),
+    time_created: integer().notNull(),
+  },
+  (table) => [
+    index("session_trace_cursor_idx").on(table.session_id, table.sequence),
+    index("session_trace_message_idx").on(table.message_id),
+  ],
+)
+
 export const TodoTable = sqliteTable(
   "todo",
   {
@@ -106,6 +127,28 @@ export const PermissionTable = sqliteTable("permission", {
   ...Timestamps,
   data: text({ mode: "json" }).notNull().$type<PermissionNext.Ruleset>(),
 })
+
+export const BackgroundTaskTable = sqliteTable(
+  "background_task",
+  {
+    id: text().primaryKey(),
+    parent_session_id: text()
+      .notNull()
+      .references(() => SessionTable.id, { onDelete: "cascade" }),
+    child_session_id: text().references(() => SessionTable.id, { onDelete: "set null" }),
+    kind: text().notNull(),
+    status: text().notNull(),
+    description: text().notNull(),
+    output: text(),
+    error: text(),
+    time_finished: integer(),
+    ...Timestamps,
+  },
+  (table) => [
+    index("background_task_parent_idx").on(table.parent_session_id, table.status),
+    index("background_task_child_idx").on(table.child_session_id),
+  ],
+)
 
 export const RoutineTable = sqliteTable(
   "routine",
@@ -147,14 +190,35 @@ export const GoalTable = sqliteTable(
     id: text().primaryKey(),
     agent_id: text(),
     objective: text().notNull(),
+    completion_criterion: text(),
     milestones: text({ mode: "json" }).notNull().$type<Array<{ name: string; status: string; completedAt?: string }>>(),
     validations: text({ mode: "json" }).notNull().$type<Array<{ testName: string; status: string; output?: string }>>(),
+    budget: text({ mode: "json" }).notNull().$type<{
+      turnBudget: number | null
+      tokenBudget: number | null
+      wallClockBudgetMs: number | null
+    }>(),
+    usage: text({ mode: "json" }).notNull().$type<{
+      turnsUsed: number
+      tokensUsed: number
+      wallClockMs: number
+      lastStartedAt: number | null
+    }>(),
+    blocked_audit: text({ mode: "json" }).notNull().$type<{
+      fingerprint: string | null
+      consecutiveTurns: number
+    }>(),
+    terminal_reason: text(),
+    queue_position: integer(),
+    revision: integer().notNull().default(1),
     state: text().notNull().default("planning"),
     progress: integer().notNull().default(0),
+    time_started: integer(),
+    time_finished: integer(),
     ...Timestamps,
   },
   (table) => [
     index("goal_agent_idx").on(table.agent_id),
+    index("goal_state_queue_idx").on(table.state, table.queue_position),
   ]
 )
-

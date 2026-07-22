@@ -1,85 +1,82 @@
 #!/usr/bin/env bun
 // @ts-nocheck
 
-// @ts-nocheck
 /**
- * Gizzi TUI Entry Point - Full REPL Integration
+ * Gizzi TUI Entry Point - Ink-based REPL initialization.
  */
-import React, { useState, useEffect } from 'react';
-import { render, Box, Text } from './ink';
-import { REPL } from './screens/REPL';
-import { enableConfigs } from './utils/config';
-import { AppStateProvider } from './state/AppState';
+import React from 'react'
+import { createRoot } from './ink'
+import { App } from './components/App'
+import { REPL } from './screens/REPL'
+import { enableConfigs } from './utils/config'
+import { enableConfigs as enableSharedConfigs } from '../../../shared/utils/config'
+import { getDefaultAppState } from './state/AppStateStore'
+import { createStatsStore } from './context/stats'
+import { getAllBaseTools } from './tools'
+import { getCommands } from './commands'
+import { createUserMessage } from './utils/messages'
+import { setCwdState, setOriginalCwd, setSessionTrustAccepted } from './bootstrap/state'
+import { Log } from '../../../shared/util/log'
 
-const App: React.FC = () => {
-  const [initialized, setInitialized] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+export async function tui(options?: any): Promise<void> {
+  const currentCwd = process.cwd()
+  setOriginalCwd(currentCwd)
+  setCwdState(currentCwd)
+  setSessionTrustAccepted(true)
 
-  useEffect(() => {
-    // Simulate initialization
-    const timer = setTimeout(() => {
-      try {
-        setInitialized(true);
-      } catch (err) {
-        setError(String(err));
-      }
-    }, 500);
-    return () => clearTimeout(timer);
-  }, []);
+  enableConfigs()
+  enableSharedConfigs()
 
-  if (error) {
-    return (
-      <Box flexDirection="column" alignItems="center" justifyContent="center" flexGrow={1}>
-        <Text color="red" bold>Error</Text>
-        <Text color="red">{error}</Text>
-      </Box>
-    );
+  if (options?.fetch) {
+    globalThis.fetch = options.fetch
   }
 
-  if (!initialized) {
-    return (
-      <Box flexDirection="column" alignItems="center" justifyContent="center" flexGrow={1}>
-        <Text color="#d4b08c" bold>⏺ GIZZI ⏺</Text>
-        <Text dimColor>Loading...</Text>
-      </Box>
-    );
-  }
+  Log.Default.info("tui: getting tools and commands")
+  const initialTools = getAllBaseTools().filter((t: any) => t.isEnabled ? t.isEnabled() : true)
+  const initialCommands = await getCommands()
 
-  return (
-    <AppStateProvider>
-      <Box flexDirection="column" height="100%">
+  const initialMessages = options?.args?.prompt
+    ? [createUserMessage({ content: options.args.prompt })]
+    : []
+
+  Log.Default.info("tui: rendering ink App & REPL via createRoot")
+  try {
+    const root = await createRoot({ exitOnCtrlC: false })
+    root.render(
+      <App
+        initialState={getDefaultAppState()}
+        stats={createStatsStore()}
+        getFpsMetrics={() => undefined}
+      >
         <REPL
-          commands={[]}
+          commands={initialCommands}
           debug={false}
-          initialTools={[]}
-          initialMessages={[]}
+          initialTools={initialTools}
+          initialMessages={initialMessages}
           thinkingConfig={{ enabled: false, budgetTokens: 0 }}
         />
-      </Box>
-    </AppStateProvider>
-  );
-};
+      </App>
+    )
 
-export async function startInkTUI(): Promise<void> {
-  if (!process.stdin.isTTY) {
-    console.error('Error: Must run in interactive terminal');
-    process.exit(1);
+    Log.Default.info("tui: waiting for exit")
+    await root.waitUntilExit()
+  } catch (err: any) {
+    Log.Default.error("tui render exception", { error: err?.stack || err?.message || String(err) })
+    console.error("TUI Render Error:", err)
+  } finally {
+    if (options?.onExit) {
+      await options.onExit()
+    }
   }
-  
-  // Enable configs before rendering UI components that may access config
-  enableConfigs();
-  
-  const app = await render(<App />, { exitOnCtrlC: false });
-  await app.waitUntilExit();
 }
 
-export async function tui(_options?: unknown): Promise<void> {
-  await startInkTUI();
+export async function startInkTUI(): Promise<void> {
+  await tui()
 }
 
 if (import.meta.main) {
   startInkTUI().catch(err => {
-    console.error('Failed:', err);
-    process.exit(1);
-  });
+    console.error('Failed to start TUI:', err)
+    process.exit(1)
+  })
 }

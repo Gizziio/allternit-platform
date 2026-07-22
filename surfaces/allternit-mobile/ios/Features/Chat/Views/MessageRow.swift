@@ -4,20 +4,38 @@ import MarkdownView
 struct MessageRow: View {
     let message: MessageRecord
     let onArtifactTap: (ArtifactRecord) -> Void
+    /// Error-card actions: model errors offer "Choose a model", everything
+    /// else offers "Retry" (re-streams the last sent text).
+    var onChooseModel: () -> Void = {}
+    var onRetry: (String) -> Void = { _ in }
+    /// Phase 8 action bar: true only on the most recent assistant reply —
+    /// its row gets the retry (regenerate) button.
+    var isLastAssistant: Bool = false
+    /// Phase 8 edit: true only on the most recent user bubble — its
+    /// long-press menu gets "Edit" (fill the composer; re-sending truncates
+    /// the conversation after it).
+    var isLastUser: Bool = false
+    var onRegenerate: () -> Void = {}
+    var onEdit: () -> Void = {}
 
-    /// One streaming source per message, kept alive for the message's lifetime.
-    /// The view model's ~50ms flushes land here via `onChange(of: message)`;
-    /// the reader parses incrementally off the main thread.
-    @State private var markdownSource: StreamingMarkdownSource
     @State private var isThinkingExpanded = false
-
-    init(message: MessageRecord, onArtifactTap: @escaping (ArtifactRecord) -> Void) {
-        self.message = message
-        self.onArtifactTap = onArtifactTap
-        _markdownSource = State(initialValue: StreamingMarkdownSource(message.content))
-    }
+    /// Settings → Capabilities → Artifacts gates the inline artifact cards;
+    /// observed so toggling it applies to already-rendered rows.
+    @ObservedObject private var settings = SettingsStore.shared
 
     var body: some View {
+        // Voice-mode summary card (Phase 7b): a centered card row with no
+        // avatars/bubble — the conversation itself renders as normal turns.
+        if let voiceSummary = message.voiceSummary {
+            VoiceSummaryCardView(summary: voiceSummary)
+                .frame(maxWidth: .infinity)
+                .padding(.horizontal, 12)
+        } else {
+            messageRowBody
+        }
+    }
+
+    private var messageRowBody: some View {
         HStack(alignment: .top, spacing: 12) {
             if message.role == "user" {
                 Spacer(minLength: 40)
@@ -44,12 +62,38 @@ struct MessageRow: View {
                     toolStatusLine(toolStatus)
                 }
 
-                // Message Bubble — markdown for the assistant, plain text for the user
-                bubble
+                // Message Bubble — markdown for the assistant, plain text for the user.
+                // Skipped when the message is nothing but an error card.
+                if !message.content.isEmpty || message.error == nil {
+                    bubble
+                }
 
-                // Inline Artifact Card attachments (typed artifact.created events)
-                ForEach(message.artifacts) { artifact in
-                    artifactCard(artifact)
+                // Structured failure card (replaces raw backend error text)
+                if let error = message.error {
+                    ChatErrorCardView(
+                        error: error,
+                        onChooseModel: onChooseModel,
+                        onRetry: { onRetry(message.id) }
+                    )
+                }
+
+                // Inline Artifact Card attachments (typed artifact.created
+                // events) — gated by Settings → Capabilities → Artifacts.
+                if settings.artifactsEnabled {
+                    ForEach(message.artifacts) { artifact in
+                        artifactCard(artifact)
+                    }
+                }
+
+                // Phase 8 action bar (Claude parity): copy / share / speak /
+                // 👍 / 👎 / retry under completed assistant replies. Hidden
+                // while streaming and on error cards (the card owns retry).
+                if message.role == "assistant", !message.isStreaming, message.error == nil {
+                    MessageActionBar(
+                        message: message,
+                        isLastAssistant: isLastAssistant,
+                        onRegenerate: onRegenerate
+                    )
                 }
             }
 
@@ -64,22 +108,6 @@ struct MessageRow: View {
             }
         }
         .padding(.horizontal, 12)
-        .onAppear {
-            // History and user messages never stream: seed and finish so the
-            // reader performs a single full parse.
-            markdownSource.text = message.content
-            if !message.isStreaming {
-                markdownSource.finishStreaming()
-            }
-        }
-        .onChange(of: message) { _, updated in
-            if updated.content != markdownSource.text {
-                markdownSource.text = updated.content
-            }
-            if !updated.isStreaming {
-                markdownSource.finishStreaming()
-            }
-        }
     }
 
     // MARK: - Subviews
@@ -96,9 +124,11 @@ struct MessageRow: View {
                 .cornerRadius(18)
                 .contextMenu { bubbleContextMenu }
         } else {
-            StreamingMarkdownReader(markdownSource) { parseResult in
-                MarkdownView(parseResult)
-            }
+            // MarkdownView 2.6.0 (pinned, see project.yml): full re-parse on
+            // each content change — bounded by the view model's ~50ms flush
+            // coalescing. v3's incremental StreamingMarkdownReader returns
+            // with the Xcode upgrade.
+            MarkdownView(message.content)
             .font(.body)
             .foregroundColor(Color("TextPrimary"))
             .padding(.horizontal, 16)
@@ -111,16 +141,19 @@ struct MessageRow: View {
 
     @ViewBuilder
     private var bubbleContextMenu: some View {
+        // Phase 8: "Edit" on the last user bubble — fills the composer with
+        // the message text; re-sending truncates the conversation after it
+        // (ChatViewModel.resendEditedMessage).
+        if message.role == "user", isLastUser {
+            Button(action: onEdit) {
+                Label("Edit", systemImage: "pencil")
+            }
+        }
+
         Button(action: {
             UIPasteboard.general.string = message.content
         }) {
             Label("Copy Text", systemImage: "doc.on.doc")
-        }
-
-        Button(action: {
-            // Trigger branching callback from this index
-        }) {
-            Label("Fork Thread Here", systemImage: "arrow.triangle.branch")
         }
     }
 
@@ -197,7 +230,7 @@ struct MessageRow: View {
                         .foregroundColor(Color("TextPrimary"))
                         .lineLimit(1)
 
-                    Text("Click to open interactive preview")
+                    Text(artifact.isPreviewable ? "Click to open interactive preview" : "Click to view")
                         .font(.caption2)
                         .foregroundColor(Color("TextSecondary"))
                 }

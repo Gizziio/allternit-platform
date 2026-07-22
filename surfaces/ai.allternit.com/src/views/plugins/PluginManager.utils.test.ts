@@ -4,7 +4,7 @@ import {
   isVersionNewer,
   normalizeMarketplacePluginPayload,
   parseGitHubRepoRef,
-} from './CapabilitiesManager';
+} from './PluginManager/utils';
 
 describe('PluginManager utility helpers', () => {
   it('parses valid GitHub repo refs and strips .git suffix', () => {
@@ -14,8 +14,11 @@ describe('PluginManager utility helpers', () => {
 
   it('returns null for invalid GitHub repo refs', () => {
     expect(parseGitHubRepoRef('owner')).toBeNull();
-    expect(parseGitHubRepoRef('https://github.com/owner/repo')).toBeNull();
     expect(parseGitHubRepoRef('')).toBeNull();
+  });
+
+  it('parses full GitHub URLs', () => {
+    expect(parseGitHubRepoRef('https://github.com/owner/repo')).toEqual({ owner: 'owner', repo: 'repo' });
   });
 
   it('detects languages from filename extensions', () => {

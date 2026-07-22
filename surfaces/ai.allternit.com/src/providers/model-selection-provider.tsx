@@ -48,6 +48,16 @@ export function ModelSelectionProvider({
     }
   }, [defaultSelection]);
 
+  // Persist the selection so non-React code (e.g. the session store building
+  // the agent-chat payload) can resolve the current provider/model.
+  useEffect(() => {
+    try {
+      if (selection) {
+        window.localStorage.setItem('allternit:model-selection', JSON.stringify(selection));
+      }
+    } catch { /* storage unavailable */ }
+  }, [selection]);
+
   const selectModel = useCallback((newSelection: ModelSelection) => {
     setSelection(newSelection);
     setIsSelecting(false);

@@ -16,6 +16,8 @@ import { $ } from "bun"
 import { Flag } from "@/runtime/context/flag/flag"
 import { readdir } from "fs/promises"
 import chokidar from "chokidar"
+import { dirname, join } from "path"
+import { RuntimeTelemetry } from "@/runtime/telemetry"
 
 const SUBSCRIBE_TIMEOUT_MS = 10_000
 
@@ -70,9 +72,24 @@ export namespace FileWatcher {
 
   const watcher = lazy((): WatcherAdapter | undefined => {
     try {
-      const binding = require(
-        `@parcel/watcher-${process.platform}-${process.arch}${process.platform === "linux" ? `-${GIZZI_LIBC || "glibc"}` : ""}`,
+      const packageName = `@parcel/watcher-${process.platform}-${process.arch}${process.platform === "linux" ? `-${GIZZI_LIBC || "glibc"}` : ""}`
+      const sidecar = join(
+        dirname(process.execPath),
+        "native-assets",
+        `${process.platform}-${process.arch}`,
+        "node_modules",
+        ...packageName.split("/"),
       )
+      let binding: unknown
+      try {
+        binding = require(sidecar)
+      } catch {
+        RuntimeTelemetry.track("native_asset_fallback", {
+          package: packageName,
+          platform: `${process.platform}-${process.arch}`,
+        })
+        binding = require(packageName)
+      }
       return createWrapper(binding) as unknown as WatcherAdapter
     } catch (error) {
       log.warn("parcel watcher binding unavailable, falling back to chokidar", { error })

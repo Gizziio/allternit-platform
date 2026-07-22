@@ -1064,6 +1064,7 @@ async fn idempotency_begin(db: &DbHandle, key: &LlmKeyContext, idem_key: &str) -
 // ─── Handlers ───────────────────────────────────────────────────────────────
 
 /// `POST /chat/completions` — OpenAI-compatible completion via Gizzi.
+#[tracing::instrument(skip_all, name = "llm_gateway.chat_completions")]
 pub async fn chat_completions(
     State(state): State<Arc<AppState>>,
     Extension(key): Extension<LlmKeyContext>,

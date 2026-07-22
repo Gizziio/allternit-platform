@@ -1,0 +1,9 @@
+{
+  "engineering-code-server": {
+    "type": "http",
+    "url": "https://plugins.anthropic.com/mcp/engineering-code",
+    "headers": {
+      "X-Plugin": "engineering-code"
+    }
+  }
+}

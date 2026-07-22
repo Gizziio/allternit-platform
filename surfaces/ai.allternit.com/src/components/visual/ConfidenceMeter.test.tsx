@@ -1,14 +1,15 @@
+import React from 'react';
 /**
  * Confidence Meter Component Tests
  */
 
 import { describe, it, expect } from 'vitest';
-import { render, screen } from '@testing-library/react';
+import { render, screen, waitFor } from '@testing-library/react';
 import { ConfidenceMeter } from './ConfidenceMeter';
 
 describe('ConfidenceMeter', () => {
   it('renders with correct confidence percentage', () => {
-    render(<ConfidenceMeter confidence={0.85} />);
+    render(<ConfidenceMeter confidence={0.85} animated={false} />);
     expect(screen.getByText('85%')).toBeInTheDocument();
   });
 

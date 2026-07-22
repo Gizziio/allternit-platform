@@ -118,19 +118,28 @@ final class ArtifactContentLoader: ObservableObject {
     }
 
     /// Fetches `urlString` as UTF-8 text. Absolute http(s) URLs are fetched
-    /// with a plain request (external host — no Clerk token); anything else
-    /// is treated as a gateway-relative path through the authenticated client.
+    /// with a plain request (external host — no Clerk token); `data:` URLs are
+    /// decoded locally; `file:` URLs are read from disk; anything else is
+    /// treated as a gateway-relative path through the authenticated client.
     private func fetchURLContent(_ urlString: String) async throws -> String {
         guard let url = URL(string: urlString) else {
             throw ArtifactContentError.badURL
         }
 
         let data: Data
-        if url.scheme == "http" || url.scheme == "https" {
+        switch url.scheme?.lowercased() {
+        case "http", "https":
             let (externalData, response) = try await client.session.data(from: url)
             try client.validate(response, data: externalData)
             data = externalData
-        } else {
+        case "data":
+            guard let decoded = Self.decodeDataURL(url) else {
+                throw ArtifactContentError.badURL
+            }
+            data = decoded
+        case "file":
+            data = try Data(contentsOf: url)
+        default:
             var request = try await client.authorizedRequest(path: urlString)
             request.setValue("*/*", forHTTPHeaderField: "Accept")
             let (gatewayData, response) = try await client.session.data(for: request)
@@ -142,6 +151,21 @@ final class ArtifactContentLoader: ObservableObject {
             throw ArtifactContentError.binaryContent
         }
         return text
+    }
+
+    /// Decodes a `data:[<mediatype>][;base64],<data>` URL into raw bytes.
+    private static func decodeDataURL(_ url: URL) -> Data? {
+        guard url.scheme?.lowercased() == "data" else { return nil }
+        let string = url.absoluteString
+        guard let commaIndex = string.firstIndex(of: ","),
+              commaIndex > string.startIndex else { return nil }
+        let metaStart = string.index(string.startIndex, offsetBy: 5) // after "data:"
+        let meta = String(string[metaStart..<commaIndex]).lowercased()
+        let dataString = String(string[string.index(after: commaIndex)...])
+        if meta.contains(";base64") {
+            return Data(base64Encoded: dataString)
+        }
+        return dataString.removingPercentEncoding?.data(using: .utf8)
     }
 
     /// GET `artifacts/:artifactId` on the gateway. Route shape confirmed in

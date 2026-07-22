@@ -11,6 +11,11 @@
 type WindowFetch = typeof window.fetch;
 type TokenGetter = () => Promise<string | null>;
 
+import {
+  getActiveRuntimeId,
+  getRuntimeExecutionTarget,
+} from './runtime-target';
+
 let currentTokenGetter: TokenGetter | null = null;
 let originalEventSource: typeof EventSource | null = null;
 let originalWebSocket: typeof WebSocket | null = null;
@@ -72,6 +77,10 @@ function isLocalOperatorApiUrl(value: string): boolean {
  */
 function isLocalOperatorUi(): boolean {
   return window.location.hostname === '127.0.0.1' || window.location.hostname === 'localhost';
+}
+
+function shouldUseLocalRuntime(): boolean {
+  return isLocalOperatorUi() && getRuntimeExecutionTarget() !== 'cloud';
 }
 
 function bytesToBase64(bytes: Uint8Array): string {
@@ -306,7 +315,7 @@ class RuntimeRelayWebSocket extends EventTarget {
   }
 
   private async connect(): Promise<void> {
-    const runtimeId = localStorage.getItem('allternit.active-runtime-id');
+    const runtimeId = getActiveRuntimeId();
     const token = currentTokenGetter
       ? await currentTokenGetter().catch(() => null)
       : localStorage.getItem('allternit_token');
@@ -382,7 +391,7 @@ function installWebSocketInterceptor(): void {
     url: string | URL,
     protocols?: string | string[],
   ): WebSocket {
-    if (!isDesktopShell() && isRuntimeApiUrl(String(url)) && !isLocalOperatorApiUrl(String(url)) && !isLocalOperatorUi()) {
+    if (!isDesktopShell() && isRuntimeApiUrl(String(url)) && !isLocalOperatorApiUrl(String(url)) && !shouldUseLocalRuntime()) {
       return new RuntimeRelayWebSocket(url) as unknown as WebSocket;
     }
     return protocols === undefined ? new NativeWebSocket(url) : new NativeWebSocket(url, protocols);
@@ -431,14 +440,14 @@ export function installFetchInterceptor(getToken?: TokenGetter): void {
     // backend, and a UI served from a loopback origin makes its same-origin
     // calls against that same local backend — in both cases skip the cloud
     // relay and the paired-runtime guard entirely.
-    if (isLocalOperatorApiUrl(url) || isLocalOperatorUi()) {
+    if (isLocalOperatorApiUrl(url) || shouldUseLocalRuntime()) {
       return originalFetch(input, {
         ...init,
         headers,
       })
     }
 
-    const activeRuntimeId = localStorage.getItem('allternit.active-runtime-id')
+    const activeRuntimeId = getActiveRuntimeId()
     if (!isDesktopShell() && activeRuntimeId && isRuntimeApiUrl(url) && token) {
       const method = (init?.method || (input instanceof Request ? input.method : 'GET')).toUpperCase()
       const serialized = await requestBody(input, init)

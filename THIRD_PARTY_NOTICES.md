@@ -4,6 +4,19 @@ This file contains notices for open-source software incorporated into this produ
 
 ---
 
+## Kimi Code
+**License:** MIT
+
+**Copyright:** Copyright (c) 2026 Moonshot AI
+
+**Source:** https://github.com/MoonshotAI/kimi-code
+
+**Used in:** `cmd/gizzi-code/src/runtime/agents/adaptive-run-batch.ts`
+
+**Adaptive agent batch scheduling adapted to Allternit's launcher contract.**
+
+---
+
 ## open-cowork
 **License:** MIT  
 **Used in:** `packages/@allternit/cowork-engine/src/scheduler/`, `packages/@allternit/cowork-engine/src/memory/`, `packages/@allternit/cowork-engine/src/sandbox/`  

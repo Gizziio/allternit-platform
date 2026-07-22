@@ -1,0 +1,9 @@
+{
+  "legal-contracts-server": {
+    "type": "http",
+    "url": "https://plugins.anthropic.com/mcp/legal-contracts",
+    "headers": {
+      "X-Plugin": "legal-contracts"
+    }
+  }
+}

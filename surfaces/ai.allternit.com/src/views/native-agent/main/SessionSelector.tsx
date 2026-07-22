@@ -22,6 +22,15 @@ interface SessionSelectorProps {
   onDelete: (id: string) => void;
 }
 
+function sessionWorkDir(session: NativeSession | null): string | null {
+  if (!session) return null;
+  for (const key of ['workDir', 'cwd', 'directory', 'projectPath'] as const) {
+    const value = session.metadata?.[key];
+    if (typeof value === 'string' && value.trim()) return value.replace(/^\/Users\/[^/]+/, '~');
+  }
+  return null;
+}
+
 export const SessionSelector: React.FC<SessionSelectorProps> = ({
   sessions,
   activeSession,
@@ -31,6 +40,7 @@ export const SessionSelector: React.FC<SessionSelectorProps> = ({
 }) => {
   const [isOpen, setIsOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
+  const activeWorkDir = sessionWorkDir(activeSession);
 
   useEffect(() => {
     if (!isOpen) return;
@@ -59,6 +69,11 @@ export const SessionSelector: React.FC<SessionSelectorProps> = ({
           <div className="text-[10px] text-zinc-500 truncate">
             {activeSession ? formatSessionTimestamp(activeSession.updatedAt) : 'No session active'}
           </div>
+          {activeWorkDir && (
+            <div className="text-[10px] text-zinc-500 truncate [direction:rtl] text-left" title={activeWorkDir}>
+              {activeWorkDir}
+            </div>
+          )}
         </div>
         <CaretDown size={14} className={cn("text-zinc-400 transition-transform", isOpen && "rotate-180")} />
       </button>
@@ -87,7 +102,9 @@ export const SessionSelector: React.FC<SessionSelectorProps> = ({
                   No sessions found
                 </div>
               ) : (
-                sessions.map((session) => (
+                sessions.map((session) => {
+                  const workDir = sessionWorkDir(session);
+                  return (
                   <div 
                     key={session.id}
                     className={cn(
@@ -103,6 +120,11 @@ export const SessionSelector: React.FC<SessionSelectorProps> = ({
                       <div className="text-[10px] text-zinc-400">
                         {formatSessionTimestamp(session.updatedAt)}
                       </div>
+                      {workDir && (
+                        <div className="text-[10px] text-zinc-500 truncate [direction:rtl] text-left" title={workDir}>
+                          {workDir}
+                        </div>
+                      )}
                     </div>
                     {activeSession?.id === session.id ? (
                       <Check size={14} weight="bold" className="text-blue-500 shrink-0" />
@@ -115,7 +137,8 @@ export const SessionSelector: React.FC<SessionSelectorProps> = ({
                       </button>
                     )}
                   </div>
-                ))
+                  );
+                })
               )}
             </div>
           </motion.div>

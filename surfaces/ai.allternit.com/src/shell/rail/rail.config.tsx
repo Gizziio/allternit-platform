@@ -88,7 +88,7 @@ export const RAIL_CONFIG: RailConfigSection[] = [
       },
       {
         id: 'browser',
-        label: 'Browser',
+        label: 'ACI',
         icon: Globe,
         payload: 'browser',
         shortcut: '⌘⇧B'

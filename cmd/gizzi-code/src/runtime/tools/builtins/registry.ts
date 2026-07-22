@@ -39,6 +39,27 @@ import { MemoryRecallTool } from "@/runtime/tools/builtins/memory-recall"
 import { VaultQueryTool } from "@/runtime/tools/builtins/vault-query"
 import { VaultWriteTool } from "@/runtime/tools/builtins/vault-write"
 import { Glob } from "@/shared/util/glob"
+import { CreateGoalTool, GetGoalTool, SetGoalBudgetTool, UpdateGoalTool } from "@/runtime/tools/builtins/goal"
+import { AgentSwarmTool } from "@/runtime/tools/builtins/agent-swarm"
+import {
+  BackgroundTaskListTool,
+  BackgroundTaskOutputTool,
+  BackgroundTaskStopTool,
+} from "@/runtime/tools/builtins/background-task"
+import {
+  SkillActivateTool,
+  SkillDecideTool,
+  SkillEvaluateTool,
+  SkillProposeTool,
+  SkillRollbackTool,
+} from "@/runtime/tools/builtins/skill-growth"
+import { SkillImportApplyTool, SkillImportPreviewTool } from "@/runtime/tools/builtins/skill-import"
+import {
+  ScratchpadListTool,
+  ScratchpadReadTool,
+  ScratchpadRemoveTool,
+  ScratchpadWriteTool,
+} from "@/runtime/tools/builtins/scratchpad"
 
 export namespace ToolRegistry {
   const log = Log.create({ service: "tool.registry" })
@@ -123,11 +144,29 @@ export namespace ToolRegistry {
       MultiEditTool,
       WriteTool,
       TaskTool,
+      AgentSwarmTool,
+      BackgroundTaskListTool,
+      BackgroundTaskOutputTool,
+      BackgroundTaskStopTool,
+      ...(Flag.GIZZI_DISABLE_SCRATCHPAD
+        ? []
+        : [ScratchpadListTool, ScratchpadReadTool, ScratchpadWriteTool, ScratchpadRemoveTool]),
       WebFetchTool,
       TodoWriteTool,
+      CreateGoalTool,
+      GetGoalTool,
+      SetGoalBudgetTool,
+      UpdateGoalTool,
       WebSearchTool,
       CodeSearchTool,
       SkillTool,
+      SkillProposeTool,
+      SkillEvaluateTool,
+      SkillDecideTool,
+      SkillActivateTool,
+      SkillRollbackTool,
+      SkillImportPreviewTool,
+      SkillImportApplyTool,
       ApplyPatchTool,
       NotebookEditTool,
       MemoryWriteTool,

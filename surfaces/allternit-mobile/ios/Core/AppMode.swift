@@ -4,10 +4,13 @@ import SwiftUI
 /// (surfaces/ai.allternit.com/src/shell/ModeSwitcher.tsx:24-70).
 ///
 /// `design` is skipped on iOS — on the web it opens an external window.
-/// Cowork is NOT a bottom-bar destination: the platform's primary mode
-/// control is the 3-way [Home | Code | ACI] segmented control
-/// (ShellRail.tsx:542-593), and cowork is a composer-level toggle inside
-/// Home (BottomDock.tsx ChatCoworkToggle).
+/// Cowork is NOT a switcher destination: the platform's primary surface
+/// control is the 5-row [Chats | Projects | Artifacts Library | Code | ACI]
+/// tab list in the sidebar header (HistorySidebarView — no persistent bottom
+/// bar, matching ChatGPT/Claude's iOS apps), and cowork is a composer-level
+/// toggle inside Chats (BottomDock.tsx ChatCoworkToggle). Projects and the
+/// artifacts library are iOS-only tab surfaces layered over the same modes
+/// (they don't stamp an `origin_surface` of their own).
 enum AppMode: String, CaseIterable, Sendable {
     case chat
     case cowork
@@ -46,50 +49,73 @@ final class AppModeStore: ObservableObject {
         }
     }
 
+    /// The sidebar tab whose surface fills the content pane. Chats/Code/ACI
+    /// track `mode`; Projects and Artifacts Library are iOS-only surfaces
+    /// layered on top (the mode — and so history filtering, theme accent,
+    /// and session stamping — stays wherever it was).
+    @Published var activeTab: ModeBarItem
+
     init(defaults: UserDefaults = .standard) {
-        let saved = defaults.string(forKey: Self.storageKey)
-        self.mode = saved.flatMap(AppMode.init(rawValue:)) ?? .chat
+        let mode: AppMode
+        if CommandLine.arguments.contains("-chat") {
+            mode = .chat
+        } else if CommandLine.arguments.contains("-code") {
+            mode = .code
+        } else if CommandLine.arguments.contains("-browser") {
+            mode = .browser
+        } else {
+            let saved = defaults.string(forKey: Self.storageKey)
+            mode = saved.flatMap(AppMode.init(rawValue:)) ?? .chat
+        }
+        self.mode = mode
+        self.activeTab = ModeBarItem.tab(for: mode)
     }
 
-    /// The 3-way segmented control maps both Home surfaces (chat + cowork)
-    /// onto one item; selecting it always lands on plain chat.
+    /// Both Home surfaces (chat + cowork) live under the Chats tab; selecting
+    /// it always lands on plain chat. Projects / Artifacts Library switch the
+    /// surface without touching the mode.
     func selectBarItem(_ item: ModeBarItem) {
+        activeTab = item
         switch item {
-        case .home: mode = .chat
+        case .chats: mode = .chat
         case .code: mode = .code
         case .aci: mode = .browser
+        case .projects, .artifacts: break
         }
     }
 }
 
-/// The three destinations of the bottom mode bar (ShellRail's segmented
-/// control: Home / Code / ACI).
+/// The five destinations of the sidebar's tab list:
+/// Chats / Projects / Artifacts Library / Code / ACI.
 enum ModeBarItem: CaseIterable {
-    case home, code, aci
+    case chats, projects, artifacts, code, aci
 
     var label: String {
         switch self {
-        case .home: return "Home"
+        case .chats: return "Chats"
+        case .projects: return "Projects"
+        case .artifacts: return "Artifacts Library"
         case .code: return "Code"
         case .aci: return "ACI"
         }
     }
 
-    /// SF Symbols standing in for the web's Phosphor House / TerminalWindow /
-    /// Globe icons.
+    /// SF Symbols standing in for the web's Phosphor icons.
     var icon: String {
         switch self {
-        case .home: return "house"
+        case .chats: return "bubble.left"
+        case .projects: return "folder"
+        case .artifacts: return "archivebox"
         case .code: return "terminal"
         case .aci: return "globe"
         }
     }
 
-    /// Which bar item is highlighted for a given app mode: cowork lives
-    /// inside Home; code/ACI map to themselves.
-    static func activeItem(for mode: AppMode) -> ModeBarItem {
+    /// The tab a launch-time mode lands on: cowork lives inside Chats;
+    /// code/ACI map to themselves.
+    static func tab(for mode: AppMode) -> ModeBarItem {
         switch mode {
-        case .chat, .cowork: return .home
+        case .chat, .cowork: return .chats
         case .code: return .code
         case .browser: return .aci
         }

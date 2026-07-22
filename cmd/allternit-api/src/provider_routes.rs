@@ -239,26 +239,57 @@ static CLI_PROVIDER_SPECS: &[(&str, &str, &str, &str)] = &[
     ("antigravity", "Antigravity", "agy", "antigravity"),
 ];
 
-/// Flattened `{id, name, provider}` catalog for the agent-creation wizard's model
-/// picker (GET /api/v1/models). Derived from the same provider specs used by the
-/// /providers endpoints so both stay in sync. `id` uses the `provider/model`
-/// convention the runtime harness resolves.
+/// Per-model display metadata: (model id, description, tier, supports_effort).
+/// Tier is flagship | standard | fast | legacy and drives picker grouping on
+/// clients (the Claude-app sheet layout). Unknown models default to
+/// (no description, "standard", false).
+static MODEL_METADATA: &[(&str, &str, &str, bool)] = &[
+    ("claude-opus-4-6", "For your toughest challenges", "flagship", true),
+    ("claude-sonnet-4-6", "Most efficient for everyday tasks", "standard", true),
+    ("claude-haiku-4-5", "Fastest for quick answers", "fast", true),
+    ("claude-haiku-4-5-20251001", "Fastest for quick answers", "fast", true),
+    ("gpt-5-mini", "Everyday reasoning and writing", "standard", true),
+    ("gpt-5-nano", "Fastest for quick answers", "fast", false),
+    ("gpt-4o", "Prior-generation flagship", "legacy", true),
+    ("gemini-2.5-pro", "Long-context reasoning", "flagship", false),
+    ("gemini-2.5-flash-lite", "Fastest for quick answers", "fast", false),
+    ("sonar-pro", "Web-grounded answers", "standard", false),
+    ("codex-mini-latest", "Coding-focused brain", "standard", false),
+];
+
+fn model_metadata(model: &str) -> Option<(&'static str, &'static str, bool)> {
+    MODEL_METADATA
+        .iter()
+        .find(|(id, _, _, _)| *id == model)
+        .map(|(_, desc, tier, effort)| (*desc, *tier, *effort))
+}
+
+/// Flattened `{id, name, provider, description?, tier, supports_effort}`
+/// catalog for the agent-creation wizard's model picker (GET /api/v1/models).
+/// Derived from the same provider specs used by the /providers endpoints so
+/// both stay in sync. `id` uses the `provider/model` convention the runtime
+/// harness resolves.
 pub fn available_model_catalog() -> Vec<serde_json::Value> {
     let mut out = Vec::new();
-    for &(id, name, _binary, model) in CLI_PROVIDER_SPECS {
+    let mut push = |id: &str, name: String, provider: &str, model: &str| {
+        let (description, tier, supports_effort) = model_metadata(model)
+            .map(|(d, t, e)| (Some(d), t, e))
+            .unwrap_or((None, "standard", false));
         out.push(json!({
-            "id": format!("{}/{}", id, model),
-            "name": format!("{} ({})", model, name),
-            "provider": id,
+            "id": id,
+            "name": name,
+            "provider": provider,
+            "description": description,
+            "tier": tier,
+            "supports_effort": supports_effort,
         }));
+    };
+    for &(id, name, _binary, model) in CLI_PROVIDER_SPECS {
+        push(&format!("{}/{}", id, model), format!("{} ({})", model, name), id, model);
     }
     for &(id, name, _env, models) in ENV_PROVIDER_SPECS {
         for model in models {
-            out.push(json!({
-                "id": format!("{}/{}", id, model),
-                "name": format!("{} ({})", model, name),
-                "provider": id,
-            }));
+            push(&format!("{}/{}", id, model), format!("{} ({})", model, name), id, model);
         }
     }
     out

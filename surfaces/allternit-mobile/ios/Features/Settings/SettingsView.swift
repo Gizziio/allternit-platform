@@ -1,0 +1,559 @@
+import SwiftUI
+
+/// The settings hub (Phase 4), presented as a sheet from the sidebar
+/// footer's gear button. iOS-standard grouped sections with the app's card
+/// styling; every toggle persists via SettingsStore (UserDefaults), and rows
+/// with a live backend call it directly (memory, archive/delete chats).
+struct SettingsView: View {
+    @Environment(\.dismiss) private var dismiss
+    @EnvironmentObject private var authManager: AuthManager
+    @ObservedObject private var settings = SettingsStore.shared
+    /// Weekly usage meter (Phase 5) backing the Usage section.
+    @ObservedObject private var usageStore = UsageStore.shared
+
+    /// Pushed Memory section (NavigationStack below).
+    @State private var isMemoryPresented = false
+    /// Export/support links open in SFSafariViewController.
+    @State private var safariURL: IdentifiableURL? = nil
+
+    @State private var isArchiveConfirmPresented = false
+    @State private var isDeleteConfirmPresented = false
+    /// Set while a bulk archive/delete loop is in flight.
+    @State private var isBulkOperationRunning = false
+    /// Result/error of a bulk operation, shown verbatim.
+    @State private var bulkAlert: BulkAlert? = nil
+
+    private struct BulkAlert: Identifiable {
+        let title: String
+        let message: String
+        var id: String { title + message }
+    }
+
+    /// `PATCH /api/v1/agent-sessions/:id` body (agent_session_routes.rs
+    /// update_session — `{ active: false }` archives).
+    private struct UpdateSessionBody: Encodable {
+        let active: Bool
+    }
+
+    var body: some View {
+        NavigationStack {
+            ScrollViewReader { proxy in
+            List {
+                accountSection
+                usageSection
+                capabilitiesSection
+                memorySection
+                voiceSection
+                dataControlsSection
+                aboutSection
+                    // Anchor for the `-open-settings-data` DEBUG scroll.
+                    .id("aboutSection")
+            }
+            .listStyle(.insetGrouped)
+            .scrollContentBackground(.hidden)
+            .background(Color("BgPrimary"))
+            .navigationTitle("Settings")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .topBarLeading) {
+                    Button("Close") { dismiss() }
+                }
+            }
+            .navigationDestination(isPresented: $isMemoryPresented) {
+                MemorySettingsView()
+            }
+            .sheet(item: $safariURL) { item in
+                SafariView(url: item.url)
+            }
+            .confirmationDialog(
+                "Archive all chats?",
+                isPresented: $isArchiveConfirmPresented,
+                titleVisibility: .visible
+            ) {
+                Button("Archive All Chats") { Task { await archiveAllChats() } }
+                Button("Cancel", role: .cancel) {}
+            } message: {
+                Text("Archived chats are hidden from your history but kept on the server.")
+            }
+            .confirmationDialog(
+                "Delete all chats?",
+                isPresented: $isDeleteConfirmPresented,
+                titleVisibility: .visible
+            ) {
+                Button("Delete All Chats", role: .destructive) { Task { await deleteAllChats() } }
+                Button("Cancel", role: .cancel) {}
+            } message: {
+                Text("This permanently deletes every conversation. This can't be undone.")
+            }
+            .alert(item: $bulkAlert) { alert in
+                Alert(title: Text(alert.title), message: Text(alert.message), dismissButton: .default(Text("OK")))
+            }
+            .onAppear {
+                #if DEBUG
+                // `-open-settings-memory` (DEBUG only): deep-link straight
+                // into the Memory section for screenshots (the sidebar's
+                // `-open-settings` handling also opens this sheet on it).
+                if CommandLine.arguments.contains("-open-settings-memory") {
+                    isMemoryPresented = true
+                }
+                // `-open-settings-data` (DEBUG only): scroll to the bottom
+                // sections (Data controls / About) for screenshots — simctl
+                // has no scroll injection. Delayed so the List has laid out.
+                if CommandLine.arguments.contains("-open-settings-data") {
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.8) {
+                        withAnimation { proxy.scrollTo("aboutSection", anchor: .bottom) }
+                    }
+                }
+                #endif
+            }
+            }
+        }
+    }
+
+    // MARK: - Account
+
+    @ViewBuilder
+    private var accountSection: some View {
+        Section {
+            HStack(spacing: 12) {
+                Text(authManager.isSignedIn ? authManager.avatarInitial : "A")
+                    .font(.subheadline)
+                    .fontWeight(.semibold)
+                    .foregroundColor(Color("BgPrimary"))
+                    .frame(width: 44, height: 44)
+                    .background(Color("TextSecondary"))
+                    .clipShape(Circle())
+
+                VStack(alignment: .leading, spacing: 2) {
+                    if authManager.isSignedIn {
+                        Text(authManager.displayName)
+                            .font(.subheadline)
+                            .fontWeight(.semibold)
+                            .foregroundColor(Color("TextPrimary"))
+                        if let email = authManager.primaryEmail {
+                            Text(email)
+                                .font(.caption)
+                                .foregroundColor(Color("TextSecondary"))
+                        }
+                    } else {
+                        // `-skip-auth` dev bypass: no Clerk session to read.
+                        Text("Development bypass")
+                            .font(.subheadline)
+                            .fontWeight(.semibold)
+                            .foregroundColor(Color("TextPrimary"))
+                        Text("Running with -skip-auth; no account signed in.")
+                            .font(.caption)
+                            .foregroundColor(Color("TextSecondary"))
+                    }
+                }
+
+                Spacer(minLength: 8)
+
+                // Plan from /me/usage when the backend meters usage (Phase
+                // 5); static "Free" when unmetered.
+                Text(usageStore.planLabel ?? "Free")
+                    .font(.system(size: 12, weight: .semibold))
+                    .foregroundColor(Color("TextSecondary"))
+                    .padding(.horizontal, 12)
+                    .padding(.vertical, 5)
+                    .background(Color("BgSecondary"))
+                    .clipShape(Capsule())
+            }
+
+            // Same sign-out path as the sidebar footer menu.
+            Button(role: .destructive, action: {
+                Task {
+                    do {
+                        try await authManager.signOut()
+                        dismiss()
+                    } catch {
+                        bulkAlert = BulkAlert(
+                            title: "Sign Out Failed",
+                            message: error.localizedDescription
+                        )
+                    }
+                }
+            }) {
+                Text("Sign Out")
+            }
+            .disabled(!authManager.isSignedIn)
+        } header: {
+            Text("Account")
+        }
+    }
+
+    // MARK: - Usage
+
+    /// Weekly usage + credits (ChatGPT "Usage and limits" parity, Phase 5).
+    /// When the backend reports metering as not configured (UsageStore is
+    /// `.unavailable` — never fake numbers) the section shows the backend's
+    /// message as plain text.
+    @ViewBuilder
+    private var usageSection: some View {
+        Section {
+            // `percentUsed` is nil when the backend has no metering window,
+            // even if a snapshot exists. Show the backend's own message instead
+            // of a misleading "0% used" progress bar.
+            if let snapshot = usageStore.snapshot, usageStore.percentUsed != nil {
+                VStack(alignment: .leading, spacing: 8) {
+                    HStack {
+                        Text("Weekly usage")
+                            .font(.subheadline)
+                            .foregroundColor(Color("TextPrimary"))
+                        Spacer()
+                        if let percentText = usageStore.percentText {
+                            Text("\(percentText) used")
+                                .font(.caption)
+                                .foregroundColor(Color("TextSecondary"))
+                        }
+                    }
+
+                    let percent = (usageStore.percentUsed ?? 0) / 100
+                    ProgressView(value: min(max(percent, 0), 1))
+                        .tint(percent >= 1
+                              ? Color.red
+                              : (percent >= 0.8 ? Theme.statusWarning : Color("AccentPrimary")))
+
+                    if let resetsLabel = usageStore.resetsLabel {
+                        Text("Resets \(resetsLabel)")
+                            .font(.caption)
+                            .foregroundColor(Color("TextSecondary"))
+                    }
+                }
+                .padding(.vertical, 4)
+
+                if let credits = snapshot.credits {
+                    HStack {
+                        Text("Credits")
+                            .font(.subheadline)
+                            .foregroundColor(Color("TextPrimary"))
+                        Spacer()
+                        Text(String(format: "%g", credits))
+                            .font(.subheadline)
+                            .foregroundColor(Color("TextSecondary"))
+                    }
+                }
+
+                Button(action: {
+                    // Placeholder — the real credits purchase flow is TBD.
+                    safariURL = IdentifiableURL(url: URL(string: "https://allternit.com/credits")!)
+                }) {
+                    bulkRowLabel("Buy credits", systemImage: "creditcard")
+                }
+
+                Button(action: {
+                    // Placeholder — the real upgrade flow is TBD.
+                    safariURL = IdentifiableURL(url: URL(string: "https://allternit.com/upgrade")!)
+                }) {
+                    bulkRowLabel("Get Pro", systemImage: "star")
+                }
+            } else {
+                // The backend's own words when metering isn't configured
+                // (503 `usage_metering_unavailable`); a generic line while
+                // the first fetch is still in flight.
+                if case .unavailable(let message) = usageStore.availability {
+                    Text(message)
+                        .font(.subheadline)
+                        .foregroundColor(Color("TextSecondary"))
+                } else {
+                    Text("Usage metering isn't available on this backend.")
+                        .font(.subheadline)
+                        .foregroundColor(Color("TextSecondary"))
+                }
+            }
+        } header: {
+            Text("Usage")
+        }
+    }
+
+    // MARK: - Capabilities
+
+    @ViewBuilder
+    private var capabilitiesSection: some View {
+        Section {
+            capabilityToggle(
+                "Artifacts",
+                explainer: "Show interactive documents and code alongside chat.",
+                isOn: $settings.artifactsEnabled
+            )
+            capabilityToggle(
+                "Code execution and file creation",
+                explainer: "Let Allternit run code and create files in chats.",
+                isOn: $settings.codeExecutionEnabled
+            )
+            capabilityToggle(
+                "Web search",
+                explainer: "Search the web for up-to-date answers. Sets the default for the composer's Web search toggle.",
+                isOn: $settings.webSearchDefault
+            )
+            capabilityToggle(
+                "Switch models when a message is flagged",
+                explainer: "Automatically retry flagged messages with a different model.",
+                isOn: $settings.switchModelsOnFlag
+            )
+        } header: {
+            Text("Capabilities")
+        }
+    }
+
+    /// Toggle row with Claude-style one-line explainer copy underneath.
+    private func capabilityToggle(_ title: String, explainer: String, isOn: Binding<Bool>) -> some View {
+        Toggle(isOn: isOn) {
+            VStack(alignment: .leading, spacing: 2) {
+                Text(title)
+                    .font(.subheadline)
+                    .foregroundColor(Color("TextPrimary"))
+                Text(explainer)
+                    .font(.caption)
+                    .foregroundColor(Color("TextSecondary"))
+            }
+        }
+        .tint(Color("AccentPrimary"))
+    }
+
+    // MARK: - Memory
+
+    @ViewBuilder
+    private var memorySection: some View {
+        Section {
+            Button(action: {
+                let generator = UIImpactFeedbackGenerator(style: .light)
+                generator.impactOccurred()
+                isMemoryPresented = true
+            }) {
+                HStack {
+                    Text("Memory")
+                        .font(.subheadline)
+                        .foregroundColor(Color("TextPrimary"))
+                    Spacer()
+                    Image(systemName: "chevron.right")
+                        .font(.system(size: 11, weight: .bold))
+                        .foregroundColor(Color("TextSecondary"))
+                }
+                .contentShape(Rectangle())
+            }
+            .buttonStyle(.plain)
+        } header: {
+            Text("Memory")
+        } footer: {
+            Text("View what Allternit remembers and manage memory generation.")
+        }
+    }
+
+    // MARK: - Voice
+
+    @ViewBuilder
+    private var voiceSection: some View {
+        Section {
+            // Consumed by DictationController (SFSpeechRecognizer locale);
+            // nil = System default. The dictation onboarding sheet offers
+            // the same choices and writes the same key.
+            Picker("Speech language", selection: $settings.speechLanguage) {
+                Text("System default").tag(SpeechLanguage?.none)
+                ForEach(SpeechLanguage.allCases, id: \.self) { language in
+                    Text(language.label).tag(SpeechLanguage?.some(language))
+                }
+            }
+            .font(.subheadline)
+
+            Picker("Speed", selection: $settings.speechSpeed) {
+                ForEach(SettingsStore.speechSpeeds, id: \.self) { speed in
+                    Text(Self.speedLabel(speed)).tag(speed)
+                }
+            }
+            .font(.subheadline)
+        } header: {
+            Text("Voice")
+        }
+    }
+
+    private static func speedLabel(_ speed: Double) -> String {
+        speed == 1.0 ? "1x" : "\(speed)x"
+    }
+
+    // MARK: - Data controls
+
+    @ViewBuilder
+    private var dataControlsSection: some View {
+        Section {
+            // Local only — the backend has no training-preference endpoint yet.
+            capabilityToggle(
+                "Improve the model for everyone",
+                explainer: "Allow your chats to be used to improve Allternit's models.",
+                isOn: $settings.improveModel
+            )
+
+            Button(action: {
+                let generator = UIImpactFeedbackGenerator(style: .light)
+                generator.impactOccurred()
+                isArchiveConfirmPresented = true
+            }) {
+                bulkRowLabel("Archive all chats", systemImage: "archivebox")
+            }
+            .disabled(isBulkOperationRunning)
+
+            Button(action: {
+                let generator = UIImpactFeedbackGenerator(style: .light)
+                generator.impactOccurred()
+                isDeleteConfirmPresented = true
+            }) {
+                bulkRowLabel("Delete all chats", systemImage: "trash", destructive: true)
+            }
+            .disabled(isBulkOperationRunning)
+
+            Button(action: {
+                safariURL = IdentifiableURL(url: URL(string: "https://ai.allternit.com")!)
+            }) {
+                bulkRowLabel("Export data", systemImage: "square.and.arrow.up")
+            }
+        } header: {
+            Text("Data controls")
+        } footer: {
+            if isBulkOperationRunning {
+                HStack(spacing: 8) {
+                    ProgressView()
+                    Text("Working…")
+                }
+            }
+        }
+    }
+
+    private func bulkRowLabel(_ title: String, systemImage: String, destructive: Bool = false) -> some View {
+        HStack(spacing: 10) {
+            Image(systemName: systemImage)
+                .font(.subheadline)
+                .frame(width: 20)
+            Text(title)
+                .font(.subheadline)
+            Spacer()
+        }
+        .foregroundColor(destructive ? Color.red : Color("TextPrimary"))
+        .contentShape(Rectangle())
+    }
+
+    // MARK: - About
+
+    @ViewBuilder
+    private var aboutSection: some View {
+        Section {
+            HStack {
+                Text("Version")
+                    .font(.subheadline)
+                    .foregroundColor(Color("TextPrimary"))
+                Spacer()
+                Text(Self.versionString)
+                    .font(.subheadline)
+                    .foregroundColor(Color("TextSecondary"))
+            }
+
+            HStack {
+                Text("API")
+                    .font(.subheadline)
+                    .foregroundColor(Color("TextPrimary"))
+                Spacer()
+                Text(AppConfig.apiBaseURL.absoluteString)
+                    .font(.caption)
+                    .foregroundColor(Color("TextSecondary"))
+                    .lineLimit(1)
+                    .truncationMode(.middle)
+            }
+
+            Button(action: {
+                // Placeholder URL — the real support portal is TBD.
+                safariURL = IdentifiableURL(url: URL(string: "https://allternit.com/support")!)
+            }) {
+                bulkRowLabel("Report an issue", systemImage: "exclamationmark.bubble")
+            }
+        } header: {
+            Text("About")
+        }
+    }
+
+    private static var versionString: String {
+        let version = Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "—"
+        let build = Bundle.main.object(forInfoDictionaryKey: "CFBundleVersion") as? String ?? "—"
+        return "\(version) (\(build))"
+    }
+
+    // MARK: - Bulk chat operations
+
+    /// Archive = `PATCH /api/v1/agent-sessions/:id { active: false }` per
+    /// session — no bulk endpoint exists, so loop it. Any per-session failure
+    /// is reported with the count that succeeded.
+    @MainActor
+    private func archiveAllChats() async {
+        await runBulkOperation(verb: "archive") { session in
+            guard session.active else { return false } // already archived
+            try await APIClient.shared.patch(
+                path: "agent-sessions/\(Self.escape(session.id))",
+                body: UpdateSessionBody(active: false)
+            )
+            return true
+        }
+    }
+
+    /// Delete = `DELETE /api/v1/agent-sessions/:id` per session.
+    @MainActor
+    private func deleteAllChats() async {
+        await runBulkOperation(verb: "delete") { session in
+            try await APIClient.shared.delete(path: "agent-sessions/\(Self.escape(session.id))")
+            return true
+        }
+    }
+
+    /// Shared loop: list sessions, apply `operation` to each, report the
+    /// result. Backends without these routes surface the HTTP error here
+    /// instead of failing silently.
+    @MainActor
+    private func runBulkOperation(verb: String, operation: (AgentSession) async throws -> Bool) async {
+        isBulkOperationRunning = true
+        defer { isBulkOperationRunning = false }
+
+        let sessions: [AgentSession]
+        do {
+            let envelope: AgentSessionListResponse = try await APIClient.shared.get(path: "agent-sessions")
+            sessions = envelope.sessions
+        } catch {
+            bulkAlert = BulkAlert(
+                title: "Couldn't \(verb) chats",
+                message: "Not supported by this backend yet — listing conversations failed: \(error.localizedDescription)"
+            )
+            return
+        }
+
+        guard !sessions.isEmpty else {
+            bulkAlert = BulkAlert(title: "Nothing to \(verb)", message: "There are no chats to \(verb).")
+            return
+        }
+
+        var succeeded = 0
+        var firstError: String? = nil
+        for session in sessions {
+            do {
+                if try await operation(session) { succeeded += 1 }
+            } catch {
+                firstError = firstError ?? error.localizedDescription
+            }
+        }
+
+        if let firstError {
+            bulkAlert = BulkAlert(
+                title: "Couldn't \(verb) all chats",
+                message: "\(succeeded) of \(sessions.count) succeeded. First error: \(firstError)"
+            )
+        } else {
+            bulkAlert = BulkAlert(
+                title: "Done",
+                message: "\(succeeded) chat\(succeeded == 1 ? "" : "s") \(verb == "archive" ? "archived" : "deleted")."
+            )
+        }
+
+        if succeeded > 0 {
+            NotificationCenter.default.post(name: .historyMutated, object: nil)
+        }
+    }
+
+    private static func escape(_ id: String) -> String {
+        id.addingPercentEncoding(withAllowedCharacters: .urlPathAllowed) ?? id
+    }
+}

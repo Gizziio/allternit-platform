@@ -62,7 +62,7 @@ export const SkillTool = Tool.define("skill", async (ctx) => {
       const skill = await Skill.get(params.name)
 
       if (!skill) {
-        const available = await Skill.all().then((x) => Object.keys(x).join(", "))
+        const available = await Skill.all().then((items) => items.map((item) => item.name).join(", "))
         throw new Error(`Skill "${params.name}" not found. Available skills: ${available || "none"}`)
       }
 
@@ -73,11 +73,11 @@ export const SkillTool = Tool.define("skill", async (ctx) => {
         metadata: {},
       })
 
-      const dir = path.dirname(skill.location)
-      const base = pathToFileURL(dir).href
+      const dir = skill.builtin ? skill.location : path.dirname(skill.location)
+      const base = skill.builtin ? skill.location : pathToFileURL(dir).href
 
       const limit = 10
-      const files = await iife(async () => {
+      const files = skill.builtin ? "" : await iife(async () => {
         const arr = []
         for await (const file of Ripgrep.files({
           cwd: dir,
@@ -116,6 +116,8 @@ export const SkillTool = Tool.define("skill", async (ctx) => {
         metadata: {
           name: skill.name,
           dir,
+          source: skill.source,
+          priority: skill.priority,
         },
       }
     },

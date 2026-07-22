@@ -2,6 +2,7 @@ import { APICallError } from "ai"
 import { STATUS_CODES } from "http"
 import { iife } from "@/shared/util/iife"
 import { Log } from "@/shared/util/log"
+import { describeProviderError } from "@/shared/util/provider-error"
 
 const log = Log.create({ service: "provider.error" })
 
@@ -162,6 +163,58 @@ export namespace ProviderError {
         responseBody?: string
         metadata?: Record<string, string>
       }
+
+  export type ParsedUnknownProviderError = {
+    type: "api_error"
+    message: string
+    isRetryable: boolean
+    statusCode?: number
+    responseBody?: string
+    metadata: Record<string, string>
+  }
+
+  /**
+   * Normalizes provider failures that were not emitted as an AI SDK
+   * APICallError. Subprocess adapters and several streaming providers throw
+   * plain Error instances or provider-shaped JSON values; allowing those to
+   * fall through as `Unknown` discards the provider identity and error class
+   * before the CLI receives the session.error event.
+   */
+  export function parseUnknownProviderError(input: {
+    providerID: string
+    error: unknown
+  }): ParsedUnknownProviderError {
+    const source = input.error instanceof Error ? input.error.message : input.error
+    const described = describeProviderError({ raw: source, providerID: input.providerID })
+    const object = json(input.error) as Record<string, unknown> | undefined
+    const statusCode =
+      typeof object?.statusCode === "number"
+        ? object.statusCode
+        : typeof object?.status === "number"
+          ? object.status
+          : undefined
+    const responseBody =
+      typeof object?.responseBody === "string"
+        ? object.responseBody
+        : typeof object?.body === "string"
+          ? object.body
+          : undefined
+    const originalName = input.error instanceof Error ? input.error.name : undefined
+    const metadata: Record<string, string> = {
+      providerID: input.providerID,
+      code: described.code,
+    }
+    if (originalName) metadata.originalName = originalName
+
+    return {
+      type: "api_error",
+      message: described.message || `Provider "${input.providerID}" request failed`,
+      isRetryable: described.code === "rate_limit" || described.code === "overloaded",
+      statusCode,
+      responseBody,
+      metadata,
+    }
+  }
 
   export function parseAPICallError(input: { providerID: string; error: APICallError }): ParsedAPICallError {
     const m = message(input.providerID, input.error)

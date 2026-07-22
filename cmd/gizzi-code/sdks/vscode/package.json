@@ -1,12 +1,12 @@
 {
-  "name": "opencode",
-  "displayName": "opencode",
-  "description": "opencode for VS Code",
+  "name": "allternit-gizzi-code",
+  "displayName": "Gizzi Code",
+  "description": "Run Gizzi Code with workspace and selection context inside VS Code.",
   "version": "1.2.10",
-  "publisher": "sst-dev",
+  "publisher": "allternit",
   "repository": {
     "type": "git",
-    "url": "https://github.com/anomalyco/opencode"
+    "url": "https://github.com/allternit/allternit"
   },
   "license": "MIT",
   "icon": "images/icon.png",
@@ -20,65 +20,88 @@
   "categories": [
     "Other"
   ],
-  "activationEvents": [],
+  "activationEvents": [
+    "onCommand:gizzi.openTerminal",
+    "onCommand:gizzi.openNewTerminal",
+    "onCommand:gizzi.addFilepathToTerminal",
+    "onUri"
+  ],
   "main": "./dist/extension.js",
   "contributes": {
     "commands": [
       {
-        "command": "opencode.openTerminal",
-        "title": "Open opencode",
+        "command": "gizzi.openTerminal",
+        "title": "Gizzi Code: Open",
         "icon": {
           "light": "images/button-dark.svg",
           "dark": "images/button-light.svg"
         }
       },
       {
-        "command": "opencode.openNewTerminal",
-        "title": "Open opencode in new tab",
+        "command": "gizzi.openNewTerminal",
+        "title": "Gizzi Code: New Session",
         "icon": {
           "light": "images/button-dark.svg",
           "dark": "images/button-light.svg"
         }
       },
       {
-        "command": "opencode.addFilepathToTerminal",
-        "title": "Add Filepath to Terminal"
+        "command": "gizzi.addFilepathToTerminal",
+        "title": "Gizzi Code: Add File or Selection"
+      },
+      {
+        "command": "gizzi.reconnect",
+        "title": "Gizzi Code: Reconnect"
+      },
+      {
+        "command": "gizzi.showLogs",
+        "title": "Gizzi Code: Show Logs"
       }
     ],
     "menus": {
       "editor/title": [
         {
-          "command": "opencode.openNewTerminal",
+          "command": "gizzi.openNewTerminal",
           "group": "navigation"
         }
       ]
     },
     "keybindings": [
       {
-        "command": "opencode.openTerminal",
-        "title": "Run opencode",
+        "command": "gizzi.openTerminal",
+        "title": "Open Gizzi Code",
         "key": "cmd+escape",
         "mac": "cmd+escape",
         "win": "ctrl+escape",
         "linux": "ctrl+escape"
       },
       {
-        "command": "opencode.openNewTerminal",
-        "title": "Run opencode",
+        "command": "gizzi.openNewTerminal",
+        "title": "New Gizzi Code Session",
         "key": "cmd+shift+escape",
         "mac": "cmd+shift+escape",
         "win": "ctrl+shift+escape",
         "linux": "ctrl+shift+escape"
       },
       {
-        "command": "opencode.addFilepathToTerminal",
-        "title": "opencode: Insert At-Mentioned",
+        "command": "gizzi.addFilepathToTerminal",
+        "title": "Gizzi Code: Add File or Selection",
         "key": "cmd+alt+k",
         "mac": "cmd+alt+k",
         "win": "ctrl+alt+K",
         "linux": "ctrl+alt+K"
       }
-    ]
+    ],
+    "configuration": {
+      "title": "Gizzi Code",
+      "properties": {
+        "gizzi.cliPath": {
+          "type": "string",
+          "default": "gizzi",
+          "description": "Path or command used to launch the Gizzi Code CLI."
+        }
+      }
+    }
   },
   "scripts": {
     "vscode:prepublish": "bun run package",

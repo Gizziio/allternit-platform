@@ -19,6 +19,7 @@ import { useEffect, useState } from 'react';
 import { getSteps, shouldShowProjectOnboarding, incrementProjectOnboardingSeenCount } from '../../projectOnboardingState';
 import { CondensedLogo } from './CondensedLogo';
 import { OffscreenFreeze } from '../OffscreenFreeze';
+import { WelcomeInfoBox } from './WelcomeInfoBox';
 import { checkForReleaseNotesSync } from '../../utils/releaseNotes';
 import { getDumpPromptsPath } from './../../services/api/dumpPrompts.ts';
 import { isEnvTruthy } from './../../utils/envUtils.ts';
@@ -249,8 +250,8 @@ export function LogoV2() {
   }
   const layoutMode = getLayoutMode(columns);
   const userTheme = resolveThemeSetting(getGlobalConfig().theme);
-  const borderTitle = ` ${color("claude", userTheme)("Claude Code")} ${color("inactive", userTheme)(`v${version}`)} `;
-  const compactBorderTitle = color("claude", userTheme)(" Claude Code ");
+  const borderTitle = ` ${color("claude", userTheme)("Gizzi Code")} ${color("inactive", userTheme)(`v${version}`)} `;
+  const compactBorderTitle = color("claude", userTheme)(" Gizzi Code ");
   if (layoutMode === "compact") {
     let welcomeMessage = formatWelcomeMessage(username);
     if (stringWidth(welcomeMessage) > columns - 4) {
@@ -327,10 +328,10 @@ export function LogoV2() {
       t18 = $[42];
       t19 = $[43];
     }
-    return <><OffscreenFreeze><Box flexDirection="column" borderStyle="round" borderColor="claude" borderText={t11} paddingX={1} paddingY={1} alignItems="center" width={columns}><Text bold={true}>{welcomeMessage}</Text>{t12}{t13}<Text dimColor={true}>{billingType}</Text><Text dimColor={true}>{agentName ? `@${agentName} · ${truncatedCwd}` : truncatedCwd}</Text></Box></OffscreenFreeze>{t14}{t15}{t16}{t17}{t18}{t19}</>;
+    return <><OffscreenFreeze><Box flexDirection="column" borderStyle="round" borderColor="claude" borderText={t11} paddingX={1} paddingY={1} alignItems="center" width={columns}><Text bold={true}>{welcomeMessage}</Text>{t12}<WelcomeInfoBox /></Box></OffscreenFreeze>{t14}{t15}{t16}{t17}{t18}{t19}</>;
   }
   const welcomeMessage_0 = formatWelcomeMessage(username);
-  const modelLine = !process.env.IS_DEMO && config.oauthAccount?.organizationName ? `${modelDisplayName} · ${billingType} · ${config.oauthAccount.organizationName}` : `${modelDisplayName} · ${billingType}`;
+  const modelLine = [modelDisplayName, billingType, !process.env.IS_DEMO && config.oauthAccount?.organizationName].filter(Boolean).join(' · ');
   const cwdAvailableWidth_0 = agentName ? LEFT_PANEL_MAX_WIDTH - 1 - stringWidth(agentName) - 3 : LEFT_PANEL_MAX_WIDTH;
   const truncatedCwd_0 = truncatePath(cwd, Math.max(cwdAvailableWidth_0, 10));
   const cwdLine = agentName ? `@${agentName} · ${truncatedCwd_0}` : truncatedCwd_0;
@@ -393,10 +394,10 @@ export function LogoV2() {
     t21 = $[52];
   }
   let t22;
-  if ($[53] !== t20 || $[54] !== t21) {
-    t22 = <Box flexDirection="column" alignItems="center">{t20}{t21}</Box>;
-    $[53] = t20;
-    $[54] = t21;
+  if ($[53] === Symbol.for("react.memo_cache_sentinel")) {
+    t22 = <WelcomeInfoBox />;
+    $[53] = t22;
+    $[54] = t22;
     $[55] = t22;
   } else {
     t22 = $[55];

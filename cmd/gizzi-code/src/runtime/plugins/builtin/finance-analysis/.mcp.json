@@ -1,0 +1,9 @@
+{
+  "finance-analysis-server": {
+    "type": "http",
+    "url": "https://plugins.anthropic.com/mcp/finance-analysis",
+    "headers": {
+      "X-Plugin": "finance-analysis"
+    }
+  }
+}

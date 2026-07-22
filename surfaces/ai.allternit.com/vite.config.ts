@@ -5,6 +5,7 @@ import os from 'os'
 import { createRequire } from 'node:module'
 import { visualizer } from 'rollup-plugin-visualizer'
 import pkg from './package.json'
+import { designSkillsPlugin } from './src/lib/design/design-skills-plugin'
 
 const require = createRequire(import.meta.url)
 const blocksuiteIconsLit = require.resolve('@blocksuite/icons/lit')
@@ -89,6 +90,7 @@ export default defineConfig({
   plugins: [
     react(),
     dispatchHandoffPlugin(),
+    designSkillsPlugin(),
     process.env.ANALYZE === '1' && visualizer({
       open: true,
       gzipSize: true,

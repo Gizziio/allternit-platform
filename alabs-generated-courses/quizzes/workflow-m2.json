@@ -1,0 +1,38 @@
+{
+  "title": "Module Quiz: ALABS-ADV-WORKFLOW-module2",
+  "questions": [
+    {
+      "question": "1. What happens when running.size >= maxConcurrency inside processQueue()?",
+      "options": [
+        "AThe oldest running task is preempted to make room.",
+        "BprocessQueue() returns early; queued tasks stay in the queue.",
+        "CThe queue is sorted again and the highest-priority task is forced to run.",
+        "DAn error is thrown telling the caller to wait."
+      ],
+      "correctIndex": 1,
+      "explanation": "Correct! The scheduler uses early return as a backpressure gate. Tasks remain in the queue until a running task finishes and frees a concurrency slot."
+    },
+    {
+      "question": "2. How does task cancellation differ for a queued task vs a running task?",
+      "options": [
+        "ABoth are aborted via AbortController; only the timing differs.",
+        "BQueued tasks are paused; running tasks are removed from the Map.",
+        "CRunning tasks call controller.abort(); queued tasks are spliced out of the array.",
+        "DThere is no difference; cancel() behaves identically in both cases."
+      ],
+      "correctIndex": 2,
+      "explanation": "Correct! Running tasks need cooperative cancellation via AbortController. Queued tasks have not started, so removing them from the queue is sufficient."
+    },
+    {
+      "question": "3. In the engine's executeNode(), when are outgoing connections traversed?",
+      "options": [
+        "AImmediately before the node executor runs, to pre-fetch downstream nodes.",
+        "BOnly if the node has no incoming connections, as a starting-node optimization.",
+        "CAfter the node executor succeeds and its result is stored in nodeResults.",
+        "DIn the finally block so they run even when the node fails."
+      ],
+      "correctIndex": 2,
+      "explanation": "Correct! Outgoing connections are traversed inside the try block, after the result is stored. If the node fails, the catch throws before downstream nodes are reached."
+    }
+  ]
+}

@@ -33,10 +33,8 @@ describe("Cron Service Integration", () => {
   });
 
   beforeEach(() => {
-    // Reset service state
-    if (CronServiceEnhanced.isRunning()) {
-      CronServiceEnhanced.close();
-    }
+    // Reset service state. close() is synchronous and idempotent.
+    CronServiceEnhanced.close();
   });
 
   describe("Service Lifecycle", () => {

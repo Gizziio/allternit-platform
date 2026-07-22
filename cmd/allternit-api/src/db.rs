@@ -60,4 +60,35 @@ impl DbHandle {
             Err(e) => Err(e),
         }
     }
+
+    /// Mark a Gizzi session as ephemeral (incognito chat).
+    pub fn set_session_ephemeral(&self, session_id: &str) -> SqlResult<()> {
+        let conn = self.connect()?;
+        conn.execute(
+            "INSERT INTO ephemeral_sessions (session_id) VALUES (?1)
+             ON CONFLICT(session_id) DO NOTHING",
+            rusqlite::params![session_id],
+        )?;
+        Ok(())
+    }
+
+    /// Whether a Gizzi session was created as ephemeral (incognito chat).
+    pub fn is_session_ephemeral(&self, session_id: &str) -> SqlResult<bool> {
+        let conn = self.connect()?;
+        let mut stmt =
+            conn.prepare("SELECT 1 FROM ephemeral_sessions WHERE session_id = ?1")?;
+        let result = stmt.exists(rusqlite::params![session_id]);
+        result
+    }
+
+    /// Forget the ephemeral flag for a Gizzi session (after the backing
+    /// record was purged).
+    pub fn clear_session_ephemeral(&self, session_id: &str) -> SqlResult<()> {
+        let conn = self.connect()?;
+        conn.execute(
+            "DELETE FROM ephemeral_sessions WHERE session_id = ?1",
+            rusqlite::params![session_id],
+        )?;
+        Ok(())
+    }
 }

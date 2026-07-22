@@ -1,12 +1,40 @@
-// Auto-generated shim to satisfy TypeScript imports
+import fs from "fs/promises"
+import path from "path"
+import { addSkillDirectories as addRuntimeSkillDirectories } from "@/runtime/skills/loadSkillsDir"
+import { Skill } from "@/runtime/skills/skill"
 
-/** Skill directories relevant to the given paths; none in this build. */
-export async function discoverSkillDirsForPaths(_paths: string[], _cwd: string): Promise<string[]> {
-  return []
+const checked = new Set<string>()
+
+/** Discover nested compatible skill roots between touched files and the workspace. */
+export async function discoverSkillDirsForPaths(paths: string[], cwd: string): Promise<string[]> {
+  const boundary = path.resolve(cwd)
+  const result: string[] = []
+  for (const file of paths) {
+    let current = path.dirname(path.resolve(file))
+    while (current !== boundary && isWithin(boundary, current)) {
+      for (const relative of [path.join(".gizzi", "skills"), path.join(".claude", "skills"), path.join(".agents", "skills")]) {
+        const candidate = path.join(current, relative)
+        if (checked.has(candidate)) continue
+        checked.add(candidate)
+        if (await fs.stat(candidate).then((stat) => stat.isDirectory()).catch(() => false)) result.push(candidate)
+      }
+      const parent = path.dirname(current)
+      if (parent === current) break
+      current = parent
+    }
+  }
+  return result.toSorted((a, b) => b.split(path.sep).length - a.split(path.sep).length)
 }
 
-/** Register extra skill directories; no-op in this build. */
-export async function addSkillDirectories(_dirs: string[]): Promise<void> {}
+export async function addSkillDirectories(dirs: string[]): Promise<void> {
+  await addRuntimeSkillDirectories(dirs.map((dir) => ({ path: dir, name: path.basename(path.dirname(dir)) })))
+}
 
-/** Activate path-conditional skills; no-op in this build. */
-export function activateConditionalSkillsForPaths(_paths: string[], _cwd: string): void {}
+export function activateConditionalSkillsForPaths(paths: string[], _cwd: string): void {
+  void Skill.activateForPaths(paths)
+}
+
+function isWithin(parent: string, child: string) {
+  const relative = path.relative(parent, child)
+  return relative === "" || (!relative.startsWith("..") && !path.isAbsolute(relative))
+}

@@ -4,6 +4,7 @@ import { THEME } from "./ChatView.constants";
 import type { GizziEmotion, GizziAttention } from "@/components/ai-elements/GizziMascot";
 import type { AgentModeSurface } from "@/stores/agent-surface-mode.store";
 import type { CanonicalAgentModeId } from "@/lib/agents/agent-mode-contracts";
+import type { PluginMentionTarget } from "@/lib/mentions/use-mention-targets";
 
 interface ChatBottomBarProps {
   mode: 'chat' | 'cowork' | 'code';
@@ -14,6 +15,7 @@ interface ChatBottomBarProps {
   agentSurface: AgentModeSurface;
   setMentionAgentId: (id: string | null) => void;
   mentionAgentId: string | null;
+  setPluginMention: (target: PluginMentionTarget | null) => void;
   activeIsLoading: boolean;
   handleStop: () => void;
   selectedModel: string;
@@ -37,6 +39,7 @@ export const ChatBottomBar: React.FC<ChatBottomBarProps> = ({
   agentSurface,
   setMentionAgentId,
   mentionAgentId,
+  setPluginMention,
   activeIsLoading,
   handleStop,
   selectedModel,
@@ -64,6 +67,7 @@ export const ChatBottomBar: React.FC<ChatBottomBarProps> = ({
           onAgentSend={onOpenAgentSession ? (text, execution) => onOpenAgentSession(text, agentSurface, execution) : undefined}
           onMentionAgentChange={setMentionAgentId}
           mentionAgentId={mentionAgentId}
+          onPluginMentionChange={setPluginMention}
           isLoading={activeIsLoading}
           onStop={handleStop}
           selectedModel={selectedModel}

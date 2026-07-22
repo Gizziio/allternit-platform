@@ -1,0 +1,15 @@
+{
+  "name": "product-management",
+  "version": "1.0.0",
+  "description": "Product management and roadmap support.",
+  "author": {
+    "name": "Anthropic",
+    "email": "support@anthropic.com"
+  },
+  "keywords": [
+    "product",
+    "claude",
+    "builtin"
+  ],
+  "license": "MIT"
+}

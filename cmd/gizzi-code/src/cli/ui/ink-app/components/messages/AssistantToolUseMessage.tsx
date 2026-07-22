@@ -19,6 +19,7 @@ import { useSelectedMessageBg } from '../messageActions';
 import { SentryErrorBoundary } from '../SentryErrorBoundary';
 import { ToolUseLoader } from '../ToolUseLoader';
 import { HookProgressMessage } from './HookProgressMessage';
+import { ToolUseCard } from './ToolUseCard';
 type Props = {
   param: ToolUseBlockParam;
   addMargin: boolean;
@@ -34,7 +35,7 @@ type Props = {
   isTranscriptMode?: boolean;
 };
 export function AssistantToolUseMessage(t0) {
-  const $ = _c(81);
+  const $ = _c(85);
   const {
     param,
     addMargin,
@@ -181,31 +182,6 @@ export function AssistantToolUseMessage(t0) {
     return null;
   }
   const t5 = addMargin ? 1 : 0;
-  const t6 = stringWidth(userFacingToolName) + (shouldShowDot ? 2 : 0);
-  let t7;
-  if ($[31] !== isQueued || $[32] !== isResolved || $[33] !== lookups.erroredToolUseIDs || $[34] !== param.id || $[35] !== shouldAnimate || $[36] !== shouldShowDot) {
-    t7 = shouldShowDot && (isQueued ? <Box minWidth={2}><Text dimColor={isQueued}>{BLACK_CIRCLE}</Text></Box> : <ToolUseLoader shouldAnimate={shouldAnimate} isUnresolved={!isResolved} isError={lookups.erroredToolUseIDs.has(param.id)} />);
-    $[31] = isQueued;
-    $[32] = isResolved;
-    $[33] = lookups.erroredToolUseIDs;
-    $[34] = param.id;
-    $[35] = shouldAnimate;
-    $[36] = shouldShowDot;
-    $[37] = t7;
-  } else {
-    t7 = $[37];
-  }
-  const t8 = userFacingToolNameBackgroundColor ? "inverseText" : undefined;
-  let t9;
-  if ($[38] !== t8 || $[39] !== userFacingToolName || $[40] !== userFacingToolNameBackgroundColor) {
-    t9 = <Box flexShrink={0}><Text bold={true} wrap="truncate-end" backgroundColor={userFacingToolNameBackgroundColor} color={t8}>{userFacingToolName}</Text></Box>;
-    $[38] = t8;
-    $[39] = userFacingToolName;
-    $[40] = userFacingToolNameBackgroundColor;
-    $[41] = t9;
-  } else {
-    t9 = $[41];
-  }
   let t10;
   if ($[42] !== renderedToolUseMessage) {
     t10 = renderedToolUseMessage !== "" && <Box flexWrap="nowrap"><Text>({renderedToolUseMessage})</Text></Box>;
@@ -225,13 +201,10 @@ export function AssistantToolUseMessage(t0) {
     t11 = $[47];
   }
   let t12;
-  if ($[48] !== t10 || $[49] !== t11 || $[50] !== t6 || $[51] !== t7 || $[52] !== t9) {
-    t12 = <Box flexDirection="row" flexWrap="nowrap" minWidth={t6}>{t7}{t9}{t10}{t11}</Box>;
+  if ($[48] !== t10 || $[49] !== t11) {
+    t12 = <Box flexDirection="row" flexWrap="nowrap">{t10}{t11}</Box>;
     $[48] = t10;
     $[49] = t11;
-    $[50] = t6;
-    $[51] = t7;
-    $[52] = t9;
     $[53] = t12;
   } else {
     t12 = $[53];
@@ -281,15 +254,20 @@ export function AssistantToolUseMessage(t0) {
   } else {
     t15 = $[76];
   }
+  const isError = lookups.erroredToolUseIDs.has(param.id);
   let t16;
-  if ($[77] !== bg || $[78] !== t15 || $[79] !== t5) {
-    t16 = <Box flexDirection="row" justifyContent="space-between" marginTop={t5} width="100%" backgroundColor={bg}>{t15}</Box>;
+  if ($[77] !== bg || $[78] !== t15 || $[79] !== t5 || $[80] !== userFacingToolName || $[81] !== isQueued || $[82] !== isResolved || $[83] !== isError) {
+    t16 = <Box flexDirection="row" justifyContent="space-between" marginTop={t5} width="100%" backgroundColor={bg}><ToolUseCard param={param} toolName={userFacingToolName} isQueued={isQueued} isResolved={isResolved} isError={isError}>{t15}</ToolUseCard></Box>;
     $[77] = bg;
     $[78] = t15;
     $[79] = t5;
-    $[80] = t16;
+    $[80] = userFacingToolName;
+    $[81] = isQueued;
+    $[82] = isResolved;
+    $[83] = isError;
+    $[84] = t16;
   } else {
-    t16 = $[80];
+    t16 = $[84];
   }
   return t16;
 }

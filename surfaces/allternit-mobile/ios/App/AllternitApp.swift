@@ -10,10 +10,21 @@ struct AllternitApp: App {
     /// mode accent and agent pill context.
     @StateObject private var modeStore = AppModeStore()
     @StateObject private var agentModeStore = AgentModeStore()
+    /// First-launch onboarding gate (Phase 10) — `isComplete` flips drive
+    /// the root swap from OnboardingView to the workspace.
+    @StateObject private var onboardingStore = OnboardingStore.shared
     @Environment(\.scenePhase) private var scenePhase
 
     init() {
         AuthManager.shared.configure(publishableKey: AppConfig.clerkPublishableKey)
+        #if DEBUG
+        // `-reset-onboarding` (DEBUG only): also clears the Phase-10
+        // onboarding gate (the ChatView site clears the dictation/priming
+        // flags). Clearing here means THIS launch lands on page 1.
+        if CommandLine.arguments.contains("-reset-onboarding") {
+            OnboardingStore.shared.reset()
+        }
+        #endif
     }
 
     var body: some Scene {
@@ -29,12 +40,14 @@ struct AllternitApp: App {
                     LoginGateView()
                 }
             }
-            .preferredColorScheme(.dark)
             .environmentObject(authManager)
             .sheet(isPresented: $authManager.isPresentingAuth, onDismiss: {
                 authManager.refreshAuthState()
             }) {
-                AuthView()
+                AuthView(
+                    mode: authManager.authEntryMode == .signUp ? .signUp : .signIn
+                )
+                    .environment(Clerk.shared)
             }
             .onChange(of: scenePhase) { _, newPhase in
                 if newPhase == .active {
@@ -46,33 +59,88 @@ struct AllternitApp: App {
 
     @ViewBuilder
     private var gatedContent: some View {
-        if authManager.isSignedIn {
-            MainWorkspaceView()
-                .environmentObject(modeStore)
-                .environmentObject(agentModeStore)
+        if authManager.isSignedIn || Self.skipAuthForTesting {
+            // Phase 10: first-launch onboarding runs BEFORE the workspace
+            // (root swap — it never covers LoginGateView). Completing or
+            // skipping flips `isComplete` and swaps in the workspace.
+            if (!onboardingStore.isComplete && !Self.bypassOnboardingForTesting)
+                || Self.forceOnboardingForTesting {
+                OnboardingView()
+            } else {
+                MainWorkspaceView()
+                    .environmentObject(modeStore)
+                    .environmentObject(agentModeStore)
+            }
         } else {
             LoginGateView()
         }
+    }
+
+    /// `-skip-auth` (DEBUG builds only): bypasses the Clerk gate to exercise
+    /// the workspace UI without an account. API calls go out without a
+    /// Bearer token, so backend-fed views show their error/empty states.
+    private static var skipAuthForTesting: Bool {
+        #if DEBUG
+        CommandLine.arguments.contains("-skip-auth")
+        #else
+        false
+        #endif
+    }
+
+    /// `-open-onboarding` (DEBUG builds only): force-show the Phase-10
+    /// onboarding flow regardless of the complete flag, for screenshots.
+    private static var forceOnboardingForTesting: Bool {
+        #if DEBUG
+        CommandLine.arguments.contains("-open-onboarding")
+        #else
+        false
+        #endif
+    }
+
+    /// Workspace-targeting DEBUG args imply "past onboarding" — simctl has
+    /// no tap injection, so without this the Phase-10 gate would swallow
+    /// the regression args (`-autosend`, `-open-settings`, …) on a fresh
+    /// install before they ever reach the workspace.
+    private static var bypassOnboardingForTesting: Bool {
+        #if DEBUG
+        let args = CommandLine.arguments
+        return args.contains("-autosend")
+            || args.contains("-open-settings")
+            || args.contains("-open-plus-sheet")
+            || args.contains("-open-incognito")
+        #else
+        false
+        #endif
     }
 }
 
 struct LoginGateView: View {
     @EnvironmentObject var auth: AuthManager
 
+    @State private var logoGlowing = false
+
     var body: some View {
         VStack(spacing: 32) {
             Spacer()
 
-            // Logo Accent matching Allternit's web logo
-            HStack(alignment: .firstTextBaseline, spacing: 6) {
-                Text("A://")
-                    .foregroundColor(Color("AccentPrimary"))
-                    .font(.system(.title2, design: .monospaced))
-                    .bold()
-                Text("LLTERNIT")
-                    .foregroundColor(Color("TextPrimary"))
-                    .font(.system(.title2, design: .serif))
-                    .tracking(4.0)
+            // Logo with ambient glow matching LaunchHeader
+            ZStack {
+                Circle()
+                    .fill(Color("AccentPrimary").opacity(logoGlowing ? 0.12 : 0.04))
+                    .frame(width: 140, height: 140)
+                    .blur(radius: 35)
+                    .animation(.easeInOut(duration: 2.5).repeatForever(autoreverses: true), value: logoGlowing)
+
+                HStack(alignment: .firstTextBaseline, spacing: 6) {
+                    Text("A://")
+                        .foregroundColor(Color("AccentPrimary"))
+                        .font(.system(.title2, design: .monospaced))
+                        .bold()
+                    Text("LLTERNIT")
+                        .foregroundColor(Color("TextPrimary"))
+                        .font(.system(.title2, design: .serif))
+                        .tracking(4.0)
+                }
             }
 
             Text("Your native workspace for autonomous AI execution.")
@@ -91,15 +159,28 @@ struct LoginGateView: View {
                     .padding(.horizontal, 24)
             }
 
-            // Sign-in = presenting ClerkKitUI's AuthView sheet (see AuthManager.signIn).
-            Button(action: auth.signIn) {
-                Text("Sign In to Allternit")
-                    .font(.headline)
-                    .foregroundColor(.black)
-                    .frame(maxWidth: .infinity)
-                    .padding(.vertical, 16)
-                    .background(Color("AccentPrimary"))
-                    .cornerRadius(12)
+            VStack(spacing: 12) {
+                Button(action: auth.signIn) {
+                    Text("Sign In")
+                        .font(.headline)
+                        .foregroundColor(.white)
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 16)
+                        .background(Color("AccentPrimary"))
+                        .cornerRadius(12)
+                }
+
+                Button(action: auth.signUp) {
+                    Text("Create Account")
+                        .font(.headline)
+                        .foregroundColor(Color("AccentPrimary"))
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 16)
+                        .background(
+                            RoundedRectangle(cornerRadius: 12)
+                                .stroke(Color("AccentPrimary"), lineWidth: 1)
+                        )
+                }
             }
             .disabled(!auth.isClerkConfigured)
             .opacity(auth.isClerkConfigured ? 1 : 0.5)
@@ -107,5 +188,6 @@ struct LoginGateView: View {
             .padding(.bottom, 48)
         }
         .background(Color("BgPrimary").edgesIgnoringSafeArea(.all))
+        .onAppear { logoGlowing = true }
     }
 }

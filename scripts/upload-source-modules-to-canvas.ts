@@ -1,7 +1,8 @@
 import fs from 'fs/promises';
 import path from 'path';
 
-const CANVAS_TOKEN = '7~rPDcCXrVEvBrN6TDGQVDNm2uAxKxGe4cnc2TvuTXUAxEEAKTBEWVUTLTvyaJC2hc';
+import { getCanvasToken } from './canvas-token.ts';
+const CANVAS_TOKEN = getCanvasToken();
 const BASE_URL = 'https://canvas.instructure.com/api/v1';
 
 async function canvasApi(method: string, pathStr: string, body?: any) {
@@ -85,7 +86,7 @@ function markdownToHtml(md: string): string {
 }
 
 async function loadRemixPlan(courseCode: string): Promise<any | null> {
-  const planPath = path.join('/Users/macbook/Desktop/allternit-workspace/allternit', 'remix-plans', `${courseCode}.json`);
+  const planPath = path.join('/Users/macbook/Desktop/allternit-workspace/allternit', 'remix-content', 'plans', `${courseCode}.json`);
   try {
     const content = await fs.readFile(planPath, 'utf-8');
     return JSON.parse(content);

@@ -172,7 +172,10 @@ export function ShellFrame({
   const gridCols = isMobile ? '0px 1fr 0px' : railCol + ' 1fr ' + sidecarCol;
 
   return (
-    <div style={{
+    <div
+      data-shell-frame=""
+      data-rail-collapsed={isRailCollapsed ? 'true' : 'false'}
+      style={{
       display: 'grid',
       gridTemplateColumns: gridCols,
       gridTemplateRows: 'minmax(0, 1fr)',

@@ -63,23 +63,15 @@ allternit/
 │       ├── package-analysis.json
 │       ├── curriculum-map.json
 │       └── platform-course-outline.json
-├── alabs-demos/                          ← Standalone demo site
+├── alabs-generated-courses/demos/        ← Standalone demo site (was top-level alabs-demos/)
 │   ├── index.html                        ← Auto-generated landing page
-│   └── *.html                            ← All demo modules (copied from generated)
+│   └── cowork-integration-preview.html
 ├── alabs-module-template/                ← Shared template system
 │   ├── shell/shell.html                  ← Common CSS + JS wrapper
 │   ├── scripts/build.ts                  ← Build: content JSON → HTML
 │   ├── scripts/convert-existing.ts       ← Migrate old modules to new format
 │   └── README.md
-├── alabs-curator/                        ← Generalizable CLI (WIP)
-│   ├── package.json
-│   ├── src/cli.ts
-│   └── src/commands/
-│       ├── ingest.ts
-│       ├── analyze.ts
-│       ├── generate.ts
-│       ├── build.ts
-│       └── publish.ts
+├── archive/alabs-curator/                ← ARCHIVED 2026-07-22: generalizable CLI scaffold (never finished; stub publish)
 ├── scripts/                              ← Pipeline scripts
 │   ├── sync-course-from-package.ts       ← Main sync (fixed page_url bug)
 │   ├── sync-incremental.ts               ← Hash-based incremental sync
@@ -231,7 +223,7 @@ Checks all 10 courses for:
 npx tsx scripts/generate-demo-index.ts
 ```
 
-Scans `alabs-generated-courses/` and `alabs-demos/` → generates `alabs-demos/index.html`.
+Scans `alabs-generated-courses/` and `alabs-generated-courses/demos/` → generates `alabs-generated-courses/demos/index.html`.
 
 ### 8. Analyze a Package for Topics
 
@@ -329,13 +321,13 @@ Output: /Users/macbook/Desktop/allternit-workspace/allternit/alabs-generated-cou
 
 ## Future Work (Backlog)
 
+- [x] Migrate Canvas token from hardcoded to env-based — **Done.** Use `scripts/canvas-token.ts` (`getCanvasToken()` reads `CANVAS_TOKEN` / `CANVAS_API_TOKEN` with legacy fallback).
+- [x] Add "Platform as Course" (ALABS-PLATFORM: 5 modules, ~15 hours) — **Done.** Outline saved to `alabs-generated-courses/platform-course-outline.json` and `alabs-generated-courses/analysis/platform-course-outline.json`; course added to platform `FALLBACK_COURSES`.
+- [x] Auto-extract quiz JSON from generated modules (instead of hand-writing) — **Done.** Run `npx tsx scripts/extract-quizzes-from-modules.ts`.
 - [ ] Migrate all existing modules to shared template shell (reduces size ~60%)
-- [ ] Complete `alabs-curator` CLI (generalize for any codebase)
-- [ ] Add "Platform as Course" (ALABS-PLATFORM: 5 modules, ~15 hours)
+- [ ] ~~Complete `alabs-curator` CLI (generalize for any codebase)~~ — archived to `archive/alabs-curator/` 2026-07-22 (scaffold with stub publish, superseded by `scripts/alabs-course-pipeline.ts`); restore from archive if revived
 - [ ] Build module generation directly into template system (agents output JSON, build script wraps)
-- [ ] Auto-extract quiz JSON from generated modules (instead of hand-writing)
 - [ ] Add completion webhooks (Canvas → platform notifications)
-- [ ] Migrate Canvas token from hardcoded to env-based
 
 ## Key Contacts / Context
 
@@ -345,7 +337,7 @@ Output: /Users/macbook/Desktop/allternit-workspace/allternit/alabs-generated-cou
 - **Platform:** Next.js in `surfaces/ai.allternit.com/`
 - **Course IDs:** See catalog table above
 - **Generated modules:** Stored in `alabs-generated-courses/`
-- **Demo site:** `alabs-demos/index.html` — works offline
+- **Demo site:** `alabs-generated-courses/demos/index.html` — works offline
 
 ---
 
@@ -360,7 +352,7 @@ Output: /Users/macbook/Desktop/allternit-workspace/allternit/alabs-generated-cou
 Demo HTML files must be copied to the platform's public directory to be served:
 
 ```bash
-cp alabs-demos/*.html surfaces/ai.allternit.com/public/demos/
+cp alabs-generated-courses/demos/*.html surfaces/ai.allternit.com/public/demos/
 ```
 
 The `LabsView.tsx` "Try Demo" buttons link to `/demos/ALABS-ADV-{COURSE}-module1.html` which resolves to `public/demos/` in Next.js.
@@ -368,7 +360,7 @@ The `LabsView.tsx` "Try Demo" buttons link to `/demos/ALABS-ADV-{COURSE}-module1
 ### Keeping Demos In Sync
 
 After generating new modules:
-1. Copy to `alabs-demos/`
+1. Copy to `alabs-generated-courses/demos/`
 2. Copy to `surfaces/ai.allternit.com/public/demos/`
 3. Regenerate index: `npx tsx scripts/generate-demo-index.ts`
 4. Copy updated index to both locations

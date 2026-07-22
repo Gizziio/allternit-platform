@@ -262,7 +262,7 @@ describe('SwarmDashboard', () => {
     });
 
     // Click on the Quarantine tab using userEvent
-    const quarantineTab = screen.getByRole('button', { name: /quarantine/i });
+    const quarantineTab = screen.getByRole('tab', { name: /quarantine/i });
     await userEvent.click(quarantineTab);
 
     // Wait for tab content to switch and empty state to appear

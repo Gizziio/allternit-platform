@@ -20,6 +20,7 @@ import { $ } from "bun";
 import { createHash } from "crypto";
 import { mkdir } from "fs/promises";
 import { dirname, resolve } from "path";
+import { copyNativeAssets } from "./native-assets.mjs";
 const TARGETS = [
     { platform: "darwin", arch: "arm64", suffix: "", target: "bun-darwin-arm64" },
     { platform: "darwin", arch: "x64", suffix: "", target: "bun-darwin-x64" },
@@ -117,11 +118,21 @@ export const Fragment = undefined;
 // preserves behaviour.
 const REACT_COMPILER_RUNTIME_NS = "react-compiler-runtime-stub";
 const REACT_COMPILER_RUNTIME_STUB = `
+import * as React from "react";
+// The compiled components in src/ guard on the older
+// Symbol.for("react.memo_cache_sentinel"); fill the cache with exactly that,
+// matching src/vendor/anthropic-stubs/react-compiler-runtime.ts.
+var MEMO_CACHE_SENTINEL = Symbol.for("react.memo_cache_sentinel");
+function makeCache(size) {
+  var cache = new Array(size);
+  for (var i = 0; i < size; i++) cache[i] = MEMO_CACHE_SENTINEL;
+  return cache;
+}
 export function c(size) {
-  return (fn) => fn();
+  return React.useState(function() { return makeCache(size); })[0];
 }
 export function useMemoCache(size) {
-  return [];
+  return React.useState(function() { return makeCache(size); })[0];
 }
 `;
 // Embed WASM files as Uint8Array constants at bundle time so they work
@@ -137,6 +148,26 @@ const wasmEmbedPlugin = {
                 contents: `const b = Buffer.from("${b64}", "base64"); export default new Uint8Array(b.buffer, b.byteOffset, b.byteLength);`,
                 loader: "js",
             };
+        });
+    },
+};
+// Embed .md and .txt files as string constants at bundle time
+const textEmbedPlugin = {
+    name: "text-embed",
+    setup(build) {
+        build.onLoad({ filter: /\.(md|txt)$/ }, async (args) => {
+            try {
+                const text = await Bun.file(args.path).text();
+                return {
+                    contents: `export default ${JSON.stringify(text)};`,
+                    loader: "js",
+                };
+            } catch {
+                return {
+                    contents: `export default "";`,
+                    loader: "js",
+                };
+            }
         });
     },
 };
@@ -182,8 +213,16 @@ const solidPlugin = {
                 candidates = [resolve("src/runtime", rel)];
             } else if (head === "cli") {
                 candidates = [resolve("src/cli", rel)];
+            } else if (head === "utils") {
+                candidates = [
+                    resolve("src/shared/utils", rel),
+                    resolve("src/cli/ui/ink-app/utils", rel),
+                    resolve("src/runtime/utils", rel),
+                    resolve("src/utils", rel),
+                ];
             } else {
                 candidates = [
+                    resolve("src/shared", relativePath),
                     resolve("src", relativePath),
                     resolve("src/runtime", relativePath),
                     resolve("src/cli/ui/ink-app", relativePath),
@@ -192,6 +231,56 @@ const solidPlugin = {
             const found = probe(candidates);
             return { path: found ?? candidates[0] };
         });
+        build.onResolve({ filter: /\.(md|txt)$/ }, (args) => {
+            const abs = resolve(dirname(args.importer || process.cwd()), args.path);
+            return { path: abs, namespace: "text-embed" };
+        });
+        build.onLoad({ filter: /.*/, namespace: "text-embed" }, async (args) => {
+            try {
+                const text = await Bun.file(args.path).text();
+                return {
+                    contents: `export default ${JSON.stringify(text)};`,
+                    loader: "js",
+                };
+            } catch {
+                return {
+                    contents: `export default "";`,
+                    loader: "js",
+                };
+            }
+        });
+        build.onResolve({ filter: /^\.\.?\/.*\.js$/ }, (args) => {
+            const abs = resolve(dirname(args.importer || process.cwd()), args.path);
+            if (Bun.file(abs).size > 0) return { path: abs };
+            const noExt = abs.replace(/\.js$/, "");
+            for (const ext of [".tsx", ".ts", "/index.tsx", "/index.ts"]) {
+                const candidate = noExt + ext;
+                if (Bun.file(candidate).size > 0) return { path: candidate };
+            }
+            return { path: abs, namespace: "empty-stub" };
+        });
+        build.onLoad({ filter: /.*/, namespace: "empty-stub" }, () => ({
+            contents: `export default {}; export const SnapshotUpdateDialog = () => null;`,
+            loader: "js",
+        }));
+
+        build.onResolve({ filter: /^@modelcontextprotocol\/sdk\/types/ }, () => ({
+            path: resolve("node_modules/@modelcontextprotocol/sdk/dist/cjs/types.js"),
+        }));
+        build.onResolve({ filter: /^@allternit\/orchestrator$/ }, () => ({
+            path: resolve("../../packages/@allternit/orchestrator/src/index.ts"),
+        }));
+        build.onResolve({ filter: /^@opentui\/core-[a-z0-9-]+/ }, () => {
+            const platform = process.platform;
+            const arch = process.arch;
+            const rootPath = resolve(`../../node_modules/@opentui/core-${platform}-${arch}/index.ts`);
+            if (Bun.file(rootPath).size > 0) return { path: rootPath };
+            return { path: resolve(`node_modules/@opentui/core-${platform}-${arch}/index.ts`) };
+        });
+        // Redirect @allternit/extension to the local stub (real extension package isn't vendored)
+        build.onResolve({ filter: /^@allternit\/extension$/ }, () => ({
+            path: resolve("src/vendor/anthropic-stubs/allternit-extension.ts"),
+        }));
         // Resolve @allternit workspace packages to their source or dist
         build.onResolve({ filter: /^@allternit\/(plugin|script|sdk|util|gizzi-util)/ }, (args) => {
             const parts = args.path.split("/");
@@ -230,44 +319,8 @@ const solidPlugin = {
             contents: REACT_COMPILER_RUNTIME_STUB,
             loader: "js",
         }));
-        // Transform .tsx files with babel-preset-solid before Bun bundles them
-        build.onLoad({ filter: /\.tsx$/ }, async (args) => {
-            const [{ transformAsync: transform }, solidMod, tsMod, syntaxJsxMod] = await Promise.all([
-                import("@babel/core"),
-                import("babel-preset-solid"),
-                import("@babel/preset-typescript"),
-                import("@babel/plugin-syntax-jsx"),
-            ]);
-            const solid = solidMod.default || solidMod;
-            const ts = tsMod.default || tsMod;
-            const file = Bun.file(args.path);
-            const code = await file.text();
-            try {
-                const result = await transform(code, {
-                    filename: args.path,
-                    presets: [
-                        [solid, { moduleName: "@opentui/solid", generate: "universal" }],
-                        [ts],
-                    ],
-                    // Babel 8: TS preset alone mis-parses JSX fragments (`<>`)
-                    // as empty type-parameter lists — enable the JSX syntax
-                    // plugin so fragments parse as JSX.
-                    plugins: [syntaxJsxMod.default || syntaxJsxMod],
-                });
-                if (args.path.endsWith("app.tsx")) {
-                    await Bun.write("./.build/app-transformed.js", result?.code ?? "");
-                    console.log("   📝 Debug: Wrote transformed app.tsx to ./.build/app-transformed.js");
-                }
-                return {
-                    contents: result?.code ?? "",
-                    loader: "js",
-                };
-            }
-            catch (err) {
-                console.error("Transform failed for " + args.path + ":", err);
-                throw err;
-            }
-        });
+        // Let Bun handle .tsx natively with React JSX
+        /* build.onLoad({ filter: /\.tsx$/ }, async (args) => { ... }); */
     },
 };
 console.log("");
@@ -290,6 +343,7 @@ const define = {
 let injectionCode = `
 var GIZZI_VERSION = "${VERSION}";
 var GIZZI_CHANNEL = "production";
+var MACRO = ${JSON.stringify({ VERSION, BUILD_TIME: new Date().toISOString() })};
 `;
 if (migrations.length > 0) {
     injectionCode += `var GIZZI_MIGRATIONS = ${JSON.stringify(migrations)};\n`;
@@ -300,11 +354,11 @@ const workerBundleResult = await Bun.build({
     entrypoints: ["./src/cli/ui/ink-app/worker.ts"],
     target: "bun",
     sourcemap: "none",
-    minify: { whitespace: true, syntax: true, identifiers: false },
+    minify: { whitespace: true, syntax: false, identifiers: false },
     define,
     conditions: ["browser"],
     external: ["electron", "chromium-bidi/*", "playwright-core/*", "@opentui/core", "@opentui/core-*"],
-    plugins: [wasmEmbedPlugin, solidPlugin],
+    plugins: [wasmEmbedPlugin, textEmbedPlugin, solidPlugin],
 });
 if (!workerBundleResult.success) {
     console.error("Worker bundle failed:");
@@ -319,14 +373,14 @@ const bundleResult = await Bun.build({
     entrypoints: ["./src/cli/main.ts"],
     target: "bun",
     sourcemap: "none",
-    minify: { whitespace: true, syntax: true, identifiers: false },
+    minify: { whitespace: true, syntax: false, identifiers: false },
     define: {
         ...define,
         "GIZZI_WORKER_CODE": JSON.stringify(workerCode),
     },
     conditions: ["browser"],
     external: ["electron", "chromium-bidi/*", "playwright-core/*", "@opentui/core", "@opentui/core-*"],
-    plugins: [wasmEmbedPlugin, solidPlugin],
+    plugins: [wasmEmbedPlugin, textEmbedPlugin, solidPlugin],
 });
 if (!bundleResult.success) {
     console.error("Bundle failed:");
@@ -364,6 +418,13 @@ for (const target of targetsToBuild) {
         const stat = await Bun.file(outfile).stat();
         const sizeMB = stat ? Math.round((stat.size / 1024 / 1024) * 10) / 10 : 0;
         console.log(`✓ (${sizeMB} MB) -> ${outfile}`);
+        if (process.env.GIZZI_DISABLE_NATIVE_SIDECAR !== "1") {
+            const assets = await copyNativeAssets({
+                outDir: OUTDIR,
+                target: `${target.platform}-${target.arch}`,
+            });
+            console.log(`   ✓ ${assets.packageName} sidecar (${assets.files} files)`);
+        }
         results.push({ target, success: true, path: outfile, size: sizeMB });
     }
     catch (err) {

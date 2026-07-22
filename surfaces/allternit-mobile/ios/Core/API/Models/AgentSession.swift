@@ -39,8 +39,17 @@ struct AgentSession: Decodable, Sendable, Identifiable {
     /// local-only store metadata (mode-session-store.ts:72-77), so this is the
     /// only wire signal distinguishing agent sessions from regular ones.
     let agentId: String?
-    // The rest of `metadata` (project_id, directory, version, permission, …)
-    // stays skipped — not rendered anywhere on iOS.
+    /// `metadata.project_id` — the cowork project this session was stamped
+    /// with at create (agent_session_routes.rs:294). Nil for unassigned
+    /// sessions; the Projects feature groups chats by this id.
+    let projectId: String?
+    /// `metadata.ephemeral` — incognito chats (Phase 6). The backend excludes
+    /// these from list responses. Decodes the bool the backend emits or the
+    /// "true" string form (the create path carries the flag as a string
+    /// inside the metadata bag).
+    let ephemeral: Bool
+    // The rest of `metadata` (directory, version, permission, …) stays
+    // skipped — not rendered anywhere on iOS.
 
     enum CodingKeys: String, CodingKey {
         case id, name, description
@@ -54,10 +63,12 @@ struct AgentSession: Decodable, Sendable, Identifiable {
 
     /// Keys inside the `metadata` object emitted by `transform_session`
     /// (agent_session_routes.rs:293-301). Note the mixed casing on the wire:
-    /// camelCase `originSurface` vs snake_case `agent_id`.
+    /// camelCase `originSurface` vs snake_case `agent_id` / `project_id`.
     private enum MetadataKeys: String, CodingKey {
         case originSurface
         case agentId = "agent_id"
+        case projectId = "project_id"
+        case ephemeral
     }
 
     /// Tolerant decode mirroring the web's `normalizeSessionPayload`: only
@@ -75,12 +86,23 @@ struct AgentSession: Decodable, Sendable, Identifiable {
         messageCount = try container.decodeIfPresent(Int.self, forKey: .messageCount) ?? 0
         active = try container.decodeIfPresent(Bool.self, forKey: .active) ?? true
         tags = try container.decodeIfPresent([String].self, forKey: .tags) ?? []
-        if let metadata = try container.nestedContainerIfPresent(keyedBy: MetadataKeys.self, forKey: .metadata) {
+        if container.contains(.metadata), try !container.decodeNil(forKey: .metadata) {
+            let metadata = try container.nestedContainer(keyedBy: MetadataKeys.self, forKey: .metadata)
             originSurface = try metadata.decodeIfPresent(String.self, forKey: .originSurface)
             agentId = try metadata.decodeIfPresent(String.self, forKey: .agentId)
+            projectId = try metadata.decodeIfPresent(String.self, forKey: .projectId)
+            // The backend emits a bool; the create path carries the flag as
+            // the string "true" inside the metadata bag.
+            if let flag = try metadata.decodeIfPresent(Bool.self, forKey: .ephemeral) {
+                ephemeral = flag
+            } else {
+                ephemeral = (try metadata.decodeIfPresent(String.self, forKey: .ephemeral)) == "true"
+            }
         } else {
             originSurface = nil
             agentId = nil
+            projectId = nil
+            ephemeral = false
         }
     }
 }

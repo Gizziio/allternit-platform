@@ -45,7 +45,7 @@ const programsList = [
   { id: 'assetmanager', name: 'AssetManager', desc: 'Image & file management', icon: FolderOpen, color: 'bg-pink-500' },
   { id: 'orchestrator', name: 'Orchestrator', desc: 'MoA execution dashboard', icon: Cpu, color: 'bg-red-500' },
   { id: 'workflowbuilder', name: 'WorkflowBuilder', desc: 'Visual DAG builder', icon: Graph, color: 'bg-cyan-500' },
-  { id: 'browser', name: 'Browser', desc: 'Web citations with screenshots', icon: Globe, color: 'bg-blue-500' },
+  { id: 'browser', name: 'ACI', desc: 'Web citations with screenshots', icon: Globe, color: 'bg-blue-500' },
   { id: 'labs', name: 'A://Labs', desc: '7 live AI learning tracks', icon: GraduationCap, color: 'bg-violet-500' },
 ];
 

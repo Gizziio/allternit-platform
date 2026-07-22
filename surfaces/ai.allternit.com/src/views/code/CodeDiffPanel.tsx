@@ -9,7 +9,7 @@ import {
   Warning,
 } from '@phosphor-icons/react';
 import { CodeCanvasTileDiff } from '@/components/canvas/CodeCanvasTileDiff';
-import { API_BASE_URL } from '@/lib/agents/api-config';
+import { runtimeApiUrl } from '@/lib/agents/api-config';
 
 interface CodeDiffPanelProps {
   initialDiff?: string;
@@ -66,7 +66,7 @@ export function CodeDiffPanel({ initialDiff = '', filePath, workingDir }: CodeDi
     const controller = new AbortController();
     setError(null);
     setIsLoading(true);
-    fetch(`${API_BASE_URL}/git/diff`, {
+    fetch(runtimeApiUrl('/git/diff'), {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ path: workingDir, staged: false, file: filePath }),

@@ -332,6 +332,12 @@ export interface BrowserAgentState {
   approveAction: () => void;
   denyAction: () => void;
   captureScreenshot: () => Promise<string | null>;
+  /**
+   * Bring up (or refresh) an interactive engine browser session outside of a
+   * goal run. The gateway creates the Playwright session on demand for the
+   * session id and returns a screenshot of it.
+   */
+  startBrowserSession: (url?: string) => Promise<boolean>;
   openDrawer: () => void;
 
   // Mode
@@ -959,6 +965,37 @@ export const useBrowserAgentStore = create<BrowserAgentState>()(
         return data.screenshot_b64 ?? get().screenshot;
       } catch {
         return null;
+      }
+    },
+
+    startBrowserSession: async (url) => {
+      const sessionId =
+        get().aciSessionId ?? `sess-${crypto.randomUUID().replace(/-/g, '').slice(0, 8)}`;
+      set({ aciSessionId: sessionId, canonicalError: null });
+      try {
+        const result = (await getPlatformComputerUseClient().executeCompatibilityAction({
+          action: 'screenshot',
+          session_id: sessionId,
+          ...(url ? { target: url } : {}),
+        })) as {
+          status?: string;
+          summary?: string;
+          artifacts?: Array<{ type?: string; mime?: string; url?: string }>;
+        };
+        const shot = result.artifacts?.find(
+          (artifact) => artifact.type === 'screenshot' && artifact.url,
+        )?.url;
+        if (shot) {
+          // The view prefixes data:image/png;base64, — store raw base64 only.
+          set({
+            screenshot: shot.replace(/^data:image\/[a-z+]+;base64,/i, ''),
+            lastEventMessage: result.summary ?? 'Browser session ready',
+          });
+        }
+        return Boolean(shot);
+      } catch (error) {
+        set({ canonicalError: String(error) });
+        return false;
       }
     },
 

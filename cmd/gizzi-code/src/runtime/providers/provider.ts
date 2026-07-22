@@ -408,7 +408,7 @@ export namespace Provider {
       if (disabled.has(providerID)) continue
       const data = database[providerID]
       if (!data) {
-        log.error("Provider does not exist in model list " + providerID)
+        log.info("custom loader skipped; provider not in model database " + providerID)
         continue
       }
       const result = await fn(data)
@@ -830,12 +830,11 @@ export namespace Provider {
     if (cfg.model && cfg.model !== "auto" && cfg.model !== "auto/auto") {
       const parsed = parseModel(cfg.model)
       if (parsed.providerID !== "auto") {
-        const configuredProvider = providers[parsed.providerID]
-        if (configuredProvider?.models?.[parsed.modelID]) return parsed
-        log.warn("configured default model not found, using auto-routing", {
-          providerID: parsed.providerID,
-          modelID: parsed.modelID,
-        })
+        // A pinned model is an explicit user decision. Validate it and surface
+        // ModelNotFoundError (with suggestions) instead of silently routing a
+        // request to a different provider/model.
+        await getModel(parsed.providerID, parsed.modelID)
+        return parsed
       }
     }
 
@@ -856,8 +855,8 @@ export namespace Provider {
     if (cfg.model && cfg.model !== "auto" && cfg.model !== "auto/auto") {
       const parsed = parseModel(cfg.model)
       if (parsed.providerID !== "auto") {
-        const provider = providers[parsed.providerID]
-        if (provider?.models?.[parsed.modelID]) return parsed
+        await getModel(parsed.providerID, parsed.modelID)
+        return parsed
       }
     }
 

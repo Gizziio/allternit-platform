@@ -17,6 +17,7 @@ import compact from './commands/compact/index.js'
 import config from './commands/config/index.js'
 import { context, contextNonInteractive } from './commands/context/index.js'
 import cost from './commands/cost/index.js'
+import dash from './commands/dash/index.js'
 import diff from './commands/diff/index.js'
 import ctx_viz from './commands/ctx_viz/index.js'
 import doctor from './commands/doctor/index.js'
@@ -127,6 +128,7 @@ const buddy = feature('BUDDY')
   ? safeRequire('./commands/buddy/index.js')?.default
   : null
 /* eslint-enable @typescript-eslint/no-require-imports */
+import think from './commands/think/index.js'
 import thinkback from './commands/thinkback/index.js'
 import thinkbackPlay from './commands/thinkback-play/index.js'
 import permissions from './commands/permissions/index.js'
@@ -280,6 +282,7 @@ const COMMANDS = memoize((): Command[] => [
   context,
   contextNonInteractive,
   cost,
+  dash,
   diff,
   doctor,
   effort,
@@ -340,6 +343,7 @@ const COMMANDS = memoize((): Command[] => [
   ...(bridge ? [bridge] : []),
   ...(remoteControlServerCommand ? [remoteControlServerCommand] : []),
   ...(voiceCommand ? [voiceCommand] : []),
+  think,
   thinkback,
   thinkbackPlay,
   permissions,
@@ -466,7 +470,7 @@ const loadAllCommands = memoize(async (cwd: string): Promise<Command[]> => {
   ] = await Promise.all([
     getSkills(cwd),
     getPluginCommands(),
-    workflowCommands ? workflowCommands(cwd) : Promise.resolve([]),
+    getWorkflowCommands ? Promise.resolve(getWorkflowCommands(cwd)) : Promise.resolve([]),
   ])
 
   return [

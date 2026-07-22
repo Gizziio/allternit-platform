@@ -1,0 +1,18 @@
+[
+  {
+    "name": "reorders a displaced result",
+    "expectedAnomalies": ["tool_result_reordered"]
+  },
+  {
+    "name": "synthesizes a missing result",
+    "expectedAnomalies": ["tool_result_synthesized"]
+  },
+  {
+    "name": "drops orphan and duplicate results",
+    "expectedAnomalies": ["duplicate_tool_result_dropped", "orphan_tool_result_dropped"]
+  },
+  {
+    "name": "merges consecutive assistants and drops blank text",
+    "expectedAnomalies": ["consecutive_assistants_merged", "whitespace_text_dropped"]
+  }
+]

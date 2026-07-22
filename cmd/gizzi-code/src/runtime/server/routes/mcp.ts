@@ -52,6 +52,87 @@ export const McpRoutes = lazy(() =>
         return c.json(status)
       },
     )
+    .get(
+      "/tools/catalog",
+      describeRoute({
+        summary: "Inspect qualified MCP tools",
+        description: "Return MCP tools with server provenance and normalization collision diagnostics.",
+        operationId: "mcp.tools.catalog",
+        responses: { 200: { description: "Qualified MCP tool catalog", content: { "application/json": { schema: resolver(z.any()) } } } },
+      }),
+      async (c) => {
+        const catalog = await MCP.toolCatalog()
+        return c.json({ descriptors: catalog.descriptors, collisions: catalog.collisions })
+      },
+    )
+    .get(
+      "/:name/auth",
+      describeRoute({
+        summary: "Get MCP OAuth state",
+        operationId: "mcp.auth.status",
+        responses: { 200: { description: "OAuth status", content: { "application/json": { schema: resolver(z.any()) } } } },
+      }),
+      validator("param", z.object({ name: z.string() })),
+      async (c) => {
+        const { name } = c.req.valid("param")
+        return c.json({ supported: await MCP.supportsOAuth(name), status: await MCP.getAuthStatus(name) })
+      },
+    )
+    .post(
+      "/:name/auth/start",
+      describeRoute({
+        summary: "Start MCP OAuth",
+        description: "Start PKCE/dynamic-registration OAuth and return a URL for browser or headless clients.",
+        operationId: "mcp.auth.start",
+        responses: { 200: { description: "OAuth flow started", content: { "application/json": { schema: resolver(z.any()) } } }, ...errors(400, 404) },
+      }),
+      validator("param", z.object({ name: z.string() })),
+      async (c) => c.json(await MCP.startAuth(c.req.valid("param").name)),
+    )
+    .post(
+      "/:name/auth/complete",
+      describeRoute({
+        summary: "Complete MCP OAuth",
+        operationId: "mcp.auth.complete",
+        responses: { 200: { description: "OAuth flow completed", content: { "application/json": { schema: resolver(z.any()) } } }, ...errors(400, 404) },
+      }),
+      validator("param", z.object({ name: z.string() })),
+      validator("json", z.object({ code: z.string().min(1) })),
+      async (c) => c.json(await MCP.finishAuth(c.req.valid("param").name, c.req.valid("json").code)),
+    )
+    .delete(
+      "/:name/auth",
+      describeRoute({
+        summary: "Remove MCP OAuth credentials",
+        operationId: "mcp.auth.logout",
+        responses: { 200: { description: "OAuth credentials removed", content: { "application/json": { schema: resolver(z.boolean()) } } } },
+      }),
+      validator("param", z.object({ name: z.string() })),
+      async (c) => {
+        await MCP.removeAuth(c.req.valid("param").name)
+        return c.json(true)
+      },
+    )
+    .post(
+      "/:name/connect",
+      describeRoute({ summary: "Connect MCP server", operationId: "mcp.connect", responses: { 200: { description: "Connected", content: { "application/json": { schema: resolver(z.any()) } } } } }),
+      validator("param", z.object({ name: z.string() })),
+      async (c) => {
+        const name = c.req.valid("param").name
+        await MCP.connect(name)
+        return c.json((await MCP.status())[name])
+      },
+    )
+    .post(
+      "/:name/disconnect",
+      describeRoute({ summary: "Disconnect MCP server", operationId: "mcp.disconnect", responses: { 200: { description: "Disconnected", content: { "application/json": { schema: resolver(z.any()) } } } } }),
+      validator("param", z.object({ name: z.string() })),
+      async (c) => {
+        const name = c.req.valid("param").name
+        await MCP.disconnect(name)
+        return c.json((await MCP.status())[name])
+      },
+    )
     .post(
       "/add",
       describeRoute({

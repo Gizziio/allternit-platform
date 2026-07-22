@@ -37,6 +37,7 @@ import { VoiceWarmupHint } from './VoiceIndicator';
 import { useVoiceEnabled } from '../../hooks/useVoiceEnabled';
 import { useVoiceState } from '../../context/voice';
 import { isFullscreenEnvEnabled } from '../../utils/fullscreen';
+import { RotatingTip } from './RotatingTip';
 import { isXtermJs } from '../../ink/terminal';
 import { useHasSelection, useSelection } from '../../ink/hooks/use-selection';
 import { getGlobalConfig, saveGlobalConfig } from '../../utils/config';
@@ -408,9 +409,7 @@ function ModeIndicator({
   // below still treat "pill present" as non-empty.
   const tasksPart = hasBackgroundTasks && !hasTeammatePills && !shouldHideTasksFooter(tasks, showSpinnerTree) ? <BackgroundTaskStatus tasksSelected={tasksSelected} isViewingTeammate={isViewingTeammate} teammateFooterIndex={teammateFooterIndex} isLeaderIdle={!isLoading} onOpenDialog={onOpenTasksDialog} /> : null;
   if (parts.length === 0 && !tasksPart && !modePart && showHint) {
-    parts.push(<Text dimColor key="shortcuts-hint">
-        ? for shortcuts
-      </Text>);
+    parts.push(<RotatingTip key="rotating-tip" />);
   }
 
   // Only replace the idle voice hint when there's something to say — otherwise

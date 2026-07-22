@@ -15,11 +15,9 @@ import { Spinner } from './Spinner';
 // Inline require breaks the cycle this file would otherwise close:
 // sessionStorage → commands → exit → ExitFlow → here. All call sites
 // are inside callbacks, so the lazy require never sees an undefined import.
-function recordWorktreeExit(): void {
-  /* eslint-disable @typescript-eslint/no-require-imports */
-  ;
-  (require('../utils/sessionStorage.js') as typeof import('../utils/sessionStorage.js')).saveWorktreeState(null);
-  /* eslint-enable @typescript-eslint/no-require-imports */
+async function recordWorktreeExit(): Promise<void> {
+  const { saveWorktreeState } = await import('../utils/sessionStorage.js');
+  saveWorktreeState(null);
 }
 type Props = {
   onDone: (result?: string, options?: {

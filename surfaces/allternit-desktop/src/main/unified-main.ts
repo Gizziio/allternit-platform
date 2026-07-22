@@ -73,6 +73,27 @@ function isUrlReachable(url: string, timeoutMs: number): Promise<boolean> {
   });
 }
 
+/**
+ * Reads resources/company.json's `selfHosted` flag. Self-hosted builds ship
+ * with no Clerk credentials and are not meant to pair with Allternit Cloud at
+ * all — the startup gate must skip runtime pairing entirely for them rather
+ * than opening a browser to a cloud sign-in flow that self-hosted operators
+ * never configured. Defaults to false (normal cloud-paired behavior) if the
+ * file is missing or unreadable, matching every build before this flag existed.
+ */
+function isSelfHostedBuild(): boolean {
+  const repoRoot = resolve(__dirname, '..', '..', '..', '..');
+  const companyConfigPath = app.isPackaged
+    ? join(process.resourcesPath ?? '', 'company.json')
+    : join(repoRoot, 'resources', 'company.json');
+  try {
+    const raw = fs.readFileSync(companyConfigPath, 'utf8');
+    return JSON.parse(raw)?.selfHosted === true;
+  } catch {
+    return false;
+  }
+}
+
 /** Locate a locally-built platform static export to use in bundled mode. */
 function resolveLocalPlatformStaticPath(): string | null {
   // __dirname is dist/main; go up four levels to reach the repo root.
@@ -593,9 +614,13 @@ async function initializeBundledMode(): Promise<void> {
   log.info('[Main] Bundled mode - managing local backend');
   
   // Show startup window: full onboarding wizard on first launch / when signed
-  // out, plain loading screen for returning signed-in users.
-  const showStartupWizard = !store.get('startupWizardCompleted') || !authManager.hasSession();
-  log.info(`[Main] Startup window: ${showStartupWizard ? 'onboarding wizard' : 'loading only'}`);
+  // out, plain loading screen for returning signed-in users. Self-hosted
+  // builds have no Clerk credentials and never pair with Allternit Cloud, so
+  // they always skip straight to the loading screen and into the platform —
+  // otherwise they'd sit at "Waiting for browser login..." forever.
+  const selfHosted = isSelfHostedBuild();
+  const showStartupWizard = !selfHosted && (!store.get('startupWizardCompleted') || !authManager.hasSession());
+  log.info(`[Main] Startup window: ${showStartupWizard ? 'onboarding wizard' : 'loading only'}${selfHosted ? ' (self-hosted)' : ''}`);
   splashWindow = createStartupWindow({ initialStep: showStartupWizard ? 'welcome' : 'loading' });
   // Device pairing is independent of local service readiness. Start waiting
   // immediately so the user can approve in parallel while the runtime boots.

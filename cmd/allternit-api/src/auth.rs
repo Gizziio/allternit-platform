@@ -599,9 +599,34 @@ fn insert_user_headers(headers: &mut HeaderMap, user: &AuthUser) {
     }
 }
 
-fn extract_desktop_bootstrap_user(headers: &HeaderMap) -> Option<AuthUser> {
+/// Constant-time comparison — avoids leaking the secret's length/prefix via
+/// early-exit timing (same concern `internal_auth::require_internal_token`
+/// and `token_crypto`'s AEAD tag check handle for their own secrets).
+fn constant_time_eq(a: &str, b: &str) -> bool {
+    let (a, b) = (a.as_bytes(), b.as_bytes());
+    if a.len() != b.len() {
+        return false;
+    }
+    a.iter().zip(b.iter()).fold(0u8, |acc, (x, y)| acc | (x ^ y)) == 0
+}
+
+fn extract_desktop_bootstrap_user(
+    headers: &HeaderMap,
+    config: &crate::config::AppConfig,
+) -> Option<AuthUser> {
     let user_id = extract_header_string(headers, USER_ID_HEADER)?;
-    let _desktop_token = extract_header_string(headers, DESKTOP_ACCESS_TOKEN_HEADER)?;
+    let provided_token = extract_header_string(headers, DESKTOP_ACCESS_TOKEN_HEADER)?;
+
+    // This path trusts every other caller-supplied identity header outright
+    // (organization_id, organization_role, ...), so it must never activate on
+    // the strength of "a token-shaped header was present" alone. Require a
+    // real match against a configured secret; no secret configured means the
+    // path is disabled, not silently permissive.
+    let expected_token = config.desktop_access_token()?;
+    if !constant_time_eq(&provided_token, &expected_token) {
+        return None;
+    }
+
     let email = extract_header_string(headers, USER_EMAIL_HEADER);
     let name = extract_header_string(headers, USER_NAME_HEADER);
     let tenant_id = extract_header_string(headers, "x-allternit-tenant-id");
@@ -626,7 +651,7 @@ pub async fn auth_middleware(
     mut request: Request,
     next: Next,
 ) -> Response {
-    if let Some(mut user) = extract_desktop_bootstrap_user(request.headers()) {
+    if let Some(mut user) = extract_desktop_bootstrap_user(request.headers(), &state.config) {
         match ensure_user_in_db(&state.db, &user) {
             Ok(organization_id) => user.organization_id = organization_id,
             Err(e) => return e.into_response(),
@@ -690,7 +715,7 @@ pub async fn auth_middleware(
     // Self-hosted bypass: packaged apps that ship without Clerk keys trust the
     // local desktop bootstrap headers or localhost origin.
     if state.config.self_hosted() {
-        if let Some(mut user) = extract_desktop_bootstrap_user(request.headers()) {
+        if let Some(mut user) = extract_desktop_bootstrap_user(request.headers(), &state.config) {
             match ensure_user_in_db(&state.db, &user) {
                 Ok(organization_id) => user.organization_id = organization_id,
                 Err(e) => return e.into_response(),

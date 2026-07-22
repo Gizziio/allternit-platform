@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   Desktop,
   FolderSimple,
@@ -25,6 +25,17 @@ import {
 } from './CodeModeStore';
 import { Popover, PopoverTrigger, PopoverContent } from '@/components/ui/popover';
 import { CodeEnvironmentDialog } from './CodeEnvironmentDialog';
+import { usePlatformAuth } from '@/lib/platform-auth-client';
+import { env } from '@/lib/env';
+import {
+  ACTIVE_RUNTIME_ID_KEY,
+  getActiveRuntimeId,
+  getRuntimeExecutionTarget,
+  setRuntimeExecutionTarget,
+  subscribeRuntimeExecutionTarget,
+  type RuntimeExecutionTarget,
+} from '@/lib/runtime-target';
+import { reloadCodeSessionsForRuntime } from './CodeSessionStore';
 
 export const CODE_SESSION_MODE_LABELS: Record<CodeSessionMode, string> = {
   SAFE: 'Read only',
@@ -140,15 +151,79 @@ function IconWrapper({ children }: { children: React.ReactNode }) {
 }
 
 function EnvironmentPill() {
+  const { getToken, isLoaded, isSignedIn } = usePlatformAuth();
   const [open, setOpen] = useState(false);
   const [dialogMode, setDialogMode] = useState<'local' | 'cloud' | null>(null);
   const [showSshDialog, setShowSshDialog] = useState(false);
-  const [environment, setEnvironment] = useState<{ id: 'local' | 'cloud'; name: string }>({ id: 'local', name: 'Local' });
+  const [target, setTarget] = useState<RuntimeExecutionTarget>(() => getRuntimeExecutionTarget());
+  const [activeRuntimeId, setActiveRuntimeId] = useState<string | null>(() => getActiveRuntimeId());
+  const [runtimes, setRuntimes] = useState<CloudRuntime[]>([]);
+  const [runtimesLoading, setRuntimesLoading] = useState(false);
+  const [runtimesError, setRuntimesError] = useState<string | null>(null);
 
-  const selectEnvironment = (id: 'local' | 'cloud', name: string) => {
-    setEnvironment({ id, name });
+  const activeRuntime = useMemo(
+    () => runtimes.find((runtime) => runtime.id === activeRuntimeId) ?? null,
+    [activeRuntimeId, runtimes],
+  );
+
+  const refreshRuntimes = useCallback(async () => {
+    if (!isLoaded || !isSignedIn) {
+      setRuntimes([]);
+      return;
+    }
+    setRuntimesLoading(true);
+    setRuntimesError(null);
+    try {
+      const token = await getToken();
+      if (!token) throw new Error('Sign in to use cloud sessions');
+      const cloudBase = env('NEXT_PUBLIC_ALLTERNIT_CLOUD_API_URL', 'https://allternit-cloud-api.fly.dev')!.replace(/\/$/, '');
+      const response = await fetch(`${cloudBase}/api/v1/runtime-devices`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (!response.ok) throw new Error(`Runtime registry returned ${response.status}`);
+      const payload = await response.json() as { runtimes?: CloudRuntime[] };
+      const nextRuntimes = payload.runtimes ?? [];
+      setRuntimes(nextRuntimes);
+      const selected = getActiveRuntimeId();
+      if (!selected || !nextRuntimes.some((runtime) => runtime.id === selected && runtime.status === 'online')) {
+        const firstOnline = nextRuntimes.find((runtime) => runtime.status === 'online');
+        if (firstOnline) {
+          localStorage.setItem(ACTIVE_RUNTIME_ID_KEY, firstOnline.id);
+          setActiveRuntimeId(firstOnline.id);
+        }
+      }
+    } catch (error) {
+      setRuntimesError(error instanceof Error ? error.message : 'Unable to load cloud runtimes');
+    } finally {
+      setRuntimesLoading(false);
+    }
+  }, [getToken, isLoaded, isSignedIn]);
+
+  useEffect(() => subscribeRuntimeExecutionTarget(() => {
+    setTarget(getRuntimeExecutionTarget());
+    setActiveRuntimeId(getActiveRuntimeId());
+  }), []);
+
+  useEffect(() => {
+    if (open) void refreshRuntimes();
+  }, [open, refreshRuntimes]);
+
+  const selectEnvironment = async (nextTarget: RuntimeExecutionTarget, runtimeId?: string) => {
+    if (nextTarget === 'cloud' && !runtimeId) {
+      setDialogMode('cloud');
+      setOpen(false);
+      return;
+    }
+    setRuntimeExecutionTarget(nextTarget, runtimeId);
+    setTarget(nextTarget);
+    setActiveRuntimeId(runtimeId ?? getActiveRuntimeId());
     setOpen(false);
+    await reloadCodeSessionsForRuntime();
   };
+
+  const environmentName = target === 'cloud'
+    ? activeRuntime?.name || 'Allternit Cloud'
+    : 'This Device';
 
   return (
     <>
@@ -156,8 +231,8 @@ function EnvironmentPill() {
         <PopoverTrigger asChild>
           <span>
             <Pill ariaLabel="Environment" testId="code-workspace-bar-environment" isOpen={open}>
-              <IconWrapper><Desktop size={14} /></IconWrapper>
-              <span>{environment.name}</span>
+              <IconWrapper>{target === 'cloud' ? <Cloud size={14} /> : <Desktop size={14} />}</IconWrapper>
+              <span>{environmentName}</span>
               <IconWrapper><CaretDown size={12} style={{ opacity: 0.7 }} /></IconWrapper>
             </Pill>
           </span>
@@ -171,10 +246,11 @@ function EnvironmentPill() {
         >
           <DropdownSection title="Environment">
             <DropdownItem
-              active={environment.id === 'local'}
+              active={target === 'local'}
               icon={<Desktop size={14} />}
-              label="Local"
-              onClick={() => selectEnvironment('local', 'Local')}
+              label="This Device"
+              description="Sessions stored on this runtime"
+              onClick={() => void selectEnvironment('local')}
               trailing={
                 <button
                   type="button"
@@ -211,47 +287,30 @@ function EnvironmentPill() {
           </DropdownSection>
           <DropdownDivider />
           <DropdownSection title="Cloud">
-            <DropdownItem
-              active={environment.id === 'cloud'}
-              icon={<Cloud size={14} />}
-              label="Default"
-              onClick={() => selectEnvironment('cloud', 'Cloud')}
-              trailing={
-                <button
-                  type="button"
-                  data-testid="code-workspace-bar-environment-cloud-settings"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    setOpen(false);
-                    setDialogMode('cloud');
-                  }}
-                  title="Cloud environment settings"
-                  style={{
-                    display: 'inline-flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    width: 22,
-                    height: 22,
-                    borderRadius: 6,
-                    border: 'none',
-                    background: 'transparent',
-                    color: TEXT_SECONDARY,
-                    cursor: 'pointer',
-                  }}
-                  onMouseEnter={(e) => {
-                    e.currentTarget.style.background = PILL_BG;
-                  }}
-                  onMouseLeave={(e) => {
-                    e.currentTarget.style.background = 'transparent';
-                  }}
-                >
-                  <Gear size={14} />
-                </button>
-              }
-            />
+            {runtimes.filter((runtime) => runtime.status === 'online').map((runtime) => (
+              <DropdownItem
+                key={runtime.id}
+                active={target === 'cloud' && activeRuntimeId === runtime.id}
+                icon={<Cloud size={14} />}
+                label={runtime.name || 'Allternit runtime'}
+                description={`${runtime.runtimeType || 'runtime'} · online`}
+                onClick={() => void selectEnvironment('cloud', runtime.id)}
+              />
+            ))}
+            {runtimesLoading ? (
+              <DropdownItem label="Loading runtimes…" icon={<ArrowsClockwise size={14} />} disabled />
+            ) : null}
+            {!runtimesLoading && runtimes.filter((runtime) => runtime.status === 'online').length === 0 ? (
+              <DropdownItem
+                label={isSignedIn ? 'No runtime online' : 'Sign in for cloud sessions'}
+                description={runtimesError || 'Pair or start a runtime before launching a cloud code session'}
+                icon={<Cloud size={14} />}
+                disabled
+              />
+            ) : null}
             <DropdownItem
               icon={<Plus size={14} />}
-              label="Add cloud environment…"
+              label="Pair or configure runtime…"
               onClick={() => {
                 setOpen(false);
                 setDialogMode('cloud');
@@ -276,10 +335,7 @@ function EnvironmentPill() {
         open={dialogMode !== null}
         mode={dialogMode ?? 'local'}
         onClose={() => setDialogMode(null)}
-        onSave={(values) => {
-          if (values.name?.trim()) {
-            setEnvironment((prev) => ({ ...prev, name: values.name!.trim() }));
-          }
+        onSave={() => {
           setDialogMode(null);
         }}
       />
@@ -287,6 +343,14 @@ function EnvironmentPill() {
       <SshHostDialog open={showSshDialog} onClose={() => setShowSshDialog(false)} />
     </>
   );
+}
+
+interface CloudRuntime {
+  id: string;
+  name: string;
+  runtimeType?: string;
+  status: string;
+  lastSeenAt?: string | null;
 }
 
 function WorkspacePill({

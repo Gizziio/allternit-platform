@@ -1,0 +1,9 @@
+{
+  "security-compliance-server": {
+    "type": "http",
+    "url": "https://plugins.anthropic.com/mcp/security-compliance",
+    "headers": {
+      "X-Plugin": "security-compliance"
+    }
+  }
+}

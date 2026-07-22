@@ -48,11 +48,22 @@
 	<string>Allternit uses the microphone so you can dictate messages in chat.</string>
 	<key>NSSpeechRecognitionUsageDescription</key>
 	<string>Allternit uses speech recognition to transcribe your dictation into chat text.</string>
-	<!-- Runtime configuration (read by AppConfig). Dev defaults shown; override
-	     per environment via build settings — no production URL is hardcoded. -->
+	<!-- Composer "+" sheet: camera capture + photo library attach/recents. -->
+	<key>NSCameraUsageDescription</key>
+	<string>Allternit uses the camera so you can take photos and attach them to your chat.</string>
+	<key>NSPhotoLibraryUsageDescription</key>
+	<string>Allternit accesses your photo library so you can attach photos and see recent ones in the composer.</string>
+	<!-- Runtime configuration (read by AppConfig). Injected per build config
+	     via the ALLTERNIT_API_BASE_URL build setting; Debug/Release values live
+	     in project.yml so the production host is never hardcoded here. -->
 	<key>ALLTERNIT_API_BASE_URL</key>
-	<string>http://127.0.0.1:8013/api/v1</string>
+	<string>$(ALLTERNIT_API_BASE_URL)</string>
 	<key>CLERK_PUBLISHABLE_KEY</key>
-	<string></string>
+	<string>$(CLERK_PUBLISHABLE_KEY)</string>
+	<!-- Cloud API host (runtime-device registry + relay entry point). The
+	     Code tab's environment selector relays through this when cloud is
+	     active; AppConfig falls back to this value when the key is absent. -->
+	<key>ALLTERNIT_CLOUD_API_URL</key>
+	<string>https://allternit-cloud-api.fly.dev</string>
 </dict>
 </plist>

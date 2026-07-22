@@ -2,13 +2,14 @@
 
 import { Suspense, useEffect } from "react"
 import { useSearchParams } from "react-router-dom"
-import { PlatformSignIn } from "@/lib/platform-auth-client"
+import { PlatformSignIn, isDesktopShell } from "@/lib/platform-auth-client"
 import { MatrixLogo } from "@/components/ai-elements/MatrixLogo"
 import { AuthPreview } from "@/components/auth/AuthPreview"
 import { SiteFooter } from "@/components/auth/SiteFooter"
 
 function SignInContent() {
   const [searchParams] = useSearchParams()
+  const desktopShell = isDesktopShell()
 
   useEffect(() => {
     const prevBodyOverflow = document.body.style.overflow
@@ -201,7 +202,7 @@ function SignInContent() {
 
       <div className="signin-page">
         {/* Nav */}
-        <nav className="signin-nav">
+        <nav className="signin-nav" style={desktopShell ? { paddingLeft: 88 } : undefined}>
           <a href="/" className="signin-logo">
             <MatrixLogo state="idle" size={28} />
             <span className="signin-logo-text">Allternit</span>
@@ -246,51 +247,54 @@ function SignInContent() {
               <a href="/privacy">Privacy Policy</a>.
             </p>
 
-            {/* Platform availability */}
-            <div className="signin-also">
-              <div className="signin-also-divider">
-                <div className="signin-also-line" />
-                <span className="signin-also-label">Also available on</span>
-                <div className="signin-also-line" />
-              </div>
-              <div className="signin-pills">
-                {/* Chrome Extension */}
-                <a
-                  href="https://github.com/allternit/chrome-extension/releases"
-                  className="signin-pill"
-                  target="_blank"
-                  rel="noreferrer"
-                >
-                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" style={{ flexShrink: 0 }}>
-                    <circle cx="12" cy="12" r="10" fill="#4285F4"/>
-                    <circle cx="12" cy="12" r="4" fill="white"/>
-                    <path d="M12 8h8.66A10 10 0 0 0 3.34 8z" fill="#EA4335"/>
-                    <path d="M8 12 3.34 8A10 10 0 0 0 12 22z" fill="#34A853"/>
-                    <path d="M16 12l4.66-4A10 10 0 0 1 12 22z" fill="#FBBC05"/>
-                  </svg>
-                  <div style={{ minWidth: 0 }}>
-                    <div className="signin-pill-title">Chrome Extension</div>
-                    <div className="signin-pill-sub">Allternit in your browser</div>
-                  </div>
-                </a>
+            {/* Platform availability — web-only cross-promo; nonsensical inside
+                the desktop app itself, so it's hidden there. */}
+            {!desktopShell && (
+              <div className="signin-also">
+                <div className="signin-also-divider">
+                  <div className="signin-also-line" />
+                  <span className="signin-also-label">Also available on</span>
+                  <div className="signin-also-line" />
+                </div>
+                <div className="signin-pills">
+                  {/* Chrome Extension */}
+                  <a
+                    href="https://github.com/allternit/chrome-extension/releases"
+                    className="signin-pill"
+                    target="_blank"
+                    rel="noreferrer"
+                  >
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" style={{ flexShrink: 0 }}>
+                      <circle cx="12" cy="12" r="10" fill="#4285F4"/>
+                      <circle cx="12" cy="12" r="4" fill="white"/>
+                      <path d="M12 8h8.66A10 10 0 0 0 3.34 8z" fill="#EA4335"/>
+                      <path d="M8 12 3.34 8A10 10 0 0 0 12 22z" fill="#34A853"/>
+                      <path d="M16 12l4.66-4A10 10 0 0 1 12 22z" fill="#FBBC05"/>
+                    </svg>
+                    <div style={{ minWidth: 0 }}>
+                      <div className="signin-pill-title">Chrome Extension</div>
+                      <div className="signin-pill-sub">Allternit in your browser</div>
+                    </div>
+                  </a>
 
-                {/* Desktop App */}
-                <a href="https://allternit.com/#/download" className="signin-pill">
-                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" style={{ flexShrink: 0 }}>
-                    <rect x="3" y="3" width="18" height="13" rx="2" stroke="#C4A78A" strokeWidth="1.5" fill="none"/>
-                    <path d="M8 20h8M12 16v4" stroke="#C4A78A" strokeWidth="1.5" strokeLinecap="round"/>
-                  </svg>
-                  <div style={{ minWidth: 0 }}>
-                    <div className="signin-pill-title">Desktop App</div>
-                    <div className="signin-pill-sub">Mac, Windows &amp; Linux</div>
-                  </div>
-                </a>
+                  {/* Desktop App */}
+                  <a href="https://allternit.com/#/download" className="signin-pill">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" style={{ flexShrink: 0 }}>
+                      <rect x="3" y="3" width="18" height="13" rx="2" stroke="#C4A78A" strokeWidth="1.5" fill="none"/>
+                      <path d="M8 20h8M12 16v4" stroke="#C4A78A" strokeWidth="1.5" strokeLinecap="round"/>
+                    </svg>
+                    <div style={{ minWidth: 0 }}>
+                      <div className="signin-pill-title">Desktop App</div>
+                      <div className="signin-pill-sub">Mac, Windows &amp; Linux</div>
+                    </div>
+                  </a>
+                </div>
               </div>
-            </div>
+            )}
           </div>
         </div>
 
-        <SiteFooter />
+        {!desktopShell && <SiteFooter />}
       </div>
     </>
   )

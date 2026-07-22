@@ -617,8 +617,8 @@ export function getTheme(themeName: ThemeName): Theme {
 // Apple Terminal doesn't handle 24-bit color escape sequences well
 const ChalkCtor = (chalk as any).Instance ?? (chalk as any).constructor
 const chalkForChart =
-  env.terminal === 'Apple_Terminal' && ChalkCtor
-    ? new ChalkCtor({ level: 2 }) // 256 colors
+  env.terminal === 'Apple_Terminal' && (chalk as any).Chalk
+    ? new (chalk as any).Chalk({ level: 2 })
     : chalk
 
 /**

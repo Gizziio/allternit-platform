@@ -1,0 +1,15 @@
+{
+  "name": "hr-recruiting",
+  "version": "1.0.0",
+  "description": "Recruiting and people operations support.",
+  "author": {
+    "name": "Anthropic",
+    "email": "support@anthropic.com"
+  },
+  "keywords": [
+    "hr",
+    "claude",
+    "builtin"
+  ],
+  "license": "MIT"
+}

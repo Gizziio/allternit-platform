@@ -234,9 +234,41 @@ export const CronServiceEnhanced = {
   },
 
   close(): void {
-    this.stop({ force: true, timeoutMs: 0 }).catch((err) => {
-      log.error("Error during close", { error: err.message });
+    if (!state.isRunning && !state.db) return;
+
+    log.info("CronService closing...");
+    state.isShuttingDown = true;
+    state.isRunning = false;
+
+    if (state.timer) {
+      clearInterval(state.timer);
+      state.timer = null;
+    }
+
+    for (const [jobId, jobInfo] of state.runningJobs) {
+      log.info("Cancelling job during close", { jobId });
+      jobInfo.abortController.abort();
+      if (jobInfo.timeoutId) clearTimeout(jobInfo.timeoutId);
+    }
+    state.runningJobs.clear();
+
+    state.db?.close();
+    state.db = null;
+
+    state.isShuttingDown = false;
+    state.metrics = {
+      jobsStarted: 0,
+      jobsCompleted: 0,
+      jobsFailed: 0,
+    };
+
+    emitEvent({
+      type: "daemon:stopped",
+      timestamp: new Date().toISOString(),
+      data: { graceful: false },
     });
+
+    log.info("CronService closed");
   },
 
   isRunning(): boolean {

@@ -41,6 +41,10 @@ final class AgentModeStore: ObservableObject {
     @Published private(set) var agentEnabledByMode: [AppMode: Bool] = [:]
     @Published private(set) var agentIdByMode: [AppMode: String] = [:]
     @Published private(set) var tileByMode: [AppMode: AgentModeTile] = [:]
+    /// When agent mode is on, the bottom deck is either expanded (showing all
+    /// tiles) or collapsed to just the selected tile. Starts expanded so the
+    /// user can pick a mode; selecting a tile collapses it.
+    @Published private(set) var isAgentModeDeckExpanded: [AppMode: Bool] = [:]
 
     /// Cowork top-deck permission level (global, not per-surface — the web
     /// keeps it as a single composer state).
@@ -48,10 +52,13 @@ final class AgentModeStore: ObservableObject {
         didSet { defaults.set(coworkPermission.rawValue, forKey: Keys.permissions) }
     }
 
-    /// Cowork top-deck project selection. The web reads projects from
-    /// CoworkStore; the mobile app has no projects endpoint wired yet, so
-    /// the only option is "No project" and the selection is session-local.
-    @Published var selectedProjectId: String? = nil
+    /// Cowork top-deck project selection. `ProjectStore.shared` is the single
+    /// source of truth (it owns the list, the persistence, and publishes
+    /// changes); this forwards so the deck's existing call sites keep working.
+    var selectedProjectId: String? {
+        get { ProjectStore.shared.selectedProjectId }
+        set { ProjectStore.shared.selectedProjectId = newValue }
+    }
 
     // MARK: - Agent registry (GET /api/v1/agents)
 
@@ -105,10 +112,25 @@ final class AgentModeStore: ObservableObject {
     func setAgentEnabled(_ enabled: Bool, for mode: AppMode) {
         agentEnabledByMode[mode] = enabled
         defaults.set(enabled, forKey: Keys.enabled(mode))
+        if enabled {
+            isAgentModeDeckExpanded[mode] = true
+        }
     }
 
     func toggleAgent(for mode: AppMode) {
         setAgentEnabled(!isAgentEnabled(for: mode), for: mode)
+    }
+
+    func isAgentModeDeckExpanded(for mode: AppMode) -> Bool {
+        isAgentModeDeckExpanded[mode] ?? true
+    }
+
+    func setAgentModeDeckExpanded(_ expanded: Bool, for mode: AppMode) {
+        isAgentModeDeckExpanded[mode] = expanded
+    }
+
+    func toggleAgentModeDeckExpanded(for mode: AppMode) {
+        setAgentModeDeckExpanded(!isAgentModeDeckExpanded(for: mode), for: mode)
     }
 
     /// `session_mode` for the next session create on this surface
@@ -156,6 +178,7 @@ final class AgentModeStore: ObservableObject {
     func selectTile(_ tile: AgentModeTile, for surface: AppMode) {
         tileByMode[surface] = tile
         defaults.set(tile.rawValue, forKey: Keys.tile(surface))
+        isAgentModeDeckExpanded[surface] = false
     }
 
     // MARK: - Registry fetch

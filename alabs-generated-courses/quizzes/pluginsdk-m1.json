@@ -1,38 +1,38 @@
 {
-  "title": "Module 1 Quiz: Plugin SDK Architecture",
+  "title": "Module Quiz: ALABS-ADV-PLUGINSDK-module1",
   "questions": [
     {
-      "question": "What is the primary role of the PluginHost interface?",
+      "question": "Quiz 1: PluginHost Anatomy",
       "options": [
-        "To compile TypeScript plugins into JavaScript",
-        "To define the contract between a plugin and its runtime environment",
-        "To manage CSS styling for plugin UIs",
-        "To handle database migrations for plugins"
+        "host.llm.complete()",
+        "host.tools.has('browser_navigate')",
+        "host.ui.renderMarkdown()",
+        "host.storage.get('browser')"
       ],
       "correctIndex": 1,
-      "explanation": "The PluginHost interface defines the contract that both the plugin and its runtime must adhere to, including methods for tool registration, execution, and lifecycle management."
+      "explanation": "Correct! <code>host.tools.has()</code> is the universal way to probe capability availability before executing."
     },
     {
-      "question": "Which adapter would you use to integrate a plugin with a VS Code extension?",
+      "question": "Quiz 2: Adapter Matching",
       "options": [
-        "McpAdapter",
-        "HttpAdapter",
-        "VSCodeAdapter",
-        "CliAdapter"
+        "MCP Adapter",
+        "VS Code Adapter",
+        "CLI Adapter",
+        "Native Adapter"
       ],
-      "correctIndex": 2,
-      "explanation": "The VSCodeAdapter is specifically designed to bridge plugins into the VS Code extension host environment, handling message passing and UI integration."
+      "correctIndex": 1,
+      "explanation": "Correct! GitHub Copilot runs inside VS Code, so the VS Code Adapter registers commands and webview panels there."
     },
     {
-      "question": "What happens when a plugin's tool throws an unhandled error?",
+      "question": "Quiz 3: Graceful Degradation",
       "options": [
-        "The entire platform crashes",
-        "The error is silently ignored",
-        "The adapter catches it and returns a structured error response",
-        "The plugin is automatically uninstalled"
+        "The CLI silently skips the call.",
+        "The process crashes with a fatal error.",
+        "The tool registry returns { success: false, error: { code: 'NOT_IMPLEMENTED' } }.",
+        "The CLI opens a browser to generate the image."
       ],
       "correctIndex": 2,
-      "explanation": "Adapters wrap tool execution in try/catch blocks and return structured error objects, preventing individual tool failures from affecting the platform."
+      "explanation": "Exactly right. The CLI adapter\\'s tool registry returns a structured failure rather than crashing."
     }
   ]
 }

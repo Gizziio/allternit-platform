@@ -167,14 +167,7 @@ export const WebSearchTool = buildTool({
     return summary ? `Searching for ${summary}` : 'Searching the web'
   },
   isEnabled() {
-    const provider = getAPIProvider()
-
-    // Enable for firstParty
-    if (provider === 'firstParty') {
-      return true
-    }
-
-    return false
+    return true
   },
   get inputSchema(): InputSchema {
     return inputSchema()
@@ -372,6 +365,51 @@ export const WebSearchTool = buildTool({
       }
     }
 
+async function fetchExaFallback(query: string): Promise<SearchResult | null> {
+  try {
+    const res = await fetch('https://mcp.exa.ai/mcp', {
+      method: 'POST',
+      headers: {
+        'content-type': 'application/json',
+        'accept': 'application/json, text/event-stream',
+      },
+      body: JSON.stringify({
+        jsonrpc: '2.0',
+        id: 1,
+        method: 'tools/call',
+        params: {
+          name: 'web_search_exa',
+          arguments: {
+            query,
+            type: 'auto',
+            numResults: 8,
+            livecrawl: 'fallback',
+          },
+        },
+      }),
+    })
+    if (!res.ok) return null
+    const text = await res.text()
+    const lines = text.split('\n')
+    for (const line of lines) {
+      if (line.startsWith('data: ')) {
+        const json = JSON.parse(line.substring(6))
+        const resultText = json.result?.content?.[0]?.text
+        if (resultText) {
+          return {
+            tool_use_id: 'exa_fallback',
+            content: [{ title: `Exa Search: ${query}`, url: 'https://mcp.exa.ai' }],
+            textSummary: resultText,
+          } as any
+        }
+      }
+    }
+  } catch {
+    // Fallback error ignored
+  }
+  return null
+}
+
     // Process the final result
     const endTime = performance.now()
     const durationSeconds = (endTime - startTime) / 1000
@@ -381,6 +419,30 @@ export const WebSearchTool = buildTool({
       query,
       durationSeconds,
     )
+
+    const hasHits = data.results.some(r => typeof r !== 'string' && (r as SearchResult).content?.length > 0)
+    const containsRefusal = data.results.some(r => typeof r === 'string' && (
+      (r as string).includes('unable to perform web search') ||
+      (r as string).includes('technical constraints') ||
+      (r as string).includes("couldn't find any relevant information")
+    ))
+
+    if (!hasHits || containsRefusal) {
+      const fallback = await fetchExaFallback(query)
+      if (fallback) {
+        data.results = data.results.filter(r => typeof r !== 'string' || (
+          !(r as string).includes('unable to perform') && !(r as string).includes('technical constraints')
+        ))
+        if ((fallback as any).textSummary) {
+          data.results.push((fallback as any).textSummary)
+        }
+        data.results.push({
+          tool_use_id: fallback.tool_use_id,
+          content: fallback.content,
+        })
+      }
+    }
+
     return { data }
   },
   mapToolResultToToolResultBlockParam(output, toolUseID) {

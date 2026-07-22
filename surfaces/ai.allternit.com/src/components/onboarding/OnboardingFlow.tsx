@@ -2083,7 +2083,7 @@ const MODE_TABS: Array<{
 }> = [
   { key: 'chat',    label: 'A:// Chat',    Icon: ChatCircle,  color: '#6366f1', bg: 'rgba(99,102,241,0.1)'  },
   { key: 'code',    label: 'A:// Code',    Icon: Code,        color: 'var(--status-success)', bg: 'rgba(16,185,129,0.1)'  },
-  { key: 'browser', label: 'A:// Browser', Icon: Globe,       color: '#ec4899', bg: 'rgba(236,72,153,0.1)'  },
+  { key: 'browser', label: 'A:// ACI', Icon: Globe,       color: '#ec4899', bg: 'rgba(236,72,153,0.1)'  },
   { key: 'agents',  label: 'A:// Agents',  Icon: Robot,       color: 'var(--status-warning)', bg: 'var(--status-warning-bg)'  },
   { key: 'private', label: 'Private',      Icon: ShieldCheck, color: 'var(--status-info)', bg: 'rgba(6,182,212,0.1)'   },
 ];

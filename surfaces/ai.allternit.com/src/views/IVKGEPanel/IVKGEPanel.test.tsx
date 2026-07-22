@@ -1,3 +1,4 @@
+import React from 'react';
 /**
  * IVKGE Panel Component Tests
  */

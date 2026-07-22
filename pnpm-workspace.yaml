@@ -35,9 +35,6 @@ packages:
   - 'platform/*/*'
   - 'platform/*/*/*'
 
-  # Plugins
-  - 'plugins/*'
-
   # Public SDK packages
   - 'sdk/*'
 
@@ -69,3 +66,6 @@ onlyBuiltDependencies:
   - protobufjs
   - sharp
   - sqlite3
+
+patchedDependencies:
+  follow-redirects@1.15.11: patches/follow-redirects@1.15.11.patch

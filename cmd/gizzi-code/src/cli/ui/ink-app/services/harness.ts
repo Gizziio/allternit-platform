@@ -153,6 +153,7 @@ export async function getPlatformHarnessConfig(
       Authorization: `Bearer ${token}`,
       Accept: 'application/json',
     },
+    signal: AbortSignal.timeout(2000),
   }).catch(() => undefined)
 
   if (!response || !response.ok) {
@@ -184,51 +185,54 @@ export async function getPlatformHarnessConfig(
 export async function getAgentHarnessConfig(
   agentName?: string,
 ): Promise<HarnessConfig | undefined> {
-  if (agentName && looksLikePlatformAgentId(agentName)) {
-    const platformConfig = await getPlatformHarnessConfig(agentName).catch(
-      () => undefined,
-    )
-    if (platformConfig) {
-      return platformConfig
+  const timeoutPromise = new Promise<undefined>((resolve) => setTimeout(() => resolve(undefined), 2000))
+  const configPromise = (async () => {
+    if (agentName && looksLikePlatformAgentId(agentName)) {
+      const platformConfig = await getPlatformHarnessConfig(agentName).catch(
+        () => undefined,
+      )
+      if (platformConfig) {
+        return platformConfig
+      }
     }
-  }
 
-  const [globalMigrationConfig, agentInfo] = await Promise.all([
-    getGlobalHarnessConfig().catch(() => undefined),
-    agentName ? Agent.get(agentName).catch(() => undefined) : undefined,
-  ])
+    const [globalMigrationConfig, agentInfo] = await Promise.all([
+      getGlobalHarnessConfig().catch(() => undefined),
+      agentName ? Agent.get(agentName).catch(() => undefined) : undefined,
+    ])
 
-  const globalConfig = normalizeMigrationConfig(globalMigrationConfig)
-  const perAgentConfig = agentInfo?.harness
+    const globalConfig = normalizeMigrationConfig(globalMigrationConfig)
+    const perAgentConfig = agentInfo?.harness
 
-  if (!perAgentConfig) {
-    return globalConfig
-  }
+    if (!perAgentConfig) {
+      return globalConfig
+    }
 
-  if (!globalConfig || globalConfig.mode === perAgentConfig.mode) {
-    return perAgentConfig
-  }
+    if (!globalConfig || globalConfig.mode === perAgentConfig.mode) {
+      return perAgentConfig
+    }
 
-  // Mode-specific merge: per-agent mode wins, but inherit mode-specific keys
-  // from the global config when the per-agent config does not provide them.
-  const merged: HarnessConfig = { mode: perAgentConfig.mode }
+    const merged: HarnessConfig = { mode: perAgentConfig.mode }
 
-  switch (perAgentConfig.mode) {
-    case 'byok':
-      merged.byok = perAgentConfig.byok ?? globalConfig.byok
-      break
-    case 'cloud':
-      merged.cloud = perAgentConfig.cloud ?? globalConfig.cloud
-      break
-    case 'local':
-      merged.local = perAgentConfig.local ?? globalConfig.local
-      break
-    case 'subprocess':
-      merged.subprocess = perAgentConfig.subprocess ?? globalConfig.subprocess
-      break
-  }
+    switch (perAgentConfig.mode) {
+      case 'byok':
+        merged.byok = perAgentConfig.byok ?? globalConfig.byok
+        break
+      case 'cloud':
+        merged.cloud = perAgentConfig.cloud ?? globalConfig.cloud
+        break
+      case 'local':
+        merged.local = perAgentConfig.local ?? globalConfig.local
+        break
+      case 'subprocess':
+        merged.subprocess = perAgentConfig.subprocess ?? globalConfig.subprocess
+        break
+    }
 
-  return merged
+    return merged
+  })()
+
+  return Promise.race([configPromise, timeoutPromise])
 }
 
 /**

@@ -1,6 +1,30 @@
 import type { MarketplacePlugin } from '../../../plugins/capability.types';
 import JSZip from 'jszip';
 
+export function detectLanguageFromName(name: string): string | undefined {
+  const ext = name.split('.').pop()?.toLowerCase();
+  const map: Record<string, string> = {
+    md: 'markdown',
+    json: 'json',
+    ts: 'typescript',
+    tsx: 'typescript',
+    js: 'javascript',
+    jsx: 'javascript',
+    py: 'python',
+    rs: 'rust',
+    go: 'go',
+    html: 'html',
+    htm: 'html',
+    css: 'css',
+    yaml: 'yaml',
+    yml: 'yaml',
+    toml: 'toml',
+    sh: 'bash',
+    txt: 'text',
+  };
+  return map[ext || ''];
+}
+
 export function normalizeMarketplacePluginPayload(
   payload: any,
   defaults: Partial<MarketplacePlugin> = {}
@@ -20,6 +44,7 @@ export function normalizeMarketplacePluginPayload(
     icon: payload.icon || defaults.icon,
     rating: payload.rating || 0,
     installCount: payload.installCount || 0,
+    installed: payload.installed ?? defaults.installed ?? false,
     sourceLabel: defaults.sourceLabel,
     sourceTrust: defaults.sourceTrust,
     sourceUrl: defaults.sourceUrl,
@@ -38,7 +63,7 @@ export function parseGitHubRepoRef(value: string): { owner: string; repo: string
   };
 }
 
-function isVersionNewer(remoteVersion: string | undefined, localVersion: string | undefined): boolean {
+export function isVersionNewer(remoteVersion: string | undefined, localVersion: string | undefined): boolean {
   if (!remoteVersion) return false;
   if (!localVersion) return true;
 

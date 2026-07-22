@@ -3,7 +3,7 @@
 
 import { useNavigate } from 'react-router-dom'
 import { useEffect, useRef, useState, useCallback } from 'react'
-import { ArrowsClockwise, Terminal, Clock } from '@phosphor-icons/react'
+import { ArrowsClockwise, Terminal, Clock, X, DownloadSimple, MagnifyingGlass } from '@phosphor-icons/react'
 import { usePlatformUser } from '@/lib/platform-auth-client'
 import { GATEWAY_BASE_URL } from '@/lib/agents/api-config'
 
@@ -20,6 +20,15 @@ interface StatusInfo {
   type: 'idle' | 'busy' | 'retry'
 }
 
+interface TraceEntry {
+  sequence: number
+  kind: string
+  time: number
+  messageID?: string
+  partID?: string
+  data?: unknown
+}
+
 function titleFor(s: GizziSession): string {
   return s.summary?.title?.trim() || s.slug || s.id.slice(0, 8)
 }
@@ -31,6 +40,7 @@ export default function SessionsPage() {
   const [statuses, setStatuses] = useState<Record<string, StatusInfo>>({})
   const [isLoading, setIsLoading] = useState(true)
   const [isRefreshing, setIsRefreshing] = useState(false)
+  const [inspectedSession, setInspectedSession] = useState<GizziSession | null>(null)
   const esRef = useRef<EventSource | null>(null)
 
   const fetchData = useCallback(async () => {
@@ -117,7 +127,7 @@ export default function SessionsPage() {
     if (isLoaded && !isSignedIn) {
       navigate(`/sign-in?redirect_url=/shell/sessions`, { replace: true })
     }
-  }, [isLoaded, isSignedIn, router])
+  }, [isLoaded, isSignedIn, navigate])
 
   if (!isLoaded || !isSignedIn) {
     return (
@@ -161,11 +171,11 @@ export default function SessionsPage() {
           </div>
         ) : (
           sessions.map((session) => (
-            <button type="button"
+            <div
               key={session.id}
-              onClick={() => router.push(`/shell/session/${session.id}`)}
-              className="w-full px-4 py-4 text-left hover:bg-zinc-50 transition-colors"
+              className="flex w-full items-center gap-2 px-4 py-4 text-left hover:bg-zinc-50 transition-colors"
             >
+              <button type="button" onClick={() => navigate(`/shell/session/${session.id}`)} className="min-w-0 flex-1 text-left">
               <div className="flex items-start justify-between gap-4">
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2 mb-1">
@@ -179,10 +189,94 @@ export default function SessionsPage() {
                   <span>{new Date(session.time.updated).toLocaleString()}</span>
                 </div>
               </div>
-            </button>
+              </button>
+              <button
+                type="button"
+                onClick={() => setInspectedSession(session)}
+                className="grid size-9 shrink-0 place-items-center rounded-lg text-zinc-500 hover:bg-zinc-200 active:scale-[0.97]"
+                aria-label={`Inspect ${titleFor(session)}`}
+                title="Inspect durable trace"
+              >
+                <MagnifyingGlass size={16} />
+              </button>
+            </div>
           ))
         )}
       </div>
+      {inspectedSession && (
+        <SessionTraceInspector session={inspectedSession} onClose={() => setInspectedSession(null)} />
+      )}
     </div>
+  )
+}
+
+function SessionTraceInspector({ session, onClose }: { session: GizziSession; onClose: () => void }) {
+  const [entries, setEntries] = useState<TraceEntry[]>([])
+  const [head, setHead] = useState(0)
+  const [filter, setFilter] = useState('')
+  const [error, setError] = useState<string | null>(null)
+
+  const refresh = useCallback(async () => {
+    try {
+      const response = await fetch(`${GATEWAY_BASE_URL}/v1/session/${encodeURIComponent(session.id)}/replay?limit=1000&snapshot=true`)
+      if (!response.ok) throw new Error(`Replay request failed (${response.status})`)
+      const page = await response.json()
+      setEntries(page.entries ?? [])
+      setHead(page.head ?? 0)
+      setError(null)
+    } catch (reason) {
+      setError(reason instanceof Error ? reason.message : String(reason))
+    }
+  }, [session.id])
+
+  useEffect(() => {
+    void refresh()
+    const timer = window.setInterval(() => void refresh(), 2_000)
+    return () => window.clearInterval(timer)
+  }, [refresh])
+
+  const visible = entries.filter((entry) => !filter || entry.kind.toLowerCase().includes(filter.toLowerCase()))
+
+  return (
+    <aside className="fixed inset-y-3 right-3 z-50 flex w-[min(680px,calc(100vw-24px))] flex-col overflow-hidden rounded-2xl border border-zinc-200/80 bg-white/90 shadow-2xl backdrop-blur-xl dark:border-zinc-700 dark:bg-zinc-950/90">
+      <header className="flex items-center gap-3 border-b border-zinc-200 px-4 py-3 dark:border-zinc-800">
+        <div className="min-w-0 flex-1">
+          <h2 className="truncate text-sm font-semibold">{titleFor(session)}</h2>
+          <p className="truncate text-xs text-zinc-500">Trace head {head} · {entries.length} loaded</p>
+        </div>
+        <a
+          href={`${GATEWAY_BASE_URL}/v1/session/${encodeURIComponent(session.id)}/support-bundle`}
+          className="grid size-8 place-items-center rounded-lg text-zinc-500 hover:bg-zinc-100 active:scale-[0.97] dark:hover:bg-zinc-800"
+          aria-label="Export redacted support bundle"
+          title="Export redacted support bundle"
+        >
+          <DownloadSimple size={16} />
+        </a>
+        <button type="button" onClick={onClose} className="grid size-8 place-items-center rounded-lg text-zinc-500 hover:bg-zinc-100 active:scale-[0.97] dark:hover:bg-zinc-800" aria-label="Close inspector">
+          <X size={16} />
+        </button>
+      </header>
+      <div className="border-b border-zinc-200 p-3 dark:border-zinc-800">
+        <label className="flex items-center gap-2 rounded-lg border border-zinc-200 bg-white px-3 py-2 dark:border-zinc-700 dark:bg-zinc-900">
+          <MagnifyingGlass size={14} className="text-zinc-400" />
+          <input value={filter} onChange={(event) => setFilter(event.target.value)} placeholder="Filter event kinds" className="min-w-0 flex-1 bg-transparent text-sm outline-none" />
+        </label>
+      </div>
+      {error && <div className="border-b border-red-200 bg-red-50 px-4 py-2 text-xs text-red-700">{error}</div>}
+      <div className="flex-1 overflow-y-auto p-3 font-mono text-xs">
+        {visible.length === 0 ? (
+          <p className="p-8 text-center font-sans text-zinc-500">No matching trace events.</p>
+        ) : visible.map((entry) => (
+          <details key={entry.sequence} className="group border-b border-zinc-100 py-2 dark:border-zinc-800">
+            <summary className="flex cursor-pointer list-none items-center gap-3 rounded px-2 py-1 hover:bg-zinc-100 dark:hover:bg-zinc-900">
+              <span className="w-12 shrink-0 text-right text-zinc-400">#{entry.sequence}</span>
+              <span className="min-w-0 flex-1 truncate font-semibold text-zinc-700 dark:text-zinc-200">{entry.kind}</span>
+              <time className="shrink-0 text-zinc-400">{new Date(entry.time).toLocaleTimeString()}</time>
+            </summary>
+            <pre className="mt-1 max-h-80 overflow-auto whitespace-pre-wrap break-words rounded-lg bg-zinc-950 p-3 text-[11px] leading-relaxed text-zinc-200">{JSON.stringify(entry, null, 2)}</pre>
+          </details>
+        ))}
+      </div>
+    </aside>
   )
 }

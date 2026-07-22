@@ -93,6 +93,16 @@ const solidPlugin = {
             const found = probe(candidates);
             return { path: found ?? candidates[0] };
         });
+        build.onResolve({ filter: /^@allternit\/orchestrator$/ }, () => ({
+            path: resolve("../../packages/@allternit/orchestrator/src/index.ts"),
+        }));
+        build.onResolve({ filter: /^@opentui\/core-[a-z0-9-]+/ }, () => {
+            const platform = process.platform;
+            const arch = process.arch;
+            const rootPath = resolve(`../../node_modules/@opentui/core-${platform}-${arch}/index.ts`);
+            if (Bun.file(rootPath).size > 0) return { path: rootPath };
+            return { path: resolve(`node_modules/@opentui/core-${platform}-${arch}/index.ts`) };
+        });
         // Resolve @allternit workspace packages to their source or dist
         build.onResolve({ filter: /^@allternit\/(plugin|script|sdk|util|gizzi-util)/ }, (args) => {
             const parts = args.path.split("/");
@@ -175,7 +185,7 @@ const result = await Bun.build({
     sourcemap: "none",
     minify: { whitespace: true, syntax: true, identifiers: false },
     conditions: ["browser"],
-    external: ["electron", "chromium-bidi/*", "playwright-core/*", "@opentui/core", "@opentui/core-*"],
+    external: ["electron", "chromium-bidi/*", "playwright-core/*"],
     plugins: [wasmEmbedPlugin, solidPlugin],
 });
 for (const log of result.logs) {

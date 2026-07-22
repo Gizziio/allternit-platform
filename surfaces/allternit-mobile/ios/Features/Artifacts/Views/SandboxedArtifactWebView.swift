@@ -16,17 +16,22 @@ import WebKit
 /// 3. `decidePolicyFor` cancels every navigation that is not the sandbox
 ///    document itself or `about:blank` (links, redirects, window.open).
 struct SandboxedArtifactWebView: UIViewRepresentable {
+    // The scheme constants and document-assembly helpers are pure and used
+    // from the non-isolated Coordinator — `nonisolated` opts them out of the
+    // MainActor isolation UIViewRepresentable puts on this struct (Swift 6.0
+    // has no cross-actor conformance inference to paper over it).
+
     /// Custom scheme served by the coordinator's scheme handler.
-    static let scheme = "artifact"
+    nonisolated static let scheme = "artifact"
     /// The single document URL the handler will serve.
-    static let documentURL = URL(string: "artifact://artifact/")!
+    nonisolated static let documentURL = URL(string: "artifact://artifact/")!
 
     let content: String
     let artifactType: String
 
     /// JavaScript is enabled only for artifact types that can execute it
     /// meaningfully (html documents, javascript sources).
-    static func allowsJavaScript(for artifactType: String) -> Bool {
+    nonisolated static func allowsJavaScript(for artifactType: String) -> Bool {
         let type = artifactType.lowercased()
         return type.contains("html")
             || type.contains("javascript")
@@ -64,7 +69,7 @@ struct SandboxedArtifactWebView: UIViewRepresentable {
     /// CSP per plan §3: no network, frames, fonts, or plugins; inline styles
     /// and `data:` images only. `script-src 'unsafe-inline'` is appended
     /// exclusively for artifact types that need JS.
-    static func contentSecurityPolicy(allowsJavaScript: Bool) -> String {
+    nonisolated static func contentSecurityPolicy(allowsJavaScript: Bool) -> String {
         var csp = "default-src 'none'; style-src 'unsafe-inline'; img-src data:;"
         if allowsJavaScript {
             csp += " script-src 'unsafe-inline';"
@@ -73,7 +78,7 @@ struct SandboxedArtifactWebView: UIViewRepresentable {
     }
 
     /// Builds the final HTML document served to the web view.
-    static func document(content: String, artifactType: String) -> String {
+    nonisolated static func document(content: String, artifactType: String) -> String {
         let js = allowsJavaScript(for: artifactType)
         let meta = "<meta http-equiv=\"Content-Security-Policy\" content=\"\(contentSecurityPolicy(allowsJavaScript: js))\">"
         let type = artifactType.lowercased()
@@ -140,7 +145,7 @@ struct SandboxedArtifactWebView: UIViewRepresentable {
     /// Injects the CSP meta into an existing `<head>` when present; otherwise
     /// creates one after `<html>`; otherwise prepends. Same approach as the
     /// web's storage-shim injector (ArtifactRenderer.tsx).
-    static func injectCSP(_ meta: String, into html: String) -> String {
+    nonisolated static func injectCSP(_ meta: String, into html: String) -> String {
         if let headTag = html.range(of: "<head[^>]*>", options: [.regularExpression, .caseInsensitive]) {
             return html.replacingCharacters(in: headTag, with: String(html[headTag]) + "\n" + meta)
         }
@@ -150,7 +155,7 @@ struct SandboxedArtifactWebView: UIViewRepresentable {
         return meta + "\n" + html
     }
 
-    static func escapeHTML(_ string: String) -> String {
+    nonisolated static func escapeHTML(_ string: String) -> String {
         string
             .replacingOccurrences(of: "&", with: "&amp;")
             .replacingOccurrences(of: "<", with: "&lt;")
@@ -159,18 +164,22 @@ struct SandboxedArtifactWebView: UIViewRepresentable {
 
     // MARK: - Coordinator
 
-    /// Conformances live in extensions below: `WKNavigationDelegate` is
-    /// main-actor-annotated in the SDK (the conformance is inferred as
-    /// isolated), while `WKURLSchemeHandler` may be called off the main
-    /// thread — so this class deliberately stays non-isolated. Its state is
-    /// only mutated on the main thread (via `updateUIView`), strictly before
-    /// the matching `load` call, so the handler never reads a torn value.
+    /// Conformances live in extensions below: `WKNavigationDelegate`'s
+    /// requirements are main-actor-annotated in the SDK (the witness carries
+    /// an explicit `@MainActor`), while `WKURLSchemeHandler` may be called
+    /// off the main thread — so this class deliberately stays non-isolated.
+    /// Its state is only mutated on the main thread (via `updateUIView`),
+    /// strictly before the matching `load` call, so the handler never reads
+    /// a torn value.
     final class Coordinator: NSObject {
         /// Mirrors `SandboxedArtifactWebView.allowsJavaScript(for:)` for the
         /// current artifact; read by the navigation delegate.
         var allowsJavaScript = false
 
         /// The document currently served for `artifact://` requests.
+        /// `loadIfNeeded` runs on the main actor; the scheme handler may run
+        /// off the main thread, so the document is guarded by a lock.
+        private let documentLock = NSLock()
         private var servedDocument = Data()
 
         /// Content/type of the last issued load. Guards the v1 reload bug:
@@ -179,12 +188,21 @@ struct SandboxedArtifactWebView: UIViewRepresentable {
         private var lastLoadedContent: String?
         private var lastLoadedType: String?
 
+        @MainActor
         func loadIfNeeded(content: String, artifactType: String, into webView: WKWebView) {
             guard content != lastLoadedContent || artifactType != lastLoadedType else { return }
             lastLoadedContent = content
             lastLoadedType = artifactType
-            servedDocument = Data(SandboxedArtifactWebView.document(content: content, artifactType: artifactType).utf8)
+            let documentData = Data(SandboxedArtifactWebView.document(content: content, artifactType: artifactType).utf8)
+            documentLock.withLock {
+                servedDocument = documentData
+            }
             webView.load(URLRequest(url: SandboxedArtifactWebView.documentURL))
+        }
+
+        /// Thread-safe copy of the current sandbox document.
+        private var currentDocument: Data {
+            documentLock.withLock { servedDocument }
         }
     }
 }
@@ -195,6 +213,9 @@ extension SandboxedArtifactWebView.Coordinator: WKNavigationDelegate {
     /// Modern per-navigation policy + JS preference API (iOS 15+). Only the
     /// sandbox document and `about:blank` are allowed; everything else —
     /// http(s) links, redirects, `window.open` — is cancelled.
+    /// `@MainActor` matches the SDK requirement's isolation explicitly —
+    /// Swift 6.0 doesn't infer it for witnesses of a non-isolated class.
+    @MainActor
     func webView(_ webView: WKWebView,
                  decidePolicyFor navigationAction: WKNavigationAction,
                  preferences: WKWebpagePreferences,
@@ -226,14 +247,15 @@ extension SandboxedArtifactWebView.Coordinator: WKURLSchemeHandler {
             return
         }
 
+        let document = currentDocument
         let response = URLResponse(
             url: requestURL,
             mimeType: "text/html",
-            expectedContentLength: servedDocument.count,
+            expectedContentLength: document.count,
             textEncodingName: "utf-8"
         )
         urlSchemeTask.didReceive(response)
-        urlSchemeTask.didReceive(servedDocument)
+        urlSchemeTask.didReceive(document)
         urlSchemeTask.didFinish()
     }
 

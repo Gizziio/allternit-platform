@@ -733,13 +733,18 @@ describe("DiscretionaryScreen VM disclosure", () => {
   test("allternit-api main.rs registers /vm-session route", async () => {
     const fs = await import("fs/promises")
     const path = await import("path")
-    const content = await fs.readFile(
+    const mainContent = await fs.readFile(
       path.join(__dirname, "../../allternit-api/src/main.rs"),
       "utf-8",
     )
-    expect(content).toContain('nest("/vm-session", vm_session_router())')
-    expect(content).toContain('pub vm_sessions: VmSessionStore')
-    expect(content).toContain('vm_sessions: new_vm_session_store()')
+    expect(mainContent).toContain('nest("/vm-session", vm_session_router())')
+    expect(mainContent).toContain('vm_sessions: new_vm_session_store()')
+
+    const libContent = await fs.readFile(
+      path.join(__dirname, "../../allternit-api/src/lib.rs"),
+      "utf-8",
+    )
+    expect(libContent).toContain('pub vm_sessions: VmSessionStore')
   })
 
   // ── WebSearch / PreToolUse / PostToolUse / AskUserQuestion coverage ──────────

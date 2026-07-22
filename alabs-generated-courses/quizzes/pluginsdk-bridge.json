@@ -1,0 +1,38 @@
+{
+  "title": "Module Quiz: ALABS-ADV-PLUGINSDK-bridge",
+  "questions": [
+    {
+      "question": "What happens if a plugin's adapter type isn't supported by the platform?",
+      "options": [
+        "The platform falls back to the HTTP adapter automatically",
+        "The plugin fails to initialize because canActivate() returns false",
+        "The platform patches the missing adapter at runtime",
+        "The plugin runs in a headless browser instead"
+      ],
+      "correctIndex": 1,
+      "explanation": "Correct! Each adapter probes its environment via <code>canActivate()</code>. If the required globals or APIs aren't present, the adapter refuses to initialize and the plugin has no valid host. There is no silent fallback — the platform fails explicitly so operators know which runtime is missing."
+    },
+    {
+      "question": "Why does the platform re-validate manifests at load time rather than trusting the registry?",
+      "options": [
+        "Registry lookups are too slow for real-time validation",
+        "Registry data can be stale, corrupted, or tampered with during transit",
+        "The registry only stores plugin names, not full manifests",
+        "Re-validation is required by the MCP specification"
+      ],
+      "correctIndex": 1,
+      "explanation": "Correct! The registry is a discovery service, not a trust anchor. Manifests can be stale, corrupted, or tampered with. By re-validating at load time with <code>utils.validateManifest()</code>, the platform ensures that only structurally valid, well-formed plugins are ever instantiated — regardless of what the registry claims."
+    },
+    {
+      "question": "In the tool call flow, which component handles timeout cancellation?",
+      "options": [
+        "The MCP Adapter's StdioServerTransport",
+        "The PluginRegistry class in the SDK",
+        "The ExecutionContext via an optional abortSignal",
+        "The UnifiedPluginRegistry's toggle() method"
+      ],
+      "correctIndex": 2,
+      "explanation": "Correct! The SDK's <code>ExecutionContext</code> type includes an optional <code>abortSignal?: AbortSignal</code>. The platform passes this signal from user-initiated cancellations (e.g., clicking 'Stop'). Long-running executions check <code>signal.aborted</code> and throw an <code>AbortError</code>, which is caught and converted into a recoverable error response."
+    }
+  ]
+}

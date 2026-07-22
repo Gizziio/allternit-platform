@@ -11,7 +11,6 @@ import {
   UsersThree,
   CaretDown,
   Check,
-  Code,
 } from '@phosphor-icons/react';
 import { useAgentStreamingStatus } from '@/hooks/useAgentStreamingStatus';
 import { TextShimmer } from '@/components/agent-elements/text-shimmer';
@@ -36,12 +35,11 @@ export const MODE_TABS = [
   { id: 'slides', label: 'Slides', color: 'var(--status-warning)', icon: PresentationChart },
   { id: 'image', label: 'Image', color: '#8b5cf6', icon: Image },
   { id: 'video', label: 'Video', color: '#ec4899', icon: VideoCamera },
-  { id: 'code', label: 'Code', color: 'var(--status-warning)', icon: Code },
 ] as const;
 
 const SURFACE_MODES: Record<AgentModeSurface, string[]> = {
-  chat: ['swarms', 'research', 'website', 'docs', 'data', 'slides', 'image', 'video', 'code'],
-  cowork: ['swarms', 'research', 'website', 'docs', 'data', 'slides', 'image', 'video', 'code'],
+  chat: ['swarms', 'research', 'website', 'docs', 'data', 'slides', 'image', 'video'],
+  cowork: ['swarms', 'research', 'website', 'docs', 'data', 'slides', 'image', 'video'],
   code: ['swarms', 'website', 'docs'],
   browser: ['research', 'website', 'docs', 'data'],
   design: ['website', 'slides', 'image', 'video'],

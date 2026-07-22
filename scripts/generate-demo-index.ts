@@ -2,7 +2,7 @@
 /**
  * Auto-generate the A://Labs demo site index.html
  *
- * Scans alabs-generated-courses/ and alabs-demos/ for HTML modules,
+ * Scans alabs-generated-courses/ and alabs-generated-courses/demos/ for HTML modules,
  * reads metadata from each file, and generates an up-to-date index.
  *
  * Usage:
@@ -12,7 +12,7 @@
 import * as fs from 'fs/promises';
 import * as path from 'path';
 
-const DEMOS_DIR = 'alabs-demos';
+const DEMOS_DIR = 'alabs-generated-courses/demos';
 const GENERATED_DIR = 'alabs-generated-courses';
 
 interface ModuleInfo {

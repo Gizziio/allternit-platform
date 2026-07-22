@@ -22,12 +22,13 @@ export function isFirstPartyAnthropicBaseUrl(): boolean {
   }
   try {
     const host = new URL(baseUrl).host
-    const allowedHosts = ['api.allternit.com']
+    const allowedHosts = ['api.allternit.com', 'api.anthropic.com', 'api-staging.anthropic.com', 'localhost', '127.0.0.1']
     if (process.env.USER_TYPE === 'ant') {
       allowedHosts.push('api-staging.allternit.com')
     }
-    return allowedHosts.includes(host)
+    return allowedHosts.includes(host) || host.endsWith('.allternit.com') || host.endsWith('.anthropic.com')
   } catch {
     return false
   }
 }
+

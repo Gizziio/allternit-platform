@@ -21,10 +21,33 @@ export namespace Truncate {
 
   export type Result = { content: string; truncated: false } | { content: string; truncated: true; outputPath: string }
 
+  export type ModelContentItem = {
+    type: string
+    text?: string
+    resource?: { blob?: unknown }
+    [key: string]: unknown
+  }
+
   export interface Options {
     maxLines?: number
     maxBytes?: number
     direction?: "head" | "tail"
+  }
+
+  /**
+   * Applies a spill result to provider-native structured tool content. Some
+   * adapters prefer this array over the normalized string output, so leaving
+   * its text untouched would silently bypass truncation. Media is retained;
+   * textual resource content is available in the spill file.
+   */
+  export function modelContent(content: ModelContentItem[], result: Result): ModelContentItem[] {
+    if (!result.truncated) return content
+    return [
+      { type: "text", text: result.content },
+      ...content.filter(
+        (item) => item.type === "image" || (item.type === "resource" && item.resource?.blob !== undefined),
+      ),
+    ]
   }
 
   export function init() {

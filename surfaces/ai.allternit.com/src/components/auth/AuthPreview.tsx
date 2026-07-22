@@ -4,13 +4,26 @@ import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { cn } from '@/lib/utils';
 
-const SLIDES = [
+interface Slide {
+  id: string;
+  label: string;
+  desc: string;
+  accent: string;
+  promoKicker: string;
+  promoTitle: string;
+  promoCopy: string;
+  promoNote: string;
+  promoStats: { value: string; label: string }[];
+  Mockup: ({ accent }: { accent: string }) => JSX.Element;
+  videoUrl?: string;
+}
+
+const SLIDES: Slide[] = [
   {
     id: 'chat',
     label: 'A:// chat',
     desc: 'Talk to any AI model. One clean interface, every conversation.',
     accent: '#6366f1',
-    videoUrl: '/videos/canvas-demo.mp4',
     promoKicker: 'Allternit Platform',
     promoTitle: 'One operating layer for every model your team uses.',
     promoCopy: 'Run conversations, artifacts, and agent workflows in a single branded environment instead of scattering work across disconnected tabs and vendor silos.',
@@ -27,7 +40,6 @@ const SLIDES = [
     label: 'A:// cowork',
     desc: 'Build artifacts alongside an AI collaborator. Docs, slides, plans — live.',
     accent: '#D97757',
-    videoUrl: '/videos/cowork-demo.mp4',
     promoKicker: 'Allternit Workflows',
     promoTitle: 'Move from prompt to polished output without breaking flow.',
     promoCopy: 'Draft strategies, decks, research packs, and operating documents beside an AI collaborator that keeps refining the work as decisions change.',
@@ -56,11 +68,11 @@ const SLIDES = [
     Mockup: CodeMockup,
   },
   {
-    id: 'browser',
-    label: 'A:// browser',
+    id: 'aci',
+    label: 'A:// aci',
     desc: 'AI that navigates the web, reads pages, and acts on your behalf.',
     accent: '#ec4899',
-    promoKicker: 'Allternit Browser',
+    promoKicker: 'Allternit Computer Interface',
     promoTitle: 'Give agents a live web surface, not a static summary.',
     promoCopy: 'Research competitors, inspect live pages, and complete browser tasks from the same platform where your team plans, reviews, and acts.',
     promoNote: 'That means better context gathering, cleaner research trails, and fewer manual jumps between tools during execution.',

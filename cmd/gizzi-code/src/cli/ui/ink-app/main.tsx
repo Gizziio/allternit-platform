@@ -50,7 +50,8 @@ import { isAgentSwarmsEnabled } from './utils/agentSwarmsEnabled';
 import { count, uniq } from './utils/array';
 import { installAsciicastRecorder } from './utils/asciicast';
 import { getSubscriptionType, isClaudeAISubscriber, prefetchAwsCredentialsAndBedRockInfoIfSafe, prefetchGcpCredentialsIfSafe, validateForceLoginOrg } from './utils/auth';
-import { checkHasTrustDialogAccepted, getGlobalConfig, getRemoteControlAtStartup, isAutoUpdaterDisabled, saveGlobalConfig } from './utils/config';
+import { checkHasTrustDialogAccepted, enableConfigs, getGlobalConfig, getRemoteControlAtStartup, isAutoUpdaterDisabled, saveGlobalConfig } from './utils/config';
+import { enableConfigs as enableSharedConfigs } from '../../../shared/utils/config.js';
 import { seedEarlyInput, stopCapturingEarlyInput } from './utils/earlyInput';
 import { getInitialEffortSetting, parseEffortValue } from './utils/effort';
 import { getInitialFastModeSetting, isFastModeEnabled, prefetchFastModeStatus, resolveFastModeStatusFromCache } from './utils/fastMode';
@@ -586,6 +587,12 @@ const _pendingSSH: PendingSSH | undefined = feature('SSH_REMOTE') ? {
 export async function main() {
   profileCheckpoint('main_function_start');
 
+  // Enable config reading before any code (skills, plugins, chrome integration, etc.)
+  // may access it during startup. `./utils/config` and `shared/utils/config` are
+  // separate modules with independent gates, so both must be unlocked here.
+  enableConfigs();
+  enableSharedConfigs();
+
   // SECURITY: Prevent Windows from executing commands from current directory
   // This must be set before ANY command execution to prevent PATH hijacking attacks
   // See: https://docs.microsoft.com/en-us/windows/win32/api/processenv/nf-processenv-searchpathw
@@ -852,7 +859,12 @@ export async function main() {
   // Parse and load settings flags early, before init()
   eagerLoadSettings();
   profileCheckpoint('main_before_run');
-  await run();
+  try {
+    await run();
+  } catch (err) {
+    console.error('MAIN RUN ERROR:', err);
+    throw err;
+  }
   profileCheckpoint('main_after_run');
 }
 async function getInputPrompt(prompt: string, inputFormat: 'text' | 'stream-json'): Promise<string | AsyncIterable<string>> {

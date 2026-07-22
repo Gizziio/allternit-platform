@@ -1,7 +1,7 @@
 import { Database as BunDatabase } from "bun:sqlite"
 import { drizzle, type SQLiteBunDatabase } from "drizzle-orm/bun-sqlite"
 import { migrate } from "drizzle-orm/bun-sqlite/migrator"
-import { type SQLiteTransaction } from "drizzle-orm/sqlite-core"
+import { SQLiteTransaction } from "drizzle-orm/sqlite-core/session.js"
 export * from "drizzle-orm"
 import { Context } from "@/shared/util/context"
 import { lazy } from "@/shared/util/lazy"

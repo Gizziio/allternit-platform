@@ -46,13 +46,13 @@ const LOCAL_AI_BASE_URL = import.meta.env.VITE_LOCAL_AI_BASE_URL as
  */
 const LOCAL_AI_REQUEST_TIMEOUT_MS = 60_000;
 
-const localAiFetch: typeof fetch = (input, init) => {
+const localAiFetch = ((input, init) => {
   const timeout = AbortSignal.timeout(LOCAL_AI_REQUEST_TIMEOUT_MS);
   const signal = init?.signal
     ? AbortSignal.any([init.signal, timeout])
     : timeout;
   return fetch(input, { ...init, signal });
-};
+}) as typeof fetch;
 
 const getLocalLanguageModel = (requestedId: string) => {
   // The env var may be an origin-relative path; the OpenAI provider needs an
