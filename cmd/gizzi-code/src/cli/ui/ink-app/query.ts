@@ -111,6 +111,7 @@ import {
 } from './bootstrap/state.js'
 import { createBudgetTracker, checkTokenBudget } from './query/tokenBudget.js'
 import { count } from './utils/array.js'
+import { getWorkspaceSystemPrompt } from '../../../runtime/session/session-context.js'
 
 /* eslint-disable @typescript-eslint/no-require-imports */
 const snipModule = feature('HISTORY_SNIP')
@@ -252,7 +253,7 @@ async function* queryLoop(
 > {
   // Immutable params — never reassigned during the query loop.
   const {
-    systemPrompt,
+    systemPrompt: baseSystemPrompt,
     userContext,
     systemContext,
     canUseTool,
@@ -294,6 +295,16 @@ async function* queryLoop(
   // Snapshot immutable env/statsig/session state once at entry. See QueryConfig
   // for what's included and why feature() gates are intentionally excluded.
   const config = buildQueryConfig()
+
+  // Inject .gizzi workspace identity into the system prompt. This is the
+  // building block of agent personality — SOUL.md, IDENTITY.md, USER.md,
+  // MEMORY.md, AGENTS.md are read and prepended to every session.
+  const workspacePrompt = await getWorkspaceSystemPrompt(
+    state.toolUseContext.cwd,
+  ).catch(() => '')
+  const systemPrompt = workspacePrompt
+    ? `${workspacePrompt}\n\n${baseSystemPrompt}`
+    : baseSystemPrompt
 
   // Fired once per user turn — the prompt is invariant across loop iterations,
   // so per-iteration firing would ask sideQuery the same question N times.

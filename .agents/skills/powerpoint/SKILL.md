@@ -11,7 +11,7 @@ entrypoint: "SKILL.md"
 Generate production-ready Microsoft PowerPoint presentations (.pptx) from structured outlines, user prompts, or Excel data summaries. This skill wraps the Summit Copilot Skills FastAPI service with opinionated styling and slide patterns so agents can produce consistent, professional decks without wrestling with low-level formatting.
 
 > **STATUS:** Production  
-> **Backend Tool:** `domains/agent-swarm/tools/document-generator/mod.ts` (action: `generatePhotoCardDeck`)
+> **Backend Tool:** `tools/agent-swarm/document-generator/mod.ts` (action: `generatePhotoCardDeck`)
 
 ---
 
@@ -91,13 +91,15 @@ Show the outline to the user for approval before rendering.
 Call the backend tool at:
 
 ```
-domains/agent-swarm/tools/powerpoint/index.ts
+tools/agent-swarm/powerpoint/index.ts
 ```
+
+> **⚠️ Stale:** this `powerpoint/index.ts` backend tool does not exist (and did not exist at the old `domains/agent-swarm/tools/` location either). The live backend is `tools/agent-swarm/document-generator/mod.ts` (see the frontmatter). This section needs a rewrite before use.
 
 Import `createDeck` and pass the approved outline as `CreatePptxParams`:
 
 ```typescript
-import { createDeck } from '../domains/agent-swarm/tools/powerpoint/index.ts';
+import { createDeck } from '../tools/agent-swarm/powerpoint/index.ts';
 
 const result = await createDeck({
   title: "Q3 Infrastructure Review",
@@ -175,8 +177,8 @@ Input: workbook_file, sheet_name, max_slides
 |--------|------|
 | Export | Path |
 |--------|------|
-| `execute` | `domains/agent-swarm/tools/document-generator/mod.ts` |
-| `inputSchema` | `domains/agent-swarm/tools/document-generator/mod.ts` |
+| `execute` | `tools/agent-swarm/document-generator/mod.ts` |
+| `inputSchema` | `tools/agent-swarm/document-generator/mod.ts` |
 
 Dependencies: `document-generator-skills` FastAPI service (Python) running at `SUMMIT_COPILOT_URL`.
 

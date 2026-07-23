@@ -41,7 +41,7 @@ services/memory/
 │   │                           # Logic now lives in memory-fabric; kept for compat.
 │   ├── allternit-memory-provider/ # Original trait crate; superseded by memory-fabric
 │   ├── memory-kernel/          # Three-layer memory model (experimental)
-│   └── ars-contexta/           # Node.js native NLP module
+│   └── ~~ars-contexta/~~       # Node.js native NLP module — archived to archive/ts-orphans/ars-contexta
 ├── observation/                # Event observation service (uses memory-fabric ledger)
 ├── state/
 │   ├── history/                # WASM-event history ledger (experimental)

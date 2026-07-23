@@ -96,11 +96,11 @@ struct MainWorkspaceView: View {
                 .shadow(color: Color.black.opacity(0.4 * sidebarProgress), radius: 10, x: -5, y: 0)
                 .animation(.spring(response: 0.35, dampingFraction: 0.86, blendDuration: 0), value: isSidebarOpen)
                 // Pane-wide drag only while the drawer is open (to drag it
-                // closed). When closed, a pane-wide gesture would fight every
-                // horizontal ScrollView inside (agent deck tiles, composer
-                // cluster) and block their sliding — opening is handled by
-                // the left-edge strip below instead.
-                .gesture(drawerGesture, including: isSidebarOpen ? .all : .subviews)
+                // closed). When closed, the gesture gets the LOWEST
+                // precedence (.none) so every ScrollView inside (agent deck
+                // templates, composer strips) wins its drags — opening is
+                // handled by the left-edge strip below instead.
+                .gesture(drawerGesture, including: isSidebarOpen ? .all : .none)
                 .overlay(alignment: .leading) {
                     if !isSidebarOpen {
                         Color.clear
@@ -397,8 +397,9 @@ struct ChatContentView: View {
     /// it visible for screenshots regardless of the dismissed flag.
     private var showsNotificationsCard: Bool {
         guard viewModel.messages.isEmpty else { return false }
-        // The incognito empty state leads with its own explainer (Phase 6).
-        guard !viewModel.isIncognito else { return false }
+        // The incognito empty state leads with its own explainer (Phase 6),
+        // and the code terminal keeps its boot header clean.
+        guard !viewModel.isIncognito, !isTerminal else { return false }
         #if DEBUG
         if CommandLine.arguments.contains("-open-notifications-card") {
             return true
@@ -429,6 +430,10 @@ struct ChatContentView: View {
 
     private var agentOn: Bool { agentModeStore.isAgentEnabled(for: modeStore.mode) }
 
+    /// Code threads render as a terminal session (dark, monospace, `❯`
+    /// prompts) instead of chat bubbles.
+    private var isTerminal: Bool { modeStore.mode == .code }
+
     /// One feed row — extracted from `body` so the view stays under the
     /// type-checker's expression budget (the Phase-8 action-bar / edit
     /// closures pushed the feed's ForEach over it).
@@ -455,6 +460,15 @@ struct ChatContentView: View {
                 editingMessageId = message.id
                 inputText = message.content
             }
+        )
+        .id(message.id)
+    }
+
+    /// Terminal-styled feed row for code threads — see TerminalMessageRow.
+    private func terminalRow(_ message: MessageRecord) -> some View {
+        TerminalMessageRow(
+            message: message,
+            isStreamingTail: viewModel.isStreaming && message.id == viewModel.messages.last?.id
         )
         .id(message.id)
     }
@@ -547,6 +561,11 @@ struct ChatContentView: View {
                                         incognitoSafariURL = IdentifiableURL(url: URL(string: "https://allternit.com/privacy")!)
                                     })
                                     .padding(.top, 60)
+                                } else if isTerminal {
+                                    // Code thread empty state: terminal boot
+                                    // header, not the Home greeting.
+                                    TerminalEmptyState()
+                                        .padding(.top, 48)
                                 } else {
                                     // Empty chat keeps the centered wordmark;
                                     // suggestion rows removed to keep the feed
@@ -557,7 +576,11 @@ struct ChatContentView: View {
                             }
                         } else {
                             ForEach(viewModel.messages) { message in
-                                messageRow(message)
+                                if isTerminal {
+                                    terminalRow(message)
+                                } else {
+                                    messageRow(message)
+                                }
                             }
                         }
 
@@ -785,6 +808,28 @@ private enum DeckMotion {
     static let animation = Animation.timingCurve(0.22, 1, 0.36, 1, duration: 0.35)
 }
 
+/// Plain circular toolbar icon — no bubble border around the mic/waveform
+/// or agent toggle, keeping the composer row clean.
+@MainActor
+private func toolbarIconButton(
+    _ systemName: String,
+    tint: Color? = nil,
+    action: @escaping () -> Void
+) -> some View {
+    Button(action: {
+        let generator = UIImpactFeedbackGenerator(style: .light)
+        generator.impactOccurred()
+        action()
+    }) {
+        Image(systemName: systemName)
+            .font(.system(size: 16, weight: .semibold))
+            .foregroundColor(tint ?? Color("TextPrimary"))
+            .frame(width: 32, height: 32)
+            .contentShape(Rectangle())
+    }
+    .buttonStyle(.plain)
+}
+
 /// The platform composer: one card holding the editor and a toolbar row,
 /// with the cowork top deck tucked behind its top edge and the agent-mode
 /// bottom deck tucked behind its bottom edge (CoworkTopDeck.tsx:115-144,
@@ -851,16 +896,28 @@ struct ComposerView: View {
     private var theme: ModeTheme { mode.theme }
     private var agentOn: Bool { agentModeStore.isAgentEnabled(for: mode) }
 
+    /// Code mode gives the composer a code-accent border cue and a
+    /// monospace, terminal-flavored editor — and NEVER shows agent mode
+    /// (no pill, no deck, no mention chip, no Gizzi): a code thread is a
+    /// plain terminal session.
+    private var isTerminal: Bool { mode == .code }
+
+    /// Agent-mode UI is shown only on surfaces that offer it.
+    private var agentUI: Bool { agentOn && !isTerminal }
+
     private var canSend: Bool {
         !inputText.isEmpty && !isSendDisabled && !isUsageLocked
     }
 
     /// Mode-aware placeholder: the web cowork launchpad's prompt
-    /// (CoworkLaunchpad.tsx:93) vs the chat composer's default.
+    /// (CoworkLaunchpad.tsx:93) vs the chat composer's default; code mode
+    /// reads like a shell prompt.
     private var placeholder: String {
-        mode == .cowork
-            ? "What should we coordinate, build, or review?"
-            : "Message Allternit..."
+        switch mode {
+        case .cowork: return "What should we coordinate, build, or review?"
+        case .code: return "describe the task…"
+        default: return "Message Allternit..."
+        }
     }
 
     var body: some View {
@@ -874,27 +931,20 @@ struct ComposerView: View {
                     .transition(.move(edge: .bottom).combined(with: .opacity))
             }
 
-            // Agent-mode top deck — context tray tucked behind the card's top
-            // edge when a mode tile is selected.
-            if agentOn, mode != .cowork {
-                AgentModeTopDeck()
-                    .zIndex(0)
-                    .transition(.move(edge: .bottom).combined(with: .opacity))
-            }
-
             composerCard
                 .zIndex(1)
 
             // Agent-mode bottom deck — collapsed to the selected tile by
             // default; tapping the tile expands the full grid again.
-            if agentOn {
+            // Code mode never shows it (no agent mode in the terminal).
+            if agentUI {
                 AgentModeBottomDeck(inputText: $inputText)
                     .zIndex(0)
                     .transition(.move(edge: .top).combined(with: .opacity))
             }
         }
         .animation(DeckMotion.animation, value: mode)
-        .animation(DeckMotion.animation, value: agentOn)
+        .animation(DeckMotion.animation, value: agentUI)
         .padding(.horizontal, 12)
         .padding(.vertical, 10)
         .sheet(isPresented: $isPlusSheetPresented) {
@@ -1021,72 +1071,69 @@ struct ComposerView: View {
                 }
             }
 
-            // Text Input wrapping autogrowing editor
-            TextField(placeholder, text: $inputText, axis: .vertical)
-                .lineLimit(1...6)
-                .foregroundColor(Color("TextPrimary"))
-                .font(.body)
-                .padding(.horizontal, 6)
-                .padding(.top, 2)
-                .disabled(isUsageLocked)
+            // Text input — when agent mode is on, the selected mode lives
+            // INSIDE the text as a real @-mention chip (NSTextAttachment),
+            // not a view floating next to the field. Code mode renders the
+            // editor as a shell input line: `❯` prompt + monospace text.
+            HStack(alignment: .top, spacing: 6) {
+                if isTerminal {
+                    Text("❯")
+                        .font(.system(size: 15, weight: .semibold, design: .monospaced))
+                        .foregroundColor(Theme.accentCode)
+                        .padding(.top, 9) // align with the editor's first line
+                }
 
-            // Toolbar row (web order: +, toggle, agent pill, …, mic, model, send).
-            // The leading selections live in a horizontal scroller: when the
-            // toggle + agent pill outgrow the row (e.g. "Agent | Websites"
-            // with the pre-session toggle) they SLIDE instead of squeezing
-            // the card wider than the screen.
-            HStack(spacing: 5) {
-                ScrollView(.horizontal, showsIndicators: false) {
-                    HStack(spacing: 5) {
-                        // Opens the "+" sheet (ComposerPlusSheet): attachments
-                        // (camera/photos/files), tool toggles, tool access, and
-                        // the Connectors entry — Claude iOS "Add to Chat" parity.
-                        Button(action: { isPlusSheetPresented = true }) {
-                            Image(systemName: "plus")
-                                .font(.system(size: 14, weight: .medium))
-                                .foregroundColor(Color("TextSecondary"))
-                                .frame(width: 30, height: 30)
-                        }
+                ComposerTextView(
+                    text: $inputText,
+                    placeholder: placeholder,
+                    isEnabled: !isUsageLocked,
+                    mention: agentUI ? agentModeStore.selectedTile(for: mode) : nil,
+                    terminal: isTerminal
+                )
+            }
+            .padding(.horizontal, 1)
 
-                        // Chat/Cowork toggle is a Home composer control
-                        // (pre-session only); the Code surface never offers it.
-                        if !hasActiveSession, mode == .chat || mode == .cowork {
-                            ChatCoworkToggle()
-                        }
+            // Toolbar row — clean icon-only controls so the composer never
+            // feels crowded. No scrolling: every control stays fully visible.
+            // Leading: + attach, Chat/Cowork segments (icon-only once agent
+            // mode claims the row), Agent toggle.
+            // Trailing: dictation mic, voice mode, model, send/stop.
+            HStack(spacing: 2) {
+                // Opens the "+" sheet (ComposerPlusSheet): attachments
+                // (camera/photos/files), tool toggles, tool access, and
+                // the Connectors entry — Claude iOS "Add to Chat" parity.
+                toolbarIconButton("plus") {
+                    isPlusSheetPresented = true
+                }
 
-                        AgentPill()
-                    }
+                // Chat/Cowork toggle is a Home composer control
+                // (pre-session only); the Code surface never offers it.
+                if !hasActiveSession, mode == .chat || mode == .cowork {
+                    ChatCoworkToggle()
+                }
+
+                // Agent On/Off toggle — plain cpu icon. Not offered in code
+                // mode: the terminal session has no agent deck.
+                if !isTerminal {
+                    AgentPill()
                 }
 
                 Spacer(minLength: 2)
 
                 // Dictation mic: plain icon, red while recording.
-                Button(action: toggleDictation) {
-                    Image(systemName: dictation.isRecording ? "mic.fill" : "mic")
-                        .symbolEffect(.pulse, isActive: dictation.isRecording)
-                        .font(.system(size: 16, weight: .medium))
-                        .foregroundColor(dictation.isRecording ? .red : Color("TextSecondary"))
-                        .frame(width: 32, height: 32)
+                toolbarIconButton(dictation.isRecording ? "mic.fill" : "mic", tint: dictation.isRecording ? .red : nil) {
+                    toggleDictation()
                 }
+                .symbolEffect(.pulse, isActive: dictation.isRecording)
 
-                // Voice mode (Phase 7b, Claude iOS parity): plain waveform
-                // icon next to the dictation mic presents the full-screen voice
-                // takeover. Shares the mic permission/priming with dictation.
-                // Disabled while a stream is in flight or usage is locked.
-                Button(action: voiceModeTapped) {
-                    Image(systemName: "waveform")
-                        .font(.system(size: 16, weight: .medium))
-                        .foregroundColor(isVoiceModeEnabled ? Color("TextSecondary") : Color("TextSecondary").opacity(0.4))
-                        .frame(width: 32, height: 32)
+                // Voice mode (Phase 7b): plain waveform icon next to the mic.
+                toolbarIconButton("waveform", tint: isVoiceModeEnabled ? nil : Color("TextSecondary").opacity(0.4)) {
+                    voiceModeTapped()
                 }
                 .accessibilityLabel("Voice mode")
                 .disabled(!isVoiceModeEnabled)
 
-                // Model selector — a bottom sheet (ModelPickerSheet) over the
-                // /api/v1/models catalog grouped by provider, plus a
-                // "Default Model" clear entry (nil = the backend's
-                // configured default). Selection persists app-wide
-                // (ModelStore).
+                // Model selector — compact pill with the current model label.
                 Button(action: { isModelPickerPresented = true }) {
                     HStack(spacing: 3) {
                         Text(modelStore.pillLabel)
@@ -1097,8 +1144,8 @@ struct ComposerView: View {
                         Image(systemName: "chevron.down")
                             .font(.system(size: 8, weight: .bold))
                     }
-                    .foregroundColor(Color("TextSecondary"))
-                    .frame(height: 28)
+                    .foregroundColor(isTerminal ? TerminalTheme.dim : Color("TextSecondary"))
+                    .frame(height: 26)
                     .frame(maxWidth: 78)
                 }
 
@@ -1108,7 +1155,7 @@ struct ComposerView: View {
                             .font(.system(size: 13))
                             .foregroundColor(.black)
                             .frame(width: 32, height: 32)
-                            .background(Color("AccentPrimary"))
+                            .background(isTerminal ? Theme.accentCode : Color("AccentPrimary"))
                             .clipShape(Circle())
                     }
                 } else if canSend {
@@ -1117,7 +1164,7 @@ struct ComposerView: View {
                             .font(.system(size: 14, weight: .semibold))
                             .foregroundColor(.black)
                             .frame(width: 32, height: 32)
-                            .background(Color("AccentPrimary"))
+                            .background(isTerminal ? Theme.accentCode : Color("AccentPrimary"))
                             .clipShape(Circle())
                     }
                 }
@@ -1129,15 +1176,15 @@ struct ComposerView: View {
         .clipShape(RoundedRectangle(cornerRadius: Theme.radiusLG))
         .overlay(
             RoundedRectangle(cornerRadius: Theme.radiusLG)
-                .stroke(agentOn ? theme.accentGlow : Theme.borderWarmDefault, lineWidth: 1)
+                .stroke(agentUI ? theme.accentGlow : (isTerminal ? Theme.accentCode.opacity(0.25) : Theme.borderWarmDefault), lineWidth: 1)
         )
         // Agent-on glow: accent border above + a soft halo shadow
         // (web: box-shadow 0 0 10px <glow>, BottomDock.tsx:194-207).
-        .shadow(color: agentOn ? theme.accentGlow : .clear, radius: 5)
+        .shadow(color: agentUI ? theme.accentGlow : .clear, radius: 5)
         // Gizzi mascot perches on the top edge of the input bar when agent
         // mode is active, mirroring the Allternit web platform behavior.
         .overlay(alignment: .top) {
-            if agentOn {
+            if agentUI {
                 GizziMascotPill()
             }
         }
@@ -1256,11 +1303,11 @@ struct ComposerView: View {
 
 // MARK: - Chat / Cowork toggle
 
-/// 28pt segmented pair [Chat | Cowork] (BottomDock.tsx ChatCoworkToggle,
-/// lines 18-63). Cowork is a composer-level mode, not a tab: selecting it
-/// sets the app mode (accent turns purple, the top deck appears); selecting
-/// Chat returns. Pre-session only — the caller hides it once a session is
-/// active.
+/// Icon-only 28pt segmented pair [Chat | Cowork] (BottomDock.tsx
+/// ChatCoworkToggle, lines 18-63). Cowork is a composer-level mode, not a
+/// tab: selecting it sets the app mode (accent turns purple, the top deck
+/// appears); selecting Chat returns. Pre-session only — the caller hides it
+/// once a session is active.
 struct ChatCoworkToggle: View {
     @EnvironmentObject private var modeStore: AppModeStore
 
@@ -1287,29 +1334,25 @@ struct ChatCoworkToggle: View {
             generator.impactOccurred()
             modeStore.mode = mode
         }) {
-            // Icon-only segments keep the toolbar row uncrowded; the label
-            // survives as the accessibility name.
             Image(systemName: icon)
-                .font(.system(size: 12, weight: .semibold))
-                // Active = soft bg + mode accent (web bg-composer-soft);
-                // inactive = muted.
-                .foregroundColor(isActive ? mode.theme.accent : Color("TextSecondary"))
-                .padding(.horizontal, 8)
-                .frame(height: 26)
-                .background(isActive ? mode.theme.accentSoft : Color.clear)
-                .contentShape(Rectangle())
-                .accessibilityLabel(label)
+                .font(.system(size: 11, weight: .semibold))
+            // Active = soft bg + mode accent (web bg-composer-soft);
+            // inactive = muted.
+            .foregroundColor(isActive ? mode.theme.accent : Color("TextSecondary"))
+            .padding(.horizontal, 10)
+            .frame(height: 26)
+            .background(isActive ? mode.theme.accentSoft : Color.clear)
+            .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
+        .accessibilityLabel(label)
     }
 }
 
 // MARK: - Agent pill
 
-/// Agent On/Off pill + caret (BottomDock.tsx AgentModePill, lines 75-144).
-/// Off: muted, bordered, "Agent Off". On: mode-accent border + soft bg +
-/// glow, label "Agent | <tile>", and a caret that opens the agent selector.
-/// State persists per mode (AgentModeStore).
+/// Agent On/Off toggle — plain icon, no bubble border or "Agent" label.
+/// Tapping the robot icon toggles agent mode for the current surface.
 struct AgentPill: View {
     @EnvironmentObject private var modeStore: AppModeStore
     @EnvironmentObject private var agentModeStore: AgentModeStore
@@ -1319,78 +1362,212 @@ struct AgentPill: View {
     private var agentOn: Bool { agentModeStore.isAgentEnabled(for: mode) }
 
     var body: some View {
-        HStack(spacing: 0) {
-            Button(action: {
-                let generator = UIImpactFeedbackGenerator(style: .light)
-                generator.impactOccurred()
-                agentModeStore.toggleAgent(for: mode)
-            }) {
-                // Phosphor Robot stand-in — SF Symbols has no robot glyph.
-                Image(systemName: "cpu")
-                    .font(.system(size: 15, weight: .semibold))
-                    .foregroundColor(agentOn ? theme.accent : Color("TextSecondary"))
-                    .frame(width: 26, height: 28)
-                    .contentShape(Rectangle())
-            }
-            .buttonStyle(.plain)
-
-            if agentOn {
-                Menu {
-                    agentMenuContent
-                } label: {
-                    Image(systemName: "chevron.down")
-                        .font(.system(size: 9, weight: .bold))
-                        .foregroundColor(theme.accent)
-                        .frame(width: 18, height: 28)
-                        .contentShape(Rectangle())
-                }
-                .menuStyle(.borderlessButton)
-            }
+        toolbarIconButton("cpu", tint: agentOn ? theme.accent : Color("TextSecondary")) {
+            agentModeStore.toggleAgent(for: mode)
         }
-        .frame(height: 28)
-        .padding(.horizontal, 6)
-        .background(agentOn ? theme.accentSoft : Color.clear)
-        .clipShape(Capsule())
-        .overlay(
-            Capsule()
-                .stroke(agentOn ? theme.accentGlow : Theme.borderWarmDefault, lineWidth: 1)
-        )
-        .shadow(color: agentOn ? theme.accentGlow : .clear, radius: 5)
-        .opacity(agentOn ? 1 : 0.75)
+        .accessibilityLabel(agentOn ? "Agent on" : "Agent off")
+    }
+}
+
+/// UITextView-backed composer editor so the selected agent mode can live
+/// INSIDE the text as a real @-mention chip (NSTextAttachment) instead of a
+/// view floating next to the field. The chip plus its trailing space form a
+/// protected prefix: they render in the view but never leak into the bound
+/// text, and they can't be deleted or typed before.
+private struct ComposerTextView: UIViewRepresentable {
+    @Binding var text: String
+    var placeholder: String
+    var isEnabled: Bool
+    /// Selected agent-mode tile → mention chip; nil = plain editor.
+    var mention: AgentModeTile?
+    /// Code mode: monospace font on the terminal palette.
+    var terminal: Bool = false
+
+    /// Editor font for the current style (body vs terminal monospace).
+    private var uiFont: UIFont {
+        terminal
+            ? UIFont.monospacedSystemFont(ofSize: 15, weight: .regular)
+            : UIFont.preferredFont(forTextStyle: .body)
     }
 
-    /// Agent selector menu — the registry list behind the web's
-    /// AgentSelectorDropdown (GET /api/v1/agents), filtered to the current
-    /// surface, plus a "Default Agent" clear option (nil = the backend binds
-    /// its default agent).
-    @ViewBuilder
-    private var agentMenuContent: some View {
-        Button(action: { agentModeStore.selectAgent(nil, for: mode) }) {
-            HStack {
-                if agentModeStore.selectedAgentId(for: mode) == nil {
-                    Image(systemName: "checkmark")
-                }
-                Text("Default Agent")
+    private var uiTextColor: UIColor {
+        terminal ? UIColor(TerminalTheme.text) : (UIColor(named: "TextPrimary") ?? .label)
+    }
+
+    func makeCoordinator() -> Coordinator { Coordinator(self) }
+
+    func makeUIView(context: Context) -> UITextView {
+        let textView = UITextView()
+        textView.delegate = context.coordinator
+        textView.font = uiFont
+        textView.textColor = uiTextColor
+        textView.backgroundColor = .clear
+        textView.textContainerInset = UIEdgeInsets(top: 8, left: 5, bottom: 8, right: 5)
+        textView.autocapitalizationType = terminal ? .none : .sentences
+        textView.autocorrectionType = terminal ? .no : .default
+        textView.returnKeyType = .default
+        textView.setContentCompressionResistancePriority(.defaultLow, for: .horizontal)
+
+        let placeholderLabel = context.coordinator.placeholderLabel
+        placeholderLabel.font = uiFont
+        placeholderLabel.textColor = terminal
+            ? UIColor(TerminalTheme.dim)
+            : UIColor(named: "TextSecondary")?.withAlphaComponent(0.6)
+        placeholderLabel.lineBreakMode = .byTruncatingTail
+        placeholderLabel.translatesAutoresizingMaskIntoConstraints = false
+        textView.addSubview(placeholderLabel)
+        context.coordinator.placeholderLeading =
+            placeholderLabel.leadingAnchor.constraint(equalTo: textView.leadingAnchor, constant: 5)
+        NSLayoutConstraint.activate([
+            context.coordinator.placeholderLeading!,
+            placeholderLabel.topAnchor.constraint(equalTo: textView.topAnchor, constant: 8),
+            placeholderLabel.trailingAnchor.constraint(lessThanOrEqualTo: textView.trailingAnchor, constant: -5),
+        ])
+
+        applyContent(to: textView, coordinator: context.coordinator, moveCursorToEnd: false)
+        context.coordinator.updatePlaceholder(textView)
+        return textView
+    }
+
+    func updateUIView(_ textView: UITextView, context: Context) {
+        context.coordinator.parent = self
+        textView.isEditable = isEnabled
+        context.coordinator.placeholderLabel.text = placeholder
+        // Rebuild only when the visible raw text diverges from the binding
+        // (external fills: dictation, templates, edit-resend) or the mention
+        // changed — never mid-keystroke, so the cursor stays put.
+        if context.coordinator.rawText(in: textView) != text || context.coordinator.mention != mention {
+            applyContent(to: textView, coordinator: context.coordinator, moveCursorToEnd: true)
+        }
+        context.coordinator.updatePlaceholder(textView)
+    }
+
+    func sizeThatFits(_ proposal: ProposedViewSize, uiView: UITextView, context: Context) -> CGSize? {
+        let width = proposal.width ?? UIScreen.main.bounds.width
+        let fit = uiView.sizeThatFits(CGSize(width: width, height: .greatestFiniteMagnitude))
+        let line = uiView.font?.lineHeight ?? 22
+        let maxHeight = line * 6 + uiView.textContainerInset.top + uiView.textContainerInset.bottom
+        uiView.isScrollEnabled = fit.height > maxHeight + 1
+        return CGSize(width: width, height: min(fit.height, maxHeight))
+    }
+
+    // MARK: Mention chip
+
+    private func applyContent(to textView: UITextView, coordinator: Coordinator, moveCursorToEnd: Bool) {
+        let composed = NSMutableAttributedString()
+        if let mention {
+            composed.append(Self.mentionChunk(for: mention))
+            coordinator.prefixLength = composed.length // attachment char + space
+        } else {
+            coordinator.prefixLength = 0
+        }
+        composed.append(Self.bodyChunk(text, font: uiFont, color: uiTextColor))
+        coordinator.mention = mention
+        textView.attributedText = composed
+        if moveCursorToEnd {
+            textView.selectedRange = NSRange(location: composed.length, length: 0)
+        }
+    }
+
+    fileprivate static func bodyChunk(_ string: String, font: UIFont, color: UIColor) -> NSAttributedString {
+        NSAttributedString(string: string, attributes: [
+            .font: font,
+            .foregroundColor: color,
+        ])
+    }
+
+    fileprivate static func mentionChunk(for tile: AgentModeTile) -> NSAttributedString {
+        let image = chipImage(for: tile)
+        let attachment = NSTextAttachment()
+        attachment.image = image
+        attachment.bounds = CGRect(x: 0, y: -4.5, width: image.size.width, height: image.size.height)
+        let chunk = NSMutableAttributedString(attachment: attachment)
+        chunk.append(NSAttributedString(string: " ", attributes: [
+            .font: UIFont.preferredFont(forTextStyle: .body),
+        ]))
+        return chunk
+    }
+
+    /// Icon-only circular token, tile-colored — rendered as an image so it
+    /// can sit inside the text like a real mention chip.
+    private static func chipImage(for tile: AgentModeTile) -> UIImage {
+        let color = UIColor(tile.color)
+        let side: CGFloat = 21
+        let icon = UIImage(systemName: tile.icon, withConfiguration:
+            UIImage.SymbolConfiguration(pointSize: 10.5, weight: .semibold))?
+            .withTintColor(color, renderingMode: .alwaysOriginal)
+        return UIGraphicsImageRenderer(size: CGSize(width: side, height: side)).image { _ in
+            let rect = CGRect(origin: .zero, size: CGSize(width: side, height: side))
+            let path = UIBezierPath(ovalIn: rect.insetBy(dx: 0.5, dy: 0.5))
+            color.withAlphaComponent(0.14).setFill()
+            path.fill()
+            color.withAlphaComponent(0.45).setStroke()
+            path.lineWidth = 1
+            path.stroke()
+            if let icon {
+                icon.draw(at: CGPoint(x: (side - icon.size.width) / 2,
+                                      y: (side - icon.size.height) / 2))
             }
         }
+    }
 
-        if agentModeStore.isLoadingAgents {
-            Text("Loading agents…")
-        } else if agentModeStore.agentsError != nil {
-            Button(action: { agentModeStore.fetchAgentsIfNeeded(force: true) }) {
-                Text("Couldn't load agents — tap to retry")
-            }
+    // MARK: Coordinator
+
+    final class Coordinator: NSObject, UITextViewDelegate {
+        var parent: ComposerTextView
+        /// UTF-16 length of the protected mention prefix (0 = no chip).
+        var prefixLength = 0
+        var mention: AgentModeTile?
+        let placeholderLabel = UILabel()
+        var placeholderLeading: NSLayoutConstraint?
+
+        init(_ parent: ComposerTextView) { self.parent = parent }
+
+        /// The user-owned text: everything after the protected chip prefix.
+        func rawText(in textView: UITextView) -> String {
+            let full = textView.attributedText.string as NSString
+            guard full.length >= prefixLength else { return "" }
+            return full.substring(from: prefixLength)
         }
 
-        ForEach(agentModeStore.agentsForSurface(mode)) { agent in
-            Button(action: { agentModeStore.selectAgent(agent, for: mode) }) {
-                HStack {
-                    if agentModeStore.selectedAgentId(for: mode) == agent.id {
-                        Image(systemName: "checkmark")
-                    }
-                    Text(agent.name)
-                }
+        func updatePlaceholder(_ textView: UITextView) {
+            placeholderLabel.isHidden = !rawText(in: textView).isEmpty
+            // Keep the placeholder clear of the chip when one is present.
+            placeholderLeading?.constant = 5 + (mention != nil ? 25 : 0)
+        }
+
+        func textViewDidChange(_ textView: UITextView) {
+            parent.text = rawText(in: textView)
+            updatePlaceholder(textView)
+        }
+
+        func textView(_ textView: UITextView, shouldChangeTextIn range: NSRange, replacementText replacement: String) -> Bool {
+            guard prefixLength > 0, range.location < prefixLength else { return true }
+            // The edit touches the protected chip (select-all + type/delete,
+            // backspace at the boundary): re-apply it AFTER the chip instead.
+            let raw = rawText(in: textView) as NSString
+            let cut = max(0, range.location - prefixLength)
+            let end = max(cut, range.location + range.length - prefixLength)
+            let newRaw = raw.replacingCharacters(in: NSRange(location: cut, length: end - cut), with: replacement)
+            parent.text = newRaw
+
+            let composed = NSMutableAttributedString()
+            if let mention {
+                composed.append(ComposerTextView.mentionChunk(for: mention))
             }
+            composed.append(ComposerTextView.bodyChunk(newRaw, font: parent.uiFont, color: parent.uiTextColor))
+            textView.attributedText = composed
+            textView.selectedRange = NSRange(
+                location: prefixLength + cut + (replacement as NSString).length, length: 0)
+            updatePlaceholder(textView)
+            return false
+        }
+
+        func textViewDidChangeSelection(_ textView: UITextView) {
+            // Never let the cursor sit before (or inside) the chip.
+            guard prefixLength > 0, textView.selectedRange.location < prefixLength else { return }
+            let spill = max(0, textView.selectedRange.location + textView.selectedRange.length - prefixLength)
+            textView.selectedRange = NSRange(location: prefixLength, length: spill)
         }
     }
 }
@@ -1503,93 +1680,33 @@ struct CoworkTopDeck: View {
 
 // MARK: - Agent-mode top deck
 
-/// Context tray tucked behind the composer card's TOP edge when an agent mode
-/// tile is selected. Shows the selected mode's icon, label, and a one-line
-/// description of what the mode will do.
-struct AgentModeTopDeck: View {
-    @EnvironmentObject private var modeStore: AppModeStore
-    @EnvironmentObject private var agentModeStore: AgentModeStore
-
-    private var surface: AppMode { modeStore.mode }
-    private var tile: AgentModeTile { agentModeStore.selectedTile(for: surface) }
-
-    var body: some View {
-        HStack(spacing: 12) {
-            HStack(spacing: 6) {
-                Image(systemName: tile.icon)
-                    .font(.system(size: 13, weight: .semibold))
-                    .foregroundColor(tile.color)
-                Text(tile.label)
-                    .font(.system(size: 13, weight: .semibold))
-                    .foregroundColor(Color("TextPrimary"))
-                    .lineLimit(1)
-            }
-            .padding(.horizontal, 10)
-            .frame(height: 28)
-            .background(tile.color.opacity(0.14))
-            .clipShape(Capsule())
-            .overlay(
-                Capsule()
-                    .stroke(tile.color.opacity(0.5), lineWidth: 1)
-            )
-
-            Text(tile.contextDescription)
-                .font(.system(size: 12, weight: .medium))
-                .foregroundColor(Color("TextSecondary"))
-                .lineLimit(2)
-
-            Spacer()
-        }
-        .padding(.horizontal, 16)
-        .padding(.bottom, 12) // tucked portion hidden under the card
-        .frame(height: 56)
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .background(Color("BgPanel"))
-        .clipShape(
-            UnevenRoundedRectangle(topLeadingRadius: Theme.radiusLG, topTrailingRadius: Theme.radiusLG)
-        )
-        .overlay(
-            UnevenRoundedRectangle(topLeadingRadius: Theme.radiusLG, topTrailingRadius: Theme.radiusLG)
-                .stroke(Theme.borderWarmDefault, lineWidth: 1)
-        )
-        .padding(.bottom, -12) // the card overlaps the deck's bottom
-    }
-}
-
 // MARK: - Agent-mode bottom deck
 
-/// Agent-on tray tucked behind the composer card's bottom edge
-/// (ChatComposer.tsx:2549-2567). When collapsed it shows only the selected
-/// tile as a compact pill; tapping the pill expands the full grid so the user
-/// can switch modes. Selecting a tile fills the composer with that mode's
-/// starter task and collapses the deck.
+/// Agent-on tray tucked behind the composer card's bottom edge.
+///
+/// Expanded: a horizontally scrolling row of every mode tile so all 9 modes
+/// are reachable without guessing.
+///
+/// Collapsed (a mode is selected): the deck stays full-width but shows ONLY
+/// the selected mode's template chips — the mode itself is already shown as
+/// the icon chip inside the input area. Tapping a chip fills the composer.
 struct AgentModeBottomDeck: View {
     @Binding var inputText: String
     @EnvironmentObject private var modeStore: AppModeStore
     @EnvironmentObject private var agentModeStore: AgentModeStore
 
     private var surface: AppMode { modeStore.mode }
-
-    private let columns = [
-        GridItem(.adaptive(minimum: 96, maximum: 110), spacing: 8)
-    ]
+    private var tile: AgentModeTile { agentModeStore.selectedTile(for: surface) }
+    private var expanded: Bool { agentModeStore.isAgentModeDeckExpanded(for: surface) }
+    /// Code mode sets template rows monospace (terminal flavor).
+    private var isTerminal: Bool { surface == .code }
 
     var body: some View {
         VStack(spacing: 0) {
-            if agentModeStore.isAgentModeDeckExpanded(for: surface) {
-                LazyVGrid(columns: columns, spacing: 8) {
-                    ForEach(AgentModeTile.visibleTiles(for: surface), id: \.self) { tile in
-                        tileButton(tile)
-                    }
-                }
-                .padding(.horizontal, 12)
-                .padding(.top, 16) // tucked portion hidden under the card
-                .padding(.bottom, 10)
+            if expanded {
+                expandedTiles
             } else {
-                selectedTilePill
-                    .padding(.horizontal, 12)
-                    .padding(.top, 16)
-                    .padding(.bottom, 10)
+                collapsedTemplates
             }
         }
         .background(Color("BgPanel"))
@@ -1600,41 +1717,80 @@ struct AgentModeBottomDeck: View {
             UnevenRoundedRectangle(bottomLeadingRadius: Theme.radiusLG, bottomTrailingRadius: Theme.radiusLG)
                 .stroke(Theme.borderWarmDefault, lineWidth: 1)
         )
-        .padding(.top, -12) // -mt-3: the card overlaps the deck's top
+        .padding(.top, -12) // the card overlaps the deck's top
         .zIndex(0)
-        .animation(DeckMotion.animation, value: agentModeStore.isAgentModeDeckExpanded(for: surface))
+        .animation(DeckMotion.animation, value: expanded)
     }
 
-    private var selectedTilePill: some View {
-        let tile = agentModeStore.selectedTile(for: surface)
-        return Button(action: {
-            let generator = UIImpactFeedbackGenerator(style: .light)
-            generator.impactOccurred()
-            agentModeStore.toggleAgentModeDeckExpanded(for: surface)
-        }) {
-            HStack(spacing: 6) {
-                Image(systemName: tile.icon)
-                    .font(.system(size: 12, weight: .semibold))
-                Text(tile.label)
-                    .font(.system(size: 12, weight: .semibold))
-                    .lineLimit(1)
-                Image(systemName: "chevron.up")
-                    .font(.system(size: 9, weight: .bold))
+    /// Expanded: every visible tile in a 3-column grid — all modes on
+    /// screen at once, no scrolling required.
+    private var expandedTiles: some View {
+        LazyVGrid(
+            columns: Array(repeating: GridItem(.flexible(), spacing: 8), count: 3),
+            spacing: 8
+        ) {
+            ForEach(AgentModeTile.visibleTiles(for: surface), id: \.self) { tile in
+                tileButton(tile)
             }
-            .foregroundColor(tile.color)
-            .padding(.horizontal, 10)
-            .frame(height: 32)
-            .background(tile.color.opacity(0.15))
-            .clipShape(Capsule())
-            .overlay(
-                Capsule()
-                    .stroke(tile.color.opacity(0.5), lineWidth: 1)
-            )
-            .contentShape(Rectangle())
         }
-        .buttonStyle(.plain)
+        .padding(.horizontal, 12)
+        .padding(.top, 16) // tucked portion hidden under the card
+        .padding(.bottom, 10)
     }
 
+    /// Collapsed: full-width deck listing the selected mode's templates as
+    /// stacked rows. Stays compact at ~2 rows with a sliver of the third
+    /// peeking in as the scroll affordance; the rest scroll vertically.
+    private var collapsedTemplates: some View {
+        ScrollView(.vertical, showsIndicators: false) {
+            VStack(spacing: 6) {
+                ForEach(tile.templates, id: \.self) { template in
+                    Button(action: {
+                        let generator = UIImpactFeedbackGenerator(style: .light)
+                        generator.impactOccurred()
+                        inputText = template
+                    }) {
+                        HStack(spacing: 8) {
+                            Image(systemName: "sparkles")
+                                .font(.system(size: 11, weight: .semibold))
+                                .foregroundColor(tile.color)
+                            Text(template)
+                                .font(.system(size: 13, weight: .medium, design: isTerminal ? .monospaced : .default))
+                                .foregroundColor(Color("TextPrimary"))
+                                .lineLimit(1)
+                                .truncationMode(.tail)
+                            Spacer(minLength: 4)
+                            Image(systemName: "arrow.up.left")
+                                .font(.system(size: 10, weight: .bold))
+                                .foregroundColor(Color("TextSecondary"))
+                                .opacity(0.6)
+                        }
+                        .padding(.horizontal, 12)
+                        .frame(maxWidth: .infinity)
+                        .frame(height: 38)
+                        .background(Color("BgSecondary"))
+                        .clipShape(RoundedRectangle(cornerRadius: Theme.radiusMD))
+                        .overlay(
+                            RoundedRectangle(cornerRadius: Theme.radiusMD)
+                                .stroke(Theme.borderWarmDefault, lineWidth: 1)
+                        )
+                        .contentShape(Rectangle())
+                    }
+                    .buttonStyle(.plain)
+                }
+            }
+            .padding(.horizontal, 12)
+        }
+        // 2 rows (38 + 6 spacing each) + a sliver of the 3rd so it's clear
+        // there's more; ~70pt of scroll travel reaches the rest.
+        .frame(height: 100)
+        .padding(.top, 16) // tucked portion hidden under the card
+        .padding(.bottom, 12)
+        .frame(maxWidth: .infinity, alignment: .leading)
+    }
+
+    /// One grid cell: icon over label, centered, full column width. The
+    /// selected tile keeps its accent tint + border.
     private func tileButton(_ tile: AgentModeTile) -> some View {
         let isSelected = agentModeStore.selectedTile(for: surface) == tile
         return Button(action: {
@@ -1643,23 +1799,22 @@ struct AgentModeBottomDeck: View {
             agentModeStore.selectTile(tile, for: surface)
             inputText = tile.taskPrompt
         }) {
-            HStack(spacing: 6) {
+            VStack(spacing: 5) {
                 Image(systemName: tile.icon)
-                    .font(.system(size: 12, weight: .semibold))
+                    .font(.system(size: 16, weight: .semibold))
                 Text(tile.label)
                     .font(.system(size: 11, weight: .semibold))
                     .lineLimit(1)
                     .minimumScaleFactor(0.8)
             }
             .foregroundColor(isSelected ? tile.color : Color("TextSecondary"))
-            .padding(.horizontal, 8)
-            .frame(height: 32)
             .frame(maxWidth: .infinity)
+            .frame(height: 58)
             .background(isSelected ? tile.color.opacity(0.15) : Color.clear)
-            .clipShape(RoundedRectangle(cornerRadius: Theme.radiusSM))
+            .clipShape(RoundedRectangle(cornerRadius: Theme.radiusMD))
             .overlay(
-                RoundedRectangle(cornerRadius: Theme.radiusSM)
-                    .stroke(isSelected ? tile.color.opacity(0.5) : Theme.borderWarmSubtle, lineWidth: 1)
+                RoundedRectangle(cornerRadius: Theme.radiusMD)
+                    .stroke(isSelected ? tile.color.opacity(0.45) : Theme.borderWarmSubtle, lineWidth: 1)
             )
             .contentShape(Rectangle())
         }
@@ -1689,11 +1844,6 @@ private let launchTaglines = [
 ]
 
 struct EmptyChatStateView: View {
-    /// Suggestion-row tap (Phase 9): fills the composer with the prompt.
-    /// Fill-not-send is deliberate — the user reviews/edits before sending,
-    /// so a decorative row can never fire off an accidental message.
-    var onSuggestion: ((String) -> Void)? = nil
-
     // Pick a random greeting once per view lifetime (matches web behavior
     // where the greeting is cached per renderer session).
     @State private var greeting: (title: String, tagline: String) = {
@@ -1707,48 +1857,6 @@ struct EmptyChatStateView: View {
     /// Staggered reveal for the greeting title.
     @State private var titleRevealed = false
     @State private var taglineRevealed = false
-
-    /// Home suggestion rows (ChatGPT Work parity). The set is static; the
-    /// ORDER follows the Phase-10 onboarding persona (see below) — a later
-    /// phase swaps in backend-personalized suggestions.
-    private struct Suggestion: Identifiable {
-        let id: String
-        let icon: String
-        let prompt: String
-    }
-
-    private static let suggestions: [Suggestion] = [
-        Suggestion(id: "summarize", icon: "doc.text", prompt: "Summarize a document"),
-        Suggestion(id: "email", icon: "envelope", prompt: "Draft an email"),
-        Suggestion(id: "plan", icon: "checklist", prompt: "Plan my next steps"),
-        Suggestion(id: "cowork", icon: "person.3", prompt: "Start a cowork session"),
-    ]
-
-    /// Persona → suggestion-row order (Phase 10; ids match `suggestions`
-    /// above, static maps are fine). Only the lead changes per persona:
-    /// engineering/product/operations lead with planning, data/finance/
-    /// legal/student with summarizing, marketing/sales with drafting,
-    /// design/people-HR with cowork. nil/other keep the default order.
-    private static let suggestionOrder: [OnboardingPersona: [String]] = [
-        .engineering: ["plan", "summarize", "email", "cowork"],
-        .design: ["cowork", "summarize", "plan", "email"],
-        .finance: ["summarize", "plan", "email", "cowork"],
-        .legal: ["summarize", "email", "plan", "cowork"],
-        .dataScience: ["summarize", "plan", "email", "cowork"],
-        .marketing: ["email", "plan", "summarize", "cowork"],
-        .operations: ["plan", "cowork", "summarize", "email"],
-        .student: ["summarize", "plan", "email", "cowork"],
-        .product: ["plan", "cowork", "email", "summarize"],
-        .sales: ["email", "cowork", "plan", "summarize"],
-        .peopleHR: ["cowork", "email", "plan", "summarize"],
-        .other: ["summarize", "email", "plan", "cowork"],
-    ]
-
-    private var orderedSuggestions: [Suggestion] {
-        let order = OnboardingStore.shared.persona.flatMap { Self.suggestionOrder[$0] }
-            ?? Self.suggestions.map(\.id)
-        return order.compactMap { id in Self.suggestions.first { $0.id == id } }
-    }
 
     var body: some View {
         VStack(spacing: 0) {
@@ -1804,50 +1912,6 @@ struct EmptyChatStateView: View {
             .opacity(taglineRevealed ? 1 : 0)
             .offset(y: taglineRevealed ? 0 : 8)
             .animation(.easeOut(duration: 0.6).delay(0.3), value: taglineRevealed)
-
-            // ── Suggestion rows (Phase 9) — below the greeting. Only
-            // rendered when a tap handler is wired; the caller already
-            // gates this whole view out of incognito and the usage wall. ──
-            if let onSuggestion {
-                VStack(spacing: 8) {
-                    ForEach(orderedSuggestions) { suggestion in
-                        Button(action: {
-                            let generator = UIImpactFeedbackGenerator(style: .light)
-                            generator.impactOccurred()
-                            onSuggestion(suggestion.prompt)
-                        }) {
-                            HStack(spacing: 12) {
-                                Image(systemName: suggestion.icon)
-                                    .font(.system(size: 13, weight: .medium))
-                                    .foregroundColor(Color("AccentPrimary"))
-                                    .frame(width: 20)
-                                Text(suggestion.prompt)
-                                    .font(.subheadline)
-                                    .foregroundColor(Color("TextPrimary"))
-                                Spacer()
-                                Image(systemName: "arrow.up.left")
-                                    .font(.system(size: 11, weight: .bold))
-                                    .foregroundColor(Color("TextSecondary"))
-                                    .opacity(0.6)
-                            }
-                            .padding(.horizontal, 14)
-                            .frame(height: 44)
-                            .background(Color("BgPanel"))
-                            .clipShape(RoundedRectangle(cornerRadius: Theme.radiusMD))
-                            .overlay(
-                                RoundedRectangle(cornerRadius: Theme.radiusMD)
-                                    .stroke(Theme.borderWarmDefault, lineWidth: 1)
-                            )
-                            .contentShape(Rectangle())
-                        }
-                        .buttonStyle(.plain)
-                    }
-                }
-                .padding(.top, 28)
-                .padding(.horizontal, 24)
-                .opacity(taglineRevealed ? 1 : 0)
-                .animation(.easeOut(duration: 0.6).delay(0.5), value: taglineRevealed)
-            }
         }
         .onAppear {
             logoGlowing = true
@@ -1939,19 +2003,120 @@ struct TransientErrorBanner: View {
     }
 }
 
+// MARK: - Terminal session (code threads)
+
+/// Terminal-styled feed row for code threads: `❯` prompt line for the user,
+/// plain monospace output for the assistant, a blinking block cursor on the
+/// streaming tail. No bubbles — a terminal session, not a chat.
+private struct TerminalMessageRow: View {
+    let message: MessageRecord
+    let isStreamingTail: Bool
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 4) {
+            if message.role == "user" {
+                HStack(alignment: .top, spacing: 8) {
+                    Text("❯")
+                        .foregroundColor(TerminalTheme.accent)
+                    Text(message.content)
+                        .foregroundColor(TerminalTheme.text)
+                }
+            } else {
+                if !message.content.isEmpty {
+                    Text(message.content)
+                        .foregroundColor(TerminalTheme.text.opacity(0.85))
+                }
+                if isStreamingTail {
+                    TerminalCursor()
+                }
+            }
+        }
+        .font(.system(size: 14, design: .monospaced))
+        .textSelection(.enabled)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(.horizontal, 16)
+    }
+}
+
+/// Boot-style empty state for code threads — a terminal session header in
+/// place of the Home greeting. Read-only output lines: no dangling prompt,
+/// so it never looks like a field waiting for input.
+private struct TerminalEmptyState: View {
+    var body: some View {
+        VStack(alignment: .leading, spacing: 6) {
+            HStack(spacing: 8) {
+                Image(systemName: "terminal")
+                    .font(.system(size: 13, weight: .semibold))
+                    .foregroundColor(TerminalTheme.accent)
+                Text("allternit code — agent terminal")
+                    .foregroundColor(TerminalTheme.accent)
+            }
+            Text("session ready. describe the task below and the agent gets to work.")
+                .foregroundColor(TerminalTheme.dim)
+        }
+        .font(.system(size: 14, design: .monospaced))
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(.horizontal, 16)
+    }
+}
+
+/// Blinking block cursor (terminal `_`-at-rest feel, block style).
+private struct TerminalCursor: View {
+    @State private var lit = true
+
+    var body: some View {
+        Text("▌")
+            .foregroundColor(TerminalTheme.text)
+            .opacity(lit ? 1 : 0)
+            .onAppear {
+                withAnimation(.easeInOut(duration: 0.8).repeatForever(autoreverses: true)) {
+                    lit = false
+                }
+            }
+    }
+}
+
 // MARK: - Gizzi mascot
 
-/// Static Gizzi mascot that sits on the top edge of the composer bar when
-/// agent mode is active. No erratic movement; it just perches above the input.
+/// Gizzi mascot perched on the top edge of the composer bar while agent
+/// mode is active. It follows the user's finger: touch and drag along the
+/// bar and Gizzi walks that way (leaning into the direction), staying where
+/// it's left — no autonomous movement.
 private struct GizziMascotPill: View {
+    /// Committed walk position along the bar (points from center).
+    @State private var walkOffset: CGFloat = 0
+    /// Live drag translation while a finger is down.
+    @GestureState private var dragOffset: CGFloat = 0
+
+    /// Farthest Gizzi may walk from center — keeps it on the composer card.
+    private let maxWalk: CGFloat = 150
+
+    private var totalOffset: CGFloat {
+        min(max(walkOffset + dragOffset, -maxWalk), maxWalk)
+    }
+
     var body: some View {
         Image("GizziMascot")
             .resizable()
             .scaledToFit()
             .frame(width: 44, height: 44)
+            // Lean into the walk direction while being dragged.
+            .rotationEffect(.degrees(dragOffset == 0 ? 0 : (dragOffset > 0 ? 7 : -7)))
             // Feet sit on the top edge of the card (a few points inside so it
             // looks grounded, not hovering).
-            .offset(y: -38)
+            .offset(x: totalOffset, y: -38)
+            .contentShape(Rectangle())
+            .gesture(
+                DragGesture(minimumDistance: 3)
+                    .updating($dragOffset) { value, state, _ in
+                        state = value.translation.width
+                    }
+                    .onEnded { value in
+                        withAnimation(.spring(response: 0.4, dampingFraction: 0.72)) {
+                            walkOffset = min(max(walkOffset + value.translation.width, -maxWalk), maxWalk)
+                        }
+                    }
+            )
             .transition(.scale.combined(with: .opacity))
             .accessibilityLabel("Gizzi")
     }

@@ -13,7 +13,7 @@ This document summarizes the organized structure of the 2-governance layer with 
 
 ### Governance Workflows
 - `governance-workflows/core-governance/` - Core governance decision-making engine
-- `governance-workflows/workflow-engine/` - Governance workflow and decision engine (TypeScript)
+- ~~`governance-workflows/workflow-engine/`~~ - Deleted (zero-consumer TypeScript package)
 - `governance-workflows/rust-governor/` - Rust-based governance engine
 
 ### Legal & Compliance
@@ -38,7 +38,7 @@ The previous confusing structure has been reorganized as follows:
 - `policy-engine/` → `identity-access-control/policy-engine/`
 - `allternit-audit-log/` → `audit-logging/core-audit/`
 - `security-governance/` → `governance-workflows/core-governance/`
-- `allternit-governor/` → `governance-workflows/workflow-engine/`
+- `allternit-governor/` → `governance-workflows/workflow-engine/` (later deleted — zero consumers)
 - `allternit-lawlayer/` → `legal-compliance/regulatory-framework/`
 - `rust/evidence_store/` → `evidence-management/core-evidence/`
 - `security/federation/` → `security-network/`

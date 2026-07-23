@@ -147,6 +147,7 @@ import type { Message as MessageType, UserMessage, ProgressMessage, HookResultMe
 import { query } from '../query';
 import { mergeClients, useMergedClients } from '../hooks/useMergedClients';
 import { getQuerySourceForREPL } from '../utils/promptCategory';
+import { runTools } from '../services/tools/toolOrchestration';
 import { useMergedTools } from '../hooks/useMergedTools';
 import { mergeAndFilterTools } from '../utils/toolPool';
 import { useMergedCommands } from '../hooks/useMergedCommands';
@@ -2949,86 +2950,156 @@ export function REPL({
     if (shouldUseHarness() && !isRemoteSession) {
       const harnessInstance = await getHarness();
       if (harnessInstance) {
-        // Use harness-based streaming
-        const request = {
-          provider: mainLoopModelParam.startsWith('claude') ? 'anthropic' as const :
-                    mainLoopModelParam.startsWith('gpt') ? 'openai' as const :
-                    mainLoopModelParam.startsWith('gemini') ? 'google' as const :
-                    'anthropic' as const,
-          model: mainLoopModelParam,
-          messages: messagesIncludingNewMessages.map(m => ({
-            role: m.type === 'user' ? 'user' as const :
-                  m.type === 'assistant' ? 'assistant' as const :
-                  'system' as const,
-            content: typeof m.message?.content === 'string' ? m.message.content :
-                     Array.isArray(m.message?.content) ?
-                       m.message.content.filter(c => c.type === 'text').map(c => c.text).join(' ') :
-                       ''
-          })),
-          systemPrompt,
-          tools: freshTools.map(t => ({
-            name: t.name,
-            description: t.description || '',
-            parameters: t.inputSchema || { type: 'object', properties: {} }
-          }))
-        };
+        // Harness tool-loop: stream → collect tool calls → execute → repeat
+        let currentMessages = messagesIncludingNewMessages;
+        let turnComplete = false;
+        let harnessFailed = false;
+        let turnUsage = { input_tokens: 0, output_tokens: 0 };
 
-        try {
-          for await (const chunk of harnessInstance.stream(request)) {
-            switch (chunk.type) {
-              case 'text':
-                // Handle text chunk - accumulate and yield via onQueryEvent
-                if (chunk.text) {
-                  setResponseLength(prev => prev + chunk.text!.length);
-                  onStreamingText(current => (current || '') + chunk.text!);
+        while (!turnComplete && !harnessFailed) {
+          const request = {
+            provider: mainLoopModelParam.startsWith('claude') ? 'anthropic' as const :
+                      mainLoopModelParam.startsWith('gpt') ? 'openai' as const :
+                      mainLoopModelParam.startsWith('gemini') ? 'google' as const :
+                      'anthropic' as const,
+            model: mainLoopModelParam,
+            messages: currentMessages.map(m => ({
+              role: m.type === 'user' ? 'user' as const :
+                    m.type === 'assistant' ? 'assistant' as const :
+                    'system' as const,
+              content: typeof m.message?.content === 'string' ? m.message.content :
+                       Array.isArray(m.message?.content) ?
+                         m.message.content.filter(c => c.type === 'text').map(c => c.text).join(' ') :
+                         ''
+            })),
+            systemPrompt,
+            tools: freshTools.map(t => ({
+              name: t.name,
+              description: t.description || '',
+              parameters: t.inputSchema || { type: 'object', properties: {} }
+            })),
+            signal: abortController.signal,
+          };
+
+          const toolCalls: Array<{ id: string; name: string; input: Record<string, unknown> }> = [];
+          let hasError = false;
+
+          try {
+            for await (const chunk of harnessInstance.stream(request)) {
+              switch (chunk.type) {
+                case 'text':
+                  if (chunk.text) {
+                    setResponseLength(prev => prev + chunk.text!.length);
+                    onStreamingText(current => (current || '') + chunk.text!);
+                  }
+                  break;
+                case 'tool_call':
+                  setStreamingToolUses(prev => [...prev, {
+                    toolUseId: chunk.id || '',
+                    toolName: chunk.name || '',
+                    input: chunk.arguments || {},
+                    status: 'pending'
+                  }]);
+                  setStreamMode('tool-use');
+                  toolCalls.push({
+                    id: chunk.id || '',
+                    name: chunk.name || '',
+                    input: chunk.arguments || {},
+                  });
+                  break;
+                case 'usage':
+                  turnUsage.input_tokens += chunk.input_tokens ?? 0;
+                  turnUsage.output_tokens += chunk.output_tokens ?? 0;
+                  break;
+                case 'error': {
+                  const errorText = chunk.error || 'Harness streaming error';
+                  logError(new Error(errorText));
+                  addNotification({
+                    key: 'harness-error',
+                    text: errorText,
+                    priority: 'high'
+                  });
+                  hasError = true;
+                  break;
                 }
-                break;
-              case 'tool_call':
-                // Handle tool call
-                setStreamingToolUses(prev => [...prev, {
-                  toolUseId: chunk.id || '',
-                  toolName: chunk.name || '',
-                  input: chunk.arguments || {},
-                  status: 'pending'
-                }]);
-                setStreamMode('tool-use');
-                break;
-              case 'error':
-                // Handle error
-                logError(new Error(chunk.error || 'Harness streaming error'));
-                addNotification({
-                  key: 'harness-error',
-                  text: chunk.error || 'Streaming error occurred',
-                  priority: 'high'
-                });
-                break;
-              case 'done':
-                // Stream complete
-                setStreamMode('responding');
-                break;
+                case 'done':
+                  setStreamMode('responding');
+                  break;
+              }
+            }
+          } catch (err) {
+            if (abortController.signal.aborted) {
+              harnessFailed = true;
+              break;
+            }
+            logError(err);
+            addNotification({
+              key: 'harness-stream-error',
+              text: 'Harness streaming failed, falling back to legacy mode',
+              priority: 'high'
+            });
+            harnessFailed = true;
+            break;
+          }
+
+          if (hasError) {
+            harnessFailed = true;
+            break;
+          }
+
+          // No tool calls → turn complete
+          if (toolCalls.length === 0) {
+            turnComplete = true;
+            break;
+          }
+
+          // Create assistant message with tool_use blocks
+          const assistantMessage = createAssistantMessage({
+            content: toolCalls.map(tc => ({
+              type: 'tool_use' as const,
+              id: tc.id,
+              name: tc.name,
+              input: tc.input,
+            })),
+          });
+          onQueryEvent(assistantMessage);
+          currentMessages = [...currentMessages, assistantMessage];
+
+          // Execute tools
+          const toolUseBlocks = toolCalls.map(tc => ({
+            id: tc.id,
+            name: tc.name,
+            input: tc.input,
+          })) as any[];
+
+          let currentToolUseContext = toolUseContext;
+          for await (const update of runTools(toolUseBlocks, [assistantMessage], canUseTool, currentToolUseContext)) {
+            if (update.message) {
+              onQueryEvent(update.message);
+              if (update.message.type === 'user') {
+                currentMessages = [...currentMessages, update.message];
+              }
+            }
+            if (update.newContext) {
+              currentToolUseContext = { ...update.newContext };
             }
           }
-        } catch (harnessError) {
-          logError(harnessError);
-          addNotification({
-            key: 'harness-stream-error',
-            text: 'Harness streaming failed, falling back to legacy mode',
-            priority: 'high'
-          });
-          // Fall through to legacy query below
         }
-        
-        // Skip the legacy query if harness succeeded
-        if (feature('BUDDY')) {
-          void fireCompanionObserver(messagesRef.current, reaction => setAppState(prev => prev.companionReaction === reaction ? prev : {
-            ...prev,
-            companionReaction: reaction
-          }));
+
+        if (!harnessFailed) {
+          // Skip the legacy query if harness succeeded
+          if (feature('BUDDY')) {
+            void fireCompanionObserver(messagesRef.current, reaction => setAppState(prev => prev.companionReaction === reaction ? prev : {
+              ...prev,
+              companionReaction: reaction
+            }));
+          }
+          queryCheckpoint('query_end');
+          resetLoadingState();
+          await onTurnComplete?.(messagesRef.current);
+          return;
         }
-        queryCheckpoint('query_end');
-        resetLoadingState();
-        await onTurnComplete?.(messagesRef.current);
-        return;
+        // Fall through to legacy query on harness failure
       }
     }
 

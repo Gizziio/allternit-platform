@@ -77,7 +77,7 @@ describe("runtime lane derivation", () => {
     const cards = deriveRuntimeLaneCards(baseInput({ tools: [], maxCards: 4 }))
 
     expect(cards).toHaveLength(2)
-    expect(cards[0]?.title).toBe("Connecting lane")
-    expect(cards[1]?.title).toBe("Receipt Bundle")
+    expect(cards[0]?.title).toBe("Connecting focus")
+    expect(cards[1]?.title).toBe("Manifest Bundle")
   })
 })

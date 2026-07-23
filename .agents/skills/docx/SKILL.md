@@ -11,7 +11,7 @@ entrypoint: "SKILL.md"
 Generate production-ready Microsoft Word documents (.docx) from structured outlines, user prompts, or raw data. This skill wraps the `docx` npm library with opinionated styling and document patterns so agents can produce consistent, professional output without wrestling with low-level formatting.
 
 > **STATUS:** Production  
-> **Backend Tool:** `domains/agent-swarm/tools/document-generator/mod.ts` (action: `generateStudyGuide`)
+> **Backend Tool:** `tools/agent-swarm/document-generator/mod.ts` (action: `generateStudyGuide`)
 
 ---
 
@@ -119,7 +119,7 @@ Show the outline to the user for approval before rendering.
 Call the Summit Copilot backend tool:
 
 ```typescript
-import { execute } from '../domains/agent-swarm/tools/document-generator/mod.ts';
+import { execute } from '../tools/agent-swarm/document-generator/mod.ts';
 
 const result = await execute({
   action: "generateStudyGuide",
@@ -167,8 +167,8 @@ If the user requests custom branding (colors, logos, custom fonts), note that th
 
 | Export | Path |
 |--------|------|
-| `execute` | `domains/agent-swarm/tools/document-generator/mod.ts` |
-| `inputSchema` | `domains/agent-swarm/tools/document-generator/mod.ts` |
+| `execute` | `tools/agent-swarm/document-generator/mod.ts` |
+| `inputSchema` | `tools/agent-swarm/document-generator/mod.ts` |
 
 Dependencies: `document-generator-skills` FastAPI service (Python) running at `SUMMIT_COPILOT_URL`.
 

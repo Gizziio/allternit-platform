@@ -95,6 +95,11 @@ struct CodeModeView: View {
                 if CommandLine.arguments.contains("-open-code-filter") {
                     isFilterSheetPresented = true
                 }
+                // `-open-code-thread` (DEBUG only): push a fresh code thread
+                // so the terminal session UX can be screenshot-verified.
+                if CommandLine.arguments.contains("-open-code-thread") {
+                    threadTarget = CodeThreadTarget(sessionId: nil, title: nil)
+                }
                 #endif
             }
             .onChange(of: threadTarget) { _, target in
@@ -525,9 +530,11 @@ private struct CodeThreadTarget: Hashable, Identifiable {
 }
 
 /// A code thread: the shared ChatContentView inside the Code tab's
-/// navigation chrome. The composer keeps its agent pill + bottom deck (the
-/// code surface's tile set, AgentModeTile.visibleTiles(for: .code)); the
-/// Chat/Cowork toggle is Home-only and hidden here.
+/// navigation chrome, dressed as a terminal session (dark chrome, terminal
+/// palette feed — ChatContentView renders terminal rows under `.code`).
+/// The composer keeps its agent pill + bottom deck (the code surface's tile
+/// set, AgentModeTile.visibleTiles(for: .code)); the Chat/Cowork toggle is
+/// Home-only and hidden here.
 private struct CodeThreadChatView: View {
     let sessionId: String?
     let title: String?

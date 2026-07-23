@@ -15,9 +15,9 @@ import axios from 'axios';
 import path from 'path';
 import os from 'os';
 import fs from 'fs';
-import UdemyService from '../services/udemy-downloader/src/udemy.service';
-import CourseStorageManager from '../services/udemy-downloader/src/course-storage.manager';
-import CourseDownloader from '../services/udemy-downloader/src/course-downloader.module';
+import UdemyService from '../tools/udemy-downloader/src/udemy.service';
+import CourseStorageManager from '../tools/udemy-downloader/src/course-storage.manager';
+import CourseDownloader from '../tools/udemy-downloader/src/course-downloader.module';
 
 const TOKEN_FILE = path.join(os.homedir(), '.udemy-token');
 const DOWNLOAD_PATH = path.join(os.homedir(), 'Downloads', 'UdemyCourses');

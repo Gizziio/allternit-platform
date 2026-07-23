@@ -32,7 +32,7 @@ Real Chrome browser streaming embedded in Allternit Browser Capsule via WebRTC.
 Chrome streaming is now part of the platform startup:
 
 ```bash
-./start-platform.sh
+pnpm dev:platform-stack  # from repo root (start-platform.sh retired → archive/bin-legacy/)
 ```
 
 This starts:
@@ -46,7 +46,7 @@ This starts:
 
 ```bash
 cd /Users/macbook/Desktop/allternit-workspace/allternit
-./start-platform.sh
+pnpm dev:platform-stack  # from repo root (start-platform.sh retired → archive/bin-legacy/)
 ```
 
 ### 2. Launch Chrome Session
@@ -123,7 +123,7 @@ let runtime = ChromeRuntime::Firecracker(firecracker_driver);
 ### Backend
 - `8-cloud/chrome-stream/` - Docker image + sidecar
 - `7-apps/api/src/chrome_session_routes.rs` - Session broker
-- `start-platform.sh` - Startup integration
+- ~~`start-platform.sh`~~ - Startup integration (retired → `archive/bin-legacy/`; use `pnpm dev:platform-stack`)
 
 ### Frontend
 - `6-ui/allternit-platform/src/capsules/browser/ChromeStreamView.tsx` - WebRTC client

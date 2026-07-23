@@ -10,10 +10,11 @@
  * - Storage operations
  */
 
-import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
+import { describe, it, expect, beforeEach, afterEach } from "bun:test";
 import * as fs from "fs/promises";
 import * as path from "path";
 import * as os from "os";
+import { mockGenerateObject, restoreMocks } from "./helpers/mockProvider";
 
 // Test verification workflow
 import {
@@ -35,10 +36,12 @@ describe("Verification System Integration", () => {
   beforeEach(async () => {
     tempDir = await fs.mkdtemp(path.join(os.tmpdir(), "verification-integration-"));
     sessionId = `test_${Date.now()}`;
+    mockGenerateObject();
   });
 
   afterEach(async () => {
     await fs.rm(tempDir, { recursive: true, force: true });
+    restoreMocks();
   });
 
   // ============================================================================
@@ -69,10 +72,8 @@ describe("Verification System Integration", () => {
       const plan = { steps: [] };
       const receipts = [];
 
-      // This will make LLM call - in real test we'd mock it
-      // For now just check it doesn't throw
       const result = await orchestrator.verify(plan as any, receipts as any);
-      
+
       expect(result).toBeDefined();
       expect(result.methodsUsed).toContain("semi-formal");
       expect(result.confidence).toBeDefined();

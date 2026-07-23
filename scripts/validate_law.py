@@ -51,7 +51,6 @@ REQUIRED_FILES = [
     ROOT / "spec" / "Contracts" / "ProvenanceTimeline.schema.json",
     ROOT / "workers" / "worker_registry.json",
     ROOT / "infra" / "gateway" / "gateway_registry.json",
-    ROOT / "capsules" / "capsule_registry.json",
     ROOT / "cli" / "cli_registry.json",
     ROOT / "memory" / "promotion_registry.json",
     ROOT / "ui" / "ui_registry.json",
@@ -59,7 +58,7 @@ REQUIRED_FILES = [
     ROOT / "ui" / "ui_nav.json",
 ]
 
-TOOLS_REGISTRY_PATH = ROOT / "tools" / "tool_registry.json"
+TOOLS_REGISTRY_PATH = ROOT / "tools" / "agent-swarm" / "tool_registry.json"
 WORKER_REGISTRY_PATH = ROOT / "workers" / "worker_registry.json"
 
 GRAPH_DIR = ROOT / ".a2r" / "graphs"
@@ -541,10 +540,10 @@ def main():
         fail("Missing .a2r/beads/graphs/*.json")
 
     if not TOOLS_REGISTRY_PATH.exists():
-        fail("Missing tools/tool_registry.json")
+        fail("Missing tools/agent-swarm/tool_registry.json")
 
     registry = load_json(TOOLS_REGISTRY_PATH)
-    validate_instance(registry, TOOL_REGISTRY_SCHEMA_ID, schemas, "tools/tool_registry.json")
+    validate_instance(registry, TOOL_REGISTRY_SCHEMA_ID, schemas, "tools/agent-swarm/tool_registry.json")
     validate_tool_registry(registry, TOOLS_REGISTRY_PATH)
     registry_ids = {tool["id"] for tool in registry.get("tools", [])}
 

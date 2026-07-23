@@ -12,7 +12,7 @@
 | **PRODUCTION_DEPLOYMENT_GUIDE.md** | Complete deployment instructions | `docs/PRODUCTION_DEPLOYMENT_GUIDE.md` |
 | **PRODUCTION_READINESS_TRACKER.md** | Task tracking & action items | `docs/PRODUCTION_READINESS_TRACKER.md` |
 | **service-config.sh** | Centralized port configuration | `dev/scripts/service-config.sh` |
-| **start-platform.sh** | Unified service launcher | `start-platform.sh` |
+| ~~**start-platform.sh**~~ | Retired — moved to `archive/bin-legacy/`; use `pnpm dev:platform-stack` | `archive/bin-legacy/start-platform.sh` |
 
 ---
 
@@ -20,8 +20,8 @@
 
 ### Development
 ```bash
-cd /Users/macbook/Desktop/allternit-workspace/allternit
-./start-platform.sh
+# From the repo root
+pnpm dev:platform-stack
 ```
 
 ### Production Build

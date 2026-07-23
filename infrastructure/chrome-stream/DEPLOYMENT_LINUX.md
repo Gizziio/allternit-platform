@@ -39,7 +39,7 @@ cp .env.example .env
 
 ```bash
 # Start ALL services including Chrome streaming
-./start-platform.sh
+pnpm dev:platform-stack
 
 # Or start Chrome streaming only
 docker-compose --profile chrome up -d
@@ -168,7 +168,7 @@ The Allternit Browser Capsule already has Chrome streaming integrated:
 
 **Usage in Electron App:**
 
-1. Start platform: `./start-platform.sh`
+1. Start platform: `pnpm dev:platform-stack`
 2. Open Electron app
 3. Click **"Open Chrome Browser"** button in URL bar
 4. Chrome stream tab opens with real Chrome

@@ -111,10 +111,16 @@ final class APIClient: @unchecked Sendable {
         // `-skip-auth` test mode: authenticate via the gateway's desktop
         // bootstrap path (auth.rs extract_desktop_bootstrap_user — user-id +
         // any desktop token). DEBUG-only shim for local UI testing; real
-        // clients send only the Clerk Bearer.
+        // clients send only the Clerk Bearer. The dev Bearer additionally
+        // satisfies allternit-cloud-api's dev shortcut
+        // (auth/middleware.rs + dispatch handoff) when `-cloud-url` points
+        // at a locally running cloud-api.
         if CommandLine.arguments.contains("-skip-auth") {
             request.setValue("dev-ios-tester", forHTTPHeaderField: "x-allternit-user-id")
             request.setValue("dev", forHTTPHeaderField: "x-allternit-desktop-access-token")
+            if request.value(forHTTPHeaderField: "Authorization") == nil {
+                request.setValue("Bearer dev-api-token", forHTTPHeaderField: "Authorization")
+            }
         }
         #endif
         return request

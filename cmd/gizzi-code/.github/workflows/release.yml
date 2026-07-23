@@ -57,10 +57,7 @@ jobs:
 
       - name: Build binary
         run: |
-          bun build ./src/cli/main.ts \
-            --outfile ./dist/${{ matrix.output }} \
-            --target bun-${{ matrix.target }} \
-            --conditions=browser
+          bun run build --target=${{ matrix.target }}
 
       - name: Upload artifact
         uses: actions/upload-artifact@v4

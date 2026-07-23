@@ -23,7 +23,7 @@ Chrome Streaming is now **fully integrated** into the Allternit Platform with a 
 
 | File | Changes |
 |------|---------|
-| `start-platform.sh` | Added Chrome Streaming check + auto-install prompt |
+| ~~`start-platform.sh`~~ | Added Chrome Streaming check + auto-install prompt (script retired → `archive/bin-legacy/`) |
 | `8-cloud/chrome-stream/Dockerfile` | Fixed for x86_64 Google Chrome |
 | `8-cloud/chrome-stream/supervisor/supervisord.conf` | Process configuration |
 | `8-cloud/chrome-stream/entrypoint.sh` | Chrome flags and startup |
@@ -45,7 +45,7 @@ cp .env.example .env
 nano .env  # Set secure TURN_SECRET
 
 # 3. Start platform (automatic Chrome install prompt)
-./start-platform.sh
+pnpm dev:platform-stack
 
 # 4. Answer Y when prompted:
 # "Install Chrome Streaming now? (recommended) [Y/n]"
@@ -133,7 +133,7 @@ curl http://localhost:8081/screenshot | python3 -c "import sys,json,base64; d=js
 
 ### Test In Electron App
 
-1. Start platform: `./start-platform.sh`
+1. Start platform: `pnpm dev:platform-stack`
 2. Open Electron app
 3. Click **"Open Chrome Browser"** button
 4. Chrome stream tab opens **inside the browser capsule**
@@ -180,7 +180,7 @@ For deploying to customer VPS:
 - [ ] Clone platform repository
 - [ ] Run `cp .env.example .env`
 - [ ] Generate secure TURN_SECRET: `openssl rand -hex 32`
-- [ ] Run `./start-platform.sh`
+- [ ] Run `pnpm dev:platform-stack`
 - [ ] Answer `Y` to Chrome Streaming prompt
 - [ ] Wait for installation (watch for errors)
 - [ ] Verify: `curl http://localhost:8081/health`
@@ -217,7 +217,7 @@ For deploying to customer VPS:
 
 ## Key Points
 
-✅ **Automated**: One-command installation (`./start-platform.sh`)
+✅ **Automated**: One-command installation (`pnpm dev:platform-stack`)
 ✅ **Standard**: Same process for EVERY deployment
 ✅ **Tested**: Works on Ubuntu 22.04+ (x86_64 and ARM64)
 ✅ **Production**: Security-hardened, monitored, scalable

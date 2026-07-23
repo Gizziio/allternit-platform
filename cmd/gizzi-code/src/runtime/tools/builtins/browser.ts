@@ -36,8 +36,11 @@ const log = Log.create({ service: "browser-tool" })
 // Configuration
 // ============================================================================
 
-const GATEWAY_URL = process.env.Allternit_COMPUTER_USE_URL || "http://localhost:3010"
-const GATEWAY_TOKEN = process.env.Allternit_COMPUTER_USE_TOKEN
+const GATEWAY_URL =
+  process.env.ALLTERNIT_COMPUTER_USE_URL ??
+  process.env.Allternit_COMPUTER_USE_URL ??
+  "http://127.0.0.1:8760"
+const GATEWAY_TOKEN = process.env.ALLTERNIT_COMPUTER_USE_TOKEN ?? process.env.Allternit_COMPUTER_USE_TOKEN
 
 // ============================================================================
 // Operator Auto-Start
@@ -46,13 +49,14 @@ const GATEWAY_TOKEN = process.env.Allternit_COMPUTER_USE_TOKEN
 let _operatorProc: ReturnType<typeof spawn> | null = null
 
 function findOperatorDir(): string | null {
+  if (process.env.ALLTERNIT_COMPUTER_USE_ENGINE_PATH) return process.env.ALLTERNIT_COMPUTER_USE_ENGINE_PATH
   if (process.env.Allternit_OPERATOR_PATH) return process.env.Allternit_OPERATOR_PATH
-  // Walk up from __dirname to find the monorepo root, then look for the service
+  // Walk up from __dirname to find the monorepo root, then look for the ACU engine
   const candidates = [
-    path.join(__dirname, "../../../../../../services/computer-use-operator"),
-    path.join(__dirname, "../../../../../services/computer-use-operator"),
-    path.join(__dirname, "../../../../services/computer-use-operator"),
-    path.join(process.cwd(), "services/computer-use-operator"),
+    path.join(__dirname, "../../../../../../domains/computer-use/core"),
+    path.join(__dirname, "../../../../../domains/computer-use/core"),
+    path.join(__dirname, "../../../../domains/computer-use/core"),
+    path.join(process.cwd(), "domains/computer-use/core"),
   ]
   return candidates.find(existsSync) ?? null
 }
@@ -86,18 +90,14 @@ async function autoStartOperator(): Promise<boolean> {
     return false
   }
 
-  const cuPath =
-    process.env.Allternit_COMPUTER_USE_PATH ??
-    path.join(operatorDir, "../../packages/computer-use")
-
-  log.info("Auto-starting Allternit Operator", { operatorDir })
+  log.info("Auto-starting ACU computer-use engine", { operatorDir })
 
   _operatorProc = spawn(
     "python3",
-    ["-m", "uvicorn", "src.main:app", "--host", "127.0.0.1", "--port", "3010", "--log-level", "warning"],
+    ["-m", "uvicorn", "gateway.main:app", "--host", "127.0.0.1", "--port", "8760", "--log-level", "warning"],
     {
       cwd: operatorDir,
-      env: { ...process.env, Allternit_COMPUTER_USE_PATH: cuPath },
+      env: { ...process.env },
       stdio: "ignore",
       detached: true,
     },
@@ -106,9 +106,9 @@ async function autoStartOperator(): Promise<boolean> {
 
   const ready = await waitForGateway(10000)
   if (ready) {
-    log.info("Allternit Operator started successfully")
+    log.info("ACU computer-use engine started successfully")
   } else {
-    log.warn("Allternit Operator did not become ready within 10s")
+    log.warn("ACU computer-use engine did not become ready within 10s")
   }
   return ready
 }
@@ -241,13 +241,13 @@ async function callComputerUseGateway(
         family: "browser",
         mode: "execute",
         status: "failed",
-        summary: "Allternit Operator is not running and could not be auto-started",
+        summary: "ACU computer-use engine is not running and could not be auto-started",
         extracted_content: null,
         artifacts: [],
         receipts: [],
         error: {
           code: "GATEWAY_UNREACHABLE",
-          message: `Cannot connect to Allternit Operator at ${GATEWAY_URL}. Start manually: cd services/computer-use-operator && python3 -m uvicorn src.main:app --port 3010`,
+          message: `Cannot connect to ACU computer-use engine at ${GATEWAY_URL}. Start manually: cd domains/computer-use/core && python3 -m uvicorn gateway.main:app --port 8760`,
         },
         trace_id: crypto.randomUUID(),
       }
@@ -482,7 +482,9 @@ export const BrowserTool = Tool.define("browser", async (initCtx) => {
 
 function normalizeProviderPreference(preference?: string): string | undefined {
   if (!preference) return undefined
-  if (preference === "playwright" || preference === "cdp") return "local-playwright"
-  if (preference === "desktop") return "extension-tab"
+  // ACU gateway accepts: playwright | browser-use | cdp | desktop
+  if (preference === "local-playwright") return "playwright"
+  if (preference === "extension-tab") return "desktop"
+  if (preference === "stagehand") return "browser-use"
   return preference
 }

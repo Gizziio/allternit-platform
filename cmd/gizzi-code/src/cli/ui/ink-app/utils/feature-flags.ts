@@ -214,6 +214,40 @@ const FEATURE_FLAG_REGISTRY: FeatureFlag<any>[] = [
     envVar: 'ALLTERNIT_SUBPROCESS_CMD',
     configKey: 'subprocess.command',
   },
+
+  // Subsystem Features
+  {
+    name: 'voice.enabled',
+    description: 'Enable voice interface',
+    type: 'boolean',
+    defaultValue: false,
+    envVar: 'GIZZI_VOICE_ENABLED',
+    configKey: 'features.voice.enabled',
+  },
+  {
+    name: 'cowork.enabled',
+    description: 'Enable cowork runtime',
+    type: 'boolean',
+    defaultValue: false,
+    envVar: 'GIZZI_COWORK_ENABLED',
+    configKey: 'features.cowork.enabled',
+  },
+  {
+    name: 'vault.enabled',
+    description: 'Enable knowledge vault',
+    type: 'boolean',
+    defaultValue: false,
+    envVar: 'GIZZI_VAULT_ENABLED',
+    configKey: 'features.vault.enabled',
+  },
+  {
+    name: 'verification.enabled',
+    description: 'Enable advanced verification',
+    type: 'boolean',
+    defaultValue: false,
+    envVar: 'GIZZI_VERIFICATION_ENABLED',
+    configKey: 'features.verification.enabled',
+  },
 ];
 
 // ============================================================================
@@ -433,28 +467,49 @@ export function getFlagSync<T>(name: string): T {
 // ============================================================================
 
 export function getHarnessMode(): HarnessMode {
+  // Explicit override wins.
+  const explicit = process.env.GIZZI_HARNESS_MODE as HarnessMode | undefined;
+  if (explicit && ['byok', 'cloud', 'local', 'subprocess', 'legacy'].includes(explicit)) {
+    return explicit;
+  }
+
   // Check environment variables
   if (process.env.ALLTERNIT_CLOUD_TOKEN) {
     return 'cloud';
   }
-  
+
   if (process.env.ALLTERNIT_LOCAL_URL) {
     return 'local';
   }
-  
+
   if (process.env.ALLTERNIT_SUBPROCESS_CMD) {
     return 'subprocess';
   }
-  
+
   if (process.env.ANTHROPIC_API_KEY || process.env.OPENAI_API_KEY) {
     return 'byok';
   }
-  
+
   return 'legacy';
 }
 
 export function shouldUseHarness(): boolean {
   return getFlagSync('harness.enabled') && getHarnessMode() !== 'legacy';
+}
+
+// ============================================================================
+// Subsystem Status
+// ============================================================================
+
+export function getActiveSubsystems(): Record<string, boolean> {
+  return {
+    harness: shouldUseHarness(),
+    voice: getFlagSync('voice.enabled'),
+    cowork: getFlagSync('cowork.enabled'),
+    vault: getFlagSync('vault.enabled'),
+    verification: getFlagSync('verification.enabled'),
+    mcp: getFlagSync('mcp.enabled'),
+  };
 }
 
 // ============================================================================

@@ -1,0 +1,35 @@
+services:
+  research:
+    build:
+      # Source lives in the sibling cowork-integration sources checkout.
+      # Override with DEERFLOW_SRC to point at a different checkout.
+      context: ${DEERFLOW_SRC:-../../../sources/deerflow}
+      dockerfile: backend/Dockerfile
+      target: runtime
+      args:
+        UV_IMAGE: ${UV_IMAGE:-ghcr.io/astral-sh/uv:0.7.20}
+        UV_INDEX_URL: ${UV_INDEX_URL:-https://pypi.org/simple}
+    ports:
+      - "${RESEARCH_PORT:-8764}:8001"
+    volumes:
+      - ./config.yaml:/app/backend/config.yaml:ro
+      - ./extensions_config.json:/app/backend/extensions_config.json:ro
+      - research_data:/app/backend/.deer-flow
+    environment:
+      - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY}
+      - OPENAI_API_KEY=${OPENAI_API_KEY:-}
+      - DEER_FLOW_PROJECT_ROOT=/app
+      - DEER_FLOW_HOME=/app/backend/.deer-flow
+      - DEER_FLOW_CONFIG_PATH=/app/backend/config.yaml
+      - DEER_FLOW_EXTENSIONS_CONFIG_PATH=/app/backend/extensions_config.json
+      - GATEWAY_ENABLE_DOCS=false
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8001/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 90s
+
+volumes:
+  research_data:

@@ -1,9 +1,0 @@
-{
-  "teacher_id": "summit_hist_002",
-  "name": "James Chen",
-  "canvas_user_id": 5002,
-  "preferred_grade_band": "6-8",
-  "style": { "tone": "engaging", "format": "visual" },
-  "auth": { "canvas_api_token_ref": "secret://summit_oic/teachers/chen/canvas_token" },
-  "desktop": { "endpoint_ref": "ws://127.0.0.1:3008/session/chen_ws_1" }
-}

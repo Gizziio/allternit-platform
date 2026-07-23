@@ -16,7 +16,6 @@ chrono = { workspace = true }
 serde_with = { version = "3.0", features = ["chrono"] }
 
 allternit-policy-tier-gating = { path = "../../../governance/identity-access-control/policy-tier-gating" }
-allternit-browser-runtime = { workspace = true }
 
 [dev-dependencies]
 tokio-test = "0.4"

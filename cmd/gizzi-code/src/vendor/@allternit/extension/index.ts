@@ -548,7 +548,7 @@ export function getAllWindowsRegistryKeys(): Array<{ browser: ChromiumBrowser; k
 // ============================================================================
 
 export function getComputerUseGatewayUrl(): string {
-  return process.env.ALLTERNIT_COMPUTER_USE_URL || 'http://localhost:3010';
+  return process.env.ALLTERNIT_COMPUTER_USE_URL || 'http://127.0.0.1:8760';
 }
 
 export function getComputerUseToken(): string | undefined {

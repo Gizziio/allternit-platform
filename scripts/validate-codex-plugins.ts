@@ -8,7 +8,9 @@
  */
 
 import * as fs from 'fs';
+import * as os from 'os';
 import * as path from 'path';
+import { fileURLToPath } from 'url';
 
 interface ValidationResult {
   name: string;
@@ -55,7 +57,8 @@ function assertSkillMd(filePath: string): string[] {
   return errs;
 }
 
-const ROOT = '/Users/macbook/Desktop/allternit-workspace/allternit';
+// Repo root derived from this script's location (scripts/ is one level below root)
+const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 
 // ─── Phase 1: Vercel Plugin ───
 check('Vercel Plugin (verceldeploy-plugin)', () => {
@@ -155,7 +158,7 @@ check('MCP Integration (.mcp.json)', () => {
 
 // ─── Integration: Tool Registry ───
 check('Tool Registry (agent-swarm)', () => {
-  const registryPath = path.join(ROOT, 'domains/agent-swarm/tools/tool_registry.json');
+  const registryPath = path.join(ROOT, 'tools/agent-swarm/tool_registry.json');
   const errs = assertFileExists(registryPath);
   if (errs.length) return errs;
   try {
@@ -175,7 +178,7 @@ check('Tool Registry (agent-swarm)', () => {
 
 // ─── Integration: Plugin Manager UI State ───
 check('Plugin Manager UI State', () => {
-  const pmPath = '/Users/macbook/.allternit/plugin-manager/ui-state.json';
+  const pmPath = path.join(os.homedir(), '.allternit/plugin-manager/ui-state.json');
   const errs = assertFileExists(pmPath);
   if (errs.length) return errs;
   try {

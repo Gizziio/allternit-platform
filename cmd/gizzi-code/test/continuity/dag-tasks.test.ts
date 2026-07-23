@@ -153,13 +153,13 @@ describe("Allternit Conventions", () => {
         compact_reason: "manual",
       })
 
-      expect(markdown).not.toContain("## Allternit Conventions")
+      expect(markdown).not.toContain("## GIZZI Conventions")
     })
 
     it("should show file naming conventions", () => {
       const context: SessionContext = {
         ...baseContext,
-        allternit_conventions: {
+        gizzi_conventions: {
           file_naming: {
             pattern: "kebab-case",
             examples: ["my-file.ts", "another-file.ts"],
@@ -172,7 +172,7 @@ describe("Allternit Conventions", () => {
         compact_reason: "manual",
       })
 
-      expect(markdown).toContain("## Allternit Conventions")
+      expect(markdown).toContain("## GIZZI Conventions")
       expect(markdown).toContain("### File Naming")
       expect(markdown).toContain("Pattern: `kebab-case`")
       expect(markdown).toContain("`my-file.ts`")
@@ -181,7 +181,7 @@ describe("Allternit Conventions", () => {
     it("should show code style", () => {
       const context: SessionContext = {
         ...baseContext,
-        allternit_conventions: {
+        gizzi_conventions: {
           code_style: {
             formatter: "prettier",
             linter: "eslint",
@@ -202,7 +202,7 @@ describe("Allternit Conventions", () => {
     it("should show testing conventions", () => {
       const context: SessionContext = {
         ...baseContext,
-        allternit_conventions: {
+        gizzi_conventions: {
           testing: {
             framework: "vitest",
             pattern: "**/*.test.ts",
@@ -225,7 +225,7 @@ describe("Allternit Conventions", () => {
     it("should show git workflow", () => {
       const context: SessionContext = {
         ...baseContext,
-        allternit_conventions: {
+        gizzi_conventions: {
           git_workflow: {
             branching_strategy: "git-flow",
             commit_convention: "conventional-commits",
@@ -246,7 +246,7 @@ describe("Allternit Conventions", () => {
     it("should show architecture patterns", () => {
       const context: SessionContext = {
         ...baseContext,
-        allternit_conventions: {
+        gizzi_conventions: {
           architecture: {
             pattern: "layered",
             patterns_used: ["Repository", "Service"],
@@ -269,7 +269,7 @@ describe("Allternit Conventions", () => {
     it("should show review checklist", () => {
       const context: SessionContext = {
         ...baseContext,
-        allternit_conventions: {
+        gizzi_conventions: {
           review_checklist: [
             "Tests passing",
             "Documentation updated",

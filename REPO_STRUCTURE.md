@@ -23,8 +23,8 @@ allternit/
 │   ├── launcher/
 │   └── gizzi-code/           # Gizzi Code CLI source
 ├── api/                      # Backend API services (gateway, cloud, workspace)
-├── services/                 # Long-running services (memory, voice, registry, orchestration)
-├── domains/                  # Domain logic (agent, agent-swarm, cowork, governance, kernel, tenants)
+├── services/                 # Long-running services (memory, voice, registry, orchestration; vendored: open-connector, docmost*)
+├── domains/                  # Domain logic (agent, computer-use, governance, kernel; agent-swarm archived → archive/agent-swarm, live agent tools at tools/agent-swarm/; cowork compose stack moved to tools/cowork-integration/stack/, cowork runtime crates remain in infrastructure/executor/cowork/)
 ├── infrastructure/           # Cloud providers, executors, bridges (alias: infra/ symlink)
 ├── mcp/                      # Model Context Protocol crates
 ├── drivers/                  # VM and hardware drivers (firecracker, apple-vf)

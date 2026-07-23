@@ -108,18 +108,7 @@ services:
       - db
 
   # Registries
-  function-registry:
-    build:
-      context: .
-      dockerfile: services/registry-functions/Dockerfile
-    ports:
-      - "3005:3005"
-    environment:
-      - RUST_LOG=info
-      - DATABASE_URL=postgresql://user:password@db:5432/allternit
-    depends_on:
-      - db
-
+  # (function-registry service removed 2026-07-23 — crate deleted, zero consumers, Dockerfile never existed)
   apps-registry:
     build:
       context: .
@@ -144,7 +133,6 @@ services:
       - db
       - redis
       - policy-service
-      - function-registry
 
   audit-log:
     build:

@@ -289,6 +289,10 @@ pub fn create_router(state: Arc<ApiState>) -> Router {
         // must not pass through the legacy allternit_* API-token middleware.
         .merge(routes::hosted_runtimes::routes())
         .merge(routes::hosted_entitlements::routes())
+        // Dispatch handoff verifies the Clerk session per-request, like the
+        // pairing routes (the token only ever means "this user, that
+        // runtime" — it is not itself a credential).
+        .merge(routes::dispatch_handoff::routes())
         .layer(axum_middleware::from_fn_with_state(
             state.public_rate_limiter.clone(),
             crate::middleware::rate_limit::rate_limit_middleware,

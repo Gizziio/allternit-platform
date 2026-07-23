@@ -39,7 +39,9 @@
     "docs": "echo 'Generating documentation...' && find src -name '*.ts' -exec echo 'Processing: {}' \\;",
     "deploy": "echo 'Deploying application...' && bun run build && echo 'Deployment completed successfully'",
     "db": "bun drizzle-kit",
-    "vm:download": "bun run src/runtime/vm/vm-image-download.ts"
+    "vm:download": "bun run src/runtime/vm/vm-image-download.ts",
+    "release": "bash script/clean-bak.sh && bun run build --all",
+    "clean:bak": "bash script/clean-bak.sh"
   },
   "bin": {
     "gizzi": "./dist/gizzi-code",
@@ -87,13 +89,14 @@
     "@ai-sdk/openai-compatible": "1.0.32",
     "@ai-sdk/provider": "2.0.1",
     "@ai-sdk/provider-utils": "3.0.21",
+    "@allternit/gizzi-util": "workspace:*",
+    "@allternit/orchestrator": "workspace:*",
     "@allternit/plugin": "workspace:*",
     "@allternit/request-scorer": "workspace:*",
     "@allternit/script": "workspace:*",
     "@allternit/sdk": "workspace:*",
-    "@allternit/gizzi-util": "workspace:*",
-    "@allternit/orchestrator": "workspace:*",
     "@anthropic-ai/sdk": "^0.90.0",
+    "@aws-sdk/credential-provider-node": "^3.972.71",
     "@clack/prompts": "1.0.0-alpha.1",
     "@growthbook/growthbook": "^1.6.5",
     "@hono/standard-validator": "0.1.5",

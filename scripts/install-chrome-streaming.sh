@@ -312,7 +312,7 @@ print_summary() {
     echo "  docker logs a2r-chrome-stream"
     echo ""
     echo -e "${BLUE}Next Steps:${NC}"
-    echo "  1. Start the full platform: ./start-platform.sh"
+    echo "  1. Start the full platform: pnpm dev:platform-stack (from repo root)"
     echo "  2. Open A2R Electron app"
     echo "  3. Click 'Open Chrome Browser' button"
     echo "  4. Chrome will stream inside the browser capsule"

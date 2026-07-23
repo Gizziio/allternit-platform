@@ -109,6 +109,7 @@ struct AllternitApp: App {
             || args.contains("-open-plus-sheet")
             || args.contains("-open-incognito")
             || args.contains("-enable-agent-mode")
+            || args.contains("-open-code-thread")
         #else
         false
         #endif

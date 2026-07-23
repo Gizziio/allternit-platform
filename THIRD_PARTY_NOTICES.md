@@ -27,14 +27,14 @@ This file contains notices for open-source software incorporated into this produ
 ## mem0
 **License:** Apache-2.0  
 **Source:** https://github.com/mem0ai/mem0  
-**Used in:** `domains/cowork/services/memory/`  
+**Used in:** `tools/cowork-integration/stack/services/memory/`  
 **Docker sidecar; REST and MCP interfaces on port 8765; Qdrant vector backend.**
 
 ---
 
 ## mcp-memory-service
 **License:** Apache-2.0  
-**Used in:** `domains/cowork/services/memory-mcp/`  
+**Used in:** `tools/cowork-integration/stack/services/memory-mcp/`  
 **Docker sidecar on port 8761; sqlite_vec backend with WAL mode.**
 
 ---
@@ -75,7 +75,7 @@ This file contains notices for open-source software incorporated into this produ
 
 ## OpenSandbox
 **License:** Apache-2.0  
-**Used in:** `domains/cowork/services/sandbox/`  
+**Used in:** `tools/cowork-integration/stack/services/sandbox/`  
 **Docker sidecar on port 8762; opensandbox/server image with Docker socket mount.**
 
 ---
@@ -83,7 +83,7 @@ This file contains notices for open-source software incorporated into this produ
 ## browser-use
 **License:** MIT  
 **Source:** https://github.com/browser-use/browser-use  
-**Used in:** `domains/cowork/services/browser-agent/`  
+**Used in:** `tools/cowork-integration/stack/services/browser-agent/`  
 **Docker sidecar on port 8763; MCP stdio interface for browser automation.**
 
 ---
@@ -98,7 +98,7 @@ This file contains notices for open-source software incorporated into this produ
 ## DeerFlow
 **License:** MIT  
 **Source:** https://github.com/bytedance/deer-flow  
-**Used in:** `domains/cowork/services/research/`  
+**Used in:** `tools/cowork-integration/stack/services/research/`  
 **LangGraph-based research super-agent; gateway on port 8764.**
 
 ---

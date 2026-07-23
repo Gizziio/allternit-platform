@@ -2,7 +2,7 @@
 resolver = "2"
 
 members = [
-    "services/orchestration/orchestration/platform-orchestration-service",
+    "services/orchestration/platform-orchestration-service",
     "cmd/allternit-api",
     "cmd/allternit-mux",
     "cmd/allternit-cloud-api",
@@ -31,12 +31,11 @@ members = [
     "infrastructure/executor/cowork/cowork/allternit-cowork-scheduler",
     "infrastructure/providers/hetzner",
     "services/orchestration/control-plane/allternit-agent-orchestration/workflows",
-    "services/orchestration/orchestration/policy-service",
+    "services/orchestration/policy-service",
     "services/voice",
     "api/services/workspace-service",
     "services/orchestration/control-plane/unified-registry/registry",
     "domains/agent/allternit-agent-workspace/allternit-agent-workspace",
-    "domains/agent-swarm/core",
     "domains/kernel/drivers/allternit-acp-driver/allternit-acp-driver",
     "domains/kernel/drivers/allternit-providers",
     "domains/kernel/drivers/allternit-rlm",
@@ -44,10 +43,8 @@ members = [
     "domains/kernel/drivers/context-pack-builder",
     "domains/kernel/drivers/dag-wih-integration",
     "domains/kernel/service/allternit-local-compute/executor",
-    "infrastructure/chrome-stream/runtime",
     "infrastructure/scheduler",
     "infrastructure/scheduler/cron-parser",
-    "platform/contracts/capsule/capsule-system/allternit-capsule-runtime",
     "services/orchestration/control-plane/unified-registry/tool-registry",
     "platform/sdk/adapters/rust/marketplace",
     "platform/types/a2ui-types",
@@ -97,8 +94,7 @@ members = [
     "domains/kernel/drivers/hooks-system",
     "domains/kernel/drivers/purpose-binding-core",
     "infrastructure/vps-node",
-    "services/orchestration/orchestration/byoc-edge-runner",
-    "services/ui/browser-view-service",
+    "services/orchestration/byoc-edge-runner",
     "infrastructure/executor/bridge-systems/io-daemon",
     "infrastructure/providers/vendor-integration/wrappers",
     "platform/protocols/transport-sms",
@@ -107,9 +103,9 @@ members = [
     "services/ml/pattern-service",
     "services/ml/prompt-pack-service",
     "services/orchestration/control-plane/allternit-agent-orchestration/hooks",
-    "services/orchestration/orchestration/budget-metering",
-    "services/orchestration/orchestration/conflict-arbitration",
-    "services/orchestration/orchestration/node-registry",
+    "services/orchestration/budget-metering",
+    "services/orchestration/conflict-arbitration",
+    "services/orchestration/node-registry",
     "services/tools/kernel-tools",
     "domains/kernel/allternit-intent-graph-kernel/allternit-intent-graph-kernel",
     "domains/kernel/allternit-presentation-kernel",
@@ -125,8 +121,6 @@ members = [
     "platform/protocols/allternit-protocol",
     "services/gateway/stdio",
     "services/registry/apps-registry",
-    "services/registry/framework-registry",
-    "services/registry/functions-registry",
     "worktree-manager",
 ]
 
@@ -198,12 +192,9 @@ allternit-protocol = { path = "platform/protocols/allternit-protocol" }
 gateway-stdio = { path = "services/gateway/stdio" }
 
 allternit-registry-apps = { path = "services/registry/apps-registry" }
-framework = { path = "services/registry/framework-registry" }
-allternit-registry-functions = { path = "services/registry/functions-registry" }
 allternit-registry = { path = "services/orchestration/control-plane/unified-registry/registry" }
 allternit-tool-registry = { path = "services/orchestration/control-plane/unified-registry/tool-registry" }
 
-allternit-browser-runtime = { path = "infrastructure/chrome-stream/runtime" }
 allternit-scheduler = { path = "infrastructure/scheduler" }
 allternit-cron-parser = { path = "infrastructure/scheduler/cron-parser" }
 allternit-cloud-api = { path = "cmd/allternit-cloud-api" }
@@ -221,8 +212,7 @@ allternit-purpose-binding-core = { path = "domains/kernel/drivers/purpose-bindin
 allternit-parity = { path = "domains/kernel/drivers/allternit-parity" }
 allternit-evaluation-harness = { path = "domains/kernel/drivers/evaluation-harness" }
 allternit-node = { path = "infrastructure/vps-node" }
-allternit-edge-runner = { path = "services/orchestration/orchestration/byoc-edge-runner" }
-allternit-browser-view-service = { path = "services/ui/browser-view-service" }
+allternit-edge-runner = { path = "services/orchestration/byoc-edge-runner" }
 allternit-io-daemon = { path = "infrastructure/executor/bridge-systems/io-daemon" }
 allternit-vendor-wrappers = { path = "infrastructure/providers/vendor-integration/wrappers" }
 allternit-transport-sms = { path = "platform/protocols/transport-sms" }
@@ -231,11 +221,10 @@ allternit-memory-provider = { path = "services/memory/data/allternit-memory-prov
 pattern-service = { path = "services/ml/pattern-service" }
 prompt-pack-service = { path = "services/ml/prompt-pack-service" }
 allternit-hooks = { path = "services/orchestration/control-plane/allternit-agent-orchestration/hooks" }
-allternit-budget-metering = { path = "services/orchestration/orchestration/budget-metering" }
-allternit-conflict-arbitration = { path = "services/orchestration/orchestration/conflict-arbitration" }
-allternit-node-registry = { path = "services/orchestration/orchestration/node-registry" }
+allternit-budget-metering = { path = "services/orchestration/budget-metering" }
+allternit-conflict-arbitration = { path = "services/orchestration/conflict-arbitration" }
+allternit-node-registry = { path = "services/orchestration/node-registry" }
 allternit-tools = { path = "services/tools/kernel-tools" }
-allternit-meta-swarm = { path = "domains/agent-swarm/core" }
 allternit-rlm = { path = "domains/kernel/drivers/allternit-rlm" }
 allternit-providers = { path = "domains/kernel/drivers/allternit-providers" }
 allternit-acp-driver = { path = "domains/kernel/drivers/allternit-acp-driver/allternit-acp-driver" }
@@ -246,7 +235,6 @@ executor = { path = "domains/kernel/service/allternit-local-compute/executor" }
 
 marketplace = { path = "platform/sdk/adapters/rust/marketplace" }
 a2ui-types = { path = "platform/types/a2ui-types" }
-capsule-runtime = { path = "platform/contracts/capsule/capsule-system/allternit-capsule-runtime" }
 
 
 allternit-tools-gateway = { path = "api/gateway/routing" }

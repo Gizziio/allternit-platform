@@ -25,8 +25,7 @@ export Allternit_BROWSER_RUNTIME_PORT=8003
 # -----------------------------------------------------------------------------
 # Gateway Services (8010-8019)
 # -----------------------------------------------------------------------------
-export Allternit_AGUI_PORT=8010
-export Allternit_A2A_PORT=8012
+# Allternit_AGUI_PORT (8010) / Allternit_A2A_PORT (8012) retired — agui/a2a gateway packages deleted
 export Allternit_GATEWAY_PORT=8013
 
 # -----------------------------------------------------------------------------
@@ -59,11 +58,9 @@ export Allternit_WEBVM_URL="http://127.0.0.1:${Allternit_WEBVM_PORT}"
 export Allternit_OPERATOR_URL="http://127.0.0.1:${Allternit_OPERATOR_PORT}"
 export Allternit_RAILS_URL="http://127.0.0.1:${Allternit_RAILS_PORT}"
 export Allternit_GATEWAY_URL="http://127.0.0.1:${Allternit_GATEWAY_PORT}"
-export Allternit_AGUI_URL="http://127.0.0.1:${Allternit_AGUI_PORT}"
-export Allternit_A2A_URL="http://127.0.0.1:${Allternit_A2A_PORT}"
 export Allternit_TERMINAL_URL="http://127.0.0.1:${Allternit_TERMINAL_PORT}"
 
 # -----------------------------------------------------------------------------
 # All Ports Array (for cleanup)
 # -----------------------------------------------------------------------------
-export Allternit_ALL_PORTS="${Allternit_API_PORT} ${Allternit_POLICY_PORT} ${Allternit_KERNEL_PORT} ${Allternit_OPERATOR_PORT} ${Allternit_RAILS_PORT} ${Allternit_VOICE_PORT} ${Allternit_WEBVM_PORT} ${Allternit_AGUI_PORT} ${Allternit_A2A_PORT} ${Allternit_GATEWAY_PORT} ${Allternit_MEMORY_PORT} ${Allternit_REGISTRY_PORT} ${Allternit_TERMINAL_PORT} ${Allternit_SHELL_UI_PORT} ${OPENCLAW_PORT}"
+export Allternit_ALL_PORTS="${Allternit_API_PORT} ${Allternit_POLICY_PORT} ${Allternit_KERNEL_PORT} ${Allternit_OPERATOR_PORT} ${Allternit_RAILS_PORT} ${Allternit_VOICE_PORT} ${Allternit_WEBVM_PORT} ${Allternit_GATEWAY_PORT} ${Allternit_MEMORY_PORT} ${Allternit_REGISTRY_PORT} ${Allternit_TERMINAL_PORT} ${Allternit_SHELL_UI_PORT} ${OPENCLAW_PORT}"

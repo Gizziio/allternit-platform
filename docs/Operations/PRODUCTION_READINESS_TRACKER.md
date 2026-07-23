@@ -34,7 +34,7 @@
 **Completed:**
 - [x] Create port registry (`docs/PORT_REGISTRY.md`)
 - [x] Create service config script (`dev/scripts/service-config.sh`)
-- [x] Create unified start script (`start-platform.sh`)
+- [x] Create unified start script (`start-platform.sh`) — later retired → `archive/bin-legacy/`; superseded by `pnpm dev:platform-stack`
 
 **Owner:** @TBD
 **Due:** Before production deployment

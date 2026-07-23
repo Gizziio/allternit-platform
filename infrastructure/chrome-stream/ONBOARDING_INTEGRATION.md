@@ -142,8 +142,8 @@ cd allternit-workspace
 
 # 3. Wait for installation (5-10 min)
 
-# 4. Start platform
-./start-platform.sh
+# 4. Start platform (start-platform.sh retired → archive/bin-legacy/)
+pnpm dev:platform-stack
 
 # 5. Open Electron app
 cd 7-apps/shell/desktop
@@ -203,7 +203,7 @@ curl http://localhost:8081/health
 **Chrome Streaming is NOW fully integrated into:**
 
 1. ✅ `scripts/onboarding-setup.sh` - Automatic prompt + install
-2. ✅ `start-platform.sh` - Auto-check + offer to install
+2. ✅ ~~`start-platform.sh`~~ - Auto-check + offer to install (script retired → `archive/bin-legacy/`)
 3. ✅ `ENVIRONMENT.md` - Complete documentation
 4. ✅ `docker-compose.yml` - Production deployment
 5. ✅ Systemd services - Auto-start on boot
@@ -211,7 +211,7 @@ curl http://localhost:8081/health
 **Standard process for ANY new machine:**
 ```bash
 ./scripts/onboarding-setup.sh  # Includes Chrome Streaming prompt
-./start-platform.sh            # Auto-checks Chrome Streaming
+pnpm dev:platform-stack        # from repo root (start-platform.sh retired → archive/bin-legacy/)
 ```
 
 **This is the COMPLETE, PRODUCTION-READY onboarding flow.**

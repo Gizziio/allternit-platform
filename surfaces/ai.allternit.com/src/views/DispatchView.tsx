@@ -28,7 +28,8 @@ import {
 } from '@phosphor-icons/react';
 import { cn } from '@/lib/utils';
 import { useSettingsState } from '@/hooks/useSettingsState';
-import { getDispatchStatus, getDispatchDevAddress, type DispatchStatusResponse } from '@/lib/dispatch/handoff';
+import { useAuth } from '@clerk/clerk-react';
+import { getDispatchStatus, getDispatchDevAddress, mintDispatchToken, type DispatchStatusResponse } from '@/lib/dispatch/handoff';
 import {
   CodePermissionsDropdown,
   type CodePermissionOption,
@@ -322,6 +323,26 @@ export function DispatchView(): React.ReactNode {
 
   // ── QR / session ────────────────────────────────────────────────────────────
   const [token, setToken] = useState<string>(() => generateDispatchToken());
+  const { getToken } = useAuth();
+
+  // Hosted handoff (allternit-cloud-api /dispatch/handoff/mint): bind the QR
+  // token to one of the user's paired runtimes so a phone claiming it pairs
+  // with THIS machine's runtime — that is what makes local and cloud code
+  // sessions correspond (both resolve to the same gizzi-code store). On the
+  // dev server, or with no paired runtime, minting fails and the local
+  // random token + dev endpoints keep the old flow.
+  useEffect(() => {
+    let cancelled = false;
+    mintDispatchToken(getToken)
+      .then((minted) => {
+        if (!cancelled) setToken(minted.token);
+      })
+      .catch(() => {});
+    return () => {
+      cancelled = true;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
   const [qrUrl, setQrUrl] = useState<string>('');
   const [copied, setCopied] = useState(false);
   const [showQR, setShowQR] = useState(false);
@@ -362,7 +383,7 @@ export function DispatchView(): React.ReactNode {
     if (!token || !qrUrl) return;
     let cancelled = false;
     const poll = () => {
-      getDispatchStatus(token)
+      getDispatchStatus(token, getToken)
         .then((status) => {
           if (cancelled) return;
           setHandoffStatus(status);

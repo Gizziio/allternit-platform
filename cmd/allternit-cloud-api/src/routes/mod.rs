@@ -4,6 +4,7 @@ pub mod approvals;
 pub mod auth;
 pub mod costs;
 pub mod deployments;
+pub mod dispatch_handoff;
 pub mod health;
 pub mod hosted_entitlements;
 pub mod hosted_runtimes;

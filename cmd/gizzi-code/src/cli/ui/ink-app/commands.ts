@@ -49,6 +49,7 @@ import teleport from './commands/teleport/index.js'
 import goal from './commands/goal.js'
 import loops from './commands/loops.js'
 import routines from './commands/routines.js'
+import live from './commands/live/index.js'
 import find from './commands/find/index.js'
 import grep from './commands/grep/index.js'
 import cowork from './commands/cowork/index.js'
@@ -299,6 +300,7 @@ const COMMANDS = memoize((): Command[] => [
   loops,
   keybindings,
   routines,
+  live,
   installGitHubApp,
   installSlackApp,
   mcp,

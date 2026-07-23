@@ -57,6 +57,10 @@ packages:
   # services/open-connector/PROVENANCE.md. Managed via plain npm, not pnpm.
   - '!services/open-connector'
   - '!services/open-connector/**'
+  # Vendored Docmost wiki — fully gitignored local checkout, managed via its
+  # own pnpm-lock. Excluded so root pnpm does not ingest it as a package.
+  - '!services/docmost'
+  - '!services/docmost/**'
 
 onlyBuiltDependencies:
   - '@whiskeysockets/baileys'

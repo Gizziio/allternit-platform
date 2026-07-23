@@ -15,7 +15,7 @@
 ├── PRODUCTION_PREPARATION_SUMMARY.md      # Quick summary
 ├── PORT_REGISTRY.md                       # Port assignments
 ├── service-config.sh                      # Port configuration
-└── start-platform.sh                      # Unified launcher
+└── ~~start-platform.sh~~                     # Retired → archive/bin-legacy/
 ```
 
 ---
@@ -24,8 +24,8 @@
 
 ### 1. Start Development Environment
 ```bash
-cd 8-cloud/allternit-production-ready
-./start-platform.sh
+# From the repo root
+pnpm dev:platform-stack
 ```
 
 ### 2. Verify All Services

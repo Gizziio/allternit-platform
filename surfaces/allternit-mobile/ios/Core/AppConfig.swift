@@ -57,6 +57,14 @@ enum AppConfig {
     /// (surfaces/ai.allternit.com/src/lib/fetch-interceptor.ts:85-87);
     /// overridable via `ALLTERNIT_CLOUD_API_URL` in Info.plist.
     static let cloudAPIBaseURL: URL = {
+        #if DEBUG
+        // `-cloud-url <url>` (DEBUG only): point cloud calls (handoff claim,
+        // runtime relay) at a locally running allternit-cloud-api.
+        if let override = UserDefaults.standard.string(forKey: "cloud-url"),
+           let url = URL(string: override) {
+            return url
+        }
+        #endif
         if let value = infoPlistValue("ALLTERNIT_CLOUD_API_URL"),
            let url = URL(string: value) {
             return url

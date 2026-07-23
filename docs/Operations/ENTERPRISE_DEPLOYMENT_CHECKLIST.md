@@ -197,8 +197,8 @@ cp .env.example .env.production
 # 3. Validate
 ./validate-config.sh
 
-# 4. Deploy
-./start-platform.sh
+# 4. Deploy (start-platform.sh retired → archive/bin-legacy/)
+pnpm dev:platform-stack
 
 # 5. Verify
 ./verify-deployment.sh
@@ -428,8 +428,8 @@ _________________________________
 ### Key Commands
 
 ```bash
-# Start all services
-./start-platform.sh
+# Start all services (start-platform.sh retired → archive/bin-legacy/)
+pnpm dev:platform-stack
 
 # Check status
 ./verify-deployment.sh
@@ -438,7 +438,7 @@ _________________________________
 tail -f .logs/api.log
 
 # Stop services
-./start-platform.sh stop
+# (Ctrl+C the dev:platform-stack process)
 ```
 
 ### Health Check URLs

@@ -39,7 +39,7 @@ export class ComputerUseCapability {
   private gatewayUrl: string;
 
   constructor(gatewayUrl?: string) {
-    this.gatewayUrl = gatewayUrl || process.env.Allternit_COMPUTER_USE_URL || "http://localhost:3010";
+    this.gatewayUrl = gatewayUrl || process.env.ALLTERNIT_COMPUTER_USE_URL || process.env.Allternit_COMPUTER_USE_URL || "http://127.0.0.1:8760";
   }
 
   public getTool(): ToolDefinition {

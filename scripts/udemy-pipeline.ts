@@ -24,10 +24,10 @@ import os from 'os';
 import path from 'path';
 import axios from 'axios';
 import { fileURLToPath } from 'url';
-import UdemyServiceModule from '../services/udemy-downloader/src/udemy.service';
-import CourseStorageManagerModule from '../services/udemy-downloader/src/course-storage.manager';
-import CourseDownloaderModule from '../services/udemy-downloader/src/course-downloader.module';
-import type { UdemyCourse } from '../services/udemy-downloader/src/udemy.service';
+import UdemyServiceModule from '../tools/udemy-downloader/src/udemy.service';
+import CourseStorageManagerModule from '../tools/udemy-downloader/src/course-storage.manager';
+import CourseDownloaderModule from '../tools/udemy-downloader/src/course-downloader.module';
+import type { UdemyCourse } from '../tools/udemy-downloader/src/udemy.service';
 
 const UdemyService = (UdemyServiceModule as any).default || UdemyServiceModule;
 const CourseStorageManager = (CourseStorageManagerModule as any).default || CourseStorageManagerModule;

@@ -66,7 +66,7 @@ describe("HandoffEmitter", () => {
       })
 
       // Check header
-      expect(markdown).toContain("# Allternit Session Baton")
+      expect(markdown).toContain("# GIZZI Session Baton")
       expect(markdown).toContain("test-session-123")
       expect(markdown).toContain("opencode")
 
@@ -182,7 +182,7 @@ describe("HandoffEmitter", () => {
         compact_reason: "error",
       })
 
-      expect(markdown).toContain("# Allternit Session Baton")
+      expect(markdown).toContain("# GIZZI Session Baton")
       expect(markdown).toContain("Reason:** error")
       expect(markdown).toContain("- No files modified")
       expect(markdown).toContain("- No commands recorded")

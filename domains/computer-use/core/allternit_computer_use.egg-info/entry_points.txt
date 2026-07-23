@@ -1,3 +1,0 @@
-[console_scripts]
-allternit-computer = gateway.daemon:main
-allternit-computer-mcp = canonical_mcp.server:main

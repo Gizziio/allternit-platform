@@ -1,8 +1,0 @@
-{
-  "type": "object",
-  "required": ["path"],
-  "properties": {
-    "path": {"type": "string"},
-    "as_markdown": {"type": "boolean", "default": true}
-  }
-}

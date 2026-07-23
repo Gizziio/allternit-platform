@@ -35,7 +35,7 @@ Real Chrome browser streaming via Firecracker microVMs with WebRTC embedding in 
 Chrome streaming is part of the platform startup:
 
 ```bash
-./start-platform.sh
+pnpm dev:platform-stack  # from repo root (start-platform.sh retired → archive/bin-legacy/)
 ```
 
 This starts:
@@ -49,7 +49,7 @@ This starts:
 
 ```bash
 cd /Users/macbook/Desktop/allternit-workspace/allternit
-./start-platform.sh
+pnpm dev:platform-stack  # from repo root (start-platform.sh retired → archive/bin-legacy/)
 ```
 
 ### 2. Launch Chrome Session
@@ -140,7 +140,7 @@ To complete Firecracker integration:
 - `8-cloud/chrome-stream/` - Chrome rootfs + sidecar
 - `7-apps/api/src/chrome_session_routes.rs` - Session broker (Firecracker-ready)
 - `1-kernel/execution/allternit-firecracker-driver/` - Firecracker driver
-- `start-platform.sh` - Startup integration
+- ~~`start-platform.sh`~~ - Startup integration (retired → `archive/bin-legacy/`; use `pnpm dev:platform-stack`)
 
 ### Frontend
 - `ChromeStreamView.tsx` - WebRTC client

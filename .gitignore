@@ -92,3 +92,15 @@ services/voice/.packaging-venv/
 Desktop/
 output/
 dispatch-screenshots/
+
+# level-2 reorg 2026-07-22: tenant secrets + committed browser profiles
+*.env
+!.env.example
+canvas_demo_profile/
+__pycache__/
+*.egg-info/
+domains/computer-use/build/
+
+# untracked 2026-07-23: gateway secrets were committed; rotated + removed from tree
+.openclaw.env
+.terminal-server.env

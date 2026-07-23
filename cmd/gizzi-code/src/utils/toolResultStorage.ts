@@ -2,8 +2,6 @@
  * Tool Result Storage
  */
 
-export type { ContentReplacementRecord } from '../shared/utils/toolResultStorage.js'
-
 export interface ToolResultEntry {
   tool: string
   result: unknown

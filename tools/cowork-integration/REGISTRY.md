@@ -1,12 +1,14 @@
 # Cowork Integration Registry
 
+> **⚠️ Stale destinations (noted 2026-07-22):** the Wave-3 rows below list `domains/cowork/connectors/*` as destinations — that directory was removed in the Jul 12 connectors refactor (`c5a20e0fb`). Connectors now live in `services/open-connector/src/providers/`.
+
 | Wave | Source Project | Source File/Dir | Destination | License | Status | Notes |
 |------|---------------|-----------------|-------------|---------|--------|-------|
 | 1 | open-cowork | src/main/schedule/scheduled-task-manager.ts | packages/@allternit/cowork-engine/src/scheduler/ | MIT | done | Ported to TS, swapped SQLite → Prisma BigInt, async store |
 | 1 | open-cowork | src/main/memory/memory-manager.ts | packages/@allternit/cowork-engine/src/memory/ | MIT | done | Types extracted, implementation deferred to Wave 4 |
 | 1 | open-cowork | src/main/sandbox/sandbox-adapter.ts | packages/@allternit/cowork-engine/src/sandbox/ | MIT | done | Types extracted, implementation deferred to Wave 9 |
-| 2 | mem0 | openmemory/api/ | domains/cowork/services/memory/ | Apache-2.0 | done | Dockerfile + compose; REST+MCP on :8765; Qdrant backend; cowork memory client + 4 API routes |
-| 2 | mcp-memory-service | src/mcp_memory_service/ | domains/cowork/services/memory-mcp/ | Apache-2.0 | done | Dockerfile + compose; HTTP mode on :8761; sqlite_vec backend; WAL mode; master docker-compose.yml |
+| 2 | mem0 | openmemory/api/ | tools/cowork-integration/stack/services/memory/ | Apache-2.0 | done | Dockerfile + compose; REST+MCP on :8765; Qdrant backend; cowork memory client + 4 API routes |
+| 2 | mcp-memory-service | src/mcp_memory_service/ | tools/cowork-integration/stack/services/memory-mcp/ | Apache-2.0 | done | Dockerfile + compose; HTTP mode on :8761; sqlite_vec backend; WAL mode; master docker-compose.yml |
 | 3 | CoWork-OS + scratch | connectors/slack/ | domains/cowork/connectors/slack/ | MIT | done | Stdio MCP; channels, messages, search, send; SLACK_BOT_TOKEN |
 | 3 | scratch | connectors/github/ | domains/cowork/connectors/github/ | MIT | done | Stdio MCP; repos, issues, PRs, Actions; GITHUB_TOKEN |
 | 3 | CoWork-OS | connectors/linear/ | domains/cowork/connectors/linear/ | MIT | done | Stdio MCP; projects, issues; LINEAR_API_KEY |
@@ -31,19 +33,19 @@
 | 7 | hermes-agent | cron/scheduler.py | cmd/allternit-api/src/cowork/scheduler.rs | MIT | done | allternit-cowork-scheduler already existed; wired start() into main.rs; /cowork/scheduler routes mounted |
 | 8 | CoWork-OS | src/electron/agent/executor*.ts | cmd/allternit-api/src/cowork/executor.rs | MIT | done | allternit-cowork-runtime already has RunManager; wired in rails/routes_cowork.rs; RunManager init pending |
 | 8 | CoWork-OS | src/electron/agent/SubAgentOrchestrator.ts | cmd/allternit-api/src/cowork/sub_agent.rs | MIT | done | Sub-agent coordination handled by RunManager + AttachmentRegistry in cowork-runtime |
-| 9 | OpenSandbox | server/opensandbox_server/ | domains/cowork/services/sandbox/ | Apache-2.0 | done | docker-compose + config.toml; opensandbox/server:latest image; Docker socket mount; :8762 |
-| 10 | browser-use | browser_use/mcp/ | domains/cowork/services/browser-agent/ | MIT | done | docker-compose; builds from source; MCP stdio on :8763 |
+| 9 | OpenSandbox | server/opensandbox_server/ | tools/cowork-integration/stack/services/sandbox/ | Apache-2.0 | done | docker-compose + config.toml; opensandbox/server:latest image; Docker socket mount; :8762 |
+| 10 | browser-use | browser_use/mcp/ | tools/cowork-integration/stack/services/browser-agent/ | MIT | done | docker-compose; builds from source; MCP stdio on :8763 |
 | 10 | agent-s | gui_agents/s2/core/ | domains/computer-use/core/adapters/hybrid/orchestrator/ | Apache-2.0 | done | Already integrated in previous session (ACU build, 40/40 tests) |
 | 11 | AionUi | src/process/team/TeamSession.ts | packages/@allternit/cowork-engine/src/sub-agent/ | Apache-2.0 | done | TeamSession + HttpSubAgentRunner; concurrency cap; run()/summary() |
 | 11 | AionUi | src/process/agent/AgentFactory.ts | packages/@allternit/cowork-engine/src/sub-agent/ | Apache-2.0 | done | AgentFactory; role blueprints from BUILT_IN_PERSONAS; registerPersona/registerBlueprint; createMany() |
 | 12 | CoWork-OS | src/electron/subconscious/ | cmd/allternit-api/src/cowork/background_service.rs | MIT | done | Rust background loop; 5-phase cycle (evidence→ideate→critique→synthesize→dispatch); SQLite journal; GET/PUT /cowork/brain/* routes |
-| 13 | DeerFlow | backend/app/ | domains/cowork/services/research/ | MIT | done | Docker sidecar :8764; config.yaml + extensions_config.json; research-client.ts; 3 API routes |
+| 13 | DeerFlow | backend/app/ | tools/cowork-integration/stack/services/research/ | MIT | done | Docker sidecar :8764; config.yaml + extensions_config.json; research-client.ts; 3 API routes |
 | 13 | agent-zero | agents/ | packages/@allternit/cowork-engine/src/personas/ | MIT | done | CoworkPersonaStore (Prisma); ensureBuiltIns(); isDefault uniqueness; BUILT_IN_PERSONAS seeded |
 
 ## Cleanup Checklist (run after all waves done)
 - [x] Remove all feature flags from .env.local and all source files
 - [x] Verify no COWORK_FEATURES_ references remain in source code
-- [ ] Delete tools/cowork-integration/ entirely (keep until final verification)
+- [ ] Delete tools/cowork-integration/ entirely (keep until final verification) — NOTE: no longer fully deletable; `tools/cowork-integration/stack/` now hosts the compose stack moved from `domains/cowork/`. Only `sources/` remains a cleanup candidate.
 - [x] Verify THIRD_PARTY_NOTICES.md is present and complete (legal requirement only)
 - [x] Run full TypeScript type check — zero cowork-related errors
 - [x] Run prisma generate + db push — CoworkSuggestion model added and synced

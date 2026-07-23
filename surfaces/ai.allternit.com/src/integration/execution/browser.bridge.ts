@@ -1,6 +1,8 @@
 import { execEvents } from "./exec.events";
 import type { ToolCall } from "./exec.types";
 
+// DORMANT: the TS browser-runtime services this targeted were deleted (2026-07-23);
+// default URL is inert until the canonical @allternit/browser (ADR-0042) exposes a compatible HTTP API.
 const DEFAULT_RUNTIME_URL = "http://localhost:8001";
 const sessionsByRun = new Map<string, string>();
 

@@ -32,12 +32,12 @@
 │      └── utils/sharepoint_uploader.py                                       │
 │                                                                             │
 │  TOOL CONNECTOR (Layer 4 — Agent Swarm Bridge)                              │
-│  └── domains/agent-swarm/tools/document-generator/mod.ts                    │
+│  └── tools/agent-swarm/document-generator/mod.ts                    │
 │                                 → Zod-typed HTTP client to the service      │
 │                                                                             │
 │  REGISTRY                                                                   │
 │  ├── .mcp.json                  → MCP server configs for 3 plugins          │
-│  ├── domains/agent-swarm/tools/tool_registry.json                           │
+│  ├── tools/agent-swarm/tool_registry.json                           │
 │  └── ~/.allternit/plugin-manager/ui-state.json                              │
 │                                                                             │
 └─────────────────────────────────────────────────────────────────────────────┘
@@ -185,7 +185,7 @@ Skills are agent prompt packs stored in `.agents/skills/`. They provide structur
 **What it does:**
 Guides agents to generate professional Microsoft Word documents from structured outlines or prompts.
 
-**Backend:** Routes to `document-generator` service via `domains/agent-swarm/tools/document-generator/mod.ts`
+**Backend:** Routes to `document-generator` service via `tools/agent-swarm/document-generator/mod.ts`
 - Action: `generateStudyGuide`
 - Format: `docx`
 
@@ -202,7 +202,7 @@ Guides agents to generate professional Microsoft Word documents from structured 
 
 **Example invocation:**
 ```typescript
-import { execute } from '../domains/agent-swarm/tools/document-generator/mod.ts';
+import { execute } from '../tools/agent-swarm/document-generator/mod.ts';
 
 const result = await execute({
   action: "generateStudyGuide",
@@ -225,7 +225,7 @@ const result = await execute({
 **What it does:**
 Guides agents to generate PowerPoint presentations from prompts, data outlines, or Excel summaries.
 
-**Backend:** Routes to `document-generator` service via `domains/agent-swarm/tools/document-generator/mod.ts`
+**Backend:** Routes to `document-generator` service via `tools/agent-swarm/document-generator/mod.ts`
 - Action: `generatePhotoCardDeck`
 
 **Slide types documented:**
@@ -244,7 +244,7 @@ Guides agents to generate PowerPoint presentations from prompts, data outlines, 
 
 **Example invocation:**
 ```typescript
-import { execute } from '../domains/agent-swarm/tools/document-generator/mod.ts';
+import { execute } from '../tools/agent-swarm/document-generator/mod.ts';
 
 const result = await execute({
   action: "generatePhotoCardDeck",
@@ -357,7 +357,7 @@ docker run -p 8000:8000 -e API_KEY=your-key allternit-document-generator
 
 ## 4. Tool Connector
 
-**Path:** `domains/agent-swarm/tools/document-generator/mod.ts`
+**Path:** `tools/agent-swarm/document-generator/mod.ts`
 
 **What it does:**
 Bridges Allternit agents to the Document Generator FastAPI service. Provides Zod-typed input/output schemas and error handling.
@@ -372,7 +372,7 @@ const SERVICE_BASE_URL = process.env.DOCUMENT_GENERATOR_URL || "http://localhost
 const API_KEY = process.env.DOCUMENT_GENERATOR_API_KEY || "your-secret-api-key";
 ```
 
-**Registered in:** `domains/agent-swarm/tools/tool_registry.json`
+**Registered in:** `tools/agent-swarm/tool_registry.json`
 - Tool ID: `document-generator`
 - Entrypoint: `tools/document-generator/mod.ts`
 - Safety level: `safe`
@@ -404,7 +404,7 @@ All 3 plugins are registered with metadata, entry points, and commands.
 
 ### 5.3 Tool Registry
 
-**File:** `domains/agent-swarm/tools/tool_registry.json`
+**File:** `tools/agent-swarm/tool_registry.json`
 
 The `document-generator` tool is registered alongside existing tools (`autoland`, `canvas.list.courses`, `agent-browser.automation`, etc.).
 
@@ -485,11 +485,11 @@ Agent returns URL to user
 | PowerPoint Skill | `.agents/skills/powerpoint/SKILL.md` |
 | Mobile App Design Skill | `.agents/skills/mobile-app-design/SKILL.md` |
 | Document Generator Service | `services/document-generator/` |
-| Tool Connector | `domains/agent-swarm/tools/document-generator/mod.ts` |
+| Tool Connector | `tools/agent-swarm/document-generator/mod.ts` |
 | Integration Registry | `CODEX_PLUGINS_REGISTRY.json` |
 | E2E Validation Script | `scripts/validate-codex-plugins.ts` |
 | MCP Config | `.mcp.json` |
-| Tool Registry | `domains/agent-swarm/tools/tool_registry.json` |
+| Tool Registry | `tools/agent-swarm/tool_registry.json` |
 | Plugin Manager State | `~/.allternit/plugin-manager/ui-state.json` |
 
 ---

@@ -1,9 +1,0 @@
-{
-  "enabled": true,
-  "min_confidence": 0.7,
-  "required_types": ["ConsoleOutput", "CoverageMap"],
-  "provider_type": "FileBased",
-  "timeout_seconds": 60,
-  "allow_bypass": true,
-  "bypass_roles": ["admin"]
-}

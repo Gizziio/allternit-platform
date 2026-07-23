@@ -10,7 +10,7 @@ The Data Fabric is the central orchestration layer for all registry data in the 
 ## 2. Orchestration Model
 The `DataFabric` struct (`src/fabric/fabric.rs`) coordinates across multiple backend stores:
 - **SQL (SQLite):** Primary storage for structured metadata (Agents, Tools, Servers) via the `server-registry`.
-- **In-Memory Cache:** Fast lookup for active UI templates and frameworks via `framework-registry`.
+- **In-Memory Cache:** Fast lookup for active UI templates and frameworks via `framework-registry`. *(framework-registry deleted 2026-07-23 — zero consumers)*
 - **JSON Manifests:** Static definitions for Capsules and built-in Tools.
 
 ## 3. Integration Path

@@ -8,7 +8,7 @@ import { createModuleLogger } from '@/lib/logger';
 
 const log = createModuleLogger('services/allternit-operator-status');
 
-const ALLTERNIT_OPERATOR_URL = process.env.ALLTERNIT_OPERATOR_URL || 'http://127.0.0.1:3000';
+const ALLTERNIT_OPERATOR_URL = process.env.ALLTERNIT_COMPUTER_USE_URL || process.env.ALLTERNIT_OPERATOR_URL || 'http://127.0.0.1:8760';
 
 type AllternitServiceStatus = 'online' | 'offline' | 'checking' | 'error';
 

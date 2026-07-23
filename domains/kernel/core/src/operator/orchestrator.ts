@@ -91,17 +91,37 @@ export class OperatorOrchestrator {
   }
 
   /**
-   * Real Screenshot: Calls the Python Operator Surface
+   * Real Screenshot: Calls the ACU computer-use engine (`/v1/execute` action=screenshot)
    */
   private async captureScreenshot(sessionId: string): Promise<string> {
-    const operatorUrl = process.env.ALLTERNIT_OPERATOR_URL || 'http://127.0.0.1:3010';
-    const response = await fetch(`${operatorUrl}/v1/vision/screenshot`, {
-      headers: { 'Authorization': `Bearer ${process.env.ALLTERNIT_OPERATOR_API_KEY}` }
+    const engineUrl = process.env.ALLTERNIT_COMPUTER_USE_URL || 'http://127.0.0.1:8760';
+    const response = await fetch(`${engineUrl}/v1/execute`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        ...(process.env.ACU_API_KEY ? { 'Authorization': `Bearer ${process.env.ACU_API_KEY}` } : {}),
+      },
+      body: JSON.stringify({
+        action: 'screenshot',
+        session_id: sessionId,
+        run_id: sessionId,
+      }),
     });
-    
-    if (!response.ok) throw new Error('Failed to capture screenshot from Operator service');
-    const data = await response.json() as { screenshot: string };
-    return data.screenshot;
+
+    if (!response.ok) throw new Error('Failed to capture screenshot from ACU engine');
+    const data = await response.json() as {
+      status: string;
+      artifacts?: Array<{ type: string; url?: string; content?: string }>;
+      error?: { code: string; message: string };
+    };
+    if (data.status !== 'completed') {
+      throw new Error(`ACU screenshot failed: ${data.error?.message ?? data.status}`);
+    }
+    const artifact = data.artifacts?.find((a) => a.type === 'screenshot');
+    const dataUrl = artifact?.url ?? artifact?.content;
+    if (!dataUrl) throw new Error('ACU screenshot response contained no screenshot artifact');
+    // ACU returns a data URL (data:image/png;base64,...) — strip the prefix
+    return dataUrl.replace(/^data:image\/\w+;base64,/, '');
   }
 
   /**

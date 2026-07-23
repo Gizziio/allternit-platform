@@ -1,9 +1,32 @@
 // @ts-nocheck
 import { describe, expect, test } from "bun:test"
+import { existsSync } from "fs"
+import { homedir } from "os"
+import { join } from "path"
 import { Instance } from "../../src/runtime/context/project/instance"
 import { Pty } from "../../src/runtime/integrations/pty"
 import { tmpdir } from "../fixture/fixture"
 
+const MUX_SOCK = join(homedir(), ".allternit", "mux", "mux.sock")
+async function isMuxAvailable(): Promise<boolean> {
+  if (!existsSync(MUX_SOCK)) return false
+  try {
+    const { connect } = await import("net")
+    const sock = connect(MUX_SOCK)
+    await new Promise((resolve, reject) => {
+      sock.once("connect", resolve)
+      sock.once("error", reject)
+      setTimeout(() => reject(new Error("timeout")), 1000)
+    })
+    sock.end()
+    return true
+  } catch {
+    return false
+  }
+}
+const muxAvailable = await isMuxAvailable()
+
+if (muxAvailable) {
 describe("pty", () => {
   test("does not leak output when websocket objects are reused", async () => {
     await using dir = await tmpdir({ git: true })
@@ -143,3 +166,4 @@ describe("pty", () => {
     })
   })
 })
+}

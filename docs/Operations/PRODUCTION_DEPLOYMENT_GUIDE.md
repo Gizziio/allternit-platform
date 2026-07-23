@@ -494,7 +494,8 @@ impl Config {
    cd allternit
 
 6. Build services
-   ./start-platform.sh build
+   pnpm install && cargo build --release --workspace
+   (start-platform.sh retired → archive/bin-legacy/)
 
 7. Configure systemd services
    sudo cp distribution/systemd/*.service /etc/systemd/system/

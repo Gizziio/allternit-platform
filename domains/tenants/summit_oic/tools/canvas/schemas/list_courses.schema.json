@@ -1,7 +1,0 @@
-{
-  "type": "object",
-  "properties": {
-    "enrollment_type": {"type": "string", "enum": ["teacher", "student", "ta", "observer"], "default": "teacher"},
-    "state": {"type": "array", "items": {"type": "string", "enum": ["unpublished", "available", "completed", "deleted"]}, "default": ["available"]}
-  }
-}

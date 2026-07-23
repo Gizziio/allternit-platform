@@ -1,15 +1,9 @@
 #!/bin/bash
 set -e
 
-# Setup/Ensure Venv
-bash scripts/law_setup.sh > /dev/null
-
-# Define Python path
-PYTHON=".venv-law/bin/python3"
-
-echo ">>> Phase 3: Capsule Runtime"
-$PYTHON scripts/validate_law.py
-bash tests/acceptance/test_capsule_registry_required.sh
-bash tests/acceptance/test_capsule_permission_denied.sh
-bash tests/acceptance/test_capsule_receipt_emitted.sh
-echo "✅ Phase 3 Complete"
+# RETIRED (2026-07-23): the capsule-runtime concept was superseded by gizzi-code
+# capsules. The Python runtime and its acceptance tests were removed (tests
+# archived to archive/tests-acceptance-capsule/). This runner also depended on
+# scripts/law_setup.sh, which no longer exists. Kept as a pointer only.
+echo "run_phase_3.sh is retired — capsule-runtime was deleted; see archive/tests-acceptance-capsule/" >&2
+exit 1

@@ -16,7 +16,7 @@ This folder contains everything needed to deploy Allternit Node to enterprise cl
 | `PRODUCTION_READINESS_TRACKER.md` | Task tracking & action items |
 | `PRODUCTION_PREPARATION_SUMMARY.md` | Quick reference summary |
 | `service-config.sh` | Centralized port configuration |
-| `start-platform.sh` | Unified service launcher |
+| ~~`start-platform.sh`~~ | Retired — moved to `archive/bin-legacy/`; use `pnpm dev:platform-stack` from the repo root |
 
 ---
 
@@ -96,8 +96,8 @@ cargo build --release --workspace
 npm run build --prefix 4-services/gateway/agui-gateway
 npm run build --prefix 4-services/gateway/a2a-gateway
 
-# 5. Deploy
-./start-platform.sh
+# 5. Deploy (start-platform.sh retired → archive/bin-legacy/)
+pnpm dev:platform-stack
 ```
 
 #### Service Verification
@@ -357,8 +357,8 @@ Rate your deployment readiness (1-5):
 
 ### Development
 ```bash
-cd 8-cloud/allternit-production-ready
-./start-platform.sh
+# From the repo root
+pnpm dev:platform-stack
 ```
 
 ### Production Build

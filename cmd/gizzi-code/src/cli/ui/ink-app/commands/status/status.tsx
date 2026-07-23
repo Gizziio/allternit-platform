@@ -24,6 +24,7 @@ import {
   getRuntimeMainLoopModel,
   renderModelName,
 } from '../../utils/model/model.js';
+import { buildSessionStatus } from '../../utils/statusModel.js';
 
 const PROGRESS_BAR_WIDTH = 24;
 
@@ -127,7 +128,15 @@ export async function call(
   context: LocalJSXCommandContext,
   args: string,
 ): Promise<React.ReactNode> {
-  if (args.trim() === '--inline') {
+  const trimmed = args.trim();
+  if (trimmed === '--json') {
+    const status = await buildSessionStatus(context);
+    onDone(JSON.stringify(status, null, 2), {
+      display: 'system',
+    });
+    return null;
+  }
+  if (trimmed === '--inline') {
     onDone(renderInlineStatus(context), { display: 'system' });
     return null;
   }

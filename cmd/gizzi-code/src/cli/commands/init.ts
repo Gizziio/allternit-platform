@@ -2,6 +2,7 @@ import path from "path"
 import { cmd } from "@/cli/commands/cmd"
 import { UI } from "@/cli/ui"
 import { Filesystem } from "@/shared/util/filesystem"
+import { Workspace } from "@/runtime/workspace/workspace"
 
 type ProjectType = {
   name: string
@@ -129,12 +130,20 @@ export const InitCommand = cmd({
     UI.println(UI.Style.TEXT_INFO_BOLD + "Initializing gizzi..." + UI.Style.TEXT_NORMAL)
     UI.empty()
 
-    // 1. Create .gizzi/ directory
+    // 1. Create .gizzi/ directory and workspace identity files
     if (!(await Filesystem.exists(gizziDir))) {
       await Filesystem.mkdir(gizziDir)
       UI.println(UI.Style.TEXT_SUCCESS_BOLD + "  +  " + UI.Style.TEXT_NORMAL + "Created .gizzi/")
     } else {
       UI.println(UI.Style.TEXT_DIM + "  ·  " + UI.Style.TEXT_NORMAL + ".gizzi/ already exists")
+    }
+
+    // 1b. Initialize agent workspace identity (IDENTITY.md, SOUL.md, USER.md, MEMORY.md, AGENTS.md)
+    try {
+      await Workspace.init(gizziDir)
+      UI.println(UI.Style.TEXT_SUCCESS_BOLD + "  +  " + UI.Style.TEXT_NORMAL + "Created agent workspace identity files")
+    } catch (e) {
+      UI.println(UI.Style.TEXT_WARNING_BOLD + "  !  " + UI.Style.TEXT_NORMAL + `Workspace identity init failed: ${e instanceof Error ? e.message : String(e)}`)
     }
 
     // 2. Detect project type
@@ -165,5 +174,6 @@ export const InitCommand = cmd({
     UI.empty()
     UI.println(UI.Style.TEXT_SUCCESS_BOLD + "Done!" + UI.Style.TEXT_NORMAL + " Edit GIZZI.md to configure your project.")
     UI.empty()
+    process.exit(0)
   },
 })

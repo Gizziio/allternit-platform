@@ -143,6 +143,17 @@ gizzi daemon status     # Show status
 
 ---
 
+## Subsystem Defaults
+
+| Subsystem | Default | Flag |
+|-----------|---------|------|
+| Harness (SDK brain) | Enabled when credentials detected | `GIZZI_HARNESS_ENABLED`, `GIZZI_HARNESS_MODE` |
+| Voice | Disabled | `GIZZI_VOICE_ENABLED` |
+| Cowork | Disabled | `GIZZI_COWORK_ENABLED` |
+| Vault | Disabled | `GIZZI_VAULT_ENABLED` |
+| Verification | Disabled | `GIZZI_VERIFICATION_ENABLED` |
+| MCP | Enabled | `GIZZI_MCP_ENABLED` |
+
 ## Tests
 
 | Suite | Command | Status |

@@ -39,8 +39,8 @@ install_plist() {
 
 # Build Monolith Kernel
 echo "Building monolith kernel..."
-if [ -d "$WORKING_DIR/services/orchestration/orchestration/kernel-service" ]; then
-    cd "$WORKING_DIR/services/orchestration/orchestration/kernel-service"
+if [ -d "$WORKING_DIR/services/orchestration/kernel-service" ]; then
+    cd "$WORKING_DIR/services/orchestration/kernel-service"
     cargo build --release
 else
     echo "Warning: kernel-service directory not found, skipping build."
@@ -51,12 +51,10 @@ cd "$WORKING_DIR"
 ./bin/dev-down 2>/dev/null || true
 
 install_plist "com.allternitchitech.intent-graph-kernel.plist.template"
-install_plist "com.allternitchitech.capsule-runtime.plist.template"
 install_plist "com.allternitchitech.presentation-kernel.plist.template"
 install_plist "com.allternitchitech.kernel.plist.template"
 install_plist "com.allternitchitech.shell.plist.template"
 install_plist "com.allternitchitech.ui-tars-operator.plist.template"
-install_plist "com.allternitchitech.agui-gateway.plist.template"
 
 echo "All services started via launchd."
 echo "Gateway listening on http://localhost:3000"

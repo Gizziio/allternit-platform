@@ -46,11 +46,16 @@ import { AgentCommand } from "@/cli/commands/agent"
 import { ProviderCommand } from "@/cli/commands/provider"
 import { RuntimeCommand } from "@/cli/commands/runtime"
 import { AllternitCommand } from "@/cli/commands/allternit"
+import { StatusCommand } from "@/cli/commands/status"
+import { BrainCommand } from "@/cli/commands/brain"
 import path from "path"
 import { Global, init as initGlobal } from "@/runtime/context/global"
 import { JsonMigration } from "@/runtime/session/storage/json-migration"
 import { Database } from "@/runtime/session/storage/db"
 import { RuntimeTelemetry } from "@/runtime/telemetry"
+import { getActiveSubsystems, getHarnessMode, shouldUseHarness } from "@/cli/ui/ink-app/utils/feature-flags"
+import { Workspace } from "@/runtime/workspace/workspace"
+import { getIsInteractive } from "@/cli/ui/ink-app/utils/feature-flags"
 // ResolveMessage is a global class from bun-types
 declare class ResolveMessage {
   readonly name: "ResolveMessage"
@@ -117,10 +122,39 @@ const cli = yargs(hideBin(process.argv))
     process.env.GIZZI = "1"
     process.env.GIZZI = "1"
 
+    const harnessMode = getHarnessMode()
+    const harnessActive = shouldUseHarness()
+    const subsystems = getActiveSubsystems()
     Log.Default.info("gizzi", {
       version: Installation.VERSION,
       args: process.argv.slice(2),
+      harness: {
+        mode: harnessMode,
+        active: harnessActive,
+      },
+      subsystems,
     })
+
+    // Initialize .gizzi agent workspace if missing. This is the building
+    // block of agent personality (IDENTITY.md, SOUL.md, USER.md, MEMORY.md,
+    // AGENTS.md). Interactive users are offered the starter; non-interactive
+    // runs silently create the global workspace.
+    const localWorkspace = path.join(process.cwd(), ".gizzi")
+    const globalWorkspace = Workspace.globalPath
+    const localExists = await Filesystem.exists(localWorkspace)
+    const globalExists = await Filesystem.exists(globalWorkspace)
+    if (!localExists && !globalExists) {
+      try {
+        if (getIsInteractive()) {
+          Log.Default.info("workspace", { msg: "no .gizzi workspace found; run `gizzi init` to create one" })
+        } else {
+          await Workspace.init(globalWorkspace)
+          Log.Default.info("workspace", { msg: "created global .gizzi workspace", path: globalWorkspace })
+        }
+      } catch (e) {
+        Log.Default.warn("workspace init failed", { error: e instanceof Error ? e.message : String(e) })
+      }
+    }
 
     const marker = path.join(Global.Path.data, "gizzi.db")
     /*
@@ -148,6 +182,7 @@ const cli = yargs(hideBin(process.argv))
   .command(WebCommand)
   .command(ModelsCommand)
   .command(StatsCommand)
+  .command(StatusCommand)
   .command(ExportCommand)
   .command(ImportCommand)
   .command(GithubCommand)
@@ -167,6 +202,7 @@ const cli = yargs(hideBin(process.argv))
   .command(ProviderCommand)
   .command(RuntimeCommand)
   .command(AllternitCommand)
+  .command(BrainCommand)
   .fail((msg, err) => {
     if (
       msg?.startsWith("Unknown argument") ||

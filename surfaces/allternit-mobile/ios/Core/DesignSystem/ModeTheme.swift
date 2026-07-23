@@ -138,6 +138,78 @@ enum AgentModeTile: String, CaseIterable, Sendable {
         }
     }
 
+    /// Starter prompt rows shown in the collapsed agent-mode bottom deck
+    /// (scrollable — the deck caps at ~3 rows and the rest scroll).
+    /// Tapping a row fills the composer with that prompt, giving the user a
+    /// quick way to reset or vary the starter task for the selected mode.
+    var templates: [String] {
+        switch self {
+        case .swarms:
+            return [
+                "Coordinate a research swarm",
+                "Coordinate a coding swarm",
+                "Split this project across parallel agents:",
+                "Run a competitive analysis swarm on",
+            ]
+        case .research:
+            return [
+                "Research the latest news on",
+                "Research academic sources for",
+                "Compare the top options for",
+                "Fact-check this claim and cite sources:",
+            ]
+        case .website:
+            return [
+                "Summarize this website: https://",
+                "Extract links from: https://",
+                "Monitor this page for changes: https://",
+                "Turn this article into key points: https://",
+            ]
+        case .docs:
+            return [
+                "Write a memo about",
+                "Edit this document about",
+                "Draft a proposal for",
+                "Proofread and tighten this draft:",
+            ]
+        case .data:
+            return [
+                "Analyze this dataset:",
+                "Build a spreadsheet for",
+                "Create a budget tracker for",
+                "Find trends in this data:",
+            ]
+        case .slides:
+            return [
+                "Create a pitch deck about",
+                "Create a status update deck for",
+                "Build a lesson deck on",
+                "Turn these notes into slides:",
+            ]
+        case .image:
+            return [
+                "Generate an illustration of",
+                "Describe this image idea:",
+                "Create a logo concept for",
+                "Generate a hero image for",
+            ]
+        case .video:
+            return [
+                "Write a script for",
+                "Create a storyboard for",
+                "Outline a short-form video about",
+                "Plan a product demo video for",
+            ]
+        case .code:
+            return [
+                "Write a function that",
+                "Review and debug this code:",
+                "Refactor this for clarity:",
+                "Add tests for this code:",
+            ]
+        }
+    }
+
     /// `SURFACE_MODES` from ModeDock.tsx:42-48 — which tiles a surface's
     /// bottom deck offers. Chat and cowork both get the full set.
     static func visibleTiles(for surface: AppMode) -> [AgentModeTile] {
@@ -150,4 +222,21 @@ enum AgentModeTile: String, CaseIterable, Sendable {
             return [.research, .website, .docs, .data]
         }
     }
+}
+
+/// Terminal treatment for code-mode threads — the PLATFORM palette with a
+/// terminal layout: monospace type, `❯` prompt lines, boot-style header,
+/// blinking block cursor. Not a dark-theme takeover — it matches the rest
+/// of the app, just behaves like a terminal session.
+enum TerminalTheme {
+    /// Session background — the platform feed background.
+    static let bg = Color("BgSecondary")
+    /// Raised surfaces (composer card, bottom deck).
+    static let panel = Color("BgPanel")
+    /// Primary text.
+    static let text = Color("TextPrimary")
+    /// Dimmed text (prompts, placeholders, inactive icons).
+    static let dim = Color("TextSecondary")
+    /// Prompt glyph / accents — the code mode accent green.
+    static let accent = Theme.accentCode
 }

@@ -3,7 +3,7 @@
 # Allternit - allternit Platform Command
 #
 # Unified entry point for the Allternit platform.
-# Delegates to the TypeScript CLI in 7-apps/shell/terminal
+# Delegates to the TypeScript CLI in cmd/gizzi-code
 #
 
 set -e
@@ -11,7 +11,7 @@ set -e
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
 
-TUI_DIR="$PROJECT_ROOT/7-apps/shell/terminal"
+TUI_DIR="$PROJECT_ROOT/cmd/gizzi-code"
 Allternit_TS="$TUI_DIR/src/cli/allternit.ts"
 
 # Colors

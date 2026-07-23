@@ -1064,7 +1064,7 @@ export const DEFAULT_CONFIG: GatewayConfig = {
     api: process.env.Allternit_API_URL || 'http://127.0.0.1:3000',
     kernel: process.env.Allternit_KERNEL_URL || 'http://127.0.0.1:3004',
     voice: process.env.Allternit_VOICE_URL || 'http://127.0.0.1:8001',
-    operator: process.env.Allternit_OPERATOR_URL || 'http://127.0.0.1:3010',
+    operator: process.env.ALLTERNIT_COMPUTER_USE_URL || process.env.Allternit_OPERATOR_URL || 'http://127.0.0.1:8760',
     rails: process.env.Allternit_RAILS_URL || 'http://127.0.0.1:3011',
     webvm: process.env.Allternit_WEBVM_URL || 'http://127.0.0.1:8002',
   },

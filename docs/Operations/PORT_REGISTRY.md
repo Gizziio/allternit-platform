@@ -19,13 +19,13 @@ This document defines the official port assignments for all Allternit services.
 |------|---------|------|----------|---------------------|
 | 8001 | Voice Service (TTS) | `4-services/ml-ai-services/voice-service/` | HTTP | ⚠️ Optional |
 | 8002 | WebVM Service | `4-services/ai/webvm-service/` | HTTP | ⚠️ Optional |
-| 8003 | Browser Runtime | `4-services/runtime/browser-runtime/` | HTTP | ⚠️ Optional |
+| ~~8003~~ | ~~Browser Runtime~~ | Retired — both TS duplicates deleted; canonical provider is `infrastructure/chrome-stream/agent-systems/allternit-browser` (ADR-0042) | — | ❌ No |
 
 ### Gateway Services (8010-8019)
 | Port | Service | Path | Protocol | Production Required |
 |------|---------|------|----------|---------------------|
-| 8010 | AGUI Gateway | `4-services/gateway/agui-gateway/` | HTTP/WS | ✅ Yes |
-| 8012 | A2A Gateway | `4-services/gateway/a2a-gateway/` | HTTP | ✅ Yes |
+| ~~8010~~ | ~~AGUI Gateway~~ | Retired — package deleted | — | ❌ No |
+| ~~8012~~ | ~~A2A Gateway~~ | Retired — package deleted | — | ❌ No |
 | 8013 | Main Gateway | `4-services/gateway/src/` | HTTP | ✅ Yes |
 
 ### Infrastructure Services (3200-3299)
@@ -99,8 +99,7 @@ Allternit_RAILS_URL=http://127.0.0.1:3011
 
 # Gateways
 Allternit_GATEWAY_URL=http://127.0.0.1:8013
-Allternit_AGUI_URL=http://127.0.0.1:8010
-Allternit_A2A_URL=http://127.0.0.1:8012
+# Allternit_AGUI_URL / Allternit_A2A_URL retired — agui/a2a gateway packages deleted
 
 # Terminal
 Allternit_TERMINAL_URL=http://127.0.0.1:4096
@@ -158,6 +157,6 @@ Allternit_SHELL_UI_URL=http://127.0.0.1:5177
 - WebVM (8002) - Browser automation
 - Operator (3010) - UI automation
 - Rails (3011) - Agent planning
-- AGUI (8010) - Event streaming
-- A2A (8012) - Agent discovery
+- ~~AGUI (8010)~~ - Retired (package deleted)
+- ~~A2A (8012)~~ - Retired (package deleted)
 - OpenClaw (18789) - LLM integration

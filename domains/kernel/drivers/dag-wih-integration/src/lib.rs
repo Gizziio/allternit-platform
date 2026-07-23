@@ -10,7 +10,6 @@ use std::path::{Path, PathBuf};
 use thiserror::Error;
 use tracing::{debug, error, info, warn};
 
-pub mod browser;
 pub mod checkpoint;
 pub mod executor;
 pub mod validator;

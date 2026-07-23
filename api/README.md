@@ -35,10 +35,10 @@ api/
 | Server | Language | Purpose |
 |---|---|---|
 | `http` | TypeScript/Fastify | Transport-agnostic API gateway with stdio/http/ws modes and UI v0 binding |
-| `a2a` | TypeScript/Express | Agent-to-agent discovery and communication gateway |
-| `agui` | TypeScript/Express+WS | Agent UI communication over WebSocket |
+| ~~`a2a`~~ | — | Deleted (zero-consumer package) |
+| ~~`agui`~~ | — | Deleted (zero-consumer package) |
 | `browser` | Rust/Axum | Routes and bridges HTTP requests to browser environments |
-| `chat-rooms` | TypeScript/Fastify+WS | Real-time agent-human chat rooms |
+| ~~`chat-rooms`~~ | — | Deleted (zero-consumer package) |
 | `routing` | Rust/Axum | IO service — the ONLY permitted side-effect path; sandboxed execution + policy enforcement |
 | `stdio` | Rust | Stdio protocol gateway |
 | `python` | Python/FastAPI | Python-based gateway service |

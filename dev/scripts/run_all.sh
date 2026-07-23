@@ -44,7 +44,8 @@ echo "✅ Phase 1.6 Complete"
 
 # Call the dedicated runners for Phase 2 and 3
 bash scripts/run_phase_2.sh
-bash scripts/run_phase_3.sh
+# Phase 3 retired (capsule-runtime deleted 2026-07-23); runner is now a stub at dev/scripts/run_phase_3.sh
+# bash scripts/run_phase_3.sh
 
 echo "==========================================="
 echo "   ALL PHASES COMPLETED SUCCESSFULLY       "

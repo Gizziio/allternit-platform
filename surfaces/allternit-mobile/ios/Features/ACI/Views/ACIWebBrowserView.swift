@@ -222,10 +222,6 @@ struct ACIWebBrowserView: View {
             .buttonStyle(.plain)
             
             Spacer()
-            
-            toolbarButton("arrow.clockwise", enabled: true) {
-                controller.reload()
-            }
         }
         .padding(.horizontal, 24)
         .padding(.vertical, 6)

@@ -1,7 +1,10 @@
 // @ts-nocheck
 import * as React from 'react'
+import { useEffect, useState } from 'react'
 import { Box, Text } from '../../ink'
 import { useAppState } from '../../state/AppState'
+import { BrainService } from '../../../../../runtime/brain/brain.service'
+import { detectWorkspace } from '../../../../../runtime/kernel/bridge'
 import {
   getCwdState,
   getOriginalCwd,
@@ -27,6 +30,25 @@ export function WelcomeInfoBox(): React.ReactNode {
   const toolPermissionContext = useAppState(s => s.toolPermissionContext)
   const mainLoopModel = useAppState(s => s.mainLoopModel)
   const mcpClients = useAppState(s => s.mcp.clients)
+
+  const [brainStats, setBrainStats] = useState<{ total_memories: number } | null>(null)
+  const [workspace, setWorkspace] = useState<{ name?: string; path: string } | null>(null)
+  useEffect(() => {
+    try {
+      const sessionId = getSessionId()
+      const stats = BrainService.stats(sessionId || 'default')
+      setBrainStats(stats)
+    } catch {
+      setBrainStats(null)
+    }
+    void detectWorkspace(cwd)
+      .then(ws => {
+        if (ws?.identity) {
+          setWorkspace({ name: ws.identity.name, path: ws.path })
+        }
+      })
+      .catch(() => setWorkspace(null))
+  }, [cwd])
 
   const model = getRuntimeMainLoopModel({
     permissionMode: toolPermissionContext.mode,
@@ -65,6 +87,15 @@ export function WelcomeInfoBox(): React.ReactNode {
 
   const mcpText = `${mcpClients.length} connected`
 
+  const brainText =
+    brainStats && brainStats.total_memories > 0
+      ? `${brainStats.total_memories} memories`
+      : 'empty'
+
+  const workspaceText = workspace
+    ? `${workspace.name ?? 'workspace'} (${workspace.path})`
+    : 'not initialized'
+
   const lines = [
     `Model:    ${modelDisplay}`,
     `CWD:      ${cwdDisplay}`,
@@ -73,6 +104,8 @@ export function WelcomeInfoBox(): React.ReactNode {
     `Version:  ${version}`,
     `Context:  ${contextText}`,
     `MCP:      ${mcpText}`,
+    `Brain:    ${brainText}`,
+    `Workspace: ${workspaceText}`,
   ]
 
   const maxWidth = Math.min(

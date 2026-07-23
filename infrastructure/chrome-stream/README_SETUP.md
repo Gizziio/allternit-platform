@@ -2,7 +2,7 @@
 
 ## Overview
 
-Chrome Streaming is **automatically integrated** into the Allternit Platform. When you run `./start-platform.sh`, it will:
+Chrome Streaming is **automatically integrated** into the Allternit Platform. When you run `pnpm dev:platform-stack`, it will:
 
 1. ✅ Check if Chrome Streaming is installed
 2. ❓ Offer to install it if missing (recommended)
@@ -30,7 +30,7 @@ nano .env  # Edit TURN_SECRET with a random value
 **Step 2: Run Platform Startup**
 
 ```bash
-./start-platform.sh
+pnpm dev:platform-stack
 ```
 
 **Step 3: Chrome Streaming Installation (Automatic Prompt)**
@@ -224,7 +224,7 @@ For deploying to customer VPS:
 - [ ] Clone platform repository
 - [ ] Run `cp .env.example .env`
 - [ ] Edit `.env` with secure secrets
-- [ ] Run `./start-platform.sh`
+- [ ] Run `pnpm dev:platform-stack`
 - [ ] Answer `Y` to Chrome Streaming prompt
 - [ ] Wait for installation (5-10 minutes)
 - [ ] Verify with `curl http://localhost:8081/health`

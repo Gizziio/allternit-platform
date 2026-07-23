@@ -16,7 +16,7 @@ The Gate coordinates several key security subsystems:
 - **Visual Verification:** Optional provider for human-in-the-loop verification of agent actions.
 
 ## 3. Policy Enforcement
-Implementation: `services/orchestration/orchestration/policy-service/`
+Implementation: `services/orchestration/policy-service/`
 Logic is decoupled from the kernel and managed by a dedicated Policy Service. Policies define:
 - **Identity & Auth:** Who the actor is (Human, Agent, System).
 - **Tool Access:** Which tools an actor is allowed to use based on their Safety Tier.
