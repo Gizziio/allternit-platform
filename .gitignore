@@ -104,3 +104,4 @@ domains/computer-use/build/
 # untracked 2026-07-23: gateway secrets were committed; rotated + removed from tree
 .openclaw.env
 .terminal-server.env
+cmd/gizzi-code/packages/sdk/dist/
