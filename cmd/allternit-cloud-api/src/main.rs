@@ -2,7 +2,7 @@
 //!
 //! Main entry point for the cloud deployment API.
 
-use allternit_cloud_api::{init_db, runtime, services, ApiState};
+use allternit_cloud_api::{init_db, routes, runtime, services, ApiState};
 use std::sync::Arc;
 use tokio::sync::broadcast;
 
@@ -137,6 +137,9 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             },
         );
 
+    // Create mesh enrollment service if a Headscale API key is available.
+    let mesh_service = routes::mesh::MeshService::from_env();
+
     // Create API state with shared services
     let state = Arc::new(ApiState {
         db,
@@ -150,6 +153,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         cost_service,
         quota_service,
         fly_runtime_service,
+        mesh_service,
     });
 
     if state.fly_runtime_service.is_some() {

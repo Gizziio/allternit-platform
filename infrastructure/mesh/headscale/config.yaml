@@ -10,10 +10,13 @@ listen_addr: 0.0.0.0:8080
 # Metrics/debug endpoint; loopback-only (reach via `fly ssh` if needed).
 metrics_listen_addr: 127.0.0.1:9090
 
-# gRPC admin interface; loopback-only. The CLI talks over the unix socket
-# below, so this is only for future remote gRPC access (requires TLS certs).
-grpc_listen_addr: 127.0.0.1:50443
-grpc_allow_insecure: false
+# gRPC admin interface. Bound to all interfaces but NOT mapped in fly.toml
+# [[services]], so it is reachable only over Fly's private 6PN network
+# (allternit-headscale.internal:50443) — used by allternit-cloud-api to mint
+# preauth keys. Insecure allowed because 6PN is WireGuard-encrypted already
+# and there is no TLS cert for the .internal name.
+grpc_listen_addr: 0.0.0.0:50443
+grpc_allow_insecure: true
 
 noise:
   private_key_path: /var/lib/headscale/noise_private.key

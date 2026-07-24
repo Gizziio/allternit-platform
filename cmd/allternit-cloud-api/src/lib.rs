@@ -54,6 +54,8 @@ pub struct ApiState {
     pub quota_service: services::SharedQuotaService,
     /// Fly runtime service for hosted runtimes
     pub fly_runtime_service: Option<services::FlyRuntimeService>,
+    /// Mesh enrollment service (Headscale), absent when HEADSCALE_API_KEY is unset
+    pub mesh_service: Option<Arc<routes::mesh::MeshService>>,
 }
 
 /// Create the API router
@@ -296,6 +298,9 @@ pub fn create_router(state: Arc<ApiState>) -> Router {
         // Gizzi instances are self-registered over a per-request Clerk
         // session, like the pairing routes — no allternit_* API token.
         .merge(routes::gizzi_instances::routes())
+        // Mesh enrollment verifies the Clerk session per-request and answers
+        // 503 mesh_not_configured when HEADSCALE_API_KEY is unset.
+        .merge(routes::mesh::routes())
         .layer(axum_middleware::from_fn_with_state(
             state.public_rate_limiter.clone(),
             crate::middleware::rate_limit::rate_limit_middleware,

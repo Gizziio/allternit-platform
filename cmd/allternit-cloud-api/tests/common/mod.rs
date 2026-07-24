@@ -71,6 +71,7 @@ impl TestApp {
             cost_service,
             quota_service,
             fly_runtime_service: None,
+            mesh_service: None,
         });
 
         // Create router

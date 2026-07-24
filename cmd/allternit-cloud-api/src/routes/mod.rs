@@ -11,6 +11,7 @@ pub mod hosted_entitlements;
 pub mod hosted_runtimes;
 pub mod instances;
 pub mod jobs;
+pub mod mesh;
 pub mod mirror;
 pub mod mirror_ws;
 pub mod providers;
