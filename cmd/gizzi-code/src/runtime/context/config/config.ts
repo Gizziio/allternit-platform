@@ -298,7 +298,7 @@ export namespace Config {
       "@allternit/plugin": targetVersion,
     }
     delete json.dependencies["@allternit/gizzi-sdk"]
-    delete json.dependencies["@a2r/plugin"]
+    delete json.dependencies["@allternit/plugin"]
     await Filesystem.writeJson(pkg, json)
     await new Promise((resolve) => setTimeout(resolve, 3000))
 
@@ -350,7 +350,7 @@ export namespace Config {
     const dependencies = parsed?.dependencies ?? {}
     const depVersion = dependencies["@allternit/plugin"]
     const deprecatedSdkVersion = dependencies["@allternit/gizzi-sdk"]
-    const legacyPluginVersion = dependencies["@a2r/plugin"]
+    const legacyPluginVersion = dependencies["@allternit/plugin"]
     if (!depVersion) return true
     if (deprecatedSdkVersion || legacyPluginVersion) return true
 
@@ -1053,6 +1053,15 @@ export namespace Config {
       mdns: z.boolean().optional().describe("Enable mDNS service discovery"),
       mdnsDomain: z.string().optional().describe("Custom domain name for mDNS service (default: gizzi.local)"),
       cors: z.array(z.string()).optional().describe("Additional domains to allow for CORS"),
+      tunnel: z.boolean().optional().describe("Expose the server through a cloudflared quick tunnel when serving"),
+      tunnel_token: z
+        .string()
+        .optional()
+        .describe("Cloudflare named-tunnel token; serves through `cloudflared tunnel run --token` instead of a quick tunnel"),
+      tunnel_hostname: z
+        .string()
+        .optional()
+        .describe("Public hostname mapped to the named tunnel (used for logs and instance registration)"),
     })
     .strict()
     

@@ -293,6 +293,9 @@ pub fn create_router(state: Arc<ApiState>) -> Router {
         // pairing routes (the token only ever means "this user, that
         // runtime" — it is not itself a credential).
         .merge(routes::dispatch_handoff::routes())
+        // Gizzi instances are self-registered over a per-request Clerk
+        // session, like the pairing routes — no allternit_* API token.
+        .merge(routes::gizzi_instances::routes())
         .layer(axum_middleware::from_fn_with_state(
             state.public_rate_limiter.clone(),
             crate::middleware::rate_limit::rate_limit_middleware,

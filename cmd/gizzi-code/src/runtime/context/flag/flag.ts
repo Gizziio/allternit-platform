@@ -34,6 +34,25 @@ export namespace Flag {
   export declare const GIZZI_CLIENT: string
   export const GIZZI_SERVER_PASSWORD = env("GIZZI_SERVER_PASSWORD")
   export const GIZZI_SERVER_USERNAME = env("GIZZI_SERVER_USERNAME")
+  // Clerk JWT auth for the standalone server (phase 1 iOS direct-connect).
+  // GIZZI_REQUIRE_CLERK_AUTH makes Bearer-token validation mandatory for every
+  // request (except OPTIONS preflight); without it, JWT is only checked when a
+  // Bearer token is presented, and password/loopback rules apply otherwise.
+  export const GIZZI_CLERK_JWKS_URL = env("GIZZI_CLERK_JWKS_URL")
+  export const GIZZI_CLERK_ISSUER = env("GIZZI_CLERK_ISSUER")
+  export const GIZZI_REQUIRE_CLERK_AUTH = truthy("GIZZI_REQUIRE_CLERK_AUTH")
+  // Path override for the cloudflared binary used by `gizzi serve --tunnel`.
+  export const GIZZI_CLOUDFLARED_BIN = env("GIZZI_CLOUDFLARED_BIN")
+  // Named-tunnel token (`cloudflared tunnel token <name>` / Zero Trust
+  // dashboard). When set, `gizzi serve` runs a named tunnel on the user's own
+  // Cloudflare account instead of a quick tunnel.
+  export const GIZZI_TUNNEL_TOKEN = env("GIZZI_TUNNEL_TOKEN")
+  // Public hostname mapped to the named tunnel. Only used for logs and
+  // instance registration — cloudflared learns the routing from the token.
+  export const GIZZI_TUNNEL_HOSTNAME = env("GIZZI_TUNNEL_HOSTNAME")
+  // Platform instance registry base URL. `gizzi serve --tunnel` PUTs its public
+  // tunnel URL here so signed-in clients (iOS app) can discover the instance.
+  export const GIZZI_PLATFORM_API_URL = env("GIZZI_PLATFORM_API_URL") ?? "https://allternit-cloud-api.fly.dev"
   export const GIZZI_ENABLE_QUESTION_TOOL = truthy("GIZZI_ENABLE_QUESTION_TOOL")
   // Emergency rollback switches for the Kimi-parity runtime rollout. New
   // installations keep these capabilities enabled; flags only suppress the

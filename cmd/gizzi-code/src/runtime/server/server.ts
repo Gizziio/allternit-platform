@@ -7,7 +7,6 @@ import { Hono } from "hono"
 import { cors } from "hono/cors"
 import { streamSSE } from "hono/streaming"
 import { proxy } from "hono/proxy"
-import { basicAuth } from "hono/basic-auth"
 import z from "zod/v4"
 import { Provider } from "@/runtime/providers/provider"
 import { NamedError, NamedErrorBase } from "@allternit/gizzi-util/error.js"
@@ -55,6 +54,9 @@ import { CronService } from "@/runtime/automation/cron/service"
 import { ArsContextaRoutes } from "@/runtime/server/routes/ars-contexta"
 import { WebProxyRoutes } from "@/runtime/server/routes/web-proxy"
 import { MDNS } from "@/runtime/server/mdns"
+import { Tunnel } from "@/runtime/server/tunnel"
+import { InstanceRegistration } from "@/runtime/server/instance-registration"
+import { ClerkAuth } from "@/runtime/server/middleware/clerk-auth"
 import { TerminalClerkAuthRoutes } from "@/runtime/server/routes/terminal-clerk-auth"
 import { UserRoutes } from "@/runtime/server/routes/user"
 import { InstanceRoutes } from "@/runtime/server/routes/instance"
@@ -84,6 +86,7 @@ export namespace Server {
   let _url: URL | undefined
   let _corsWhitelist: string[] = []
   let _hostname: string | undefined
+  let _tunnel = false
   const rateWindows = new Map<string, { startedAt: number; count: number }>()
 
   function isLoopback(hostname: string | undefined) {
@@ -135,7 +138,12 @@ export namespace Server {
           c.header("Referrer-Policy", "no-referrer")
           c.header("Permissions-Policy", "camera=(), microphone=(), geolocation=()")
 
-          if (_hostname && isLoopback(_hostname)) {
+          // Loopback-only DNS-rebinding guard. Skipped in tunnel mode: the
+          // tunnel legitimately forwards the public *.trycloudflare.com (or
+          // named-tunnel) Host header, and tunnel mode always requires auth
+          // (serve refuses --tunnel without a password or Clerk), so the
+          // rebinding protection is moot there.
+          if (_hostname && isLoopback(_hostname) && !_tunnel) {
             const host = (c.req.header("host") ?? "").toLowerCase().replace(/:\d+$/, "")
             const allowed = new Set(["localhost", "127.0.0.1", "[::1]", "gizzi.internal", "tauri.localhost"])
             if (host && !allowed.has(host)) {
@@ -193,15 +201,7 @@ export namespace Server {
             },
           }),
         )
-        .use((c, next) => {
-          // Allow CORS preflight requests to succeed without auth.
-          // Browser clients sending Authorization headers will preflight with OPTIONS.
-          if (c.req.method === "OPTIONS") return next()
-          const password = Flag.GIZZI_SERVER_PASSWORD
-          if (!password) return next()
-          const username = Flag.GIZZI_SERVER_USERNAME ?? "gizzi"
-          return basicAuth({ username, password })(c, next)
-        })
+        .use(ClerkAuth.middleware())
         .use(async (c, next) => {
           const skipLogging = c.req.path === "/log"
           if (!skipLogging) {
@@ -596,9 +596,19 @@ export namespace Server {
     mdns?: boolean
     mdnsDomain?: string
     cors?: string[]
+    tunnel?: boolean
+    tunnelToken?: string
+    tunnelHostname?: string
   }) {
     _corsWhitelist = opts.cors ?? []
     _hostname = opts.hostname
+    _tunnel = opts.tunnel ?? false
+
+    if (opts.tunnel && !Tunnel.available()) {
+      throw new Error(
+        "--tunnel requires cloudflared, which is not installed. Install it (`brew install cloudflared`, or see https://developers.cloudflare.com/cloudflare-one/connections/connect-networks/downloads/) or set GIZZI_CLOUDFLARED_BIN to its path.",
+      )
+    }
 
     const args = {
       hostname: opts.hostname,
@@ -645,8 +655,38 @@ export namespace Server {
       log.warn("mDNS enabled but hostname is loopback; skipping mDNS publish")
     }
 
+    if (opts.tunnel) {
+      const tunnelOpts: Tunnel.Options = opts.tunnelToken
+        ? { mode: "named", token: opts.tunnelToken, hostname: opts.tunnelHostname }
+        : { mode: "quick" }
+      Tunnel.start(server.port!, tunnelOpts)
+        .then((url) => {
+          if (url) {
+            process.stderr.write(`gizzi tunnel ready at ${url}\n`)
+            // Best-effort self-registration with the platform instance registry;
+            // fire-and-forget so startup never blocks on it.
+            void InstanceRegistration.register({ url }).catch((err) => {
+              log.warn("instance registration failed", { error: err })
+            })
+          } else {
+            // Named tunnel without a configured hostname: the tunnel runs, but
+            // there is no URL to log or register.
+            process.stderr.write("gizzi named tunnel running (hostname not configured)\n")
+            log.info("skipping instance registration: named tunnel hostname not configured")
+          }
+        })
+        .catch((err) => {
+          log.error("failed to start cloudflared tunnel", { error: err })
+          process.stderr.write(`gizzi tunnel failed: ${err instanceof Error ? err.message : String(err)}\n`)
+        })
+    }
+
     const originalStop = server.stop.bind(server)
     server.stop = async (closeActiveConnections?: boolean) => {
+      if (opts.tunnel) {
+        Tunnel.stop()
+        InstanceRegistration.stop()
+      }
       if (shouldPublishMDNS) MDNS.unpublish()
       try {
         CronService.close()

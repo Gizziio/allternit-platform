@@ -22,6 +22,11 @@ packages:
   Runestone:
     url: https://github.com/simonbs/Runestone
     from: "0.5.2"
+  # Terminal emulator for the code thread's pty flip. swift-tools 5.9 / iOS
+  # 14+, no transitive deps — safe for Xcode 16.2 (Swift 6.0).
+  SwiftTerm:
+    url: https://github.com/migueldeicaza/SwiftTerm
+    from: "1.2.0"
 targets:
   Allternit:
     type: application
@@ -52,11 +57,15 @@ targets:
       configs:
         debug:
           ALLTERNIT_API_BASE_URL: http://127.0.0.1:8013/api/v1
+          ALLTERNIT_GIZZI_CODE_URL: http://127.0.0.1:4096
         release:
           # TODO: verify the public mobile gateway host before App Store submission.
           # The gizzi clients default to https://api.allternit.com; mobile may share
           # it or need a dedicated host. Update this value once confirmed.
           ALLTERNIT_API_BASE_URL: https://api.allternit.com/api/v1
+          # TODO: no hosted gizzi-code server exists yet — empty falls back to
+          # AppConfig's dev default (127.0.0.1:4096) until one is deployed.
+          ALLTERNIT_GIZZI_CODE_URL: ""
     dependencies:
       - package: clerk-ios
         product: ClerkKit
@@ -66,3 +75,5 @@ targets:
         product: MarkdownView
       - package: Runestone
         product: Runestone
+      - package: SwiftTerm
+        product: SwiftTerm

@@ -1,0 +1,74 @@
+// @ts-nocheck
+import { cmd } from "@/cli/commands/cmd"
+import { Pairing } from "@/runtime/services/pairing/pairing"
+
+function printStatus(status: Awaited<ReturnType<typeof Pairing.status>>) {
+  if (!status.paired && !status.stored) {
+    process.stdout.write("Not paired. Run `gizzi pair` to pair this machine as a runtime device.\n")
+    return
+  }
+  const stored = status.stored!
+  process.stdout.write(`Device name:  ${stored.name}\n`)
+  process.stdout.write(`Runtime ID:   ${stored.runtimeId ?? "(not paired)"}\n`)
+  if (stored.userEmail) process.stdout.write(`Account:      ${stored.userEmail}\n`)
+  process.stdout.write(`Fingerprint:  ${stored.publicKeyFingerprint}\n`)
+  if (stored.tokenExpiresAt) {
+    const remaining = Date.parse(stored.tokenExpiresAt) - Date.now()
+    const days = Math.max(0, Math.floor(remaining / 86_400_000))
+    process.stdout.write(`Token:        ${status.paired ? `valid (${days} days remaining, expires ${stored.tokenExpiresAt})` : `expired (${stored.tokenExpiresAt})`}\n`)
+    if (Pairing.rotationDue(stored)) {
+      process.stdout.write("Token rotation is due; it happens automatically the next time `gizzi serve` runs.\n")
+    }
+  }
+  if (!status.paired) {
+    process.stdout.write("Run `gizzi pair` to (re-)pair this machine.\n")
+  }
+}
+
+export const PairCommand = cmd({
+  command: "pair",
+  builder: (yargs) =>
+    yargs
+      .option("status", {
+        type: "boolean",
+        default: false,
+        describe: "show the current pairing state and exit",
+      })
+      .option("force", {
+        type: "boolean",
+        default: false,
+        describe: "re-pair even if a valid device token already exists",
+      })
+      .option("name", {
+        type: "string",
+        describe: "device name shown on the platform (defaults to the stored name or hostname)",
+      }),
+  describe: "pair this machine as an Allternit runtime device",
+  handler: async (args) => {
+    if (args.status) {
+      printStatus(await Pairing.status())
+      process.exit(0)
+    }
+
+    const existing = await Pairing.status()
+    if (existing.paired && !args.force) {
+      process.stdout.write("This machine is already paired.\n")
+      printStatus(existing)
+      process.stdout.write("Run `gizzi pair --force` to re-pair.\n")
+      process.exit(0)
+    }
+
+    const stored = await Pairing.pair({
+      name: args.name,
+      onCreated: (pairing) => {
+        process.stdout.write(`Pairing code: ${pairing.userCode}\n`)
+        process.stdout.write(`Approve this device at: ${pairing.verificationUrl}\n`)
+        process.stdout.write("Waiting for approval…\n")
+      },
+    })
+    process.stdout.write(`Paired as ${stored.name} (runtime ${stored.runtimeId}).\n`)
+    if (stored.userEmail) process.stdout.write(`Account: ${stored.userEmail}\n`)
+    process.stdout.write(`Device token valid until ${stored.tokenExpiresAt}.\n`)
+    process.exit(0)
+  },
+})

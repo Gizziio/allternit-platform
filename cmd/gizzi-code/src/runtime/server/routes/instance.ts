@@ -18,9 +18,38 @@ import { Instance } from "@/runtime/context/project/instance"
 import * as Bridge from "@/runtime/kernel/bridge"
 import { Workspace } from "@/runtime/workspace/workspace"
 import { clearWorkspaceCache } from "@/runtime/session/session-context"
+import { Tunnel } from "@/runtime/server/tunnel"
 
 export function InstanceRoutes() {
   return new Hono()
+    .get(
+      "/status",
+      describeRoute({
+        summary: "Instance status",
+        description: "Lightweight server/instance status, including the public cloudflared tunnel URL when --tunnel is active.",
+        operationId: "instance.status",
+        responses: {
+          200: {
+            description: "Instance status",
+            content: {
+              "application/json": {
+                schema: resolver(z.any()),
+              },
+            },
+          },
+        },
+      }),
+      async (c) => {
+        return c.json({
+          status: "ok",
+          service: "gizzi-code",
+          tunnel: {
+            enabled: Tunnel.active() || Tunnel.url() !== undefined,
+            url: Tunnel.url() ?? null,
+          },
+        })
+      },
+    )
     .get(
       "/sync",
       describeRoute({

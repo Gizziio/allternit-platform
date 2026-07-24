@@ -58,6 +58,11 @@
 	     in project.yml so the production host is never hardcoded here. -->
 	<key>ALLTERNIT_API_BASE_URL</key>
 	<string>$(ALLTERNIT_API_BASE_URL)</string>
+	<!-- Standalone gizzi-code server (pty terminal) base URL. Injected per
+	     build config via project.yml; NSAllowsLocalNetworking above already
+	     covers the plain-HTTP/WS dev default (127.0.0.1:4096). -->
+	<key>ALLTERNIT_GIZZI_CODE_URL</key>
+	<string>$(ALLTERNIT_GIZZI_CODE_URL)</string>
 	<key>CLERK_PUBLISHABLE_KEY</key>
 	<string>$(CLERK_PUBLISHABLE_KEY)</string>
 	<!-- Cloud API host (runtime-device registry + relay entry point). The

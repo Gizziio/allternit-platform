@@ -1,5 +1,5 @@
 {
-  "originHash" : "7ed71e899ef2afbda4edd8c978afb9926fc2fc425a2fcedfd3920bc7f6e3971b",
+  "originHash" : "e9cb99d0ab99dcd0be4c482c436ca182ed7f287a771b067f1f1741c47be2ff75",
   "pins" : [
     {
       "identity" : "clerk-ios",
@@ -74,6 +74,15 @@
       }
     },
     {
+      "identity" : "swift-argument-parser",
+      "kind" : "remoteSourceControl",
+      "location" : "https://github.com/apple/swift-argument-parser",
+      "state" : {
+        "revision" : "6a52f3251125d74daf04fcbd5e6f08a75d074382",
+        "version" : "1.8.2"
+      }
+    },
+    {
       "identity" : "swift-cmark",
       "kind" : "remoteSourceControl",
       "location" : "https://github.com/swiftlang/swift-cmark.git",
@@ -107,6 +116,15 @@
       "state" : {
         "revision" : "82699f4bdf2f075793cfa0d392eb27c59b41a3fe",
         "version" : "0.29.0"
+      }
+    },
+    {
+      "identity" : "swiftterm",
+      "kind" : "remoteSourceControl",
+      "location" : "https://github.com/migueldeicaza/SwiftTerm",
+      "state" : {
+        "revision" : "dd2fb8ac5b861e7bf617c872895e338f38165648",
+        "version" : "1.15.0"
       }
     },
     {

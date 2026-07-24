@@ -46,9 +46,28 @@ export namespace Pty {
   let spawnAttempt: Promise<void> | undefined
   async function ensureMuxDaemon(): Promise<void> {
     const socket = muxSocketPath()
-    const { existsSync } = await import("node:fs")
+    const { existsSync, unlinkSync } = await import("node:fs")
     // NB: unix sockets are not regular files — Bun.file().exists() misses them.
-    if (existsSync(socket)) return
+    if (existsSync(socket)) {
+      // Check if the existing socket is responsive. A stale socket file from a
+      // dead daemon will fail to connect; remove it and respawn.
+      try {
+        const sock = netConnect(socket)
+        await new Promise((resolve, reject) => {
+          sock.once("connect", resolve)
+          sock.once("error", reject)
+          setTimeout(() => reject(new Error("timeout")), 1000)
+        })
+        sock.end()
+        return
+      } catch {
+        try {
+          unlinkSync(socket)
+        } catch {
+          // ignore
+        }
+      }
+    }
     spawnAttempt ??= (async () => {
       const { spawn } = await import("node:child_process")
       const { mkdirSync } = await import("node:fs")
@@ -416,6 +435,10 @@ export namespace Pty {
   }
 
   export async function connect(id: string, ws: Socket, _cursor?: number) {
+    // Capture the connection identifier BEFORE any async work. If the caller
+    // reuses the same ws object for another connection, the pump must still
+    // know which connection it belongs to.
+    const connectionId = (ws as any).data?.events?.connection ?? (ws as any).data?.connId ?? id
     const mapping = state().get(id)
     if (!mapping) {
       ws.close()
@@ -456,11 +479,18 @@ export namespace Pty {
       try {
         for (;;) {
           const frame = JSON.parse(await conn.nextLine())
-          if (frame.pane_id !== mapping.muxPaneId) continue
+          const framePaneId = frame.pane_id ?? frame.data?.pane_id
+          if (framePaneId !== mapping.muxPaneId) continue
           if (frame.type === "pane.output") {
             const chunk = frame.data?.data ?? ""
             if (chunk) {
               try {
+                // Prevent cross-connection output leaks: only send if this ws
+                // is still associated with the connection that created the pump.
+                const currentConnection = (ws as any).data?.events?.connection ?? (ws as any).data?.connId ?? id
+                if (currentConnection !== connectionId) {
+                  break
+                }
                 ws.send(chunk)
               } catch {
                 break

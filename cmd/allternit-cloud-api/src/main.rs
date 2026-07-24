@@ -185,6 +185,9 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         tracing::info!("Cost tracking disabled");
     }
 
+    // Start stale gizzi-instance garbage collection (startup sweep + hourly)
+    allternit_cloud_api::routes::gizzi_instances::start_gizzi_instance_gc_task(state.db.clone());
+
     // Start server
     tracing::info!("Starting API server on {}", bind_addr);
     allternit_cloud_api::start_server(state, &bind_addr).await?;

@@ -17,7 +17,7 @@ use ed25519_dalek::{Signature, Verifier, VerifyingKey};
 use rand::{Rng, RngCore};
 use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha256};
-use sqlx::FromRow;
+use sqlx::{FromRow, SqlitePool};
 use std::sync::Arc;
 use uuid::Uuid;
 
@@ -25,6 +25,9 @@ use crate::{auth::clerk, ApiError, ApiState};
 
 const PAIRING_TTL_MINUTES: i64 = 10;
 const CREDENTIAL_TTL_DAYS: i64 = 90;
+/// Device credentials minted here always carry this prefix; other routes use
+/// it to tell a device token apart from a Clerk session JWT.
+pub(crate) const DEVICE_TOKEN_PREFIX: &str = "allternit_runtime_";
 const DEFAULT_CAPABILITIES: &[&str] = &[
     "runtime:connect",
     "runtime:execute",
@@ -147,9 +150,10 @@ struct PairingRow {
 }
 
 #[derive(Debug, FromRow)]
-struct RuntimeCredentialRow {
-    id: String,
-    user_id: String,
+pub(crate) struct RuntimeCredentialRow {
+    pub id: String,
+    pub user_id: String,
+    pub name: String,
     credential_expires_at: DateTime<Utc>,
     status: String,
 }
@@ -487,7 +491,7 @@ async fn exchange_pairing(
     }
 
     let runtime_id = format!("rt_{}", Uuid::new_v4().simple());
-    let device_token = format!("allternit_runtime_{}", random_secret(48));
+    let device_token = format!("{DEVICE_TOKEN_PREFIX}{}", random_secret(48));
     let credential_hash = sha256_hex(device_token.as_bytes());
     let credential_expires_at = Utc::now() + Duration::days(CREDENTIAL_TTL_DAYS);
 
@@ -686,7 +690,7 @@ async fn rotate_runtime_credential(
     Path(id): Path<String>,
 ) -> Result<Json<serde_json::Value>, ApiError> {
     let runtime = authenticate_runtime(&state, &headers, &id).await?;
-    let device_token = format!("allternit_runtime_{}", random_secret(48));
+    let device_token = format!("{DEVICE_TOKEN_PREFIX}{}", random_secret(48));
     let expires_at = Utc::now() + Duration::days(CREDENTIAL_TTL_DAYS);
     sqlx::query(
         "UPDATE runtime_devices SET credential_hash = ?, credential_expires_at = ?, last_seen_at = CURRENT_TIMESTAMP WHERE id = ?",
@@ -721,28 +725,50 @@ async fn revoke_self(
     ))
 }
 
-async fn authenticate_runtime(
-    state: &ApiState,
-    headers: &HeaderMap,
-    expected_id: &str,
-) -> Result<RuntimeCredentialRow, ApiError> {
-    let token = headers
+/// Extracts a runtime device token (`Bearer allternit_runtime_…`) from the
+/// Authorization header, or `None` when the header carries anything else
+/// (e.g. a Clerk session JWT).
+pub(crate) fn device_token_from_headers(headers: &HeaderMap) -> Option<&str> {
+    headers
         .get(axum::http::header::AUTHORIZATION)
         .and_then(|value| value.to_str().ok())
         .and_then(|value| value.strip_prefix("Bearer "))
-        .filter(|value| value.starts_with("allternit_runtime_"))
-        .ok_or_else(|| ApiError::Unauthorized("Runtime credential required".to_string()))?;
-    let runtime = sqlx::query_as::<_, RuntimeCredentialRow>(
-        r#"
-        SELECT id, user_id, credential_expires_at, status
-        FROM runtime_devices
-        WHERE credential_hash = ? AND id = ? AND revoked_at IS NULL
-        "#,
-    )
-    .bind(sha256_hex(token.as_bytes()))
-    .bind(expected_id)
-    .fetch_optional(&state.db)
-    .await?
+        .filter(|value| value.starts_with(DEVICE_TOKEN_PREFIX))
+}
+
+/// Core credential check shared by the runtime routes and other registries
+/// that accept a device token: token hash → device row, with expiry and
+/// revocation enforced. `expected_id` scopes the lookup to one device when
+/// the route path names it.
+pub(crate) async fn runtime_device_for_token(
+    db: &SqlitePool,
+    token: &str,
+    expected_id: Option<&str>,
+) -> Result<RuntimeCredentialRow, ApiError> {
+    let credential_hash = sha256_hex(token.as_bytes());
+    let runtime = match expected_id {
+        Some(expected_id) => sqlx::query_as::<_, RuntimeCredentialRow>(
+            r#"
+            SELECT id, user_id, name, credential_expires_at, status
+            FROM runtime_devices
+            WHERE credential_hash = ? AND id = ? AND revoked_at IS NULL
+            "#,
+        )
+        .bind(credential_hash)
+        .bind(expected_id)
+        .fetch_optional(db)
+        .await?,
+        None => sqlx::query_as::<_, RuntimeCredentialRow>(
+            r#"
+            SELECT id, user_id, name, credential_expires_at, status
+            FROM runtime_devices
+            WHERE credential_hash = ? AND revoked_at IS NULL
+            "#,
+        )
+        .bind(credential_hash)
+        .fetch_optional(db)
+        .await?,
+    }
     .ok_or_else(|| ApiError::Unauthorized("Invalid runtime credential".to_string()))?;
     if runtime.credential_expires_at <= Utc::now() {
         return Err(ApiError::TokenExpired(
@@ -755,6 +781,16 @@ async fn authenticate_runtime(
         ));
     }
     Ok(runtime)
+}
+
+async fn authenticate_runtime(
+    state: &ApiState,
+    headers: &HeaderMap,
+    expected_id: &str,
+) -> Result<RuntimeCredentialRow, ApiError> {
+    let token = device_token_from_headers(headers)
+        .ok_or_else(|| ApiError::Unauthorized("Runtime credential required".to_string()))?;
+    runtime_device_for_token(&state.db, token, Some(expected_id)).await
 }
 
 pub(crate) async fn authenticate_runtime_token(
@@ -972,6 +1008,6 @@ pub(crate) fn random_secret(bytes: usize) -> String {
     URL_SAFE_NO_PAD.encode(data)
 }
 
-fn sha256_hex(value: &[u8]) -> String {
+pub(crate) fn sha256_hex(value: &[u8]) -> String {
     hex::encode(Sha256::digest(value))
 }

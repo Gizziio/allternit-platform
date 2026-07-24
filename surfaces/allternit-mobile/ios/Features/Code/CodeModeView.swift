@@ -32,6 +32,12 @@ struct CodeModeView: View {
     /// Phase 8 status filter (Claude "Filter by status" sheet parity).
     @State private var statusFilter: CodeStatusFilter = .all
     @State private var isFilterSheetPresented = false
+    #if DEBUG
+    /// One-shot latch for the `-open-code-*` launch args — `.task` can
+    /// re-run when the nav stack pops back to the list, and without this
+    /// the debug push fires again and swallows the Back navigation.
+    @State private var didApplyDebugArgs = false
+    #endif
 
     private let theme = ModeTheme(mode: .code)
 
@@ -86,19 +92,30 @@ struct CodeModeView: View {
                 .presentationDetents([.medium])
             }
             .task {
+                // Warm the gizzi-instance registry so a thread's first flip
+                // to the terminal can attach to a registered instance.
+                Task { await InstanceStore.shared.refresh() }
                 await loadSessions()
                 #if DEBUG
-                // `-open-code-filter` (DEBUG only): open the status filter
-                // sheet on appear for screenshot verification — MainWorkspaceView
-                // handles the matching tab switch to Code (no tap injection
-                // in simctl).
-                if CommandLine.arguments.contains("-open-code-filter") {
-                    isFilterSheetPresented = true
-                }
-                // `-open-code-thread` (DEBUG only): push a fresh code thread
-                // so the terminal session UX can be screenshot-verified.
-                if CommandLine.arguments.contains("-open-code-thread") {
-                    threadTarget = CodeThreadTarget(sessionId: nil, title: nil)
+                // `-open-code-filter` / `-open-code-thread` (DEBUG only):
+                // land on the filter sheet or a fresh thread for screenshot
+                // verification. One-shot — `.task` re-runs when the nav
+                // stack pops back here, and re-applying the push would
+                // swallow the Back navigation.
+                if !didApplyDebugArgs {
+                    if CommandLine.arguments.contains("-open-code-filter") {
+                        isFilterSheetPresented = true
+                    }
+                    if CommandLine.arguments.contains("-open-code-thread") {
+                        threadTarget = CodeThreadTarget(sessionId: nil, title: nil)
+                    }
+                    // `-open-code-thread-id <id>` (DEBUG only): open an
+                    // existing session in the code thread (e.g. to verify
+                    // the thought stream renders from loaded history).
+                    if let threadId = UserDefaults.standard.string(forKey: "open-code-thread-id") {
+                        threadTarget = CodeThreadTarget(sessionId: threadId, title: "Thread")
+                    }
+                    didApplyDebugArgs = true
                 }
                 #endif
             }
@@ -535,17 +552,188 @@ private struct CodeThreadTarget: Hashable, Identifiable {
 /// The composer keeps its agent pill + bottom deck (the code surface's tile
 /// set, AgentModeTile.visibleTiles(for: .code)); the Chat/Cowork toggle is
 /// Home-only and hidden here.
+///
+/// The toolbar flips the thread to a real interactive terminal
+/// (TerminalSessionView) attached to a pty on the gizzi-code server. The
+/// pty session is created lazily on the first flip — resolving the host
+/// from InstanceStore (the pinned instance when one is selected, else the
+/// first ONLINE registered instance) with fallback to the static
+/// `AppConfig.gizziCodeBaseURL` — and kept in @State afterwards so flipping
+/// preserves the shell. With more than one registered instance, a second
+/// toolbar menu switches instances by tearing the session down and
+/// rebuilding it against the new host. When no host resolves at all
+/// (release build with no registered instance), the flip lands on a
+/// no-instance empty state with a Retry that re-fetches the registry.
 private struct CodeThreadChatView: View {
     let sessionId: String?
     let title: String?
 
     @StateObject private var viewModel = ChatViewModel()
+    @StateObject private var instanceStore = InstanceStore.shared
+    @State private var terminalSession: PtySession? = nil
+    @State private var showTerminal = false
+    @State private var resolvingTerminalHost = false
 
     var body: some View {
-        ChatContentView(sessionId: sessionId, viewModel: viewModel)
-            .background(Color("BgPrimary"))
-            .navigationTitle(title ?? "New Thread")
-            .navigationBarTitleDisplayMode(.inline)
+        Group {
+            if showTerminal {
+                if let terminalSession {
+                    // `.id` gives each rebuilt session (instance switch) a
+                    // fresh view identity, so its `.task` fires and attaches
+                    // the new pty instead of reusing the torn-down view.
+                    TerminalSessionView(session: terminalSession)
+                        .id(ObjectIdentifier(terminalSession))
+                } else if resolvingTerminalHost {
+                    ProgressView("Connecting…")
+                } else {
+                    noInstanceView
+                }
+            } else {
+                ChatContentView(sessionId: sessionId, viewModel: viewModel)
+            }
+        }
+        .background(Color("BgPrimary"))
+        .navigationTitle(title ?? "New Thread")
+        .navigationBarTitleDisplayMode(.inline)
+        .toolbar {
+            ToolbarItem(placement: .topBarTrailing) {
+                Button {
+                    if !showTerminal, terminalSession == nil {
+                        terminalSession = Self.makeTerminalSession(from: instanceStore)
+                        if terminalSession == nil {
+                            // No host resolved (release with no registered
+                            // instance) — the warm-up fetch may still be in
+                            // flight, so wait for it before settling on the
+                            // no-instance state.
+                            resolvingTerminalHost = true
+                            Task {
+                                await instanceStore.refreshIfNeeded()
+                                terminalSession = Self.makeTerminalSession(from: instanceStore)
+                                resolvingTerminalHost = false
+                            }
+                        }
+                    }
+                    showTerminal.toggle()
+                } label: {
+                    Image(systemName: showTerminal ? "bubble.left.and.bubble.right" : "terminal")
+                }
+                .accessibilityLabel(showTerminal ? "Show chat" : "Show terminal")
+            }
+            // Only multi-instance users get the picker; with zero or one
+            // registered instance the toolbar is exactly the terminal toggle.
+            if instanceStore.instances.count > 1 {
+                ToolbarItem(placement: .topBarTrailing) {
+                    instanceMenu
+                }
+            }
+        }
+        .task {
+            // Warm the instance registry so the first flip can already
+            // resolve a registered instance. On failure the store keeps the
+            // empty list and the flip falls back to the static dev default
+            // (DEBUG) or the no-instance state (release).
+            await instanceStore.refreshIfNeeded()
+        }
+        .onDisappear {
+            // Detach only — the pty keeps running server-side.
+            terminalSession?.stop()
+        }
+    }
+
+    /// Builds the terminal's pty session on first flip: attached to the
+    /// preferred registered instance (name plumbed through for display), or
+    /// to `AppConfig.gizziCodeBaseURL` when no instance resolved — the
+    /// `PtySession()` default client targets exactly that static URL.
+    /// Returns nil when neither source yields a usable host (release build,
+    /// no registered instance) — the caller shows the no-instance state
+    /// instead of attempting a connection.
+    private static func makeTerminalSession(from store: InstanceStore) -> PtySession? {
+        if let instance = store.preferredInstance, let url = instance.instanceURL {
+            return PtySession(client: PtyClient(baseURL: url), attachedInstanceName: instance.name)
+        }
+        guard AppConfig.hasUsableGizziCodeURL else { return nil }
+        return PtySession()
+    }
+
+    /// Shown in place of the terminal when no host resolved (release build
+    /// with no registered instance and an empty static fallback). Retry
+    /// re-fetches the registry and rebuilds the session if an instance
+    /// appeared. Copy mirrors the session list's error state.
+    private var noInstanceView: some View {
+        VStack(spacing: 12) {
+            Image(systemName: "terminal")
+                .font(.title2)
+                .foregroundColor(Color("TextSecondary"))
+            Text("No instance available")
+                .font(.subheadline)
+                .foregroundColor(Color("TextPrimary"))
+            Text("Start `gizzi serve --tunnel` on your computer, then retry.")
+                .font(.caption)
+                .foregroundColor(Color("TextSecondary"))
+                .multilineTextAlignment(.center)
+            Button("Retry") {
+                Task {
+                    await instanceStore.refresh()
+                    terminalSession = Self.makeTerminalSession(from: instanceStore)
+                }
+            }
+            .font(.subheadline)
+        }
+        .padding(.horizontal, 20)
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+    }
+
+    /// Instance switcher for the registered `gizzi serve --tunnel` hosts:
+    /// Automatic resolution plus one row per instance with an online/stale
+    /// dot and a checkmark on the pinned one. Rendered only when more than
+    /// one instance is registered.
+    private var instanceMenu: some View {
+        Menu {
+            Button(action: { selectInstance(nil) }) {
+                HStack {
+                    if instanceStore.selectedInstanceID == nil {
+                        Image(systemName: "checkmark")
+                    }
+                    Label("Automatic", systemImage: "sparkles")
+                }
+            }
+
+            Divider()
+
+            ForEach(instanceStore.instances) { instance in
+                Button(action: { selectInstance(instance.id) }) {
+                    HStack {
+                        if instanceStore.selectedInstanceID == instance.id {
+                            Image(systemName: "checkmark")
+                        }
+                        Circle()
+                            .fill(instance.isOnline ? Theme.statusSuccess : Color("TextSecondary"))
+                            .frame(width: 6, height: 6)
+                        Text(instance.name)
+                    }
+                }
+            }
+        } label: {
+            Image(systemName: "server.rack")
+        }
+        .task {
+            // Presenting the thread re-checks reachability so the menu's
+            // online/stale dots are fresh — a full refresh, unlike the
+            // once-per-run warm-up below.
+            await instanceStore.refresh()
+        }
+    }
+
+    /// Pins the terminal to an instance (nil = automatic) and rebuilds the
+    /// pty session against the new host: the old session is detached and
+    /// dropped, then either rebuilt immediately (terminal on screen — the
+    /// fresh view's `.task` attaches it) or left nil so the next flip
+    /// rebuilds it lazily via `makeTerminalSession`, which reads the
+    /// selection at build time.
+    private func selectInstance(_ id: String?) {
+        instanceStore.select(id)
+        terminalSession?.stop()
+        terminalSession = showTerminal ? Self.makeTerminalSession(from: instanceStore) : nil
     }
 }
 

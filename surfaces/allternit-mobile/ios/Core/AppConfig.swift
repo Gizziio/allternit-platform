@@ -48,6 +48,36 @@ enum AppConfig {
         return apiBase.appendingPathComponent("aci")
     }()
 
+    /// Base URL of a standalone gizzi-code server (`gizzi serve`) hosting the
+    /// pty REST + WebSocket routes (`/v1/pty/...`, see
+    /// cmd/gizzi-code/docs/pty-websocket-protocol.md). Default: the local dev
+    /// server. Terminal connections always go DIRECTLY here — the cloud relay
+    /// envelope cannot carry a WebSocket upgrade.
+    static let gizziCodeBaseURL: URL = {
+        if let value = infoPlistValue("ALLTERNIT_GIZZI_CODE_URL"),
+           let url = URL(string: value) {
+            return url
+        }
+        return URL(string: "http://127.0.0.1:4096")!
+    }()
+
+    /// Whether `gizziCodeBaseURL` is a real target: true when the build
+    /// setting resolved, plus DEBUG builds (which legitimately fall back to
+    /// the local dev server). Release ships `ALLTERNIT_GIZZI_CODE_URL`
+    /// empty, so there the static default is just a placeholder — callers
+    /// must treat the terminal host as unresolved (InstanceStore is the
+    /// only real source) instead of connecting to the dev fallback.
+    static let hasUsableGizziCodeURL: Bool = {
+        if let value = infoPlistValue("ALLTERNIT_GIZZI_CODE_URL") {
+            return URL(string: value) != nil
+        }
+        #if DEBUG
+        return true
+        #else
+        return false
+        #endif
+    }()
+
     /// Empty until a real publishable key is provided — AuthManager treats an
     /// empty key as "Clerk not configured" instead of crashing.
     static let clerkPublishableKey: String = infoPlistValue("CLERK_PUBLISHABLE_KEY") ?? ""

@@ -1,0 +1,271 @@
+import Foundation
+
+/// Pty session info returned by gizzi-code's `POST /v1/pty/create`
+/// (integrations/pty/index.ts `Info`).
+struct PtyInfo: Decodable, Sendable {
+    let id: String
+    let title: String
+    let command: String
+    let args: [String]
+    let cwd: String
+    let status: String
+    let pid: Int
+}
+
+/// Client for the standalone gizzi-code server's pty routes — REST plus the
+/// WebSocket attach (cmd/gizzi-code/docs/pty-websocket-protocol.md).
+///
+/// Unlike `APIClient.shared` this always connects DIRECTLY to
+/// `AppConfig.gizziCodeBaseURL` (no EnvironmentStore relay route): the cloud
+/// relay envelope (`APIClient.relayRequest`) cannot carry a WebSocket
+/// upgrade, so in `.cloud` mode the terminal still talks to the gizzi
+/// server itself.
+final class PtyClient: @unchecked Sendable {
+    static let shared = PtyClient()
+
+    let baseURL: URL
+    private let client: APIClient
+
+    init(baseURL: URL = AppConfig.gizziCodeBaseURL) {
+        self.baseURL = baseURL
+        self.client = APIClient(
+            baseURL: baseURL,
+            tokenProvider: { try await AuthManager.shared.getToken() }
+        )
+    }
+
+    // MARK: - REST
+
+    /// `POST /v1/pty/create`. The server's `CreateInput` has no size field —
+    /// mux panes are born 80x24 (integrations/pty/index.ts:335-339) and are
+    /// resized afterwards via `resize(id:cols:rows:)`.
+    func createPty(title: String? = nil) async throws -> PtyInfo {
+        try await client.post(path: "v1/pty/create", body: CreatePtyRequest(title: title))
+    }
+
+    /// `PUT /v1/pty/:id` — `{ "size": { "rows": R, "cols": C } }`. Resize is
+    /// REST-only; it does NOT go over the socket (protocol doc §Client→server).
+    func resize(id: String, cols: Int, rows: Int) async throws {
+        try await client.put(
+            path: "v1/pty/\(Self.escape(id))",
+            body: UpdatePtyRequest(size: .init(rows: rows, cols: cols))
+        )
+    }
+
+    /// `DELETE /v1/pty/:id` — kills the pty server-side. Detaching (closing
+    /// the WebSocket) leaves it alive; only call this to end the shell.
+    func deletePty(id: String) async throws {
+        try await client.delete(path: "v1/pty/\(Self.escape(id))")
+    }
+
+    // MARK: - WebSocket
+
+    /// Builds the authorized WebSocket task for `GET /v1/pty/:id/connect`
+    /// (not yet resumed). The upgrade is an ordinary HTTP request under the
+    /// same auth middleware as REST (protocol doc §Auth): Clerk Bearer, plus
+    /// the DEBUG `-skip-auth` dev headers mirroring APIClient:118-125.
+    func connectWebSocket(ptyId: String) async throws -> URLSessionWebSocketTask {
+        guard var components = URLComponents(
+            url: baseURL.appendingPathComponent("v1/pty/\(Self.escape(ptyId))/connect"),
+            resolvingAgainstBaseURL: false
+        ) else {
+            throw APIError.invalidResponse
+        }
+        components.scheme = components.scheme == "https" ? "wss" : "ws"
+        guard let url = components.url else {
+            throw APIError.invalidResponse
+        }
+
+        var request = URLRequest(url: url)
+        if let token = try await AuthManager.shared.getToken(), !token.isEmpty {
+            request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
+        }
+        #if DEBUG
+        if CommandLine.arguments.contains("-skip-auth") {
+            request.setValue("dev-ios-tester", forHTTPHeaderField: "x-allternit-user-id")
+            request.setValue("dev", forHTTPHeaderField: "x-allternit-desktop-access-token")
+            if request.value(forHTTPHeaderField: "Authorization") == nil {
+                request.setValue("Bearer dev-api-token", forHTTPHeaderField: "Authorization")
+            }
+        }
+        #endif
+        return URLSession.shared.webSocketTask(with: request)
+    }
+
+    /// Web uses `encodeURIComponent` on path ids (parity with AgentChatClient).
+    private static func escape(_ ptyId: String) -> String {
+        ptyId.addingPercentEncoding(withAllowedCharacters: .urlPathAllowed) ?? ptyId
+    }
+}
+
+private struct CreatePtyRequest: Encodable {
+    let title: String?
+}
+
+private struct UpdatePtyRequest: Encodable {
+    struct Size: Encodable {
+        let rows: Int
+        let cols: Int
+    }
+    let size: Size
+}
+
+/// Lifecycle owner for one pty attachment: creates the pty, pumps the
+/// WebSocket, classifies frames, and gates input on the meta frame.
+///
+/// UI-facing state is main-actor published; the receive loop suspends at
+/// `socket.receive()` and never blocks the main thread. The pty is never
+/// deleted here — sessions are owned by the server's mux daemon and survive
+/// detaches, so the chat↔terminal flip keeps the shell alive.
+@MainActor
+final class PtySession: ObservableObject {
+    enum State: Equatable {
+        case connecting
+        /// Meta frame received: replay done, input hooked up.
+        case live
+        /// Server closed the socket (the pty's process exited).
+        case exited
+        case failed(String)
+    }
+
+    @Published private(set) var state: State = .connecting
+
+    /// Name of the registered gizzi instance this session attaches to
+    /// (InstanceStore), shown by the terminal view while connecting; nil when
+    /// attached to the static `AppConfig.gizziCodeBaseURL` default.
+    let attachedInstanceName: String?
+
+    /// Raw terminal output sink (ANSI included), invoked on the main actor.
+    /// Assigned by the terminal view; cleared on `stop()`.
+    var onOutput: (@MainActor (String) -> Void)?
+
+    private let client: PtyClient
+    private(set) var ptyId: String?
+    private var readyForInput = false
+    private var intentionalClose = false
+    private var lastResize: String?
+
+    // `nonisolated(unsafe)` so the (non-isolated, Swift 6.0) deinit can tear
+    // the connection down; both are only mutated on the main actor otherwise.
+    nonisolated(unsafe) private var webSocket: URLSessionWebSocketTask?
+    nonisolated(unsafe) private var receiveTask: Task<Void, Never>?
+
+    init(client: PtyClient = .shared, attachedInstanceName: String? = nil) {
+        self.client = client
+        self.attachedInstanceName = attachedInstanceName
+    }
+
+    deinit {
+        receiveTask?.cancel()
+        webSocket?.cancel(with: .goingAway, reason: nil)
+    }
+
+    /// Creates the pty and attaches the WebSocket. No-op while attached.
+    /// After a detach (e.g. flipping to chat and back), the same pty is
+    /// re-attached and the server replays the full scrollback, restoring
+    /// the terminal screen (protocol: reconnecting to a live ptyID replays).
+    func start() async {
+        guard webSocket == nil else { return }
+        state = .connecting
+        intentionalClose = false
+        readyForInput = false
+        lastResize = nil
+        do {
+            if ptyId == nil {
+                let info = try await client.createPty(title: "iOS Terminal")
+                ptyId = info.id
+            }
+            guard let ptyId else { return }
+            let socket = try await client.connectWebSocket(ptyId: ptyId)
+            webSocket = socket
+            socket.resume()
+            startReceiveLoop(socket)
+        } catch {
+            guard !Task.isCancelled else { return }
+            state = .failed(error.localizedDescription)
+        }
+    }
+
+    /// Tears down a failed/exited session and attaches a fresh pty.
+    func retry() async {
+        stop()
+        ptyId = nil
+        await start()
+    }
+
+    /// Writes user input to the pty stdin (text frames, verbatim). Gated on
+    /// the meta frame per protocol — input is only hooked up server-side once
+    /// the replay completed, so keystrokes arriving earlier are dropped here.
+    func send(_ text: String) {
+        guard readyForInput, let webSocket else { return }
+        webSocket.send(.string(text)) { _ in }
+    }
+
+    /// Best-effort REST resize, deduped (SwiftTerm reports `sizeChanged` on
+    /// every layout pass). Failures are swallowed like the server's own
+    /// `.catch(() => undefined)` resize path.
+    func resize(cols: Int, rows: Int) {
+        guard let ptyId, cols > 0, rows > 0 else { return }
+        let key = "\(cols)x\(rows)"
+        guard key != lastResize else { return }
+        lastResize = key
+        Task { [client] in
+            try? await client.resize(id: ptyId, cols: cols, rows: rows)
+        }
+    }
+
+    /// Detaches from the pty. The pty itself keeps running server-side
+    /// (protocol doc §Close semantics) — `PtyClient.deletePty` would kill it.
+    func stop() {
+        intentionalClose = true
+        receiveTask?.cancel()
+        receiveTask = nil
+        webSocket?.cancel(with: .normalClosure, reason: nil)
+        webSocket = nil
+        onOutput = nil
+    }
+
+    private func startReceiveLoop(_ socket: URLSessionWebSocketTask) {
+        receiveTask = Task { [weak self] in
+            while !Task.isCancelled {
+                let message: URLSessionWebSocketTask.Message
+                do {
+                    message = try await socket.receive()
+                } catch {
+                    // Peer closed (pty process exited) or the socket dropped.
+                    if !Task.isCancelled {
+                        self?.connectionEnded()
+                    }
+                    return
+                }
+                guard let self else { return }
+                self.handle(message)
+            }
+        }
+    }
+
+    private func handle(_ message: URLSessionWebSocketTask.Message) {
+        switch message {
+        case .string(let text):
+            // Scrollback replay and live output are both raw UTF-8 text frames.
+            onOutput?(text)
+        case .data(let data):
+            // The only server→client binary frame is the meta frame: 0x00 +
+            // UTF-8 JSON. It must never be rendered; it marks the end of the
+            // replay. `cursor` is informational (server-side resume isn't
+            // implemented) and unknown meta keys are ignored.
+            guard data.first == 0x00 else { return }
+            readyForInput = true
+            state = .live
+        @unknown default:
+            break
+        }
+    }
+
+    private func connectionEnded() {
+        guard !intentionalClose else { return }
+        // A closed socket mid-replay means the attach failed; after the meta
+        // frame it means the pty's process exited (protocol doc §Close).
+        state = readyForInput ? .exited : .failed("Connection closed by the server.")
+    }
+}
