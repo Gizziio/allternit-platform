@@ -144,6 +144,35 @@ final class VoiceModeViewModel: ObservableObject {
         }
     }
 
+    /// True while a tap on the reply area interrupts (thinking/speaking).
+    var canInterrupt: Bool {
+        state == .thinking || state == .speaking
+    }
+
+    /// Tap-to-interrupt — neither Claude's nor OpenAI's voice mode has
+    /// barge-in, so this puts us ahead: speaking stops the TTS playback,
+    /// thinking aborts the stream (the partial reply stays in the feed);
+    /// either way the next turn starts (hands-free re-listens, PTT idles).
+    func interrupt() {
+        guard isActive else { return }
+        switch state {
+        case .speaking:
+            let generator = UIImpactFeedbackGenerator(style: .medium)
+            generator.impactOccurred()
+            speaker?.stop()
+            replyMessageId = nil
+            advanceAfterSpeech()
+        case .thinking:
+            let generator = UIImpactFeedbackGenerator(style: .medium)
+            generator.impactOccurred()
+            chatViewModel.stopStreaming()
+            replyMessageId = nil
+            advanceAfterSpeech()
+        case .idle, .listening:
+            break
+        }
+    }
+
     /// Push-to-talk: the mic button's hold gesture began.
     func pressBegan() {
         guard isActive, interactionMode == .pushToTalk, !isMuted else { return }

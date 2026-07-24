@@ -44,7 +44,8 @@ struct HistorySidebarView: View {
             .padding(.bottom, 12)
 
             // Tab list as labeled nav rows (icon + text, full-width tap
-            // target): Chats / Projects / Artifacts Library / Code / ACI.
+            // target): Chats / Projects / Artifacts Library / Agents /
+            // Code / ACI.
             // The active tab is shown by highlight only — no chevrons or
             // other trailing accessories on these rows.
             VStack(spacing: 2) {

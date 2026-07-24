@@ -4,10 +4,10 @@ import SwiftUI
 
 /// Top-level tab host: a per-tab content area, no persistent bottom bar —
 /// neither ChatGPT nor Claude's iOS apps put a surface switcher there, so
-/// the [Chats | Projects | Artifacts Library | Code | ACI] tab list lives in
-/// the sidebar header instead (HistorySidebarView). Cowork is NOT a tab
-/// destination; it's a composer-level toggle inside Chats (BottomDock.tsx
-/// ChatCoworkToggle).
+/// the [Chats | Projects | Artifacts Library | Agents | Code | ACI] tab
+/// list lives in the sidebar header instead (HistorySidebarView). Cowork is
+/// NOT a tab destination; it's a composer-level toggle inside Chats
+/// (BottomDock.tsx ChatCoworkToggle).
 struct MainWorkspaceView: View {
     @EnvironmentObject private var modeStore: AppModeStore
     @State private var isSidebarOpen = false
@@ -71,10 +71,12 @@ struct MainWorkspaceView: View {
                             )
                         case .artifacts:
                             ArtifactsLibraryView(isSidebarOpen: $isSidebarOpen)
+                        case .agents:
+                            AgentHubView(isSidebarOpen: $isSidebarOpen)
                         case .code:
                             CodeModeView(isSidebarOpen: $isSidebarOpen, selectedSessionId: $selectedSessionId)
                         case .aci:
-                            ACITabView(isSidebarOpen: $isSidebarOpen)
+                            ACITabView(isSidebarOpen: $isSidebarOpen, selectedSessionId: $selectedSessionId)
                         }
                     }
                 // Opaque backdrop for the whole pane, bleeding edge-to-edge
@@ -119,6 +121,9 @@ struct MainWorkspaceView: View {
             // Usage meter (Phase 5): one fetch per launch; streams refresh
             // it on completion (ChatViewModel.finishStreaming).
             UsageStore.shared.fetchUsageIfNeeded()
+            // Response-style preferences: loaded here so the very first
+            // send can already inject the directive (plan Phase 6).
+            PreferencesStore.shared.fetchIfNeeded()
             if CommandLine.arguments.contains("-sidebar") {
                 isSidebarOpen = true
             }
@@ -137,6 +142,11 @@ struct MainWorkspaceView: View {
             }
             if CommandLine.arguments.contains("-open-artifacts") {
                 modeStore.selectBarItem(.artifacts)
+            }
+            // `-open-agent-hub` (DEBUG only): land on the Agents tab
+            // directly (no tap injection in simctl).
+            if CommandLine.arguments.contains("-open-agent-hub") {
+                modeStore.selectBarItem(.agents)
             }
             // `-open-code-filter` (DEBUG only): land on the Code tab —
             // CodeModeView presents the Phase-8 status filter sheet itself.
@@ -428,6 +438,15 @@ struct ChatContentView: View {
         )
     }
 
+    /// Model for the next send: the user's manual picker choice always
+    /// wins; a selected agent defers to the SERVER (the bridge applies the
+    /// agent's own model when runtimeModelId is absent); otherwise the
+    /// persisted/auto-selected model goes out as before.
+    private var modelForSend: String? {
+        if modelStore.didManuallySelectModel { return modelStore.selectedModelId }
+        return sessionContext.agentId == nil ? modelStore.selectedModelId : nil
+    }
+
     private var agentOn: Bool { agentModeStore.isAgentEnabled(for: modeStore.mode) }
 
     /// Code threads render as a terminal session (dark, monospace, `❯`
@@ -649,9 +668,9 @@ struct ChatContentView: View {
                 onSend: { attachments in
                     if let editingMessageId {
                         self.editingMessageId = nil
-                        viewModel.resendEditedMessage(editingMessageId, newText: inputText, attachments: attachments, runtimeModelId: modelStore.selectedModelId, effort: modelStore.effortForSend)
+                        viewModel.resendEditedMessage(editingMessageId, newText: inputText, attachments: attachments, runtimeModelId: modelForSend, effort: modelStore.effortForSend)
                     } else {
-                        viewModel.sendMessage(inputText, attachments: attachments, runtimeModelId: modelStore.selectedModelId, effort: modelStore.effortForSend)
+                        viewModel.sendMessage(inputText, attachments: attachments, runtimeModelId: modelForSend, effort: modelStore.effortForSend)
                     }
                     inputText = ""
                 },
@@ -744,7 +763,7 @@ struct ChatContentView: View {
             // (overridable the same way: `-allternit-runtime-model-id <id>`).
             if let text = UserDefaults.standard.string(forKey: "autosend"),
                sessionId == nil, viewModel.messages.isEmpty {
-                viewModel.sendMessage(text, attachments: attachmentStore.attachments, runtimeModelId: modelStore.selectedModelId, effort: modelStore.effortForSend)
+                viewModel.sendMessage(text, attachments: attachmentStore.attachments, runtimeModelId: modelForSend, effort: modelStore.effortForSend)
                 attachmentStore.clear()
             }
             #endif
@@ -931,6 +950,17 @@ struct ComposerView: View {
                     .transition(.move(edge: .bottom).combined(with: .opacity))
             }
 
+            // Agent-mode top deck — the agent selector (the platform's
+            // Agent Hub), tucked behind the card's top edge like the
+            // cowork deck. Code mode never shows it; in cowork mode the
+            // selector rides inside CoworkTopDeck instead, so agent-on
+            // cowork gets ONE deck, not two stacked trays.
+            if agentUI, mode != .cowork {
+                AgentTopDeck()
+                    .zIndex(0)
+                    .transition(.move(edge: .bottom).combined(with: .opacity))
+            }
+
             composerCard
                 .zIndex(1)
 
@@ -1033,7 +1063,13 @@ struct ComposerView: View {
         .onChange(of: agentOn) { _, on in
             // The agent selector lists the registry on first use (the web
             // fetches when agent mode activates, ChatComposer.tsx:779-800).
-            if on { agentModeStore.fetchAgentsIfNeeded() }
+            if on {
+                agentModeStore.fetchAgentsIfNeeded()
+            } else {
+                // Agent off: the composer goes back to default — any
+                // mode-injected starter text leaves with the chip.
+                inputText = ""
+            }
         }
         .onChange(of: dictation.transcript) { _, transcript in
             // Live partials replace the tail of the field; the base keeps
@@ -1080,7 +1116,7 @@ struct ComposerView: View {
                     Text("❯")
                         .font(.system(size: 15, weight: .semibold, design: .monospaced))
                         .foregroundColor(Theme.accentCode)
-                        .padding(.top, 9) // align with the editor's first line
+                        .padding(.top, 8) // align with the editor's first line
                 }
 
                 ComposerTextView(
@@ -1151,21 +1187,36 @@ struct ComposerView: View {
 
                 if isStreaming {
                     Button(action: onStop) {
-                        Image(systemName: "stop.fill")
-                            .font(.system(size: 13))
-                            .foregroundColor(.black)
-                            .frame(width: 32, height: 32)
-                            .background(isTerminal ? Theme.accentCode : Color("AccentPrimary"))
-                            .clipShape(Circle())
+                        if isTerminal {
+                            Image(systemName: "xmark")
+                                .font(.system(size: 15, weight: .bold))
+                                .foregroundColor(Theme.accentCode)
+                                .frame(width: 32, height: 32)
+                        } else {
+                            Image(systemName: "stop.fill")
+                                .font(.system(size: 13))
+                                .foregroundColor(.black)
+                                .frame(width: 32, height: 32)
+                                .background(Color("AccentPrimary"))
+                                .clipShape(Circle())
+                        }
                     }
                 } else if canSend {
                     Button(action: sendTapped) {
-                        Image(systemName: "arrow.up")
-                            .font(.system(size: 14, weight: .semibold))
-                            .foregroundColor(.black)
-                            .frame(width: 32, height: 32)
-                            .background(isTerminal ? Theme.accentCode : Color("AccentPrimary"))
-                            .clipShape(Circle())
+                        if isTerminal {
+                            // Terminal send: a return key, not a chat bubble arrow.
+                            Image(systemName: "return")
+                                .font(.system(size: 15, weight: .bold))
+                                .foregroundColor(Theme.accentCode)
+                                .frame(width: 32, height: 32)
+                        } else {
+                            Image(systemName: "arrow.up")
+                                .font(.system(size: 14, weight: .semibold))
+                                .foregroundColor(.black)
+                                .frame(width: 32, height: 32)
+                                .background(Color("AccentPrimary"))
+                                .clipShape(Circle())
+                        }
                     }
                 }
             }
@@ -1403,6 +1454,10 @@ private struct ComposerTextView: UIViewRepresentable {
         textView.textColor = uiTextColor
         textView.backgroundColor = .clear
         textView.textContainerInset = UIEdgeInsets(top: 8, left: 5, bottom: 8, right: 5)
+        // Kill the 5pt fragment padding so typed text and the caret start at
+        // exactly the placeholder's x — otherwise the caret lands on top of
+        // the placeholder's first glyphs.
+        textView.textContainer.lineFragmentPadding = 0
         textView.autocapitalizationType = terminal ? .none : .sentences
         textView.autocorrectionType = terminal ? .no : .default
         textView.returnKeyType = .default
@@ -1440,6 +1495,14 @@ private struct ComposerTextView: UIViewRepresentable {
             applyContent(to: textView, coordinator: context.coordinator, moveCursorToEnd: true)
         }
         context.coordinator.updatePlaceholder(textView)
+        #if DEBUG
+        // `-focus-composer` (DEBUG only): focus the editor on launch so the
+        // caret's alignment can be screenshot-verified (no tap injection in
+        // simctl).
+        if CommandLine.arguments.contains("-focus-composer"), !textView.isFirstResponder {
+            DispatchQueue.main.async { textView.becomeFirstResponder() }
+        }
+        #endif
     }
 
     func sizeThatFits(_ proposal: ProposedViewSize, uiView: UITextView, context: Context) -> CGSize? {
@@ -1456,7 +1519,7 @@ private struct ComposerTextView: UIViewRepresentable {
     private func applyContent(to textView: UITextView, coordinator: Coordinator, moveCursorToEnd: Bool) {
         let composed = NSMutableAttributedString()
         if let mention {
-            composed.append(Self.mentionChunk(for: mention))
+            composed.append(Self.mentionChunk(for: mention, font: uiFont))
             coordinator.prefixLength = composed.length // attachment char + space
         } else {
             coordinator.prefixLength = 0
@@ -1476,25 +1539,30 @@ private struct ComposerTextView: UIViewRepresentable {
         ])
     }
 
-    fileprivate static func mentionChunk(for tile: AgentModeTile) -> NSAttributedString {
+    fileprivate static func mentionChunk(for tile: AgentModeTile, font: UIFont) -> NSAttributedString {
         let image = chipImage(for: tile)
         let attachment = NSTextAttachment()
         attachment.image = image
-        attachment.bounds = CGRect(x: 0, y: -4.5, width: image.size.width, height: image.size.height)
+        // Vertically center the chip on the font's cap-height band so the
+        // text baseline — and the caret — stay exactly where an un-chipped
+        // line puts them.
+        let y = (font.capHeight - image.size.height) / 2
+        attachment.bounds = CGRect(x: 0, y: y, width: image.size.width, height: image.size.height)
         let chunk = NSMutableAttributedString(attachment: attachment)
         chunk.append(NSAttributedString(string: " ", attributes: [
-            .font: UIFont.preferredFont(forTextStyle: .body),
+            .font: font,
         ]))
         return chunk
     }
 
     /// Icon-only circular token, tile-colored — rendered as an image so it
-    /// can sit inside the text like a real mention chip.
+    /// can sit inside the text like a real mention chip. Sized to sit inside
+    /// a normal text line without inflating it.
     private static func chipImage(for tile: AgentModeTile) -> UIImage {
         let color = UIColor(tile.color)
-        let side: CGFloat = 21
+        let side: CGFloat = 18
         let icon = UIImage(systemName: tile.icon, withConfiguration:
-            UIImage.SymbolConfiguration(pointSize: 10.5, weight: .semibold))?
+            UIImage.SymbolConfiguration(pointSize: 9, weight: .semibold))?
             .withTintColor(color, renderingMode: .alwaysOriginal)
         return UIGraphicsImageRenderer(size: CGSize(width: side, height: side)).image { _ in
             let rect = CGRect(origin: .zero, size: CGSize(width: side, height: side))
@@ -1533,7 +1601,7 @@ private struct ComposerTextView: UIViewRepresentable {
         func updatePlaceholder(_ textView: UITextView) {
             placeholderLabel.isHidden = !rawText(in: textView).isEmpty
             // Keep the placeholder clear of the chip when one is present.
-            placeholderLeading?.constant = 5 + (mention != nil ? 25 : 0)
+            placeholderLeading?.constant = 5 + (mention != nil ? 23 : 0)
         }
 
         func textViewDidChange(_ textView: UITextView) {
@@ -1553,7 +1621,7 @@ private struct ComposerTextView: UIViewRepresentable {
 
             let composed = NSMutableAttributedString()
             if let mention {
-                composed.append(ComposerTextView.mentionChunk(for: mention))
+                composed.append(ComposerTextView.mentionChunk(for: mention, font: parent.uiFont))
             }
             composed.append(ComposerTextView.bodyChunk(newRaw, font: parent.uiFont, color: parent.uiTextColor))
             textView.attributedText = composed
@@ -1572,24 +1640,100 @@ private struct ComposerTextView: UIViewRepresentable {
     }
 }
 
+// MARK: - Deck pill chrome
+
+/// Shared deck-pill chrome (project / permission / agent selectors): a
+/// compact capsule so the tray stays a sliver above the composer card.
+private func deckPill(icon: String, iconColor: Color, text: String) -> some View {
+    HStack(spacing: 4) {
+        Image(systemName: icon)
+            .font(.system(size: 9, weight: .semibold))
+            .foregroundColor(iconColor)
+        Text(text)
+            .font(.system(size: 10, weight: .semibold))
+            .foregroundColor(Color("TextSecondary"))
+            .lineLimit(1)
+            .frame(maxWidth: 88)
+        Image(systemName: "chevron.down")
+            .font(.system(size: 7, weight: .bold))
+            .foregroundColor(Color("TextSecondary"))
+            .opacity(0.7)
+    }
+    .padding(.horizontal, 7)
+    .frame(height: 22)
+    .background(Color("BgSecondary"))
+    .clipShape(Capsule())
+    .overlay(Capsule().stroke(Theme.borderWarmDefault, lineWidth: 1))
+}
+
+// MARK: - Agent selection menu
+
+/// The platform's Agent Hub as a deck pill (AgentSelectorDropdown): taps
+/// open `AgentSelectionSheet`, the quick-switcher listing the registry
+/// agents valid for this surface; the selection rides on the next session
+/// create as `agent_id`/`agent_name` (ChatContentView.sessionContext) and
+/// its persona/model are injected at send time (ChatViewModel
+/// composedSystemPrompt). Shared by AgentTopDeck (chat) and CoworkTopDeck
+/// (cowork), so agent-on never needs a second tray.
+private struct AgentSelectionMenu: View {
+    @EnvironmentObject private var modeStore: AppModeStore
+    @EnvironmentObject private var agentModeStore: AgentModeStore
+    @State private var isSheetPresented = false
+
+    private var surface: AppMode { modeStore.mode }
+
+    var body: some View {
+        Button(action: { isSheetPresented = true }) {
+            deckPill(
+                icon: "cpu",
+                iconColor: Color("AccentPrimary"),
+                text: agentModeStore.selectedAgent(for: surface)?.name ?? "Default agent"
+            )
+        }
+        .buttonStyle(.plain)
+        .sheet(isPresented: $isSheetPresented) {
+            AgentSelectionSheet()
+        }
+        .onAppear {
+            #if DEBUG
+            // `-open-agent-sheet` (DEBUG only): open the picker on launch
+            // for screenshot verification (no tap injection in simctl).
+            if CommandLine.arguments.contains("-open-agent-sheet") {
+                isSheetPresented = true
+            }
+            #endif
+        }
+    }
+}
+
 // MARK: - Cowork top deck
 
 /// Cowork tray tucked behind the composer card's TOP edge
 /// (CoworkTopDeck.tsx): 56pt total with the bottom 12pt hidden under the
 /// card, rounded top corners, holding the Project and Permissions dropdown
-/// pills. Backing state: ProjectStore (project) + AgentModeStore
-/// (coworkPermission), both persisted.
+/// pills — plus the Agent selector when agent mode is on (one deck, not
+/// two stacked trays). Backing state: ProjectStore (project) +
+/// AgentModeStore (coworkPermission, agent selection), all persisted.
 struct CoworkTopDeck: View {
+    @EnvironmentObject private var modeStore: AppModeStore
     @EnvironmentObject private var agentModeStore: AgentModeStore
     @StateObject private var projectStore = ProjectStore.shared
 
+    private var agentOn: Bool { agentModeStore.isAgentEnabled(for: modeStore.mode) }
+
     var body: some View {
-        HStack(spacing: 10) {
+        HStack(spacing: 8) {
             projectMenu
             permissionMenu
+            if agentOn {
+                AgentSelectionMenu()
+            }
             Spacer()
         }
-        .padding(.horizontal, 16)
+        .padding(.horizontal, 12)
+        // Keep the pills clear of the Gizzi mascot perched on the card's
+        // top-right corner when agent mode is on (mascot spans ~48pt).
+        .padding(.trailing, agentOn ? 60 : 0)
         .padding(.bottom, 12) // tucked portion hidden under the card
         .frame(height: 56)
         .frame(maxWidth: .infinity, alignment: .leading)
@@ -1602,7 +1746,10 @@ struct CoworkTopDeck: View {
                 .stroke(Theme.borderWarmDefault, lineWidth: 1)
         )
         .padding(.bottom, -12) // the card overlaps the deck's bottom
-        .onAppear { projectStore.fetchProjectsIfNeeded() }
+        .onAppear {
+            projectStore.fetchProjectsIfNeeded()
+            if agentOn { agentModeStore.fetchAgentsIfNeeded() }
+        }
     }
 
     private var projectMenu: some View {
@@ -1655,30 +1802,38 @@ struct CoworkTopDeck: View {
         }
     }
 
-    private func deckPill(icon: String, iconColor: Color, text: String) -> some View {
-        HStack(spacing: 5) {
-            Image(systemName: icon)
-                .font(.system(size: 11, weight: .semibold))
-                .foregroundColor(iconColor)
-            Text(text)
-                .font(.system(size: 11, weight: .semibold))
-                .foregroundColor(Color("TextSecondary"))
-                .lineLimit(1)
-                .frame(maxWidth: 120)
-            Image(systemName: "chevron.down")
-                .font(.system(size: 8, weight: .bold))
-                .foregroundColor(Color("TextSecondary"))
-                .opacity(0.7)
-        }
-        .padding(.horizontal, 9)
-        .frame(height: 26)
-        .background(Color("BgSecondary"))
-        .clipShape(Capsule())
-        .overlay(Capsule().stroke(Theme.borderWarmDefault, lineWidth: 1))
-    }
 }
 
 // MARK: - Agent-mode top deck
+
+/// Agent-on tray tucked behind the composer card's TOP edge (same tuck as
+/// CoworkTopDeck): the agent selector — the platform's Agent Hub
+/// (AgentSelectorDropdown). Chat surface only; in cowork the selector
+/// rides inside CoworkTopDeck.
+struct AgentTopDeck: View {
+    @EnvironmentObject private var agentModeStore: AgentModeStore
+
+    var body: some View {
+        HStack(spacing: 8) {
+            AgentSelectionMenu()
+            Spacer()
+        }
+        .padding(.horizontal, 12)
+        .padding(.bottom, 12) // tucked portion hidden under the card
+        .frame(height: 56)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(Color("BgPanel"))
+        .clipShape(
+            UnevenRoundedRectangle(topLeadingRadius: Theme.radiusLG, topTrailingRadius: Theme.radiusLG)
+        )
+        .overlay(
+            UnevenRoundedRectangle(topLeadingRadius: Theme.radiusLG, topTrailingRadius: Theme.radiusLG)
+                .stroke(Theme.borderWarmDefault, lineWidth: 1)
+        )
+        .padding(.bottom, -12) // the card overlaps the deck's bottom
+        .onAppear { agentModeStore.fetchAgentsIfNeeded() }
+    }
+}
 
 // MARK: - Agent-mode bottom deck
 
@@ -1722,18 +1877,21 @@ struct AgentModeBottomDeck: View {
         .animation(DeckMotion.animation, value: expanded)
     }
 
-    /// Expanded: every visible tile in a 3-column grid — all modes on
-    /// screen at once, no scrolling required.
+    /// Expanded: one row of 3 tiles at a time — the rest of the 3-column
+    /// grid scrolls vertically (a sliver of the next row hints at it).
     private var expandedTiles: some View {
-        LazyVGrid(
-            columns: Array(repeating: GridItem(.flexible(), spacing: 8), count: 3),
-            spacing: 8
-        ) {
-            ForEach(AgentModeTile.visibleTiles(for: surface), id: \.self) { tile in
-                tileButton(tile)
+        ScrollView(.vertical, showsIndicators: false) {
+            LazyVGrid(
+                columns: Array(repeating: GridItem(.flexible(), spacing: 8), count: 3),
+                spacing: 8
+            ) {
+                ForEach(AgentModeTile.visibleTiles(for: surface), id: \.self) { tile in
+                    tileButton(tile)
+                }
             }
+            .padding(.horizontal, 12)
         }
-        .padding(.horizontal, 12)
+        .frame(height: 72) // one row (58) + a peek at the next
         .padding(.top, 16) // tucked portion hidden under the card
         .padding(.bottom, 10)
     }
@@ -2005,15 +2163,16 @@ struct TransientErrorBanner: View {
 
 // MARK: - Terminal session (code threads)
 
-/// Terminal-styled feed row for code threads: `❯` prompt line for the user,
-/// plain monospace output for the assistant, a blinking block cursor on the
-/// streaming tail. No bubbles — a terminal session, not a chat.
+/// Terminal-styled feed row for code threads: `❯` prompt line for the user;
+/// for the assistant a dim thought stream (`✻ thinking`), `$`-prefixed
+/// tool-call status lines, then the streamed output with a blinking block
+/// cursor on the tail. No bubbles — a terminal session, not a chat.
 private struct TerminalMessageRow: View {
     let message: MessageRecord
     let isStreamingTail: Bool
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 4) {
+        VStack(alignment: .leading, spacing: 6) {
             if message.role == "user" {
                 HStack(alignment: .top, spacing: 8) {
                     Text("❯")
@@ -2022,6 +2181,33 @@ private struct TerminalMessageRow: View {
                         .foregroundColor(TerminalTheme.text)
                 }
             } else {
+                // Thought stream — the agent's reasoning, dimmed like
+                // commented terminal output.
+                if !message.reasoning.isEmpty {
+                    VStack(alignment: .leading, spacing: 3) {
+                        Text("✻ thinking")
+                            .foregroundColor(TerminalTheme.dim)
+                        Text(message.reasoning)
+                            .font(.system(size: 12, design: .monospaced))
+                            .foregroundColor(TerminalTheme.dim)
+                    }
+                }
+
+                // Tool-call status, shell-command style.
+                if let tool = message.toolStatus {
+                    HStack(spacing: 6) {
+                        Text("$")
+                            .foregroundColor(TerminalTheme.accent)
+                        Text(tool.text)
+                            .foregroundColor(TerminalTheme.text.opacity(0.85))
+                            .lineLimit(2)
+                        Spacer(minLength: 4)
+                        Text(toolGlyph(tool.state))
+                            .foregroundColor(tool.state == .failed ? .orange : TerminalTheme.accent)
+                    }
+                    .font(.system(size: 12, design: .monospaced))
+                }
+
                 if !message.content.isEmpty {
                     Text(message.content)
                         .foregroundColor(TerminalTheme.text.opacity(0.85))
@@ -2035,6 +2221,14 @@ private struct TerminalMessageRow: View {
         .textSelection(.enabled)
         .frame(maxWidth: .infinity, alignment: .leading)
         .padding(.horizontal, 16)
+    }
+
+    private func toolGlyph(_ state: MessageRecord.ToolStatus.State) -> String {
+        switch state {
+        case .running: return "…"
+        case .done: return "✓"
+        case .failed: return "✗"
+        }
     }
 }
 
@@ -2088,11 +2282,14 @@ private struct GizziMascotPill: View {
     /// Live drag translation while a finger is down.
     @GestureState private var dragOffset: CGFloat = 0
 
-    /// Farthest Gizzi may walk from center — keeps it on the composer card.
+    /// Farthest Gizzi may roam from center — keeps it on the composer card.
     private let maxWalk: CGFloat = 150
+    /// Resting perch, near the card's right corner: clear of the top-deck
+    /// pills that hug the card's leading edge when agent mode is on.
+    private let restX: CGFloat = 140
 
     private var totalOffset: CGFloat {
-        min(max(walkOffset + dragOffset, -maxWalk), maxWalk)
+        restX + min(max(walkOffset + dragOffset, -maxWalk - restX), maxWalk - restX)
     }
 
     var body: some View {
@@ -2113,7 +2310,7 @@ private struct GizziMascotPill: View {
                     }
                     .onEnded { value in
                         withAnimation(.spring(response: 0.4, dampingFraction: 0.72)) {
-                            walkOffset = min(max(walkOffset + value.translation.width, -maxWalk), maxWalk)
+                            walkOffset = min(max(walkOffset + value.translation.width, -maxWalk - restX), maxWalk - restX)
                         }
                     }
             )

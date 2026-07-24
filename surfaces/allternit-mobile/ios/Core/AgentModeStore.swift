@@ -33,7 +33,10 @@ enum CoworkPermission: String, CaseIterable, Sendable {
 /// ModeDock.tsx:63-67), agent-surface-mode.store (per-surface persistence).
 ///
 /// Also owns the agent registry fetch (`GET /api/v1/agents` — the same
-/// endpoint behind the web's AgentSelectorDropdown).
+/// endpoint behind the web's AgentSelectorDropdown). Rows are full
+/// `AgentRecord`s (shared with the Agent Hub via AgentClient), so the
+/// selection sheet and the send path can read descriptions, models, and
+/// system prompts without a second fetch.
 @MainActor
 final class AgentModeStore: ObservableObject {
     // MARK: - Persisted per-surface state
@@ -62,12 +65,12 @@ final class AgentModeStore: ObservableObject {
 
     // MARK: - Agent registry (GET /api/v1/agents)
 
-    @Published private(set) var agents: [AgentSummary] = []
+    @Published private(set) var agents: [AgentRecord] = []
     @Published private(set) var isLoadingAgents = false
     @Published private(set) var agentsError: String? = nil
 
     private let defaults: UserDefaults
-    private let chatClient: AgentChatClient
+    private let agentClient: AgentClient
     private var fetchTask: Task<Void, Never>? = nil
 
     private enum Keys {
@@ -77,9 +80,9 @@ final class AgentModeStore: ObservableObject {
         static func tile(_ mode: AppMode) -> String { "allternit-agent-tile-\(mode.rawValue)" }
     }
 
-    init(defaults: UserDefaults = .standard, chatClient: AgentChatClient = AgentChatClient()) {
+    init(defaults: UserDefaults = .standard, agentClient: AgentClient = AgentClient()) {
         self.defaults = defaults
-        self.chatClient = chatClient
+        self.agentClient = agentClient
 
         var enabled: [AppMode: Bool] = [:]
         var agentIds: [AppMode: String] = [:]
@@ -145,20 +148,20 @@ final class AgentModeStore: ObservableObject {
         agentIdByMode[mode]
     }
 
-    func selectedAgent(for mode: AppMode) -> AgentSummary? {
+    func selectedAgent(for mode: AppMode) -> AgentRecord? {
         guard let id = agentIdByMode[mode] else { return nil }
         return agents.first { $0.id == id }
     }
 
     /// nil clears the selection (the web dropdown's "clear" action — the
     /// backend then binds the session to its default agent).
-    func selectAgent(_ agent: AgentSummary?, for mode: AppMode) {
+    func selectAgent(_ agent: AgentRecord?, for mode: AppMode) {
         agentIdByMode[mode] = agent?.id
         defaults.set(agent?.id, forKey: Keys.agentId(mode))
     }
 
     /// Agents selectable on the given surface (BottomDock.tsx:231-234).
-    func agentsForSurface(_ surface: AppMode) -> [AgentSummary] {
+    func agentsForSurface(_ surface: AppMode) -> [AgentRecord] {
         agents.filter { $0.allows(surface: surface) }
     }
 
@@ -196,7 +199,7 @@ final class AgentModeStore: ObservableObject {
                 self.fetchTask = nil
             }
             do {
-                self.agents = try await self.chatClient.listAgents()
+                self.agents = try await self.agentClient.listAgents()
             } catch is CancellationError {
                 // View went away mid-flight — keep current state.
             } catch {

@@ -47,9 +47,15 @@ final class AgentChatClient: @unchecked Sendable {
 
     /// Body of `POST /api/agent-chat` (native-agent-api.ts:643-648). The web
     /// also splats an `agentContext` (agentId/systemPrompt/…) into the body —
-    /// desktop-agent-only; mobile chat sends none. `runtimeModelId` is a
-    /// catalog id ("provider/model", RuntimeModel.id); nil lets the backend
-    /// fall back to its configured default model (v1_routes.rs:182-200).
+    /// desktop-agent-only; mobile chat sends just `agentId`: the bridge
+    /// resolves the agent's persona, workspace files (SOUL.md/STYLE.md),
+    /// and the caller's response-style preferences SERVER-SIDE and wraps
+    /// them as `<system-instructions>` (v1_routes.rs agent_chat_bridge).
+    /// `systemPrompt` stays accepted for parity with the web (appended
+    /// last by the bridge) but mobile sends none. `runtimeModelId` is a
+    /// catalog id ("provider/model", RuntimeModel.id); nil lets the bridge
+    /// fall back to the agent's own model, then the configured default
+    /// (v1_routes.rs:182-200).
     /// `effort` ("low"|"medium"|"high") rides along for reasoning-capable
     /// models; the bridge forwards it to the runtime, which ignores it for
     /// models without reasoning. `attachments` are composer-staged files
@@ -60,6 +66,8 @@ final class AgentChatClient: @unchecked Sendable {
     private struct AgentChatRequest: Encodable {
         let chatId: String
         let message: String
+        let agentId: String?
+        let systemPrompt: String?
         let runtimeModelId: String?
         let effort: String?
         let attachments: [AttachmentRef]?
@@ -183,7 +191,7 @@ final class AgentChatClient: @unchecked Sendable {
     /// (`finish` / `done` / `[DONE]`), when the connection ends, or when the
     /// consuming task is cancelled; per-frame decode failures are skipped
     /// (the web parser logs and continues on malformed frames).
-    func sendMessageStream(sessionId: String, text: String, runtimeModelId: String? = nil, effort: String? = nil, attachments: [AttachmentRef]? = nil, tools: ToolOptions? = nil) -> AsyncThrowingStream<AgentChatEvent, Error> {
+    func sendMessageStream(sessionId: String, text: String, agentId: String? = nil, systemPrompt: String? = nil, runtimeModelId: String? = nil, effort: String? = nil, attachments: [AttachmentRef]? = nil, tools: ToolOptions? = nil) -> AsyncThrowingStream<AgentChatEvent, Error> {
         AsyncThrowingStream { continuation in
             let task = Task {
                 do {
@@ -196,6 +204,8 @@ final class AgentChatClient: @unchecked Sendable {
                         AgentChatRequest(
                             chatId: sessionId,
                             message: text,
+                            agentId: agentId,
+                            systemPrompt: systemPrompt,
                             runtimeModelId: runtimeModelId,
                             effort: effort,
                             attachments: attachments,

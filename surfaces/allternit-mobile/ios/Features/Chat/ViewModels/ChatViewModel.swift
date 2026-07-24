@@ -45,7 +45,11 @@ struct SessionContext: Equatable, Sendable {
     var originSurface: String = "chat"
     /// "regular" | "agent" — "agent" when the agent pill is on.
     var sessionMode: String = "regular"
-    /// Selected registry agent (nil = backend default agent).
+    /// Selected registry agent (nil = backend default agent). Also sent on
+    /// the agent-chat body: the bridge composes the persona, workspace
+    /// files (SOUL.md/STYLE.md), and response-style preferences
+    /// SERVER-SIDE from it (v1_routes.rs agent_chat_bridge) — clients
+    /// never inject prompts themselves.
     var agentId: String? = nil
     var agentName: String? = nil
     /// Selected bottom-deck tile, sent as `metadata.agentModeId`.
@@ -394,9 +398,12 @@ final class ChatViewModel: ObservableObject {    @Published var messages: [Messa
                 let sessionId = try await self.ensureSessionId()
                 self.isCreatingSession = false
                 // POST /api/agent-chat — the response body IS the frame stream.
+                // agentId rides along so the bridge composes persona +
+                // workspace files + response-style prefs server-side.
                 for try await event in self.chatClient.sendMessageStream(
                     sessionId: sessionId,
                     text: trimmed,
+                    agentId: self.sessionContext.agentId,
                     runtimeModelId: runtimeModelId,
                     effort: effort,
                     attachments: attachmentRefs.isEmpty ? nil : attachmentRefs,

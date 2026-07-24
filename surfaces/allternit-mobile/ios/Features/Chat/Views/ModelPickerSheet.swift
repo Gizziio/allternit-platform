@@ -21,7 +21,7 @@ struct ModelPickerSheet: View {
                         supportsEffort: false,
                         isSelected: modelStore.selectedModelId == nil
                     ) {
-                        modelStore.selectedModelId = nil
+                        modelStore.userSelectedModel(nil)
                         dismiss()
                     }
 
@@ -144,7 +144,7 @@ struct ModelPickerSheet: View {
             supportsEffort: model.supportsEffort,
             isSelected: modelStore.selectedModelId == model.id
         ) {
-            modelStore.selectedModelId = model.id
+            modelStore.userSelectedModel(model.id)
             dismiss()
         }
     }

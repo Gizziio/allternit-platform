@@ -1,0 +1,394 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Allternit iOS — Agent Hub options</title>
+<style>
+  :root {
+    --bg: #f3ede4;
+    --phone-bg: #faf6f0;
+    --panel: #ffffff;
+    --panel-2: #f4eee5;
+    --border: #e6dcc9;
+    --text: #2b251f;
+    --text-2: #8a7d6d;
+    --accent: #c4632c;
+    --accent-soft: rgba(196, 99, 44, .12);
+    --code-green: #3d7a52;
+    --radius: 18px;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    background: var(--bg);
+    font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Helvetica Neue", sans-serif;
+    color: var(--text);
+    padding: 48px 24px 96px;
+  }
+  .page-head { max-width: 1240px; margin: 0 auto 40px; }
+  .page-head h1 { font-family: Georgia, "Times New Roman", serif; font-size: 34px; font-weight: 600; letter-spacing: -.5px; }
+  .page-head p { margin-top: 10px; color: var(--text-2); font-size: 15px; max-width: 720px; line-height: 1.5; }
+  .options { display: flex; gap: 40px; justify-content: center; flex-wrap: wrap; max-width: 1400px; margin: 0 auto; }
+  .option { flex: 1 1 560px; max-width: 640px; }
+  .option-tag {
+    display: inline-block; font-size: 11px; font-weight: 700; letter-spacing: 1.2px;
+    text-transform: uppercase; color: var(--accent); background: var(--accent-soft);
+    padding: 5px 12px; border-radius: 999px; margin-bottom: 10px;
+  }
+  .option h2 { font-family: Georgia, serif; font-size: 24px; font-weight: 600; margin-bottom: 6px; }
+  .option .desc { color: var(--text-2); font-size: 14px; line-height: 1.5; margin-bottom: 20px; }
+  .frames { display: flex; gap: 20px; flex-wrap: wrap; }
+
+  /* iPhone frame */
+  .phone {
+    width: 300px; height: 620px; background: var(--phone-bg);
+    border: 3px solid #1d1a16; border-radius: 44px; overflow: hidden;
+    position: relative; flex-shrink: 0; box-shadow: 0 18px 40px rgba(43,37,31,.18);
+  }
+  .notch { position: absolute; top: 10px; left: 50%; transform: translateX(-50%); width: 90px; height: 24px; background: #1d1a16; border-radius: 14px; z-index: 30; }
+  .screen { position: absolute; inset: 0; padding-top: 44px; display: flex; flex-direction: column; }
+  .frame-label { text-align: center; font-size: 12px; color: var(--text-2); margin-top: 10px; font-weight: 600; }
+
+  /* Nav bar */
+  .navbar { display: flex; align-items: center; justify-content: space-between; padding: 8px 18px 12px; }
+  .navbar .title { font-family: Georgia, serif; font-size: 21px; font-weight: 600; }
+  .navbar .nav-btn { width: 30px; height: 30px; border-radius: 50%; background: var(--panel-2); border: 1px solid var(--border); display: flex; align-items: center; justify-content: center; font-size: 13px; color: var(--text-2); }
+  .navbar .back { color: #3b7ddb; font-size: 14px; font-weight: 500; }
+
+  .scroll { flex: 1; overflow: hidden; padding: 4px 14px; }
+  .search {
+    background: var(--panel-2); border: 1px solid var(--border); border-radius: 12px;
+    padding: 8px 12px; font-size: 13px; color: var(--text-2); margin-bottom: 14px;
+  }
+  .section-label { font-size: 11px; font-weight: 700; letter-spacing: 1px; text-transform: uppercase; color: var(--text-2); margin: 12px 4px 8px; }
+
+  /* Agent card (Option A) */
+  .agent-card {
+    background: var(--panel); border: 1px solid var(--border); border-radius: var(--radius);
+    padding: 12px; margin-bottom: 10px; display: flex; gap: 11px; align-items: flex-start;
+  }
+  .avatar { width: 40px; height: 40px; border-radius: 13px; display: flex; align-items: center; justify-content: center; font-size: 19px; flex-shrink: 0; }
+  .avatar.bot { background: #efe4d3; }
+  .avatar.research { background: #e4ecf5; }
+  .avatar.code { background: #e2efe4; }
+  .avatar.swarm { background: #f3e4f0; }
+  .agent-card .info { flex: 1; min-width: 0; }
+  .agent-card .name-row { display: flex; align-items: center; gap: 7px; }
+  .agent-card .name { font-size: 14.5px; font-weight: 600; }
+  .dot { width: 7px; height: 7px; border-radius: 50%; background: #57a86b; }
+  .dot.idle { background: #c9bda9; }
+  .agent-card .sub { font-size: 12px; color: var(--text-2); margin-top: 2px; line-height: 1.35; }
+  .model-pill {
+    display: inline-block; font-size: 10px; font-weight: 600; color: var(--text-2);
+    background: var(--panel-2); border: 1px solid var(--border); border-radius: 999px;
+    padding: 2.5px 8px; margin-top: 7px;
+  }
+  .primary-tag { display: inline-block; font-size: 9.5px; font-weight: 700; letter-spacing: .6px; color: var(--accent); background: var(--accent-soft); border-radius: 999px; padding: 2.5px 7px; margin-left: 6px; text-transform: uppercase; }
+
+  .fab {
+    position: absolute; bottom: 22px; right: 16px; height: 40px; padding: 0 16px;
+    border-radius: 999px; background: var(--accent); color: #fff; font-size: 13px; font-weight: 600;
+    display: flex; align-items: center; gap: 6px; box-shadow: 0 6px 16px rgba(196,99,44,.35); z-index: 20;
+  }
+
+  /* Detail screen rows */
+  .detail-hero { text-align: center; padding: 14px 0 10px; }
+  .detail-hero .avatar { width: 62px; height: 62px; border-radius: 20px; font-size: 30px; margin: 0 auto 8px; }
+  .detail-hero .name { font-family: Georgia, serif; font-size: 19px; font-weight: 600; }
+  .detail-hero .sub { font-size: 12px; color: var(--text-2); margin-top: 3px; }
+  .group { background: var(--panel); border: 1px solid var(--border); border-radius: 16px; overflow: hidden; margin-bottom: 12px; }
+  .row { display: flex; align-items: center; justify-content: space-between; padding: 11px 13px; font-size: 13.5px; border-bottom: 1px solid var(--panel-2); }
+  .row:last-child { border-bottom: none; }
+  .row .k { color: var(--text); }
+  .row .v { color: var(--text-2); font-size: 12.5px; display: flex; align-items: center; gap: 4px; }
+  .row .md { font-family: "SF Mono", Menlo, monospace; font-size: 11.5px; color: var(--code-green); }
+  .toggle { width: 34px; height: 20px; border-radius: 999px; background: #57a86b; position: relative; }
+  .toggle::after { content: ""; position: absolute; top: 2px; right: 2px; width: 16px; height: 16px; border-radius: 50%; background: #fff; }
+  .toggle.off { background: #d8ccba; }
+  .toggle.off::after { right: auto; left: 2px; }
+
+  /* Option B: chat + sheet */
+  .chat-body { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 10px; }
+  .chat-glyph { width: 44px; height: 44px; border-radius: 14px; background: #efe4d3; display: flex; align-items: center; justify-content: center; font-size: 22px; }
+  .chat-title { font-family: Georgia, serif; font-size: 20px; font-weight: 600; }
+  .dim { font-size: 11px; letter-spacing: 1.4px; color: var(--text-2); text-transform: uppercase; }
+  .sheet {
+    background: var(--panel); border: 1px solid var(--border); border-bottom: none;
+    border-radius: 24px 24px 0 0; padding: 10px 14px 14px; box-shadow: 0 -8px 24px rgba(43,37,31,.10);
+  }
+  .grabber { width: 36px; height: 4px; border-radius: 2px; background: #ddd2c2; margin: 0 auto 10px; }
+  .sheet-title { font-size: 12px; font-weight: 700; letter-spacing: 1px; text-transform: uppercase; color: var(--text-2); margin: 0 4px 8px; }
+  .agent-row { display: flex; align-items: center; gap: 10px; padding: 8px 6px; border-radius: 14px; cursor: pointer; }
+  .agent-row.sel { background: var(--accent-soft); }
+  .agent-row .avatar { width: 32px; height: 32px; border-radius: 10px; font-size: 15px; }
+  .agent-row .info { flex: 1; min-width: 0; }
+  .agent-row .name { font-size: 13.5px; font-weight: 600; }
+  .agent-row .sub { font-size: 11px; color: var(--text-2); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .agent-row .check { color: var(--accent); font-size: 13px; font-weight: 700; width: 16px; text-align: center; }
+  .sheet .manage { text-align: center; font-size: 12.5px; color: var(--accent); font-weight: 600; padding: 9px 0 2px; }
+
+  /* composer */
+  .composer { margin: 10px 12px 14px; background: var(--panel); border: 1px solid var(--border); border-radius: 20px; padding: 10px 12px; }
+  .composer .input { font-size: 13.5px; color: #b3a796; }
+  .composer .tools { display: flex; align-items: center; gap: 12px; margin-top: 9px; color: var(--text-2); font-size: 14px; }
+  .composer .tools .spacer { flex: 1; }
+  .mini-pill { font-size: 10px; font-weight: 600; color: var(--text-2); background: var(--panel-2); border: 1px solid var(--border); border-radius: 999px; padding: 3px 8px; }
+
+  .verdict { margin-top: 18px; background: var(--panel); border: 1px solid var(--border); border-radius: 16px; padding: 14px 16px; font-size: 13px; line-height: 1.55; }
+  .verdict b { color: var(--accent); }
+  .verdict ul { margin: 8px 0 0 18px; color: var(--text-2); }
+  .verdict li { margin-bottom: 4px; }
+</style>
+</head>
+<body>
+<div class="page-head">
+  <h1>Agent Hub on iOS — two directions</h1>
+  <p>Both are fed by the live <code>GET /api/v1/agents</code> registry (same as the web Agent Hub). Tap the agents in the Option&nbsp;B sheet to see the selection behavior. Nothing here is final — this is purely to pick a direction.</p>
+</div>
+
+<div class="options">
+
+  <!-- ============ OPTION A ============ -->
+  <div class="option">
+    <div class="option-tag">Option A</div>
+    <h2>Full Agent Hub screen</h2>
+    <p class="desc">A dedicated tab/screen mirroring the web Agent Hub: browse every agent, see status and model, create from templates, and open a detail page to edit identity, model, and the workspace&nbsp;.md files.</p>
+    <div class="frames">
+
+      <div>
+        <div class="phone">
+          <div class="notch"></div>
+          <div class="screen">
+            <div class="navbar">
+              <span class="title">Agent Hub</span>
+              <span class="nav-btn">＋</span>
+            </div>
+            <div class="scroll">
+              <div class="search">⌕&nbsp;&nbsp;Search agents</div>
+              <div class="section-label">Your agents</div>
+
+              <div class="agent-card">
+                <div class="avatar bot">🤖</div>
+                <div class="info">
+                  <div class="name-row"><span class="name">Gizzi</span><span class="dot"></span><span class="primary-tag">Primary</span></div>
+                  <div class="sub">Companion agent — general chat, coordinates the swarm</div>
+                  <span class="model-pill">claude-sonnet-4</span>
+                </div>
+              </div>
+
+              <div class="agent-card">
+                <div class="avatar research">🔭</div>
+                <div class="info">
+                  <div class="name-row"><span class="name">Deep Research</span><span class="dot idle"></span></div>
+                  <div class="sub">Long-horizon research with cited briefs</div>
+                  <span class="model-pill">claude-opus-4</span>
+                </div>
+              </div>
+
+              <div class="agent-card">
+                <div class="avatar code">⌨️</div>
+                <div class="info">
+                  <div class="name-row"><span class="name">Code Runner</span><span class="dot"></span></div>
+                  <div class="sub">Terminal sessions, edits, and builds on this device</div>
+                  <span class="model-pill">claude-sonnet-4</span>
+                </div>
+              </div>
+
+              <div class="agent-card">
+                <div class="avatar swarm">🛰️</div>
+                <div class="info">
+                  <div class="name-row"><span class="name">Alpha Trader</span><span class="dot idle"></span></div>
+                  <div class="sub">Watches markets, drafts trade theses for review</div>
+                  <span class="model-pill">gpt-5.2</span>
+                </div>
+              </div>
+
+              <div class="section-label">Templates</div>
+              <div class="agent-card">
+                <div class="avatar bot">✨</div>
+                <div class="info">
+                  <div class="name-row"><span class="name">New from template…</span></div>
+                  <div class="sub">Researcher · Reviewer · Writer · Trader · Custom</div>
+                </div>
+              </div>
+            </div>
+            <div class="fab">＋ New agent</div>
+          </div>
+        </div>
+        <div class="frame-label">A1 — Hub list (new tab or Settings entry)</div>
+      </div>
+
+      <div>
+        <div class="phone">
+          <div class="notch"></div>
+          <div class="screen">
+            <div class="navbar">
+              <span class="back">‹ Hub</span>
+              <span class="nav-btn">⋯</span>
+            </div>
+            <div class="scroll">
+              <div class="detail-hero">
+                <div class="avatar bot">🤖</div>
+                <div class="name">Gizzi</div>
+                <div class="sub">Created Jul 12 · 48 sessions</div>
+              </div>
+
+              <div class="section-label">Identity</div>
+              <div class="group">
+                <div class="row"><span class="k">Model</span><span class="v">claude-sonnet-4 ⌄</span></div>
+                <div class="row"><span class="k">Response style</span><span class="v">Concise ⌄</span></div>
+                <div class="row"><span class="k">System prompt</span><span class="v">Edit ›</span></div>
+              </div>
+
+              <div class="section-label">Workspace files</div>
+              <div class="group">
+                <div class="row"><span class="md">SOUL.md</span><span class="v">2.1 KB ›</span></div>
+                <div class="row"><span class="md">MEMORY.md</span><span class="v">8.4 KB ›</span></div>
+                <div class="row"><span class="md">PLAYBOOK.md</span><span class="v">1.3 KB ›</span></div>
+                <div class="row"><span class="md">COGNITIVE.md</span><span class="v">3.7 KB ›</span></div>
+              </div>
+
+              <div class="section-label">Behavior</div>
+              <div class="group">
+                <div class="row"><span class="k">Ask before actions</span><span class="toggle"></span></div>
+                <div class="row"><span class="k">Active on this device</span><span class="toggle"></span></div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="frame-label">A2 — Agent detail (edit + workspace .md files)</div>
+      </div>
+
+    </div>
+    <div class="verdict">
+      <b>What you get:</b> full parity with the web Agent Hub, a home for create/edit, and the natural place where response-style + workspace .md editing lives (A2).
+      <ul>
+        <li>More screens to build: list, detail, template flow, .md editor</li>
+        <li>Needs a nav home: new tab, or a Settings row, or both</li>
+        <li>Best fit if agents are a core part of how you use the platform</li>
+      </ul>
+    </div>
+  </div>
+
+  <!-- ============ OPTION B ============ -->
+  <div class="option">
+    <div class="option-tag">Option B</div>
+    <h2>Richer composer selector</h2>
+    <p class="desc">No new screen. The pill we just added opens a proper bottom sheet: every agent with a description, model badge, and one-tap selection — right where you already start chats.</p>
+    <div class="frames">
+
+      <div>
+        <div class="phone">
+          <div class="notch"></div>
+          <div class="screen">
+            <div class="navbar">
+              <span class="nav-btn">☰</span>
+              <span class="nav-btn">✎</span>
+            </div>
+            <div class="chat-body">
+              <div class="chat-glyph">▦</div>
+              <div class="chat-title">Allternit</div>
+              <div class="dim">Coffee, code, and creativity</div>
+            </div>
+            <div class="composer">
+              <div class="input">Message Allternit…</div>
+              <div class="tools">
+                <span>＋</span><span>💬</span><span>⚙</span>
+                <span class="spacer"></span>
+                <span>🎙</span><span class="mini-pill">claude-so… ⌄</span>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="frame-label">B1 — Composer today (pill in the deck above)</div>
+      </div>
+
+      <div>
+        <div class="phone">
+          <div class="notch"></div>
+          <div class="screen">
+            <div class="navbar">
+              <span class="nav-btn">☰</span>
+              <span class="nav-btn">✎</span>
+            </div>
+            <div class="chat-body" style="justify-content:flex-start; padding-top:30px; opacity:.45;">
+              <div class="chat-glyph">▦</div>
+              <div class="chat-title">Allternit</div>
+              <div class="dim">Coffee, code, and creativity</div>
+            </div>
+            <div class="sheet" id="agentSheet">
+              <div class="grabber"></div>
+              <div class="sheet-title">Choose agent</div>
+
+              <div class="agent-row sel" onclick="pick(this)">
+                <div class="avatar bot">🤖</div>
+                <div class="info">
+                  <div class="name">Gizzi <span class="primary-tag">Primary</span></div>
+                  <div class="sub">Companion — general chat, coordinates the swarm</div>
+                </div>
+                <span class="mini-pill">sonnet-4</span>
+                <span class="check">✓</span>
+              </div>
+
+              <div class="agent-row" onclick="pick(this)">
+                <div class="avatar research">🔭</div>
+                <div class="info">
+                  <div class="name">Deep Research</div>
+                  <div class="sub">Long-horizon research with cited briefs</div>
+                </div>
+                <span class="mini-pill">opus-4</span>
+                <span class="check"></span>
+              </div>
+
+              <div class="agent-row" onclick="pick(this)">
+                <div class="avatar code">⌨️</div>
+                <div class="info">
+                  <div class="name">Code Runner</div>
+                  <div class="sub">Terminal sessions, edits, builds</div>
+                </div>
+                <span class="mini-pill">sonnet-4</span>
+                <span class="check"></span>
+              </div>
+
+              <div class="agent-row" onclick="pick(this)">
+                <div class="avatar swarm">🛰️</div>
+                <div class="info">
+                  <div class="name">Alpha Trader</div>
+                  <div class="sub">Market watcher, trade theses</div>
+                </div>
+                <span class="mini-pill">gpt-5.2</span>
+                <span class="check"></span>
+              </div>
+
+              <div class="manage">＋ New agent from template</div>
+            </div>
+          </div>
+        </div>
+        <div class="frame-label">B2 — Tap the deck pill → selection sheet (tap rows!)</div>
+      </div>
+
+    </div>
+    <div class="verdict">
+      <b>What you get:</b> fast agent switching at the point of use with descriptions and models visible — a big upgrade over the bare menu, at a fraction of the build cost.
+      <ul>
+        <li>One sheet + deck pill wiring; no new navigation</li>
+        <li>Create/edit still has no home — would link out to web or ship later</li>
+        <li>Workspace .md + response-style editing would still live in Settings</li>
+      </ul>
+    </div>
+  </div>
+
+</div>
+
+<script>
+  function pick(row) {
+    row.parentElement.querySelectorAll('.agent-row').forEach(r => {
+      r.classList.remove('sel');
+      r.querySelector('.check').textContent = '';
+    });
+    row.classList.add('sel');
+    row.querySelector('.check').textContent = '✓';
+  }
+</script>
+</body>
+</html>

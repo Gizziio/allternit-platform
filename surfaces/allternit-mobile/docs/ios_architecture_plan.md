@@ -1,6 +1,8 @@
 # Allternit iOS — Architecture & Parity Plan (v2)
 
 **Status:** SUPERSEDES the 2026-07-17 scaffolding plan. **Amended 2026-07-18 (v2.1): wire-protocol correction below takes precedence over §2.**
+**Amended 2026-07-23 (v2.2):** Agent Hub + response-style preferences are now LIVE. iOS has an Agents tab (`AgentHubView`/`AgentDetailView`, full CRUD + templates + workspace .md editor), a composer agent quick-switcher (`AgentSelectionSheet`, presented from the deck pill on chat + cowork), and a Settings → Agent section (response style + custom instructions). Backend: `GET/PUT /api/v1/agent-preferences` (V31 `user_agent_preferences`; PUT syncs a managed `STYLE.md` into each agent workspace) and `GET/PUT /agents/:id/workspace/file(s)` (read/write with path-traversal guard) in `cmd/allternit-api`.
+**Amended 2026-07-23 (v2.3):** The runtime gap is CLOSED. `POST /api/agent-chat` (`v1_routes.rs agent_chat_bridge`) now composes system instructions SERVER-SIDE for every client: `SOUL.md` → agent `system_prompt` → response-style directive → custom instructions (from `user_agent_preferences`; `STYLE.md` only as a no-prefs-row fallback since the row generates it) → client-sent `systemPrompt`, wrapped by the existing `<system-instructions>` path. Model precedence: client `runtimeModelId` > agent `provider/model` > env default. Clients send only `agentId` — no client-side prompt injection (the iOS injection added in v2.2 was removed the same day). Verified end-to-end: iOS → bridge → gizzi, agent persona + model live in the streamed reply.
 **Date:** 2026-07-18 · **Basis:** code audit of the v1 scaffold + deep research on existing open-source iOS AI apps, libraries, and the Claude iOS feature set (all verified against live sources on 2026-07-18).
 
 ---

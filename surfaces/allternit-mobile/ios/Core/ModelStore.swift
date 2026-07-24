@@ -67,6 +67,19 @@ final class ModelStore: ObservableObject {
         selectedModel?.supportsEffort == true ? selectedEffort.rawValue : nil
     }
 
+    /// True once the user picks a model in the picker this launch. Until
+    /// then a selected agent's own model may win the send (plan Phase 6.3:
+    /// a manual composer choice always overrides the agent's model). Not
+    /// persisted — every launch starts agent-deferential again.
+    @Published private(set) var didManuallySelectModel = false
+
+    /// The picker sheet's selection path — marks the choice as manual so
+    /// per-agent model defaults stop applying this launch.
+    func userSelectedModel(_ id: String?) {
+        selectedModelId = id
+        didManuallySelectModel = true
+    }
+
     /// Catalog rows grouped by provider, preserving catalog order — the
     /// selector menu renders one section per provider.
     var providers: [(provider: String, models: [RuntimeModel])] {

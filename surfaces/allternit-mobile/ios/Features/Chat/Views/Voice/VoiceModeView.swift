@@ -153,7 +153,9 @@ struct VoiceModeView: View {
     @ViewBuilder
     private var centerContent: some View {
         if !viewModel.replyText.isEmpty {
-            // Assistant reply — serif (Claude voice-mode parity).
+            // Assistant reply — serif (Claude voice-mode parity). A tap
+            // while thinking/speaking interrupts (stop TTS / abort stream);
+            // simultaneous so the reply stays scrollable.
             ScrollView {
                 Text(viewModel.replyText)
                     .font(.system(size: 22, weight: .medium, design: .serif))
@@ -164,12 +166,34 @@ struct VoiceModeView: View {
             }
             .scrollIndicators(.hidden)
             .padding(.horizontal, 8)
+            .contentShape(Rectangle())
+            .simultaneousGesture(
+                TapGesture().onEnded { viewModel.interrupt() }
+            )
         } else {
             Text(statusLabel)
                 .font(.system(size: 22, weight: .medium, design: .serif))
                 .foregroundColor(Color("TextSecondary"))
                 .multilineTextAlignment(.center)
                 .padding(.horizontal, 40)
+                .contentShape(Rectangle())
+                .onTapGesture { viewModel.interrupt() }
+        }
+
+        if viewModel.canInterrupt {
+            // Barge-in affordance — visible only while a tap would act.
+            HStack(spacing: 5) {
+                Image(systemName: "hand.tap")
+                    .font(.system(size: 10, weight: .semibold))
+                Text("Tap to interrupt")
+                    .font(.caption)
+            }
+            .foregroundColor(Color("TextSecondary"))
+            .padding(.horizontal, 12)
+            .padding(.vertical, 6)
+            .background(.ultraThinMaterial, in: Capsule())
+            .padding(.bottom, 10)
+            .transition(.opacity)
         }
     }
 

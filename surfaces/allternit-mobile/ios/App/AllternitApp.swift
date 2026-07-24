@@ -109,7 +109,16 @@ struct AllternitApp: App {
             || args.contains("-open-plus-sheet")
             || args.contains("-open-incognito")
             || args.contains("-enable-agent-mode")
+            || args.contains("-open-agent-sheet")
+            || args.contains("-open-agent-hub")
+            || args.contains("-open-agent-detail")
+            || args.contains("-open-avatar-editor")
+            || args.contains("-open-new-workspace-file")
+            || args.contains("-open-workspace-file")
+            || args.contains("-open-voice-mode")
+            || args.contains("-open-voice-settings")
             || args.contains("-open-code-thread")
+            || args.contains("-open-code-thread-id")
         #else
         false
         #endif
