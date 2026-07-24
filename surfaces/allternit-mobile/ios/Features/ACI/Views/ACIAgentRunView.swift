@@ -262,9 +262,15 @@ struct ACIAgentRunView: View {
     private var topStrip: some View {
         HStack(spacing: 8) {
             Button(action: onExit) {
-                Image(systemName: "chevron.left")
-                    .font(.system(size: 13, weight: .semibold))
+                Label("Close", systemImage: "chevron.left")
+                    .font(.system(size: 12, weight: .semibold))
                     .foregroundColor(Color("TextSecondary"))
+                    .padding(.horizontal, 8)
+                    .padding(.vertical, 4)
+                    .overlay(
+                        RoundedRectangle(cornerRadius: Theme.radiusSM)
+                            .stroke(Color("BorderSubtle"), lineWidth: 1)
+                    )
             }
             .buttonStyle(.plain)
 
@@ -332,8 +338,10 @@ struct ACIAgentRunView: View {
                     errorState(errorMessage)
                 } else if let screenshot = viewModel.screenshot {
                     screenshotContent(screenshot, in: geometry.size)
-                } else {
+                } else if isConnecting {
                     connectingState
+                } else {
+                    noVideoState
                 }
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity)
@@ -430,17 +438,76 @@ struct ACIAgentRunView: View {
         .allowsHitTesting(false)
     }
 
+    /// CONNECTING is only honest before the run's first feedback: no error,
+    /// no screenshot, no trace lines, and no status reported yet. This
+    /// backend (ACU) never streams screenshot frames, so gating on the
+    /// screenshot alone pinned the viewport here for the entire run.
+    private var isConnecting: Bool {
+        viewModel.errorMessage == nil
+            && viewModel.screenshot == nil
+            && viewModel.traceLines.isEmpty
+            && viewModel.status == .idle
+    }
+
     private var connectingState: some View {
         VStack(spacing: 16) {
-            ProgressView()
-                .controlSize(.regular)
-                .tint(Color("TextSecondary"))
-            Text("CONNECTING")
+            VStack(spacing: 16) {
+                ProgressView()
+                    .controlSize(.regular)
+                    .tint(Color("TextSecondary"))
+                Text("CONNECTING")
+                    .font(.system(size: 10, design: .monospaced))
+                    .tracking(3)
+                    .foregroundColor(Color("TextSecondary"))
+            }
+            .opacity(0.45)
+
+            closeButton
+        }
+    }
+
+    /// Shown in place of the screenshot once the run has produced feedback
+    /// or finished: ACU streams state/trace frames only (no video), so the
+    /// viewport surfaces the run's status here instead of a bare spinner.
+    private var noVideoState: some View {
+        VStack(spacing: 8) {
+            Image(systemName: "video.slash")
+                .font(.system(size: 20))
+                .foregroundColor(Color("TextSecondary"))
+            Text(noVideoLabel)
                 .font(.system(size: 10, design: .monospaced))
                 .tracking(3)
                 .foregroundColor(Color("TextSecondary"))
+            Text("This backend streams status and actions only — no screen video.")
+                .font(.system(size: 10, design: .monospaced))
+                .foregroundColor(Color("TextSecondary").opacity(0.7))
+                .multilineTextAlignment(.center)
+                .padding(.horizontal, 24)
         }
         .opacity(0.45)
+    }
+
+    private var noVideoLabel: String {
+        switch viewModel.status {
+        case .done: return "TASK COMPLETE"
+        case .blocked: return "RUN BLOCKED"
+        case .error: return "RUN ERROR"
+        default: return "NO LIVE VIDEO"
+        }
+    }
+
+    /// Secondary exit affordance for the connecting/terminal states — the
+    /// top strip's labeled Close button is the primary exit in every state.
+    private var closeButton: some View {
+        Button("Close", action: onExit)
+            .font(.system(size: 12, weight: .semibold))
+            .foregroundColor(Color("TextSecondary"))
+            .padding(.horizontal, 16)
+            .padding(.vertical, 6)
+            .overlay(
+                RoundedRectangle(cornerRadius: Theme.radiusSM)
+                    .stroke(Color("BorderSubtle"), lineWidth: 1)
+            )
     }
 
     private func errorState(_ message: String) -> some View {
@@ -452,15 +519,18 @@ struct ACIAgentRunView: View {
                 .font(.system(size: 11, design: .monospaced))
                 .foregroundColor(Color(hex: "#EF4444"))
                 .multilineTextAlignment(.center)
-            Button("Retry") { viewModel.retry() }
-                .font(.system(size: 12, weight: .semibold))
-                .foregroundColor(theme.accent)
-                .padding(.horizontal, 16)
-                .padding(.vertical, 6)
-                .overlay(
-                    RoundedRectangle(cornerRadius: Theme.radiusSM)
-                        .stroke(theme.accentGlow, lineWidth: 1)
-                )
+            HStack(spacing: 10) {
+                Button("Retry") { viewModel.retry() }
+                    .font(.system(size: 12, weight: .semibold))
+                    .foregroundColor(theme.accent)
+                    .padding(.horizontal, 16)
+                    .padding(.vertical, 6)
+                    .overlay(
+                        RoundedRectangle(cornerRadius: Theme.radiusSM)
+                            .stroke(theme.accentGlow, lineWidth: 1)
+                    )
+                closeButton
+            }
         }
         .padding(24)
     }

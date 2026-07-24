@@ -87,6 +87,7 @@ export namespace Pairing {
     | { status: "pending" }
     | { status: "denied" }
     | { status: "expired" }
+    | { status: "ratelimited"; retryAfterMs: number }
     | {
         status: "approved"
         session: {
@@ -261,6 +262,12 @@ export namespace Pairing {
     if (response.status === 428) return { status: "pending" }
     if (response.status === 410) return { status: "expired" }
     if (response.status === 403) return { status: "denied" }
+    if (response.status === 429) {
+      // The cloud API rate-limits the exchange poll (and the approval page
+      // polls the same bucket); honor retry_after instead of dying.
+      const body = (await response.json().catch(() => undefined)) as { retry_after?: number } | undefined
+      return { status: "ratelimited", retryAfterMs: Math.max(1, body?.retry_after ?? 15) * 1000 }
+    }
     if (!response.ok) {
       const body = await response.text().catch(() => "")
       throw new Error(`pairing exchange failed (${response.status}): ${body}`)
@@ -324,6 +331,10 @@ export namespace Pairing {
       const result = await exchange(stored, pairing)
       if (result.status === "pending") {
         await new Promise((resolve) => setTimeout(resolve, interval))
+        continue
+      }
+      if (result.status === "ratelimited") {
+        await new Promise((resolve) => setTimeout(resolve, result.retryAfterMs))
         continue
       }
       if (result.status === "expired") throw new Error("Pairing request expired before it was approved. Run `gizzi pair` again.")

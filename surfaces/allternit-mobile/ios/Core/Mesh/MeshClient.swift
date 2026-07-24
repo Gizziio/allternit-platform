@@ -115,7 +115,8 @@ final class MeshClient: ObservableObject {
 
     /// Brings the node up. No-op while a start is already in flight; any
     /// previous node is closed first. `authKey` is a Headscale pre-auth key
-    /// (minted manually via `fly ssh` until platform-side minting lands).
+    /// (from `startWithPlatformAuth()`'s enroll response, or a DEBUG manual
+    /// key — see `debugAuthKey`).
     func start(controlURL: String = AppConfig.meshControlURL, authKey: String) {
         guard state != .starting else { return }
 
@@ -153,6 +154,39 @@ final class MeshClient: ObservableObject {
                 try? newBox.node.close()
                 await self?.startDidFail(error.localizedDescription)
             }
+        }
+    }
+
+    /// Brings the node up with platform-minted credentials: enrolls via the
+    /// cloud API (`MeshEnrollClient` → `POST /api/v1/mesh/enroll`) and starts
+    /// with the returned control URL + pre-auth key. No key caching — enroll
+    /// mints a fresh 24h single-use key on every start (platform-side
+    /// refresh cadence is a follow-up). A DEBUG `debugAuthKey` (launch arg /
+    /// Settings row) always wins and skips enrollment entirely. Enrollment
+    /// failures land in state: 401 → sign-in required, 503
+    /// (`mesh_not_configured`) → mesh unavailable, anything else → the
+    /// error's message.
+    func startWithPlatformAuth() async {
+        if let key = Self.debugAuthKey {
+            start(authKey: key)
+            return
+        }
+        do {
+            let enrollment = try await MeshEnrollClient().enroll()
+            start(controlURL: enrollment.controlUrl, authKey: enrollment.authKey)
+        } catch let error as APIError {
+            switch error {
+            case .httpError(let statusCode, let message):
+                switch statusCode {
+                case 401: state = .failed("Sign in to use mesh")
+                case 503: state = .failed("Mesh unavailable")
+                default: state = .failed(message ?? "Enroll failed with status \(statusCode)")
+                }
+            default:
+                state = .failed(error.localizedDescription)
+            }
+        } catch {
+            state = .failed(error.localizedDescription)
         }
     }
 
@@ -300,10 +334,11 @@ final class MeshClient: ObservableObject {
     #endif
 
     /// Pre-auth key source (v1, DEBUG only): the `-mesh-auth-key <key>`
-    /// launch argument, or the hidden Settings debug row — both land in
+    /// launch argument, or the Settings debug row — both land in
     /// UserDefaults under `mesh-auth-key` (launch args sit in the arguments
     /// domain, so the flag wins when both are set). Release builds have no
-    /// key entry at all; platform-side key minting replaces this later.
+    /// key entry at all. When set, it overrides platform enrollment
+    /// (`startWithPlatformAuth`) — the debug override always wins.
     static var debugAuthKey: String? {
         #if DEBUG
         let key = UserDefaults.standard.string(forKey: "mesh-auth-key")?

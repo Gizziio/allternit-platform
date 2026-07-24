@@ -10,8 +10,13 @@ import SwiftUI
 ///     OFF it opens the entered site in the in-app browser.
 ///   - `.browser(URL)` — ACIWebBrowserView (plain in-app browsing).
 ///   - `.agent(goal)` — ACIAgentRunView (computer-use run + live viewport).
+///   - `.chat(sessionId)` — BrowserChatView: the sidebar's browser-stamped
+///     sessions opened ON this surface (the Code tab's thread pattern —
+///     before this, tapping one was a dead tap that leaked the session
+///     into the Chats tab).
 struct ACITabView: View {
     @Binding var isSidebarOpen: Bool
+    @Binding var selectedSessionId: String?
 
     private let theme = ModeTheme(mode: .browser)
 
@@ -19,16 +24,22 @@ struct ACITabView: View {
         case landing
         case browser(URL)
         case agent(String)
+        case chat(sessionId: String?)
     }
 
     @State private var destination: Destination
     @State private var input = ""
     /// Mirrors BrowserPane's agent toggle (`setAgentMode('Assist'|'Human')`).
     @State private var agentActive = false
+    /// Set when the chat's own Back clears the selection — the resulting
+    /// nil change must NOT be read as the sidebar's New-chat pill (which
+    /// starts a FRESH browser chat instead of leaving chat entirely).
+    @State private var suppressNextNilChange = false
     @FocusState private var inputFocused: Bool
 
-    init(isSidebarOpen: Binding<Bool>) {
+    init(isSidebarOpen: Binding<Bool>, selectedSessionId: Binding<String?>) {
         self._isSidebarOpen = isSidebarOpen
+        self._selectedSessionId = selectedSessionId
         if CommandLine.arguments.contains("-extension") {
             self._destination = State(initialValue: .browser(URL(string: "https://news.ycombinator.com")!))
         } else {
@@ -69,6 +80,8 @@ struct ACITabView: View {
                 .background(Color("BgPrimary"))
 
                 Divider().background(Color("BorderSubtle"))
+
+                backendIndicator
             }
 
             Group {
@@ -81,15 +94,81 @@ struct ACITabView: View {
                     })
                 case .agent(let goal):
                     ACIAgentRunView(goal: goal, onExit: backToLanding)
+                case .chat(let sessionId):
+                    BrowserChatView(sessionId: sessionId, onBack: {
+                        suppressNextNilChange = true
+                        selectedSessionId = nil
+                        backToLanding()
+                    })
                 }
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity)
             .background(Color("BgSecondary"))
         }
+        .onAppear {
+            // Landing on the tab with a browser session already selected
+            // (tapped in the sidebar before switching over).
+            if let sessionId = selectedSessionId {
+                destination = .chat(sessionId: sessionId)
+            }
+            #if DEBUG
+            // `-open-browser-chat` (DEBUG only): open a fresh browser chat
+            // for screenshot/send-path verification.
+            if CommandLine.arguments.contains("-open-browser-chat") {
+                destination = .chat(sessionId: nil)
+            }
+            #endif
+        }
+        .onChange(of: selectedSessionId) { _, newValue in
+            if let sessionId = newValue {
+                // Sidebar history tap — open the browser chat on THIS
+                // surface (was a dead tap that leaked into Chats).
+                destination = .chat(sessionId: sessionId)
+            } else if case .chat = destination {
+                if suppressNextNilChange {
+                    suppressNextNilChange = false
+                } else {
+                    // Sidebar "New chat" pill (it only nils the selection):
+                    // a fresh browser chat on this surface.
+                    destination = .chat(sessionId: nil)
+                }
+            }
+        }
+        .onDisappear {
+            // Leaving the tab: drop a chat selection so a browser-stamped
+            // session never leaks into the Chats surface.
+            if case .chat = destination {
+                suppressNextNilChange = true
+                selectedSessionId = nil
+                destination = .landing
+            }
+        }
     }
 
     private func backToLanding() {
         destination = .landing
+    }
+
+    /// Small caption naming the backend Computer Agent runs go to — full
+    /// URL in DEBUG, host-only in release (Code mode shows its environment
+    /// in the header; the ACI surface had no equivalent).
+    private var backendIndicator: some View {
+        #if DEBUG
+        let backend = AppConfig.aciBaseURL.absoluteString
+        #else
+        let backend = AppConfig.aciBaseURL.host(percentEncoded: false) ?? AppConfig.aciBaseURL.absoluteString
+        #endif
+        return HStack(spacing: 5) {
+            Image(systemName: "server.rack")
+                .font(.system(size: 9))
+            Text(backend)
+                .font(.system(size: 10, design: .monospaced))
+                .lineLimit(1)
+        }
+        .foregroundColor(Color("TextSecondary").opacity(0.6))
+        .frame(maxWidth: .infinity)
+        .padding(.vertical, 4)
+        .background(Color("BgPrimary"))
     }
 
     // MARK: - Landing

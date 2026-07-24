@@ -690,16 +690,16 @@ private struct CodeThreadChatView: View {
 
     /// Resolves the loopback base URL (`http://127.0.0.1:<port>`) for a mesh
     /// instance: with the node already up, straight to the proxy; otherwise
-    /// tries to start it with the DEBUG auth key and waits for the join
-    /// (the Go-side start blocks up to ~60s — the caller's "Connecting…"
-    /// spinner covers this). nil when the mesh can't be used: release
-    /// builds carry no key, and a failed start leaves state `.failed`.
+    /// starts it via platform enrollment (a DEBUG auth key takes precedence
+    /// inside MeshClient) and waits for the join (enroll plus the Go-side
+    /// start, which blocks up to ~60s — the caller's "Connecting…" spinner
+    /// covers this). nil when the mesh can't be used: a failed enroll or
+    /// start leaves state `.failed`.
     @MainActor
     private static func resolveMeshProxyBaseURL(for url: URL) async -> URL? {
         let mesh = MeshClient.shared
         if !mesh.state.isUp {
-            guard let authKey = MeshClient.debugAuthKey else { return nil }
-            mesh.start(authKey: authKey)
+            await mesh.startWithPlatformAuth()
             // start() is fire-and-forget; poll the published state until
             // the join settles.
             while mesh.state == .starting {

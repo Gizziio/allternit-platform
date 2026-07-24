@@ -9,5 +9,12 @@
 		     https://clerk.com/docs/ios/getting-started/quickstart -->
 		<string>webcredentials:clerk.platform.allternit.com</string>
 	</array>
+	<!-- Clerk iOS SDK persists client/session state in the keychain; without
+	     this group the writes fail with errSecMissingEntitlement (-34018) and
+	     every subsequent API call goes out unauthenticated ("signed_out" 401). -->
+	<key>keychain-access-groups</key>
+	<array>
+		<string>$(AppIdentifierPrefix)com.allternit.mobile</string>
+	</array>
 </dict>
 </plist>

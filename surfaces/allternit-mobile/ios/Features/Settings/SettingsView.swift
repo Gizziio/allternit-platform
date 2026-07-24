@@ -14,12 +14,13 @@ struct SettingsView: View {
     /// Response-style preferences (Agent section) — backed by
     /// `GET/PUT /api/v1/agent-preferences`, not UserDefaults.
     @ObservedObject private var preferences = PreferencesStore.shared
-    #if DEBUG
-    /// Embedded tsnet node state for the DEBUG-only Mesh section.
+    /// Embedded tsnet node state for the Mesh section.
     @ObservedObject private var mesh = MeshClient.shared
+    #if DEBUG
     /// Pre-auth key entry (DEBUG only) — UserDefaults `mesh-auth-key`, the
     /// same key the `-mesh-auth-key` launch argument feeds. Launch args live
     /// in the arguments domain, so the flag shadows whatever is typed here.
+    /// Overrides platform enrollment when set (MeshClient.startWithPlatformAuth).
     @AppStorage("mesh-auth-key") private var meshAuthKey = ""
     #endif
 
@@ -60,9 +61,7 @@ struct SettingsView: View {
                 memorySection
                 voiceSection
                 dataControlsSection
-                #if DEBUG
                 meshSection
-                #endif
                 aboutSection
                     // Anchor for the `-open-settings-data` DEBUG scroll.
                     .id("aboutSection")
@@ -532,20 +531,22 @@ struct SettingsView: View {
         .contentShape(Rectangle())
     }
 
-    // MARK: - Mesh (DEBUG)
+    // MARK: - Mesh
 
-    #if DEBUG
-    /// DEBUG-only mesh (tsnet) bring-up: paste a manually minted Headscale
-    /// pre-auth key, start the node, see its mesh IP. Release builds omit
-    /// this section entirely — platform-side key minting replaces the manual
-    /// entry later. Not wired into the terminal flow yet.
+    /// Mesh (tsnet) bring-up: Start enrolls via the platform
+    /// (`POST /api/v1/mesh/enroll` → fresh pre-auth key) and joins the
+    /// Headscale tailnet; enroll failures (sign-in required, mesh not
+    /// configured) surface in the Status row. The manual key field is
+    /// DEBUG-only and overrides enrollment when set.
     @ViewBuilder
     private var meshSection: some View {
         Section {
+            #if DEBUG
             SecureField("Pre-auth key (debug)", text: $meshAuthKey)
                 .font(.system(.subheadline, design: .monospaced))
                 .autocorrectionDisabled()
                 .textInputAutocapitalization(.never)
+            #endif
 
             HStack {
                 Text("Status")
@@ -582,20 +583,18 @@ struct SettingsView: View {
                 }
             } else {
                 Button(action: {
-                    mesh.start(authKey: meshAuthKey.trimmingCharacters(in: .whitespacesAndNewlines))
+                    Task { await mesh.startWithPlatformAuth() }
                 }) {
                     bulkRowLabel("Start mesh node", systemImage: "point.3.connected.trianglepath.dotted")
                 }
-                .disabled(mesh.state == .starting
-                          || meshAuthKey.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+                .disabled(mesh.state == .starting)
             }
         } header: {
-            Text("Mesh (Debug)")
+            Text("Mesh")
         } footer: {
             Text("Embedded tsnet node → \(AppConfig.meshControlURL). Same directory = same node identity across launches.")
         }
     }
-    #endif
 
     // MARK: - About
 

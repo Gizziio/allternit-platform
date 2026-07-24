@@ -1,5 +1,6 @@
 use axum::{
     body::Body,
+    extract::{Extension, State},
     http::{HeaderMap, StatusCode},
     response::{
         sse::{Event, KeepAlive, Sse},
@@ -10,12 +11,16 @@ use axum::{
 };
 use futures::StreamExt;
 use once_cell::sync::Lazy;
+use rusqlite::{params, OptionalExtension};
 use serde_json::json;
 use std::{collections::HashMap, convert::Infallible, sync::Arc, sync::Mutex};
 use tracing::{info, warn};
 use uuid::Uuid;
 
+use crate::agent_preferences_routes::chat_style_directive;
 use crate::agent_session_routes::gizzi_client;
+use crate::agent_workspace_paths::workspace_dir_for;
+use crate::auth::AuthUser;
 use crate::config::build_gizzi_harness_for_provider;
 use crate::gizzi_chat_stream::configure_harness_on_gizzi;
 use crate::{default_model, AppState};
@@ -247,15 +252,127 @@ pub fn agent_chat_router() -> Router<Arc<AppState>> {
     Router::new().route("/agent-chat", any(agent_chat_bridge))
 }
 
+/// Per-agent context loaded for server-side system-instruction composition in
+/// the agent-chat bridge.
+#[derive(Default)]
+struct AgentChatContext {
+    system_prompt: Option<String>,
+    provider: String,
+    model: String,
+    soul_md: Option<String>,
+    style_md: Option<String>,
+    instructions_md: Option<String>,
+}
+
+/// Read a workspace markdown file for composition. Missing files are normal
+/// (agents are not required to have persona files); other read failures are
+/// logged and skipped so they never fail the chat request. MEMORY.md is
+/// deliberately never read this way — too large for every send.
+fn read_workspace_md(dir: &std::path::Path, name: &str) -> Option<String> {
+    match std::fs::read_to_string(dir.join(name)) {
+        Ok(text) => Some(text),
+        Err(e) => {
+            if e.kind() != std::io::ErrorKind::NotFound {
+                warn!(
+                    "agent-chat: failed to read {}: {}",
+                    dir.join(name).display(),
+                    e
+                );
+            }
+            None
+        }
+    }
+}
+
+/// Canonical instruction files gizzi-code's context packer injects into
+/// every agent prompt (cmd/gizzi-code/src/runtime/context/pack.ts), in its
+/// exact order. The platform composer mirrors the list so a workspace's
+/// AGENTS.md/CLAUDE.md is honored on the agent-chat path too.
+const INSTRUCTION_FILES: [&str; 4] = ["AGENTS.md", "GIZZI.md", ".claude/CLAUDE.md", "SYSTEM_LAW.md"];
+
+/// Read the canonical instruction files from a workspace root and compose
+/// them into one layer, each wrapped in the same `--- <path> ---` header
+/// pack.ts emits. Blank/missing files are skipped; returns None when no
+/// file carries content.
+fn read_instruction_files(dir: &std::path::Path) -> Option<String> {
+    let parts: Vec<String> = INSTRUCTION_FILES
+        .iter()
+        .filter_map(|name| {
+            read_workspace_md(dir, name)
+                .map(|text| text.trim().to_string())
+                .filter(|text| !text.is_empty())
+                .map(|text| format!("--- {} ---\n{}", name, text))
+        })
+        .collect();
+    if parts.is_empty() {
+        None
+    } else {
+        Some(parts.join("\n\n"))
+    }
+}
+
+/// Compose the final system-instructions block for an agent-chat request.
+/// Layer order: SOUL.md → STYLE.md (only when no prefs row exists — it is
+/// generated from that row, so including both would state the style
+/// twice) → canonical instruction files (AGENTS.md → GIZZI.md →
+/// .claude/CLAUDE.md → SYSTEM_LAW.md, mirroring pack.ts) → agent
+/// system_prompt → response-style directive → custom
+/// instructions → client-sent systemPrompt. Blank layers
+/// are skipped and layers are joined with "\n\n"; returns None when every
+/// layer is empty so the caller preserves the old no-block behavior exactly.
+fn compose_system_instructions(
+    soul_md: Option<&str>,
+    style_md: Option<&str>,
+    instructions_md: Option<&str>,
+    agent_prompt: Option<&str>,
+    response_style: &str,
+    custom_instructions: &str,
+    client_prompt: Option<&str>,
+) -> Option<String> {
+    let mut parts: Vec<String> = Vec::new();
+    for layer in [soul_md, style_md, instructions_md, agent_prompt] {
+        if let Some(text) = layer.map(str::trim).filter(|t| !t.is_empty()) {
+            parts.push(text.to_string());
+        }
+    }
+    if let Some(directive) = chat_style_directive(response_style) {
+        parts.push(directive.to_string());
+    }
+    if !custom_instructions.trim().is_empty() {
+        parts.push(format!(
+            "Custom instructions from the user:\n{}",
+            custom_instructions
+        ));
+    }
+    if let Some(text) = client_prompt.map(str::trim).filter(|t| !t.is_empty()) {
+        parts.push(text.to_string());
+    }
+    if parts.is_empty() {
+        None
+    } else {
+        Some(parts.join("\n\n"))
+    }
+}
+
 /// Bridge /api/agent-chat → gizzi session/event architecture.
 ///
 /// 1. Parse chatId and message from the request body.
-/// 2. Subscribe to gizzi's SSE event stream.
-/// 3. POST the message to gizzi /v1/session/:id/message.
-/// 4. Filter message.part.delta events for this session and convert to
+/// 2. Compose the system instructions server-side: agent persona (SOUL.md,
+///    STYLE.md), canonical workspace instruction files (AGENTS.md → GIZZI.md →
+///    .claude/CLAUDE.md → SYSTEM_LAW.md), system_prompt, plus the caller's
+///    response-style preferences, wrapped by the existing
+///    <system-instructions> path below.
+/// 3. Subscribe to gizzi's SSE event stream.
+/// 4. POST the message to gizzi /v1/session/:id/message.
+/// 5. Filter message.part.delta events for this session and convert to
 ///    the content_block_delta SSE format the frontend expects.
-/// 5. Close the stream when session.status becomes idle.
-async fn agent_chat_bridge(_headers: HeaderMap, body: Body) -> Response {
+/// 6. Close the stream when session.status becomes idle.
+async fn agent_chat_bridge(
+    State(state): State<Arc<AppState>>,
+    Extension(user): Extension<AuthUser>,
+    headers: HeaderMap,
+    body: Body,
+) -> Response {
     let body_bytes = match body_to_bytes(body).await {
         Ok(b) => b,
         Err(_) => {
@@ -280,10 +397,134 @@ async fn agent_chat_bridge(_headers: HeaderMap, body: Body) -> Response {
         .and_then(|v| v.as_str())
         .unwrap_or("")
         .to_string();
-    let system_prompt = body_json
+    let client_system_prompt = body_json
         .get("systemPrompt")
         .and_then(|v| v.as_str())
-        .unwrap_or("");
+        .map(str::to_string);
+    let agent_id = body_json
+        .get("agent_id")
+        .or_else(|| body_json.get("agentId"))
+        .and_then(|v| v.as_str())
+        .filter(|s| !s.is_empty())
+        .map(str::to_string);
+
+    if chat_id.is_empty() || message.is_empty() {
+        return (
+            StatusCode::BAD_REQUEST,
+            Json(json!({"error": "chatId and message are required"})),
+        )
+            .into_response();
+    }
+
+    // ── Server-side system-instruction context ─────────────────────────────
+    // Load the caller's response-style preferences (every request) and, when
+    // an agent_id is given, the agent row plus its workspace persona files.
+    let db = state.db.clone();
+    let user_id = user.user_id;
+    let agent_id_for_task = agent_id.clone();
+    let gathered = tokio::task::spawn_blocking(move || {
+        let conn = db.connect()?;
+
+        let prefs_row: Option<(String, String)> = conn
+            .query_row(
+                "SELECT response_style, custom_instructions
+                 FROM user_agent_preferences WHERE user_id = ?1",
+                params![user_id],
+                |row| Ok((row.get(0)?, row.get(1)?)),
+            )
+            .optional()?;
+        let (response_style, custom_instructions) = prefs_row
+            .clone()
+            .unwrap_or(("balanced".to_string(), String::new()));
+
+        let agent = match agent_id_for_task {
+            Some(ref agent_id) => {
+                let row = conn
+                    .query_row(
+                        "SELECT system_prompt, provider, model FROM agents
+                         WHERE id = ?1 AND user_id = ?2",
+                        params![agent_id, user_id],
+                        |row| {
+                            Ok((
+                                row.get::<_, Option<String>>(0)?,
+                                row.get::<_, String>(1)?,
+                                row.get::<_, String>(2)?,
+                            ))
+                        },
+                    )
+                    .optional()?;
+                row.map(|(system_prompt, provider, model)| {
+                    let dir = workspace_dir_for(agent_id);
+                    AgentChatContext {
+                        system_prompt,
+                        provider,
+                        model,
+                        soul_md: read_workspace_md(&dir, "SOUL.md"),
+                        // STYLE.md is GENERATED from the prefs row — reading
+                        // it on top of the row's own directive/instruction
+                        // layers would state the style twice. The row wins;
+                        // STYLE.md is only a fallback for workspaces synced
+                        // before this rule (no prefs row on record).
+                        style_md: if prefs_row.is_some() {
+                            None
+                        } else {
+                            read_workspace_md(&dir, "STYLE.md")
+                        },
+                        instructions_md: read_instruction_files(&dir),
+                    }
+                })
+            }
+            None => None,
+        };
+
+        Ok::<_, rusqlite::Error>((response_style, custom_instructions, agent))
+    })
+    .await;
+
+    let (response_style, custom_instructions, agent) = match gathered {
+        Ok(Ok(v)) => v,
+        Ok(Err(e)) => {
+            warn!("DB error composing agent-chat context: {}", e);
+            return (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(json!({"error": e.to_string()})),
+            )
+                .into_response();
+        }
+        Err(e) => {
+            warn!("DB task panicked: {}", e);
+            return (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(json!({"error": "internal error"})),
+            )
+                .into_response();
+        }
+    };
+
+    if agent_id.is_some() && agent.is_none() {
+        return (
+            StatusCode::NOT_FOUND,
+            Json(json!({"error": "Agent not found"})),
+        )
+            .into_response();
+    }
+    let agent = agent.unwrap_or_default();
+
+    // Composition order: SOUL.md → STYLE.md → canonical instruction files
+    // (AGENTS.md → GIZZI.md → .claude/CLAUDE.md → SYSTEM_LAW.md) → agent
+    // system_prompt → style directive → custom instructions → client-sent
+    // systemPrompt.
+    let system_prompt = compose_system_instructions(
+        agent.soul_md.as_deref(),
+        agent.style_md.as_deref(),
+        agent.instructions_md.as_deref(),
+        agent.system_prompt.as_deref(),
+        &response_style,
+        &custom_instructions,
+        client_system_prompt.as_deref(),
+    )
+    .unwrap_or_default();
+
     let effective_message = if system_prompt.trim().is_empty() {
         message.clone()
     } else {
@@ -294,14 +535,21 @@ async fn agent_chat_bridge(_headers: HeaderMap, body: Body) -> Response {
     };
 
     // Parse model from runtimeModelId or modelId — strip provider prefix if present.
-    // When nothing is supplied, use the environment-configurable default so the
+    // Client-sent model ids always win; without one, fall back to the agent's
+    // provider/model, then to the environment-configurable default so the
     // packaged app can target any Gizzi provider/model without recompiling.
     let (default_provider, default_model_id) = default_model();
     let default_label = format!("{}/{}", default_provider, default_model_id);
+    let agent_model_label = if agent.provider.trim().is_empty() || agent.model.trim().is_empty() {
+        None
+    } else {
+        Some(format!("{}/{}", agent.provider, agent.model))
+    };
     let raw_model = body_json
         .get("runtimeModelId")
         .or_else(|| body_json.get("modelId"))
         .and_then(|v| v.as_str())
+        .or(agent_model_label.as_deref())
         .unwrap_or(&default_label)
         // Frontend model ids use the `provider::model` convention; the runtime
         // expects `provider/model`. Normalize so both forms route.
@@ -313,14 +561,6 @@ async fn agent_chat_bridge(_headers: HeaderMap, body: Body) -> Response {
         (default_provider, raw_model.clone())
     };
 
-    if chat_id.is_empty() || message.is_empty() {
-        return (
-            StatusCode::BAD_REQUEST,
-            Json(json!({"error": "chatId and message are required"})),
-        )
-            .into_response();
-    }
-
     let gizzi = gizzi_base();
     let assistant_message_id = format!("msg_{}", Uuid::new_v4().simple());
     let model_label = format!("{}/{}", provider_id, model_id);
@@ -330,7 +570,7 @@ async fn agent_chat_bridge(_headers: HeaderMap, body: Body) -> Response {
     // the desktop shell). Sharing agent_session_routes::gizzi_client keeps the
     // auth boundary rules in one place. Note it carries no overall timeout on
     // purpose — the /event SSE stream below is long-lived.
-    let client = gizzi_client(&_headers);
+    let client = gizzi_client(&headers);
 
     // For non-cloud harness modes (subprocess, local, BYOK), push credentials
     // and config to Gizzi before creating the session so the chosen brain is
@@ -497,6 +737,11 @@ async fn agent_chat_bridge(_headers: HeaderMap, body: Body) -> Response {
         let mut buf = String::new();
         let mut byte_stream = event_resp.bytes_stream();
         let mut was_busy = false;
+        // partID → type tracking: `message.part.updated` carries the part's
+        // type ("text" | "reasoning" | "tool" | …) while the deltas don't,
+        // so reasoning streams can be forwarded as thinking deltas instead
+        // of being flattened into the visible reply text.
+        let mut reasoning_parts = std::collections::HashSet::<String>::new();
 
         'event_loop: while let Some(chunk_result) = byte_stream.next().await {
             let chunk = match chunk_result {
@@ -531,16 +776,35 @@ async fn agent_chat_bridge(_headers: HeaderMap, body: Body) -> Response {
                 }
 
                 match event_type {
+                    "message.part.updated" => {
+                        let part = &props["part"];
+                        let part_type = part.get("type").and_then(|t| t.as_str()).unwrap_or("");
+                        let part_id = part.get("id").and_then(|v| v.as_str()).unwrap_or("");
+                        if part_type == "reasoning" && !part_id.is_empty() {
+                            reasoning_parts.insert(part_id.to_string());
+                        }
+                    }
                     "message.part.delta" => {
                         let delta_text = props.get("delta").and_then(|v| v.as_str()).unwrap_or("");
                         let part_id = props.get("partID").and_then(|v| v.as_str()).unwrap_or("text-1");
 
-                        yield Ok(Event::default().data(json!({
-                            "type": "content_block_delta",
-                            "messageId": msg_id,
-                            "partId": part_id,
-                            "delta": { "type": "text_delta", "text": delta_text },
-                        }).to_string()));
+                        if reasoning_parts.contains(part_id) {
+                            // Reasoning part → thinking delta (the frontend's
+                            // thought stream), not visible reply text.
+                            yield Ok(Event::default().data(json!({
+                                "type": "content_block_delta",
+                                "messageId": msg_id,
+                                "partId": part_id,
+                                "delta": { "type": "thinking_delta", "thinking": delta_text },
+                            }).to_string()));
+                        } else {
+                            yield Ok(Event::default().data(json!({
+                                "type": "content_block_delta",
+                                "messageId": msg_id,
+                                "partId": part_id,
+                                "delta": { "type": "text_delta", "text": delta_text },
+                            }).to_string()));
+                        }
                     }
                     "session.status" => {
                         let status_type = props.get("status")
@@ -578,4 +842,146 @@ async fn body_to_bytes(
     use http_body_util::BodyExt;
     let collected = body.collect().await?;
     Ok(collected.to_bytes())
+}
+
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn compose_empty_returns_none() {
+        assert_eq!(
+            compose_system_instructions(None, None, None, None, "balanced", "", None),
+            None
+        );
+    }
+
+    #[test]
+    fn compose_skips_blank_layers() {
+        assert_eq!(
+            compose_system_instructions(
+                Some("  "),
+                Some(""),
+                Some(""),
+                Some("\n"),
+                "balanced",
+                "   ",
+                Some("\t")
+            ),
+            None
+        );
+    }
+
+    #[test]
+    fn compose_each_layer_alone() {
+        assert_eq!(
+            compose_system_instructions(Some("soul"), None, None, None, "balanced", "", None)
+                .as_deref(),
+            Some("soul")
+        );
+        assert_eq!(
+            compose_system_instructions(None, Some("style md"), None, None, "balanced", "", None)
+                .as_deref(),
+            Some("style md")
+        );
+        assert_eq!(
+            compose_system_instructions(None, None, Some("--- AGENTS.md ---\nrules"), None, "balanced", "", None)
+                .as_deref(),
+            Some("--- AGENTS.md ---\nrules")
+        );
+        assert_eq!(
+            compose_system_instructions(None, None, None, Some("agent prompt"), "balanced", "", None)
+                .as_deref(),
+            Some("agent prompt")
+        );
+        assert_eq!(
+            compose_system_instructions(None, None, None, None, "concise", "", None).as_deref(),
+            Some(chat_style_directive("concise").unwrap())
+        );
+        assert_eq!(
+            compose_system_instructions(None, None, None, None, "balanced", "do x", None).as_deref(),
+            Some("Custom instructions from the user:\ndo x")
+        );
+        assert_eq!(
+            compose_system_instructions(None, None, None, None, "balanced", "", Some("client"))
+                .as_deref(),
+            Some("client")
+        );
+    }
+
+    #[test]
+    fn compose_full_ordering() {
+        let out = compose_system_instructions(
+            Some("SOUL"),
+            Some("STYLE"),
+            Some("INSTRUCTIONS"),
+            Some("AGENT"),
+            "detailed",
+            "CUSTOM",
+            Some("CLIENT"),
+        )
+        .unwrap();
+        let expected = [
+            "SOUL",
+            "STYLE",
+            "INSTRUCTIONS",
+            "AGENT",
+            chat_style_directive("detailed").unwrap(),
+            "Custom instructions from the user:\nCUSTOM",
+            "CLIENT",
+        ]
+        .join("\n\n");
+        assert_eq!(out, expected);
+    }
+
+    #[test]
+    fn compose_no_directive_for_balanced_or_custom() {
+        assert_eq!(
+            compose_system_instructions(None, None, None, None, "balanced", "", None),
+            None
+        );
+        assert_eq!(
+            compose_system_instructions(None, None, None, None, "custom", "", None),
+            None
+        );
+    }
+
+    #[test]
+    fn instruction_files_compose_in_pack_order_with_headers() {
+        let dir = std::env::temp_dir().join(format!("allternit-test-{}", Uuid::new_v4()));
+        std::fs::create_dir_all(dir.join(".claude")).unwrap();
+        // GIZZI.md deliberately absent — missing files are skipped.
+        std::fs::write(dir.join("AGENTS.md"), "agents rules").unwrap();
+        std::fs::write(dir.join(".claude/CLAUDE.md"), "claude rules\n").unwrap();
+        std::fs::write(dir.join("SYSTEM_LAW.md"), "  \n").unwrap(); // blank → skipped
+        let out = read_instruction_files(&dir).unwrap();
+        std::fs::remove_dir_all(&dir).unwrap();
+        assert_eq!(
+            out,
+            "--- AGENTS.md ---\nagents rules\n\n--- .claude/CLAUDE.md ---\nclaude rules"
+        );
+    }
+
+    #[test]
+    fn instruction_files_none_when_no_file_has_content() {
+        let dir = std::env::temp_dir().join(format!("allternit-test-{}", Uuid::new_v4()));
+        std::fs::create_dir_all(&dir).unwrap();
+        assert_eq!(read_instruction_files(&dir), None);
+        std::fs::write(dir.join("GIZZI.md"), "\n").unwrap();
+        assert_eq!(read_instruction_files(&dir), None);
+        std::fs::remove_dir_all(&dir).unwrap();
+    }
+
+    #[test]
+    fn compose_directive_strings_match_ios_client() {
+        assert_eq!(
+            chat_style_directive("concise"),
+            Some("Response style: keep responses brief and to the point — no preamble, no recap, no filler.")
+        );
+        assert_eq!(
+            chat_style_directive("detailed"),
+            Some("Response style: give thorough, detailed responses — full context, reasoning, and examples where they help.")
+        );
+    }
 }
