@@ -50,6 +50,19 @@ export namespace Flag {
   // Public hostname mapped to the named tunnel. Only used for logs and
   // instance registration — cloudflared learns the routing from the token.
   export const GIZZI_TUNNEL_HOSTNAME = env("GIZZI_TUNNEL_HOSTNAME")
+  // Path overrides for the tailscale binaries used by `gizzi serve --mesh`.
+  export const GIZZI_TAILSCALE_BIN = env("GIZZI_TAILSCALE_BIN")
+  export const GIZZI_TAILSCALED_BIN = env("GIZZI_TAILSCALED_BIN")
+  // Path override for the mesh-node tsnet sidecar used by `gizzi serve --mesh`
+  // (built by infrastructure/mesh/tsnet-ios/build-sidecar.sh into
+  // vendor/mesh-node/<platform>-<arch>/).
+  export const GIZZI_MESH_NODE_BIN = env("GIZZI_MESH_NODE_BIN")
+  // Tailscale/Headscale preauth key for `gizzi serve --mesh` (secret — prefer
+  // this env var over storing it in a config file). Implies mesh mode.
+  export const GIZZI_MESH_AUTH_KEY = env("GIZZI_MESH_AUTH_KEY")
+  // Headscale coordination server URL for `gizzi serve --mesh`. The default
+  // (https://allternit-headscale.fly.dev) lives in Mesh.DEFAULT_CONTROL_URL.
+  export const GIZZI_MESH_CONTROL_URL = env("GIZZI_MESH_CONTROL_URL")
   // Platform instance registry base URL. `gizzi serve --tunnel` PUTs its public
   // tunnel URL here so signed-in clients (iOS app) can discover the instance.
   export const GIZZI_PLATFORM_API_URL = env("GIZZI_PLATFORM_API_URL") ?? "https://allternit-cloud-api.fly.dev"

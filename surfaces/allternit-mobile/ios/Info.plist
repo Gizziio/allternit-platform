@@ -70,5 +70,9 @@
 	     active; AppConfig falls back to this value when the key is absent. -->
 	<key>ALLTERNIT_CLOUD_API_URL</key>
 	<string>https://allternit-cloud-api.fly.dev</string>
+	<!-- Headscale control plane for the embedded mesh (tsnet) node; AppConfig
+	     falls back to this URL when the key is absent. -->
+	<key>ALLTERNIT_MESH_CONTROL_URL</key>
+	<string>$(ALLTERNIT_MESH_CONTROL_URL)</string>
 </dict>
 </plist>

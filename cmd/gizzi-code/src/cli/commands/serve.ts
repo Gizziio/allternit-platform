@@ -1,4 +1,5 @@
 import { Server } from "@/runtime/server/server"
+import { Mesh } from "@/runtime/server/mesh"
 import { cmd } from "@/cli/commands/cmd"
 import { withNetworkOptions, resolveNetworkOptions } from "@/cli/network"
 import { Flag } from "@/runtime/context/flag/flag"
@@ -27,6 +28,19 @@ export const ServeCommand = cmd({
       .option("tunnel-hostname", {
         type: "string",
         describe: "public hostname mapped to the named tunnel (enables the stable URL in logs and registration)",
+      })
+      .option("mesh", {
+        type: "boolean",
+        default: false,
+        describe: "join the Allternit mesh tailnet (Tailscale/Headscale) so tailnet devices can reach this server",
+      })
+      .option("mesh-auth-key", {
+        type: "string",
+        describe: "Tailscale/Headscale preauth key for the mesh join; implies --mesh (secret — prefer GIZZI_MESH_AUTH_KEY)",
+      })
+      .option("mesh-control-url", {
+        type: "string",
+        describe: "Headscale coordination server URL (default https://allternit-headscale.fly.dev)",
       }),
   describe: "starts a headless gizzi server",
   handler: async (args) => {
@@ -39,6 +53,14 @@ export const ServeCommand = cmd({
     const tunnelHostname = args.tunnelHostname ?? Flag.GIZZI_TUNNEL_HOSTNAME ?? config?.server?.tunnel_hostname
     // A named-tunnel token implies tunnel mode even without --tunnel.
     const tunnel = tunnelFlag || !!tunnelToken
+
+    const meshExplicitlySet = process.argv.includes("--mesh") || process.argv.includes("--no-mesh")
+    const meshFlag = meshExplicitlySet ? args.mesh : (config?.server?.mesh ?? args.mesh)
+    const meshAuthKey = args.meshAuthKey ?? Flag.GIZZI_MESH_AUTH_KEY ?? config?.server?.mesh_auth_key
+    const meshControlUrl =
+      args.meshControlUrl ?? Flag.GIZZI_MESH_CONTROL_URL ?? config?.server?.mesh_control_url ?? Mesh.DEFAULT_CONTROL_URL
+    // An auth key implies mesh mode even without --mesh (same rule as --tunnel-token).
+    const mesh = meshFlag || !!meshAuthKey
 
     const loopback = opts.hostname === "localhost" || opts.hostname === "127.0.0.1" || opts.hostname === "::1"
     // Auth counts as configured when either the shared password is set or
@@ -55,7 +77,7 @@ export const ServeCommand = cmd({
     if (exposed && !authConfigured) {
       process.stderr.write("Warning: serving an unauthenticated Gizzi API on a non-loopback interface.\n")
     }
-    const server = Server.listen({ ...opts, tunnel, tunnelToken, tunnelHostname })
+    const server = Server.listen({ ...opts, tunnel, tunnelToken, tunnelHostname, mesh, meshAuthKey, meshControlUrl })
     process.stderr.write(`gizzi server listening on http://${server.hostname}:${server.port}\n`)
     await new Promise(() => {})
     await server.stop()

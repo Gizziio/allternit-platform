@@ -105,3 +105,10 @@ domains/computer-use/build/
 .openclaw.env
 .terminal-server.env
 cmd/gizzi-code/packages/sdk/dist/
+
+# large vendored binaries — fetch/build via scripts, not git (see infrastructure/mesh/tsnet-ios/build-sidecar.sh)
+cmd/gizzi-code/vendor/cloudflared/
+cmd/gizzi-code/vendor/mesh-node/
+surfaces/allternit-mobile/ios/Frameworks/Mesh.xcframework/
+infrastructure/mesh/tsnet-ios/Mesh.xcframework/
+infrastructure/mesh/tsnet-ios/Harness/harness

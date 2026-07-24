@@ -1,0 +1,78 @@
+# Headscale configuration for allternit-headscale (Fly.io).
+# Schema verified against headscale v0.29.2 config-example.yaml.
+
+# Public URL clients (tailscaled / tsnet) use to reach this control server.
+# Fly terminates TLS at the edge and forwards plain HTTP to :8080.
+server_url: https://allternit-headscale.fly.dev
+
+listen_addr: 0.0.0.0:8080
+
+# Metrics/debug endpoint; loopback-only (reach via `fly ssh` if needed).
+metrics_listen_addr: 127.0.0.1:9090
+
+# gRPC admin interface; loopback-only. The CLI talks over the unix socket
+# below, so this is only for future remote gRPC access (requires TLS certs).
+grpc_listen_addr: 127.0.0.1:50443
+grpc_allow_insecure: false
+
+noise:
+  private_key_path: /var/lib/headscale/noise_private.key
+
+# Tailnet address space (standard Tailscale ranges; do not change).
+prefixes:
+  v4: 100.64.0.0/10
+  v6: fd7a:115c:a1e0::/48
+  allocation: sequential
+
+# Relay map: use Tailscale's public DERP fleet; do NOT run the embedded
+# DERP server for now. Revisit if we want a lax-local relay later.
+derp:
+  server:
+    enabled: false
+  urls:
+    - https://controlplane.tailscale.com/derpmap/default
+  paths: []
+  auto_update_enabled: true
+  update_frequency: 3h
+
+# We pin the image tag instead of self-checking for updates.
+disable_check_updates: true
+
+database:
+  type: sqlite
+  sqlite:
+    path: /var/lib/headscale/db.sqlite
+    write_ahead_log: true
+
+log:
+  level: info
+  format: text
+
+# ACL/grant policy comes later (per-customer isolation via tags).
+# Empty path = no policy file; all nodes in the tailnet can reach each other
+# within headscale's default behavior until a policy is added.
+policy:
+  mode: file
+  path: ""
+
+dns:
+  magic_dns: true
+  # MagicDNS suffix for nodes, e.g. joes-mac.ts.allternit.internal
+  # Must differ from the server_url domain.
+  base_domain: ts.allternit.internal
+  # Do not clobber client DNS; with no global nameservers configured,
+  # only the MagicDNS base domain is resolved via the tailnet resolver.
+  override_local_dns: false
+  nameservers:
+    global: []
+    split: {}
+  search_domains: []
+  extra_records: []
+
+# Unix socket the `headscale` CLI uses inside the machine (via `fly ssh`).
+unix_socket: /var/run/headscale/headscale.sock
+unix_socket_permission: "0770"
+
+# Don't send node logs to Tailscale Inc.
+logtail:
+  enabled: false

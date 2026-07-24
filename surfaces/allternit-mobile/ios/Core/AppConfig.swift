@@ -78,6 +78,16 @@ enum AppConfig {
         #endif
     }()
 
+    /// Headscale control-plane URL for the embedded mesh (tsnet) node
+    /// (Core/Mesh/MeshClient.swift). Set via `ALLTERNIT_MESH_CONTROL_URL`;
+    /// falls back to the live Headscale instance.
+    static let meshControlURL: String = {
+        if let value = infoPlistValue("ALLTERNIT_MESH_CONTROL_URL") {
+            return value
+        }
+        return "https://allternit-headscale.fly.dev"
+    }()
+
     /// Empty until a real publishable key is provided — AuthManager treats an
     /// empty key as "Clerk not configured" instead of crashing.
     static let clerkPublishableKey: String = infoPlistValue("CLERK_PUBLISHABLE_KEY") ?? ""

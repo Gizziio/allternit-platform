@@ -54,6 +54,10 @@ targets:
         # Placeholder — set your team for device builds.
         DEVELOPMENT_TEAM: ""
         CODE_SIGN_STYLE: Automatic
+        # Headscale control plane for the embedded mesh (tsnet) node. Same
+        # value in debug+release; AppConfig falls back to this URL when the
+        # plist key is missing.
+        ALLTERNIT_MESH_CONTROL_URL: https://allternit-headscale.fly.dev
       configs:
         debug:
           ALLTERNIT_API_BASE_URL: http://127.0.0.1:8013/api/v1
@@ -67,6 +71,10 @@ targets:
           # AppConfig's dev default (127.0.0.1:4096) until one is deployed.
           ALLTERNIT_GIZZI_CODE_URL: ""
     dependencies:
+      # Embedded tsnet node (static xcframework — no embed phase, linked
+      # into the binary). Vendored copy of infrastructure/mesh/tsnet-ios.
+      - framework: Frameworks/Mesh.xcframework
+        embed: false
       - package: clerk-ios
         product: ClerkKit
       - package: clerk-ios

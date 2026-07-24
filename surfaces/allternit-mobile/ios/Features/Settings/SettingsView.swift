@@ -7,12 +7,26 @@ import SwiftUI
 struct SettingsView: View {
     @Environment(\.dismiss) private var dismiss
     @EnvironmentObject private var authManager: AuthManager
+    @EnvironmentObject private var modeStore: AppModeStore
     @ObservedObject private var settings = SettingsStore.shared
     /// Weekly usage meter (Phase 5) backing the Usage section.
     @ObservedObject private var usageStore = UsageStore.shared
+    /// Response-style preferences (Agent section) — backed by
+    /// `GET/PUT /api/v1/agent-preferences`, not UserDefaults.
+    @ObservedObject private var preferences = PreferencesStore.shared
+    #if DEBUG
+    /// Embedded tsnet node state for the DEBUG-only Mesh section.
+    @ObservedObject private var mesh = MeshClient.shared
+    /// Pre-auth key entry (DEBUG only) — UserDefaults `mesh-auth-key`, the
+    /// same key the `-mesh-auth-key` launch argument feeds. Launch args live
+    /// in the arguments domain, so the flag shadows whatever is typed here.
+    @AppStorage("mesh-auth-key") private var meshAuthKey = ""
+    #endif
 
     /// Pushed Memory section (NavigationStack below).
     @State private var isMemoryPresented = false
+    /// Pushed custom-instructions editor (Agent section).
+    @State private var isInstructionsPresented = false
     /// Export/support links open in SFSafariViewController.
     @State private var safariURL: IdentifiableURL? = nil
 
@@ -42,9 +56,13 @@ struct SettingsView: View {
                 accountSection
                 usageSection
                 capabilitiesSection
+                agentSection
                 memorySection
                 voiceSection
                 dataControlsSection
+                #if DEBUG
+                meshSection
+                #endif
                 aboutSection
                     // Anchor for the `-open-settings-data` DEBUG scroll.
                     .id("aboutSection")
@@ -61,6 +79,9 @@ struct SettingsView: View {
             }
             .navigationDestination(isPresented: $isMemoryPresented) {
                 MemorySettingsView()
+            }
+            .navigationDestination(isPresented: $isInstructionsPresented) {
+                CustomInstructionsView()
             }
             .sheet(item: $safariURL) { item in
                 SafariView(url: item.url)
@@ -89,6 +110,9 @@ struct SettingsView: View {
                 Alert(title: Text(alert.title), message: Text(alert.message), dismissButton: .default(Text("OK")))
             }
             .onAppear {
+                // Response-style row state (fetched once per launch; the
+                // store dedupes, and ChatView already kicked it off).
+                PreferencesStore.shared.fetchIfNeeded()
                 #if DEBUG
                 // `-open-settings-memory` (DEBUG only): deep-link straight
                 // into the Memory section for screenshots (the sidebar's
@@ -311,6 +335,83 @@ struct SettingsView: View {
         .tint(Color("AccentPrimary"))
     }
 
+    // MARK: - Agent
+
+    /// Response style + custom instructions (backend-persisted via
+    /// `GET/PUT /api/v1/agent-preferences`; the PUT also syncs a managed
+    /// STYLE.md into each agent workspace — agent_preferences_routes.rs).
+    /// These apply to every chat: ChatViewModel injects them into the
+    /// agent-chat `systemPrompt` at send time (plan Phases 5-6).
+    @ViewBuilder
+    private var agentSection: some View {
+        Section {
+            Picker("Response style", selection: responseStyleBinding) {
+                ForEach(ResponseStyle.allCases, id: \.self) { style in
+                    Text(style.label).tag(style)
+                }
+            }
+            .font(.subheadline)
+
+            Button(action: {
+                let generator = UIImpactFeedbackGenerator(style: .light)
+                generator.impactOccurred()
+                isInstructionsPresented = true
+            }) {
+                HStack {
+                    Text("Custom instructions")
+                        .font(.subheadline)
+                        .foregroundColor(Color("TextPrimary"))
+                    Spacer()
+                    Text(preferences.customInstructions.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ? "None" : "Set")
+                        .font(.subheadline)
+                        .foregroundColor(Color("TextSecondary"))
+                    Image(systemName: "chevron.right")
+                        .font(.system(size: 11, weight: .bold))
+                        .foregroundColor(Color("TextSecondary"))
+                }
+                .contentShape(Rectangle())
+            }
+            .buttonStyle(.plain)
+
+            Button(action: {
+                // The hub is a sidebar tab — close the sheet and hop to it.
+                dismiss()
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
+                    modeStore.selectBarItem(.agents)
+                }
+            }) {
+                HStack {
+                    Text("Manage agents")
+                        .font(.subheadline)
+                        .foregroundColor(Color("TextPrimary"))
+                    Spacer()
+                    Image(systemName: "chevron.right")
+                        .font(.system(size: 11, weight: .bold))
+                        .foregroundColor(Color("TextSecondary"))
+                }
+                .contentShape(Rectangle())
+            }
+            .buttonStyle(.plain)
+        } header: {
+            Text("Agent")
+        } footer: {
+            if let error = preferences.saveError {
+                Text("Couldn't sync preferences: \(error)")
+            } else {
+                Text("Applies to every chat and syncs to your agents' workspace files (STYLE.md).")
+            }
+        }
+    }
+
+    /// Picker writes save immediately (optimistic; the store rolls back on
+    /// a failed PUT and shows the error in this section's footer).
+    private var responseStyleBinding: Binding<ResponseStyle> {
+        Binding(
+            get: { preferences.responseStyle },
+            set: { preferences.save(style: $0, instructions: preferences.customInstructions) }
+        )
+    }
+
     // MARK: - Memory
 
     @ViewBuilder
@@ -430,6 +531,71 @@ struct SettingsView: View {
         .foregroundColor(destructive ? Color.red : Color("TextPrimary"))
         .contentShape(Rectangle())
     }
+
+    // MARK: - Mesh (DEBUG)
+
+    #if DEBUG
+    /// DEBUG-only mesh (tsnet) bring-up: paste a manually minted Headscale
+    /// pre-auth key, start the node, see its mesh IP. Release builds omit
+    /// this section entirely — platform-side key minting replaces the manual
+    /// entry later. Not wired into the terminal flow yet.
+    @ViewBuilder
+    private var meshSection: some View {
+        Section {
+            SecureField("Pre-auth key (debug)", text: $meshAuthKey)
+                .font(.system(.subheadline, design: .monospaced))
+                .autocorrectionDisabled()
+                .textInputAutocapitalization(.never)
+
+            HStack {
+                Text("Status")
+                    .font(.subheadline)
+                    .foregroundColor(Color("TextPrimary"))
+                Spacer()
+                switch mesh.state {
+                case .idle:
+                    Text("Idle")
+                        .font(.subheadline)
+                        .foregroundColor(Color("TextSecondary"))
+                case .starting:
+                    HStack(spacing: 8) {
+                        ProgressView()
+                        Text("Joining…")
+                            .font(.subheadline)
+                            .foregroundColor(Color("TextSecondary"))
+                    }
+                case .up(let meshIP):
+                    Text(meshIP)
+                        .font(.system(.subheadline, design: .monospaced))
+                        .foregroundColor(Color("TextPrimary"))
+                case .failed(let message):
+                    Text(message)
+                        .font(.caption)
+                        .foregroundColor(.red)
+                        .lineLimit(2)
+                }
+            }
+
+            if case .up = mesh.state {
+                Button(action: { mesh.stop() }) {
+                    bulkRowLabel("Stop mesh node", systemImage: "stop.circle")
+                }
+            } else {
+                Button(action: {
+                    mesh.start(authKey: meshAuthKey.trimmingCharacters(in: .whitespacesAndNewlines))
+                }) {
+                    bulkRowLabel("Start mesh node", systemImage: "point.3.connected.trianglepath.dotted")
+                }
+                .disabled(mesh.state == .starting
+                          || meshAuthKey.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+            }
+        } header: {
+            Text("Mesh (Debug)")
+        } footer: {
+            Text("Embedded tsnet node → \(AppConfig.meshControlURL). Same directory = same node identity across launches.")
+        }
+    }
+    #endif
 
     // MARK: - About
 
@@ -555,5 +721,42 @@ struct SettingsView: View {
 
     private static func escape(_ id: String) -> String {
         id.addingPercentEncoding(withAllowedCharacters: .urlPathAllowed) ?? id
+    }
+}
+
+// MARK: - Custom instructions editor
+
+/// Pushed editor for the user's custom instructions (Settings → Agent).
+/// Saved via PreferencesStore on Done — the same PUT that syncs STYLE.md
+/// into every agent workspace (agent_preferences_routes.rs), so the file
+/// and the next chat's composed system prompt never disagree.
+struct CustomInstructionsView: View {
+    @Environment(\.dismiss) private var dismiss
+    @ObservedObject private var preferences = PreferencesStore.shared
+
+    @State private var text: String = ""
+
+    var body: some View {
+        TextEditor(text: $text)
+            .font(.system(.body, design: .monospaced))
+            .padding(12)
+            .scrollContentBackground(.hidden)
+            .background(Color("BgPrimary"))
+            .navigationTitle("Custom Instructions")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .topBarTrailing) {
+                    Button("Done") {
+                        preferences.save(
+                            style: preferences.responseStyle,
+                            instructions: text.trimmingCharacters(in: .whitespacesAndNewlines)
+                        )
+                        dismiss()
+                    }
+                }
+            }
+            .onAppear {
+                text = preferences.customInstructions
+            }
     }
 }

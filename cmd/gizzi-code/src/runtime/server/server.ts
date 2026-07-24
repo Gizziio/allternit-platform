@@ -55,6 +55,7 @@ import { ArsContextaRoutes } from "@/runtime/server/routes/ars-contexta"
 import { WebProxyRoutes } from "@/runtime/server/routes/web-proxy"
 import { MDNS } from "@/runtime/server/mdns"
 import { Tunnel } from "@/runtime/server/tunnel"
+import { Mesh } from "@/runtime/server/mesh"
 import { InstanceRegistration } from "@/runtime/server/instance-registration"
 import { ClerkAuth } from "@/runtime/server/middleware/clerk-auth"
 import { TerminalClerkAuthRoutes } from "@/runtime/server/routes/terminal-clerk-auth"
@@ -599,6 +600,9 @@ export namespace Server {
     tunnel?: boolean
     tunnelToken?: string
     tunnelHostname?: string
+    mesh?: boolean
+    meshAuthKey?: string
+    meshControlUrl?: string
   }) {
     _corsWhitelist = opts.cors ?? []
     _hostname = opts.hostname
@@ -681,10 +685,43 @@ export namespace Server {
         })
     }
 
+    if (opts.mesh) {
+      if (isLoopback(opts.hostname)) {
+        // A loopback-bound server is only reachable on the tailnet when the
+        // mesh-node sidecar path is used (it forwards to 127.0.0.1 itself);
+        // the attach/userspace-tailscaled paths need a real interface bind.
+        log.warn("mesh enabled on a loopback server; the mesh URL is only routable via the mesh-node sidecar path — attach mode needs a non-loopback bind (e.g. --hostname 0.0.0.0)")
+      }
+      // Mesh is strictly additive: any join failure (missing binaries, expired
+      // or single-use auth key, unreachable control server) is logged and the
+      // server keeps running without mesh.
+      Mesh.start(server.port!, { authKey: opts.meshAuthKey, controlUrl: opts.meshControlUrl })
+        .then((url) => {
+          if (!url) return
+          process.stderr.write(`gizzi mesh ready at ${url}\n`)
+          // Best-effort self-registration with the platform instance registry,
+          // same contract as the tunnel URL ({url, name} only); clients tell
+          // mesh URLs apart by the 100.64.0.0/10 prefix.
+          void InstanceRegistration.register({ url }).catch((err) => {
+            log.warn("instance registration failed", { error: err })
+          })
+        })
+        .catch((err) => {
+          log.error("failed to join mesh tailnet", { error: err })
+          process.stderr.write(
+            `gizzi mesh failed (continuing without mesh): ${err instanceof Error ? err.message : String(err)}\n`,
+          )
+        })
+    }
+
     const originalStop = server.stop.bind(server)
     server.stop = async (closeActiveConnections?: boolean) => {
       if (opts.tunnel) {
         Tunnel.stop()
+        InstanceRegistration.stop()
+      }
+      if (opts.mesh) {
+        await Mesh.stop()
         InstanceRegistration.stop()
       }
       if (shouldPublishMDNS) MDNS.unpublish()

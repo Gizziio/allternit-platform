@@ -1062,6 +1062,17 @@ export namespace Config {
         .string()
         .optional()
         .describe("Public hostname mapped to the named tunnel (used for logs and instance registration)"),
+      mesh: z.boolean().optional().describe("Join the Allternit mesh tailnet (Tailscale/Headscale) when serving"),
+      mesh_auth_key: z
+        .string()
+        .optional()
+        .describe(
+          "Tailscale/Headscale preauth key for the mesh join (secret — prefer the GIZZI_MESH_AUTH_KEY env var over storing it in a config file)",
+        ),
+      mesh_control_url: z
+        .string()
+        .optional()
+        .describe("Headscale coordination server URL (default https://allternit-headscale.fly.dev)"),
     })
     .strict()
     

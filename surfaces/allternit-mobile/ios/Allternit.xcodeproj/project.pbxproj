@@ -17,6 +17,7 @@
 		145F8258CCC59437E3BBD4CA /* OnboardingView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 91C770057CDB7F7249B6EE0D /* OnboardingView.swift */; };
 		1526643C864CF4A2D20144E8 /* SettingsStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = BB1A0D0734D3D239827ECD6A /* SettingsStore.swift */; };
 		15970CE94E88293413A0AE86 /* InstancesClient.swift in Sources */ = {isa = PBXBuildFile; fileRef = E471B33D6779D3C68395D818 /* InstancesClient.swift */; };
+		19E0767DE23B690FFA6BE33A /* Mesh.xcframework in Frameworks */ = {isa = PBXBuildFile; fileRef = C7B9F283E2DE6838A4FDF9C4 /* Mesh.xcframework */; };
 		20E80A1F2D2626B38DB8EEB4 /* MessageRow.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9AC5DA69A46A6B20CD3FB8BF /* MessageRow.swift */; };
 		239DD97E2CE53C524C621776 /* ACIAgentRunView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F7AEC5CF2FBE0926C09D8DDF /* ACIAgentRunView.swift */; };
 		2AF88D8EAD207BC7586A817D /* ArtifactContentLoader.swift in Sources */ = {isa = PBXBuildFile; fileRef = 03E34A99F6B335FE86510DB1 /* ArtifactContentLoader.swift */; };
@@ -62,6 +63,7 @@
 		A462907889B0CB124DE22969 /* ProjectStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = DF7B74CD03BCD43CEFF3B203 /* ProjectStore.swift */; };
 		A895E2F6A5440D7E40BA8F2C /* AppMode.swift in Sources */ = {isa = PBXBuildFile; fileRef = 62A63A32019B982AEB95024D /* AppMode.swift */; };
 		AA58D84ADBC9375DEE9AF094 /* ReplyEvent.swift in Sources */ = {isa = PBXBuildFile; fileRef = 52277CD4E2534578A9E785F8 /* ReplyEvent.swift */; };
+		AAAC91D038EC9566F923403B /* MeshClient.swift in Sources */ = {isa = PBXBuildFile; fileRef = B88B65FA4B5A3288485C10A4 /* MeshClient.swift */; };
 		AE4827F580E76F77A891EB2A /* MemoryModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = BBE8F35E82EC2D8E0341AA8D /* MemoryModels.swift */; };
 		B0F6225E255785813E033F4A /* ArtifactLibraryStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1484FBF4E7FCFDF0EF1262E1 /* ArtifactLibraryStore.swift */; };
 		B27578BF382B7826884887F2 /* WorkspaceFileEditorView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 92576416EF984EB91D9A016E /* WorkspaceFileEditorView.swift */; };
@@ -164,12 +166,14 @@
 		ADC22289020633B79A4877ED /* MemoryClient.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MemoryClient.swift; sourceTree = "<group>"; };
 		AE61B45DBC74809757BE9AEC /* AgentClient.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AgentClient.swift; sourceTree = "<group>"; };
 		B7F3B173705B7F5941BDC4FE /* SafariView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SafariView.swift; sourceTree = "<group>"; };
+		B88B65FA4B5A3288485C10A4 /* MeshClient.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MeshClient.swift; sourceTree = "<group>"; };
 		BB1A0D0734D3D239827ECD6A /* SettingsStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsStore.swift; sourceTree = "<group>"; };
 		BBE8F35E82EC2D8E0341AA8D /* MemoryModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MemoryModels.swift; sourceTree = "<group>"; };
 		BE3CC250492B1313864FA19D /* PermissionPrimingSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PermissionPrimingSheet.swift; sourceTree = "<group>"; };
 		C06CD7152FFD4F0D52DD4BBA /* AgentDetailView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AgentDetailView.swift; sourceTree = "<group>"; };
 		C262FDAD23A0BA84CEA2CBD8 /* AgentModeStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AgentModeStore.swift; sourceTree = "<group>"; };
 		C391FEC5AE3DBB58A5866E03 /* MessageActionBar.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MessageActionBar.swift; sourceTree = "<group>"; };
+		C7B9F283E2DE6838A4FDF9C4 /* Mesh.xcframework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.xcframework; name = Mesh.xcframework; path = Frameworks/Mesh.xcframework; sourceTree = "<group>"; };
 		D11953529A9295E82BD8B098 /* MemorySettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MemorySettingsView.swift; sourceTree = "<group>"; };
 		D45673F8E41471638BD2E334 /* Color+Theme.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Color+Theme.swift"; sourceTree = "<group>"; };
 		D61E57FF032550F43AAC67BD /* Reply.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Reply.swift; sourceTree = "<group>"; };
@@ -193,6 +197,7 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				19E0767DE23B690FFA6BE33A /* Mesh.xcframework in Frameworks */,
 				DFD61E74AD745777D77785A1 /* ClerkKit in Frameworks */,
 				C2937A44D490892AF6C00188 /* ClerkKitUI in Frameworks */,
 				40C9CBF6F83731D28F941789 /* MarkdownView in Frameworks */,
@@ -226,6 +231,14 @@
 				2381F311EC679E52A7820C09 /* ACIAgentClient.swift */,
 			);
 			path = Services;
+			sourceTree = "<group>";
+		};
+		1E8CB0B35BED2173B9A534FD /* Mesh */ = {
+			isa = PBXGroup;
+			children = (
+				B88B65FA4B5A3288485C10A4 /* MeshClient.swift */,
+			);
+			path = Mesh;
 			sourceTree = "<group>";
 		};
 		29B48E2ED1D138BC5FAD33A4 /* Views */ = {
@@ -299,6 +312,7 @@
 				C59451C9C5AF1F1876D6EAD7 /* App */,
 				7921E05DCB410BADD7E8972A /* Core */,
 				9532FC532890F989B64EA885 /* Features */,
+				81BC9F98A3EDD9FE122FE8FE /* Frameworks */,
 				D0DFF4C5CD5504689090FDDE /* Products */,
 			);
 			sourceTree = "<group>";
@@ -348,6 +362,7 @@
 				42EEC45547DBFC90712637DD /* API */,
 				52E891D24571F713177AAA2A /* Auth */,
 				5308CC2C0D21F6B5639F8617 /* DesignSystem */,
+				1E8CB0B35BED2173B9A534FD /* Mesh */,
 			);
 			path = Core;
 			sourceTree = "<group>";
@@ -358,6 +373,14 @@
 				29B48E2ED1D138BC5FAD33A4 /* Views */,
 			);
 			path = History;
+			sourceTree = "<group>";
+		};
+		81BC9F98A3EDD9FE122FE8FE /* Frameworks */ = {
+			isa = PBXGroup;
+			children = (
+				C7B9F283E2DE6838A4FDF9C4 /* Mesh.xcframework */,
+			);
+			name = Frameworks;
 			sourceTree = "<group>";
 		};
 		84568374974BC58963824BF5 /* Artifacts */ = {
@@ -652,6 +675,7 @@
 				65F58948DB57F802D27C2C7B /* MemoryClient.swift in Sources */,
 				AE4827F580E76F77A891EB2A /* MemoryModels.swift in Sources */,
 				965ECCD0C479654C756FAAFD /* MemorySettingsView.swift in Sources */,
+				AAAC91D038EC9566F923403B /* MeshClient.swift in Sources */,
 				64AB41A8CA560DB652B20A10 /* MessageActionBar.swift in Sources */,
 				20E80A1F2D2626B38DB8EEB4 /* MessageRow.swift in Sources */,
 				F047EB8C6BDC03144EDF1187 /* ModeTheme.swift in Sources */,
@@ -761,6 +785,7 @@
 			buildSettings = {
 				ALLTERNIT_API_BASE_URL = "https://api.allternit.com/api/v1";
 				ALLTERNIT_GIZZI_CODE_URL = "";
+				ALLTERNIT_MESH_CONTROL_URL = "https://allternit-headscale.fly.dev";
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CLERK_PUBLISHABLE_KEY = pk_live_Y2xlcmsucGxhdGZvcm0uYWxsdGVybml0LmNvbSQ;
 				CODE_SIGN_ENTITLEMENTS = Allternit.entitlements;
@@ -768,6 +793,10 @@
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
 				DEVELOPMENT_TEAM = "";
+				FRAMEWORK_SEARCH_PATHS = (
+					"$(inherited)",
+					"\"Frameworks\"",
+				);
 				INFOPLIST_FILE = Info.plist;
 				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
 				LD_RUNPATH_SEARCH_PATHS = (
@@ -788,6 +817,7 @@
 			buildSettings = {
 				ALLTERNIT_API_BASE_URL = "http://127.0.0.1:8013/api/v1";
 				ALLTERNIT_GIZZI_CODE_URL = "http://127.0.0.1:4096";
+				ALLTERNIT_MESH_CONTROL_URL = "https://allternit-headscale.fly.dev";
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CLERK_PUBLISHABLE_KEY = pk_live_Y2xlcmsucGxhdGZvcm0uYWxsdGVybml0LmNvbSQ;
 				CODE_SIGN_ENTITLEMENTS = Allternit.entitlements;
@@ -795,6 +825,10 @@
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
 				DEVELOPMENT_TEAM = "";
+				FRAMEWORK_SEARCH_PATHS = (
+					"$(inherited)",
+					"\"Frameworks\"",
+				);
 				INFOPLIST_FILE = Info.plist;
 				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
 				LD_RUNPATH_SEARCH_PATHS = (
