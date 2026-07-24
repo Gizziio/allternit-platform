@@ -26,6 +26,25 @@ struct GizziInstance: Decodable, Sendable, Identifiable {
     /// The instance's tunnel base URL (e.g. `https://xyz.trycloudflare.com`);
     /// nil if the server sent a malformed URL.
     var instanceURL: URL? { URL(string: url) }
+
+    /// True when the instance registered a mesh URL (100.64.0.0/10) —
+    /// reachable only through the embedded mesh node's loopback proxy, never
+    /// directly via URLSession.
+    var isMeshInstance: Bool { instanceURL?.isMeshAddress == true }
+}
+
+extension URL {
+    /// True for tailnet IPv4 addresses (100.64.0.0/10: first octet 100,
+    /// second 64–127). These route only through the in-process tsnet node.
+    var isMeshAddress: Bool {
+        guard let host, scheme == "http" || scheme == "https" else { return false }
+        let octets = host.split(separator: ".", omittingEmptySubsequences: false)
+        guard octets.count == 4,
+              let first = Int(octets[0]), first == 100,
+              let second = Int(octets[1]), (64...127).contains(second),
+              Int(octets[2]) != nil, Int(octets[3]) != nil else { return false }
+        return true
+    }
 }
 
 /// Fetches the signed-in user's registered gizzi instances from the cloud

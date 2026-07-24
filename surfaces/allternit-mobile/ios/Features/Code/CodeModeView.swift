@@ -115,6 +115,12 @@ struct CodeModeView: View {
                     if let threadId = UserDefaults.standard.string(forKey: "open-code-thread-id") {
                         threadTarget = CodeThreadTarget(sessionId: threadId, title: "Thread")
                     }
+                    // `-mesh-proxy-selfcheck` (DEBUG only): verify the mesh
+                    // proxy URL helpers (100.64.0.0/10 classification,
+                    // target parsing) — results go to the console.
+                    if CommandLine.arguments.contains("-mesh-proxy-selfcheck") {
+                        MeshClient.runProxySelfCheck()
+                    }
                     didApplyDebugArgs = true
                 }
                 #endif
@@ -557,9 +563,12 @@ private struct CodeThreadTarget: Hashable, Identifiable {
 /// (TerminalSessionView) attached to a pty on the gizzi-code server. The
 /// pty session is created lazily on the first flip — resolving the host
 /// from InstanceStore (the pinned instance when one is selected, else the
-/// first ONLINE registered instance) with fallback to the static
+/// first ONLINE registered instance, with mesh instances preferred while
+/// the mesh node is up) with fallback to the static
 /// `AppConfig.gizziCodeBaseURL` — and kept in @State afterwards so flipping
-/// preserves the shell. With more than one registered instance, a second
+/// preserves the shell. Mesh-URL instances (100.64.0.0/10) attach through
+/// MeshClient's loopback proxy, since URLSession can't route the tailnet.
+/// With more than one registered instance, a second
 /// toolbar menu switches instances by tearing the session down and
 /// rebuilding it against the new host. When no host resolves at all
 /// (release build with no registered instance), the flip lands on a
@@ -599,18 +608,22 @@ private struct CodeThreadChatView: View {
             ToolbarItem(placement: .topBarTrailing) {
                 Button {
                     if !showTerminal, terminalSession == nil {
-                        terminalSession = Self.makeTerminalSession(from: instanceStore)
-                        if terminalSession == nil {
-                            // No host resolved (release with no registered
-                            // instance) — the warm-up fetch may still be in
-                            // flight, so wait for it before settling on the
-                            // no-instance state.
-                            resolvingTerminalHost = true
-                            Task {
+                        // Resolution can take a while (a mesh node start
+                        // blocks up to ~60s Go-side), so it runs in a task
+                        // under the "Connecting…" spinner.
+                        resolvingTerminalHost = true
+                        Task {
+                            var session = await Self.makeTerminalSession(from: instanceStore)
+                            if session == nil {
+                                // No host resolved (release with no registered
+                                // instance) — the warm-up fetch may still be in
+                                // flight, so wait for it before settling on the
+                                // no-instance state.
                                 await instanceStore.refreshIfNeeded()
-                                terminalSession = Self.makeTerminalSession(from: instanceStore)
-                                resolvingTerminalHost = false
+                                session = await Self.makeTerminalSession(from: instanceStore)
                             }
+                            terminalSession = session
+                            resolvingTerminalHost = false
                         }
                     }
                     showTerminal.toggle()
@@ -647,12 +660,55 @@ private struct CodeThreadChatView: View {
     /// Returns nil when neither source yields a usable host (release build,
     /// no registered instance) — the caller shows the no-instance state
     /// instead of attempting a connection.
-    private static func makeTerminalSession(from store: InstanceStore) -> PtySession? {
+    ///
+    /// Mesh instances (100.64.0.0/10 URLs) can't be reached by URLSession
+    /// directly — the tailnet is in-process userspace — so they attach
+    /// through MeshClient's loopback proxy. When the mesh can't be brought
+    /// up, resolution falls back to the preferred non-mesh instance, then
+    /// to the static URL.
+    @MainActor
+    private static func makeTerminalSession(from store: InstanceStore) async -> PtySession? {
         if let instance = store.preferredInstance, let url = instance.instanceURL {
-            return PtySession(client: PtyClient(baseURL: url), attachedInstanceName: instance.name)
+            if !url.isMeshAddress {
+                return PtySession(client: PtyClient(baseURL: url), attachedInstanceName: instance.name)
+            }
+            if let proxyURL = await resolveMeshProxyBaseURL(for: url) {
+                return PtySession(client: PtyClient(baseURL: proxyURL), attachedInstanceName: instance.name)
+            }
+            // Mesh instance preferred but unreachable — try the non-mesh
+            // fallback before giving up on the registry.
+            if let fallback = store.nonMeshFallbackInstance,
+               fallback.id != instance.id,
+               let fallbackURL = fallback.instanceURL {
+                return PtySession(client: PtyClient(baseURL: fallbackURL), attachedInstanceName: fallback.name)
+            }
+            return nil
         }
         guard AppConfig.hasUsableGizziCodeURL else { return nil }
         return PtySession()
+    }
+
+    /// Resolves the loopback base URL (`http://127.0.0.1:<port>`) for a mesh
+    /// instance: with the node already up, straight to the proxy; otherwise
+    /// tries to start it with the DEBUG auth key and waits for the join
+    /// (the Go-side start blocks up to ~60s — the caller's "Connecting…"
+    /// spinner covers this). nil when the mesh can't be used: release
+    /// builds carry no key, and a failed start leaves state `.failed`.
+    @MainActor
+    private static func resolveMeshProxyBaseURL(for url: URL) async -> URL? {
+        let mesh = MeshClient.shared
+        if !mesh.state.isUp {
+            guard let authKey = MeshClient.debugAuthKey else { return nil }
+            mesh.start(authKey: authKey)
+            // start() is fire-and-forget; poll the published state until
+            // the join settles.
+            while mesh.state == .starting {
+                try? await Task.sleep(for: .milliseconds(250))
+                if Task.isCancelled { return nil }
+            }
+            guard mesh.state.isUp else { return nil }
+        }
+        return try? await mesh.localProxyBaseURL(forMeshURL: url)
     }
 
     /// Shown in place of the terminal when no host resolved (release build
@@ -674,7 +730,7 @@ private struct CodeThreadChatView: View {
             Button("Retry") {
                 Task {
                     await instanceStore.refresh()
-                    terminalSession = Self.makeTerminalSession(from: instanceStore)
+                    terminalSession = await Self.makeTerminalSession(from: instanceStore)
                 }
             }
             .font(.subheadline)
@@ -709,7 +765,7 @@ private struct CodeThreadChatView: View {
                         Circle()
                             .fill(instance.isOnline ? Theme.statusSuccess : Color("TextSecondary"))
                             .frame(width: 6, height: 6)
-                        Text(instance.name)
+                        Text(instance.isMeshInstance ? "\(instance.name) · mesh" : instance.name)
                     }
                 }
             }
@@ -726,14 +782,20 @@ private struct CodeThreadChatView: View {
 
     /// Pins the terminal to an instance (nil = automatic) and rebuilds the
     /// pty session against the new host: the old session is detached and
-    /// dropped, then either rebuilt immediately (terminal on screen — the
-    /// fresh view's `.task` attaches it) or left nil so the next flip
-    /// rebuilds it lazily via `makeTerminalSession`, which reads the
-    /// selection at build time.
+    /// dropped, then either rebuilt (terminal on screen — the fresh view's
+    /// `.task` attaches it) or left nil so the next flip rebuilds it lazily
+    /// via `makeTerminalSession`, which reads the selection at build time.
     private func selectInstance(_ id: String?) {
         instanceStore.select(id)
         terminalSession?.stop()
-        terminalSession = showTerminal ? Self.makeTerminalSession(from: instanceStore) : nil
+        terminalSession = nil
+        if showTerminal {
+            resolvingTerminalHost = true
+            Task {
+                terminalSession = await Self.makeTerminalSession(from: instanceStore)
+                resolvingTerminalHost = false
+            }
+        }
     }
 }
 

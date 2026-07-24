@@ -57,6 +57,8 @@ node := mesh.NewNode("my-iphone")            // MeshNewNode("my-iphone")
 err  := node.Start(controlURL, authKey, dataDir)
 ip   := node.MeshIP()                        // "100.x.y.z" once up, "" otherwise
 body, err := node.Get("http://100.x.y.z/")   // through the tailnet
+port, err := node.StartProxy("100.x.y.z", 4096) // loopback proxy → 127.0.0.1:port
+err  = node.StopProxy()
 err  = node.Close()
 ```
 
@@ -67,6 +69,8 @@ Generated Obj-C surface (see
 - `-[MeshNode start:authKey:dataDir:error:] -> BOOL`
 - `-[MeshNode meshIP] -> NSString*`
 - `-[MeshNode get:error:] -> NSString*`
+- `-[MeshNode startProxy:targetPort:ret0_:error:] -> BOOL`
+- `-[MeshNode stopProxy:] -> BOOL`
 - `-[MeshNode close:] -> BOOL`
 
 Notes:
@@ -78,6 +82,12 @@ Notes:
   caller pass it).
 - `Start` blocks until the node is online (up to 60 s) — call it off the main
   thread.
+- `StartProxy` exists because iOS networking cannot route 100.64.0.0/10:
+  URLSession traffic to mesh URLs must enter the tailnet through the Go side.
+  The proxy listens on 127.0.0.1 (random free port), forwards to one fixed
+  tailnet target, and carries HTTP/WS unchanged (loopback Host headers pass
+  the gizzi server's loopback allowlist). One proxy per node — same target
+  returns the running port, a different target replaces it.
 - A `Node` is single-use after `Close`; create a new one to reconnect.
 
 ## Consuming the xcframework in the app

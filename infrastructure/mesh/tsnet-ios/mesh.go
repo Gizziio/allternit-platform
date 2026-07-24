@@ -8,8 +8,11 @@ package mesh
 import (
 	"context"
 	"errors"
+	"fmt"
 	"io"
+	"net"
 	"net/http"
+	"strconv"
 	"sync"
 	"time"
 
@@ -26,6 +29,15 @@ type Node struct {
 	mu       sync.Mutex
 	hostname string
 	srv      *tsnet.Server
+	proxy    *nodeProxy
+}
+
+// nodeProxy is the loopback TCP proxy started by StartProxy: it accepts on
+// 127.0.0.1 and dials its fixed tailnet target through the node's tsnet
+// server.
+type nodeProxy struct {
+	target string
+	ln     net.Listener
 }
 
 // NewNode creates a Node that will join the tailnet under the given hostname.
@@ -123,11 +135,129 @@ func (n *Node) Get(url string) (string, error) {
 	return string(body), nil
 }
 
+// StartProxy starts a loopback TCP proxy that forwards connections from
+// 127.0.0.1:<localPort> through the tailnet to targetHost:targetPort, and
+// returns the chosen local port.
+//
+// iOS networking cannot reach tailnet (100.64.0.0/10) addresses directly —
+// the mesh is userspace and in-process — so URLSession must go through this
+// proxy to reach mesh-registered services (e.g. an instance URL like
+// http://100.64.0.2:4096 becomes http://127.0.0.1:<localPort>). TCP-level
+// forwarding carries HTTP and WebSocket traffic unchanged.
+//
+// One proxy per node: calling again with the same target returns the
+// running proxy's port; calling with a different target replaces the
+// running proxy. The proxy stops on StopProxy or Close.
+func (n *Node) StartProxy(targetHost string, targetPort int) (int, error) {
+	n.mu.Lock()
+	defer n.mu.Unlock()
+	if n.srv == nil {
+		return 0, errors.New("mesh: node not started")
+	}
+	if targetHost == "" || targetPort <= 0 || targetPort > 65535 {
+		return 0, fmt.Errorf("mesh: invalid proxy target %q port %d", targetHost, targetPort)
+	}
+	target := net.JoinHostPort(targetHost, strconv.Itoa(targetPort))
+	if n.proxy != nil && n.proxy.target == target {
+		return n.proxy.ln.Addr().(*net.TCPAddr).Port, nil
+	}
+	n.stopProxyLocked()
+
+	ln, err := net.Listen("tcp", "127.0.0.1:0")
+	if err != nil {
+		return 0, err
+	}
+	p := &nodeProxy{target: target, ln: ln}
+	n.proxy = p
+	go n.serveProxy(p)
+	return ln.Addr().(*net.TCPAddr).Port, nil
+}
+
+// serveProxy accepts loopback connections until the proxy's listener is
+// closed (StopProxy/Close) and bridges each to the tailnet target.
+func (n *Node) serveProxy(p *nodeProxy) {
+	for {
+		conn, err := p.ln.Accept()
+		if err != nil {
+			return // listener closed
+		}
+		go n.bridgeToTailnet(p, conn)
+	}
+}
+
+// bridgeToTailnet dials the proxy's target through the tailnet and shuttles
+// bytes between the loopback connection and the tailnet connection.
+func (n *Node) bridgeToTailnet(p *nodeProxy, local net.Conn) {
+	n.mu.Lock()
+	srv := n.srv
+	n.mu.Unlock()
+	if srv == nil {
+		local.Close()
+		return
+	}
+	ctx, cancel := context.WithTimeout(context.Background(), 15*time.Second)
+	upstream, err := srv.Dial(ctx, "tcp", p.target)
+	cancel()
+	if err != nil {
+		local.Close()
+		return
+	}
+	proxyConns(local, upstream)
+}
+
+// StopProxy stops the loopback proxy started by StartProxy, if any.
+func (n *Node) StopProxy() error {
+	n.mu.Lock()
+	defer n.mu.Unlock()
+	n.stopProxyLocked()
+	return nil
+}
+
+func (n *Node) stopProxyLocked() {
+	if n.proxy != nil {
+		n.proxy.ln.Close()
+		n.proxy = nil
+	}
+}
+
+// proxyConns shuttles bytes between a and b in both directions until both
+// copies finish, then closes both. A half-close is propagated to the other
+// side when the connection supports it (TCP), so a peer that signals EOF
+// still receives the remaining response from the other direction. Mirrors
+// proxyConn in cmd/mesh-node/proxy.go (kept as a copy: that one lives in
+// package main and cannot be imported here).
+func proxyConns(a, b net.Conn) {
+	var wg sync.WaitGroup
+	wg.Add(2)
+	go func() {
+		defer wg.Done()
+		io.Copy(a, b)
+		closeWrite(a)
+	}()
+	go func() {
+		defer wg.Done()
+		io.Copy(b, a)
+		closeWrite(b)
+	}()
+	wg.Wait()
+	a.Close()
+	b.Close()
+}
+
+// closeWrite propagates EOF without closing the read side; a no-op for
+// connection types without half-close support.
+func closeWrite(c net.Conn) {
+	if tc, ok := c.(*net.TCPConn); ok {
+		_ = tc.CloseWrite()
+	}
+}
+
 // Close shuts the node down and releases its resources. The Node must not be
 // used afterwards; create a fresh one with NewNode to reconnect.
 func (n *Node) Close() error {
 	n.mu.Lock()
 	defer n.mu.Unlock()
+	n.stopProxyLocked()
 	if n.srv == nil {
 		return nil
 	}

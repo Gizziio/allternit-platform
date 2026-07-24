@@ -31,6 +31,13 @@ final class MeshClient: ObservableObject {
             case .idle, .failed: return false
             }
         }
+
+        /// True only when the node is online — the loopback proxy (and
+        /// `meshGET`) is usable in this state alone.
+        var isUp: Bool {
+            if case .up = self { return true }
+            return false
+        }
     }
 
     @Published private(set) var state: State = .idle
@@ -48,6 +55,13 @@ final class MeshClient: ObservableObject {
     /// Set when the app backgrounds while the node is live; consumed by the
     /// foreground restart.
     private var restartOnForeground = false
+
+    /// The running loopback proxy: its tailnet target ("host:port") and the
+    /// local 127.0.0.1 port it listens on. One proxy per node (the Go side
+    /// enforces this) — a different target replaces it. Cleared whenever the
+    /// node is torn down, because the proxy dies with it (foreground restart
+    /// included); the next `proxyPort(forMeshURL:)` re-creates it lazily.
+    private var activeProxy: (target: String, localPort: Int)?
 
     /// Sendable box for handing the (non-Sendable) MeshNode to a detached
     /// task — see the `nonisolated(unsafe)` note on `node`.
@@ -109,6 +123,7 @@ final class MeshClient: ObservableObject {
         // captured by the detached (sending) closure below.
         let oldBox = node.map { NodeBox(node: $0) }
         node = nil
+        activeProxy = nil // the old node's proxy dies with it
         state = .starting
         lastStartParams = (controlURL, authKey)
 
@@ -158,11 +173,13 @@ final class MeshClient: ObservableObject {
     func stop() {
         let oldBox = node.map { NodeBox(node: $0) }
         node = nil
+        activeProxy = nil
         lastStartParams = nil
         restartOnForeground = false
         state = .idle
         if let oldBox {
             Task.detached {
+                try? oldBox.node.stopProxy()
                 try? oldBox.node.close()
             }
         }
@@ -189,15 +206,98 @@ final class MeshClient: ObservableObject {
 
     enum MeshClientError: LocalizedError {
         case notUp
+        case badMeshURL
 
         var errorDescription: String? {
             switch self {
             case .notUp: return "Mesh node is not up"
+            case .badMeshURL: return "Instance URL has no usable host"
             }
         }
     }
 
+    // MARK: - Loopback proxy
+
+    /// The tailnet target (host + port, default 80) a mesh instance URL
+    /// points at; nil when the URL has no usable host. `nonisolated`: a
+    /// pure function — the DEBUG self-check calls it off-actor.
+    nonisolated static func proxyTarget(forMeshURL url: URL) -> (host: String, port: Int)? {
+        guard let host = url.host, !host.isEmpty else { return nil }
+        return (host, url.port ?? 80)
+    }
+
+    /// Starts (or reuses) the loopback proxy for a mesh instance URL like
+    /// `http://100.64.0.2:4096` and returns the local port: the Go node
+    /// listens on 127.0.0.1:<port> and forwards each connection through the
+    /// tailnet to the URL's host:port. This is the ONLY way URLSession can
+    /// reach a mesh address — 100.64.0.0/10 is in-process userspace, so iOS
+    /// networking can't route it. Only available while state is `.up`.
+    ///
+    /// Idempotent per target: a running proxy for the same host:port is
+    /// returned as-is. A different target replaces the running proxy (the Go
+    /// side allows one per node), which the terminal's single-instance
+    /// attach makes sufficient.
+    func proxyPort(forMeshURL url: URL) async throws -> Int {
+        guard state.isUp, let node else { throw MeshClientError.notUp }
+        guard let target = Self.proxyTarget(forMeshURL: url) else { throw MeshClientError.badMeshURL }
+        let targetKey = "\(target.host):\(target.port)"
+        if let activeProxy, activeProxy.target == targetKey {
+            return activeProxy.localPort
+        }
+        // Box before crossing into the detached (sending) closure — same
+        // pattern as meshGET; gobind blocks, so it runs off the main actor.
+        let box = NodeBox(node: node)
+        let localPort = try await Task.detached {
+            // gobind maps the (int, error) return to BOOL + ret0_ out-param.
+            var localPort = 0
+            try box.node.startProxy(target.host, targetPort: target.port, ret0_: &localPort)
+            return localPort
+        }.value
+        activeProxy = (targetKey, localPort)
+        return localPort
+    }
+
+    /// The loopback base URL (`http://127.0.0.1:<port>`) a `PtyClient` can
+    /// target to reach a mesh instance through the proxy. TCP-level
+    /// forwarding preserves the loopback Host header, which the gizzi
+    /// server's loopback allowlist accepts.
+    func localProxyBaseURL(forMeshURL url: URL) async throws -> URL? {
+        let port = try await proxyPort(forMeshURL: url)
+        return URL(string: "http://127.0.0.1:\(port)")
+    }
+
     // MARK: - DEBUG auth key
+
+    #if DEBUG
+    /// DEBUG-only self-check for the mesh proxy resolution path (run with
+    /// the `-mesh-proxy-selfcheck` launch argument): 100.64.0.0/10
+    /// classification, target parsing, and the loopback base-URL shape. The
+    /// live proxy itself needs a joined tailnet plus a registered mesh
+    /// gizzi instance, so this covers the pure parts only. Prints one line
+    /// per check and returns false on any mismatch.
+    @discardableResult
+    static func runProxySelfCheck() -> Bool {
+        var ok = true
+        func check(_ label: String, _ condition: Bool) {
+            if !condition { ok = false }
+            print("[mesh-proxy-selfcheck] \(label): \(condition ? "ok" : "FAIL")")
+        }
+        check("100.64.0.2 is mesh", URL(string: "http://100.64.0.2:4096")?.isMeshAddress == true)
+        check("100.127.255.254 is mesh", URL(string: "http://100.127.255.254:4096")?.isMeshAddress == true)
+        check("100.63.255.255 is not mesh", URL(string: "http://100.63.255.255:4096")?.isMeshAddress == false)
+        check("100.128.0.0 is not mesh", URL(string: "http://100.128.0.0:4096")?.isMeshAddress == false)
+        check("tunnel URL is not mesh", URL(string: "https://xyz.trycloudflare.com")?.isMeshAddress == false)
+        check("127.0.0.1 is not mesh", URL(string: "http://127.0.0.1:4096")?.isMeshAddress == false)
+        check("10.0.0.5 is not mesh", URL(string: "http://10.0.0.5:4096")?.isMeshAddress == false)
+        let target = URL(string: "http://100.64.0.2:4096").flatMap(proxyTarget(forMeshURL:))
+        check("target parses host", target?.host == "100.64.0.2")
+        check("target parses port", target?.port == 4096)
+        check("default port is 80", URL(string: "http://100.64.0.2").flatMap(proxyTarget(forMeshURL:))?.port == 80)
+        check("bad URL has no target", URL(string: "http://").flatMap(proxyTarget(forMeshURL:)) == nil)
+        check("loopback base URL shape", URL(string: "http://127.0.0.1:51234")?.absoluteString == "http://127.0.0.1:51234")
+        return ok
+    }
+    #endif
 
     /// Pre-auth key source (v1, DEBUG only): the `-mesh-auth-key <key>`
     /// launch argument, or the hidden Settings debug row — both land in
