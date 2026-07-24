@@ -4,16 +4,16 @@
     <id>gizzi-code</id>
     <version>1.0.0</version>
     <title>Gizzi Code</title>
-    <authors>A2R Technologies</authors>
+    <authors>Allternit Technologies</authors>
     <owners>Gizziio</owners>
     <requireLicenseAcceptance>false</requireLicenseAcceptance>
     <licenseUrl>https://github.com/Gizziio/gizzi-code/blob/main/LICENSE</licenseUrl>
     <projectUrl>https://gizzi.sh</projectUrl>
     <iconUrl>https://gizzi.sh/icon.png</iconUrl>
-    <description>AI-powered terminal interface for the A2R ecosystem</description>
+    <description>AI-powered terminal interface for the Allternit ecosystem</description>
     <summary>AI Terminal Interface</summary>
     <releaseNotes>https://github.com/Gizziio/gizzi-code/releases</releaseNotes>
-    <copyright>Copyright 2025 A2R Technologies</copyright>
+    <copyright>Copyright 2025 Allternit Technologies</copyright>
     <tags>ai terminal cli tui</tags>
     <projectSourceUrl>https://github.com/Gizziio/gizzi-code</projectSourceUrl>
     <packageSourceUrl>https://github.com/Gizziio/gizzi-code</packageSourceUrl>

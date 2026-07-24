@@ -168,9 +168,15 @@ export class VerificationOrchestrator {
         break;
     }
     
-    // Capture visual evidence
-    await this.captureVisualEvidence(plan, receipts, result);
-    
+    // Capture visual evidence (skip in test/offline mode to avoid browser
+    // automation overhead)
+    if (
+      process.env.GIZZI_VERIFICATION_OFFLINE !== "1" &&
+      process.env.NODE_ENV !== "test"
+    ) {
+      await this.captureVisualEvidence(plan, receipts, result);
+    }
+
     return result;
   }
   

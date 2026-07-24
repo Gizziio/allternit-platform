@@ -52,7 +52,9 @@ export namespace SessionTrace {
         part_id: input.partID,
         data: input.data,
         time_created: input.time ?? Date.now(),
-      }).run()
+        // drizzle types .run() as void, but bun:sqlite returns
+        // { changes, lastInsertRowid } — the sequence id we hand back.
+      }).run() as unknown as { lastInsertRowid: number | bigint }
       return Number(result.lastInsertRowid)
     })
   }

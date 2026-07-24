@@ -1,3 +1,4 @@
+/** @jsxImportSource @opentui/solid */
 import type { MessageV2 } from "@/runtime/session/message-v2"
 import type { SessionStatus } from "@/runtime/session/status"
 import { createEffect, createMemo, createSignal, For, onCleanup, Show } from "solid-js"

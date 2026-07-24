@@ -1,3 +1,4 @@
+/** @jsxImportSource @opentui/solid */
 import { For, Show, createMemo } from "solid-js"
 import { useGIZZITheme } from "@/cli/ui/components/gizzi/theme"
 import { useBrand, type BrandBannerVariant } from "@/cli/ui/components/gizzi/useBrand"

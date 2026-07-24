@@ -4,7 +4,9 @@
 
 export type ModelProvider = 'anthropic' | 'openai' | 'google' | 'ollama'
 
-export function getAPIProvider(): ModelProvider {
+export type APIProvider = 'firstParty'
+
+export function getAPIProvider(): APIProvider {
   return 'firstParty'
 }
 
@@ -27,6 +29,6 @@ export function isFirstPartyAnthropicBaseUrl(): boolean {
 }
 
 /** Provider name string for telemetry/statsig tagging. */
-export function getAPIProviderForStatsig(): ModelProvider {
+export function getAPIProviderForStatsig(): APIProvider {
   return getAPIProvider()
 }

@@ -41,6 +41,7 @@ export const AgentSwarmTool = Tool.define("agent_swarm", async () => ({
     const config = await Config.get()
     const parentMessage = await MessageV2.get({ sessionID: ctx.sessionID, messageID: ctx.messageID })
     if (parentMessage.info.role !== "assistant") throw new Error("Agent swarm must be called from an assistant turn")
+    const parentInfo = parentMessage.info
 
     const resolved = new Map<string, Agent.Info>()
     for (const task of params.tasks) {
@@ -81,7 +82,7 @@ export const AgentSwarmTool = Tool.define("agent_swarm", async () => ({
           })
 
       if (!existingID) await PermissionNext.setMode(child.id, await PermissionNext.getMode(ctx.sessionID))
-      const model = agent.model ?? { providerID: parentMessage.info.providerID, modelID: parentMessage.info.modelID }
+      const model = agent.model ?? { providerID: parentInfo.providerID, modelID: parentInfo.modelID }
       const tools = {
         todowrite: false,
         todoread: false,

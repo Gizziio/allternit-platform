@@ -1,3 +1,4 @@
+/** @jsxImportSource @opentui/solid */
 /**
  * GIZZI Mascot Logo (TUI Version)
  * 

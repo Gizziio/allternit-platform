@@ -1,3 +1,4 @@
+/** @jsxImportSource @opentui/solid */
 import type { JSX } from "@opentui/solid"
 import { Show, createMemo } from "solid-js"
 import { useGIZZITheme } from "@/cli/ui/components/gizzi/theme"

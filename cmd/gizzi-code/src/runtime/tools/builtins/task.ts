@@ -39,7 +39,13 @@ const parameters = z.object({
     .describe("Return immediately and notify the parent session when this subagent finishes."),
 })
 
-export const TaskTool = Tool.define("task", async (ctx) => {
+type TaskMetadata = {
+  sessionId: string
+  model: { modelID: string; providerID: string }
+  background?: boolean
+}
+
+export const TaskTool = Tool.define<typeof parameters, TaskMetadata>("task", async (ctx) => {
   const agents = await Agent.list().then((x) => x.filter((a) => a.mode !== "primary"))
 
   // Filter agents by permissions if agent provided
@@ -134,6 +140,7 @@ export const TaskTool = Tool.define("task", async (ctx) => {
       })
       const msg = await MessageV2.get({ sessionID: ctx.sessionID, messageID: ctx.messageID })
       if (msg.info.role !== "assistant") throw new Error("Not an assistant message")
+      const info = msg.info
 
       const model = agent.model ?? {
         modelID: msg.info.modelID,
@@ -217,7 +224,7 @@ export const TaskTool = Tool.define("task", async (ctx) => {
           await SessionPrompt.prompt({
             sessionID: ctx.sessionID,
             agent: msg.info.agent,
-            model: { providerID: msg.info.providerID, modelID: msg.info.modelID },
+            model: { providerID: info.providerID, modelID: info.modelID },
             parts: [
               {
                 type: "text",

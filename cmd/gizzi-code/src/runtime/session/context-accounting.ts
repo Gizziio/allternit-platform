@@ -33,7 +33,7 @@ export namespace ContextAccounting {
   }): ContextMeasurement {
     const systemTokens = input.system.reduce((total, block) => total + estimate(block), 0)
     const messageTokens = input.messages.reduce((total, message) => total + estimate(message), 0)
-    const toolSchemaTokens = Object.values(input.tools).reduce((total, schema) => total + estimate(schema), 0)
+    const toolSchemaTokens = Object.values(input.tools).reduce<number>((total, schema) => total + estimate(schema), 0)
     const estimatedInput = systemTokens + messageTokens + toolSchemaTokens
     const providerInput = input.providerUsage?.inputTokens
     const inputTokens = providerInput === undefined ? estimatedInput : Math.max(providerInput, estimatedInput)

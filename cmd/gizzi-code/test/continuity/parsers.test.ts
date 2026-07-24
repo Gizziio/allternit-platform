@@ -18,7 +18,7 @@ describe("Tool Parsers", () => {
   })
 
   describe("OpenCode Parser", () => {
-    it.skip("should parse basic OpenCode session (parseOpenCode not implemented)", async () => {
+    it("should parse basic OpenCode session", async () => {
       const sessionPath = path.join(testDir, "opencode-session")
       await mkdir(sessionPath, { recursive: true })
       

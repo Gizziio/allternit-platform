@@ -1,3 +1,4 @@
+/** @jsxImportSource @opentui/solid */
 import { createMemo } from "solid-js"
 import { TextAttributes } from "@opentui/core"
 import { useAnimation } from "@/cli/ui/components/animation"

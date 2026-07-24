@@ -2,6 +2,14 @@ import fs from "fs/promises"
 import path from "path"
 import { strToU8, zipSync } from "fflate"
 import { Session } from "@/runtime/session"
+
+// The ambient declaration in src/types/global.d.ts only declares gzip/gunzip
+// and shadows fflate's bundled types; augment it with the members used here
+// (signatures match fflate 0.8.x).
+declare module "fflate" {
+  export function strToU8(str: string, latin1?: boolean): Uint8Array
+  export function zipSync(data: Record<string, Uint8Array>, options?: { level?: number }): Uint8Array
+}
 import { SessionTrace } from "@/runtime/session/trace"
 import { BackgroundTask } from "@/runtime/session/background-task"
 import { Global } from "@/runtime/context/global"

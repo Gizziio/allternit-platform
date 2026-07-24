@@ -9,6 +9,9 @@
  *   - sequential-thinking  (@modelcontextprotocol/server-sequential-thinking)
  *   - context7             (@upstash/context7-mcp)
  *   - superpowers          (tools/mcp-servers/superpowers)
+ *   - allternit-connectors (Rust API internal route — per-user connector
+ *                           actions on connected apps; only when
+ *                           ALLTERNIT_INTERNAL_SERVICE_TOKEN is configured)
  *
  * These are merged with user-defined MCP config at startup. User config
  * can override any bundled server by defining an entry with the same key.
@@ -47,6 +50,38 @@ function localServer(entrypoint: string | undefined): Config.Mcp | undefined {
   return { type: "local", command: [process.execPath, entrypoint] }
 }
 
+/**
+ * The Allternit connector MCP: per-user actions on connected apps
+ * (list_apps / search_actions / get_action_guide / execute_action) via the
+ * Rust API's internal route (`cmd/allternit-api/src/internal_routes.rs` →
+ * connector_routes.rs mcp_proxy_internal). This is the last mile that makes
+ * connected Gmail/Notion/Slack/etc. accounts callable BY the agent.
+ *
+ * Registered only when ALLTERNIT_INTERNAL_SERVICE_TOKEN matches the API's
+ * (config.rs:302) — without it the entry would be a server that can only
+ * 401. The route also requires the user explicitly; ALLTERNIT_USER_ID
+ * overrides the local single-user default.
+ */
+function allternitConnectorsServer(): Config.Mcp | undefined {
+  const token = process.env.ALLTERNIT_INTERNAL_SERVICE_TOKEN
+  if (!token) return undefined
+  const base = (process.env.ALLTERNIT_API_URL ?? "http://127.0.0.1:8013").replace(/\/$/, "")
+  return {
+    type: "remote",
+    url: `${base}/internal/connectors/mcp`,
+    headers: {
+      // Static shared secret (internal_auth.rs — NOT a Bearer token).
+      "x-allternit-internal-token": token,
+      // The route also requires the user explicitly — the per-user
+      // alias the connector proxy scopes connections by.
+      "x-allternit-user-id": process.env.ALLTERNIT_USER_ID ?? "local-dev-user",
+    },
+    // The route authenticates by the static internal token, not OAuth —
+    // skip gizzi's OAuth auto-detection.
+    oauth: false,
+  }
+}
+
 export function bundledMcpServers(options: { cwd?: string } = {}): Record<string, Config.Mcp> {
   const result: Record<string, Config.Mcp> = {}
   const sequentialThinking = localServer(
@@ -58,6 +93,9 @@ export function bundledMcpServers(options: { cwd?: string } = {}): Record<string
   if (sequentialThinking) result["sequential-thinking"] = sequentialThinking
   if (context7) result.context7 = context7
   if (superpowers) result.superpowers = superpowers
+
+  const connectors = allternitConnectorsServer()
+  if (connectors) result["allternit-connectors"] = connectors
 
   // Network-backed npx startup used to run unconditionally, causing two
   // independent startup timeouts and making a local CLI launch depend on npm.

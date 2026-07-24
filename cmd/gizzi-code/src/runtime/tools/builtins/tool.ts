@@ -89,5 +89,5 @@ export namespace Tool {
 }
 
 // Merge-by-re-export: complete counterpart (local exports win on conflict)
-export { buildTool, findToolByName, toolMatchesName } from "../../../tool.js";
-export type { AnyObject, Progress, SetToolJSXFn, ToolCall, ToolDef, ToolInvocation, ToolPermissionContext, ToolResult, ToolUse, ToolUseContext, Tools, ValidationResult } from "../../../tool.js";
+export { buildTool, findToolByName, toolMatchesName } from "../../../Tool.js";
+export type { AnyObject, Progress, SetToolJSXFn, ToolCall, ToolDef, ToolInvocation, ToolPermissionContext, ToolResult, ToolUse, ToolUseContext, Tools, ValidationResult } from "../../../Tool.js";

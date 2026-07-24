@@ -160,15 +160,20 @@ export namespace PermissionNext {
   export const ask = fn(
     Request.partial({ id: true }).extend({
       ruleset: Ruleset,
+      // Optional per-call mode override (e.g. the mobile composer's per-message
+      // `toolAccess` option). When set, it is used instead of the session's
+      // persisted mode for this evaluation only — the session mode is never
+      // read or written.
+      mode: Mode.optional(),
     }),
     async (input) => {
       const s = await state()
-      const { ruleset, ...request } = input
+      const { ruleset, mode: modeOverride, ...request } = input
       for (const pattern of request.patterns ?? []) {
         const rule = evaluatePolicy(request.permission, pattern, {
           configured: ruleset,
           approvals: s.approved,
-          mode: await getMode(request.sessionID),
+          mode: modeOverride ?? (await getMode(request.sessionID)),
         })
         log.info("evaluated", { permission: request.permission, pattern, action: rule })
         if (rule.action === "deny")

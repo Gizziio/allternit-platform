@@ -1,3 +1,4 @@
+/** @jsxImportSource @opentui/solid */
 /**
  * Progress Bar Component
  * 

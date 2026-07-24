@@ -11,7 +11,7 @@ import {
   saveGlobalConfig,
 } from '../../../shared/utils/config.js'
 import { logForDebugging } from '../../../shared/utils/debug.js'
-import { toError } from '../../../shared/utils/errors.js'
+import { errorMessage } from '../../../shared/utils/errors.js'
 import { getAuthHeaders } from '../../../shared/utils/http.js'
 import { logError } from '../../../cli/utils/log.js'
 import { createSignal } from '../../util/signal.js'
@@ -180,9 +180,7 @@ function getEnvOverrides(): Record<string, unknown> | null {
           )
         } catch {
           logError(
-            new Error(
-              `GrowthBook: Failed to parse CLAUDE_INTERNAL_FC_OVERRIDES: ${raw}`,
-            ),
+            `GrowthBook: Failed to parse CLAUDE_INTERNAL_FC_OVERRIDES: ${raw}`,
           )
         }
       }
@@ -602,7 +600,7 @@ const getGrowthBookClient = memoize(
       })
       .catch(error => {
         if (process.env.USER_TYPE === 'ant') {
-          logError(toError(error))
+          logError(errorMessage(error))
         }
       })
 
@@ -967,7 +965,7 @@ export function refreshGrowthBookAfterAuthChange(): void {
     // try/catch below cannot catch async rejections.
     reinitializingPromise = initializeGrowthBook()
       .catch(error => {
-        logError(toError(error))
+        logError(errorMessage(error))
         return null
       })
       .finally(() => {
@@ -977,7 +975,7 @@ export function refreshGrowthBookAfterAuthChange(): void {
     if (process.env.NODE_ENV === 'development') {
       throw error
     }
-    logError(toError(error))
+    logError(errorMessage(error))
   }
 }
 
@@ -1073,7 +1071,7 @@ export async function refreshGrowthBookFeatures(): Promise<void> {
     if (process.env.NODE_ENV === 'development') {
       throw error
     }
-    logError(toError(error))
+    logError(errorMessage(error))
   }
 }
 

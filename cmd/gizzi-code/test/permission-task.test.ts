@@ -139,7 +139,7 @@ describe("PermissionNext.disabled for task tool", () => {
 })
 
 // Integration tests that load permissions from real config files
-describe.skip("permission.task with real config files (config loading not wired in tests)", () => {
+describe("permission.task with real config files", () => {
   test("loads task permissions from opencode.json config", async () => {
     await using tmp = await tmpdir({
       git: true,

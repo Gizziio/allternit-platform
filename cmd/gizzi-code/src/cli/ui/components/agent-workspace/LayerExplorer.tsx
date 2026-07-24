@@ -1,3 +1,4 @@
+/** @jsxImportSource @opentui/solid */
 import type { JSX } from "solid-js"
 import { For, Show, createMemo } from "solid-js"
 import { useTheme } from "@/cli/ui/ink-app/context/theme"

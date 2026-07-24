@@ -26,7 +26,7 @@ export namespace RuntimeTelemetry {
     const properties: Record<string, TelemetryPrimitive> = {}
     for (const key of Object.keys(allowed)) {
       const value = input[key as keyof RuntimeTelemetryEvents[K]] as unknown
-      if (value === undefined || value === null || typeof value === "boolean") properties[key] = value
+      if (value === undefined || value === null || typeof value === "boolean") properties[key] = value as TelemetryPrimitive
       if (typeof value === "string") properties[key] = cleanTelemetryString(value)
       if (typeof value === "number" && Number.isFinite(value)) properties[key] = value
     }

@@ -1,3 +1,4 @@
+/** @jsxImportSource @opentui/solid */
 import { For, createSignal, onMount, onCleanup, Show, Switch, Match, createMemo } from "solid-js"
 import { RGBA, TextAttributes } from "@opentui/core"
 

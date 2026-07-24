@@ -1,4 +1,4 @@
-
+/** @jsxImportSource @opentui/solid */
 import type { RGBA } from "@opentui/core"
 import type { JSX } from "@opentui/solid"
 import { createMemo, Show } from "solid-js"

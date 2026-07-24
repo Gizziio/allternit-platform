@@ -65,7 +65,7 @@ export async function startPlatform(): Promise<{ success: boolean; error?: strin
   log.info("Starting platform...", { projectRoot })
   
   return new Promise((resolve) => {
-    const child = spawn("cargo", ["run", "-p", "gizzichitech-platform"], {
+    const child = spawn("cargo", ["run", "-p", "allternit-platform"], {
       cwd: projectRoot,
       detached: true,
       stdio: "ignore",

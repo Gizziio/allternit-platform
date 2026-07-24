@@ -84,7 +84,7 @@ export namespace Skill {
 
     const emitInvalid = (location: string, err: unknown) => {
       const message = ConfigMarkdown.FrontmatterError.isInstance(err)
-        ? (err.data?.message as string | undefined) ?? `Failed to parse skill ${location}`
+        ? (err as { data?: { message?: string } }).data?.message ?? `Failed to parse skill ${location}`
         : `Failed to parse skill ${location}`
       Bus.publish(Session.Event.Error, { error: { name: "SkillInvalidError", message, data: { path: location } } })
       log.error("failed to load skill", { skill: location, err })

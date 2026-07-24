@@ -320,6 +320,10 @@ export namespace MessageV2 {
     }),
     system: z.string().optional(),
     tools: z.record(z.string(), z.boolean()).optional(),
+    // Passthrough metadata from the prompt input (e.g. the mobile composer's
+    // `tools` options). Rides on the user message so every step of the turn
+    // sees it; it is never written to the session's permission ruleset.
+    metadata: z.record(z.string(), z.any()).optional(),
     variant: z.string().optional(),
   })
   export type User = z.infer<typeof User>

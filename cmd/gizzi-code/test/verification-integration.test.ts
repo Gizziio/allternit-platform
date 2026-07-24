@@ -28,6 +28,7 @@ import {
 
 import { VerifyTool } from "../src/runtime/tools/builtins/verify";
 import { ToolRegistry } from "../src/runtime/tools/builtins/registry";
+import { Instance } from "../src/runtime/context/project/instance";
 
 describe("Verification System Integration", () => {
   let tempDir: string;
@@ -336,8 +337,13 @@ describe("Verification System Integration", () => {
     });
 
     it("should be registered in tool registry", async () => {
-      const toolIds = await ToolRegistry.ids();
-      expect(toolIds).toContain("verify");
+      await Instance.provide({
+        directory: tempDir,
+        fn: async () => {
+          const toolIds = await ToolRegistry.ids();
+          expect(toolIds).toContain("verify");
+        },
+      });
     });
   });
 

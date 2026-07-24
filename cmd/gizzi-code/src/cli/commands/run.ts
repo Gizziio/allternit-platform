@@ -626,7 +626,7 @@ export const RunCommand = cmd({
         let lastMessageHeaderID = ""
 
         for await (const event of eventStream) {
-          if (event.type === "background.task.started") {
+          if ((event.type as string) === "background.task.started") {
             const task = event.properties as any
             if (task.parentSessionID !== sessionID) continue
             pendingBackground.add(task.id)
@@ -634,7 +634,7 @@ export const RunCommand = cmd({
             continue
           }
 
-          if (event.type === "background.task.finished") {
+          if ((event.type as string) === "background.task.finished") {
             const task = event.properties as any
             if (task.parentSessionID !== sessionID) continue
             pendingBackground.delete(task.id)

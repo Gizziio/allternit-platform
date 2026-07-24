@@ -217,7 +217,9 @@ export namespace SkillImporter {
   async function sourceDigest(source: string): Promise<string> {
     if (!(await isDirectory(source))) return digest(await fs.readFile(source))
     const entries: Array<{ path: string; digest: string }> = []
-    await walk(source, async (file) => entries.push({ path: path.relative(source, file), digest: digest(await fs.readFile(file)) }))
+    await walk(source, async (file) => {
+      entries.push({ path: path.relative(source, file), digest: digest(await fs.readFile(file)) })
+    })
     return digest(JSON.stringify(entries.toSorted((a, b) => a.path.localeCompare(b.path))))
   }
 

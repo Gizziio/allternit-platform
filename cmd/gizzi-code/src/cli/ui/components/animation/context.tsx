@@ -1,3 +1,4 @@
+/** @jsxImportSource solid-js */
 /**
  * GIZZI Animation System - SolidJS Context
  * 

@@ -1,3 +1,4 @@
+/** @jsxImportSource @opentui/solid */
 import { For, createMemo } from "solid-js"
 import { RGBA } from "@opentui/core"
 import { useMascotFrame } from "@/cli/ui/components/animation"

@@ -125,6 +125,12 @@ export namespace SessionPrompt {
       .describe(
         "@deprecated tools and permissions have been merged, you can set permissions on the session itself now",
       ),
+    metadata: z
+      .record(z.string(), z.unknown())
+      .optional()
+      .describe(
+        "Passthrough metadata forwarded by API bridges. The mobile composer sends `metadata.tools` ({ webSearch, research, toolAccess }) here; it is applied to this message's turn only and never persisted on the session.",
+      ),
     format: MessageV2.Format.optional(),
     system: z.string().optional(),
     variant: z.string().optional(),
@@ -697,6 +703,7 @@ const message = await createUserMessage(input)
         session,
         model,
         tools: lastUser.tools,
+        metadata: lastUser.metadata,
         processor,
         bypassAgentCheck,
         messages: msgs,
@@ -953,12 +960,19 @@ const message = await createUserMessage(input)
     model: Provider.Model
     session: Session.Info
     tools?: Record<string, boolean>
+    metadata?: Record<string, unknown>
     processor: SessionProcessor.Info
     bypassAgentCheck: boolean
     messages: MessageV2.WithParts[]
   }) {
     using _ = log.time("resolveTools")
     const tools: Record<string, AITool> = {}
+
+    // Per-message mobile composer tool options (forwarded by the bridge as
+    // `metadata.tools`). Turn-scoped only: nothing here is persisted to the
+    // session's permission ruleset.
+    const mobileOptions = parseMobileToolOptions(input.metadata)
+    const permissionModeOverride = mobileToolAccessMode(mobileOptions?.toolAccess)
 
     const context = (args: Record<string, unknown>, options: ToolCallOptions): Tool.Context => ({
       sessionID: input.session.id,
@@ -991,6 +1005,10 @@ const message = await createUserMessage(input)
           sessionID: input.session.id,
           tool: { messageID: input.processor.message.id, callID: options.toolCallId },
           ruleset: PermissionNext.merge(input.agent.permission, input.session.permission ?? []),
+          // Per-message permission-mode override from the mobile composer's
+          // `toolAccess` option. Applies to permission checks made through this
+          // turn's tool contexts only; the session mode is untouched.
+          ...(permissionModeOverride ? { mode: permissionModeOverride } : {}),
         })
       },
     })
@@ -1197,7 +1215,83 @@ const message = await createUserMessage(input)
       tools[key] = item
     }
 
+    // Per-message mobile composer gating (metadata.tools) — applied last so it
+    // wins over agent/config tool assembly for this turn only.
+    if (mobileOptions) {
+      applyMobileToolGating(tools, mobileOptions)
+      log.info("mobile tool gating applied", {
+        sessionID: input.session.id,
+        options: mobileOptions,
+        websearch: "websearch" in tools,
+        task: "task" in tools,
+      })
+    }
+
     return tools
+  }
+
+  const MobileTools = z.object({
+    webSearch: z.boolean().optional(),
+    research: z.boolean().optional(),
+    toolAccess: z.enum(["auto", "on_demand", "always"]).optional(),
+  })
+
+  export interface MobileToolOptions {
+    webSearch?: boolean
+    research?: boolean
+    toolAccess?: "auto" | "on_demand" | "always"
+  }
+
+  /**
+   * Parse the mobile composer's tool options out of prompt `metadata`
+   * (forwarded by the Rust bridge as `metadata.tools`). Returns undefined when
+   * absent or malformed — malformed input must never break a prompt.
+   *
+   * @internal Exported for testing
+   */
+  export function parseMobileToolOptions(
+    metadata: Record<string, unknown> | undefined,
+  ): MobileToolOptions | undefined {
+    const parsed = MobileTools.safeParse(metadata?.["tools"])
+    return parsed.success ? parsed.data : undefined
+  }
+
+  /**
+   * Remove tools for this turn based on the mobile composer's options.
+   *
+   * Mapping decision: there is no dedicated `research` tool. `research: false`
+   * maps to the closest deep-research capabilities — the `websearch` tool
+   * (whose `type: "deep"` mode is the deep-research vehicle) and the `task`
+   * subagent tool. `webSearch: false` removes only `websearch`. `true` values
+   * (or absent keys) leave the default tool set unchanged.
+   *
+   * @internal Exported for testing
+   */
+  export function applyMobileToolGating(tools: Record<string, AITool>, options: MobileToolOptions): void {
+    if (options.webSearch === false || options.research === false) delete tools["websearch"]
+    if (options.research === false) delete tools["task"]
+  }
+
+  /**
+   * Map the mobile composer's `toolAccess` to a PermissionNext mode applied as
+   * a per-message override for this turn (never persisted):
+   *   auto      -> "auto"              (unattended: auto-allow, no questions)
+   *   on_demand -> "default"           (normal ask behavior)
+   *   always    -> "bypassPermissions" (allow everything without asking)
+   */
+  function mobileToolAccessMode(
+    toolAccess: MobileToolOptions["toolAccess"],
+  ): PermissionNext.Mode | undefined {
+    switch (toolAccess) {
+      case "auto":
+        return "auto"
+      case "on_demand":
+        return "default"
+      case "always":
+        return "bypassPermissions"
+      default:
+        return undefined
+    }
   }
 
   /** @internal Exported for testing */
@@ -1251,6 +1345,7 @@ const message = await createUserMessage(input)
         created: Date.now(),
       },
       tools: input.tools,
+      metadata: input.metadata,
       agent: agent.name,
       model,
       system: input.system,

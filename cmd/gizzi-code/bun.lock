@@ -5,10 +5,10 @@
     "": {
       "name": "@allternit/gizzi-code",
       "dependencies": {
-        "@a2r/plugin": "workspace:*",
-        "@a2r/script": "workspace:*",
-        "@a2r/sdk": "workspace:*",
-        "@a2r/util": "workspace:*",
+        "@allternit/plugin": "workspace:*",
+        "@allternit/script": "workspace:*",
+        "@allternit/sdk": "workspace:*",
+        "@allternit/util": "workspace:*",
         "@actions/core": "1.11.1",
         "@actions/github": "6.0.1",
         "@agentclientprotocol/sdk": "0.14.1",
@@ -98,22 +98,22 @@
       },
     },
     "packages/plugin": {
-      "name": "@a2r/plugin",
+      "name": "@allternit/plugin",
       "version": "1.2.10",
       "dependencies": {
-        "@a2r/sdk": "workspace:*",
+        "@allternit/sdk": "workspace:*",
       },
     },
     "packages/script": {
-      "name": "@a2r/script",
+      "name": "@allternit/script",
       "version": "1.0.0",
     },
     "packages/sdk": {
-      "name": "@a2r/sdk",
+      "name": "@allternit/sdk",
       "version": "1.2.10",
     },
     "packages/util": {
-      "name": "@a2r/util",
+      "name": "@allternit/util",
       "version": "1.0.0",
     },
   },
@@ -121,13 +121,13 @@
     "drizzle-orm": "1.0.0-beta.12-a5629fb",
   },
   "packages": {
-    "@a2r/plugin": ["@a2r/plugin@workspace:packages/plugin"],
+    "@allternit/plugin": ["@allternit/plugin@workspace:packages/plugin"],
 
-    "@a2r/script": ["@a2r/script@workspace:packages/script"],
+    "@allternit/script": ["@allternit/script@workspace:packages/script"],
 
-    "@a2r/sdk": ["@a2r/sdk@workspace:packages/sdk"],
+    "@allternit/sdk": ["@allternit/sdk@workspace:packages/sdk"],
 
-    "@a2r/util": ["@a2r/util@workspace:packages/util"],
+    "@allternit/util": ["@allternit/util@workspace:packages/util"],
 
     "@actions/core": ["@actions/core@1.11.1", "", { "dependencies": { "@actions/exec": "^1.1.1", "@actions/http-client": "^2.0.1" } }, "sha512-hXJCSrkwfA46Vd9Z3q4cpEpHB1rL5NG04+/rbqW9d3+CSvtB1tYe8UTpAlixa1vj0m/ULglfEK2UKxMGxCxv5A=="],
 

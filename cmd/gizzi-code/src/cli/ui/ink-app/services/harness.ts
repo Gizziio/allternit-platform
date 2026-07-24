@@ -376,7 +376,6 @@ export function getHarnessService(): HarnessService {
           provider: defaultProvider(),
           model: 'claude-3-5-haiku',
           messages: [{ role: 'user', content: input }],
-          stream: true,
         })) {
           if (cancelled) {
             break
@@ -386,7 +385,6 @@ export function getHarnessService(): HarnessService {
               callbacks.onText?.(chunk.text)
               break
             case 'tool_call':
-            case 'tool_call_complete':
               callbacks.onToolUse?.({
                 id: chunk.id,
                 name: chunk.name,
