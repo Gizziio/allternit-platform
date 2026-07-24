@@ -17,7 +17,6 @@ use rusqlite::params;
 use serde::{Deserialize, Serialize};
 use serde_json::json;
 use std::io::Write;
-use std::path::PathBuf;
 use std::sync::Arc;
 use std::time::Duration;
 use tracing::warn;
@@ -44,7 +43,7 @@ pub fn agent_router() -> Router<Arc<AppState>> {
             "/agents/:id",
             get(get_agent).put(update_agent).delete(delete_agent),
         )
-        .route("/agents/:id/runs", post(run_agent))
+        .route("/agents/:id/runs", post(run_agent).get(list_agent_runs))
         .route("/agents/:id/events", get(stream_agent_events))
         .route(
             "/agents/:id/subagents",
@@ -1351,10 +1350,7 @@ async fn initialize_agent_workspace(
         _ => {}
     }
 
-    let data_dir = dirs::data_dir()
-        .map(|d| d.join("allternit"))
-        .unwrap_or_else(|| PathBuf::from("/var/lib/allternit"));
-    let workspace_dir = data_dir.join("agent-workspaces").join(&id);
+    let workspace_dir = crate::agent_workspace_paths::workspace_dir_for(&id);
     let workspace_dir_for_task = workspace_dir.clone();
 
     let write_result = tokio::task::spawn_blocking(move || {
@@ -1500,8 +1496,9 @@ struct MetricRow {
     agent_id: String,
     metric_type: String,
     value: f64,
-    labels: Option<String>,
-    created_at: String,
+    unit: String,
+    metadata: Option<String>,
+    timestamp: String,
 }
 
 #[derive(Deserialize)]
@@ -1527,9 +1524,12 @@ async fn list_agent_metrics(
 
     let rows = tokio::task::spawn_blocking(move || {
         let conn = db.connect()?;
+        // Columns match the V1 baseline agent_metrics schema (unit, metadata,
+        // timestamp) — this query previously selected labels/created_at, which
+        // never existed, so the endpoint always fell into the empty branch.
         let mut sql = String::from(
-            "SELECT id, agent_id, metric_type, value, labels, created_at
-             FROM agent_metrics WHERE user_id = ?1 AND created_at >= datetime('now', ?2 || ' days')"
+            "SELECT id, agent_id, metric_type, value, unit, metadata, timestamp
+             FROM agent_metrics WHERE user_id = ?1 AND timestamp >= datetime('now', ?2 || ' days')"
         );
         if agent_id.is_some() {
             sql.push_str(" AND agent_id = ?3");
@@ -1537,7 +1537,7 @@ async fn list_agent_metrics(
         if metric_type.is_some() {
             sql.push_str(" AND metric_type = ?4");
         }
-        sql.push_str(" ORDER BY created_at DESC");
+        sql.push_str(" ORDER BY timestamp DESC");
 
         let mut stmt = conn.prepare(&sql)?;
         let param_days = format!("-{}", days);
@@ -1566,8 +1566,9 @@ fn row_to_metric(row: &rusqlite::Row) -> Result<MetricRow, rusqlite::Error> {
         agent_id: row.get(1)?,
         metric_type: row.get(2)?,
         value: row.get(3)?,
-        labels: row.get(4)?,
-        created_at: row.get(5)?,
+        unit: row.get(4)?,
+        metadata: row.get(5)?,
+        timestamp: row.get(6)?,
     })
 }
 
@@ -1748,13 +1749,14 @@ async fn run_agent(
 
     let db = state.db.clone();
     let user_id = user.user_id;
+    let user_id_for_db = user_id.clone();
     let id_for_db = id.clone();
     let row = tokio::task::spawn_blocking(move || {
         let conn = db.connect()?;
         conn.query_row(
             "SELECT id, name, model, provider, system_prompt
              FROM agents WHERE id = ?1 AND user_id = ?2",
-            params![id_for_db, user_id],
+            params![id_for_db, user_id_for_db],
             |row| {
                 Ok(AgentRunRow {
                     id: row.get(0)?,
@@ -1791,24 +1793,133 @@ async fn run_agent(
         }
     };
 
+    let run_id = uuid::Uuid::new_v4().to_string();
+    let started_at = std::time::Instant::now();
+
+    // Record the run up front so even a gizzi-side failure leaves a trail.
+    record_run_start(&state.db, &run_id, &agent.id, &user_id).await;
+    append_run_ledger_event(
+        &state,
+        &user_id,
+        &run_id,
+        "agent.run.started",
+        json!({
+            "agent_id": agent.id,
+            "run_id": run_id,
+            "model": agent.model,
+            "provider": agent.provider,
+        }),
+    )
+    .await;
+
+    let outcome = execute_agent_run(&state, &agent, &input).await;
+    let duration_ms = started_at.elapsed().as_millis() as i64;
+
+    match outcome {
+        Ok((session_id, output)) => {
+            record_run_outcome(
+                &state,
+                &user_id,
+                &agent.id,
+                &run_id,
+                true,
+                Some(&output),
+                None,
+                duration_ms,
+            )
+            .await;
+            stamp_last_run_at(&state.db, &agent.id).await;
+
+            (
+                StatusCode::OK,
+                Json(json!({
+                    "run_id": run_id,
+                    "agent_id": agent.id,
+                    "session_id": session_id,
+                    "status": "completed",
+                    "output": output,
+                    "model": agent.model,
+                    "provider": agent.provider,
+                })),
+            )
+                .into_response()
+        }
+        Err(RunFailure::Brain {
+            session_id,
+            message,
+        }) => {
+            record_run_outcome(
+                &state,
+                &user_id,
+                &agent.id,
+                &run_id,
+                false,
+                None,
+                Some(&message),
+                duration_ms,
+            )
+            .await;
+            (
+                StatusCode::OK,
+                Json(json!({
+                    "run_id": run_id,
+                    "agent_id": agent.id,
+                    "session_id": session_id,
+                    "status": "error",
+                    "error": message,
+                    "model": agent.model,
+                    "provider": agent.provider,
+                })),
+            )
+                .into_response()
+        }
+        Err(RunFailure::Gateway(message)) => {
+            record_run_outcome(
+                &state,
+                &user_id,
+                &agent.id,
+                &run_id,
+                false,
+                None,
+                Some(&message),
+                duration_ms,
+            )
+            .await;
+            (
+                StatusCode::BAD_GATEWAY,
+                Json(json!({"error": message, "run_id": run_id})),
+            )
+                .into_response()
+        }
+    }
+}
+
+/// How a run failed, preserving the two response shapes `run_agent` has always
+/// had: gizzi-hop failures are 502s, brain/provider errors are 200
+/// status:"error".
+enum RunFailure {
+    Gateway(String),
+    Brain { session_id: String, message: String },
+}
+
+/// The gizzi round-trip half of `run_agent`: create a session, post the
+/// message, extract the text output. Split out so the handler can record the
+/// run lifecycle around a single Result instead of minting an untracked
+/// run_id per early return.
+async fn execute_agent_run(
+    state: &AppState,
+    agent: &AgentRunRow,
+    input: &str,
+) -> Result<(String, String), RunFailure> {
     let gizzi = state
         .config
         .terminal_server_url()
         .trim_end_matches('/')
         .to_string();
-    let client = match reqwest::Client::builder()
+    let client = reqwest::Client::builder()
         .timeout(Duration::from_secs(180))
         .build()
-    {
-        Ok(c) => c,
-        Err(e) => {
-            return (
-                StatusCode::INTERNAL_SERVER_ERROR,
-                Json(json!({"error": e.to_string()})),
-            )
-                .into_response();
-        }
-    };
+        .map_err(|e| RunFailure::Gateway(e.to_string()))?;
 
     // Create a gizzi session bound to this agent.
     let session_payload = json!({
@@ -1824,28 +1935,19 @@ async fn run_agent(
         Ok(r) if r.status().is_success() => match r.json::<serde_json::Value>().await {
             Ok(v) => v,
             Err(e) => {
-                return (
-                    StatusCode::BAD_GATEWAY,
-                    Json(json!({"error": format!("gizzi session decode: {}", e)})),
-                )
-                    .into_response();
+                return Err(RunFailure::Gateway(format!("gizzi session decode: {}", e)));
             }
         },
         Ok(r) => {
             let s = r.status();
             let t = r.text().await.unwrap_or_default();
-            return (
-                StatusCode::BAD_GATEWAY,
-                Json(json!({"error": format!("gizzi session create failed: {} {}", s, t)})),
-            )
-                .into_response();
+            return Err(RunFailure::Gateway(format!(
+                "gizzi session create failed: {} {}",
+                s, t
+            )));
         }
         Err(e) => {
-            return (
-                StatusCode::BAD_GATEWAY,
-                Json(json!({"error": format!("gizzi unreachable: {}", e)})),
-            )
-                .into_response();
+            return Err(RunFailure::Gateway(format!("gizzi unreachable: {}", e)));
         }
     };
     let session_id = session
@@ -1854,18 +1956,16 @@ async fn run_agent(
         .unwrap_or("")
         .to_string();
     if session_id.is_empty() {
-        return (
-            StatusCode::BAD_GATEWAY,
-            Json(json!({"error": "gizzi returned no session id"})),
-        )
-            .into_response();
+        return Err(RunFailure::Gateway(
+            "gizzi returned no session id".to_string(),
+        ));
     }
 
     // Gizzi message parts only accept a fixed set of part types (no "system"),
     // so prepend the agent's system prompt to the user input when present.
     let full_prompt = match &agent.system_prompt {
         Some(sp) if !sp.trim().is_empty() => format!("{}\n\n{}", sp.trim(), input),
-        _ => input.clone(),
+        _ => input.to_string(),
     };
     let message_payload = json!({
         "model": { "providerID": agent.provider, "modelID": agent.model },
@@ -1881,28 +1981,19 @@ async fn run_agent(
         Ok(r) if r.status().is_success() => match r.json::<serde_json::Value>().await {
             Ok(v) => v,
             Err(e) => {
-                return (
-                    StatusCode::BAD_GATEWAY,
-                    Json(json!({"error": format!("gizzi message decode: {}", e)})),
-                )
-                    .into_response();
+                return Err(RunFailure::Gateway(format!("gizzi message decode: {}", e)));
             }
         },
         Ok(r) => {
             let s = r.status();
             let t = r.text().await.unwrap_or_default();
-            return (
-                StatusCode::BAD_GATEWAY,
-                Json(json!({"error": format!("gizzi message failed: {} {}", s, t)})),
-            )
-                .into_response();
+            return Err(RunFailure::Gateway(format!(
+                "gizzi message failed: {} {}",
+                s, t
+            )));
         }
         Err(e) => {
-            return (
-                StatusCode::BAD_GATEWAY,
-                Json(json!({"error": format!("gizzi unreachable: {}", e)})),
-            )
-                .into_response();
+            return Err(RunFailure::Gateway(format!("gizzi unreachable: {}", e)));
         }
     };
 
@@ -1916,19 +2007,10 @@ async fn run_agent(
             .get("message")
             .and_then(|m| m.as_str())
             .unwrap_or("gizzi brain error");
-        return (
-            StatusCode::OK,
-            Json(json!({
-                "run_id": uuid::Uuid::new_v4().to_string(),
-                "agent_id": agent.id,
-                "session_id": session_id,
-                "status": "error",
-                "error": msg,
-                "model": agent.model,
-                "provider": agent.provider,
-            })),
-        )
-            .into_response();
+        return Err(RunFailure::Brain {
+            session_id,
+            message: msg.to_string(),
+        });
     }
 
     let mut output = String::new();
@@ -1942,32 +2024,288 @@ async fn run_agent(
         }
     }
 
-    // Stamp last_run_at (best-effort; do not fail the run if this errors).
-    let db2 = state.db.clone();
-    let aid = agent.id.clone();
-    let _ = tokio::task::spawn_blocking(move || {
-        let conn = db2.connect()?;
+    Ok((session_id, output))
+}
+
+/// Insert the `agent_runs` row for a freshly-started run (status "running").
+/// Best-effort: a recording failure never fails the run itself.
+async fn record_run_start(db: &crate::db::DbHandle, run_id: &str, agent_id: &str, user_id: &str) {
+    let db = db.clone();
+    let run_id = run_id.to_string();
+    let agent_id = agent_id.to_string();
+    let user_id = user_id.to_string();
+    let result = tokio::task::spawn_blocking(move || {
+        let conn = db.connect()?;
         conn.execute(
-            "UPDATE agents SET last_run_at = datetime('now'), updated_at = datetime('now') WHERE id = ?1",
-            params![aid],
+            "INSERT INTO agent_runs (id, agent_id, user_id, status) VALUES (?1, ?2, ?3, 'running')",
+            params![run_id, agent_id, user_id],
         )?;
         Ok::<_, rusqlite::Error>(())
     })
     .await;
+    match result {
+        Ok(Ok(())) => {}
+        Ok(Err(e)) => warn!("Failed to record agent run start: {}", e),
+        Err(e) => warn!("Run-record task panicked: {}", e),
+    }
+}
 
-    (
-        StatusCode::OK,
-        Json(json!({
-            "run_id": uuid::Uuid::new_v4().to_string(),
-            "agent_id": agent.id,
-            "session_id": session_id,
-            "status": "completed",
-            "output": output,
-            "model": agent.model,
-            "provider": agent.provider,
-        })),
-    )
-        .into_response()
+/// Persist the terminal state of a run: the `agent_runs` row, a Rails ledger
+/// event, and the `agent_metrics` samples. All best-effort — recording never
+/// changes the response the caller gets.
+#[allow(clippy::too_many_arguments)]
+async fn record_run_outcome(
+    state: &AppState,
+    user_id: &str,
+    agent_id: &str,
+    run_id: &str,
+    success: bool,
+    output: Option<&str>,
+    error: Option<&str>,
+    duration_ms: i64,
+) {
+    let status = if success { "completed" } else { "failed" };
+    record_run_finish(&state.db, run_id, status, output, error, duration_ms).await;
+
+    let mut payload = json!({
+        "agent_id": agent_id,
+        "run_id": run_id,
+        "duration_ms": duration_ms,
+    });
+    // Ledger events replay on the agent events SSE; cap output so a long
+    // response doesn't bloat the append-only ledger.
+    if let Some(o) = output {
+        payload["output"] = json!(o.chars().take(2000).collect::<String>());
+    }
+    if let Some(e) = error {
+        payload["error"] = json!(e);
+    }
+    let event_type = if success {
+        "agent.run.completed"
+    } else {
+        "agent.run.failed"
+    };
+    append_run_ledger_event(state, user_id, run_id, event_type, payload).await;
+
+    record_run_metrics(&state.db, user_id, agent_id, run_id, success, duration_ms).await;
+}
+
+/// Update the `agent_runs` row with the terminal status, output/error,
+/// duration and completion timestamp. Best-effort.
+async fn record_run_finish(
+    db: &crate::db::DbHandle,
+    run_id: &str,
+    status: &str,
+    output: Option<&str>,
+    error: Option<&str>,
+    duration_ms: i64,
+) {
+    let db = db.clone();
+    let run_id = run_id.to_string();
+    let status = status.to_string();
+    let output = output.map(str::to_string);
+    let error = error.map(str::to_string);
+    let result = tokio::task::spawn_blocking(move || {
+        let conn = db.connect()?;
+        conn.execute(
+            "UPDATE agent_runs SET status = ?2, output = ?3, error = ?4, duration_ms = ?5,
+                    completed_at = CURRENT_TIMESTAMP
+             WHERE id = ?1",
+            params![run_id, status, output, error, duration_ms],
+        )?;
+        Ok::<_, rusqlite::Error>(())
+    })
+    .await;
+    match result {
+        Ok(Ok(())) => {}
+        Ok(Err(e)) => warn!("Failed to record agent run finish: {}", e),
+        Err(e) => warn!("Run-record task panicked: {}", e),
+    }
+}
+
+/// Write the per-run metric samples `GET /agents/metrics` reads back: a run
+/// counter, a success/failure counter, and a duration sample. The V1
+/// `agent_metrics` table is event-style (one row per sample), so counters and
+/// averages are aggregates over these rows, not a single rolled-up row.
+async fn record_run_metrics(
+    db: &crate::db::DbHandle,
+    user_id: &str,
+    agent_id: &str,
+    run_id: &str,
+    success: bool,
+    duration_ms: i64,
+) {
+    let db = db.clone();
+    let user_id = user_id.to_string();
+    let agent_id = agent_id.to_string();
+    let run_id = run_id.to_string();
+    let result = tokio::task::spawn_blocking(move || {
+        let conn = db.connect()?;
+        let metadata = json!({"run_id": run_id}).to_string();
+        let outcome_type = if success { "run_success" } else { "run_failure" };
+        for (metric_type, value, unit) in [
+            ("run", 1.0_f64, "count"),
+            (outcome_type, 1.0, "count"),
+            ("run_duration_ms", duration_ms as f64, "ms"),
+        ] {
+            conn.execute(
+                "INSERT INTO agent_metrics (id, user_id, agent_id, run_id, metric_type, value, unit, metadata)
+                 VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8)",
+                params![
+                    uuid::Uuid::new_v4().to_string(),
+                    user_id,
+                    agent_id,
+                    run_id,
+                    metric_type,
+                    value,
+                    unit,
+                    metadata,
+                ],
+            )?;
+        }
+        Ok::<_, rusqlite::Error>(())
+    })
+    .await;
+    match result {
+        Ok(Ok(())) => {}
+        Ok(Err(e)) => warn!("Failed to record agent run metrics: {}", e),
+        Err(e) => warn!("Run-metrics task panicked: {}", e),
+    }
+}
+
+/// Append an agent run lifecycle event to the same Rails ledger
+/// `agent.created` uses, so `GET /agents/:id/events` replays run activity.
+/// Best-effort, same posture as the creation write.
+async fn append_run_ledger_event(
+    state: &AppState,
+    user_id: &str,
+    run_id: &str,
+    event_type: &str,
+    payload: serde_json::Value,
+) {
+    let event = allternit_agent_system_rails::AllternitEvent {
+        event_id: String::new(),
+        ts: String::new(),
+        actor: allternit_agent_system_rails::Actor {
+            r#type: allternit_agent_system_rails::ActorType::User,
+            id: user_id.to_string(),
+        },
+        scope: Some(allternit_agent_system_rails::EventScope {
+            project_id: None,
+            dag_id: None,
+            node_id: None,
+            wih_id: None,
+            run_id: Some(run_id.to_string()),
+            team_workspace_id: None,
+            team_name: None,
+        }),
+        r#type: event_type.to_string(),
+        payload,
+        provenance: None,
+    };
+    if let Err(e) = state.rails.ledger.append(event).await {
+        warn!("Failed to append {} ledger event: {}", event_type, e);
+    }
+}
+
+/// Stamp agents.last_run_at (best-effort; never fails the run).
+async fn stamp_last_run_at(db: &crate::db::DbHandle, agent_id: &str) {
+    let db = db.clone();
+    let agent_id = agent_id.to_string();
+    let _ = tokio::task::spawn_blocking(move || {
+        let conn = db.connect()?;
+        conn.execute(
+            "UPDATE agents SET last_run_at = datetime('now'), updated_at = datetime('now') WHERE id = ?1",
+            params![agent_id],
+        )?;
+        Ok::<_, rusqlite::Error>(())
+    })
+    .await;
+}
+
+// ─── Agent Run Records ────────────────────────────────────────────────────────
+
+#[derive(Serialize)]
+struct AgentRunRecord {
+    id: String,
+    agent_id: String,
+    status: String,
+    output: Option<String>,
+    error: Option<String>,
+    duration_ms: Option<i64>,
+    created_at: String,
+    completed_at: Option<String>,
+}
+
+/// GET /agents/:id/runs — run history for one agent, newest first, capped at
+/// 50. Ownership-checked the same way as the workspace routes.
+async fn list_agent_runs(
+    State(state): State<Arc<AppState>>,
+    Extension(user): Extension<AuthUser>,
+    _headers: HeaderMap,
+    Path(id): Path<String>,
+) -> impl IntoResponse {
+    let db = state.db.clone();
+    let user_id = user.user_id;
+    let agent_id = id.clone();
+
+    let result = tokio::task::spawn_blocking(move || {
+        let conn = db.connect()?;
+        let owned: i64 = conn.query_row(
+            "SELECT COUNT(*) FROM agents WHERE id = ?1 AND user_id = ?2",
+            params![agent_id, user_id],
+            |row| row.get(0),
+        )?;
+        if owned == 0 {
+            return Ok::<_, rusqlite::Error>(None);
+        }
+        let mut stmt = conn.prepare(
+            "SELECT id, agent_id, status, output, error, duration_ms, created_at, completed_at
+             FROM agent_runs WHERE agent_id = ?1 AND user_id = ?2
+             ORDER BY created_at DESC LIMIT 50",
+        )?;
+        let runs = stmt
+            .query_map(params![agent_id, user_id], |row| {
+                Ok(AgentRunRecord {
+                    id: row.get(0)?,
+                    agent_id: row.get(1)?,
+                    status: row.get(2)?,
+                    output: row.get(3)?,
+                    error: row.get(4)?,
+                    duration_ms: row.get(5)?,
+                    created_at: row.get(6)?,
+                    completed_at: row.get(7)?,
+                })
+            })?
+            .collect::<Result<Vec<_>, _>>()?;
+        Ok(Some(runs))
+    })
+    .await;
+
+    match result {
+        Ok(Ok(Some(runs))) => Json(json!({ "runs": runs })).into_response(),
+        Ok(Ok(None)) => (
+            StatusCode::NOT_FOUND,
+            Json(json!({"error": "Agent not found"})),
+        )
+            .into_response(),
+        Ok(Err(e)) => {
+            warn!("DB error listing agent runs: {}", e);
+            (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(json!({"error": e.to_string()})),
+            )
+                .into_response()
+        }
+        Err(e) => {
+            warn!("DB task panicked: {}", e);
+            (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(json!({"error": "internal error"})),
+            )
+                .into_response()
+        }
+    }
 }
 
 // ─── Run Agent Test ───────────────────────────────────────────────────────────

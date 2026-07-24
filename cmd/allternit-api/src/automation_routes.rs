@@ -383,6 +383,153 @@ async fn cron_daemon_run_job(
         .map_err(|e| format!("cron daemon run decode failed: {}", e))
 }
 
+/// Fetch a gizzi cron job's run history (`GET /jobs/:id/runs` — the daemon's
+/// persisted `CronRun` records). Short timeout: this runs on the read path of
+/// `list_routine_runs`, so a hung daemon must degrade to stored rows quickly.
+async fn cron_daemon_list_runs(
+    client: &reqwest::Client,
+    daemon_job_id: &str,
+) -> Result<Vec<serde_json::Value>, String> {
+    let url = format!("{}/jobs/{}/runs", cron_daemon_base(), daemon_job_id);
+    let res = client
+        .get(&url)
+        .timeout(std::time::Duration::from_secs(5))
+        .send()
+        .await
+        .map_err(|e| format!("cron daemon runs fetch failed: {}", e))?;
+
+    if !res.status().is_success() {
+        let text = res.text().await.unwrap_or_default();
+        return Err(format!("cron daemon runs error: {}", text));
+    }
+
+    res.json::<Vec<serde_json::Value>>()
+        .await
+        .map_err(|e| format!("cron daemon runs decode failed: {}", e))
+}
+
+/// Upsert fetched gizzi cron run history into `routine_runs` for one routine.
+/// Idempotent: matches on `gizzi_run_id` first, falling back to
+/// (routine_id, scheduled_at) for rows written before gizzi ids were tracked;
+/// matched rows are refreshed (status/output/error/duration move as the
+/// daemon's record evolves), unmatched runs are inserted. Returns the number
+/// of runs processed. Kept synchronous (no .await while holding the
+/// connection) so the calling handler's future stays Send.
+fn upsert_routine_runs(
+    conn: &rusqlite::Connection,
+    routine_id: &str,
+    runs: &[serde_json::Value],
+) -> usize {
+    let mut synced = 0usize;
+    for run in runs {
+        let gizzi_run_id = run.get("id").and_then(|v| v.as_str());
+        // scheduled_at is NOT NULL locally; gizzi always sets scheduledAt,
+        // with startedAt as a sane fallback.
+        let scheduled_at = run
+            .get("scheduledAt")
+            .or_else(|| run.get("startedAt"))
+            .and_then(|v| v.as_str())
+            .unwrap_or("")
+            .to_string();
+        if scheduled_at.is_empty() {
+            continue;
+        }
+        // Gizzi RunStatus (pending|running|completed|failed|aborted) maps
+        // directly onto the local status column.
+        let status = run
+            .get("status")
+            .and_then(|v| v.as_str())
+            .unwrap_or("pending");
+        let started_at = run.get("startedAt").and_then(|v| v.as_str());
+        let finished_at = run.get("finishedAt").and_then(|v| v.as_str());
+        let duration_ms = run.get("durationMs").and_then(|v| v.as_i64());
+        let output = run.get("output").and_then(|v| v.as_str());
+        let error = run.get("error").and_then(|v| v.as_str());
+        let attempt = run
+            .get("attempt")
+            .and_then(|v| v.as_i64())
+            .unwrap_or(1);
+        let triggered_by = run
+            .get("triggeredBy")
+            .and_then(|v| v.as_str())
+            .unwrap_or("schedule");
+        let metadata = run
+            .get("metadata")
+            .filter(|m| m.is_object())
+            .map(|m| m.to_string());
+
+        let existing_id: Option<String> = gizzi_run_id
+            .and_then(|rid| {
+                conn.query_row(
+                    "SELECT id FROM routine_runs WHERE gizzi_run_id = ?1",
+                    [rid],
+                    |row| row.get(0),
+                )
+                .ok()
+            })
+            .or_else(|| {
+                conn.query_row(
+                    "SELECT id FROM routine_runs WHERE routine_id = ?1 AND scheduled_at = ?2",
+                    rusqlite::params![routine_id, scheduled_at],
+                    |row| row.get(0),
+                )
+                .ok()
+            });
+
+        let result = match existing_id {
+            Some(local_id) => conn.execute(
+                "UPDATE routine_runs SET gizzi_run_id = ?2, status = ?3, started_at = ?4,
+                        finished_at = ?5, duration_ms = ?6, output = ?7, error = ?8,
+                        attempt = ?9, triggered_by = ?10, metadata = ?11
+                 WHERE id = ?1",
+                rusqlite::params![
+                    local_id,
+                    gizzi_run_id,
+                    status,
+                    started_at,
+                    finished_at,
+                    duration_ms,
+                    output,
+                    error,
+                    attempt,
+                    triggered_by,
+                    metadata,
+                ],
+            ),
+            None => conn.execute(
+                "INSERT INTO routine_runs
+                    (id, routine_id, gizzi_run_id, status, scheduled_at, started_at,
+                     finished_at, duration_ms, output, error, attempt, triggered_by, metadata)
+                 VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13)",
+                rusqlite::params![
+                    uuid::Uuid::new_v4().to_string(),
+                    routine_id,
+                    gizzi_run_id,
+                    status,
+                    scheduled_at,
+                    started_at,
+                    finished_at,
+                    duration_ms,
+                    output,
+                    error,
+                    attempt,
+                    triggered_by,
+                    metadata,
+                ],
+            ),
+        };
+        if let Err(e) = result {
+            warn!(
+                "routine-runs sync: failed to upsert run {:?} for routine {}: {}",
+                gizzi_run_id, routine_id, e
+            );
+        } else {
+            synced += 1;
+        }
+    }
+    synced
+}
+
 /// Extract the daemon job id from a Gizzi cron response.
 /// Gizzi returns `{ "id": "...", ... }`, but some older versions may nest
 /// it under `job.id`; accept both shapes for backward compatibility.
@@ -1206,19 +1353,40 @@ async fn list_routine_runs(
     State(state): State<Arc<AppState>>,
     headers: HeaderMap,
     Path(id): Path<String>,
-) -> Result<Json<Vec<RoutineRun>>, StatusCode> {
+) -> Result<Json<serde_json::Value>, StatusCode> {
     let user = get_user(&headers).ok_or(StatusCode::UNAUTHORIZED)?;
     let conn = state.db.connect().map_err(|e| {
         warn!("db error: {}", e);
         StatusCode::INTERNAL_SERVER_ERROR
     })?;
 
-    conn.query_row(
-        "SELECT 1 FROM routines WHERE id = ?1 AND user_id = ?2",
-        [&id, &user.user_id],
-        |_| Ok(()),
-    )
-    .map_err(|_| StatusCode::NOT_FOUND)?;
+    let gizzi_job_id: Option<String> = conn
+        .query_row(
+            "SELECT gizzi_job_id FROM routines WHERE id = ?1 AND user_id = ?2",
+            [&id, &user.user_id],
+            |row| row.get(0),
+        )
+        .map_err(|_| StatusCode::NOT_FOUND)?;
+
+    // On-read sync: pull the gizzi cron daemon's persisted run history into
+    // routine_runs before serving, so the read is truthful without a poller.
+    // Never fails the read — a daemon outage is reported in the `sync` field
+    // and the stored rows are served as-is.
+    let mut sync = json!({"attempted": false, "synced": 0, "error": serde_json::Value::Null});
+    if let Some(ref job_id) = gizzi_job_id {
+        sync["attempted"] = json!(true);
+        let client = reqwest::Client::new();
+        match cron_daemon_list_runs(&client, job_id).await {
+            Ok(runs) => {
+                let n = upsert_routine_runs(&conn, &id, &runs);
+                sync["synced"] = json!(n);
+            }
+            Err(e) => {
+                warn!("routine-runs sync failed for routine {}: {}", id, e);
+                sync["error"] = json!(e);
+            }
+        }
+    }
 
     let mut stmt = conn
         .prepare(
@@ -1251,7 +1419,7 @@ async fn list_routine_runs(
         .collect::<Result<Vec<_>, _>>()
         .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
 
-    Ok(Json(runs))
+    Ok(Json(json!({"runs": runs, "sync": sync})))
 }
 
 async fn get_routine_metrics(

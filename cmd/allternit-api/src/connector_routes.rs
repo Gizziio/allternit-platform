@@ -111,19 +111,64 @@ pub fn connector_router() -> Router<Arc<AppState>> {
 /// are NOT reachable through this surface, only through the REST routes
 /// above — they never went through the sidecar to begin with.
 async fn mcp_proxy(headers: axum::http::HeaderMap, Json(body): Json<Value>) -> impl IntoResponse {
-    let user_id = caller(&headers);
+    proxy_mcp_response(caller(&headers), body).await
+}
+
+/// Headless variant of the MCP proxy for peer services with no Clerk session —
+/// the local gizzi daemon's MCP client during an agent run. Mounted on the
+/// public router via `internal_routes` (`/internal/connectors/mcp`) and gated
+/// per-request by `internal_auth::require_internal_token`, the same
+/// peer-service trust model the ACU gateway uses for `/internal/*`.
+///
+/// The caller names the user explicitly via `x-allternit-user-id`; that header
+/// is only meaningful because the internal token already authenticated the
+/// *service*. Limitation: cloud-issued runtime-device tokens
+/// (`Bearer allternit_runtime_…`, see allternit-cloud-api
+/// `routes/runtime_pairing.rs`) are NOT accepted here — the `runtime_devices`
+/// registry that verifies them lives in allternit-cloud-api's own database,
+/// which this API cannot reach. A headless caller on the same machine uses
+/// the internal service token instead; there is no silent admin bypass.
+pub async fn mcp_proxy_internal(
+    State(state): State<Arc<AppState>>,
+    headers: axum::http::HeaderMap,
+    Json(body): Json<Value>,
+) -> impl IntoResponse {
+    if let Err(status) = crate::internal_auth::require_internal_token(&headers, &state) {
+        return (status, Json(json!({"error": "unauthorized"}))).into_response();
+    }
+    let user_id = headers
+        .get("x-allternit-user-id")
+        .and_then(|v| v.to_str().ok())
+        .map(str::trim)
+        .filter(|s| !s.is_empty())
+        .map(str::to_string);
+    match user_id {
+        Some(user_id) => proxy_mcp_response(user_id, body).await,
+        None => (
+            StatusCode::BAD_REQUEST,
+            Json(json!({"error": "x-allternit-user-id header is required"})),
+        )
+            .into_response(),
+    }
+}
+
+/// Shared core of both MCP proxy entry points: forward the JSON-RPC body to
+/// the sidecar with the per-user `x-oo-connector-alias` header.
+async fn proxy_mcp_response(user_id: String, body: Value) -> axum::response::Response {
     match crate::open_connector_proxy::proxy_mcp(&user_id, body).await {
-        Ok(resp) => (StatusCode::OK, Json(resp)),
+        Ok(resp) => (StatusCode::OK, Json(resp)).into_response(),
         Err(e) if e.unreachable => (
             StatusCode::BAD_GATEWAY,
             Json(
                 json!({ "error": "sidecar_unavailable", "message": "Connector sidecar unavailable — the open-connector process is down or still starting." }),
             ),
-        ),
+        )
+            .into_response(),
         Err(e) => (
             StatusCode::from_u16(e.status).unwrap_or(StatusCode::BAD_GATEWAY),
             Json(json!({ "error": "mcp_proxy_failed", "message": e.message })),
-        ),
+        )
+            .into_response(),
     }
 }
 

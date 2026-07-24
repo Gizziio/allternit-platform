@@ -29,6 +29,12 @@ pub fn internal_router() -> Router<Arc<AppState>> {
             post(resolve_credential),
         )
         .route("/internal/usage-events", post(ingest_usage_event))
+        // Headless MCP path for the local gizzi daemon's MCP client — see
+        // connector_routes::mcp_proxy_internal for the trust model.
+        .route(
+            "/internal/connectors/mcp",
+            post(crate::connector_routes::mcp_proxy_internal),
+        )
 }
 
 #[derive(Debug, Deserialize)]

@@ -5,9 +5,12 @@
 pub mod aci_routes;
 pub mod agent_execution;
 pub mod agent_operations_routes;
+pub mod agent_preferences_routes;
 pub mod agent_routes;
 pub mod agent_runtime_routes;
 pub mod agent_session_routes;
+pub mod agent_workspace_paths;
+pub mod agent_workspace_routes;
 pub mod agents_v1_routes;
 pub mod alabs_routes;
 pub mod analytics_routes;

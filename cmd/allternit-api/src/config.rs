@@ -541,6 +541,16 @@ impl AppConfig {
             .unwrap_or_else(|| "http://127.0.0.1:4096/cron".to_string())
     }
 
+    /// ACU (computer-use) gateway base URL. The Python/FastAPI gateway in
+    /// `domains/computer-use/core` serves the computer-use API under
+    /// `/v1/computer-use` on port 8760 by default; `/api/aci/*` proxies to it.
+    pub fn acu_url(&self) -> String {
+        std::env::var("ALLTERNIT_ACU_URL")
+            .ok()
+            .filter(|s| !s.is_empty())
+            .unwrap_or_else(|| "http://127.0.0.1:8760".to_string())
+    }
+
     /// Gizzi runtime port. Used when a full URL is not supplied.
     pub fn gizzi_port(&self) -> u16 {
         std::env::var("GIZZI_PORT")

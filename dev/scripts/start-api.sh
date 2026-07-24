@@ -23,8 +23,13 @@ fi
 echo "[start-api] Starting allternit-api on :8013 (dev mode, auth bypass enabled)"
 echo "[start-api] Log: $LOG_FILE"
 
+# The internal service token gates /internal/* (incl. the connector MCP
+# proxy the gizzi daemon's bundled allternit-connectors server calls) —
+# default a dev value so local runs work out of the box; set the env to
+# override. The gizzi server must be started with the SAME value.
 ALLTERNIT_LOCAL_DEV_BYPASS=1 \
     ALLTERNIT_SELF_HOSTED=1 \
+    ALLTERNIT_INTERNAL_SERVICE_TOKEN="${ALLTERNIT_INTERNAL_SERVICE_TOKEN:-allternit-internal-dev}" \
     "$BINARY" > "$LOG_FILE" 2>&1 &
 
 PID=$!

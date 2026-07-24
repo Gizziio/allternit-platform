@@ -314,7 +314,10 @@ fn extract_message_content(parts: &[GizziMessagePart]) -> String {
     let mut text_parts = Vec::new();
     for part in parts {
         match part.part_type.as_str() {
-            "text" | "reasoning" | "agent" => {
+            // `reasoning` is deliberately excluded — it ships separately as
+            // `thinking` (extract_reasoning); including it here rendered the
+            // thought stream twice (once in the bubble, once in the block).
+            "text" | "agent" => {
                 if let Some(text) = &part.text {
                     text_parts.push(text.clone());
                 }
