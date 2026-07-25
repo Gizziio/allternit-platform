@@ -2029,7 +2029,7 @@ async fn execute_agent_run(
 
 /// Insert the `agent_runs` row for a freshly-started run (status "running").
 /// Best-effort: a recording failure never fails the run itself.
-async fn record_run_start(db: &crate::db::DbHandle, run_id: &str, agent_id: &str, user_id: &str) {
+pub(crate) async fn record_run_start(db: &crate::db::DbHandle, run_id: &str, agent_id: &str, user_id: &str) {
     let db = db.clone();
     let run_id = run_id.to_string();
     let agent_id = agent_id.to_string();
@@ -2092,7 +2092,7 @@ async fn record_run_outcome(
 
 /// Update the `agent_runs` row with the terminal status, output/error,
 /// duration and completion timestamp. Best-effort.
-async fn record_run_finish(
+pub(crate) async fn record_run_finish(
     db: &crate::db::DbHandle,
     run_id: &str,
     status: &str,

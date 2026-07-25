@@ -354,6 +354,31 @@ fn compose_system_instructions(
     }
 }
 
+/// Agent-runs row for a bridge chat carrying an agent_id. Settled exactly
+/// once when the stream reaches a terminal finish (or the pre-stream session
+/// setup fails).
+struct ChatRunRecord {
+    agent_id: String,
+    db: crate::db::DbHandle,
+    run_id: String,
+    started: std::time::Instant,
+}
+
+/// Settle a bridge chat's agent_runs row. No-op for chats without an
+/// agent_id; best-effort, like all run recording.
+async fn settle_chat_run(record: &Option<ChatRunRecord>, success: bool, error: Option<&str>) {
+    let Some(record) = record else { return };
+    crate::agent_routes::record_run_finish(
+        &record.db,
+        &record.run_id,
+        if success { "completed" } else { "failed" },
+        None,
+        error,
+        record.started.elapsed().as_millis() as i64,
+    )
+    .await;
+}
+
 /// Bridge /api/agent-chat → gizzi session/event architecture.
 ///
 /// 1. Parse chatId and message from the request body.
@@ -421,6 +446,7 @@ async fn agent_chat_bridge(
     // an agent_id is given, the agent row plus its workspace persona files.
     let db = state.db.clone();
     let user_id = user.user_id;
+    let user_id_for_record = user_id.clone();
     let agent_id_for_task = agent_id.clone();
     let gathered = tokio::task::spawn_blocking(move || {
         let conn = db.connect()?;
@@ -510,6 +536,28 @@ async fn agent_chat_bridge(
     }
     let agent = agent.unwrap_or_default();
 
+    // Record the chat as an agent_runs row when it runs under an agent. Rows
+    // only — no Rails ledger events (a ledger event per chat message would
+    // flood the agent events feed) and no agent_metrics samples (chat sends
+    // would skew the per-run counters; discrete run_agent executions remain
+    // the unit there). Best-effort like all run recording: a recording
+    // failure must never affect the chat.
+    let chat_run = agent_id.as_ref().map(|aid| ChatRunRecord {
+        agent_id: aid.clone(),
+        db: state.db.clone(),
+        run_id: Uuid::new_v4().to_string(),
+        started: std::time::Instant::now(),
+    });
+    if let Some(record) = &chat_run {
+        crate::agent_routes::record_run_start(
+            &record.db,
+            &record.run_id,
+            &record.agent_id,
+            &user_id_for_record,
+        )
+        .await;
+    }
+
     // Composition order: SOUL.md → STYLE.md → canonical instruction files
     // (AGENTS.md → GIZZI.md → .claude/CLAUDE.md → SYSTEM_LAW.md) → agent
     // system_prompt → style directive → custom instructions → client-sent
@@ -584,6 +632,7 @@ async fn agent_chat_bridge(
         Ok(id) => id,
         Err(err) => {
             warn!(error = %err, "Failed to get or create Gizzi session");
+            settle_chat_run(&chat_run, false, Some(&err)).await;
             return (
                 StatusCode::INTERNAL_SERVER_ERROR,
                 Json(json!({ "error": err })),
@@ -618,6 +667,7 @@ async fn agent_chat_bridge(
             Ok(r) => r,
             Err(e) => {
                 warn!("Failed to connect to gizzi event stream: {}", e);
+                settle_chat_run(&chat_run, false, Some(&format!("gizzi event stream unavailable: {}", e))).await;
                 yield Ok(Event::default().data(json!({
                     "type": "finish",
                     "messageId": msg_id,
@@ -710,6 +760,7 @@ async fn agent_chat_bridge(
                 // render targeted UI (e.g. a model picker on
                 // ProviderModelNotFoundError) instead of parsing a string.
                 let details = serde_json::from_str::<serde_json::Value>(&body).ok();
+                settle_chat_run(&chat_run, false, Some(&format!("gizzi message failed ({}): {}", status, body))).await;
                 yield Ok(Event::default().data(json!({
                     "type": "finish",
                     "messageId": msg_id,
@@ -720,6 +771,7 @@ async fn agent_chat_bridge(
             }
             Err(e) => {
                 warn!("Failed to send message to gizzi session: {}", e);
+                settle_chat_run(&chat_run, false, Some(&format!("gizzi unavailable: {}", e))).await;
                 yield Ok(Event::default().data(json!({
                     "type": "finish",
                     "messageId": msg_id,
@@ -823,6 +875,7 @@ async fn agent_chat_bridge(
             }
         }
 
+        settle_chat_run(&chat_run, true, None).await;
         yield Ok(Event::default().data(json!({
             "type": "finish",
             "messageId": msg_id,

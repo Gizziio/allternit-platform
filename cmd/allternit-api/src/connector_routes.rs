@@ -114,25 +114,126 @@ async fn mcp_proxy(headers: axum::http::HeaderMap, Json(body): Json<Value>) -> i
     proxy_mcp_response(caller(&headers), body).await
 }
 
+/// Prefix of cloud-issued runtime-device tokens, mirroring
+/// `DEVICE_TOKEN_PREFIX` in allternit-cloud-api's runtime_pairing.rs and what
+/// gizzi-code's pairing service sends (`Authorization: Bearer
+/// allternit_runtime_…`).
+const DEVICE_TOKEN_PREFIX: &str = "allternit_runtime_";
+
+fn device_token_from_headers(headers: &axum::http::HeaderMap) -> Option<&str> {
+    headers
+        .get(axum::http::header::AUTHORIZATION)
+        .and_then(|v| v.to_str().ok())
+        .and_then(|v| v.strip_prefix("Bearer "))
+        .filter(|v| v.starts_with(DEVICE_TOKEN_PREFIX))
+}
+
+/// Verify a cloud-issued runtime-device token by introspecting it against
+/// allternit-cloud-api (`POST /api/v1/runtime-devices/verify-token`) — the
+/// `runtime_devices` registry lives in that service's database, so a network
+/// introspection call is the honest minimal path. Returns the device owner's
+/// user_id; the token-derived identity always wins over any caller-asserted
+/// `x-allternit-user-id` header. Fails closed: 401 on rejection, 502 when
+/// the cloud-api itself is unreachable or answers garbage.
+async fn verify_runtime_device_token(
+    state: &AppState,
+    token: &str,
+) -> Result<String, axum::response::Response> {
+    // Fail closed: without a configured cloud-api URL there is no way to
+    // verify a device token, so it cannot authenticate anything.
+    let Some(base) = state.config.cloud_api_url() else {
+        return Err((
+            StatusCode::UNAUTHORIZED,
+            Json(json!({
+                "error": "unauthorized",
+                "message": "runtime-device tokens are not verifiable: no cloud-api URL configured",
+            })),
+        )
+            .into_response());
+    };
+    let url = format!(
+        "{}/api/v1/runtime-devices/verify-token",
+        base.trim_end_matches('/')
+    );
+    let resp = reqwest::Client::new()
+        .post(&url)
+        .bearer_auth(token)
+        .timeout(std::time::Duration::from_secs(5))
+        .send()
+        .await
+        .map_err(|e| {
+            (
+                StatusCode::BAD_GATEWAY,
+                Json(json!({
+                    "error": "cloud_api_unavailable",
+                    "message": format!("cloud-api token introspection unavailable: {}", e),
+                })),
+            )
+                .into_response()
+        })?;
+
+    if !resp.status().is_success() {
+        return Err((
+            StatusCode::UNAUTHORIZED,
+            Json(json!({"error": "unauthorized"})),
+        )
+            .into_response());
+    }
+    let body = resp.json::<Value>().await.map_err(|e| {
+        (
+            StatusCode::BAD_GATEWAY,
+            Json(json!({
+                "error": "cloud_api_unavailable",
+                "message": format!("cloud-api introspection decode failed: {}", e),
+            })),
+        )
+            .into_response()
+    })?;
+    body.get("userId")
+        .and_then(|v| v.as_str())
+        .filter(|s| !s.is_empty())
+        .map(str::to_string)
+        .ok_or_else(|| {
+            (
+                StatusCode::BAD_GATEWAY,
+                Json(json!({
+                    "error": "cloud_api_unavailable",
+                    "message": "cloud-api introspection response missing userId",
+                })),
+            )
+                .into_response()
+        })
+}
+
 /// Headless variant of the MCP proxy for peer services with no Clerk session —
 /// the local gizzi daemon's MCP client during an agent run. Mounted on the
-/// public router via `internal_routes` (`/internal/connectors/mcp`) and gated
-/// per-request by `internal_auth::require_internal_token`, the same
-/// peer-service trust model the ACU gateway uses for `/internal/*`.
+/// public router via `internal_routes` (`/internal/connectors/mcp`). Two
+/// credentials are accepted, checked in this order:
 ///
-/// The caller names the user explicitly via `x-allternit-user-id`; that header
-/// is only meaningful because the internal token already authenticated the
-/// *service*. Limitation: cloud-issued runtime-device tokens
-/// (`Bearer allternit_runtime_…`, see allternit-cloud-api
-/// `routes/runtime_pairing.rs`) are NOT accepted here — the `runtime_devices`
-/// registry that verifies them lives in allternit-cloud-api's own database,
-/// which this API cannot reach. A headless caller on the same machine uses
-/// the internal service token instead; there is no silent admin bypass.
+/// 1. A cloud-issued runtime-device token (`Authorization: Bearer
+///    allternit_runtime_…`), introspected against allternit-cloud-api. The
+///    alias user is the device's registered owner — the token-derived
+///    identity wins over any caller-asserted header.
+/// 2. The internal service token (`internal_auth::require_internal_token`),
+///    the same peer-service trust model the ACU gateway uses for
+///    `/internal/*`; the user is named explicitly via `x-allternit-user-id`,
+///    which is only meaningful because the internal token already
+///    authenticated the *service*.
+///
+/// Anything else is 401 — there is no silent admin bypass.
 pub async fn mcp_proxy_internal(
     State(state): State<Arc<AppState>>,
     headers: axum::http::HeaderMap,
     Json(body): Json<Value>,
 ) -> impl IntoResponse {
+    if let Some(token) = device_token_from_headers(&headers) {
+        let token = token.to_string();
+        return match verify_runtime_device_token(&state, &token).await {
+            Ok(user_id) => proxy_mcp_response(user_id, body).await,
+            Err(resp) => resp,
+        };
+    }
+
     if let Err(status) = crate::internal_auth::require_internal_token(&headers, &state) {
         return (status, Json(json!({"error": "unauthorized"}))).into_response();
     }

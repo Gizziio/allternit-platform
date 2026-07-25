@@ -172,6 +172,13 @@ pub fn routes() -> Router<Arc<ApiState>> {
             post(deny_pairing),
         )
         .route("/api/v1/runtime-devices", get(list_runtime_devices))
+        // Registered before the parameterized :id route for clarity (axum
+        // already prefers the static segment). Token introspection for peer
+        // services — see verify_device_token.
+        .route(
+            "/api/v1/runtime-devices/verify-token",
+            post(verify_device_token),
+        )
         .route("/api/v1/runtime-devices/:id", delete(revoke_runtime_device))
         .route(
             "/api/v1/runtime-devices/:id/heartbeat",
@@ -791,6 +798,27 @@ async fn authenticate_runtime(
     let token = device_token_from_headers(headers)
         .ok_or_else(|| ApiError::Unauthorized("Runtime credential required".to_string()))?;
     runtime_device_for_token(&state.db, token, Some(expected_id)).await
+}
+
+/// Token introspection for peer services (e.g. the local allternit-api
+/// proxying a headless gizzi MCP client that holds a device token). Public
+/// like the pairing exchange endpoint: possession of a valid device token is
+/// itself the credential, and this reveals only the identity that token
+/// already authenticates as — nothing else. Fails closed on unknown,
+/// expired, or revoked tokens via `runtime_device_for_token`.
+async fn verify_device_token(
+    State(state): State<Arc<ApiState>>,
+    headers: HeaderMap,
+) -> Result<Json<serde_json::Value>, ApiError> {
+    let token = device_token_from_headers(&headers)
+        .ok_or_else(|| ApiError::Unauthorized("Runtime credential required".to_string()))?;
+    let device = runtime_device_for_token(&state.db, token, None).await?;
+    Ok(Json(serde_json::json!({
+        "runtimeId": device.id,
+        "userId": device.user_id,
+        "name": device.name,
+        "status": device.status,
+    })))
 }
 
 pub(crate) async fn authenticate_runtime_token(
