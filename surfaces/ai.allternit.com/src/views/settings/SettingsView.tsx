@@ -55,6 +55,7 @@ import { SecurityPanel } from './SecurityPanel';
 import { SkillsSettingsPanel } from './SkillsSettingsPanel';
 import { PluginsSettingsPanel } from './PluginsSettingsPanel';
 import { DispatchSettingsPanel } from './DispatchSettingsPanel';
+import { ResponseStylePanel } from './ResponseStylePanel';
 import { PluginManager } from '../plugins';
 import type { TabId as FullManagerTabId } from '../plugins/PluginManager/types';
 import { QUIET_BUTTON_CLASS, DESTRUCTIVE_BUTTON_CLASS, SETTINGS_SELECT_CLASS } from '@/components/settings/buttonStyles';
@@ -1394,6 +1395,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
       case 'signin': return <ClerkAuthPanel />;
       case 'organization': return <OrganizationAccessPanel />;
       case 'skills': return renderSkillsPanel();
+      case 'response-style': return <ResponseStylePanel />;
       case 'connectors': return renderConnectorsPanel();
       case 'plugins': return renderPluginsPanel();
       case 'vps': return <ToastProvider><VPSConnectionsPanel /></ToastProvider>;

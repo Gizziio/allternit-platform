@@ -14,6 +14,7 @@ import {
   Check,
   X, Record } from '@phosphor-icons/react';
 import { agentWorkspaceService } from '@/lib/agents/agent-workspace.service';
+import { agentWorkspaceFilesApi } from '@/lib/agents/agent-workspace-files-api';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { SkillBuilderWizard, HeartbeatScheduler, PackageManager } from '@/components/agent-workspace';
@@ -46,9 +47,10 @@ const getFileLayer = (path: string): keyof AgentWorkspaceLayers => {
   return 'skills'; // default
 };
 
-// The file tree carries workspace-rooted paths that may be relative
-// (`agents/<id>/…`) or absolute (`/Users/<u>/agents/<id>/…`). Strip everything
-// up to the first `agents/<id>/` segment so labels show workspace-relative paths.
+// The workspace files endpoint returns workspace-relative paths (`SOUL.md`,
+// `.allternit/…`). Older sources could carry workspace-rooted paths
+// (`agents/<id>/…` or absolute) — strip up to `agents/<id>/` if present so
+// labels always show workspace-relative paths.
 const workspaceRelativePath = (p: string) => p.replace(/^.*?agents\/[^/]+\//, '');
 
 export function WorkspaceTab({ agent }: WorkspaceTabProps) {
@@ -73,8 +75,13 @@ export function WorkspaceTab({ agent }: WorkspaceTabProps) {
     setIsLoading(true);
     setError(null);
     try {
-      const workspace = await agentWorkspaceService.load(agent.id);
-      setFiles(workspace.fileTree);
+      // Real workspace files from the Rust API (workspace-relative paths).
+      const list = await agentWorkspaceFilesApi.list(agent.id);
+      setFiles(list.map(f => ({
+        name: f.path.split('/').pop() ?? f.path,
+        path: f.path,
+        type: 'file' as const,
+      })));
     } catch (e) {
       setError('Failed to load workspace files');
       console.error(e);
@@ -86,7 +93,7 @@ export function WorkspaceTab({ agent }: WorkspaceTabProps) {
   const loadFile = async (path: string) => {
     setIsLoading(true);
     try {
-      const content = await agentWorkspaceService.readFile(agent.id, path);
+      const content = await agentWorkspaceFilesApi.read(agent.id, path);
       setFileContent(content);
       setSelectedFile(path);
     } catch (e) {
@@ -101,7 +108,7 @@ export function WorkspaceTab({ agent }: WorkspaceTabProps) {
     if (!selectedFile) return;
     setIsSaving(true);
     try {
-      await agentWorkspaceService.writeFile(agent.id, selectedFile, fileContent);
+      await agentWorkspaceFilesApi.write(agent.id, selectedFile, fileContent);
     } catch (e) {
       setError('Failed to save file');
       console.error(e);

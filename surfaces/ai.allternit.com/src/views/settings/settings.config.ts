@@ -34,6 +34,7 @@ import {
   Package,
   DeviceMobile,
   Buildings,
+  ChatCircleText,
 } from '@phosphor-icons/react';
 
 export type SettingsGroup = 'account' | 'platform' | 'products' | 'infrastructure' | 'customize' | 'about';
@@ -69,6 +70,7 @@ export const SETTINGS_NAV_ITEMS: SettingsNavItem[] = [
   { id: 'security', label: 'Security', icon: React.createElement(Shield, { size: 18 }), group: 'infrastructure' },
   { id: 'agents', label: 'Agents', icon: React.createElement(Robot, { size: 18 }), group: 'infrastructure' },
   { id: 'skills', label: 'Skills', icon: React.createElement(Sparkle, { size: 18 }), group: 'customize' },
+  { id: 'response-style', label: 'Response style', icon: React.createElement(ChatCircleText, { size: 18 }), group: 'customize' },
   { id: 'connectors', label: 'Connectors', icon: React.createElement(PlugsConnected, { size: 18 }), group: 'customize' },
   { id: 'plugins', label: 'Allternit Plugins', icon: React.createElement(Package, { size: 18 }), group: 'customize' },
   { id: 'about', label: 'About', icon: React.createElement(Info, { size: 18 }), group: 'about' },
