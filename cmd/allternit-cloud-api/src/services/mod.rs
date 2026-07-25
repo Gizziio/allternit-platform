@@ -2,6 +2,7 @@
 
 pub mod cost_service;
 pub mod event_store;
+pub mod executor_service;
 pub mod fly_runtime_service;
 pub mod hosted_runtime_lifecycle;
 pub mod quota_service;
@@ -15,6 +16,10 @@ pub use cost_service::{
     SetCostRateRequest, UpdateBudgetRequest, UserCostBudget, UserCostSummary,
 };
 pub use event_store::{event_utils, EventStore, EventStoreImpl};
+pub use executor_service::{
+    start_executor_service, AllowAllGate, ApprovalGate, ExecutorConfig, ExecutorDeps,
+    ExecutorService,
+};
 pub use fly_runtime_service::{
     FlyMachineState, FlyRuntimeService, HostedInstanceRow, HostedMachineConfig, ProvisionedMachine,
 };

@@ -192,6 +192,27 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     // Start stale gizzi-instance garbage collection (startup sweep + hourly)
     allternit_cloud_api::routes::gizzi_instances::start_gizzi_instance_gc_task(state.db.clone());
 
+    // Start executor service (background task): claims queued runs and
+    // dispatches them to online registered gizzi instances.
+    let executor_enabled = std::env::var("EXECUTOR_ENABLED")
+        .map(|v| v.parse::<bool>().unwrap_or(true))
+        .unwrap_or(true);
+
+    if executor_enabled {
+        let executor_config = services::ExecutorConfig::from_env();
+        tracing::info!("Starting executor service...");
+        services::start_executor_service(
+            executor_config,
+            services::ExecutorDeps {
+                db: state.db.clone(),
+                event_store: state.event_store.clone(),
+                run_service: state.run_service.clone(),
+            },
+        );
+    } else {
+        tracing::info!("Executor service disabled");
+    }
+
     // Start server
     tracing::info!("Starting API server on {}", bind_addr);
     allternit_cloud_api::start_server(state, &bind_addr).await?;
