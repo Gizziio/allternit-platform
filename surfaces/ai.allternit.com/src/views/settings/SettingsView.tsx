@@ -27,6 +27,7 @@ import {
 } from '@phosphor-icons/react';
 import { VPSConnectionsPanel } from './VPSConnectionsPanel';
 import { DevicePairingPanel } from './DevicePairingPanel';
+import { CloudInstancesPanel } from './CloudInstancesPanel';
 import { ComputeBillingPanel } from '@/components/settings/ComputeBillingPanel';
 import { EnterpriseByocPanel } from '@/components/settings/EnterpriseByocPanel';
 import { OrganizationAccessPanel } from '@/components/settings/OrganizationAccessPanel';
@@ -1401,6 +1402,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
       case 'plugins': return renderPluginsPanel();
       case 'vps': return <ToastProvider><VPSConnectionsPanel /></ToastProvider>;
       case 'devices': return <DevicePairingPanel />;
+      case 'cloud-instances': return <CloudInstancesPanel />;
       case 'cloud-credentials': return <EnterpriseByocPanel />;
       default: return null;
     }
