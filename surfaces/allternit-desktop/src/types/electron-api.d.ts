@@ -173,6 +173,41 @@ export interface AuthAPI {
   hardSignOut(): Promise<void>;
 }
 
+export interface PairingInfo {
+  pairingId: string;
+  userCode: string;
+  name: string;
+  runtimeType: string;
+  hostname?: string;
+  platform?: string;
+  publicKeyFingerprint: string;
+  capabilities: string[];
+  status: string;
+  expiresAt: string;
+}
+
+export interface RuntimeDevice {
+  id: string;
+  name: string;
+  runtimeType: string;
+  hostname?: string;
+  platform?: string;
+  version?: string;
+  capabilities: string[];
+  publicKeyFingerprint: string;
+  status: string;
+  lastSeenAt?: string;
+  createdAt: string;
+  credentialExpiresAt: string;
+}
+
+export interface DevicePairingAPI {
+  lookup(code: string): Promise<PairingInfo>;
+  approve(code: string): Promise<{ status: string; pairingId?: string; runtimeName?: string }>;
+  deny(code: string): Promise<{ status: string }>;
+  listDevices(): Promise<RuntimeDevice[]>;
+}
+
 export interface ShellAPI {
   openExternal(url: string): Promise<void>;
   getOfficeHostStatus(): Promise<Record<'word' | 'excel' | 'powerpoint', {
@@ -455,6 +490,7 @@ export interface AllternitDesktopAPI {
   state: PersistedStateAPI;
   app: AppAPI;
   auth: AuthAPI;
+  devicePairing: DevicePairingAPI;
   shell: ShellAPI;
   officeAddins: OfficeAddinsAPI;
   theme: ThemeAPI;

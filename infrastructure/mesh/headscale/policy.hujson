@@ -1,0 +1,54 @@
+// Headscale ACL policy for allternit-headscale (headscale v0.29.2, HuJSON).
+//
+// ISOLATION MODEL
+// ---------------
+// One headscale user per customer (`clerk-<sanitized-clerk-id>`, created by
+// allternit-cloud-api at enroll time). Every node enrolls under its owner's
+// user via a preauth key and stays USER-OWNED (no ACL tags). The single rule
+// below lets a node reach only nodes owned by the SAME headscale user —
+// i.e. a customer's devices can reach each other and nothing else. ACLs are
+// default-deny, so everything not listed here (cross-customer traffic,
+// internet exit, subnet routes) is blocked. Subnet/exit routes additionally
+// require manual approval (`headscale nodes approve-routes`); there are no
+// autoApprovers, so none are ever approved automatically.
+//
+// WHY autogroup:self AND NOT PER-CUSTOMER TAGS (verified against the
+// v0.29.2 source, hscontrol/policy/v2 + hscontrol/state/state.go):
+//
+//   * tagOwners keys are exact tag names — there is no wildcard support
+//     (Tag.Validate / resolveTagOwners). A static file cannot enumerate
+//     `tag:customer-<id>` for customers that do not exist yet.
+//   * Tags in ACL src/dst also resolve per exact tag
+//     (Tag.resolve matches node.HasTag), so per-tag ACL rules would need
+//     the same impossible enumeration.
+//   * autogroup:self destinations REJECT tag and autogroup:tagged sources
+//     (validateACLSrcDstCombination → ErrACLAutogroupSelfInvalidSource),
+//     and compileAutogroupSelf returns no rules for tagged nodes. So once
+//     a node is tagged, the only dynamic same-owner rule is unavailable.
+//   * The only static rules expressible for tagged nodes are per-tag
+//     (enumeration, impossible) or autogroup:tagged → autogroup:tagged
+//     (every customer reaches every customer — no isolation at all).
+//
+// Conclusion: with a static policy file, per-customer isolation is only
+// expressible via user ownership + autogroup:self. The alternative —
+// policy.mode: database with cloud-api appending per-customer
+// tagOwners/ACL rules over gRPC SetPolicy on every enroll — was rejected:
+// it mutates shared tailnet state from the request path, tagged nodes lose
+// their user association (worse ops visibility), and it buys nothing over
+// the model above.
+//
+// Side effect worth knowing: SetNodeTags / client --advertise-tags require
+// the tag to exist in tagOwners (polMan.TagExists). With no tagOwners
+// declared, no node can ever be tagged, so the isolation model cannot be
+// escaped by tagging.
+{
+  "acls": [
+    // A node's traffic may go only to nodes owned by the same headscale
+    // user (= the same customer), on any port/protocol.
+    {
+      "action": "accept",
+      "src": ["autogroup:member"],
+      "dst": ["autogroup:self:*"],
+    },
+  ],
+}

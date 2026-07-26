@@ -341,13 +341,7 @@ async fn start_hosted_runtime(
 
     fly.start(&machine_id).await?;
 
-    sqlx::query(
-        "UPDATE hosted_runtime_instances SET status = 'starting', started_at = CURRENT_TIMESTAMP, stopped_at = NULL, active_since = CURRENT_TIMESTAMP, last_activity_at = CURRENT_TIMESTAMP, stop_reason = NULL WHERE id = ?",
-    )
-    .bind(&id)
-    .execute(&state.db)
-    .await?;
-    services::record_runtime_started(&state.db, &id).await?;
+    services::mark_hosted_instance_starting(&state.db, &id).await?;
 
     let row = fetch_instance(&state, &id).await?;
     let usage = services::hosted_usage_summary(&state.db, &user.id).await?;

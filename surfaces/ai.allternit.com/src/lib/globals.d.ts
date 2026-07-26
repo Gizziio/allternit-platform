@@ -53,6 +53,36 @@ declare global {
         signOut: () => Promise<void>;
         hardSignOut: () => Promise<void>;
       };
+      devicePairing?: {
+        lookup: (code: string) => Promise<{
+          pairingId: string;
+          userCode: string;
+          name: string;
+          runtimeType: string;
+          hostname?: string;
+          platform?: string;
+          publicKeyFingerprint: string;
+          capabilities: string[];
+          status: string;
+          expiresAt: string;
+        }>;
+        approve: (code: string) => Promise<{ status: string; pairingId?: string; runtimeName?: string }>;
+        deny: (code: string) => Promise<{ status: string }>;
+        listDevices: () => Promise<Array<{
+          id: string;
+          name: string;
+          runtimeType: string;
+          hostname?: string;
+          platform?: string;
+          version?: string;
+          capabilities: string[];
+          publicKeyFingerprint: string;
+          status: string;
+          lastSeenAt?: string;
+          createdAt: string;
+          credentialExpiresAt: string;
+        }>>;
+      };
       connection?: {
         getBackend: () => Promise<{ mode: 'bundled' | 'remote' | 'development'; url: string }>;
       };

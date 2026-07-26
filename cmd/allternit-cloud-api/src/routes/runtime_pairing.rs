@@ -21,7 +21,10 @@ use sqlx::{FromRow, SqlitePool};
 use std::sync::Arc;
 use uuid::Uuid;
 
-use crate::{auth::clerk, ApiError, ApiState};
+use crate::{
+    auth::clerk::{self, ClerkUser},
+    ApiError, ApiState,
+};
 
 const PAIRING_TTL_MINUTES: i64 = 10;
 const CREDENTIAL_TTL_DAYS: i64 = 90;
@@ -304,7 +307,7 @@ async fn pairing_info(
     headers: HeaderMap,
     Path(code): Path<String>,
 ) -> Result<Json<PairingInfoResponse>, ApiError> {
-    let _user = clerk::user_from_headers(&headers).await?;
+    let _user = approver_from_headers(&state, &headers).await?;
     let pairing = pairing_by_code(&state, &normalize_user_code(&code)).await?;
     ensure_pairing_live(&state, &pairing).await?;
     Ok(Json(pairing_info_response(pairing)))
@@ -317,7 +320,7 @@ async fn approve_pairing(
     profile: Option<Json<ApprovePairingRequest>>,
 ) -> Result<Json<serde_json::Value>, ApiError> {
     let profile = profile.map(|Json(value)| value).unwrap_or_default();
-    let user = clerk::user_from_headers(&headers).await?;
+    let user = approver_from_headers(&state, &headers).await?;
     let pairing = pairing_by_code(&state, &normalize_user_code(&code)).await?;
     ensure_pairing_live(&state, &pairing).await?;
     if pairing.status == "approved" {
@@ -404,7 +407,7 @@ async fn deny_pairing(
     headers: HeaderMap,
     Path(code): Path<String>,
 ) -> Result<Json<serde_json::Value>, ApiError> {
-    let _user = clerk::user_from_headers(&headers).await?;
+    let _user = approver_from_headers(&state, &headers).await?;
     let code = normalize_user_code(&code);
     let affected = sqlx::query(
         "UPDATE runtime_pairings SET status = 'denied' WHERE user_code = ? AND status = 'pending'",
@@ -602,7 +605,7 @@ async fn list_runtime_devices(
     State(state): State<Arc<ApiState>>,
     headers: HeaderMap,
 ) -> Result<Json<serde_json::Value>, ApiError> {
-    let user = clerk::user_from_headers(&headers).await?;
+    let user = approver_from_headers(&state, &headers).await?;
     let devices = sqlx::query_as::<_, RuntimeDeviceView>(
         r#"
         SELECT id, name, runtime_type, hostname, platform, version, capabilities,
@@ -834,6 +837,26 @@ pub(crate) async fn authenticate_runtime_token(
     Ok(authenticate_runtime(state, &headers, expected_id)
         .await?
         .user_id)
+}
+
+/// Human-facing pairing routes are normally authorized by a Clerk session
+/// from the browser. Allternit Desktop approves pairings in-app instead and
+/// authenticates with its runtime device credential, which resolves to the
+/// device's owner — the same trust decision as
+/// `gizzi_instances::actor_from_headers`. A device token can only ever act on
+/// pairings and devices belonging to its own owner.
+async fn approver_from_headers(state: &ApiState, headers: &HeaderMap) -> Result<ClerkUser, ApiError> {
+    if let Some(token) = device_token_from_headers(headers) {
+        let device = runtime_device_for_token(&state.db, token, None).await?;
+        return Ok(ClerkUser {
+            id: device.user_id,
+            email: None,
+            name: None,
+            image_url: None,
+            organization_id: None,
+        });
+    }
+    clerk::user_from_headers(headers).await
 }
 
 async fn pairing_by_code(state: &ApiState, code: &str) -> Result<PairingRow, ApiError> {

@@ -4,7 +4,9 @@
 //! Headscale preauth key so their device can join the tailnet. Each customer
 //! maps to one Headscale user named `clerk-<clerk_user_id>` (sanitized to the
 //! Headscale username charset); the key is single-use, non-ephemeral, and
-//! expires after 24 hours.
+//! expires after 24 hours. Nodes stay user-owned (no ACL tags) so the
+//! tailnet's `autogroup:self` policy isolates each customer to their own
+//! devices — see `infrastructure/mesh/headscale/policy.hujson`.
 //!
 //! The gRPC admin API is reached over the Fly private network in plaintext
 //! (the WireGuard underlay provides encryption), authenticated per-call with
@@ -298,6 +300,15 @@ impl HeadscaleAdmin for GrpcHeadscaleAdmin {
         // v0.29.2: CreatePreAuthKeyRequest { uint64 user = 1; bool reusable = 2;
         // bool ephemeral = 3; google.protobuf.Timestamp expiration = 4;
         // repeated string acl_tags = 5; }
+        //
+        // acl_tags deliberately stays empty: per-customer isolation is
+        // enforced by the ACL policy (policy.hujson, autogroup:self) over
+        // user-owned nodes — one headscale user per customer. Tagging the
+        // nodes would strip their user ownership (user XOR tags), and in
+        // v0.29.2 tagged nodes cannot match autogroup:self, while per-tag
+        // ACL/tagOwners rules cannot be enumerated in a static policy file.
+        // See infrastructure/mesh/headscale/policy.hujson for the full
+        // rationale.
         let request = self.authenticate(tonic::Request::new(proto::CreatePreAuthKeyRequest {
             user: user_id,
             reusable: false,

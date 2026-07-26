@@ -27,38 +27,83 @@ fly logs -a allternit-headscale
 Note: exactly one machine per volume — `min_machines_running = 1` and the
 SQLite DB mean this app is single-machine by design. Do not scale past 1.
 
-## Customer onboarding (per-customer isolation)
+## Isolation model (per-customer ACLs)
 
-One headscale **user** per customer; devices join that user's namespace with
-a preauth key.
+`policy.hujson` is baked into the image (`policy.path` in `config.yaml`) and
+contains exactly one rule: `autogroup:member` → `autogroup:self:*`. Combined
+with one headscale **user** per customer (`clerk-<sanitized-clerk-id>`,
+created by allternit-cloud-api at enroll time) and **untagged** preauth
+keys, that means:
+
+- A node's traffic may go only to nodes owned by the same headscale user,
+  i.e. the same customer's devices. ACLs are default-deny, so all
+  cross-customer traffic is blocked.
+- No internet exit, no subnet routes: there are no `autoApprovers`, so
+  advertised routes are never approved automatically (manual
+  `headscale nodes approve-routes` only).
+- Nodes must stay **user-owned**. Do NOT pass `--tags` when minting keys:
+  a tagged node loses its user ownership, matches no rule in this policy
+  (tagged nodes cannot use `autogroup:self`), and is cut off. Tagging via
+  `headscale nodes tag` / `--advertise-tags` is rejected anyway because the
+  policy declares no `tagOwners`. See the header of `policy.hujson` for why
+  the model uses `autogroup:self` instead of per-customer tags.
+
+Verifying isolation:
+
+```sh
+# each node shows its owning user (one user = one customer)
+fly ssh console -a allternit-headscale -C "headscale nodes list"
+
+# policy currently in force
+fly ssh console -a allternit-headscale -C "headscale policy get"
+```
+
+On a connected node, `tailscale status` must list only same-customer peers.
+To test that cross-customer traffic is denied, enroll one node under each
+of two different users and, from node A:
+
+```sh
+tailscale status                     # node B must NOT appear
+tailscale ping <node-B-100.x IP>     # must fail/time out
+```
+
+## Customer onboarding
+
+Normal enrollments go through allternit-cloud-api (`POST
+/api/v1/mesh/enroll`), which creates the `clerk-<id>` user and mints a
+single-use, untagged, 24h preauth key. Manual onboarding for testing:
 
 ```sh
 # 1. create the user (use the platform customer ID as the name)
 fly ssh console -a allternit-headscale -C "headscale users create cust_abc123"
 
-# 2. mint a preauth key for device enrollment
-#    --user accepts the user name or numeric ID
+# 2. find the numeric user ID (preauthkeys create wants the ID, not the name)
+fly ssh console -a allternit-headscale -C "headscale users list"
+
+# 3. mint a preauth key for device enrollment
 #    reusable: multiple devices (desktop + iOS) can enroll with one key
 #    ephemeral: node auto-deletes when it goes offline (good for CI/VPS throwaway)
 #    --expiration: how long the KEY stays valid for enrollment (not the node)
+#    NO --tags: nodes must stay user-owned or the isolation policy cuts them off
 fly ssh console -a allternit-headscale -C \
-  "headscale preauthkeys create --user cust_abc123 --reusable --expiration 720h"
+  "headscale preauthkeys create --user <numeric-user-id> --reusable --expiration 720h"
 
 # one-shot ephemeral key variant:
 fly ssh console -a allternit-headscale -C \
-  "headscale preauthkeys create --user cust_abc123 --ephemeral --expiration 1h"
+  "headscale preauthkeys create --user <numeric-user-id> --ephemeral --expiration 1h"
 
-# list keys for a user
-fly ssh console -a allternit-headscale -C "headscale preauthkeys list --user cust_abc123"
+# list keys
+fly ssh console -a allternit-headscale -C "headscale preauthkeys list"
 
-# revoke a key before expiry
-fly ssh console -a allternit-headscale -C "headscale preauthkeys expire --user cust_abc123 --key <key>"
+# revoke a key before expiry (by numeric authkey ID from the list)
+fly ssh console -a allternit-headscale -C "headscale preauthkeys expire --id <authkey-id>"
 ```
 
-Recommended defaults for the platform integration later: `--reusable` keys
-with a short `--expiration` (hours/days), minted just-in-time when a customer
-pairs a new device. Keys are enrollment credentials — store them like secrets
-and expire them aggressively.
+Recommended defaults for manual keys: `--reusable` with a short
+`--expiration` (hours/days), minted just-in-time. The platform integration
+(allternit-cloud-api) mints single-use, non-ephemeral 24h keys. Keys are
+enrollment credentials — store them like secrets and expire them
+aggressively.
 
 ## Node administration
 
@@ -137,11 +182,11 @@ re-enroll, so back it up.
 
 ## Known follow-ups / not yet done
 
-- **ACLs / tagging:** per-customer isolation today is only namespace-level
-  (users). `policy.path` is empty, so there is no ACL policy restricting
-  node-to-node traffic. Before GA, write a HuJSON policy with `tag:customer-*`
-  tags and `--tags` on preauth keys, and switch `policy.path` to a file baked
-  into the image.
+- ~~**ACLs / tagging**~~ **Done:** per-customer isolation is enforced by
+  `policy.hujson` (`autogroup:member` → `autogroup:self:*`) over user-owned
+  nodes — see "Isolation model" above. It takes effect on the next deploy;
+  no node-side changes are needed (nodes receive the new packet filter with
+  their next map update).
 - **Custom domain:** `allternit-headscale.fly.dev` works but leaks the
   provider; consider `mesh.allternit.com` (`fly certs add`). If you change
   `server_url`, existing nodes keep working only until reauth — do it before

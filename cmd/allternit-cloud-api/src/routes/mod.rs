@@ -2,6 +2,7 @@
 
 pub mod approvals;
 pub mod auth;
+pub mod billing_webhooks;
 pub mod costs;
 pub mod deployments;
 pub mod dispatch_handoff;

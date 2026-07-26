@@ -73,14 +73,14 @@ Response:
 
 The runtime displays `userCode` and opens `verificationUrl` in the system browser.
 
-### 2. Human approves in the browser
+### 2. Human approves in the browser or in Allternit Desktop
 
-The browser loads `/pair?code=ABCD-2345`. If not signed in, Clerk redirects to sign-in and returns to `/pair`. The page calls:
+The browser loads `/pair?code=ABCD-2345`. If not signed in, Clerk redirects to sign-in and returns to `/pair`. Alternatively, an already-paired Allternit Desktop approves in-app from Settings → Devices. Both paths call:
 
 `GET /api/v1/runtime-pairings/code/:code`  
 `POST /api/v1/runtime-pairings/code/:code/approve`
 
-Both require a valid Clerk session token in the `Authorization` header.
+Both require a valid Clerk session token in the `Authorization` header, or the runtime device credential of an already-paired device (which resolves to that device's owner — it can only act on pairings and devices belonging to its own account). The same applies to `POST /api/v1/runtime-pairings/code/:code/deny` and `GET /api/v1/runtime-devices`.
 
 ### 3. Runtime exchanges the pairing for a device credential
 

@@ -213,6 +213,46 @@ const authAPI = {
   hardSignOut: (): Promise<void> => ipcRenderer.invoke('auth:sign-out'),
 };
 
+// ─── Device Pairing ───────────────────────────────────────────────────────────
+// Approving `gizzi pair` codes in-app. Electron main holds the runtime device
+// credential and brokers these calls to the Allternit Cloud API.
+
+export type PairingInfo = {
+  pairingId: string;
+  userCode: string;
+  name: string;
+  runtimeType: string;
+  hostname?: string;
+  platform?: string;
+  publicKeyFingerprint: string;
+  capabilities: string[];
+  status: string;
+  expiresAt: string;
+};
+
+export type RuntimeDevice = {
+  id: string;
+  name: string;
+  runtimeType: string;
+  hostname?: string;
+  platform?: string;
+  version?: string;
+  capabilities: string[];
+  publicKeyFingerprint: string;
+  status: string;
+  lastSeenAt?: string;
+  createdAt: string;
+  credentialExpiresAt: string;
+};
+
+const devicePairingAPI = {
+  lookup: (code: string): Promise<PairingInfo> => ipcRenderer.invoke('device-pairing:lookup', code),
+  approve: (code: string): Promise<{ status: string; pairingId?: string; runtimeName?: string }> =>
+    ipcRenderer.invoke('device-pairing:approve', code),
+  deny: (code: string): Promise<{ status: string }> => ipcRenderer.invoke('device-pairing:deny', code),
+  listDevices: (): Promise<RuntimeDevice[]> => ipcRenderer.invoke('device-pairing:list'),
+};
+
 // ─── Shell ────────────────────────────────────────────────────────────────────
 
 const shellAPI = {
@@ -530,6 +570,7 @@ const allternitDesktopAPI = {
   state: stateAPI,
   app: appAPI,
   auth: authAPI,
+  devicePairing: devicePairingAPI,
   shell: shellAPI,
   officeAddins: officeAddinsAPI,
   theme: themeAPI,

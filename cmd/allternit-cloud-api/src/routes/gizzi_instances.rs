@@ -121,13 +121,36 @@ async fn upsert_instance(
     Ok(instance)
 }
 
+/// Who is registering: a paired runtime device registers under its owner
+/// and defaults the instance name to the device name; anything else falls
+/// back to the Clerk session path. The variant also records which profile
+/// data is available for ensuring the `users` row (see [`ensure_user_row`]).
+#[derive(Debug)]
+enum Actor {
+    Device { user_id: String, device_name: String },
+    Clerk(clerk::ClerkUser),
+}
+
+impl Actor {
+    fn user_id(&self) -> &str {
+        match self {
+            Actor::Device { user_id, .. } => user_id,
+            Actor::Clerk(user) => &user.id,
+        }
+    }
+
+    fn default_name(&self) -> &str {
+        match self {
+            Actor::Device { device_name, .. } => device_name,
+            Actor::Clerk(_) => DEFAULT_INSTANCE_NAME,
+        }
+    }
+}
+
 /// Resolves who is registering: a paired runtime device token registers
-/// under the device's owner and defaults the instance name to the device
-/// name; anything else falls back to the Clerk session path.
-async fn actor_from_headers(
-    db: &SqlitePool,
-    headers: &HeaderMap,
-) -> Result<(String, String), ApiError> {
+/// under the device's owner; anything else falls back to the Clerk session
+/// path.
+async fn actor_from_headers(db: &SqlitePool, headers: &HeaderMap) -> Result<Actor, ApiError> {
     if let Some(token) = runtime_pairing::device_token_from_headers(headers) {
         let device = runtime_pairing::runtime_device_for_token(db, token, None).await?;
         // The registry PUT doubles as a lightweight heartbeat.
@@ -137,10 +160,64 @@ async fn actor_from_headers(
         .bind(&device.id)
         .execute(db)
         .await?;
-        return Ok((device.user_id, device.name));
+        return Ok(Actor::Device {
+            user_id: device.user_id,
+            device_name: device.name,
+        });
     }
     let user = clerk::user_from_headers(headers).await?;
-    Ok((user.id, DEFAULT_INSTANCE_NAME.to_string()))
+    Ok(Actor::Clerk(user))
+}
+
+/// `gizzi_instances.user_id` references `users(id)`, so a `users` row must
+/// exist before the upsert — a first registration for a user who never went
+/// through the pairing/hosted flows otherwise fails on the FK. Mirrors the
+/// pairing-approve pattern (runtime_pairing.rs): a Clerk session upserts
+/// its profile claims; a device token only backfills a placeholder row if
+/// missing (its owner row was already created by the pairing approve flow
+/// and must not be clobbered).
+async fn ensure_user_row(db: &SqlitePool, actor: &Actor) -> Result<(), ApiError> {
+    match actor {
+        Actor::Clerk(user) => {
+            let email = user
+                .email
+                .clone()
+                .unwrap_or_else(|| format!("{}@users.allternit.local", user.id));
+            sqlx::query(
+                r#"
+                INSERT INTO users (id, email, name, avatar_url, status, last_login_at)
+                VALUES (?, ?, ?, ?, 'active', CURRENT_TIMESTAMP)
+                ON CONFLICT(id) DO UPDATE SET
+                    email = excluded.email,
+                    name = COALESCE(excluded.name, users.name),
+                    avatar_url = COALESCE(excluded.avatar_url, users.avatar_url),
+                    status = 'active',
+                    last_login_at = CURRENT_TIMESTAMP
+                "#,
+            )
+            .bind(&user.id)
+            .bind(&email)
+            .bind(user.name.as_deref())
+            .bind(user.image_url.as_deref())
+            .execute(db)
+            .await?;
+        }
+        Actor::Device { user_id, .. } => {
+            let email = format!("{}@users.allternit.local", user_id.replace('@', "_"));
+            sqlx::query(
+                r#"
+                INSERT INTO users (id, email, status, last_login_at)
+                VALUES (?, ?, 'active', CURRENT_TIMESTAMP)
+                ON CONFLICT(id) DO NOTHING
+                "#,
+            )
+            .bind(user_id)
+            .bind(email)
+            .execute(db)
+            .await?;
+        }
+    }
+    Ok(())
 }
 
 async fn upsert_self_instance(
@@ -149,14 +226,15 @@ async fn upsert_self_instance(
     Json(body): Json<UpsertInstanceRequest>,
 ) -> Result<Json<serde_json::Value>, ApiError> {
     let url = validate_instance_url(&body.url)?;
-    let (user_id, default_name) = actor_from_headers(&state.db, &headers).await?;
+    let actor = actor_from_headers(&state.db, &headers).await?;
+    ensure_user_row(&state.db, &actor).await?;
     let name = body
         .name
         .as_deref()
         .map(str::trim)
         .filter(|name| !name.is_empty())
-        .unwrap_or(&default_name);
-    let instance = upsert_instance(&state.db, &user_id, name, &url).await?;
+        .unwrap_or_else(|| actor.default_name());
+    let instance = upsert_instance(&state.db, actor.user_id(), name, &url).await?;
     Ok(Json(instance_json(&instance)))
 }
 
@@ -239,11 +317,29 @@ mod tests {
     /// updated_at to exercise stale derivation.
     async fn test_pool() -> SqlitePool {
         let pool = SqlitePool::connect(":memory:").await.unwrap();
+        // Minimal users shape; gizzi_instances.user_id references it, and
+        // sqlx enables PRAGMA foreign_keys by default, so the FK is really
+        // exercised here.
+        sqlx::query(
+            r#"
+            CREATE TABLE users (
+                id TEXT PRIMARY KEY,
+                email TEXT NOT NULL UNIQUE,
+                name TEXT,
+                avatar_url TEXT,
+                status TEXT NOT NULL DEFAULT 'active',
+                last_login_at TIMESTAMP
+            )
+            "#,
+        )
+        .execute(&pool)
+        .await
+        .unwrap();
         sqlx::query(
             r#"
             CREATE TABLE gizzi_instances (
                 id TEXT PRIMARY KEY,
-                user_id TEXT NOT NULL,
+                user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
                 name TEXT NOT NULL,
                 url TEXT NOT NULL,
                 created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
@@ -306,6 +402,15 @@ mod tests {
         .unwrap();
     }
 
+    async fn insert_user(pool: &SqlitePool, id: &str) {
+        sqlx::query("INSERT INTO users (id, email) VALUES (?, ?)")
+            .bind(id)
+            .bind(format!("{id}@users.allternit.local"))
+            .execute(pool)
+            .await
+            .unwrap();
+    }
+
     #[test]
     fn validate_instance_url_accepts_http_and_https() {
         assert!(validate_instance_url("https://xyz.trycloudflare.com").is_ok());
@@ -336,6 +441,7 @@ mod tests {
     #[tokio::test]
     async fn upsert_inserts_then_refreshes_url_and_timestamp() {
         let pool = test_pool().await;
+        insert_user(&pool, "user_1").await;
 
         let first = upsert_instance(&pool, "user_1", "my-macbook", "https://a.trycloudflare.com")
             .await
@@ -369,6 +475,8 @@ mod tests {
     #[tokio::test]
     async fn list_is_per_user_with_derived_status() {
         let pool = test_pool().await;
+        insert_user(&pool, "user_1").await;
+        insert_user(&pool, "user_2").await;
         upsert_instance(&pool, "user_1", "default", "https://a.trycloudflare.com")
             .await
             .unwrap();
@@ -407,13 +515,18 @@ mod tests {
         let token = format!("{}testsecret", runtime_pairing::DEVICE_TOKEN_PREFIX);
         insert_device(&pool, &token, "offline", false).await;
 
-        let (user_id, default_name) = actor_from_headers(&pool, &bearer_headers(&token))
+        let actor = actor_from_headers(&pool, &bearer_headers(&token))
             .await
             .unwrap();
-        assert_eq!(user_id, "user_9", "registration lands on the device owner");
-        assert_eq!(default_name, "joes-macbook", "name defaults to the device name");
+        assert_eq!(actor.user_id(), "user_9", "registration lands on the device owner");
+        assert_eq!(
+            actor.default_name(),
+            "joes-macbook",
+            "name defaults to the device name"
+        );
 
-        let instance = upsert_instance(&pool, &user_id, &default_name, "https://a.trycloudflare.com")
+        ensure_user_row(&pool, &actor).await.unwrap();
+        let instance = upsert_instance(&pool, actor.user_id(), actor.default_name(), "https://a.trycloudflare.com")
             .await
             .unwrap();
         assert_eq!(instance.name, "joes-macbook");
@@ -435,6 +548,7 @@ mod tests {
     #[tokio::test]
     async fn gc_deletes_only_instances_older_than_retention() {
         let pool = test_pool().await;
+        insert_user(&pool, "user_1").await;
 
         // Insert the old row directly with a backdated updated_at; any UPDATE
         // would refresh the timestamp (the production table has a trigger for
@@ -487,5 +601,96 @@ mod tests {
             .await
             .unwrap();
         assert_eq!(count, 0, "rejected tokens must not register anything");
+    }
+
+    #[tokio::test]
+    async fn clerk_upsert_creates_users_row_for_brand_new_user() {
+        let pool = test_pool().await;
+        let actor = Actor::Clerk(clerk::ClerkUser {
+            id: "user_brandnew".to_string(),
+            email: Some("joe@example.com".to_string()),
+            name: Some("Joe".to_string()),
+            image_url: None,
+            organization_id: None,
+        });
+
+        // First registration for a user with no users row must not hit the
+        // gizzi_instances.user_id FK.
+        ensure_user_row(&pool, &actor).await.unwrap();
+        let instance = upsert_instance(&pool, actor.user_id(), actor.default_name(), "https://a.trycloudflare.com")
+            .await
+            .unwrap();
+        assert_eq!(instance.name, "default");
+
+        let (email, name): (String, Option<String>) =
+            sqlx::query_as("SELECT email, name FROM users WHERE id = 'user_brandnew'")
+                .fetch_one(&pool)
+                .await
+                .unwrap();
+        assert_eq!(email, "joe@example.com");
+        assert_eq!(name.as_deref(), Some("Joe"));
+
+        // A repeated PUT refreshes the instance and keeps a single users row.
+        ensure_user_row(&pool, &actor).await.unwrap();
+        upsert_instance(&pool, actor.user_id(), actor.default_name(), "https://b.trycloudflare.com")
+            .await
+            .unwrap();
+        let users_count: i64 = sqlx::query_scalar("SELECT COUNT(*) FROM users")
+            .fetch_one(&pool)
+            .await
+            .unwrap();
+        assert_eq!(users_count, 1);
+    }
+
+    #[tokio::test]
+    async fn clerk_upsert_without_email_claim_uses_placeholder() {
+        let pool = test_pool().await;
+        let actor = Actor::Clerk(clerk::ClerkUser {
+            id: "user_noemail".to_string(),
+            email: None,
+            name: None,
+            image_url: None,
+            organization_id: None,
+        });
+        ensure_user_row(&pool, &actor).await.unwrap();
+
+        let email: String = sqlx::query_scalar("SELECT email FROM users WHERE id = 'user_noemail'")
+            .fetch_one(&pool)
+            .await
+            .unwrap();
+        assert_eq!(email, "user_noemail@users.allternit.local");
+    }
+
+    #[tokio::test]
+    async fn device_ensure_user_row_backfills_placeholder_without_clobbering() {
+        let pool = test_pool().await;
+        let actor = Actor::Device {
+            user_id: "user_9".to_string(),
+            device_name: "joes-macbook".to_string(),
+        };
+
+        // No users row yet (owner predates the pairing approve flow):
+        // backfill a placeholder so the FK is satisfied.
+        ensure_user_row(&pool, &actor).await.unwrap();
+        let email: String = sqlx::query_scalar("SELECT email FROM users WHERE id = 'user_9'")
+            .fetch_one(&pool)
+            .await
+            .unwrap();
+        assert_eq!(email, "user_9@users.allternit.local");
+
+        // A real profile row (created by the pairing approve flow) must not
+        // be clobbered by the device-token path.
+        sqlx::query("UPDATE users SET email = 'joe@example.com', name = 'Joe' WHERE id = 'user_9'")
+            .execute(&pool)
+            .await
+            .unwrap();
+        ensure_user_row(&pool, &actor).await.unwrap();
+        let (email, name): (String, Option<String>) =
+            sqlx::query_as("SELECT email, name FROM users WHERE id = 'user_9'")
+                .fetch_one(&pool)
+                .await
+                .unwrap();
+        assert_eq!(email, "joe@example.com");
+        assert_eq!(name.as_deref(), Some("Joe"));
     }
 }

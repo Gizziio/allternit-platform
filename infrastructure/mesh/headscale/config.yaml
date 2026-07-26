@@ -51,12 +51,14 @@ log:
   level: info
   format: text
 
-# ACL/grant policy comes later (per-customer isolation via tags).
-# Empty path = no policy file; all nodes in the tailnet can reach each other
-# within headscale's default behavior until a policy is added.
+# Per-customer isolation: nodes may reach only nodes owned by the same
+# headscale user (= the same customer); everything else is default-deny.
+# See policy.hujson for the model and why it uses autogroup:self over
+# user-owned nodes instead of per-customer ACL tags. The file is baked into
+# the image by the Dockerfile.
 policy:
   mode: file
-  path: ""
+  path: /etc/headscale/policy.hujson
 
 dns:
   magic_dns: true

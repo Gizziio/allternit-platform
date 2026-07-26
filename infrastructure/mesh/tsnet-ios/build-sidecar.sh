@@ -9,15 +9,17 @@ cd "$(dirname "$0")"
 
 OUT_BASE="../../../cmd/gizzi-code/vendor/mesh-node"
 
-PLATFORMS=(
-  darwin-arm64
-  linux-amd64
+# GOOS-GOARCH pairs; the vendor directory uses the Node/Bun arch naming
+# (`${process.platform}-${process.arch}` — x64, not amd64) that gizzi-code's
+# mesh.ts discovery expects.
+TARGETS=(
+  "darwin arm64 darwin-arm64"
+  "linux amd64 linux-x64"
 )
 
-for pa in "${PLATFORMS[@]}"; do
-  GOOS="${pa%-*}"
-  GOARCH="${pa#*-}"
-  out="$OUT_BASE/$pa/mesh-node"
+for entry in "${TARGETS[@]}"; do
+  read -r GOOS GOARCH dir <<<"$entry"
+  out="$OUT_BASE/$dir/mesh-node"
   mkdir -p "$(dirname "$out")"
   CGO_ENABLED=0 GOOS="$GOOS" GOARCH="$GOARCH" \
     go build -ldflags="-s -w" -o "$out" ./cmd/mesh-node

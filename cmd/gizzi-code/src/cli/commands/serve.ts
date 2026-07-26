@@ -79,7 +79,25 @@ export const ServeCommand = cmd({
     }
     const server = Server.listen({ ...opts, tunnel, tunnelToken, tunnelHostname, mesh, meshAuthKey, meshControlUrl })
     process.stderr.write(`gizzi server listening on http://${server.hostname}:${server.port}\n`)
+    // Graceful shutdown: server.stop() is the wrapped stop from Server.listen,
+    // which also kills the cloudflared/mesh-node children. Without these
+    // handlers SIGTERM/SIGINT would leave those children orphaned.
+    let shuttingDown = false
+    const shutdown = (signal: string) => {
+      // A second signal while cleanup is in flight means "stop waiting".
+      if (shuttingDown) {
+        process.stderr.write(`gizzi server received ${signal} again; force exiting\n`)
+        process.exit(1)
+      }
+      shuttingDown = true
+      process.stderr.write(`gizzi server received ${signal}; shutting down\n`)
+      server
+        .stop()
+        .catch(() => {})
+        .finally(() => process.exit(0))
+    }
+    process.on("SIGINT", () => shutdown("SIGINT"))
+    process.on("SIGTERM", () => shutdown("SIGTERM"))
     await new Promise(() => {})
-    await server.stop()
   },
 })

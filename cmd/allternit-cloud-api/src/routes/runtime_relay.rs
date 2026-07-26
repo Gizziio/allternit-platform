@@ -3,6 +3,15 @@
 //! Runtimes connect outward over WebSocket. A Clerk-authenticated browser may
 //! relay a scoped request only to a runtime owned by the same user. Gizzi and
 //! the operator API remain private on the runtime's loopback interface.
+//!
+//! Wake-on-demand: when a browser targets a device backed by a stopped hosted
+//! runtime, the relay starts its Fly machine and then polls the relay hub for
+//! the daemon to reconnect (bounded by [`WAKE_WAIT_TIMEOUT`]). Polling was
+//! chosen over an immediate "warming" response because it needs no client
+//! protocol change on the common path — a stopped shared-cpu machine typically
+//! reconnects in a few seconds, so the request simply completes slower. If the
+//! wait times out, the proxy answers 503 `runtime_warming` so the client can
+//! retry, and socket-ticket creation answers 503 with a warming message.
 
 use axum::{
     body::Body,
@@ -34,6 +43,8 @@ use crate::{auth::clerk, ApiError, ApiState};
 
 const RELAY_TIMEOUT: Duration = Duration::from_secs(90);
 const MAX_RELAY_BODY_BYTES: usize = 5 * 1024 * 1024;
+const WAKE_WAIT_TIMEOUT: Duration = Duration::from_secs(30);
+const WAKE_POLL_INTERVAL: Duration = Duration::from_millis(500);
 
 #[derive(Debug, Deserialize)]
 #[serde(tag = "type", rename_all = "snake_case")]
@@ -179,6 +190,57 @@ fn relay_hub() -> &'static RelayHub {
     HUB.get_or_init(|| RwLock::new(HashMap::new()))
 }
 
+/// Result of resolving a runtime's relay connection, with wake-on-demand.
+enum RelayConnect {
+    /// The runtime has a live relay connection.
+    Connected(Arc<RuntimeConnection>),
+    /// A hosted machine start was issued but the daemon did not reconnect in
+    /// time; the client should retry shortly.
+    Warming,
+    /// The runtime is not connected and cannot be woken.
+    Offline,
+}
+
+/// Look up the runtime's relay connection, starting its hosted machine first
+/// when the device maps to a stopped hosted runtime instance.
+async fn connect_or_wake_runtime(
+    state: &ApiState,
+    runtime_id: &str,
+) -> Result<RelayConnect, ApiError> {
+    if let Some(connection) = relay_hub().read().await.get(runtime_id).cloned() {
+        return Ok(RelayConnect::Connected(connection));
+    }
+    let outcome = crate::services::wake_hosted_runtime_for_device(
+        &state.db,
+        state.fly_runtime_service.as_ref(),
+        runtime_id,
+    )
+    .await?;
+    if matches!(
+        outcome,
+        crate::services::HostedWakeOutcome::NotHosted
+            | crate::services::HostedWakeOutcome::NotWakeable
+    ) {
+        return Ok(RelayConnect::Offline);
+    }
+    // The machine is (or was already) starting: poll the hub until the daemon
+    // reconnects, bounded so a wedged boot does not pin the request.
+    let deadline = Instant::now() + WAKE_WAIT_TIMEOUT;
+    loop {
+        if let Some(connection) = relay_hub().read().await.get(runtime_id).cloned() {
+            return Ok(RelayConnect::Connected(connection));
+        }
+        if Instant::now() >= deadline {
+            break;
+        }
+        tokio::time::sleep(WAKE_POLL_INTERVAL).await;
+    }
+    Ok(match outcome {
+        crate::services::HostedWakeOutcome::Waking => RelayConnect::Warming,
+        _ => RelayConnect::Offline,
+    })
+}
+
 fn socket_tickets() -> &'static Mutex<HashMap<String, SocketTicket>> {
     static TICKETS: OnceLock<Mutex<HashMap<String, SocketTicket>>> = OnceLock::new();
     TICKETS.get_or_init(|| Mutex::new(HashMap::new()))
@@ -236,10 +298,18 @@ async fn create_socket_ticket(
             "Runtime pairing does not grant {required}"
         )));
     }
-    if relay_hub().read().await.get(&runtime_id).is_none() {
-        return Err(ApiError::ServiceUnavailable(
-            "The selected runtime is offline".to_string(),
-        ));
+    match connect_or_wake_runtime(&state, &runtime_id).await? {
+        RelayConnect::Connected(_) => {}
+        RelayConnect::Warming => {
+            return Err(ApiError::ServiceUnavailable(
+                "The hosted runtime is waking up; retry shortly".to_string(),
+            ));
+        }
+        RelayConnect::Offline => {
+            return Err(ApiError::ServiceUnavailable(
+                "The selected runtime is offline".to_string(),
+            ));
+        }
     }
     services_touch_runtime(&state, &runtime_id).await;
 
@@ -603,12 +673,20 @@ async fn proxy_to_runtime(
     }
     services_touch_runtime(&state, &runtime_id).await;
 
-    let connection = relay_hub().read().await.get(&runtime_id).cloned();
-    let Some(connection) = connection else {
-        return Ok((
-            StatusCode::SERVICE_UNAVAILABLE,
-            Json(serde_json::json!({ "error": "runtime_offline", "message": "The selected runtime is offline" })),
-        ).into_response());
+    let connection = match connect_or_wake_runtime(&state, &runtime_id).await? {
+        RelayConnect::Connected(connection) => connection,
+        RelayConnect::Warming => {
+            return Ok((
+                StatusCode::SERVICE_UNAVAILABLE,
+                Json(serde_json::json!({ "error": "runtime_warming", "message": "The hosted runtime is waking up; retry shortly", "retryAfterSeconds": WAKE_WAIT_TIMEOUT.as_secs() })),
+            ).into_response());
+        }
+        RelayConnect::Offline => {
+            return Ok((
+                StatusCode::SERVICE_UNAVAILABLE,
+                Json(serde_json::json!({ "error": "runtime_offline", "message": "The selected runtime is offline" })),
+            ).into_response());
+        }
     };
     let request_id = Uuid::new_v4().to_string();
     let response_timeout = if request.path.starts_with("/api/v1/providers/video/generate") {

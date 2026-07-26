@@ -291,6 +291,9 @@ pub fn create_router(state: Arc<ApiState>) -> Router {
         // must not pass through the legacy allternit_* API-token middleware.
         .merge(routes::hosted_runtimes::routes())
         .merge(routes::hosted_entitlements::routes())
+        // The Stripe webhook verifies the Stripe-Signature HMAC itself and
+        // answers 503 webhook_not_configured when STRIPE_WEBHOOK_SECRET is unset.
+        .merge(routes::billing_webhooks::routes())
         // Dispatch handoff verifies the Clerk session per-request, like the
         // pairing routes (the token only ever means "this user, that
         // runtime" — it is not itself a credential).
