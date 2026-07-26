@@ -3,6 +3,15 @@
 //! Route definitions for the BYO-VPS deployment wizard. The router is mounted
 //! by allternit-cloud-api behind Clerk authentication, which injects an
 //! [`handlers::AuthenticatedUser`] request extension for every handler.
+//!
+//! Bootstrap retry: `POST /api/v1/cloud/wizard/deployments/:id/bootstrap`
+//! doubles as the retry endpoint. When the session is `Failed` and the
+//! recorded bootstrap failure was recoverable, the same POST transitions the
+//! session back to the Bootstrap step and re-executes (the bootstrap script
+//! is idempotent). Sessions carry `bootstrap_attempts` /
+//! `max_bootstrap_attempts` in their JSON; once the cap is reached, or the
+//! failure was non-recoverable (auth/validation), the POST answers 409
+//! `bootstrap_not_retryable` and the session stays terminally `Failed`.
 
 use crate::handlers::*;
 use crate::WizardAppState;

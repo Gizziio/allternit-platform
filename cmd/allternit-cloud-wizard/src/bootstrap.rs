@@ -137,19 +137,39 @@ pub struct BootstrapError {
 }
 
 impl BootstrapError {
+    /// SSH transport errors are transient (unreachable, timeout, transfer
+    /// blip) and recoverable; authentication failures are not — re-running
+    /// with the same credentials will fail the same way.
     fn ssh(error: allternit_cloud_ssh::SshError) -> Self {
+        let recoverable = !matches!(
+            error,
+            allternit_cloud_ssh::SshError::AuthenticationFailed(_)
+        );
         Self {
             code: "SSH_ERROR".to_string(),
             message: error.to_string(),
-            recoverable: true,
+            recoverable,
         }
     }
 
+    /// Runtime failure of the bootstrap script on the box (non-zero exit,
+    /// apt lock, download/tailscale hiccup) — the script is idempotent, so
+    /// these are recoverable by re-running.
     fn failed(message: impl Into<String>) -> Self {
         Self {
             code: "BOOTSTRAP_FAILED".to_string(),
             message: message.into(),
             recoverable: true,
+        }
+    }
+
+    /// Local validation failure (the run never reached the box) — not
+    /// recoverable without changing the request.
+    fn invalid(message: impl Into<String>) -> Self {
+        Self {
+            code: "BOOTSTRAP_INVALID".to_string(),
+            message: message.into(),
+            recoverable: false,
         }
     }
 }
@@ -182,11 +202,11 @@ pub fn generate_bootstrap_script(config: &BootstrapConfig) -> Result<String, Boo
 
     // Pre-validate so we never upload a script that cannot succeed.
     if config.username.is_empty() || config.host.is_empty() {
-        return Err(BootstrapError::failed("host and username are required"));
+        return Err(BootstrapError::invalid("host and username are required"));
     }
     if let Some(mesh) = &config.mesh {
         if mesh.auth_key.is_empty() || mesh.control_url.is_empty() {
-            return Err(BootstrapError::failed(
+            return Err(BootstrapError::invalid(
                 "mesh auth key and control URL are required for enrollment",
             ));
         }
@@ -573,5 +593,27 @@ mod tests {
         let mut config = test_config(true);
         config.host = String::new();
         assert!(generate_bootstrap_script(&config).is_err());
+    }
+
+    #[test]
+    fn ssh_auth_failure_is_not_recoverable_but_transport_errors_are() {
+        let auth = BootstrapError::ssh(allternit_cloud_ssh::SshError::AuthenticationFailed(
+            "permission denied".to_string(),
+        ));
+        assert!(!auth.recoverable);
+
+        let transport = BootstrapError::ssh(allternit_cloud_ssh::SshError::ConnectionFailed(
+            "connection timed out".to_string(),
+        ));
+        assert!(transport.recoverable);
+    }
+
+    #[test]
+    fn local_validation_failure_is_not_recoverable() {
+        let mut config = test_config(true);
+        config.host = String::new();
+        let err = generate_bootstrap_script(&config).unwrap_err();
+        assert_eq!(err.code, "BOOTSTRAP_INVALID");
+        assert!(!err.recoverable);
     }
 }

@@ -27,6 +27,22 @@ pub struct WizardState {
     pub retry_count: u32,
     /// Maximum retries
     pub max_retries: u32,
+    /// Bootstrap attempts so far (visible in session JSON as a guardrail)
+    #[serde(default)]
+    pub bootstrap_attempts: u32,
+    /// Maximum bootstrap attempts before a failure is terminal for real
+    #[serde(default = "default_max_bootstrap_attempts")]
+    pub max_bootstrap_attempts: u32,
+    /// Whether the last recorded bootstrap failure was marked recoverable
+    #[serde(default)]
+    pub last_bootstrap_recoverable: Option<bool>,
+}
+
+/// Default cap on bootstrap attempts per session.
+pub const DEFAULT_MAX_BOOTSTRAP_ATTEMPTS: u32 = 5;
+
+fn default_max_bootstrap_attempts() -> u32 {
+    DEFAULT_MAX_BOOTSTRAP_ATTEMPTS
 }
 
 /// Wizard steps (state machine states)
@@ -251,6 +267,9 @@ impl WizardState {
             timestamps: StateTimestamps::default(),
             retry_count: 0,
             max_retries: 3,
+            bootstrap_attempts: 0,
+            max_bootstrap_attempts: DEFAULT_MAX_BOOTSTRAP_ATTEMPTS,
+            last_bootstrap_recoverable: None,
         }
     }
 
@@ -310,6 +329,33 @@ impl WizardState {
         }
     }
 
+    /// Re-enter the Bootstrap step after a recoverable bootstrap failure.
+    ///
+    /// Gated on three conditions: the session is `Failed`, the recorded
+    /// bootstrap failure was marked recoverable, and the per-session attempt
+    /// cap has not been reached. Unlike [`Self::retry`] (which restarts at
+    /// Preflight), this only re-runs the idempotent bootstrap script.
+    pub fn retry_bootstrap(&mut self) -> Result<(), String> {
+        if self.current_step != WizardStep::Failed {
+            return Err(format!(
+                "Cannot retry bootstrap from step {:?}",
+                self.current_step
+            ));
+        }
+        if self.last_bootstrap_recoverable != Some(true) {
+            return Err("Last bootstrap failure is not recoverable".to_string());
+        }
+        if self.bootstrap_attempts >= self.max_bootstrap_attempts {
+            return Err(format!(
+                "Bootstrap attempt cap reached ({}/{})",
+                self.bootstrap_attempts, self.max_bootstrap_attempts
+            ));
+        }
+        self.current_step = WizardStep::Bootstrap;
+        self.timestamps.last_step_started_at = Some(Utc::now());
+        Ok(())
+    }
+
     /// Check if can proceed
     pub fn can_proceed(&self) -> bool {
         !self.current_step.is_terminal()
@@ -337,5 +383,74 @@ impl WizardState {
 impl Default for WizardState {
     fn default() -> Self {
         Self::new()
+    }
+}
+
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn failed_wizard(recoverable: Option<bool>, attempts: u32) -> WizardState {
+        let mut wizard = WizardState::new();
+        wizard.current_step = WizardStep::Failed;
+        wizard.last_bootstrap_recoverable = recoverable;
+        wizard.bootstrap_attempts = attempts;
+        wizard
+    }
+
+    #[test]
+    fn retry_bootstrap_reenters_bootstrap_after_recoverable_failure() {
+        let mut wizard = failed_wizard(Some(true), 1);
+        wizard.retry_bootstrap().unwrap();
+        assert_eq!(wizard.current_step, WizardStep::Bootstrap);
+        assert!(wizard.timestamps.last_step_started_at.is_some());
+        // The attempt counter is untouched here; the handler counts the run.
+        assert_eq!(wizard.bootstrap_attempts, 1);
+    }
+
+    #[test]
+    fn retry_bootstrap_rejects_non_recoverable_failure() {
+        let mut wizard = failed_wizard(Some(false), 1);
+        assert!(wizard.retry_bootstrap().is_err());
+        assert_eq!(wizard.current_step, WizardStep::Failed);
+
+        // Never recorded a recoverable flag (e.g. legacy checkpoint).
+        let mut wizard = failed_wizard(None, 1);
+        assert!(wizard.retry_bootstrap().is_err());
+        assert_eq!(wizard.current_step, WizardStep::Failed);
+    }
+
+    #[test]
+    fn retry_bootstrap_enforces_attempt_cap() {
+        let mut wizard = failed_wizard(Some(true), DEFAULT_MAX_BOOTSTRAP_ATTEMPTS);
+        assert!(wizard.retry_bootstrap().is_err());
+        assert_eq!(wizard.current_step, WizardStep::Failed);
+    }
+
+    #[test]
+    fn retry_bootstrap_rejects_non_failed_steps() {
+        let mut wizard = WizardState::new();
+        wizard.current_step = WizardStep::Bootstrap;
+        wizard.last_bootstrap_recoverable = Some(true);
+        assert!(wizard.retry_bootstrap().is_err());
+    }
+
+    #[test]
+    fn legacy_checkpoint_without_attempt_fields_deserializes() {
+        let wizard = WizardState::new();
+        let mut json = serde_json::to_value(&wizard).unwrap();
+        let obj = json.as_object_mut().unwrap();
+        obj.remove("bootstrap_attempts");
+        obj.remove("max_bootstrap_attempts");
+        obj.remove("last_bootstrap_recoverable");
+
+        let restored: WizardState = serde_json::from_value(json).unwrap();
+        assert_eq!(restored.bootstrap_attempts, 0);
+        assert_eq!(
+            restored.max_bootstrap_attempts,
+            DEFAULT_MAX_BOOTSTRAP_ATTEMPTS
+        );
+        assert_eq!(restored.last_bootstrap_recoverable, None);
     }
 }

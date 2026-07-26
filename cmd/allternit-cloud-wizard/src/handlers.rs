@@ -357,6 +357,12 @@ pub async fn delete_wizard(
 ///
 /// Long-running by nature (release download + package install on the box);
 /// the wizard session is checkpointed before and after the run.
+///
+/// Retryable: when the session is `Failed` because of a recoverable bootstrap
+/// error (transient SSH/script failure — the script is idempotent), calling
+/// this endpoint again re-enters the Bootstrap step and re-runs. Non-
+/// recoverable failures (auth, validation) and sessions at the attempt cap
+/// answer 409 `bootstrap_not_retryable`.
 pub async fn bootstrap_wizard(
     Extension(user): Extension<AuthenticatedUser>,
     State(state): State<Arc<WizardAppState>>,
@@ -379,6 +385,38 @@ pub async fn bootstrap_wizard(
             StatusCode::NOT_FOUND,
             Json(serde_json::json!({ "error": "wizard_not_found" })),
         ))?;
+
+    // Re-entry gate: a session Failed by a recoverable bootstrap error may
+    // be retried through this same endpoint; `retry_bootstrap` enforces the
+    // recoverable flag and the per-session attempt cap.
+    if wizard.current_step == WizardStep::Failed {
+        wizard.retry_bootstrap().map_err(|e| {
+            (
+                StatusCode::CONFLICT,
+                Json(serde_json::json!({
+                    "error": "bootstrap_not_retryable",
+                    "message": e,
+                    "recoverable": wizard.last_bootstrap_recoverable.unwrap_or(false),
+                    "bootstrap_attempts": wizard.bootstrap_attempts,
+                    "max_bootstrap_attempts": wizard.max_bootstrap_attempts,
+                })),
+            )
+        })?;
+        // Persist the re-entry so a crash mid-run cannot lose it.
+        if let Err(e) = state.checkpoint_store.save(&user.user_id, &wizard).await {
+            error!("Failed to save bootstrap retry state: {}", e);
+            return Err((
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(serde_json::json!({ "error": "checkpoint_save_failed" })),
+            ));
+        }
+        info!(
+            "Retrying bootstrap for {} (attempt {}/{})",
+            deployment_id,
+            wizard.bootstrap_attempts + 1,
+            wizard.max_bootstrap_attempts
+        );
+    }
 
     if wizard.current_step != WizardStep::Bootstrap {
         return Err((
@@ -444,6 +482,17 @@ pub async fn bootstrap_wizard(
         mesh,
     );
 
+    // Count the attempt and checkpoint before the long-running SSH run, so
+    // the cap guardrail survives a crash mid-bootstrap.
+    wizard.bootstrap_attempts += 1;
+    if let Err(e) = state.checkpoint_store.save(&user.user_id, &wizard).await {
+        error!("Failed to save pre-bootstrap checkpoint: {}", e);
+        return Err((
+            StatusCode::INTERNAL_SERVER_ERROR,
+            Json(serde_json::json!({ "error": "checkpoint_save_failed" })),
+        ));
+    }
+
     match bootstrap::run_bootstrap(&config).await {
         Ok(result) => {
             let mesh_ip = result.mesh_ip.clone().ok_or((
@@ -473,6 +522,7 @@ pub async fn bootstrap_wizard(
             // Mark complete.
             wizard.context.bootstrap_log = Some(tail(&result.log_output, 4000).to_string());
             wizard.context.verification_passed = Some(true);
+            wizard.last_bootstrap_recoverable = None;
             wizard.context.agent_guidance.push(format!(
                 "Bootstrap complete; registered {} at {}",
                 instance_name, url
@@ -498,6 +548,8 @@ pub async fn bootstrap_wizard(
         Err(e) => {
             error!("Bootstrap failed for {}: {}", deployment_id, e);
             wizard.context.agent_guidance.push(format!("Bootstrap failed: {}", e));
+            // Recorded so a later POST can re-enter only when recoverable.
+            wizard.last_bootstrap_recoverable = Some(e.recoverable);
             wizard.fail();
             let _ = state.checkpoint_store.save(&user.user_id, &wizard).await;
             Err((
@@ -506,6 +558,8 @@ pub async fn bootstrap_wizard(
                     "error": "bootstrap_failed",
                     "message": e.message,
                     "recoverable": e.recoverable,
+                    "bootstrap_attempts": wizard.bootstrap_attempts,
+                    "max_bootstrap_attempts": wizard.max_bootstrap_attempts,
                 })),
             ))
         }
@@ -856,6 +910,120 @@ mod tests {
         let (status, body) = result.unwrap_err();
         assert_eq!(status, StatusCode::SERVICE_UNAVAILABLE);
         assert_eq!(body["error"], "mesh_not_configured");
+    }
+
+    #[tokio::test]
+    async fn bootstrap_retry_reenters_bootstrap_after_recoverable_failure() {
+        let state = test_state(); // no minter wired
+        let mut wizard = WizardState::new();
+        wizard.deployment_id = "dep-retry".to_string();
+        wizard.current_step = WizardStep::Failed;
+        wizard.last_bootstrap_recoverable = Some(true);
+        wizard.bootstrap_attempts = 1;
+        wizard.context.ssh_host = Some("203.0.113.5".to_string());
+        wizard.context.ssh_username = Some("root".to_string());
+        wizard.context.ssh_private_key = Some("key".to_string());
+        state
+            .checkpoint_store
+            .save("user_a", &wizard)
+            .await
+            .unwrap();
+
+        // No minter wired: the run stops at the mesh gate, but only AFTER
+        // the Failed session has re-entered the Bootstrap step.
+        let result = bootstrap_wizard(
+            Extension(user("user_a")),
+            State(state.clone()),
+            Path("dep-retry".to_string()),
+        )
+        .await;
+        let (status, body) = result.unwrap_err();
+        assert_eq!(status, StatusCode::SERVICE_UNAVAILABLE);
+        assert_eq!(body["error"], "mesh_not_configured");
+
+        let reloaded = state
+            .checkpoint_store
+            .load("user_a", "dep-retry")
+            .await
+            .unwrap()
+            .unwrap();
+        assert_eq!(reloaded.current_step, WizardStep::Bootstrap);
+    }
+
+    #[tokio::test]
+    async fn bootstrap_retry_rejected_when_failure_not_recoverable() {
+        let state = test_state();
+        let mut wizard = WizardState::new();
+        wizard.deployment_id = "dep-no-retry".to_string();
+        wizard.current_step = WizardStep::Failed;
+        wizard.last_bootstrap_recoverable = Some(false);
+        wizard.bootstrap_attempts = 1;
+        wizard.context.ssh_host = Some("203.0.113.5".to_string());
+        wizard.context.ssh_username = Some("root".to_string());
+        wizard.context.ssh_private_key = Some("key".to_string());
+        state
+            .checkpoint_store
+            .save("user_a", &wizard)
+            .await
+            .unwrap();
+
+        let result = bootstrap_wizard(
+            Extension(user("user_a")),
+            State(state.clone()),
+            Path("dep-no-retry".to_string()),
+        )
+        .await;
+        let (status, body) = result.unwrap_err();
+        assert_eq!(status, StatusCode::CONFLICT);
+        assert_eq!(body["error"], "bootstrap_not_retryable");
+
+        let reloaded = state
+            .checkpoint_store
+            .load("user_a", "dep-no-retry")
+            .await
+            .unwrap()
+            .unwrap();
+        assert_eq!(reloaded.current_step, WizardStep::Failed);
+    }
+
+    #[tokio::test]
+    async fn bootstrap_retry_rejected_at_attempt_cap() {
+        let state = test_state();
+        let mut wizard = WizardState::new();
+        wizard.deployment_id = "dep-capped".to_string();
+        wizard.current_step = WizardStep::Failed;
+        wizard.last_bootstrap_recoverable = Some(true);
+        wizard.bootstrap_attempts = wizard.max_bootstrap_attempts;
+        wizard.context.ssh_host = Some("203.0.113.5".to_string());
+        wizard.context.ssh_username = Some("root".to_string());
+        wizard.context.ssh_private_key = Some("key".to_string());
+        state
+            .checkpoint_store
+            .save("user_a", &wizard)
+            .await
+            .unwrap();
+
+        let result = bootstrap_wizard(
+            Extension(user("user_a")),
+            State(state.clone()),
+            Path("dep-capped".to_string()),
+        )
+        .await;
+        let (status, body) = result.unwrap_err();
+        assert_eq!(status, StatusCode::CONFLICT);
+        assert_eq!(body["error"], "bootstrap_not_retryable");
+        assert_eq!(
+            body["bootstrap_attempts"],
+            wizard.max_bootstrap_attempts
+        );
+
+        let reloaded = state
+            .checkpoint_store
+            .load("user_a", "dep-capped")
+            .await
+            .unwrap()
+            .unwrap();
+        assert_eq!(reloaded.current_step, WizardStep::Failed);
     }
 
     #[tokio::test]
