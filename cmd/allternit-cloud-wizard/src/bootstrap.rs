@@ -30,9 +30,12 @@ pub const GIZZI_RELEASE: &str = "hosted-runtime-2026.07.16";
 pub const GIZZI_LINUX_X64_SHA256: &str =
     "f1d29bad0b3903d77261e7706ff80fd292fefece3ebeaa4bb7f08a51ad2fc694";
 
-/// The hosted Dockerfile only pins the x64 artifact, so the arm64 checksum
-/// must be supplied by the operator via this env var until releases publish
-/// checksums for both arches.
+/// SHA-256 of `gizzi-code-linux-arm64-native` for [`GIZZI_RELEASE`].
+pub const GIZZI_LINUX_ARM64_SHA256: &str =
+    "f3b040914d68d51f38f9fdf12863c74ecf6e54d4651e0dd391ad12c21fab8268";
+
+/// Escape hatch to override the pinned arm64 checksum (e.g. when testing a
+/// newer release build that hasn't been pinned yet).
 pub const GIZZI_LINUX_ARM64_SHA256_ENV: &str = "GIZZI_LINUX_ARM64_SHA256";
 
 /// GitHub releases download base for the pinned release.
@@ -104,7 +107,10 @@ impl BootstrapConfig {
             mesh: Some(mesh),
             release: GIZZI_RELEASE.to_string(),
             x64_sha256: GIZZI_LINUX_X64_SHA256.to_string(),
-            arm64_sha256: std::env::var(GIZZI_LINUX_ARM64_SHA256_ENV).ok(),
+            arm64_sha256: Some(
+                std::env::var(GIZZI_LINUX_ARM64_SHA256_ENV)
+                    .unwrap_or_else(|_| GIZZI_LINUX_ARM64_SHA256.to_string()),
+            ),
         }
     }
 
