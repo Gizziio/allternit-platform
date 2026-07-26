@@ -103,7 +103,7 @@ pub async fn start_wizard(
 
     // Validate the credential/mode combination up front.
     match request.provider {
-        SupportedProvider::Hetzner | SupportedProvider::DigitalOcean
+        SupportedProvider::Hetzner | SupportedProvider::DigitalOcean | SupportedProvider::Aws
             if request.api_token.is_none() =>
         {
             return Err(StatusCode::BAD_REQUEST);
@@ -226,7 +226,7 @@ pub async fn advance_wizard(
     }
 
     // Execute current step
-    match execute_step(&mut wizard).await {
+    match execute_step(&mut wizard, &user.user_id).await {
         Ok(_) => {
             // Save checkpoint
             if let Err(e) = state.checkpoint_store.save(&user.user_id, &wizard).await {
@@ -513,7 +513,7 @@ pub async fn bootstrap_wizard(
 }
 
 /// Execute current wizard step
-async fn execute_step(wizard: &mut WizardState) -> Result<(), String> {
+async fn execute_step(wizard: &mut WizardState, user_id: &str) -> Result<(), String> {
     let current_step = wizard.current_step;
 
     match current_step {
@@ -576,7 +576,7 @@ async fn execute_step(wizard: &mut WizardState) -> Result<(), String> {
         }
 
         WizardStep::Provisioning => {
-            provision_server(wizard).await?;
+            provision_server(wizard, user_id).await?;
         }
 
         WizardStep::Bootstrap => {
@@ -611,7 +611,7 @@ async fn execute_step(wizard: &mut WizardState) -> Result<(), String> {
 /// Provision a server through the provider driver (API mode), generating and
 /// injecting a throwaway SSH keypair so the later bootstrap step can log in.
 /// Manual mode skips straight to bootstrap with the user-supplied SSH target.
-async fn provision_server(wizard: &mut WizardState) -> Result<(), String> {
+async fn provision_server(wizard: &mut WizardState, user_id: &str) -> Result<(), String> {
     let provider = wizard
         .context
         .provider
@@ -642,6 +642,7 @@ async fn provision_server(wizard: &mut WizardState) -> Result<(), String> {
     let (default_region, default_type, default_image) = match provider {
         SupportedProvider::Hetzner => ("fsn1", "cx21", "ubuntu-22.04"),
         SupportedProvider::DigitalOcean => ("nyc3", "s-1vcpu-2gb", "ubuntu-22-04-x64"),
+        SupportedProvider::Aws => ("us-east-1", "t3.small", "ubuntu-24.04"),
         _ => unreachable!("non-API providers returned above"),
     };
 
@@ -653,6 +654,7 @@ async fn provision_server(wizard: &mut WizardState) -> Result<(), String> {
         ssh_keys: vec![keypair.public_key.clone()],
         storage_gb: wizard.context.storage_gb.unwrap_or(50),
         api_token: String::new(), // driver was constructed with the token
+        owner_id: Some(user_id.to_string()),
     };
 
     let result = driver

@@ -47,6 +47,7 @@ async fn e2e_hetzner_provisioning() {
         ssh_keys: vec![],  // Will create key
         storage_gb: 40,
         api_token: api_token.clone(),
+        owner_id: None,
     };
 
     let create_result = driver.create_server(&request).await;
@@ -109,6 +110,7 @@ async fn e2e_digitalocean_provisioning() {
         ssh_keys: vec![],
         storage_gb: 25,
         api_token: api_token.clone(),
+        owner_id: None,
     };
 
     let create_result = driver.create_server(&request).await;
@@ -137,6 +139,68 @@ async fn e2e_digitalocean_provisioning() {
     println!("✓ Droplet destroyed");
 
     println!("DigitalOcean e2e test PASSED");
+}
+
+/// Test AWS EC2 provisioning end-to-end
+#[tokio::test]
+#[ignore]  // Requires real AWS credentials
+async fn e2e_aws_provisioning() {
+    // JSON credential string, same shape as the stored provider token:
+    // {"access_key_id":"...","secret_access_key":"...","region":"us-east-1"}
+    let credentials = std::env::var("ALLTERNIT_AWS_CREDENTIALS")
+        .expect("ALLTERNIT_AWS_CREDENTIALS must be set for e2e tests");
+
+    println!("Starting AWS e2e test...");
+
+    // 1. Validate credentials (STS GetCallerIdentity)
+    println!("Step 1: Validating credentials...");
+    let result = crate::aws::validate_aws_credentials(&credentials).await;
+    assert!(result.is_ok(), "Credential validation failed: {:?}", result);
+    println!("✓ Credentials validated");
+
+    // 2. Create instance
+    println!("Step 2: Creating instance...");
+    let creds = crate::aws::AwsCredentials::from_token(&credentials).unwrap();
+    let driver = crate::aws::AwsDriver::new(creds);
+
+    let request = CreateServerRequest {
+        name: format!("allternit-e2e-test-{}", uuid::Uuid::new_v4()),
+        region: "us-east-1".to_string(), // informational; the driver's region rules
+        instance_type: "t3.small".to_string(),
+        image: "ubuntu-24.04".to_string(),
+        ssh_keys: vec![], // driver can boot without a key pair; SSH not exercised here
+        storage_gb: 20,
+        api_token: credentials.clone(),
+        owner_id: Some("e2e".to_string()),
+    };
+
+    let create_result = driver.create_server(&request).await;
+    assert!(create_result.is_ok(), "Instance creation failed: {:?}", create_result);
+    let instance = create_result.unwrap();
+    let instance_id = instance.server_id.clone();
+    println!("✓ Instance created: {}", instance_id);
+
+    // 3. Wait for running (SSH-ready needs an inbound SG rule the mesh-only
+    //    group deliberately lacks, so poll status only)
+    println!("Step 3: Waiting for running state...");
+    let start = std::time::Instant::now();
+    loop {
+        let status = driver.get_server_status(&instance_id).await;
+        if matches!(status, Ok(crate::provider::ServerStatus::Running)) {
+            break;
+        }
+        assert!(start.elapsed() < Duration::from_secs(300), "Timed out waiting for running");
+        tokio::time::sleep(Duration::from_secs(5)).await;
+    }
+    println!("✓ Instance is running");
+
+    // 4. Destroy instance
+    println!("Step 4: Terminating instance...");
+    let destroy_result = driver.destroy_server(&instance_id).await;
+    assert!(destroy_result.is_ok(), "Instance termination failed: {:?}", destroy_result);
+    println!("✓ Instance terminated");
+
+    println!("AWS e2e test PASSED");
 }
 
 /// Test checkpoint store persistence

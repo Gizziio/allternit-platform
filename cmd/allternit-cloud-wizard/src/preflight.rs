@@ -144,9 +144,20 @@ impl PreflightChecker {
                 }
             }
             Some(SupportedProvider::Aws) => {
-                // AWS validation would require AWS SDK
-                // For now, skip validation
-                Ok(())
+                // AWS credentials are a JSON string
+                // ({"access_key_id","secret_access_key","region"}), validated
+                // live via STS GetCallerIdentity.
+                let creds = crate::aws::AwsCredentials::from_token(token)
+                    .map_err(PreflightError::InvalidCredentials)?;
+                let driver = crate::aws::AwsDriver::new(creds);
+                match timeout(self.timeout, driver.validate()).await {
+                    Ok(Ok(())) => Ok(()),
+                    Ok(Err(e)) if e.code == "AWS_AUTH_ERROR" => Err(
+                        PreflightError::InvalidCredentials(format!("Invalid AWS credentials: {}", e.message)),
+                    ),
+                    Ok(Err(e)) => Err(PreflightError::ProviderError(format!("AWS API error: {}", e.message))),
+                    Err(_) => Err(PreflightError::Timeout("AWS STS validation timed out".to_string())),
+                }
             }
             Some(SupportedProvider::Manual) | None => {
                 Err(PreflightError::InvalidProvider("API token validation requires API-mode provider".to_string()))
@@ -254,33 +265,64 @@ impl PreflightChecker {
                         if !response.status().is_success() {
                             return Err(PreflightWarning::QuotaUnknown("Cannot check Hetzner quota".to_string()));
                         }
-                        // Parse response to check quota
-                        // For now, assume OK
+                        // Hetzner exposes no quota-list endpoint; create-time
+                        // "resource_limit_exceeded" errors are mapped to
+                        // QUOTA_EXCEEDED by the driver instead.
                         Ok(())
                     }
                     _ => Err(PreflightWarning::QuotaUnknown("Cannot check Hetzner quota".to_string())),
                 }
             }
             SupportedProvider::DigitalOcean => {
-                // Check DigitalOcean quota
+                // Check DigitalOcean quota: droplet count vs account limit.
                 let client = reqwest::Client::new();
-                let result = timeout(self.timeout, async {
-                    client.get("https://api.digitalocean.com/v2/account")
+                let check = async {
+                    let account = client
+                        .get("https://api.digitalocean.com/v2/account")
                         .bearer_auth(token)
                         .send()
                         .await
-                }).await;
-
-                match result {
-                    Ok(Ok(response)) => {
-                        if !response.status().is_success() {
-                            return Err(PreflightWarning::QuotaUnknown("Cannot check DigitalOcean quota".to_string()));
-                        }
-                        // Parse response to check quota
-                        // For now, assume OK
-                        Ok(())
+                        .map_err(|e| e.to_string())?;
+                    if !account.status().is_success() {
+                        return Err(format!("account endpoint returned {}", account.status()));
                     }
-                    _ => Err(PreflightWarning::QuotaUnknown("Cannot check DigitalOcean quota".to_string())),
+                    let account: serde_json::Value = account.json().await.map_err(|e| e.to_string())?;
+                    let limit = account["account"]["droplet_limit"]
+                        .as_i64()
+                        .ok_or_else(|| "no droplet_limit in account response".to_string())?;
+
+                    let droplets = client
+                        .get("https://api.digitalocean.com/v2/droplets?per_page=200")
+                        .bearer_auth(token)
+                        .send()
+                        .await
+                        .map_err(|e| e.to_string())?;
+                    if !droplets.status().is_success() {
+                        return Err(format!("droplets endpoint returned {}", droplets.status()));
+                    }
+                    let droplets: serde_json::Value = droplets.json().await.map_err(|e| e.to_string())?;
+                    let total = droplets["meta"]["total"]
+                        .as_i64()
+                        .ok_or_else(|| "no meta.total in droplets response".to_string())?;
+
+                    Ok((total, limit))
+                };
+
+                match timeout(self.timeout, check).await {
+                    Ok(Ok((total, limit))) if total >= limit => Err(
+                        PreflightWarning::QuotaExceeded(format!(
+                            "DigitalOcean droplet limit reached: {}/{} droplets in use",
+                            total, limit
+                        )),
+                    ),
+                    Ok(Ok(_)) => Ok(()),
+                    Ok(Err(e)) => Err(PreflightWarning::QuotaUnknown(format!(
+                        "Cannot check DigitalOcean quota: {}",
+                        e
+                    ))),
+                    Err(_) => Err(PreflightWarning::QuotaUnknown(
+                        "DigitalOcean quota check timed out".to_string(),
+                    )),
                 }
             }
             _ => Ok(()),
@@ -328,6 +370,7 @@ impl std::fmt::Display for PreflightError {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum PreflightWarning {
     QuotaUnknown(String),
+    QuotaExceeded(String),
     OSUnknown(String),
     FirewallDetected(String),
 }
@@ -336,6 +379,7 @@ impl std::fmt::Display for PreflightWarning {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
             Self::QuotaUnknown(msg) => write!(f, "Quota unknown: {}", msg),
+            Self::QuotaExceeded(msg) => write!(f, "Quota exceeded: {}", msg),
             Self::OSUnknown(msg) => write!(f, "OS unknown: {}", msg),
             Self::FirewallDetected(msg) => write!(f, "Firewall detected: {}", msg),
         }

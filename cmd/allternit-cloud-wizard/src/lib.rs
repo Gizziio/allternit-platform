@@ -6,7 +6,7 @@
 //! - Preflight validation (real API tokens + real SSH logins)
 //! - Idempotent gizzi-code bootstrap over SSH (checksum-pinned release,
 //!   systemd unit, Headscale tailnet join via tailscaled)
-//! - Provider driver abstraction (REAL API CALLS: Hetzner, DigitalOcean)
+//! - Provider driver abstraction (REAL API CALLS: Hetzner, DigitalOcean, AWS EC2)
 //! - Failure policy handling
 //! - Agent-assisted signup with human checkpoints
 //! - Affiliate/referral tracking
@@ -19,6 +19,8 @@ pub mod preflight;
 pub mod bootstrap;
 pub mod verifier;
 pub mod provider;
+pub mod aws;
+pub mod types;
 pub mod failure_policy;
 pub mod guidance;
 pub mod affiliate;
@@ -38,6 +40,8 @@ pub use provider::{
     driver_for, CreateServerRequest, DigitalOceanDriver, HetznerDriver, ProviderCapabilities,
     ProviderDriver, ProviderError, ServerStatus,
 };
+pub use aws::{validate_aws_credentials, AwsCredentials, AwsDriver};
+pub use types::{estimate_cost, CostEstimate};
 pub use failure_policy::{FailurePolicy, FailureAction};
 pub use guidance::{AgentGuidanceOverlay, SignupAutomationScript, GuidanceState};
 pub use affiliate::{AffiliateTracker, MonetizationTier};

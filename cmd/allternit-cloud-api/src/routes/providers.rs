@@ -1,10 +1,14 @@
 //! Provider routes
 //!
 //! Static provider catalog, REAL credential validation (Hetzner, DigitalOcean,
-//! universal SSH), and per-user provider token management. Tokens are
+//! AWS, universal SSH), and per-user provider token management. Tokens are
 //! validated against the provider API before storage, encrypted at rest with
 //! the credential cipher (migration 019 `provider_tokens`), and never
 //! echoed back: reads return only `configured: true`.
+//!
+//! AWS credentials are a single token string holding JSON:
+//! `{"access_key_id": "...", "secret_access_key": "...", "region": "us-east-1"}`
+//! — validated live via STS GetCallerIdentity.
 
 use axum::{
     extract::{Path, State},
@@ -18,10 +22,10 @@ use std::sync::Arc;
 use crate::{auth::clerk, ApiError, ApiState};
 
 /// Providers with an automated API driver (wizard `provider.rs`).
-const AUTOMATED_PROVIDERS: &[&str] = &["hetzner", "digitalocean"];
+const AUTOMATED_PROVIDERS: &[&str] = &["hetzner", "digitalocean", "aws"];
 
 /// Providers that can hold a stored API token.
-const STORABLE_PROVIDERS: &[&str] = &["hetzner", "digitalocean"];
+const STORABLE_PROVIDERS: &[&str] = &["hetzner", "digitalocean", "aws"];
 
 pub fn clerk_routes() -> Router<Arc<ApiState>> {
     Router::new()
@@ -52,7 +56,7 @@ pub async fn list_providers(
         ProviderResponse {
             id: "aws".to_string(),
             name: "Amazon Web Services".to_string(),
-            automated: false,
+            automated: true,
         },
         ProviderResponse {
             id: "contabo".to_string(),
@@ -77,9 +81,16 @@ pub async fn list_providers(
 /// Validate a Hetzner/DigitalOcean API token against the provider's API.
 /// Returns `Ok(())` on 2xx, `Err(message)` otherwise; the token is never
 /// included in the message.
+///
+/// AWS is validated separately: its "token" is JSON
+/// (`{"access_key_id","secret_access_key","region"}`), checked live via STS
+/// GetCallerIdentity (wizard `aws.rs`, hand-rolled SigV4).
 async fn validate_provider_token(provider: &str, token: &str) -> Result<(), String> {
     if token.trim().is_empty() {
         return Err("token must not be empty".to_string());
+    }
+    if provider == "aws" {
+        return allternit_cloud_wizard::validate_aws_credentials(token).await;
     }
     let url = match provider {
         "hetzner" => "https://api.hetzner.cloud/v1/servers",
@@ -115,6 +126,8 @@ async fn validate_provider_token(provider: &str, token: &str) -> Result<(), Stri
 /// Validate provider credentials (real API calls).
 ///
 /// - hetzner/digitalocean: `api_key` is the provider token, checked live.
+/// - aws: `api_key` is the JSON credential string
+///   (`{"access_key_id","secret_access_key","region"}`), checked live via STS.
 /// - ssh: `api_key` is the SSH private key (or `api_secret` the password);
 ///   `ssh_host`/`ssh_username` are required — a real connection is attempted.
 /// - anything else: not validatable, use SSH mode.
@@ -248,6 +261,11 @@ async fn list_provider_tokens(
 
 /// Store (or replace) a provider token. The token is validated against the
 /// provider API first; only valid tokens are stored.
+///
+/// For `aws` the token body must be the JSON credential string
+/// `{"access_key_id":"...","secret_access_key":"...","region":"..."}` —
+/// malformed JSON is rejected with a 400 naming the expected shape, and the
+/// parsed credentials are validated via STS before storage.
 async fn put_provider_token(
     State(state): State<Arc<ApiState>>,
     headers: HeaderMap,
@@ -373,14 +391,26 @@ mod tests {
     async fn empty_token_is_rejected_before_any_network_call() {
         assert!(validate_provider_token("hetzner", "   ").await.is_err());
         assert!(validate_provider_token("digitalocean", "").await.is_err());
+        assert!(validate_provider_token("aws", "").await.is_err());
     }
 
     #[tokio::test]
     async fn unsupported_providers_route_to_ssh_mode_message() {
-        let err = validate_provider_token("aws", "token").await.unwrap_err();
-        assert!(err.contains("use SSH mode"), "got: {}", err);
         let err = validate_provider_token("contabo", "token").await.unwrap_err();
         assert!(err.contains("use SSH mode"), "got: {}", err);
+        let err = validate_provider_token("racknerd", "token").await.unwrap_err();
+        assert!(err.contains("use SSH mode"), "got: {}", err);
+    }
+
+    #[tokio::test]
+    async fn aws_rejects_malformed_json_before_any_network_call() {
+        // Must fail locally (JSON shape error) — never reaching STS.
+        let err = validate_provider_token("aws", "plain-token").await.unwrap_err();
+        assert!(err.contains("access_key_id"), "got: {}", err);
+        let err = validate_provider_token("aws", "{\"access_key_id\":\"AKIA\"}")
+            .await
+            .unwrap_err();
+        assert!(err.contains("access_key_id"), "got: {}", err);
     }
 
     #[test]

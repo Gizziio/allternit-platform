@@ -9,6 +9,7 @@
 //! IMPLEMENTATION STATUS:
 //! - HetznerDriver: REAL API calls
 //! - DigitalOceanDriver: REAL API calls
+//! - AwsDriver: REAL API calls (see `aws.rs` — hand-rolled SigV4, EC2 Query API)
 
 use async_trait::async_trait;
 use serde::{Deserialize, Serialize};
@@ -58,6 +59,8 @@ pub trait ProviderDriver: Send + Sync {
 
 /// Build the driver for an API-mode provider. `None` for providers without
 /// an automated driver — those go through the universal SSH path instead.
+/// AWS takes its JSON credential string (`{"access_key_id",...}`); when it
+/// doesn't parse, `None` routes the session to SSH mode.
 pub fn driver_for(
     provider: crate::capability::SupportedProvider,
     api_token: String,
@@ -69,6 +72,11 @@ pub fn driver_for(
         crate::capability::SupportedProvider::DigitalOcean => {
             Some(Box::new(DigitalOceanDriver::new(api_token)))
         }
+        crate::capability::SupportedProvider::Aws => crate::aws::AwsCredentials::from_token(
+            &api_token,
+        )
+        .ok()
+        .map(|creds| Box::new(crate::aws::AwsDriver::new(creds)) as Box<dyn ProviderDriver>),
         _ => None,
     }
 }
@@ -107,6 +115,10 @@ pub struct CreateServerRequest {
     pub storage_gb: u32,
     /// API token (provider-specific)
     pub api_token: String,
+    /// Owning user id (for provider-side ownership tags/labels, e.g. AWS
+    /// `allternit:user`). Absent for providers that don't tag.
+    #[serde(default)]
+    pub owner_id: Option<String>,
 }
 
 /// Create server result
@@ -294,6 +306,15 @@ impl ProviderDriver for HetznerDriver {
         if !response.status().is_success() {
             let status = response.status();
             let body = response.text().await.unwrap_or_default();
+            // Hetzner has no quota-list endpoint; the create call itself
+            // reports "resource_limit_exceeded" — surface it as QUOTA_EXCEEDED.
+            if body.contains("resource_limit_exceeded") {
+                return Err(ProviderError {
+                    code: crate::failure_policy::error_codes::QUOTA_EXCEEDED.to_string(),
+                    message: format!("Hetzner resource limit reached: {}", body),
+                    retryable: false,
+                });
+            }
             return Err(ProviderError {
                 code: "HETZNER_API_ERROR".to_string(),
                 message: format!("Server creation failed {}: {}", status, body),
@@ -586,6 +607,54 @@ impl DigitalOceanDriver {
         Ok(result.droplet)
     }
 
+    /// Pre-create quota check: droplet count vs the account's droplet limit.
+    /// At/over the limit this fails with QUOTA_EXCEEDED naming the limit;
+    /// if the check itself can't complete, it only logs and lets the create
+    /// attempt proceed (the API's own 4xx remains the backstop).
+    async fn check_quota(&self) -> Result<(), ProviderError> {
+        let account = self.client
+            .get("https://api.digitalocean.com/v2/account")
+            .header("Authorization", format!("Bearer {}", self.api_token))
+            .send()
+            .await;
+        let droplets = self.client
+            .get("https://api.digitalocean.com/v2/droplets?per_page=200")
+            .header("Authorization", format!("Bearer {}", self.api_token))
+            .send()
+            .await;
+
+        let (account, droplets) = match (account, droplets) {
+            (Ok(a), Ok(d)) if a.status().is_success() && d.status().is_success() => (a, d),
+            _ => {
+                tracing::warn!("Could not pre-check DigitalOcean droplet quota; proceeding");
+                return Ok(());
+            }
+        };
+
+        let limit = account
+            .json::<DigitalOceanAccountResponse>()
+            .await
+            .map(|r| r.account.droplet_limit);
+        let total = droplets
+            .json::<DigitalOceanDropletsResponse>()
+            .await
+            .map(|r| r.meta.total);
+
+        if let (Ok(limit), Ok(total)) = (limit, total) {
+            if total >= limit {
+                return Err(ProviderError {
+                    code: crate::failure_policy::error_codes::QUOTA_EXCEEDED.to_string(),
+                    message: format!(
+                        "DigitalOcean droplet limit reached: {}/{} droplets in use - destroy one or request a limit increase",
+                        total, limit
+                    ),
+                    retryable: false,
+                });
+            }
+        }
+        Ok(())
+    }
+
     /// Wait for TCP port to be accessible
     async fn wait_for_tcp(&self, host: &str, port: u16, timeout_dur: Duration) -> Result<(), ProviderError> {
         timeout(timeout_dur, async {
@@ -624,6 +693,10 @@ impl ProviderDriver for DigitalOceanDriver {
 
     async fn create_server(&self, request: &CreateServerRequest) -> Result<CreateServerResult, ProviderError> {
         tracing::info!("Creating DigitalOcean droplet: {} in {}", request.name, request.region);
+
+        // Quota precheck: fail with a clear limit-named error before burning
+        // a create call that would 4xx anyway.
+        self.check_quota().await?;
 
         // First, create or find SSH key
         let mut ssh_key_ids = Vec::new();
@@ -991,6 +1064,26 @@ struct DigitalOceanSshKey {
     public_key: String,
 }
 
+#[derive(Debug, Deserialize)]
+struct DigitalOceanAccountResponse {
+    account: DigitalOceanAccount,
+}
+
+#[derive(Debug, Deserialize)]
+struct DigitalOceanAccount {
+    droplet_limit: i64,
+}
+
+#[derive(Debug, Deserialize)]
+struct DigitalOceanDropletsResponse {
+    meta: DigitalOceanMeta,
+}
+
+#[derive(Debug, Deserialize)]
+struct DigitalOceanMeta {
+    total: i64,
+}
+
 // ============================================================================
 // Tests (mock driver — no real cloud API calls)
 // ============================================================================
@@ -1163,7 +1256,10 @@ mod tests {
         use crate::capability::SupportedProvider;
         assert!(driver_for(SupportedProvider::Hetzner, "t".to_string()).is_some());
         assert!(driver_for(SupportedProvider::DigitalOcean, "t".to_string()).is_some());
+        // AWS needs its JSON credential string; anything else falls back to SSH mode.
         assert!(driver_for(SupportedProvider::Aws, "t".to_string()).is_none());
+        let aws_json = r#"{"access_key_id":"AKIA","secret_access_key":"s","region":"us-east-1"}"#;
+        assert!(driver_for(SupportedProvider::Aws, aws_json.to_string()).is_some());
         assert!(driver_for(SupportedProvider::Manual, "t".to_string()).is_none());
     }
 }
