@@ -72,6 +72,7 @@ impl TestApp {
             quota_service,
             fly_runtime_service: None,
             mesh_service: None,
+            credential_cipher: None,
         });
 
         // Create router

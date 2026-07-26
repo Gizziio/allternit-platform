@@ -8,7 +8,7 @@
 
 use async_trait::async_trait;
 use serde::{Deserialize, Serialize};
-use std::path::{Path, PathBuf};
+use std::path::PathBuf;
 use tokio::fs;
 use tokio::io::AsyncWriteExt;
 use uuid::Uuid;
@@ -29,22 +29,32 @@ pub enum CheckpointStoreError {
 
     #[error("Corrupted checkpoint: {0}")]
     Corrupted(String),
+
+    #[error("Database error: {0}")]
+    Database(#[from] sqlx::Error),
+
+    #[error("Encryption error: {0}")]
+    Crypto(#[from] allternit_cloud_core::CredentialCryptoError),
 }
 
 /// Checkpoint store trait
+///
+/// All operations are scoped by `user_id`: a wizard checkpoint carries
+/// provider tokens and SSH keys, so one user must never be able to load,
+/// overwrite, or even enumerate another user's sessions.
 #[async_trait]
 pub trait CheckpointStore: Send + Sync {
-    /// Load wizard state for deployment
-    async fn load(&self, deployment_id: &str) -> Result<Option<WizardState>, CheckpointStoreError>;
+    /// Load wizard state for deployment owned by `user_id`
+    async fn load(&self, user_id: &str, deployment_id: &str) -> Result<Option<WizardState>, CheckpointStoreError>;
 
-    /// Save wizard state
-    async fn save(&self, state: &WizardState) -> Result<(), CheckpointStoreError>;
+    /// Save wizard state under `user_id`
+    async fn save(&self, user_id: &str, state: &WizardState) -> Result<(), CheckpointStoreError>;
 
-    /// Delete checkpoint
-    async fn delete(&self, deployment_id: &str) -> Result<(), CheckpointStoreError>;
+    /// Delete checkpoint owned by `user_id`
+    async fn delete(&self, user_id: &str, deployment_id: &str) -> Result<(), CheckpointStoreError>;
 
-    /// List all checkpoints
-    async fn list(&self) -> Result<Vec<String>, CheckpointStoreError>;
+    /// List all checkpoint deployment IDs owned by `user_id`
+    async fn list(&self, user_id: &str) -> Result<Vec<String>, CheckpointStoreError>;
 }
 
 /// File-based checkpoint store
@@ -69,22 +79,32 @@ impl FsCheckpointStore {
         Self::new(root)
     }
 
-    /// Get checkpoint file path
-    fn checkpoint_path(&self, deployment_id: &str) -> PathBuf {
-        self.root.join(format!("{}.json", deployment_id))
+    /// Get checkpoint file path (one subdirectory per user)
+    fn checkpoint_path(&self, user_id: &str, deployment_id: &str) -> PathBuf {
+        self.user_dir(user_id).join(format!("{}.json", deployment_id))
     }
 
     /// Get temp file path for atomic writes
-    fn temp_path(&self, deployment_id: &str) -> PathBuf {
-        self.root.join(format!("{}.tmp", deployment_id))
+    fn temp_path(&self, user_id: &str, deployment_id: &str) -> PathBuf {
+        self.user_dir(user_id).join(format!("{}.tmp", deployment_id))
+    }
+
+    /// Per-user directory; user ids are URL/file-system unsafe in theory, so
+    /// scrub to a conservative charset.
+    fn user_dir(&self, user_id: &str) -> PathBuf {
+        let safe: String = user_id
+            .chars()
+            .map(|c| if c.is_ascii_alphanumeric() || c == '-' || c == '_' { c } else { '_' })
+            .collect();
+        self.root.join(safe)
     }
 }
 
 #[async_trait]
 impl CheckpointStore for FsCheckpointStore {
-    async fn load(&self, deployment_id: &str) -> Result<Option<WizardState>, CheckpointStoreError> {
-        let path = self.checkpoint_path(deployment_id);
-        
+    async fn load(&self, user_id: &str, deployment_id: &str) -> Result<Option<WizardState>, CheckpointStoreError> {
+        let path = self.checkpoint_path(user_id, deployment_id);
+
         if !path.exists() {
             return Ok(None);
         }
@@ -96,9 +116,11 @@ impl CheckpointStore for FsCheckpointStore {
         Ok(Some(state))
     }
 
-    async fn save(&self, state: &WizardState) -> Result<(), CheckpointStoreError> {
-        let path = self.checkpoint_path(&state.deployment_id);
-        let temp_path = self.temp_path(&state.deployment_id);
+    async fn save(&self, user_id: &str, state: &WizardState) -> Result<(), CheckpointStoreError> {
+        let path = self.checkpoint_path(user_id, &state.deployment_id);
+        let temp_path = self.temp_path(user_id, &state.deployment_id);
+
+        fs::create_dir_all(path.parent().expect("checkpoint path has a parent")).await?;
 
         // Serialize to temp file
         let content = serde_json::to_string_pretty(state)?;
@@ -113,8 +135,8 @@ impl CheckpointStore for FsCheckpointStore {
         Ok(())
     }
 
-    async fn delete(&self, deployment_id: &str) -> Result<(), CheckpointStoreError> {
-        let path = self.checkpoint_path(deployment_id);
+    async fn delete(&self, user_id: &str, deployment_id: &str) -> Result<(), CheckpointStoreError> {
+        let path = self.checkpoint_path(user_id, deployment_id);
         
         if path.exists() {
             fs::remove_file(&path).await?;
@@ -123,10 +145,14 @@ impl CheckpointStore for FsCheckpointStore {
         Ok(())
     }
 
-    async fn list(&self) -> Result<Vec<String>, CheckpointStoreError> {
+    async fn list(&self, user_id: &str) -> Result<Vec<String>, CheckpointStoreError> {
         let mut deployment_ids = Vec::new();
-        
-        let mut entries = fs::read_dir(&self.root).await?;
+
+        let dir = self.user_dir(user_id);
+        if !dir.exists() {
+            return Ok(deployment_ids);
+        }
+        let mut entries = fs::read_dir(&dir).await?;
         while let Some(entry) = entries.next_entry().await? {
             let path = entry.path();
             if path.extension().and_then(|s| s.to_str()) == Some("json") {
@@ -142,7 +168,7 @@ impl CheckpointStore for FsCheckpointStore {
 
 /// In-memory checkpoint store (for testing)
 pub struct InMemoryCheckpointStore {
-    data: tokio::sync::RwLock<std::collections::HashMap<String, WizardState>>,
+    data: tokio::sync::RwLock<std::collections::HashMap<(String, String), WizardState>>,
 }
 
 impl InMemoryCheckpointStore {
@@ -161,26 +187,30 @@ impl Default for InMemoryCheckpointStore {
 
 #[async_trait]
 impl CheckpointStore for InMemoryCheckpointStore {
-    async fn load(&self, deployment_id: &str) -> Result<Option<WizardState>, CheckpointStoreError> {
+    async fn load(&self, user_id: &str, deployment_id: &str) -> Result<Option<WizardState>, CheckpointStoreError> {
         let data = self.data.read().await;
-        Ok(data.get(deployment_id).cloned())
+        Ok(data.get(&(user_id.to_string(), deployment_id.to_string())).cloned())
     }
 
-    async fn save(&self, state: &WizardState) -> Result<(), CheckpointStoreError> {
+    async fn save(&self, user_id: &str, state: &WizardState) -> Result<(), CheckpointStoreError> {
         let mut data = self.data.write().await;
-        data.insert(state.deployment_id.clone(), state.clone());
+        data.insert((user_id.to_string(), state.deployment_id.clone()), state.clone());
         Ok(())
     }
 
-    async fn delete(&self, deployment_id: &str) -> Result<(), CheckpointStoreError> {
+    async fn delete(&self, user_id: &str, deployment_id: &str) -> Result<(), CheckpointStoreError> {
         let mut data = self.data.write().await;
-        data.remove(deployment_id);
+        data.remove(&(user_id.to_string(), deployment_id.to_string()));
         Ok(())
     }
 
-    async fn list(&self) -> Result<Vec<String>, CheckpointStoreError> {
+    async fn list(&self, user_id: &str) -> Result<Vec<String>, CheckpointStoreError> {
         let data = self.data.read().await;
-        Ok(data.keys().cloned().collect())
+        Ok(data
+            .keys()
+            .filter(|(owner, _)| owner == user_id)
+            .map(|(_, id)| id.clone())
+            .collect())
     }
 }
 
@@ -275,19 +305,21 @@ mod tests {
         state.deployment_id = "test-123".to_string();
 
         // Save
-        store.save(&state).await.unwrap();
+        store.save("user_a", &state).await.unwrap();
 
-        // Load
-        let loaded = store.load("test-123").await.unwrap().unwrap();
+        // Load (owner only)
+        let loaded = store.load("user_a", "test-123").await.unwrap().unwrap();
         assert_eq!(loaded.deployment_id, "test-123");
+        assert!(store.load("user_b", "test-123").await.unwrap().is_none());
 
         // List
-        let list = store.list().await.unwrap();
+        let list = store.list("user_a").await.unwrap();
         assert_eq!(list.len(), 1);
+        assert!(store.list("user_b").await.unwrap().is_empty());
 
         // Delete
-        store.delete("test-123").await.unwrap();
-        let loaded = store.load("test-123").await.unwrap();
+        store.delete("user_a", "test-123").await.unwrap();
+        let loaded = store.load("user_a", "test-123").await.unwrap();
         assert!(loaded.is_none());
     }
 
@@ -309,5 +341,197 @@ mod tests {
 
         // Should not be duplicate anymore
         assert!(!store.is_duplicate("op-1").await);
+    }
+}
+
+// ============================================================================
+// SQLite checkpoint store (production, survives restarts)
+// ============================================================================
+
+use allternit_cloud_core::CredentialCipher;
+use sqlx::SqlitePool;
+use std::sync::Arc;
+
+/// SQLite-backed checkpoint store over the `wizard_sessions` table (see
+/// `cmd/allternit-cloud-api/migrations/019_wizard.sql`). The serialized
+/// wizard state carries provider tokens and SSH keys, so when a
+/// [`CredentialCipher`] is configured the state JSON is encrypted at rest.
+pub struct SqliteCheckpointStore {
+    pool: SqlitePool,
+    cipher: Option<Arc<CredentialCipher>>,
+}
+
+impl SqliteCheckpointStore {
+    /// Create a store over an existing pool. `cipher` encrypts the state
+    /// column; pass `None` only in tests/dev where plaintext is acceptable.
+    pub fn new(pool: SqlitePool, cipher: Option<Arc<CredentialCipher>>) -> Self {
+        Self { pool, cipher }
+    }
+
+    fn encode(&self, state: &WizardState) -> Result<String, CheckpointStoreError> {
+        let json = serde_json::to_string(state)?;
+        match &self.cipher {
+            Some(cipher) => Ok(cipher.encrypt(&json)?),
+            None => Ok(json),
+        }
+    }
+
+    fn decode(&self, stored: &str, deployment_id: &str) -> Result<WizardState, CheckpointStoreError> {
+        let json = match &self.cipher {
+            Some(cipher) => cipher.decrypt(stored)?,
+            None => stored.to_string(),
+        };
+        serde_json::from_str(&json)
+            .map_err(|e| CheckpointStoreError::Corrupted(format!("{}: {}", deployment_id, e)))
+    }
+}
+
+#[async_trait]
+impl CheckpointStore for SqliteCheckpointStore {
+    async fn load(&self, user_id: &str, deployment_id: &str) -> Result<Option<WizardState>, CheckpointStoreError> {
+        let row: Option<(String,)> = sqlx::query_as(
+            "SELECT state FROM wizard_sessions WHERE deployment_id = ? AND user_id = ?",
+        )
+        .bind(deployment_id)
+        .bind(user_id)
+        .fetch_optional(&self.pool)
+        .await?;
+
+        row.map(|(state,)| self.decode(&state, deployment_id)).transpose()
+    }
+
+    async fn save(&self, user_id: &str, state: &WizardState) -> Result<(), CheckpointStoreError> {
+        let encoded = self.encode(state)?;
+        sqlx::query(
+            r#"
+            INSERT INTO wizard_sessions (deployment_id, user_id, state)
+            VALUES (?, ?, ?)
+            ON CONFLICT(deployment_id) DO UPDATE SET
+                user_id = excluded.user_id,
+                state = excluded.state,
+                updated_at = CURRENT_TIMESTAMP
+            "#,
+        )
+        .bind(&state.deployment_id)
+        .bind(user_id)
+        .bind(&encoded)
+        .execute(&self.pool)
+        .await?;
+        Ok(())
+    }
+
+    async fn delete(&self, user_id: &str, deployment_id: &str) -> Result<(), CheckpointStoreError> {
+        sqlx::query("DELETE FROM wizard_sessions WHERE deployment_id = ? AND user_id = ?")
+            .bind(deployment_id)
+            .bind(user_id)
+            .execute(&self.pool)
+            .await?;
+        Ok(())
+    }
+
+    async fn list(&self, user_id: &str) -> Result<Vec<String>, CheckpointStoreError> {
+        let rows: Vec<(String,)> = sqlx::query_as(
+            "SELECT deployment_id FROM wizard_sessions WHERE user_id = ? ORDER BY updated_at DESC",
+        )
+        .bind(user_id)
+        .fetch_all(&self.pool)
+        .await?;
+        Ok(rows.into_iter().map(|(id,)| id).collect())
+    }
+}
+
+#[cfg(test)]
+mod sqlite_tests {
+    use super::*;
+
+    async fn test_pool() -> SqlitePool {
+        let pool = SqlitePool::connect(":memory:").await.unwrap();
+        sqlx::query(
+            r#"
+            CREATE TABLE wizard_sessions (
+                deployment_id TEXT PRIMARY KEY,
+                user_id TEXT NOT NULL,
+                state TEXT NOT NULL,
+                created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+            )
+            "#,
+        )
+        .execute(&pool)
+        .await
+        .unwrap();
+        pool
+    }
+
+    #[tokio::test]
+    async fn sqlite_store_roundtrip_is_user_scoped() {
+        let pool = test_pool().await;
+        let store = SqliteCheckpointStore::new(pool, None);
+        let mut state = WizardState::new();
+        state.deployment_id = "dep-1".to_string();
+
+        store.save("user_a", &state).await.unwrap();
+        let loaded = store.load("user_a", "dep-1").await.unwrap().unwrap();
+        assert_eq!(loaded.deployment_id, "dep-1");
+
+        // Another user can neither load nor list nor delete it.
+        assert!(store.load("user_b", "dep-1").await.unwrap().is_none());
+        assert!(store.list("user_b").await.unwrap().is_empty());
+        store.delete("user_b", "dep-1").await.unwrap();
+        assert!(store.load("user_a", "dep-1").await.unwrap().is_some());
+
+        store.delete("user_a", "dep-1").await.unwrap();
+        assert!(store.load("user_a", "dep-1").await.unwrap().is_none());
+    }
+
+    #[tokio::test]
+    async fn sqlite_store_encrypts_state_at_rest() {
+        let pool = test_pool().await;
+        let cipher = CredentialCipher::new("wizard-test-key");
+        let store = SqliteCheckpointStore::new(pool.clone(), Some(Arc::new(cipher)));
+
+        let mut state = WizardState::new();
+        state.deployment_id = "dep-secret".to_string();
+        state.context.api_token = Some("hcx-secret-token".to_string());
+        store.save("user_a", &state).await.unwrap();
+
+        // The raw column must not contain the token.
+        let (raw,): (String,) =
+            sqlx::query_as("SELECT state FROM wizard_sessions WHERE deployment_id = 'dep-secret'")
+                .fetch_one(&pool)
+                .await
+                .unwrap();
+        assert!(raw.starts_with("v1:"), "state must be ciphertext, got: {}", &raw[..20.min(raw.len())]);
+        assert!(!raw.contains("hcx-secret-token"));
+
+        // ...but the loaded state decrypts back to the original.
+        let loaded = store.load("user_a", "dep-secret").await.unwrap().unwrap();
+        assert_eq!(loaded.context.api_token.as_deref(), Some("hcx-secret-token"));
+    }
+
+    #[tokio::test]
+    async fn sqlite_store_survives_reopen() {
+        // Shared in-memory database across two "restarts" of the store.
+        let pool = SqlitePool::connect("sqlite::memory:").await.unwrap();
+        sqlx::query(
+            "CREATE TABLE wizard_sessions (deployment_id TEXT PRIMARY KEY, user_id TEXT NOT NULL, state TEXT NOT NULL, created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP, updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP)",
+        )
+        .execute(&pool)
+        .await
+        .unwrap();
+
+        let mut state = WizardState::new();
+        state.deployment_id = "dep-restart".to_string();
+        SqliteCheckpointStore::new(pool.clone(), None)
+            .save("user_a", &state)
+            .await
+            .unwrap();
+        drop(state);
+
+        let loaded = SqliteCheckpointStore::new(pool, None)
+            .load("user_a", "dep-restart")
+            .await
+            .unwrap();
+        assert!(loaded.is_some(), "state must survive a store restart");
     }
 }

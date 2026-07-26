@@ -5,7 +5,7 @@
 
 use axum::{
     extract::{Path, State},
-    http::StatusCode,
+    http::{HeaderMap, StatusCode},
     Json,
 };
 use chrono::{DateTime, Utc};
@@ -13,7 +13,7 @@ use serde::{Deserialize, Serialize};
 use std::sync::Arc;
 use tracing::{debug, error, info, warn};
 
-use crate::{ApiError, ApiState};
+use crate::{auth::clerk, routes::providers, ApiError, ApiState};
 
 /// Cloud provider type
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, sqlx::Type)]
@@ -21,14 +21,19 @@ use crate::{ApiError, ApiState};
 #[serde(rename_all = "lowercase")]
 pub enum CloudProvider {
     Hetzner,
+    DigitalOcean,
     Aws,
+    /// Box adopted over universal SSH (no API driver)
+    Other,
 }
 
 impl std::fmt::Display for CloudProvider {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
             CloudProvider::Hetzner => write!(f, "hetzner"),
+            CloudProvider::DigitalOcean => write!(f, "digitalocean"),
             CloudProvider::Aws => write!(f, "aws"),
+            CloudProvider::Other => write!(f, "other"),
         }
     }
 }
@@ -39,7 +44,9 @@ impl std::str::FromStr for CloudProvider {
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         match s.to_lowercase().as_str() {
             "hetzner" => Ok(CloudProvider::Hetzner),
+            "digitalocean" => Ok(CloudProvider::DigitalOcean),
             "aws" => Ok(CloudProvider::Aws),
+            "other" => Ok(CloudProvider::Other),
             _ => Err(ApiError::BadRequest(format!("Unknown provider: {}", s))),
         }
     }
@@ -169,6 +176,7 @@ pub async fn get_instance(
 /// Currently supports Hetzner Cloud (AWS support can be added).
 pub async fn restart_instance(
     State(state): State<Arc<ApiState>>,
+    headers: HeaderMap,
     Path(id): Path<String>,
 ) -> Result<Json<InstanceResponse>, ApiError> {
     info!("Restarting cloud instance: {}", id);
@@ -215,19 +223,8 @@ pub async fn restart_instance(
         _ => {}
     }
 
-    // Call provider-specific restart
-    match instance.provider {
-        CloudProvider::Hetzner => {
-            restart_hetzner_instance(&instance).await?;
-        }
-        CloudProvider::Aws => {
-            // AWS restart implementation would go here
-            warn!("AWS restart not yet implemented for instance {}", id);
-            return Err(ApiError::Internal(
-                "AWS instance restart not yet implemented".to_string(),
-            ));
-        }
-    }
+    // Call provider-specific restart (real driver calls)
+    restart_via_driver(&state, &headers, &instance).await?;
 
     // Update status in database
     sqlx::query(
@@ -272,46 +269,13 @@ pub async fn restart_instance(
     Ok(Json(InstanceResponse::from(updated_instance)))
 }
 
-/// Restart a Hetzner Cloud instance
-async fn restart_hetzner_instance(instance: &CloudInstance) -> Result<(), ApiError> {
-    debug!(
-        "Restarting Hetzner instance {} (server_id: {})",
-        instance.id, instance.server_id
-    );
-
-    // Parse server ID as i64 (Hetzner uses numeric IDs)
-    let server_id: i64 = instance.server_id.parse().map_err(|_| {
-        ApiError::Internal(format!("Invalid Hetzner server ID: {}", instance.server_id))
-    })?;
-
-    // Note: In a production environment, you would:
-    // 1. Fetch the provider credentials from the database
-    // 2. Create a HetznerClient with the API token
-    // 3. Call the appropriate restart method
-    //
-    // For now, we simulate the restart operation.
-    // The actual implementation would look like:
-    //
-    // let client = get_hetzner_client(&instance.provider_id).await?;
-    // client.reboot_server(server_id).await.map_err(|e| {
-    //     error!("Hetzner API error restarting server {}: {}", server_id, e);
-    //     ApiError::Internal(format!("Failed to restart server: {}", e))
-    // })?;
-
-    info!(
-        "Simulated Hetzner restart for server {} (instance {})",
-        server_id, instance.id
-    );
-
-    Ok(())
-}
-
 /// Destroy a cloud instance
 ///
 /// Permanently deletes the instance from the cloud provider.
 /// This action is irreversible.
 pub async fn destroy_instance(
     State(state): State<Arc<ApiState>>,
+    headers: HeaderMap,
     Path(id): Path<String>,
 ) -> Result<StatusCode, ApiError> {
     info!("Destroying cloud instance: {}", id);
@@ -319,7 +283,7 @@ pub async fn destroy_instance(
     // Fetch the instance from database
     let instance = sqlx::query_as::<_, CloudInstance>(
         r#"
-        SELECT 
+        SELECT
             id, server_id, provider, name, region, instance_type,
             status, public_ip, private_ip, ssh_key, run_id,
             created_at, updated_at
@@ -354,7 +318,7 @@ pub async fn destroy_instance(
     // Update status to destroying before making API call
     sqlx::query(
         r#"
-        UPDATE cloud_instances 
+        UPDATE cloud_instances
         SET status = 'destroying', updated_at = CURRENT_TIMESTAMP
         WHERE id = ?
         "#,
@@ -370,16 +334,8 @@ pub async fn destroy_instance(
         ApiError::DatabaseError(e)
     })?;
 
-    // Call provider-specific destroy
-    let destroy_result = match instance.provider {
-        CloudProvider::Hetzner => destroy_hetzner_instance(&instance).await,
-        CloudProvider::Aws => {
-            warn!("AWS destroy not yet implemented for instance {}", id);
-            Err(ApiError::Internal(
-                "AWS instance destroy not yet implemented".to_string(),
-            ))
-        }
-    };
+    // Call provider-specific destroy (real driver calls)
+    let destroy_result = destroy_via_driver(&state, &headers, &instance).await;
 
     // Handle destroy result
     match destroy_result {
@@ -401,7 +357,7 @@ pub async fn destroy_instance(
             // Update status back to error on failure
             sqlx::query(
                 r#"
-                UPDATE cloud_instances 
+                UPDATE cloud_instances
                 SET status = 'error', updated_at = CURRENT_TIMESTAMP
                 WHERE id = ?
                 "#,
@@ -423,50 +379,113 @@ pub async fn destroy_instance(
     }
 }
 
-/// Destroy a Hetzner Cloud instance
-async fn destroy_hetzner_instance(instance: &CloudInstance) -> Result<(), ApiError> {
-    debug!(
-        "Destroying Hetzner instance {} (server_id: {})",
-        instance.id, instance.server_id
-    );
+/// Resolve the API token for a provider: the Clerk user's stored token
+/// (encrypted in `provider_tokens`) wins; the platform-level env var is
+/// the fallback for legacy cowork flows that carry no Clerk session.
+async fn resolve_provider_token(
+    state: &ApiState,
+    headers: &HeaderMap,
+    provider: CloudProvider,
+) -> Result<String, ApiError> {
+    let provider_key = provider.to_string();
 
-    // Parse server ID as i64 (Hetzner uses numeric IDs)
-    let server_id: i64 = instance.server_id.parse().map_err(|_| {
-        ApiError::Internal(format!("Invalid Hetzner server ID: {}", instance.server_id))
-    })?;
+    if let Ok(user) = clerk::user_from_headers(headers).await {
+        if let Some(token) =
+            providers::load_provider_token(state, &user.id, &provider_key).await?
+        {
+            debug!("Using stored {} token for user {}", provider_key, user.id);
+            return Ok(token);
+        }
+    }
 
-    // Note: In a production environment, you would:
-    // 1. Fetch the provider credentials from the database
-    // 2. Create a HetznerClient with the API token
-    // 3. Call delete_server
-    //
-    // For now, we simulate the destroy operation.
-    // The actual implementation would look like:
-    //
-    // let client = get_hetzner_client(&instance.provider_id).await?;
-    // client.delete_server(server_id).await.map_err(|e| {
-    //     error!("Hetzner API error deleting server {}: {}", server_id, e);
-    //     ApiError::Internal(format!("Failed to delete server: {}", e))
-    // })?;
+    let env_var = match provider {
+        CloudProvider::Hetzner => "HETZNER_API_TOKEN",
+        CloudProvider::DigitalOcean => "DIGITALOCEAN_API_TOKEN",
+        _ => unreachable!("driver-backed providers only"),
+    };
+    if let Some(token) = std::env::var(env_var).ok().filter(|t| !t.is_empty()) {
+        debug!("Using platform {} for {} op", env_var, provider_key);
+        return Ok(token);
+    }
 
-    info!(
-        "Simulated Hetzner destroy for server {} (instance {})",
-        server_id, instance.id
-    );
-
-    Ok(())
+    Err(ApiError::Unauthorized(format!(
+        "no {} credentials - store a token via PUT /api/v1/provider-tokens/{} or set {}",
+        provider_key, provider_key, env_var
+    )))
 }
 
-/// Helper function to get Hetzner client (for production use)
-#[allow(dead_code)]
-async fn get_hetzner_client(
-    _provider_id: &str,
-) -> Result<allternit_cloud_hetzner::HetznerClient, ApiError> {
-    // In production, fetch credentials from database and create client
-    // This is a placeholder for the actual implementation
-    Err(ApiError::Internal(
-        "Hetzner client initialization not implemented".to_string(),
-    ))
+/// Build the wizard provider driver for an instance, or a 501 pointing at
+/// the universal SSH path for providers without an automated driver.
+fn driver_for_instance(
+    instance: &CloudInstance,
+    token: String,
+) -> Result<Box<dyn allternit_cloud_wizard::ProviderDriver>, ApiError> {
+    let provider = match instance.provider {
+        CloudProvider::Hetzner => allternit_cloud_wizard::SupportedProvider::Hetzner,
+        CloudProvider::DigitalOcean => allternit_cloud_wizard::SupportedProvider::DigitalOcean,
+        other => {
+            warn!("No automated driver for {} (instance {})", other, instance.id);
+            return Err(ApiError::NotImplemented(format!(
+                "no automated driver for {} - manage this box over SSH mode",
+                other
+            )));
+        }
+    };
+    allternit_cloud_wizard::driver_for(provider, token).ok_or_else(|| {
+        ApiError::NotImplemented(format!(
+            "no automated driver for {} - manage this box over SSH mode",
+            instance.provider
+        ))
+    })
+}
+
+/// Restart an instance through its provider driver.
+async fn restart_via_driver(
+    state: &ApiState,
+    headers: &HeaderMap,
+    instance: &CloudInstance,
+) -> Result<(), ApiError> {
+    // 501 (not unauthorized) for driverless providers.
+    let probe = driver_for_instance(instance, String::new())?;
+    drop(probe);
+    let token = resolve_provider_token(state, headers, instance.provider).await?;
+    let driver = driver_for_instance(instance, token)?;
+
+    info!(
+        "Restarting {} instance {} (server_id: {})",
+        instance.provider, instance.id, instance.server_id
+    );
+    driver
+        .reboot_server(&instance.server_id)
+        .await
+        .map_err(|e| {
+            error!("{} reboot failed for {}: {}", instance.provider, instance.id, e);
+            ApiError::Internal(format!("provider reboot failed: {}", e))
+        })
+}
+
+/// Destroy an instance through its provider driver.
+async fn destroy_via_driver(
+    state: &ApiState,
+    headers: &HeaderMap,
+    instance: &CloudInstance,
+) -> Result<(), ApiError> {
+    let probe = driver_for_instance(instance, String::new())?;
+    drop(probe);
+    let token = resolve_provider_token(state, headers, instance.provider).await?;
+    let driver = driver_for_instance(instance, token)?;
+
+    info!(
+        "Destroying {} instance {} (server_id: {})",
+        instance.provider, instance.id, instance.server_id
+    );
+    driver
+        .destroy_server(&instance.server_id)
+        .await
+        .map_err(|e| {
+            error!("{} destroy failed for {}: {}", instance.provider, instance.id, e);
+            ApiError::Internal(format!("provider destroy failed: {}", e))
+        })
 }
 
 /// Instance response DTO

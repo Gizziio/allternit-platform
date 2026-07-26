@@ -56,6 +56,9 @@ pub struct ApiState {
     pub fly_runtime_service: Option<services::FlyRuntimeService>,
     /// Mesh enrollment service (Headscale), absent when HEADSCALE_API_KEY is unset
     pub mesh_service: Option<Arc<routes::mesh::MeshService>>,
+    /// AES-256-GCM cipher for provider tokens and wizard checkpoints,
+    /// absent (plaintext-at-rest, dev only) when ALLTERNIT_CREDENTIALS_KEY is unset
+    pub credential_cipher: Option<Arc<allternit_cloud_core::CredentialCipher>>,
 }
 
 /// Create the API router
@@ -304,6 +307,12 @@ pub fn create_router(state: Arc<ApiState>) -> Router {
         // Mesh enrollment verifies the Clerk session per-request and answers
         // 503 mesh_not_configured when HEADSCALE_API_KEY is unset.
         .merge(routes::mesh::routes())
+        // BYO-VPS deploy wizard: Clerk session verified per-request (injected
+        // as the wizard's AuthenticatedUser), checkpoints in wizard_sessions.
+        .merge(routes::wizard::routes(&state))
+        // Provider token management: Clerk session per-request, tokens
+        // encrypted at rest, never echoed back.
+        .merge(routes::providers::clerk_routes())
         .layer(axum_middleware::from_fn_with_state(
             state.public_rate_limiter.clone(),
             crate::middleware::rate_limit::rate_limit_middleware,

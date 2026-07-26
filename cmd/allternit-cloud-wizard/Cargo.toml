@@ -8,6 +8,10 @@ description = "Allternit Cloud Deploy Wizard - Enterprise BYOC deployment with p
 # Allternit internal
 allternit-cloud-ssh = { path = "../../infrastructure/cloud/allternit-cloud-ssh" }
 allternit-cloud-hetzner = { path = "../../infrastructure/providers/hetzner" }
+allternit-cloud-core = { path = "../../infrastructure/cloud" }
+
+# Database (durable checkpoint store)
+sqlx = { workspace = true, features = ['chrono'] }
 
 # Web framework
 axum = { workspace = true }

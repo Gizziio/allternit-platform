@@ -1,12 +1,13 @@
 //! SSH key manager
 //!
-//! Real key generation using ed25519-dalek.
+//! Real key generation. Keys are produced with the system `ssh-keygen` (the
+//! same convention as `cmd/allternit-api/src/ssh_key_routes.rs` and
+//! `runtime/local_runtime.rs`) so the output is guaranteed to be in the
+//! OpenSSH formats that cloud providers (Hetzner/DigitalOcean key injection)
+//! and libssh2 (`userauth_pubkey_memory`) actually accept.
 
-use crate::Result;
 use crate::executor::SshKeypair;
-use ed25519_dalek::SigningKey;
-use rand::rngs::OsRng;
-use base64::{Engine as _, engine::general_purpose::STANDARD as BASE64};
+use crate::{Result, SshError};
 
 /// SSH key manager for generating and managing keys
 pub struct SshKeyManager;
@@ -18,37 +19,97 @@ impl SshKeyManager {
     }
 
     /// Generate a new SSH keypair
-    /// 
-    /// Uses Ed25519 for modern, secure key generation.
+    ///
+    /// Runs `ssh-keygen -t ed25519` in a fresh temp directory and reads the
+    /// resulting OpenSSH private key and `ssh-ed25519 ...` public key back
+    /// into memory. The temp directory is removed afterwards.
     pub fn generate_keypair(&self) -> Result<SshKeypair> {
-        // Generate keypair using cryptographic RNG
-        let mut csprng = OsRng {};
-        let signing_key = SigningKey::generate(&mut csprng);
-        let verifying_key = signing_key.verifying_key();
+        tracing::info!("Generating SSH keypair for deployment");
 
-        // Get raw bytes for private key
-        let private_key_bytes = signing_key.to_bytes();
-        
-        // Encode private key in PEM format
-        let private_key_pem = format!(
-            "-----BEGIN PRIVATE KEY-----\n{}\n-----END PRIVATE KEY-----",
-            BASE64.encode(private_key_bytes)
-        );
+        let dir = std::env::temp_dir().join(format!("allternit-keygen-{}", uuid_v4()));
+        std::fs::create_dir_all(&dir)?;
+        let key_path = dir.join("id_ed25519");
 
-        // Convert public key to OpenSSH format
-        let public_key_bytes = verifying_key.as_bytes();
-        let public_key_base64 = BASE64.encode(public_key_bytes);
-        let public_key_openssh = format!("ssh-ed25519 {} allternit-deployment", public_key_base64);
+        let result = (|| -> Result<SshKeypair> {
+            let output = std::process::Command::new("ssh-keygen")
+                .args([
+                    "-t",
+                    "ed25519",
+                    "-f",
+                    key_path.to_str().ok_or_else(|| {
+                        SshError::KeyGenerationFailed("non-UTF8 temp path".to_string())
+                    })?,
+                    "-N",
+                    "",
+                    "-C",
+                    "allternit-deployment",
+                ])
+                .output()
+                .map_err(|e| {
+                    SshError::KeyGenerationFailed(format!("failed to run ssh-keygen: {}", e))
+                })?;
 
-        Ok(SshKeypair {
-            public_key: public_key_openssh,
-            private_key: private_key_pem,
-        })
+            if !output.status.success() {
+                return Err(SshError::KeyGenerationFailed(format!(
+                    "ssh-keygen failed: {}",
+                    String::from_utf8_lossy(&output.stderr)
+                )));
+            }
+
+            let private_key = std::fs::read_to_string(&key_path)?;
+            let public_key = std::fs::read_to_string(key_path.with_extension("pub"))?;
+
+            Ok(SshKeypair {
+                public_key: public_key.trim().to_string(),
+                private_key,
+            })
+        })();
+
+        // Best-effort cleanup of the on-disk key material.
+        let _ = std::fs::remove_dir_all(&dir);
+
+        let keypair = result?;
+        tracing::info!("SSH keypair generated successfully");
+        Ok(keypair)
     }
 }
 
 impl Default for SshKeyManager {
     fn default() -> Self {
         Self::new()
+    }
+}
+
+/// Random hex suffix for the temp key directory (avoids pulling in a UUID
+/// crate just for this).
+fn uuid_v4() -> String {
+    use std::time::{SystemTime, UNIX_EPOCH};
+    let nanos = SystemTime::now()
+        .duration_since(UNIX_EPOCH)
+        .map(|d| d.as_nanos())
+        .unwrap_or(0);
+    let pid = std::process::id();
+    format!("{:x}{:x}", nanos, pid)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn generated_keypair_is_openssh_format() {
+        let keypair = SshKeyManager::new().generate_keypair().unwrap();
+        assert!(
+            keypair
+                .private_key
+                .starts_with("-----BEGIN OPENSSH PRIVATE KEY-----"),
+            "private key must be OpenSSH format, got: {}",
+            &keypair.private_key[..40.min(keypair.private_key.len())]
+        );
+        assert!(
+            keypair.public_key.starts_with("ssh-ed25519 "),
+            "public key must be OpenSSH format"
+        );
+        assert!(keypair.public_key.ends_with("allternit-deployment"));
     }
 }

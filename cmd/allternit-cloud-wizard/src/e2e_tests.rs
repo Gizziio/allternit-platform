@@ -12,7 +12,6 @@
 
 use crate::provider::{ProviderDriver, HetznerDriver, DigitalOceanDriver, CreateServerRequest};
 use crate::preflight::PreflightChecker;
-use crate::bootstrap::BootstrapContract;
 use crate::verifier::PostInstallVerifier;
 use std::time::Duration;
 
@@ -154,12 +153,12 @@ async fn e2e_checkpoint_persistence() {
 
     // Save
     println!("Step 1: Saving checkpoint...");
-    store.save(&wizard).await.expect("Failed to save");
+    store.save("e2e-user", &wizard).await.expect("Failed to save");
     println!("✓ Checkpoint saved");
 
     // Load
     println!("Step 2: Loading checkpoint...");
-    let loaded = store.load("test-persistence-123").await
+    let loaded = store.load("e2e-user", "test-persistence-123").await
         .expect("Failed to load")
         .expect("Checkpoint not found");
     assert_eq!(loaded.deployment_id, wizard.deployment_id);
@@ -167,17 +166,17 @@ async fn e2e_checkpoint_persistence() {
 
     // List
     println!("Step 3: Listing checkpoints...");
-    let list = store.list().await.expect("Failed to list");
+    let list = store.list("e2e-user").await.expect("Failed to list");
     assert!(list.contains(&"test-persistence-123".to_string()));
     println!("✓ Checkpoints listed: {:?}", list);
 
     // Delete
     println!("Step 4: Deleting checkpoint...");
-    store.delete("test-persistence-123").await.expect("Failed to delete");
+    store.delete("e2e-user", "test-persistence-123").await.expect("Failed to delete");
     println!("✓ Checkpoint deleted");
 
     // Verify deleted
-    let loaded = store.load("test-persistence-123").await.expect("Failed to load");
+    let loaded = store.load("e2e-user", "test-persistence-123").await.expect("Failed to load");
     assert!(loaded.is_none(), "Checkpoint should be deleted");
     println!("✓ Deletion confirmed");
 

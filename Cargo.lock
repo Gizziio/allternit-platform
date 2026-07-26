@@ -430,6 +430,7 @@ dependencies = [
  "allternit-cloud-core",
  "allternit-cloud-hetzner",
  "allternit-cloud-ssh",
+ "allternit-cloud-wizard",
  "anyhow",
  "assert_matches",
  "async-trait",
@@ -481,10 +482,13 @@ version = "0.1.0"
 dependencies = [
  "anyhow",
  "async-trait",
+ "base64 0.22.1",
  "chrono",
  "once_cell",
+ "ring",
  "serde",
  "serde_json",
+ "sha2 0.10.9",
  "thiserror 1.0.69",
  "tokio",
  "tokio-test",
@@ -530,9 +534,6 @@ name = "allternit-cloud-ssh"
 version = "0.1.0"
 dependencies = [
  "anyhow",
- "base64 0.22.1",
- "ed25519-dalek 2.2.0",
- "rand 0.8.6",
  "ssh2",
  "thiserror 1.0.69",
  "tokio",
@@ -544,6 +545,7 @@ dependencies = [
 name = "allternit-cloud-wizard"
 version = "0.1.0"
 dependencies = [
+ "allternit-cloud-core",
  "allternit-cloud-hetzner",
  "allternit-cloud-ssh",
  "async-trait",
@@ -552,6 +554,7 @@ dependencies = [
  "reqwest",
  "serde",
  "serde_json",
+ "sqlx",
  "thiserror 1.0.69",
  "tokio",
  "tokio-test",

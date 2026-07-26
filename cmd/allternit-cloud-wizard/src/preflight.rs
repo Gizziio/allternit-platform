@@ -10,7 +10,7 @@ use serde::{Deserialize, Serialize};
 use std::time::Duration;
 use tokio::time::timeout;
 
-use crate::capability::{SupportedProvider, SupportedOS, AuthMethod};
+use crate::capability::{SupportedProvider, AuthMethod};
 
 /// Preflight checker
 pub struct PreflightChecker {
@@ -155,6 +155,9 @@ impl PreflightChecker {
     }
 
     /// Validate SSH connection
+    ///
+    /// Real validation: TCP connect, SSH handshake + auth (key or password),
+    /// then a trivial remote command (`uname -a`).
     pub async fn validate_ssh_connection(
         &self,
         host: &str,
@@ -163,27 +166,68 @@ impl PreflightChecker {
         private_key: Option<&str>,
         password: Option<&str>,
     ) -> Result<(), PreflightError> {
-        // Test TCP connectivity first
-        let tcp_result = timeout(self.timeout, async {
-            tokio::net::TcpStream::connect(format!("{}:{}", host, port)).await
-        }).await;
-
-        match tcp_result {
-            Ok(Ok(_)) => {}
-            Ok(Err(e)) => return Err(PreflightError::ConnectionFailed(format!("Cannot connect to {}:{} - {}", host, port, e))),
-            Err(_) => return Err(PreflightError::Timeout(format!("TCP connection to {}:{} timed out", host, port))),
-        }
-
-        // Test SSH authentication
-        // In production, use ssh2 crate to actually test auth
-        // For now, just verify credentials are provided
         if private_key.is_none() && password.is_none() {
             return Err(PreflightError::MissingCredentials("SSH key or password required".to_string()));
         }
 
-        // Detect OS via SSH
-        // In production, would actually connect and run commands
-        // For now, skip OS detection
+        let connect = async {
+            match (private_key, password) {
+                (Some(key), _) => {
+                    allternit_cloud_ssh::SshConnection::connect(host, port, username, key).await
+                }
+                (None, Some(pass)) => {
+                    allternit_cloud_ssh::SshConnection::connect_password(host, port, username, pass)
+                        .await
+                }
+                (None, None) => unreachable!("checked above"),
+            }
+        };
+
+        let conn = match timeout(self.timeout, connect).await {
+            Ok(Ok(conn)) => conn,
+            Ok(Err(allternit_cloud_ssh::SshError::AuthenticationFailed(msg))) => {
+                return Err(PreflightError::InvalidCredentials(format!(
+                    "SSH authentication failed for {}@{}:{} - {}",
+                    username, host, port, msg
+                )));
+            }
+            Ok(Err(e)) => {
+                return Err(PreflightError::ConnectionFailed(format!(
+                    "Cannot connect to {}:{} - {}",
+                    host, port, e
+                )));
+            }
+            Err(_) => {
+                return Err(PreflightError::Timeout(format!(
+                    "SSH connection to {}:{} timed out",
+                    host, port
+                )));
+            }
+        };
+
+        // Trivial command proves the session really executes.
+        let output = match timeout(self.timeout, conn.execute("uname -a")).await {
+            Ok(Ok(output)) => output,
+            Ok(Err(e)) => {
+                return Err(PreflightError::ConnectionFailed(format!(
+                    "SSH command failed on {}:{} - {}",
+                    host, port, e
+                )));
+            }
+            Err(_) => {
+                return Err(PreflightError::Timeout(format!(
+                    "SSH command on {}:{} timed out",
+                    host, port
+                )));
+            }
+        };
+
+        if output.exit_code != 0 || output.stdout.trim().is_empty() {
+            return Err(PreflightError::ConnectionFailed(format!(
+                "`uname -a` failed on {}:{} (exit {})",
+                host, port, output.exit_code
+            )));
+        }
 
         Ok(())
     }

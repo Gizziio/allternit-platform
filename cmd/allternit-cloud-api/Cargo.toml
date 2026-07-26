@@ -13,6 +13,7 @@ path = "src/main.rs"
 allternit-cloud-core = { path = "../../infrastructure/cloud" }
 allternit-cloud-ssh = { path = "../../infrastructure/cloud/allternit-cloud-ssh" }
 allternit-cloud-hetzner = { path = "../../infrastructure/providers/hetzner" }
+allternit-cloud-wizard = { path = "../allternit-cloud-wizard" }
 
 # Web framework
 axum = { workspace = true, features = ["ws"] }

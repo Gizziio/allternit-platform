@@ -39,6 +39,38 @@ pub trait ProviderDriver: Send + Sync {
 
     /// Destroy server
     async fn destroy_server(&self, server_id: &str) -> Result<(), ProviderError>;
+
+    /// Reboot server (default: unsupported by this driver)
+    async fn reboot_server(&self, server_id: &str) -> Result<(), ProviderError> {
+        let _ = server_id;
+        Err(ProviderError {
+            code: "UNSUPPORTED".to_string(),
+            message: format!("{} driver does not support reboot", self.name()),
+            retryable: false,
+        })
+    }
+
+    /// Get the server's public IPv4 address (default: unknown)
+    async fn get_server_ip(&self, _server_id: &str) -> Result<Option<String>, ProviderError> {
+        Ok(None)
+    }
+}
+
+/// Build the driver for an API-mode provider. `None` for providers without
+/// an automated driver — those go through the universal SSH path instead.
+pub fn driver_for(
+    provider: crate::capability::SupportedProvider,
+    api_token: String,
+) -> Option<Box<dyn ProviderDriver>> {
+    match provider {
+        crate::capability::SupportedProvider::Hetzner => {
+            Some(Box::new(HetznerDriver::new(api_token)))
+        }
+        crate::capability::SupportedProvider::DigitalOcean => {
+            Some(Box::new(DigitalOceanDriver::new(api_token)))
+        }
+        _ => None,
+    }
 }
 
 /// Provider capabilities
@@ -449,6 +481,42 @@ impl ProviderDriver for HetznerDriver {
         tracing::info!("Server {} destroyed", server_id);
         Ok(())
     }
+
+    async fn reboot_server(&self, server_id: &str) -> Result<(), ProviderError> {
+        tracing::info!("Rebooting Hetzner server {}", server_id);
+
+        let url = format!(
+            "https://api.hetzner.cloud/v1/servers/{}/actions/reboot",
+            server_id
+        );
+
+        let response = self.client
+            .post(&url)
+            .header("Authorization", format!("Bearer {}", self.api_token))
+            .send()
+            .await
+            .map_err(|e| ProviderError {
+                code: "HETZNER_API_ERROR".to_string(),
+                message: format!("Failed to reboot server: {}", e),
+                retryable: true,
+            })?;
+
+        if !response.status().is_success() {
+            let status = response.status();
+            let body = response.text().await.unwrap_or_default();
+            return Err(ProviderError {
+                code: "HETZNER_API_ERROR".to_string(),
+                message: format!("Server reboot failed {}: {}", status, body),
+                retryable: status.is_server_error(),
+            });
+        }
+
+        Ok(())
+    }
+
+    async fn get_server_ip(&self, server_id: &str) -> Result<Option<String>, ProviderError> {
+        Ok(self.get_server(server_id).await?.public_net.ipv4.ip)
+    }
 }
 
 impl HetznerDriver {
@@ -766,6 +834,52 @@ impl ProviderDriver for DigitalOceanDriver {
         tracing::info!("Droplet {} destroyed", droplet_id);
         Ok(())
     }
+
+    async fn reboot_server(&self, droplet_id: &str) -> Result<(), ProviderError> {
+        tracing::info!("Rebooting DigitalOcean droplet {}", droplet_id);
+
+        let url = format!(
+            "https://api.digitalocean.com/v2/droplets/{}/actions",
+            droplet_id
+        );
+        let body = serde_json::json!({ "type": "reboot" });
+
+        let response = self.client
+            .post(&url)
+            .header("Authorization", format!("Bearer {}", self.api_token))
+            .header("Content-Type", "application/json")
+            .json(&body)
+            .send()
+            .await
+            .map_err(|e| ProviderError {
+                code: "DO_API_ERROR".to_string(),
+                message: format!("Failed to reboot droplet: {}", e),
+                retryable: true,
+            })?;
+
+        if !response.status().is_success() {
+            let status = response.status();
+            let body = response.text().await.unwrap_or_default();
+            return Err(ProviderError {
+                code: "DO_API_ERROR".to_string(),
+                message: format!("Droplet reboot failed {}: {}", status, body),
+                retryable: status.is_server_error(),
+            });
+        }
+
+        Ok(())
+    }
+
+    async fn get_server_ip(&self, droplet_id: &str) -> Result<Option<String>, ProviderError> {
+        let droplet = self.get_droplet(droplet_id).await?;
+        Ok(droplet.networks.and_then(|networks| {
+            networks
+                .v4
+                .into_iter()
+                .find(|n| n.r#type == "public")
+                .map(|n| n.ip_address)
+        }))
+    }
 }
 
 // ============================================================================
@@ -875,4 +989,181 @@ struct DigitalOceanSshKey {
     id: i64,
     name: String,
     public_key: String,
+}
+
+// ============================================================================
+// Tests (mock driver — no real cloud API calls)
+// ============================================================================
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::sync::Mutex;
+
+    /// Records trait calls and returns scripted results.
+    struct MockDriver {
+        calls: Mutex<Vec<String>>,
+        fail_on: Mutex<Option<String>>,
+    }
+
+    impl MockDriver {
+        fn new() -> Self {
+            Self {
+                calls: Mutex::new(Vec::new()),
+                fail_on: Mutex::new(None),
+            }
+        }
+
+        fn record(&self, call: &str) -> Result<(), ProviderError> {
+            self.calls.lock().unwrap().push(call.to_string());
+            if self.fail_on.lock().unwrap().as_deref() == Some(call) {
+                return Err(ProviderError {
+                    code: "MOCK_FAILURE".to_string(),
+                    message: format!("scripted failure on {}", call),
+                    retryable: false,
+                });
+            }
+            Ok(())
+        }
+    }
+
+    #[async_trait]
+    impl ProviderDriver for MockDriver {
+        fn name(&self) -> &str {
+            "mock"
+        }
+
+        fn capabilities(&self) -> ProviderCapabilities {
+            ProviderCapabilities {
+                supports_api: true,
+                supports_ssh_key_injection: true,
+                supports_firewall_config: false,
+                regions: vec![],
+                instance_types: vec![],
+                os_images: vec![],
+            }
+        }
+
+        async fn create_server(
+            &self,
+            _request: &CreateServerRequest,
+        ) -> Result<CreateServerResult, ProviderError> {
+            self.record("create")?;
+            Ok(CreateServerResult {
+                server_id: "mock-1".to_string(),
+                ip_address: Some("203.0.113.1".to_string()),
+                status: ServerStatus::Provisioning,
+            })
+        }
+
+        async fn inject_ssh_key(
+            &self,
+            _server_id: &str,
+            _public_key: &str,
+        ) -> Result<String, ProviderError> {
+            self.record("inject_key")?;
+            Ok("key-1".to_string())
+        }
+
+        async fn wait_for_ready(
+            &self,
+            _server_id: &str,
+            _timeout: Duration,
+        ) -> Result<ServerStatus, ProviderError> {
+            self.record("wait")?;
+            Ok(ServerStatus::Running)
+        }
+
+        async fn get_server_status(&self, _server_id: &str) -> Result<ServerStatus, ProviderError> {
+            self.record("status")?;
+            Ok(ServerStatus::Running)
+        }
+
+        async fn destroy_server(&self, server_id: &str) -> Result<(), ProviderError> {
+            self.record(&format!("destroy:{}", server_id))
+        }
+
+        async fn reboot_server(&self, server_id: &str) -> Result<(), ProviderError> {
+            self.record(&format!("reboot:{}", server_id))
+        }
+    }
+
+    /// A driver that inherits the default (unsupported) reboot behavior.
+    struct NoRebootDriver;
+
+    #[async_trait]
+    impl ProviderDriver for NoRebootDriver {
+        fn name(&self) -> &str {
+            "no-reboot"
+        }
+        fn capabilities(&self) -> ProviderCapabilities {
+            MockDriver::new().capabilities()
+        }
+        async fn create_server(
+            &self,
+            _r: &CreateServerRequest,
+        ) -> Result<CreateServerResult, ProviderError> {
+            unimplemented!()
+        }
+        async fn inject_ssh_key(&self, _s: &str, _k: &str) -> Result<String, ProviderError> {
+            unimplemented!()
+        }
+        async fn wait_for_ready(
+            &self,
+            _s: &str,
+            _t: Duration,
+        ) -> Result<ServerStatus, ProviderError> {
+            unimplemented!()
+        }
+        async fn get_server_status(&self, _s: &str) -> Result<ServerStatus, ProviderError> {
+            unimplemented!()
+        }
+        async fn destroy_server(&self, _s: &str) -> Result<(), ProviderError> {
+            unimplemented!()
+        }
+    }
+
+    #[tokio::test]
+    async fn trait_dispatch_reaches_driver_ops() {
+        let driver = MockDriver::new();
+        let dyn_driver: &dyn ProviderDriver = &driver;
+
+        dyn_driver.reboot_server("srv-42").await.unwrap();
+        dyn_driver.destroy_server("srv-42").await.unwrap();
+
+        let calls = driver.calls.lock().unwrap().clone();
+        assert_eq!(calls, vec!["reboot:srv-42", "destroy:srv-42"]);
+    }
+
+    #[tokio::test]
+    async fn driver_errors_propagate_through_trait() {
+        let driver = MockDriver::new();
+        *driver.fail_on.lock().unwrap() = Some("reboot:srv-1".to_string());
+
+        let err = driver.reboot_server("srv-1").await.unwrap_err();
+        assert_eq!(err.code, "MOCK_FAILURE");
+    }
+
+    #[tokio::test]
+    async fn default_reboot_reports_unsupported() {
+        let driver = NoRebootDriver;
+        let err = driver.reboot_server("srv-1").await.unwrap_err();
+        assert_eq!(err.code, "UNSUPPORTED");
+        assert!(!err.retryable);
+    }
+
+    #[tokio::test]
+    async fn default_get_server_ip_is_none() {
+        let driver = NoRebootDriver;
+        assert_eq!(driver.get_server_ip("srv-1").await.unwrap(), None);
+    }
+
+    #[test]
+    fn driver_for_covers_automated_providers_only() {
+        use crate::capability::SupportedProvider;
+        assert!(driver_for(SupportedProvider::Hetzner, "t".to_string()).is_some());
+        assert!(driver_for(SupportedProvider::DigitalOcean, "t".to_string()).is_some());
+        assert!(driver_for(SupportedProvider::Aws, "t".to_string()).is_none());
+        assert!(driver_for(SupportedProvider::Manual, "t".to_string()).is_none());
+    }
 }

@@ -74,6 +74,9 @@ pub enum ApiError {
 
     #[error("Internal error: {0}")]
     Internal(String),
+
+    #[error("Not implemented: {0}")]
+    NotImplemented(String),
 }
 
 impl From<sqlx::migrate::MigrateError> for ApiError {
@@ -188,6 +191,11 @@ impl IntoResponse for ApiError {
             ApiError::Internal(msg) => (
                 StatusCode::INTERNAL_SERVER_ERROR,
                 "INTERNAL_ERROR",
+                msg.clone(),
+            ),
+            ApiError::NotImplemented(msg) => (
+                StatusCode::NOT_IMPLEMENTED,
+                "NOT_IMPLEMENTED",
                 msg.clone(),
             ),
         };

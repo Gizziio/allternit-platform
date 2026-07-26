@@ -13,12 +13,5 @@ tracing = { workspace = true }
 # SSH library (synchronous, wrapped in spawn_blocking for async)
 ssh2 = "0.9"
 
-# Key generation
-ed25519-dalek = { version = "2.0", features = ["rand_core"] }
-rand = "0.8"
-
-# Encoding
-base64 = "0.22"
-
 [dev-dependencies]
 tokio-test = "0.4"

@@ -22,3 +22,4 @@ pub mod runtime_pairing;
 pub mod runtime_relay;
 pub mod schedules;
 pub mod tasks;
+pub mod wizard;

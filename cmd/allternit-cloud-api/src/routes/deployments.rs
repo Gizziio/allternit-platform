@@ -430,39 +430,43 @@ async fn run_manual_deployment(
         }
     }
 
-    // Install Allternit runtime
+    // Install gizzi-code via SSH (legacy path — no mesh preauth key is
+    // available in this flow, so the box serves without joining a tailnet;
+    // the BYO-VPS wizard is the mesh-joined happy path).
     update_deployment_status(
         state,
         deployment_id,
         "installing",
         50,
-        "Installing Allternit runtime",
+        "Installing gizzi-code",
     )
     .await?;
 
-    let control_plane_url = std::env::var("CONTROL_PLANE_URL")
-        .unwrap_or_else(|_| "wss://console.allternit.sh".to_string());
-
-    match ssh_executor
-        .install_allternit_runtime(
-            ssh_host,
-            ssh_port,
-            ssh_username,
-            ssh_private_key,
-            &control_plane_url,
-            deployment_id,
+    let bootstrap_config = allternit_cloud_wizard::BootstrapConfig {
+        host: ssh_host.to_string(),
+        port: ssh_port,
+        username: ssh_username.to_string(),
+        auth: allternit_cloud_wizard::SshAuth::PrivateKey(ssh_private_key.to_string()),
+        instance_name: format!("allternit-{}", &deployment_id[..8.min(deployment_id.len())]),
+        mesh: None,
+        release: allternit_cloud_wizard::bootstrap::GIZZI_RELEASE.to_string(),
+        x64_sha256: allternit_cloud_wizard::bootstrap::GIZZI_LINUX_X64_SHA256.to_string(),
+        arm64_sha256: std::env::var(
+            allternit_cloud_wizard::bootstrap::GIZZI_LINUX_ARM64_SHA256_ENV,
         )
-        .await
-    {
-        Ok(output) => {
-            info!("Allternit runtime installed successfully");
-            info!("Installation output: {}", output.stdout);
+        .ok(),
+    };
+
+    match allternit_cloud_wizard::bootstrap::run_bootstrap(&bootstrap_config).await {
+        Ok(result) => {
+            info!("gizzi-code installed successfully");
+            info!("Installation output: {}", result.log_output);
 
             update_deployment_status(state, deployment_id, "complete", 100, "Deployment complete")
                 .await?;
         }
         Err(e) => {
-            error!("Allternit installation failed: {}", e);
+            error!("gizzi-code installation failed: {}", e);
             update_deployment_status(
                 state,
                 deployment_id,

@@ -140,6 +140,26 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     // Create mesh enrollment service if a Headscale API key is available.
     let mesh_service = routes::mesh::MeshService::from_env();
 
+    // Credential cipher for provider tokens and wizard checkpoints. In
+    // production the key is required; in dev, secrets are stored plaintext
+    // with a loud warning.
+    let credential_cipher =
+        allternit_cloud_core::CredentialCipher::from_env().map(std::sync::Arc::new);
+    match (&credential_cipher, is_production) {
+        (None, true) => {
+            tracing::error!(
+                "ALLTERNIT_CREDENTIALS_KEY must be set in production - provider tokens and wizard checkpoints require encryption at rest"
+            );
+            std::process::exit(1);
+        }
+        (None, false) => {
+            tracing::warn!(
+                "ALLTERNIT_CREDENTIALS_KEY unset - provider tokens and wizard checkpoints stored PLAINTEXT (dev only)"
+            );
+        }
+        _ => tracing::info!("Credential cipher initialized"),
+    }
+
     // Create API state with shared services
     let state = Arc::new(ApiState {
         db,
@@ -154,6 +174,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         quota_service,
         fly_runtime_service,
         mesh_service,
+        credential_cipher,
     });
 
     if state.fly_runtime_service.is_some() {

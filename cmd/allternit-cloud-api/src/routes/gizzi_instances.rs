@@ -42,7 +42,7 @@ pub struct UpsertInstanceRequest {
 }
 
 #[derive(Debug, FromRow)]
-struct GizziInstanceView {
+pub(crate) struct GizziInstanceView {
     id: String,
     name: String,
     url: String,
@@ -87,7 +87,11 @@ fn validate_instance_url(url: &str) -> Result<String, ApiError> {
     Ok(trimmed.to_string())
 }
 
-async fn upsert_instance(
+/// Upsert a gizzi instance row for `user_id`. `pub(crate)` so the BYO-VPS
+/// wizard registrar can write the row directly after bootstrap — the API
+/// knows the user id, the mesh IP, and the port, so no credentials are ever
+/// handed to the VPS for registration.
+pub(crate) async fn upsert_instance(
     db: &SqlitePool,
     user_id: &str,
     name: &str,

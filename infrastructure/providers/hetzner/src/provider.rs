@@ -54,15 +54,15 @@ impl HetznerProvider {
         info!("Waiting for server {} to be ready", server.id);
         self.wait_for_server_ready(server.id).await?;
         
-        // Install Allternit runtime via SSH
-        info!("Installing Allternit runtime on {}", server.name);
-        let install_result = self.ssh_executor.install_allternit_runtime(
+        // Install gizzi-code via SSH (legacy path — no mesh enrollment; the
+        // BYO-VPS wizard is the mesh-joined happy path).
+        info!("Installing gizzi-code on {}", server.name);
+        let install_result = self.ssh_executor.run_script(
             &server.public_net.ipv4.ip,
             22,
             "root",
             &keypair.private_key,
-            &config.control_plane_url,
-            &config.deployment_token,
+            &legacy_gizzi_install_script(),
         ).await;
         
         match install_result {
@@ -128,4 +128,52 @@ pub struct DeploymentResult {
     pub instance_ip: String,
     pub server_name: String,
     pub ssh_key: String,
+}
+
+/// Legacy install script for the old cowork deployment flow: checksum-pinned
+/// gizzi-code release + systemd unit, no tailnet enrollment (this flow has no
+/// Headscale preauth key; the BYO-VPS wizard handles the mesh-joined path).
+/// Mirrors `cmd/allternit-hosted-runtime/Dockerfile` pins.
+fn legacy_gizzi_install_script() -> String {
+    const RELEASE: &str = "hosted-runtime-2026.07.16";
+    const X64_SHA256: &str =
+        "f1d29bad0b3903d77261e7706ff80fd292fefece3ebeaa4bb7f08a51ad2fc694";
+    format!(
+        r#"#!/bin/bash
+set -euo pipefail
+[ "$(uname -m)" = "x86_64" ] || {{ echo "only x86_64 supported by legacy installer" >&2; exit 1; }}
+command -v curl >/dev/null 2>&1 || {{ apt-get update -qq && apt-get install -y -qq curl ca-certificates; }}
+mkdir -p /opt/gizzi/bin
+if [ ! -f /opt/gizzi/bin/gizzi-code ]; then
+    curl -fsSL "https://github.com/Gizziio/gizzi-code/releases/download/{release}/gizzi-code-linux-x64-native" -o /tmp/gizzi-code.download
+    echo "{sha256}  /tmp/gizzi-code.download" | sha256sum -c -
+    mv /tmp/gizzi-code.download /opt/gizzi/bin/gizzi-code
+    chmod +x /opt/gizzi/bin/gizzi-code
+fi
+cat > /etc/systemd/system/gizzi-code.service << 'UNIT'
+[Unit]
+Description=gizzi-code instance
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+Environment=GIZZI_REQUIRE_CLERK_AUTH=true
+Environment=GIZZI_DISABLE_AUTOUPDATE=1
+ExecStart=/opt/gizzi/bin/gizzi-code serve --hostname 0.0.0.0 --port 4096
+Restart=always
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target
+UNIT
+systemctl daemon-reload
+systemctl enable gizzi-code.service >/dev/null 2>&1 || true
+systemctl restart gizzi-code.service
+sleep 3
+systemctl is-active --quiet gizzi-code.service
+"#,
+        release = RELEASE,
+        sha256 = X64_SHA256,
+    )
 }

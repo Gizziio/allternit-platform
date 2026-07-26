@@ -1,8 +1,8 @@
 //! SSH executor for deployment operations
 //!
-//! Real SSH implementation for Allternit installation.
+//! Real SSH implementation for gizzi-code bootstrap on user-supplied VPSes.
 
-use crate::{Result, SshConnection, CommandOutput, SshKeyManager};
+use crate::{CommandOutput, Result, SshConnection, SshError, SshKeyManager};
 
 /// SSH executor for running deployment tasks
 pub struct SshExecutor {
@@ -17,51 +17,53 @@ impl SshExecutor {
         }
     }
 
-    /// Execute installation script on remote VPS
-    pub async fn install_allternit_runtime(
+    /// Upload and execute a bootstrap script on a remote VPS.
+    ///
+    /// The script is transferred via SCP to a temp path and run with `bash`;
+    /// the full command output (exit code, stdout, stderr) is returned so the
+    /// caller can parse result markers (e.g. `MESH_IP=...`) out of stdout.
+    pub async fn run_script(
         &self,
         host: &str,
         port: u16,
         username: &str,
         private_key: &str,
-        control_plane_url: &str,
-        deployment_token: &str,
+        script: &str,
     ) -> Result<CommandOutput> {
-        tracing::info!("Installing Allternit runtime on {}:{}", host, port);
+        tracing::info!("Running bootstrap script on {}:{}", host, port);
 
-        // Connect to VPS
         let conn = SshConnection::connect(host, port, username, private_key).await?;
 
-        // Download and execute installation script
-        let install_command = format!(
-            r#"
-export Allternit_VERSION="latest"
-export CONTROL_PLANE_URL="{}"
-export DEPLOYMENT_TOKEN="{}"
+        let remote_path = format!("/tmp/allternit-bootstrap-{}.sh", std::process::id());
+        conn.upload_file("bootstrap.sh", &remote_path, script.as_bytes())
+            .await?;
 
-curl -L "https://releases.allternit.sh/${{Allternit_VERSION}}/install-allternit-runtime.sh" | bash
-            "#,
-            control_plane_url,
-            deployment_token
-        );
+        let output = conn
+            .execute(&format!("bash {}", shell_quote(&remote_path)))
+            .await?;
 
-        let output = conn.execute(&install_command).await?;
+        // Best-effort cleanup of the uploaded script (it may contain no
+        // secrets — those live in the env file — but keep the box tidy).
+        let _ = conn
+            .execute(&format!("rm -f {}", shell_quote(&remote_path)))
+            .await;
 
-        // Verify installation
-        let verify_output = conn.execute("systemctl is-active allternit-agent").await?;
-        
-        if verify_output.exit_code != 0 {
-            return Err(crate::SshError::CommandFailed(
-                format!("Allternit agent failed to start: {}", verify_output.stderr)
-            ));
+        if output.exit_code != 0 {
+            return Err(SshError::CommandFailed(format!(
+                "bootstrap script exited {}: {}",
+                output.exit_code,
+                tail(&output.stderr, 500)
+            )));
         }
 
-        tracing::info!("Allternit runtime installed successfully on {}:{}", host, port);
-
+        tracing::info!("Bootstrap script completed on {}:{}", host, port);
         Ok(output)
     }
 
-    /// Test SSH connection
+    /// Test SSH connection with a trivial command (`uname -a`).
+    ///
+    /// Returns `Ok(true)` when the connection, authentication, and command
+    /// execution all succeed.
     pub async fn test_connection(
         &self,
         host: &str,
@@ -73,10 +75,9 @@ curl -L "https://releases.allternit.sh/${{Allternit_VERSION}}/install-allternit-
 
         let conn = SshConnection::connect(host, port, username, private_key).await?;
 
-        // Run simple test command
-        let output = conn.execute("echo 'SSH connection test successful'").await?;
+        let output = conn.execute("uname -a").await?;
 
-        let success = output.exit_code == 0 && output.stdout.contains("SSH connection test successful");
+        let success = output.exit_code == 0 && !output.stdout.trim().is_empty();
 
         if success {
             tracing::info!("SSH connection test passed for {}:{}", host, port);
@@ -102,9 +103,40 @@ impl Default for SshExecutor {
     }
 }
 
+/// Minimal single-quote shell escaping for remote paths we generate.
+fn shell_quote(value: &str) -> String {
+    format!("'{}'", value.replace('\'', "'\\''"))
+}
+
+/// Last `n` chars of a string, for error messages.
+fn tail(value: &str, n: usize) -> &str {
+    if value.len() <= n {
+        value
+    } else {
+        &value[value.len() - n..]
+    }
+}
+
 /// SSH keypair
 #[derive(Debug, Clone)]
 pub struct SshKeypair {
     pub public_key: String,
     pub private_key: String,
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn shell_quote_escapes_single_quotes() {
+        assert_eq!(shell_quote("/tmp/a b.sh"), "'/tmp/a b.sh'");
+        assert_eq!(shell_quote("it's"), "'it'\\''s'");
+    }
+
+    #[test]
+    fn tail_returns_last_n_chars() {
+        assert_eq!(tail("hello", 500), "hello");
+        assert_eq!(tail("abcdef", 3), "def");
+    }
 }

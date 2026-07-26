@@ -63,6 +63,44 @@ impl SshConnection {
         })
     }
 
+    /// Connect to a VPS via SSH using password authentication
+    pub async fn connect_password(
+        host: &str,
+        port: u16,
+        username: &str,
+        password: &str,
+    ) -> Result<Self, SshError> {
+        let host = host.to_string();
+        let username = username.to_string();
+        let password = password.to_string();
+
+        let session = tokio::task::spawn_blocking(move || {
+            tracing::info!("Connecting to {}:{} as {} (password auth)", host, port, username);
+
+            let tcp = TcpStream::connect(format!("{}:{}", host, port))
+                .map_err(|e| SshError::ConnectionFailed(format!("TCP connection failed: {}", e)))?;
+
+            let mut session = Session::new()
+                .map_err(|e| SshError::ConnectionFailed(format!("Failed to create session: {}", e)))?;
+
+            session.set_tcp_stream(tcp);
+            session.handshake()
+                .map_err(|e| SshError::ConnectionFailed(format!("SSH handshake failed: {}", e)))?;
+
+            session.userauth_password(username.as_str(), password.as_str())
+                .map_err(|e| SshError::AuthenticationFailed(format!("Authentication failed: {}", e)))?;
+
+            tracing::info!("SSH connection established to {}:{}", host, port);
+            Ok::<Session, SshError>(session)
+        })
+        .await
+        .map_err(|e| SshError::ConnectionFailed(format!("Task join failed: {}", e)))??;
+
+        Ok(Self {
+            session: Arc::new(Mutex::new(session)),
+        })
+    }
+
     /// Execute a command on the remote VPS
     pub async fn execute(&self, command: &str) -> Result<CommandOutput, SshError> {
         let session = Arc::clone(&self.session);
@@ -111,6 +149,12 @@ impl SshConnection {
 
     /// Upload a file to the remote VPS via SCP
     pub async fn upload_file(&self, _local_path: &str, remote_path: &str, content: &[u8]) -> Result<(), SshError> {
+        self.upload_file_with_mode(remote_path, content, 0o644).await
+    }
+
+    /// Upload a file to the remote VPS via SCP with an explicit permission
+    /// mode (e.g. 0o600 for files containing secrets).
+    pub async fn upload_file_with_mode(&self, remote_path: &str, content: &[u8], mode: i32) -> Result<(), SshError> {
         let session = Arc::clone(&self.session);
         let remote_path = std::path::PathBuf::from(remote_path);
         let content = content.to_vec();
@@ -121,7 +165,7 @@ impl SshConnection {
             let session = session.blocking_lock();
 
             // Open remote file for writing
-            let mut remote_file = session.scp_send(&remote_path, 0o644, content.len() as u64, None)
+            let mut remote_file = session.scp_send(&remote_path, mode, content.len() as u64, None)
                 .map_err(|e| SshError::FileTransferFailed(format!("Failed to create remote file: {}", e)))?;
 
             // Write content
