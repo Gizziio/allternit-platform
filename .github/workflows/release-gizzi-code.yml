@@ -28,9 +28,13 @@ jobs:
           - os: macos-latest
             target: darwin-arm64
             ext: tar.gz
-          - os: macos-13
-            target: darwin-x64
-            ext: tar.gz
+          # darwin-x64 (Intel Mac) disabled: macos-13 runners queue for hours
+          # on GitHub's capacity-constrained Intel fleet, blocking every
+          # release. Re-add (or switch to macos-15-intel) if Intel builds are
+          # actually needed.
+          # - os: macos-13
+          #   target: darwin-x64
+          #   ext: tar.gz
           - os: windows-latest
             target: win32-x64
             pkg: windows-x64
