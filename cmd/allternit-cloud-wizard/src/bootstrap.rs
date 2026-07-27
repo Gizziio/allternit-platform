@@ -21,18 +21,21 @@
 use allternit_cloud_ssh::SshConnection;
 use serde::{Deserialize, Serialize};
 
-/// Pinned gizzi-code release, mirroring the hosted runtime Dockerfile
-/// (`GIZZI_RELEASE` in `cmd/allternit-hosted-runtime/Dockerfile`).
-pub const GIZZI_RELEASE: &str = "hosted-runtime-2026.07.16";
+/// Pinned gizzi-code release tag (in `Gizziio/allternit-platform`, built by
+/// `release-gizzi-code.yml` from this monorepo).
+pub const GIZZI_RELEASE: &str = "gizzi-code/0.2.0";
 
-/// SHA-256 of `gizzi-code-linux-x64-native` for [`GIZZI_RELEASE`], mirroring
-/// `GIZZI_LINUX_X64_SHA256` in the hosted runtime Dockerfile.
+/// Bare version string used in release asset filenames
+/// (`gizzi-code-v{VERSION}-linux-<arch>.tar.gz`).
+pub const GIZZI_VERSION: &str = "0.2.0";
+
+/// SHA-256 of `gizzi-code-v{VERSION}-linux-x64.tar.gz` for [`GIZZI_RELEASE`].
 pub const GIZZI_LINUX_X64_SHA256: &str =
-    "f1d29bad0b3903d77261e7706ff80fd292fefece3ebeaa4bb7f08a51ad2fc694";
+    "74704f22703a719c3717af6bb68b2aad202260cc5f96c17979e65a409ce99ddd";
 
-/// SHA-256 of `gizzi-code-linux-arm64-native` for [`GIZZI_RELEASE`].
+/// SHA-256 of `gizzi-code-v{VERSION}-linux-arm64.tar.gz` for [`GIZZI_RELEASE`].
 pub const GIZZI_LINUX_ARM64_SHA256: &str =
-    "f3b040914d68d51f38f9fdf12863c74ecf6e54d4651e0dd391ad12c21fab8268";
+    "f2ce9db3f0745e4832c3e69adcabc3b4e5dd9d2ffa4cdc28f86db84ea3df6025";
 
 /// Escape hatch to override the pinned arm64 checksum (e.g. when testing a
 /// newer release build that hasn't been pinned yet).
@@ -40,7 +43,7 @@ pub const GIZZI_LINUX_ARM64_SHA256_ENV: &str = "GIZZI_LINUX_ARM64_SHA256";
 
 /// GitHub releases download base for the pinned release.
 pub const GIZZI_DOWNLOAD_BASE: &str =
-    "https://github.com/Gizziio/gizzi-code/releases/download";
+    "https://github.com/Gizziio/allternit-platform/releases/download";
 
 /// Port gizzi-code serves on (mesh-only; no firewall ports are opened).
 pub const GIZZI_PORT: u16 = 4096;
@@ -114,11 +117,12 @@ impl BootstrapConfig {
         }
     }
 
-    /// Download URL for a given artifact arch (`x64` / `arm64`).
+    /// Download URL for a given artifact arch (`x64` / `arm64`) — the
+    /// monorepo release ships tarballs containing a `gizzi-code` binary.
     pub fn artifact_url(&self, artifact_arch: &str) -> String {
         format!(
-            "{}/{}/gizzi-code-linux-{}-native",
-            GIZZI_DOWNLOAD_BASE, self.release, artifact_arch
+            "{}/{}/gizzi-code-v{}-linux-{}.tar.gz",
+            GIZZI_DOWNLOAD_BASE, self.release, GIZZI_VERSION, artifact_arch
         )
     }
 }
@@ -306,21 +310,21 @@ if ! command -v curl >/dev/null 2>&1; then
     fi
 fi
 
-# ── gizzi-code binary (checksum-pinned) ──────────────────────────────────────
+# ── gizzi-code binary (checksum-pinned tarball) ──────────────────────────────
 $SUDO mkdir -p /opt/gizzi/bin /etc/gizzi
 ARTIFACT_URL="{artifact_url}"
-INSTALLED_SHA256=""
-if [ -f /opt/gizzi/bin/gizzi-code ]; then
-    INSTALLED_SHA256="$($SUDO sha256sum /opt/gizzi/bin/gizzi-code | awk '{{print $1}}')"
-fi
-if [ "$INSTALLED_SHA256" = "$EXPECTED_SHA256" ]; then
-    log "gizzi-code already installed and checksum matches - skipping download"
+INSTALLED_RELEASE="$(cat /opt/gizzi/RELEASE 2>/dev/null || true)"
+if [ "$INSTALLED_RELEASE" = "{release}" ] && [ -f /opt/gizzi/bin/gizzi-code ]; then
+    log "gizzi-code {release} already installed - skipping download"
 else
     log "Downloading gizzi-code {release} ($ARTIFACT_ARCH)..."
-    curl -fsSL "$ARTIFACT_URL" -o /tmp/gizzi-code.download
-    echo "$EXPECTED_SHA256  /tmp/gizzi-code.download" | sha256sum -c - || error "checksum mismatch for $ARTIFACT_URL"
-    $SUDO mv /tmp/gizzi-code.download /opt/gizzi/bin/gizzi-code
+    curl -fsSL "$ARTIFACT_URL" -o /tmp/gizzi-code.tar.gz
+    echo "$EXPECTED_SHA256  /tmp/gizzi-code.tar.gz" | sha256sum -c - || error "checksum mismatch for $ARTIFACT_URL"
+    rm -rf /tmp/gizzi-extract && mkdir -p /tmp/gizzi-extract
+    tar -xzf /tmp/gizzi-code.tar.gz -C /tmp/gizzi-extract
+    $SUDO mv /tmp/gizzi-extract/gizzi-code /opt/gizzi/bin/gizzi-code
     $SUDO chmod +x /opt/gizzi/bin/gizzi-code
+    echo "{release}" | $SUDO tee /opt/gizzi/RELEASE >/dev/null
 fi
 
 # ── Env file (uploaded to /tmp by the provisioner, contains the mesh key) ────
@@ -501,9 +505,12 @@ mod tests {
         assert!(script.contains(GIZZI_RELEASE));
         assert!(script.contains(GIZZI_LINUX_X64_SHA256));
         assert!(script.contains(&format!(
-            "{}/{}/gizzi-code-linux-${{ARTIFACT_ARCH}}-native",
-            GIZZI_DOWNLOAD_BASE, GIZZI_RELEASE
+            "{}/{}/gizzi-code-v{}-linux-${{ARTIFACT_ARCH}}.tar.gz",
+            GIZZI_DOWNLOAD_BASE, GIZZI_RELEASE, GIZZI_VERSION
         )));
+        // Tarballs need extraction + a release marker for idempotency.
+        assert!(script.contains("tar -xzf /tmp/gizzi-code.tar.gz"));
+        assert!(script.contains("/opt/gizzi/RELEASE"));
     }
 
     #[test]
