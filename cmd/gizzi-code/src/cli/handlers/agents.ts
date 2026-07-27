@@ -11,7 +11,7 @@ import {
   type ResolvedAgent,
   resolveAgentModelDisplay,
   resolveAgentOverrides,
-} from '../../runtime/tools/builtins/agenttool/agentDisplay.js'
+} from '../../runtime/tools/builtins/AgentTool/agentDisplay.js'
 import {
   getActiveAgentsFromList,
   getAgentDefinitionsWithOverrides,

@@ -116,9 +116,9 @@ import type {
   HookEvent,
   SDKAssistantMessageError,
 } from '../../entrypoints/agentSdkTypes.js'
-import { EXPLORE_AGENT } from '../../runtime/tools/builtins/agenttool/built-in/exploreAgent.js'
-import { PLAN_AGENT } from '../../runtime/tools/builtins/agenttool/built-in/planAgent.js'
-import { areExplorePlanAgentsEnabled } from '../../runtime/tools/builtins/agenttool/builtInAgents.js'
+import { EXPLORE_AGENT } from '../../runtime/tools/builtins/AgentTool/built-in/exploreAgent.js'
+import { PLAN_AGENT } from '../../runtime/tools/builtins/AgentTool/built-in/planAgent.js'
+import { areExplorePlanAgentsEnabled } from '../../runtime/tools/builtins/AgentTool/builtInAgents.js'
 import { AGENT_TOOL_NAME } from '../../cli/ui/ink-app/tools/AgentTool/constants.js'
 import { ASK_USER_QUESTION_TOOL_NAME } from '../../cli/ui/ink-app/tools/AskUserQuestionTool/prompt.js'
 import { BashTool } from '../../cli/ui/ink-app/tools/BashTool/BashTool.js'

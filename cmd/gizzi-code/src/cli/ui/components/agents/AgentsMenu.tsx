@@ -10,7 +10,7 @@ import { useMergedTools } from '@/hooks/useMergedTools.js';
 import { Box, Text } from '@/ink.js';
 import { useAppState, useSetAppState } from '@/state/AppState.js';
 import type { Tools } from '@/Tool.js';
-import { type ResolvedAgent, resolveAgentOverrides } from '../../../../runtime/tools/builtins/agenttool/agentDisplay.js';
+import { type ResolvedAgent, resolveAgentOverrides } from '../../../../runtime/tools/builtins/AgentTool/agentDisplay.js';
 import { type AgentDefinition, getActiveAgentsFromList } from '../../../../tools/AgentTool/loadAgentsDir.js';
 import { toError } from '../../../../shared/utils/errors.js';
 import { logError } from '../../../../shared/utils/log.js';

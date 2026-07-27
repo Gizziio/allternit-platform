@@ -3,7 +3,7 @@ import React, { type ReactNode } from 'react';
 import { Box } from '@/ink.js';
 import { useKeybinding } from '@/keybindings/useKeybinding.js';
 import { isAutoMemoryEnabled } from '../../../../../../memdir/paths.js';
-import { type AgentMemoryScope, loadAgentMemoryPrompt } from '../../../../../../runtime/tools/builtins/agenttool/agentMemory.js';
+import { type AgentMemoryScope, loadAgentMemoryPrompt } from '../../../../../../runtime/tools/builtins/AgentTool/agentMemory.js';
 import { ConfigurableShortcutHint } from '../../../ConfigurableShortcutHint.js';
 import { Select } from '../../../CustomSelect/select.js';
 import { Byline } from '../../../design-system/Byline.js';

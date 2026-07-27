@@ -12,4 +12,4 @@ export {
   filterAgentsByMcpRequirements,
   hasRequiredMcpServers,
   getBuiltInAgents,
-} from '../../runtime/tools/builtins/agenttool/loadAgentsDir.js'
+} from '../../runtime/tools/builtins/AgentTool/loadAgentsDir.js'

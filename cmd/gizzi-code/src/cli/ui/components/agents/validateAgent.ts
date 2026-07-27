@@ -1,6 +1,6 @@
 // @ts-nocheck
 import type { Tools } from '@/Tool.js'
-import { resolveAgentTools } from '../../../../runtime/tools/builtins/agenttool/agentToolUtils.js'
+import { resolveAgentTools } from '../../../../runtime/tools/builtins/AgentTool/agentToolUtils.js'
 import type {
   AgentDefinition,
   CustomAgentDefinition,

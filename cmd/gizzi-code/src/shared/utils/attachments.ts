@@ -126,7 +126,7 @@ import { AGENT_TOOL_NAME } from '../../cli/ui/ink-app/tools/AgentTool/constants.
 import {
   formatAgentLine,
   shouldInjectAgentListInMessages,
-} from '../../runtime/tools/builtins/agenttool/prompt.js'
+} from '../../runtime/tools/builtins/AgentTool/prompt.js'
 import { filterDeniedAgents } from './permissions/permissions.js'
 import { getSubscriptionType } from './auth.js'
 import { mcpInfoFromString } from '../../runtime/services/mcp/mcpStringUtils.js'

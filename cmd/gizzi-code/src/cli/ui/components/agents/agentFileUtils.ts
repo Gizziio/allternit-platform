@@ -3,7 +3,7 @@ import { mkdir, open, unlink } from 'fs/promises'
 import { join } from 'path'
 import type { SettingSource } from 'src/utils/settings/constants.js'
 import { getManagedFilePath } from 'src/utils/settings/managedPath.js'
-import type { AgentMemoryScope } from '../../../../runtime/tools/builtins/agenttool/agentMemory.js'
+import type { AgentMemoryScope } from '../../../../runtime/tools/builtins/AgentTool/agentMemory.js'
 import {
   type AgentDefinition,
   isBuiltInAgent,

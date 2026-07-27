@@ -5,7 +5,7 @@ import type { ToolUseContext } from '@/Tool.js'
 import {
   AGENT_COLORS,
   type AgentColorName,
-} from '../../../runtime/tools/builtins/agenttool/agentColorManager.js'
+} from '../../../runtime/tools/builtins/AgentTool/agentColorManager.js'
 import type {
   LocalJSXCommandContext,
   LocalJSXCommandOnDone,

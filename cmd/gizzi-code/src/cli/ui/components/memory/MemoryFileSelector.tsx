@@ -15,7 +15,7 @@ import { logEvent } from '@/services/analytics/index.js';
 import { isAutoDreamEnabled } from '@/services/autoDream/config.js';
 import { readLastConsolidatedAt } from '@/services/autoDream/consolidationLock.js';
 import { useAppState } from '@/state/AppState.js';
-import { getAgentMemoryDir } from '../../../../runtime/tools/builtins/agenttool/agentMemory.js';
+import { getAgentMemoryDir } from '../../../../runtime/tools/builtins/AgentTool/agentMemory.js';
 import { openPath } from '../../../../shared/utils/browser.js';
 import { getMemoryFiles, type MemoryFileInfo } from '../../../../shared/utils/claudemd.js';
 import { getClaudeConfigHomeDir } from '../../../../shared/utils/envUtils.js';

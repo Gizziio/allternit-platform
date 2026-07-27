@@ -6,7 +6,7 @@ import { Box, Text } from '@/ink.js';
 import { useKeybinding } from '@/keybindings/useKeybinding.js';
 import { isAutoMemoryEnabled } from '../../../../../../memdir/paths.js';
 import type { Tools } from '@/Tool.js';
-import { getMemoryScopeDisplay } from '../../../../../../runtime/tools/builtins/agenttool/agentMemory.js';
+import { getMemoryScopeDisplay } from '../../../../../../runtime/tools/builtins/AgentTool/agentMemory.js';
 import type { AgentDefinition } from '../../../../../../tools/AgentTool/loadAgentsDir.js';
 import { truncateToWidth } from '../../../../../../shared/utils/format.js';
 import { getAgentModelDisplay } from '../../../../utils/model/agent.js';
