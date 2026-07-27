@@ -67,7 +67,7 @@ jobs:
 
       - name: Build binary
         working-directory: cmd/gizzi-code
-        run: bun run script/build-production.ts --target=${{ matrix.target }}
+        run: bun run script/build-production.js --target=${{ matrix.target }}
       
       - name: Package (Unix)
         if: matrix.os != 'windows-latest'
