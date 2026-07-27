@@ -66,9 +66,12 @@ jobs:
           pnpm install --frozen-lockfile
 
       - name: Build workspace package dependencies
-        # Nested workspace packages (packages/gizzi-util, sdk, …) ship gitignored
-        # dist/ output; build them before bundling.
-        run: pnpm --filter "@allternit/gizzi-code^..." run build
+        # Nested workspace packages ship gitignored dist/ output; build them
+        # before bundling. gizzi-sdk is used by imports but never declared in
+        # package.json, so it needs an explicit build invocation.
+        run: |
+          pnpm --filter "@allternit/gizzi-code^..." run build
+          pnpm --filter "@allternit/gizzi-sdk" run build
 
       - name: Build binary
         working-directory: cmd/gizzi-code
