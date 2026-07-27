@@ -57,13 +57,13 @@ jobs:
           fi
       
       - name: Install dependencies
-        # Deps are pnpm `workspace:*` refs (e.g. @allternit/gizzi-util), so a
-        # bare `bun install` inside cmd/gizzi-code can't resolve them — install
-        # from the repo root with pnpm, filtered to this package and its deps.
+        # Full workspace install: gizzi-code imports packages it doesn't
+        # declare (they resolve via the root node_modules, same as local
+        # builds). A filtered install misses them and bundling fails.
         run: |
           corepack enable
           corepack prepare pnpm@10.28.0 --activate
-          pnpm install --filter @allternit/gizzi-code... --frozen-lockfile
+          pnpm install --frozen-lockfile
 
       - name: Build workspace package dependencies
         # Nested workspace packages (packages/gizzi-util, sdk, …) ship gitignored
