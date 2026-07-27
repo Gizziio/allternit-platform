@@ -84,5 +84,8 @@
   },
   "files": [
     "dist"
-  ]
+  ],
+  "scripts": {
+    "build": "node scripts/build.mjs"
+  }
 }
