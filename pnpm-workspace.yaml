@@ -73,3 +73,10 @@ onlyBuiltDependencies:
 
 patchedDependencies:
   follow-redirects@1.15.11: patches/follow-redirects@1.15.11.patch
+
+# Release builds cross-compile (bun --compile) for every target on every
+# runner, so platform-conditional optional deps (e.g. @opentui/core-*) must
+# be installed for ALL OS/arch combos, not just the host's.
+supportedArchitectures:
+  os: [darwin, linux, win32]
+  cpu: [arm64, x64]
