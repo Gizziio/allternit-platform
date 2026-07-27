@@ -1,7 +1,9 @@
-// tsc emits dist/ even when type errors are present (noEmitOnError is off).
-// The ~1.8k pre-existing type errors in this package are a known baseline
-// (same situation as the 351 in gizzi-code proper) — the dist output is what
-// the runtime consumes, so build failures here must not block releases.
+// dist/gen is committed (vendored from the canonical release repo), so plain
+// tsc is sufficient for the release build — the OpenAPI codegen
+// (packages/sdk/js/script/build.ts) is a dev-time tool that currently fails
+// against zod 4.x and is tracked separately. tsc emits dist/ even when type
+// errors are present (noEmitOnError is off); the ~1.8k pre-existing type
+// errors are a known baseline — never fail the release on them.
 import { spawnSync } from 'node:child_process'
 
 spawnSync('bunx', ['tsc'], { stdio: 'inherit' })
