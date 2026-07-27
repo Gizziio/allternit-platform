@@ -32,7 +32,8 @@ jobs:
             target: darwin-x64
             ext: tar.gz
           - os: windows-latest
-            target: windows-x64
+            target: win32-x64
+            pkg: windows-x64
             ext: zip
 
     runs-on: ${{ matrix.os }}
