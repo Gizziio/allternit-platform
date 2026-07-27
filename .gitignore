@@ -19,7 +19,7 @@ rails/reference/beads/
 .env.*
 !.env.example
 !.env.production
-debug/
+/debug/
 release/
 .aider/
 .claude/
