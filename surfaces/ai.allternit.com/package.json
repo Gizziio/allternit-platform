@@ -32,7 +32,7 @@
     "db:push": "drizzle-kit push --config drizzle.config.sqlite.ts",
     "db:setup": "mkdir -p data && touch data/.gitkeep",
     "guard:ai-elements": "bash scripts/no-legacy-ai-elements.sh",
-    "guard:no-drift": "bash scripts/guard:no-drift.sh",
+    "guard:no-drift": "bash scripts/guard-no-drift.sh",
     "coverage:ai-elements": "bash scripts/coverage-ai-elements.sh",
     "record:sse": "bash scripts/record-chat-sse.sh",
     "test": "vitest run",
