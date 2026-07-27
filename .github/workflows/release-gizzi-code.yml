@@ -57,9 +57,14 @@ jobs:
           fi
       
       - name: Install dependencies
-        working-directory: cmd/gizzi-code
-        run: bun install
-      
+        # Deps are pnpm `workspace:*` refs (e.g. @allternit/gizzi-util), so a
+        # bare `bun install` inside cmd/gizzi-code can't resolve them — install
+        # from the repo root with pnpm, filtered to this package and its deps.
+        run: |
+          corepack enable
+          corepack prepare pnpm@10.28.0 --activate
+          pnpm install --filter @allternit/gizzi-code... --frozen-lockfile
+
       - name: Build binary
         working-directory: cmd/gizzi-code
         run: bun run script/build-production.ts --target=${{ matrix.target }}
