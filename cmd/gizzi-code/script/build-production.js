@@ -18,7 +18,9 @@
  */
 import { $ } from "bun";
 import { createHash } from "crypto";
-import { mkdir } from "fs/promises";
+import { mkdir, rename, copyFile, readdir } from "fs/promises";
+import { existsSync } from "fs";
+import { devNull } from "os";
 import { dirname, resolve } from "path";
 import { copyNativeAssets } from "./native-assets.mjs";
 const TARGETS = [
@@ -80,8 +82,8 @@ function parseTime(tag) {
     return Date.UTC(Number(match[1]), Number(match[2]) - 1, Number(match[3]), Number(match[4]), Number(match[5]), Number(match[6]));
 }
 try {
-    const entries = await $ `ls -1 ${migrationDir} 2>/dev/null || echo ""`.text();
-    for (const dir of entries.trim().split("\n").filter(Boolean)) {
+    const entries = existsSync(migrationDir) ? await readdir(migrationDir) : [];
+    for (const dir of entries) {
         const migrationPath = `${migrationDir}/${dir}/migration.sql`;
         const file = Bun.file(migrationPath);
         if (await file.exists()) {
@@ -332,7 +334,7 @@ const BUNFIG_BACKUP = "./.build/bunfig.toml.bak";
 const BUNFIG_ORIG = "./bunfig.toml";
 let bunfigWasMoved = false;
 if (await Bun.file(BUNFIG_ORIG).exists()) {
-    await $ `mv ${BUNFIG_ORIG} ${BUNFIG_BACKUP}`;
+    await rename(BUNFIG_ORIG, BUNFIG_BACKUP);
     bunfigWasMoved = true;
 }
 // Shared defines for the bundler
@@ -389,7 +391,7 @@ if (!bundleResult.success) {
     }
     // Restore bunfig.toml before exiting
     if (bunfigWasMoved && await Bun.file(BUNFIG_BACKUP).exists()) {
-        await $ `mv ${BUNFIG_BACKUP} ${BUNFIG_ORIG}`;
+        await rename(BUNFIG_BACKUP, BUNFIG_ORIG);
     }
     process.exit(1);
 }
@@ -411,9 +413,15 @@ for (const target of targetsToBuild) {
     const outfile = args.outfile || `${OUTDIR}/${BINARY_NAME}-${target.platform}-${target.arch}${target.suffix}`;
     process.stdout.write(`   Building ${target.platform}-${target.arch}... `);
     try {
-        // Use env -i with minimal environment to ensure no preload config leaks in
-        // Note: Cross-compilation requires the target platform to be specified
-        await $ `env -i PATH="${process.env.PATH}" HOME="${process.env.HOME}" BUNFIG_PATH=/dev/null bun build --compile ${BUNDLE_FILE} --outfile ${outfile} --target=${target.target}`;
+        // Cross-platform minimal-env compile (no `env -i`, which is unix-only)
+        const proc = Bun.spawnSync({
+            cmd: [process.execPath, "build", "--compile", BUNDLE_FILE, "--outfile", outfile, "--target", target.target],
+            env: { PATH: process.env.PATH, HOME: process.env.HOME, BUNFIG_PATH: devNull },
+            stdout: "inherit",
+            stderr: "inherit",
+        });
+        if (proc.exitCode !== 0)
+            throw new Error(`bun build failed with exit code ${proc.exitCode}`);
         // Get file size
         const stat = await Bun.file(outfile).stat();
         const sizeMB = stat ? Math.round((stat.size / 1024 / 1024) * 10) / 10 : 0;
@@ -435,7 +443,7 @@ for (const target of targetsToBuild) {
 }
 // Restore bunfig.toml
 if (bunfigWasMoved && await Bun.file(BUNFIG_BACKUP).exists()) {
-    await $ `mv ${BUNFIG_BACKUP} ${BUNFIG_ORIG}`;
+    await rename(BUNFIG_BACKUP, BUNFIG_ORIG);
 }
 console.log("");
 console.log("╔══════════════════════════════════════════════════════════╗");
@@ -465,7 +473,10 @@ if (successful.length === 1) {
     const simpleName = `${OUTDIR}/${BINARY_NAME}${successful[0].target.suffix}`;
     const targetName = `${BINARY_NAME}-${successful[0].target.platform}-${successful[0].target.arch}${successful[0].target.suffix}`;
     try {
-        await $ `cd ${OUTDIR} && ln -sf ${targetName} ${BINARY_NAME}${successful[0].target.suffix} 2>/dev/null || cp ${successful[0].path} ${simpleName}`;
+        // Symlink for the current platform; fall back to a copy (Windows
+        // symlink creation often needs elevated privileges).
+        const { symlink } = await import("fs/promises");
+        await symlink(targetName, simpleName).catch(() => copyFile(successful[0].path, simpleName));
     }
     catch {
         // Ignore symlink errors
@@ -487,7 +498,7 @@ for (const r of successful) {
         if (await Bun.file(vendoredMux).exists()) {
             const dest = `${OUTDIR}/vendor/allternit-mux/${pa}`;
             await mkdir(dest, { recursive: true });
-            await $ `cp ${vendoredMux} ${dest}/allternit-mux${suffix}`;
+            await copyFile(vendoredMux, `${dest}/allternit-mux${suffix}`);
             console.log(`✓ vendored allternit-mux -> ${dest}/allternit-mux${suffix}`);
         }
         else {
@@ -497,7 +508,7 @@ for (const r of successful) {
         if (await Bun.file(vendoredRg).exists()) {
             const dest = `${OUTDIR}/vendor/ripgrep/${ap}`;
             await mkdir(dest, { recursive: true });
-            await $ `cp ${vendoredRg} ${dest}/rg${suffix}`;
+            await copyFile(vendoredRg, `${dest}/rg${suffix}`);
             console.log(`✓ vendored ripgrep -> ${dest}/rg${suffix}`);
         }
         else {
