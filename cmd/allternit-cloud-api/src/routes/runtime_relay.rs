@@ -906,7 +906,12 @@ fn filtered_headers(headers: HashMap<String, String>) -> HashMap<String, String>
         .filter(|(name, _)| {
             matches!(
                 name.to_ascii_lowercase().as_str(),
-                "accept"
+                // The caller is already Clerk-authenticated on this route, so
+                // forwarding their Authorization lets the box's gizzi-code
+                // validate the end user's JWT instead of 401-ing every relayed
+                // request behind GIZZI_REQUIRE_CLERK_AUTH.
+                "authorization"
+                    | "accept"
                     | "content-type"
                     | "if-none-match"
                     | "if-modified-since"
