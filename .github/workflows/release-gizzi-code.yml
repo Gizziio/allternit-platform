@@ -82,6 +82,14 @@ jobs:
         working-directory: cmd/gizzi-code
         run: bun run script/build-production.js --target=${{ matrix.target }}
 
+      - name: Setup Go
+        # macos-latest images don't have Go on PATH; pin to the sidecar
+        # module's toolchain (go.mod `go 1.26.5`).
+        uses: actions/setup-go@v5
+        with:
+          go-version-file: infrastructure/mesh/tsnet-ios/go.mod
+          cache: false
+
       - name: Build mesh-node sidecar
         # tsnet sidecar (infrastructure/mesh/tsnet-ios/cmd/mesh-node) shipped
         # next to gizzi-code in the tarball so `serve --mesh` can join a
