@@ -392,8 +392,8 @@ if [ -n "${ALLTERNIT_BYO_BOOTSTRAP_TOKEN:-}" ] && [ -n "${ALLTERNIT_CLOUD_API_UR
     if [ -f "$IDENTITY_FILE" ]; then
         log "Already paired as a runtime device - skipping pairing"
         PAIRED="true"
-        RUNTIME_ID="$(jq -r '.runtimeId // empty' "$IDENTITY_FILE")"
-        DEVICE_TOKEN="$(jq -r '.deviceToken // empty' "$IDENTITY_FILE")"
+        RUNTIME_ID="$($SUDO jq -r '.runtimeId // empty' "$IDENTITY_FILE")"
+        DEVICE_TOKEN="$($SUDO jq -r '.deviceToken // empty' "$IDENTITY_FILE")"
     else
         log "Pairing this box as an Allternit runtime device..."
         PAIR_KEY="/tmp/gizzi-pair-key.pem"
@@ -476,7 +476,7 @@ if [ -n "${ALLTERNIT_BYO_BOOTSTRAP_TOKEN:-}" ] && [ -n "${ALLTERNIT_CLOUD_API_UR
     if [ -f /opt/gizzi/bin/agent-daemon ]; then
         if [ ! -f /etc/gizzi/runtime-identity.json ]; then
             log "Deriving agent-daemon identity from $IDENTITY_FILE..."
-            jq '{runtimeId, userId, userEmail, deviceToken, expiresAt: .tokenExpiresAt, capabilities: (.capabilities // []), privateKeyPem: .privateKey, publicKey}' "$IDENTITY_FILE" \
+            $SUDO jq '{runtimeId, userId, userEmail, deviceToken, expiresAt: .tokenExpiresAt, capabilities: (.capabilities // []), privateKeyPem: .privateKey, publicKey}' "$IDENTITY_FILE" \
                 | $SUDO tee /etc/gizzi/runtime-identity.json >/dev/null
             $SUDO chmod 600 /etc/gizzi/runtime-identity.json
         fi
