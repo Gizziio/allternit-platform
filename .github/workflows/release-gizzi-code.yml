@@ -81,15 +81,36 @@ jobs:
       - name: Build binary
         working-directory: cmd/gizzi-code
         run: bun run script/build-production.js --target=${{ matrix.target }}
-      
+
+      - name: Build mesh-node sidecar
+        # tsnet sidecar (infrastructure/mesh/tsnet-ios/cmd/mesh-node) shipped
+        # next to gizzi-code in the tarball so `serve --mesh` can join a
+        # tailnet in pure userspace (mesh.ts execDir-sibling discovery).
+        # GOOS/GOARCH mapping mirrors build-sidecar.sh; bash works on all
+        # runners (git-bash on windows-latest).
+        shell: bash
+        working-directory: infrastructure/mesh/tsnet-ios
+        run: |
+          case "${{ matrix.target }}" in
+            linux-x64)    GOOS=linux;   GOARCH=amd64 ;;
+            linux-arm64)  GOOS=linux;   GOARCH=arm64 ;;
+            darwin-arm64) GOOS=darwin;  GOARCH=arm64 ;;
+            win32-x64)    GOOS=windows; GOARCH=amd64 ;;
+            *) echo "no GOOS/GOARCH mapping for target ${{ matrix.target }}"; exit 1 ;;
+          esac
+          EXT=""; [ "$GOOS" = "windows" ] && EXT=".exe"
+          CGO_ENABLED=0 GOOS=$GOOS GOARCH=$GOARCH \
+            go build -ldflags="-s -w" -o "../../../cmd/gizzi-code/dist/mesh-node$EXT" ./cmd/mesh-node
+          ls -la ../../../cmd/gizzi-code/dist/
+
       - name: Package (Unix)
         if: matrix.os != 'windows-latest'
         working-directory: cmd/gizzi-code
         run: |
           mkdir -p dist/pkg
-          cp dist/gizzi-code dist/pkg/
+          cp dist/gizzi-code dist/mesh-node dist/pkg/
           cd dist/pkg
-          tar -czf "../../../gizzi-code-v${{ steps.version.outputs.VERSION }}-${{ matrix.target }}.tar.gz" gizzi-code
+          tar -czf "../../../gizzi-code-v${{ steps.version.outputs.VERSION }}-${{ matrix.target }}.tar.gz" gizzi-code mesh-node
       
       - name: Package (Windows)
         if: matrix.os == 'windows-latest'
@@ -98,8 +119,9 @@ jobs:
         run: |
           New-Item -ItemType Directory -Force -Path dist/pkg | Out-Null
           Copy-Item dist/gizzi-code.exe dist/pkg/
+          Copy-Item dist/mesh-node.exe dist/pkg/
           cd dist/pkg
-          Compress-Archive -Path gizzi-code.exe -DestinationPath "../../../gizzi-code-v${{ steps.version.outputs.VERSION }}-windows-x64.zip"
+          Compress-Archive -Path gizzi-code.exe, mesh-node.exe -DestinationPath "../../../gizzi-code-v${{ steps.version.outputs.VERSION }}-windows-x64.zip"
       
       - name: Upload artifact
         uses: actions/upload-artifact@v4

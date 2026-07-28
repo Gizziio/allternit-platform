@@ -13,6 +13,9 @@
 //! sidecar from gizzi-code releases, so bootstrap installs the official
 //! Tailscale package (`https://tailscale.com/install.sh`) and points it at
 //! the platform Headscale control URL with `tailscale up --login-server`.
+//! From v0.2.1 the release tarballs also ship the mesh-node tsnet sidecar,
+//! which bootstrap installs next to gizzi-code (`/opt/gizzi/bin/mesh-node`)
+//! so `serve --mesh` can fall back to a pure-userspace tailnet join.
 //!
 //! Everything is idempotent: re-running skips the download when the checksum
 //! already matches and skips `tailscale up` when the node is already on the
@@ -23,11 +26,11 @@ use serde::{Deserialize, Serialize};
 
 /// Pinned gizzi-code release tag (in `Gizziio/allternit-platform`, built by
 /// `release-gizzi-code.yml` from this monorepo).
-pub const GIZZI_RELEASE: &str = "gizzi-code/0.2.0";
+pub const GIZZI_RELEASE: &str = "gizzi-code/0.2.1";
 
 /// Bare version string used in release asset filenames
 /// (`gizzi-code-v{VERSION}-linux-<arch>.tar.gz`).
-pub const GIZZI_VERSION: &str = "0.2.0";
+pub const GIZZI_VERSION: &str = "0.2.1";
 
 /// SHA-256 of `gizzi-code-v{VERSION}-linux-x64.tar.gz` for [`GIZZI_RELEASE`].
 pub const GIZZI_LINUX_X64_SHA256: &str =
@@ -324,6 +327,16 @@ else
     tar -xzf /tmp/gizzi-code.tar.gz -C /tmp/gizzi-extract
     $SUDO mv /tmp/gizzi-extract/gizzi-code /opt/gizzi/bin/gizzi-code
     $SUDO chmod +x /opt/gizzi/bin/gizzi-code
+    # mesh-node tsnet sidecar ships in the tarball from v0.2.1 on; install it
+    # next to gizzi-code so `serve --mesh` finds it via execDir-sibling
+    # discovery. Conditional so older tarballs (gizzi-code only) still work.
+    if [ -f /tmp/gizzi-extract/mesh-node ]; then
+        log "Installing mesh-node sidecar..."
+        $SUDO mv /tmp/gizzi-extract/mesh-node /opt/gizzi/bin/mesh-node
+        $SUDO chmod 0755 /opt/gizzi/bin/mesh-node
+    else
+        log "No mesh-node in tarball - skipping sidecar install"
+    fi
     echo "{release}" | $SUDO tee /opt/gizzi/RELEASE >/dev/null
 fi
 
@@ -511,6 +524,18 @@ mod tests {
         // Tarballs need extraction + a release marker for idempotency.
         assert!(script.contains("tar -xzf /tmp/gizzi-code.tar.gz"));
         assert!(script.contains("/opt/gizzi/RELEASE"));
+    }
+
+    #[test]
+    fn script_installs_mesh_node_sidecar_when_present_in_tarball() {
+        let script = generate_bootstrap_script(&test_config(true)).unwrap();
+        // Conditional on the file existing so older tarballs (gizzi-code
+        // only) still bootstrap cleanly.
+        assert!(script.contains("if [ -f /tmp/gizzi-extract/mesh-node ]; then"));
+        assert!(script.contains("$SUDO mv /tmp/gizzi-extract/mesh-node /opt/gizzi/bin/mesh-node"));
+        assert!(script.contains("$SUDO chmod 0755 /opt/gizzi/bin/mesh-node"));
+        // mesh.ts discovers the sidecar as an execDir sibling of gizzi-code.
+        assert!(script.contains("/opt/gizzi/bin/gizzi-code"));
     }
 
     #[test]
