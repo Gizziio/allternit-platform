@@ -854,6 +854,9 @@ fn is_allowed_runtime_path(path: &str) -> bool {
         "/panes",
         "/status",
         "/health",
+        // gizzi-code mirrors its entire route surface under /v1/*, so this one
+        // prefix covers BYO-VPS boxes (pty, sessions, events, instance, ...).
+        "/v1",
     ];
     PREFIXES.iter().any(|prefix| {
         path == *prefix
