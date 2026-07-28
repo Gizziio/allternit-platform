@@ -490,9 +490,8 @@ export const AgentCompatRoutes = () =>
     })
     .post("/v1/agent-sessions/:sessionID/compact", async (c) => {
       // compact_session → gizzi's on-demand summarize. SessionSummary.summarize
-      // wants the anchor message id; use the session's latest message (the
-      // native /session/:id/summarize route passes a bare string and 500s —
-      // pre-existing engine bug, worked around here).
+      // wants the anchor message id; use the session's latest user message
+      // (same anchor the native /session/:id/summarize route now uses).
       const sessionID = c.req.param("sessionID")
       const existing = await findSession(sessionID)
       if (!existing) return c.json({ error: "Session not found" }, 404)

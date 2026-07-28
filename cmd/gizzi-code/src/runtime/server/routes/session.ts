@@ -565,8 +565,14 @@ export const SessionRoutes = lazy(() =>
       validator("param", z.any()),
       async (c) => {
         const { sessionID } = c.req.valid("param") as any
-        const result = await SessionSummary.summarize(sessionID)
-        return c.json(result)
+        // SessionSummary.summarize wants the anchor message id (a USER
+        // message — assistant anchors fail the Assistant.summary schema);
+        // this route previously passed a bare sessionID and 500'd.
+        const messages = await Session.messages({ sessionID })
+        const anchor = messages.findLast((m: any) => m.info?.role === "user")
+        if (!anchor) return c.json({ error: "Session has no messages to summarize" }, 400)
+        const result = await SessionSummary.summarize({ sessionID, messageID: anchor.info.id })
+        return c.json(result ?? null)
       },
     )
     .post(
