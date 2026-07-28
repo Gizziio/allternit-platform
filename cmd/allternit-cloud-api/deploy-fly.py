@@ -11,6 +11,7 @@ deploy_dir = sys.argv[2]
 # Workspace members required by allternit-cloud-api (direct + transitive).
 MEMBERS = [
     "cmd/allternit-cloud-api",
+    "cmd/allternit-cloud-wizard",
     "infrastructure/cloud",
     "infrastructure/cloud/allternit-cloud-ssh",
     "infrastructure/providers/hetzner",
