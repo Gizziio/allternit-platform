@@ -415,9 +415,11 @@ if [ -n "${ALLTERNIT_BYO_BOOTSTRAP_TOKEN:-}" ] && [ -n "${ALLTERNIT_CLOUD_API_UR
         DEVICE_CODE="$(printf '%s' "$CREATE_RESPONSE" | jq -r '.deviceCode')"
         CHALLENGE="$(printf '%s' "$CREATE_RESPONSE" | jq -r '.challenge')"
 
-        SIGNATURE="$(printf 'allternit-runtime-pairing:%s:%s' "$PAIRING_ID" "$CHALLENGE" \
-            | openssl pkeyutl -sign -inkey "$PAIR_KEY" -rawin \
+        SIGNATURE_MSG="$(mktemp)"
+        printf 'allternit-runtime-pairing:%s:%s' "$PAIRING_ID" "$CHALLENGE" > "$SIGNATURE_MSG"
+        SIGNATURE="$(openssl pkeyutl -sign -inkey "$PAIR_KEY" -rawin -in "$SIGNATURE_MSG" \
             | base64 -w0 | tr '+/' '-_' | tr -d '=')"
+        rm -f "$SIGNATURE_MSG"
 
         EXCHANGE_RESPONSE="$(curl -fsS -X POST "${ALLTERNIT_CLOUD_API_URL%/}/api/v1/runtime-pairings/exchange" \
             -H 'content-type: application/json' \
