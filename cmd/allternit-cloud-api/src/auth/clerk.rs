@@ -4,7 +4,7 @@
 //! credential; the Clerk JWT is never handed to or stored by the runtime.
 
 use axum::http::{header, HeaderMap};
-use jsonwebtoken::{decode, decode_header, Algorithm, DecodingKey, Validation};
+use base64::{engine::general_purpose::URL_SAFE_NO_PAD, Engine as _};
 use serde::Deserialize;
 use std::collections::HashMap;
 use std::sync::{Arc, OnceLock};
@@ -12,6 +12,25 @@ use std::time::{Duration, Instant};
 use tokio::sync::RwLock;
 
 use crate::ApiError;
+
+/// Extracts `kid` from a JWT header without jsonwebtoken's Header
+/// deserialization, which rejects Clerk's numeric `oiat` claim under v10.
+fn jwt_header_kid(token: &str) -> Result<String, ApiError> {
+    let part = token
+        .split('.')
+        .next()
+        .ok_or_else(|| ApiError::Unauthorized("Invalid Clerk token".to_string()))?;
+    let bytes = URL_SAFE_NO_PAD
+        .decode(part)
+        .map_err(|_| ApiError::Unauthorized("Invalid Clerk token".to_string()))?;
+    let header: serde_json::Value = serde_json::from_slice(&bytes)
+        .map_err(|_| ApiError::Unauthorized("Invalid Clerk token".to_string()))?;
+    header
+        .get("kid")
+        .and_then(|v| v.as_str())
+        .map(str::to_owned)
+        .ok_or_else(|| ApiError::Unauthorized("Clerk token has no key id".to_string()))
+}
 
 const DEFAULT_CLERK_ISSUER: &str = "https://clerk.platform.allternit.com";
 const DEFAULT_CLERK_JWKS_URL: &str = "https://clerk.platform.allternit.com/.well-known/jwks.json";
@@ -24,32 +43,6 @@ pub struct ClerkUser {
     pub name: Option<String>,
     pub image_url: Option<String>,
     pub organization_id: Option<String>,
-}
-
-#[derive(Debug, Deserialize)]
-struct ClerkClaims {
-    sub: String,
-    iss: String,
-    exp: usize,
-    #[serde(default)]
-    email: Option<String>,
-    #[serde(default)]
-    email_address: Option<String>,
-    #[serde(default)]
-    name: Option<String>,
-    #[serde(default)]
-    image_url: Option<String>,
-    /// Clerk session token v2 organization claim.
-    #[serde(default)]
-    o: Option<ClerkOrganizationClaims>,
-    /// Clerk session token v1 organization claim.
-    #[serde(default)]
-    org_id: Option<String>,
-}
-
-#[derive(Debug, Deserialize)]
-struct ClerkOrganizationClaims {
-    id: String,
 }
 
 #[derive(Clone, Debug, Deserialize)]
@@ -133,34 +126,87 @@ impl ClerkVerifier {
     }
 
     async fn verify(&self, token: &str) -> Result<ClerkUser, ApiError> {
-        let header = decode_header(token)
-            .map_err(|_| ApiError::Unauthorized("Invalid Clerk token".to_string()))?;
-        let kid = header
-            .kid
-            .ok_or_else(|| ApiError::Unauthorized("Clerk token has no key id".to_string()))?;
+        // Parse the JWT header manually: jsonwebtoken v10's Header struct
+        // flattens non-standard claims into `HashMap<String, String> extras`,
+        // so any non-string custom claim (Clerk's numeric `oiat`) fails
+        // decode_header AND decode() for every Clerk token. We therefore
+        // verify RS256 + issuer + expiry manually instead.
+        let kid = jwt_header_kid(token)?;
         let jwk = self.key(&kid).await?;
-        let key = DecodingKey::from_rsa_components(&jwk.n, &jwk.e)
-            .map_err(|_| ApiError::Unauthorized("Invalid Clerk signing key".to_string()))?;
-        let mut validation = Validation::new(Algorithm::RS256);
-        validation.set_issuer(&[&self.issuer]);
-        validation.validate_aud = false;
-        let claims = decode::<ClerkClaims>(token, &key, &validation)
-            .map_err(|_| ApiError::Unauthorized("Invalid or expired Clerk session".to_string()))?
-            .claims;
+        let claims = verify_rs256(token, &jwk, &self.issuer)?;
 
         let organization_id = claims
-            .o
-            .map(|organization| organization.id)
-            .or(claims.org_id);
+            .get("o")
+            .and_then(|o| o.get("id"))
+            .and_then(|v| v.as_str())
+            .or_else(|| claims.get("org_id").and_then(|v| v.as_str()))
+            .map(str::to_owned);
 
         Ok(ClerkUser {
-            id: claims.sub,
-            email: claims.email.or(claims.email_address),
-            name: claims.name,
-            image_url: claims.image_url,
+            id: claims
+                .get("sub")
+                .and_then(|v| v.as_str())
+                .ok_or_else(|| ApiError::Unauthorized("Clerk token has no subject".to_string()))?
+                .to_string(),
+            email: str_claim(&claims, "email").or_else(|| str_claim(&claims, "email_address")),
+            name: str_claim(&claims, "name"),
+            image_url: str_claim(&claims, "image_url"),
             organization_id,
         })
     }
+}
+
+fn str_claim(claims: &serde_json::Value, key: &str) -> Option<String> {
+    claims.get(key).and_then(|v| v.as_str()).map(str::to_owned)
+}
+
+/// Verifies an RS256 JWT against a JWKS key and enforces issuer + expiry
+/// (60s leeway), returning the raw claims. See `verify` for why jsonwebtoken
+/// v10 cannot be used on this path.
+fn verify_rs256(token: &str, jwk: &Jwk, issuer: &str) -> Result<serde_json::Value, ApiError> {
+    let unauthorized = |msg: &str| ApiError::Unauthorized(msg.to_string());
+    let mut parts = token.split('.');
+    let (header_b64, payload_b64, signature_b64) = match (parts.next(), parts.next(), parts.next(), parts.next()) {
+        (Some(h), Some(p), Some(s), None) => (h, p, s),
+        _ => return Err(unauthorized("Malformed Clerk token")),
+    };
+    let signature = URL_SAFE_NO_PAD
+        .decode(signature_b64)
+        .map_err(|_| unauthorized("Malformed Clerk signature"))?;
+    let n = URL_SAFE_NO_PAD
+        .decode(&jwk.n)
+        .map_err(|_| unauthorized("Invalid Clerk signing key"))?;
+    let e = URL_SAFE_NO_PAD
+        .decode(&jwk.e)
+        .map_err(|_| unauthorized("Invalid Clerk signing key"))?;
+    let public_key = aws_lc_rs::signature::RsaPublicKeyComponents { n: &n, e: &e };
+    public_key
+        .verify(
+            &aws_lc_rs::signature::RSA_PKCS1_2048_8192_SHA256,
+            format!("{header_b64}.{payload_b64}").as_bytes(),
+            &signature,
+        )
+        .map_err(|_| unauthorized("Invalid Clerk signature"))?;
+
+    let claims: serde_json::Value = serde_json::from_slice(
+        &URL_SAFE_NO_PAD
+            .decode(payload_b64)
+            .map_err(|_| unauthorized("Malformed Clerk payload"))?,
+    )
+    .map_err(|_| unauthorized("Malformed Clerk payload"))?;
+
+    if claims.get("iss").and_then(|v| v.as_str()) != Some(issuer) {
+        return Err(unauthorized("Invalid Clerk issuer"));
+    }
+    let now = std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .map(|d| d.as_secs())
+        .unwrap_or(0);
+    match claims.get("exp").and_then(|v| v.as_u64()) {
+        Some(exp) if now <= exp + 60 => {}
+        _ => return Err(unauthorized("Invalid or expired Clerk session")),
+    }
+    Ok(claims)
 }
 
 fn verifier() -> &'static Arc<ClerkVerifier> {

@@ -13,9 +13,28 @@ use axum::{
     response::{IntoResponse, Response},
     Json,
 };
-use jsonwebtoken::{decode, decode_header, Algorithm, DecodingKey, TokenData, Validation};
+use base64::{engine::general_purpose::URL_SAFE_NO_PAD, Engine as _};
 use serde::{Deserialize, Serialize};
 use serde_json::json;
+
+/// Extracts `kid` from a JWT header without jsonwebtoken's Header
+/// deserialization, which rejects Clerk's numeric `oiat` claim under v10.
+fn jwt_header_kid(token: &str) -> Result<String, AuthError> {
+    let part = token
+        .split('.')
+        .next()
+        .ok_or_else(|| AuthError::TokenDecode("Malformed token".to_string()))?;
+    let bytes = URL_SAFE_NO_PAD
+        .decode(part)
+        .map_err(|e| AuthError::TokenDecode(e.to_string()))?;
+    let header: serde_json::Value =
+        serde_json::from_slice(&bytes).map_err(|e| AuthError::TokenDecode(e.to_string()))?;
+    header
+        .get("kid")
+        .and_then(|v| v.as_str())
+        .map(str::to_owned)
+        .ok_or_else(|| AuthError::TokenDecode("Token missing 'kid' header".to_string()))
+}
 use std::collections::HashMap;
 use std::sync::Arc;
 use std::time::{Duration, Instant};
@@ -142,35 +161,6 @@ pub(crate) fn is_localhost_origin(headers: &HeaderMap) -> bool {
 }
 
 /// Clerk JWT claims
-#[derive(Debug, Serialize, Deserialize)]
-struct ClerkClaims {
-    /// Subject — Clerk user ID (e.g. "user_abc123")
-    sub: String,
-    /// Email address
-    #[serde(default)]
-    email: Option<String>,
-    /// Full name
-    #[serde(default)]
-    name: Option<String>,
-    /// Avatar URL
-    #[serde(default, rename = "image_url")]
-    image_url: Option<String>,
-    /// Clerk session token v2 organization claim.
-    #[serde(default)]
-    o: Option<ClerkOrganizationClaims>,
-    /// Clerk session token v1 organization claims. Kept during migration.
-    #[serde(default)]
-    org_id: Option<String>,
-    #[serde(default)]
-    org_role: Option<String>,
-    #[serde(default)]
-    org_slug: Option<String>,
-    /// Issuer
-    iss: String,
-    /// Expiration
-    exp: usize,
-}
-
 #[derive(Debug, Serialize, Deserialize)]
 struct ClerkOrganizationClaims {
     id: String,
@@ -384,12 +374,11 @@ pub async fn verify_token(
     token: &str,
     config: &AuthConfig,
 ) -> Result<AuthUser, AuthError> {
-    // Decode header to get key ID
-    let header = decode_header(token).map_err(|e| AuthError::TokenDecode(e.to_string()))?;
-
-    let kid = header
-        .kid
-        .ok_or_else(|| AuthError::TokenDecode("Token missing 'kid' header".to_string()))?;
+    // jsonwebtoken v10's Header flattens non-standard claims into
+    // `HashMap<String, String> extras`, so any non-string custom claim
+    // (Clerk's numeric `oiat`) fails decode_header AND decode() for every
+    // Clerk token. Verify RS256 + issuer + expiry manually instead.
+    let kid = jwt_header_kid(token)?;
 
     // Fetch the signing key
     let jwk = jwks
@@ -397,7 +386,6 @@ pub async fn verify_token(
         .await
         .ok_or_else(|| AuthError::KeyNotFound(kid))?;
 
-    // Build decoding key from RSA components
     let n = jwk
         .n
         .as_ref()
@@ -407,38 +395,93 @@ pub async fn verify_token(
         .as_ref()
         .ok_or_else(|| AuthError::KeyNotFound("JWK missing 'e'".to_string()))?;
 
-    let decoding_key = DecodingKey::from_rsa_components(n, e)
-        .map_err(|e| AuthError::TokenDecode(e.to_string()))?;
+    let claims = verify_rs256(token, n, e, &config.clerk_issuer)?;
 
-    // Validate token
-    let mut validation = Validation::new(Algorithm::RS256);
-    validation.set_issuer(&[&config.clerk_issuer]);
-    // Accept tokens with or without audience
-    validation.validate_aud = false;
-
-    let token_data: TokenData<ClerkClaims> =
-        decode(token, &decoding_key, &validation).map_err(|e| match e.kind() {
-            jsonwebtoken::errors::ErrorKind::ExpiredSignature => AuthError::Expired,
-            _ => AuthError::TokenDecode(e.to_string()),
-        })?;
-
-    let claims = token_data.claims;
-
-    let (organization_id, organization_role, organization_slug) = match claims.o {
-        Some(organization) => (Some(organization.id), organization.rol, organization.slg),
-        None => (claims.org_id, claims.org_role, claims.org_slug),
+    let (organization_id, organization_role, organization_slug) = match claims.get("o") {
+        Some(o) => (
+            str_claim(o, "id"),
+            str_claim(o, "rol"),
+            str_claim(o, "slg"),
+        ),
+        None => (
+            str_claim(&claims, "org_id"),
+            str_claim(&claims, "org_role"),
+            str_claim(&claims, "org_slug"),
+        ),
     };
 
     Ok(AuthUser {
-        user_id: claims.sub,
-        email: claims.email,
-        name: claims.name,
-        avatar_url: claims.image_url,
+        user_id: claims
+            .get("sub")
+            .and_then(|v| v.as_str())
+            .ok_or_else(|| AuthError::TokenDecode("Token missing 'sub'".to_string()))?
+            .to_string(),
+        email: str_claim(&claims, "email"),
+        name: str_claim(&claims, "name"),
+        avatar_url: str_claim(&claims, "image_url"),
         tenant_id: None,
         organization_id,
         organization_role,
         organization_slug,
     })
+}
+
+fn str_claim(claims: &serde_json::Value, key: &str) -> Option<String> {
+    claims.get(key).and_then(|v| v.as_str()).map(str::to_owned)
+}
+
+/// Verifies an RS256 JWT against RSA components and enforces issuer + expiry
+/// (60s leeway), returning the raw claims. See `verify_token` for why
+/// jsonwebtoken v10 cannot be used on this path.
+fn verify_rs256(
+    token: &str,
+    n_b64: &str,
+    e_b64: &str,
+    issuer: &str,
+) -> Result<serde_json::Value, AuthError> {
+    let mut parts = token.split('.');
+    let (header_b64, payload_b64, signature_b64) = match (parts.next(), parts.next(), parts.next(), parts.next()) {
+        (Some(h), Some(p), Some(s), None) => (h, p, s),
+        _ => return Err(AuthError::TokenDecode("Malformed token".to_string())),
+    };
+    let signature = URL_SAFE_NO_PAD
+        .decode(signature_b64)
+        .map_err(|e| AuthError::TokenDecode(e.to_string()))?;
+    let n = URL_SAFE_NO_PAD
+        .decode(n_b64)
+        .map_err(|e| AuthError::TokenDecode(e.to_string()))?;
+    let e = URL_SAFE_NO_PAD
+        .decode(e_b64)
+        .map_err(|e| AuthError::TokenDecode(e.to_string()))?;
+
+    let public_key = aws_lc_rs::signature::RsaPublicKeyComponents { n: &n, e: &e };
+    public_key
+        .verify(
+            &aws_lc_rs::signature::RSA_PKCS1_2048_8192_SHA256,
+            format!("{header_b64}.{payload_b64}").as_bytes(),
+            &signature,
+        )
+        .map_err(|_| AuthError::TokenDecode("Invalid signature".to_string()))?;
+
+    let claims: serde_json::Value = serde_json::from_slice(
+        &URL_SAFE_NO_PAD
+            .decode(payload_b64)
+            .map_err(|e| AuthError::TokenDecode(e.to_string()))?,
+    )
+    .map_err(|e| AuthError::TokenDecode(e.to_string()))?;
+
+    if claims.get("iss").and_then(|v| v.as_str()) != Some(issuer) {
+        return Err(AuthError::TokenDecode("Invalid issuer".to_string()));
+    }
+    let now = std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .map(|d| d.as_secs())
+        .unwrap_or(0);
+    match claims.get("exp").and_then(|v| v.as_u64()) {
+        Some(exp) if now <= exp + 60 => {}
+        _ => return Err(AuthError::Expired),
+    }
+    Ok(claims)
 }
 
 /// Ensure a user exists in the local SQLite DB, creating if necessary.

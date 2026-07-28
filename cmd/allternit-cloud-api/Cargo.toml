@@ -60,6 +60,7 @@ hmac = { workspace = true }
 hex = { workspace = true }
 ed25519-dalek = { workspace = true }
 jsonwebtoken = "10"
+aws-lc-rs = "1"
 reqwest = { workspace = true, features = ["json"] }
 cron = "0.12"
 tempfile = { workspace = true }
