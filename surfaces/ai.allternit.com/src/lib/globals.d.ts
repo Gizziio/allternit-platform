@@ -83,6 +83,27 @@ declare global {
           credentialExpiresAt: string;
         }>>;
       };
+      mesh?: {
+        start: () => Promise<{
+          state: 'stopped' | 'starting' | 'running' | 'error';
+          meshIp?: string;
+          error?: string;
+          proxies: Array<{ target: string; url: string }>;
+        }>;
+        stop: () => Promise<{
+          state: 'stopped' | 'starting' | 'running' | 'error';
+          meshIp?: string;
+          error?: string;
+          proxies: Array<{ target: string; url: string }>;
+        }>;
+        status: () => Promise<{
+          state: 'stopped' | 'starting' | 'running' | 'error';
+          meshIp?: string;
+          error?: string;
+          proxies: Array<{ target: string; url: string }>;
+        }>;
+        proxyFor: (instanceUrl: string) => Promise<string>;
+      };
       connection?: {
         getBackend: () => Promise<{ mode: 'bundled' | 'remote' | 'development'; url: string }>;
       };

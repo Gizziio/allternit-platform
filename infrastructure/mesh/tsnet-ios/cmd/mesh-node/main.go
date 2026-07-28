@@ -6,10 +6,20 @@
 // connections directly, so the node's mesh IP is actually reachable from
 // other tailnet nodes (e.g. the iOS app with its embedded tsnet).
 //
-// Contract with the parent process (gizzi-code's mesh.ts): on success exactly
-// one line is printed to stdout — `MESH_READY ip=<100.x addr>` — which the
-// parent scrapes. Any failure prints `MESH_ERROR reason=...` to stderr and
-// exits non-zero. SIGTERM/SIGINT shut down cleanly (exit 0).
+// Reverse mode (`--reverse host:port`) is the mirror image for tailnet
+// CLIENTS (e.g. the Allternit desktop app): the node listens on 127.0.0.1
+// with an ephemeral port and dials the fixed tailnet target through the
+// tsnet server per connection, so local apps that cannot route 100.x can
+// reach a mesh-registered instance via the loopback URL. Mirrors StartProxy
+// in infrastructure/mesh/tsnet-ios/mesh.go (the iOS loopback proxy).
+//
+// Contract with the parent process (gizzi-code's mesh.ts, or the desktop
+// app's mesh-manager.ts): on success `MESH_READY ip=<100.x addr>` is printed
+// to stdout once the node is up and its listener is bound; in reverse mode a
+// second line, `PROXY_READY port=<n>`, follows with the chosen loopback port.
+// These are the only stdout output. Any failure prints
+// `MESH_ERROR reason=...` to stderr and exits non-zero. SIGTERM/SIGINT shut
+// down cleanly (exit 0).
 package main
 
 import (
@@ -44,6 +54,7 @@ func main() {
 	dataDir := flag.String("data-dir", defaultDataDir(), "tsnet state directory (node key lives here)")
 	forwardPort := flag.Int("forward", 4096, "local gizzi port to proxy tailnet connections to")
 	listenPort := flag.Int("listen", 0, "tailnet-side listen port (default: same as --forward)")
+	reverseTarget := flag.String("reverse", "", "reverse mode: listen on 127.0.0.1:0 and dial this tailnet target (host:port) per connection (ignores --forward/--listen)")
 	upTimeout := flag.Duration("up-timeout", 60*time.Second, "how long to wait for the tailnet join")
 	debug := flag.Bool("debug", false, "log tsnet and connection events to stderr")
 	flag.Parse()
@@ -53,8 +64,8 @@ func main() {
 		listen = *forwardPort
 	}
 
-	// Stay quiet by default: stdout is reserved for the MESH_READY contract
-	// line and stderr for MESH_ERROR; anything else only with --debug.
+	// Stay quiet by default: stdout is reserved for the MESH_READY/PROXY_READY
+	// contract lines and stderr for MESH_ERROR; anything else only with --debug.
 	logf := func(string, ...any) {}
 	if *debug {
 		logf = func(format string, args ...any) {
@@ -62,13 +73,18 @@ func main() {
 		}
 	}
 
-	if err := run(*hostname, *controlURL, *authKey, *dataDir, *forwardPort, listen, *upTimeout, logf); err != nil {
+	if err := run(*hostname, *controlURL, *authKey, *dataDir, *forwardPort, listen, *reverseTarget, *upTimeout, logf); err != nil {
 		fmt.Fprintf(os.Stderr, "MESH_ERROR reason=%s\n", err)
 		os.Exit(1)
 	}
 }
 
-func run(hostname, controlURL, authKey, dataDir string, forwardPort, listenPort int, upTimeout time.Duration, logf func(string, ...any)) error {
+func run(hostname, controlURL, authKey, dataDir string, forwardPort, listenPort int, reverseTarget string, upTimeout time.Duration, logf func(string, ...any)) error {
+	if reverseTarget != "" {
+		if _, _, err := net.SplitHostPort(reverseTarget); err != nil {
+			return fmt.Errorf("invalid --reverse target %q: %w", reverseTarget, err)
+		}
+	}
 	if err := os.MkdirAll(dataDir, 0o700); err != nil {
 		return fmt.Errorf("creating data dir: %w", err)
 	}
@@ -99,20 +115,33 @@ func run(hostname, controlURL, authKey, dataDir string, forwardPort, listenPort 
 		return errors.New("tailnet joined but no tailnet IPv4 address was assigned")
 	}
 
-	ln, err := srv.Listen("tcp", fmt.Sprintf(":%d", listenPort))
-	if err != nil {
-		return fmt.Errorf("listening on tailnet port %d: %w", listenPort, err)
-	}
-
-	// The parent scrapes exactly this line; keep it the only stdout output.
-	fmt.Printf("MESH_READY ip=%s\n", ip)
-
 	done := make(chan struct{})
 	sigCh := make(chan os.Signal, 1)
 	signal.Notify(sigCh, syscall.SIGTERM, syscall.SIGINT)
 	go func() {
 		<-sigCh
 		close(done)
+	}()
+
+	if reverseTarget != "" {
+		return serveReverse(srv, ip, reverseTarget, done, logf)
+	}
+	return serveForward(srv, ip, forwardPort, listenPort, done, logf)
+}
+
+// serveForward is the default mode: listen on the tailnet and proxy each
+// accepted connection to the local gizzi port.
+func serveForward(srv *tsnet.Server, ip string, forwardPort, listenPort int, done <-chan struct{}, logf func(string, ...any)) error {
+	ln, err := srv.Listen("tcp", fmt.Sprintf(":%d", listenPort))
+	if err != nil {
+		return fmt.Errorf("listening on tailnet port %d: %w", listenPort, err)
+	}
+
+	// The parent scrapes exactly this line; keep stdout to the contract lines.
+	fmt.Printf("MESH_READY ip=%s\n", ip)
+
+	go func() {
+		<-done
 		ln.Close()
 	}()
 
@@ -129,6 +158,62 @@ func run(hostname, controlURL, authKey, dataDir string, forwardPort, listenPort 
 		}
 		logf("accepted tailnet connection from %s", conn.RemoteAddr())
 		go forward(conn, forwardPort, logf)
+	}
+}
+
+// serveReverse is the tailnet-client mode: listen on loopback with an
+// ephemeral port and dial the fixed tailnet target through the tsnet server
+// per connection. Local apps reach the instance via 127.0.0.1:<port>; TCP
+// forwarding carries HTTP and WebSocket traffic unchanged.
+func serveReverse(srv *tsnet.Server, ip, target string, done <-chan struct{}, logf func(string, ...any)) error {
+	ln, err := net.Listen("tcp", "127.0.0.1:0")
+	if err != nil {
+		return fmt.Errorf("listening on loopback: %w", err)
+	}
+
+	// Contract lines the parent scrapes; keep them the only stdout output.
+	fmt.Printf("MESH_READY ip=%s\n", ip)
+	fmt.Printf("PROXY_READY port=%d\n", ln.Addr().(*net.TCPAddr).Port)
+
+	dial := func() (net.Conn, error) {
+		ctx, cancel := context.WithTimeout(context.Background(), 15*time.Second)
+		defer cancel()
+		return srv.Dial(ctx, "tcp", target)
+	}
+	if err := serveLoopback(ln, dial, done, logf); err != nil {
+		return err
+	}
+	return srv.Close()
+}
+
+// serveLoopback accepts on ln and bridges each connection to the target
+// obtained from dial, until done is closed (which closes ln). It returns nil
+// on the shutdown path so the caller can close the tsnet server cleanly.
+func serveLoopback(ln net.Listener, dial func() (net.Conn, error), done <-chan struct{}, logf func(string, ...any)) error {
+	go func() {
+		<-done
+		ln.Close()
+	}()
+	for {
+		conn, err := ln.Accept()
+		if err != nil {
+			select {
+			case <-done:
+				return nil
+			default:
+				return fmt.Errorf("accepting on loopback listener: %w", err)
+			}
+		}
+		logf("accepted loopback connection from %s", conn.RemoteAddr())
+		go func() {
+			upstream, err := dial()
+			if err != nil {
+				logf("dialing reverse target: %v", err)
+				conn.Close()
+				return
+			}
+			proxyConn(conn, upstream)
+		}()
 	}
 }
 

@@ -253,6 +253,27 @@ const devicePairingAPI = {
   listDevices: (): Promise<RuntimeDevice[]> => ipcRenderer.invoke('device-pairing:list'),
 };
 
+// ─── Mesh (Allternit tailnet client) ──────────────────────────────────────────
+// Reaching gizzi instances registered with 100.x mesh URLs. Electron main
+// enrolls against the cloud API with the runtime device credential and runs
+// mesh-node sidecars; the renderer only ever sees loopback URLs.
+
+export type MeshState = 'stopped' | 'starting' | 'running' | 'error';
+
+export type MeshStatus = {
+  state: MeshState;
+  meshIp?: string;
+  error?: string;
+  proxies: Array<{ target: string; url: string }>;
+};
+
+const meshAPI = {
+  start: (): Promise<MeshStatus> => ipcRenderer.invoke('mesh:start'),
+  stop: (): Promise<MeshStatus> => ipcRenderer.invoke('mesh:stop'),
+  status: (): Promise<MeshStatus> => ipcRenderer.invoke('mesh:status'),
+  proxyFor: (instanceUrl: string): Promise<string> => ipcRenderer.invoke('mesh:proxy-for', instanceUrl),
+};
+
 // ─── Shell ────────────────────────────────────────────────────────────────────
 
 const shellAPI = {
@@ -571,6 +592,7 @@ const allternitDesktopAPI = {
   app: appAPI,
   auth: authAPI,
   devicePairing: devicePairingAPI,
+  mesh: meshAPI,
   shell: shellAPI,
   officeAddins: officeAddinsAPI,
   theme: themeAPI,

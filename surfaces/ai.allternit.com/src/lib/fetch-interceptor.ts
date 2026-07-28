@@ -70,6 +70,37 @@ function isLocalOperatorApiUrl(value: string): boolean {
 }
 
 /**
+ * True for absolute URLs whose host is a tailnet mesh address
+ * (100.64.0.0/10) — gizzi instances registered in `gizzi_instances` use
+ * these. The renderer's network stack cannot route them; inside the desktop
+ * shell they are bridged through Electron main's mesh proxy
+ * (`window.allternit.mesh.proxyFor`) to a loopback URL.
+ */
+function isMeshUrl(value: string): boolean {
+  try {
+    if (!/^(https?|wss?):\/\//i.test(value)) return false;
+    const match = /^100\.(\d{1,3})\.\d{1,3}\.\d{1,3}$/.exec(new URL(value).hostname);
+    return !!match && Number(match[1]) >= 64 && Number(match[1]) <= 127;
+  } catch {
+    return false;
+  }
+}
+
+/** The desktop mesh bridge, when running inside Electron. */
+function meshBridge(): { proxyFor(instanceUrl: string): Promise<string> } | undefined {
+  return isDesktopShell() ? window.allternit?.mesh : undefined;
+}
+
+/** Rewrite a ws(s):// mesh URL to the loopback proxy URL Electron main hands back. */
+async function resolveMeshWebSocketUrl(value: string): Promise<string> {
+  const bridge = meshBridge();
+  if (!bridge) throw new Error('Mesh bridge is unavailable');
+  const proxied = new URL(await bridge.proxyFor(value));
+  proxied.protocol = proxied.protocol === 'https:' ? 'wss:' : 'ws:';
+  return proxied.toString();
+}
+
+/**
  * True when the UI itself is served from a loopback origin (the Vite dev
  * server, or the API's own static host). Such a UI is a local operator UI:
  * its same-origin/relative API calls are answered by the local backend
@@ -226,7 +257,10 @@ function installEventSourceInterceptor(): void {
   originalEventSource = window.EventSource;
   const NativeEventSource = originalEventSource;
   const RuntimeAwareEventSource = function (url: string | URL, options?: EventSourceInit): EventSource {
-    return isRuntimeApiUrl(String(url))
+    const value = String(url);
+    // Mesh URLs go through the fetch-based EventSource too: its window.fetch
+    // call is intercepted and rewritten to the desktop's mesh loopback proxy.
+    return isRuntimeApiUrl(value) || (isDesktopShell() && isMeshUrl(value))
       ? new RuntimeFetchEventSource(url, options) as unknown as EventSource
       : new NativeEventSource(url, options);
   } as unknown as typeof EventSource;
@@ -383,14 +417,139 @@ class RuntimeRelayWebSocket extends EventTarget {
   }
 }
 
-function installWebSocketInterceptor(): void {
-  if (typeof window === 'undefined' || originalWebSocket || typeof window.WebSocket === 'undefined') return;
+/**
+ * WebSocket shim for mesh (100.64.0.0/10) URLs inside the desktop shell.
+ * The native WebSocket constructor is synchronous but the mesh proxy lookup
+ * is async, so this defers the real connect until Electron main resolves the
+ * loopback proxy URL, queueing sends in the meantime (the same pattern as
+ * RuntimeRelayWebSocket).
+ */
+class MeshProxyWebSocket extends EventTarget {
+  static readonly CONNECTING = 0;
+  static readonly OPEN = 1;
+  static readonly CLOSING = 2;
+  static readonly CLOSED = 3;
+  readonly CONNECTING = 0;
+  readonly OPEN = 1;
+  readonly CLOSING = 2;
+  readonly CLOSED = 3;
+  readonly url: string;
+  protocol = '';
+  extensions = '';
+  readyState = MeshProxyWebSocket.CONNECTING;
+  onopen: ((this: WebSocket, event: Event) => any) | null = null;
+  onmessage: ((this: WebSocket, event: MessageEvent) => any) | null = null;
+  onerror: ((this: WebSocket, event: Event) => any) | null = null;
+  onclose: ((this: WebSocket, event: CloseEvent) => any) | null = null;
+
+  private native: WebSocket | null = null;
+  private queued: Array<string | ArrayBufferLike | Blob | ArrayBufferView> = [];
+  private requestedBinaryType: BinaryType = 'blob';
+
+  constructor(url: string | URL, private protocols?: string | string[]) {
+    super();
+    this.url = String(url);
+    void this.connect();
+  }
+
+  get binaryType(): BinaryType {
+    return this.native?.binaryType || this.requestedBinaryType;
+  }
+
+  set binaryType(value: BinaryType) {
+    this.requestedBinaryType = value;
+    if (this.native) this.native.binaryType = value;
+  }
+
+  get bufferedAmount(): number {
+    return this.native?.bufferedAmount || 0;
+  }
+
+  send(data: string | ArrayBufferLike | Blob | ArrayBufferView): void {
+    if (this.readyState === MeshProxyWebSocket.CONNECTING) {
+      this.queued.push(data);
+      return;
+    }
+    if (this.readyState !== MeshProxyWebSocket.OPEN || !this.native) {
+      throw new DOMException('WebSocket is not open', 'InvalidStateError');
+    }
+    this.native.send(data);
+  }
+
+  close(code?: number, reason?: string): void {
+    if (this.readyState === MeshProxyWebSocket.CLOSED) return;
+    this.readyState = this.native ? MeshProxyWebSocket.CLOSING : MeshProxyWebSocket.CLOSED;
+    this.native?.close(code, reason);
+  }
+
+  private emitFailure(message: string): void {
+    if (this.readyState === MeshProxyWebSocket.CLOSED) return;
+    const error = new Event('error');
+    this.onerror?.call(this as unknown as WebSocket, error);
+    this.dispatchEvent(error);
+    this.finishClose(new CloseEvent('close', { code: 1008, reason: message, wasClean: false }));
+  }
+
+  private finishClose(event: CloseEvent): void {
+    if (this.readyState === MeshProxyWebSocket.CLOSED) return;
+    this.readyState = MeshProxyWebSocket.CLOSED;
+    this.onclose?.call(this as unknown as WebSocket, event);
+    this.dispatchEvent(event);
+  }
+
+  private async connect(): Promise<void> {
+    if (!originalWebSocket) {
+      this.emitFailure('WebSocket is unavailable');
+      return;
+    }
+    const NativeWebSocket = originalWebSocket;
+    try {
+      const proxiedUrl = await resolveMeshWebSocketUrl(this.url);
+      if (this.readyState === MeshProxyWebSocket.CLOSED) return;
+      const socket = this.protocols === undefined
+        ? new NativeWebSocket(proxiedUrl)
+        : new NativeWebSocket(proxiedUrl, this.protocols);
+      this.native = socket;
+      socket.binaryType = this.requestedBinaryType;
+      socket.onopen = () => {
+        this.readyState = MeshProxyWebSocket.OPEN;
+        const opened = new Event('open');
+        this.onopen?.call(this as unknown as WebSocket, opened);
+        this.dispatchEvent(opened);
+        for (const data of this.queued.splice(0)) socket.send(data);
+      };
+      socket.onmessage = (event) => {
+        if (this.readyState !== MeshProxyWebSocket.OPEN) return;
+        const message = new MessageEvent('message', { data: event.data, origin: window.location.origin });
+        this.onmessage?.call(this as unknown as WebSocket, message);
+        this.dispatchEvent(message);
+      };
+      socket.onerror = () => {
+        const error = new Event('error');
+        this.onerror?.call(this as unknown as WebSocket, error);
+        this.dispatchEvent(error);
+      };
+      socket.onclose = (event) => this.finishClose(new CloseEvent('close', {
+        code: event.code,
+        reason: event.reason,
+        wasClean: event.wasClean,
+      }));
+    } catch (error) {
+      this.emitFailure(error instanceof Error ? error.message : 'Mesh socket failed');
+    }
+  }
+}
+
+function installWebSocketInterceptor(): void {  if (typeof window === 'undefined' || originalWebSocket || typeof window.WebSocket === 'undefined') return;
   originalWebSocket = window.WebSocket;
   const NativeWebSocket = originalWebSocket;
   const RuntimeAwareWebSocket = function (
     url: string | URL,
     protocols?: string | string[],
   ): WebSocket {
+    if (isDesktopShell() && isMeshUrl(String(url))) {
+      return new MeshProxyWebSocket(url, protocols) as unknown as WebSocket;
+    }
     if (!isDesktopShell() && isRuntimeApiUrl(String(url)) && !isLocalOperatorApiUrl(String(url)) && !shouldUseLocalRuntime()) {
       return new RuntimeRelayWebSocket(url) as unknown as WebSocket;
     }
@@ -417,7 +576,24 @@ export function installFetchInterceptor(getToken?: TokenGetter): void {
     input: RequestInfo | URL,
     init?: RequestInit
   ): Promise<Response> {
-    const url = typeof input === 'string' ? input : input.toString()
+    let url = typeof input === 'string' ? input : input.toString()
+
+    // Mesh (Allternit tailnet) URLs cannot be routed by the renderer's
+    // network stack; Electron main bridges them to a loopback proxy into the
+    // tailnet. The rewritten loopback URL then flows through the normal
+    // classification below (local operator pass-through, no cloud relay).
+    if (isDesktopShell() && isMeshUrl(url)) {
+      const bridge = meshBridge()
+      if (bridge) {
+        const proxied = await bridge.proxyFor(url)
+        if (proxied !== url) {
+          input = typeof Request !== 'undefined' && input instanceof Request
+            ? new Request(proxied, input)
+            : proxied
+          url = proxied
+        }
+      }
+    }
 
     const isApiRequest = typeof url === 'string' && isRuntimeApiUrl(url)
 

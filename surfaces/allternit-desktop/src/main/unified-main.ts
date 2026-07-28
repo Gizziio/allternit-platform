@@ -34,6 +34,7 @@ import { OfficeAddinManager, type OfficeProductId } from './office-addin-manager
 import { tunnelManager } from './tunnel-manager.js';
 import { authManager } from './auth-manager.js';
 import { devicePairingManager } from './device-pairing-manager.js';
+import { meshManager } from './mesh-manager.js';
 import { createStartupWindow } from './startup-window.js';
 import { notebookManager } from './notebook-manager.js';
 import { voiceManager } from './voice-manager.js';
@@ -1642,6 +1643,7 @@ app.on('before-quit', async () => {
   await backendManager.stopBackend();
 
   gizziManager.stop();
+  meshManager.stop().catch(() => {}); // best-effort mesh sidecar shutdown
   notebookManager.stop();
   voiceManager.stop();
   bonsaiCompanion.stop();

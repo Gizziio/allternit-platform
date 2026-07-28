@@ -208,6 +208,23 @@ export interface DevicePairingAPI {
   listDevices(): Promise<RuntimeDevice[]>;
 }
 
+export type MeshState = 'stopped' | 'starting' | 'running' | 'error';
+
+export interface MeshStatus {
+  state: MeshState;
+  meshIp?: string;
+  error?: string;
+  proxies: Array<{ target: string; url: string }>;
+}
+
+export interface MeshAPI {
+  start(): Promise<MeshStatus>;
+  stop(): Promise<MeshStatus>;
+  status(): Promise<MeshStatus>;
+  /** Resolve a 100.64.0.0/10 instance URL to a loopback URL bridged into the tailnet. */
+  proxyFor(instanceUrl: string): Promise<string>;
+}
+
 export interface ShellAPI {
   openExternal(url: string): Promise<void>;
   getOfficeHostStatus(): Promise<Record<'word' | 'excel' | 'powerpoint', {
@@ -491,6 +508,7 @@ export interface AllternitDesktopAPI {
   app: AppAPI;
   auth: AuthAPI;
   devicePairing: DevicePairingAPI;
+  mesh: MeshAPI;
   shell: ShellAPI;
   officeAddins: OfficeAddinsAPI;
   theme: ThemeAPI;

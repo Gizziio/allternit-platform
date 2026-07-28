@@ -14,6 +14,7 @@ import React, { useCallback, useEffect, useState } from 'react';
 import {
   ArrowClockwise,
   CheckCircle,
+  Graph,
   HardDrives,
   Laptop,
   ShieldCheck,
@@ -84,6 +85,7 @@ async function readError(response: Response, fallback: string): Promise<Error> {
 export function DevicePairingPanel() {
   const { getToken } = usePlatformAuth();
   const bridge = typeof window !== 'undefined' ? window.allternit?.devicePairing : undefined;
+  const meshBridge = typeof window !== 'undefined' ? window.allternit?.mesh : undefined;
 
   const [code, setCode] = useState('');
   const [pairing, setPairing] = useState<PairingInfo | null>(null);
@@ -95,6 +97,32 @@ export function DevicePairingPanel() {
   const [devices, setDevices] = useState<RuntimeDevice[]>([]);
   const [devicesLoading, setDevicesLoading] = useState(true);
   const [devicesError, setDevicesError] = useState<string | null>(null);
+
+  type MeshStatusSnapshot = {
+    state: 'stopped' | 'starting' | 'running' | 'error';
+    meshIp?: string;
+    error?: string;
+    proxies: Array<{ target: string; url: string }>;
+  };
+  const [meshStatus, setMeshStatus] = useState<MeshStatusSnapshot | null>(null);
+
+  // Mesh status is desktop-only (the bridge exists solely in Electron); poll
+  // lightly since the sidecar starts lazily on first mesh-URL use.
+  useEffect(() => {
+    if (!meshBridge) return;
+    let cancelled = false;
+    const refresh = () => {
+      meshBridge.status()
+        .then((status) => { if (!cancelled) setMeshStatus(status); })
+        .catch(() => {});
+    };
+    refresh();
+    const interval = window.setInterval(refresh, 5000);
+    return () => {
+      cancelled = true;
+      window.clearInterval(interval);
+    };
+  }, [meshBridge]);
 
   const webFetch = useCallback(async (path: string, init?: RequestInit) => {
     const token = await getToken();
@@ -494,6 +522,66 @@ export function DevicePairingPanel() {
             </span>
           </div>
         ))}
+
+        {/* Mesh (Allternit tailnet) status — desktop shell only */}
+        {meshStatus && (
+          <div
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '12px',
+              padding: '12px 0 0',
+              marginTop: '4px',
+              borderTop: '1px solid var(--border-subtle)',
+            }}
+          >
+            <div
+              style={{
+                width: '36px',
+                height: '36px',
+                display: 'grid',
+                placeItems: 'center',
+                borderRadius: '9px',
+                background: 'var(--bg-secondary)',
+                color: 'var(--accent-primary)',
+                flex: 'none',
+              }}
+            >
+              <Graph size={19} />
+            </div>
+            <div style={{ flex: 1, minWidth: 0 }}>
+              <div style={{ fontSize: '14px', fontWeight: 600, color: 'var(--text-primary)' }}>
+                Mesh network
+              </div>
+              <div style={{ fontSize: '12px', color: TEXT.secondary }}>
+                {meshStatus.state === 'running' && meshStatus.meshIp
+                  ? `Connected · ${meshStatus.meshIp}`
+                  : meshStatus.state === 'running'
+                    ? 'Connected'
+                    : meshStatus.state === 'error'
+                      ? (meshStatus.error ?? 'Mesh error')
+                      : meshStatus.state === 'starting'
+                        ? 'Connecting…'
+                        : 'Starts automatically when a mesh device is opened'}
+              </div>
+            </div>
+            <span
+              style={{
+                flex: 'none',
+                padding: '3px 10px',
+                borderRadius: '999px',
+                fontSize: '11px',
+                fontWeight: 600,
+                textTransform: 'capitalize',
+                color: meshStatus.state === 'running' ? STATUS.success : meshStatus.state === 'error' ? STATUS.error : TEXT.secondary,
+                background: meshStatus.state === 'running' ? 'var(--status-success-bg, rgba(34,197,94,0.12))' : 'var(--bg-secondary)',
+                border: '1px solid var(--border-subtle)',
+              }}
+            >
+              {meshStatus.state}
+            </span>
+          </div>
+        )}
       </div>
     </div>
   );
