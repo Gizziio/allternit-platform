@@ -17,7 +17,9 @@ COPY . .
 RUN cargo build --release -p allternit-cloud-api
 
 # ─────────────────────────────────────────────────────────────────────────────
-FROM debian:bookworm-slim
+# Runtime base must match the builder's Debian (rust:1.97-slim = trixie):
+# aws-lc-rs links glibc 2.38+ symbols that bookworm (2.36) doesn't have.
+FROM debian:trixie-slim
 
 RUN apt-get update \
     && apt-get install -y --no-install-recommends ca-certificates curl \
