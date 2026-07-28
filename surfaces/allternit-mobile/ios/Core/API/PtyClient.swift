@@ -144,6 +144,11 @@ final class PtySession: ObservableObject {
     private var readyForInput = false
     private var intentionalClose = false
     private var lastResize: String?
+    /// Last grid size reported by the terminal view, kept so it can be sent
+    /// (or re-sent) once the session is live — the first `sizeChanged` fires
+    /// during layout, before `createPty` returns, so `resize` has no ptyId
+    /// yet and would otherwise drop the only resize the view ever reports.
+    private var pendingSize: (cols: Int, rows: Int)?
 
     // `nonisolated(unsafe)` so the (non-isolated, Swift 6.0) deinit can tear
     // the connection down; both are only mutated on the main actor otherwise.
@@ -202,15 +207,26 @@ final class PtySession: ObservableObject {
     }
 
     /// Best-effort REST resize, deduped (SwiftTerm reports `sizeChanged` on
-    /// every layout pass). Failures are swallowed like the server's own
-    /// `.catch(() => undefined)` resize path.
+    /// every layout pass). The size is remembered even before the pty exists
+    /// (see `pendingSize`), so the meta-frame handler can send it once live.
+    /// Failures clear the dedupe key so a later identical report retries.
     func resize(cols: Int, rows: Int) {
-        guard let ptyId, cols > 0, rows > 0 else { return }
+        guard cols > 0, rows > 0 else { return }
+        pendingSize = (cols, rows)
+        sendResize(cols: cols, rows: rows)
+    }
+
+    private func sendResize(cols: Int, rows: Int) {
+        guard let ptyId else { return }
         let key = "\(cols)x\(rows)"
         guard key != lastResize else { return }
         lastResize = key
-        Task { [client] in
-            try? await client.resize(id: ptyId, cols: cols, rows: rows)
+        Task { [client, weak self] in
+            do {
+                try await client.resize(id: ptyId, cols: cols, rows: rows)
+            } catch {
+                if self?.lastResize == key { self?.lastResize = nil }
+            }
         }
     }
 
@@ -257,6 +273,16 @@ final class PtySession: ObservableObject {
             guard data.first == 0x00 else { return }
             readyForInput = true
             state = .live
+            // The first `sizeChanged` fired during layout, before the pty
+            // existed, so its resize was dropped (no ptyId) and the size
+            // never changes again to re-trigger it — leaving the pty at the
+            // server's 80x24 default. Re-send the reported size now that
+            // the attach completed; forcing past the dedupe key also covers
+            // a resize whose REST call raced or failed mid-handshake.
+            if let pendingSize {
+                lastResize = nil
+                sendResize(cols: pendingSize.cols, rows: pendingSize.rows)
+            }
         @unknown default:
             break
         }
