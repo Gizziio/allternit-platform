@@ -57,6 +57,11 @@ pub struct CreatePairingRequest {
     /// One-time bootstrap secret issued to a hosted runtime during provisioning.
     #[serde(default)]
     hosted_bootstrap_token: Option<String>,
+    /// One-time bootstrap secret minted by the BYO-VPS wizard and injected
+    /// into the box's env file; lets a wizard-bootstrapped VPS self-approve
+    /// its pairing (runtime_type "vps") without a Clerk session.
+    #[serde(default)]
+    byo_bootstrap_token: Option<String>,
 }
 
 #[derive(Debug, Serialize)]
@@ -149,6 +154,7 @@ struct PairingRow {
     user_id: Option<String>,
     organization_id: Option<String>,
     hosted_instance_id: Option<String>,
+    byo_bootstrap_token_id: Option<String>,
     expires_at: DateTime<Utc>,
 }
 
@@ -211,36 +217,43 @@ async fn create_pairing(
     let capabilities_json = serde_json::to_string(&capabilities)?;
     let expires_at = Utc::now() + Duration::minutes(PAIRING_TTL_MINUTES);
 
-    // Hosted runtimes are provisioned by the cloud API and carry a one-time
-    // bootstrap token. If valid, we create an already-approved pairing for the
-    // owning user so the machine can exchange it without a Clerk session.
-    let hosted_approval = if request.runtime_type == "hosted" {
-        Some(
+    // Server-initiated runtimes carry a one-time bootstrap token. If valid,
+    // we create an already-approved pairing for the owning user so the machine
+    // can exchange it without a Clerk session: hosted runtimes validate
+    // against hosted_runtime_instances, BYO-VPS boxes against the wizard-
+    // minted byo_bootstrap_tokens table.
+    let bootstrap_approval = match request.runtime_type.as_str() {
+        "hosted" => Some(
             validate_hosted_bootstrap(
                 &state,
                 request.hosted_instance_id.as_deref(),
                 request.hosted_bootstrap_token.as_deref(),
             )
             .await?,
-        )
-    } else {
-        None
+        ),
+        "vps" if request.byo_bootstrap_token.is_some() => Some(
+            validate_byo_bootstrap(&state.db, request.byo_bootstrap_token.as_deref()).await?,
+        ),
+        _ => None,
     };
 
-    let status = if hosted_approval.is_some() {
+    let status = if bootstrap_approval.is_some() {
         "approved"
     } else {
         "pending"
     };
-    let user_id = hosted_approval
+    let user_id = bootstrap_approval
         .as_ref()
         .map(|approval| approval.user_id.clone());
-    let organization_id = hosted_approval
+    let organization_id = bootstrap_approval
         .as_ref()
         .and_then(|approval| approval.organization_id.clone());
-    let hosted_instance_id = hosted_approval
+    let hosted_instance_id = bootstrap_approval
         .as_ref()
-        .map(|approval| approval.instance_id.clone());
+        .and_then(|approval| approval.hosted_instance_id.clone());
+    let byo_bootstrap_token_id = bootstrap_approval
+        .as_ref()
+        .and_then(|approval| approval.byo_bootstrap_token_id.clone());
 
     if let Some(ref user_id) = user_id {
         let quota = state.quota_service.ensure_quota(user_id).await?;
@@ -256,8 +269,9 @@ async fn create_pairing(
         INSERT INTO runtime_pairings (
             id, device_code_hash, user_code, challenge, public_key,
             public_key_fingerprint, name, runtime_type, hostname, platform,
-            version, capabilities, status, user_id, organization_id, hosted_instance_id, expires_at
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            version, capabilities, status, user_id, organization_id,
+            hosted_instance_id, byo_bootstrap_token_id, expires_at
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         "#,
     )
     .bind(&pairing_id)
@@ -276,6 +290,7 @@ async fn create_pairing(
     .bind(user_id.as_deref())
     .bind(organization_id.as_deref())
     .bind(hosted_instance_id.as_deref())
+    .bind(byo_bootstrap_token_id.as_deref())
     .bind(expires_at)
     .execute(&state.db)
     .await?;
@@ -430,7 +445,8 @@ async fn exchange_pairing(
         r#"
         SELECT id, user_code, challenge, public_key, public_key_fingerprint,
                name, runtime_type, hostname, platform, version, capabilities,
-               status, user_id, organization_id, hosted_instance_id, expires_at
+               status, user_id, organization_id, hosted_instance_id,
+               byo_bootstrap_token_id, expires_at
         FROM runtime_pairings
         WHERE id = ? AND device_code_hash = ?
         "#,
@@ -491,9 +507,10 @@ async fn exchange_pairing(
         .quota_service
         .check_active_device_cap(&user_id, &quota)
         .await?;
-    // Non-hosted pairings only record the daily pairing count at exchange time
-    // because the owning user is unknown when the pairing is created.
-    if pairing.hosted_instance_id.is_none() {
+    // Server-approved pairings (hosted bootstrap, BYO wizard bootstrap) already
+    // recorded the daily pairing count at create time, when the owning user
+    // became known; only browser-approved pairings record it at exchange.
+    if pairing.hosted_instance_id.is_none() && pairing.byo_bootstrap_token_id.is_none() {
         state
             .quota_service
             .record_pairing_created(&user_id, &quota)
@@ -864,7 +881,8 @@ async fn pairing_by_code(state: &ApiState, code: &str) -> Result<PairingRow, Api
         r#"
         SELECT id, user_code, challenge, public_key, public_key_fingerprint,
                name, runtime_type, hostname, platform, version, capabilities,
-               status, user_id, organization_id, hosted_instance_id, expires_at
+               status, user_id, organization_id, hosted_instance_id,
+               byo_bootstrap_token_id, expires_at
         FROM runtime_pairings WHERE user_code = ?
         "#,
     )
@@ -982,8 +1000,13 @@ fn pairing_signature_message(pairing_id: &str, challenge: &str) -> String {
     format!("allternit-runtime-pairing:{pairing_id}:{challenge}")
 }
 
-struct HostedApproval {
-    instance_id: String,
+/// A server-side pre-approval for a pairing, established by a one-time
+/// bootstrap token: hosted runtimes carry `hosted_instance_id`, BYO-VPS boxes
+/// carry `byo_bootstrap_token_id`; exactly one is set.
+#[derive(Debug)]
+struct BootstrapApproval {
+    hosted_instance_id: Option<String>,
+    byo_bootstrap_token_id: Option<String>,
     user_id: String,
     organization_id: Option<String>,
 }
@@ -992,7 +1015,7 @@ async fn validate_hosted_bootstrap(
     state: &ApiState,
     instance_id: Option<&str>,
     token: Option<&str>,
-) -> Result<HostedApproval, ApiError> {
+) -> Result<BootstrapApproval, ApiError> {
     let instance_id = instance_id
         .filter(|value| !value.is_empty())
         .ok_or_else(|| ApiError::BadRequest("hosted_instance_id is required".to_string()))?;
@@ -1021,10 +1044,68 @@ async fn validate_hosted_bootstrap(
         ));
     }
 
-    Ok(HostedApproval {
-        instance_id: instance_id.to_string(),
+    Ok(BootstrapApproval {
+        hosted_instance_id: Some(instance_id.to_string()),
+        byo_bootstrap_token_id: None,
         user_id: row.0,
         organization_id: row.1,
+    })
+}
+
+/// Validates a wizard-minted BYO bootstrap token and consumes it. Consumption
+/// happens here (at pairing-create), not at exchange: a valid-but-unconsumed
+/// token could otherwise mint unlimited approved pairings. A bootstrap that
+/// dies before the exchange simply re-runs — the wizard mints a fresh token
+/// per attempt.
+async fn validate_byo_bootstrap(
+    db: &SqlitePool,
+    token: Option<&str>,
+) -> Result<BootstrapApproval, ApiError> {
+    let token = token
+        .filter(|value| !value.is_empty())
+        .ok_or_else(|| ApiError::Unauthorized("byo_bootstrap_token is required".to_string()))?;
+
+    let row: Option<(String, String, Option<DateTime<Utc>>, DateTime<Utc>)> = sqlx::query_as(
+        r#"
+        SELECT id, user_id, consumed_at, expires_at
+        FROM byo_bootstrap_tokens
+        WHERE token_hash = ?
+        "#,
+    )
+    .bind(sha256_hex(token.as_bytes()))
+    .fetch_optional(db)
+    .await?;
+
+    // Expiry/consumption are checked in Rust: sqlx stores DateTime<Utc> as
+    // RFC3339 text, which does not compare cleanly against CURRENT_TIMESTAMP
+    // in SQL (same reason PairingRow.expires_at is checked in Rust).
+    let (token_id, user_id, consumed_at, expires_at) = row.ok_or_else(|| {
+        ApiError::Unauthorized("Invalid or expired BYO bootstrap token".to_string())
+    })?;
+    if consumed_at.is_some() || expires_at <= Utc::now() {
+        return Err(ApiError::Unauthorized(
+            "Invalid or expired BYO bootstrap token".to_string(),
+        ));
+    }
+
+    let consumed = sqlx::query(
+        "UPDATE byo_bootstrap_tokens SET consumed_at = CURRENT_TIMESTAMP WHERE id = ? AND consumed_at IS NULL",
+    )
+    .bind(&token_id)
+    .execute(db)
+    .await?
+    .rows_affected();
+    if consumed != 1 {
+        return Err(ApiError::Unauthorized(
+            "Invalid or expired BYO bootstrap token".to_string(),
+        ));
+    }
+
+    Ok(BootstrapApproval {
+        hosted_instance_id: None,
+        byo_bootstrap_token_id: Some(token_id),
+        user_id,
+        organization_id: None,
     })
 }
 
@@ -1061,4 +1142,106 @@ pub(crate) fn random_secret(bytes: usize) -> String {
 
 pub(crate) fn sha256_hex(value: &[u8]) -> String {
     hex::encode(Sha256::digest(value))
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    /// Minimal schema for the BYO bootstrap token path: the token table plus
+    /// the users table its user_id FK references.
+    async fn test_pool() -> SqlitePool {
+        let pool = SqlitePool::connect(":memory:").await.unwrap();
+        sqlx::query(
+            r#"
+            CREATE TABLE users (
+                id TEXT PRIMARY KEY,
+                email TEXT NOT NULL UNIQUE,
+                status TEXT NOT NULL DEFAULT 'active'
+            )
+            "#,
+        )
+        .execute(&pool)
+        .await
+        .unwrap();
+        sqlx::query(
+            r#"
+            CREATE TABLE byo_bootstrap_tokens (
+                id TEXT PRIMARY KEY,
+                user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+                instance_name TEXT NOT NULL,
+                token_hash TEXT NOT NULL UNIQUE,
+                expires_at TIMESTAMP NOT NULL,
+                consumed_at TIMESTAMP,
+                created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+            )
+            "#,
+        )
+        .execute(&pool)
+        .await
+        .unwrap();
+        sqlx::query("INSERT INTO users (id, email) VALUES ('user_1', 'user_1@users.allternit.local')")
+            .execute(&pool)
+            .await
+            .unwrap();
+        pool
+    }
+
+    async fn insert_token(pool: &SqlitePool, id: &str, token: &str, expires_in: Duration) {
+        sqlx::query(
+            r#"
+            INSERT INTO byo_bootstrap_tokens (id, user_id, instance_name, token_hash, expires_at)
+            VALUES (?, 'user_1', 'byo-vps-1', ?, ?)
+            "#,
+        )
+        .bind(id)
+        .bind(sha256_hex(token.as_bytes()))
+        .bind(Utc::now() + expires_in)
+        .execute(pool)
+        .await
+        .unwrap();
+    }
+
+    #[tokio::test]
+    async fn byo_bootstrap_token_validates_once_then_is_consumed() {
+        let pool = test_pool().await;
+        insert_token(&pool, "bt_1", "byo-secret", Duration::hours(1)).await;
+
+        let approval = validate_byo_bootstrap(&pool, Some("byo-secret"))
+            .await
+            .unwrap();
+        assert_eq!(approval.user_id, "user_1");
+        assert_eq!(approval.byo_bootstrap_token_id.as_deref(), Some("bt_1"));
+        assert!(approval.hosted_instance_id.is_none());
+
+        // Single-use: the same token can never approve a second pairing.
+        let error = validate_byo_bootstrap(&pool, Some("byo-secret"))
+            .await
+            .unwrap_err();
+        assert!(matches!(error, ApiError::Unauthorized(_)));
+    }
+
+    #[tokio::test]
+    async fn byo_bootstrap_token_rejects_expired_unknown_and_missing() {
+        let pool = test_pool().await;
+        insert_token(&pool, "bt_expired", "old-secret", Duration::minutes(-5)).await;
+
+        for token in [Some("old-secret"), Some("never-issued"), Some("")] {
+            let error = validate_byo_bootstrap(&pool, token).await.unwrap_err();
+            assert!(
+                matches!(error, ApiError::Unauthorized(_)),
+                "token {token:?} must be rejected, got {error:?}"
+            );
+        }
+        let error = validate_byo_bootstrap(&pool, None).await.unwrap_err();
+        assert!(matches!(error, ApiError::Unauthorized(_)));
+
+        // The expired token must not be consumed by the failed attempt...
+        let consumed: Option<DateTime<Utc>> =
+            sqlx::query_scalar("SELECT consumed_at FROM byo_bootstrap_tokens WHERE id = 'bt_expired'")
+                .fetch_one(&pool)
+                .await
+                .unwrap();
+        assert!(consumed.is_none());
+    }
 }

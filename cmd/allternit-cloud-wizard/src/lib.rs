@@ -33,7 +33,7 @@ pub use capability::{CapabilityMatrix, SupportedProvider, SupportedOS, AuthMetho
 pub use state_machine::{WizardState, WizardStep, WizardContext, HumanCheckpoint};
 pub use preflight::{PreflightChecker, PreflightResult, PreflightError};
 pub use bootstrap::{
-    BootstrapConfig, BootstrapError, BootstrapResult, MeshBootstrap, SshAuth,
+    BootstrapConfig, BootstrapError, BootstrapResult, MeshBootstrap, PairingBootstrap, SshAuth,
 };
 pub use verifier::{PostInstallVerifier, VerificationResult, VerificationError};
 pub use provider::{
@@ -50,6 +50,7 @@ pub use checkpoint_store::{
     SqliteCheckpointStore,
 };
 pub use handlers::{
-    AuthenticatedUser, InstanceRegistrar, MeshKeyMinter, StartWizardRequest, WizardAppState,
+    AuthenticatedUser, InstanceRegistrar, MeshKeyMinter, PairingBootstrapMinter,
+    StartWizardRequest, WizardAppState,
 };
 pub use routes::create_wizard_router;

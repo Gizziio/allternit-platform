@@ -449,6 +449,7 @@ async fn run_manual_deployment(
         auth: allternit_cloud_wizard::SshAuth::PrivateKey(ssh_private_key.to_string()),
         instance_name: format!("allternit-{}", &deployment_id[..8.min(deployment_id.len())]),
         mesh: None,
+        pairing: None,
         release: allternit_cloud_wizard::bootstrap::GIZZI_RELEASE.to_string(),
         x64_sha256: allternit_cloud_wizard::bootstrap::GIZZI_LINUX_X64_SHA256.to_string(),
         arm64_sha256: std::env::var(

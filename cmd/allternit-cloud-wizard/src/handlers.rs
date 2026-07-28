@@ -8,7 +8,7 @@
 //! these routes). Wizard checkpoints carry provider tokens and SSH keys, so
 //! every store operation is user-scoped and every response is redacted.
 
-use crate::bootstrap::{self, BootstrapConfig, MeshBootstrap, SshAuth};
+use crate::bootstrap::{self, BootstrapConfig, MeshBootstrap, PairingBootstrap, SshAuth};
 use crate::capability::{AuthMethod, SupportedProvider};
 use crate::checkpoint_store::{CheckpointStore, IdempotencyKey};
 use crate::preflight::PreflightChecker;
@@ -48,6 +48,15 @@ pub trait InstanceRegistrar: Send + Sync {
     async fn register(&self, user_id: &str, name: &str, url: &str) -> Result<(), String>;
 }
 
+/// Mints the one-time runtime-pairing bootstrap token for the box being
+/// bootstrapped. Implemented by the hosting service (cloud-api) over its
+/// `byo_bootstrap_tokens` table — like the mesh preauth key, the token only
+/// ever lands in the 0600 env file on the box.
+#[async_trait::async_trait]
+pub trait PairingBootstrapMinter: Send + Sync {
+    async fn mint(&self, user_id: &str, instance_name: &str) -> Result<PairingBootstrap, String>;
+}
+
 /// Wizard application state
 pub struct WizardAppState {
     pub checkpoint_store: Arc<dyn CheckpointStore>,
@@ -56,6 +65,9 @@ pub struct WizardAppState {
     pub mesh_minter: Option<Arc<dyn MeshKeyMinter>>,
     /// gizzi instance registry writer; absent when registration is disabled.
     pub registrar: Option<Arc<dyn InstanceRegistrar>>,
+    /// Runtime-pairing bootstrap token minter; absent when pairing is
+    /// disabled (the box then bootstraps without becoming a runtime device).
+    pub pairing_minter: Option<Arc<dyn PairingBootstrapMinter>>,
 }
 
 impl WizardAppState {
@@ -65,6 +77,7 @@ impl WizardAppState {
             idempotency_store: Arc::new(crate::checkpoint_store::IdempotencyStore::new()),
             mesh_minter: None,
             registrar: None,
+            pairing_minter: None,
         }
     }
 
@@ -75,6 +88,11 @@ impl WizardAppState {
 
     pub fn with_registrar(mut self, registrar: Arc<dyn InstanceRegistrar>) -> Self {
         self.registrar = Some(registrar);
+        self
+    }
+
+    pub fn with_pairing_minter(mut self, minter: Arc<dyn PairingBootstrapMinter>) -> Self {
+        self.pairing_minter = Some(minter);
         self
     }
 }
@@ -473,6 +491,25 @@ pub async fn bootstrap_wizard(
         .clone()
         .unwrap_or_else(|| format!("allternit-{}", &wizard.deployment_id[..8]));
 
+    // Mint the one-time runtime-pairing bootstrap token BEFORE the SSH run;
+    // like the mesh preauth key it only ever lands in the 0600 env file on
+    // the box. Absent a minter the box bootstraps without pairing.
+    let pairing = match &state.pairing_minter {
+        Some(minter) => Some(
+            minter
+                .mint(&user.user_id, &instance_name)
+                .await
+                .map_err(|e| {
+                    error!("Failed to mint pairing bootstrap token: {}", e);
+                    (
+                        StatusCode::INTERNAL_SERVER_ERROR,
+                        Json(serde_json::json!({ "error": "pairing_mint_failed" })),
+                    )
+                })?,
+        ),
+        None => None,
+    };
+
     let config = BootstrapConfig::new(
         host,
         wizard.context.ssh_port.unwrap_or(22),
@@ -481,6 +518,10 @@ pub async fn bootstrap_wizard(
         instance_name.clone(),
         mesh,
     );
+    let config = match pairing {
+        Some(pairing) => config.with_pairing(pairing),
+        None => config,
+    };
 
     // Count the attempt and checkpoint before the long-running SSH run, so
     // the cap guardrail survives a crash mid-bootstrap.
@@ -524,8 +565,8 @@ pub async fn bootstrap_wizard(
             wizard.context.verification_passed = Some(true);
             wizard.last_bootstrap_recoverable = None;
             wizard.context.agent_guidance.push(format!(
-                "Bootstrap complete; registered {} at {}",
-                instance_name, url
+                "Bootstrap complete; registered {} at {} (runtime device paired: {})",
+                instance_name, url, result.paired
             ));
             wizard.complete();
             if let Err(e) = state.checkpoint_store.save(&user.user_id, &wizard).await {
@@ -542,6 +583,8 @@ pub async fn bootstrap_wizard(
                 "mesh_ip": mesh_ip,
                 "instance_name": instance_name,
                 "url": url,
+                "paired": result.paired,
+                "runtime_id": result.runtime_id,
                 "wizard": redacted(&wizard),
             })))
         }

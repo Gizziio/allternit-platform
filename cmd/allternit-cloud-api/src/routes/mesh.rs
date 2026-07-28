@@ -25,7 +25,7 @@ use std::sync::Arc;
 use tokio::sync::Mutex;
 use tonic::transport::Channel;
 
-use crate::{auth::clerk, ApiState};
+use crate::{auth::clerk, routes::runtime_pairing, ApiError, ApiState};
 
 /// Generated from the vendored Headscale v0.29.2 protos (`proto/`).
 pub mod proto {
@@ -358,15 +358,35 @@ fn mesh_upstream_error_response(error: &MeshError) -> Response {
         .into_response()
 }
 
+/// Resolves who is enrolling: a paired runtime device token enrolls under the
+/// device's owner (the owner's user id maps to the same per-customer Headscale
+/// user, `clerk-<id>`); anything else falls back to the Clerk session path.
+/// Mirrors `gizzi_instances::actor_from_headers` — same trust decision, and
+/// the call doubles as a lightweight device heartbeat.
+async fn enroll_user_id(db: &sqlx::SqlitePool, headers: &HeaderMap) -> Result<String, ApiError> {
+    if let Some(token) = runtime_pairing::device_token_from_headers(headers) {
+        let device = runtime_pairing::runtime_device_for_token(db, token, None).await?;
+        sqlx::query(
+            "UPDATE runtime_devices SET status = 'online', last_seen_at = CURRENT_TIMESTAMP WHERE id = ?",
+        )
+        .bind(&device.id)
+        .execute(db)
+        .await?;
+        return Ok(device.user_id);
+    }
+    let user = clerk::user_from_headers(headers).await?;
+    Ok(user.id)
+}
+
 async fn enroll(State(state): State<Arc<ApiState>>, headers: HeaderMap) -> Response {
-    let user = match clerk::user_from_headers(&headers).await {
-        Ok(user) => user,
+    let user_id = match enroll_user_id(&state.db, &headers).await {
+        Ok(user_id) => user_id,
         Err(error) => return error.into_response(),
     };
     let Some(mesh) = &state.mesh_service else {
         return mesh_not_configured_response();
     };
-    match mesh.enroll(&user.id).await {
+    match mesh.enroll(&user_id).await {
         Ok(enrollment) => Json(serde_json::json!({
             "controlUrl": enrollment.control_url,
             "authKey": enrollment.auth_key,
@@ -571,5 +591,97 @@ mod tests {
         let service = MeshService::from_env().expect("service should build with an API key");
         assert_eq!(service.control_url, DEFAULT_CONTROL_URL);
         std::env::remove_var("HEADSCALE_API_KEY");
+    }
+
+    /// Minimal runtime_devices shape for the device-token auth path (mirrors
+    /// the gizzi_instances dual-auth tests).
+    async fn device_test_pool() -> sqlx::SqlitePool {
+        let pool = sqlx::SqlitePool::connect(":memory:").await.unwrap();
+        sqlx::query(
+            r#"
+            CREATE TABLE runtime_devices (
+                id TEXT PRIMARY KEY,
+                user_id TEXT NOT NULL,
+                name TEXT NOT NULL,
+                credential_hash TEXT NOT NULL UNIQUE,
+                credential_expires_at TIMESTAMP NOT NULL,
+                status TEXT NOT NULL DEFAULT 'offline',
+                last_seen_at TIMESTAMP,
+                revoked_at TIMESTAMP
+            )
+            "#,
+        )
+        .execute(&pool)
+        .await
+        .unwrap();
+        pool
+    }
+
+    fn device_headers(token: &str) -> HeaderMap {
+        let mut headers = HeaderMap::new();
+        headers.insert(
+            axum::http::header::AUTHORIZATION,
+            format!("Bearer {token}").parse().unwrap(),
+        );
+        headers
+    }
+
+    async fn insert_device(pool: &sqlx::SqlitePool, token: &str, revoked: bool) {
+        sqlx::query(
+            r#"
+            INSERT INTO runtime_devices (
+                id, user_id, name, credential_hash, credential_expires_at, status, revoked_at
+            )
+            VALUES ('rd_1', 'user_9', 'byo-vps-1', ?, ?, 'offline', ?)
+            "#,
+        )
+        .bind(runtime_pairing::sha256_hex(token.as_bytes()))
+        .bind(Utc::now() + Duration::days(1))
+        .bind(if revoked { Some(Utc::now()) } else { None })
+        .execute(pool)
+        .await
+        .unwrap();
+    }
+
+    #[tokio::test]
+    async fn device_token_enrolls_against_owners_mesh_user() {
+        let pool = device_test_pool().await;
+        let token = format!("{}testsecret", runtime_pairing::DEVICE_TOKEN_PREFIX);
+        insert_device(&pool, &token, false).await;
+
+        // The device token resolves to the device's owner; enrollment mints
+        // the key against the owner's per-customer mesh user (clerk-<id>).
+        let user_id = enroll_user_id(&pool, &device_headers(&token)).await.unwrap();
+        assert_eq!(user_id, "user_9");
+
+        let admin = Arc::new(MockHeadscaleAdmin::new());
+        let service = MeshService::with_admin(admin.clone(), DEFAULT_CONTROL_URL);
+        let enrollment = service.enroll(&user_id).await.unwrap();
+        assert_eq!(enrollment.mesh_user, "clerk-user-9");
+
+        // The enroll call doubles as a lightweight device heartbeat.
+        let (status, last_seen_at): (String, Option<DateTime<Utc>>) = sqlx::query_as(
+            "SELECT status, last_seen_at FROM runtime_devices WHERE id = 'rd_1'",
+        )
+        .fetch_one(&pool)
+        .await
+        .unwrap();
+        assert_eq!(status, "online");
+        assert!(last_seen_at.unwrap() > Utc::now() - Duration::minutes(1));
+    }
+
+    #[tokio::test]
+    async fn revoked_device_token_cannot_enroll() {
+        let pool = device_test_pool().await;
+        let token = format!("{}testsecret", runtime_pairing::DEVICE_TOKEN_PREFIX);
+        insert_device(&pool, &token, true).await;
+
+        let error = enroll_user_id(&pool, &device_headers(&token))
+            .await
+            .unwrap_err();
+        assert!(
+            matches!(error, ApiError::Unauthorized(_)),
+            "revoked device credential must be a 401, got {error:?}"
+        );
     }
 }

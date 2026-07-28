@@ -23,7 +23,8 @@ use axum::{
 use std::sync::Arc;
 
 use allternit_cloud_wizard::{
-    AuthenticatedUser, InstanceRegistrar, MeshKeyMinter, SqliteCheckpointStore, WizardAppState,
+    AuthenticatedUser, InstanceRegistrar, MeshKeyMinter, PairingBootstrap, PairingBootstrapMinter,
+    SqliteCheckpointStore, WizardAppState,
 };
 
 use crate::{auth::clerk, routes::mesh::MeshService, ApiError, ApiState};
@@ -47,6 +48,9 @@ pub fn routes(state: &Arc<ApiState>) -> Router<Arc<ApiState>> {
         }));
     }
     wizard_state = wizard_state.with_registrar(Arc::new(GizziRegistrar {
+        db: state.db.clone(),
+    }));
+    wizard_state = wizard_state.with_pairing_minter(Arc::new(ByoPairingMinter {
         db: state.db.clone(),
     }));
 
@@ -158,5 +162,48 @@ impl InstanceRegistrar for GizziRegistrar {
             .await
             .map_err(|e| e.to_string())?;
         Ok(())
+    }
+}
+
+/// Mints one-time BYO runtime-pairing bootstrap tokens (migration 021). The
+/// token hash is stored server-side; the plaintext token only ever travels
+/// into the 0600 env file on the box being bootstrapped, which exchanges it
+/// for an approved runtime-device pairing during bootstrap.
+struct ByoPairingMinter {
+    db: sqlx::SqlitePool,
+}
+
+/// BYO bootstrap tokens are valid for one hour: the wizard mints immediately
+/// before the SSH run, and a retry re-mints.
+const BYO_BOOTSTRAP_TOKEN_TTL: chrono::Duration = chrono::Duration::hours(1);
+
+#[async_trait::async_trait]
+impl PairingBootstrapMinter for ByoPairingMinter {
+    async fn mint(&self, user_id: &str, instance_name: &str) -> Result<PairingBootstrap, String> {
+        let token = crate::routes::runtime_pairing::random_secret(32);
+        let id = format!("bt_{}", uuid::Uuid::new_v4().simple());
+        sqlx::query(
+            r#"
+            INSERT INTO byo_bootstrap_tokens (id, user_id, instance_name, token_hash, expires_at)
+            VALUES (?, ?, ?, ?, ?)
+            "#,
+        )
+        .bind(&id)
+        .bind(user_id)
+        .bind(instance_name)
+        .bind(crate::routes::runtime_pairing::sha256_hex(token.as_bytes()))
+        .bind(chrono::Utc::now() + BYO_BOOTSTRAP_TOKEN_TTL)
+        .execute(&self.db)
+        .await
+        .map_err(|e| e.to_string())?;
+
+        // Same env convention as the hosted runtime service
+        // (services/fly_runtime_service.rs).
+        let cloud_api_url = std::env::var("ALLTERNIT_CLOUD_API_URL")
+            .unwrap_or_else(|_| "https://allternit-cloud-api.fly.dev".to_string());
+        Ok(PairingBootstrap {
+            cloud_api_url,
+            bootstrap_token: token,
+        })
     }
 }

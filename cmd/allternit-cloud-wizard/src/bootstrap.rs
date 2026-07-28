@@ -7,6 +7,12 @@
 //! - Joins the Headscale tailnet via `tailscaled` + a single-use preauth key
 //!   minted by the cloud-api BEFORE the SSH run (the key only ever lives in
 //!   the 0600 env file on the box)
+//! - Pairs the box as a runtime device: the cloud-api mints a one-time BYO
+//!   bootstrap token (also only in the env file), the script generates an
+//!   Ed25519 identity, signs the pairing challenge, and exchanges it for a
+//!   durable device token — the BYO analogue of the hosted runtime's
+//!   agent-daemon auto-pairing. A systemd heartbeat timer then keeps the
+//!   device "online" in the runtime selector.
 //! - Captures the mesh IPv4 (`tailscale ip -4`) for registry insertion
 //!
 //! Mesh join choice: the hosted runtime Dockerfile does not ship a mesh-node
@@ -70,6 +76,17 @@ pub struct MeshBootstrap {
     pub control_url: String,
 }
 
+/// Runtime-device pairing configuration for the bootstrap
+#[derive(Debug, Clone)]
+pub struct PairingBootstrap {
+    /// Public base URL of the cloud-api the box pairs against.
+    pub cloud_api_url: String,
+    /// One-time bootstrap token minted by cloud-api before the run; the box
+    /// exchanges it for an approved runtime-device pairing (and a durable
+    /// device token) during bootstrap — no Clerk session on the box.
+    pub bootstrap_token: String,
+}
+
 /// Bootstrap configuration for one VPS
 #[derive(Debug, Clone)]
 pub struct BootstrapConfig {
@@ -86,6 +103,10 @@ pub struct BootstrapConfig {
     /// Mesh enrollment; `None` installs gizzi-code without joining a tailnet
     /// (legacy/manual path only — the wizard happy path always enrolls).
     pub mesh: Option<MeshBootstrap>,
+    /// Runtime-device pairing; `Some` pairs the box as a runtime device during
+    /// bootstrap so it appears in `GET /api/v1/runtime-devices` and keeps its
+    /// registry row fresh with its own device token.
+    pub pairing: Option<PairingBootstrap>,
     /// gizzi-code release tag to install
     pub release: String,
     /// SHA-256 for the linux-x64 artifact
@@ -111,6 +132,7 @@ impl BootstrapConfig {
             auth,
             instance_name,
             mesh: Some(mesh),
+            pairing: None,
             release: GIZZI_RELEASE.to_string(),
             x64_sha256: GIZZI_LINUX_X64_SHA256.to_string(),
             arm64_sha256: Some(
@@ -118,6 +140,13 @@ impl BootstrapConfig {
                     .unwrap_or_else(|_| GIZZI_LINUX_ARM64_SHA256.to_string()),
             ),
         }
+    }
+
+    /// Enable runtime-device pairing at bootstrap (BYO analogue of the hosted
+    /// runtime's auto-pairing).
+    pub fn with_pairing(mut self, pairing: PairingBootstrap) -> Self {
+        self.pairing = Some(pairing);
+        self
     }
 
     /// Download URL for a given artifact arch (`x64` / `arm64`) — the
@@ -139,6 +168,12 @@ pub struct BootstrapResult {
     pub log_output: String,
     /// Mesh IPv4 captured from `tailscale ip -4` (present when enrolled)
     pub mesh_ip: Option<String>,
+    /// Whether the box paired as a runtime device during bootstrap
+    #[serde(default)]
+    pub paired: bool,
+    /// Runtime device id (`rt_…`) when paired
+    #[serde(default)]
+    pub runtime_id: Option<String>,
 }
 
 /// Bootstrap error
@@ -196,12 +231,20 @@ impl std::fmt::Display for BootstrapError {
 impl std::error::Error for BootstrapError {}
 
 /// Contents of `/etc/gizzi/gizzi-code.env` (written 0600 on the box). This
-/// is the only place the mesh preauth key is stored.
+/// is the only place the mesh preauth key and the pairing bootstrap token
+/// are stored.
 pub fn generate_env_file(config: &BootstrapConfig) -> String {
     let mut out = String::from("GIZZI_REQUIRE_CLERK_AUTH=true\nGIZZI_DISABLE_AUTOUPDATE=1\n");
     if let Some(mesh) = &config.mesh {
         out.push_str(&format!("GIZZI_MESH_AUTH_KEY={}\n", mesh.auth_key));
         out.push_str(&format!("GIZZI_MESH_CONTROL_URL={}\n", mesh.control_url));
+    }
+    if let Some(pairing) = &config.pairing {
+        out.push_str(&format!("ALLTERNIT_CLOUD_API_URL={}\n", pairing.cloud_api_url));
+        out.push_str(&format!(
+            "ALLTERNIT_BYO_BOOTSTRAP_TOKEN={}\n",
+            pairing.bootstrap_token
+        ));
     }
     out
 }
@@ -224,6 +267,14 @@ pub fn generate_bootstrap_script(config: &BootstrapConfig) -> Result<String, Boo
             ));
         }
     }
+    if let Some(pairing) = &config.pairing {
+        if pairing.bootstrap_token.is_empty() || pairing.cloud_api_url.is_empty() {
+            return Err(BootstrapError::invalid(
+                "pairing bootstrap token and cloud API URL are required for pairing",
+            ));
+        }
+    }
+    let pairing_enabled = config.pairing.is_some();
 
     let exec_start = if mesh_enabled {
         format!(
@@ -267,6 +318,178 @@ log "Mesh enrollment disabled - gizzi-code will serve without a tailnet"
 "#
     };
 
+    // Runtime pairing needs jq (JSON build/parse) and openssl (Ed25519
+    // keygen/sign); the legacy path only needs curl.
+    let deps_block = if pairing_enabled {
+        r#"
+# ── Dependencies ─────────────────────────────────────────────────────────────
+for tool in curl jq openssl; do
+    if ! command -v "$tool" >/dev/null 2>&1; then
+        log "Installing $tool..."
+        if command -v apt-get >/dev/null 2>&1; then
+            $SUDO apt-get update -qq && $SUDO apt-get install -y -qq "$tool" ca-certificates
+        elif command -v dnf >/dev/null 2>&1; then
+            $SUDO dnf install -y -q "$tool" ca-certificates
+        elif command -v yum >/dev/null 2>&1; then
+            $SUDO yum install -y -q "$tool" ca-certificates
+        else
+            error "no supported package manager (apt-get, dnf, yum)"
+        fi
+    fi
+done
+"#
+    } else {
+        r#"
+# ── Dependencies ─────────────────────────────────────────────────────────────
+if ! command -v curl >/dev/null 2>&1; then
+    log "Installing curl..."
+    if command -v apt-get >/dev/null 2>&1; then
+        $SUDO apt-get update -qq && $SUDO apt-get install -y -qq curl ca-certificates
+    elif command -v dnf >/dev/null 2>&1; then
+        $SUDO dnf install -y -q curl ca-certificates
+    elif command -v yum >/dev/null 2>&1; then
+        $SUDO yum install -y -q curl ca-certificates
+    else
+        error "no supported package manager (apt-get, dnf, yum)"
+    fi
+fi
+"#
+    };
+
+    // Self-approving runtime-device pairing: the wizard minted a one-time
+    // bootstrap token (env file); the box generates an ephemeral Ed25519
+    // identity, signs the pairing challenge, and exchanges it for a durable
+    // device token — the BYO analogue of the hosted runtime's agent-daemon
+    // auto-pairing, done inline because no relay daemon is shipped to BYO
+    // boxes (see cmd/allternit-hosted-runtime/Dockerfile).
+    //
+    // The identity JSON lands where gizzi-code's Pairing service loads it
+    // (<xdg-data>/gizzi-code/runtime-device.json; the service runs as root),
+    // so `serve --mesh` picks the token up for registry refreshes and
+    // rotation. The token is also appended to the env file as
+    // ALLTERNIT_API_TOKEN — instance-registration's fallback credential — so
+    // registry refreshes work even if the identity file is lost.
+    let pairing_block = if pairing_enabled {
+        r#"
+# ── Runtime-device pairing (BYO) ─────────────────────────────────────────────
+PAIRED="false"
+RUNTIME_ID=""
+DEVICE_TOKEN=""
+IDENTITY_FILE="/root/.local/share/gizzi-code/runtime-device.json"
+if [ -n "${ALLTERNIT_BYO_BOOTSTRAP_TOKEN:-}" ] && [ -n "${ALLTERNIT_CLOUD_API_URL:-}" ]; then
+    if [ -f "$IDENTITY_FILE" ]; then
+        log "Already paired as a runtime device - skipping pairing"
+        PAIRED="true"
+        RUNTIME_ID="$(jq -r '.runtimeId // empty' "$IDENTITY_FILE")"
+        DEVICE_TOKEN="$(jq -r '.deviceToken // empty' "$IDENTITY_FILE")"
+    else
+        log "Pairing this box as an Allternit runtime device..."
+        PAIR_KEY="/tmp/gizzi-pair-key.pem"
+        openssl genpkey -algorithm ed25519 -out "$PAIR_KEY" 2>/dev/null
+        PUBLIC_KEY="$(openssl pkey -in "$PAIR_KEY" -pubout -outform DER 2>/dev/null | tail -c 32 | base64 -w0 | tr '+/' '-_' | tr -d '=')"
+        FINGERPRINT="$(openssl pkey -in "$PAIR_KEY" -pubout -outform DER 2>/dev/null | tail -c 32 | sha256sum | cut -d' ' -f1)"
+
+        CREATE_RESPONSE="$(curl -fsS -X POST "${ALLTERNIT_CLOUD_API_URL%/}/api/v1/runtime-pairings" \
+            -H 'content-type: application/json' \
+            -d "$(jq -n \
+                --arg name "$INSTANCE_NAME" \
+                --arg host "$(hostname)" \
+                --arg platform "linux-$(uname -m)" \
+                --arg publicKey "$PUBLIC_KEY" \
+                --arg token "$ALLTERNIT_BYO_BOOTSTRAP_TOKEN" \
+                '{name:$name, runtimeType:"vps", hostname:$host, platform:$platform, publicKey:$publicKey, byoBootstrapToken:$token}')")" \
+            || error "runtime pairing request failed"
+        PAIRING_ID="$(printf '%s' "$CREATE_RESPONSE" | jq -r '.pairingId')"
+        DEVICE_CODE="$(printf '%s' "$CREATE_RESPONSE" | jq -r '.deviceCode')"
+        CHALLENGE="$(printf '%s' "$CREATE_RESPONSE" | jq -r '.challenge')"
+
+        SIGNATURE="$(printf 'allternit-runtime-pairing:%s:%s' "$PAIRING_ID" "$CHALLENGE" \
+            | openssl pkeyutl -sign -inkey "$PAIR_KEY" -rawin \
+            | base64 -w0 | tr '+/' '-_' | tr -d '=')"
+
+        EXCHANGE_RESPONSE="$(curl -fsS -X POST "${ALLTERNIT_CLOUD_API_URL%/}/api/v1/runtime-pairings/exchange" \
+            -H 'content-type: application/json' \
+            -d "$(jq -n --arg id "$PAIRING_ID" --arg code "$DEVICE_CODE" --arg sig "$SIGNATURE" \
+                '{pairingId:$id, deviceCode:$code, signature:$sig}')")" \
+            || error "runtime pairing exchange failed"
+        RUNTIME_ID="$(printf '%s' "$EXCHANGE_RESPONSE" | jq -r '.runtimeId')"
+        DEVICE_TOKEN="$(printf '%s' "$EXCHANGE_RESPONSE" | jq -r '.deviceToken')"
+        USER_ID="$(printf '%s' "$EXCHANGE_RESPONSE" | jq -r '.userId')"
+        USER_EMAIL="$(printf '%s' "$EXCHANGE_RESPONSE" | jq -r '.userEmail')"
+        EXPIRES_AT="$(printf '%s' "$EXCHANGE_RESPONSE" | jq -r '.expiresAt')"
+        CAPABILITIES="$(printf '%s' "$EXCHANGE_RESPONSE" | jq -c '.capabilities // []')"
+        { [ -n "$DEVICE_TOKEN" ] && [ "$DEVICE_TOKEN" != "null" ]; } \
+            || error "pairing exchange returned no device token"
+
+        # Persist the identity where gizzi-code's Pairing service loads it.
+        $SUDO mkdir -p "$(dirname "$IDENTITY_FILE")"
+        jq -n \
+            --arg name "$INSTANCE_NAME" \
+            --arg host "$(hostname)" \
+            --arg platform "linux-$(uname -m)" \
+            --arg publicKey "$PUBLIC_KEY" \
+            --arg fingerprint "$FINGERPRINT" \
+            --rawfile privateKey "$PAIR_KEY" \
+            --arg runtimeId "$RUNTIME_ID" \
+            --arg userId "$USER_ID" \
+            --arg userEmail "$USER_EMAIL" \
+            --arg deviceToken "$DEVICE_TOKEN" \
+            --arg tokenExpiresAt "$EXPIRES_AT" \
+            --argjson capabilities "$CAPABILITIES" \
+            --arg pairedAt "$(date -u '+%Y-%m-%dT%H:%M:%SZ')" \
+            '{version:1, name:$name, runtimeType:"vps", hostname:$host, platform:$platform, publicKey:$publicKey, publicKeyFingerprint:$fingerprint, privateKey:$privateKey, runtimeId:$runtimeId, userId:$userId, userEmail:$userEmail, deviceToken:$deviceToken, tokenExpiresAt:$tokenExpiresAt, capabilities:$capabilities, pairedAt:$pairedAt}' \
+            | $SUDO tee "$IDENTITY_FILE" >/dev/null
+        $SUDO chmod 600 "$IDENTITY_FILE"
+        rm -f "$PAIR_KEY"
+        PAIRED="true"
+        log "Paired as runtime device $RUNTIME_ID"
+    fi
+
+    # Registry credential + runtime id for the heartbeat unit (appended once).
+    if ! grep -q '^ALLTERNIT_API_TOKEN=' /etc/gizzi/gizzi-code.env; then
+        echo "ALLTERNIT_API_TOKEN=$DEVICE_TOKEN" | $SUDO tee -a /etc/gizzi/gizzi-code.env >/dev/null
+    fi
+    if ! grep -q '^ALLTERNIT_RUNTIME_ID=' /etc/gizzi/gizzi-code.env; then
+        echo "ALLTERNIT_RUNTIME_ID=$RUNTIME_ID" | $SUDO tee -a /etc/gizzi/gizzi-code.env >/dev/null
+    fi
+
+    # Heartbeat keeps the device "online" in the runtime selector (the device
+    # list derives status from last_seen_at). The token/runtime id are read
+    # from the identity file so gizzi-code's credential rotation cannot
+    # strand the heartbeat.
+    log "Installing gizzi-heartbeat.timer..."
+    $SUDO tee /etc/systemd/system/gizzi-heartbeat.service >/dev/null << 'UNIT'
+[Unit]
+Description=Allternit runtime-device heartbeat (BYO-VPS)
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+EnvironmentFile=/etc/gizzi/gizzi-code.env
+ExecStart=/bin/sh -c 'curl -fsS -m 10 -X POST -H "Authorization: Bearer $$(jq -r .deviceToken /root/.local/share/gizzi-code/runtime-device.json)" "$${ALLTERNIT_CLOUD_API_URL%/}/api/v1/runtime-devices/$$(jq -r .runtimeId /root/.local/share/gizzi-code/runtime-device.json)/heartbeat"'
+UNIT
+    $SUDO tee /etc/systemd/system/gizzi-heartbeat.timer >/dev/null << 'UNIT'
+[Unit]
+Description=Allternit runtime-device heartbeat timer (BYO-VPS)
+
+[Timer]
+OnBootSec=15s
+OnUnitActiveSec=30s
+
+[Install]
+WantedBy=timers.target
+UNIT
+fi
+"#
+    } else {
+        r#"
+PAIRED="false"
+RUNTIME_ID=""
+log "Runtime-device pairing not configured - skipping"
+"#
+    };
+
     // NOTE: single-quoted heredocs everywhere so nothing expands locally.
     let script = format!(
         r#"#!/bin/bash
@@ -298,20 +521,7 @@ case "$(uname -m)" in
 esac
 [ -n "$EXPECTED_SHA256" ] || error "no pinned checksum for linux-$ARTIFACT_ARCH (set {arm64_env})"
 log "Architecture: $ARTIFACT_ARCH"
-
-# ── Dependencies ─────────────────────────────────────────────────────────────
-if ! command -v curl >/dev/null 2>&1; then
-    log "Installing curl..."
-    if command -v apt-get >/dev/null 2>&1; then
-        $SUDO apt-get update -qq && $SUDO apt-get install -y -qq curl ca-certificates
-    elif command -v dnf >/dev/null 2>&1; then
-        $SUDO dnf install -y -q curl ca-certificates
-    elif command -v yum >/dev/null 2>&1; then
-        $SUDO yum install -y -q curl ca-certificates
-    else
-        error "no supported package manager (apt-get, dnf, yum)"
-    fi
-fi
+{deps_block}
 
 # ── gizzi-code binary (checksum-pinned tarball) ──────────────────────────────
 $SUDO mkdir -p /opt/gizzi/bin /etc/gizzi
@@ -365,12 +575,16 @@ RestartSec=5
 [Install]
 WantedBy=multi-user.target
 UNIT
+{pairing_block}
 {tailscale_block}
 
 # ── Start service ────────────────────────────────────────────────────────────
 log "Starting gizzi-code.service..."
 $SUDO systemctl daemon-reload
 $SUDO systemctl enable gizzi-code.service >/dev/null 2>&1 || true
+if [ "$PAIRED" = "true" ]; then
+    $SUDO systemctl enable --now gizzi-heartbeat.timer >/dev/null 2>&1 || true
+fi
 $SUDO systemctl restart gizzi-code.service
 
 sleep 3
@@ -380,6 +594,8 @@ $SUDO systemctl is-active --quiet gizzi-code.service || error "gizzi-code.servic
 
 echo "STATUS=SUCCESS"
 echo "MESH_IP=$MESH_IP"
+echo "PAIRED=$PAIRED"
+echo "RUNTIME_ID=$RUNTIME_ID"
 echo "MESSAGE=gizzi-code bootstrap complete"
 "#,
         x64_sha256 = config.x64_sha256,
@@ -389,6 +605,8 @@ echo "MESSAGE=gizzi-code bootstrap complete"
         release = config.release,
         instance_name = config.instance_name,
         exec_start = exec_start,
+        deps_block = deps_block,
+        pairing_block = pairing_block,
         tailscale_block = tailscale_block,
     );
 
@@ -471,6 +689,14 @@ pub async fn run_bootstrap(config: &BootstrapConfig) -> Result<BootstrapResult, 
         ));
     }
 
+    let paired = parse_marker(&output.stdout, "PAIRED") == Some("true");
+    if config.pairing.is_some() && !paired {
+        return Err(BootstrapError::failed(
+            "bootstrap succeeded but runtime-device pairing did not complete",
+        ));
+    }
+    let runtime_id = parse_marker(&output.stdout, "RUNTIME_ID").map(str::to_string);
+
     Ok(BootstrapResult {
         success: true,
         status: "SUCCESS".to_string(),
@@ -479,6 +705,8 @@ pub async fn run_bootstrap(config: &BootstrapConfig) -> Result<BootstrapResult, 
             .to_string(),
         log_output,
         mesh_ip,
+        paired,
+        runtime_id,
     })
 }
 
@@ -506,10 +734,18 @@ mod tests {
                 auth_key: "hskey-auth-abc".to_string(),
                 control_url: DEFAULT_MESH_CONTROL_URL.to_string(),
             }),
+            pairing: None,
             release: GIZZI_RELEASE.to_string(),
             x64_sha256: GIZZI_LINUX_X64_SHA256.to_string(),
             arm64_sha256: Some("deadbeef".to_string()),
         }
+    }
+
+    fn paired_config() -> BootstrapConfig {
+        test_config(true).with_pairing(PairingBootstrap {
+            cloud_api_url: "https://allternit-cloud-api.fly.dev".to_string(),
+            bootstrap_token: "byo-bootstrap-secret".to_string(),
+        })
     }
 
     #[test]
@@ -575,6 +811,70 @@ mod tests {
     }
 
     #[test]
+    fn env_file_carries_pairing_bootstrap_token_when_configured() {
+        let env = generate_env_file(&paired_config());
+        assert!(env.contains("ALLTERNIT_CLOUD_API_URL=https://allternit-cloud-api.fly.dev"));
+        assert!(env.contains("ALLTERNIT_BYO_BOOTSTRAP_TOKEN=byo-bootstrap-secret"));
+
+        // Without pairing config the env file carries no pairing variables.
+        let env = generate_env_file(&test_config(true));
+        assert!(!env.contains("ALLTERNIT_BYO_BOOTSTRAP_TOKEN"));
+        assert!(!env.contains("ALLTERNIT_CLOUD_API_URL"));
+    }
+
+    #[test]
+    fn pairing_script_exchanges_bootstrap_token_and_keeps_secrets_out() {
+        let script = generate_bootstrap_script(&paired_config()).unwrap();
+        // The bootstrap token only ever lives in the env file.
+        assert!(
+            !script.contains("byo-bootstrap-secret"),
+            "pairing bootstrap token must only live in the env file"
+        );
+        // Self-approving pairing: create with the BYO token, sign the
+        // challenge, exchange for a device token.
+        assert!(script.contains("/api/v1/runtime-pairings"));
+        assert!(script.contains("byoBootstrapToken:$token"));
+        assert!(script.contains("openssl genpkey -algorithm ed25519"));
+        assert!(script.contains("openssl pkeyutl -sign"));
+        assert!(script.contains("allternit-runtime-pairing:%s:%s"));
+        assert!(script.contains("/api/v1/runtime-pairings/exchange"));
+        // The identity lands where gizzi-code's Pairing service loads it, and
+        // the device token doubles as the registry credential.
+        assert!(script.contains("/root/.local/share/gizzi-code/runtime-device.json"));
+        assert!(script.contains("ALLTERNIT_API_TOKEN=$DEVICE_TOKEN"));
+        // Heartbeat keeps the device online in the runtime selector.
+        assert!(script.contains("gizzi-heartbeat.timer"));
+        assert!(script.contains("/heartbeat"));
+        // jq + openssl are installed when pairing is enabled.
+        assert!(script.contains("for tool in curl jq openssl"));
+        // Idempotency: an existing identity skips re-pairing.
+        assert!(script.contains("Already paired as a runtime device - skipping pairing"));
+    }
+
+    #[test]
+    fn no_pairing_omits_pairing_block_and_jq() {
+        let script = generate_bootstrap_script(&test_config(true)).unwrap();
+        assert!(!script.contains("byoBootstrapToken"));
+        // The heartbeat unit is only written by the pairing block (the
+        // unconditional enable line is guarded by PAIRED=true).
+        assert!(!script.contains("Installing gizzi-heartbeat.timer"));
+        assert!(!script.contains("ALLTERNIT_API_TOKEN=$DEVICE_TOKEN"));
+        assert!(!script.contains("for tool in curl jq openssl"));
+        assert!(script.contains("Runtime-device pairing not configured - skipping"));
+    }
+
+    #[test]
+    fn pairing_requires_token_and_url() {
+        let mut config = paired_config();
+        config.pairing = Some(PairingBootstrap {
+            cloud_api_url: String::new(),
+            bootstrap_token: String::new(),
+        });
+        let err = generate_bootstrap_script(&config).unwrap_err();
+        assert_eq!(err.code, "BOOTSTRAP_INVALID");
+    }
+
+    #[test]
     fn mesh_disabled_omits_tailscale() {
         let config = test_config(false);
         let script = generate_bootstrap_script(&config).unwrap();
@@ -598,8 +898,13 @@ mod tests {
         {
             return;
         }
-        for mesh in [true, false] {
-            let script = generate_bootstrap_script(&test_config(mesh)).unwrap();
+        let configs = [
+            test_config(true),
+            test_config(false),
+            paired_config(),
+        ];
+        for (index, config) in configs.iter().enumerate() {
+            let script = generate_bootstrap_script(config).unwrap();
             let mut child = std::process::Command::new("bash")
                 .arg("-n")
                 .stdin(std::process::Stdio::piped())
@@ -613,7 +918,7 @@ mod tests {
                 .write_all(script.as_bytes())
                 .unwrap();
             let status = child.wait().unwrap();
-            assert!(status.success(), "bash -n rejected script (mesh={})", mesh);
+            assert!(status.success(), "bash -n rejected script (config #{index})");
         }
     }
 

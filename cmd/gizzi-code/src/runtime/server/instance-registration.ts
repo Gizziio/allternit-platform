@@ -5,17 +5,22 @@
 // failure logs a warning and never blocks or fails server startup.
 //
 // Token precedence:
-// 1. Paired runtime-device token from runtime-device.json (`gizzi pair`).
-//    Durable (~90 days), so registration is refreshed on an interval while the
-//    server runs — this is the heartbeat that keeps the registry entry fresh.
-//    The token is also rotated (Pairing.rotateIfNeeded) before each resolve
-//    once it nears expiry, so the registry always sees the fresh token.
-// 2. ALLTERNIT_API_TOKEN env var (outbound Bearer convention)
+// 1. Paired runtime-device token from runtime-device.json (`gizzi pair`, or a
+//    BYO-VPS bootstrap, which writes the same file). Durable (~90 days), so
+//    registration is refreshed on an interval while the server runs — this is
+//    the heartbeat that keeps the registry entry fresh. The token is also
+//    rotated (Pairing.rotateIfNeeded) before each resolve once it nears
+//    expiry, so the registry always sees the fresh token.
+// 2. ALLTERNIT_API_TOKEN env var (outbound Bearer convention). A runtime
+//    device token (allternit_runtime_… — e.g. injected into the systemd env
+//    file by the BYO-VPS bootstrap) is durable and gets the same refresh
+//    loop; anything else is treated as short-lived and stays one-shot.
 // 3. Stored Clerk session JWT from the browser login bridge (auth.json
 //    wellknown entries). These are short-lived (~60s), so the JWT payload is
 //    decoded and expired tokens are treated as missing.
-// Clerk/env-token registration stays one-shot: those tokens die too quickly
-// for a refresh loop to mean anything.
+// Clerk/env-token registration stays one-shot unless the token is a durable
+// device token: short-lived tokens die too quickly for a refresh loop to
+// mean anything.
 import os from "node:os"
 import { Log } from "@/shared/util/log"
 import { Flag } from "@/runtime/context/flag/flag"
@@ -51,7 +56,10 @@ export namespace InstanceRegistration {
       return { token: device.deviceToken!, durable: true, name: device.name }
     }
     const envToken = process.env.ALLTERNIT_API_TOKEN?.trim()
-    if (envToken) return { token: envToken, durable: false }
+    // A runtime device token is durable (~90 days): give it the same refresh
+    // loop as a paired device so the registry entry stays fresh. Rotation is
+    // not possible without the stored identity — the token simply ages out.
+    if (envToken) return { token: envToken, durable: envToken.startsWith("allternit_runtime_") }
     // auth.json wellknown entries are keyed by the platform URL the user logged
     // in against; any of them holds a Clerk session JWT accepted by the registry.
     const all = await Auth.all()
