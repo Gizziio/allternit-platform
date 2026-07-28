@@ -34,11 +34,11 @@ pub const GIZZI_VERSION: &str = "0.2.1";
 
 /// SHA-256 of `gizzi-code-v{VERSION}-linux-x64.tar.gz` for [`GIZZI_RELEASE`].
 pub const GIZZI_LINUX_X64_SHA256: &str =
-    "74704f22703a719c3717af6bb68b2aad202260cc5f96c17979e65a409ce99ddd";
+    "165ce341d1195588556039038e3aed6e7bd211fd8fdad4d64d2041e9ff2f2117";
 
 /// SHA-256 of `gizzi-code-v{VERSION}-linux-arm64.tar.gz` for [`GIZZI_RELEASE`].
 pub const GIZZI_LINUX_ARM64_SHA256: &str =
-    "f2ce9db3f0745e4832c3e69adcabc3b4e5dd9d2ffa4cdc28f86db84ea3df6025";
+    "d54244bb686f2e899342f8f82448871a978b50db6cc267dc02e62279f7d234f4";
 
 /// Escape hatch to override the pinned arm64 checksum (e.g. when testing a
 /// newer release build that hasn't been pinned yet).
