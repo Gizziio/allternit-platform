@@ -287,11 +287,19 @@ async function handleRelayRequest(socket: WebSocket, message: any): Promise<void
     '/terminal', '/mcp', '/platform', '/metrics', '/alabs', '/cowork',
     '/webhooks', '/status', '/health',
     '/ws', '/panes',
+    // gizzi-code mirrors its entire route surface under /v1/* (pty, sessions,
+    // events, instance, …) — BYO boxes are unreachable without this.
+    '/v1/',
   ];
   if (!allowedPrefixes.some((prefix) => requestPath.startsWith(prefix))) return;
   try {
     const headers = new Headers(message.headers || {});
-    headers.set('Authorization', `Bearer ${identity.deviceToken}`);
+    // Prefer the caller's own Clerk JWT when the envelope carries one so the
+    // local gateway authenticates as the end user; fall back to the device
+    // token (and its identity headers) when it doesn't.
+    if (!headers.has('Authorization')) {
+      headers.set('Authorization', `Bearer ${identity.deviceToken}`);
+    }
     headers.set('X-Allternit-Desktop-Access-Token', identity.deviceToken);
     headers.set('X-Allternit-User-Id', identity.userId);
     headers.set('X-Allternit-User-Email', identity.userEmail);
