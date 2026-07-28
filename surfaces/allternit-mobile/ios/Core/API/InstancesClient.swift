@@ -72,3 +72,119 @@ final class InstancesClient: @unchecked Sendable {
 private struct InstancesResponse: Decodable {
     let instances: [GizziInstance]
 }
+
+// MARK: - Runtime devices & pairing codes
+
+/// One paired runtime device, as listed by the cloud API's
+/// `GET /api/v1/runtime-devices`:
+/// `{ "runtimes": [{ "id", "name", "runtimeType", "hostname", "status",
+/// "lastSeenAt", ... }] }` (runtime_pairing.rs `list_runtime_devices` —
+/// camelCase keys, newest first).
+///
+/// `status` and `lastSeenAt` stay raw Strings on purpose (unknown future
+/// statuses shouldn't break decoding of the whole list; the timestamp is
+/// display-only here).
+struct RuntimeDevice: Decodable, Sendable, Identifiable {
+    let id: String
+    let name: String
+    /// "vps" | "desktop" | "hosted" (kept as String for forward compatibility).
+    let runtimeType: String
+    let hostname: String?
+    /// "online" | "offline" (already staleness-adjusted server-side).
+    let status: String
+    let lastSeenAt: String?
+
+    var isOnline: Bool { status == "online" }
+
+    /// Display label mirroring the web panel (DevicePairingPanel.tsx:503).
+    var typeLabel: String { Self.typeLabel(for: runtimeType) }
+
+    static func typeLabel(for runtimeType: String) -> String {
+        switch runtimeType {
+        case "vps": return "VPS runtime"
+        case "hosted": return "Hosted runtime"
+        default: return "Desktop runtime"
+        }
+    }
+}
+
+/// A pending pairing request behind a user code, from
+/// `GET /api/v1/runtime-pairings/code/:code` (PairingInfoResponse,
+/// runtime_pairing.rs:108-121 — camelCase keys).
+struct RuntimePairingInfo: Decodable, Sendable {
+    let pairingId: String
+    let userCode: String
+    let name: String
+    let runtimeType: String
+    let hostname: String?
+    let platform: String?
+    let status: String
+}
+
+/// Cloud-API client for the runtime-device list and the `gizzi pair`
+/// approval flow the Code tab's pairing sheet uses. Like InstancesClient,
+/// requests go DIRECT to `AppConfig.cloudAPIBaseURL` with the Clerk Bearer —
+/// never through the EnvironmentStore relay route.
+final class RuntimeDevicesClient: @unchecked Sendable {
+    /// `GET {cloud}/api/v1/runtime-devices` — the signed-in user's paired
+    /// runtime devices.
+    func fetchRuntimes() async throws -> [RuntimeDevice] {
+        let url = AppConfig.cloudAPIBaseURL.appendingPathComponent("api/v1/runtime-devices")
+        let client = APIClient.shared
+        let request = try await client.authorizedRequest(url: url)
+
+        let (data, response) = try await client.session.data(for: request)
+        try client.validate(response, data: data)
+        do {
+            return try JSONDecoder().decode(RuntimesResponse.self, from: data).runtimes
+        } catch {
+            throw APIError.decoding(error)
+        }
+    }
+
+    /// `GET {cloud}/api/v1/runtime-pairings/code/:code` — the pending pairing
+    /// request behind a user code (404 when the code is invalid or expired).
+    func lookupPairing(code: String) async throws -> RuntimePairingInfo {
+        let url = AppConfig.cloudAPIBaseURL
+            .appendingPathComponent("api/v1/runtime-pairings/code")
+            .appendingPathComponent(code)
+        let client = APIClient.shared
+        let request = try await client.authorizedRequest(url: url)
+
+        let (data, response) = try await client.session.data(for: request)
+        try client.validate(response, data: data)
+        do {
+            return try JSONDecoder().decode(RuntimePairingInfo.self, from: data)
+        } catch {
+            throw APIError.decoding(error)
+        }
+    }
+
+    /// `POST {cloud}/api/v1/runtime-pairings/code/:code/approve` with an
+    /// empty JSON body (DevicePairingPanel.tsx:188-192). The device registers
+    /// itself as a runtime device when it next polls the pairing status, so
+    /// the response carries only the name (`runtimeName`,
+    /// runtime_pairing.rs:412-417) — no device id yet.
+    @discardableResult
+    func approvePairing(code: String) async throws -> String? {
+        let url = AppConfig.cloudAPIBaseURL
+            .appendingPathComponent("api/v1/runtime-pairings/code")
+            .appendingPathComponent(code)
+            .appendingPathComponent("approve")
+        let client = APIClient.shared
+        var request = try await client.authorizedRequest(url: url, method: "POST")
+        request.httpBody = Data("{}".utf8)
+
+        let (data, response) = try await client.session.data(for: request)
+        try client.validate(response, data: data)
+        return try? JSONDecoder().decode(ApprovePairingResponse.self, from: data).runtimeName
+    }
+}
+
+private struct RuntimesResponse: Decodable {
+    let runtimes: [RuntimeDevice]
+}
+
+private struct ApprovePairingResponse: Decodable {
+    let runtimeName: String?
+}

@@ -801,27 +801,38 @@ private struct CodeThreadChatView: View {
 
 // MARK: - Runtime pairing sheet
 
-/// Pairing sheet behind the environment menu's "Pair Runtime…" entry.
+/// Pairing sheet behind the environment menu's "Pair Runtime…" entry. The
+/// user never types a runtime id:
 ///
-/// Two paths:
-/// 1. Handoff token → POST /dispatch/handoff/claim (the phone half of the
-///    desktop QR handoff, src/lib/dispatch/handoff.ts). DEPENDENT ON AN
-///    UNIMPLEMENTED HOSTED ENDPOINT (handoff.ts:1-7,23-27) — marked inline;
-///    failures are shown, not swallowed.
-/// 2. Manual "Runtime device ID" entry — the working fallback (the id the
-///    web's Settings → Runtime devices lists from GET /api/v1/runtime-devices,
-///    SettingsView.tsx:193-254).
+/// 1. "Choose a runtime" (default) — GET /api/v1/runtime-devices lists the
+///    account's paired devices (name, type, online status, last seen);
+///    tapping a row pairs it via EnvironmentStore and dismisses.
+/// 2. "Have a pairing code?" — the XXXX-XXXX code a NEW device prints
+///    (`gizzi pair`, a VPS first boot): GET /api/v1/runtime-pairings/code/:code
+///    shows the device, POST .../approve connects it (the web/desktop
+///    DevicePairingPanel flow), then the sheet auto-pairs the device once it
+///    checks in to the runtime list.
+///
+/// Manual runtime-id entry remains as a collapsed "Advanced" fallback.
 private struct RuntimePairingView: View {
     @StateObject private var environmentStore = EnvironmentStore.shared
     @Environment(\.dismiss) private var dismiss
 
-    @State private var handoffToken = ""
+    @State private var runtimes: [RuntimeDevice] = []
+    @State private var isLoadingRuntimes = false
+    @State private var runtimesError: String? = nil
+
+    @State private var pairingCode = ""
+    @State private var pairingInfo: RuntimePairingInfo? = nil
+    @State private var isLookingUp = false
+    @State private var isApproving = false
+    @State private var codeError: String? = nil
+    @State private var approvedName: String? = nil
+
     @State private var manualRuntimeId = ""
-    @State private var isClaiming = false
-    @State private var pairingError: String? = nil
-    @State private var infoMessage: String? = nil
 
     private let theme = ModeTheme(mode: .code)
+    private let client = RuntimeDevicesClient()
 
     var body: some View {
         NavigationStack {
@@ -830,8 +841,9 @@ private struct RuntimePairingView: View {
                     if let pairedRuntimeId = environmentStore.pairedRuntimeId {
                         pairedCard(pairedRuntimeId)
                     }
-                    handoffCard
-                    manualCard
+                    chooseCard
+                    codeCard
+                    advancedCard
                 }
                 .padding(20)
             }
@@ -842,6 +854,12 @@ private struct RuntimePairingView: View {
                 ToolbarItem(placement: .topBarTrailing) {
                     Button("Done") { dismiss() }
                 }
+            }
+            .task {
+                await loadRuntimes()
+            }
+            .refreshable {
+                await loadRuntimes()
             }
         }
     }
@@ -880,59 +898,186 @@ private struct RuntimePairingView: View {
         )
     }
 
-    private var handoffCard: some View {
+    // MARK: - Choose a runtime
+
+    /// The default path: the account's paired devices from
+    /// GET /api/v1/runtime-devices. Tap pairs + dismisses; loading, error
+    /// (with retry), and empty states mirror the session list's.
+    private var chooseCard: some View {
         VStack(alignment: .leading, spacing: 10) {
-            Text("Handoff token")
+            Text("Choose a runtime")
                 .font(.subheadline)
                 .fontWeight(.semibold)
                 .foregroundColor(Color("TextPrimary"))
 
-            Text("Paste the token from the desktop's pairing handoff. Dependent on the hosted /dispatch/handoff/claim endpoint, which isn't implemented yet — expect claiming to fail and use manual entry below.")
+            Text("Cloud requests relay through the runtime you pick. Pair a new device with a code below.")
                 .font(.caption)
                 .foregroundColor(Color("TextSecondary"))
                 .fixedSize(horizontal: false, vertical: true)
 
-            TextField("Handoff token", text: $handoffToken)
-                .font(.subheadline)
-                .foregroundColor(Color("TextPrimary"))
-                .textInputAutocapitalization(.never)
-                .autocorrectionDisabled()
-                .padding(.horizontal, 12)
-                .padding(.vertical, 9)
-                .background(Color("BgSecondary"))
-                .cornerRadius(10)
+            if isLoadingRuntimes && runtimes.isEmpty {
+                HStack {
+                    Spacer()
+                    ProgressView()
+                        .padding(.vertical, 12)
+                    Spacer()
+                }
+            } else if let runtimesError, runtimes.isEmpty {
+                VStack(alignment: .leading, spacing: 8) {
+                    Text(runtimesError)
+                        .font(.caption)
+                        .foregroundColor(.red)
+                        .fixedSize(horizontal: false, vertical: true)
+                    Button("Retry") {
+                        Task { await loadRuntimes() }
+                    }
+                    .font(.subheadline)
+                    .foregroundColor(theme.accent)
+                }
+            } else if runtimes.isEmpty {
+                Text("No runtimes yet — pair one with a code below.")
+                    .font(.caption)
+                    .foregroundColor(Color("TextSecondary"))
+                    .fixedSize(horizontal: false, vertical: true)
+            } else {
+                VStack(spacing: 0) {
+                    ForEach(runtimes) { runtime in
+                        runtimeRow(runtime)
+                    }
+                }
+            }
+        }
+        .padding(14)
+        .background(Color("BgPanel"))
+        .clipShape(RoundedRectangle(cornerRadius: Theme.radiusLG))
+        .overlay(
+            RoundedRectangle(cornerRadius: Theme.radiusLG)
+                .stroke(Theme.borderWarmDefault, lineWidth: 1)
+        )
+    }
 
-            if let pairingError {
-                Text(pairingError)
+    /// One runtime row: status dot, type icon, name + type · last-seen
+    /// subtitle, checkmark on the currently paired one.
+    private func runtimeRow(_ runtime: RuntimeDevice) -> some View {
+        Button(action: {
+            let generator = UIImpactFeedbackGenerator(style: .light)
+            generator.impactOccurred()
+            environmentStore.pair(withRuntimeId: runtime.id)
+            dismiss()
+        }) {
+            HStack(spacing: 12) {
+                Image(systemName: runtime.runtimeType == "vps" || runtime.runtimeType == "hosted" ? "server.rack" : "desktopcomputer")
+                    .font(.subheadline)
+                    .foregroundColor(theme.accent)
+                    .frame(width: 20)
+
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(runtime.name)
+                        .font(.subheadline)
+                        .foregroundColor(Color("TextPrimary"))
+                        .lineLimit(1)
+
+                    Text("\(runtime.typeLabel) · \(Self.lastSeenLabel(for: runtime))")
+                        .font(.caption)
+                        .foregroundColor(Color("TextSecondary"))
+                        .lineLimit(1)
+                }
+
+                Spacer()
+
+                Circle()
+                    .fill(runtime.isOnline ? Theme.statusSuccess : Color("TextSecondary"))
+                    .frame(width: 8, height: 8)
+
+                Image(systemName: "checkmark")
+                    .font(.subheadline)
+                    .fontWeight(.semibold)
+                    .foregroundColor(theme.accent)
+                    .opacity(environmentStore.pairedRuntimeId == runtime.id ? 1 : 0)
+                    .frame(width: 20)
+            }
+            .padding(.vertical, 8)
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+    }
+
+    // MARK: - Pairing code
+
+    /// The new-device path: the XXXX-XXXX code a runtime prints when it asks
+    /// to pair (`gizzi pair`, a VPS first boot). Continue looks the code up
+    /// and swaps in the device details with Approve / Back.
+    private var codeCard: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            Text("Have a pairing code?")
+                .font(.subheadline)
+                .fontWeight(.semibold)
+                .foregroundColor(Color("TextPrimary"))
+
+            Text("Enter the code a runtime prints when it asks to connect — e.g. `gizzi pair` output or a VPS first boot.")
+                .font(.caption)
+                .foregroundColor(Color("TextSecondary"))
+                .fixedSize(horizontal: false, vertical: true)
+
+            if let approvedName {
+                HStack(spacing: 8) {
+                    Image(systemName: "checkmark.circle.fill")
+                        .foregroundColor(Theme.statusSuccess)
+                    Text("\(approvedName) is connected to your Allternit account — pick it from the list above once it checks in.")
+                        .font(.caption)
+                        .foregroundColor(Color("TextPrimary"))
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+            }
+
+            if let pairingInfo {
+                pairingDetail(pairingInfo)
+            } else {
+                HStack(spacing: 10) {
+                    TextField("ABCD-2345", text: $pairingCode)
+                        .font(.system(.subheadline, design: .monospaced))
+                        .foregroundColor(Color("TextPrimary"))
+                        .textInputAutocapitalization(.never)
+                        .autocorrectionDisabled()
+                        .padding(.horizontal, 12)
+                        .padding(.vertical, 9)
+                        .background(Color("BgSecondary"))
+                        .cornerRadius(10)
+                        .onChange(of: pairingCode) { _, newValue in
+                            let normalized = Self.normalizeCode(newValue)
+                            if normalized != newValue {
+                                pairingCode = normalized
+                            }
+                            codeError = nil
+                        }
+
+                    Button(action: lookup) {
+                        HStack(spacing: 8) {
+                            if isLookingUp {
+                                ProgressView()
+                                    .scaleEffect(0.8)
+                            }
+                            Text(isLookingUp ? "Checking…" : "Continue")
+                        }
+                        .font(.subheadline)
+                        .fontWeight(.semibold)
+                        .foregroundColor(.black)
+                        .padding(.horizontal, 14)
+                        .padding(.vertical, 9)
+                        .background(theme.accent)
+                        .cornerRadius(10)
+                    }
+                    .disabled(pairingCode.count != 9 || isLookingUp)
+                    .opacity(pairingCode.count != 9 || isLookingUp ? 0.5 : 1)
+                }
+            }
+
+            if let codeError {
+                Text(codeError)
                     .font(.caption)
                     .foregroundColor(.red)
                     .fixedSize(horizontal: false, vertical: true)
             }
-            if let infoMessage {
-                Text(infoMessage)
-                    .font(.caption)
-                    .foregroundColor(Theme.statusWarning)
-                    .fixedSize(horizontal: false, vertical: true)
-            }
-
-            Button(action: claim) {
-                HStack(spacing: 8) {
-                    if isClaiming {
-                        ProgressView()
-                            .scaleEffect(0.8)
-                    }
-                    Text(isClaiming ? "Claiming…" : "Claim Token")
-                }
-                .font(.subheadline)
-                .fontWeight(.semibold)
-                .foregroundColor(.black)
-                .frame(maxWidth: .infinity)
-                .padding(.vertical, 10)
-                .background(theme.accent)
-                .cornerRadius(10)
-            }
-            .disabled(handoffToken.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty || isClaiming)
-            .opacity(handoffToken.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty || isClaiming ? 0.5 : 1)
         }
         .padding(14)
         .background(Color("BgPanel"))
@@ -943,41 +1088,125 @@ private struct RuntimePairingView: View {
         )
     }
 
-    private var manualCard: some View {
+    /// The looked-up pairing request (DevicePairingPanel.tsx:343-433): device
+    /// name, type · code subtitle, optional host/system rows, Approve + Back.
+    private func pairingDetail(_ pairing: RuntimePairingInfo) -> some View {
         VStack(alignment: .leading, spacing: 10) {
-            Text("Runtime device ID")
-                .font(.subheadline)
-                .fontWeight(.semibold)
-                .foregroundColor(Color("TextPrimary"))
+            HStack(spacing: 12) {
+                Image(systemName: pairing.runtimeType == "vps" || pairing.runtimeType == "hosted" ? "server.rack" : "desktopcomputer")
+                    .font(.title3)
+                    .foregroundColor(theme.accent)
+                    .frame(width: 40, height: 40)
+                    .background(Color("BgSecondary"))
+                    .clipShape(RoundedRectangle(cornerRadius: 10))
 
-            Text("The id listed under Settings → Runtime devices on the web or desktop. Cloud requests then relay through this runtime.")
-                .font(.caption)
-                .foregroundColor(Color("TextSecondary"))
-                .fixedSize(horizontal: false, vertical: true)
+                VStack(alignment: .leading, spacing: 2) {
+                    Text("Connect \(pairing.name)?")
+                        .font(.subheadline)
+                        .fontWeight(.semibold)
+                        .foregroundColor(Color("TextPrimary"))
+                    Text("\(RuntimeDevice.typeLabel(for: pairing.runtimeType)) · Code \(pairing.userCode)")
+                        .font(.caption)
+                        .foregroundColor(Color("TextSecondary"))
+                }
+            }
 
-            TextField("Runtime device ID", text: $manualRuntimeId)
-                .font(.subheadline)
-                .foregroundColor(Color("TextPrimary"))
-                .textInputAutocapitalization(.never)
-                .autocorrectionDisabled()
-                .padding(.horizontal, 12)
-                .padding(.vertical, 9)
-                .background(Color("BgSecondary"))
-                .cornerRadius(10)
+            if let hostname = pairing.hostname, !hostname.isEmpty {
+                detailRow("Host", hostname)
+            }
+            if let platform = pairing.platform, !platform.isEmpty {
+                detailRow("System", platform)
+            }
 
-            Button(action: saveManual) {
-                Text("Save Runtime ID")
+            HStack(spacing: 10) {
+                Button(action: approve) {
+                    HStack(spacing: 8) {
+                        if isApproving {
+                            ProgressView()
+                                .scaleEffect(0.8)
+                        }
+                        Text(isApproving ? "Connecting…" : "Approve")
+                    }
                     .font(.subheadline)
                     .fontWeight(.semibold)
                     .foregroundColor(.black)
-                    .frame(maxWidth: .infinity)
-                    .padding(.vertical, 10)
+                    .padding(.horizontal, 14)
+                    .padding(.vertical, 9)
                     .background(theme.accent)
                     .cornerRadius(10)
+                }
+                .disabled(isApproving)
+                .opacity(isApproving ? 0.5 : 1)
+
+                Button("Back") {
+                    pairingInfo = nil
+                    codeError = nil
+                }
+                .font(.subheadline)
+                .foregroundColor(Color("TextSecondary"))
+                .disabled(isApproving)
             }
-            .disabled(manualRuntimeId.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
-            .opacity(manualRuntimeId.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ? 0.5 : 1)
         }
+    }
+
+    private func detailRow(_ label: String, _ value: String) -> some View {
+        HStack {
+            Text(label)
+                .font(.caption)
+                .foregroundColor(Color("TextSecondary"))
+            Spacer()
+            Text(value)
+                .font(.caption)
+                .fontWeight(.semibold)
+                .foregroundColor(Color("TextPrimary"))
+                .lineLimit(1)
+                .truncationMode(.middle)
+        }
+    }
+
+    // MARK: - Advanced (manual id)
+
+    /// Manual runtime-id entry, collapsed by default — the fallback for when
+    /// neither the list nor a pairing code applies.
+    private var advancedCard: some View {
+        DisclosureGroup {
+            VStack(alignment: .leading, spacing: 10) {
+                Text("The id listed under Settings → Runtime devices on the web or desktop. Cloud requests then relay through this runtime.")
+                    .font(.caption)
+                    .foregroundColor(Color("TextSecondary"))
+                    .fixedSize(horizontal: false, vertical: true)
+
+                TextField("Runtime device ID", text: $manualRuntimeId)
+                    .font(.subheadline)
+                    .foregroundColor(Color("TextPrimary"))
+                    .textInputAutocapitalization(.never)
+                    .autocorrectionDisabled()
+                    .padding(.horizontal, 12)
+                    .padding(.vertical, 9)
+                    .background(Color("BgSecondary"))
+                    .cornerRadius(10)
+
+                Button(action: saveManual) {
+                    Text("Save Runtime ID")
+                        .font(.subheadline)
+                        .fontWeight(.semibold)
+                        .foregroundColor(.black)
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 10)
+                        .background(theme.accent)
+                        .cornerRadius(10)
+                }
+                .disabled(manualRuntimeId.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+                .opacity(manualRuntimeId.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ? 0.5 : 1)
+            }
+            .padding(.top, 10)
+        } label: {
+            Text("Advanced: enter a runtime ID")
+                .font(.subheadline)
+                .fontWeight(.semibold)
+                .foregroundColor(Color("TextSecondary"))
+        }
+        .tint(Color("TextSecondary"))
         .padding(14)
         .background(Color("BgPanel"))
         .clipShape(RoundedRectangle(cornerRadius: Theme.radiusLG))
@@ -987,31 +1216,92 @@ private struct RuntimePairingView: View {
         )
     }
 
-    /// POST /dispatch/handoff/claim via EnvironmentStore. Success carrying a
-    /// runtime id pairs and dismisses; any failure is shown inline.
-    private func claim() {
-        let token = handoffToken.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !token.isEmpty, !isClaiming else { return }
+    // MARK: - Actions & loading
 
-        isClaiming = true
-        pairingError = nil
-        infoMessage = nil
+    @MainActor
+    private func loadRuntimes() async {
+        if runtimes.isEmpty {
+            isLoadingRuntimes = true
+        }
+        runtimesError = nil
+
+        do {
+            runtimes = try await client.fetchRuntimes()
+        } catch is CancellationError {
+            // View disappeared mid-flight — keep the current state.
+        } catch {
+            runtimesError = error.localizedDescription
+        }
+        isLoadingRuntimes = false
+    }
+
+    /// GET /api/v1/runtime-pairings/code/:code. Success swaps the code field
+    /// for the device details; any failure is shown inline.
+    private func lookup() {
+        let code = pairingCode
+        guard code.count == 9, !isLookingUp else { return }
+
+        isLookingUp = true
+        codeError = nil
 
         Task {
             do {
-                if let runtimeId = try await environmentStore.claimHandoffToken(token) {
-                    environmentStore.pair(withRuntimeId: runtimeId)
-                    dismiss()
-                } else {
-                    // 2xx but an unrecognized body — the endpoint's success
-                    // shape is undefined while it's unimplemented.
-                    infoMessage = "The token was accepted, but the response carried no runtime id. Enter the runtime device ID manually below."
-                }
+                pairingInfo = try await client.lookupPairing(code: code)
             } catch {
-                pairingError = error.localizedDescription
+                pairingInfo = nil
+                codeError = error.localizedDescription
             }
-            isClaiming = false
+            isLookingUp = false
         }
+    }
+
+    /// POST /api/v1/runtime-pairings/code/:code/approve, then auto-pair the
+    /// device once it checks in to the runtime list; when it hasn't yet, the
+    /// success message points at the (refreshed) list instead.
+    private func approve() {
+        guard let pairing = pairingInfo, !isApproving else { return }
+
+        isApproving = true
+        codeError = nil
+
+        Task {
+            do {
+                let name = try await client.approvePairing(code: pairing.userCode) ?? pairing.name
+                pairingInfo = nil
+                pairingCode = ""
+                await loadRuntimes()
+                if await autoPairApprovedRuntime(named: name) {
+                    isApproving = false
+                    return
+                }
+                approvedName = name
+            } catch {
+                codeError = error.localizedDescription
+            }
+            isApproving = false
+        }
+    }
+
+    /// The approve response carries no device id (the device registers itself
+    /// when it next polls the pairing status), so poll the runtime list
+    /// briefly for a device with the approved name and pair it directly.
+    /// Returns true when paired (the sheet dismisses); false leaves the
+    /// success message + refreshed list for the user to tap.
+    @MainActor
+    private func autoPairApprovedRuntime(named name: String) async -> Bool {
+        for attempt in 0..<4 {
+            if attempt > 0 {
+                try? await Task.sleep(for: .seconds(1.5))
+                await loadRuntimes()
+            }
+            if Task.isCancelled { return false }
+            if let device = runtimes.first(where: { $0.name == name }) {
+                environmentStore.pair(withRuntimeId: device.id)
+                dismiss()
+                return true
+            }
+        }
+        return false
     }
 
     private func saveManual() {
@@ -1019,6 +1309,36 @@ private struct RuntimePairingView: View {
         guard !runtimeId.isEmpty else { return }
         environmentStore.pair(withRuntimeId: runtimeId)
         dismiss()
+    }
+
+    // MARK: - Formatting
+
+    /// Same normalization as the web panel (DevicePairingPanel.tsx:64-67):
+    /// uppercase A-Z2-9, 8 chars, dashed XXXX-XXXX.
+    private static func normalizeCode(_ value: String) -> String {
+        let allowed = Set("ABCDEFGHIJKLMNOPQRSTUVWXYZ23456789")
+        let compact = String(value.uppercased().filter { allowed.contains($0) }.prefix(8))
+        return compact.count > 4 ? "\(compact.prefix(4))-\(compact.suffix(compact.count - 4))" : compact
+    }
+
+    private static func lastSeenLabel(for runtime: RuntimeDevice) -> String {
+        guard let raw = runtime.lastSeenAt, let date = parseTimestamp(raw) else {
+            return "Last seen never"
+        }
+        // Built per call: a shared formatter static would be non-Sendable
+        // state under Swift 6.
+        let formatter = RelativeDateTimeFormatter()
+        formatter.unitsStyle = .abbreviated
+        return "Last seen \(formatter.localizedString(for: date, relativeTo: Date()))"
+    }
+
+    /// Backend timestamps are RFC-3339 (chrono `to_rfc3339`), with or without
+    /// fractional seconds. Mirrored from CodeModeView's private copy.
+    private static func parseTimestamp(_ value: String) -> Date? {
+        if let date = try? Date(value, strategy: Date.ISO8601FormatStyle(includingFractionalSeconds: true)) {
+            return date
+        }
+        return try? Date(value, strategy: Date.ISO8601FormatStyle())
     }
 }
 
