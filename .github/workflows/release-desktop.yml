@@ -126,6 +126,24 @@ jobs:
           lipo -info resources/lima/limactl
         working-directory: surfaces/allternit-desktop
 
+      # ── Step 3b: Stage mesh-node sidecar ─────────────────────────────────
+      - name: Setup Go
+        # Needed to build the mesh-node sidecar from source (the vendor tree
+        # is gitignored, so prepare-mesh-node.cjs builds it via
+        # infrastructure/mesh/tsnet-ios/build-sidecar.sh).
+        uses: actions/setup-go@v5
+        with:
+          go-version-file: infrastructure/mesh/tsnet-ios/go.mod
+          cache: false
+
+      - name: Stage mesh-node sidecar
+        # tsnet sidecar that gives the packaged app tailnet reachability
+        # (src/main/mesh-manager.ts resolves resources/bin/mesh-node).
+        # Stages into resources/bin/ ahead of electron-builder's
+        # extraResources packing.
+        run: node scripts/prepare-mesh-node.cjs
+        working-directory: surfaces/allternit-desktop
+
       # ── Step 4: Patch checksums into manifest.ts ─────────────────────────────
       - name: Patch manifest.ts checksums
         run: |
@@ -238,6 +256,21 @@ jobs:
           mkdir -p surfaces/allternit-desktop/resources/bin
           cp target/x86_64-pc-windows-msvc/release/allternit-api.exe \
              surfaces/allternit-desktop/resources/bin/allternit-api.exe
+
+      - name: Setup Go
+        # Needed to build the mesh-node sidecar from source (the vendor tree
+        # is gitignored, so prepare-mesh-node.cjs runs an equivalent go build
+        # for win32-x64, mirroring release-gizzi-code.yml).
+        uses: actions/setup-go@v5
+        with:
+          go-version-file: infrastructure/mesh/tsnet-ios/go.mod
+          cache: false
+
+      - name: Stage mesh-node sidecar
+        # Stages resources/bin/mesh-node.exe ahead of electron-builder's
+        # extraResources packing (src/main/mesh-manager.ts resolves it).
+        run: node scripts/prepare-mesh-node.cjs
+        working-directory: surfaces/allternit-desktop
 
       - name: Install desktop dependencies
         run: npm install

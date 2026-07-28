@@ -72,6 +72,24 @@ chmod +x resources/bin/cloudflared
 curl -L --output resources/bin/cloudflared.exe https://github.com/cloudflare/cloudflared/releases/latest/download/cloudflared-windows-amd64.exe
 ```
 
+### Step 3b: Stage mesh-node sidecar
+
+mesh-node is the tsnet userspace sidecar (`infrastructure/mesh/tsnet-ios/cmd/mesh-node`) that joins the Allternit tailnet without a system VPN — it's what lets the desktop app reach gizzi instances at `100.64.0.0/10` addresses. The packaged app resolves it from `resources/bin/mesh-node[.exe]` (see `src/main/mesh-manager.ts`).
+
+Stage it for your current platform:
+
+```bash
+npm run prepare:mesh-node
+```
+
+The script (`scripts/prepare-mesh-node.cjs`) acquires the binary in this order:
+
+1. **Vendor copy** — copies from the repo vendor tree `cmd/gizzi-code/vendor/mesh-node/<platform>-<arch>/` (the same binary gizzi-code's `mesh.ts` uses) if present.
+2. **Build from source** — runs `infrastructure/mesh/tsnet-ios/build-sidecar.sh` (darwin-arm64, linux-x64), or an equivalent `go build` for win32-x64, when Go is on PATH.
+3. **Release download** — downloads the latest `gizzi-code/*` GitHub release asset (v0.2.2+ archives ship `mesh-node` next to `gizzi-code`) and extracts just the sidecar.
+
+The script is idempotent (skips when `resources/bin/mesh-node` already exists) and is already wired into `build:electron`, `build:electron:dmg`, `pack`, and `dist`. The staged binary is gitignored like the rest of `resources/bin/`.
+
 ### Step 4: Build Desktop App
 
 ```bash
@@ -140,6 +158,10 @@ elif [[ "$OSTYPE" == "linux-gnu"* ]]; then
     curl -L -o resources/bin/cloudflared https://github.com/cloudflare/cloudflared/releases/latest/download/cloudflared-linux-amd64
     chmod +x resources/bin/cloudflared
 fi
+
+# Step 3b: Stage mesh-node sidecar (vendor copy → go build → release download)
+echo "→ Staging mesh-node..."
+npm run prepare:mesh-node
 
 # Step 4: Build desktop
 echo "→ Building desktop app..."
