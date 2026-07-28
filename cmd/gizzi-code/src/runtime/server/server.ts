@@ -76,6 +76,7 @@ import { CoworkRoutes } from "@/runtime/server/routes/cowork"
 import { AcpRoutes } from "@/runtime/server/routes/acp"
 import { PeerRoutes } from "@/runtime/server/routes/peers"
 import { OrchestratorRoutes } from "@/runtime/server/routes/orchestrator"
+import { AgentCompatRoutes } from "@/runtime/server/routes/agent-compat"
 import { createHash, randomUUID } from "node:crypto"
 
 // @ts-ignore This global is needed to prevent ai-sdk from logging warnings to stdout https://github.com/vercel/ai/blob/2dc67e0ef538307f21368db32d5a12345d98831b/packages/ai/src/logger/log-warnings.ts#L85
@@ -442,6 +443,10 @@ export namespace Server {
           },
         )
         .route("/event", EventRoutes())
+        // Allternit iOS app protocol facade (/api/v1/agent-sessions +
+        // /api/agent-chat) — lets any gizzi instance serve as the app's
+        // agent brain without allternit-api in the middle.
+        .route("/api", AgentCompatRoutes())
         // /v1/ — versioned API surface (same handlers, new path prefix)
         .route(
           "/v1",
