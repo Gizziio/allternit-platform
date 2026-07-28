@@ -26,7 +26,7 @@ use allternit_cloud_wizard::{
     AuthenticatedUser, InstanceRegistrar, MeshKeyMinter, SqliteCheckpointStore, WizardAppState,
 };
 
-use crate::{auth::clerk, routes::mesh::MeshService, ApiState};
+use crate::{auth::clerk, routes::mesh::MeshService, ApiError, ApiState};
 
 /// Wizard state shared across all wizard requests, built once at startup.
 pub struct WizardHost {
@@ -62,9 +62,11 @@ pub fn routes(state: &Arc<ApiState>) -> Router<Arc<ApiState>> {
 
 /// Verifies the Clerk session and injects the wizard's `AuthenticatedUser`.
 /// Answers 401 (via the shared ApiError mapping) when the session is absent
-/// or invalid.
+/// or invalid. Also provisions the `users` row: `wizard_sessions.user_id`
+/// references it, and a first-time wizard user otherwise dies on the FK
+/// (mirrors `gizzi_instances::ensure_user_row`).
 async fn clerk_user_extension(
-    State(_state): State<Arc<ApiState>>,
+    State(state): State<Arc<ApiState>>,
     mut request: Request,
     next: Next,
 ) -> Response {
@@ -72,6 +74,31 @@ async fn clerk_user_extension(
         Ok(user) => user,
         Err(error) => return error.into_response(),
     };
+    let email = user
+        .email
+        .clone()
+        .unwrap_or_else(|| format!("{}@users.allternit.local", user.id));
+    let provisioned = sqlx::query(
+        r#"
+        INSERT INTO users (id, email, name, avatar_url, status, last_login_at)
+        VALUES (?, ?, ?, ?, 'active', CURRENT_TIMESTAMP)
+        ON CONFLICT(id) DO UPDATE SET
+            email = excluded.email,
+            name = COALESCE(excluded.name, users.name),
+            avatar_url = COALESCE(excluded.avatar_url, users.avatar_url),
+            status = 'active',
+            last_login_at = CURRENT_TIMESTAMP
+        "#,
+    )
+    .bind(&user.id)
+    .bind(&email)
+    .bind(user.name.as_deref())
+    .bind(user.image_url.as_deref())
+    .execute(&state.db)
+    .await;
+    if let Err(error) = provisioned {
+        return ApiError::from(error).into_response();
+    }
     request.extensions_mut().insert(AuthenticatedUser {
         user_id: user.id,
     });
