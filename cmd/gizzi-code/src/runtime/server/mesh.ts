@@ -5,22 +5,31 @@
 // server over WireGuard instead of a public tunnel. Mirrors tunnel.ts: one
 // discovery chain, one spawn path, `stop()` lifecycle owned by this process.
 //
-// Three join paths, decided at start() in this order:
-//   attach  — a system tailscaled is already reachable through the `tailscale`
-//             CLI's default socket (e.g. Homebrew's `tailscaled` running as a
-//             daemon, or the Tailscale.app GUI). If it already has a tailnet
-//             IPv4 we reuse it as-is (passive — never `up`, never `down`);
-//             otherwise we `tailscale up --login-server <control>` against it.
-//             Real host interface, so the mesh URL is always routable.
-//   sidecar — no system daemon: spawn the mesh-node tsnet sidecar
+// Three join paths, decided at start() in this order. The Allternit mesh is
+// the product's network — a personal tailnet is the user's own — so the
+// sidecar that joins OUR headscale is the primary path and any system
+// tailscaled is only a fallback:
+//   sidecar — primary path, when the mesh-node binary is discoverable AND an
+//             auth key is configured: spawn the mesh-node tsnet sidecar
 //             (infrastructure/mesh/tsnet-ios/cmd/mesh-node, vendored under
 //             vendor/mesh-node/<platform>-<arch>/). It joins the tailnet in
 //             pure userspace and listens on the tailnet, forwarding to
 //             127.0.0.1:<gizzi port>, and prints `MESH_READY ip=<100.x>` which
 //             we scrape. tsnet's userspace Listen accepts inbound tailnet
 //             connections, so this mesh URL IS routable — no root, no TUN,
-//             and it works even when gizzi itself binds loopback.
-//   spawn   — last resort when neither a system daemon nor the sidecar is
+//             and it works even when gizzi itself binds loopback. It keeps
+//             its own state/socket, so it coexists with any system tailscaled
+//             without touching the user's personal tailnet.
+//   attach  — fallback when the sidecar can't run (binary missing) or the
+//             join fails (bad/expired key, control unreachable — logged with a
+//             warning): a system tailscaled is reachable through the
+//             `tailscale` CLI's default socket (e.g. Homebrew's `tailscaled`
+//             running as a daemon, or the Tailscale.app GUI). If it already
+//             has a tailnet IPv4 we reuse it as-is (passive — never `up`,
+//             never `down`); otherwise we `tailscale up --login-server
+//             <control>` against OUR control URL. Real host interface, so the
+//             mesh URL is always routable.
+//   spawn   — last resort when neither the sidecar nor a system daemon is
 //             available: spawn our own tailscaled in userspace networking
 //             mode (no root/TUN needed) with state/socket under the gizzi
 //             data dir, then drive it via `tailscale --socket <sock>`.
@@ -50,6 +59,8 @@ export namespace Mesh {
     "no system tailscaled is running, the mesh-node sidecar is not available, and the tailscaled binary is not installed, so the mesh cannot be joined. Install tailscaled (`brew install tailscale`), set GIZZI_MESH_NODE_BIN to a mesh-node binary, or set GIZZI_TAILSCALED_BIN to its path."
   const AUTH_KEY_HINT =
     "tailscale rejected the auth key — preauth keys expire and are usually single-use. Get a new one (see infrastructure/mesh/headscale/OPS.md) and pass --mesh-auth-key or set GIZZI_MESH_AUTH_KEY."
+  const NO_AUTH_KEY_HINT =
+    "no mesh auth key configured; skipping the mesh join. Keys are minted by pairing/enrollment — run `gizzi pair` (the platform's /api/v1/mesh/enroll flow issues the key), then pass --mesh-auth-key or set GIZZI_MESH_AUTH_KEY."
 
   export type Options = {
     authKey?: string
@@ -264,7 +275,8 @@ export namespace Mesh {
 
   // Starts the mesh join and resolves with the mesh URL
   // (http://<tailnet-ip>:<port>). Idempotent: concurrent callers share the
-  // in-flight start. Rejects on any failure — the caller logs it and keeps
+  // in-flight start. Resolves undefined when no auth key is configured (mesh
+  // skipped); rejects on any join failure — the caller logs it and keeps
   // serving without mesh.
   export async function start(port: number, opts: Options = {}): Promise<string | undefined> {
     if (meshUrl) return meshUrl
@@ -288,26 +300,23 @@ export namespace Mesh {
       }
 
       try {
-        // Path 1 — attach: a system tailscaled is reachable. If it already has
-        // a tailnet IPv4, reuse it passively — the machine is already on a
-        // tailnet and we must not re-up or later tear down someone else's
-        // login.
-        if (cli && (await systemDaemonReachable(cli))) {
-          const existing = await meshIp(cli)
-          if (existing) {
-            mode = "attach-passive"
-            meshUrl = `http://${existing}:${port}`
-            log.info("system tailscaled already on a tailnet; using existing mesh IP", { ip: existing })
-            return meshUrl
-          }
-          mode = "attach-up"
-          await tailscaleUp(cli, opts)
-        } else {
-          // Path 2 — sidecar: the mesh-node tsnet sidecar joins AND listens on
-          // the tailnet in pure userspace, forwarding to 127.0.0.1:<port>, so
-          // the scraped IP yields a routable mesh URL.
-          const node = nodeBinary()
-          if (node) {
+        // No auth key, no mesh: every join path needs a preauth key to be
+        // non-interactive, so without one we skip with a hint rather than
+        // block on an interactive login or land on a personal tailnet.
+        if (!opts.authKey) {
+          log.warn(NO_AUTH_KEY_HINT)
+          return undefined
+        }
+
+        // Path 1 — sidecar: the mesh-node tsnet sidecar joins AND listens on
+        // the Allternit tailnet in pure userspace, forwarding to
+        // 127.0.0.1:<port>, so the scraped IP yields a routable mesh URL. It
+        // keeps its own state/socket, so it is the primary path even when a
+        // system tailscaled exists — the user's personal tailnet stays
+        // untouched.
+        const node = nodeBinary()
+        if (node) {
+          try {
             mode = "sidecar"
             const ip = await startSidecar(node, port, opts)
             if (child) {
@@ -321,7 +330,39 @@ export namespace Mesh {
             meshUrl = `http://${ip}:${port}`
             log.info("mesh tailnet joined", { mode, url: meshUrl })
             return meshUrl
+          } catch (err) {
+            // Sidecar present but the join failed (bad/expired key, control
+            // unreachable) — fall back to attaching to a system tailscaled.
+            log.warn("mesh-node sidecar failed; falling back to a system tailscaled", {
+              error: err instanceof Error ? err.message : String(err),
+            })
+            if (child) {
+              try {
+                child.kill("SIGTERM")
+              } catch {
+                // already gone
+              }
+              child = undefined
+            }
+            mode = undefined
           }
+        }
+
+        // Path 2 — attach: a system tailscaled is reachable. If it already has
+        // a tailnet IPv4, reuse it passively — the machine is already on a
+        // tailnet and we must not re-up or later tear down someone else's
+        // login. Otherwise `tailscale up` against OUR control URL.
+        if (cli && (await systemDaemonReachable(cli))) {
+          const existing = await meshIp(cli)
+          if (existing) {
+            mode = "attach-passive"
+            meshUrl = `http://${existing}:${port}`
+            log.info("system tailscaled already on a tailnet; using existing mesh IP", { ip: existing })
+            return meshUrl
+          }
+          mode = "attach-up"
+          await tailscaleUp(cli, opts)
+        } else {
           // Path 3 — spawn fallback: userspace networking needs no root/TUN.
           // State and socket live under the gizzi data dir so concurrent gizzi
           // instances never collide with a system daemon. Caveat (see header):
