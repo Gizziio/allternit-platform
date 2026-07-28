@@ -594,7 +594,8 @@ mod tests {
     }
 
     /// Minimal runtime_devices shape for the device-token auth path (mirrors
-    /// the gizzi_instances dual-auth tests).
+    /// the gizzi_instances dual-auth tests, including the migration-022
+    /// rotation-grace columns runtime_device_for_token falls back to).
     async fn device_test_pool() -> sqlx::SqlitePool {
         let pool = sqlx::SqlitePool::connect(":memory:").await.unwrap();
         sqlx::query(
@@ -605,6 +606,8 @@ mod tests {
                 name TEXT NOT NULL,
                 credential_hash TEXT NOT NULL UNIQUE,
                 credential_expires_at TIMESTAMP NOT NULL,
+                previous_credential_hash TEXT,
+                previous_credential_expires_at TIMESTAMP,
                 status TEXT NOT NULL DEFAULT 'offline',
                 last_seen_at TIMESTAMP,
                 revoked_at TIMESTAMP

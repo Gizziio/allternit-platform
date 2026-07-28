@@ -28,6 +28,11 @@ use crate::{
 
 const PAIRING_TTL_MINUTES: i64 = 10;
 const CREDENTIAL_TTL_DAYS: i64 = 90;
+/// How long a just-rotated-out device token stays valid. BYO boxes run two
+/// components (gizzi-code, agent-daemon) off the same token and both rotate
+/// independently; the grace lets the loser keep working until its own
+/// rotation self-heals it instead of dying with 401s.
+const ROTATION_GRACE_MINUTES: i64 = 15;
 /// Device credentials minted here always carry this prefix; other routes use
 /// it to tell a device token apart from a Clerk session JWT.
 pub(crate) const DEVICE_TOKEN_PREFIX: &str = "allternit_runtime_";
@@ -717,22 +722,44 @@ async fn rotate_runtime_credential(
     Path(id): Path<String>,
 ) -> Result<Json<serde_json::Value>, ApiError> {
     let runtime = authenticate_runtime(&state, &headers, &id).await?;
-    let device_token = format!("{DEVICE_TOKEN_PREFIX}{}", random_secret(48));
-    let expires_at = Utc::now() + Duration::days(CREDENTIAL_TTL_DAYS);
-    sqlx::query(
-        "UPDATE runtime_devices SET credential_hash = ?, credential_expires_at = ?, last_seen_at = CURRENT_TIMESTAMP WHERE id = ?",
-    )
-    .bind(sha256_hex(device_token.as_bytes()))
-    .bind(expires_at)
-    .bind(&runtime.id)
-    .execute(&state.db)
-    .await?;
+    let (device_token, expires_at) = rotate_credential(&state.db, &runtime.id).await?;
     Ok(Json(serde_json::json!({
         "runtimeId": runtime.id,
         "deviceToken": device_token,
         "tokenType": "Bearer",
         "expiresAt": expires_at,
     })))
+}
+
+/// Mints a fresh device credential for `runtime_id`, moving the replaced
+/// hash into previous_* with a ROTATION_GRACE_MINUTES expiry. A rotation
+/// authenticated via the previous hash takes the same path: the just-
+/// replaced current becomes the new previous with a fresh grace, which lets
+/// a stranded second component self-heal.
+async fn rotate_credential(
+    db: &SqlitePool,
+    runtime_id: &str,
+) -> Result<(String, DateTime<Utc>), ApiError> {
+    let device_token = format!("{DEVICE_TOKEN_PREFIX}{}", random_secret(48));
+    let expires_at = Utc::now() + Duration::days(CREDENTIAL_TTL_DAYS);
+    sqlx::query(
+        r#"
+        UPDATE runtime_devices
+        SET previous_credential_hash = credential_hash,
+            previous_credential_expires_at = ?,
+            credential_hash = ?,
+            credential_expires_at = ?,
+            last_seen_at = CURRENT_TIMESTAMP
+        WHERE id = ?
+        "#,
+    )
+    .bind(Utc::now() + Duration::minutes(ROTATION_GRACE_MINUTES))
+    .bind(sha256_hex(device_token.as_bytes()))
+    .bind(expires_at)
+    .bind(runtime_id)
+    .execute(db)
+    .await?;
+    Ok((device_token, expires_at))
 }
 
 async fn revoke_self(
@@ -781,7 +808,7 @@ pub(crate) async fn runtime_device_for_token(
             WHERE credential_hash = ? AND id = ? AND revoked_at IS NULL
             "#,
         )
-        .bind(credential_hash)
+        .bind(&credential_hash)
         .bind(expected_id)
         .fetch_optional(db)
         .await?,
@@ -792,11 +819,19 @@ pub(crate) async fn runtime_device_for_token(
             WHERE credential_hash = ? AND revoked_at IS NULL
             "#,
         )
-        .bind(credential_hash)
+        .bind(&credential_hash)
         .fetch_optional(db)
         .await?,
-    }
-    .ok_or_else(|| ApiError::Unauthorized("Invalid runtime credential".to_string()))?;
+    };
+    let runtime = match runtime {
+        Some(runtime) => runtime,
+        // The just-rotated-out hash stays valid for a short grace window so a
+        // second component holding the old token does not die while it
+        // catches up. Authenticating this way never extends the grace.
+        None => previous_credential_for_token(db, &credential_hash, expected_id)
+            .await?
+            .ok_or_else(|| ApiError::Unauthorized("Invalid runtime credential".to_string()))?,
+    };
     if runtime.credential_expires_at <= Utc::now() {
         return Err(ApiError::TokenExpired(
             "Runtime credential expired".to_string(),
@@ -808,6 +843,65 @@ pub(crate) async fn runtime_device_for_token(
         ));
     }
     Ok(runtime)
+}
+
+/// Grace-window fallback for `runtime_device_for_token`: resolves a token
+/// against the previous credential hash while its grace is still open. The
+/// grace expiry is checked in Rust: sqlx stores DateTime<Utc> as RFC3339
+/// text, which does not compare cleanly against CURRENT_TIMESTAMP in SQL
+/// (same reason PairingRow.expires_at is checked in Rust). An expired grace
+/// is treated as absent — the row is lazily cleared on the next rotation.
+async fn previous_credential_for_token(
+    db: &SqlitePool,
+    credential_hash: &str,
+    expected_id: Option<&str>,
+) -> Result<Option<RuntimeCredentialRow>, ApiError> {
+    type PreviousRow = (
+        String,
+        String,
+        String,
+        DateTime<Utc>,
+        String,
+        Option<DateTime<Utc>>,
+    );
+    let row: Option<PreviousRow> = match expected_id {
+        Some(expected_id) => sqlx::query_as::<_, PreviousRow>(
+            r#"
+            SELECT id, user_id, name, credential_expires_at, status,
+                   previous_credential_expires_at
+            FROM runtime_devices
+            WHERE previous_credential_hash = ? AND id = ? AND revoked_at IS NULL
+            "#,
+        )
+        .bind(credential_hash)
+        .bind(expected_id)
+        .fetch_optional(db)
+        .await?,
+        None => sqlx::query_as::<_, PreviousRow>(
+            r#"
+            SELECT id, user_id, name, credential_expires_at, status,
+                   previous_credential_expires_at
+            FROM runtime_devices
+            WHERE previous_credential_hash = ? AND revoked_at IS NULL
+            "#,
+        )
+        .bind(credential_hash)
+        .fetch_optional(db)
+        .await?,
+    };
+    let Some((id, user_id, name, credential_expires_at, status, grace_expires_at)) = row else {
+        return Ok(None);
+    };
+    if grace_expires_at.map(|expires| expires <= Utc::now()).unwrap_or(true) {
+        return Ok(None);
+    }
+    Ok(Some(RuntimeCredentialRow {
+        id,
+        user_id,
+        name,
+        credential_expires_at,
+        status,
+    }))
 }
 
 async fn authenticate_runtime(
@@ -1243,5 +1337,146 @@ mod tests {
                 .await
                 .unwrap();
         assert!(consumed.is_none());
+    }
+
+    /// Minimal runtime_devices shape for the rotation-grace tests (mirrors
+    /// the gizzi_instances/mesh device-token tests, plus the grace columns
+    /// from migration 022).
+    async fn device_pool() -> SqlitePool {
+        let pool = SqlitePool::connect(":memory:").await.unwrap();
+        sqlx::query(
+            r#"
+            CREATE TABLE runtime_devices (
+                id TEXT PRIMARY KEY,
+                user_id TEXT NOT NULL,
+                name TEXT NOT NULL,
+                credential_hash TEXT NOT NULL UNIQUE,
+                credential_expires_at TIMESTAMP NOT NULL,
+                previous_credential_hash TEXT,
+                previous_credential_expires_at TIMESTAMP,
+                status TEXT NOT NULL DEFAULT 'offline',
+                last_seen_at TIMESTAMP,
+                revoked_at TIMESTAMP
+            )
+            "#,
+        )
+        .execute(&pool)
+        .await
+        .unwrap();
+        pool
+    }
+
+    async fn insert_device(pool: &SqlitePool, token: &str) {
+        sqlx::query(
+            r#"
+            INSERT INTO runtime_devices (
+                id, user_id, name, credential_hash, credential_expires_at, status
+            )
+            VALUES ('rd_1', 'user_9', 'byo-vps-1', ?, ?, 'offline')
+            "#,
+        )
+        .bind(sha256_hex(token.as_bytes()))
+        .bind(Utc::now() + Duration::days(1))
+        .execute(pool)
+        .await
+        .unwrap();
+    }
+
+    #[tokio::test]
+    async fn rotated_out_token_works_within_grace_alongside_new_token() {
+        let pool = device_pool().await;
+        let old_token = format!("{DEVICE_TOKEN_PREFIX}oldsecret");
+        insert_device(&pool, &old_token).await;
+
+        let (new_token, _) = rotate_credential(&pool, "rd_1").await.unwrap();
+
+        // Both the fresh token and the just-replaced one authenticate.
+        let via_new = runtime_device_for_token(&pool, &new_token, Some("rd_1"))
+            .await
+            .unwrap();
+        assert_eq!(via_new.id, "rd_1");
+        let via_old = runtime_device_for_token(&pool, &old_token, Some("rd_1"))
+            .await
+            .unwrap();
+        assert_eq!(via_old.id, "rd_1");
+        let via_old = runtime_device_for_token(&pool, &old_token, None)
+            .await
+            .unwrap();
+        assert_eq!(via_old.user_id, "user_9");
+    }
+
+    #[tokio::test]
+    async fn authenticating_via_previous_token_does_not_extend_grace() {
+        let pool = device_pool().await;
+        let old_token = format!("{DEVICE_TOKEN_PREFIX}oldsecret");
+        insert_device(&pool, &old_token).await;
+        rotate_credential(&pool, "rd_1").await.unwrap();
+
+        let grace_before: String =
+            sqlx::query_scalar("SELECT previous_credential_expires_at FROM runtime_devices WHERE id = 'rd_1'")
+                .fetch_one(&pool)
+                .await
+                .unwrap();
+        runtime_device_for_token(&pool, &old_token, Some("rd_1"))
+            .await
+            .unwrap();
+        let grace_after: String =
+            sqlx::query_scalar("SELECT previous_credential_expires_at FROM runtime_devices WHERE id = 'rd_1'")
+                .fetch_one(&pool)
+                .await
+                .unwrap();
+        assert_eq!(grace_before, grace_after);
+    }
+
+    #[tokio::test]
+    async fn rotation_with_previous_token_succeeds_and_mints_fresh_current() {
+        let pool = device_pool().await;
+        let token_a = format!("{DEVICE_TOKEN_PREFIX}tokena");
+        insert_device(&pool, &token_a).await;
+        let (token_b, _) = rotate_credential(&pool, "rd_1").await.unwrap();
+
+        // The stranded component still holds token_a: it authenticates via
+        // the grace window and rotates. token_b moves to previous with a
+        // fresh grace; token_a is gone for good.
+        let runtime = runtime_device_for_token(&pool, &token_a, Some("rd_1"))
+            .await
+            .unwrap();
+        let (token_c, _) = rotate_credential(&pool, &runtime.id).await.unwrap();
+
+        runtime_device_for_token(&pool, &token_c, Some("rd_1"))
+            .await
+            .unwrap();
+        runtime_device_for_token(&pool, &token_b, Some("rd_1"))
+            .await
+            .unwrap();
+        let error = runtime_device_for_token(&pool, &token_a, Some("rd_1"))
+            .await
+            .unwrap_err();
+        assert!(matches!(error, ApiError::Unauthorized(_)));
+    }
+
+    #[tokio::test]
+    async fn previous_token_is_rejected_after_grace_expires() {
+        let pool = device_pool().await;
+        let old_token = format!("{DEVICE_TOKEN_PREFIX}oldsecret");
+        insert_device(&pool, &old_token).await;
+        let (new_token, _) = rotate_credential(&pool, "rd_1").await.unwrap();
+
+        sqlx::query(
+            "UPDATE runtime_devices SET previous_credential_expires_at = ? WHERE id = 'rd_1'",
+        )
+        .bind(Utc::now() - Duration::minutes(1))
+        .execute(&pool)
+        .await
+        .unwrap();
+
+        let error = runtime_device_for_token(&pool, &old_token, Some("rd_1"))
+            .await
+            .unwrap_err();
+        assert!(matches!(error, ApiError::Unauthorized(_)));
+        // The current token is unaffected by the lapsed grace.
+        runtime_device_for_token(&pool, &new_token, Some("rd_1"))
+            .await
+            .unwrap();
     }
 }

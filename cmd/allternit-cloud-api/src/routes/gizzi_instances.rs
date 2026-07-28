@@ -355,7 +355,9 @@ mod tests {
         .execute(&pool)
         .await
         .unwrap();
-        // Minimal runtime_devices shape for the device-token auth path.
+        // Minimal runtime_devices shape for the device-token auth path
+        // (including the migration-022 rotation-grace columns
+        // runtime_device_for_token falls back to).
         sqlx::query(
             r#"
             CREATE TABLE runtime_devices (
@@ -364,6 +366,8 @@ mod tests {
                 name TEXT NOT NULL,
                 credential_hash TEXT NOT NULL UNIQUE,
                 credential_expires_at TIMESTAMP NOT NULL,
+                previous_credential_hash TEXT,
+                previous_credential_expires_at TIMESTAMP,
                 status TEXT NOT NULL DEFAULT 'offline',
                 last_seen_at TIMESTAMP,
                 revoked_at TIMESTAMP
