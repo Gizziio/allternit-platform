@@ -389,7 +389,7 @@ RUNTIME_ID=""
 DEVICE_TOKEN=""
 IDENTITY_FILE="/root/.local/share/gizzi-code/runtime-device.json"
 if [ -n "${ALLTERNIT_BYO_BOOTSTRAP_TOKEN:-}" ] && [ -n "${ALLTERNIT_CLOUD_API_URL:-}" ]; then
-    if [ -f "$IDENTITY_FILE" ]; then
+    if $SUDO test -f "$IDENTITY_FILE"; then
         log "Already paired as a runtime device - skipping pairing"
         PAIRED="true"
         RUNTIME_ID="$($SUDO jq -r '.runtimeId // empty' "$IDENTITY_FILE")"
