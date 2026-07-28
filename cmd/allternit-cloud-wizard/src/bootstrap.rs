@@ -13,6 +13,11 @@
 //!   durable device token — the BYO analogue of the hosted runtime's
 //!   agent-daemon auto-pairing. A systemd heartbeat timer then keeps the
 //!   device "online" in the runtime selector.
+//! - Installs the agent-daemon relay (shipped in the release tarball from
+//!   v0.2.2 on) as `gizzi-agent-daemon.service`: it holds the outbound
+//!   WebSocket to the cloud-api runtime relay, so relay-based surfaces
+//!   (Code-mode dispatch, terminal) can reach the box. Its identity file is
+//!   derived from the pairing identity, so it never needs to self-pair.
 //! - Captures the mesh IPv4 (`tailscale ip -4`) for registry insertion
 //!
 //! Mesh join choice: the hosted runtime Dockerfile does not ship a mesh-node
@@ -245,6 +250,12 @@ pub fn generate_env_file(config: &BootstrapConfig) -> String {
             "ALLTERNIT_BYO_BOOTSTRAP_TOKEN={}\n",
             pairing.bootstrap_token
         ));
+        // agent-daemon relay (installed from the release tarball when present):
+        // proxies relay requests to the local gizzi-code gateway on GIZZI_PORT
+        // and reads its identity from a daemon-schema JSON derived from
+        // runtime-device.json during bootstrap.
+        out.push_str(&format!("ALLTERNIT_GATEWAY_URL=http://127.0.0.1:{}\n", GIZZI_PORT));
+        out.push_str("ALLTERNIT_RUNTIME_IDENTITY_PATH=/etc/gizzi/runtime-identity.json\n");
     }
     out
 }
@@ -360,8 +371,9 @@ fi
     // bootstrap token (env file); the box generates an ephemeral Ed25519
     // identity, signs the pairing challenge, and exchanges it for a durable
     // device token — the BYO analogue of the hosted runtime's agent-daemon
-    // auto-pairing, done inline because no relay daemon is shipped to BYO
-    // boxes (see cmd/allternit-hosted-runtime/Dockerfile).
+    // auto-pairing, done inline so pairing works even with older tarballs
+    // that don't ship the relay daemon (see
+    // cmd/allternit-hosted-runtime/Dockerfile).
     //
     // The identity JSON lands where gizzi-code's Pairing service loads it
     // (<xdg-data>/gizzi-code/runtime-device.json; the service runs as root),
@@ -451,6 +463,40 @@ if [ -n "${ALLTERNIT_BYO_BOOTSTRAP_TOKEN:-}" ] && [ -n "${ALLTERNIT_CLOUD_API_UR
     fi
     if ! grep -q '^ALLTERNIT_RUNTIME_ID=' /etc/gizzi/gizzi-code.env; then
         echo "ALLTERNIT_RUNTIME_ID=$RUNTIME_ID" | $SUDO tee -a /etc/gizzi/gizzi-code.env >/dev/null
+    fi
+
+    # agent-daemon relay (installed above when the tarball ships it). It reads
+    # a slightly different identity schema (privateKeyPem/expiresAt) than
+    # gizzi-code's runtime-device.json, so derive its identity here — the
+    # daemon then reuses this pairing and never self-pairs. The unit is
+    # restart-safe and start order is after gizzi-code (the local gateway it
+    # proxies relay requests to).
+    if [ -f /opt/gizzi/bin/agent-daemon ]; then
+        if [ ! -f /etc/gizzi/runtime-identity.json ]; then
+            log "Deriving agent-daemon identity from $IDENTITY_FILE..."
+            jq '{runtimeId, userId, userEmail, deviceToken, expiresAt: .tokenExpiresAt, capabilities: (.capabilities // []), privateKeyPem: .privateKey, publicKey}' "$IDENTITY_FILE" \
+                | $SUDO tee /etc/gizzi/runtime-identity.json >/dev/null
+            $SUDO chmod 600 /etc/gizzi/runtime-identity.json
+        fi
+        log "Installing gizzi-agent-daemon.service..."
+        $SUDO tee /etc/systemd/system/gizzi-agent-daemon.service >/dev/null << 'UNIT'
+[Unit]
+Description=Allternit agent-daemon runtime relay (BYO-VPS)
+After=network-online.target gizzi-code.service
+Wants=network-online.target
+
+[Service]
+Type=simple
+EnvironmentFile=/etc/gizzi/gizzi-code.env
+ExecStart=/opt/gizzi/bin/agent-daemon
+Restart=always
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target
+UNIT
+    else
+        log "No agent-daemon binary - relay surfaces unavailable on this box"
     fi
 
     # Heartbeat keeps the device "online" in the runtime selector (the device
@@ -547,6 +593,16 @@ else
     else
         log "No mesh-node in tarball - skipping sidecar install"
     fi
+    # agent-daemon relay ships in the tarball from v0.2.2 on; install it next
+    # to gizzi-code so relay-based surfaces (Code-mode dispatch, terminal) can
+    # reach this box. Conditional so older tarballs still bootstrap cleanly.
+    if [ -f /tmp/gizzi-extract/agent-daemon ]; then
+        log "Installing agent-daemon relay..."
+        $SUDO mv /tmp/gizzi-extract/agent-daemon /opt/gizzi/bin/agent-daemon
+        $SUDO chmod 0755 /opt/gizzi/bin/agent-daemon
+    else
+        log "No agent-daemon in tarball - skipping relay daemon install"
+    fi
     echo "{release}" | $SUDO tee /opt/gizzi/RELEASE >/dev/null
 fi
 
@@ -584,6 +640,14 @@ $SUDO systemctl daemon-reload
 $SUDO systemctl enable gizzi-code.service >/dev/null 2>&1 || true
 if [ "$PAIRED" = "true" ]; then
     $SUDO systemctl enable --now gizzi-heartbeat.timer >/dev/null 2>&1 || true
+    if [ -f /etc/systemd/system/gizzi-agent-daemon.service ]; then
+        log "Starting gizzi-agent-daemon.service..."
+        $SUDO systemctl enable gizzi-agent-daemon.service >/dev/null 2>&1 || true
+        # The relay is additive (mesh serving already works without it), so a
+        # start failure warns instead of failing the whole bootstrap.
+        $SUDO systemctl restart gizzi-agent-daemon.service \
+            || log "WARNING: gizzi-agent-daemon.service failed to start"
+    fi
 fi
 $SUDO systemctl restart gizzi-code.service
 
@@ -775,6 +839,17 @@ mod tests {
     }
 
     #[test]
+    fn script_installs_agent_daemon_relay_when_present_in_tarball() {
+        let script = generate_bootstrap_script(&test_config(true)).unwrap();
+        // Conditional on the file existing so older tarballs (no daemon)
+        // still bootstrap cleanly.
+        assert!(script.contains("if [ -f /tmp/gizzi-extract/agent-daemon ]; then"));
+        assert!(script.contains("$SUDO mv /tmp/gizzi-extract/agent-daemon /opt/gizzi/bin/agent-daemon"));
+        assert!(script.contains("$SUDO chmod 0755 /opt/gizzi/bin/agent-daemon"));
+        assert!(script.contains("No agent-daemon in tarball - skipping relay daemon install"));
+    }
+
+    #[test]
     fn script_contains_no_secrets_and_mesh_flags() {
         let config = test_config(true);
         let script = generate_bootstrap_script(&config).unwrap();
@@ -815,11 +890,16 @@ mod tests {
         let env = generate_env_file(&paired_config());
         assert!(env.contains("ALLTERNIT_CLOUD_API_URL=https://allternit-cloud-api.fly.dev"));
         assert!(env.contains("ALLTERNIT_BYO_BOOTSTRAP_TOKEN=byo-bootstrap-secret"));
+        // agent-daemon relay: local gateway it proxies to + its identity path.
+        assert!(env.contains(&format!("ALLTERNIT_GATEWAY_URL=http://127.0.0.1:{}", GIZZI_PORT)));
+        assert!(env.contains("ALLTERNIT_RUNTIME_IDENTITY_PATH=/etc/gizzi/runtime-identity.json"));
 
         // Without pairing config the env file carries no pairing variables.
         let env = generate_env_file(&test_config(true));
         assert!(!env.contains("ALLTERNIT_BYO_BOOTSTRAP_TOKEN"));
         assert!(!env.contains("ALLTERNIT_CLOUD_API_URL"));
+        assert!(!env.contains("ALLTERNIT_GATEWAY_URL"));
+        assert!(!env.contains("ALLTERNIT_RUNTIME_IDENTITY_PATH"));
     }
 
     #[test]
@@ -845,6 +925,17 @@ mod tests {
         // Heartbeat keeps the device online in the runtime selector.
         assert!(script.contains("gizzi-heartbeat.timer"));
         assert!(script.contains("/heartbeat"));
+        // agent-daemon relay: identity derived from the gizzi-code identity
+        // (daemon schema: privateKeyPem/expiresAt), systemd unit wired to the
+        // same 0600 env file, restart-safe, started only when present.
+        assert!(script.contains("privateKeyPem: .privateKey"));
+        assert!(script.contains("expiresAt: .tokenExpiresAt"));
+        assert!(script.contains("/etc/gizzi/runtime-identity.json"));
+        assert!(script.contains("gizzi-agent-daemon.service"));
+        assert!(script.contains("ExecStart=/opt/gizzi/bin/agent-daemon"));
+        assert!(script.contains("EnvironmentFile=/etc/gizzi/gizzi-code.env"));
+        assert!(script.contains("Restart=always"));
+        assert!(script.contains("if [ -f /etc/systemd/system/gizzi-agent-daemon.service ]; then"));
         // jq + openssl are installed when pairing is enabled.
         assert!(script.contains("for tool in curl jq openssl"));
         // Idempotency: an existing identity skips re-pairing.
@@ -860,6 +951,12 @@ mod tests {
         assert!(!script.contains("Installing gizzi-heartbeat.timer"));
         assert!(!script.contains("ALLTERNIT_API_TOKEN=$DEVICE_TOKEN"));
         assert!(!script.contains("for tool in curl jq openssl"));
+        // The agent-daemon unit/identity live in the pairing block too (the
+        // binary install in the extract block and the PAIRED-guarded start
+        // check stay, both harmless without the unit file).
+        assert!(!script.contains("Installing gizzi-agent-daemon.service"));
+        assert!(!script.contains("/etc/gizzi/runtime-identity.json"));
+        assert!(script.contains("if [ -f /etc/systemd/system/gizzi-agent-daemon.service ]; then"));
         assert!(script.contains("Runtime-device pairing not configured - skipping"));
     }
 

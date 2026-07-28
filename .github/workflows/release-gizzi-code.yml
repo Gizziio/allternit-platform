@@ -82,6 +82,29 @@ jobs:
         working-directory: cmd/gizzi-code
         run: bun run script/build-production.js --target=${{ matrix.target }}
 
+      - name: Build agent-daemon relay binary
+        # Runtime relay daemon (cmd/agent-daemon) shipped next to gizzi-code so
+        # BYO-VPS bootstrap can install it: the daemon holds the outbound WS to
+        # the cloud-api runtime relay, which is what Code-mode dispatch and the
+        # terminal surface use to reach the box. `bun build --compile` bundles
+        # the `ws` dependency in — no node_modules needed at runtime. Output
+        # lands in cmd/gizzi-code/dist, mirroring the mesh-node step below.
+        shell: bash
+        working-directory: cmd/agent-daemon
+        run: |
+          case "${{ matrix.target }}" in
+            linux-x64)    BUN_TARGET=bun-linux-x64 ;;
+            linux-arm64)  BUN_TARGET=bun-linux-arm64 ;;
+            darwin-arm64) BUN_TARGET=bun-darwin-arm64 ;;
+            win32-x64)    BUN_TARGET=bun-windows-x64 ;;
+            *) echo "no bun compile target for ${{ matrix.target }}"; exit 1 ;;
+          esac
+          EXT=""; [ "$BUN_TARGET" = "bun-windows-x64" ] && EXT=".exe"
+          bun build --compile src/index.ts \
+            --outfile "../gizzi-code/dist/agent-daemon$EXT" \
+            --target="$BUN_TARGET"
+          ls -la ../gizzi-code/dist/
+
       - name: Setup Go
         # macos-latest images don't have Go on PATH; pin to the sidecar
         # module's toolchain (go.mod `go 1.26.5`).
@@ -116,9 +139,9 @@ jobs:
         working-directory: cmd/gizzi-code
         run: |
           mkdir -p dist/pkg
-          cp dist/gizzi-code dist/mesh-node dist/pkg/
+          cp dist/gizzi-code dist/mesh-node dist/agent-daemon dist/pkg/
           cd dist/pkg
-          tar -czf "../../../gizzi-code-v${{ steps.version.outputs.VERSION }}-${{ matrix.target }}.tar.gz" gizzi-code mesh-node
+          tar -czf "../../../gizzi-code-v${{ steps.version.outputs.VERSION }}-${{ matrix.target }}.tar.gz" gizzi-code mesh-node agent-daemon
       
       - name: Package (Windows)
         if: matrix.os == 'windows-latest'
@@ -128,8 +151,9 @@ jobs:
           New-Item -ItemType Directory -Force -Path dist/pkg | Out-Null
           Copy-Item dist/gizzi-code.exe dist/pkg/
           Copy-Item dist/mesh-node.exe dist/pkg/
+          Copy-Item dist/agent-daemon.exe dist/pkg/
           cd dist/pkg
-          Compress-Archive -Path gizzi-code.exe, mesh-node.exe -DestinationPath "../../../gizzi-code-v${{ steps.version.outputs.VERSION }}-windows-x64.zip"
+          Compress-Archive -Path gizzi-code.exe, mesh-node.exe, agent-daemon.exe -DestinationPath "../../../gizzi-code-v${{ steps.version.outputs.VERSION }}-windows-x64.zip"
       
       - name: Upload artifact
         uses: actions/upload-artifact@v4
