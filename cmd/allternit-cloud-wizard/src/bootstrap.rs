@@ -37,19 +37,19 @@ use serde::{Deserialize, Serialize};
 
 /// Pinned gizzi-code release tag (in `Gizziio/allternit-platform`, built by
 /// `release-gizzi-code.yml` from this monorepo).
-pub const GIZZI_RELEASE: &str = "gizzi-code/0.2.1";
+pub const GIZZI_RELEASE: &str = "gizzi-code/0.2.2";
 
 /// Bare version string used in release asset filenames
 /// (`gizzi-code-v{VERSION}-linux-<arch>.tar.gz`).
-pub const GIZZI_VERSION: &str = "0.2.1";
+pub const GIZZI_VERSION: &str = "0.2.2";
 
 /// SHA-256 of `gizzi-code-v{VERSION}-linux-x64.tar.gz` for [`GIZZI_RELEASE`].
 pub const GIZZI_LINUX_X64_SHA256: &str =
-    "165ce341d1195588556039038e3aed6e7bd211fd8fdad4d64d2041e9ff2f2117";
+    "7c6936d15ae4afb94602defb73e85748eada2e6594d98c296350f81df52e2b42";
 
 /// SHA-256 of `gizzi-code-v{VERSION}-linux-arm64.tar.gz` for [`GIZZI_RELEASE`].
 pub const GIZZI_LINUX_ARM64_SHA256: &str =
-    "d54244bb686f2e899342f8f82448871a978b50db6cc267dc02e62279f7d234f4";
+    "7d9496c77c59370c204339508b68634951c3534291cc7010f17c42bdb08051ec";
 
 /// Escape hatch to override the pinned arm64 checksum (e.g. when testing a
 /// newer release build that hasn't been pinned yet).
