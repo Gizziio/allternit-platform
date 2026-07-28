@@ -6,10 +6,14 @@ on:
     paths:
       - 'cmd/allternit-cloud-api/**'
       - 'cmd/allternit-cloud-api/migrations/**'
+      - 'cmd/allternit-cloud-wizard/**'
+      - 'infrastructure/cloud/**'
+      - 'infrastructure/providers/hetzner/**'
       - 'Cargo.toml'
       - 'Cargo.lock'
       - 'fly.toml'
       - '.github/workflows/deploy-cloud-api-fly.yml'
+  workflow_dispatch:
 
 jobs:
   deploy:
