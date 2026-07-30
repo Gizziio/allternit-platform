@@ -54,7 +54,10 @@ import {
   getManagedClaudeRulesDir,
   getMemoryPath,
   getUserClaudeRulesDir,
+  pickMemoryFile,
+  pickMemoryFileFrom,
 } from './config.js'
+import { ROOT_INSTRUCTION_FILENAMES } from './agentFileResolver.js'
 import { logForDebugging } from './debug.js'
 import { logForDiagnosticsNoPII } from './diagLogs.js'
 import { getClaudeConfigHomeDir, isEnvTruthy } from './envUtils.js'
@@ -886,7 +889,7 @@ export const getMemoryFiles = memoize(
 
       // Try reading CLAUDE.md (Project) - only if projectSettings is enabled
       if (isSettingSourceEnabled('projectSettings') && !skipProject) {
-        const projectPath = join(dir, 'CLAUDE.md')
+        const projectPath = pickMemoryFileFrom(ROOT_INSTRUCTION_FILENAMES.map((name) => join(dir, name)))
         result.push(
           ...(await processMemoryFile(
             projectPath,
@@ -897,7 +900,7 @@ export const getMemoryFiles = memoize(
         )
 
         // Try reading .claude/CLAUDE.md (Project)
-        const dotClaudePath = join(dir, '.claude', 'CLAUDE.md')
+        const dotClaudePath = pickMemoryFile(join(dir, '.gizzi', 'GIZZI.md'), join(dir, '.claude', 'CLAUDE.md'))
         result.push(
           ...(await processMemoryFile(
             dotClaudePath,
@@ -908,7 +911,7 @@ export const getMemoryFiles = memoize(
         )
 
         // Try reading .claude/rules/*.md files (Project)
-        const rulesDir = join(dir, '.claude', 'rules')
+        const rulesDir = pickMemoryFile(join(dir, '.gizzi', 'rules'), join(dir, '.claude', 'rules'))
         result.push(
           ...(await processMdRules({
             rulesDir,
@@ -922,7 +925,7 @@ export const getMemoryFiles = memoize(
 
       // Try reading CLAUDE.local.md (Local) - only if localSettings is enabled
       if (isSettingSourceEnabled('localSettings')) {
-        const localPath = join(dir, 'CLAUDE.local.md')
+        const localPath = pickMemoryFile(join(dir, 'GIZZI.local.md'), join(dir, 'CLAUDE.local.md'))
         result.push(
           ...(await processMemoryFile(
             localPath,
@@ -942,7 +945,7 @@ export const getMemoryFiles = memoize(
       const additionalDirs = getAdditionalDirectoriesForClaudeMd()
       for (const dir of additionalDirs) {
         // Try reading CLAUDE.md from the additional directory
-        const projectPath = join(dir, 'CLAUDE.md')
+        const projectPath = pickMemoryFileFrom(ROOT_INSTRUCTION_FILENAMES.map((name) => join(dir, name)))
         result.push(
           ...(await processMemoryFile(
             projectPath,
@@ -953,7 +956,7 @@ export const getMemoryFiles = memoize(
         )
 
         // Try reading .claude/CLAUDE.md from the additional directory
-        const dotClaudePath = join(dir, '.claude', 'CLAUDE.md')
+        const dotClaudePath = pickMemoryFile(join(dir, '.gizzi', 'GIZZI.md'), join(dir, '.claude', 'CLAUDE.md'))
         result.push(
           ...(await processMemoryFile(
             dotClaudePath,
@@ -964,7 +967,7 @@ export const getMemoryFiles = memoize(
         )
 
         // Try reading .claude/rules/*.md files from the additional directory
-        const rulesDir = join(dir, '.claude', 'rules')
+        const rulesDir = pickMemoryFile(join(dir, '.gizzi', 'rules'), join(dir, '.claude', 'rules'))
         result.push(
           ...(await processMdRules({
             rulesDir,
@@ -1256,7 +1259,7 @@ export async function getMemoryFilesForNestedDirectory(
 
   // Process project memory files (CLAUDE.md and .claude/CLAUDE.md)
   if (isSettingSourceEnabled('projectSettings')) {
-    const projectPath = join(dir, 'CLAUDE.md')
+    const projectPath = pickMemoryFileFrom(ROOT_INSTRUCTION_FILENAMES.map((name) => join(dir, name)))
     result.push(
       ...(await processMemoryFile(
         projectPath,
@@ -1265,7 +1268,7 @@ export async function getMemoryFilesForNestedDirectory(
         false,
       )),
     )
-    const dotClaudePath = join(dir, '.claude', 'CLAUDE.md')
+    const dotClaudePath = pickMemoryFile(join(dir, '.gizzi', 'GIZZI.md'), join(dir, '.claude', 'CLAUDE.md'))
     result.push(
       ...(await processMemoryFile(
         dotClaudePath,
@@ -1278,13 +1281,13 @@ export async function getMemoryFilesForNestedDirectory(
 
   // Process local memory file (CLAUDE.local.md)
   if (isSettingSourceEnabled('localSettings')) {
-    const localPath = join(dir, 'CLAUDE.local.md')
+    const localPath = pickMemoryFile(join(dir, 'GIZZI.local.md'), join(dir, 'CLAUDE.local.md'))
     result.push(
       ...(await processMemoryFile(localPath, 'Local', processedPaths, false)),
     )
   }
 
-  const rulesDir = join(dir, '.claude', 'rules')
+  const rulesDir = pickMemoryFile(join(dir, '.gizzi', 'rules'), join(dir, '.claude', 'rules'))
 
   // Process project unconditional .claude/rules/*.md files, which were not eagerly loaded
   // Use a separate processedPaths set to avoid marking conditional rule files as processed
@@ -1332,7 +1335,7 @@ export async function getConditionalRulesForCwdLevelDirectory(
   targetPath: string,
   processedPaths: Set<string>,
 ): Promise<MemoryFileInfo[]> {
-  const rulesDir = join(dir, '.claude', 'rules')
+  const rulesDir = pickMemoryFile(join(dir, '.gizzi', 'rules'), join(dir, '.claude', 'rules'))
   return processConditionedMdRules(
     targetPath,
     rulesDir,
@@ -1431,20 +1434,29 @@ export async function shouldShowClaudeMdExternalIncludesWarning(): Promise<boole
 }
 
 /**
- * Check if a file path is a memory file (CLAUDE.md, CLAUDE.local.md, or .claude/rules/*.md)
+ * Check if a file path is a memory file (GIZZI.md/CLAUDE.md/AGENTS.md/CONTEXT.md,
+ * their *.local.md variants, or .gizzi/rules or .claude/rules *.md files)
  */
 export function isMemoryFilePath(filePath: string): boolean {
   const name = basename(filePath)
 
-  // CLAUDE.md or CLAUDE.local.md anywhere
-  if (name === 'CLAUDE.md' || name === 'CLAUDE.local.md') {
+  // Root marker, local override, or legacy-compat filenames anywhere
+  if (
+    name === 'GIZZI.md' ||
+    name === 'GIZZI.local.md' ||
+    name === 'CLAUDE.md' ||
+    name === 'CLAUDE.local.md' ||
+    name === 'AGENTS.md' ||
+    name === 'CONTEXT.md'
+  ) {
     return true
   }
 
-  // .md files in .claude/rules/ directories
+  // .md files in .gizzi/rules/ or .claude/rules/ directories
   if (
     name.endsWith('.md') &&
-    filePath.includes(`${sep}.claude${sep}rules${sep}`)
+    (filePath.includes(`${sep}.claude${sep}rules${sep}`) ||
+      filePath.includes(`${sep}.gizzi${sep}rules${sep}`))
   ) {
     return true
   }

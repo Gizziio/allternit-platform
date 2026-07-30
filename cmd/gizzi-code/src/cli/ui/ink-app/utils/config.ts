@@ -1,11 +1,12 @@
 // @ts-nocheck
 import { feature } from 'bun:bundle'
 import { randomBytes } from 'crypto'
-import { unwatchFile, watchFile } from 'fs'
+import { existsSync, unwatchFile, watchFile } from 'fs'
 import memoize from 'lodash-es/memoize.js'
 import pickBy from 'lodash-es/pickBy.js'
 import { basename, dirname, join, resolve } from 'path'
 import { getOriginalCwd, getSessionTrustAccepted } from '../bootstrap/state.js'
+import { ROOT_INSTRUCTION_FILENAMES } from '../../../../shared/utils/agentFileResolver.js'
 import { getAutoMemEntrypoint } from '../memdir/paths.js'
 import { logEvent } from '../services/analytics/index.js'
 import type { McpServerConfig } from '../services/mcp/types.js'
@@ -1777,18 +1778,58 @@ export function recordFirstStartTime(): void {
   }
 }
 
+/**
+ * GIZZI-first memory file resolution: prefer GIZZI-named memory files
+ * (GIZZI.md / GIZZI.local.md) and fall back to legacy CLAUDE-named ones so
+ * existing projects keep working. When neither exists the GIZZI name wins so
+ * newly created memory files use the new naming.
+ */
+export function pickMemoryFile(gizziPath: string, legacyPath: string): string {
+  try {
+    if (existsSync(gizziPath)) {
+      return gizziPath
+    }
+    if (existsSync(legacyPath)) {
+      return legacyPath
+    }
+  } catch {
+    // fall through
+  }
+  return gizziPath
+}
+
+/**
+ * Root-marker resolution across all compat filenames, in precedence order
+ * (GIZZI.md > CLAUDE.md > AGENTS.md > CONTEXT.md — see agentFileResolver.ts,
+ * the shared source of truth for this order across both the TUI and
+ * headless/server pipelines). Falls back to the first candidate (GIZZI.md)
+ * when none exist, so newly created files use the new naming.
+ */
+export function pickMemoryFileFrom(candidatePaths: readonly string[]): string {
+  for (const candidate of candidatePaths) {
+    try {
+      if (existsSync(candidate)) return candidate
+    } catch {
+      // fall through
+    }
+  }
+  return candidatePaths[0]
+}
+
 export function getMemoryPath(memoryType: MemoryType): string {
   const cwd = getOriginalCwd()
 
   switch (memoryType) {
     case 'User':
-      return join(getClaudeConfigHomeDir(), 'CLAUDE.md')
+      return pickMemoryFile(join(getClaudeConfigHomeDir(), 'GIZZI.md'), join(getClaudeConfigHomeDir(), 'CLAUDE.md'))
     case 'Local':
-      return join(cwd, 'CLAUDE.local.md')
+      return pickMemoryFile(join(cwd, 'GIZZI.local.md'), join(cwd, 'CLAUDE.local.md'))
     case 'Project':
-      return join(cwd, 'CLAUDE.md')
+      return pickMemoryFileFrom(
+        ROOT_INSTRUCTION_FILENAMES.map((name) => join(cwd, name)),
+      )
     case 'Managed':
-      return join(getManagedFilePath(), 'CLAUDE.md')
+      return pickMemoryFile(join(getManagedFilePath(), 'GIZZI.md'), join(getManagedFilePath(), 'CLAUDE.md'))
     case 'AutoMem':
       return getAutoMemEntrypoint()
   }

@@ -9,14 +9,16 @@ import { Log } from "@/shared/util/log"
 import { Glob } from "@/shared/util/glob"
 import type { MessageV2 } from "@/runtime/session/message-v2"
 import { parseFrontmatter } from "@/runtime/memory/memory-service"
+import { pickWinner, ROOT_INSTRUCTION_FILENAMES } from "@/shared/utils/agentFileResolver"
 
 const log = Log.create({ service: "instruction" })
 
-const FILES = [
-  "AGENTS.md",
-  "CLAUDE.md",
-  "CONTEXT.md", // deprecated
-]
+// GIZZI.md is canonical; CLAUDE.md/AGENTS.md/CONTEXT.md are read for compat
+// (crossing over from Claude Code, or the cross-tool AGENTS.md convention).
+// Order matters: this is precedence, not a set of independently-loaded files —
+// see agentFileResolver.ts, the shared source of truth for this order across
+// both this (headless/server) pipeline and the interactive TUI pipeline.
+const FILES = ROOT_INSTRUCTION_FILENAMES
 
 const MAX_MEMORY_LINES = 200
 
@@ -171,14 +173,25 @@ export namespace InstructionPrompt {
     const paths = new Set<string>()
 
     if (!Flag.GIZZI_DISABLE_PROJECT_CONFIG) {
-      for (const file of FILES) {
-        const matches = await Filesystem.findUp(file, Instance.directory, Instance.worktree)
-        if (matches.length > 0) {
-          matches.forEach((p) => {
-            paths.add(path.resolve(p))
-          })
-          break
+      // Per-directory-level precedence (not a single global winner for the
+      // whole walk): each directory from cwd up to the worktree root picks
+      // its own highest-precedence file independently, so e.g. a subdirectory
+      // with only AGENTS.md and a parent directory with only CLAUDE.md are
+      // BOTH honored, instead of one filename choice suppressing the other
+      // directory's file entirely.
+      let current = Instance.directory
+      while (true) {
+        const existing = new Set<string>()
+        for (const file of FILES) {
+          if (await Filesystem.exists(path.join(current, file))) existing.add(file)
         }
+        const winner = pickWinner(existing, FILES)
+        if (winner) paths.add(path.resolve(path.join(current, winner)))
+
+        if (Instance.worktree === current) break
+        const parent = path.dirname(current)
+        if (parent === current) break
+        current = parent
       }
     }
 

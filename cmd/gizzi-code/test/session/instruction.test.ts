@@ -1,10 +1,61 @@
 // @ts-nocheck
 import { afterEach, beforeEach, describe, expect, test } from "bun:test"
 import path from "path"
-import { InstructionPrompt } from "../../src/session/instruction"
-import { Instance } from "../../src/project/instance"
-import { Global } from "../../src/global"
+import { InstructionPrompt } from "../../src/runtime/session/instruction"
+import { Instance } from "../../src/runtime/context/project/instance"
+import { Global } from "../../src/runtime/context/global"
 import { tmpdir } from "../fixture/fixture"
+
+describe("InstructionPrompt.systemPaths per-directory-level precedence", () => {
+  test("honors each directory's own winner instead of one global filename choice", async () => {
+    await using tmp = await tmpdir({
+      init: async (dir) => {
+        await Bun.write(path.join(dir, "GIZZI.md"), "# Root (GIZZI.md)")
+        await Bun.write(path.join(dir, "sub", "CLAUDE.md"), "# Sub (CLAUDE.md)")
+      },
+    })
+    await Instance.provide({
+      directory: path.join(tmp.path, "sub"),
+      fn: async () => {
+        const paths = await InstructionPrompt.systemPaths()
+        expect(paths.has(path.join(tmp.path, "GIZZI.md"))).toBe(true)
+        expect(paths.has(path.join(tmp.path, "sub", "CLAUDE.md"))).toBe(true)
+      },
+    })
+  })
+
+  test("GIZZI.md wins over CLAUDE.md at the same directory level", async () => {
+    await using tmp = await tmpdir({
+      init: async (dir) => {
+        await Bun.write(path.join(dir, "GIZZI.md"), "# GIZZI wins")
+        await Bun.write(path.join(dir, "CLAUDE.md"), "# CLAUDE loses")
+      },
+    })
+    await Instance.provide({
+      directory: tmp.path,
+      fn: async () => {
+        const paths = await InstructionPrompt.systemPaths()
+        expect(paths.has(path.join(tmp.path, "GIZZI.md"))).toBe(true)
+        expect(paths.has(path.join(tmp.path, "CLAUDE.md"))).toBe(false)
+      },
+    })
+  })
+
+  test("AGENTS.md is honored when GIZZI.md/CLAUDE.md are absent", async () => {
+    await using tmp = await tmpdir({
+      init: async (dir) => {
+        await Bun.write(path.join(dir, "AGENTS.md"), "# AGENTS.md")
+      },
+    })
+    await Instance.provide({
+      directory: tmp.path,
+      fn: async () => {
+        const paths = await InstructionPrompt.systemPaths()
+        expect(paths.has(path.join(tmp.path, "AGENTS.md"))).toBe(true)
+      },
+    })
+  })
+})
 
 describe("InstructionPrompt.resolve", () => {
   test("returns empty when AGENTS.md is at project root (already in systemPaths)", async () => {
@@ -71,22 +122,22 @@ describe("InstructionPrompt.resolve", () => {
   })
 })
 
-describe("InstructionPrompt.systemPaths Allternit_CONFIG_DIR", () => {
+describe("InstructionPrompt.systemPaths GIZZI_CONFIG_DIR", () => {
   let originalConfigDir: string | undefined
 
   beforeEach(() => {
-    originalConfigDir = process.env["Allternit_CONFIG_DIR"]
+    originalConfigDir = process.env["GIZZI_CONFIG_DIR"]
   })
 
   afterEach(() => {
     if (originalConfigDir === undefined) {
-      delete process.env["Allternit_CONFIG_DIR"]
+      delete process.env["GIZZI_CONFIG_DIR"]
     } else {
-      process.env["Allternit_CONFIG_DIR"] = originalConfigDir
+      process.env["GIZZI_CONFIG_DIR"] = originalConfigDir
     }
   })
 
-  test("prefers Allternit_CONFIG_DIR AGENTS.md over global when both exist", async () => {
+  test("prefers GIZZI_CONFIG_DIR AGENTS.md over global when both exist", async () => {
     await using profileTmp = await tmpdir({
       init: async (dir) => {
         await Bun.write(path.join(dir, "AGENTS.md"), "# Profile Instructions")
@@ -99,7 +150,7 @@ describe("InstructionPrompt.systemPaths Allternit_CONFIG_DIR", () => {
     })
     await using projectTmp = await tmpdir()
 
-    process.env["Allternit_CONFIG_DIR"] = profileTmp.path
+    process.env["GIZZI_CONFIG_DIR"] = profileTmp.path
     const originalGlobalConfig = Global.Path.config
     ;(Global.Path as { config: string }).config = globalTmp.path
 
@@ -117,7 +168,7 @@ describe("InstructionPrompt.systemPaths Allternit_CONFIG_DIR", () => {
     }
   })
 
-  test("falls back to global AGENTS.md when Allternit_CONFIG_DIR has no AGENTS.md", async () => {
+  test("falls back to global AGENTS.md when GIZZI_CONFIG_DIR has no AGENTS.md", async () => {
     await using profileTmp = await tmpdir()
     await using globalTmp = await tmpdir({
       init: async (dir) => {
@@ -126,7 +177,7 @@ describe("InstructionPrompt.systemPaths Allternit_CONFIG_DIR", () => {
     })
     await using projectTmp = await tmpdir()
 
-    process.env["Allternit_CONFIG_DIR"] = profileTmp.path
+    process.env["GIZZI_CONFIG_DIR"] = profileTmp.path
     const originalGlobalConfig = Global.Path.config
     ;(Global.Path as { config: string }).config = globalTmp.path
 
@@ -144,7 +195,7 @@ describe("InstructionPrompt.systemPaths Allternit_CONFIG_DIR", () => {
     }
   })
 
-  test("uses global AGENTS.md when Allternit_CONFIG_DIR is not set", async () => {
+  test("uses global AGENTS.md when GIZZI_CONFIG_DIR is not set", async () => {
     await using globalTmp = await tmpdir({
       init: async (dir) => {
         await Bun.write(path.join(dir, "AGENTS.md"), "# Global Instructions")
@@ -152,7 +203,7 @@ describe("InstructionPrompt.systemPaths Allternit_CONFIG_DIR", () => {
     })
     await using projectTmp = await tmpdir()
 
-    delete process.env["Allternit_CONFIG_DIR"]
+    delete process.env["GIZZI_CONFIG_DIR"]
     const originalGlobalConfig = Global.Path.config
     ;(Global.Path as { config: string }).config = globalTmp.path
 
