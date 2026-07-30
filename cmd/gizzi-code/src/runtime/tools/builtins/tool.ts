@@ -3,6 +3,7 @@ import type { MessageV2 } from "@/runtime/session/message-v2"
 import type { Agent } from "@/runtime/loop/agent"
 import type { PermissionNext } from "@/runtime/tools/guard/permission/next"
 import { Truncate } from "@/runtime/tools/builtins/truncation"
+import { ToolValidationRetry } from "@/runtime/tools/validation-retry"
 
 export namespace Tool {
   interface Metadata {
@@ -58,14 +59,29 @@ export namespace Tool {
           try {
             toolInfo.parameters.parse(args)
           } catch (error) {
-            if (error instanceof z.ZodError && toolInfo.formatValidationError) {
-              throw new Error(toolInfo.formatValidationError(error), { cause: error })
+            if (error instanceof z.ZodError) {
+              const count = ToolValidationRetry.recordFailure(ctx.sessionID, id, ToolValidationRetry.summarize(error))
+              const capped = count >= ToolValidationRetry.MAX_CONSECUTIVE_FAILURES
+              const base = toolInfo.formatValidationError
+                ? toolInfo.formatValidationError(error)
+                : `The ${id} tool was called with invalid arguments: ${ToolValidationRetry.summarize(error)}.\nPlease rewrite the input so it satisfies the expected schema.`
+              const message = capped
+                ? `${base}\nThis is attempt ${count} of ${ToolValidationRetry.MAX_CONSECUTIVE_FAILURES} with invalid arguments for ${id} — stop retrying this exact approach and try something else.`
+                : `${base} (attempt ${count}/${ToolValidationRetry.MAX_CONSECUTIVE_FAILURES})`
+              const validationError = new Error(message, { cause: error })
+              Object.assign(validationError, {
+                validationError: true,
+                validationAttempt: count,
+                validationIssues: error.issues.map((issue) => ({ path: issue.path, message: issue.message })),
+              })
+              throw validationError
             }
             throw new Error(
               `The ${id} tool was called with invalid arguments: ${error}.\nPlease rewrite the input so it satisfies the expected schema.`,
               { cause: error },
             )
           }
+          ToolValidationRetry.recordSuccess(ctx.sessionID, id)
           const result = await execute(args, ctx)
           // skip truncation for tools that handle it themselves
           if (result.metadata.truncated !== undefined) {

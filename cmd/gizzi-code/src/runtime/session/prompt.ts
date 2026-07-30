@@ -48,6 +48,7 @@ import { Tool } from "@/runtime/tools/builtins/tool"
 import { PermissionNext } from "@/runtime/tools/guard/permission/next"
 import { SessionStatus } from "@/runtime/session/status"
 import { GoalEngine } from "@/runtime/automation/goal-engine"
+import { ToolValidationRetry } from "@/runtime/tools/validation-retry"
 import { LLM } from "@/runtime/session/llm"
 import { iife } from "@/shared/util/iife"
 import { Shell } from "@/runtime/integrations/shell/shell"
@@ -393,13 +394,16 @@ const message = await createUserMessage(input)
       if (goalAtTurnStart?.state === "in_progress") GoalEngine.enforceBudget(goalAtTurnStart.id)
 
       step++
-      if (step === 1)
+      if (step === 1) {
+        // New turn: don't let an unrelated earlier turn's validation failure cap a fresh attempt.
+        ToolValidationRetry.resetSession(sessionID)
         ensureTitle({
           session,
           modelID: lastUser.model.modelID,
           providerID: lastUser.model.providerID,
           history: msgs,
         })
+      }
 
       // Resolve auto-routing before model lookup
       const resolvedModelRef =
@@ -773,6 +777,8 @@ const message = await createUserMessage(input)
       }
       const goalReminder = GoalEngine.reminder(sessionID)
       if (goalReminder) system.push(goalReminder)
+      const validationReminder = ToolValidationRetry.reminder(sessionID)
+      if (validationReminder) system.push(validationReminder)
 
       const activeGoalForDeadline = GoalEngine.getCurrentGoal(sessionID)
       const deadlineMs = activeGoalForDeadline?.state === "in_progress"

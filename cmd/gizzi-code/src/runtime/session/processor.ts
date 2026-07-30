@@ -299,12 +299,22 @@ export namespace SessionProcessor {
                 case "tool-error": {
                   const match = toolcalls[value.toolCallId]
                   if (match && match.state.status === "running") {
+                    // Tool.define (tools/builtins/tool.ts) tags zod validation errors with these fields.
+                    const validationError = value.error as any
+                    const validation = validationError?.validationError
+                      ? {
+                          validationError: true,
+                          attempt: validationError.validationAttempt,
+                          issues: validationError.validationIssues,
+                        }
+                      : undefined
                     const part = (await Session.updatePart({
                       ...match,
                       state: {
                         status: "error",
                         input: value.input ?? match.state.input,
                         error: (value.error as any).toString(),
+                        ...(validation ? { metadata: validation } : {}),
                         time: {
                           start: match.state.time.start,
                           end: Date.now(),
