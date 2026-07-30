@@ -22,7 +22,8 @@ rails/reference/beads/
 /debug/
 release/
 .aider/
-.claude/
+.claude/*
+!.claude/settings.json
 .gemini/
 .allternit/
 .gizzi/

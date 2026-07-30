@@ -1,5 +1,6 @@
 #!/bin/bash
-# .steering/bin/steer-stop.sh — Kimi Code Stop hook.
+# .steering/bin/steer-stop.sh — agent-CLI-agnostic Stop hook (kimi, Claude Code,
+# codex, gizzi-code). Registered per CLI; see .steering/bin/steer-install.sh.
 #
 # Consults a separate steering agent when .steering/checkpoint.md changed since
 # the last review. The steering agent replies with first line "APPROVE"
@@ -14,7 +15,8 @@ payload=$(cat)
 cwd=$(printf '%s' "$payload" | python3 -c 'import json,sys; print(json.load(sys.stdin).get("cwd",""))' 2>/dev/null)
 session_id=$(printf '%s' "$payload" | python3 -c 'import json,sys; print(json.load(sys.stdin).get("session_id","unknown"))' 2>/dev/null)
 session_id=$(printf '%s' "${session_id:-unknown}" | tr -cd 'A-Za-z0-9_-')
-[ -n "$cwd" ] || exit 0
+# Fallback: some CLIs' Stop payloads omit cwd; hook commands run in the session dir.
+[ -n "$cwd" ] || cwd="$PWD"
 
 dir="$cwd/.steering"
 checkpoint="$dir/checkpoint.md"
@@ -82,7 +84,11 @@ if printf '%s' "$first_line" | grep -qi '^APPROVE'; then
 fi
 
 printf '%s session=%s hash=%s verdict=STEER\n' "$(date -u +%FT%TZ)" "$session_id" "$cur_hash" >> "$log"
-# Block the stop: stderr is injected back into the working session.
-printf '[steering] Checkpoint review from the steering agent (answer its questions, apply its guidance, then update .steering/checkpoint.md):\n%s\n' \
-  "$(printf '%s\n' "$clean" | head -c 4000)" >&2
+# Block the stop and inject the steering feedback into the working session.
+# Multi-CLI contract: stderr + exit 2 covers kimi and Claude Code; the JSON on
+# stdout covers codex and gizzi-code, which read {"decision","reason"}.
+reason="[steering] Checkpoint review from the steering agent (answer its questions, apply its guidance, then update .steering/checkpoint.md):
+$(printf '%s\n' "$clean" | head -c 4000)"
+REASON="$reason" python3 -c 'import json,os; print(json.dumps({"decision":"block","reason":os.environ["REASON"]}))'
+printf '%s\n' "$reason" >&2
 exit 2

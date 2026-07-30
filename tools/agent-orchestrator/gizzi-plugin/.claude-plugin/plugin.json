@@ -1,0 +1,14 @@
+{
+  "name": "allternit-steering",
+  "version": "1.0.0",
+  "description": "Steering checkpoints: consults a separate steering agent (ao-steer) when .steering/checkpoint.md changes, injecting STEER feedback back into the working session.",
+  "author": {
+    "name": "Allternit"
+  },
+  "keywords": [
+    "steering",
+    "checkpoints",
+    "agent-orchestrator"
+  ],
+  "license": "MIT"
+}

@@ -1,0 +1,15 @@
+{
+  "hooks": {
+    "Stop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash .steering/bin/steer-stop.sh",
+            "timeout": 600
+          }
+        ]
+      }
+    ]
+  }
+}

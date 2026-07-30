@@ -1,0 +1,16 @@
+{
+  "description": "Steering checkpoint Stop hook. The command runs in the session's project directory; it no-ops unless the project has .steering/checkpoint.md.",
+  "hooks": {
+    "Stop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash .steering/bin/steer-stop.sh",
+            "timeout": 600
+          }
+        ]
+      }
+    ]
+  }
+}
