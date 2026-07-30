@@ -1,5 +1,5 @@
 // @ts-nocheck
-import { LSP } from "@/runtime/integrations/lsp/lsp"
+import { LSP } from "@/runtime/integrations/lsp"
 import { bootstrap } from "@/cli/bootstrap/bootstrap"
 import { cmd } from "@/cli/commands/cmd"
 import { Log } from "@/runtime/util/log"

@@ -385,8 +385,8 @@ async fn settle_chat_run(record: &Option<ChatRunRecord>, success: bool, error: O
 /// 2. Compose the system instructions server-side: agent persona (SOUL.md,
 ///    STYLE.md), canonical workspace instruction files (AGENTS.md → GIZZI.md →
 ///    .claude/CLAUDE.md → SYSTEM_LAW.md), system_prompt, plus the caller's
-///    response-style preferences, wrapped by the existing
-///    <system-instructions> path below.
+///    response-style preferences, sent to gizzi via the message's "system"
+///    field (kept separate from the user's message text).
 /// 3. Subscribe to gizzi's SSE event stream.
 /// 4. POST the message to gizzi /v1/session/:id/message.
 /// 5. Filter message.part.delta events for this session and convert to
@@ -573,15 +573,6 @@ async fn agent_chat_bridge(
     )
     .unwrap_or_default();
 
-    let effective_message = if system_prompt.trim().is_empty() {
-        message.clone()
-    } else {
-        format!(
-            "<system-instructions>\n{}\n</system-instructions>\n\n<user-request>\n{}\n</user-request>",
-            system_prompt, message
-        )
-    };
-
     // Parse model from runtimeModelId or modelId — strip provider prefix if present.
     // Client-sent model ids always win; without one, fall back to the agent's
     // provider/model, then to the environment-configurable default so the
@@ -692,7 +683,7 @@ async fn agent_chat_bridge(
         // becomes a gizzi file part alongside the text part. A raw
         // `dataBase64` payload (no upload round-trip) is forwarded as a data
         // URL so small inline images still work.
-        let mut parts = vec![json!({ "type": "text", "text": effective_message })];
+        let mut parts = vec![json!({ "type": "text", "text": message })];
         if let Some(attachments) = body_json.get("attachments").and_then(|v| v.as_array()) {
             for attachment in attachments {
                 let media_type = attachment
@@ -728,6 +719,11 @@ async fn agent_chat_bridge(
         });
         if let Some(effort) = effort {
             gizzi_payload["effort"] = json!(effort);
+        }
+        // "+" prefix: APPEND to gizzi's default assembled system prompt
+        // rather than replace it.
+        if !system_prompt.trim().is_empty() {
+            gizzi_payload["system"] = json!(format!("+{}", system_prompt.trim()));
         }
 
         // Composer tool options (mobile "+" sheet): `metadata.tools` carries

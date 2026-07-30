@@ -76,10 +76,11 @@ export namespace LLM {
         // use agent prompt otherwise provider prompt
         // For Codex sessions, skip SystemPrompt.provider() since it's sent via options.instructions
         ...(input.agent.prompt ? [input.agent.prompt] : isCodex ? [] : SystemPrompt.provider(input.model, input.mode)),
-        // any custom prompt passed into this call
+        // any custom prompt passed into this call — already includes the last
+        // user message's system override/append (see prompt.ts's loop(),
+        // which folds lastUser.system into this array exactly once; do not
+        // re-add input.user.system here or it gets applied twice).
         ...input.system,
-        // any custom prompt from last user message
-        ...(input.user.system ? [input.user.system] : []),
       ]
         .filter((x) => x)
         .join("\n"),

@@ -1,0 +1,21 @@
+[package]
+name = "allternit-self-improve"
+version = "0.1.0"
+edition = "2021"
+license = "MIT OR Apache-2.0"
+description = "Scaffolding for an evolutionary self-improvement loop: agents-as-diffs lineage, working-copy patch application, and a staged evaluation gate"
+
+[lib]
+name = "allternit_self_improve"
+path = "src/lib.rs"
+
+[dependencies]
+serde = { workspace = true }
+serde_json = { workspace = true }
+thiserror = { workspace = true }
+chrono = { workspace = true }
+rand = { workspace = true }
+walkdir = { workspace = true }
+
+[dev-dependencies]
+tempfile = { workspace = true }

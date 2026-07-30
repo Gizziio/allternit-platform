@@ -173,7 +173,7 @@ export namespace ToolRegistry {
       MemoryRecallTool,
       VaultQueryTool,
       VaultWriteTool,
-      ...(Flag.GIZZI_EXPERIMENTAL_LSP_TOOL ? [LspTool] : []),
+      ...(Flag.GIZZI_ENABLE_LSP_TOOL ? [LspTool] : []),
       ...(config.experimental?.batch_tool === true ? [BatchTool] : []),
       ...(Flag.GIZZI_CLIENT === "cli" ? [PlanExitTool, PlanEnterTool] : []),
       ...(Flag.GIZZI_ENABLE_BROWSER_TOOL ? [BrowserTool] : []),
