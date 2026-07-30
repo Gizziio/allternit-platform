@@ -1,0 +1,53 @@
+#!/usr/bin/env bash
+# ao-send <slug> <prompt...>   or   ao-send <slug> -f <promptfile>
+# Verified prompt injection: bracketed-paste the prompt into the agent TUI,
+# read the pane back to confirm every character landed in THIS session's
+# input box, and only then press Enter. On a bad read-back it clears the
+# line with C-u (NEVER C-c — that kills kimi) and exits 1 so you can retry.
+set -euo pipefail
+[ $# -ge 2 ] || { echo "usage: ao-send <slug> <prompt...> | ao-send <slug> -f <file>" >&2; exit 2; }
+
+SLUG=$1; shift
+SESSION="ao-$SLUG"
+if [ "$1" = "-f" ]; then PROMPT=$(cat "$2"); else PROMPT="$*"; fi
+
+tmux has-session -t "=$SESSION:" 2>/dev/null || { echo "error: no session $SESSION" >&2; exit 1; }
+
+# Marker: last 40 alphanumeric chars of the prompt. Comparing alnum-only text
+# is immune to TUI line-wrapping, input-box border chars, and padding.
+STRIPPED=$(printf '%s' "$PROMPT" | tr -cd '[:alnum:]')
+MARKER=${STRIPPED:$(( ${#STRIPPED} > 40 ? ${#STRIPPED} - 40 : 0 ))}
+[ -n "$MARKER" ] || { echo "error: prompt has no alphanumeric content" >&2; exit 2; }
+
+tmux set-buffer -b ao-send "$PROMPT"
+tmux paste-buffer -p -b ao-send -d -t "=$SESSION:"
+
+# Wait for the paste to actually render instead of a fixed sleep: poll the
+# pane until the marker shows up in two consecutive captures (a single
+# sighting can be a half-painted TUI frame), bounded at 5s.
+DEADLINE=$(( $(date +%s) + 5 ))
+SEEN=""
+PANE=""
+while :; do
+  PANE=$(tmux capture-pane -p -t "=$SESSION:" -S -80 | tr -cd '[:alnum:]')
+  case "$PANE" in
+    *"$MARKER"*)
+      [ -n "$SEEN" ] && break
+      SEEN=1
+      ;;
+    *) SEEN="" ;;
+  esac
+  [ "$(date +%s)" -lt "$DEADLINE" ] || break
+  sleep 0.2
+done
+case "$PANE" in
+  *"$MARKER"*)
+    tmux send-keys -t "=$SESSION:" Enter
+    echo "submitted to $SESSION"
+    ;;
+  *)
+    tmux send-keys -t "=$SESSION:" C-u
+    echo "error: prompt not found in $SESSION pane after paste — cleared line with C-u, NOT submitted. Inspect with: tmux capture-pane -p -t $SESSION" >&2
+    exit 1
+    ;;
+esac

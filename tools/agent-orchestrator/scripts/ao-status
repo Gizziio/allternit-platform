@@ -1,0 +1,29 @@
+#!/usr/bin/env bash
+# ao-status [slug] [lines=25]
+# No slug: one-line summary of every ao-* session (alive/dead, workdir).
+# With slug: session state + last N pane lines, so the orchestrator can
+# check progress or stalls without attaching.
+set -euo pipefail
+
+if [ $# -eq 0 ]; then
+  FOUND=0
+  while IFS=: read -r NAME REST; do
+    case "$NAME" in ao-*)
+      FOUND=1
+      DEAD=$(tmux list-panes -t "=$NAME:" -F '#{pane_dead}' | head -1)
+      DIRP=$(tmux display-message -p -t "=$NAME:" '#{pane_current_path}')
+      STATE=alive; [ "$DEAD" != "0" ] && STATE=DEAD
+      echo "$NAME  $STATE  $DIRP"
+    ;; esac
+  done < <(tmux list-sessions -F '#{session_name}:' 2>/dev/null)
+  [ "$FOUND" = 1 ] || echo "no ao-* sessions"
+  exit 0
+fi
+
+SLUG=$1; LINES=${2:-25}
+SESSION="ao-$SLUG"
+tmux has-session -t "=$SESSION:" 2>/dev/null || { echo "no session $SESSION" >&2; exit 1; }
+DEAD=$(tmux list-panes -t "=$SESSION:" -F '#{pane_dead}' | head -1)
+STATE=alive; [ "$DEAD" != "0" ] && STATE=DEAD
+echo "== $SESSION ($STATE) — last $LINES lines =="
+tmux capture-pane -p -t "=$SESSION:" -S "-$LINES"

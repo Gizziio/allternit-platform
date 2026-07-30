@@ -4,6 +4,10 @@
 >
 > **LAST UPDATED:** 2026-04-17
 
+## Steering checkpoints
+
+This repo is wired for hook-based steering: when an agent session working here ends a turn, a Kimi Code `Stop` hook consults a **separate steering agent** — but only if `.steering/checkpoint.md` changed since the last review. So at every meaningful checkpoint (subtask finished, design decision made, before a risky change), update `.steering/checkpoint.md`: `Goal`, `Just did`, `Next`, `Open questions`. The steering agent's answers/guidance come back injected as a `[steering]` message — treat them as authoritative and act on them before continuing. See `.steering/README.md`. Kill switch: `touch .steering/off`.
+
 ## Agent creation checklist
 
 > **STATUS:** Canonical schema, registry contract, harness wiring, surface filtering, automation bridge, and workspace artifacts are implemented and passing verification as of 2026-07-02.

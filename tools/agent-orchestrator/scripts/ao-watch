@@ -1,0 +1,19 @@
+#!/usr/bin/env bash
+# ao-watch <slug> <sentinel-file> [timeout-sec=3600] [interval-sec=20]
+# Blocks until the executor's deliverable sentinel file exists (DONE),
+# the agent pane dies (PANE-DEAD), or the timeout elapses (TIMEOUT).
+# Run in the background / under Monitor; exit code 0 only on DONE.
+set -euo pipefail
+[ $# -ge 2 ] || { echo "usage: ao-watch <slug> <sentinel-file> [timeout] [interval]" >&2; exit 2; }
+
+SLUG=$1; SENTINEL=$2; TIMEOUT=${3:-3600}; INTERVAL=${4:-20}
+SESSION="ao-$SLUG"
+ELAPSED=0
+
+while :; do
+  if [ -f "$SENTINEL" ]; then echo "DONE $SENTINEL"; exit 0; fi
+  DEAD=$(tmux list-panes -t "=$SESSION:" -F '#{pane_dead}' 2>/dev/null || echo gone)
+  if [ "$DEAD" != "0" ]; then echo "PANE-DEAD $SESSION (agent exited or session gone; check log in ~/.agent-orchestrator/logs)"; exit 3; fi
+  if [ "$ELAPSED" -ge "$TIMEOUT" ]; then echo "TIMEOUT after ${TIMEOUT}s; sentinel absent, pane alive"; exit 4; fi
+  sleep "$INTERVAL"; ELAPSED=$((ELAPSED + INTERVAL))
+done
