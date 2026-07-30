@@ -2,7 +2,7 @@
 
 /**
  * Standalone Console Error Capture Script
- * Uses playwright-core directly to capture console errors from A2R Platform UI
+ * Uses playwright-core directly to capture console errors from Allternit Platform UI
  * 
  * Usage: node capture-errors.mjs
  */
@@ -13,7 +13,7 @@ const BASE_URL = process.env.TEST_BASE_URL || 'http://127.0.0.1:5177';
 
 async function main() {
   console.log('='.repeat(60));
-  console.log('A2R Platform - Console Error Capture');
+  console.log('Allternit Platform - Console Error Capture');
   console.log('='.repeat(60));
   console.log('Target URL:', BASE_URL);
   console.log('');

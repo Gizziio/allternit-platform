@@ -6,6 +6,9 @@
  * literals with process.env.USER_TYPE === 'ant' for Bun to remove the codenames
  * during dead code elimination
  */
+import { readFileSync } from 'fs'
+import { homedir } from 'os'
+import { join } from 'path'
 import { getMainLoopModelOverride } from '../../bootstrap/state.js'
 import {
   getSubscriptionType,
@@ -33,6 +36,28 @@ import { capitalize } from '../stringUtils.js'
 export type ModelShortName = string
 export type ModelName = string
 export type ModelSetting = ModelName | ModelAlias | null
+
+/**
+ * Read the runtime gizzi.json config (e.g. ~/.config/gizzi-code/gizzi.json)
+ * and return its top-level model field, if any. This bridges the Ink UI
+ * settings path with the runtime provider config so a local model set in
+ * gizzi.json is picked up as the main-loop model.
+ */
+function getRuntimeConfigModel(): ModelName | undefined {
+  try {
+    const configDir =
+      process.env.GIZZI_CONFIG_DIR ?? join(homedir(), '.config', 'gizzi-code')
+    const configPath = join(configDir, 'gizzi.json')
+    const raw = readFileSync(configPath, 'utf-8')
+    const parsed = JSON.parse(raw)
+    if (parsed && typeof parsed.model === 'string' && parsed.model.length > 0) {
+      return parsed.model
+    }
+  } catch {
+    // Runtime config missing or unreadable — fall back to normal settings path.
+  }
+  return undefined
+}
 
 export function getSmallFastModel(): ModelName {
   return process.env.ANTHROPIC_SMALL_FAST_MODEL || getDefaultHaikuModel()
@@ -67,7 +92,11 @@ export function getUserSpecifiedModelSetting(): ModelSetting | undefined {
     specifiedModel = modelOverride
   } else {
     const settings = getSettings_DEPRECATED() || {}
-    specifiedModel = process.env.ANTHROPIC_MODEL || settings.model || undefined
+    specifiedModel =
+      process.env.ANTHROPIC_MODEL ||
+      settings.model ||
+      getRuntimeConfigModel() ||
+      undefined
   }
 
   // Ignore the user-specified model if it's not in the availableModels allowlist.
@@ -220,6 +249,9 @@ export function getDefaultMainLoopModel(): ModelName {
  * module top-level (see MODEL_COSTS in modelCost.ts).
  */
 export function firstPartyNameToCanonical(name: ModelName): ModelShortName {
+  if (!name) {
+    return ''
+  }
   name = name.toLowerCase()
   // Special cases for Claude 4+ models to differentiate versions
   // Order matters: check more specific versions first (4-5 before 4)

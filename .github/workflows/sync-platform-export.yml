@@ -1,0 +1,75 @@
+name: Sync platform export to websites repo
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'surfaces/ai.allternit.com/src/**'
+      - 'surfaces/ai.allternit.com/public/**'
+      - 'surfaces/ai.allternit.com/package.json'
+      - 'surfaces/ai.allternit.com/vite.config.ts'
+      - 'pnpm-lock.yaml'
+      - '.github/workflows/sync-platform-export.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build-and-sync:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 10.28.0
+          run_install: false
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile --ignore-scripts
+
+      - name: Generate Prisma client
+        working-directory: surfaces/ai.allternit.com
+        run: pnpm prisma generate
+
+      - name: Copy discovery feed to public
+        run: |
+          if [ -f surfaces/ai.allternit.com/src/data/discovery-pipeline.json ]; then
+            cp surfaces/ai.allternit.com/src/data/discovery-pipeline.json surfaces/ai.allternit.com/public/discovery-feed.json
+            echo "Copied discovery-pipeline.json to public/discovery-feed.json"
+          else
+            echo "No discovery-pipeline.json found, skipping"
+          fi
+
+      - name: Build static export
+        working-directory: surfaces/ai.allternit.com
+        run: pnpm build
+        env:
+          NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY: ${{ secrets.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY }}
+          NEXT_PUBLIC_ALLTERNIT_DESKTOP_AUTH: 'true'
+          ENCRYPTION_KEY: ${{ secrets.ENCRYPTION_KEY }}
+
+      - name: Clone Allternit-websites repo
+        env:
+          PAT: ${{ secrets.ALLTERNIT_WEBSITES_PAT }}
+        run: |
+          git clone --depth 1 "https://x-access-token:${PAT}@github.com/Gizziio/Allternit-websites.git" /tmp/websites
+
+      - name: Sync static export to websites repo
+        run: |
+          rsync -av --delete surfaces/ai.allternit.com/dist/ /tmp/websites/projects/platform.allternit.com/source/
+          cd /tmp/websites
+          git config user.name "allternit-platform bot"
+          git config user.email "platform-bot@allternit.com"
+          git add -A
+          git diff --cached --quiet || {
+            git commit -m "sync: platform export from workspace@${{ github.sha }}"
+            git push
+          }

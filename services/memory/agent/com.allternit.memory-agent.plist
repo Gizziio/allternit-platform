@@ -8,7 +8,7 @@
 
     <!-- Human-readable description -->
     <key>LabelDescription</key>
-    <string>Allternitchitech Always-On Memory Agent</string>
+    <string>Allternit Always-On Memory Agent</string>
 
     <!-- Program to execute -->
     <key>ProgramArguments</key>

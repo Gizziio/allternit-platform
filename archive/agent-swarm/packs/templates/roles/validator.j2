@@ -1,5 +1,5 @@
 ---
-prompt_id: "a2r.pack.role.validator@v1"
+prompt_id: "allternit.pack.role.validator@v1"
 version: "v1"
 description: "Validator role prompt for evaluating artifacts against acceptance criteria"
 argument_hint: "validator --wih={{wih_id}} --artifacts={{artifacts}}"
@@ -11,7 +11,7 @@ execution_permission_mode: "plan"
 hooks_required: ["PreToolUse", "PostToolUse", "Stop"]
 outputs: ["validator_report.yaml"]
 writes_policy:
-  workspace_root: ".a2r/"
+  workspace_root: ".allternit/"
   allow_write_paths: []  # Read-only
   deny_write_paths: ["**/*"]
 role: "validator"
@@ -91,7 +91,7 @@ STEP 4: Check Invariants
 STEP 5: Evaluate Evidence
 - Verify: acceptance.evidence artifacts exist
 - Check: build_report.yaml present
-- **Autoland Verification**: Ensure all builder artifacts are correctly contained within `.a2r/runner/{{wih_id}}/` and not in the project root.
+- **Autoland Verification**: Ensure all builder artifacts are correctly contained within `.allternit/runner/{{wih_id}}/` and not in the project root.
 - Validate: artifact hashes match
 
 STEP 6: Produce Verdict

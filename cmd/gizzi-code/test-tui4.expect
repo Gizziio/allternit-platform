@@ -1,0 +1,16 @@
+#!/usr/bin/expect -f
+set timeout 180
+set env(DEBUG) "gizzi"
+spawn /bin/sh -c "/opt/homebrew/bin/gizzi-code -m local-mlx/qwen3.6-35b-a3b-4bit --dangerously-skip-permissions 2>&1"
+log_file /tmp/gizzi-tui4.log
+expect {
+  -re "trust" { send "y\r"; exp_continue }
+  "❯" {}
+  timeout {}
+}
+sleep 2
+send "hello\r"
+sleep 90
+send "/exit\r"
+sleep 2
+expect eof

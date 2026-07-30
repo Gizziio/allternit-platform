@@ -41,7 +41,7 @@ impl ControlPlaneServiceConfig {
             ledger_path,
             database_url,
             control_plane_id: None,
-            control_plane_name: "Allternitchitech Control Plane".to_string(),
+            control_plane_name: "Allternit Control Plane".to_string(),
             control_plane_description: "Local control plane service".to_string(),
         }
     }

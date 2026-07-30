@@ -1,8 +1,8 @@
-# A2R Node Agent Dockerfile
+# Allternit Node Agent Dockerfile
 # 
 # Usage:
-#   docker build -t a2r-node .
-#   docker run -d --name a2r-node -v /var/run/docker.sock:/var/run/docker.sock -e A2R_TOKEN=xxx a2r-node
+#   docker build -t allternit-node .
+#   docker run -d --name allternit-node -v /var/run/docker.sock:/var/run/docker.sock -e ALLTERNIT_TOKEN=xxx allternit-node
 
 FROM rust:1.75-bookworm AS builder
 
@@ -31,37 +31,37 @@ RUN apt-get update && apt-get install -y \
     && rm -rf /var/lib/apt/lists/*
 
 # Create non-root user
-RUN groupadd -r a2r && useradd -r -g a2r a2r
+RUN groupadd -r allternit && useradd -r -g allternit allternit
 
 # Create directories
-RUN mkdir -p /opt/a2r/bin /etc/a2r /var/log/a2r && \
-    chown -R a2r:a2r /opt/a2r /etc/a2r /var/log/a2r
+RUN mkdir -p /opt/allternit/bin /etc/allternit /var/log/allternit && \
+    chown -R allternit:allternit /opt/allternit /etc/allternit /var/log/allternit
 
 # Copy binary from builder
-COPY --from=builder /app/target/release/a2r-node /opt/a2r/bin/a2r-node
-RUN chmod +x /opt/a2r/bin/a2r-node && \
-    chown a2r:a2r /opt/a2r/bin/a2r-node
+COPY --from=builder /app/target/release/allternit-node /opt/allternit/bin/allternit-node
+RUN chmod +x /opt/allternit/bin/allternit-node && \
+    chown allternit:allternit /opt/allternit/bin/allternit-node
 
 # Switch to non-root user
-USER a2r
+USER allternit
 
-WORKDIR /opt/a2r
+WORKDIR /opt/allternit
 
 # Set environment variables
-ENV A2R_NODE_ID=
-ENV A2R_TOKEN=
-ENV A2R_CONTROL_PLANE=wss://control.a2r.io
+ENV Allternit_NODE_ID=
+ENV ALLTERNIT_TOKEN=
+ENV Allternit_CONTROL_PLANE=wss://control.allternit.io
 ENV RUST_LOG=info
 
 # Health check
 HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
-    CMD /opt/a2r/bin/a2r-node --health || exit 1
+    CMD /opt/allternit/bin/allternit-node --health || exit 1
 
 # Run the binary
-CMD ["/opt/a2r/bin/a2r-node"]
+CMD ["/opt/allternit/bin/allternit-node"]
 
 # Metadata
-LABEL org.opencontainers.image.title="A2R Node Agent"
-LABEL org.opencontainers.image.description="A2R Node Agent - Connect your infrastructure to A2R Control Plane"
-LABEL org.opencontainers.image.vendor="A2R"
+LABEL org.opencontainers.image.title="Allternit Node Agent"
+LABEL org.opencontainers.image.description="Allternit Node Agent - Connect your infrastructure to Allternit Control Plane"
+LABEL org.opencontainers.image.vendor="Allternit"
 LABEL org.opencontainers.image.licenses="MIT OR Apache-2.0"

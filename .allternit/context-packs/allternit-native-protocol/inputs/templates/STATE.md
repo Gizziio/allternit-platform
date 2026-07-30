@@ -1,10 +1,10 @@
-# A2R Native: STATE.md
+# Allternit Native: STATE.md
 
 The Brain Runtime's living memory. Read this first in every session.
 
 ## Project Reference
 
-See: .a2r/PROJECT.md (updated [date])
+See: .allternit/PROJECT.md (updated [date])
 
 **Core value:** [One-liner from PROJECT.md Core Value section]
 **Current focus:** [Current phase name]

@@ -50,11 +50,11 @@ fi
 cd "$WORKING_DIR"
 ./bin/dev-down 2>/dev/null || true
 
-install_plist "com.allternitchitech.intent-graph-kernel.plist.template"
-install_plist "com.allternitchitech.presentation-kernel.plist.template"
-install_plist "com.allternitchitech.kernel.plist.template"
-install_plist "com.allternitchitech.shell.plist.template"
-install_plist "com.allternitchitech.ui-tars-operator.plist.template"
+install_plist "com.allternit.intent-graph-kernel.plist.template"
+install_plist "com.allternit.presentation-kernel.plist.template"
+install_plist "com.allternit.kernel.plist.template"
+install_plist "com.allternit.shell.plist.template"
+install_plist "com.allternit.ui-tars-operator.plist.template"
 
 echo "All services started via launchd."
 echo "Gateway listening on http://localhost:3000"

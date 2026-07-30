@@ -1,5 +1,5 @@
 ---
-prompt_id: "a2r.pack.plan.plan_with_files"
+prompt_id: "allternit.pack.plan.plan_with_files"
 version: "v1"
 description: "Create execution plan from files and requirements"
 model: "any"
@@ -56,7 +56,7 @@ outputs: ["execution_plan.json", "file_manifest.json"]
 ### STEP 5: Emit Plan
 - Write: execution_plan.json
 - Write: file_manifest.json
-- **Landing Standard**: Ensure all `builder` nodes specify an isolated workspace in `.a2r/runner/` and never write directly to the project root.
+- **Landing Standard**: Ensure all `builder` nodes specify an isolated workspace in `.allternit/runner/` and never write directly to the project root.
 - Emit: PlanCreated hook
 
 ## Report

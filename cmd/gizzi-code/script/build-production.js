@@ -352,6 +352,45 @@ if (migrations.length > 0) {
 }
 // Step 1: Bundle to single JS file
 console.log("🔨 Step 1a: Bundling worker...");
+// The worker is the headless backend — it must never load the OpenTUI
+// renderer. Tangled barrel imports (e.g. utils -> components/index) can drag
+// @opentui/solid -> @opentui/core into the worker graph; @opentui/core is
+// native (bun:ffi) and unresolvable from the blob: worker inside a compiled
+// binary, which killed the worker at startup ("Worker has been terminated"
+// on every query). Stub all @opentui/* imports in the worker bundle only.
+const OPENTUI_WORKER_STUB_NS = "opentui-worker-stub";
+const OPENTUI_WORKER_STUB_NAMES = [
+  "ASCIIFontRenderable","BaseRenderable","BoxRenderable","CliRenderer","CodeRenderable",
+  "DiffRenderable","InputRenderable","InputRenderableEvents","LineNumberRenderable",
+  "MarkdownRenderable","Renderable","RootTextNodeRenderable","ScrollBoxRenderable",
+  "SelectRenderable","SelectRenderableEvents","TabSelectRenderable","TabSelectRenderableEvents",
+  "TextAttributes","TextNodeRenderable","TextRenderable","TextareaRenderable",
+  "TimeToFirstDrawRenderable","Timeline","Yoga","createCliRenderer","createTestRenderer",
+  "createTextAttributes","engine","isTextNodeRenderable","parseColor",
+  "Portal","useKeyboard","useRenderer","useTerminalDimensions","createComponent","mergeProps",
+];
+const OPENTUI_WORKER_STUB = `
+var _stub = new Proxy(function () {}, {
+  get: function (t, k) { return k === Symbol.toPrimitive ? function () { return 0; } : _stub; },
+  apply: function () { return _stub; },
+  construct: function () { return {}; },
+});
+${OPENTUI_WORKER_STUB_NAMES.map((n) => `export var ${n} = _stub;`).join("\n")}
+export default _stub;
+`;
+const opentuiWorkerStubPlugin = {
+    name: "opentui-worker-stub",
+    setup(build) {
+        build.onResolve({ filter: /^@opentui\// }, () => ({
+            path: OPENTUI_WORKER_STUB_NS,
+            namespace: OPENTUI_WORKER_STUB_NS,
+        }));
+        build.onLoad({ filter: /.*/, namespace: OPENTUI_WORKER_STUB_NS }, () => ({
+            contents: OPENTUI_WORKER_STUB,
+            loader: "js",
+        }));
+    },
+};
 const workerBundleResult = await Bun.build({
     entrypoints: ["./src/cli/ui/ink-app/worker.ts"],
     target: "bun",
@@ -360,7 +399,7 @@ const workerBundleResult = await Bun.build({
     define,
     conditions: ["browser"],
     external: ["electron", "chromium-bidi/*", "playwright-core/*", "@opentui/core", "@opentui/core-*"],
-    plugins: [wasmEmbedPlugin, textEmbedPlugin, solidPlugin],
+    plugins: [wasmEmbedPlugin, textEmbedPlugin, solidPlugin, opentuiWorkerStubPlugin],
 });
 if (!workerBundleResult.success) {
     console.error("Worker bundle failed:");

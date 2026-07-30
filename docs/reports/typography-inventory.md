@@ -53,7 +53,7 @@
 | `.allternit/plugins/html-to-figma-opensource/extension/content.js` | 257 | `font-family: system-ui` | Replaced with Allternit Sans |
 | Multiple mockup HTML files | 15+ | System font stacks | Replaced with Allternit Sans/Mono |
 
-## Visible A2R Branding Found (Pre-Migration)
+## Visible Allternit Branding Found (Pre-Migration)
 
 | File | Count | Action |
 |---|---|---|

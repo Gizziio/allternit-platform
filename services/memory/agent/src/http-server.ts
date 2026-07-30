@@ -524,7 +524,7 @@ async function startServer(): Promise<void> {
     
     app.listen(PORT, () => {
       console.log('╔══════════════════════════════════════════════════════════╗');
-      console.log('║     Allternitchitech Memory Agent HTTP API                     ║');
+      console.log('║     Allternit Memory Agent HTTP API                     ║');
       console.log('╚══════════════════════════════════════════════════════════╝');
       console.log('');
       console.log(`Server running on http://localhost:${PORT}`);

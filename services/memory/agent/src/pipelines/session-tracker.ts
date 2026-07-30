@@ -277,7 +277,7 @@ export class SessionTracker {
  */
 async function main(): Promise<void> {
   console.log('╔══════════════════════════════════════════════════════════╗');
-  console.log('║     Allternitchitech Session State Tracker                     ║');
+  console.log('║     Allternit Session State Tracker                     ║');
   console.log('╚══════════════════════════════════════════════════════════╝');
   console.log('');
 

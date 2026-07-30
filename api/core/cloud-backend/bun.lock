@@ -3,7 +3,7 @@
   "configVersion": 1,
   "workspaces": {
     "": {
-      "name": "@a2r/cloud-backend",
+      "name": "@allternit/cloud-backend",
       "dependencies": {
         "uuid": "^9.0.1",
         "ws": "^8.16.0",

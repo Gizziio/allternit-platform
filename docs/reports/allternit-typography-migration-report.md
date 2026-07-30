@@ -58,8 +58,8 @@
 - `.allternit/plugins/html-to-figma-opensource/src/automation/workflows/quick-capture.ts` — Updated visible text
 
 ### Documentation / Editorial
-- `.allternit/plugins/html-to-figma-opensource/A2R_EXTENSION_SUMMARY.md` — Migrated visible text to Allternit
-- `.allternit/plugins/html-to-figma-opensource/A2R_INTEGRATION_ARCHITECTURE.md` — Migrated visible text to Allternit
+- `.allternit/plugins/html-to-figma-opensource/Allternit_EXTENSION_SUMMARY.md` — Migrated visible text to Allternit
+- `.allternit/plugins/html-to-figma-opensource/Allternit_INTEGRATION_ARCHITECTURE.md` — Migrated visible text to Allternit
 - `.allternit/plugins/html-to-figma-opensource/INTEGRATION_GUIDE.md` — Migrated visible text to Allternit
 
 ## Surfaces Migrated
@@ -99,12 +99,12 @@ python3 scripts/validate-typography.py
 
 | File | Reason | Follow-up |
 |---|---|---|
-| `.allternit/auth-app/package.json` | Internal package name `a2r-auth-app` | Deferred — changing would break npm workspace resolution |
-| `.allternit/auth-app/app/.well-known/gizzi/route.ts` | `A2R_TOKEN` env var name | Deferred — changing would break deployment config |
-| `.allternit/auth-app/app/terminal/clerk/page.tsx` | `a2r_callback_url` sessionStorage key | Deferred — changing would break callback flow |
-| `.allternit/plugins/html-to-figma-opensource/src/a2r/` | Directory and code symbols (`createA2RIntegration`, `A2RIntegration`, etc.) | Deferred — internal API identifiers; mass rename would break imports |
+| `.allternit/auth-app/package.json` | Internal package name `allternit-auth-app` | Deferred — changing would break npm workspace resolution |
+| `.allternit/auth-app/app/.well-known/gizzi/route.ts` | `ALLTERNIT_TOKEN` env var name | Deferred — changing would break deployment config |
+| `.allternit/auth-app/app/terminal/clerk/page.tsx` | `allternit_callback_url` sessionStorage key | Deferred — changing would break callback flow |
+| `.allternit/plugins/html-to-figma-opensource/src/allternit/` | Directory and code symbols (`createAllternitIntegration`, `AllternitIntegration`, etc.) | Deferred — internal API identifiers; mass rename would break imports |
 | `.allternit/plugins/html-to-figma-opensource/tests/__snapshots__/` | Test snapshot fixtures with `"fontFamily": "Arial"` | Test fixtures — not active code; updating would require regenerating snapshots |
-| `.gizzi/package.json.original` | Legacy reference to `@a2r/plugin` | Legacy backup file; not active |
+| `.gizzi/package.json.original` | Legacy reference to `@allternit/plugin` | Legacy backup file; not active |
 
 ## Risks
 - The `.allternit/auth-app/` is a separate Next.js workspace; typography.css was copied rather than symlinked. Keep both copies in sync if tokens change.
@@ -112,7 +112,7 @@ python3 scripts/validate-typography.py
 - Several plugin skill markdown files still mention legacy font names inside data CSVs or historical design references. These are reference data, not active CSS.
 
 ## Next Steps
-1. Update `.allternit/auth-app/package.json` name from `a2r-auth-app` to `allternit-auth-app` when workspace references are updated.
+1. Update `.allternit/auth-app/package.json` name from `allternit-auth-app` to `allternit-auth-app` when workspace references are updated.
 2. Regenerate test snapshots in `html-to-figma-opensource` after confirming font changes.
 3. If Allternit Sans/Serif/Mono font files become available, add `@font-face` declarations to `src/styles/typography.css`.
 4. Run the auth-app dev build to confirm Next.js can resolve the `typography.css` import.

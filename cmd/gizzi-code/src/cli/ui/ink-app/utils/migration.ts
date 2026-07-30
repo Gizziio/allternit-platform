@@ -221,9 +221,17 @@ async function shouldRunMigration(): Promise<boolean> {
 // ============================================================================
 
 async function migrateFromLegacy(): Promise<void> {
+  const existing = await configStore.get(HARNESS_CONFIG_KEY) as HarnessConfig | undefined;
+
+  // If a harness config already exists (e.g. user-created local/BYOK config),
+  // preserve it instead of clobbering it with env-driven legacy detection.
+  if (existing && existing.mode && existing.mode !== 'legacy') {
+    return;
+  }
+
   const mode = detectHarnessMode();
   const harnessConfig: HarnessConfig = { mode };
-  
+
   switch (mode) {
     case 'byok':
       harnessConfig.byok = {
@@ -232,32 +240,32 @@ async function migrateFromLegacy(): Promise<void> {
         google: { apiKey: process.env.GOOGLE_API_KEY },
       };
       break;
-      
+
     case 'cloud':
       harnessConfig.cloud = {
         baseURL: process.env.ALLTERNIT_CLOUD_URL || DEFAULTS.CLOUD_BASE_URL,
         accessToken: process.env.ALLTERNIT_CLOUD_TOKEN,
       };
       break;
-      
+
     case 'local':
       harnessConfig.local = {
         baseURL: process.env.ALLTERNIT_LOCAL_URL || DEFAULTS.LOCAL_BASE_URL,
       };
       break;
-      
+
     case 'subprocess':
       harnessConfig.subprocess = {
         command: process.env.ALLTERNIT_SUBPROCESS_CMD || DEFAULTS.SUBPROCESS_CMD,
       };
       break;
-      
+
     case 'legacy':
     default:
       // Keep as legacy, no harness config needed
       break;
   }
-  
+
   await configStore.set(HARNESS_CONFIG_KEY, harnessConfig);
 }
 

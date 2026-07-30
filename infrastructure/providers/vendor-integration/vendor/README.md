@@ -1,6 +1,6 @@
 # VENDOR INTEGRATION (READ-ONLY)
 
-This directory contains vendor code integrated into the Allternitchitech platform.
+This directory contains vendor code integrated into the Allternit platform.
 
 ## Status: FROZEN VENDOR CODE
 

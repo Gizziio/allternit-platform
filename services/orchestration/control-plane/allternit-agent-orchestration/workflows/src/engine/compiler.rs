@@ -370,7 +370,7 @@ impl YamlCompiler {
             id: task.id.clone(),
             name: task.name.clone(),
             phase,
-            skill_id: task.persona.clone(), // In Allternitchitech, persona maps to skill_id
+            skill_id: task.persona.clone(), // In Allternit, persona maps to skill_id
             inputs: task.inputs.clone(),
             outputs: task.outputs.clone(),
             constraints,

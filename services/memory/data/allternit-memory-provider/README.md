@@ -1,4 +1,4 @@
-# Allternitchitech Memory Provider
+# Allternit Memory Provider
 
 A unified memory abstraction layer that provides a seamless interface to multiple memory implementations following Unix-like modularity principles.
 

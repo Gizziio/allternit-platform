@@ -1,10 +1,10 @@
-# Allternitchitech Platform Orchestrator
+# Allternit Platform Orchestrator
 
-The Allternitchitech Platform Orchestrator is a unified binary that starts and manages all services in the Allternitchitech platform.
+The Allternit Platform Orchestrator is a unified binary that starts and manages all services in the Allternit platform.
 
 ## Overview
 
-The orchestrator provides a single command to start all platform services in the correct order, making it easy to run the complete Allternitchitech platform with one command.
+The orchestrator provides a single command to start all platform services in the correct order, making it easy to run the complete Allternit platform with one command.
 
 ## Features
 

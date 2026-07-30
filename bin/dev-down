@@ -12,10 +12,10 @@ unload_service() {
     fi
 }
 
-unload_service "com.allternitchitech.intent-graph-kernel"
-unload_service "com.allternitchitech.presentation-kernel"
-unload_service "com.allternitchitech.kernel"
-unload_service "com.allternitchitech.shell"
-unload_service "com.allternitchitech.ui-tars-operator"
+unload_service "com.allternit.intent-graph-kernel"
+unload_service "com.allternit.presentation-kernel"
+unload_service "com.allternit.kernel"
+unload_service "com.allternit.shell"
+unload_service "com.allternit.ui-tars-operator"
 
 echo "All allternit development services stopped."

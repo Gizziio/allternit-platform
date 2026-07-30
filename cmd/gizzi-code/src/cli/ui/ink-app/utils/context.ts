@@ -50,9 +50,18 @@ export function modelSupports1M(model: string): boolean {
 }
 
 export function getContextWindowForModel(
-  model: string,
+  model: string | null | undefined,
   betas?: string[],
 ): number {
+  if (!model) {
+    return MODEL_CONTEXT_WINDOW_DEFAULT
+  }
+
+  // Local MLX Qwen3.6-35B-A3B-4bit: 128K context window
+  if (model.toLowerCase().includes('qwen3.6-35b-a3b-4bit')) {
+    return 131_072
+  }
+
   // Allow override via environment variable (ant-only)
   // This takes precedence over all other context window resolution, including 1M detection,
   // so users can cap the effective context window for local decisions (auto-compact, etc.)
@@ -98,8 +107,8 @@ export function getContextWindowForModel(
   return MODEL_CONTEXT_WINDOW_DEFAULT
 }
 
-export function getSonnet1mExpTreatmentEnabled(model: string): boolean {
-  if (is1mContextDisabled()) {
+export function getSonnet1mExpTreatmentEnabled(model: string | null | undefined): boolean {
+  if (!model || is1mContextDisabled()) {
     return false
   }
   // Only applies to sonnet 4.6 without an explicit [1m] suffix

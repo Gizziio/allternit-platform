@@ -3,20 +3,25 @@
 <plist version="1.0">
 <dict>
     <key>Label</key>
-    <string>com.a2rchitech.intent-graph-kernel</string>
+    <string>com.allternit.kernel</string>
     <key>ProgramArguments</key>
     <array>
-        <string>{{WORKING_DIR}}/target/release/intent-graph-kernel</string>
+        <string>{{WORKING_DIR}}/target/release/kernel</string>
     </array>
     <key>RunAtLoad</key>
     <true/>
     <key>KeepAlive</key>
     <true/>
     <key>StandardOutPath</key>
-    <string>{{WORKING_DIR}}/.logs/intent-graph-kernel.out.log</string>
+    <string>{{WORKING_DIR}}/.logs/kernel.out.log</string>
     <key>StandardErrorPath</key>
-    <string>{{WORKING_DIR}}/.logs/intent-graph-kernel.err.log</string>
+    <string>{{WORKING_DIR}}/.logs/kernel.err.log</string>
     <key>WorkingDirectory</key>
-    <string>{{WORKING_DIR}}/0-substrate/a2r-intent-graph-kernel</string>
+    <string>{{WORKING_DIR}}/4-services/orchestration/kernel-service</string>
+    <key>EnvironmentVariables</key>
+    <dict>
+        <key>RUST_LOG</key>
+        <string>info</string>
+    </dict>
 </dict>
 </plist>

@@ -65,7 +65,7 @@
 - legacy-allternit-workspace/completed/reference/rfcs/mcp-client-architecture.md
 - legacy-allternit-workspace/completed/reference/unified-architecture/00_MASTER_ARCHITECTURE.md
 - legacy-allternit-workspace/archive/SYSTEMATIC_ANALYSIS_LOG.md
-- legacy-allternit-workspace/archive/session-transcripts/unfinished/Framing/Allternitchitech_PAI_Kernel_Spec_and_PAIMM_Mapping.md
+- legacy-allternit-workspace/archive/session-transcripts/unfinished/Framing/Allternit_PAI_Kernel_Spec_and_PAIMM_Mapping.md
 - legacy-allternit-workspace/archive/historical-roadmaps/Allternit_OPENCLAW_EXECUTION_QUEUE.md
 - *... and 62 more*
 

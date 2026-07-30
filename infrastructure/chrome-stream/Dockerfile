@@ -1,4 +1,4 @@
-# A2R Chrome Stream - Enterprise-grade real Chrome streaming via WebRTC
+# Allternit Chrome Stream - Enterprise-grade real Chrome streaming via WebRTC
 # Based on Ubuntu 22.04 with Google Chrome (x86_64), selkies-gstreamer, and sidecar
 # Uses Docker x86_64 emulation on ARM64 hosts
 
@@ -98,24 +98,24 @@ RUN useradd -m -s /bin/bash chrome \
 
 # Copy configuration files
 COPY chrome-policies/ /etc/opt/chrome/policies/managed/
-COPY seccomp/ /etc/a2r/seccomp/
+COPY seccomp/ /etc/allternit/seccomp/
 COPY supervisor/ /etc/supervisor/conf.d/
-COPY sidecar/ /opt/a2r/sidecar/
-COPY entrypoint.sh /opt/a2r/entrypoint.sh
+COPY sidecar/ /opt/allternit/sidecar/
+COPY entrypoint.sh /opt/allternit/entrypoint.sh
 
 # Make scripts executable
-RUN chmod +x /opt/a2r/entrypoint.sh \
-    && chmod +x /opt/a2r/sidecar/main.py
+RUN chmod +x /opt/allternit/entrypoint.sh \
+    && chmod +x /opt/allternit/sidecar/main.py
 
 # Set environment variables for GStreamer
 ENV DISPLAY=:99 \
-    A2R_RESOLUTION=1920x1080 \
-    A2R_WIDTH=1920 \
-    A2R_HEIGHT=1080 \
-    A2R_SESSION_ID="" \
-    A2R_TENANT_ID="" \
-    A2R_EXTENSION_MODE=managed \
-    A2R_DISABLE_BACKGROUND_THROTTLING=false \
+    Allternit_RESOLUTION=1920x1080 \
+    Allternit_WIDTH=1920 \
+    Allternit_HEIGHT=1080 \
+    Allternit_SESSION_ID="" \
+    Allternit_TENANT_ID="" \
+    Allternit_EXTENSION_MODE=managed \
+    Allternit_DISABLE_BACKGROUND_THROTTLING=false \
     SELKIES_ENCODER=x264enc \
     PYTHONUNBUFFERED=1 \
     GSTREAMER_PATH=/usr \
@@ -140,4 +140,4 @@ HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
     CMD curl -f http://localhost:8081/health || exit 1
 
 # Entrypoint
-ENTRYPOINT ["/opt/a2r/entrypoint.sh"]
+ENTRYPOINT ["/opt/allternit/entrypoint.sh"]

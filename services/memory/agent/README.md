@@ -1,4 +1,4 @@
-# Allternitchitech Always-On Memory Agent
+# Allternit Always-On Memory Agent
 
 > **Persistent AI memory powered by local LLM (Ollama)** - Runs 24/7 as a lightweight background process, continuously processing, consolidating, and connecting information.
 

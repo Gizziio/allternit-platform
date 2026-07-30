@@ -2,7 +2,7 @@
 
 ## Overview
 
-This document defines all CLI commands for A2R Workflow Blueprints.
+This document defines all CLI commands for Allternit Workflow Blueprints.
 
 **Command Structure**: `gizzi blueprint <command> [options]`
 
@@ -43,7 +43,7 @@ gizzi blueprint validate ./blueprint.yaml --format json
 ✓ Blueprint validation passed
 
 File: ./blueprint.yaml
-Schema: a2r.io/v1
+Schema: allternit.io/v1
 
 Summary:
   Agents: 2
@@ -64,7 +64,7 @@ Expected one of: token, oauth, basic, bearer, none
 Got: "api_key"
 
 Fix: Change auth_type to "token" for GitHub connector
-Docs: https://docs.a2r.io/connectors/github
+Docs: https://docs.allternit.io/connectors/github
 ```
 
 ---
@@ -93,7 +93,7 @@ gizzi blueprint install <path-or-url> [options]
 gizzi blueprint install ./saas-startup-team.yaml
 
 # Install from GitHub
-gizzi blueprint install github.com/a2r-blueprints/saas-startup-team
+gizzi blueprint install github.com/allternit-blueprints/saas-startup-team
 
 # Dry run
 gizzi blueprint install ./blueprint.yaml --dry-run
@@ -218,7 +218,7 @@ Metadata:
   Author: Jane Doe <jane@example.com>
   Description: Daily standup and PR review automation
   License: MIT
-  Homepage: https://blueprints.a2r.io/saas-startup-team
+  Homepage: https://blueprints.allternit.io/saas-startup-team
 
 Status: active
 Environment: prod
@@ -946,7 +946,7 @@ SEARCH RESULTS: "engineering"
 
 NAME                  VERSION  RATING  DOWNLOADS  AUTHOR
 ──────────────────────────────────────────────────────────
-saas-startup-team     1.2.0    ⭐ 4.8   1,234      a2r-team
+saas-startup-team     1.2.0    ⭐ 4.8   1,234      allternit-team
 devops-automation     2.0.1    ⭐ 4.5   892        devops-pro
 incident-response     1.5.0    ⭐ 4.9   567        sre-team
 

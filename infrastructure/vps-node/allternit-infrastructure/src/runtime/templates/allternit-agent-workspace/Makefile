@@ -1,5 +1,5 @@
 # ============================================================================
-# A2R Agent Workspace - Makefile
+# Allternit Agent Workspace - Makefile
 # Convenient commands for managing the agent workspace
 # ============================================================================
 
@@ -10,7 +10,7 @@
 
 # Variables
 COMPOSE_FILE := docker-compose.yml
-PROJECT_NAME := a2r-agent
+PROJECT_NAME := allternit-agent
 
 # Colors for output
 BLUE := \033[36m
@@ -20,26 +20,26 @@ RED := \033[31m
 RESET := \033[0m
 
 help: ## Show this help message
-	@echo "$(BLUE)A2R Agent Workspace - Available Commands$(RESET)"
+	@echo "$(BLUE)Allternit Agent Workspace - Available Commands$(RESET)"
 	@echo "=========================================="
 	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | sort | awk 'BEGIN {FS = ":.*?## "}; {printf "  $(GREEN)%-15s$(RESET) %s\n", $$1, $$2}'
 
 build: ## Build all Docker images
-	@echo "$(BLUE)Building A2R Agent Workspace images...$(RESET)"
+	@echo "$(BLUE)Building Allternit Agent Workspace images...$(RESET)"
 	docker-compose -f $(COMPOSE_FILE) build
 
 start: ## Start the agent workspace
-	@echo "$(GREEN)Starting A2R Agent Workspace...$(RESET)"
+	@echo "$(GREEN)Starting Allternit Agent Workspace...$(RESET)"
 	docker-compose -f $(COMPOSE_FILE) up -d
 	@echo "$(GREEN)Agent workspace is running!$(RESET)"
 	@echo "Health check: http://localhost:3000/health"
 
 start-fg: ## Start in foreground mode (for debugging)
-	@echo "$(BLUE)Starting A2R Agent Workspace (foreground)...$(RESET)"
+	@echo "$(BLUE)Starting Allternit Agent Workspace (foreground)...$(RESET)"
 	docker-compose -f $(COMPOSE_FILE) up
 
 stop: ## Stop the agent workspace
-	@echo "$(YELLOW)Stopping A2R Agent Workspace...$(RESET)"
+	@echo "$(YELLOW)Stopping Allternit Agent Workspace...$(RESET)"
 	docker-compose -f $(COMPOSE_FILE) down
 
 restart: stop start ## Restart the agent workspace

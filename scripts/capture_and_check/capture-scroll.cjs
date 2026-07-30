@@ -12,11 +12,11 @@ const { chromium } = require('playwright');
   if (await inputBox.isVisible().catch(() => false)) {
     const box = await inputBox.boundingBox();
     await page.screenshot({ 
-      path: '/Users/macbook/Desktop/a2rchitech-workspace/a2rchitech/shell-input-region.png',
+      path: '/Users/macbook/Desktop/allternit-workspace/allternit/shell-input-region.png',
       clip: { x: box.x - 20, y: box.y - 20, width: box.width + 40, height: box.height + 40 }
     });
   } else {
-    await page.screenshot({ path: '/Users/macbook/Desktop/a2rchitech-workspace/a2rchitech/shell-input-region.png' });
+    await page.screenshot({ path: '/Users/macbook/Desktop/allternit-workspace/allternit/shell-input-region.png' });
   }
   
   await browser.close();

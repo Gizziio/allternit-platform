@@ -2,7 +2,7 @@
 name = "allternit-workflows"
 version = "0.1.0"
 edition = "2021"
-description = "Allternitchitech workflow engine with DAG execution and scientific loop"
+description = "Allternit workflow engine with DAG execution and scientific loop"
 
 [dependencies]
 serde = { version = "1.0", features = ["derive"] }

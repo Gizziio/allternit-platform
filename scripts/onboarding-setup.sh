@@ -1,8 +1,8 @@
 #!/bin/bash
 # =============================================================================
-# A2RCHITECT PLATFORM - COMPLETE ONBOARDING SETUP SCRIPT
+# ALLTERNIT PLATFORM - COMPLETE ONBOARDING SETUP SCRIPT
 # =============================================================================
-# This script sets up a NEW computer from scratch to run the a2rchitect platform
+# This script sets up a NEW computer from scratch to run the allternit platform
 # Run this on a fresh machine to install ALL dependencies and services
 # =============================================================================
 
@@ -18,10 +18,10 @@ MAGENTA='\033[0;35m'
 NC='\033[0m'
 
 # Configuration
-REPO_URL="https://github.com/a2rchitech/a2rchitech.git"
-INSTALL_DIR="${INSTALL_DIR:-$HOME/a2rchitect-workspace}"
-A2R_DIR="$INSTALL_DIR/a2rchitech"
-LOG_DIR="$A2R_DIR/.logs"
+REPO_URL="https://github.com/allternit/allternit.git"
+INSTALL_DIR="${INSTALL_DIR:-$HOME/allternit-workspace}"
+ALLTERNIT_DIR="$INSTALL_DIR/allternit"
+LOG_DIR="$ALLTERNIT_DIR/.logs"
 
 # Version requirements
 NODE_VERSION="18"
@@ -29,7 +29,7 @@ RUST_VERSION="stable"
 PYTHON_VERSION="3.11"
 
 # Ports used by the platform (for validation)
-declare -a A2R_PORTS=(
+declare -a Allternit_PORTS=(
     3000    # API Server
     3004    # Kernel
     3010    # Operator/Rust API
@@ -46,7 +46,7 @@ declare -a A2R_PORTS=(
 print_header() {
     echo ""
     echo -e "${CYAN}╔════════════════════════════════════════════════════════════════╗${NC}"
-    echo -e "${CYAN}║${NC}           ${GREEN}A2RCHITECT PLATFORM${NC}                              ${CYAN}║${NC}"
+    echo -e "${CYAN}║${NC}           ${GREEN}ALLTERNIT PLATFORM${NC}                              ${CYAN}║${NC}"
     echo -e "${CYAN}║${NC}              ${BLUE}Complete Onboarding Setup${NC}                       ${CYAN}║${NC}"
     echo -e "${CYAN}╚════════════════════════════════════════════════════════════════╝${NC}"
     echo ""
@@ -293,7 +293,7 @@ install_chrome_streaming() {
     fi
 
     # Check if already installed
-    if docker image inspect a2r/chrome-stream &>/dev/null && command -v turnserver &>/dev/null; then
+    if docker image inspect allternit/chrome-stream &>/dev/null && command -v turnserver &>/dev/null; then
         print_success "Chrome Streaming already installed"
         return 0
     fi
@@ -332,15 +332,15 @@ install_chrome_streaming() {
 clone_repository() {
     print_section "CLONING REPOSITORY"
     
-    if [ -d "$A2R_DIR" ]; then
-        print_warning "Directory $A2R_DIR already exists"
+    if [ -d "$ALLTERNIT_DIR" ]; then
+        print_warning "Directory $ALLTERNIT_DIR already exists"
         read -p "Remove and re-clone? (y/N) " -n 1 -r
         echo
         if [[ $REPLY =~ ^[Yy]$ ]]; then
-            rm -rf "$A2R_DIR"
+            rm -rf "$ALLTERNIT_DIR"
         else
             print_info "Using existing directory"
-            cd "$A2R_DIR"
+            cd "$ALLTERNIT_DIR"
             return 0
         fi
     fi
@@ -348,11 +348,11 @@ clone_repository() {
     print_step "Creating workspace directory..."
     mkdir -p "$INSTALL_DIR"
     
-    print_step "Cloning a2rchitect repository..."
-    git clone "$REPO_URL" "$A2R_DIR"
+    print_step "Cloning allternit repository..."
+    git clone "$REPO_URL" "$ALLTERNIT_DIR"
     
-    cd "$A2R_DIR"
-    print_success "Repository cloned to $A2R_DIR"
+    cd "$ALLTERNIT_DIR"
+    print_success "Repository cloned to $ALLTERNIT_DIR"
 }
 
 # =============================================================================
@@ -362,7 +362,7 @@ clone_repository() {
 install_project_deps() {
     print_section "INSTALLING PROJECT DEPENDENCIES"
     
-    cd "$A2R_DIR"
+    cd "$ALLTERNIT_DIR"
     
     # Install Node.js dependencies
     print_step "Installing Node.js dependencies (pnpm)..."
@@ -376,16 +376,16 @@ install_project_deps() {
     
     # Build Rust workspace
     print_step "Building Rust workspace (this may take several minutes)..."
-    cargo build --release --bin a2rchitech-api
+    cargo build --release --bin allternit-api
     print_success "Rust API built"
     
     # Setup Python virtual environments
     print_step "Setting up Python services..."
     
     # Browser-use-service
-    if [ -d "$A2R_DIR/4-services/browser-use-service" ]; then
+    if [ -d "$ALLTERNIT_DIR/4-services/browser-use-service" ]; then
         print_info "Setting up browser-use-service..."
-        cd "$A2R_DIR/4-services/browser-use-service"
+        cd "$ALLTERNIT_DIR/4-services/browser-use-service"
         uv venv .venv 2>/dev/null || python3 -m venv .venv
         source .venv/bin/activate
         pip install -r requirements.txt
@@ -393,9 +393,9 @@ install_project_deps() {
     fi
     
     # Operator service
-    if [ -d "$A2R_DIR/4-services/a2r-operator" ]; then
+    if [ -d "$ALLTERNIT_DIR/4-services/allternit-operator" ]; then
         print_info "Setting up operator service..."
-        cd "$A2R_DIR/4-services/a2r-operator"
+        cd "$ALLTERNIT_DIR/4-services/allternit-operator"
         uv venv .venv 2>/dev/null || python3 -m venv .venv
         source .venv/bin/activate
         pip install -r requirements.txt
@@ -412,31 +412,31 @@ install_project_deps() {
 create_env_files() {
     print_section "CREATING ENVIRONMENT FILES"
     
-    cd "$A2R_DIR"
+    cd "$ALLTERNIT_DIR"
     
     # Main .env file
     if [ ! -f ".env" ]; then
         cat > ".env" << 'EOF'
 # =============================================================================
-# A2RCHITECT PLATFORM - ENVIRONMENT CONFIGURATION
+# ALLTERNIT PLATFORM - ENVIRONMENT CONFIGURATION
 # =============================================================================
 
 # -----------------------------------------------------------------------------
 # CORE API CONFIGURATION
 # -----------------------------------------------------------------------------
-A2RCHITECH_API_BIND=127.0.0.1:3010
-A2RCHITECH_LEDGER_PATH=./data/a2rchitech.jsonl
-A2RCHITECH_DB_PATH=./data/a2rchitech.db
-A2RCHITECH_API_IDENTITY=api-service
-A2RCHITECH_API_TENANT=default
-A2RCHITECH_API_BOOTSTRAP_POLICY=true
-A2RCHITECH_API_POLICY_ENFORCE=true
+Allternit_API_BIND=127.0.0.1:3010
+Allternit_LEDGER_PATH=./data/allternit.jsonl
+Allternit_DB_PATH=./data/allternit.db
+Allternit_API_IDENTITY=api-service
+Allternit_API_TENANT=default
+Allternit_API_BOOTSTRAP_POLICY=true
+Allternit_API_POLICY_ENFORCE=true
 
 # -----------------------------------------------------------------------------
 # SHELL UI CONFIGURATION
 # -----------------------------------------------------------------------------
-VITE_A2R_GATEWAY_URL=http://127.0.0.1:8013
-VITE_A2R_API_VERSION=v1
+VITE_Allternit_GATEWAY_URL=http://127.0.0.1:8013
+VITE_Allternit_API_VERSION=v1
 VITE_ENABLE_DEBUG_LOGS=true
 VITE_ENABLE_MOCK_SERVICES=false
 VITE_ENABLE_SESSION_BRIDGE=false
@@ -477,25 +477,25 @@ VITE_ENABLE_BROWSER_GATEWAY=false
 # CHROME STREAMING GATEWAY (Optional - requires Docker)
 # -----------------------------------------------------------------------------
 TURN_SECRET=change-this-secret-in-production
-TURN_REALM=a2r.io
-A2R_SESSION_ID=
-A2R_TENANT_ID=
-A2R_RESOLUTION=1920x1080
-A2R_EXTENSION_MODE=managed
-A2R_DISABLE_BACKGROUND_THROTTLING=false
+TURN_REALM=allternit.io
+Allternit_SESSION_ID=
+Allternit_TENANT_ID=
+Allternit_RESOLUTION=1920x1080
+Allternit_EXTENSION_MODE=managed
+Allternit_DISABLE_BACKGROUND_THROTTLING=false
 
 # -----------------------------------------------------------------------------
 # SERVICE PORTS (Change if you have conflicts)
 # -----------------------------------------------------------------------------
-A2R_API_PORT=3010
-A2R_SHELL_UI_PORT=5177
-A2R_TERMINAL_PORT=3000
-A2R_VOICE_PORT=8001
-A2R_WEBVM_PORT=8002
-A2R_GATEWAY_PORT=8013
-A2R_KERNEL_PORT=3004
-A2R_MEMORY_PORT=3200
-A2R_REGISTRY_PORT=8080
+ALLTERNIT_API_PORT=3010
+ALLTERNIT_SHELL_UI_PORT=5177
+Allternit_TERMINAL_PORT=3000
+Allternit_VOICE_PORT=8001
+Allternit_WEBVM_PORT=8002
+Allternit_GATEWAY_PORT=8013
+Allternit_KERNEL_PORT=3004
+Allternit_MEMORY_PORT=3200
+Allternit_REGISTRY_PORT=8080
 
 # -----------------------------------------------------------------------------
 # OLLAMA (Local LLM - Optional)
@@ -505,8 +505,8 @@ OLLAMA_BASE_URL=http://127.0.0.1:11434
 # -----------------------------------------------------------------------------
 # GATEWAY AUTH (Optional)
 # -----------------------------------------------------------------------------
-# A2R_GATEWAY_TOKEN=
-# A2R_GATEWAY_PASSWORD=
+# Allternit_GATEWAY_TOKEN=
+# Allternit_GATEWAY_PASSWORD=
 EOF
         print_success "Created .env file"
     else
@@ -514,9 +514,9 @@ EOF
     fi
     
     # Create data directories
-    mkdir -p "$A2R_DIR/data"
+    mkdir -p "$ALLTERNIT_DIR/data"
     mkdir -p "$LOG_DIR"
-    mkdir -p "$A2R_DIR/recordings"
+    mkdir -p "$ALLTERNIT_DIR/recordings"
     
     print_success "Environment files created"
 }
@@ -529,13 +529,13 @@ setup_api_keys() {
     print_section "AI PROVIDER API KEYS"
     
     print_info "The platform works best with AI provider API keys."
-    print_info "You can add them to $A2R_DIR/.env now or later."
+    print_info "You can add them to $ALLTERNIT_DIR/.env now or later."
     
     read -p "Would you like to configure API keys now? (y/N) " -n 1 -r
     echo
     
     if [[ $REPLY =~ ^[Yy]$ ]]; then
-        local env_file="$A2R_DIR/.env"
+        local env_file="$ALLTERNIT_DIR/.env"
         
         # OpenAI
         read -p "OpenAI API Key (press Enter to skip): " openai_key
@@ -586,7 +586,7 @@ check_ports() {
     
     local occupied_ports=()
     
-    for port in "${A2R_PORTS[@]}"; do
+    for port in "${Allternit_PORTS[@]}"; do
         if lsof -Pi :$port -sTCP:LISTEN -t >/dev/null 2>&1; then
             occupied_ports+=($port)
         fi
@@ -607,10 +607,10 @@ check_ports() {
 create_startup_script() {
     print_section "CREATING STARTUP SCRIPT"
     
-    cat > "$A2R_DIR/start-dev.sh" << 'EOF'
+    cat > "$ALLTERNIT_DIR/start-dev.sh" << 'EOF'
 #!/bin/bash
 # =============================================================================
-# A2RCHITECT PLATFORM - DEVELOPMENT STARTER
+# ALLTERNIT PLATFORM - DEVELOPMENT STARTER
 # =============================================================================
 
 set -e
@@ -632,7 +632,7 @@ NC='\033[0m'
 print_header() {
     echo -e "${BLUE}"
     echo "╔═══════════════════════════════════════════════════════════╗"
-    echo "║              A2RCHITECT PLATFORM                          ║"
+    echo "║              ALLTERNIT PLATFORM                          ║"
     echo "║                 Development Mode                          ║"
     echo "╚═══════════════════════════════════════════════════════════╝"
     echo -e "${NC}"
@@ -644,7 +644,7 @@ print_success() { echo -e "${GREEN}[✓]${NC} $1"; }
 # Cleanup function
 cleanup() {
     echo ""
-    print_status "Shutting down A2rchitect Platform..."
+    print_status "Shutting down Allternit Platform..."
     
     # Kill processes by port
     for port in 3010 5177 8001 8002; do
@@ -662,14 +662,14 @@ trap cleanup EXIT INT TERM
 print_header
 
 # Check if API binary exists
-if [ ! -f "./target/release/a2rchitech-api" ]; then
+if [ ! -f "./target/release/allternit-api" ]; then
     print_status "Building Rust API..."
-    cargo build --release --bin a2rchitech-api
+    cargo build --release --bin allternit-api
 fi
 
 # Start API Server
-print_status "Starting Rust API Server on port ${A2R_API_PORT:-3010}..."
-./target/release/a2rchitech-api &
+print_status "Starting Rust API Server on port ${ALLTERNIT_API_PORT:-3010}..."
+./target/release/allternit-api &
 API_PID=$!
 sleep 2
 
@@ -683,7 +683,7 @@ print_success "API Server running (PID: $API_PID)"
 # Start Electron Shell
 print_status "Starting Electron Shell UI..."
 cd "$SCRIPT_DIR/7-apps/shell/desktop"
-export VITE_A2R_GATEWAY_URL="http://127.0.0.1:${A2R_API_PORT:-3010}"
+export VITE_Allternit_GATEWAY_URL="http://127.0.0.1:${ALLTERNIT_API_PORT:-3010}"
 npm run dev &
 ELECTRON_PID=$!
 sleep 3
@@ -691,11 +691,11 @@ sleep 3
 print_success "Electron Shell starting..."
 
 echo ""
-echo -e "${GREEN}A2rchitect Platform is running!${NC}"
+echo -e "${GREEN}Allternit Platform is running!${NC}"
 echo ""
 echo "Services:"
-echo "  API Server:    http://127.0.0.1:${A2R_API_PORT:-3010}"
-echo "  Shell UI:      http://localhost:${A2R_SHELL_UI_PORT:-5177}"
+echo "  API Server:    http://127.0.0.1:${ALLTERNIT_API_PORT:-3010}"
+echo "  Shell UI:      http://localhost:${ALLTERNIT_SHELL_UI_PORT:-5177}"
 echo ""
 echo "Press Ctrl+C to stop all services"
 echo ""
@@ -704,7 +704,7 @@ echo ""
 wait
 EOF
 
-    chmod +x "$A2R_DIR/start-dev.sh"
+    chmod +x "$ALLTERNIT_DIR/start-dev.sh"
     print_success "Created start-dev.sh"
 }
 
@@ -713,12 +713,12 @@ EOF
 # =============================================================================
 
 create_service_manager() {
-    cat > "$A2R_DIR/a2r.sh" << 'EOF'
+    cat > "$ALLTERNIT_DIR/allternit.sh" << 'EOF'
 #!/bin/bash
 # =============================================================================
-# A2RCHITECT PLATFORM - SERVICE MANAGER
+# ALLTERNIT PLATFORM - SERVICE MANAGER
 # =============================================================================
-# Usage: ./a2r.sh [command]
+# Usage: ./allternit.sh [command]
 # Commands:
 #   start       - Start all services
 #   stop        - Stop all services
@@ -745,7 +745,7 @@ YELLOW='\033[1;33m'
 BLUE='\033[0;34m'
 NC='\033[0m'
 
-print_status() { echo -e "${BLUE}[A2R]${NC} $1"; }
+print_status() { echo -e "${BLUE}[Allternit]${NC} $1"; }
 print_success() { echo -e "${GREEN}[✓]${NC} $1"; }
 print_error() { echo -e "${RED}[✗]${NC} $1"; }
 print_warning() { echo -e "${YELLOW}[!]${NC} $1"; }
@@ -760,23 +760,23 @@ check_service() {
 }
 
 cmd_start() {
-    print_status "Starting A2rchitect Platform..."
+    print_status "Starting Allternit Platform..."
     
     # Build if needed
-    if [ ! -f "./target/release/a2rchitech-api" ]; then
+    if [ ! -f "./target/release/allternit-api" ]; then
         print_status "Building API server..."
-        cargo build --release --bin a2rchitech-api
+        cargo build --release --bin allternit-api
     fi
     
     # Start API
-    if ! check_service "${A2R_API_PORT:-3010}"; then
+    if ! check_service "${ALLTERNIT_API_PORT:-3010}"; then
 n        print_status "Starting API server..."
-        ./target/release/a2rchitech-api > ".logs/api.log" 2>&1 &
+        ./target/release/allternit-api > ".logs/api.log" 2>&1 &
         sleep 2
     fi
     
     # Start Shell
-    if ! check_service "${A2R_SHELL_UI_PORT:-5177}"; then
+    if ! check_service "${ALLTERNIT_SHELL_UI_PORT:-5177}"; then
         print_status "Starting Shell UI..."
         cd "$SCRIPT_DIR/7-apps/shell/desktop"
         npm run dev > "$SCRIPT_DIR/.logs/shell.log" 2>&1 &
@@ -790,26 +790,26 @@ n        print_status "Starting API server..."
 cmd_stop() {
     print_status "Stopping services..."
     
-    for port in "${A2R_API_PORT:-3010}" "${A2R_SHELL_UI_PORT:-5177}" "${A2R_VOICE_PORT:-8001}" "${A2R_WEBVM_PORT:-8002}"; do
+    for port in "${ALLTERNIT_API_PORT:-3010}" "${ALLTERNIT_SHELL_UI_PORT:-5177}" "${Allternit_VOICE_PORT:-8001}" "${Allternit_WEBVM_PORT:-8002}"; do
         lsof -ti :$port | xargs kill -9 2>/dev/null || true
     done
     
     pkill -f "electron.*desktop" 2>/dev/null || true
-    pkill -f "a2rchitech-api" 2>/dev/null || true
+    pkill -f "allternit-api" 2>/dev/null || true
     
     print_success "Services stopped"
 }
 
 cmd_status() {
     echo ""
-    echo "A2rchitect Platform Status:"
+    echo "Allternit Platform Status:"
     echo "─────────────────────────────────────"
     
     local services=(
-        "API:${A2R_API_PORT:-3010}"
-        "Shell UI:${A2R_SHELL_UI_PORT:-5177}"
-        "Voice:${A2R_VOICE_PORT:-8001}"
-        "WebVM:${A2R_WEBVM_PORT:-8002}"
+        "API:${ALLTERNIT_API_PORT:-3010}"
+        "Shell UI:${ALLTERNIT_SHELL_UI_PORT:-5177}"
+        "Voice:${Allternit_VOICE_PORT:-8001}"
+        "WebVM:${Allternit_WEBVM_PORT:-8002}"
     )
     
     for svc in "${services[@]}"; do
@@ -826,10 +826,10 @@ cmd_status() {
 }
 
 cmd_build() {
-    print_status "Building A2rchitect Platform..."
+    print_status "Building Allternit Platform..."
     
     print_status "Building Rust workspace..."
-    cargo build --release --bin a2rchitech-api
+    cargo build --release --bin allternit-api
     
     print_status "Installing Node.js dependencies..."
     pnpm install
@@ -859,7 +859,7 @@ cmd_logs() {
 }
 
 cmd_update() {
-    print_status "Updating A2rchitect Platform..."
+    print_status "Updating Allternit Platform..."
     git pull
     cmd_build
     print_success "Update complete"
@@ -894,9 +894,9 @@ case "${1:-help}" in
         cmd_update
         ;;
     help|*)
-        echo "A2rchitect Platform Service Manager"
+        echo "Allternit Platform Service Manager"
         echo ""
-        echo "Usage: ./a2r.sh [command]"
+        echo "Usage: ./allternit.sh [command]"
         echo ""
         echo "Commands:"
         echo "  start       Start all services"
@@ -912,8 +912,8 @@ case "${1:-help}" in
 esac
 EOF
 
-    chmod +x "$A2R_DIR/a2r.sh"
-    print_success "Created a2r.sh service manager"
+    chmod +x "$ALLTERNIT_DIR/allternit.sh"
+    print_success "Created allternit.sh service manager"
 }
 
 # =============================================================================
@@ -924,25 +924,25 @@ print_summary() {
     print_section "SETUP COMPLETE!"
     
     echo ""
-    echo -e "${GREEN}A2rchitect Platform has been successfully set up!${NC}"
+    echo -e "${GREEN}Allternit Platform has been successfully set up!${NC}"
     echo ""
-    echo "Installation Directory: $A2R_DIR"
+    echo "Installation Directory: $ALLTERNIT_DIR"
     echo ""
     echo "Quick Start Commands:"
-    echo "  cd $A2R_DIR"
-    echo "  ./a2r.sh start          # Start all services"
-    echo "  ./a2r.sh status         # Check service status"
-    echo "  ./a2r.sh stop           # Stop all services"
+    echo "  cd $ALLTERNIT_DIR"
+    echo "  ./allternit.sh start          # Start all services"
+    echo "  ./allternit.sh status         # Check service status"
+    echo "  ./allternit.sh stop           # Stop all services"
     echo "  ./start-dev.sh          # Start in dev mode with auto-reload"
     echo ""
     echo "Or use pnpm/npm commands:"
     echo "  pnpm dev                # Start development environment"
     echo "  pnpm shell              # Start Electron shell only"
-    echo "  cargo run --bin a2rchitech-api  # Start API only"
+    echo "  cargo run --bin allternit-api  # Start API only"
     echo ""
     echo "Important Files:"
     echo "  .env                    # Environment configuration (edit this!)"
-    echo "  a2r.sh                  # Service manager script"
+    echo "  allternit.sh                  # Service manager script"
     echo "  start-dev.sh            # Development starter"
     echo ""
     echo "Documentation:"
@@ -953,7 +953,7 @@ print_summary() {
     echo -e "${YELLOW}NOTE:${NC} Make sure to add your AI provider API keys to .env"
     echo "      The platform works best with OpenAI, Anthropic, or Groq keys."
     echo ""
-    echo -e "${GREEN}Happy building with A2rchitect!${NC}"
+    echo -e "${GREEN}Happy building with Allternit!${NC}"
     echo ""
 }
 

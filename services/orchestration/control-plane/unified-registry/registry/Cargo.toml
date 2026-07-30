@@ -2,7 +2,7 @@
 name = "allternit-registry"
 version = "0.1.0"
 edition = "2021"
-description = "Allternitchitech Unified Registry & Data Fabric - Single source of truth for tenant capabilities (agents, skills, tools) with multi-backend storage"
+description = "Allternit Unified Registry & Data Fabric - Single source of truth for tenant capabilities (agents, skills, tools) with multi-backend storage"
 
 [dependencies]
 serde = { workspace = true }

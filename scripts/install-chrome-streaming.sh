@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # =============================================================================
-# A2RCHITECH PLATFORM - Chrome Streaming Gateway Installer
+# Allternit PLATFORM - Chrome Streaming Gateway Installer
 # =============================================================================
 # Automated setup for Chrome streaming on any Linux VPS/server
 # Run this ONCE after platform installation
@@ -22,7 +22,7 @@ NC='\033[0m'
 print_header() {
     echo ""
     echo -e "${CYAN}╔═══════════════════════════════════════════════════════════╗${NC}"
-    echo -e "${CYAN}║${NC}     ${GREEN}A2R Chrome Streaming Gateway - Installer${NC}            ${CYAN}║${NC}"
+    echo -e "${CYAN}║${NC}     ${GREEN}Allternit Chrome Streaming Gateway - Installer${NC}            ${CYAN}║${NC}"
     echo -e "${CYAN}╚═══════════════════════════════════════════════════════════╝${NC}"
     echo ""
 }
@@ -135,8 +135,8 @@ generate_turn_secret() {
 setup_env() {
     print_step "5" "Setting up environment file..."
     
-    ENV_FILE="/root/Desktop/a2rchitech-workspace/a2rchitech/.env"
-    ENV_EXAMPLE="/root/Desktop/a2rchitech-workspace/a2rchitech/.env.example"
+    ENV_FILE="/root/Desktop/allternit-workspace/allternit/.env"
+    ENV_EXAMPLE="/root/Desktop/allternit-workspace/allternit/.env.example"
     
     if [ ! -f "$ENV_FILE" ]; then
         if [ -f "$ENV_EXAMPLE" ]; then
@@ -167,7 +167,7 @@ setup_env() {
 build_chrome_image() {
     print_step "6" "Building Chrome stream Docker image..."
     
-    CHROME_DIR="/root/Desktop/a2rchitech-workspace/a2rchitech/8-cloud/chrome-stream"
+    CHROME_DIR="/root/Desktop/allternit-workspace/allternit/8-cloud/chrome-stream"
     
     if [ ! -d "$CHROME_DIR" ]; then
         print_error "Chrome streaming directory not found at $CHROME_DIR"
@@ -177,9 +177,9 @@ build_chrome_image() {
     cd "$CHROME_DIR"
     
     # Build image
-    docker build -t a2r/chrome-stream .
+    docker build -t allternit/chrome-stream .
     
-    print_success "Chrome stream image built (a2r/chrome-stream)"
+    print_success "Chrome stream image built (allternit/chrome-stream)"
 }
 
 # Setup systemd service
@@ -187,16 +187,16 @@ setup_systemd() {
     print_step "7" "Setting up systemd services..."
     
     # Chrome streaming service
-    cat > /etc/systemd/system/a2r-chrome-streaming.service << 'EOF'
+    cat > /etc/systemd/system/allternit-chrome-streaming.service << 'EOF'
 [Unit]
-Description=A2R Chrome Streaming Gateway
+Description=Allternit Chrome Streaming Gateway
 Requires=docker.service
 After=docker.service
 
 [Service]
 Type=oneshot
 RemainAfterExit=yes
-WorkingDirectory=/root/Desktop/a2rchitech-workspace/a2rchitech
+WorkingDirectory=/root/Desktop/allternit-workspace/allternit
 ExecStart=/usr/bin/docker compose --profile chrome up -d
 ExecStop=/usr/bin/docker compose --profile chrome down
 TimeoutStartSec=300
@@ -211,8 +211,8 @@ listening-port=3478
 tls-listening-port=5349
 listening-ip=0.0.0.0
 external-ip=YOUR_SERVER_IP  # Will be replaced below
-realm=a2r.io
-server-name=a2r-turn
+realm=allternit.io
+server-name=allternit-turn
 lt-cred-mech
 user=turnuser:$(openssl rand -hex 16)  # Will be replaced
 pidfile=/var/run/turnserver.pid
@@ -235,7 +235,7 @@ EOF
     
     # Enable and start services
     systemctl daemon-reload
-    systemctl enable a2r-chrome-streaming
+    systemctl enable allternit-chrome-streaming
     systemctl enable coturn
     
     print_success "Systemd services configured"
@@ -269,7 +269,7 @@ configure_firewall() {
 start_services() {
     print_step "9" "Starting Chrome streaming services..."
     
-    cd /root/Desktop/a2rchitech-workspace/a2rchitech
+    cd /root/Desktop/allternit-workspace/allternit
     
     # Start coturn
     systemctl restart coturn
@@ -309,11 +309,11 @@ print_summary() {
     echo ""
     echo -e "${BLUE}Test Commands:${NC}"
     echo "  curl http://localhost:8081/health"
-    echo "  docker logs a2r-chrome-stream"
+    echo "  docker logs allternit-chrome-stream"
     echo ""
     echo -e "${BLUE}Next Steps:${NC}"
     echo "  1. Start the full platform: pnpm dev:platform-stack (from repo root)"
-    echo "  2. Open A2R Electron app"
+    echo "  2. Open Allternit Electron app"
     echo "  3. Click 'Open Chrome Browser' button"
     echo "  4. Chrome will stream inside the browser capsule"
     echo ""

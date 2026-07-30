@@ -14,7 +14,7 @@ const { chromium } = require('playwright');
     await page.waitForTimeout(1000);
   }
   
-  await page.screenshot({ path: '/Users/macbook/Desktop/a2rchitech-workspace/a2rchitech/shell-focus.png', fullPage: false });
+  await page.screenshot({ path: '/Users/macbook/Desktop/allternit-workspace/allternit/shell-focus.png', fullPage: false });
   await browser.close();
   console.log('Screenshot saved');
 })();

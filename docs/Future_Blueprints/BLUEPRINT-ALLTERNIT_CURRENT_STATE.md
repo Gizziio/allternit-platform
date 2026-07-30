@@ -123,10 +123,7 @@ allternit/
 
 | Pattern | Status |
 |---------|--------|
-| `allternit` | ✅ Removed |
-| `allternit` | ✅ Removed |
-| `allternit` | ✅ Removed |
-| `architech` | ✅ Removed |
+| Legacy codenames (pre-Allternit) | ✅ Removed |
 
 ---
 

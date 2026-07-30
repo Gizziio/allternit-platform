@@ -93,16 +93,16 @@ jobs:
           WIH_ID="gh_${{ github.event_name }}_${{ github.run_id }}_${{ github.run_attempt }}"
           
           # Run visual capture
-          npx a2r verify-visual \
+          npx allternit verify-visual \
             --wih-id "$WIH_ID" \
             --changed-files "${{ steps.changed-files.outputs.files }}" \
-            --output .a2r/evidence/ \
+            --output .allternit/evidence/ \
             --format json
           
           # Read result
-          if [ -f ".a2r/evidence/${WIH_ID}.json" ]; then
-            CONFIDENCE=$(cat ".a2r/evidence/${WIH_ID}.json" | jq -r '.overall_confidence')
-            PASSED=$(cat ".a2r/evidence/${WIH_ID}.json" | jq -r '.passed')
+          if [ -f ".allternit/evidence/${WIH_ID}.json" ]; then
+            CONFIDENCE=$(cat ".allternit/evidence/${WIH_ID}.json" | jq -r '.overall_confidence')
+            PASSED=$(cat ".allternit/evidence/${WIH_ID}.json" | jq -r '.passed')
             
             echo "confidence=$CONFIDENCE" >> $GITHUB_OUTPUT
             echo "passed=$PASSED" >> $GITHUB_OUTPUT
@@ -123,7 +123,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: visual-evidence-${{ github.run_id }}
-          path: .a2r/evidence/
+          path: .allternit/evidence/
           retention-days: 7
       
       # Post PR comment with results

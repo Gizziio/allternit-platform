@@ -2,7 +2,7 @@
 name = "allternit-platform"
 version = "0.1.0"
 edition = "2021"
-description = "Allternitchitech platform orchestrator that starts all services"
+description = "Allternit platform orchestrator that starts all services"
 
 [[bin]]
 name = "allternit-platform"

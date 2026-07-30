@@ -3,23 +3,25 @@
 <plist version="1.0">
 <dict>
     <key>Label</key>
-    <string>com.a2rchitech.kernel</string>
+    <string>com.allternit.presentation-kernel</string>
     <key>ProgramArguments</key>
     <array>
-        <string>{{WORKING_DIR}}/target/release/kernel</string>
+        <string>{{WORKING_DIR}}/target/release/presentation-kernel</string>
     </array>
     <key>RunAtLoad</key>
     <true/>
     <key>KeepAlive</key>
     <true/>
     <key>StandardOutPath</key>
-    <string>{{WORKING_DIR}}/.logs/kernel.out.log</string>
+    <string>{{WORKING_DIR}}/.logs/presentation-kernel.out.log</string>
     <key>StandardErrorPath</key>
-    <string>{{WORKING_DIR}}/.logs/kernel.err.log</string>
+    <string>{{WORKING_DIR}}/.logs/presentation-kernel.err.log</string>
     <key>WorkingDirectory</key>
-    <string>{{WORKING_DIR}}/4-services/orchestration/kernel-service</string>
+    <string>{{WORKING_DIR}}/4-services/ui-services/presentation-kernel</string>
     <key>EnvironmentVariables</key>
     <dict>
+        <key>A2_BIND_PORT</key>
+        <string>3007</string>
         <key>RUST_LOG</key>
         <string>info</string>
     </dict>

@@ -40,15 +40,15 @@ export function EnvironmentWizardWithTemplate() {
   return (
     <>
       <Button onClick={() => setIsOpen(true)}>
-        Create A2R Platform Environment
+        Create Allternit Platform Environment
       </Button>
 
       <EnvironmentWizard
         isOpen={isOpen}
         onClose={() => setIsOpen(false)}
-        initialTemplateId="a2r-platform-dev"  // Pre-select the A2R platform template
+        initialTemplateId="allternit-platform-dev"  // Pre-select the Allternit platform template
         onSuccess={(env) => {
-          console.log('A2R Platform environment ready:', env.url);
+          console.log('Allternit Platform environment ready:', env.url);
         }}
       />
     </>

@@ -1,6 +1,6 @@
-# A2R Native: PROJECT.md
+# Allternit Native: PROJECT.md
 
-The living project context document for A2rchitech Brain Runtimes.
+The living project context document for Allternit Brain Runtimes.
 
 ## What This Is
 
@@ -16,7 +16,7 @@ One sentence that drives prioritization when tradeoffs arise.]
 
 ### Validated
 
-<!-- Shipped and confirmed functional in the A2R environment. -->
+<!-- Shipped and confirmed functional in the Allternit environment. -->
 
 (None yet — ship to validate)
 
@@ -38,7 +38,7 @@ One sentence that drives prioritization when tradeoffs arise.]
 ## Context
 
 [Background information for the Brain Runtime:
-- A2R ecosystem and connected services
+- Allternit ecosystem and connected services
 - Relevant prior work or experience
 - User research or feedback themes
 - Known issues to address]

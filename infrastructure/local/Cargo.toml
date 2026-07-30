@@ -4,7 +4,7 @@
 name = "allternit-multi-region"
 version = "0.1.0"
 edition = "2021"
-description = "Multi-region infrastructure for Allternitchitech - replication, health monitoring, failover"
+description = "Multi-region infrastructure for Allternit - replication, health monitoring, failover"
 
 [dependencies]
 tokio = { workspace = true }

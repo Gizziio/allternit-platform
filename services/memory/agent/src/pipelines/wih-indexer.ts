@@ -232,7 +232,7 @@ export class WIHIndexer {
  */
 async function main(): Promise<void> {
   console.log('╔══════════════════════════════════════════════════════════╗');
-  console.log('║     Allternitchitech WIH Pattern Indexer                       ║');
+  console.log('║     Allternit WIH Pattern Indexer                       ║');
   console.log('╚══════════════════════════════════════════════════════════╝');
   console.log('');
 

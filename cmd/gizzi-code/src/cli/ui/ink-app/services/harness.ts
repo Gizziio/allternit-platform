@@ -118,6 +118,15 @@ function looksLikePlatformAgentId(value: string): boolean {
   return UUID_RE.test(value)
 }
 
+/**
+ * Model passed to the screen-facing harness stream. Defaults to the local
+ * Qwen3.6-35B-A3B-4bit MLX model so the UI and provider agree on what is
+ * running. Override via GIZZI_HARNESS_MODEL to use a different model.
+ */
+export function getHarnessModel(): string {
+  return process.env.GIZZI_HARNESS_MODEL ?? 'qwen3.6-35b-a3b-4bit'
+}
+
 function getAllternitApiBase(): string {
   return (
     process.env.ALLTERNIT_API_URL ||
@@ -374,7 +383,7 @@ export function getHarnessService(): HarnessService {
       try {
         for await (const chunk of harness.stream({
           provider: defaultProvider(),
-          model: 'claude-3-5-haiku',
+          model: getHarnessModel(),
           messages: [{ role: 'user', content: input }],
         })) {
           if (cancelled) {

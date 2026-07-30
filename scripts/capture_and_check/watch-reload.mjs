@@ -8,12 +8,12 @@ import { watch } from 'fs';
 import { execSync } from 'child_process';
 
 const WATCH_DIRS = [
-  '/Users/macbook/Desktop/a2rchitech-workspace/a2rchitech/6-ui/a2r-platform/src',
-  '/Users/macbook/Desktop/a2rchitech-workspace/a2rchitech/7-apps/shell/web/src',
+  '/Users/macbook/Desktop/allternit-workspace/allternit/6-ui/allternit-platform/src',
+  '/Users/macbook/Desktop/allternit-workspace/allternit/7-apps/shell/web/src',
 ];
 
 console.log('╔══════════════════════════════════════════════════════════╗');
-console.log('║  👀 File Watcher for A2R Browser Dev                     ║');
+console.log('║  👀 File Watcher for Allternit Browser Dev                     ║');
 console.log('╚══════════════════════════════════════════════════════════╝');
 console.log('');
 console.log('Watching for changes... Press Cmd+R in Chrome to reload');

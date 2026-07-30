@@ -2041,7 +2041,7 @@ mod tests {
         let config = ArtifactRegistryConfig {
             registry_id: "test-registry-001".to_string(),
             name: "Test Artifact Registry".to_string(),
-            description: "A test artifact registry for Allternitchitech".to_string(),
+            description: "A test artifact registry for Allternit".to_string(),
             version: "1.0.0".to_string(),
             storage_config: StorageConfig {
                 storage_type: StorageType::LocalFileSystem,
@@ -2141,7 +2141,7 @@ mod tests {
             name: "Test Skill".to_string(),
             version: "1.0.0".to_string(),
             artifact_type: ArtifactType::Skill,
-            description: "A test skill for Allternitchitech".to_string(),
+            description: "A test skill for Allternit".to_string(),
             author: "Test Author".to_string(),
             license: "MIT".to_string(),
             tags: vec!["test".to_string(), "allternit".to_string()],

@@ -28,7 +28,7 @@ const { chromium } = require('playwright');
     }
   }
   
-  await page.screenshot({ path: '/Users/macbook/Desktop/a2rchitech-workspace/a2rchitech/shell-modes-selected.png', fullPage: false });
+  await page.screenshot({ path: '/Users/macbook/Desktop/allternit-workspace/allternit/shell-modes-selected.png', fullPage: false });
   await browser.close();
   console.log('Screenshot saved');
 })();

@@ -1,7 +1,7 @@
 /**
- * A2rchitect Super-Agent OS - Chat Integration Example
+ * Allternit Super-Agent OS - Chat Integration Example
  * 
- * Full example showing how to integrate the A2rCanvas and Agent Runtime
+ * Full example showing how to integrate the AllternitCanvas and Agent Runtime
  * into a chat interface with automatic program launching.
  */
 
@@ -14,7 +14,7 @@ import { createModuleLogger } from '@/lib/logger';
 const logger = createModuleLogger('');
 
 // ============================================================================
-// Example 1: Complete Chat Shell with A2rCanvas
+// Example 1: Complete Chat Shell with AllternitCanvas
 // ============================================================================
 
 export function ChatShell() {
@@ -28,7 +28,7 @@ export function ChatShell() {
       </div>
       
       {/* Utility Pane - persists across all views */}
-      <A2rCanvas className="flex-shrink-0" />
+      <AllternitCanvas className="flex-shrink-0" />
     </div>
   );
 }

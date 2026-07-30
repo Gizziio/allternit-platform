@@ -1,6 +1,10 @@
 // @ts-nocheck
 import { randomUUID } from 'crypto'
 import { queryModelWithStreaming } from '../services/api/claude.js'
+import {
+  isLocalProviderModel,
+  queryLocalModelWithStreaming,
+} from '../services/api/localModel.js'
 import { autoCompactIfNeeded } from '../services/compact/autoCompact.js'
 import { microcompactMessages } from '../services/compact/microCompact.js'
 
@@ -31,9 +35,25 @@ export type QueryDeps = {
   uuid: () => string
 }
 
+async function* callModelWithProviderRouting(
+  ...args: Parameters<typeof queryModelWithStreaming>
+): AsyncGenerator<
+  Awaited<ReturnType<typeof queryLocalModelWithStreaming>> extends
+    AsyncGenerator<infer T>
+    ? T
+    : never,
+  void
+> {
+  if (isLocalProviderModel(args[0].options.model)) {
+    yield* queryLocalModelWithStreaming(args[0])
+  } else {
+    yield* queryModelWithStreaming(...args)
+  }
+}
+
 export function productionDeps(): QueryDeps {
   return {
-    callModel: queryModelWithStreaming,
+    callModel: callModelWithProviderRouting as typeof queryModelWithStreaming,
     microcompact: microcompactMessages,
     autocompact: autoCompactIfNeeded,
     uuid: randomUUID,

@@ -1,5 +1,5 @@
 ---
-prompt_id: "a2r.pack.role.builder@v1"
+prompt_id: "allternit.pack.role.builder@v1"
 version: "v1"
 description: "Builder role prompt for implementing artifacts under WIH scope"
 argument_hint: "builder --wih={{wih_id}} --iteration={{iteration}}"
@@ -11,9 +11,9 @@ execution_permission_mode: "acceptEdits"
 hooks_required: ["PreToolUse", "PostToolUse", "PostToolUseFailure"]
 outputs: ["build_report.yaml", "code_changes.patch"]
 writes_policy:
-  workspace_root: ".a2r/"
+  workspace_root: ".allternit/"
   allow_write_paths: ["{{allowed_paths}}"]
-  deny_write_paths: [".a2r/ledger/**", ".a2r/leases/**", ".a2r/wih/**"]
+  deny_write_paths: [".allternit/ledger/**", ".allternit/leases/**", ".allternit/wih/**"]
 role: "builder"
 timeout_s: 1800
 max_iterations: 3
@@ -57,7 +57,7 @@ required_fixes: {{required_fixes | default([])}}
 
 **DO NOT**:
 - Declare work complete (validator does this)
-- Write outside allowed_paths (strictly limited to `.a2r/runner/{{wih_id}}/`)
+- Write outside allowed_paths (strictly limited to `.allternit/runner/{{wih_id}}/`)
 - Skip required tests
 - Ignore required_fixes from previous iterations
 

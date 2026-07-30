@@ -1,8 +1,8 @@
-//! Allternitchitech Registry Server Library
+//! Allternit Registry Server Library
 //!
 //! Core functionality for the registry server including data models, business logic,
 //! and service implementations for publishing, searching, indexing, and managing
-//! skills, tools, and agents in the Allternitchitech ecosystem.
+//! skills, tools, and agents in the Allternit ecosystem.
 
 use anyhow::Result;
 use chrono::{DateTime, NaiveDateTime, Utc};

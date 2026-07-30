@@ -1,4 +1,4 @@
-//! Allternitchitech Registry Server
+//! Allternit Registry Server
 //!
 //! Centralized service for publishing, searching, and indexing skills, tools, and agents.
 //! Provides marketplace-grade functionality with channel promotion flows and
@@ -112,7 +112,7 @@ async fn main() -> Result<()> {
     let host = std::env::var("HOST").unwrap_or_else(|_| "127.0.0.1".to_string());
     let port = std::env::var("PORT").unwrap_or_else(|_| "8080".to_string());
     config.bind_addr = format!("{}:{}", host, port);
-    info!("Starting Allternitchitech Registry Server");
+    info!("Starting Allternit Registry Server");
 
     // Initialize registry
     let registry = Arc::new(RwLock::new(Registry::new(&config.db_url).await?));

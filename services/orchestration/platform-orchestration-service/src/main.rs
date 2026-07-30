@@ -1,4 +1,4 @@
-//! Allternitchitech Platform Orchestrator
+//! Allternit Platform Orchestrator
 //!
 //! Starts all platform services from `.allternit/services.json`.
 
@@ -229,7 +229,7 @@ async fn main() {
     let config = load_services_config(&config_path);
     let vars = build_template_vars(&root, &config);
 
-    println!("🚀 Starting Allternitchitech Platform");
+    println!("🚀 Starting Allternit Platform");
     println!("===========================================");
     println!("Using services config: {}", config_path.display());
     println!("Config version: {}", config.version);
@@ -271,7 +271,7 @@ async fn main() {
     println!("💡 Press Ctrl+C to stop the platform.");
 
     ctrlc::set_handler(move || {
-        println!("\n🛑 Stopping Allternitchitech Platform...");
+        println!("\n🛑 Stopping Allternit Platform...");
         std::process::exit(0);
     })
     .expect("Error setting Ctrl+C handler");

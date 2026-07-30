@@ -1,32 +1,32 @@
 #Requires -RunAsAdministrator
 <#
 .SYNOPSIS
-    A2R Node Agent Windows Service Installer
+    Allternit Node Agent Windows Service Installer
 
 .DESCRIPTION
-    Installs and configures the A2R Node Agent as a Windows Service.
+    Installs and configures the Allternit Node Agent as a Windows Service.
     Requires Docker Desktop for Windows to be installed.
 
 .PARAMETER Token
-    Your A2R node authentication token (required)
+    Your Allternit node authentication token (required)
 
 .PARAMETER NodeId
     Custom node ID (optional, auto-generated if not provided)
 
 .PARAMETER ControlPlane
-    Control plane URL (default: wss://control.a2r.io)
+    Control plane URL (default: wss://control.allternit.io)
 
 .PARAMETER InstallDir
-    Installation directory (default: C:\Program Files\a2r)
+    Installation directory (default: C:\Program Files\allternit)
 
 .PARAMETER Uninstall
-    Remove the A2R Node Agent service
+    Remove the Allternit Node Agent service
 
 .EXAMPLE
-    .\install-windows.ps1 -Token "a2r_xxxxxxxxxxxxx"
+    .\install-windows.ps1 -Token "allternit_xxxxxxxxxxxxx"
 
 .EXAMPLE
-    .\install-windows.ps1 -Token "a2r_xxx" -NodeId "my-node-1"
+    .\install-windows.ps1 -Token "allternit_xxx" -NodeId "my-node-1"
 
 .EXAMPLE
     .\install-windows.ps1 -Uninstall
@@ -41,21 +41,21 @@ param(
     [string]$NodeId,
     
     [Parameter(ParameterSetName = "Install")]
-    [string]$ControlPlane = "wss://control.a2r.io",
+    [string]$ControlPlane = "wss://control.allternit.io",
     
     [Parameter(ParameterSetName = "Install")]
-    [string]$InstallDir = "C:\Program Files\a2r",
+    [string]$InstallDir = "C:\Program Files\allternit",
     
     [Parameter(ParameterSetName = "Uninstall")]
     [switch]$Uninstall
 )
 
 # Configuration
-$ServiceName = "a2r-node"
-$ServiceDisplayName = "A2R Node Agent"
-$ServiceDescription = "A2R Node Agent - Connect your infrastructure to A2R Control Plane"
-$ConfigDir = "C:\ProgramData\a2r"
-$LogDir = "C:\ProgramData\a2r\logs"
+$ServiceName = "allternit-node"
+$ServiceDisplayName = "Allternit Node Agent"
+$ServiceDescription = "Allternit Node Agent - Connect your infrastructure to Allternit Control Plane"
+$ConfigDir = "C:\ProgramData\allternit"
+$LogDir = "C:\ProgramData\allternit\logs"
 
 # Colors
 function Write-Info { Write-Host "→ $args" -ForegroundColor Cyan }
@@ -106,7 +106,7 @@ function Write-Banner {
     Write-Host "/_/  |_/_/  /_/_/  |_| |___/_/" -ForegroundColor Cyan
     Write-Host "                      Node Agent" -ForegroundColor Cyan
     Write-Host ""
-    Write-Host "Installing A2R Node Agent for Windows..." -ForegroundColor Cyan
+    Write-Host "Installing Allternit Node Agent for Windows..." -ForegroundColor Cyan
     Write-Host ""
 }
 
@@ -114,8 +114,8 @@ function Write-Banner {
 # Installation Functions
 #------------------------------------------------------------------------------
 
-function Install-A2RService {
-    Write-Info "Installing A2R Node Agent service..."
+function Install-AllternitService {
+    Write-Info "Installing Allternit Node Agent service..."
     
     # Check prerequisites
     if (-not (Test-Administrator)) {
@@ -158,10 +158,10 @@ function Install-A2RService {
     Write-Success "Directories created"
     
     # Download binary
-    Write-Info "Downloading A2R Node Agent..."
+    Write-Info "Downloading Allternit Node Agent..."
     $arch = if ([Environment]::Is64BitOperatingSystem) { "x86_64" } else { "i686" }
-    $downloadUrl = "https://github.com/a2r/node/releases/latest/download/a2r-node-windows-${arch}.exe"
-    $binaryPath = "$InstallDir\a2r-node.exe"
+    $downloadUrl = "https://github.com/allternit/node/releases/latest/download/allternit-node-windows-${arch}.exe"
+    $binaryPath = "$InstallDir\allternit-node.exe"
     
     try {
         Invoke-WebRequest -Uri $downloadUrl -OutFile $binaryPath -UseBasicParsing
@@ -181,12 +181,12 @@ function Install-A2RService {
     # Create configuration
     Write-Info "Creating configuration..."
     $configContent = @"
-# A2R Node Agent Configuration
+# Allternit Node Agent Configuration
 # Generated: $(Get-Date -Format "yyyy-MM-ddTHH:mm:ssZ")
 
-A2R_NODE_ID=$NodeId
-A2R_TOKEN=$Token
-A2R_CONTROL_PLANE=$ControlPlane
+Allternit_NODE_ID=$NodeId
+ALLTERNIT_TOKEN=$Token
+Allternit_CONTROL_PLANE=$ControlPlane
 "@
     
     $configPath = "$ConfigDir\node.env"
@@ -222,14 +222,14 @@ A2R_CONTROL_PLANE=$ControlPlane
     }
     
     # Start service
-    Write-Info "Starting A2R Node Agent service..."
+    Write-Info "Starting Allternit Node Agent service..."
     try {
         Start-Service -Name $ServiceName
         Start-Sleep -Seconds 3
         
         $serviceStatus = Get-Service -Name $ServiceName
         if ($serviceStatus.Status -eq 'Running') {
-            Write-Success "A2R Node Agent is running"
+            Write-Success "Allternit Node Agent is running"
         } else {
             Write-Warn "Service started but status is: $($serviceStatus.Status)"
         }
@@ -270,21 +270,21 @@ A2R_CONTROL_PLANE=$ControlPlane
     Write-Host "  Stop-Service $ServiceName"
     Write-Host ""
     Write-Host "Next Steps:"
-    Write-Host "  1. Visit https://app.a2r.io to see your node"
+    Write-Host "  1. Visit https://app.allternit.io to see your node"
     Write-Host "  2. Node should appear online within 30 seconds"
     Write-Host "  3. Start deploying agents and running jobs"
     Write-Host ""
     Write-Host "Support:"
-    Write-Host "  Documentation: https://docs.a2r.io"
-    Write-Host "  Discord:       https://discord.gg/a2r"
-    Write-Host "  GitHub:        https://github.com/a2r/node"
+    Write-Host "  Documentation: https://docs.allternit.io"
+    Write-Host "  Discord:       https://discord.gg/allternit"
+    Write-Host "  GitHub:        https://github.com/allternit/node"
     Write-Host ""
     Write-Host "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━" -ForegroundColor Cyan
     Write-Host ""
 }
 
-function Uninstall-A2RService {
-    Write-Info "Uninstalling A2R Node Agent..."
+function Uninstall-AllternitService {
+    Write-Info "Uninstalling Allternit Node Agent..."
     
     # Stop service
     Write-Info "Stopping service..."
@@ -331,7 +331,7 @@ function Uninstall-A2RService {
 Write-Banner
 
 if ($Uninstall) {
-    Uninstall-A2RService
+    Uninstall-AllternitService
 } else {
-    Install-A2RService
+    Install-AllternitService
 }

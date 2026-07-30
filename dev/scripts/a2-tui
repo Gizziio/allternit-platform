@@ -4,8 +4,8 @@ set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
 
-DEBUG_BIN="$PROJECT_ROOT/target/debug/a2rchitech"
-RELEASE_BIN="$PROJECT_ROOT/target/release/a2rchitech"
+DEBUG_BIN="$PROJECT_ROOT/target/debug/allternit"
+RELEASE_BIN="$PROJECT_ROOT/target/release/allternit"
 
 if [[ -x "$DEBUG_BIN" ]]; then
   exec "$DEBUG_BIN" tui "$@"
@@ -16,5 +16,5 @@ if [[ -x "$RELEASE_BIN" ]]; then
 fi
 
 cd "$PROJECT_ROOT"
-cargo build -p a2rchitech-cli
+cargo build -p allternit-cli
 exec "$DEBUG_BIN" tui "$@"

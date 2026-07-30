@@ -229,12 +229,15 @@ class PlanningLoop:
 
         # Prepend scratchpad context to task so the vision provider sees it
         augmented_task = (task + "\n\n" + sp_context) if sp_context else task
+
+        # AX inspector — init once, use throughout loop. `_ax_context` must be
+        # bound before the augmentation below reads it (it previously was not,
+        # which made every run fail with UnboundLocalError at this point).
+        _inspector = None
+        _ax_context = ""
         if _ax_context:
             augmented_task = augmented_task + "\n\n[ACCESSIBILITY TREE (skeleton)]:\n" + _ax_context
 
-        # AX inspector — init once, use throughout loop
-        _inspector = None
-        _ax_context = ""
         try:
             from .accessibility_inspector import AccessibilityInspector
             _inspector = AccessibilityInspector()

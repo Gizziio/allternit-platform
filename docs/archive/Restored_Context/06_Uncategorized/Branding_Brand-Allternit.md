@@ -6,7 +6,7 @@ No fluff. This is infra-grade.
 
 ⸻
 
-A://rchitech — System Identity & Namespace Grammar
+A://llternit — System Identity & Namespace Grammar
 
 1. Core Identity
 
@@ -22,7 +22,7 @@ Represents:
 
 Full System Name
 
-A://rchitech
+A://llternit
 
 Used for:
 	•	website header
@@ -41,7 +41,7 @@ Lowercase for CLI, configs, logs, and runtime surfaces.
 
 2. Semantic Model
 
-A://rchitech is branded as a protocol-shaped operating system.
+A://llternit is branded as a protocol-shaped operating system.
 
 Everything in the ecosystem is mounted beneath the root.
 
@@ -97,7 +97,7 @@ Used for:
 	•	boot logo
 	•	system tray
 
-A://rchitech (Wordmark)
+A://llternit (Wordmark)
 
 Used for:
 	•	headers
@@ -184,7 +184,7 @@ CLI startup:
 
 Studio splash:
 
-Initializing A://rchitech…
+Initializing A://llternit…
 
 
 ⸻
@@ -213,7 +213,7 @@ Example flow:
 
 10. Brand Positioning Summary
 
-A://rchitech is not framed as:
+A://llternit is not framed as:
 	•	an app
 	•	a SaaS product
 	•	a chatbot
@@ -237,7 +237,7 @@ The identity system must always reinforce:
 
 The following are now canonical:
 	•	Sigil: A://
-	•	System Name: A://rchitech
+	•	System Name: A://llternit
 	•	Grammar: A://{layer}
 	•	CLI Root: a://
 	•	Style: infrastructure-first

@@ -1,11 +1,11 @@
 #!/bin/bash
 
-# Browser-only development mode for A2R
+# Browser-only development mode for Allternit
 # Much faster than Electron, no disk bloat
 
 set -e
 
-echo "🌐 A2R Browser Development Mode"
+echo "🌐 Allternit Browser Development Mode"
 echo "================================"
 echo ""
 
@@ -14,7 +14,7 @@ if ! curl -s http://127.0.0.1:5177 > /dev/null 2>&1; then
     echo "⚠️  Vite dev server not running!"
     echo ""
     echo "Starting Vite..."
-    cd /Users/macbook/Desktop/a2rchitech-workspace/a2rchitech/7-apps/shell/web
+    cd /Users/macbook/Desktop/allternit-workspace/allternit/7-apps/shell/web
     pnpm dev &
     VITE_PID=$!
     echo "   Vite PID: $VITE_PID"
@@ -50,5 +50,5 @@ echo "   ./cdp-helper.mjs devtools    # Open DevTools"
 echo "   ./cdp-helper.mjs reload      # Reload page"
 echo "   ./cdp-helper.mjs screenshot  # Take screenshot"
 echo ""
-echo "Stop with: pkill -f a2r-chrome-dev"
+echo "Stop with: pkill -f allternit-chrome-dev"
 echo "================================================"

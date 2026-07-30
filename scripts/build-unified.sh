@@ -1,6 +1,6 @@
 #!/bin/bash
 #
-# A2R Unified Platform Build Script
+# Allternit Unified Platform Build Script
 # 
 # Builds Desktop with bundled backend for current platform
 #
@@ -55,9 +55,9 @@ echo ""
 
 # Step 1: Build Backend
 # =============================================================================
-log_info "Step 1: Building A2R Backend..."
+log_info "Step 1: Building Allternit Backend..."
 
-cd "$PROJECT_ROOT/7-apps/a2r-api"
+cd "$PROJECT_ROOT/7-apps/allternit-api"
 
 if [ ! -f "Cargo.toml" ]; then
   log_error "Backend Cargo.toml not found"
@@ -73,7 +73,7 @@ echo ""
 # =============================================================================
 log_info "Step 2: Preparing bundled backend..."
 
-cd "$PROJECT_ROOT/7-apps/a2r-desktop"
+cd "$PROJECT_ROOT/7-apps/allternit-desktop"
 
 # Create directory structure
 BUNDLE_DIR="bundled-backend/${ELECTRON_PLATFORM}/${ELECTRON_ARCH}"
@@ -81,10 +81,10 @@ mkdir -p "$BUNDLE_DIR/bin"
 mkdir -p "$BUNDLE_DIR/web"
 
 # Copy backend binary
-BACKEND_BINARY="$PROJECT_ROOT/7-apps/a2r-api/target/release/a2r-api"
+BACKEND_BINARY="$PROJECT_ROOT/7-apps/allternit-api/target/release/allternit-api"
 if [ ! -f "$BACKEND_BINARY" ]; then
   # Try alternative binary names
-  BACKEND_BINARY="$PROJECT_ROOT/7-apps/a2r-api/target/release/a2r_api"
+  BACKEND_BINARY="$PROJECT_ROOT/7-apps/allternit-api/target/release/allternit_api"
 fi
 
 if [ -f "$BACKEND_BINARY" ]; then
@@ -104,7 +104,7 @@ echo ""
 
 # Step 3: Build Desktop
 # =============================================================================
-log_info "Step 3: Building A2R Desktop..."
+log_info "Step 3: Building Allternit Desktop..."
 
 # Install dependencies if needed
 if [ ! -d "node_modules" ]; then

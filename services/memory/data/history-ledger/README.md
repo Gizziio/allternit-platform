@@ -1,4 +1,4 @@
-# Allternitchitech History Package
+# Allternit History Package
 
 The history package provides an append-only JSONL ledger with chained hashes for complete auditability and deterministic replay.
 

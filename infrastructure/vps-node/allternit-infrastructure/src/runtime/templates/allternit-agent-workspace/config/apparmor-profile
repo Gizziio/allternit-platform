@@ -1,6 +1,6 @@
 #include <tunables/global>
 
-# A2R Agent Workspace - AppArmor Profile
+# Allternit Agent Workspace - AppArmor Profile
 # Restrictive security profile for agent execution
 
 /usr/local/bin/agent-runner {

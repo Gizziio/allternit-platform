@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# A2R Computer Use — Conformance Runner
+# Allternit Computer Use — Conformance Runner
 # Runs the full conformance harness or a specific suite.
 #
 # Usage:
@@ -18,7 +18,7 @@ COMPUTER_USE="$REPO_ROOT/packages/computer-use"
 SUITE="${1:-all}"
 
 echo "═══════════════════════════════════════════════════════════"
-echo "  A2R Computer Use — Conformance Runner"
+echo "  Allternit Computer Use — Conformance Runner"
 echo "  Suite: $SUITE"
 echo "  Working dir: $COMPUTER_USE"
 echo "═══════════════════════════════════════════════════════════"

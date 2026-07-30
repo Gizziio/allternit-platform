@@ -1,4 +1,4 @@
-//! # Allternitchitech Tool Registry
+//! # Allternit Tool Registry
 //!
 //! Dynamic tool discovery, registration, and resolution.
 //!

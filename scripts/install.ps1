@@ -1,14 +1,14 @@
 #
-# A2R System Installer for Windows
-# PowerShell script to set up the complete A2R stack
+# Allternit System Installer for Windows
+# PowerShell script to set up the complete Allternit stack
 #
 
 #Requires -RunAsAdministrator
 
 param(
-    [string]$InstallDir = "$env:USERPROFILE\.a2r",
-    [string]$ConfigDir = "$env:LOCALAPPDATA\a2r",
-    [string]$LogDir = "$env:USERPROFILE\.logs\a2r"
+    [string]$InstallDir = "$env:USERPROFILE\.allternit",
+    [string]$ConfigDir = "$env:LOCALAPPDATA\allternit",
+    [string]$LogDir = "$env:USERPROFILE\.logs\allternit"
 )
 
 # Configuration
@@ -36,7 +36,7 @@ function Write-Warning($message) {
 function Print-Header {
     Write-Host ""
     Write-Host "╔═══════════════════════════════════════════════════════════╗" -ForegroundColor Blue
-    Write-Host "║          A2R System Installer                             ║" -ForegroundColor Blue
+    Write-Host "║          Allternit System Installer                             ║" -ForegroundColor Blue
     Write-Host "║  Cloud-Native Computer Use Architecture                   ║" -ForegroundColor Blue
     Write-Host "╚═══════════════════════════════════════════════════════════╝" -ForegroundColor Blue
     Write-Host ""
@@ -120,7 +120,7 @@ function Install-CloudBackend {
 
 # Install Desktop
 function Install-Desktop {
-    Write-Info "Installing A2R Desktop..."
+    Write-Info "Installing Allternit Desktop..."
     
     Set-Location "7-apps\shell\desktop"
     
@@ -132,14 +132,14 @@ function Install-Desktop {
     Set-Location ".."
     
     Set-Location "..\..\.."
-    Write-Success "A2R Desktop installed"
+    Write-Success "Allternit Desktop installed"
 }
 
 # Register native messaging host
 function Register-NativeHost {
     Write-Info "Registering Native Messaging Host..."
     
-    $extensionId = "com.a2r.desktop"
+    $extensionId = "com.allternit.desktop"
     $nativeHostPath = "$PWD\7-apps\shell\desktop\native-host\dist\native-host.js"
     $registryPath = "HKCU:\Software\Google\Chrome\NativeMessagingHosts\$extensionId"
     
@@ -152,7 +152,7 @@ function Register-NativeHost {
     $manifestPath = "$ConfigDir\native-host.json"
     $manifest = @{
         name = $extensionId
-        description = "A2R Desktop Native Messaging Host"
+        description = "Allternit Desktop Native Messaging Host"
         path = $nativeHostPath
         type = "stdio"
         allowed_origins = @("chrome-extension://*/")
@@ -208,53 +208,53 @@ function Create-Launchers {
     # Cloud Backend launcher
     @"
 @echo off
-REM Start A2R Cloud Backend
+REM Start Allternit Cloud Backend
 
 cd /d "$PWD\7-apps\cloud-backend"
 set PORT=$CloudPort
 set HOST=0.0.0.0
 
-echo Starting A2R Cloud Backend on port %PORT%...
+echo Starting Allternit Cloud Backend on port %PORT%...
 node dist\index.js
 "@ | Set-Content -Path "$InstallDir\start-cloud.bat"
     
     # Desktop launcher
     @"
 @echo off
-REM Start A2R Desktop
+REM Start Allternit Desktop
 
 cd /d "$PWD\7-apps\shell\desktop"
-echo Starting A2R Desktop...
+echo Starting Allternit Desktop...
 npm run dev
 "@ | Set-Content -Path "$InstallDir\start-desktop.bat"
     
     # Thin Client launcher
     @"
 @echo off
-REM Start A2R Thin Client
+REM Start Allternit Thin Client
 
 cd /d "$PWD\7-apps\thin-client"
-echo Starting A2R Thin Client...
+echo Starting Allternit Thin Client...
 npm start
 "@ | Set-Content -Path "$InstallDir\start-thin-client.bat"
     
     # Full stack launcher
     @"
 @echo off
-REM Start all A2R components
+REM Start all Allternit components
 
 echo ===================================
-echo          Starting A2R System
+echo          Starting Allternit System
 echo ===================================
 echo.
 
-start "A2R Cloud Backend" "$InstallDir\start-cloud.bat"
+start "Allternit Cloud Backend" "$InstallDir\start-cloud.bat"
 timeout /t 2 >nul
 
-start "A2R Desktop" "$InstallDir\start-desktop.bat"
+start "Allternit Desktop" "$InstallDir\start-desktop.bat"
 timeout /t 3 >nul
 
-start "A2R Thin Client" "$InstallDir\start-thin-client.bat"
+start "Allternit Thin Client" "$InstallDir\start-thin-client.bat"
 
 echo.
 echo All components started!

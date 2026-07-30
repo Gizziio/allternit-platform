@@ -25,7 +25,7 @@ const { chromium } = require('playwright');
     await page.waitForTimeout(1000);
   }
   
-  await page.screenshot({ path: '/Users/macbook/Desktop/a2rchitech-workspace/a2rchitech/shell-agent-mode.png', fullPage: true });
+  await page.screenshot({ path: '/Users/macbook/Desktop/allternit-workspace/allternit/shell-agent-mode.png', fullPage: true });
   await browser.close();
   console.log('Screenshot saved');
 })();

@@ -2,7 +2,7 @@
 name = "allternit-artifact-registry"
 version = "0.1.0"
 edition = "2021"
-description = "Allternitchitech artifact registry for skills, personas, workflows, and packages"
+description = "Allternit artifact registry for skills, personas, workflows, and packages"
 
 [dependencies]
 serde = { workspace = true }

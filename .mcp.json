@@ -11,11 +11,11 @@
     "dak-runner": {
       "command": "node",
       "args": [
-        "1-kernel/agent-systems/a2r-dak-runner/dist/mcp-server.js"
+        "1-kernel/agent-systems/allternit-dak-runner/dist/mcp-server.js"
       ],
       "env": {
-        "A2R_RAILS_CLI": "a2r",
-        "A2R_PROJECT_PATH": "."
+        "Allternit_RAILS_CLI": "allternit",
+        "Allternit_PROJECT_PATH": "."
       }
     },
     "sequential-thinking": {

@@ -9,7 +9,7 @@ Read this first if you have no context. Last updated: 2026-07-12 ~00:15 by the o
 > **2026-07-12 addendum:** the overlay-vs-route question is RESOLVED — settings now renders as a true overlay in `ShellApp.tsx` (`settingsOpen` state + lazy `SettingsOverlay`, open/close events toggle it; the active view stays mounted underneath, and closing returns to it instead of forcing `chat`). The open event's `detail.section`/`detail.tab` now reach SettingsView as props (previously silently dropped), with unknown ids guarded to `signin`. The `settings` entry in ViewRegistry remains as a legacy fallback. Note: `allternit-settings-section` sessionStorage keys are written in two places but read nowhere — pre-existing dead code, left as-is.
 
 ## The goal
-Bring the allternit platform's settings UI (`surfaces/ai.allternit.com/src/views/settings/`) on par with Claude Desktop's settings modal, using a screen recording of Claude Desktop as reference. Eoj's standing prefs: action over discussion, thorough cleanup not shortcuts, NEVER run builds/typechecks (they hog CPU), a2r- prefix is legacy (use allternit-).
+Bring the allternit platform's settings UI (`surfaces/ai.allternit.com/src/views/settings/`) on par with Claude Desktop's settings modal, using a screen recording of Claude Desktop as reference. Eoj's standing prefs: action over discussion, thorough cleanup not shortcuts, NEVER run builds/typechecks (they hog CPU), allternit- prefix is legacy (use allternit-).
 
 ## Key docs (all in this repo's docs/)
 - `CLAUDE_DESKTOP_SETTINGS_PARITY_MAP.md` — the full spec: element-by-element mapping, section mapping, phases A–D.

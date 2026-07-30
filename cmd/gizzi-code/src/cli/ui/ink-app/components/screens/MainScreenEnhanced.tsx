@@ -11,7 +11,7 @@ import React, { useState, useCallback, useEffect, useRef } from 'react';
 import { Box, Text, useApp, useInput } from '../../ink';
 import { useTerminalSize } from '../../hooks/useTerminalSize';
 import type { Session, Message, ToolUse, ToolResult } from '../../types';
-import { getHarnessService } from '../../services/harness';
+import { getHarnessModel, getHarnessService } from '../../services/harness';
 import { CommandPalette } from '../CommandPalette';
 import { useCommandRegistry } from '../../hooks/useCommandRegistry';
 
@@ -92,7 +92,7 @@ export const MainScreenEnhanced: React.FC<MainScreenEnhancedProps> = ({
   // UI state
   const [showCommandPalette, setShowCommandPalette] = useState(false);
   const [showModelPicker, setShowModelPicker] = useState(false);
-  const [currentModel, setCurrentModel] = useState('claude-3-5-sonnet');
+  const [currentModel, setCurrentModel] = useState(getHarnessModel());
   const [totalCost, setTotalCost] = useState(0);
   // Spinner animation
   const [spinnerFrame, setSpinnerFrame] = useState(0);
@@ -356,7 +356,7 @@ export const MainScreenEnhanced: React.FC<MainScreenEnhancedProps> = ({
       <Box flexDirection="column" height={height} padding={1}>
         <Text bold>Select Model</Text>
         <Box flexDirection="column" marginY={1}>
-          {['claude-3-5-sonnet', 'claude-3-5-haiku', 'gpt-4', 'gpt-3.5-turbo'].map((model) => (
+          {[getHarnessModel(), 'claude-3-5-sonnet', 'claude-3-5-haiku', 'gpt-4', 'gpt-3.5-turbo'].map((model) => (
             <Box key={model} paddingY={0}>
               <Text color={currentModel === model ? 'green' : undefined}>
                 {currentModel === model ? '● ' : '○ '}{model}

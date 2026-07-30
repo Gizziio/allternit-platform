@@ -3,7 +3,7 @@
 <plist version="1.0">
 <dict>
     <key>Label</key>
-    <string>com.a2rchitech.shell</string>
+    <string>com.allternit.shell</string>
     <key>ProgramArguments</key>
     <array>
         <string>/opt/homebrew/bin/pnpm</string>

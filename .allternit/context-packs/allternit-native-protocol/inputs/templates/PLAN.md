@@ -1,4 +1,4 @@
-# A2R Native: PLAN.md
+# Allternit Native: PLAN.md
 
 Executable task plan for a single execution wave.
 

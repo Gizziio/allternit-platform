@@ -1,10 +1,10 @@
 # Blueprint YAML Schema Specification
 
-## Version: a2r.io/v1
+## Version: allternit.io/v1
 
 ## Overview
 
-This document defines the complete YAML schema for A2R Workflow Blueprints.
+This document defines the complete YAML schema for Allternit Workflow Blueprints.
 
 ---
 
@@ -13,7 +13,7 @@ This document defines the complete YAML schema for A2R Workflow Blueprints.
 ### Minimal Valid Blueprint
 
 ```yaml
-apiVersion: a2r.io/v1
+apiVersion: allternit.io/v1
 kind: WorkflowBlueprint
 
 metadata:
@@ -74,7 +74,7 @@ routines:
 
 | Field | Type | Required | Description |
 |-------|------|----------|-------------|
-| `apiVersion` | string | Yes | Schema version: `"a2r.io/v1"` |
+| `apiVersion` | string | Yes | Schema version: `"allternit.io/v1"` |
 | `kind` | string | Yes | Resource type: `"WorkflowBlueprint"` |
 | `metadata` | object | Yes | Blueprint metadata |
 | `agents` | array | Yes | Agent definitions |
@@ -342,7 +342,7 @@ observability:
       - tool_calls
       - token_usage
     destination:
-      - file: .a2r/logs/
+      - file: .allternit/logs/
       - console: pretty
       - external: datadog   # External logging
       
@@ -443,7 +443,7 @@ cost_control:
 ## Complete Example (All Phases)
 
 ```yaml
-apiVersion: a2r.io/v1
+apiVersion: allternit.io/v1
 kind: WorkflowBlueprint
 
 metadata:
@@ -451,11 +451,11 @@ metadata:
   name: "Enterprise SaaS Team"
   version: 2.1.0
   description: "Production-grade engineering team automation"
-  author: "A2R Team <team@a2r.io>"
+  author: "Allternit Team <team@allternit.io>"
   tags: [engineering, saas, enterprise]
   license: MIT
-  homepage: https://blueprints.a2r.io/enterprise-saas-team
-  repository: https://github.com/a2r-blueprints/enterprise-saas-team
+  homepage: https://blueprints.allternit.io/enterprise-saas-team
+  repository: https://github.com/allternit-blueprints/enterprise-saas-team
 
 agents:
   - id: tech-lead
@@ -635,7 +635,7 @@ observability:
       - tool_calls
       - token_usage
     destination:
-      - file: .a2r/logs/
+      - file: .allternit/logs/
       
   tracing:
     enabled: true
@@ -721,14 +721,14 @@ cost_control:
 ```json
 {
   "$schema": "http://json-schema.org/draft-07/schema#",
-  "$id": "https://a2r.io/schemas/blueprint-v1.json",
-  "title": "A2R Workflow Blueprint",
+  "$id": "https://allternit.io/schemas/blueprint-v1.json",
+  "title": "Allternit Workflow Blueprint",
   "type": "object",
   "required": ["apiVersion", "kind", "metadata", "agents", "connectors", "routines"],
   "properties": {
     "apiVersion": {
       "type": "string",
-      "enum": ["a2r.io/v1"]
+      "enum": ["allternit.io/v1"]
     },
     "kind": {
       "type": "string",

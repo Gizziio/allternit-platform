@@ -1,11 +1,11 @@
 #
-# A2R Node Agent Installation Script for Windows
+# Allternit Node Agent Installation Script for Windows
 # Supports: Windows Server 2019/2022, Windows 10/11
 #
 # This script:
 # - Detects Windows version and architecture
 # - Installs Docker Desktop if not present
-# - Pulls A2R agent Docker image
+# - Pulls Allternit agent Docker image
 # - Sets up Windows service
 # - Configures networking
 # - Sets up log rotation
@@ -14,9 +14,9 @@
 [CmdletBinding()]
 param(
     [string]$Version = "latest",
-    [string]$InstallDir = "C:\ProgramData\A2R",
-    [string]$ConfigDir = "C:\ProgramData\A2R\Config",
-    [string]$LogDir = "C:\ProgramData\A2R\Logs",
+    [string]$InstallDir = "C:\ProgramData\Allternit",
+    [string]$ConfigDir = "C:\ProgramData\Allternit\Config",
+    [string]$LogDir = "C:\ProgramData\Allternit\Logs",
     [switch]$SkipDockerInstall,
     [switch]$Force
 )
@@ -46,11 +46,11 @@ function Write-Error {
 }
 
 # Global variables
-$script:A2RVersion = $Version
-$script:A2RDir = $InstallDir
-$script:A2RConfigDir = $ConfigDir
-$script:A2RLogDir = $LogDir
-$script:ServiceName = "A2RAgent"
+$script:AllternitVersion = $Version
+$script:AllternitDir = $InstallDir
+$script:AllternitConfigDir = $ConfigDir
+$script:AllternitLogDir = $LogDir
+$script:ServiceName = "AllternitAgent"
 
 # Check if running as administrator
 function Test-Administrator {
@@ -184,15 +184,15 @@ function Install-DockerDesktop {
 
 # Setup directories
 function Initialize-Directories {
-    Write-Info "Setting up A2R directories..."
+    Write-Info "Setting up Allternit directories..."
     
     $directories = @(
-        $script:A2RDir,
-        "$script:A2RDir\config",
-        "$script:A2RDir\data",
-        "$script:A2RDir\scripts",
-        $script:A2RConfigDir,
-        $script:A2RLogDir
+        $script:AllternitDir,
+        "$script:AllternitDir\config",
+        "$script:AllternitDir\data",
+        "$script:AllternitDir\scripts",
+        $script:AllternitConfigDir,
+        $script:AllternitLogDir
     )
     
     foreach ($dir in $directories) {
@@ -203,7 +203,7 @@ function Initialize-Directories {
     }
     
     # Set ACLs
-    $acl = Get-Acl $script:A2RDir
+    $acl = Get-Acl $script:AllternitDir
     
     # Add SYSTEM full control
     $systemRule = New-Object System.Security.AccessControl.FileSystemAccessRule(
@@ -214,7 +214,7 @@ function Initialize-Directories {
         "Allow"
     )
     $acl.SetAccessRule($systemRule)
-    Set-Acl $script:A2RDir $acl
+    Set-Acl $script:AllternitDir $acl
     
     Write-Success "Directories created"
 }
@@ -226,7 +226,7 @@ function Initialize-Firewall {
     $ports = @(80, 443, 8080, 9090, 9091)
     
     foreach ($port in $ports) {
-        $ruleName = "A2R Agent - Port $port"
+        $ruleName = "Allternit Agent - Port $port"
         
         # Remove existing rule if present
         Remove-NetFirewallRule -DisplayName $ruleName -ErrorAction SilentlyContinue
@@ -255,26 +255,26 @@ function New-DockerComposeFile {
 version: '3.8'
 
 services:
-  a2r-agent:
-    image: a2r/agent:$script:A2RVersion
-    container_name: a2r-agent
+  allternit-agent:
+    image: allternit/agent:$script:AllternitVersion
+    container_name: allternit-agent
     restart: unless-stopped
     ports:
       - "8080:8080"
       - "9090:9090"
     volumes:
-      - "$($script:A2RConfigDir -replace '\\', '/'):/etc/a2r:ro"
-      - "$($script:A2RDir -replace '\\', '/')/data:/data"
-      - "$($script:A2RLogDir -replace '\\', '/'):/var/log/a2r"
+      - "$($script:AllternitConfigDir -replace '\\', '/'):/etc/allternit:ro"
+      - "$($script:AllternitDir -replace '\\', '/')/data:/data"
+      - "$($script:AllternitLogDir -replace '\\', '/'):/var/log/allternit"
       - type: bind
         source: //./pipe/docker_engine
         target: //./pipe/docker_engine
     environment:
-      - A2R_CONFIG_PATH=/etc/a2r/config.json
-      - A2R_LOG_LEVEL=info
-      - A2R_DATA_DIR=/data
+      - Allternit_CONFIG_PATH=/etc/allternit/config.json
+      - Allternit_LOG_LEVEL=info
+      - Allternit_DATA_DIR=/data
     networks:
-      - a2r-network
+      - allternit-network
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8080/health"]
       interval: 30s
@@ -284,17 +284,17 @@ services:
 
   redis:
     image: redis:7-alpine
-    container_name: a2r-redis
+    container_name: allternit-redis
     restart: unless-stopped
     volumes:
       - redis-data:/data
     networks:
-      - a2r-network
+      - allternit-network
     command: redis-server --appendonly yes --maxmemory 256mb --maxmemory-policy allkeys-lru
 
   traefik:
     image: traefik:v3.0
-    container_name: a2r-traefik
+    container_name: allternit-traefik
     restart: unless-stopped
     command:
       - "--api.insecure=true"
@@ -311,27 +311,27 @@ services:
         source: //./pipe/docker_engine
         target: //./pipe/docker_engine
     networks:
-      - a2r-network
+      - allternit-network
 
 volumes:
   redis-data:
 
 networks:
-  a2r-network:
+  allternit-network:
     driver: nat
     ipam:
       config:
         - subnet: 172.20.0.0/16
 "@
     
-    $composePath = Join-Path $script:A2RDir "docker-compose.yml"
+    $composePath = Join-Path $script:AllternitDir "docker-compose.yml"
     $composeContent | Out-File -FilePath $composePath -Encoding UTF8 -Force
     
     Write-Success "Docker Compose file created: $composePath"
 }
 
 # Create Windows Service
-function New-A2RService {
+function New-AllternitService {
     Write-Info "Creating Windows Service..."
     
     # Remove existing service if present
@@ -345,7 +345,7 @@ function New-A2RService {
     
     # Create service script
     $serviceScript = @"
-`$LogFile = "$script:A2RLogDir\service.log"
+`$LogFile = "$script:AllternitLogDir\service.log"
 
 function Write-Log {
     param([string]`$Message)
@@ -353,10 +353,10 @@ function Write-Log {
     "`$timestamp - `$Message" | Out-File -Append -FilePath `$LogFile
 }
 
-Write-Log "Starting A2R Agent Service"
+Write-Log "Starting Allternit Agent Service"
 
 try {
-    Set-Location "$script:A2RDir"
+    Set-Location "$script:AllternitDir"
     
     # Pull latest images
     Write-Log "Pulling Docker images..."
@@ -377,12 +377,12 @@ try {
 } catch {
     Write-Log "ERROR: `$_"
 } finally {
-    Write-Log "Stopping A2R Agent Service"
+    Write-Log "Stopping Allternit Agent Service"
     docker compose down 2>&1 | ForEach-Object { Write-Log `$_ }
 }
 "@
     
-    $serviceScriptPath = Join-Path $script:A2RDir "scripts\service.ps1"
+    $serviceScriptPath = Join-Path $script:AllternitDir "scripts\service.ps1"
     $serviceScript | Out-File -FilePath $serviceScriptPath -Encoding UTF8 -Force
     
     # Create scheduled task as a service alternative (more reliable on Windows)
@@ -407,7 +407,7 @@ function Initialize-LogRotation {
     Write-Info "Setting up log rotation..."
     
     $logRotationScript = @"
-`$LogDir = "$script:A2RLogDir"
+`$LogDir = "$script:AllternitLogDir"
 `$MaxLogSize = 100MB
 `$MaxLogFiles = 14
 
@@ -428,7 +428,7 @@ Get-ChildItem -Path `$LogDir -Filter "*.log" | ForEach-Object {
 Get-ChildItem -Path `$LogDir -Filter "*.zip" | Sort-Object LastWriteTime -Descending | Select-Object -Skip `$MaxLogFiles | Remove-Item -Force
 "@
     
-    $rotationScriptPath = Join-Path $script:A2RDir "scripts\log-rotation.ps1"
+    $rotationScriptPath = Join-Path $script:AllternitDir "scripts\log-rotation.ps1"
     $logRotationScript | Out-File -FilePath $rotationScriptPath -Encoding UTF8 -Force
     
     # Create scheduled task for log rotation
@@ -438,7 +438,7 @@ Get-ChildItem -Path `$LogDir -Filter "*.zip" | Sort-Object LastWriteTime -Descen
     $taskPrincipal = New-ScheduledTaskPrincipal -UserId "SYSTEM" -LogonType ServiceAccount
     
     Register-ScheduledTask `
-        -TaskName "A2RLogRotation" `
+        -TaskName "AllternitLogRotation" `
         -Action $taskAction `
         -Trigger $taskTrigger `
         -Settings $taskSettings `
@@ -469,13 +469,13 @@ function Test-Installation {
     }
     
     # Check configuration files
-    $composePath = Join-Path $script:A2RDir "docker-compose.yml"
+    $composePath = Join-Path $script:AllternitDir "docker-compose.yml"
     if (-not (Test-Path $composePath)) {
         throw "Docker Compose file not found"
     }
     
     # Validate docker-compose
-    Set-Location $script:A2RDir
+    Set-Location $script:AllternitDir
     $validateResult = docker compose config 2>&1
     if ($LASTEXITCODE -ne 0) {
         throw "Docker Compose configuration is invalid: $validateResult"
@@ -485,8 +485,8 @@ function Test-Installation {
 }
 
 # Start the service
-function Start-A2RService {
-    Write-Info "Starting A2R Agent Service..."
+function Start-AllternitService {
+    Write-Info "Starting Allternit Agent Service..."
     
     Start-ScheduledTask -TaskName $script:ServiceName -ErrorAction SilentlyContinue
     
@@ -495,17 +495,17 @@ function Start-A2RService {
     # Check if containers are running
     $containers = docker compose ps --format json 2>$null | ConvertFrom-Json
     if ($containers) {
-        Write-Success "A2R Agent containers are starting"
+        Write-Success "Allternit Agent containers are starting"
     } else {
         Write-Warn "Containers may still be starting. Check logs for details."
     }
 }
 
 # Main installation
-function Install-A2RAgent {
+function Install-AllternitAgent {
     Write-Info "========================================"
-    Write-Info "A2R Node Agent Installer for Windows"
-    Write-Info "Version: $script:A2RVersion"
+    Write-Info "Allternit Node Agent Installer for Windows"
+    Write-Info "Version: $script:AllternitVersion"
     Write-Info "========================================"
     
     try {
@@ -515,23 +515,23 @@ function Install-A2RAgent {
         Initialize-Directories
         Initialize-Firewall
         New-DockerComposeFile
-        New-A2RService
+        New-AllternitService
         Initialize-LogRotation
         Test-Installation
-        Start-A2RService
+        Start-AllternitService
         
         Write-Success "========================================"
-        Write-Success "A2R Agent installation completed!"
+        Write-Success "Allternit Agent installation completed!"
         Write-Success "========================================"
         Write-Info ""
         Write-Info "Next steps:"
         Write-Info "  - Check service status: Get-ScheduledTask -TaskName '$script:ServiceName'"
-        Write-Info "  - View logs: Get-Content '$script:A2RLogDir\service.log' -Tail 50"
-        Write-Info "  - Docker logs: docker compose -f '$script:A2RDir\docker-compose.yml' logs -f"
+        Write-Info "  - View logs: Get-Content '$script:AllternitLogDir\service.log' -Tail 50"
+        Write-Info "  - Docker logs: docker compose -f '$script:AllternitDir\docker-compose.yml' logs -f"
         Write-Info ""
-        Write-Info "Configuration directory: $script:A2RConfigDir"
-        Write-Info "Data directory: $script:A2RDir\data"
-        Write-Info "Log directory: $script:A2RLogDir"
+        Write-Info "Configuration directory: $script:AllternitConfigDir"
+        Write-Info "Data directory: $script:AllternitDir\data"
+        Write-Info "Log directory: $script:AllternitLogDir"
     }
     catch {
         Write-Error "Installation failed: $_"
@@ -540,28 +540,28 @@ function Install-A2RAgent {
 }
 
 # Uninstall function
-function Uninstall-A2RAgent {
-    Write-Info "Uninstalling A2R Agent..."
+function Uninstall-AllternitAgent {
+    Write-Info "Uninstalling Allternit Agent..."
     
     # Stop and remove service
     Stop-ScheduledTask -TaskName $script:ServiceName -ErrorAction SilentlyContinue
     Unregister-ScheduledTask -TaskName $script:ServiceName -Confirm:$false -ErrorAction SilentlyContinue
-    Unregister-ScheduledTask -TaskName "A2RLogRotation" -Confirm:$false -ErrorAction SilentlyContinue
+    Unregister-ScheduledTask -TaskName "AllternitLogRotation" -Confirm:$false -ErrorAction SilentlyContinue
     
     # Stop and remove containers
-    if (Test-Path "$script:A2RDir\docker-compose.yml") {
-        Set-Location $script:A2RDir
+    if (Test-Path "$script:AllternitDir\docker-compose.yml") {
+        Set-Location $script:AllternitDir
         docker compose down --volumes --remove-orphans 2>$null | Out-Null
     }
     
     # Remove firewall rules
-    Remove-NetFirewallRule -DisplayName "A2R Agent*" -ErrorAction SilentlyContinue
+    Remove-NetFirewallRule -DisplayName "Allternit Agent*" -ErrorAction SilentlyContinue
     
     # Remove directories
-    Remove-Item -Path $script:A2RDir -Recurse -Force -ErrorAction SilentlyContinue
+    Remove-Item -Path $script:AllternitDir -Recurse -Force -ErrorAction SilentlyContinue
     
-    Write-Success "A2R Agent uninstalled"
+    Write-Success "Allternit Agent uninstalled"
 }
 
 # Run installation
-Install-A2RAgent
+Install-AllternitAgent

@@ -1,4 +1,4 @@
-# Allternitchitech Workflows Package
+# Allternit Workflows Package
 
 The workflows package provides the deterministic workflow engine that executes agent work as explicit, replayable programs following the scientific loop: OBSERVE → THINK → PLAN → BUILD → EXECUTE → VERIFY → LEARN.
 

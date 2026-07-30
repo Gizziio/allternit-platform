@@ -136,12 +136,15 @@ export function messageTokenCountFromLastAPIResponse(
   return 0
 }
 
-export function getCurrentUsage(messages: Message[]): {
+export function getCurrentUsage(messages: Message[] | null | undefined): {
   input_tokens: number
   output_tokens: number
   cache_creation_input_tokens: number
   cache_read_input_tokens: number
 } | null {
+  if (!messages || messages.length === 0) {
+    return null
+  }
   for (let i = messages.length - 1; i >= 0; i--) {
     const message = messages[i]
     const usage = message ? getTokenUsage(message) : undefined

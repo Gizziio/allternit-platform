@@ -31,7 +31,7 @@ export type SessionMetrics = {
 }
 
 export function useSessionMetrics(): SessionMetrics {
-  const messages = useAppState(s => s.messages)
+  const messages = useAppState(s => s.messages) ?? []
   const toolPermissionContext = useAppState(s => s.toolPermissionContext)
   const mainLoopModel = useAppState(s => s.mainLoopModel)
   const [, setTick] = useState(0)

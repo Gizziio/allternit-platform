@@ -1,4 +1,4 @@
-# A2rchitect Shell Application Dockerfile
+# Allternit Shell Application Dockerfile
 FROM node:20-alpine AS base
 
 # Install dependencies only when needed

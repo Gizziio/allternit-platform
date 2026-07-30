@@ -1,4 +1,4 @@
-# Allternitchitech Unified Registry & Data Fabric
+# Allternit Unified Registry & Data Fabric
 
 The Unified Registry provides a single source of truth for all tenant capabilities (agents, skills, tools) with a unified data fabric that optimizes access patterns across multiple storage backends.
 

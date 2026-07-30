@@ -21,7 +21,7 @@ class MockHandler(http.server.BaseHTTPRequestHandler):
                         "modified": ["src/lib.rs"],
                         "deleted": []
                     },
-                    "backup_dir": f".a2r/backups/{wih_id}_1709856000" if not dry_run else None
+                    "backup_dir": f".allternit/backups/{wih_id}_1709856000" if not dry_run else None
                 }
             }
             self.send_response(200)

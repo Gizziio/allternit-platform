@@ -35,6 +35,20 @@ jobs:
           NEWSLETTER_SEND_TOKEN: ${{ secrets.NEWSLETTER_SEND_TOKEN }}
         run: node .github/scripts/generate-briefing.cjs
 
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 10.28.0
+          run_install: false
+
+      - name: Install PDF renderer
+        run: |
+          pnpm install --frozen-lockfile --ignore-scripts
+          pnpm exec playwright install --with-deps chromium
+
+      - name: Generate PDF editions
+        run: node .github/scripts/generate-pdf-editions.cjs --new
+
       - name: Commit and push if changed
         id: commit
         run: |

@@ -9,12 +9,15 @@ import type { ProviderLoader } from "../../types"
 import { anthropicLoader } from "./anthropic"
 import { openaiLoader } from "./openai"
 import { gizziLoader, gizziioLoader } from "./misc"
+import { localLoader } from "./local"
 
 export const CUSTOM_LOADERS: Record<string, ProviderLoader> = {
   "anthropic": anthropicLoader,
   "openai": openaiLoader,
   "gizzi": gizziLoader,
   "gizziio": gizziioLoader,
+  "local-mlx": localLoader,
+  "local": localLoader,
   // google, mistral, qwen, kimi, minimax, glm — no custom loaders needed,
   // they work via models.dev catalog + BUNDLED_PROVIDERS or @ai-sdk/openai-compatible
 }

@@ -22,7 +22,7 @@
     "allternit",
     "hypervisor"
   ],
-  "author": "Allternitchitech Team",
+  "author": "Allternit Team",
   "license": "MIT",
   "engines": {
     "node": ">=16.0.0",

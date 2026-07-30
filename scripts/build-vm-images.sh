@@ -15,7 +15,7 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
 
 echo "╔═══════════════════════════════════════════════════════════════╗"
-echo "║           A2R VM Image Build & Release Script                ║"
+echo "║           Allternit VM Image Build & Release Script                ║"
 echo "╚═══════════════════════════════════════════════════════════════╝"
 echo ""
 echo "Version: $VERSION"
@@ -24,7 +24,7 @@ echo ""
 
 # Check if we're in the right directory
 if [ ! -f "$REPO_ROOT/Cargo.toml" ]; then
-    echo "❌ Error: Not in the a2rchitech repository root"
+    echo "❌ Error: Not in the allternit repository root"
     exit 1
 fi
 
@@ -70,5 +70,5 @@ echo "💡 To check status locally:"
 echo "   gh run list --workflow=vm-images.yml"
 echo ""
 echo "🎯 After completion, users can download with:"
-echo "   a2r vm setup"
+echo "   allternit vm setup"
 echo ""

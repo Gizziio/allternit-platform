@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Allternitchitech API Gateway - Canonical Enterprise Implementation
+Allternit API Gateway - Canonical Enterprise Implementation
 
 This is the SINGLE entry point for all external traffic to the allternit platform.
 All UI and external client requests MUST go through this gateway.

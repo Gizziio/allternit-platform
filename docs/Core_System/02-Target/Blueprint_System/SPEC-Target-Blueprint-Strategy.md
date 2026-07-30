@@ -1,4 +1,4 @@
-# Strategic Analysis: A2R Workflow Blueprints
+# Strategic Analysis: Allternit Workflow Blueprints
 
 ## Executive Summary
 
@@ -56,7 +56,7 @@ From our research, the market has clear pain points:
     Unreliable)            │               Limited)
                            │
                            │
-                    ★ A2R BLUEPRINTS
+                    ★ Allternit BLUEPRINTS
                     (Sweet spot: Production-ready
                      + Local-first + BYO Model)
                            │
@@ -65,7 +65,7 @@ From our research, the market has clear pain points:
 
 ### Competitive Differentiation Matrix
 
-| Feature | CrewAI | LangGraph | Dify | A2R Blueprints |
+| Feature | CrewAI | LangGraph | Dify | Allternit Blueprints |
 |---------|--------|-----------|------|----------------|
 | Production Reliability | ❌ Fails | ⚠️ Complex | ✅ Good | ✅✅ Designed for it |
 | Local-First | ❌ Cloud | ❌ Cloud | ❌ Cloud | ✅✅ Core differentiator |
@@ -200,7 +200,7 @@ Don't compete horizontally. Dominate one vertical first.
 - On-call automation
 - Runbook automation
 - **Why**: This audience cares deeply about reliability
-- **Play**: "CrewAI for demos, A2R for production incidents"
+- **Play**: "CrewAI for demos, Allternit for production incidents"
 
 #### Option B: Compliance-First (GOOD)
 Target regulated industries with "compliance out of the box"
@@ -339,7 +339,7 @@ Become the "npm for agent workflows"
 
 ✅ **Timing**: Enterprises need production reliability now  
 ✅ **Differentiation**: Local-first + hardening is unique  
-✅ **Technical Foundation**: Leverages existing A2R well  
+✅ **Technical Foundation**: Leverages existing Allternit well  
 ✅ **Phased Approach**: Can deliver value incrementally  
 ✅ **Market Gap**: No one does "production-grade" well  
 
@@ -390,7 +390,7 @@ It's not CrewAI or LangGraph. It's:
 
 ## Conclusion
 
-**A2R Workflow Blueprints is technically viable and solves real problems.**
+**Allternit Workflow Blueprints is technically viable and solves real problems.**
 
 **But**: The full 28-week vision is too ambitious for a new product. The market doesn't need another general-purpose agent framework. It needs **production-grade automation for specific use cases**.
 

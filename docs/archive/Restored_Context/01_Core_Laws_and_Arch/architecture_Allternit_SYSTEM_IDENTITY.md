@@ -2,11 +2,11 @@ This is written as an authoritative system charter, not marketing copy.
 
 ⸻
 
-A://rchitech — Agentic Engineering Operating System
+A://llternit — Agentic Engineering Operating System
 
-1. What Is A://rchitech?
+1. What Is A://llternit?
 
-A://rchitech is a protocol-shaped operating system for autonomous and human-directed agents.
+A://llternit is a protocol-shaped operating system for autonomous and human-directed agents.
 
 It is not:
 	•	a chatbot
@@ -19,7 +19,7 @@ It is:
 
 a layered execution substrate, governance engine, orchestration fabric, and UI embodiment platform for agentic systems.
 
-A://rchitech provides:
+A://llternit provides:
 	•	deterministic execution harnesses
 	•	runtime sandboxes
 	•	policy enforcement
@@ -41,7 +41,7 @@ All components mount beneath a single namespace root.
 
 2. System Grammar
 
-A://rchitech uses OS-style protocol grammar:
+A://llternit uses OS-style protocol grammar:
 
 A://{layer}/{component}
 
@@ -96,7 +96,7 @@ The system is designed for **engineering discipline**, not prompt hacking.
 
 3. The Harness Concept
 
-In A://rchitech, a Harness is:
+In A://llternit, a Harness is:
 
 a deterministic execution envelope that mounts models, tools, runtimes, policies, and UI surfaces into a controlled agent environment.
 
@@ -115,7 +115,7 @@ It is the system that:
 
 Claude Code, Codex, Devin, and similar tools are examples of harnesses.
 
-A://rchitech provides a general-purpose, vendor-agnostic harness capable of mounting:
+A://llternit provides a general-purpose, vendor-agnostic harness capable of mounting:
 	•	local LLMs
 	•	API models
 	•	CLI tools
@@ -130,7 +130,7 @@ A://rchitech provides a general-purpose, vendor-agnostic harness capable of moun
 
 4. Layered Architecture
 
-A://rchitech is structured as a vertical OS stack.
+A://llternit is structured as a vertical OS stack.
 
 Top-level layers:
 
@@ -256,7 +256,7 @@ End-user applications:
 
 5. Cowork, Code, and Studio Surfaces
 
-A://rchitech exposes multiple embodiment modes:
+A://llternit exposes multiple embodiment modes:
 
 Cowork Mode
 
@@ -300,7 +300,7 @@ Visual control plane:
 
 6. Rebranding and First-Party Products
 
-Third-party projects integrated into A://rchitech are:
+Third-party projects integrated into A://llternit are:
 	•	re-branded
 	•	quarantined as vendors
 	•	surfaced only through first-party harness layers
@@ -323,7 +323,7 @@ Forked or upstream systems (UI-TARS, OpenWork, WebVM, etc.) are:
 - feature-cherry-picked
 - never exposed directly
 
-A://rchitech does not become a wrapper around them.
+A://llternit does not become a wrapper around them.
 
 They become **providers inside the OS**.
 
@@ -360,7 +360,7 @@ These map to:
 
 8. System Positioning
 
-A://rchitech is positioned as:
+A://llternit is positioned as:
 
 an agentic engineering operating system — not an application.
 
@@ -379,7 +379,7 @@ Not chat products.
 
 The following are frozen:
 	•	Sigil: A://
-	•	System Name: A://rchitech
+	•	System Name: A://llternit
 	•	CLI Root: a://
 	•	Grammar: A://{layer}/{component}
 	•	Structure: layered OS
@@ -417,7 +417,7 @@ No new subsystem may be introduced without:
 
 ## Long-Term Goal
 
-A://rchitech is designed to become:
+A://llternit is designed to become:
 
 - the substrate for agent engineering
 - the Linux of agent runtimes

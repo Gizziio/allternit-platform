@@ -1,5 +1,5 @@
 {
-  description = "A2R Unified Development Environment";
+  description = "Allternit Unified Development Environment";
 
   inputs = {
     nixpkgs.url = "github:NixOS/nixpkgs/nixos-unstable";
@@ -90,44 +90,44 @@
       {
         packages = {
           default = pkgs.buildEnv {
-            name = "a2r-unified-env";
+            name = "allternit-unified-env";
             paths = commonTools ++ nodeTools ++ pythonTools ++ rustTools ++ goTools ++ infraTools;
           };
 
           minimal = pkgs.buildEnv {
-            name = "a2r-minimal-env";
+            name = "allternit-minimal-env";
             paths = commonTools;
           };
 
           node = pkgs.buildEnv {
-            name = "a2r-node-env";
+            name = "allternit-node-env";
             paths = commonTools ++ nodeTools;
           };
 
           python = pkgs.buildEnv {
-            name = "a2r-python-env";
+            name = "allternit-python-env";
             paths = commonTools ++ pythonTools;
           };
 
           rust = pkgs.buildEnv {
-            name = "a2r-rust-env";
+            name = "allternit-rust-env";
             paths = commonTools ++ rustTools;
           };
 
           go = pkgs.buildEnv {
-            name = "a2r-go-env";
+            name = "allternit-go-env";
             paths = commonTools ++ goTools;
           };
         };
 
         devShells = {
           default = pkgs.mkShell {
-            name = "a2r-unified-shell";
+            name = "allternit-unified-shell";
             
             buildInputs = commonTools ++ nodeTools ++ pythonTools ++ rustTools ++ goTools ++ infraTools;
 
             shellHook = ''
-              echo "🚀 Welcome to A2R Unified Development Environment!"
+              echo "🚀 Welcome to Allternit Unified Development Environment!"
               echo ""
               echo "Available tools:"
               echo "  📦 Node.js    : $(node --version 2>/dev/null || echo 'not found')"
@@ -167,7 +167,7 @@
           };
 
           node = pkgs.mkShell {
-            name = "a2r-node-shell";
+            name = "allternit-node-shell";
             buildInputs = commonTools ++ nodeTools;
             shellHook = ''
               echo "🚀 Node.js Development Environment"
@@ -177,7 +177,7 @@
           };
 
           python = pkgs.mkShell {
-            name = "a2r-python-shell";
+            name = "allternit-python-shell";
             buildInputs = commonTools ++ pythonTools;
             shellHook = ''
               echo "🐍 Python Development Environment"
@@ -189,7 +189,7 @@
           };
 
           rust = pkgs.mkShell {
-            name = "a2r-rust-shell";
+            name = "allternit-rust-shell";
             buildInputs = commonTools ++ rustTools;
             shellHook = ''
               echo "⚙️  Rust Development Environment"
@@ -201,7 +201,7 @@
           };
 
           go = pkgs.mkShell {
-            name = "a2r-go-shell";
+            name = "allternit-go-shell";
             buildInputs = commonTools ++ goTools;
             shellHook = ''
               echo "🐹 Go Development Environment"

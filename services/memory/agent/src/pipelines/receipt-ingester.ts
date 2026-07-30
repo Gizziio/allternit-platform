@@ -215,7 +215,7 @@ export class ReceiptIngester {
  */
 async function main(): Promise<void> {
   console.log('╔══════════════════════════════════════════════════════════╗');
-  console.log('║     Allternitchitech Receipt Ingestion Pipeline                ║');
+  console.log('║     Allternit Receipt Ingestion Pipeline                ║');
   console.log('╚══════════════════════════════════════════════════════════╝');
   console.log('');
 

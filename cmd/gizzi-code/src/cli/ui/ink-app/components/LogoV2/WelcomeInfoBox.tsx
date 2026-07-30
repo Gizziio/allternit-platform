@@ -33,10 +33,17 @@ export function WelcomeInfoBox(): React.ReactNode {
 
   const [brainStats, setBrainStats] = useState<{ total_memories: number } | null>(null)
   const [workspace, setWorkspace] = useState<{ name?: string; path: string } | null>(null)
+
+  // Resolve cwd and other sync state BEFORE the effect so the effect closure
+  // does not reference a const declared after it (TDZ crash in the bundle).
+  const cwd = getCwdState()
+  const projectDir = getOriginalCwd()
+  const sessionId = getSessionId()
+
   useEffect(() => {
     try {
-      const sessionId = getSessionId()
-      const stats = BrainService.stats(sessionId || 'default')
+      const effectSessionId = getSessionId()
+      const stats = BrainService.stats(effectSessionId || 'default')
       setBrainStats(stats)
     } catch {
       setBrainStats(null)
@@ -57,9 +64,6 @@ export function WelcomeInfoBox(): React.ReactNode {
   })
 
   const modelDisplay = renderModelName(model)
-  const cwd = getCwdState()
-  const projectDir = getOriginalCwd()
-  const sessionId = getSessionId()
   const version =
     (typeof MACRO !== 'undefined' ? MACRO.VERSION : undefined) ?? 'unknown'
 

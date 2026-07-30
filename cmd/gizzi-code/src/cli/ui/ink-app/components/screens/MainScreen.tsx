@@ -2,7 +2,7 @@
 import React, { useState, useCallback, useEffect } from 'react';
 import { Box, Text, useApp, useInput } from '../../ink';
 import type { Session, ToolUse, ToolResult, CommandOption } from '../../types';
-import { getHarnessService } from '../../services/harness';
+import { getHarnessModel, getHarnessService } from '../../services/harness';
 import { CommandPalette } from '../CommandPalette';
 import { useCommandRegistry } from '../../hooks/useCommandRegistry';
 
@@ -49,7 +49,7 @@ export const MainScreen: React.FC<MainScreenProps> = ({
   // UI state
   const [showCommandPalette, setShowCommandPalette] = useState(false);
   const [currentAgent, setCurrentAgent] = useState('default');
-  const [currentModel, setCurrentModel] = useState('claude-3-5-haiku');
+  const [currentModel, setCurrentModel] = useState(getHarnessModel());
   // Spinner animation
   const [spinnerFrame, setSpinnerFrame] = useState(0);
   const spinners = ['◐', '◓', '◑', '◒'];
@@ -93,7 +93,8 @@ export const MainScreen: React.FC<MainScreenProps> = ({
         value: 'model.cycle_recent',
         footer: 'Ctrl+M',
         onSelect: () => {
-          setCurrentModel(m => m === 'claude-3-5-haiku' ? 'gpt-4' : 'claude-3-5-haiku');
+          const harnessModel = getHarnessModel();
+          setCurrentModel(m => m === harnessModel ? 'gpt-4' : harnessModel);
           addItem({ type: 'system', content: `Switched to ${currentModel}` });
         },
       },

@@ -1,5 +1,5 @@
 ---
-prompt_id: "a2r.pack.evidence.receipt_emit"
+prompt_id: "allternit.pack.evidence.receipt_emit"
 version: "v1"
 description: "Emit tamper-evident receipt for tool execution or decision"
 model: "any"
@@ -57,7 +57,7 @@ outputs: ["receipt.json"]
 
 ### STEP 4: Receipt Storage
 - Write: receipt.json to receipts directory
-- Path: .a2r/receipts/{{receipt_type}}/{{receipt_id}}.json
+- Path: .allternit/receipts/{{receipt_type}}/{{receipt_id}}.json
 - Verify: File written and readable
 
 ### STEP 5: Indexing

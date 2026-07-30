@@ -1,5 +1,5 @@
 ---
-prompt_id: "a2r.pack.core.context_prime@v1"
+prompt_id: "allternit.pack.core.context_prime@v1"
 version: "v1"
 description: "Prime an agent session with deterministic context injection"
 argument_hint: "context_prime --wih={{wih_id}} --dag={{dag_id}}"
@@ -11,9 +11,9 @@ execution_permission_mode: "default"
 hooks_required: ["SessionStart", "UserPromptSubmit"]
 outputs: ["injection_marker.json"]
 writes_policy:
-  workspace_root: ".a2r/"
-  allow_write_paths: [".a2r/runner/{{run_id}}/markers/"]
-  deny_write_paths: [".a2r/ledger/**", ".a2r/leases/**"]
+  workspace_root: ".allternit/"
+  allow_write_paths: [".allternit/runner/{{run_id}}/markers/"]
+  deny_write_paths: [".allternit/ledger/**", ".allternit/leases/**"]
 role: "orchestrator"
 timeout_s: 30
 requires_wih: true
@@ -112,7 +112,7 @@ report:
   status: PASS|FAIL|BLOCKED
   summary: "Context primed successfully"
   artifacts:
-    - path: ".a2r/runner/{{run_id}}/markers/injection_marker.json"
+    - path: ".allternit/runner/{{run_id}}/markers/injection_marker.json"
       kind: "marker"
       hash: "{{injection_marker_hash}}"
   context_pack:

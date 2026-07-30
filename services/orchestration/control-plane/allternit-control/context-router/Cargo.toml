@@ -2,7 +2,7 @@
 name = "allternit-context-router"
 version = "0.1.0"
 edition = "2021"
-description = "Allternitchitech context routing and precision hydration engine"
+description = "Allternit context routing and precision hydration engine"
 
 [dependencies]
 serde = { version = "1.0", features = ["derive"] }

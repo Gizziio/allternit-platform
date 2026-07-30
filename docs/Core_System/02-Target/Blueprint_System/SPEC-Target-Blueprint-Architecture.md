@@ -1,8 +1,8 @@
-# A2R Workflow Blueprints - System Architecture
+# Allternit Workflow Blueprints - System Architecture
 
 ## Executive Summary
 
-A2R Workflow Blueprints is a **manifest-based packaging system** that orchestrates existing A2R infrastructure (Cowork runtime, .gizzi persistence, connectors, plugins) into installable, shareable workflow templates.
+Allternit Workflow Blueprints is a **manifest-based packaging system** that orchestrates existing Allternit infrastructure (Cowork runtime, .gizzi persistence, connectors, plugins) into installable, shareable workflow templates.
 
 **Core Principle**: Blueprints are YAML manifests, not new infrastructure.
 
@@ -12,12 +12,12 @@ A2R Workflow Blueprints is a **manifest-based packaging system** that orchestrat
 
 ```
 ┌─────────────────────────────────────────────────────────────────────────────────────┐
-│                              A2R WORKFLOW BLUEPRINTS                                │
+│                              Allternit WORKFLOW BLUEPRINTS                                │
 │                              SYSTEM ARCHITECTURE                                    │
 └─────────────────────────────────────────────────────────────────────────────────────┘
 
 ┌──────────────────┐     ┌──────────────────┐     ┌──────────────────┐
-│   CLI Interface  │────▶│  Blueprint Core  │────▶│  A2R Infrastructure│
+│   CLI Interface  │────▶│  Blueprint Core  │────▶│  Allternit Infrastructure│
 │    (gizzi)       │     │   (New Layer)    │     │   (Existing)       │
 └──────────────────┘     └──────────────────┘     └──────────────────┘
          │                        │                       │
@@ -56,7 +56,7 @@ User-facing command interface for blueprint operations.
 
 ### Components
 ```
-a2r/cli/blueprint/
+allternit/cli/blueprint/
 ├── __init__.py
 ├── main.py              # Entry point, argument parsing
 ├── commands/
@@ -89,7 +89,7 @@ Parse, validate, and resolve blueprint manifests.
 
 ### Components
 ```
-a2r/blueprint/
+allternit/blueprint/
 ├── __init__.py
 ├── models/
 │   ├── __init__.py
@@ -150,7 +150,7 @@ Install blueprint components into .gizzi workspace.
 
 ### Components
 ```
-a2r/blueprint/
+allternit/blueprint/
 ├── installer/
 │   ├── __init__.py
 │   ├── installer.py     # Main installer orchestrator
@@ -240,11 +240,11 @@ class AgentInstallationStep(InstallationStep):
 
 ---
 
-## Layer 4: A2R Infrastructure Integration
+## Layer 4: Allternit Infrastructure Integration
 
 ### Cowork Runtime Integration
 ```python
-# a2r/blueprint/runtime/cowork_adapter.py
+# allternit/blueprint/runtime/cowork_adapter.py
 
 class CoworkAdapter:
     """Integrate blueprints with Cowork runtime."""
@@ -299,7 +299,7 @@ class CoworkAdapter:
 @dataclass
 class Blueprint:
     """Top-level blueprint model."""
-    api_version: str          # "a2r.io/v1"
+    api_version: str          # "allternit.io/v1"
     kind: str                 # "WorkflowBlueprint"
     
     metadata: BlueprintMetadata
@@ -391,7 +391,7 @@ class Step:
 
 ### Secret Storage
 ```
-.a2r/secrets/
+.allternit/secrets/
 ├── keys/                  # Encryption keys
 │   └── master.key        # Master encryption key
 ├── connectors/
@@ -468,7 +468,7 @@ Expected one of: token, oauth, basic
 Got: "api_key"
 
 Fix: Change auth_type to "token" for GitHub connector.
-See: https://docs.a2r.io/connectors/github
+See: https://docs.allternit.io/connectors/github
 ```
 
 ---
@@ -488,7 +488,7 @@ See: https://docs.a2r.io/connectors/github
 
 ## Migration Path
 
-### From Existing A2R
+### From Existing Allternit
 ```bash
 # Users with existing .gizzi workspace
 gizzi blueprint init

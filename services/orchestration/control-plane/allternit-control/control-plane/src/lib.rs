@@ -1565,7 +1565,7 @@ mod tests {
         let config = ControlPlaneConfig {
             control_plane_id: "test-control-plane-001".to_string(),
             name: "Test Control Plane".to_string(),
-            description: "A test control plane for Allternitchitech".to_string(),
+            description: "A test control plane for Allternit".to_string(),
             version: "1.0.0".to_string(),
             enabled_features: vec![
                 ControlFeature::AgentInspection,

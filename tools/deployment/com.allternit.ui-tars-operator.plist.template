@@ -3,7 +3,7 @@
 <plist version="1.0">
 <dict>
     <key>Label</key>
-    <string>com.a2rchitech.ui-tars-operator</string>
+    <string>com.allternit.ui-tars-operator</string>
     <key>ProgramArguments</key>
     <array>
         <string>/usr/bin/true</string>

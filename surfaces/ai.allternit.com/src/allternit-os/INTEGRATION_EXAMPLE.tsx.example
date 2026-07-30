@@ -1,8 +1,8 @@
 /**
- * A2rchitect Super-Agent OS - Integration Example
+ * Allternit Super-Agent OS - Integration Example
  * 
- * This file demonstrates how to integrate the A2rCanvas into the existing
- * A2R Platform shell. Copy relevant parts into your main app layout.
+ * This file demonstrates how to integrate the AllternitCanvas into the existing
+ * Allternit Platform shell. Copy relevant parts into your main app layout.
  */
 
 import React, { useEffect } from 'react';
@@ -17,7 +17,7 @@ const logger = createModuleLogger('');
 // Example 1: Basic Layout Integration
 // ============================================================================
 
-export function ShellWithA2rCanvas() {
+export function ShellWithAllternitCanvas() {
   return (
     <div className="flex h-screen bg-white dark:bg-gray-900">
       {/* Main content area - switches between Chat/Code/Browser views */}
@@ -26,7 +26,7 @@ export function ShellWithA2rCanvas() {
       </main>
 
       {/* Utility Pane - persists across view switches */}
-      <A2rCanvas 
+      <AllternitCanvas 
         className="flex-shrink-0"
         showTabs={true}
         resizable={true}
@@ -342,7 +342,7 @@ function BrowserView() {
 // ============================================================================
 
 export default {
-  ShellWithA2rCanvas,
+  ShellWithAllternitCanvas,
   ChatView,
   CodeView,
   BrowserView,

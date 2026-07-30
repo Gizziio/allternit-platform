@@ -2,7 +2,7 @@
 name = "allternit-memory-provider"
 version = "0.1.0"
 edition = "2021"
-description = "Common interface and traits for memory providers in Allternitchitech"
+description = "Common interface and traits for memory providers in Allternit"
 license = "MIT"
 
 [dependencies]

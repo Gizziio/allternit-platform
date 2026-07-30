@@ -6,7 +6,7 @@ COPY Cargo.toml Cargo.lock ./
 COPY apps ./apps
 COPY packages ./packages
 
-RUN cargo build -p a2rchitech-api --release
+RUN cargo build -p allternit-api --release
 
 FROM debian:bookworm-slim
 
@@ -14,24 +14,24 @@ RUN apt-get update \
     && apt-get install -y --no-install-recommends ca-certificates curl \
     && rm -rf /var/lib/apt/lists/*
 
-RUN useradd -m a2r
+RUN useradd -m allternit
 WORKDIR /app
 
-COPY --from=builder /app/target/release/a2rchitech-api /usr/local/bin/a2rchitech-api
+COPY --from=builder /app/target/release/allternit-api /usr/local/bin/allternit-api
 
 RUN mkdir -p /data \
-    && chown -R a2r:a2r /data
+    && chown -R allternit:allternit /data
 
-USER a2r
+USER allternit
 
-ENV A2RCHITECH_API_BIND=0.0.0.0:3000 \
-    A2RCHITECH_LEDGER_PATH=/data/a2rchitech.jsonl \
-    A2RCHITECH_DB_PATH=/data/a2rchitech.db \
-    A2RCHITECH_API_IDENTITY=api-service \
-    A2RCHITECH_API_TENANT=default \
-    A2RCHITECH_API_BOOTSTRAP_POLICY=true \
-    A2RCHITECH_API_POLICY_ENFORCE=true
+ENV Allternit_API_BIND=0.0.0.0:3000 \
+    Allternit_LEDGER_PATH=/data/allternit.jsonl \
+    Allternit_DB_PATH=/data/allternit.db \
+    Allternit_API_IDENTITY=api-service \
+    Allternit_API_TENANT=default \
+    Allternit_API_BOOTSTRAP_POLICY=true \
+    Allternit_API_POLICY_ENFORCE=true
 
 EXPOSE 3000
 
-CMD ["a2rchitech-api"]
+CMD ["allternit-api"]

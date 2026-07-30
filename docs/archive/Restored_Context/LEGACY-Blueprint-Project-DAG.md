@@ -1,4 +1,4 @@
-# A2R Workflow Blueprints - Master Project DAG
+# Allternit Workflow Blueprints - Master Project DAG
 
 ## Project Overview
 **Start Date**: Week 1  
@@ -7,7 +7,7 @@
 
 ```
 ┌─────────────────────────────────────────────────────────────────────────────────────────────┐
-│                              A2R WORKFLOW BLUEPRINTS - MASTER DAG                           │
+│                              Allternit WORKFLOW BLUEPRINTS - MASTER DAG                           │
 └─────────────────────────────────────────────────────────────────────────────────────────────┘
 
 PHASE 0: FOUNDATION (Weeks 1-3) ─────────────────────────────────────────────────────────────

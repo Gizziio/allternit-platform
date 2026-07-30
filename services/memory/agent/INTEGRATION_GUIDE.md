@@ -1,4 +1,4 @@
-# Allternitchitech Memory Agent - Integration Guide
+# Allternit Memory Agent - Integration Guide
 
 ## Overview
 

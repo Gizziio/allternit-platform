@@ -42,6 +42,12 @@ export async function validateModel(
     return { valid: true }
   }
 
+  // Provider-prefixed models (e.g. local-mlx/qwen3.6-35b-a3b-4bit) are
+  // user-defined local/3P endpoints. Skip the Anthropic API probe.
+  if (normalizedModel.includes('/')) {
+    return { valid: true }
+  }
+
   // Check if it matches ANTHROPIC_CUSTOM_MODEL_OPTION (pre-validated by the user)
   if (normalizedModel === process.env.ANTHROPIC_CUSTOM_MODEL_OPTION) {
     return { valid: true }

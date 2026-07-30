@@ -2,7 +2,7 @@
 name = "allternit-hooks"
 version = "0.1.0"
 edition = "2021"
-description = "Allternitchitech event-driven lifecycle hooks middleware"
+description = "Allternit event-driven lifecycle hooks middleware"
 
 [dependencies]
 axum = { workspace = true }

@@ -893,7 +893,7 @@ impl IntentDispatcher {
             tools.len()
         );
 
-        let system_prompt = "You are the Allternitchitech Kernel. Given a user intent, decide which tools to call. \
+        let system_prompt = "You are the Allternit Kernel. Given a user intent, decide which tools to call. \
                              If a tool is relevant, return a tool call. If no tools are needed, answer directly. \
                              Always maintain system safety.";
 

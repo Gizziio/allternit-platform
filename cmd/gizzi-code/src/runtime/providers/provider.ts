@@ -891,6 +891,7 @@ export namespace Provider {
     "gpt4": "openai/gpt-4.1",
     "o3": "openai/o3",
     "o4-mini": "openai/o4-mini",
+    "qwen": "local-mlx/qwen3.6-35b-a3b-4bit",
     "auto": "auto/auto",
   }
 

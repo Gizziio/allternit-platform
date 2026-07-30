@@ -7,7 +7,7 @@
     @/Users/macbook/Desktop/allternit-workspace/allternit/docs/_archive/legacy-specs/CAPSUL
     E_SDK_ARCHITECTURE.md @/Users/macbook/Desktop/allternit-workspace/allternit/docs/_archi
     ve/legacy-specs/CAPSULE_SDK_INTEGRATION.md @/Users/macbook/Desktop/allternit-workspace/a
-    2rchitech/docs/_archive/legacy-specs/CAPSULE_SDK_SETUP.md @/Users/macbook/Desktop/allternitchit
+    2llternit/docs/_archive/legacy-specs/CAPSULE_SDK_SETUP.md @/Users/macbook/Desktop/allternitchit
     ech-workspace/allternit/docs/_archive/legacy-specs/canvas-runtime.md /Users/macbook/Desk
     top/allternit-workspace/allternit/docs/_archive/legacy-specs/organized/Architecture/LAW
      /Users/macbook/Desktop/allternit-workspace/allternit/docs/_archive/legacy-specs/organi
@@ -98,7 +98,7 @@
     nized/Architecture/UI/Architecture_and_Prompt_Suites.md 
     @/Users/macbook/Desktop/allternit-workspace/allternit/docs/_archive/legacy-specs/orga
     nized/Architecture/UI/CanvasProtocol.md @/Users/macbook/Desktop/allternit-workspace/a2
-    rchitech/docs/_archive/legacy-specs/organized/Architecture/UI/CapsuleProtocol.md 
+    llternit/docs/_archive/legacy-specs/organized/Architecture/UI/CapsuleProtocol.md 
     @/Users/macbook/Desktop/allternit-workspace/allternit/docs/_archive/legacy-specs/orga
     nized/Architecture/UI/Capsules.md 
     @/Users/macbook/Desktop/allternit-workspace/allternit/docs/_archive/legacy-specs/orga

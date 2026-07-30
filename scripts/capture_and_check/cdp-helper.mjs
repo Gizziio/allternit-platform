@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 /**
  * Chrome DevTools Protocol (CDP) Helper
- * Automates Chrome for A2R development via HTTP CDP endpoints
+ * Automates Chrome for Allternit development via HTTP CDP endpoints
  */
 
 import { execSync } from 'child_process';
@@ -51,8 +51,8 @@ async function listTargets() {
   
   console.log('\n📋 Available Targets:');
   targets.forEach((t, i) => {
-    const isA2R = t.url.includes('localhost:5177') ? ' ⭐ A2R' : '';
-    console.log(`\n   ${i + 1}. ${t.title}${isA2R}`);
+    const isAllternit = t.url.includes('localhost:5177') ? ' ⭐ Allternit' : '';
+    console.log(`\n   ${i + 1}. ${t.title}${isAllternit}`);
     console.log(`      URL: ${t.url.substring(0, 60)}${t.url.length > 60 ? '...' : ''}`);
     console.log(`      Type: ${t.type}, ID: ${t.id}`);
   });
@@ -177,7 +177,7 @@ async function main() {
       console.log(`
 ╔══════════════════════════════════════════════════════════╗
 ║     Chrome DevTools Protocol (CDP) Helper                ║
-║     For A2R Browser Development                          ║
+║     For Allternit Browser Development                          ║
 ╚══════════════════════════════════════════════════════════╝
 
 Usage: node cdp-helper.mjs <command> [args]
@@ -209,7 +209,7 @@ Benefits over Electron:
   ✅ Native Chrome DevTools
   ✅ Lower memory usage
 
-Stop Chrome: pkill -f a2r-chrome-dev
+Stop Chrome: pkill -f allternit-chrome-dev
 `);
   }
 }
