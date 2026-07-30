@@ -21,7 +21,7 @@ skip() { printf '  [skip] %s\n' "$1"; }
 echo "== kimi =="
 KIMI_HOME="${KIMI_CODE_HOME:-$HOME/.kimi-code}"
 if [ -f "$KIMI_HOME/config.toml" ] && grep -q 'steer-stop\.sh' "$KIMI_HOME/config.toml"; then
-  skip "already registered in $KIMI_HOME/config.toml"
+  skip "Stop hook already registered in $KIMI_HOME/config.toml"
 else
   mkdir -p "$KIMI_HOME"; touch "$KIMI_HOME/config.toml"
   cat >> "$KIMI_HOME/config.toml" <<'EOF'
@@ -35,6 +35,23 @@ command = "bash .steering/bin/steer-stop.sh"
 timeout = 600
 EOF
   ok "added [[hooks]] Stop entry to $KIMI_HOME/config.toml"
+fi
+
+if [ -f "$KIMI_HOME/config.toml" ] && grep -q 'steer-pre-commit-gate\.sh' "$KIMI_HOME/config.toml"; then
+  skip "commit gate already registered in $KIMI_HOME/config.toml"
+else
+  mkdir -p "$KIMI_HOME"; touch "$KIMI_HOME/config.toml"
+  cat >> "$KIMI_HOME/config.toml" <<'EOF'
+
+# Steering commit gate: the steering agent must APPROVE git commit/push before
+# it executes. Fails open on consult errors; no-ops for non-git commands.
+[[hooks]]
+event = "PreToolUse"
+matcher = "Bash"
+command = "bash .steering/bin/steer-pre-commit-gate.sh"
+timeout = 600
+EOF
+  ok "added [[hooks]] PreToolUse commit gate to $KIMI_HOME/config.toml"
 fi
 
 echo "== Claude Code =="
@@ -51,24 +68,30 @@ python3 - "$CODEX_HOME" <<'PY'
 import json, os, sys
 home = sys.argv[1]
 path = os.path.join(home, "hooks.json")
-entry = {"type": "command", "command": "bash .steering/bin/steer-stop.sh", "timeout": 600}
+stop_entry = {"type": "command", "command": "bash .steering/bin/steer-stop.sh", "timeout": 600}
+gate_entry = {"type": "command", "command": "bash .steering/bin/steer-pre-commit-gate.sh", "timeout": 600}
 cfg = {"hooks": {}}
 if os.path.exists(path):
     with open(path) as f:
         cfg = json.load(f)
     cfg.setdefault("hooks", {})
-stop = cfg["hooks"].setdefault("Stop", [])
-for group in stop:
-    hooks = group.get("hooks", [])
-    if any("steer-stop.sh" in h.get("command", "") for h in hooks):
-        print("  [skip] already registered in hooks.json")
-        break
-else:
-    stop.append({"hooks": [entry]})
+changed = False
+for event, entry, matcher in (("Stop", stop_entry, None), ("PreToolUse", gate_entry, "Bash|shell")):
+    groups = cfg["hooks"].setdefault(event, [])
+    if any("steer-" in h.get("command", "") and entry["command"].split()[-1] in h.get("command", "")
+           for g in groups for h in g.get("hooks", [])):
+        print(f"  [skip] {event} already registered in hooks.json")
+        continue
+    group = {"hooks": [entry]}
+    if matcher:
+        group["matcher"] = matcher
+    groups.append(group)
+    changed = True
+    print(f"  [ok] added {event} hook to hooks.json")
+if changed:
     with open(path, "w") as f:
         json.dump(cfg, f, indent=2)
         f.write("\n")
-    print("  [ok] added Stop hook to hooks.json")
 PY
 CT="$CODEX_HOME/config.toml"
 touch "$CT"

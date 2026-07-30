@@ -9,9 +9,25 @@ Flow:
 
 1. The working agent updates `checkpoint.md` (Goal / Just did / Next / Open questions)
    at meaningful checkpoints. Its AGENTS.md instructions require this.
-2. The hook sends `prompt.md` + checkpoint + git state to the steering agent.
-3. Steering replies `APPROVE` (turn ends) or `STEER` + answers/guidance, which is
-   injected back into the working session as a `[steering]` message.
+2. The hook sends `prompt.md` (the review rubric) + checkpoint + **evidence** —
+   git status, diff stat, the actual diff (capped at 16KB), and test output when
+   `.steering/test-command` exists (a shell script the hook runs, tail 4KB kept) —
+   to the steering agent.
+3. Steering replies `APPROVE` (turn ends) or `STEER` + answers/guidance tagged by
+   severity (BLOCKER/MAJOR/MINOR), which is injected back into the working
+   session as a `[steering]` message.
+
+There is also a **hard commit gate** (`steer-pre-commit-gate.sh`, `PreToolUse` on
+shell tools): `git commit` / `git push` only execute after the steering agent
+APPROVES them. All other commands pass without a consult.
+
+The steering agent is deliberately a **different model family** than the usual
+worker — same-model reviewers share the worker's blind spots. Default: claude
+(see `AO_CONSULT_AGENT_CMD` below).
+
+Operational note: a cold consult (fresh `ao-steer` spawn) includes the agent's
+first-turn repo exploration and can exceed five minutes; the hook's 600s timeout
+covers it, and subsequent consults reuse the warm session.
 
 ## Per-CLI wiring
 
@@ -20,9 +36,9 @@ Run `.steering/bin/steer-install.sh` once per machine (idempotent; re-run after
 
 | CLI | Mechanism | Where |
 |---|---|---|
-| kimi | `[[hooks]]` Stop entry | `~/.kimi-code/config.toml` |
-| Claude Code | project `Stop` hook | `.claude/settings.json` — **committed**, active automatically (approve the trust prompt on first run) |
-| codex | Claude-style `Stop` hook + `codex_hooks` feature flag | `~/.codex/hooks.json`, `~/.codex/config.toml` |
+| kimi | `[[hooks]]` Stop + PreToolUse entries | `~/.kimi-code/config.toml` |
+| Claude Code | project Stop + PreToolUse hooks | `.claude/settings.json` — **committed**, active automatically (approve the trust prompt on first run) |
+| codex | Claude-style Stop + PreToolUse hooks + `codex_hooks` feature flag | `~/.codex/hooks.json`, `~/.codex/config.toml` |
 | gizzi-code | `allternit-steering` plugin (`session.stop` hook) | copied to `~/.gizzi/plugins/` from `tools/agent-orchestrator/gizzi-plugin/` |
 | agy | no hook support | convention only (AGENTS.md checkpoint rule) |
 
@@ -40,5 +56,9 @@ so the global registrations are safe for other repos.
   across checkpoints. Falls back to `kimi -p` (fresh session per consult) when
   ao-consult is unavailable. Override either with `STEER_CONSULT_CMD` (reads the
   prompt on stdin, writes the answer on stdout). The steering agent itself is
-  CLI-agnostic too: set `AO_CONSULT_AGENT_CMD` (e.g. `"claude"`,
-  `"codex --dangerously-bypass-approvals-and-sandbox"`) to change it.
+  CLI-agnostic: set `AO_CONSULT_AGENT_CMD` to change it (default
+  `claude --dangerously-skip-permissions`; takes effect when `ao-steer` is
+  (re)spawned — `ao-kill steer` to force a respawn).
+- Test evidence: put a runnable shell script at `.steering/test-command` and the
+  Stop hook will run it (2 min cap where `timeout`/`gtimeout` exists) and attach
+  the output tail to every consult.

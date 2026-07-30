@@ -10,6 +10,18 @@
           }
         ]
       }
+    ],
+    "PreToolUse": [
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash .steering/bin/steer-pre-commit-gate.sh",
+            "timeout": 600
+          }
+        ]
+      }
     ]
   }
 }

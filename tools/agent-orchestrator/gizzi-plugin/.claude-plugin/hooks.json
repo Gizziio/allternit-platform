@@ -1,5 +1,5 @@
 {
-  "description": "Steering checkpoint Stop hook. The command runs in the session's project directory; it no-ops unless the project has .steering/checkpoint.md.",
+  "description": "Steering checkpoint Stop hook + commit gate. Commands run in the session's project directory; they no-op unless the project has .steering/checkpoint.md.",
   "hooks": {
     "Stop": [
       {
@@ -7,6 +7,18 @@
           {
             "type": "command",
             "command": "bash .steering/bin/steer-stop.sh",
+            "timeout": 600
+          }
+        ]
+      }
+    ],
+    "PreToolUse": [
+      {
+        "matcher": "Bash|shell",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash .steering/bin/steer-pre-commit-gate.sh",
             "timeout": 600
           }
         ]

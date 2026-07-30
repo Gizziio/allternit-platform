@@ -15,7 +15,10 @@ set -uo pipefail
 REPO="${1:-$PWD}"
 SLUG="${AO_CONSULT_SLUG:-steer}"
 TIMEOUT="${AO_CONSULT_TIMEOUT:-540}"
-AGENT_CMD="${AO_CONSULT_AGENT_CMD:-kimi --yolo}"
+# Default steering agent is a DIFFERENT model family than the usual worker
+# (kimi) — same-model checkers share the worker's blind spots. Override per
+# machine with AO_CONSULT_AGENT_CMD.
+AGENT_CMD="${AO_CONSULT_AGENT_CMD:-claude --dangerously-skip-permissions}"
 
 REQDIR="$HOME/.agent-orchestrator/consults/$(date +%Y%m%d-%H%M%S)-$$"
 mkdir -p "$REQDIR"

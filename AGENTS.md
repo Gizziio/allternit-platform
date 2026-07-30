@@ -6,7 +6,7 @@
 
 ## Steering checkpoints
 
-This repo is wired for hook-based steering: when an agent session working here ends a turn, a Kimi Code `Stop` hook consults a **separate steering agent** — but only if `.steering/checkpoint.md` changed since the last review. So at every meaningful checkpoint (subtask finished, design decision made, before a risky change), update `.steering/checkpoint.md`: `Goal`, `Just did`, `Next`, `Open questions`. The steering agent's answers/guidance come back injected as a `[steering]` message — treat them as authoritative and act on them before continuing. See `.steering/README.md`. Kill switch: `touch .steering/off`.
+This repo is wired for hook-based steering: when an agent session working here ends a turn, a `Stop` hook consults a **separate steering agent** (a different model family, run via the agent-orchestrator tmux tooling) — but only if `.steering/checkpoint.md` changed since the last review. So at every meaningful checkpoint (subtask finished, design decision made, before a risky change), update `.steering/checkpoint.md`: `Goal`, `Just did`, `Next`, `Open questions`. The steering agent's answers/guidance come back injected as a `[steering]` message — treat them as authoritative and act on them before continuing. Additionally, `git commit`/`git push` pass through a hard gate: they only execute after the steering agent approves. See `.steering/README.md`. Kill switch: `touch .steering/off`.
 
 ## Agent creation checklist
 
