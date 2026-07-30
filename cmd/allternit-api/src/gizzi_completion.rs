@@ -84,17 +84,16 @@ pub async fn complete(
         }
     };
 
-    // Send the message. Gizzi message parts only accept a fixed set of types,
-    // and "system" is not one of them, so we prepend the system prompt to the
-    // user text if one was provided.
-    let full_prompt = if let Some(system_text) = system {
-        format!("{system_text}\n\n{prompt}")
-    } else {
-        prompt.to_string()
-    };
-    let message_payload = json!({
-        "parts": [{ "type": "text", "text": full_prompt }]
+    // Send the message. Gizzi's PromptInput accepts a real "system" field,
+    // so pass the system prompt there instead of folding it into the text.
+    // "+" prefix: APPEND to gizzi's default assembled system prompt rather
+    // than replace it.
+    let mut message_payload = json!({
+        "parts": [{ "type": "text", "text": prompt }]
     });
+    if let Some(system_text) = system.map(str::trim).filter(|s| !s.is_empty()) {
+        message_payload["system"] = json!(format!("+{system_text}"));
+    }
 
     if let Err(err) = client
         .post(format!("{}/v1/session/{}/message", gizzi, session_id))

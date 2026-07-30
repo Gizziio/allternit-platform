@@ -342,6 +342,7 @@ pub async fn stream_chat_through_gizzi(
     gizzi_base: &str,
     session_id: &str,
     message: &str,
+    system: Option<&str>,
     runtime_model_id: Option<&str>,
     agent_provider: Option<&str>,
     agent_model: Option<&str>,
@@ -423,10 +424,15 @@ pub async fn stream_chat_through_gizzi(
         }
     };
 
-    let message_payload = json!({
+    let mut message_payload = json!({
         "parts": [{ "type": "text", "text": message }],
         "model": model,
     });
+    // "+" prefix: APPEND to gizzi's default assembled system prompt rather
+    // than replace it.
+    if let Some(system) = system.map(str::trim).filter(|s| !s.is_empty()) {
+        message_payload["system"] = json!(format!("+{system}"));
+    }
 
     let message_url = format!(
         "{}/session/{}/message",

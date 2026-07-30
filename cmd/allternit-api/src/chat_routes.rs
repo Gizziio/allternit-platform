@@ -59,19 +59,13 @@ async fn handle_agent_chat(
         .get("systemPrompt")
         .and_then(|value| value.as_str())
         .filter(|value| !value.trim().is_empty());
-    let effective_message = match system_prompt {
-        Some(system) => format!(
-            "<system-instructions>\n{}\n</system-instructions>\n\n<user-request>\n{}\n</user-request>",
-            system, request.message
-        ),
-        None => request.message.clone(),
-    };
 
     let gizzi_base = state.config.terminal_server_url();
     stream_chat_through_gizzi(
         &gizzi_base,
         &request.chat_id,
-        &effective_message,
+        &request.message,
+        system_prompt,
         request.model_id.as_deref(),
         request.agent_provider.as_deref(),
         request.agent_model.as_deref(),

@@ -1961,17 +1961,25 @@ async fn execute_agent_run(
         ));
     }
 
-    // Gizzi message parts only accept a fixed set of part types (no "system"),
-    // so prepend the agent's system prompt to the user input when present.
-    let full_prompt = match &agent.system_prompt {
-        Some(sp) if !sp.trim().is_empty() => format!("{}\n\n{}", sp.trim(), input),
-        _ => input.to_string(),
-    };
-    let message_payload = json!({
+    // Gizzi's PromptInput accepts a real "system" field; send the agent's
+    // system prompt there instead of folding it into the user message. The
+    // "+" prefix tells gizzi to APPEND to its default assembled system
+    // prompt (environment block, canonical instructions) rather than
+    // replace it — matches the old prepend behavior, which always kept
+    // gizzi's default prompt alongside the agent's.
+    let system = agent
+        .system_prompt
+        .as_deref()
+        .map(str::trim)
+        .filter(|sp| !sp.is_empty());
+    let mut message_payload = json!({
         "model": { "providerID": agent.provider, "modelID": agent.model },
         "agent": "build",
-        "parts": [{ "type": "text", "text": full_prompt }],
+        "parts": [{ "type": "text", "text": input }],
     });
+    if let Some(sp) = system {
+        message_payload["system"] = json!(format!("+{sp}"));
+    }
     let message = match client
         .post(format!("{}/v1/session/{}/message", gizzi, session_id))
         .json(&message_payload)
@@ -2381,15 +2389,21 @@ async fn gizzi_run_once(
         ));
     }
 
-    let full_prompt = match &agent.system_prompt {
-        Some(sp) if !sp.trim().is_empty() => format!("{}\n\n{}", sp.trim(), input),
-        _ => input.to_string(),
-    };
-    let message_payload = json!({
+    // "+" prefix: APPEND to gizzi's default assembled system prompt rather
+    // than replace it (see execute_agent_run above for rationale).
+    let system = agent
+        .system_prompt
+        .as_deref()
+        .map(str::trim)
+        .filter(|sp| !sp.is_empty());
+    let mut message_payload = json!({
         "model": { "providerID": agent.provider, "modelID": agent.model },
         "agent": "build",
-        "parts": [{ "type": "text", "text": full_prompt }],
+        "parts": [{ "type": "text", "text": input }],
     });
+    if let Some(sp) = system {
+        message_payload["system"] = json!(format!("+{sp}"));
+    }
     let message = match client
         .post(format!("{}/v1/session/{}/message", gizzi, session_id))
         .json(&message_payload)
