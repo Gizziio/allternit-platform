@@ -1898,6 +1898,19 @@ dependencies = [
 ]
 
 [[package]]
+name = "allternit-self-improve"
+version = "0.1.0"
+dependencies = [
+ "chrono",
+ "rand 0.8.6",
+ "serde",
+ "serde_json",
+ "tempfile",
+ "thiserror 1.0.69",
+ "walkdir",
+]
+
+[[package]]
 name = "allternit-session-manager"
 version = "0.1.0"
 dependencies = [

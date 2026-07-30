@@ -21,6 +21,7 @@ members = [
     "drivers/firecracker-guest-agent",
     "services/session-manager",
     "services/vm-executor",
+    "services/self-improve",
     "mcp/core",
     "mcp/mcp-client",
     "infrastructure/cloud",
@@ -141,6 +142,7 @@ allternit-apple-vf-driver = { path = "drivers/apple-vf" }
 allternit-firecracker-driver = { path = "drivers/firecracker" }
 allternit-session-manager = { path = "services/session-manager" }
 allternit-vm-executor = { path = "services/vm-executor" }
+allternit-self-improve = { path = "services/self-improve" }
 allternit-agent-system-rails = { path = "rails" }
 allternit-cowork-runtime = { path = "infrastructure/executor/cowork/cowork/allternit-cowork-runtime" }
 allternit-cowork-scheduler = { path = "infrastructure/executor/cowork/cowork/allternit-cowork-scheduler" }
