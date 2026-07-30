@@ -102,7 +102,9 @@ export namespace Flag {
   export const GIZZI_EXPERIMENTAL_OUTPUT_TOKEN_MAX = number("GIZZI_EXPERIMENTAL_OUTPUT_TOKEN_MAX")
   export const GIZZI_EXPERIMENTAL_OXFMT = GIZZI_EXPERIMENTAL || truthy("GIZZI_EXPERIMENTAL_OXFMT")
   export const GIZZI_EXPERIMENTAL_LSP_TY = truthy("GIZZI_EXPERIMENTAL_LSP_TY")
-  export const GIZZI_EXPERIMENTAL_LSP_TOOL = GIZZI_EXPERIMENTAL || truthy("GIZZI_EXPERIMENTAL_LSP_TOOL")
+  // LSP navigation tool (goToDefinition/findReferences/documentSymbol/etc.) ships
+  // enabled by default; set this to opt out (mirrors GIZZI_DISABLE_BROWSER_TOOL).
+  export const GIZZI_ENABLE_LSP_TOOL = !truthy("GIZZI_DISABLE_LSP_TOOL")
   export const GIZZI_ENABLE_BROWSER_TOOL = !truthy("GIZZI_DISABLE_BROWSER_TOOL")
   export const GIZZI_DISABLE_FILETIME_CHECK = truthy("GIZZI_DISABLE_FILETIME_CHECK")
   export const GIZZI_EXPERIMENTAL_PLAN_MODE = GIZZI_EXPERIMENTAL || truthy("GIZZI_EXPERIMENTAL_PLAN_MODE")
