@@ -13,9 +13,14 @@ Flow:
    git status, diff stat, the actual diff (capped at 16KB), and test output when
    `.steering/test-command` exists (a shell script the hook runs, tail 4KB kept) —
    to the steering agent.
-3. Steering replies `APPROVE` (turn ends) or `STEER` + answers/guidance tagged by
-   severity (BLOCKER/MAJOR/MINOR), which is injected back into the working
-   session as a `[steering]` message.
+3. **Gap analysis**: `.steering/spec.md` is the source of truth for what "done"
+   means. Write it when the feature is scoped, keep it current, and make each
+   requirement checkable. Every consult, the steering agent maps each requirement
+   to DONE / PARTIAL / MISSING with code evidence — a MISSING core requirement
+   blocks approval.
+4. Steering replies `APPROVE` (turn ends) or `STEER` + the gap analysis, answers,
+   and severity-tagged findings (BLOCKER/MAJOR/MINOR), which is injected back
+   into the working session as a `[steering]` message.
 
 There is also a **hard commit gate** (`steer-pre-commit-gate.sh`, `PreToolUse` on
 shell tools): `git commit` / `git push` only execute after the steering agent

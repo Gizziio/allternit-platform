@@ -7,7 +7,9 @@
 
 ## Goal
 
-<one paragraph: the feature being built and why>
+<one paragraph: the feature being built and why. If this is a multi-checkpoint
+feature, enumerate its requirements in .steering/spec.md — the steering agent
+runs its gap analysis against that file>
 
 ## Just did
 

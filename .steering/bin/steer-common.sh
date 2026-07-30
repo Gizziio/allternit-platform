@@ -27,6 +27,12 @@ steer_build_context() {
   local cwd=$1 out=$2 dir="$1/.steering"
   {
     cat "$dir/prompt.md" 2>/dev/null
+    if [ -f "$dir/spec.md" ]; then
+      printf '\n\n=== SPEC FILE (.steering/spec.md) — source of truth for the gap analysis ===\n'
+      head -c 12000 "$dir/spec.md"
+    else
+      printf '\n\n(no .steering/spec.md — base the gap analysis on the checkpoint Goal only)\n'
+    fi
     printf '\n\n=== CHECKPOINT FILE (.steering/checkpoint.md) ===\n'
     head -c 12000 "$dir/checkpoint.md"
     printf '\n\n=== EVIDENCE: git status --short ===\n'
