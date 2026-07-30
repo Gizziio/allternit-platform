@@ -366,7 +366,9 @@
     "license": "CC BY 4.0",
     "accessLevel": "public",
     "imageUrl": "https://ai.allternit.com/images/discovery/weekly-news-2026-w31.svg",
-    "artifactUrl": "https://ai.allternit.com/editions/weekly-news-2026-w31.html"
+    "artifactUrl": "https://ai.allternit.com/editions/weekly-news-2026-w31.html",
+    "pdfUrl": "https://ai.allternit.com/editions/weekly-news-2026-w31.pdf",
+    "photoUrl": "https://ai.allternit.com/editions/weekly-news-2026-w31.photo.pdf"
   },
   {
     "id": "news-2026-w29",
@@ -703,7 +705,8 @@
     "license": "CC BY 4.0",
     "accessLevel": "public",
     "artifactUrl": "https://ai.allternit.com/editions/weekly-news-2026-w29.html",
-    "imageUrl": "https://ai.allternit.com/images/discovery/weekly-news-2026-w29.svg"
+    "imageUrl": "https://ai.allternit.com/images/discovery/weekly-news-2026-w29.svg",
+    "pdfUrl": "https://ai.allternit.com/editions/weekly-news-2026-w29.pdf"
   },
   {
     "id": "blog-2026-w29",
@@ -751,7 +754,8 @@
     "license": "CC BY 4.0",
     "accessLevel": "public",
     "imageUrl": "https://ai.allternit.com/images/discovery/builders-notebook-2026-w29.svg",
-    "artifactUrl": "https://ai.allternit.com/editions/builders-notebook-2026-w29.html"
+    "artifactUrl": "https://ai.allternit.com/editions/builders-notebook-2026-w29.html",
+    "pdfUrl": "https://ai.allternit.com/editions/builders-notebook-2026-w29.pdf"
   },
   {
     "id": "signal-2026-07-17-daily-brief",
@@ -839,7 +843,8 @@
     "license": "CC BY 4.0",
     "accessLevel": "public",
     "imageUrl": "https://ai.allternit.com/images/discovery/daily-brief-2026-07-17.svg",
-    "artifactUrl": "https://ai.allternit.com/editions/daily-brief-2026-07-17.html"
+    "artifactUrl": "https://ai.allternit.com/editions/daily-brief-2026-07-17.html",
+    "pdfUrl": "https://ai.allternit.com/editions/daily-brief-2026-07-17.pdf"
   },
   {
     "id": "signal-2026-04-27-daily-brief",
@@ -884,6 +889,7 @@
     "license": "CC BY 4.0",
     "accessLevel": "public",
     "imageUrl": "https://ai.allternit.com/images/discovery/daily-brief-2026-04-27.svg",
-    "artifactUrl": "https://ai.allternit.com/editions/daily-brief-2026-04-27.html"
+    "artifactUrl": "https://ai.allternit.com/editions/daily-brief-2026-04-27.html",
+    "pdfUrl": "https://ai.allternit.com/editions/daily-brief-2026-04-27.pdf"
   }
 ]

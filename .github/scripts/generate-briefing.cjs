@@ -36,37 +36,39 @@ DEPARTMENTS (strict markdown — use these exact headings, in this order):
 ## ls -la
 The full listing: the week's events in the AI/robotics space, organized by category and relevance. This is the comprehensive section. For each item:
 - **Title** — link the URL
-- 1-2 sentences: what happened, and why a production AI team should care
+- 2-4 sentences: what happened, the technical context a practitioner needs (architecture, numbers, availability, who built it), and why it matters now
+- The single most important story of the week leads the section and gets a full paragraph, not a bullet fragment
 
 ## rm -rf
 What got deleted this week: deprecated APIs, sunset products, dead startups/projects, abandoned models, layoffs, removed features. For each:
 - **Title** — link the URL
-- What was killed, and what replaces it (if anything)
+- 2-3 sentences: what was killed, the context behind it, and what replaces it (if anything)
 
 ## git push
 Trending GitHub projects, drawn from the GitHub Trending sources below. For each:
 - **owner / repo** — link the URL
-- What it does, star/fork momentum, and why it's worth a look
+- 2-3 sentences: what it does, the technical angle, star/fork momentum, and why it's worth a look
 
 ## pwned
 Security: jailbreaks, exploits, breaches, espionage, model distillation/theft, adversarial research. For each:
 - **Title** — link the URL
-- The attack surface or exposure, and who needs to patch or pay attention
+- 2-3 sentences: the attack surface or exposure, the mechanism, and who needs to patch or pay attention
 
 ## Ctrl + Z
 Run it back: follow-ups, corrections, and second-look updates to stories covered previously. For each:
 - **Title** — link the URL
-- What changed since the original coverage
+- 2-3 sentences: what changed since the original coverage, and what it means now
 
 RULES:
 - Write ALL FIVE departments. Only omit one if its source material is literally zero (e.g. no security stories exist at all). A short department beats a missing one.
 - The git push department is MANDATORY whenever GitHub Trending sources appear below — never skip it.
-- Budget: ls -la gets at most ~40% of the edition; each other department gets 100-150 words with 3-5 items.
+- Budget: ls -la gets at most ~40% of the edition; each other department gets 200-300 words with 3-5 items.
+- Include exactly one pull quote (a markdown blockquote, a line starting with "> "): the sharpest single sentence of the week, drawn from the edition's own reporting. Place it right after the lead story in ls -la.
 - Skip meta threads, hiring posts, pure VC/funding news
 - No hype words: "groundbreaking", "revolutionary", "game-changing"
 - Use specifics: model names, latency numbers, benchmark scores
 - Every claim must trace to a source below
-- Total length: 600-1000 words
+- Total length: 1600-2400 words
 
 SOURCES:
 ${sourcesText}`;

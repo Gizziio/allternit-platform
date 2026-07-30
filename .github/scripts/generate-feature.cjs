@@ -53,22 +53,22 @@ STRUCTURE (strict markdown):
 # ${topic}
 
 ## Cover Story
-What is happening and why it matters now? 250-350 words. No fluff. Lead with the stakes.
+What is happening and why it matters now? 350-500 words. No fluff. Lead with the stakes.
 
 ## Technical Breakdown
-The core technical details an engineer needs to understand. 400-600 words.
+The core technical details an engineer needs to understand. 500-700 words.
 - How it works (architecture, key algorithms, dependencies)
 - What problem it actually solves vs. what the marketing claims
 - Limitations and edge cases
 
 ## Production Implications
-What does this mean for teams shipping AI? 250-350 words.
+What does this mean for teams shipping AI? 350-500 words.
 - When should you adopt it? When should you wait?
 - Integration complexity and operational concerns
 - Cost and performance tradeoffs
 
 ## This Week
-Compact magazine versions of this week's Allternit News departments — 60-120 words each, using these exact headings, in this order:
+Compact magazine versions of this week's Allternit News departments — 120-200 words each, using these exact headings, in this order:
 ### ls -la — the full listing: the week's AI/robotics events, by category and relevance
 ### rm -rf — what got deleted this week: deprecated APIs, sunset products, dead projects, layoffs, removed features
 ### git push — trending GitHub projects worth a look
@@ -86,7 +86,8 @@ If a department has zero relevant items, OMIT it entirely rather than padding.
 Bullet list of all referenced sources with URLs.
 
 RULES:
-- Total length: 1500-2500 words
+- Total length: 2200-3200 words
+- Include exactly one pull quote (a markdown blockquote, a line starting with "> "): the sharpest single sentence of the piece, drawn from its own analysis. Place it in the Cover Story section.
 - No hype words: "groundbreaking", "revolutionary", "game-changing", "disruptive"
 - Use specifics: model names, latency numbers, benchmark scores, version numbers
 - Every technical claim must trace to a source below

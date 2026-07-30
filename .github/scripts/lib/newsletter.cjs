@@ -180,6 +180,26 @@ function readOnlineUrl(pub) {
     : 'https://allternit.com/news';
 }
 
+// Secondary edition links under the read-online button. The PDF edition URL
+// is deterministic from the artifact URL — the workflows render it in the
+// same run, before deploy. The photo edition only exists when the pipeline
+// JSON already carries one (it is generated locally).
+function editionLinksHtml(pub) {
+  const links = [];
+  if (typeof pub.artifactUrl === 'string' && pub.artifactUrl.endsWith('.html')) {
+    links.push(
+      `<a href="${pub.artifactUrl.replace(/\.html$/, '.pdf')}" style="color:${BRAND_COLORS.coral};text-decoration:underline;">Download the PDF edition</a>`,
+    );
+  }
+  if (typeof pub.photoUrl === 'string' && pub.photoUrl) {
+    links.push(
+      `<a href="${pub.photoUrl}" style="color:${BRAND_COLORS.coral};text-decoration:underline;">Photo edition</a>`,
+    );
+  }
+  if (!links.length) return '';
+  return `<p style="text-align:center;margin:14px 0 0;font-size:13px;color:${BRAND_COLORS.textMuted};">${links.join(' &middot; ')}</p>`;
+}
+
 function generateSignalEmail(pub) {
   const dateStr = formatDate(pub);
   const url = readOnlineUrl(pub);
@@ -206,6 +226,7 @@ function generateSignalEmail(pub) {
       </td>
     </tr>
   </table>
+  ${editionLinksHtml(pub)}
   `;
 
   const footer = `
@@ -261,6 +282,7 @@ function generateFeatureEmail(pub) {
       </td>
     </tr>
   </table>
+  ${editionLinksHtml(pub)}
   `;
 
   const footer = `

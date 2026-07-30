@@ -112,3 +112,6 @@ cmd/gizzi-code/vendor/mesh-node/
 surfaces/allternit-mobile/ios/Frameworks/Mesh.xcframework/
 infrastructure/mesh/tsnet-ios/Mesh.xcframework/
 infrastructure/mesh/tsnet-ios/Harness/harness
+
+# Publication edition photos are pipeline artifacts and deploy with the site
+!surfaces/ai.allternit.com/public/images/editions/**/*.png

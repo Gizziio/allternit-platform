@@ -1,0 +1,62 @@
+[
+  {
+    "sourceUrl": "https://bsky.app/profile/did:plc:57j4dnzyvdjl2bici4u3oero/post/3mrpaacojve2e",
+    "file": "surfaces/ai.allternit.com/public/images/editions/weekly-news-2026-w31/story-0.jpg",
+    "host": "bsky.app"
+  },
+  {
+    "sourceUrl": "https://bsky.app/profile/did:plc:bxosittqplnrfmzdz4mvmzif/post/3mrnnbl27yc2y",
+    "file": "surfaces/ai.allternit.com/public/images/editions/weekly-news-2026-w31/story-1.jpg",
+    "host": "bsky.app"
+  },
+  {
+    "sourceUrl": "https://bsky.app/profile/did:plc:zdlf7f5vb2wu3vucqn67f262/post/3mrpaj2qecc2s",
+    "file": "surfaces/ai.allternit.com/public/images/editions/weekly-news-2026-w31/story-2.jpg",
+    "host": "bsky.app"
+  },
+  {
+    "sourceUrl": "https://bsky.app/profile/did:plc:57j4dnzyvdjl2bici4u3oero/post/3mrpb3e7h522j",
+    "file": "surfaces/ai.allternit.com/public/images/editions/weekly-news-2026-w31/story-3.jpg",
+    "host": "bsky.app"
+  },
+  {
+    "sourceUrl": "https://techcrunch.com/2026/07/08/this-startup-thinks-robotics-is-about-to-have-its-chatgpt-moment/",
+    "file": "surfaces/ai.allternit.com/public/images/editions/weekly-news-2026-w31/story-4.jpg",
+    "host": "techcrunch.com"
+  },
+  {
+    "sourceUrl": "https://spectrum.ieee.org/nasa-ai-satellite-image-analysis",
+    "file": "surfaces/ai.allternit.com/public/images/editions/weekly-news-2026-w31/story-5.jpg",
+    "host": "spectrum.ieee.org"
+  },
+  {
+    "sourceUrl": "https://github.com/affaan-m/ECC",
+    "file": "surfaces/ai.allternit.com/public/images/editions/weekly-news-2026-w31/story-6.png",
+    "host": "github.com"
+  },
+  {
+    "sourceUrl": "https://bsky.app/profile/did:plc:v2ob6je7otkaffdktzdaywzp/post/3mrpbevveak2t",
+    "file": "surfaces/ai.allternit.com/public/images/editions/weekly-news-2026-w31/story-7.jpg",
+    "host": "bsky.app"
+  },
+  {
+    "sourceUrl": "https://bsky.app/profile/did:plc:v7ywkbts5lvbey66u5qi3yz5/post/3mrpbakmghl2q",
+    "file": "surfaces/ai.allternit.com/public/images/editions/weekly-news-2026-w31/story-8.jpg",
+    "host": "bsky.app"
+  },
+  {
+    "sourceUrl": "https://bsky.app/profile/did:plc:misyowzprptb3awhfo7oxrju/post/3mrp7wctlt32k",
+    "file": "surfaces/ai.allternit.com/public/images/editions/weekly-news-2026-w31/story-9.jpg",
+    "host": "bsky.app"
+  },
+  {
+    "sourceUrl": "https://blog.google/innovation-and-ai/technology/developers-tools/expanding-managed-agents-gemini-api/",
+    "file": "surfaces/ai.allternit.com/public/images/editions/weekly-news-2026-w31/story-10.png",
+    "host": "blog.google"
+  },
+  {
+    "sourceUrl": "https://www.technologyreview.com/2026/07/27/1140836/openai-hugging-face-attack-precedent/",
+    "file": "surfaces/ai.allternit.com/public/images/editions/weekly-news-2026-w31/story-11.jpg",
+    "host": "technologyreview.com"
+  }
+]

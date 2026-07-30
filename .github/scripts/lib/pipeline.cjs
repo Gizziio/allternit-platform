@@ -693,10 +693,10 @@ function formatSourcesForPrompt(sources) {
     const items = bySource[key];
     if (!items || !items.length) continue;
     lines.push(`=== ${sourceLabels[key] || key} ===`);
-    for (const item of items.slice(0, 6)) {
+    for (const item of items.slice(0, 8)) {
       lines.push(`Title: ${item.title}`);
       if (item.author && item.author !== key) lines.push(`Author: ${item.author}`);
-      if (item.text) lines.push(`Summary: ${item.text.slice(0, 250)}`);
+      if (item.text) lines.push(`Summary: ${item.text.slice(0, 700)}`);
       lines.push(`URL: ${item.url}`);
       if (item.score) lines.push(`Engagement: ${item.score} points`);
       if (item.commentCount) lines.push(`Comments: ${item.commentCount}`);
