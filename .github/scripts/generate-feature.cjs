@@ -192,7 +192,28 @@ async function main() {
   // Step 1: Select trending topic
   console.log('Selecting trending topic...');
   const topicPrompt = buildTopicSelectionPrompt(sourcesText);
-  const topic = await callKimi([{ role: 'user', content: topicPrompt }], 200);
+  // Reasoning models consume thinking tokens from the max_tokens budget —
+  // a small budget comes back empty (observed in production as an empty
+  // topic, which then emptied the title and the newsletter subject).
+  let topic = (
+    (await callKimi([{ role: 'user', content: topicPrompt }], 4000)) || ''
+  ).trim();
+  if (!topic) {
+    console.warn('Empty topic from Kimi — retrying with explicit instruction...');
+    topic = (
+      (await callKimi(
+        [
+          {
+            role: 'system',
+            content:
+              'You are an editor. Return only the requested title, nothing else.',
+          },
+          { role: 'user', content: topicPrompt },
+        ],
+        4000,
+      )) || ''
+    ).trim();
+  }
   console.log('Topic:', topic);
 
   // Step 2: Generate feature article
@@ -204,6 +225,17 @@ async function main() {
     console.error('Empty feature response. Skipping.');
     console.log('No new items added to discovery-pipeline.json.');
     return;
+  }
+
+  // Last-resort title: take the article's own H1 when the topic selection
+  // came back empty, so the publication title (and newsletter subject) is
+  // never blank.
+  if (!topic) {
+    const h1 = markdown.match(/^#\s+(.+)$/m);
+    topic = h1
+      ? h1[1].trim()
+      : `A://SUDO Reality — ${friendlyDate}`;
+    console.log('Topic recovered from article H1:', topic);
   }
 
   // Step 3: Extract metadata
