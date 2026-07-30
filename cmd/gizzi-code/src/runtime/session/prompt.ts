@@ -2313,10 +2313,17 @@ NOTE: At any point in time through this workflow you should feel free to ask the
       )
     })
     const modelMessages = MessageV2.toModelMessages(contextMessages, model)
+    // Title gen calls LLM.stream directly instead of going through loop(), so it
+    // doesn't get loop()'s folding of lastUser.system into the system array — fold
+    // the first message's system override in here to preserve that parity.
+    const firstUserSystem = firstRealUser.info.system
+    const titleSystem = firstUserSystem
+      ? [firstUserSystem.startsWith("+") ? firstUserSystem.slice(1) : firstUserSystem]
+      : []
     const result = await LLM.stream({
       agent,
       user: firstRealUser.info as MessageV2.User,
-      system: [],
+      system: titleSystem,
       small: true,
       tools: {},
       model,
