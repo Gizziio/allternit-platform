@@ -103,7 +103,13 @@ const STYLES = `
     line-height: 1.03;
     letter-spacing: -0.015em;
   }
-  .ph { object-fit: cover; border-radius: 3px; display: block; }
+  .ph {
+    object-fit: contain; /* never crop: og-cards and diagrams stay legible */
+    object-position: center;
+    background: rgba(26, 26, 26, 0.05);
+    border-radius: 3px;
+    display: block;
+  }
   .ph-inset { width: 168px; height: 122px; flex: 0 0 auto; }
   .ph-hero { flex: 1 1 auto; min-width: 220px; height: 190px; }
 
