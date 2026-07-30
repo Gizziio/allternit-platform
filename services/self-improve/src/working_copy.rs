@@ -53,7 +53,18 @@ impl WorkingCopy {
         }
         std::fs::create_dir_all(dest)?;
 
-        for entry in WalkDir::new(source).into_iter().filter_map(|entry| entry.ok()) {
+        for entry in WalkDir::new(source)
+            .into_iter()
+            .filter_entry(|entry| {
+                // Skip descending into protected directories entirely, rather than
+                // walking them and excluding every entry one at a time below.
+                match entry.path().strip_prefix(source) {
+                    Ok(relative) if !relative.as_os_str().is_empty() => !is_excluded(relative, protected),
+                    _ => true, // the root entry itself
+                }
+            })
+            .filter_map(|entry| entry.ok())
+        {
             let relative = match entry.path().strip_prefix(source) {
                 Ok(relative) if !relative.as_os_str().is_empty() => relative,
                 _ => continue, // the root entry itself
@@ -245,6 +256,23 @@ mod tests {
 
         assert!(working_copy.path().join("src/main.rs").exists());
         assert!(!working_copy.path().join("eval_harness").exists());
+    }
+
+    #[test]
+    fn create_prunes_protected_subtree_without_descending() {
+        let source = tempfile::tempdir().unwrap();
+        std::fs::create_dir_all(source.path().join("eval_harness/nested/deep")).unwrap();
+        std::fs::write(source.path().join("eval_harness/nested/deep/secret.json"), "{}").unwrap();
+        std::fs::create_dir_all(source.path().join("src")).unwrap();
+        std::fs::write(source.path().join("src/main.rs"), "fn main() {}").unwrap();
+
+        let dest = tempfile::tempdir().unwrap();
+        let protected = vec![PathBuf::from("eval_harness")];
+        let working_copy = WorkingCopy::create(source.path(), dest.path(), &protected).unwrap();
+
+        assert!(working_copy.path().join("src/main.rs").exists());
+        assert!(!working_copy.path().join("eval_harness").exists());
+        assert!(!working_copy.path().join("eval_harness/nested/deep/secret.json").exists());
     }
 
     #[test]
