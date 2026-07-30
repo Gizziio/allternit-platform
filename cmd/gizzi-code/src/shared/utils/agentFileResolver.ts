@@ -14,6 +14,13 @@ export const LOCAL_INSTRUCTION_FILENAMES = ["GIZZI.local.md", "CLAUDE.local.md"]
 export const RULES_DIRNAMES = [".gizzi/rules", ".claude/rules"] as const
 
 /**
+ * Companion file read alongside the root marker at every directory level —
+ * not a precedence alternative to GIZZI.md, an addition to it. No legacy
+ * name to be compatible with; this is a gizzi-only convention.
+ */
+export const ANTI_PATTERNS_FILENAME = "ANTI_PATTERNS.md"
+
+/**
  * Given the filenames (or dirnames) that exist at one directory level,
  * return the highest-precedence match, or undefined if none exist.
  */

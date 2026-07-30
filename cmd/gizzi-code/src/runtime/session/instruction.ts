@@ -9,7 +9,7 @@ import { Log } from "@/shared/util/log"
 import { Glob } from "@/shared/util/glob"
 import type { MessageV2 } from "@/runtime/session/message-v2"
 import { parseFrontmatter } from "@/runtime/memory/memory-service"
-import { pickWinner, ROOT_INSTRUCTION_FILENAMES } from "@/shared/utils/agentFileResolver"
+import { ANTI_PATTERNS_FILENAME, pickWinner, ROOT_INSTRUCTION_FILENAMES } from "@/shared/utils/agentFileResolver"
 
 const log = Log.create({ service: "instruction" })
 
@@ -187,6 +187,11 @@ export namespace InstructionPrompt {
         }
         const winner = pickWinner(existing, FILES)
         if (winner) paths.add(path.resolve(path.join(current, winner)))
+
+        // ANTI_PATTERNS.md is a companion to the root marker, not a
+        // precedence alternative — load it alongside, same directory level.
+        const antiPatternsPath = path.join(current, ANTI_PATTERNS_FILENAME)
+        if (await Filesystem.exists(antiPatternsPath)) paths.add(path.resolve(antiPatternsPath))
 
         if (Instance.worktree === current) break
         const parent = path.dirname(current)

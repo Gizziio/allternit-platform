@@ -46,6 +46,19 @@ context about the intent behind the change.
 Focus: $ARGUMENTS
 `
 
+const ANTI_PATTERNS_TEMPLATE = `# ANTI_PATTERNS.md
+
+Things Gizzi should specifically avoid in this project — deprecated
+patterns, banned libraries, style violations to steer away from. This is
+read alongside GIZZI.md at every directory level; keep it short and
+concrete. Consistency beats re-explaining constraints every session.
+
+<!-- Example:
+- Don't use \`any\` in new TypeScript code — use \`unknown\` and narrow.
+- Don't add a new HTTP client; use the existing \`apiClient\` wrapper.
+-->
+`
+
 function starterConfig(project?: ProjectType): string {
   const lines: string[] = []
 
@@ -112,6 +125,14 @@ function starterConfig(project?: ProjectType): string {
   lines.push("`.gizzi/commands/` (an example is already there — try `/review`).")
   lines.push("Both were created by `gizzi init` and are picked up automatically.")
   lines.push("")
+  lines.push("`ANTI_PATTERNS.md` (next to this file) is read alongside GIZZI.md at")
+  lines.push("every directory level — put deprecated patterns, banned libraries, or")
+  lines.push("style violations to avoid there instead of repeating them in prompts.")
+  lines.push("")
+  lines.push("Generated artifacts (reports, migration plans, one-off scripts) go in")
+  lines.push("`scratch/` instead of scattering across the tree — created by")
+  lines.push("`gizzi init` and gitignored by default.")
+  lines.push("")
   lines.push("Hooks, MCP servers, and permissions are configured in `gizzi.json`")
   lines.push("(not created by default, since they change runtime behavior — add")
   lines.push("them deliberately). Examples:")
@@ -141,23 +162,29 @@ function starterConfig(project?: ProjectType): string {
   return lines.join("\n")
 }
 
-async function ensureGitignore(dir: string): Promise<boolean> {
+async function ensureGitignore(dir: string, entries: string[]): Promise<string[]> {
   const gitignorePath = path.join(dir, ".gitignore")
-  const entry = ".gizzi/"
+  const bare = (e: string) => e.replace(/\/$/, "")
 
+  let content = ""
   if (await Filesystem.exists(gitignorePath)) {
-    const content = await Filesystem.readText(gitignorePath)
-    const lines = content.split("\n")
-    if (lines.some((line) => line.trim() === entry || line.trim() === ".gizzi")) {
-      return false
-    }
-    const suffix = content.endsWith("\n") ? "" : "\n"
-    await Filesystem.write(gitignorePath, content + suffix + entry + "\n")
-    return true
+    content = await Filesystem.readText(gitignorePath)
+  }
+  const lines = content.split("\n")
+  const added: string[] = []
+  let toAppend = ""
+
+  for (const entry of entries) {
+    if (lines.some((line) => bare(line.trim()) === bare(entry))) continue
+    added.push(entry)
+    toAppend += entry + "\n"
   }
 
-  await Filesystem.write(gitignorePath, entry + "\n")
-  return true
+  if (added.length === 0) return added
+
+  const suffix = content && !content.endsWith("\n") ? "\n" : ""
+  await Filesystem.write(gitignorePath, content + suffix + toAppend)
+  return added
 }
 
 export const InitCommand = cmd({
@@ -215,7 +242,15 @@ export const InitCommand = cmd({
       UI.println(UI.Style.TEXT_SUCCESS_BOLD + "  +  " + UI.Style.TEXT_NORMAL + "Created .gizzi/commands/review.md (try /review)")
     }
 
-    // 3. Create GIZZI.md
+    // 2c. Scaffold the outputs directory (scratch/) so generated artifacts
+    // have a fixed home instead of scattering across the tree.
+    const scratchDir = path.join(dir, "scratch")
+    if (!(await Filesystem.exists(scratchDir))) {
+      await Filesystem.mkdir(scratchDir, { recursive: true })
+      UI.println(UI.Style.TEXT_SUCCESS_BOLD + "  +  " + UI.Style.TEXT_NORMAL + "Created scratch/")
+    }
+
+    // 3. Create GIZZI.md and its companion ANTI_PATTERNS.md
     if (!(await Filesystem.exists(configPath))) {
       const content = starterConfig(project)
       await Filesystem.write(configPath, content)
@@ -224,12 +259,20 @@ export const InitCommand = cmd({
       UI.println(UI.Style.TEXT_DIM + "  ·  " + UI.Style.TEXT_NORMAL + "GIZZI.md already exists")
     }
 
-    // 4. Add .gizzi/ to .gitignore
-    const addedToGitignore = await ensureGitignore(dir)
-    if (addedToGitignore) {
-      UI.println(UI.Style.TEXT_SUCCESS_BOLD + "  +  " + UI.Style.TEXT_NORMAL + "Added .gizzi/ to .gitignore")
+    const antiPatternsPath = path.join(dir, "ANTI_PATTERNS.md")
+    if (!(await Filesystem.exists(antiPatternsPath))) {
+      await Filesystem.write(antiPatternsPath, ANTI_PATTERNS_TEMPLATE)
+      UI.println(UI.Style.TEXT_SUCCESS_BOLD + "  +  " + UI.Style.TEXT_NORMAL + "Created ANTI_PATTERNS.md")
     } else {
-      UI.println(UI.Style.TEXT_DIM + "  ·  " + UI.Style.TEXT_NORMAL + ".gizzi/ already in .gitignore")
+      UI.println(UI.Style.TEXT_DIM + "  ·  " + UI.Style.TEXT_NORMAL + "ANTI_PATTERNS.md already exists")
+    }
+
+    // 4. Add .gizzi/ and scratch/ to .gitignore
+    const addedToGitignore = await ensureGitignore(dir, [".gizzi/", "scratch/"])
+    if (addedToGitignore.length > 0) {
+      UI.println(UI.Style.TEXT_SUCCESS_BOLD + "  +  " + UI.Style.TEXT_NORMAL + `Added ${addedToGitignore.join(", ")} to .gitignore`)
+    } else {
+      UI.println(UI.Style.TEXT_DIM + "  ·  " + UI.Style.TEXT_NORMAL + ".gizzi/ and scratch/ already in .gitignore")
     }
 
     UI.empty()
