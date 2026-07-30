@@ -34,6 +34,18 @@ async function detectProject(dir: string): Promise<ProjectType | undefined> {
   return undefined
 }
 
+const EXAMPLE_COMMAND = `---
+description: Summarize what changed and why, for a commit message or PR description
+---
+
+Review the current diff (\`git diff\`, or \`git diff --staged\` if there's staged
+work) and summarize it in a few sentences: what changed and why, not a
+line-by-line description. If $ARGUMENTS is provided, treat it as extra
+context about the intent behind the change.
+
+Focus: $ARGUMENTS
+`
+
 function starterConfig(project?: ProjectType): string {
   const lines: string[] = []
 
@@ -94,6 +106,37 @@ function starterConfig(project?: ProjectType): string {
   lines.push("")
   lines.push("<!-- Add coding conventions, style rules, or other guidelines -->")
   lines.push("")
+  lines.push("## Harness")
+  lines.push("")
+  lines.push("Reusable expertise and one-off commands go in `.gizzi/skills/` and")
+  lines.push("`.gizzi/commands/` (an example is already there — try `/review`).")
+  lines.push("Both were created by `gizzi init` and are picked up automatically.")
+  lines.push("")
+  lines.push("Hooks, MCP servers, and permissions are configured in `gizzi.json`")
+  lines.push("(not created by default, since they change runtime behavior — add")
+  lines.push("them deliberately). Examples:")
+  lines.push("")
+  lines.push("```json")
+  lines.push("{")
+  lines.push('  "$schema": "https://gizzi.io/config.json",')
+  lines.push('  "permission": {')
+  lines.push('    "bash": "ask",')
+  lines.push('    "edit": "allow"')
+  lines.push("  },")
+  lines.push('  "hooks": {')
+  lines.push('    "command": [')
+  lines.push("      {")
+  lines.push('        "command": "npm run lint",')
+  lines.push('        "events": ["PostToolUse"],')
+  lines.push('        "matchers": ["edit"]')
+  lines.push("      }")
+  lines.push("    ]")
+  lines.push("  }")
+  lines.push("}")
+  lines.push("```")
+  lines.push("")
+  lines.push("For MCP servers, prefer `gizzi mcp add` over hand-editing the config.")
+  lines.push("")
 
   return lines.join("\n")
 }
@@ -152,6 +195,24 @@ export const InitCommand = cmd({
       UI.println(
         UI.Style.TEXT_SUCCESS_BOLD + "  ✓  " + UI.Style.TEXT_NORMAL + `Detected ${project.name} project`,
       )
+    }
+
+    // 2b. Scaffold the skills and commands directories so the harness is
+    // discoverable from a fresh init. Hooks/MCP/permissions are documented
+    // in GIZZI.md instead of written here, since those change runtime
+    // behavior and shouldn't be silently turned on for a new project.
+    const skillsDir = path.join(gizziDir, "skills")
+    if (!(await Filesystem.exists(skillsDir))) {
+      await Filesystem.mkdir(skillsDir, { recursive: true })
+      UI.println(UI.Style.TEXT_SUCCESS_BOLD + "  +  " + UI.Style.TEXT_NORMAL + "Created .gizzi/skills/")
+    }
+
+    const commandsDir = path.join(gizziDir, "commands")
+    const exampleCommandPath = path.join(commandsDir, "review.md")
+    if (!(await Filesystem.exists(exampleCommandPath))) {
+      await Filesystem.mkdir(commandsDir, { recursive: true })
+      await Filesystem.write(exampleCommandPath, EXAMPLE_COMMAND)
+      UI.println(UI.Style.TEXT_SUCCESS_BOLD + "  +  " + UI.Style.TEXT_NORMAL + "Created .gizzi/commands/review.md (try /review)")
     }
 
     // 3. Create GIZZI.md
