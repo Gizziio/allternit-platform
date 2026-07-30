@@ -19,7 +19,6 @@ import { TuiRoutes } from "@/runtime/server/routes/tui"
 import { Instance } from "@/runtime/context/project/instance"
 import { Vcs } from "@/runtime/context/project/vcs"
 import { Agent } from "@/runtime/loop/agent"
-import { AgentLoop } from "@/runtime/loop/loop"
 
 import { Skill } from "@/runtime/skills/skill"
 import { Auth } from "@/runtime/integrations/auth"
