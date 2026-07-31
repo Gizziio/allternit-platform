@@ -1,0 +1,7 @@
+# Runtime artifacts — committed code only in this directory (C3).
+briefs/
+specs/
+queue/
+seen.json
+errors.log
+verdicts.json
