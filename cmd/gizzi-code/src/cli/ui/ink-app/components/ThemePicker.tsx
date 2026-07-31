@@ -236,7 +236,7 @@ export function ThemePicker(t0) {
       newStart: 1,
       oldLines: 3,
       newLines: 3,
-      lines: [" function greet() {", "-  console.log(\"Hello, World!\");", "+  console.log(\"Hello, Claude!\");", " }"]
+      lines: [" function greet() {", "-  console.log(\"Hello, World!\");", "+  console.log(\"Hello, Gizzi!\"));", " }"]
     };
     $[34] = t20;
   } else {

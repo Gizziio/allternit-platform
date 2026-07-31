@@ -60,7 +60,7 @@ export async function mcpServeHandler({
   try {
     const {
       setup
-    } = await import('../../runtime/claude-core/setup.js');
+    } = await import('../../runtime/gizzi-core/setup.js');
     await setup(providedCwd, 'default', false, false, undefined, false);
     const {
       startMCPServer

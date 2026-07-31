@@ -49,6 +49,36 @@ export function modelSupports1M(model: string): boolean {
   return canonical.includes('claude-sonnet-4') || canonical.includes('opus-4-6')
 }
 
+
+/**
+ * Native context window for provider-prefixed local/3P models, read from the
+ * provider config (~/.config/gizzi-code/gizzi.json) — e.g.
+ * provider.local-mlx.models["qwen3.6-35b-a3b-4bit"].limit.context.
+ * This is the model's real, configured context window; no hardcoding.
+ */
+function getLocalProviderContextWindow(model: string): number | null {
+  try {
+    const slash = model.indexOf('/')
+    if (slash <= 0 || slash === model.length - 1) {
+      return null
+    }
+    const provider = model.slice(0, slash)
+    const modelId = model.slice(slash + 1)
+    const { readFileSync } = require('fs')
+    const { homedir } = require('os')
+    const { join } = require('path')
+    const configDir =
+      process.env.GIZZI_CONFIG_DIR ?? join(homedir(), '.config', 'gizzi-code')
+    const raw = readFileSync(join(configDir, 'gizzi.json'), 'utf-8')
+    const cfg = JSON.parse(raw)
+    const entry = cfg?.provider?.[provider]?.models?.[modelId]
+    const limit = entry?.limit?.context
+    return typeof limit === 'number' && limit > 0 ? limit : null
+  } catch {
+    return null
+  }
+}
+
 export function getContextWindowForModel(
   model: string | null | undefined,
   betas?: string[],
@@ -57,7 +87,14 @@ export function getContextWindowForModel(
     return MODEL_CONTEXT_WINDOW_DEFAULT
   }
 
-  // Local MLX Qwen3.6-35B-A3B-4bit: 128K context window
+  // Provider-prefixed local/3P models: use the native context window from
+  // the provider config (limit.context in gizzi.json).
+  const localWindow = getLocalProviderContextWindow(model)
+  if (localWindow !== null) {
+    return localWindow
+  }
+
+  // Local MLX Qwen3.6-35B-A3B-4bit: 128K context window (fallback)
   if (model.toLowerCase().includes('qwen3.6-35b-a3b-4bit')) {
     return 131_072
   }

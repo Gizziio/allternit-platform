@@ -109,7 +109,7 @@ export function DiscretionaryScreen(props: DiscretionaryScreenProps) {
             </text>
             <box height={1} />
             <text fg={theme.textMuted}>
-              Same toolset as Claude Code cloud sessions (Ubuntu 24.04):
+              Same toolset as Gizzi Code cloud sessions (Ubuntu 24.04):
             </text>
             <text fg={RGBA.fromInts(130, 200, 140)}>
               {" "}  • Shells: bash, zsh/Powerlevel10k, fish  — bat, git-delta, fzf, fd, rg

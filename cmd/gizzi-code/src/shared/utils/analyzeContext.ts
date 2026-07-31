@@ -7,7 +7,7 @@ import {
 import { microcompactMessages } from '@/services/compact/microCompact.js'
 import { getSdkBetas } from '@/bootstrap/state.js'
 import { getCommandName } from '../../cli/ui/ink-app/commands.js'
-import { getSystemContext } from '../../runtime/claude-core/context.js'
+import { getSystemContext } from '../../runtime/gizzi-core/context.js'
 import { getFeatureValue_CACHED_MAY_BE_STALE } from '../../runtime/services/analytics/growthbook.js'
 import {
   AUTOCOMPACT_BUFFER_TOKENS,

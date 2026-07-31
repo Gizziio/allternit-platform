@@ -13,7 +13,7 @@
 import type { Command } from '../../runtime/verification/cli/commands.js'
 import { getSystemPrompt } from '@/constants/prompts.js'
 import { getUserContext } from '../../runtime/context/context.js';
-import { getSystemContext } from '../../runtime/claude-core/context.js';
+import { getSystemContext } from '../../runtime/gizzi-core/context.js';
 import type { MCPServerConnection } from '../../runtime/services/mcp/types.js'
 import type { AppState } from '@/state/AppStateStore.js'
 import type { Tools, ToolUseContext } from '../../runtime/tools/Tool.js'

@@ -72,7 +72,7 @@ const createStubCommands = (): Command[] => {
       category: 'Agent',
       handler: async () => ({
         type: 'info' as const,
-        message: 'Available models: Claude 3.5 Sonnet, GPT-4, Gemini Pro'
+        message: 'Available models: Qwen3.6-35B, GPT-4, Gemini Pro'
       })
     },
     {

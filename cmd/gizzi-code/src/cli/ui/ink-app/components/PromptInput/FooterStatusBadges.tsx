@@ -8,20 +8,22 @@ import { useSessionMetrics } from '../../hooks/useSessionMetrics'
 
 const MAX_CWD_WIDTH = 24
 
-export function FooterStatusBadges(): React.ReactNode {
-  const metrics = useSessionMetrics()
+export function FooterStatusBadges({ messages }: { messages?: import('../../types/message.js').Message[] }): React.ReactNode {
+  const metrics = useSessionMetrics(messages)
   const cwd = getCwdState()
   const cwdDisplay = truncateStartToWidth(cwd, MAX_CWD_WIDTH)
 
-  const contextText =
-    metrics.contextPercent !== null
-      ? `${formatTokens(metrics.contextUsed ?? 0)} / ${formatTokens(metrics.contextTotal)} (${metrics.contextPercent}%)`
-      : 'no data'
+  // Always real: 0% before the first response, then live usage.
+  const contextText = `context: ${metrics.contextPercent ?? 0}% (${formatTokens(metrics.contextUsed ?? 0)}/${formatTokens(metrics.contextTotal)})`
 
+  // Two rows, right-aligned: cwd + model on top, context bottom-right.
+  // Single-row crowds the context readout off screen on narrow terminals.
   return (
-    <Box gap={1} flexShrink={0}>
-      <Text dimColor wrap="truncate">{cwdDisplay}</Text>
-      <Text color="magenta" wrap="truncate">{metrics.model}</Text>
+    <Box flexDirection="column" alignItems="flex-end" flexShrink={0}>
+      <Box gap={1}>
+        <Text dimColor wrap="truncate">{cwdDisplay}</Text>
+        <Text color="magenta" wrap="truncate">{metrics.model}</Text>
+      </Box>
       <Text dimColor wrap="truncate">{contextText}</Text>
     </Box>
   )

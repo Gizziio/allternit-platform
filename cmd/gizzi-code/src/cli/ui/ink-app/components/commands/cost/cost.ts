@@ -9,9 +9,9 @@ export const call: LocalCommandCall = async () => {
     let value: string
     if (currentLimits.isUsingOverage) {
       value =
-        'You are currently using your overages to power your Claude Code usage. We will automatically switch you back to your subscription rate limits when they reset'
+        'You are currently using your overages to power your Gizzi Code usage. We will automatically switch you back to your subscription rate limits when they reset'
     } else {
-        'You are currently using your subscription to power your Claude Code usage'
+        'You are currently using your subscription to power your Gizzi Code usage'
     }
     if (process.env.USER_TYPE === 'ant') {
       value += `\n\n[ANT-ONLY] Showing cost anyway:\n ${formatTotalCost()}`

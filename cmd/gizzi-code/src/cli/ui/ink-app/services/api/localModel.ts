@@ -294,6 +294,9 @@ export async function* queryLocalModelWithStreaming({
     model: resolvedModelId,
     messages: openaiMessages,
     stream: true,
+    // Ask the server for a final usage chunk so the UI can show real
+    // context-window consumption (mlx_lm.server only emits it when asked).
+    stream_options: { include_usage: true },
     temperature: options.temperatureOverride ?? 0.7,
   }
 

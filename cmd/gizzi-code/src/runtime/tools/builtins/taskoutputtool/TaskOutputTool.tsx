@@ -7,7 +7,7 @@ import { FallbackToolUseRejectedMessage } from '../../../../cli/ui/ink-app/compo
 import { MessageResponse } from '../../../../cli/ui/ink-app/components/MessageResponse.js';
 import { Box, Text } from '@/ink.js';
 import { useShortcutDisplay } from '@/keybindings/useShortcutDisplay.js';
-import type { TaskType } from '../../../claude-core/Task.js';
+import type { TaskType } from '../../../gizzi-core/Task.js';
 import type { Tool } from '@/Tool.js';
 import { buildTool, type ToolDef } from '@/Tool.js';
 import type { LocalAgentTaskState } from '../../tasks/LocalAgentTask/LocalAgentTask.js';

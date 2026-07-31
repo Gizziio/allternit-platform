@@ -403,7 +403,7 @@ export const MainScreenEnhanced: React.FC<MainScreenEnhancedProps> = ({
             <Box>
               <Text color="#d4b08c">◆</Text>
               <Text> </Text>
-              <Text color="#58a6ff" bold>Claude</Text>
+              <Text color="#58a6ff" bold>Gizzi</Text>
             </Box>
             <Box marginLeft={2}>
               <Text wrap="wrap">{currentResponse}</Text>
@@ -465,7 +465,7 @@ const MessageItem: React.FC<{ item: OutputItem; isLast: boolean }> = ({ item }) 
         <Box>
           <Box>
             <Text color="#d4b08c">◆</Text>
-            <Text color="#58a6ff" bold>Claude</Text>
+            <Text color="#58a6ff" bold>Gizzi</Text>
           </Box>
           <Box marginLeft={2}>
             <Text wrap="wrap">{item.content}</Text>

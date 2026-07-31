@@ -30,8 +30,9 @@ export type SessionMetrics = {
   }
 }
 
-export function useSessionMetrics(): SessionMetrics {
-  const messages = useAppState(s => s.messages) ?? []
+export function useSessionMetrics(messagesOverride?: import('../types/message.js').Message[]): SessionMetrics {
+  const appStateMessages = useAppState(s => s.messages) ?? []
+  const messages = messagesOverride ?? appStateMessages
   const toolPermissionContext = useAppState(s => s.toolPermissionContext)
   const mainLoopModel = useAppState(s => s.mainLoopModel)
   const [, setTick] = useState(0)

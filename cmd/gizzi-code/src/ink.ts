@@ -209,5 +209,5 @@ export default {
 // complete module lives in the runtime tree; re-export it underneath — local
 // exports take precedence on conflicts, and the missing ones (Link, etc.)
 // come through.
-export { Ansi, BaseBox, BaseText, Button, ClickEvent, Event, EventEmitter, FocusManager, InputEvent, Link, NoSelect, RawAnsi, TerminalFocusEvent, ThemeProvider, color, createRoot, supportsTabStatus, useAnimationFrame, useAnimationTimer, useInterval, usePreviewTheme, useSelection, useTabStatus, useTerminalFocus, useTerminalTitle, useTerminalViewport, useTheme, useThemeSetting, wrapText } from "./runtime/claude-core/ink.js";
-export type { AppProps, BaseBoxProps, BaseTextProps, ButtonProps, ButtonState, DOMElement, FlickerReason, Instance, LinkProps, NewlineProps, Root, StdinProps, TerminalFocusEventType } from "./runtime/claude-core/ink.js";
+export { Ansi, BaseBox, BaseText, Button, ClickEvent, Event, EventEmitter, FocusManager, InputEvent, Link, NoSelect, RawAnsi, TerminalFocusEvent, ThemeProvider, color, createRoot, supportsTabStatus, useAnimationFrame, useAnimationTimer, useInterval, usePreviewTheme, useSelection, useTabStatus, useTerminalFocus, useTerminalTitle, useTerminalViewport, useTheme, useThemeSetting, wrapText } from "./runtime/gizzi-core/ink.js";
+export type { AppProps, BaseBoxProps, BaseTextProps, ButtonProps, ButtonState, DOMElement, FlickerReason, Instance, LinkProps, NewlineProps, Root, StdinProps, TerminalFocusEventType } from "./runtime/gizzi-core/ink.js";

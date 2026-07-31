@@ -11,7 +11,7 @@ import {
   enhanceSystemPromptWithEnvDetails,
 } from '@/constants/prompts.js'
 import type { QuerySource } from '@/constants/querySource.js'
-import { getSystemContext, getUserContext } from '../../../claude-core/context.js'
+import { getSystemContext, getUserContext } from '../../../gizzi-core/context.js'
 import type { CanUseToolFn } from '@/hooks/useCanUseTool.js'
 import { query } from '../../query.js'
 import { getFeatureValue_CACHED_MAY_BE_STALE } from '@/services/analytics/growthbook.js'

@@ -93,7 +93,7 @@ export async function installHandler(target: string | undefined, options: {
 }): Promise<void> {
   const {
     setup
-  } = await import('../../runtime/claude-core/setup.js');
+  } = await import('../../runtime/gizzi-core/setup.js');
   await setup(cwd(), 'default', false, false, undefined, false);
   const {
     install

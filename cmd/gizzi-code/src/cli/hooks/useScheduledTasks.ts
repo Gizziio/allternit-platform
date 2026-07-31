@@ -1,7 +1,7 @@
 // @ts-nocheck
 import { useEffect, useRef } from 'react'
 import { useAppStateStore, useSetAppState } from '@/state/AppState.js'
-import { isTerminalTaskStatus } from '../../runtime/claude-core/Task.js'
+import { isTerminalTaskStatus } from '../../runtime/gizzi-core/Task.js'
 import {
   findTeammateTaskByAgentId,
   injectUserMessageToTeammate,

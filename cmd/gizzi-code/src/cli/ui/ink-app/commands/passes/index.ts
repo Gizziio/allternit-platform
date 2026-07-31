@@ -11,7 +11,7 @@ export default {
   get description() {
     const reward = getCachedReferrerReward()
     if (reward) {
-      return 'Share a free week of Claude Code with friends and earn extra usage'
+      return 'Share a free week of Gizzi Code with friends and earn extra usage'
     }
     return 'Share a free week of Claude Code with friends'
   },

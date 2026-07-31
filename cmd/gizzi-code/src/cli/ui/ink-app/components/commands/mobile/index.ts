@@ -5,7 +5,7 @@ const mobile = {
   type: 'local-jsx',
   name: 'mobile',
   aliases: ['ios', 'android'],
-  description: 'Show QR code to download the Claude mobile app',
+  description: 'Show QR code to download the Allternit mobile app',
   load: () => import('../../../commands/mobile/mobile.js'),
 } satisfies Command
 export default mobile

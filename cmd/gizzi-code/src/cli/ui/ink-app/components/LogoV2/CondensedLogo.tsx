@@ -13,8 +13,7 @@ import { isFullscreenEnvEnabled } from '../../utils/fullscreen';
 import { formatModelAndBilling, getLogoDisplayData, truncatePath } from '../../utils/logoV2Utils';
 import { renderModelSetting } from '../../utils/model/model';
 import { OffscreenFreeze } from '../OffscreenFreeze';
-import { AnimatedClawd } from './AnimatedClawd';
-import { Clawd } from './Clawd';
+import { GizziMascot } from './GizziMascot';
 import { GuestPassesUpsell, incrementGuestPassesSeenCount, useShowGuestPassesUpsell } from './GuestPassesUpsell';
 import { incrementOverageCreditUpsellSeenCount, OverageCreditUpsell, useShowOverageCreditUpsell } from './OverageCreditUpsell';
 export function CondensedLogo() {
@@ -82,7 +81,7 @@ export function CondensedLogo() {
   const truncatedCwd = truncatePath(cwd, Math.max(cwdAvailableWidth, 10));
   let t4;
   if ($[7] === Symbol.for("react.memo_cache_sentinel")) {
-    t4 = isFullscreenEnvEnabled() ? <AnimatedClawd /> : <Clawd />;
+    t4 = <GizziMascot />;
     $[7] = t4;
   } else {
     t4 = $[7];

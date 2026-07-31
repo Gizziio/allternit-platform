@@ -1,6 +1,6 @@
 // @ts-nocheck
 import { z } from 'zod/v4'
-import type { TaskStateBase } from '../../../claude-core/Task.js'
+import type { TaskStateBase } from '../../../gizzi-core/Task.js'
 import { buildTool, type ToolDef } from '@/Tool.js'
 import { stopTask } from '../../tasks/stopTask.js'
 import { lazySchema } from '../../../../shared/utils/lazySchema.js'
