@@ -706,6 +706,39 @@ pub async fn auth_middleware(
         return next.run(request).await;
     }
 
+    // Cloud-issued runtime-device token (`Authorization: Bearer
+    // allternit_runtime_…`), the same mechanism already proven for
+    // `mcp_proxy_internal`/`/internal/*`. Introspected against
+    // allternit-cloud-api; the token-derived user_id is the identity, exactly
+    // as `verify_runtime_device_token` resolves it there — no separate
+    // identity model for this path.
+    if let Some(token) = crate::connector_routes::device_token_from_headers(request.headers()) {
+        let token = token.to_string();
+        return match crate::connector_routes::verify_runtime_device_token(&state, &token).await {
+            Ok(user_id) => {
+                let mut user = AuthUser {
+                    user_id,
+                    email: None,
+                    name: None,
+                    avatar_url: None,
+                    tenant_id: None,
+                    organization_id: None,
+                    organization_role: None,
+                    organization_slug: None,
+                };
+                match ensure_user_in_db(&state.db, &user) {
+                    Ok(organization_id) => user.organization_id = organization_id,
+                    Err(e) => return e.into_response(),
+                }
+                let headers = request.headers_mut();
+                insert_user_headers(headers, &user);
+                request.extensions_mut().insert(user);
+                next.run(request).await
+            }
+            Err(resp) => resp,
+        };
+    }
+
     // Try Clerk JWT first
     if let Some(token) = extract_bearer_token(request.headers()) {
         match verify_token(&state.jwks, &token, &state.auth_config).await {

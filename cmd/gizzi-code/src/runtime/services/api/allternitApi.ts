@@ -8,7 +8,12 @@
  * Auth precedence:
  * 1. ALLTERNIT_API_TOKEN as a Bearer token (Clerk JWT in production)
  * 2. Local dev: x-allternit-user-id + x-allternit-desktop-access-token
+ *
+ * The canvas functions below (HTML artifact publish) use a wider precedence —
+ * see `getAllternitApiConfigWithDeviceToken`.
  */
+
+import { Pairing } from '@/runtime/services/pairing/pairing'
 
 const DEFAULT_API_URL = 'http://127.0.0.1:8013'
 
@@ -43,6 +48,28 @@ export function getAllternitApiConfig(): AllternitApiConfig {
     userEmail: process.env.ALLTERNIT_USER_EMAIL?.trim(),
     userName: process.env.ALLTERNIT_USER_NAME?.trim(),
   }
+}
+
+/**
+ * Same as `getAllternitApiConfig`, but for the canvas endpoints (HTML
+ * artifact publish): prefers this machine's paired runtime-device token
+ * (`gizzi pair`, stored by `Pairing` in runtime-device.json) over
+ * `ALLTERNIT_API_TOKEN` when one is usable. allternit-api's canvas routes
+ * accept `allternit_runtime_…` bearer tokens via the same device-token
+ * mechanism `instance-registration.ts` already uses to register this
+ * machine with allternit-cloud-api — this is that same token
+ * source/storage, just pointed at a different backend. Falls through to
+ * the existing `ALLTERNIT_API_TOKEN` / desktop-bootstrap dev-fallback
+ * precedence unchanged when this machine isn't paired (most local dev
+ * setups): unpaired is the common case, not an error.
+ */
+export async function getAllternitApiConfigWithDeviceToken(): Promise<AllternitApiConfig> {
+  const base = getAllternitApiConfig()
+  const device = await Pairing.load()
+  if (Pairing.tokenUsable(device)) {
+    return { ...base, token: device.deviceToken! }
+  }
+  return base
 }
 
 function getHeaders(config: AllternitApiConfig): Record<string, string> {
@@ -299,4 +326,88 @@ export async function deleteApiLoop(
       `Allternit API DELETE /automation/loops/${id} failed: ${res.status} ${res.statusText}${text ? ` — ${text}` : ''}`,
     )
   }
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// Canvases (HTML artifact publish) — see docs/HTML_ARTIFACTS_PHASE_1_NOTES.md
+// for the authoritative route contract this wraps.
+//
+// Unlike /tasks and /automation above, these paths include the /api/v1
+// prefix explicitly — verified against a running allternit-api instance
+// during Phase 1/2 (canvas_routes.rs is nested under /api/v1 in main.rs).
+// ═══════════════════════════════════════════════════════════════════════════════
+
+export type ApiCanvas = {
+  id: string
+  session_id: string
+  title?: string
+  components: unknown
+  layout?: unknown
+  metadata?: unknown
+  artifact_key?: string | null
+  version: number
+  created_at: string
+  updated_at: string
+}
+
+export type ApiCanvasListResponse = {
+  canvases: ApiCanvas[]
+}
+
+/** Response shape of the stable-key upsert call — a narrower subset of
+ * ApiCanvas fields (Phase 1's create/redeploy response doesn't echo back
+ * title/components/etc, just the identity and version). */
+export type ApiCanvasPublishResponse = {
+  id: string
+  session_id: string
+  artifact_key?: string | null
+  version: number
+  updated_at?: string
+}
+
+/**
+ * Publish or redeploy a canvas. Always send the full current content —
+ * Phase 1's upsert-by-artifact_key is full-replace, not a partial patch
+ * (see PHASE_1_NOTES.md, "For Phase 2"): a redeploy that omits a field
+ * resets it, it does not preserve the previous value.
+ */
+export async function publishApiCanvas(
+  config: AllternitApiConfig,
+  sessionId: string,
+  input: {
+    title?: string
+    components: unknown
+    layout?: unknown
+    metadata?: unknown
+    artifact_key: string
+  },
+): Promise<ApiCanvasPublishResponse> {
+  return apiFetchJson<ApiCanvasPublishResponse>(
+    config,
+    `/api/v1/agent-sessions/${encodeURIComponent(sessionId)}/canvases`,
+    {
+      method: 'POST',
+      body: JSON.stringify(input),
+    },
+  )
+}
+
+export async function listApiCanvases(
+  config: AllternitApiConfig,
+  sessionId: string,
+): Promise<ApiCanvasListResponse> {
+  return apiFetchJson<ApiCanvasListResponse>(
+    config,
+    `/api/v1/agent-sessions/${encodeURIComponent(sessionId)}/canvases`,
+  )
+}
+
+export async function getApiCanvas(
+  config: AllternitApiConfig,
+  canvasId: string,
+): Promise<ApiCanvas> {
+  return apiFetchJson<ApiCanvas>(
+    config,
+    `/api/v1/canvases/${encodeURIComponent(canvasId)}`,
+  )
 }

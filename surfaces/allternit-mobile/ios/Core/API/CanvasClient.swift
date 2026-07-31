@@ -22,10 +22,14 @@ struct CanvasRecord: Decodable, Sendable {
     let sessionId: String
     let title: String?
     let components: [CanvasComponent]
+    let artifactKey: String?
+    let version: Int
     let updatedAt: String
 
     enum CodingKeys: String, CodingKey {
         case id, title, components
+        case version
+        case artifactKey = "artifact_key"
         case sessionId = "session_id"
         case updatedAt = "updated_at"
     }
@@ -36,6 +40,8 @@ struct CanvasRecord: Decodable, Sendable {
         sessionId = try container.decode(String.self, forKey: .sessionId)
         title = try container.decodeIfPresent(String.self, forKey: .title)
         components = (try? container.decode([CanvasComponent].self, forKey: .components)) ?? []
+        artifactKey = try container.decodeIfPresent(String.self, forKey: .artifactKey)
+        version = try container.decodeIfPresent(Int.self, forKey: .version) ?? 1
         updatedAt = try container.decode(String.self, forKey: .updatedAt)
     }
 }
@@ -64,6 +70,13 @@ struct CanvasClient: Sendable {
 
     init(client: APIClient = .shared) {
         self.client = client
+    }
+
+    /// GET /api/v1/canvases → the authenticated user's newest canvases,
+    /// including artifacts published under non-chat synthetic session ids.
+    func listCanvases() async throws -> [CanvasRecord] {
+        let envelope: ListResponse = try await client.get(path: "canvases")
+        return envelope.canvases
     }
 
     /// GET /api/v1/agent-sessions/:id/canvases → { canvases: [...] }
