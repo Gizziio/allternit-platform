@@ -12,6 +12,7 @@ set -uo pipefail
 
 CHECK_SPEC="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/check-spec.sh"
 TMP="$(mktemp -d /tmp/check-spec-test-XXXXXX)"
+export TMP
 PDIR="$TMP/pipeline"
 mkdir -p "$PDIR/specs" "$TMP/canned" "$TMP/bin"
 
@@ -46,6 +47,7 @@ export SPEC_RUBRIC="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)/spec-rubric
 cat > "$TMP/stub-consult.sh" <<'EOF'
 #!/usr/bin/env bash
 req="$(cat)"
+printf '%s' "$req" > "$(dirname "$CONSULT_LOG")/last-request.txt"
 slug="$(printf '%s' "$req" | sed -n 's/.*SPEC UNDER REVIEW: \.pipeline\/specs\/\([^.]*\)\.md.*/\1/p' | head -1)"
 echo "$slug" >> "$CONSULT_LOG"
 if [ -n "$slug" ] && [ -f "$CANNED_DIR/$slug.txt" ]; then
@@ -66,7 +68,10 @@ for a in "$@"; do
   prev="$a"
 done
 printf '%s %s\n' "$url" "$payload" >> "$CURL_CAPTURE"
-if [[ "$url" == *:3201* && "${MEMORY_MODE:-}" == "fail" ]]; then
+if [[ "$url" == *:3201/api/query* && "${MEMORY_MODE:-}" != "fail" ]]; then
+  # Realistic memory response for the taste-precedents query.
+  printf '%s' '{"answer":"past rejections: crypto trading bot (charter: no crypto)","memories":[{"content":"REJECTED spec nft-minter — violates crypto/web3 clause"}],"insights":[]}'
+elif [[ "$url" == *:3201* && "${MEMORY_MODE:-}" == "fail" ]]; then
   printf '500'
 elif [[ "$url" == *:8013* && "${RAILS_MODE:-}" == "fail" ]]; then
   printf '500'
@@ -116,7 +121,7 @@ check "NEEDS-WORK: findings appended to .review.md (bullet-stripped)" \
 check "transport failure: no verdict recorded for gamma" \
   test -z "$(verdict_field gamma verdict)"
 check "run 1 reports gamma skip" file_contains "$TMP/out1.txt" "gamma — empty consult answer"
-check "no memory POST on round 1" bash -c '! grep -q ":3201" "$CURL_CAPTURE"'
+check "no memory ingest on round 1 (precedent queries are fine)" bash -c '! grep -q ":3201/api/ingest" "$CURL_CAPTURE"'
 
 # ─── Run 2: beta NEEDS-WORK r2 -> memory ingest ─────────────────────────────
 
@@ -169,6 +174,29 @@ out8="$(run_checker)"; rc8=$?
 check "retry after rails recovery exits 0" test "$rc8" -eq 0
 check "retry moves spec to queue" test -f "$PDIR/queue/epsilon.md"
 check "retry records READY verdict" test "$(verdict_field epsilon verdict)" = "READY"
+
+# ─── Runs 9-10: REJECT (charter violation) is final and ingested ─────────────
+
+cp "$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)/charter.md" "$PDIR/charter.md"
+printf '# zeta spec\n\n## Requirements\n\n- [ ] R1: WHEN x, THE SYSTEM SHALL mine crypto\n' > "$PDIR/specs/zeta.md"
+printf 'REJECT\nViolates "We do NOT build": crypto/web3 features.\n' > "$TMP/canned/zeta.txt"
+: > "$CURL_CAPTURE"
+out9="$(run_checker)"; rc9=$?
+check "REJECT run exits 0" test "$rc9" -eq 0
+check "REJECT: spec moved to rejected/" test -f "$PDIR/rejected/zeta.md"
+check "REJECT: spec removed from specs/" test ! -f "$PDIR/specs/zeta.md"
+check "REJECT: verdict recorded" test "$(verdict_field zeta verdict)" = "REJECT"
+check "REJECT: memory POST fired immediately (taste signal)" \
+  bash -c 'grep -q ":3201/api/ingest" "$CURL_CAPTURE" && grep -q "REJECTED" "$CURL_CAPTURE"'
+check "REJECT: not announced to queue thread" bash -c '! grep -q "wih:pipeline-queue.*zeta" "$CURL_CAPTURE"'
+check "consult request includes the charter" \
+  bash -c 'grep -q "PIPELINE CHARTER" "$TMP/last-request.txt" && grep -q "We do NOT build" "$TMP/last-request.txt"'
+check "consult request includes taste precedents from memory" \
+  bash -c 'grep -q "TASTE PRECEDENTS" "$TMP/last-request.txt" && grep -q "nft-minter" "$TMP/last-request.txt"'
+before="$(grep -c '^zeta$' "$CONSULT_LOG")"
+run_checker >/dev/null
+after="$(grep -c '^zeta$' "$CONSULT_LOG")"
+check "REJECT spec never re-consulted" test "$before" = "$after"
 
 # ─── Result ─────────────────────────────────────────────────────────────────
 

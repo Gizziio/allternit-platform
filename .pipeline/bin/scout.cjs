@@ -163,8 +163,18 @@ function briefDocument(item, body) {
   return `# ${item.title}\n\n- Source: ${item.source}\n- URL: ${item.url}\n- Relevance score: ${item.relevance?.score ?? 'n/a'}\n- Discovered: ${new Date().toISOString()}\n\n${body}\n`;
 }
 
+function loadCharter() {
+  const p = path.join(SCOUT_DIR, 'charter.md');
+  try {
+    return fs.readFileSync(p, 'utf8').slice(0, 3000);
+  } catch {
+    return '';
+  }
+}
+
 async function generateBrief(pipeline, item) {
   if (typeof pipeline.callKimi === 'function' && pipeline.KIMI_API_KEY) {
+    const charter = loadCharter();
     try {
       const text = await pipeline.callKimi(
         [
@@ -179,8 +189,11 @@ async function generateBrief(pipeline, item) {
               '(an agent runtime/orchestration platform with rails, infra/, domains/, mcp/), each ' +
               'formatted "- <repo path or subsystem>: <what would change>".\n' +
               '"## Requirements seed" — 2-6 bullets, each a single checkable behavior in the form ' +
-              '"WHEN <trigger>, THE SYSTEM SHALL <observable behavior>".\n\n' +
-              `Title: ${item.title}\nURL: ${item.url}\nExcerpt: ${(item.text || '').slice(0, 600)}`,
+              '"WHEN <trigger>, THE SYSTEM SHALL <observable behavior>".\n' +
+              (charter
+                ? `\nFrame the brief through this product charter — the integration surface and requirements seed must serve it, and if the item clearly conflicts with it, say so in one line at the top:\n${charter}\n`
+                : '') +
+              `\nTitle: ${item.title}\nURL: ${item.url}\nExcerpt: ${(item.text || '').slice(0, 600)}`,
           },
         ],
         1200,

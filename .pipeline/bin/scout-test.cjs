@@ -262,6 +262,66 @@ check(
     JSON.parse(fs.readFileSync(path.join(dirD, 'seen.json'), 'utf8')).length === 5,
 );
 
+// ─── Scenario (e): charter present -> callKimi prompt is framed by it ───────
+
+const kimiFixture = path.join(TMP, 'fixture-kimi.cjs');
+fs.writeFileSync(
+  kimiFixture,
+  `'use strict';
+const items = ${JSON.stringify(
+    ITEMS.slice(0, 1).map((it, i) => ({
+      title: it.title,
+      url: `https://example.com/kimi-${i}`,
+      text: 'excerpt',
+      source: 'hackernews',
+      score: 99,
+      relevance: { score: it.score, matched: [], focusAreas: [] },
+    })),
+  )};
+module.exports = {
+  fetchAllSources: async () => ({ filtered: items }),
+  KIMI_API_KEY: 'test-key',
+  callKimi: async (messages) => {
+    require('fs').writeFileSync(process.env.KIMI_PROMPT_CAPTURE, messages[0].content);
+    return 'brief body (content irrelevant to charter assertions)';
+  },
+};
+`,
+);
+
+const dirE = path.join(TMP, 'run-e');
+fs.mkdirSync(dirE, { recursive: true });
+fs.writeFileSync(path.join(dirE, 'charter.md'), '# Charter\n\nWe do NOT build crypto.\n');
+runScout({
+  SCOUT_DIR: dirE,
+  SCOUT_PIPELINE_MODULE: kimiFixture,
+  SCOUT_RAILS_ENSURE: ensureOk,
+  SCOUT_ANNOUNCER: announcer,
+  KIMI_PROMPT_CAPTURE: path.join(TMP, 'prompt-e.txt'),
+});
+check(
+  '(e) charter present -> brief prompt framed by charter',
+  fs.existsSync(path.join(TMP, 'prompt-e.txt')) &&
+    fs.readFileSync(path.join(TMP, 'prompt-e.txt'), 'utf8').includes('Frame the brief through this product charter') &&
+    fs.readFileSync(path.join(TMP, 'prompt-e.txt'), 'utf8').includes('We do NOT build crypto'),
+);
+
+// ─── Scenario (f): charter absent -> prompt unchanged ───────────────────────
+
+const dirF = path.join(TMP, 'run-f');
+runScout({
+  SCOUT_DIR: dirF,
+  SCOUT_PIPELINE_MODULE: kimiFixture,
+  SCOUT_RAILS_ENSURE: ensureOk,
+  SCOUT_ANNOUNCER: announcer,
+  KIMI_PROMPT_CAPTURE: path.join(TMP, 'prompt-f.txt'),
+});
+check(
+  '(f) charter absent -> no charter framing in prompt',
+  fs.existsSync(path.join(TMP, 'prompt-f.txt')) &&
+    !fs.readFileSync(path.join(TMP, 'prompt-f.txt'), 'utf8').includes('Frame the brief through this product charter'),
+);
+
 // ─── Result ─────────────────────────────────────────────────────────────────
 
 fs.rmSync(TMP, { recursive: true, force: true });

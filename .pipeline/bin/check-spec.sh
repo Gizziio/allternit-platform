@@ -1,15 +1,19 @@
 #!/usr/bin/env bash
-# check-spec.sh — independent spec-checker loop (Phase 3).
+# check-spec.sh — independent spec-checker loop (Phase 3 + charter layer).
 #
-# For each .pipeline/specs/*.md without a READY/STALLED verdict in
-# .pipeline/verdicts.json: assemble spec-rubric.md + the spec, consult the
-# independent reviewer (SPEC_CHECK_CMD test hook, else ao-consult), then:
+# For each .pipeline/specs/*.md without a READY/STALLED/REJECT verdict in
+# .pipeline/verdicts.json: assemble spec-rubric.md + charter.md + taste
+# precedents from memory (advisory) + the spec, consult the independent
+# reviewer (SPEC_CHECK_CMD test hook, else ao-consult), then:
 #   READY      -> move spec to .pipeline/queue/, record verdict, announce to
 #                 wih:pipeline-queue (announce failure = hard error, R4/C3)
 #   NEEDS-WORK -> record verdict + round, append findings to <slug>.review.md;
 #                 2nd NEEDS-WORK ingests the rejection pattern to memory
 #                 (:3201, advisory — failure logged, run continues);
 #                 3rd round marks the spec STALLED and skips it thereafter
+#   REJECT     -> charter violation: move spec to .pipeline/rejected/, record
+#                 verdict, ingest the violation to memory immediately (taste
+#                 signal). REJECT is final — never retried.
 # Empty/unparseable consult answer or transport failure: record nothing,
 # continue to the next spec (fail open per-spec, never wedge the run).
 set -uo pipefail
@@ -21,10 +25,13 @@ QUEUE_DIR="$PIPELINE_DIR/queue"
 VERDICTS_FILE="$PIPELINE_DIR/verdicts.json"
 ERRORS_LOG="$PIPELINE_DIR/errors.log"
 RUBRIC="${SPEC_RUBRIC:-$PIPELINE_DIR/spec-rubric.md}"
+CHARTER="${PIPELINE_CHARTER:-$PIPELINE_DIR/charter.md}"
+REJECTED_DIR="$PIPELINE_DIR/rejected"
 RAILS_ENSURE="${RAILS_ENSURE:-$PIPELINE_DIR/bin/rails-ensure.sh}"
 RAILS_SHARE_URL="http://localhost:8013/api/rails/mail/share"
 QUEUE_THREAD="wih:pipeline-queue"
 MEMORY_URL="http://localhost:3201/api/ingest"
+MEMORY_QUERY_URL="http://localhost:3201/api/query"
 MAX_ROUNDS=3
 
 log_error() {
@@ -88,6 +95,27 @@ ingest_lesson() { # ingest_lesson <slug> <findings>
   fi
 }
 
+# ─── taste precedents (advisory) ────────────────────────────────────────────
+
+query_precedents() { # -> past rejection/lesson text on stdout (empty if memory down)
+  local payload
+  payload=$(python3 -c 'import json; print(json.dumps({"question":"pipeline spec rejections, charter violations, and taste precedents","max_results":5}))')
+  curl -s --max-time 5 -X POST "$MEMORY_QUERY_URL" \
+    -H 'Content-Type: application/json' -d "$payload" 2>/dev/null \
+    | python3 -c 'import json,sys
+try:
+    d = json.load(sys.stdin)
+except Exception:
+    sys.exit(0)
+parts = []
+if isinstance(d, dict):
+    if d.get("answer"): parts.append(str(d["answer"]))
+    for k in ("insights","memories"):
+        for it in d.get(k) or []:
+            if isinstance(it, dict) and it.get("content"): parts.append(str(it["content"]))
+print("\n---\n".join(parts)[:3000])' 2>/dev/null
+}
+
 # ─── consult ────────────────────────────────────────────────────────────────
 
 consult() { # consult <request-file> -> answer on stdout (may be empty)
@@ -127,7 +155,7 @@ for spec in "$SPECS_DIR"/*.md; do
   rounds="${state##* }"
   [ -n "$state" ] || rounds=0
 
-  if [ "$verdict" = "READY" ] || [ "$verdict" = "STALLED" ]; then
+  if [ "$verdict" = "READY" ] || [ "$verdict" = "STALLED" ] || [ "$verdict" = "REJECT" ]; then
     continue
   fi
 
@@ -135,6 +163,14 @@ for spec in "$SPECS_DIR"/*.md; do
   request="$(mktemp -t check-spec)"
   {
     cat "$RUBRIC"
+    if [ -f "$CHARTER" ]; then
+      printf '\n\n=== PIPELINE CHARTER (.pipeline/charter.md) ===\n'
+      cat "$CHARTER"
+    fi
+    precedents="$(query_precedents)"
+    if [ -n "${precedents// /}" ]; then
+      printf '\n\n=== TASTE PRECEDENTS (from memory — past rejections/lessons) ===\n%s\n' "$precedents"
+    fi
     printf '\n\n=== SPEC UNDER REVIEW: .pipeline/specs/%s.md ===\n' "$slug"
     cat "$spec"
   } > "$request"
@@ -182,6 +218,17 @@ for spec in "$SPECS_DIR"/*.md; do
         verdict_set "$slug" "NEEDS-WORK" "$rounds"
         echo "check-spec: $slug — NEEDS-WORK round $rounds; findings appended to specs/$slug.review.md"
       fi
+      ;;
+    REJECT*)
+      # Charter violation — final. Move the spec aside, record, and ingest the
+      # violation immediately: this is the pipeline's taste signal.
+      mkdir -p "$REJECTED_DIR"
+      findings="$(printf '%s\n' "$answer" | sed 's/^• //' | head -c 4000)"
+      mv "$spec" "$REJECTED_DIR/$slug.md"
+      [ -f "$SPECS_DIR/$slug.review.md" ] && mv "$SPECS_DIR/$slug.review.md" "$REJECTED_DIR/$slug.review.md"
+      verdict_set "$slug" "REJECT" "$rounds"
+      ingest_lesson "$slug (REJECTED — charter violation)" "$findings"
+      echo "check-spec: $slug — REJECT (charter violation), moved to rejected/ and ingested to memory"
       ;;
     *)
       echo "check-spec: $slug — unparseable verdict line ('$first'); skipping (recorded nothing)"

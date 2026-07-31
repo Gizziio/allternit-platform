@@ -45,6 +45,21 @@ briefs for the most relevant new items, announces them over rails mail, and
     `--no-wait` spawns without watching.
     There is NO auto-merge — a human merges `ao/build-<slug>` after review.
 
+## The charter (taste layer)
+
+`.pipeline/charter.md` decides **what kind of features the pipeline may build** —
+what Allternit is, what we build, what we do NOT build, current priorities.
+It is plain data you edit; the pipeline applies it at machine speed:
+
+- The scout frames every brief through the charter.
+- The spec-checker includes the charter (plus taste precedents queried from
+  memory) in every review and has a third verdict: `REJECT` — charter
+  violation, final, spec moves to `.pipeline/rejected/` and the violation is
+  ingested to memory immediately. (`NEEDS-WORK` is for fixable specs;
+  `REJECT` is for features we should never build.)
+- Rejections become taste precedents: future consults see past rejection
+  decisions, so pipeline taste converges on yours.
+
 ## The full cycle
 
 ```

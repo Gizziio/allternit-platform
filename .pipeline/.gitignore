@@ -2,6 +2,7 @@
 briefs/
 specs/
 queue/
+rejected/
 seen.json
 errors.log
 verdicts.json
