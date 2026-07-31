@@ -11,7 +11,10 @@ export namespace Flag {
   export const GIZZI_AUTO_SHARE = truthy("GIZZI_AUTO_SHARE")
   export const GIZZI_GIT_BASH_PATH = env("GIZZI_GIT_BASH_PATH")
   export const GIZZI_CONFIG = env("GIZZI_CONFIG")
-  export const GIZZI_CONFIG_DIR = env("GIZZI_CONFIG_DIR")
+  // Dynamic getter below (defined after the namespace) — tests and CLI flags
+  // set this mid-process, after this module has already been imported, so it
+  // can't be a frozen const evaluated once at import time.
+  export declare const GIZZI_CONFIG_DIR: string | undefined
   export const GIZZI_CONFIG_CONTENT = env("GIZZI_CONFIG_CONTENT")
   export const GIZZI_DISABLE_AUTOUPDATE = truthy("GIZZI_DISABLE_AUTOUPDATE")
   export const GIZZI_DISABLE_PRUNE = truthy("GIZZI_DISABLE_PRUNE")
@@ -156,6 +159,15 @@ export namespace Flag {
     return entries.length ? entries : undefined
   }
 }
+
+// Dynamic getter for GIZZI_CONFIG_DIR
+Object.defineProperty(Flag, "GIZZI_CONFIG_DIR", {
+  get() {
+    return env("GIZZI_CONFIG_DIR")
+  },
+  enumerable: true,
+  configurable: false,
+})
 
 // Dynamic getter for GIZZI_DISABLE_PROJECT_CONFIG
 Object.defineProperty(Flag, "GIZZI_DISABLE_PROJECT_CONFIG", {
