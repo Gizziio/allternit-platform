@@ -7,37 +7,38 @@
 
 ## Goal
 
-Phase 2 of the discovery-to-spec pipeline: a deterministic, LLM-free
-brief→spec generator (`.pipeline/bin/generate-spec.cjs`) that parses the
-structured brief format into OpenSpec-profile specs (Context / numbered
-R1..Rn EARS requirements / Out of scope / mechanical Gherkin acceptance),
-byte-identical on regeneration, with a `.generated.json` manifest. Also
-tightens the Phase 1 brief template in scout.cjs so briefs are mechanically
-parseable. Phase 1 selection logic (dedup-first-then-cap) is frozen by the
-steering ruling.
+Phase 3 of the discovery-to-spec pipeline: independent spec-checker loop
+(rubric + ao-steer consult), queue promotion for READY specs, and memory
+ingestion of rejection patterns. Rails is the only hard dependency; memory
+is advisory.
 
 ## Just did
 
-Phase 2 complete (first commit attempt BLOCKED by steering with one MAJOR:
-spec.md had no Phase 2 requirements — documentation gap only, code verified
-DONE on every build step). Applied the ruling:
-- `.steering/spec.md` now has "Requirements (Phase 2 — deterministic
-  generator)" R5–R8 (structured brief format; strict parsing/rejection, no
-  LLM; deterministic OpenSpec-profile emission + manifest; offline test),
-  three Phase 2 Gherkin acceptance scenarios lifted from
-  generate-spec-test.cjs assertions, Phase 1 R0–R4 marked `[x]` complete and
-  frozen, and "Out of scope" reduced to Phase 3+. NOTES updated to match.
-
-(Pre-block state, re-verified by the steering agent itself: brief template
-tightened in scout.cjs, scout-test 20/20; generate-spec.cjs strict +
-LLM-free + byte-identical regen, generate-spec-test 20/20; real OSReward
-brief → spec with R1–R4 + 4 Gherkin scenarios; C3 gitignore verified.)
+Applied the steering STEER from the mid-phase review:
+- **MAJOR fixed** — READY path reordered in check-spec.sh: announce to
+  `wih:pipeline-queue` FIRST; only on 2xx does the spec move to `queue/` and
+  the verdict get recorded. Announce failure now leaves the spec untouched
+  in `specs/` with its prior state, so the next run re-consults and retries.
+  Regression coverage added to check-spec-test.sh: announce-failure leaves
+  no queue file + no READY verdict + errors.log entry + exit 1, and a
+  follow-up run after "rails recovery" completes the READY path. Suite now
+  28/28 PASS.
+- **MINOR fixed** — a spec's accumulated `<slug>.review.md` now moves to
+  `queue/` alongside the spec.
+- Follow-up noted in NOTES (not changed): scout.cjs's seen.json-before-
+  announce ordering (Phase 1 frozen per its ruling).
+- Real run completed with the LIVE ao-steer: NEEDS-WORK round 1 on the
+  osreward spec, findings verbatim in `.pipeline/specs/osreward-….review.md`,
+  verdicts.json rounds=1. Steering agent confirmed independently.
+- Phase 3 requirements R9–R12 + Gherkin already in `.steering/spec.md`;
+  NOTES + sentinel written.
 
 ## Next
 
-Retry the gated commit: `git add .pipeline .steering docs && git commit -m
-"feat(pipeline): deterministic brief-to-spec generator (Phase 2)"`.
+Gated commit: `git add .pipeline .steering docs && git commit -m
+"feat(pipeline): spec-checker loop + queue + memory lessons (Phase 3)"`.
 
 ## Open questions
 
-- (none)
+- (none — steering's MAJOR/MINOR both addressed; the scout.cjs ordering note
+  is recorded as a follow-up in NOTES, not an open question)

@@ -4,3 +4,4 @@ specs/
 queue/
 seen.json
 errors.log
+verdicts.json

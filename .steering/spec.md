@@ -1,4 +1,4 @@
-# Steering spec — Discovery-to-spec pipeline: scout (Phase 1) + generator (Phase 2)
+# Steering spec — Discovery-to-spec pipeline: scout (P1) + generator (P2) + spec-checker (P3)
 
 <!-- SOURCE OF TRUTH for this feature. The steering agent maps every requirement
      to DONE / PARTIAL / MISSING with code evidence at each checkpoint.
@@ -8,7 +8,9 @@
      P1 prose + idempotency Gherkin corrected per steering rulings.
      v4: Phase 2 requirements R5–R8 added (2026-07-31) — retroactively
      numbered from TASK.md Build steps 1–3 per steering review of the
-     Phase 2 commit. -->
+     Phase 2 commit.
+     v5: Phase 3 requirements R9–R12 + Gherkin added alongside the
+     implementation (2026-07-31), applying the v4 lesson. -->
 
 ## Context
 
@@ -88,6 +90,37 @@ EARS-ish requirements, Gherkin acceptance) are adopted, not reinvented.
   malformed briefs are rejected with the right error lines, regeneration is
   byte-identical, and the manifest is updated.
 
+## Requirements (Phase 3 — spec-checker loop, queue, memory lessons)
+
+- [x] R9: THE SYSTEM SHALL keep the spec-checker's review prompt in the repo
+  as data (`.pipeline/spec-rubric.md`): every requirement verdict-able as
+  DONE/PARTIAL/MISSING by a future builder, acceptance scenarios that prove
+  their requirement, right-sizing (one reviewable unit), and no conflict
+  with this file's phase boundaries. The verdict contract SHALL be: first
+  line exactly `READY` or `NEEDS-WORK`, then findings citing requirement IDs.
+- [x] R10: WHEN `check-spec.sh` runs, THE SYSTEM SHALL first run
+  `rails-ensure.sh` and abort non-zero if it fails; then, for each spec in
+  `.pipeline/specs/` without a READY or STALLED verdict in
+  `.pipeline/verdicts.json`, consult the independent reviewer
+  (`SPEC_CHECK_CMD` test hook, else `ao-consult`). ON a READY verdict, THE
+  SYSTEM SHALL move the spec to `.pipeline/queue/<slug>.md`, record the
+  verdict, and announce to `wih:pipeline-queue` (announcement failure is a
+  hard error: errors.log + non-zero exit). ON NEEDS-WORK, THE SYSTEM SHALL
+  record the round and append findings to `.pipeline/specs/<slug>.review.md`;
+  after 3 rounds THE SYSTEM SHALL mark the spec STALLED and skip it
+  thereafter. ON an empty/unparseable answer or transport failure, THE
+  SYSTEM SHALL record nothing and continue (fail open per-spec).
+- [x] R11: WHEN a spec reaches its 2nd NEEDS-WORK, THE SYSTEM SHALL ingest
+  the rejection pattern to memory (`POST localhost:3201/api/ingest`,
+  source `pipeline-spec-checker`). IF memory is unreachable, THE SYSTEM
+  SHALL log to `.pipeline/errors.log` and continue — lessons are advisory;
+  rails is the only hard dependency.
+- [x] R12: WHEN the checker test runs (`check-spec-test.sh`), THE SYSTEM
+  SHALL verify offline (stubbed consult, PATH-shimmed curl) READY
+  move+announce+record, NEEDS-WORK round increments and `.review.md`
+  findings, STALLED after 3 rounds with subsequent skips, the 2nd-round
+  memory POST, and the advisory memory-failure path.
+
 ## Cross-cutting constraints
 
 - C1: every pipeline stage SHALL be a prompt+model pair behind a one-file
@@ -101,8 +134,6 @@ EARS-ish requirements, Gherkin acceptance) are adopted, not reinvented.
 
 ## Out of scope (later phases)
 
-- Phase 3: spec-checker loop (READY/NEEDS-WORK, 3-round cap), `.pipeline/queue/`,
-  memory ingestion of rejection patterns (port 3201).
 - Executor consumption of the queue, self-improve lineage integration,
   auto-merge, issue-tracker sync.
 
@@ -151,3 +182,27 @@ EARS-ish requirements, Gherkin acceptance) are adopted, not reinvented.
   When the generator runs again on the unchanged brief
   Then the spec is byte-identical, `.generated.json` maps the slug to the
   brief's SHA-256, and the unchanged brief is skipped in all-briefs mode.
+
+### Phase 3 — spec-checker
+
+- Scenario: a READY spec joins the queue
+  Given a spec with no verdict and a consult answering READY
+  When check-spec runs
+  Then the spec moves to `.pipeline/queue/`, the verdict is recorded, and
+  `wih:pipeline-queue` holds an announcement with the queue path as
+  asset_ref.
+- Scenario: NEEDS-WORK rounds accumulate to STALLED
+  Given a spec whose consult answers NEEDS-WORK
+  When check-spec runs three times
+  Then rounds 1 and 2 append findings to `<slug>.review.md`, the 2nd round
+  posts the rejection pattern to memory, the 3rd marks the spec STALLED,
+  and a 4th run skips it without consulting.
+- Scenario: memory outage is advisory, rails outage is fatal
+  Given a spec reaching its 2nd NEEDS-WORK while memory is down
+  When check-spec runs
+  Then the failure is logged to errors.log and the run continues; but when
+  rails-ensure fails, check-spec aborts non-zero before any consult.
+- Scenario: a broken consult never wedges the run
+  Given a spec whose consult answer is empty or unparseable
+  When check-spec runs
+  Then nothing is recorded for that spec and the run continues to the next.
