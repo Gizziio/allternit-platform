@@ -20,7 +20,8 @@ EARS-ish requirements, Gherkin acceptance) are adopted, not reinvented.
   ships `.pipeline/bin/rails-ensure.sh` (R0 below); the packaged-app instance
   of allternit-api does NOT accept pipeline writes (no dev bypass), so the
   dev instance from `dev/scripts/start-api.sh` is the supported rails backend
-  (debug binary already built at `target/debug/allternit-api`).
+  (requires the debug binary at `target/debug/allternit-api` — build it with
+  `cargo build --bin allternit-api` if missing).
 
 ## Requirements (Phase 1 — scout only)
 
@@ -79,10 +80,12 @@ EARS-ish requirements, Gherkin acceptance) are adopted, not reinvented.
   When the scout runs
   Then exactly 5 briefs exist in `.pipeline/briefs/`, `seen.json` lists all 5
   slugs, and `wih:pipeline-discovery` holds 5 announcements.
-- Scenario: a re-run is idempotent
+- Scenario: a re-run drains the backlog without duplicating
   Given `seen.json` from the previous scenario
   When the scout runs again with the same sources
-  Then no new briefs are written and no announcements are made.
+  Then briefs are written only for items not already in `seen.json` (the
+  remaining 3), no item is briefed twice, and a third run writes nothing and
+  makes no announcements.
 - Scenario: rails outage aborts the run loudly
   Given rails cannot be made healthy by rails-ensure (dead port, blocked auth)
   When the scout runs
