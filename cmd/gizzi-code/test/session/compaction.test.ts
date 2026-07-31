@@ -1,13 +1,13 @@
 // @ts-nocheck
 import { describe, expect, test } from "bun:test"
 import path from "path"
-import { SessionCompaction } from "../../src/session/compaction"
-import { Token } from "../../src/util/token"
-import { Instance } from "../../src/project/instance"
-import { Log } from "../../src/util/log"
+import { SessionCompaction } from "../../src/runtime/session/compaction"
+import { Token } from "../../src/shared/util/token"
+import { Instance } from "../../src/runtime/context/project/instance"
+import { Log } from "../../src/shared/util/log"
 import { tmpdir } from "../fixture/fixture"
-import { Session } from "../../src/session"
-import type { Provider } from "../../src/provider/provider"
+import { Session } from "../../src/runtime/session"
+import type { Provider } from "../../src/runtime/providers/provider"
 
 Log.init({ print: false })
 

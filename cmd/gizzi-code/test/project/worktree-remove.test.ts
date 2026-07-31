@@ -3,9 +3,9 @@ import { describe, expect, test } from "bun:test"
 import { $ } from "bun"
 import fs from "fs/promises"
 import path from "path"
-import { Instance } from "../../src/project/instance"
-import { Worktree } from "../../src/worktree"
-import { Filesystem } from "../../src/util/filesystem"
+import { Instance } from "../../src/runtime/context/project/instance"
+import { Worktree } from "../../src/runtime/workspace/worktree"
+import { Filesystem } from "../../src/shared/util/filesystem"
 import { tmpdir } from "../fixture/fixture"
 
 describe("Worktree.remove", () => {

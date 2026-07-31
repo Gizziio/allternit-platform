@@ -1,22 +1,22 @@
 // @ts-nocheck
 import { describe, expect, mock, test } from "bun:test"
-import { Project } from "../../src/project/project"
-import { Log } from "../../src/util/log"
+import { Project } from "../../src/runtime/context/project/project"
+import { Log } from "../../src/shared/util/log"
 import { $ } from "bun"
 import path from "path"
 import { tmpdir } from "../fixture/fixture"
-import { Filesystem } from "../../src/util/filesystem"
-import { GlobalBus } from "../../src/bus/global"
+import { Filesystem } from "../../src/shared/util/filesystem"
+import { GlobalBus } from "../../src/shared/bus/global"
 
 Log.init({ print: false })
 
-const gitModule = await import("../../src/util/git")
+const gitModule = await import("../../src/shared/util/git")
 const originalGit = gitModule.git
 
 type Mode = "none" | "rev-list-fail" | "top-fail" | "common-dir-fail"
 let mode: Mode = "none"
 
-mock.module("../../src/util/git", () => ({
+mock.module("../../src/shared/util/git", () => ({
   git: (args: string[], opts: { cwd: string; env?: Record<string, string> }) => {
     const cmd = ["git", ...args].join(" ")
     if (
@@ -63,7 +63,7 @@ async function withMode(next: Mode, run: () => Promise<void>) {
 }
 
 async function loadProject() {
-  return (await import("../../src/project/project")).Project
+  return (await import("../../src/runtime/context/project/project")).Project
 }
 
 describe("Project.fromDirectory", () => {
