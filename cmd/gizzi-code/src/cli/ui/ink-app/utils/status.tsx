@@ -5,7 +5,7 @@ import * as React from 'react';
 import { color, Text } from '../ink';
 import type { MCPServerConnection } from '../services/mcp/types';
 import { getAccountInformation, isClaudeAISubscriber } from './auth';
-import { getLargeMemoryFiles, getMemoryFiles, MAX_MEMORY_CHARACTER_COUNT } from './claudemd';
+import { getLargeMemoryFiles, getMemoryFiles, MAX_MEMORY_CHARACTER_COUNT } from './gizzimd';
 import { getDoctorDiagnostic } from './doctorDiagnostic';
 import { getAWSRegion, getDefaultVertexRegion, isEnvTruthy } from './envUtils';
 import { getDisplayPath } from './file';

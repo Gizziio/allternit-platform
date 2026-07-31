@@ -44,7 +44,7 @@ import {
   getMemoryFilesForNestedDirectory,
   getConditionalRulesForCwdLevelDirectory,
   type MemoryFileInfo,
-} from './claudemd.js'
+} from './gizzimd.js'
 import { dirname, parse, relative, resolve } from 'path'
 import { getCwd } from './cwd.js'
 import { getViewedTeammateTask } from '@/state/selectors.js'

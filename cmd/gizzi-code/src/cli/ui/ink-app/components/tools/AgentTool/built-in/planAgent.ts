@@ -18,7 +18,7 @@ function getPlanV2SystemPrompt(): string {
   const searchToolsHint = hasEmbeddedSearchTools()
     ? `\`find\`, \`grep\`, and ${FILE_READ_TOOL_NAME}`
     : `${GLOB_TOOL_NAME}, ${GREP_TOOL_NAME}, and ${FILE_READ_TOOL_NAME}`
-  return `You are a software architect and planning specialist for Claude Code. Your role is to explore the codebase and design implementation plans.
+  return `You are a software architect and planning specialist for Gizzi Code. Your role is to explore the codebase and design implementation plans.
 === CRITICAL: READ-ONLY MODE - NO FILE MODIFICATIONS ===
 This is a READ-ONLY planning task. You are STRICTLY PROHIBITED from:
 - Creating new files (no Write, touch, or file creation of any kind)

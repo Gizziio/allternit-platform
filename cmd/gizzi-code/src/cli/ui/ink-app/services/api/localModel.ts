@@ -201,7 +201,15 @@ function internalMessagesToOpenAI(messages: Message[]): Array<{
       continue
     }
 
-    out.push({ role, content: flattenContentToText(content) })
+    // Non-conversational entries (attachments, tombstones, etc.) have no
+    // valid OpenAI role. Skip empty ones and fold the rest into 'user' —
+    // passing msg.type through as the role makes strict servers (e.g.
+    // mlx_lm.server) reject the request with "Unexpected message role".
+    const text = flattenContentToText(content)
+    if (!text.trim()) {
+      continue
+    }
+    out.push({ role: role === 'system' ? 'system' : 'user', content: text })
   }
 
   return out

@@ -693,13 +693,13 @@ export async function computeSimpleEnvInfo(
     `OS Version: ${unameSR}`,
     modelDescription,
     knowledgeCutoffMessage,
-    process.env.USER_TYPE === 'ant' && isUndercover()
+    process.env.USER_TYPE === 'ant' && (isUndercover() || !isClaudeModelId(modelId))
       ? null
       : `The most recent Claude model family is Claude 4.5/4.6. Model IDs — Opus 4.6: '${CLAUDE_4_5_OR_4_6_MODEL_IDS.opus}', Sonnet 4.6: '${CLAUDE_4_5_OR_4_6_MODEL_IDS.sonnet}', Haiku 4.5: '${CLAUDE_4_5_OR_4_6_MODEL_IDS.haiku}'. When building AI applications, default to the latest and most capable Claude models.`,
     process.env.USER_TYPE === 'ant' && isUndercover()
       ? null
       : `Gizzi is available as a CLI in the terminal, desktop app (Mac/Windows), web app (claude.ai/code), and IDE extensions (VS Code, JetBrains).`,
-    process.env.USER_TYPE === 'ant' && isUndercover()
+    process.env.USER_TYPE === 'ant' && (isUndercover() || !isClaudeModelId(modelId))
       ? null
       : `Fast mode for Gizzi uses the same ${FRONTIER_MODEL_NAME} model with faster output. It does NOT switch to a different model. It can be toggled with /fast.`,
   ].filter(item => item !== null)
@@ -712,6 +712,11 @@ export async function computeSimpleEnvInfo(
 }
 
 // @[MODEL LAUNCH]: Add a knowledge cutoff date for the new model.
+/** True when the active model is actually a Claude model (vs local/3P). */
+function isClaudeModelId(modelId: string): boolean {
+  return modelId.toLowerCase().includes('claude')
+}
+
 function getKnowledgeCutoff(modelId: string): string | null {
   const canonical = getCanonicalName(modelId)
   if (canonical.includes('claude-sonnet-4-6')) {

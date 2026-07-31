@@ -20,7 +20,7 @@ import { handleMcpjsonServerApprovals } from '@/services/mcpServerApproval.js';
 import { AppStateProvider } from '@/state/AppState.js';
 import { onChangeAppState } from '@/state/onChangeAppState.js';
 import { normalizeApiKeyForConfig } from '../../shared/utils/authPortable.js';
-import { getExternalClaudeMdIncludes, getMemoryFiles, shouldShowClaudeMdExternalIncludesWarning } from '../../shared/utils/claudemd.js';
+import { getExternalClaudeMdIncludes, getMemoryFiles, shouldShowClaudeMdExternalIncludesWarning } from '../../shared/utils/gizzimd.js';
 import { checkHasTrustDialogAccepted, getCustomApiKeyStatus, getGlobalConfig, saveGlobalConfig } from '../../shared/utils/config.js';
 import { updateDeepLinkTerminalPreference } from '../../shared/utils/deepLink/terminalPreference.js';
 import { isEnvTruthy, isRunningOnHomespace } from '../../shared/utils/envUtils.js';
@@ -167,9 +167,9 @@ export async function showSetupScreens(root: Root, permissionMode: PermissionMod
     if (await shouldShowClaudeMdExternalIncludesWarning()) {
       const externalIncludes = getExternalClaudeMdIncludes(await getMemoryFiles(true));
       const {
-        ClaudeMdExternalIncludesDialog
-      } = await import('../../cli/ui/ink-app/components/ClaudeMdExternalIncludesDialog.js');
-      await showSetupDialog(root, done => <ClaudeMdExternalIncludesDialog onDone={done} isStandaloneDialog externalIncludes={externalIncludes} />);
+        GizziMdExternalIncludesDialog
+      } = await import('../../cli/ui/ink-app/components/GizziMdExternalIncludesDialog.js');
+      await showSetupDialog(root, done => <GizziMdExternalIncludesDialog onDone={done} isStandaloneDialog externalIncludes={externalIncludes} />);
     }
   }
 

@@ -71,7 +71,7 @@ import { SpinnerWithVerb, BriefIdleStatus, type SpinnerMode } from '../component
 import { getSystemPrompt } from '../constants/prompts';
 import { buildEffectiveSystemPrompt } from '../utils/systemPrompt';
 import { getSystemContext, getUserContext } from '../context';
-import { getMemoryFiles } from '../utils/claudemd';
+import { getMemoryFiles } from '../utils/gizzimd';
 import { startBackgroundHousekeeping } from '../utils/backgroundHousekeeping';
 import { getTotalCost, saveCurrentSessionCosts, resetCostState, getStoredSessionCosts } from '../cost-tracker';
 import { useCostSummary } from '../costHook';
@@ -2835,7 +2835,7 @@ export function REPL({
     // which was broken by SessionStart hook messages (prepended via
     // useDeferredHookMessages) and attachment messages (appended by
     // processTextPrompt) — both pushed length past 1 on turn one, so the
-    // title silently fell through to the "Claude Code" default.
+    // title silently fell through to the "Gizzi Code" default.
     if (!titleDisabled && !sessionTitle && !agentTitle && !haikuTitleAttemptedRef.current) {
       const firstUserMessage = newMessages.find(m => m.type === 'user' && !m.isMeta);
       const text = firstUserMessage?.type === 'user' ? getContentText(firstUserMessage.message.content) : null;
@@ -4478,7 +4478,7 @@ export function REPL({
   useEffect(() => {
     const handleSuspend = () => {
       // Print suspension instructions
-      process.stdout.write(`\nClaude Code has been suspended. Run \`fg\` to bring Claude Code back.\nNote: ctrl + z now suspends Claude Code, ctrl + _ undoes input.\n`);
+      process.stdout.write(`\nGizzi Code has been suspended. Run \`fg\` to bring Gizzi Code back.\nNote: ctrl + z now suspends Gizzi Code, ctrl + _ undoes input.\n`);
     };
     const handleResume = () => {
       // Force complete component tree replacement instead of terminal clear

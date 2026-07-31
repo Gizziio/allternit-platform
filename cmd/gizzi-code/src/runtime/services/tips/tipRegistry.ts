@@ -637,7 +637,7 @@ const internalOnlyTips: Tip[] =
   process.env.USER_TYPE === 'ant'
     ? [
         {
-          id: 'important-claudemd',
+          id: 'important-gizzimd',
           content: async () =>
             '[ANT-ONLY] Use "IMPORTANT:" prefix for must-follow CLAUDE.md rules',
           cooldownSessions: 30,

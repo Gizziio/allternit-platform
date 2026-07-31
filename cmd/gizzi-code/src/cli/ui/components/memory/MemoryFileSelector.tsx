@@ -17,7 +17,7 @@ import { readLastConsolidatedAt } from '@/services/autoDream/consolidationLock.j
 import { useAppState } from '@/state/AppState.js';
 import { getAgentMemoryDir } from '../../../../runtime/tools/builtins/AgentTool/agentMemory.js';
 import { openPath } from '../../../../shared/utils/browser.js';
-import { getMemoryFiles, type MemoryFileInfo } from '../../../../shared/utils/claudemd.js';
+import { getMemoryFiles, type MemoryFileInfo } from '../../../../shared/utils/gizzimd.js';
 import { getClaudeConfigHomeDir } from '../../../../shared/utils/envUtils.js';
 import { getDisplayPath } from '../../../../shared/utils/file.js';
 import { formatRelativeTimeAgo } from '../../../../shared/utils/format.js';

@@ -1,8 +1,9 @@
 export const PRODUCT_URL = 'https://gizzi.io'
 
 // Gizzi Remote session URLs
-export const GIZZI_BASE_URL = 'https://claude.ai'
-export const GIZZI_STAGING_BASE_URL = 'https://claude-ai.staging.ant.dev'
+export const GIZZI_BASE_URL = PRODUCT_URL
+// TODO: confirm the real gizzi staging origin for remote sessions.
+export const GIZZI_STAGING_BASE_URL = 'https://staging.gizzi.io'
 export const GIZZI_LOCAL_BASE_URL = 'http://localhost:4000'
 
 /**

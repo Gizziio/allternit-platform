@@ -27,7 +27,7 @@ import { clearTrackedMagicDocs } from '../../../../../../runtime/services/MagicD
 import { clearDynamicSkills } from '../../../../../../runtime/skills/loadSkillsDir'
 import { resetSentSkillNames } from '../../../../../../shared/utils/attachments'
 import { clearCommandPrefixCaches } from '../../../../../../commands'
-import { resetGetMemoryFilesCache } from '../../../../../../shared/utils/claudemd'
+import { resetGetMemoryFilesCache } from '../../../../../../shared/utils/gizzimd'
 import { clearRepositoryCaches } from '../../../../../../shared/utils/detectRepository'
 import { clearResolveGitDirCache } from '../../../../../../shared/utils/git/gitFilesystem'
 import { clearStoredImagePaths } from '../../../../../../shared/utils/imageStore'

@@ -32,7 +32,7 @@ export function getSteps(): Step[] {
       isEnabled: isWorkspaceDirEmpty,
     },
     {
-      key: 'claudemd',
+      key: 'gizzimd',
       text: 'Run /init to create a GIZZI.md file with instructions for Gizzi',
       isComplete: hasClaudeMd,
       isCompletable: true,

@@ -10,7 +10,7 @@ import {
   filterInjectedMemoryFiles,
   getClaudeMds,
   getMemoryFiles,
-} from '../../shared/utils/claudemd.js'
+} from '../../shared/utils/gizzimd.js'
 import { logForDiagnosticsNoPII } from '../../shared/utils/diagLogs.js'
 import { isBareMode, isEnvTruthy } from '../../shared/utils/envUtils.js'
 import { execFileNoThrow } from '../../shared/utils/execFileNoThrow.js'

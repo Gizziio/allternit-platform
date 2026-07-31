@@ -2,7 +2,7 @@
 /**
  * Files are loaded in the following order:
  *
- * 1. Managed memory (eg. /etc/claude-code/CLAUDE.md) - Global instructions for all users
+ * 1. Managed memory (eg. /etc/gizzi/CLAUDE.md) - Global instructions for all users
  * 2. User memory (~/.claude/CLAUDE.md) - Private global instructions for all projects
  * 3. Project memory (CLAUDE.md, .claude/CLAUDE.md, and .claude/rules/*.md in project roots) - Instructions checked into the codebase
  * 4. Local memory (CLAUDE.local.md in project roots) - Private project-specific instructions
@@ -41,14 +41,14 @@ import {
   sep,
 } from 'path'
 import picomatch from 'picomatch'
-import { logEvent } from './../services/analytics/index.ts'
+import { logEvent } from '@/services/analytics/index.js'
 import {
   getAdditionalDirectoriesForClaudeMd,
   getOriginalCwd,
-} from '../bootstrap/state.js'
-import { truncateEntrypointContent } from '../memdir/memdir.js'
+} from '@/bootstrap/state.js'
+import { truncateEntrypointContent } from '../../cli/ui/ink-app/memdir/memdir.js'
 import { getAutoMemEntrypoint, isAutoMemoryEnabled } from '../memdir/paths.js'
-import { getFeatureValue_CACHED_MAY_BE_STALE } from '../services/analytics/growthbook.js'
+import { getFeatureValue_CACHED_MAY_BE_STALE } from '../../runtime/services/analytics/growthbook.js'
 import {
   getCurrentProjectConfig,
   getManagedClaudeRulesDir,
@@ -57,7 +57,7 @@ import {
   pickMemoryFile,
   pickMemoryFileFrom,
 } from './config.js'
-import { ROOT_INSTRUCTION_FILENAMES } from '../../../../shared/utils/agentFileResolver.js'
+import { ANTI_PATTERNS_FILENAME, ROOT_INSTRUCTION_FILENAMES } from './agentFileResolver.js'
 import { logForDebugging } from './debug.js'
 import { logForDiagnosticsNoPII } from './diagLogs.js'
 import { getClaudeConfigHomeDir, isEnvTruthy } from './envUtils.js'
@@ -868,7 +868,7 @@ export const getMemoryFiles = memoize(
     // directories above the worktree but within the main repo — the worktree
     // already has its own checkout. CLAUDE.local.md is gitignored so it only
     // exists in the main repo and is still loaded.
-    // See: https://github.com/anthropics/claude-code/issues/29599
+    // See: https://github.com/anthropics/gizzi/issues/29599
     const gitRoot = findGitRoot(originalCwd)
     const canonicalRoot = findCanonicalGitRoot(originalCwd)
     const isNestedWorktree =
@@ -893,6 +893,17 @@ export const getMemoryFiles = memoize(
         result.push(
           ...(await processMemoryFile(
             projectPath,
+            'Project',
+            processedPaths,
+            includeExternal,
+          )),
+        )
+
+        // Try reading ANTI_PATTERNS.md — a companion to the root marker, not
+        // a precedence alternative, so it's always loaded alongside it.
+        result.push(
+          ...(await processMemoryFile(
+            join(dir, ANTI_PATTERNS_FILENAME),
             'Project',
             processedPaths,
             includeExternal,
@@ -938,10 +949,10 @@ export const getMemoryFiles = memoize(
     }
 
     // Process CLAUDE.md from additional directories (--add-dir) if env var is enabled
-    // This is controlled by CLAUDE_CODE_ADDITIONAL_DIRECTORIES_CLAUDE_MD and defaults to off
+    // This is controlled by GIZZI_ADDITIONAL_DIRECTORIES_CLAUDE_MD and defaults to off
     // Note: we don't check isSettingSourceEnabled('projectSettings') here because --add-dir
     // is an explicit user action and the SDK defaults settingSources to [] when not specified
-    if (isEnvTruthy(process.env.CLAUDE_CODE_ADDITIONAL_DIRECTORIES_CLAUDE_MD)) {
+    if (isEnvTruthy(process.env.GIZZI_ADDITIONAL_DIRECTORIES_CLAUDE_MD)) {
       const additionalDirs = getAdditionalDirectoriesForClaudeMd()
       for (const dir of additionalDirs) {
         // Try reading CLAUDE.md from the additional directory
@@ -1440,14 +1451,15 @@ export async function shouldShowClaudeMdExternalIncludesWarning(): Promise<boole
 export function isMemoryFilePath(filePath: string): boolean {
   const name = basename(filePath)
 
-  // Root marker, local override, or legacy-compat filenames anywhere
+  // Root marker, local override, legacy-compat, or anti-patterns filenames anywhere
   if (
     name === 'GIZZI.md' ||
     name === 'GIZZI.local.md' ||
     name === 'CLAUDE.md' ||
     name === 'CLAUDE.local.md' ||
     name === 'AGENTS.md' ||
-    name === 'CONTEXT.md'
+    name === 'CONTEXT.md' ||
+    name === ANTI_PATTERNS_FILENAME
   ) {
     return true
   }

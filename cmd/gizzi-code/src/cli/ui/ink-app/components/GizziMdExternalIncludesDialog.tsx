@@ -1,18 +1,18 @@
 // @ts-nocheck
 import { c as _c } from "react/compiler-runtime";
 import React, { useCallback } from 'react';
-import { logEvent } from 'src/services/analytics/index.js';
-import { Box, Link, Text } from '@/ink.js';
-import type { ExternalClaudeMdInclude } from '../../../shared/utils/claudemd.js';
-import { saveCurrentProjectConfig } from '../../../shared/utils/config.js';
-import { Select } from './CustomSelect/index.js';
-import { Dialog } from './design-system/Dialog.js';
+import { logEvent } from './../services/analytics/index.ts';
+import { Box, Link, Text } from '../ink';
+import type { ExternalClaudeMdInclude } from '../utils/gizzimd';
+import { saveCurrentProjectConfig } from '../utils/config';
+import { Select } from './CustomSelect/index';
+import { Dialog } from './design-system/Dialog';
 type Props = {
   onDone(): void;
   isStandaloneDialog?: boolean;
   externalIncludes?: ExternalClaudeMdInclude[];
 };
-export function ClaudeMdExternalIncludesDialog(t0) {
+export function GizziMdExternalIncludesDialog(t0) {
   const $ = _c(18);
   const {
     onDone,
@@ -75,7 +75,7 @@ export function ClaudeMdExternalIncludesDialog(t0) {
   }
   let t8;
   if ($[8] === Symbol.for("react.memo_cache_sentinel")) {
-    t8 = <Text dimColor={true}>Important: Only use Gizzi with files you trust. Accessing untrusted files may pose security risks{" "}<Link url="https://code.claude.com/docs/en/security" />{" "}</Text>;
+    t8 = <Text dimColor={true}>Important: Only use Gizzi Code with files you trust. Accessing untrusted files may pose security risks{" "}<Link url="https://code.claude.com/docs/en/security" />{" "}</Text>;
     $[8] = t8;
   } else {
     t8 = $[8];

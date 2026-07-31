@@ -7,7 +7,7 @@ import { MemoryFileSelector } from '../../components/memory/MemoryFileSelector';
 import { getRelativeMemoryPath } from '../../components/memory/MemoryUpdateNotification';
 import { Box, Link, Text } from '../../ink';
 import type { LocalJSXCommandCall } from '../../types/command';
-import { clearMemoryFileCaches, getMemoryFiles } from '../../utils/claudemd';
+import { clearMemoryFileCaches, getMemoryFiles } from '../../utils/gizzimd';
 import { getClaudeConfigHomeDir } from '../../utils/envUtils';
 import { getErrnoCode } from '../../utils/errors';
 import { logError } from '../../utils/log';

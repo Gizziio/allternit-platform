@@ -25,7 +25,7 @@ import {
   checkAndRefreshOAuthTokenIfNeeded,
   getClaudeAIOAuthTokens,
 } from '../../../utils/auth.js'
-import { clearMemoryFileCaches } from '../../../shared/utils/claudemd.js'
+import { clearMemoryFileCaches } from '../../../shared/utils/gizzimd.js'
 import { getMemoryPath } from '../../../utils/config.js'
 import { logForDiagnosticsNoPII } from '../../../shared/utils/diagLogs.js'
 import { classifyAxiosError } from '../../../shared/utils/errors.js'

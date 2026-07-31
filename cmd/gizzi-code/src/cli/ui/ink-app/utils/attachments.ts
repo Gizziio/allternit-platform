@@ -17,6 +17,7 @@ import {
   readImageWithTokenBudget,
 } from '../tools/FileReadTool/FileReadTool.js'
 import { FileTooLargeError, readFileInRange } from './readFileInRange.js'
+import { isLocalProviderModel } from '../services/api/localModel.js'
 import { expandPath } from './path.js'
 import { countCharInString } from './stringUtils.js'
 import { count, uniq } from './array.js'
@@ -44,7 +45,7 @@ import {
   getMemoryFilesForNestedDirectory,
   getConditionalRulesForCwdLevelDirectory,
   type MemoryFileInfo,
-} from './claudemd.js'
+} from './gizzimd.js'
 import { dirname, parse, relative, resolve } from 'path'
 import { getCwd } from './cwd.ts'
 import { getViewedTeammateTask } from '../state/selectors.js'
@@ -2363,6 +2364,12 @@ export function startRelevantMemoryPrefetch(
   messages: ReadonlyArray<Message>,
   toolUseContext: ToolUseContext,
 ): MemoryPrefetch | undefined {
+  // Local-provider models (e.g. local-mlx/*) have no cloud endpoint — the
+  // sideQuery would fire at api.allternit.com and dump connection errors
+  // into the session. Skip the prefetch entirely for them.
+  if (isLocalProviderModel(toolUseContext.options.mainLoopModel)) {
+    return undefined
+  }
   if (
     !isAutoMemoryEnabled() ||
     !getFeatureValue_CACHED_MAY_BE_STALE('tengu_moth_copse', false)
