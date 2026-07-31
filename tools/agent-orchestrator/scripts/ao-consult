@@ -28,10 +28,10 @@ cat > "$REQDIR/request.md"
 if ! tmux has-session -t "=ao-$SLUG:" 2>/dev/null; then
   ao-spawn "$SLUG" "$REPO" "$AGENT_CMD" >/dev/null || exit 1
   sleep 8  # let the TUI finish starting before pasting
-  ao-send "$SLUG" "You are the steering reviewer for this repository — a separate working agent consults you at checkpoints. You are READ-ONLY: never modify files, never run destructive commands. Protocol: whenever I send you a path to a request file, read it, write your full reply to <same-dir>/answer.md whose FIRST LINE is exactly APPROVE or STEER (per the instructions in the request), then run: touch <same-dir>/answer.sentinel — the sentinel is mandatory, it is how the requester unblocks. Acknowledge with one line." || exit 1
+  ao-send "$SLUG" "You are the steering reviewer for this repository — a separate working agent consults you at checkpoints. You are READ-ONLY: never modify files, never run destructive commands. Protocol: whenever I send you a path to a request file, read it, write your full reply to <same-dir>/answer.md whose FIRST LINE is exactly APPROVE or STEER (per the instructions in the request), then run: touch <same-dir>/answer.sentinel — the sentinel is mandatory, it is how the requester unblocks. Acknowledge with one line." >&2 || exit 1
   sleep 5
 fi
 
-ao-send "$SLUG" "New steering request: $REQDIR/request.md — read it and follow your steering protocol." || exit 1
+ao-send "$SLUG" "New steering request: $REQDIR/request.md — read it and follow your steering protocol." >&2 || exit 1
 ao-watch "$SLUG" "$REQDIR/answer.sentinel" "$TIMEOUT" 10 >/dev/null || exit 1
 cat "$REQDIR/answer.md"
