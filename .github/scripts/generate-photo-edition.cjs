@@ -31,6 +31,7 @@ const path = require('path');
 const { spawnSync } = require('child_process');
 const { buildPhotoEditionHtml } = require('./lib/photo-edition.cjs');
 const { harvestSourceImages } = require('./lib/source-images.cjs');
+const { buildPhotoBriefs } = require('./lib/photo-briefs.cjs');
 
 const DATA_FILE = path.resolve(
   __dirname,
@@ -65,11 +66,6 @@ const SLOTS = [
 // (full-bleed quote page, two-up page) always come from Codex generation —
 // blown up to a full page, a 1200x630 text card looks wrong.
 const COVER_SLOTS = SLOTS.slice(0, 3);
-
-const STYLE_SUFFIX =
-  'Warm documentary editorial photograph, natural window light, shallow ' +
-  'depth of field, 35mm, candid and human, muted warm tones. ' +
-  'No text, no captions, no logos, no watermarks.';
 
 // ─── CLI ────────────────────────────────────────────────────────────────────
 
@@ -116,44 +112,6 @@ function selectItems(items, opts) {
       it.content.markdown &&
       (opts.force || !it.photoUrl),
   );
-}
-
-// ─── Image briefs ───────────────────────────────────────────────────────────
-
-// Strip dates/issue numbers out of titles so briefs describe the subject.
-function themeOf(publication) {
-  return String(publication.title || '')
-    .replace(/—.*$/, '')
-    .replace(/\((?:ISO )?week[^)]*\)/i, '')
-    .replace(/\b\d{4}\b/g, '')
-    .replace(/\s{2,}/g, ' ')
-    .trim();
-}
-
-function buildBriefs(publication) {
-  const theme = themeOf(publication) || 'technology and the people building it';
-  const keywords = (publication.keywords || []).slice(0, 4).join(', ');
-  const tags = (publication.tags || []).slice(0, 3).join(', ');
-  return {
-    'cover-hero':
-      `Wide cinematic photograph that captures the idea of "${theme}". ` +
-      `A human moment at the center, workspace atmosphere. ${STYLE_SUFFIX}`,
-    'cover-inset-a':
-      `Intimate detail photograph related to ${keywords || theme}. ` +
-      `Hands, tools, and screens at work. ${STYLE_SUFFIX}`,
-    'cover-inset-b':
-      `Quiet portrait-style photograph of a person absorbed in their craft, ` +
-      `evoking ${tags || theme}. ${STYLE_SUFFIX}`,
-    'bleed-quote':
-      `Atmospheric full-frame scene evoking "${theme}" — moody, spacious, ` +
-      `room for a quote to sit over a darker area. ${STYLE_SUFFIX}`,
-    'pair-a':
-      `Over-the-shoulder photograph of focused work connected to ` +
-      `${keywords || theme}. ${STYLE_SUFFIX}`,
-    'pair-b':
-      `Still-life photograph of the tools of modern work — notebook, ` +
-      `terminal glow, coffee — tied to ${tags || theme}. ${STYLE_SUFFIX}`,
-  };
 }
 
 // ─── Codex image generation ─────────────────────────────────────────────────
@@ -318,7 +276,9 @@ async function main() {
         }
         const slotPool = [...harvestedAll];
 
-        const briefs = buildBriefs(publication);
+        const briefs = await buildPhotoBriefs(publication, {
+          log: console.log,
+        });
         for (const slot of SLOTS) {
           const dest = path.join(imageDir, `${slot}.png`);
           if (fs.existsSync(dest) && !opts.force) {
