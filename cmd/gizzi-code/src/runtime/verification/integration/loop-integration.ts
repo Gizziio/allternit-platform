@@ -6,8 +6,7 @@
  */
 
 import { Log } from "@/shared/util/log";
-import type { Plan } from "@/runtime/loop/planner";
-import type { ExecutionReceipt } from "@/runtime/loop/executor";
+import type { Plan, ExecutionReceipt } from "@/runtime/loop/types";
 import type { VerificationResult as StandardVerificationResult } from "@/runtime/loop/verifier";
 
 import { VerificationOrchestrator } from "../verifiers/orchestrator";

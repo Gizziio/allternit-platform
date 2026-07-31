@@ -4,8 +4,7 @@
  * Abstract base class and interfaces for all verification implementations.
  */
 
-import type { Plan } from "@/runtime/loop/planner";
-import type { ExecutionReceipt } from "@/runtime/loop/executor";
+import type { Plan, ExecutionReceipt } from "@/runtime/loop/types";
 import type { 
   VerificationStrategy, 
   VerificationContext,

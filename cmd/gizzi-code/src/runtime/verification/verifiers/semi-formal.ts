@@ -13,8 +13,7 @@ import { Provider } from "@/runtime/providers/provider";
 import { Log } from "@/shared/util/log";
 import { randomUUID } from "crypto";
 
-import type { Plan } from "@/runtime/loop/planner";
-import type { ExecutionReceipt } from "@/runtime/loop/executor";
+import type { Plan, ExecutionReceipt } from "@/runtime/loop/types";
 import type {
   VerificationStrategy,
   VerificationContext,

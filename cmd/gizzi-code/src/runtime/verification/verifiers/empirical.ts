@@ -12,8 +12,7 @@ import * as path from "path";
 import * as fs from "fs/promises";
 import * as glob from "glob";
 
-import type { Plan } from "@/runtime/loop/planner";
-import type { ExecutionReceipt } from "@/runtime/loop/executor";
+import type { Plan, ExecutionReceipt } from "@/runtime/loop/types";
 import type {
   VerificationStrategy,
   VerificationContext,

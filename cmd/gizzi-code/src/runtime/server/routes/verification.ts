@@ -24,8 +24,7 @@ import {
   type VerificationMode,
   type VerificationStrategy,
 } from "@/runtime/loop/verification";
-import { type Plan } from "@/runtime/loop/planner";
-import { type ExecutionReceipt } from "@/runtime/loop/executor";
+import { type Plan, type ExecutionReceipt } from "@/runtime/loop/types";
 import { Log } from "@/shared/util/log";
 
 const log = Log.create({ service: "server.routes.verification" });

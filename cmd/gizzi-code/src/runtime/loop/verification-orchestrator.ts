@@ -12,8 +12,7 @@
  */
 
 import { Log } from "@/shared/util/log";
-import type { Plan } from "./planner";
-import type { ExecutionReceipt } from "./executor";
+import type { Plan, ExecutionReceipt } from "./types";
 import { Verifier, type VerificationResult as StandardVerificationResult } from "./verifier";
 import { 
   SemiFormalVerifier, 

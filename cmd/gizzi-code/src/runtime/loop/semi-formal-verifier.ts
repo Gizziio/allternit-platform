@@ -15,8 +15,7 @@
  */
 
 import { Log } from "@/shared/util/log";
-import type { Plan } from "./planner";
-import type { ExecutionReceipt } from "./executor";
+import type { Plan, ExecutionReceipt } from "./types";
 import { generateObject, type ModelMessage } from "ai";
 import { Provider } from "@/runtime/providers/provider";
 import z from "zod/v4";

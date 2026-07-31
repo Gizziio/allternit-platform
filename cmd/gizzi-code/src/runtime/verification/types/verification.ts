@@ -5,8 +5,7 @@
  */
 
 import type { VerificationCertificate } from "./certificate";
-import type { Plan } from "@/runtime/loop/planner";
-import type { ExecutionReceipt } from "@/runtime/loop/executor";
+import type { Plan, ExecutionReceipt } from "@/runtime/loop/types";
 
 // ============================================================================
 // Verification Modes & Strategies

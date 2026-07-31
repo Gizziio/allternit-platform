@@ -1,6 +1,5 @@
-import type { Plan } from "./planner";
+import type { Plan, ExecutionReceipt } from "./types";
 import { Log } from "@/shared/util/log";
-import type { ExecutionReceipt } from "./executor";
 
 export interface VerificationResult {
   passed: boolean;

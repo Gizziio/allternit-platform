@@ -32,9 +32,9 @@
 //! - System instructions: the Rust bridge composes persona files (SOUL.md,
 //!   STYLE.md, registry system_prompt, response-style prefs) server-side and
 //!   wraps them in <system-instructions>. Here we rely on gizzi's native
-//!   context packing (runtime/context/pack.ts reads AGENTS.md, GIZZI.md,
-//!   .claude/CLAUDE.md, SYSTEM_LAW.md and InstructionPrompt.system() injects
-//!   them into every turn) instead of duplicating that composition. A
+//!   context loading (InstructionPrompt.system() in session/instruction.ts
+//!   resolves GIZZI.md/CLAUDE.md/AGENTS.md/CONTEXT.md per directory level and
+//!   injects them into every turn) instead of duplicating that composition. A
 //!   client-sent systemPrompt is still honored via the same
 //!   <system-instructions>/<user-request> wrap the bridge uses.
 //!
