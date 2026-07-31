@@ -181,6 +181,7 @@ function loadManifest() {
 
 function saveManifest(manifest) {
   const sorted = Object.fromEntries(Object.keys(manifest).sort().map((k) => [k, manifest[k]]));
+  fs.mkdirSync(SPECS_DIR, { recursive: true }); // fresh checkouts may have no specs/ dir at all
   fs.writeFileSync(MANIFEST_FILE, JSON.stringify(sorted, null, 2) + '\n');
 }
 
