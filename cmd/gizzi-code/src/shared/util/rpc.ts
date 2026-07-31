@@ -14,8 +14,14 @@ export namespace Rpc {
           postMessage(JSON.stringify({ type: "rpc.result", result, id: parsed.id }))
         }
       } catch (e) {
-        // console.error is intentional — runs in Worker context without Log access
-        console.error("RPC worker error:", e)
+        // Full detail goes to the debug log file — dumping the raw error
+        // object on console here floods the TUI with bundled-source context.
+        try {
+          const { Log } = require("./log.js")
+          Log.Default.error("RPC worker error", { error: e instanceof Error ? e.stack ?? e.message : String(e) })
+        } catch {
+          console.error("RPC worker error:", e instanceof Error ? e.message : String(e))
+        }
         // Send error response so the TUI-side promise rejects instead of hanging forever
         if (id !== undefined) {
           postMessage(JSON.stringify({ type: "rpc.error", error: e instanceof Error ? e.message : String(e), id }))
