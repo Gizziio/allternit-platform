@@ -5,3 +5,5 @@ queue/
 seen.json
 errors.log
 verdicts.json
+builds/
+builds.json
