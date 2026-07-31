@@ -296,15 +296,28 @@ export function getSettingsFilePathForSource(
   }
 }
 
+/**
+ * GIZZI-first settings file resolution: prefer .gizzi/settings*.json,
+ * fall back to .claude/settings*.json so existing projects keep working.
+ * When neither exists the .gizzi path wins so new files use the new naming
+ * — same pattern as pickMemoryFile in shared/utils/config.ts.
+ */
 export function getRelativeSettingsFilePathForSource(
   source: 'projectSettings' | 'localSettings',
 ): string {
-  switch (source) {
-    case 'projectSettings':
-      return join('.claude', 'settings.json')
-    case 'localSettings':
-      return join('.claude', 'settings.local.json')
+  const filename =
+    source === 'projectSettings' ? 'settings.json' : 'settings.local.json'
+  const gizziPath = join('.gizzi', filename)
+  const claudePath = join('.claude', filename)
+  const root = resolve(getOriginalCwd())
+  try {
+    const fs = getFsImplementation()
+    if (fs.existsSync(join(root, gizziPath))) return gizziPath
+    if (fs.existsSync(join(root, claudePath))) return claudePath
+  } catch {
+    // fall through
   }
+  return gizziPath
 }
 
 export function getSettingsForSource(
