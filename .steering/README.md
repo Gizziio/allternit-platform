@@ -55,6 +55,8 @@ so the global registrations are safe for other repos.
 ## Controls
 
 - Kill switch: `touch .steering/off` (delete to re-enable).
+- Status: `.steering/bin/steer-status.sh` prints `steering: ENABLED|DISABLED` and
+  the last 5 consults (exit 0 enabled, 1 disabled).
 - State and consult log: `.steering/state/` (gitignored).
 - Consult backend: `ao-consult` (tools/agent-orchestrator/scripts/, on PATH via
   `~/.local/bin`) — a persistent `ao-steer` tmux session that accumulates context
