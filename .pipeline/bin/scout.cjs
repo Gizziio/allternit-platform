@@ -257,12 +257,12 @@ async function main() {
   for (const { item, slug } of candidates) {
     const briefPath = path.join(BRIEFS_DIR, `${slug}.md`);
     fs.writeFileSync(briefPath, await generateBrief(pipeline, item));
-    seen.push(slug);
-    saveSeen(seen); // R2: persist per brief for cross-run idempotency
-    taken.add(slug);
     console.log(`scout: brief written ${briefPath}`);
 
     // R3/R4: announce; failure after a successful ensure is a hard error.
+    // Announce BEFORE recording seen: on failure the brief is rolled back and
+    // the slug stays unseen, so the next run retries the item instead of
+    // silently losing its announcement (ordering fix per steering review).
     try {
       await announce({
         thread: DISCOVERY_THREAD,
@@ -271,9 +271,14 @@ async function main() {
       });
       console.log(`scout: announced "${item.title}" to ${DISCOVERY_THREAD}`);
     } catch (err) {
+      fs.rmSync(briefPath, { force: true });
       logError(`announce failed for ${briefPath} ("${item.title}"): ${err.message}`);
-      fail(`scout: rails announcement failed for "${slug}" — recorded in ${ERRORS_LOG}; aborting`);
+      fail(`scout: rails announcement failed for "${slug}" — brief rolled back, recorded in ${ERRORS_LOG}; aborting`);
     }
+
+    seen.push(slug);
+    saveSeen(seen); // R2: persist per brief for cross-run idempotency
+    taken.add(slug);
   }
 
   console.log(`scout: done — ${candidates.length} brief(s), seen.json now holds ${seen.length} slug(s)`);

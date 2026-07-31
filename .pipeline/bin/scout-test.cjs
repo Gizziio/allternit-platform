@@ -211,6 +211,57 @@ check(
 );
 check('(c) seen.json never created', !fs.existsSync(path.join(dirC, 'seen.json')));
 
+// ─── Scenario (d): announce failure rolls back and is retried next run ───────
+
+const flakyAnnouncer = path.join(TMP, 'announcer-flaky.cjs');
+fs.writeFileSync(
+  flakyAnnouncer,
+  `'use strict';
+const fs = require('fs');
+module.exports = async (payload) => {
+  if (!process.env.SCOUT_ANNOUNCE_OK) throw new Error('rails 500');
+  fs.appendFileSync(process.env.SCOUT_ANNOUNCE_CAPTURE, JSON.stringify(payload) + '\\n');
+};
+`,
+);
+
+const dirD = path.join(TMP, 'run-d');
+const resD1 = runScout({
+  SCOUT_DIR: dirD,
+  SCOUT_PIPELINE_MODULE: fixtureModule,
+  SCOUT_RAILS_ENSURE: ensureOk,
+  SCOUT_ANNOUNCER: flakyAnnouncer,
+});
+
+check('(d) announce failure exits non-zero', resD1.status !== 0);
+const briefsD1 = fs.existsSync(path.join(dirD, 'briefs'))
+  ? fs.readdirSync(path.join(dirD, 'briefs')).filter((f) => f.endsWith('.md'))
+  : [];
+check('(d) failed brief rolled back', briefsD1.length === 0, `got ${briefsD1.length}`);
+check(
+  '(d) failed slug not recorded as seen',
+  !fs.existsSync(path.join(dirD, 'seen.json')),
+  'seen.json should not exist after first-item announce failure',
+);
+
+// Retry with rails recovered: the same items must be briefed and announced.
+fs.writeFileSync(CAPTURE_FILE, '');
+const resD2 = runScout({
+  SCOUT_DIR: dirD,
+  SCOUT_PIPELINE_MODULE: fixtureModule,
+  SCOUT_RAILS_ENSURE: ensureOk,
+  SCOUT_ANNOUNCER: flakyAnnouncer,
+  SCOUT_ANNOUNCE_OK: '1',
+});
+const announcedD2 = readJsonl(CAPTURE_FILE);
+check('(d) retry after rails recovery exits 0', resD2.status === 0, resD2.stderr.trim());
+check('(d) retry announces all 5 items', announcedD2.length === 5, `got ${announcedD2.length}`);
+check(
+  '(d) retry records 5 slugs in seen.json',
+  fs.existsSync(path.join(dirD, 'seen.json')) &&
+    JSON.parse(fs.readFileSync(path.join(dirD, 'seen.json'), 'utf8')).length === 5,
+);
+
 // ─── Result ─────────────────────────────────────────────────────────────────
 
 fs.rmSync(TMP, { recursive: true, force: true });
