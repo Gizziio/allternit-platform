@@ -16,12 +16,25 @@ EARS-ish requirements, Gherkin acceptance) are adopted, not reinvented.
 
 ## Prerequisites
 
-- P1: local `allternit-api` runs with `ALLTERNIT_LOCAL_DEV_BYPASS=1` so localhost
-  callers pass rails auth (`cmd/allternit-api/src/config.rs:369`).
+- P1: rails must be reachable AND writable before any pipeline work. The repo
+  ships `.pipeline/bin/rails-ensure.sh` (R0 below); the packaged-app instance
+  of allternit-api does NOT accept pipeline writes (no dev bypass), so the
+  dev instance from `dev/scripts/start-api.sh` is the supported rails backend
+  (debug binary already built at `target/debug/allternit-api`).
 
 ## Requirements (Phase 1 — scout only)
 
-- [ ] R1: WHEN a scout run executes, THE SYSTEM SHALL call `fetchAllSources()`
+- [ ] R0: `.pipeline/bin/rails-ensure.sh` — WHEN invoked, THE SYSTEM SHALL
+  verify rails works by (a) GET `localhost:8013/health`, (b) a real probe POST
+  to `POST /api/rails/mail/share` on thread `wih:pipeline-probe`. If the port
+  is free or the probe fails auth, THE SYSTEM SHALL start the dev instance via
+  `dev/scripts/start-api.sh` (which sets `ALLTERNIT_LOCAL_DEV_BYPASS=1`) and
+  re-probe until healthy (timeout 60s). IF rails still does not accept the
+  probe (e.g. port held by the packaged app), THE SYSTEM SHALL exit non-zero
+  with a message naming the blocker. There is NO fallback path: the pipeline
+  aborts when rails cannot be made to work.
+- [ ] R1: WHEN a scout run executes, THE SYSTEM SHALL first run
+  `rails-ensure.sh` and abort non-zero if it fails; then call `fetchAllSources()`
   with social sources disabled where option flags allow, iterate
   `result.filtered`, and write a mechanism brief (what it does, how it works
   internally, candidate integration surface in this repo) per item to
@@ -35,9 +48,10 @@ EARS-ish requirements, Gherkin acceptance) are adopted, not reinvented.
 - [ ] R3: WHEN a brief is written, THE SYSTEM SHALL announce it to rails thread
   `wih:pipeline-discovery` via `POST /api/rails/mail/share` (thread is
   auto-created by the endpoint).
-- [ ] R4: IF rails is unreachable during R3, THE SYSTEM SHALL skip the
-  announcement, append the failure to `.pipeline/errors.log`, and continue the
-  run (no retry, no abort).
+- [ ] R4: WHEN the scout run reaches R3, rails has already been proven working
+  by R0/R1 — a failed announcement after that is a hard error: THE SYSTEM SHALL
+  record it in `.pipeline/errors.log` and exit non-zero. There is no
+  skip-and-continue path for rails failures.
 
 ## Cross-cutting constraints
 
@@ -69,8 +83,13 @@ EARS-ish requirements, Gherkin acceptance) are adopted, not reinvented.
   Given `seen.json` from the previous scenario
   When the scout runs again with the same sources
   Then no new briefs are written and no announcements are made.
-- Scenario: rails outage degrades gracefully
-  Given rails is unreachable
+- Scenario: rails outage aborts the run loudly
+  Given rails cannot be made healthy by rails-ensure (dead port, blocked auth)
   When the scout runs
-  Then briefs are still written locally and `.pipeline/errors.log` records the
-  skipped announcements.
+  Then it exits non-zero before writing any brief, and the error names the
+  blocker.
+- Scenario: rails-ensure self-heals a free port
+  Given nothing is listening on port 8013 and the debug binary exists
+  When rails-ensure runs
+  Then the dev API is started and the probe POST to `wih:pipeline-probe`
+  succeeds within 60s.
