@@ -1,0 +1,57 @@
+[
+  {
+    "sourceUrl": "https://bsky.app/profile/did:plc:42han5exrxyrgdsbwosrp7sy/post/3mquxmqdpd72j",
+    "file": "/Users/joe/Desktop/allternit-workspace/allternit/surfaces/ai.allternit.com/public/images/editions/weekly-news-2026-w29/story-0.jpg",
+    "host": "bsky.app"
+  },
+  {
+    "sourceUrl": "https://bsky.app/profile/did:plc:5r7bshogvp37oq4gpq45vrfe/post/3mqurtcn7rf2q",
+    "file": "/Users/joe/Desktop/allternit-workspace/allternit/surfaces/ai.allternit.com/public/images/editions/weekly-news-2026-w29/story-1.jpg",
+    "host": "bsky.app"
+  },
+  {
+    "sourceUrl": "https://techcrunch.com/2026/07/08/this-startup-thinks-robotics-is-about-to-have-its-chatgpt-moment/",
+    "file": "/Users/joe/Desktop/allternit-workspace/allternit/surfaces/ai.allternit.com/public/images/editions/weekly-news-2026-w29/story-2.jpg",
+    "host": "techcrunch.com"
+  },
+  {
+    "sourceUrl": "https://techcrunch.com/2026/07/05/this-humanoid-robotics-company-is-going-public-but-its-ceo-isnt-promising-a-robot-in-your-home-anytime-soon/",
+    "file": "/Users/joe/Desktop/allternit-workspace/allternit/surfaces/ai.allternit.com/public/images/editions/weekly-news-2026-w29/story-3.jpg",
+    "host": "techcrunch.com"
+  },
+  {
+    "sourceUrl": "https://www.technologyreview.com/2026/07/15/1140514/meet-gpt-red-an-llm-super-hacker-openai-built-to-make-its-models-safer/",
+    "file": "/Users/joe/Desktop/allternit-workspace/allternit/surfaces/ai.allternit.com/public/images/editions/weekly-news-2026-w29/story-4.jpg",
+    "host": "technologyreview.com"
+  },
+  {
+    "sourceUrl": "https://www.technologyreview.com/2026/07/09/1140293/anthropic-found-a-hidden-space-where-claude-puzzles-over-concepts/",
+    "file": "/Users/joe/Desktop/allternit-workspace/allternit/surfaces/ai.allternit.com/public/images/editions/weekly-news-2026-w29/story-5.jpg",
+    "host": "technologyreview.com"
+  },
+  {
+    "sourceUrl": "https://bsky.app/profile/did:plc:kqj4vuyjvmtnptvvdt2xijtk/post/3mqunhyl6jo2r",
+    "file": "/Users/joe/Desktop/allternit-workspace/allternit/surfaces/ai.allternit.com/public/images/editions/weekly-news-2026-w29/story-6.jpg",
+    "host": "bsky.app"
+  },
+  {
+    "sourceUrl": "https://bsky.app/profile/did:plc:acy4bywuzyjw2lro2veqmnfi/post/3mqugsczlpc2a",
+    "file": "/Users/joe/Desktop/allternit-workspace/allternit/surfaces/ai.allternit.com/public/images/editions/weekly-news-2026-w29/story-7.jpg",
+    "host": "bsky.app"
+  },
+  {
+    "sourceUrl": "https://blog.google/innovation-and-ai/technology/developers-tools/expanding-managed-agents-gemini-api/",
+    "file": "/Users/joe/Desktop/allternit-workspace/allternit/surfaces/ai.allternit.com/public/images/editions/weekly-news-2026-w29/story-8.png",
+    "host": "blog.google"
+  },
+  {
+    "sourceUrl": "https://spectrum.ieee.org/jailbreaking-llms",
+    "file": "/Users/joe/Desktop/allternit-workspace/allternit/surfaces/ai.allternit.com/public/images/editions/weekly-news-2026-w29/story-9.png",
+    "host": "spectrum.ieee.org"
+  },
+  {
+    "sourceUrl": "https://spectrum.ieee.org/x-square-robot-embodied-ai-stack",
+    "file": "/Users/joe/Desktop/allternit-workspace/allternit/surfaces/ai.allternit.com/public/images/editions/weekly-news-2026-w29/story-10.png",
+    "host": "spectrum.ieee.org"
+  }
+]
