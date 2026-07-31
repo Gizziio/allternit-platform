@@ -6,17 +6,55 @@ briefs for the most relevant new items, announces them over rails mail, and
 
 ## Phase roadmap
 
-- **Phase 1 (this): scout** — discover → brief → announce.
+- **Phase 1: scout** — discover → brief → announce.
   - `bin/rails-ensure.sh` — proves rails (port 8013) accepts pipeline writes,
     self-healing via the dev API; hard-fails otherwise (no fallback).
   - `bin/scout.cjs` — fetches sources via `.github/scripts/lib/pipeline.cjs`,
     writes briefs for the top-5 unseen items to `briefs/`, tracks slugs in
     `seen.json`, announces each to rails thread `wih:pipeline-discovery`.
-- **Phase 2: generator** — deterministic brief → spec (OpenSpec + EARS +
-  Gherkin, no LLM). Outputs to `specs/`.
+- **Phase 2 (this): generator** — deterministic brief → spec (OpenSpec +
+  EARS + Gherkin, no LLM).
+  - `bin/generate-spec.cjs` — parses the structured brief format and emits
+    `.pipeline/specs/<slug>.md`; strict (malformed briefs rejected, never
+    improvised), deterministic (byte-identical regen), manifest at
+    `specs/.generated.json`.
 - **Phase 3: spec-checker + queue** — READY/NEEDS-WORK review loop (3-round
   cap), `.pipeline/queue/` for executor consumption, memory ingestion of
   rejection patterns.
+
+## Brief format (parsed by the generator)
+
+Both the LLM path and the `TODO(agent)` fallback in the scout emit exactly
+this structure; an agent completes the TODO sections before generating:
+
+```markdown
+# <title>
+
+- Source: <source>
+- URL: <url>
+- Relevance score: <0..1>
+
+## What it is
+
+One paragraph.
+
+## Mechanism
+
+- Fact about how it works internally
+
+## Integration surface
+
+- <repo path or subsystem>: <what would change>
+
+## Requirements seed
+
+- WHEN <trigger>, THE SYSTEM SHALL <observable behavior>
+- WHEN <trigger>, THE SYSTEM SHALL <observable behavior>
+
+## Excluded            ← optional, merged into the spec's Out of scope
+
+- <anything explicitly out>
+```
 
 ## Running the scout
 
@@ -32,18 +70,39 @@ pipeline writes (e.g. the packaged app), it exits non-zero naming the blocker:
 run `make stop && make api` or stop the packaged app. There is no fallback.
 
 If `KIMI_API_KEY` is set, briefs are drafted by `callKimi()` from the repo's
-pipeline lib; otherwise a `TODO(agent)` template is written per brief.
+pipeline lib; otherwise a `TODO(agent)` template is written per brief — an
+agent completes the structured sections before the generator will accept the
+brief (raw TODO placeholders are rejected by the strict parser).
+
+## Running the generator
+
+```bash
+# One brief (regenerates unconditionally):
+node .pipeline/bin/generate-spec.cjs .pipeline/briefs/<slug>.md
+
+# All new/changed briefs (skips up-to-date via specs/.generated.json):
+node .pipeline/bin/generate-spec.cjs
+```
+
+Emits `.pipeline/specs/<slug>.md` (Context / R1..Rn / Out of scope / Gherkin
+acceptance). Deterministic: same brief in → byte-identical spec out. A brief
+missing `## Requirements seed` or with a non-`WHEN…THE SYSTEM SHALL` seed
+bullet is rejected with an error naming the brief and the offending line —
+never improvised.
 
 ## Testing
 
 ```bash
 node .pipeline/bin/scout-test.cjs
+node .pipeline/bin/generate-spec-test.cjs
 ```
 
 Offline: stubs the source fetch and the rails announce; verifies the three
 offline-testable Gherkin scenarios from `.steering/spec.md` (fresh run caps at
 5 briefs, re-run drains the backlog without duplicating, rails outage aborts
-before any brief).
+before any brief). The generator test uses fixture briefs (valid + two
+malformed) and checks EARS preservation, rejection errors, byte-identical
+regeneration, and the manifest.
 
 ## Layout
 

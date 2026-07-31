@@ -146,8 +146,8 @@ check(
 );
 const briefBody = fs.readFileSync(path.join(dirA, 'briefs', `${expectedTop5[0]}.md`), 'utf8');
 check(
-  '(a) brief has 3 mechanism sections + TODO(agent) fallback',
-  ['What it is', 'How it works internally', 'Candidate integration surface in this repo'].every((s) =>
+  '(a) brief has 4 structured sections + TODO(agent) fallback',
+  ['What it is', 'Mechanism', 'Integration surface', 'Requirements seed'].every((s) =>
     briefBody.includes(`## ${s}`),
   ) && briefBody.includes('TODO(agent)'),
 );

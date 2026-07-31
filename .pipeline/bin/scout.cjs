@@ -129,13 +129,37 @@ function uniqueSlug(title, url, taken) {
 }
 
 // ─── Mechanism brief ────────────────────────────────────────────────────────
-
-const BRIEF_SECTIONS = ['What it is', 'How it works internally', 'Candidate integration surface in this repo'];
+//
+// Structured brief format (Phase 2): both the LLM path and the TODO(agent)
+// fallback emit exactly these sections so .pipeline/bin/generate-spec.cjs can
+// parse them mechanically:
+//   ## What it is            — one paragraph
+//   ## Mechanism             — bulleted facts about how it works internally
+//   ## Integration surface   — bullets `- <repo path or subsystem>: <change>`
+//   ## Requirements seed     — 2-6 bullets, each `WHEN <trigger>, THE SYSTEM
+//                              SHALL <observable behavior>`
 
 function templateBrief(item, reason) {
-  const body = BRIEF_SECTIONS.map(
-    (s) => `## ${s}\n\nTODO(agent): fill in this section. (LLM brief generation unavailable: ${reason})`,
-  ).join('\n\n');
+  const body = `## What it is
+
+TODO(agent): one paragraph describing what this is. (LLM brief generation unavailable: ${reason})
+
+## Mechanism
+
+- TODO(agent): one fact about how it works internally
+
+## Integration surface
+
+- TODO(agent): <repo path or subsystem>: <what would change>
+
+## Requirements seed
+
+- TODO(agent): WHEN <trigger>, THE SYSTEM SHALL <observable behavior>
+- TODO(agent): WHEN <trigger>, THE SYSTEM SHALL <observable behavior>`;
+  return briefDocument(item, body);
+}
+
+function briefDocument(item, body) {
   return `# ${item.title}\n\n- Source: ${item.source}\n- URL: ${item.url}\n- Relevance score: ${item.relevance?.score ?? 'n/a'}\n- Discovered: ${new Date().toISOString()}\n\n${body}\n`;
 }
 
@@ -148,16 +172,21 @@ async function generateBrief(pipeline, item) {
             role: 'user',
             content:
               'Write a concise mechanism brief (markdown) about the following discovery item, ' +
-              'with exactly these three sections: "## What it is", "## How it works internally", ' +
-              '"## Candidate integration surface in this repo" (the repo is Allternit: an agent ' +
-              'runtime/orchestration platform with rails, infra/, domains/, mcp/).\n\n' +
+              'with EXACTLY these four sections and formats (no other sections):\n' +
+              '"## What it is" — one paragraph.\n' +
+              '"## Mechanism" — bulleted facts about how it works internally.\n' +
+              '"## Integration surface" — bulleted candidate touchpoints in the Allternit repo ' +
+              '(an agent runtime/orchestration platform with rails, infra/, domains/, mcp/), each ' +
+              'formatted "- <repo path or subsystem>: <what would change>".\n' +
+              '"## Requirements seed" — 2-6 bullets, each a single checkable behavior in the form ' +
+              '"WHEN <trigger>, THE SYSTEM SHALL <observable behavior>".\n\n' +
               `Title: ${item.title}\nURL: ${item.url}\nExcerpt: ${(item.text || '').slice(0, 600)}`,
           },
         ],
         1200,
       );
       if (text) {
-        return `# ${item.title}\n\n- Source: ${item.source}\n- URL: ${item.url}\n- Relevance score: ${item.relevance?.score ?? 'n/a'}\n- Discovered: ${new Date().toISOString()}\n\n${text}\n`;
+        return briefDocument(item, text);
       }
     } catch (err) {
       console.error(`scout: callKimi failed for "${item.title}" (${err.message}); writing TODO template`);
