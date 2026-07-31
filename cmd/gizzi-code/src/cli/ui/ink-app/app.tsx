@@ -33,7 +33,7 @@ export async function tui(options?: any): Promise<void> {
 
   Log.Default.info("tui: getting tools and commands")
   const initialTools = getAllBaseTools().filter((t: any) => t.isEnabled ? t.isEnabled() : true)
-  const initialCommands = await getCommands()
+  const initialCommands = await getCommands(currentCwd)
 
   const initialMessages = options?.args?.prompt
     ? [createUserMessage({ content: options.args.prompt })]

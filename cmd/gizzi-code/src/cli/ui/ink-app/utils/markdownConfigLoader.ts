@@ -251,18 +251,26 @@ export function getProjectDirsUpToHome(
       break
     }
 
-    const claudeSubdir = join(current, '.claude', subdir)
-    // Filter to existing dirs. This is a perf filter (avoids spawning
-    // ripgrep on non-existent dirs downstream) and the worktree fallback
-    // in loadMarkdownFilesForSubdir relies on it. statSync + explicit error
-    // handling instead of existsSync — re-throws unexpected errors rather
-    // than silently swallowing them. Downstream loadMarkdownFiles handles
-    // the TOCTOU window (dir disappearing before read) gracefully.
-    try {
-      statSync(claudeSubdir)
-      dirs.push(claudeSubdir)
-    } catch (e: unknown) {
-      if (!isFsInaccessible(e)) throw e
+    // Check .gizzi/<subdir> (canonical) and .claude/<subdir> (compat) at
+    // this directory level. Unlike the single GIZZI.md root-marker file,
+    // these are directories of independently-named items (skills, commands,
+    // agents) — a project can have real content in both (pre-existing
+    // .claude/skills/foo/ plus newly-added .gizzi/skills/bar/), so both are
+    // included rather than one suppressing the other. Filter to existing
+    // dirs. This is a perf filter (avoids spawning ripgrep on non-existent
+    // dirs downstream) and the worktree fallback in loadMarkdownFilesForSubdir
+    // relies on it. statSync + explicit error handling instead of existsSync
+    // — re-throws unexpected errors rather than silently swallowing them.
+    // Downstream loadMarkdownFiles handles the TOCTOU window (dir
+    // disappearing before read) gracefully.
+    for (const dotDir of ['.gizzi', '.claude']) {
+      const candidateSubdir = join(current, dotDir, subdir)
+      try {
+        statSync(candidateSubdir)
+        dirs.push(candidateSubdir)
+      } catch (e: unknown) {
+        if (!isFsInaccessible(e)) throw e
+      }
     }
 
     // Stop after processing the git root directory - this prevents commands from parent
