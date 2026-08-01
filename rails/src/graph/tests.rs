@@ -5,35 +5,9 @@ use std::sync::Arc;
 use std::time::Duration;
 
 use crate::dependencies::{DependencyEdge, DependencyGraph, DependencyKind};
-use crate::rails_id::TicketId;
 
+use super::fixtures::{blocks, chain, diamond, id};
 use super::{GraphAnalytics, GraphInsights, InsightsConfig, MetricStatus};
-
-fn id(name: &str) -> TicketId {
-    TicketId::new(format!("T-{name}"))
-}
-
-fn blocks(graph: &mut DependencyGraph, from: &str, to: &str) {
-    graph.add(DependencyEdge::new(id(from), id(to), DependencyKind::Blocks));
-}
-
-/// A blocks B,C; B,C block D.
-fn diamond() -> DependencyGraph {
-    let mut g = DependencyGraph::new();
-    blocks(&mut g, "a", "b");
-    blocks(&mut g, "a", "c");
-    blocks(&mut g, "b", "d");
-    blocks(&mut g, "c", "d");
-    g
-}
-
-fn chain(names: &[&str]) -> DependencyGraph {
-    let mut g = DependencyGraph::new();
-    for w in names.windows(2) {
-        blocks(&mut g, w[0], w[1]);
-    }
-    g
-}
 
 fn phase2_statuses(ins: &GraphInsights) -> Vec<MetricStatus> {
     vec![

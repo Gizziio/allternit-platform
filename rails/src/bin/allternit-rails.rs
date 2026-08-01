@@ -17,7 +17,9 @@ use allternit_agent_system_rails::dependencies::load_graph;
 use allternit_agent_system_rails::gate::gate::{GateOptions, WihPickupOptions};
 use allternit_agent_system_rails::leases::leases::LeasesOptions;
 use allternit_agent_system_rails::ledger::ledger::LedgerOptions;
+use allternit_agent_system_rails::graph::{views, GraphAnalytics, GraphView, InsightsConfig};
 use allternit_agent_system_rails::policy;
+use allternit_agent_system_rails::rails_id::TicketId;
 use allternit_agent_system_rails::tickets::{self, TicketStore};
 use allternit_agent_system_rails::wait_gates::WaitGateStore;
 use allternit_agent_system_rails::wih::projection::project_wih;
@@ -77,6 +79,22 @@ enum Commands {
     Work(WorkCmd),
     #[command(subcommand)]
     Ticket(TicketCmd),
+    #[command(subcommand)]
+    Graph(GraphCmd),
+}
+
+#[derive(Subcommand)]
+enum GraphCmd {
+    /// Health summary, keystones, bottlenecks, and quick wins over the
+    /// ticket dependency graph.
+    Insights,
+    /// Ranked ready tickets with scores, reasons, and unblock counts.
+    Triage,
+    /// What a ticket affects: direct + transitive dependents, critical-path
+    /// impact, centrality ranks.
+    Impact {
+        ticket_id: String,
+    },
 }
 
 #[derive(Subcommand)]
@@ -1072,6 +1090,39 @@ async fn main() -> Result<()> {
                 println!("{}", serde_json::to_string_pretty(&ready)?);
             }
         },
+        // Graph analytics: same view-model builders as the HTTP surface
+        // (`graph::views`), so the printed JSON matches /api/rails/graph/*.
+        Commands::Graph(cmd) => {
+            let store = TicketStore::new(&root)?;
+            let graph = load_graph(&root)?;
+            let gates = WaitGateStore::new(&root)?;
+            let all = store.list()?;
+            let ready = tickets::ready(&all, &graph, &gates, Utc::now())?;
+            let insights =
+                GraphAnalytics::new().compute_insights(&graph, &InsightsConfig::default());
+            let view = GraphView::from_graph(&graph);
+            match cmd {
+                GraphCmd::Insights => {
+                    let out = views::build_insights_view(&insights, &ready, &view);
+                    println!("{}", serde_json::to_string_pretty(&out)?);
+                }
+                GraphCmd::Triage => {
+                    let out = views::build_triage_view(&insights, &ready, &view);
+                    println!("{}", serde_json::to_string_pretty(&out)?);
+                }
+                GraphCmd::Impact { ticket_id } => {
+                    let id: TicketId = ticket_id
+                        .parse()
+                        .map_err(|e: allternit_agent_system_rails::rails_id::InvalidTicketId| {
+                            anyhow::anyhow!(e)
+                        })?;
+                    match views::build_impact_view(&insights, &view, &all, &id) {
+                        Ok(out) => println!("{}", serde_json::to_string_pretty(&out)?),
+                        Err(e) => bail!("{e}"),
+                    }
+                }
+            }
+        }
     }
 
     Ok(())

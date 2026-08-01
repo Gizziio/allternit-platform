@@ -1,20 +1,36 @@
-# Steering spec — <feature name>
+# Steering spec — rails graph, Phase B2 (robot surface)
 
-<!-- The SOURCE OF TRUTH for what "done" means. Write this BEFORE or AT THE START
-     of the work (whoever scopes the feature — you or the working agent), and keep
-     it current as scope decisions change. The steering agent maps every
-     requirement below to DONE / PARTIAL / MISSING with code evidence at each
-     checkpoint. Vague requirements get vague verdicts: make each one checkable. -->
+<!-- From .pipeline/TRACK-B-rails-graph.md (steered v2). B1 (analytics library)
+     is merged in main: rails/src/graph/. Source of truth for this feature. -->
 
-## Requirements
+## Acceptance (Gherkin) — B2
 
-- [ ] R1: <concrete, verifiable requirement — e.g. "POST /api/x returns 400 on missing field y">
-- [ ] R2: <...>
+- Scenario: keystones over HTTP
+  Given a diamond dependency graph (A blocks B and C; B and C block D) loaded via tickets
+  When GET /api/rails/graph/insights is called
+  Then A ranks as top keystone by critical-path impact, D the most blocked, all metrics "computed".
+- Scenario: bounded triage
+  Given a 500-ticket graph
+  When GET /api/rails/graph/triage is called
+  Then the response body stays under 16KB with ranked recommendations + per-item reasons.
+- Scenario: CLI parity
+  Given the same graph
+  When `rails graph insights` runs
+  Then its JSON equals the HTTP /insights response for the same graph hash.
 
-## Out of scope
+## Phase B2 — robot surface (after B1)
 
-- <explicit non-goals — anything the checker should NOT flag as missing>
+- [ ] B2-R1: WHEN an agent calls HTTP, THE SYSTEM SHALL serve fixed-shape JSON
+  under `/api/rails/graph/`: `GET /insights` (health + keystones + bottlenecks
+  + quick wins), `GET /triage` (ranked ready work with scores, reasons,
+  unblock counts), `GET /impact/:ticket_id` — each carrying phase-2 status
+  flags and the graph content hash, each bounded < 16KB at 500 tickets.
+- [ ] B2-R2: WHEN CLI is preferred, THE SYSTEM SHALL expose the same three
+  views as `rails graph` subcommands printing the identical JSON.
 
-## Acceptance
 
-- <how the whole feature is proven: which test/command/behavior demonstrates it>
+## Constraints
+
+- No new external crates (PageRank/HITS/betweenness implemented in-crate;
+  betweenness via Brandes' algorithm, expect ~80-100 lines with edge cases).
+- `cargo test -p allternit-agent-system-rails` passes.

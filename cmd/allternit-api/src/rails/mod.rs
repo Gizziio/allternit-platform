@@ -23,6 +23,7 @@ use crate::AppState;
 use allternit_agent_system_rails::dependencies::{
     self, DependencyEdge, DependencyKind,
 };
+use allternit_agent_system_rails::graph::{views, GraphAnalytics, GraphView, InsightsConfig};
 use allternit_agent_system_rails::rails_id::{HierarchicalId, TicketId};
 use allternit_agent_system_rails::receipts::ReceiptQuery;
 use allternit_agent_system_rails::tickets::{
@@ -54,6 +55,9 @@ pub struct RailsState {
     pub receipts: Arc<ReceiptStore>,
     pub work_ops: Arc<WorkOps>,
     pub context_packs: Arc<ContextPackStore>,
+    /// Shared graph analytics engine (content-hash cache) for the B2 robot
+    /// surface under `/graph/*`.
+    pub graph_analytics: Arc<GraphAnalytics>,
 }
 
 impl RailsState {
@@ -149,6 +153,7 @@ impl RailsState {
             receipts,
             work_ops,
             context_packs,
+            graph_analytics: Arc::new(GraphAnalytics::new()),
         })
     }
 }
@@ -191,6 +196,10 @@ pub fn rails_router() -> Router<Arc<AppState>> {
             "/tickets/:id/dependencies",
             post(add_ticket_dependency).delete(remove_ticket_dependency),
         )
+        // Graph analytics (B2 robot surface over the ticket dependency graph)
+        .route("/graph/insights", get(graph_insights))
+        .route("/graph/triage", get(graph_triage))
+        .route("/graph/impact/:ticket_id", get(graph_impact))
         // DAGs / Work
         .route("/workspace/:workspace_id/dags", get(list_dags))
         .route("/workspace/:workspace_id/dags", post(create_dag))
@@ -1760,6 +1769,92 @@ fn ready_inputs(
     Ok((all, graph, gates))
 }
 
+// ============================================================================
+// Graph analytics (B2 robot surface)
+//
+// View-model builders live in the rails crate (`graph::views`) and are shared
+// with the `rails graph` CLI, so both surfaces emit identical JSON. Per the
+// B1 NOTES, `compute_insights` can block its caller for up to 5s on large
+// graphs, so the whole load → ready → compute → build pipeline runs inside
+// `tokio::task::spawn_blocking`.
+// ============================================================================
+
+/// Load tickets + graph + gates, compute the ready list, then run `build`.
+/// Everything happens on a blocking thread; `build` receives the shared
+/// state, all tickets, the dependency graph, and the ready list.
+async fn run_graph_view<T, F>(state: Arc<AppState>, build: F) -> axum::response::Response
+where
+    T: serde::Serialize + Send + 'static,
+    F: FnOnce(&AppState, &[Ticket], &dependencies::DependencyGraph, Vec<Ticket>) -> Result<T, axum::response::Response>
+        + Send
+        + 'static,
+{
+    match tokio::task::spawn_blocking(move || {
+        let (all, graph, gates) = ready_inputs(&state)?;
+        let ready = tickets::ready(&all, &graph, &gates, chrono::Utc::now()).map_err(|e| {
+            error!(error = %e, "graph: ready computation failed");
+            ticket_error(StatusCode::INTERNAL_SERVER_ERROR, e.to_string())
+        })?;
+        build(&state, &all, &graph, ready)
+    })
+    .await
+    {
+        Ok(Ok(view)) => (StatusCode::OK, Json(view)).into_response(),
+        Ok(Err(response)) => response,
+        Err(e) => {
+            error!(error = %e, "graph: blocking task panicked or was cancelled");
+            ticket_error(StatusCode::INTERNAL_SERVER_ERROR, e.to_string())
+        }
+    }
+}
+
+async fn graph_insights(State(state): State<Arc<AppState>>) -> axum::response::Response {
+    run_graph_view(state, |state, _all, graph, ready| {
+        let insights = state
+            .rails
+            .graph_analytics
+            .compute_insights(graph, &InsightsConfig::default());
+        let view = GraphView::from_graph(graph);
+        Ok(views::build_insights_view(&insights, &ready, &view))
+    })
+    .await
+}
+
+async fn graph_triage(State(state): State<Arc<AppState>>) -> axum::response::Response {
+    run_graph_view(state, |state, _all, graph, ready| {
+        let insights = state
+            .rails
+            .graph_analytics
+            .compute_insights(graph, &InsightsConfig::default());
+        let view = GraphView::from_graph(graph);
+        Ok(views::build_triage_view(&insights, &ready, &view))
+    })
+    .await
+}
+
+async fn graph_impact(
+    State(state): State<Arc<AppState>>,
+    Path(ticket_id): Path<String>,
+) -> axum::response::Response {
+    let id = match parse_ticket_id(&ticket_id) {
+        Ok(id) => id,
+        Err(response) => return response,
+    };
+    run_graph_view(state, move |state, all, graph, _ready| {
+        let insights = state
+            .rails
+            .graph_analytics
+            .compute_insights(graph, &InsightsConfig::default());
+        let view = GraphView::from_graph(graph);
+        views::build_impact_view(&insights, &view, all, &id).map_err(|e| match e {
+            views::ViewError::UnknownTicket(id) => {
+                ticket_error(StatusCode::NOT_FOUND, format!("ticket {id} not found"))
+            }
+        })
+    })
+    .await
+}
+
 async fn add_ticket_dependency(
     State(state): State<Arc<AppState>>,
     Path(id): Path<String>,
@@ -1883,5 +1978,166 @@ async fn remove_ticket_dependency(
             error!(error = %e, "tickets: remove dependency failed");
             ticket_error(StatusCode::INTERNAL_SERVER_ERROR, e.to_string())
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use axum::body::Body;
+    use axum::http::Request;
+    use http_body_util::BodyExt;
+    use serde_json::Value;
+    use std::collections::HashMap;
+    use tokio::sync::RwLock;
+    use tower::ServiceExt;
+
+    async fn body_json(body: axum::body::Body) -> Value {
+        let bytes = body.collect().await.unwrap().to_bytes();
+        serde_json::from_slice(&bytes).unwrap()
+    }
+
+    async fn test_app_state(temp: &std::path::Path) -> Arc<AppState> {
+        let config = crate::AppConfig {
+            company: Default::default(),
+            user: Default::default(),
+        };
+        let db = crate::db::DbHandle::new(temp.join("test.db")).expect("test db");
+        let auth_config = crate::auth::AuthConfig::from_app_config(&config);
+        let jwks = crate::auth::JwksManager::new(&auth_config);
+        let rails = RailsState::new(temp.join("rails"))
+            .await
+            .expect("test rails");
+        Arc::new(AppState {
+            config,
+            db,
+            jwks,
+            auth_config,
+            vm_driver: None,
+            rails,
+            vm_sessions: crate::vm_session_routes::new_vm_session_store(),
+            cowork_scheduler: None,
+            cowork_background: None,
+            cowork_run_manager: None,
+            webhook_secret: None,
+            office_runtime: Arc::new(RwLock::new(
+                crate::office_routes::OfficeRuntimeFile::default(),
+            )),
+            design_skill_cache: crate::design_connector_routes::DesignSkillCache::new(),
+            terminal_sessions: crate::terminal_routes::TerminalSessionStore::new(),
+            office_cli_docs: Arc::new(RwLock::new(HashMap::new())),
+            office_cli_watches: Arc::new(RwLock::new(HashMap::new())),
+            office_cli_mcp_sessions: Arc::new(RwLock::new(HashMap::new())),
+        })
+    }
+
+    fn new_ticket(title: &str) -> Ticket {
+        let now = chrono::Utc::now();
+        let id = TicketId::mint(title.as_bytes());
+        Ticket {
+            hierarchical_id: HierarchicalId::root(id.clone()),
+            id,
+            title: title.to_string(),
+            description: String::new(),
+            design: None,
+            acceptance: None,
+            notes: Vec::new(),
+            status: TicketStatus::Open,
+            kind: TicketKind::Task,
+            priority: TicketPriority::P2,
+            assignee: None,
+            estimate_minutes: None,
+            due_at: None,
+            defer_until: None,
+            labels: Vec::new(),
+            external_ref: None,
+            metadata: HashMap::new(),
+            created_at: now,
+            updated_at: now,
+            closed_at: None,
+            close_reason: None,
+        }
+    }
+
+    async fn get(app: &Router, uri: &str) -> axum::response::Response {
+        app.clone()
+            .oneshot(Request::builder().uri(uri).body(Body::empty()).unwrap())
+            .await
+            .unwrap()
+    }
+
+    /// Gherkin scenario "keystones over HTTP": diamond graph (A blocks B and
+    /// C; B and C block D) → A top keystone, D most blocked, all metrics
+    /// computed. Plus triage ranking and impact 404/400 handling.
+    #[tokio::test]
+    async fn graph_endpoints_over_diamond_fixture() {
+        let temp = std::env::temp_dir().join(format!(
+            "allternit-rails-graph-test-{}",
+            uuid::Uuid::new_v4()
+        ));
+        std::fs::create_dir_all(&temp).unwrap();
+        let state = test_app_state(&temp).await;
+        let root = state.rails.root_dir.clone();
+
+        // Seed the diamond via the ticket store + dependency events.
+        let store = TicketStore::new(&root).unwrap();
+        let a = store.create(new_ticket("A")).unwrap();
+        let b = store.create(new_ticket("B")).unwrap();
+        let c = store.create(new_ticket("C")).unwrap();
+        let d = store.create(new_ticket("D")).unwrap();
+        for (from, to) in [(&a, &b), (&a, &c), (&b, &d), (&c, &d)] {
+            dependencies::add_edge(
+                &root,
+                &store,
+                DependencyEdge::new(from.id.clone(), to.id.clone(), DependencyKind::Blocks),
+            )
+            .unwrap();
+        }
+
+        let app = rails_router().with_state(state.clone());
+
+        // ── Insights ─────────────────────────────────────────────────────
+        let resp = get(&app, "/graph/insights").await;
+        assert_eq!(resp.status(), StatusCode::OK);
+        let body = body_json(resp.into_body()).await;
+        assert_eq!(body["keystones"][0]["ticket"], json!(a.id.to_string()));
+        assert_eq!(body["keystones"][0]["impact"], json!(3));
+        assert_eq!(body["health"]["most_blocked"], json!(d.id.to_string()));
+        assert_eq!(body["health"]["ready_count"], json!(1));
+        assert_eq!(body["metric_statuses"]["pagerank"], json!("computed"));
+        assert_eq!(body["metric_statuses"]["betweenness"], json!("computed"));
+        assert_eq!(body["metric_statuses"]["critical_path"], json!("computed"));
+        assert!(body["content_hash"].as_str().unwrap().len() == 64);
+
+        // ── Triage ───────────────────────────────────────────────────────
+        let resp = get(&app, "/graph/triage").await;
+        assert_eq!(resp.status(), StatusCode::OK);
+        let body = body_json(resp.into_body()).await;
+        assert_eq!(body["ready_count"], json!(1));
+        assert_eq!(body["items"][0]["ticket"], json!(a.id.to_string()));
+        assert_eq!(body["items"][0]["unblocks"], json!(3));
+        assert!(body["items"][0]["reason"]
+            .as_str()
+            .unwrap()
+            .contains("unblocks 3 tickets"));
+
+        // ── Impact ───────────────────────────────────────────────────────
+        let resp = get(&app, &format!("/graph/impact/{}", a.id)).await;
+        assert_eq!(resp.status(), StatusCode::OK);
+        let body = body_json(resp.into_body()).await;
+        assert_eq!(body["critical_path_impact"], json!(3));
+        assert_eq!(body["transitive_dependents"].as_array().unwrap().len(), 3);
+        assert_eq!(body["direct_dependents"].as_array().unwrap().len(), 2);
+
+        // Unknown (but well-formed) ticket id → 404.
+        let unknown = format!("T-{}", "0".repeat(32));
+        let resp = get(&app, &format!("/graph/impact/{unknown}")).await;
+        assert_eq!(resp.status(), StatusCode::NOT_FOUND);
+
+        // Malformed ticket id → 400.
+        let resp = get(&app, "/graph/impact/bogus").await;
+        assert_eq!(resp.status(), StatusCode::BAD_REQUEST);
+
+        let _ = std::fs::remove_dir_all(&temp);
     }
 }

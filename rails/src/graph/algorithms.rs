@@ -64,6 +64,12 @@ impl GraphView {
         self.nodes.len()
     }
 
+    /// Index of a ticket in the node table, if it participates in the
+    /// blocking subgraph.
+    pub fn index_of(&self, id: &TicketId) -> Option<usize> {
+        self.index.get(id).copied()
+    }
+
     pub fn edge_count(&self) -> usize {
         self.adj.iter().map(Vec::len).sum()
     }

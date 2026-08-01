@@ -25,7 +25,12 @@
 
 mod algorithms;
 #[cfg(test)]
+mod fixtures;
+#[cfg(test)]
 mod tests;
+#[cfg(test)]
+mod view_tests;
+pub mod views;
 
 use std::collections::HashMap;
 use std::sync::atomic::{AtomicUsize, Ordering};
