@@ -52,8 +52,8 @@ pub use crate::index::{Index, IndexOptions};
 pub use crate::leases::{Leases, LeasesOptions};
 pub use crate::ledger::{Ledger, LedgerOptions};
 pub use crate::mail::{
-    resolve_thread_id, AgentRecord, AgentRegistry, Mail, MailImportance, MailMessage, MailOptions,
-    TypedMessage, DEFAULT_MAIL_THREAD,
+    resolve_thread_id, AgentRecord, AgentRegistry, Mail, MailImportance, MailIndex,
+    MailIndexOptions, MailMessage, MailOptions, MailSearchHit, TypedMessage, DEFAULT_MAIL_THREAD,
 };
 pub use crate::prompt::{project_prompt, PromptTimeline};
 pub use crate::receipts::{ReceiptStore, ReceiptStoreOptions};

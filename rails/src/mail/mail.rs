@@ -9,6 +9,7 @@ use crate::core::ids::create_event_id;
 use crate::core::types::{AllternitEvent, Actor, ActorType, LedgerQuery};
 use crate::ledger::Ledger;
 use crate::mail::agents::AgentRegistry;
+use crate::mail::index::{MailIndex, MailSearchHit};
 use crate::mail::projection::append_thread_event;
 use crate::mail::types::{MailMessage, TypedMessage};
 
@@ -18,12 +19,16 @@ pub struct MailOptions {
     pub ledger: Arc<Ledger>,
     pub actor_id: Option<String>,
     pub actor_type: Option<ActorType>,
+    /// Optional FTS index (E2). When present, every typed `MessageSent` is
+    /// indexed on emit.
+    pub mail_index: Option<Arc<MailIndex>>,
 }
 
 pub struct Mail {
     root_dir: PathBuf,
     ledger: Arc<Ledger>,
     actor: Actor,
+    index: Option<Arc<MailIndex>>,
 }
 
 impl Mail {
@@ -39,6 +44,7 @@ impl Mail {
             root_dir,
             ledger: opts.ledger,
             actor,
+            index: opts.mail_index,
         }
     }
 
@@ -266,8 +272,38 @@ impl Mail {
             event_id: event_id.clone(),
             ..event
         };
+        let ts = event.ts.clone();
+        let from_agent = message.from_agent.clone();
+        let subject = message.subject.clone();
         self.emit(event).await?;
+        // Index on emit (E2-R1). The index is rebuildable from the ledger, so
+        // an indexing failure is logged, never fatal to the send.
+        if let Some(index) = &self.index {
+            if let Err(e) = index
+                .index_message(
+                    &event_id,
+                    thread_id,
+                    &from_agent,
+                    subject.as_deref(),
+                    &message.body,
+                    &ts,
+                )
+                .await
+            {
+                tracing::error!(error = %e, "mail: FTS index on emit failed");
+            }
+        }
         Ok(event_id)
+    }
+
+    /// Full-text search over typed mail (E2-R1). Requires a configured
+    /// `MailIndex` (see `MailOptions::mail_index`).
+    pub async fn search_messages(&self, query: &str, limit: i64) -> Result<Vec<MailSearchHit>> {
+        let index = self
+            .index
+            .as_ref()
+            .ok_or_else(|| anyhow::anyhow!("mail search index not configured"))?;
+        index.search_messages(query, limit).await
     }
 
     /// Per-agent inbox (E1-R3): `MessageSent` events where the agent is in
@@ -376,6 +412,7 @@ mod tests {
             ledger,
             actor_id: Some("test".to_string()),
             actor_type: None,
+            mail_index: None,
         })
     }
 

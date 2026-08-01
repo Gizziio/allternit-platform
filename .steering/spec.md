@@ -1,20 +1,37 @@
-# Steering spec — <feature name>
+# Steering spec — rails mail, Phase E2 (search + digests)
 
-<!-- The SOURCE OF TRUTH for what "done" means. Write this BEFORE or AT THE START
-     of the work (whoever scopes the feature — you or the working agent), and keep
-     it current as scope decisions change. The steering agent maps every
-     requirement below to DONE / PARTIAL / MISSING with code evidence at each
-     checkpoint. Vague requirements get vague verdicts: make each one checkable. -->
+<!-- From .pipeline/TRACK-E-rails-mail.md (steered v1). E1 merged in main. -->
 
-## Requirements
+## Phase E2 — search + digests
 
-- [ ] R1: <concrete, verifiable requirement — e.g. "POST /api/x returns 400 on missing field y">
-- [ ] R2: <...>
+- [ ] E2-R1: WHEN a message is emitted, THE SYSTEM SHALL index subject + body
+  into a mail FTS5 table (new `rails/src/mail/index.rs`, following
+  `index/search.rs` conventions: sqlx, ensure_schema, rebuild_from_ledger) and
+  expose `GET /api/rails/mail/search?q=...` returning matching messages with
+  thread_id, from_agent, subject, ts, and a body excerpt.
+- [ ] E2-R2: WHEN events are appended to a thread, THE SYSTEM SHALL also append
+  a one-line digest entry to `.allternit/mail/threads/<id>.digest.md`
+  (append-only markdown: ts, actor, event type, subject/first-80-chars), built
+  so it can be regenerated from the thread JSONL.
 
-## Out of scope
 
-- <explicit non-goals — anything the checker should NOT flag as missing>
+## Acceptance (Gherkin) — E2
 
-## Acceptance
+- Scenario: search finds content
+  Given a message with subject "deploy window Friday"
+  When GET /api/rails/mail/search?q=deploy is called
+  Then the message is returned with an excerpt; and after wiping the mail
+  index db, rebuild_from_ledger restores the same result.
+- Scenario: digest regeneration
+- Scenario: digest regeneration
+  Given a thread with 5 events
+  When the digest file is deleted and regenerated from the thread JSONL
+  Then it contains exactly 5 one-line entries in order.
 
-- <how the whole feature is proven: which test/command/behavior demonstrates it>
+
+## Constraints
+
+- `cargo test -p allternit-agent-system-rails` passes (new unit tests per
+  phase) and `cargo build -p allternit-api` compiles.
+- Crate conventions: ledger events + projection folds for state; SQLite only
+  as a rebuildable index; `core::io` helpers; `MailXxxRequest` HTTP structs.

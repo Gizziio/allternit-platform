@@ -34,8 +34,8 @@ use allternit_agent_system_rails::wait_gates::WaitGateStore;
 use allternit_agent_system_rails::{
     project_dag, resolve_thread_id, ContextPackSeal, ContextPackStore, ContextPackStoreOptions,
     DagMutation, Gate, GateOptions, Index, IndexOptions, Leases, LeasesOptions, Ledger,
-    LedgerOptions, LedgerQuery, Mail, MailImportance, MailOptions, ReceiptRecord, ReceiptStore,
-    ReceiptStoreOptions, TypedMessage, Vault, VaultOptions, WorkOps,
+    LedgerOptions, LedgerQuery, Mail, MailImportance, MailIndex, MailIndexOptions, MailOptions,
+    ReceiptRecord, ReceiptStore, ReceiptStoreOptions, TypedMessage, Vault, VaultOptions, WorkOps,
 };
 
 // ============================================================================
@@ -129,12 +129,19 @@ impl RailsState {
             visual_config: None,
         }));
 
-        // Initialize Mail
+        // Initialize Mail (with the E2 FTS search index)
+        let mail_index = Arc::new(
+            MailIndex::new(MailIndexOptions {
+                root_dir: Some(root_dir.clone()),
+            })
+            .await?,
+        );
         let mail = Arc::new(Mail::new(MailOptions {
             root_dir: Some(root_dir.clone()),
             ledger: ledger.clone(),
             actor_id: Some("api".to_string()),
             actor_type: None,
+            mail_index: Some(mail_index),
         }));
 
         // Initialize WorkOps
@@ -184,6 +191,8 @@ pub fn rails_router() -> Router<Arc<AppState>> {
         .route("/mail/agents/register", post(register_mail_agent))
         .route("/mail/inbox/:agent_id", get(read_mail_inbox))
         .route("/mail/outbox/:agent_id", get(read_mail_outbox))
+        // Mail FTS search (E2)
+        .route("/mail/search", get(search_mail_messages))
         // WIHs (compatibility surface used by platform cowork/chat views)
         .route("/wihs", get(list_wihs_get).post(list_wihs))
         .route("/wihs/pickup", post(pickup_wih))
@@ -703,6 +712,43 @@ async fn list_mail_agents(State(state): State<Arc<AppState>>) -> impl IntoRespon
         Ok(agents) => (StatusCode::OK, Json(json!({ "agents": agents }))).into_response(),
         Err(e) => {
             error!(error = %e, "mail: list agents failed");
+            (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(json!({ "error": e.to_string() })),
+            )
+                .into_response()
+        }
+    }
+}
+
+#[derive(Debug, Deserialize)]
+struct MailSearchQuery {
+    q: Option<String>,
+    limit: Option<i64>,
+}
+
+async fn search_mail_messages(
+    State(state): State<Arc<AppState>>,
+    Query(query): Query<MailSearchQuery>,
+) -> impl IntoResponse {
+    let q = query.q.unwrap_or_default();
+    let q = q.trim();
+    if q.is_empty() {
+        return (
+            StatusCode::BAD_REQUEST,
+            Json(json!({ "error": "q required" })),
+        )
+            .into_response();
+    }
+    let limit = query.limit.unwrap_or(20);
+    match state.rails.mail.search_messages(q, limit).await {
+        Ok(hits) => (
+            StatusCode::OK,
+            Json(json!({ "q": q, "results": hits })),
+        )
+            .into_response(),
+        Err(e) => {
+            error!(error = %e, "mail: search failed");
             (
                 StatusCode::INTERNAL_SERVER_ERROR,
                 Json(json!({ "error": e.to_string() })),
@@ -2369,6 +2415,68 @@ mod tests {
         let resp = get(&app, "/mail/inbox/beta").await;
         let body = body_json(resp.into_body()).await;
         assert_eq!(body["messages"].as_array().unwrap().len(), 2);
+
+        let _ = std::fs::remove_dir_all(&temp);
+    }
+
+    /// E2 mail search round-trip: typed sends are indexed on emit and found
+    /// by subject/body word; legacy untyped sends stay out of the index;
+    /// empty q is a 400.
+    #[tokio::test]
+    async fn mail_e2_search_round_trip() {
+        let temp = std::env::temp_dir().join(format!(
+            "allternit-rails-mail-e2-test-{}",
+            uuid::Uuid::new_v4()
+        ));
+        std::fs::create_dir_all(&temp).unwrap();
+        let state = test_app_state(&temp).await;
+        let app = rails_router().with_state(state.clone());
+
+        // Typed send with a searchable subject.
+        let resp = post_json(
+            &app,
+            "/mail/send",
+            json!({
+                "from_agent": "alpha",
+                "to_agents": ["beta"],
+                "subject": "deploy window Friday",
+                "body": "Please review the rollout plan."
+            }),
+        )
+        .await;
+        assert_eq!(resp.status(), StatusCode::OK);
+        let body = body_json(resp.into_body()).await;
+        let message_id = body["message_id"].as_str().unwrap().to_string();
+
+        // Legacy untyped send — must not break or enter the index.
+        let resp = post_json(&app, "/mail/send", json!({ "body": "legacy deploy chatter" })).await;
+        assert_eq!(resp.status(), StatusCode::OK);
+
+        // Search by subject word (Gherkin: q=deploy finds the message with
+        // an excerpt) — and the legacy send stays out.
+        let resp = get(&app, "/mail/search?q=deploy").await;
+        assert_eq!(resp.status(), StatusCode::OK);
+        let body = body_json(resp.into_body()).await;
+        let results = body["results"].as_array().unwrap();
+        assert_eq!(results.len(), 1);
+        assert_eq!(results[0]["message_id"], json!(message_id));
+        assert_eq!(results[0]["thread_id"], json!("mail:general"));
+        assert_eq!(results[0]["from_agent"], json!("alpha"));
+        assert_eq!(results[0]["subject"], json!("deploy window Friday"));
+        assert!(results[0]["ts"].as_str().unwrap().len() > 0);
+        assert!(results[0]["excerpt"].as_str().unwrap().len() > 0);
+
+        // Search by body-only word.
+        let resp = get(&app, "/mail/search?q=rollout&limit=5").await;
+        assert_eq!(resp.status(), StatusCode::OK);
+        let body = body_json(resp.into_body()).await;
+        assert_eq!(body["results"].as_array().unwrap().len(), 1);
+
+        // Empty / missing q -> 400.
+        let resp = get(&app, "/mail/search").await;
+        assert_eq!(resp.status(), StatusCode::BAD_REQUEST);
+        let resp = get(&app, "/mail/search?q=%20").await;
+        assert_eq!(resp.status(), StatusCode::BAD_REQUEST);
 
         let _ = std::fs::remove_dir_all(&temp);
     }

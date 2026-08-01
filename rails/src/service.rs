@@ -117,6 +117,7 @@ impl ServiceState {
             ledger: ledger.clone(),
             actor_id: Some("mail".to_string()),
             actor_type: None,
+            mail_index: None,
         }));
 
         Ok(Self {

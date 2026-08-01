@@ -468,6 +468,7 @@ async fn main() -> Result<()> {
         ledger: ledger.clone(),
         actor_id: Some("mail".to_string()),
         actor_type: None,
+        mail_index: None,
     });
 
     match cli.command {
