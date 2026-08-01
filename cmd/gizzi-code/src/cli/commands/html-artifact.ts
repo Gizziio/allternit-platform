@@ -105,6 +105,12 @@ export const HtmlArtifactPublishCommand = cmd({
       `${isRedeploy ? "Redeployed" : "Published"} "${input.title}" as "${slug}" — canvas ${response.id}, version ${response.version}.\n`,
     )
     process.stdout.write(`Saved to .gizzi/artifacts/${slug}/config.json\n`)
+    // Same pattern as status.ts/cowork.ts/pair.ts/init.ts/serve.ts: force a
+    // clean exit after a real network call, since something in the shared
+    // command bootstrap otherwise leaves the event loop open (observed:
+    // the process hangs indefinitely after a successful publish/redeploy
+    // instead of returning control to the shell).
+    process.exit(0)
   },
 })
 
@@ -133,6 +139,7 @@ export const HtmlArtifactStatusCommand = cmd({
     process.stdout.write(
       `${args.key}: canvas ${canvas.id}, version ${canvas.version}, session ${canvas.session_id}, updated_at ${canvas.updated_at}\n`,
     )
+    process.exit(0)
   },
 })
 
