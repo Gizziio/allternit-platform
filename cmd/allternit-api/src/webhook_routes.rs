@@ -1,6 +1,11 @@
 //! Clerk webhook handlers — sync user state from Clerk to local SQLite.
 //!
-//! Verifies Svix webhook signatures when `CLERK_WEBHOOK_SECRET` is configured.
+//! These routes are mounted on the public router (main.rs) by necessity —
+//! Clerk can't attach a user auth token to a webhook call, only a Svix
+//! signature — so signature verification is the only thing distinguishing
+//! a real Clerk event from an arbitrary POST. Requests are rejected (401)
+//! unless `CLERK_WEBHOOK_SECRET` is configured AND the signature verifies;
+//! there is no unauthenticated fallback.
 
 use axum::{
     body::Bytes,
@@ -85,6 +90,31 @@ fn verify_svix_signature(secret: &str, headers: &HeaderMap, body: &[u8]) -> Resu
     Ok(())
 }
 
+/// Require a verified Svix signature, or reject the request outright.
+/// No fallback: an unconfigured `CLERK_WEBHOOK_SECRET` is treated the same
+/// as a bad signature (401), not as "skip verification."
+fn require_webhook_signature(
+    state: &AppState,
+    headers: &HeaderMap,
+    body: &[u8],
+) -> Result<(), (StatusCode, Json<serde_json::Value>)> {
+    let Some(secret) = state.webhook_secret.as_deref() else {
+        warn!("Clerk webhook rejected: CLERK_WEBHOOK_SECRET is not configured");
+        return Err((
+            StatusCode::UNAUTHORIZED,
+            Json(json!({"error": "webhook_not_configured"})),
+        ));
+    };
+    if let Err(e) = verify_svix_signature(secret, headers, body) {
+        warn!("Clerk webhook signature verification failed: {e}");
+        return Err((
+            StatusCode::UNAUTHORIZED,
+            Json(json!({"error": "invalid_signature"})),
+        ));
+    }
+    Ok(())
+}
+
 #[derive(Deserialize)]
 struct ClerkUserPayload {
     id: String,
@@ -112,18 +142,8 @@ async fn handle_user_created(
     headers: HeaderMap,
     body: Bytes,
 ) -> impl IntoResponse {
-    if let Some(ref secret) = state.webhook_secret {
-        if let Err(e) = verify_svix_signature(secret, &headers, &body) {
-            warn!("Clerk webhook signature verification failed: {e}");
-            return (
-                StatusCode::UNAUTHORIZED,
-                Json(json!({"error": "invalid_signature"})),
-            );
-        }
-    } else {
-        warn!(
-            "Clerk webhook received without signature verification (CLERK_WEBHOOK_SECRET not set)"
-        );
+    if let Err(rejection) = require_webhook_signature(&state, &headers, &body) {
+        return rejection;
     }
 
     let event: ClerkWebhookEvent = match serde_json::from_slice(&body) {
@@ -224,18 +244,8 @@ async fn handle_user_deleted(
     headers: HeaderMap,
     body: Bytes,
 ) -> impl IntoResponse {
-    if let Some(ref secret) = state.webhook_secret {
-        if let Err(e) = verify_svix_signature(secret, &headers, &body) {
-            warn!("Clerk webhook signature verification failed: {e}");
-            return (
-                StatusCode::UNAUTHORIZED,
-                Json(json!({"error": "invalid_signature"})),
-            );
-        }
-    } else {
-        warn!(
-            "Clerk webhook received without signature verification (CLERK_WEBHOOK_SECRET not set)"
-        );
+    if let Err(rejection) = require_webhook_signature(&state, &headers, &body) {
+        return rejection;
     }
 
     let event: ClerkDeleteEvent = match serde_json::from_slice(&body) {
