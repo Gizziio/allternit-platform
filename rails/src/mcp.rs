@@ -12,11 +12,12 @@ use chrono::Utc;
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 
-use crate::dependencies::DependencyGraph;
+use crate::dependencies::load_graph;
 use crate::killswitch::KillSwitch;
 use crate::memory::MemoryStore;
 use crate::rails_id::TicketId;
-use crate::tickets::{Ticket, TicketKind, TicketPriority, TicketStatus, TicketStore};
+use crate::tickets::{self, Ticket, TicketKind, TicketPriority, TicketStatus, TicketStore};
+use crate::wait_gates::WaitGateStore;
 
 /// A JSON-RPC request from an MCP client.
 #[derive(Clone, Debug, Deserialize)]
@@ -287,17 +288,10 @@ impl<'a> McpServer<'a> {
     fn tool_ready(&self) -> Result<Value, String> {
         let store = TicketStore::new(self.root).map_err(|e| e.to_string())?;
         let graph = load_graph(self.root).map_err(|e| e.to_string())?;
-        let tickets = store.list().map_err(|e| e.to_string())?;
-        let now = Utc::now();
-        let ready: Vec<_> = tickets.iter()
-            .filter(|t| t.status != TicketStatus::Closed && !t.is_deferred(now))
-            .filter(|t| {
-                graph.blocks(&t.id).into_iter()
-                    .filter_map(|id| tickets.iter().find(|x| &x.id == id))
-                    .all(|b| b.status == TicketStatus::Closed)
-            })
-            .cloned()
-            .collect();
+        let gates = WaitGateStore::new(self.root).map_err(|e| e.to_string())?;
+        let tickets_list = store.list().map_err(|e| e.to_string())?;
+        let ready = tickets::ready(&tickets_list, &graph, &gates, Utc::now())
+            .map_err(|e| e.to_string())?;
         Ok(serde_json::json!({ "ready": ready }))
     }
 
@@ -323,15 +317,5 @@ impl<'a> McpServer<'a> {
         let brief = store.brief(&tags, limit).map_err(|e| e.to_string())?;
         Ok(serde_json::json!({ "brief": brief }))
     }
-}
-
-fn load_graph(root: &Path) -> Result<DependencyGraph> {
-    let path = root.join(".allternit/rails/dependencies/graph.json");
-    if !path.exists() {
-        return Ok(DependencyGraph::new());
-    }
-    let raw = std::fs::read_to_string(&path)?;
-    let graph: DependencyGraph = serde_json::from_str(&raw)?;
-    Ok(graph)
 }
 

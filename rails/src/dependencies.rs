@@ -13,8 +13,13 @@
 //! acyclic for hard-blocking edges.
 
 use std::collections::{HashMap, HashSet};
+use std::path::Path;
+
+use anyhow::{Context, Result};
+use chrono::Utc;
 
 use crate::rails_id::TicketId;
+use crate::tickets::{TicketEvent, TicketStore};
 
 /// A directed edge between two tickets.
 #[derive(Clone, Debug, PartialEq, Eq, Hash, serde::Serialize, serde::Deserialize)]
@@ -267,6 +272,108 @@ impl DependencyGraph {
     }
 }
 
+/// Path of the dependency graph snapshot, relative to workspace root.
+pub const GRAPH_PATH: &str = ".allternit/rails/dependencies/graph.json";
+
+/// Load the dependency graph for a workspace.
+///
+/// `graph.json` is a rebuildable snapshot: when it is missing the graph is
+/// derived by replaying `DependencyAdded`/`DependencyRemoved` events from the
+/// full ticket event log.
+pub fn load_graph(root: &Path) -> Result<DependencyGraph> {
+    let path = root.join(GRAPH_PATH);
+    if path.exists() {
+        let raw = std::fs::read_to_string(&path)
+            .with_context(|| format!("failed to read dependency graph {path:?}"))?;
+        let graph: DependencyGraph = serde_json::from_str(&raw)
+            .with_context(|| format!("failed to parse dependency graph {path:?}"))?;
+        return Ok(graph);
+    }
+    let store = TicketStore::new(root)?;
+    rebuild_graph_from_events(&store)
+}
+
+/// Persist the dependency graph snapshot.
+pub fn save_graph(root: &Path, graph: &DependencyGraph) -> Result<()> {
+    let path = root.join(GRAPH_PATH);
+    crate::core::io::write_json_atomic(&path, graph)
+        .with_context(|| format!("failed to write dependency graph {path:?}"))
+}
+
+/// Rebuild the dependency graph by replaying dependency events from the full
+/// ticket event log. Dependency events span two tickets but are filed under a
+/// single id, so this must scan the whole log, not `events_for(id)`.
+pub fn rebuild_graph_from_events(store: &TicketStore) -> Result<DependencyGraph> {
+    let mut graph = DependencyGraph::new();
+    for event in store.all_events()? {
+        match event {
+            TicketEvent::DependencyAdded { from, to, kind, .. } => {
+                graph.add(DependencyEdge::new(from, to, kind));
+            }
+            TicketEvent::DependencyRemoved { from, to, kind, .. } => {
+                graph.remove(&from, &to, kind);
+            }
+            _ => {}
+        }
+    }
+    Ok(graph)
+}
+
+/// Add a dependency edge: append a hash-chained `DependencyAdded` event and
+/// re-derive the graph snapshot from the event log.
+///
+/// Validates against blocking cycles before applying; on cycle the error
+/// carries the cycle path and nothing is persisted.
+pub fn add_edge(root: &Path, store: &TicketStore, edge: DependencyEdge) -> Result<()> {
+    let graph = load_graph(root)?;
+    if edge.kind.is_blocking() && graph.would_cycle(&edge) {
+        let mut g = graph.clone();
+        g.add(edge.clone());
+        let cycle = g
+            .find_cycle()
+            .map(|ids| ids.iter().map(|id| id.to_string()).collect::<Vec<_>>().join(" -> "))
+            .unwrap_or_else(|| format!("{} -> {}", edge.from, edge.to));
+        anyhow::bail!("dependency would create a blocking cycle: {cycle}");
+    }
+
+    store.append(&TicketEvent::DependencyAdded {
+        from: edge.from,
+        to: edge.to,
+        kind: edge.kind,
+        ts: Utc::now(),
+    })?;
+    let graph = rebuild_graph_from_events(store)?;
+    save_graph(root, &graph)?;
+    Ok(())
+}
+
+/// Remove a dependency edge: append a hash-chained `DependencyRemoved` event
+/// and re-derive the graph snapshot from the event log.
+///
+/// Returns false (and appends nothing) when the edge does not exist.
+pub fn remove_edge(
+    root: &Path,
+    store: &TicketStore,
+    from: &TicketId,
+    to: &TicketId,
+    kind: DependencyKind,
+) -> Result<bool> {
+    let graph = load_graph(root)?;
+    if !graph.edges().any(|e| e.from == *from && e.to == *to && e.kind == kind) {
+        return Ok(false);
+    }
+
+    store.append(&TicketEvent::DependencyRemoved {
+        from: from.clone(),
+        to: to.clone(),
+        kind,
+        ts: Utc::now(),
+    })?;
+    let graph = rebuild_graph_from_events(store)?;
+    save_graph(root, &graph)?;
+    Ok(true)
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -321,5 +428,134 @@ mod tests {
 
         let closing = DependencyEdge::new(b.clone(), a.clone(), DependencyKind::Blocks);
         assert!(g.would_cycle(&closing));
+    }
+
+    mod event_sourced {
+        use super::*;
+        use crate::rails_id::HierarchicalId;
+        use crate::tickets::{Ticket, TicketKind, TicketPriority, TicketStatus, TicketStore};
+        use std::collections::HashMap;
+        use tempfile::TempDir;
+
+        fn make_ticket(store: &TicketStore, title: &str) -> Ticket {
+            let id = TicketId::mint(title);
+            let ticket = Ticket {
+                id: id.clone(),
+                hierarchical_id: HierarchicalId::root(id),
+                title: title.to_string(),
+                description: String::new(),
+                design: None,
+                acceptance: None,
+                notes: Vec::new(),
+                status: TicketStatus::Open,
+                kind: TicketKind::Task,
+                priority: TicketPriority::P2,
+                assignee: None,
+                estimate_minutes: None,
+                due_at: None,
+                defer_until: None,
+                labels: Vec::new(),
+                external_ref: None,
+                metadata: HashMap::new(),
+                created_at: chrono::Utc::now(),
+                updated_at: chrono::Utc::now(),
+                closed_at: None,
+                close_reason: None,
+            };
+            store.create(ticket.clone()).unwrap()
+        }
+
+        #[test]
+        fn add_edge_emits_event_and_graph_rebuilds_from_full_log() {
+            let tmp = TempDir::new().unwrap();
+            let root = tmp.path();
+            let store = TicketStore::new(root).unwrap();
+            let a = make_ticket(&store, "a");
+            let b = make_ticket(&store, "b");
+
+            add_edge(
+                root,
+                &store,
+                DependencyEdge::new(a.id.clone(), b.id.clone(), DependencyKind::Blocks),
+            )
+            .unwrap();
+
+            // Event round-trip: the edge is derivable by replaying the log.
+            let replayed = rebuild_graph_from_events(&store).unwrap();
+            assert_eq!(replayed.blocked_by(&a.id), vec![&b.id]);
+
+            // Delete the snapshot; load_graph must rebuild from the full log
+            // (the event is filed only under `from`, so events_for(b) would miss it).
+            std::fs::remove_file(root.join(GRAPH_PATH)).unwrap();
+            let graph = load_graph(root).unwrap();
+            assert_eq!(graph.blocks(&b.id), vec![&a.id]);
+
+            // The blocked ticket is not ready.
+            let gates = crate::wait_gates::WaitGateStore::new(root).unwrap();
+            let all = store.list().unwrap();
+            let ready =
+                crate::tickets::ready(&all, &graph, &gates, chrono::Utc::now()).unwrap();
+            assert!(ready.iter().any(|t| t.id == a.id));
+            assert!(!ready.iter().any(|t| t.id == b.id));
+        }
+
+        #[test]
+        fn remove_edge_emits_event_and_rebuild_drops_edge() {
+            let tmp = TempDir::new().unwrap();
+            let root = tmp.path();
+            let store = TicketStore::new(root).unwrap();
+            let a = make_ticket(&store, "a");
+            let b = make_ticket(&store, "b");
+
+            add_edge(
+                root,
+                &store,
+                DependencyEdge::new(a.id.clone(), b.id.clone(), DependencyKind::Blocks),
+            )
+            .unwrap();
+            let removed =
+                remove_edge(root, &store, &a.id, &b.id, DependencyKind::Blocks).unwrap();
+            assert!(removed);
+
+            let graph = rebuild_graph_from_events(&store).unwrap();
+            assert!(graph.blocks(&b.id).is_empty());
+            assert_eq!(load_graph(root).unwrap().edges().count(), 0);
+
+            // Removing a missing edge is a no-op.
+            let removed =
+                remove_edge(root, &store, &a.id, &b.id, DependencyKind::Blocks).unwrap();
+            assert!(!removed);
+        }
+
+        #[test]
+        fn add_edge_rejects_cycle_without_persisting() {
+            let tmp = TempDir::new().unwrap();
+            let root = tmp.path();
+            let store = TicketStore::new(root).unwrap();
+            let a = make_ticket(&store, "a");
+            let b = make_ticket(&store, "b");
+
+            add_edge(
+                root,
+                &store,
+                DependencyEdge::new(a.id.clone(), b.id.clone(), DependencyKind::Blocks),
+            )
+            .unwrap();
+            let event_count_before = store.all_events().unwrap().len();
+
+            let err = add_edge(
+                root,
+                &store,
+                DependencyEdge::new(b.id.clone(), a.id.clone(), DependencyKind::Blocks),
+            )
+            .unwrap_err();
+            assert!(err.to_string().contains("cycle"));
+
+            // No partial mutation: no new event, prior edge intact.
+            assert_eq!(store.all_events().unwrap().len(), event_count_before);
+            let graph = load_graph(root).unwrap();
+            assert_eq!(graph.edges().count(), 1);
+            assert_eq!(graph.blocked_by(&a.id), vec![&b.id]);
+        }
     }
 }

@@ -20,7 +20,16 @@ use std::sync::Arc;
 use tracing::{debug, error, info};
 
 use crate::AppState;
+use allternit_agent_system_rails::dependencies::{
+    self, DependencyEdge, DependencyKind,
+};
+use allternit_agent_system_rails::rails_id::{HierarchicalId, TicketId};
 use allternit_agent_system_rails::receipts::ReceiptQuery;
+use allternit_agent_system_rails::tickets::{
+    self, BlockedTicket, Ticket, TicketKind, TicketPriority, TicketStatus, TicketStore,
+    TicketUpdate,
+};
+use allternit_agent_system_rails::wait_gates::WaitGateStore;
 use allternit_agent_system_rails::{
     project_dag, ContextPackSeal, ContextPackStore, ContextPackStoreOptions, DagMutation, Gate,
     GateOptions, Index, IndexOptions, Leases, LeasesOptions, Ledger, LedgerOptions, LedgerQuery,
@@ -35,6 +44,7 @@ use allternit_agent_system_rails::{
 /// Rails service state shared across handlers
 #[derive(Clone)]
 pub struct RailsState {
+    pub root_dir: std::path::PathBuf,
     pub ledger: Arc<Ledger>,
     pub gate: Arc<Gate>,
     pub leases: Arc<Leases>,
@@ -129,6 +139,7 @@ impl RailsState {
         info!("Rails service state initialized successfully");
 
         Ok(Self {
+            root_dir,
             ledger,
             gate,
             leases,
@@ -169,6 +180,17 @@ pub fn rails_router() -> Router<Arc<AppState>> {
         .route("/wihs/:wih_id/context", get(get_wih_context))
         .route("/wihs/:wih_id/sign", post(sign_wih))
         .route("/wihs/:wih_id/close", post(close_wih))
+        // Tickets (event-sourced ticket subsystem)
+        .route("/tickets", post(create_ticket).get(list_tickets))
+        .route("/tickets/ready", get(list_ready_tickets))
+        .route("/tickets/blocked", get(list_blocked_tickets))
+        .route("/tickets/:id", get(get_ticket).patch(update_ticket))
+        .route("/tickets/:id/close", post(close_ticket))
+        .route("/tickets/:id/reopen", post(reopen_ticket))
+        .route(
+            "/tickets/:id/dependencies",
+            post(add_ticket_dependency).delete(remove_ticket_dependency),
+        )
         // DAGs / Work
         .route("/workspace/:workspace_id/dags", get(list_dags))
         .route("/workspace/:workspace_id/dags", post(create_dag))
@@ -1401,4 +1423,465 @@ struct EvaluatePolicyRequest {
     resource: String,
     tenant_id: String,
     context: Option<serde_json::Value>,
+}
+
+// ============================================================================
+// Tickets (event-sourced ticket subsystem)
+// ============================================================================
+
+#[derive(Debug, Deserialize)]
+struct TicketCreateRequest {
+    title: String,
+    description: Option<String>,
+    kind: Option<String>,
+    priority: Option<String>,
+    labels: Option<Vec<String>>,
+}
+
+#[derive(Debug, Serialize)]
+struct TicketResponse {
+    ticket: Ticket,
+}
+
+#[derive(Debug, Deserialize)]
+struct TicketListParams {
+    status: Option<String>,
+    label: Option<String>,
+}
+
+#[derive(Debug, Serialize)]
+struct TicketListResponse {
+    tickets: Vec<Ticket>,
+}
+
+#[derive(Debug, Deserialize)]
+struct TicketUpdateRequest {
+    title: Option<String>,
+    description: Option<String>,
+    priority: Option<String>,
+    labels: Option<Vec<String>>,
+}
+
+#[derive(Debug, Deserialize)]
+struct TicketCloseRequest {
+    reason: Option<String>,
+}
+
+#[derive(Debug, Deserialize)]
+struct TicketDependencyRequest {
+    to: String,
+    kind: Option<String>,
+}
+
+#[derive(Debug, Serialize)]
+struct TicketReadyListResponse {
+    ready: Vec<Ticket>,
+}
+
+#[derive(Debug, Serialize)]
+struct TicketBlockedListResponse {
+    blocked: Vec<BlockedTicket>,
+}
+
+fn ticket_error(status: StatusCode, message: impl Into<String>) -> axum::response::Response {
+    (status, Json(json!({ "error": message.into() }))).into_response()
+}
+
+fn ticket_store(state: &AppState) -> Result<TicketStore, axum::response::Response> {
+    TicketStore::new(&state.rails.root_dir).map_err(|e| {
+        error!(error = %e, "tickets: failed to open store");
+        ticket_error(StatusCode::INTERNAL_SERVER_ERROR, e.to_string())
+    })
+}
+
+fn parse_ticket_id(raw: &str) -> Result<TicketId, axum::response::Response> {
+    raw.parse::<TicketId>()
+        .map_err(|e| ticket_error(StatusCode::BAD_REQUEST, e.to_string()))
+}
+
+async fn create_ticket(
+    State(state): State<Arc<AppState>>,
+    Json(req): Json<TicketCreateRequest>,
+) -> impl IntoResponse {
+    let store = match ticket_store(&state) {
+        Ok(store) => store,
+        Err(response) => return response,
+    };
+    let kind = match req
+        .kind
+        .as_deref()
+        .unwrap_or("task")
+        .parse::<TicketKind>()
+    {
+        Ok(kind) => kind,
+        Err(e) => return ticket_error(StatusCode::BAD_REQUEST, e.to_string()),
+    };
+    let priority = match req
+        .priority
+        .as_deref()
+        .unwrap_or("P2")
+        .parse::<TicketPriority>()
+    {
+        Ok(priority) => priority,
+        Err(e) => return ticket_error(StatusCode::BAD_REQUEST, e.to_string()),
+    };
+
+    let now = chrono::Utc::now();
+    let id = TicketId::mint(format!("{}:{}", req.title, now).as_bytes());
+    let ticket = Ticket {
+        id: id.clone(),
+        hierarchical_id: HierarchicalId::root(id),
+        title: req.title,
+        description: req.description.unwrap_or_default(),
+        design: None,
+        acceptance: None,
+        notes: Vec::new(),
+        status: TicketStatus::Open,
+        kind,
+        priority,
+        assignee: None,
+        estimate_minutes: None,
+        due_at: None,
+        defer_until: None,
+        labels: req.labels.unwrap_or_default(),
+        external_ref: None,
+        metadata: std::collections::HashMap::new(),
+        created_at: now,
+        updated_at: now,
+        closed_at: None,
+        close_reason: None,
+    };
+
+    match store.create(ticket) {
+        Ok(ticket) => (StatusCode::CREATED, Json(TicketResponse { ticket })).into_response(),
+        Err(e) => {
+            error!(error = %e, "tickets: create failed");
+            ticket_error(StatusCode::INTERNAL_SERVER_ERROR, e.to_string())
+        }
+    }
+}
+
+async fn list_tickets(
+    State(state): State<Arc<AppState>>,
+    Query(params): Query<TicketListParams>,
+) -> impl IntoResponse {
+    let store = match ticket_store(&state) {
+        Ok(store) => store,
+        Err(response) => return response,
+    };
+    let status_filter = match params
+        .status
+        .as_deref()
+        .map(|s| s.parse::<TicketStatus>())
+        .transpose()
+    {
+        Ok(status) => status,
+        Err(e) => return ticket_error(StatusCode::BAD_REQUEST, e.to_string()),
+    };
+
+    match store.list() {
+        Ok(tickets) => {
+            let tickets: Vec<Ticket> = tickets
+                .into_iter()
+                .filter(|t| status_filter.map(|s| t.status == s).unwrap_or(true))
+                .filter(|t| {
+                    params
+                        .label
+                        .as_ref()
+                        .map(|l| t.labels.contains(l))
+                        .unwrap_or(true)
+                })
+                .collect();
+            (StatusCode::OK, Json(TicketListResponse { tickets })).into_response()
+        }
+        Err(e) => {
+            error!(error = %e, "tickets: list failed");
+            ticket_error(StatusCode::INTERNAL_SERVER_ERROR, e.to_string())
+        }
+    }
+}
+
+async fn get_ticket(
+    State(state): State<Arc<AppState>>,
+    Path(id): Path<String>,
+) -> impl IntoResponse {
+    let store = match ticket_store(&state) {
+        Ok(store) => store,
+        Err(response) => return response,
+    };
+    let id = match parse_ticket_id(&id) {
+        Ok(id) => id,
+        Err(response) => return response,
+    };
+
+    match store.get(&id) {
+        Ok(Some(ticket)) => (StatusCode::OK, Json(TicketResponse { ticket })).into_response(),
+        Ok(None) => ticket_error(StatusCode::NOT_FOUND, format!("ticket {id} not found")),
+        Err(e) => {
+            error!(error = %e, "tickets: get failed");
+            ticket_error(StatusCode::INTERNAL_SERVER_ERROR, e.to_string())
+        }
+    }
+}
+
+async fn update_ticket(
+    State(state): State<Arc<AppState>>,
+    Path(id): Path<String>,
+    Json(req): Json<TicketUpdateRequest>,
+) -> impl IntoResponse {
+    let store = match ticket_store(&state) {
+        Ok(store) => store,
+        Err(response) => return response,
+    };
+    let id = match parse_ticket_id(&id) {
+        Ok(id) => id,
+        Err(response) => return response,
+    };
+    let priority = match req
+        .priority
+        .as_deref()
+        .map(|p| p.parse::<TicketPriority>())
+        .transpose()
+    {
+        Ok(priority) => priority,
+        Err(e) => return ticket_error(StatusCode::BAD_REQUEST, e.to_string()),
+    };
+
+    let patch = TicketUpdate {
+        title: req.title,
+        description: req.description,
+        priority,
+        labels: req.labels,
+        ..Default::default()
+    };
+    match store.update(&id, patch) {
+        Ok(ticket) => (StatusCode::OK, Json(TicketResponse { ticket })).into_response(),
+        Err(e) => {
+            error!(error = %e, "tickets: update failed");
+            ticket_error(StatusCode::NOT_FOUND, e.to_string())
+        }
+    }
+}
+
+async fn close_ticket(
+    State(state): State<Arc<AppState>>,
+    Path(id): Path<String>,
+    Json(req): Json<TicketCloseRequest>,
+) -> impl IntoResponse {
+    set_ticket_status(state, id, TicketStatus::Closed, req.reason).await
+}
+
+async fn reopen_ticket(
+    State(state): State<Arc<AppState>>,
+    Path(id): Path<String>,
+) -> impl IntoResponse {
+    set_ticket_status(state, id, TicketStatus::Open, None).await
+}
+
+async fn set_ticket_status(
+    state: Arc<AppState>,
+    raw_id: String,
+    status: TicketStatus,
+    reason: Option<String>,
+) -> axum::response::Response {
+    let store = match ticket_store(&state) {
+        Ok(store) => store,
+        Err(response) => return response,
+    };
+    let id = match parse_ticket_id(&raw_id) {
+        Ok(id) => id,
+        Err(response) => return response,
+    };
+
+    match store.set_status(&id, status, "api", reason) {
+        Ok(ticket) => (StatusCode::OK, Json(TicketResponse { ticket })).into_response(),
+        Err(e) => {
+            error!(error = %e, "tickets: status change failed");
+            ticket_error(StatusCode::NOT_FOUND, e.to_string())
+        }
+    }
+}
+
+async fn list_ready_tickets(State(state): State<Arc<AppState>>) -> impl IntoResponse {
+    match ready_inputs(&state) {
+        Ok((all, graph, gates)) => match tickets::ready(&all, &graph, &gates, chrono::Utc::now()) {
+            Ok(ready) => {
+                (StatusCode::OK, Json(TicketReadyListResponse { ready })).into_response()
+            }
+            Err(e) => {
+                error!(error = %e, "tickets: ready computation failed");
+                ticket_error(StatusCode::INTERNAL_SERVER_ERROR, e.to_string())
+            }
+        },
+        Err(response) => response,
+    }
+}
+
+async fn list_blocked_tickets(State(state): State<Arc<AppState>>) -> impl IntoResponse {
+    match ready_inputs(&state) {
+        Ok((all, graph, gates)) => {
+            match tickets::blocked(&all, &graph, &gates, chrono::Utc::now()) {
+                Ok(blocked) => {
+                    (StatusCode::OK, Json(TicketBlockedListResponse { blocked })).into_response()
+                }
+                Err(e) => {
+                    error!(error = %e, "tickets: blocked computation failed");
+                    ticket_error(StatusCode::INTERNAL_SERVER_ERROR, e.to_string())
+                }
+            }
+        }
+        Err(response) => response,
+    }
+}
+
+fn ready_inputs(
+    state: &AppState,
+) -> Result<
+    (
+        Vec<Ticket>,
+        dependencies::DependencyGraph,
+        WaitGateStore,
+    ),
+    axum::response::Response,
+> {
+    let store = ticket_store(state)?;
+    let all = store.list().map_err(|e| {
+        error!(error = %e, "tickets: list failed");
+        ticket_error(StatusCode::INTERNAL_SERVER_ERROR, e.to_string())
+    })?;
+    let graph = dependencies::load_graph(&state.rails.root_dir).map_err(|e| {
+        error!(error = %e, "tickets: failed to load dependency graph");
+        ticket_error(StatusCode::INTERNAL_SERVER_ERROR, e.to_string())
+    })?;
+    let gates = WaitGateStore::new(&state.rails.root_dir).map_err(|e| {
+        error!(error = %e, "tickets: failed to open wait-gate store");
+        ticket_error(StatusCode::INTERNAL_SERVER_ERROR, e.to_string())
+    })?;
+    Ok((all, graph, gates))
+}
+
+async fn add_ticket_dependency(
+    State(state): State<Arc<AppState>>,
+    Path(id): Path<String>,
+    Json(req): Json<TicketDependencyRequest>,
+) -> impl IntoResponse {
+    let store = match ticket_store(&state) {
+        Ok(store) => store,
+        Err(response) => return response,
+    };
+    let from = match parse_ticket_id(&id) {
+        Ok(id) => id,
+        Err(response) => return response,
+    };
+    let to = match parse_ticket_id(&req.to) {
+        Ok(id) => id,
+        Err(response) => return response,
+    };
+    let kind = match req
+        .kind
+        .as_deref()
+        .unwrap_or("blocks")
+        .parse::<DependencyKind>()
+    {
+        Ok(kind) => kind,
+        Err(e) => return ticket_error(StatusCode::BAD_REQUEST, e.to_string()),
+    };
+
+    // Validate before applying (BatchExecutor precedent): no partial mutation.
+    for endpoint in [&from, &to] {
+        match store.get(endpoint) {
+            Ok(Some(_)) => {}
+            Ok(None) => {
+                return ticket_error(
+                    StatusCode::NOT_FOUND,
+                    format!("ticket {endpoint} not found"),
+                )
+            }
+            Err(e) => {
+                error!(error = %e, "tickets: get failed");
+                return ticket_error(StatusCode::INTERNAL_SERVER_ERROR, e.to_string());
+            }
+        }
+    }
+
+    let graph = match dependencies::load_graph(&state.rails.root_dir) {
+        Ok(graph) => graph,
+        Err(e) => {
+            error!(error = %e, "tickets: failed to load dependency graph");
+            return ticket_error(StatusCode::INTERNAL_SERVER_ERROR, e.to_string());
+        }
+    };
+    let edge = DependencyEdge::new(from.clone(), to.clone(), kind);
+    if edge.kind.is_blocking() && graph.would_cycle(&edge) {
+        let mut g = graph.clone();
+        g.add(edge.clone());
+        let cycle: Vec<String> = g
+            .find_cycle()
+            .map(|ids| ids.iter().map(|id| id.to_string()).collect())
+            .unwrap_or_else(|| vec![from.to_string(), to.to_string()]);
+        return (
+            StatusCode::CONFLICT,
+            Json(json!({
+                "error": "dependency would create a blocking cycle",
+                "cycle": cycle,
+            })),
+        )
+            .into_response();
+    }
+
+    match dependencies::add_edge(&state.rails.root_dir, &store, edge) {
+        Ok(()) => (
+            StatusCode::CREATED,
+            Json(json!({ "added": true, "from": from, "to": to, "kind": kind.to_string() })),
+        )
+            .into_response(),
+        Err(e) => {
+            error!(error = %e, "tickets: add dependency failed");
+            ticket_error(StatusCode::INTERNAL_SERVER_ERROR, e.to_string())
+        }
+    }
+}
+
+async fn remove_ticket_dependency(
+    State(state): State<Arc<AppState>>,
+    Path(id): Path<String>,
+    Json(req): Json<TicketDependencyRequest>,
+) -> impl IntoResponse {
+    let store = match ticket_store(&state) {
+        Ok(store) => store,
+        Err(response) => return response,
+    };
+    let from = match parse_ticket_id(&id) {
+        Ok(id) => id,
+        Err(response) => return response,
+    };
+    let to = match parse_ticket_id(&req.to) {
+        Ok(id) => id,
+        Err(response) => return response,
+    };
+    let kind = match req
+        .kind
+        .as_deref()
+        .unwrap_or("blocks")
+        .parse::<DependencyKind>()
+    {
+        Ok(kind) => kind,
+        Err(e) => return ticket_error(StatusCode::BAD_REQUEST, e.to_string()),
+    };
+
+    match dependencies::remove_edge(&state.rails.root_dir, &store, &from, &to, kind) {
+        Ok(true) => (
+            StatusCode::OK,
+            Json(json!({ "removed": true, "from": from, "to": to, "kind": kind.to_string() })),
+        )
+            .into_response(),
+        Ok(false) => ticket_error(
+            StatusCode::NOT_FOUND,
+            format!("no {kind} dependency from {from} to {to}"),
+        ),
+        Err(e) => {
+            error!(error = %e, "tickets: remove dependency failed");
+            ticket_error(StatusCode::INTERNAL_SERVER_ERROR, e.to_string())
+        }
+    }
 }

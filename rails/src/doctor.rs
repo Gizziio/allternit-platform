@@ -7,7 +7,7 @@ use anyhow::Result;
 use chrono::{Duration, Utc};
 use serde::{Deserialize, Serialize};
 
-use crate::dependencies::DependencyGraph;
+use crate::dependencies::load_graph;
 use crate::rails_id::TicketId;
 use crate::tickets::{TicketStatus, TicketStore};
 
@@ -153,14 +153,4 @@ pub fn diagnose(
         ledger_valid: ledger_check.valid,
         issues,
     })
-}
-
-fn load_graph(root: &Path) -> Result<DependencyGraph> {
-    let path = root.join(".allternit/rails/dependencies/graph.json");
-    if !path.exists() {
-        return Ok(DependencyGraph::new());
-    }
-    let raw = std::fs::read_to_string(&path)?;
-    let graph: DependencyGraph = serde_json::from_str(&raw)?;
-    Ok(graph)
 }

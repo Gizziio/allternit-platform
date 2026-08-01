@@ -16,7 +16,9 @@ use serde_json::Value;
 use sha2::{Digest, Sha256};
 
 use crate::core::io::{ensure_dir, read_json, write_json_atomic};
+use crate::dependencies::{DependencyGraph, DependencyKind};
 use crate::rails_id::{HierarchicalId, TicketId};
+use crate::wait_gates::WaitGateStore;
 
 /// Default directory for ticket events, relative to workspace root.
 pub const TICKET_EVENTS_DIR: &str = ".allternit/rails/ticket_events";
@@ -248,6 +250,31 @@ pub enum TicketEvent {
         id: TicketId,
         note: TicketNote,
     },
+    LabelAdded {
+        id: TicketId,
+        label: String,
+        ts: DateTime<Utc>,
+    },
+    LabelRemoved {
+        id: TicketId,
+        label: String,
+        ts: DateTime<Utc>,
+    },
+    /// A dependency edge was added. Spans two tickets; filed under `from`.
+    /// Graph rebuilds must scan the full event log, not `events_for(id)`.
+    DependencyAdded {
+        from: TicketId,
+        to: TicketId,
+        kind: DependencyKind,
+        ts: DateTime<Utc>,
+    },
+    /// A dependency edge was removed. Spans two tickets; filed under `from`.
+    DependencyRemoved {
+        from: TicketId,
+        to: TicketId,
+        kind: DependencyKind,
+        ts: DateTime<Utc>,
+    },
 }
 
 impl TicketEvent {
@@ -256,7 +283,11 @@ impl TicketEvent {
             TicketEvent::Created { ticket } => &ticket.id,
             TicketEvent::Updated { id, .. }
             | TicketEvent::StatusChanged { id, .. }
-            | TicketEvent::NoteAdded { id, .. } => id,
+            | TicketEvent::NoteAdded { id, .. }
+            | TicketEvent::LabelAdded { id, .. }
+            | TicketEvent::LabelRemoved { id, .. } => id,
+            TicketEvent::DependencyAdded { from, .. }
+            | TicketEvent::DependencyRemoved { from, .. } => from,
         }
     }
 }
@@ -530,6 +561,44 @@ impl TicketStore {
         Ok(ticket)
     }
 
+    /// Add a label to a ticket.
+    pub fn add_label(&self, id: &TicketId, label: impl Into<String>) -> Result<Ticket> {
+        let mut ticket = self.get(id)?.context("ticket not found")?;
+        let label = label.into();
+        let ts = Utc::now();
+        if !ticket.labels.contains(&label) {
+            ticket.labels.push(label.clone());
+        }
+        ticket.updated_at = ts;
+
+        let event = TicketEvent::LabelAdded {
+            id: id.clone(),
+            label,
+            ts,
+        };
+        self.append(&event)?;
+        self.write_snapshot(&ticket)?;
+        Ok(ticket)
+    }
+
+    /// Remove a label from a ticket.
+    pub fn remove_label(&self, id: &TicketId, label: impl Into<String>) -> Result<Ticket> {
+        let mut ticket = self.get(id)?.context("ticket not found")?;
+        let label = label.into();
+        let ts = Utc::now();
+        ticket.labels.retain(|l| l != &label);
+        ticket.updated_at = ts;
+
+        let event = TicketEvent::LabelRemoved {
+            id: id.clone(),
+            label,
+            ts,
+        };
+        self.append(&event)?;
+        self.write_snapshot(&ticket)?;
+        Ok(ticket)
+    }
+
     /// Load the current ticket state, preferring the snapshot if present.
     pub fn get(&self, id: &TicketId) -> Result<Option<Ticket>> {
         let snapshot_path = self.snapshot_path(id);
@@ -538,15 +607,16 @@ impl TicketStore {
                 .with_context(|| format!("failed to read ticket snapshot {snapshot_path:?}"));
         }
 
+        // No snapshot: rebuild full state by replaying the event log.
         let mut ticket: Option<Ticket> = None;
         for event in self.events_for(id)? {
             match event {
                 TicketEvent::Created { ticket: t } => ticket = Some(t),
-                TicketEvent::Updated { id: _, .. } => {
-                    // Snapshots are authoritative; if no snapshot, recompute.
+                ref e => {
+                    if let Some(ref mut t) = ticket {
+                        apply_event(t, e);
+                    }
                 }
-                TicketEvent::StatusChanged { .. } => {}
-                TicketEvent::NoteAdded { .. } => {}
             }
         }
         Ok(ticket)
@@ -575,29 +645,10 @@ impl TicketStore {
                 TicketEvent::Created { ticket } => {
                     tickets.insert(ticket.id.clone(), ticket);
                 }
-                TicketEvent::Updated { id, .. } => {
+                ref e => {
+                    let id = e.ticket_id().clone();
                     if let Some(mut ticket) = tickets.get(&id).cloned() {
-                        // Re-apply updates from events would require replay.
-                        // Snapshots are written on every mutation, so this is
-                        // sufficient for recovery.
-                        ticket.updated_at = Utc::now();
-                        tickets.insert(id, ticket);
-                    }
-                }
-                TicketEvent::StatusChanged { id, status, ts, .. } => {
-                    if let Some(mut ticket) = tickets.get(&id).cloned() {
-                        ticket.status = status;
-                        ticket.updated_at = ts;
-                        if status == TicketStatus::Closed {
-                            ticket.closed_at = Some(ts);
-                        }
-                        tickets.insert(id, ticket);
-                    }
-                }
-                TicketEvent::NoteAdded { id, note } => {
-                    if let Some(mut ticket) = tickets.get(&id).cloned() {
-                        ticket.notes.push(note);
-                        ticket.updated_at = Utc::now();
+                        apply_event(&mut ticket, e);
                         tickets.insert(id, ticket);
                     }
                 }
@@ -623,12 +674,14 @@ impl TicketStore {
 
     fn events_for(&self, id: &TicketId) -> Result<Vec<TicketEvent>> {
         let mut envelopes = Vec::new();
-        let prefix = format!("{}", id);
+        // Event files are named `{sequence:08}-{id}-{ts}.json`; the id is the
+        // middle segment, so match on `-{id}-` rather than a name prefix.
+        let needle = format!("-{id}-");
         for entry in std::fs::read_dir(&self.events_dir)? {
             let entry = entry?;
             let name = entry.file_name();
             let name = name.to_string_lossy();
-            if name.starts_with(&prefix) && name.ends_with(".json") {
+            if name.contains(&needle) && name.ends_with(".json") {
                 let event = Self::read_event(&entry.path())?;
                 envelopes.push(event);
             }
@@ -637,7 +690,12 @@ impl TicketStore {
         Ok(envelopes.into_iter().map(|e| e.event).collect())
     }
 
-    fn all_events(&self) -> Result<Vec<TicketEvent>> {
+    /// Return all events in the log, ordered by sequence.
+    ///
+    /// Dependency events span two tickets but are filed under a single id, so
+    /// anything that rebuilds cross-ticket state (the dependency graph) must
+    /// use this full-log scan rather than `events_for(id)`.
+    pub fn all_events(&self) -> Result<Vec<TicketEvent>> {
         let mut envelopes = Vec::new();
         for entry in std::fs::read_dir(&self.events_dir)? {
             let entry = entry?;
@@ -693,6 +751,176 @@ fn compute_event_hash(
     let event_bytes = serde_json::to_vec(event).expect("event serializes");
     hasher.update(&event_bytes);
     hex::encode(hasher.finalize())
+}
+
+/// Apply a single event to an in-flight ticket state.
+///
+/// Used by both the no-snapshot fallback in `get` and `rebuild_snapshots` so
+/// event-only replay stays consistent everywhere. Dependency events do not
+/// mutate ticket state and are ignored.
+fn apply_event(ticket: &mut Ticket, event: &TicketEvent) {
+    match event {
+        TicketEvent::Created { .. } => {}
+        TicketEvent::Updated {
+            title,
+            description,
+            design,
+            acceptance,
+            priority,
+            assignee,
+            estimate_minutes,
+            due_at,
+            defer_until,
+            labels,
+            external_ref,
+            metadata,
+            updated_at,
+            ..
+        } => {
+            if let Some(title) = title {
+                ticket.title = title.clone();
+            }
+            if let Some(description) = description {
+                ticket.description = description.clone();
+            }
+            if let Some(design) = design {
+                ticket.design = design.clone();
+            }
+            if let Some(acceptance) = acceptance {
+                ticket.acceptance = acceptance.clone();
+            }
+            if let Some(priority) = priority {
+                ticket.priority = *priority;
+            }
+            if let Some(assignee) = assignee {
+                ticket.assignee = assignee.clone();
+            }
+            if let Some(estimate) = estimate_minutes {
+                ticket.estimate_minutes = *estimate;
+            }
+            if let Some(due_at) = due_at {
+                ticket.due_at = *due_at;
+            }
+            if let Some(defer_until) = defer_until {
+                ticket.defer_until = *defer_until;
+            }
+            if let Some(labels) = labels {
+                ticket.labels = labels.clone();
+            }
+            if let Some(external_ref) = external_ref {
+                ticket.external_ref = external_ref.clone();
+            }
+            if let Some(metadata) = metadata {
+                ticket.metadata = metadata.clone();
+            }
+            ticket.updated_at = *updated_at;
+        }
+        TicketEvent::StatusChanged {
+            status,
+            reason,
+            ts,
+            ..
+        } => {
+            ticket.status = *status;
+            ticket.updated_at = *ts;
+            if *status == TicketStatus::Closed {
+                ticket.closed_at = Some(*ts);
+                ticket.close_reason = reason.clone();
+            }
+        }
+        TicketEvent::NoteAdded { note, .. } => {
+            ticket.notes.push(note.clone());
+        }
+        TicketEvent::LabelAdded { label, ts, .. } => {
+            if !ticket.labels.contains(label) {
+                ticket.labels.push(label.clone());
+            }
+            ticket.updated_at = *ts;
+        }
+        TicketEvent::LabelRemoved { label, ts, .. } => {
+            ticket.labels.retain(|l| l != label);
+            ticket.updated_at = *ts;
+        }
+        TicketEvent::DependencyAdded { .. } | TicketEvent::DependencyRemoved { .. } => {}
+    }
+}
+
+/// A ticket that is not ready, together with the ids of the open tickets
+/// whose `blocks` edges hold it back.
+#[derive(Clone, Debug, Serialize, Deserialize)]
+pub struct BlockedTicket {
+    pub ticket: Ticket,
+    pub blocked_by: Vec<TicketId>,
+}
+
+/// Compute the ready list: tickets that are open, not deferred, have every
+/// incoming `blocks` edge closed, and have no unsatisfied wait-gate.
+///
+/// This is the single shared implementation — MCP, the CLI, and the HTTP
+/// surface all call it.
+pub fn ready(
+    tickets: &[Ticket],
+    graph: &DependencyGraph,
+    gates: &WaitGateStore,
+    now: DateTime<Utc>,
+) -> Result<Vec<Ticket>> {
+    let mut ready = Vec::new();
+    for ticket in tickets {
+        if !ticket.is_open() || ticket.is_deferred(now) {
+            continue;
+        }
+        let blockers_closed = graph.blocks(&ticket.id).into_iter().all(|id| {
+            tickets
+                .iter()
+                .find(|t| &t.id == id)
+                .map(|t| t.status == TicketStatus::Closed)
+                .unwrap_or(true)
+        });
+        if !blockers_closed {
+            continue;
+        }
+        if !gates.blocking_for(&ticket.id)?.is_empty() {
+            continue;
+        }
+        ready.push(ticket.clone());
+    }
+    Ok(ready)
+}
+
+/// Compute the blocked list: open, non-deferred tickets that are held back by
+/// at least one open incoming `blocks` edge or one unsatisfied wait-gate.
+pub fn blocked(
+    tickets: &[Ticket],
+    graph: &DependencyGraph,
+    gates: &WaitGateStore,
+    now: DateTime<Utc>,
+) -> Result<Vec<BlockedTicket>> {
+    let mut blocked = Vec::new();
+    for ticket in tickets {
+        if !ticket.is_open() || ticket.is_deferred(now) {
+            continue;
+        }
+        let open_blockers: Vec<TicketId> = graph
+            .blocks(&ticket.id)
+            .into_iter()
+            .filter(|id| {
+                tickets
+                    .iter()
+                    .find(|t| &t.id == *id)
+                    .map(|t| t.status != TicketStatus::Closed)
+                    .unwrap_or(false)
+            })
+            .cloned()
+            .collect();
+        let gated = !gates.blocking_for(&ticket.id)?.is_empty();
+        if !open_blockers.is_empty() || gated {
+            blocked.push(BlockedTicket {
+                ticket: ticket.clone(),
+                blocked_by: open_blockers,
+            });
+        }
+    }
+    Ok(blocked)
 }
 
 /// Patch fields for [`TicketStore::update`].
@@ -832,5 +1060,134 @@ mod tests {
         assert_eq!(envelopes.len(), 2);
         assert!(envelopes[0].previous_hash.is_none());
         assert_eq!(envelopes[1].previous_hash.as_ref(), Some(&envelopes[0].event_hash));
+    }
+
+    #[test]
+    fn label_ops_emit_events() {
+        let tmp = TempDir::new().unwrap();
+        let store = TicketStore::new(tmp.path()).unwrap();
+        let ticket = sample_ticket("Labeled");
+        store.create(ticket.clone()).unwrap();
+
+        let t = store.add_label(&ticket.id, "backend").unwrap();
+        assert_eq!(t.labels, vec!["backend".to_string()]);
+        let t = store.add_label(&ticket.id, "urgent").unwrap();
+        assert_eq!(t.labels.len(), 2);
+        let t = store.remove_label(&ticket.id, "backend").unwrap();
+        assert_eq!(t.labels, vec!["urgent".to_string()]);
+
+        let events = store.all_events().unwrap();
+        assert!(events
+            .iter()
+            .any(|e| matches!(e, TicketEvent::LabelAdded { label, .. } if label == "backend")));
+        assert!(events
+            .iter()
+            .any(|e| matches!(e, TicketEvent::LabelRemoved { label, .. } if label == "backend")));
+    }
+
+    #[test]
+    fn get_rebuilds_state_from_events_without_snapshot() {
+        let tmp = TempDir::new().unwrap();
+        let store = TicketStore::new(tmp.path()).unwrap();
+        let ticket = sample_ticket("Event sourced");
+        store.create(ticket.clone()).unwrap();
+
+        store
+            .update(
+                &ticket.id,
+                TicketUpdate {
+                    title: Some("Renamed".to_string()),
+                    priority: Some(TicketPriority::P0),
+                    ..Default::default()
+                },
+            )
+            .unwrap();
+        store
+            .set_status(&ticket.id, TicketStatus::InProgress, "agent", None)
+            .unwrap();
+        store.add_label(&ticket.id, "backend").unwrap();
+        store.add_label(&ticket.id, "urgent").unwrap();
+        store.remove_label(&ticket.id, "urgent").unwrap();
+        store.add_note(&ticket.id, "agent", "first note").unwrap();
+        store.add_note(&ticket.id, "human", "second note").unwrap();
+
+        // Remove the snapshot; get() must replay the event log.
+        let snapshot = tmp
+            .path()
+            .join(TICKET_SNAPSHOTS_DIR)
+            .join(format!("{}.json", ticket.id));
+        std::fs::remove_file(&snapshot).unwrap();
+
+        let rebuilt = store.get(&ticket.id).unwrap().unwrap();
+        assert_eq!(rebuilt.title, "Renamed");
+        assert_eq!(rebuilt.priority, TicketPriority::P0);
+        assert_eq!(rebuilt.status, TicketStatus::InProgress);
+        assert_eq!(rebuilt.labels, vec!["backend".to_string()]);
+        assert_eq!(rebuilt.notes.len(), 2);
+        assert_eq!(rebuilt.notes[0].body, "first note");
+        assert_eq!(rebuilt.notes[1].author, "human");
+    }
+
+    #[test]
+    fn ready_excludes_blocked_and_gated_tickets() {
+        use crate::dependencies::{add_edge, load_graph, DependencyEdge, DependencyKind};
+        use crate::wait_gates::{WaitGateKind, WaitGateStore};
+
+        let tmp = TempDir::new().unwrap();
+        let store = TicketStore::new(tmp.path()).unwrap();
+        let blocker = sample_ticket("blocker");
+        let blocked_t = sample_ticket("blocked");
+        let gated = sample_ticket("gated");
+        let free = sample_ticket("free");
+        store.create(blocker.clone()).unwrap();
+        store.create(blocked_t.clone()).unwrap();
+        store.create(gated.clone()).unwrap();
+        store.create(free.clone()).unwrap();
+
+        add_edge(
+            tmp.path(),
+            &store,
+            DependencyEdge::new(blocker.id.clone(), blocked_t.id.clone(), DependencyKind::Blocks),
+        )
+        .unwrap();
+
+        // Unsatisfied timer gate (far future) blocks the gated ticket.
+        let gates = WaitGateStore::new(tmp.path()).unwrap();
+        let mut params = HashMap::new();
+        params.insert(
+            "until".to_string(),
+            serde_json::json!("2999-01-01T00:00:00Z"),
+        );
+        gates
+            .add(gated.id.clone(), WaitGateKind::Timer, "wait".to_string(), params)
+            .unwrap();
+
+        let graph = load_graph(tmp.path()).unwrap();
+        let all = store.list().unwrap();
+        let ready = super::ready(&all, &graph, &gates, Utc::now()).unwrap();
+        let ready_ids: Vec<_> = ready.iter().map(|t| t.id.clone()).collect();
+        assert!(ready_ids.contains(&blocker.id));
+        assert!(ready_ids.contains(&free.id));
+        assert!(!ready_ids.contains(&blocked_t.id));
+        assert!(!ready_ids.contains(&gated.id));
+
+        // Blocked list carries the open blockers.
+        let blocked = super::blocked(&all, &graph, &gates, Utc::now()).unwrap();
+        let blocked_entry = blocked
+            .iter()
+            .find(|b| b.ticket.id == blocked_t.id)
+            .unwrap();
+        assert_eq!(blocked_entry.blocked_by, vec![blocker.id.clone()]);
+        assert!(blocked.iter().any(|b| b.ticket.id == gated.id));
+
+        // Closing the blocker makes the blocked ticket ready.
+        store
+            .set_status(&blocker.id, TicketStatus::Closed, "agent", None)
+            .unwrap();
+        let all = store.list().unwrap();
+        let ready = super::ready(&all, &graph, &gates, Utc::now()).unwrap();
+        let ready_ids: Vec<_> = ready.iter().map(|t| t.id.clone()).collect();
+        assert!(ready_ids.contains(&blocked_t.id));
+        assert!(!ready_ids.contains(&gated.id));
     }
 }
