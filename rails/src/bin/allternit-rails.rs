@@ -13,10 +13,13 @@ use allternit_agent_system_rails::bus::{Bus, BusMessage, BusOptions, NewBusMessa
 use allternit_agent_system_rails::cli::work::{run_work_command, WorkCmd, WorkContext};
 use allternit_agent_system_rails::core::ids::{create_event_id, create_lease_id};
 use allternit_agent_system_rails::core::io::{ensure_dir, write_json_atomic};
+use allternit_agent_system_rails::dependencies::load_graph;
 use allternit_agent_system_rails::gate::gate::{GateOptions, WihPickupOptions};
 use allternit_agent_system_rails::leases::leases::LeasesOptions;
 use allternit_agent_system_rails::ledger::ledger::LedgerOptions;
 use allternit_agent_system_rails::policy;
+use allternit_agent_system_rails::tickets::{self, TicketStore};
+use allternit_agent_system_rails::wait_gates::WaitGateStore;
 use allternit_agent_system_rails::wih::projection::project_wih;
 use allternit_agent_system_rails::wih::types::LoopPolicy;
 use allternit_agent_system_rails::work::graph::{has_cycle_edges, ready_nodes};
@@ -72,6 +75,15 @@ enum Commands {
     Init,
     #[command(subcommand)]
     Work(WorkCmd),
+    #[command(subcommand)]
+    Ticket(TicketCmd),
+}
+
+#[derive(Subcommand)]
+enum TicketCmd {
+    /// List tickets that are ready: open, not deferred, no open blockers, no
+    /// unsatisfied wait-gates.
+    Ready,
 }
 
 #[derive(Subcommand)]
@@ -1050,6 +1062,16 @@ async fn main() -> Result<()> {
             init_system(&root, &ledger, &lease_store, &receipts, &index).await?;
         }
         Commands::Work(cmd) => run_work_command(&work_ctx, cmd).await?,
+        Commands::Ticket(cmd) => match cmd {
+            TicketCmd::Ready => {
+                let store = TicketStore::new(&root)?;
+                let graph = load_graph(&root)?;
+                let gates = WaitGateStore::new(&root)?;
+                let all = store.list()?;
+                let ready = tickets::ready(&all, &graph, &gates, Utc::now())?;
+                println!("{}", serde_json::to_string_pretty(&ready)?);
+            }
+        },
     }
 
     Ok(())

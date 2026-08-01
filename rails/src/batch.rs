@@ -1,8 +1,10 @@
 //! Atomic batch operations for the Rails CLI.
 //!
-//! A batch applies multiple ticket/dependency mutations as a single unit.
-//! If any operation fails, prior changes within the batch are rolled back
-//! so that the workspace is never left in a partially-applied state.
+//! A batch validates all of its ticket/dependency mutations up front, then
+//! applies them as a unit. Application is best-effort atomic: on failure,
+//! already-created tickets and appended events remain (file-based store),
+//! and a graph snapshot that cannot be persisted is invalidated so the next
+//! load rebuilds it from the authoritative event log.
 
 use std::collections::HashMap;
 use std::path::{Path, PathBuf};
@@ -11,10 +13,12 @@ use anyhow::{Context, Result};
 use chrono::Utc;
 use serde::{Deserialize, Serialize};
 
-use crate::dependencies::{DependencyEdge, DependencyGraph, DependencyKind};
+use crate::dependencies::{
+    load_graph, save_graph, DependencyEdge, DependencyGraph, DependencyKind, GRAPH_PATH,
+};
 use crate::rails_id::TicketId;
 use crate::tickets::{
-    Ticket, TicketKind, TicketPriority, TicketStatus, TicketStore, TicketUpdate,
+    Ticket, TicketEvent, TicketKind, TicketPriority, TicketStatus, TicketStore, TicketUpdate,
 };
 
 /// A single operation inside a batch.
@@ -58,26 +62,28 @@ pub enum BatchOpResult {
 /// Atomic batch executor.
 pub struct BatchExecutor<'a> {
     ticket_store: &'a TicketStore,
-    graph_path: PathBuf,
+    root: PathBuf,
 }
 
 impl<'a> BatchExecutor<'a> {
     pub fn new(ticket_store: &'a TicketStore, root: impl AsRef<Path>) -> Self {
         Self {
             ticket_store,
-            graph_path: root.as_ref().join(".allternit/rails/dependencies/graph.json"),
+            root: root.as_ref().to_path_buf(),
         }
     }
 
     /// Execute a batch atomically.
     ///
     /// The implementation validates the entire batch first, then applies it.
-    /// If application fails partway through, already-created tickets are not
-    /// rolled back (this is a file-based store), but the graph is restored
-    /// from its original snapshot.
+    /// If application fails partway through, already-created tickets and
+    /// already-appended dependency events are not rolled back (this is a
+    /// file-based store). If the graph snapshot fails to persist, the
+    /// snapshot is deleted instead of restored: the event log is
+    /// authoritative, so the next `load_graph` rebuilds from it rather than
+    /// serving a snapshot that contradicts the log.
     pub fn execute(&self, ops: Vec<BatchOp>) -> Result<Vec<BatchOpResult>> {
-        let mut graph = self.load_graph()?;
-        let original_graph = graph.clone();
+        let mut graph = load_graph(&self.root)?;
 
         // Validate.
         self.validate(&ops, &graph)?;
@@ -152,6 +158,12 @@ impl<'a> BatchExecutor<'a> {
                 }
                 BatchOp::AddDependency { from, to, kind } => {
                     let edge = DependencyEdge::new(from.clone(), to.clone(), kind);
+                    self.ticket_store.append(&TicketEvent::DependencyAdded {
+                        from: edge.from.clone(),
+                        to: edge.to.clone(),
+                        kind: edge.kind,
+                        ts: Utc::now(),
+                    })?;
                     graph.add(edge.clone());
                     results.push(BatchOpResult::AddDependency {
                         from: edge.from,
@@ -162,10 +174,14 @@ impl<'a> BatchExecutor<'a> {
             }
         }
 
-        if let Err(e) = self.save_graph(&graph) {
-            // Restore original graph on persistence failure.
-            let _ = self.save_graph(&original_graph);
-            return Err(e).context("batch failed to persist dependency graph; rolled back");
+        if let Err(e) = save_graph(&self.root, &graph) {
+            // Do not restore the pre-batch snapshot: dependency events for
+            // this batch are already in the log, so the old snapshot would
+            // contradict the authoritative event log. Delete it instead so
+            // the next load_graph rebuilds from the log.
+            let _ = std::fs::remove_file(self.root.join(GRAPH_PATH));
+            return Err(e)
+                .context("batch failed to persist dependency graph; snapshot invalidated");
         }
 
         Ok(results)
@@ -208,20 +224,6 @@ impl<'a> BatchExecutor<'a> {
                 working_graph.add(edge);
             }
         }
-        Ok(())
-    }
-
-    fn load_graph(&self) -> Result<DependencyGraph> {
-        if !self.graph_path.exists() {
-            return Ok(DependencyGraph::new());
-        }
-        let raw = std::fs::read_to_string(&self.graph_path)?;
-        let graph: DependencyGraph = serde_json::from_str(&raw)?;
-        Ok(graph)
-    }
-
-    fn save_graph(&self, graph: &DependencyGraph) -> Result<()> {
-        crate::core::io::write_json_atomic(&self.graph_path, graph)?;
         Ok(())
     }
 }
