@@ -10,6 +10,7 @@ pub mod doctor;
 pub mod dolt;
 pub mod echoes;
 pub mod gate;
+pub mod graph;
 pub mod index;
 pub mod killswitch;
 pub mod leases;
