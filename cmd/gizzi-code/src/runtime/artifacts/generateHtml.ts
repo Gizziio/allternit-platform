@@ -7,12 +7,23 @@
  * order (every loop below walks an explicit array from the input, never
  * `Object.keys`/`for...in`). Output is fully self-contained — inline CSS,
  * one small inline vanilla-JS tab switcher, no external requests, no CDN
- * links — and supports light/dark via `prefers-color-scheme`.
+ * links — and supports light/dark via `prefers-color-scheme` plus an
+ * explicit `data-theme` override on `<html>` for viewers that stamp one.
  *
  * This is a from-scratch implementation written for gizzi-code, not a copy
  * of Claude Code's project-artifact template.html — informed by the same
  * general vocabulary (status pill, tabs, callouts, CSS-variable theming)
  * but its own CSS, its own tab-switch script, and its own tone system.
+ *
+ * The token values (surface/text/border/status/accent colors, spacing
+ * scale, tab pattern, badge formula) are pulled directly from the repo's
+ * own `DESIGN.md` v2.0 §§1–4 — not invented — so every artifact this
+ * generates reads as native Allternit UI rather than a generic template.
+ * Typography uses DESIGN.md's Sans role (dashboards/status surfaces are
+ * an explicit Sans surface per §1.3) for headings/body/labels and its
+ * Mono role for stat values and tabular numerics; the Serif role is
+ * deliberately unused here — that's reserved for long-form research and
+ * editorial content, not tab/status/callout dashboards.
  */
 import type { ArtifactInput, ArtifactSection, ArtifactTable, ArtifactTone } from './types'
 
@@ -36,7 +47,7 @@ function renderTable(table: ArtifactTable): string {
   const body = table.rows
     .map((row) => `<tr>${row.map((cell) => `<td>${escapeHtml(cell)}</td>`).join('')}</tr>`)
     .join('')
-  return `<table>${head}${body}</table>`
+  return `<div class="table-scroll"><table>${head}${body}</table></div>`
 }
 
 function renderSection(section: ArtifactSection): string {
@@ -74,47 +85,90 @@ function validate(input: ArtifactInput): void {
 }
 
 const STYLE = `
-  :root { --fg:#1c1c1e; --bg:#fbfaf8; --surface:#ffffff; --muted:#6b6b6f; --border:#e3e1dc; --code-bg:#f2f0ec;
-    --accent:#3d6b4f; --accent-fg:#ffffff; --warn:#9a5b12; --warn-fg:#ffffff; --danger:#a3352c; --danger-fg:#ffffff; }
+  :root {
+    --surface-canvas: #fafafa; --surface-panel: #ffffff; --surface-active: #f3f4f6; --surface-hover: #e5e7eb;
+    --text-primary: #111111; --text-secondary: #4b5563; --text-muted: #9ca3af; --text-inverse: #ffffff;
+    --border-muted: #e5e7eb; --border-default: #d1d5db;
+    --accent-primary: #7c3aed; --accent-primary-rgb: 124, 58, 237;
+    --status-warning: #f59e0b; --status-warning-rgb: 245, 158, 11;
+    --status-error: #ef4444; --status-error-rgb: 239, 68, 68;
+    --shadow-2: 0 4px 12px rgba(0, 0, 0, 0.06);
+    --duration-standard: 200ms; --ease-standard: cubic-bezier(0.4, 0, 0.2, 1);
+    --font-sans: Inter, ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+    --font-mono: "SFMono-Regular", ui-monospace, Menlo, Monaco, Consolas, monospace;
+    color-scheme: light dark;
+  }
   @media (prefers-color-scheme: dark) {
-    :root { --fg:#eeeeee; --bg:#17181a; --surface:#1f2023; --muted:#9a9a9e; --border:#2f3033; --code-bg:#232427;
-      --accent:#7fbf98; --accent-fg:#0e1a13; --warn:#e0a655; --warn-fg:#241605; --danger:#e28378; --danger-fg:#2a0d0a; }
+    :root {
+      --surface-canvas: #0a0a0b; --surface-panel: #141416; --surface-active: #222225; --surface-hover: #2a2a2e;
+      --text-primary: #f0f0f0; --text-secondary: #a1a1aa; --text-muted: #52525b; --text-inverse: #0a0a0b;
+      --border-muted: #27272a; --border-default: #3f3f46;
+      --accent-primary: #a78bfa; --accent-primary-rgb: 167, 139, 250;
+      --shadow-2: 0 4px 16px rgba(0, 0, 0, 0.24);
+    }
+  }
+  :root[data-theme="dark"] {
+    --surface-canvas: #0a0a0b; --surface-panel: #141416; --surface-active: #222225; --surface-hover: #2a2a2e;
+    --text-primary: #f0f0f0; --text-secondary: #a1a1aa; --text-muted: #52525b; --text-inverse: #0a0a0b;
+    --border-muted: #27272a; --border-default: #3f3f46;
+    --accent-primary: #a78bfa; --accent-primary-rgb: 167, 139, 250;
+    --shadow-2: 0 4px 16px rgba(0, 0, 0, 0.24);
+  }
+  :root[data-theme="light"] {
+    --surface-canvas: #fafafa; --surface-panel: #ffffff; --surface-active: #f3f4f6; --surface-hover: #e5e7eb;
+    --text-primary: #111111; --text-secondary: #4b5563; --text-muted: #9ca3af; --text-inverse: #ffffff;
+    --border-muted: #e5e7eb; --border-default: #d1d5db;
+    --accent-primary: #7c3aed; --accent-primary-rgb: 124, 58, 237;
+    --shadow-2: 0 4px 12px rgba(0, 0, 0, 0.06);
   }
   * { box-sizing: border-box; }
-  body { margin: 0; padding: 2.5em 1.5em 4em; background: var(--bg); color: var(--fg);
-    font: 15px/1.6 -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; }
-  main, header { max-width: 880px; margin: 0 auto; }
-  header { margin-bottom: 1.6em; }
-  h1 { font-size: 1.6em; font-weight: 650; margin: 0 0 .2em; letter-spacing: -.01em; }
-  h2 { font-size: 1.15em; font-weight: 650; margin: 1.4em 0 .5em; }
-  p { margin: .6em 0; }
-  .subtitle { color: var(--muted); font-size: .98em; margin: 0 0 .8em; }
-  .pill { display: inline-block; font-size: .8em; font-weight: 600; padding: .25em .7em; border-radius: 999px; letter-spacing: .01em; }
-  .pill.tone-accent { background: var(--accent); color: var(--accent-fg); }
-  .pill.tone-warn { background: var(--warn); color: var(--warn-fg); }
-  .pill.tone-danger { background: var(--danger); color: var(--danger-fg); }
-  .pill.tone-neutral { background: var(--code-bg); color: var(--fg); border: 1px solid var(--border); }
-  .callout { border-radius: 8px; padding: .8em 1.1em; margin: 1em 0; font-size: .95em; border: 1px solid var(--border); border-left-width: 4px; background: var(--surface); }
-  .callout.tone-accent { border-left-color: var(--accent); }
-  .callout.tone-warn { border-left-color: var(--warn); }
-  .callout.tone-danger { border-left-color: var(--danger); }
-  .callout.tone-neutral { border-left-color: var(--border); }
-  .tabbar { display: flex; flex-wrap: wrap; gap: .25em; border-bottom: 1px solid var(--border); margin: 0 0 1.5em; max-width: 880px; margin-left: auto; margin-right: auto; }
-  .tab { font: inherit; font-weight: 550; font-size: .92em; color: var(--muted); background: none; border: none; cursor: pointer;
-    padding: .65em .9em; border-bottom: 2px solid transparent; margin-bottom: -1px; }
-  .tab:hover { color: var(--fg); }
-  .tab.active { color: var(--fg); border-bottom-color: var(--accent); }
+  body { margin: 0; padding: 40px 16px 64px; background: var(--surface-canvas); color: var(--text-primary);
+    font: 15px/1.65 var(--font-sans); -webkit-font-smoothing: antialiased; }
+  main, header, .tabbar-row { max-width: 768px; margin-left: auto; margin-right: auto; }
+  header { display: flex; flex-direction: column; gap: 8px; margin-bottom: 24px; }
+  h1 { font-size: 1.7em; font-weight: 650; margin: 0; letter-spacing: -.015em; text-wrap: balance; }
+  h2 { font-size: 1.05em; font-weight: 650; margin: 32px 0 12px; letter-spacing: -.005em; }
+  p { margin: 8px 0; color: var(--text-secondary); max-width: 65ch; }
+  .subtitle { color: var(--text-secondary); font-size: 1em; margin: 0; }
+  .badge { display: inline-flex; align-items: center; width: fit-content; font-size: .78em; font-weight: 600;
+    padding: 3px 10px; border-radius: 999px; letter-spacing: .015em; }
+  .badge.tone-accent { background: rgba(var(--accent-primary-rgb), 0.12); border: 1px solid rgba(var(--accent-primary-rgb), 0.25); color: var(--accent-primary); }
+  .badge.tone-warn { background: rgba(var(--status-warning-rgb), 0.12); border: 1px solid rgba(var(--status-warning-rgb), 0.25); color: var(--status-warning); }
+  .badge.tone-danger { background: rgba(var(--status-error-rgb), 0.12); border: 1px solid rgba(var(--status-error-rgb), 0.25); color: var(--status-error); }
+  .badge.tone-neutral { background: transparent; border: 1px solid var(--border-default); color: var(--text-secondary); }
+  .callout { border-radius: 10px; padding: 14px 16px; margin: 16px 0; font-size: .95em; line-height: 1.55;
+    background: var(--surface-panel); border: 1px solid var(--border-muted); border-left-width: 3px; color: var(--text-secondary); }
+  .callout.tone-accent { border-left-color: var(--accent-primary); }
+  .callout.tone-warn { border-left-color: var(--status-warning); }
+  .callout.tone-danger { border-left-color: var(--status-error); }
+  .callout.tone-neutral { border-left-color: var(--border-default); }
+  .tabbar-row { border-bottom: 1px solid var(--border-muted); margin-bottom: 24px; }
+  .tabbar { display: flex; flex-wrap: wrap; gap: 4px; overflow-x: auto; }
+  .tab { font: inherit; font-family: var(--font-sans); font-weight: 550; font-size: .92em; color: var(--text-secondary);
+    background: none; border: none; cursor: pointer; white-space: nowrap;
+    padding: 10px 14px; border-bottom: 2px solid transparent; margin-bottom: -1px;
+    transition: color var(--duration-standard) var(--ease-standard), border-color var(--duration-standard) var(--ease-standard); }
+  .tab:hover { color: var(--text-primary); }
+  .tab.active { color: var(--text-primary); border-bottom-color: var(--accent-primary); }
+  .tab:focus-visible { outline: 2px solid var(--accent-primary); outline-offset: 2px; border-radius: 4px; }
   .pane { display: none; }
   .pane.active { display: block; }
-  .stats { display: flex; flex-wrap: wrap; gap: 1.5em; margin: 1em 0; }
-  .stat { display: flex; flex-direction: column; }
-  .stat-value { font-size: 1.4em; font-weight: 650; }
-  .stat-label { color: var(--muted); font-size: .85em; }
-  ul { padding-left: 1.3em; margin: .6em 0; }
-  li { margin: .3em 0; }
-  table { border-collapse: collapse; width: 100%; margin: .9em 0; font-size: .93em; }
-  th, td { border: 1px solid var(--border); padding: .5em .7em; text-align: left; vertical-align: top; }
-  th { background: var(--code-bg); font-weight: 600; }
+  .stats { display: flex; flex-wrap: wrap; gap: 24px; margin: 16px 0; }
+  .stat { display: flex; flex-direction: column; gap: 2px; }
+  .stat-value { font-family: var(--font-mono); font-variant-numeric: tabular-nums; font-size: 1.35em; font-weight: 600; letter-spacing: -.01em; }
+  .stat-label { color: var(--text-muted); font-size: .82em; }
+  ul { padding-left: 1.25em; margin: 8px 0; color: var(--text-secondary); }
+  li { margin: 4px 0; }
+  .table-scroll { overflow-x: auto; margin: 16px 0; border: 1px solid var(--border-muted); border-radius: 10px; }
+  table { border-collapse: collapse; width: 100%; font-size: .92em; font-variant-numeric: tabular-nums; }
+  th, td { padding: 10px 14px; text-align: left; vertical-align: top; border-bottom: 1px solid var(--border-muted); }
+  tr:last-child td { border-bottom: none; }
+  th { background: var(--surface-active); font-weight: 600; font-size: .85em; color: var(--text-secondary);
+    text-transform: uppercase; letter-spacing: .03em; }
+  td { color: var(--text-primary); }
+  @media (prefers-reduced-motion: reduce) {
+    .tab { transition-duration: 0.01ms; }
+  }
 `.trim()
 
 const TAB_SCRIPT = `
@@ -143,19 +197,19 @@ export function generateArtifactHtml(input: ArtifactInput): string {
   const headerParts: string[] = [`<h1>${title}</h1>`]
   if (input.subtitle) headerParts.push(`<p class="subtitle">${escapeHtml(input.subtitle)}</p>`)
   if (input.status) {
-    headerParts.push(`<span class="pill ${toneClass(input.status.tone)}">${escapeHtml(input.status.label)}</span>`)
+    headerParts.push(`<span class="badge ${toneClass(input.status.tone)}">${escapeHtml(input.status.label)}</span>`)
   }
 
   const singleTab = input.tabs.length === 1
 
   const tabbar = singleTab
     ? ''
-    : `<div class="tabbar">\n${input.tabs
+    : `<div class="tabbar-row"><div class="tabbar">\n${input.tabs
         .map(
           (tab, i) =>
             `  <button class="tab${i === 0 ? ' active' : ''}" data-pane="${tab.id}">${escapeHtml(tab.label)}</button>`,
         )
-        .join('\n')}\n</div>\n`
+        .join('\n')}\n</div></div>\n`
 
   const panes = input.tabs
     .map((tab, i) => {
