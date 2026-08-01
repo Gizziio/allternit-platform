@@ -428,6 +428,15 @@ export const SettingsSchema = lazySchema(() =>
         .describe('Custom commands to run before/after tool executions'),
       worktree: z
         .object({
+          autoCreate: z
+            .boolean()
+            .optional()
+            .describe(
+              'Create a new git worktree for every session by default, exactly as if ' +
+                '--worktree had been passed (default: false). Explicit CLI flags override ' +
+                'this setting: --worktree always enables creation, --no-worktree disables ' +
+                'it for that launch.',
+            ),
           symlinkDirectories: z
             .array(z.string())
             .optional()
