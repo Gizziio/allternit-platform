@@ -297,6 +297,7 @@ pub fn create_router(state: Arc<ApiState>) -> Router {
         // The Stripe webhook verifies the Stripe-Signature HMAC itself and
         // answers 503 webhook_not_configured when STRIPE_WEBHOOK_SECRET is unset.
         .merge(routes::billing_webhooks::routes())
+        .merge(routes::clerk_webhooks::routes())
         // Dispatch handoff verifies the Clerk session per-request, like the
         // pairing routes (the token only ever means "this user, that
         // runtime" — it is not itself a credential).
