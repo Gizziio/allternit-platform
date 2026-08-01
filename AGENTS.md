@@ -4,6 +4,10 @@
 >
 > **LAST UPDATED:** 2026-04-17
 
+## Session worktrees (default for ALL repo work)
+
+Every agent session in this repo works in its OWN linked worktree — never in the shared main checkout. On your first prompt (or SessionStart), a hook injects the ritual: create-or-reuse `<repo>-session-<id>` on branch `session/<id>` and `cd` into it. A PreToolUse guard blocks `git commit/checkout/switch/merge/push/rebase/reset` and `branch -d` in the shared checkout (escape for human/orchestrator merges: `STEER_GUARD_OFF=1`). Rationale: concurrent sessions sharing one HEAD collide on branches, commits, and dirty files. gizzi-code additionally has native `--worktree` support (`src/shared/utils/worktree.ts`); making it default-on is tracked as phase W2. Linked worktrees pass all guards automatically (detected via the git dir path).
+
 ## Steering checkpoints
 
 This repo is wired for hook-based steering: when an agent session working here ends a turn, a `Stop` hook consults a **separate steering agent** (a different model family, run via the agent-orchestrator tmux tooling) — but only if `.steering/checkpoint.md` changed since the last review. So at every meaningful checkpoint (subtask finished, design decision made, before a risky change), update `.steering/checkpoint.md`: `Goal`, `Just did`, `Next`, `Open questions`. The steering agent's answers/guidance come back injected as a `[steering]` message — treat them as authoritative and act on them before continuing. Additionally, `git commit`/`git push` pass through a hard gate: they only execute after the steering agent approves. See `.steering/README.md`. Kill switch: `touch .steering/off`.
