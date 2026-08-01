@@ -15,6 +15,7 @@ use axum::{
     routing::post,
     Json, Router,
 };
+use base64::{engine::general_purpose::STANDARD, Engine as _};
 use hmac::{Hmac, Mac};
 use rusqlite::params;
 use serde::Deserialize;
@@ -34,8 +35,20 @@ pub fn webhook_router() -> Router<Arc<AppState>> {
         .route("/webhooks/clerk/user.deleted", post(handle_user_deleted))
 }
 
-/// Verify Svix webhook signature.
-/// Format: `v1,<base64_hmac>` where HMAC is computed over `${timestamp}.${body}`.
+/// Verify a Svix-signed Clerk webhook delivery, per the real spec
+/// (https://docs.svix.com/receiving/verifying-payloads/how-manual):
+/// HMAC-SHA256 over `${svix_id}.${svix_timestamp}.${body}` (raw bytes, not a
+/// lossy UTF-8 round-trip), keyed by the secret's payload after stripping
+/// the `whsec_` prefix and base64-decoding it, with the resulting signature
+/// itself base64 — not hex — encoded.
+///
+/// An earlier version of this function got three things wrong at once (no
+/// svix_id in the signed content, raw secret bytes instead of the decoded
+/// key, hex instead of base64): it still failed closed, since a signature
+/// computed the wrong way can never match a real one, but it meant this
+/// endpoint would reject every genuine Clerk delivery too, not just forged
+/// ones. Caught by round-tripping against a signature computed independently
+/// per the spec (see docs.svix.com), not by inspection alone.
 fn verify_svix_signature(secret: &str, headers: &HeaderMap, body: &[u8]) -> Result<(), String> {
     let svix_id = headers
         .get("svix-id")
@@ -62,20 +75,34 @@ fn verify_svix_signature(secret: &str, headers: &HeaderMap, body: &[u8]) -> Resu
         return Err("svix-timestamp outside tolerance (±5 min)".into());
     }
 
-    // Compute HMAC-SHA256 over `${timestamp}.${body}`
-    let signed_payload = format!("{svix_timestamp}.{}", String::from_utf8_lossy(body));
-    let mut mac =
-        HmacSha256::new_from_slice(secret.as_bytes()).map_err(|_| "invalid secret length")?;
-    mac.update(signed_payload.as_bytes());
-    let expected_sig = hex::encode(mac.finalize().into_bytes());
+    // Secret is `whsec_<base64>`; the HMAC key is the decoded bytes, not the
+    // raw prefixed string.
+    let secret_b64 = secret.strip_prefix("whsec_").unwrap_or(secret);
+    let secret_bytes = STANDARD
+        .decode(secret_b64)
+        .map_err(|_| "CLERK_WEBHOOK_SECRET is not valid whsec_<base64>".to_string())?;
 
-    // Svix sends signatures as `v1,<hex>` (can have multiple `v1,` entries for rolling secrets)
+    let mut signed_content = Vec::with_capacity(svix_id.len() + svix_timestamp.len() + body.len() + 2);
+    signed_content.extend_from_slice(svix_id.as_bytes());
+    signed_content.push(b'.');
+    signed_content.extend_from_slice(svix_timestamp.as_bytes());
+    signed_content.push(b'.');
+    signed_content.extend_from_slice(body);
+
+    let mut mac =
+        HmacSha256::new_from_slice(&secret_bytes).map_err(|_| "invalid secret length")?;
+    mac.update(&signed_content);
+
+    // svix-signature is space-delimited `v1,<base64>` entries (plural during
+    // secret rotation) — any one matching is sufficient.
     let mut valid = false;
     for part in svix_signature.split(' ') {
         if let Some(sig) = part.strip_prefix("v1,") {
-            if sig == expected_sig {
-                valid = true;
-                break;
+            if let Ok(expected) = STANDARD.decode(sig) {
+                if mac.clone().verify_slice(&expected).is_ok() {
+                    valid = true;
+                    break;
+                }
             }
         }
     }
@@ -83,9 +110,6 @@ fn verify_svix_signature(secret: &str, headers: &HeaderMap, body: &[u8]) -> Resu
         return Err("svix-signature mismatch".into());
     }
 
-    // Prevent simple replays by checking svix-id (optional but recommended)
-    // In a full implementation you'd cache seen svix-ids for ~5 minutes.
-    // For now we just log it.
     info!("Svix webhook verified: id={svix_id} ts={svix_timestamp}");
     Ok(())
 }
