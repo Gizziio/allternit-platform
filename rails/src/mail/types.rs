@@ -108,3 +108,100 @@ impl MailMessage {
         })
     }
 }
+
+
+// ---------------------------------------------------------------------------
+// Per-recipient ack state (E3-R1)
+// ---------------------------------------------------------------------------
+
+/// Ack state for one ack-required message: recipients stay `pending` until a
+/// `MessageAcknowledged` event names them (payload `agent_id`, falling back
+/// to the ack event's actor).
+#[derive(Debug, Clone, serde::Serialize)]
+pub struct AckState {
+    pub message_id: String,
+    pub thread_id: String,
+    pub from_agent: String,
+    pub to_agents: Vec<String>,
+    pub subject: Option<String>,
+    pub importance: MailImportance,
+    pub sent_ts: String,
+    pub pending: Vec<String>,
+    /// agent_id -> ack timestamp.
+    pub acked: std::collections::BTreeMap<String, String>,
+}
+
+impl AckState {
+    /// Fold `MessageSent` / `MessageAcknowledged` events into per-message,
+    /// per-recipient ack state. Only typed sends with `ack_required: true`
+    /// and a non-empty recipient list are tracked — broadcast messages
+    /// (empty `to_agents`) make ack_required meaningless and are excluded.
+    pub fn fold(events: &[AllternitEvent]) -> Vec<Self> {
+        let mut states: Vec<Self> = Vec::new();
+        for event in events {
+            match event.r#type.as_str() {
+                "MessageSent" => {
+                    let payload = &event.payload;
+                    let ack_required = payload
+                        .get("ack_required")
+                        .and_then(|v| v.as_bool())
+                        .unwrap_or(false);
+                    if !ack_required {
+                        continue;
+                    }
+                    let Some(message) = MailMessage::from_event(event) else {
+                        continue;
+                    };
+                    if message.to_agents.is_empty() {
+                        continue;
+                    }
+                    states.push(Self {
+                        message_id: message.message_id,
+                        thread_id: message.thread_id,
+                        from_agent: message.from_agent,
+                        pending: message.to_agents.clone(),
+                        to_agents: message.to_agents,
+                        subject: message.subject,
+                        importance: message.importance,
+                        sent_ts: message.timestamp,
+                        acked: std::collections::BTreeMap::new(),
+                    });
+                }
+                "MessageAcknowledged" => {
+                    let payload = &event.payload;
+                    let Some(message_id) = payload.get("message_id").and_then(|v| v.as_str()) else {
+                        continue;
+                    };
+                    let agent = payload
+                        .get("agent_id")
+                        .and_then(|v| v.as_str())
+                        .map(|s| s.to_string())
+                        .unwrap_or_else(|| event.actor.id.clone());
+                    if let Some(state) = states.iter_mut().find(|s| s.message_id == message_id) {
+                        if let Some(pos) = state.pending.iter().position(|a| a == &agent) {
+                            state.pending.remove(pos);
+                            state.acked.insert(agent, event.ts.clone());
+                        }
+                    }
+                }
+                _ => {}
+            }
+        }
+        states
+    }
+}
+
+/// One row of the overdue view (E3-R1): the message envelope plus the
+/// recipients still pending and the message age.
+#[derive(Debug, Clone, serde::Serialize)]
+pub struct OverdueMessage {
+    pub message_id: String,
+    pub thread_id: String,
+    pub from_agent: String,
+    pub to_agents: Vec<String>,
+    pub subject: Option<String>,
+    pub importance: MailImportance,
+    pub sent_ts: String,
+    pub pending: Vec<String>,
+    pub age_seconds: i64,
+}

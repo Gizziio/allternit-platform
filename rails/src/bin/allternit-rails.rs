@@ -233,6 +233,8 @@ enum MailCmd {
     Ack {
         thread_id: String,
         message_id: String,
+        #[arg(long = "agent")]
+        agent_id: Option<String>,
         #[arg(long)]
         note: Option<String>,
     },
@@ -686,10 +688,16 @@ async fn main() -> Result<()> {
             MailCmd::Ack {
                 thread_id,
                 message_id,
+                agent_id,
                 note,
             } => {
                 let ack_id = mail
-                    .acknowledge_message(&thread_id, &message_id, note.as_deref())
+                    .acknowledge_message(
+                        &thread_id,
+                        &message_id,
+                        agent_id.as_deref(),
+                        note.as_deref(),
+                    )
                     .await?;
                 println!("ack_id: {ack_id}");
             }

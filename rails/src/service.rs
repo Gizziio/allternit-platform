@@ -440,6 +440,10 @@ fn default_inbox_limit() -> usize {
 pub struct MailAckRequest {
     pub thread_id: String,
     pub message_id: String,
+    /// The acking recipient (E3 per-recipient ack state). When omitted, the
+    /// ack event's actor identifies the acker.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub agent_id: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub note: Option<String>,
 }
@@ -1361,6 +1365,7 @@ async fn mail_ack(
         .acknowledge_message(
             &request.thread_id,
             &request.message_id,
+            request.agent_id.as_deref(),
             request.note.as_deref(),
         )
         .await

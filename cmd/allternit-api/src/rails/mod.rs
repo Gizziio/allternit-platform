@@ -193,6 +193,8 @@ pub fn rails_router() -> Router<Arc<AppState>> {
         .route("/mail/outbox/:agent_id", get(read_mail_outbox))
         // Mail FTS search (E2)
         .route("/mail/search", get(search_mail_messages))
+        // Mail ack overdue view (E3)
+        .route("/mail/overdue", get(read_mail_overdue))
         // WIHs (compatibility surface used by platform cowork/chat views)
         .route("/wihs", get(list_wihs_get).post(list_wihs))
         .route("/wihs/pickup", post(pickup_wih))
@@ -749,6 +751,35 @@ async fn search_mail_messages(
             .into_response(),
         Err(e) => {
             error!(error = %e, "mail: search failed");
+            (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(json!({ "error": e.to_string() })),
+            )
+                .into_response()
+        }
+    }
+}
+
+#[derive(Debug, Deserialize)]
+struct MailOverdueQuery {
+    agent: Option<String>,
+    older_than: Option<i64>,
+}
+
+async fn read_mail_overdue(
+    State(state): State<Arc<AppState>>,
+    Query(query): Query<MailOverdueQuery>,
+) -> impl IntoResponse {
+    let older_than = query.older_than.unwrap_or(0);
+    match state
+        .rails
+        .mail
+        .overdue(query.agent.as_deref(), older_than)
+        .await
+    {
+        Ok(rows) => (StatusCode::OK, Json(json!({ "overdue": rows }))).into_response(),
+        Err(e) => {
+            error!(error = %e, "mail: overdue failed");
             (
                 StatusCode::INTERNAL_SERVER_ERROR,
                 Json(json!({ "error": e.to_string() })),
@@ -2477,6 +2508,90 @@ mod tests {
         assert_eq!(resp.status(), StatusCode::BAD_REQUEST);
         let resp = get(&app, "/mail/search?q=%20").await;
         assert_eq!(resp.status(), StatusCode::BAD_REQUEST);
+
+        let _ = std::fs::remove_dir_all(&temp);
+    }
+
+    /// E3 overdue round-trip: ack-required send appears in the recipient's
+    /// overdue list until that recipient acks; ack_required=false never
+    /// appears; older_than filters by age.
+    #[tokio::test]
+    async fn mail_e3_overdue_round_trip() {
+        let temp = std::env::temp_dir().join(format!(
+            "allternit-rails-mail-e3-test-{}",
+            uuid::Uuid::new_v4()
+        ));
+        std::fs::create_dir_all(&temp).unwrap();
+        let state = test_app_state(&temp).await;
+        let app = rails_router().with_state(state.clone());
+
+        // ack_required message alpha -> beta.
+        let resp = post_json(
+            &app,
+            "/mail/send",
+            json!({
+                "from_agent": "alpha",
+                "to_agents": ["beta"],
+                "subject": "please ack",
+                "ack_required": true,
+                "body": "needs ack"
+            }),
+        )
+        .await;
+        assert_eq!(resp.status(), StatusCode::OK);
+        let body = body_json(resp.into_body()).await;
+        let message_id = body["message_id"].as_str().unwrap().to_string();
+
+        // ack_required = false — never overdue.
+        let resp = post_json(
+            &app,
+            "/mail/send",
+            json!({
+                "from_agent": "alpha",
+                "to_agents": ["beta"],
+                "subject": "fyi",
+                "ack_required": false,
+                "body": "no ack needed"
+            }),
+        )
+        .await;
+        assert_eq!(resp.status(), StatusCode::OK);
+
+        // beta's overdue list contains exactly the ack-required message.
+        let resp = get(&app, "/mail/overdue?agent=beta").await;
+        assert_eq!(resp.status(), StatusCode::OK);
+        let body = body_json(resp.into_body()).await;
+        let rows = body["overdue"].as_array().unwrap();
+        assert_eq!(rows.len(), 1);
+        assert_eq!(rows[0]["message_id"], json!(message_id));
+        assert_eq!(rows[0]["from_agent"], json!("alpha"));
+        assert_eq!(rows[0]["subject"], json!("please ack"));
+        assert_eq!(rows[0]["pending"], json!(["beta"]));
+        assert!(rows[0]["age_seconds"].as_i64().unwrap() >= 0);
+
+        // Unfiltered view shows the pending recipient list too.
+        let resp = get(&app, "/mail/overdue").await;
+        let body = body_json(resp.into_body()).await;
+        assert_eq!(body["overdue"].as_array().unwrap().len(), 1);
+
+        // older_than beyond the message age filters it out.
+        let resp = get(&app, "/mail/overdue?agent=beta&older_than=999999").await;
+        let body = body_json(resp.into_body()).await;
+        assert!(body["overdue"].as_array().unwrap().is_empty());
+
+        // beta acks — the message leaves overdue.
+        state
+            .rails
+            .mail
+            .acknowledge_message("mail:general", &message_id, Some("beta"), None)
+            .await
+            .unwrap();
+        let resp = get(&app, "/mail/overdue?agent=beta").await;
+        let body = body_json(resp.into_body()).await;
+        assert!(body["overdue"].as_array().unwrap().is_empty());
+        let resp = get(&app, "/mail/overdue").await;
+        let body = body_json(resp.into_body()).await;
+        assert!(body["overdue"].as_array().unwrap().is_empty());
 
         let _ = std::fs::remove_dir_all(&temp);
     }

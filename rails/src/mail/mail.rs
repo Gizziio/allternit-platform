@@ -11,7 +11,7 @@ use crate::ledger::Ledger;
 use crate::mail::agents::AgentRegistry;
 use crate::mail::index::{MailIndex, MailSearchHit};
 use crate::mail::projection::append_thread_event;
-use crate::mail::types::{MailMessage, TypedMessage};
+use crate::mail::types::{AckState, MailMessage, OverdueMessage, TypedMessage};
 
 #[derive(Clone)]
 pub struct MailOptions {
@@ -83,10 +83,14 @@ impl Mail {
         Ok(events)
     }
 
+    /// Acknowledge a message (E3). `ack_by` names the acking recipient for
+    /// per-recipient ack state: an ack from agent X clears only X's pending
+    /// entry. When omitted, the ack event's actor identifies the acker.
     pub async fn acknowledge_message(
         &self,
         thread_id: &str,
         message_id: &str,
+        ack_by: Option<&str>,
         note: Option<&str>,
     ) -> Result<String> {
         self.log_event(
@@ -94,10 +98,57 @@ impl Mail {
             json!({
                 "thread_id": thread_id,
                 "message_id": message_id,
+                "agent_id": ack_by,
                 "note": note
             }),
         )
         .await
+    }
+
+    /// Overdue ack-required messages (E3-R1).
+    ///
+    /// With `agent`: pending ack-required messages where that agent is a
+    /// recipient. Without: all pending ack-required messages with their
+    /// pending recipient lists. `older_than_secs` filters by message age
+    /// (0 = all pending). Messages with `ack_required: false` and broadcast
+    /// messages never appear. Oldest first.
+    pub async fn overdue(
+        &self,
+        agent: Option<&str>,
+        older_than_secs: i64,
+    ) -> Result<Vec<OverdueMessage>> {
+        let events = self.ledger.query(LedgerQuery::default()).await?;
+        let now = Utc::now();
+        let mut rows: Vec<OverdueMessage> = AckState::fold(&events)
+            .into_iter()
+            .filter(|state| !state.pending.is_empty())
+            .filter(|state| {
+                agent
+                    .map(|a| state.pending.iter().any(|p| p == a))
+                    .unwrap_or(true)
+            })
+            .filter_map(|state| {
+                let age_seconds = chrono::DateTime::parse_from_rfc3339(&state.sent_ts)
+                    .map(|sent| (now - sent.with_timezone(&Utc)).num_seconds())
+                    .unwrap_or(0);
+                if age_seconds < older_than_secs {
+                    return None;
+                }
+                Some(OverdueMessage {
+                    message_id: state.message_id,
+                    thread_id: state.thread_id,
+                    from_agent: state.from_agent,
+                    to_agents: state.to_agents,
+                    subject: state.subject,
+                    importance: state.importance,
+                    sent_ts: state.sent_ts,
+                    pending: state.pending,
+                    age_seconds,
+                })
+            })
+            .collect();
+        rows.sort_by(|a, b| a.sent_ts.cmp(&b.sent_ts));
+        Ok(rows)
     }
 
     pub async fn share_asset(
@@ -416,6 +467,32 @@ mod tests {
         })
     }
 
+    fn test_mail_with_ledger(tmp: &TempDir) -> (Mail, Arc<Ledger>) {
+        let ledger = Arc::new(Ledger::new(LedgerOptions {
+            root_dir: Some(tmp.path().to_path_buf()),
+            ledger_dir: Some(PathBuf::from(".allternit/ledger")),
+        }));
+        let mail = Mail::new(MailOptions {
+            root_dir: Some(tmp.path().to_path_buf()),
+            ledger: ledger.clone(),
+            actor_id: Some("test".to_string()),
+            actor_type: None,
+            mail_index: None,
+        });
+        (mail, ledger)
+    }
+
+    fn ack_typed(to_agents: Vec<String>, ack_required: bool) -> TypedMessage {
+        TypedMessage {
+            from_agent: "alpha".to_string(),
+            to_agents,
+            subject: Some("please ack".to_string()),
+            importance: MailImportance::Normal,
+            ack_required,
+            body: "body".to_string(),
+        }
+    }
+
     #[test]
     fn thread_id_resolution_defaults_and_validates() {
         // Omitted thread routes to the mail:general default (E1-R4).
@@ -520,5 +597,144 @@ mod tests {
             )
             .await;
         assert!(result.is_err());
+    }
+
+    // -----------------------------------------------------------------------
+    // E3: ack tracking + overdue
+    // -----------------------------------------------------------------------
+
+    #[tokio::test]
+    async fn one_recipient_overdue_until_their_ack() {
+        let tmp = TempDir::new().unwrap();
+        let mail = test_mail(&tmp);
+        mail.ensure_thread(DEFAULT_MAIL_THREAD).await.unwrap();
+        let msg_id = mail
+            .send_typed_message(DEFAULT_MAIL_THREAD, ack_typed(vec!["beta".to_string()], true))
+            .await
+            .unwrap();
+
+        // Pending for beta.
+        let rows = mail.overdue(Some("beta"), 0).await.unwrap();
+        assert_eq!(rows.len(), 1);
+        assert_eq!(rows[0].message_id, msg_id);
+        assert_eq!(rows[0].pending, vec!["beta".to_string()]);
+        assert_eq!(rows[0].from_agent, "alpha");
+        assert_eq!(rows[0].subject.as_deref(), Some("please ack"));
+        // And visible without an agent filter, with the pending list.
+        assert_eq!(mail.overdue(None, 0).await.unwrap().len(), 1);
+
+        // An ack naming someone else does not clear beta.
+        mail.acknowledge_message(DEFAULT_MAIL_THREAD, &msg_id, Some("gamma"), None)
+            .await
+            .unwrap();
+        assert_eq!(mail.overdue(Some("beta"), 0).await.unwrap().len(), 1);
+
+        // beta's ack clears it.
+        mail.acknowledge_message(DEFAULT_MAIL_THREAD, &msg_id, Some("beta"), None)
+            .await
+            .unwrap();
+        assert!(mail.overdue(Some("beta"), 0).await.unwrap().is_empty());
+        assert!(mail.overdue(None, 0).await.unwrap().is_empty());
+    }
+
+    #[tokio::test]
+    async fn two_recipients_clear_after_second_ack() {
+        let tmp = TempDir::new().unwrap();
+        let (mail, ledger) = test_mail_with_ledger(&tmp);
+        mail.ensure_thread(DEFAULT_MAIL_THREAD).await.unwrap();
+        let msg_id = mail
+            .send_typed_message(
+                DEFAULT_MAIL_THREAD,
+                ack_typed(vec!["beta".to_string(), "gamma".to_string()], true),
+            )
+            .await
+            .unwrap();
+
+        // First ack (beta, via agent_id) — still overdue for gamma.
+        mail.acknowledge_message(DEFAULT_MAIL_THREAD, &msg_id, Some("beta"), None)
+            .await
+            .unwrap();
+        let rows = mail.overdue(None, 0).await.unwrap();
+        assert_eq!(rows.len(), 1);
+        assert_eq!(rows[0].pending, vec!["gamma".to_string()]);
+        assert!(mail.overdue(Some("beta"), 0).await.unwrap().is_empty());
+        assert_eq!(mail.overdue(Some("gamma"), 0).await.unwrap().len(), 1);
+
+        // Second ack (gamma, via the ack event's ACTOR — no agent_id field).
+        ledger
+            .append(AllternitEvent {
+                event_id: create_event_id(),
+                ts: Utc::now().to_rfc3339(),
+                actor: Actor {
+                    r#type: ActorType::Agent,
+                    id: "gamma".to_string(),
+                },
+                scope: None,
+                r#type: "MessageAcknowledged".to_string(),
+                payload: json!({ "thread_id": DEFAULT_MAIL_THREAD, "message_id": msg_id }),
+                provenance: None,
+            })
+            .await
+            .unwrap();
+        assert!(mail.overdue(None, 0).await.unwrap().is_empty());
+    }
+
+    #[tokio::test]
+    async fn ack_not_required_and_broadcast_never_overdue() {
+        let tmp = TempDir::new().unwrap();
+        let mail = test_mail(&tmp);
+        mail.ensure_thread(DEFAULT_MAIL_THREAD).await.unwrap();
+        // ack_required = false.
+        mail.send_typed_message(DEFAULT_MAIL_THREAD, ack_typed(vec!["beta".to_string()], false))
+            .await
+            .unwrap();
+        // Broadcast (empty to_agents) with ack_required = true.
+        mail.send_typed_message(DEFAULT_MAIL_THREAD, ack_typed(vec![], true))
+            .await
+            .unwrap();
+        assert!(mail.overdue(None, 0).await.unwrap().is_empty());
+        assert!(mail.overdue(Some("beta"), 0).await.unwrap().is_empty());
+    }
+
+    #[tokio::test]
+    async fn overdue_older_than_filters_by_age() {
+        let tmp = TempDir::new().unwrap();
+        let (mail, ledger) = test_mail_with_ledger(&tmp);
+        // A typed ack-required message sent two hours ago (raw event so we
+        // control the timestamp).
+        let sent_ts = (Utc::now() - chrono::Duration::hours(2)).to_rfc3339();
+        ledger
+            .append(AllternitEvent {
+                event_id: "msg-old".to_string(),
+                ts: sent_ts.clone(),
+                actor: Actor {
+                    r#type: ActorType::Agent,
+                    id: "alpha".to_string(),
+                },
+                scope: None,
+                r#type: "MessageSent".to_string(),
+                payload: json!({
+                    "thread_id": DEFAULT_MAIL_THREAD,
+                    "from_agent": "alpha",
+                    "to_agents": ["beta"],
+                    "subject": "old message",
+                    "importance": "normal",
+                    "ack_required": true,
+                    "body_path": ".allternit/mail/messages/msg-old.md",
+                }),
+                provenance: None,
+            })
+            .await
+            .unwrap();
+
+        // Default threshold: present, ~2h old, oldest first.
+        let rows = mail.overdue(Some("beta"), 0).await.unwrap();
+        assert_eq!(rows.len(), 1);
+        assert!(rows[0].age_seconds >= 7100 && rows[0].age_seconds <= 7300);
+        assert_eq!(rows[0].sent_ts, sent_ts);
+        // older_than under the age: still present.
+        assert_eq!(mail.overdue(Some("beta"), 3600).await.unwrap().len(), 1);
+        // older_than over the age: filtered out.
+        assert!(mail.overdue(Some("beta"), 3 * 3600).await.unwrap().is_empty());
     }
 }
