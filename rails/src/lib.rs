@@ -51,7 +51,10 @@ pub use crate::gate::{Gate, GateOptions, GateResult, WihPickupOptions};
 pub use crate::index::{Index, IndexOptions};
 pub use crate::leases::{Leases, LeasesOptions};
 pub use crate::ledger::{Ledger, LedgerOptions};
-pub use crate::mail::{Mail, MailOptions};
+pub use crate::mail::{
+    resolve_thread_id, AgentRecord, AgentRegistry, Mail, MailImportance, MailMessage, MailOptions,
+    TypedMessage, DEFAULT_MAIL_THREAD,
+};
 pub use crate::prompt::{project_prompt, PromptTimeline};
 pub use crate::receipts::{ReceiptStore, ReceiptStoreOptions};
 pub use crate::vault::{Vault, VaultOptions};
