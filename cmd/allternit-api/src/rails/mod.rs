@@ -32,10 +32,10 @@ use allternit_agent_system_rails::tickets::{
 };
 use allternit_agent_system_rails::wait_gates::WaitGateStore;
 use allternit_agent_system_rails::{
-    project_dag, ContextPackSeal, ContextPackStore, ContextPackStoreOptions, DagMutation, Gate,
-    GateOptions, Index, IndexOptions, Leases, LeasesOptions, Ledger, LedgerOptions, LedgerQuery,
-    Mail, MailOptions, ReceiptRecord, ReceiptStore, ReceiptStoreOptions, Vault, VaultOptions,
-    WorkOps,
+    project_dag, resolve_thread_id, ContextPackSeal, ContextPackStore, ContextPackStoreOptions,
+    DagMutation, Gate, GateOptions, Index, IndexOptions, Leases, LeasesOptions, Ledger,
+    LedgerOptions, LedgerQuery, Mail, MailImportance, MailOptions, ReceiptRecord, ReceiptStore,
+    ReceiptStoreOptions, TypedMessage, Vault, VaultOptions, WorkOps,
 };
 
 // ============================================================================
@@ -179,6 +179,11 @@ pub fn rails_router() -> Router<Arc<AppState>> {
         .route("/mail/thread/:thread_id", get(read_mail_thread))
         .route("/mail/share", post(mail_share))
         .route("/mail/decide", post(mail_decide))
+        // Mail agent identities + per-agent boxes (E1)
+        .route("/mail/agents", get(list_mail_agents))
+        .route("/mail/agents/register", post(register_mail_agent))
+        .route("/mail/inbox/:agent_id", get(read_mail_inbox))
+        .route("/mail/outbox/:agent_id", get(read_mail_outbox))
         // WIHs (compatibility surface used by platform cowork/chat views)
         .route("/wihs", get(list_wihs_get).post(list_wihs))
         .route("/wihs/pickup", post(pickup_wih))
@@ -559,6 +564,12 @@ struct MailWriteRequest {
     body_ref: Option<String>,
     body: Option<String>,
     attachments: Option<Vec<String>>,
+    // Typed envelope fields (E1-R2). `from_agent` present => typed send.
+    from_agent: Option<String>,
+    to_agents: Option<Vec<String>>,
+    subject: Option<String>,
+    importance: Option<MailImportance>,
+    ack_required: Option<bool>,
 }
 
 async fn ensure_mail_thread(state: &AppState, topic: &str) -> Result<String, axum::response::Response> {
@@ -572,16 +583,65 @@ async fn ensure_mail_thread(state: &AppState, topic: &str) -> Result<String, axu
     })
 }
 
+/// THE shared thread-resolution helper for every mail endpoint (E1-R4):
+/// an omitted thread defaults to `mail:general`, and thread validation
+/// accepts `dag:`/`wih:`/`mail:` prefixes (enforced inside `ensure_thread`
+/// via `resolve_thread_id`/`canonical_thread_id` in the rails crate).
+/// mail_send / mail_share / mail_decide all funnel through here — do not
+/// re-inline the pattern.
+async fn resolve_mail_thread(
+    state: &AppState,
+    thread: Option<String>,
+) -> Result<String, axum::response::Response> {
+    let topic = match resolve_thread_id(thread.as_deref()) {
+        Ok(topic) => topic,
+        Err(e) => {
+            return Err((
+                StatusCode::BAD_REQUEST,
+                Json(json!({ "error": e.to_string() })),
+            )
+                .into_response());
+        }
+    };
+    ensure_mail_thread(state, &topic).await
+}
+
 async fn mail_send(
     State(state): State<Arc<AppState>>,
     Json(req): Json<MailWriteRequest>,
 ) -> impl IntoResponse {
-    let topic = req.thread.unwrap_or_else(|| "default".to_string());
-    let thread_id = match ensure_mail_thread(&state, &topic).await {
+    let thread_id = match resolve_mail_thread(&state, req.thread).await {
         Ok(id) => id,
         Err(response) => return response,
     };
     let body = req.body_ref.or(req.body).unwrap_or_default();
+    if let Some(from_agent) = req.from_agent {
+        // Typed envelope path (E1-R2).
+        let message = TypedMessage {
+            from_agent,
+            to_agents: req.to_agents.unwrap_or_default(),
+            subject: req.subject,
+            importance: req.importance.unwrap_or_default(),
+            ack_required: req.ack_required.unwrap_or(false),
+            body,
+        };
+        return match state.rails.mail.send_typed_message(&thread_id, message).await {
+            Ok(message_id) => (
+                StatusCode::OK,
+                Json(json!({ "sent": true, "thread_id": thread_id, "message_id": message_id })),
+            )
+                .into_response(),
+            Err(e) => {
+                error!(error = %e, "mail: send_typed_message failed");
+                (
+                    StatusCode::INTERNAL_SERVER_ERROR,
+                    Json(json!({ "error": e.to_string() })),
+                )
+                    .into_response()
+            }
+        };
+    }
+    // Legacy body/body_ref path — unchanged behavior.
     match state
         .rails
         .mail
@@ -591,6 +651,109 @@ async fn mail_send(
         Ok(_) => (StatusCode::OK, Json(json!({ "sent": true, "thread_id": thread_id }))).into_response(),
         Err(e) => {
             error!(error = %e, "mail: send_message failed");
+            (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(json!({ "error": e.to_string() })),
+            )
+                .into_response()
+        }
+    }
+}
+
+// ---------------------------------------------------------------------------
+// Mail agent identities + per-agent inbox/outbox (E1)
+// ---------------------------------------------------------------------------
+
+#[derive(Debug, Deserialize)]
+struct MailAgentRegisterRequest {
+    agent_id: String,
+    display_name: Option<String>,
+    metadata: Option<serde_json::Value>,
+}
+
+async fn register_mail_agent(
+    State(state): State<Arc<AppState>>,
+    Json(req): Json<MailAgentRegisterRequest>,
+) -> impl IntoResponse {
+    match state
+        .rails
+        .mail
+        .agents()
+        .register_agent(&req.agent_id, req.display_name.as_deref(), req.metadata)
+        .await
+    {
+        Ok((agent, created)) => (
+            StatusCode::OK,
+            Json(json!({ "agent": agent, "created": created })),
+        )
+            .into_response(),
+        Err(e) => {
+            error!(error = %e, "mail: register agent failed");
+            (
+                StatusCode::BAD_REQUEST,
+                Json(json!({ "error": e.to_string() })),
+            )
+                .into_response()
+        }
+    }
+}
+
+async fn list_mail_agents(State(state): State<Arc<AppState>>) -> impl IntoResponse {
+    match state.rails.mail.agents().list_agents().await {
+        Ok(agents) => (StatusCode::OK, Json(json!({ "agents": agents }))).into_response(),
+        Err(e) => {
+            error!(error = %e, "mail: list agents failed");
+            (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(json!({ "error": e.to_string() })),
+            )
+                .into_response()
+        }
+    }
+}
+
+#[derive(Debug, Deserialize)]
+struct MailBoxQuery {
+    limit: Option<usize>,
+}
+
+async fn read_mail_inbox(
+    State(state): State<Arc<AppState>>,
+    Path(agent_id): Path<String>,
+    Query(query): Query<MailBoxQuery>,
+) -> impl IntoResponse {
+    let limit = query.limit.unwrap_or(100);
+    match state.rails.mail.inbox(&agent_id, limit).await {
+        Ok(messages) => (
+            StatusCode::OK,
+            Json(json!({ "agent_id": agent_id, "messages": messages })),
+        )
+            .into_response(),
+        Err(e) => {
+            error!(error = %e, "mail: inbox failed");
+            (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(json!({ "error": e.to_string() })),
+            )
+                .into_response()
+        }
+    }
+}
+
+async fn read_mail_outbox(
+    State(state): State<Arc<AppState>>,
+    Path(agent_id): Path<String>,
+    Query(query): Query<MailBoxQuery>,
+) -> impl IntoResponse {
+    let limit = query.limit.unwrap_or(100);
+    match state.rails.mail.outbox(&agent_id, limit).await {
+        Ok(messages) => (
+            StatusCode::OK,
+            Json(json!({ "agent_id": agent_id, "messages": messages })),
+        )
+            .into_response(),
+        Err(e) => {
+            error!(error = %e, "mail: outbox failed");
             (
                 StatusCode::INTERNAL_SERVER_ERROR,
                 Json(json!({ "error": e.to_string() })),
@@ -693,8 +856,7 @@ async fn mail_share(
                 .into_response();
         }
     };
-    let topic = req.thread.unwrap_or_else(|| "default".to_string());
-    let thread_id = match ensure_mail_thread(&state, &topic).await {
+    let thread_id = match resolve_mail_thread(&state, req.thread).await {
         Ok(id) => id,
         Err(response) => return response,
     };
@@ -770,8 +932,7 @@ async fn mail_decide(
                 .into_response();
         }
     };
-    let topic = req.thread.unwrap_or_else(|| "default".to_string());
-    let thread_id = match ensure_mail_thread(&state, &topic).await {
+    let thread_id = match resolve_mail_thread(&state, req.thread).await {
         Ok(id) => id,
         Err(response) => return response,
     };
@@ -2064,6 +2225,152 @@ mod tests {
             .oneshot(Request::builder().uri(uri).body(Body::empty()).unwrap())
             .await
             .unwrap()
+    }
+
+    async fn post_json(app: &Router, uri: &str, body: Value) -> axum::response::Response {
+        app.clone()
+            .oneshot(
+                Request::builder()
+                    .method("POST")
+                    .uri(uri)
+                    .header("content-type", "application/json")
+                    .body(Body::from(body.to_string()))
+                    .unwrap(),
+            )
+            .await
+            .unwrap()
+    }
+
+    /// E1 mail round-trip: thread default fix (R4), agent registry (R1),
+    /// typed envelope send (R2), per-agent inbox/outbox (R3), and the
+    /// untouched share path whose events the inbox must skip.
+    #[tokio::test]
+    async fn mail_e1_endpoints_round_trip() {
+        let temp = std::env::temp_dir().join(format!(
+            "allternit-rails-mail-e1-test-{}",
+            uuid::Uuid::new_v4()
+        ));
+        std::fs::create_dir_all(&temp).unwrap();
+        let state = test_app_state(&temp).await;
+        let app = rails_router().with_state(state.clone());
+
+        // R4: legacy send with only {"body": ...} and no thread lands in
+        // mail:general (previously a 500 on the "default" topic).
+        let resp = post_json(&app, "/mail/send", json!({ "body": "hello" })).await;
+        assert_eq!(resp.status(), StatusCode::OK);
+        let body = body_json(resp.into_body()).await;
+        assert_eq!(body["sent"], json!(true));
+        assert_eq!(body["thread_id"], json!("mail:general"));
+
+        // Invalid explicit thread is rejected.
+        let resp = post_json(
+            &app,
+            "/mail/send",
+            json!({ "thread": "bogus", "body": "x" }),
+        )
+        .await;
+        assert_eq!(resp.status(), StatusCode::BAD_REQUEST);
+
+        // R1: register alpha and beta; re-registering alpha is idempotent.
+        let resp = post_json(
+            &app,
+            "/mail/agents/register",
+            json!({ "agent_id": "alpha", "display_name": "Alpha" }),
+        )
+        .await;
+        assert_eq!(resp.status(), StatusCode::OK);
+        let body = body_json(resp.into_body()).await;
+        assert_eq!(body["created"], json!(true));
+        assert_eq!(body["agent"]["agent_id"], json!("alpha"));
+
+        let resp = post_json(
+            &app,
+            "/mail/agents/register",
+            json!({ "agent_id": "alpha", "display_name": "Renamed" }),
+        )
+        .await;
+        let body = body_json(resp.into_body()).await;
+        assert_eq!(body["created"], json!(false));
+        assert_eq!(body["agent"]["display_name"], json!("Alpha"));
+
+        let resp = post_json(&app, "/mail/agents/register", json!({ "agent_id": "beta" })).await;
+        assert_eq!(resp.status(), StatusCode::OK);
+
+        let resp = get(&app, "/mail/agents").await;
+        assert_eq!(resp.status(), StatusCode::OK);
+        let body = body_json(resp.into_body()).await;
+        assert_eq!(body["agents"].as_array().unwrap().len(), 2);
+
+        // R2: typed send alpha -> beta, high importance, ack required.
+        let resp = post_json(
+            &app,
+            "/mail/send",
+            json!({
+                "thread": "mail:general",
+                "from_agent": "alpha",
+                "to_agents": ["beta"],
+                "subject": "S",
+                "importance": "high",
+                "ack_required": true,
+                "body": "# Hi beta"
+            }),
+        )
+        .await;
+        assert_eq!(resp.status(), StatusCode::OK);
+        let body = body_json(resp.into_body()).await;
+        assert_eq!(body["sent"], json!(true));
+        let message_id = body["message_id"].as_str().unwrap().to_string();
+        // Body persisted as a file under .allternit/mail/messages/.
+        let body_file = state
+            .rails
+            .root_dir
+            .join(format!(".allternit/mail/messages/{}.md", message_id));
+        assert_eq!(std::fs::read_to_string(body_file).unwrap(), "# Hi beta");
+
+        // R3: beta's inbox carries the full typed envelope + the legacy
+        // broadcast; alpha's outbox has the typed message.
+        let resp = get(&app, "/mail/inbox/beta").await;
+        assert_eq!(resp.status(), StatusCode::OK);
+        let body = body_json(resp.into_body()).await;
+        let messages = body["messages"].as_array().unwrap();
+        assert_eq!(messages.len(), 2);
+        let typed = messages
+            .iter()
+            .find(|m| m["message_id"] == json!(message_id))
+            .expect("typed message in beta inbox");
+        assert_eq!(typed["from_agent"], json!("alpha"));
+        assert_eq!(typed["to_agents"], json!(["beta"]));
+        assert_eq!(typed["subject"], json!("S"));
+        assert_eq!(typed["importance"], json!("high"));
+        assert_eq!(typed["ack_required"], json!(true));
+        assert!(typed["body_path"]
+            .as_str()
+            .unwrap()
+            .ends_with(&format!("{}.md", message_id)));
+
+        let resp = get(&app, "/mail/outbox/alpha?limit=10").await;
+        assert_eq!(resp.status(), StatusCode::OK);
+        let body = body_json(resp.into_body()).await;
+        assert_eq!(body["messages"].as_array().unwrap().len(), 1);
+
+        // NON-GOAL check: the share path still works (wih:pipeline-* shape)
+        // and its MailAssetShared events do not leak into inboxes.
+        let resp = post_json(
+            &app,
+            "/mail/share",
+            json!({ "thread": "wih:pipeline-probe", "asset_ref": "outputs/probe.txt" }),
+        )
+        .await;
+        assert_eq!(resp.status(), StatusCode::OK);
+        let body = body_json(resp.into_body()).await;
+        assert_eq!(body["shared"], json!(true));
+        assert_eq!(body["thread_id"], json!("wih:pipeline-probe"));
+
+        let resp = get(&app, "/mail/inbox/beta").await;
+        let body = body_json(resp.into_body()).await;
+        assert_eq!(body["messages"].as_array().unwrap().len(), 2);
+
+        let _ = std::fs::remove_dir_all(&temp);
     }
 
     /// Gherkin scenario "keystones over HTTP": diamond graph (A blocks B and
