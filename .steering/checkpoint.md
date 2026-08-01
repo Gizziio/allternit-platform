@@ -1,31 +1,25 @@
 # Steering checkpoint
 
+<!-- The working agent maintains this file. The Stop hook consults the steering
+     agent ONLY when this file's content changes since the last review. Update it
+     at meaningful checkpoints: a subtask finished, a design decision made,
+     before a risky change. Remove questions once they are answered. -->
+
 ## Goal
 
-Phase B1 (spec.md B1-R1..R3): graph analytics library over the TICKET
-dependency graph (`rails/src/dependencies.rs` `DependencyGraph`, blocking
-subgraph) in a new module `rails/src/graph/` — PageRank, Brandes betweenness,
-HITS, critical path (impact = 1 + max downstream), cycle enumeration, topo
-order; two-phase orchestration with size-aware timeout and content-hash cache;
-per-metric status tags. Library only, no new crates. Builder trap:
-`rails/src/work/graph.rs` is unrelated and untouched.
+<one paragraph: the feature being built and why. If this is a multi-checkpoint
+feature, enumerate its requirements in .steering/spec.md — the steering agent
+runs its gap analysis against that file>
 
 ## Just did
 
-Implemented `rails/src/graph/{mod.rs,algorithms.rs,tests.rs}` + `pub mod
-graph;` in lib.rs. Applied steering review: fixed E0308 pattern bug in
-critical-path chain reconstruction (`Some((start, _))`), and made the
-large-graph size check consistent (blocking-edge count for both the
-threshold and the timeout). `cargo test -p allternit-agent-system-rails`
-passes: 61 lib tests (5 new graph tests: diamond/chain/cycle/forced-
-timeout/cache), 5 invariant tests, 1 doc-test — 0 failures.
+<what changed since the last checkpoint — files touched, behavior added>
 
 ## Next
 
-Write `docs/RAILS_GRAPH_B1_NOTES.md` (+ sentinel) recording verification
-and deviations, then commit `rails .steering docs` with the task-file
-message. Gate review expected.
+<what you are about to do>
 
 ## Open questions
 
 - (none)
+
