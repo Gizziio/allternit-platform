@@ -1,0 +1,305 @@
+<title>Agent Activity Panel — Mockup v2</title>
+<style>
+  :root {
+    --surface-canvas: #fafafa; --surface-panel: #ffffff; --surface-active: #f3f4f6; --surface-hover: #e5e7eb;
+    --text-primary: #111111; --text-secondary: #4b5563; --text-muted: #9ca3af;
+    --border-muted: #e5e7eb; --border-default: #d1d5db;
+    --accent-primary: #7c3aed; --accent-primary-rgb: 124, 58, 237;
+    --status-success: #22c55e; --status-success-rgb: 34, 197, 94;
+    --status-warning: #f59e0b; --status-warning-rgb: 245, 158, 11;
+    --status-error: #ef4444; --status-error-rgb: 239, 68, 68;
+    --status-info: #3b82f6; --status-info-rgb: 59, 130, 246;
+    --font-sans: Inter, ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+    --font-mono: "SFMono-Regular", ui-monospace, Menlo, Monaco, Consolas, monospace;
+    color-scheme: light dark;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --surface-canvas: #0a0a0b; --surface-panel: #141416; --surface-active: #202024; --surface-hover: #2a2a2e;
+      --text-primary: #f0f0f0; --text-secondary: #a1a1aa; --text-muted: #6b6b70;
+      --border-muted: #27272a; --border-default: #3a3a3e;
+      --accent-primary: #a78bfa; --accent-primary-rgb: 167, 139, 250;
+    }
+  }
+  :root[data-theme="dark"] {
+    --surface-canvas: #0a0a0b; --surface-panel: #141416; --surface-active: #202024; --surface-hover: #2a2a2e;
+    --text-primary: #f0f0f0; --text-secondary: #a1a1aa; --text-muted: #6b6b70;
+    --border-muted: #27272a; --border-default: #3a3a3e;
+    --accent-primary: #a78bfa; --accent-primary-rgb: 167, 139, 250;
+  }
+  :root[data-theme="light"] {
+    --surface-canvas: #fafafa; --surface-panel: #ffffff; --surface-active: #f3f4f6; --surface-hover: #e5e7eb;
+    --text-primary: #111111; --text-secondary: #4b5563; --text-muted: #9ca3af;
+    --border-muted: #e5e7eb; --border-default: #d1d5db;
+    --accent-primary: #7c3aed; --accent-primary-rgb: 124, 58, 237;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; height: 100%; }
+  body { background: var(--surface-canvas); color: var(--text-primary); font: 14px/1.5 var(--font-sans); -webkit-font-smoothing: antialiased; }
+
+  .note-banner { background: rgba(var(--accent-primary-rgb), .08); border-bottom: 1px solid var(--border-muted); padding: 10px 20px;
+    font-size: .82em; color: var(--text-secondary); }
+  .note-banner b { color: var(--text-primary); }
+  .note-banner ul { margin: 6px 0 0; padding-left: 18px; }
+  .note-banner li { margin-bottom: 2px; }
+
+  .stage { display: flex; justify-content: center; padding: 40px 20px; }
+  .app-frame { width: 900px; max-width: 100%; height: 560px; background: var(--surface-canvas); border: 1px solid var(--border-muted); border-radius: 14px; overflow: hidden; position: relative; box-shadow: 0 20px 60px rgba(0,0,0,.12); }
+
+  /* Fake app chrome behind the panel, for context */
+  .fake-topbar { height: 48px; border-bottom: 1px solid var(--border-muted); display: flex; align-items: center; padding: 0 16px; gap: 10px; background: var(--surface-panel); }
+  .fake-icon { width: 28px; height: 28px; border-radius: 7px; display: flex; align-items: center; justify-content: center; font-size: 14px; color: var(--text-muted); cursor: pointer; }
+  .fake-icon:hover { background: var(--surface-hover); }
+  .bell-wrap { position: relative; }
+  .bell-wrap.active .fake-icon { background: rgba(var(--accent-primary-rgb), .14); color: var(--accent-primary); }
+  .badge-count { position: absolute; top: -2px; right: -2px; background: var(--status-error); color: white; font: 700 9px/1 var(--font-mono);
+    min-width: 14px; height: 14px; border-radius: 999px; display: flex; align-items: center; justify-content: center; padding: 0 3px; }
+  .fake-body { padding: 24px; color: var(--text-muted); font-size: .85em; }
+
+  /* Slide-over panel */
+  .panel { position: absolute; top: 48px; right: 16px; width: 380px; max-height: calc(100% - 64px); background: var(--surface-panel);
+    border: 1px solid var(--border-default); border-radius: 12px; box-shadow: 0 12px 40px rgba(0,0,0,.18); display: flex; flex-direction: column; overflow: hidden; }
+  .panel-header { padding: 12px 16px; border-bottom: 1px solid var(--border-muted); display: flex; align-items: center; }
+  .panel-header h1 { font-size: .92em; font-weight: 700; margin: 0; }
+  .panel-header .count { color: var(--text-muted); font-size: .78em; font-family: var(--font-mono); margin-left: 6px; }
+  .panel-tabs { margin-left: auto; display: flex; gap: 2px; background: var(--surface-active); border-radius: 7px; padding: 2px; }
+  .panel-tab { font: inherit; font-size: .74em; font-weight: 650; border: none; background: none; color: var(--text-muted); padding: 4px 9px; border-radius: 5px; cursor: pointer; }
+  .panel-tab.active { background: var(--surface-panel); color: var(--text-primary); box-shadow: 0 1px 2px rgba(0,0,0,.08); }
+
+  .thread-list { overflow-y: auto; flex: 1; }
+  .thread-row { border-bottom: 1px solid var(--border-muted); cursor: pointer; }
+  .thread-row-main { padding: 10px 16px; display: flex; align-items: flex-start; gap: 10px; }
+  .thread-row-main:hover { background: var(--surface-hover); }
+  .status-dot { width: 8px; height: 8px; border-radius: 50%; margin-top: 5px; flex-shrink: 0; }
+  .status-dot.review { background: var(--status-warning); }
+  .status-dot.working { background: var(--status-info); animation: pulse 1.6s infinite; }
+  .status-dot.done { background: var(--status-success); }
+  .status-dot.idle { background: var(--text-muted); }
+  @keyframes pulse { 0%,100% { opacity: 1; } 50% { opacity: .35; } }
+
+  .row-content { min-width: 0; flex: 1; }
+  .row-top { display: flex; align-items: baseline; gap: 6px; }
+  .row-topic { font-weight: 650; font-size: .87em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .row-time { margin-left: auto; color: var(--text-muted); font-size: .72em; font-family: var(--font-mono); flex-shrink: 0; }
+  .row-preview { color: var(--text-secondary); font-size: .81em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; margin-top: 1px; }
+  .row-tag { display: inline-block; font-size: .68em; font-weight: 700; padding: 1px 6px; border-radius: 5px; margin-top: 4px; }
+  .row-tag.review { background: rgba(var(--status-warning-rgb), .12); color: var(--status-warning); }
+  .row-tag.next-run { background: var(--surface-active); color: var(--text-muted); font-family: var(--font-mono); font-weight: 600; }
+
+  /* Inline expand */
+  .row-expand { max-height: 0; overflow: hidden; background: var(--surface-active); transition: max-height .2s ease; }
+  .thread-row.open .row-expand { max-height: 320px; overflow-y: auto; }
+  .expand-inner { padding: 10px 16px 12px 34px; }
+  .exp-msg { font-size: .8em; margin-bottom: 8px; }
+  .exp-msg .who { font-weight: 650; }
+  .exp-msg .who.agent { color: var(--accent-primary); }
+  .exp-msg .who.system { color: var(--text-muted); }
+  .exp-msg .body { color: var(--text-secondary); margin-top: 1px; }
+  .exp-msg .body code { font-family: var(--font-mono); background: var(--surface-panel); padding: 0 .3em; border-radius: 3px; }
+
+  .diff-link { display: inline-flex; align-items: center; gap: 5px; font-size: .78em; font-weight: 650; color: var(--accent-primary);
+    background: var(--surface-panel); border: 1px solid var(--border-default); border-radius: 6px; padding: 5px 10px; margin: 4px 0 8px; cursor: pointer; }
+  .diff-link:hover { background: var(--surface-hover); }
+
+  .quick-actions { display: flex; gap: 6px; margin-bottom: 8px; }
+  .qa-btn { font: inherit; font-size: .76em; font-weight: 650; border-radius: 6px; padding: 5px 10px; cursor: pointer; border: 1px solid var(--border-default); background: var(--surface-panel); color: var(--text-secondary); }
+  .qa-btn.approve { color: var(--status-success); border-color: rgba(var(--status-success-rgb), .35); }
+  .qa-btn.approve:hover { background: rgba(var(--status-success-rgb), .08); }
+  .qa-btn.deny { color: var(--status-error); border-color: rgba(var(--status-error-rgb), .35); }
+  .qa-btn.deny:hover { background: rgba(var(--status-error-rgb), .08); }
+
+  .reply-row { display: flex; gap: 6px; align-items: center; }
+  .reply-row input { flex: 1; font: inherit; font-size: .8em; border: 1px solid var(--border-default); background: var(--surface-panel); border-radius: 6px; padding: 6px 9px; color: var(--text-primary); outline: none; }
+  .reply-row input::placeholder { color: var(--text-muted); }
+  .reply-row button { font: inherit; font-size: .78em; font-weight: 650; background: var(--accent-primary); color: white; border: none; border-radius: 6px; padding: 6px 11px; cursor: pointer; }
+  .resolved-note { font-size: .78em; color: var(--status-success); font-weight: 650; margin-top: 4px; }
+
+  ::selection { background: rgba(var(--accent-primary-rgb), .25); }
+</style>
+
+<div class="note-banner">
+  <b>v2 — rebuilt around real production patterns, not a generic inbox.</b>
+  <ul>
+    <li><b>Flat list, not two-pane</b> — matches Claude Code's own Agent View (session list: status + last-response preview + time, inline preview, no separate detail screen by default).</li>
+    <li><b>Header icon → slide-over panel</b>, not a dedicated page — matches GitHub's Copilot Agents panel (always-available utility, not primary content).</li>
+    <li><b>Click a row → inline accordion expand</b> in place, not navigation away.</li>
+    <li><b>Review items get a "View diff" link into the real review surface</b> instead of reinventing approve/deny UI — matches GitHub/Cursor routing agent output into the existing PR review flow. Quick inline Approve/Deny still available for the fast path (Claude Code's "yes, ship it" inline-reply pattern).</li>
+  </ul>
+</div>
+
+<div class="stage">
+  <div class="app-frame">
+    <div class="fake-topbar">
+      <div class="fake-icon">💬</div>
+      <div class="fake-icon">📁</div>
+      <div class="bell-wrap active">
+        <div class="fake-icon">🔔<span class="badge-count">3</span></div>
+      </div>
+    </div>
+    <div class="fake-body">← rest of the app, dimmed for this mockup. The panel below opens from the bell icon, same interaction as GitHub's Agents panel or a notification tray — it overlays, it doesn't replace the screen.</div>
+
+    <div class="panel">
+      <div class="panel-header">
+        <h1>Agent Activity <span class="count">6</span></h1>
+        <div class="panel-tabs">
+          <button class="panel-tab active">All</button>
+          <button class="panel-tab">Review <span style="font-family:var(--font-mono)">2</span></button>
+        </div>
+      </div>
+      <div class="thread-list" id="threadList"></div>
+    </div>
+  </div>
+</div>
+
+<script>
+const THREADS = [
+  {
+    id: "wih:executor-changeset-review",
+    topic: "Changeset Review — iOS",
+    status: "review",
+    time: "2m",
+    preview: "Wired banner into CodeThreadChatView, ready for review.",
+    messages: [
+      { who: "gizzi-code", kind: "agent", text: "Started phase 1: PermissionClient.swift + ChangesetReviewSheet.swift" },
+      { who: "gizzi-code", kind: "agent", text: "Wired banner into CodeThreadChatView. Wrote docs/CHANGESET_REVIEW_PHASE_1_NOTES.md." },
+    ],
+    diffRef: "PR #4 — ChangesetReviewSheet.swift +216",
+    resolved: false,
+  },
+  {
+    id: "wih:executor-automation-cron",
+    topic: "Automation Tasks — cron",
+    status: "review",
+    time: "41m",
+    preview: "Built CronClient + AutomationTasksListView, ready for review.",
+    messages: [
+      { who: "gizzi-code", kind: "agent", text: "Built CronClient, CronJobStore, AutomationTasksListView." },
+      { who: "gizzi-code", kind: "agent", text: "Wired into ModeBarItem + MainWorkspaceView." },
+    ],
+    diffRef: "PR #9 — 6 files +1411",
+    resolved: false,
+  },
+  {
+    id: "wih:executor-cowork-tasks",
+    topic: "Cowork Tasks — flat list",
+    status: "done",
+    time: "1h",
+    preview: "Approved and merged as PR #13.",
+    messages: [
+      { who: "gizzi-code", kind: "agent", text: "Task list + detail + create sheet done." },
+      { who: "system", kind: "system", text: "PR #13 merged into main." },
+    ],
+    diffRef: null,
+    resolved: true,
+  },
+  {
+    id: "wih:executor-ci-issue-6",
+    topic: "CI fix — typography + Vercel",
+    status: "done",
+    time: "3h",
+    preview: "validate-typography: PASS (19s). Vercel root-caused as vestigial.",
+    messages: [
+      { who: "gizzi-code", kind: "agent", text: "Found 766 violations, mostly validator bugs. Root-caused Vercel." },
+      { who: "system", kind: "system", text: "validate-typography: PASS" },
+    ],
+    diffRef: null,
+    resolved: true,
+  },
+  {
+    id: "wih:executor-automation-goals",
+    topic: "Automation Tasks — goals (phase 2)",
+    status: "working",
+    time: "3m",
+    preview: "Reading GoalEngine API surface, scoping GoalsClient…",
+    messages: [
+      { who: "gizzi-code", kind: "agent", text: "Reading GoalEngine API surface, scoping GoalsClient…" },
+    ],
+    diffRef: null,
+    resolved: false,
+  },
+  {
+    id: "wih:automation-weekly-digest",
+    topic: "Weekly digest (cron)",
+    status: "idle",
+    time: "next: Mon 9am",
+    preview: "Scheduled — last run summarized 14 threads.",
+    messages: [
+      { who: "system", kind: "system", text: "Last run (Mon 9:00): summarized 14 threads, 0 needing review." },
+    ],
+    diffRef: null,
+    resolved: false,
+    nextRun: true,
+  },
+];
+
+const listEl = document.getElementById("threadList");
+let openId = null;
+
+function render() {
+  listEl.innerHTML = THREADS.map(t => `
+    <div class="thread-row ${openId === t.id ? 'open' : ''}" data-id="${t.id}">
+      <div class="thread-row-main">
+        <div class="status-dot ${t.status}"></div>
+        <div class="row-content">
+          <div class="row-top">
+            <span class="row-topic">${t.topic}</span>
+            <span class="row-time">${t.time}</span>
+          </div>
+          <div class="row-preview">${t.preview}</div>
+          ${t.status === 'review' ? '<span class="row-tag review">Needs review</span>' : ''}
+          ${t.nextRun ? `<span class="row-tag next-run">${t.time}</span>` : ''}
+        </div>
+      </div>
+      <div class="row-expand">
+        <div class="expand-inner">
+          ${t.messages.map(m => `<div class="exp-msg"><span class="who ${m.kind}">${m.who}</span><div class="body">${m.text}</div></div>`).join('')}
+          ${t.diffRef ? `<div class="diff-link" data-diff="${t.id}">📄 View diff — ${t.diffRef}</div>` : ''}
+          ${t.status === 'review' && !t.resolved ? `
+            <div class="quick-actions">
+              <button class="qa-btn approve" data-approve="${t.id}">Approve</button>
+              <button class="qa-btn deny" data-deny="${t.id}">Deny</button>
+            </div>
+          ` : ''}
+          ${t.resolved ? '<div class="resolved-note">✓ Resolved</div>' : `
+            <div class="reply-row">
+              <input type="text" placeholder="Quick reply…" />
+              <button>Send</button>
+            </div>
+          `}
+        </div>
+      </div>
+    </div>
+  `).join("");
+
+  listEl.querySelectorAll(".thread-row-main").forEach(el => {
+    el.addEventListener("click", () => {
+      const id = el.closest(".thread-row").dataset.id;
+      openId = openId === id ? null : id;
+      render();
+    });
+  });
+  listEl.querySelectorAll("[data-approve]").forEach(el => {
+    el.addEventListener("click", (e) => {
+      e.stopPropagation();
+      const t = THREADS.find(x => x.id === el.dataset.approve);
+      t.resolved = true;
+      t.status = "done";
+      t.preview = "Approved.";
+      render();
+    });
+  });
+  listEl.querySelectorAll("[data-deny]").forEach(el => {
+    el.addEventListener("click", (e) => {
+      e.stopPropagation();
+      const t = THREADS.find(x => x.id === el.dataset.deny);
+      t.preview = "Denied — needs changes.";
+      render();
+    });
+  });
+  listEl.querySelectorAll("[data-diff]").forEach(el => {
+    el.addEventListener("click", (e) => e.stopPropagation());
+  });
+}
+
+render();
+</script>
