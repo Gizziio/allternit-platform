@@ -45,6 +45,29 @@ briefs for the most relevant new items, announces them over rails mail, and
     `--no-wait` spawns without watching.
     There is NO auto-merge — a human merges `ao/build-<slug>` after review.
 
+- **Taste memory loop (C1+C4)** — the pipeline learns the project's taste.
+  - `bin/taste-ingest.sh` — builds the taste corpus: ingests repo docs
+    (`AGENTS.md`/`DESIGN.md`/`README.md` + top-level `docs/*.md`) and the
+    allternit-brain wiki as `trusted`, plus agent session transcripts
+    (`TASTE_SESSIONS`) tiered by `taste/trust-rules.json` (default
+    `unverified`; paths matching `revert`/`failed` → `failed`). Every item is
+    POSTed to memory (:3201, advisory) with
+    `{source, trust_tier, provenance_ref}`; `taste/ingested.json` ledgers
+    content hashes so re-runs skip unchanged items. Failed approaches stay
+    visible as pitfalls, never as evidence.
+  - `bin/record-outcome.sh <slug> <merged|reverted|rejected> [note]` — the
+    outcome feedback loop. **When a human merges, reverts, or rejects a build
+    at the queue/merge stage, record the decision with this command** (the
+    build-queue announce step stays as-is; this is the human's half of the
+    loop). Appends `{ts, slug, outcome, note}` to `outcomes.jsonl` and ingests
+    the outcome to memory as a taste precedent (`merged` → `trusted`,
+    `reverted`/`rejected` → `failed`).
+  - Precedent staleness: `check-spec.sh`'s `query_precedents` marks memory
+    items older than 90 days `[stale]` in the assembled precedent text instead
+    of presenting them as current (undated items degrade to current), and
+    labels `failed`-tier items `[pitfall]` so reverted/rejected attempts stay
+    visible but never read as evidence (C1-R2's consult half).
+
 ## The charter (taste layer)
 
 `.pipeline/charter.md` decides **what kind of features the pipeline may build** —
@@ -154,6 +177,7 @@ node .pipeline/bin/scout-test.cjs
 node .pipeline/bin/generate-spec-test.cjs
 bash .pipeline/bin/check-spec-test.sh
 bash .pipeline/bin/build-queue-test.sh
+bash .pipeline/bin/taste-test.sh
 ```
 
 Offline: stubs the source fetch and the rails announce; verifies the three
@@ -168,11 +192,16 @@ The build-queue test PATH-shims `ao-spawn`/`ao-send`/`ao-watch`/`curl` and
 verifies the rails-ensure abort, task-file generation, session names,
 `built`/`failed` recording, the rails announcements, announce-failure
 retry (announce-only, no re-spawn), ao-send-failure state, built-skip on
-re-run, `--no-wait`, and the empty-queue path.
+re-run, `--no-wait`, and the empty-queue path. The taste test stubs curl and
+verifies per-source metadata, trust-rule tiers, ledger idempotency, outcome
+recording + posting, `[stale]` marking of old precedents, and the
+memory-down advisory paths.
 
 ## Layout
 
-- `bin/`, `spec-rubric.md` — committed code and prompts
+- `bin/`, `spec-rubric.md`, `taste/trust-rules.json` — committed code, prompts,
+  and trust config
 - `briefs/`, `specs/`, `queue/`, `seen.json`, `errors.log`, `verdicts.json`,
-  `builds/`, `builds.json` — gitignored runtime artifacts (multi-machine
-  sync is via rails asset refs, not git)
+  `builds/`, `builds.json`, `taste/ingested.json`, `outcomes.jsonl` —
+  gitignored runtime artifacts (multi-machine sync is via rails asset refs,
+  not git)

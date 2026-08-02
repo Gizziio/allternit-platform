@@ -1,0 +1,7 @@
+{
+  "default_tier": "unverified",
+  "rules": [
+    { "pattern": "revert", "trust_tier": "failed" },
+    { "pattern": "failed", "trust_tier": "failed" }
+  ]
+}

@@ -8,3 +8,5 @@ errors.log
 verdicts.json
 builds/
 builds.json
+taste/ingested.json
+outcomes.jsonl

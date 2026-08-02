@@ -102,17 +102,65 @@ query_precedents() { # -> past rejection/lesson text on stdout (empty if memory 
   payload=$(python3 -c 'import json; print(json.dumps({"question":"pipeline spec rejections, charter violations, and taste precedents","max_results":5}))')
   curl -s --max-time 5 -X POST "$MEMORY_QUERY_URL" \
     -H 'Content-Type: application/json' -d "$payload" 2>/dev/null \
-    | python3 -c 'import json,sys
+    | python3 -c 'import json,sys,datetime
 try:
     d = json.load(sys.stdin)
 except Exception:
     sys.exit(0)
+# C4-R2: precedents older than 90 days are marked [stale] instead of being
+# presented as current. Items without a parseable timestamp degrade to current.
+# C1-R2: failed-tier content (reverted/rejected/failed attempts) must never
+# read as evidence — it stays in the assembled text but labeled [pitfall].
+STALE_DAYS = 90
+now = datetime.datetime.now(datetime.timezone.utc)
+
+def ts_of(it):
+    for k in ("ingested_at", "created_at", "timestamp", "ts", "updated_at"):
+        v = it.get(k)
+        if v is None:
+            continue
+        if isinstance(v, (int, float)):
+            try:
+                return datetime.datetime.fromtimestamp(v, datetime.timezone.utc)
+            except Exception:
+                return None
+        if isinstance(v, str):
+            s = v.strip()
+            if s.isdigit():
+                try:
+                    return datetime.datetime.fromtimestamp(int(s), datetime.timezone.utc)
+                except Exception:
+                    return None
+            try:
+                return datetime.datetime.fromisoformat(s.replace("Z", "+00:00"))
+            except Exception:
+                return None
+    return None
+
+def is_stale(it):
+    t = ts_of(it)
+    if t is None:
+        return False
+    if t.tzinfo is None:
+        t = t.replace(tzinfo=datetime.timezone.utc)
+    return (now - t).days > STALE_DAYS
+
+def tier_of(it):
+    md = it.get("metadata")
+    if isinstance(md, dict) and md.get("trust_tier"):
+        return md["trust_tier"]
+    return it.get("trust_tier", "")
+
 parts = []
 if isinstance(d, dict):
     if d.get("answer"): parts.append(str(d["answer"]))
     for k in ("insights","memories"):
         for it in d.get(k) or []:
-            if isinstance(it, dict) and it.get("content"): parts.append(str(it["content"]))
+            if isinstance(it, dict) and it.get("content"):
+                c = str(it["content"])
+                if is_stale(it): c = "[stale] " + c
+                if tier_of(it) == "failed": c = "[pitfall] " + c
+                parts.append(c)
 print("\n---\n".join(parts)[:3000])' 2>/dev/null
 }
 

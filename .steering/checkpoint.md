@@ -7,34 +7,41 @@
 
 ## Goal
 
-Phase E3 rails mail (spec: .steering/spec.md, task: docs/RAILS_MAIL_E3_TASK.md):
-per-recipient ack tracking + overdue view (E3-R1). Standing constraints: do
-NOT touch mail_share/share_asset; keep E1/E2 envelope + index behavior
-unchanged except as needed for ack state.
+Phase C1+C4 taste memory loop (spec: .steering/spec.md, task:
+docs/TASTE_C1_TASK.md): taste corpus ingest (repo docs / brain / sessions with
+trust tiers) + outcome feedback loop + precedent staleness. Constraints:
+memory (:3201) advisory everywhere; no changes to scout/generate-spec/
+build-queue behavior; bash + python3 only.
 
 ## Just did
 
-E3 implemented. `rails/src/mail/types.rs`: `AckState::fold` (MessageSent with
-ack_required + non-empty to_agents → pending recipients;
-MessageAcknowledged moves the agent named by payload `agent_id`, falling
-back to the event's actor, from pending → acked; broadcast excluded) +
-`OverdueMessage`. `rails/src/mail/mail.rs`: `acknowledge_message` gains
-`ack_by: Option<&str>` (per-recipient semantics); new `Mail::overdue(agent,
-older_than_secs)` → envelope + pending + age_seconds, oldest first.
-Callers updated: service.rs `MailAckRequest.agent_id`, CLI `mail ack
---agent`. HTTP: `GET /mail/overdue?agent=&older_than=` (default 0 = all
-pending). mail_share untouched; E1/E2 envelope + index behavior unchanged.
-
-Unit tests: 15/15 rails mail tests pass (one recipient overdue until their
-ack; wrong-agent ack doesn't clear; two recipients clear after second ack,
-incl. actor-fallback ack; ack_required=false + broadcast never overdue;
-older_than age math).
+All built and green:
+- `.pipeline/bin/taste-ingest.sh` — 3 source classes (repo docs + brain →
+  trusted; sessions tiered by `.pipeline/taste/trust-rules.json`, default
+  unverified, revert/failed patterns → failed), metadata
+  {source, trust_tier, provenance_ref}, hash ledger
+  `.pipeline/taste/ingested.json` updated only on 2xx, memory-down advisory.
+- `.pipeline/bin/record-outcome.sh` — appends {ts,slug,outcome,note} to
+  `.pipeline/outcomes.jsonl`, ingests precedent (merged→trusted,
+  reverted/rejected→failed); documented in README as the human merge-stage
+  command.
+- `check-spec.sh` `query_precedents` — `[stale] ` prefix for >90-day items
+  (ingested_at/created_at/timestamp/ts/updated_at, ISO or epoch; undated →
+  current).
+- `.pipeline/bin/taste-test.sh` — 33/33 PASS; check-spec-test.sh still all
+  PASS.
+- NOTES written to docs/TASTE_C1_NOTES.md with deviations + acceptance
+  mapping.
 
 ## Next
 
-Done pending commit: rails suite 82 passed / 0 failed; API rails tests
-4 passed / 0 failed (incl. `mail_e3_overdue_round_trip`); NOTES written.
-Waiting on `cargo build -p allternit-api`, then sentinel + commit E3.
+First commit blocked by the steering gate: C1-R2's consult half was missing —
+`query_precedents` read no trust tiers, so failed-tier content read as
+undifferentiated evidence. Fixed: failed-tier items are now labeled
+`[pitfall]` (composes with `[stale]`), 3 new tests (36/36 PASS), NOTES/README
+updated. Retry the commit:
+`git add .pipeline .steering docs && git commit -m "feat(pipeline): taste
+corpus + outcome feedback loop (C1+C4)"`.
 
 ## Open questions
 

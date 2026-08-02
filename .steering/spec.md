@@ -1,27 +1,43 @@
-# Steering spec — rails mail, Phase E3 (acks + overdue)
+# Steering spec — taste engine, Phase C1+C4 (taste memory loop)
 
-<!-- From .pipeline/TRACK-E-rails-mail.md (steered v1). E1+E2 merged in main. -->
+<!-- From .pipeline/TRACK-C-taste-engine.md. Source of truth for this feature. -->
 
-## Acceptance (Gherkin) — E3
+## Acceptance (Gherkin) — C1+C4
 
-- Scenario: ack lifecycle
-  Given registered agents alpha and beta
-  When alpha sends beta a message with ack_required=true
-  Then beta's overdue list contains it until an ack event, after which it is absent;
-  and messages with ack_required=false never appear in overdue.
+- Scenario: failed attempts don't become evidence
+  Given a past session where an approach was tried and reverted
+  When the taste corpus is built and a consult assembles precedents
+  Then the reverted approach appears as a pitfall, not as trusted evidence.
+- Scenario: outcome feedback recorded
+  Given a spec that reached READY and was built
+  When a human rejects it at merge
+  Then .pipeline/outcomes.jsonl gains an event linking spec slug + outcome + date,
+  and memory ingest is attempted with the rejection as a taste precedent.
+- Scenario: precedent staleness
+  Given a precedent ingested 100 days ago
+  When a consult assembles precedents
+  Then it is marked stale rather than treated as current.
 
-## Phase E3 — acks + overdue
+## Phase C1+C4 — taste memory loop
 
-- [ ] E3-R1: WHEN a message is sent with `ack_required: true`, THE SYSTEM SHALL
-  track per-recipient ack state (projection fold of MessageSent /
-  MessageAcknowledged events with per-recipient `ack_ts`), and
-  `GET /api/rails/mail/overdue` SHALL return messages whose ack is missing
-  after a caller-supplied age threshold.
+- [ ] C1-R1: WHEN the taste corpus is built, THE SYSTEM SHALL ingest three
+  source classes into the memory service (`POST :3201/api/ingest`) via
+  connector scripts in `.pipeline/taste/`: (a) repo docs (AGENTS.md, DESIGN.md,
+  module READMEs), (b) allternit-brain wiki pages (read-only clone path from
+  env `BRAIN_REPO`), (c) local agent session transcripts (kimi, claude, codex
+  session dirs from env overrides) — each item ingested with metadata
+  `{source, trust_tier, provenance_ref}`.
+- [ ] C1-R2: WHEN trust tiers are assigned, THE SYSTEM SHALL mark: merged
+  code/docs and human-authored wiki decisions `trusted`; pipeline-generated
+  artifacts `unverified`; reverted commits, REJECTed specs, and failed builds
+  `failed` — and consult requests (steering, spec-checker) SHALL exclude
+  `failed`-tier content from evidence while keeping it visible as pitfalls.
+- [ ] C4-R1: WHEN a build outcome is known (merged, reverted, human-rejected),
+  THE SYSTEM SHALL record it as an outcome event on the producing artifacts
+  (brief slug, spec slug) in `.pipeline/outcomes.jsonl` and ingest the outcome
+  to memory as a taste precedent.
+- [ ] C4-R2: WHEN consult requests are assembled, THE SYSTEM SHALL include
+  relevant past outcomes and REJECT/pitfall precedents (extending the current
+  `query_precedents`) so repeated mistakes decay — a precedent older than 90
+  days SHALL be marked `stale` rather than silently treated as current.
 
-
-## Constraints
-
-- `cargo test -p allternit-agent-system-rails` passes (new unit tests per
-  phase) and `cargo build -p allternit-api` compiles.
-- Crate conventions: ledger events + projection folds for state; SQLite only
-  as a rebuildable index; `core::io` helpers; `MailXxxRequest` HTTP structs.
