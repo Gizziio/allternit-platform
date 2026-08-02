@@ -199,9 +199,14 @@ app.post('/api/ingest', async (req, res) => {
       ? `${source}${tenant_id ? `:${tenant_id}` : ''}${session_id ? `:${session_id}` : ''}`
       : tenant_id || session_id || 'direct-input';
 
-    const result = await orchestrator.ingest(content, enrichedSource);
-    
+    const result = await orchestrator.ingest(content, enrichedSource, metadata);
+
     if (result.success) {
+      // Populate the in-memory vector index so semantic search can find the memory
+      if (result.memory) {
+        await vectorStore.addMemory(result.memory);
+      }
+
       res.status(201).json({
         success: true,
         memory_id: result.memoryId,
@@ -435,7 +440,9 @@ app.post('/api/ingest/bulk', async (req, res) => {
   try {
     await initializeMemory();
     
-    const { items } = req.body as { items: Array<{ content: string; source?: string }> };
+    const { items } = req.body as {
+      items: Array<{ content: string; source?: string; metadata?: Record<string, unknown> }>;
+    };
     
     if (!items || !Array.isArray(items)) {
       return res.status(400).json({ error: 'Items array is required' });
@@ -447,14 +454,23 @@ app.post('/api/ingest/bulk', async (req, res) => {
 
     for (const item of items) {
       try {
-        const result = await orchestrator.ingest(item.content, item.source || 'bulk-ingest');
+        const result = await orchestrator.ingest(
+          item.content,
+          item.source || 'bulk-ingest',
+          item.metadata
+        );
+
+        if (result.success && result.memory) {
+          await vectorStore.addMemory(result.memory);
+        }
+
         results.push({
           source: item.source || 'bulk-ingest',
           success: result.success,
           memory_id: result.memoryId,
           error: result.error,
         });
-        
+
         if (result.success) successCount++;
         else errorCount++;
       } catch (error) {

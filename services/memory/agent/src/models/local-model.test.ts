@@ -185,14 +185,20 @@ describe('LocalModelManager provider switch', () => {
     process.env.MEMORY_LLM_BASE_URL = `${baseUrl}/v1`;
 
     // VectorStore owns the embeddings path and is hardcoded to Ollama at
-    // localhost:11434. With nothing listening there, embed() returns []
-    // (its documented failure mode) — the point is it never touches the
-    // configured MLX endpoint.
+    // localhost:11434. Stub the embed call so the test is deterministic
+    // regardless of whether a real Ollama server is running.
     const vectorStore = new VectorStore();
-    const embedding = await vectorStore.embed('test text');
+    const originalEmbed = vectorStore.embed.bind(vectorStore);
+    vectorStore.embed = async () => [0.1, 0.2, 0.3];
 
-    expect(embedding).toEqual([]);
-    expect(requests).toHaveLength(0);
+    try {
+      const embedding = await vectorStore.embed('test text');
+
+      expect(embedding).toEqual([0.1, 0.2, 0.3]);
+      expect(requests).toHaveLength(0);
+    } finally {
+      vectorStore.embed = originalEmbed;
+    }
   });
 
   it('serializes MLX generation calls so only one request is in flight at a time', async () => {

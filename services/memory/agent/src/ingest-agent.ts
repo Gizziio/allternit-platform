@@ -9,7 +9,7 @@ import * as path from 'path';
 import { watch, FSWatcher } from 'chokidar';
 import { LocalModelManager } from './models/local-model.js';
 import { MemoryStore } from './store/sqlite-store.js';
-import type { Memory, FileType, IngestRequest, IngestResult } from './types/memory.types.js';
+import type { Memory, FileType, IngestRequest, IngestResult, MemoryImportance } from './types/memory.types.js';
 
 /**
  * File type utilities
@@ -297,7 +297,7 @@ export class IngestAgent {
    */
   async ingestContent(request: IngestRequest): Promise<IngestResult> {
     const content = request.content || '';
-    
+
     if (!content.trim()) {
       return {
         success: false,
@@ -307,19 +307,33 @@ export class IngestAgent {
 
     try {
       // Determine file type
-      const sourceType: FileType = request.filePath 
+      const sourceType: FileType = request.filePath
         ? FileTypeUtils.getFileType(request.filePath)
         : 'text';
 
-      // Process with LLM
-      console.log('IngestAgent: Processing content with LLM...');
-      
-      // Extract summary, entities, topics
-      const [summary, { entities, topics }, importance] = await Promise.all([
-        this.modelManager.summarize(content, 150),
-        this.modelManager.extractEntities(content),
-        this.modelManager.assessImportance(content),
-      ]);
+      const isBulkMode = request.metadata?.mode === 'bulk';
+      let summary: string;
+      let entities: string[];
+      let topics: string[];
+      let importance: MemoryImportance;
+
+      if (isBulkMode) {
+        console.log('IngestAgent: Bulk mode — skipping LLM enrichment');
+        summary = content.slice(0, 500);
+        entities = [];
+        topics = [];
+        importance = 'medium';
+      } else {
+        // Process with LLM
+        console.log('IngestAgent: Processing content with LLM...');
+
+        // Extract summary, entities, topics
+        [summary, { entities, topics }, importance] = await Promise.all([
+          this.modelManager.summarize(content, 150),
+          this.modelManager.extractEntities(content),
+          this.modelManager.assessImportance(content),
+        ]);
+      }
 
       // Create memory
       const memory: Omit<Memory, 'id' | 'createdAt' | 'updatedAt'> = {
@@ -335,12 +349,13 @@ export class IngestAgent {
       };
 
       const createdMemory = this.store.createMemory(memory);
-      
+
       console.log(`IngestAgent: Created memory ${createdMemory.id} with importance ${importance}`);
 
       return {
         success: true,
         memoryId: createdMemory.id,
+        memory: createdMemory,
       };
     } catch (error) {
       console.error('IngestAgent: Error ingesting content:', error);
