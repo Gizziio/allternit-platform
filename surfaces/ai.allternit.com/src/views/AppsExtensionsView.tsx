@@ -33,7 +33,6 @@ const INK = '#1F1E1D';
 const MUTED = '#6B685F';
 const HAIRLINE = '#ECEAE3';
 const CARD_BORDER = '#BBB4A1';
-const SERIF = 'ui-serif, Georgia, Cambria, "Times New Roman", serif';
 
 function openExternal(url: string): void {
   window.open(url, '_blank', 'noopener,noreferrer');
@@ -442,7 +441,7 @@ export function AppsExtensionsView(): React.ReactNode {
           <div>
             <h1
               className="text-3xl font-medium tracking-tight m-0"
-              style={{ color: INK, fontFamily: SERIF }}
+              style={{ color: INK, fontFamily: 'var(--font-serif)' }}
             >
               Apps and extensions
             </h1>

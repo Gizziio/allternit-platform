@@ -234,7 +234,7 @@ function PairingShell({ children }: { children: ReactNode }) {
         .pair-page { min-height: 100vh; display: grid; place-items: center; padding: 24px; box-sizing: border-box; background: #faf9f7; color: #1a1916; }
         .pair-card { width: min(100%, 460px); box-sizing: border-box; padding: 34px; border: 1px solid #e1e5eb; border-radius: 20px; background: #fffefc; box-shadow: 0 24px 70px rgba(28,27,26,.09); }
         .pair-brand { display: flex; align-items: center; gap: 10px; margin-bottom: 30px; font-weight: 700; }
-        .pair-card h1 { margin: 8px 0 10px; color: #0d0c0a; font-family: Georgia, ui-serif, serif; font-size: 27px; line-height: 1.2; }
+        .pair-card h1 { margin: 8px 0 10px; color: #0d0c0a; font-family: var(--font-serif); font-size: 27px; line-height: 1.2; }
         .pair-muted { margin: 0 0 24px; color: #74716b; font-size: 14px; line-height: 1.55; }
         .pair-label, .pair-eyebrow { display: block; margin-bottom: 8px; color: #74716b; font-size: 11px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; }
         .pair-code { width: 100%; box-sizing: border-box; margin-bottom: 14px; padding: 14px; border: 1px solid #c9d0da; border-radius: 10px; background: #fff; color: #1a1916; font: 700 22px/1 ui-monospace, monospace; letter-spacing: .12em; text-align: center; outline: none; }
