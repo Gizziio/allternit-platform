@@ -730,7 +730,7 @@ export function CloudInstancesPanel() {
               <label style={LABEL_STYLE} htmlFor="ci-ssh-key">Private key (PEM or OpenSSH)</label>
               <textarea id="ci-ssh-key" value={sshKey} onChange={(e) => setSshKey(e.target.value)}
                 rows={4} placeholder="-----BEGIN OPENSSH PRIVATE KEY-----" autoComplete="off" spellCheck={false}
-                style={{ ...INPUT_STYLE, fontFamily: 'ui-monospace, monospace', resize: 'vertical' }} />
+                style={{ ...INPUT_STYLE, fontFamily: 'var(--font-code)', resize: 'vertical' }} />
             </div>
           ) : (
             <div style={{ marginBottom: '12px' }}>
@@ -863,8 +863,8 @@ export function CloudInstancesPanel() {
               {bootstrapResult.instance_name} is online
             </div>
             <div style={{ fontSize: '13px', color: 'var(--text-primary)', lineHeight: '1.8' }}>
-              <div>Mesh IP: <code style={{ fontFamily: 'ui-monospace, monospace' }}>{bootstrapResult.mesh_ip}</code></div>
-              <div>Runtime URL: <code style={{ fontFamily: 'ui-monospace, monospace' }}>{bootstrapResult.url}</code></div>
+              <div>Mesh IP: <code style={{ fontFamily: 'var(--font-code)' }}>{bootstrapResult.mesh_ip}</code></div>
+              <div>Runtime URL: <code style={{ fontFamily: 'var(--font-code)' }}>{bootstrapResult.url}</code></div>
             </div>
             <div style={{ marginTop: '14px' }}>
               <button type="button" onClick={resetWizard} className={QUIET_BUTTON_CLASS}>Done</button>

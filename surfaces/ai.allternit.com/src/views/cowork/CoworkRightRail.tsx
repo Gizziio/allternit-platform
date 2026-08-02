@@ -537,7 +537,7 @@ function ArtifactsSection({ artifacts, isStreaming }: { artifacts: ArtifactEntry
           <span style={{
             flex: 1, minWidth: 0, fontSize: 11, color: RAIL_TEXT,
             overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
-            fontFamily: 'monospace',
+            fontFamily: 'var(--font-code)',
           }}>
             {a.preview}
           </span>
@@ -580,7 +580,7 @@ function AuditLogsSection({ auditLogs }: { auditLogs: any[] }) {
           </div>
           <p style={{ margin: 0, fontWeight: 500 }}>{log.action}</p>
           {log.payload && (
-            <p style={{ margin: '2px 0 0', color: RAIL_MUTED, fontSize: '10px', fontFamily: 'monospace', overflowX: 'auto' }}>
+            <p style={{ margin: '2px 0 0', color: RAIL_MUTED, fontSize: '10px', fontFamily: 'var(--font-code)', overflowX: 'auto' }}>
               {typeof log.payload === 'string' ? log.payload : JSON.stringify(log.payload)}
             </p>
           )}

@@ -323,7 +323,7 @@ export function DevicePairingPanel() {
                 border: '1px solid var(--border-subtle)',
                 background: 'var(--bg-secondary)',
                 color: 'var(--text-primary)',
-                fontFamily: 'ui-monospace, monospace',
+                fontFamily: 'var(--font-code)',
                 fontSize: '16px',
                 fontWeight: 700,
                 letterSpacing: '0.12em',
