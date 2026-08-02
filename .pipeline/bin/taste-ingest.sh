@@ -5,8 +5,11 @@
 #   a. repo docs    (TASTE_REPO_DOCS, default: repo root) — top-level
 #                   AGENTS.md / DESIGN.md / README.md and docs/*.md (top level
 #                   only) -> trust_tier "trusted", source "repo-docs"
-#   b. brain wiki   (TASTE_BRAIN, default: $HOME/Desktop/allternit-brain if it
-#                   exists, else skipped silently) — all *.md recursively ->
+#   b. brain wiki   (TASTE_BRAIN; default resolution — D1-R3: gizzi settings
+#                   `brain.path` as written by `gizzi brain init`, else
+#                   ~/brain when it exists, else the legacy
+#                   $HOME/Desktop/allternit-brain; skipped silently when
+#                   absent) — all *.md recursively ->
 #                   "trusted", source "brain"
 #   c. agent sessions (TASTE_SESSIONS, default: skipped unless set) —
 #                   space-separated list of session dirs; every file found is
@@ -32,7 +35,33 @@ ERRORS_LOG="$PIPELINE_DIR/errors.log"
 MEMORY_URL="${TASTE_MEMORY_URL:-http://localhost:3201/api/ingest}"
 
 REPO_DOCS="${TASTE_REPO_DOCS:-$ROOT}"
-BRAIN="${TASTE_BRAIN:-$HOME/Desktop/allternit-brain}"
+# Brain path resolution (D1-R3): explicit TASTE_BRAIN wins; else the brain
+# registered by `gizzi brain init` in gizzi user settings (brain.path); else
+# the D1 default ~/brain when it exists; else the legacy allternit-brain path.
+resolve_brain() {
+  if [ -n "${TASTE_BRAIN:-}" ]; then
+    printf '%s' "$TASTE_BRAIN"
+    return
+  fi
+  local settings="$HOME/.gizzi/settings.json" configured=""
+  if [ -f "$settings" ]; then
+    configured="$(python3 -c '
+import json, sys
+try:
+    print(json.load(open(sys.argv[1])).get("brain", {}).get("path", "") or "")
+except Exception:
+    pass
+' "$settings" 2>/dev/null)"
+  fi
+  if [ -n "$configured" ]; then
+    printf '%s' "$configured"
+  elif [ -d "$HOME/brain" ]; then
+    printf '%s' "$HOME/brain"
+  else
+    printf '%s' "$HOME/Desktop/allternit-brain"
+  fi
+}
+BRAIN="$(resolve_brain)"
 SESSIONS="${TASTE_SESSIONS:-}"
 
 mkdir -p "$TASTE_DIR"

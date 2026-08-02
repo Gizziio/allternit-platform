@@ -465,6 +465,21 @@ export const SettingsSchema = lazySchema(() =>
         })
         .optional()
         .describe('Git worktree configuration for --worktree flag.'),
+      brain: z
+        .object({
+          path: z
+            .string()
+            .optional()
+            .describe(
+              'Absolute path to the user\'s second brain — a local git repo of ' +
+                'frontmatter markdown created by `gizzi brain init` (Track D). ' +
+                'The agent layer (memory ingestion / taste-corpus wiki connector) ' +
+                'reads pages from this path. Written automatically by ' +
+                '`gizzi brain init`.',
+            ),
+        })
+        .optional()
+        .describe('Second-brain configuration (see .steering/spec.md Track D).'),
       // Whether to disable all hooks and statusLine
       disableAllHooks: z
         .boolean()

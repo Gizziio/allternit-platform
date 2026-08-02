@@ -15,9 +15,9 @@ function getTenantId(): string {
   }
 }
 
-export const BrainCommand = cmd({
-  command: "brain [action]",
-  describe: "Brain integration — persistent knowledge and memory",
+export const BrainMemoryCommand = cmd({
+  command: "memory [action]",
+  describe: "Legacy triple-store memory (BrainService) — remember/recall/entities",
   builder: (yargs) =>
     yargs
       .positional("action", {
@@ -52,11 +52,11 @@ export const BrainCommand = cmd({
         describe: "Result limit",
         default: 10,
       })
-      .example("gizzi brain status", "Show brain statistics")
-      .example('gizzi brain remember -t "Redis runs on port 6379" --importance 8', "Store a fact")
-      .example('gizzi brain recall -t "Redis"', "Search memories")
-      .example("gizzi brain entities", "List known entities")
-      .example("gizzi brain sync", "Sync BRAIN.md from database"),
+      .example("gizzi brain memory status", "Show memory statistics")
+      .example('gizzi brain memory remember -t "Redis runs on port 6379" --importance 8', "Store a fact")
+      .example('gizzi brain memory recall -t "Redis"', "Search memories")
+      .example("gizzi brain memory entities", "List known entities")
+      .example("gizzi brain memory sync", "Sync BRAIN.md from database"),
 
   handler: async (args) => {
     const action = args.action as "status" | "remember" | "recall" | "entities" | "sync" | "forget"

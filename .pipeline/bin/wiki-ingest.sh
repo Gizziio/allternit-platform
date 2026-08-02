@@ -1,7 +1,9 @@
 #!/usr/bin/env bash
 # wiki-ingest.sh — wiki connector (C2-R1/R2). Reads the brain wiki
-# (TASTE_BRAIN, default $HOME/Desktop/allternit-brain, skipped silently when
-# absent) and, for every *.md page (recursive):
+# (TASTE_BRAIN; default resolution — D1-R3: gizzi settings `brain.path` as
+# written by `gizzi brain init`, else ~/brain when it exists, else the legacy
+# $HOME/Desktop/allternit-brain; skipped silently when absent) and, for every
+# *.md page (recursive):
 #
 #   - Parses frontmatter TOLERANTLY (leading --- block; keys type/status/
 #     domain; a page with no frontmatter is a context page). Page content is
@@ -33,7 +35,33 @@ CANDIDATES_DIR="$PIPELINE_DIR/candidates"
 ERRORS_LOG="$PIPELINE_DIR/errors.log"
 MEMORY_URL="${TASTE_MEMORY_URL:-http://localhost:3201/api/ingest}"
 
-BRAIN="${TASTE_BRAIN:-$HOME/Desktop/allternit-brain}"
+# Brain path resolution (D1-R3): explicit TASTE_BRAIN wins; else the brain
+# registered by `gizzi brain init` in gizzi user settings (brain.path); else
+# the D1 default ~/brain when it exists; else the legacy allternit-brain path.
+resolve_brain() {
+  if [ -n "${TASTE_BRAIN:-}" ]; then
+    printf '%s' "$TASTE_BRAIN"
+    return
+  fi
+  local settings="$HOME/.gizzi/settings.json" configured=""
+  if [ -f "$settings" ]; then
+    configured="$(python3 -c '
+import json, sys
+try:
+    print(json.load(open(sys.argv[1])).get("brain", {}).get("path", "") or "")
+except Exception:
+    pass
+' "$settings" 2>/dev/null)"
+  fi
+  if [ -n "$configured" ]; then
+    printf '%s' "$configured"
+  elif [ -d "$HOME/brain" ]; then
+    printf '%s' "$HOME/brain"
+  else
+    printf '%s' "$HOME/Desktop/allternit-brain"
+  fi
+}
+BRAIN="$(resolve_brain)"
 
 # Absent wiki: skip silently (same convention as taste-ingest.sh).
 if [ ! -d "$BRAIN" ]; then
