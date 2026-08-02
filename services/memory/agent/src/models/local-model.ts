@@ -162,9 +162,14 @@ export class LocalModelManager {
   }
 
   /**
-   * Pull a model if not already installed
+   * Pull a model if not already installed.
+   * When an OpenAI-compatible generation provider (e.g. MLX) is configured,
+   * generation models are server-managed, so skip Ollama pulls entirely.
    */
   async ensureModel(modelName: string): Promise<boolean> {
+    if (this.llmBaseUrl) {
+      return true;
+    }
     try {
       const models = await this.listModels();
       if (models.some(m => m.startsWith(modelName))) {
