@@ -826,6 +826,7 @@ private struct RuntimePairingView: View {
     @State private var pairingInfo: RuntimePairingInfo? = nil
     @State private var isLookingUp = false
     @State private var isApproving = false
+    @State private var isDenying = false
     @State private var codeError: String? = nil
     @State private var approvedName: String? = nil
 
@@ -1135,8 +1136,17 @@ private struct RuntimePairingView: View {
                     .background(theme.accent)
                     .cornerRadius(10)
                 }
-                .disabled(isApproving)
+                .disabled(isApproving || isDenying)
                 .opacity(isApproving ? 0.5 : 1)
+
+                Button(action: deny) {
+                    Text(isDenying ? "Denying…" : "Deny")
+                        .font(.subheadline)
+                        .fontWeight(.semibold)
+                }
+                .foregroundColor(.red)
+                .disabled(isApproving || isDenying)
+                .opacity(isDenying ? 0.5 : 1)
 
                 Button("Back") {
                     pairingInfo = nil
@@ -1144,7 +1154,7 @@ private struct RuntimePairingView: View {
                 }
                 .font(.subheadline)
                 .foregroundColor(Color("TextSecondary"))
-                .disabled(isApproving)
+                .disabled(isApproving || isDenying)
             }
         }
     }
@@ -1252,6 +1262,27 @@ private struct RuntimePairingView: View {
                 codeError = error.localizedDescription
             }
             isLookingUp = false
+        }
+    }
+
+    /// POST /api/v1/runtime-pairings/code/:code/deny (DevicePairingPanel.tsx
+    /// denyPairing, runtime_pairing.rs deny_pairing) — marks the request
+    /// denied and returns to the code-entry state; nothing to auto-pair.
+    private func deny() {
+        guard let pairing = pairingInfo, !isDenying, !isApproving else { return }
+
+        isDenying = true
+        codeError = nil
+
+        Task {
+            do {
+                try await client.denyPairing(code: pairing.userCode)
+                pairingInfo = nil
+                pairingCode = ""
+            } catch {
+                codeError = error.localizedDescription
+            }
+            isDenying = false
         }
     }
 
