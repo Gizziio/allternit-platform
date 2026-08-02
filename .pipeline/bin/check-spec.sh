@@ -47,7 +47,7 @@ RAILS_SHARE_URL="http://localhost:8013/api/rails/mail/share"
 RAILS_TICKETS_URL="http://localhost:8013/api/rails/tickets"
 QUEUE_THREAD="wih:pipeline-queue"
 MEMORY_URL="http://localhost:3201/api/ingest"
-MEMORY_QUERY_URL="http://localhost:3201/api/query"
+MEMORY_QUERY_URL="http://localhost:3201/api/search"
 MAX_ROUNDS=3
 
 log_error() {
@@ -282,9 +282,8 @@ ingest_lesson() { # ingest_lesson <slug> <findings>
 
 query_precedents() { # -> past rejection/lesson text on stdout (empty if memory down)
   local payload
-  payload=$(python3 -c 'import json; print(json.dumps({"question":"pipeline spec rejections, charter violations, and taste precedents","max_results":5}))')
-  curl -s --max-time 5 -X POST "$MEMORY_QUERY_URL" \
-    -H 'Content-Type: application/json' -d "$payload" 2>/dev/null \
+  curl -s --max-time 15 -X GET "$MEMORY_QUERY_URL?q=taste+precedents&limit=5" \
+    2>/dev/null \
     | python3 -c 'import json,sys,datetime
 try:
     d = json.load(sys.stdin)
