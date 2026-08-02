@@ -1,37 +1,29 @@
-# Steering spec — M5: learning metrics harness
-
-<!-- "Better" must be measured, not felt. Computes the learning system's
-     quality signals from existing logs; ingested to memory as insights. -->
+# Steering spec — MLX provider for the memory agent's generation tasks
 
 ## Requirements
 
-- [ ] R1: WHEN `.pipeline/bin/metrics.sh` runs, THE SYSTEM SHALL compute from
-  `.steering/state/consults.log`, `.pipeline/learn/events.jsonl`,
-  `.pipeline/outcomes.jsonl`, and git history: (a) first-pass rate — % of
-  gated commits approved on first attempt per week; (b) gate block rate
-  trend; (c) reviewer verdict distribution (APPROVE/STEER/REJECT/
-  CONSULT_FAILED); (d) executor stall signals (nudge events in events.jsonl
-  or long gaps between checkpoint and commit); (e) outcome linkage coverage
-  (% of adopted proposals with recorded outcomes).
-- [ ] R2: WHEN metrics are computed, THE SYSTEM SHALL write
-  `.pipeline/metrics/latest.json` (machine) + `latest.md` (human summary,
-  one paragraph per metric with the trend arrow), and ingest the summary to
-  memory as an insight (advisory — memory down = log + continue).
-- [ ] R3: WHEN data is missing or thin (< 3 events), THE SYSTEM SHALL report
-  `insufficient_data` for that metric rather than a fake number — a metric
-  cannot pass by doing nothing.
-- [ ] R4: WHEN run repeatedly, THE SYSTEM SHALL be idempotent (latest.*
-  overwritten, history appended to `.pipeline/metrics/history.jsonl` only
-  when values changed).
+- [ ] R1: WHEN `MEMORY_LLM_BASE_URL` is set (e.g. http://localhost:8080/v1),
+  THE SYSTEM SHALL route generation tasks (ingest, consolidate, query,
+  extract) to the OpenAI-compatible endpoint using the preset model names
+  mapped via `MEMORY_LLM_MODEL` (single model for all generation tasks), and
+  embeddings SHALL remain on Ollama.
+- [ ] R2: WHEN `MEMORY_LLM_BASE_URL` is unset, THE SYSTEM SHALL behave exactly
+  as today (Ollama generate path, MODEL_PRESETS names).
+- [ ] R3: WHEN the MLX endpoint is unreachable mid-request, THE SYSTEM SHALL
+  fail the request with a clear error (no silent fallback to a different
+  model — wrong-model answers are worse than failed ones).
+- [ ] R4: WHEN local-model.ts is changed, THE SYSTEM SHALL keep its existing
+  callers working (http-server.ts, orchestrator.ts) with no signature
+  changes beyond optional config, and unit-test the provider switch.
 
 ## Acceptance (Gherkin)
 
-- Scenario: real numbers from real logs
-  Given fixture consults.log + events.jsonl with known verdicts
-  When metrics.sh runs
-  Then latest.json matches the hand-computed rates, and latest.md renders
-  each metric with its trend.
-- Scenario: thin data is honest
-  Given < 3 events
-  When metrics.sh runs
-  Then affected metrics report insufficient_data.
+- Scenario: MLX path used when configured
+  Given MEMORY_LLM_BASE_URL set to a stub OpenAI server
+  When a generate task runs
+  Then the request hits /v1/chat/completions with the MEMORY_LLM_MODEL name,
+  and embeddings still hit Ollama.
+- Scenario: default unchanged
+  Given the env unset
+  When a generate task runs
+  Then Ollama is used with the preset model name.

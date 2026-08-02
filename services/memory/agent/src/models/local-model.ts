@@ -1,11 +1,31 @@
 /**
  * Local Model Manager - Ollama Integration
- * 
- * Handles all interactions with local Ollama models
+ *
+ * Handles all interactions with local Ollama models.
+ *
+ * Provider switch: when `MEMORY_LLM_BASE_URL` is set (e.g. an MLX
+ * OpenAI-compatible server at http://localhost:8080/v1), generation tasks are
+ * routed to `{base}/chat/completions` with the model from `MEMORY_LLM_MODEL`
+ * (default 'qwen3-4b-instruct'). Embeddings always stay on Ollama
+ * (see store/vector-store.ts).
  */
 
 import { Ollama } from 'ollama';
 import type { ChatResponse } from 'ollama';
+
+/**
+ * Optional OpenAI-compatible generation provider config.
+ * Values default to the MEMORY_LLM_BASE_URL / MEMORY_LLM_MODEL env vars.
+ */
+export interface LLMProviderConfig {
+  baseUrl?: string;
+  model?: string;
+}
+
+interface ChatMessage {
+  role: 'system' | 'user';
+  content: string;
+}
 
 /**
  * Model configuration
@@ -64,9 +84,56 @@ export const MODEL_PRESETS: Record<string, ModelConfig> = {
  */
 export class LocalModelManager {
   private ollama: Ollama;
+  private llmBaseUrl?: string;
+  private llmModel: string;
 
-  constructor(host: string = 'localhost', port: number = 11434) {
+  constructor(host: string = 'localhost', port: number = 11434, llm?: LLMProviderConfig) {
     this.ollama = new Ollama({ host: `http://${host}:${port}` });
+    const baseUrl = llm?.baseUrl ?? process.env.MEMORY_LLM_BASE_URL;
+    this.llmBaseUrl = baseUrl ? baseUrl.replace(/\/+$/, '') : undefined;
+    this.llmModel = llm?.model ?? process.env.MEMORY_LLM_MODEL ?? 'qwen3-4b-instruct';
+  }
+
+  /**
+   * Call the configured OpenAI-compatible endpoint (MLX path).
+   * Throws with endpoint + status on any failure — never falls back to
+   * Ollama mid-config (R3: wrong-model answers are worse than failed ones).
+   */
+  private async openAIChat(messages: ChatMessage[], modelConfig: ModelConfig): Promise<string> {
+    const endpoint = `${this.llmBaseUrl}/chat/completions`;
+
+    let response: Response;
+    try {
+      response = await fetch(endpoint, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          model: this.llmModel,
+          messages,
+          temperature: modelConfig.temperature,
+          top_p: modelConfig.topP,
+          max_tokens: modelConfig.numPredict,
+          stream: false,
+        }),
+      });
+    } catch (error) {
+      throw new Error(
+        `OpenAI-compatible provider unreachable at ${endpoint}: ${error instanceof Error ? error.message : 'network error'}`
+      );
+    }
+
+    if (!response.ok) {
+      throw new Error(`OpenAI-compatible provider error at ${endpoint}: HTTP ${response.status}`);
+    }
+
+    const data = (await response.json()) as {
+      choices?: Array<{ message?: { content?: unknown } }>;
+    };
+    const content = data.choices?.[0]?.message?.content;
+    if (typeof content !== 'string') {
+      throw new Error(`OpenAI-compatible provider at ${endpoint} returned an unexpected response shape`);
+    }
+    return content;
   }
 
   /**
@@ -122,17 +189,23 @@ export class LocalModelManager {
     systemPrompt?: string,
     config?: Partial<ModelConfig>
   ): Promise<string> {
-    const modelConfig = config?.name 
+    const modelConfig = config?.name
       ? { ...MODEL_PRESETS.ingest, ...config }
       : MODEL_PRESETS.ingest;
+
+    const messages: ChatMessage[] = [
+      ...(systemPrompt ? [{ role: 'system' as const, content: systemPrompt }] : []),
+      { role: 'user' as const, content: prompt },
+    ];
+
+    if (this.llmBaseUrl) {
+      return this.openAIChat(messages, modelConfig);
+    }
 
     try {
       const response: ChatResponse = await this.ollama.chat({
         model: modelConfig.name,
-        messages: [
-          ...(systemPrompt ? [{ role: 'system' as const, content: systemPrompt }] : []),
-          { role: 'user' as const, content: prompt },
-        ],
+        messages,
         options: {
           temperature: modelConfig.temperature,
           top_p: modelConfig.topP,
@@ -155,17 +228,26 @@ export class LocalModelManager {
     systemPrompt?: string,
     config?: Partial<ModelConfig>
   ): AsyncGenerator<string> {
-    const modelConfig = config?.name 
+    const modelConfig = config?.name
       ? { ...MODEL_PRESETS.ingest, ...config }
       : MODEL_PRESETS.ingest;
+
+    const messages: ChatMessage[] = [
+      ...(systemPrompt ? [{ role: 'system' as const, content: systemPrompt }] : []),
+      { role: 'user' as const, content: prompt },
+    ];
+
+    if (this.llmBaseUrl) {
+      // MLX path: the OpenAI-compatible endpoint is called non-streaming;
+      // the full response is yielded as a single chunk (interface preserved).
+      yield await this.openAIChat(messages, modelConfig);
+      return;
+    }
 
     try {
       const stream = await this.ollama.chat({
         model: modelConfig.name,
-        messages: [
-          ...(systemPrompt ? [{ role: 'system' as const, content: systemPrompt }] : []),
-          { role: 'user' as const, content: prompt },
-        ],
+        messages,
         options: {
           temperature: modelConfig.temperature,
           top_p: modelConfig.topP,
