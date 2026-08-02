@@ -5,7 +5,7 @@ use anyhow::Result;
 use chrono::Utc;
 use serde::{Deserialize, Serialize};
 use serde_json::{json, Value};
-use sqlx::sqlite::SqlitePoolOptions;
+use sqlx::sqlite::{SqliteConnectOptions, SqlitePoolOptions};
 use sqlx::{Pool, Row, Sqlite};
 
 use crate::core::ids::create_event_id;
@@ -53,10 +53,12 @@ impl Bus {
         let bus_dir = opts.root_dir.join(".allternit").join("bus");
         ensure_dir(&bus_dir)?;
         let db_path = bus_dir.join("queue.db");
-        let database_url = format!("sqlite://{}", db_path.display());
+        let connect_opts = SqliteConnectOptions::new()
+            .filename(&db_path)
+            .create_if_missing(true);
         let pool = SqlitePoolOptions::new()
             .max_connections(4)
-            .connect(&database_url)
+            .connect_with(connect_opts)
             .await?;
         sqlx::query(
             "CREATE TABLE IF NOT EXISTS messages (

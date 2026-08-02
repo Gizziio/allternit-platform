@@ -109,6 +109,7 @@ const ExportsView            = lazy(() => import('../views/cowork/ExportsView').
 const ProductsDiscoveryView  = lazy(() => import('../views/products/ProductsDiscoveryView').then(m => ({ default: m.ProductsDiscoveryView })));
 const LibraryView            = lazy(() => import('../views/library/LibraryView').then(m => ({ default: m.LibraryView })));
 const LabsView               = lazy(() => import('../views/LabsView').then(m => ({ default: m.LabsView })));
+const BrainView              = lazy(() => import('../views/brain/BrainView').then(m => ({ default: m.BrainView })));
 const CatalogView            = lazy(() => import('../views/CatalogView').then(m => ({ default: m.CatalogView })));
 const ExplorerView           = lazy(() => import('../views/code/ExplorerView').then(m => ({ default: m.ExplorerView })));
 const GitView                = lazy(() => import('../views/code/GitView').then(m => ({ default: m.GitView })));
@@ -650,6 +651,11 @@ export function getShellViewRegistry(handlers: {
     labs: ({ context }: { context?: ViewContext }) => (
       <ErrorBoundary fallback={<ErrorFallbackWrapper viewName="A://Labs" />}>
         <LabsView />
+      </ErrorBoundary>
+    ),
+    brain: ({ context }: { context?: ViewContext }) => (
+      <ErrorBoundary fallback={<ErrorFallbackWrapper viewName="Brain" />}>
+        <BrainView />
       </ErrorBoundary>
     ),
     catalog: ({ context }: { context?: ViewContext }) => (

@@ -438,6 +438,15 @@ export const SettingsSchema = lazySchema(() =>
         .describe('Custom commands to run before/after tool executions'),
       worktree: z
         .object({
+          autoCreate: z
+            .boolean()
+            .optional()
+            .describe(
+              'Create a new git worktree for every session by default, exactly as if ' +
+                '--worktree had been passed (default: false). Explicit CLI flags override ' +
+                'this setting: --worktree always enables creation, --no-worktree disables ' +
+                'it for that launch.',
+            ),
           symlinkDirectories: z
             .array(z.string())
             .optional()
@@ -456,6 +465,21 @@ export const SettingsSchema = lazySchema(() =>
         })
         .optional()
         .describe('Git worktree configuration for --worktree flag.'),
+      brain: z
+        .object({
+          path: z
+            .string()
+            .optional()
+            .describe(
+              'Absolute path to the user\'s second brain — a local git repo of ' +
+                'frontmatter markdown created by `gizzi brain init` (Track D). ' +
+                'The agent layer (memory ingestion / taste-corpus wiki connector) ' +
+                'reads pages from this path. Written automatically by ' +
+                '`gizzi brain init`.',
+            ),
+        })
+        .optional()
+        .describe('Second-brain configuration (see .steering/spec.md Track D).'),
       // Whether to disable all hooks and statusLine
       disableAllHooks: z
         .boolean()

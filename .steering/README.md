@@ -52,6 +52,20 @@ The hook script speaks every CLI's block protocol at once: stderr + exit 2
 (codex, gizzi-code). It no-ops in any project without `.steering/checkpoint.md`,
 so the global registrations are safe for other repos.
 
+## Session worktree hooks
+
+Two more hooks ride the same registrations (all four CLIs; gizzi-code also has
+native `--worktree`, default-on tracked as phase W2):
+
+- `session-worktree.sh` (UserPromptSubmit; also SessionStart for Claude Code) —
+  injects the per-session worktree ritual once per session when the cwd is the
+  shared main checkout.
+- `guard-main-checkout.sh` (PreToolUse on shell tools) — blocks git mutations
+  in the shared checkout; linked worktrees pass automatically. Escape hatch for
+  human/orchestrator merges: `STEER_GUARD_OFF=1`.
+
+Tests: `bash .steering/bin/worktree-guard-test.sh`.
+
 ## Controls
 
 - Kill switch: `touch .steering/off` (delete to re-enable).

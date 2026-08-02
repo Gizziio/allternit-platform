@@ -164,6 +164,9 @@ export const DEFAULT_POLICIES: Record<ViewType, SpawnPolicy> = {
   labs: { singleton: true, maxInstances: 1, allowNew: false, surface: 'view', ownsTabs: false },
   catalog: { singleton: true, maxInstances: 1, allowNew: false, surface: 'view', ownsTabs: false },
 
+  // Second Brain (meta-learning knowledge base)
+  brain: { singleton: true, maxInstances: 1, allowNew: false, surface: 'view', ownsTabs: false },
+
   // Design surface
   design: { singleton: true, maxInstances: 1, allowNew: false, surface: 'view', ownsTabs: false },
   "design-view-questions": { singleton: true, maxInstances: 1, allowNew: false, surface: 'view', ownsTabs: false },

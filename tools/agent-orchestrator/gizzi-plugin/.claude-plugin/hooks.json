@@ -1,5 +1,5 @@
 {
-  "description": "Steering checkpoint Stop hook + commit gate. Commands run in the session's project directory; they no-op unless the project has .steering/checkpoint.md.",
+  "description": "Steering checkpoint Stop hook, commit gate, session worktree ritual, and shared-checkout guard. Commands run in the session's project directory; they no-op unless the project has .steering/checkpoint.md.",
   "hooks": {
     "Stop": [
       {
@@ -20,6 +20,27 @@
             "type": "command",
             "command": "bash .steering/bin/steer-pre-commit-gate.sh",
             "timeout": 600
+          }
+        ]
+      },
+      {
+        "matcher": "Bash|shell",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash .steering/bin/guard-main-checkout.sh",
+            "timeout": 10
+          }
+        ]
+      }
+    ],
+    "UserPromptSubmit": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash .steering/bin/session-worktree.sh",
+            "timeout": 10
           }
         ]
       }

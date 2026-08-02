@@ -148,12 +148,25 @@ check('Context from What it is + source URL', spec.includes('## Context') && spe
 check('Excluded merged into Out of scope', spec.includes('## Out of scope') && spec.includes('Distributed multi-node scheduling'));
 
 // ─── Determinism: byte-identical regeneration ───────────────────────────────
+// produced_at frontmatter is wall-clock metadata (C3-R1); mask it — every
+// other byte must be a pure function of the brief.
+
+const maskProducedAt = (buf) => buf.toString('utf8').replace(/^produced_at:.*$/m, 'produced_at: <masked>');
 
 const firstBytes = fs.readFileSync(specPath);
 const resRegen = runGenerator([validPath]);
 const secondBytes = fs.readFileSync(specPath);
 check('regeneration exits 0', resRegen.status === 0, resRegen.stderr);
-check('regeneration is byte-identical', Buffer.compare(firstBytes, secondBytes) === 0);
+check(
+  'regeneration is byte-identical (modulo produced_at timestamp)',
+  maskProducedAt(firstBytes) === maskProducedAt(secondBytes),
+);
+check(
+  'spec carries C3-R1 frontmatter contract',
+  ['schema_version: 1', 'trust_tier: unverified', 'provenance_refs:', 'produced_by: generate-spec.cjs', 'produced_at:'].every(
+    (k) => secondBytes.toString('utf8').includes(k),
+  ) && secondBytes.toString('utf8').includes('sha256:' + sha256(validBrief)),
+);
 
 // ─── Manifest ───────────────────────────────────────────────────────────────
 
@@ -171,6 +184,82 @@ check(
   'all-briefs mode skips up-to-date brief',
   resAll.stdout.includes('0 spec(s) written, 1 up to date, 2 rejected'),
   resAll.stdout.trim(),
+);
+
+// ─── B3-R4: blocks frontmatter pass-through ─────────────────────────────────
+// Briefs may declare `blocks: [<slug>, ...]` in their frontmatter (dashed or
+// inline list); the generator carries it into the spec's frontmatter so
+// check-spec can wire dependency edges at ticket-creation time.
+
+const blocksBrief = `---
+schema_version: 1
+trust_tier: unverified
+provenance_refs:
+  - https://example.com/blocked
+produced_by: scout.cjs
+produced_at: 2026-08-01T00:00:00.000Z
+blocks:
+  - alpha-spec
+  - beta-spec
+---
+# Blocked Spec
+
+- Source: hackernews
+- URL: https://example.com/blocked
+
+## What it is
+
+A spec that cannot start until two other specs land.
+
+## Requirements seed
+
+- WHEN all blockers close, THE SYSTEM SHALL become ready
+`;
+
+const inlineBlocksBrief = `---
+schema_version: 1
+trust_tier: unverified
+provenance_refs:
+  - https://example.com/blocked-inline
+produced_by: scout.cjs
+produced_at: 2026-08-01T00:00:00.000Z
+blocks: [gamma-spec]
+---
+# Inline Blocked Spec
+
+- Source: hackernews
+- URL: https://example.com/blocked-inline
+
+## What it is
+
+A spec with an inline blocks list.
+
+## Requirements seed
+
+- WHEN the blocker closes, THE SYSTEM SHALL become ready
+`;
+
+fs.writeFileSync(path.join(BRIEFS, 'blocks-brief.md'), blocksBrief);
+fs.writeFileSync(path.join(BRIEFS, 'inline-blocks-brief.md'), inlineBlocksBrief);
+const resBlocks = runGenerator([path.join(BRIEFS, 'blocks-brief.md')]);
+check('blocks brief exits 0', resBlocks.status === 0, resBlocks.stderr);
+const blocksSpec = fs.existsSync(path.join(SPECS, 'blocks-brief.md'))
+  ? fs.readFileSync(path.join(SPECS, 'blocks-brief.md'), 'utf8')
+  : '';
+check(
+  'blocks frontmatter passed through (dashed list)',
+  blocksSpec.includes('blocks:\n  - alpha-spec\n  - beta-spec\n---'),
+  blocksSpec.split('\n').slice(0, 15).join('\n'),
+);
+const resInline = runGenerator([path.join(BRIEFS, 'inline-blocks-brief.md')]);
+check('inline blocks brief exits 0', resInline.status === 0, resInline.stderr);
+const inlineSpec = fs.existsSync(path.join(SPECS, 'inline-blocks-brief.md'))
+  ? fs.readFileSync(path.join(SPECS, 'inline-blocks-brief.md'), 'utf8')
+  : '';
+check(
+  'blocks frontmatter passed through (inline list -> dashed)',
+  inlineSpec.includes('blocks:\n  - gamma-spec\n---'),
+  inlineSpec.split('\n').slice(0, 15).join('\n'),
 );
 
 // ─── Malformed briefs ───────────────────────────────────────────────────────

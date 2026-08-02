@@ -40,6 +40,7 @@ use allternit_api::automation_routes::automation_router;
 use allternit_api::backend_install_routes::backend_install_router;
 use allternit_api::board_routes::board_router;
 use allternit_api::board_stream_routes::board_stream_router;
+use allternit_api::brain_routes::{brain_git_router, brain_router};
 use allternit_api::canvas_routes::canvas_router;
 use allternit_api::checkpoints_routes::checkpoints_router;
 use allternit_api::conversation_routes::conversation_router;
@@ -316,7 +317,8 @@ async fn main() {
         .merge(office_cli_router())
         .merge(orchestrator_router())
         .merge(alabs_router())
-        .merge(automation_router());
+        .merge(automation_router())
+        .merge(brain_router());
 
     // ── Protected routes (require authentication) ─────────────────────────────
     let protected = Router::new()
@@ -371,7 +373,14 @@ async fn main() {
         // Internal-only: the ACU (computer-use) Python gateway has no Clerk
         // session, so these are gated by internal_auth::require_internal_token
         // per-handler instead of the Clerk auth_middleware layer above.
-        .merge(allternit_api::internal_routes::internal_router());
+        .merge(allternit_api::internal_routes::internal_router())
+        // Brain git smart-HTTP: git clients carry no Clerk JWT — they use
+        // `allternit_git_` tokens (Basic password or Bearer), verified
+        // per-handler by brain_routes and scoped to these routes only. The
+        // management/read brain API stays on the protected router above.
+        // Nested under /api/v1 so clone URLs issued by POST /api/v1/brains
+        // resolve here.
+        .nest("/api/v1", brain_git_router());
 
     // LLM gateway: the OpenAI-compatible /v1 surface (chat completions,
     // models). It carries its own virtual-key middleware chain (llm_key auth

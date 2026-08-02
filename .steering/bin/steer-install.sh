@@ -54,6 +54,29 @@ EOF
   ok "added [[hooks]] PreToolUse commit gate to $KIMI_HOME/config.toml"
 fi
 
+if [ -f "$KIMI_HOME/config.toml" ] && grep -q 'session-worktree\.sh' "$KIMI_HOME/config.toml"; then
+  skip "session worktree hooks already registered in $KIMI_HOME/config.toml"
+else
+  mkdir -p "$KIMI_HOME"; touch "$KIMI_HOME/config.toml"
+  cat >> "$KIMI_HOME/config.toml" <<'EOF'
+
+# Per-session worktree ritual: inject worktree instructions on the first
+# prompt in a shared main checkout (steering-enabled repos only).
+[[hooks]]
+event = "UserPromptSubmit"
+command = "bash .steering/bin/session-worktree.sh"
+timeout = 10
+
+# Shared-checkout guard: block git mutations outside a linked worktree.
+[[hooks]]
+event = "PreToolUse"
+matcher = "Bash"
+command = "bash .steering/bin/guard-main-checkout.sh"
+timeout = 10
+EOF
+  ok "added session-worktree + guard hooks to $KIMI_HOME/config.toml"
+fi
+
 echo "== Claude Code =="
 if [ -f "$REPO/.claude/settings.json" ]; then
   skip "project .claude/settings.json is committed — active automatically (approve the trust prompt on first run)"
@@ -70,15 +93,18 @@ home = sys.argv[1]
 path = os.path.join(home, "hooks.json")
 stop_entry = {"type": "command", "command": "bash .steering/bin/steer-stop.sh", "timeout": 600}
 gate_entry = {"type": "command", "command": "bash .steering/bin/steer-pre-commit-gate.sh", "timeout": 600}
+wt_entry = {"type": "command", "command": "bash .steering/bin/session-worktree.sh", "timeout": 10}
+guard_entry = {"type": "command", "command": "bash .steering/bin/guard-main-checkout.sh", "timeout": 10}
 cfg = {"hooks": {}}
 if os.path.exists(path):
     with open(path) as f:
         cfg = json.load(f)
     cfg.setdefault("hooks", {})
 changed = False
-for event, entry, matcher in (("Stop", stop_entry, None), ("PreToolUse", gate_entry, "Bash|shell")):
+for event, entry, matcher in (("Stop", stop_entry, None), ("PreToolUse", gate_entry, "Bash|shell"),
+                              ("UserPromptSubmit", wt_entry, None), ("PreToolUse", guard_entry, "Bash|shell")):
     groups = cfg["hooks"].setdefault(event, [])
-    if any("steer-" in h.get("command", "") and entry["command"].split()[-1] in h.get("command", "")
+    if any(entry["command"].split()[-1] in h.get("command", "")
            for g in groups for h in g.get("hooks", [])):
         print(f"  [skip] {event} already registered in hooks.json")
         continue
