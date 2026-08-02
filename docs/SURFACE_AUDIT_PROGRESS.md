@@ -18,23 +18,26 @@ Living checklist for the 121 actionable items (83 GAP + 38 PARTIAL) from `docs/S
 
 ## Cowork
 
-- [ ] **Cowork workspace (CoworkRoot)** _(`PARTIAL` → iOS)_ — Web has the richest GUI, gizzi-code's engine is arguably even more capable via CLI, iOS only exposes a toggle.
-- [ ] **Cowork Runs view** _(`PARTIAL` → iOS)_ — gizzi-code has the underlying data with no visual browser; iOS has neither.
-- [ ] **Cowork Drafts view** _(`GAP` → iOS)_ — Neither other surface has a named drafts view; gizzi-code's approval queue is the nearest functional analog.
-- [ ] **Cowork Tasks view** _(`PARTIAL` → iOS)_ — gizzi-code has real task-tracking via cowork-team; iOS has nothing.
-- [ ] **Cowork Cron view** _(`GAP` → iOS)_ — Missing from iOS entirely; gizzi-code's cron is actually the most capable of the three.
-- [ ] **Cowork Project view** _(`GAP` → gizzi-code)_ — Neither other surface exposes Cowork run history scoped to a project.
-- [ ] **Cowork Documents view** _(`GAP` → iOS)_ — Missing from iOS with no good reason it couldn't exist there; gizzi-code's absence is more defensible (file-native).
-- [ ] **Cowork Tables view** _(`GAP` → iOS)_ — Same as Documents: real gap on iOS, defensible absence on gizzi-code.
-- [ ] **Cowork Files view** _(`GAP` → iOS)_ — Same pattern as Documents/Tables.
-- [ ] **Cowork Exports view** _(`PARTIAL` → iOS)_ — gizzi-code has an adjacent generic mechanism; iOS has none.
-- [ ] **Cowork Insights panel** _(`GAP` → iOS, gizzi-code)_ — Absent from both other surfaces, no fundamental blocker to a CLI-side summary.
-- [ ] **Cowork Activity panel** _(`GAP` → iOS, gizzi-code)_ — Same as Insights.
-- [ ] **Cowork Goals panel** _(`PARTIAL` → iOS)_ — gizzi-code's goal engine is a real, deeper equivalent; iOS has nothing.
-- [ ] **Cowork Wiki section viewer** _(`PARTIAL` → iOS)_ — Loose, currently-inactive gizzi-code overlap; no iOS equivalent at all.
-- [ ] **Cowork Audit log viewer** _(`GAP` → iOS, gizzi-code)_ — Neither other surface lets a user review a Cowork action audit trail.
-- [ ] **Intelli-Schedule panel** _(`GAP` → iOS)_ — Missing from iOS only; gizzi-code has the actual named engine likely backing this panel.
-- [ ] **Harness Config panel (execution sandbox config)** _(`GAP` → iOS)_ — Missing from iOS; gizzi-code's overlap is adjacent infrastructure, not a direct match.
+**Corrected 2026-08-02 after live-code investigation of `surfaces/ai.allternit.com/src/views/cowork/`** (per explicit instruction: don't trust the audit's Cowork sub-view names without checking what's actually wired into the shipped nav today). Verdict: most of the audit's Cowork sub-view list was never real — `ViewRegistry.tsx` registers a component for each one, but grepping for actual dispatchers shows most have **zero call sites**, meaning the component exists in the file tree but nothing in the live app ever renders it. Real, reachable Cowork nav today (`shell/rail/cowork.config.ts` + `CoworkRoot.tsx`): New Task, Agent Hub, **Automation Tasks** (renamed from "Cron" — confirmed in both the rail label and `AutomationTasksView.tsx`'s own fallback title), a dynamic Tasks list, and per-project tabs (Tasks/Agent Tasks/Sources) once a project is open.
+
+- [ ] **Cowork workspace (CoworkRoot)** _(`PARTIAL` → iOS)_ — Web has the richest GUI, gizzi-code's engine is arguably even more capable via CLI, iOS only exposes a toggle. Still real — unaffected by the correction below.
+- [~] **Cowork Automation Tasks** _(was "Cowork Cron view")_ — **Confirmed real, and already satisfied**: this is the same underlying concept as the iOS Automation Tasks tab shipped in PR #9 (cron jobs). Not Cowork-scoped specifically on iOS (it's a top-level tab, not nested inside the Cowork toggle the way it is on web), but the functional gap is closed. No further action unless a Cowork-nested placement is specifically wanted later.
+- [ ] **Cowork Project view** _(`GAP` → gizzi-code)_ — Confirmed real and live (`CoworkProjectView.tsx`, mounted directly by `CoworkRoot` when a project is active — Tasks/Agent Tasks/Sources tabs). Still a legitimate gap.
+- [ ] **Cowork Runs view** / **Cowork Tasks view** _(UNCLEAR, needs one more check)_ — The standalone `TasksView.tsx` (which both of these audit rows likely meant) turned out to have **zero dispatchers** — dead code. But the rail's own dynamic "Tasks" list opens individual tasks directly into `CoworkRoot`/the workspace, a different (real, live) mechanism the audit didn't separately name. Before building anything, confirm what that live task-opening flow actually shows (session/run history?) and scope against that, not against the dead `TasksView.tsx`.
+- [ ] **Cowork Wiki section viewer** _(real, but not a Cowork-specific gap — recategorize)_ — `WikiSectionViewer.tsx` is real and live, but rendered inside the app-wide `ArtifactDetailView`/`ArtifactSidecar` (mounted globally in `ShellApp.tsx`), not inside Cowork's own nav. If iOS parity is wanted, scope it as "Artifact sidecar / Wiki viewer" (an app-wide feature Cowork happens to feed into), not as a Cowork sub-view.
+- [ ] **Harness Config panel** _(real, but wrong surface — recategorize)_ — `HarnessConfigPanel.tsx` is real and live, but mounted in `OperatorBrowserView.tsx` and `DesignModeView.tsx` — Operator/Browser and Design mode, not Cowork, despite living in the `views/cowork/` folder. Re-scope any iOS work under those surfaces, not Cowork.
+- [x] ~~Cowork Drafts view~~ — **Dropped.** `DraftsView.tsx` has zero dispatchers anywhere in the web source; never wired into Cowork's shipped nav. Not a real gap to fix on iOS.
+- [x] ~~Cowork Documents view~~ — **Dropped, and the audit's "Artifacts Library" naming guess was also wrong.** `DocumentsView.tsx` has zero dispatchers from Cowork. Separately, the real `library`/"Artifacts Library" viewType (`LibraryView.tsx`) is an unrelated, app-wide content library, not a Cowork feature and not Documents' successor.
+- [x] ~~Cowork Tables view~~ — **Dropped.** `TablesView.tsx`, zero dispatchers.
+- [x] ~~Cowork Files view~~ — **Dropped.** `FilesView.tsx`, zero dispatchers.
+- [x] ~~Cowork Exports view~~ — **Dropped.** `ExportsView.tsx`, zero dispatchers.
+- [x] ~~Cowork Insights panel~~ — **Dropped.** `InsightsView.tsx`, zero dispatchers.
+- [x] ~~Cowork Activity panel~~ — **Dropped.** `ActivityView.tsx`, zero dispatchers.
+- [x] ~~Cowork Goals panel~~ — **Dropped, superseded.** `GoalsView.tsx` has zero dispatchers; the real, live goals UI is a tab inside Automation Tasks (`goals-list` → `AutomationTasksView initialTab="goal"`), already covered by the Automation Tasks item above.
+- [x] ~~Cowork Audit log viewer~~ — **Dropped.** `AuditLogViewer.tsx` is only rendered inside the dead `TasksView.tsx` — unreachable.
+- [x] ~~Intelli-Schedule panel~~ — **Dropped.** `IntelliSchedulePanel.tsx` is only rendered inside the dead `TasksView.tsx` — unreachable.
+
+**Net effect**: what looked like ~14 Cowork gaps in the original audit is really 2 confirmed-real gaps (Project view; Runs/Tasks pending one more check) plus 2 miscategorized real features to track under other surfaces (Wiki viewer, Harness Config) plus 1 already satisfied (Automation Tasks). The other 9 were never shipped on web at all — building iOS parity for them would have been fixing gaps that don't exist. Static-analysis caveat from the investigation: this is import/dispatch-site analysis, not a running-app check — a feature-flagged or deep-link-only path could theoretically exist and wasn't found.
 
 ## Code
 
