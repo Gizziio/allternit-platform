@@ -252,6 +252,20 @@ for spec in "$SPECS_DIR"/*.md; do
     NEEDS-WORK*)
       rounds=$((rounds + 1))
       findings="$(printf '%s\n' "$answer" | sed 's/^• //' | head -c 4000)"
+      # C3-R1 artifact contract: verdict review records carry schema-versioned
+      # frontmatter, written once when the record is created (rounds append).
+      if [ ! -f "$SPECS_DIR/$slug.review.md" ]; then
+        {
+          printf '%s\n' '---'
+          printf '%s\n' 'schema_version: 1'
+          printf '%s\n' 'trust_tier: unverified'
+          printf '%s\n' 'provenance_refs:'
+          printf '  - .pipeline/specs/%s.md\n' "$slug"
+          printf '%s\n' 'produced_by: check-spec.sh'
+          printf 'produced_at: %s\n' "$(date -u +%FT%TZ)"
+          printf '%s\n\n' '---'
+        } > "$SPECS_DIR/$slug.review.md"
+      fi
       {
         printf '\n## Review round %d (%s)\n\n' "$rounds" "$(date -u +%FT%TZ)"
         printf '%s\n' "$findings"

@@ -148,12 +148,25 @@ check('Context from What it is + source URL', spec.includes('## Context') && spe
 check('Excluded merged into Out of scope', spec.includes('## Out of scope') && spec.includes('Distributed multi-node scheduling'));
 
 // ─── Determinism: byte-identical regeneration ───────────────────────────────
+// produced_at frontmatter is wall-clock metadata (C3-R1); mask it — every
+// other byte must be a pure function of the brief.
+
+const maskProducedAt = (buf) => buf.toString('utf8').replace(/^produced_at:.*$/m, 'produced_at: <masked>');
 
 const firstBytes = fs.readFileSync(specPath);
 const resRegen = runGenerator([validPath]);
 const secondBytes = fs.readFileSync(specPath);
 check('regeneration exits 0', resRegen.status === 0, resRegen.stderr);
-check('regeneration is byte-identical', Buffer.compare(firstBytes, secondBytes) === 0);
+check(
+  'regeneration is byte-identical (modulo produced_at timestamp)',
+  maskProducedAt(firstBytes) === maskProducedAt(secondBytes),
+);
+check(
+  'spec carries C3-R1 frontmatter contract',
+  ['schema_version: 1', 'trust_tier: unverified', 'provenance_refs:', 'produced_by: generate-spec.cjs', 'produced_at:'].every(
+    (k) => secondBytes.toString('utf8').includes(k),
+  ) && secondBytes.toString('utf8').includes('sha256:' + sha256(validBrief)),
+);
 
 // ─── Manifest ───────────────────────────────────────────────────────────────
 

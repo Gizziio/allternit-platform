@@ -3,6 +3,7 @@ briefs/
 specs/
 queue/
 rejected/
+candidates/
 seen.json
 errors.log
 verdicts.json
@@ -10,3 +11,4 @@ builds/
 builds.json
 taste/ingested.json
 outcomes.jsonl
+dismissals.json

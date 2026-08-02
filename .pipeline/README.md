@@ -68,6 +68,34 @@ briefs for the most relevant new items, announces them over rails mail, and
     labels `failed`-tier items `[pitfall]` so reverted/rejected attempts stay
     visible but never read as evidence (C1-R2's consult half).
 
+- **Wiki connector + artifact contracts (C2+C3)** — the brain wiki becomes a
+  candidate source, and every pipeline artifact carries a schema-versioned
+  contract.
+  - `bin/wiki-ingest.sh` — reads the brain wiki (`TASTE_BRAIN`, default
+    `$HOME/Desktop/allternit-brain`, skipped silently when absent). Pages with
+    frontmatter `type: idea|pain` become `candidates/<slug>.md` (frontmatter:
+    `source_page`, `trust_tier: unverified`, `ingested_at`); everything else
+    (runbook/decision/identity/domain/no frontmatter) is context only. ALL
+    pages are ingested to memory (advisory; idea/pain `unverified`, context
+    `trusted`; ledger keys `wiki:<relpath>`). ENFORCEMENT-ONLY (C2-R1): the
+    wiki is read-only, page content is never executed, and injection text in a
+    page changes nothing but candidate creation.
+  - `bin/dismiss.sh <slug-or-title> [note]` — records a dismissal in
+    `dismissals.json` (`{slug: {title, dismissed_at, note}}`) and ingests it
+    to memory as a `failed`-tier taste precedent (C2-R3). The scout
+    suppresses items whose normalized title (lowercase, alnum-only) matches a
+    dismissal younger than 14 days — logged to `errors.log` with the
+    dismissal cited; after 14 days the item may surface again.
+  - Artifact contracts (C3-R1): briefs (scout), specs (generate-spec), and
+    verdict review records (check-spec) all carry frontmatter with
+    `schema_version: 1`, `trust_tier`, `provenance_refs`, `produced_by`,
+    `produced_at`. Briefs cite the source URL; specs cite the brief path +
+    brief SHA-256; reviews cite the spec path. `bin/contract-test.sh` pins
+    the contract with golden fixtures in `taste/golden/` and validates the
+    live producers against it.
+  - Note: spec regeneration is byte-identical modulo the wall-clock
+    `produced_at` frontmatter line (masked in determinism comparisons).
+
 ## The charter (taste layer)
 
 `.pipeline/charter.md` decides **what kind of features the pipeline may build** —
@@ -178,6 +206,8 @@ node .pipeline/bin/generate-spec-test.cjs
 bash .pipeline/bin/check-spec-test.sh
 bash .pipeline/bin/build-queue-test.sh
 bash .pipeline/bin/taste-test.sh
+bash .pipeline/bin/wiki-test.sh
+bash .pipeline/bin/contract-test.sh
 ```
 
 Offline: stubs the source fetch and the rails announce; verifies the three
@@ -195,13 +225,22 @@ retry (announce-only, no re-spawn), ao-send-failure state, built-skip on
 re-run, `--no-wait`, and the empty-queue path. The taste test stubs curl and
 verifies per-source metadata, trust-rule tiers, ledger idempotency, outcome
 recording + posting, `[stale]` marking of old precedents, and the
-memory-down advisory paths.
+memory-down advisory paths. The wiki test stubs curl and the scout deps and
+verifies idea/pain → unverified candidates, context pages yielding none, the
+C2-R1 injection page (candidate marked unverified, wiki byte-identical, no
+writes outside `candidates/` + the ledger), dismissal recording, and scout
+suppression inside/outside the 14-day window; it runs the contract test as
+its final block. The contract test validates the golden fixtures in
+`taste/golden/`, regenerates the fixture spec (byte-identical modulo
+`produced_at`), and validates the live scout/check-spec producers against the
+same frontmatter contract.
 
 ## Layout
 
-- `bin/`, `spec-rubric.md`, `taste/trust-rules.json` — committed code, prompts,
-  and trust config
+- `bin/`, `spec-rubric.md`, `taste/trust-rules.json`, `taste/golden/` —
+  committed code, prompts, trust config, and contract fixtures
 - `briefs/`, `specs/`, `queue/`, `seen.json`, `errors.log`, `verdicts.json`,
-  `builds/`, `builds.json`, `taste/ingested.json`, `outcomes.jsonl` —
+  `builds/`, `builds.json`, `taste/ingested.json`, `outcomes.jsonl`,
+  `candidates/`, `dismissals.json` —
   gitignored runtime artifacts (multi-machine sync is via rails asset refs,
   not git)

@@ -7,41 +7,38 @@
 
 ## Goal
 
-Phase C1+C4 taste memory loop (spec: .steering/spec.md, task:
-docs/TASTE_C1_TASK.md): taste corpus ingest (repo docs / brain / sessions with
-trust tiers) + outcome feedback loop + precedent staleness. Constraints:
-memory (:3201) advisory everywhere; no changes to scout/generate-spec/
-build-queue behavior; bash + python3 only.
+Phase C2+C3 (spec: .steering/spec.md C2-R1..R3 + C3-R1, task:
+docs/TASTE_C2_TASK.md): wiki connector (brain → candidates, enforcement-only),
+dismissal ledger with 14-day suppression in scout.cjs, and schema-versioned
+frontmatter contracts on pipeline artifacts (briefs, specs, verdict records)
+with golden-file tests. Constraints: wiki read-only; memory advisory; rails
+untouched; scout-test.cjs / generate-spec-test.cjs stay green.
 
 ## Just did
 
-All built and green:
-- `.pipeline/bin/taste-ingest.sh` — 3 source classes (repo docs + brain →
-  trusted; sessions tiered by `.pipeline/taste/trust-rules.json`, default
-  unverified, revert/failed patterns → failed), metadata
-  {source, trust_tier, provenance_ref}, hash ledger
-  `.pipeline/taste/ingested.json` updated only on 2xx, memory-down advisory.
-- `.pipeline/bin/record-outcome.sh` — appends {ts,slug,outcome,note} to
-  `.pipeline/outcomes.jsonl`, ingests precedent (merged→trusted,
-  reverted/rejected→failed); documented in README as the human merge-stage
-  command.
-- `check-spec.sh` `query_precedents` — `[stale] ` prefix for >90-day items
-  (ingested_at/created_at/timestamp/ts/updated_at, ISO or epoch; undated →
-  current).
-- `.pipeline/bin/taste-test.sh` — 33/33 PASS; check-spec-test.sh still all
-  PASS.
-- NOTES written to docs/TASTE_C1_NOTES.md with deviations + acceptance
-  mapping.
+All built and green (7/7 suites: scout, generate-spec, taste, check-spec,
+build-queue, contract-test 17/17, wiki-test 38/38):
+- `.pipeline/bin/wiki-ingest.sh` — wiki connector: idea/pain →
+  `candidates/<slug>.md` (source_page, trust_tier: unverified, ingested_at);
+  all pages → memory advisory (idea/pain unverified, context trusted); ledger
+  keys `wiki:<relpath>`; wiki read-only; content never executed.
+- `.pipeline/bin/dismiss.sh` — dismissal ledger `dismissals.json` + failed-tier
+  memory precedent (advisory).
+- `scout.cjs` — <14-day normalized-title dismissal suppression (logged +
+  cited, item stays unseen, additive filter) + C3-R1 brief frontmatter.
+- `generate-spec.cjs` / `check-spec.sh` — spec + review-record frontmatter
+  (schema_version/trust_tier/provenance_refs/produced_by/produced_at).
+- `contract-test.sh` + `taste/golden/` fixtures; `wiki-test.sh` (injection
+  test, suppression window, memory-down paths).
+- NOTES at docs/TASTE_C2_NOTES.md + sentinel. Deviation of note: produced_at
+  is wall-clock; determinism comparisons mask that one line (documented in
+  NOTES + generate-spec docstring).
 
 ## Next
 
-First commit blocked by the steering gate: C1-R2's consult half was missing —
-`query_precedents` read no trust tiers, so failed-tier content read as
-undifferentiated evidence. Fixed: failed-tier items are now labeled
-`[pitfall]` (composes with `[stale]`), 3 new tests (36/36 PASS), NOTES/README
-updated. Retry the commit:
-`git add .pipeline .steering docs && git commit -m "feat(pipeline): taste
-corpus + outcome feedback loop (C1+C4)"`.
+Commit: `git add .pipeline .steering docs && git commit -m "feat(pipeline):
+wiki connector + artifact contracts (C2+C3)"`. Fix and retry if the gate
+blocks.
 
 ## Open questions
 
