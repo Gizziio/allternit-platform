@@ -28,6 +28,7 @@ struct ComposerPlusSheet: View {
     @State private var isConnectorsPresented = false
     @State private var isBrainCapturePresented = false
     @State private var isCoworkTasksPresented = false
+    @State private var isAgentActivityPresented = false
     /// Set to present the app-owned priming sheet before a system prompt.
     @State private var primingPermission: AppPermission? = nil
     /// Whether granting photo access from the priming sheet should also open
@@ -84,6 +85,7 @@ struct ComposerPlusSheet: View {
                     toolAccessSection
                     permissionsRow
                     coworkTasksRow
+                    agentActivityRow
                     connectorsRow
                     brainCaptureRow
                 }
@@ -111,6 +113,9 @@ struct ComposerPlusSheet: View {
         }
         .sheet(isPresented: $isCoworkTasksPresented) {
             CoworkTasksListView()
+        }
+        .sheet(isPresented: $isAgentActivityPresented) {
+            AgentActivityListView()
         }
         .sheet(isPresented: $isBrainCapturePresented) {
             BrainCaptureSheet()
@@ -373,6 +378,32 @@ struct ComposerPlusSheet: View {
                 icon: "checklist",
                 iconColor: Theme.accentCowork,
                 title: "Cowork Tasks",
+                value: ""
+            )
+        }
+        .buttonStyle(.plain)
+    }
+
+    /// Agent Activity entry — same chrome and reasoning as `coworkTasksRow`
+    /// immediately above it (a plain Button presenting a sheet, not a Menu):
+    /// this app has no dedicated Agent Activity screen or persistent
+    /// notification badge to hang this off of (checked: no badge/unread-
+    /// count convention exists anywhere in this codebase — `ShellHeader`'s
+    /// web equivalent isn't even mounted on web's own live app per
+    /// AGENT_ACTIVITY_WEB_PHASE_1_NOTES.md), so cross-cutting notification-
+    /// style content gets the same composer-sheet entry point Cowork Tasks
+    /// already established this session rather than inventing a new
+    /// top-level surface for it.
+    private var agentActivityRow: some View {
+        Button(action: {
+            let generator = UIImpactFeedbackGenerator(style: .light)
+            generator.impactOccurred()
+            isAgentActivityPresented = true
+        }) {
+            menuRow(
+                icon: "bubble.left.and.bubble.right",
+                iconColor: Theme.accentPrimary,
+                title: "Agent Activity",
                 value: ""
             )
         }
