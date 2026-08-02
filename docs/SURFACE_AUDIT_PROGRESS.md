@@ -117,7 +117,7 @@ Living checklist for the 121 actionable items (83 GAP + 38 PARTIAL) from `docs/S
 - [ ] **H5I panel — Commit** _(`PARTIAL` → upgrade)_
 - [ ] **H5I panel — Context** _(`GAP` → gizzi-code)_
 - [ ] **H5I panel — Diff** _(`PARTIAL` → upgrade)_
-- [ ] **Changeset Review (diff cards, approve/reject)** _(`GAP` → iOS)_ — Genuine, actionable gap: a mobile user can kick off an agentic coding session but apparently can't review changes before they're applied.
+- [~] **Changeset Review (diff cards, approve/reject)** _(`GAP` → iOS)_ — Genuine, actionable gap: a mobile user can kick off an agentic coding session but apparently can't review changes before they're applied. PR #4 (reviewed, awaiting merge). Backend needed no changes — gizzi-code's `/v1/permission` queue already existed.
 
 ## Marketplace/Plugins
 
