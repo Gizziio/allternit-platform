@@ -22,6 +22,7 @@ pub mod backend_install_routes;
 pub mod billing;
 pub mod board_routes;
 pub mod board_stream_routes;
+pub mod brain_routes;
 pub mod canvas_routes;
 pub mod chat_routes;
 pub mod checkpoints_routes;
