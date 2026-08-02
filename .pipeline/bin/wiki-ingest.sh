@@ -125,7 +125,7 @@ print(json.dumps({
         "provenance_ref": sys.argv[3],
     },
 }))' "$f" "$tier" "$prov")
-  code=$(curl -s -o /dev/null -w '%{http_code}' --max-time 5 -X POST "$MEMORY_URL" \
+  code=$(curl -s -o /dev/null -w '%{http_code}' --max-time "${TASTE_INGEST_TIMEOUT:-60}" -X POST "$MEMORY_URL" \
     -H 'Content-Type: application/json' -d "$payload" 2>/dev/null)
   if [[ "$code" == 2* ]]; then
     ledger_set "$key" "$hash"
