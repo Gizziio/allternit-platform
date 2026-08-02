@@ -18,3 +18,8 @@ learn/events.jsonl
 learn/watermark
 # M2: proposals are the audit trail (committed); verdicts are runtime state.
 proposals/verdicts.json
+# M5: metrics outputs are runtime artifacts; bin/metrics.sh + bin/metrics-test.sh
+# ARE committed.
+metrics/latest.json
+metrics/latest.md
+metrics/history.jsonl

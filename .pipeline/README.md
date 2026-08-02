@@ -185,6 +185,35 @@ mirroring how humans learn (program: `.pipeline/PROGRAM-meta-learning.md`):
   for a real executor instead. Every adoption links slug → commit in
   `outcomes.jsonl`; REJECT feeds the taste memory.
 
+## Learning metrics (M5)
+
+"Better" is measured, not felt. `bin/metrics.sh` computes the learning
+system's quality signals from the EXISTING logs — read-only, no behavior
+changes to any script:
+
+- **Sources**: `.steering/state/consults.log` (gate + checkpoint consult
+  lines), `.pipeline/learn/events.jsonl`, `.pipeline/outcomes.jsonl`, and
+  git history (commits per ISO week).
+- **Metrics** (per ISO week where applicable): (a) first-pass rate — % of
+  gated commits approved on first attempt; (b) gate block rate (STEER
+  share); (c) reviewer verdict distribution
+  (APPROVE/STEER/REJECT/CONSULT_FAILED); (d) executor stall signals — nudge
+  events (none emitted yet; wired for when they appear) + gate STEER →
+  same-cmd APPROVE gaps > 10 min; (e) outcome linkage coverage — % of
+  adopted proposals with a recorded outcome.
+- **Honesty**: a metric with < 3 relevant events reports
+  `insufficient_data` — never a fake number. No smoothing.
+- **Outputs**: `.pipeline/metrics/latest.json` (machine) + `latest.md`
+  (human, one paragraph per metric with a trend arrow), both gitignored;
+  the summary is ingested to memory as an insight (advisory — memory down =
+  log + continue). `.pipeline/metrics/history.jsonl` is appended ONLY when
+  the values change, so re-runs are idempotent.
+
+```bash
+bash .pipeline/bin/metrics.sh        # compute + write latest.* + ingest
+bash .pipeline/bin/metrics-test.sh   # fixture tests, hand-computed assertions
+```
+
 ## The full cycle
 
 ```
@@ -284,6 +313,7 @@ bash .pipeline/bin/wiki-test.sh
 bash .pipeline/bin/contract-test.sh
 bash .pipeline/bin/learn-test.sh
 bash .pipeline/bin/proposals-test.sh
+bash .pipeline/bin/metrics-test.sh
 ```
 
 Offline: stubs the source fetch and the rails announce; verifies the three
@@ -319,7 +349,11 @@ proposal audit test fixtures a temp git repo and stubs the auditor consult
 and curl; it verifies ADOPT application + slug-referencing commit + outcome
 linkage (data and code targets), REVISE recording without application,
 REJECT no-op + memory ingest, consult-failure skip, verdict merge semantics,
-and re-run idempotency.
+and re-run idempotency. The metrics test runs hand-computed fixture logs
+(consults/events/outcomes/git timestamps) through `metrics.sh` and verifies
+the R1 rates, per-week `insufficient_data` honesty on thin data (R3),
+history append-on-change idempotency (R4), and the memory-down advisory
+path (R2).
 
 ## Layout
 
@@ -330,6 +364,7 @@ and re-run idempotency.
 - `briefs/`, `specs/`, `queue/`, `seen.json`, `errors.log`, `verdicts.json`,
   `builds/`, `builds.json`, `taste/ingested.json`, `outcomes.jsonl`,
   `candidates/`, `dismissals.json`, `learn/events.jsonl`, `learn/watermark`,
-  `proposals/verdicts.json` —
+  `proposals/verdicts.json`, `metrics/latest.json`, `metrics/latest.md`,
+  `metrics/history.jsonl` —
   gitignored runtime artifacts (multi-machine sync is via rails asset refs,
   not git)
