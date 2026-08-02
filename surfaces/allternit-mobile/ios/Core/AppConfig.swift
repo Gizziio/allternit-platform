@@ -12,6 +12,15 @@ import Foundation
 enum AppConfig {
     /// Default: the local dev gateway.
     static let apiBaseURL: URL = {
+        #if DEBUG
+        // `-api-url <url>` (DEBUG only, mirrors `-cloud-url`): point every
+        // API call at a locally running allternit-api — used by the D3 live
+        // verification harness against a throwaway data dir + port.
+        if let override = UserDefaults.standard.string(forKey: "api-url"),
+           let url = URL(string: override) {
+            return url
+        }
+        #endif
         if let value = infoPlistValue("ALLTERNIT_API_BASE_URL"),
            let url = URL(string: value) {
             return url

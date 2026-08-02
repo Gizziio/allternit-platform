@@ -727,10 +727,19 @@ fn find_subslice(haystack: &[u8], needle: &[u8]) -> Option<usize> {
 }
 
 fn git_auth_failure() -> Response {
+    // libgit2 ≤1.3 interop (D3 iOS client, docs/BRAIN_D3_SPIKE.md): its
+    // bundled http-parser does not drain a 401 body before retrying with
+    // credentials on the same keep-alive connection — the leftover body
+    // bytes get parsed as the next response's status line ("http parser
+    // error: invalid constant string") and the push fails. Empty body +
+    // `Connection: close` forces a fresh connection for the authenticated
+    // retry, which libgit2 handles correctly (spike's stand-in server did
+    // exactly this). Harmless for git-C and other clients.
     Response::builder()
         .status(StatusCode::UNAUTHORIZED)
         .header("WWW-Authenticate", r#"Basic realm="allternit-git""#)
-        .body(Body::from("authentication required"))
+        .header("Connection", "close")
+        .body(Body::from(""))
         .unwrap()
 }
 

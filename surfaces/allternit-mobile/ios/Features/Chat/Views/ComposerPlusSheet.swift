@@ -15,6 +15,7 @@ struct ComposerPlusSheet: View {
 
     @StateObject private var toolOptions = ToolOptionsStore.shared
     @StateObject private var projectStore = ProjectStore.shared
+    @StateObject private var brainStore = BrainStore.shared
     @EnvironmentObject private var agentModeStore: AgentModeStore
     @Environment(\.dismiss) private var dismiss
 
@@ -25,6 +26,7 @@ struct ComposerPlusSheet: View {
     @State private var isCameraPresented = false
     @State private var isFilePickerPresented = false
     @State private var isConnectorsPresented = false
+    @State private var isBrainCapturePresented = false
     /// Set to present the app-owned priming sheet before a system prompt.
     @State private var primingPermission: AppPermission? = nil
     /// Whether granting photo access from the priming sheet should also open
@@ -81,6 +83,7 @@ struct ComposerPlusSheet: View {
                     toolAccessSection
                     permissionsRow
                     connectorsRow
+                    brainCaptureRow
                 }
                 .padding(.horizontal, 20)
                 .padding(.vertical, 20)
@@ -103,6 +106,9 @@ struct ComposerPlusSheet: View {
         }
         .sheet(isPresented: $isConnectorsPresented) {
             ConnectorsListView()
+        }
+        .sheet(isPresented: $isBrainCapturePresented) {
+            BrainCaptureSheet()
         }
         .sheet(item: $primingPermission) { permission in
             PermissionPrimingSheet(permission: permission) {
@@ -409,6 +415,52 @@ struct ComposerPlusSheet: View {
             )
         }
         .buttonStyle(.plain)
+    }
+
+    // MARK: - Brain capture (D3-R2)
+
+    /// "Capture to brain" row — only when a brain exists (BrainStore.hasBrain);
+    /// users who skipped onboarding creation never see it. Subtitle flips to a
+    /// subtle pending-sync indicator while a push is queued.
+    @ViewBuilder
+    private var brainCaptureRow: some View {
+        if brainStore.hasBrain {
+            Button(action: {
+                let generator = UIImpactFeedbackGenerator(style: .light)
+                generator.impactOccurred()
+                isBrainCapturePresented = true
+            }) {
+                HStack(spacing: 10) {
+                    Image(systemName: "brain.head.profile")
+                        .font(.system(size: 15, weight: .medium))
+                        .foregroundColor(Color("AccentPrimary"))
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text("Capture to brain")
+                            .font(.system(size: 14, weight: .medium))
+                            .foregroundColor(Color("TextPrimary"))
+                        Text(brainStore.pendingPush
+                             ? "Waiting to sync — will retry automatically"
+                             : "Save an idea or pain to your second brain")
+                            .font(.caption)
+                            .foregroundColor(Color("TextSecondary"))
+                    }
+                    Spacer()
+                    Image(systemName: brainStore.pendingPush
+                          ? "arrow.triangle.2.circlepath" : "chevron.right")
+                        .font(.system(size: 11, weight: .bold))
+                        .foregroundColor(Color("TextSecondary"))
+                }
+                .padding(.horizontal, 14)
+                .frame(height: 56)
+                .background(Color("BgPanel"))
+                .clipShape(RoundedRectangle(cornerRadius: Theme.radiusMD))
+                .overlay(
+                    RoundedRectangle(cornerRadius: Theme.radiusMD)
+                        .stroke(Theme.borderWarmDefault, lineWidth: 1)
+                )
+            }
+            .buttonStyle(.plain)
+        }
     }
 
     // MARK: - Permission flows

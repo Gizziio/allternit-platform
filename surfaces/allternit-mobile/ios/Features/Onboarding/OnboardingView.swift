@@ -1,9 +1,9 @@
 import SwiftUI
 
-/// First-launch onboarding (Phase 10, ChatGPT macOS onboarding parity):
-/// a four-page flow shown once after first sign-in, gated by
-/// `OnboardingStore.isComplete` in AllternitApp (root swap — never over
-/// LoginGateView).
+/// First-launch onboarding (Phase 10, ChatGPT macOS onboarding parity +
+/// Track D phase D3 brain step): a five-page flow shown once after first
+/// sign-in, gated by `OnboardingStore.isComplete` in AllternitApp (root
+/// swap — never over LoginGateView).
 ///
 ///   1. Welcome — aurora background, A:// monogram with the
 ///      EmptyChatStateView glow, "Hey, <first name>!" (Clerk first name;
@@ -14,26 +14,38 @@ import SwiftUI
 ///   3. Starter tasks — 2x2 card grid whose ORDER follows the persona
 ///      answer; a card tap finishes the flow AND stashes the prompt in
 ///      `OnboardingStore.pendingPrompt` (the composer fills it once).
-///   4. "You're all set" — Get Started finishes the flow.
+///   4. Second brain (D3-R1) — one-tap "Create my brain" provisions the
+///      hosted remote and clones the canonical structure on-device
+///      (BrainStore.createBrain). Offered, never forced: "Skip for now"
+///      advances without creating anything (no repo left behind).
+///   5. "You're all set" — Get Started finishes the flow.
 ///
-/// Pages 2-3 carry a "Skip" text button → "Skip setup?" confirmation
+/// Pages 2-4 carry a "Skip" text button → "Skip setup?" confirmation
 /// (Keep setting up / Go to app), ChatGPT's exact pattern.
 ///
 /// DEBUG args (simctl has no tap injection):
 /// - `-open-onboarding` — force-show the flow regardless of the complete
 ///   flag (handled in AllternitApp).
-/// - `-onboarding-page 2|3|4` — jump to a page for screenshots.
+/// - `-onboarding-page 2|3|4|5` — jump to a page for screenshots.
 /// - `-onboarding-persona Engineering` — pre-select a persona (raw value
 ///   or label) so page 2 renders its selection state.
 /// - `-onboarding-skip-dialog` — open the skip confirmation on appear.
 struct OnboardingView: View {
     @StateObject private var store = OnboardingStore.shared
+    @StateObject private var brainStore = BrainStore.shared
 
     @State private var page = 1
     @State private var showSkipDialog = false
     @State private var logoGlowing = false
+    /// Inline error on the brain page after a failed creation attempt.
+    @State private var brainError: String? = nil
+    #if DEBUG
+    /// `-brain-create-auto` fires createBrain once (simctl has no tap
+    /// injection — same harness pattern as the spike's `-brain-spike-auto`).
+    @State private var brainAutoRan = false
+    #endif
 
-    private static let pageCount = 4
+    private static let pageCount = 5
 
     /// The four starter-task prompts. The ORDER rendered on page 3 is
     /// persona-tailored (see `starterTaskOrder`); the set itself is fixed.
@@ -93,10 +105,10 @@ struct OnboardingView: View {
             auroraBackground
 
             VStack(spacing: 0) {
-                // Skip affordance (pages 2-3 only, ChatGPT's placement).
+                // Skip affordance (pages 2-4 only, ChatGPT's placement).
                 HStack {
                     Spacer()
-                    if page == 2 || page == 3 {
+                    if page >= 2 && page <= 4 {
                         Button("Skip") { showSkipDialog = true }
                             .font(.subheadline)
                             .foregroundColor(Color("TextSecondary"))
@@ -111,6 +123,7 @@ struct OnboardingView: View {
                         case 1: welcomePage
                         case 2: workProfilePage
                         case 3: starterTasksPage
+                        case 4: brainPage
                         default: allSetPage
                         }
                     }
@@ -146,9 +159,38 @@ struct OnboardingView: View {
             if CommandLine.arguments.contains("-onboarding-skip-dialog") {
                 showSkipDialog = true
             }
+            // `-brain-create-auto` (D3 live verification): run "Create my
+            // brain" automatically and record the outcome to
+            // <Documents>/brain-create-result.json for the simctl harness.
+            if CommandLine.arguments.contains("-brain-create-auto"), !brainAutoRan {
+                brainAutoRan = true
+                Task {
+                    do {
+                        try await brainStore.createBrain()
+                        writeBrainCreateResult(ok: true, error: nil)
+                    } catch {
+                        brainError = error.localizedDescription
+                        writeBrainCreateResult(ok: false, error: error.localizedDescription)
+                    }
+                }
+            }
             #endif
         }
     }
+
+    #if DEBUG
+    /// Result file for `-brain-create-auto` (read from the host via simctl —
+    /// no screenshot parsing), mirroring the spike's brain-spike-result.json.
+    private func writeBrainCreateResult(ok: Bool, error: String?) {
+        let payload: [String: String] = [
+            "ok": ok ? "true" : "false",
+            "error": error ?? "",
+        ]
+        guard let data = try? JSONSerialization.data(withJSONObject: payload) else { return }
+        let docs = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask)[0]
+        try? data.write(to: docs.appendingPathComponent("brain-create-result.json"))
+    }
+    #endif
 
     // MARK: - Page 1: Welcome
 
@@ -337,7 +379,69 @@ struct OnboardingView: View {
         .buttonStyle(.plain)
     }
 
-    // MARK: - Page 4: You're all set
+    // MARK: - Page 4: Second brain (D3-R1)
+
+    private var brainPage: some View {
+        VStack(spacing: 0) {
+            Text("Your second brain")
+                .font(.system(size: 24, weight: .medium, design: .serif))
+                .foregroundColor(Color("TextPrimary"))
+                .multilineTextAlignment(.center)
+                .padding(.bottom, 8)
+
+            Text("A local-first git repo of your ideas and notes — synced to your hosted remote, and read by agents that work for you.")
+                .font(.subheadline)
+                .foregroundColor(Color("TextSecondary"))
+                .multilineTextAlignment(.center)
+                .padding(.horizontal, 40)
+                .padding(.bottom, 24)
+
+            VStack(alignment: .leading, spacing: 14) {
+                brainFeatureRow(
+                    icon: "iphone",
+                    text: "Local-first — capture works offline, every device has full history")
+                brainFeatureRow(
+                    icon: "arrow.triangle.2.circlepath",
+                    text: "Syncs to your hosted remote in the background")
+                brainFeatureRow(
+                    icon: "brain.head.profile",
+                    text: "Agents read it to work on your behalf")
+            }
+            .padding(14)
+            .background(Color("BgPanel"))
+            .clipShape(RoundedRectangle(cornerRadius: Theme.radiusMD))
+            .overlay(
+                RoundedRectangle(cornerRadius: Theme.radiusMD)
+                    .stroke(Theme.borderWarmDefault, lineWidth: 1)
+            )
+            .padding(.horizontal, 20)
+
+            if let brainError {
+                Text(brainError)
+                    .font(.caption)
+                    .foregroundColor(Theme.statusWarning)
+                    .multilineTextAlignment(.center)
+                    .padding(.horizontal, 40)
+                    .padding(.top, 16)
+            }
+        }
+    }
+
+    private func brainFeatureRow(icon: String, text: String) -> some View {
+        HStack(spacing: 12) {
+            Image(systemName: icon)
+                .font(.system(size: 15, weight: .medium))
+                .foregroundColor(Color("AccentPrimary"))
+                .frame(width: 28)
+            Text(text)
+                .font(.subheadline)
+                .foregroundColor(Color("TextPrimary"))
+                .fixedSize(horizontal: false, vertical: true)
+            Spacer(minLength: 0)
+        }
+    }
+
+    // MARK: - Page 5: You're all set
 
     private var allSetPage: some View {
         VStack(spacing: 0) {
@@ -383,6 +487,8 @@ struct OnboardingView: View {
                 primaryButton(title: "Continue", disabled: store.persona == nil) { advance(to: 3) }
             case 3:
                 primaryButton(title: "Continue") { advance(to: 4) }
+            case 4:
+                brainControls
             default:
                 primaryButton(title: "Get Started") {
                     let generator = UIImpactFeedbackGenerator(style: .medium)
@@ -393,6 +499,37 @@ struct OnboardingView: View {
         }
         .padding(.horizontal, 24)
         .padding(.bottom, 32)
+    }
+
+    /// Brain page controls: "Create my brain" (spinner while provisioning,
+    /// "Try again" after a failure) + an always-visible "Skip for now" —
+    /// the brain is offered, never forced.
+    private var brainControls: some View {
+        VStack(spacing: 12) {
+            Button(action: createBrainTapped) {
+                Group {
+                    if brainStore.isProvisioning {
+                        ProgressView()
+                            .tint(.white)
+                    } else {
+                        Text(brainError == nil ? "Create my brain" : "Try again")
+                    }
+                }
+                .font(.headline)
+                .foregroundColor(.white)
+                .frame(maxWidth: .infinity)
+                .padding(.vertical, 16)
+                .background(Color("AccentPrimary"))
+                .cornerRadius(Theme.radiusMD)
+            }
+            .disabled(brainStore.isProvisioning)
+            .opacity(brainStore.isProvisioning ? 0.7 : 1)
+
+            Button("Skip for now") { advance(to: 5) }
+                .font(.subheadline)
+                .foregroundColor(Color("TextSecondary"))
+                .disabled(brainStore.isProvisioning)
+        }
     }
 
     private func primaryButton(title: String, disabled: Bool = false, action: @escaping () -> Void) -> some View {
@@ -411,6 +548,23 @@ struct OnboardingView: View {
         }
         .disabled(disabled)
         .opacity(disabled ? 0.5 : 1)
+    }
+
+    /// One tap = provision + mint token + clone + seed + commit + push
+    /// (BrainStore.createBrain). Success advances to the all-set page;
+    /// failure keeps the user here with an inline error and Try again.
+    private func createBrainTapped() {
+        let generator = UIImpactFeedbackGenerator(style: .light)
+        generator.impactOccurred()
+        brainError = nil
+        Task {
+            do {
+                try await brainStore.createBrain()
+                advance(to: 5)
+            } catch {
+                brainError = error.localizedDescription
+            }
+        }
     }
 
     private func advance(to target: Int) {
