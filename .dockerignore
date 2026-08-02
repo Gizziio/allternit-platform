@@ -53,3 +53,44 @@ archive
 
 # Documentation
 *.md
+
+# Non-Rust-workspace top-level dirs (verified 2026-08-01: none of these appear
+# in root Cargo.toml's [workspace] members — which live only under api/, cmd/,
+# domains/, drivers/, infrastructure/, mcp/, platform/, rails/, services/,
+# worktree-manager/ — and no Cargo.toml anywhere in the repo has a `path =`
+# dependency reaching into any of them either. Excluding them cut the build
+# context from >1.5GB to a fraction of that; surfaces/ alone is ~3GB of
+# frontend/mobile source no Rust build needs. Re-verify before trusting this
+# if the workspace member list changes.
+alabs-generated-courses
+alabs-module-template
+bin
+config
+dev
+docs
+infra
+packages
+patches
+remix-content
+research
+resources
+scripts
+sdk
+spec
+surfaces
+tests
+tools
+ui
+
+# Dev-tool / IDE state dirs, never needed for a compile
+.agents
+.beads
+.claude
+.codex-logs
+.gizzi
+.logs
+.pids
+.pipeline
+.steering
+.tmp-*
+.vercel
