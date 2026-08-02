@@ -22,7 +22,10 @@ describe('LocalModelManager provider switch', () => {
   let server: http.Server;
   let baseUrl: string;
   let requests: RecordedRequest[];
+  let requestTimestamps: number[];
+  let arrivalOffsets: number[];
   let failWithStatus: number | null;
+  let responseDelay: number;
 
   const savedEnv = { ...process.env };
 
@@ -30,14 +33,22 @@ describe('LocalModelManager provider switch', () => {
     server = http.createServer((req, res) => {
       let raw = '';
       req.on('data', (chunk) => (raw += chunk));
-      req.on('end', () => {
+      req.on('end', async () => {
         let body: any = null;
         try {
           body = raw ? JSON.parse(raw) : null;
         } catch {
           body = raw;
         }
+        const startedAt = Date.now();
         requests.push({ url: req.url || '', method: req.method || '', body });
+        arrivalOffsets.push(startedAt);
+
+        if (responseDelay > 0) {
+          await new Promise((resolve) => setTimeout(resolve, responseDelay));
+        }
+
+        requestTimestamps.push(Date.now() - startedAt);
 
         if (failWithStatus !== null) {
           res.writeHead(failWithStatus, { 'Content-Type': 'application/json' });
@@ -79,7 +90,10 @@ describe('LocalModelManager provider switch', () => {
 
   beforeEach(() => {
     requests = [];
+    requestTimestamps = [];
+    arrivalOffsets = [];
     failWithStatus = null;
+    responseDelay = 0;
     delete process.env.MEMORY_LLM_BASE_URL;
     delete process.env.MEMORY_LLM_MODEL;
   });
@@ -179,5 +193,37 @@ describe('LocalModelManager provider switch', () => {
 
     expect(embedding).toEqual([]);
     expect(requests).toHaveLength(0);
+  });
+
+  it('serializes MLX generation calls so only one request is in flight at a time', async () => {
+    process.env.MEMORY_LLM_BASE_URL = `${baseUrl}/v1`;
+    responseDelay = 60;
+
+    const testStart = Date.now();
+    const manager = new LocalModelManager();
+    const [a, b] = await Promise.all([
+      manager.generate('first'),
+      manager.generate('second'),
+    ]);
+
+    expect(a).toBe('mlx-response');
+    expect(b).toBe('mlx-response');
+    expect(requests.filter((r) => r.url === '/v1/chat/completions')).toHaveLength(2);
+
+    // If the calls had been parallel, both requests would have arrived near
+    // time 0. Serialization means the second request arrives only after the
+    // first response finishes (~60ms delay).
+    expect(arrivalOffsets[1] - testStart).toBeGreaterThanOrEqual(responseDelay - 10);
+  });
+
+  it('does not let a failed MLX call wedge the serialized queue', async () => {
+    process.env.MEMORY_LLM_BASE_URL = `${baseUrl}/v1`;
+    failWithStatus = 500;
+
+    const manager = new LocalModelManager();
+    await expect(manager.generate('first')).rejects.toThrow('HTTP 500');
+    await expect(manager.generate('second')).rejects.toThrow('HTTP 500');
+
+    expect(requests.filter((r) => r.url === '/v1/chat/completions')).toHaveLength(2);
   });
 });
