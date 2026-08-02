@@ -1,45 +1,37 @@
-# Steering spec — M4: second brain as a first-class web surface section
+# Steering spec — M5: learning metrics harness
 
-<!-- From .pipeline/PROGRAM-meta-learning.md. M1+M2+M3 merged. D2 brain
-     remotes + pages API in main (f1297f804). -->
+<!-- "Better" must be measured, not felt. Computes the learning system's
+     quality signals from existing logs; ingested to memory as insights. -->
 
 ## Requirements
 
-- [ ] R1: WHEN a user opens ai.allternit.com, THE SYSTEM SHALL have a
-  first-class "Brain" section (top-level nav item, not buried in a miniapp):
-  a brains list from the platform (add `GET /api/v1/brains` list endpoint
-  scoped to the authenticated user if D2 didn't ship one — check
-  cmd/allternit-api brains routes first).
-- [ ] R2: WHEN a brain is opened, THE SYSTEM SHALL render its pages via
-  `GET /api/v1/brains/:id/pages`: markdown rendered, frontmatter shown as
-  badges (type / status / domain / confidence), grouped by directory
-  (decisions, runbooks, ideas, learnings).
-- [ ] R3: WHEN the learnings directory is viewed, THE SYSTEM SHALL present it
-  as the Learning Feed: lesson pages newest-first, stale lessons visually
-  dimmed, provenance refs shown — the visible record of what the system has
-  learned (M1/M3 output).
-- [ ] R4: WHEN a user wants to fork a brain, THE SYSTEM SHALL show the
-  brain's clone URL with a copy action (fork = git clone; D2 clone_url).
+- [ ] R1: WHEN `.pipeline/bin/metrics.sh` runs, THE SYSTEM SHALL compute from
+  `.steering/state/consults.log`, `.pipeline/learn/events.jsonl`,
+  `.pipeline/outcomes.jsonl`, and git history: (a) first-pass rate — % of
+  gated commits approved on first attempt per week; (b) gate block rate
+  trend; (c) reviewer verdict distribution (APPROVE/STEER/REJECT/
+  CONSULT_FAILED); (d) executor stall signals (nudge events in events.jsonl
+  or long gaps between checkpoint and commit); (e) outcome linkage coverage
+  (% of adopted proposals with recorded outcomes).
+- [ ] R2: WHEN metrics are computed, THE SYSTEM SHALL write
+  `.pipeline/metrics/latest.json` (machine) + `latest.md` (human summary,
+  one paragraph per metric with the trend arrow), and ingest the summary to
+  memory as an insight (advisory — memory down = log + continue).
+- [ ] R3: WHEN data is missing or thin (< 3 events), THE SYSTEM SHALL report
+  `insufficient_data` for that metric rather than a fake number — a metric
+  cannot pass by doing nothing.
+- [ ] R4: WHEN run repeatedly, THE SYSTEM SHALL be idempotent (latest.*
+  overwritten, history appended to `.pipeline/metrics/history.jsonl` only
+  when values changed).
 
 ## Acceptance (Gherkin)
 
-- Scenario: brain section with real data
-  Given the dev API serving a brain with pages
-  When the Brain section loads
-  Then pages render grouped by directory with frontmatter badges, and the
-  clone URL is copyable.
-- Scenario: learning feed
-  Given learnings/ pages with one stale lesson
-  When the Learning Feed loads
-  Then the stale lesson is dimmed and provenance refs are visible.
-- Scenario: empty state
-  Given no brains
-  When the section loads
-  Then it shows how to create one (gizzi brain init / POST /api/v1/brains).
-
-## Constraints
-
-- Read-only surface (no page editing in this phase).
-- Follow the surface's existing conventions (routes/views, its markdown
-  renderer if one exists, design system).
-- Auth follows the existing Clerk/APIClient path.
+- Scenario: real numbers from real logs
+  Given fixture consults.log + events.jsonl with known verdicts
+  When metrics.sh runs
+  Then latest.json matches the hand-computed rates, and latest.md renders
+  each metric with its trend.
+- Scenario: thin data is honest
+  Given < 3 events
+  When metrics.sh runs
+  Then affected metrics report insufficient_data.
