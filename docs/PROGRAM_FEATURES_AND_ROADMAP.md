@@ -149,6 +149,29 @@ beads+agent-mail parity, rails-named.
 
 ---
 
+## 6 · The meta-learning loop (M1–M5) — shipped 2026-08-02
+
+**What it is.** The system learns skills, not just facts — at the moment
+learning happens, audited before adoption, stored in the second brain,
+visible in the web surface, and measured.
+
+| Phase | What it does | How to use |
+|---|---|---|
+| M1 · Event capture + reflection | Learnable moments (verdicts, blocks, outcomes, dismissals) append to `events.jsonl` instantly; reflection distills them into confidence-scored playbook rules at run boundaries; playbook feeds every consult | Automatic; `bash .pipeline/bin/learn-reflect.sh` for manual reflection |
+| M2 · Audited self-upgrade | Rules with 3+ same-kind events become upgrade proposals; the spec-checker verdicts ADOPT/REVISE/REJECT; data-file changes apply with proposal-slug commits, code changes become executor tasks | `bash .pipeline/bin/audit-proposal.sh` |
+| M3 · Brain persistence | Rules persist as frontmatter `type: lesson` pages in the brain, one `learn:` commit per run, stale after 90 days | Automatic via reflection; visible in `brain/learnings/` |
+| M4 · Brain web section | First-class Brain section in ai.allternit.com: pages with badges, Learning Feed (stale dimming, provenance), fork-by-clone-URL | Web surface → Brain nav |
+| M5 · Metrics harness | First-pass rate, gate block trends, verdict distribution, stall signals, outcome coverage; honest `insufficient_data` on thin data | `bash .pipeline/bin/metrics.sh` → `.pipeline/metrics/latest.md` |
+
+**Future enhancements**
+
+- **Playbook → charter promotion** — recurring dismissals auto-propose
+  charter clauses (human-approved).
+- **Cross-repo learning** — adopt `.steering/` in other repos; the learning
+  loop works there identically.
+
+---
+
 ## Cross-cutting knowns
 
 - **Memory agent (port 3201) is down** — taste ingestion is advisory and
