@@ -27,6 +27,7 @@ struct ComposerPlusSheet: View {
     @State private var isFilePickerPresented = false
     @State private var isConnectorsPresented = false
     @State private var isBrainCapturePresented = false
+    @State private var isCoworkTasksPresented = false
     /// Set to present the app-owned priming sheet before a system prompt.
     @State private var primingPermission: AppPermission? = nil
     /// Whether granting photo access from the priming sheet should also open
@@ -82,6 +83,7 @@ struct ComposerPlusSheet: View {
                     togglesSection
                     toolAccessSection
                     permissionsRow
+                    coworkTasksRow
                     connectorsRow
                     brainCaptureRow
                 }
@@ -106,6 +108,9 @@ struct ComposerPlusSheet: View {
         }
         .sheet(isPresented: $isConnectorsPresented) {
             ConnectorsListView()
+        }
+        .sheet(isPresented: $isCoworkTasksPresented) {
+            CoworkTasksListView()
         }
         .sheet(isPresented: $isBrainCapturePresented) {
             BrainCaptureSheet()
@@ -349,6 +354,29 @@ struct ComposerPlusSheet: View {
                 value: agentModeStore.coworkPermission.label
             )
         }
+    }
+
+    /// Cowork Tasks entry — same `menuRow` chrome as `permissionsRow`, but a
+    /// plain Button (not a Menu) that presents `CoworkTasksListView` as its
+    /// own sheet: this app has no dedicated Cowork screen to push onto, so
+    /// the task list gets a sheet of its own rather than a Menu's inline
+    /// options. `permissionsRow` has no visibility gating (always shown
+    /// regardless of cowork/agent mode), so this row mirrors that — always
+    /// visible — rather than inventing a new gating rule.
+    private var coworkTasksRow: some View {
+        Button(action: {
+            let generator = UIImpactFeedbackGenerator(style: .light)
+            generator.impactOccurred()
+            isCoworkTasksPresented = true
+        }) {
+            menuRow(
+                icon: "checklist",
+                iconColor: Theme.accentCowork,
+                title: "Cowork Tasks",
+                value: ""
+            )
+        }
+        .buttonStyle(.plain)
     }
 
     /// Shared row chrome for Menu-backed rows: icon + title, trailing value
