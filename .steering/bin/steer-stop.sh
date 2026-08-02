@@ -45,6 +45,7 @@ fi
 verdict=$(steer_verdict "$answer")
 printf '%s\n' "$cur_hash" > "$state"
 steer_log "$cwd" "$session_id" "hash=$cur_hash verdict=$verdict"
+steer_learn "$cwd" "steering" "$cur_hash" "checkpoint verdict=$verdict session=$session_id"
 
 [ "$verdict" = "APPROVE" ] && exit 0
 

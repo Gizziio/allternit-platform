@@ -523,4 +523,10 @@ for slug in "${slugs[@]}"; do
   [ "$rc" -eq 0 ] || failures=$((failures + 1))
 done
 
+# M1-R2: reflection point — a build-queue run completed (advisory, never fatal).
+LEARN_REFLECT="${LEARN_REFLECT:-$PIPELINE_DIR/bin/learn-reflect.sh}"
+if [ -x "$LEARN_REFLECT" ]; then
+  LEARN_PIPELINE_DIR="$PIPELINE_DIR" "$LEARN_REFLECT" || true
+fi
+
 [ "$failures" -eq 0 ]

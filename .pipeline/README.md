@@ -133,6 +133,32 @@ It is plain data you edit; the pipeline applies it at machine speed:
 - Rejections become taste precedents: future consults see past rejection
   decisions, so pipeline taste converges on yours.
 
+## The learning loop (M1)
+
+The pipeline learns **skills**, not just facts. Two deterministic triggers,
+mirroring how humans learn (program: `.pipeline/PROGRAM-meta-learning.md`):
+
+- **Learnable moments** are captured at the moment they happen: every
+  steering/gate/check-spec verdict, every `record-outcome.sh` call, every
+  dismissal appends `{ts, kind, refs, summary}` to
+  `.pipeline/learn/events.jsonl` (gitignored) via the shared helper
+  `bin/learn-event.sh <kind> <refs> <summary>`. Capture is additive and
+  advisory — it never alters a verdict or gate decision.
+- **Reflection points** fire when a run completes (end of `check-spec.sh`
+  and `build-queue.sh`): `bin/learn-reflect.sh` reads the events since the
+  last reflection (watermark in `.pipeline/learn/watermark`), consults
+  ao-consult with the distillation prompt
+  (`.pipeline/learn/reflect-prompt.md`; `LEARN_CONSULT_CMD` overrides the
+  consult for tests), and appends the returned rules to
+  `.pipeline/playbook.md` — each rule imperative, with `confidence`,
+  `provenance` (event refs), `added`, and `last_confirmed`. Reflection is
+  advisory: a consult failure is logged and the watermark stays put, so no
+  events are lost.
+- **Consumption**: every steering consult (`steer_build_context`) and every
+  check-spec request includes the playbook via `bin/learn-playbook.sh`,
+  capped at 4KB; rules unconfirmed for 90+ days are marked `[stale]` at
+  inclusion time (the playbook file itself is never mutated by inclusion).
+
 ## The full cycle
 
 ```
@@ -230,6 +256,7 @@ bash .pipeline/bin/build-queue-test.sh
 bash .pipeline/bin/taste-test.sh
 bash .pipeline/bin/wiki-test.sh
 bash .pipeline/bin/contract-test.sh
+bash .pipeline/bin/learn-test.sh
 ```
 
 Offline: stubs the source fetch and the rails announce; verifies the three
@@ -255,14 +282,20 @@ suppression inside/outside the 14-day window; it runs the contract test as
 its final block. The contract test validates the golden fixtures in
 `taste/golden/`, regenerates the fixture spec (byte-identical modulo
 `produced_at`), and validates the live scout/check-spec producers against the
-same frontmatter contract.
+same frontmatter contract. The learning-loop test stubs the consults
+(`STEER_CONSULT_CMD`/`SPEC_CHECK_CMD`/`LEARN_CONSULT_CMD`) and curl and
+verifies capture-on-verdict (gate, check-spec, record-outcome, dismiss),
+reflection distillation + watermark idempotency + advisory failure, playbook
+inclusion in both consult assemblies, and `[stale]` marking / the 4KB cap.
 
 ## Layout
 
-- `bin/`, `spec-rubric.md`, `taste/trust-rules.json`, `taste/golden/` —
-  committed code, prompts, trust config, and contract fixtures
+- `bin/`, `spec-rubric.md`, `taste/trust-rules.json`, `taste/golden/`,
+  `learn/reflect-prompt.md`, `playbook.md` —
+  committed code, prompts, trust config, contract fixtures, and the learned
+  playbook
 - `briefs/`, `specs/`, `queue/`, `seen.json`, `errors.log`, `verdicts.json`,
   `builds/`, `builds.json`, `taste/ingested.json`, `outcomes.jsonl`,
-  `candidates/`, `dismissals.json` —
+  `candidates/`, `dismissals.json`, `learn/events.jsonl`, `learn/watermark` —
   gitignored runtime artifacts (multi-machine sync is via rails asset refs,
   not git)

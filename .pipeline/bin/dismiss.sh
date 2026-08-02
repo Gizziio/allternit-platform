@@ -86,4 +86,9 @@ if [[ "$code" != 2* ]]; then
   echo "dismiss: memory unreachable for $slug — logged, continuing (advisory)"
 fi
 
+# M1-R1: capture the dismissal as a learning event (advisory — never fatal).
+LEARN_EVENT="${LEARN_EVENT:-$PIPELINE_DIR/bin/learn-event.sh}"
+[ -x "$LEARN_EVENT" ] && LEARN_PIPELINE_DIR="$PIPELINE_DIR" \
+  "$LEARN_EVENT" "dismissal" "$slug" "dismissed: $title" >/dev/null 2>&1 || true
+
 echo "dismiss: '$title' recorded in $DISMISSALS (slug: $slug)"

@@ -12,3 +12,7 @@ builds.json
 taste/ingested.json
 outcomes.jsonl
 dismissals.json
+# M1 learning loop: events + watermark are runtime data; playbook.md and
+# learn/reflect-prompt.md ARE committed.
+learn/events.jsonl
+learn/watermark

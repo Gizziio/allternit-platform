@@ -70,4 +70,9 @@ if [[ "$code" != 2* ]]; then
   echo "record-outcome: memory unreachable for $slug — logged, continuing (advisory)"
 fi
 
+# M1-R1: capture the outcome as a learning event (advisory — never fatal).
+LEARN_EVENT="${LEARN_EVENT:-$PIPELINE_DIR/bin/learn-event.sh}"
+[ -x "$LEARN_EVENT" ] && LEARN_PIPELINE_DIR="$PIPELINE_DIR" \
+  "$LEARN_EVENT" "outcome" "$slug" "$outcome${note:+ — $note}" >/dev/null 2>&1 || true
+
 echo "record-outcome: $slug $outcome recorded in $OUTCOMES"

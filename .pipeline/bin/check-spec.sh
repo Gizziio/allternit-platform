@@ -54,6 +54,17 @@ log_error() {
   printf '[%s] %s\n' "$(date -u +%FT%TZ)" "$1" >> "$ERRORS_LOG"
 }
 
+# ─── learning loop (M1, advisory) ───────────────────────────────────────────
+
+LEARN_EVENT="${LEARN_EVENT:-$PIPELINE_DIR/bin/learn-event.sh}"
+LEARN_PLAYBOOK="${LEARN_PLAYBOOK:-$PIPELINE_DIR/bin/learn-playbook.sh}"
+LEARN_REFLECT="${LEARN_REFLECT:-$PIPELINE_DIR/bin/learn-reflect.sh}"
+
+learn_event() { # learn_event <kind> <refs> <summary> — capture, never fatal
+  [ -x "$LEARN_EVENT" ] || return 0
+  LEARN_PIPELINE_DIR="$PIPELINE_DIR" "$LEARN_EVENT" "$1" "$2" "$3" >/dev/null 2>&1 || true
+}
+
 # ─── verdicts.json helpers (python3, like .steering/bin/) ───────────────────
 
 verdict_get() { # verdict_get <slug> -> "verdict rounds" (empty if none)
@@ -391,6 +402,11 @@ for spec in "$SPECS_DIR"/*.md; do
     if [ -n "${precedents// /}" ]; then
       printf '\n\n=== TASTE PRECEDENTS (from memory — past rejections/lessons) ===\n%s\n' "$precedents"
     fi
+    # M1-R3: learned playbook rules (advisory, 4KB-capped, [stale] at 90+ days).
+    playbook="$([ -x "$LEARN_PLAYBOOK" ] && "$LEARN_PLAYBOOK" "$PIPELINE_DIR/playbook.md" 2>/dev/null)"
+    if [ -n "${playbook// /}" ]; then
+      printf '\n\n=== LEARNED PLAYBOOK (.pipeline/playbook.md — advisory rules) ===\n%s\n' "$playbook"
+    fi
     printf '\n\n=== SPEC UNDER REVIEW: .pipeline/specs/%s.md ===\n' "$slug"
     cat "$spec"
   } > "$request"
@@ -419,6 +435,7 @@ for spec in "$SPECS_DIR"/*.md; do
       # Keep the review trail with the spec it documents (if any).
       [ -f "$SPECS_DIR/$slug.review.md" ] && mv "$SPECS_DIR/$slug.review.md" "$QUEUE_DIR/$slug.review.md"
       verdict_set "$slug" "READY" "$rounds"
+      learn_event "check-spec" "$slug" "verdict=READY round=$rounds"
       # B3-R1: create the rails ticket AFTER the existing announce + mv to
       # queue/ (B3_TASK build order). Failure is a hard error (log + exit 1)
       # but gates ticket creation ONLY, never the file queue: the spec stays
@@ -477,9 +494,11 @@ for spec in "$SPECS_DIR"/*.md; do
       fi
       if [ "$rounds" -ge "$MAX_ROUNDS" ]; then
         verdict_set "$slug" "STALLED" "$rounds"
+        learn_event "check-spec" "$slug" "verdict=STALLED round=$rounds"
         echo "check-spec: $slug — NEEDS-WORK round $rounds; STALLED after $MAX_ROUNDS rounds"
       else
         verdict_set "$slug" "NEEDS-WORK" "$rounds"
+        learn_event "check-spec" "$slug" "verdict=NEEDS-WORK round=$rounds"
         echo "check-spec: $slug — NEEDS-WORK round $rounds; findings appended to specs/$slug.review.md"
       fi
       ;;
@@ -491,6 +510,7 @@ for spec in "$SPECS_DIR"/*.md; do
       mv "$spec" "$REJECTED_DIR/$slug.md"
       [ -f "$SPECS_DIR/$slug.review.md" ] && mv "$SPECS_DIR/$slug.review.md" "$REJECTED_DIR/$slug.review.md"
       verdict_set "$slug" "REJECT" "$rounds"
+      learn_event "check-spec" "$slug" "verdict=REJECT round=$rounds (charter violation)"
       ingest_lesson "$slug (REJECTED — charter violation)" "$findings"
       echo "check-spec: $slug — REJECT (charter violation), moved to rejected/ and ingested to memory"
       ;;
@@ -499,5 +519,10 @@ for spec in "$SPECS_DIR"/*.md; do
       ;;
   esac
 done
+
+# M1-R2: reflection point — a check-spec run completed (advisory, never fatal).
+if [ -x "$LEARN_REFLECT" ]; then
+  LEARN_PIPELINE_DIR="$PIPELINE_DIR" "$LEARN_REFLECT" || true
+fi
 
 echo "check-spec: done — $checked spec(s) consulted"

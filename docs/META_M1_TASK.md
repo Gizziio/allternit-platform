@@ -1,6 +1,8 @@
-# Steering spec — M1: event-driven learning loop
+# M1 TASK — event-driven learning capture + reflection playbook
 
-<!-- From .pipeline/PROGRAM-meta-learning.md. -->
+You are the executor, working under the steering system (your checkpoints and
+commit are independently reviewed). `.pipeline/PROGRAM-meta-learning.md` is
+the program context. `.steering/spec.md` below is your spec.
 
 ## Spec (M1)
 
@@ -24,7 +26,6 @@
 - R4: WHEN rules age, THE SYSTEM SHALL mark rules unconfirmed for 90+ days
   as stale at inclusion time (same pattern as precedent staleness).
 
-
 ## Acceptance (Gherkin)
 
 - Scenario: moment captured at the moment
@@ -41,4 +42,34 @@
   When a check-spec request is assembled
   Then it contains the rule text; a 90-day-old rule is marked [stale].
 
+## Build map
 
+1. `.pipeline/bin/learn-event.sh` — the shared append helper (bash+python3,
+   .pipeline conventions; sanitize inputs; create dir).
+2. Hook points: steer-common.sh (after verdict computed), steer-pre-commit-
+   gate.sh (verdict), check-spec.sh (verdict paths), record-outcome.sh,
+   dismiss.sh — one-line call each with kind/refs/summary. Do NOT change
+   their verdict semantics.
+3. `.pipeline/bin/learn-reflect.sh` + `.pipeline/learn/reflect-prompt.md` —
+   watermark at `.pipeline/learn/watermark`; consult override env
+   LEARN_CONSULT_CMD for tests (same pattern as SPEC_CHECK_CMD).
+4. Playbook inclusion: steer-common.sh steer_build_context + check-spec.sh
+   request assembly, 4KB cap, [stale] marking by rule date.
+5. `.pipeline/bin/learn-test.sh` — shim tests for R1-R4 + the two Gherkin
+   scenarios (capture-on-verdict, reflect idempotency, playbook inclusion,
+   stale marking). PASS/FAIL, non-zero on FAIL.
+6. `.pipeline/.gitignore`: learn/events.jsonl, learn/watermark (playbook.md
+   and reflect-prompt.md ARE committed).
+
+## Workflow rules
+
+1. Update `.steering/checkpoint.md` at checkpoints; [steering] authoritative.
+2. Done → `docs/META_M1_NOTES.md` with YAML frontmatter, then
+   `touch docs/META_M1_NOTES.sentinel`.
+3. Then commit: `git add .pipeline .steering docs && git commit -m "feat(pipeline): event-driven learning capture + reflection playbook (M1)"`.
+   A gate reviews; fix and retry if blocked.
+
+## Constraints
+
+- bash + python3 only; no new deps; memory stays advisory.
+- Do not alter any existing verdict/gate behavior — capture is additive.
