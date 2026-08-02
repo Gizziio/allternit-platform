@@ -1,44 +1,36 @@
-# Steering spec — M1: event-driven learning loop
+# Steering spec — M3: learnings persist in the second brain
 
-<!-- From .pipeline/PROGRAM-meta-learning.md. -->
+<!-- From .pipeline/PROGRAM-meta-learning.md. M1 merged (228a1e5d4). -->
 
-## Spec (M1)
+## Requirements
 
-- R1: WHEN a learnable moment occurs — a steering verdict (via
-  `.steering/bin/steer-common.sh` consult path), a gate verdict
-  (steer-pre-commit-gate.sh), a check-spec verdict, a record-outcome call,
-  a dismissal — THE SYSTEM SHALL append `{ts, kind, refs, summary}` to
-  `.pipeline/learn/events.jsonl` (gitignored) at the moment it happens, via
-  one shared helper (`.pipeline/bin/learn-event.sh <kind> <refs> <summary>`).
-- R2: WHEN a pipeline run or executor phase completes (end of build-queue
-  run, end of check-spec run), THE SYSTEM SHALL offer reflection:
-  `.pipeline/bin/learn-reflect.sh` reads events.jsonl since last reflection
-  (watermark file), consults ao-consult with a distillation prompt
-  (`.pipeline/learn/reflect-prompt.md`), and appends resulting rules to
-  `.pipeline/playbook.md` — each rule imperative, with `confidence`,
-  `provenance` (event refs), `added`, `last_confirmed`. Reflection is
-  advisory: consult failure logs and continues.
-- R3: WHEN any consult request is assembled (steer-common.sh build_context,
-  check-spec.sh request), THE SYSTEM SHALL include `.pipeline/playbook.md`
-  (capped 4KB) if present.
-- R4: WHEN rules age, THE SYSTEM SHALL mark rules unconfirmed for 90+ days
-  as stale at inclusion time (same pattern as precedent staleness).
-
+- [ ] R1: WHEN learn-reflect.sh distills rules into the playbook, THE SYSTEM
+  SHALL also write each rule as a frontmatter page into the resolved brain
+  (same resolution as taste-ingest: TASTE_BRAIN env → gizzi settings
+  brain.path → ~/brain → skip silently): `learnings/<slug>.md` with
+  frontmatter `type: lesson`, `status: active|stale`, `domain`,
+  `confidence`, `provenance_refs` (event ids), `added`, `last_confirmed`.
+- [ ] R2: WHEN a rule goes stale (90+ days unconfirmed), THE SYSTEM SHALL
+  flip its brain page `status` to `stale` on the next reflection run —
+  learnings age visibly in the brain, not silently.
+- [ ] R3: WHEN the brain is a git repo, THE SYSTEM SHALL commit learning
+  pages with message `learn: <rule slug>` (single commit per reflection run,
+  not per rule) and SHALL NOT push (sync is the user's `gizzi brain sync`).
+- [ ] R4: WHEN no brain is resolvable, THE SYSTEM SHALL skip brain
+  persistence and note it once in errors.log (never fail the reflection).
 
 ## Acceptance (Gherkin)
 
-- Scenario: moment captured at the moment
-  Given a gate fires a STEER verdict
-  When the verdict is logged
-  Then events.jsonl gains a gate event with the verdict + cmd ref in the same run.
-- Scenario: reflection distills at completion
-  Given 3 events since the watermark and a stubbed consult returning rules
-  When learn-reflect runs (stub via STEER_CONSULT_CMD-style override)
-  Then playbook.md gains the rules with confidence + provenance, the
-  watermark advances, and a second run reflects nothing new.
-- Scenario: playbook reaches consults
-  Given a playbook with a rule
-  When a check-spec request is assembled
-  Then it contains the rule text; a 90-day-old rule is marked [stale].
-
-
+- Scenario: rules land in the brain
+  Given a resolved brain dir and a reflection producing 2 rules
+  When the run completes
+  Then brain/learnings/ contains 2 frontmatter-valid lesson pages with
+  provenance refs, and `git -C <brain> log -1` shows one `learn:` commit.
+- Scenario: aging is visible
+  Given a rule older than 90 days unconfirmed
+  When the next reflection runs
+  Then its brain page status is stale.
+- Scenario: no brain, no problem
+  Given no resolvable brain
+  When reflection runs
+  Then playbook.md still updates and errors.log notes the skip once.

@@ -158,6 +158,17 @@ mirroring how humans learn (program: `.pipeline/PROGRAM-meta-learning.md`):
   check-spec request includes the playbook via `bin/learn-playbook.sh`,
   capped at 4KB; rules unconfirmed for 90+ days are marked `[stale]` at
   inclusion time (the playbook file itself is never mutated by inclusion).
+- **Persistence (M3)**: each distilled rule is also written to the resolved
+  brain (`bin/brain-resolve.sh`, shared with taste/wiki-ingest: TASTE_BRAIN →
+  gizzi settings `brain.path` → ~/brain → skip) as `learnings/<slug>.md`
+  with frontmatter `type: lesson`, `status: active|stale`, `domain`,
+  `confidence`, `provenance_refs`, `added`, `last_confirmed`. Rules 90+ days
+  unconfirmed flip to `status: stale` on the next run — aging is visible in
+  the brain. When the brain is a git repo, each reflection run makes ONE
+  `learn:` commit (`add -- learnings` only, never pushes — sync is the
+  user's `gizzi brain sync`). With no resolvable brain the skip is noted
+  once in errors.log and the playbook still updates. The brain is written
+  ONLY under `learnings/`.
 
 ## The full cycle
 
