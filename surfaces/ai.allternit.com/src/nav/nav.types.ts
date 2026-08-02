@@ -136,6 +136,8 @@ export type ViewType =
   // A://Labs - Course Management
   | "labs"
   | "catalog"
+  // Second Brain (meta-learning knowledge base)
+  | "brain"
   // Design Mode surface
   | "design"
   | "design-view-questions"

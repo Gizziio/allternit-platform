@@ -426,6 +426,7 @@ async fn provision_brain(
 async fn list_brains(
     State(state): State<Arc<AppState>>,
     Extension(user): Extension<AuthUser>,
+    headers: HeaderMap,
 ) -> Response {
     let db = state.db.clone();
     let user_id = user.user_id;
@@ -436,17 +437,28 @@ async fn list_brains(
         )?;
         let rows = stmt
             .query_map(params![user_id], |row| {
-                Ok(json!({
-                    "brain_id": row.get::<_, String>(0)?,
-                    "created_at": row.get::<_, String>(1)?,
-                }))
+                Ok((
+                    row.get::<_, String>(0)?,
+                    row.get::<_, String>(1)?,
+                ))
             })?
             .collect::<Result<Vec<_>, _>>()?;
         Ok::<_, rusqlite::Error>(rows)
     })
     .await;
     match result {
-        Ok(Ok(rows)) => Json(json!(rows)).into_response(),
+        // M4: the list carries the clone URL (derived from the request host,
+        // same as provision) so surfaces can offer fork = git clone without
+        // a second round-trip.
+        Ok(Ok(rows)) => Json(json!(rows
+            .iter()
+            .map(|(id, created_at)| json!({
+                "brain_id": id,
+                "created_at": created_at,
+                "clone_url": clone_url_for(&headers, id),
+            }))
+            .collect::<Vec<_>>()))
+        .into_response(),
         Ok(Err(e)) => json_error(StatusCode::INTERNAL_SERVER_ERROR, &e.to_string()),
         Err(e) => {
             warn!("brain list task failed: {}", e);
@@ -458,8 +470,10 @@ async fn list_brains(
 // ─── D2b-R1: pages API (read-only) ──────────────────────────────────────────
 
 /// Parse leading `---\nkey: value\n---` frontmatter. Simple `key: value`
-/// pairs only (the brain's frontmatter convention — type/status/domain);
-/// anything else is ignored, never fatal.
+/// pairs only (the brain's frontmatter convention — type/status/domain),
+/// plus dashed lists: a `key:` with an empty value followed by `- item`
+/// lines collects into a JSON array (e.g. M3's provenance_refs). Anything
+/// else is ignored, never fatal.
 fn parse_frontmatter(content: &str) -> (Map<String, Value>, String) {
     let mut map = Map::new();
     let Some(rest) = content.strip_prefix("---\n") else {
@@ -468,12 +482,38 @@ fn parse_frontmatter(content: &str) -> (Map<String, Value>, String) {
     let Some(end) = rest.find("\n---") else {
         return (map, content.to_string());
     };
+    // The key a dashed list attaches to: set by a `key:` line with an empty
+    // value, cleared by any valued key.
+    let mut list_key: Option<String> = None;
     for line in rest[..end].lines() {
+        let trimmed = line.trim();
+        if trimmed == "-" || trimmed.starts_with("- ") {
+            if let Some(key) = list_key.clone() {
+                let item = trimmed
+                    .trim_start_matches('-')
+                    .trim()
+                    .trim_matches('"')
+                    .trim_matches('\'')
+                    .to_string();
+                match map.get_mut(&key) {
+                    Some(Value::Array(items)) => items.push(Value::String(item)),
+                    _ => {
+                        map.insert(key, Value::Array(vec![Value::String(item)]));
+                    }
+                }
+            }
+            continue;
+        }
         if let Some((key, value)) = line.split_once(':') {
             let key = key.trim();
             let value = value.trim().trim_matches('"').trim_matches('\'');
             if !key.is_empty() {
                 map.insert(key.to_string(), Value::String(value.to_string()));
+                list_key = if value.is_empty() {
+                    Some(key.to_string())
+                } else {
+                    None
+                };
             }
         }
     }
@@ -1131,6 +1171,8 @@ mod tests {
             .oneshot(
                 Request::builder()
                     .uri("/brains")
+                    .header("host", "brains.example.test")
+                    .header("x-forwarded-proto", "https")
                     .extension(test_user("user-a"))
                     .body(Body::empty())
                     .unwrap(),
@@ -1140,8 +1182,37 @@ mod tests {
         let list = body_json(resp.into_body()).await;
         assert_eq!(list.as_array().unwrap().len(), 1);
         assert_eq!(list[0]["brain_id"], json!(brain_id));
+        // M4: the list carries the derived clone URL (fork = git clone).
+        assert_eq!(
+            list[0]["clone_url"].as_str().unwrap(),
+            format!("https://brains.example.test/api/v1/brains/{}/git", brain_id)
+        );
 
         std::env::remove_var("ALLTERNIT_BRAINS_DIR");
+    }
+
+    #[test]
+    fn frontmatter_dashed_lists_become_arrays() {
+        // M3 learning pages carry provenance_refs as a dashed YAML list;
+        // the pages API must expose them as a JSON array, not junk keys.
+        let (fm, body) = parse_frontmatter(
+            "---\ntype: lesson\nstatus: stale\nconfidence: high\nprovenance_refs:\n  - gate:a@2026-08-02T00:00:01Z\n  - gate:b@2026-08-02T00:00:02Z\nadded: 2026-08-02\nlast_confirmed: 2026-08-02\n---\n\n# Rule text\n",
+        );
+        assert_eq!(fm["type"], json!("lesson"));
+        assert_eq!(fm["status"], json!("stale"));
+        assert_eq!(
+            fm["provenance_refs"],
+            json!(["gate:a@2026-08-02T00:00:01Z", "gate:b@2026-08-02T00:00:02Z"])
+        );
+        // A valued key after the list is a plain string, not a list item.
+        assert_eq!(fm["added"], json!("2026-08-02"));
+        assert_eq!(fm["last_confirmed"], json!("2026-08-02"));
+        assert!(body.contains("# Rule text"));
+
+        // An empty-valued key with NO dashed items keeps the old behavior
+        // (empty string, not an empty array).
+        let (fm2, _) = parse_frontmatter("---\ntype: lesson\nprovenance_refs:\n---\n\nbody\n");
+        assert_eq!(fm2["provenance_refs"], json!(""));
     }
 
     // ── D2b-R1: pages API on a seeded repo ─────────────────────────────────
