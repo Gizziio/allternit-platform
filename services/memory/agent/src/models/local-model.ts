@@ -86,12 +86,28 @@ export class LocalModelManager {
   private ollama: Ollama;
   private llmBaseUrl?: string;
   private llmModel: string;
+  // MLX/local OpenAI-compatible servers (e.g. mlx_lm.server) are often
+  // single-threaded and deadlock or serialize poorly under concurrent load.
+  // Queue generation requests so only one hits the server at a time.
+  private llmQueue: Promise<unknown> = Promise.resolve();
 
   constructor(host: string = 'localhost', port: number = 11434, llm?: LLMProviderConfig) {
     this.ollama = new Ollama({ host: `http://${host}:${port}` });
     const baseUrl = llm?.baseUrl ?? process.env.MEMORY_LLM_BASE_URL;
     this.llmBaseUrl = baseUrl ? baseUrl.replace(/\/+$/, '') : undefined;
     this.llmModel = llm?.model ?? process.env.MEMORY_LLM_MODEL ?? 'qwen3-4b-instruct';
+  }
+
+  /**
+   * Serialize an async operation. Returns a promise that resolves/rejects
+   * with the operation's result, and internally chains behind any prior call.
+   */
+  private async serialized<T>(operation: () => Promise<T>): Promise<T> {
+    const result = this.llmQueue.then(operation);
+    // Track completion (success or failure) so the next queued call waits
+    // until this one finishes, but don't let a rejection break the chain.
+    this.llmQueue = result.catch(() => undefined);
+    return result;
   }
 
   /**
@@ -115,6 +131,9 @@ export class LocalModelManager {
           max_tokens: modelConfig.numPredict,
           stream: false,
         }),
+        // Generations can be slow; 2m is generous without letting a hung
+        // server wedge the serialized queue forever.
+        signal: AbortSignal.timeout(120_000),
       });
     } catch (error) {
       throw new Error(
@@ -204,7 +223,7 @@ export class LocalModelManager {
     ];
 
     if (this.llmBaseUrl) {
-      return this.openAIChat(messages, modelConfig);
+      return this.serialized(() => this.openAIChat(messages, modelConfig));
     }
 
     try {
@@ -245,7 +264,8 @@ export class LocalModelManager {
     if (this.llmBaseUrl) {
       // MLX path: the OpenAI-compatible endpoint is called non-streaming;
       // the full response is yielded as a single chunk (interface preserved).
-      yield await this.openAIChat(messages, modelConfig);
+      // Serialize to keep single-threaded MLX servers healthy.
+      yield await this.serialized(() => this.openAIChat(messages, modelConfig));
       return;
     }
 
