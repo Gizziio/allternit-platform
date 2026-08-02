@@ -199,7 +199,11 @@ export class MemoryOrchestrator {
   /**
    * Ingest content directly
    */
-  async ingest(content: string, source?: string): Promise<IngestResult> {
+  async ingest(
+    content: string,
+    source?: string,
+    metadata?: Record<string, unknown>
+  ): Promise<IngestResult> {
     if (!this.isInitialized) {
       await this.initialize();
     }
@@ -207,6 +211,7 @@ export class MemoryOrchestrator {
     return this.ingestAgent.ingestContent({
       content,
       source: source || 'direct-input',
+      metadata,
     });
   }
 

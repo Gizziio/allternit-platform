@@ -190,6 +190,7 @@ export interface QueryRequest {
 export interface IngestResult {
   success: boolean;
   memoryId?: string;
+  memory?: Memory;
   error?: string;
 }
 
