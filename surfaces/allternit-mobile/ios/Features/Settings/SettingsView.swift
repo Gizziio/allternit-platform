@@ -28,6 +28,10 @@ struct SettingsView: View {
     @State private var isMemoryPresented = false
     /// Pushed custom-instructions editor (Agent section).
     @State private var isInstructionsPresented = false
+    #if DEBUG
+    /// Pushed Brain Spike screen (DEBUG-only D3 spike section).
+    @State private var isBrainSpikePresented = false
+    #endif
     /// Export/support links open in SFSafariViewController.
     @State private var safariURL: IdentifiableURL? = nil
 
@@ -62,6 +66,9 @@ struct SettingsView: View {
                 voiceSection
                 dataControlsSection
                 meshSection
+                #if DEBUG
+                brainSpikeSection
+                #endif
                 aboutSection
                     // Anchor for the `-open-settings-data` DEBUG scroll.
                     .id("aboutSection")
@@ -82,6 +89,11 @@ struct SettingsView: View {
             .navigationDestination(isPresented: $isInstructionsPresented) {
                 CustomInstructionsView()
             }
+            #if DEBUG
+            .navigationDestination(isPresented: $isBrainSpikePresented) {
+                BrainSpikeView()
+            }
+            #endif
             .sheet(item: $safariURL) { item in
                 SafariView(url: item.url)
             }
@@ -126,6 +138,12 @@ struct SettingsView: View {
                     DispatchQueue.main.asyncAfter(deadline: .now() + 0.8) {
                         withAnimation { proxy.scrollTo("aboutSection", anchor: .bottom) }
                     }
+                }
+                // `-open-settings-brain-spike` (DEBUG only): deep-link
+                // straight into the D3 spike screen for the automated proof
+                // run (`-brain-spike-auto` takes it from there).
+                if CommandLine.arguments.contains("-open-settings-brain-spike") {
+                    isBrainSpikePresented = true
                 }
                 #endif
             }
@@ -595,6 +613,27 @@ struct SettingsView: View {
             Text("Embedded tsnet node → \(AppConfig.meshControlURL). Same directory = same node identity across launches.")
         }
     }
+
+    // MARK: - Brain Spike (DEBUG, D3 spike)
+
+    #if DEBUG
+    /// D3 spike entry point — DEBUG builds only (whole section compile-gated,
+    /// so release builds never see it; same precedent as the `-skip-auth`
+    /// shim). Embedded-git proof: clone → append frontmatter page → commit
+    /// → push.
+    @ViewBuilder
+    private var brainSpikeSection: some View {
+        Section {
+            Button(action: { isBrainSpikePresented = true }) {
+                bulkRowLabel("Brain Spike (embedded git)", systemImage: "arrow.triangle.branch")
+            }
+        } header: {
+            Text("Spike")
+        } footer: {
+            Text("D3 feasibility proof — libgit2 \(BrainGit.libgit2Version) vendored. DEBUG only; not in release builds.")
+        }
+    }
+    #endif
 
     // MARK: - About
 

@@ -183,6 +183,7 @@ struct HistorySidebarView: View {
             // in simctl.
             if CommandLine.arguments.contains("-open-settings")
                 || CommandLine.arguments.contains("-open-settings-memory")
+                || CommandLine.arguments.contains("-open-settings-brain-spike")
                 || CommandLine.arguments.contains("-open-usage") {
                 isSettingsPresented = true
             }

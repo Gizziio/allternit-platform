@@ -119,6 +119,8 @@ struct AllternitApp: App {
             || args.contains("-open-voice-settings")
             || args.contains("-open-code-thread")
             || args.contains("-open-code-thread-id")
+            || args.contains("-open-settings-brain-spike")
+            || args.contains("-brain-spike-auto")
         #else
         false
         #endif
