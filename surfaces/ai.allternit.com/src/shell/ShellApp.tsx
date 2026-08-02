@@ -47,7 +47,8 @@ import { usePermissionGuide } from '../lib/usePermissionGuide';
 import { TooltipProvider } from '../components/ui/tooltip';
 import { VoiceProvider } from '../providers/voice-provider';
 import { VoicePresence } from '../components/ai-elements/voice-presence';
-import { ConversationMonitorOverlay } from './ConversationMonitorOverlay';
+import { AgentActivityPanel } from '../views/agent-activity/AgentActivityPanel';
+import { useMonitorThreads } from '../views/mail-monitor/monitor.helpers';
 import { useAgentSurfaceModeStore } from '../stores/agent-surface-mode.store';
 import { FloatingAvatar } from '../components/agents/FloatingAvatar';
 import { SessionProvider } from '../providers/session-provider';
@@ -325,7 +326,7 @@ function ShellAppInner(): React.ReactNode {
       const isMeta = event.metaKey || event.ctrlKey;
       if (isMeta && event.shiftKey && event.key.toLowerCase() === "m") {
         event.preventDefault();
-        setMonitorOverlayOpen((prev) => !prev);
+        setAgentActivityPanelOpen((prev) => !prev);
       }
       if (isMeta && event.key.toLowerCase() === "f" && window.allternit?.findInPage) {
         event.preventDefault();
@@ -529,7 +530,8 @@ function ShellAppInner(): React.ReactNode {
   const [session, setSession] = useState(null);
   useEffect(() => { void getSession().then(setSession); }, []);
 
-  const [monitorOverlayOpen, setMonitorOverlayOpen] = useState(false);
+  const [agentActivityPanelOpen, setAgentActivityPanelOpen] = useState(false);
+  const { unreadCount: agentActivityUnreadCount } = useMonitorThreads();
   const [isControlCenterOpen, setIsControlCenterOpen] = useState(false);
   const permissions = usePermissionGuide();
 
@@ -634,6 +636,8 @@ function ShellAppInner(): React.ReactNode {
                     else setIsRailCollapsed(!isRailCollapsed);
                   }}
                   railWidth={railWidth}
+                  onAgentActivityOpen={() => setAgentActivityPanelOpen(true)}
+                  agentActivityUnreadCount={agentActivityUnreadCount}
                   onModeHover={setHoveredModeIcon}
                   onNewChat={() => {
                     useChatSessionStore.getState().setActiveSession(null);
@@ -712,9 +716,9 @@ function ShellAppInner(): React.ReactNode {
                 <SearchOverlay open={isSearchOpen} onClose={() => setIsSearchOpen(false)} />
         <FindInPageOverlay open={isFindInPageOpen} onClose={() => setIsFindInPageOpen(false)} />
         {active.viewType === 'code' && <ConsoleDrawer />}
-        <ConversationMonitorOverlay
-          open={monitorOverlayOpen}
-          onClose={() => setMonitorOverlayOpen(false)}
+        <AgentActivityPanel
+          open={agentActivityPanelOpen}
+          onClose={() => setAgentActivityPanelOpen(false)}
         />
         <ControlCenter
           isOpen={isControlCenterOpen}

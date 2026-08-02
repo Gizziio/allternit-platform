@@ -3,6 +3,7 @@ import {
   SidebarSimple,
   NotePencil,
   MagnifyingGlass,
+  Bell,
   House,
   TerminalWindow,
   Globe,
@@ -20,6 +21,8 @@ interface RailControlsProps {
   isRailCollapsed: boolean;
   railWidth?: number;
   onSearchOpen?: () => void;
+  onAgentActivityOpen?: () => void;
+  agentActivityUnreadCount?: number;
   onModeHover?: (mode: AppMode | null) => void;
   onCollapsedHover?: (hovered: boolean) => void;
 }
@@ -46,6 +49,8 @@ export function RailControls({
   isRailCollapsed,
   railWidth = 248,
   onSearchOpen,
+  onAgentActivityOpen,
+  agentActivityUnreadCount = 0,
   onModeHover,
   onCollapsedHover,
 }: RailControlsProps): React.ReactNode {
@@ -187,6 +192,20 @@ export function RailControls({
           <TitleBarButton onClick={onSearchOpen} title="Search">
             <MagnifyingGlass size={15} weight="bold" />
           </TitleBarButton>
+
+          <div className="relative">
+            <TitleBarButton onClick={onAgentActivityOpen} title="Agent Activity (⌘⇧M)">
+              <Bell size={15} weight="bold" />
+            </TitleBarButton>
+            {agentActivityUnreadCount > 0 && (
+              <span
+                className="absolute -top-0.5 -right-0.5 flex items-center justify-center min-w-[14px] h-[14px] px-[3px] rounded-full text-[9px] font-bold leading-none pointer-events-none"
+                style={{ background: 'var(--status-error)', color: '#fff' }}
+              >
+                {agentActivityUnreadCount > 9 ? '9+' : agentActivityUnreadCount}
+              </span>
+            )}
+          </div>
         </div>
 
         {/* Draggable title-bar spacer to the right of the controls */}

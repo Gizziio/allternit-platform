@@ -64,6 +64,8 @@ const MarketplacePage = lazy(() => import('./pages/MarketplacePage'))
 const WorkflowsPage = lazy(() => import('./pages/WorkflowsPage'))
 const GoalsListPage = lazy(() => import('./pages/GoalsListPage'))
 const GoalDetailPage = lazy(() => import('./pages/GoalDetailPage'))
+const AgentActivityListPage = lazy(() => import('./pages/AgentActivityListPage'))
+const AgentActivityDetailPage = lazy(() => import('./pages/AgentActivityDetailPage'))
 const RoutinesListPage = lazy(() => import('./pages/RoutinesListPage'))
 const LoopsListPage = lazy(() => import('./pages/LoopsListPage'))
 const PrivacyPage = lazy(() => import('./pages/PrivacyPage'))
@@ -100,6 +102,8 @@ export default function AppRoutes() {
         <Route path="/workflows" element={<WorkflowsPage />} />
         <Route path="/automation/goals" element={<GoalsListPage />} />
         <Route path="/automation/goals/:id" element={<GoalDetailPage />} />
+        <Route path="/agent-activity" element={<AgentActivityListPage />} />
+        <Route path="/agent-activity/:threadId" element={<AgentActivityDetailPage />} />
         <Route path="/automation/routines" element={<RoutinesListPage />} />
         <Route path="/automation/loops" element={<LoopsListPage />} />
         <Route path="/privacy" element={<PrivacyPage />} />
