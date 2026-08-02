@@ -5,13 +5,13 @@ import SwiftUI
 ///
 /// `design` is skipped on iOS — on the web it opens an external window.
 /// Cowork is NOT a switcher destination: the platform's primary surface
-/// control is the 6-row [Chats | Projects | Artifacts Library | Agents |
-/// Code | ACI] tab list in the sidebar header (HistorySidebarView — no
-/// persistent bottom bar, matching ChatGPT/Claude's iOS apps), and cowork
-/// is a composer-level toggle inside Chats (BottomDock.tsx
-/// ChatCoworkToggle). Projects, the artifacts library, and the Agent Hub
-/// are iOS-only tab surfaces layered over the same modes (they don't stamp
-/// an `origin_surface` of their own).
+/// control is the 7-row [Chats | Projects | Artifacts Library | Agents |
+/// Automation Tasks | Code | ACI] tab list in the sidebar header
+/// (HistorySidebarView — no persistent bottom bar, matching ChatGPT/Claude's
+/// iOS apps), and cowork is a composer-level toggle inside Chats
+/// (BottomDock.tsx ChatCoworkToggle). Projects, the artifacts library, the
+/// Agent Hub, and Automation Tasks are iOS-only tab surfaces layered over
+/// the same modes (they don't stamp an `origin_surface` of their own).
 enum AppMode: String, CaseIterable, Sendable {
     case chat
     case cowork
@@ -51,9 +51,9 @@ final class AppModeStore: ObservableObject {
     }
 
     /// The sidebar tab whose surface fills the content pane. Chats/Code/ACI
-    /// track `mode`; Projects, Artifacts Library, and Agents are iOS-only
-    /// surfaces layered on top (the mode — and so history filtering, theme
-    /// accent, and session stamping — stays wherever it was).
+    /// track `mode`; Projects, Artifacts Library, Agents, and Automation
+    /// Tasks are iOS-only surfaces layered on top (the mode — and so history
+    /// filtering, theme accent, and session stamping — stays wherever it was).
     @Published var activeTab: ModeBarItem
 
     init(defaults: UserDefaults = .standard) {
@@ -73,23 +73,24 @@ final class AppModeStore: ObservableObject {
     }
 
     /// Both Home surfaces (chat + cowork) live under the Chats tab; selecting
-    /// it always lands on plain chat. Projects / Artifacts Library / Agents
-    /// switch the surface without touching the mode.
+    /// it always lands on plain chat. Projects / Artifacts Library / Agents /
+    /// Automation Tasks switch the surface without touching the mode.
     func selectBarItem(_ item: ModeBarItem) {
         activeTab = item
         switch item {
         case .chats: mode = .chat
         case .code: mode = .code
         case .aci: mode = .browser
-        case .projects, .artifacts, .agents: break
+        case .projects, .artifacts, .agents, .automation: break
         }
     }
 }
 
-/// The six destinations of the sidebar's tab list:
-/// Chats / Projects / Artifacts Library / Agents / Code / ACI.
+/// The seven destinations of the sidebar's tab list:
+/// Chats / Projects / Artifacts Library / Agents / Automation Tasks / Code /
+/// ACI.
 enum ModeBarItem: CaseIterable {
-    case chats, projects, artifacts, agents, code, aci
+    case chats, projects, artifacts, agents, automation, code, aci
 
     var label: String {
         switch self {
@@ -97,6 +98,7 @@ enum ModeBarItem: CaseIterable {
         case .projects: return "Projects"
         case .artifacts: return "Artifacts Library"
         case .agents: return "Agents"
+        case .automation: return "Automation Tasks"
         case .code: return "Code"
         case .aci: return "ACI"
         }
@@ -109,6 +111,7 @@ enum ModeBarItem: CaseIterable {
         case .projects: return "folder"
         case .artifacts: return "archivebox"
         case .agents: return "cpu"
+        case .automation: return "clock.arrow.circlepath"
         case .code: return "terminal"
         case .aci: return "globe"
         }
