@@ -1,60 +1,78 @@
-# Steering spec — Track D, Phase D1: gizzi brain init
+# Steering spec — B3: tickets as the pipeline's native queue
 
-<!-- From .pipeline/TRACK-D-brain-onboarding.md (steered v1). Product decision:
-     local-first with sync; brain = git repo of frontmatter markdown. -->
+<!-- From .pipeline/TRACK-B-rails-graph.md Phase B3. DESIGN DECISION (2026-08-02):
+     rails tickets ARE the queue's native store (not a frontmatter field, not a
+     manual tag). A1 ticket HTTP endpoints and B2 triage already exist in main. -->
 
-## The brain (canonical structure)
+## Context
 
-A user's second brain: a git repo of markdown with frontmatter, created by
-onboarding, read by agents (pipeline taste engine, steering, future features).
-Canonical layout (v1):
+The pipeline queue today is `.pipeline/queue/*.md` files — flat, unordered,
+dependency-blind. Rails has tickets (A1: typed deps, ready computation, HTTP)
+and graph triage (B2: ranked ready work with unblock counts). B3 makes READY
+specs become rails tickets, so the queue gains dependency awareness and
+triage ordering. Spec files stay as artifact storage; tickets point at them.
 
-```
-brain/
-├── brain.yaml                 # schema_version, owner, created, platform remote
-├── identity.md                # who the user is, roles, goals (frontmatter: type: identity)
-├── domains/
-│   └── <domain>.md            # areas of work/life (frontmatter: type: domain, status)
-├── decisions/                 # type: decision, status: active|superseded, date
-├── runbooks/                  # type: runbook, domain
-├── ideas/                     # type: idea|pain, status: new|reviewing|rejected|built
-└── MEMORY.md                  # index/agents' entry point (like AGENTS.md)
-```
+## Requirements
 
-Frontmatter convention matches Track C2 (`type`, `status`, `domain`) so the
-taste engine's wiki connector consumes any brain with zero adapter work.
+- [ ] R1: WHEN check-spec verdicts a spec READY, THE SYSTEM SHALL create a
+  rails ticket via `POST /api/rails/tickets` with: title = spec title,
+  kind = feature, labels = ["pipeline", "spec:<slug>"], and the spec's queue
+  path + brief provenance in `description` (the ONLY free-text field the
+  endpoint accepts — TicketCreateRequest has title/description/kind/
+  priority/labels; there is no note field and no note-adding endpoint).
+  Ticket creation failure = hard error (rails has no fallback; the spec
+  stays in specs/ for retry, same precedent as the existing announce
+  hard-error — the mv to queue/ today is INDEPENDENT of ticket creation,
+  so this gates ticket creation only, never the file queue).
+- [ ] R2: WHEN build-queue runs, THE SYSTEM SHALL consume the queue from
+  `GET /api/rails/tickets/ready` (NO server-side label filter exists —
+  filter pipeline labels CLIENT-SIDE), ordered by
+  `GET /api/rails/graph/triage` score (unblocks first, deterministic
+  tiebreak), resolving each ticket's `spec:<slug>` label to its queue file.
+  KNOWN CAP: the triage response is capped at 50 items while the ready list
+  is uncapped — ready tickets absent from the triage response SHALL sort
+  after all scored items, ordered by created_at then ticket_id.
+  Filesystem queue files without tickets SHALL still build (legacy), after
+  ticketed items.
+- [ ] R3: WHEN a build completes (built or failed), THE SYSTEM SHALL set the
+  ticket's status (closed for built, plus a note; stays open + note for
+  failed) via the A1 status endpoint, and record the outcome via
+  record-outcome.sh (C4 wiring, one call).
+- [ ] R4: WHEN a queued spec declares `blocks: [<slug>, ...]` in its
+  frontmatter (generator passes it through from briefs), THE SYSTEM SHALL
+  create the dependency edges via `POST /api/rails/tickets/:id/dependencies`
+  ({to, kind:"blocks"}; the endpoint rejects cycles with 409), and the ready
+  list SHALL exclude blocked items until their blockers close.
 
+## Out of scope
 
-## Phase D1 — gizzi-code: `gizzi brain init`
-
-- [ ] D1-R1: WHEN a user runs `gizzi brain init`, THE SYSTEM SHALL create the
-  canonical brain structure (git init, template files above, first commit) at
-  a user-chosen path (default `~/brain`), refusing to overwrite a non-empty
-  existing brain unless `--force`.
-- [ ] D1-R2: WHEN a brain exists, `gizzi brain` SHALL print status (path,
-  remote configured?, uncommitted changes, unpushed commits) and
-  `gizzi brain sync` SHALL git pull --rebase then push to the configured
-  remote, surfacing conflicts as plain instructions (never auto-resolving).
-- [ ] D1-R3: WHEN a brain is initialized, THE SYSTEM SHALL wire it into the
-  local agent layer: memory ingestion config pointing at the brain path
-  (so the taste corpus / wiki connector can ingest it) and an AGENTS.md-style
-  pointer in the brain's MEMORY.md.
-- [ ] D1-R4: WHEN a user has a platform account, `gizzi brain init --remote`
-  SHALL provision a hosted remote via the D2 API and configure it as origin.
-
+- Migrating historical verdicts to tickets; ticket-side changes (A1/B2 are
+  done); auto-merge.
 
 ## Acceptance (Gherkin)
 
-- Scenario: init creates a conforming brain
-  Given an empty target path
-  When `gizzi brain init` runs
-  Then the canonical layout exists with valid frontmatter in every template
-  page, one initial commit, and `gizzi brain` reports clean status.
+- Scenario: READY becomes a ticket
+  Given a spec verdicted READY
+  When check-spec completes
+  Then a ticket exists with label spec:<slug> and verdicts.json records its
+  ticket_id; and GET /api/rails/tickets/ready includes it.
+- Scenario: triage ordering
+  Given ticket-backed specs X (blocks nothing, unblocks 2) and Y (plain)
+  When build-queue --all runs
+  Then X builds before Y.
+- Scenario: dependency gate
+  Given spec B with frontmatter blocks: [spec A]
+  When both are queued and A is not built
+  Then B is absent from the ready list until A's ticket closes.
+- Scenario: legacy compat
+  Given a queue file with no ticket
+  When build-queue runs
+  Then it builds after all ticketed items, exactly as before.
 
 ## Constraints
 
-- Sync is git. No bespoke merge logic anywhere in D1-D3.
-- The platform is never the system of record: losing the hosted remote loses
-  no data (every device has full history).
-- D1 lives in cmd/gizzi-code (match its command conventions); D2 in
-  cmd/allternit-api (new route module, auth like existing routes).
+- Pipeline scripts fail hard on rails errors (R1) but build-queue falls back
+  to legacy file mode if the tickets endpoint is unreachable (documented
+  degradation, logged — tickets are an enhancement to build-queue, not a
+  hard dependency for legacy files).
+- Tests use the existing PATH-shim/stub patterns (no live rails needed).

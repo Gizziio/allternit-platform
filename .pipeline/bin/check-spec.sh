@@ -6,7 +6,22 @@
 # precedents from memory (advisory) + the spec, consult the independent
 # reviewer (SPEC_CHECK_CMD test hook, else ao-consult), then:
 #   READY      -> move spec to .pipeline/queue/, record verdict, announce to
-#                 wih:pipeline-queue (announce failure = hard error, R4/C3)
+#                 wih:pipeline-queue (announce failure = hard error, R4/C3);
+#                 then create a rails ticket for the queued spec (B3-R1):
+#                 POST /api/rails/tickets with title = spec's first heading,
+#                 kind = feature, labels ["pipeline","spec:<slug>"], and the
+#                 queue path + brief provenance in `description` (the only
+#                 free-text field — there is no note field). Ticket creation
+#                 failure = hard error (log + exit 1), but it gates ticket
+#                 creation ONLY: the spec stays in queue/ with its READY
+#                 verdict and builds via the legacy file path. The ticket_id
+#                 is merged into verdicts.json (merge semantics — a later
+#                 verdict_set never wipes it). If the spec's frontmatter
+#                 declares `blocks: [<slug>, ...]` (B3-R4: the listed slugs
+#                 block this spec), dependency edges are posted from each
+#                 blocker's ticket to the new ticket ({to, kind:"blocks"});
+#                 a 409 cycle rejection is logged and the spec flagged in
+#                 errors.log (non-fatal).
 #   NEEDS-WORK -> record verdict + round, append findings to <slug>.review.md;
 #                 2nd NEEDS-WORK ingests the rejection pattern to memory
 #                 (:3201, advisory — failure logged, run continues);
@@ -29,6 +44,7 @@ CHARTER="${PIPELINE_CHARTER:-$PIPELINE_DIR/charter.md}"
 REJECTED_DIR="$PIPELINE_DIR/rejected"
 RAILS_ENSURE="${RAILS_ENSURE:-$PIPELINE_DIR/bin/rails-ensure.sh}"
 RAILS_SHARE_URL="http://localhost:8013/api/rails/mail/share"
+RAILS_TICKETS_URL="http://localhost:8013/api/rails/tickets"
 QUEUE_THREAD="wih:pipeline-queue"
 MEMORY_URL="http://localhost:3201/api/ingest"
 MEMORY_QUERY_URL="http://localhost:3201/api/query"
@@ -53,7 +69,9 @@ if v:
 PY
 }
 
-verdict_set() { # verdict_set <slug> <verdict> <rounds>
+verdict_set() { # verdict_set <slug> <verdict> <rounds> — MERGE semantics
+  # (B3-R1): the per-slug dict is merged, never replaced, so a ticket_id
+  # recorded by an earlier READY survives any later verdict_set.
   python3 - "$VERDICTS_FILE" "$1" "$2" "$3" <<'PY'
 import json, sys, datetime
 path, slug, verdict, rounds = sys.argv[1], sys.argv[2], sys.argv[3], int(sys.argv[4])
@@ -61,11 +79,31 @@ try:
     d = json.load(open(path))
 except Exception:
     d = {}
-d[slug] = {
+rec = d.get(slug, {})
+rec.update({
     "verdict": verdict,
     "rounds": rounds,
     "updated": datetime.datetime.now(datetime.timezone.utc).isoformat(),
+})
+d[slug] = rec
+with open(path, "w") as f:
+    json.dump(d, f, indent=2, sort_keys=True)
+    f.write("\n")
+PY
 }
+
+verdict_merge() { # verdict_merge <slug> <extra-json-object> — merge extra keys
+  python3 - "$VERDICTS_FILE" "$1" "$2" <<'PY'
+import json, sys, datetime
+path, slug, extra = sys.argv[1], sys.argv[2], sys.argv[3]
+try:
+    d = json.load(open(path))
+except Exception:
+    d = {}
+rec = d.get(slug, {})
+rec.update(json.loads(extra))
+rec["updated"] = datetime.datetime.now(datetime.timezone.utc).isoformat()
+d[slug] = rec
 with open(path, "w") as f:
     json.dump(d, f, indent=2, sort_keys=True)
     f.write("\n")
@@ -80,6 +118,140 @@ announce() { # announce <asset_ref> <note> -> 0 on HTTP 2xx
   code=$(curl -s -o /dev/null -w '%{http_code}' --max-time 5 -X POST "$RAILS_SHARE_URL" \
     -H 'Content-Type: application/json' -d "$payload" 2>/dev/null)
   [[ "$code" == 2* ]]
+}
+
+# ─── rails tickets (B3-R1: create is a hard error; B3-R4: edges advisory) ───
+
+# spec_frontmatter_field <spec-file> <field> -> list items, one per line.
+# Minimal YAML-subset reader: inline "field: [a, b]" and dashed-list forms.
+spec_frontmatter_field() {
+  python3 - "$1" "$2" <<'PY'
+import sys
+path, field = sys.argv[1], sys.argv[2]
+try:
+    lines = open(path, encoding="utf-8", errors="replace").read().splitlines()
+except Exception:
+    sys.exit(0)
+if not lines or lines[0].strip() != "---":
+    sys.exit(0)
+fm = []
+for line in lines[1:]:
+    if line.strip() == "---":
+        break
+    fm.append(line)
+items = []
+for i, l in enumerate(fm):
+    if l.startswith(field + ":"):
+        rest = l[len(field) + 1:].strip()
+        if rest.startswith("[") and rest.endswith("]"):
+            items = [x.strip().strip("'\"") for x in rest[1:-1].split(",") if x.strip()]
+        elif rest:
+            items = [rest.strip("'\"")]
+        else:
+            j = i + 1
+            while j < len(fm) and fm[j].startswith(("  - ", "- ")):
+                items.append(fm[j].split("- ", 1)[1].strip().strip("'\""))
+                j += 1
+        break
+print("\n".join(items))
+PY
+}
+
+# split_resp <resp> -> sets globals RESP_CODE / RESP_BODY. Tolerates stubs
+# that emit only a body (no -w status line): RESP_CODE is left empty.
+split_resp() {
+  case "$1" in
+    *$'\n'*)
+      RESP_CODE="${1##*$'\n'}"
+      RESP_BODY="${1%$'\n'*}"
+      ;;
+    *)
+      RESP_CODE=""
+      RESP_BODY="$1"
+      ;;
+  esac
+}
+
+# ticket_create <slug> <queue-path> -> ticket id on stdout; non-zero on
+# transport/HTTP/parse failure (B3-R1: the ONLY free-text field is
+# `description` — TicketCreateRequest has no note field).
+ticket_create() {
+  local payload resp
+  payload=$(python3 - "$1" "$2" <<'PY'
+import json, sys
+slug, qpath = sys.argv[1], sys.argv[2]
+try:
+    lines = open(qpath, encoding="utf-8", errors="replace").read().splitlines()
+except Exception:
+    lines = []
+title = ""
+for line in lines:
+    s = line.strip()
+    if s.startswith("# "):
+        title = s[2:].strip()
+        break
+if not title:
+    title = slug
+prov = []
+if lines and lines[0].strip() == "---":
+    fm = []
+    for line in lines[1:]:
+        if line.strip() == "---":
+            break
+        fm.append(line)
+    for i, l in enumerate(fm):
+        if l.startswith("provenance_refs:"):
+            j = i + 1
+            while j < len(fm) and fm[j].startswith(("  - ", "- ")):
+                prov.append(fm[j].split("- ", 1)[1].strip())
+                j += 1
+            break
+desc = "queue: %s\nbrief provenance: %s" % (qpath, ", ".join(prov) if prov else "n/a")
+print(json.dumps({
+    "title": title,
+    "description": desc,
+    "kind": "feature",
+    "labels": ["pipeline", "spec:" + slug],
+}))
+PY
+)
+  resp=$(curl -s --max-time 5 -w '\n%{http_code}' -X POST "$RAILS_TICKETS_URL" \
+    -H 'Content-Type: application/json' -d "$payload" 2>/dev/null)
+  split_resp "$resp"
+  if [ -n "$RESP_CODE" ] && [[ "$RESP_CODE" != 2* ]]; then
+    return 1
+  fi
+  python3 -c 'import json,sys; print(json.loads(sys.argv[1])["ticket"]["id"])' "$RESP_BODY"
+}
+
+# ticket_find_by_label <label> -> first matching ticket id (empty if none or
+# the endpoint is unreachable — the caller logs either way).
+ticket_find_by_label() {
+  local resp
+  resp=$(curl -s --max-time 5 "$RAILS_TICKETS_URL?label=$1" 2>/dev/null)
+  python3 -c 'import json,sys
+try:
+    d = json.loads(sys.argv[1])
+except Exception:
+    sys.exit(0)
+ts = d.get("tickets") or []
+if ts:
+    print(ts[0].get("id", ""))' "$resp" 2>/dev/null
+}
+
+# ticket_add_dependency <from-id> <to-id> -> 0 on 2xx (edge from blocks to).
+ticket_add_dependency() {
+  local payload resp
+  payload=$(python3 -c 'import json,sys; print(json.dumps({"to":sys.argv[1],"kind":"blocks"}))' "$2")
+  resp=$(curl -s --max-time 5 -w '\n%{http_code}' -X POST "$RAILS_TICKETS_URL/$1/dependencies" \
+    -H 'Content-Type: application/json' -d "$payload" 2>/dev/null)
+  split_resp "$resp"
+  if [ -n "$RESP_CODE" ]; then
+    [[ "$RESP_CODE" == 2* ]]
+  else
+    # Stub without a status line: a JSON error body (e.g. 409 cycle) fails.
+    case "$RESP_BODY" in *'"error"'*) return 1 ;; *) return 0 ;; esac
+  fi
 }
 
 # ─── memory ingest (advisory) ───────────────────────────────────────────────
@@ -247,7 +419,37 @@ for spec in "$SPECS_DIR"/*.md; do
       # Keep the review trail with the spec it documents (if any).
       [ -f "$SPECS_DIR/$slug.review.md" ] && mv "$SPECS_DIR/$slug.review.md" "$QUEUE_DIR/$slug.review.md"
       verdict_set "$slug" "READY" "$rounds"
-      echo "check-spec: $slug — READY, moved to queue/ and announced to $QUEUE_THREAD"
+      # B3-R1: create the rails ticket AFTER the existing announce + mv to
+      # queue/ (B3_TASK build order). Failure is a hard error (log + exit 1)
+      # but gates ticket creation ONLY, never the file queue: the spec stays
+      # in queue/ with its READY verdict and builds via the legacy path.
+      ticket_id="$(ticket_create "$slug" "$QUEUE_DIR/$slug.md")" || {
+        log_error "ticket creation failed for $slug ($QUEUE_DIR/$slug.md) — rails has no fallback (B3-R1); spec stays queued with READY verdict and builds legacy"
+        echo "check-spec: $slug — READY, moved to queue/ and announced, but rails ticket creation failed; recorded in $ERRORS_LOG; aborting (ticket creation is a hard error)" >&2
+        exit 1
+      }
+      verdict_merge "$slug" "{\"ticket_id\":\"$ticket_id\"}"
+      # B3-R4: frontmatter `blocks: [<slug>, ...]` = the listed slugs block
+      # this one (acceptance: this spec is absent from ready until each
+      # blocker's ticket closes). Edges point blocker -> this ticket
+      # (rails: from blocks to). Edge failures are logged, never fatal.
+      blocks="$(spec_frontmatter_field "$QUEUE_DIR/$slug.md" blocks)"
+      if [ -n "$blocks" ]; then
+        while IFS= read -r blocker; do
+          [ -n "$blocker" ] || continue
+          blocker_id="$(ticket_find_by_label "spec:$blocker")"
+          if [ -z "$blocker_id" ]; then
+            log_error "B3-R4: $slug blocked by $blocker — no ticket with label spec:$blocker (not READY yet?); edge skipped"
+            echo "check-spec: $slug — blocker '$blocker' has no ticket; dependency edge skipped (logged)" >&2
+            continue
+          fi
+          if ! ticket_add_dependency "$blocker_id" "$ticket_id"; then
+            log_error "B3-R4: dependency $blocker_id blocks $ticket_id rejected (409 cycle or rails error); spec $slug flagged"
+            echo "check-spec: $slug — dependency edge from '$blocker' rejected (cycle?); flagged in $ERRORS_LOG" >&2
+          fi
+        done <<< "$blocks"
+      fi
+      echo "check-spec: $slug — READY, moved to queue/ and announced to $QUEUE_THREAD, ticket $ticket_id created"
       ;;
     NEEDS-WORK*)
       rounds=$((rounds + 1))

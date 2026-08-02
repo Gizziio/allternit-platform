@@ -17,6 +17,7 @@ set -uo pipefail
 
 BUILD_QUEUE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/build-queue.sh"
 TMP="$(mktemp -d /tmp/build-queue-test-XXXXXX)"
+export TMP
 PDIR="$TMP/pipeline"
 mkdir -p "$PDIR/queue" "$TMP/bin"
 
@@ -83,15 +84,36 @@ EOF
 
 cat > "$TMP/bin/curl" <<'EOF'
 #!/usr/bin/env bash
-url=""; payload=""; prev=""
+url=""; payload=""; prev=""; method=""
 for a in "$@"; do
   [ "$prev" = "-d" ] && payload="$a"
+  [ "$prev" = "-X" ] && method="$a"
   case "$a" in http*) url="$a" ;; esac
   prev="$a"
 done
-printf '%s %s\n' "$url" "$payload" >> "$CURL_CAPTURE"
+printf '%s %s %s\n' "$method" "$url" "$payload" >> "$CURL_CAPTURE"
 if [[ "$url" == *:8013* && "${RAILS_MODE:-}" == "fail" ]]; then
   printf '500'
+elif [[ "$url" == *"/api/rails/tickets/ready"* ]]; then
+  # B3-R2: ready list from fixture; TICKETS_MODE=fail simulates outage.
+  if [ "${TICKETS_MODE:-}" = "fail" ]; then
+    printf '500'
+  else
+    cat "$TICKETS_FIXTURE/ready.json" 2>/dev/null
+  fi
+elif [[ "$url" == *"/api/rails/graph/triage"* ]]; then
+  # B3-R2: triage ordering from fixture; TRIAGE_MODE=fail degrades ordering.
+  if [ "${TRIAGE_MODE:-}" = "fail" ]; then
+    printf '500'
+  else
+    cat "$TICKETS_FIXTURE/triage.json" 2>/dev/null
+  fi
+elif [[ "$url" == *"/api/rails/tickets/"*"/close"* ]]; then
+  printf '%s' '{"ticket":{"status":"closed"}}'
+elif [[ "$url" == *"/api/rails/tickets/"* && "$method" = "PATCH" ]]; then
+  printf '%s' '{"ticket":{"status":"open"}}'
+elif [[ "$url" == *"/api/rails/tickets/"* ]]; then
+  printf '{"ticket":{"id":"%s","description":"original desc"}}' "${url##*/}"
 else
   printf '201'
 fi
@@ -248,6 +270,126 @@ check "empty queue message" file_contains <(printf '%s' "$out7") "queue is empty
 out8="$(run_queue)"; rc8=$?
 check "empty queue (list mode) exits 0" test "$rc8" -eq 0
 check "empty queue list message" file_contains <(printf '%s' "$out8") "queue is empty"
+
+# ─── B3 fixtures: ready/triage endpoints + record-outcome capture ────────────
+
+mkdir -p "$TMP/fixtures"
+export TICKETS_FIXTURE="$TMP/fixtures"
+export OUTCOME_LOG="$TMP/outcome.log"
+: > "$OUTCOME_LOG"
+cat > "$TMP/record-outcome-stub.sh" <<'EOF'
+#!/usr/bin/env bash
+echo "record-outcome $*" >> "$OUTCOME_LOG"
+EOF
+export RECORD_OUTCOME="$TMP/record-outcome-stub.sh"
+
+spawn_order() { grep 'ao-spawn' "$AO_LOG" | sed 's/.*--worktree build-\([a-z0-9]*\).*/\1/' | tr '\n' ','; }
+
+# ─── B3-R2: ticketed ordering — scored > 50-cap fallback > legacy ───────────
+
+for s in sx sy sz sw blk leg; do
+  printf '# %s spec\n\n## Requirements\n\n- [ ] R1: WHEN x, THE SYSTEM SHALL y\n' "$s" > "$PDIR/queue/$s.md"
+done
+cat > "$TICKETS_FIXTURE/ready.json" <<'EOF'
+{"ready":[
+  {"id":"T-sx","title":"sx","created_at":"2026-08-01T00:00:00Z","labels":["pipeline","spec:sx"]},
+  {"id":"T-sy","title":"sy","created_at":"2026-08-01T00:01:00Z","labels":["pipeline","spec:sy"]},
+  {"id":"T-sz","title":"sz","created_at":"2026-08-01T00:03:00Z","labels":["pipeline","spec:sz"]},
+  {"id":"T-sw","title":"sw","created_at":"2026-08-01T00:02:00Z","labels":["pipeline","spec:sw"]},
+  {"id":"T-other","title":"other","created_at":"2026-08-01T00:00:00Z","labels":["other-team"]}
+]}
+EOF
+# Triage is the 50-capped view: sz/sw are ready but absent from it.
+cat > "$TICKETS_FIXTURE/triage.json" <<'EOF'
+{"ready_count":4,"items":[
+  {"ticket":"T-sx","title":"sx","score":25,"reason":"unblocks 2","unblocks":2},
+  {"ticket":"T-sy","title":"sy","score":5,"reason":"priority","unblocks":0}
+]}
+EOF
+python3 - "$PDIR/verdicts.json" <<'PY'
+import json, sys
+d = {s: {"verdict": "READY", "rounds": 0, "ticket_id": "T-" + s} for s in ("sx", "sy", "sz", "sw", "blk")}
+json.dump(d, open(sys.argv[1], "w"), indent=2, sort_keys=True)
+PY
+
+: > "$AO_LOG"; : > "$CURL_CAPTURE"
+out10="$(run_queue --all --no-wait)"; rc10=$?
+printf '%s\n' "$out10" > "$TMP/out10.txt"
+check "B3-R2: ticketed --all run exits 0" test "$rc10" -eq 0
+check "B3-R2: scored (triage order) > 50-cap fallback (created_at) > legacy" \
+  test "$(spawn_order)" = "sx,sy,sw,sz,leg,"
+check "B3-R2: blocked ticket (not in ready list) skipped, not built as legacy" \
+  bash -c '! grep -q "build-blk" "$AO_LOG" && grep -q "blk — ticket not ready" "$TMP/out10.txt"'
+check "B3-R2: ready + triage endpoints consumed" \
+  bash -c 'grep -q "api/rails/tickets/ready" "$CURL_CAPTURE" && grep -q "api/rails/graph/triage" "$CURL_CAPTURE"'
+
+# ─── B3-R3: built -> ticket closed (reason = NOTES path) + outcome merged ───
+
+rm -f "$PDIR/builds.json"
+printf '# tb spec\n\n## Requirements\n\n- [ ] R1: WHEN x, THE SYSTEM SHALL y\n' > "$PDIR/queue/tb.md"
+python3 - "$PDIR/verdicts.json" <<'PY'
+import json, sys
+p = sys.argv[1]
+d = json.load(open(p))
+d["tb"] = {"verdict": "READY", "rounds": 0, "ticket_id": "T-tb"}
+json.dump(d, open(p, "w"), indent=2, sort_keys=True)
+PY
+: > "$AO_LOG"; : > "$CURL_CAPTURE"; : > "$OUTCOME_LOG"
+out11="$(run_queue tb)"; rc11=$?
+check "B3-R3: built run exits 0" test "$rc11" -eq 0
+check "B3-R3: built -> POST close with reason = NOTES path" \
+  bash -c 'grep -q "POST http://localhost:8013/api/rails/tickets/T-tb/close" "$CURL_CAPTURE" \
+    && grep -q "BUILD_TB_NOTES.md" "$CURL_CAPTURE"'
+check "B3-R3: outcome recorded via record-outcome.sh (merged)" \
+  file_contains "$OUTCOME_LOG" "record-outcome tb merged"
+
+# ─── B3-R3: failed -> ticket stays open + PATCH note + outcome failed ───────
+
+rm -f "$PDIR/builds.json"
+printf '# tf spec\n\n## Requirements\n\n- [ ] R1: WHEN x, THE SYSTEM SHALL y\n' > "$PDIR/queue/tf.md"
+python3 - "$PDIR/verdicts.json" <<'PY'
+import json, sys
+p = sys.argv[1]
+d = json.load(open(p))
+d["tf"] = {"verdict": "READY", "rounds": 0, "ticket_id": "T-tf"}
+json.dump(d, open(p, "w"), indent=2, sort_keys=True)
+PY
+: > "$AO_LOG"; : > "$CURL_CAPTURE"; : > "$OUTCOME_LOG"
+out12="$(WATCH_MODE=fail run_queue tf)"; rc12=$?
+check "B3-R3: failed run exits non-zero" test "$rc12" -ne 0
+check "B3-R3: failed -> ticket NOT closed" bash -c '! grep -q "/close" "$CURL_CAPTURE"'
+check "B3-R3: failed -> ticket fetched + PATCHed with appended failure note" \
+  bash -c 'grep -q "PATCH http://localhost:8013/api/rails/tickets/T-tf" "$CURL_CAPTURE" \
+    && grep -qF "[build-queue] failed: tf" "$CURL_CAPTURE" \
+    && grep -q "original desc" "$CURL_CAPTURE"'
+check "B3-R3: outcome recorded via record-outcome.sh (failed)" \
+  file_contains "$OUTCOME_LOG" "record-outcome tf failed"
+
+# ─── B3-R2: triage down -> ticketed items unscored (created_at order) ───────
+
+rm -f "$PDIR/builds.json" "$PDIR/queue"/*.md
+for s in sx sy; do
+  printf '# %s spec\n\n## Requirements\n\n- [ ] R1: WHEN x, THE SYSTEM SHALL y\n' "$s" > "$PDIR/queue/$s.md"
+done
+: > "$AO_LOG"
+out13="$(TRIAGE_MODE=fail run_queue --all --no-wait)"; rc13=$?
+check "B3-R2: triage-down run exits 0 (ordering degrade only)" test "$rc13" -eq 0
+check "B3-R2: triage-down falls back to created_at order" \
+  test "$(spawn_order)" = "sx,sy,"
+
+# ─── B3-R2: tickets endpoint down -> documented legacy file mode ─────────────
+
+rm -f "$PDIR/builds.json" "$PDIR/queue"/*.md
+printf '# d1 spec\n\n## Requirements\n\n- [ ] R1: WHEN x, THE SYSTEM SHALL y\n' > "$PDIR/queue/d1.md"
+printf '# d2 spec\n\n## Requirements\n\n- [ ] R1: WHEN x, THE SYSTEM SHALL y\n' > "$PDIR/queue/d2.md"
+rm -f "$PDIR/errors.log"
+: > "$AO_LOG"
+out14="$(TICKETS_MODE=fail run_queue --all --no-wait)"; rc14=$?
+check "B3-R2: endpoint-down run exits 0 (legacy degrade)" test "$rc14" -eq 0
+check "B3-R2: degrade logged to errors.log" \
+  file_contains "$PDIR/errors.log" "degraded to legacy file mode"
+check "B3-R2: legacy mode builds every queue file in glob order" \
+  test "$(spawn_order)" = "d1,d2,"
 
 # ─── Result ─────────────────────────────────────────────────────────────────
 

@@ -186,6 +186,82 @@ check(
   resAll.stdout.trim(),
 );
 
+// ─── B3-R4: blocks frontmatter pass-through ─────────────────────────────────
+// Briefs may declare `blocks: [<slug>, ...]` in their frontmatter (dashed or
+// inline list); the generator carries it into the spec's frontmatter so
+// check-spec can wire dependency edges at ticket-creation time.
+
+const blocksBrief = `---
+schema_version: 1
+trust_tier: unverified
+provenance_refs:
+  - https://example.com/blocked
+produced_by: scout.cjs
+produced_at: 2026-08-01T00:00:00.000Z
+blocks:
+  - alpha-spec
+  - beta-spec
+---
+# Blocked Spec
+
+- Source: hackernews
+- URL: https://example.com/blocked
+
+## What it is
+
+A spec that cannot start until two other specs land.
+
+## Requirements seed
+
+- WHEN all blockers close, THE SYSTEM SHALL become ready
+`;
+
+const inlineBlocksBrief = `---
+schema_version: 1
+trust_tier: unverified
+provenance_refs:
+  - https://example.com/blocked-inline
+produced_by: scout.cjs
+produced_at: 2026-08-01T00:00:00.000Z
+blocks: [gamma-spec]
+---
+# Inline Blocked Spec
+
+- Source: hackernews
+- URL: https://example.com/blocked-inline
+
+## What it is
+
+A spec with an inline blocks list.
+
+## Requirements seed
+
+- WHEN the blocker closes, THE SYSTEM SHALL become ready
+`;
+
+fs.writeFileSync(path.join(BRIEFS, 'blocks-brief.md'), blocksBrief);
+fs.writeFileSync(path.join(BRIEFS, 'inline-blocks-brief.md'), inlineBlocksBrief);
+const resBlocks = runGenerator([path.join(BRIEFS, 'blocks-brief.md')]);
+check('blocks brief exits 0', resBlocks.status === 0, resBlocks.stderr);
+const blocksSpec = fs.existsSync(path.join(SPECS, 'blocks-brief.md'))
+  ? fs.readFileSync(path.join(SPECS, 'blocks-brief.md'), 'utf8')
+  : '';
+check(
+  'blocks frontmatter passed through (dashed list)',
+  blocksSpec.includes('blocks:\n  - alpha-spec\n  - beta-spec\n---'),
+  blocksSpec.split('\n').slice(0, 15).join('\n'),
+);
+const resInline = runGenerator([path.join(BRIEFS, 'inline-blocks-brief.md')]);
+check('inline blocks brief exits 0', resInline.status === 0, resInline.stderr);
+const inlineSpec = fs.existsSync(path.join(SPECS, 'inline-blocks-brief.md'))
+  ? fs.readFileSync(path.join(SPECS, 'inline-blocks-brief.md'), 'utf8')
+  : '';
+check(
+  'blocks frontmatter passed through (inline list -> dashed)',
+  inlineSpec.includes('blocks:\n  - gamma-spec\n---'),
+  inlineSpec.split('\n').slice(0, 15).join('\n'),
+);
+
 // ─── Malformed briefs ───────────────────────────────────────────────────────
 
 const resMissing = runGenerator([path.join(BRIEFS, 'missing-seed.md')]);

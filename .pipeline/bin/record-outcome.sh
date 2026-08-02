@@ -1,8 +1,10 @@
 #!/usr/bin/env bash
 # record-outcome.sh — outcome feedback loop (C4-R1). When a build's outcome is
-# known (a human merges, reverts, or rejects it at the queue/merge stage):
+# known (a human merges, reverts, or rejects it at the queue/merge stage; or
+# the build itself fails — B3-R3 wires build-queue to call this once per
+# completed build with merged|failed):
 #
-#   record-outcome.sh <slug> <merged|reverted|rejected> [note]
+#   record-outcome.sh <slug> <merged|reverted|rejected|failed> [note]
 #
 # Appends {ts, slug, outcome, note} to .pipeline/outcomes.jsonl and ingests the
 # outcome to memory (:3201, advisory) as a taste precedent. Trust tier follows
@@ -22,13 +24,13 @@ outcome="${2:-}"
 note="${3:-}"
 
 usage() {
-  echo "usage: record-outcome.sh <slug> <merged|reverted|rejected> [note]" >&2
+  echo "usage: record-outcome.sh <slug> <merged|reverted|rejected|failed> [note]" >&2
   exit 2
 }
 
 [ -n "$slug" ] && [ -n "$outcome" ] || usage
 case "$outcome" in
-  merged|reverted|rejected) ;;
+  merged|reverted|rejected|failed) ;;
   *) usage ;;
 esac
 

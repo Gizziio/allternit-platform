@@ -29,6 +29,17 @@ briefs for the most relevant new items, announces them over rails mail, and
     failure); NEEDS-WORK → findings in `specs/<slug>.review.md`, 3 rounds →
     STALLED; 2nd NEEDS-WORK ingests the rejection pattern to memory (:3201,
     advisory only). Verdicts in `verdicts.json`.
+  - **B3: rails tickets are the queue's native store.** READY → after the
+    announce + `mv`, `check-spec.sh` creates a rails ticket (`POST
+    /api/rails/tickets`: title = first heading, kind `feature`, labels
+    `["pipeline","spec:<slug>"]`, queue path + brief provenance in
+    `description` — the only free-text field) and merges `ticket_id` into
+    `verdicts.json` (merge semantics: a later `verdict_set` never wipes it).
+    Ticket failure = hard error, but gates ticket creation only — the spec
+    stays in `queue/` and builds legacy. Frontmatter `blocks: [<slug>, …]`
+    (passed through from briefs by `generate-spec.cjs`) wires dependency
+    edges blocker → ticket via `POST /tickets/:id/dependencies`; a 409 cycle
+    rejection is logged + flagged in `errors.log` (non-fatal).
 - **Phase 4 (this): queue consumption** — spawn build executors for READY
   specs; human merge is the boundary.
   - `bin/build-queue.sh` — for each queued spec not already `building`/
@@ -43,6 +54,16 @@ briefs for the most relevant new items, announces them over rails mail, and
     2xx): an announcement failure is a hard error, and a later run retries
     only the announce — never re-spawns a completed build.
     `--no-wait` spawns without watching.
+    **B3:** `--all` builds ticketed items first — `GET
+    /api/rails/tickets/ready` filtered client-side for the `pipeline` label,
+    ordered by `GET /api/rails/graph/triage` score (tickets missing from the
+    50-capped triage response sort after scored items by `created_at` then
+    ticket_id), then legacy ticket-less queue files; tickets not in the ready
+    list (blocked) are skipped. If the tickets endpoint is unreachable it
+    logs and degrades to legacy file mode. On the watch verdict: built →
+    `POST /tickets/:id/close` (reason = NOTES path); failed → ticket stays
+    open + failure note appended via PATCH; then `record-outcome.sh <slug>
+    merged|failed` (C4 wiring). Both are advisory (logged, non-fatal).
     There is NO auto-merge — a human merges `ao/build-<slug>` after review.
 
 - **Taste memory loop (C1+C4)** — the pipeline learns the project's taste.
@@ -55,13 +76,14 @@ briefs for the most relevant new items, announces them over rails mail, and
     `{source, trust_tier, provenance_ref}`; `taste/ingested.json` ledgers
     content hashes so re-runs skip unchanged items. Failed approaches stay
     visible as pitfalls, never as evidence.
-  - `bin/record-outcome.sh <slug> <merged|reverted|rejected> [note]` — the
+  - `bin/record-outcome.sh <slug> <merged|reverted|rejected|failed> [note]` — the
     outcome feedback loop. **When a human merges, reverts, or rejects a build
     at the queue/merge stage, record the decision with this command** (the
     build-queue announce step stays as-is; this is the human's half of the
-    loop). Appends `{ts, slug, outcome, note}` to `outcomes.jsonl` and ingests
-    the outcome to memory as a taste precedent (`merged` → `trusted`,
-    `reverted`/`rejected` → `failed`).
+    loop; B3 also wires build-queue to call it with `merged`/`failed` when the
+    watch verdict lands). Appends `{ts, slug, outcome, note}` to
+    `outcomes.jsonl` and ingests the outcome to memory as a taste precedent
+    (`merged` → `trusted`, `reverted`/`rejected`/`failed` → `failed`).
   - Precedent staleness: `check-spec.sh`'s `query_precedents` marks memory
     items older than 90 days `[stale]` in the assembled precedent text instead
     of presenting them as current (undated items degrade to current), and

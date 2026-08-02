@@ -54,6 +54,9 @@ if [[ "$url" == *:3201* && "${MEMORY_MODE:-}" == "fail" ]]; then
   printf '500'
 elif [[ "$url" == *:3201/api/query* ]]; then
   cat "${MEMORY_CANNED:-/dev/null}"
+elif [[ "$url" == *"/api/rails/tickets"* ]]; then
+  # B3-R1: check-spec creates a rails ticket on READY.
+  printf '%s' '{"ticket":{"id":"T-taste","status":"open"}}'
 else
   printf '201'
 fi

@@ -49,6 +49,32 @@ const REQ_RE = /^WHEN\s+(.+?),\s*THE SYSTEM SHALL\s+(.+?)\s*$/i;
 
 class BriefError extends Error {}
 
+// Minimal YAML-subset list reader for frontmatter pass-through fields.
+// Accepts `field: [a, b]` and the dashed-list form.
+function parseFrontmatterList(fmLines, field) {
+  for (let i = 0; i < fmLines.length; i++) {
+    const l = fmLines[i];
+    if (!l.startsWith(field + ':')) continue;
+    const rest = l.slice(field.length + 1).trim();
+    if (rest.startsWith('[') && rest.endsWith(']')) {
+      return rest
+        .slice(1, -1)
+        .split(',')
+        .map((x) => x.trim().replace(/^['"]|['"]$/g, ''))
+        .filter(Boolean);
+    }
+    if (rest) return [rest.replace(/^['"]|['"]$/g, '')];
+    const items = [];
+    for (let j = i + 1; j < fmLines.length; j++) {
+      const m = fmLines[j].match(/^\s*-\s+(.+?)\s*$/);
+      if (!m) break;
+      items.push(m[1].replace(/^['"]|['"]$/g, ''));
+    }
+    return items;
+  }
+  return [];
+}
+
 function err(briefPath, msg) {
   return new BriefError(`generate-spec: ERROR ${briefPath}: ${msg}`);
 }
@@ -58,10 +84,16 @@ function err(briefPath, msg) {
 function parseBrief(briefPath, content) {
   let lines = content.split('\n');
   // Skip artifact-contract frontmatter (C3-R1): a leading --- block is
-  // metadata, not brief content.
+  // metadata, not brief content. B3-R4: a `blocks` list declared in the
+  // brief's frontmatter is passed through to the generated spec's
+  // frontmatter (dependency edges are wired at ticket-creation time).
+  let blocks = [];
   if (lines[0] && lines[0].trim() === '---') {
     const end = lines.findIndex((l, i) => i > 0 && l.trim() === '---');
-    if (end > 0) lines = lines.slice(end + 1);
+    if (end > 0) {
+      blocks = parseFrontmatterList(lines.slice(1, end), 'blocks');
+      lines = lines.slice(end + 1);
+    }
   }
   const titleLine = lines.find((l) => l.startsWith('# '));
   if (!titleLine) throw err(briefPath, 'missing "# <title>" heading');
@@ -123,7 +155,7 @@ function parseBrief(briefPath, content) {
     }
   }
 
-  return { title, url, whatItIsText, requirements, excluded };
+  return { title, url, whatItIsText, requirements, excluded, blocks };
 }
 
 // ─── Spec emission ──────────────────────────────────────────────────────────
@@ -157,6 +189,8 @@ function emitSpec(slug, brief, briefHash) {
 
   // C3-R1 artifact contract frontmatter. produced_at is wall-clock — the one
   // non-deterministic byte range in an otherwise pure brief -> spec function.
+  // B3-R4: `blocks` from the brief frontmatter is passed through verbatim
+  // (check-spec wires the dependency edges when the ticket is created).
   const frontmatter = [
     '---',
     'schema_version: 1',
@@ -166,6 +200,7 @@ function emitSpec(slug, brief, briefHash) {
     `  - sha256:${briefHash}`,
     'produced_by: generate-spec.cjs',
     `produced_at: ${new Date().toISOString()}`,
+    ...(brief.blocks.length > 0 ? ['blocks:', ...brief.blocks.map((b) => `  - ${b}`)] : []),
     '---',
     '',
   ].join('\n');
