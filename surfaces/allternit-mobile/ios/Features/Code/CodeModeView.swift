@@ -583,22 +583,34 @@ private struct CodeThreadChatView: View {
     @State private var showTerminal = false
     @State private var resolvingTerminalHost = false
 
+    /// Pending gizzi-code approval requests for this thread's own session
+    /// (`GET /v1/permission`, filtered to `sessionID == sessionId`), kept
+    /// fresh by `pollPendingPermissions()` below. Sorted oldest-first by id
+    /// (`Identifier.ascending("permission")`, `next.ts:73`) so the banner
+    /// always opens the longest-waiting request.
+    @State private var pendingPermissions: [PermissionRequest] = []
+    /// Non-nil while `ChangesetReviewSheet` is presented for this request.
+    @State private var reviewingPermission: PermissionRequest? = nil
+
     var body: some View {
-        Group {
-            if showTerminal {
-                if let terminalSession {
-                    // `.id` gives each rebuilt session (instance switch) a
-                    // fresh view identity, so its `.task` fires and attaches
-                    // the new pty instead of reusing the torn-down view.
-                    TerminalSessionView(session: terminalSession)
-                        .id(ObjectIdentifier(terminalSession))
-                } else if resolvingTerminalHost {
-                    ProgressView("Connecting…")
+        VStack(spacing: 0) {
+            pendingPermissionBanner
+            Group {
+                if showTerminal {
+                    if let terminalSession {
+                        // `.id` gives each rebuilt session (instance switch) a
+                        // fresh view identity, so its `.task` fires and attaches
+                        // the new pty instead of reusing the torn-down view.
+                        TerminalSessionView(session: terminalSession)
+                            .id(ObjectIdentifier(terminalSession))
+                    } else if resolvingTerminalHost {
+                        ProgressView("Connecting…")
+                    } else {
+                        noInstanceView
+                    }
                 } else {
-                    noInstanceView
+                    ChatContentView(sessionId: sessionId, viewModel: viewModel)
                 }
-            } else {
-                ChatContentView(sessionId: sessionId, viewModel: viewModel)
             }
         }
         .background(Color("BgPrimary"))
@@ -647,9 +659,74 @@ private struct CodeThreadChatView: View {
             // (DEBUG) or the no-instance state (release).
             await instanceStore.refreshIfNeeded()
         }
+        .task {
+            // Mirrors the terminal's own `.task { await session.start() }` —
+            // SwiftUI cancels a view's `.task` automatically when it leaves
+            // the hierarchy, so this loop just needs to check
+            // `Task.isCancelled` between polls; no separate teardown call is
+            // needed the way `terminalSession?.stop()` tears down the pty.
+            await pollPendingPermissions()
+        }
+        .sheet(item: $reviewingPermission) { request in
+            ChangesetReviewSheet(request: request) { resolved in
+                pendingPermissions.removeAll { $0.id == resolved.id }
+            }
+        }
         .onDisappear {
             // Detach only — the pty keeps running server-side.
             terminalSession?.stop()
+        }
+    }
+
+    /// Single-line banner shown above the chat/terminal content whenever a
+    /// gizzi-code coding session has a pending file-edit (or other) approval
+    /// waiting — visible regardless of `showTerminal`, since it lives above
+    /// the flipped `Group` rather than inside either branch. Tapping it opens
+    /// `ChangesetReviewSheet` for the oldest pending request.
+    @ViewBuilder
+    private var pendingPermissionBanner: some View {
+        if let oldest = pendingPermissions.first {
+            Button {
+                reviewingPermission = oldest
+            } label: {
+                HStack(spacing: 8) {
+                    Image(systemName: "checkmark.shield")
+                        .foregroundColor(Theme.statusWarning)
+                    Text(pendingPermissions.count == 1
+                         ? "1 change awaiting review"
+                         : "\(pendingPermissions.count) changes awaiting review")
+                        .font(.subheadline)
+                        .foregroundColor(Color("TextPrimary"))
+                    Spacer()
+                    Image(systemName: "chevron.right")
+                        .font(.caption2)
+                        .foregroundColor(Color("TextSecondary"))
+                }
+                .padding(.horizontal, 16)
+                .padding(.vertical, 10)
+                .background(Color("BgPanel"))
+                .contentShape(Rectangle())
+            }
+            .buttonStyle(.plain)
+        }
+    }
+
+    /// Polls `GET /v1/permission` every 4s while the view is on screen,
+    /// filtered down to this thread's own session id (`sessionID ==
+    /// sessionId`, `PermissionNext.Request.sessionID` at `next.ts:74`).
+    /// Sessionless (not-yet-created) threads have no id to filter on, so a
+    /// nil `sessionId` skips polling entirely. Failed polls are silently
+    /// skipped and retried on the next tick — a transient network error
+    /// shouldn't blank out an already-known pending list.
+    private func pollPendingPermissions() async {
+        guard let sessionId else { return }
+        while !Task.isCancelled {
+            if let all = try? await PermissionClient.shared.listPending() {
+                pendingPermissions = all
+                    .filter { $0.sessionID == sessionId }
+                    .sorted { $0.id < $1.id }
+            }
+            try? await Task.sleep(for: .seconds(4))
         }
     }
 
