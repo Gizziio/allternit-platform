@@ -1,0 +1,612 @@
+<title>Agent Activity Panel — Mockup v3</title>
+<style>
+  :root {
+    --surface-canvas: #fafafa; --surface-panel: #ffffff; --surface-active: #f3f4f6; --surface-hover: #e5e7eb;
+    --text-primary: #111111; --text-secondary: #4b5563; --text-muted: #9ca3af;
+    --border-muted: #e5e7eb; --border-default: #d1d5db;
+    --accent-primary: #7c3aed; --accent-primary-rgb: 124, 58, 237;
+    --status-success: #22c55e; --status-success-rgb: 34, 197, 94;
+    --status-warning: #f59e0b; --status-warning-rgb: 245, 158, 11;
+    --status-error: #ef4444; --status-error-rgb: 239, 68, 68;
+    --status-info: #3b82f6; --status-info-rgb: 59, 130, 246;
+    --font-sans: Inter, ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+    --font-mono: "SFMono-Regular", ui-monospace, Menlo, Monaco, Consolas, monospace;
+    color-scheme: light dark;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --surface-canvas: #0a0a0b; --surface-panel: #141416; --surface-active: #202024; --surface-hover: #2a2a2e;
+      --text-primary: #f0f0f0; --text-secondary: #a1a1aa; --text-muted: #6b6b70;
+      --border-muted: #27272a; --border-default: #3a3a3e;
+      --accent-primary: #a78bfa; --accent-primary-rgb: 167, 139, 250;
+    }
+  }
+  :root[data-theme="dark"] {
+    --surface-canvas: #0a0a0b; --surface-panel: #141416; --surface-active: #202024; --surface-hover: #2a2a2e;
+    --text-primary: #f0f0f0; --text-secondary: #a1a1aa; --text-muted: #6b6b70;
+    --border-muted: #27272a; --border-default: #3a3a3e;
+    --accent-primary: #a78bfa; --accent-primary-rgb: 167, 139, 250;
+  }
+  :root[data-theme="light"] {
+    --surface-canvas: #fafafa; --surface-panel: #ffffff; --surface-active: #f3f4f6; --surface-hover: #e5e7eb;
+    --text-primary: #111111; --text-secondary: #4b5563; --text-muted: #9ca3af;
+    --border-muted: #e5e7eb; --border-default: #d1d5db;
+    --accent-primary: #7c3aed; --accent-primary-rgb: 124, 58, 237;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; height: 100%; }
+  body { background: var(--surface-canvas); color: var(--text-primary); font: 14px/1.5 var(--font-sans); -webkit-font-smoothing: antialiased; }
+
+  .note-banner { background: rgba(var(--accent-primary-rgb), .08); border-bottom: 1px solid var(--border-muted); padding: 12px 20px;
+    font-size: .82em; color: var(--text-secondary); }
+  .note-banner b { color: var(--text-primary); }
+  .note-banner ul { margin: 6px 0 0; padding-left: 18px; }
+  .note-banner li { margin-bottom: 3px; }
+  .note-banner .src { color: var(--text-muted); font-size: .95em; }
+  .note-banner details { margin-top: 8px; }
+  .note-banner summary { cursor: pointer; font-weight: 650; color: var(--text-primary); }
+  .note-banner summary::marker { color: var(--accent-primary); }
+
+  .sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden;
+    clip: rect(0,0,0,0); white-space: nowrap; border: 0; }
+
+  .stage { display: flex; justify-content: center; padding: 40px 20px; }
+  .app-frame { width: 900px; max-width: 100%; height: 600px; background: var(--surface-canvas); border: 1px solid var(--border-muted); border-radius: 14px; overflow: hidden; position: relative; box-shadow: 0 20px 60px rgba(0,0,0,.12); }
+
+  .fake-topbar { height: 48px; border-bottom: 1px solid var(--border-muted); display: flex; align-items: center; padding: 0 16px; gap: 10px; background: var(--surface-panel); }
+  .fake-icon { width: 28px; height: 28px; border-radius: 7px; display: flex; align-items: center; justify-content: center; font-size: 14px; color: var(--text-muted); cursor: pointer; }
+  .fake-icon:hover { background: var(--surface-hover); }
+  .bell-wrap { position: relative; }
+  .bell-wrap.active .fake-icon { background: rgba(var(--accent-primary-rgb), .14); color: var(--accent-primary); }
+  .badge-count { position: absolute; top: -2px; right: -2px; background: var(--status-error); color: white; font: 700 9px/1 var(--font-mono);
+    min-width: 14px; height: 14px; border-radius: 999px; display: flex; align-items: center; justify-content: center; padding: 0 3px; }
+  .fake-body { padding: 24px; color: var(--text-muted); font-size: .85em; }
+
+  .panel { position: absolute; top: 48px; right: 16px; width: 400px; height: 520px; max-height: calc(100% - 64px); background: var(--surface-panel);
+    border: 1px solid var(--border-default); border-radius: 12px; box-shadow: 0 12px 40px rgba(0,0,0,.18); display: flex; flex-direction: column; overflow: hidden; }
+  .panel-header { padding: 12px 16px; border-bottom: 1px solid var(--border-muted); display: flex; align-items: center; }
+  .panel-header h1 { font-size: .92em; font-weight: 700; margin: 0; }
+  .panel-header .count { color: var(--text-muted); font-size: .78em; font-family: var(--font-mono); margin-left: 6px; }
+  .panel-tabs { margin-left: auto; display: flex; gap: 2px; background: var(--surface-active); border-radius: 7px; padding: 2px; }
+  .panel-tab { font: inherit; font-size: .74em; font-weight: 650; border: none; background: none; color: var(--text-muted); padding: 4px 9px; border-radius: 5px; cursor: pointer; }
+  .panel-tab.active { background: var(--surface-panel); color: var(--text-primary); box-shadow: 0 1px 2px rgba(0,0,0,.08); }
+  .panel-tab:focus-visible, .fake-icon:focus-visible, .qa-btn:focus-visible, .diff-link:focus-visible,
+  .thread-row-main:focus-visible, .kebab:focus-visible, .menu-item:focus-visible, .backlink:focus-visible { outline: 2px solid var(--accent-primary); outline-offset: -2px; }
+
+  .panel-body { position: relative; flex: 1; min-height: 0; }
+  .thread-list { position: absolute; inset: 0; overflow-y: auto; }
+  .thread-row { border-bottom: 1px solid var(--border-muted); }
+  .thread-row-top { display: flex; align-items: flex-start; }
+  .thread-row-main { padding: 10px 16px; display: flex; align-items: flex-start; gap: 10px; cursor: pointer; flex: 1; min-width: 0; text-align: left; background: none; border: none; font: inherit; color: inherit; }
+  .thread-row-main:hover { background: var(--surface-hover); }
+  .thread-row.focused .thread-row-main { background: rgba(var(--accent-primary-rgb), .07); box-shadow: inset 2px 0 0 var(--accent-primary); }
+
+  .status-dot { width: 8px; height: 8px; border-radius: 50%; margin-top: 5px; flex-shrink: 0; position: relative; }
+  .status-dot.review { background: var(--status-warning); }
+  .status-dot.working { background: var(--status-info); }
+  .status-dot.done { background: var(--status-success); }
+  .status-dot.idle { background: var(--text-muted); }
+  .status-dot.blocked { background: var(--status-error); }
+  @media (prefers-reduced-motion: no-preference) {
+    .status-dot.working::after { content: ""; position: absolute; inset: 0; border-radius: 50%; background: inherit; animation: pulse 1.6s infinite; }
+  }
+  @keyframes pulse { 0% { opacity: .7; transform: scale(1); } 100% { opacity: 0; transform: scale(2.4); } }
+
+  .row-content { min-width: 0; flex: 1; }
+  .row-top { display: flex; align-items: baseline; gap: 6px; }
+  .row-topic { font-weight: 500; font-size: .87em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .thread-row.unread .row-topic { font-weight: 700; }
+  .unread-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--accent-primary); flex-shrink: 0; display: inline-block; }
+  .row-time { margin-left: auto; color: var(--text-muted); font-size: .72em; font-family: var(--font-mono); flex-shrink: 0; }
+  .row-preview { color: var(--text-secondary); font-size: .81em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; margin-top: 1px; }
+  .row-tags { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 4px; }
+  .row-tag { display: inline-flex; align-items: center; gap: 3px; font-size: .68em; font-weight: 700; padding: 1px 6px; border-radius: 5px; }
+  .row-tag.review { background: rgba(var(--status-warning-rgb), .12); color: var(--status-warning); }
+  .row-tag.blocked { background: rgba(var(--status-error-rgb), .12); color: var(--status-error); }
+  .row-tag.lock { background: var(--surface-active); color: var(--text-muted); font-weight: 600; }
+  .row-tag.next-run { background: var(--surface-active); color: var(--text-muted); font-family: var(--font-mono); font-weight: 600; }
+  .row-tag.archived { background: var(--surface-active); color: var(--text-muted); }
+
+  .row-actions { display: flex; align-items: flex-start; gap: 2px; flex-shrink: 0; padding: 10px 12px 0 0; }
+  .kebab { position: relative; }
+  .kebab-btn { font: inherit; border: none; background: none; color: var(--text-muted); cursor: pointer; padding: 2px 5px; border-radius: 5px; font-size: .95em; }
+  .kebab-btn:hover { background: var(--surface-hover); color: var(--text-primary); }
+  .kebab-menu { position: absolute; right: 0; top: 22px; z-index: 5; background: var(--surface-panel); border: 1px solid var(--border-default);
+    border-radius: 8px; box-shadow: 0 8px 24px rgba(0,0,0,.16); min-width: 150px; overflow: hidden; }
+  .menu-item { display: block; width: 100%; text-align: left; font: inherit; font-size: .8em; padding: 8px 12px; border: none; background: none; color: var(--text-primary); cursor: pointer; }
+  .menu-item:hover { background: var(--surface-hover); }
+
+  .row-expand { max-height: 0; overflow: hidden; background: var(--surface-active); transition: max-height .2s ease; }
+  .thread-row.open .row-expand { max-height: 420px; overflow-y: auto; }
+  .expand-inner { padding: 10px 16px 12px 34px; }
+  .exp-msg { font-size: .8em; margin-bottom: 8px; }
+  .exp-msg .who { font-weight: 650; }
+  .exp-msg .who.agent { color: var(--accent-primary); }
+  .exp-msg .who.system { color: var(--text-muted); }
+  .exp-msg .who.human { color: var(--status-info); }
+  .exp-msg .body { color: var(--text-secondary); margin-top: 1px; }
+  .exp-msg .body code { font-family: var(--font-mono); background: var(--surface-panel); padding: 0 .3em; border-radius: 3px; }
+  .exp-msg.guard-msg { background: rgba(var(--status-error-rgb), .07); border: 1px solid rgba(var(--status-error-rgb), .25); border-radius: 8px; padding: 7px 10px; }
+  .exp-msg.guard-msg .who { color: var(--status-error); }
+  .older-count { font-size: .74em; color: var(--text-muted); margin-bottom: 8px; }
+
+  .reserve-note { display: flex; gap: 6px; align-items: flex-start; font-size: .78em; color: var(--text-secondary);
+    background: var(--surface-panel); border: 1px solid var(--border-muted); border-radius: 7px; padding: 7px 10px; margin-bottom: 8px; }
+  .reserve-note b { color: var(--text-primary); }
+
+  .review-card { background: var(--surface-panel); border: 1px solid var(--border-default); border-radius: 8px; padding: 10px 12px; margin-bottom: 8px; }
+  .review-card .rc-kind { font-size: .68em; font-weight: 700; text-transform: uppercase; letter-spacing: .04em; color: var(--status-warning); }
+  .review-card .rc-ask { font-size: .82em; margin-top: 4px; color: var(--text-primary); }
+  .review-card .rc-alt { font-size: .78em; margin-top: 4px; color: var(--text-muted); }
+  .review-card .rc-diff { font-family: var(--font-mono); font-size: .76em; color: var(--text-secondary); margin-top: 6px; }
+  .review-card .rc-stat { color: var(--text-muted); }
+
+  .diff-link { display: inline-flex; align-items: center; gap: 5px; font-size: .78em; font-weight: 650; color: var(--accent-primary);
+    background: var(--surface-active); border: 1px solid var(--border-default); border-radius: 6px; padding: 5px 10px; margin: 6px 0 2px; cursor: pointer; }
+  .diff-link:hover { background: var(--surface-hover); }
+
+  .quick-actions { display: flex; gap: 6px; margin: 8px 0; }
+  .qa-btn { font: inherit; font-size: .76em; font-weight: 650; border-radius: 6px; padding: 5px 10px; cursor: pointer; border: 1px solid var(--border-default); background: var(--surface-panel); color: var(--text-secondary); }
+  .qa-btn.approve { color: var(--status-success); border-color: rgba(var(--status-success-rgb), .35); }
+  .qa-btn.approve:hover { background: rgba(var(--status-success-rgb), .08); }
+  .qa-btn.deny { color: var(--status-error); border-color: rgba(var(--status-error-rgb), .35); }
+  .qa-btn.deny:hover { background: rgba(var(--status-error-rgb), .08); }
+  .qa-btn kbd { font-family: var(--font-mono); opacity: .6; margin-left: 3px; }
+
+  .open-full { font-size: .77em; color: var(--accent-primary); font-weight: 650; background: none; border: none; cursor: pointer; padding: 4px 0; display: block; }
+  .open-full:hover { text-decoration: underline; }
+
+  .reply-row { display: flex; gap: 6px; align-items: center; margin-top: 4px; }
+  .reply-row input { flex: 1; font: inherit; font-size: .8em; border: 1px solid var(--border-default); background: var(--surface-panel); border-radius: 6px; padding: 6px 9px; color: var(--text-primary); outline: none; }
+  .reply-row input::placeholder { color: var(--text-muted); }
+  .reply-row input:focus { border-color: var(--accent-primary); }
+  .reply-row button { font: inherit; font-size: .78em; font-weight: 650; background: var(--accent-primary); color: white; border: none; border-radius: 6px; padding: 6px 11px; cursor: pointer; }
+  .resolved-note { font-size: .78em; color: var(--status-success); font-weight: 650; margin-top: 4px; }
+
+  /* Detail overlay — the "full thread" escalation the accordion alone can't provide */
+  .detail-overlay { position: absolute; inset: 0; background: var(--surface-panel); display: flex; flex-direction: column; z-index: 10; }
+  .detail-head { padding: 10px 16px; border-bottom: 1px solid var(--border-muted); display: flex; align-items: center; gap: 8px; flex-shrink: 0; }
+  .backlink { font: inherit; font-size: .8em; font-weight: 650; color: var(--text-secondary); background: none; border: none; cursor: pointer; padding: 4px 6px; border-radius: 6px; }
+  .backlink:hover { background: var(--surface-hover); }
+  .detail-head-title { min-width: 0; }
+  .detail-head-title .t { font-weight: 700; font-size: .88em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .detail-head-title .id { font-family: var(--font-mono); font-size: .72em; color: var(--text-muted); }
+  .detail-body { flex: 1; overflow-y: auto; padding: 12px 16px; }
+  .detail-body .exp-msg { font-size: .82em; }
+
+  .kbd-footer { border-top: 1px solid var(--border-muted); padding: 6px 16px; font-size: .7em; color: var(--text-muted); font-family: var(--font-mono);
+    display: flex; gap: 12px; flex-shrink: 0; background: var(--surface-panel); }
+  .kbd-footer kbd { background: var(--surface-active); border: 1px solid var(--border-default); border-radius: 3px; padding: 0 4px; font-family: inherit; }
+
+  ::selection { background: rgba(var(--accent-primary-rgb), .25); }
+</style>
+
+<div class="note-banner">
+  <b>v3 — audited v2 against decision-queue and incident-response products, not just other "agent panel" UIs.</b> Full findings and failure scenarios in <code>AUDIT_NOTES.md</code>. What changed here and why:
+  <ul>
+    <li><b>Archive + Share are back</b> (v1 had them, v2 silently dropped them) via a per-row <b>⋯</b> menu — <code>archive()</code>/<code>share()</code> are real, distinct Rails Mail actions, not the same thing as <code>decide()</code>.</li>
+    <li><b>Unread state restored</b> (v2 had none at all — a heavy user with dozens of threads couldn't tell new from seen) plus a real <b>Archived</b> tab, so resolved/archived threads stop inflating "All" forever.</li>
+    <li><b>Review cards always show the actual ask before offering Approve/Deny</b> — modeled on PagerDuty/Linear always surfacing full context before an action, not a bare link a user could ignore. Code-diff requests show a stat line; non-diff <code>decide()</code> calls (a design choice, not a diff) show the question and the agent's recommended option inline, since <code>decide()</code> is strictly boolean — there's no such thing as a 3-way decision in the real API, only "approve the recommendation or not."</li>
+    <li><b>Accordion → "Open full thread" escalation</b>, matching what Claude Code's Agent View actually does (inline preview, <kbd>Enter</kbd> for full transcript) — v2's banner cited that pattern but only built the inline half, with no escape hatch for a long-running thread.</li>
+    <li><b>Reservations and guard actions are now visible, not invisible</b> — <code>reserve()</code>/<code>guard()</code> aren't human actions, but a lock held by one thread blocking another is exactly the kind of state this repo's own concurrent-session workflow needs surfaced (see <code>GIZZI.md</code>'s "multiple concurrent Eoj/agent sessions" note).</li>
+    <li><b>Keyboard-first interaction</b> (<kbd>↑↓</kbd>/<kbd>j k</kbd> navigate, <kbd>Enter</kbd> open, <kbd>1</kbd>/<kbd>2</kbd> approve/deny, <kbd>a</kbd> archive) — modeled on Linear Triage's number-key triage. This is also the piece that actually generalizes to a CLI list, unlike hover states or a fixed 400px panel.</li>
+    <li>Reduced-motion respected (pulse only animates under <code>prefers-reduced-motion: no-preference</code>); status is never color-only — every dot has a text label alongside it.</li>
+  </ul>
+  <details>
+    <summary>New sources (beyond Claude Code / GitHub Agents panel / Cursor, already cited in v2)</summary>
+    <ul>
+      <li class="src"><b>Linear Triage</b> — <a href="https://linear.app/docs/triage">linear.app/docs/triage</a>: 4-key triage (Accept/Duplicate/Decline/Snooze), Triage Rules automation for scale.</li>
+      <li class="src"><b>Linear Triage Intelligence</b> — <a href="https://linear.app/now/how-we-built-triage-intelligence">linear.app/now/how-we-built-triage-intelligence</a>: AI suggestions shown with visible reasoning (hover tooltip + "thinking panel"), never silently auto-applied.</li>
+      <li class="src"><b>PagerDuty incidents</b> — <a href="https://support.pagerduty.com/main/docs/incidents">support.pagerduty.com/main/docs/incidents</a>: filterable Timeline tab, Acknowledge/Escalate/Resolve action bar.</li>
+      <li class="src"><b>PagerDuty mobile app</b> — <a href="https://support.pagerduty.com/main/docs/mobile-app">support.pagerduty.com/main/docs/mobile-app</a>: status-color banner (red→yellow on ack), swipe-to-Ack/Resolve, long-press push notification to Ack without opening the app.</li>
+      <li class="src"><b>GitHub notifications inbox</b> — <a href="https://docs.github.com/en/subscriptions-and-notifications/how-tos/viewing-and-triaging-notifications/managing-notifications-from-your-inbox">docs.github.com/.../managing-notifications-from-your-inbox</a>: reason labels, Done vs Save (kept vs. archived-forever) as the volume-control mechanism.</li>
+      <li class="src"><b>GitHub Mobile push notifications</b> — <a href="https://github.blog/changelog/2021-11-22-push-notifications-for-pull-request-review-activities-on-github-mobile/">github.blog changelog, 2021-11-22</a> and <a href="https://github.blog/changelog/2021-04-01-reviewing-deployments-on-github-mobile/">2021-04-01</a>: on mobile, the notification itself is the only entry point to a deployment-approval dialog.</li>
+      <li class="src"><b>Slack mobile approval-request tutorial</b> — <a href="https://docs.slack.dev/tools/deno-slack-sdk/tutorials/mobile-request/">docs.slack.dev/.../tutorials/mobile-request</a>: Block Kit message with primary Approve / danger Deny buttons; on click, buttons are replaced in place with the decision (no dead state).</li>
+    </ul>
+  </details>
+</div>
+
+<div class="stage">
+  <div class="app-frame">
+    <div class="fake-topbar">
+      <div class="fake-icon">💬</div>
+      <div class="fake-icon">📁</div>
+      <div class="bell-wrap active">
+        <div class="fake-icon">🔔<span class="badge-count" id="badgeCount">4</span></div>
+      </div>
+    </div>
+    <div class="fake-body">← rest of the app, dimmed for this mockup. Same header-icon → slide-over entry point as v2 (that part of the audit held up); everything inside the panel changed.</div>
+
+    <div class="panel">
+      <div class="panel-header">
+        <h1>Agent Activity <span class="count" id="panelCount">9</span></h1>
+        <div class="panel-tabs" id="panelTabs"></div>
+      </div>
+      <div class="panel-body" id="panelBody"></div>
+      <div class="kbd-footer">
+        <span><kbd>↑↓</kbd>/<kbd>j k</kbd> navigate</span>
+        <span><kbd>Enter</kbd> open</span>
+        <span><kbd>1</kbd> approve</span>
+        <span><kbd>2</kbd> deny</span>
+        <span><kbd>a</kbd> archive</span>
+        <span><kbd>Esc</kbd> back</span>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+const THREADS = [
+  {
+    id: "wih:executor-changeset-review",
+    topic: "Changeset Review — iOS Code tab",
+    status: "review", unread: true, archived: false,
+    time: "2m",
+    preview: "Wired banner into CodeThreadChatView, ready for review.",
+    messages: [
+      { who: "gizzi-code", kind: "agent", text: "Started phase 1: PermissionClient.swift + ChangesetReviewSheet.swift" },
+      { who: "gizzi-code", kind: "agent", text: "Wired banner into CodeThreadChatView. Wrote docs/CHANGESET_REVIEW_PHASE_1_NOTES.md." },
+    ],
+    review: { kind: "code-diff", diffRef: "PR #4 — ChangesetReviewSheet.swift", stat: "+216 −12 · 3 files", resolved: false },
+    reservation: null,
+  },
+  {
+    id: "wih:executor-automation-cron",
+    topic: "Automation Tasks — cron jobs (phase 1)",
+    status: "review", unread: true, archived: false,
+    time: "41m",
+    preview: "Built CronClient + AutomationTasksListView, ready for review.",
+    messages: [
+      { who: "gizzi-code", kind: "agent", text: "Built CronClient, CronJobStore, AutomationTasksListView." },
+      { who: "gizzi-code", kind: "agent", text: "Wired into ModeBarItem + MainWorkspaceView. Ready for review." },
+    ],
+    review: { kind: "code-diff", diffRef: "PR #9", stat: "+1411 −34 · 6 files", resolved: false },
+    reservation: null,
+  },
+  {
+    id: "wih:executor-goal-engine-decision",
+    topic: "Automation Tasks — goals, sync approach",
+    status: "review", unread: true, archived: false,
+    time: "15m",
+    preview: "Needs a call: extend GoalEngine's sync path, or fork a lightweight client?",
+    messages: [
+      { who: "gizzi-code", kind: "agent", text: "Scoped GoalEngine's API surface. Two ways to wire Goals into Automation Tasks — flagging before I write 1000+ lines in the wrong direction." },
+    ],
+    review: {
+      kind: "decision",
+      question: "Extend GoalEngine's existing sync path, or fork a lightweight GoalsClient to avoid touching shared sync code?",
+      recommended: "Fork a lightweight GoalsClient — smaller diff, zero risk to the 3 other features that depend on GoalEngine's sync path.",
+      alternative: "Extend GoalEngine directly — more reuse, but touches shared code under active use elsewhere.",
+      resolved: false,
+    },
+    reservation: null,
+  },
+  {
+    id: "wih:executor-onboarding-goals-refactor",
+    topic: "Onboarding — wire Goals into setup flow",
+    status: "blocked", unread: true, archived: false,
+    time: "8m",
+    preview: "Blocked — guard denied a write outside this agent's reserved paths.",
+    messages: [
+      { who: "gizzi-code", kind: "agent", text: "Wiring GoalEngine+Client.swift into the onboarding flow." },
+      { who: "guard", kind: "guard", text: "Denied: write to Features/Automation/GoalEngine+Client.swift — path reserved by wih:executor-automation-goals. Retry after release or request the human resolve the conflict." },
+    ],
+    review: null,
+    reservation: null,
+  },
+  {
+    id: "wih:executor-automation-goals",
+    topic: "Automation Tasks — goals (phase 2, engine)",
+    status: "working", unread: false, archived: false,
+    time: "3m",
+    preview: "Reading GoalEngine API surface, scoping GoalsClient…",
+    messages: [
+      { who: "gizzi-code", kind: "agent", text: "Reading GoalEngine API surface, scoping GoalsClient…" },
+    ],
+    review: null,
+    reservation: { paths: ["Features/Automation/GoalsClient.swift", "Features/Automation/GoalEngine+Client.swift"], ttl: "9m left" },
+  },
+  {
+    id: "wih:executor-agent-activity-audit",
+    topic: "Agent Activity design — v2 audit",
+    status: "working", unread: true, archived: false,
+    time: "just now",
+    preview: "Auditing mockup-v2.html against Linear Triage, PagerDuty, Slack, GitHub notification patterns…",
+    messages: [
+      { who: "claude", kind: "agent", text: "Pulled Rails Mail's real action surface from cmd/allternit-api/src/rails/mod.rs — reserve()/guard() are backend-only, decide() is strictly boolean." },
+      { who: "claude", kind: "agent", text: "Researched Linear Triage, PagerDuty (web + mobile), Slack approval Block Kit, GitHub notifications. Writing mockup-v3.html + AUDIT_NOTES.md now." },
+    ],
+    review: null,
+    reservation: null,
+  },
+  {
+    id: "wih:executor-cowork-tasks",
+    topic: "Cowork Tasks — flat task list",
+    status: "done", unread: false, archived: true,
+    time: "1h",
+    preview: "Approved and merged as PR #13.",
+    messages: [
+      { who: "gizzi-code", kind: "agent", text: "Task list + detail + create sheet done, wired into ComposerPlusSheet." },
+      { who: "Eoj", kind: "human", text: "Approved and merged as PR #13." },
+    ],
+    review: { kind: "code-diff", diffRef: "PR #13", stat: "+981 −0 · 3 files", resolved: true },
+    reservation: null,
+  },
+  {
+    id: "wih:executor-ci-issue-6",
+    topic: "CI fix — typography validator + Vercel",
+    status: "done", unread: false, archived: false,
+    time: "3h",
+    preview: "validate-typography: PASS (19s). Vercel root-caused as vestigial.",
+    messages: [
+      { who: "gizzi-code", kind: "agent", text: "Found 766 violations, mostly validator bugs. Root-caused Vercel as vestigial." },
+      { who: "system", kind: "system", text: "validate-typography: PASS (19s)" },
+    ],
+    review: null,
+    reservation: null,
+  },
+  {
+    id: "wih:automation-weekly-digest",
+    topic: "Weekly digest (cron)",
+    status: "idle", unread: false, archived: false,
+    time: "next: Mon 9am",
+    preview: "Scheduled — last run summarized 14 threads, 0 needing review.",
+    messages: [
+      { who: "system", kind: "system", text: "Last run (Mon 9:00): summarized 14 threads, 0 needing review." },
+    ],
+    review: null,
+    reservation: null,
+    nextRun: true,
+  },
+];
+
+const STATUS_LABEL = { review: "Needs review", working: "Working", done: "Done", idle: "Scheduled", blocked: "Blocked" };
+
+let activeTab = "all";      // all | review | archived
+let openId = null;          // accordion open in list view
+let detailId = null;        // full-thread overlay
+let menuOpenId = null;      // kebab menu open
+let focusedIndex = 0;
+
+const bodyEl = document.getElementById("panelBody");
+const tabsEl = document.getElementById("panelTabs");
+
+function visibleThreads() {
+  if (activeTab === "archived") return THREADS.filter(t => t.archived);
+  if (activeTab === "review") return THREADS.filter(t => !t.archived && t.review && !t.review.resolved);
+  return THREADS.filter(t => !t.archived);
+}
+
+function counts() {
+  return {
+    all: THREADS.filter(t => !t.archived).length,
+    review: THREADS.filter(t => !t.archived && t.review && !t.review.resolved).length,
+    archived: THREADS.filter(t => t.archived).length,
+  };
+}
+
+function updateChrome() {
+  const c = counts();
+  document.getElementById("panelCount").textContent = c.all;
+  document.getElementById("badgeCount").textContent = THREADS.filter(t => t.unread && !t.archived).length;
+  tabsEl.innerHTML = `
+    <button class="panel-tab ${activeTab === 'all' ? 'active' : ''}" data-tab="all">All <span style="font-family:var(--font-mono)">${c.all}</span></button>
+    <button class="panel-tab ${activeTab === 'review' ? 'active' : ''}" data-tab="review">Review <span style="font-family:var(--font-mono)">${c.review}</span></button>
+    <button class="panel-tab ${activeTab === 'archived' ? 'active' : ''}" data-tab="archived">Archived <span style="font-family:var(--font-mono)">${c.archived}</span></button>
+  `;
+  tabsEl.querySelectorAll("[data-tab]").forEach(btn => btn.addEventListener("click", () => {
+    activeTab = btn.dataset.tab; openId = null; menuOpenId = null; focusedIndex = 0; render();
+  }));
+}
+
+function reviewCardHtml(t) {
+  const r = t.review;
+  if (!r) return "";
+  if (r.resolved) return `<div class="resolved-note">✓ ${r.kind === 'code-diff' ? 'Approved and merged' : 'Resolved'}</div>`;
+  if (r.kind === "code-diff") {
+    return `
+      <div class="review-card">
+        <div class="rc-kind">Review requested · code diff</div>
+        <div class="diff-link" data-diff="${t.id}">📄 ${r.diffRef} <span class="rc-stat">· ${r.stat}</span> ↗ opens on GitHub</div>
+      </div>
+      <div class="quick-actions">
+        <button class="qa-btn approve" data-approve="${t.id}">Approve <kbd>1</kbd></button>
+        <button class="qa-btn deny" data-deny="${t.id}">Deny <kbd>2</kbd></button>
+      </div>`;
+  }
+  // decision kind — decide() is boolean, so this is "approve the recommended option, or not"
+  return `
+    <div class="review-card">
+      <div class="rc-kind">Review requested · decision (no diff)</div>
+      <div class="rc-ask">${r.question}</div>
+      <div class="rc-ask"><b>Recommended:</b> ${r.recommended}</div>
+      <div class="rc-alt">Alternative: ${r.alternative}</div>
+    </div>
+    <div class="quick-actions">
+      <button class="qa-btn approve" data-approve="${t.id}">Approve recommendation <kbd>1</kbd></button>
+      <button class="qa-btn deny" data-deny="${t.id}">Reject <kbd>2</kbd></button>
+    </div>`;
+}
+
+function msgHtml(m) {
+  if (m.kind === "guard") {
+    return `<div class="exp-msg guard-msg"><span class="who">⛔ ${m.who}</span><div class="body">${m.text}</div></div>`;
+  }
+  return `<div class="exp-msg"><span class="who ${m.kind}">${m.who}</span><div class="body">${m.text}</div></div>`;
+}
+
+function reserveHtml(t) {
+  if (!t.reservation) return "";
+  return `<div class="reserve-note">🔒 <span><b>${t.reservation.paths.length} path${t.reservation.paths.length > 1 ? 's' : ''} reserved</b> — ${t.reservation.paths.join(", ")} · ${t.reservation.ttl}</span></div>`;
+}
+
+function bodyBlockHtml(t, full) {
+  const msgs = full ? t.messages : t.messages.slice(-2);
+  const hidden = full ? 0 : t.messages.length - msgs.length;
+  return `
+    ${hidden > 0 ? `<div class="older-count">${hidden} earlier message${hidden > 1 ? 's' : ''} not shown</div>` : ""}
+    ${msgs.map(msgHtml).join("")}
+    ${reserveHtml(t)}
+    ${reviewCardHtml(t)}
+    ${!full && hidden > 0 ? `<button class="open-full" data-open="${t.id}">Open full thread →</button>` : ""}
+    ${t.archived ? `<div class="row-tag archived" style="margin-top:6px;">📦 Archived</div>` : `
+      <div class="reply-row">
+        <input type="text" placeholder="Reply in this thread…" data-reply="${t.id}" />
+        <button data-send="${t.id}">Send</button>
+      </div>`}
+  `;
+}
+
+function rowTagsHtml(t) {
+  const tags = [];
+  if (t.review && !t.review.resolved) tags.push(`<span class="row-tag review">Needs review</span>`);
+  if (t.status === "blocked") tags.push(`<span class="row-tag blocked">⛔ Blocked by guard</span>`);
+  if (t.reservation) tags.push(`<span class="row-tag lock">🔒 ${t.reservation.paths.length} path${t.reservation.paths.length > 1 ? 's' : ''} · ${t.reservation.ttl}</span>`);
+  if (t.nextRun) tags.push(`<span class="row-tag next-run">${t.time}</span>`);
+  if (t.archived) tags.push(`<span class="row-tag archived">📦 Archived</span>`);
+  return tags.join("");
+}
+
+function renderList() {
+  const list = visibleThreads();
+  if (focusedIndex >= list.length) focusedIndex = Math.max(0, list.length - 1);
+  bodyEl.innerHTML = `<div class="thread-list">${list.map((t, i) => `
+    <div class="thread-row ${openId === t.id ? 'open' : ''} ${t.unread ? 'unread' : ''} ${i === focusedIndex ? 'focused' : ''}" data-id="${t.id}">
+      <div class="thread-row-top">
+        <button class="thread-row-main" data-toggle="${t.id}">
+          <div class="status-dot ${t.status}"></div>
+          <div class="row-content">
+            <div class="row-top">
+              <span class="row-topic">${t.topic}</span>
+              ${t.unread ? '<span class="unread-dot" aria-hidden="true"></span>' : ''}
+              <span class="sr-only">${STATUS_LABEL[t.status]}${t.unread ? ', unread' : ''}</span>
+              <span class="row-time">${t.time}</span>
+            </div>
+            <div class="row-preview">${t.preview}</div>
+            <div class="row-tags">${rowTagsHtml(t)}</div>
+          </div>
+        </button>
+        <div class="row-actions">
+          <div class="kebab">
+            <button class="kebab-btn" data-kebab="${t.id}" aria-label="More actions">⋯</button>
+            ${menuOpenId === t.id ? `
+              <div class="kebab-menu">
+                <button class="menu-item" data-archive-toggle="${t.id}">${t.archived ? 'Unarchive' : 'Archive'}</button>
+                <button class="menu-item" data-share="${t.id}">Share asset…</button>
+              </div>` : ''}
+          </div>
+        </div>
+      </div>
+      <div class="row-expand"><div class="expand-inner">${openId === t.id ? bodyBlockHtml(t, false) : ''}</div></div>
+    </div>
+  `).join("")}</div>`;
+  bindListEvents();
+}
+
+function renderDetail(id) {
+  const t = THREADS.find(x => x.id === id);
+  bodyEl.innerHTML = `
+    <div class="detail-overlay">
+      <div class="detail-head">
+        <button class="backlink" data-back>← Back</button>
+        <div class="detail-head-title">
+          <div class="t">${t.topic}</div>
+          <div class="id">${t.id}</div>
+        </div>
+      </div>
+      <div class="detail-body">${bodyBlockHtml(t, true)}</div>
+    </div>
+  `;
+  bindActionEvents(bodyEl);
+  bodyEl.querySelector("[data-back]").addEventListener("click", () => { detailId = null; render(); });
+}
+
+function bindActionEvents(scope) {
+  scope.querySelectorAll("[data-approve]").forEach(el => el.addEventListener("click", (e) => { e.stopPropagation(); decide(el.dataset.approve, true); }));
+  scope.querySelectorAll("[data-deny]").forEach(el => el.addEventListener("click", (e) => { e.stopPropagation(); decide(el.dataset.deny, false); }));
+  scope.querySelectorAll("[data-diff]").forEach(el => el.addEventListener("click", (e) => e.stopPropagation()));
+  scope.querySelectorAll("[data-open]").forEach(el => el.addEventListener("click", (e) => { e.stopPropagation(); detailId = el.dataset.open; openId = null; render(); }));
+  scope.querySelectorAll("[data-send]").forEach(el => el.addEventListener("click", (e) => {
+    e.stopPropagation();
+    const id = el.dataset.send;
+    const input = scope.querySelector(`[data-reply="${id}"]`);
+    if (input && input.value.trim()) { sendReply(id, input.value.trim()); }
+  }));
+}
+
+function bindListEvents() {
+  bindActionEvents(bodyEl);
+  bodyEl.querySelectorAll("[data-toggle]").forEach(el => el.addEventListener("click", () => {
+    const id = el.dataset.toggle;
+    openId = openId === id ? null : id;
+    const t = THREADS.find(x => x.id === id);
+    if (t) t.unread = false;
+    menuOpenId = null;
+    render();
+  }));
+  bodyEl.querySelectorAll("[data-kebab]").forEach(el => el.addEventListener("click", (e) => {
+    e.stopPropagation();
+    const id = el.dataset.kebab;
+    menuOpenId = menuOpenId === id ? null : id;
+    render();
+  }));
+  bodyEl.querySelectorAll("[data-archive-toggle]").forEach(el => el.addEventListener("click", (e) => {
+    e.stopPropagation();
+    const t = THREADS.find(x => x.id === el.dataset.archiveToggle);
+    t.archived = !t.archived;
+    menuOpenId = null; openId = null;
+    render();
+  }));
+  bodyEl.querySelectorAll("[data-share]").forEach(el => el.addEventListener("click", (e) => {
+    e.stopPropagation();
+    const t = THREADS.find(x => x.id === el.dataset.share);
+    t.messages.push({ who: "Eoj", kind: "human", text: "📎 Shared build artifact into thread." });
+    menuOpenId = null;
+    render();
+  }));
+}
+
+function decide(id, approve) {
+  const t = THREADS.find(x => x.id === id);
+  t.review.resolved = true;
+  t.status = "done";
+  t.preview = approve ? "Approved." : "Denied — needs changes.";
+  t.messages.push({ who: "Eoj", kind: "human", text: approve ? "Approved." : "Denied — needs changes." });
+  render();
+}
+
+function sendReply(id, text) {
+  const t = THREADS.find(x => x.id === id);
+  t.messages.push({ who: "Eoj", kind: "human", text });
+  render();
+}
+
+function render() {
+  updateChrome();
+  if (detailId) renderDetail(detailId); else renderList();
+}
+
+document.addEventListener("keydown", (e) => {
+  if (document.activeElement && document.activeElement.tagName === "INPUT") return;
+  const list = visibleThreads();
+  if (e.key === "Escape") {
+    if (detailId) { detailId = null; render(); }
+    else if (openId) { openId = null; render(); }
+    return;
+  }
+  if (detailId) return; // decide/deny/archive still reachable via buttons in detail view
+  if (e.key === "ArrowDown" || e.key === "j") { focusedIndex = Math.min(list.length - 1, focusedIndex + 1); render(); e.preventDefault(); }
+  else if (e.key === "ArrowUp" || e.key === "k") { focusedIndex = Math.max(0, focusedIndex - 1); render(); e.preventDefault(); }
+  else if (e.key === "Enter") {
+    const t = list[focusedIndex]; if (t) { detailId = t.id; t.unread = false; render(); }
+  } else if (e.key === "1" || e.key === "2") {
+    const t = list[focusedIndex];
+    if (t && t.review && !t.review.resolved) decide(t.id, e.key === "1");
+  } else if (e.key === "a") {
+    const t = list[focusedIndex];
+    if (t) { t.archived = !t.archived; render(); }
+  }
+});
+
+render();
+</script>
