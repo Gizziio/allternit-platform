@@ -14,7 +14,7 @@ Living checklist for the 121 actionable items (83 GAP + 38 PARTIAL) from `docs/S
 
 - [ ] **Projects** _(`GAP` → gizzi-code)_ — A CLI user has no way to group sessions into a named project the way web/iOS do; `init` is a one-shot scaffold, not a browser.
 - [ ] **Artifacts Library** _(`PARTIAL` → upgrade)_ — gizzi-code can produce/publish artifacts consumed elsewhere but can't browse its own artifact history.
-- [ ] **Automation Tasks (Goals/Routines/Loops/Cron)** _(`GAP` → iOS)_ — Missing from iOS specifically; ironically gizzi-code's engine is the richest implementation of this concept across all three surfaces.
+- [~] **Automation Tasks (Goals/Routines/Loops/Cron)** _(`GAP` → iOS)_ — Missing from iOS specifically; ironically gizzi-code's engine is the richest implementation of this concept across all three surfaces. Confirmed genuinely greenfield (unlike Device Pairing). Phased: Phase 1 = cron jobs only (in progress, `ao/automation-cron`), Routines/Loops/Goals as later phases — see `docs/AUTOMATION_TASKS_MAP.md`.
 
 ## Cowork
 
