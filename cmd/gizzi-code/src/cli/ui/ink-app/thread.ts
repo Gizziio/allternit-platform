@@ -11,6 +11,20 @@ import { withNetworkOptions, resolveNetworkOptions } from "@/cli/network"
 import { Filesystem } from "@/shared/util/filesystem"
 import type { EventSource } from "@/cli/ui/ink-app/context/sdk"
 import { win32DisableProcessedInput, win32InstallCtrlCGuard } from "@/cli/ui/ink-app/win32"
+import { getSessionId, setOriginalCwd, setProjectRoot } from "@/cli/ui/ink-app/bootstrap/state"
+import { getCwd } from "@/cli/ui/ink-app/utils/cwd"
+import { findCanonicalGitRoot, findGitRoot, getIsGit } from "@/cli/ui/ink-app/utils/git"
+import { clearMemoryFileCaches } from "@/cli/ui/ink-app/utils/gizzimd"
+import { captureHooksConfigSnapshot, updateHooksConfigSnapshot } from "@/cli/ui/ink-app/utils/hooks/hooksConfigSnapshot"
+import { getPlanSlug } from "@/cli/ui/ink-app/utils/plans"
+import { logEvent } from "@/cli/ui/ink-app/services/analytics/index"
+import { saveWorktreeState } from "@/cli/ui/ink-app/utils/sessionStorage"
+import { setCwd } from "@/cli/ui/ink-app/utils/Shell"
+import { createWorktreeForSession, hasWorktreeCreateHook } from "@/cli/ui/ink-app/utils/worktree"
+import { getInitialSettings } from "@/cli/ui/ink-app/utils/settings/settings"
+import { enableConfigs } from "@/cli/ui/ink-app/utils/config"
+import { enableConfigs as enableSharedConfigs } from "@/shared/utils/config"
+import { resolveSessionWorktreeEnabled } from "@/cli/ui/ink-app/threadWorktree"
 
 // Local Event type since SDK Event is now unknown
 type Event = any
@@ -103,6 +117,11 @@ export const TuiThreadCommand = cmd({
       .option("agent", {
         type: "string",
         describe: "agent to use",
+      })
+      .option("worktree", {
+        type: "boolean",
+        describe:
+          "create a new git worktree for this session (--no-worktree disables; defaults to the worktree.autoCreate setting)",
       }),
   handler: async (args) => {
     if (args.yolo || args["dangerously-skip-permissions"]) {
@@ -148,6 +167,76 @@ export const TuiThreadCommand = cmd({
         console.error("Failed to change directory to " + cwd)
         process.exitCode = 1
         return
+      }
+
+      // Project/local settings resolve against getOriginalCwd(), and
+      // getCwd()-based helpers read cwd state — point both at the project
+      // dir before resolving worktree creation. tui() sets the same state
+      // to the same value at startup, so this only makes it visible earlier.
+      setCwd(cwd)
+      setOriginalCwd(cwd)
+
+      // Worktree creation on the live path (W2b). The live path never calls
+      // setup(), so when resolution enables it we run the same native worktree
+      // branch setup() runs (src/cli/ui/ink-app/setup.ts) here — before the
+      // worker spawns, so both the worker and the TUI start inside the
+      // worktree. Resolution is identical to the commander path: --worktree
+      // wins, --no-worktree beats the worktree.autoCreate setting, default off.
+      if (resolveSessionWorktreeEnabled(args.worktree, getInitialSettings().worktree?.autoCreate)) {
+        // Worktree creation reads config (symlink/sparse settings); tui()
+        // enables configs idempotently later, so enable them here first.
+        enableConfigs()
+        enableSharedConfigs()
+        captureHooksConfigSnapshot()
+
+        // Mirrors setup.ts: hook-configured sessions can proceed without git
+        // so createWorktreeForSession() can delegate to the hook.
+        const hasHook = hasWorktreeCreateHook()
+        const inGit = await getIsGit()
+        if (!hasHook && !inGit) {
+          console.error(
+            `Error: Can only use --worktree in a git repository, but ${cwd} is not a git repository. ` +
+              `Configure a WorktreeCreate hook in settings.json to use --worktree with other VCS systems.`,
+          )
+          process.exitCode = 1
+          return
+        }
+
+        if (inGit) {
+          // Resolve to the main repo root (handles being invoked from within
+          // a worktree), same as setup().
+          const mainRepoRoot = findCanonicalGitRoot(getCwd())
+          if (!mainRepoRoot) {
+            console.error("Error: Could not determine the main git repository root.")
+            process.exitCode = 1
+            return
+          }
+          if (mainRepoRoot !== (findGitRoot(getCwd()) ?? getCwd())) {
+            process.chdir(mainRepoRoot)
+            setCwd(mainRepoRoot)
+          }
+        }
+
+        let worktreeSession: Awaited<ReturnType<typeof createWorktreeForSession>>
+        try {
+          worktreeSession = await createWorktreeForSession(getSessionId(), getPlanSlug())
+        } catch (e) {
+          console.error(`Error creating worktree: ${e instanceof Error ? e.message : String(e)}`)
+          process.exitCode = 1
+          return
+        }
+        logEvent("tengu_worktree_created", { tmux_enabled: false })
+
+        process.chdir(worktreeSession.worktreePath)
+        setCwd(worktreeSession.worktreePath)
+        setOriginalCwd(getCwd())
+        // --worktree means the worktree IS the session's project (same as
+        // setup.ts): skills/hooks resolve here.
+        setProjectRoot(getCwd())
+        saveWorktreeState(worktreeSession)
+        clearMemoryFileCaches()
+        // Re-read hooks from the worktree, same as setup().
+        updateHooksConfigSnapshot()
       }
 
       Log.Default.info("tui: spawning worker")

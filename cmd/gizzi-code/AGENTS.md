@@ -171,7 +171,18 @@ Triple-store memory system (episodic / semantic / procedural) with entity graph 
 |------|---------|
 | `src/runtime/brain/brain.service.ts` | `BrainService` — CRUD chunks, entities, relations, BRAIN.md sync |
 | `src/runtime/brain/memory.sql.ts` | Drizzle schema for `brain_memory_chunk`, `brain_memory_embedding`, `brain_memory_entity`, `brain_memory_relation` |
-| `src/cli/commands/brain.ts` | CLI: `status`, `remember`, `recall`, `entities`, `sync` |
+| `src/cli/commands/brain/memory.ts` | CLI: `gizzi brain memory status/remember/recall/entities/sync` |
+
+## Second Brain (Track D)
+
+`gizzi brain` command group (`src/cli/commands/brain/`) — the user's second brain: a
+local-first git repo of frontmatter markdown created by `gizzi brain init` (default
+`~/brain`), synced via plain git (`gizzi brain sync` = pull --rebase + push). Core logic
+in `lib.ts` (no UI/settings imports; covered by `test/cli/brain.test.ts`). Brain path is
+recorded in user settings as `brain.path` (schema lives in BOTH
+`src/shared/utils/settings/types.ts` and `src/cli/ui/ink-app/utils/settings/types.ts` —
+keep them in sync). Hosted platform remotes land in D2 (`POST /api/v1/brains` does not
+exist yet; `init --remote` degrades gracefully).
 
 ### Retrieval strategy (no embeddings required)
 1. Recency + importance ranking

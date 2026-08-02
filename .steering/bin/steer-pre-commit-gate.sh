@@ -56,6 +56,8 @@ fi
 
 verdict=$(steer_verdict "$answer")
 steer_log "$cwd" "$session_id" "gate=1 cmd=\"$(printf '%s' "$command" | head -c 80)\" verdict=$verdict"
+# M1-R1: capture the gate verdict at the moment it happens (advisory).
+steer_learn "$cwd" "gate" "$(printf '%s' "$command" | head -c 120)" "verdict=$verdict"
 
 [ "$verdict" = "APPROVE" ] && exit 0
 

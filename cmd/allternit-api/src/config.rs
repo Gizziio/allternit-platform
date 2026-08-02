@@ -448,6 +448,25 @@ impl AppConfig {
             })
     }
 
+    /// Directory where hosted brain remotes (per-user bare git repos) live.
+    /// Falls back to `<data_dir>/brains` using the same data-dir convention as
+    /// `office_cli_dir()` (env → platform data dir → /var/lib).
+    pub fn brains_dir(&self) -> PathBuf {
+        std::env::var("ALLTERNIT_BRAINS_DIR")
+            .ok()
+            .filter(|s| !s.is_empty())
+            .map(PathBuf::from)
+            .unwrap_or_else(|| {
+                std::env::var("ALLTERNIT_DATA_DIR")
+                    .ok()
+                    .filter(|value| !value.is_empty())
+                    .map(PathBuf::from)
+                    .or_else(|| dirs::data_dir().map(|d| d.join("allternit")))
+                    .unwrap_or_else(|| PathBuf::from("/var/lib/allternit"))
+                    .join("brains")
+            })
+    }
+
     /// Arguments used to spawn the OfficeCLI MCP stdio server
     /// (comma-or-space separated). Verified against officecli 1.0.138: the
     /// stdio server starts on bare `officecli mcp` (targets like `claude` are

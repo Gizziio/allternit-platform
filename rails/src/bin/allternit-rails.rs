@@ -13,10 +13,15 @@ use allternit_agent_system_rails::bus::{Bus, BusMessage, BusOptions, NewBusMessa
 use allternit_agent_system_rails::cli::work::{run_work_command, WorkCmd, WorkContext};
 use allternit_agent_system_rails::core::ids::{create_event_id, create_lease_id};
 use allternit_agent_system_rails::core::io::{ensure_dir, write_json_atomic};
+use allternit_agent_system_rails::dependencies::load_graph;
 use allternit_agent_system_rails::gate::gate::{GateOptions, WihPickupOptions};
 use allternit_agent_system_rails::leases::leases::LeasesOptions;
 use allternit_agent_system_rails::ledger::ledger::LedgerOptions;
+use allternit_agent_system_rails::graph::{views, GraphAnalytics, GraphView, InsightsConfig};
 use allternit_agent_system_rails::policy;
+use allternit_agent_system_rails::rails_id::TicketId;
+use allternit_agent_system_rails::tickets::{self, TicketStore};
+use allternit_agent_system_rails::wait_gates::WaitGateStore;
 use allternit_agent_system_rails::wih::projection::project_wih;
 use allternit_agent_system_rails::wih::types::LoopPolicy;
 use allternit_agent_system_rails::work::graph::{has_cycle_edges, ready_nodes};
@@ -30,6 +35,7 @@ use allternit_agent_system_rails::{
 use tokio::io::{AsyncReadExt, AsyncWriteExt, BufReader};
 use tokio::net::UnixStream;
 use tokio::process::Command;
+use tokio::sync::OnceCell;
 use tokio::time::{sleep, Duration as TokioDuration};
 
 #[derive(Parser)]
@@ -72,6 +78,31 @@ enum Commands {
     Init,
     #[command(subcommand)]
     Work(WorkCmd),
+    #[command(subcommand)]
+    Ticket(TicketCmd),
+    #[command(subcommand)]
+    Graph(GraphCmd),
+}
+
+#[derive(Subcommand)]
+enum GraphCmd {
+    /// Health summary, keystones, bottlenecks, and quick wins over the
+    /// ticket dependency graph.
+    Insights,
+    /// Ranked ready tickets with scores, reasons, and unblock counts.
+    Triage,
+    /// What a ticket affects: direct + transitive dependents, critical-path
+    /// impact, centrality ranks.
+    Impact {
+        ticket_id: String,
+    },
+}
+
+#[derive(Subcommand)]
+enum TicketCmd {
+    /// List tickets that are ready: open, not deferred, no open blockers, no
+    /// unsatisfied wait-gates.
+    Ready,
 }
 
 #[derive(Subcommand)]
@@ -203,6 +234,8 @@ enum MailCmd {
     Ack {
         thread_id: String,
         message_id: String,
+        #[arg(long = "agent")]
+        agent_id: Option<String>,
         #[arg(long)]
         note: Option<String>,
     },
@@ -356,93 +389,33 @@ async fn main() -> Result<()> {
     let cli = Cli::parse();
     let root = cli.root.unwrap_or_else(|| std::env::current_dir().unwrap());
 
+    // Ledger and Mail are pure path/config holders (no disk I/O in their
+    // constructors), so they stay eager. Everything heavier — the SQLite-backed
+    // stores (Leases, Index, Bus) and their dependents (Receipts, Vault, Gate,
+    // WorkOps) — is built lazily by `Stores` only when the invoked subcommand
+    // actually uses it, so light subcommands (`ticket ready`, `graph insights`,
+    // `mail *` reads) never touch SQLite and cannot abort on SQLITE_CANTOPEN.
     let ledger = Arc::new(Ledger::new(LedgerOptions {
         root_dir: Some(root.clone()),
         ledger_dir: Some(PathBuf::from(".allternit/ledger")),
     }));
 
-    let lease_store = Arc::new(
-        Leases::new(LeasesOptions {
-            root_dir: Some(root.clone()),
-            leases_dir: Some(PathBuf::from(".allternit/leases")),
-            event_sink: Some(ledger.clone()),
-            actor_id: Some("gate".to_string()),
-            auto_renewal_enabled: true,
-            auto_renewal_threshold_seconds: 300,
-            auto_renewal_interval_seconds: 60,
-            auto_renewal_extend_seconds: 600,
-        })
-        .await?,
-    );
-
-    let receipts = Arc::new(ReceiptStore::new(ReceiptStoreOptions {
-        root_dir: Some(root.clone()),
-        receipts_dir: Some(PathBuf::from(".allternit/receipts")),
-        blobs_dir: Some(PathBuf::from(".allternit/blobs")),
-    })?);
-
-    let index = Arc::new(
-        Index::new(IndexOptions {
-            root_dir: Some(root.clone()),
-            index_dir: Some(PathBuf::from(".allternit/index")),
-        })
-        .await?,
-    );
-
-    let vault = Arc::new(Vault::new(VaultOptions {
-        root_dir: Some(root.clone()),
-        ledger: ledger.clone(),
-        actor_id: Some("gate".to_string()),
-    }));
-
-    let gate = Arc::new(Gate::new(GateOptions {
-        ledger: ledger.clone(),
-        leases: lease_store.clone(),
-        receipts: receipts.clone(),
-        index: Some(index.clone()),
-        vault: Some(vault.clone()),
-        root_dir: Some(root.clone()),
-        actor_id: Some("gate".to_string()),
-        oauth_vault: None,
-        strict_provenance: None,
-        visual_provider: None,
-        visual_config: None,
-    }));
+    let stores = Stores::new(root.clone(), ledger.clone());
 
     let transport_root = Arc::new(root.clone());
-    let bus = Arc::new(
-        Bus::new(BusOptions {
-            root_dir: root.clone(),
-            ledger: ledger.clone(),
-            actor_id: Some("bus".to_string()),
-            actor_type: Some(ActorType::Gate),
-        })
-        .await?,
-    );
-
-    let work_ops = Arc::new(WorkOps::new(
-        ledger.clone(),
-        Some("allternit work".to_string()),
-        Some(ActorType::Agent),
-    ));
-    let work_ctx = WorkContext {
-        root: root.clone(),
-        ledger: ledger.clone(),
-        gate: gate.clone(),
-        work: work_ops.clone(),
-        index: index.clone(),
-    };
 
     let mail = Mail::new(MailOptions {
         root_dir: Some(root.clone()),
         ledger: ledger.clone(),
         actor_id: Some("mail".to_string()),
         actor_type: None,
+        mail_index: None,
     });
 
     match cli.command {
         Commands::Plan(cmd) => match cmd {
             PlanCmd::New { text } => {
+                let gate = stores.gate().await?;
                 let (prompt_id, dag_id, node_id) = gate.plan_new(&text, None).await?;
                 println!("prompt_id: {prompt_id}\ndag_id: {dag_id}\nnode_id: {node_id}");
             }
@@ -452,6 +425,7 @@ async fn main() -> Result<()> {
                 mutations,
                 mutations_json,
             } => {
+                let gate = stores.gate().await?;
                 let mutations = load_mutations(mutations, mutations_json)?;
                 let delta_id = gate.plan_refine(&dag_id, &delta, "cli", mutations).await?;
                 println!("delta_id: {delta_id}");
@@ -506,6 +480,7 @@ async fn main() -> Result<()> {
                 role,
                 fresh,
             } => {
+                let gate = stores.gate().await?;
                 let wih_id = gate
                     .wih_pickup_with(
                         &dag_id,
@@ -530,6 +505,7 @@ async fn main() -> Result<()> {
                 }
             }
             WihCmd::SignOpen { wih_id, signature } => {
+                let gate = stores.gate().await?;
                 gate.wih_sign_open(&wih_id, &signature).await?;
                 println!("signed");
             }
@@ -538,6 +514,7 @@ async fn main() -> Result<()> {
                 status,
                 evidence,
             } => {
+                let gate = stores.gate().await?;
                 gate.wih_close(&wih_id, &status, &evidence).await?;
                 println!("closed");
             }
@@ -549,10 +526,12 @@ async fn main() -> Result<()> {
                 paths,
                 ttl,
             } => {
+                let gate = stores.gate().await?;
                 let lease_id = gate.lease_request(&wih_id, &agent_id, paths, ttl).await?;
                 println!("lease_id: {lease_id}");
             }
             LeaseCmd::Release { lease_id } => {
+                let lease_store = stores.leases().await?;
                 lease_store.release(&lease_id).await?;
                 println!("released");
             }
@@ -588,6 +567,7 @@ async fn main() -> Result<()> {
         },
         Commands::Index(cmd) => match cmd {
             IndexCmd::Rebuild => {
+                let index = stores.index().await?;
                 let count = index.rebuild_from_ledger(&ledger).await?;
                 println!("indexed {count} events");
             }
@@ -604,6 +584,7 @@ async fn main() -> Result<()> {
             } => {
                 mail.send_message(&thread_id, &body_ref, attachments.clone())
                     .await?;
+                let bus = stores.bus().await?;
                 let bus_payload = json!({
                     "thread_id": thread_id,
                     "body_ref": body_ref,
@@ -655,10 +636,16 @@ async fn main() -> Result<()> {
             MailCmd::Ack {
                 thread_id,
                 message_id,
+                agent_id,
                 note,
             } => {
                 let ack_id = mail
-                    .acknowledge_message(&thread_id, &message_id, note.as_deref())
+                    .acknowledge_message(
+                        &thread_id,
+                        &message_id,
+                        agent_id.as_deref(),
+                        note.as_deref(),
+                    )
                     .await?;
                 println!("ack_id: {ack_id}");
             }
@@ -668,6 +655,7 @@ async fn main() -> Result<()> {
                 paths,
                 ttl,
             } => {
+                let lease_store = stores.leases().await?;
                 let lease_id = create_lease_id();
                 let req = LeaseRequest {
                     lease_id: lease_id.clone(),
@@ -693,6 +681,7 @@ async fn main() -> Result<()> {
                 println!("lease_id: {lease_id}");
             }
             MailCmd::Release { lease_id } => {
+                let lease_store = stores.leases().await?;
                 lease_store.release(&lease_id).await?;
                 let _ = mail
                     .log_event("MailLeaseReleased", json!({ "lease_id": lease_id }))
@@ -733,6 +722,7 @@ async fn main() -> Result<()> {
                 tool,
                 paths,
             } => {
+                let gate = stores.gate().await?;
                 let res = gate.pre_tool(&wih_id, &tool, &paths).await?;
                 println!("allowed: {}", res.allowed);
                 if let Some(reason) = res.reason {
@@ -789,6 +779,7 @@ async fn main() -> Result<()> {
                 reason,
                 links,
             } => {
+                let gate = stores.gate().await?;
                 let decision_id = gate.record_agent_decision(&note, reason, links).await?;
                 println!("decision_id: {decision_id}");
             }
@@ -799,6 +790,7 @@ async fn main() -> Result<()> {
                 mutations,
                 mutations_json,
             } => {
+                let gate = stores.gate().await?;
                 let mutations = load_mutations(mutations, mutations_json)?;
                 let (decision_id, mutation_ids) = gate
                     .mutate_with_decision(&dag_id, &note, reason, mutations)
@@ -811,6 +803,7 @@ async fn main() -> Result<()> {
         },
         Commands::Vault(cmd) => match cmd {
             VaultCmd::Archive { wih_id } => {
+                let vault = stores.vault().await?;
                 let path = vault.archive_wih(&wih_id).await?;
                 println!("vaulted: {}", path.display());
             }
@@ -868,36 +861,44 @@ async fn main() -> Result<()> {
                 }
             }
         },
-        Commands::Runner(cmd) => match cmd {
-            RunnerCmd::Start => {
-                start_runner(
-                    &root,
-                    ledger.clone(),
-                    gate.clone(),
-                    lease_store.clone(),
-                    receipts.clone(),
-                    index.clone(),
-                    vault.clone(),
-                    bus.clone(),
-                    true,
-                )
-                .await?;
+        Commands::Runner(cmd) => {
+            let gate = stores.gate().await?;
+            let lease_store = stores.leases().await?;
+            let receipts = stores.receipts().await?;
+            let index = stores.index().await?;
+            let vault = stores.vault().await?;
+            let bus = stores.bus().await?;
+            match cmd {
+                RunnerCmd::Start => {
+                    start_runner(
+                        &root,
+                        ledger.clone(),
+                        gate,
+                        lease_store,
+                        receipts,
+                        index,
+                        vault,
+                        bus,
+                        true,
+                    )
+                    .await?;
+                }
+                RunnerCmd::Once => {
+                    start_runner(
+                        &root,
+                        ledger.clone(),
+                        gate,
+                        lease_store,
+                        receipts,
+                        index,
+                        vault,
+                        bus,
+                        false,
+                    )
+                    .await?;
+                }
             }
-            RunnerCmd::Once => {
-                start_runner(
-                    &root,
-                    ledger.clone(),
-                    gate.clone(),
-                    lease_store.clone(),
-                    receipts.clone(),
-                    index.clone(),
-                    vault.clone(),
-                    bus.clone(),
-                    false,
-                )
-                .await?;
-            }
-        },
+        }
         Commands::Bus(cmd) => match cmd {
             BusCmd::Send {
                 to,
@@ -919,16 +920,19 @@ async fn main() -> Result<()> {
                     payload: payload_value,
                     transport,
                 };
+                let bus = stores.bus().await?;
                 let message_id = bus.send_message(msg).await?;
                 println!("message_id: {message_id}");
             }
             BusCmd::Poll { limit } => {
+                let bus = stores.bus().await?;
                 let entries = bus.poll_pending(limit).await?;
                 for entry in entries {
                     println!("{}", serde_json::to_string_pretty(&entry)?);
                 }
             }
             BusCmd::Deliver { message_id } => {
+                let bus = stores.bus().await?;
                 bus.mark_delivered(message_id).await?;
                 println!("delivered: {message_id}");
             }
@@ -971,6 +975,7 @@ async fn main() -> Result<()> {
                     payload,
                     transport: "tmux".to_string(),
                 };
+                let bus = stores.bus().await?;
                 let id = bus.send_message(msg).await?;
                 println!("tmux message_id: {id}");
             }
@@ -1017,6 +1022,7 @@ async fn main() -> Result<()> {
                     payload: payload_value,
                     transport: "socket".to_string(),
                 };
+                let bus = stores.bus().await?;
                 let id = bus.send_message(msg).await?;
                 println!("socket message_id: {id}");
             }
@@ -1025,13 +1031,15 @@ async fn main() -> Result<()> {
                 pane,
                 watch,
             } => {
+                let bus = stores.bus().await?;
                 let pane_name = pane.unwrap_or_else(|| session.clone());
-                run_tmux_transport(transport_root.clone(), bus.clone(), pane_name, watch).await?;
+                run_tmux_transport(transport_root.clone(), bus, pane_name, watch).await?;
             }
             BusCmd::SocketRunner { socket, watch } => {
+                let bus = stores.bus().await?;
                 run_socket_transport(
                     transport_root.clone(),
-                    bus.clone(),
+                    bus,
                     PathBuf::from(socket),
                     watch,
                 )
@@ -1047,12 +1055,222 @@ async fn main() -> Result<()> {
             }
         },
         Commands::Init => {
+            // `init` explicitly provisions the workspace, so it constructs the
+            // full set of stores (including the SQLite-backed ones) on purpose.
+            let lease_store = stores.leases().await?;
+            let receipts = stores.receipts().await?;
+            let index = stores.index().await?;
             init_system(&root, &ledger, &lease_store, &receipts, &index).await?;
         }
-        Commands::Work(cmd) => run_work_command(&work_ctx, cmd).await?,
+        Commands::Work(cmd) => {
+            let work_ctx = WorkContext {
+                root: root.clone(),
+                ledger: ledger.clone(),
+                gate: stores.gate().await?,
+                work: stores.work_ops().await?,
+                index: stores.index().await?,
+            };
+            run_work_command(&work_ctx, cmd).await?
+        }
+        Commands::Ticket(cmd) => match cmd {
+            TicketCmd::Ready => {
+                let store = TicketStore::new(&root)?;
+                let graph = load_graph(&root)?;
+                let gates = WaitGateStore::new(&root)?;
+                let all = store.list()?;
+                let ready = tickets::ready(&all, &graph, &gates, Utc::now())?;
+                println!("{}", serde_json::to_string_pretty(&ready)?);
+            }
+        },
+        // Graph analytics: same view-model builders as the HTTP surface
+        // (`graph::views`), so the printed JSON matches /api/rails/graph/*.
+        Commands::Graph(cmd) => {
+            let store = TicketStore::new(&root)?;
+            let graph = load_graph(&root)?;
+            let gates = WaitGateStore::new(&root)?;
+            let all = store.list()?;
+            let ready = tickets::ready(&all, &graph, &gates, Utc::now())?;
+            let insights =
+                GraphAnalytics::new().compute_insights(&graph, &InsightsConfig::default());
+            let view = GraphView::from_graph(&graph);
+            match cmd {
+                GraphCmd::Insights => {
+                    let out = views::build_insights_view(&insights, &ready, &view);
+                    println!("{}", serde_json::to_string_pretty(&out)?);
+                }
+                GraphCmd::Triage => {
+                    let out = views::build_triage_view(&insights, &ready, &view);
+                    println!("{}", serde_json::to_string_pretty(&out)?);
+                }
+                GraphCmd::Impact { ticket_id } => {
+                    let id: TicketId = ticket_id
+                        .parse()
+                        .map_err(|e: allternit_agent_system_rails::rails_id::InvalidTicketId| {
+                            anyhow::anyhow!(e)
+                        })?;
+                    match views::build_impact_view(&insights, &view, &all, &id) {
+                        Ok(out) => println!("{}", serde_json::to_string_pretty(&out)?),
+                        Err(e) => bail!("{e}"),
+                    }
+                }
+            }
+        }
     }
 
     Ok(())
+}
+
+/// Lazy store registry for the CLI. Each accessor builds its store on first
+/// use (per process) and caches it, so a subcommand only pays for — and only
+/// risks failure from — the stores it actually touches. SQLite-backed stores
+/// (Leases, Index, Bus) and their dependents (Gate, Vault, WorkOps) live here;
+/// Ledger and Mail are pure config holders and stay eagerly built in `main`.
+struct Stores {
+    root: PathBuf,
+    ledger: Arc<Ledger>,
+    leases: OnceCell<Arc<Leases>>,
+    receipts: OnceCell<Arc<ReceiptStore>>,
+    index: OnceCell<Arc<Index>>,
+    vault: OnceCell<Arc<Vault>>,
+    gate: OnceCell<Arc<Gate>>,
+    bus: OnceCell<Arc<Bus>>,
+    work_ops: OnceCell<Arc<WorkOps>>,
+}
+
+impl Stores {
+    fn new(root: PathBuf, ledger: Arc<Ledger>) -> Self {
+        Self {
+            root,
+            ledger,
+            leases: OnceCell::new(),
+            receipts: OnceCell::new(),
+            index: OnceCell::new(),
+            vault: OnceCell::new(),
+            gate: OnceCell::new(),
+            bus: OnceCell::new(),
+            work_ops: OnceCell::new(),
+        }
+    }
+
+    async fn leases(&self) -> Result<Arc<Leases>> {
+        Ok(self
+            .leases
+            .get_or_try_init(|| async {
+                Ok::<_, anyhow::Error>(Arc::new(
+                    Leases::new(LeasesOptions {
+                        root_dir: Some(self.root.clone()),
+                        leases_dir: Some(PathBuf::from(".allternit/leases")),
+                        event_sink: Some(self.ledger.clone()),
+                        actor_id: Some("gate".to_string()),
+                        auto_renewal_enabled: true,
+                        auto_renewal_threshold_seconds: 300,
+                        auto_renewal_interval_seconds: 60,
+                        auto_renewal_extend_seconds: 600,
+                    })
+                    .await?,
+                ))
+            })
+            .await?
+            .clone())
+    }
+
+    async fn receipts(&self) -> Result<Arc<ReceiptStore>> {
+        Ok(self
+            .receipts
+            .get_or_try_init(|| async {
+                Ok::<_, anyhow::Error>(Arc::new(ReceiptStore::new(ReceiptStoreOptions {
+                    root_dir: Some(self.root.clone()),
+                    receipts_dir: Some(PathBuf::from(".allternit/receipts")),
+                    blobs_dir: Some(PathBuf::from(".allternit/blobs")),
+                })?))
+            })
+            .await?
+            .clone())
+    }
+
+    async fn index(&self) -> Result<Arc<Index>> {
+        Ok(self
+            .index
+            .get_or_try_init(|| async {
+                Ok::<_, anyhow::Error>(Arc::new(
+                    Index::new(IndexOptions {
+                        root_dir: Some(self.root.clone()),
+                        index_dir: Some(PathBuf::from(".allternit/index")),
+                    })
+                    .await?,
+                ))
+            })
+            .await?
+            .clone())
+    }
+
+    async fn vault(&self) -> Result<Arc<Vault>> {
+        Ok(self
+            .vault
+            .get_or_init(|| async {
+                Arc::new(Vault::new(VaultOptions {
+                    root_dir: Some(self.root.clone()),
+                    ledger: self.ledger.clone(),
+                    actor_id: Some("gate".to_string()),
+                }))
+            })
+            .await
+            .clone())
+    }
+
+    async fn gate(&self) -> Result<Arc<Gate>> {
+        Ok(self
+            .gate
+            .get_or_try_init(|| async {
+                Ok::<_, anyhow::Error>(Arc::new(Gate::new(GateOptions {
+                    ledger: self.ledger.clone(),
+                    leases: self.leases().await?,
+                    receipts: self.receipts().await?,
+                    index: Some(self.index().await?),
+                    vault: Some(self.vault().await?),
+                    root_dir: Some(self.root.clone()),
+                    actor_id: Some("gate".to_string()),
+                    oauth_vault: None,
+                    strict_provenance: None,
+                    visual_provider: None,
+                    visual_config: None,
+                })))
+            })
+            .await?
+            .clone())
+    }
+
+    async fn bus(&self) -> Result<Arc<Bus>> {
+        Ok(self
+            .bus
+            .get_or_try_init(|| async {
+                Ok::<_, anyhow::Error>(Arc::new(
+                    Bus::new(BusOptions {
+                        root_dir: self.root.clone(),
+                        ledger: self.ledger.clone(),
+                        actor_id: Some("bus".to_string()),
+                        actor_type: Some(ActorType::Gate),
+                    })
+                    .await?,
+                ))
+            })
+            .await?
+            .clone())
+    }
+
+    async fn work_ops(&self) -> Result<Arc<WorkOps>> {
+        Ok(self
+            .work_ops
+            .get_or_init(|| async {
+                Arc::new(WorkOps::new(
+                    self.ledger.clone(),
+                    Some("allternit work".to_string()),
+                    Some(ActorType::Agent),
+                ))
+            })
+            .await
+            .clone())
+    }
 }
 
 fn read_spec(name: &str) -> Option<String> {

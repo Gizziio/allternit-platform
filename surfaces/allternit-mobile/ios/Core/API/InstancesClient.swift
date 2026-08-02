@@ -179,6 +179,23 @@ final class RuntimeDevicesClient: @unchecked Sendable {
         try client.validate(response, data: data)
         return try? JSONDecoder().decode(ApprovePairingResponse.self, from: data).runtimeName
     }
+
+    /// `POST {cloud}/api/v1/runtime-pairings/code/:code/deny` with an empty
+    /// JSON body (DevicePairingPanel.tsx:205-222, runtime_pairing.rs
+    /// `deny_pairing`) — marks the pending request denied; 404 if the code
+    /// is invalid, expired, or already resolved.
+    func denyPairing(code: String) async throws {
+        let url = AppConfig.cloudAPIBaseURL
+            .appendingPathComponent("api/v1/runtime-pairings/code")
+            .appendingPathComponent(code)
+            .appendingPathComponent("deny")
+        let client = APIClient.shared
+        var request = try await client.authorizedRequest(url: url, method: "POST")
+        request.httpBody = Data("{}".utf8)
+
+        let (data, response) = try await client.session.data(for: request)
+        try client.validate(response, data: data)
+    }
 }
 
 private struct RuntimesResponse: Decodable {

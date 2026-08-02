@@ -45,7 +45,7 @@ struct HistorySidebarView: View {
 
             // Tab list as labeled nav rows (icon + text, full-width tap
             // target): Chats / Projects / Artifacts Library / Agents /
-            // Code / ACI.
+            // Automation Tasks / Code / ACI.
             // The active tab is shown by highlight only — no chevrons or
             // other trailing accessories on these rows.
             VStack(spacing: 2) {
@@ -183,6 +183,7 @@ struct HistorySidebarView: View {
             // in simctl.
             if CommandLine.arguments.contains("-open-settings")
                 || CommandLine.arguments.contains("-open-settings-memory")
+                || CommandLine.arguments.contains("-open-settings-brain-spike")
                 || CommandLine.arguments.contains("-open-usage") {
                 isSettingsPresented = true
             }

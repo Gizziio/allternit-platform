@@ -9,6 +9,14 @@
  *  - rails-ensure.sh runs first; any failure aborts non-zero before any brief.
  *  - A failed announcement after a successful ensure is a hard error:
  *    recorded in .pipeline/errors.log, non-zero exit. No skip-and-continue.
+ *  - C2-R3: items whose normalized title (lowercase, alnum-only) matches a
+ *    dismissal in .pipeline/dismissals.json younger than 14 days are
+ *    suppressed from briefing; the suppression is logged to errors.log with
+ *    the dismissal cited. Suppressed items are NOT marked seen — they may
+ *    surface again once the dismissal ages out.
+ *  - C3-R1: every brief carries schema-versioned frontmatter
+ *    (schema_version, trust_tier: unverified, provenance_refs: [source URL],
+ *    produced_by, produced_at).
  *
  * Dependency injection (used by scout-test.cjs; defaults hit production):
  *  - SCOUT_DIR             state dir (default: .pipeline)
@@ -27,6 +35,7 @@ const { execFileSync } = require('child_process');
 const SCOUT_DIR = process.env.SCOUT_DIR || path.resolve(__dirname, '..');
 const BRIEFS_DIR = path.join(SCOUT_DIR, 'briefs');
 const SEEN_FILE = path.join(SCOUT_DIR, 'seen.json');
+const DISMISSALS_FILE = path.join(SCOUT_DIR, 'dismissals.json');
 const ERRORS_LOG = path.join(SCOUT_DIR, 'errors.log');
 const REPO_ROOT = path.resolve(__dirname, '..', '..');
 const PIPELINE_MODULE =
@@ -37,6 +46,7 @@ const RAILS_ENSURE =
 const RAILS_SHARE_URL = 'http://localhost:8013/api/rails/mail/share';
 const DISCOVERY_THREAD = 'wih:pipeline-discovery';
 const MAX_BRIEFS = 5;
+const DISMISSAL_WINDOW_DAYS = 14; // C2-R3
 // Social sources degrade to [] without credentials and add noise; disabled.
 const SOCIAL_SOURCES = new Set(['twitter', 'x', 'bluesky', 'mastodon']);
 
@@ -106,6 +116,38 @@ function saveSeen(seen) {
   fs.writeFileSync(SEEN_FILE, JSON.stringify(seen, null, 2) + '\n');
 }
 
+// ─── Dismissals (C2-R3) ─────────────────────────────────────────────────────
+//
+// .pipeline/dismissals.json: { slug: { title, dismissed_at, note } }. An item
+// is suppressed when its normalized title (lowercase, alnum-only) equals a
+// dismissal's normalized title and the dismissal is younger than 14 days.
+
+function normalizeTitle(t) {
+  return String(t || '')
+    .toLowerCase()
+    .replace(/[^a-z0-9]/g, '');
+}
+
+function loadActiveDismissals() {
+  const active = new Map(); // normalized title -> { slug, title, dismissed_at }
+  let data;
+  try {
+    data = JSON.parse(fs.readFileSync(DISMISSALS_FILE, 'utf8'));
+  } catch {
+    return active; // tolerate missing/corrupt ledger
+  }
+  const now = Date.now();
+  for (const [slug, d] of Object.entries(data && typeof data === 'object' ? data : {})) {
+    if (!d || !d.dismissed_at) continue;
+    const at = Date.parse(d.dismissed_at);
+    if (Number.isNaN(at)) continue;
+    if ((now - at) / 86400000 < DISMISSAL_WINDOW_DAYS) {
+      active.set(normalizeTitle(d.title || slug), { slug, title: d.title || slug, dismissed_at: d.dismissed_at });
+    }
+  }
+  return active;
+}
+
 // ─── Slugs ──────────────────────────────────────────────────────────────────
 
 function baseSlug(title) {
@@ -160,7 +202,20 @@ TODO(agent): one paragraph describing what this is. (LLM brief generation unavai
 }
 
 function briefDocument(item, body) {
-  return `# ${item.title}\n\n- Source: ${item.source}\n- URL: ${item.url}\n- Relevance score: ${item.relevance?.score ?? 'n/a'}\n- Discovered: ${new Date().toISOString()}\n\n${body}\n`;
+  // C3-R1 artifact contract: schema-versioned frontmatter. Briefs are
+  // machine-generated from unvetted sources -> trust_tier unverified.
+  const frontmatter = [
+    '---',
+    'schema_version: 1',
+    'trust_tier: unverified',
+    'provenance_refs:',
+    `  - ${item.url || 'unknown'}`,
+    'produced_by: scout.cjs',
+    `produced_at: ${new Date().toISOString()}`,
+    '---',
+    '',
+  ].join('\n');
+  return `${frontmatter}# ${item.title}\n\n- Source: ${item.source}\n- URL: ${item.url}\n- Relevance score: ${item.relevance?.score ?? 'n/a'}\n- Discovered: ${new Date().toISOString()}\n\n${body}\n`;
 }
 
 function loadCharter() {
@@ -249,8 +304,24 @@ async function main() {
     const hash = crypto.createHash('sha1').update(String(item.url || item.title)).digest('hex').slice(0, 8);
     return seen.includes(`${base.slice(0, 51).replace(/-+$/g, '')}-${hash}`);
   };
+  // C2-R3: suppress items matching an active (<14 day) dismissal. Additive
+  // filter only — selection logic (dedup, score sort, cap) is unchanged.
+  // Suppressed items stay unseen so they can surface once the dismissal
+  // ages out; every suppression is logged with the dismissal cited.
+  const dismissals = loadActiveDismissals();
+  const notDismissed = (item) => {
+    const d = dismissals.get(normalizeTitle(item.title));
+    if (!d) return true;
+    logError(
+      `scout: suppressed "${item.title}" — matches dismissal "${d.title}" ` +
+        `(slug: ${d.slug}, dismissed_at: ${d.dismissed_at}, window: ${DISMISSAL_WINDOW_DAYS} days)`,
+    );
+    console.log(`scout: suppressed "${item.title}" (dismissed ${d.dismissed_at}, slug: ${d.slug})`);
+    return false;
+  };
   const unseen = items
     .filter((item) => !alreadySeen(item))
+    .filter(notDismissed)
     .sort((a, b) => (b.relevance?.score ?? 0) - (a.relevance?.score ?? 0))
     .slice(0, MAX_BRIEFS);
   const candidates = [];

@@ -75,6 +75,16 @@ targets:
       # into the binary). Vendored copy of infrastructure/mesh/tsnet-ios.
       - framework: Frameworks/Mesh.xcframework
         embed: false
+      # D3 spike: embedded git client. Prebuilt libgit2 v1.3.1 (OpenSSL,
+      # libssh2, pcre statically merged; fetch via Frameworks/fetch-libgit2.sh).
+      # Static like Mesh — linked in, no embed phase. Swift imports it as
+      # `Clibgit2` via the injected module map.
+      - framework: Frameworks/libgit2.xcframework
+        embed: false
+      # libgit2 was built against system zlib (crc32/inflateReset …).
+      - sdk: libz.tbd
+      # … and system iconv (git_path_iconv for unicode path handling).
+      - sdk: libiconv.tbd
       - package: clerk-ios
         product: ClerkKit
       - package: clerk-ios

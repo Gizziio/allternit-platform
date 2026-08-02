@@ -20,12 +20,22 @@ use std::sync::Arc;
 use tracing::{debug, error, info};
 
 use crate::AppState;
+use allternit_agent_system_rails::dependencies::{
+    self, DependencyEdge, DependencyKind,
+};
+use allternit_agent_system_rails::graph::{views, GraphAnalytics, GraphView, InsightsConfig};
+use allternit_agent_system_rails::rails_id::{HierarchicalId, TicketId};
 use allternit_agent_system_rails::receipts::ReceiptQuery;
+use allternit_agent_system_rails::tickets::{
+    self, BlockedTicket, Ticket, TicketKind, TicketPriority, TicketStatus, TicketStore,
+    TicketUpdate,
+};
+use allternit_agent_system_rails::wait_gates::WaitGateStore;
 use allternit_agent_system_rails::{
-    project_dag, ContextPackSeal, ContextPackStore, ContextPackStoreOptions, DagMutation, Gate,
-    GateOptions, Index, IndexOptions, Leases, LeasesOptions, Ledger, LedgerOptions, LedgerQuery,
-    Mail, MailOptions, ReceiptRecord, ReceiptStore, ReceiptStoreOptions, Vault, VaultOptions,
-    WorkOps,
+    project_dag, resolve_thread_id, ContextPackSeal, ContextPackStore, ContextPackStoreOptions,
+    DagMutation, Gate, GateOptions, Index, IndexOptions, Leases, LeasesOptions, Ledger,
+    LedgerOptions, LedgerQuery, Mail, MailImportance, MailIndex, MailIndexOptions, MailOptions,
+    ReceiptRecord, ReceiptStore, ReceiptStoreOptions, TypedMessage, Vault, VaultOptions, WorkOps,
 };
 
 // ============================================================================
@@ -35,6 +45,7 @@ use allternit_agent_system_rails::{
 /// Rails service state shared across handlers
 #[derive(Clone)]
 pub struct RailsState {
+    pub root_dir: std::path::PathBuf,
     pub ledger: Arc<Ledger>,
     pub gate: Arc<Gate>,
     pub leases: Arc<Leases>,
@@ -44,6 +55,9 @@ pub struct RailsState {
     pub receipts: Arc<ReceiptStore>,
     pub work_ops: Arc<WorkOps>,
     pub context_packs: Arc<ContextPackStore>,
+    /// Shared graph analytics engine (content-hash cache) for the B2 robot
+    /// surface under `/graph/*`.
+    pub graph_analytics: Arc<GraphAnalytics>,
 }
 
 impl RailsState {
@@ -115,12 +129,19 @@ impl RailsState {
             visual_config: None,
         }));
 
-        // Initialize Mail
+        // Initialize Mail (with the E2 FTS search index)
+        let mail_index = Arc::new(
+            MailIndex::new(MailIndexOptions {
+                root_dir: Some(root_dir.clone()),
+            })
+            .await?,
+        );
         let mail = Arc::new(Mail::new(MailOptions {
             root_dir: Some(root_dir.clone()),
             ledger: ledger.clone(),
             actor_id: Some("api".to_string()),
             actor_type: None,
+            mail_index: Some(mail_index),
         }));
 
         // Initialize WorkOps
@@ -129,6 +150,7 @@ impl RailsState {
         info!("Rails service state initialized successfully");
 
         Ok(Self {
+            root_dir,
             ledger,
             gate,
             leases,
@@ -138,6 +160,7 @@ impl RailsState {
             receipts,
             work_ops,
             context_packs,
+            graph_analytics: Arc::new(GraphAnalytics::new()),
         })
     }
 }
@@ -163,12 +186,36 @@ pub fn rails_router() -> Router<Arc<AppState>> {
         .route("/mail/thread/:thread_id", get(read_mail_thread))
         .route("/mail/share", post(mail_share))
         .route("/mail/decide", post(mail_decide))
+        // Mail agent identities + per-agent boxes (E1)
+        .route("/mail/agents", get(list_mail_agents))
+        .route("/mail/agents/register", post(register_mail_agent))
+        .route("/mail/inbox/:agent_id", get(read_mail_inbox))
+        .route("/mail/outbox/:agent_id", get(read_mail_outbox))
+        // Mail FTS search (E2)
+        .route("/mail/search", get(search_mail_messages))
+        // Mail ack overdue view (E3)
+        .route("/mail/overdue", get(read_mail_overdue))
         // WIHs (compatibility surface used by platform cowork/chat views)
         .route("/wihs", get(list_wihs_get).post(list_wihs))
         .route("/wihs/pickup", post(pickup_wih))
         .route("/wihs/:wih_id/context", get(get_wih_context))
         .route("/wihs/:wih_id/sign", post(sign_wih))
         .route("/wihs/:wih_id/close", post(close_wih))
+        // Tickets (event-sourced ticket subsystem)
+        .route("/tickets", post(create_ticket).get(list_tickets))
+        .route("/tickets/ready", get(list_ready_tickets))
+        .route("/tickets/blocked", get(list_blocked_tickets))
+        .route("/tickets/:id", get(get_ticket).patch(update_ticket))
+        .route("/tickets/:id/close", post(close_ticket))
+        .route("/tickets/:id/reopen", post(reopen_ticket))
+        .route(
+            "/tickets/:id/dependencies",
+            post(add_ticket_dependency).delete(remove_ticket_dependency),
+        )
+        // Graph analytics (B2 robot surface over the ticket dependency graph)
+        .route("/graph/insights", get(graph_insights))
+        .route("/graph/triage", get(graph_triage))
+        .route("/graph/impact/:ticket_id", get(graph_impact))
         // DAGs / Work
         .route("/workspace/:workspace_id/dags", get(list_dags))
         .route("/workspace/:workspace_id/dags", post(create_dag))
@@ -528,6 +575,12 @@ struct MailWriteRequest {
     body_ref: Option<String>,
     body: Option<String>,
     attachments: Option<Vec<String>>,
+    // Typed envelope fields (E1-R2). `from_agent` present => typed send.
+    from_agent: Option<String>,
+    to_agents: Option<Vec<String>>,
+    subject: Option<String>,
+    importance: Option<MailImportance>,
+    ack_required: Option<bool>,
 }
 
 async fn ensure_mail_thread(state: &AppState, topic: &str) -> Result<String, axum::response::Response> {
@@ -541,16 +594,65 @@ async fn ensure_mail_thread(state: &AppState, topic: &str) -> Result<String, axu
     })
 }
 
+/// THE shared thread-resolution helper for every mail endpoint (E1-R4):
+/// an omitted thread defaults to `mail:general`, and thread validation
+/// accepts `dag:`/`wih:`/`mail:` prefixes (enforced inside `ensure_thread`
+/// via `resolve_thread_id`/`canonical_thread_id` in the rails crate).
+/// mail_send / mail_share / mail_decide all funnel through here — do not
+/// re-inline the pattern.
+async fn resolve_mail_thread(
+    state: &AppState,
+    thread: Option<String>,
+) -> Result<String, axum::response::Response> {
+    let topic = match resolve_thread_id(thread.as_deref()) {
+        Ok(topic) => topic,
+        Err(e) => {
+            return Err((
+                StatusCode::BAD_REQUEST,
+                Json(json!({ "error": e.to_string() })),
+            )
+                .into_response());
+        }
+    };
+    ensure_mail_thread(state, &topic).await
+}
+
 async fn mail_send(
     State(state): State<Arc<AppState>>,
     Json(req): Json<MailWriteRequest>,
 ) -> impl IntoResponse {
-    let topic = req.thread.unwrap_or_else(|| "default".to_string());
-    let thread_id = match ensure_mail_thread(&state, &topic).await {
+    let thread_id = match resolve_mail_thread(&state, req.thread).await {
         Ok(id) => id,
         Err(response) => return response,
     };
     let body = req.body_ref.or(req.body).unwrap_or_default();
+    if let Some(from_agent) = req.from_agent {
+        // Typed envelope path (E1-R2).
+        let message = TypedMessage {
+            from_agent,
+            to_agents: req.to_agents.unwrap_or_default(),
+            subject: req.subject,
+            importance: req.importance.unwrap_or_default(),
+            ack_required: req.ack_required.unwrap_or(false),
+            body,
+        };
+        return match state.rails.mail.send_typed_message(&thread_id, message).await {
+            Ok(message_id) => (
+                StatusCode::OK,
+                Json(json!({ "sent": true, "thread_id": thread_id, "message_id": message_id })),
+            )
+                .into_response(),
+            Err(e) => {
+                error!(error = %e, "mail: send_typed_message failed");
+                (
+                    StatusCode::INTERNAL_SERVER_ERROR,
+                    Json(json!({ "error": e.to_string() })),
+                )
+                    .into_response()
+            }
+        };
+    }
+    // Legacy body/body_ref path — unchanged behavior.
     match state
         .rails
         .mail
@@ -560,6 +662,175 @@ async fn mail_send(
         Ok(_) => (StatusCode::OK, Json(json!({ "sent": true, "thread_id": thread_id }))).into_response(),
         Err(e) => {
             error!(error = %e, "mail: send_message failed");
+            (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(json!({ "error": e.to_string() })),
+            )
+                .into_response()
+        }
+    }
+}
+
+// ---------------------------------------------------------------------------
+// Mail agent identities + per-agent inbox/outbox (E1)
+// ---------------------------------------------------------------------------
+
+#[derive(Debug, Deserialize)]
+struct MailAgentRegisterRequest {
+    agent_id: String,
+    display_name: Option<String>,
+    metadata: Option<serde_json::Value>,
+}
+
+async fn register_mail_agent(
+    State(state): State<Arc<AppState>>,
+    Json(req): Json<MailAgentRegisterRequest>,
+) -> impl IntoResponse {
+    match state
+        .rails
+        .mail
+        .agents()
+        .register_agent(&req.agent_id, req.display_name.as_deref(), req.metadata)
+        .await
+    {
+        Ok((agent, created)) => (
+            StatusCode::OK,
+            Json(json!({ "agent": agent, "created": created })),
+        )
+            .into_response(),
+        Err(e) => {
+            error!(error = %e, "mail: register agent failed");
+            (
+                StatusCode::BAD_REQUEST,
+                Json(json!({ "error": e.to_string() })),
+            )
+                .into_response()
+        }
+    }
+}
+
+async fn list_mail_agents(State(state): State<Arc<AppState>>) -> impl IntoResponse {
+    match state.rails.mail.agents().list_agents().await {
+        Ok(agents) => (StatusCode::OK, Json(json!({ "agents": agents }))).into_response(),
+        Err(e) => {
+            error!(error = %e, "mail: list agents failed");
+            (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(json!({ "error": e.to_string() })),
+            )
+                .into_response()
+        }
+    }
+}
+
+#[derive(Debug, Deserialize)]
+struct MailSearchQuery {
+    q: Option<String>,
+    limit: Option<i64>,
+}
+
+async fn search_mail_messages(
+    State(state): State<Arc<AppState>>,
+    Query(query): Query<MailSearchQuery>,
+) -> impl IntoResponse {
+    let q = query.q.unwrap_or_default();
+    let q = q.trim();
+    if q.is_empty() {
+        return (
+            StatusCode::BAD_REQUEST,
+            Json(json!({ "error": "q required" })),
+        )
+            .into_response();
+    }
+    let limit = query.limit.unwrap_or(20);
+    match state.rails.mail.search_messages(q, limit).await {
+        Ok(hits) => (
+            StatusCode::OK,
+            Json(json!({ "q": q, "results": hits })),
+        )
+            .into_response(),
+        Err(e) => {
+            error!(error = %e, "mail: search failed");
+            (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(json!({ "error": e.to_string() })),
+            )
+                .into_response()
+        }
+    }
+}
+
+#[derive(Debug, Deserialize)]
+struct MailOverdueQuery {
+    agent: Option<String>,
+    older_than: Option<i64>,
+}
+
+async fn read_mail_overdue(
+    State(state): State<Arc<AppState>>,
+    Query(query): Query<MailOverdueQuery>,
+) -> impl IntoResponse {
+    let older_than = query.older_than.unwrap_or(0);
+    match state
+        .rails
+        .mail
+        .overdue(query.agent.as_deref(), older_than)
+        .await
+    {
+        Ok(rows) => (StatusCode::OK, Json(json!({ "overdue": rows }))).into_response(),
+        Err(e) => {
+            error!(error = %e, "mail: overdue failed");
+            (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(json!({ "error": e.to_string() })),
+            )
+                .into_response()
+        }
+    }
+}
+
+#[derive(Debug, Deserialize)]
+struct MailBoxQuery {
+    limit: Option<usize>,
+}
+
+async fn read_mail_inbox(
+    State(state): State<Arc<AppState>>,
+    Path(agent_id): Path<String>,
+    Query(query): Query<MailBoxQuery>,
+) -> impl IntoResponse {
+    let limit = query.limit.unwrap_or(100);
+    match state.rails.mail.inbox(&agent_id, limit).await {
+        Ok(messages) => (
+            StatusCode::OK,
+            Json(json!({ "agent_id": agent_id, "messages": messages })),
+        )
+            .into_response(),
+        Err(e) => {
+            error!(error = %e, "mail: inbox failed");
+            (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(json!({ "error": e.to_string() })),
+            )
+                .into_response()
+        }
+    }
+}
+
+async fn read_mail_outbox(
+    State(state): State<Arc<AppState>>,
+    Path(agent_id): Path<String>,
+    Query(query): Query<MailBoxQuery>,
+) -> impl IntoResponse {
+    let limit = query.limit.unwrap_or(100);
+    match state.rails.mail.outbox(&agent_id, limit).await {
+        Ok(messages) => (
+            StatusCode::OK,
+            Json(json!({ "agent_id": agent_id, "messages": messages })),
+        )
+            .into_response(),
+        Err(e) => {
+            error!(error = %e, "mail: outbox failed");
             (
                 StatusCode::INTERNAL_SERVER_ERROR,
                 Json(json!({ "error": e.to_string() })),
@@ -662,8 +933,7 @@ async fn mail_share(
                 .into_response();
         }
     };
-    let topic = req.thread.unwrap_or_else(|| "default".to_string());
-    let thread_id = match ensure_mail_thread(&state, &topic).await {
+    let thread_id = match resolve_mail_thread(&state, req.thread).await {
         Ok(id) => id,
         Err(response) => return response,
     };
@@ -739,8 +1009,7 @@ async fn mail_decide(
                 .into_response();
         }
     };
-    let topic = req.thread.unwrap_or_else(|| "default".to_string());
-    let thread_id = match ensure_mail_thread(&state, &topic).await {
+    let thread_id = match resolve_mail_thread(&state, req.thread).await {
         Ok(id) => id,
         Err(response) => return response,
     };
@@ -1401,4 +1670,1004 @@ struct EvaluatePolicyRequest {
     resource: String,
     tenant_id: String,
     context: Option<serde_json::Value>,
+}
+
+// ============================================================================
+// Tickets (event-sourced ticket subsystem)
+// ============================================================================
+
+#[derive(Debug, Deserialize)]
+struct TicketCreateRequest {
+    title: String,
+    description: Option<String>,
+    kind: Option<String>,
+    priority: Option<String>,
+    labels: Option<Vec<String>>,
+}
+
+#[derive(Debug, Serialize)]
+struct TicketResponse {
+    ticket: Ticket,
+}
+
+#[derive(Debug, Deserialize)]
+struct TicketListParams {
+    status: Option<String>,
+    label: Option<String>,
+}
+
+#[derive(Debug, Serialize)]
+struct TicketListResponse {
+    tickets: Vec<Ticket>,
+}
+
+#[derive(Debug, Deserialize)]
+struct TicketUpdateRequest {
+    title: Option<String>,
+    description: Option<String>,
+    priority: Option<String>,
+    labels: Option<Vec<String>>,
+}
+
+#[derive(Debug, Deserialize)]
+struct TicketCloseRequest {
+    reason: Option<String>,
+}
+
+#[derive(Debug, Deserialize)]
+struct TicketDependencyRequest {
+    to: String,
+    kind: Option<String>,
+}
+
+#[derive(Debug, Serialize)]
+struct TicketReadyListResponse {
+    ready: Vec<Ticket>,
+}
+
+#[derive(Debug, Serialize)]
+struct TicketBlockedListResponse {
+    blocked: Vec<BlockedTicket>,
+}
+
+fn ticket_error(status: StatusCode, message: impl Into<String>) -> axum::response::Response {
+    (status, Json(json!({ "error": message.into() }))).into_response()
+}
+
+fn ticket_store(state: &AppState) -> Result<TicketStore, axum::response::Response> {
+    TicketStore::new(&state.rails.root_dir).map_err(|e| {
+        error!(error = %e, "tickets: failed to open store");
+        ticket_error(StatusCode::INTERNAL_SERVER_ERROR, e.to_string())
+    })
+}
+
+fn parse_ticket_id(raw: &str) -> Result<TicketId, axum::response::Response> {
+    raw.parse::<TicketId>()
+        .map_err(|e| ticket_error(StatusCode::BAD_REQUEST, e.to_string()))
+}
+
+async fn create_ticket(
+    State(state): State<Arc<AppState>>,
+    Json(req): Json<TicketCreateRequest>,
+) -> impl IntoResponse {
+    let store = match ticket_store(&state) {
+        Ok(store) => store,
+        Err(response) => return response,
+    };
+    let kind = match req
+        .kind
+        .as_deref()
+        .unwrap_or("task")
+        .parse::<TicketKind>()
+    {
+        Ok(kind) => kind,
+        Err(e) => return ticket_error(StatusCode::BAD_REQUEST, e.to_string()),
+    };
+    let priority = match req
+        .priority
+        .as_deref()
+        .unwrap_or("P2")
+        .parse::<TicketPriority>()
+    {
+        Ok(priority) => priority,
+        Err(e) => return ticket_error(StatusCode::BAD_REQUEST, e.to_string()),
+    };
+
+    let now = chrono::Utc::now();
+    let id = TicketId::mint(format!("{}:{}", req.title, now).as_bytes());
+    let ticket = Ticket {
+        id: id.clone(),
+        hierarchical_id: HierarchicalId::root(id),
+        title: req.title,
+        description: req.description.unwrap_or_default(),
+        design: None,
+        acceptance: None,
+        notes: Vec::new(),
+        status: TicketStatus::Open,
+        kind,
+        priority,
+        assignee: None,
+        estimate_minutes: None,
+        due_at: None,
+        defer_until: None,
+        labels: req.labels.unwrap_or_default(),
+        external_ref: None,
+        metadata: std::collections::HashMap::new(),
+        created_at: now,
+        updated_at: now,
+        closed_at: None,
+        close_reason: None,
+    };
+
+    match store.create(ticket) {
+        Ok(ticket) => (StatusCode::CREATED, Json(TicketResponse { ticket })).into_response(),
+        Err(e) => {
+            error!(error = %e, "tickets: create failed");
+            ticket_error(StatusCode::INTERNAL_SERVER_ERROR, e.to_string())
+        }
+    }
+}
+
+async fn list_tickets(
+    State(state): State<Arc<AppState>>,
+    Query(params): Query<TicketListParams>,
+) -> impl IntoResponse {
+    let store = match ticket_store(&state) {
+        Ok(store) => store,
+        Err(response) => return response,
+    };
+    let status_filter = match params
+        .status
+        .as_deref()
+        .map(|s| s.parse::<TicketStatus>())
+        .transpose()
+    {
+        Ok(status) => status,
+        Err(e) => return ticket_error(StatusCode::BAD_REQUEST, e.to_string()),
+    };
+
+    match store.list() {
+        Ok(tickets) => {
+            let tickets: Vec<Ticket> = tickets
+                .into_iter()
+                .filter(|t| status_filter.map(|s| t.status == s).unwrap_or(true))
+                .filter(|t| {
+                    params
+                        .label
+                        .as_ref()
+                        .map(|l| t.labels.contains(l))
+                        .unwrap_or(true)
+                })
+                .collect();
+            (StatusCode::OK, Json(TicketListResponse { tickets })).into_response()
+        }
+        Err(e) => {
+            error!(error = %e, "tickets: list failed");
+            ticket_error(StatusCode::INTERNAL_SERVER_ERROR, e.to_string())
+        }
+    }
+}
+
+async fn get_ticket(
+    State(state): State<Arc<AppState>>,
+    Path(id): Path<String>,
+) -> impl IntoResponse {
+    let store = match ticket_store(&state) {
+        Ok(store) => store,
+        Err(response) => return response,
+    };
+    let id = match parse_ticket_id(&id) {
+        Ok(id) => id,
+        Err(response) => return response,
+    };
+
+    match store.get(&id) {
+        Ok(Some(ticket)) => (StatusCode::OK, Json(TicketResponse { ticket })).into_response(),
+        Ok(None) => ticket_error(StatusCode::NOT_FOUND, format!("ticket {id} not found")),
+        Err(e) => {
+            error!(error = %e, "tickets: get failed");
+            ticket_error(StatusCode::INTERNAL_SERVER_ERROR, e.to_string())
+        }
+    }
+}
+
+async fn update_ticket(
+    State(state): State<Arc<AppState>>,
+    Path(id): Path<String>,
+    Json(req): Json<TicketUpdateRequest>,
+) -> impl IntoResponse {
+    let store = match ticket_store(&state) {
+        Ok(store) => store,
+        Err(response) => return response,
+    };
+    let id = match parse_ticket_id(&id) {
+        Ok(id) => id,
+        Err(response) => return response,
+    };
+    let priority = match req
+        .priority
+        .as_deref()
+        .map(|p| p.parse::<TicketPriority>())
+        .transpose()
+    {
+        Ok(priority) => priority,
+        Err(e) => return ticket_error(StatusCode::BAD_REQUEST, e.to_string()),
+    };
+
+    let patch = TicketUpdate {
+        title: req.title,
+        description: req.description,
+        priority,
+        labels: req.labels,
+        ..Default::default()
+    };
+    match store.update(&id, patch) {
+        Ok(ticket) => (StatusCode::OK, Json(TicketResponse { ticket })).into_response(),
+        Err(e) => {
+            error!(error = %e, "tickets: update failed");
+            ticket_error(StatusCode::NOT_FOUND, e.to_string())
+        }
+    }
+}
+
+async fn close_ticket(
+    State(state): State<Arc<AppState>>,
+    Path(id): Path<String>,
+    Json(req): Json<TicketCloseRequest>,
+) -> impl IntoResponse {
+    set_ticket_status(state, id, TicketStatus::Closed, req.reason).await
+}
+
+async fn reopen_ticket(
+    State(state): State<Arc<AppState>>,
+    Path(id): Path<String>,
+) -> impl IntoResponse {
+    set_ticket_status(state, id, TicketStatus::Open, None).await
+}
+
+async fn set_ticket_status(
+    state: Arc<AppState>,
+    raw_id: String,
+    status: TicketStatus,
+    reason: Option<String>,
+) -> axum::response::Response {
+    let store = match ticket_store(&state) {
+        Ok(store) => store,
+        Err(response) => return response,
+    };
+    let id = match parse_ticket_id(&raw_id) {
+        Ok(id) => id,
+        Err(response) => return response,
+    };
+
+    match store.set_status(&id, status, "api", reason) {
+        Ok(ticket) => (StatusCode::OK, Json(TicketResponse { ticket })).into_response(),
+        Err(e) => {
+            error!(error = %e, "tickets: status change failed");
+            ticket_error(StatusCode::NOT_FOUND, e.to_string())
+        }
+    }
+}
+
+async fn list_ready_tickets(State(state): State<Arc<AppState>>) -> impl IntoResponse {
+    match ready_inputs(&state) {
+        Ok((all, graph, gates)) => match tickets::ready(&all, &graph, &gates, chrono::Utc::now()) {
+            Ok(ready) => {
+                (StatusCode::OK, Json(TicketReadyListResponse { ready })).into_response()
+            }
+            Err(e) => {
+                error!(error = %e, "tickets: ready computation failed");
+                ticket_error(StatusCode::INTERNAL_SERVER_ERROR, e.to_string())
+            }
+        },
+        Err(response) => response,
+    }
+}
+
+async fn list_blocked_tickets(State(state): State<Arc<AppState>>) -> impl IntoResponse {
+    match ready_inputs(&state) {
+        Ok((all, graph, gates)) => {
+            match tickets::blocked(&all, &graph, &gates, chrono::Utc::now()) {
+                Ok(blocked) => {
+                    (StatusCode::OK, Json(TicketBlockedListResponse { blocked })).into_response()
+                }
+                Err(e) => {
+                    error!(error = %e, "tickets: blocked computation failed");
+                    ticket_error(StatusCode::INTERNAL_SERVER_ERROR, e.to_string())
+                }
+            }
+        }
+        Err(response) => response,
+    }
+}
+
+fn ready_inputs(
+    state: &AppState,
+) -> Result<
+    (
+        Vec<Ticket>,
+        dependencies::DependencyGraph,
+        WaitGateStore,
+    ),
+    axum::response::Response,
+> {
+    let store = ticket_store(state)?;
+    let all = store.list().map_err(|e| {
+        error!(error = %e, "tickets: list failed");
+        ticket_error(StatusCode::INTERNAL_SERVER_ERROR, e.to_string())
+    })?;
+    let graph = dependencies::load_graph(&state.rails.root_dir).map_err(|e| {
+        error!(error = %e, "tickets: failed to load dependency graph");
+        ticket_error(StatusCode::INTERNAL_SERVER_ERROR, e.to_string())
+    })?;
+    let gates = WaitGateStore::new(&state.rails.root_dir).map_err(|e| {
+        error!(error = %e, "tickets: failed to open wait-gate store");
+        ticket_error(StatusCode::INTERNAL_SERVER_ERROR, e.to_string())
+    })?;
+    Ok((all, graph, gates))
+}
+
+// ============================================================================
+// Graph analytics (B2 robot surface)
+//
+// View-model builders live in the rails crate (`graph::views`) and are shared
+// with the `rails graph` CLI, so both surfaces emit identical JSON. Per the
+// B1 NOTES, `compute_insights` can block its caller for up to 5s on large
+// graphs, so the whole load → ready → compute → build pipeline runs inside
+// `tokio::task::spawn_blocking`.
+// ============================================================================
+
+/// Load tickets + graph + gates, compute the ready list, then run `build`.
+/// Everything happens on a blocking thread; `build` receives the shared
+/// state, all tickets, the dependency graph, and the ready list.
+async fn run_graph_view<T, F>(state: Arc<AppState>, build: F) -> axum::response::Response
+where
+    T: serde::Serialize + Send + 'static,
+    F: FnOnce(&AppState, &[Ticket], &dependencies::DependencyGraph, Vec<Ticket>) -> Result<T, axum::response::Response>
+        + Send
+        + 'static,
+{
+    match tokio::task::spawn_blocking(move || {
+        let (all, graph, gates) = ready_inputs(&state)?;
+        let ready = tickets::ready(&all, &graph, &gates, chrono::Utc::now()).map_err(|e| {
+            error!(error = %e, "graph: ready computation failed");
+            ticket_error(StatusCode::INTERNAL_SERVER_ERROR, e.to_string())
+        })?;
+        build(&state, &all, &graph, ready)
+    })
+    .await
+    {
+        Ok(Ok(view)) => (StatusCode::OK, Json(view)).into_response(),
+        Ok(Err(response)) => response,
+        Err(e) => {
+            error!(error = %e, "graph: blocking task panicked or was cancelled");
+            ticket_error(StatusCode::INTERNAL_SERVER_ERROR, e.to_string())
+        }
+    }
+}
+
+async fn graph_insights(State(state): State<Arc<AppState>>) -> axum::response::Response {
+    run_graph_view(state, |state, _all, graph, ready| {
+        let insights = state
+            .rails
+            .graph_analytics
+            .compute_insights(graph, &InsightsConfig::default());
+        let view = GraphView::from_graph(graph);
+        Ok(views::build_insights_view(&insights, &ready, &view))
+    })
+    .await
+}
+
+async fn graph_triage(State(state): State<Arc<AppState>>) -> axum::response::Response {
+    run_graph_view(state, |state, _all, graph, ready| {
+        let insights = state
+            .rails
+            .graph_analytics
+            .compute_insights(graph, &InsightsConfig::default());
+        let view = GraphView::from_graph(graph);
+        Ok(views::build_triage_view(&insights, &ready, &view))
+    })
+    .await
+}
+
+async fn graph_impact(
+    State(state): State<Arc<AppState>>,
+    Path(ticket_id): Path<String>,
+) -> axum::response::Response {
+    let id = match parse_ticket_id(&ticket_id) {
+        Ok(id) => id,
+        Err(response) => return response,
+    };
+    run_graph_view(state, move |state, all, graph, _ready| {
+        let insights = state
+            .rails
+            .graph_analytics
+            .compute_insights(graph, &InsightsConfig::default());
+        let view = GraphView::from_graph(graph);
+        views::build_impact_view(&insights, &view, all, &id).map_err(|e| match e {
+            views::ViewError::UnknownTicket(id) => {
+                ticket_error(StatusCode::NOT_FOUND, format!("ticket {id} not found"))
+            }
+        })
+    })
+    .await
+}
+
+async fn add_ticket_dependency(
+    State(state): State<Arc<AppState>>,
+    Path(id): Path<String>,
+    Json(req): Json<TicketDependencyRequest>,
+) -> impl IntoResponse {
+    let store = match ticket_store(&state) {
+        Ok(store) => store,
+        Err(response) => return response,
+    };
+    let from = match parse_ticket_id(&id) {
+        Ok(id) => id,
+        Err(response) => return response,
+    };
+    let to = match parse_ticket_id(&req.to) {
+        Ok(id) => id,
+        Err(response) => return response,
+    };
+    let kind = match req
+        .kind
+        .as_deref()
+        .unwrap_or("blocks")
+        .parse::<DependencyKind>()
+    {
+        Ok(kind) => kind,
+        Err(e) => return ticket_error(StatusCode::BAD_REQUEST, e.to_string()),
+    };
+
+    // Validate before applying (BatchExecutor precedent): no partial mutation.
+    for endpoint in [&from, &to] {
+        match store.get(endpoint) {
+            Ok(Some(_)) => {}
+            Ok(None) => {
+                return ticket_error(
+                    StatusCode::NOT_FOUND,
+                    format!("ticket {endpoint} not found"),
+                )
+            }
+            Err(e) => {
+                error!(error = %e, "tickets: get failed");
+                return ticket_error(StatusCode::INTERNAL_SERVER_ERROR, e.to_string());
+            }
+        }
+    }
+
+    let graph = match dependencies::load_graph(&state.rails.root_dir) {
+        Ok(graph) => graph,
+        Err(e) => {
+            error!(error = %e, "tickets: failed to load dependency graph");
+            return ticket_error(StatusCode::INTERNAL_SERVER_ERROR, e.to_string());
+        }
+    };
+    let edge = DependencyEdge::new(from.clone(), to.clone(), kind);
+    if edge.kind.is_blocking() && graph.would_cycle(&edge) {
+        let mut g = graph.clone();
+        g.add(edge.clone());
+        let cycle: Vec<String> = g
+            .find_cycle()
+            .map(|ids| ids.iter().map(|id| id.to_string()).collect())
+            .unwrap_or_else(|| vec![from.to_string(), to.to_string()]);
+        return (
+            StatusCode::CONFLICT,
+            Json(json!({
+                "error": "dependency would create a blocking cycle",
+                "cycle": cycle,
+            })),
+        )
+            .into_response();
+    }
+
+    match dependencies::add_edge(&state.rails.root_dir, &store, edge) {
+        Ok(()) => (
+            StatusCode::CREATED,
+            Json(json!({ "added": true, "from": from, "to": to, "kind": kind.to_string() })),
+        )
+            .into_response(),
+        Err(e) => {
+            error!(error = %e, "tickets: add dependency failed");
+            ticket_error(StatusCode::INTERNAL_SERVER_ERROR, e.to_string())
+        }
+    }
+}
+
+async fn remove_ticket_dependency(
+    State(state): State<Arc<AppState>>,
+    Path(id): Path<String>,
+    Json(req): Json<TicketDependencyRequest>,
+) -> impl IntoResponse {
+    let store = match ticket_store(&state) {
+        Ok(store) => store,
+        Err(response) => return response,
+    };
+    let from = match parse_ticket_id(&id) {
+        Ok(id) => id,
+        Err(response) => return response,
+    };
+    let to = match parse_ticket_id(&req.to) {
+        Ok(id) => id,
+        Err(response) => return response,
+    };
+    let kind = match req
+        .kind
+        .as_deref()
+        .unwrap_or("blocks")
+        .parse::<DependencyKind>()
+    {
+        Ok(kind) => kind,
+        Err(e) => return ticket_error(StatusCode::BAD_REQUEST, e.to_string()),
+    };
+
+    match dependencies::remove_edge(&state.rails.root_dir, &store, &from, &to, kind) {
+        Ok(true) => (
+            StatusCode::OK,
+            Json(json!({ "removed": true, "from": from, "to": to, "kind": kind.to_string() })),
+        )
+            .into_response(),
+        Ok(false) => ticket_error(
+            StatusCode::NOT_FOUND,
+            format!("no {kind} dependency from {from} to {to}"),
+        ),
+        Err(e) => {
+            error!(error = %e, "tickets: remove dependency failed");
+            ticket_error(StatusCode::INTERNAL_SERVER_ERROR, e.to_string())
+        }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use axum::body::Body;
+    use axum::http::Request;
+    use http_body_util::BodyExt;
+    use serde_json::Value;
+    use std::collections::HashMap;
+    use tokio::sync::RwLock;
+    use tower::ServiceExt;
+
+    async fn body_json(body: axum::body::Body) -> Value {
+        let bytes = body.collect().await.unwrap().to_bytes();
+        serde_json::from_slice(&bytes).unwrap()
+    }
+
+    async fn test_app_state(temp: &std::path::Path) -> Arc<AppState> {
+        let config = crate::AppConfig {
+            company: Default::default(),
+            user: Default::default(),
+        };
+        let db = crate::db::DbHandle::new(temp.join("test.db")).expect("test db");
+        let auth_config = crate::auth::AuthConfig::from_app_config(&config);
+        let jwks = crate::auth::JwksManager::new(&auth_config);
+        let rails = RailsState::new(temp.join("rails"))
+            .await
+            .expect("test rails");
+        Arc::new(AppState {
+            config,
+            db,
+            jwks,
+            auth_config,
+            vm_driver: None,
+            rails,
+            vm_sessions: crate::vm_session_routes::new_vm_session_store(),
+            cowork_scheduler: None,
+            cowork_background: None,
+            cowork_run_manager: None,
+            webhook_secret: None,
+            office_runtime: Arc::new(RwLock::new(
+                crate::office_routes::OfficeRuntimeFile::default(),
+            )),
+            design_skill_cache: crate::design_connector_routes::DesignSkillCache::new(),
+            terminal_sessions: crate::terminal_routes::TerminalSessionStore::new(),
+            office_cli_docs: Arc::new(RwLock::new(HashMap::new())),
+            office_cli_watches: Arc::new(RwLock::new(HashMap::new())),
+            office_cli_mcp_sessions: Arc::new(RwLock::new(HashMap::new())),
+        })
+    }
+
+    fn new_ticket(title: &str) -> Ticket {
+        let now = chrono::Utc::now();
+        let id = TicketId::mint(title.as_bytes());
+        Ticket {
+            hierarchical_id: HierarchicalId::root(id.clone()),
+            id,
+            title: title.to_string(),
+            description: String::new(),
+            design: None,
+            acceptance: None,
+            notes: Vec::new(),
+            status: TicketStatus::Open,
+            kind: TicketKind::Task,
+            priority: TicketPriority::P2,
+            assignee: None,
+            estimate_minutes: None,
+            due_at: None,
+            defer_until: None,
+            labels: Vec::new(),
+            external_ref: None,
+            metadata: HashMap::new(),
+            created_at: now,
+            updated_at: now,
+            closed_at: None,
+            close_reason: None,
+        }
+    }
+
+    async fn get(app: &Router, uri: &str) -> axum::response::Response {
+        app.clone()
+            .oneshot(Request::builder().uri(uri).body(Body::empty()).unwrap())
+            .await
+            .unwrap()
+    }
+
+    async fn post_json(app: &Router, uri: &str, body: Value) -> axum::response::Response {
+        app.clone()
+            .oneshot(
+                Request::builder()
+                    .method("POST")
+                    .uri(uri)
+                    .header("content-type", "application/json")
+                    .body(Body::from(body.to_string()))
+                    .unwrap(),
+            )
+            .await
+            .unwrap()
+    }
+
+    /// E1 mail round-trip: thread default fix (R4), agent registry (R1),
+    /// typed envelope send (R2), per-agent inbox/outbox (R3), and the
+    /// untouched share path whose events the inbox must skip.
+    #[tokio::test]
+    async fn mail_e1_endpoints_round_trip() {
+        let temp = std::env::temp_dir().join(format!(
+            "allternit-rails-mail-e1-test-{}",
+            uuid::Uuid::new_v4()
+        ));
+        std::fs::create_dir_all(&temp).unwrap();
+        let state = test_app_state(&temp).await;
+        let app = rails_router().with_state(state.clone());
+
+        // R4: legacy send with only {"body": ...} and no thread lands in
+        // mail:general (previously a 500 on the "default" topic).
+        let resp = post_json(&app, "/mail/send", json!({ "body": "hello" })).await;
+        assert_eq!(resp.status(), StatusCode::OK);
+        let body = body_json(resp.into_body()).await;
+        assert_eq!(body["sent"], json!(true));
+        assert_eq!(body["thread_id"], json!("mail:general"));
+
+        // Invalid explicit thread is rejected.
+        let resp = post_json(
+            &app,
+            "/mail/send",
+            json!({ "thread": "bogus", "body": "x" }),
+        )
+        .await;
+        assert_eq!(resp.status(), StatusCode::BAD_REQUEST);
+
+        // R1: register alpha and beta; re-registering alpha is idempotent.
+        let resp = post_json(
+            &app,
+            "/mail/agents/register",
+            json!({ "agent_id": "alpha", "display_name": "Alpha" }),
+        )
+        .await;
+        assert_eq!(resp.status(), StatusCode::OK);
+        let body = body_json(resp.into_body()).await;
+        assert_eq!(body["created"], json!(true));
+        assert_eq!(body["agent"]["agent_id"], json!("alpha"));
+
+        let resp = post_json(
+            &app,
+            "/mail/agents/register",
+            json!({ "agent_id": "alpha", "display_name": "Renamed" }),
+        )
+        .await;
+        let body = body_json(resp.into_body()).await;
+        assert_eq!(body["created"], json!(false));
+        assert_eq!(body["agent"]["display_name"], json!("Alpha"));
+
+        let resp = post_json(&app, "/mail/agents/register", json!({ "agent_id": "beta" })).await;
+        assert_eq!(resp.status(), StatusCode::OK);
+
+        let resp = get(&app, "/mail/agents").await;
+        assert_eq!(resp.status(), StatusCode::OK);
+        let body = body_json(resp.into_body()).await;
+        assert_eq!(body["agents"].as_array().unwrap().len(), 2);
+
+        // R2: typed send alpha -> beta, high importance, ack required.
+        let resp = post_json(
+            &app,
+            "/mail/send",
+            json!({
+                "thread": "mail:general",
+                "from_agent": "alpha",
+                "to_agents": ["beta"],
+                "subject": "S",
+                "importance": "high",
+                "ack_required": true,
+                "body": "# Hi beta"
+            }),
+        )
+        .await;
+        assert_eq!(resp.status(), StatusCode::OK);
+        let body = body_json(resp.into_body()).await;
+        assert_eq!(body["sent"], json!(true));
+        let message_id = body["message_id"].as_str().unwrap().to_string();
+        // Body persisted as a file under .allternit/mail/messages/.
+        let body_file = state
+            .rails
+            .root_dir
+            .join(format!(".allternit/mail/messages/{}.md", message_id));
+        assert_eq!(std::fs::read_to_string(body_file).unwrap(), "# Hi beta");
+
+        // R3: beta's inbox carries the full typed envelope + the legacy
+        // broadcast; alpha's outbox has the typed message.
+        let resp = get(&app, "/mail/inbox/beta").await;
+        assert_eq!(resp.status(), StatusCode::OK);
+        let body = body_json(resp.into_body()).await;
+        let messages = body["messages"].as_array().unwrap();
+        assert_eq!(messages.len(), 2);
+        let typed = messages
+            .iter()
+            .find(|m| m["message_id"] == json!(message_id))
+            .expect("typed message in beta inbox");
+        assert_eq!(typed["from_agent"], json!("alpha"));
+        assert_eq!(typed["to_agents"], json!(["beta"]));
+        assert_eq!(typed["subject"], json!("S"));
+        assert_eq!(typed["importance"], json!("high"));
+        assert_eq!(typed["ack_required"], json!(true));
+        assert!(typed["body_path"]
+            .as_str()
+            .unwrap()
+            .ends_with(&format!("{}.md", message_id)));
+
+        let resp = get(&app, "/mail/outbox/alpha?limit=10").await;
+        assert_eq!(resp.status(), StatusCode::OK);
+        let body = body_json(resp.into_body()).await;
+        assert_eq!(body["messages"].as_array().unwrap().len(), 1);
+
+        // NON-GOAL check: the share path still works (wih:pipeline-* shape)
+        // and its MailAssetShared events do not leak into inboxes.
+        let resp = post_json(
+            &app,
+            "/mail/share",
+            json!({ "thread": "wih:pipeline-probe", "asset_ref": "outputs/probe.txt" }),
+        )
+        .await;
+        assert_eq!(resp.status(), StatusCode::OK);
+        let body = body_json(resp.into_body()).await;
+        assert_eq!(body["shared"], json!(true));
+        assert_eq!(body["thread_id"], json!("wih:pipeline-probe"));
+
+        let resp = get(&app, "/mail/inbox/beta").await;
+        let body = body_json(resp.into_body()).await;
+        assert_eq!(body["messages"].as_array().unwrap().len(), 2);
+
+        let _ = std::fs::remove_dir_all(&temp);
+    }
+
+    /// E2 mail search round-trip: typed sends are indexed on emit and found
+    /// by subject/body word; legacy untyped sends stay out of the index;
+    /// empty q is a 400.
+    #[tokio::test]
+    async fn mail_e2_search_round_trip() {
+        let temp = std::env::temp_dir().join(format!(
+            "allternit-rails-mail-e2-test-{}",
+            uuid::Uuid::new_v4()
+        ));
+        std::fs::create_dir_all(&temp).unwrap();
+        let state = test_app_state(&temp).await;
+        let app = rails_router().with_state(state.clone());
+
+        // Typed send with a searchable subject.
+        let resp = post_json(
+            &app,
+            "/mail/send",
+            json!({
+                "from_agent": "alpha",
+                "to_agents": ["beta"],
+                "subject": "deploy window Friday",
+                "body": "Please review the rollout plan."
+            }),
+        )
+        .await;
+        assert_eq!(resp.status(), StatusCode::OK);
+        let body = body_json(resp.into_body()).await;
+        let message_id = body["message_id"].as_str().unwrap().to_string();
+
+        // Legacy untyped send — must not break or enter the index.
+        let resp = post_json(&app, "/mail/send", json!({ "body": "legacy deploy chatter" })).await;
+        assert_eq!(resp.status(), StatusCode::OK);
+
+        // Search by subject word (Gherkin: q=deploy finds the message with
+        // an excerpt) — and the legacy send stays out.
+        let resp = get(&app, "/mail/search?q=deploy").await;
+        assert_eq!(resp.status(), StatusCode::OK);
+        let body = body_json(resp.into_body()).await;
+        let results = body["results"].as_array().unwrap();
+        assert_eq!(results.len(), 1);
+        assert_eq!(results[0]["message_id"], json!(message_id));
+        assert_eq!(results[0]["thread_id"], json!("mail:general"));
+        assert_eq!(results[0]["from_agent"], json!("alpha"));
+        assert_eq!(results[0]["subject"], json!("deploy window Friday"));
+        assert!(results[0]["ts"].as_str().unwrap().len() > 0);
+        assert!(results[0]["excerpt"].as_str().unwrap().len() > 0);
+
+        // Search by body-only word.
+        let resp = get(&app, "/mail/search?q=rollout&limit=5").await;
+        assert_eq!(resp.status(), StatusCode::OK);
+        let body = body_json(resp.into_body()).await;
+        assert_eq!(body["results"].as_array().unwrap().len(), 1);
+
+        // Empty / missing q -> 400.
+        let resp = get(&app, "/mail/search").await;
+        assert_eq!(resp.status(), StatusCode::BAD_REQUEST);
+        let resp = get(&app, "/mail/search?q=%20").await;
+        assert_eq!(resp.status(), StatusCode::BAD_REQUEST);
+
+        let _ = std::fs::remove_dir_all(&temp);
+    }
+
+    /// E3 overdue round-trip: ack-required send appears in the recipient's
+    /// overdue list until that recipient acks; ack_required=false never
+    /// appears; older_than filters by age.
+    #[tokio::test]
+    async fn mail_e3_overdue_round_trip() {
+        let temp = std::env::temp_dir().join(format!(
+            "allternit-rails-mail-e3-test-{}",
+            uuid::Uuid::new_v4()
+        ));
+        std::fs::create_dir_all(&temp).unwrap();
+        let state = test_app_state(&temp).await;
+        let app = rails_router().with_state(state.clone());
+
+        // ack_required message alpha -> beta.
+        let resp = post_json(
+            &app,
+            "/mail/send",
+            json!({
+                "from_agent": "alpha",
+                "to_agents": ["beta"],
+                "subject": "please ack",
+                "ack_required": true,
+                "body": "needs ack"
+            }),
+        )
+        .await;
+        assert_eq!(resp.status(), StatusCode::OK);
+        let body = body_json(resp.into_body()).await;
+        let message_id = body["message_id"].as_str().unwrap().to_string();
+
+        // ack_required = false — never overdue.
+        let resp = post_json(
+            &app,
+            "/mail/send",
+            json!({
+                "from_agent": "alpha",
+                "to_agents": ["beta"],
+                "subject": "fyi",
+                "ack_required": false,
+                "body": "no ack needed"
+            }),
+        )
+        .await;
+        assert_eq!(resp.status(), StatusCode::OK);
+
+        // beta's overdue list contains exactly the ack-required message.
+        let resp = get(&app, "/mail/overdue?agent=beta").await;
+        assert_eq!(resp.status(), StatusCode::OK);
+        let body = body_json(resp.into_body()).await;
+        let rows = body["overdue"].as_array().unwrap();
+        assert_eq!(rows.len(), 1);
+        assert_eq!(rows[0]["message_id"], json!(message_id));
+        assert_eq!(rows[0]["from_agent"], json!("alpha"));
+        assert_eq!(rows[0]["subject"], json!("please ack"));
+        assert_eq!(rows[0]["pending"], json!(["beta"]));
+        assert!(rows[0]["age_seconds"].as_i64().unwrap() >= 0);
+
+        // Unfiltered view shows the pending recipient list too.
+        let resp = get(&app, "/mail/overdue").await;
+        let body = body_json(resp.into_body()).await;
+        assert_eq!(body["overdue"].as_array().unwrap().len(), 1);
+
+        // older_than beyond the message age filters it out.
+        let resp = get(&app, "/mail/overdue?agent=beta&older_than=999999").await;
+        let body = body_json(resp.into_body()).await;
+        assert!(body["overdue"].as_array().unwrap().is_empty());
+
+        // beta acks — the message leaves overdue.
+        state
+            .rails
+            .mail
+            .acknowledge_message("mail:general", &message_id, Some("beta"), None)
+            .await
+            .unwrap();
+        let resp = get(&app, "/mail/overdue?agent=beta").await;
+        let body = body_json(resp.into_body()).await;
+        assert!(body["overdue"].as_array().unwrap().is_empty());
+        let resp = get(&app, "/mail/overdue").await;
+        let body = body_json(resp.into_body()).await;
+        assert!(body["overdue"].as_array().unwrap().is_empty());
+
+        let _ = std::fs::remove_dir_all(&temp);
+    }
+
+    /// Gherkin scenario "keystones over HTTP": diamond graph (A blocks B and
+    /// C; B and C block D) → A top keystone, D most blocked, all metrics
+    /// computed. Plus triage ranking and impact 404/400 handling.
+    #[tokio::test]
+    async fn graph_endpoints_over_diamond_fixture() {
+        let temp = std::env::temp_dir().join(format!(
+            "allternit-rails-graph-test-{}",
+            uuid::Uuid::new_v4()
+        ));
+        std::fs::create_dir_all(&temp).unwrap();
+        let state = test_app_state(&temp).await;
+        let root = state.rails.root_dir.clone();
+
+        // Seed the diamond via the ticket store + dependency events.
+        let store = TicketStore::new(&root).unwrap();
+        let a = store.create(new_ticket("A")).unwrap();
+        let b = store.create(new_ticket("B")).unwrap();
+        let c = store.create(new_ticket("C")).unwrap();
+        let d = store.create(new_ticket("D")).unwrap();
+        for (from, to) in [(&a, &b), (&a, &c), (&b, &d), (&c, &d)] {
+            dependencies::add_edge(
+                &root,
+                &store,
+                DependencyEdge::new(from.id.clone(), to.id.clone(), DependencyKind::Blocks),
+            )
+            .unwrap();
+        }
+
+        let app = rails_router().with_state(state.clone());
+
+        // ── Insights ─────────────────────────────────────────────────────
+        let resp = get(&app, "/graph/insights").await;
+        assert_eq!(resp.status(), StatusCode::OK);
+        let body = body_json(resp.into_body()).await;
+        assert_eq!(body["keystones"][0]["ticket"], json!(a.id.to_string()));
+        assert_eq!(body["keystones"][0]["impact"], json!(3));
+        assert_eq!(body["health"]["most_blocked"], json!(d.id.to_string()));
+        assert_eq!(body["health"]["ready_count"], json!(1));
+        assert_eq!(body["metric_statuses"]["pagerank"], json!("computed"));
+        assert_eq!(body["metric_statuses"]["betweenness"], json!("computed"));
+        assert_eq!(body["metric_statuses"]["critical_path"], json!("computed"));
+        assert!(body["content_hash"].as_str().unwrap().len() == 64);
+
+        // ── Triage ───────────────────────────────────────────────────────
+        let resp = get(&app, "/graph/triage").await;
+        assert_eq!(resp.status(), StatusCode::OK);
+        let body = body_json(resp.into_body()).await;
+        assert_eq!(body["ready_count"], json!(1));
+        assert_eq!(body["items"][0]["ticket"], json!(a.id.to_string()));
+        assert_eq!(body["items"][0]["unblocks"], json!(3));
+        assert!(body["items"][0]["reason"]
+            .as_str()
+            .unwrap()
+            .contains("unblocks 3 tickets"));
+
+        // ── Impact ───────────────────────────────────────────────────────
+        let resp = get(&app, &format!("/graph/impact/{}", a.id)).await;
+        assert_eq!(resp.status(), StatusCode::OK);
+        let body = body_json(resp.into_body()).await;
+        assert_eq!(body["critical_path_impact"], json!(3));
+        assert_eq!(body["transitive_dependents"].as_array().unwrap().len(), 3);
+        assert_eq!(body["direct_dependents"].as_array().unwrap().len(), 2);
+
+        // Unknown (but well-formed) ticket id → 404.
+        let unknown = format!("T-{}", "0".repeat(32));
+        let resp = get(&app, &format!("/graph/impact/{unknown}")).await;
+        assert_eq!(resp.status(), StatusCode::NOT_FOUND);
+
+        // Malformed ticket id → 400.
+        let resp = get(&app, "/graph/impact/bogus").await;
+        assert_eq!(resp.status(), StatusCode::BAD_REQUEST);
+
+        let _ = std::fs::remove_dir_all(&temp);
+    }
 }

@@ -85,6 +85,10 @@ export function isClerkDisabledByEnv(): boolean {
   return envFlag('NEXT_PUBLIC_ALLTERNIT_PLATFORM_DISABLE_CLERK');
 }
 
+export function isSelfHosted(): boolean {
+  return envFlag('ALLTERNIT_SELF_HOSTED');
+}
+
 export function isDesktopAuthEnabled(): boolean {
   return envFlag('NEXT_PUBLIC_ALLTERNIT_DESKTOP_AUTH');
 }

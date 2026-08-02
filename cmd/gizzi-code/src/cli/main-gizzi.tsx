@@ -65,6 +65,8 @@ import { jsonParse, writeFileSync_DEPRECATED } from '../shared/utils/slowOperati
 import { computeInitialTeamContext } from '../shared/utils/swarm/reconnection.js';
 import { initializeWarningHandler } from './utils/warningHandler.js';
 import { isWorktreeModeEnabled } from './utils/worktreeModeEnabled.js';
+import { resolveWorktreeEnabled } from '../shared/utils/worktreeModeEnabled.js';
+import { getInitialSettings as getSharedInitialSettings } from '../shared/utils/settings/settings.js';
 
 // Lazy require to avoid circular dependency: teammate.ts -> AppState.tsx -> ... -> main.tsx
 /* eslint-disable @typescript-eslint/no-require-imports */
@@ -1152,12 +1154,19 @@ async function run(): Promise<CommanderCommand> {
     }
 
     // Extract worktree option
-    // worktree can be true (flag without value) or a string (custom name or PR reference)
+    // worktree can be true (flag without value), a string (custom name or PR
+    // reference), or false (--no-worktree: explicit opt-out for this launch)
     const worktreeOption = isWorktreeModeEnabled() ? (options as {
       worktree?: boolean | string;
     }).worktree : undefined;
     let worktreeName = typeof worktreeOption === 'string' ? worktreeOption : undefined;
-    const worktreeEnabled = worktreeOption !== undefined;
+    // Explicit --worktree beats everything; --no-worktree beats the
+    // worktree.autoCreate settings default; both absent → setting, then false.
+    const worktreeEnabled = isWorktreeModeEnabled() && resolveWorktreeEnabled(
+      worktreeOption !== undefined && worktreeOption !== false,
+      worktreeOption === false,
+      getSharedInitialSettings().worktree?.autoCreate
+    );
 
     // Check if worktree name is a PR reference (#N or GitHub PR URL)
     let worktreePRNumber: number | undefined;
@@ -3830,6 +3839,7 @@ async function run(): Promise<CommanderCommand> {
 
   // Worktree flags
   program.option('-w, --worktree [name]', 'Create a new git worktree for this session (optionally specify a name)');
+  program.option('--no-worktree', 'Disable worktree creation for this launch (overrides the worktree.autoCreate setting)');
   program.option('--tmux', 'Create a tmux session for the worktree (requires --worktree). Uses iTerm2 native panes when available; use --tmux=classic for traditional tmux.');
   if (canUserConfigureAdvisor()) {
     program.addOption(new Option('--advisor <model>', 'Enable the server-side advisor tool with the specified model (alias or full ID).').hideHelp());

@@ -31,6 +31,7 @@ import {
   Trash,
   DotsThreeVertical,
   Check,
+  Brain,
 } from '@phosphor-icons/react';
 import { getPinnedMiniApps, unpinMiniApp, seedDefaultMiniApps } from '../views/aci/mini-app-registry';
 import type { InstalledMiniApp } from '../views/aci/mini-app.types';
@@ -818,6 +819,12 @@ export function ShellRail({
               label="Artifacts Library"
               isActive={activeViewType === 'library'}
               onClick={() => onOpen?.('library')}
+            />
+            <RailItem
+              icon={Brain}
+              label="Brain"
+              isActive={activeViewType === 'brain'}
+              onClick={() => onOpen?.('brain')}
             />
             <RailItem
               icon={Clock}
