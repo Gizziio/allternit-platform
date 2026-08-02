@@ -57,6 +57,23 @@ enum AppConfig {
         return apiBase.appendingPathComponent("aci")
     }()
 
+    /// Base URL of the Rails Mail / ledger endpoints —
+    /// `GET /api/rails/mail/threads`, `GET /api/rails/mail/thread/:id`,
+    /// `POST /api/rails/mail/send`, `POST /api/rails/mail/decide`,
+    /// `POST /api/rails/mail/share`, `POST /api/rails/ledger/tail`.
+    ///
+    /// Like agent-chat and ACI, the rails router is mounted directly under
+    /// `/api` on allternit-api (cmd/allternit-api/src/main.rs:334-335,
+    /// `.nest("/api/rails", rails_router())`) — NOT under the `/api/v1`
+    /// router — so it can't be reached by appending a path to `apiBaseURL`.
+    /// Derived the same way as `aciBaseURL`.
+    static let railsBaseURL: URL = {
+        let apiBase = apiBaseURL.lastPathComponent == "v1"
+            ? apiBaseURL.deletingLastPathComponent()
+            : apiBaseURL
+        return apiBase.appendingPathComponent("rails")
+    }()
+
     /// Base URL of a standalone gizzi-code server (`gizzi serve`) hosting the
     /// pty REST + WebSocket routes (`/v1/pty/...`, see
     /// cmd/gizzi-code/docs/pty-websocket-protocol.md). Default: the local dev
