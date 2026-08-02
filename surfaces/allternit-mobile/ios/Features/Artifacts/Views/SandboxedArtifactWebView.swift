@@ -46,9 +46,12 @@ struct SandboxedArtifactWebView: UIViewRepresentable {
     func makeUIView(context: Context) -> WKWebView {
         let configuration = WKWebViewConfiguration()
         configuration.setURLSchemeHandler(context.coordinator, forURLScheme: Self.scheme)
-        // Default deny; the navigation delegate opts JS in per navigation.
+        // Custom-scheme navigations do not reliably apply a delegate-only
+        // JavaScript opt-in before the document's inline script is parsed, so
+        // configure the initial artifact type here as well. The navigation
+        // delegate repeats the same type-gated policy for every navigation.
         let preferences = WKWebpagePreferences()
-        preferences.allowsContentJavaScript = false
+        preferences.allowsContentJavaScript = Self.allowsJavaScript(for: artifactType)
         configuration.defaultWebpagePreferences = preferences
 
         let webView = WKWebView(frame: .zero, configuration: configuration)

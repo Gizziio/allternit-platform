@@ -12,6 +12,8 @@ struct ArtifactRecord: Identifiable, Hashable, Sendable, Codable {
     /// Inline content carried by the event itself (contract `inlinePreview`);
     /// `nil` when the event only references content by `url` / `artifactId`.
     let inlinePreview: String?
+    /// Backend canvas version; nil for local and legacy artifacts.
+    let version: Int?
 
     init(id: String,
          title: String,
@@ -20,7 +22,8 @@ struct ArtifactRecord: Identifiable, Hashable, Sendable, Codable {
          artifactId: String? = nil,
          artifactType: String? = nil,
          url: String? = nil,
-         inlinePreview: String? = nil) {
+         inlinePreview: String? = nil,
+         version: Int? = nil) {
         self.id = id
         self.title = title
         self.fileType = fileType
@@ -29,6 +32,7 @@ struct ArtifactRecord: Identifiable, Hashable, Sendable, Codable {
         self.artifactType = artifactType
         self.url = url
         self.inlinePreview = inlinePreview
+        self.version = version
     }
 
     /// Attachment built from a typed `artifact.created` SSE event. Content

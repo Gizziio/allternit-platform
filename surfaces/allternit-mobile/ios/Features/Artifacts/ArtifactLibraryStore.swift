@@ -21,8 +21,8 @@ struct SavedArtifact: Identifiable, Hashable, Sendable, Codable {
 ///
 /// 1. Live stream frames, recorded as they arrive (instant, offline-safe) —
 ///    and mirrored back to the backend as canvases so the web sees them.
-/// 2. `refreshFromBackend()`: sweeps recent sessions' canvases to pick up
-///    artifacts created on other surfaces (or before this install).
+/// 2. `refreshFromBackend()`: lists the authenticated user's canvases to pick
+///    up artifacts created on other surfaces (or before this install).
 @MainActor
 final class ArtifactLibraryStore: ObservableObject {
     static let shared = ArtifactLibraryStore()
@@ -37,9 +37,6 @@ final class ArtifactLibraryStore: ObservableObject {
 
     private let fileURL: URL
     private let canvasClient = CanvasClient()
-    /// Newest sessions swept per refresh — bounds the N+1 canvas fan-out.
-    private let refreshSessionLimit = 30
-
     private struct Persisted: Codable {
         var artifacts: [SavedArtifact]
         var canvasIds: [String: String]
@@ -72,58 +69,47 @@ final class ArtifactLibraryStore: ObservableObject {
         save()
     }
 
-    /// Sweeps the newest sessions' canvases for artifact components and
-    /// merges anything unseen (web-created artifacts, pre-install history).
-    /// Local entries win on conflict — they carry the freshest content.
+    /// Lists the user's canvases and merges web-created artifacts and newer
+    /// backend redeploys. Versioned entries only advance monotonically; a
+    /// first versioned backend copy may replace an unversioned local entry.
     func refreshFromBackend() async {
         guard !isRefreshing else { return }
         isRefreshing = true
         defer { isRefreshing = false }
 
-        // Sessions list failing means no sweep this time — the local
-        // library stands (refresh is additive best-effort).
-        guard let envelope: AgentSessionListResponse = try? await APIClient.shared.get(path: "agent-sessions") else {
-            return
-        }
-        let sessionIds = envelope.sessions.prefix(refreshSessionLimit).map(\.id)
-        let known = Set(artifacts.map(\.id))
-        let client = canvasClient
-        var fetched: [SavedArtifact] = []
+        // A failed list leaves the local library intact (additive best-effort).
+        guard let canvases = try? await canvasClient.listCanvases() else { return }
+        let fetched = Self.savedArtifacts(from: canvases)
 
-        // Four sessions in flight at a time keeps the sweep quick without
-        // hammering the gateway.
-        var index = 0
-        while index < sessionIds.count {
-            let chunk = Array(sessionIds[index..<min(index + 4, sessionIds.count)])
-            index += chunk.count
-            let batch = await withTaskGroup(of: [SavedArtifact].self) { group in
-                for sessionId in chunk {
-                    group.addTask {
-                        let canvases = (try? await client.listCanvases(sessionId: sessionId)) ?? []
-                        return Self.savedArtifacts(from: canvases, sessionId: sessionId)
-                    }
-                }
-                var results: [SavedArtifact] = []
-                for await sessionArtifacts in group {
-                    results.append(contentsOf: sessionArtifacts)
-                }
-                return results
+        var mergedById: [String: SavedArtifact] = [:]
+        for artifact in artifacts where mergedById[artifact.id] == nil {
+            mergedById[artifact.id] = artifact
+        }
+        var changed = false
+        for candidate in fetched {
+            guard let existing = mergedById[candidate.id] else {
+                mergedById[candidate.id] = candidate
+                changed = true
+                continue
             }
-            fetched.append(contentsOf: batch)
+            guard let fetchedVersion = candidate.record.version else { continue }
+            if existing.record.version.map({ fetchedVersion > $0 }) ?? true {
+                mergedById[candidate.id] = candidate
+                changed = true
+            }
         }
-
-        let additions = fetched.filter { !known.contains($0.id) }
-        guard !additions.isEmpty else { return }
-        artifacts = (artifacts + additions).sorted { $0.savedAt > $1.savedAt }
+        guard changed else { return }
+        artifacts = mergedById.values.sorted { $0.savedAt > $1.savedAt }
         save()
     }
 
     // MARK: - Canvas mapping
 
-    nonisolated private static func savedArtifacts(from canvases: [CanvasRecord], sessionId: String) -> [SavedArtifact] {
+    nonisolated private static func savedArtifacts(from canvases: [CanvasRecord]) -> [SavedArtifact] {
         canvases.flatMap { canvas in
             canvas.components.compactMap { component -> SavedArtifact? in
-                guard component.type == "artifact", let artifactId = component.artifactId else { return nil }
+                guard component.type == "artifact" else { return nil }
+                let artifactId = canvas.artifactKey ?? component.artifactId ?? canvas.id
                 let record = ArtifactRecord(
                     id: artifactId,
                     title: component.title ?? canvas.title ?? "Untitled artifact",
@@ -131,11 +117,12 @@ final class ArtifactLibraryStore: ObservableObject {
                     artifactId: artifactId,
                     artifactType: component.kind,
                     url: component.url,
-                    inlinePreview: component.content
+                    inlinePreview: component.content,
+                    version: canvas.version
                 )
                 return SavedArtifact(
                     record: record,
-                    sessionId: sessionId,
+                    sessionId: canvas.sessionId,
                     savedAt: Self.parseTimestamp(canvas.updatedAt) ?? Date()
                 )
             }

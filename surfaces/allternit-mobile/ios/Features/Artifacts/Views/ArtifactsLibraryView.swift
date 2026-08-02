@@ -73,8 +73,8 @@ struct ArtifactsLibraryView: View {
             ArtifactDetailsView(artifact: artifact)
         }
         .task {
-            // Sweep recent sessions' canvases for artifacts created on other
-            // surfaces (the web mirrors artifacts there).
+            // List the user's canvases for artifacts created on other
+            // surfaces (the web and gizzi-code mirror artifacts there).
             await store.refreshFromBackend()
         }
     }
@@ -121,7 +121,7 @@ struct ArtifactsLibraryView: View {
                         .font(.system(size: 14, weight: .medium))
                         .foregroundColor(Color("TextPrimary"))
                         .lineLimit(1)
-                    Text("\(saved.record.fileType.uppercased()) · \(saved.savedAt.formatted(date: .abbreviated, time: .shortened))")
+                    Text(rowMetadata(saved))
                         .font(.caption)
                         .foregroundColor(Color("TextSecondary"))
                 }
@@ -145,5 +145,11 @@ struct ArtifactsLibraryView: View {
                 Label("Remove from library", systemImage: "trash")
             }
         }
+    }
+
+    private func rowMetadata(_ saved: SavedArtifact) -> String {
+        let type = saved.record.fileType.uppercased()
+        let version = saved.record.version.map { " · V\($0)" } ?? ""
+        return "\(type)\(version) · \(saved.savedAt.formatted(date: .abbreviated, time: .shortened))"
     }
 }

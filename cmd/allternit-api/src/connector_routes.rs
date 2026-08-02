@@ -118,9 +118,9 @@ async fn mcp_proxy(headers: axum::http::HeaderMap, Json(body): Json<Value>) -> i
 /// `DEVICE_TOKEN_PREFIX` in allternit-cloud-api's runtime_pairing.rs and what
 /// gizzi-code's pairing service sends (`Authorization: Bearer
 /// allternit_runtime_…`).
-const DEVICE_TOKEN_PREFIX: &str = "allternit_runtime_";
+pub(crate) const DEVICE_TOKEN_PREFIX: &str = "allternit_runtime_";
 
-fn device_token_from_headers(headers: &axum::http::HeaderMap) -> Option<&str> {
+pub(crate) fn device_token_from_headers(headers: &axum::http::HeaderMap) -> Option<&str> {
     headers
         .get(axum::http::header::AUTHORIZATION)
         .and_then(|v| v.to_str().ok())
@@ -135,7 +135,7 @@ fn device_token_from_headers(headers: &axum::http::HeaderMap) -> Option<&str> {
 /// user_id; the token-derived identity always wins over any caller-asserted
 /// `x-allternit-user-id` header. Fails closed: 401 on rejection, 502 when
 /// the cloud-api itself is unreachable or answers garbage.
-async fn verify_runtime_device_token(
+pub(crate) async fn verify_runtime_device_token(
     state: &AppState,
     token: &str,
 ) -> Result<String, axum::response::Response> {
