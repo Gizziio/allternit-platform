@@ -1,9 +1,9 @@
 // @ts-nocheck
 "use client";
 
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { railsApi, useUnifiedStore } from "@/lib/agents";
-import type { LedgerEvent, LogEntry, MailMessage } from "@/lib/agents";
+import type { LedgerEvent, LogEntry, MailMessage, SessionAnalytics } from "@/lib/agents";
 import { useTelemetrySnapshot } from "@/lib/telemetry/useTelemetrySnapshot";
 
 import { createModuleLogger } from '@/lib/logger';
@@ -12,7 +12,132 @@ const logger = createModuleLogger('Monitor.helpers');
 
 const BASE_URL = typeof window !== "undefined" ? window.location.origin : "https://app.allternit.dev";
 
-export function useMonitorData(threadId: string | null): void {
+// ============================================================================
+// Shared, pure derivation helpers
+//
+// These exist because the real data model has no first-class "review status"
+// or "reservation" object attached to a thread — see AGENT_ACTIVITY_WEB_PHASE_1_NOTES.md.
+// `relevantEvents` (ledgerEvents filtered by payload.thread_id / mail_thread_id)
+// is the only signal, and `event_type` is a free-form string, so status here is
+// a best-effort heuristic (substring match on event_type), not a guaranteed field.
+// ============================================================================
+
+export function filterEventsForThread(events: LedgerEvent[], threadId: string): LedgerEvent[] {
+  return events.filter((event) => {
+    const payload = event.payload as Record<string, unknown>;
+    if (!payload || typeof payload !== "object") return false;
+    return payload["thread_id"] === threadId || payload["mail_thread_id"] === threadId;
+  });
+}
+
+export type AgentActivityReviewKind = "code-diff" | "decision";
+
+export interface AgentActivityReview {
+  kind: AgentActivityReviewKind;
+  ask: string;
+  diffRef?: string;
+  requestedAt: string;
+}
+
+/**
+ * decide() is strictly boolean (see rails.service.ts) — there is no 3-way
+ * decision in the real API. A review is only "code-diff" typed when the
+ * requestReview event's payload actually carried a diff_ref; otherwise it's
+ * rendered as a plain decision ask.
+ */
+export function deriveThreadReview(events: LedgerEvent[]): AgentActivityReview | null {
+  const sorted = [...events].sort(
+    (a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()
+  );
+  const requested = sorted.find((event) => /review/i.test(event.event_type));
+  if (!requested) return null;
+
+  const decided = sorted.find((event) => /decide/i.test(event.event_type));
+  if (decided && new Date(decided.timestamp).getTime() > new Date(requested.timestamp).getTime()) {
+    return null; // a later decide() event means this ask is already resolved
+  }
+
+  const payload = (requested.payload && typeof requested.payload === "object"
+    ? requested.payload
+    : {}) as Record<string, unknown>;
+  const diffRef = (payload["diff_ref"] as string) || (payload["diffRef"] as string) || undefined;
+  const note = (payload["note"] as string) || (payload["notes_ref"] as string) || undefined;
+
+  return {
+    kind: diffRef ? "code-diff" : "decision",
+    diffRef,
+    ask: note || (diffRef ? `Code changes ready for review: ${diffRef}` : "Agent is requesting a decision on this thread."),
+    requestedAt: requested.timestamp,
+  };
+}
+
+export function hasGuardActivity(events: LedgerEvent[]): boolean {
+  return events.some((event) => /guard/i.test(event.event_type));
+}
+
+export function hasReservationActivity(events: LedgerEvent[]): boolean {
+  return events.some((event) => /reserve/i.test(event.event_type));
+}
+
+// ============================================================================
+// Client-side "archived" tracking
+//
+// MailThread (rails.service.ts) has no archived flag — archive() actually
+// takes (threadId, path, reason), which reads like "release a reserved path"
+// rather than "hide this thread from my inbox." We still call the real
+// endpoint (no invented backend behavior), but the Review/Archived tab filter
+// is driven by this local marker since the server has nothing to read back.
+// ============================================================================
+
+const ARCHIVED_STORAGE_KEY = "agent-activity:archived-thread-ids";
+
+function readArchivedIds(): Set<string> {
+  if (typeof window === "undefined") return new Set();
+  try {
+    const raw = window.localStorage.getItem(ARCHIVED_STORAGE_KEY);
+    return new Set(raw ? (JSON.parse(raw) as string[]) : []);
+  } catch {
+    return new Set();
+  }
+}
+
+function writeArchivedIds(ids: Set<string>): void {
+  if (typeof window === "undefined") return;
+  try {
+    window.localStorage.setItem(ARCHIVED_STORAGE_KEY, JSON.stringify(Array.from(ids)));
+  } catch {
+    // best-effort only
+  }
+}
+
+export function isThreadArchivedLocally(threadId: string): boolean {
+  return readArchivedIds().has(threadId);
+}
+
+export function setThreadArchivedLocally(threadId: string, archived: boolean): void {
+  const ids = readArchivedIds();
+  if (archived) ids.add(threadId);
+  else ids.delete(threadId);
+  writeArchivedIds(ids);
+}
+
+// ============================================================================
+// Single-thread data (existing — used by the detail view)
+// ============================================================================
+
+export interface MonitorData {
+  analytics: SessionAnalytics | null;
+  messages: MailMessage[];
+  relevantEvents: LedgerEvent[];
+  relevantLogs: LogEntry[];
+  telemetry: {
+    snapshot: import("@/lib/telemetry/schema").TelemetrySnapshot | null;
+    loading: boolean;
+    error: string | null;
+  };
+}
+
+export function useMonitorData(threadId: string | null): MonitorData {
   const mailMessages = useUnifiedStore((state) => state.mailMessages);
   const ledgerEvents = useUnifiedStore((state) => state.ledgerEvents);
   const logs = useUnifiedStore((state) => state.logs);
@@ -27,14 +152,7 @@ export function useMonitorData(threadId: string | null): void {
 
   const relevantEvents = useMemo<LedgerEvent[]>(() => {
     if (!threadId) return [];
-    return ledgerEvents
-      .filter((event) => {
-        const payload = event.payload as Record<string, unknown>;
-        if (!payload || typeof payload !== "object") return false;
-        return payload["thread_id"] === threadId || payload["mail_thread_id"] === threadId;
-      })
-      .slice(-4)
-      .reverse();
+    return filterEventsForThread(ledgerEvents, threadId).slice(-4).reverse();
   }, [ledgerEvents, threadId]);
 
   const relevantLogs = useMemo<LogEntry[]>(() => {
@@ -73,9 +191,140 @@ function useMonitorShare(threadId: string | null): void {
   return { shareId, isSharing, shareMonitor, monitorLink };
 }
 
-function buildMonitorLink(threadId: string, shareId: string | null): void {
+export function buildMonitorLink(threadId: string, shareId: string | null): string {
   if (shareId) {
     return `${BASE_URL}/mail/share/${shareId}`;
   }
-  return `${BASE_URL}/mail/monitor/${threadId}`;
+  // Real route (routes.tsx): /agent-activity/:threadId — this used to point at
+  // /mail/monitor/:threadId, which was never registered anywhere.
+  return `${BASE_URL}/agent-activity/${threadId}`;
+}
+
+// ============================================================================
+// Thread-list data (new — used by the panel and the full list page)
+// ============================================================================
+
+export interface AgentActivityThreadSummary {
+  threadId: string;
+  topic: string;
+  createdAt: string;
+  lastActivityAt: string;
+  lastMessage: MailMessage | null;
+  preview: string;
+  unread: boolean;
+  relevantEvents: LedgerEvent[];
+  review: AgentActivityReview | null;
+  hasGuardActivity: boolean;
+  hasReservationActivity: boolean;
+  archived: boolean;
+}
+
+export interface UseMonitorThreadsResult {
+  threads: AgentActivityThreadSummary[];
+  unreadCount: number;
+  reviewCount: number;
+  loading: boolean;
+  error: string | null;
+  refresh: () => Promise<void>;
+  setThreadArchived: (threadId: string, archived: boolean) => void;
+}
+
+/**
+ * Thread-list variant of useMonitorData. mailThreads (from fetchMailThreads)
+ * only carries {thread_id, topic, created_at} — topic is literally the
+ * thread_id today, since threads are derived client-side from inbox messages
+ * rather than a dedicated "thread" backend record. We independently pull a
+ * full inbox snapshot (not routed through the store's mailMessages slice,
+ * which fetchMailMessages(threadId) overwrites per-thread) so previews/unread
+ * state can be computed for every thread at once without clobbering whatever
+ * the detail view has loaded for a single thread.
+ */
+export function useMonitorThreads(): UseMonitorThreadsResult {
+  const mailThreads = useUnifiedStore((state) => state.mailThreads);
+  const fetchMailThreads = useUnifiedStore((state) => state.fetchMailThreads);
+  const ledgerEvents = useUnifiedStore((state) => state.ledgerEvents);
+  const fetchLedgerEvents = useUnifiedStore((state) => state.fetchLedgerEvents);
+
+  const [inboxMessages, setInboxMessages] = useState<MailMessage[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [archivedTick, setArchivedTick] = useState(0);
+
+  const refresh = useCallback(async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      const [, , inboxResponse] = await Promise.all([
+        fetchMailThreads(),
+        fetchLedgerEvents(200),
+        railsApi.mail.inbox({ limit: 200 }),
+      ]);
+      setInboxMessages(inboxResponse.messages);
+    } catch (err) {
+      logger.error({ err }, "Failed to load agent activity threads");
+      setError(err instanceof Error ? err.message : "Failed to load agent activity");
+    } finally {
+      setLoading(false);
+    }
+  }, [fetchMailThreads, fetchLedgerEvents]);
+
+  useEffect(() => {
+    refresh();
+  }, [refresh]);
+
+  const setThreadArchived = useCallback((threadId: string, archived: boolean) => {
+    setThreadArchivedLocally(threadId, archived);
+    setArchivedTick((tick) => tick + 1);
+  }, []);
+
+  const threads = useMemo<AgentActivityThreadSummary[]>(() => {
+    const summaries = mailThreads.map((thread): AgentActivityThreadSummary => {
+      const threadMessages = inboxMessages
+        .filter((msg) => msg.thread_id === thread.thread_id)
+        .sort((a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime());
+      const lastMessage = threadMessages.length ? threadMessages[threadMessages.length - 1] : null;
+      const relevantEvents = filterEventsForThread(ledgerEvents, thread.thread_id);
+      const lastEvent = relevantEvents.length
+        ? [...relevantEvents].sort(
+            (a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()
+          )[0]
+        : null;
+      const lastActivityAt =
+        [lastMessage?.timestamp, lastEvent?.timestamp, thread.created_at]
+          .filter((value): value is string => Boolean(value))
+          .sort((a, b) => new Date(b).getTime() - new Date(a).getTime())[0] ?? thread.created_at;
+
+      return {
+        threadId: thread.thread_id,
+        topic: thread.topic || thread.thread_id,
+        createdAt: thread.created_at,
+        lastActivityAt,
+        lastMessage,
+        preview: lastMessage?.body ?? (lastEvent ? lastEvent.event_type : "No activity yet."),
+        unread: threadMessages.some((msg) => !msg.acknowledged),
+        relevantEvents,
+        review: deriveThreadReview(relevantEvents),
+        hasGuardActivity: hasGuardActivity(relevantEvents),
+        hasReservationActivity: hasReservationActivity(relevantEvents),
+        archived: isThreadArchivedLocally(thread.thread_id),
+      };
+    });
+
+    return summaries.sort(
+      (a, b) => new Date(b.lastActivityAt).getTime() - new Date(a.lastActivityAt).getTime()
+    );
+    // archivedTick is a deliberate dependency: it forces recompute after
+    // setThreadArchived writes to localStorage, which mailThreads can't see.
+  }, [mailThreads, inboxMessages, ledgerEvents, archivedTick]);
+
+  const unreadCount = useMemo(
+    () => threads.filter((thread) => thread.unread && !thread.archived).length,
+    [threads]
+  );
+  const reviewCount = useMemo(
+    () => threads.filter((thread) => thread.review && !thread.archived).length,
+    [threads]
+  );
+
+  return { threads, unreadCount, reviewCount, loading, error, refresh, setThreadArchived };
 }
