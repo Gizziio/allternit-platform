@@ -16,3 +16,5 @@ dismissals.json
 # learn/reflect-prompt.md ARE committed.
 learn/events.jsonl
 learn/watermark
+# M2: proposals are the audit trail (committed); verdicts are runtime state.
+proposals/verdicts.json

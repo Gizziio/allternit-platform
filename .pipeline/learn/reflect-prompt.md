@@ -24,3 +24,25 @@ RULE | <imperative rule text> | <confidence: low|medium|high> | <provenance refs
   `kind:refs@ts` (e.g. `gate:git commit -m x@2026-08-02T03:00:00Z`).
 - Do NOT restate what the events already record as fact — a rule is the
   generalization, not the event.
+
+## Optional: upgrade proposals (M2)
+
+When a rule's evidence shows the SAME kind of failure or friction recurring
+(3+ events of one kind), the system will flag it `upgrade_candidate` and
+turn it into an audited artifact proposal. You may steer that proposal by
+emitting, immediately after its RULE line, a line of the form
+
+`PROPOSAL | <target_artifact> | <one-line change summary>`
+
+optionally followed by a fenced code block holding the full proposed
+content.
+
+- `target_artifact`: the file the change belongs in — a data file
+  (`.steering/prompt.md`, `.pipeline/*-rubric.md`, `.pipeline/playbook.md`)
+  or a code target (a script/skill — those become executor task specs, never
+  direct edits).
+- The fenced block is the exact content an adoption would append to the
+  target; keep it minimal and self-contained.
+- Omit PROPOSAL when the right change is simply "add this rule to the
+  playbook" — that is the default.
+

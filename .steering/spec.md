@@ -1,36 +1,43 @@
-# Steering spec — M3: learnings persist in the second brain
+# Steering spec — M2: learned artifacts, audited before adoption
 
-<!-- From .pipeline/PROGRAM-meta-learning.md. M1 merged (228a1e5d4). -->
+<!-- From .pipeline/PROGRAM-meta-learning.md. M1+M3 merged. -->
 
 ## Requirements
 
-- [ ] R1: WHEN learn-reflect.sh distills rules into the playbook, THE SYSTEM
-  SHALL also write each rule as a frontmatter page into the resolved brain
-  (same resolution as taste-ingest: TASTE_BRAIN env → gizzi settings
-  brain.path → ~/brain → skip silently): `learnings/<slug>.md` with
-  frontmatter `type: lesson`, `status: active|stale`, `domain`,
-  `confidence`, `provenance_refs` (event ids), `added`, `last_confirmed`.
-- [ ] R2: WHEN a rule goes stale (90+ days unconfirmed), THE SYSTEM SHALL
-  flip its brain page `status` to `stale` on the next reflection run —
-  learnings age visibly in the brain, not silently.
-- [ ] R3: WHEN the brain is a git repo, THE SYSTEM SHALL commit learning
-  pages with message `learn: <rule slug>` (single commit per reflection run,
-  not per rule) and SHALL NOT push (sync is the user's `gizzi brain sync`).
-- [ ] R4: WHEN no brain is resolvable, THE SYSTEM SHALL skip brain
-  persistence and note it once in errors.log (never fail the reflection).
+- [ ] R1: WHEN a reflection run produces a rule whose provenance shows 3+
+  independent events of the same kind (e.g. 3 gate blocks with the same
+  failure class), THE SYSTEM SHALL mark that rule `upgrade_candidate` in the
+  playbook and write a proposal to `.pipeline/proposals/<slug>.md`: what to
+  change (which artifact — rubric, prompt, skill, script), the proposed
+  diff/content, and the provenance.
+- [ ] R2: WHEN a proposal exists, THE SYSTEM SHALL route it through the
+  pipeline's own audit: the spec-checker (ao-steer via ao-consult) reviews
+  the proposal against a new `.pipeline/proposal-rubric.md` (does the
+  evidence support the change, is scope minimal, does it conflict with the
+  charter) and verdicts ADOPT / REVISE / REJECT — recorded in
+  `.pipeline/proposals/verdicts.json`. REJECT feeds the taste memory.
+- [ ] R3: WHEN a proposal verdicts ADOPT, THE SYSTEM SHALL apply it:
+  prompt/rubric/playbook changes are applied to the target file directly
+  (they are data); script/skill changes produce a task spec for an executor
+  instead (code goes through the full build pipeline). Application commits
+  reference the proposal slug.
+- [ ] R4: WHEN an adopted change lands, THE SYSTEM SHALL record the outcome
+  linkage (proposal slug → commit) in `.pipeline/outcomes.jsonl` so later
+  metrics can judge whether the upgrade helped.
 
 ## Acceptance (Gherkin)
 
-- Scenario: rules land in the brain
-  Given a resolved brain dir and a reflection producing 2 rules
-  When the run completes
-  Then brain/learnings/ contains 2 frontmatter-valid lesson pages with
-  provenance refs, and `git -C <brain> log -1` shows one `learn:` commit.
-- Scenario: aging is visible
-  Given a rule older than 90 days unconfirmed
-  When the next reflection runs
-  Then its brain page status is stale.
-- Scenario: no brain, no problem
-  Given no resolvable brain
+- Scenario: repeated failures become a proposal
+  Given 3 gate-block events of the same failure class in events.jsonl
   When reflection runs
-  Then playbook.md still updates and errors.log notes the skip once.
+  Then the rule is marked upgrade_candidate and a proposal exists with the
+  target artifact, proposed change, and provenance.
+- Scenario: audit gates adoption
+  Given a proposal
+  When the audit runs with a stubbed consult
+  Then ADOPT applies the data-file change referencing the proposal slug;
+  REJECT applies nothing and ingests the rejection; verdicts.json records it.
+- Scenario: outcome linkage
+  Given an adopted prompt change
+  When it is applied
+  Then outcomes.jsonl contains proposal slug + commit reference.

@@ -317,6 +317,32 @@ print("\n".join(items))
 PY
 }
 
+fm_list() { # fm_list <file> <key> -> dashed frontmatter list items
+  python3 - "$1" "$2" <<'PY'
+import sys
+path, key = sys.argv[1], sys.argv[2]
+try:
+    lines = open(path, encoding="utf-8").read().split("\n")
+except Exception:
+    lines = []
+items = []
+in_list = False
+if lines and lines[0].strip() == "---":
+    for line in lines[1:]:
+        if line.strip() == "---":
+            break
+        if line.startswith(key + ":"):
+            in_list = True
+            continue
+        if in_list:
+            if line.startswith(("  - ", "- ")):
+                items.append(line.split("- ", 1)[1].strip())
+            elif line.strip():
+                in_list = False
+print("\n".join(items))
+PY
+}
+
 # Scenario: rules land in the brain (2 rules, one learn: commit).
 PD6="$TMP/p6"
 BRAIN6="$TMP/brain6"
@@ -402,6 +428,69 @@ env LEARN_PIPELINE_DIR="$PD8" TASTE_BRAIN="$BRAIN8" BRAIN_RESOLVE="$BRAIN_RESOLV
 rc=$?
 check "M3: non-git brain still gets pages" [ "$(ls "$BRAIN8/learnings"/*.md 2>/dev/null | wc -l | tr -d ' ')" = "1" ]
 check "M3: non-git brain run exits 0" [ "$rc" = "0" ]
+
+# ─── M2-R1: repeated failures become a proposal ─────────────────────────────
+
+# Scenario: 3+ same-kind provenance events → upgrade_candidate + proposal.
+PD9="$TMP/p9"
+LEARN_PIPELINE_DIR="$PD9" "$LEARN_EVENT" "gate" "git commit -m a" "verdict=STEER" >/dev/null
+LEARN_PIPELINE_DIR="$PD9" "$LEARN_EVENT" "gate" "git commit -m b" "verdict=STEER" >/dev/null
+LEARN_PIPELINE_DIR="$PD9" "$LEARN_EVENT" "gate" "git push" "verdict=STEER" >/dev/null
+
+cat > "$TMP/bin/reflect-consult-m2.sh" <<'EOF'
+#!/usr/bin/env bash
+cat >/dev/null
+cat <<'RULES'
+RULE | Never commit while the gate is red | high | gate:git-commit-a@2026-08-02T00:00:01Z, gate:git-commit-b@2026-08-02T00:00:02Z, gate:git-push-c@2026-08-02T00:00:03Z
+RULE | Keep summaries short | low | outcome:x@2026-08-02T00:00:04Z, gate:git-commit-d@2026-08-02T00:00:05Z
+RULES
+EOF
+chmod +x "$TMP/bin/reflect-consult-m2.sh"
+
+env LEARN_PIPELINE_DIR="$PD9" BRAIN_RESOLVE="$BRAIN_RESOLVE_REAL" \
+  LEARN_CONSULT_CMD="$TMP/bin/reflect-consult-m2.sh" bash "$LEARN_REFLECT" >/dev/null 2>&1
+
+check "M2: 3+ same-kind rule marked upgrade_candidate" file_contains "$PD9/playbook.md" 'Never commit while the gate is red.*upgrade_candidate: true'
+check "M2: exactly one rule flagged" [ "$(grep -c 'upgrade_candidate: true' "$PD9/playbook.md")" = "1" ]
+prop9="$PD9/proposals/never-commit-while-the-gate-is-red.md"
+check "M2: proposal file written for the flagged rule" test -f "$prop9"
+check "M2: no proposal for the mixed-kind rule" [ "$(ls "$PD9/proposals"/*.md 2>/dev/null | wc -l | tr -d ' ')" = "1" ]
+check "M2: proposal carries target_artifact" [ "$(page_field "$prop9" target_artifact)" = ".pipeline/playbook.md" ]
+check "M2: proposal kind computed as data" [ "$(page_field "$prop9" kind)" = "data" ]
+check "M2: proposal lists 3 evidence events" [ "$(fm_list "$prop9" evidence_event_ids | wc -l | tr -d ' ')" = "3" ]
+check "M2: evidence ids carried" str_contains "$(fm_list "$prop9" evidence_event_ids)" 'gate:git-commit-b@2026-08-02T00:00:02Z'
+check "M2: proposal has a Proposed change section" file_contains "$prop9" '## Proposed change'
+check "M2: default proposed change is the rule itself" file_contains "$prop9" 'Never commit while the gate is red'
+
+# Scenario: consult steers the proposal target via PROPOSAL line (+ fence).
+PD10="$TMP/p10"
+LEARN_PIPELINE_DIR="$PD10" "$LEARN_EVENT" "gate" "git commit" "verdict=STEER" >/dev/null
+
+cat > "$TMP/bin/reflect-consult-m2b.sh" <<'EOF'
+#!/usr/bin/env bash
+cat >/dev/null
+cat <<'OUT'
+RULE | Always run tests before the prescribed commit | high | gate:a@2026-08-02T00:00:01Z, gate:b@2026-08-02T00:00:02Z, gate:c@2026-08-02T00:00:03Z
+PROPOSAL | .steering/prompt.md | Add a test-first line to the steering prompt
+
+```
+New prompt line: the working agent runs .steering/test-command before every commit.
+```
+RULE | Cache triage responses between runs | medium | check-spec:a@2026-08-02T00:00:01Z, check-spec:b@2026-08-02T00:00:02Z, check-spec:c@2026-08-02T00:00:03Z
+PROPOSAL | .pipeline/bin/check-spec.sh | Add a triage cache to check-spec
+OUT
+EOF
+chmod +x "$TMP/bin/reflect-consult-m2b.sh"
+
+env LEARN_PIPELINE_DIR="$PD10" BRAIN_RESOLVE="$BRAIN_RESOLVE_REAL" \
+  LEARN_CONSULT_CMD="$TMP/bin/reflect-consult-m2b.sh" bash "$LEARN_REFLECT" >/dev/null 2>&1
+
+prop10="$PD10/proposals/always-run-tests-before-the-prescribed-commit.md"
+prop10c="$PD10/proposals/cache-triage-responses-between-runs.md"
+check "M2: PROPOSAL line steers the target" [ "$(page_field "$prop10" target_artifact)" = ".steering/prompt.md" ]
+check "M2: steered prompt target is data kind" [ "$(page_field "$prop10" kind)" = "data" ]
+check "M2: fenced block becomes the proposed change" file_contains "$prop10" 'New prompt line: the working agent runs .steering/test-command before every commit.'
+check "M2: script target computed as code kind" [ "$(page_field "$prop10c" kind)" = "code" ]
 
 # ─── summary ────────────────────────────────────────────────────────────────
 

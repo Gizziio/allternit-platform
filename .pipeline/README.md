@@ -169,6 +169,21 @@ mirroring how humans learn (program: `.pipeline/PROGRAM-meta-learning.md`):
   user's `gizzi brain sync`). With no resolvable brain the skip is noted
   once in errors.log and the playbook still updates. The brain is written
   ONLY under `learnings/`.
+- **Audit before adoption (M2)**: when a rule's provenance shows 3+ events
+  of the same kind, reflection marks it `upgrade_candidate: true` in the
+  playbook and writes `.pipeline/proposals/<slug>.md` (frontmatter
+  `target_artifact`, `kind`, `evidence_event_ids` + a fenced proposed
+  change). `bin/audit-proposal.sh` is the ONLY path by which the pipeline
+  modifies itself: it consults the auditor against `proposal-rubric.md`
+  (evidence support, minimal scope, charter conflict) and verdicts
+  ADOPT/REVISE/REJECT into `proposals/verdicts.json` (merge semantics;
+  REVISE re-audits only after the proposal actually changes). ADOPT on a
+  data target (`.steering/prompt.md`, `.pipeline/playbook.md`,
+  `.pipeline/*-rubric.md` — computed from the path, never trusted) appends
+  the change under an adoption marker and commits `learn: adopt proposal
+  <slug>`; ADOPT on a code target emits `proposals/tasks/<slug>-TASK.md`
+  for a real executor instead. Every adoption links slug → commit in
+  `outcomes.jsonl`; REJECT feeds the taste memory.
 
 ## The full cycle
 
@@ -268,6 +283,7 @@ bash .pipeline/bin/taste-test.sh
 bash .pipeline/bin/wiki-test.sh
 bash .pipeline/bin/contract-test.sh
 bash .pipeline/bin/learn-test.sh
+bash .pipeline/bin/proposals-test.sh
 ```
 
 Offline: stubs the source fetch and the rails announce; verifies the three
@@ -297,16 +313,23 @@ same frontmatter contract. The learning-loop test stubs the consults
 (`STEER_CONSULT_CMD`/`SPEC_CHECK_CMD`/`LEARN_CONSULT_CMD`) and curl and
 verifies capture-on-verdict (gate, check-spec, record-outcome, dismiss),
 reflection distillation + watermark idempotency + advisory failure, playbook
-inclusion in both consult assemblies, and `[stale]` marking / the 4KB cap.
+inclusion in both consult assemblies, and `[stale]` marking / the 4KB cap;
+it also covers M3 brain persistence and M2-R1 proposal generation. The
+proposal audit test fixtures a temp git repo and stubs the auditor consult
+and curl; it verifies ADOPT application + slug-referencing commit + outcome
+linkage (data and code targets), REVISE recording without application,
+REJECT no-op + memory ingest, consult-failure skip, verdict merge semantics,
+and re-run idempotency.
 
 ## Layout
 
-- `bin/`, `spec-rubric.md`, `taste/trust-rules.json`, `taste/golden/`,
-  `learn/reflect-prompt.md`, `playbook.md` —
-  committed code, prompts, trust config, contract fixtures, and the learned
-  playbook
+- `bin/`, `spec-rubric.md`, `proposal-rubric.md`, `taste/trust-rules.json`,
+  `taste/golden/`, `learn/reflect-prompt.md`, `playbook.md`, `proposals/` —
+  committed code, prompts, trust config, contract fixtures, the learned
+  playbook, and the proposal audit trail
 - `briefs/`, `specs/`, `queue/`, `seen.json`, `errors.log`, `verdicts.json`,
   `builds/`, `builds.json`, `taste/ingested.json`, `outcomes.jsonl`,
-  `candidates/`, `dismissals.json`, `learn/events.jsonl`, `learn/watermark` —
+  `candidates/`, `dismissals.json`, `learn/events.jsonl`, `learn/watermark`,
+  `proposals/verdicts.json` —
   gitignored runtime artifacts (multi-machine sync is via rails asset refs,
   not git)

@@ -24,7 +24,12 @@
 #      git repo (add -- learnings only; NEVER pushes — sync is the user's
 #      `gizzi brain sync`);
 #   8. (M3-R4) when no brain is resolvable, skips persistence with ONE note
-#      in errors.log per rule-producing run — the playbook still updates.
+#      in errors.log per rule-producing run — the playbook still updates;
+#   9. (M2-R1) marks rules whose provenance shows 3+ same-kind events
+#      `upgrade_candidate: true` in the playbook and writes each as an
+#      audit proposal to .pipeline/proposals/<slug>.md (frontmatter
+#      target_artifact/kind/evidence_event_ids + fenced proposed change);
+#      adoption happens ONLY through audit-proposal.sh.
 #
 # Reflection is advisory: consult failure is logged to errors.log and the
 # caller continues (exit stays 0).
@@ -236,32 +241,90 @@ rules_dump="$(mktemp -t learn-rules)"
 
 # The answer travels via argv, not stdin: the heredoc below IS stdin (the
 # program), so a `printf | python3 <<PY` pipe would be silently overridden.
-python3 - "$PLAYBOOK" "$WATERMARK" "$total" "$answer" "$rules_dump" <<'PY'
+python3 - "$PLAYBOOK" "$WATERMARK" "$total" "$answer" "$rules_dump" "$PIPELINE_DIR/proposals" <<'PY'
 import datetime
+import hashlib
 import json
 import os
+import re
 import sys
 
-playbook, watermark, total, answer, rules_out = (
-    sys.argv[1], sys.argv[2], int(sys.argv[3]), sys.argv[4], sys.argv[5])
+playbook, watermark, total, answer, rules_out, proposals_dir = (
+    sys.argv[1], sys.argv[2], int(sys.argv[3]), sys.argv[4], sys.argv[5], sys.argv[6])
 today = datetime.datetime.now(datetime.timezone.utc).strftime("%Y-%m-%d")
+now = datetime.datetime.now(datetime.timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
+UPGRADE_THRESHOLD = 3  # M2-R1: 3+ same-kind provenance events
 
+
+def slugify(t):
+    s = re.sub(r"[^a-z0-9]+", "-", t.lower()).strip("-")[:60].rstrip("-")
+    return s or hashlib.sha1(t.encode()).hexdigest()[:12]
+
+
+# Parse RULE lines; an optional PROPOSAL line (+ fenced block) pairs with the
+# immediately preceding RULE.
 rules = []
-for line in answer.splitlines():
-    line = line.strip()
+lines = answer.splitlines()
+i = 0
+while i < len(lines):
+    line = lines[i].strip()
     if line.startswith("• "):
         line = line[2:].strip()
-    if not line.upper().startswith("RULE"):
-        continue
-    parts = [p.strip() for p in line.split("|")]
-    if len(parts) < 4:
-        continue
-    text, confidence, provenance = parts[1], parts[2].lower(), parts[3]
-    if not text:
-        continue
-    if confidence not in ("low", "medium", "high"):
-        confidence = "low"
-    rules.append((text, confidence, provenance))
+    upper = line.upper()
+    if upper.startswith("RULE"):
+        parts = [p.strip() for p in line.split("|")]
+        if len(parts) >= 4 and parts[1]:
+            confidence = parts[2].lower()
+            if confidence not in ("low", "medium", "high"):
+                confidence = "low"
+            rules.append({"text": parts[1], "confidence": confidence,
+                          "provenance": parts[3], "target": "", "change": ""})
+    elif upper.startswith("PROPOSAL") and rules:
+        parts = [p.strip() for p in line.split("|")]
+        if len(parts) >= 2:
+            rules[-1]["target"] = parts[1]
+        if len(parts) >= 3 and parts[2]:
+            rules[-1]["change"] = parts[2]
+        # A fenced block on the following lines becomes the change content.
+        j = i + 1
+        while j < len(lines) and not lines[j].strip():
+            j += 1
+        if j < len(lines) and lines[j].strip().startswith("```"):
+            block = []
+            j += 1
+            while j < len(lines) and not lines[j].strip().startswith("```"):
+                block.append(lines[j])
+                j += 1
+            if block:
+                rules[-1]["change"] = "\n".join(block)
+            i = j
+    i += 1
+
+
+# fm kind is COMPUTED from the target (data allowlist), never trusted from
+# the consult (M2-R3: data files are applied directly; code gets a task).
+def kind_of(target):
+    if target in (".steering/prompt.md", ".pipeline/playbook.md"):
+        return "data"
+    if re.match(r"^\.pipeline/.+-rubric\.md$", target):
+        return "data"
+    return "code"
+
+
+for rule in rules:
+    refs = [r.strip() for r in rule["provenance"].split(",") if r.strip()]
+    rule["refs"] = refs
+    counts = {}
+    for r in refs:
+        kind = r.split(":", 1)[0]
+        counts[kind] = counts.get(kind, 0) + 1
+    rule["evidence_kind"] = max(counts, key=counts.get) if counts else ""
+    rule["same_kind"] = max(counts.values()) if counts else 0
+    rule["upgrade"] = rule["same_kind"] >= UPGRADE_THRESHOLD
+    if not rule["target"]:
+        rule["target"] = ".pipeline/playbook.md"
+    if not rule["change"]:
+        rule["change"] = rule["text"]
 
 if rules:
     if not os.path.exists(playbook):
@@ -273,22 +336,65 @@ if rules:
                     "     marked [stale] after 90 days unconfirmed. -->\n\n"
                     "## Rules\n")
     with open(playbook, "a") as f:
-        for text, confidence, provenance in rules:
-            f.write("- %s (confidence: %s; provenance: %s; added: %s; last_confirmed: %s)\n"
-                    % (text, confidence, provenance, today, today))
+        for rule in rules:
+            flag = "; upgrade_candidate: true" if rule["upgrade"] else ""
+            f.write("- %s (confidence: %s; provenance: %s; added: %s; last_confirmed: %s%s)\n"
+                    % (rule["text"], rule["confidence"], rule["provenance"],
+                       today, today, flag))
+
+# M2-R1: upgrade candidates become proposals, audited before adoption.
+proposals = 0
+for rule in rules:
+    if not rule["upgrade"]:
+        continue
+    slug = slugify(rule["text"])
+    os.makedirs(proposals_dir, exist_ok=True)
+    refs_fm = "\n".join("  - " + r for r in rule["refs"]) or "  - none"
+    evidence = "\n".join("- `%s`" % r for r in rule["refs"])
+    doc = """---
+schema_version: 1
+produced_by: learn-reflect.sh
+produced_at: %s
+status: pending
+target_artifact: %s
+kind: %s
+evidence_kind: %s
+evidence_event_ids:
+%s
+---
+
+# Proposal: %s
+
+## Evidence
+
+%d events of kind `%s` (upgrade threshold: %d):
+
+%s
+
+## Proposed change
+
+```
+%s
+```
+""" % (now, rule["target"], kind_of(rule["target"]), rule["evidence_kind"],
+       refs_fm, rule["text"], rule["same_kind"], rule["evidence_kind"],
+       UPGRADE_THRESHOLD, evidence, rule["change"])
+    with open(os.path.join(proposals_dir, slug + ".md"), "w") as f:
+        f.write(doc)
+    proposals += 1
 
 # The parsed rules travel to the brain-persistence step as JSON lines.
 with open(rules_out, "w") as f:
-    for text, confidence, provenance in rules:
-        f.write(json.dumps({"text": text, "confidence": confidence,
-                            "provenance": provenance}) + "\n")
+    for rule in rules:
+        f.write(json.dumps({"text": rule["text"], "confidence": rule["confidence"],
+                            "provenance": rule["provenance"]}) + "\n")
 
 # The consult answered: the events were considered whether or not they
 # yielded rules, so the watermark advances.
 with open(watermark, "w") as f:
     f.write("%d\n" % total)
 
-print("%d rule(s) appended" % len(rules))
+print("%d rule(s) appended, %d proposal(s) written" % (len(rules), proposals))
 PY
 
 # M3-R1/R4: persist the new rules to the brain — or note the skip once.
