@@ -2,8 +2,8 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { railsApi, useUnifiedStore } from "@/lib/agents";
-import type { LedgerEvent, LogEntry, MailMessage, SessionAnalytics } from "@/lib/agents";
+import { useUnifiedStore } from "@/lib/agents";
+import type { LedgerEvent, LogEntry, SessionAnalytics } from "@/lib/agents";
 import { useTelemetrySnapshot } from "@/lib/telemetry/useTelemetrySnapshot";
 
 import { createModuleLogger } from '@/lib/logger';
@@ -242,14 +242,10 @@ export interface UseMonitorThreadsResult {
 }
 
 /**
- * Thread-list variant of useMonitorData. mailThreads (from fetchMailThreads)
- * only carries {thread_id, topic, created_at} — topic is literally the
- * thread_id today, since threads are derived client-side from inbox messages
- * rather than a dedicated "thread" backend record. We independently pull a
- * full inbox snapshot (not routed through the store's mailMessages slice,
- * which fetchMailMessages(threadId) overwrites per-thread) so previews/unread
- * state can be computed for every thread at once without clobbering whatever
- * the detail view has loaded for a single thread.
+ * Thread-list variant of useMonitorData. Uses the real GET /mail/threads
+ * endpoint (issue #16); the old POST /mail/inbox route does not exist on the
+ * backend. Previews and unread state are derived from the thread summary and
+ * ledger events — there is no global "all messages" fetch in this phase.
  */
 export function useMonitorThreads(): UseMonitorThreadsResult {
   const mailThreads = useUnifiedStore((state) => state.mailThreads);
@@ -257,7 +253,6 @@ export function useMonitorThreads(): UseMonitorThreadsResult {
   const ledgerEvents = useUnifiedStore((state) => state.ledgerEvents);
   const fetchLedgerEvents = useUnifiedStore((state) => state.fetchLedgerEvents);
 
-  const [inboxMessages, setInboxMessages] = useState<MailMessage[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [archivedTick, setArchivedTick] = useState(0);
@@ -266,12 +261,7 @@ export function useMonitorThreads(): UseMonitorThreadsResult {
     setLoading(true);
     setError(null);
     try {
-      const [, , inboxResponse] = await Promise.all([
-        fetchMailThreads(),
-        fetchLedgerEvents(200),
-        railsApi.mail.inbox({ limit: 200 }),
-      ]);
-      setInboxMessages(inboxResponse.messages);
+      await Promise.all([fetchMailThreads(), fetchLedgerEvents(200)]);
     } catch (err) {
       logger.error({ err }, "Failed to load agent activity threads");
       setError(err instanceof Error ? err.message : "Failed to load agent activity");
@@ -291,10 +281,6 @@ export function useMonitorThreads(): UseMonitorThreadsResult {
 
   const threads = useMemo<AgentActivityThreadSummary[]>(() => {
     const summaries = mailThreads.map((thread): AgentActivityThreadSummary => {
-      const threadMessages = inboxMessages
-        .filter((msg) => msg.thread_id === thread.thread_id)
-        .sort((a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime());
-      const lastMessage = threadMessages.length ? threadMessages[threadMessages.length - 1] : null;
       const relevantEvents = filterEventsForThread(ledgerEvents, thread.thread_id);
       const lastEvent = relevantEvents.length
         ? [...relevantEvents].sort(
@@ -302,7 +288,7 @@ export function useMonitorThreads(): UseMonitorThreadsResult {
           )[0]
         : null;
       const lastActivityAt =
-        [lastMessage?.timestamp, lastEvent?.timestamp, thread.created_at]
+        [lastEvent?.timestamp, thread.created_at]
           .filter((value): value is string => Boolean(value))
           .sort((a, b) => new Date(b).getTime() - new Date(a).getTime())[0] ?? thread.created_at;
 
@@ -311,9 +297,9 @@ export function useMonitorThreads(): UseMonitorThreadsResult {
         topic: thread.topic || thread.thread_id,
         createdAt: thread.created_at,
         lastActivityAt,
-        lastMessage,
-        preview: lastMessage?.body ?? (lastEvent ? lastEvent.event_type : "No activity yet."),
-        unread: threadMessages.some((msg) => !msg.acknowledged),
+        lastMessage: null,
+        preview: lastEvent ? lastEvent.event_type : "No activity yet.",
+        unread: false,
         relevantEvents,
         review: deriveThreadReview(relevantEvents),
         hasGuardActivity: hasGuardActivity(relevantEvents),
@@ -327,7 +313,7 @@ export function useMonitorThreads(): UseMonitorThreadsResult {
     );
     // archivedTick is a deliberate dependency: it forces recompute after
     // setThreadArchived writes to localStorage, which mailThreads can't see.
-  }, [mailThreads, inboxMessages, ledgerEvents, archivedTick]);
+  }, [mailThreads, ledgerEvents, archivedTick]);
 
   const unreadCount = useMemo(
     () => threads.filter((thread) => thread.unread && !thread.archived).length,

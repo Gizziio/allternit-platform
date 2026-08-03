@@ -287,8 +287,14 @@ export interface MailSendRequest {
   attachments?: string[];
 }
 
+export interface MailThreadSummary {
+  thread_id: string;
+  messages: number;
+  last_ts: string;
+}
+
 export interface MailInboxRequest {
-  thread_id?: string;
+  agent_id: string;
   limit?: number;
 }
 
@@ -553,11 +559,25 @@ export const railsApi = {
       { method: "POST", body: JSON.stringify(req) }
     ),
 
-    /** Get inbox */
-    inbox: (req: MailInboxRequest = {}) => apiRequestWithError<{ messages: MailMessage[] }>(
-      `${RAILS_BASE}/mail/inbox`,
-      { method: "POST", body: JSON.stringify(req) }
+    /** List threads — real endpoint is GET /mail/threads (issue #16). */
+    threads: () => apiRequestWithError<{ threads: MailThreadSummary[] }>(
+      `${RAILS_BASE}/mail/threads`
     ),
+
+    /** Read a single thread — real endpoint is GET /mail/thread/:id (issue #16). */
+    thread: (threadId: string) => apiRequestWithError<{ messages: MailMessage[] }>(
+      `${RAILS_BASE}/mail/thread/${encodeURIComponent(threadId)}`
+    ),
+
+    /** Get inbox for a specific agent — real endpoint is GET /mail/inbox/:agent_id (issue #16). */
+    inbox: (req: MailInboxRequest) => {
+      const params = new URLSearchParams()
+      if (req.limit !== undefined) params.set("limit", String(req.limit))
+      const query = params.toString()
+      return apiRequestWithError<{ agent_id: string; messages: MailMessage[] }>(
+        `${RAILS_BASE}/mail/inbox/${encodeURIComponent(req.agent_id)}${query ? `?${query}` : ""}`
+      )
+    },
 
     /** Acknowledge message */
     ack: (threadId: string, messageId: string, note?: string) => apiRequestWithError<void>(

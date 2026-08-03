@@ -1040,7 +1040,9 @@ import type { AgentMailMessage, AgentMailThread, SendMailInput } from './agent.t
  * Get agent inbox messages
  */
 export async function getAgentInbox(agentId: string, limit: number = 50): Promise<AgentMailMessage[]> {
-  const response = await railsApi.mail.inbox({ limit });
+  // Real endpoint: GET /mail/inbox/:agent_id (issue #16). The old
+  // POST /mail/inbox route does not exist on the backend.
+  const response = await railsApi.mail.inbox({ agent_id: agentId, limit });
   
   // Transform messages - filter by recipient
   const messages = (response.messages || []) as unknown[];
