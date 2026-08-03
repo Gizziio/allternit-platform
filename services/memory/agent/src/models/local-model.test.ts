@@ -230,6 +230,35 @@ describe('LocalModelManager provider switch', () => {
     expect(requests.filter((r) => r.url === '/v1/chat/completions')).toHaveLength(2);
   });
 
+  it('allows only one half-open probe at a time under concurrent load', async () => {
+    process.env.MEMORY_LLM_BASE_URL = `${baseUrl}/v1`;
+    process.env.MEMORY_LLM_BREAKER_THRESHOLD = '1';
+    process.env.MEMORY_LLM_BREAKER_COOLDOWN_MS = '0';
+    failMlxWithStatus = 500;
+    responseDelay = 60;
+
+    const { port } = server.address() as AddressInfo;
+    const manager = new LocalModelManager('127.0.0.1', port);
+
+    // Open the breaker with one failure.
+    await manager.generate('first');
+    expect(requests.filter((r) => r.url === '/v1/chat/completions')).toHaveLength(1);
+
+    // With cooldown 0 the breaker is now half-open. Fire two concurrent calls:
+    // only one should be allowed to probe MLX; the other must fall back to
+    // Ollama immediately.
+    const [a, b] = await Promise.all([
+      manager.generate('second'),
+      manager.generate('third'),
+    ]);
+    expect(a).toBe('ollama-response');
+    expect(b).toBe('ollama-response');
+
+    // Exactly one additional MLX probe was made, not two.
+    expect(requests.filter((r) => r.url === '/v1/chat/completions')).toHaveLength(2);
+    expect(requests.filter((r) => r.url === '/api/chat')).toHaveLength(3);
+  });
+
   it('keeps embeddings on Ollama even when MEMORY_LLM_BASE_URL is set', async () => {
     process.env.MEMORY_LLM_BASE_URL = `${baseUrl}/v1`;
 

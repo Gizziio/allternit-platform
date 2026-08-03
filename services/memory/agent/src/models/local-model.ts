@@ -111,6 +111,9 @@ export class LocalModelManager {
   private lastOpenedAt = 0;
   private breakerThreshold: number;
   private breakerCooldownMs: number;
+  // In half-open state, allow only one in-flight probe request to MLX at a time
+  // so concurrent callers don't all rush through before the first probe resolves.
+  private breakerProbeInFlight = false;
 
   constructor(host: string = 'localhost', port: number = 11434, llm?: LLMProviderConfig) {
     this.ollama = new Ollama({ host: `http://${host}:${port}` });
@@ -180,7 +183,7 @@ export class LocalModelManager {
 
   /**
    * Circuit-breaker state machine. Returns true when the MLX path is currently
-   * allowed to be tried (closed or half-open after cooldown).
+   * allowed to be tried (closed, or half-open with no probe in flight).
    */
   private mlxAllowed(): boolean {
     if (!this.llmBaseUrl) return false;
@@ -188,11 +191,14 @@ export class LocalModelManager {
     if (this.breakerState === 'open') {
       if (Date.now() - this.lastOpenedAt >= this.breakerCooldownMs) {
         this.breakerState = 'half_open';
-        return true;
+      } else {
+        return false;
       }
-      return false;
     }
-    return true; // half_open
+    // half_open: only one caller may probe MLX at a time.
+    if (this.breakerProbeInFlight) return false;
+    this.breakerProbeInFlight = true;
+    return true;
   }
 
   /**
@@ -216,6 +222,20 @@ export class LocalModelManager {
           `falling back to Ollama for ${this.breakerCooldownMs}ms`
       );
     }
+  }
+
+  /**
+   * Release the half-open probe lock so the next caller can probe MLX.
+   */
+  private releaseBreakerProbe(): void {
+    this.breakerProbeInFlight = false;
+  }
+
+  /**
+   * Record which backend served a generation call for auditability.
+   */
+  private logBackend(backend: 'mlx' | 'ollama'): void {
+    console.log(`LocalModelManager: generation backend=${backend}`);
   }
 
   /**
@@ -308,17 +328,22 @@ export class LocalModelManager {
       { role: 'user' as const, content: prompt },
     ];
 
-    if (this.mlxAllowed()) {
+    const probingMlx = this.mlxAllowed();
+    if (probingMlx) {
       try {
         const result = await this.serialized(() => this.openAIChat(messages, modelConfig));
         this.recordMlxSuccess();
+        this.logBackend('mlx');
         return result;
       } catch (error) {
         this.recordMlxFailure();
         console.warn('LocalModelManager: MLX generation failed, trying Ollama fallback:', error);
+      } finally {
+        this.releaseBreakerProbe();
       }
     }
 
+    this.logBackend('ollama');
     try {
       return await this.ollamaChat(messages, modelConfig);
     } catch (error) {
@@ -347,18 +372,23 @@ export class LocalModelManager {
       { role: 'user' as const, content: prompt },
     ];
 
-    if (this.mlxAllowed()) {
+    const probingMlx = this.mlxAllowed();
+    if (probingMlx) {
       try {
         const result = await this.serialized(() => this.openAIChat(messages, modelConfig));
         this.recordMlxSuccess();
+        this.logBackend('mlx');
         yield result;
         return;
       } catch (error) {
         this.recordMlxFailure();
         console.warn('LocalModelManager: MLX streaming failed, trying Ollama fallback:', error);
+      } finally {
+        this.releaseBreakerProbe();
       }
     }
 
+    this.logBackend('ollama');
     try {
       const stream = await this.ollama.chat({
         model: modelConfig.name,

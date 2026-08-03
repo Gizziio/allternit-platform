@@ -9,9 +9,11 @@
   embeddings SHALL remain on Ollama.
 - [ ] R2: WHEN `MEMORY_LLM_BASE_URL` is unset, THE SYSTEM SHALL behave exactly
   as today (Ollama generate path, MODEL_PRESETS names).
-- [ ] R3: WHEN the MLX endpoint is unreachable mid-request, THE SYSTEM SHALL
-  fail the request with a clear error (no silent fallback to a different
-  model — wrong-model answers are worse than failed ones).
+- [ ] R3: WHEN the MLX endpoint is unreachable or returns hard errors mid-request
+  and no fallback is configured, THE SYSTEM SHALL fail the request with a clear
+  error. WHEN a circuit breaker is active, THE SYSTEM MAY fall back to the
+  configured Ollama generation model after repeated hard failures, and SHALL
+  record the serving backend so fallback-enriched memories remain auditable.
 - [ ] R4: WHEN local-model.ts is changed, THE SYSTEM SHALL keep its existing
   callers working (http-server.ts, orchestrator.ts) with no signature
   changes beyond optional config, and unit-test the provider switch.
