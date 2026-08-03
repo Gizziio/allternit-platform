@@ -41,6 +41,7 @@ import { DoctorCommand } from "@/cli/commands/doctor"
 import { VerificationCommand } from "@/cli/commands/verification"
 import { AgentHubCommand } from "@/cli/commands/agent-hub"
 import { AcCommand } from "@/cli/commands/ac"
+import { MailCommand } from "@/cli/commands/mail"
 import { CoworkCommand } from "@/cli/commands/cowork"
 import { CoworkTeamCommand } from "@/cli/commands/cowork-team"
 import { AgentCommand } from "@/cli/commands/agent"
@@ -199,6 +200,7 @@ const cli = yargs(hideBin(process.argv))
   .command(VerificationCommand)
   .command(AgentHubCommand)
   .command(AcCommand)
+  .command(MailCommand)
   .command(CoworkCommand)
   .command(CoworkTeamCommand)
   .command(AgentCommand)
