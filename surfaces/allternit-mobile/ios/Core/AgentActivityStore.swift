@@ -141,13 +141,25 @@ final class AgentActivityStore: ObservableObject {
     // MARK: - Heuristic derivation
 
     /// Substring match on `event_type` against /guard/i, /reserve/i,
-    /// /review/i, /decide/i — there is no documented `event_type`
+    /// review-request, and decision — there is no documented `event_type`
     /// vocabulary, so this is read-only best-effort surfacing, not a
     /// guaranteed status field (identical caveat to the web phase's own
     /// heuristic). "Pending review" mirrors the web phase's derivation: a
-    /// review is open if the most recent /review/i-matching event in the
-    /// window postdates the most recent /decide/i-matching event (or there
-    /// is no decide event at all).
+    /// review is open if the most recent review-request-matching event in the
+    /// window postdates the most recent decision-matching event (or there is
+    /// no decision event at all).
+    ///
+    /// The backend emits `ReviewDecision` for a resolution; it contains the
+    /// substring "review" but is a decision, so it must be excluded from
+    /// review-request matching and included in decision matching.
+    private static func isDecisionEvent(_ type: String) -> Bool {
+        type.range(of: "decide", options: .caseInsensitive) != nil || type == "ReviewDecision"
+    }
+
+    private static func isReviewRequestEvent(_ type: String) -> Bool {
+        type.range(of: "review", options: .caseInsensitive) != nil && !isDecisionEvent(type)
+    }
+
     private static func deriveThreadStates(
         threadIds: [String],
         ledgerEvents: [LedgerEvent],
@@ -172,10 +184,10 @@ final class AgentActivityStore: ObservableObject {
                 if type.range(of: "reserve", options: .caseInsensitive) != nil {
                     state.hasReservationActivity = true
                 }
-                if type.range(of: "review", options: .caseInsensitive) != nil {
+                if isReviewRequestEvent(type) {
                     lastReviewIndex = index
                 }
-                if type.range(of: "decide", options: .caseInsensitive) != nil {
+                if isDecisionEvent(type) {
                     lastDecideIndex = index
                 }
             }

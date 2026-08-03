@@ -30,6 +30,18 @@ export function filterEventsForThread(events: LedgerEvent[], threadId: string): 
   });
 }
 
+// The backend emits `ReviewDecision` for an approve/reject resolution
+// (rails/src/mail/mail.rs:decide_review). It contains the substring
+// "review", so a naive /review/i match misclassifies it as a request.
+// Decision events must be excluded from review-request matching.
+function isDecisionEvent(eventType: string): boolean {
+  return /decide/i.test(eventType) || eventType === "ReviewDecision";
+}
+
+function isReviewRequestEvent(eventType: string): boolean {
+  return /review/i.test(eventType) && !isDecisionEvent(eventType);
+}
+
 export type AgentActivityReviewKind = "code-diff" | "decision";
 
 export interface AgentActivityReview {
@@ -49,10 +61,10 @@ export function deriveThreadReview(events: LedgerEvent[]): AgentActivityReview |
   const sorted = [...events].sort(
     (a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()
   );
-  const requested = sorted.find((event) => /review/i.test(event.event_type));
+  const requested = sorted.find((event) => isReviewRequestEvent(event.event_type));
   if (!requested) return null;
 
-  const decided = sorted.find((event) => /decide/i.test(event.event_type));
+  const decided = sorted.find((event) => isDecisionEvent(event.event_type));
   if (decided && new Date(decided.timestamp).getTime() > new Date(requested.timestamp).getTime()) {
     return null; // a later decide() event means this ask is already resolved
   }
