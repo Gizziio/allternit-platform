@@ -31,6 +31,10 @@
 - [ ] R8: WHEN generation model presets are overridden via environment
   variables (`MEMORY_INGEST_MODEL`, `MEMORY_FAST_INGEST_MODEL`, etc.), THE
   SYSTEM SHALL use the overridden names without requiring code changes.
+- [ ] R9: WHEN the configured MLX/OpenAI-compatible generation endpoint fails
+  repeatedly, THE SYSTEM SHALL trip a circuit breaker after a configurable
+  threshold and fall back to Ollama generation for a cooldown window, without
+  manual intervention.
 
 ## Acceptance (Gherkin)
 
@@ -55,3 +59,7 @@
   Given a query that retrieves many memories
   When synthesis runs
   Then at most 5 memories are included and each summary is at most 200 chars.
+- Scenario: MLX circuit breaker falls back to Ollama
+  Given MEMORY_LLM_BASE_URL is set and the MLX endpoint returns errors
+  When generation fails N consecutive times
+  Then generation falls back to Ollama and skips MLX until the cooldown passes.

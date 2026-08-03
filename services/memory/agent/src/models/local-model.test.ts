@@ -25,6 +25,7 @@ describe('LocalModelManager provider switch', () => {
   let requestTimestamps: number[];
   let arrivalOffsets: number[];
   let failWithStatus: number | null;
+  let failMlxWithStatus: number | null;
   let responseDelay: number;
 
   const savedEnv = { ...process.env };
@@ -50,8 +51,11 @@ describe('LocalModelManager provider switch', () => {
 
         requestTimestamps.push(Date.now() - startedAt);
 
-        if (failWithStatus !== null) {
-          res.writeHead(failWithStatus, { 'Content-Type': 'application/json' });
+        const shouldFailMlx = failMlxWithStatus !== null && req.url === '/v1/chat/completions';
+        const shouldFailAll = failWithStatus !== null;
+        if (shouldFailMlx || shouldFailAll) {
+          const status = shouldFailMlx ? failMlxWithStatus! : failWithStatus!;
+          res.writeHead(status, { 'Content-Type': 'application/json' });
           res.end(JSON.stringify({ error: 'stub failure' }));
           return;
         }
@@ -93,9 +97,12 @@ describe('LocalModelManager provider switch', () => {
     requestTimestamps = [];
     arrivalOffsets = [];
     failWithStatus = null;
+    failMlxWithStatus = null;
     responseDelay = 0;
     delete process.env.MEMORY_LLM_BASE_URL;
     delete process.env.MEMORY_LLM_MODEL;
+    delete process.env.MEMORY_LLM_BREAKER_THRESHOLD;
+    delete process.env.MEMORY_LLM_BREAKER_COOLDOWN_MS;
   });
 
   afterEach(() => {
@@ -155,30 +162,72 @@ describe('LocalModelManager provider switch', () => {
     expect(requests.filter((r) => r.url === '/v1/chat/completions')).toHaveLength(0);
   });
 
-  it('fails with endpoint + status on non-2xx and never falls back to Ollama', async () => {
+  it('falls back to Ollama when the MLX endpoint returns non-2xx', async () => {
     process.env.MEMORY_LLM_BASE_URL = `${baseUrl}/v1`;
-    failWithStatus = 500;
+    failMlxWithStatus = 500;
 
-    const manager = new LocalModelManager();
-    await expect(manager.generate('hello')).rejects.toThrow(
-      `${baseUrl}/v1/chat/completions`
-    );
-    await expect(manager.generate('hello')).rejects.toThrow('HTTP 500');
+    const { port } = server.address() as AddressInfo;
+    const manager = new LocalModelManager('127.0.0.1', port);
+    const result = await manager.generate('hello');
 
-    // Still no Ollama fallback
-    expect(requests.filter((r) => r.url === '/api/chat')).toHaveLength(0);
+    // First failure is recorded, then Ollama fallback runs.
+    expect(result).toBe('ollama-response');
+    expect(requests.filter((r) => r.url === '/v1/chat/completions')).toHaveLength(1);
+    expect(requests.filter((r) => r.url === '/api/chat')).toHaveLength(1);
   });
 
-  it('fails clearly when the MLX endpoint is unreachable (no fallback)', async () => {
+  it('falls back to Ollama when the MLX endpoint is unreachable', async () => {
     // Port 1 is never listening
     process.env.MEMORY_LLM_BASE_URL = 'http://127.0.0.1:1/v1';
 
-    const manager = new LocalModelManager();
-    await expect(manager.generate('hello')).rejects.toThrow(
-      'http://127.0.0.1:1/v1/chat/completions'
-    );
+    const { port } = server.address() as AddressInfo;
+    const manager = new LocalModelManager('127.0.0.1', port);
+    const result = await manager.generate('hello');
 
-    expect(requests.filter((r) => r.url === '/api/chat')).toHaveLength(0);
+    expect(result).toBe('ollama-response');
+    expect(requests.filter((r) => r.url === '/api/chat')).toHaveLength(1);
+  });
+
+  it('opens the circuit breaker after threshold failures and skips MLX thereafter', async () => {
+    process.env.MEMORY_LLM_BASE_URL = `${baseUrl}/v1`;
+    process.env.MEMORY_LLM_BREAKER_THRESHOLD = '2';
+    process.env.MEMORY_LLM_BREAKER_COOLDOWN_MS = '60000';
+    failMlxWithStatus = 500;
+
+    const { port } = server.address() as AddressInfo;
+    const manager = new LocalModelManager('127.0.0.1', port);
+
+    // First failure: MLX attempted, fallback to Ollama.
+    await manager.generate('first');
+    // Second failure: MLX attempted again, fallback to Ollama, breaker opens.
+    await manager.generate('second');
+    // Third failure: breaker is open, MLX is skipped entirely.
+    await manager.generate('third');
+
+    expect(requests.filter((r) => r.url === '/v1/chat/completions')).toHaveLength(2);
+    expect(requests.filter((r) => r.url === '/api/chat')).toHaveLength(3);
+  });
+
+  it('closes the circuit breaker after a successful MLX call', async () => {
+    process.env.MEMORY_LLM_BASE_URL = `${baseUrl}/v1`;
+    process.env.MEMORY_LLM_BREAKER_THRESHOLD = '1';
+    process.env.MEMORY_LLM_BREAKER_COOLDOWN_MS = '0';
+    failMlxWithStatus = 500;
+
+    const { port } = server.address() as AddressInfo;
+    const manager = new LocalModelManager('127.0.0.1', port);
+
+    // Failure opens the breaker.
+    await manager.generate('first');
+    expect(requests.filter((r) => r.url === '/v1/chat/completions')).toHaveLength(1);
+
+    // Cooldown is 0, so the next call moves to half-open and retries MLX.
+    failMlxWithStatus = null;
+    const result = await manager.generate('second');
+    expect(result).toBe('mlx-response');
+
+    // One more MLX request was made and succeeded, closing the breaker.
+    expect(requests.filter((r) => r.url === '/v1/chat/completions')).toHaveLength(2);
   });
 
   it('keeps embeddings on Ollama even when MEMORY_LLM_BASE_URL is set', async () => {
@@ -224,12 +273,16 @@ describe('LocalModelManager provider switch', () => {
 
   it('does not let a failed MLX call wedge the serialized queue', async () => {
     process.env.MEMORY_LLM_BASE_URL = `${baseUrl}/v1`;
-    failWithStatus = 500;
+    failMlxWithStatus = 500;
 
-    const manager = new LocalModelManager();
-    await expect(manager.generate('first')).rejects.toThrow('HTTP 500');
-    await expect(manager.generate('second')).rejects.toThrow('HTTP 500');
+    const { port } = server.address() as AddressInfo;
+    const manager = new LocalModelManager('127.0.0.1', port);
+    await manager.generate('first');
+    await manager.generate('second');
 
+    // Both MLX attempts ran, and the queue did not wedge because each failure
+    // fell back to Ollama instead of leaving a pending promise.
     expect(requests.filter((r) => r.url === '/v1/chat/completions')).toHaveLength(2);
+    expect(requests.filter((r) => r.url === '/api/chat')).toHaveLength(2);
   });
 });

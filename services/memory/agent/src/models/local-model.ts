@@ -89,6 +89,8 @@ export const MODEL_PRESETS: Record<string, ModelConfig> = {
   },
 };
 
+type BreakerState = 'closed' | 'open' | 'half_open';
+
 /**
  * Local Model Manager class
  */
@@ -101,11 +103,22 @@ export class LocalModelManager {
   // Queue generation requests so only one hits the server at a time.
   private llmQueue: Promise<unknown> = Promise.resolve();
 
+  // Circuit breaker for the optional MLX/OpenAI-compatible generation provider.
+  // If MLX hangs or errors repeatedly, generation falls back to Ollama for a
+  // cooldown window instead of queueing every remaining caller into a timeout.
+  private breakerState: BreakerState = 'closed';
+  private consecutiveFailures = 0;
+  private lastOpenedAt = 0;
+  private breakerThreshold: number;
+  private breakerCooldownMs: number;
+
   constructor(host: string = 'localhost', port: number = 11434, llm?: LLMProviderConfig) {
     this.ollama = new Ollama({ host: `http://${host}:${port}` });
     const baseUrl = llm?.baseUrl ?? process.env.MEMORY_LLM_BASE_URL;
     this.llmBaseUrl = baseUrl ? baseUrl.replace(/\/+$/, '') : undefined;
     this.llmModel = llm?.model ?? process.env.MEMORY_LLM_MODEL ?? 'qwen3-4b-instruct';
+    this.breakerThreshold = Math.max(1, parseInt(process.env.MEMORY_LLM_BREAKER_THRESHOLD || '3', 10));
+    this.breakerCooldownMs = Math.max(0, parseInt(process.env.MEMORY_LLM_BREAKER_COOLDOWN_MS || '60000', 10));
   }
 
   /**
@@ -166,6 +179,63 @@ export class LocalModelManager {
   }
 
   /**
+   * Circuit-breaker state machine. Returns true when the MLX path is currently
+   * allowed to be tried (closed or half-open after cooldown).
+   */
+  private mlxAllowed(): boolean {
+    if (!this.llmBaseUrl) return false;
+    if (this.breakerState === 'closed') return true;
+    if (this.breakerState === 'open') {
+      if (Date.now() - this.lastOpenedAt >= this.breakerCooldownMs) {
+        this.breakerState = 'half_open';
+        return true;
+      }
+      return false;
+    }
+    return true; // half_open
+  }
+
+  /**
+   * Record a successful MLX call: close the breaker and reset failures.
+   */
+  private recordMlxSuccess(): void {
+    this.breakerState = 'closed';
+    this.consecutiveFailures = 0;
+  }
+
+  /**
+   * Record a failed MLX call: open the breaker if the failure threshold is hit.
+   */
+  private recordMlxFailure(): void {
+    this.consecutiveFailures += 1;
+    if (this.consecutiveFailures >= this.breakerThreshold) {
+      this.breakerState = 'open';
+      this.lastOpenedAt = Date.now();
+      console.warn(
+        `LocalModelManager: MLX provider failed ${this.consecutiveFailures} consecutive times; ` +
+          `falling back to Ollama for ${this.breakerCooldownMs}ms`
+      );
+    }
+  }
+
+  /**
+   * Synchronous Ollama chat helper used by both the default path and the MLX
+   * circuit-breaker fallback.
+   */
+  private async ollamaChat(messages: ChatMessage[], modelConfig: ModelConfig): Promise<string> {
+    const response: ChatResponse = await this.ollama.chat({
+      model: modelConfig.name,
+      messages,
+      options: {
+        temperature: modelConfig.temperature,
+        top_p: modelConfig.topP,
+        num_predict: modelConfig.numPredict,
+      },
+    });
+    return response.message.content;
+  }
+
+  /**
    * Check if Ollama is running and accessible
    */
   async isRunning(): Promise<boolean> {
@@ -192,11 +262,14 @@ export class LocalModelManager {
 
   /**
    * Pull a model if not already installed.
-   * When an OpenAI-compatible generation provider (e.g. MLX) is configured,
-   * generation models are server-managed, so skip Ollama pulls entirely.
+   * When an OpenAI-compatible generation provider (e.g. MLX) is configured, the
+   * provider's model is server-managed and we skip the pull. However, if the
+   * requested model name looks like an Ollama tag (no '/' namespace), ensure it
+   * is available as a circuit-breaker fallback.
    */
   async ensureModel(modelName: string): Promise<boolean> {
-    if (this.llmBaseUrl) {
+    const isOllamaTag = !modelName.includes('/');
+    if (this.llmBaseUrl && !isOllamaTag) {
       return true;
     }
     try {
@@ -216,7 +289,10 @@ export class LocalModelManager {
   }
 
   /**
-   * Generate a response from the model
+   * Generate a response from the model.
+   * When MEMORY_LLM_BASE_URL is set, generation tries the MLX/OpenAI-compatible
+   * provider first. If that provider fails repeatedly, a circuit breaker trips
+   * and generation falls back to Ollama for a cooldown window.
    */
   async generate(
     prompt: string,
@@ -232,22 +308,19 @@ export class LocalModelManager {
       { role: 'user' as const, content: prompt },
     ];
 
-    if (this.llmBaseUrl) {
-      return this.serialized(() => this.openAIChat(messages, modelConfig));
+    if (this.mlxAllowed()) {
+      try {
+        const result = await this.serialized(() => this.openAIChat(messages, modelConfig));
+        this.recordMlxSuccess();
+        return result;
+      } catch (error) {
+        this.recordMlxFailure();
+        console.warn('LocalModelManager: MLX generation failed, trying Ollama fallback:', error);
+      }
     }
 
     try {
-      const response: ChatResponse = await this.ollama.chat({
-        model: modelConfig.name,
-        messages,
-        options: {
-          temperature: modelConfig.temperature,
-          top_p: modelConfig.topP,
-          num_predict: modelConfig.numPredict,
-        },
-      });
-
-      return response.message.content;
+      return await this.ollamaChat(messages, modelConfig);
     } catch (error) {
       console.error('Error generating response:', error);
       throw new Error(`Model generation failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
@@ -255,7 +328,10 @@ export class LocalModelManager {
   }
 
   /**
-   * Generate with streaming (for long responses)
+   * Generate with streaming (for long responses).
+   * Mirrors the circuit-breaker behavior of generate(): tries MLX first, falls
+   * back to Ollama if the breaker is open. The MLX path is non-streaming at the
+   * protocol level and yielded as a single chunk.
    */
   async *generateStream(
     prompt: string,
@@ -271,12 +347,16 @@ export class LocalModelManager {
       { role: 'user' as const, content: prompt },
     ];
 
-    if (this.llmBaseUrl) {
-      // MLX path: the OpenAI-compatible endpoint is called non-streaming;
-      // the full response is yielded as a single chunk (interface preserved).
-      // Serialize to keep single-threaded MLX servers healthy.
-      yield await this.serialized(() => this.openAIChat(messages, modelConfig));
-      return;
+    if (this.mlxAllowed()) {
+      try {
+        const result = await this.serialized(() => this.openAIChat(messages, modelConfig));
+        this.recordMlxSuccess();
+        yield result;
+        return;
+      } catch (error) {
+        this.recordMlxFailure();
+        console.warn('LocalModelManager: MLX streaming failed, trying Ollama fallback:', error);
+      }
     }
 
     try {

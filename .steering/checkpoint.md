@@ -2,54 +2,40 @@
 
 ## Goal
 
-Speed up the memory agent's normal ingest and query paths, especially when the
-MLX OpenAI-compatible generation provider is configured, while keeping the
-Ollama default path unchanged. Add guardrails so a single malformed structured
-response does not revert to three slow LLM calls.
+Add a circuit breaker around the memory agent's optional MLX/OpenAI-compatible
+generation provider so that repeated endpoint hangs or errors automatically fall
+back to Ollama generation for a cooldown window, instead of queueing every
+caller into a 120-second timeout.
 
 ## Just did
 
-- Combined `summarize` + `extractEntities` + `assessImportance` into one
-  `enrichContent()` structured call in `services/memory/agent/src/models/local-model.ts`,
-  cutting generation work per ingest from ~3 LLM passes to ~1.
-- Switched `services/memory/agent/src/ingest-agent.ts` to use `enrichContent()`
-  for normal ingest; bulk mode still skips LLM enrichment.
-- Capped query synthesis context in `services/memory/agent/src/query-agent.ts`
-  to the top 5 memories with 200-character summary truncation.
-- Added env-var model hooks (`MEMORY_INGEST_MODEL`, `MEMORY_FAST_INGEST_MODEL`,
-  `MEMORY_CONSOLIDATE_MODEL`, `MEMORY_QUERY_MODEL`, `MEMORY_EXTRACT_MODEL`) so
-  faster/slower models can be swapped without code changes.
-- Added strict schema validation and a fast local fallback to `enrichContent()`.
-  If the LLM returns malformed JSON, the agent now extracts a local summary,
-  keywords, and heuristic importance instead of falling back to three more
-  LLM calls.
-- Updated `services/memory/agent/src/ingest-agent.test.ts` mock to expect
-  `enrichContent()`.
+- Added a circuit breaker to `LocalModelManager` in
+  `services/memory/agent/src/models/local-model.ts`:
+  - Tracks consecutive MLX failures and trips open after a configurable
+    threshold (`MEMORY_LLM_BREAKER_THRESHOLD`, default 3).
+  - While open, generation skips MLX and goes straight to Ollama for a
+    configurable cooldown (`MEMORY_LLM_BREAKER_COOLDOWN_MS`, default 60s).
+  - After cooldown, the breaker enters half-open and retries MLX; a success
+    closes it again.
+- Refactored `generate()` and `generateStream()` to route through the breaker.
+- Extracted `ollamaChat()` so both the default Ollama path and the MLX
+  circuit-breaker fallback share one implementation.
+- Updated `ensureModel()` to pull Ollama fallback models even when MLX is
+  configured (only skips pulls for MLX-style model IDs containing '/').
+- Updated `services/memory/agent/src/models/local-model.test.ts` with four new
+  tests covering fallback, breaker-open, breaker-close, and queue-wedge cases.
 - Verified:
-  - `pnpm test`: 30/30 passed.
+  - `pnpm test`: 32/32 passed.
   - `pnpm typecheck`: clean.
-  - Live end-to-end ingest of docs/PROGRAM_FEATURES_AND_ROADMAP.md
-    (11KB / 1573 words) on M1 Pro 32GB:
-    - MLX Qwen3-4B-4bit via mlx_lm.server: ~10.1s average (5 runs).
-    - Ollama qwen3.5:4b (Q4_K_M, llama.cpp): ~44.9s average (5 runs).
-    - Direct MLX generation (warm, prompt-cache hit): ~4.9s for the same
-      structured JSON; ~40 tok/s effective generation throughput.
-  - Steering audit (ao-steer) reviewed the MLX-vs-Ollama rationale and
-    recommended schema validation, matched warm comparisons, and a circuit
-    breaker. Schema validation and matched comparison are included in this
-    change; circuit breaker and shadow-mode monitoring are documented as
-    follow-ups.
 
 ## Files changed
 
 - `services/memory/agent/src/models/local-model.ts`
-- `services/memory/agent/src/ingest-agent.ts`
-- `services/memory/agent/src/query-agent.ts`
-- `services/memory/agent/src/ingest-agent.test.ts`
+- `services/memory/agent/src/models/local-model.test.ts`
+- `.steering/spec.md`
 
 ## Known follow-ups
 
-- Add a circuit breaker for persistent MLX endpoint hangs (audit Q2).
 - Add per-backend latency + JSON-validity metrics and periodic shadow-mode
   dual-backend comparisons (audit Q5).
 - Consider a held-out accuracy eval set for entity/topic/importance extraction
