@@ -16,6 +16,22 @@
   callers working (http-server.ts, orchestrator.ts) with no signature
   changes beyond optional config, and unit-test the provider switch.
 
+## Speed + guardrail requirements (MLX or Ollama)
+
+- [ ] R5: WHEN normal ingest enriches a memory, THE SYSTEM SHALL use a single
+  structured LLM call (`enrichContent()`) for summary + entities + topics +
+  importance instead of three separate calls.
+- [ ] R6: WHEN the structured enrichment call returns malformed JSON or fields
+  of the wrong type, THE SYSTEM SHALL fall back to a fast local extraction
+  (truncated summary, keyword-derived entities/topics, heuristic importance)
+  and SHALL NOT emit additional LLM calls.
+- [ ] R7: WHEN a query is synthesized, THE SYSTEM SHALL cap the synthesis
+  context to the top 5 retrieved memories with summaries truncated to 200
+  characters.
+- [ ] R8: WHEN generation model presets are overridden via environment
+  variables (`MEMORY_INGEST_MODEL`, `MEMORY_FAST_INGEST_MODEL`, etc.), THE
+  SYSTEM SHALL use the overridden names without requiring code changes.
+
 ## Acceptance (Gherkin)
 
 - Scenario: MLX path used when configured
@@ -27,3 +43,15 @@
   Given the env unset
   When a generate task runs
   Then Ollama is used with the preset model name.
+- Scenario: fast ingest uses one LLM call
+  Given a normal ingest request
+  When enrichment runs
+  Then exactly one structured generation call is made.
+- Scenario: malformed structured output degrades safely
+  Given a normal ingest request where the LLM returns invalid JSON
+  When enrichment runs
+  Then no further LLM calls are made and a memory is still created.
+- Scenario: query synthesis stays small
+  Given a query that retrieves many memories
+  When synthesis runs
+  Then at most 5 memories are included and each summary is at most 200 chars.

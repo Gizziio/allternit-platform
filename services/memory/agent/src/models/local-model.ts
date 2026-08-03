@@ -12,6 +12,7 @@
 
 import { Ollama } from 'ollama';
 import type { ChatResponse } from 'ollama';
+import type { MemoryImportance } from '../types/memory.types.js';
 
 /**
  * Optional OpenAI-compatible generation provider config.
@@ -44,28 +45,37 @@ export interface ModelConfig {
 export const MODEL_PRESETS: Record<string, ModelConfig> = {
   // Fast summarization and extraction
   ingest: {
-    name: 'qwen3.5:2b',
+    name: process.env.MEMORY_INGEST_MODEL || 'qwen3.5:2b',
     temperature: 0.3,
     topP: 0.9,
     numPredict: 500,
   },
+  // Single-call enrichment for normal ingest (configurable for experimentation)
+  fastIngest: {
+    name: process.env.MEMORY_FAST_INGEST_MODEL || process.env.MEMORY_INGEST_MODEL || 'qwen3.5:2b',
+    temperature: 0.2,
+    topP: 0.9,
+    // 600 tokens leaves headroom for long summaries + many entities/topics on
+    // large docs without materially slowing the MLX/Ollama path.
+    numPredict: 600,
+  },
   // Reasoning and pattern finding
   consolidate: {
-    name: 'qwen3.5:4b',
+    name: process.env.MEMORY_CONSOLIDATE_MODEL || 'qwen3.5:4b',
     temperature: 0.5,
     topP: 0.9,
     numPredict: 1000,
   },
   // Query synthesis
   query: {
-    name: 'qwen3.5:2b',
+    name: process.env.MEMORY_QUERY_MODEL || 'qwen3.5:2b',
     temperature: 0.4,
     topP: 0.9,
     numPredict: 800,
   },
   // Entity extraction (structured output)
   extract: {
-    name: 'qwen3.5:2b',
+    name: process.env.MEMORY_EXTRACT_MODEL || 'qwen3.5:2b',
     temperature: 0.2,
     topP: 0.9,
     numPredict: 400,
@@ -395,6 +405,133 @@ Respond with ONLY one word: low, medium, high, or critical`;
       console.error('Error assessing importance:', error);
       return 'medium';
     }
+  }
+
+  /**
+   * Validate and sanitize the structured enrichment result.
+   * Returns null if the result is missing required fields or has wrong types.
+   */
+  private validateEnrichment(
+    result: Record<string, unknown>,
+    maxLength: number
+  ): { summary: string; entities: string[]; topics: string[]; importance: MemoryImportance } | null {
+    if (!result || typeof result !== 'object') return null;
+
+    const rawSummary = result.summary;
+    if (typeof rawSummary !== 'string' || rawSummary.trim().length === 0) return null;
+
+    const rawEntities = result.entities;
+    const rawTopics = result.topics;
+    if (!Array.isArray(rawEntities) || !Array.isArray(rawTopics)) return null;
+
+    const entities = rawEntities.filter((e): e is string => typeof e === 'string');
+    const topics = rawTopics.filter((t): t is string => typeof t === 'string');
+
+    const rawImportance = String(result.importance || 'medium').trim().toLowerCase();
+    const importance: MemoryImportance = ['low', 'medium', 'high', 'critical'].includes(rawImportance)
+      ? (rawImportance as MemoryImportance)
+      : 'medium';
+
+    // Bound summary length so downstream storage/query prompts stay predictable.
+    const summary = rawSummary.trim().slice(0, Math.max(80, maxLength * 8));
+
+    return { summary, entities, topics, importance };
+  }
+
+  /**
+   * Fast local fallback when the LLM fails to return valid structured JSON.
+   * Avoids the old three-call fallback so the speedup isn't lost on failure.
+   */
+  private localEnrichmentFallback(
+    text: string,
+    maxLength: number
+  ): { summary: string; entities: string[]; topics: string[]; importance: MemoryImportance } {
+    const sentences = text
+      .replace(/\s+/g, ' ')
+      .split(/(?<=[.!?])\s+/)
+      .filter(s => s.trim().length > 0);
+
+    const targetChars = Math.max(120, maxLength * 8);
+    let summary = '';
+    for (const sentence of sentences) {
+      if (summary.length + sentence.length > targetChars && summary.length > 0) break;
+      summary += (summary ? ' ' : '') + sentence.trim();
+    }
+
+    // Crude keyword extraction: capitalized phrases and alphanumeric tokens > 5 chars.
+    const entityMatches = text.match(/\b[A-Z][a-zA-Z]+(?:\s+[A-Z][a-zA-Z]+)*\b/g) || [];
+    const entities = Array.from(new Set(entityMatches.filter(e => e.length > 3).slice(0, 10)));
+
+    const topicMatches = text.toLowerCase().match(/\b[a-z]{6,}\b/g) || [];
+    const topicFreq = new Map<string, number>();
+    for (const t of topicMatches) {
+      if (['because', 'through', 'between', 'however', 'therefore', 'following'].includes(t)) continue;
+      topicFreq.set(t, (topicFreq.get(t) || 0) + 1);
+    }
+    const topics = Array.from(topicFreq.entries())
+      .sort((a, b) => b[1] - a[1])
+      .slice(0, 5)
+      .map(([t]) => t);
+
+    // Heuristic importance: longer, decision/learning-heavy docs rank higher.
+    const lower = text.toLowerCase();
+    const hasCritical = /critical|crucial|block|outage|breach|rollback/i.test(lower);
+    const hasDecision = /decision|adopted|rejected|approved|roadmap|milestone/i.test(lower);
+    const importance: MemoryImportance = hasCritical
+      ? 'critical'
+      : hasDecision || text.length > 5000
+        ? 'high'
+        : text.length > 1000
+          ? 'medium'
+          : 'low';
+
+    return { summary: summary.trim() || text.slice(0, targetChars), entities, topics, importance };
+  }
+
+  /**
+   * Single-call enrichment: summary + entities + topics + importance.
+   * Faster than the separate calls because the long document prompt is
+   * processed once instead of three times. If the LLM returns malformed or
+   * incomplete structured output, a fast local fallback keeps ingestion moving
+   * without reverting to three extra LLM calls.
+   */
+  async enrichContent(
+    text: string,
+    maxLength: number = 150
+  ): Promise<{ summary: string; entities: string[]; topics: string[]; importance: MemoryImportance }> {
+    const schema = `{
+  "summary": "string, ${maxLength} words or less",
+  "entities": ["named entities (people, places, organizations, products, etc.)"],
+  "topics": ["3-5 main topics or themes"],
+  "importance": "one of: low, medium, high, critical"
+}`;
+
+    const prompt = `Analyze the following text and return a single JSON object with this schema:
+${schema}
+
+Text:
+${text}
+
+Respond ONLY with valid JSON. No explanations, no markdown, no extra text.`;
+
+    try {
+      const raw = await this.extractStructured<{
+        summary?: string;
+        entities?: string[];
+        topics?: string[];
+        importance?: string;
+      }>(prompt, schema, MODEL_PRESETS.fastIngest);
+
+      const validated = raw ? this.validateEnrichment(raw as Record<string, unknown>, maxLength) : null;
+      if (validated) {
+        return validated;
+      }
+    } catch (error) {
+      console.error('LocalModelManager: enrichment structured call failed:', error);
+    }
+
+    console.log('LocalModelManager: using fast local enrichment fallback');
+    return this.localEnrichmentFallback(text, maxLength);
   }
 
   /**

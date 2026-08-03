@@ -324,15 +324,13 @@ export class IngestAgent {
         topics = [];
         importance = 'medium';
       } else {
-        // Process with LLM
-        console.log('IngestAgent: Processing content with LLM...');
-
-        // Extract summary, entities, topics
-        [summary, { entities, topics }, importance] = await Promise.all([
-          this.modelManager.summarize(content, 150),
-          this.modelManager.extractEntities(content),
-          this.modelManager.assessImportance(content),
-        ]);
+        // Single-call enrichment: processes the long document prompt once.
+        console.log('IngestAgent: Enriching content with LLM...');
+        const enriched = await this.modelManager.enrichContent(content, 150);
+        summary = enriched.summary;
+        entities = enriched.entities;
+        topics = enriched.topics;
+        importance = enriched.importance;
       }
 
       // Create memory

@@ -2,42 +2,55 @@
 
 ## Goal
 
-Implement the memory agent bulk / fast ingest mode (spec:
-`.pipeline/builds/memory-bulk-fast-ingest-TASK.md`, source spec
-`.pipeline/queue/memory-bulk-fast-ingest.md`): when `POST /api/ingest` carries
-`metadata.mode: "bulk"`, skip LLM enrichment, store the memory with raw content,
-and keep it searchable; normal ingest pipeline remains unchanged; metadata
-(source, trust_tier, provenance_ref) is preserved.
+Speed up the memory agent's normal ingest and query paths, especially when the
+MLX OpenAI-compatible generation provider is configured, while keeping the
+Ollama default path unchanged. Add guardrails so a single malformed structured
+response does not revert to three slow LLM calls.
 
 ## Just did
 
-- Implemented bulk mode in `services/memory/agent/src/ingest-agent.ts`:
-  detects `metadata.mode === "bulk"`, sets summary to the first 500 characters
-  of content, entities/topics to empty arrays, importance to `"medium"`, and
-  bypasses `summarize`/`extractEntities`/`assessImportance`.
-- Threaded `metadata` through the ingest path:
-  - `http-server.ts` `/api/ingest` and `/api/ingest/bulk` forward metadata.
-  - `orchestrator.ingest()` accepts optional `metadata` and passes it to the
-    ingest agent.
-- Extended `IngestResult` with `memory?: Memory` so `http-server.ts` can add
-  successfully ingested memories to the in-memory vector index (fixes the
-  pre-existing condition where `/api/vector/search` had no indexed memories).
-- Added `services/memory/agent/src/ingest-agent.test.ts` covering R1–R5 with
-  a mocked `LocalModelManager` and real `MemoryStore`.
-- Fixed pre-existing `local-model.test.ts` embedding assertion that broke
-  because a real Ollama server is running; the test now stubs `VectorStore.embed`
-  and still verifies embeddings do not hit the MLX endpoint.
-- Rebuilt `better-sqlite3` native bindings for Node v24 and ran verification
-  with Node v24 (`/opt/homebrew/opt/node@24/bin`); default shell Node v26 cannot
-  load or compile the binding.
-- Wrote `docs/BUILD_MEMORY_BULK_FAST_INGEST_NOTES.md` and touched the sentinel.
+- Combined `summarize` + `extractEntities` + `assessImportance` into one
+  `enrichContent()` structured call in `services/memory/agent/src/models/local-model.ts`,
+  cutting generation work per ingest from ~3 LLM passes to ~1.
+- Switched `services/memory/agent/src/ingest-agent.ts` to use `enrichContent()`
+  for normal ingest; bulk mode still skips LLM enrichment.
+- Capped query synthesis context in `services/memory/agent/src/query-agent.ts`
+  to the top 5 memories with 200-character summary truncation.
+- Added env-var model hooks (`MEMORY_INGEST_MODEL`, `MEMORY_FAST_INGEST_MODEL`,
+  `MEMORY_CONSOLIDATE_MODEL`, `MEMORY_QUERY_MODEL`, `MEMORY_EXTRACT_MODEL`) so
+  faster/slower models can be swapped without code changes.
+- Added strict schema validation and a fast local fallback to `enrichContent()`.
+  If the LLM returns malformed JSON, the agent now extracts a local summary,
+  keywords, and heuristic importance instead of falling back to three more
+  LLM calls.
+- Updated `services/memory/agent/src/ingest-agent.test.ts` mock to expect
+  `enrichContent()`.
+- Verified:
+  - `pnpm test`: 30/30 passed.
+  - `pnpm typecheck`: clean.
+  - Live end-to-end ingest of docs/PROGRAM_FEATURES_AND_ROADMAP.md
+    (11KB / 1573 words) on M1 Pro 32GB:
+    - MLX Qwen3-4B-4bit via mlx_lm.server: ~10.1s average (5 runs).
+    - Ollama qwen3.5:4b (Q4_K_M, llama.cpp): ~44.9s average (5 runs).
+    - Direct MLX generation (warm, prompt-cache hit): ~4.9s for the same
+      structured JSON; ~40 tok/s effective generation throughput.
+  - Steering audit (ao-steer) reviewed the MLX-vs-Ollama rationale and
+    recommended schema validation, matched warm comparisons, and a circuit
+    breaker. Schema validation and matched comparison are included in this
+    change; circuit breaker and shadow-mode monitoring are documented as
+    follow-ups.
 
-## Next
+## Files changed
 
-Prescribed commit:
-`git add -A && git commit -m "build(memory-bulk-fast-ingest): bulk/fast ingest mode for memory agent"`.
-Fix and retry if the gate blocks.
+- `services/memory/agent/src/models/local-model.ts`
+- `services/memory/agent/src/ingest-agent.ts`
+- `services/memory/agent/src/query-agent.ts`
+- `services/memory/agent/src/ingest-agent.test.ts`
 
-## Open questions
+## Known follow-ups
 
-- (none)
+- Add a circuit breaker for persistent MLX endpoint hangs (audit Q2).
+- Add per-backend latency + JSON-validity metrics and periodic shadow-mode
+  dual-backend comparisons (audit Q5).
+- Consider a held-out accuracy eval set for entity/topic/importance extraction
+  quality (audit Q3).

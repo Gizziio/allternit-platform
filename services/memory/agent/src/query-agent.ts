@@ -80,9 +80,15 @@ export class QueryAgent {
       console.log(`QueryAgent: Found ${relevantInsights.length} relevant insights`);
     }
 
-    // Step 4: Synthesize answer
-    const memoriesForSynthesis = relevantMemories.map(m => ({
-      summary: m.summary,
+    // Step 4: Synthesize answer from a capped subset to keep the prompt short
+    // and the LLM response fast. Retrieval can return more; synthesis uses the
+    // top memories only and truncates their summaries.
+    const maxSynthesisMemories = Math.min(relevantMemories.length, 5);
+    const maxSummaryChars = 200;
+    const memoriesForSynthesis = relevantMemories.slice(0, maxSynthesisMemories).map(m => ({
+      summary: m.summary.length > maxSummaryChars
+        ? `${m.summary.slice(0, maxSummaryChars)}...`
+        : m.summary,
       source: m.source,
     }));
 
