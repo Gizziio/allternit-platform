@@ -21,7 +21,7 @@ Living checklist for the 121 actionable items (83 GAP + 38 PARTIAL) from `docs/S
 - [ ] **Cowork workspace (CoworkRoot)** _(`PARTIAL` → iOS)_ — Web has the richest GUI, gizzi-code's engine is arguably even more capable via CLI, iOS only exposes a toggle.
 - [ ] **Cowork Runs view** _(`PARTIAL` → iOS)_ — gizzi-code has the underlying data with no visual browser; iOS has neither.
 - [ ] **Cowork Drafts view** _(`GAP` → iOS)_ — Neither other surface has a named drafts view; gizzi-code's approval queue is the nearest functional analog.
-- [ ] **Cowork Tasks view** _(`PARTIAL` → iOS)_ — gizzi-code has real task-tracking via cowork-team; iOS has nothing.
+- [x] **Cowork Tasks view** _(`PARTIAL` → iOS)_ — gizzi-code has real task-tracking via cowork-team; iOS has nothing. **Shipped in PR #13** (flat task list against allternit-cloud-api).
 - [ ] **Cowork Cron view** _(`GAP` → iOS)_ — Missing from iOS entirely; gizzi-code's cron is actually the most capable of the three.
 - [ ] **Cowork Project view** _(`GAP` → gizzi-code)_ — Neither other surface exposes Cowork run history scoped to a project.
 - [ ] **Cowork Documents view** _(`GAP` → iOS)_ — Missing from iOS with no good reason it couldn't exist there; gizzi-code's absence is more defensible (file-native).
