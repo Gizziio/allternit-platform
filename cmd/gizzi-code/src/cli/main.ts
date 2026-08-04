@@ -50,6 +50,7 @@ import { RuntimeCommand } from "@/cli/commands/runtime"
 import { AllternitCommand } from "@/cli/commands/allternit"
 import { StatusCommand } from "@/cli/commands/status"
 import { BrainCommand } from "@/cli/commands/brain"
+import { ProductsCommand } from "@/cli/commands/products"
 import { HtmlArtifactCommand } from "@/cli/commands/html-artifact"
 import path from "path"
 import { Global, init as initGlobal } from "@/runtime/context/global"
@@ -209,6 +210,7 @@ const cli = yargs(hideBin(process.argv))
   .command(AllternitCommand)
   .command(BrainCommand)
   .command(HtmlArtifactCommand)
+  .command(ProductsCommand)
   .fail((msg, err) => {
     if (
       msg?.startsWith("Unknown argument") ||

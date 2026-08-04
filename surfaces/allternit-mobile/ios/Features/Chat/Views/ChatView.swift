@@ -82,6 +82,8 @@ struct MainWorkspaceView: View {
                             case .loops:
                                 LoopsListView(isSidebarOpen: $isSidebarOpen)
                             }
+                        case .products:
+                            ProductsDiscoveryView(isSidebarOpen: $isSidebarOpen)
                         case .code:
                             CodeModeView(isSidebarOpen: $isSidebarOpen, selectedSessionId: $selectedSessionId)
                         case .aci:
