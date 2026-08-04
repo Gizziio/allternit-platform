@@ -55,6 +55,7 @@ import grep from './commands/grep/index.js'
 import cowork from './commands/cowork/index.js'
 import artifact from './commands/artifact/index.js'
 import swarm from './commands/swarm/index.js'
+import purpose from './commands/purpose/index.js'
 
 function safeRequire(path: string) {
   try {
@@ -280,6 +281,7 @@ const COMMANDS = memoize((): Command[] => [
   desktop,
   cowork,
   swarm,
+  purpose,
   context,
   contextNonInteractive,
   cost,
