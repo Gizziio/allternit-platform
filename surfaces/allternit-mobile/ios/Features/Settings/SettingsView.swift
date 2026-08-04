@@ -28,6 +28,8 @@ struct SettingsView: View {
     @State private var isMemoryPresented = false
     /// Pushed Compute Billing settings (Plans & Compute parity).
     @State private var isComputeBillingPresented = false
+    /// Pushed Platform settings (Settings > Platform parity).
+    @State private var isPlatformPresented = false
     /// Pushed custom-instructions editor (Agent section).
     @State private var isInstructionsPresented = false
     /// Pushed Monitor view (infra section).
@@ -76,6 +78,7 @@ struct SettingsView: View {
             List {
                 accountSection
                 usageSection
+                platformSection
                 capabilitiesSection
                 agentSection
                 memorySection
@@ -105,6 +108,9 @@ struct SettingsView: View {
             }
             .navigationDestination(isPresented: $isComputeBillingPresented) {
                 ComputeBillingView()
+            }
+            .navigationDestination(isPresented: $isPlatformPresented) {
+                PlatformSettingsView()
             }
             .navigationDestination(isPresented: $isInstructionsPresented) {
                 CustomInstructionsView()
@@ -363,6 +369,35 @@ struct SettingsView: View {
             }
         } header: {
             Text("Usage")
+        }
+    }
+
+    // MARK: - Platform
+
+    @ViewBuilder
+    private var platformSection: some View {
+        Section {
+            Button(action: {
+                let generator = UIImpactFeedbackGenerator(style: .light)
+                generator.impactOccurred()
+                isPlatformPresented = true
+            }) {
+                HStack {
+                    Text("Platform")
+                        .font(.subheadline)
+                        .foregroundColor(Color("TextPrimary"))
+                    Spacer()
+                    Image(systemName: "chevron.right")
+                        .font(.system(size: 11, weight: .bold))
+                        .foregroundColor(Color("TextSecondary"))
+                }
+                .contentShape(Rectangle())
+            }
+            .buttonStyle(.plain)
+        } header: {
+            Text("Platform")
+        } footer: {
+            Text("General, appearance, models, API keys, shortcuts, permissions, dispatch, devices, cloud instances, and diagnostics.")
         }
     }
 

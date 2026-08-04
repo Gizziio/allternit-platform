@@ -119,8 +119,55 @@ final class SettingsStore: ObservableObject {
         didSet { defaults.set(improveModel, forKey: Keys.improveModel) }
     }
 
+    // MARK: - Platform (Settings > Platform parity)
+
+    /// General: display language — mirrors web `general.language`.
+    @Published var displayLanguage: String {
+        didSet { defaults.set(displayLanguage, forKey: Keys.displayLanguage) }
+    }
+    /// General: timezone — mirrors web `general.timezone`.
+    @Published var timezone: String {
+        didSet { defaults.set(timezone, forKey: Keys.timezone) }
+    }
+    /// General: show system/agent messages in the chat feed.
+    @Published var showSystemMessages: Bool {
+        didSet { defaults.set(showSystemMessages, forKey: Keys.showSystemMessages) }
+    }
+    /// General: telemetry opt-in.
+    @Published var enableTelemetry: Bool {
+        didSet { defaults.set(enableTelemetry, forKey: Keys.enableTelemetry) }
+    }
+    /// General: auto-save drafts.
+    @Published var autoSave: Bool {
+        didSet { defaults.set(autoSave, forKey: Keys.autoSave) }
+    }
+
+    /// Appearance: compact UI density.
+    @Published var compactDensity: Bool {
+        didSet { defaults.set(compactDensity, forKey: Keys.compactDensity) }
+    }
+    /// Appearance: show labels under sidebar tab icons.
+    @Published var showSidebarLabels: Bool {
+        didSet { defaults.set(showSidebarLabels, forKey: Keys.showSidebarLabels) }
+    }
+
+    /// Models: streaming responses toggle.
+    @Published var streamingEnabled: Bool {
+        didSet { defaults.set(streamingEnabled, forKey: Keys.streamingEnabled) }
+    }
+
+    /// Dispatch: cowork dispatch toggle.
+    @Published var dispatchEnabled: Bool {
+        didSet { defaults.set(dispatchEnabled, forKey: Keys.dispatchEnabled) }
+    }
+
     /// Voice speed steps offered in the picker.
     static let speechSpeeds: [Double] = [0.75, 1.0, 1.25, 1.5]
+
+    /// Language choices offered in General settings.
+    static let displayLanguages = ["English", "Español", "Français", "Deutsch", "日本語"]
+    /// Timezone choices offered in General settings.
+    static let timezones = ["UTC", "America/New_York", "America/Los_Angeles", "Europe/London", "Europe/Paris", "Asia/Tokyo"]
 
     private let defaults: UserDefaults
 
@@ -135,6 +182,15 @@ final class SettingsStore: ObservableObject {
         static let voiceIdentifier = "allternit-settings-voice-identifier"
         static let voiceInteractionMode = "allternit-settings-voice-interaction-mode"
         static let improveModel = "allternit-settings-improve-model"
+        static let displayLanguage = "allternit-settings-display-language"
+        static let timezone = "allternit-settings-timezone"
+        static let showSystemMessages = "allternit-settings-show-system-messages"
+        static let enableTelemetry = "allternit-settings-enable-telemetry"
+        static let autoSave = "allternit-settings-auto-save"
+        static let compactDensity = "allternit-settings-compact-density"
+        static let showSidebarLabels = "allternit-settings-show-sidebar-labels"
+        static let streamingEnabled = "allternit-settings-streaming-enabled"
+        static let dispatchEnabled = "allternit-settings-dispatch-enabled"
     }
 
     init(defaults: UserDefaults = .standard) {
@@ -155,5 +211,14 @@ final class SettingsStore: ObservableObject {
         self.voiceInteractionMode = defaults.string(forKey: Keys.voiceInteractionMode)
             .flatMap(VoiceInteractionMode.init(rawValue:)) ?? .handsFree
         self.improveModel = defaults.object(forKey: Keys.improveModel) as? Bool ?? true
+        self.displayLanguage = defaults.string(forKey: Keys.displayLanguage) ?? "English"
+        self.timezone = defaults.string(forKey: Keys.timezone) ?? "UTC"
+        self.showSystemMessages = defaults.object(forKey: Keys.showSystemMessages) as? Bool ?? true
+        self.enableTelemetry = defaults.object(forKey: Keys.enableTelemetry) as? Bool ?? true
+        self.autoSave = defaults.object(forKey: Keys.autoSave) as? Bool ?? true
+        self.compactDensity = defaults.object(forKey: Keys.compactDensity) as? Bool ?? false
+        self.showSidebarLabels = defaults.object(forKey: Keys.showSidebarLabels) as? Bool ?? true
+        self.streamingEnabled = defaults.object(forKey: Keys.streamingEnabled) as? Bool ?? true
+        self.dispatchEnabled = defaults.object(forKey: Keys.dispatchEnabled) as? Bool ?? false
     }
 }
