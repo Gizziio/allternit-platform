@@ -123,7 +123,7 @@ Branch: `fix/review-decision-event-type` (issue #16/#19 fixes) + `docs/surface-a
 
 | # | Item | Status | Finding | Action | PR |
 |---|------|--------|---------|--------|-----|
-| 71 | DAG Integration Page (PARTIAL → upgrade) | `[ ]` | REAL — `views/DagIntegrationPage.tsx` is a stale 4-tab wrapper predating the newer DAG-suite views (Ontology, Security, etc.), which are routed but not surfaced here | Rebuild as full DAG-suite index | |
+| 71 | DAG Integration Page (PARTIAL → upgrade) | `[x]` | REAL — rebuilt `views/DagIntegrationPage.tsx` as a full DAG-suite index with navigation tiles for Orchestration, Knowledge, Security, Browser/Execution, and Observability views (`feat/web-dag-integration-page`) | Shipped index rebuild; individual gizzi-code ports remain under #72–#86 | `feat/web-dag-integration-page` |
 | 72 | Ontology Viewer (GAP → gizzi-code) | `[ ]` | REAL — web `views/dag/OntologyViewer.tsx` live via railsApi; gizzi-code hit is unrelated code comment | Port to gizzi-code | |
 | 73 | Directive Compiler (GAP → gizzi-code) | `[ ]` | REAL — web `views/dag/DirectiveCompiler.tsx` real `createDagPlan`/`refineDag`; zero gizzi-code/iOS matches | Port to gizzi-code | |
 | 74 | GC Agents (GAP → gizzi-code) | `[ ]` | REAL — web `views/dag/GCAgents.tsx` real archive/index-maintenance controls; zero matches elsewhere | Port to gizzi-code (low priority) | |
