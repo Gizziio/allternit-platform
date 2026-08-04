@@ -3,9 +3,9 @@ import Foundation
 // -----------------------------------------------------------------------------
 // Team Skill REST models — base path /api/v1/team-skills.
 //
-// Mirrors the Rust producers in cmd/allternit-api/src/team_skill_routes.rs
-// (`TeamSkillRow`). The API emits snake_case keys on the wire; Swift properties
-// stay camelCase via explicit CodingKeys.
+// Mirrors `cmd/allternit-api/src/team_skill_routes.rs` (`TeamSkillRow`).
+// The API emits snake_case keys on the wire; Swift properties stay camelCase
+// via explicit CodingKeys.
 // -----------------------------------------------------------------------------
 
 /// One team skill (`GET /api/v1/team-skills` → `{skills: [...]}`).
@@ -24,10 +24,9 @@ struct TeamSkill: Decodable, Sendable, Identifiable, Hashable {
     let installedAt: String
 
     enum CodingKeys: String, CodingKey {
-        case id, name, description, manifest
+        case id, name, description, manifest, version
         case workspaceId = "workspace_id"
         case sourceRepo = "source_repo"
-        case version
         case installedBy = "installed_by"
         case installedAt = "installed_at"
     }
@@ -36,4 +35,26 @@ struct TeamSkill: Decodable, Sendable, Identifiable, Hashable {
 /// `GET /api/v1/team-skills` envelope (`{ skills: [...] }`).
 struct TeamSkillListResponse: Decodable, Sendable {
     let skills: [TeamSkill]
+}
+
+/// `POST /api/v1/team-skills` response (`{ skill: { id, name } }`).
+struct CreateTeamSkillResponse: Decodable, Sendable {
+    struct Created: Decodable, Sendable {
+        let id: String
+        let name: String
+    }
+    let skill: Created
+}
+
+/// Body of `POST /api/v1/team-skills`.
+struct CreateTeamSkillBody: Encodable, Sendable {
+    let workspaceId: String
+    let name: String
+    let description: String?
+    let version: String
+
+    enum CodingKeys: String, CodingKey {
+        case name, description, version
+        case workspaceId = "workspaceId"
+    }
 }
