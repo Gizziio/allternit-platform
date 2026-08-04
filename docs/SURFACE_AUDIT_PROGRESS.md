@@ -12,30 +12,7 @@ Living checklist for the 121 actionable items (83 GAP + 38 PARTIAL) from `docs/S
 
 ## Core Chat/Home
 
-HEAD
-- [x] **Projects** _(`GAP` → gizzi-code)_ — A CLI user has no way to group sessions into a named project the way web/iOS do; `init` is a one-shot scaffold, not a browser. — Session finding: STALE — project model already exists: web `views/ProjectView.tsx`, gizzi-code `project/instance.ts`, iOS `Features/Projects/`
-- [x] **Artifacts Library** _(`PARTIAL` → upgrade)_ — gizzi-code can produce/publish artifacts consumed elsewhere but can't browse its own artifact history. — Session finding: STALE — web `views/library/LibraryView.tsx` ("Artifacts Library") + iOS `Features/Artifacts/Views/ArtifactsLibraryView.swift` both exist
-- [x] **Automation Tasks (Goals/Routines/Loops/Cron)** _(`GAP` → iOS)_ — Phase 1 cron jobs shipped in PR #9. Routines/Loops/Goals remain as later phases — see `docs/AUTOMATION_TASKS_MAP.md`. — Session finding: PR #9 merged to main; cron jobs shipped on iOS
-
-## Cowork
-
-- [x] **Cowork workspace (CoworkRoot)** _(`PARTIAL` → iOS)_ — Web has the richest GUI, gizzi-code's engine is arguably even more capable via CLI, iOS only exposes a toggle. — Session finding: REAL — phase 1 shipped: launchpad + active-session shell + progress panel on iOS (`feat/ios-cowork-workspace`)
-- [x] **Cowork Runs view** _(`PARTIAL` → iOS)_ — gizzi-code has the underlying data with no visual browser; iOS has neither. — Session finding: STALE — RunsView.tsx registered but zero dispatchers in Cowork nav; only reachable via unrelated Products Discovery "Workflows" card
-- [x] **Cowork Drafts view** _(`GAP` → iOS)_ — Neither other surface has a named drafts view; gizzi-code's approval queue is the nearest functional analog. — Session finding: STALE — DraftsView.tsx registered, zero dispatchers anywhere; dead code
-- [x] **Cowork Tasks view** _(`PARTIAL` → iOS)_ — gizzi-code has real task-tracking via cowork-team; iOS has nothing. **Shipped in PR #13** (flat task list against allternit-cloud-api).
-- [x] **Cowork Cron view** _(`GAP` → iOS)_ — Missing from iOS entirely; gizzi-code's cron is actually the most capable of the three. — Session finding: STALE — renamed/merged into Automation Tasks (live, reachable via shared Home rail); iOS Automation Tasks itself absent from this checkout despite PR #9 claims
-- [x] **Cowork Project view** _(`GAP` → gizzi-code)_ — Neither other surface exposes Cowork run history scoped to a project. — Session finding: REAL — phase 1 shipped: `cowork-project` command lists Cowork projects, shows tasks by project, and creates tasks (`feat/gizzi-cowork-project`)
-- [x] **Cowork Documents view** _(`GAP` → iOS)_ — Missing from iOS with no good reason it couldn't exist there; gizzi-code's absence is more defensible (file-native). — Session finding: STALE — DocumentsView.tsx only reachable via unrelated Code-mode Skills Registry path, not Cowork nav
-- [x] **Cowork Tables view** _(`GAP` → iOS)_ — Same as Documents: real gap on iOS, defensible absence on gizzi-code. — Session finding: STALE — TablesView.tsx registered, zero dispatchers; dead code
-- [x] **Cowork Files view** _(`GAP` → iOS)_ — Same pattern as Documents/Tables. — Session finding: STALE — FilesView.tsx registered, zero dispatchers; dead code
-- [x] **Cowork Exports view** _(`PARTIAL` → iOS)_ — gizzi-code has an adjacent generic mechanism; iOS has none. — Session finding: STALE — ExportsView.tsx registered, zero dispatchers; dead code on web
-- [x] **Cowork Insights panel** _(`GAP` → iOS, gizzi-code)_ — Absent from both other surfaces, no fundamental blocker to a CLI-side summary. — Session finding: STALE — InsightsView.tsx registered, zero dispatchers; dead code on web too
-- [x] **Cowork Activity panel** _(`GAP` → iOS, gizzi-code)_ — Same as Insights. — Session finding: STALE — ActivityView.tsx registered, zero dispatchers; dead code
-- [x] **Cowork Goals panel** _(`PARTIAL` → iOS)_ — gizzi-code's goal engine is a real, deeper equivalent; iOS has nothing. — Session finding: STALE — GoalsView.tsx dead; real goals UI is a tab inside AutomationTasksView (duplicate of item #7)
-- [x] **Cowork Wiki section viewer** _(`PARTIAL` → iOS)_ — Loose, currently-inactive gizzi-code overlap; no iOS equivalent at all. — Session finding: STALE (recategorize) — WikiSectionViewer.tsx real/live but mounted app-wide via ArtifactSidecar, not Cowork nav
-- [x] **Cowork Audit log viewer** _(`GAP` → iOS, gizzi-code)_ — Neither other surface lets a user review a Cowork action audit trail. — Session finding: STALE — AuditLogViewer.tsx only rendered inside dead TasksView.tsx; transitively unreachable
-- [x] **Intelli-Schedule panel** _(`GAP` → iOS)_ — Missing from iOS only; gizzi-code has the actual named engine likely backing this panel. — Session finding: REAL — phase 1 shipped: Swift `IntelliScheduleEngine`, `IntelliScheduleStore`, `IntelliSchedulePanel`, entry from Cowork-mode chrome (`feat/ios-intelli-schedule`)
-- [x] **Harness Config panel (execution sandbox config)** _(`GAP` → iOS)_ — Missing from iOS; gizzi-code's overlap is adjacent infrastructure, not a direct match. — Session finding: STALE (recategorize) — HarnessConfigPanel.tsx real/live but mounted in OperatorBrowserView/DesignModeView, not Cowork- [ ] **Projects** _(`GAP` → gizzi-code)_ — A CLI user has no way to group sessions into a named project the way web/iOS do; `init` is a one-shot scaffold, not a browser.
+- [ ] **Projects** _(`GAP` → gizzi-code)_ — A CLI user has no way to group sessions into a named project the way web/iOS do; `init` is a one-shot scaffold, not a browser.
 - [ ] **Artifacts Library** _(`PARTIAL` → upgrade)_ — gizzi-code can produce/publish artifacts consumed elsewhere but can't browse its own artifact history.
 - [x] **Automation Tasks (Goals/Routines/Loops/Cron)** _(`GAP` → iOS)_ — Phase 1 cron jobs shipped in PR #9. Routines/Loops/Goals remain as later phases — see `docs/AUTOMATION_TASKS_MAP.md`.
 
@@ -58,91 +35,73 @@ HEAD
 - [ ] **Cowork Audit log viewer** _(`GAP` → iOS, gizzi-code)_ — Neither other surface lets a user review a Cowork action audit trail.
 - [ ] **Intelli-Schedule panel** _(`GAP` → iOS)_ — Missing from iOS only; gizzi-code has the actual named engine likely backing this panel.
 - [ ] **Harness Config panel (execution sandbox config)** _(`GAP` → iOS)_ — Missing from iOS; gizzi-code's overlap is adjacent infrastructure, not a direct match.
->>>>>>> origin/ao/aci-design-triage
 
 ## Code
 
-- [x] **Code workspace (CodeRoot)** _(`PARTIAL` → upgrade)_ — gizzi-code is the originating engine and is full; iOS has a genuine but much thinner mobile version. — Session finding: STALE — fully implemented, live (`CodeRoot.tsx`→`CodeSurfaceRouter.tsx`→`CodeThreadView`/`CodeCanvasView`)
-- [x] **Code Explorer** _(`GAP` → iOS)_ — iOS has a live shell but no way to browse files without typing commands — a real, fixable gap. — Session finding: STALE — `ExplorerView.tsx` (430 lines) live via `CodeModeAgentSession.tsx` explorer tab
-- [x] **Code Git panel** _(`GAP` → iOS)_ — iOS gap is real (raw pty git is not a UI); gizzi-code's terminal-native git access is a defensible reason it skips a GUI panel. — Session finding: STALE — `GitView.tsx` (412 lines) live via `CodeModeAgentSession.tsx` git tab
-- [x] **Code Skills view** _(`GAP` → iOS)_ — Session finding: REAL — web `SkillsView.tsx` now fetches `/api/v1/team-skills`; iOS `CodeSkillsView` + `TeamSkillsClient` + store shipped (`feat/ios-code-skills`)
-- [x] **Code Project view** _(`PARTIAL` → upgrade)_ — Both other surfaces have a thinner, generic version of "per-project workspace" rather than this scoped view. — Session finding: STALE — `CodeProjectView.tsx` (473 lines) live via `code-project` route + `ProjectDetailRouter.tsx`
-- [x] **Code Canvas (live preview split view)** _(`PARTIAL` → iOS)_ — Loose gizzi-code overlap via artifact publish; iOS has nothing. — Session finding: REAL — phase 1 shipped: workspace shell + session tile grid + entry from CodeModeView (`feat/ios-code-canvas`). Full infinite canvas, drag/resize, non-session tiles deferred.
-- [x] **Code Preview Pane** _(`GAP` → iOS, gizzi-code)_ — A mobile live-preview of code output (e.g. a local web app) is plausible and would be genuinely useful; not a hard blocker. — Session finding: STALE (dead code) — `CodePreviewPane.tsx` (208 lines) fully written, zero callers anywhere
-- [x] **Orchestrator Center** _(`PARTIAL` → iOS)_ — Session finding: STALE (dead code) — `OrchestratorCenter.tsx` (70 lines), no callers anywhere
-- [x] **Orchestration View** _(`PARTIAL` → iOS)_ — Likely the same underlying concept as Orchestrator Center, described twice. — Session finding: STALE (dead code) — `OrchestrationView.tsx` (156 lines), uses real `useUnifiedStore`, no callers
-- [x] **Goal Control Center** _(`GAP` → iOS)_ — Missing from iOS only; strong, literal gizzi-code equivalent. — Session finding: STALE (dead code) — `GoalControlCenter.tsx` backed by live `/automation/goals` API, no callers
-- [x] **Kanban(+DAG) Board** _(`GAP` → iOS)_ — Missing from iOS only; direct, strong gizzi-code match. — Session finding: STALE (dead code) — `KanbanBoard.tsx`+`KanbanDAG.tsx` (536+503 lines), no callers
-- [x] **Debug View** _(`PARTIAL` → iOS)_ — Different purpose (tooling the CLI itself vs. debugging an agent's run) but conceptually adjacent. — Session finding: STALE (dead/unreachable route) — `DebugView.tsx` (458 lines) registered as `debug` route, no nav caller
-- [x] **Logs View** _(`PARTIAL` → iOS)_ — Session finding: STALE (dead code) — `LogsView.tsx` (246 lines), not even registered as a route
-- [x] **Run Inspector** _(`PARTIAL` → iOS)_ — Session finding: STALE (dead code) — `RunInspector.tsx` (124 lines), uses real stores, no callers
-- [x] **Run Replay** _(`GAP` → iOS, gizzi-code)_ — Likely the same underlying capability as "Replay Manager" under Terminal/Runtime/Infra, described in two places; genuinely absent from both other surfaces. — Session finding: STALE (dead/unreachable route) — `RunReplayView.tsx` registered as `run-replay` route w/ real backend calls, no nav caller
-- [x] **Tools Registry** _(`PARTIAL` → iOS)_ — Session finding: STALE (dead/unreachable route) — `ToolsView.tsx` registered as `registry` route, backed by live `/tools` API, no nav caller
-- [x] **Skills Registry (SkillsRegistryView, "Memory" nav item)** _(`GAP` → iOS)_ — Missing from iOS only; strong gizzi-code match. — Session finding: DEFER — `SkillsRegistryView.tsx` (293 lines) unreachable route, calls nonexistent `/api/v1/skills/registry`
-- [x] **Promotion Dashboard** _(`GAP` → iOS, gizzi-code)_ — Absent from both other surfaces, no fundamental blocker to a CLI-side status view. — Session finding: DEFER — `PromotionDashboardView.tsx` never routed at all, calls nonexistent `/api/v1/promotion/proposals`
-- [x] **Automation Tasks (Code)** _(`GAP` → iOS)_ — Explicitly "shares component with Cowork's" in the source — same underlying feature as the Core Chat/Home Automation Tasks row, mode-scoped here. — Session finding: STALE — duplicate of #3; `code-automations` route renders the same `AutomationTasksView` already shipped in PR #9
+- [ ] **Code workspace (CodeRoot)** _(`PARTIAL` → upgrade)_ — gizzi-code is the originating engine and is full; iOS has a genuine but much thinner mobile version.
+- [ ] **Code Explorer** _(`GAP` → iOS)_ — iOS has a live shell but no way to browse files without typing commands — a real, fixable gap.
+- [ ] **Code Git panel** _(`GAP` → iOS)_ — iOS gap is real (raw pty git is not a UI); gizzi-code's terminal-native git access is a defensible reason it skips a GUI panel.
+- [ ] **Code Skills view** _(`GAP` → iOS)_
+- [ ] **Code Project view** _(`PARTIAL` → upgrade)_ — Both other surfaces have a thinner, generic version of "per-project workspace" rather than this scoped view.
+- [ ] **Code Canvas (live preview split view)** _(`PARTIAL` → iOS)_ — Loose gizzi-code overlap via artifact publish; iOS has nothing.
+- [ ] **Code Preview Pane** _(`GAP` → iOS, gizzi-code)_ — A mobile live-preview of code output (e.g. a local web app) is plausible and would be genuinely useful; not a hard blocker.
+- [ ] **Orchestrator Center** _(`PARTIAL` → iOS)_
+- [ ] **Orchestration View** _(`PARTIAL` → iOS)_ — Likely the same underlying concept as Orchestrator Center, described twice.
+- [ ] **Goal Control Center** _(`GAP` → iOS)_ — Missing from iOS only; strong, literal gizzi-code equivalent.
+- [ ] **Kanban(+DAG) Board** _(`GAP` → iOS)_ — Missing from iOS only; direct, strong gizzi-code match.
+- [ ] **Debug View** _(`PARTIAL` → iOS)_ — Different purpose (tooling the CLI itself vs. debugging an agent's run) but conceptually adjacent.
+- [ ] **Logs View** _(`PARTIAL` → iOS)_
+- [ ] **Run Inspector** _(`PARTIAL` → iOS)_
+- [ ] **Run Replay** _(`GAP` → iOS, gizzi-code)_ — Likely the same underlying capability as "Replay Manager" under Terminal/Runtime/Infra, described in two places; genuinely absent from both other surfaces.
+- [ ] **Tools Registry** _(`PARTIAL` → iOS)_
+- [ ] **Skills Registry (SkillsRegistryView, "Memory" nav item)** _(`GAP` → iOS)_ — Missing from iOS only; strong gizzi-code match.
+- [ ] **Promotion Dashboard** _(`GAP` → iOS, gizzi-code)_ — Absent from both other surfaces, no fundamental blocker to a CLI-side status view.
+- [ ] **Automation Tasks (Code)** _(`GAP` → iOS)_ — Explicitly "shares component with Cowork's" in the source — same underlying feature as the Core Chat/Home Automation Tasks row, mode-scoped here.
 
 ## ACI/Browser
 
-- [x] **ACI Browser surface (BrowserCapsuleEnhanced)** _(`GAP` → gizzi-code)_ — Web and iOS both have real browser-automation implementations; gizzi-code has no equivalent capability despite being a plausible fit (e.g. via a browser-control MCP tool). — Session finding: DEFER — web+iOS fully implemented (ACITabView/ACIWebBrowserView); gizzi-code is a CLI, no GUI surface to port to
-- [x] **Mini-apps Store** _(`GAP` → iOS)_ — Missing from iOS; gizzi-code's plugin marketplace is an adjacent but not equivalent mechanism. — Session finding: REAL — phase 1 shipped: browse-only store with community catalog + public MCP registry, search, categories, pin/unpin, Safari open (`feat/ios-mini-apps-store`)
-- [x] **Mini-app frame/runtime** _(`GAP` → iOS)_ — iOS has no sandboxed extension-runtime concept at all. — Session finding: REAL — phase 1 shipped: `MiniAppRuntimeView` WKWebView host + capabilities placeholder, wired from store Open button (`feat/ios-mini-app-runtime`)
-- [x] **Office Add-ins — Word** _(`GAP` → iOS, gizzi-code)_ — No fundamental blocker; just not built on either surface. — Session finding: DEFER — one shared web component (AciAddinView.tsx, OfficeHost type) covers all 3 hosts; no iOS/gizzi-code equiv; Add-ins run inside Office hosts
-- [x] **Office Add-ins — Excel** _(`GAP` → iOS, gizzi-code)_ — Same. — Session finding: DEFER — duplicate target of #42 (same AciAddinView.tsx component)
-- [x] **Office Add-ins — PowerPoint** _(`GAP` → iOS, gizzi-code)_ — Same. — Session finding: DEFER — duplicate target of #42 (same AciAddinView.tsx component)
-- [x] **Office & Extensions view** _(`GAP` → iOS, gizzi-code)_ — Combined view over the above; same gap. — Session finding: DEFER — web AppsExtensionsView.tsx (652 lines) hub exists; no iOS/gizzi-code hub; bundles deferred #40-44
-- [x] **Operator Browser** _(`GAP` → gizzi-code)_ — gizzi-code lacks any browser-automation capability; web's Operator Browser and iOS's ACI computer-use mode are plausibly the same underlying feature under two names. — Session finding: DEFER — web OperatorBrowserView.tsx; iOS already has documented parity (BrowserChatView.swift); gizzi-code CLI/GUI mismatch
+- [ ] **ACI Browser surface (BrowserCapsuleEnhanced)** _(`GAP` → gizzi-code)_ — Web and iOS both have real browser-automation implementations; gizzi-code has no equivalent capability despite being a plausible fit (e.g. via a browser-control MCP tool).
+- [ ] **Mini-apps Store** _(`GAP` → iOS)_ — Missing from iOS; gizzi-code's plugin marketplace is an adjacent but not equivalent mechanism.
+- [ ] **Mini-app frame/runtime** _(`GAP` → iOS)_ — iOS has no sandboxed extension-runtime concept at all.
+- [ ] **Office Add-ins — Word** _(`GAP` → iOS, gizzi-code)_ — No fundamental blocker; just not built on either surface.
+- [ ] **Office Add-ins — Excel** _(`GAP` → iOS, gizzi-code)_ — Same.
+- [ ] **Office Add-ins — PowerPoint** _(`GAP` → iOS, gizzi-code)_ — Same.
+- [ ] **Office & Extensions view** _(`GAP` → iOS, gizzi-code)_ — Combined view over the above; same gap.
+- [ ] **Operator Browser** _(`GAP` → gizzi-code)_ — gizzi-code lacks any browser-automation capability; web's Operator Browser and iOS's ACI computer-use mode are plausibly the same underlying feature under two names.
 
 ## Design/Creative
 
-- [x] **Design Mode — Questions tab** _(`GAP` → iOS, gizzi-code)_ — A design-brief Q&A flow isn't inherently visual; could plausibly be a chat-like flow on either surface. — Session finding: DEFER — AppMode.swift:6-8 documents Design mode deliberately skipped on iOS (opens external window on web instead)
-- [x] **Design Mode — Mobile tab (mobile-design preview)** _(`GAP` → iOS, gizzi-code)_ — Previewing mobile-target designs on an actual phone is a plausible, arguably natural fit — not built. — Session finding: DEFER — same documented iOS Design-mode exclusion (AppMode.swift:6-8)
-- [x] **Design Mode — Docs tab** _(`GAP` → iOS, gizzi-code)_ — Documentation generation isn't inherently visual. — Session finding: DEFER — same documented iOS Design-mode exclusion (AppMode.swift:6-8)
-- [x] **Design Mode — Handoff tab (design-to-dev specs)** _(`GAP` → iOS, gizzi-code)_ — Handoff specs are structured text/data, plausibly renderable or exportable on either other surface. — Session finding: DEFER — same documented iOS Design-mode exclusion (AppMode.swift:6-8)
-- [x] **Design Mode — Graph tab (skill graph)** _(`GAP` → iOS, gizzi-code)_ — Node graphs render adequately on mobile too, and gizzi-code could emit a text/tree representation. — Session finding: DEFER — same documented iOS Design-mode exclusion (AppMode.swift:6-8)
-- [x] **Design Mode — Pipeline tab** _(`GAP` → iOS, gizzi-code)_ — A workflow/pipeline view, not canvas-locked. — Session finding: DEFER — same exclusion; component (ContentPipelineView.tsx) also duplicated by row #58
-- [x] **Design Marketplace/Registry** _(`GAP` → iOS)_ — Missing from iOS; gizzi-code's marketplace covers different content, not a real equivalent. — Session finding: DEFER — DesignRegistryView.tsx is also the `market` tab of DesignModeView; covered by iOS Design-mode exclusion
-- [x] **Design Compare** _(`GAP` → iOS, gizzi-code)_ — Side-by-side variant comparison is a common pattern elsewhere and not inherently desktop-only. — Session finding: STALE — ViewRegistry.tsx:387-391 `design-view-compare` route aliases to DesignRegistryView (same as marketplace); no real compare UI exists anywhere
-- [x] **Form Surfaces (schema-driven forms for agent-human comms)** _(`GAP` → iOS, gizzi-code)_ — A structured form-rendering capability for approvals/structured input is absent from both, a real usability gap for e.g. approval flows. — Session finding: REAL — phase 1 shipped: iOS `FormSurfacesView` registry + dynamic renderer for all web field types, entry from `ComposerPlusSheet` (`feat/ios-form-surfaces`)
-- [x] **Canvas Protocol (declarative task-surface catalog)** _(`PARTIAL` → iOS)_ — Session finding: REAL — phase 1 shipped: all 40+ `CanvasViewType`s + `CanvasSpec` model + spec CRUD helpers in `CanvasClient`, specs ride in existing canvas metadata (`feat/ios-canvas-protocol`)
-- [x] **Design Team Workspace** _(`GAP` → iOS, gizzi-code)_ — No collaborative design tool equivalent on either other surface. — Session finding: DEFER — DesignTeamWorkspace.tsx is the `team` tab of DesignModeView; covered by iOS Design-mode exclusion
-- [x] **Content Pipeline** _(`GAP` → iOS, gizzi-code)_ — Session finding: STALE — duplicate of #52; both point at the same ContentPipelineView.tsx / `pipeline` tab
-- [x] **Live Artifact Editor** _(`PARTIAL` → upgrade)_ — Session finding: DEFER — LiveArtifactEditor.tsx exists; gap is localStorage-only persistence on web (an upgrade item, not a platform-port gap)
+- [ ] **Design Mode — Questions tab** _(`GAP` → iOS, gizzi-code)_ — A design-brief Q&A flow isn't inherently visual; could plausibly be a chat-like flow on either surface.
+- [ ] **Design Mode — Mobile tab (mobile-design preview)** _(`GAP` → iOS, gizzi-code)_ — Previewing mobile-target designs on an actual phone is a plausible, arguably natural fit — not built.
+- [ ] **Design Mode — Docs tab** _(`GAP` → iOS, gizzi-code)_ — Documentation generation isn't inherently visual.
+- [ ] **Design Mode — Handoff tab (design-to-dev specs)** _(`GAP` → iOS, gizzi-code)_ — Handoff specs are structured text/data, plausibly renderable or exportable on either other surface.
+- [ ] **Design Mode — Graph tab (skill graph)** _(`GAP` → iOS, gizzi-code)_ — Node graphs render adequately on mobile too, and gizzi-code could emit a text/tree representation.
+- [ ] **Design Mode — Pipeline tab** _(`GAP` → iOS, gizzi-code)_ — A workflow/pipeline view, not canvas-locked.
+- [ ] **Design Marketplace/Registry** _(`GAP` → iOS)_ — Missing from iOS; gizzi-code's marketplace covers different content, not a real equivalent.
+- [ ] **Design Compare** _(`GAP` → iOS, gizzi-code)_ — Side-by-side variant comparison is a common pattern elsewhere and not inherently desktop-only.
+- [ ] **Form Surfaces (schema-driven forms for agent-human comms)** _(`GAP` → iOS, gizzi-code)_ — A structured form-rendering capability for approvals/structured input is absent from both, a real usability gap for e.g. approval flows.
+- [ ] **Canvas Protocol (declarative task-surface catalog)** _(`PARTIAL` → iOS)_
+- [ ] **Design Team Workspace** _(`GAP` → iOS, gizzi-code)_ — No collaborative design tool equivalent on either other surface.
+- [ ] **Content Pipeline** _(`GAP` → iOS, gizzi-code)_
+- [ ] **Live Artifact Editor** _(`PARTIAL` → upgrade)_
 
 ## Terminal/Infra
 
-- [x] **Monitor (live agent dashboard, pause/resume/restart)** _(`GAP` → iOS)_ — No live agent-control dashboard on either other surface, though gizzi-code has partial underlying data. — Session finding: REAL — phase 1 shipped: iOS `MonitorView` + `MonitorClient` + `MonitorStore` wired to `/api/v1/monitor/*`, entry from Settings Infrastructure (`feat/ios-monitor`)
-- [x] **Runtime Operations** _(`GAP` → iOS, gizzi-code)_ — Session finding: REAL — phase 1 shipped: iOS `RuntimeOperationsView` hub aggregating budget/replay/prewarm/execution-mode cards + `RuntimeOperationsClient` (`feat/ios-runtime-operations`)
-- [x] **Budget Dashboard** _(`PARTIAL` → iOS)_ — Some form exists everywhere; web's dedicated dashboard is richest, iOS's is thinnest. — Session finding: REAL — phase 1 shipped: iOS `BudgetDashboardView` with stat cards, quota editor (text + quick presets), pressure bars, alerts; reachable from Runtime Operations hub (`feat/ios-budget-dashboard`)
-- [x] **Replay Manager** _(`GAP` → iOS, gizzi-code)_ — Same underlying gap as Code's "Run Replay," described in two sections. — Session finding: REAL — phase 1 shipped: iOS `ReplayManagerView` with search, capture-level filter, stat cards, and per-row replay; `RuntimeOperationsStore.executeReplay` wired to `POST /runtime/replay/sessions/:run_id/execute` (`feat/ios-replay-manager`)
-- [x] **Prewarm Manager (pre-warmed environment pool)** _(`GAP` → iOS, gizzi-code)_ — Leans internal-ops, but per the audit's own instruction this should still be checked honestly rather than waved through — genuinely absent elsewhere. — Session finding: REAL — phase 1 shipped: iOS `PrewarmManagerView` with pool-size slider, Apply/Warmup actions, health chips, pool topology, and recent activity; `RuntimeOperationsStore` wired to `POST /runtime/prewarm/pool` and `/runtime/prewarm/warmup` (`feat/ios-prewarm-manager`)
-- [x] **Nodes (node/cluster management)** _(`GAP` → iOS, gizzi-code)_ — Session finding: REAL — phase 1 shipped: iOS `NodesManagerView` + `NodesStore` + `NodesClient` listing compute nodes, online/offline stats, delete, and join-token generation via `/api/v1/nodes/*` (`feat/ios-nodes-manager`)
-- [x] **Cloud Deploy (deployment wizard)** _(`GAP` → iOS, gizzi-code)_ — Session finding: REAL — phase 1 shipped: iOS `CloudDeployManagerView` + `CloudDeployStore` + `CloudDeployClient` listing deployments, manual/automated creation form, cancel, and status polling via `/api/v1/deployments*` (`feat/ios-cloud-deploy`)
-- [x] **Capsule Manager (MCP Interactive Capsules)** _(`GAP` → iOS)_ — Missing from iOS only; gizzi-code's `mcp` command is the probable underlying capability. — Session finding: STALE — web `views/CapsuleManagerView.tsx` is an explicit stub (`stub-capsule-001`, "replace when @allternit/shell-ui available"), no real feature to port
-- [x] **VPS & Servers panel** _(`GAP` → iOS, gizzi-code)_ — Session finding: REAL — phase 1 shipped: iOS `VPSServersManagerView` + `SSHConnectionsStore` + `SSHConnectionsClient` for listing, testing, creating, connecting, disconnecting, and deleting SSH connections via `/api/v1/ssh-connections*` (`feat/ios-vps-servers`)
-- [x] **Cloud Instances panel** _(`GAP` → iOS, gizzi-code)_ — Session finding: REAL — phase 1 shipped: iOS `CloudInstancesManagerView` + `CloudInstancesStore` + `CloudInstancesClient` for the BYO-VPS wizard on the cloud API (`/api/v1/cloud/wizard/deployments*`): list sessions, manual SSH start, advance, bootstrap, cancel, delete (`feat/ios-cloud-instances`)
-- [x] **Enterprise BYOC panel** _(`GAP` → iOS, gizzi-code)_ — Same item recurs under Onboarding & Account below (it's a Settings sub-section too). — Session finding: DUPLICATE of row 70 — same `EnterpriseBYOCPanelView` shipped in `feat/ios-enterprise-byoc`; no additional work
+- [ ] **Monitor (live agent dashboard, pause/resume/restart)** _(`GAP` → iOS)_ — No live agent-control dashboard on either other surface, though gizzi-code has partial underlying data.
+- [ ] **Runtime Operations** _(`GAP` → iOS, gizzi-code)_
+- [ ] **Budget Dashboard** _(`PARTIAL` → iOS)_ — Some form exists everywhere; web's dedicated dashboard is richest, iOS's is thinnest.
+- [ ] **Replay Manager** _(`GAP` → iOS, gizzi-code)_ — Same underlying gap as Code's "Run Replay," described in two sections.
+- [ ] **Prewarm Manager (pre-warmed environment pool)** _(`GAP` → iOS, gizzi-code)_ — Leans internal-ops, but per the audit's own instruction this should still be checked honestly rather than waved through — genuinely absent elsewhere.
+- [ ] **Nodes (node/cluster management)** _(`GAP` → iOS, gizzi-code)_
+- [ ] **Cloud Deploy (deployment wizard)** _(`GAP` → iOS, gizzi-code)_
+- [ ] **Capsule Manager (MCP Interactive Capsules)** _(`GAP` → iOS)_ — Missing from iOS only; gizzi-code's `mcp` command is the probable underlying capability.
+- [ ] **VPS & Servers panel** _(`GAP` → iOS, gizzi-code)_
+- [ ] **Cloud Instances panel** _(`GAP` → iOS, gizzi-code)_
+- [ ] **Enterprise BYOC panel** _(`GAP` → iOS, gizzi-code)_ — Same item recurs under Onboarding & Account below (it's a Settings sub-section too).
 
 ## DAG suite
 
-HEAD
-- [x] **DAG Integration Page (umbrella)** _(`PARTIAL` → upgrade)_ — Session finding: REAL — rebuilt `views/DagIntegrationPage.tsx` as a full DAG-suite index with navigation tiles for Orchestration, Knowledge, Security, Browser/Execution, and Observability views (`feat/web-dag-integration-page`)
-- [x] **Ontology Viewer** _(`GAP` → gizzi-code)_ — A real finding: no CLI-side way to browse the system's ontology despite this being a natural introspection fit for a technical tool. — Session finding: REAL — gizzi-code `/ontology` command shipped: Ink TUI that fetches DAG plans, WIHs, context packs, and receipts from `/api/rails/*` and displays summary + recent DAGs + WIHs (`feat/gizzi-dag-ontology`)
-- [x] **Directive Compiler** _(`GAP` → gizzi-code)_ — Real gap: no CLI equivalent for compiling high-level directives into executable plans. — Session finding: REAL — gizzi-code `/directive` command shipped: compiles natural-language directives into DAG plans via `POST /api/rails/plan` and renders the resulting plan as Markdown (`feat/gizzi-directive-compiler`)
-- [x] **GC Agents (garbage-collection/lifecycle)** _(`GAP` → gizzi-code)_ — Session finding: REAL — gizzi-code `/gc` command shipped: status, `archive <wih-id>`, `verify`, and `rebuild` subcommands backed by `/api/rails/wihs`, `/vault/*`, `/gate/verify`, and `/index/rebuild` (`feat/gizzi-gc-agents`)
-- [x] **Receipts Viewer (cryptographic/audit receipts)** _(`GAP` → gizzi-code)_ — Real gap worth flagging: an audit-receipts capability exists only in the web debug UI with nothing generating or viewing receipts CLI-side. — Session finding: REAL — gizzi-code `/receipts` command shipped: query receipts with `--dag/--node/--wih/--kind/--limit` filters and `show <id>` detail via `/api/rails/receipts*` (`feat/gizzi-receipts-viewer`)
-- [x] **Security Dashboard** _(`GAP` → gizzi-code)_ — Distinct concepts: a skill for the agent to use vs. a dashboard about the CLI's own security posture. — Session finding: REAL — gizzi-code `/security` command shipped: overview, events with filters, compliance, assessment, and ack/resolve actions via `/api/v1/security/*` (`feat/gizzi-security-dashboard`)
-- [x] **Purpose Binding (governance: bind actions to declared purpose)** _(`GAP` → gizzi-code)_ — Session finding: REAL — gizzi-code `/purpose` command shipped: list purposes, bindings, violations, bind/unbind agents via `/api/v1/purposes/*` (`feat/gizzi-purpose-binding`)
-- [x] **Observability Dashboard** _(`PARTIAL` → upgrade)_ — Session finding: REAL — added `ObservabilityCharts.tsx` with Recharts area (ledger event volume) and stacked-bar (receipts by kind) time-series panels, integrated into `ObservabilityDashboardSurface` (`feat/web-observability-charts`)
-- [x] **Multimodal Input (testing UI)** _(`GAP` → gizzi-code)_ — gizzi-code lacks even a dev-facing multimodal test tool. — Session finding: REAL — gizzi-code `/multimodal` command shipped: Ink TUI that connects to `/api/v1/multimodal/ws/multimodal` and reports connection status, message count, and last frame size (camera/audio capture is not applicable in a terminal) (`feat/gizzi-multimodal-input`)
-- [x] **Evolution Layer (memory/skill/workflow self-improvement)** _(`GAP` → gizzi-code)_ — Real gap: gizzi-code lacks this despite self-improvement being a very CLI-agent-native concept. — Session finding: DEFER — web `views/EvolutionLayerView.tsx` (58 lines) is purely static mock, zero backend calls; nothing real to port yet
-- [x] **Context Control Plane (git-based context controller)** _(`GAP` → gizzi-code)_ — Session finding: DEFER — web `views/ContextControlPlaneView.tsx` (361 lines) is hardcoded mock arrays, zero API calls; nothing real to port yet
-- [x] **Swarm ADE (multi-agent swarm dashboard)** _(`PARTIAL` → iOS)_ — Real gizzi-code capability, likely thinner than web's 34-file dashboard; missing from iOS entirely. — Session finding: REAL — iOS Swarm ADE shipped: new Swarm sidebar tab, `SwarmAgent` models, `SwarmClient` mapping agent-sessions to swarm agents, `SwarmStore`, and `SwarmADEView` with Grid / Console / Detail modes (`feat/ios-swarm-ade`)
-- [x] **H5I panel — Audit** _(`GAP` → gizzi-code)_ — Session finding: REAL — gizzi-code `/h5i audit` command shipped: calls `/api/h5i/status`, `/api/h5i/init`, `/api/h5i/vibe`; reports AI footprint, riskiest files, leaked tokens, prompt injection hits, AI-written directories, and raw output (`feat/gizzi-h5i-audit`)
-- [x] **H5I panel — Commit** _(`PARTIAL` → upgrade)_ — Session finding: REAL — upgraded `H5iCommitPanel.tsx`: added Files to include picker, auto-load diff preview from `/api/v1/git/diff`, per-file diff display, and pass selected files to `commitWithH5i` (`feat/web-h5i-commit-upgrade`)
-- [x] **H5I panel — Context** _(`GAP` → gizzi-code)_ — Session finding: REAL — gizzi-code `/h5i context` shipped: show trace via `/api/h5i/context/trace`, start via `/api/h5i/context/start`, finish via `/api/h5i/context/finish`; extends the same `/h5i` command as audit (`feat/gizzi-h5i-context`)
-- [x] **H5I panel — Diff** _(`PARTIAL` → upgrade)_ — Session finding: REAL — upgraded `H5iDiffPanel.tsx`: renamed header to 'h5i Diff', added Reasoning Traces / File Diff tabs, file-diff mode calls `/api/v1/git/diff` with optional path and renders per-file diffs (`feat/web-h5i-diff-upgrade`)
-- [x] **Changeset Review (diff cards, approve/reject)** _(`GAP` → iOS)_ — Shipped in PR #4. Backend needed no changes — gizzi-code's `/v1/permission` queue already existed. — Session finding: PR #4 merged to main- [ ] **DAG Integration Page (umbrella)** _(`PARTIAL` → upgrade)_
+- [ ] **DAG Integration Page (umbrella)** _(`PARTIAL` → upgrade)_
 - [ ] **Ontology Viewer** _(`GAP` → gizzi-code)_ — A real finding: no CLI-side way to browse the system's ontology despite this being a natural introspection fit for a technical tool.
 - [ ] **Directive Compiler** _(`GAP` → gizzi-code)_ — Real gap: no CLI equivalent for compiling high-level directives into executable plans.
 - [ ] **GC Agents (garbage-collection/lifecycle)** _(`GAP` → gizzi-code)_
@@ -159,43 +118,31 @@ HEAD
 - [ ] **H5I panel — Context** _(`GAP` → gizzi-code)_
 - [ ] **H5I panel — Diff** _(`PARTIAL` → upgrade)_
 - [x] **Changeset Review (diff cards, approve/reject)** _(`GAP` → iOS)_ — Shipped in PR #4. Backend needed no changes — gizzi-code's `/v1/permission` queue already existed.
->>>>>>> origin/ao/aci-design-triage
 
 ## Marketplace/Plugins
 
-- [x] **Marketplace (top-level)** _(`PARTIAL` → iOS)_ — Session finding: DEFER — re-verified against live code: `views/marketplace/main/useMarketplaceManager.ts` is hardcoded mock `INITIAL_ITEMS` with no backend; nothing real to port yet
-- [x] **Plugin Registry / Plugin Marketplace (480-file built-in catalog)** _(`PARTIAL` → iOS)_ — Session finding: REAL — iOS Plugin Marketplace shipped: new Plugins sidebar tab, `MarketplacePlugin` model with bundled catalog, `PluginStore` for enabled-state persistence, and `PluginMarketplaceView` with category filters/search/enable toggle (`feat/ios-plugin-marketplace`)
-- [x] **Team Skills panel (org-level shared skills)** _(`GAP` → iOS)_ — Session finding: REAL — iOS Team Skills shipped: new sidebar tab, `WorkspaceClient`/`WorkspaceStore`, `TeamSkill` model, `TeamSkillsClient`/`TeamSkillsStore`, and `TeamSkillsView` wired to `/api/v1/team-skills`
-- [x] **MiroFish simulation engine** _(`GAP` → iOS, gizzi-code)_ — A genuinely distinct product feature with no equivalent elsewhere; no fundamental blocker to at least a text-based CLI version. — Session finding: DEFER — web fully built `lib/mirofish/*`, real gap on iOS/gizzi-code but large scope
+- [ ] **Marketplace (top-level)** _(`PARTIAL` → iOS)_
+- [ ] **Plugin Registry / Plugin Marketplace (480-file built-in catalog)** _(`PARTIAL` → iOS)_
+- [ ] **Team Skills panel (org-level shared skills)** _(`GAP` → iOS)_
+- [ ] **MiroFish simulation engine** _(`GAP` → iOS, gizzi-code)_ — A genuinely distinct product feature with no equivalent elsewhere; no fundamental blocker to at least a text-based CLI version.
 
 ## Products/Discovery
 
-- [x] **Products Discovery** _(`GAP` → iOS, gizzi-code)_ — Session finding: REAL — iOS Products tab + gizzi-code `products` command shipped; bundled catalog mirrors web's ProductsDiscoveryView
-- [x] **A://Labs (experimental features)** _(`GAP` → iOS, gizzi-code)_ — Session finding: REAL — iOS A://Labs tab shipped: `ALABSCourse`/`ALABSLesson` models, `LabsClient`/`LabsStore`, `LabsView` with Discovery/Tracks/Classroom tabs; gizzi-code `labs` command lists courses/lessons
-- [x] **Udemy Catalog** _(`GAP` → iOS, gizzi-code)_ — Lower-priority third-party integration, but still a real, uncontested gap per the rubric. — Session finding: REAL — backend `udemy_routes.rs` proxy shipped, iOS Udemy Catalog tab with categories/search/curate, and gizzi-code `udemy` command
-- [x] **Discovery Feed** _(`GAP` → iOS, gizzi-code)_ — Session finding: STALE — not standalone; nested sub-tab inside `LabsView.tsx`, not its own route
-- [x] **Research tab/panel** _(`PARTIAL` → iOS)_ — Session finding: REAL — iOS Research tab shipped: `ResearchNotebook`/`ResearchSource`/`ResearchChatMessage` models, `ResearchClient`/`ResearchStore`, `ResearchView` with notebook list/sources/chat, wired into `ModeBarItem.research`
+- [ ] **Products Discovery** _(`GAP` → iOS, gizzi-code)_
+- [ ] **A://Labs (experimental features)** _(`GAP` → iOS, gizzi-code)_
+- [ ] **Udemy Catalog** _(`GAP` → iOS, gizzi-code)_ — Lower-priority third-party integration, but still a real, uncontested gap per the rubric.
+- [ ] **Discovery Feed** _(`GAP` → iOS, gizzi-code)_
+- [ ] **Research tab/panel** _(`PARTIAL` → iOS)_
 
 ## Mail/Knowledge
 
-- [x] **Mail Monitor** _(`GAP` → iOS)_ — Missing from iOS; gizzi-code's overlap exists only as an unwired/inactive feature. — Session finding: STALE — `views/mail-monitor/` only holds shared helpers now; the panel was rebuilt as Agent Activity (`views/agent-activity/*`) and shipped on iOS in PR #18
-- [x] **Documents (office-file I/O)** _(`GAP` → iOS)_ — Real gap on iOS (can't open/edit an Office doc on mobile); gizzi-code's absence is defensible since it's file-native. — Session finding: REAL — iOS Documents tab shipped: import via document picker, list, QuickLook preview, rename/share/delete; editing (docx/xlsx/pptx mutation) deferred to a later phase
-- [x] **Knowledge (stub — not implemented on web itself)** _(`PARTIAL` → iOS)_ — Notable inversion: web's own "Knowledge" directory is an unimplemented stub, so gizzi-code is arguably ahead here, not behind. — Session finding: DEFER — no `knowledge/` dir; closest analog `views/MemoryKernelView.tsx`, needs product scoping
+- [ ] **Mail Monitor** _(`GAP` → iOS)_ — Missing from iOS; gizzi-code's overlap exists only as an unwired/inactive feature.
+- [ ] **Documents (office-file I/O)** _(`GAP` → iOS)_ — Real gap on iOS (can't open/edit an Office doc on mobile); gizzi-code's absence is defensible since it's file-native.
+- [ ] **Knowledge (stub — not implemented on web itself)** _(`PARTIAL` → iOS)_ — Notable inversion: web's own "Knowledge" directory is an unimplemented stub, so gizzi-code is arguably ahead here, not behind.
 
 ## Onboarding/Account
 
-HEAD
-- [x] **Settings (umbrella/shell)** _(`PARTIAL` → upgrade)_ — Session finding: STALE — `views/settings/SettingsView.tsx` (1510 lines) is mature, fully wired
-- [x] **Settings > Account (Sign-in, Org & Access, Usage, Plans & Compute, Billing, Privacy)** _(`PARTIAL` → gizzi-code)_ — Sign-in/Account/Usage are solid parity; Org Access and Billing specifically are absent from both other surfaces. — Session finding: DEFER — pieces exist both sides, but no true settings sync; needs an ADR
-- [x] **Settings > Platform (General, Appearance, Models, API Keys, Shortcuts, Permissions, Dispatch, Devices, Cloud Instances, Diagnostics)** _(`PARTIAL` → iOS)_ — gizzi-code covers most of this category piecemeal via separate commands; iOS covers comparatively little of it explicitly. — Session finding: REAL — iOS Settings > Platform shipped: `PlatformSettingsView` with General, Appearance, Models, API Keys, Shortcuts, Permissions, Dispatch, Devices, Cloud Instances, and Diagnostics sections
-- [x] **Settings > Products (Gizziio Code settings, Cowork settings, Extensions)** _(`GAP` → iOS)_ — Missing from iOS; gizzi-code's absence for its own self-referential settings is defensible, but iOS's absence isn't. — Session finding: REAL — iOS Settings > Products shipped: `ProductsSettingsView` with Gizziio Code toggles, Cowork dispatch/open workspace, and Extensions toggles
-- [x] **Settings > Infrastructure (Infrastructure, VPS & Servers, Enterprise BYOC, Environment, Security, Agents)** _(`GAP` → iOS, gizzi-code)_ — Real finding: infra management is thin-to-absent on both other surfaces, even though gizzi-code as "the brain" is a plausible place for CLI-driven infra config. — Session finding: REAL (iOS) — iOS Settings > Infrastructure shipped: `InfrastructureSettingsView` with environment selector, mesh controls, cloud instances, BYOC/VPS/Security placeholders, and agent hub link
-- [x] **Settings > Customize (Skills, Response Style, Connectors, Allternit Plugins)** _(`PARTIAL` → upgrade)_ — Response Style is a confirmed direct FULL PARITY sub-item across all three (flagged explicitly in the source map as a good parity check); Skills customization specifically is missing on iOS. — Session finding: STALE — Skills/Response-style/Connectors/Plugins panels all implemented and wired
-- [x] **Device Pairing panel** _(`GAP` → iOS)_ — **Audit finding was stale**: iOS already had a complete, wired-in approve/lookup/list flow (`RuntimeDevicesClient`/`RuntimePairingView`) mirroring web's panel almost line-for-line. The real gap was narrower — no Deny action. Shipped in PR #5. — Session finding: PR #5 merged to main
-- [x] **Organization Access panel** _(`GAP` → iOS, gizzi-code)_ — Arguably reasonable that an agent CLI doesn't manage org membership (identity/admin plane, not agent capability), but nothing structurally prevents it — not built, not clearly out of scope. — Session finding: REAL — iOS `OrganizationAccessView` shipped (profile + personal-org creation) and gizzi-code `org` command shipped (`show` + `create`)
-- [x] **Compute Billing panel** _(`GAP` → iOS)_ — Session finding: REAL — iOS `ComputeBillingView` shipped: plan badge, weekly usage meter, credits, and upgrade/buy-credits actions
-- [x] **Enterprise BYOC panel** _(`GAP` → iOS, gizzi-code)_ — Same item as the Terminal/Infra section's BYOC row — it's both a Settings sub-section and a standalone panel in the source inventory. — Session finding: DUPLICATE of row 70 — same `EnterpriseBYOCPanelView` shipped in `feat/ios-enterprise-byoc`; no additional work
-- [x] **Model Management view** _(`PARTIAL` → upgrade)_ — gizzi-code match is clear and strong; iOS is genuinely unclear from the inventory description alone. — Session finding: REAL — iOS `ModelManagementView` shipped: default model picker + provider/engine list with auth/ready status via `/api/v1/providers*`, `/api/v1/provider/ollama/status`- [ ] **Settings (umbrella/shell)** _(`PARTIAL` → upgrade)_
+- [ ] **Settings (umbrella/shell)** _(`PARTIAL` → upgrade)_
 - [ ] **Settings > Account (Sign-in, Org & Access, Usage, Plans & Compute, Billing, Privacy)** _(`PARTIAL` → gizzi-code)_ — Sign-in/Account/Usage are solid parity; Org Access and Billing specifically are absent from both other surfaces.
 - [ ] **Settings > Platform (General, Appearance, Models, API Keys, Shortcuts, Permissions, Dispatch, Devices, Cloud Instances, Diagnostics)** _(`PARTIAL` → iOS)_ — gizzi-code covers most of this category piecemeal via separate commands; iOS covers comparatively little of it explicitly.
 - [ ] **Settings > Products (Gizziio Code settings, Cowork settings, Extensions)** _(`GAP` → iOS)_ — Missing from iOS; gizzi-code's absence for its own self-referential settings is defensible, but iOS's absence isn't.
@@ -206,29 +153,28 @@ HEAD
 - [ ] **Compute Billing panel** _(`GAP` → iOS)_
 - [ ] **Enterprise BYOC panel** _(`GAP` → iOS, gizzi-code)_ — Same item as the Terminal/Infra section's BYOC row — it's both a Settings sub-section and a standalone panel in the source inventory.
 - [ ] **Model Management view** _(`PARTIAL` → upgrade)_ — gizzi-code match is clear and strong; iOS is genuinely unclear from the inventory description alone.
->>>>>>> origin/ao/aci-design-triage
 
 ## AllternitOS
 
-- [x] **AllternitOS (kernel/windowing/installable "programs")** _(`GAP` → gizzi-code)_ — iOS's absence is structurally defensible; gizzi-code's absence is the more actionable finding since several of AllternitOS's "programs" are conceptually close to things gizzi-code's skill bundles already do piecemeal, just not as an installable-program model. — Session finding: REAL — gizzi-code `programs` command shipped: lists built-in command programs + installed agents, shows info, and provides a `run` shim mapping AllternitOS installable programs to CLI agents/skills
+- [ ] **AllternitOS (kernel/windowing/installable "programs")** _(`GAP` → gizzi-code)_ — iOS's absence is structurally defensible; gizzi-code's absence is the more actionable finding since several of AllternitOS's "programs" are conceptually close to things gizzi-code's skill bundles already do piecemeal, just not as an installable-program model.
 
 ## Playground/QA
 
-- [x] **Playground (model-parameter workbench)** _(`PARTIAL` → iOS)_ — Session finding: DEFER — web has full playground, zero matches iOS, but gizzi-code interactive session is a de facto substitute
+- [ ] **Playground (model-parameter workbench)** _(`PARTIAL` → iOS)_
 
 ## Empty stubs
 
-- [x] **`views/gizzi`, `components/mesh`, `lib/mesh-network` (empty stub dirs)** _(`PARTIAL` → upgrade)_ — Notable inversion of the usual pattern: web/desktop's own "mesh" directory is an empty, unimplemented stub while iOS has a real, functioning Mesh networking feature — iOS is ahead here, not behind. — Session finding: STALE (mischaracterized) — paths don't exist; git shows ~4,750 lines deleted 2026-07-02 (commit 1a1d9900a), not an empty stub
+- [ ] **`views/gizzi`, `components/mesh`, `lib/mesh-network` (empty stub dirs)** _(`PARTIAL` → upgrade)_ — Notable inversion of the usual pattern: web/desktop's own "mesh" directory is an empty, unimplemented stub while iOS has a real, functioning Mesh networking feature — iOS is ahead here, not behind.
 
 ## Desktop-only
 
-- [x] **Local runtime discovery (`agent-workspace/discovery.ts`, `runtime-client.ts`)** _(`PARTIAL` → upgrade)_ — The one item in this list with a real, named gizzi-code equivalent — flagged explicitly by the phase task as worth checking before assuming no overlap, and it does overlap. — Session finding: STALE — gizzi-code already has `cli/commands/runtime.ts` equivalent; consolidation opportunity, not a new build
-- [x] **Local Python execution (`PythonExecutionService.ts`)** _(`PARTIAL` → upgrade)_ — gizzi-code's general coding-agent tool access is a real, arguably better equivalent mechanism; iOS is properly excluded by sandboxing. — Session finding: STALE — gizzi-code's general tool execution already covers Python; no dedicated desktop file needed
+- [ ] **Local runtime discovery (`agent-workspace/discovery.ts`, `runtime-client.ts`)** _(`PARTIAL` → upgrade)_ — The one item in this list with a real, named gizzi-code equivalent — flagged explicitly by the phase task as worth checking before assuming no overlap, and it does overlap.
+- [ ] **Local Python execution (`PythonExecutionService.ts`)** _(`PARTIAL` → upgrade)_ — gizzi-code's general coding-agent tool access is a real, arguably better equivalent mechanism; iOS is properly excluded by sandboxing.
 
 ## gizzi-code-only
 
-- [x] **`github ...` (install/run a GitHub Actions agent bot for issue/PR mentions)** _(`GAP` → iOS, gizzi-code)_ — A real, sizable capability (1600+ lines) with no platform-UI equivalent on either other surface, despite being explicitly tagged by the source inventory as "settings-shaped" (comparable to how Connector Settings or MCP management got a GUI). — Session finding: STALE (gizzi-code) — fully implemented `cli/commands/github.ts` (~1630 lines), registered in `cli/main.ts`
-- [x] **Local VM management (`vm.ts`, "manage local VMs via vfkit")** _(`GAP` → gizzi-code)_ — iOS's absence is structural (sandboxing), but Desktop's absence is the real finding: Desktop already exposes other local-execution-adjacent panels (Terminal, Cloud Deploy) and would be a plausible home for local sandboxed-VM management, yet has none. — Session finding: STALE — `runtime/vm/` (vfkit-based) + `cli/commands/vm.ts` fully built, used in production
-- [x] **Teleport / remote dev environments (run or resume a session inside a remote/cloud dev environment or VM, with stash/resume)** _(`GAP` → gizzi-code)_ — Distinct from the already-covered "Checkpointing" row (Part 1A), which only captures teleport's stash/resume sub-mechanism — the core "run my session remotely" capability itself has no web/iOS equivalent. — Session finding: STALE (gizzi-code) — extensive `remote/RemoteSessionManager.ts` + Teleport UI/hooks already exist
-- [x] **Slack app install (`/install-slack-app`)** _(`GAP` → gizzi-code)_ — Installs the Gizzi/Claude Slack app into a workspace; no platform-UI equivalent, despite being a similarly "settings-shaped" integration to the GitHub bot and MCP connector management that *do* have GUIs elsewhere. — Session finding: STALE — working `install-slack-app` command registered in two command tables
-- [x] **Theme switching (`/theme`)** _(`PARTIAL` → upgrade)_ — Web and gizzi-code both have a real, if differently-shaped, theme-switching capability; iOS doesn't clearly have one from its own inventory. — Session finding: REAL — custom theme/palette upgrade shipped: arbitrary named themes in `~/.config/gizzi/themes.json`, `theme custom`, `theme palette`, `theme delete`; built-ins remain immutable
+- [ ] **`github ...` (install/run a GitHub Actions agent bot for issue/PR mentions)** _(`GAP` → iOS, gizzi-code)_ — A real, sizable capability (1600+ lines) with no platform-UI equivalent on either other surface, despite being explicitly tagged by the source inventory as "settings-shaped" (comparable to how Connector Settings or MCP management got a GUI).
+- [ ] **Local VM management (`vm.ts`, "manage local VMs via vfkit")** _(`GAP` → gizzi-code)_ — iOS's absence is structural (sandboxing), but Desktop's absence is the real finding: Desktop already exposes other local-execution-adjacent panels (Terminal, Cloud Deploy) and would be a plausible home for local sandboxed-VM management, yet has none.
+- [ ] **Teleport / remote dev environments (run or resume a session inside a remote/cloud dev environment or VM, with stash/resume)** _(`GAP` → gizzi-code)_ — Distinct from the already-covered "Checkpointing" row (Part 1A), which only captures teleport's stash/resume sub-mechanism — the core "run my session remotely" capability itself has no web/iOS equivalent.
+- [ ] **Slack app install (`/install-slack-app`)** _(`GAP` → gizzi-code)_ — Installs the Gizzi/Claude Slack app into a workspace; no platform-UI equivalent, despite being a similarly "settings-shaped" integration to the GitHub bot and MCP connector management that *do* have GUIs elsewhere.
+- [ ] **Theme switching (`/theme`)** _(`PARTIAL` → upgrade)_ — Web and gizzi-code both have a real, if differently-shaped, theme-switching capability; iOS doesn't clearly have one from its own inventory.

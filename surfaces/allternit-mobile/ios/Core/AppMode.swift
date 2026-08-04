@@ -5,64 +5,13 @@ import SwiftUI
 ///
 /// `design` is skipped on iOS — on the web it opens an external window.
 /// Cowork is NOT a switcher destination: the platform's primary surface
-HEAD
-HEAD
-HEAD
-HEAD
-HEAD
-/// control is the 9-row [Chats | Projects | Artifacts Library | Agents |
-HEAD
-/// Automation Tasks | Code | ACI | Research | Documents] tab list in the
-/// sidebar header (HistorySidebarView — no persistent bottom bar, matching
-/// ChatGPT/Claude's iOS apps), and cowork is a composer-level toggle inside
-/// Chats (BottomDock.tsx ChatCoworkToggle). Projects, the artifacts library,
-/// the Agent Hub, Automation Tasks, Research, and Documents are iOS-only tab
-/// surfaces layered over the same modes (they don't stamp an `origin_surface`
-/// of their own)./// Automation Tasks | Plugins | Code | ACI | Research] tab list in the sidebar header
-/// (HistorySidebarView — no persistent bottom bar, matching ChatGPT/Claude's
-/// iOS apps), and cowork is a composer-level toggle inside Chats
-/// (BottomDock.tsx ChatCoworkToggle). Projects, the artifacts library, the
-/// Agent Hub, Automation Tasks, Plugins, and Research are iOS-only tab surfaces layered/// control is the 10-row [Chats | Projects | Artifacts Library | Agents |
-/// Automation Tasks | Swarm | Code | ACI | Research] tab list in the sidebar header
-/// (HistorySidebarView — no persistent bottom bar, matching ChatGPT/Claude's
-/// iOS apps), and cowork is a composer-level toggle inside Chats
-/// (BottomDock.tsx ChatCoworkToggle). Projects, the artifacts library, the
-/// Agent Hub, Automation Tasks, Swarm, and Research are iOS-only tab surfaces layered
->>>>>>> origin/feat/ios-swarm-ade
-/// over the same modes (they don't stamp an `origin_surface` of their own).
->>>>>>> origin/feat/ios-plugin-marketplace/// control is the 8-row [Chats | Projects | Artifacts Library | Agents |
-/// Automation Tasks | Team Skills | Code | ACI] tab list in the sidebar header
-/// (HistorySidebarView — no persistent bottom bar, matching ChatGPT/Claude's
-/// iOS apps), and cowork is a composer-level toggle inside Chats
-/// (BottomDock.tsx ChatCoworkToggle). Projects, the artifacts library, the
-/// Agent Hub, Automation Tasks, Team Skills, and Research are iOS-only tab
-/// surfaces layered over the same modes (they don't stamp an `origin_surface`
-/// of their own).
->>>>>>> origin/feat/ios-team-skills/// control is the tab list in the sidebar header
-/// [Chats | Projects | Artifacts Library | Agents | Automation Tasks |
-/// Products | Code | ACI | Research] (HistorySidebarView — no persistent
-/// bottom bar, matching ChatGPT/Claude's iOS apps), and cowork is a
+/// control is the sidebar tab list in the header (HistorySidebarView — no
+/// persistent bottom bar, matching ChatGPT/Claude's iOS apps), and cowork is a
 /// composer-level toggle inside Chats (BottomDock.tsx ChatCoworkToggle).
-/// Projects, the artifacts library, the Agent Hub, Automation Tasks,
-/// Products Discovery, and Research are iOS-only tab surfaces layered over
-/// the same modes (they don't stamp an `origin_surface` of their own).
->>>>>>> origin/feat/products-discovery/// control is the 9-row [Chats | Projects | Artifacts Library | Agents |
-/// Automation Tasks | A://Labs | Code | ACI | Research] tab list in the sidebar
-/// header (HistorySidebarView — no persistent bottom bar, matching
-/// ChatGPT/Claude's iOS apps), and cowork is a composer-level toggle inside
-/// Chats (BottomDock.tsx ChatCoworkToggle). Projects, the artifacts library,
-/// the Agent Hub, Automation Tasks, A://Labs, and Research are iOS-only tab
-/// surfaces layered over the same modes (they don't stamp an `origin_surface`
-/// of their own).
->>>>>>> origin/feat/labs/// control is the 9-row [Chats | Projects | Artifacts Library | Agents |
-/// Automation Tasks | Research | Udemy Catalog | Code | ACI] tab list in the
-/// sidebar header (HistorySidebarView — no persistent bottom bar, matching
-/// ChatGPT/Claude's iOS apps), and cowork is a composer-level toggle inside
-/// Chats (BottomDock.tsx ChatCoworkToggle). Projects, the artifacts library,
-/// the Agent Hub, Automation Tasks, Research, and Udemy Catalog are iOS-only
-/// tab surfaces layered over the same modes (they don't stamp an
-/// `origin_surface` of their own).
->>>>>>> origin/feat/udemy-catalog
+/// Projects, the artifacts library, the Agent Hub, Automation Tasks, Plugins,
+/// Swarm, Team Skills, Products Discovery, A://Labs, Udemy Catalog, Research,
+/// and Documents are iOS-only tab surfaces layered over the same modes (they
+/// don't stamp an `origin_surface` of their own).
 enum AppMode: String, CaseIterable, Sendable {
     case chat
     case cowork
@@ -103,30 +52,10 @@ final class AppModeStore: ObservableObject {
 
     /// The sidebar tab whose surface fills the content pane. Chats/Code/ACI
     /// track `mode`; Projects, Artifacts Library, Agents, Automation Tasks,
-HEAD
-HEAD
-HEAD
-HEAD
-HEAD
-HEAD
-    /// Research, and Documents are iOS-only surfaces layered on top (the mode
-    /// — and so history filtering, theme accent, and session stamping — stays
-    /// wherever it was).    /// Plugins, and Research are iOS-only surfaces layered on top (the mode — and so history    /// and Swarm are iOS-only surfaces layered on top (the mode — and so history
->>>>>>> origin/feat/ios-swarm-ade
-    /// filtering, theme accent, and session stamping — stays wherever it was).
->>>>>>> origin/feat/ios-plugin-marketplace    /// Team Skills, and Research are iOS-only surfaces layered on top (the
-    /// mode — and so history filtering, theme accent, and session stamping —
-    /// stays wherever it was).
->>>>>>> origin/feat/ios-team-skills    /// Products Discovery, and Research are iOS-only surfaces layered on top
+    /// Plugins, Swarm, Team Skills, Products Discovery, A://Labs, Udemy
+    /// Catalog, Research, and Documents are iOS-only surfaces layered on top
     /// (the mode — and so history filtering, theme accent, and session
     /// stamping — stays wherever it was).
->>>>>>> origin/feat/products-discovery    /// A://Labs, and Research are iOS-only surfaces layered on top (the mode —
-    /// and so history filtering, theme accent, and session stamping — stays
-    /// wherever it was).
->>>>>>> origin/feat/labs    /// Research, and Udemy Catalog are iOS-only surfaces layered on top (the
-    /// mode — and so history filtering, theme accent, and session stamping —
-    /// stays wherever it was).
->>>>>>> origin/feat/udemy-catalog
     @Published var activeTab: ModeBarItem
 
     /// Which sub-surface the Automation Tasks tab shows: cron jobs
@@ -154,85 +83,26 @@ HEAD
 
     /// Both Home surfaces (chat + cowork) live under the Chats tab; selecting
     /// it always lands on plain chat. Projects / Artifacts Library / Agents /
-HEAD
-HEAD
-HEAD
-HEAD
-HEAD
-HEAD
-    /// Automation Tasks / Research / Documents switch the surface without
-    /// touching the mode.    /// Automation Tasks / Plugins / Research switch the surface without touching the mode.
->>>>>>> origin/feat/ios-plugin-marketplace    /// Automation Tasks / Swarm / Research switch the surface without touching the mode.
->>>>>>> origin/feat/ios-swarm-ade    /// Automation Tasks / Team Skills / Research switch the surface without
+    /// Automation Tasks / Plugins / Swarm / Team Skills / Products / A://Labs /
+    /// Research / Udemy Catalog / Documents switch the surface without
     /// touching the mode.
->>>>>>> origin/feat/ios-team-skills    /// Automation Tasks / Products / Research switch the surface without
-    /// touching the mode.
->>>>>>> origin/feat/products-discovery    /// Automation Tasks / A://Labs / Research switch the surface without touching the mode.
->>>>>>> origin/feat/labs    /// Automation Tasks / Research / Udemy Catalog switch the surface without
-    /// touching the mode.
->>>>>>> origin/feat/udemy-catalog
     func selectBarItem(_ item: ModeBarItem) {
         activeTab = item
         switch item {
         case .chats: mode = .chat
         case .code: mode = .code
         case .aci: mode = .browser
-HEAD
-HEAD
-HEAD
-HEAD
-HEAD
-HEAD
-        case .projects, .artifacts, .agents, .automation, .research, .documents: break        case .projects, .artifacts, .agents, .automation, .plugins, .research: break
->>>>>>> origin/feat/ios-plugin-marketplace        case .projects, .artifacts, .agents, .automation, .swarm, .research: break
->>>>>>> origin/feat/ios-swarm-ade        case .projects, .artifacts, .agents, .automation, .teamSkills, .research: break
->>>>>>> origin/feat/ios-team-skills        case .projects, .artifacts, .agents, .automation, .products, .research: break
->>>>>>> origin/feat/products-discovery        case .projects, .artifacts, .agents, .automation, .labs, .research: break
->>>>>>> origin/feat/labs        case .projects, .artifacts, .agents, .automation, .research, .catalog: break
->>>>>>> origin/feat/udemy-catalog
+        case .projects, .artifacts, .agents, .automation, .plugins, .swarm,
+                .teamSkills, .products, .labs, .research, .catalog, .documents:
+            break
         }
     }
 }
 
-HEAD
-HEAD
-HEAD
-HEAD
-/// The nine destinations of the sidebar's tab list:
-HEAD
-HEAD
-/// Chats / Projects / Artifacts Library / Agents / Automation Tasks / Code /
-/// ACI / Research / Documents.
+/// The destinations of the sidebar's tab list.
 enum ModeBarItem: CaseIterable {
-    case chats, projects, artifacts, agents, automation, code, aci, research, documents/// Chats / Projects / Artifacts Library / Agents / Automation Tasks / Plugins /
-/// Code / ACI / Research.
-enum ModeBarItem: CaseIterable {
-    case chats, projects, artifacts, agents, automation, plugins, code, aci, research
->>>>>>> origin/feat/ios-plugin-marketplace/// Chats / Projects / Artifacts Library / Agents / Automation Tasks / Swarm /
-/// Code / ACI / Research.
-enum ModeBarItem: CaseIterable {
-    case chats, projects, artifacts, agents, automation, swarm, code, aci, research
->>>>>>> origin/feat/ios-swarm-ade/// The eight destinations of the sidebar's tab list:
-/// Chats / Projects / Artifacts Library / Agents / Automation Tasks / Team
-/// Skills / Code / ACI / Research.
-enum ModeBarItem: CaseIterable {
-    case chats, projects, artifacts, agents, automation, teamSkills, code, aci, research
->>>>>>> origin/feat/ios-team-skills/// The nine destinations of the sidebar's tab list:
-/// Chats / Projects / Artifacts Library / Agents / Automation Tasks /
-/// Products / Code / ACI / Research.
-enum ModeBarItem: CaseIterable {
-    case chats, projects, artifacts, agents, automation, products, code, aci, research
->>>>>>> origin/feat/products-discovery/// The nine destinations of the sidebar's tab list:
-/// Chats / Projects / Artifacts Library / Agents / Automation Tasks /
-/// A://Labs / Code / ACI / Research.
-enum ModeBarItem: CaseIterable {
-    case chats, projects, artifacts, agents, automation, labs, code, aci, research
->>>>>>> origin/feat/labs/// The nine destinations of the sidebar's tab list:
-/// Chats / Projects / Artifacts Library / Agents / Automation Tasks / Research /
-/// Udemy Catalog / Code / ACI.
-enum ModeBarItem: CaseIterable {
-    case chats, projects, artifacts, agents, automation, research, catalog, code, aci
->>>>>>> origin/feat/udemy-catalog
+    case chats, projects, artifacts, agents, automation, plugins, swarm,
+         teamSkills, products, labs, research, catalog, code, aci, documents
 
     var label: String {
         switch self {
@@ -241,24 +111,16 @@ enum ModeBarItem: CaseIterable {
         case .artifacts: return "Artifacts Library"
         case .agents: return "Agents"
         case .automation: return "Automation Tasks"
-HEAD
-HEAD
-HEAD
-HEAD
-HEAD
-        case .plugins: return "Plugins"        case .swarm: return "Swarm"
->>>>>>> origin/feat/ios-swarm-ade        case .teamSkills: return "Team Skills"
->>>>>>> origin/feat/ios-team-skills        case .products: return "Products"
->>>>>>> origin/feat/products-discovery        case .labs: return "A://Labs"
->>>>>>> origin/feat/labs
-        case .code: return "Code"
-        case .aci: return "ACI"
+        case .plugins: return "Plugins"
+        case .swarm: return "Swarm"
+        case .teamSkills: return "Team Skills"
+        case .products: return "Products"
+        case .labs: return "A://Labs"
         case .research: return "Research"
-        case .documents: return "Documents"        case .research: return "Research"
         case .catalog: return "Udemy Catalog"
         case .code: return "Code"
         case .aci: return "ACI"
->>>>>>> origin/feat/udemy-catalog
+        case .documents: return "Documents"
         }
     }
 
@@ -270,24 +132,16 @@ HEAD
         case .artifacts: return "archivebox"
         case .agents: return "cpu"
         case .automation: return "clock.arrow.circlepath"
-HEAD
-HEAD
-HEAD
-HEAD
-HEAD
-        case .plugins: return "puzzlepiece"        case .swarm: return "person.3"
->>>>>>> origin/feat/ios-swarm-ade        case .teamSkills: return "puzzlepiece.extension"
->>>>>>> origin/feat/ios-team-skills        case .products: return "square.grid.2x2"
->>>>>>> origin/feat/products-discovery        case .labs: return "graduationcap"
->>>>>>> origin/feat/labs
-        case .code: return "terminal"
-        case .aci: return "globe"
+        case .plugins: return "puzzlepiece"
+        case .swarm: return "person.3"
+        case .teamSkills: return "puzzlepiece.extension"
+        case .products: return "square.grid.2x2"
+        case .labs: return "graduationcap"
         case .research: return "book.closed"
-        case .documents: return "doc.text"        case .research: return "book.closed"
         case .catalog: return "book"
         case .code: return "terminal"
         case .aci: return "globe"
->>>>>>> origin/feat/udemy-catalog
+        case .documents: return "doc.text"
         }
     }
 

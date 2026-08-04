@@ -36,7 +36,6 @@ class MockModelManager extends LocalModelManager {
     this.calls.push({ method: 'assessImportance', args: [text] });
     return 'high';
   }
-HEAD
 
   override async enrichContent(text: string, maxLength: number = 150): Promise<{
     summary: string;
@@ -54,7 +53,6 @@ HEAD
       backend: 'mlx',
     };
   }
->>>>>>> origin/ao/build-memory-bulk-fast-ingest
 }
 
 describe('IngestAgent bulk ingest mode', () => {
@@ -148,18 +146,10 @@ describe('IngestAgent bulk ingest mode', () => {
     expect(memory!.entities).toEqual(['entity-a']);
     expect(memory!.topics).toEqual(['topic-a']);
     expect(memory!.importance).toBe('high');
-HEAD
     expect(memory!.metadata.enrichment_backend).toBe('mlx');
 
     // Single combined enrichment call was made instead of three separate calls
     expect(modelManager.calls.map((c) => c.method)).toEqual(['enrichContent']);
-    // All three LLM enrichment calls were made
-    expect(modelManager.calls.map((c) => c.method)).toEqual([
-      'summarize',
-      'extractEntities',
-      'assessImportance',
-    ]);
->>>>>>> origin/ao/build-memory-bulk-fast-ingest
   });
 
   it('R5 — bulk mode preserves source, trust_tier, and provenance_ref metadata', async () => {

@@ -57,19 +57,13 @@ import cowork from './commands/cowork/index.js'
 import coworkProject from './commands/cowork-project/index.js'
 import artifact from './commands/artifact/index.js'
 import swarm from './commands/swarm/index.js'
-HEAD
-HEAD
-HEAD
-HEAD
-HEAD
-HEAD
-import ontology from './commands/ontology/index.js'import directive from './commands/directive/index.js'
->>>>>>> origin/feat/gizzi-directive-compilerimport gc from './commands/gc/index.js'
->>>>>>> origin/feat/gizzi-gc-agentsimport multimodal from './commands/multimodal/index.js'
->>>>>>> origin/feat/gizzi-multimodal-inputimport purpose from './commands/purpose/index.js'
->>>>>>> origin/feat/gizzi-purpose-bindingimport receipts from './commands/receipts/index.js'
->>>>>>> origin/feat/gizzi-receipts-viewerimport security from './commands/security/index.js'
->>>>>>> origin/feat/gizzi-security-dashboard
+import ontology from './commands/ontology/index.js'
+import directive from './commands/directive/index.js'
+import gc from './commands/gc/index.js'
+import multimodal from './commands/multimodal/index.js'
+import purpose from './commands/purpose/index.js'
+import receipts from './commands/receipts/index.js'
+import security from './commands/security/index.js'
 
 function safeRequire(path: string) {
   try {
@@ -296,19 +290,13 @@ const COMMANDS = memoize((): Command[] => [
   cowork,
   coworkProject,
   swarm,
-HEAD
-HEAD
-HEAD
-HEAD
-HEAD
-HEAD
-  ontology,  directive,
->>>>>>> origin/feat/gizzi-directive-compiler  gc,
->>>>>>> origin/feat/gizzi-gc-agents  multimodal,
->>>>>>> origin/feat/gizzi-multimodal-input  purpose,
->>>>>>> origin/feat/gizzi-purpose-binding  receipts,
->>>>>>> origin/feat/gizzi-receipts-viewer  security,
->>>>>>> origin/feat/gizzi-security-dashboard
+  ontology,
+  directive,
+  gc,
+  multimodal,
+  purpose,
+  receipts,
+  security,
   context,
   contextNonInteractive,
   cost,

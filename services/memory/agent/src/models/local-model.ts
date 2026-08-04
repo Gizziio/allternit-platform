@@ -112,9 +112,6 @@ export class LocalModelManager {
   private ollama: Ollama;
   private llmBaseUrl?: string;
   private llmModel: string;
-HEAD
-HEAD
->>>>>>> origin/fix/mlx-serialize
   // MLX/local OpenAI-compatible servers (e.g. mlx_lm.server) are often
   // single-threaded and deadlock or serialize poorly under concurrent load.
   // Queue generation requests so only one hits the server at a time.
@@ -143,28 +140,13 @@ HEAD
     enrichment: { localFallbacks: 0 },
   };
 
->>>>>>> origin/ao/mlxmem
   constructor(host: string = 'localhost', port: number = 11434, llm?: LLMProviderConfig) {
     this.ollama = new Ollama({ host: `http://${host}:${port}` });
     const baseUrl = llm?.baseUrl ?? process.env.MEMORY_LLM_BASE_URL;
     this.llmBaseUrl = baseUrl ? baseUrl.replace(/\/+$/, '') : undefined;
     this.llmModel = llm?.model ?? process.env.MEMORY_LLM_MODEL ?? 'qwen3-4b-instruct';
-HEAD
     this.breakerThreshold = Math.max(1, parseInt(process.env.MEMORY_LLM_BREAKER_THRESHOLD || '3', 10));
     this.breakerCooldownMs = Math.max(0, parseInt(process.env.MEMORY_LLM_BREAKER_COOLDOWN_MS || '60000', 10));
-  }
-
-  /**
-   * Serialize an async operation. Returns a promise that resolves/rejects
-   * with the operation's result, and internally chains behind any prior call.
-   */
-  private async serialized<T>(operation: () => Promise<T>): Promise<T> {
-    const result = this.llmQueue.then(operation);
-    // Track completion (success or failure) so the next queued call waits
-    // until this one finishes, but don't let a rejection break the chain.
-    this.llmQueue = result.catch(() => undefined);
-    return result;
->>>>>>> origin/ao/mlxmem
   }
 
   /**
@@ -200,15 +182,9 @@ HEAD
           max_tokens: modelConfig.numPredict,
           stream: false,
         }),
-HEAD
-HEAD
         // Generations can be slow; 2m is generous without letting a hung
         // server wedge the serialized queue forever.
         signal: AbortSignal.timeout(120_000),
->>>>>>> origin/ao/mlxmem        // Generations can be slow; 2m is generous without letting a hung
-        // server wedge the serialized queue forever.
-        signal: AbortSignal.timeout(120_000),
->>>>>>> origin/fix/mlx-serialize
       });
     } catch (error) {
       throw new Error(
@@ -228,7 +204,6 @@ HEAD
       throw new Error(`OpenAI-compatible provider at ${endpoint} returned an unexpected response shape`);
     }
     return content;
-HEAD
   }
 
   /**
@@ -330,7 +305,6 @@ HEAD
       },
     });
     return response.message.content;
->>>>>>> origin/ao/mlxmem
   }
 
   /**
@@ -396,9 +370,7 @@ HEAD
     prompt: string,
     systemPrompt?: string,
     config?: Partial<ModelConfig>
-HEAD
-  ): Promise<{ content: string; backend: 'mlx' | 'ollama' }> {  ): Promise<string> {
->>>>>>> origin/ao/mlxmem
+  ): Promise<{ content: string; backend: 'mlx' | 'ollama' }> {
     const modelConfig = config?.name
       ? { ...MODEL_PRESETS.ingest, ...config }
       : MODEL_PRESETS.ingest;
@@ -407,22 +379,6 @@ HEAD
       ...(systemPrompt ? [{ role: 'system' as const, content: systemPrompt }] : []),
       { role: 'user' as const, content: prompt },
     ];
-HEAD
-    if (this.llmBaseUrl) {
-      return this.serialized(() => this.openAIChat(messages, modelConfig));
-    }
-
-    try {
-      const response: ChatResponse = await this.ollama.chat({
-        model: modelConfig.name,
-        messages,
-        options: {
-          temperature: modelConfig.temperature,
-          top_p: modelConfig.topP,
-          num_predict: modelConfig.numPredict,
-        },
-      });
->>>>>>> origin/ao/mlxmem
 
     const startMs = Date.now();
     const probingMlx = this.mlxAllowed();
@@ -487,7 +443,6 @@ HEAD
       { role: 'user' as const, content: prompt },
     ];
 
-HEAD
     const probingMlx = this.mlxAllowed();
     if (probingMlx) {
       try {
@@ -504,15 +459,7 @@ HEAD
       }
     }
 
-    this.logBackend('ollama');    if (this.llmBaseUrl) {
-      // MLX path: the OpenAI-compatible endpoint is called non-streaming;
-      // the full response is yielded as a single chunk (interface preserved).
-      // Serialize to keep single-threaded MLX servers healthy.
-      yield await this.serialized(() => this.openAIChat(messages, modelConfig));
-      return;
-    }
-
->>>>>>> origin/ao/mlxmem
+    this.logBackend('ollama');
     try {
       const stream = await this.ollama.chat({
         model: modelConfig.name,

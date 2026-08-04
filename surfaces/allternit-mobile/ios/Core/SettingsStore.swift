@@ -119,7 +119,6 @@ final class SettingsStore: ObservableObject {
         didSet { defaults.set(improveModel, forKey: Keys.improveModel) }
     }
 
-HEAD
     // MARK: - Platform (Settings > Platform parity)
 
     /// General: display language — mirrors web `general.language`.
@@ -159,7 +158,10 @@ HEAD
 
     /// Dispatch: cowork dispatch toggle.
     @Published var dispatchEnabled: Bool {
-        didSet { defaults.set(dispatchEnabled, forKey: Keys.dispatchEnabled) }    // MARK: - Products (Settings > Products parity)
+        didSet { defaults.set(dispatchEnabled, forKey: Keys.dispatchEnabled) }
+    }
+
+    // MARK: - Products (Settings > Products parity)
 
     /// Gizziio Code: bypass desktop permission checks (developer-only).
     @Published var gizziBypassPermissions: Bool {
@@ -189,7 +191,6 @@ HEAD
     /// Extensions: use built-in Node runtime.
     @Published var extensionsUseBuiltinNode: Bool {
         didSet { defaults.set(extensionsUseBuiltinNode, forKey: Keys.extensionsUseBuiltinNode) }
->>>>>>> origin/feat/ios-settings-products
     }
 
     /// Voice speed steps offered in the picker.
@@ -213,7 +214,6 @@ HEAD
         static let voiceIdentifier = "allternit-settings-voice-identifier"
         static let voiceInteractionMode = "allternit-settings-voice-interaction-mode"
         static let improveModel = "allternit-settings-improve-model"
-HEAD
         static let displayLanguage = "allternit-settings-display-language"
         static let timezone = "allternit-settings-timezone"
         static let showSystemMessages = "allternit-settings-show-system-messages"
@@ -222,14 +222,14 @@ HEAD
         static let compactDensity = "allternit-settings-compact-density"
         static let showSidebarLabels = "allternit-settings-show-sidebar-labels"
         static let streamingEnabled = "allternit-settings-streaming-enabled"
-        static let dispatchEnabled = "allternit-settings-dispatch-enabled"        static let gizziBypassPermissions = "allternit-settings-gizzi-bypass-permissions"
+        static let dispatchEnabled = "allternit-settings-dispatch-enabled"
+        static let gizziBypassPermissions = "allternit-settings-gizzi-bypass-permissions"
         static let gizziDrawAttentionNotifications = "allternit-settings-gizzi-draw-attention"
         static let gizziBrowserTools = "allternit-settings-gizzi-browser-tools"
         static let gizziAutoCreatePRs = "allternit-settings-gizzi-auto-prs"
         static let gizziAutofixPRs = "allternit-settings-gizzi-autofix-prs"
         static let extensionsAutoUpdate = "allternit-settings-extensions-auto-update"
         static let extensionsUseBuiltinNode = "allternit-settings-extensions-builtin-node"
->>>>>>> origin/feat/ios-settings-products
     }
 
     init(defaults: UserDefaults = .standard) {
@@ -250,7 +250,6 @@ HEAD
         self.voiceInteractionMode = defaults.string(forKey: Keys.voiceInteractionMode)
             .flatMap(VoiceInteractionMode.init(rawValue:)) ?? .handsFree
         self.improveModel = defaults.object(forKey: Keys.improveModel) as? Bool ?? true
-HEAD
         self.displayLanguage = defaults.string(forKey: Keys.displayLanguage) ?? "English"
         self.timezone = defaults.string(forKey: Keys.timezone) ?? "UTC"
         self.showSystemMessages = defaults.object(forKey: Keys.showSystemMessages) as? Bool ?? true
@@ -259,13 +258,13 @@ HEAD
         self.compactDensity = defaults.object(forKey: Keys.compactDensity) as? Bool ?? false
         self.showSidebarLabels = defaults.object(forKey: Keys.showSidebarLabels) as? Bool ?? true
         self.streamingEnabled = defaults.object(forKey: Keys.streamingEnabled) as? Bool ?? true
-        self.dispatchEnabled = defaults.object(forKey: Keys.dispatchEnabled) as? Bool ?? false        self.gizziBypassPermissions = defaults.object(forKey: Keys.gizziBypassPermissions) as? Bool ?? false
+        self.dispatchEnabled = defaults.object(forKey: Keys.dispatchEnabled) as? Bool ?? false
+        self.gizziBypassPermissions = defaults.object(forKey: Keys.gizziBypassPermissions) as? Bool ?? false
         self.gizziDrawAttentionNotifications = defaults.object(forKey: Keys.gizziDrawAttentionNotifications) as? Bool ?? true
         self.gizziBrowserTools = defaults.object(forKey: Keys.gizziBrowserTools) as? Bool ?? true
         self.gizziAutoCreatePRs = defaults.object(forKey: Keys.gizziAutoCreatePRs) as? Bool ?? false
         self.gizziAutofixPRs = defaults.object(forKey: Keys.gizziAutofixPRs) as? Bool ?? true
         self.extensionsAutoUpdate = defaults.object(forKey: Keys.extensionsAutoUpdate) as? Bool ?? true
         self.extensionsUseBuiltinNode = defaults.object(forKey: Keys.extensionsUseBuiltinNode) as? Bool ?? true
->>>>>>> origin/feat/ios-settings-products
     }
 }

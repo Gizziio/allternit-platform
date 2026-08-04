@@ -5,14 +5,10 @@ import SwiftUI
 /// Top-level tab host: a per-tab content area, no persistent bottom bar —
 /// neither ChatGPT nor Claude's iOS apps put a surface switcher there, so
 /// the [Chats | Projects | Artifacts Library | Agents | Automation Tasks |
-HEAD
-HEAD
-/// Plugins | Code | ACI] tab list lives in the sidebar header instead/// Swarm | Code | ACI] tab list lives in the sidebar header instead
->>>>>>> origin/feat/ios-swarm-ade
-/// (HistorySidebarView). Cowork is NOT a tab destination; it's a/// Research | Udemy Catalog | Code | ACI] tab list lives in the sidebar header
-/// instead (HistorySidebarView). Cowork is NOT a tab destination; it's a
->>>>>>> origin/feat/udemy-catalog
-/// composer-level toggle inside Chats (BottomDock.tsx ChatCoworkToggle).
+/// Plugins | Swarm | Team Skills | Products | A://Labs | Research |
+/// Udemy Catalog | Code | ACI | Documents] tab list lives in the sidebar
+/// header instead (HistorySidebarView). Cowork is NOT a tab destination;
+/// it's a composer-level toggle inside Chats (BottomDock.tsx ChatCoworkToggle).
 struct MainWorkspaceView: View {
     @EnvironmentObject private var modeStore: AppModeStore
     @State private var isSidebarOpen = false
@@ -87,23 +83,18 @@ struct MainWorkspaceView: View {
                             case .loops:
                                 LoopsListView(isSidebarOpen: $isSidebarOpen)
                             }
-HEAD
-HEAD
-HEAD
-HEAD
-HEAD
                         case .plugins:
-                            PluginMarketplaceView(isSidebarOpen: $isSidebarOpen)                        case .swarm:
+                            PluginMarketplaceView(isSidebarOpen: $isSidebarOpen)
+                        case .swarm:
                             SwarmADEView(isSidebarOpen: $isSidebarOpen)
->>>>>>> origin/feat/ios-swarm-ade                        case .teamSkills:
+                        case .teamSkills:
                             TeamSkillsView(isSidebarOpen: $isSidebarOpen)
->>>>>>> origin/feat/ios-team-skills                        case .products:
+                        case .products:
                             ProductsDiscoveryView(isSidebarOpen: $isSidebarOpen)
->>>>>>> origin/feat/products-discovery                        case .labs:
+                        case .labs:
                             LabsView(isSidebarOpen: $isSidebarOpen)
->>>>>>> origin/feat/labs                        case .catalog:
+                        case .catalog:
                             CatalogView(isSidebarOpen: $isSidebarOpen)
->>>>>>> origin/feat/udemy-catalog
                         case .code:
                             CodeModeView(isSidebarOpen: $isSidebarOpen, selectedSessionId: $selectedSessionId)
                         case .aci:

@@ -28,22 +28,16 @@ struct SettingsView: View {
     @State private var isMemoryPresented = false
     /// Pushed Compute Billing settings (Plans & Compute parity).
     @State private var isComputeBillingPresented = false
-HEAD
-HEAD
-HEAD
-HEAD
     /// Pushed Platform settings (Settings > Platform parity).
-    @State private var isPlatformPresented = false    /// Pushed Products settings (Settings > Products parity).
+    @State private var isPlatformPresented = false
+    /// Pushed Products settings (Settings > Products parity).
     @State private var isProductsPresented = false
->>>>>>> origin/feat/ios-settings-products    /// Pushed Infrastructure settings (Settings > Infrastructure parity).
+    /// Pushed Infrastructure settings (Settings > Infrastructure parity).
     @State private var isInfrastructurePresented = false
->>>>>>> origin/feat/ios-settings-infrastructure    /// Pushed Model Management view.
+    /// Pushed Model Management view.
     @State private var isModelManagementPresented = false
->>>>>>> origin/feat/ios-model-management
     /// Pushed Organization & Access settings.
     @State private var isOrganizationAccessPresented = false
-
->>>>>>> origin/feat/ios-organization-access
     /// Pushed custom-instructions editor (Agent section).
     @State private var isInstructionsPresented = false
     /// Pushed Monitor view (infra section).
@@ -126,20 +120,20 @@ HEAD
             .navigationDestination(isPresented: $isComputeBillingPresented) {
                 ComputeBillingView()
             }
-HEAD
-HEAD
-HEAD
-HEAD
             .navigationDestination(isPresented: $isPlatformPresented) {
-                PlatformSettingsView()            .navigationDestination(isPresented: $isProductsPresented) {
+                PlatformSettingsView()
+            }
+            .navigationDestination(isPresented: $isProductsPresented) {
                 ProductsSettingsView()
->>>>>>> origin/feat/ios-settings-products            .navigationDestination(isPresented: $isInfrastructurePresented) {
+            }
+            .navigationDestination(isPresented: $isInfrastructurePresented) {
                 InfrastructureSettingsView()
->>>>>>> origin/feat/ios-settings-infrastructure            .navigationDestination(isPresented: $isModelManagementPresented) {
+            }
+            .navigationDestination(isPresented: $isModelManagementPresented) {
                 ModelManagementView()
->>>>>>> origin/feat/ios-model-management            .navigationDestination(isPresented: $isOrganizationAccessPresented) {
+            }
+            .navigationDestination(isPresented: $isOrganizationAccessPresented) {
                 OrganizationAccessView()
->>>>>>> origin/feat/ios-organization-access
             }
             .navigationDestination(isPresented: $isInstructionsPresented) {
                 CustomInstructionsView()
