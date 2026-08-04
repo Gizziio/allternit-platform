@@ -400,6 +400,8 @@ struct ChatContentView: View {
     /// before the system prompt (once per install via
     /// AppPermission.notifications).
     @State private var isNotificationPrimingPresented = false
+    /// Cowork workspace launchpad sheet — opened from the composer toggle.
+    @State private var isCoworkWorkspacePresented = false
     @Environment(\.scenePhase) private var scenePhase
 
     private static let notificationsCardDismissedKey = "allternit-notifications-card-dismissed"
@@ -1009,6 +1011,9 @@ struct ComposerView: View {
         .sheet(isPresented: $isModelPickerPresented) {
             ModelPickerSheet(modelStore: modelStore)
         }
+        .sheet(isPresented: $isCoworkWorkspacePresented) {
+            CoworkWorkspaceView()
+        }
         .onAppear {
             if agentOn { agentModeStore.fetchAgentsIfNeeded() }
             modelStore.fetchModelsIfNeeded()
@@ -1148,6 +1153,14 @@ struct ComposerView: View {
                 // (pre-session only); the Code surface never offers it.
                 if !hasActiveSession, mode == .chat || mode == .cowork {
                     ChatCoworkToggle()
+                }
+
+                // Cowork workspace launchpad — opens the full workspace when
+                // in Cowork mode and no session is active.
+                if !hasActiveSession, mode == .cowork {
+                    toolbarIconButton("arrow.up.forward.square") {
+                        isCoworkWorkspacePresented = true
+                    }
                 }
 
                 // Agent On/Off toggle — plain cpu icon. Not offered in code
