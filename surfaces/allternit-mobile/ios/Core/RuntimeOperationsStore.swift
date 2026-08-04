@@ -20,6 +20,7 @@ final class RuntimeOperationsStore: ObservableObject {
     @Published private(set) var isLoading = false
     @Published private(set) var loadError: String? = nil
     @Published private(set) var isSavingQuota = false
+    @Published private(set) var replayingRunId: String? = nil
 
     private let client: RuntimeOperationsClient
     private var fetchTask: Task<Void, Never>? = nil
@@ -107,6 +108,16 @@ final class RuntimeOperationsStore: ObservableObject {
         await refresh()
     }
 
+    func executeReplay(runId: String) async throws {
+        replayingRunId = runId
+        defer { replayingRunId = nil }
+        let result = try await client.executeReplay(runId: runId)
+        guard result.canReplay else {
+            throw ReplayError.notReplayable(status: result.status)
+        }
+        await refresh()
+    }
+
     // MARK: - Helpers
 
     private static func buildMetrics(_ budget: RuntimeBudgetStatus) -> [RuntimeBudgetMetric] {
@@ -167,4 +178,15 @@ private extension PoolStats {
         totalReuses: 0,
         avgWarmupTimeMs: 0
     )
+}
+
+private enum ReplayError: LocalizedError {
+    case notReplayable(status: String)
+
+    var errorDescription: String? {
+        switch self {
+        case .notReplayable(let status):
+            return "Replay returned status '\(status)' and is not replayable."
+        }
+    }
 }

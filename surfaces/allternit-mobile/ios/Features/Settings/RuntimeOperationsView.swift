@@ -9,6 +9,7 @@ struct RuntimeOperationsView: View {
     @StateObject private var store = RuntimeOperationsStore.shared
     @Environment(\.dismiss) private var dismiss
     @State private var isBudgetDashboardPresented = false
+    @State private var isReplayManagerPresented = false
 
     var body: some View {
         VStack(spacing: 0) {
@@ -19,6 +20,9 @@ struct RuntimeOperationsView: View {
         .background(Color("BgPrimary").edgesIgnoringSafeArea(.all))
         .navigationDestination(isPresented: $isBudgetDashboardPresented) {
             BudgetDashboardView()
+        }
+        .navigationDestination(isPresented: $isReplayManagerPresented) {
+            ReplayManagerView()
         }
         .task {
             store.fetchIfNeeded()
@@ -284,48 +288,51 @@ struct RuntimeOperationsView: View {
     // MARK: - Replay card
 
     private var replayCard: some View {
-        card {
-            VStack(alignment: .leading, spacing: 12) {
-                HStack {
-                    Image(systemName: "clock.arrow.circlepath")
-                        .font(.system(size: 18, weight: .medium))
-                        .foregroundColor(Color("AccentPrimary"))
-                    Text("Replay")
-                        .font(.system(size: 15, weight: .semibold))
-                        .foregroundColor(Color("TextPrimary"))
-                    Spacer()
-                    Text("\(store.replayManifests.count) manifests")
-                        .font(.caption)
-                        .foregroundColor(Color("TextSecondary"))
-                }
+        Button(action: { isReplayManagerPresented = true }) {
+            card {
+                VStack(alignment: .leading, spacing: 12) {
+                    HStack {
+                        Image(systemName: "clock.arrow.circlepath")
+                            .font(.system(size: 18, weight: .medium))
+                            .foregroundColor(Color("AccentPrimary"))
+                        Text("Replay")
+                            .font(.system(size: 15, weight: .semibold))
+                            .foregroundColor(Color("TextPrimary"))
+                        Spacer()
+                        Text("\(store.replayManifests.count) manifests")
+                            .font(.caption)
+                            .foregroundColor(Color("TextSecondary"))
+                    }
 
-                if let first = store.replayManifests.first {
-                    HStack {
-                        Text("Latest")
+                    if let first = store.replayManifests.first {
+                        HStack {
+                            Text("Latest")
+                                .font(.caption)
+                                .foregroundColor(Color("TextSecondary"))
+                            Spacer()
+                            Text(first.runId.prefix(18))
+                                .font(.system(size: 12, design: .monospaced))
+                                .foregroundColor(Color("TextPrimary"))
+                                .lineLimit(1)
+                        }
+                        HStack {
+                            Text("Outputs")
+                                .font(.caption)
+                                .foregroundColor(Color("TextSecondary"))
+                            Spacer()
+                            Text("\(first.outputCount)")
+                                .font(.system(size: 12, weight: .semibold))
+                                .foregroundColor(Color("TextPrimary"))
+                        }
+                    } else {
+                        Text("No replay manifests available")
                             .font(.caption)
                             .foregroundColor(Color("TextSecondary"))
-                        Spacer()
-                        Text(first.runId.prefix(18))
-                            .font(.system(size: 12, design: .monospaced))
-                            .foregroundColor(Color("TextPrimary"))
-                            .lineLimit(1)
                     }
-                    HStack {
-                        Text("Outputs")
-                            .font(.caption)
-                            .foregroundColor(Color("TextSecondary"))
-                        Spacer()
-                        Text("\(first.outputCount)")
-                            .font(.system(size: 12, weight: .semibold))
-                            .foregroundColor(Color("TextPrimary"))
-                    }
-                } else {
-                    Text("No replay manifests available")
-                        .font(.caption)
-                        .foregroundColor(Color("TextSecondary"))
                 }
             }
         }
+        .buttonStyle(.plain)
     }
 
     // MARK: - Prewarm card
