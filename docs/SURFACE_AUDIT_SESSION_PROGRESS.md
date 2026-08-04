@@ -158,7 +158,7 @@ Branch: `fix/review-decision-event-type` (issue #16/#19 fixes) + `docs/surface-a
 | 93 | A://Labs (GAP → iOS, gizzi-code) | `[x]` | REAL — iOS A://Labs tab shipped: `ALABSCourse`/`ALABSLesson` models, `LabsClient`/`LabsStore`, `LabsView` with Discovery/Tracks/Classroom tabs; gizzi-code `labs` command lists courses/lessons | Shipped phase 1 port | `feat/labs` |
 | 94 | Udemy Catalog (GAP → iOS, gizzi-code) | `[x]` | REAL — backend `udemy_routes.rs` proxy shipped, iOS Udemy Catalog tab with categories/search/curate, and gizzi-code `udemy` command | Shipped phase 1 port | `feat/udemy-catalog` |
 | 95 | Discovery Feed (GAP → iOS, gizzi-code) | `[x]` | STALE — not standalone; nested sub-tab inside `LabsView.tsx`, not its own route | Fold into #93 A://Labs | |
-| 96 | Research tab/panel (PARTIAL → iOS) | `[ ]` | REAL — web `views/research/ResearchTab.tsx` nested in Labs, no match iOS | Build iOS, scope inside Labs | |
+| 96 | Research tab/panel (PARTIAL → iOS) | `[x]` | REAL — iOS Research tab shipped: `ResearchNotebook`/`ResearchSource`/`ResearchChatMessage` models, `ResearchClient`/`ResearchStore`, `ResearchView` with notebook list/sources/chat, wired into `ModeBarItem.research` | Shipped phase 1 iOS port | `feat/ios-research-tab` |
 
 ## Mail/Knowledge (3)
 
