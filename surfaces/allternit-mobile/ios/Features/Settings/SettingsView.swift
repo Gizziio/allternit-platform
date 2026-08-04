@@ -30,6 +30,8 @@ struct SettingsView: View {
     @State private var isInstructionsPresented = false
     /// Pushed Monitor view (infra section).
     @State private var isMonitorPresented = false
+    /// Pushed Runtime Operations view (infra section).
+    @State private var isRuntimeOperationsPresented = false
     #if DEBUG
     /// Pushed Brain Spike screen (DEBUG-only D3 spike section).
     @State private var isBrainSpikePresented = false
@@ -94,6 +96,9 @@ struct SettingsView: View {
             }
             .navigationDestination(isPresented: $isMonitorPresented) {
                 MonitorView()
+            }
+            .navigationDestination(isPresented: $isRuntimeOperationsPresented) {
+                RuntimeOperationsView()
             }
             #if DEBUG
             .navigationDestination(isPresented: $isBrainSpikePresented) {
@@ -628,10 +633,13 @@ struct SettingsView: View {
             Button(action: { isMonitorPresented = true }) {
                 bulkRowLabel("Monitor", systemImage: "chart.line.uptrend.xyaxis")
             }
+            Button(action: { isRuntimeOperationsPresented = true }) {
+                bulkRowLabel("Runtime Operations", systemImage: "gearshape.2")
+            }
         } header: {
             Text("Infrastructure")
         } footer: {
-            Text("Live view of agents, system metrics, and logs.")
+            Text("Live view of agents, system metrics, logs, and runtime controls.")
         }
     }
 
