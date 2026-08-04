@@ -24,7 +24,7 @@ export interface SessionData {
 }
 
 export interface UserPreferences {
-  theme?: 'dark' | 'light' | 'system'
+  theme?: string
   fontSize?: number
   autoSave?: boolean
   notifications?: boolean
