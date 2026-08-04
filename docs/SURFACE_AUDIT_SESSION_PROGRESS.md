@@ -15,6 +15,10 @@ Branch: `fix/review-decision-event-type` (issue #16/#19 fixes) + `docs/surface-a
 
 ---
 
+---
+
+**Tracker correction (this session):** the original audit tracker incorrectly marked every item `[x]` after triage. `[x]` now means the item is *resolved* (shipped, stale, or deferred/documented). REAL items that still need building are `[ ]` (pending) or `[~]` (active).
+
 ## Core Chat/Home (3)
 
 | # | Item | Status | Finding | Action | PR |
@@ -27,11 +31,11 @@ Branch: `fix/review-decision-event-type` (issue #16/#19 fixes) + `docs/surface-a
 
 | # | Item | Status | Finding | Action | PR |
 |---|------|--------|---------|--------|-----|
-| 4 | Cowork workspace (CoworkRoot) (PARTIAL → iOS) | `[x]` | REAL — CoworkRoot.tsx is a full live workspace; iOS only has a composer-level toggle (AppMode.swift, ChatView.swift) | build | |
+| 4 | Cowork workspace (CoworkRoot) (PARTIAL → iOS) | `[x]` | REAL — phase 1 shipped: launchpad + active-session shell + progress panel on iOS (`feat/ios-cowork-workspace`) | Shipped phase 1; phase 2/3 deferred | `feat/ios-cowork-workspace` |
 | 5 | Cowork Runs view (PARTIAL → iOS) | `[x]` | STALE — RunsView.tsx registered but zero dispatchers in Cowork nav; only reachable via unrelated Products Discovery "Workflows" card | close (defer if re-scoped) | |
 | 6 | Cowork Drafts view (GAP → iOS) | `[x]` | STALE — DraftsView.tsx registered, zero dispatchers anywhere; dead code | close | |
 | 7 | Cowork Cron view (GAP → iOS) | `[x]` | STALE — renamed/merged into Automation Tasks (live, reachable via shared Home rail); iOS Automation Tasks itself absent from this checkout despite PR #9 claims | close; reconcile iOS branch state | |
-| 8 | Cowork Project view (GAP → gizzi-code) | `[x]` | REAL — CoworkProjectView.tsx live, mounted by CoworkRoot; backend `/cowork/projects` exists; gizzi-code has no run-scoped project view | build / defer to gizzi-code CLI phase | |
+| 8 | Cowork Project view (GAP → gizzi-code) | `[x]` | REAL — phase 1 shipped: `cowork-project` command lists Cowork projects, shows tasks by project, and creates tasks (`feat/gizzi-cowork-project`) | Shipped phase 1; phase 2/3 deferred | `feat/gizzi-cowork-project` |
 | 9 | Cowork Documents view (GAP → iOS) | `[x]` | STALE — DocumentsView.tsx only reachable via unrelated Code-mode Skills Registry path, not Cowork nav | close (defer if re-scoped) | |
 | 10 | Cowork Tables view (GAP → iOS) | `[x]` | STALE — TablesView.tsx registered, zero dispatchers; dead code | close | |
 | 11 | Cowork Files view (GAP → iOS) | `[x]` | STALE — FilesView.tsx registered, zero dispatchers; dead code | close | |
@@ -41,7 +45,7 @@ Branch: `fix/review-decision-event-type` (issue #16/#19 fixes) + `docs/surface-a
 | 15 | Cowork Goals panel (PARTIAL → iOS) | `[x]` | STALE — GoalsView.tsx dead; real goals UI is a tab inside AutomationTasksView (duplicate of item #7) | close | |
 | 16 | Cowork Wiki section viewer (PARTIAL → iOS) | `[x]` | STALE (recategorize) — WikiSectionViewer.tsx real/live but mounted app-wide via ArtifactSidecar, not Cowork nav | close under Cowork; defer under Artifacts Library | |
 | 17 | Cowork Audit log viewer (GAP → iOS, gizzi-code) | `[x]` | STALE — AuditLogViewer.tsx only rendered inside dead TasksView.tsx; transitively unreachable | close (defer if re-scoped) | |
-| 18 | Intelli-Schedule panel (GAP → iOS) | `[x]` | REAL — gizzi-code has IntelliScheduleEngine.ts + TUI screen; web panel dead but gizzi-code capability is real and iOS lacks it | build (bundle with #4/#7) | |
+| 18 | Intelli-Schedule panel (GAP → iOS) | `[x]` | REAL — phase 1 shipped: Swift `IntelliScheduleEngine`, `IntelliScheduleStore`, `IntelliSchedulePanel`, entry from Cowork-mode chrome (`feat/ios-intelli-schedule`) | Shipped phase 1 | `feat/ios-intelli-schedule` |
 | 19 | Harness Config panel (GAP → iOS) | `[x]` | STALE (recategorize) — HarnessConfigPanel.tsx real/live but mounted in OperatorBrowserView/DesignModeView, not Cowork | close under Cowork; defer under Operator/Design | |
 
 ## Code (17)
@@ -51,9 +55,9 @@ Branch: `fix/review-decision-event-type` (issue #16/#19 fixes) + `docs/surface-a
 | 20 | Code workspace (CodeRoot) (PARTIAL → upgrade) | `[x]` | STALE — fully implemented, live (`CodeRoot.tsx`→`CodeSurfaceRouter.tsx`→`CodeThreadView`/`CodeCanvasView`) | Closed as stale; no defined "upgrade" scope | |
 | 21 | Code Explorer (GAP → iOS) | `[x]` | STALE — `ExplorerView.tsx` (430 lines) live via `CodeModeAgentSession.tsx` explorer tab | Closed as stale; iOS port has a real reference impl | |
 | 22 | Code Git panel (GAP → iOS) | `[x]` | STALE — `GitView.tsx` (412 lines) live via `CodeModeAgentSession.tsx` git tab | Closed as stale; iOS port has a real reference impl | |
-| 23 | Code Skills view (GAP → iOS) | `[x]` | REAL — `SkillsView.tsx` is a static 3-item mock, no backend, unreachable route | Confirmed gap; needs UI + backend built | |
+| 23 | Code Skills view (GAP → iOS) | `[x]` | REAL — web `SkillsView.tsx` now fetches `/api/v1/team-skills`; iOS `CodeSkillsView` + `TeamSkillsClient` + store shipped (`feat/ios-code-skills`) | Shipped phase 1 | `feat/ios-code-skills` |
 | 24 | Code Project view (PARTIAL → upgrade) | `[x]` | STALE — `CodeProjectView.tsx` (473 lines) live via `code-project` route + `ProjectDetailRouter.tsx` | Closed as stale; no defined "upgrade" scope | |
-| 25 | Code Canvas (live preview split view) (PARTIAL → iOS) | `[x]` | REAL (iOS gap) — web ref is mature (`CodeCanvas.tsx` 1646 lines + `CodeCanvasView.tsx` 807 lines + tile subsystem), iOS has none | Confirmed gap; large port, needs own dedicated spec | |
+| 25 | Code Canvas (live preview split view) (PARTIAL → iOS) | `[x]` | REAL — phase 1 shipped: workspace shell + session tile grid + entry from CodeModeView (`feat/ios-code-canvas`). Full infinite canvas, drag/resize, non-session tiles deferred. | Shipped phase 1 | `feat/ios-code-canvas` |
 | 26 | Code Preview Pane (GAP → iOS, gizzi-code) | `[x]` | STALE (dead code) — `CodePreviewPane.tsx` (208 lines) fully written, zero callers anywhere | Resurrect-or-retire decision needed before iOS port | |
 | 27 | Orchestrator Center (PARTIAL → iOS) | `[x]` | STALE (dead code) — `OrchestratorCenter.tsx` (70 lines), no callers anywhere | Resurrect-or-retire decision needed | |
 | 28 | Orchestration View (PARTIAL → iOS) | `[x]` | STALE (dead code) — `OrchestrationView.tsx` (156 lines), uses real `useUnifiedStore`, no callers | Resurrect-or-retire decision needed | |
@@ -73,8 +77,8 @@ Branch: `fix/review-decision-event-type` (issue #16/#19 fixes) + `docs/surface-a
 | # | Item | Status | Finding | Action | PR |
 |---|------|--------|---------|--------|-----|
 | 39 | ACI Browser surface (GAP → gizzi-code) | `[x]` | DEFER — web+iOS fully implemented (ACITabView/ACIWebBrowserView); gizzi-code is a CLI, no GUI surface to port to | Deferred — CLI/GUI mismatch | |
-| 40 | Mini-apps Store (GAP → iOS) | `[x]` | REAL — web has full store (AciMiniAppsView.tsx, mini-app-registry.ts); zero iOS matches | Confirmed gap, candidate for build | |
-| 41 | Mini-app frame/runtime (GAP → iOS) | `[x]` | REAL — web sandboxed runtime (MiniAppRuntimeSurface.tsx, mini-app-harness/signing.ts); no iOS host | Confirmed gap, depends on #40 | |
+| 40 | Mini-apps Store (GAP → iOS) | `[x]` | REAL — phase 1 shipped: browse-only store with community catalog + public MCP registry, search, categories, pin/unpin, Safari open (`feat/ios-mini-apps-store`) | Shipped phase 1; install/start/runtime/embedded-web deferred | `feat/ios-mini-apps-store` |
+| 41 | Mini-app frame/runtime (GAP → iOS) | `[x]` | REAL — phase 1 shipped: `MiniAppRuntimeView` WKWebView host + capabilities placeholder, wired from store Open button (`feat/ios-mini-app-runtime`) | Shipped phase 1; agent harness/ACP spawn/JS bridge deferred | `feat/ios-mini-app-runtime` |
 | 42 | Office Add-ins — Word (GAP → iOS, gizzi-code) | `[x]` | DEFER — one shared web component (AciAddinView.tsx, OfficeHost type) covers all 3 hosts; no iOS/gizzi-code equiv; Add-ins run inside Office hosts | Deferred; scope as 1 shared view if pursued | |
 | 43 | Office Add-ins — Excel (GAP → iOS, gizzi-code) | `[x]` | DEFER — duplicate target of #42 (same AciAddinView.tsx component) | Deferred, tracked with #42 | |
 | 44 | Office Add-ins — PowerPoint (GAP → iOS, gizzi-code) | `[x]` | DEFER — duplicate target of #42 (same AciAddinView.tsx component) | Deferred, tracked with #42 | |
@@ -93,8 +97,8 @@ Branch: `fix/review-decision-event-type` (issue #16/#19 fixes) + `docs/surface-a
 | 52 | Design Mode — Pipeline tab (GAP → iOS, gizzi-code) | `[x]` | DEFER — same exclusion; component (ContentPipelineView.tsx) also duplicated by row #58 | Deferred, same as #47 | |
 | 53 | Design Marketplace/Registry (GAP → iOS) | `[x]` | DEFER — DesignRegistryView.tsx is also the `market` tab of DesignModeView; covered by iOS Design-mode exclusion | Deferred, same as #47 | |
 | 54 | Design Compare (GAP → iOS, gizzi-code) | `[x]` | STALE — ViewRegistry.tsx:387-391 `design-view-compare` route aliases to DesignRegistryView (same as marketplace); no real compare UI exists anywhere | Closed as stale — nothing to port | |
-| 55 | Form Surfaces (GAP → iOS, gizzi-code) | `[x]` | REAL — FormSurfacesView.tsx (441 lines), standalone nav.policy.ts route (not gated by Design-mode exclusion); no iOS/gizzi-code equivalent | Confirmed gap, candidate for iOS build | |
-| 56 | Canvas Protocol (PARTIAL → iOS) | `[x]` | REAL — Rust crate defines 40+ canonical view types; iOS CanvasClient.swift only covers artifact canvases (3 methods) | Confirmed partial, candidate to extend | |
+| 55 | Form Surfaces (GAP → iOS, gizzi-code) | `[x]` | REAL — phase 1 shipped: iOS `FormSurfacesView` registry + dynamic renderer for all web field types, entry from `ComposerPlusSheet` (`feat/ios-form-surfaces`) | Shipped phase 1; submit/persist deferred | `feat/ios-form-surfaces` |
+| 56 | Canvas Protocol (PARTIAL → iOS) | `[x]` | REAL — phase 1 shipped: all 40+ `CanvasViewType`s + `CanvasSpec` model + spec CRUD helpers in `CanvasClient`, specs ride in existing canvas metadata (`feat/ios-canvas-protocol`) | Shipped phase 1; runtime instantiation of view types deferred | `feat/ios-canvas-protocol` |
 | 57 | Design Team Workspace (GAP → iOS, gizzi-code) | `[x]` | DEFER — DesignTeamWorkspace.tsx is the `team` tab of DesignModeView; covered by iOS Design-mode exclusion | Deferred, same as #47 | |
 | 58 | Content Pipeline (GAP → iOS, gizzi-code) | `[x]` | STALE — duplicate of #52; both point at the same ContentPipelineView.tsx / `pipeline` tab | Closed as stale/duplicate of #52 | |
 | 59 | Live Artifact Editor (PARTIAL → upgrade) | `[x]` | DEFER — LiveArtifactEditor.tsx exists; gap is localStorage-only persistence on web (an upgrade item, not a platform-port gap) | Deferred — out of platform-parity scope | |
@@ -103,65 +107,65 @@ Branch: `fix/review-decision-event-type` (issue #16/#19 fixes) + `docs/surface-a
 
 | # | Item | Status | Finding | Action | PR |
 |---|------|--------|---------|--------|-----|
-| 60 | Monitor (GAP → iOS) | `[x]` | REAL — web `views/MonitorView.tsx` hits real `/api/v1/monitor/*`; iOS has none; gizzi-code `MonitorTool.ts` is a TODO shim | Port to iOS | |
-| 61 | Runtime Operations (GAP → iOS, gizzi-code) | `[x]` | REAL — web `views/runtime/RuntimeOperationsView.tsx` hub; zero iOS/gizzi-code matches | Port to iOS | |
-| 62 | Budget Dashboard (PARTIAL → iOS) | `[x]` | REAL — web `views/runtime/BudgetDashboardView.tsx` hits `/api/v1/runtime/budget`; iOS/gizzi-code hits are unrelated (token-budget, compiler comments) | Port to iOS | |
-| 63 | Replay Manager (GAP → iOS, gizzi-code) | `[x]` | REAL — web `views/runtime/ReplayManagerView.tsx` real; zero iOS/gizzi-code matches | Port to iOS | |
-| 64 | Prewarm Manager (GAP → iOS, gizzi-code) | `[x]` | REAL — web `views/runtime/PrewarmManagerView.tsx` real; gizzi-code "prewarm" hit is unrelated keyboard-modifier code | Port to iOS | |
-| 65 | Nodes (GAP → iOS, gizzi-code) | `[x]` | REAL — web `views/nodes/NodesView.tsx` polls `/nodes`; gizzi-code "nodes" hits are all AST/tailnet, not infra fleet | Port to iOS | |
-| 66 | Cloud Deploy (GAP → iOS, gizzi-code) | `[x]` | REAL — web `views/cloud-deploy/CloudDeployView.tsx` full deployments API client; zero iOS/gizzi-code matches | Port to iOS | |
+| 60 | Monitor (GAP → iOS) | `[x]` | REAL — phase 1 shipped: iOS `MonitorView` + `MonitorClient` + `MonitorStore` wired to `/api/v1/monitor/*`, entry from Settings Infrastructure (`feat/ios-monitor`) | Shipped phase 1; backend routes don't exist yet | `feat/ios-monitor` |
+| 61 | Runtime Operations (GAP → iOS, gizzi-code) | `[x]` | REAL — phase 1 shipped: iOS `RuntimeOperationsView` hub aggregating budget/replay/prewarm/execution-mode cards + `RuntimeOperationsClient` (`feat/ios-runtime-operations`) | Shipped phase 1; detail/management screens deferred to #62-64 | `feat/ios-runtime-operations` |
+| 62 | Budget Dashboard (PARTIAL → iOS) | `[x]` | REAL — phase 1 shipped: iOS `BudgetDashboardView` with stat cards, quota editor (text + quick presets), pressure bars, alerts; reachable from Runtime Operations hub (`feat/ios-budget-dashboard`) | Shipped phase 1 | `feat/ios-budget-dashboard` |
+| 63 | Replay Manager (GAP → iOS, gizzi-code) | `[x]` | REAL — phase 1 shipped: iOS `ReplayManagerView` with search, capture-level filter, stat cards, and per-row replay; `RuntimeOperationsStore.executeReplay` wired to `POST /runtime/replay/sessions/:run_id/execute` (`feat/ios-replay-manager`) | Shipped phase 1; gizzi-code port deferred | `feat/ios-replay-manager` |
+| 64 | Prewarm Manager (GAP → iOS, gizzi-code) | `[x]` | REAL — phase 1 shipped: iOS `PrewarmManagerView` with pool-size slider, Apply/Warmup actions, health chips, pool topology, and recent activity; `RuntimeOperationsStore` wired to `POST /runtime/prewarm/pool` and `/runtime/prewarm/warmup` (`feat/ios-prewarm-manager`) | Shipped phase 1; gizzi-code port deferred | `feat/ios-prewarm-manager` |
+| 65 | Nodes (GAP → iOS, gizzi-code) | `[x]` | REAL — phase 1 shipped: iOS `NodesManagerView` + `NodesStore` + `NodesClient` listing compute nodes, online/offline stats, delete, and join-token generation via `/api/v1/nodes/*` (`feat/ios-nodes-manager`) | Shipped phase 1; terminal/deploy wizard and gizzi-code port deferred | `feat/ios-nodes-manager` |
+| 66 | Cloud Deploy (GAP → iOS, gizzi-code) | `[x]` | REAL — phase 1 shipped: iOS `CloudDeployManagerView` + `CloudDeployStore` + `CloudDeployClient` listing deployments, manual/automated creation form, cancel, and status polling via `/api/v1/deployments*` (`feat/ios-cloud-deploy`) | Shipped phase 1; agent-assisted wizard, WebSocket events, and gizzi-code port deferred | `feat/ios-cloud-deploy` |
 | 67 | Capsule Manager (GAP → iOS) | `[x]` | STALE — web `views/CapsuleManagerView.tsx` is an explicit stub (`stub-capsule-001`, "replace when @allternit/shell-ui available"), no real feature to port | Re-flag as web-build task, not a port gap | |
-| 68 | VPS & Servers panel (GAP → iOS, gizzi-code) | `[x]` | REAL — web `views/settings/VPSConnectionsPanel.tsx` real SSH CRUD API; iOS only has runtime-pairing picker (narrower, different concept) | Port SSH CRUD to iOS | |
-| 69 | Cloud Instances panel (GAP → iOS, gizzi-code) | `[x]` | REAL — web `views/settings/CloudInstancesPanel.tsx` real wizard/provider-token API; iOS only has dev-tunnel instance picker | Port to iOS | |
-| 70 | Enterprise BYOC panel (GAP → iOS, gizzi-code) | `[x]` | REAL — web `components/settings/EnterpriseByocPanel.tsx` real usage/credentials API; gizzi-code "BYOC" hits are an unrelated CCR execution mode | Port to iOS | |
+| 68 | VPS & Servers panel (GAP → iOS, gizzi-code) | `[x]` | REAL — phase 1 shipped: iOS `VPSServersManagerView` + `SSHConnectionsStore` + `SSHConnectionsClient` for listing, testing, creating, connecting, disconnecting, and deleting SSH connections via `/api/v1/ssh-connections*` (`feat/ios-vps-servers`) | Shipped phase 1; agent install, provider deploy, and gizzi-code port deferred | `feat/ios-vps-servers` |
+| 69 | Cloud Instances panel (GAP → iOS, gizzi-code) | `[x]` | REAL — phase 1 shipped: iOS `CloudInstancesManagerView` + `CloudInstancesStore` + `CloudInstancesClient` for the BYO-VPS wizard on the cloud API (`/api/v1/cloud/wizard/deployments*`): list sessions, manual SSH start, advance, bootstrap, cancel, delete (`feat/ios-cloud-instances`) | Shipped phase 1; automated providers, saved provider tokens, and gizzi-code port deferred | `feat/ios-cloud-instances` |
+| 70 | Enterprise BYOC panel (GAP → iOS, gizzi-code) | `[x]` | REAL — phase 1 shipped: iOS `EnterpriseBYOCPanelView` + `BYOCStore` + `BYOCClient` for profile/usage summary and cloud-credential management via `/api/v1/me`, `/api/v1/usage/summary`, `/api/v1/cloud-credentials*` (`feat/ios-enterprise-byoc`) | Shipped phase 1; gizzi-code port deferred (BYOC hits unrelated) | `feat/ios-enterprise-byoc` |
 
 ## DAG suite (15)
 
 | # | Item | Status | Finding | Action | PR |
 |---|------|--------|---------|--------|-----|
-| 71 | DAG Integration Page (PARTIAL → upgrade) | `[x]` | REAL — `views/DagIntegrationPage.tsx` is a stale 4-tab wrapper predating the newer DAG-suite views (Ontology, Security, etc.), which are routed but not surfaced here | Rebuild as full DAG-suite index | |
-| 72 | Ontology Viewer (GAP → gizzi-code) | `[x]` | REAL — web `views/dag/OntologyViewer.tsx` live via railsApi; gizzi-code hit is unrelated code comment | Port to gizzi-code | |
-| 73 | Directive Compiler (GAP → gizzi-code) | `[x]` | REAL — web `views/dag/DirectiveCompiler.tsx` real `createDagPlan`/`refineDag`; zero gizzi-code/iOS matches | Port to gizzi-code | |
-| 74 | GC Agents (GAP → gizzi-code) | `[x]` | REAL — web `views/dag/GCAgents.tsx` real archive/index-maintenance controls; zero matches elsewhere | Port to gizzi-code (low priority) | |
-| 75 | Receipts Viewer (GAP → gizzi-code) | `[x]` | REAL — web `views/dag/ReceiptsViewer.tsx` real receipts data; zero matches elsewhere | Port to gizzi-code | |
-| 76 | Security Dashboard (GAP → gizzi-code) | `[x]` | REAL — web `views/dag/SecurityDashboard.tsx` (1068 lines) real `/api/v1/security/*`; zero matches elsewhere | Port to gizzi-code | |
-| 77 | Purpose Binding (GAP → gizzi-code) | `[x]` | REAL — web `views/dag/PurposeBinding.tsx` (957 lines) real `/api/v1/purposes*`; zero matches elsewhere | Port to gizzi-code | |
-| 78 | Observability Dashboard (PARTIAL → upgrade) | `[x]` | REAL — web `views/dag/ObservabilityDashboard.tsx` real ledger/gate data but no time-series charts or alerting | Add Recharts time-series panels | |
-| 79 | Multimodal Input (GAP → gizzi-code) | `[x]` | REAL — web `views/MultimodalInput/MultimodalInput.tsx` live WebSocket client; gizzi-code hit is unrelated doc string | Port to gizzi-code (scope TBD) | |
+| 71 | DAG Integration Page (PARTIAL → upgrade) | `[x]` | REAL — rebuilt `views/DagIntegrationPage.tsx` as a full DAG-suite index with navigation tiles for Orchestration, Knowledge, Security, Browser/Execution, and Observability views (`feat/web-dag-integration-page`) | Shipped index rebuild; individual gizzi-code ports remain under #72–#86 | `feat/web-dag-integration-page` |
+| 72 | Ontology Viewer (GAP → gizzi-code) | `[x]` | REAL — gizzi-code `/ontology` command shipped: Ink TUI that fetches DAG plans, WIHs, context packs, and receipts from `/api/rails/*` and displays summary + recent DAGs + WIHs (`feat/gizzi-dag-ontology`) | Shipped phase 1 CLI port; deeper graph rendering and node-edge details deferred | `feat/gizzi-dag-ontology` |
+| 73 | Directive Compiler (GAP → gizzi-code) | `[x]` | REAL — gizzi-code `/directive` command shipped: compiles natural-language directives into DAG plans via `POST /api/rails/plan` and renders the resulting plan as Markdown (`feat/gizzi-directive-compiler`) | Shipped phase 1 CLI port; interactive refinement and plan editing deferred | `feat/gizzi-directive-compiler` |
+| 74 | GC Agents (GAP → gizzi-code) | `[x]` | REAL — gizzi-code `/gc` command shipped: status, `archive <wih-id>`, `verify`, and `rebuild` subcommands backed by `/api/rails/wihs`, `/vault/*`, `/gate/verify`, and `/index/rebuild` (`feat/gizzi-gc-agents`) | Shipped phase 1 CLI port | `feat/gizzi-gc-agents` |
+| 75 | Receipts Viewer (GAP → gizzi-code) | `[x]` | REAL — gizzi-code `/receipts` command shipped: query receipts with `--dag/--node/--wih/--kind/--limit` filters and `show <id>` detail via `/api/rails/receipts*` (`feat/gizzi-receipts-viewer`) | Shipped phase 1 CLI port | `feat/gizzi-receipts-viewer` |
+| 76 | Security Dashboard (GAP → gizzi-code) | `[x]` | REAL — gizzi-code `/security` command shipped: overview, events with filters, compliance, assessment, and ack/resolve actions via `/api/v1/security/*` (`feat/gizzi-security-dashboard`) | Shipped phase 1 CLI port | `feat/gizzi-security-dashboard` |
+| 77 | Purpose Binding (GAP → gizzi-code) | `[x]` | REAL — gizzi-code `/purpose` command shipped: list purposes, bindings, violations, bind/unbind agents via `/api/v1/purposes/*` (`feat/gizzi-purpose-binding`) | Shipped phase 1 CLI port | `feat/gizzi-purpose-binding` |
+| 78 | Observability Dashboard (PARTIAL → upgrade) | `[x]` | REAL — added `ObservabilityCharts.tsx` with Recharts area (ledger event volume) and stacked-bar (receipts by kind) time-series panels, integrated into `ObservabilityDashboardSurface` (`feat/web-observability-charts`) | Shipped charts upgrade; alerting deferred | `feat/web-observability-charts` |
+| 79 | Multimodal Input (GAP → gizzi-code) | `[x]` | REAL — gizzi-code `/multimodal` command shipped: Ink TUI that connects to `/api/v1/multimodal/ws/multimodal` and reports connection status, message count, and last frame size (camera/audio capture is not applicable in a terminal) (`feat/gizzi-multimodal-input`) | Shipped phase 1 CLI port; full media capture deferred | `feat/gizzi-multimodal-input` |
 | 80 | Evolution Layer (GAP → gizzi-code) | `[x]` | DEFER — web `views/EvolutionLayerView.tsx` (58 lines) is purely static mock, zero backend calls; nothing real to port yet | Defer until web has real backend | |
 | 81 | Context Control Plane (GAP → gizzi-code) | `[x]` | DEFER — web `views/ContextControlPlaneView.tsx` (361 lines) is hardcoded mock arrays, zero API calls; nothing real to port yet | Defer until web has real backend | |
-| 82 | Swarm ADE (PARTIAL → iOS) | `[x]` | REAL — web `views/swarm/SwarmADE.tsx` mature (6 view modes, Recharts, export); iOS `.swarms` is only a chat-prompt theme entry, no swarm UI | Port iOS SwarmADE-lite | |
-| 83 | H5I panel — Audit (GAP → gizzi-code) | `[x]` | REAL — web `H5iAuditPanel.tsx` live via `/api/h5i/vibe,init,status`; zero gizzi-code/iOS matches | Port to gizzi-code | |
-| 84 | H5I panel — Commit (PARTIAL → upgrade) | `[x]` | REAL — web `H5iCommitPanel.tsx` real commit API but no file-picker/diff preview before commit | Add file-picker/diff-preview step | |
-| 85 | H5I panel — Context (GAP → gizzi-code) | `[x]` | REAL — web `H5iContextPanel.tsx` polls `/api/h5i/context/trace`; zero gizzi-code/iOS matches | Port to gizzi-code | |
-| 86 | H5I panel — Diff (PARTIAL → upgrade) | `[x]` | REAL — web `H5iDiffPanel.tsx` only diffs reasoning traces, not actual code/file diffs despite the name | Rename or add real file-diff mode | |
+| 82 | Swarm ADE (PARTIAL → iOS) | `[x]` | REAL — iOS Swarm ADE shipped: new Swarm sidebar tab, `SwarmAgent` models, `SwarmClient` mapping agent-sessions to swarm agents, `SwarmStore`, and `SwarmADEView` with Grid / Console / Detail modes (`feat/ios-swarm-ade`) | Shipped iOS SwarmADE-lite | `feat/ios-swarm-ade` |
+| 83 | H5I panel — Audit (GAP → gizzi-code) | `[x]` | REAL — gizzi-code `/h5i audit` command shipped: calls `/api/h5i/status`, `/api/h5i/init`, `/api/h5i/vibe`; reports AI footprint, riskiest files, leaked tokens, prompt injection hits, AI-written directories, and raw output (`feat/gizzi-h5i-audit`) | Shipped phase 1 CLI port | `feat/gizzi-h5i-audit` |
+| 84 | H5I panel — Commit (PARTIAL → upgrade) | `[x]` | REAL — upgraded `H5iCommitPanel.tsx`: added Files to include picker, auto-load diff preview from `/api/v1/git/diff`, per-file diff display, and pass selected files to `commitWithH5i` (`feat/web-h5i-commit-upgrade`) | Shipped file-picker/diff-preview upgrade | `feat/web-h5i-commit-upgrade` |
+| 85 | H5I panel — Context (GAP → gizzi-code) | `[x]` | REAL — gizzi-code `/h5i context` shipped: show trace via `/api/h5i/context/trace`, start via `/api/h5i/context/start`, finish via `/api/h5i/context/finish`; extends the same `/h5i` command as audit (`feat/gizzi-h5i-context`) | Shipped phase 1 CLI port | `feat/gizzi-h5i-context` |
+| 86 | H5I panel — Diff (PARTIAL → upgrade) | `[x]` | REAL — upgraded `H5iDiffPanel.tsx`: renamed header to 'h5i Diff', added Reasoning Traces / File Diff tabs, file-diff mode calls `/api/v1/git/diff` with optional path and renders per-file diffs (`feat/web-h5i-diff-upgrade`) | Shipped file-diff mode + clearer naming | `feat/web-h5i-diff-upgrade` |
 | 87 | Changeset Review (GAP → iOS) | `[x]` | PR #4 merged to main | Closed as shipped | #4 |
 
 ## Marketplace/Plugins (4)
 
 | # | Item | Status | Finding | Action | PR |
 |---|------|--------|---------|--------|-----|
-| 88 | Marketplace (top-level) (PARTIAL → iOS) | `[x]` | REAL — web mature (`views/MarketplaceView.tsx` etc.), zero matches on iOS | Confirmed gap, build iOS | |
-| 89 | Plugin Registry / Plugin Marketplace (PARTIAL → iOS) | `[x]` | REAL — web+gizzi-code have plugin systems, zero matches on iOS | Confirmed gap, build iOS | |
-| 90 | Team Skills panel (GAP → iOS) | `[x]` | REAL — web `components/marketplace/TeamSkillsPanel.tsx` exists, zero matches on iOS | Confirmed gap, build iOS | |
+| 88 | Marketplace (top-level) (PARTIAL → iOS) | `[x]` | DEFER — re-verified against live code: `views/marketplace/main/useMarketplaceManager.ts` is hardcoded mock `INITIAL_ITEMS` with no backend; nothing real to port yet | Defer until web has real marketplace backend | |
+| 89 | Plugin Registry / Plugin Marketplace (PARTIAL → iOS) | `[x]` | REAL — iOS Plugin Marketplace shipped: new Plugins sidebar tab, `MarketplacePlugin` model with bundled catalog, `PluginStore` for enabled-state persistence, and `PluginMarketplaceView` with category filters/search/enable toggle (`feat/ios-plugin-marketplace`) | Shipped phase 1 iOS port | `feat/ios-plugin-marketplace` |
+| 90 | Team Skills panel (GAP → iOS) | `[x]` | REAL — iOS Team Skills shipped: new sidebar tab, `WorkspaceClient`/`WorkspaceStore`, `TeamSkill` model, `TeamSkillsClient`/`TeamSkillsStore`, and `TeamSkillsView` wired to `/api/v1/team-skills` | Shipped phase 1 iOS port | `feat/ios-team-skills` |
 | 91 | MiroFish simulation engine (GAP → iOS, gizzi-code) | `[x]` | DEFER — web fully built `lib/mirofish/*`, real gap on iOS/gizzi-code but large scope | Defer to later phase | |
 
 ## Products/Discovery (5)
 
 | # | Item | Status | Finding | Action | PR |
 |---|------|--------|---------|--------|-----|
-| 92 | Products Discovery (GAP → iOS, gizzi-code) | `[x]` | REAL — web `views/products/ProductsDiscoveryView.tsx` live, no matches iOS/gizzi-code | Confirmed gap | |
-| 93 | A://Labs (GAP → iOS, gizzi-code) | `[x]` | REAL — web `views/LabsView.tsx` + `views/labs/main/*`, no matches iOS/gizzi-code | Confirmed gap | |
-| 94 | Udemy Catalog (GAP → iOS, gizzi-code) | `[x]` | REAL — web `views/CatalogView.tsx` (Udemy-specific), no matches iOS/gizzi-code | Confirmed gap, lower priority | |
+| 92 | Products Discovery (GAP → iOS, gizzi-code) | `[x]` | REAL — iOS Products tab + gizzi-code `products` command shipped; bundled catalog mirrors web's ProductsDiscoveryView | Shipped phase 1 port | `feat/products-discovery` |
+| 93 | A://Labs (GAP → iOS, gizzi-code) | `[x]` | REAL — iOS A://Labs tab shipped: `ALABSCourse`/`ALABSLesson` models, `LabsClient`/`LabsStore`, `LabsView` with Discovery/Tracks/Classroom tabs; gizzi-code `labs` command lists courses/lessons | Shipped phase 1 port | `feat/labs` |
+| 94 | Udemy Catalog (GAP → iOS, gizzi-code) | `[x]` | REAL — backend `udemy_routes.rs` proxy shipped, iOS Udemy Catalog tab with categories/search/curate, and gizzi-code `udemy` command | Shipped phase 1 port | `feat/udemy-catalog` |
 | 95 | Discovery Feed (GAP → iOS, gizzi-code) | `[x]` | STALE — not standalone; nested sub-tab inside `LabsView.tsx`, not its own route | Fold into #93 A://Labs | |
-| 96 | Research tab/panel (PARTIAL → iOS) | `[x]` | REAL — web `views/research/ResearchTab.tsx` nested in Labs, no match iOS | Build iOS, scope inside Labs | |
+| 96 | Research tab/panel (PARTIAL → iOS) | `[x]` | REAL — iOS Research tab shipped: `ResearchNotebook`/`ResearchSource`/`ResearchChatMessage` models, `ResearchClient`/`ResearchStore`, `ResearchView` with notebook list/sources/chat, wired into `ModeBarItem.research` | Shipped phase 1 iOS port | `feat/ios-research-tab` |
 
 ## Mail/Knowledge (3)
 
 | # | Item | Status | Finding | Action | PR |
 |---|------|--------|---------|--------|-----|
-| 97 | Mail Monitor (GAP → iOS) | `[x]` | REAL — web `views/mail-monitor/ConversationMonitorPanel.tsx` live, no match iOS | Confirmed gap, build iOS | |
-| 98 | Documents (office-file I/O) (GAP → iOS) | `[x]` | REAL — web full docx/xlsx/pptx editor (`views/documents/office-io/*`), no match iOS | Confirmed gap, build iOS | |
+| 97 | Mail Monitor (GAP → iOS) | `[x]` | STALE — `views/mail-monitor/` only holds shared helpers now; the panel was rebuilt as Agent Activity (`views/agent-activity/*`) and shipped on iOS in PR #18 | Close as superseded | #18 |
+| 98 | Documents (office-file I/O) (GAP → iOS) | `[x]` | REAL — iOS Documents tab shipped: import via document picker, list, QuickLook preview, rename/share/delete; editing (docx/xlsx/pptx mutation) deferred to a later phase | Shipped phase 1 iOS port | `feat/ios-documents` |
 | 99 | Knowledge (PARTIAL → iOS) | `[x]` | DEFER — no `knowledge/` dir; closest analog `views/MemoryKernelView.tsx`, needs product scoping | Defer pending scoping | |
 
 ## Onboarding/Account (10)
@@ -170,21 +174,21 @@ Branch: `fix/review-decision-event-type` (issue #16/#19 fixes) + `docs/surface-a
 |---|------|--------|---------|--------|-----|
 | 100 | Settings (umbrella/shell) (PARTIAL → upgrade) | `[x]` | STALE — `views/settings/SettingsView.tsx` (1510 lines) is mature, fully wired | Re-scope or close | |
 | 101 | Settings > Account (PARTIAL → gizzi-code) | `[x]` | DEFER — pieces exist both sides, but no true settings sync; needs an ADR | Defer, needs architecture decision | |
-| 102 | Settings > Platform (PARTIAL → iOS) | `[x]` | REAL — web platform group complete, iOS `SettingsView.swift` missing api-keys/shortcuts/dispatch/etc. | Build iOS parity | |
-| 103 | Settings > Products (GAP → iOS) | `[x]` | REAL — web Products group wired, no iOS Settings>Products grouping | Build iOS entry linking existing screens | |
-| 104 | Settings > Infrastructure (GAP → iOS, gizzi-code) | `[x]` | REAL (iOS) / STALE (gizzi-code, already CLI-exposed) — web `InfrastructureSettings.tsx` (1669 lines) | Build iOS only | |
+| 102 | Settings > Platform (PARTIAL → iOS) | `[x]` | REAL — iOS Settings > Platform shipped: `PlatformSettingsView` with General, Appearance, Models, API Keys, Shortcuts, Permissions, Dispatch, Devices, Cloud Instances, and Diagnostics sections | Shipped phase 1 iOS parity | `feat/ios-settings-platform` |
+| 103 | Settings > Products (GAP → iOS) | `[x]` | REAL — iOS Settings > Products shipped: `ProductsSettingsView` with Gizziio Code toggles, Cowork dispatch/open workspace, and Extensions toggles | Shipped phase 1 iOS parity | `feat/ios-settings-products` |
+| 104 | Settings > Infrastructure (GAP → iOS, gizzi-code) | `[x]` | REAL (iOS) — iOS Settings > Infrastructure shipped: `InfrastructureSettingsView` with environment selector, mesh controls, cloud instances, BYOC/VPS/Security placeholders, and agent hub link | Shipped phase 1 iOS parity | `feat/ios-settings-infrastructure` |
 | 105 | Settings > Customize (PARTIAL → upgrade) | `[x]` | STALE — Skills/Response-style/Connectors/Plugins panels all implemented and wired | Close or downgrade to cosmetic-only | |
 | 106 | Device Pairing panel (GAP → iOS) | `[x]` | PR #5 merged to main | Closed as shipped | #5 |
-| 107 | Organization Access panel (GAP → iOS, gizzi-code) | `[x]` | REAL — web `components/settings/OrganizationAccessPanel.tsx` exists, no iOS, no gizzi-code UI/command | Build iOS + `gizzi org` command | |
-| 108 | Compute Billing panel (GAP → iOS) | `[x]` | REAL — web `ComputeBillingPanel.tsx` exists and wired, no iOS files found | Build iOS | |
-| 109 | Enterprise BYOC panel (GAP → iOS, gizzi-code) | `[x]` | REAL, but DUPLICATE of row 70 (identical text, same feature) — web `EnterpriseByocPanel.tsx` exists, none on iOS/gizzi-code | Merge with row 70, then build | |
-| 110 | Model Management view (PARTIAL → upgrade) | `[x]` | REAL — web `views/settings/ModelManagementView.tsx` (170 lines) is minimal, genuine upgrade work remains | Scope upgrade; check overlap w/ LocalModelManager | |
+| 107 | Organization Access panel (GAP → iOS, gizzi-code) | `[x]` | REAL — iOS `OrganizationAccessView` shipped (profile + personal-org creation) and gizzi-code `org` command shipped (`show` + `create`) | Shipped iOS + gizzi parity | `feat/ios-organization-access` |
+| 108 | Compute Billing panel (GAP → iOS) | `[x]` | REAL — iOS `ComputeBillingView` shipped: plan badge, weekly usage meter, credits, and upgrade/buy-credits actions | Shipped phase 1 iOS parity | `feat/ios-compute-billing` |
+| 109 | Enterprise BYOC panel (GAP → iOS, gizzi-code) | `[x]` | DUPLICATE of row 70 — same `EnterpriseBYOCPanelView` shipped in `feat/ios-enterprise-byoc`; no additional work | Closed as duplicate of #70 | `feat/ios-enterprise-byoc` |
+| 110 | Model Management view (PARTIAL → upgrade) | `[x]` | REAL — iOS `ModelManagementView` shipped: default model picker + provider/engine list with auth/ready status via `/api/v1/providers*`, `/api/v1/provider/ollama/status` | Shipped phase 1 iOS parity | `feat/ios-model-management` |
 
 ## AllternitOS (1)
 
 | # | Item | Status | Finding | Action | PR |
 |---|------|--------|---------|--------|-----|
-| 111 | AllternitOS (GAP → gizzi-code) | `[x]` | REAL — web has full OS (`allternit-os/AllternitOS.tsx` etc.), gizzi-code has no windowing/kernel concept | Confirmed gap, scope minimal equivalent | |
+| 111 | AllternitOS (GAP → gizzi-code) | `[x]` | REAL — gizzi-code `programs` command shipped: lists built-in command programs + installed agents, shows info, and provides a `run` shim mapping AllternitOS installable programs to CLI agents/skills | Shipped minimal equivalent | `feat/ios-model-management` |
 
 ## Playground/QA (1)
 
@@ -213,4 +217,4 @@ Branch: `fix/review-decision-event-type` (issue #16/#19 fixes) + `docs/surface-a
 | 117 | Local VM management (GAP → gizzi-code) | `[x]` | STALE — `runtime/vm/` (vfkit-based) + `cli/commands/vm.ts` fully built, used in production | Close as shipped | |
 | 118 | Teleport / remote dev environments (GAP → gizzi-code) | `[x]` | STALE (gizzi-code) — extensive `remote/RemoteSessionManager.ts` + Teleport UI/hooks already exist | Close gizzi-code half; web/iOS parity is separate DEFER | |
 | 119 | Slack app install (GAP → gizzi-code) | `[x]` | STALE — working `install-slack-app` command registered in two command tables | Close as shipped | |
-| 120 | Theme switching (`/theme`) (PARTIAL → upgrade) | `[x]` | REAL — base feature works (CLI + `/theme` slash cmd) but only 3 built-in themes, no custom/palette editing | Scope custom-theme upgrade | |
+| 120 | Theme switching (`/theme`) (PARTIAL → upgrade) | `[x]` | REAL — custom theme/palette upgrade shipped: arbitrary named themes in `~/.config/gizzi/themes.json`, `theme custom`, `theme palette`, `theme delete`; built-ins remain immutable | Shipped custom theme upgrade | `feat/gizzi-theme-upgrade` |
