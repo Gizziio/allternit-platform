@@ -103,38 +103,38 @@ Branch: `fix/review-decision-event-type` (issue #16/#19 fixes) + `docs/surface-a
 
 | # | Item | Status | Finding | Action | PR |
 |---|------|--------|---------|--------|-----|
-| 60 | Monitor (GAP → iOS) | `[ ]` | | | |
-| 61 | Runtime Operations (GAP → iOS, gizzi-code) | `[ ]` | | | |
-| 62 | Budget Dashboard (PARTIAL → iOS) | `[ ]` | | | |
-| 63 | Replay Manager (GAP → iOS, gizzi-code) | `[ ]` | | | |
-| 64 | Prewarm Manager (GAP → iOS, gizzi-code) | `[ ]` | | | |
-| 65 | Nodes (GAP → iOS, gizzi-code) | `[ ]` | | | |
-| 66 | Cloud Deploy (GAP → iOS, gizzi-code) | `[ ]` | | | |
-| 67 | Capsule Manager (GAP → iOS) | `[ ]` | | | |
-| 68 | VPS & Servers panel (GAP → iOS, gizzi-code) | `[ ]` | | | |
-| 69 | Cloud Instances panel (GAP → iOS, gizzi-code) | `[ ]` | | | |
-| 70 | Enterprise BYOC panel (GAP → iOS, gizzi-code) | `[ ]` | | | |
+| 60 | Monitor (GAP → iOS) | `[x]` | REAL — web `views/MonitorView.tsx` hits real `/api/v1/monitor/*`; iOS has none; gizzi-code `MonitorTool.ts` is a TODO shim | Port to iOS | |
+| 61 | Runtime Operations (GAP → iOS, gizzi-code) | `[x]` | REAL — web `views/runtime/RuntimeOperationsView.tsx` hub; zero iOS/gizzi-code matches | Port to iOS | |
+| 62 | Budget Dashboard (PARTIAL → iOS) | `[x]` | REAL — web `views/runtime/BudgetDashboardView.tsx` hits `/api/v1/runtime/budget`; iOS/gizzi-code hits are unrelated (token-budget, compiler comments) | Port to iOS | |
+| 63 | Replay Manager (GAP → iOS, gizzi-code) | `[x]` | REAL — web `views/runtime/ReplayManagerView.tsx` real; zero iOS/gizzi-code matches | Port to iOS | |
+| 64 | Prewarm Manager (GAP → iOS, gizzi-code) | `[x]` | REAL — web `views/runtime/PrewarmManagerView.tsx` real; gizzi-code "prewarm" hit is unrelated keyboard-modifier code | Port to iOS | |
+| 65 | Nodes (GAP → iOS, gizzi-code) | `[x]` | REAL — web `views/nodes/NodesView.tsx` polls `/nodes`; gizzi-code "nodes" hits are all AST/tailnet, not infra fleet | Port to iOS | |
+| 66 | Cloud Deploy (GAP → iOS, gizzi-code) | `[x]` | REAL — web `views/cloud-deploy/CloudDeployView.tsx` full deployments API client; zero iOS/gizzi-code matches | Port to iOS | |
+| 67 | Capsule Manager (GAP → iOS) | `[x]` | STALE — web `views/CapsuleManagerView.tsx` is an explicit stub (`stub-capsule-001`, "replace when @allternit/shell-ui available"), no real feature to port | Re-flag as web-build task, not a port gap | |
+| 68 | VPS & Servers panel (GAP → iOS, gizzi-code) | `[x]` | REAL — web `views/settings/VPSConnectionsPanel.tsx` real SSH CRUD API; iOS only has runtime-pairing picker (narrower, different concept) | Port SSH CRUD to iOS | |
+| 69 | Cloud Instances panel (GAP → iOS, gizzi-code) | `[x]` | REAL — web `views/settings/CloudInstancesPanel.tsx` real wizard/provider-token API; iOS only has dev-tunnel instance picker | Port to iOS | |
+| 70 | Enterprise BYOC panel (GAP → iOS, gizzi-code) | `[x]` | REAL — web `components/settings/EnterpriseByocPanel.tsx` real usage/credentials API; gizzi-code "BYOC" hits are an unrelated CCR execution mode | Port to iOS | |
 
 ## DAG suite (15)
 
 | # | Item | Status | Finding | Action | PR |
 |---|------|--------|---------|--------|-----|
-| 71 | DAG Integration Page (PARTIAL → upgrade) | `[ ]` | | | |
-| 72 | Ontology Viewer (GAP → gizzi-code) | `[ ]` | | | |
-| 73 | Directive Compiler (GAP → gizzi-code) | `[ ]` | | | |
-| 74 | GC Agents (GAP → gizzi-code) | `[ ]` | | | |
-| 75 | Receipts Viewer (GAP → gizzi-code) | `[ ]` | | | |
-| 76 | Security Dashboard (GAP → gizzi-code) | `[ ]` | | | |
-| 77 | Purpose Binding (GAP → gizzi-code) | `[ ]` | | | |
-| 78 | Observability Dashboard (PARTIAL → upgrade) | `[ ]` | | | |
-| 79 | Multimodal Input (GAP → gizzi-code) | `[ ]` | | | |
-| 80 | Evolution Layer (GAP → gizzi-code) | `[ ]` | | | |
-| 81 | Context Control Plane (GAP → gizzi-code) | `[ ]` | | | |
-| 82 | Swarm ADE (PARTIAL → iOS) | `[ ]` | | | |
-| 83 | H5I panel — Audit (GAP → gizzi-code) | `[ ]` | | | |
-| 84 | H5I panel — Commit (PARTIAL → upgrade) | `[ ]` | | | |
-| 85 | H5I panel — Context (GAP → gizzi-code) | `[ ]` | | | |
-| 86 | H5I panel — Diff (PARTIAL → upgrade) | `[ ]` | | | |
+| 71 | DAG Integration Page (PARTIAL → upgrade) | `[x]` | REAL — `views/DagIntegrationPage.tsx` is a stale 4-tab wrapper predating the newer DAG-suite views (Ontology, Security, etc.), which are routed but not surfaced here | Rebuild as full DAG-suite index | |
+| 72 | Ontology Viewer (GAP → gizzi-code) | `[x]` | REAL — web `views/dag/OntologyViewer.tsx` live via railsApi; gizzi-code hit is unrelated code comment | Port to gizzi-code | |
+| 73 | Directive Compiler (GAP → gizzi-code) | `[x]` | REAL — web `views/dag/DirectiveCompiler.tsx` real `createDagPlan`/`refineDag`; zero gizzi-code/iOS matches | Port to gizzi-code | |
+| 74 | GC Agents (GAP → gizzi-code) | `[x]` | REAL — web `views/dag/GCAgents.tsx` real archive/index-maintenance controls; zero matches elsewhere | Port to gizzi-code (low priority) | |
+| 75 | Receipts Viewer (GAP → gizzi-code) | `[x]` | REAL — web `views/dag/ReceiptsViewer.tsx` real receipts data; zero matches elsewhere | Port to gizzi-code | |
+| 76 | Security Dashboard (GAP → gizzi-code) | `[x]` | REAL — web `views/dag/SecurityDashboard.tsx` (1068 lines) real `/api/v1/security/*`; zero matches elsewhere | Port to gizzi-code | |
+| 77 | Purpose Binding (GAP → gizzi-code) | `[x]` | REAL — web `views/dag/PurposeBinding.tsx` (957 lines) real `/api/v1/purposes*`; zero matches elsewhere | Port to gizzi-code | |
+| 78 | Observability Dashboard (PARTIAL → upgrade) | `[x]` | REAL — web `views/dag/ObservabilityDashboard.tsx` real ledger/gate data but no time-series charts or alerting | Add Recharts time-series panels | |
+| 79 | Multimodal Input (GAP → gizzi-code) | `[x]` | REAL — web `views/MultimodalInput/MultimodalInput.tsx` live WebSocket client; gizzi-code hit is unrelated doc string | Port to gizzi-code (scope TBD) | |
+| 80 | Evolution Layer (GAP → gizzi-code) | `[x]` | DEFER — web `views/EvolutionLayerView.tsx` (58 lines) is purely static mock, zero backend calls; nothing real to port yet | Defer until web has real backend | |
+| 81 | Context Control Plane (GAP → gizzi-code) | `[x]` | DEFER — web `views/ContextControlPlaneView.tsx` (361 lines) is hardcoded mock arrays, zero API calls; nothing real to port yet | Defer until web has real backend | |
+| 82 | Swarm ADE (PARTIAL → iOS) | `[x]` | REAL — web `views/swarm/SwarmADE.tsx` mature (6 view modes, Recharts, export); iOS `.swarms` is only a chat-prompt theme entry, no swarm UI | Port iOS SwarmADE-lite | |
+| 83 | H5I panel — Audit (GAP → gizzi-code) | `[x]` | REAL — web `H5iAuditPanel.tsx` live via `/api/h5i/vibe,init,status`; zero gizzi-code/iOS matches | Port to gizzi-code | |
+| 84 | H5I panel — Commit (PARTIAL → upgrade) | `[x]` | REAL — web `H5iCommitPanel.tsx` real commit API but no file-picker/diff preview before commit | Add file-picker/diff-preview step | |
+| 85 | H5I panel — Context (GAP → gizzi-code) | `[x]` | REAL — web `H5iContextPanel.tsx` polls `/api/h5i/context/trace`; zero gizzi-code/iOS matches | Port to gizzi-code | |
+| 86 | H5I panel — Diff (PARTIAL → upgrade) | `[x]` | REAL — web `H5iDiffPanel.tsx` only diffs reasoning traces, not actual code/file diffs despite the name | Rename or add real file-diff mode | |
 | 87 | Changeset Review (GAP → iOS) | `[x]` | PR #4 merged to main | Closed as shipped | #4 |
 
 ## Marketplace/Plugins (4)
