@@ -26,6 +26,8 @@ struct SettingsView: View {
 
     /// Pushed Memory section (NavigationStack below).
     @State private var isMemoryPresented = false
+    /// Pushed Compute Billing settings (Plans & Compute parity).
+    @State private var isComputeBillingPresented = false
     /// Pushed custom-instructions editor (Agent section).
     @State private var isInstructionsPresented = false
     /// Pushed Monitor view (infra section).
@@ -100,6 +102,9 @@ struct SettingsView: View {
             }
             .navigationDestination(isPresented: $isMemoryPresented) {
                 MemorySettingsView()
+            }
+            .navigationDestination(isPresented: $isComputeBillingPresented) {
+                ComputeBillingView()
             }
             .navigationDestination(isPresented: $isInstructionsPresented) {
                 CustomInstructionsView()
@@ -236,6 +241,24 @@ struct SettingsView: View {
                     .background(Color("BgSecondary"))
                     .clipShape(Capsule())
             }
+
+            Button(action: {
+                let generator = UIImpactFeedbackGenerator(style: .light)
+                generator.impactOccurred()
+                isComputeBillingPresented = true
+            }) {
+                HStack {
+                    Text("Plans & Compute")
+                        .font(.subheadline)
+                        .foregroundColor(Color("TextPrimary"))
+                    Spacer()
+                    Image(systemName: "chevron.right")
+                        .font(.system(size: 11, weight: .bold))
+                        .foregroundColor(Color("TextSecondary"))
+                }
+                .contentShape(Rectangle())
+            }
+            .buttonStyle(.plain)
 
             // Same sign-out path as the sidebar footer menu.
             Button(role: .destructive, action: {

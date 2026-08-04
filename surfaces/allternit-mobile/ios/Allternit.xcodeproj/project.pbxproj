@@ -26,6 +26,7 @@
 		1835BCF4D303C85249F87AAB /* CronJob.swift in Sources */ = {isa = PBXBuildFile; fileRef = BC9B4BA16EDF46885053622B /* CronJob.swift */; };
 		18C9EB8E0CDD8146822E1E05 /* libz.tbd in Frameworks */ = {isa = PBXBuildFile; fileRef = 2EA4CD63CB38E3BE58D42166 /* libz.tbd */; };
 		19E0767DE23B690FFA6BE33A /* Mesh.xcframework in Frameworks */ = {isa = PBXBuildFile; fileRef = C7B9F283E2DE6838A4FDF9C4 /* Mesh.xcframework */; };
+		1F010EB98323D25EEFB22CB6 /* ComputeBillingView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D129CF0D5A7B51D59834876E /* ComputeBillingView.swift */; };
 		20E80A1F2D2626B38DB8EEB4 /* MessageRow.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9AC5DA69A46A6B20CD3FB8BF /* MessageRow.swift */; };
 		239DD97E2CE53C524C621776 /* ACIAgentRunView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F7AEC5CF2FBE0926C09D8DDF /* ACIAgentRunView.swift */; };
 		26E26C99F6DB134C1CD6E5CB /* ChangesetReviewSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = 74AAFC624B283761154C5E82 /* ChangesetReviewSheet.swift */; };
@@ -244,6 +245,7 @@
 		C7B9F283E2DE6838A4FDF9C4 /* Mesh.xcframework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.xcframework; name = Mesh.xcframework; path = Frameworks/Mesh.xcframework; sourceTree = "<group>"; };
 		CDA9A55790F69985EC8F4D6D /* AgentActivityThread.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AgentActivityThread.swift; sourceTree = "<group>"; };
 		D11953529A9295E82BD8B098 /* MemorySettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MemorySettingsView.swift; sourceTree = "<group>"; };
+		D129CF0D5A7B51D59834876E /* ComputeBillingView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ComputeBillingView.swift; sourceTree = "<group>"; };
 		D45673F8E41471638BD2E334 /* Color+Theme.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Color+Theme.swift"; sourceTree = "<group>"; };
 		D61E57FF032550F43AAC67BD /* Reply.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Reply.swift; sourceTree = "<group>"; };
 		DA805C4BABCE1FA5CE5E38E1 /* libgit2.xcframework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.xcframework; name = libgit2.xcframework; path = Frameworks/libgit2.xcframework; sourceTree = "<group>"; };
@@ -719,6 +721,7 @@
 		DDFF322C789AF15F6EA00CA3 /* Settings */ = {
 			isa = PBXGroup;
 			children = (
+				D129CF0D5A7B51D59834876E /* ComputeBillingView.swift */,
 				D11953529A9295E82BD8B098 /* MemorySettingsView.swift */,
 				B7F3B173705B7F5941BDC4FE /* SafariView.swift */,
 				59F0F883C961CE5C29AD0B21 /* SettingsView.swift */,
@@ -880,6 +883,7 @@
 				6BB4A917B6F16D659FC4505C /* CodeModeView.swift in Sources */,
 				9E98F1BC9EA39287BFD70DCD /* Color+Theme.swift in Sources */,
 				BC4A7BEB1237004CCFA919A4 /* ComposerPlusSheet.swift in Sources */,
+				1F010EB98323D25EEFB22CB6 /* ComputeBillingView.swift in Sources */,
 				D03140127825489A37768513 /* Connector.swift in Sources */,
 				91A9CC9F276FFA299E656E23 /* ConnectorsClient.swift in Sources */,
 				9FED2141772D7016D1172DD7 /* ConnectorsListView.swift in Sources */,
