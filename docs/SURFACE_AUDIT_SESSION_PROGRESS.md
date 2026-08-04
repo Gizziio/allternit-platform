@@ -19,8 +19,8 @@ Branch: `fix/review-decision-event-type` (issue #16/#19 fixes) + `docs/surface-a
 
 | # | Item | Status | Finding | Action | PR |
 |---|------|--------|---------|--------|-----|
-| 1 | Projects (GAP → gizzi-code) | `[ ]` | | | |
-| 2 | Artifacts Library (PARTIAL → upgrade) | `[ ]` | | | |
+| 1 | Projects (GAP → gizzi-code) | `[x]` | STALE — project model already exists: web `views/ProjectView.tsx`, gizzi-code `project/instance.ts`, iOS `Features/Projects/` | Closed as stale | |
+| 2 | Artifacts Library (PARTIAL → upgrade) | `[x]` | STALE — web `views/library/LibraryView.tsx` ("Artifacts Library") + iOS `Features/Artifacts/Views/ArtifactsLibraryView.swift` both exist | Closed as stale | |
 | 3 | Automation Tasks (Goals/Routines/Loops/Cron) (GAP → iOS) | `[x]` | PR #9 merged to main; cron jobs shipped on iOS | Closed as shipped | #9 |
 
 ## Cowork (15)
@@ -141,76 +141,76 @@ Branch: `fix/review-decision-event-type` (issue #16/#19 fixes) + `docs/surface-a
 
 | # | Item | Status | Finding | Action | PR |
 |---|------|--------|---------|--------|-----|
-| 88 | Marketplace (top-level) (PARTIAL → iOS) | `[ ]` | | | |
-| 89 | Plugin Registry / Plugin Marketplace (PARTIAL → iOS) | `[ ]` | | | |
-| 90 | Team Skills panel (GAP → iOS) | `[ ]` | | | |
-| 91 | MiroFish simulation engine (GAP → iOS, gizzi-code) | `[ ]` | | | |
+| 88 | Marketplace (top-level) (PARTIAL → iOS) | `[x]` | REAL — web mature (`views/MarketplaceView.tsx` etc.), zero matches on iOS | Confirmed gap, build iOS | |
+| 89 | Plugin Registry / Plugin Marketplace (PARTIAL → iOS) | `[x]` | REAL — web+gizzi-code have plugin systems, zero matches on iOS | Confirmed gap, build iOS | |
+| 90 | Team Skills panel (GAP → iOS) | `[x]` | REAL — web `components/marketplace/TeamSkillsPanel.tsx` exists, zero matches on iOS | Confirmed gap, build iOS | |
+| 91 | MiroFish simulation engine (GAP → iOS, gizzi-code) | `[x]` | DEFER — web fully built `lib/mirofish/*`, real gap on iOS/gizzi-code but large scope | Defer to later phase | |
 
 ## Products/Discovery (5)
 
 | # | Item | Status | Finding | Action | PR |
 |---|------|--------|---------|--------|-----|
-| 92 | Products Discovery (GAP → iOS, gizzi-code) | `[ ]` | | | |
-| 93 | A://Labs (GAP → iOS, gizzi-code) | `[ ]` | | | |
-| 94 | Udemy Catalog (GAP → iOS, gizzi-code) | `[ ]` | | | |
-| 95 | Discovery Feed (GAP → iOS, gizzi-code) | `[ ]` | | | |
-| 96 | Research tab/panel (PARTIAL → iOS) | `[ ]` | | | |
+| 92 | Products Discovery (GAP → iOS, gizzi-code) | `[x]` | REAL — web `views/products/ProductsDiscoveryView.tsx` live, no matches iOS/gizzi-code | Confirmed gap | |
+| 93 | A://Labs (GAP → iOS, gizzi-code) | `[x]` | REAL — web `views/LabsView.tsx` + `views/labs/main/*`, no matches iOS/gizzi-code | Confirmed gap | |
+| 94 | Udemy Catalog (GAP → iOS, gizzi-code) | `[x]` | REAL — web `views/CatalogView.tsx` (Udemy-specific), no matches iOS/gizzi-code | Confirmed gap, lower priority | |
+| 95 | Discovery Feed (GAP → iOS, gizzi-code) | `[x]` | STALE — not standalone; nested sub-tab inside `LabsView.tsx`, not its own route | Fold into #93 A://Labs | |
+| 96 | Research tab/panel (PARTIAL → iOS) | `[x]` | REAL — web `views/research/ResearchTab.tsx` nested in Labs, no match iOS | Build iOS, scope inside Labs | |
 
 ## Mail/Knowledge (3)
 
 | # | Item | Status | Finding | Action | PR |
 |---|------|--------|---------|--------|-----|
-| 97 | Mail Monitor (GAP → iOS) | `[ ]` | | | |
-| 98 | Documents (office-file I/O) (GAP → iOS) | `[ ]` | | | |
-| 99 | Knowledge (PARTIAL → iOS) | `[ ]` | | | |
+| 97 | Mail Monitor (GAP → iOS) | `[x]` | REAL — web `views/mail-monitor/ConversationMonitorPanel.tsx` live, no match iOS | Confirmed gap, build iOS | |
+| 98 | Documents (office-file I/O) (GAP → iOS) | `[x]` | REAL — web full docx/xlsx/pptx editor (`views/documents/office-io/*`), no match iOS | Confirmed gap, build iOS | |
+| 99 | Knowledge (PARTIAL → iOS) | `[x]` | DEFER — no `knowledge/` dir; closest analog `views/MemoryKernelView.tsx`, needs product scoping | Defer pending scoping | |
 
 ## Onboarding/Account (10)
 
 | # | Item | Status | Finding | Action | PR |
 |---|------|--------|---------|--------|-----|
-| 100 | Settings (umbrella/shell) (PARTIAL → upgrade) | `[ ]` | | | |
-| 101 | Settings > Account (PARTIAL → gizzi-code) | `[ ]` | | | |
-| 102 | Settings > Platform (PARTIAL → iOS) | `[ ]` | | | |
-| 103 | Settings > Products (GAP → iOS) | `[ ]` | | | |
-| 104 | Settings > Infrastructure (GAP → iOS, gizzi-code) | `[ ]` | | | |
-| 105 | Settings > Customize (PARTIAL → upgrade) | `[ ]` | | | |
+| 100 | Settings (umbrella/shell) (PARTIAL → upgrade) | `[x]` | STALE — `views/settings/SettingsView.tsx` (1510 lines) is mature, fully wired | Re-scope or close | |
+| 101 | Settings > Account (PARTIAL → gizzi-code) | `[x]` | DEFER — pieces exist both sides, but no true settings sync; needs an ADR | Defer, needs architecture decision | |
+| 102 | Settings > Platform (PARTIAL → iOS) | `[x]` | REAL — web platform group complete, iOS `SettingsView.swift` missing api-keys/shortcuts/dispatch/etc. | Build iOS parity | |
+| 103 | Settings > Products (GAP → iOS) | `[x]` | REAL — web Products group wired, no iOS Settings>Products grouping | Build iOS entry linking existing screens | |
+| 104 | Settings > Infrastructure (GAP → iOS, gizzi-code) | `[x]` | REAL (iOS) / STALE (gizzi-code, already CLI-exposed) — web `InfrastructureSettings.tsx` (1669 lines) | Build iOS only | |
+| 105 | Settings > Customize (PARTIAL → upgrade) | `[x]` | STALE — Skills/Response-style/Connectors/Plugins panels all implemented and wired | Close or downgrade to cosmetic-only | |
 | 106 | Device Pairing panel (GAP → iOS) | `[x]` | PR #5 merged to main | Closed as shipped | #5 |
-| 107 | Organization Access panel (GAP → iOS, gizzi-code) | `[ ]` | | | |
-| 108 | Compute Billing panel (GAP → iOS) | `[ ]` | | | |
-| 109 | Enterprise BYOC panel (GAP → iOS, gizzi-code) | `[ ]` | | | |
-| 110 | Model Management view (PARTIAL → upgrade) | `[ ]` | | | |
+| 107 | Organization Access panel (GAP → iOS, gizzi-code) | `[x]` | REAL — web `components/settings/OrganizationAccessPanel.tsx` exists, no iOS, no gizzi-code UI/command | Build iOS + `gizzi org` command | |
+| 108 | Compute Billing panel (GAP → iOS) | `[x]` | REAL — web `ComputeBillingPanel.tsx` exists and wired, no iOS files found | Build iOS | |
+| 109 | Enterprise BYOC panel (GAP → iOS, gizzi-code) | `[x]` | REAL, but DUPLICATE of row 70 (identical text, same feature) — web `EnterpriseByocPanel.tsx` exists, none on iOS/gizzi-code | Merge with row 70, then build | |
+| 110 | Model Management view (PARTIAL → upgrade) | `[x]` | REAL — web `views/settings/ModelManagementView.tsx` (170 lines) is minimal, genuine upgrade work remains | Scope upgrade; check overlap w/ LocalModelManager | |
 
 ## AllternitOS (1)
 
 | # | Item | Status | Finding | Action | PR |
 |---|------|--------|---------|--------|-----|
-| 111 | AllternitOS (GAP → gizzi-code) | `[ ]` | | | |
+| 111 | AllternitOS (GAP → gizzi-code) | `[x]` | REAL — web has full OS (`allternit-os/AllternitOS.tsx` etc.), gizzi-code has no windowing/kernel concept | Confirmed gap, scope minimal equivalent | |
 
 ## Playground/QA (1)
 
 | # | Item | Status | Finding | Action | PR |
 |---|------|--------|---------|--------|-----|
-| 112 | Playground (PARTIAL → iOS) | `[ ]` | | | |
+| 112 | Playground (PARTIAL → iOS) | `[x]` | DEFER — web has full playground, zero matches iOS, but gizzi-code interactive session is a de facto substitute | Real but low value, defer indefinitely | |
 
 ## Empty stubs (1)
 
 | # | Item | Status | Finding | Action | PR |
 |---|------|--------|---------|--------|-----|
-| 113 | `views/gizzi`, `components/mesh`, `lib/mesh-network` (PARTIAL → upgrade) | `[ ]` | | | |
+| 113 | `views/gizzi`, `components/mesh`, `lib/mesh-network` (PARTIAL → upgrade) | `[x]` | STALE (mischaracterized) — paths don't exist; git shows ~4,750 lines deleted 2026-07-02 (commit 1a1d9900a), not an empty stub | Confirm if deletion was intentional before restoring | |
 
 ## Desktop-only (2)
 
 | # | Item | Status | Finding | Action | PR |
 |---|------|--------|---------|--------|-----|
-| 114 | Local runtime discovery (PARTIAL → upgrade) | `[ ]` | | | |
-| 115 | Local Python execution (PARTIAL → upgrade) | `[ ]` | | | |
+| 114 | Local runtime discovery (PARTIAL → upgrade) | `[x]` | STALE — gizzi-code already has `cli/commands/runtime.ts` equivalent; consolidation opportunity, not a new build | Evaluate shared protocol, no net-new build | |
+| 115 | Local Python execution (PARTIAL → upgrade) | `[x]` | STALE — gizzi-code's general tool execution already covers Python; no dedicated desktop file needed | No build needed | |
 
 ## gizzi-code-only (5)
 
 | # | Item | Status | Finding | Action | PR |
 |---|------|--------|---------|--------|-----|
-| 116 | `github ...` GitHub Actions agent bot (GAP → iOS, gizzi-code) | `[ ]` | | | |
-| 117 | Local VM management (GAP → gizzi-code) | `[ ]` | | | |
-| 118 | Teleport / remote dev environments (GAP → gizzi-code) | `[ ]` | | | |
-| 119 | Slack app install (GAP → gizzi-code) | `[ ]` | | | |
-| 120 | Theme switching (`/theme`) (PARTIAL → upgrade) | `[ ]` | | | |
+| 116 | `github ...` GitHub Actions agent bot (GAP → iOS, gizzi-code) | `[x]` | STALE (gizzi-code) — fully implemented `cli/commands/github.ts` (~1630 lines), registered in `cli/main.ts` | Close gizzi-code half; iOS parity is separate | |
+| 117 | Local VM management (GAP → gizzi-code) | `[x]` | STALE — `runtime/vm/` (vfkit-based) + `cli/commands/vm.ts` fully built, used in production | Close as shipped | |
+| 118 | Teleport / remote dev environments (GAP → gizzi-code) | `[x]` | STALE (gizzi-code) — extensive `remote/RemoteSessionManager.ts` + Teleport UI/hooks already exist | Close gizzi-code half; web/iOS parity is separate DEFER | |
+| 119 | Slack app install (GAP → gizzi-code) | `[x]` | STALE — working `install-slack-app` command registered in two command tables | Close as shipped | |
+| 120 | Theme switching (`/theme`) (PARTIAL → upgrade) | `[x]` | REAL — base feature works (CLI + `/theme` slash cmd) but only 3 built-in themes, no custom/palette editing | Scope custom-theme upgrade | |
