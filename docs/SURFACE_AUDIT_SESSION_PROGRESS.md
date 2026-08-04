@@ -175,7 +175,7 @@ Branch: `fix/review-decision-event-type` (issue #16/#19 fixes) + `docs/surface-a
 | 100 | Settings (umbrella/shell) (PARTIAL → upgrade) | `[x]` | STALE — `views/settings/SettingsView.tsx` (1510 lines) is mature, fully wired | Re-scope or close | |
 | 101 | Settings > Account (PARTIAL → gizzi-code) | `[x]` | DEFER — pieces exist both sides, but no true settings sync; needs an ADR | Defer, needs architecture decision | |
 | 102 | Settings > Platform (PARTIAL → iOS) | `[x]` | REAL — iOS Settings > Platform shipped: `PlatformSettingsView` with General, Appearance, Models, API Keys, Shortcuts, Permissions, Dispatch, Devices, Cloud Instances, and Diagnostics sections | Shipped phase 1 iOS parity | `feat/ios-settings-platform` |
-| 103 | Settings > Products (GAP → iOS) | `[ ]` | REAL — web Products group wired, no iOS Settings>Products grouping | Build iOS entry linking existing screens | |
+| 103 | Settings > Products (GAP → iOS) | `[x]` | REAL — iOS Settings > Products shipped: `ProductsSettingsView` with Gizziio Code toggles, Cowork dispatch/open workspace, and Extensions toggles | Shipped phase 1 iOS parity | `feat/ios-settings-products` |
 | 104 | Settings > Infrastructure (GAP → iOS, gizzi-code) | `[ ]` | REAL (iOS) / STALE (gizzi-code, already CLI-exposed) — web `InfrastructureSettings.tsx` (1669 lines) | Build iOS only | |
 | 105 | Settings > Customize (PARTIAL → upgrade) | `[x]` | STALE — Skills/Response-style/Connectors/Plugins panels all implemented and wired | Close or downgrade to cosmetic-only | |
 | 106 | Device Pairing panel (GAP → iOS) | `[x]` | PR #5 merged to main | Closed as shipped | #5 |
