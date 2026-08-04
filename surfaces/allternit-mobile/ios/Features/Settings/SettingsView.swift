@@ -32,6 +32,8 @@ struct SettingsView: View {
     @State private var isMonitorPresented = false
     /// Pushed Runtime Operations view (infra section).
     @State private var isRuntimeOperationsPresented = false
+    /// Pushed Compute Nodes view (infra section).
+    @State private var isNodesManagerPresented = false
     #if DEBUG
     /// Pushed Brain Spike screen (DEBUG-only D3 spike section).
     @State private var isBrainSpikePresented = false
@@ -99,6 +101,9 @@ struct SettingsView: View {
             }
             .navigationDestination(isPresented: $isRuntimeOperationsPresented) {
                 RuntimeOperationsView()
+            }
+            .navigationDestination(isPresented: $isNodesManagerPresented) {
+                NodesManagerView()
             }
             #if DEBUG
             .navigationDestination(isPresented: $isBrainSpikePresented) {
@@ -636,10 +641,13 @@ struct SettingsView: View {
             Button(action: { isRuntimeOperationsPresented = true }) {
                 bulkRowLabel("Runtime Operations", systemImage: "gearshape.2")
             }
+            Button(action: { isNodesManagerPresented = true }) {
+                bulkRowLabel("Compute Nodes", systemImage: "externaldrive.connected.to.line.below")
+            }
         } header: {
             Text("Infrastructure")
         } footer: {
-            Text("Live view of agents, system metrics, logs, and runtime controls.")
+            Text("Live view of agents, system metrics, logs, runtime controls, and compute nodes.")
         }
     }
 
