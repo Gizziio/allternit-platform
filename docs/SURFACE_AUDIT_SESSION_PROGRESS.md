@@ -27,22 +27,22 @@ Branch: `fix/review-decision-event-type` (issue #16/#19 fixes) + `docs/surface-a
 
 | # | Item | Status | Finding | Action | PR |
 |---|------|--------|---------|--------|-----|
-| 4 | Cowork workspace (CoworkRoot) (PARTIAL → iOS) | `[ ]` | | | |
-| 5 | Cowork Runs view (PARTIAL → iOS) | `[ ]` | | | |
-| 6 | Cowork Drafts view (GAP → iOS) | `[ ]` | | | |
-| 7 | Cowork Cron view (GAP → iOS) | `[ ]` | | | |
-| 8 | Cowork Project view (GAP → gizzi-code) | `[ ]` | | | |
-| 9 | Cowork Documents view (GAP → iOS) | `[ ]` | | | |
-| 10 | Cowork Tables view (GAP → iOS) | `[ ]` | | | |
-| 11 | Cowork Files view (GAP → iOS) | `[ ]` | | | |
-| 12 | Cowork Exports view (PARTIAL → iOS) | `[ ]` | | | |
-| 13 | Cowork Insights panel (GAP → iOS, gizzi-code) | `[ ]` | | | |
-| 14 | Cowork Activity panel (GAP → iOS, gizzi-code) | `[ ]` | | | |
-| 15 | Cowork Goals panel (PARTIAL → iOS) | `[ ]` | | | |
-| 16 | Cowork Wiki section viewer (PARTIAL → iOS) | `[ ]` | | | |
-| 17 | Cowork Audit log viewer (GAP → iOS, gizzi-code) | `[ ]` | | | |
-| 18 | Intelli-Schedule panel (GAP → iOS) | `[ ]` | | | |
-| 19 | Harness Config panel (GAP → iOS) | `[ ]` | | | |
+| 4 | Cowork workspace (CoworkRoot) (PARTIAL → iOS) | `[x]` | REAL — CoworkRoot.tsx is a full live workspace; iOS only has a composer-level toggle (AppMode.swift, ChatView.swift) | build | |
+| 5 | Cowork Runs view (PARTIAL → iOS) | `[x]` | STALE — RunsView.tsx registered but zero dispatchers in Cowork nav; only reachable via unrelated Products Discovery "Workflows" card | close (defer if re-scoped) | |
+| 6 | Cowork Drafts view (GAP → iOS) | `[x]` | STALE — DraftsView.tsx registered, zero dispatchers anywhere; dead code | close | |
+| 7 | Cowork Cron view (GAP → iOS) | `[x]` | STALE — renamed/merged into Automation Tasks (live, reachable via shared Home rail); iOS Automation Tasks itself absent from this checkout despite PR #9 claims | close; reconcile iOS branch state | |
+| 8 | Cowork Project view (GAP → gizzi-code) | `[x]` | REAL — CoworkProjectView.tsx live, mounted by CoworkRoot; backend `/cowork/projects` exists; gizzi-code has no run-scoped project view | build / defer to gizzi-code CLI phase | |
+| 9 | Cowork Documents view (GAP → iOS) | `[x]` | STALE — DocumentsView.tsx only reachable via unrelated Code-mode Skills Registry path, not Cowork nav | close (defer if re-scoped) | |
+| 10 | Cowork Tables view (GAP → iOS) | `[x]` | STALE — TablesView.tsx registered, zero dispatchers; dead code | close | |
+| 11 | Cowork Files view (GAP → iOS) | `[x]` | STALE — FilesView.tsx registered, zero dispatchers; dead code | close | |
+| 12 | Cowork Exports view (PARTIAL → iOS) | `[x]` | STALE — ExportsView.tsx registered, zero dispatchers; dead code on web | close (defer if re-scoped) | |
+| 13 | Cowork Insights panel (GAP → iOS, gizzi-code) | `[x]` | STALE — InsightsView.tsx registered, zero dispatchers; dead code on web too | close (defer if re-scoped) | |
+| 14 | Cowork Activity panel (GAP → iOS, gizzi-code) | `[x]` | STALE — ActivityView.tsx registered, zero dispatchers; dead code | close | |
+| 15 | Cowork Goals panel (PARTIAL → iOS) | `[x]` | STALE — GoalsView.tsx dead; real goals UI is a tab inside AutomationTasksView (duplicate of item #7) | close | |
+| 16 | Cowork Wiki section viewer (PARTIAL → iOS) | `[x]` | STALE (recategorize) — WikiSectionViewer.tsx real/live but mounted app-wide via ArtifactSidecar, not Cowork nav | close under Cowork; defer under Artifacts Library | |
+| 17 | Cowork Audit log viewer (GAP → iOS, gizzi-code) | `[x]` | STALE — AuditLogViewer.tsx only rendered inside dead TasksView.tsx; transitively unreachable | close (defer if re-scoped) | |
+| 18 | Intelli-Schedule panel (GAP → iOS) | `[x]` | REAL — gizzi-code has IntelliScheduleEngine.ts + TUI screen; web panel dead but gizzi-code capability is real and iOS lacks it | build (bundle with #4/#7) | |
+| 19 | Harness Config panel (GAP → iOS) | `[x]` | STALE (recategorize) — HarnessConfigPanel.tsx real/live but mounted in OperatorBrowserView/DesignModeView, not Cowork | close under Cowork; defer under Operator/Design | |
 
 ## Code (17)
 
