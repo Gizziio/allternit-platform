@@ -317,14 +317,17 @@ export class IngestAgent {
       let topics: string[];
       let importance: MemoryImportance;
 
+HEAD
       let backend: 'mlx' | 'ollama' | 'local' | undefined;
 
+>>>>>>> origin/ao/build-memory-bulk-fast-ingest
       if (isBulkMode) {
         console.log('IngestAgent: Bulk mode — skipping LLM enrichment');
         summary = content.slice(0, 500);
         entities = [];
         topics = [];
         importance = 'medium';
+HEAD
         backend = 'local';
       } else {
         // Single-call enrichment: processes the long document prompt once.
@@ -334,7 +337,17 @@ export class IngestAgent {
         entities = enriched.entities;
         topics = enriched.topics;
         importance = enriched.importance;
-        backend = enriched.backend;
+        backend = enriched.backend;      } else {
+        // Process with LLM
+        console.log('IngestAgent: Processing content with LLM...');
+
+        // Extract summary, entities, topics
+        [summary, { entities, topics }, importance] = await Promise.all([
+          this.modelManager.summarize(content, 150),
+          this.modelManager.extractEntities(content),
+          this.modelManager.assessImportance(content),
+        ]);
+>>>>>>> origin/ao/build-memory-bulk-fast-ingest
       }
 
       // Create memory
