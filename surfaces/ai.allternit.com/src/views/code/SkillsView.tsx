@@ -1,14 +1,44 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { GlassCard } from '../../design/glass/GlassCard';
 import { Robot, Terminal, PlugsConnected, DownloadSimple } from '@phosphor-icons/react';
 
-const SKILLS = [
-  { id: 's1', name: 'React Architect', version: '1.2.0', desc: 'Expert in component composition and hooks.', type: 'Skill' },
-  { id: 's2', name: 'Python Data', version: '0.9.5', desc: 'Pandas/NumPy expert for data analysis.', type: 'Skill' },
-  { id: 'p1', name: 'Postgres Connector', version: '2.0.1', desc: 'MCP server for PostgreSQL database access.', type: 'Plugin' },
-];
+interface TeamSkill {
+  id: string;
+  name: string;
+  description?: string;
+  source_repo?: string;
+  version?: string;
+  installed_at?: string;
+}
 
 export function SkillsView(): React.ReactNode {
+  const [skills, setSkills] = useState<TeamSkill[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    fetch('/api/v1/team-skills')
+      .then((res) => {
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        return res.json();
+      })
+      .then((data: { skills?: TeamSkill[] }) => {
+        if (cancelled) return;
+        setSkills(data.skills ?? []);
+        setLoading(false);
+      })
+      .catch((e) => {
+        if (cancelled) return;
+        setError(String(e));
+        setLoading(false);
+      });
+    return () => { cancelled = true; };
+  }, []);
+
+  const isPlugin = (skill: TeamSkill) =>
+    (skill.source_repo ?? '').includes('mcp') || (skill.name ?? '').toLowerCase().includes('connector');
+
   return (
     <div style={{ padding: 32, maxWidth: 1000, margin: '0 auto' }}>
       <div style={{ marginBottom: 32, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
@@ -26,25 +56,32 @@ export function SkillsView(): React.ReactNode {
         </button>
       </div>
 
+      {loading && <p style={{ opacity: 0.6 }}>Loading skills…</p>}
+      {error && <p style={{ color: 'var(--status-error)' }}>Error: {error}</p>}
+
+      {!loading && !error && skills.length === 0 && (
+        <p style={{ opacity: 0.6 }}>No skills installed yet.</p>
+      )}
+
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', gap: 20 }}>
-        {SKILLS.map(skill => (
+        {skills.map(skill => (
           <GlassCard key={skill.id} style={{ padding: 20, display: 'flex', flexDirection: 'column', gap: 16 }}>
             <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between' }}>
               <div style={{ 
                 width: 48, height: 48, borderRadius: 12, 
                 background: 'var(--surface-hover)', 
                 display: 'flex', alignItems: 'center', justifyContent: 'center',
-                color: skill.type === 'Skill' ? '#a855f7' : 'var(--status-warning)'
+                color: isPlugin(skill) ? 'var(--status-warning)' : '#a855f7'
               }}>
-                {skill.type === 'Skill' ? <Robot size={24} weight="duotone" /> : <PlugsConnected size={24} weight="duotone" />}
+                {isPlugin(skill) ? <PlugsConnected size={24} weight="duotone" /> : <Robot size={24} weight="duotone" />}
               </div>
               <div style={{ fontSize: 12, fontWeight: 700, padding: '4px 8px', borderRadius: 6, background: 'var(--bg-secondary)', opacity: 0.7 }}>
-                v{skill.version}
+                v{skill.version || '0.0.1'}
               </div>
             </div>
             <div>
               <div style={{ fontWeight: 700, fontSize: 16, marginBottom: 4 }}>{skill.name}</div>
-              <div style={{ fontSize: 13, opacity: 0.6, lineHeight: 1.5 }}>{skill.desc}</div>
+              <div style={{ fontSize: 13, opacity: 0.6, lineHeight: 1.5 }}>{skill.description || 'No description.'}</div>
             </div>
             <div style={{ marginTop: 'auto', paddingTop: 16, borderTop: '1px solid var(--border-subtle)', display: 'flex', gap: 8 }}>
                <div style={{ fontSize: 12, fontWeight: 600, opacity: 0.5, display: 'flex', alignItems: 'center', gap: 4 }}>

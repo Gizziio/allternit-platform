@@ -28,6 +28,18 @@ struct SettingsView: View {
     @State private var isMemoryPresented = false
     /// Pushed custom-instructions editor (Agent section).
     @State private var isInstructionsPresented = false
+    /// Pushed Monitor view (infra section).
+    @State private var isMonitorPresented = false
+    /// Pushed Runtime Operations view (infra section).
+    @State private var isRuntimeOperationsPresented = false
+    /// Pushed Compute Nodes view (infra section).
+    @State private var isNodesManagerPresented = false
+    /// Pushed Cloud Deploy view (infra section).
+    @State private var isCloudDeployPresented = false
+    /// Pushed VPS & Servers view (infra section).
+    @State private var isVPSServersPresented = false
+    /// Pushed Cloud Instances view (infra section).
+    @State private var isCloudInstancesPresented = false
     #if DEBUG
     /// Pushed Brain Spike screen (DEBUG-only D3 spike section).
     @State private var isBrainSpikePresented = false
@@ -66,6 +78,7 @@ struct SettingsView: View {
                 voiceSection
                 dataControlsSection
                 meshSection
+                infraSection
                 #if DEBUG
                 brainSpikeSection
                 #endif
@@ -88,6 +101,24 @@ struct SettingsView: View {
             }
             .navigationDestination(isPresented: $isInstructionsPresented) {
                 CustomInstructionsView()
+            }
+            .navigationDestination(isPresented: $isMonitorPresented) {
+                MonitorView()
+            }
+            .navigationDestination(isPresented: $isRuntimeOperationsPresented) {
+                RuntimeOperationsView()
+            }
+            .navigationDestination(isPresented: $isNodesManagerPresented) {
+                NodesManagerView()
+            }
+            .navigationDestination(isPresented: $isCloudDeployPresented) {
+                CloudDeployManagerView()
+            }
+            .navigationDestination(isPresented: $isVPSServersPresented) {
+                VPSServersManagerView()
+            }
+            .navigationDestination(isPresented: $isCloudInstancesPresented) {
+                CloudInstancesManagerView()
             }
             #if DEBUG
             .navigationDestination(isPresented: $isBrainSpikePresented) {
@@ -611,6 +642,36 @@ struct SettingsView: View {
             Text("Mesh")
         } footer: {
             Text("Embedded tsnet node → \(AppConfig.meshControlURL). Same directory = same node identity across launches.")
+        }
+    }
+
+    // MARK: - Infra
+
+    @ViewBuilder
+    private var infraSection: some View {
+        Section {
+            Button(action: { isMonitorPresented = true }) {
+                bulkRowLabel("Monitor", systemImage: "chart.line.uptrend.xyaxis")
+            }
+            Button(action: { isRuntimeOperationsPresented = true }) {
+                bulkRowLabel("Runtime Operations", systemImage: "gearshape.2")
+            }
+            Button(action: { isNodesManagerPresented = true }) {
+                bulkRowLabel("Compute Nodes", systemImage: "externaldrive.connected.to.line.below")
+            }
+            Button(action: { isCloudDeployPresented = true }) {
+                bulkRowLabel("Cloud Deploy", systemImage: "cloud")
+            }
+            Button(action: { isVPSServersPresented = true }) {
+                bulkRowLabel("VPS & Servers", systemImage: "server.rack")
+            }
+            Button(action: { isCloudInstancesPresented = true }) {
+                bulkRowLabel("Cloud Instances", systemImage: "cloud.fill")
+            }
+        } header: {
+            Text("Infrastructure")
+        } footer: {
+            Text("Live view of agents, system metrics, logs, runtime controls, compute nodes, cloud deployments, SSH connections, and BYO-VPS wizard.")
         }
     }
 

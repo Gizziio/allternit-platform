@@ -29,6 +29,7 @@ struct ACITabView: View {
 
     @State private var destination: Destination
     @State private var input = ""
+    @State private var isMiniAppsStorePresented = false
     /// Mirrors BrowserPane's agent toggle (`setAgentMode('Assist'|'Human')`).
     @State private var agentActive = false
     /// Set when the chat's own Back clears the selection — the resulting
@@ -142,6 +143,9 @@ struct ACITabView: View {
                 selectedSessionId = nil
                 destination = .landing
             }
+        }
+        .sheet(isPresented: $isMiniAppsStorePresented) {
+            MiniAppsStoreView()
         }
     }
 
@@ -285,8 +289,41 @@ struct ACITabView: View {
         Shortcut(label: "Hacker News", url: "https://news.ycombinator.com"),
     ]
 
+    /// Shortcut opening the Mini-apps Store sheet (surface-audit item #40).
+    private var miniAppsShortcut: some View {
+        Button(action: {
+            let generator = UIImpactFeedbackGenerator(style: .light)
+            generator.impactOccurred()
+            isMiniAppsStorePresented = true
+        }) {
+            VStack(spacing: 8) {
+                ZStack {
+                    Circle().fill(theme.accentSoft)
+                    Image(systemName: "app.window")
+                        .font(.system(size: 16))
+                        .foregroundColor(theme.accent)
+                }
+                .frame(width: 48, height: 48)
+                Text("Mini Apps")
+                    .font(.system(size: 12))
+                    .foregroundColor(Color("TextSecondary"))
+                    .lineLimit(1)
+            }
+            .frame(maxWidth: .infinity)
+            .padding(.vertical, 16)
+            .background(Color("BgPrimary"))
+            .clipShape(RoundedRectangle(cornerRadius: Theme.radiusMD))
+            .overlay(
+                RoundedRectangle(cornerRadius: Theme.radiusMD)
+                    .stroke(Color("BorderSubtle"), lineWidth: 1)
+            )
+        }
+        .buttonStyle(.plain)
+    }
+
     private var shortcutGrid: some View {
         LazyVGrid(columns: [GridItem(.adaptive(minimum: 80), spacing: 12)], spacing: 12) {
+            miniAppsShortcut
             ForEach(Self.shortcuts) { shortcut in
                 Button(action: {
                     if let url = URL(string: shortcut.url) {

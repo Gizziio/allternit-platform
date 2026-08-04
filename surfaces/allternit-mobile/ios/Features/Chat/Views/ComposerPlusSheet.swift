@@ -29,6 +29,7 @@ struct ComposerPlusSheet: View {
     @State private var isBrainCapturePresented = false
     @State private var isCoworkTasksPresented = false
     @State private var isAgentActivityPresented = false
+    @State private var isFormSurfacesPresented = false
     /// Set to present the app-owned priming sheet before a system prompt.
     @State private var primingPermission: AppPermission? = nil
     /// Whether granting photo access from the priming sheet should also open
@@ -87,6 +88,7 @@ struct ComposerPlusSheet: View {
                     coworkTasksRow
                     agentActivityRow
                     connectorsRow
+                    formSurfacesRow
                     brainCaptureRow
                 }
                 .padding(.horizontal, 20)
@@ -116,6 +118,9 @@ struct ComposerPlusSheet: View {
         }
         .sheet(isPresented: $isAgentActivityPresented) {
             AgentActivityListView()
+        }
+        .sheet(isPresented: $isFormSurfacesPresented) {
+            FormSurfacesView()
         }
         .sheet(isPresented: $isBrainCapturePresented) {
             BrainCaptureSheet()
@@ -456,6 +461,43 @@ struct ComposerPlusSheet: View {
                         .font(.system(size: 14, weight: .medium))
                         .foregroundColor(Color("TextPrimary"))
                     Text("Browse and manage connected services")
+                        .font(.caption)
+                        .foregroundColor(Color("TextSecondary"))
+                }
+                Spacer()
+                Image(systemName: "chevron.right")
+                    .font(.system(size: 11, weight: .bold))
+                    .foregroundColor(Color("TextSecondary"))
+            }
+            .padding(.horizontal, 14)
+            .frame(height: 56)
+            .background(Color("BgPanel"))
+            .clipShape(RoundedRectangle(cornerRadius: Theme.radiusMD))
+            .overlay(
+                RoundedRectangle(cornerRadius: Theme.radiusMD)
+                    .stroke(Theme.borderWarmDefault, lineWidth: 1)
+            )
+        }
+        .buttonStyle(.plain)
+    }
+
+    // MARK: - Form Surfaces
+
+    private var formSurfacesRow: some View {
+        Button(action: {
+            let generator = UIImpactFeedbackGenerator(style: .light)
+            generator.impactOccurred()
+            isFormSurfacesPresented = true
+        }) {
+            HStack(spacing: 10) {
+                Image(systemName: "doc.text")
+                    .font(.system(size: 15, weight: .medium))
+                    .foregroundColor(Color("AccentPrimary"))
+                VStack(alignment: .leading, spacing: 2) {
+                    Text("Form Surfaces")
+                        .font(.system(size: 14, weight: .medium))
+                        .foregroundColor(Color("TextPrimary"))
+                    Text("Browse and fill dynamic forms")
                         .font(.caption)
                         .foregroundColor(Color("TextSecondary"))
                 }
