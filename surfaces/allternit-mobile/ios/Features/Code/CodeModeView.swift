@@ -29,6 +29,7 @@ struct CodeModeView: View {
     @State private var loadError: String? = nil
     @State private var threadTarget: CodeThreadTarget? = nil
     @State private var isPairingPresented = false
+    @State private var isSkillsPresented = false
     /// Phase 8 status filter (Claude "Filter by status" sheet parity).
     @State private var statusFilter: CodeStatusFilter = .all
     @State private var isFilterSheetPresented = false
@@ -90,6 +91,9 @@ struct CodeModeView: View {
                     accent: theme.accent
                 )
                 .presentationDetents([.medium])
+            }
+            .sheet(isPresented: $isSkillsPresented) {
+                CodeSkillsView()
             }
             .task {
                 // Warm the gizzi-instance registry so a thread's first flip
@@ -183,6 +187,17 @@ struct CodeModeView: View {
                 Image(systemName: "line.3.horizontal.decrease.circle")
                     .font(.title3)
                     .foregroundColor(statusFilter == .all ? Color("TextPrimary") : theme.accent)
+                    .frame(width: 44, height: 44)
+            }
+
+            Button(action: {
+                let generator = UIImpactFeedbackGenerator(style: .light)
+                generator.impactOccurred()
+                isSkillsPresented = true
+            }) {
+                Image(systemName: "puzzlepiece.extension")
+                    .font(.title3)
+                    .foregroundColor(Color("TextPrimary"))
                     .frame(width: 44, height: 44)
             }
 
