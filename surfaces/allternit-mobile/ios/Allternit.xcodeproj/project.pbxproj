@@ -42,7 +42,10 @@
 		20E80A1F2D2626B38DB8EEB4 /* MessageRow.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9AC5DA69A46A6B20CD3FB8BF /* MessageRow.swift */; };
 		22587EBF84FC873F64DD20B8 /* FormSchema.swift in Sources */ = {isa = PBXBuildFile; fileRef = 88BF1E2601384E006590B918 /* FormSchema.swift */; };
 		239DD97E2CE53C524C621776 /* ACIAgentRunView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F7AEC5CF2FBE0926C09D8DDF /* ACIAgentRunView.swift */; };
-		25EAC345E8461C615669CEEC /* NodesManagerView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9A56EA2A93A483FB59104108 /* NodesManagerView.swift */; };
+HEAD
+		25EAC345E8461C615669CEEC /* NodesManagerView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9A56EA2A93A483FB59104108 /* NodesManagerView.swift */; };		1C343DA7F7BB5F094534948F /* SwarmClient.swift in Sources */ = {isa = PBXBuildFile; fileRef = FE32C4171923FDA48E907B54 /* SwarmClient.swift */; };
+		258D26C3574814FADD38F135 /* SwarmStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = B34A9AA6622EFD49F2C264A1 /* SwarmStore.swift */; };
+>>>>>>> origin/feat/ios-swarm-ade
 		26E26C99F6DB134C1CD6E5CB /* ChangesetReviewSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = 74AAFC624B283761154C5E82 /* ChangesetReviewSheet.swift */; };
 		2995CA94BCC63006B8001F40 /* CloudDeployManagerView.swift in Sources */ = {isa = PBXBuildFile; fileRef = DC54C20A256A93666E1DA7F7 /* CloudDeployManagerView.swift */; };
 		2A9E86E6D57F54104F2A5385 /* NodesClient.swift in Sources */ = {isa = PBXBuildFile; fileRef = A30ED6FB8687860800A24AA0 /* NodesClient.swift */; };
@@ -120,7 +123,9 @@ HEAD
 		819AC1D939BC82773FF58BE4 /* libiconv.tbd in Frameworks */ = {isa = PBXBuildFile; fileRef = 155758E1014D4AE63687BCED /* libiconv.tbd */; };
 		83E13B7D88BF568B72C061E2 /* CoworkSession.swift in Sources */ = {isa = PBXBuildFile; fileRef = 62812584F5287A455C87B152 /* CoworkSession.swift */; };
 		842B7CC503AF5B23BEBA6977 /* ResponseNotificationsCard.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3759BBE0D3CE7A18F3CDC161 /* ResponseNotificationsCard.swift */; };
-		851D6ED0A055BAAA7E5DF0F2 /* CodeCanvasStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 122C28A0CEDC1D5563AA57F7 /* CodeCanvasStore.swift */; };
+HEAD
+		851D6ED0A055BAAA7E5DF0F2 /* CodeCanvasStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 122C28A0CEDC1D5563AA57F7 /* CodeCanvasStore.swift */; };		8479FA2154EBD242F56C1860 /* SwarmAgent.swift in Sources */ = {isa = PBXBuildFile; fileRef = E7698CFE2663EA0009F95020 /* SwarmAgent.swift */; };
+>>>>>>> origin/feat/ios-swarm-ade
 		8824F1594A6579EAABDCD2F1 /* CoworkTasksStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0F81685E9D60F3C21A678501 /* CoworkTasksStore.swift */; };
 		8826956213E279959229323B /* CronClient.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2FFB7D184254156867F9470D /* CronClient.swift */; };
 		885E1657F838D9E721003731 /* LoopsListView.swift in Sources */ = {isa = PBXBuildFile; fileRef = BBBF352C41F4185192ED4DF8 /* LoopsListView.swift */; };
@@ -142,6 +147,7 @@ HEAD
 		98BB46BC427E4DAF161133B4 /* CreateAutomationTaskSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = F6D2C7796AA7864163BD882B /* CreateAutomationTaskSheet.swift */; };
 		9954A5ADAE66E45AF5E3FC62 /* MonitorClient.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8E42117B66795FF4DCDCF390 /* MonitorClient.swift */; };
 		9C5A561D52AE96125A2AC50F /* ResearchStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2B5131B5412681599DB896E9 /* ResearchStore.swift */; };
+		99FA63E3C1BAD0A063A165E8 /* SwarmADEView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4A48CF216FCC906B0A72F671 /* SwarmADEView.swift */; };
 		9E5B4610C820CE11F367EA94 /* PtyClient.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2F872E12909F37FC3EB5C89A /* PtyClient.swift */; };
 		9E98F1BC9EA39287BFD70DCD /* Color+Theme.swift in Sources */ = {isa = PBXBuildFile; fileRef = D45673F8E41471638BD2E334 /* Color+Theme.swift */; };
 		9FC9731FA3314FB5FF3050E8 /* BrainTemplates.swift in Sources */ = {isa = PBXBuildFile; fileRef = E7640CFD6314328B32B5E74B /* BrainTemplates.swift */; };
@@ -296,8 +302,10 @@ HEAD
 		46B0738673B7B6922FEFC50A /* SSHConnectionsStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SSHConnectionsStore.swift; sourceTree = "<group>"; };
 		49127E0CD8EAED365F17FDD6 /* AgentActivityListView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AgentActivityListView.swift; sourceTree = "<group>"; };
 		49B33CE3F3D5FDE0F08BA1DE /* PermissionClient.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PermissionClient.swift; sourceTree = "<group>"; };
+HEAD
 		49BD4448061E87D93BCB1403 /* CloudInstancesManagerView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CloudInstancesManagerView.swift; sourceTree = "<group>"; };
-		4DD7A577716E6A6FEFD91C3A /* RoutineDetailView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RoutineDetailView.swift; sourceTree = "<group>"; };
+		4DD7A577716E6A6FEFD91C3A /* RoutineDetailView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RoutineDetailView.swift; sourceTree = "<group>"; };		4A48CF216FCC906B0A72F671 /* SwarmADEView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SwarmADEView.swift; sourceTree = "<group>"; };
+>>>>>>> origin/feat/ios-swarm-ade
 		4E7FB6E04286889DF3D4A1A6 /* ModeTheme.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ModeTheme.swift; sourceTree = "<group>"; };
 		4EF8244489CC0664EF5D30B3 /* BrainGitClient.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BrainGitClient.swift; sourceTree = "<group>"; };
 		4FF5A433FAC2C691A9F790AD /* CodeWorkspace.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CodeWorkspace.swift; sourceTree = "<group>"; };
@@ -389,7 +397,9 @@ HEAD
 		ADC22289020633B79A4877ED /* MemoryClient.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MemoryClient.swift; sourceTree = "<group>"; };
 		AE61B45DBC74809757BE9AEC /* AgentClient.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AgentClient.swift; sourceTree = "<group>"; };
 		AFA993E3D323D4735226C5F4 /* CoworkTasksClient.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CoworkTasksClient.swift; sourceTree = "<group>"; };
-		B5BD4D291D1894EC9DB01D1B /* DocumentsStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DocumentsStore.swift; sourceTree = "<group>"; };
+HEAD
+		B5BD4D291D1894EC9DB01D1B /* DocumentsStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DocumentsStore.swift; sourceTree = "<group>"; };		B34A9AA6622EFD49F2C264A1 /* SwarmStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SwarmStore.swift; sourceTree = "<group>"; };
+>>>>>>> origin/feat/ios-swarm-ade
 		B7F3B173705B7F5941BDC4FE /* SafariView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SafariView.swift; sourceTree = "<group>"; };
 		B85F6678BE960D0995556FE6 /* MeshEnrollClient.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MeshEnrollClient.swift; sourceTree = "<group>"; };
 		B88B65FA4B5A3288485C10A4 /* MeshClient.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MeshClient.swift; sourceTree = "<group>"; };
@@ -441,8 +451,10 @@ HEAD
 		E44A5FBBCC1751E77BAB353F /* VoiceSettingsSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VoiceSettingsSheet.swift; sourceTree = "<group>"; };
 		E471B33D6779D3C68395D818 /* InstancesClient.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = InstancesClient.swift; sourceTree = "<group>"; };
 		E7640CFD6314328B32B5E74B /* BrainTemplates.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BrainTemplates.swift; sourceTree = "<group>"; };
+HEAD
 		E833C0D51467E65C4A3040EC /* BYOCStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BYOCStore.swift; sourceTree = "<group>"; };
-		EA1555E7A74960CBA7D77549 /* CanvasProtocol.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CanvasProtocol.swift; sourceTree = "<group>"; };
+		EA1555E7A74960CBA7D77549 /* CanvasProtocol.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CanvasProtocol.swift; sourceTree = "<group>"; };		E7698CFE2663EA0009F95020 /* SwarmAgent.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SwarmAgent.swift; sourceTree = "<group>"; };
+>>>>>>> origin/feat/ios-swarm-ade
 		EB5FC664C55551D4AFE4F68F /* EnvironmentStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EnvironmentStore.swift; sourceTree = "<group>"; };
 		ECCF48884128341077961F98 /* UsageStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UsageStore.swift; sourceTree = "<group>"; };
 		F0A28F6341B679B8457003DB /* Connector.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Connector.swift; sourceTree = "<group>"; };
@@ -455,6 +467,7 @@ HEAD
 		F8DD653029C2B3BF8282DF08 /* FormSurfacesView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FormSurfacesView.swift; sourceTree = "<group>"; };
 		FB180A8B2DE32B3733CB9CC4 /* RuntimeOperationsStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RuntimeOperationsStore.swift; sourceTree = "<group>"; };
 		FD557129AC5FE54BDF7BE1BC /* RuntimeModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RuntimeModel.swift; sourceTree = "<group>"; };
+		FE32C4171923FDA48E907B54 /* SwarmClient.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SwarmClient.swift; sourceTree = "<group>"; };
 		FEEC6838A5C637D76EED594C /* AgentActivityDetailView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AgentActivityDetailView.swift; sourceTree = "<group>"; };
 HEAD
 		FF328AFBA2C29F32527949E4 /* LoopStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LoopStore.swift; sourceTree = "<group>"; };		FEBFF3044FDC074368D1997C /* ProviderManagementClient.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProviderManagementClient.swift; sourceTree = "<group>"; };
@@ -624,10 +637,12 @@ HEAD
 				FEBFF3044FDC074368D1997C /* ProviderManagementClient.swift */,
 				2F872E12909F37FC3EB5C89A /* PtyClient.swift */,
 				0D191901E44884716902E9E5 /* ResearchClient.swift */,
+HEAD
 				267918D8AD2CDF5412795ECE /* RoutinesClient.swift */,
 				5632A786043C936EE49EF52E /* RuntimeOperationsClient.swift */,
 				50D82FD8AABF7FA6BC2E6191 /* SSHConnectionsClient.swift */,
-				D4C7E7D01FB891FF21DC712F /* TeamSkillsClient.swift */,
+				D4C7E7D01FB891FF21DC712F /* TeamSkillsClient.swift */,				FE32C4171923FDA48E907B54 /* SwarmClient.swift */,
+>>>>>>> origin/feat/ios-swarm-ade
 				92E9010FD0D4757566D313D1 /* Models */,
 			);
 			path = API;
@@ -735,8 +750,10 @@ HEAD
 				6095FF2DECF5CAC8781DB099 /* RoutineStore.swift */,
 				FB180A8B2DE32B3733CB9CC4 /* RuntimeOperationsStore.swift */,
 				BB1A0D0734D3D239827ECD6A /* SettingsStore.swift */,
+HEAD
 				46B0738673B7B6922FEFC50A /* SSHConnectionsStore.swift */,
-				9DA5DDB09CEDCA1035EF5073 /* TeamSkillsStore.swift */,
+				9DA5DDB09CEDCA1035EF5073 /* TeamSkillsStore.swift */,				B34A9AA6622EFD49F2C264A1 /* SwarmStore.swift */,
+>>>>>>> origin/feat/ios-swarm-ade
 				E10652B6A3C4031AC35E7A7D /* ToolOptionsStore.swift */,
 				ECCF48884128341077961F98 /* UsageStore.swift */,
 				42EEC45547DBFC90712637DD /* API */,
@@ -855,10 +872,12 @@ HEAD
 				A44284F59DE892D108C72571 /* Routine.swift */,
 				FD557129AC5FE54BDF7BE1BC /* RuntimeModel.swift */,
 HEAD
+HEAD
 				2E309E127E42B78330B54B0E /* RuntimeOperationsModels.swift */,
 				0AD444127C4286C673A6E09B /* SSHConnectionModels.swift */,
 				BDBB70569909670A2297985F /* TeamSkill.swift */,				D4002E6788B643B667652C0F /* UserProfile.swift */,
->>>>>>> origin/feat/ios-organization-access
+>>>>>>> origin/feat/ios-organization-access				E7698CFE2663EA0009F95020 /* SwarmAgent.swift */,
+>>>>>>> origin/feat/ios-swarm-ade
 			);
 			path = Models;
 			sourceTree = "<group>";
@@ -883,6 +902,7 @@ HEAD
 				DB959E979C81A3A654188B6C /* Projects */,
 				889710AD566824BA983FC0E5 /* Research */,
 				DDFF322C789AF15F6EA00CA3 /* Settings */,
+				BFA17CD7AD3B600372B725A0 /* Swarm */,
 			);
 			path = Features;
 			sourceTree = "<group>";
@@ -927,6 +947,14 @@ HEAD
 				9A9C3ECB634E68AFEB34FD09 /* Views */,
 			);
 			path = Cowork;
+			sourceTree = "<group>";
+		};
+		BFA17CD7AD3B600372B725A0 /* Swarm */ = {
+			isa = PBXGroup;
+			children = (
+				DE698D6F2346F12B0C8EDB6B /* Views */,
+			);
+			path = Swarm;
 			sourceTree = "<group>";
 		};
 		C0B056C328EA330D52B056F0 /* ACI */ = {
@@ -1059,6 +1087,14 @@ HEAD
 				DCAD13AFBFFF560038AF9894 /* BrainSpike */,
 			);
 			path = Settings;
+			sourceTree = "<group>";
+		};
+		DE698D6F2346F12B0C8EDB6B /* Views */ = {
+			isa = PBXGroup;
+			children = (
+				4A48CF216FCC906B0A72F671 /* SwarmADEView.swift */,
+			);
+			path = Views;
 			sourceTree = "<group>";
 		};
 		E76542592605709295F5E294 /* Views */ = {
@@ -1363,9 +1399,14 @@ HEAD
 				DE0B7B978D25095CDE0A806B /* SandboxedArtifactWebView.swift in Sources */,
 				1526643C864CF4A2D20144E8 /* SettingsStore.swift in Sources */,
 				90479EDA461BD0B88CB8718E /* SettingsView.swift in Sources */,
+HEAD
 				6740B134C90AFA5A6B8D512B /* TeamSkill.swift in Sources */,
 				05D08B62825590855B4206C2 /* TeamSkillsClient.swift in Sources */,
-				92A56C7220BF257FA44D6A22 /* TeamSkillsStore.swift in Sources */,
+				92A56C7220BF257FA44D6A22 /* TeamSkillsStore.swift in Sources */,				99FA63E3C1BAD0A063A165E8 /* SwarmADEView.swift in Sources */,
+				8479FA2154EBD242F56C1860 /* SwarmAgent.swift in Sources */,
+				1C343DA7F7BB5F094534948F /* SwarmClient.swift in Sources */,
+				258D26C3574814FADD38F135 /* SwarmStore.swift in Sources */,
+>>>>>>> origin/feat/ios-swarm-ade
 				FA39A9D1C72C62138B55E2D5 /* TerminalSessionView.swift in Sources */,
 				2D730B78F2D9F3C134683690 /* ToolOptionsStore.swift in Sources */,
 				C9DEAEE737EDD2D38E876307 /* UsageLimitViews.swift in Sources */,

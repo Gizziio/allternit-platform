@@ -5,7 +5,9 @@ import SwiftUI
 /// Top-level tab host: a per-tab content area, no persistent bottom bar —
 /// neither ChatGPT nor Claude's iOS apps put a surface switcher there, so
 /// the [Chats | Projects | Artifacts Library | Agents | Automation Tasks |
-/// Plugins | Code | ACI] tab list lives in the sidebar header instead
+HEAD
+/// Plugins | Code | ACI] tab list lives in the sidebar header instead/// Swarm | Code | ACI] tab list lives in the sidebar header instead
+>>>>>>> origin/feat/ios-swarm-ade
 /// (HistorySidebarView). Cowork is NOT a tab destination; it's a
 /// composer-level toggle inside Chats (BottomDock.tsx ChatCoworkToggle).
 struct MainWorkspaceView: View {
@@ -82,8 +84,11 @@ struct MainWorkspaceView: View {
                             case .loops:
                                 LoopsListView(isSidebarOpen: $isSidebarOpen)
                             }
+HEAD
                         case .plugins:
-                            PluginMarketplaceView(isSidebarOpen: $isSidebarOpen)
+                            PluginMarketplaceView(isSidebarOpen: $isSidebarOpen)                        case .swarm:
+                            SwarmADEView(isSidebarOpen: $isSidebarOpen)
+>>>>>>> origin/feat/ios-swarm-ade
                         case .code:
                             CodeModeView(isSidebarOpen: $isSidebarOpen, selectedSessionId: $selectedSessionId)
                         case .aci:

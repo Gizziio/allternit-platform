@@ -5,6 +5,7 @@ import SwiftUI
 ///
 /// `design` is skipped on iOS — on the web it opens an external window.
 /// Cowork is NOT a switcher destination: the platform's primary surface
+HEAD
 /// control is the 9-row [Chats | Projects | Artifacts Library | Agents |
 HEAD
 /// Automation Tasks | Code | ACI | Research | Documents] tab list in the
@@ -17,7 +18,13 @@ HEAD
 /// (HistorySidebarView — no persistent bottom bar, matching ChatGPT/Claude's
 /// iOS apps), and cowork is a composer-level toggle inside Chats
 /// (BottomDock.tsx ChatCoworkToggle). Projects, the artifacts library, the
-/// Agent Hub, Automation Tasks, Plugins, and Research are iOS-only tab surfaces layered
+/// Agent Hub, Automation Tasks, Plugins, and Research are iOS-only tab surfaces layered/// control is the 10-row [Chats | Projects | Artifacts Library | Agents |
+/// Automation Tasks | Swarm | Code | ACI | Research] tab list in the sidebar header
+/// (HistorySidebarView — no persistent bottom bar, matching ChatGPT/Claude's
+/// iOS apps), and cowork is a composer-level toggle inside Chats
+/// (BottomDock.tsx ChatCoworkToggle). Projects, the artifacts library, the
+/// Agent Hub, Automation Tasks, Swarm, and Research are iOS-only tab surfaces layered
+>>>>>>> origin/feat/ios-swarm-ade
 /// over the same modes (they don't stamp an `origin_surface` of their own).
 >>>>>>> origin/feat/ios-plugin-marketplace
 enum AppMode: String, CaseIterable, Sendable {
@@ -61,9 +68,11 @@ final class AppModeStore: ObservableObject {
     /// The sidebar tab whose surface fills the content pane. Chats/Code/ACI
     /// track `mode`; Projects, Artifacts Library, Agents, Automation Tasks,
 HEAD
+HEAD
     /// Research, and Documents are iOS-only surfaces layered on top (the mode
     /// — and so history filtering, theme accent, and session stamping — stays
-    /// wherever it was).    /// Plugins, and Research are iOS-only surfaces layered on top (the mode — and so history
+    /// wherever it was).    /// Plugins, and Research are iOS-only surfaces layered on top (the mode — and so history    /// and Swarm are iOS-only surfaces layered on top (the mode — and so history
+>>>>>>> origin/feat/ios-swarm-ade
     /// filtering, theme accent, and session stamping — stays wherever it was).
 >>>>>>> origin/feat/ios-plugin-marketplace
     @Published var activeTab: ModeBarItem
@@ -94,9 +103,11 @@ HEAD
     /// Both Home surfaces (chat + cowork) live under the Chats tab; selecting
     /// it always lands on plain chat. Projects / Artifacts Library / Agents /
 HEAD
+HEAD
     /// Automation Tasks / Research / Documents switch the surface without
     /// touching the mode.    /// Automation Tasks / Plugins / Research switch the surface without touching the mode.
->>>>>>> origin/feat/ios-plugin-marketplace
+>>>>>>> origin/feat/ios-plugin-marketplace    /// Automation Tasks / Swarm / Research switch the surface without touching the mode.
+>>>>>>> origin/feat/ios-swarm-ade
     func selectBarItem(_ item: ModeBarItem) {
         activeTab = item
         switch item {
@@ -104,13 +115,16 @@ HEAD
         case .code: mode = .code
         case .aci: mode = .browser
 HEAD
+HEAD
         case .projects, .artifacts, .agents, .automation, .research, .documents: break        case .projects, .artifacts, .agents, .automation, .plugins, .research: break
->>>>>>> origin/feat/ios-plugin-marketplace
+>>>>>>> origin/feat/ios-plugin-marketplace        case .projects, .artifacts, .agents, .automation, .swarm, .research: break
+>>>>>>> origin/feat/ios-swarm-ade
         }
     }
 }
 
 /// The nine destinations of the sidebar's tab list:
+HEAD
 HEAD
 /// Chats / Projects / Artifacts Library / Agents / Automation Tasks / Code /
 /// ACI / Research / Documents.
@@ -119,7 +133,11 @@ enum ModeBarItem: CaseIterable {
 /// Code / ACI / Research.
 enum ModeBarItem: CaseIterable {
     case chats, projects, artifacts, agents, automation, plugins, code, aci, research
->>>>>>> origin/feat/ios-plugin-marketplace
+>>>>>>> origin/feat/ios-plugin-marketplace/// Chats / Projects / Artifacts Library / Agents / Automation Tasks / Swarm /
+/// Code / ACI / Research.
+enum ModeBarItem: CaseIterable {
+    case chats, projects, artifacts, agents, automation, swarm, code, aci, research
+>>>>>>> origin/feat/ios-swarm-ade
 
     var label: String {
         switch self {
@@ -128,7 +146,9 @@ enum ModeBarItem: CaseIterable {
         case .artifacts: return "Artifacts Library"
         case .agents: return "Agents"
         case .automation: return "Automation Tasks"
-        case .plugins: return "Plugins"
+HEAD
+        case .plugins: return "Plugins"        case .swarm: return "Swarm"
+>>>>>>> origin/feat/ios-swarm-ade
         case .code: return "Code"
         case .aci: return "ACI"
         case .research: return "Research"
@@ -144,7 +164,9 @@ enum ModeBarItem: CaseIterable {
         case .artifacts: return "archivebox"
         case .agents: return "cpu"
         case .automation: return "clock.arrow.circlepath"
-        case .plugins: return "puzzlepiece"
+HEAD
+        case .plugins: return "puzzlepiece"        case .swarm: return "person.3"
+>>>>>>> origin/feat/ios-swarm-ade
         case .code: return "terminal"
         case .aci: return "globe"
         case .research: return "book.closed"
