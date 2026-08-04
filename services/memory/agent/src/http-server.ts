@@ -95,6 +95,49 @@ app.get('/metrics', (req, res) => {
 });
 
 /**
+ * Per-backend generation metrics (MLX vs Ollama)
+ */
+app.get('/metrics/backends', async (req, res) => {
+  try {
+    await initializeMemory();
+    const metrics = orchestrator.getModelManager().getMetrics();
+    res.json(metrics);
+  } catch (error) {
+    res.status(500).json({
+      error: error instanceof Error ? error.message : 'Failed to get backend metrics',
+    });
+  }
+});
+
+/**
+ * Shadow comparison: run the same prompt through MLX and Ollama.
+ * POST /shadow-compare
+ * Body: { prompt, system_prompt?, model_config? }
+ */
+app.post('/shadow-compare', async (req, res) => {
+  try {
+    await initializeMemory();
+    const { prompt, system_prompt, model_config } = req.body;
+
+    if (!prompt || typeof prompt !== 'string') {
+      return res.status(400).json({ error: 'prompt is required' });
+    }
+
+    const result = await orchestrator.getModelManager().shadowCompare(
+      prompt,
+      system_prompt,
+      model_config
+    );
+
+    res.json(result);
+  } catch (error) {
+    res.status(500).json({
+      error: error instanceof Error ? error.message : 'Shadow comparison failed',
+    });
+  }
+});
+
+/**
  * Detailed observability metrics
  */
 app.get('/observability', (req, res) => {
@@ -548,6 +591,8 @@ async function startServer(): Promise<void> {
       console.log('Endpoints:');
       console.log(`  GET  /health              - Health check`);
       console.log(`  GET  /stats               - Memory statistics`);
+      console.log(`  GET  /metrics/backends    - MLX/Ollama generation metrics`);
+      console.log(`  POST /shadow-compare      - Run prompt through both backends`);
       console.log(`  POST /api/query           - Query memory`);
       console.log(`  POST /api/ingest          - Ingest content`);
       console.log(`  POST /api/ingest/bulk     - Bulk ingest`);

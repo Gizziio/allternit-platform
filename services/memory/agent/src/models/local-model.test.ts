@@ -61,10 +61,23 @@ describe('LocalModelManager provider switch', () => {
         }
 
         if (req.url === '/v1/chat/completions') {
+          const isEnrichment = JSON.stringify(body?.messages || '').includes('schema');
           res.writeHead(200, { 'Content-Type': 'application/json' });
           res.end(
             JSON.stringify({
-              choices: [{ message: { role: 'assistant', content: 'mlx-response' } }],
+              choices: [{
+                message: {
+                  role: 'assistant',
+                  content: isEnrichment
+                    ? JSON.stringify({
+                        summary: 'A company released a phone.',
+                        entities: ['Apple Inc.', 'iPhone'],
+                        topics: ['technology', 'products'],
+                        importance: 'medium',
+                      })
+                    : 'mlx-response',
+                },
+              }],
             })
           );
         } else if (req.url === '/api/chat') {
@@ -313,5 +326,49 @@ describe('LocalModelManager provider switch', () => {
     // fell back to Ollama instead of leaving a pending promise.
     expect(requests.filter((r) => r.url === '/v1/chat/completions')).toHaveLength(2);
     expect(requests.filter((r) => r.url === '/api/chat')).toHaveLength(2);
+  });
+
+  it('enrichContent reports the backend that served the structured call', async () => {
+    process.env.MEMORY_LLM_BASE_URL = `${baseUrl}/v1`;
+
+    const manager = new LocalModelManager();
+    const result = await manager.enrichContent('Apple Inc. released a new iPhone.');
+
+    expect(result.backend).toBe('mlx');
+    expect(result.summary).toBeTruthy();
+    expect(result.entities.length).toBeGreaterThan(0);
+  });
+
+  it('tracks per-backend metrics across generate calls', async () => {
+    process.env.MEMORY_LLM_BASE_URL = `${baseUrl}/v1`;
+    failMlxWithStatus = 500;
+
+    const { port } = server.address() as AddressInfo;
+    const manager = new LocalModelManager('127.0.0.1', port);
+
+    // One MLX failure that falls back to Ollama.
+    await manager.generate('hello');
+
+    const metrics = manager.getMetrics();
+    expect(metrics.mlx.calls).toBe(1);
+    expect(metrics.mlx.failures).toBe(1);
+    expect(metrics.ollama.calls).toBe(1);
+    expect(metrics.ollama.failures).toBe(0);
+    expect(metrics.mlx.avgLatencyMs).toBeGreaterThanOrEqual(0);
+    expect(metrics.ollama.avgLatencyMs).toBeGreaterThanOrEqual(0);
+  });
+
+  it('shadowCompare returns responses from both backends', async () => {
+    process.env.MEMORY_LLM_BASE_URL = `${baseUrl}/v1`;
+
+    const { port } = server.address() as AddressInfo;
+    const manager = new LocalModelManager('127.0.0.1', port);
+
+    const result = await manager.shadowCompare('hello');
+
+    expect(result.mlx?.content).toBe('mlx-response');
+    expect(result.ollama?.content).toBe('ollama-response');
+    expect(result.mlx?.latencyMs).toBeGreaterThanOrEqual(0);
+    expect(result.ollama?.latencyMs).toBeGreaterThanOrEqual(0);
   });
 });

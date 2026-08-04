@@ -115,6 +115,15 @@ export class LocalModelManager {
   // so concurrent callers don't all rush through before the first probe resolves.
   private breakerProbeInFlight = false;
 
+  // Per-backend generation metrics (latency, calls, failures).
+  private metrics: {
+    mlx: { calls: number; failures: number; totalLatencyMs: number };
+    ollama: { calls: number; failures: number; totalLatencyMs: number };
+  } = {
+    mlx: { calls: 0, failures: 0, totalLatencyMs: 0 },
+    ollama: { calls: 0, failures: 0, totalLatencyMs: 0 },
+  };
+
   constructor(host: string = 'localhost', port: number = 11434, llm?: LLMProviderConfig) {
     this.ollama = new Ollama({ host: `http://${host}:${port}` });
     const baseUrl = llm?.baseUrl ?? process.env.MEMORY_LLM_BASE_URL;
@@ -239,6 +248,31 @@ export class LocalModelManager {
   }
 
   /**
+   * Record a latency/failure sample for the given backend.
+   */
+  private recordLatency(backend: 'mlx' | 'ollama', latencyMs: number, failed: boolean): void {
+    const bucket = this.metrics[backend];
+    bucket.calls += 1;
+    bucket.totalLatencyMs += latencyMs;
+    if (failed) bucket.failures += 1;
+  }
+
+  /**
+   * Return a snapshot of per-backend generation metrics.
+   */
+  getMetrics(): {
+    mlx: { calls: number; failures: number; avgLatencyMs: number };
+    ollama: { calls: number; failures: number; avgLatencyMs: number };
+  } {
+    const avg = (bucket: { calls: number; totalLatencyMs: number }) =>
+      bucket.calls > 0 ? bucket.totalLatencyMs / bucket.calls : 0;
+    return {
+      mlx: { ...this.metrics.mlx, avgLatencyMs: avg(this.metrics.mlx) },
+      ollama: { ...this.metrics.ollama, avgLatencyMs: avg(this.metrics.ollama) },
+    };
+  }
+
+  /**
    * Synchronous Ollama chat helper used by both the default path and the MLX
    * circuit-breaker fallback.
    */
@@ -309,16 +343,16 @@ export class LocalModelManager {
   }
 
   /**
-   * Generate a response from the model.
+   * Generate a response and report which backend served it.
    * When MEMORY_LLM_BASE_URL is set, generation tries the MLX/OpenAI-compatible
    * provider first. If that provider fails repeatedly, a circuit breaker trips
    * and generation falls back to Ollama for a cooldown window.
    */
-  async generate(
+  private async generateWithBackend(
     prompt: string,
     systemPrompt?: string,
     config?: Partial<ModelConfig>
-  ): Promise<string> {
+  ): Promise<{ content: string; backend: 'mlx' | 'ollama' }> {
     const modelConfig = config?.name
       ? { ...MODEL_PRESETS.ingest, ...config }
       : MODEL_PRESETS.ingest;
@@ -328,15 +362,18 @@ export class LocalModelManager {
       { role: 'user' as const, content: prompt },
     ];
 
+    const startMs = Date.now();
     const probingMlx = this.mlxAllowed();
     if (probingMlx) {
       try {
         const result = await this.serialized(() => this.openAIChat(messages, modelConfig));
         this.recordMlxSuccess();
         this.logBackend('mlx');
-        return result;
+        this.recordLatency('mlx', Date.now() - startMs, false);
+        return { content: result, backend: 'mlx' };
       } catch (error) {
         this.recordMlxFailure();
+        this.recordLatency('mlx', Date.now() - startMs, true);
         console.warn('LocalModelManager: MLX generation failed, trying Ollama fallback:', error);
       } finally {
         this.releaseBreakerProbe();
@@ -344,12 +381,28 @@ export class LocalModelManager {
     }
 
     this.logBackend('ollama');
+    let startOllamaMs = Date.now();
     try {
-      return await this.ollamaChat(messages, modelConfig);
+      const result = await this.ollamaChat(messages, modelConfig);
+      this.recordLatency('ollama', Date.now() - startOllamaMs, false);
+      return { content: result, backend: 'ollama' };
     } catch (error) {
+      this.recordLatency('ollama', Date.now() - startOllamaMs, true);
       console.error('Error generating response:', error);
       throw new Error(`Model generation failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
     }
+  }
+
+  /**
+   * Generate a response from the model.
+   */
+  async generate(
+    prompt: string,
+    systemPrompt?: string,
+    config?: Partial<ModelConfig>
+  ): Promise<string> {
+    const { content } = await this.generateWithBackend(prompt, systemPrompt, config);
+    return content;
   }
 
   /**
@@ -410,6 +463,54 @@ export class LocalModelManager {
       console.error('Error streaming response:', error);
       throw new Error(`Model streaming failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
     }
+  }
+
+  /**
+   * Run the same prompt against both MLX and Ollama generation backends and
+   * return both responses for comparison. This bypasses the circuit breaker so
+   * it can be used for shadow-mode quality monitoring even when MLX is failing.
+   */
+  async shadowCompare(
+    prompt: string,
+    systemPrompt?: string,
+    config?: Partial<ModelConfig>
+  ): Promise<{
+    mlx?: { content: string; latencyMs: number };
+    ollama?: { content: string; latencyMs: number };
+  }> {
+    const modelConfig = config?.name
+      ? { ...MODEL_PRESETS.ingest, ...config }
+      : MODEL_PRESETS.ingest;
+
+    const messages: ChatMessage[] = [
+      ...(systemPrompt ? [{ role: 'system' as const, content: systemPrompt }] : []),
+      { role: 'user' as const, content: prompt },
+    ];
+
+    const result: {
+      mlx?: { content: string; latencyMs: number };
+      ollama?: { content: string; latencyMs: number };
+    } = {};
+
+    if (this.llmBaseUrl) {
+      const startMs = Date.now();
+      try {
+        const content = await this.serialized(() => this.openAIChat(messages, modelConfig));
+        result.mlx = { content, latencyMs: Date.now() - startMs };
+      } catch (error) {
+        console.warn('LocalModelManager: shadow MLX comparison failed:', error);
+      }
+    }
+
+    const startMs = Date.now();
+    try {
+      const content = await this.ollamaChat(messages, modelConfig);
+      result.ollama = { content, latencyMs: Date.now() - startMs };
+    } catch (error) {
+      console.warn('LocalModelManager: shadow Ollama comparison failed:', error);
+    }
+
+    return result;
   }
 
   /**
@@ -599,7 +700,7 @@ Respond with ONLY one word: low, medium, high, or critical`;
   }
 
   /**
-   * Single-call enrichment: summary + entities + topics + importance.
+   * Single-call enrichment: summary + entities + topics + importance + backend.
    * Faster than the separate calls because the long document prompt is
    * processed once instead of three times. If the LLM returns malformed or
    * incomplete structured output, a fast local fallback keeps ingestion moving
@@ -608,13 +709,25 @@ Respond with ONLY one word: low, medium, high, or critical`;
   async enrichContent(
     text: string,
     maxLength: number = 150
-  ): Promise<{ summary: string; entities: string[]; topics: string[]; importance: MemoryImportance }> {
+  ): Promise<{
+    summary: string;
+    entities: string[];
+    topics: string[];
+    importance: MemoryImportance;
+    backend: 'mlx' | 'ollama' | 'local';
+  }> {
     const schema = `{
   "summary": "string, ${maxLength} words or less",
   "entities": ["named entities (people, places, organizations, products, etc.)"],
   "topics": ["3-5 main topics or themes"],
   "importance": "one of: low, medium, high, critical"
 }`;
+
+    const systemPrompt = `You are a data extraction assistant.
+Extract information from the input and format it as valid JSON according to this schema:
+${schema}
+
+Respond ONLY with valid JSON. No explanations, no markdown, no extra text.`;
 
     const prompt = `Analyze the following text and return a single JSON object with this schema:
 ${schema}
@@ -625,23 +738,23 @@ ${text}
 Respond ONLY with valid JSON. No explanations, no markdown, no extra text.`;
 
     try {
-      const raw = await this.extractStructured<{
-        summary?: string;
-        entities?: string[];
-        topics?: string[];
-        importance?: string;
-      }>(prompt, schema, MODEL_PRESETS.fastIngest);
+      const { content, backend } = await this.generateWithBackend(prompt, systemPrompt, {
+        ...MODEL_PRESETS.fastIngest,
+        temperature: 0.1, // Low temperature for consistent structured output
+      });
 
-      const validated = raw ? this.validateEnrichment(raw as Record<string, unknown>, maxLength) : null;
+      const cleaned = content.replace(/```json\s*/g, '').replace(/```\s*/g, '').trim();
+      const raw = JSON.parse(cleaned) as Record<string, unknown>;
+      const validated = this.validateEnrichment(raw, maxLength);
       if (validated) {
-        return validated;
+        return { ...validated, backend };
       }
     } catch (error) {
       console.error('LocalModelManager: enrichment structured call failed:', error);
     }
 
     console.log('LocalModelManager: using fast local enrichment fallback');
-    return this.localEnrichmentFallback(text, maxLength);
+    return { ...this.localEnrichmentFallback(text, maxLength), backend: 'local' };
   }
 
   /**

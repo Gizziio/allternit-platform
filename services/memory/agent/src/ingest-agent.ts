@@ -317,12 +317,15 @@ export class IngestAgent {
       let topics: string[];
       let importance: MemoryImportance;
 
+      let backend: 'mlx' | 'ollama' | 'local' | undefined;
+
       if (isBulkMode) {
         console.log('IngestAgent: Bulk mode — skipping LLM enrichment');
         summary = content.slice(0, 500);
         entities = [];
         topics = [];
         importance = 'medium';
+        backend = 'local';
       } else {
         // Single-call enrichment: processes the long document prompt once.
         console.log('IngestAgent: Enriching content with LLM...');
@@ -331,6 +334,7 @@ export class IngestAgent {
         entities = enriched.entities;
         topics = enriched.topics;
         importance = enriched.importance;
+        backend = enriched.backend;
       }
 
       // Create memory
@@ -343,7 +347,10 @@ export class IngestAgent {
         status: 'raw',
         source: request.source || 'direct-input',
         sourceType,
-        metadata: request.metadata || {},
+        metadata: {
+          ...(request.metadata || {}),
+          enrichment_backend: backend,
+        },
       };
 
       const createdMemory = this.store.createMemory(memory);

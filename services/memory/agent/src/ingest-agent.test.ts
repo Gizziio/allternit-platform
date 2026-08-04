@@ -42,6 +42,7 @@ class MockModelManager extends LocalModelManager {
     entities: string[];
     topics: string[];
     importance: MemoryImportance;
+    backend: 'mlx' | 'ollama' | 'local';
   }> {
     this.calls.push({ method: 'enrichContent', args: [text, maxLength] });
     return {
@@ -49,6 +50,7 @@ class MockModelManager extends LocalModelManager {
       entities: ['entity-a'],
       topics: ['topic-a'],
       importance: 'high',
+      backend: 'mlx',
     };
   }
 }
@@ -144,6 +146,7 @@ describe('IngestAgent bulk ingest mode', () => {
     expect(memory!.entities).toEqual(['entity-a']);
     expect(memory!.topics).toEqual(['topic-a']);
     expect(memory!.importance).toBe('high');
+    expect(memory!.metadata.enrichment_backend).toBe('mlx');
 
     // Single combined enrichment call was made instead of three separate calls
     expect(modelManager.calls.map((c) => c.method)).toEqual(['enrichContent']);

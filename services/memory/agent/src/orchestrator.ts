@@ -46,6 +46,13 @@ export class MemoryOrchestrator {
   }
 
   /**
+   * Expose the model manager for diagnostics/metrics endpoints.
+   */
+  getModelManager(): LocalModelManager {
+    return this.modelManager;
+  }
+
+  /**
    * Initialize all components
    */
   async initialize(): Promise<void> {

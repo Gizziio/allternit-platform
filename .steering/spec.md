@@ -37,6 +37,12 @@
   repeatedly, THE SYSTEM SHALL trip a circuit breaker after a configurable
   threshold and fall back to Ollama generation for a cooldown window, without
   manual intervention.
+- [ ] R10: WHEN a memory is enriched, THE SYSTEM SHALL record the serving
+  generation backend (`mlx`, `ollama`, or `local`) in the memory's metadata.
+- [ ] R11: WHEN generation calls complete, THE SYSTEM SHALL track per-backend
+  call counts, failures, and average latency, and expose them via `getMetrics()`.
+- [ ] R12: WHEN requested, THE SYSTEM SHALL run the same prompt through both
+  MLX and Ollama and return both responses for comparison (shadow mode).
 
 ## Acceptance (Gherkin)
 
@@ -65,3 +71,15 @@
   Given MEMORY_LLM_BASE_URL is set and the MLX endpoint returns errors
   When generation fails N consecutive times
   Then generation falls back to Ollama and skips MLX until the cooldown passes.
+- Scenario: backend provenance is stored with each memory
+  Given a normal ingest request
+  When the memory is created
+  Then metadata.enrichment_backend is set to mlx, ollama, or local.
+- Scenario: backend metrics are observable
+  Given generation calls have run
+  When getMetrics() is called
+  Then per-backend calls, failures, and avgLatencyMs are returned.
+- Scenario: shadow comparison runs both backends
+  Given a prompt and MEMORY_LLM_BASE_URL set
+  When shadowCompare() is called
+  Then both mlx and ollama responses are returned.
