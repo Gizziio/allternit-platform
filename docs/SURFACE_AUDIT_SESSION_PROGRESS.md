@@ -48,25 +48,25 @@ Branch: `fix/review-decision-event-type` (issue #16/#19 fixes) + `docs/surface-a
 
 | # | Item | Status | Finding | Action | PR |
 |---|------|--------|---------|--------|-----|
-| 20 | Code workspace (CodeRoot) (PARTIAL → upgrade) | `[ ]` | | | |
-| 21 | Code Explorer (GAP → iOS) | `[ ]` | | | |
-| 22 | Code Git panel (GAP → iOS) | `[ ]` | | | |
-| 23 | Code Skills view (GAP → iOS) | `[ ]` | | | |
-| 24 | Code Project view (PARTIAL → upgrade) | `[ ]` | | | |
-| 25 | Code Canvas (live preview split view) (PARTIAL → iOS) | `[ ]` | | | |
-| 26 | Code Preview Pane (GAP → iOS, gizzi-code) | `[ ]` | | | |
-| 27 | Orchestrator Center (PARTIAL → iOS) | `[ ]` | | | |
-| 28 | Orchestration View (PARTIAL → iOS) | `[ ]` | | | |
-| 29 | Goal Control Center (GAP → iOS) | `[ ]` | | | |
-| 30 | Kanban(+DAG) Board (GAP → iOS) | `[ ]` | | | |
-| 31 | Debug View (PARTIAL → iOS) | `[ ]` | | | |
-| 32 | Logs View (PARTIAL → iOS) | `[ ]` | | | |
-| 33 | Run Inspector (PARTIAL → iOS) | `[ ]` | | | |
-| 34 | Run Replay (GAP → iOS, gizzi-code) | `[ ]` | | | |
-| 35 | Tools Registry (PARTIAL → iOS) | `[ ]` | | | |
-| 36 | Skills Registry (GAP → iOS) | `[ ]` | | | |
-| 37 | Promotion Dashboard (GAP → iOS, gizzi-code) | `[ ]` | | | |
-| 38 | Automation Tasks (Code) (GAP → iOS) | `[ ]` | | | |
+| 20 | Code workspace (CodeRoot) (PARTIAL → upgrade) | `[x]` | STALE — fully implemented, live (`CodeRoot.tsx`→`CodeSurfaceRouter.tsx`→`CodeThreadView`/`CodeCanvasView`) | Closed as stale; no defined "upgrade" scope | |
+| 21 | Code Explorer (GAP → iOS) | `[x]` | STALE — `ExplorerView.tsx` (430 lines) live via `CodeModeAgentSession.tsx` explorer tab | Closed as stale; iOS port has a real reference impl | |
+| 22 | Code Git panel (GAP → iOS) | `[x]` | STALE — `GitView.tsx` (412 lines) live via `CodeModeAgentSession.tsx` git tab | Closed as stale; iOS port has a real reference impl | |
+| 23 | Code Skills view (GAP → iOS) | `[x]` | REAL — `SkillsView.tsx` is a static 3-item mock, no backend, unreachable route | Confirmed gap; needs UI + backend built | |
+| 24 | Code Project view (PARTIAL → upgrade) | `[x]` | STALE — `CodeProjectView.tsx` (473 lines) live via `code-project` route + `ProjectDetailRouter.tsx` | Closed as stale; no defined "upgrade" scope | |
+| 25 | Code Canvas (live preview split view) (PARTIAL → iOS) | `[x]` | REAL (iOS gap) — web ref is mature (`CodeCanvas.tsx` 1646 lines + `CodeCanvasView.tsx` 807 lines + tile subsystem), iOS has none | Confirmed gap; large port, needs own dedicated spec | |
+| 26 | Code Preview Pane (GAP → iOS, gizzi-code) | `[x]` | STALE (dead code) — `CodePreviewPane.tsx` (208 lines) fully written, zero callers anywhere | Resurrect-or-retire decision needed before iOS port | |
+| 27 | Orchestrator Center (PARTIAL → iOS) | `[x]` | STALE (dead code) — `OrchestratorCenter.tsx` (70 lines), no callers anywhere | Resurrect-or-retire decision needed | |
+| 28 | Orchestration View (PARTIAL → iOS) | `[x]` | STALE (dead code) — `OrchestrationView.tsx` (156 lines), uses real `useUnifiedStore`, no callers | Resurrect-or-retire decision needed | |
+| 29 | Goal Control Center (GAP → iOS) | `[x]` | STALE (dead code) — `GoalControlCenter.tsx` backed by live `/automation/goals` API, no callers | Shovel-ready; just needs nav wiring | |
+| 30 | Kanban(+DAG) Board (GAP → iOS) | `[x]` | STALE (dead code) — `KanbanBoard.tsx`+`KanbanDAG.tsx` (536+503 lines), no callers | Resurrect-or-retire decision needed | |
+| 31 | Debug View (PARTIAL → iOS) | `[x]` | STALE (dead/unreachable route) — `DebugView.tsx` (458 lines) registered as `debug` route, no nav caller | Needs a nav entry point, or retire | |
+| 32 | Logs View (PARTIAL → iOS) | `[x]` | STALE (dead code) — `LogsView.tsx` (246 lines), not even registered as a route | Resurrect-or-retire decision needed | |
+| 33 | Run Inspector (PARTIAL → iOS) | `[x]` | STALE (dead code) — `RunInspector.tsx` (124 lines), uses real stores, no callers | Resurrect-or-retire decision needed | |
+| 34 | Run Replay (GAP → iOS, gizzi-code) | `[x]` | STALE (dead/unreachable route) — `RunReplayView.tsx` registered as `run-replay` route w/ real backend calls, no nav caller | Needs a caller (e.g. "View Replay" action) before porting | |
+| 35 | Tools Registry (PARTIAL → iOS) | `[x]` | STALE (dead/unreachable route) — `ToolsView.tsx` registered as `registry` route, backed by live `/tools` API, no nav caller | Cheapest orphan to resurrect; full stack works | |
+| 36 | Skills Registry (GAP → iOS) | `[x]` | DEFER — `SkillsRegistryView.tsx` (293 lines) unreachable route, calls nonexistent `/api/v1/skills/registry` | Needs backend spec before UI wiring or iOS work | |
+| 37 | Promotion Dashboard (GAP → iOS, gizzi-code) | `[x]` | DEFER — `PromotionDashboardView.tsx` never routed at all, calls nonexistent `/api/v1/promotion/proposals` | Needs backend + product decision on scope | |
+| 38 | Automation Tasks (Code) (GAP → iOS) | `[x]` | STALE — duplicate of #3; `code-automations` route renders the same `AutomationTasksView` already shipped in PR #9 | Closed as duplicate | #9 |
 
 ## ACI/Browser (8)
 
