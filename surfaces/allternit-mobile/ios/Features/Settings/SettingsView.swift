@@ -40,6 +40,8 @@ struct SettingsView: View {
     @State private var isVPSServersPresented = false
     /// Pushed Cloud Instances view (infra section).
     @State private var isCloudInstancesPresented = false
+    /// Pushed Enterprise BYOC panel (infra section).
+    @State private var isEnterpriseBYOCPresented = false
     #if DEBUG
     /// Pushed Brain Spike screen (DEBUG-only D3 spike section).
     @State private var isBrainSpikePresented = false
@@ -119,6 +121,9 @@ struct SettingsView: View {
             }
             .navigationDestination(isPresented: $isCloudInstancesPresented) {
                 CloudInstancesManagerView()
+            }
+            .navigationDestination(isPresented: $isEnterpriseBYOCPresented) {
+                EnterpriseBYOCPanelView()
             }
             #if DEBUG
             .navigationDestination(isPresented: $isBrainSpikePresented) {
@@ -667,6 +672,9 @@ struct SettingsView: View {
             }
             Button(action: { isCloudInstancesPresented = true }) {
                 bulkRowLabel("Cloud Instances", systemImage: "cloud.fill")
+            }
+            Button(action: { isEnterpriseBYOCPresented = true }) {
+                bulkRowLabel("Enterprise BYOC", systemImage: "building.columns")
             }
         } header: {
             Text("Infrastructure")
