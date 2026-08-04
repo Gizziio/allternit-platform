@@ -51,6 +51,7 @@ import { AllternitCommand } from "@/cli/commands/allternit"
 import { StatusCommand } from "@/cli/commands/status"
 import { BrainCommand } from "@/cli/commands/brain"
 import { HtmlArtifactCommand } from "@/cli/commands/html-artifact"
+import { UdemyCommand } from "@/cli/commands/udemy"
 import path from "path"
 import { Global, init as initGlobal } from "@/runtime/context/global"
 import { JsonMigration } from "@/runtime/session/storage/json-migration"
@@ -209,6 +210,7 @@ const cli = yargs(hideBin(process.argv))
   .command(AllternitCommand)
   .command(BrainCommand)
   .command(HtmlArtifactCommand)
+  .command(UdemyCommand)
   .fail((msg, err) => {
     if (
       msg?.startsWith("Unknown argument") ||

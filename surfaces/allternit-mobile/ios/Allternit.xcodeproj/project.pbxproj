@@ -137,6 +137,11 @@
 		F704F4A9E639C60E39EAA70F /* AgentSelectionSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = 50C8CA810B01E6533AB8A789 /* AgentSelectionSheet.swift */; };
 		F7B19CC042E5B3F179191EE8 /* BrainsClient.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3B3F96A628FFCDA4B7129AB5 /* BrainsClient.swift */; };
 		FA39A9D1C72C62138B55E2D5 /* TerminalSessionView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1C8B054DE7A97A50E230D1A0 /* TerminalSessionView.swift */; };
+		055F2E149E50177A670082A3 /* UdemyCatalogStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = D55D9D69F55173931EBB097C /* UdemyCatalogStore.swift */; };
+		8CF72DE5871C8AFB842C0083 /* UdemyClient.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4B0056BC37926FF5FCE46CB0 /* UdemyClient.swift */; };
+		7D13AF9B4398B8D1C05435B4 /* UdemyCourse.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4D6695F02C77A350F3DCA112 /* UdemyCourse.swift */; };
+		B17D9110648748E2D863E3A6 /* A2LabsCategory.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4022FA8E2731080AEE93E5AE /* A2LabsCategory.swift */; };
+		FC3BE7E09381D3390B7B787B /* CatalogView.swift in Sources */ = {isa = PBXBuildFile; fileRef = EE29A2D972366CC33143FC26 /* CatalogView.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -266,6 +271,11 @@
 		F7DD389A8BFF1E5E0EF97F81 /* ProjectsClient.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProjectsClient.swift; sourceTree = "<group>"; };
 		FD557129AC5FE54BDF7BE1BC /* RuntimeModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RuntimeModel.swift; sourceTree = "<group>"; };
 		FEEC6838A5C637D76EED594C /* AgentActivityDetailView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AgentActivityDetailView.swift; sourceTree = "<group>"; };
+		4022FA8E2731080AEE93E5AE /* A2LabsCategory.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = A2LabsCategory.swift; sourceTree = "<group>"; };
+		D55D9D69F55173931EBB097C /* UdemyCatalogStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UdemyCatalogStore.swift; sourceTree = "<group>"; };
+		4B0056BC37926FF5FCE46CB0 /* UdemyClient.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UdemyClient.swift; sourceTree = "<group>"; };
+		4D6695F02C77A350F3DCA112 /* UdemyCourse.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UdemyCourse.swift; sourceTree = "<group>"; };
+		EE29A2D972366CC33143FC26 /* CatalogView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CatalogView.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -396,6 +406,7 @@
 				F7DD389A8BFF1E5E0EF97F81 /* ProjectsClient.swift */,
 				2F872E12909F37FC3EB5C89A /* PtyClient.swift */,
 				0D191901E44884716902E9E5 /* ResearchClient.swift */,
+				4B0056BC37926FF5FCE46CB0 /* UdemyClient.swift */,
 				92E9010FD0D4757566D313D1 /* Models */,
 			);
 			path = API;
@@ -477,6 +488,7 @@
 				02B37C727FD0BC60B78752DA /* PreferencesStore.swift */,
 				DF7B74CD03BCD43CEFF3B203 /* ProjectStore.swift */,
 				2B5131B5412681599DB896E9 /* ResearchStore.swift */,
+				D55D9D69F55173931EBB097C /* UdemyCatalogStore.swift */,
 				BB1A0D0734D3D239827ECD6A /* SettingsStore.swift */,
 				E10652B6A3C4031AC35E7A7D /* ToolOptionsStore.swift */,
 				ECCF48884128341077961F98 /* UsageStore.swift */,
@@ -562,7 +574,9 @@
 				52277CD4E2534578A9E785F8 /* ReplyEvent.swift */,
 				8459DCBDC8777D04BF8EC4EB /* ReplyItem.swift */,
 				6C9D2168F881D9954CD7FB76 /* ResearchNotebook.swift */,
+				4D6695F02C77A350F3DCA112 /* UdemyCourse.swift */,
 				FD557129AC5FE54BDF7BE1BC /* RuntimeModel.swift */,
+				4022FA8E2731080AEE93E5AE /* A2LabsCategory.swift */,
 			);
 			path = Models;
 			sourceTree = "<group>";
@@ -576,6 +590,7 @@
 				84568374974BC58963824BF5 /* Artifacts */,
 				C8CDE65E244C8407319F4AA2 /* Automation */,
 				FA1063ECE362A5D53C9EA111 /* Brain */,
+				1C7804E1724CE6EED60EF34C /* Catalog */,
 				60C8BC47827941A5797E9C4A /* Chat */,
 				370D9EF7EF5FEB19E1DE14E8 /* Code */,
 				0F9B52D227F7C31F30C42631 /* Connectors */,
@@ -746,6 +761,22 @@
 				22A98A22F0D4B4A2007A2BFE /* BrainCaptureSheet.swift */,
 			);
 			path = Brain;
+			sourceTree = "<group>";
+		};
+		1C7804E1724CE6EED60EF34C /* Catalog */ = {
+			isa = PBXGroup;
+			children = (
+				C610976578C3A8E37D86BFBA /* Views */,
+			);
+			path = Catalog;
+			sourceTree = "<group>";
+		};
+		C610976578C3A8E37D86BFBA /* Views */ = {
+			isa = PBXGroup;
+			children = (
+				EE29A2D972366CC33143FC26 /* CatalogView.swift */,
+			);
+			path = Views;
 			sourceTree = "<group>";
 		};
 /* End PBXGroup section */
@@ -951,6 +982,11 @@
 				BD043C18DB50D10AB1D01779 /* VoiceSettingsSheet.swift in Sources */,
 				DF62B63F124833DDB417BABD /* VoiceSummaryCardView.swift in Sources */,
 				B27578BF382B7826884887F2 /* WorkspaceFileEditorView.swift in Sources */,
+				B17D9110648748E2D863E3A6 /* A2LabsCategory.swift in Sources */,
+				FC3BE7E09381D3390B7B787B /* CatalogView.swift in Sources */,
+				055F2E149E50177A670082A3 /* UdemyCatalogStore.swift in Sources */,
+				8CF72DE5871C8AFB842C0083 /* UdemyClient.swift in Sources */,
+				7D13AF9B4398B8D1C05435B4 /* UdemyCourse.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
