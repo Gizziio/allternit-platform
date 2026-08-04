@@ -74,7 +74,12 @@ struct MainWorkspaceView: View {
                         case .agents:
                             AgentHubView(isSidebarOpen: $isSidebarOpen)
                         case .automation:
-                            AutomationTasksListView(isSidebarOpen: $isSidebarOpen)
+                            switch modeStore.automationKind {
+                            case .cron:
+                                AutomationTasksListView(isSidebarOpen: $isSidebarOpen)
+                            case .routines:
+                                RoutinesListView(isSidebarOpen: $isSidebarOpen)
+                            }
                         case .code:
                             CodeModeView(isSidebarOpen: $isSidebarOpen, selectedSessionId: $selectedSessionId)
                         case .aci:

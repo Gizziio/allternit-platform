@@ -56,6 +56,13 @@ final class AppModeStore: ObservableObject {
     /// filtering, theme accent, and session stamping — stays wherever it was).
     @Published var activeTab: ModeBarItem
 
+    /// Which sub-surface the Automation Tasks tab shows: cron jobs
+    /// (`/v1/cron`, Phase 1) or routines (`/v1/automations/routines`,
+    /// Phase 2). Both `AutomationTasksListView` and `RoutinesListView` read/
+    /// write this via a shared segmented control so either one is reachable
+    /// from the same tab rather than needing a separate nav item.
+    @Published var automationKind: AutomationKind = .cron
+
     init(defaults: UserDefaults = .standard) {
         let mode: AppMode
         if CommandLine.arguments.contains("-chat") {
@@ -126,4 +133,10 @@ enum ModeBarItem: CaseIterable {
         case .browser: return .aci
         }
     }
+}
+
+/// The two sub-surfaces of the Automation Tasks tab (`ModeBarItem.automation`).
+enum AutomationKind: String, CaseIterable {
+    case cron = "Cron"
+    case routines = "Routines"
 }

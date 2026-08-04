@@ -1,53 +1,40 @@
 import SwiftUI
 
-/// Automation Tasks tab surface — the Cron sub-view (Phase 1). Loops/Goals
-/// under `/v1/automations` are later phases; Routines (Phase 2) is its
-/// sibling, `RoutinesListView`, reachable via the Cron/Routines segmented
-/// control below the header — see `modeStore.automationKind` and
-/// ChatView.swift's `.automation` case. Structural pattern from
-/// `ProjectsListView`: search + status segmented control, row → detail push,
-/// toolbar "+" opens a creation sheet.
+/// Automation Tasks tab surface — Routines sub-view (Phase 2; Loops/Goals
+/// under `/v1/automations` are later phases). Structural pattern mirrors
+/// `AutomationTasksListView`: search, row -> detail push, toolbar "+" opens
+/// a creation sheet. The Cron/Routines segmented control (top of both list
+/// views, bound to `modeStore.automationKind`) is what makes this reachable
+/// from the same "Automation Tasks" tab as cron — see ChatView.swift's
+/// `.automation` case.
 ///
-/// Data: `CronJobStore.shared` over `GET v1/cron/jobs` on gizzi-code's own
-/// server (CronClient — same host as PtyClient/PermissionClient, not the
-/// `allternit-api` relay ProjectsClient uses).
-struct AutomationTasksListView: View {
+/// Data: `RoutineStore.shared` over `GET v1/automations/routines` on
+/// gizzi-code's own server (RoutinesClient — same host as PtyClient/
+/// PermissionClient/CronClient, not the `allternit-api` relay ProjectsClient
+/// uses).
+struct RoutinesListView: View {
     @Binding var isSidebarOpen: Bool
 
     @EnvironmentObject private var modeStore: AppModeStore
-    @StateObject private var jobStore = CronJobStore.shared
+    @StateObject private var routineStore = RoutineStore.shared
 
     @State private var searchText = ""
-    @State private var statusFilter: StatusFilter = .all
     /// Pushed detail (nil = list).
-    @State private var detailJob: CronJob? = nil
+    @State private var detailRoutine: Routine? = nil
     @State private var isCreateSheetPresented = false
     @State private var actionError: String? = nil
 
-    private enum StatusFilter: String, CaseIterable {
-        case all = "All"
-        case active = "Active"
-        case paused = "Paused"
-    }
-
-    private var visibleJobs: [CronJob] {
-        var jobs = jobStore.jobs
-        switch statusFilter {
-        case .all: break
-        case .active: jobs = jobs.filter { $0.status == "active" }
-        case .paused: jobs = jobs.filter { $0.status == "paused" }
-        }
+    private var visibleRoutines: [Routine] {
         let query = searchText.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !query.isEmpty else { return jobs }
-        return jobs.filter { $0.name.localizedCaseInsensitiveContains(query) }
+        guard !query.isEmpty else { return routineStore.routines }
+        return routineStore.routines.filter { $0.name.localizedCaseInsensitiveContains(query) }
     }
 
     var body: some View {
         NavigationStack {
             VStack(spacing: 0) {
-                // Header (AgentHubView's standalone-tab chrome: sidebar
-                // toggle + title + "+" — this surface has no parent sheet to
-                // dismiss, unlike ProjectsListView's sheet-hosted variant).
+                // Header (AutomationTasksListView's standalone-tab chrome:
+                // sidebar toggle + title + "+").
                 HStack {
                     Button(action: {
                         let generator = UIImpactFeedbackGenerator(style: .medium)
@@ -88,10 +75,8 @@ struct AutomationTasksListView: View {
 
                 Divider().background(Color("BorderSubtle"))
 
-                // Sibling entry point into Routines (Phase 2) — same
-                // "Automation Tasks" tab, `modeStore.automationKind` picks
-                // which sub-surface ChatView renders (see ChatView.swift's
-                // `.automation` case).
+                // Sibling entry point back into Cron — same tab as
+                // AutomationTasksListView's picker.
                 Picker("Automation kind", selection: $modeStore.automationKind) {
                     ForEach(AutomationKind.allCases, id: \.self) { kind in
                         Text(kind.rawValue).tag(kind)
@@ -105,17 +90,17 @@ struct AutomationTasksListView: View {
             }
             .background(Color("BgPrimary").edgesIgnoringSafeArea(.all))
             .toolbar(.hidden, for: .navigationBar)
-            .navigationDestination(item: $detailJob) { job in
-                AutomationTaskDetailView(job: job)
+            .navigationDestination(item: $detailRoutine) { routine in
+                RoutineDetailView(routine: routine)
             }
         }
         .sheet(isPresented: $isCreateSheetPresented) {
-            CreateAutomationTaskSheet { name, prompt, schedule in
-                createJob(name: name, prompt: prompt, schedule: schedule)
+            CreateRoutineSheet { name, steps, trigger, schedule in
+                createRoutine(name: name, steps: steps, trigger: trigger, schedule: schedule)
             }
         }
         .task {
-            jobStore.fetchJobsIfNeeded()
+            routineStore.fetchRoutinesIfNeeded()
         }
     }
 
@@ -124,23 +109,14 @@ struct AutomationTasksListView: View {
     @ViewBuilder
     private var content: some View {
         VStack(spacing: 0) {
-            Picker("Status", selection: $statusFilter) {
-                ForEach(StatusFilter.allCases, id: \.self) { filter in
-                    Text(filter.rawValue).tag(filter)
-                }
-            }
-            .pickerStyle(.segmented)
-            .padding(.horizontal, 20)
-            .padding(.vertical, 12)
-
-            if jobStore.isLoading && jobStore.jobs.isEmpty {
+            if routineStore.isLoading && routineStore.routines.isEmpty {
                 Spacer()
                 ProgressView()
                 Spacer()
-            } else if let loadError = jobStore.loadError, jobStore.jobs.isEmpty {
+            } else if let loadError = routineStore.loadError, routineStore.routines.isEmpty {
                 Spacer()
                 VStack(spacing: 12) {
-                    Text("Couldn't load automation tasks")
+                    Text("Couldn't load routines")
                         .font(.subheadline)
                         .foregroundColor(Color("TextPrimary"))
                     Text(loadError)
@@ -148,14 +124,14 @@ struct AutomationTasksListView: View {
                         .foregroundColor(Color("TextSecondary"))
                         .multilineTextAlignment(.center)
                     Button("Retry") {
-                        jobStore.fetchJobsIfNeeded(force: true)
+                        routineStore.fetchRoutinesIfNeeded(force: true)
                     }
                     .font(.subheadline)
                     .foregroundColor(Color("AccentPrimary"))
                 }
                 .padding(.horizontal, 20)
                 Spacer()
-            } else if jobStore.jobs.isEmpty {
+            } else if routineStore.routines.isEmpty {
                 Spacer()
                 emptyState
                 Spacer()
@@ -171,7 +147,7 @@ struct AutomationTasksListView: View {
                 Image(systemName: "magnifyingglass")
                     .font(.subheadline)
                     .foregroundColor(Color("TextSecondary"))
-                TextField("Search automation tasks", text: $searchText)
+                TextField("Search routines", text: $searchText)
                     .font(.subheadline)
                     .foregroundColor(Color("TextPrimary"))
                     .textInputAutocapitalization(.never)
@@ -189,6 +165,7 @@ struct AutomationTasksListView: View {
             .background(Color("BgSecondary"))
             .cornerRadius(10)
             .padding(.horizontal, 20)
+            .padding(.top, 12)
             .padding(.bottom, 12)
 
             if let actionError {
@@ -201,15 +178,15 @@ struct AutomationTasksListView: View {
 
             ScrollView {
                 LazyVStack(spacing: 8) {
-                    ForEach(visibleJobs) { job in
-                        jobRow(job)
+                    ForEach(visibleRoutines) { routine in
+                        routineRow(routine)
                     }
-                    if visibleJobs.isEmpty {
+                    if visibleRoutines.isEmpty {
                         VStack(spacing: 10) {
                             Image(systemName: "magnifyingglass")
                                 .font(.system(size: 20, weight: .medium))
                                 .foregroundColor(Color("TextSecondary"))
-                            Text("No automation tasks match.")
+                            Text("No routines match.")
                                 .font(.subheadline)
                                 .foregroundColor(Color("TextSecondary"))
                         }
@@ -221,39 +198,34 @@ struct AutomationTasksListView: View {
             }
             .scrollDismissesKeyboard(.interactively)
             .refreshable {
-                await jobStore.refresh()
+                await routineStore.refresh()
             }
         }
     }
 
-    private func jobRow(_ job: CronJob) -> some View {
+    private func routineRow(_ routine: Routine) -> some View {
         Button(action: {
             let generator = UIImpactFeedbackGenerator(style: .light)
             generator.impactOccurred()
-            detailJob = job
+            detailRoutine = routine
         }) {
             HStack(spacing: 12) {
-                Image(systemName: "clock.arrow.circlepath")
+                Image(systemName: "list.bullet.rectangle")
                     .font(.system(size: 15, weight: .medium))
                     .foregroundColor(Color("AccentPrimary"))
                     .frame(width: 28)
                 VStack(alignment: .leading, spacing: 2) {
-                    Text(job.name)
+                    Text(routine.name)
                         .font(.system(size: 14, weight: .medium))
                         .foregroundColor(Color("TextPrimary"))
                         .lineLimit(1)
-                    Text(job.schedule.displayText)
+                    Text(Self.subtitleText(routine))
                         .font(.caption)
                         .foregroundColor(Color("TextSecondary"))
                         .lineLimit(1)
-                    if let nextRunText = Self.relativeText(job.nextRunAt) {
-                        Text("Next run \(nextRunText)")
-                            .font(.caption2)
-                            .foregroundColor(Color("TextSecondary"))
-                    }
                 }
                 Spacer()
-                statusBadge(job.status)
+                Self.statusBadge(routine.state)
                 Image(systemName: "chevron.right")
                     .font(.system(size: 11, weight: .bold))
                     .foregroundColor(Color("TextSecondary"))
@@ -273,7 +245,7 @@ struct AutomationTasksListView: View {
 
     private var emptyState: some View {
         VStack(spacing: 16) {
-            Image(systemName: "clock.arrow.circlepath")
+            Image(systemName: "list.bullet.rectangle")
                 .font(.system(size: 24, weight: .medium))
                 .foregroundColor(Color("TextSecondary"))
                 .frame(width: 56, height: 56)
@@ -283,7 +255,7 @@ struct AutomationTasksListView: View {
                     RoundedRectangle(cornerRadius: Theme.radiusLG)
                         .stroke(Theme.borderWarmDefault, lineWidth: 1)
                 )
-            Text("Schedule a prompt to run automatically — daily digests, recurring reminders, anything on a timer.")
+            Text("Chain a few commands into a named routine you can run on demand, anytime.")
                 .font(.subheadline)
                 .foregroundColor(Color("TextSecondary"))
                 .multilineTextAlignment(.center)
@@ -293,7 +265,7 @@ struct AutomationTasksListView: View {
                 generator.impactOccurred()
                 isCreateSheetPresented = true
             }) {
-                Text("Create automation task")
+                Text("Create routine")
                     .font(.system(size: 13, weight: .semibold))
                     .foregroundColor(Color("TextPrimary"))
                     .padding(.horizontal, 14)
@@ -307,51 +279,58 @@ struct AutomationTasksListView: View {
 
     // MARK: - Actions
 
-    private func createJob(name: String, prompt: String, schedule: String) {
+    private func createRoutine(name: String, steps: [RoutineStep], trigger: String?, schedule: String?) {
         Task {
             do {
-                try await jobStore.createAgentJob(name: name, prompt: prompt, schedule: schedule)
+                try await routineStore.createRoutine(name: name, steps: steps, trigger: trigger, schedule: schedule)
             } catch {
-                actionError = "Couldn't create the automation task: \(error.localizedDescription)"
+                actionError = "Couldn't create the routine: \(error.localizedDescription)"
             }
         }
     }
 
-    // MARK: - Formatting (shared with AutomationTaskDetailView)
+    // MARK: - Formatting (shared with RoutineDetailView)
 
-    /// Status badge colors mirroring CodeModeView's session-status
-    /// convention (Theme.status* + `.red` for hard failures).
-    static func statusColor(_ status: String) -> Color {
-        switch status {
-        case "active": return Theme.statusSuccess
-        case "paused": return Theme.statusWarning
-        case "error": return .red
+    /// Status badge colors mirroring AutomationTasksListView's convention,
+    /// adapted to routine `state` values (defined/running/completed/failed,
+    /// routine-engine.ts:12,64-74).
+    static func statusColor(_ state: String) -> Color {
+        switch state {
+        case "running": return Theme.statusInfo
+        case "completed": return Theme.statusSuccess
+        case "failed": return .red
         default: return Color("TextSecondary")
         }
     }
 
-    private func statusBadge(_ status: String) -> some View {
-        Text(status.capitalized)
+    private static func statusBadge(_ state: String) -> some View {
+        Text(state.capitalized)
             .font(.caption2)
             .fontWeight(.semibold)
-            .foregroundColor(Self.statusColor(status))
+            .foregroundColor(statusColor(state))
             .padding(.horizontal, 8)
             .padding(.vertical, 3)
-            .background(Self.statusColor(status).opacity(0.15))
+            .background(statusColor(state).opacity(0.15))
             .clipShape(Capsule())
     }
 
-    /// Backend timestamps are ISO-8601 (`Date.toISOString()`), with
-    /// fractional seconds. Mirrored from CodeModeView's private copy.
-    private static func parseTimestamp(_ value: String) -> Date? {
-        if let date = try? Date(value, strategy: Date.ISO8601FormatStyle(includingFractionalSeconds: true)) {
-            return date
+    private static func subtitleText(_ routine: Routine) -> String {
+        var parts: [String] = []
+        let stepCount = routine.steps.count
+        parts.append(stepCount == 1 ? "1 step" : "\(stepCount) steps")
+        if let trigger = routine.trigger, !trigger.isEmpty {
+            parts.append(trigger)
+        } else if let schedule = routine.schedule, !schedule.isEmpty {
+            parts.append(schedule)
         }
-        return try? Date(value, strategy: Date.ISO8601FormatStyle())
+        return parts.joined(separator: " · ")
     }
 
-    static func relativeText(_ value: String?) -> String? {
-        guard let value, let date = parseTimestamp(value) else { return nil }
+    /// `time_created`/`time_updated` are ms-epoch numbers (automations.ts:
+    /// 147-148), unlike cron's ISO-8601 strings.
+    static func relativeText(_ msEpoch: Double?) -> String? {
+        guard let msEpoch else { return nil }
+        let date = Date(timeIntervalSince1970: msEpoch / 1000)
         let formatter = RelativeDateTimeFormatter()
         formatter.unitsStyle = .abbreviated
         return formatter.localizedString(for: date, relativeTo: Date())
