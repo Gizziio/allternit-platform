@@ -17,7 +17,7 @@ Branch: `fix/review-decision-event-type` (issue #16/#19 fixes) + `docs/surface-a
 
 ---
 
-**Tracker correction (this session):** the original audit tracker incorrectly marked every item `[x]` after triage. `[x]` now means the item is *resolved* (shipped, stale, or deferred/documented). REAL items that still need building are `[ ]` (pending) or `[~]` (active). PR #13 (Cowork Tasks iOS) was also mis-reported as merged to `main`; it exists on branch `feat/cowork-tasks-scope` and on the `fix/review-decision-event-type` worktree, but is **not** in `origin/main` (aa3d67584).
+**Tracker correction (this session):** the original audit tracker incorrectly marked every item `[x]` after triage. `[x]` now means the item is *resolved* (shipped, stale, or deferred/documented). REAL items that still need building are `[ ]` (pending) or `[~]` (active).
 
 ## Core Chat/Home (3)
 
