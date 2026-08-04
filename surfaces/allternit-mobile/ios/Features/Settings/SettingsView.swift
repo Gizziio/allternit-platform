@@ -28,6 +28,10 @@ struct SettingsView: View {
     @State private var isMemoryPresented = false
     /// Pushed Compute Billing settings (Plans & Compute parity).
     @State private var isComputeBillingPresented = false
+
+    /// Pushed Organization & Access settings.
+    @State private var isOrganizationAccessPresented = false
+
     /// Pushed custom-instructions editor (Agent section).
     @State private var isInstructionsPresented = false
     /// Pushed Monitor view (infra section).
@@ -105,6 +109,9 @@ struct SettingsView: View {
             }
             .navigationDestination(isPresented: $isComputeBillingPresented) {
                 ComputeBillingView()
+            }
+            .navigationDestination(isPresented: $isOrganizationAccessPresented) {
+                OrganizationAccessView()
             }
             .navigationDestination(isPresented: $isInstructionsPresented) {
                 CustomInstructionsView()
@@ -249,6 +256,24 @@ struct SettingsView: View {
             }) {
                 HStack {
                     Text("Plans & Compute")
+                        .font(.subheadline)
+                        .foregroundColor(Color("TextPrimary"))
+                    Spacer()
+                    Image(systemName: "chevron.right")
+                        .font(.system(size: 11, weight: .bold))
+                        .foregroundColor(Color("TextSecondary"))
+                }
+                .contentShape(Rectangle())
+            }
+            .buttonStyle(.plain)
+
+            Button(action: {
+                let generator = UIImpactFeedbackGenerator(style: .light)
+                generator.impactOccurred()
+                isOrganizationAccessPresented = true
+            }) {
+                HStack {
+                    Text("Organization & Access")
                         .font(.subheadline)
                         .foregroundColor(Color("TextPrimary"))
                     Spacer()
