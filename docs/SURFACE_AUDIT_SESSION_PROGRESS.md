@@ -35,7 +35,7 @@ Branch: `fix/review-decision-event-type` (issue #16/#19 fixes) + `docs/surface-a
 | 5 | Cowork Runs view (PARTIAL → iOS) | `[x]` | STALE — RunsView.tsx registered but zero dispatchers in Cowork nav; only reachable via unrelated Products Discovery "Workflows" card | close (defer if re-scoped) | |
 | 6 | Cowork Drafts view (GAP → iOS) | `[x]` | STALE — DraftsView.tsx registered, zero dispatchers anywhere; dead code | close | |
 | 7 | Cowork Cron view (GAP → iOS) | `[x]` | STALE — renamed/merged into Automation Tasks (live, reachable via shared Home rail); iOS Automation Tasks itself absent from this checkout despite PR #9 claims | close; reconcile iOS branch state | |
-| 8 | Cowork Project view (GAP → gizzi-code) | `[ ]` | REAL — CoworkProjectView.tsx live, mounted by CoworkRoot; backend `/cowork/projects` exists; gizzi-code has no run-scoped project view | build / defer to gizzi-code CLI phase | |
+| 8 | Cowork Project view (GAP → gizzi-code) | `[x]` | REAL — phase 1 shipped: `cowork-project` command lists Cowork projects, shows tasks by project, and creates tasks (`feat/gizzi-cowork-project`) | Shipped phase 1; phase 2/3 deferred | `feat/gizzi-cowork-project` |
 | 9 | Cowork Documents view (GAP → iOS) | `[x]` | STALE — DocumentsView.tsx only reachable via unrelated Code-mode Skills Registry path, not Cowork nav | close (defer if re-scoped) | |
 | 10 | Cowork Tables view (GAP → iOS) | `[x]` | STALE — TablesView.tsx registered, zero dispatchers; dead code | close | |
 | 11 | Cowork Files view (GAP → iOS) | `[x]` | STALE — FilesView.tsx registered, zero dispatchers; dead code | close | |
