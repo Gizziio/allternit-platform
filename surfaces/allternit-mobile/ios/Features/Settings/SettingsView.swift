@@ -34,6 +34,8 @@ struct SettingsView: View {
     @State private var isRuntimeOperationsPresented = false
     /// Pushed Compute Nodes view (infra section).
     @State private var isNodesManagerPresented = false
+    /// Pushed Cloud Deploy view (infra section).
+    @State private var isCloudDeployPresented = false
     #if DEBUG
     /// Pushed Brain Spike screen (DEBUG-only D3 spike section).
     @State private var isBrainSpikePresented = false
@@ -104,6 +106,9 @@ struct SettingsView: View {
             }
             .navigationDestination(isPresented: $isNodesManagerPresented) {
                 NodesManagerView()
+            }
+            .navigationDestination(isPresented: $isCloudDeployPresented) {
+                CloudDeployManagerView()
             }
             #if DEBUG
             .navigationDestination(isPresented: $isBrainSpikePresented) {
@@ -644,10 +649,13 @@ struct SettingsView: View {
             Button(action: { isNodesManagerPresented = true }) {
                 bulkRowLabel("Compute Nodes", systemImage: "externaldrive.connected.to.line.below")
             }
+            Button(action: { isCloudDeployPresented = true }) {
+                bulkRowLabel("Cloud Deploy", systemImage: "cloud")
+            }
         } header: {
             Text("Infrastructure")
         } footer: {
-            Text("Live view of agents, system metrics, logs, runtime controls, and compute nodes.")
+            Text("Live view of agents, system metrics, logs, runtime controls, compute nodes, and cloud deployments.")
         }
     }
 
