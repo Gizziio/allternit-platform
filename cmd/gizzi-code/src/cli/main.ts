@@ -51,7 +51,11 @@ import { AllternitCommand } from "@/cli/commands/allternit"
 import { StatusCommand } from "@/cli/commands/status"
 import { BrainCommand } from "@/cli/commands/brain"
 import { HtmlArtifactCommand } from "@/cli/commands/html-artifact"
+HEAD
 import { ProgramsCommand } from "@/cli/commands/programs"
+import { OrgCommand } from "@/cli/commands/org"
+
+>>>>>>> origin/feat/ios-organization-access
 import path from "path"
 import { Global, init as initGlobal } from "@/runtime/context/global"
 import { JsonMigration } from "@/runtime/session/storage/json-migration"
@@ -210,7 +214,11 @@ const cli = yargs(hideBin(process.argv))
   .command(AllternitCommand)
   .command(BrainCommand)
   .command(HtmlArtifactCommand)
+HEAD
   .command(ProgramsCommand)
+  .command(OrgCommand)
+
+>>>>>>> origin/feat/ios-organization-access
   .fail((msg, err) => {
     if (
       msg?.startsWith("Unknown argument") ||

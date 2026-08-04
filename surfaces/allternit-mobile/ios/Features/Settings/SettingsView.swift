@@ -31,6 +31,7 @@ struct SettingsView: View {
 HEAD
 HEAD
 HEAD
+HEAD
     /// Pushed Platform settings (Settings > Platform parity).
     @State private var isPlatformPresented = false    /// Pushed Products settings (Settings > Products parity).
     @State private var isProductsPresented = false
@@ -39,6 +40,10 @@ HEAD
 >>>>>>> origin/feat/ios-settings-infrastructure    /// Pushed Model Management view.
     @State private var isModelManagementPresented = false
 >>>>>>> origin/feat/ios-model-management
+    /// Pushed Organization & Access settings.
+    @State private var isOrganizationAccessPresented = false
+
+>>>>>>> origin/feat/ios-organization-access
     /// Pushed custom-instructions editor (Agent section).
     @State private var isInstructionsPresented = false
     /// Pushed Monitor view (infra section).
@@ -124,6 +129,7 @@ HEAD
 HEAD
 HEAD
 HEAD
+HEAD
             .navigationDestination(isPresented: $isPlatformPresented) {
                 PlatformSettingsView()            .navigationDestination(isPresented: $isProductsPresented) {
                 ProductsSettingsView()
@@ -131,7 +137,9 @@ HEAD
                 InfrastructureSettingsView()
 >>>>>>> origin/feat/ios-settings-infrastructure            .navigationDestination(isPresented: $isModelManagementPresented) {
                 ModelManagementView()
->>>>>>> origin/feat/ios-model-management
+>>>>>>> origin/feat/ios-model-management            .navigationDestination(isPresented: $isOrganizationAccessPresented) {
+                OrganizationAccessView()
+>>>>>>> origin/feat/ios-organization-access
             }
             .navigationDestination(isPresented: $isInstructionsPresented) {
                 CustomInstructionsView()
@@ -276,6 +284,24 @@ HEAD
             }) {
                 HStack {
                     Text("Plans & Compute")
+                        .font(.subheadline)
+                        .foregroundColor(Color("TextPrimary"))
+                    Spacer()
+                    Image(systemName: "chevron.right")
+                        .font(.system(size: 11, weight: .bold))
+                        .foregroundColor(Color("TextSecondary"))
+                }
+                .contentShape(Rectangle())
+            }
+            .buttonStyle(.plain)
+
+            Button(action: {
+                let generator = UIImpactFeedbackGenerator(style: .light)
+                generator.impactOccurred()
+                isOrganizationAccessPresented = true
+            }) {
+                HStack {
+                    Text("Organization & Access")
                         .font(.subheadline)
                         .foregroundColor(Color("TextPrimary"))
                     Spacer()
