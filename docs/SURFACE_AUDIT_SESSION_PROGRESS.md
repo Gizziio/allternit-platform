@@ -182,7 +182,7 @@ Branch: `fix/review-decision-event-type` (issue #16/#19 fixes) + `docs/surface-a
 | 107 | Organization Access panel (GAP → iOS, gizzi-code) | `[x]` | REAL — iOS `OrganizationAccessView` shipped (profile + personal-org creation) and gizzi-code `org` command shipped (`show` + `create`) | Shipped iOS + gizzi parity | `feat/ios-organization-access` |
 | 108 | Compute Billing panel (GAP → iOS) | `[x]` | REAL — iOS `ComputeBillingView` shipped: plan badge, weekly usage meter, credits, and upgrade/buy-credits actions | Shipped phase 1 iOS parity | `feat/ios-compute-billing` |
 | 109 | Enterprise BYOC panel (GAP → iOS, gizzi-code) | `[x]` | DUPLICATE of row 70 — same `EnterpriseBYOCPanelView` shipped in `feat/ios-enterprise-byoc`; no additional work | Closed as duplicate of #70 | `feat/ios-enterprise-byoc` |
-| 110 | Model Management view (PARTIAL → upgrade) | `[ ]` | REAL — web `views/settings/ModelManagementView.tsx` (170 lines) is minimal, genuine upgrade work remains | Scope upgrade; check overlap w/ LocalModelManager | |
+| 110 | Model Management view (PARTIAL → upgrade) | `[x]` | REAL — iOS `ModelManagementView` shipped: default model picker + provider/engine list with auth/ready status via `/api/v1/providers*`, `/api/v1/provider/ollama/status` | Shipped phase 1 iOS parity | `feat/ios-model-management` |
 
 ## AllternitOS (1)
 
