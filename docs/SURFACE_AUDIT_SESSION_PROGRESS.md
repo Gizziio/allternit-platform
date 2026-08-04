@@ -124,7 +124,7 @@ Branch: `fix/review-decision-event-type` (issue #16/#19 fixes) + `docs/surface-a
 | # | Item | Status | Finding | Action | PR |
 |---|------|--------|---------|--------|-----|
 | 71 | DAG Integration Page (PARTIAL → upgrade) | `[x]` | REAL — rebuilt `views/DagIntegrationPage.tsx` as a full DAG-suite index with navigation tiles for Orchestration, Knowledge, Security, Browser/Execution, and Observability views (`feat/web-dag-integration-page`) | Shipped index rebuild; individual gizzi-code ports remain under #72–#86 | `feat/web-dag-integration-page` |
-| 72 | Ontology Viewer (GAP → gizzi-code) | `[ ]` | REAL — web `views/dag/OntologyViewer.tsx` live via railsApi; gizzi-code hit is unrelated code comment | Port to gizzi-code | |
+| 72 | Ontology Viewer (GAP → gizzi-code) | `[x]` | REAL — gizzi-code `/ontology` command shipped: Ink TUI that fetches DAG plans, WIHs, context packs, and receipts from `/api/rails/*` and displays summary + recent DAGs + WIHs (`feat/gizzi-dag-ontology`) | Shipped phase 1 CLI port; deeper graph rendering and node-edge details deferred | `feat/gizzi-dag-ontology` |
 | 73 | Directive Compiler (GAP → gizzi-code) | `[ ]` | REAL — web `views/dag/DirectiveCompiler.tsx` real `createDagPlan`/`refineDag`; zero gizzi-code/iOS matches | Port to gizzi-code | |
 | 74 | GC Agents (GAP → gizzi-code) | `[ ]` | REAL — web `views/dag/GCAgents.tsx` real archive/index-maintenance controls; zero matches elsewhere | Port to gizzi-code (low priority) | |
 | 75 | Receipts Viewer (GAP → gizzi-code) | `[ ]` | REAL — web `views/dag/ReceiptsViewer.tsx` real receipts data; zero matches elsewhere | Port to gizzi-code | |
