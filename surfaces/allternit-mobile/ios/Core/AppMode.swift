@@ -5,13 +5,13 @@ import SwiftUI
 ///
 /// `design` is skipped on iOS — on the web it opens an external window.
 /// Cowork is NOT a switcher destination: the platform's primary surface
-/// control is the 7-row [Chats | Projects | Artifacts Library | Agents |
-/// Automation Tasks | Code | ACI] tab list in the sidebar header
+/// control is the 8-row [Chats | Projects | Artifacts Library | Agents |
+/// Automation Tasks | Code | ACI | Research] tab list in the sidebar header
 /// (HistorySidebarView — no persistent bottom bar, matching ChatGPT/Claude's
 /// iOS apps), and cowork is a composer-level toggle inside Chats
 /// (BottomDock.tsx ChatCoworkToggle). Projects, the artifacts library, the
-/// Agent Hub, and Automation Tasks are iOS-only tab surfaces layered over
-/// the same modes (they don't stamp an `origin_surface` of their own).
+/// Agent Hub, Automation Tasks, and Research are iOS-only tab surfaces layered
+/// over the same modes (they don't stamp an `origin_surface` of their own).
 enum AppMode: String, CaseIterable, Sendable {
     case chat
     case cowork
@@ -81,23 +81,23 @@ final class AppModeStore: ObservableObject {
 
     /// Both Home surfaces (chat + cowork) live under the Chats tab; selecting
     /// it always lands on plain chat. Projects / Artifacts Library / Agents /
-    /// Automation Tasks switch the surface without touching the mode.
+    /// Automation Tasks / Research switch the surface without touching the mode.
     func selectBarItem(_ item: ModeBarItem) {
         activeTab = item
         switch item {
         case .chats: mode = .chat
         case .code: mode = .code
         case .aci: mode = .browser
-        case .projects, .artifacts, .agents, .automation: break
+        case .projects, .artifacts, .agents, .automation, .research: break
         }
     }
 }
 
-/// The seven destinations of the sidebar's tab list:
+/// The eight destinations of the sidebar's tab list:
 /// Chats / Projects / Artifacts Library / Agents / Automation Tasks / Code /
-/// ACI.
+/// ACI / Research.
 enum ModeBarItem: CaseIterable {
-    case chats, projects, artifacts, agents, automation, code, aci
+    case chats, projects, artifacts, agents, automation, code, aci, research
 
     var label: String {
         switch self {
@@ -108,6 +108,7 @@ enum ModeBarItem: CaseIterable {
         case .automation: return "Automation Tasks"
         case .code: return "Code"
         case .aci: return "ACI"
+        case .research: return "Research"
         }
     }
 
@@ -121,6 +122,7 @@ enum ModeBarItem: CaseIterable {
         case .automation: return "clock.arrow.circlepath"
         case .code: return "terminal"
         case .aci: return "globe"
+        case .research: return "book.closed"
         }
     }
 
