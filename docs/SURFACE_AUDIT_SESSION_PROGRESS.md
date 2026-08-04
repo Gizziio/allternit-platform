@@ -55,7 +55,7 @@ Branch: `fix/review-decision-event-type` (issue #16/#19 fixes) + `docs/surface-a
 | 20 | Code workspace (CodeRoot) (PARTIAL → upgrade) | `[x]` | STALE — fully implemented, live (`CodeRoot.tsx`→`CodeSurfaceRouter.tsx`→`CodeThreadView`/`CodeCanvasView`) | Closed as stale; no defined "upgrade" scope | |
 | 21 | Code Explorer (GAP → iOS) | `[x]` | STALE — `ExplorerView.tsx` (430 lines) live via `CodeModeAgentSession.tsx` explorer tab | Closed as stale; iOS port has a real reference impl | |
 | 22 | Code Git panel (GAP → iOS) | `[x]` | STALE — `GitView.tsx` (412 lines) live via `CodeModeAgentSession.tsx` git tab | Closed as stale; iOS port has a real reference impl | |
-| 23 | Code Skills view (GAP → iOS) | `[ ]` | REAL — `SkillsView.tsx` is a static 3-item mock, no backend, unreachable route | Confirmed gap; needs UI + backend built | |
+| 23 | Code Skills view (GAP → iOS) | `[x]` | REAL — web `SkillsView.tsx` now fetches `/api/v1/team-skills`; iOS `CodeSkillsView` + `TeamSkillsClient` + store shipped (`feat/ios-code-skills`) | Shipped phase 1 | `feat/ios-code-skills` |
 | 24 | Code Project view (PARTIAL → upgrade) | `[x]` | STALE — `CodeProjectView.tsx` (473 lines) live via `code-project` route + `ProjectDetailRouter.tsx` | Closed as stale; no defined "upgrade" scope | |
 | 25 | Code Canvas (live preview split view) (PARTIAL → iOS) | `[ ]` | REAL (iOS gap) — web ref is mature (`CodeCanvas.tsx` 1646 lines + `CodeCanvasView.tsx` 807 lines + tile subsystem), iOS has none | Confirmed gap; large port, needs own dedicated spec | |
 | 26 | Code Preview Pane (GAP → iOS, gizzi-code) | `[x]` | STALE (dead code) — `CodePreviewPane.tsx` (208 lines) fully written, zero callers anywhere | Resurrect-or-retire decision needed before iOS port | |
