@@ -61,11 +61,13 @@ HEAD
 HEAD
 HEAD
 HEAD
+HEAD
 import ontology from './commands/ontology/index.js'import directive from './commands/directive/index.js'
 >>>>>>> origin/feat/gizzi-directive-compilerimport gc from './commands/gc/index.js'
 >>>>>>> origin/feat/gizzi-gc-agentsimport multimodal from './commands/multimodal/index.js'
 >>>>>>> origin/feat/gizzi-multimodal-inputimport purpose from './commands/purpose/index.js'
->>>>>>> origin/feat/gizzi-purpose-binding
+>>>>>>> origin/feat/gizzi-purpose-bindingimport receipts from './commands/receipts/index.js'
+>>>>>>> origin/feat/gizzi-receipts-viewer
 
 function safeRequire(path: string) {
   try {
@@ -296,11 +298,13 @@ HEAD
 HEAD
 HEAD
 HEAD
+HEAD
   ontology,  directive,
 >>>>>>> origin/feat/gizzi-directive-compiler  gc,
 >>>>>>> origin/feat/gizzi-gc-agents  multimodal,
 >>>>>>> origin/feat/gizzi-multimodal-input  purpose,
->>>>>>> origin/feat/gizzi-purpose-binding
+>>>>>>> origin/feat/gizzi-purpose-binding  receipts,
+>>>>>>> origin/feat/gizzi-receipts-viewer
   context,
   contextNonInteractive,
   cost,
