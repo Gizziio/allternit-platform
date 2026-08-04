@@ -88,6 +88,8 @@ struct MainWorkspaceView: View {
                             ACITabView(isSidebarOpen: $isSidebarOpen, selectedSessionId: $selectedSessionId)
                         case .research:
                             ResearchView(isSidebarOpen: $isSidebarOpen)
+                        case .documents:
+                            DocumentsView(isSidebarOpen: $isSidebarOpen)
                         }
                     }
                 // Opaque backdrop for the whole pane, bleeding edge-to-edge

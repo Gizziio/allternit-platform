@@ -85,6 +85,9 @@ targets:
       - sdk: libz.tbd
       # … and system iconv (git_path_iconv for unicode path handling).
       - sdk: libiconv.tbd
+      # Document import / preview support.
+      - sdk: QuickLook.framework
+      - sdk: UniformTypeIdentifiers.framework
       - package: clerk-ios
         product: ClerkKit
       - package: clerk-ios
