@@ -31,7 +31,7 @@ Branch: `fix/review-decision-event-type` (issue #16/#19 fixes) + `docs/surface-a
 
 | # | Item | Status | Finding | Action | PR |
 |---|------|--------|---------|--------|-----|
-| 4 | Cowork workspace (CoworkRoot) (PARTIAL → iOS) | `[~]` | REAL — CoworkRoot.tsx is a full live workspace; iOS only has a composer-level toggle (AppMode.swift, ChatView.swift) | build | |
+| 4 | Cowork workspace (CoworkRoot) (PARTIAL → iOS) | `[x]` | REAL — phase 1 shipped: launchpad + active-session shell + progress panel on iOS (`feat/ios-cowork-workspace`) | Shipped phase 1; phase 2/3 deferred | `feat/ios-cowork-workspace` |
 | 5 | Cowork Runs view (PARTIAL → iOS) | `[x]` | STALE — RunsView.tsx registered but zero dispatchers in Cowork nav; only reachable via unrelated Products Discovery "Workflows" card | close (defer if re-scoped) | |
 | 6 | Cowork Drafts view (GAP → iOS) | `[x]` | STALE — DraftsView.tsx registered, zero dispatchers anywhere; dead code | close | |
 | 7 | Cowork Cron view (GAP → iOS) | `[x]` | STALE — renamed/merged into Automation Tasks (live, reachable via shared Home rail); iOS Automation Tasks itself absent from this checkout despite PR #9 claims | close; reconcile iOS branch state | |
