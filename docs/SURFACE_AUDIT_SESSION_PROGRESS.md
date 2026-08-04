@@ -165,7 +165,7 @@ Branch: `fix/review-decision-event-type` (issue #16/#19 fixes) + `docs/surface-a
 | # | Item | Status | Finding | Action | PR |
 |---|------|--------|---------|--------|-----|
 | 97 | Mail Monitor (GAP → iOS) | `[x]` | STALE — `views/mail-monitor/` only holds shared helpers now; the panel was rebuilt as Agent Activity (`views/agent-activity/*`) and shipped on iOS in PR #18 | Close as superseded | #18 |
-| 98 | Documents (office-file I/O) (GAP → iOS) | `[ ]` | REAL — web full docx/xlsx/pptx editor (`views/documents/office-io/*`), no match iOS | Confirmed gap, build iOS | |
+| 98 | Documents (office-file I/O) (GAP → iOS) | `[x]` | REAL — iOS Documents tab shipped: import via document picker, list, QuickLook preview, rename/share/delete; editing (docx/xlsx/pptx mutation) deferred to a later phase | Shipped phase 1 iOS port | `feat/ios-documents` |
 | 99 | Knowledge (PARTIAL → iOS) | `[x]` | DEFER — no `knowledge/` dir; closest analog `views/MemoryKernelView.tsx`, needs product scoping | Defer pending scoping | |
 
 ## Onboarding/Account (10)
