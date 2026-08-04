@@ -12,6 +12,7 @@ Living checklist for the 121 actionable items (83 GAP + 38 PARTIAL) from `docs/S
 
 ## Core Chat/Home
 
+HEAD
 - [x] **Projects** _(`GAP` → gizzi-code)_ — A CLI user has no way to group sessions into a named project the way web/iOS do; `init` is a one-shot scaffold, not a browser. — Session finding: STALE — project model already exists: web `views/ProjectView.tsx`, gizzi-code `project/instance.ts`, iOS `Features/Projects/`
 - [x] **Artifacts Library** _(`PARTIAL` → upgrade)_ — gizzi-code can produce/publish artifacts consumed elsewhere but can't browse its own artifact history. — Session finding: STALE — web `views/library/LibraryView.tsx` ("Artifacts Library") + iOS `Features/Artifacts/Views/ArtifactsLibraryView.swift` both exist
 - [x] **Automation Tasks (Goals/Routines/Loops/Cron)** _(`GAP` → iOS)_ — Phase 1 cron jobs shipped in PR #9. Routines/Loops/Goals remain as later phases — see `docs/AUTOMATION_TASKS_MAP.md`. — Session finding: PR #9 merged to main; cron jobs shipped on iOS
@@ -34,7 +35,30 @@ Living checklist for the 121 actionable items (83 GAP + 38 PARTIAL) from `docs/S
 - [x] **Cowork Wiki section viewer** _(`PARTIAL` → iOS)_ — Loose, currently-inactive gizzi-code overlap; no iOS equivalent at all. — Session finding: STALE (recategorize) — WikiSectionViewer.tsx real/live but mounted app-wide via ArtifactSidecar, not Cowork nav
 - [x] **Cowork Audit log viewer** _(`GAP` → iOS, gizzi-code)_ — Neither other surface lets a user review a Cowork action audit trail. — Session finding: STALE — AuditLogViewer.tsx only rendered inside dead TasksView.tsx; transitively unreachable
 - [x] **Intelli-Schedule panel** _(`GAP` → iOS)_ — Missing from iOS only; gizzi-code has the actual named engine likely backing this panel. — Session finding: REAL — phase 1 shipped: Swift `IntelliScheduleEngine`, `IntelliScheduleStore`, `IntelliSchedulePanel`, entry from Cowork-mode chrome (`feat/ios-intelli-schedule`)
-- [x] **Harness Config panel (execution sandbox config)** _(`GAP` → iOS)_ — Missing from iOS; gizzi-code's overlap is adjacent infrastructure, not a direct match. — Session finding: STALE (recategorize) — HarnessConfigPanel.tsx real/live but mounted in OperatorBrowserView/DesignModeView, not Cowork
+- [x] **Harness Config panel (execution sandbox config)** _(`GAP` → iOS)_ — Missing from iOS; gizzi-code's overlap is adjacent infrastructure, not a direct match. — Session finding: STALE (recategorize) — HarnessConfigPanel.tsx real/live but mounted in OperatorBrowserView/DesignModeView, not Cowork- [ ] **Projects** _(`GAP` → gizzi-code)_ — A CLI user has no way to group sessions into a named project the way web/iOS do; `init` is a one-shot scaffold, not a browser.
+- [ ] **Artifacts Library** _(`PARTIAL` → upgrade)_ — gizzi-code can produce/publish artifacts consumed elsewhere but can't browse its own artifact history.
+- [x] **Automation Tasks (Goals/Routines/Loops/Cron)** _(`GAP` → iOS)_ — Phase 1 cron jobs shipped in PR #9. Routines/Loops/Goals remain as later phases — see `docs/AUTOMATION_TASKS_MAP.md`.
+
+## Cowork
+
+- [ ] **Cowork workspace (CoworkRoot)** _(`PARTIAL` → iOS)_ — Web has the richest GUI, gizzi-code's engine is arguably even more capable via CLI, iOS only exposes a toggle.
+- [ ] **Cowork Runs view** _(`PARTIAL` → iOS)_ — gizzi-code has the underlying data with no visual browser; iOS has neither.
+- [ ] **Cowork Drafts view** _(`GAP` → iOS)_ — Neither other surface has a named drafts view; gizzi-code's approval queue is the nearest functional analog.
+- [x] **Cowork Tasks view** _(`PARTIAL` → iOS)_ — gizzi-code has real task-tracking via cowork-team; iOS has nothing. **Shipped in PR #13** (flat task list against allternit-cloud-api).
+- [ ] **Cowork Cron view** _(`GAP` → iOS)_ — Missing from iOS entirely; gizzi-code's cron is actually the most capable of the three.
+- [ ] **Cowork Project view** _(`GAP` → gizzi-code)_ — Neither other surface exposes Cowork run history scoped to a project.
+- [ ] **Cowork Documents view** _(`GAP` → iOS)_ — Missing from iOS with no good reason it couldn't exist there; gizzi-code's absence is more defensible (file-native).
+- [ ] **Cowork Tables view** _(`GAP` → iOS)_ — Same as Documents: real gap on iOS, defensible absence on gizzi-code.
+- [ ] **Cowork Files view** _(`GAP` → iOS)_ — Same pattern as Documents/Tables.
+- [ ] **Cowork Exports view** _(`PARTIAL` → iOS)_ — gizzi-code has an adjacent generic mechanism; iOS has none.
+- [ ] **Cowork Insights panel** _(`GAP` → iOS, gizzi-code)_ — Absent from both other surfaces, no fundamental blocker to a CLI-side summary.
+- [ ] **Cowork Activity panel** _(`GAP` → iOS, gizzi-code)_ — Same as Insights.
+- [ ] **Cowork Goals panel** _(`PARTIAL` → iOS)_ — gizzi-code's goal engine is a real, deeper equivalent; iOS has nothing.
+- [ ] **Cowork Wiki section viewer** _(`PARTIAL` → iOS)_ — Loose, currently-inactive gizzi-code overlap; no iOS equivalent at all.
+- [ ] **Cowork Audit log viewer** _(`GAP` → iOS, gizzi-code)_ — Neither other surface lets a user review a Cowork action audit trail.
+- [ ] **Intelli-Schedule panel** _(`GAP` → iOS)_ — Missing from iOS only; gizzi-code has the actual named engine likely backing this panel.
+- [ ] **Harness Config panel (execution sandbox config)** _(`GAP` → iOS)_ — Missing from iOS; gizzi-code's overlap is adjacent infrastructure, not a direct match.
+>>>>>>> origin/ao/aci-design-triage
 
 ## Code
 
@@ -101,6 +125,7 @@ Living checklist for the 121 actionable items (83 GAP + 38 PARTIAL) from `docs/S
 
 ## DAG suite
 
+HEAD
 - [x] **DAG Integration Page (umbrella)** _(`PARTIAL` → upgrade)_ — Session finding: REAL — rebuilt `views/DagIntegrationPage.tsx` as a full DAG-suite index with navigation tiles for Orchestration, Knowledge, Security, Browser/Execution, and Observability views (`feat/web-dag-integration-page`)
 - [x] **Ontology Viewer** _(`GAP` → gizzi-code)_ — A real finding: no CLI-side way to browse the system's ontology despite this being a natural introspection fit for a technical tool. — Session finding: REAL — gizzi-code `/ontology` command shipped: Ink TUI that fetches DAG plans, WIHs, context packs, and receipts from `/api/rails/*` and displays summary + recent DAGs + WIHs (`feat/gizzi-dag-ontology`)
 - [x] **Directive Compiler** _(`GAP` → gizzi-code)_ — Real gap: no CLI equivalent for compiling high-level directives into executable plans. — Session finding: REAL — gizzi-code `/directive` command shipped: compiles natural-language directives into DAG plans via `POST /api/rails/plan` and renders the resulting plan as Markdown (`feat/gizzi-directive-compiler`)
@@ -117,7 +142,24 @@ Living checklist for the 121 actionable items (83 GAP + 38 PARTIAL) from `docs/S
 - [x] **H5I panel — Commit** _(`PARTIAL` → upgrade)_ — Session finding: REAL — upgraded `H5iCommitPanel.tsx`: added Files to include picker, auto-load diff preview from `/api/v1/git/diff`, per-file diff display, and pass selected files to `commitWithH5i` (`feat/web-h5i-commit-upgrade`)
 - [x] **H5I panel — Context** _(`GAP` → gizzi-code)_ — Session finding: REAL — gizzi-code `/h5i context` shipped: show trace via `/api/h5i/context/trace`, start via `/api/h5i/context/start`, finish via `/api/h5i/context/finish`; extends the same `/h5i` command as audit (`feat/gizzi-h5i-context`)
 - [x] **H5I panel — Diff** _(`PARTIAL` → upgrade)_ — Session finding: REAL — upgraded `H5iDiffPanel.tsx`: renamed header to 'h5i Diff', added Reasoning Traces / File Diff tabs, file-diff mode calls `/api/v1/git/diff` with optional path and renders per-file diffs (`feat/web-h5i-diff-upgrade`)
-- [x] **Changeset Review (diff cards, approve/reject)** _(`GAP` → iOS)_ — Shipped in PR #4. Backend needed no changes — gizzi-code's `/v1/permission` queue already existed. — Session finding: PR #4 merged to main
+- [x] **Changeset Review (diff cards, approve/reject)** _(`GAP` → iOS)_ — Shipped in PR #4. Backend needed no changes — gizzi-code's `/v1/permission` queue already existed. — Session finding: PR #4 merged to main- [ ] **DAG Integration Page (umbrella)** _(`PARTIAL` → upgrade)_
+- [ ] **Ontology Viewer** _(`GAP` → gizzi-code)_ — A real finding: no CLI-side way to browse the system's ontology despite this being a natural introspection fit for a technical tool.
+- [ ] **Directive Compiler** _(`GAP` → gizzi-code)_ — Real gap: no CLI equivalent for compiling high-level directives into executable plans.
+- [ ] **GC Agents (garbage-collection/lifecycle)** _(`GAP` → gizzi-code)_
+- [ ] **Receipts Viewer (cryptographic/audit receipts)** _(`GAP` → gizzi-code)_ — Real gap worth flagging: an audit-receipts capability exists only in the web debug UI with nothing generating or viewing receipts CLI-side.
+- [ ] **Security Dashboard** _(`GAP` → gizzi-code)_ — Distinct concepts: a skill for the agent to use vs. a dashboard about the CLI's own security posture.
+- [ ] **Purpose Binding (governance: bind actions to declared purpose)** _(`GAP` → gizzi-code)_
+- [ ] **Observability Dashboard** _(`PARTIAL` → upgrade)_
+- [ ] **Multimodal Input (testing UI)** _(`GAP` → gizzi-code)_ — gizzi-code lacks even a dev-facing multimodal test tool.
+- [ ] **Evolution Layer (memory/skill/workflow self-improvement)** _(`GAP` → gizzi-code)_ — Real gap: gizzi-code lacks this despite self-improvement being a very CLI-agent-native concept.
+- [ ] **Context Control Plane (git-based context controller)** _(`GAP` → gizzi-code)_
+- [ ] **Swarm ADE (multi-agent swarm dashboard)** _(`PARTIAL` → iOS)_ — Real gizzi-code capability, likely thinner than web's 34-file dashboard; missing from iOS entirely.
+- [ ] **H5I panel — Audit** _(`GAP` → gizzi-code)_
+- [ ] **H5I panel — Commit** _(`PARTIAL` → upgrade)_
+- [ ] **H5I panel — Context** _(`GAP` → gizzi-code)_
+- [ ] **H5I panel — Diff** _(`PARTIAL` → upgrade)_
+- [x] **Changeset Review (diff cards, approve/reject)** _(`GAP` → iOS)_ — Shipped in PR #4. Backend needed no changes — gizzi-code's `/v1/permission` queue already existed.
+>>>>>>> origin/ao/aci-design-triage
 
 ## Marketplace/Plugins
 
@@ -142,6 +184,7 @@ Living checklist for the 121 actionable items (83 GAP + 38 PARTIAL) from `docs/S
 
 ## Onboarding/Account
 
+HEAD
 - [x] **Settings (umbrella/shell)** _(`PARTIAL` → upgrade)_ — Session finding: STALE — `views/settings/SettingsView.tsx` (1510 lines) is mature, fully wired
 - [x] **Settings > Account (Sign-in, Org & Access, Usage, Plans & Compute, Billing, Privacy)** _(`PARTIAL` → gizzi-code)_ — Sign-in/Account/Usage are solid parity; Org Access and Billing specifically are absent from both other surfaces. — Session finding: DEFER — pieces exist both sides, but no true settings sync; needs an ADR
 - [x] **Settings > Platform (General, Appearance, Models, API Keys, Shortcuts, Permissions, Dispatch, Devices, Cloud Instances, Diagnostics)** _(`PARTIAL` → iOS)_ — gizzi-code covers most of this category piecemeal via separate commands; iOS covers comparatively little of it explicitly. — Session finding: REAL — iOS Settings > Platform shipped: `PlatformSettingsView` with General, Appearance, Models, API Keys, Shortcuts, Permissions, Dispatch, Devices, Cloud Instances, and Diagnostics sections
@@ -152,7 +195,18 @@ Living checklist for the 121 actionable items (83 GAP + 38 PARTIAL) from `docs/S
 - [x] **Organization Access panel** _(`GAP` → iOS, gizzi-code)_ — Arguably reasonable that an agent CLI doesn't manage org membership (identity/admin plane, not agent capability), but nothing structurally prevents it — not built, not clearly out of scope. — Session finding: REAL — iOS `OrganizationAccessView` shipped (profile + personal-org creation) and gizzi-code `org` command shipped (`show` + `create`)
 - [x] **Compute Billing panel** _(`GAP` → iOS)_ — Session finding: REAL — iOS `ComputeBillingView` shipped: plan badge, weekly usage meter, credits, and upgrade/buy-credits actions
 - [x] **Enterprise BYOC panel** _(`GAP` → iOS, gizzi-code)_ — Same item as the Terminal/Infra section's BYOC row — it's both a Settings sub-section and a standalone panel in the source inventory. — Session finding: DUPLICATE of row 70 — same `EnterpriseBYOCPanelView` shipped in `feat/ios-enterprise-byoc`; no additional work
-- [x] **Model Management view** _(`PARTIAL` → upgrade)_ — gizzi-code match is clear and strong; iOS is genuinely unclear from the inventory description alone. — Session finding: REAL — iOS `ModelManagementView` shipped: default model picker + provider/engine list with auth/ready status via `/api/v1/providers*`, `/api/v1/provider/ollama/status`
+- [x] **Model Management view** _(`PARTIAL` → upgrade)_ — gizzi-code match is clear and strong; iOS is genuinely unclear from the inventory description alone. — Session finding: REAL — iOS `ModelManagementView` shipped: default model picker + provider/engine list with auth/ready status via `/api/v1/providers*`, `/api/v1/provider/ollama/status`- [ ] **Settings (umbrella/shell)** _(`PARTIAL` → upgrade)_
+- [ ] **Settings > Account (Sign-in, Org & Access, Usage, Plans & Compute, Billing, Privacy)** _(`PARTIAL` → gizzi-code)_ — Sign-in/Account/Usage are solid parity; Org Access and Billing specifically are absent from both other surfaces.
+- [ ] **Settings > Platform (General, Appearance, Models, API Keys, Shortcuts, Permissions, Dispatch, Devices, Cloud Instances, Diagnostics)** _(`PARTIAL` → iOS)_ — gizzi-code covers most of this category piecemeal via separate commands; iOS covers comparatively little of it explicitly.
+- [ ] **Settings > Products (Gizziio Code settings, Cowork settings, Extensions)** _(`GAP` → iOS)_ — Missing from iOS; gizzi-code's absence for its own self-referential settings is defensible, but iOS's absence isn't.
+- [ ] **Settings > Infrastructure (Infrastructure, VPS & Servers, Enterprise BYOC, Environment, Security, Agents)** _(`GAP` → iOS, gizzi-code)_ — Real finding: infra management is thin-to-absent on both other surfaces, even though gizzi-code as "the brain" is a plausible place for CLI-driven infra config.
+- [ ] **Settings > Customize (Skills, Response Style, Connectors, Allternit Plugins)** _(`PARTIAL` → upgrade)_ — Response Style is a confirmed direct FULL PARITY sub-item across all three (flagged explicitly in the source map as a good parity check); Skills customization specifically is missing on iOS.
+- [x] **Device Pairing panel** _(`GAP` → iOS)_ — **Audit finding was stale**: iOS already had a complete, wired-in approve/lookup/list flow (`RuntimeDevicesClient`/`RuntimePairingView`) mirroring web's panel almost line-for-line. The real gap was narrower — no Deny action. Shipped in PR #5.
+- [ ] **Organization Access panel** _(`GAP` → iOS, gizzi-code)_ — Arguably reasonable that an agent CLI doesn't manage org membership (identity/admin plane, not agent capability), but nothing structurally prevents it — not built, not clearly out of scope.
+- [ ] **Compute Billing panel** _(`GAP` → iOS)_
+- [ ] **Enterprise BYOC panel** _(`GAP` → iOS, gizzi-code)_ — Same item as the Terminal/Infra section's BYOC row — it's both a Settings sub-section and a standalone panel in the source inventory.
+- [ ] **Model Management view** _(`PARTIAL` → upgrade)_ — gizzi-code match is clear and strong; iOS is genuinely unclear from the inventory description alone.
+>>>>>>> origin/ao/aci-design-triage
 
 ## AllternitOS
 
