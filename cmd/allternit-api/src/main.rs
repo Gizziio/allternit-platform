@@ -83,6 +83,7 @@ use allternit_api::task_routes;
 use allternit_api::team_skill_routes::team_skill_router;
 use allternit_api::terminal_routes::{terminal_router, TerminalSessionStore};
 use allternit_api::tool_routes;
+use allternit_api::udemy_routes::udemy_router;
 use allternit_api::v1_routes::{agent_chat_router, v1_router};
 use allternit_api::viz_routes::viz_router;
 use allternit_api::vm_session_routes::{new_vm_session_store, vm_session_router};
@@ -297,6 +298,7 @@ async fn main() {
         .merge(audit_log_router())
         .merge(ssh_key_router())
         .merge(team_skill_router())
+        .merge(udemy_router())
         .merge(agent_runtime_router())
         .merge(backend_install_router())
         .merge(runtime_discover_router())

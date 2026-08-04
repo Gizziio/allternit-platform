@@ -276,8 +276,14 @@ HEAD
 		F7B19CC042E5B3F179191EE8 /* BrainsClient.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3B3F96A628FFCDA4B7129AB5 /* BrainsClient.swift */; };
 		F9C4E2F6EB612BA2F911BE62 /* SSHConnectionModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0AD444127C4286C673A6E09B /* SSHConnectionModels.swift */; };
 		FA39A9D1C72C62138B55E2D5 /* TerminalSessionView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1C8B054DE7A97A50E230D1A0 /* TerminalSessionView.swift */; };
+HEAD
 		FEA213F071503B7A07B32330 /* RuntimeOperationsModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2E309E127E42B78330B54B0E /* RuntimeOperationsModels.swift */; };
-		FF0D640B1FC2ED46EF885F3B /* NodesModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = BB6BCD8D1CBF7A72E2286396 /* NodesModels.swift */; };
+		FF0D640B1FC2ED46EF885F3B /* NodesModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = BB6BCD8D1CBF7A72E2286396 /* NodesModels.swift */; };		055F2E149E50177A670082A3 /* UdemyCatalogStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = D55D9D69F55173931EBB097C /* UdemyCatalogStore.swift */; };
+		8CF72DE5871C8AFB842C0083 /* UdemyClient.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4B0056BC37926FF5FCE46CB0 /* UdemyClient.swift */; };
+		7D13AF9B4398B8D1C05435B4 /* UdemyCourse.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4D6695F02C77A350F3DCA112 /* UdemyCourse.swift */; };
+		B17D9110648748E2D863E3A6 /* A2LabsCategory.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4022FA8E2731080AEE93E5AE /* A2LabsCategory.swift */; };
+		FC3BE7E09381D3390B7B787B /* CatalogView.swift in Sources */ = {isa = PBXBuildFile; fileRef = EE29A2D972366CC33143FC26 /* CatalogView.swift */; };
+>>>>>>> origin/feat/udemy-catalog
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -556,9 +562,15 @@ HEAD		F8759BCF9C57565126D0ACC7 /* Workspace.swift */ = {isa = PBXFileReference; 
 		FEEC6838A5C637D76EED594C /* AgentActivityDetailView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AgentActivityDetailView.swift; sourceTree = "<group>"; };
 HEAD
 HEAD
+HEAD
 		FF328AFBA2C29F32527949E4 /* LoopStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LoopStore.swift; sourceTree = "<group>"; };		FEBFF3044FDC074368D1997C /* ProviderManagementClient.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProviderManagementClient.swift; sourceTree = "<group>"; };
 >>>>>>> origin/feat/ios-model-management		FF328AFBA2C29F32527949E4 /* LoopStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LoopStore.swift; sourceTree = "<group>"; };
->>>>>>> origin/feat/ios-team-skills
+>>>>>>> origin/feat/ios-team-skills		4022FA8E2731080AEE93E5AE /* A2LabsCategory.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = A2LabsCategory.swift; sourceTree = "<group>"; };
+		D55D9D69F55173931EBB097C /* UdemyCatalogStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UdemyCatalogStore.swift; sourceTree = "<group>"; };
+		4B0056BC37926FF5FCE46CB0 /* UdemyClient.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UdemyClient.swift; sourceTree = "<group>"; };
+		4D6695F02C77A350F3DCA112 /* UdemyCourse.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UdemyCourse.swift; sourceTree = "<group>"; };
+		EE29A2D972366CC33143FC26 /* CatalogView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CatalogView.swift; sourceTree = "<group>"; };
+>>>>>>> origin/feat/udemy-catalog
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -751,6 +763,7 @@ HEAD
 				0D191901E44884716902E9E5 /* ResearchClient.swift */,
 HEAD
 HEAD
+HEAD
 				267918D8AD2CDF5412795ECE /* RoutinesClient.swift */,
 				5632A786043C936EE49EF52E /* RuntimeOperationsClient.swift */,
 				50D82FD8AABF7FA6BC2E6191 /* SSHConnectionsClient.swift */,
@@ -760,7 +773,8 @@ HEAD
 				50D82FD8AABF7FA6BC2E6191 /* SSHConnectionsClient.swift */,
 				D4C7E7D01FB891FF21DC712F /* TeamSkillsClient.swift */,
 				B1511FD767F14CCACE52B80D /* WorkspaceClient.swift */,
->>>>>>> origin/feat/ios-team-skills
+>>>>>>> origin/feat/ios-team-skills				4B0056BC37926FF5FCE46CB0 /* UdemyClient.swift */,
+>>>>>>> origin/feat/udemy-catalog
 				92E9010FD0D4757566D313D1 /* Models */,
 			);
 			path = API;
@@ -870,8 +884,10 @@ HEAD
 				02B37C727FD0BC60B78752DA /* PreferencesStore.swift */,
 				DF7B74CD03BCD43CEFF3B203 /* ProjectStore.swift */,
 				2B5131B5412681599DB896E9 /* ResearchStore.swift */,
+HEAD
 				6095FF2DECF5CAC8781DB099 /* RoutineStore.swift */,
-				FB180A8B2DE32B3733CB9CC4 /* RuntimeOperationsStore.swift */,
+				FB180A8B2DE32B3733CB9CC4 /* RuntimeOperationsStore.swift */,				D55D9D69F55173931EBB097C /* UdemyCatalogStore.swift */,
+>>>>>>> origin/feat/udemy-catalog
 				BB1A0D0734D3D239827ECD6A /* SettingsStore.swift */,
 HEAD
 HEAD
@@ -1012,6 +1028,7 @@ HEAD
 				52277CD4E2534578A9E785F8 /* ReplyEvent.swift */,
 				8459DCBDC8777D04BF8EC4EB /* ReplyItem.swift */,
 				6C9D2168F881D9954CD7FB76 /* ResearchNotebook.swift */,
+HEAD
 				A44284F59DE892D108C72571 /* Routine.swift */,
 				FD557129AC5FE54BDF7BE1BC /* RuntimeModel.swift */,
 HEAD
@@ -1025,7 +1042,10 @@ HEAD
 				0AD444127C4286C673A6E09B /* SSHConnectionModels.swift */,
 				BDBB70569909670A2297985F /* TeamSkill.swift */,
 				F8759BCF9C57565126D0ACC7 /* Workspace.swift */,
->>>>>>> origin/feat/ios-team-skills
+>>>>>>> origin/feat/ios-team-skills				4D6695F02C77A350F3DCA112 /* UdemyCourse.swift */,
+				FD557129AC5FE54BDF7BE1BC /* RuntimeModel.swift */,
+				4022FA8E2731080AEE93E5AE /* A2LabsCategory.swift */,
+>>>>>>> origin/feat/udemy-catalog
 			);
 			path = Models;
 			sourceTree = "<group>";
@@ -1039,6 +1059,7 @@ HEAD
 				84568374974BC58963824BF5 /* Artifacts */,
 				C8CDE65E244C8407319F4AA2 /* Automation */,
 				FA1063ECE362A5D53C9EA111 /* Brain */,
+				1C7804E1724CE6EED60EF34C /* Catalog */,
 				60C8BC47827941A5797E9C4A /* Chat */,
 				370D9EF7EF5FEB19E1DE14E8 /* Code */,
 				0F9B52D227F7C31F30C42631 /* Connectors */,
@@ -1293,6 +1314,22 @@ HEAD
 				22A98A22F0D4B4A2007A2BFE /* BrainCaptureSheet.swift */,
 			);
 			path = Brain;
+			sourceTree = "<group>";
+		};
+		1C7804E1724CE6EED60EF34C /* Catalog */ = {
+			isa = PBXGroup;
+			children = (
+				C610976578C3A8E37D86BFBA /* Views */,
+			);
+			path = Catalog;
+			sourceTree = "<group>";
+		};
+		C610976578C3A8E37D86BFBA /* Views */ = {
+			isa = PBXGroup;
+			children = (
+				EE29A2D972366CC33143FC26 /* CatalogView.swift */,
+			);
+			path = Views;
 			sourceTree = "<group>";
 		};
 /* End PBXGroup section */
@@ -1613,7 +1650,13 @@ HEAD
 				441399439E1E49FB49645F0D /* Workspace.swift in Sources */,
 				1A9000E7143437004E78866A /* WorkspaceClient.swift in Sources */,
 				B27578BF382B7826884887F2 /* WorkspaceFileEditorView.swift in Sources */,
-				6DDA4F8D234EF56C1549B8F4 /* WorkspaceStore.swift in Sources */,
+HEAD
+				6DDA4F8D234EF56C1549B8F4 /* WorkspaceStore.swift in Sources */,				B17D9110648748E2D863E3A6 /* A2LabsCategory.swift in Sources */,
+				FC3BE7E09381D3390B7B787B /* CatalogView.swift in Sources */,
+				055F2E149E50177A670082A3 /* UdemyCatalogStore.swift in Sources */,
+				8CF72DE5871C8AFB842C0083 /* UdemyClient.swift in Sources */,
+				7D13AF9B4398B8D1C05435B4 /* UdemyCourse.swift in Sources */,
+>>>>>>> origin/feat/udemy-catalog
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

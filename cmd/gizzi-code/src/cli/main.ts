@@ -54,11 +54,13 @@ import { ProductsCommand } from "@/cli/commands/products"
 import { HtmlArtifactCommand } from "@/cli/commands/html-artifact"
 HEAD
 HEAD
+HEAD
 import { ProgramsCommand } from "@/cli/commands/programs"
 import { OrgCommand } from "@/cli/commands/org"
 
 >>>>>>> origin/feat/ios-organization-accessimport { LabsCommand } from "@/cli/commands/labs"
->>>>>>> origin/feat/labs
+>>>>>>> origin/feat/labsimport { UdemyCommand } from "@/cli/commands/udemy"
+>>>>>>> origin/feat/udemy-catalog
 import path from "path"
 import { Global, init as initGlobal } from "@/runtime/context/global"
 import { JsonMigration } from "@/runtime/session/storage/json-migration"
@@ -220,12 +222,14 @@ const cli = yargs(hideBin(process.argv))
 HEAD
 HEAD
 HEAD
+HEAD
   .command(ProgramsCommand)
   .command(OrgCommand)
 
 >>>>>>> origin/feat/ios-organization-access  .command(ProductsCommand)
 >>>>>>> origin/feat/products-discovery  .command(LabsCommand)
->>>>>>> origin/feat/labs
+>>>>>>> origin/feat/labs  .command(UdemyCommand)
+>>>>>>> origin/feat/udemy-catalog
   .fail((msg, err) => {
     if (
       msg?.startsWith("Unknown argument") ||

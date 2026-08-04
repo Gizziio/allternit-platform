@@ -9,6 +9,7 @@ HEAD
 HEAD
 HEAD
 HEAD
+HEAD
 /// control is the 9-row [Chats | Projects | Artifacts Library | Agents |
 HEAD
 /// Automation Tasks | Code | ACI | Research | Documents] tab list in the
@@ -53,7 +54,15 @@ HEAD
 /// the Agent Hub, Automation Tasks, A://Labs, and Research are iOS-only tab
 /// surfaces layered over the same modes (they don't stamp an `origin_surface`
 /// of their own).
->>>>>>> origin/feat/labs
+>>>>>>> origin/feat/labs/// control is the 9-row [Chats | Projects | Artifacts Library | Agents |
+/// Automation Tasks | Research | Udemy Catalog | Code | ACI] tab list in the
+/// sidebar header (HistorySidebarView — no persistent bottom bar, matching
+/// ChatGPT/Claude's iOS apps), and cowork is a composer-level toggle inside
+/// Chats (BottomDock.tsx ChatCoworkToggle). Projects, the artifacts library,
+/// the Agent Hub, Automation Tasks, Research, and Udemy Catalog are iOS-only
+/// tab surfaces layered over the same modes (they don't stamp an
+/// `origin_surface` of their own).
+>>>>>>> origin/feat/udemy-catalog
 enum AppMode: String, CaseIterable, Sendable {
     case chat
     case cowork
@@ -99,6 +108,7 @@ HEAD
 HEAD
 HEAD
 HEAD
+HEAD
     /// Research, and Documents are iOS-only surfaces layered on top (the mode
     /// — and so history filtering, theme accent, and session stamping — stays
     /// wherever it was).    /// Plugins, and Research are iOS-only surfaces layered on top (the mode — and so history    /// and Swarm are iOS-only surfaces layered on top (the mode — and so history
@@ -113,7 +123,10 @@ HEAD
 >>>>>>> origin/feat/products-discovery    /// A://Labs, and Research are iOS-only surfaces layered on top (the mode —
     /// and so history filtering, theme accent, and session stamping — stays
     /// wherever it was).
->>>>>>> origin/feat/labs
+>>>>>>> origin/feat/labs    /// Research, and Udemy Catalog are iOS-only surfaces layered on top (the
+    /// mode — and so history filtering, theme accent, and session stamping —
+    /// stays wherever it was).
+>>>>>>> origin/feat/udemy-catalog
     @Published var activeTab: ModeBarItem
 
     /// Which sub-surface the Automation Tasks tab shows: cron jobs
@@ -146,6 +159,7 @@ HEAD
 HEAD
 HEAD
 HEAD
+HEAD
     /// Automation Tasks / Research / Documents switch the surface without
     /// touching the mode.    /// Automation Tasks / Plugins / Research switch the surface without touching the mode.
 >>>>>>> origin/feat/ios-plugin-marketplace    /// Automation Tasks / Swarm / Research switch the surface without touching the mode.
@@ -154,7 +168,9 @@ HEAD
 >>>>>>> origin/feat/ios-team-skills    /// Automation Tasks / Products / Research switch the surface without
     /// touching the mode.
 >>>>>>> origin/feat/products-discovery    /// Automation Tasks / A://Labs / Research switch the surface without touching the mode.
->>>>>>> origin/feat/labs
+>>>>>>> origin/feat/labs    /// Automation Tasks / Research / Udemy Catalog switch the surface without
+    /// touching the mode.
+>>>>>>> origin/feat/udemy-catalog
     func selectBarItem(_ item: ModeBarItem) {
         activeTab = item
         switch item {
@@ -166,16 +182,19 @@ HEAD
 HEAD
 HEAD
 HEAD
+HEAD
         case .projects, .artifacts, .agents, .automation, .research, .documents: break        case .projects, .artifacts, .agents, .automation, .plugins, .research: break
 >>>>>>> origin/feat/ios-plugin-marketplace        case .projects, .artifacts, .agents, .automation, .swarm, .research: break
 >>>>>>> origin/feat/ios-swarm-ade        case .projects, .artifacts, .agents, .automation, .teamSkills, .research: break
 >>>>>>> origin/feat/ios-team-skills        case .projects, .artifacts, .agents, .automation, .products, .research: break
 >>>>>>> origin/feat/products-discovery        case .projects, .artifacts, .agents, .automation, .labs, .research: break
->>>>>>> origin/feat/labs
+>>>>>>> origin/feat/labs        case .projects, .artifacts, .agents, .automation, .research, .catalog: break
+>>>>>>> origin/feat/udemy-catalog
         }
     }
 }
 
+HEAD
 HEAD
 HEAD
 HEAD
@@ -208,7 +227,12 @@ enum ModeBarItem: CaseIterable {
 /// A://Labs / Code / ACI / Research.
 enum ModeBarItem: CaseIterable {
     case chats, projects, artifacts, agents, automation, labs, code, aci, research
->>>>>>> origin/feat/labs
+>>>>>>> origin/feat/labs/// The nine destinations of the sidebar's tab list:
+/// Chats / Projects / Artifacts Library / Agents / Automation Tasks / Research /
+/// Udemy Catalog / Code / ACI.
+enum ModeBarItem: CaseIterable {
+    case chats, projects, artifacts, agents, automation, research, catalog, code, aci
+>>>>>>> origin/feat/udemy-catalog
 
     var label: String {
         switch self {
@@ -221,6 +245,7 @@ HEAD
 HEAD
 HEAD
 HEAD
+HEAD
         case .plugins: return "Plugins"        case .swarm: return "Swarm"
 >>>>>>> origin/feat/ios-swarm-ade        case .teamSkills: return "Team Skills"
 >>>>>>> origin/feat/ios-team-skills        case .products: return "Products"
@@ -229,7 +254,11 @@ HEAD
         case .code: return "Code"
         case .aci: return "ACI"
         case .research: return "Research"
-        case .documents: return "Documents"
+        case .documents: return "Documents"        case .research: return "Research"
+        case .catalog: return "Udemy Catalog"
+        case .code: return "Code"
+        case .aci: return "ACI"
+>>>>>>> origin/feat/udemy-catalog
         }
     }
 
@@ -245,6 +274,7 @@ HEAD
 HEAD
 HEAD
 HEAD
+HEAD
         case .plugins: return "puzzlepiece"        case .swarm: return "person.3"
 >>>>>>> origin/feat/ios-swarm-ade        case .teamSkills: return "puzzlepiece.extension"
 >>>>>>> origin/feat/ios-team-skills        case .products: return "square.grid.2x2"
@@ -253,7 +283,11 @@ HEAD
         case .code: return "terminal"
         case .aci: return "globe"
         case .research: return "book.closed"
-        case .documents: return "doc.text"
+        case .documents: return "doc.text"        case .research: return "book.closed"
+        case .catalog: return "book"
+        case .code: return "terminal"
+        case .aci: return "globe"
+>>>>>>> origin/feat/udemy-catalog
         }
     }
 

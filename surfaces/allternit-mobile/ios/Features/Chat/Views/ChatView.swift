@@ -6,9 +6,12 @@ import SwiftUI
 /// neither ChatGPT nor Claude's iOS apps put a surface switcher there, so
 /// the [Chats | Projects | Artifacts Library | Agents | Automation Tasks |
 HEAD
+HEAD
 /// Plugins | Code | ACI] tab list lives in the sidebar header instead/// Swarm | Code | ACI] tab list lives in the sidebar header instead
 >>>>>>> origin/feat/ios-swarm-ade
-/// (HistorySidebarView). Cowork is NOT a tab destination; it's a
+/// (HistorySidebarView). Cowork is NOT a tab destination; it's a/// Research | Udemy Catalog | Code | ACI] tab list lives in the sidebar header
+/// instead (HistorySidebarView). Cowork is NOT a tab destination; it's a
+>>>>>>> origin/feat/udemy-catalog
 /// composer-level toggle inside Chats (BottomDock.tsx ChatCoworkToggle).
 struct MainWorkspaceView: View {
     @EnvironmentObject private var modeStore: AppModeStore
@@ -88,6 +91,7 @@ HEAD
 HEAD
 HEAD
 HEAD
+HEAD
                         case .plugins:
                             PluginMarketplaceView(isSidebarOpen: $isSidebarOpen)                        case .swarm:
                             SwarmADEView(isSidebarOpen: $isSidebarOpen)
@@ -97,7 +101,9 @@ HEAD
                             ProductsDiscoveryView(isSidebarOpen: $isSidebarOpen)
 >>>>>>> origin/feat/products-discovery                        case .labs:
                             LabsView(isSidebarOpen: $isSidebarOpen)
->>>>>>> origin/feat/labs
+>>>>>>> origin/feat/labs                        case .catalog:
+                            CatalogView(isSidebarOpen: $isSidebarOpen)
+>>>>>>> origin/feat/udemy-catalog
                         case .code:
                             CodeModeView(isSidebarOpen: $isSidebarOpen, selectedSessionId: $selectedSessionId)
                         case .aci:
