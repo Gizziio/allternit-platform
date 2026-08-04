@@ -8,6 +8,7 @@ import SwiftUI
 struct RuntimeOperationsView: View {
     @StateObject private var store = RuntimeOperationsStore.shared
     @Environment(\.dismiss) private var dismiss
+    @State private var isBudgetDashboardPresented = false
 
     var body: some View {
         VStack(spacing: 0) {
@@ -16,6 +17,9 @@ struct RuntimeOperationsView: View {
             content
         }
         .background(Color("BgPrimary").edgesIgnoringSafeArea(.all))
+        .navigationDestination(isPresented: $isBudgetDashboardPresented) {
+            BudgetDashboardView()
+        }
         .task {
             store.fetchIfNeeded()
         }
@@ -196,6 +200,13 @@ struct RuntimeOperationsView: View {
     // MARK: - Budget card
 
     private var budgetCard: some View {
+        Button(action: { isBudgetDashboardPresented = true }) {
+            budgetCardContent
+        }
+        .buttonStyle(.plain)
+    }
+
+    private var budgetCardContent: some View {
         card {
             VStack(alignment: .leading, spacing: 12) {
                 HStack {

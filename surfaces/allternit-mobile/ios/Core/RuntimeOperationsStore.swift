@@ -15,8 +15,11 @@ final class RuntimeOperationsStore: ObservableObject {
     @Published private(set) var prewarmStatus: PrewarmStatus? = nil
     @Published private(set) var poolStats: PoolStats = .empty
     @Published private(set) var executionMode: RuntimeExecutionModeStatus? = nil
+    @Published private(set) var configuredCreditsPerHour: Double = 0
+    @Published private(set) var maxPressurePercent: Double = 0
     @Published private(set) var isLoading = false
     @Published private(set) var loadError: String? = nil
+    @Published private(set) var isSavingQuota = false
 
     private let client: RuntimeOperationsClient
     private var fetchTask: Task<Void, Never>? = nil
@@ -47,6 +50,8 @@ final class RuntimeOperationsStore: ObservableObject {
                 self.budget = budgetValue
                 self.budgetMetrics = Self.buildMetrics(budgetValue)
                 self.budgetAlerts = Self.buildAlerts(budgetValue)
+                self.configuredCreditsPerHour = budgetValue.creditsRemaining
+                self.maxPressurePercent = Self.maxPressure(budgetValue)
 
                 self.replayManifests = try await replays
 
@@ -75,6 +80,8 @@ final class RuntimeOperationsStore: ObservableObject {
             self.budget = budgetValue
             self.budgetMetrics = Self.buildMetrics(budgetValue)
             self.budgetAlerts = Self.buildAlerts(budgetValue)
+            self.configuredCreditsPerHour = budgetValue.creditsRemaining
+            self.maxPressurePercent = Self.maxPressure(budgetValue)
 
             self.replayManifests = try await replays
 
@@ -88,6 +95,16 @@ final class RuntimeOperationsStore: ObservableObject {
         } catch {
             loadError = error.localizedDescription
         }
+    }
+
+    // MARK: - Actions
+
+    func setBudgetQuota(creditsPerHour: Double) async throws {
+        isSavingQuota = true
+        defer { isSavingQuota = false }
+        let update = try await client.setBudgetQuota(creditsPerHour: creditsPerHour)
+        configuredCreditsPerHour = update.creditsPerHour
+        await refresh()
     }
 
     // MARK: - Helpers
@@ -133,6 +150,10 @@ final class RuntimeOperationsStore: ObservableObject {
         if percent >= 90 { return .critical }
         if percent >= 75 { return .warning }
         return .healthy
+    }
+
+    private static func maxPressure(_ budget: RuntimeBudgetStatus) -> Double {
+        max(budget.cpuPercent, budget.memoryPercent, budget.networkPercent, budget.workerPercent)
     }
 }
 
