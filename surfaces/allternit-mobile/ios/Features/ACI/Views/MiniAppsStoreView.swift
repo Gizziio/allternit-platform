@@ -3,14 +3,15 @@ import SwiftUI
 /// Phase-1 Mini-apps Store for iOS.
 ///
 /// Browse the community catalog and public MCP registry, pin/unpin apps, and
-/// open their URLs in Safari. Install/start/runtime are deferred — iOS has no
-/// desktop bridge for those operations.
+/// open them in the in-app MiniAppRuntimeView. Install/start/runtime are
+/// deferred — iOS has no desktop bridge for those operations.
 struct MiniAppsStoreView: View {
     @StateObject private var store = MiniAppCatalogStore.shared
     @Environment(\.dismiss) private var dismiss
 
     @State private var searchText = ""
     @State private var selectedCategory: MiniAppCategory? = nil
+    @State private var selectedApp: MiniApp? = nil
 
     private let theme = ModeTheme(mode: .browser)
 
@@ -35,6 +36,9 @@ struct MiniAppsStoreView: View {
             }
             .background(Color("BgPrimary").edgesIgnoringSafeArea(.all))
             .toolbar(.hidden, for: .navigationBar)
+            .navigationDestination(item: $selectedApp) { app in
+                MiniAppRuntimeView(app: app)
+            }
         }
         .task {
             store.fetchCatalogIfNeeded()
@@ -254,9 +258,9 @@ struct MiniAppsStoreView: View {
             }
 
             HStack(spacing: 10) {
-                Button(action: { openApp(app) }) {
+                Button(action: { selectedApp = app }) {
                     HStack(spacing: 4) {
-                        Image(systemName: "safari")
+                        Image(systemName: "app.window")
                             .font(.system(size: 11, weight: .semibold))
                         Text("Open")
                             .font(.system(size: 12, weight: .semibold))
@@ -317,8 +321,4 @@ struct MiniAppsStoreView: View {
         .frame(width: 44, height: 44)
     }
 
-    private func openApp(_ app: MiniApp) {
-        guard let url = URL(string: app.url), UIApplication.shared.canOpenURL(url) else { return }
-        UIApplication.shared.open(url)
-    }
 }
