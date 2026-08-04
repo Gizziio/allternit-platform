@@ -180,7 +180,7 @@ Branch: `fix/review-decision-event-type` (issue #16/#19 fixes) + `docs/surface-a
 | 105 | Settings > Customize (PARTIAL → upgrade) | `[x]` | STALE — Skills/Response-style/Connectors/Plugins panels all implemented and wired | Close or downgrade to cosmetic-only | |
 | 106 | Device Pairing panel (GAP → iOS) | `[x]` | PR #5 merged to main | Closed as shipped | #5 |
 | 107 | Organization Access panel (GAP → iOS, gizzi-code) | `[x]` | REAL — iOS `OrganizationAccessView` shipped (profile + personal-org creation) and gizzi-code `org` command shipped (`show` + `create`) | Shipped iOS + gizzi parity | `feat/ios-organization-access` |
-| 108 | Compute Billing panel (GAP → iOS) | `[ ]` | REAL — web `ComputeBillingPanel.tsx` exists and wired, no iOS files found | Build iOS | |
+| 108 | Compute Billing panel (GAP → iOS) | `[x]` | REAL — iOS `ComputeBillingView` shipped: plan badge, weekly usage meter, credits, and upgrade/buy-credits actions | Shipped phase 1 iOS parity | `feat/ios-compute-billing` |
 | 109 | Enterprise BYOC panel (GAP → iOS, gizzi-code) | `[ ]` | REAL, but DUPLICATE of row 70 (identical text, same feature) — web `EnterpriseByocPanel.tsx` exists, none on iOS/gizzi-code | Merge with row 70, then build | |
 | 110 | Model Management view (PARTIAL → upgrade) | `[ ]` | REAL — web `views/settings/ModelManagementView.tsx` (170 lines) is minimal, genuine upgrade work remains | Scope upgrade; check overlap w/ LocalModelManager | |
 
