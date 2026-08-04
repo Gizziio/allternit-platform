@@ -217,4 +217,4 @@ Branch: `fix/review-decision-event-type` (issue #16/#19 fixes) + `docs/surface-a
 | 117 | Local VM management (GAP → gizzi-code) | `[x]` | STALE — `runtime/vm/` (vfkit-based) + `cli/commands/vm.ts` fully built, used in production | Close as shipped | |
 | 118 | Teleport / remote dev environments (GAP → gizzi-code) | `[x]` | STALE (gizzi-code) — extensive `remote/RemoteSessionManager.ts` + Teleport UI/hooks already exist | Close gizzi-code half; web/iOS parity is separate DEFER | |
 | 119 | Slack app install (GAP → gizzi-code) | `[x]` | STALE — working `install-slack-app` command registered in two command tables | Close as shipped | |
-| 120 | Theme switching (`/theme`) (PARTIAL → upgrade) | `[ ]` | REAL — base feature works (CLI + `/theme` slash cmd) but only 3 built-in themes, no custom/palette editing | Scope custom-theme upgrade | |
+| 120 | Theme switching (`/theme`) (PARTIAL → upgrade) | `[x]` | REAL — custom theme/palette upgrade shipped: arbitrary named themes in `~/.config/gizzi/themes.json`, `theme custom`, `theme palette`, `theme delete`; built-ins remain immutable | Shipped custom theme upgrade | `feat/gizzi-theme-upgrade` |
