@@ -59,9 +59,11 @@ import artifact from './commands/artifact/index.js'
 import swarm from './commands/swarm/index.js'
 HEAD
 HEAD
+HEAD
 import ontology from './commands/ontology/index.js'import directive from './commands/directive/index.js'
 >>>>>>> origin/feat/gizzi-directive-compilerimport gc from './commands/gc/index.js'
->>>>>>> origin/feat/gizzi-gc-agents
+>>>>>>> origin/feat/gizzi-gc-agentsimport multimodal from './commands/multimodal/index.js'
+>>>>>>> origin/feat/gizzi-multimodal-input
 
 function safeRequire(path: string) {
   try {
@@ -290,9 +292,11 @@ const COMMANDS = memoize((): Command[] => [
   swarm,
 HEAD
 HEAD
+HEAD
   ontology,  directive,
 >>>>>>> origin/feat/gizzi-directive-compiler  gc,
->>>>>>> origin/feat/gizzi-gc-agents
+>>>>>>> origin/feat/gizzi-gc-agents  multimodal,
+>>>>>>> origin/feat/gizzi-multimodal-input
   context,
   contextNonInteractive,
   cost,
