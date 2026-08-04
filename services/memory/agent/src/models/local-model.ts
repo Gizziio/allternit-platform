@@ -119,9 +119,11 @@ export class LocalModelManager {
   private metrics: {
     mlx: { calls: number; failures: number; totalLatencyMs: number };
     ollama: { calls: number; failures: number; totalLatencyMs: number };
+    enrichment: { localFallbacks: number };
   } = {
     mlx: { calls: 0, failures: 0, totalLatencyMs: 0 },
     ollama: { calls: 0, failures: 0, totalLatencyMs: 0 },
+    enrichment: { localFallbacks: 0 },
   };
 
   constructor(host: string = 'localhost', port: number = 11434, llm?: LLMProviderConfig) {
@@ -263,12 +265,14 @@ export class LocalModelManager {
   getMetrics(): {
     mlx: { calls: number; failures: number; avgLatencyMs: number };
     ollama: { calls: number; failures: number; avgLatencyMs: number };
+    enrichment: { localFallbacks: number };
   } {
     const avg = (bucket: { calls: number; totalLatencyMs: number }) =>
       bucket.calls > 0 ? bucket.totalLatencyMs / bucket.calls : 0;
     return {
       mlx: { ...this.metrics.mlx, avgLatencyMs: avg(this.metrics.mlx) },
       ollama: { ...this.metrics.ollama, avgLatencyMs: avg(this.metrics.ollama) },
+      enrichment: { ...this.metrics.enrichment },
     };
   }
 
@@ -754,6 +758,7 @@ Respond ONLY with valid JSON. No explanations, no markdown, no extra text.`;
     }
 
     console.log('LocalModelManager: using fast local enrichment fallback');
+    this.metrics.enrichment.localFallbacks += 1;
     return { ...this.localEnrichmentFallback(text, maxLength), backend: 'local' };
   }
 

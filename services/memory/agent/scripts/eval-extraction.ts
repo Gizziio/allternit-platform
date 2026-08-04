@@ -49,24 +49,31 @@ function normalizeSet(items: string[]): Set<string> {
   );
 }
 
-function f1Score(expected: string[], actual: string[]): number {
-  const exp = normalizeSet(expected);
-  const act = normalizeSet(actual);
-  if (exp.size === 0 && act.size === 0) return 1.0;
-  if (exp.size === 0 || act.size === 0) return 0.0;
+function matches(a: string, e: string): boolean {
+  return a === e || a.includes(e) || e.includes(a);
+}
 
+function f1Score(expected: string[], actual: string[]): number {
+  const exp = Array.from(normalizeSet(expected));
+  const act = Array.from(normalizeSet(actual));
+  if (exp.length === 0 && act.length === 0) return 1.0;
+  if (exp.length === 0 || act.length === 0) return 0.0;
+
+  // Greedy one-to-one matching so overlap is bounded by min(exp, act).
+  const usedExpected = new Set<number>();
   let overlap = 0;
   for (const a of act) {
-    for (const e of exp) {
-      if (a === e || a.includes(e) || e.includes(a)) {
+    for (let i = 0; i < exp.length; i++) {
+      if (!usedExpected.has(i) && matches(a, exp[i])) {
+        usedExpected.add(i);
         overlap++;
         break;
       }
     }
   }
 
-  const precision = act.size > 0 ? overlap / act.size : 0;
-  const recall = exp.size > 0 ? overlap / exp.size : 0;
+  const precision = act.length > 0 ? overlap / act.length : 0;
+  const recall = exp.length > 0 ? overlap / exp.length : 0;
   if (precision + recall === 0) return 0;
   return (2 * precision * recall) / (precision + recall);
 }

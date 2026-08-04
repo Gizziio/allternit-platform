@@ -356,6 +356,7 @@ describe('LocalModelManager provider switch', () => {
     expect(metrics.ollama.failures).toBe(0);
     expect(metrics.mlx.avgLatencyMs).toBeGreaterThanOrEqual(0);
     expect(metrics.ollama.avgLatencyMs).toBeGreaterThanOrEqual(0);
+    expect(metrics.enrichment.localFallbacks).toBe(0);
   });
 
   it('shadowCompare returns responses from both backends', async () => {

@@ -9,6 +9,7 @@ import express from 'express';
 import cors from 'cors';
 import { MemoryOrchestrator } from './orchestrator.js';
 import type { IngestRequest, QueryRequest } from './types/memory.types.js';
+import type { ModelConfig } from './models/local-model.js';
 import { VectorStore } from './store/vector-store.js';
 import { observability } from './utils/observability.js';
 
@@ -112,21 +113,42 @@ app.get('/metrics/backends', async (req, res) => {
 /**
  * Shadow comparison: run the same prompt through MLX and Ollama.
  * POST /shadow-compare
- * Body: { prompt, system_prompt?, model_config? }
+ * Body: { prompt, system_prompt?, temperature?, top_p?, max_tokens? }
+ *
+ * Inputs are capped and model_config is restricted to a small allowlist so the
+ * endpoint cannot monopolize the single-threaded MLX queue with an oversized
+ * prompt or an unbounded generation request.
  */
 app.post('/shadow-compare', async (req, res) => {
   try {
     await initializeMemory();
-    const { prompt, system_prompt, model_config } = req.body;
+    const { prompt, system_prompt, temperature, top_p, max_tokens } = req.body;
 
     if (!prompt || typeof prompt !== 'string') {
       return res.status(400).json({ error: 'prompt is required' });
+    }
+    if (prompt.length > 20000) {
+      return res.status(400).json({ error: 'prompt exceeds 20000 characters' });
+    }
+    if (system_prompt && (typeof system_prompt !== 'string' || system_prompt.length > 5000)) {
+      return res.status(400).json({ error: 'system_prompt invalid or exceeds 5000 characters' });
+    }
+
+    const modelConfig: Partial<ModelConfig> = {};
+    if (typeof temperature === 'number') {
+      modelConfig.temperature = Math.max(0, Math.min(2, temperature));
+    }
+    if (typeof top_p === 'number') {
+      modelConfig.topP = Math.max(0, Math.min(1, top_p));
+    }
+    if (typeof max_tokens === 'number') {
+      modelConfig.numPredict = Math.max(1, Math.min(4096, Math.floor(max_tokens)));
     }
 
     const result = await orchestrator.getModelManager().shadowCompare(
       prompt,
       system_prompt,
-      model_config
+      Object.keys(modelConfig).length > 0 ? modelConfig : undefined
     );
 
     res.json(result);
