@@ -65,6 +65,7 @@
 		6EBCD38026960953E68E4CE4 /* AgentWorkspaceLayout.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2FF498E05254A11171F8A560 /* AgentWorkspaceLayout.swift */; };
 		6FABE8767B5DDB768BE24B43 /* BrainCaptureSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = 22A98A22F0D4B4A2007A2BFE /* BrainCaptureSheet.swift */; };
 		737A6A945FF0BADD5810FE32 /* AgentActivityThread.swift in Sources */ = {isa = PBXBuildFile; fileRef = CDA9A55790F69985EC8F4D6D /* AgentActivityThread.swift */; };
+		7736F9534238046DA13B14B9 /* ProductsSettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 983173299444360A8FD01471 /* ProductsSettingsView.swift */; };
 		7AE84CEABE55FCAB51EF6257 /* CronJobStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0DE71084378D6D46400C9AC6 /* CronJobStore.swift */; };
 		7AE904B5149210D54A6D8678 /* DictationController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9A74A8A29D50F0BE64114352 /* DictationController.swift */; };
 		7B938F56B68E8364BCB57D33 /* AuthManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8E01CE023D9AC41B3CDF4E3F /* AuthManager.swift */; };
@@ -218,6 +219,7 @@
 		93E956710126053EB031C4BB /* CoworkProject.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CoworkProject.swift; sourceTree = "<group>"; };
 		976C7758D4F8559596C88B1E /* VoiceModeViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VoiceModeViewModel.swift; sourceTree = "<group>"; };
 		97879A6011085454783C2713 /* AgentIdenticonView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AgentIdenticonView.swift; sourceTree = "<group>"; };
+		983173299444360A8FD01471 /* ProductsSettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProductsSettingsView.swift; sourceTree = "<group>"; };
 		9A74A8A29D50F0BE64114352 /* DictationController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DictationController.swift; sourceTree = "<group>"; };
 		9AC5DA69A46A6B20CD3FB8BF /* MessageRow.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MessageRow.swift; sourceTree = "<group>"; };
 		9D306A988D6817A4226CE448 /* SandboxedArtifactWebView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SandboxedArtifactWebView.swift; sourceTree = "<group>"; };
@@ -723,6 +725,7 @@
 			children = (
 				D129CF0D5A7B51D59834876E /* ComputeBillingView.swift */,
 				D11953529A9295E82BD8B098 /* MemorySettingsView.swift */,
+				983173299444360A8FD01471 /* ProductsSettingsView.swift */,
 				B7F3B173705B7F5941BDC4FE /* SafariView.swift */,
 				59F0F883C961CE5C29AD0B21 /* SettingsView.swift */,
 				DCAD13AFBFFF560038AF9894 /* BrainSpike */,
@@ -924,6 +927,7 @@
 				CA807701EBE68F492B5E66FA /* PermissionPrimingSheet.swift in Sources */,
 				63067F08A2E43C63E14F5FC7 /* PreferencesClient.swift in Sources */,
 				3BA3A701E147348083A9F5C9 /* PreferencesStore.swift in Sources */,
+				7736F9534238046DA13B14B9 /* ProductsSettingsView.swift in Sources */,
 				37461B42AB20995C665DD296 /* ProjectDetailView.swift in Sources */,
 				A462907889B0CB124DE22969 /* ProjectStore.swift in Sources */,
 				6247F7EC99AC623F8DECFA5D /* ProjectsClient.swift in Sources */,

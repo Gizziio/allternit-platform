@@ -119,6 +119,38 @@ final class SettingsStore: ObservableObject {
         didSet { defaults.set(improveModel, forKey: Keys.improveModel) }
     }
 
+    // MARK: - Products (Settings > Products parity)
+
+    /// Gizziio Code: bypass desktop permission checks (developer-only).
+    @Published var gizziBypassPermissions: Bool {
+        didSet { defaults.set(gizziBypassPermissions, forKey: Keys.gizziBypassPermissions) }
+    }
+    /// Gizziio Code: draw-attention notifications.
+    @Published var gizziDrawAttentionNotifications: Bool {
+        didSet { defaults.set(gizziDrawAttentionNotifications, forKey: Keys.gizziDrawAttentionNotifications) }
+    }
+    /// Gizziio Code: enable browser tools.
+    @Published var gizziBrowserTools: Bool {
+        didSet { defaults.set(gizziBrowserTools, forKey: Keys.gizziBrowserTools) }
+    }
+    /// Gizziio Code: auto-create pull requests.
+    @Published var gizziAutoCreatePRs: Bool {
+        didSet { defaults.set(gizziAutoCreatePRs, forKey: Keys.gizziAutoCreatePRs) }
+    }
+    /// Gizziio Code: autofix failing PRs.
+    @Published var gizziAutofixPRs: Bool {
+        didSet { defaults.set(gizziAutofixPRs, forKey: Keys.gizziAutofixPRs) }
+    }
+
+    /// Extensions: auto-update marketplace/sidecar extensions.
+    @Published var extensionsAutoUpdate: Bool {
+        didSet { defaults.set(extensionsAutoUpdate, forKey: Keys.extensionsAutoUpdate) }
+    }
+    /// Extensions: use built-in Node runtime.
+    @Published var extensionsUseBuiltinNode: Bool {
+        didSet { defaults.set(extensionsUseBuiltinNode, forKey: Keys.extensionsUseBuiltinNode) }
+    }
+
     /// Voice speed steps offered in the picker.
     static let speechSpeeds: [Double] = [0.75, 1.0, 1.25, 1.5]
 
@@ -135,6 +167,13 @@ final class SettingsStore: ObservableObject {
         static let voiceIdentifier = "allternit-settings-voice-identifier"
         static let voiceInteractionMode = "allternit-settings-voice-interaction-mode"
         static let improveModel = "allternit-settings-improve-model"
+        static let gizziBypassPermissions = "allternit-settings-gizzi-bypass-permissions"
+        static let gizziDrawAttentionNotifications = "allternit-settings-gizzi-draw-attention"
+        static let gizziBrowserTools = "allternit-settings-gizzi-browser-tools"
+        static let gizziAutoCreatePRs = "allternit-settings-gizzi-auto-prs"
+        static let gizziAutofixPRs = "allternit-settings-gizzi-autofix-prs"
+        static let extensionsAutoUpdate = "allternit-settings-extensions-auto-update"
+        static let extensionsUseBuiltinNode = "allternit-settings-extensions-builtin-node"
     }
 
     init(defaults: UserDefaults = .standard) {
@@ -155,5 +194,12 @@ final class SettingsStore: ObservableObject {
         self.voiceInteractionMode = defaults.string(forKey: Keys.voiceInteractionMode)
             .flatMap(VoiceInteractionMode.init(rawValue:)) ?? .handsFree
         self.improveModel = defaults.object(forKey: Keys.improveModel) as? Bool ?? true
+        self.gizziBypassPermissions = defaults.object(forKey: Keys.gizziBypassPermissions) as? Bool ?? false
+        self.gizziDrawAttentionNotifications = defaults.object(forKey: Keys.gizziDrawAttentionNotifications) as? Bool ?? true
+        self.gizziBrowserTools = defaults.object(forKey: Keys.gizziBrowserTools) as? Bool ?? true
+        self.gizziAutoCreatePRs = defaults.object(forKey: Keys.gizziAutoCreatePRs) as? Bool ?? false
+        self.gizziAutofixPRs = defaults.object(forKey: Keys.gizziAutofixPRs) as? Bool ?? true
+        self.extensionsAutoUpdate = defaults.object(forKey: Keys.extensionsAutoUpdate) as? Bool ?? true
+        self.extensionsUseBuiltinNode = defaults.object(forKey: Keys.extensionsUseBuiltinNode) as? Bool ?? true
     }
 }
