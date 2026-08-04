@@ -1,0 +1,38 @@
+[
+  {
+    "id": "product-release",
+    "content": "Apple Inc. announced the iPhone 15 Pro at its September 2023 event in Cupertino. The device features a titanium frame, an A17 Pro chip, and a 48-megapixel main camera. Tim Cook emphasized sustainability and supply-chain improvements during the keynote.",
+    "expected": {
+      "entities": ["Apple Inc.", "iPhone 15 Pro", "Cupertino", "A17 Pro", "Tim Cook"],
+      "topics": ["technology", "product launch", "smartphones", "sustainability"],
+      "importance": "medium"
+    }
+  },
+  {
+    "id": "critical-outage",
+    "content": "CRITICAL: The production API gateway experienced a complete outage from 14:00 to 15:47 UTC on 2026-07-29. All customer-facing services returned 503 errors. The root cause was a misconfigured rate-limit rule deployed in release v2.14.0. A rollback to v2.13.4 restored service.",
+    "expected": {
+      "entities": ["API gateway", "v2.14.0", "v2.13.4"],
+      "topics": ["outage", "incident response", "production", "rollback"],
+      "importance": "critical"
+    }
+  },
+  {
+    "id": "architecture-decision",
+    "content": "After reviewing three options, the platform team decided to adopt PostgreSQL over MongoDB for the billing service. The decision was recorded in ADR-042. Primary drivers were ACID compliance, existing operational expertise, and the need for complex relational queries. MongoDB will remain for the analytics pipeline.",
+    "expected": {
+      "entities": ["PostgreSQL", "MongoDB", "billing service", "ADR-042", "analytics pipeline"],
+      "topics": ["architecture", "database", "decision record", "billing"],
+      "importance": "high"
+    }
+  },
+  {
+    "id": "routine-status",
+    "content": "Daily stand-up notes for the mobile team: Sarah finished the login screen refactor, Marcus is still debugging a layout issue on iPad, and the team agreed to move the weekly demo to Thursday at 10am.",
+    "expected": {
+      "entities": ["Sarah", "Marcus", "iPad"],
+      "topics": ["stand-up", "mobile team", "schedule"],
+      "importance": "low"
+    }
+  }
+]

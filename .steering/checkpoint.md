@@ -25,6 +25,20 @@ Close the follow-ups from the MLX speedup/circuit-breaker work:
   - `pnpm test`: 36/36 passed.
   - `pnpm typecheck`: clean.
 
+- Added `scripts/eval-extraction.ts` and `data/eval-extraction.json` with four
+  labeled cases covering product releases, critical outages, architecture
+  decisions, and routine notes. The script computes entity F1, topic F1, and
+  importance accuracy, and reports an overall score.
+- Initial eval run (MLX Qwen3-4B): overall score 0.55, entity F1 0.77,
+  topic F1 0.39, importance accuracy 0.50.
+- Initial eval run (Ollama qwen3.5:2b/4b): overall score 0.43, entity F1 0.41,
+  topic F1 0.12, importance accuracy 0.75 (with local fallback on malformed
+  JSON).
+- Verified:
+  - `pnpm test`: 36/36 passed.
+  - `pnpm typecheck`: clean.
+  - Eval script runs against both MLX and Ollama backends.
+
 ## Files changed
 
 - `services/memory/agent/src/models/local-model.ts`
@@ -33,9 +47,11 @@ Close the follow-ups from the MLX speedup/circuit-breaker work:
 - `services/memory/agent/src/models/local-model.test.ts`
 - `services/memory/agent/src/orchestrator.ts`
 - `services/memory/agent/src/http-server.ts`
+- `services/memory/agent/scripts/eval-extraction.ts`
+- `services/memory/agent/data/eval-extraction.json`
 - `.steering/spec.md`
 
 ## Known follow-ups
 
 - Add a scheduled/periodic shadow comparison job (currently available on-demand via HTTP).
-- Consider a held-out accuracy eval set for entity/topic/importance extraction quality (audit Q3).
+- Expand the eval set with more cases and finer-grained scoring (e.g., partial entity matches).
