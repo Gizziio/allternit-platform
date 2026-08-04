@@ -21,7 +21,7 @@ Branch: `fix/review-decision-event-type` (issue #16/#19 fixes) + `docs/surface-a
 |---|------|--------|---------|--------|-----|
 | 1 | Projects (GAP → gizzi-code) | `[ ]` | | | |
 | 2 | Artifacts Library (PARTIAL → upgrade) | `[ ]` | | | |
-| 3 | Automation Tasks (Goals/Routines/Loops/Cron) (GAP → iOS) | `[~]` | Phase 1 cron in progress (`ao/automation-cron`) | Continue/complete phase 1 | #9 |
+| 3 | Automation Tasks (Goals/Routines/Loops/Cron) (GAP → iOS) | `[x]` | PR #9 merged to main; cron jobs shipped on iOS | Closed as shipped | #9 |
 
 ## Cowork (15)
 
@@ -135,7 +135,7 @@ Branch: `fix/review-decision-event-type` (issue #16/#19 fixes) + `docs/surface-a
 | 84 | H5I panel — Commit (PARTIAL → upgrade) | `[ ]` | | | |
 | 85 | H5I panel — Context (GAP → gizzi-code) | `[ ]` | | | |
 | 86 | H5I panel — Diff (PARTIAL → upgrade) | `[ ]` | | | |
-| 87 | Changeset Review (GAP → iOS) | `[~]` | PR #4 reviewed, awaiting merge | Complete/merge | #4 |
+| 87 | Changeset Review (GAP → iOS) | `[x]` | PR #4 merged to main | Closed as shipped | #4 |
 
 ## Marketplace/Plugins (4)
 
@@ -174,7 +174,7 @@ Branch: `fix/review-decision-event-type` (issue #16/#19 fixes) + `docs/surface-a
 | 103 | Settings > Products (GAP → iOS) | `[ ]` | | | |
 | 104 | Settings > Infrastructure (GAP → iOS, gizzi-code) | `[ ]` | | | |
 | 105 | Settings > Customize (PARTIAL → upgrade) | `[ ]` | | | |
-| 106 | Device Pairing panel (GAP → iOS) | `[~]` | PR #5 reviewed, awaiting merge | Complete/merge | #5 |
+| 106 | Device Pairing panel (GAP → iOS) | `[x]` | PR #5 merged to main | Closed as shipped | #5 |
 | 107 | Organization Access panel (GAP → iOS, gizzi-code) | `[ ]` | | | |
 | 108 | Compute Billing panel (GAP → iOS) | `[ ]` | | | |
 | 109 | Enterprise BYOC panel (GAP → iOS, gizzi-code) | `[ ]` | | | |

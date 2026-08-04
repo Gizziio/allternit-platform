@@ -14,7 +14,7 @@ Living checklist for the 121 actionable items (83 GAP + 38 PARTIAL) from `docs/S
 
 - [ ] **Projects** _(`GAP` → gizzi-code)_ — A CLI user has no way to group sessions into a named project the way web/iOS do; `init` is a one-shot scaffold, not a browser.
 - [ ] **Artifacts Library** _(`PARTIAL` → upgrade)_ — gizzi-code can produce/publish artifacts consumed elsewhere but can't browse its own artifact history.
-- [~] **Automation Tasks (Goals/Routines/Loops/Cron)** _(`GAP` → iOS)_ — Missing from iOS specifically; ironically gizzi-code's engine is the richest implementation of this concept across all three surfaces. Confirmed genuinely greenfield (unlike Device Pairing). Phased: Phase 1 = cron jobs only (in progress, `ao/automation-cron`), Routines/Loops/Goals as later phases — see `docs/AUTOMATION_TASKS_MAP.md`.
+- [x] **Automation Tasks (Goals/Routines/Loops/Cron)** _(`GAP` → iOS)_ — Phase 1 cron jobs shipped in PR #9. Routines/Loops/Goals remain as later phases — see `docs/AUTOMATION_TASKS_MAP.md`.
 
 ## Cowork
 
@@ -117,7 +117,7 @@ Living checklist for the 121 actionable items (83 GAP + 38 PARTIAL) from `docs/S
 - [ ] **H5I panel — Commit** _(`PARTIAL` → upgrade)_
 - [ ] **H5I panel — Context** _(`GAP` → gizzi-code)_
 - [ ] **H5I panel — Diff** _(`PARTIAL` → upgrade)_
-- [~] **Changeset Review (diff cards, approve/reject)** _(`GAP` → iOS)_ — Genuine, actionable gap: a mobile user can kick off an agentic coding session but apparently can't review changes before they're applied. PR #4 (reviewed, awaiting merge). Backend needed no changes — gizzi-code's `/v1/permission` queue already existed.
+- [x] **Changeset Review (diff cards, approve/reject)** _(`GAP` → iOS)_ — Shipped in PR #4. Backend needed no changes — gizzi-code's `/v1/permission` queue already existed.
 
 ## Marketplace/Plugins
 
@@ -148,7 +148,7 @@ Living checklist for the 121 actionable items (83 GAP + 38 PARTIAL) from `docs/S
 - [ ] **Settings > Products (Gizziio Code settings, Cowork settings, Extensions)** _(`GAP` → iOS)_ — Missing from iOS; gizzi-code's absence for its own self-referential settings is defensible, but iOS's absence isn't.
 - [ ] **Settings > Infrastructure (Infrastructure, VPS & Servers, Enterprise BYOC, Environment, Security, Agents)** _(`GAP` → iOS, gizzi-code)_ — Real finding: infra management is thin-to-absent on both other surfaces, even though gizzi-code as "the brain" is a plausible place for CLI-driven infra config.
 - [ ] **Settings > Customize (Skills, Response Style, Connectors, Allternit Plugins)** _(`PARTIAL` → upgrade)_ — Response Style is a confirmed direct FULL PARITY sub-item across all three (flagged explicitly in the source map as a good parity check); Skills customization specifically is missing on iOS.
-- [~] **Device Pairing panel** _(`GAP` → iOS)_ — **Audit finding was stale**: iOS already had a complete, wired-in approve/lookup/list flow (`RuntimeDevicesClient`/`RuntimePairingView`) mirroring web's panel almost line-for-line. The real gap was narrower — no Deny action. PR #5 (reviewed, awaiting merge) adds it.
+- [x] **Device Pairing panel** _(`GAP` → iOS)_ — **Audit finding was stale**: iOS already had a complete, wired-in approve/lookup/list flow (`RuntimeDevicesClient`/`RuntimePairingView`) mirroring web's panel almost line-for-line. The real gap was narrower — no Deny action. Shipped in PR #5.
 - [ ] **Organization Access panel** _(`GAP` → iOS, gizzi-code)_ — Arguably reasonable that an agent CLI doesn't manage org membership (identity/admin plane, not agent capability), but nothing structurally prevents it — not built, not clearly out of scope.
 - [ ] **Compute Billing panel** _(`GAP` → iOS)_
 - [ ] **Enterprise BYOC panel** _(`GAP` → iOS, gizzi-code)_ — Same item as the Terminal/Infra section's BYOC row — it's both a Settings sub-section and a standalone panel in the source inventory.
