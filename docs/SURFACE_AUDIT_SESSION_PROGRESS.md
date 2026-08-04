@@ -188,7 +188,7 @@ Branch: `fix/review-decision-event-type` (issue #16/#19 fixes) + `docs/surface-a
 
 | # | Item | Status | Finding | Action | PR |
 |---|------|--------|---------|--------|-----|
-| 111 | AllternitOS (GAP → gizzi-code) | `[ ]` | REAL — web has full OS (`allternit-os/AllternitOS.tsx` etc.), gizzi-code has no windowing/kernel concept | Confirmed gap, scope minimal equivalent | |
+| 111 | AllternitOS (GAP → gizzi-code) | `[x]` | REAL — gizzi-code `programs` command shipped: lists built-in command programs + installed agents, shows info, and provides a `run` shim mapping AllternitOS installable programs to CLI agents/skills | Shipped minimal equivalent | `feat/ios-model-management` |
 
 ## Playground/QA (1)
 
