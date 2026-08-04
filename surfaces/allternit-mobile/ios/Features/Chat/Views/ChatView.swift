@@ -239,6 +239,8 @@ struct ChatView: View {
     @Binding var isSidebarOpen: Bool
 
     @StateObject private var viewModel = ChatViewModel()
+    /// Intelli-Schedule panel sheet — opened from the floating chrome in Cowork mode.
+    @State private var isIntelliSchedulePresented = false
 
     /// Incognito affordance glyph. "ghost" (Claude parity) only exists in
     /// newer SF Symbols — on iOS 18 it renders blank, so fall back to
@@ -287,6 +289,13 @@ struct ChatView: View {
                         selectedSessionId = nil
                         viewModel.startNewSession(ephemeral: true)
                     }
+
+                    // Intelli-Schedule panel — only offered in Cowork mode.
+                    if modeStore.mode == .cowork {
+                        floatingIcon("calendar.badge.clock") {
+                            isIntelliSchedulePresented = true
+                        }
+                    }
                 }
 
             }
@@ -304,6 +313,9 @@ struct ChatView: View {
             }
         }
         .background(Color("BgSecondary"))
+        .sheet(isPresented: $isIntelliSchedulePresented) {
+            IntelliSchedulePanel()
+        }
         #if DEBUG
         // `-temporary-chat` (DEBUG only): start in temporary mode for
         // screenshot verification (no tap injection in simctl).
