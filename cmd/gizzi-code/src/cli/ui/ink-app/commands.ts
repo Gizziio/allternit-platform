@@ -54,6 +54,7 @@ import live from './commands/live/index.js'
 import find from './commands/find/index.js'
 import grep from './commands/grep/index.js'
 import cowork from './commands/cowork/index.js'
+import coworkProject from './commands/cowork-project/index.js'
 import artifact from './commands/artifact/index.js'
 import swarm from './commands/swarm/index.js'
 
@@ -280,6 +281,7 @@ const COMMANDS = memoize((): Command[] => [
   copy,
   desktop,
   cowork,
+  coworkProject,
   swarm,
   context,
   contextNonInteractive,
