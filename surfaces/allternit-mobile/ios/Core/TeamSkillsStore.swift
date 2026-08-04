@@ -1,6 +1,7 @@
 import SwiftUI
 
-/// Team skills state: the fetched skill list backing the Code Skills sheet.
+/// Team skills state: the fetched skill list backing both the Code Skills sheet
+/// and the Team Skills sidebar tab.
 ///
 /// Data source: `GET /api/v1/team-skills` on the gateway (TeamSkillsClient).
 /// On failure the store keeps whatever it last had and exposes `loadError` so
@@ -16,7 +17,7 @@ final class TeamSkillsStore: ObservableObject {
     private let client: TeamSkillsClient
     private var fetchTask: Task<Void, Never>? = nil
 
-    init(client: TeamSkillsClient = TeamSkillsClient()) {
+    init(client: TeamSkillsClient = .shared) {
         self.client = client
     }
 
@@ -44,7 +45,22 @@ final class TeamSkillsStore: ObservableObject {
         }
     }
 
-    /// Unconditional refresh (pull-to-refresh).
+    /// Loads skills for the given workspace. Callers drive this from the view
+    /// layer when `WorkspaceStore.activeWorkspaceId` changes.
+    func fetchSkills(workspaceId: String) async {
+        isLoading = true
+        loadError = nil
+        defer { isLoading = false }
+        do {
+            skills = try await client.listSkills(workspaceId: workspaceId)
+        } catch is CancellationError {
+            // View went away mid-flight — keep current state.
+        } catch {
+            loadError = error.localizedDescription
+        }
+    }
+
+    /// Unconditional refresh (pull-to-refresh) for the Code Skills sheet.
     func refresh() async {
         loadError = nil
         do {
@@ -54,5 +70,43 @@ final class TeamSkillsStore: ObservableObject {
         } catch {
             loadError = error.localizedDescription
         }
+    }
+
+    /// Refreshes the current workspace's skills (pull-to-refresh).
+    func refresh(workspaceId: String) async {
+        await fetchSkills(workspaceId: workspaceId)
+    }
+
+    // MARK: - Mutations
+
+    /// Creates a skill and prepends it locally, then refreshes so
+    /// server-computed fields (`installedAt`, etc.) land.
+    @discardableResult
+    func createSkill(workspaceId: String, name: String, description: String? = nil) async throws -> TeamSkill {
+        let id = try await client.createSkill(workspaceId: workspaceId, name: name, description: description)
+        let skill = TeamSkill(
+            id: id,
+            workspaceId: workspaceId,
+            name: name,
+            description: description,
+            manifest: nil,
+            sourceRepo: nil,
+            version: "0.0.1",
+            installedBy: "",
+            installedAt: Self.currentTimestamp()
+        )
+        skills.insert(skill, at: 0)
+        await fetchSkills(workspaceId: workspaceId)
+        return skill
+    }
+
+    /// Deletes a skill and removes it locally.
+    func deleteSkill(id: String) async throws {
+        try await client.deleteSkill(id: id)
+        skills.removeAll { $0.id == id }
+    }
+
+    private static func currentTimestamp() -> String {
+        ISO8601DateFormatter().string(from: Date())
     }
 }
