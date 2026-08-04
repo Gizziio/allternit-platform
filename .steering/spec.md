@@ -1,85 +1,91 @@
-# Steering spec — MLX provider for the memory agent's generation tasks
+# Steering spec — Automation Tasks (iOS) Phase 3: Loops
+
+Source: `docs/AUTOMATION_TASKS_PHASE_3_TASK.md`. Backend already exists
+(`v1/automations` loops routes, `cmd/gizzi-code/src/runtime/server/routes/
+automations.ts:228-344`) — this phase is iOS-only, mirroring the Phase 2
+routines implementation (`docs/AUTOMATION_TASKS_PHASE_2_NOTES.md`), which
+itself mirrored Phase 1 cron.
 
 ## Requirements
 
-- [ ] R1: WHEN `MEMORY_LLM_BASE_URL` is set (e.g. http://localhost:8080/v1),
-  THE SYSTEM SHALL route generation tasks (ingest, consolidate, query,
-  extract) to the OpenAI-compatible endpoint using the preset model names
-  mapped via `MEMORY_LLM_MODEL` (single model for all generation tasks), and
-  embeddings SHALL remain on Ollama.
-- [ ] R2: WHEN `MEMORY_LLM_BASE_URL` is unset, THE SYSTEM SHALL behave exactly
-  as today (Ollama generate path, MODEL_PRESETS names).
-- [ ] R3: WHEN the MLX endpoint is unreachable or returns hard errors mid-request
-  and no fallback is configured, THE SYSTEM SHALL fail the request with a clear
-  error. WHEN a circuit breaker is active, THE SYSTEM MAY fall back to the
-  configured Ollama generation model after repeated hard failures, and SHALL
-  record the serving backend so fallback-enriched memories remain auditable.
-- [ ] R4: WHEN local-model.ts is changed, THE SYSTEM SHALL keep its existing
-  callers working (http-server.ts, orchestrator.ts) with no signature
-  changes beyond optional config, and unit-test the provider switch.
-
-## Speed + guardrail requirements (MLX or Ollama)
-
-- [ ] R5: WHEN normal ingest enriches a memory, THE SYSTEM SHALL use a single
-  structured LLM call (`enrichContent()`) for summary + entities + topics +
-  importance instead of three separate calls.
-- [ ] R6: WHEN the structured enrichment call returns malformed JSON or fields
-  of the wrong type, THE SYSTEM SHALL fall back to a fast local extraction
-  (truncated summary, keyword-derived entities/topics, heuristic importance)
-  and SHALL NOT emit additional LLM calls.
-- [ ] R7: WHEN a query is synthesized, THE SYSTEM SHALL cap the synthesis
-  context to the top 5 retrieved memories with summaries truncated to 200
-  characters.
-- [ ] R8: WHEN generation model presets are overridden via environment
-  variables (`MEMORY_INGEST_MODEL`, `MEMORY_FAST_INGEST_MODEL`, etc.), THE
-  SYSTEM SHALL use the overridden names without requiring code changes.
-- [ ] R9: WHEN the configured MLX/OpenAI-compatible generation endpoint fails
-  repeatedly, THE SYSTEM SHALL trip a circuit breaker after a configurable
-  threshold and fall back to Ollama generation for a cooldown window, without
-  manual intervention.
-- [ ] R10: WHEN a memory is enriched, THE SYSTEM SHALL record the serving
-  generation backend (`mlx`, `ollama`, or `local`) in the memory's metadata.
-- [ ] R11: WHEN generation calls complete, THE SYSTEM SHALL track per-backend
-  call counts, failures, and average latency, and expose them via `getMetrics()`.
-- [ ] R12: WHEN requested, THE SYSTEM SHALL run the same prompt through both
-  MLX and Ollama and return both responses for comparison (shadow mode).
+- [x] R1: WHEN the Automation Tasks tab loads Loops, THE SYSTEM SHALL fetch
+  `GET v1/automations/loops` via a dedicated `LoopsClient` connecting
+  directly to `AppConfig.gizziCodeBaseURL` (same host as
+  `CronClient`/`RoutinesClient`/`PtyClient`/`PermissionClient`, NOT the
+  `allternit-api` relay), and decode the bare array response with correct
+  wire shape: snake_case row keys (`agent_id`, `exit_condition`,
+  `max_iterations`, `iteration_log`, `time_created`, `time_updated`) but
+  **camelCase** `iteration_log` element keys (`LoopLogEntry` is a plain TS
+  interface, not a drizzle column — confirmed by reading `loop-engine.ts`).
+- [x] R2: WHEN a user creates a loop, THE SYSTEM SHALL POST
+  `v1/automations/loops` with `{ command, exit_condition?, max_iterations }`
+  where only `command` is required, `max_iterations` is entered via a
+  numeric stepper (not free text), and the resulting loop is already
+  `state: "running"` on return — unlike Routines, there is no separate
+  "create then run" step.
+- [x] R3: WHEN a user taps Restart on a loop, THE SYSTEM SHALL POST
+  `v1/automations/loops/:id/run` (no body, fire-and-forget server-side,
+  restarts a stopped/finished loop) and refresh the list afterward. The
+  action SHALL be disabled while the loop's own `state == "running"`, since
+  restart is only meaningful once stopped — even though the endpoint itself
+  doesn't reject a redundant call.
+- [x] R4: WHEN a user taps Delete on a loop, THE SYSTEM SHALL DELETE
+  `v1/automations/loops/:id` and remove it from local state.
+- [x] R5: THE SYSTEM SHALL NOT implement pause/resume (no such endpoint) and
+  SHALL NOT implement a run-history view/endpoint call (no
+  `/loops/:id/runs`, no `GET /loops/:id`) — the detail view shows current
+  `state` and the row's own `iteration_log` (refetched via whole-list
+  refresh) instead, each entry expandable to show full command output.
+- [x] R6: THE SYSTEM SHALL extend the existing `AutomationKind` enum
+  (`.cron`, `.routines`) with a third `.loops` case and wire it into
+  `ChatView.swift`'s switch, re-using the already-generic
+  `ForEach(AutomationKind.allCases...)` pickers in `AutomationTasksListView`/
+  `RoutinesListView` rather than duplicating picker logic in a new place.
+- [x] R7: THE SYSTEM SHALL NOT touch Goals (Phase 4, out of scope) or make
+  any backend changes.
+- [x] R8: Swift files SHALL mirror the Phase 2 routine files' structure,
+  naming, property-wrapper choice, and error/loading-state conventions
+  exactly, as sibling files: `LoopsClient.swift`, `Models/Loop.swift`,
+  `LoopStore.swift`, `LoopsListView.swift`, `LoopDetailView.swift`,
+  `CreateLoopSheet.swift`.
 
 ## Acceptance (Gherkin)
 
-- Scenario: MLX path used when configured
-  Given MEMORY_LLM_BASE_URL set to a stub OpenAI server
-  When a generate task runs
-  Then the request hits /v1/chat/completions with the MEMORY_LLM_MODEL name,
-  and embeddings still hit Ollama.
-- Scenario: default unchanged
-  Given the env unset
-  When a generate task runs
-  Then Ollama is used with the preset model name.
-- Scenario: fast ingest uses one LLM call
-  Given a normal ingest request
-  When enrichment runs
-  Then exactly one structured generation call is made.
-- Scenario: malformed structured output degrades safely
-  Given a normal ingest request where the LLM returns invalid JSON
-  When enrichment runs
-  Then no further LLM calls are made and a memory is still created.
-- Scenario: query synthesis stays small
-  Given a query that retrieves many memories
-  When synthesis runs
-  Then at most 5 memories are included and each summary is at most 200 chars.
-- Scenario: MLX circuit breaker falls back to Ollama
-  Given MEMORY_LLM_BASE_URL is set and the MLX endpoint returns errors
-  When generation fails N consecutive times
-  Then generation falls back to Ollama and skips MLX until the cooldown passes.
-- Scenario: backend provenance is stored with each memory
-  Given a normal ingest request
-  When the memory is created
-  Then metadata.enrichment_backend is set to mlx, ollama, or local.
-- Scenario: backend metrics are observable
-  Given generation calls have run
-  When getMetrics() is called
-  Then per-backend calls, failures, and avgLatencyMs are returned.
-- Scenario: shadow comparison runs both backends
-  Given a prompt and MEMORY_LLM_BASE_URL set
-  When shadowCompare() is called
-  Then both mlx and ollama responses are returned.
+- Scenario: Loops list loads with correct wire shape
+  Given `GET v1/automations/loops` returns a bare array of loop rows with
+  snake_case row keys and a camelCase `iteration_log` array
+  When `LoopsListView` appears
+  Then `LoopStore.fetchLoopsIfNeeded()` decodes it into `[Loop]` without a
+  decoding error.
+- Scenario: Create requires only a command, loop starts immediately
+  Given a user fills in only "Command" and leaves exit condition blank,
+  max_iterations at its default of 10
+  When they tap Create
+  Then `POST v1/automations/loops` is sent with `{command, max_iterations:
+  10}` (`exit_condition` omitted, not null-encoded), and the created row's
+  `state` is `"running"` with no separate Run action needed.
+- Scenario: Restart is disabled while running
+  Given a loop in state "running"
+  When `LoopDetailView` renders its action row
+  Then the Restart button is disabled and labeled "Running…".
+- Scenario: Restart re-enables once stopped, refreshes instead of trusting response
+  Given a loop in state "succeeded" or "max_iterations"
+  When Restart is tapped
+  Then `POST .../run` is called, its response is discarded, and
+  `LoopStore.refresh()` re-fetches the list so `state` becomes "running".
+- Scenario: Third segment reachable from both existing views
+  Given a user is on `AutomationTasksListView` (Cron) or `RoutinesListView`
+  When they tap the "Loops" segment
+  Then `ChatView`'s `.automation` case renders `LoopsListView`, and its own
+  segmented control can flip to either of the other two.
+
+## Verification status
+
+- `swift -frontend -parse` clean on all 6 new files + 4 modified files
+  (`AppMode.swift`, `ChatView.swift`, `AutomationTasksListView.swift`,
+  `RoutinesListView.swift` — the latter two touched only for doc comments).
+- No Xcode build / simulator run (excluded by task constraints).
+- No live gizzi-code server QA — response shapes verified by reading
+  `automations.ts:228-344` and the full `loop-engine.ts` source directly.
+- Deliverable notes at `docs/AUTOMATION_TASKS_PHASE_3_NOTES.md`, including
+  the exact `iteration_log`/`LoopLogEntry` shape and how it was modeled.
