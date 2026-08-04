@@ -28,6 +28,8 @@ struct SettingsView: View {
     @State private var isMemoryPresented = false
     /// Pushed Compute Billing settings (Plans & Compute parity).
     @State private var isComputeBillingPresented = false
+    /// Pushed Model Management view.
+    @State private var isModelManagementPresented = false
     /// Pushed custom-instructions editor (Agent section).
     @State private var isInstructionsPresented = false
     /// Pushed Monitor view (infra section).
@@ -78,6 +80,7 @@ struct SettingsView: View {
                 usageSection
                 capabilitiesSection
                 agentSection
+                modelsSection
                 memorySection
                 voiceSection
                 dataControlsSection
@@ -105,6 +108,9 @@ struct SettingsView: View {
             }
             .navigationDestination(isPresented: $isComputeBillingPresented) {
                 ComputeBillingView()
+            }
+            .navigationDestination(isPresented: $isModelManagementPresented) {
+                ModelManagementView()
             }
             .navigationDestination(isPresented: $isInstructionsPresented) {
                 CustomInstructionsView()
@@ -486,6 +492,35 @@ struct SettingsView: View {
             get: { preferences.responseStyle },
             set: { preferences.save(style: $0, instructions: preferences.customInstructions) }
         )
+    }
+
+    // MARK: - Models
+
+    @ViewBuilder
+    private var modelsSection: some View {
+        Section {
+            Button(action: {
+                let generator = UIImpactFeedbackGenerator(style: .light)
+                generator.impactOccurred()
+                isModelManagementPresented = true
+            }) {
+                HStack {
+                    Text("Models & Engines")
+                        .font(.subheadline)
+                        .foregroundColor(Color("TextPrimary"))
+                    Spacer()
+                    Image(systemName: "chevron.right")
+                        .font(.system(size: 11, weight: .bold))
+                        .foregroundColor(Color("TextSecondary"))
+                }
+                .contentShape(Rectangle())
+            }
+            .buttonStyle(.plain)
+        } header: {
+            Text("Models")
+        } footer: {
+            Text("Manage cloud model providers and local runtimes.")
+        }
     }
 
     // MARK: - Memory
