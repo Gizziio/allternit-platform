@@ -28,12 +28,24 @@ function relatedThreadId(payload: unknown): string | undefined {
  * AgentActivityStore.deriveThreadStates): substring match on `event_type`
  * against /guard/i, /reserve/i, /review/i, /decide/i, windowed to the last 4
  * ledger events related to this thread (by `payload.thread_id`/
- * `mail_thread_id`). "Review pending" if the most recent /review/i match in
- * the window postdates the most recent /decide/i match (or there is no
- * /decide/i match at all in the window). Read-only — no structured
+ * `mail_thread_id`). "Review pending" if the most recent review-request match
+ * in the window postdates the most recent decision match (or there is no
+ * decision match at all in the window). Read-only — no structured
  * reservation/guard schema exists server-side, same finding both prior
  * phases already made.
+ *
+ * The backend emits `ReviewDecision` for a resolution (it contains "review"
+ * but is a decision, not a request), so decision matching must be checked
+ * first and excluded from review-request matching.
  */
+function isDecisionEvent(eventType: string): boolean {
+  return /decide/i.test(eventType) || eventType === "ReviewDecision"
+}
+
+function isReviewRequestEvent(eventType: string): boolean {
+  return /review/i.test(eventType) && !isDecisionEvent(eventType)
+}
+
 function guardReviewTags(threadId: string, events: LedgerEvent[]): string[] {
   const relevant = events.filter((e) => relatedThreadId(e.payload) === threadId)
   const windowed = relevant.slice(-RELEVANT_EVENT_WINDOW)
@@ -45,8 +57,8 @@ function guardReviewTags(threadId: string, events: LedgerEvent[]): string[] {
   let lastReviewIndex = -1
   let lastDecideIndex = -1
   windowed.forEach((e, index) => {
-    if (/review/i.test(e.event_type)) lastReviewIndex = index
-    if (/decide/i.test(e.event_type)) lastDecideIndex = index
+    if (isReviewRequestEvent(e.event_type)) lastReviewIndex = index
+    if (isDecisionEvent(e.event_type)) lastDecideIndex = index
   })
   if (lastReviewIndex !== -1 && (lastDecideIndex === -1 || lastDecideIndex < lastReviewIndex)) {
     tags.push("❓ review pending")

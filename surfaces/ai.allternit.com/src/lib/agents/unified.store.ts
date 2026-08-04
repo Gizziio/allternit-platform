@@ -1190,19 +1190,15 @@ export const useUnifiedStore = create<UnifiedStore>()(
     // Actions - Mail
     fetchMailThreads: async () => {
       try {
-        // Threads are created via ensureThread, list them from messages
-        const response = await railsApi.mail.inbox({ limit: 100 });
-        const threadsMap = new Map<string, MailThread>();
-        response.messages.forEach((msg) => {
-          if (!threadsMap.has(msg.thread_id)) {
-            threadsMap.set(msg.thread_id, {
-              thread_id: msg.thread_id,
-              topic: msg.thread_id,
-              created_at: msg.timestamp,
-            });
-          }
-        });
-        set({ mailThreads: Array.from(threadsMap.values()) });
+        // Real endpoint: GET /mail/threads (issue #16). The old POST /mail/inbox
+        // route does not exist on the backend.
+        const response = await railsApi.mail.threads();
+        const threads = response.threads.map((t): MailThread => ({
+          thread_id: t.thread_id,
+          topic: t.thread_id,
+          created_at: t.last_ts,
+        }));
+        set({ mailThreads: threads });
       } catch (err: any) {
         set({ error: err.message });
       }
@@ -1210,7 +1206,10 @@ export const useUnifiedStore = create<UnifiedStore>()(
     
     fetchMailMessages: async (threadId) => {
       try {
-        const response = await railsApi.mail.inbox({ thread_id: threadId, limit: 50 });
+        // Real endpoint: GET /mail/thread/:id (issue #16). The old
+        // POST /mail/inbox?thread_id route does not exist on the backend.
+        if (!threadId) throw new Error("threadId is required to fetch mail messages")
+        const response = await railsApi.mail.thread(threadId)
         set({ mailMessages: response.messages });
         const unread = response.messages.filter((m) => !m.acknowledged).length;
         set({ mailUnreadCount: unread });
