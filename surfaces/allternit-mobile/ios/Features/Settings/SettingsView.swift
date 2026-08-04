@@ -38,6 +38,8 @@ struct SettingsView: View {
     @State private var isCloudDeployPresented = false
     /// Pushed VPS & Servers view (infra section).
     @State private var isVPSServersPresented = false
+    /// Pushed Cloud Instances view (infra section).
+    @State private var isCloudInstancesPresented = false
     #if DEBUG
     /// Pushed Brain Spike screen (DEBUG-only D3 spike section).
     @State private var isBrainSpikePresented = false
@@ -114,6 +116,9 @@ struct SettingsView: View {
             }
             .navigationDestination(isPresented: $isVPSServersPresented) {
                 VPSServersManagerView()
+            }
+            .navigationDestination(isPresented: $isCloudInstancesPresented) {
+                CloudInstancesManagerView()
             }
             #if DEBUG
             .navigationDestination(isPresented: $isBrainSpikePresented) {
@@ -660,10 +665,13 @@ struct SettingsView: View {
             Button(action: { isVPSServersPresented = true }) {
                 bulkRowLabel("VPS & Servers", systemImage: "server.rack")
             }
+            Button(action: { isCloudInstancesPresented = true }) {
+                bulkRowLabel("Cloud Instances", systemImage: "cloud.fill")
+            }
         } header: {
             Text("Infrastructure")
         } footer: {
-            Text("Live view of agents, system metrics, logs, runtime controls, compute nodes, cloud deployments, and SSH connections.")
+            Text("Live view of agents, system metrics, logs, runtime controls, compute nodes, cloud deployments, SSH connections, and BYO-VPS wizard.")
         }
     }
 
