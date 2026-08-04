@@ -86,12 +86,15 @@ struct MainWorkspaceView: View {
                             }
 HEAD
 HEAD
+HEAD
                         case .plugins:
                             PluginMarketplaceView(isSidebarOpen: $isSidebarOpen)                        case .swarm:
                             SwarmADEView(isSidebarOpen: $isSidebarOpen)
 >>>>>>> origin/feat/ios-swarm-ade                        case .teamSkills:
                             TeamSkillsView(isSidebarOpen: $isSidebarOpen)
->>>>>>> origin/feat/ios-team-skills
+>>>>>>> origin/feat/ios-team-skills                        case .products:
+                            ProductsDiscoveryView(isSidebarOpen: $isSidebarOpen)
+>>>>>>> origin/feat/products-discovery
                         case .code:
                             CodeModeView(isSidebarOpen: $isSidebarOpen, selectedSessionId: $selectedSessionId)
                         case .aci:

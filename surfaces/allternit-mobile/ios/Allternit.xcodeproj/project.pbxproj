@@ -32,7 +32,9 @@ HEAD
 		145F8258CCC59437E3BBD4CA /* OnboardingView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 91C770057CDB7F7249B6EE0D /* OnboardingView.swift */; };
 		1526643C864CF4A2D20144E8 /* SettingsStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = BB1A0D0734D3D239827ECD6A /* SettingsStore.swift */; };
 		15970CE94E88293413A0AE86 /* InstancesClient.swift in Sources */ = {isa = PBXBuildFile; fileRef = E471B33D6779D3C68395D818 /* InstancesClient.swift */; };
-		16EA99E23FF18243D69A33C9 /* SSHConnectionsStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 46B0738673B7B6922FEFC50A /* SSHConnectionsStore.swift */; };
+HEAD
+		16EA99E23FF18243D69A33C9 /* SSHConnectionsStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 46B0738673B7B6922FEFC50A /* SSHConnectionsStore.swift */; };		17F40ADF875B8E29361DC58E /* ProductDiscoveryItem.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1ED2C8BBD23DCB7F1AB08324 /* ProductDiscoveryItem.swift */; };
+>>>>>>> origin/feat/products-discovery
 		1834CC829C4E4DF29D135C87 /* AgentActivityDetailView.swift in Sources */ = {isa = PBXBuildFile; fileRef = FEEC6838A5C637D76EED594C /* AgentActivityDetailView.swift */; };
 		1835BCF4D303C85249F87AAB /* CronJob.swift in Sources */ = {isa = PBXBuildFile; fileRef = BC9B4BA16EDF46885053622B /* CronJob.swift */; };
 		18C9EB8E0CDD8146822E1E05 /* libz.tbd in Frameworks */ = {isa = PBXBuildFile; fileRef = 2EA4CD63CB38E3BE58D42166 /* libz.tbd */; };
@@ -173,7 +175,9 @@ HEAD
 		A04A4796644F30C94952A26A /* VoiceModeView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2D55AE23DF47255312BD3B49 /* VoiceModeView.swift */; };
 		A076803F5886FF12CF36A054 /* BrowserChatView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 15E60D739E1ED3BAF445214F /* BrowserChatView.swift */; };
 		A13EBC26EEE05FA56A9BC433 /* ACIWebBrowserView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2E44F010D96E6FC76D3CE571 /* ACIWebBrowserView.swift */; };
-		A2780C16186F740087C1F165 /* NodesStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 302A6416DE266F5195F08582 /* NodesStore.swift */; };
+HEAD
+		A2780C16186F740087C1F165 /* NodesStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 302A6416DE266F5195F08582 /* NodesStore.swift */; };		A22161996E0AE35458D5F21F /* ProductsDiscoveryView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 75B881E71F6239389105F20F /* ProductsDiscoveryView.swift */; };
+>>>>>>> origin/feat/products-discovery
 		A462907889B0CB124DE22969 /* ProjectStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = DF7B74CD03BCD43CEFF3B203 /* ProjectStore.swift */; };
 		A895E2F6A5440D7E40BA8F2C /* AppMode.swift in Sources */ = {isa = PBXBuildFile; fileRef = 62A63A32019B982AEB95024D /* AppMode.swift */; };
 		A943F45FE89277BE010B3BAB /* MeshEnrollClient.swift in Sources */ = {isa = PBXBuildFile; fileRef = B85F6678BE960D0995556FE6 /* MeshEnrollClient.swift */; };
@@ -303,7 +307,9 @@ HEAD
 		1C8B054DE7A97A50E230D1A0 /* TerminalSessionView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TerminalSessionView.swift; sourceTree = "<group>"; };
 		1CF7108EB91B4916B1C1C99E /* AllternitApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AllternitApp.swift; sourceTree = "<group>"; };
 		1E08EFDE05133F76965F508F /* VoiceSummaryCardView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VoiceSummaryCardView.swift; sourceTree = "<group>"; };
-		21D75EE2D83781B3A5D109E6 /* CodeSkillsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CodeSkillsView.swift; sourceTree = "<group>"; };
+HEAD
+		21D75EE2D83781B3A5D109E6 /* CodeSkillsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CodeSkillsView.swift; sourceTree = "<group>"; };		1ED2C8BBD23DCB7F1AB08324 /* ProductDiscoveryItem.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProductDiscoveryItem.swift; sourceTree = "<group>"; };
+>>>>>>> origin/feat/products-discovery
 		22911B6B17227946DBEA7DE5 /* APIClient.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = APIClient.swift; sourceTree = "<group>"; };
 		22A98A22F0D4B4A2007A2BFE /* BrainCaptureSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BrainCaptureSheet.swift; sourceTree = "<group>"; };
 		2379C3D1BE4210564BD1A258 /* IntelliScheduleStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = IntelliScheduleStore.swift; sourceTree = "<group>"; };
@@ -384,6 +390,7 @@ HEAD
 		7418C319D19D7318343155AE /* DocumentsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DocumentsView.swift; sourceTree = "<group>"; };
 >>>>>>> origin/feat/ios-team-skills
 		74AAFC624B283761154C5E82 /* ChangesetReviewSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChangesetReviewSheet.swift; sourceTree = "<group>"; };
+		75B881E71F6239389105F20F /* ProductsDiscoveryView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProductsDiscoveryView.swift; sourceTree = "<group>"; };
 		75DC1AEC3708DB2C11B17049 /* AgentRecord.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AgentRecord.swift; sourceTree = "<group>"; };
 		7C3D796D48E71F1D3AD44224 /* Allternit.app */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.application; path = Allternit.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		7D23E3A1BED41C07A55DB1AF /* CoworkTask.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CoworkTask.swift; sourceTree = "<group>"; };
@@ -634,6 +641,14 @@ HEAD
 				6B8F10ADBC50ECB7FB85AF6A /* HistorySidebarView.swift */,
 			);
 			path = Views;
+			sourceTree = "<group>";
+		};
+		2D69ADA7982B049131BC156A /* ProductsDiscovery */ = {
+			isa = PBXGroup;
+			children = (
+				BAD3721D03A5774A073776BD /* Views */,
+			);
+			path = ProductsDiscovery;
 			sourceTree = "<group>";
 		};
 		2EE49961CE68434D0D593ECB /* Views */ = {
@@ -947,6 +962,7 @@ HEAD
 HEAD
 HEAD
 HEAD
+HEAD
 				C293AF27384130A66F8AFE77 /* MiniApp.swift */,
 				A0B593311C7429FF2825D031 /* MonitorModels.swift */,
 				BB6BCD8D1CBF7A72E2286396 /* NodesModels.swift */,				A77B165D21B73B971FBB9DE0 /* Plugin.swift */,
@@ -954,7 +970,8 @@ HEAD
 >>>>>>> origin/feat/ios-model-management				C293AF27384130A66F8AFE77 /* MiniApp.swift */,
 				A0B593311C7429FF2825D031 /* MonitorModels.swift */,
 				BB6BCD8D1CBF7A72E2286396 /* NodesModels.swift */,
->>>>>>> origin/feat/ios-team-skills
+>>>>>>> origin/feat/ios-team-skills				1ED2C8BBD23DCB7F1AB08324 /* ProductDiscoveryItem.swift */,
+>>>>>>> origin/feat/products-discovery
 				D61E57FF032550F43AAC67BD /* Reply.swift */,
 				52277CD4E2534578A9E785F8 /* ReplyEvent.swift */,
 				8459DCBDC8777D04BF8EC4EB /* ReplyItem.swift */,
@@ -993,7 +1010,9 @@ HEAD
 				6D7F7C36815E346C8D89D692 /* Documents */,
 				7E07879AB588E834BD65090D /* History */,
 				4821018A9956AE2EAC939840 /* Onboarding */,
-				EBCEA8126863B2D5905CC35B /* Plugins */,
+HEAD
+				EBCEA8126863B2D5905CC35B /* Plugins */,				2D69ADA7982B049131BC156A /* ProductsDiscovery */,
+>>>>>>> origin/feat/products-discovery
 				DB959E979C81A3A654188B6C /* Projects */,
 				889710AD566824BA983FC0E5 /* Research */,
 				DDFF322C789AF15F6EA00CA3 /* Settings */,
@@ -1046,12 +1065,19 @@ HEAD
 			path = Cowork;
 			sourceTree = "<group>";
 		};
+HEAD
 		BFA17CD7AD3B600372B725A0 /* Swarm */ = {
 			isa = PBXGroup;
 			children = (
 				DE698D6F2346F12B0C8EDB6B /* Views */,
 			);
-			path = Swarm;
+			path = Swarm;		BAD3721D03A5774A073776BD /* Views */ = {
+			isa = PBXGroup;
+			children = (
+				75B881E71F6239389105F20F /* ProductsDiscoveryView.swift */,
+			);
+			path = Views;
+>>>>>>> origin/feat/products-discovery
 			sourceTree = "<group>";
 		};
 		C0B056C328EA330D52B056F0 /* ACI */ = {
@@ -1476,9 +1502,12 @@ HEAD
 				3BA3A701E147348083A9F5C9 /* PreferencesStore.swift in Sources */,
 HEAD
 HEAD
+HEAD
 				0D37C59E18600EC7F741B2E3 /* PrewarmManagerView.swift in Sources */,				7736F9534238046DA13B14B9 /* ProductsSettingsView.swift in Sources */,
 >>>>>>> origin/feat/ios-settings-products				0D37C59E18600EC7F741B2E3 /* PrewarmManagerView.swift in Sources */,
->>>>>>> origin/feat/ios-team-skills
+>>>>>>> origin/feat/ios-team-skills				17F40ADF875B8E29361DC58E /* ProductDiscoveryItem.swift in Sources */,
+				A22161996E0AE35458D5F21F /* ProductsDiscoveryView.swift in Sources */,
+>>>>>>> origin/feat/products-discovery
 				37461B42AB20995C665DD296 /* ProjectDetailView.swift in Sources */,
 				A462907889B0CB124DE22969 /* ProjectStore.swift in Sources */,
 				6247F7EC99AC623F8DECFA5D /* ProjectsClient.swift in Sources */,
