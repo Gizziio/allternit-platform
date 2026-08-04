@@ -1,40 +1,40 @@
 import SwiftUI
 
-/// Automation Tasks tab surface — Routines sub-view (Phase 2; Goals under
+/// Automation Tasks tab surface — Loops sub-view (Phase 3; Goals under
 /// `/v1/automations` is a later phase). Structural pattern mirrors
-/// `AutomationTasksListView`: search, row -> detail push, toolbar "+" opens
-/// a creation sheet. The Cron/Routines/Loops segmented control (top of all
+/// `RoutinesListView`: search, row -> detail push, toolbar "+" opens a
+/// creation sheet. The Cron/Routines/Loops segmented control (top of all
 /// three list views, bound to `modeStore.automationKind`) is what makes this
-/// reachable from the same "Automation Tasks" tab as Cron/Loops — see
-/// ChatView.swift's `.automation` case.
+/// reachable from the same "Automation Tasks" tab — see ChatView.swift's
+/// `.automation` case.
 ///
-/// Data: `RoutineStore.shared` over `GET v1/automations/routines` on
-/// gizzi-code's own server (RoutinesClient — same host as PtyClient/
-/// PermissionClient/CronClient, not the `allternit-api` relay ProjectsClient
+/// Data: `LoopStore.shared` over `GET v1/automations/loops` on gizzi-code's
+/// own server (LoopsClient — same host as PtyClient/PermissionClient/
+/// CronClient/RoutinesClient, not the `allternit-api` relay ProjectsClient
 /// uses).
-struct RoutinesListView: View {
+struct LoopsListView: View {
     @Binding var isSidebarOpen: Bool
 
     @EnvironmentObject private var modeStore: AppModeStore
-    @StateObject private var routineStore = RoutineStore.shared
+    @StateObject private var loopStore = LoopStore.shared
 
     @State private var searchText = ""
     /// Pushed detail (nil = list).
-    @State private var detailRoutine: Routine? = nil
+    @State private var detailLoop: Loop? = nil
     @State private var isCreateSheetPresented = false
     @State private var actionError: String? = nil
 
-    private var visibleRoutines: [Routine] {
+    private var visibleLoops: [Loop] {
         let query = searchText.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !query.isEmpty else { return routineStore.routines }
-        return routineStore.routines.filter { $0.name.localizedCaseInsensitiveContains(query) }
+        guard !query.isEmpty else { return loopStore.loops }
+        return loopStore.loops.filter { $0.command.localizedCaseInsensitiveContains(query) }
     }
 
     var body: some View {
         NavigationStack {
             VStack(spacing: 0) {
-                // Header (AutomationTasksListView's standalone-tab chrome:
-                // sidebar toggle + title + "+").
+                // Header (RoutinesListView's standalone-tab chrome: sidebar
+                // toggle + title + "+").
                 HStack {
                     Button(action: {
                         let generator = UIImpactFeedbackGenerator(style: .medium)
@@ -75,8 +75,8 @@ struct RoutinesListView: View {
 
                 Divider().background(Color("BorderSubtle"))
 
-                // Sibling entry point back into Cron — same tab as
-                // AutomationTasksListView's picker.
+                // Sibling entry point into Cron/Routines — same tab as the
+                // other two list views' pickers.
                 Picker("Automation kind", selection: $modeStore.automationKind) {
                     ForEach(AutomationKind.allCases, id: \.self) { kind in
                         Text(kind.rawValue).tag(kind)
@@ -90,17 +90,17 @@ struct RoutinesListView: View {
             }
             .background(Color("BgPrimary").edgesIgnoringSafeArea(.all))
             .toolbar(.hidden, for: .navigationBar)
-            .navigationDestination(item: $detailRoutine) { routine in
-                RoutineDetailView(routine: routine)
+            .navigationDestination(item: $detailLoop) { loop in
+                LoopDetailView(loop: loop)
             }
         }
         .sheet(isPresented: $isCreateSheetPresented) {
-            CreateRoutineSheet { name, steps, trigger, schedule in
-                createRoutine(name: name, steps: steps, trigger: trigger, schedule: schedule)
+            CreateLoopSheet { command, exitCondition, maxIterations in
+                createLoop(command: command, exitCondition: exitCondition, maxIterations: maxIterations)
             }
         }
         .task {
-            routineStore.fetchRoutinesIfNeeded()
+            loopStore.fetchLoopsIfNeeded()
         }
     }
 
@@ -109,14 +109,14 @@ struct RoutinesListView: View {
     @ViewBuilder
     private var content: some View {
         VStack(spacing: 0) {
-            if routineStore.isLoading && routineStore.routines.isEmpty {
+            if loopStore.isLoading && loopStore.loops.isEmpty {
                 Spacer()
                 ProgressView()
                 Spacer()
-            } else if let loadError = routineStore.loadError, routineStore.routines.isEmpty {
+            } else if let loadError = loopStore.loadError, loopStore.loops.isEmpty {
                 Spacer()
                 VStack(spacing: 12) {
-                    Text("Couldn't load routines")
+                    Text("Couldn't load loops")
                         .font(.subheadline)
                         .foregroundColor(Color("TextPrimary"))
                     Text(loadError)
@@ -124,14 +124,14 @@ struct RoutinesListView: View {
                         .foregroundColor(Color("TextSecondary"))
                         .multilineTextAlignment(.center)
                     Button("Retry") {
-                        routineStore.fetchRoutinesIfNeeded(force: true)
+                        loopStore.fetchLoopsIfNeeded(force: true)
                     }
                     .font(.subheadline)
                     .foregroundColor(Color("AccentPrimary"))
                 }
                 .padding(.horizontal, 20)
                 Spacer()
-            } else if routineStore.routines.isEmpty {
+            } else if loopStore.loops.isEmpty {
                 Spacer()
                 emptyState
                 Spacer()
@@ -147,7 +147,7 @@ struct RoutinesListView: View {
                 Image(systemName: "magnifyingglass")
                     .font(.subheadline)
                     .foregroundColor(Color("TextSecondary"))
-                TextField("Search routines", text: $searchText)
+                TextField("Search loops", text: $searchText)
                     .font(.subheadline)
                     .foregroundColor(Color("TextPrimary"))
                     .textInputAutocapitalization(.never)
@@ -178,15 +178,15 @@ struct RoutinesListView: View {
 
             ScrollView {
                 LazyVStack(spacing: 8) {
-                    ForEach(visibleRoutines) { routine in
-                        routineRow(routine)
+                    ForEach(visibleLoops) { loop in
+                        loopRow(loop)
                     }
-                    if visibleRoutines.isEmpty {
+                    if visibleLoops.isEmpty {
                         VStack(spacing: 10) {
                             Image(systemName: "magnifyingglass")
                                 .font(.system(size: 20, weight: .medium))
                                 .foregroundColor(Color("TextSecondary"))
-                            Text("No routines match.")
+                            Text("No loops match.")
                                 .font(.subheadline)
                                 .foregroundColor(Color("TextSecondary"))
                         }
@@ -198,34 +198,34 @@ struct RoutinesListView: View {
             }
             .scrollDismissesKeyboard(.interactively)
             .refreshable {
-                await routineStore.refresh()
+                await loopStore.refresh()
             }
         }
     }
 
-    private func routineRow(_ routine: Routine) -> some View {
+    private func loopRow(_ loop: Loop) -> some View {
         Button(action: {
             let generator = UIImpactFeedbackGenerator(style: .light)
             generator.impactOccurred()
-            detailRoutine = routine
+            detailLoop = loop
         }) {
             HStack(spacing: 12) {
-                Image(systemName: "list.bullet.rectangle")
+                Image(systemName: "repeat")
                     .font(.system(size: 15, weight: .medium))
                     .foregroundColor(Color("AccentPrimary"))
                     .frame(width: 28)
                 VStack(alignment: .leading, spacing: 2) {
-                    Text(routine.name)
-                        .font(.system(size: 14, weight: .medium))
+                    Text(loop.command)
+                        .font(.system(size: 13, weight: .medium, design: .monospaced))
                         .foregroundColor(Color("TextPrimary"))
                         .lineLimit(1)
-                    Text(Self.subtitleText(routine))
+                    Text(Self.subtitleText(loop))
                         .font(.caption)
                         .foregroundColor(Color("TextSecondary"))
                         .lineLimit(1)
                 }
                 Spacer()
-                Self.statusBadge(routine.state)
+                Self.statusBadge(loop.state)
                 Image(systemName: "chevron.right")
                     .font(.system(size: 11, weight: .bold))
                     .foregroundColor(Color("TextSecondary"))
@@ -245,7 +245,7 @@ struct RoutinesListView: View {
 
     private var emptyState: some View {
         VStack(spacing: 16) {
-            Image(systemName: "list.bullet.rectangle")
+            Image(systemName: "repeat")
                 .font(.system(size: 24, weight: .medium))
                 .foregroundColor(Color("TextSecondary"))
                 .frame(width: 56, height: 56)
@@ -255,7 +255,7 @@ struct RoutinesListView: View {
                     RoundedRectangle(cornerRadius: Theme.radiusLG)
                         .stroke(Theme.borderWarmDefault, lineWidth: 1)
                 )
-            Text("Chain a few commands into a named routine you can run on demand, anytime.")
+            Text("Run a command on repeat until it exits clean or hits its iteration cap.")
                 .font(.subheadline)
                 .foregroundColor(Color("TextSecondary"))
                 .multilineTextAlignment(.center)
@@ -265,7 +265,7 @@ struct RoutinesListView: View {
                 generator.impactOccurred()
                 isCreateSheetPresented = true
             }) {
-                Text("Create routine")
+                Text("Create loop")
                     .font(.system(size: 13, weight: .semibold))
                     .foregroundColor(Color("TextPrimary"))
                     .padding(.horizontal, 14)
@@ -279,32 +279,34 @@ struct RoutinesListView: View {
 
     // MARK: - Actions
 
-    private func createRoutine(name: String, steps: [RoutineStep], trigger: String?, schedule: String?) {
+    private func createLoop(command: String, exitCondition: String?, maxIterations: Int) {
         Task {
             do {
-                try await routineStore.createRoutine(name: name, steps: steps, trigger: trigger, schedule: schedule)
+                try await loopStore.createLoop(command: command, exitCondition: exitCondition, maxIterations: maxIterations)
             } catch {
-                actionError = "Couldn't create the routine: \(error.localizedDescription)"
+                actionError = "Couldn't create the loop: \(error.localizedDescription)"
             }
         }
     }
 
-    // MARK: - Formatting (shared with RoutineDetailView)
+    // MARK: - Formatting (shared with LoopDetailView)
 
-    /// Status badge colors mirroring AutomationTasksListView's convention,
-    /// adapted to routine `state` values (defined/running/completed/failed,
-    /// routine-engine.ts:12,64-74).
+    /// Status badge colors mirroring RoutinesListView's convention, adapted
+    /// to loop `state` values (running/succeeded/max_iterations,
+    /// loop-engine.ts:19,72-105) — `max_iterations` means it ran out of
+    /// attempts without its exit condition firing, so it reads as a warning
+    /// rather than a hard failure.
     static func statusColor(_ state: String) -> Color {
         switch state {
         case "running": return Theme.statusInfo
-        case "completed": return Theme.statusSuccess
-        case "failed": return .red
+        case "succeeded": return Theme.statusSuccess
+        case "max_iterations": return Theme.statusWarning
         default: return Color("TextSecondary")
         }
     }
 
     private static func statusBadge(_ state: String) -> some View {
-        Text(state.capitalized)
+        Text(Self.stateLabel(state))
             .font(.caption2)
             .fontWeight(.semibold)
             .foregroundColor(statusColor(state))
@@ -314,25 +316,23 @@ struct RoutinesListView: View {
             .clipShape(Capsule())
     }
 
-    private static func subtitleText(_ routine: Routine) -> String {
+    private static func stateLabel(_ state: String) -> String {
+        state == "max_iterations" ? "Max iterations" : state.capitalized
+    }
+
+    private static func subtitleText(_ loop: Loop) -> String {
         var parts: [String] = []
-        let stepCount = routine.steps.count
-        parts.append(stepCount == 1 ? "1 step" : "\(stepCount) steps")
-        if let trigger = routine.trigger, !trigger.isEmpty {
-            parts.append(trigger)
-        } else if let schedule = routine.schedule, !schedule.isEmpty {
-            parts.append(schedule)
+        let count = loop.iterationLog.count
+        parts.append("\(count)/\(loop.maxIterations) iterations")
+        if let exitCondition = loop.exitCondition, !exitCondition.isEmpty {
+            parts.append(exitCondition)
         }
         return parts.joined(separator: " · ")
     }
 
-    /// `time_created`/`time_updated` are ms-epoch numbers (automations.ts:
-    /// 147-148), unlike cron's ISO-8601 strings.
+    /// `time_created`/`time_updated` are ms-epoch numbers, same convention
+    /// as Routine (RoutinesListView.relativeText).
     static func relativeText(_ msEpoch: Double?) -> String? {
-        guard let msEpoch else { return nil }
-        let date = Date(timeIntervalSince1970: msEpoch / 1000)
-        let formatter = RelativeDateTimeFormatter()
-        formatter.unitsStyle = .abbreviated
-        return formatter.localizedString(for: date, relativeTo: Date())
+        RoutinesListView.relativeText(msEpoch)
     }
 }

@@ -57,10 +57,10 @@ final class AppModeStore: ObservableObject {
     @Published var activeTab: ModeBarItem
 
     /// Which sub-surface the Automation Tasks tab shows: cron jobs
-    /// (`/v1/cron`, Phase 1) or routines (`/v1/automations/routines`,
-    /// Phase 2). Both `AutomationTasksListView` and `RoutinesListView` read/
-    /// write this via a shared segmented control so either one is reachable
-    /// from the same tab rather than needing a separate nav item.
+    /// (`/v1/cron`, Phase 1), routines (`/v1/automations/routines`, Phase 2),
+    /// or loops (`/v1/automations/loops`, Phase 3). All three list views
+    /// read/write this via a shared segmented control so any one is
+    /// reachable from the same tab rather than needing a separate nav item.
     @Published var automationKind: AutomationKind = .cron
 
     init(defaults: UserDefaults = .standard) {
@@ -135,8 +135,9 @@ enum ModeBarItem: CaseIterable {
     }
 }
 
-/// The two sub-surfaces of the Automation Tasks tab (`ModeBarItem.automation`).
+/// The sub-surfaces of the Automation Tasks tab (`ModeBarItem.automation`).
 enum AutomationKind: String, CaseIterable {
     case cron = "Cron"
     case routines = "Routines"
+    case loops = "Loops"
 }

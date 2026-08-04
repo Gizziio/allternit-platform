@@ -1,12 +1,12 @@
 import SwiftUI
 
-/// Automation Tasks tab surface — the Cron sub-view (Phase 1). Loops/Goals
-/// under `/v1/automations` are later phases; Routines (Phase 2) is its
-/// sibling, `RoutinesListView`, reachable via the Cron/Routines segmented
-/// control below the header — see `modeStore.automationKind` and
-/// ChatView.swift's `.automation` case. Structural pattern from
-/// `ProjectsListView`: search + status segmented control, row → detail push,
-/// toolbar "+" opens a creation sheet.
+/// Automation Tasks tab surface — the Cron sub-view (Phase 1). Goals under
+/// `/v1/automations` is a later phase; Routines (Phase 2) and Loops
+/// (Phase 3) are its siblings, `RoutinesListView`/`LoopsListView`, reachable
+/// via the Cron/Routines/Loops segmented control below the header — see
+/// `modeStore.automationKind` and ChatView.swift's `.automation` case.
+/// Structural pattern from `ProjectsListView`: search + status segmented
+/// control, row → detail push, toolbar "+" opens a creation sheet.
 ///
 /// Data: `CronJobStore.shared` over `GET v1/cron/jobs` on gizzi-code's own
 /// server (CronClient — same host as PtyClient/PermissionClient, not the

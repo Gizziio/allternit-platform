@@ -79,6 +79,8 @@ struct MainWorkspaceView: View {
                                 AutomationTasksListView(isSidebarOpen: $isSidebarOpen)
                             case .routines:
                                 RoutinesListView(isSidebarOpen: $isSidebarOpen)
+                            case .loops:
+                                LoopsListView(isSidebarOpen: $isSidebarOpen)
                             }
                         case .code:
                             CodeModeView(isSidebarOpen: $isSidebarOpen, selectedSessionId: $selectedSessionId)
