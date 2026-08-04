@@ -57,6 +57,7 @@ import cowork from './commands/cowork/index.js'
 import coworkProject from './commands/cowork-project/index.js'
 import artifact from './commands/artifact/index.js'
 import swarm from './commands/swarm/index.js'
+import ontology from './commands/ontology/index.js'
 
 function safeRequire(path: string) {
   try {
@@ -283,6 +284,7 @@ const COMMANDS = memoize((): Command[] => [
   cowork,
   coworkProject,
   swarm,
+  ontology,
   context,
   contextNonInteractive,
   cost,
