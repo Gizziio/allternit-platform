@@ -22,11 +22,13 @@ describe('LocalModelManager provider switch', () => {
   let server: http.Server;
   let baseUrl: string;
   let requests: RecordedRequest[];
+HEAD
   let requestTimestamps: number[];
   let arrivalOffsets: number[];
   let failWithStatus: number | null;
   let failMlxWithStatus: number | null;
-  let responseDelay: number;
+  let responseDelay: number;  let failWithStatus: number | null;
+>>>>>>> origin/ao/mlxmem
 
   const savedEnv = { ...process.env };
 
@@ -34,13 +36,16 @@ describe('LocalModelManager provider switch', () => {
     server = http.createServer((req, res) => {
       let raw = '';
       req.on('data', (chunk) => (raw += chunk));
-      req.on('end', async () => {
+HEAD
+      req.on('end', async () => {      req.on('end', () => {
+>>>>>>> origin/ao/mlxmem
         let body: any = null;
         try {
           body = raw ? JSON.parse(raw) : null;
         } catch {
           body = raw;
         }
+HEAD
         const startedAt = Date.now();
         requests.push({ url: req.url || '', method: req.method || '', body });
         arrivalOffsets.push(startedAt);
@@ -55,12 +60,17 @@ describe('LocalModelManager provider switch', () => {
         const shouldFailAll = failWithStatus !== null;
         if (shouldFailMlx || shouldFailAll) {
           const status = shouldFailMlx ? failMlxWithStatus! : failWithStatus!;
-          res.writeHead(status, { 'Content-Type': 'application/json' });
+          res.writeHead(status, { 'Content-Type': 'application/json' });        requests.push({ url: req.url || '', method: req.method || '', body });
+
+        if (failWithStatus !== null) {
+          res.writeHead(failWithStatus, { 'Content-Type': 'application/json' });
+>>>>>>> origin/ao/mlxmem
           res.end(JSON.stringify({ error: 'stub failure' }));
           return;
         }
 
         if (req.url === '/v1/chat/completions') {
+HEAD
           const isEnrichment = JSON.stringify(body?.messages || '').includes('schema');
           res.writeHead(200, { 'Content-Type': 'application/json' });
           res.end(
@@ -77,7 +87,11 @@ describe('LocalModelManager provider switch', () => {
                       })
                     : 'mlx-response',
                 },
-              }],
+              }],          res.writeHead(200, { 'Content-Type': 'application/json' });
+          res.end(
+            JSON.stringify({
+              choices: [{ message: { role: 'assistant', content: 'mlx-response' } }],
+>>>>>>> origin/ao/mlxmem
             })
           );
         } else if (req.url === '/api/chat') {
@@ -107,6 +121,7 @@ describe('LocalModelManager provider switch', () => {
 
   beforeEach(() => {
     requests = [];
+HEAD
     requestTimestamps = [];
     arrivalOffsets = [];
     failWithStatus = null;
@@ -115,7 +130,10 @@ describe('LocalModelManager provider switch', () => {
     delete process.env.MEMORY_LLM_BASE_URL;
     delete process.env.MEMORY_LLM_MODEL;
     delete process.env.MEMORY_LLM_BREAKER_THRESHOLD;
-    delete process.env.MEMORY_LLM_BREAKER_COOLDOWN_MS;
+    delete process.env.MEMORY_LLM_BREAKER_COOLDOWN_MS;    failWithStatus = null;
+    delete process.env.MEMORY_LLM_BASE_URL;
+    delete process.env.MEMORY_LLM_MODEL;
+>>>>>>> origin/ao/mlxmem
   });
 
   afterEach(() => {
@@ -175,6 +193,7 @@ describe('LocalModelManager provider switch', () => {
     expect(requests.filter((r) => r.url === '/v1/chat/completions')).toHaveLength(0);
   });
 
+HEAD
   it('falls back to Ollama when the MLX endpoint returns non-2xx', async () => {
     process.env.MEMORY_LLM_BASE_URL = `${baseUrl}/v1`;
     failMlxWithStatus = 500;
@@ -269,13 +288,38 @@ describe('LocalModelManager provider switch', () => {
 
     // Exactly one additional MLX probe was made, not two.
     expect(requests.filter((r) => r.url === '/v1/chat/completions')).toHaveLength(2);
-    expect(requests.filter((r) => r.url === '/api/chat')).toHaveLength(3);
+    expect(requests.filter((r) => r.url === '/api/chat')).toHaveLength(3);  it('fails with endpoint + status on non-2xx and never falls back to Ollama', async () => {
+    process.env.MEMORY_LLM_BASE_URL = `${baseUrl}/v1`;
+    failWithStatus = 500;
+
+    const manager = new LocalModelManager();
+    await expect(manager.generate('hello')).rejects.toThrow(
+      `${baseUrl}/v1/chat/completions`
+    );
+    await expect(manager.generate('hello')).rejects.toThrow('HTTP 500');
+
+    // Still no Ollama fallback
+    expect(requests.filter((r) => r.url === '/api/chat')).toHaveLength(0);
+  });
+
+  it('fails clearly when the MLX endpoint is unreachable (no fallback)', async () => {
+    // Port 1 is never listening
+    process.env.MEMORY_LLM_BASE_URL = 'http://127.0.0.1:1/v1';
+
+    const manager = new LocalModelManager();
+    await expect(manager.generate('hello')).rejects.toThrow(
+      'http://127.0.0.1:1/v1/chat/completions'
+    );
+
+    expect(requests.filter((r) => r.url === '/api/chat')).toHaveLength(0);
+>>>>>>> origin/ao/mlxmem
   });
 
   it('keeps embeddings on Ollama even when MEMORY_LLM_BASE_URL is set', async () => {
     process.env.MEMORY_LLM_BASE_URL = `${baseUrl}/v1`;
 
     // VectorStore owns the embeddings path and is hardcoded to Ollama at
+HEAD
     // localhost:11434. Stub the embed call so the test is deterministic
     // regardless of whether a real Ollama server is running.
     const vectorStore = new VectorStore();
@@ -370,6 +414,14 @@ describe('LocalModelManager provider switch', () => {
     expect(result.mlx?.content).toBe('mlx-response');
     expect(result.ollama?.content).toBe('ollama-response');
     expect(result.mlx?.latencyMs).toBeGreaterThanOrEqual(0);
-    expect(result.ollama?.latencyMs).toBeGreaterThanOrEqual(0);
+    expect(result.ollama?.latencyMs).toBeGreaterThanOrEqual(0);    // localhost:11434. With nothing listening there, embed() returns []
+    // (its documented failure mode) — the point is it never touches the
+    // configured MLX endpoint.
+    const vectorStore = new VectorStore();
+    const embedding = await vectorStore.embed('test text');
+
+    expect(embedding).toEqual([]);
+    expect(requests).toHaveLength(0);
+>>>>>>> origin/ao/mlxmem
   });
 });

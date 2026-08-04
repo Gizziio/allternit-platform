@@ -29,6 +29,20 @@ interface ChatMessage {
 }
 
 /**
+ * Optional OpenAI-compatible generation provider config.
+ * Values default to the MEMORY_LLM_BASE_URL / MEMORY_LLM_MODEL env vars.
+ */
+export interface LLMProviderConfig {
+  baseUrl?: string;
+  model?: string;
+}
+
+interface ChatMessage {
+  role: 'system' | 'user';
+  content: string;
+}
+
+/**
  * Model configuration
  */
 export interface ModelConfig {
@@ -98,6 +112,7 @@ export class LocalModelManager {
   private ollama: Ollama;
   private llmBaseUrl?: string;
   private llmModel: string;
+HEAD
   // MLX/local OpenAI-compatible servers (e.g. mlx_lm.server) are often
   // single-threaded and deadlock or serialize poorly under concurrent load.
   // Queue generation requests so only one hits the server at a time.
@@ -126,11 +141,13 @@ export class LocalModelManager {
     enrichment: { localFallbacks: 0 },
   };
 
+>>>>>>> origin/ao/mlxmem
   constructor(host: string = 'localhost', port: number = 11434, llm?: LLMProviderConfig) {
     this.ollama = new Ollama({ host: `http://${host}:${port}` });
     const baseUrl = llm?.baseUrl ?? process.env.MEMORY_LLM_BASE_URL;
     this.llmBaseUrl = baseUrl ? baseUrl.replace(/\/+$/, '') : undefined;
     this.llmModel = llm?.model ?? process.env.MEMORY_LLM_MODEL ?? 'qwen3-4b-instruct';
+HEAD
     this.breakerThreshold = Math.max(1, parseInt(process.env.MEMORY_LLM_BREAKER_THRESHOLD || '3', 10));
     this.breakerCooldownMs = Math.max(0, parseInt(process.env.MEMORY_LLM_BREAKER_COOLDOWN_MS || '60000', 10));
   }
@@ -145,6 +162,7 @@ export class LocalModelManager {
     // until this one finishes, but don't let a rejection break the chain.
     this.llmQueue = result.catch(() => undefined);
     return result;
+>>>>>>> origin/ao/mlxmem
   }
 
   /**
@@ -168,9 +186,11 @@ export class LocalModelManager {
           max_tokens: modelConfig.numPredict,
           stream: false,
         }),
+HEAD
         // Generations can be slow; 2m is generous without letting a hung
         // server wedge the serialized queue forever.
         signal: AbortSignal.timeout(120_000),
+>>>>>>> origin/ao/mlxmem
       });
     } catch (error) {
       throw new Error(
@@ -190,6 +210,7 @@ export class LocalModelManager {
       throw new Error(`OpenAI-compatible provider at ${endpoint} returned an unexpected response shape`);
     }
     return content;
+HEAD
   }
 
   /**
@@ -291,6 +312,7 @@ export class LocalModelManager {
       },
     });
     return response.message.content;
+>>>>>>> origin/ao/mlxmem
   }
 
   /**
@@ -356,7 +378,9 @@ export class LocalModelManager {
     prompt: string,
     systemPrompt?: string,
     config?: Partial<ModelConfig>
-  ): Promise<{ content: string; backend: 'mlx' | 'ollama' }> {
+HEAD
+  ): Promise<{ content: string; backend: 'mlx' | 'ollama' }> {  ): Promise<string> {
+>>>>>>> origin/ao/mlxmem
     const modelConfig = config?.name
       ? { ...MODEL_PRESETS.ingest, ...config }
       : MODEL_PRESETS.ingest;
@@ -365,6 +389,22 @@ export class LocalModelManager {
       ...(systemPrompt ? [{ role: 'system' as const, content: systemPrompt }] : []),
       { role: 'user' as const, content: prompt },
     ];
+HEAD
+    if (this.llmBaseUrl) {
+      return this.openAIChat(messages, modelConfig);
+    }
+
+    try {
+      const response: ChatResponse = await this.ollama.chat({
+        model: modelConfig.name,
+        messages,
+        options: {
+          temperature: modelConfig.temperature,
+          top_p: modelConfig.topP,
+          num_predict: modelConfig.numPredict,
+        },
+      });
+>>>>>>> origin/ao/mlxmem
 
     const startMs = Date.now();
     const probingMlx = this.mlxAllowed();
@@ -429,6 +469,7 @@ export class LocalModelManager {
       { role: 'user' as const, content: prompt },
     ];
 
+HEAD
     const probingMlx = this.mlxAllowed();
     if (probingMlx) {
       try {
@@ -445,7 +486,14 @@ export class LocalModelManager {
       }
     }
 
-    this.logBackend('ollama');
+    this.logBackend('ollama');    if (this.llmBaseUrl) {
+      // MLX path: the OpenAI-compatible endpoint is called non-streaming;
+      // the full response is yielded as a single chunk (interface preserved).
+      yield await this.openAIChat(messages, modelConfig);
+      return;
+    }
+
+>>>>>>> origin/ao/mlxmem
     try {
       const stream = await this.ollama.chat({
         model: modelConfig.name,

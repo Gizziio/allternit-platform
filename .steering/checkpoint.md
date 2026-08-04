@@ -3,6 +3,7 @@
 ## Goal
 
 HEAD
+HEAD
 Automation Tasks (iOS) Phase 3: build Loops as an iOS sibling surface to the
 already-shipped Phase 1 cron and Phase 2 routines implementations, backed by
 the already-existing `v1/automations/loops` backend (no backend changes).
@@ -60,10 +61,31 @@ Spec: `docs/AUTOMATION_TASKS_PHASE_3_TASK.md`.
 `.pipeline/queue/memory-bulk-fast-ingest.md`): when `POST /api/ingest` carries
 `metadata.mode: "bulk"`, skip LLM enrichment, store the memory with raw content,
 and keep it searchable; normal ingest pipeline remains unchanged; metadata
-(source, trust_tier, provenance_ref) is preserved.
+(source, trust_tier, provenance_ref) is preserved.MLX provider switch in the memory agent (spec: .steering/spec.md R1–R4, task:
+docs/MLX_PROVIDER_TASK.md): when `MEMORY_LLM_BASE_URL` is set, generation goes
+to the OpenAI-compatible endpoint (`{base}/chat/completions`, model from
+`MEMORY_LLM_MODEL` default `qwen3-4b-instruct`) via plain fetch; embeddings
+stay on Ollama; no silent fallback; then NOTES + sentinel + prescribed commit.
 
 ## Just did
 
+- Implemented the provider switch in `local-model.ts`: optional 3rd ctor arg
+  `{ baseUrl?, model? }` → env fallback; private `openAIChat()` via plain
+  fetch to `{base}/chat/completions` (OpenAI shape, preset sampling params);
+  branch in `generate()`/`generateStream()`. MODEL_PRESETS untouched;
+  embeddings untouched (vector-store.ts owns its own Ollama client).
+- R3 errors include endpoint + HTTP status; no Ollama fallback mid-config.
+- Added `src/models/local-model.test.ts` (vitest + node:http stub): 6/6 pass
+  — MLX request shape, default model name, default-unchanged Ollama path,
+  non-2xx + unreachable-endpoint errors, embeddings-stay-Ollama.
+- Targeted `tsc --noEmit --strict` clean.
+- Boot check documented (better-sqlite3 native build broken on Node v26,
+  pre-existing). Wrote docs/MLX_PROVIDER_NOTES.md + sentinel.
+>>>>>>> origin/ao/mlxmem
+
+## Just did
+
+HEAD
 - Implemented bulk mode in `services/memory/agent/src/ingest-agent.ts`:
   detects `metadata.mode === "bulk"`, sets summary to the first 500 characters
   of content, entities/topics to empty arrays, importance to `"medium"`, and
@@ -84,7 +106,10 @@ and keep it searchable; normal ingest pipeline remains unchanged; metadata
   with Node v24 (`/opt/homebrew/opt/node@24/bin`); default shell Node v26 cannot
   load or compile the binding.
 - Wrote `docs/BUILD_MEMORY_BULK_FAST_INGEST_NOTES.md` and touched the sentinel.
->>>>>>> origin/ao/build-memory-bulk-fast-ingest
+>>>>>>> origin/ao/build-memory-bulk-fast-ingestThe prescribed commit:
+`git add services/memory/agent docs .steering && git commit -m "feat(memory): OpenAI-compatible provider for generation (MLX path)"`.
+Fix and retry if the gate blocks.
+>>>>>>> origin/ao/mlxmem
 
 ## Files changed
 
