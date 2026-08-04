@@ -57,7 +57,9 @@ import cowork from './commands/cowork/index.js'
 import coworkProject from './commands/cowork-project/index.js'
 import artifact from './commands/artifact/index.js'
 import swarm from './commands/swarm/index.js'
-import ontology from './commands/ontology/index.js'
+HEAD
+import ontology from './commands/ontology/index.js'import directive from './commands/directive/index.js'
+>>>>>>> origin/feat/gizzi-directive-compiler
 
 function safeRequire(path: string) {
   try {
@@ -284,7 +286,9 @@ const COMMANDS = memoize((): Command[] => [
   cowork,
   coworkProject,
   swarm,
-  ontology,
+HEAD
+  ontology,  directive,
+>>>>>>> origin/feat/gizzi-directive-compiler
   context,
   contextNonInteractive,
   cost,
