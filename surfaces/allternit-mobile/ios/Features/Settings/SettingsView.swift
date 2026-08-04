@@ -28,6 +28,8 @@ struct SettingsView: View {
     @State private var isMemoryPresented = false
     /// Pushed Compute Billing settings (Plans & Compute parity).
     @State private var isComputeBillingPresented = false
+    /// Pushed Infrastructure settings (Settings > Infrastructure parity).
+    @State private var isInfrastructurePresented = false
     /// Pushed custom-instructions editor (Agent section).
     @State private var isInstructionsPresented = false
     /// Pushed Monitor view (infra section).
@@ -86,6 +88,7 @@ struct SettingsView: View {
                 #if DEBUG
                 brainSpikeSection
                 #endif
+                infrastructureSection
                 aboutSection
                     // Anchor for the `-open-settings-data` DEBUG scroll.
                     .id("aboutSection")
@@ -105,6 +108,9 @@ struct SettingsView: View {
             }
             .navigationDestination(isPresented: $isComputeBillingPresented) {
                 ComputeBillingView()
+            }
+            .navigationDestination(isPresented: $isInfrastructurePresented) {
+                InfrastructureSettingsView()
             }
             .navigationDestination(isPresented: $isInstructionsPresented) {
                 CustomInstructionsView()
@@ -726,6 +732,35 @@ struct SettingsView: View {
         }
     }
     #endif
+
+    // MARK: - Infrastructure
+
+    @ViewBuilder
+    private var infrastructureSection: some View {
+        Section {
+            Button(action: {
+                let generator = UIImpactFeedbackGenerator(style: .light)
+                generator.impactOccurred()
+                isInfrastructurePresented = true
+            }) {
+                HStack {
+                    Text("Infrastructure")
+                        .font(.subheadline)
+                        .foregroundColor(Color("TextPrimary"))
+                    Spacer()
+                    Image(systemName: "chevron.right")
+                        .font(.system(size: 11, weight: .bold))
+                        .foregroundColor(Color("TextSecondary"))
+                }
+                .contentShape(Rectangle())
+            }
+            .buttonStyle(.plain)
+        } header: {
+            Text("Infrastructure")
+        } footer: {
+            Text("Environment, cloud instances, mesh, BYOC, security, and agents.")
+        }
+    }
 
     // MARK: - About
 
