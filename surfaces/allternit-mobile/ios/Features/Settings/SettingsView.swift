@@ -30,12 +30,15 @@ struct SettingsView: View {
     @State private var isComputeBillingPresented = false
 HEAD
 HEAD
+HEAD
     /// Pushed Platform settings (Settings > Platform parity).
     @State private var isPlatformPresented = false    /// Pushed Products settings (Settings > Products parity).
     @State private var isProductsPresented = false
 >>>>>>> origin/feat/ios-settings-products    /// Pushed Infrastructure settings (Settings > Infrastructure parity).
     @State private var isInfrastructurePresented = false
->>>>>>> origin/feat/ios-settings-infrastructure
+>>>>>>> origin/feat/ios-settings-infrastructure    /// Pushed Model Management view.
+    @State private var isModelManagementPresented = false
+>>>>>>> origin/feat/ios-model-management
     /// Pushed custom-instructions editor (Agent section).
     @State private var isInstructionsPresented = false
     /// Pushed Monitor view (infra section).
@@ -87,6 +90,7 @@ HEAD
                 platformSection
                 capabilitiesSection
                 agentSection
+                modelsSection
                 memorySection
                 productsSection
                 voiceSection
@@ -119,12 +123,15 @@ HEAD
             }
 HEAD
 HEAD
+HEAD
             .navigationDestination(isPresented: $isPlatformPresented) {
                 PlatformSettingsView()            .navigationDestination(isPresented: $isProductsPresented) {
                 ProductsSettingsView()
 >>>>>>> origin/feat/ios-settings-products            .navigationDestination(isPresented: $isInfrastructurePresented) {
                 InfrastructureSettingsView()
->>>>>>> origin/feat/ios-settings-infrastructure
+>>>>>>> origin/feat/ios-settings-infrastructure            .navigationDestination(isPresented: $isModelManagementPresented) {
+                ModelManagementView()
+>>>>>>> origin/feat/ios-model-management
             }
             .navigationDestination(isPresented: $isInstructionsPresented) {
                 CustomInstructionsView()
@@ -535,6 +542,35 @@ HEAD
             get: { preferences.responseStyle },
             set: { preferences.save(style: $0, instructions: preferences.customInstructions) }
         )
+    }
+
+    // MARK: - Models
+
+    @ViewBuilder
+    private var modelsSection: some View {
+        Section {
+            Button(action: {
+                let generator = UIImpactFeedbackGenerator(style: .light)
+                generator.impactOccurred()
+                isModelManagementPresented = true
+            }) {
+                HStack {
+                    Text("Models & Engines")
+                        .font(.subheadline)
+                        .foregroundColor(Color("TextPrimary"))
+                    Spacer()
+                    Image(systemName: "chevron.right")
+                        .font(.system(size: 11, weight: .bold))
+                        .foregroundColor(Color("TextSecondary"))
+                }
+                .contentShape(Rectangle())
+            }
+            .buttonStyle(.plain)
+        } header: {
+            Text("Models")
+        } footer: {
+            Text("Manage cloud model providers and local runtimes.")
+        }
     }
 
     // MARK: - Memory
