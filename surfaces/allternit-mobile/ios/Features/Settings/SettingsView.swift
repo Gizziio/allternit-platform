@@ -28,6 +28,8 @@ struct SettingsView: View {
     @State private var isMemoryPresented = false
     /// Pushed custom-instructions editor (Agent section).
     @State private var isInstructionsPresented = false
+    /// Pushed Monitor view (infra section).
+    @State private var isMonitorPresented = false
     #if DEBUG
     /// Pushed Brain Spike screen (DEBUG-only D3 spike section).
     @State private var isBrainSpikePresented = false
@@ -66,6 +68,7 @@ struct SettingsView: View {
                 voiceSection
                 dataControlsSection
                 meshSection
+                infraSection
                 #if DEBUG
                 brainSpikeSection
                 #endif
@@ -88,6 +91,9 @@ struct SettingsView: View {
             }
             .navigationDestination(isPresented: $isInstructionsPresented) {
                 CustomInstructionsView()
+            }
+            .navigationDestination(isPresented: $isMonitorPresented) {
+                MonitorView()
             }
             #if DEBUG
             .navigationDestination(isPresented: $isBrainSpikePresented) {
@@ -611,6 +617,21 @@ struct SettingsView: View {
             Text("Mesh")
         } footer: {
             Text("Embedded tsnet node → \(AppConfig.meshControlURL). Same directory = same node identity across launches.")
+        }
+    }
+
+    // MARK: - Infra
+
+    @ViewBuilder
+    private var infraSection: some View {
+        Section {
+            Button(action: { isMonitorPresented = true }) {
+                bulkRowLabel("Monitor", systemImage: "chart.line.uptrend.xyaxis")
+            }
+        } header: {
+            Text("Infrastructure")
+        } footer: {
+            Text("Live view of agents, system metrics, and logs.")
         }
     }
 
