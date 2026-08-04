@@ -29,10 +29,13 @@ struct SettingsView: View {
     /// Pushed Compute Billing settings (Plans & Compute parity).
     @State private var isComputeBillingPresented = false
 HEAD
+HEAD
     /// Pushed Platform settings (Settings > Platform parity).
     @State private var isPlatformPresented = false    /// Pushed Products settings (Settings > Products parity).
     @State private var isProductsPresented = false
->>>>>>> origin/feat/ios-settings-products
+>>>>>>> origin/feat/ios-settings-products    /// Pushed Infrastructure settings (Settings > Infrastructure parity).
+    @State private var isInfrastructurePresented = false
+>>>>>>> origin/feat/ios-settings-infrastructure
     /// Pushed custom-instructions editor (Agent section).
     @State private var isInstructionsPresented = false
     /// Pushed Monitor view (infra section).
@@ -93,6 +96,7 @@ HEAD
                 #if DEBUG
                 brainSpikeSection
                 #endif
+                infrastructureSection
                 aboutSection
                     // Anchor for the `-open-settings-data` DEBUG scroll.
                     .id("aboutSection")
@@ -114,10 +118,13 @@ HEAD
                 ComputeBillingView()
             }
 HEAD
+HEAD
             .navigationDestination(isPresented: $isPlatformPresented) {
                 PlatformSettingsView()            .navigationDestination(isPresented: $isProductsPresented) {
                 ProductsSettingsView()
->>>>>>> origin/feat/ios-settings-products
+>>>>>>> origin/feat/ios-settings-products            .navigationDestination(isPresented: $isInfrastructurePresented) {
+                InfrastructureSettingsView()
+>>>>>>> origin/feat/ios-settings-infrastructure
             }
             .navigationDestination(isPresented: $isInstructionsPresented) {
                 CustomInstructionsView()
@@ -797,6 +804,35 @@ HEAD
         }
     }
     #endif
+
+    // MARK: - Infrastructure
+
+    @ViewBuilder
+    private var infrastructureSection: some View {
+        Section {
+            Button(action: {
+                let generator = UIImpactFeedbackGenerator(style: .light)
+                generator.impactOccurred()
+                isInfrastructurePresented = true
+            }) {
+                HStack {
+                    Text("Infrastructure")
+                        .font(.subheadline)
+                        .foregroundColor(Color("TextPrimary"))
+                    Spacer()
+                    Image(systemName: "chevron.right")
+                        .font(.system(size: 11, weight: .bold))
+                        .foregroundColor(Color("TextSecondary"))
+                }
+                .contentShape(Rectangle())
+            }
+            .buttonStyle(.plain)
+        } header: {
+            Text("Infrastructure")
+        } footer: {
+            Text("Environment, cloud instances, mesh, BYOC, security, and agents.")
+        }
+    }
 
     // MARK: - About
 

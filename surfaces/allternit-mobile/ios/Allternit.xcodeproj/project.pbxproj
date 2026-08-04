@@ -48,6 +48,7 @@
 		2A9E86E6D57F54104F2A5385 /* NodesClient.swift in Sources */ = {isa = PBXBuildFile; fileRef = A30ED6FB8687860800A24AA0 /* NodesClient.swift */; };
 		2AF88D8EAD207BC7586A817D /* ArtifactContentLoader.swift in Sources */ = {isa = PBXBuildFile; fileRef = 03E34A99F6B335FE86510DB1 /* ArtifactContentLoader.swift */; };
 		2CEE9C83C47EEEAFDCE4ED2B /* Runestone in Frameworks */ = {isa = PBXBuildFile; productRef = A8A3C701861EEE87CDB63E1F /* Runestone */; };
+		2D1337256108FD734CA46EAE /* InfrastructureSettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6E79642FCCC464D9E8C120AB /* InfrastructureSettingsView.swift */; };
 		2D730B78F2D9F3C134683690 /* ToolOptionsStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = E10652B6A3C4031AC35E7A7D /* ToolOptionsStore.swift */; };
 		2E46FBCE540795234E4CCC06 /* AppConfig.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6D086E0C0BC3296625734880 /* AppConfig.swift */; };
 		30284AD93DE741661CFE2A5B /* AgentActivityListView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 49127E0CD8EAED365F17FDD6 /* AgentActivityListView.swift */; };
@@ -304,6 +305,7 @@ HEAD
 		6BF08861508C7252E3641B3A /* NewProjectSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NewProjectSheet.swift; sourceTree = "<group>"; };
 		6C9D2168F881D9954CD7FB76 /* ResearchNotebook.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ResearchNotebook.swift; sourceTree = "<group>"; };
 		6D086E0C0BC3296625734880 /* AppConfig.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppConfig.swift; sourceTree = "<group>"; };
+		6E79642FCCC464D9E8C120AB /* InfrastructureSettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = InfrastructureSettingsView.swift; sourceTree = "<group>"; };
 		6FF93BF3011FB990CFCC5926 /* PreferencesClient.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PreferencesClient.swift; sourceTree = "<group>"; };
 		7033B3B07143C73EBE3EA4EC /* AgentSummary.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AgentSummary.swift; sourceTree = "<group>"; };
 		7355CA3620D382F4B41E9531 /* VPSServersManagerView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VPSServersManagerView.swift; sourceTree = "<group>"; };
@@ -975,7 +977,9 @@ HEAD
 				DC54C20A256A93666E1DA7F7 /* CloudDeployManagerView.swift */,
 				49BD4448061E87D93BCB1403 /* CloudInstancesManagerView.swift */,
 				D129CF0D5A7B51D59834876E /* ComputeBillingView.swift */,
-				BDF51415431B0961379CB98A /* EnterpriseBYOCPanelView.swift */,
+HEAD
+				BDF51415431B0961379CB98A /* EnterpriseBYOCPanelView.swift */,				6E79642FCCC464D9E8C120AB /* InfrastructureSettingsView.swift */,
+>>>>>>> origin/feat/ios-settings-infrastructure
 				D11953529A9295E82BD8B098 /* MemorySettingsView.swift */,
 HEAD
 HEAD
@@ -1200,6 +1204,7 @@ HEAD
 				22587EBF84FC873F64DD20B8 /* FormSchema.swift in Sources */,
 				49E8007E1EC443E080CBC787 /* FormSurfacesView.swift in Sources */,
 				CD6E8FC8C6E89354387BCD63 /* HistorySidebarView.swift in Sources */,
+				2D1337256108FD734CA46EAE /* InfrastructureSettingsView.swift in Sources */,
 				DE0CED7365BEC06AFD91F875 /* InstanceStore.swift in Sources */,
 				15970CE94E88293413A0AE86 /* InstancesClient.swift in Sources */,
 				7C8C9409E90567B7A5CA95D6 /* IntelliScheduleEngine.swift in Sources */,
