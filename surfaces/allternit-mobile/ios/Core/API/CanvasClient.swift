@@ -14,9 +14,9 @@ struct CanvasComponent: Codable, Sendable {
     let url: String?
 }
 
-/// A persisted canvas row (canvas_routes.rs CanvasResponse). `components` is
-/// arbitrary JSON server-side; anything that isn't an array of component
-/// objects decodes as empty rather than failing the whole list.
+/// A persisted canvas row (canvas_routes.rs CanvasResponse). `components` and
+/// `metadata` are arbitrary JSON server-side; non-matching shapes decode as
+/// empty/default rather than failing the whole record.
 struct CanvasRecord: Decodable, Sendable {
     let id: String
     let sessionId: String
@@ -25,9 +25,11 @@ struct CanvasRecord: Decodable, Sendable {
     let artifactKey: String?
     let version: Int
     let updatedAt: String
+    /// Metadata JSON from the backend; may hold a canvas protocol spec.
+    let metadata: JSONValue?
 
     enum CodingKeys: String, CodingKey {
-        case id, title, components
+        case id, title, components, metadata
         case version
         case artifactKey = "artifact_key"
         case sessionId = "session_id"
@@ -43,6 +45,14 @@ struct CanvasRecord: Decodable, Sendable {
         artifactKey = try container.decodeIfPresent(String.self, forKey: .artifactKey)
         version = try container.decodeIfPresent(Int.self, forKey: .version) ?? 1
         updatedAt = try container.decode(String.self, forKey: .updatedAt)
+        metadata = try? container.decode(JSONValue.self, forKey: .metadata)
+    }
+
+    /// Decodes a `CanvasSpec` from `metadata` when one was stored.
+    var spec: CanvasSpec? {
+        guard let metadata else { return nil }
+        guard let data = try? JSONEncoder().encode(metadata) else { return nil }
+        return try? JSONDecoder().decode(CanvasSpec.self, from: data)
     }
 }
 
@@ -58,6 +68,18 @@ struct CanvasClient: Sendable {
     private struct WritePayload: Encodable {
         let title: String
         let components: [CanvasComponent]
+    }
+
+    /// Payload that includes a Canvas Protocol spec in `metadata`.
+    private struct SpecPayload: Encodable {
+        let title: String
+        let components: [CanvasComponent]
+        let metadata: CanvasSpec
+    }
+
+    /// Minimal PATCH payload that only updates `metadata`.
+    private struct SpecUpdatePayload: Encodable {
+        let metadata: CanvasSpec
     }
 
     /// POST returns a slim `{ id, session_id }`, not the full row
@@ -104,6 +126,40 @@ struct CanvasClient: Sendable {
             path: "canvases/\(escaped)",
             body: WritePayload(title: artifact.title, components: [Self.component(for: artifact)])
         )
+    }
+
+    // MARK: - Canvas Protocol (item #56)
+
+    /// POST /api/v1/agent-sessions/:id/canvases — create a canvas carrying a
+    /// Canvas Protocol spec in its metadata. Components default to empty.
+    func createCanvas(sessionId: String, spec: CanvasSpec, components: [CanvasComponent] = []) async throws -> String {
+        let escaped = sessionId.addingPercentEncoding(withAllowedCharacters: .urlPathAllowed) ?? sessionId
+        let created: CreateResponse = try await client.post(
+            path: "agent-sessions/\(escaped)/canvases",
+            body: SpecPayload(
+                title: spec.title ?? "Canvas",
+                components: components,
+                metadata: spec
+            )
+        )
+        return created.id
+    }
+
+    /// PATCH /api/v1/canvases/:id — update the canvas metadata to store a new
+    /// or revised Canvas Protocol spec.
+    func updateCanvasSpec(canvasId: String, spec: CanvasSpec) async throws {
+        let escaped = canvasId.addingPercentEncoding(withAllowedCharacters: .urlPathAllowed) ?? canvasId
+        try await client.patch(
+            path: "canvases/\(escaped)",
+            body: SpecUpdatePayload(metadata: spec)
+        )
+    }
+
+    /// GET /api/v1/canvases/:id — returns the canvas row; decode `spec` from
+    /// `CanvasRecord.metadata`.
+    func getCanvas(canvasId: String) async throws -> CanvasRecord {
+        let escaped = canvasId.addingPercentEncoding(withAllowedCharacters: .urlPathAllowed) ?? canvasId
+        return try await client.get(path: "canvases/\(escaped)")
     }
 
     private static func component(for artifact: ArtifactRecord) -> CanvasComponent {
