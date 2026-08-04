@@ -16,6 +16,7 @@ import { DagPlanningPanel } from "@/runner/components/DagPlanningPanel";
 import { LeaseMonitorPanel } from "@/runner/components/LeaseMonitorPanel";
 import { ReceiptQueryPanel } from "@/runner/components/ReceiptQueryPanel";
 import { WIHManagerPanel } from "@/runner/components/WIHManagerPanel";
+import { ObservabilityCharts } from "./ObservabilityCharts";
 import type { ContextPack, DagDefinition, Receipt, WihInfo } from "@/runner/dak.types";
 import type { LedgerEvent } from "@/lib/agents/rails.service";
 import {
@@ -1173,6 +1174,7 @@ export function ObservabilityDashboardSurface() {
         contextPacks={runtime.contextPacks}
         railsConnected={runtime.railsConnected}
       />
+      <ObservabilityCharts ledgerEvents={runtime.ledgerEvents} receipts={runtime.receipts} />
       <div className="grid gap-6 xl:grid-cols-[1.1fr_1fr]">
         <Card>
           <CardHeader>
