@@ -44,6 +44,26 @@ final class RuntimeOperationsClient: @unchecked Sendable {
         try await APIClient.shared.get(path: "runtime/prewarm/status")
     }
 
+    func setPrewarmPoolSize(poolSize: Int) async throws {
+        struct Body: Encodable {
+            let poolSize: Int
+            enum CodingKeys: String, CodingKey {
+                case poolSize = "pool_size"
+            }
+        }
+        try await APIClient.shared.post(
+            path: "runtime/prewarm/pool",
+            body: Body(poolSize: poolSize)
+        )
+    }
+
+    func warmupPrewarmPool() async throws {
+        try await APIClient.shared.post(
+            path: "runtime/prewarm/warmup",
+            body: [String: String]()
+        )
+    }
+
     // MARK: - Execution mode
 
     /// GET {gizzi}/runtime/execution-mode — direct to runtime host.

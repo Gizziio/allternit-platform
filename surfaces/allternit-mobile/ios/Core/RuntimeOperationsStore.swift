@@ -21,6 +21,8 @@ final class RuntimeOperationsStore: ObservableObject {
     @Published private(set) var loadError: String? = nil
     @Published private(set) var isSavingQuota = false
     @Published private(set) var replayingRunId: String? = nil
+    @Published private(set) var isSettingPrewarmPoolSize = false
+    @Published private(set) var isWarmingPrewarmPool = false
 
     private let client: RuntimeOperationsClient
     private var fetchTask: Task<Void, Never>? = nil
@@ -115,6 +117,20 @@ final class RuntimeOperationsStore: ObservableObject {
         guard result.canReplay else {
             throw ReplayError.notReplayable(status: result.status)
         }
+        await refresh()
+    }
+
+    func setPrewarmPoolSize(_ poolSize: Int) async throws {
+        isSettingPrewarmPoolSize = true
+        defer { isSettingPrewarmPoolSize = false }
+        try await client.setPrewarmPoolSize(poolSize: poolSize)
+        await refresh()
+    }
+
+    func warmupPrewarmPool() async throws {
+        isWarmingPrewarmPool = true
+        defer { isWarmingPrewarmPool = false }
+        try await client.warmupPrewarmPool()
         await refresh()
     }
 

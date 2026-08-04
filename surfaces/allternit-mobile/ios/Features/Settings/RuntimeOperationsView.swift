@@ -10,6 +10,7 @@ struct RuntimeOperationsView: View {
     @Environment(\.dismiss) private var dismiss
     @State private var isBudgetDashboardPresented = false
     @State private var isReplayManagerPresented = false
+    @State private var isPrewarmManagerPresented = false
 
     var body: some View {
         VStack(spacing: 0) {
@@ -23,6 +24,9 @@ struct RuntimeOperationsView: View {
         }
         .navigationDestination(isPresented: $isReplayManagerPresented) {
             ReplayManagerView()
+        }
+        .navigationDestination(isPresented: $isPrewarmManagerPresented) {
+            PrewarmManagerView()
         }
         .task {
             store.fetchIfNeeded()
@@ -338,38 +342,41 @@ struct RuntimeOperationsView: View {
     // MARK: - Prewarm card
 
     private var prewarmCard: some View {
-        card {
-            VStack(alignment: .leading, spacing: 12) {
-                HStack {
-                    Image(systemName: "flame")
-                        .font(.system(size: 18, weight: .medium))
-                        .foregroundColor(Color("AccentPrimary"))
-                    Text("Prewarm")
-                        .font(.system(size: 15, weight: .semibold))
-                        .foregroundColor(Color("TextPrimary"))
-                    Spacer()
-                    if let status = store.prewarmStatus {
-                        Text(status.enabled ? "Enabled" : "Disabled")
-                            .font(.caption)
-                            .foregroundColor(status.enabled ? Theme.statusSuccess : Color("TextSecondary"))
+        Button(action: { isPrewarmManagerPresented = true }) {
+            card {
+                VStack(alignment: .leading, spacing: 12) {
+                    HStack {
+                        Image(systemName: "flame")
+                            .font(.system(size: 18, weight: .medium))
+                            .foregroundColor(Color("AccentPrimary"))
+                        Text("Prewarm")
+                            .font(.system(size: 15, weight: .semibold))
+                            .foregroundColor(Color("TextPrimary"))
+                        Spacer()
+                        if let status = store.prewarmStatus {
+                            Text(status.enabled ? "Enabled" : "Disabled")
+                                .font(.caption)
+                                .foregroundColor(status.enabled ? Theme.statusSuccess : Color("TextSecondary"))
+                        }
                     }
-                }
 
-                HStack(spacing: 12) {
-                    prewarmMiniStat("Pools", value: "\(store.poolStats.totalPools)")
-                    prewarmMiniStat("Instances", value: "\(store.poolStats.totalInstances)")
-                    prewarmMiniStat("Available", value: "\(store.poolStats.totalAvailable)")
-                    prewarmMiniStat("In Use", value: "\(store.poolStats.totalInUse)")
-                }
+                    HStack(spacing: 12) {
+                        prewarmMiniStat("Pools", value: "\(store.poolStats.totalPools)")
+                        prewarmMiniStat("Instances", value: "\(store.poolStats.totalInstances)")
+                        prewarmMiniStat("Available", value: "\(store.poolStats.totalAvailable)")
+                        prewarmMiniStat("In Use", value: "\(store.poolStats.totalInUse)")
+                    }
 
-                if let status = store.prewarmStatus, !status.pools.isEmpty {
-                    Text("Pools: \(status.pools.map(\.name).joined(separator: ", "))")
-                        .font(.caption)
-                        .foregroundColor(Color("TextSecondary"))
-                        .lineLimit(1)
+                    if let status = store.prewarmStatus, !status.pools.isEmpty {
+                        Text("Pools: \(status.pools.map(\.name).joined(separator: ", "))")
+                            .font(.caption)
+                            .foregroundColor(Color("TextSecondary"))
+                            .lineLimit(1)
+                    }
                 }
             }
         }
+        .buttonStyle(.plain)
     }
 
     private func prewarmMiniStat(_ label: String, value: String) -> some View {
