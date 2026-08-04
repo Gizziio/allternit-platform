@@ -23,12 +23,17 @@ describe('LocalModelManager provider switch', () => {
   let baseUrl: string;
   let requests: RecordedRequest[];
 HEAD
+HEAD
   let requestTimestamps: number[];
   let arrivalOffsets: number[];
   let failWithStatus: number | null;
   let failMlxWithStatus: number | null;
   let responseDelay: number;  let failWithStatus: number | null;
->>>>>>> origin/ao/mlxmem
+>>>>>>> origin/ao/mlxmem  let requestTimestamps: number[];
+  let arrivalOffsets: number[];
+  let failWithStatus: number | null;
+  let responseDelay: number;
+>>>>>>> origin/fix/mlx-serialize
 
   const savedEnv = { ...process.env };
 
@@ -37,8 +42,10 @@ HEAD
       let raw = '';
       req.on('data', (chunk) => (raw += chunk));
 HEAD
+HEAD
       req.on('end', async () => {      req.on('end', () => {
->>>>>>> origin/ao/mlxmem
+>>>>>>> origin/ao/mlxmem      req.on('end', async () => {
+>>>>>>> origin/fix/mlx-serialize
         let body: any = null;
         try {
           body = raw ? JSON.parse(raw) : null;
@@ -46,6 +53,8 @@ HEAD
           body = raw;
         }
 HEAD
+HEAD
+>>>>>>> origin/fix/mlx-serialize
         const startedAt = Date.now();
         requests.push({ url: req.url || '', method: req.method || '', body });
         arrivalOffsets.push(startedAt);
@@ -55,12 +64,14 @@ HEAD
         }
 
         requestTimestamps.push(Date.now() - startedAt);
+HEAD
 
         const shouldFailMlx = failMlxWithStatus !== null && req.url === '/v1/chat/completions';
         const shouldFailAll = failWithStatus !== null;
         if (shouldFailMlx || shouldFailAll) {
           const status = shouldFailMlx ? failMlxWithStatus! : failWithStatus!;
           res.writeHead(status, { 'Content-Type': 'application/json' });        requests.push({ url: req.url || '', method: req.method || '', body });
+>>>>>>> origin/fix/mlx-serialize
 
         if (failWithStatus !== null) {
           res.writeHead(failWithStatus, { 'Content-Type': 'application/json' });
@@ -122,10 +133,14 @@ HEAD
   beforeEach(() => {
     requests = [];
 HEAD
+HEAD
     requestTimestamps = [];
     arrivalOffsets = [];
     failWithStatus = null;
-    failMlxWithStatus = null;
+    failMlxWithStatus = null;    requestTimestamps = [];
+    arrivalOffsets = [];
+    failWithStatus = null;
+>>>>>>> origin/fix/mlx-serialize
     responseDelay = 0;
     delete process.env.MEMORY_LLM_BASE_URL;
     delete process.env.MEMORY_LLM_MODEL;
@@ -423,5 +438,37 @@ HEAD
     expect(embedding).toEqual([]);
     expect(requests).toHaveLength(0);
 >>>>>>> origin/ao/mlxmem
+  });
+
+  it('serializes MLX generation calls so only one request is in flight at a time', async () => {
+    process.env.MEMORY_LLM_BASE_URL = `${baseUrl}/v1`;
+    responseDelay = 60;
+
+    const testStart = Date.now();
+    const manager = new LocalModelManager();
+    const [a, b] = await Promise.all([
+      manager.generate('first'),
+      manager.generate('second'),
+    ]);
+
+    expect(a).toBe('mlx-response');
+    expect(b).toBe('mlx-response');
+    expect(requests.filter((r) => r.url === '/v1/chat/completions')).toHaveLength(2);
+
+    // If the calls had been parallel, both requests would have arrived near
+    // time 0. Serialization means the second request arrives only after the
+    // first response finishes (~60ms delay).
+    expect(arrivalOffsets[1] - testStart).toBeGreaterThanOrEqual(responseDelay - 10);
+  });
+
+  it('does not let a failed MLX call wedge the serialized queue', async () => {
+    process.env.MEMORY_LLM_BASE_URL = `${baseUrl}/v1`;
+    failWithStatus = 500;
+
+    const manager = new LocalModelManager();
+    await expect(manager.generate('first')).rejects.toThrow('HTTP 500');
+    await expect(manager.generate('second')).rejects.toThrow('HTTP 500');
+
+    expect(requests.filter((r) => r.url === '/v1/chat/completions')).toHaveLength(2);
   });
 });
