@@ -72,32 +72,32 @@ Branch: `fix/review-decision-event-type` (issue #16/#19 fixes) + `docs/surface-a
 
 | # | Item | Status | Finding | Action | PR |
 |---|------|--------|---------|--------|-----|
-| 39 | ACI Browser surface (GAP → gizzi-code) | `[ ]` | | | |
-| 40 | Mini-apps Store (GAP → iOS) | `[ ]` | | | |
-| 41 | Mini-app frame/runtime (GAP → iOS) | `[ ]` | | | |
-| 42 | Office Add-ins — Word (GAP → iOS, gizzi-code) | `[ ]` | | | |
-| 43 | Office Add-ins — Excel (GAP → iOS, gizzi-code) | `[ ]` | | | |
-| 44 | Office Add-ins — PowerPoint (GAP → iOS, gizzi-code) | `[ ]` | | | |
-| 45 | Office & Extensions view (GAP → iOS, gizzi-code) | `[ ]` | | | |
-| 46 | Operator Browser (GAP → gizzi-code) | `[ ]` | | | |
+| 39 | ACI Browser surface (GAP → gizzi-code) | `[x]` | DEFER — web+iOS fully implemented (ACITabView/ACIWebBrowserView); gizzi-code is a CLI, no GUI surface to port to | Deferred — CLI/GUI mismatch | |
+| 40 | Mini-apps Store (GAP → iOS) | `[x]` | REAL — web has full store (AciMiniAppsView.tsx, mini-app-registry.ts); zero iOS matches | Confirmed gap, candidate for build | |
+| 41 | Mini-app frame/runtime (GAP → iOS) | `[x]` | REAL — web sandboxed runtime (MiniAppRuntimeSurface.tsx, mini-app-harness/signing.ts); no iOS host | Confirmed gap, depends on #40 | |
+| 42 | Office Add-ins — Word (GAP → iOS, gizzi-code) | `[x]` | DEFER — one shared web component (AciAddinView.tsx, OfficeHost type) covers all 3 hosts; no iOS/gizzi-code equiv; Add-ins run inside Office hosts | Deferred; scope as 1 shared view if pursued | |
+| 43 | Office Add-ins — Excel (GAP → iOS, gizzi-code) | `[x]` | DEFER — duplicate target of #42 (same AciAddinView.tsx component) | Deferred, tracked with #42 | |
+| 44 | Office Add-ins — PowerPoint (GAP → iOS, gizzi-code) | `[x]` | DEFER — duplicate target of #42 (same AciAddinView.tsx component) | Deferred, tracked with #42 | |
+| 45 | Office & Extensions view (GAP → iOS, gizzi-code) | `[x]` | DEFER — web AppsExtensionsView.tsx (652 lines) hub exists; no iOS/gizzi-code hub; bundles deferred #40-44 | Deferred with dependents | |
+| 46 | Operator Browser (GAP → gizzi-code) | `[x]` | DEFER — web OperatorBrowserView.tsx; iOS already has documented parity (BrowserChatView.swift); gizzi-code CLI/GUI mismatch | Deferred — CLI/GUI mismatch | |
 
 ## Design/Creative (13)
 
 | # | Item | Status | Finding | Action | PR |
 |---|------|--------|---------|--------|-----|
-| 47 | Design Mode — Questions tab (GAP → iOS, gizzi-code) | `[ ]` | | | |
-| 48 | Design Mode — Mobile tab (GAP → iOS, gizzi-code) | `[ ]` | | | |
-| 49 | Design Mode — Docs tab (GAP → iOS, gizzi-code) | `[ ]` | | | |
-| 50 | Design Mode — Handoff tab (GAP → iOS, gizzi-code) | `[ ]` | | | |
-| 51 | Design Mode — Graph tab (GAP → iOS, gizzi-code) | `[ ]` | | | |
-| 52 | Design Mode — Pipeline tab (GAP → iOS, gizzi-code) | `[ ]` | | | |
-| 53 | Design Marketplace/Registry (GAP → iOS) | `[ ]` | | | |
-| 54 | Design Compare (GAP → iOS, gizzi-code) | `[ ]` | | | |
-| 55 | Form Surfaces (GAP → iOS, gizzi-code) | `[ ]` | | | |
-| 56 | Canvas Protocol (PARTIAL → iOS) | `[ ]` | | | |
-| 57 | Design Team Workspace (GAP → iOS, gizzi-code) | `[ ]` | | | |
-| 58 | Content Pipeline (GAP → iOS, gizzi-code) | `[ ]` | | | |
-| 59 | Live Artifact Editor (PARTIAL → upgrade) | `[ ]` | | | |
+| 47 | Design Mode — Questions tab (GAP → iOS, gizzi-code) | `[x]` | DEFER — AppMode.swift:6-8 documents Design mode deliberately skipped on iOS (opens external window on web instead) | Deferred — documented scope decision | |
+| 48 | Design Mode — Mobile tab (GAP → iOS, gizzi-code) | `[x]` | DEFER — same documented iOS Design-mode exclusion (AppMode.swift:6-8) | Deferred, same as #47 | |
+| 49 | Design Mode — Docs tab (GAP → iOS, gizzi-code) | `[x]` | DEFER — same documented iOS Design-mode exclusion (AppMode.swift:6-8) | Deferred, same as #47 | |
+| 50 | Design Mode — Handoff tab (GAP → iOS, gizzi-code) | `[x]` | DEFER — same documented iOS Design-mode exclusion (AppMode.swift:6-8) | Deferred, same as #47 | |
+| 51 | Design Mode — Graph tab (GAP → iOS, gizzi-code) | `[x]` | DEFER — same documented iOS Design-mode exclusion (AppMode.swift:6-8) | Deferred, same as #47 | |
+| 52 | Design Mode — Pipeline tab (GAP → iOS, gizzi-code) | `[x]` | DEFER — same exclusion; component (ContentPipelineView.tsx) also duplicated by row #58 | Deferred, same as #47 | |
+| 53 | Design Marketplace/Registry (GAP → iOS) | `[x]` | DEFER — DesignRegistryView.tsx is also the `market` tab of DesignModeView; covered by iOS Design-mode exclusion | Deferred, same as #47 | |
+| 54 | Design Compare (GAP → iOS, gizzi-code) | `[x]` | STALE — ViewRegistry.tsx:387-391 `design-view-compare` route aliases to DesignRegistryView (same as marketplace); no real compare UI exists anywhere | Closed as stale — nothing to port | |
+| 55 | Form Surfaces (GAP → iOS, gizzi-code) | `[x]` | REAL — FormSurfacesView.tsx (441 lines), standalone nav.policy.ts route (not gated by Design-mode exclusion); no iOS/gizzi-code equivalent | Confirmed gap, candidate for iOS build | |
+| 56 | Canvas Protocol (PARTIAL → iOS) | `[x]` | REAL — Rust crate defines 40+ canonical view types; iOS CanvasClient.swift only covers artifact canvases (3 methods) | Confirmed partial, candidate to extend | |
+| 57 | Design Team Workspace (GAP → iOS, gizzi-code) | `[x]` | DEFER — DesignTeamWorkspace.tsx is the `team` tab of DesignModeView; covered by iOS Design-mode exclusion | Deferred, same as #47 | |
+| 58 | Content Pipeline (GAP → iOS, gizzi-code) | `[x]` | STALE — duplicate of #52; both point at the same ContentPipelineView.tsx / `pipeline` tab | Closed as stale/duplicate of #52 | |
+| 59 | Live Artifact Editor (PARTIAL → upgrade) | `[x]` | DEFER — LiveArtifactEditor.tsx exists; gap is localStorage-only persistence on web (an upgrade item, not a platform-port gap) | Deferred — out of platform-parity scope | |
 
 ## Terminal/Infra (11)
 
