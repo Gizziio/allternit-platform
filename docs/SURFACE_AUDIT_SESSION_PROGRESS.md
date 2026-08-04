@@ -77,7 +77,7 @@ Branch: `fix/review-decision-event-type` (issue #16/#19 fixes) + `docs/surface-a
 | # | Item | Status | Finding | Action | PR |
 |---|------|--------|---------|--------|-----|
 | 39 | ACI Browser surface (GAP → gizzi-code) | `[x]` | DEFER — web+iOS fully implemented (ACITabView/ACIWebBrowserView); gizzi-code is a CLI, no GUI surface to port to | Deferred — CLI/GUI mismatch | |
-| 40 | Mini-apps Store (GAP → iOS) | `[ ]` | REAL — web has full store (AciMiniAppsView.tsx, mini-app-registry.ts); zero iOS matches | Confirmed gap, candidate for build | |
+| 40 | Mini-apps Store (GAP → iOS) | `[x]` | REAL — phase 1 shipped: browse-only store with community catalog + public MCP registry, search, categories, pin/unpin, Safari open (`feat/ios-mini-apps-store`) | Shipped phase 1; install/start/runtime/embedded-web deferred | `feat/ios-mini-apps-store` |
 | 41 | Mini-app frame/runtime (GAP → iOS) | `[ ]` | REAL — web sandboxed runtime (MiniAppRuntimeSurface.tsx, mini-app-harness/signing.ts); no iOS host | Confirmed gap, depends on #40 | |
 | 42 | Office Add-ins — Word (GAP → iOS, gizzi-code) | `[x]` | DEFER — one shared web component (AciAddinView.tsx, OfficeHost type) covers all 3 hosts; no iOS/gizzi-code equiv; Add-ins run inside Office hosts | Deferred; scope as 1 shared view if pursued | |
 | 43 | Office Add-ins — Excel (GAP → iOS, gizzi-code) | `[x]` | DEFER — duplicate target of #42 (same AciAddinView.tsx component) | Deferred, tracked with #42 | |
