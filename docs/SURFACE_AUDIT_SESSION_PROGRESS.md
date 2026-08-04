@@ -107,7 +107,7 @@ Branch: `fix/review-decision-event-type` (issue #16/#19 fixes) + `docs/surface-a
 
 | # | Item | Status | Finding | Action | PR |
 |---|------|--------|---------|--------|-----|
-| 60 | Monitor (GAP → iOS) | `[ ]` | REAL — web `views/MonitorView.tsx` hits real `/api/v1/monitor/*`; iOS has none; gizzi-code `MonitorTool.ts` is a TODO shim | Port to iOS | |
+| 60 | Monitor (GAP → iOS) | `[x]` | REAL — phase 1 shipped: iOS `MonitorView` + `MonitorClient` + `MonitorStore` wired to `/api/v1/monitor/*`, entry from Settings Infrastructure (`feat/ios-monitor`) | Shipped phase 1; backend routes don't exist yet | `feat/ios-monitor` |
 | 61 | Runtime Operations (GAP → iOS, gizzi-code) | `[ ]` | REAL — web `views/runtime/RuntimeOperationsView.tsx` hub; zero iOS/gizzi-code matches | Port to iOS | |
 | 62 | Budget Dashboard (PARTIAL → iOS) | `[ ]` | REAL — web `views/runtime/BudgetDashboardView.tsx` hits `/api/v1/runtime/budget`; iOS/gizzi-code hits are unrelated (token-budget, compiler comments) | Port to iOS | |
 | 63 | Replay Manager (GAP → iOS, gizzi-code) | `[ ]` | REAL — web `views/runtime/ReplayManagerView.tsx` real; zero iOS/gizzi-code matches | Port to iOS | |
