@@ -154,7 +154,7 @@ Branch: `fix/review-decision-event-type` (issue #16/#19 fixes) + `docs/surface-a
 
 | # | Item | Status | Finding | Action | PR |
 |---|------|--------|---------|--------|-----|
-| 92 | Products Discovery (GAP → iOS, gizzi-code) | `[ ]` | REAL — web `views/products/ProductsDiscoveryView.tsx` live, no matches iOS/gizzi-code | Confirmed gap | |
+| 92 | Products Discovery (GAP → iOS, gizzi-code) | `[x]` | REAL — iOS Products tab + gizzi-code `products` command shipped; bundled catalog mirrors web's ProductsDiscoveryView | Shipped phase 1 port | `feat/products-discovery` |
 | 93 | A://Labs (GAP → iOS, gizzi-code) | `[ ]` | REAL — web `views/LabsView.tsx` + `views/labs/main/*`, no matches iOS/gizzi-code | Confirmed gap | |
 | 94 | Udemy Catalog (GAP → iOS, gizzi-code) | `[ ]` | REAL — web `views/CatalogView.tsx` (Udemy-specific), no matches iOS/gizzi-code | Confirmed gap, lower priority | |
 | 95 | Discovery Feed (GAP → iOS, gizzi-code) | `[x]` | STALE — not standalone; nested sub-tab inside `LabsView.tsx`, not its own route | Fold into #93 A://Labs | |
