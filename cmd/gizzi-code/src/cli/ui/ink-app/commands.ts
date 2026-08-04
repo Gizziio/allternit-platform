@@ -60,10 +60,12 @@ import swarm from './commands/swarm/index.js'
 HEAD
 HEAD
 HEAD
+HEAD
 import ontology from './commands/ontology/index.js'import directive from './commands/directive/index.js'
 >>>>>>> origin/feat/gizzi-directive-compilerimport gc from './commands/gc/index.js'
 >>>>>>> origin/feat/gizzi-gc-agentsimport multimodal from './commands/multimodal/index.js'
->>>>>>> origin/feat/gizzi-multimodal-input
+>>>>>>> origin/feat/gizzi-multimodal-inputimport purpose from './commands/purpose/index.js'
+>>>>>>> origin/feat/gizzi-purpose-binding
 
 function safeRequire(path: string) {
   try {
@@ -293,10 +295,12 @@ const COMMANDS = memoize((): Command[] => [
 HEAD
 HEAD
 HEAD
+HEAD
   ontology,  directive,
 >>>>>>> origin/feat/gizzi-directive-compiler  gc,
 >>>>>>> origin/feat/gizzi-gc-agents  multimodal,
->>>>>>> origin/feat/gizzi-multimodal-input
+>>>>>>> origin/feat/gizzi-multimodal-input  purpose,
+>>>>>>> origin/feat/gizzi-purpose-binding
   context,
   contextNonInteractive,
   cost,
