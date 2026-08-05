@@ -142,17 +142,47 @@ export const VaultCommand = cmd({
       )
       .command(
         "graph",
-        "Rebuild entity graph and create entity notes",
-        () => {},
-        async () => {
+        "Rebuild entity graph: semantic linking, hub demotion, orphan detection",
+        (yargs) =>
+          yargs.option("delete-orphans", {
+            type: "boolean",
+            default: false,
+            describe: "Delete notes with zero incoming and outgoing edges (never automatic without this flag)",
+          }),
+        async (argv) => {
           const vault = new VaultManager()
           await vault.initialize()
-          const { buildGraph, ensureEntityNotes } = await import("@/vault/graph/build")
+          const { buildGraphWithSemanticLinking, ensureEntityNotes } = await import("@/vault/graph/build")
+          const { findOrphans } = await import("@/vault/graph/orphans")
           const notes = (await vault.query({})).notes
-          const graph = buildGraph(notes)
-          console.log(`Graph: ${graph.nodes.size} nodes, ${graph.edges.length} edges`)
-          await ensureEntityNotes(vault.rootPath, notes)
-          console.log("Entity notes ensured")
+          const { graph, semanticEdges } = buildGraphWithSemanticLinking(notes)
+          vault.replaceSemanticLinks(semanticEdges)
+
+          const similarCount = semanticEdges.filter((e) => e.relation === "similar").length
+          const bridgeCount = semanticEdges.filter((e) => e.relation === "bridge").length
+          console.log(
+            `Graph: ${graph.nodes.size} nodes, ${graph.edges.length} edges ` +
+              `(${similarCount} similar, ${bridgeCount} bridge)`,
+          )
+
+          await ensureEntityNotes(vault.rootPath, notes, graph)
+          console.log("Entity notes ensured (hub-demoted above 15 related notes)")
+
+          const orphans = findOrphans(notes, graph)
+          console.log(`Orphans: ${orphans.length} note(s) with zero incoming and outgoing edges`)
+          if (orphans.length > 0) {
+            for (const o of orphans.slice(0, 10)) console.log(`  ${o.relPath}`)
+            if (orphans.length > 10) console.log(`  ... and ${orphans.length - 10} more`)
+          }
+
+          if (argv.deleteOrphans && orphans.length > 0) {
+            const fs = await import("fs/promises")
+            for (const o of orphans) await fs.rm(o.path, { force: true })
+            console.log(`Deleted ${orphans.length} orphan(s)`)
+          } else if (orphans.length > 0) {
+            console.log("Run with --delete-orphans to remove them")
+          }
+
           vault.close()
         },
       )

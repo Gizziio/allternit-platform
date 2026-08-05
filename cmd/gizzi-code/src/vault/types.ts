@@ -120,8 +120,13 @@ export namespace Vault {
 
   export interface GraphEdge {
     target: string
-    relation: "mentions" | "decided_in" | "attended" | "owns" | "related"
+    // "similar" = leaf-to-leaf semantic neighbor; "bridge" = cross-cluster
+    // semantic connection (deliberately rarer/higher-threshold than
+    // "similar"). See vault/graph/semantic-linking.ts.
+    relation: "mentions" | "decided_in" | "attended" | "owns" | "related" | "similar" | "bridge"
     context?: string
+    // Cosine similarity score, set only on "similar"/"bridge" edges.
+    weight?: number
   }
 
   export interface Graph {

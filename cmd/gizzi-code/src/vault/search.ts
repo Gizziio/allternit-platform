@@ -70,6 +70,25 @@ export class VaultIndex {
       )
     `)
 
+    // Semantic/bridge edges from vault/graph/semantic-linking.ts. Deliberately
+    // separate from `links`: that table is delete+reinsert per-note on every
+    // vault scan keyed off note.outgoingLinks, so semantic edges would be
+    // wiped on the next VaultManager.initialize() if stored there. This
+    // table is instead fully replaced only when `gizzi vault graph` runs
+    // (see replaceSemanticLinks) — same "recompute everything" philosophy,
+    // just on its own schedule. Keyed on relPath (not the absolute `path`
+    // the other tables use), since that's what semantic-linking.ts computes
+    // with end-to-end.
+    this.db.run(`
+      CREATE TABLE IF NOT EXISTS semantic_links (
+        source TEXT NOT NULL,
+        target TEXT NOT NULL,
+        relation TEXT NOT NULL,
+        weight REAL NOT NULL,
+        PRIMARY KEY (source, target, relation)
+      )
+    `)
+
     this.db.run(`CREATE INDEX IF NOT EXISTS idx_notes_folder ON notes(folder)`)
     this.db.run(`CREATE INDEX IF NOT EXISTS idx_notes_mtime ON notes(mtime)`)
     this.db.run(`CREATE INDEX IF NOT EXISTS idx_tags_tag ON tags(tag)`)
@@ -190,6 +209,34 @@ export class VaultIndex {
       ORDER BY mtime DESC
       LIMIT $limit
     `).all({ $limit: limit }) as Array<{ path: string; title: string; mtime: number }>
+  }
+
+  /**
+   * Full delete + bulk insert — the semantic graph is recomputed from
+   * scratch on every `gizzi vault graph` run (deterministic given the same
+   * vault content), so there's no incremental-update path to maintain here.
+   */
+  replaceSemanticLinks(edges: Array<{ source: string; target: string; relation: string; weight: number }>): void {
+    this.db.run("DELETE FROM semantic_links")
+    if (edges.length === 0) return
+    const insert = this.db.prepare(
+      "INSERT OR IGNORE INTO semantic_links (source, target, relation, weight) VALUES ($source, $target, $relation, $weight)",
+    )
+    const insertAll = this.db.transaction((rows: typeof edges) => {
+      for (const e of rows) {
+        insert.run({ $source: e.source, $target: e.target, $relation: e.relation, $weight: e.weight })
+      }
+    })
+    insertAll(edges)
+  }
+
+  getSemanticNeighbors(relPath: string): Array<{ target: string; relation: string; weight: number }> {
+    return this.db.query(`
+      SELECT target, relation, weight FROM semantic_links WHERE source = $source
+      UNION
+      SELECT source as target, relation, weight FROM semantic_links WHERE target = $source
+      ORDER BY weight DESC
+    `).all({ $source: relPath }) as Array<{ target: string; relation: string; weight: number }>
   }
 
   close(): void {

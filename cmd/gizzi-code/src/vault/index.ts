@@ -172,6 +172,19 @@ export class VaultManager {
     return { notes, total, truncated }
   }
 
+  /**
+   * Persist semantic/bridge edges from graph/build.ts's
+   * buildGraphWithSemanticLinking(). Full replace, not incremental — the
+   * semantic graph is recomputed from scratch each `gizzi vault graph` run.
+   */
+  replaceSemanticLinks(edges: Array<{ source: string; target: string; relation: string; weight: number }>): void {
+    this.index.replaceSemanticLinks(edges)
+  }
+
+  getSemanticNeighbors(relPath: string): Array<{ target: string; relation: string; weight: number }> {
+    return this.index.getSemanticNeighbors(relPath)
+  }
+
   async getBacklinks(relPath: string): Promise<Vault.Note[]> {
     const absPath = path.join(this.root, relPath)
     const links = this.index.getBacklinks(absPath)
