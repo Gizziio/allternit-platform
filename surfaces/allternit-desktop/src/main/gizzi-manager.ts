@@ -29,6 +29,11 @@ const HEALTH_TIMEOUT_MS = 30_000;
 export interface GizziStartConfig {
   /** Credential persisted by the installed always-on daemon, when present. */
   existingPassword?: string | null;
+  /** Extra env vars merged into the spawned process, e.g. connector sidecar
+   * tokens from authManager.getConnectorSidecarEnvironment() — gizzi-code
+   * hosts the Lens vault MCP server, which needs these to reach the
+   * connector sidecar directly (see vault/connectors/sidecar.ts). */
+  extraEnv?: Record<string, string>;
 }
 
 type GizziProbeResult = 'ready' | 'unauthorized' | 'unhealthy' | 'unreachable';
@@ -98,6 +103,7 @@ export class GizziManager {
       // Point at allternit-api for operator-level routes (vm-session, rails, etc.)
       ALLTERNIT_API_URL: URLS.API,
       NODE_ENV: 'production',
+      ...(config.extraEnv ?? {}),
     };
 
     log.info(`[GizziManager] Starting gizzi-code on port ${GIZZI_PORT} from ${binaryPath}`);

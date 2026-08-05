@@ -22,6 +22,8 @@ export const PORTS = {
   NOTEBOOK: 5055,
   /** Local speech-to-text and text-to-speech service */
   VOICE: 8001,
+  /** open-connector connector sidecar (see services/open-connector) */
+  CONNECTOR_SIDECAR: 8014,
 } as const;
 
 export const HOSTS = {
@@ -38,6 +40,7 @@ export const URLS = {
   ACU_RELAY: `http://${HOSTS.LOOPBACK}:${PORTS.ACU_RELAY}`,
   NOTEBOOK: `http://${HOSTS.LOOPBACK}:${PORTS.NOTEBOOK}`,
   VOICE: `http://${HOSTS.LOOPBACK}:${PORTS.VOICE}`,
+  CONNECTOR_SIDECAR: `http://${HOSTS.LOOPBACK}:${PORTS.CONNECTOR_SIDECAR}`,
   /** Canonical Allternit control plane. Human Clerk sessions approve runtime pairing here. */
   CLOUD_API: 'https://allternit-cloud-api.fly.dev',
   /** Canonical browser experience. Pairing must never follow a local static UI URL. */
