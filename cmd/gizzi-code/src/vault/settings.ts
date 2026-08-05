@@ -9,30 +9,28 @@ import path from "path"
 import { Log } from "@/shared/util/log"
 import { Filesystem } from "@/shared/util/filesystem"
 import { Global } from "@/runtime/context/global"
-import type { Vault } from "./types"
 
 const log = Log.create({ service: "vault-settings" })
 
 const SETTINGS_FILE = path.join(Global.Path.config, "vault-settings.json")
 
+// Per-source settings. Keyed by connector id (see vault/connector.ts registry) —
+// not a fixed set of literal keys, so registering a new VaultConnector never
+// requires a type change here. OAuth tokens themselves live in the separate
+// Auth store (auth.json), never in this file; the fields below are the small
+// set of things a connector needs beyond a bare enabled flag (its own OAuth
+// app credentials, an API key, etc).
+export interface SourceSettings {
+  enabled: boolean
+  clientId?: string
+  clientSecret?: string
+  apiKey?: string
+  [key: string]: unknown
+}
+
 export interface VaultUserSettings {
   version: number
-  sources: {
-    gmail: {
-      enabled: boolean
-      clientId?: string
-      clientSecret?: string
-      // OAuth tokens stored separately in auth.json
-    }
-    calendar: {
-      enabled: boolean
-      // Shares gmail OAuth if from same Google account
-    }
-    fireflies: {
-      enabled: boolean
-      apiKey?: string
-    }
-  }
+  sources: Record<string, SourceSettings>
   voice: {
     enabled: boolean
     deepgramApiKey?: string
@@ -52,6 +50,12 @@ const DEFAULT_SETTINGS: VaultUserSettings = {
     gmail: { enabled: false },
     calendar: { enabled: false },
     fireflies: { enabled: false },
+    // Sidecar-backed sources (see vault/connectors/sidecar.ts) — auth lives
+    // entirely in the open-connector sidecar, so these only need the flag.
+    notion: { enabled: false },
+    github: { enabled: false },
+    linear: { enabled: false },
+    slack: { enabled: false },
   },
   voice: {
     enabled: false,
@@ -95,14 +99,14 @@ export async function saveSettings(settings: VaultUserSettings): Promise<void> {
   log.info("Vault settings saved")
 }
 
-export async function getSourceConfig(source: keyof VaultUserSettings["sources"]): Promise<VaultUserSettings["sources"][typeof source]> {
+export async function getSourceConfig(source: string): Promise<SourceSettings> {
   const settings = await loadSettings()
-  return settings.sources[source]
+  return settings.sources[source] ?? { enabled: false }
 }
 
-export async function setSourceEnabled(source: keyof VaultUserSettings["sources"], enabled: boolean): Promise<void> {
+export async function setSourceEnabled(source: string, enabled: boolean): Promise<void> {
   const settings = await loadSettings()
-  settings.sources[source].enabled = enabled
+  settings.sources[source] = { ...(settings.sources[source] ?? {}), enabled }
   await saveSettings(settings)
   log.info(`Source ${source} ${enabled ? "enabled" : "disabled"}`)
 }
@@ -127,28 +131,6 @@ export async function setVoiceConfig(config: Partial<VaultUserSettings["voice"]>
   settings.voice = { ...settings.voice, ...config }
   await saveSettings(settings)
   log.info("Voice config saved")
-}
-
-export async function getSyncConfig(): Promise<Vault.VaultConfig["sync"]> {
-  const settings = await loadSettings()
-  return {
-    gmail: {
-      enabled: settings.sources.gmail.enabled,
-      intervalMinutes: 60,
-      lookbackDays: 7,
-    },
-    calendar: {
-      enabled: settings.sources.calendar.enabled,
-      intervalMinutes: 60,
-      lookbackDays: 30,
-    },
-    fireflies: {
-      enabled: settings.sources.fireflies.enabled,
-      intervalMinutes: 60,
-      lookbackDays: 30,
-      apiKey: settings.sources.fireflies.apiKey,
-    },
-  }
 }
 
 export async function getVoiceConfig(): Promise<VaultUserSettings["voice"]> {

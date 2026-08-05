@@ -9,5 +9,6 @@
 import "./gmail"
 import "./calendar"
 import "./fireflies"
+import "./sidecar"
 
 export * from "@/vault/connector"

@@ -298,11 +298,29 @@ Conflicts are surfaced for the human to resolve, never auto-merged.
 `
 }
 
+/**
+ * Folders that hold Vault-synced/generated content once Vault and Brain
+ * share a storage root — never the user's own authored notes, so never
+ * git-tracked. Exported so `ensureVaultStructure` (src/vault/io.ts) can
+ * idempotently top up an existing brain's .gitignore with the same list.
+ */
+export const BRAIN_GITIGNORE_ENTRIES = ["Topics/", "profile/", ".allternit/"]
+
+function brainGitignore(): string {
+  return `# Auto-synced/generated content — never the user's own authored notes.
+# Kept out of git so \`gizzi brain status\`/\`sync\` stay meaningful once
+# Lens (vault sync) shares this repo. See BRAIN_GITIGNORE_ENTRIES in
+# cli/commands/brain/lib.ts.
+${BRAIN_GITIGNORE_ENTRIES.join("\n")}
+`
+}
+
 /** The canonical brain layout (v1). `now` is injectable for tests. */
 export function brainTemplates(now: Date = new Date()): BrainTemplate[] {
   const date = now.toISOString().slice(0, 10)
   return [
     { path: "brain.yaml", content: brainYaml(now) },
+    { path: ".gitignore", content: brainGitignore() },
     { path: "identity.md", content: identityTemplate() },
     { path: "MEMORY.md", content: memoryMd() },
     { path: join("domains", "_template.md"), content: domainTemplate() },

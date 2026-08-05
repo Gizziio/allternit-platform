@@ -11,6 +11,7 @@ import fs from "fs/promises"
 import { Glob } from "@/shared/util/glob"
 import { Filesystem } from "@/shared/util/filesystem"
 import { Log } from "@/shared/util/log"
+import { BRAIN_GITIGNORE_ENTRIES } from "@/cli/commands/brain/lib"
 import type { Vault } from "./types"
 
 const log = Log.create({ service: "vault-io" })
@@ -181,6 +182,29 @@ export async function ensureVaultStructure(vaultRoot: string): Promise<void> {
   for (const dir of dirs) {
     await Filesystem.ensureDir(path.join(vaultRoot, dir))
   }
+  await ensureGitignoreEntries(vaultRoot)
+}
+
+/**
+ * Top up an existing brain's .gitignore with the entries that keep
+ * auto-synced content (Topics/, profile/, .allternit/) out of git — covers
+ * brains initialized before those entries were added to the init template.
+ * No-op for a non-git root (a bare vault that never went through
+ * `gizzi brain init`/VaultManager's brain-bootstrap).
+ */
+async function ensureGitignoreEntries(vaultRoot: string): Promise<void> {
+  if (!(await Filesystem.exists(path.join(vaultRoot, ".git")))) return
+
+  const gitignorePath = path.join(vaultRoot, ".gitignore")
+  const existing = (await Filesystem.exists(gitignorePath))
+    ? await fs.readFile(gitignorePath, "utf-8")
+    : ""
+  const missing = BRAIN_GITIGNORE_ENTRIES.filter((entry) => !existing.includes(entry))
+  if (missing.length === 0) return
+
+  const separator = existing && !existing.endsWith("\n") ? "\n" : ""
+  await fs.writeFile(gitignorePath, `${existing}${separator}${missing.join("\n")}\n`, "utf-8")
+  log.info("Topped up .gitignore with brain/vault entries", { vaultRoot, added: missing })
 }
 
 export function sanitizeFilename(name: string): string {

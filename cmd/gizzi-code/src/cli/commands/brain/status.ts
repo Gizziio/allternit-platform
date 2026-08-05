@@ -1,23 +1,15 @@
 import { cmd } from "@/cli/commands/cmd"
 import { UI } from "@/cli/ui"
-import { getSettingsForSource } from "@/cli/ui/ink-app/utils/settings/settings"
-import {
-  DEFAULT_BRAIN_PATH,
-  expandBrainPath,
-  getBrainStatus,
-} from "./lib"
+import { getBrainStatus } from "./lib"
 
-/** Settings-backed brain path resolution, shared by status/sync/remote. */
-export function resolveBrainPath(flagPath?: string): string {
-  if (flagPath) return expandBrainPath(flagPath)
-  try {
-    const configured = getSettingsForSource("userSettings")?.brain?.path
-    if (configured) return expandBrainPath(configured)
-  } catch {
-    // settings unavailable — fall through to the default
-  }
-  return DEFAULT_BRAIN_PATH
-}
+/**
+ * Settings-backed brain path resolution, shared by status/sync/remote —
+ * and now also by Vault (`src/vault/index.ts`), which is why the actual
+ * logic lives in `runtime/brain/path.ts` instead of here. Re-exported for
+ * this file's existing importers (sync.ts, remote.ts).
+ */
+import { resolveBrainPath } from "@/runtime/brain/path"
+export { resolveBrainPath }
 
 export async function printBrainStatus(flagPath?: string): Promise<void> {
   const path = resolveBrainPath(flagPath)

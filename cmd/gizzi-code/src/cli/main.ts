@@ -56,6 +56,7 @@ import { ProgramsCommand } from "@/cli/commands/programs"
 import { OrgCommand } from "@/cli/commands/org"
 import { LabsCommand } from "@/cli/commands/labs"
 import { UdemyCommand } from "@/cli/commands/udemy"
+import { VaultCommand } from "@/cli/commands/vault"
 import path from "path"
 import { Global, init as initGlobal } from "@/runtime/context/global"
 import { JsonMigration } from "@/runtime/session/storage/json-migration"
@@ -219,6 +220,7 @@ const cli = yargs(hideBin(process.argv))
   .command(ProductsCommand)
   .command(LabsCommand)
   .command(UdemyCommand)
+  .command(VaultCommand)
   .fail((msg, err) => {
     if (
       msg?.startsWith("Unknown argument") ||

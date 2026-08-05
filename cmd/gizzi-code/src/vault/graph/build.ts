@@ -7,7 +7,7 @@
 
 import path from "path"
 import { Log } from "@/shared/util/log"
-import type { Vault } from "../types"
+import { Vault } from "../types"
 import * as IO from "../io"
 
 const log = Log.create({ service: "vault-graph" })
@@ -67,13 +67,12 @@ export function buildGraph(notes: Vault.Note[]): Vault.Graph {
 
   for (const note of notes) {
     const nodeId = note.relPath
-    const folderType = note.folder.split("/")[0]?.toLowerCase() as Vault.EntityType
 
     if (!nodes.has(nodeId)) {
       nodes.set(nodeId, {
         id: nodeId,
         title: note.title,
-        type: folderType || "topic",
+        type: Vault.inferEntityType(note),
         path: note.relPath,
         edges: [],
       })

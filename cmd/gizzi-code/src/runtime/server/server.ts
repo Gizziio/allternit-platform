@@ -67,6 +67,7 @@ import { SkillRoutes } from "@/runtime/server/routes/skill"
 import { VcsRoutes } from "@/runtime/server/routes/vcs"
 import { PathRoutes } from "@/runtime/server/routes/path"
 import { MemoryRoutes } from "@/runtime/server/routes/memory"
+import { VaultRoutes } from "@/runtime/server/routes/vault"
 import { SandboxRoutes } from "@/runtime/server/routes/sandbox"
 import { VmSessionRoutes } from "@/runtime/server/routes/vm-session"
 import { WorkspaceRoutes } from "@/runtime/server/routes/workspace"
@@ -384,6 +385,7 @@ export namespace Server {
         .route("/formatter", FormatterRoutes())
         .route("/skill", SkillRoutes())
         .route("/memory", MemoryRoutes())
+        .route("/vault", VaultRoutes())
         .route("/sandbox", SandboxRoutes())
         .route("/vm-session", VmSessionRoutes())
         .route("/plugin", PluginRoutes())
@@ -473,6 +475,7 @@ export namespace Server {
             .route("/formatter", FormatterRoutes())
             .route("/skill", SkillRoutes())
             .route("/memory", MemoryRoutes())
+            .route("/vault", VaultRoutes())
             .route("/sandbox", SandboxRoutes())
             .route("/vm-session", VmSessionRoutes())
             .route("/plugin", PluginRoutes())

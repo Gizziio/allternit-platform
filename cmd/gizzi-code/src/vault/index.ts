@@ -6,8 +6,11 @@
  */
 
 import path from "path"
+import fs from "fs/promises"
 import { Log } from "@/shared/util/log"
-import { Global } from "@/runtime/context/global"
+import { Filesystem } from "@/shared/util/filesystem"
+import { resolveBrainPath } from "@/runtime/brain/path"
+import { initBrain } from "@/cli/commands/brain/lib"
 import { Vault } from "./types"
 import { VaultIndex } from "./search"
 import * as IO from "./io"
@@ -25,7 +28,7 @@ export class VaultManager {
 
   constructor(config?: Partial<Vault.VaultConfig>) {
     this.vaultConfig = { ...Vault.DEFAULT_CONFIG, ...config }
-    this.root = this.vaultConfig.vaultPath || path.join(Global.Path.data, "vault")
+    this.root = this.vaultConfig.vaultPath || resolveBrainPath()
     this.index = new VaultIndex(this.root)
   }
 
@@ -38,9 +41,37 @@ export class VaultManager {
   }
 
   async initialize(): Promise<void> {
+    await this.ensureBootstrapped()
     await IO.ensureVaultStructure(this.root)
     await this.rebuildIndex()
     log.info("Vault initialized", { root: this.root })
+  }
+
+  /**
+   * Vault and the second brain (`gizzi brain`) share one storage root as of
+   * docs/LENS_CONTEXT_LAYER_PLAN.md. If nothing exists at that root yet
+   * (neither `gizzi brain init` nor a prior vault sync has run), bootstrap
+   * it the same way `gizzi brain init` does — git init + templates — so
+   * `gizzi vault sync` and `gizzi brain init` agree on one init path
+   * regardless of which the user runs first. Must run BEFORE
+   * ensureVaultStructure(): initBrain() refuses a non-empty directory.
+   */
+  private async ensureBootstrapped(): Promise<void> {
+    const exists = await Filesystem.exists(this.root)
+    // Ignore vault's own index artifact (created by the VaultIndex/SQLite
+    // constructor above, which runs before initialize() ever gets a
+    // chance to check emptiness) — it isn't "real content" for the
+    // purposes of deciding whether this is a fresh root to bootstrap.
+    const entries = exists ? (await fs.readdir(this.root)).filter((e) => e !== ".allternit") : []
+    if (entries.length > 0) return
+    try {
+      // force: true — our own check above (not initBrain's naive readdir)
+      // is the source of truth for "empty enough to bootstrap."
+      await initBrain(this.root, { force: true })
+      log.info("Bootstrapped second brain at vault root", { root: this.root })
+    } catch (e) {
+      log.warn("Second-brain bootstrap skipped", { root: this.root, error: e })
+    }
   }
 
   async rebuildIndex(): Promise<void> {
@@ -108,8 +139,8 @@ export class VaultManager {
     // Filter by entity types
     if (q.entityTypes?.length) {
       notes = notes.filter(n => {
-        const folderType = n.folder.split("/")[0]?.toLowerCase()
-        return q.entityTypes!.some(t => folderType === t || n.frontmatter.entities?.some(e => e.toLowerCase().includes(t)))
+        const entityType = Vault.inferEntityType(n)
+        return q.entityTypes!.some(t => entityType === t || n.frontmatter.entities?.some(e => e.toLowerCase().includes(t)))
       })
     }
 
@@ -119,6 +150,18 @@ export class VaultManager {
     }
     if (q.before) {
       notes = notes.filter(n => n.mtime <= q.before!.getTime())
+    }
+
+    // Filter by source (e.g. provider id) — used by consumers that only
+    // trust/want data from specific connections.
+    if (q.sources?.length) {
+      notes = notes.filter(n => n.frontmatter.source && q.sources!.includes(n.frontmatter.source))
+    }
+
+    // Filter by sensitivity — notes without an explicit label are treated as
+    // "private" (fail closed) rather than matching every filter.
+    if (q.sensitivity?.length) {
+      notes = notes.filter(n => q.sensitivity!.includes(n.frontmatter.sensitivity ?? "private"))
     }
 
     const total = notes.length

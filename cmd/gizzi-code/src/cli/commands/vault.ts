@@ -10,6 +10,7 @@
  * - gizzi vault graph             Rebuild entity graph
  * - gizzi vault live              Update live notes
  * - gizzi vault status            Show vault statistics
+ * - gizzi vault mcp-server        Start the Lens context MCP server (stdio)
  */
 
 import { cmd } from "./cmd"
@@ -165,6 +166,15 @@ export const VaultCommand = cmd({
           const updated = await updateAllLiveNotes(vault)
           console.log(`Updated ${updated} live note(s)`)
           vault.close()
+        },
+      )
+      .command(
+        "mcp-server",
+        "Start the Lens context MCP server over stdio (for Claude Desktop, Cursor, etc.)",
+        () => {},
+        async () => {
+          const { startLensMcpServer } = await import("@/vault/mcp-server")
+          await startLensMcpServer()
         },
       )
       .command(

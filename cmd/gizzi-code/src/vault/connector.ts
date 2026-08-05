@@ -30,6 +30,11 @@ export interface ConnectorMetadata {
   version: string
   authType: ConnectorAuthType
   authProviderId?: string // Key used in Auth store (e.g. "google", "fireflies")
+  // Sync cadence defaults, used by getConnectorConfig() when settings.json
+  // has no override. Falls back to 30/120 (see getConnectorConfig) when a
+  // connector doesn't declare these.
+  defaultLookbackDays?: number
+  defaultIntervalMinutes?: number
 }
 
 export interface ConnectorStatus {
@@ -145,31 +150,34 @@ export async function refreshOAuthToken(
 // Settings-driven Connector Config
 // ============================================================================
 
+// Per-connector cadence defaults for the few sources that predate
+// ConnectorMetadata.defaultLookbackDays/defaultIntervalMinutes (gmail,
+// calendar, fireflies — see vault/connectors/*.ts). New connectors should
+// declare their own defaults on `meta` instead of adding a case here.
+const LEGACY_CADENCE_DEFAULTS: Record<string, { lookbackDays: number; intervalMinutes: number }> = {
+  gmail: { lookbackDays: 7, intervalMinutes: 60 },
+  calendar: { lookbackDays: 30, intervalMinutes: 60 },
+  fireflies: { lookbackDays: 30, intervalMinutes: 60 },
+}
+
 export async function getConnectorConfig(id: string): Promise<ConnectorConfig> {
   const settings = await loadSettings()
+  const sourceSettings = settings.sources[id] ?? { enabled: false }
+  const connector = getConnector(id)
+  const cadence =
+    LEGACY_CADENCE_DEFAULTS[id] ??
+    (connector?.meta.defaultLookbackDays || connector?.meta.defaultIntervalMinutes
+      ? {
+          lookbackDays: connector.meta.defaultLookbackDays ?? 30,
+          intervalMinutes: connector.meta.defaultIntervalMinutes ?? 120,
+        }
+      : { lookbackDays: 30, intervalMinutes: 120 })
 
-  switch (id) {
-    case "gmail":
-      return {
-        enabled: settings.sources.gmail.enabled,
-        lookbackDays: 7,
-        intervalMinutes: 60,
-      }
-    case "calendar":
-      return {
-        enabled: settings.sources.calendar.enabled,
-        lookbackDays: 30,
-        intervalMinutes: 60,
-      }
-    case "fireflies":
-      return {
-        enabled: settings.sources.fireflies.enabled,
-        lookbackDays: 30,
-        intervalMinutes: 60,
-        apiKey: settings.sources.fireflies.apiKey,
-      }
-    default:
-      return { enabled: false, lookbackDays: 7, intervalMinutes: 60 }
+  return {
+    enabled: sourceSettings.enabled,
+    lookbackDays: cadence.lookbackDays,
+    intervalMinutes: cadence.intervalMinutes,
+    ...sourceSettings,
   }
 }
 

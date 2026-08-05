@@ -18,8 +18,25 @@ export namespace Vault {
     "daily",
     "task",
     "reference",
+    // Added when Vault and the second brain (`gizzi brain`) were unified
+    // onto one storage root — match brain's template frontmatter `type:`
+    // values (identity.md, domains/, runbooks/, ideas/). See
+    // docs/LENS_CONTEXT_LAYER_PLAN.md.
+    "identity",
+    "domain",
+    "runbook",
+    "idea",
   ])
   export type EntityType = z.infer<typeof EntityType>
+
+  // Coarse-grained visibility label an ingest source assigns to a note at
+  // extraction time. Read by the Lens MCP server (mcp/servers/lens-context-server)
+  // to decide what a given connected AI tool is allowed to see — see
+  // docs/LENS_CONTEXT_LAYER_PLAN.md Phase 4. Defaults to "private" when
+  // absent (extraction-pipeline.ts always sets it explicitly; this is a
+  // fail-closed fallback for hand-written notes that predate this field).
+  export const Sensitivity = z.enum(["public", "private", "restricted"])
+  export type Sensitivity = z.infer<typeof Sensitivity>
 
   export interface Frontmatter {
     title?: string
@@ -27,7 +44,13 @@ export namespace Vault {
     tags?: string[]
     entities?: string[]
     source?: string
+    sensitivity?: Sensitivity
     status?: "open" | "closed" | "pending"
+    // Brain templates (identity.md, domains/, decisions/, runbooks/,
+    // ideas/) set this explicitly. Prefer it over folder-name inference —
+    // see inferEntityType() below — since root-level files like
+    // identity.md/MEMORY.md have no folder to infer from.
+    type?: EntityType
     [key: string]: unknown
   }
 
@@ -44,6 +67,23 @@ export namespace Vault {
     ctime: number
   }
 
+  /**
+   * A note's entity type: prefer `frontmatter.type` when it's a valid
+   * EntityType (how brain's templates declare it), fall back to the
+   * existing plural-folder→singular-type convention (e.g. `decisions/` →
+   * `decision`), default to `"reference"` when neither yields a valid
+   * type. Shared by vault/index.ts's query() and vault/graph/build.ts so
+   * both agree on one inference rule.
+   */
+  export function inferEntityType(note: Pick<Note, "folder" | "frontmatter">): EntityType {
+    const fromFrontmatter = EntityType.safeParse(note.frontmatter.type)
+    if (fromFrontmatter.success) return fromFrontmatter.data
+
+    const folderType = note.folder.split("/")[0]?.toLowerCase()
+    const fromFolder = EntityType.safeParse(folderType)
+    return fromFolder.success ? fromFolder.data : "reference"
+  }
+
   export interface Query {
     text?: string
     entityTypes?: EntityType[]
@@ -54,6 +94,14 @@ export namespace Vault {
     limit?: number
     after?: Date
     before?: Date
+    // Restrict results to these frontmatter.source values (e.g. provider ids
+    // like "gmail"/"notion"). Used by the Lens MCP server to enforce
+    // per-source connection scoping.
+    sources?: string[]
+    // Restrict results to these sensitivity levels. Used by the Lens MCP
+    // server to enforce per-tool visibility (e.g. a "restricted" note never
+    // leaves the vault via MCP even if the source matches).
+    sensitivity?: Sensitivity[]
   }
 
   export interface QueryResult {
