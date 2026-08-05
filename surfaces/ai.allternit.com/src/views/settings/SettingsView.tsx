@@ -55,6 +55,7 @@ import { MonoChip } from '@/components/settings/MonoChip';
 import { AgentOpsPanel } from './AgentOpsPanel';
 import { SecurityPanel } from './SecurityPanel';
 import { SkillsSettingsPanel } from './SkillsSettingsPanel';
+import { LensSettingsPanel } from './LensSettingsPanel';
 import { PluginsSettingsPanel } from './PluginsSettingsPanel';
 import { DispatchSettingsPanel } from './DispatchSettingsPanel';
 import { ResponseStylePanel } from './ResponseStylePanel';
@@ -1399,6 +1400,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
       case 'skills': return renderSkillsPanel();
       case 'response-style': return <ResponseStylePanel />;
       case 'connectors': return renderConnectorsPanel();
+      case 'lens': return <LensSettingsPanel />;
       case 'plugins': return renderPluginsPanel();
       case 'vps': return <ToastProvider><VPSConnectionsPanel /></ToastProvider>;
       case 'devices': return <DevicePairingPanel />;
