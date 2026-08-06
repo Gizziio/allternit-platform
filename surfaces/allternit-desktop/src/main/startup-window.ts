@@ -1,14 +1,9 @@
 /**
- * Allternit Desktop — Startup Window (onboarding wizard + loading)
+ * Allternit Desktop — Startup Window (onboarding welcome + Clerk auth + loading)
  *
- * First launch / signed-out launches show a two-step onboarding wizard
- * (welcome → sign-in) modeled on the Claude for Mac / MiniMax Agent startup
- * screens, followed by the service-loading step. Returning signed-in launches
- * go straight to the loading step.
- *
- * Styling uses the Allternit design tokens (see
- * surfaces/ai.allternit.com/src/styles/allternit-design/tokens.css) in the
- * light brand palette to match allternit.com.
+ * First launch / signed-out launches show a welcome step, then load the native
+ * Clerk auth renderer for sign-in. Returning signed-in launches go straight to
+ * the loading step.
  */
 
 import { BrowserWindow, shell } from 'electron';
@@ -21,16 +16,11 @@ export interface StartupWindowOptions {
   initialStep: StartupInitialStep;
 }
 
-// Copy kept as constants so marketing tweaks stay one-line changes.
 const BRAND_NAME = 'Allternit';
 const TAGLINE = 'Your AI platform, right on your desktop';
-const SIGN_IN_TITLE = 'Connect this desktop';
-const SIGN_IN_SUBTITLE = 'Approve this runtime with your Allternit account in the browser';
 const TERMS_URL = 'https://allternit.com/terms';
 const PRIVACY_URL = 'https://allternit.com/privacy';
 
-// Matrix logo, recolored from the old gold (#D4B08C/#D97757) to the Allternit
-// design-token accent palette (#B08D6E / #9A7658).
 const MATRIX_LOGO_SVG = `
 <svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg" shape-rendering="geometricPrecision" width="88" height="88">
   <defs>
@@ -74,7 +64,7 @@ const MATRIX_LOGO_SVG = `
   <circle cx="50" cy="50" r="3" fill="#B08D6E" filter="url(#glow)"/>
 </svg>`;
 
-export function buildStartupHtml(initialStep: StartupInitialStep): string {
+function buildStartupHtml(initialStep: StartupInitialStep): string {
   return `<!DOCTYPE html>
 <html>
 <head>
@@ -95,10 +85,7 @@ export function buildStartupHtml(initialStep: StartupInitialStep): string {
       --down: #9c2a25;
       --btn-primary-bg: #1a1916;
       --btn-primary-fg: #faf9f7;
-      --btn-secondary-bg: #fffefc;
-      --btn-secondary-fg: #1a1916;
     }
-
     * { margin: 0; padding: 0; box-sizing: border-box; }
     html, body { height: 100%; }
     body {
@@ -116,7 +103,6 @@ export function buildStartupHtml(initialStep: StartupInitialStep): string {
     button, a { -webkit-app-region: no-drag; }
     .step { display: none; flex-direction: column; align-items: center; width: 100%; }
     .step.active { display: flex; }
-
     .brand {
       font-family: 'Allternit Serif', Georgia, ui-serif, Cambria, 'Times New Roman', Times, serif;
       font-size: 34px;
@@ -152,16 +138,7 @@ export function buildStartupHtml(initialStep: StartupInitialStep): string {
       border: 1px solid var(--btn-primary-bg);
     }
     .btn-primary:hover { opacity: 0.85; }
-    .btn-secondary {
-      background: var(--btn-secondary-bg);
-      color: var(--btn-secondary-fg);
-      border: 1px solid var(--border-strong);
-    }
-    .btn-secondary:hover { background: var(--bg); border-color: var(--muted); }
-    .btn:disabled, .btn:disabled:hover {
-      cursor: not-allowed;
-      opacity: 0.5;
-    }
+    .btn:disabled, .btn:disabled:hover { cursor: not-allowed; opacity: 0.5; }
     .footer-legal {
       position: absolute;
       bottom: 28px;
@@ -174,70 +151,6 @@ export function buildStartupHtml(initialStep: StartupInitialStep): string {
     }
     .footer-legal a { color: var(--muted); text-decoration: none; }
     .footer-legal a:hover { color: var(--accent); }
-
-    .signin-title {
-      font-family: 'Allternit Serif', Georgia, ui-serif, Cambria, 'Times New Roman', Times, serif;
-      font-size: 28px;
-      font-weight: 700;
-      color: var(--text-strong);
-      margin-bottom: 8px;
-    }
-    .signin-subtitle { font-size: 14px; color: var(--muted); margin-bottom: 32px; text-align: center; }
-    .signin-card {
-      width: 100%;
-      max-width: 380px;
-      background: var(--panel);
-      border: 1px solid var(--border);
-      border-radius: 16px;
-      padding: 28px 24px;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-    }
-    .divider {
-      width: 100%;
-      display: flex;
-      align-items: center;
-      gap: 12px;
-      margin: 18px 0;
-      color: var(--soft);
-      font-size: 11px;
-      letter-spacing: 1px;
-    }
-    .divider::before, .divider::after {
-      content: '';
-      flex: 1;
-      height: 1px;
-      background: var(--border);
-    }
-    .signin-error {
-      display: none;
-      width: 100%;
-      font-size: 12px;
-      color: var(--down);
-      text-align: center;
-      margin-bottom: 14px;
-      line-height: 1.4;
-    }
-    .signin-readiness {
-      width: 100%;
-      min-height: 17px;
-      margin-top: 14px;
-      color: var(--soft);
-      font-size: 12px;
-      line-height: 1.4;
-      text-align: center;
-    }
-    .signin-quit {
-      margin-top: 8px;
-      background: none;
-      border: none;
-      color: var(--soft);
-      font-size: 12px;
-      cursor: pointer;
-    }
-    .signin-quit:hover { color: var(--muted); }
-
     .spinner {
       width: 28px;
       height: 28px;
@@ -294,12 +207,10 @@ export function buildStartupHtml(initialStep: StartupInitialStep): string {
       font-size: 11px;
       color: var(--soft);
     }
-    .waiting-status { font-size: 14px; color: var(--muted); text-align: center; margin-top: 12px; line-height: 1.5; }
   </style>
 </head>
 <body>
-  <!-- Step: welcome -->
-  <div class="step" id="step-welcome">
+  <div class="step ${initialStep === 'welcome' ? 'active' : ''}" id="step-welcome">
     ${MATRIX_LOGO_SVG}
     <div class="brand">${BRAND_NAME}</div>
     <div class="tagline">${TAGLINE}</div>
@@ -312,52 +223,19 @@ export function buildStartupHtml(initialStep: StartupInitialStep): string {
     </div>
   </div>
 
-  <!-- Step: sign-in -->
-  <div class="step" id="step-signin">
-    <div class="signin-title">${SIGN_IN_TITLE}</div>
-    <div class="signin-subtitle">${SIGN_IN_SUBTITLE}</div>
-    <div class="signin-card">
-      <div class="signin-error" id="signin-error"></div>
-      <button class="btn btn-primary" id="btn-allternit" disabled><span>Continue with Allternit</span></button>
-      <div class="signin-readiness" id="signin-readiness">Preparing secure device pairing…</div>
-    </div>
-    <button class="signin-quit" id="btn-quit">Quit</button>
-  </div>
-
-  <!-- Step: waiting for browser login -->
-  <div class="step" id="step-waiting">
-    <div class="spinner"></div>
-    <div class="waiting-status" id="waiting-status">Waiting for browser login...</div>
-  </div>
-
-  <!-- Step: loading services -->
-  <div class="step" id="step-loading">
+  <div class="step ${initialStep === 'loading' ? 'active' : ''}" id="step-loading">
     ${MATRIX_LOGO_SVG}
     <div class="brand" style="font-size: 24px; margin-top: 20px; margin-bottom: 24px;">${BRAND_NAME}</div>
     <div class="stack-status">
-      <div class="stack-row">
-        <div class="stack-name">Allternit API</div>
-        <div class="stack-value" id="svc-api">Starting…</div>
-      </div>
-      <div class="stack-row">
-        <div class="stack-name">Gateway</div>
-        <div class="stack-value" id="svc-gateway">Starting…</div>
-      </div>
-      <div class="stack-row">
-        <div class="stack-name">Gizzi Runtime</div>
-        <div class="stack-value" id="svc-gizzi">Starting…</div>
-      </div>
-      <div class="stack-row">
-        <div class="stack-name">Platform</div>
-        <div class="stack-value" id="svc-platform">Waiting…</div>
-      </div>
+      <div class="stack-row"><div class="stack-name">Allternit API</div><div class="stack-value" id="svc-api">Starting…</div></div>
+      <div class="stack-row"><div class="stack-name">Gateway</div><div class="stack-value" id="svc-gateway">Starting…</div></div>
+      <div class="stack-row"><div class="stack-name">Gizzi Runtime</div><div class="stack-value" id="svc-gizzi">Starting…</div></div>
+      <div class="stack-row"><div class="stack-name">Platform</div><div class="stack-value" id="svc-platform">Waiting…</div></div>
     </div>
     <div id="loading">
       <div class="spinner"></div>
       <div class="status" id="status">Starting...</div>
-      <div class="progress-container">
-        <div class="progress-bar" id="progress-bar"></div>
-      </div>
+      <div class="progress-container"><div class="progress-bar" id="progress-bar"></div></div>
       <div class="progress-text" id="progress-text"></div>
     </div>
   </div>
@@ -367,71 +245,16 @@ export function buildStartupHtml(initialStep: StartupInitialStep): string {
   <script>
     const { ipcRenderer } = require('electron');
 
-    const steps = ['welcome', 'signin', 'waiting', 'loading'];
-    let authReady = false;
-
-    function setAuthReady(ready, message) {
-      authReady = ready;
-      document.getElementById('btn-allternit').disabled = !ready;
-      const readiness = document.getElementById('signin-readiness');
-      readiness.textContent = message || (ready ? 'Secure device pairing is ready' : 'Preparing secure device pairing…');
-      readiness.style.color = ready ? 'var(--up)' : 'var(--soft)';
-    }
-
-    function showStep(name) {
-      for (const step of steps) {
-        const node = document.getElementById('step-' + step);
-        if (node) node.classList.toggle('active', step === name);
-      }
-    }
-
-    document.getElementById('btn-get-started').addEventListener('click', () => showStep('signin'));
-    document.getElementById('btn-allternit').addEventListener('click', () => {
-      if (!authReady) return;
+    document.getElementById('btn-get-started').addEventListener('click', () => {
       ipcRenderer.send('auth:start-login');
-    });
-    document.getElementById('btn-quit').addEventListener('click', () => {
-      ipcRenderer.send('app:quit');
-    });
-
-    // Back-compat: anything requesting sign-in (e.g. ensureAuthenticated) lands
-    // on the wizard's sign-in step.
-    ipcRenderer.on('auth-required', () => showStep('signin'));
-
-    ipcRenderer.on('auth:ready', (_, message) => {
-      setAuthReady(true, message);
-    });
-
-    ipcRenderer.on('auth:not-ready', (_, message) => {
-      setAuthReady(false, message);
-      showStep('signin');
     });
 
     ipcRenderer.on('auth:login-started', (_, message) => {
-      showStep('waiting');
-      document.getElementById('waiting-status').textContent = message;
-    });
-
-    ipcRenderer.on('auth:login-success', (_, message) => {
-      showStep('waiting');
-      document.getElementById('waiting-status').innerHTML =
-        '<span style="color: var(--up);">' + message + '</span>';
-    });
-
-    ipcRenderer.on('auth:login-failed', (_, message) => {
-      showStep('signin');
-      const errorNode = document.getElementById('signin-error');
-      errorNode.textContent = message;
-      errorNode.style.display = 'block';
+      // When auth starts, the main process will load the Clerk renderer.
     });
 
     ipcRenderer.on('services', (_, services) => {
-      const entries = [
-        ['api', 'svc-api'],
-        ['gateway', 'svc-gateway'],
-        ['gizzi', 'svc-gizzi'],
-        ['platform', 'svc-platform'],
-      ];
+      const entries = [['api', 'svc-api'], ['gateway', 'svc-gateway'], ['gizzi', 'svc-gizzi'], ['platform', 'svc-platform']];
       for (const [key, nodeId] of entries) {
         const node = document.getElementById(nodeId);
         const state = services && services[key];
@@ -452,22 +275,18 @@ export function buildStartupHtml(initialStep: StartupInitialStep): string {
     });
 
     ipcRenderer.on('complete', () => {
-      showStep('loading');
       document.getElementById('loading').innerHTML =
         '<div style="font-size: 24px; margin-bottom: 8px; color: var(--accent); text-align: center;">✓</div>' +
         '<div style="color: var(--text); text-align: center;">Local backend connected</div>';
     });
 
     ipcRenderer.on('error', (_, message) => {
-      showStep('loading');
       const node = document.getElementById('status');
       if (node) {
         node.textContent = 'Error: ' + message;
         node.style.color = 'var(--down)';
       }
     });
-
-    showStep(${JSON.stringify(initialStep)});
   </script>
 </body>
 </html>`;
@@ -480,18 +299,22 @@ export function createStartupWindow(options: StartupWindowOptions): BrowserWindo
     resizable: false,
     alwaysOnTop: true,
     titleBarStyle: 'hiddenInset',
+    backgroundColor: '#faf9f7',
+    show: false,
     webPreferences: {
       nodeIntegration: true,
       contextIsolation: false,
     },
   });
 
-  // Log startup window console messages
+  window.once('ready-to-show', () => {
+    window.show();
+  });
+
   window.webContents.on('console-message', (_event, _level, message, line, sourceId) => {
     log.info(`[Startup] ${message} (${sourceId}:${line})`);
   });
 
-  // Terms / Privacy links open in the system browser, not in-app.
   window.webContents.setWindowOpenHandler(({ url }) => {
     void shell.openExternal(url);
     return { action: 'deny' };
@@ -500,3 +323,10 @@ export function createStartupWindow(options: StartupWindowOptions): BrowserWindo
   window.loadURL(`data:text/html;charset=utf-8,${encodeURIComponent(buildStartupHtml(options.initialStep))}`);
   return window;
 }
+
+/**
+ * Loads the native Clerk auth renderer into the startup window.
+ * In packaged builds this is dist/renderer/auth/index.html; in development
+ * Vite serves it from src/renderer/auth/index.html.
+ */
+

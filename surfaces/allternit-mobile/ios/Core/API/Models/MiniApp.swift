@@ -47,7 +47,7 @@ enum MiniAppCatalogSource: String, Codable, Sendable {
 }
 
 /// One mini-app in the catalog/store list.
-struct MiniApp: Identifiable, Codable, Sendable {
+struct MiniApp: Identifiable, Codable, Sendable, Hashable {
     let id: String
     var name: String
     var description: String

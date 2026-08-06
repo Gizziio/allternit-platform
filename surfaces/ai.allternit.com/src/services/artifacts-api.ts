@@ -98,10 +98,12 @@ export async function createArtifact(input: {
   tags?: string[];
   sections?: Array<{ heading?: string; kind?: string; body?: string; position?: number }>;
 }): Promise<ArtifactDto> {
+  // The gateway's CreateBody deserializes snake_case (workspace_id).
+  const { workspaceId, ...rest } = input;
   const response = await fetch('/api/v1/artifacts', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(input),
+    body: JSON.stringify({ workspace_id: workspaceId, ...rest }),
   });
   const payload = await readJson<{ artifact: ArtifactDto }>(response, 'Failed to create artifact');
   return payload.artifact;

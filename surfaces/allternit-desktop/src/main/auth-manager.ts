@@ -1,4 +1,10 @@
-import { app, BrowserWindow, ipcMain, safeStorage, shell } from 'electron';
+import { app, BrowserWindow, ipcMain, net, safeStorage, session, shell } from 'electron';
+import { fileURLToPath } from 'node:url';
+import { dirname, join } from 'node:path';
+import { openClerkOAuthPopup } from './clerk-oauth-popup.js';
+import { PORTS } from './config.js';
+
+const __dirname = dirname(fileURLToPath(import.meta.url));
 import {
   createCipheriv,
   createDecipheriv,
@@ -20,6 +26,30 @@ const ROTATION_SKEW_MS = 7 * 24 * 60 * 60 * 1000;
 const HEARTBEAT_INTERVAL_MS = 60 * 1000;
 const SAFE_STORAGE_HEADER = 'allternit-safe-storage-v1\n';
 const LOCAL_STORAGE_HEADER = 'allternit-local-aes-gcm-v1\n';
+
+/**
+ * The auth window loads from https://accounts.<clerk-instance-domain>/__desktop_auth__/
+ * (served locally via protocol interception) so Clerk's production-origin
+ * checks and the Turnstile CAPTCHA hostname lock pass legitimately.
+ */
+const AUTH_WINDOW_PATH_PREFIX = '/__desktop_auth__';
+const AUTH_SESSION_PARTITION = 'allternit-auth';
+
+const AUTH_FILE_MIME_TYPES: Record<string, string> = {
+  '.html': 'text/html',
+  '.js': 'application/javascript',
+  '.mjs': 'application/javascript',
+  '.css': 'text/css',
+  '.json': 'application/json',
+  '.png': 'image/png',
+  '.jpg': 'image/jpeg',
+  '.jpeg': 'image/jpeg',
+  '.svg': 'image/svg+xml',
+  '.ico': 'image/x-icon',
+  '.woff': 'font/woff',
+  '.woff2': 'font/woff2',
+  '.ttf': 'font/ttf',
+};
 
 export interface DesktopAuthSession {
   accessToken: string;
@@ -112,22 +142,44 @@ export class DesktopAuthManager {
   private refreshInFlight: Promise<void> | null = null;
   private readonly identityPath = path.join(app.getPath('userData'), 'auth', 'runtime-identity.json');
   private readonly platformKeyPath = path.join(app.getPath('userData'), 'auth', 'platform-encryption-key.bin');
+  private readonly connectorSidecarTokensPath = path.join(app.getPath('userData'), 'auth', 'connector-sidecar-tokens.json');
   private readonly legacySessionPath = path.join(app.getPath('userData'), 'auth', 'desktop-session.json');
   private readonly accountsPath = path.join(app.getPath('userData'), 'auth', 'desktop-accounts.json');
   private signInResolver: ((session: DesktopAuthSession) => void) | null = null;
   private signInRejecter: ((error: Error) => void) | null = null;
   private startupGateResolver: ((session: DesktopAuthSession) => void) | null = null;
   private splashWindow: BrowserWindow | null = null;
+  private clerkTokenResolver: ((token: string) => void) | null = null;
+  private clerkTokenRejecter: ((error: Error) => void) | null = null;
+  private authWindow: BrowserWindow | null = null;
+  private authWindowBaseUrl: string | null = null;
+  private authSessionProtocolRegistered = false;
+  private oauthPopupInFlight = false;
 
   constructor() {
     ipcMain.on('auth:start-login', () => {
       void this.handleLoginRequest();
     });
     // Kept for older startup-window bundles. Human login method selection now
-    // belongs entirely to Clerk on the Allternit pairing page.
+    // belongs entirely to Clerk inside the desktop app.
     ipcMain.on('auth:start-google-login', () => {
       void this.handleLoginRequest();
     });
+
+    ipcMain.handle('auth:clerk-token', (_event, payload: { token: string; userId: string; email: string }) => {
+      log.info('[Auth] Clerk session token received from renderer; resolver present:', Boolean(this.clerkTokenResolver));
+      this.clerkTokenResolver?.(payload.token);
+      this.clerkTokenResolver = null;
+      this.clerkTokenRejecter = null;
+    });
+
+    ipcMain.handle('auth:clerk-error', (_event, message: string) => {
+      log.warn('[Auth] Clerk renderer error:', message);
+      this.clerkTokenRejecter?.(new Error(message));
+      this.clerkTokenResolver = null;
+      this.clerkTokenRejecter = null;
+    });
+
     ipcMain.on('app:quit', () => app.quit());
   }
 
@@ -189,6 +241,46 @@ export class DesktopAuthManager {
       fs.writeFileSync(this.platformKeyPath, this.encodeSecret(key), { mode: 0o600 });
     }
     return { ALLTERNIT_ENCRYPTION_KEY: key };
+  }
+
+  /**
+   * Bearer tokens shared between allternit-api and the open-connector
+   * connector sidecar (see cmd/allternit-api/src/open_connector_proxy.rs and
+   * services/open-connector/PROVENANCE.md). Same persistence pattern as
+   * getPlatformEncryptionEnvironment() above — generated once, protected by
+   * the same authenticated local envelope / OS safeStorage in packaged
+   * builds, reused across restarts so existing connector connections don't
+   * silently invalidate every relaunch.
+   */
+  getConnectorSidecarEnvironment(): Record<string, string> {
+    let tokens: { admin: string; runtime: string } | null = null;
+    if (fs.existsSync(this.connectorSidecarTokensPath)) {
+      try {
+        const parsed = JSON.parse(this.decodeSecret(fs.readFileSync(this.connectorSidecarTokensPath)));
+        if (
+          typeof parsed?.admin === 'string' && /^[a-f0-9]{48}$/i.test(parsed.admin) &&
+          typeof parsed?.runtime === 'string' && /^[a-f0-9]{48}$/i.test(parsed.runtime)
+        ) {
+          tokens = parsed;
+        } else {
+          throw new Error('Connector sidecar tokens have an invalid format');
+        }
+      } catch (error) {
+        log.warn('[Auth] Connector sidecar tokens are unreadable; replacing them:', error);
+        this.quarantineCorruptFile(this.connectorSidecarTokensPath);
+        tokens = null;
+      }
+    }
+    if (!tokens) {
+      tokens = { admin: randomBytes(24).toString('hex'), runtime: randomBytes(24).toString('hex') };
+      fs.mkdirSync(path.dirname(this.connectorSidecarTokensPath), { recursive: true });
+      fs.writeFileSync(this.connectorSidecarTokensPath, this.encodeSecret(JSON.stringify(tokens)), { mode: 0o600 });
+    }
+    return {
+      ALLTERNIT_CONNECTOR_SIDECAR_URL: `http://127.0.0.1:${PORTS.CONNECTOR_SIDECAR}`,
+      ALLTERNIT_CONNECTOR_SIDECAR_ADMIN_TOKEN: tokens.admin,
+      ALLTERNIT_CONNECTOR_SIDECAR_RUNTIME_TOKEN: tokens.runtime,
+    };
   }
 
   /** Main-process-only snapshot for narrow request brokering. */
@@ -319,7 +411,6 @@ export class DesktopAuthManager {
     const visibleWindow = this.splashWindow
       || BrowserWindow.getAllWindows().find((candidate) => candidate.isVisible() && !candidate.isDestroyed());
     visibleWindow?.setAlwaysOnTop(false);
-    this.notifySplash('auth:login-started', 'Opening Allternit in your browser…');
 
     try {
       const session = await this.startPairing();
@@ -369,7 +460,7 @@ export class DesktopAuthManager {
       rejectPairing = reject;
     });
     const timeout = setTimeout(() => {
-      this.clearPendingPairing(new Error('Pairing expired. Choose Continue with Allternit to try again.'));
+      this.clearPendingPairing(new Error('Pairing expired. Choose Get started to try again.'));
     }, PAIRING_TIMEOUT_MS);
     const pending: PendingPairing = {
       pairing,
@@ -383,14 +474,272 @@ export class DesktopAuthManager {
     };
     this.pendingPairing = pending;
 
-    this.notifySplash(
-      'auth:login-started',
-      `Approve ${pairing.userCode} in your browser. This window will continue automatically.`,
-    );
-    await shell.openExternal(pairing.verificationUrl);
-    void this.pollPairing(pending);
+    // Native Clerk auth: open a dedicated auth window with context isolation,
+    // load the React/Clerk renderer, and wait for the user to sign in.
+    void this.openAuthWindow();
+
+    void (async () => {
+      try {
+        const clerkToken = await this.waitForClerkToken();
+        this.closeAuthWindow();
+        await this.completePairingWithClerkToken(clerkToken, pending);
+      } catch (error) {
+        log.warn('[Auth] Pairing with Clerk token failed:', error);
+        this.closeAuthWindow();
+        this.clearPendingPairing(error instanceof Error ? error : new Error('Clerk sign-in failed'));
+      }
+    })();
+
     return promise;
   }
+
+  private async openAuthWindow(): Promise<BrowserWindow> {
+    if (this.authWindow && !this.authWindow.isDestroyed()) {
+      this.authWindow.focus();
+      return this.authWindow;
+    }
+
+    const authDir = join(__dirname, '../renderer/auth');
+    const servingDomain = this.clerkAuthServingDomain();
+    if (!servingDomain) {
+      throw new Error('Clerk auth serving domain is not configured. Rebuild with NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY set.');
+    }
+    const authSession = this.prepareAuthSession(authDir, servingDomain);
+    this.authWindowBaseUrl = `https://${servingDomain}${AUTH_WINDOW_PATH_PREFIX}/`;
+
+    const window = new BrowserWindow({
+      width: 560,
+      height: 680,
+      resizable: false,
+      alwaysOnTop: true,
+      titleBarStyle: 'hiddenInset',
+      title: 'Allternit — Sign in',
+      parent: this.splashWindow ?? undefined,
+      modal: Boolean(this.splashWindow),
+      webPreferences: {
+        preload: join(__dirname, '../preload/auth.js'),
+        nodeIntegration: false,
+        contextIsolation: true,
+        session: authSession,
+      },
+    });
+
+    window.webContents.on('console-message', (_event, _level, message, line, sourceId) => {
+      log.info(`[AuthRenderer] ${message} (${sourceId}:${line})`);
+    });
+
+    // Clerk remembers the last auth route in session storage; start each pairing
+    // flow from a clean slate so the embedded renderer controls the experience.
+    await authSession.clearStorageData();
+
+    // Intercept Clerk OAuth navigation so Google/GitHub sign-in opens in a modal
+    // popup instead of navigating away from the isolated auth renderer.
+    window.webContents.on('will-navigate', (event, url) => {
+      if (!this.isOAuthProviderUrl(url)) return;
+      event.preventDefault();
+
+      // clerk-js retries the external verification navigation whenever the
+      // attempt stays pending — without this guard every retry opens another
+      // popup on top of the previous one.
+      if (this.oauthPopupInFlight) {
+        log.info('[Auth] OAuth popup already open; ignoring duplicate navigation to:', url);
+        return;
+      }
+      this.oauthPopupInFlight = true;
+      log.info('[Auth] Opening OAuth popup for:', url);
+      void openClerkOAuthPopup(url)
+        .then((callbackUrl) => {
+          if (!window.isDestroyed()) {
+            window.loadURL(callbackUrl).catch((err) => {
+              log.error('[Auth] Failed to load OAuth callback:', err);
+            });
+          }
+        })
+        .catch((err) => {
+          log.warn('[Auth] OAuth popup failed:', err);
+          // Don't fail the whole pairing when the user closes the popup.
+          // Reset the auth renderer to a clean client instead, so clerk-js
+          // abandons the pending external verification and stops
+          // re-navigating to the provider (which would reopen the popup).
+          if (!window.isDestroyed() && this.authWindowBaseUrl) {
+            const baseUrl = this.authWindowBaseUrl;
+            void authSession.clearStorageData().then(() => {
+              if (!window.isDestroyed()) {
+                window.loadURL(baseUrl).catch((loadErr) => {
+                  log.error('[Auth] Failed to reset auth renderer:', loadErr);
+                });
+              }
+            });
+          }
+        })
+        .finally(() => {
+          this.oauthPopupInFlight = false;
+        });
+    });
+
+    window.loadURL(this.authWindowBaseUrl).catch((err) => {
+      log.error('[Auth] Failed to load auth renderer:', err);
+      this.clerkTokenRejecter?.(err instanceof Error ? err : new Error('Auth renderer failed to load'));
+    });
+
+    window.on('closed', () => {
+      this.authWindow = null;
+      if (this.clerkTokenRejecter) {
+        this.clerkTokenRejecter(new Error('Sign-in window was closed.'));
+        this.clerkTokenResolver = null;
+        this.clerkTokenRejecter = null;
+      }
+    });
+
+    this.authWindow = window;
+    return window;
+  }
+
+  private closeAuthWindow(): void {
+    log.info('[Auth] closeAuthWindow called; authWindow =', this.authWindow ? 'present' : 'null');
+    if (this.authWindow && !this.authWindow.isDestroyed()) {
+      this.authWindow.close();
+    }
+    this.authWindow = null;
+  }
+
+  /**
+   * Decodes the domain the auth window should be served from, based on the
+   * publishable key baked into clerk-config.json at build time
+   * (pk_(test|live)_<base64(host)$>).
+   *
+   * We serve from the instance's Account Portal domain (accounts.<domain>)
+   * rather than the bare instance domain: Clerk manages its Turnstile
+   * CAPTCHA sitekey for the hosted-pages domain, so the widget only renders
+   * there (elsewhere it fails with error 600010 "missing hostname in widget
+   * configuration"). The Frontend API also accepts subdomains of the instance
+   * domain as a valid origin for production keys.
+   *
+   * clerk.platform.example.com -> accounts.platform.example.com
+   * foo-123.clerk.accounts.dev -> foo-123.accounts.dev
+   */
+  private clerkAuthServingDomain(): string | null {
+    try {
+      const configPath = join(__dirname, '../renderer/auth/clerk-config.json');
+      const { publishableKey } = JSON.parse(fs.readFileSync(configPath, 'utf8')) as { publishableKey?: string };
+      const encoded = publishableKey?.split('_')[2];
+      if (!encoded) return null;
+      const frontendApiHost = Buffer.from(encoded, 'base64').toString('utf8').replace(/\$+$/, '');
+      if (!frontendApiHost) return null;
+      return frontendApiHost.endsWith('.clerk.accounts.dev')
+        ? frontendApiHost.replace('.clerk.accounts.dev', '.accounts.dev')
+        : frontendApiHost.replace(/^clerk\./, 'accounts.');
+    } catch (error) {
+      log.warn('[Auth] Could not decode Clerk auth serving domain:', error);
+      return null;
+    }
+  }
+
+  /**
+   * Prepares the dedicated session for the auth window. The auth renderer is
+   * served from https://accounts.<instance-domain>/__desktop_auth__/ via
+   * protocol interception, which makes Clerk's browser checks pass
+   * legitimately: production keys accept subdomains of the instance domain as
+   * request origin, and Clerk's Turnstile CAPTCHA sitekey is configured for
+   * the hosted-pages (accounts.*) domain. All other https traffic passes
+   * through untouched.
+   */
+  private prepareAuthSession(authDir: string, instanceDomain: string): Electron.Session {
+    const authSession = session.fromPartition(AUTH_SESSION_PARTITION);
+    if (!this.authSessionProtocolRegistered) {
+      authSession.protocol.handle('https', (request) => {
+        const url = new URL(request.url);
+        if (url.host !== instanceDomain || !url.pathname.startsWith(AUTH_WINDOW_PATH_PREFIX)) {
+          return net.fetch(request);
+        }
+        return this.serveAuthFile(authDir, url.pathname.slice(AUTH_WINDOW_PATH_PREFIX.length) || '/');
+      });
+      this.authSessionProtocolRegistered = true;
+    }
+    return authSession;
+  }
+
+  private serveAuthFile(authDir: string, requestPath: string): Response {
+    const target = requestPath === '/' ? '/index.html' : requestPath;
+    const filePath = path.normalize(path.join(authDir, target));
+    if (!filePath.startsWith(path.normalize(authDir + path.sep))) {
+      return new Response('Forbidden', { status: 403 });
+    }
+    try {
+      const data = fs.readFileSync(filePath);
+      return new Response(data, {
+        headers: {
+          'Content-Type': AUTH_FILE_MIME_TYPES[path.extname(filePath).toLowerCase()] || 'application/octet-stream',
+          'Cache-Control': 'no-cache',
+        },
+      });
+    } catch {
+      return new Response('Not found', { status: 404 });
+    }
+  }
+
+  private isOAuthProviderUrl(url: string): boolean {
+    try {
+      const parsed = new URL(url);
+      const hosts = new Set(['accounts.google.com', 'github.com']);
+      return hosts.has(parsed.hostname) || parsed.hostname.endsWith('.google.com');
+    } catch {
+      return false;
+    }
+  }
+
+  private waitForClerkToken(): Promise<string> {
+    return new Promise((resolve, reject) => {
+      this.clerkTokenResolver = resolve;
+      this.clerkTokenRejecter = reject;
+    });
+  }
+
+  private async completePairingWithClerkToken(clerkToken: string, pending: PendingPairing): Promise<void> {
+    const code = pending.pairing.userCode;
+    const normalized = code.toUpperCase().replace(/[^A-Z2-9]/g, '').replace(/(.{4})(?=.)/, '$1-');
+    log.info('[Auth] Completing pairing with Clerk token; looking up pairing code');
+
+    // Verify the pairing exists.
+    const lookup = await fetch(
+      `${cloudApiBaseUrl()}/api/v1/runtime-pairings/code/${encodeURIComponent(normalized)}`,
+      { headers: { Authorization: `Bearer ${clerkToken}` } },
+    );
+    log.info('[Auth] Pairing lookup status:', lookup.status);
+    if (!lookup.ok) {
+      throw new Error('This pairing request is invalid or expired. Please try again.');
+    }
+
+    // Approve it with the Clerk-authenticated user.
+    const approve = await fetch(
+      `${cloudApiBaseUrl()}/api/v1/runtime-pairings/code/${encodeURIComponent(normalized)}/approve`,
+      {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${clerkToken}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({}),
+      },
+    );
+    log.info('[Auth] Pairing approve status:', approve.status);
+    if (!approve.ok) {
+      const payload = await approve.json().catch(() => ({})) as { message?: string; error?: string };
+      throw new Error(payload.message || payload.error || 'Allternit could not approve this runtime.');
+    }
+
+    // Exchange for the device credential. The exchange may return 428 if the
+    // approve transaction hasn't committed yet, so start polling after the first
+    // attempt instead of giving up and leaving the pending pairing stranded.
+    log.info('[Auth] Pairing approved; exchanging for device credential');
+    const exchanged = await this.exchangePendingPairing(pending);
+    if (!exchanged) {
+      log.info('[Auth] Exchange not ready; starting pairing poll');
+      void this.pollPairing(pending);
+    }
+  }
+
+
 
   private async pollPairing(pending: PendingPairing): Promise<void> {
     const interval = Math.max(pending.pairing.pollIntervalSeconds || 2, 2) * 1000;
@@ -402,7 +751,14 @@ export class DesktopAuthManager {
   }
 
   private async exchangePendingPairing(pending: PendingPairing): Promise<boolean> {
-    if (pending.exchangeInFlight || this.pendingPairing !== pending) return false;
+    if (pending.exchangeInFlight) {
+      log.info('[Auth] Skipping exchange; another exchange is already in flight');
+      return false;
+    }
+    if (this.pendingPairing !== pending) {
+      log.info('[Auth] Skipping exchange; pending pairing changed');
+      return false;
+    }
     pending.exchangeInFlight = true;
     try {
       const message = pairingSignatureMessage(pending.pairing.pairingId, pending.pairing.challenge);
@@ -416,9 +772,11 @@ export class DesktopAuthManager {
           signature,
         }),
       });
+      log.info('[Auth] Pairing exchange status:', response.status);
       if (response.status === 428) return false;
       if (!response.ok) {
         const payload = await response.json().catch(() => null) as { error?: string; message?: string } | null;
+        log.warn('[Auth] Pairing exchange failed:', response.status, payload);
         if (response.status >= 500) return false;
         throw new Error(payload?.message || payload?.error || `Pairing failed (${response.status})`);
       }
@@ -447,6 +805,7 @@ export class DesktopAuthManager {
       pending.resolve(this.toSession(identity));
       this.scheduleHeartbeat();
       this.connectRuntimeRelay();
+      log.info('[Auth] Pairing exchange completed; identity saved for user', identity.userId);
       return true;
     } catch (error) {
       if (error instanceof TypeError) {
@@ -866,8 +1225,13 @@ export class DesktopAuthManager {
   }
 
   private localHardwareKey(): Buffer {
+    // Deliberately excludes os.hostname(): on macOS it flips between the mDNS
+    // form ("foo.local") and the DHCP/ISP-assigned form ("foo.hsd1.mn.comcast.net")
+    // depending on network state, which changed this key across relaunches,
+    // failed GCM auth-tag verification on otherwise-valid secrets, and caused
+    // readIdentityFromDisk() to quarantine a good runtime-identity.json as
+    // "corrupt" — silently forcing re-pairing on every network change.
     return createHash('sha256')
-      .update(os.hostname())
       .update(os.userInfo().username)
       .update(os.platform())
       .update(os.arch())

@@ -42,7 +42,7 @@ pub fn mcp_server_router() -> Router<Arc<AppState>> {
 }
 
 #[derive(Debug, Deserialize)]
-struct JsonRpcRequest {
+pub(crate) struct JsonRpcRequest {
     id: Option<Value>,
     method: String,
     #[serde(default)]
@@ -50,7 +50,7 @@ struct JsonRpcRequest {
 }
 
 fn tool_catalog() -> Vec<Value> {
-    vec![
+    let mut tools = vec![
         json!({
             "name": "shell.exec",
             "description": "Execute a shell command on the allternit-api host.",
@@ -150,7 +150,20 @@ fn tool_catalog() -> Vec<Value> {
             "description": "Get the current UTC time.",
             "inputSchema": { "type": "object", "properties": {} }
         }),
-    ]
+    ];
+
+    // Office-engine markdown conversion tools — descriptors shared with the
+    // REST registry (`tool_routes::list_tools`), so both front doors advertise
+    // the same contract.
+    for tool in crate::tool_routes::markdown_builtin_tools() {
+        tools.push(json!({
+            "name": tool.get("id").cloned().unwrap_or(Value::Null),
+            "description": tool.get("description").cloned().unwrap_or(Value::Null),
+            "inputSchema": tool.get("parameters").cloned().unwrap_or(json!({})),
+        }));
+    }
+
+    tools
 }
 
 fn success(id: Value, result: Value) -> Value {
@@ -163,10 +176,51 @@ fn rpc_error(id: Value, code: i32, message: String) -> Value {
 
 #[tracing::instrument(skip_all, name = "mcp_server.handle_rpc", fields(method = %req.method))]
 async fn handle_rpc(
-    State(_state): State<Arc<AppState>>,
+    State(state): State<Arc<AppState>>,
     Extension(user): Extension<AuthUser>,
     Json(req): Json<JsonRpcRequest>,
 ) -> impl IntoResponse {
+    handle_rpc_inner(&state, &user.user_id, req).await
+}
+
+/// Internal sibling of `/mcp/server` for the local gizzi runtime's MCP client
+/// (the `allternit-tools` bundled server in cmd/gizzi-code): same tool
+/// registry, but gated by `internal_auth::require_internal_token` (shared
+/// secret) instead of Clerk, with the user named explicitly via
+/// `x-allternit-user-id` — the same trust model as
+/// `connector_routes::mcp_proxy_internal`. Mounted by `internal_routes.rs` at
+/// `/internal/tools/mcp`, outside the Clerk-protected router.
+pub async fn mcp_tools_internal(
+    State(state): State<Arc<AppState>>,
+    headers: axum::http::HeaderMap,
+    Json(req): Json<JsonRpcRequest>,
+) -> impl IntoResponse {
+    if let Err(status) = crate::internal_auth::require_internal_token(&headers, &state) {
+        return (status, Json(json!({"error": "unauthorized"}))).into_response();
+    }
+    let user_id = headers
+        .get("x-allternit-user-id")
+        .and_then(|v| v.to_str().ok())
+        .map(str::trim)
+        .filter(|s| !s.is_empty())
+        .map(str::to_string);
+    match user_id {
+        Some(user_id) => handle_rpc_inner(&state, &user_id, req).await,
+        None => (
+            StatusCode::BAD_REQUEST,
+            Json(json!({"error": "x-allternit-user-id header is required"})),
+        )
+            .into_response(),
+    }
+}
+
+/// Shared JSON-RPC core behind both the Clerk-gated `/mcp/server` route and
+/// the internal-token-gated `/internal/tools/mcp` route.
+async fn handle_rpc_inner(
+    state: &AppState,
+    user_id: &str,
+    req: JsonRpcRequest,
+) -> axum::response::Response {
     // JSON-RPC notifications (no `id`) get no response body — the caller
     // isn't waiting on one. `notifications/initialized` is the only one this
     // server expects.
@@ -209,7 +263,7 @@ async fn handle_rpc(
                 workspace_id: None,
             };
 
-            match execute_tool_internal(&exec_request, &user.user_id).await {
+            match execute_tool_internal(state, &exec_request, user_id).await {
                 Ok(result) => Json(success(
                     id,
                     json!({

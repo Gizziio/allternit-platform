@@ -229,7 +229,7 @@ export function DevicePairingPanel() {
           marginBottom: '24px',
           padding: '24px',
           borderRadius: '12px',
-          background: 'linear-gradient(135deg, rgba(37,37,37,0.6) 0%, rgba(37,37,37,0.3) 100%)',
+          background: 'linear-gradient(135deg, var(--bg-tertiary) 0%, var(--bg-secondary) 100%)',
           border: '1px solid var(--ui-border-muted)',
         }}
       >
@@ -294,7 +294,7 @@ export function DevicePairingPanel() {
           marginBottom: '24px',
           padding: '20px',
           borderRadius: '10px',
-          background: 'rgba(37,37,37,0.4)',
+          background: 'var(--bg-secondary)',
           border: '1px solid var(--ui-border-muted)',
         }}
       >
@@ -438,7 +438,7 @@ export function DevicePairingPanel() {
         style={{
           padding: '20px',
           borderRadius: '10px',
-          background: 'rgba(37,37,37,0.4)',
+          background: 'var(--bg-secondary)',
           border: '1px solid var(--ui-border-muted)',
         }}
       >

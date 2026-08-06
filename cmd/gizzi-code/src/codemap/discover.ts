@@ -32,6 +32,18 @@ async function trackedFileCount(root: string, dir: string): Promise<number> {
  * the candidate set to real package roots rather than every subdirectory
  * a broad glob happens to touch.
  */
+// Glob.scan (the `glob` npm package) has no concept of .gitignore, unlike
+// Ripgrep.files elsewhere in this module — so a broad workspace pattern
+// like "cmd/*/*" genuinely matches into e.g. "cmd/gizzi-code/node_modules/
+// drizzle-orm" (which has its own package.json, passing the marker check
+// below) just as readily as a real package. Exclude generated dirs
+// explicitly rather than relying on the glob engine to know better.
+const GLOB_EXCLUDED_SEGMENTS = new Set(["node_modules", ".git", "dist", "build", "out", "target", ".next", ".turbo", "coverage"])
+
+function containsExcludedSegment(rel: string): boolean {
+  return rel.split(path.sep).some((segment) => GLOB_EXCLUDED_SEGMENTS.has(segment))
+}
+
 async function expandGlobs(root: string, patterns: string[], marker: string): Promise<Set<string>> {
   const dirs = new Set<string>()
   for (const pattern of patterns) {
@@ -44,6 +56,7 @@ async function expandGlobs(root: string, patterns: string[], marker: string): Pr
     const matches = await Glob.scan(pattern, { cwd: root, include: "all" })
     for (const m of matches) {
       const rel = m.replace(/\/$/, "")
+      if (containsExcludedSegment(rel)) continue
       if (await Filesystem.exists(path.join(root, rel, marker))) dirs.add(rel)
     }
   }
@@ -259,7 +272,11 @@ export async function deriveEntrypoints(root: string, modules: DiscoveredModule[
       const rel = path.join(m.path, candidate)
       if (await Filesystem.exists(path.join(root, rel))) entrypoints.push(rel)
     }
-    if (entrypoints.length) result.set(m.id, entrypoints)
+    // package.json can declare multiple `bin` aliases pointing at the same
+    // file (e.g. {"gizzi": "./dist/x", "gizzi-code": "./dist/x"}) — dedupe
+    // rather than reporting the same real path twice.
+    const deduped = [...new Set(entrypoints)]
+    if (deduped.length) result.set(m.id, deduped)
   }
   return result
 }

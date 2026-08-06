@@ -127,12 +127,10 @@ struct WorkspaceFileEditorView: View {
                 .padding(.top, 12)
                 .padding(.bottom, 8)
 
-                // Editor card.
-                TextEditor(text: $content)
-                    .font(.system(.callout, design: .monospaced))
-                    .foregroundColor(Color("TextPrimary"))
-                    .scrollContentBackground(.hidden)
-                    .padding(10)
+                // Editor card — Runestone gutter + Tree-sitter highlighting,
+                // language resolved from the file's extension.
+                CodeEditorView(text: $content, language: CodeLanguage.language(forPath: file.path))
+                    .padding(.vertical, 6)
                     .background(Color("BgPanel"))
                     .clipShape(RoundedRectangle(cornerRadius: Theme.radiusMD))
                     .overlay(
@@ -307,14 +305,15 @@ struct WorkspaceFileEditorView: View {
 
             Divider().background(Color("BorderSubtle"))
 
+            // Inline green/red diff against the on-screen content, rather
+            // than a flat dump of the proposed file — reuses the same
+            // DiffLine/DiffRenderer the session diff viewer and permission
+            // approval sheet already render with.
             ScrollView {
-                Text(proposal)
-                    .font(.system(.caption, design: .monospaced))
-                    .foregroundColor(Color("TextPrimary"))
-                    .frame(maxWidth: .infinity, alignment: .leading)
-                    .padding(12)
+                DiffRenderer(lines: DiffLine.diffLines(before: content, after: proposal))
+                    .padding(8)
             }
-            .frame(maxHeight: 190)
+            .frame(maxHeight: 220)
         }
         .background(Color("BgPrimary"))
         .clipShape(RoundedRectangle(cornerRadius: Theme.radiusMD))

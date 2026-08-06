@@ -25,6 +25,46 @@ function printStatus(status: Awaited<ReturnType<typeof Pairing.status>>) {
   }
 }
 
+async function runPair(args: { status?: boolean; force?: boolean; name?: string; login?: boolean }) {
+  if (args.status) {
+    printStatus(await Pairing.status())
+    process.exit(0)
+  }
+
+  const existing = await Pairing.status()
+  if (existing.paired && !args.force) {
+    if (args.login) {
+      process.stdout.write("Already signed in.\n")
+    } else {
+      process.stdout.write("This machine is already paired.\n")
+    }
+    printStatus(existing)
+    process.stdout.write("Run `gizzi pair --force` to re-pair.\n")
+    process.exit(0)
+  }
+
+  if (args.login) {
+    process.stdout.write("Opening Allternit to sign in…\n")
+  }
+
+  const stored = await Pairing.pair({
+    name: args.name,
+    onCreated: (pairing) => {
+      process.stdout.write(`Pairing code: ${pairing.userCode}\n`)
+      process.stdout.write(`Approve this device at: ${pairing.verificationUrl}\n`)
+      process.stdout.write("Waiting for approval…\n")
+    },
+  })
+  if (args.login) {
+    process.stdout.write(`Signed in as ${stored.userEmail ?? stored.name}.\n`)
+  } else {
+    process.stdout.write(`Paired as ${stored.name} (runtime ${stored.runtimeId}).\n`)
+  }
+  if (stored.userEmail) process.stdout.write(`Account: ${stored.userEmail}\n`)
+  process.stdout.write(`Device token valid until ${stored.tokenExpiresAt}.\n`)
+  process.exit(0)
+}
+
 export const PairCommand = cmd({
   command: "pair",
   builder: (yargs) =>
@@ -44,31 +84,22 @@ export const PairCommand = cmd({
         describe: "device name shown on the platform (defaults to the stored name or hostname)",
       }),
   describe: "pair this machine as an Allternit runtime device",
-  handler: async (args) => {
-    if (args.status) {
-      printStatus(await Pairing.status())
-      process.exit(0)
-    }
+  handler: runPair,
+})
 
-    const existing = await Pairing.status()
-    if (existing.paired && !args.force) {
-      process.stdout.write("This machine is already paired.\n")
-      printStatus(existing)
-      process.stdout.write("Run `gizzi pair --force` to re-pair.\n")
-      process.exit(0)
-    }
-
-    const stored = await Pairing.pair({
-      name: args.name,
-      onCreated: (pairing) => {
-        process.stdout.write(`Pairing code: ${pairing.userCode}\n`)
-        process.stdout.write(`Approve this device at: ${pairing.verificationUrl}\n`)
-        process.stdout.write("Waiting for approval…\n")
-      },
-    })
-    process.stdout.write(`Paired as ${stored.name} (runtime ${stored.runtimeId}).\n`)
-    if (stored.userEmail) process.stdout.write(`Account: ${stored.userEmail}\n`)
-    process.stdout.write(`Device token valid until ${stored.tokenExpiresAt}.\n`)
-    process.exit(0)
-  },
+export const LoginCommand = cmd({
+  command: "login",
+  builder: (yargs) =>
+    yargs
+      .option("force", {
+        type: "boolean",
+        default: false,
+        describe: "re-sign in even if a valid device token already exists",
+      })
+      .option("name", {
+        type: "string",
+        describe: "device name shown on the platform (defaults to the stored name or hostname)",
+      }),
+  describe: "sign in to Allternit from the command line",
+  handler: (args) => runPair({ ...args, login: true }),
 })

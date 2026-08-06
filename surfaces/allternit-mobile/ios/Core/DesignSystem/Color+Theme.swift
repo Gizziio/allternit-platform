@@ -72,6 +72,7 @@ struct Theme {
     static let statusSuccess = Color(hex: "#4ADE80")
     static let statusWarning = Color(hex: "#FBBF24")
     static let statusInfo = Color(hex: "#60A5FA")
+    static let statusError = Color(hex: "#F87171")
 
     // MARK: - Radius scale (theme.css:35-42)
 

@@ -2,8 +2,8 @@
 import { describe, test, expect, beforeEach, afterEach } from "bun:test"
 import path from "path"
 import fs from "fs/promises"
-import { Checkpoint } from "../../src/agent-workspace/checkpoint"
-import { AgentWorkspace } from "../../src/agent-workspace/artifacts"
+import { Checkpoint } from "../../src/runtime/session/checkpoint"
+import { AgentWorkspace } from "../../src/runtime/memory/memory"
 import { tmpdir } from "../fixture/fixture"
 
 describe("checkpoint", () => {
@@ -55,17 +55,17 @@ describe("checkpoint", () => {
       expect(checkpoint.files["test.txt"].content).toBe("Hello, World!")
     })
 
-    test("excludes .allternit directory from snapshots", async () => {
+    test("excludes .gizzi directory from snapshots", async () => {
       await using tmp = await tmpdir()
       await AgentWorkspace.initialize(tmp.path)
 
-      // Create a file in .allternit
-      const allternitFile = path.join(tmp.path, ".allternit", "test.txt")
-      await fs.writeFile(allternitFile, "should not be included", "utf-8")
+      // Create a file in .gizzi
+      const gizziFile = path.join(tmp.path, ".gizzi", "test.txt")
+      await fs.writeFile(gizziFile, "should not be included", "utf-8")
 
       const checkpoint = await Checkpoint.create(tmp.path, { reason: "test" })
 
-      expect(checkpoint.files[".allternit/test.txt"]).toBeUndefined()
+      expect(checkpoint.files[".gizzi/test.txt"]).toBeUndefined()
     })
 
     test("excludes node_modules from snapshots", async () => {

@@ -95,7 +95,7 @@ struct IntelliSchedulePanel: View {
                     .padding(.horizontal, 20)
                 }
 
-                ForEach(output.schedule) { entry in
+                ForEach(output.schedule, id: \.taskId) { entry in
                     scheduleRow(entry: entry)
                 }
             }

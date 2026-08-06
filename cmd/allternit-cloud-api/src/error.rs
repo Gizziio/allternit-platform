@@ -6,6 +6,7 @@ use axum::{
     Json,
 };
 use serde::{Deserialize, Serialize};
+use tracing::warn;
 
 /// API error response
 #[derive(Debug, Serialize, Deserialize)]
@@ -92,6 +93,10 @@ impl IntoResponse for ApiError {
             .map(|v| v != "true" && v != "1")
             .unwrap_or(true);
 
+        // Log the real error detail server-side before any production sanitization
+        // so fly.io logs show the root cause instead of a generic message.
+        warn!(error = %self, "ApiError response");
+
         let (status, error_code, message) = match &self {
             ApiError::DeploymentNotFound(id) => {
                 (StatusCode::NOT_FOUND, "DEPLOYMENT_NOT_FOUND", id.clone())
@@ -113,11 +118,7 @@ impl IntoResponse for ApiError {
                 "UNAUTHORIZED",
                 "Unauthorized".to_string(),
             ),
-            ApiError::Forbidden(_) => (
-                StatusCode::FORBIDDEN,
-                "FORBIDDEN",
-                "Access forbidden".to_string(),
-            ),
+            ApiError::Forbidden(msg) => (StatusCode::FORBIDDEN, "FORBIDDEN", msg.clone()),
             ApiError::TokenExpired(_) => (
                 StatusCode::UNAUTHORIZED,
                 "TOKEN_EXPIRED",

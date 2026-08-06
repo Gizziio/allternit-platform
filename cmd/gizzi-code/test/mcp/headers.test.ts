@@ -44,7 +44,7 @@ beforeEach(() => {
 })
 
 // Import MCP after mocking
-const { MCP } = await import("../../src/mcp/index")
+const { MCP } = await import("../../src/runtime/tools/mcp")
 const { Instance } = await import("../../src/project/instance")
 const { tmpdir } = await import("../fixture/fixture")
 
@@ -52,9 +52,9 @@ test("headers are passed to transports when oauth is enabled (default)", async (
   await using tmp = await tmpdir({
     init: async (dir) => {
       await Bun.write(
-        `${dir}/opencode.json`,
+        `${dir}/gizzi.json`,
         JSON.stringify({
-          $schema: "https://opencode.ai/config.json",
+          $schema: "https://gizzi.io/config.json",
           mcp: {
             "test-server": {
               type: "remote",

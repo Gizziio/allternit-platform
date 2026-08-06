@@ -1,0 +1,37 @@
+{
+  "name": "@allternit/os-contracts",
+  "version": "0.1.0-draft.0",
+  "license": "UNLICENSED",
+  "private": true,
+  "type": "module",
+  "description": "DRAFT AllternitOS contract spine (Workload/Artifact/Capability/Lease/Receipt/Approval/Event) — provisional, pending ADR-002..012 ratification",
+  "main": "./dist/index.js",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "import": "./dist/index.js",
+      "types": "./dist/index.d.ts"
+    }
+  },
+  "files": [
+    "dist",
+    "src"
+  ],
+  "scripts": {
+    "build": "tsc -p tsconfig.build.json",
+    "clean": "rm -rf dist",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "test:watch": "vitest"
+  },
+  "dependencies": {
+    "zod": "^3.25.0"
+  },
+  "devDependencies": {
+    "@types/node": "^24.10.1",
+    "typescript": "^5.9.3",
+    "vitest": "^1.6.1"
+  },
+  "author": "Allternit"
+}

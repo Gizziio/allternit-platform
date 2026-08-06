@@ -7,9 +7,10 @@ import Foundation
 /// `PtyClient`: always talks directly to `AppConfig.gizziCodeBaseURL`
 /// through a plain `APIClient`.
 ///
-/// Phase 1 is poll-only (`GET /v1/permission` on an interval from the host
-/// view) — the bus events behind `permission.ts`'s SSE `/event` route
-/// (`Event.Asked`/`Event.Replied`, `next.ts:101-111`) aren't wired here.
+/// `subscribeToEvents()` streams the bus events behind `permission.ts`'s SSE
+/// `/event` route (`Event.Asked`/`Event.Replied`, `next.ts:101-111`) in
+/// real time; `CodeModeView.pollPendingPermissions()` consumes it and falls
+/// back to a plain `listPending()` poll if the stream drops.
 final class PermissionClient: @unchecked Sendable {
     static let shared = PermissionClient()
 
@@ -40,6 +41,43 @@ final class PermissionClient: @unchecked Sendable {
         )
     }
 
+    /// Subscribes to the server-sent events stream (`GET /v1/event`).
+    /// Yields parsed permission asked/replied events in real-time.
+    func subscribeToEvents() -> AsyncThrowingStream<PermissionBusEvent, Error> {
+        AsyncThrowingStream { continuation in
+            let task = Task {
+                do {
+                    var request = try await client.authorizedRequest(path: "v1/event")
+                    request.setValue("text/event-stream", forHTTPHeaderField: "Accept")
+                    request.timeoutInterval = 600
+
+                    let (bytes, response) = try await client.sendStream(request)
+                    try client.validate(response)
+
+                    let decoder = JSONDecoder()
+                    for try await line in bytes.lines {
+                        try Task.checkCancellation()
+
+                        guard line.hasPrefix("data: ") else { continue }
+                        let payload = String(line.dropFirst(6))
+                        guard !payload.isEmpty else { continue }
+
+                        guard let data = payload.data(using: .utf8) else { continue }
+
+                        if let event = try? decoder.decode(PermissionBusEvent.self, from: data) {
+                            if case .ignored = event { continue }
+                            continuation.yield(event)
+                        }
+                    }
+                    continuation.finish()
+                } catch {
+                    continuation.finish(throwing: error)
+                }
+            }
+            continuation.onTermination = { _ in task.cancel() }
+        }
+    }
+
     /// Same path-escaping idiom as `PtyClient.escape` (parity with the web's
     /// `encodeURIComponent` on path ids).
     private static func escape(_ requestID: String) -> String {
@@ -50,6 +88,39 @@ final class PermissionClient: @unchecked Sendable {
 private struct ReplyRequestBody: Encodable {
     let reply: PermissionReply
     let message: String?
+}
+
+/// Dynamic events received over the permission bus (`/v1/event` route).
+enum PermissionBusEvent: Decodable, Sendable {
+    case asked(PermissionRequest)
+    case replied(PermissionRepliedInfo)
+    case ignored
+
+    enum CodingKeys: String, CodingKey {
+        case type, properties
+    }
+
+    struct PermissionRepliedInfo: Decodable, Sendable {
+        let sessionID: String
+        let requestID: String
+        let reply: PermissionReply
+    }
+
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        let type = try container.decode(String.self, forKey: .type)
+
+        switch type {
+        case "permission.asked":
+            let request = try container.decode(PermissionRequest.self, forKey: .properties)
+            self = .asked(request)
+        case "permission.replied":
+            let info = try container.decode(PermissionRepliedInfo.self, forKey: .properties)
+            self = .replied(info)
+        default:
+            self = .ignored
+        }
+    }
 }
 
 /// Mirrors `PermissionNext.Request` (`next.ts:71-88`) field-for-field. The
@@ -67,7 +138,7 @@ struct PermissionRequest: Decodable, Sendable, Identifiable {
 }
 
 /// Mirrors `PermissionNext.Reply` (`next.ts:90-91`).
-enum PermissionReply: String, Encodable {
+enum PermissionReply: String, Codable, Sendable {
     case once, always, reject
 }
 

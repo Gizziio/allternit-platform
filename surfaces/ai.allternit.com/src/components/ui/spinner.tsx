@@ -1,15 +1,19 @@
-import {
-  CircleNotch as Loader2Icon,
-} from '@phosphor-icons/react';
+import { ThinkingOrb, type OrbState } from "thinking-orbs";
 
 import { cn } from "@/lib/utils"
 
-function Spinner({ className, ...props }: React.ComponentProps<"svg">) {
+function Spinner({
+  className,
+  state = "working",
+  ...props
+}: React.ComponentProps<"canvas"> & { state?: OrbState }) {
   return (
-    <Loader2Icon
+    <ThinkingOrb
+      state={state}
+      size={20}
       role="status"
       aria-label="Loading"
-      className={cn("size-4 animate-spin", className)}
+      className={cn("inline-block align-middle", className)}
       {...props}
     />
   )

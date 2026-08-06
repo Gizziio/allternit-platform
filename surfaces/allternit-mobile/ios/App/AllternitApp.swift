@@ -4,6 +4,7 @@ import ClerkKitUI
 
 @main
 struct AllternitApp: App {
+    @UIApplicationDelegateAdaptor(AppDelegate.self) private var appDelegate
     @StateObject private var authManager = AuthManager.shared
     /// Platform mode state (chat/cowork/code/browser) + composer agent
     /// state, available environment-wide so every surface reads the same
@@ -17,6 +18,9 @@ struct AllternitApp: App {
 
     init() {
         AuthManager.shared.configure(publishableKey: AppConfig.clerkPublishableKey)
+        // Must register before this initializer returns — BGTaskScheduler
+        // requires the handler in place before app launch completes.
+        BackgroundRefreshManager.register()
         #if DEBUG
         // `-reset-onboarding` (DEBUG only): also clears the Phase-10
         // onboarding gate (the ChatView site clears the dictation/priming
@@ -52,6 +56,8 @@ struct AllternitApp: App {
             .onChange(of: scenePhase) { _, newPhase in
                 if newPhase == .active {
                     authManager.refreshAuthState()
+                } else if newPhase == .background {
+                    BackgroundRefreshManager.scheduleNextRefresh()
                 }
             }
         }

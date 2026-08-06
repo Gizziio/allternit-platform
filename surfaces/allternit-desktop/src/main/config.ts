@@ -24,6 +24,8 @@ export const PORTS = {
   VOICE: 8001,
   /** open-connector connector sidecar (see services/open-connector) */
   CONNECTOR_SIDECAR: 8014,
+  /** Office engine sidecar (services/office-engine) backing /api/office/* */
+  OFFICE_ENGINE: 8099,
 } as const;
 
 export const HOSTS = {
@@ -41,6 +43,7 @@ export const URLS = {
   NOTEBOOK: `http://${HOSTS.LOOPBACK}:${PORTS.NOTEBOOK}`,
   VOICE: `http://${HOSTS.LOOPBACK}:${PORTS.VOICE}`,
   CONNECTOR_SIDECAR: `http://${HOSTS.LOOPBACK}:${PORTS.CONNECTOR_SIDECAR}`,
+  OFFICE_ENGINE: `http://${HOSTS.LOOPBACK}:${PORTS.OFFICE_ENGINE}`,
   /** Canonical Allternit control plane. Human Clerk sessions approve runtime pairing here. */
   CLOUD_API: 'https://allternit-cloud-api.fly.dev',
   /** Canonical browser experience. Pairing must never follow a local static UI URL. */
@@ -83,4 +86,10 @@ export function acuRelayUrl(path?: string): string {
 /** Build a URL for the research notebook backend with an optional path. */
 export function notebookUrl(path?: string): string {
   return path ? `${URLS.NOTEBOOK}${path}` : URLS.NOTEBOOK;
+}
+
+/** Build a URL for the office-engine sidecar with an optional path and port override. */
+export function officeEngineUrl(path?: string, port?: number): string {
+  const base = port ? `http://${HOSTS.LOOPBACK}:${port}` : URLS.OFFICE_ENGINE;
+  return path ? `${base}${path}` : base;
 }

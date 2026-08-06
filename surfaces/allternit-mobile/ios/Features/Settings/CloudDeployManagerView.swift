@@ -520,7 +520,7 @@ struct CloudDeployCreateSheet: View {
     }
 
     private func create() {
-        store.createError = nil
+        store.setCreateError(nil)
         guard let storage = Int(storageGb) else { return }
         let request = DeploymentCreateRequest(
             providerId: providerId.trimmingCharacters(in: .whitespaces),
@@ -542,7 +542,7 @@ struct CloudDeployCreateSheet: View {
                     dismiss()
                 }
             } catch {
-                store.createError = error.localizedDescription
+                store.setCreateError(error.localizedDescription)
             }
         }
     }

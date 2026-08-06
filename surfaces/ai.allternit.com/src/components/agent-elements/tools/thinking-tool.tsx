@@ -28,6 +28,7 @@ function ThinkingCollapsed({
 
   return (
     <ToolRowBase
+      orbState="breathing"
       shimmerLabel="Thinking"
       completeLabel="Thought"
       isAnimating={state === "animating"}

@@ -37,8 +37,11 @@ export function OnboardingPortal(): React.ReactPortal | null {
         alignItems: 'center',
         justifyContent: 'center',
         // Solid background — no see-through. The platform UI should not
-        // be visible during onboarding; that looks unpolished.
-        backgroundColor: '#0d0d10',
+        // be visible during onboarding; that looks unpolished. Must track
+        // the active theme (var, not a hardcoded hex) — WelcomeScreen's own
+        // left panel has no background of its own and relies on this
+        // wrapper, so a fixed dark value made light mode unreadable here.
+        backgroundColor: 'var(--surface-canvas)',
       }}
       data-onboarding-portal
     >

@@ -173,7 +173,7 @@ struct MonitorView: View {
     }
 
     private func color(for hex: String) -> Color {
-        Color(hex: hex) ?? Color("AccentPrimary")
+        Color(hex: hex)
     }
 
     private func trendIcon(for trend: MonitorTrend) -> String {
@@ -488,20 +488,5 @@ private struct FlowLayout: Layout {
             }
             self.size = CGSize(width: maxWidth, height: y + lineHeight)
         }
-    }
-}
-
-// MARK: - Hex color helper
-
-private extension Color {
-    init?(hex: String) {
-        var hexSanitized = hex.trimmingCharacters(in: .whitespacesAndNewlines)
-        hexSanitized = hexSanitized.replacingOccurrences(of: "#", with: "")
-        var rgb: UInt64 = 0
-        guard Scanner(string: hexSanitized).scanHexInt64(&rgb) else { return nil }
-        let r = Double((rgb & 0xFF0000) >> 16) / 255
-        let g = Double((rgb & 0x00FF00) >> 8) / 255
-        let b = Double(rgb & 0x0000FF) / 255
-        self.init(red: r, green: g, blue: b)
     }
 }

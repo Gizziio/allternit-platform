@@ -1,12 +1,12 @@
 // @ts-nocheck
 import { describe, expect, test } from "bun:test"
 import path from "path"
-import { ReadTool } from "../../src/tool/read"
+import { ReadTool } from "../../src/runtime/tools/builtins/read"
 import { Instance } from "../../src/project/instance"
 import { Filesystem } from "../../src/util/filesystem"
 import { tmpdir } from "../fixture/fixture"
 import { PermissionNext } from "../../src/permission/next"
-import { Agent } from "../../src/agent/agent"
+import { Agent } from "../../src/runtime/loop/agent"
 
 const FIXTURES_DIR = path.join(import.meta.dir, "fixtures")
 

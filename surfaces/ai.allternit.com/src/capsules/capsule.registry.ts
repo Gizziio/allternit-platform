@@ -5,7 +5,7 @@ export function capsuleKindToViewType(kind: CapsuleKind): ViewType {
   switch (kind) {
     case "browser": return "browser";
     case "chat": return "chat";
-    case "studio": return "studio";
+    case "studio": return "agent-hub";
     case "workspace": return "workspace";
     default: return "workspace";
   }

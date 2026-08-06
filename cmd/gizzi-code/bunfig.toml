@@ -1,0 +1,5 @@
+[test]
+# Isolate tests from the machine's real global state (XDG data/config/state,
+# API keys, sandbox runtime). Must load BEFORE any src/ imports because
+# xdg-basedir reads env vars at import time. See test/preload.ts.
+preload = ["./test/preload.ts"]

@@ -1,9 +1,9 @@
 // @ts-nocheck
 import { describe, expect, test } from "bun:test"
 import path from "path"
-import type { Tool } from "../../src/tool/tool"
+import type { Tool } from "../../src/runtime/tools/builtins/tool"
 import { Instance } from "../../src/project/instance"
-import { assertExternalDirectory } from "../../src/tool/external-directory"
+import { assertExternalDirectory } from "../../src/runtime/tools/builtins/external-directory"
 import type { PermissionNext } from "../../src/permission/next"
 
 const baseCtx: Omit<Tool.Context, "ask"> = {

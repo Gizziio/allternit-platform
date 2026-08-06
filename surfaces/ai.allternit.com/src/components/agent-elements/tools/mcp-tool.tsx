@@ -217,6 +217,7 @@ export const McpTool = memo(function McpTool({
   return (
     <div className="an-tool-mcp">
       <ToolRowBase
+        orbState="connecting"
         shimmerLabel={title}
         completeLabel={title}
         isAnimating={isPending}

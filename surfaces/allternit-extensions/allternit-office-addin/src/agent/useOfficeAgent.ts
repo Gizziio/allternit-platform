@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { officeStorage } from '@/lib/storage'
 import { loadPlugin, buildPluginSystemPromptPrefix, loadPluginSkillContent } from '@/lib/plugin-loader'
-import { extractCode, executeCode, executeWithRetry, type RetryContext } from '@/lib/code-executor'
+import { extractCode, executeStructuredCode, executeWithRetry, isFreeformExecutionAllowed, type RetryContext } from '@/lib/code-executor'
 import { getToolsForHost, mergeToolCallDelta, finalizeToolCalls, toOpenAITool, type OpenAITool, type ParsedToolCall } from '@/lib/tool-schemas'
 import { buildToolCallCode, describeToolCall, validateToolCall } from '@/lib/tool-dispatcher'
 import { checkToolRequirement } from '@/lib/tool-requirements'
@@ -613,7 +613,7 @@ export function useOfficeAgent(): UseOfficeAgentResult {
               } else {
                 const code = buildToolCallCode(toolCall)
                 const execStart = performance.now()
-                const execResult = await executeCode(code)
+                const execResult = await executeStructuredCode(code)
                 toolDuration = Math.round(performance.now() - execStart)
                 if (execResult.success) {
                   toolResult = typeof execResult.output === 'string'
@@ -660,7 +660,10 @@ export function useOfficeAgent(): UseOfficeAgentResult {
         const code = extractCode(finalContent)
         let displayText = finalContent
 
-        if (code) {
+        if (code && !isFreeformExecutionAllowed()) {
+          // Freeform AI code is default-denied; structured tools already ran.
+          displayText = `${finalContent}\n\n*⚠ Freeform code execution is disabled. Enable it in the add-in settings to run generated code.*`
+        } else if (code) {
           setActivity({ type: 'executing', tool: 'office-js' })
 
           const result = await executeWithRetry(code, {

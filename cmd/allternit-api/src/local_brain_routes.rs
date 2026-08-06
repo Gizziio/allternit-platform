@@ -40,6 +40,10 @@ pub fn local_brain_router() -> Router<Arc<AppState>> {
             get(local_brain_entry).post(pull_local_brain),
         )
         .route("/local-brain/status", get(brain_status))
+        .route(
+            "/local-brain/pull-custom",
+            axum::routing::post(pull_custom_model),
+        )
 }
 
 // ─── Data models ──────────────────────────────────────────────────────────────
@@ -303,12 +307,57 @@ async fn query_brain_impl(
 // ─── Pull Local Brain model over SSE ─────────────────────────────────────────
 
 async fn pull_local_brain(State(state): State<Arc<AppState>>, headers: HeaderMap) -> Response {
-    let _user = match get_user(&headers) {
-        Some(u) => u,
-        None => return unauthorized(),
+    if get_user(&headers).is_none() {
+        return unauthorized();
+    }
+    stream_ollama_pull(state.config.ollama_url(), LOCAL_BRAIN_MODEL.to_string()).await
+}
+
+// ─── Pull an arbitrary Hugging Face GGUF model over SSE ──────────────────────
+//
+// Companion to `search_huggingface` in provider_routes.rs: installs any
+// result from that search the same way `pull_local_brain` installs the fixed
+// default, via Ollama's own `hf.co/<repo>` pull support (same convention
+// gizzi-code's sidecar uses in cmd/gizzi-code/src/runtime/sidecar/index.ts).
+
+#[derive(Deserialize)]
+struct PullCustomModelRequest {
+    /// e.g. "bartowski/Llama-3.2-3B-Instruct-GGUF"
+    repo: String,
+    /// Optional quantization tag, e.g. "Q4_K_M". Ollama picks a default when omitted.
+    quant: Option<String>,
+}
+
+async fn pull_custom_model(
+    State(state): State<Arc<AppState>>,
+    headers: HeaderMap,
+    Json(body): Json<PullCustomModelRequest>,
+) -> Response {
+    if get_user(&headers).is_none() {
+        return unauthorized();
+    }
+
+    let repo = body.repo.trim();
+    if repo.is_empty() || repo.contains(char::is_whitespace) {
+        return (
+            StatusCode::BAD_REQUEST,
+            Json(json!({ "error": "invalid_repo", "message": "repo must be a non-empty Hugging Face repo id, e.g. \"org/name-GGUF\"" })),
+        )
+            .into_response();
+    }
+
+    let tag = match body.quant.as_deref().map(str::trim).filter(|q| !q.is_empty()) {
+        Some(quant) => format!("hf.co/{repo}:{quant}"),
+        None => format!("hf.co/{repo}"),
     };
 
-    let ollama_url = state.config.ollama_url();
+    stream_ollama_pull(state.config.ollama_url(), tag).await
+}
+
+/// Streams an Ollama `/api/pull` for `model_tag` back to the client as SSE,
+/// re-emitting each JSON progress line Ollama sends. Shared by the fixed
+/// Local Brain download and arbitrary Hugging Face installs.
+async fn stream_ollama_pull(ollama_url: String, model_tag: String) -> Response {
     let client = reqwest::Client::new();
     let tags_url = format!("{}/api/tags", ollama_url.trim_end_matches('/'));
     let pull_url = format!("{}/api/pull", ollama_url.trim_end_matches('/'));
@@ -339,7 +388,7 @@ async fn pull_local_brain(State(state): State<Arc<AppState>>, headers: HeaderMap
         let pull_response = match client
             .post(&pull_url)
             .json(&json!({
-                "name": LOCAL_BRAIN_MODEL,
+                "name": model_tag,
                 "stream": true,
             }))
             .send()

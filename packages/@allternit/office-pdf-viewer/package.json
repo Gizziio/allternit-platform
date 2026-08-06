@@ -1,0 +1,27 @@
+{
+  "name": "@allternit/office-pdf-viewer",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Shared Allternit PDF viewer component (pdf.js rendering + text extraction)",
+  "type": "module",
+  "main": "./src/index.ts",
+  "types": "./src/index.ts",
+  "exports": {
+    ".": {
+      "import": "./src/index.ts",
+      "types": "./src/index.ts"
+    }
+  },
+  "dependencies": {
+    "pdfjs-dist": "^5.4.54",
+    "react": "^18.2.0",
+    "react-dom": "^18.2.0"
+  },
+  "devDependencies": {
+    "@types/react": "^18.3.28",
+    "typescript": "^5.9.3"
+  },
+  "scripts": {
+    "typecheck": "tsc --noEmit"
+  }
+}

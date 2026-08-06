@@ -39,6 +39,7 @@ export const DEFAULT_POLICIES: Record<ViewType, SpawnPolicy> = {
   monitor: { singleton: true, maxInstances: 1, allowNew: false, surface: 'view', ownsTabs: false },
   hermes: { singleton: true, maxInstances: 1, allowNew: false, surface: 'view', ownsTabs: false },
   'oh-my-pi': { singleton: true, maxInstances: 1, allowNew: false, surface: 'view', ownsTabs: false },
+  'vault-viewer': { singleton: true, maxInstances: 1, allowNew: false, surface: 'view', ownsTabs: false },
   openclaw: { singleton: true, maxInstances: 1, allowNew: false, surface: 'view', ownsTabs: false },
   'openclaw-chat': { singleton: true, maxInstances: 1, allowNew: false, surface: 'view', ownsTabs: false },
   'openclaw-sessions': { singleton: true, maxInstances: 1, allowNew: false, surface: 'view', ownsTabs: false },
@@ -179,6 +180,17 @@ export const DEFAULT_POLICIES: Record<ViewType, SpawnPolicy> = {
   "design-view-market": { singleton: true, maxInstances: 1, allowNew: false, surface: 'view', ownsTabs: false },
   "design-view-compare": { singleton: true, maxInstances: 1, allowNew: false, surface: 'view', ownsTabs: false },
   "design-marketplace": { singleton: true, maxInstances: 1, allowNew: false, surface: 'view', ownsTabs: false },
+
+  // Docs editor (GenOffice)
+  docs: { singleton: false, maxInstances: 5, allowNew: true, surface: 'view', ownsTabs: false },
+  // Slides editor (GenOffice)
+  slides: { singleton: false, maxInstances: 5, allowNew: true, surface: 'view', ownsTabs: false },
+  // Sheets editor (GenOffice)
+  sheets: { singleton: false, maxInstances: 5, allowNew: true, surface: 'view', ownsTabs: false },
+  // PDF viewer (GenOffice)
+  pdf: { singleton: false, maxInstances: 5, allowNew: true, surface: 'view', ownsTabs: false },
+  // Markdown preview (anydoc)
+  'markdown-preview': { singleton: false, maxInstances: 5, allowNew: true, surface: 'view', ownsTabs: false },
 
 };
 

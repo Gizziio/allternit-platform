@@ -59,7 +59,10 @@ final class ACIBrowserController: ObservableObject {
     }
 
     func load(_ url: URL) {
-        webView?.load(URLRequest(url: url))
+        Task {
+            let tunneled = await InstanceConnection.tunnelLocalhost(url: url)
+            webView?.load(URLRequest(url: tunneled))
+        }
     }
 
     func goBack() { webView?.goBack() }
@@ -420,6 +423,25 @@ private struct ACIBrowserWebView: UIViewRepresentable {
 // MARK: - WKNavigationDelegate
 
 extension ACIBrowserWebView.Coordinator: WKNavigationDelegate {
+    @MainActor func webView(_ webView: WKWebView,
+                 decidePolicyFor navigationAction: WKNavigationAction,
+                 decisionHandler: @escaping @MainActor @Sendable (WKNavigationActionPolicy) -> Void) {
+        guard let url = navigationAction.request.url else {
+            decisionHandler(.allow)
+            return
+        }
+        let host = url.host ?? ""
+        if host == "localhost" || host == "127.0.0.1" {
+            decisionHandler(.cancel)
+            Task {
+                let tunneled = await InstanceConnection.tunnelLocalhost(url: url)
+                webView.load(URLRequest(url: tunneled))
+            }
+        } else {
+            decisionHandler(.allow)
+        }
+    }
+
     func webView(_ webView: WKWebView, didStartProvisionalNavigation navigation: WKNavigation!) {
         sync(webView, isLoading: true, progress: 0.15)
     }

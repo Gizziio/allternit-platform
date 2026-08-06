@@ -1,5 +1,7 @@
 node_modules/
 services/open-connector/data/
+services/vault-viewer/data/
+services/vault-viewer/server/public/
 dist/
 dist-bundle/
 target/

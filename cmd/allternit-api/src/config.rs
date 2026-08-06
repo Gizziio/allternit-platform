@@ -570,6 +570,16 @@ impl AppConfig {
             .unwrap_or_else(|| "http://127.0.0.1:8760".to_string())
     }
 
+    /// Office engine (services/office-engine) base URL. The TypeScript Hono
+    /// service exposes `POST /parse` and `POST /docx/roundtrip`; the
+    /// `/api/office/*` gateway routes proxy to it.
+    pub fn office_engine_url(&self) -> String {
+        std::env::var("OFFICE_ENGINE_URL")
+            .ok()
+            .filter(|s| !s.is_empty())
+            .unwrap_or_else(|| "http://127.0.0.1:8099".to_string())
+    }
+
     /// Gizzi runtime port. Used when a full URL is not supplied.
     pub fn gizzi_port(&self) -> u16 {
         std::env::var("GIZZI_PORT")

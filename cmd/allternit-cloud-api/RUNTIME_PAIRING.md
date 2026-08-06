@@ -6,7 +6,7 @@ This document describes the first-party device-pairing protocol that binds Allte
 
 ```
 ┌─────────────────────────────────────┐
-│ platform.allternit.com              │  Clerk authenticates the human
+│ ai.allternit.com                    │  Clerk authenticates the human
 │ Clerk session                       │
 └─────────────┬───────────────────────┘
               │ approves
@@ -65,7 +65,7 @@ Response:
   "deviceCode": "base64url-secret",
   "userCode": "ABCD-2345",
   "challenge": "base64url-secret",
-  "verificationUrl": "https://platform.allternit.com/pair?code=ABCD-2345",
+  "verificationUrl": "https://ai.allternit.com/pair?code=ABCD-2345",
   "expiresAt": "2026-07-16T01:40:00Z",
   "pollIntervalSeconds": 2
 }

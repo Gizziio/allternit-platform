@@ -24,7 +24,7 @@ struct ChangesetReviewSheet: View {
 
     private var diffLines: [DiffLine]? {
         guard let diff = request.metadata.diff, !diff.isEmpty else { return nil }
-        return DiffLine.parse(diff)
+        return DiffLine.parse(unifiedDiff: diff)
     }
 
     var body: some View {
@@ -33,7 +33,7 @@ struct ChangesetReviewSheet: View {
                 VStack(alignment: .leading, spacing: 16) {
                     header
                     if let diffLines {
-                        diffView(diffLines)
+                        DiffRenderer(lines: diffLines)
                     } else {
                         fallbackView
                     }
@@ -87,26 +87,6 @@ struct ChangesetReviewSheet: View {
             }
         }
         .frame(maxWidth: .infinity, alignment: .leading)
-    }
-
-    private func diffView(_ lines: [DiffLine]) -> some View {
-        VStack(alignment: .leading, spacing: 0) {
-            ForEach(lines) { line in
-                Text(line.text.isEmpty ? " " : line.text)
-                    .font(.system(.caption, design: .monospaced))
-                    .foregroundColor(Color("TextPrimary"))
-                    .frame(maxWidth: .infinity, alignment: .leading)
-                    .padding(.horizontal, 10)
-                    .padding(.vertical, 2)
-                    .background(line.kind.background)
-            }
-        }
-        .background(Color("BgPanel"))
-        .clipShape(RoundedRectangle(cornerRadius: Theme.radiusMD))
-        .overlay(
-            RoundedRectangle(cornerRadius: Theme.radiusMD)
-                .stroke(Theme.borderWarmDefault, lineWidth: 1)
-        )
     }
 
     /// Non-file-edit permissions (e.g. `bash`) carry no `diff` — just show
@@ -174,43 +154,5 @@ struct ChangesetReviewSheet: View {
             errorMessage = error.localizedDescription
         }
         isSubmitting = false
-    }
-}
-
-/// One rendered row of a unified diff (`createTwoFilesPatch` output,
-/// `edit.ts:48-149`): `+`/`-`/` `-prefixed content lines plus the `---`/`+++`
-/// file headers and `@@` hunk headers, all rendered as plain context.
-private struct DiffLine: Identifiable {
-    enum Kind {
-        case added, removed, context, header
-
-        var background: Color {
-            switch self {
-            case .added: return Theme.statusSuccess.opacity(0.15)
-            case .removed: return Color.red.opacity(0.15)
-            case .context, .header: return .clear
-            }
-        }
-    }
-
-    let id: Int
-    let kind: Kind
-    let text: String
-
-    static func parse(_ diff: String) -> [DiffLine] {
-        diff.split(separator: "\n", omittingEmptySubsequences: false).enumerated().map { index, raw in
-            let line = String(raw)
-            let kind: Kind
-            if line.hasPrefix("+++") || line.hasPrefix("---") || line.hasPrefix("@@") || line.hasPrefix("Index:") || line.hasPrefix("===") {
-                kind = .header
-            } else if line.hasPrefix("+") {
-                kind = .added
-            } else if line.hasPrefix("-") {
-                kind = .removed
-            } else {
-                kind = .context
-            }
-            return DiffLine(id: index, kind: kind, text: line)
-        }
     }
 }

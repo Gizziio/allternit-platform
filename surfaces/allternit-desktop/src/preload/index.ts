@@ -140,7 +140,10 @@ type WindowState = {
 const windowAPI = {
   minimize: (): Promise<void> => ipcRenderer.invoke('window:minimize'),
   maximize: (): Promise<{ maximized: boolean }> => ipcRenderer.invoke('window:maximize'),
-  close: (): Promise<void> => ipcRenderer.invoke('window:close'),
+  close: (): Promise<void> => {
+    console.warn('[preload] window.close() invoked from renderer', new Error('trace').stack);
+    return ipcRenderer.invoke('window:close');
+  },
   isMaximized: (): Promise<boolean> => ipcRenderer.invoke('window:is-maximized'),
   fullscreen: (enabled?: boolean): Promise<{ fullscreen: boolean }> =>
     ipcRenderer.invoke('window:fullscreen', enabled),
@@ -279,6 +282,9 @@ const meshAPI = {
 const shellAPI = {
   openExternal: (url: string): Promise<void> => ipcRenderer.invoke('shell:open-external', url),
   openDesign: (): Promise<void> => ipcRenderer.invoke('shell:open-design'),
+  openDocs: (artifactId?: string): Promise<void> => ipcRenderer.invoke('shell:open-docs', artifactId),
+  openOffice: (target?: string, artifactId?: string): Promise<void> =>
+    ipcRenderer.invoke('shell:open-office', target, artifactId),
   openSession: (options: { sessionId: string; workspaceId?: string; title?: string }): Promise<void> =>
     ipcRenderer.invoke('shell:open-session', options),
   getOfficeHostStatus: (): Promise<Record<'word' | 'excel' | 'powerpoint', {
@@ -288,6 +294,25 @@ const shellAPI = {
   }>> => ipcRenderer.invoke('shell:get-office-host-status'),
   showSave: (options: unknown): Promise<unknown> => ipcRenderer.invoke('dialog:show-save', options),
   showOpen: (options: unknown): Promise<unknown> => ipcRenderer.invoke('dialog:show-open', options),
+};
+
+// ─── Office programs ─────────────────────────────────────────────────────────
+// File-association delivery: the main process sends `office:open-file` with
+// { name, bytes } after the editor window loads; the platform surface's
+// office desktop bridge registers a handler here and routes the bytes via
+// its file-handoff store.
+
+const officeAPI = {
+  onOpenFile: (
+    callback: (payload: { name: string; bytes: Uint8Array }) => void,
+  ): (() => void) => {
+    const listener = (_event: Electron.IpcRendererEvent, payload: { name: string; bytes: Uint8Array }) =>
+      callback(payload);
+    ipcRenderer.on('office:open-file', listener);
+    return () => {
+      ipcRenderer.removeListener('office:open-file', listener);
+    };
+  },
 };
 
 const officeAddinsAPI = {
@@ -594,6 +619,7 @@ const allternitDesktopAPI = {
   devicePairing: devicePairingAPI,
   mesh: meshAPI,
   shell: shellAPI,
+  office: officeAPI,
   officeAddins: officeAddinsAPI,
   theme: themeAPI,
   extension: extensionAPI,
@@ -612,6 +638,14 @@ const allternitDesktopAPI = {
 };
 
 contextBridge.exposeInMainWorld('allternit', allternitDesktopAPI);
+
+// Temporary diagnostic: log a stack trace for native window.close() calls
+// (e.g. TerminalClerkPage.tsx's self-close), which bypass windowAPI.close above.
+const nativeWindowClose = window.close.bind(window);
+window.close = () => {
+  console.warn('[preload] native window.close() invoked', new Error('trace').stack);
+  nativeWindowClose();
+};
 
 // ─── allternitSidecar bridge ──────────────────────────────────────────────────
 // The platform renderer calls window.allternitSidecar to detect Electron and

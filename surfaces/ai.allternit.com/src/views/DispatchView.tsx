@@ -28,7 +28,7 @@ import {
 } from '@phosphor-icons/react';
 import { cn } from '@/lib/utils';
 import { useSettingsState } from '@/hooks/useSettingsState';
-import { useAuth } from '@clerk/clerk-react';
+import { usePlatformAuth } from '@/lib/platform-auth-client';
 import { getDispatchStatus, getDispatchDevAddress, mintDispatchToken, type DispatchStatusResponse } from '@/lib/dispatch/handoff';
 import {
   CodePermissionsDropdown,
@@ -323,7 +323,7 @@ export function DispatchView(): React.ReactNode {
 
   // ── QR / session ────────────────────────────────────────────────────────────
   const [token, setToken] = useState<string>(() => generateDispatchToken());
-  const { getToken } = useAuth();
+  const { getToken } = usePlatformAuth();
 
   // Hosted handoff (allternit-cloud-api /dispatch/handoff/mint): bind the QR
   // token to one of the user's paired runtimes so a phone claiming it pairs

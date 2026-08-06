@@ -40,9 +40,13 @@ export function UniverSheetEditor({ projectName }: Props) {
           locales: { [LocaleType.EN_US]: merge({}, sheetLocale) },
           theme: defaultTheme,
           presets: [
+            // Legacy design-mode editor pinned to @univerjs/presets 0.21 while
+            // the sheets app carries Univer 0.25 — the two cores' IPreset types
+            // are nominally incompatible, so the call is cast (superseded by
+            // packages/@allternit/office-sheets-app).
             UniverSheetsCorePreset({
               container: containerRef.current,
-            }),
+            } as any) as any,
           ],
         });
 

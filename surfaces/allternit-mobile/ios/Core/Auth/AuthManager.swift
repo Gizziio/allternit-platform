@@ -48,16 +48,43 @@ final class AuthManager: ObservableObject {
 
     /// Mirrors `Clerk.shared.session` into the published gate state. Called
     /// after configure, sign-out, auth-sheet dismissal, and foregrounding.
+    /// When the user is signed in, kick off runtime pairing in the background
+    /// so API calls can upgrade from a short-lived Clerk JWT to a long-lived
+    /// cloud-issued device token.
     func refreshAuthState() {
         guard isClerkConfigured else { return }
         currentSession = Clerk.shared.session
+        let wasSignedIn = isSignedIn
         isSignedIn = currentSession != nil
+
+        if isSignedIn, !wasSignedIn {
+            Task {
+                do {
+                    _ = try await RuntimePairing.shared.ensurePaired()
+                } catch {
+                    print("[AuthManager] Runtime pairing failed: \(error.localizedDescription)")
+                }
+            }
+        }
     }
 
     /// Clerk session token for the API layer (the SDK caches and refreshes it).
     func getToken() async throws -> String? {
         guard isClerkConfigured else { return nil }
         return try await Clerk.shared.session?.getToken()
+    }
+
+    /// Returns the runtime device token when paired and valid; otherwise falls
+    /// back to the Clerk session token. This is what `APIClient` sends as the
+    /// Bearer token, matching desktop's use of `allternit_runtime_…` credentials.
+    func effectiveToken() async throws -> String? {
+        if RuntimePairing.shared.isPaired {
+            await RuntimePairing.shared.rotateIfNeeded()
+        }
+        if let token = RuntimePairing.shared.deviceToken() {
+            return token
+        }
+        return try await getToken()
     }
 
     /// Bridges to ClerkKitUI: presenting the `AuthView` sheet is the sign-in flow.
@@ -76,6 +103,9 @@ final class AuthManager: ObservableObject {
 
     func signOut() async throws {
         guard isClerkConfigured else { return }
+        // Revoke the iOS runtime device credential before signing out of Clerk.
+        // The revoke call needs the current device token, so it must run first.
+        await RuntimePairing.shared.revoke()
         try await Clerk.shared.auth.signOut()
         refreshAuthState()
     }

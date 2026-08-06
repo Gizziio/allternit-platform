@@ -41,9 +41,9 @@ struct NodesManagerView: View {
                 Text("Disconnect \(node.hostname) from the control plane. The node agent will need to be reconfigured to reconnect.")
             }
         }
-        .alert("Node Join Token", isPresented: Binding(
-            get { store.generatedToken != nil },
-            set { if !$0 { store.clearGeneratedToken() } }
+        .alert("Node Join Token", isPresented: Binding<Bool>(
+            get: { store.generatedToken != nil },
+            set: { if !$0 { store.clearGeneratedToken() } }
         )) {
             Button("Copy & Close") {
                 if let command = store.generatedToken?.installCommand {

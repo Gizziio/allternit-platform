@@ -11,7 +11,7 @@ type PairingInfo = {
   pairingId: string;
   userCode: string;
   name: string;
-  runtimeType: 'desktop' | 'vps';
+  runtimeType: 'desktop' | 'vps' | 'ios';
   hostname?: string;
   platform?: string;
   publicKeyFingerprint: string;

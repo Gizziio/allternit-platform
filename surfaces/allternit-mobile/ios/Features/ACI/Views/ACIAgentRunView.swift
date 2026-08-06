@@ -452,9 +452,7 @@ struct ACIAgentRunView: View {
     private var connectingState: some View {
         VStack(spacing: 16) {
             VStack(spacing: 16) {
-                ProgressView()
-                    .controlSize(.regular)
-                    .tint(Color("TextSecondary"))
+                ThinkingOrb(state: .connecting, size: .avatar)
                 Text("CONNECTING")
                     .font(.system(size: 10, design: .monospaced))
                     .tracking(3)

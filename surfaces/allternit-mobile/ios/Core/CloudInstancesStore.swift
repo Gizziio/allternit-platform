@@ -15,6 +15,12 @@ final class CloudInstancesStore: ObservableObject {
     @Published private(set) var isStarting = false
     @Published private(set) var startError: String? = nil
     @Published private(set) var isAdvancing = false
+
+    /// Views report/update start-flow errors through this setter; the
+    /// property stays `private(set)` so all mutation goes through the store.
+    func setStartError(_ message: String?) {
+        startError = message
+    }
     @Published private(set) var isBootstrapping = false
     @Published private(set) var bootstrapResult: CloudBootstrapResult? = nil
     @Published private(set) var isCancelling = false

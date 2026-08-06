@@ -1040,9 +1040,9 @@ fn validate_pairing_request(request: &CreatePairingRequest) -> Result<(), ApiErr
             "Runtime name must be 1-100 characters".to_string(),
         ));
     }
-    if !matches!(request.runtime_type.as_str(), "desktop" | "vps" | "hosted") {
+    if !matches!(request.runtime_type.as_str(), "desktop" | "vps" | "hosted" | "ios") {
         return Err(ApiError::BadRequest(
-            "runtimeType must be desktop, vps, or hosted".to_string(),
+            "runtimeType must be desktop, vps, hosted, or ios".to_string(),
         ));
     }
     decode_public_key(&request.public_key)?;

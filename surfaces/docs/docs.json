@@ -82,7 +82,8 @@
       "pages": [
         "surfaces/desktop",
         "surfaces/platform",
-        "surfaces/extensions"
+        "surfaces/extensions",
+        "surfaces/anydoc"
       ]
     },
     {

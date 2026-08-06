@@ -100,9 +100,9 @@ beforeEach(() => {
 })
 
 // Import modules after mocking
-const { MCP } = await import("../../src/mcp/index")
-const { Bus } = await import("../../src/bus")
-const { McpOAuthCallback } = await import("../../src/mcp/oauth-callback")
+const { MCP } = await import("../../src/runtime/tools/mcp")
+const { Bus } = await import("../../src/shared/bus")
+const { McpOAuthCallback } = await import("../../src/runtime/tools/mcp/oauth-callback")
 const { Instance } = await import("../../src/project/instance")
 const { tmpdir } = await import("../fixture/fixture")
 
@@ -110,9 +110,9 @@ test("BrowserOpenFailed event is published when open() throws", async () => {
   await using tmp = await tmpdir({
     init: async (dir) => {
       await Bun.write(
-        `${dir}/opencode.json`,
+        `${dir}/gizzi.json`,
         JSON.stringify({
-          $schema: "https://opencode.ai/config.json",
+          $schema: "https://gizzi.io/config.json",
           mcp: {
             "test-oauth-server": {
               type: "remote",
@@ -161,9 +161,9 @@ test("BrowserOpenFailed event is NOT published when open() succeeds", async () =
   await using tmp = await tmpdir({
     init: async (dir) => {
       await Bun.write(
-        `${dir}/opencode.json`,
+        `${dir}/gizzi.json`,
         JSON.stringify({
-          $schema: "https://opencode.ai/config.json",
+          $schema: "https://gizzi.io/config.json",
           mcp: {
             "test-oauth-server-2": {
               type: "remote",
@@ -210,9 +210,9 @@ test("open() is called with the authorization URL", async () => {
   await using tmp = await tmpdir({
     init: async (dir) => {
       await Bun.write(
-        `${dir}/opencode.json`,
+        `${dir}/gizzi.json`,
         JSON.stringify({
-          $schema: "https://opencode.ai/config.json",
+          $schema: "https://gizzi.io/config.json",
           mcp: {
             "test-oauth-server-3": {
               type: "remote",

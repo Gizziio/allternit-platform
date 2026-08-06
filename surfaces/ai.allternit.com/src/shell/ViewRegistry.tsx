@@ -24,6 +24,7 @@ const SkillsRegistryView   = lazy(() => import('../views/code/SkillsRegistryView
 const DesignRegistryView   = lazy(() => import('../views/design/DesignRegistryView').then(m => ({ default: m.DesignRegistryView })));
 const OpenClawView         = lazy(() => import('../views/openclaw/OpenClawView').then(m => ({ default: m.OpenClawView })));
 const HermesView           = lazy(() => import('../views/hermes/HermesView').then(m => ({ default: m.HermesView })));
+const VaultViewerView      = lazy(() => import('../views/vault-viewer/VaultViewerView').then(m => ({ default: m.VaultViewerView })));
 const OhMyPiView           = lazy(() => import('../views/omp/OhMyPiView').then(m => ({ default: m.OhMyPiView })));
 const ChatModeAgentSession = lazy(() => import('../views/agent-sessions/ChatModeAgentSession').then(m => ({ default: m.ChatModeAgentSession })));
 const CoworkModeAgentTasks = lazy(() => import('../views/agent-sessions/CoworkModeAgentTasks').then(m => ({ default: m.CoworkModeAgentTasks })));
@@ -123,6 +124,11 @@ const GoalsListView          = lazy(() => import('../views/automation/GoalsListV
 const GoalDetailView         = lazy(() => import('../views/automation/GoalDetailView').then(m => ({ default: m.GoalDetailView })));
 const RoutinesListView       = lazy(() => import('../views/automation/RoutinesListView').then(m => ({ default: m.RoutinesListView })));
 const LoopsListView          = lazy(() => import('../views/automation/LoopsListView').then(m => ({ default: m.LoopsListView })));
+const DocsView               = lazy(() => import('../views/docs/DocsView').then(m => ({ default: m.DocsView })));
+const SlidesView             = lazy(() => import('../views/slides/SlidesView').then(m => ({ default: m.SlidesView })));
+const SheetsView             = lazy(() => import('../views/sheets/SheetsView').then(m => ({ default: m.SheetsView })));
+const PdfView                = lazy(() => import('../views/pdf/PdfView').then(m => ({ default: m.PdfView })));
+const MarkdownPreviewView    = lazy(() => import('../views/office/MarkdownPreviewView').then(m => ({ default: m.MarkdownPreviewView })));
 
 export function getShellViewRegistry(handlers: {
   handleOpenAgentSession: (text: string, surface: AppMode, execution?: { modeId: CanonicalAgentModeId; templateTitle?: string }) => void;
@@ -229,7 +235,7 @@ export function getShellViewRegistry(handlers: {
     ),
     'browser-extensions': () => (
       <ErrorBoundary fallback={<ErrorFallbackWrapper viewName="Office & Extensions" />}>
-        <BrowserExtensionsView />
+        <BrowserExtensionsView openView={open} />
       </ErrorBoundary>
     ),
     terminal: ({ context }: { context?: ViewContext }) => (
@@ -307,6 +313,11 @@ export function getShellViewRegistry(handlers: {
         <OhMyPiView />
       </ErrorBoundary>
     ),
+    'vault-viewer': () => (
+      <ErrorBoundary fallback={<ErrorFallbackWrapper viewName="Vault Viewer" />}>
+        <VaultViewerView />
+      </ErrorBoundary>
+    ),
     dag: ({ context }: { context?: ViewContext }) => (
       <ErrorBoundary fallback={<div>Failed to load DAG Integration</div>}>
         <DagIntegrationPage />
@@ -336,48 +347,48 @@ export function getShellViewRegistry(handlers: {
       const ctx = context?.context as any;
       return (
         <ErrorBoundary fallback={<div>Failed to load Design Workspace</div>}>
-          <DesignModeView initialDesignMd={ctx?.designMd} initialStream={ctx?.stream} />
+          <DesignModeView openView={open} initialDesignMd={ctx?.designMd} initialStream={ctx?.stream} />
         </ErrorBoundary>
       );
     },
     design: ({ context }: { context?: ViewContext }) => (
       <ErrorBoundary fallback={<div>Failed to load Design Workspace</div>}>
-        <DesignModeView />
+        <DesignModeView openView={open} />
       </ErrorBoundary>
     ),
     "design-view-questions": ({ context }: { context?: ViewContext }) => (
       <ErrorBoundary fallback={<div>Failed to load Design Discovery</div>}>
-        <DesignModeView initialTab="questions" />
+        <DesignModeView openView={open} initialTab="questions" />
       </ErrorBoundary>
     ),
     "design-view-mobile": ({ context }: { context?: ViewContext }) => (
       <ErrorBoundary fallback={<div>Failed to load Mobile View</div>}>
-        <DesignModeView initialTab="mobile" />
+        <DesignModeView openView={open} initialTab="mobile" />
       </ErrorBoundary>
     ),
     "design-view-video": ({ context }: { context?: ViewContext }) => (
       <ErrorBoundary fallback={<div>Failed to load Video Editor</div>}>
-        <DesignModeView initialTab="video" />
+        <DesignModeView openView={open} initialTab="video" />
       </ErrorBoundary>
     ),
     "design-view-docs": ({ context }: { context?: ViewContext }) => (
       <ErrorBoundary fallback={<div>Failed to load Documents View</div>}>
-        <DesignModeView initialTab="docs" />
+        <DesignModeView openView={open} initialTab="docs" />
       </ErrorBoundary>
     ),
     "design-view-handoff": ({ context }: { context?: ViewContext }) => (
       <ErrorBoundary fallback={<div>Failed to load Handoff View</div>}>
-        <DesignModeView initialTab="handoff" />
+        <DesignModeView openView={open} initialTab="handoff" />
       </ErrorBoundary>
     ),
     "design-view-graph": ({ context }: { context?: ViewContext }) => (
       <ErrorBoundary fallback={<div>Failed to load Skill Graph</div>}>
-        <DesignModeView initialTab="graph" />
+        <DesignModeView openView={open} initialTab="graph" />
       </ErrorBoundary>
     ),
     "design-view-pipeline": ({ context }: { context?: ViewContext }) => (
       <ErrorBoundary fallback={<div>Failed to load Pipeline View</div>}>
-        <DesignModeView initialTab="pipeline" />
+        <DesignModeView openView={open} initialTab="pipeline" />
       </ErrorBoundary>
     ),
     "design-view-market": ({ context }: { context?: ViewContext }) => (
@@ -393,6 +404,46 @@ export function getShellViewRegistry(handlers: {
     "design-marketplace": ({ context }: { context?: ViewContext }) => (
       <ErrorBoundary fallback={<div>Failed to load Hyperdesign Marketplace</div>}>
         <DesignRegistryView />
+      </ErrorBoundary>
+    ),
+    docs: ({ context }: { context?: ViewContext }) => (
+      <ErrorBoundary fallback={<ErrorFallbackWrapper viewName="Docs" />}>
+        <DocsView
+          artifactId={(context?.context as { artifactId?: string } | undefined)?.artifactId ?? context?.viewId}
+          handoffId={(context?.context as { handoffId?: string } | undefined)?.handoffId}
+        />
+      </ErrorBoundary>
+    ),
+    slides: ({ context }: { context?: ViewContext }) => (
+      <ErrorBoundary fallback={<ErrorFallbackWrapper viewName="Slides" />}>
+        <SlidesView
+          artifactId={(context?.context as { artifactId?: string } | undefined)?.artifactId ?? context?.viewId}
+          handoffId={(context?.context as { handoffId?: string } | undefined)?.handoffId}
+        />
+      </ErrorBoundary>
+    ),
+    sheets: ({ context }: { context?: ViewContext }) => (
+      <ErrorBoundary fallback={<ErrorFallbackWrapper viewName="Sheets" />}>
+        <SheetsView
+          artifactId={(context?.context as { artifactId?: string } | undefined)?.artifactId ?? context?.viewId}
+          handoffId={(context?.context as { handoffId?: string } | undefined)?.handoffId}
+        />
+      </ErrorBoundary>
+    ),
+    pdf: ({ context }: { context?: ViewContext }) => (
+      <ErrorBoundary fallback={<ErrorFallbackWrapper viewName="PDF" />}>
+        <PdfView
+          artifactId={(context?.context as { artifactId?: string } | undefined)?.artifactId ?? context?.viewId}
+          handoffId={(context?.context as { handoffId?: string } | undefined)?.handoffId}
+        />
+      </ErrorBoundary>
+    ),
+    "markdown-preview": ({ context }: { context?: ViewContext }) => (
+      <ErrorBoundary fallback={<ErrorFallbackWrapper viewName="Markdown Preview" />}>
+        <MarkdownPreviewView
+          handoffId={(context?.context as { handoffId?: string } | undefined)?.handoffId}
+          sourceUrl={(context?.context as { sourceUrl?: string } | undefined)?.sourceUrl}
+        />
       </ErrorBoundary>
     ),
     "form-surfaces": ({ context }: { context?: ViewContext }) => (
@@ -615,7 +666,7 @@ export function getShellViewRegistry(handlers: {
     ),
     'cowork-documents': ({ context }: { context?: ViewContext }) => (
       <ErrorBoundary fallback={<ErrorFallbackWrapper viewName="Documents" />}>
-        <DocumentsView />
+        <DocumentsView openView={open} />
       </ErrorBoundary>
     ),
     'cowork-tables': ({ context }: { context?: ViewContext }) => (

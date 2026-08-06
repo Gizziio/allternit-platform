@@ -200,8 +200,7 @@ struct MessageRow: View {
             Group {
                 switch status.state {
                 case .running:
-                    ProgressView()
-                        .scaleEffect(0.6)
+                    ThinkingOrb(state: .forToolName(status.toolName), size: .inline)
                 case .done:
                     Image(systemName: "checkmark.circle.fill")
                         .foregroundColor(Color("AccentPrimary"))
@@ -210,7 +209,7 @@ struct MessageRow: View {
                         .foregroundColor(.orange)
                 }
             }
-            .frame(width: 14, height: 14)
+            .frame(width: 20, height: 20)
 
             Text(status.text)
                 .font(.caption)

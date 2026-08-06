@@ -1,6 +1,6 @@
 ---
 name: docx
-description: "Generate Word documents (.docx) from outlines, prompts, or structured data. Supports business proposals, technical specs, reports, and SOPs. Uses the Summit Copilot Skills FastAPI service for production-grade output."
+description: "Generate Word documents (.docx) from outlines, prompts, or structured data. Supports business proposals, technical specs, reports, and SOPs. Parse, round-trip, and extract text via the Allternit office-engine service."
 tags: ["documents", "docx", "word", "office", "reporting"]
 tools: ["llm", "filesystem"]
 entrypoint: "SKILL.md"
@@ -10,8 +10,9 @@ entrypoint: "SKILL.md"
 
 Generate production-ready Microsoft Word documents (.docx) from structured outlines, user prompts, or raw data. This skill wraps the `docx` npm library with opinionated styling and document patterns so agents can produce consistent, professional output without wrestling with low-level formatting.
 
-> **STATUS:** Production  
-> **Backend Tool:** `tools/agent-swarm/document-generator/mod.ts` (action: `generateStudyGuide`)
+> **STATUS:** Engine operations (parse / extract / round-trip / verify) — Production via office-engine service. Generative rendering — migrating off the legacy document-generator backend.  
+> **Engine Service:** `services/office-engine` (HTTP, `OFFICE_ENGINE_URL`, default `http://127.0.0.1:8099`; also proxied by the gateway at `/api/office/*`)  
+> **Legacy Backend Tool:** `tools/agent-swarm/document-generator/mod.ts` (action: `generateStudyGuide`) — **deprecated**, do not use for new work.
 
 ---
 
@@ -116,9 +117,10 @@ Show the outline to the user for approval before rendering.
 
 ### Step 3: Render
 
-Call the Summit Copilot backend tool:
+Render the approved outline to `.docx` bytes (legacy path shown below; it is deprecated — see the Engine Service Reference). After rendering, ALWAYS verify the output through the office-engine (`/docx/roundtrip` + `/parse`) before delivering.
 
 ```typescript
+// LEGACY (deprecated): tools/agent-swarm/document-generator/mod.ts
 import { execute } from '../tools/agent-swarm/document-generator/mod.ts';
 
 const result = await execute({
@@ -163,14 +165,34 @@ If the user requests custom branding (colors, logos, custom fonts), note that th
 
 ---
 
-## Backend Tool Reference
+## Engine Service Reference (office-engine)
 
-| Export | Path |
-|--------|------|
-| `execute` | `tools/agent-swarm/document-generator/mod.ts` |
-| `inputSchema` | `tools/agent-swarm/document-generator/mod.ts` |
+Base URL: `OFFICE_ENGINE_URL` (default `http://127.0.0.1:8099`). The same routes are proxied through the Allternit gateway at `/api/office/*` (port 8013, auth required) — prefer the gateway path when running inside the platform.
 
-Dependencies: `document-generator-skills` FastAPI service (Python) running at `SUMMIT_COPILOT_URL`.
+| Endpoint | Body | Returns |
+|----------|------|---------|
+| `POST /parse` | raw `.docx` bytes + `x-office-filename` header | artifact JSON `{id, type: "office-document", title, extractedText, stats, …}` |
+| `POST /docx/roundtrip` | raw `.docx` bytes | `{originalSize, outputSize, changed}` — use to verify a generated file parses and re-serializes cleanly |
+| `POST /extract` | raw bytes of docx/pptx/xlsx/pdf/txt + `x-office-filename` | artifact JSON with `extractedText` (format auto-detected from extension) |
+| `POST /markdown` | raw bytes + `x-office-filename` (docx/pptx/xlsx/pdf/odf/rtf/epub/csv incl. legacy .doc/.xls/.ppt) | `{markdown, format, title, stats}` — LLM-ready GFM via anydoc |
+| `POST /markdown-url` | JSON `{url}` | `{markdown, title, sourceUrl, format}` — readability-extracted GFM; document content-types at the URL pass through anydoc. Private/loopback hosts refused (`blockedUrl`) |
+| `GET /health` | — | `{status: "ok", engines: {…}}` |
+
+Prefer `/markdown` over `/extract` when the text is meant for an LLM (tables, headings, and structure survive as GFM). Use `/markdown-url` to read a live web page as markdown.
+
+Example — verify a generated document end-to-end:
+
+```bash
+curl -s -X POST "$OFFICE_ENGINE_URL/docx/roundtrip" \
+  --data-binary @/path/to/output.docx
+curl -s -X POST "$OFFICE_ENGINE_URL/parse" \
+  -H "x-office-filename: output.docx" \
+  --data-binary @/path/to/output.docx
+```
+
+Errors: `400 {"error":"empty body"}`, `422 {"error":"parse failed","detail":…}`.
+
+Legacy generation backend (`tools/agent-swarm/document-generator/mod.ts` → `document-generator-skills` FastAPI at `SUMMIT_COPILOT_URL`) is **deprecated**; it is retained only until generative rendering moves onto the forked `@allternit/office-docx-engine` (see `GENOFFICE_INTEGRATION_PLAN.md`).
 
 ---
 

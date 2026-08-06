@@ -2,6 +2,9 @@
 dist/
 release/
 
+# Staged office-engine sidecar bundle (prepare:office-engine)
+resources/office-engine/
+
 # Logs
 *.log
 

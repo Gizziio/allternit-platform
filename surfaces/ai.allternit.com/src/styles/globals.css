@@ -7,9 +7,13 @@
   to   { transform: rotate(360deg); }
 }
 
-/* Dark background on the document itself so no white flash before JS loads */
+/* index.html has a synchronous pre-paint script that sets data-theme before
+   first render, so theme.css's `body { background-color: var(--bg-primary) }`
+   already avoids a flash for both themes — this must not hardcode a color,
+   or it permanently overrides that per-theme background (it did, for light
+   mode, since this rule and theme.css's have equal specificity and this one
+   loads later). */
 html, body {
-  background-color: #0d0d10;
   margin: 0;
 }
 

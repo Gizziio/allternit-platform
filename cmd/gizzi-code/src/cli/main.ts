@@ -18,7 +18,7 @@ import { Installation } from "@/shared/installation"
 import { NamedErrorBase } from "@allternit/gizzi-util/error.js"
 import { FormatError } from "@/shared/error/format"
 import { ServeCommand } from "@/cli/commands/serve"
-import { PairCommand } from "@/cli/commands/pair"
+import { PairCommand, LoginCommand } from "@/cli/commands/pair"
 import { Filesystem } from "@/shared/util/filesystem"
 import { DebugCommand } from "@/cli/commands/debug"
 import { StatsCommand } from "@/cli/commands/stats"
@@ -190,6 +190,7 @@ const cli = yargs(hideBin(process.argv))
   .command(UninstallCommand)
   .command(ServeCommand)
   .command(PairCommand)
+  .command(LoginCommand)
   .command(WebCommand)
   .command(ModelsCommand)
   .command(StatsCommand)

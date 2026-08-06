@@ -23,8 +23,12 @@ use crate::AppState;
 #[derive(Debug, Deserialize)]
 pub struct ExecuteToolRequest {
     /// Tool identifier (e.g. "shell.exec", "file.read", "browser.navigate", "mcp:<server>:<tool>")
+    /// `tool_name` alias: the web/desktop surface (`native-agent-api.ts`,
+    /// `recording.store.ts`) posts that key.
+    #[serde(alias = "tool_name")]
     pub tool: String,
-    /// Tool arguments
+    /// Tool arguments (`parameters` alias, same reason as above).
+    #[serde(alias = "parameters")]
     pub args: Value,
     /// Optional timeout in seconds (default: 30)
     #[serde(default)]
@@ -53,7 +57,7 @@ pub fn tool_router() -> Router<Arc<AppState>> {
 // ─── Handlers ───────────────────────────────────────────────────────────────
 
 async fn execute_tool(
-    State(_state): State<Arc<AppState>>,
+    State(state): State<Arc<AppState>>,
     headers: HeaderMap,
     Json(body): Json<ExecuteToolRequest>,
 ) -> impl IntoResponse {
@@ -100,7 +104,7 @@ async fn execute_tool(
     let start = std::time::Instant::now();
     info!("Executing tool '{}' for user '{}'", body.tool, user.user_id);
 
-    let result = match execute_tool_internal(&body, &user.user_id).await {
+    let result = match execute_tool_internal(&state, &body, &user.user_id).await {
         Ok(result) => json!({
             "success": true,
             "result": result,
@@ -125,8 +129,9 @@ async fn execute_tool(
 /// so the same tool set is reachable both as a plain REST call and as an
 /// MCP server tool — one registry, two front doors, same auth gate.
 pub(crate) async fn execute_tool_internal(
+    state: &AppState,
     request: &ExecuteToolRequest,
-    _user_id: &str,
+    user_id: &str,
 ) -> Result<Value, String> {
     match request.tool.as_str() {
         // ── Shell Execution ──────────────────────────────────────────────────
@@ -147,6 +152,10 @@ pub(crate) async fn execute_tool_internal(
         // ── Network ──────────────────────────────────────────────────────────
         "http.get" => http_get(request).await,
         "http.post" => http_post(request).await,
+
+        // ── Markdown Conversion (office engine) ──────────────────────────────
+        "document_to_markdown" => document_to_markdown(state, request, user_id).await,
+        "url_to_markdown" => url_to_markdown(state, request).await,
 
         // ── Time ─────────────────────────────────────────────────────────────
         "time.now" => time_now(request).await,
@@ -402,6 +411,240 @@ async fn http_post(request: &ExecuteToolRequest) -> Result<Value, String> {
     }))
 }
 
+// ── Markdown Conversion (office engine) ─────────────────────────────────────
+
+/// Upper bound on markdown returned as a tool result. The office engine can
+/// emit book-length GFM; tool results feed an LLM context, so long output is
+/// truncated at a char boundary with an explicit note instead of failing.
+const MAX_TOOL_MARKDOWN_CHARS: usize = 30_000;
+
+/// Tool descriptors for the built-in markdown conversion tools, shared by the
+/// REST tool list (`list_tools`), the MCP server catalog
+/// (`mcp_server_routes.rs`), and the agents-v1 deferred-tool listing
+/// (`agents_v1_routes.rs`) so every surface advertises the same
+/// name/description/schema.
+pub(crate) fn markdown_builtin_tools() -> Vec<Value> {
+    vec![
+        json!({
+            "id": "document_to_markdown",
+            "label": "Document to Markdown",
+            "description": "Convert an uploaded document or artifact (PDF, DOCX, PPTX, XLSX, CSV, and more) into GitHub-flavored Markdown that can be read and quoted in chat.",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "uploadId": {
+                        "type": "string",
+                        "description": "ID of a file uploaded through /api/v1/uploads (the composer attachment flow)."
+                    },
+                    "artifactId": {
+                        "type": "string",
+                        "description": "ID of an artifact whose text sections should be assembled into a single Markdown document."
+                    }
+                }
+            }
+        }),
+        json!({
+            "id": "url_to_markdown",
+            "label": "URL to Markdown",
+            "description": "Fetch a web page or a document hosted at a URL and convert it into GitHub-flavored Markdown.",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "url": {
+                        "type": "string",
+                        "description": "The http(s) URL to fetch and convert."
+                    }
+                },
+                "required": ["url"]
+            }
+        }),
+    ]
+}
+
+/// Truncate over-long markdown at a char boundary, appending a note so the
+/// caller knows the output is partial. Returns (text, was_truncated).
+fn truncate_markdown(markdown: &str) -> (String, bool) {
+    let total = markdown.chars().count();
+    if total <= MAX_TOOL_MARKDOWN_CHARS {
+        return (markdown.to_string(), false);
+    }
+    let head: String = markdown.chars().take(MAX_TOOL_MARKDOWN_CHARS).collect();
+    (
+        format!(
+            "{head}\n\n_[Output truncated — showing the first {MAX_TOOL_MARKDOWN_CHARS} of {total} characters.]_"
+        ),
+        true,
+    )
+}
+
+/// Convert the office engine's artifact-shaped JSON into a compact tool
+/// result, truncating the markdown payload when needed.
+fn markdown_tool_result(body: &Value) -> Result<Value, String> {
+    let markdown = body
+        .get("markdown")
+        .and_then(|v| v.as_str())
+        .ok_or_else(|| "Office engine response did not include markdown".to_string())?;
+    let (markdown, truncated) = truncate_markdown(markdown);
+    Ok(json!({
+        "markdown": markdown,
+        "truncated": truncated,
+        "title": body.get("title").cloned().unwrap_or(Value::Null),
+        "format": body.get("format").cloned().unwrap_or(Value::Null),
+        "sourceUrl": body.get("sourceUrl").cloned().unwrap_or(Value::Null),
+    }))
+}
+
+/// Read an office-engine response: success → truncated tool result, failure →
+/// the engine's own error detail.
+async fn engine_markdown_response(resp: reqwest::Response) -> Result<Value, String> {
+    let status = resp.status();
+    let body: Value = resp
+        .json()
+        .await
+        .map_err(|e| format!("Failed to read office engine response: {}", e))?;
+    if !status.is_success() {
+        let detail = body
+            .get("detail")
+            .or_else(|| body.get("error"))
+            .and_then(|v| v.as_str())
+            .unwrap_or("unknown error");
+        return Err(format!(
+            "Office engine conversion failed ({}): {}",
+            status, detail
+        ));
+    }
+    markdown_tool_result(&body)
+}
+
+fn office_engine_client(request: &ExecuteToolRequest) -> Result<reqwest::Client, String> {
+    reqwest::Client::builder()
+        .timeout(std::time::Duration::from_secs(
+            request.timeout.unwrap_or(60),
+        ))
+        .build()
+        .map_err(|e| e.to_string())
+}
+
+/// Pull an artifact's text sections out of the local store and assemble them
+/// as a single GFM document. Scoped to the calling user, same as the artifact
+/// REST routes. Returns (document, title).
+///
+/// Unlike uploads, artifacts are already text, so this path does NOT round-trip
+/// through the office engine: anydoc only handles binary document formats
+/// (docx/pdf/xlsx/…) and rejects plain-text payloads as 415.
+async fn read_artifact_as_document(
+    state: &AppState,
+    artifact_id: &str,
+    user_id: &str,
+) -> Result<(String, String), String> {
+    let db = state.db.clone();
+    let artifact_id = artifact_id.to_string();
+    let user_id = user_id.to_string();
+
+    tokio::task::spawn_blocking(move || {
+        let conn = db
+            .connect()
+            .map_err(|e| format!("Failed to open database: {}", e))?;
+
+        let title: Option<String> = conn
+            .query_row(
+                "SELECT title FROM artifacts WHERE id = ?1 AND user_id = ?2",
+                rusqlite::params![&artifact_id, &user_id],
+                |row| row.get(0),
+            )
+            .ok();
+
+        let title = title.ok_or_else(|| format!("Artifact not found: '{}'", artifact_id))?;
+
+        let mut stmt = conn
+            .prepare(
+                "SELECT heading, body FROM artifact_sections
+                 WHERE artifact_id = ?1 ORDER BY position ASC, created_at ASC",
+            )
+            .map_err(|e| format!("Failed to query artifact sections: {}", e))?;
+        let sections: Vec<(String, String)> = stmt
+            .query_map(rusqlite::params![&artifact_id], |row| {
+                Ok((row.get(0)?, row.get(1)?))
+            })
+            .map_err(|e| format!("Failed to read artifact sections: {}", e))?
+            .collect::<Result<Vec<_>, _>>()
+            .map_err(|e| format!("Failed to read artifact sections: {}", e))?;
+
+        let mut document = format!("# {}\n", title);
+        for (heading, body) in sections {
+            document.push_str(&format!("\n## {}\n\n{}\n", heading, body));
+        }
+
+        Ok((document, title))
+    })
+    .await
+    .map_err(|e| format!("Artifact read task failed: {}", e))?
+}
+
+async fn document_to_markdown(
+    state: &AppState,
+    request: &ExecuteToolRequest,
+    user_id: &str,
+) -> Result<Value, String> {
+    let upload_id = request.args.get("uploadId").and_then(|v| v.as_str());
+    let artifact_id = request.args.get("artifactId").and_then(|v| v.as_str());
+
+    match (upload_id, artifact_id) {
+        (Some(id), None) => {
+            let (bytes, filename, _media_type) = crate::upload_routes::read_upload(id)
+                .ok_or_else(|| format!("Upload not found: '{}'", id))?;
+
+            let target = format!(
+                "{}/markdown",
+                state.config.office_engine_url().trim_end_matches('/')
+            );
+            let resp = office_engine_client(request)?
+                .post(&target)
+                .header("x-office-filename", &filename)
+                .body(bytes)
+                .send()
+                .await
+                .map_err(|e| format!("Cannot reach the office engine: {}", e))?;
+
+            engine_markdown_response(resp).await
+        }
+        (None, Some(id)) => {
+            let (document, title) = read_artifact_as_document(state, id, user_id).await?;
+            let (markdown, truncated) = truncate_markdown(&document);
+            Ok(json!({
+                "markdown": markdown,
+                "truncated": truncated,
+                "title": title,
+                "format": "artifact",
+                "sourceUrl": Value::Null,
+            }))
+        }
+        _ => Err("Provide exactly one of 'uploadId' or 'artifactId'".to_string()),
+    }
+}
+
+async fn url_to_markdown(state: &AppState, request: &ExecuteToolRequest) -> Result<Value, String> {
+    let url = request
+        .args
+        .get("url")
+        .and_then(|v| v.as_str())
+        .filter(|s| !s.trim().is_empty())
+        .ok_or("Missing 'url' argument")?;
+
+    let target = format!(
+        "{}/markdown-url",
+        state.config.office_engine_url().trim_end_matches('/')
+    );
+    let resp = office_engine_client(request)?
+        .post(&target)
+        .json(&json!({ "url": url }))
+        .send()
+        .await
+        .map_err(|e| format!("Cannot reach the office engine: {}", e))?;
+
+    engine_markdown_response(resp).await
+}
+
 // ── Time ────────────────────────────────────────────────────────────────────
 
 async fn time_now(_request: &ExecuteToolRequest) -> Result<Value, String> {
@@ -417,17 +660,136 @@ async fn time_now(_request: &ExecuteToolRequest) -> Result<Value, String> {
 // ─── List tools (stub) ───────────────────────────────────────────────────────
 
 async fn list_tools() -> impl IntoResponse {
+    let mut tools = vec![
+        json!({ "id": "shell.exec", "name": "Shell Execute", "description": "Execute shell commands" }),
+        json!({ "id": "file.read", "name": "File Read", "description": "Read file contents" }),
+        json!({ "id": "file.write", "name": "File Write", "description": "Write to a file" }),
+        json!({ "id": "file.list", "name": "File List", "description": "List directory contents" }),
+        json!({ "id": "http.get", "name": "HTTP GET", "description": "Make HTTP GET requests" }),
+        json!({ "id": "http.post", "name": "HTTP POST", "description": "Make HTTP POST requests" }),
+        json!({ "id": "system.info", "name": "System Info", "description": "Get system information" }),
+        json!({ "id": "echo", "name": "Echo", "description": "Echo back arguments" }),
+    ];
+    for tool in markdown_builtin_tools() {
+        tools.push(json!({
+            "id": tool.get("id").cloned().unwrap_or(Value::Null),
+            "name": tool.get("label").cloned().unwrap_or(Value::Null),
+            "description": tool.get("description").cloned().unwrap_or(Value::Null),
+            "parameters": tool.get("parameters").cloned().unwrap_or(json!({})),
+        }));
+    }
+    let total = tools.len();
     Json(json!({
-        "tools": [
-            { "id": "shell.exec", "name": "Shell Execute", "description": "Execute shell commands" },
-            { "id": "file.read", "name": "File Read", "description": "Read file contents" },
-            { "id": "file.write", "name": "File Write", "description": "Write to a file" },
-            { "id": "file.list", "name": "File List", "description": "List directory contents" },
-            { "id": "http.get", "name": "HTTP GET", "description": "Make HTTP GET requests" },
-            { "id": "http.post", "name": "HTTP POST", "description": "Make HTTP POST requests" },
-            { "id": "system.info", "name": "System Info", "description": "Get system information" },
-            { "id": "echo", "name": "Echo", "description": "Echo back arguments" },
-        ],
-        "total": 8,
+        "tools": tools,
+        // The web/desktop tool registry (`tool-registry.store.ts`,
+        // `native-agent-api.ts`) reads grouped buckets — mirror the same list
+        // under `native` so those consumers actually see the registry
+        // (previously they read a missing key and rendered zero tools).
+        "native": tools,
+        "total": total,
     }))
+}
+
+// ─── Tests ────────────────────────────────────────────────────────────────────
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn truncate_markdown_leaves_short_output_untouched() {
+        let input = "# Hello\n\nSome markdown.";
+        let (out, truncated) = truncate_markdown(input);
+        assert_eq!(out, input);
+        assert!(!truncated);
+    }
+
+    #[test]
+    fn truncate_markdown_caps_long_output_with_note() {
+        let input = "a".repeat(MAX_TOOL_MARKDOWN_CHARS + 500);
+        let (out, truncated) = truncate_markdown(&input);
+        assert!(truncated);
+        assert!(out.starts_with(&"a".repeat(1000)));
+        assert!(out.contains("Output truncated"));
+        assert!(out.contains(&(MAX_TOOL_MARKDOWN_CHARS + 500).to_string()));
+    }
+
+    #[test]
+    fn truncate_markdown_respects_char_boundaries() {
+        // Multibyte characters must never be split mid-codepoint.
+        let input = "é".repeat(MAX_TOOL_MARKDOWN_CHARS + 10);
+        let (out, truncated) = truncate_markdown(&input);
+        assert!(truncated);
+        let head = out.split("\n\n_").next().unwrap();
+        assert_eq!(head.chars().count(), MAX_TOOL_MARKDOWN_CHARS);
+    }
+
+    #[test]
+    fn markdown_tool_result_errors_without_markdown_field() {
+        let body = json!({"title": "nope"});
+        assert!(markdown_tool_result(&body).is_err());
+    }
+
+    #[test]
+    fn markdown_tool_result_maps_engine_payload() {
+        let body = json!({
+            "markdown": "# Title\n\nbody",
+            "title": "Title",
+            "format": "docx",
+            "sourceUrl": "https://example.com",
+        });
+        let result = markdown_tool_result(&body).unwrap();
+        assert_eq!(result["markdown"], "# Title\n\nbody");
+        assert_eq!(result["truncated"], false);
+        assert_eq!(result["title"], "Title");
+        assert_eq!(result["format"], "docx");
+        assert_eq!(result["sourceUrl"], "https://example.com");
+    }
+
+    #[test]
+    fn markdown_tool_result_truncates_engine_payload() {
+        let body = json!({ "markdown": "b".repeat(MAX_TOOL_MARKDOWN_CHARS * 2) });
+        let result = markdown_tool_result(&body).unwrap();
+        assert_eq!(result["truncated"], true);
+        assert!(result["markdown"]
+            .as_str()
+            .unwrap()
+            .contains("Output truncated"));
+    }
+
+    #[test]
+    fn execute_tool_request_accepts_surface_field_names() {
+        // The web/desktop surface posts `tool_name`/`parameters`.
+        let req: ExecuteToolRequest = serde_json::from_str(
+            r#"{"tool_name": "echo", "parameters": {"message": "hi"}, "session_id": "s1"}"#,
+        )
+        .unwrap();
+        assert_eq!(req.tool, "echo");
+        assert_eq!(req.args["message"], "hi");
+
+        // And the canonical `tool`/`args` keys keep working.
+        let req: ExecuteToolRequest =
+            serde_json::from_str(r#"{"tool": "echo", "args": {}}"#).unwrap();
+        assert_eq!(req.tool, "echo");
+    }
+
+    #[test]
+    fn markdown_builtin_tools_advertise_expected_contract() {
+        let tools = markdown_builtin_tools();
+        assert_eq!(tools.len(), 2);
+
+        let doc = &tools[0];
+        assert_eq!(doc["id"], "document_to_markdown");
+        assert!(doc["description"].as_str().unwrap().len() > 20);
+        let props = doc["parameters"]["properties"].as_object().unwrap();
+        assert!(props.contains_key("uploadId"));
+        assert!(props.contains_key("artifactId"));
+
+        let url = &tools[1];
+        assert_eq!(url["id"], "url_to_markdown");
+        assert_eq!(
+            url["parameters"]["required"],
+            json!(["url"])
+        );
+    }
 }

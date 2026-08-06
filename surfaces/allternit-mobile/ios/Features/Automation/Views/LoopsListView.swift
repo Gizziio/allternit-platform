@@ -210,10 +210,7 @@ struct LoopsListView: View {
             detailLoop = loop
         }) {
             HStack(spacing: 12) {
-                Image(systemName: "repeat")
-                    .font(.system(size: 15, weight: .medium))
-                    .foregroundColor(Color("AccentPrimary"))
-                    .frame(width: 28)
+                LoopStaminaRing(loop: loop)
                 VStack(alignment: .leading, spacing: 2) {
                     Text(loop.command)
                         .font(.system(size: 13, weight: .medium, design: .monospaced))

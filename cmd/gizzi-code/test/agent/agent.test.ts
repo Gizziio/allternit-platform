@@ -3,7 +3,7 @@ import { test, expect } from "bun:test"
 import path from "path"
 import { tmpdir } from "../fixture/fixture"
 import { Instance } from "../../src/project/instance"
-import { Agent } from "../../src/agent/agent"
+import { Agent } from "../../src/runtime/loop/agent"
 import { PermissionNext } from "../../src/permission/next"
 
 // Helper to evaluate permission for a tool with wildcard pattern
@@ -40,12 +40,14 @@ test("build agent has correct default properties", async () => {
       expect(build?.mode).toBe("primary")
       expect(build?.native).toBe(true)
       expect(evalPerm(build, "edit")).toBe("allow")
-      expect(evalPerm(build, "bash")).toBe("allow")
+      // gizzi's build defaults are `"*": "ask"` (src/runtime/loop/agent.ts) —
+      // unlike upstream opencode, bash is not blanket-allowed for the build agent.
+      expect(evalPerm(build, "bash")).toBe("ask")
     },
   })
 })
 
-test("plan agent denies edits except .opencode/plans/*", async () => {
+test("plan agent denies edits except .gizzi/plans/*", async () => {
   await using tmp = await tmpdir()
   await Instance.provide({
     directory: tmp.path,
@@ -55,7 +57,7 @@ test("plan agent denies edits except .opencode/plans/*", async () => {
       // Wildcard is denied
       expect(evalPerm(plan, "edit")).toBe("deny")
       // But specific path is allowed
-      expect(PermissionNext.evaluate("edit", ".opencode/plans/foo.md", plan!.permission).action).toBe("allow")
+      expect(PermissionNext.evaluate("edit", ".gizzi/plans/foo.md", plan!.permission).action).toBe("allow")
     },
   })
 })
@@ -77,7 +79,7 @@ test("explore agent denies edit and write", async () => {
 })
 
 test("explore agent asks for external directories and allows Truncate.GLOB", async () => {
-  const { Truncate } = await import("../../src/tool/truncation")
+  const { Truncate } = await import("../../src/runtime/tools/builtins/truncation")
   await using tmp = await tmpdir()
   await Instance.provide({
     directory: tmp.path,
@@ -464,7 +466,7 @@ test("legacy tools config maps write/edit/patch/multiedit to edit permission", a
 })
 
 test("Truncate.GLOB is allowed even when user denies external_directory globally", async () => {
-  const { Truncate } = await import("../../src/tool/truncation")
+  const { Truncate } = await import("../../src/runtime/tools/builtins/truncation")
   await using tmp = await tmpdir({
     config: {
       permission: {
@@ -484,7 +486,7 @@ test("Truncate.GLOB is allowed even when user denies external_directory globally
 })
 
 test("Truncate.GLOB is allowed even when user denies external_directory per-agent", async () => {
-  const { Truncate } = await import("../../src/tool/truncation")
+  const { Truncate } = await import("../../src/runtime/tools/builtins/truncation")
   await using tmp = await tmpdir({
     config: {
       agent: {
@@ -508,7 +510,7 @@ test("Truncate.GLOB is allowed even when user denies external_directory per-agen
 })
 
 test("explicit Truncate.GLOB deny is respected", async () => {
-  const { Truncate } = await import("../../src/tool/truncation")
+  const { Truncate } = await import("../../src/runtime/tools/builtins/truncation")
   await using tmp = await tmpdir({
     config: {
       permission: {
@@ -533,7 +535,7 @@ test("skill directories are allowed for external_directory", async () => {
   await using tmp = await tmpdir({
     git: true,
     init: async (dir) => {
-      const skillDir = path.join(dir, ".opencode", "skill", "perm-skill")
+      const skillDir = path.join(dir, ".gizzi", "skill", "perm-skill")
       await Bun.write(
         path.join(skillDir, "SKILL.md"),
         `---
@@ -547,21 +549,21 @@ description: Permission skill.
     },
   })
 
-  const home = process.env.Allternit_TEST_HOME
-  process.env.Allternit_TEST_HOME = tmp.path
+  const home = process.env.GIZZI_TEST_HOME
+  process.env.GIZZI_TEST_HOME = tmp.path
 
   try {
     await Instance.provide({
       directory: tmp.path,
       fn: async () => {
         const build = await Agent.get("build")
-        const skillDir = path.join(tmp.path, ".opencode", "skill", "perm-skill")
+        const skillDir = path.join(tmp.path, ".gizzi", "skill", "perm-skill")
         const target = path.join(skillDir, "reference", "notes.md")
         expect(PermissionNext.evaluate("external_directory", target, build!.permission).action).toBe("allow")
       },
     })
   } finally {
-    process.env.Allternit_TEST_HOME = home
+    process.env.GIZZI_TEST_HOME = home
   }
 })
 

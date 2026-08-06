@@ -919,7 +919,7 @@ export const InfrastructureSettings: React.FC<InfrastructureSettingsProps> = ({ 
                 className={`p-[16px_20px] flex items-center justify-between ${index < sshKeys.length - 1 ? 'border-b border-solid border-[var(--ui-border-muted)]' : ''}`}
               >
                 <div className="flex items-center gap-3">
-                  <Key size={18} className="text-[#666]" />
+                  <Key size={18} className="text-[var(--ui-text-muted)]" />
                   <div>
                     <div className="text-sm font-medium text-[var(--ui-text-primary)]">
                       {key.name}
@@ -1038,7 +1038,7 @@ export const InfrastructureSettings: React.FC<InfrastructureSettingsProps> = ({ 
       <div className="mt-8 p-6 bg-[var(--surface-hover)] rounded-xl border border-dashed border-[var(--ui-border-default)]">
         <div className="flex items-center gap-4">
           <div className="size-12 rounded-xl bg-[var(--surface-hover)] flex items-center justify-center">
-            <Files size={24} className="text-[#666]" />
+            <Files size={24} className="text-[var(--ui-text-muted)]" />
           </div>
           <div className="flex-1">
             <SectionHeading className="mt-0 mb-1">Custom configuration</SectionHeading>
@@ -1063,7 +1063,7 @@ export const InfrastructureSettings: React.FC<InfrastructureSettingsProps> = ({ 
           description="VS Code remote containers spec. Works with any IDE supporting the spec."
         />
         <InfoCard
-          icon={<Cube size={24} className="text-[#7c3aed]" />}
+          icon={<Cube size={24} className="text-[var(--accent-cowork)]" />}
           title="Nix Flakes"
           description="Reproducible, declarative environments. Pin exact dependency versions."
         />
@@ -1112,7 +1112,7 @@ export const InfrastructureSettings: React.FC<InfrastructureSettingsProps> = ({ 
         <SkeletonRow lines={5} />
       ) : nodes.length === 0 ? (
         <EmptyState
-          icon={<Cpu size={64} className="text-[#333]" />}
+          icon={<Cpu size={64} className="text-[var(--ui-text-muted)]" />}
           caption="No nodes installed. Deploy an Allternit node to the cloud or install on your connected VPS."
           ctaLabel="Deploy Node"
           onCtaClick={() => window.dispatchEvent(new CustomEvent('allternit:open-cloud-deploy'))}
@@ -1173,7 +1173,7 @@ export const InfrastructureSettings: React.FC<InfrastructureSettingsProps> = ({ 
                   </div>
                 )}
                 {instance.gpu_available && (
-                  <div className="flex items-center gap-1.5 text-[13px] text-[#7c3aed]">
+                  <div className="flex items-center gap-1.5 text-[13px] text-[var(--accent-cowork)]">
                     <Sparkle size={14} />
                     GPU
                   </div>

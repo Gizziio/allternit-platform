@@ -60,6 +60,35 @@ fn meta_path(id: &str) -> PathBuf {
     uploads_dir().join(format!("{}.json", id))
 }
 
+/// Read a stored upload's bytes plus its original filename/media type from
+/// the sidecar. `pub(crate)` so the tool executor (`tool_routes.rs`) can hand
+/// upload bytes to the office engine without re-implementing the storage
+/// layout. Returns `None` when the id is invalid or the payload is missing.
+pub(crate) fn read_upload(id: &str) -> Option<(Vec<u8>, String, String)> {
+    if id.is_empty() || !id.chars().all(|c| c.is_ascii_alphanumeric()) {
+        return None;
+    }
+    let bytes = std::fs::read(uploads_dir().join(id)).ok()?;
+    let (name, media_type) = std::fs::read_to_string(meta_path(id))
+        .ok()
+        .and_then(|raw| serde_json::from_str::<serde_json::Value>(&raw).ok())
+        .map(|meta| {
+            let name = meta
+                .get("name")
+                .and_then(|v| v.as_str())
+                .unwrap_or("document")
+                .to_string();
+            let media_type = meta
+                .get("mediaType")
+                .and_then(|v| v.as_str())
+                .unwrap_or("application/octet-stream")
+                .to_string();
+            (name, media_type)
+        })
+        .unwrap_or_else(|| ("document".to_string(), "application/octet-stream".to_string()));
+    Some((bytes, name, media_type))
+}
+
 async fn create_upload(Json(req): Json<CreateUploadRequest>) -> impl IntoResponse {
     let bytes = match STANDARD.decode(req.data_base64.as_bytes()) {
         Ok(bytes) => bytes,

@@ -1,4 +1,5 @@
 import { memo } from "react";
+import { ThinkingOrb } from "thinking-orbs";
 import { TextShimmer } from "../text-shimmer";
 import type { TimelineStep, StepState } from "../types/timeline";
 import { useToolComplete } from "../hooks/use-tool-complete";
@@ -54,22 +55,9 @@ function BashToolTerminalCard({
           )}
         </div>
         {isPending && (
-          <svg
-            className="size-3  text-muted-foreground animate-spin shrink-0"
-            viewBox="0 0 16 16"
-            fill="none"
-          >
-            <circle
-              cx="8"
-              cy="8"
-              r="6"
-              stroke="currentColor"
-              strokeWidth="1.5"
-              strokeDasharray="28"
-              strokeDashoffset="7"
-              strokeLinecap="round"
-            />
-          </svg>
+          <span className="flex items-center justify-center size-5 shrink-0">
+            <ThinkingOrb state="working" size={20} />
+          </span>
         )}
       </div>
       <div className="border-t border-border px-2.5 py-1.5 font-mono text-[12px] leading-[16px] overflow-hidden bg-background">

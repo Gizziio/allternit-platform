@@ -18,8 +18,16 @@ enum NotificationService {
     /// sheet (AppPermission.notifications) got a Continue.
     static func requestAuthorization() async -> Bool {
         do {
-            return try await UNUserNotificationCenter.current()
+            let granted = try await UNUserNotificationCenter.current()
                 .requestAuthorization(options: [.alert, .sound, .badge])
+            if granted {
+                // Gap 3 — same consent moment, no separate prompt. See
+                // PushNotificationManager for why this can't be verified
+                // end-to-end on this machine (no signing team, no backend
+                // device-token endpoint).
+                await PushNotificationManager.shared.registerForRemoteNotifications()
+            }
+            return granted
         } catch {
             return false
         }
@@ -44,5 +52,23 @@ enum NotificationService {
             trigger: nil // deliver immediately
         )
         try? await center.add(request)
+    }
+
+    /// Posts a local "approval needed" notification for a permission
+    /// request discovered by `BackgroundRefreshManager`'s background poll.
+    /// Reuses the same `.notifications` authorization as
+    /// `postResponseNotification` — no separate opt-in.
+    static func postPermissionRequestNotification(for request: PermissionRequest) async {
+        let content = UNMutableNotificationContent()
+        content.title = "Approval needed"
+        content.body = "\(request.permission.capitalized) request is waiting on you."
+        content.sound = .default
+
+        let notificationRequest = UNNotificationRequest(
+            identifier: "permission-\(request.id)",
+            content: content,
+            trigger: nil // deliver immediately
+        )
+        try? await UNUserNotificationCenter.current().add(notificationRequest)
     }
 }

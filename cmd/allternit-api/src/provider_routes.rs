@@ -8,7 +8,7 @@ use axum::{
     routing::{get, post},
     Json, Router,
 };
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
 use serde_json::json;
 use std::{collections::HashSet, sync::Arc};
 use tracing::warn;
@@ -53,6 +53,7 @@ pub fn provider_router() -> Router<Arc<AppState>> {
         .route("/providers/video/generate", post(generate_video))
         .route("/provider/ollama/status", get(ollama_live_status))
         .route("/provider/ollama/models", get(list_ollama_models))
+        .route("/provider/huggingface/search", get(search_huggingface))
 }
 
 async fn generate_video(headers: HeaderMap, Json(payload): Json<serde_json::Value>) -> Response {
@@ -1372,4 +1373,104 @@ async fn confirm_provider_connect(
     // Promote to default so the one-click flow actually routes agents to it.
     crate::onboarding_routes::persist_cli_default(&state, meta.id, meta.label, binary, meta.model);
     Json(json!({ "status": "success", "provider": id, "confirmed": true })).into_response()
+}
+
+// ─── Hugging Face GGUF search (PocketPal-style local model discovery) ────────
+
+#[derive(Deserialize)]
+struct HuggingFaceSearchQuery {
+    q: Option<String>,
+    limit: Option<u32>,
+}
+
+#[derive(Serialize)]
+struct HuggingFaceModelResult {
+    #[serde(rename = "repoId")]
+    repo_id: String,
+    downloads: u64,
+    likes: u64,
+}
+
+/// Searches HuggingFace's public model API for GGUF-tagged repos, so the
+/// Models settings panel can offer any GGUF (not just a fixed catalog) the
+/// same way PocketPal's model picker does. No auth needed for public repos.
+/// Installing a result reuses Ollama's own `hf.co/<repo>` pull support via
+/// `POST /api/local-brain/pull-custom`.
+async fn search_huggingface(
+    Extension(_user): Extension<AuthUser>,
+    headers: HeaderMap,
+    axum::extract::Query(query): axum::extract::Query<HuggingFaceSearchQuery>,
+) -> Response {
+    if get_user(&headers).is_none() {
+        return unauthorized();
+    }
+
+    let search_term = query.q.unwrap_or_default();
+    let limit = query.limit.unwrap_or(20).min(50);
+
+    let client = reqwest::Client::new();
+    let response = client
+        .get("https://huggingface.co/api/models")
+        .query(&[
+            ("search", search_term.as_str()),
+            ("filter", "gguf"),
+            ("sort", "downloads"),
+            ("direction", "-1"),
+            ("limit", &limit.to_string()),
+        ])
+        .timeout(std::time::Duration::from_secs(8))
+        .send()
+        .await;
+
+    let response = match response {
+        Ok(res) if res.status().is_success() => res,
+        Ok(res) => {
+            return (
+                StatusCode::BAD_GATEWAY,
+                Json(json!({ "error": "huggingface_error", "status": res.status().as_u16() })),
+            )
+                .into_response();
+        }
+        Err(err) => {
+            warn!("huggingface search request failed: {}", err);
+            return (
+                StatusCode::BAD_GATEWAY,
+                Json(json!({ "error": "huggingface_unreachable", "message": err.to_string() })),
+            )
+                .into_response();
+        }
+    };
+
+    let body = match response.json::<serde_json::Value>().await {
+        Ok(value) => value,
+        Err(err) => {
+            return (
+                StatusCode::BAD_GATEWAY,
+                Json(json!({ "error": "huggingface_parse_error", "message": err.to_string() })),
+            )
+                .into_response();
+        }
+    };
+
+    let results: Vec<HuggingFaceModelResult> = body
+        .as_array()
+        .map(|arr| {
+            arr.iter()
+                .filter_map(|m| {
+                    let repo_id = m
+                        .get("id")
+                        .or_else(|| m.get("modelId"))
+                        .and_then(|v| v.as_str())?
+                        .to_string();
+                    Some(HuggingFaceModelResult {
+                        repo_id,
+                        downloads: m.get("downloads").and_then(|v| v.as_u64()).unwrap_or(0),
+                        likes: m.get("likes").and_then(|v| v.as_u64()).unwrap_or(0),
+                    })
+                })
+                .collect()
+        })
+        .unwrap_or_default();
+
+    Json(json!({ "models": results })).into_response()
 }

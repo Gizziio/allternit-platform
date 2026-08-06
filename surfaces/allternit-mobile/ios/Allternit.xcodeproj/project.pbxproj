@@ -116,6 +116,7 @@
 		65675D60341D97A296013769 /* TreeSitterSwiftRunestone in Frameworks */ = {isa = PBXBuildFile; productRef = B7E1C1CFB727D46A6801CA9E /* TreeSitterSwiftRunestone */; };
 		65A30DEA9A029523CECAA775 /* VoiceModeViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 976C7758D4F8559596C88B1E /* VoiceModeViewModel.swift */; };
 		65F58948DB57F802D27C2C7B /* MemoryClient.swift in Sources */ = {isa = PBXBuildFile; fileRef = ADC22289020633B79A4877ED /* MemoryClient.swift */; };
+		683F2944F5F17551266D58E1 /* ThinkingOrb.swift in Sources */ = {isa = PBXBuildFile; fileRef = D71E9B45F5D6F57046B40046 /* ThinkingOrb.swift */; };
 		69B50D1B3F4A7108263F2A70 /* DiffRenderer.swift in Sources */ = {isa = PBXBuildFile; fileRef = E949D97C5E108AE7428E2C54 /* DiffRenderer.swift */; };
 		6BB3705C203B06F92A5468A4 /* IntelliScheduleStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2379C3D1BE4210564BD1A258 /* IntelliScheduleStore.swift */; };
 		6BB4A917B6F16D659FC4505C /* CodeModeView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0D011B052E3F3ABA469EBA92 /* CodeModeView.swift */; };
@@ -499,6 +500,7 @@
 		D45673F8E41471638BD2E334 /* Color+Theme.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Color+Theme.swift"; sourceTree = "<group>"; };
 		D4697ED76511B667A26C4A0F /* AgentMarketplace.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AgentMarketplace.swift; sourceTree = "<group>"; };
 		D61E57FF032550F43AAC67BD /* Reply.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Reply.swift; sourceTree = "<group>"; };
+		D71E9B45F5D6F57046B40046 /* ThinkingOrb.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ThinkingOrb.swift; sourceTree = "<group>"; };
 		DA805C4BABCE1FA5CE5E38E1 /* libgit2.xcframework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.xcframework; name = libgit2.xcframework; path = Frameworks/libgit2.xcframework; sourceTree = "<group>"; };
 		DB8805AD510ACE2BA8D3054E /* CloudDeployClient.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CloudDeployClient.swift; sourceTree = "<group>"; };
 		DC54C20A256A93666E1DA7F7 /* CloudDeployManagerView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CloudDeployManagerView.swift; sourceTree = "<group>"; };
@@ -819,6 +821,7 @@
 			children = (
 				D45673F8E41471638BD2E334 /* Color+Theme.swift */,
 				4E7FB6E04286889DF3D4A1A6 /* ModeTheme.swift */,
+				D71E9B45F5D6F57046B40046 /* ThinkingOrb.swift */,
 			);
 			path = DesignSystem;
 			sourceTree = "<group>";
@@ -1559,6 +1562,7 @@
 				1200E59A9D5615AD6F51BEE9 /* TerminalAccessoryView.swift in Sources */,
 				0BFC8384FC5B58A7B0CD6F6E /* TerminalControlKeys.swift in Sources */,
 				FA39A9D1C72C62138B55E2D5 /* TerminalSessionView.swift in Sources */,
+				683F2944F5F17551266D58E1 /* ThinkingOrb.swift in Sources */,
 				2D730B78F2D9F3C134683690 /* ToolOptionsStore.swift in Sources */,
 				C9DEAEE737EDD2D38E876307 /* UsageLimitViews.swift in Sources */,
 				B7AA169C1521A363602A7F1D /* UsageStore.swift in Sources */,

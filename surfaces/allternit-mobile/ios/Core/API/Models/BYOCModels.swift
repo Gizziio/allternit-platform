@@ -60,10 +60,12 @@ struct EnterpriseUsageSummary: Codable, Sendable {
 
 // MARK: - Cloud credentials
 
-enum CloudProvider: String, Codable, Sendable, CaseIterable {
+enum CloudProvider: String, Codable, Sendable, CaseIterable, Identifiable {
     case aws
     case gcp
     case azure
+
+    var id: String { rawValue }
 }
 
 struct CloudCredential: Identifiable, Codable, Sendable {

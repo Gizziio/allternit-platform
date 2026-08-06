@@ -63,6 +63,7 @@ use allternit_api::memory_routes::memory_router;
 use allternit_api::metrics::metrics_router;
 use allternit_api::oauth_routes::oauth_router;
 use allternit_api::office_cli_routes::office_cli_router;
+use allternit_api::office_engine_routes::{office_engine_router, office_engine_v1_router};
 use allternit_api::office_routes::office_router;
 use allternit_api::onboarding_routes::onboarding_router;
 use allternit_api::orchestrator_routes::orchestrator_router;
@@ -317,6 +318,7 @@ async fn main() {
         .merge(conversation_router())
         .merge(office_router())
         .merge(office_cli_router())
+        .merge(office_engine_v1_router())
         .merge(orchestrator_router())
         .merge(alabs_router())
         .merge(automation_router())
@@ -325,6 +327,10 @@ async fn main() {
     // ── Protected routes (require authentication) ─────────────────────────────
     let protected = Router::new()
         .nest("/api/v1", v1_routes)
+        // The tool registry is also served under /api/v1 because the
+        // web/desktop surface (`native-agent-api.ts`, `recording.store.ts`,
+        // `tool-registry.store.ts`) calls `/api/v1/tools[/execute]`.
+        .nest("/api/v1", tool_routes::tool_router())
         // API routes (not under /v1)
         .nest("/api", agent_chat_router())
         .nest("/api", tool_routes::tool_router())
@@ -350,6 +356,7 @@ async fn main() {
         .nest("/api", playground_router())
         .nest("/api", checkpoints_router())
         .nest("/api", design_connector_router())
+        .nest("/api", office_engine_router())
         .nest("/api", provider_router())
         // Auth middleware applied to everything above
         .layer(axum::middleware::from_fn_with_state(
@@ -445,6 +452,7 @@ async fn main() {
                 HeaderName::from_static("x-allternit-user-id"),
                 HeaderName::from_static("x-allternit-user-email"),
                 HeaderName::from_static("x-allternit-user-name"),
+                HeaderName::from_static("x-allternit-tenant-id"),
                 // OfficeCLI document upload headers (browser taskpane)
                 HeaderName::from_static("x-office-filename"),
                 HeaderName::from_static("x-office-host"),

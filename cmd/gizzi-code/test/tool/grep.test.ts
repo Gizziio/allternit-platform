@@ -1,7 +1,7 @@
 // @ts-nocheck
 import { describe, expect, test } from "bun:test"
 import path from "path"
-import { GrepTool } from "../../src/tool/grep"
+import { GrepTool } from "../../src/runtime/tools/builtins/grep"
 import { Instance } from "../../src/project/instance"
 import { tmpdir } from "../fixture/fixture"
 

@@ -89,7 +89,7 @@ export function manifestToMiniApp(
   };
 }
 
-const SEED_KEY = 'allternit-mini-apps-seeded-v3';
+const SEED_KEY = 'allternit-mini-apps-seeded-v4';
 
 export function seedDefaultMiniApps(): void {
   if (typeof window === 'undefined') return;
@@ -150,6 +150,23 @@ export function seedDefaultMiniApps(): void {
         presentation: { mode: 'native', nativeRenderer: 'oh-my-pi', fallback: 'native-tools' },
         surface: { kind: 'allternit-native', viewType: 'oh-my-pi' },
         harness: { transport: 'acp', command: 'omp acp', model: 'omp' },
+      },
+      {
+        id: 'vault-viewer',
+        name: 'Vault Viewer',
+        description: 'Obsidian-compatible viewer/editor for your Allternit knowledge vault (vendored WebObsidian).',
+        category: 'tool',
+        source: 'builtin',
+        catalogSource: 'allternit',
+        verified: true,
+        featured: true,
+        url: 'http://127.0.0.1:8787',
+        sourceUrl: 'http://127.0.0.1:8787',
+        repo: 'xnohat/webobsidian',
+        githubUrl: 'https://github.com/xnohat/webobsidian',
+        downloadable: true,
+        presentation: { mode: 'embedded', uiUrl: 'http://127.0.0.1:8787', healthUrl: 'http://127.0.0.1:8787', electronPartition: 'persist:allternit-vault-viewer', nativeRenderer: 'vault-viewer', fallback: 'external-browser' },
+        surface: { kind: 'embedded-web', url: 'http://127.0.0.1:8787', viewType: 'vault-viewer' },
       },
     ];
     const correctedIds = new Set(defaults.map((app) => app.id));

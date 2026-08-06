@@ -254,7 +254,12 @@ export function BrainsPanel() {
         const phase = connect[p.provider_id] ?? { phase: 'idle' as const };
         const letter = (p.provider_id || '?').slice(0, 1).toUpperCase();
         const isReady = p.authenticated;
-        const showConnect = phase.phase !== 'api_key';
+        // Hide the top-level Connect/Reconnect button whenever the inline
+        // API-key form is already showing (needs_key or api_key phase) — it
+        // triggers a different action (onConnect's OAuth/CLI probe) than the
+        // form's own Connect button (saveApiKey), so both rendering at once
+        // was two competing "Connect" affordances for the same provider row.
+        const showConnect = phase.phase !== 'api_key' && phase.phase !== 'needs_key';
 
         return (
           <div

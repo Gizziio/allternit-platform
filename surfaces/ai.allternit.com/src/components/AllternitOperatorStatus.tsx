@@ -12,9 +12,9 @@ import {
   CheckCircle,
   XCircle,
   Circle,
-  Spinner,
   Robot,
 } from '@phosphor-icons/react';
+import { ThinkingOrb } from 'thinking-orbs';
 import { useAllternitOperatorStatus } from '@/lib/services/useAllternitOperatorStatus';
 
 export function AllternitOperatorStatus() {
@@ -48,7 +48,7 @@ export function AllternitOperatorStatus() {
       case 'online': return <CheckCircle size={14} weight="fill" color={getStatusColor()} />;
       case 'offline': return <XCircle size={14} weight="fill" color={getStatusColor()} />;
       case 'error': return <XCircle size={14} weight="fill" color={getStatusColor()} />;
-      case 'checking': return <Spinner size={14} className="animate-spin" color={getStatusColor()} />;
+      case 'checking': return <ThinkingOrb state="connecting" size={20} />;
       default: return <Circle size={14} color={getStatusColor()} />;
     }
   };

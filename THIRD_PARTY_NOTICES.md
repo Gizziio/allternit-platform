@@ -4,6 +4,76 @@ This file contains notices for open-source software incorporated into this produ
 
 ---
 
+## GenOffice
+**License:** Apache-2.0
+
+**Copyright:** Copyright 2026 Mainfunc, Inc.
+
+**Source:** https://github.com/genspark-ai/genoffice
+
+**Used in:**
+- `packages/@allternit/office-docx-engine/`
+- `packages/@allternit/office-pptx-engine/`
+- `packages/@allternit/office-pptx-render/`
+- `packages/@allternit/office-file-parse/`
+- `packages/@allternit/office-xlsx-engine/` (Rust crate from `apps/sheets/native/xlsx-engine` + Node sidecar client)
+
+**GenOffice document office engines forked and adapted for the Allternit workspace. Each package retains a copy of the GenOffice `LICENSE` and `NOTICE` files.
+
+---
+
+## anydoc
+**License:** MIT
+
+**Copyright:** Copyright (c) 2026 Firecrawl
+
+**Source:** https://github.com/firecrawl/anydoc
+
+**Used in:** `services/office-engine/` (`@firecrawl/anydoc` npm package, pinned at `0.1.6`)
+
+**Rust document → GFM Markdown converter with napi prebuilt Node bindings; powers the office engine's `POST /markdown` endpoint.**
+
+---
+
+## Readability
+**License:** Apache-2.0
+
+**Copyright:** Copyright (c) 2023 Mozilla
+
+**Source:** https://github.com/mozilla/readability
+
+**Used in:** `services/office-engine/` (`@mozilla/readability` npm package, `0.6.0`)
+
+**Main-content extraction for the office engine's `POST /markdown-url` endpoint (URL → Markdown).**
+
+---
+
+## Turndown
+**License:** MIT
+
+**Copyright:** Copyright (c) 2017 Dom Christie
+
+**Source:** https://github.com/mixmark-io/turndown
+
+**Used in:** `services/office-engine/` (`turndown` npm package, `7.2.0`)
+
+**HTML → GFM Markdown conversion for the office engine's `POST /markdown-url` endpoint.**
+
+---
+
+## linkedom
+**License:** ISC
+
+**Copyright:** Copyright (c) 2020-present Andrea Giammarchi
+
+**Source:** https://github.com/WebReflection/linkedom
+
+**Used in:** `services/office-engine/` (`linkedom` npm package, `0.18.12`)
+
+**Server-side DOM for Readability in the office engine's `POST /markdown-url` endpoint.**
+
+---
+
 ## Kimi Code
 **License:** MIT
 

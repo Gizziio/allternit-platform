@@ -15,6 +15,8 @@ import {
   Play,
   Stop,
   X,
+  MagnifyingGlass,
+  DownloadSimple,
 } from '@phosphor-icons/react';
 import { LOCAL_MODEL_CATALOG } from '@/lib/local-models/catalog';
 import {
@@ -54,6 +56,20 @@ interface PullProgress {
 
 type PullState = 'idle' | 'pulling' | 'done' | 'error';
 
+interface HuggingFaceModel {
+  repoId: string;
+  downloads: number;
+  likes: number;
+}
+
+type HfInstallState = 'idle' | 'pulling' | 'done' | 'error';
+
+interface HfInstallStatus {
+  state: HfInstallState;
+  progress?: PullProgress;
+  error?: string;
+}
+
 type BonsaiBridge = NonNullable<NonNullable<typeof window.allternit>['bonsai']>;
 type BonsaiStatus = Awaited<ReturnType<BonsaiBridge['getStatus']>>;
 
@@ -77,6 +93,13 @@ export function LocalModelManager() {
   const [webGpuConsent, setWebGpuConsent] = useState(false);
   const [webGpuBusy, setWebGpuBusy] = useState(false);
   const [webGpuMessage, setWebGpuMessage] = useState<string | null>(null);
+
+  const [hfQuery, setHfQuery] = useState('');
+  const [hfResults, setHfResults] = useState<HuggingFaceModel[]>([]);
+  const [hfSearching, setHfSearching] = useState(false);
+  const [hfSearchError, setHfSearchError] = useState<string | null>(null);
+  const [hfSearched, setHfSearched] = useState(false);
+  const [hfInstalls, setHfInstalls] = useState<Record<string, HfInstallStatus>>({});
 
   const fetchStatus = useCallback(async () => {
     try {
@@ -232,6 +255,67 @@ export function LocalModelManager() {
     }
   };
 
+  const searchHuggingFace = async (query: string) => {
+    setHfSearching(true);
+    setHfSearchError(null);
+    setHfSearched(true);
+    try {
+      const res = await fetch(`/api/provider/huggingface/search?q=${encodeURIComponent(query)}`);
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({})) as { message?: string; error?: string };
+        throw new Error(err.message ?? err.error ?? `Search failed (${res.status})`);
+      }
+      const data = await res.json() as { models?: HuggingFaceModel[] };
+      setHfResults(data.models ?? []);
+    } catch (err) {
+      setHfSearchError(err instanceof Error ? err.message : String(err));
+      setHfResults([]);
+    } finally {
+      setHfSearching(false);
+    }
+  };
+
+  const installFromHuggingFace = async (repoId: string) => {
+    setHfInstalls((prev) => ({ ...prev, [repoId]: { state: 'pulling' } }));
+    try {
+      const res = await fetch('/api/local-brain/pull-custom', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ repo: repoId }),
+      });
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({})) as { message?: string; error?: string };
+        throw new Error(err.message ?? err.error ?? `Install failed (${res.status})`);
+      }
+      const reader = res.body!.getReader();
+      const dec = new TextDecoder();
+      let buf = '';
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        buf += dec.decode(value, { stream: true });
+        const lines = buf.split('\n');
+        buf = lines.pop() ?? '';
+        for (const line of lines) {
+          if (!line.startsWith('data: ')) continue;
+          try {
+            const event: PullProgress = JSON.parse(line.slice(6));
+            if (event.status === 'success' || event.status === 'done') {
+              setHfInstalls((prev) => ({ ...prev, [repoId]: { state: 'done' } }));
+              await fetchModels();
+            } else if (event.status === 'error') {
+              setHfInstalls((prev) => ({ ...prev, [repoId]: { state: 'error', error: event.error ?? 'Install failed' } }));
+            } else {
+              setHfInstalls((prev) => ({ ...prev, [repoId]: { state: 'pulling', progress: event } }));
+            }
+          } catch {}
+        }
+      }
+    } catch (err) {
+      setHfInstalls((prev) => ({ ...prev, [repoId]: { state: 'error', error: err instanceof Error ? err.message : String(err) } }));
+    }
+  };
+
   const formatSize = (bytes: number) =>
     (bytes / (1024 * 1024 * 1024)).toFixed(2) + ' GB';
 
@@ -377,6 +461,89 @@ export function LocalModelManager() {
           </div>
         </div>
       )}
+
+      {/* ── Hugging Face model search (PocketPal-style discovery) ── */}
+      <div>
+        <h4 className="text-sm font-semibold text-[var(--text-primary)] mb-1">Add a model from Hugging Face</h4>
+        <p className="text-xs text-[var(--text-tertiary)] mb-3">
+          Search public GGUF models on Hugging Face and install any of them into your Local Brain — not just the default.
+        </p>
+        <form
+          className="flex items-center gap-2 mb-3"
+          onSubmit={(event) => { event.preventDefault(); if (hfQuery.trim()) void searchHuggingFace(hfQuery.trim()); }}
+        >
+          <div className="relative flex-1">
+            <MagnifyingGlass size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--text-tertiary)]" />
+            <input
+              type="text"
+              value={hfQuery}
+              onChange={(event) => setHfQuery(event.target.value)}
+              placeholder={'Search Hugging Face, e.g. "qwen 7b gguf"'}
+              className="w-full pl-8 pr-3 py-2 rounded-lg border border-solid border-[var(--border-subtle)] bg-[var(--bg-secondary)] text-[13px] text-[var(--text-primary)] placeholder:text-[var(--text-tertiary)] outline-none focus:border-[var(--accent-primary)]"
+            />
+          </div>
+          <button
+            type="submit"
+            disabled={hfSearching || !hfQuery.trim()}
+            className="shrink-0 px-3 py-2 rounded-lg text-xs font-bold bg-[var(--accent-primary)] text-[var(--text-inverse)] hover:opacity-90 transition-opacity disabled:opacity-50"
+          >
+            {hfSearching ? 'Searching…' : 'Search'}
+          </button>
+        </form>
+
+        {hfSearchError && (
+          <div className="p-3 rounded-xl border border-red-500/30 bg-red-500/5 flex items-start gap-2 mb-3">
+            <Warning size={16} className="text-red-500 shrink-0 mt-0.5" />
+            <p className="text-xs text-[var(--text-tertiary)] break-words">{hfSearchError}</p>
+          </div>
+        )}
+
+        {hfSearched && !hfSearching && !hfSearchError && hfResults.length === 0 && (
+          <p className="text-xs text-[var(--text-tertiary)]">No GGUF models matched that search.</p>
+        )}
+
+        {hfResults.length > 0 && (
+          <div className="grid grid-cols-1 gap-2">
+            {hfResults.map((model) => {
+              const install = hfInstalls[model.repoId];
+              return (
+                <div
+                  key={model.repoId}
+                  className="p-3 rounded-xl border border-[var(--border-subtle)] bg-[var(--bg-secondary)] flex items-center justify-between gap-3"
+                >
+                  <div className="min-w-0 flex-1">
+                    <div className="text-xs font-semibold text-[var(--text-primary)] truncate font-mono">{model.repoId}</div>
+                    <div className="text-[11px] text-[var(--text-tertiary)] mt-0.5">
+                      {model.downloads.toLocaleString()} downloads · {model.likes.toLocaleString()} likes
+                    </div>
+                    {install?.state === 'pulling' && (
+                      <div className="text-[11px] text-[var(--accent-primary)] mt-1">
+                        {install.progress?.status ?? 'Starting…'}
+                      </div>
+                    )}
+                    {install?.state === 'error' && (
+                      <div className="text-[11px] text-red-500 mt-1">{install.error}</div>
+                    )}
+                  </div>
+                  {install?.state === 'done' ? (
+                    <CheckCircle size={20} weight="fill" className="text-green-500 shrink-0" />
+                  ) : (
+                    <button
+                      type="button"
+                      onClick={() => void installFromHuggingFace(model.repoId)}
+                      disabled={install?.state === 'pulling'}
+                      className="shrink-0 flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold border border-[var(--border-subtle)] text-[var(--text-secondary)] hover:bg-[var(--surface-hover)] transition-colors disabled:opacity-50"
+                    >
+                      <DownloadSimple size={14} className={install?.state === 'pulling' ? 'animate-pulse' : ''} />
+                      {install?.state === 'pulling' ? 'Installing…' : 'Install'}
+                    </button>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        )}
+      </div>
 
       {/* ── Bonsai Image companion card ── */}
       <div>

@@ -1,5 +1,6 @@
-import { Suspense, lazy } from 'react'
-import { Routes, Route, Navigate } from 'react-router-dom'
+import { Suspense, lazy, useEffect } from 'react'
+import { Routes, Route, Navigate, useNavigate } from 'react-router-dom'
+import { installOfficeDesktopBridge } from './views/office/desktop-bridge'
 
 const AppLoader = () => (
   <div
@@ -81,8 +82,22 @@ const TerminalClerkPage = lazy(() => import('./pages/TerminalClerkPage'))
 const OfficeAuthBridgePage = lazy(() => import('./pages/OfficeAuthBridgePage'))
 const DispatchJoinPage = lazy(() => import('./pages/DispatchJoinPage'))
 const DesignPage = lazy(() => import('./pages/DesignPage'))
+const DocsPage = lazy(() => import('./pages/DocsPage'))
+const SlidesPage = lazy(() => import('./pages/SlidesPage'))
+const SheetsPage = lazy(() => import('./pages/SheetsPage'))
+const PdfPage = lazy(() => import('./pages/PdfPage'))
+const MarkdownPreviewPage = lazy(() => import('./pages/MarkdownPreviewPage'))
+const OfficeLauncherPage = lazy(() => import('./pages/OfficeLauncherPage'))
 
 export default function AppRoutes() {
+  const navigate = useNavigate();
+
+  // Receive "Open with Allternit" file payloads when running in the desktop
+  // shell; no-op in the browser.
+  useEffect(() => {
+    installOfficeDesktopBridge((path, options) => navigate(path, options));
+  }, [navigate]);
+
   return (
     <Suspense fallback={<AppLoader />}>
       <Routes>
@@ -119,6 +134,12 @@ export default function AppRoutes() {
         <Route path="/office-auth-bridge" element={<OfficeAuthBridgePage />} />
         <Route path="/dispatch/join" element={<DispatchJoinPage />} />
         <Route path="/design" element={<DesignPage />} />
+        <Route path="/docs/:artifactId?" element={<DocsPage />} />
+        <Route path="/slides/:artifactId?" element={<SlidesPage />} />
+        <Route path="/sheets/:artifactId?" element={<SheetsPage />} />
+        <Route path="/pdf/:artifactId?" element={<PdfPage />} />
+        <Route path="/markdown-preview" element={<MarkdownPreviewPage />} />
+        <Route path="/office" element={<OfficeLauncherPage />} />
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
     </Suspense>

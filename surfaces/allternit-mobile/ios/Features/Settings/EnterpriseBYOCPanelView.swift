@@ -632,7 +632,7 @@ struct BYOCCredentialCreateSheet: View {
             }
             .onDisappear {
                 store.clearTestResult()
-                store.createError = nil
+                store.setCreateError(nil)
             }
         }
     }

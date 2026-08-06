@@ -2,7 +2,7 @@
 import { describe, test, expect } from "bun:test"
 import path from "path"
 import fs from "fs/promises"
-import { WriteTool } from "../../src/tool/write"
+import { WriteTool } from "../../src/runtime/tools/builtins/write"
 import { Instance } from "../../src/project/instance"
 import { tmpdir } from "../fixture/fixture"
 
@@ -98,7 +98,7 @@ describe("tool.write", () => {
       await Instance.provide({
         directory: tmp.path,
         fn: async () => {
-          const { FileTime } = await import("../../src/file/time")
+          const { FileTime } = await import("../../src/shared/file/time")
           FileTime.read(ctx.sessionID, filepath)
 
           const write = await WriteTool.init()
@@ -127,7 +127,7 @@ describe("tool.write", () => {
       await Instance.provide({
         directory: tmp.path,
         fn: async () => {
-          const { FileTime } = await import("../../src/file/time")
+          const { FileTime } = await import("../../src/shared/file/time")
           FileTime.read(ctx.sessionID, filepath)
 
           const write = await WriteTool.init()

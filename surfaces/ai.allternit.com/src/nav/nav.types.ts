@@ -26,6 +26,7 @@ export type ViewType =
   | "openclaw"
   | "openclaw-chat"
   | "openclaw-sessions"
+  | "vault-viewer"
   | "dag"
   // Infrastructure views (P4 DAG tasks)
   | "swarm"
@@ -150,6 +151,16 @@ export type ViewType =
   | "design-view-market"
   | "design-view-compare"
   | "design-marketplace"
+  // Docs editor (GenOffice)
+  | "docs"
+  // Slides editor (GenOffice)
+  | "slides"
+  // Sheets editor (GenOffice)
+  | "sheets"
+  // PDF viewer (GenOffice)
+  | "pdf"
+  // Markdown preview (anydoc conversion)
+  | "markdown-preview"
   // Browser Extensions hub
   | "browser-extensions";
 

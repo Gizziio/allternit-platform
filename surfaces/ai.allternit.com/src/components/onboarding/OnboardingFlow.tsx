@@ -311,6 +311,33 @@ function getUserOS(): 'mac' | 'windows' | 'linux' {
   return 'mac';
 }
 
+/**
+ * Confirms `baseUrl` is an actual Allternit backend (allternit-api or
+ * gizzi-code), not just something that answered on the port. A bare
+ * `res.ok` check on a guessed health path isn't enough: any static file
+ * server with SPA-style fallback routing (this repo runs several, on
+ * several ports, including the marketing site) returns 200 + index.html
+ * for literally any path, including a plausible-looking /health. Requiring
+ * JSON content plus a recognized status shape rules that out.
+ */
+async function isAllternitBackend(baseUrl: string, signal?: AbortSignal): Promise<boolean> {
+  try {
+    const ctrl = new AbortController();
+    const timeout = setTimeout(() => ctrl.abort(), 2500);
+    const combined = signal
+      ? (() => { signal.addEventListener('abort', () => ctrl.abort()); return ctrl.signal; })()
+      : ctrl.signal;
+    const res = await fetch(`${baseUrl.replace(/\/$/, '')}/health`, { signal: combined });
+    clearTimeout(timeout);
+    if (!res.ok) return false;
+    if (!(res.headers.get('content-type') ?? '').includes('application/json')) return false;
+    const body = await res.json().catch(() => null) as { status?: string } | null;
+    return typeof body?.status === 'string';
+  } catch {
+    return false;
+  }
+}
+
 const inputClassName = "flex-1 px-3 py-2.5 rounded-lg text-[13px] bg-surface-canvas border border-ui-border-default text-ui-text-primary outline-none";
 
 
@@ -351,13 +378,12 @@ function InfraStep({ data, onUpdate, onLocalFound }: { data: WizardData; onUpdat
         }
       } catch { /* fall through to port probe */ }
     }
-    for (const port of [8013, 4096, 3001, 8080]) {
-      try {
-        const ctrl = new AbortController();
-        setTimeout(() => ctrl.abort(), 2000);
-        const res = await fetch(`http://localhost:${port}/v1/global/health`, { signal: ctrl.signal });
-        if (res.ok) { setLocalStatus('found'); setLocalUrl(`http://localhost:${port}`); return; }
-      } catch { /* next port */ }
+    for (const port of [8013, 4096]) {
+      if (await isAllternitBackend(`http://localhost:${port}`)) {
+        setLocalStatus('found');
+        setLocalUrl(`http://localhost:${port}`);
+        return;
+      }
     }
     setLocalStatus('not-found');
   }, [isElectron]);
@@ -412,11 +438,11 @@ function InfraStep({ data, onUpdate, onLocalFound }: { data: WizardData; onUpdat
       const normalized = url.startsWith('http') ? url : `https://${url}`;
       const ctrl = new AbortController();
       setTimeout(() => ctrl.abort(), 6000);
-      const res = await fetch(`${normalized.replace(/\/$/, '')}/v1/global/health`, { signal: ctrl.signal });
-      if (res.ok) {
+      const ok = await isAllternitBackend(normalized, ctrl.signal);
+      if (ok) {
         setUrlTestStatus('ok');
         if (!manualName) setManualName(new URL(normalized).hostname.split('.')[0] || 'My Backend');
-      } else { setUrlTestStatus('fail'); setUrlTestError(`Server returned ${res.status}`); }
+      } else { setUrlTestStatus('fail'); setUrlTestError('Not an Allternit backend — no valid /health response'); }
     } catch (e: any) {
       setUrlTestStatus('fail');
       setUrlTestError(e?.name === 'AbortError' ? 'Timed out — unreachable' : 'Could not connect');

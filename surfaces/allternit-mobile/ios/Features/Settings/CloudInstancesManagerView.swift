@@ -673,7 +673,7 @@ struct CloudInstancesCreateSheet: View {
                     dismiss()
                 }
             } catch {
-                store.startError = error.localizedDescription
+                store.setStartError(error.localizedDescription)
             }
         }
     }

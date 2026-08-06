@@ -15,6 +15,12 @@ final class CloudDeployStore: ObservableObject {
     @Published private(set) var lastCreated: Deployment? = nil
     @Published private(set) var isCancellingId: String? = nil
 
+    /// Views report/update create-flow errors through this setter; the
+    /// property stays `private(set)` so all mutation goes through the store.
+    func setCreateError(_ message: String?) {
+        createError = message
+    }
+
     private let client: CloudDeployClient
     private var fetchTask: Task<Void, Never>? = nil
     private var pollTask: Task<Void, Never>? = nil

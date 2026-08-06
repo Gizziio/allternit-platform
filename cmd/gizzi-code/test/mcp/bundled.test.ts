@@ -58,6 +58,21 @@ describe("bundled MCP discovery", () => {
     }
   })
 
+  test("registers the platform tools MCP only with the internal token configured", () => {
+    delete process.env.ALLTERNIT_INTERNAL_SERVICE_TOKEN
+    expect(bundledMcpServers()["allternit-tools"]).toBeUndefined()
+
+    process.env.ALLTERNIT_INTERNAL_SERVICE_TOKEN = "test-secret"
+    const tools = bundledMcpServers()["allternit-tools"]
+    expect(tools?.type).toBe("remote")
+    if (tools?.type === "remote") {
+      expect(tools.url).toEndWith("/internal/tools/mcp")
+      expect(tools.headers?.["x-allternit-internal-token"]).toBe("test-secret")
+      expect(tools.headers?.["x-allternit-user-id"]).toBe("local-dev-user")
+      expect(tools.oauth).toBe(false)
+    }
+  })
+
   test("lets users disable bundled servers or override one explicitly", () => {
     process.env.GIZZI_DISABLE_BUNDLED_MCPS = "1"
     expect(withBundledMcpServers()).toStrictEqual({})

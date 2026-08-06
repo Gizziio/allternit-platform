@@ -1,5 +1,13 @@
 import SwiftUI
 
+#if DEBUG
+/// String wrapper for `.sheet(item:)` debug deep-links.
+private struct IdentifiableString: Identifiable {
+    var wrappedValue: String
+    var id: String { wrappedValue }
+}
+#endif
+
 /// The Artifacts Library tab surface: every artifact seen in chat streams,
 /// newest first (ArtifactLibraryStore — the backend has no artifact list
 /// endpoint, so the library is collected client-side). Tapping a row opens
@@ -9,6 +17,10 @@ struct ArtifactsLibraryView: View {
 
     @StateObject private var store = ArtifactLibraryStore.shared
     @State private var activeArtifact: ArtifactRecord? = nil
+    @State private var showingOfficeDocuments = false
+    #if DEBUG
+    @State private var debugOfficeDocumentId: IdentifiableString? = nil
+    #endif
 
     var body: some View {
         VStack(spacing: 0) {
@@ -33,6 +45,16 @@ struct ArtifactsLibraryView: View {
                     .foregroundColor(Color("TextPrimary"))
 
                 Spacer()
+
+                // Office documents saved by the Docs/Sheets/Slides/PDF editors
+                // (artifact service, read-only native rendering).
+                Button(action: { showingOfficeDocuments = true }) {
+                    Image(systemName: "doc.text.magnifyingglass")
+                        .font(.title3)
+                        .foregroundColor(Color("TextPrimary"))
+                        .frame(width: 44, height: 44)
+                }
+                .accessibilityLabel("Office documents")
             }
             .padding(.horizontal, 8)
             .padding(.vertical, 10)
@@ -72,6 +94,29 @@ struct ArtifactsLibraryView: View {
         .sheet(item: $activeArtifact) { artifact in
             ArtifactDetailsView(artifact: artifact)
         }
+        .sheet(isPresented: $showingOfficeDocuments) {
+            OfficeDocumentsView()
+        }
+        #if DEBUG
+        .sheet(item: $debugOfficeDocumentId) { id in
+            NavigationStack {
+                OfficeDocumentView(artifactId: id.wrappedValue)
+            }
+        }
+        .task {
+            // `-open-office-documents` / `-open-office-document-id <id>`
+            // (DEBUG only): drive the Office surfaces without tap injection
+            // for simulator regression runs (same pattern as -open-settings).
+            let args = CommandLine.arguments
+            if args.contains("-open-office-documents") {
+                showingOfficeDocuments = true
+            }
+            if let idx = args.firstIndex(of: "-open-office-document-id"),
+               args.indices.contains(idx + 1) {
+                debugOfficeDocumentId = .init(wrappedValue: args[idx + 1])
+            }
+        }
+        #endif
         .task {
             // List the user's canvases for artifacts created on other
             // surfaces (the web and gizzi-code mirror artifacts there).

@@ -50,7 +50,10 @@ export async function scanRustFile(root: string, relFile: string, internalCrates
       fromFile: relFile,
       toFile: targetPath, // a module path, not a specific file — roll-up in edges.ts matches this directly
       type: "imports",
-      evidence: { file: relFile, line, symbol: `use ${crateName}::…`, confidence: "textual" },
+      // `symbol` must be a literal substring of the cited line (validate.ts
+      // checks this) — use the bare crate name, not a human-readable
+      // "use X::…" label, since no real source line contains an ellipsis.
+      evidence: { file: relFile, line, symbol: crateName, confidence: "textual" },
     })
   }
   return edges

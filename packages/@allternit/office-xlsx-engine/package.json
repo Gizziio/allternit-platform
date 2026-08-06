@@ -1,0 +1,58 @@
+{
+  "name": "@allternit/office-xlsx-engine",
+  "version": "0.1.0",
+  "license": "Apache-2.0",
+  "private": true,
+  "type": "module",
+  "description": "xlsx import/export + IronCalc recalculation sidecar (vendored Rust crate from GenOffice apps/sheets) with a Node JSON-lines client",
+  "main": "./dist/index.js",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "import": "./dist/index.js",
+      "types": "./dist/index.d.ts"
+    },
+    "./shared/desktop-api": {
+      "import": "./dist/shared/desktop-api.js",
+      "types": "./dist/shared/desktop-api.d.ts"
+    },
+    "./shared/*": {
+      "import": "./dist/shared/*.js",
+      "types": "./dist/shared/*.d.ts"
+    },
+    "./domain/*": {
+      "import": "./dist/domain/*.js",
+      "types": "./dist/domain/*.d.ts"
+    },
+    "./gateway/*": {
+      "import": "./dist/gateway/*.js",
+      "types": "./dist/gateway/*.d.ts"
+    }
+  },
+  "files": [
+    "dist",
+    "src",
+    "crate"
+  ],
+  "scripts": {
+    "build": "tsc -p tsconfig.build.json",
+    "clean": "rm -rf dist",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "sidecar:build": "cargo build --release --manifest-path crate/Cargo.toml"
+  },
+  "devDependencies": {
+    "@types/node": "^24.10.1",
+    "jszip": "^3.10.1",
+    "typescript": "^5.9.3",
+    "vitest": "^1.6.1"
+  },
+  "author": "Allternit",
+  "dependencies": {
+    "@univerjs/core": "^0.25.1",
+    "jszip": "^3.10.1",
+    "zod": "^3.25.0"
+  }
+}

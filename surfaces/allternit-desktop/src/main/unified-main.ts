@@ -9,7 +9,7 @@
 
 import { app, BrowserWindow, ipcMain, nativeTheme, safeStorage, shell, Tray, Menu, dialog, globalShortcut, screen, protocol } from 'electron';
 import { fileURLToPath } from 'node:url';
-import { dirname, join, resolve } from 'node:path';
+import { dirname, join, resolve, basename } from 'node:path';
 import * as fs from 'node:fs';
 import * as net from 'node:net';
 import * as http from 'node:http';
@@ -21,8 +21,18 @@ import log from 'electron-log';
 import { updateElectronApp } from 'update-electron-app';
 import fixPath from 'fix-path';
 import { backendManager } from './backend-manager.js';
+import { officeEngineManager } from './office-engine-manager.js';
+import {
+  editorForFile,
+  extractOfficeFileArg,
+  isOfficeTarget,
+  officePathFor,
+  officeTitleFor,
+  type OfficeTarget,
+} from './office-programs.js';
 import { bonsaiCompanion } from './bonsai-companion-manager.js';
 import { gizziManager } from './gizzi-manager.js';
+import { connectorSidecarManager } from './connector-sidecar-manager.js';
 import { gizziDaemonManager } from './gizzi-daemon-manager.js';
 import { PORTS, URLS, devUiUrl, apiUrl, notebookUrl, staticUiUrl } from './config.js';
 import { installMiniApp, startMiniApp, stopMiniApp, getMiniAppStatus, launchMiniAppDesktop, getMiniAppApproval, reviewAndApproveMiniApp, revokeMiniAppApproval, removeMiniAppRuntime, rollbackMiniAppRuntime, setMiniAppOAuthTokenResolver } from './mini-apps-manager.js';
@@ -100,9 +110,17 @@ function isSelfHostedBuild(): boolean {
 function resolveLocalPlatformStaticPath(): string | null {
   // __dirname is dist/main; go up four levels to reach the repo root.
   const repoRoot = resolve(__dirname, '..', '..', '..', '..');
+  // Unpackaged runs prefer resources/platform — the same output
+  // prepare-platform-static.cjs builds for packaged apps, with
+  // NEXT_PUBLIC_ALLTERNIT_DESKTOP_AUTH baked in so the desktop shell bypasses
+  // Clerk instead of hitting its production-domain origin lock. The raw
+  // ai.allternit.com/dist candidates are a last-resort fallback only:
+  // whatever's sitting there could have been built by a plain `vite build`
+  // with no desktop flags at all, which is exactly what broke this before.
   const candidates = app.isPackaged
     ? [join(process.resourcesPath ?? '', 'platform')]
     : [
+        join(repoRoot, 'surfaces', 'allternit-desktop', 'resources', 'platform'),
         join(repoRoot, 'surfaces', 'ai.allternit.com', 'dist'),
         join(repoRoot, 'surfaces', 'ai.allternit.com', 'out'),
         join(repoRoot, 'surfaces', 'platform', 'dist'),
@@ -134,6 +152,8 @@ const isMac = process.platform === 'darwin';
 
 let mainWindow: BrowserWindow | null = null;
 let designWindow: BrowserWindow | null = null;
+/** One office editor window per target (docs/sheets/slides/pdf/launcher). */
+const officeWindows = new Map<OfficeTarget, BrowserWindow>();
 let splashWindow: BrowserWindow | null = null;
 
 // Service state for splash screen progress (module-level so IPC handlers can update it)
@@ -200,7 +220,10 @@ async function startGizziRuntime(): Promise<string> {
       log.warn('[GizziManager] Legacy daemon migration deferred:', error);
     }
   }
-  return gizziManager.start({ existingPassword });
+  return gizziManager.start({
+    existingPassword,
+    extraEnv: authManager.getConnectorSidecarEnvironment(),
+  });
 }
 
 async function installAlwaysOnGizziRuntime(): Promise<void> {
@@ -669,6 +692,36 @@ async function initializeBundledMode(): Promise<void> {
       await new Promise(r => setTimeout(r, 1000));
     }
 
+    // Step 1.5 — connector sidecar (open-connector, port ${PORTS.CONNECTOR_SIDECAR}).
+    // allternit-api's connector routes proxy to this; non-fatal if it fails
+    // to start (connector-backed sources just stay unavailable, same as
+    // gizzi-code above).
+    {
+      const sidecarEnv = authManager.getConnectorSidecarEnvironment();
+      try {
+        await connectorSidecarManager.start({
+          encryptionKey: authManager.getPlatformEncryptionEnvironment().ALLTERNIT_ENCRYPTION_KEY,
+          adminToken: sidecarEnv.ALLTERNIT_CONNECTOR_SIDECAR_ADMIN_TOKEN,
+          runtimeToken: sidecarEnv.ALLTERNIT_CONNECTOR_SIDECAR_RUNTIME_TOKEN,
+        });
+        log.info('[Main] Connector sidecar started successfully');
+      } catch (sidecarErr) {
+        log.warn('[Main] Connector sidecar failed to start, continuing without it:', sidecarErr);
+      }
+    }
+
+    // Step 1.6 — office-engine sidecar (services/office-engine, port 8099).
+    // The gateway's /api/office/* routes proxy to this; non-fatal if it fails
+    // (the gateway answers 502, same pattern as the connector sidecar).
+    {
+      const engineUrl = await officeEngineManager.start();
+      if (engineUrl) {
+        log.info(`[Main] Office engine ready (${officeEngineManager.getMode()}) at ${engineUrl}`);
+      } else {
+        log.warn('[Main] Office engine unavailable, continuing without it');
+      }
+    }
+
     // Step 2 — allternit-api (Rust operator API, port ${PORTS.API} — VM, rails, terminal)
     const apiStatus = await backendManager.getStatus();
     if (!apiStatus.installed) {
@@ -692,6 +745,7 @@ async function initializeBundledMode(): Promise<void> {
       extraEnv: {
         ...computerUseDriverManager.getLaunchEnvironment(),
         ...authManager.getPlatformEncryptionEnvironment(),
+        ...authManager.getConnectorSidecarEnvironment(),
       },
     });
     serviceState.api = { status: 'up', detail: `Connected on ${URLS.API}` };
@@ -789,6 +843,15 @@ async function initializeBundledMode(): Promise<void> {
     });
     mainWindow.webContents.on('did-fail-load', (event, errorCode, errorDescription, validatedURL) => {
       log.error(`[Main] Window failed to load: ${errorDescription} (${errorCode}) at ${validatedURL}`);
+    });
+    mainWindow.webContents.on('did-navigate', (_event, url) => {
+      log.info(`[Main] Window did-navigate: ${url}`);
+    });
+    mainWindow.webContents.on('did-navigate-in-page', (_event, url) => {
+      log.info(`[Main] Window did-navigate-in-page: ${url}`);
+    });
+    mainWindow.on('close', (event) => {
+      log.warn('[Main] mainWindow close event fired', { destroyed: mainWindow?.isDestroyed() });
     });
     mainWindow.webContents.on('dom-ready', () => {
       log.info('[Main] DOM ready');
@@ -1298,6 +1361,16 @@ async function updateTrayMenu(): Promise<void> {
     },
     ...(permItem ? [permItem, { type: 'separator' } as Electron.MenuItemConstructorOptions] : []),
     { label: 'Show Window', click: () => mainWindow?.show() },
+    {
+      label: 'Allternit Office',
+      submenu: [
+        { label: 'Launcher', click: () => openOfficeWindow('launcher') },
+        { label: 'Docs', click: () => openOfficeWindow('docs') },
+        { label: 'Sheets', click: () => openOfficeWindow('sheets') },
+        { label: 'Slides', click: () => openOfficeWindow('slides') },
+        { label: 'PDF', click: () => openOfficeWindow('pdf') },
+      ],
+    },
     { label: 'Quick Chat', accelerator: QUICK_CHAT_HOTKEY, click: () => toggleMiniWindow() },
     { type: 'separator' },
     { label: 'Quit', click: () => app.quit() },
@@ -1407,14 +1480,41 @@ app.on('second-instance', (_event, argv) => {
   const url = extractProtocolUrl(argv);
   log.info('[Main] second-instance fired, URL:', url);
   void handleProtocolCallback(url);
+  // File-association launch (Windows/Linux pass the file in argv).
+  const officeFile = extractOfficeFileArg(argv);
+  if (officeFile) openOfficeWithFile(officeFile);
   if (mainWindow) {
     if (mainWindow.isMinimized()) mainWindow.restore();
     mainWindow.focus();
   }
 });
 
+// macOS file association ("Open with Allternit").
+app.on('open-file', (event, filePath) => {
+  event.preventDefault();
+  log.info('[Main] open-file:', filePath);
+  if (app.isReady()) {
+    openOfficeWithFile(filePath);
+  } else {
+    app.whenReady().then(() => openOfficeWithFile(filePath));
+  }
+});
+
 app.whenReady().then(async () => {
   console.log('[Main] App is ready...');
+
+  // Phase 0 convenience hook: open the Allternit Docs editor window on startup
+  // when explicitly requested (e.g. dev smoke test).
+  if (process.env.ALLTERNIT_OPEN_DOCS_ON_START) {
+    openDocsWindow();
+  }
+
+  // Cold-start file association (Windows/Linux first instance).
+  const officeFileArg = extractOfficeFileArg(process.argv);
+  if (officeFileArg) {
+    openOfficeWithFile(officeFileArg);
+  }
+
   console.log('[Main] Initializing auth manager...');
   await authManager.initialize();
   authManagerReady = true;
@@ -1643,6 +1743,8 @@ app.on('before-quit', async () => {
   await backendManager.stopBackend();
 
   gizziManager.stop();
+  connectorSidecarManager.stop();
+  officeEngineManager.stop();
   meshManager.stop().catch(() => {}); // best-effort mesh sidecar shutdown
   notebookManager.stop();
   voiceManager.stop();
@@ -1675,6 +1777,7 @@ ipcMain.handle('backend:restart', async () => {
     extraEnv: {
       ...computerUseDriverManager.getLaunchEnvironment(),
       ...authManager.getPlatformEncryptionEnvironment(),
+      ...authManager.getConnectorSidecarEnvironment(),
     },
   });
 });
@@ -1757,6 +1860,122 @@ ipcMain.handle('shell:open-design', () => {
   designWindow.on('closed', () => { designWindow = null; });
   void designWindow.loadURL(new URL('/design', activePlatformUrl).toString());
 });
+
+function resolveOfficeUrl(target: OfficeTarget, artifactId?: string): string {
+  // The office editors live on the platform surface (same pattern as the
+  // design window). ALLTERNIT_PLATFORM_URL overrides the platform base
+  // (e.g. for e2e tests pointing at a local dev server).
+  const base = process.env.ALLTERNIT_PLATFORM_URL || activePlatformUrl;
+  return new URL(officePathFor(target, artifactId), base).toString();
+}
+
+function openOfficeWindow(target: OfficeTarget = 'launcher', artifactId?: string): BrowserWindow {
+  const existing = officeWindows.get(target);
+  if (existing && !existing.isDestroyed()) {
+    void existing.loadURL(resolveOfficeUrl(target, artifactId));
+    existing.show();
+    existing.focus();
+    return existing;
+  }
+
+  const title = officeTitleFor(target);
+  const window = new BrowserWindow({
+    width: 1280,
+    height: 900,
+    minWidth: 800,
+    minHeight: 600,
+    title,
+    titleBarStyle: isMac ? 'hiddenInset' : 'default',
+    trafficLightPosition: { x: 16, y: 16 },
+    show: false,
+    backgroundColor: '#0F0C0A',
+    webPreferences: {
+      preload: join(__dirname, '../preload/index.js'),
+      contextIsolation: true,
+      nodeIntegration: false,
+      sandbox: true,
+    },
+  });
+
+  window.webContents.setWindowOpenHandler(({ url }) => {
+    void shell.openExternal(url);
+    return { action: 'deny' };
+  });
+  window.webContents.on('did-finish-load', () => {
+    log.info(`[Office] ${title} window finished loading:`, window.webContents.getURL());
+  });
+  window.webContents.on('did-fail-load', (_event, errorCode, errorDescription) => {
+    log.error(`[Office] ${title} window failed to load:`, errorCode, errorDescription);
+  });
+  window.once('ready-to-show', () => window.show());
+  window.on('closed', () => { officeWindows.delete(target); });
+  officeWindows.set(target, window);
+  const url = resolveOfficeUrl(target, artifactId);
+  log.info(`[Office] Loading ${title} URL:`, url);
+  void window.loadURL(url);
+  return window;
+}
+
+/**
+ * Open a file from a file-association ("Open with Allternit") in its editor.
+ * The bytes are delivered to the platform surface over IPC after load; the
+ * web app's office desktop bridge stashes and routes them (file-handoff).
+ */
+function openOfficeWithFile(filePath: string): void {
+  const editor = editorForFile(filePath);
+  if (!editor) {
+    log.warn('[Office] Unsupported file association:', filePath);
+    return;
+  }
+  let bytes: Buffer;
+  try {
+    bytes = fs.readFileSync(filePath);
+  } catch (error) {
+    log.error('[Office] Failed to read associated file:', filePath, error);
+    return;
+  }
+  const payload = { name: basename(filePath), bytes };
+  const window = openOfficeWindow(editor);
+  const deliver = () => {
+    if (!window.isDestroyed()) {
+      window.webContents.send('office:open-file', payload);
+      window.show();
+      window.focus();
+    }
+  };
+  if (window.webContents.isLoading()) {
+    window.webContents.once('did-finish-load', deliver);
+  } else {
+    deliver();
+  }
+}
+
+/** Back-compat wrapper: the docs window is an office window for 'docs'. */
+function openDocsWindow(artifactId?: string): void {
+  openOfficeWindow('docs', artifactId);
+}
+
+ipcMain.handle('shell:open-docs', (_event, artifactId?: unknown) => {
+  openDocsWindow(typeof artifactId === 'string' && artifactId ? artifactId : undefined);
+});
+
+const openOfficeFromIpc = (target?: unknown, artifactId?: unknown) => {
+  openOfficeWindow(
+    isOfficeTarget(target) ? target : 'launcher',
+    typeof artifactId === 'string' && artifactId ? artifactId : undefined,
+  );
+};
+
+ipcMain.handle('shell:open-office', (_event, target?: unknown, artifactId?: unknown) => {
+  openOfficeFromIpc(target, artifactId);
+});
+
+// `ipcMain.handle` registers an invoke-handler, not an EventEmitter listener,
+// so tests (and fire-and-forget senders) use the `ipcMain.on` path.
+ipcMain.on('shell:open-office', (_event, target?: unknown, artifactId?: unknown) => {
+  openOfficeFromIpc(target, artifactId);
+});
+
 const codeSessionWindows = new Map<string, BrowserWindow>();
 
 ipcMain.handle('shell:open-session', (_event, options: { sessionId: string; workspaceId?: string; title?: string }) => {
@@ -1856,7 +2075,10 @@ ipcMain.handle('window:maximize', () => {
   return { maximized: true };
 });
 
-ipcMain.handle('window:close', () => { mainWindow?.close(); });
+ipcMain.handle('window:close', (event) => {
+  log.warn('[Main] window:close invoked by renderer at', event.sender.getURL());
+  mainWindow?.close();
+});
 
 ipcMain.handle('window:is-maximized', () => mainWindow?.isMaximized() ?? false);
 

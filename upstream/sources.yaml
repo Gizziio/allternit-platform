@@ -1,0 +1,26 @@
+# Upstream source pins for third-party code forked into this monorepo.
+# Each entry records the exact revision a fork was taken from so license
+# compliance and future re-syncs are auditable. Do not advance a pin without
+# reviewing upstream license changes first.
+
+genoffice:
+  repo: https://github.com/genspark-ai/genoffice
+  # Pinned revision of the shallow clone used for the Phase 0/1 forks.
+  # Commit: "Sync snapshot (2026-08-04) (#19)", committed 2026-08-04.
+  revision: 8f523289d6c34f940cd691472ee56b2013d148c8
+  license: Apache-2.0
+  copyright: Copyright 2026 Mainfunc, Inc.
+  notes: >-
+    Core of the repo is Apache-2.0 (see upstream LICENSE/NOTICE). The
+    upstream `ee/` directory is enterprise-licensed and is explicitly
+    EXCLUDED from every fork in this monorepo — nothing under `ee/` may be
+    copied in.
+  forked_into:
+    - packages/@allternit/office-docx-engine
+    - packages/@allternit/office-pptx-engine
+    - packages/@allternit/office-pptx-render
+    - packages/@allternit/office-file-parse
+    # xlsx import/export + IronCalc recalculation sidecar, vendored from
+    # apps/sheets/native/xlsx-engine (Rust crate) plus the Node JSON-lines
+    # client from apps/sheets/src/main/xlsx-sidecar-client.ts.
+    - packages/@allternit/office-xlsx-engine

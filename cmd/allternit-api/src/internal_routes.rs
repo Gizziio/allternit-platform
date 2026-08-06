@@ -35,6 +35,13 @@ pub fn internal_router() -> Router<Arc<AppState>> {
             "/internal/connectors/mcp",
             post(crate::connector_routes::mcp_proxy_internal),
         )
+        // The gateway's own tool registry (shell/file/http + office-engine
+        // markdown tools) over the same internal-token trust model, so the
+        // gizzi runtime's bundled `allternit-tools` MCP server can call them.
+        .route(
+            "/internal/tools/mcp",
+            post(crate::mcp_server_routes::mcp_tools_internal),
+        )
 }
 
 #[derive(Debug, Deserialize)]

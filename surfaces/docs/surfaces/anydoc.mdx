@@ -1,0 +1,81 @@
+---
+title: Open as Markdown (anydoc)
+description: Convert Office documents to clean GFM Markdown with Firecrawl's anydoc engine
+---
+
+## Overview
+
+Allternit integrates [anydoc](https://github.com/firecrawl/anydoc) (MIT, `@firecrawl/anydoc` pinned at `0.1.6`) — Firecrawl's Rust document-to-Markdown converter with prebuilt Node bindings and zero external converter dependencies. It powers the **"Open as Markdown"** capability across the platform: any supported document becomes clean, LLM-ready GFM Markdown.
+
+The converter lives in the office engine (`services/office-engine`) as `POST /markdown`, proxied by the gateway at `/api/office/markdown` and `/api/v1/office/engines/markdown`. The original file is never modified; conversion is read-only.
+
+## Supported formats
+
+| Format family | Extensions |
+| --- | --- |
+| Word (modern + legacy) | `.docx` `.doc` `.docm` |
+| PowerPoint (modern + legacy) | `.pptx` `.ppt` `.pps` `.pot` `.pptm` `.ppsx` `.ppsm` |
+| Excel (modern + legacy) | `.xlsx` `.xls` `.xlsm` `.xlsb` |
+| OpenDocument | `.odt` `.ods` `.odp` |
+| Rich Text | `.rtf` |
+| E-books | `.epub` |
+| Spreadsheets (text) | `.csv` |
+| PDF (text-based) | `.pdf` |
+
+Known limits (accepted by design): no OCR (scanned PDFs are rejected as unsupported), no HTML or image input, encrypted files are rejected, and decompressed input is capped at 512 MiB.
+
+## API
+
+```
+POST /api/office/markdown          # gateway proxy (platform surface)
+POST /api/v1/office/engines/markdown  # v1 mount (Office add-in)
+POST /markdown                     # office engine direct (:8099)
+POST /api/office/markdown-url      # gateway proxy, URL → Markdown
+POST /api/v1/office/engines/markdown-url  # v1 mount
+POST /markdown-url                 # office engine direct (:8099)
+```
+
+Send the raw document bytes as the body with an `x-office-filename` header — the extension drives format detection (with content-based detection as fallback).
+
+```bash
+curl -X POST http://localhost:8099/markdown \
+  -H 'x-office-filename: report.csv' \
+  --data-binary $'name,score\nalice,3\n'
+```
+
+Success returns an artifact-shaped JSON document with the converted `markdown`, detected `format`, and a `title` (first heading when present). Errors are mapped to stable codes:
+
+| Status | `code` | Meaning |
+| --- | --- | --- |
+| 400 | — | Empty body |
+| 415 | `unsupported` | Unknown/unconvertible format (e.g. `.txt`, image-only PDF) |
+| 422 | `malformed` `encrypted` `resourceLimit` `missingPart` `io` | Conversion failed |
+| 503 | `unavailable` | anydoc native binding failed to load |
+
+## URL → Markdown
+
+anydoc itself is documents-only, so the office engine also exposes `POST /markdown-url` for web pages. It fetches the page server-side with SSRF guards (http/https only; private, loopback, and link-local hosts blocked; ≤5 redirects; 15s timeout; ~10 MiB body cap), extracts the main content with [@mozilla/readability](https://github.com/mozilla/readability), and converts it to GFM with [turndown](https://github.com/mixmark-io/turndown). A URL that serves a *document* content-type (PDF, OOXML, …) is passed through the anydoc byte path — one endpoint handles anything.
+
+```bash
+curl -X POST http://localhost:8099/markdown-url \
+  -H 'content-type: application/json' \
+  -d '{"url": "https://example.com/article"}'
+```
+
+The response matches the `/markdown` shape with `format: 'html'` (or the detected document format), `sourceUrl` (after redirects), `title`, and `markdown`. Error mapping: 400 for invalid/blocked URLs (`invalidUrl` / `blockedUrl`), 415 for unsupported content-types, 422 for fetch/parse failures. The Markdown Preview view exposes this as the **Open URL as Markdown** action on the office launcher and as a URL input in the preview's empty state.
+
+## Per-surface behavior
+
+- **Web platform** — formats with no native editor (legacy Office, ODF, `.rtf`, `.epub`, `.csv`) open in the **Markdown Preview** view from the office launcher. Editor-owned formats (`.docx` `.xlsx` `.pptx` `.pdf`) still open in their editors. The preview offers Copy, Download `.md`, and **Save as artifact** (the markdown persists as a `markdown-preview/markdown` section, so agents and mobile clients see it through the existing artifact channel).
+- **Desktop** — file-association opens of anydoc-only formats land in a Markdown Preview window; in the shell they open as a preview view.
+- **Office add-in** — the task pane's connected-document panel has a **View as Markdown** action: the current document's bytes (`Document.getFileAsync`) are converted via the v1 endpoint and shown in a read-only panel with an **Open in platform** link.
+- **Mobile (iOS)** — no dedicated UI in v1: converted documents saved as artifacts already render in `OfficeDocumentView` via plaintext sections.
+
+## Source
+
+- Engine endpoint: `services/office-engine/src/markdown.ts` (+ `POST /markdown` in `src/index.ts`)
+- URL → Markdown: `services/office-engine/src/markdown-url.ts` (+ `POST /markdown-url` in `src/index.ts`)
+- Gateway proxy: `cmd/allternit-api/src/office_engine_routes.rs`
+- Web view: `surfaces/ai.allternit.com/src/views/office/MarkdownPreviewView.tsx`
+- Desktop routing: `surfaces/allternit-desktop/src/main/office-programs.ts`
+- Add-in plumbing: `surfaces/allternit-extensions/allternit-office-addin/src/lib/markdown-conversion.ts`

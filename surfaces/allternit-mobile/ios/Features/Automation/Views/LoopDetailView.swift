@@ -39,6 +39,9 @@ struct LoopDetailView: View {
                 }
 
                 headerSection
+                if liveLoop.state == "max_iterations" {
+                    interruptBanner
+                }
                 actionRow
                 iterationsSection
             }
@@ -68,18 +71,52 @@ struct LoopDetailView: View {
     // MARK: - Header
 
     private var headerSection: some View {
-        VStack(alignment: .leading, spacing: 10) {
-            infoRow(label: "State", value: liveLoop.state.capitalized, valueColor: LoopsListView.statusColor(liveLoop.state))
-            infoRow(label: "Iterations", value: "\(liveLoop.iterationLog.count) / \(liveLoop.maxIterations)")
-            if let exitCondition = liveLoop.exitCondition, !exitCondition.isEmpty {
-                infoRow(label: "Exit condition", value: exitCondition)
-            } else {
-                infoRow(label: "Exit condition", value: "Exit code 0 (default)")
-            }
-            if let updatedText = LoopsListView.relativeText(liveLoop.timeUpdated) {
-                infoRow(label: "Updated", value: updatedText)
+        HStack(alignment: .top, spacing: 16) {
+            LoopStaminaRing(loop: liveLoop, diameter: 52, lineWidth: 4)
+
+            VStack(alignment: .leading, spacing: 10) {
+                infoRow(label: "State", value: liveLoop.state.capitalized, valueColor: LoopsListView.statusColor(liveLoop.state))
+                infoRow(label: "Iterations", value: "\(liveLoop.iterationLog.count) / \(liveLoop.maxIterations)")
+                if let exitCondition = liveLoop.exitCondition, !exitCondition.isEmpty {
+                    infoRow(label: "Exit condition", value: exitCondition)
+                } else {
+                    infoRow(label: "Exit condition", value: "Exit code 0 (default)")
+                }
+                if let updatedText = LoopsListView.relativeText(liveLoop.timeUpdated) {
+                    infoRow(label: "Updated", value: updatedText)
+                }
             }
         }
+    }
+
+    /// The loop's actual "interrupt": there's no permission gate on a raw
+    /// shell-command loop (`LoopEngine.startLoop` just spawns `loop.command`
+    /// on a timer — no agent, no approval step), but running out of its
+    /// iteration budget without the exit condition firing IS the point
+    /// where it stops itself and waits on a human decision. Surfacing that
+    /// prominently, with a one-tap Restart, is the honest equivalent here.
+    private var interruptBanner: some View {
+        HStack(spacing: 10) {
+            Image(systemName: "exclamationmark.triangle.fill")
+                .font(.subheadline)
+                .foregroundColor(Theme.statusWarning)
+            VStack(alignment: .leading, spacing: 2) {
+                Text("Ran out of iterations")
+                    .font(.system(size: 13, weight: .semibold))
+                    .foregroundColor(Color("TextPrimary"))
+                Text("Exit condition never fired within \(liveLoop.maxIterations) tries. Restart to try again.")
+                    .font(.caption)
+                    .foregroundColor(Color("TextSecondary"))
+            }
+            Spacer(minLength: 8)
+        }
+        .padding(12)
+        .background(Theme.statusWarning.opacity(0.12))
+        .clipShape(RoundedRectangle(cornerRadius: Theme.radiusMD))
+        .overlay(
+            RoundedRectangle(cornerRadius: Theme.radiusMD)
+                .stroke(Theme.statusWarning.opacity(0.35), lineWidth: 1)
+        )
     }
 
     private func infoRow(label: String, value: String, valueColor: Color = Color("TextPrimary")) -> some View {

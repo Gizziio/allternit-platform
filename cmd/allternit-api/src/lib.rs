@@ -57,6 +57,7 @@ pub mod metrics;
 pub mod oauth_routes;
 pub mod office_cli_mcp;
 pub mod office_cli_routes;
+pub mod office_engine_routes;
 pub mod office_routes;
 pub mod onboarding_routes;
 pub mod open_connector_proxy;

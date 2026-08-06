@@ -1,11 +1,15 @@
 import { useEffect, useState, type ReactNode } from "react";
 import { Collapsible } from "@base-ui/react/collapsible";
+import { ThinkingOrb } from "thinking-orbs";
 import { TextShimmer } from "../text-shimmer";
 import { IconChevronRight } from "@tabler/icons-react";
 import { cn } from "../utils/cn";
+import type { OrbState } from "../utils/orb-state";
 
 export type ToolRowBaseProps = {
   icon?: ReactNode;
+  /** Orb animation shown in the icon slot while isAnimating. @default 'working' */
+  orbState?: OrbState;
   shimmerLabel?: string;
   completeLabel: string;
   isAnimating: boolean;
@@ -22,6 +26,7 @@ export type ToolRowBaseProps = {
 
 export function ToolRowBase({
   icon,
+  orbState = "working",
   shimmerLabel,
   completeLabel,
   isAnimating,
@@ -67,10 +72,16 @@ export function ToolRowBase({
       )}
     >
       <div className="flex items-center gap-2 min-w-0 text-sm text-muted-foreground">
-        {icon && (
-          <span className="flex items-center justify-center size-3 shrink-0">
-            {icon}
+        {isAnimating ? (
+          <span className="flex items-center justify-center size-5 shrink-0">
+            <ThinkingOrb state={orbState} size={20} />
           </span>
+        ) : (
+          icon && (
+            <span className="flex items-center justify-center size-3 shrink-0">
+              {icon}
+            </span>
+          )
         )}
         <span className="font-[450] whitespace-nowrap shrink-0">
           {isAnimating && shimmerLabel ? (

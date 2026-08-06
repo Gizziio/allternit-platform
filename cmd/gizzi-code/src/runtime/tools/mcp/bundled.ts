@@ -12,6 +12,9 @@
  *   - allternit-connectors (Rust API internal route — per-user connector
  *                           actions on connected apps; only when
  *                           ALLTERNIT_INTERNAL_SERVICE_TOKEN is configured)
+ *   - allternit-tools      (Rust API internal route — the gateway's own tool
+ *                           registry: document_to_markdown, url_to_markdown,
+ *                           shell/file/http tools; same token gate)
  *
  * These are merged with user-defined MCP config at startup. User config
  * can override any bundled server by defining an entry with the same key.
@@ -82,6 +85,38 @@ function allternitConnectorsServer(): Config.Mcp | undefined {
   }
 }
 
+/**
+ * The Allternit platform tool MCP: the gateway's own executable tool
+ * registry (`cmd/allternit-api/src/tool_routes.rs` — document_to_markdown,
+ * url_to_markdown, shell/file/http helpers) served over MCP by
+ * `mcp_server_routes::mcp_tools_internal` at `/internal/tools/mcp`. This is
+ * what makes platform tools like office-engine markdown conversion callable
+ * BY the agent in a default chat session without per-user MCP config.
+ *
+ * Same trust model and registration gate as allternitConnectorsServer:
+ * only when ALLTERNIT_INTERNAL_SERVICE_TOKEN matches the API's
+ * (config.rs:302); user identified via ALLTERNIT_USER_ID.
+ */
+function allternitToolsServer(): Config.Mcp | undefined {
+  const token = process.env.ALLTERNIT_INTERNAL_SERVICE_TOKEN
+  if (!token) return undefined
+  const base = (process.env.ALLTERNIT_API_URL ?? "http://127.0.0.1:8013").replace(/\/$/, "")
+  return {
+    type: "remote",
+    url: `${base}/internal/tools/mcp`,
+    headers: {
+      // Static shared secret (internal_auth.rs — NOT a Bearer token).
+      "x-allternit-internal-token": token,
+      // The route also requires the user explicitly — tool executions are
+      // scoped to this user (e.g. artifact reads in document_to_markdown).
+      "x-allternit-user-id": process.env.ALLTERNIT_USER_ID ?? "local-dev-user",
+    },
+    // The route authenticates by the static internal token, not OAuth —
+    // skip gizzi's OAuth auto-detection.
+    oauth: false,
+  }
+}
+
 export function bundledMcpServers(options: { cwd?: string } = {}): Record<string, Config.Mcp> {
   const result: Record<string, Config.Mcp> = {}
   const sequentialThinking = localServer(
@@ -96,6 +131,9 @@ export function bundledMcpServers(options: { cwd?: string } = {}): Record<string
 
   const connectors = allternitConnectorsServer()
   if (connectors) result["allternit-connectors"] = connectors
+
+  const tools = allternitToolsServer()
+  if (tools) result["allternit-tools"] = tools
 
   // Network-backed npx startup used to run unconditionally, causing two
   // independent startup timeouts and making a local CLI launch depend on npm.

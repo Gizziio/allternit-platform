@@ -1,12 +1,12 @@
 // @ts-nocheck
 import { describe, expect, test } from "bun:test"
 import path from "path"
-import { BashTool } from "../../src/tool/bash"
+import { BashTool } from "../../src/runtime/tools/builtins/bash"
 import { Instance } from "../../src/project/instance"
 import { Filesystem } from "../../src/util/filesystem"
 import { tmpdir } from "../fixture/fixture"
 import type { PermissionNext } from "../../src/permission/next"
-import { Truncate } from "../../src/tool/truncation"
+import { Truncate } from "../../src/runtime/tools/builtins/truncation"
 
 const ctx = {
   sessionID: "test",

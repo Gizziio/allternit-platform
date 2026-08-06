@@ -1,6 +1,6 @@
 // @ts-nocheck
 import { describe, expect, it, beforeAll, afterAll } from "bun:test"
-import { AgentWorkspace } from "@/agent-workspace"
+import { AgentWorkspace } from "../../src/runtime/memory/memory"
 import { rmdir, mkdir, writeFile, readFile } from "fs/promises"
 import path from "path"
 
@@ -21,7 +21,7 @@ describe("AgentWorkspace", () => {
     it("should return all 5-layer paths", () => {
       const paths = AgentWorkspace.getPaths(testWorkspace)
       
-      expect(paths.root).toContain(".allternit")
+      expect(paths.root).toContain(".gizzi")
       expect(paths.manifest).toContain("manifest.json")
       expect(paths.l1_cognitive).toContain("L1-COGNITIVE")
       expect(paths.l2_identity).toContain("L2-IDENTITY")
