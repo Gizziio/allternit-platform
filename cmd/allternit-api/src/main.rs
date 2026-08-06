@@ -445,6 +445,7 @@ async fn main() {
                 HeaderName::from_static("x-allternit-user-id"),
                 HeaderName::from_static("x-allternit-user-email"),
                 HeaderName::from_static("x-allternit-user-name"),
+                HeaderName::from_static("x-allternit-tenant-id"),
                 // OfficeCLI document upload headers (browser taskpane)
                 HeaderName::from_static("x-office-filename"),
                 HeaderName::from_static("x-office-host"),
