@@ -3,6 +3,7 @@ import { cmd } from "@/cli/commands/cmd"
 import { UI } from "@/cli/ui"
 import { Filesystem } from "@/shared/util/filesystem"
 import { Workspace } from "@/runtime/workspace/workspace"
+import { generateCodemap } from "@/codemap"
 
 type ProjectType = {
   name: string
@@ -188,8 +189,13 @@ async function ensureGitignore(dir: string, entries: string[]): Promise<string[]
 export const InitCommand = cmd({
   command: "init",
   describe: "initialize gizzi in the current project",
-  builder: (yargs) => yargs,
-  handler: async () => {
+  builder: (yargs) =>
+    yargs.option("skip-codemap", {
+      type: "boolean",
+      default: false,
+      describe: "skip automatic docs/codemap/ generation",
+    }),
+  handler: async (args) => {
     const dir = process.cwd()
     const gizziDir = path.join(dir, ".gizzi")
     const configPath = path.join(dir, "GIZZI.md")
@@ -271,6 +277,27 @@ export const InitCommand = cmd({
       UI.println(UI.Style.TEXT_SUCCESS_BOLD + "  +  " + UI.Style.TEXT_NORMAL + `Added ${addedToGitignore.join(", ")} to .gitignore`)
     } else {
       UI.println(UI.Style.TEXT_DIM + "  ·  " + UI.Style.TEXT_NORMAL + ".gizzi/ and scratch/ already in .gitignore")
+    }
+
+    // 5. Generate the deterministic codemap (docs/codemap/*). Best-effort:
+    // must never fail `init` itself — a codemap problem shouldn't block a
+    // developer from getting their project set up.
+    if (!args.skipCodemap) {
+      try {
+        const result = await generateCodemap(dir)
+        if (result.ok) {
+          UI.println(UI.Style.TEXT_SUCCESS_BOLD + "  +  " + UI.Style.TEXT_NORMAL + "Generated docs/codemap/ (codemap.json, codemap.html, codemap.lock)")
+          if (result.staleModules.length > 0) {
+            UI.println(UI.Style.TEXT_DIM + "  ·  " + UI.Style.TEXT_NORMAL + `${result.staleModules.length} module(s) changed since last codemap: ${result.staleModules.join(", ")}`)
+          }
+        } else {
+          UI.println(UI.Style.TEXT_WARNING_BOLD + "  !  " + UI.Style.TEXT_NORMAL + `Codemap generation skipped: ${result.reason}`)
+        }
+      } catch (e) {
+        UI.println(UI.Style.TEXT_WARNING_BOLD + "  !  " + UI.Style.TEXT_NORMAL + `Codemap generation failed: ${e instanceof Error ? e.message : String(e)}`)
+      }
+    } else {
+      UI.println(UI.Style.TEXT_DIM + "  ·  " + UI.Style.TEXT_NORMAL + "Codemap generation skipped (--skip-codemap)")
     }
 
     UI.empty()
