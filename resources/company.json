@@ -8,7 +8,7 @@
   "railsWorkspaceId": "default",
   "cronDaemonUrl": "http://127.0.0.1:4096/cron",
   "vmDir": "",
-  "clerkPublishableKey": "",
+  "clerkPublishableKey": "pk_live_Y2xlcmsucGxhdGZvcm0uYWxsdGVybml0LmNvbSQ",
   "clerkJwksUrl": "",
   "clerkIssuer": "",
   "clerkWebhookSecret": "",
