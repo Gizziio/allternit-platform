@@ -2,29 +2,55 @@ import SwiftUI
 
 /// Model Management parity — lists cloud providers and local engines with their
 /// auth/ready status, mirroring the web's `ModelManagementView.tsx`.
+///
+/// Thin chrome wrapper around `ModelManagementListContent` for the
+/// push-navigation entry point (Settings → Model Management). The rail-tab
+/// entry point (`ModelsTabView`) wraps the same content with its own
+/// hamburger-menu header instead — factored out so neither duplicates the
+/// stores or list sections.
 struct ModelManagementView: View {
     @ObservedObject private var modelStore = ModelStore.shared
     @StateObject private var store = ProviderManagementStore()
 
     var body: some View {
+        ModelManagementListContent(modelStore: modelStore, store: store)
+            .navigationTitle("Models & Engines")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .topBarTrailing) {
+                    Button(action: { Task { await store.load() } }) {
+                        Image(systemName: "arrow.clockwise")
+                            .font(.subheadline)
+                    }
+                    .disabled(store.isLoading)
+                }
+            }
+    }
+}
+
+/// The actual list content (default model/effort pickers + engines list),
+/// with no navigation chrome of its own — shared by `ModelManagementView`
+/// (pushed from Settings) and `ModelsTabView` (rail tab root).
+struct ModelManagementListContent: View {
+    @ObservedObject var modelStore: ModelStore
+    @ObservedObject var store: ProviderManagementStore
+
+    var body: some View {
         List {
             selectedModelSection
             enginesSection
+            Section {
+                NavigationLink("Benchmark") {
+                    BenchmarkView()
+                }
+                NavigationLink("On-Device (Experimental)") {
+                    OnDeviceChatView()
+                }
+            }
         }
         .listStyle(.insetGrouped)
         .scrollContentBackground(.hidden)
         .background(Color("BgPrimary"))
-        .navigationTitle("Models & Engines")
-        .navigationBarTitleDisplayMode(.inline)
-        .toolbar {
-            ToolbarItem(placement: .topBarTrailing) {
-                Button(action: { Task { await store.load() } }) {
-                    Image(systemName: "arrow.clockwise")
-                        .font(.subheadline)
-                }
-                .disabled(store.isLoading)
-            }
-        }
         .task {
             modelStore.fetchModelsIfNeeded()
             await store.load()

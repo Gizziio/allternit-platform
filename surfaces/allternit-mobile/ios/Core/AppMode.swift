@@ -8,10 +8,9 @@ import SwiftUI
 /// control is the sidebar tab list in the header (HistorySidebarView — no
 /// persistent bottom bar, matching ChatGPT/Claude's iOS apps), and cowork is a
 /// composer-level toggle inside Chats (BottomDock.tsx ChatCoworkToggle).
-/// Projects, the artifacts library, the Agent Hub, Automation Tasks, Plugins,
-/// Swarm, Team Skills, Products Discovery, A://Labs, Udemy Catalog, Research,
-/// and Documents are iOS-only tab surfaces layered over the same modes (they
-/// don't stamp an `origin_surface` of their own).
+/// Projects, the artifacts library, the Agent Hub, Automation Tasks, and
+/// Models are iOS-only tab surfaces layered over the same modes (they don't
+/// stamp an `origin_surface` of their own).
 enum AppMode: String, CaseIterable, Sendable {
     case chat
     case cowork
@@ -51,11 +50,10 @@ final class AppModeStore: ObservableObject {
     }
 
     /// The sidebar tab whose surface fills the content pane. Chats/Code/ACI
-    /// track `mode`; Projects, Artifacts Library, Agents, Automation Tasks,
-    /// Plugins, Swarm, Team Skills, Products Discovery, A://Labs, Udemy
-    /// Catalog, Research, and Documents are iOS-only surfaces layered on top
-    /// (the mode — and so history filtering, theme accent, and session
-    /// stamping — stays wherever it was).
+    /// track `mode`; Projects, Artifacts Library, Agents, and Automation
+    /// Tasks are iOS-only surfaces layered on top (the mode — and so history
+    /// filtering, theme accent, and session stamping — stays wherever it
+    /// was).
     @Published var activeTab: ModeBarItem
 
     /// Which sub-surface the Automation Tasks tab shows: cron jobs
@@ -83,17 +81,14 @@ final class AppModeStore: ObservableObject {
 
     /// Both Home surfaces (chat + cowork) live under the Chats tab; selecting
     /// it always lands on plain chat. Projects / Artifacts Library / Agents /
-    /// Automation Tasks / Plugins / Swarm / Team Skills / Products / A://Labs /
-    /// Research / Udemy Catalog / Documents switch the surface without
-    /// touching the mode.
+    /// Automation Tasks switch the surface without touching the mode.
     func selectBarItem(_ item: ModeBarItem) {
         activeTab = item
         switch item {
         case .chats: mode = .chat
         case .code: mode = .code
         case .aci: mode = .browser
-        case .projects, .artifacts, .agents, .automation, .plugins, .swarm,
-                .teamSkills, .products, .labs, .research, .catalog, .documents:
+        case .projects, .artifacts, .agents, .automation, .models:
             break
         }
     }
@@ -101,8 +96,7 @@ final class AppModeStore: ObservableObject {
 
 /// The destinations of the sidebar's tab list.
 enum ModeBarItem: CaseIterable {
-    case chats, projects, artifacts, agents, automation, plugins, swarm,
-         teamSkills, products, labs, research, catalog, code, aci, documents
+    case chats, projects, artifacts, agents, automation, models, code, aci
 
     var label: String {
         switch self {
@@ -111,16 +105,9 @@ enum ModeBarItem: CaseIterable {
         case .artifacts: return "Artifacts Library"
         case .agents: return "Agents"
         case .automation: return "Automation Tasks"
-        case .plugins: return "Plugins"
-        case .swarm: return "Swarm"
-        case .teamSkills: return "Team Skills"
-        case .products: return "Products"
-        case .labs: return "A://Labs"
-        case .research: return "Research"
-        case .catalog: return "Udemy Catalog"
+        case .models: return "Models"
         case .code: return "Code"
         case .aci: return "ACI"
-        case .documents: return "Documents"
         }
     }
 
@@ -132,16 +119,9 @@ enum ModeBarItem: CaseIterable {
         case .artifacts: return "archivebox"
         case .agents: return "cpu"
         case .automation: return "clock.arrow.circlepath"
-        case .plugins: return "puzzlepiece"
-        case .swarm: return "person.3"
-        case .teamSkills: return "puzzlepiece.extension"
-        case .products: return "square.grid.2x2"
-        case .labs: return "graduationcap"
-        case .research: return "book.closed"
-        case .catalog: return "book"
+        case .models: return "brain.head.profile"
         case .code: return "terminal"
         case .aci: return "globe"
-        case .documents: return "doc.text"
         }
     }
 

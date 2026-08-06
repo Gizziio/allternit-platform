@@ -5,10 +5,9 @@ import SwiftUI
 /// Top-level tab host: a per-tab content area, no persistent bottom bar —
 /// neither ChatGPT nor Claude's iOS apps put a surface switcher there, so
 /// the [Chats | Projects | Artifacts Library | Agents | Automation Tasks |
-/// Plugins | Swarm | Team Skills | Products | A://Labs | Research |
-/// Udemy Catalog | Code | ACI | Documents] tab list lives in the sidebar
-/// header instead (HistorySidebarView). Cowork is NOT a tab destination;
-/// it's a composer-level toggle inside Chats (BottomDock.tsx ChatCoworkToggle).
+/// Code | ACI] tab list lives in the sidebar header instead
+/// (HistorySidebarView). Cowork is NOT a tab destination; it's a
+/// composer-level toggle inside Chats (BottomDock.tsx ChatCoworkToggle).
 struct MainWorkspaceView: View {
     @EnvironmentObject private var modeStore: AppModeStore
     @State private var isSidebarOpen = false
@@ -83,26 +82,12 @@ struct MainWorkspaceView: View {
                             case .loops:
                                 LoopsListView(isSidebarOpen: $isSidebarOpen)
                             }
-                        case .plugins:
-                            PluginMarketplaceView(isSidebarOpen: $isSidebarOpen)
-                        case .swarm:
-                            SwarmADEView(isSidebarOpen: $isSidebarOpen)
-                        case .teamSkills:
-                            TeamSkillsView(isSidebarOpen: $isSidebarOpen)
-                        case .products:
-                            ProductsDiscoveryView(isSidebarOpen: $isSidebarOpen)
-                        case .labs:
-                            LabsView(isSidebarOpen: $isSidebarOpen)
-                        case .catalog:
-                            CatalogView(isSidebarOpen: $isSidebarOpen)
+                        case .models:
+                            ModelsTabView(isSidebarOpen: $isSidebarOpen)
                         case .code:
                             CodeModeView(isSidebarOpen: $isSidebarOpen, selectedSessionId: $selectedSessionId)
                         case .aci:
                             ACITabView(isSidebarOpen: $isSidebarOpen, selectedSessionId: $selectedSessionId)
-                        case .research:
-                            ResearchView(isSidebarOpen: $isSidebarOpen)
-                        case .documents:
-                            DocumentsView(isSidebarOpen: $isSidebarOpen)
                         }
                     }
                 // Opaque backdrop for the whole pane, bleeding edge-to-edge
@@ -253,6 +238,7 @@ struct ChatView: View {
     @Binding var selectedSessionId: String?
     @Binding var isSidebarOpen: Bool
 
+    @EnvironmentObject private var modeStore: AppModeStore
     @StateObject private var viewModel = ChatViewModel()
     /// Intelli-Schedule panel sheet — opened from the floating chrome in Cowork mode.
     @State private var isIntelliSchedulePresented = false
@@ -628,9 +614,22 @@ struct ChatContentView: View {
                                 } else {
                                     // Empty chat keeps the centered wordmark;
                                     // suggestion rows removed to keep the feed
-                                    // uncluttered.
+                                    // uncluttered — greeting/suggested-prompt
+                                    // chips are the one exception, and only
+                                    // when a specific agent is explicitly
+                                    // selected (not the default backend
+                                    // agent), per Eoj.
                                     EmptyChatStateView()
                                         .padding(.top, 60)
+                                    if agentOn, let agentId = sessionContext.agentId,
+                                       let agent = AgentHubStore.shared.agents.first(where: { $0.id == agentId }),
+                                       agent.greeting != nil || !agent.suggestedPrompts.isEmpty {
+                                        AgentGreetingView(agent: agent) { prompt in
+                                            inputText = prompt
+                                        }
+                                        .padding(.top, 16)
+                                        .padding(.horizontal, 16)
+                                    }
                                 }
                             }
                         } else {
@@ -950,6 +949,8 @@ struct ComposerView: View {
     /// starting dictation (same shared mic permission, Phase 7b).
     @State private var micPrimingTargetsVoiceMode = false
     @State private var isModelPickerPresented = false
+    /// Cowork workspace launchpad sheet — opens CoworkWorkspaceView in Cowork mode.
+    @State private var isCoworkWorkspacePresented = false
 
     private var mode: AppMode { modeStore.mode }
     private var theme: ModeTheme { mode.theme }
@@ -2051,6 +2052,51 @@ private let launchTaglines = [
     "Precision in Every Interaction",
     "Stay curious, stay creative.",
 ]
+
+/// Agent-specific greeting + suggested-prompt chips on a fresh chat
+/// (PocketPal Pal-inspired). Deliberately narrower than the generic
+/// "suggestion rows on every empty chat" pattern that was removed elsewhere
+/// to keep the feed uncluttered — this only renders when the composer has a
+/// specific agent selected (not the default backend agent), and only when
+/// that agent actually has a greeting/prompts set.
+struct AgentGreetingView: View {
+    let agent: AgentRecord
+    /// Tapping a chip fills the composer — never auto-sends.
+    let onSelectPrompt: (String) -> Void
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            if let greeting = agent.greeting {
+                Text(greeting)
+                    .font(.subheadline)
+                    .foregroundColor(Color("TextSecondary"))
+                    .multilineTextAlignment(.leading)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+            }
+            if !agent.suggestedPrompts.isEmpty {
+                VStack(alignment: .leading, spacing: 6) {
+                    ForEach(agent.suggestedPrompts, id: \.self) { prompt in
+                        Button(action: {
+                            let generator = UISelectionFeedbackGenerator()
+                            generator.selectionChanged()
+                            onSelectPrompt(prompt)
+                        }) {
+                            Text(prompt)
+                                .font(.subheadline)
+                                .foregroundColor(Color("TextPrimary"))
+                                .padding(.horizontal, 14)
+                                .padding(.vertical, 10)
+                                .frame(maxWidth: .infinity, alignment: .leading)
+                                .background(Color("BgPanel"))
+                                .clipShape(RoundedRectangle(cornerRadius: 14))
+                        }
+                        .buttonStyle(.plain)
+                    }
+                }
+            }
+        }
+    }
+}
 
 struct EmptyChatStateView: View {
     // Pick a random greeting once per view lifetime (matches web behavior

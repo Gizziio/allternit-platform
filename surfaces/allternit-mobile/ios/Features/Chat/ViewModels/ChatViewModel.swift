@@ -17,6 +17,34 @@ struct MessageRecord: Identifiable, Equatable, Sendable {
         var toolName: String
         var text: String
         var state: State
+        /// Wall-clock start, for the elapsed-time readout once done/failed —
+        /// nil for tool statuses restored from history (no live timing).
+        var startedAt: Date? = nil
+        /// Set once state leaves .running. Only elapsed time is shown, never
+        /// a token/byte count — the wire protocol (AgentChatEvent) doesn't
+        /// carry tool result size, and fabricating one would be dishonest.
+        var elapsed: TimeInterval? = nil
+    }
+
+    /// Client-side-measured performance readout for a completed assistant
+    /// reply, rendered as an inline footer (PocketPal-inspired). The backend
+    /// stream (v1_routes.rs's `finish` frame) carries no token/usage
+    /// telemetry at all, so this is wall-clock timing plus an approximate
+    /// token count (chars/4, the common rule-of-thumb for English text) —
+    /// not real inference-engine stats the way a local llama.cpp run would
+    /// have. `~` prefixes in the UI make the approximation explicit rather
+    /// than presenting it as precise.
+    struct PerfStats: Equatable, Sendable {
+        /// Time from request sent to the first content delta arriving.
+        var timeToFirstToken: TimeInterval
+        /// Time from the first content delta to the finish frame.
+        var generationDuration: TimeInterval
+        /// chars/4 estimate — not a real tokenizer count.
+        var approxTokenCount: Int
+
+        var approxTokensPerSecond: Double {
+            generationDuration > 0 ? Double(approxTokenCount) / generationDuration : 0
+        }
     }
 
     let id: String
@@ -29,6 +57,10 @@ struct MessageRecord: Identifiable, Equatable, Sendable {
     /// Structured stream/transport failure rendered as an inline error card
     /// (ChatErrorCardView) instead of raw backend text in the bubble.
     var error: ChatError? = nil
+    /// Set once, when the stream finishes normally — nil while streaming
+    /// and nil for messages loaded from history (no live timing to derive
+    /// it from).
+    var perfStats: PerfStats? = nil
     /// Local-only record of a finished voice-mode session (Phase 7b),
     /// rendered as the "Voice chat ended · Ns" card (VoiceSummaryCardView).
     /// Never sent to or loaded from the backend — the row is a feed-local
@@ -113,6 +145,14 @@ final class ChatViewModel: ObservableObject {    @Published var messages: [Messa
     private var pendingReasoning: String = ""
     private var flushTask: Task<Void, Never>? = nil
     private static let flushIntervalNs: UInt64 = 50_000_000
+
+    // MARK: - Perf stats timing (client-side wall clock — see MessageRecord.PerfStats)
+
+    /// Set right before the stream request goes out; nil once consumed by
+    /// finishStreaming so a retried/new message doesn't inherit stale timing.
+    private var streamRequestStartedAt: Date? = nil
+    /// Set on the first content delta of the current stream.
+    private var streamFirstDeltaAt: Date? = nil
 
     init(apiClient: APIClient = .shared) {
         self.chatClient = AgentChatClient(client: apiClient)
@@ -397,6 +437,8 @@ final class ChatViewModel: ObservableObject {    @Published var messages: [Messa
 
                 let sessionId = try await self.ensureSessionId()
                 self.isCreatingSession = false
+                self.streamRequestStartedAt = Date()
+                self.streamFirstDeltaAt = nil
                 // POST /api/agent-chat — the response body IS the frame stream.
                 // agentId rides along so the bridge composes persona +
                 // workspace files + response-style prefs server-side.
@@ -453,6 +495,9 @@ final class ChatViewModel: ObservableObject {    @Published var messages: [Messa
     private func apply(_ event: AgentChatEvent, to messageId: String) -> Bool {
         switch event {
         case .textDelta(let payload):
+            if streamFirstDeltaAt == nil {
+                streamFirstDeltaAt = Date()
+            }
             pendingText += payload.text
             scheduleFlush()
 
@@ -465,19 +510,26 @@ final class ChatViewModel: ObservableObject {    @Published var messages: [Messa
                 message.toolStatus = MessageRecord.ToolStatus(
                     toolName: payload.toolName,
                     text: payload.toolName,
-                    state: .running
+                    state: .running,
+                    startedAt: Date()
                 )
             }
 
         case .toolResult:
             updateMessage(messageId) { message in
                 message.toolStatus?.state = .done
+                if let startedAt = message.toolStatus?.startedAt {
+                    message.toolStatus?.elapsed = Date().timeIntervalSince(startedAt)
+                }
             }
 
         case .toolError(let payload):
             updateMessage(messageId) { message in
                 message.toolStatus?.state = .failed
                 message.toolStatus?.text = payload.error
+                if let startedAt = message.toolStatus?.startedAt {
+                    message.toolStatus?.elapsed = Date().timeIntervalSince(startedAt)
+                }
             }
 
         case .artifact(let artifact):
@@ -635,6 +687,24 @@ final class ChatViewModel: ObservableObject {    @Published var messages: [Messa
     /// Normal end of a stream: flush, clear streaming flags and bookkeeping.
     private func finishStreaming(messageId: String) {
         flushPendingDeltas()
+
+        // Perf stats need a request-start and a first-delta timestamp — both
+        // absent for e.g. an error that failed before any text arrived, in
+        // which case there's nothing honest to show.
+        if let requestStartedAt = streamRequestStartedAt,
+           let firstDeltaAt = streamFirstDeltaAt {
+            let generationDuration = Date().timeIntervalSince(firstDeltaAt)
+            let charCount = messages.first(where: { $0.id == messageId })?.content.count ?? 0
+            let stats = MessageRecord.PerfStats(
+                timeToFirstToken: firstDeltaAt.timeIntervalSince(requestStartedAt),
+                generationDuration: generationDuration,
+                approxTokenCount: max(1, charCount / 4)
+            )
+            updateMessage(messageId) { $0.perfStats = stats }
+        }
+        streamRequestStartedAt = nil
+        streamFirstDeltaAt = nil
+
         updateMessage(messageId) { $0.isStreaming = false }
         isStreaming = false
         streamingMessageId = nil

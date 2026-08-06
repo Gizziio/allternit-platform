@@ -56,12 +56,14 @@ final class AgentClient: @unchecked Sendable {
     func updateAgent(id: String, name: String? = nil, description: String? = nil,
                      model: String? = nil, provider: String? = nil,
                      systemPrompt: String? = nil, avatar: String? = nil,
-                     enabledModes: [String]? = nil) async throws {
+                     enabledModes: [String]? = nil,
+                     config: [String: JSONValue]? = nil) async throws {
         try await client.put(
             path: "agents/\(Self.escape(id))",
             body: UpdateAgentBody(
                 name: name, description: description, model: model, provider: provider,
-                systemPrompt: systemPrompt, avatar: avatar, enabledModes: enabledModes
+                systemPrompt: systemPrompt, avatar: avatar, enabledModes: enabledModes,
+                config: config
             )
         )
     }
@@ -156,9 +158,13 @@ final class AgentClient: @unchecked Sendable {
         let systemPrompt: String?
         let avatar: String?
         let enabledModes: [String]?
+        /// Full-replace, not a merge — the backend COALESCEs the whole
+        /// `config` column, so callers must send the complete merged object
+        /// (AgentRecord.configReplacing does this).
+        let config: [String: JSONValue]?
 
         enum CodingKeys: String, CodingKey {
-            case name, description, model, provider, avatar
+            case name, description, model, provider, avatar, config
             case systemPrompt = "system_prompt"
             case enabledModes = "enabled_modes"
         }

@@ -1,5 +1,5 @@
 {
-  "originHash" : "e9cb99d0ab99dcd0be4c482c436ca182ed7f287a771b067f1f1741c47be2ff75",
+  "originHash" : "ba8c9f9feb02870ebf83e4a86308602e60b172e697a3e881010f0bf9241a7d19",
   "pins" : [
     {
       "identity" : "clerk-ios",
@@ -8,6 +8,15 @@
       "state" : {
         "revision" : "74b48c126a0de46d519ef87b74fc5b2f61dfc46d",
         "version" : "1.1.0"
+      }
+    },
+    {
+      "identity" : "gzipswift",
+      "kind" : "remoteSourceControl",
+      "location" : "https://github.com/1024jp/GzipSwift",
+      "state" : {
+        "revision" : "731037f6cc2be2ec01562f6597c1d0aa3fe6fd05",
+        "version" : "6.0.1"
       }
     },
     {
@@ -44,6 +53,24 @@
       "state" : {
         "revision" : "00e9c3df6b1c82031c7fe3785028f3d21c0d73ba",
         "version" : "3.5.0"
+      }
+    },
+    {
+      "identity" : "mlx-swift",
+      "kind" : "remoteSourceControl",
+      "location" : "https://github.com/ml-explore/mlx-swift",
+      "state" : {
+        "revision" : "072b684acaae80b6a463abab3a103732f33774bf",
+        "version" : "0.29.1"
+      }
+    },
+    {
+      "identity" : "mlx-swift-examples",
+      "kind" : "remoteSourceControl",
+      "location" : "https://github.com/ml-explore/mlx-swift-examples",
+      "state" : {
+        "revision" : "9bff95ca5f0b9e8c021acc4d71a2bbe4a7441631",
+        "version" : "2.29.1"
       }
     },
     {
@@ -92,6 +119,15 @@
       }
     },
     {
+      "identity" : "swift-collections",
+      "kind" : "remoteSourceControl",
+      "location" : "https://github.com/apple/swift-collections.git",
+      "state" : {
+        "revision" : "a0cb0954ecb21e4e31b0070e6ed5674e8556685a",
+        "version" : "1.6.0"
+      }
+    },
+    {
       "identity" : "swift-html-entities",
       "kind" : "remoteSourceControl",
       "location" : "https://github.com/Kitura/swift-html-entities",
@@ -101,12 +137,39 @@
       }
     },
     {
+      "identity" : "swift-jinja",
+      "kind" : "remoteSourceControl",
+      "location" : "https://github.com/huggingface/swift-jinja.git",
+      "state" : {
+        "revision" : "7d0b8880ef8e567dd4e0089f8b99fb354129017c",
+        "version" : "2.4.2"
+      }
+    },
+    {
       "identity" : "swift-markdown",
       "kind" : "remoteSourceControl",
       "location" : "https://github.com/swiftlang/swift-markdown.git",
       "state" : {
         "revision" : "3c6f9523da3a1ec2fd829673e472d95b8097a3b8",
         "version" : "0.8.0"
+      }
+    },
+    {
+      "identity" : "swift-numerics",
+      "kind" : "remoteSourceControl",
+      "location" : "https://github.com/apple/swift-numerics",
+      "state" : {
+        "revision" : "0c0290ff6b24942dadb83a929ffaaa1481df04a2",
+        "version" : "1.1.1"
+      }
+    },
+    {
+      "identity" : "swift-transformers",
+      "kind" : "remoteSourceControl",
+      "location" : "https://github.com/huggingface/swift-transformers",
+      "state" : {
+        "revision" : "a2e184dddb4757bc943e77fbe99ac6786c53f0b2",
+        "version" : "1.0.0"
       }
     },
     {
@@ -134,6 +197,15 @@
       "state" : {
         "revision" : "98be227227af10cc7a269cb3ffb23686c0610b17",
         "version" : "0.20.9"
+      }
+    },
+    {
+      "identity" : "treesitterlanguages",
+      "kind" : "remoteSourceControl",
+      "location" : "https://github.com/simonbs/TreeSitterLanguages",
+      "state" : {
+        "revision" : "15cf3a9ec3ab95e0d058b7df9f35619123c9e02d",
+        "version" : "0.1.10"
       }
     }
   ],

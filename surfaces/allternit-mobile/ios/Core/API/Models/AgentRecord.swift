@@ -34,9 +34,16 @@ struct AgentRecord: Decodable, Sendable, Identifiable, Equatable, Hashable {
     let createdAt: String
     let updatedAt: String
     let lastRunAt: String?
+    /// The `config` JSON column — free-form, no fixed backend schema
+    /// (agent_routes.rs's `UpdateAgentBody`/`CreateAgentBody` pass it through
+    /// opaquely). `greeting`/`suggestedPrompts` below read known keys out of
+    /// it; unknown keys are kept in `config` itself so an update round-trip
+    /// (full-replace COALESCE on the backend, not a JSON merge) doesn't
+    /// silently drop fields this client doesn't know about.
+    let config: [String: JSONValue]?
 
     enum CodingKeys: String, CodingKey {
-        case id, name, description, type, model, provider, status, avatar, category, mode
+        case id, name, description, type, model, provider, status, avatar, category, mode, config
         case parentAgentId = "parent_agent_id"
         case systemPrompt = "system_prompt"
         case workspaceId = "workspace_id"
@@ -46,6 +53,50 @@ struct AgentRecord: Decodable, Sendable, Identifiable, Equatable, Hashable {
         case createdAt = "created_at"
         case updatedAt = "updated_at"
         case lastRunAt = "last_run_at"
+    }
+
+    /// Optional first-message greeting for a fresh chat with this agent
+    /// (`config.greeting`) — PocketPal-Pal-inspired, shown only when the
+    /// agent is explicitly selected, per Eoj (the generic "suggestion rows
+    /// on every empty chat" pattern was deliberately removed elsewhere).
+    var greeting: String? {
+        if case .string(let value)? = config?["greeting"], !value.isEmpty { return value }
+        return nil
+    }
+
+    /// Quick-start prompt chips shown alongside the greeting
+    /// (`config.suggested_prompts`, array of strings).
+    var suggestedPrompts: [String] {
+        guard case .array(let items)? = config?["suggested_prompts"] else { return [] }
+        return items.compactMap { if case .string(let s) = $0 { return s } else { return nil } }
+    }
+
+    /// `[String: JSONValue]?` breaks synthesized `Hashable` (Dictionary
+    /// never conforms to Hashable in the stdlib, regardless of Key/Value
+    /// conformance) — `id` + `updatedAt` is a sufficient, collision-safe
+    /// substitute since both change whenever the row actually changes.
+    func hash(into hasher: inout Hasher) {
+        hasher.combine(id)
+        hasher.combine(updatedAt)
+    }
+
+    /// Builds the full `config` object for a PUT, with `greeting`/
+    /// `suggested_prompts` set/cleared and every other existing key
+    /// preserved as-is (the backend replaces `config` wholesale).
+    func configReplacing(greeting: String?, suggestedPrompts: [String]) -> [String: JSONValue] {
+        var next = config ?? [:]
+        if let greeting, !greeting.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+            next["greeting"] = .string(greeting)
+        } else {
+            next.removeValue(forKey: "greeting")
+        }
+        let prompts = suggestedPrompts.filter { !$0.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty }
+        if prompts.isEmpty {
+            next.removeValue(forKey: "suggested_prompts")
+        } else {
+            next["suggested_prompts"] = .array(prompts.map { .string($0) })
+        }
+        return next
     }
 
     init(from decoder: Decoder) throws {
@@ -67,6 +118,10 @@ struct AgentRecord: Decodable, Sendable, Identifiable, Equatable, Hashable {
         createdAt = try container.decodeIfPresent(String.self, forKey: .createdAt) ?? ""
         updatedAt = try container.decodeIfPresent(String.self, forKey: .updatedAt) ?? ""
         lastRunAt = try container.decodeIfPresent(String.self, forKey: .lastRunAt)
+        // parse_json_column (agent_routes.rs) turns the stored TEXT column
+        // into a native JSON value before the response is serialized, so
+        // this decodes directly — no string-unwrapping fallback needed.
+        config = try container.decodeIfPresent([String: JSONValue].self, forKey: .config)
 
         if let modes = try? container.decode([String].self, forKey: .enabledModes) {
             enabledModes = modes
@@ -110,7 +165,8 @@ struct AgentRecord: Decodable, Sendable, Identifiable, Equatable, Hashable {
          systemPrompt: String? = nil, status: String = "idle", workspaceId: String? = nil,
          avatar: String? = nil, trustTier: String = "standard", enabledModes: [String] = ["chat"],
          category: String? = nil, mode: String = "primary", isPrimary: Bool = false,
-         createdAt: String = "", updatedAt: String = "", lastRunAt: String? = nil) {
+         createdAt: String = "", updatedAt: String = "", lastRunAt: String? = nil,
+         config: [String: JSONValue]? = nil) {
         self.id = id
         self.name = name
         self.description = description
@@ -128,6 +184,7 @@ struct AgentRecord: Decodable, Sendable, Identifiable, Equatable, Hashable {
         self.mode = mode
         self.isPrimary = isPrimary
         self.createdAt = createdAt
+        self.config = config
         self.updatedAt = updatedAt
         self.lastRunAt = lastRunAt
     }

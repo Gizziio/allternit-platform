@@ -94,6 +94,10 @@ struct MessageRow: View {
                         isLastAssistant: isLastAssistant,
                         onRegenerate: onRegenerate
                     )
+
+                    if let stats = message.perfStats {
+                        perfStatsLine(stats)
+                    }
                 }
             }
 
@@ -212,7 +216,34 @@ struct MessageRow: View {
                 .font(.caption)
                 .foregroundColor(Color("TextSecondary"))
                 .lineLimit(1)
+
+            // Elapsed time only — the wire protocol carries no result
+            // size/token count for tool calls, so there's nothing honest to
+            // show beyond how long it ran (PocketPal's ToolMetricsFooter
+            // shows token count too, but that's backed by real llama.cpp
+            // data we don't have here).
+            if let elapsed = status.elapsed {
+                Text("· \(formattedElapsed(elapsed))")
+                    .font(.caption2)
+                    .foregroundColor(Color("TextSecondary").opacity(0.7))
+            }
         }
+    }
+
+    private func formattedElapsed(_ seconds: TimeInterval) -> String {
+        seconds < 1 ? String(format: "%.0fms", seconds * 1000) : String(format: "%.1fs", seconds)
+    }
+
+    /// Client-side timing readout under a completed reply (PocketPal's
+    /// AssistantTurnFooter-inspired) — the `~` is load-bearing, not
+    /// decorative: token count is a chars/4 estimate, and the whole readout
+    /// is wall-clock timing over the network, not real inference-engine
+    /// telemetry (see MessageRecord.PerfStats).
+    private func perfStatsLine(_ stats: MessageRecord.PerfStats) -> some View {
+        Text("\(formattedElapsed(stats.timeToFirstToken)) to first token · ~\(Int(stats.approxTokensPerSecond)) tok/s")
+            .font(.caption2)
+            .foregroundColor(Color("TextSecondary").opacity(0.7))
+            .padding(.leading, 8)
     }
 
     @ViewBuilder

@@ -28,9 +28,11 @@ struct AgentDetailView: View {
     @State private var didApplyDebugArgs = false
     #endif
     @State private var isPromptEditorPresented = false
+    @State private var isGreetingEditorPresented = false
     @State private var isAvatarEditorPresented = false
     @State private var isSavingModel = false
     @State private var saveError: String? = nil
+    @State private var isPublishSheetPresented = false
 
     private let agentClient = AgentClient()
 
@@ -46,6 +48,17 @@ struct AgentDetailView: View {
             identitySection
             workspaceSections
             behaviorSection
+            Section {
+                Button(action: {
+                    let generator = UIImpactFeedbackGenerator(style: .light)
+                    generator.impactOccurred()
+                    isPublishSheetPresented = true
+                }) {
+                    Label("Publish to Marketplace", systemImage: "storefront")
+                }
+            } footer: {
+                Text("Shares a snapshot of this agent so others can install their own copy.")
+            }
         }
         .listStyle(.insetGrouped)
         .scrollContentBackground(.hidden)
@@ -63,11 +76,17 @@ struct AgentDetailView: View {
                 fileToEdit = created
             }
         }
+        .sheet(isPresented: $isGreetingEditorPresented) {
+            GreetingEditorSheet(agent: agent)
+        }
         .sheet(isPresented: $isPromptEditorPresented) {
             SystemPromptEditorSheet(agentId: agent.id, initialPrompt: agent.systemPrompt ?? "")
         }
         .sheet(isPresented: $isAvatarEditorPresented) {
             AgentAvatarEditorSheet(agent: agent)
+        }
+        .sheet(isPresented: $isPublishSheetPresented) {
+            PublishAgentSheet(sourceAgent: agent)
         }
         .alert("Couldn't save changes", isPresented: Binding(
             get: { saveError != nil },
@@ -186,6 +205,24 @@ struct AgentDetailView: View {
                             .font(.system(size: 11, weight: .bold))
                             .foregroundColor(Color("TextSecondary"))
                     }
+                }
+            }
+
+            Button(action: {
+                let generator = UIImpactFeedbackGenerator(style: .light)
+                generator.impactOccurred()
+                isGreetingEditorPresented = true
+            }) {
+                HStack {
+                    Text("Greeting")
+                        .foregroundColor(Color("TextPrimary"))
+                    Spacer()
+                    Text(agent.greeting?.isEmpty == false ? "Edit" : "Add")
+                        .font(.subheadline)
+                        .foregroundColor(Color("TextSecondary"))
+                    Image(systemName: "chevron.right")
+                        .font(.system(size: 11, weight: .bold))
+                        .foregroundColor(Color("TextSecondary"))
                 }
             }
         } header: {
@@ -658,6 +695,118 @@ private struct SystemPromptEditorSheet: View {
         Task {
             do {
                 try await hubStore.updateAgent(id: agentId, systemPrompt: prompt)
+                dismiss()
+            } catch {
+                saveError = error.localizedDescription
+            }
+            isSaving = false
+        }
+    }
+}
+
+// MARK: - Greeting editor
+
+/// Greeting + suggested-prompts editor (Identity section) — PocketPal-Pal-
+/// inspired first-message quick-start, stored in the free-form `config` JSON
+/// column (`greeting`/`suggested_prompts` keys; no dedicated backend
+/// schema). Save sends the FULL merged config
+/// (`AgentRecord.configReplacing`) since the backend replaces `config`
+/// wholesale rather than merging it.
+private struct GreetingEditorSheet: View {
+    let agent: AgentRecord
+
+    @StateObject private var hubStore = AgentHubStore.shared
+    @Environment(\.dismiss) private var dismiss
+
+    @State private var greeting: String
+    @State private var prompts: [String]
+    @State private var isSaving = false
+    @State private var saveError: String? = nil
+
+    init(agent: AgentRecord) {
+        self.agent = agent
+        _greeting = State(initialValue: agent.greeting ?? "")
+        // Always keep one trailing blank row to add a new prompt into.
+        _prompts = State(initialValue: agent.suggestedPrompts + [""])
+    }
+
+    var body: some View {
+        NavigationStack {
+            Form {
+                Section {
+                    TextEditor(text: $greeting)
+                        .frame(minHeight: 80)
+                } header: {
+                    Text("Greeting")
+                } footer: {
+                    Text("Shown at the top of a fresh chat when this agent is selected.")
+                }
+
+                Section {
+                    ForEach(prompts.indices, id: \.self) { index in
+                        TextField("Suggested prompt", text: promptBinding(index))
+                    }
+                    .onDelete { offsets in
+                        prompts.remove(atOffsets: offsets)
+                        ensureTrailingBlankRow()
+                    }
+                } header: {
+                    Text("Suggested prompts")
+                } footer: {
+                    Text("Quick-start chips shown next to the greeting. Leave blank rows empty — they're dropped on save.")
+                }
+
+                if let saveError {
+                    Text(saveError)
+                        .font(.caption)
+                        .foregroundColor(Theme.statusWarning)
+                }
+            }
+            .navigationTitle("Greeting")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .topBarLeading) {
+                    Button("Cancel") { dismiss() }
+                }
+                ToolbarItem(placement: .topBarTrailing) {
+                    Button(action: save) {
+                        if isSaving {
+                            ProgressView()
+                        } else {
+                            Text("Save")
+                                .fontWeight(.semibold)
+                        }
+                    }
+                    .disabled(isSaving)
+                }
+            }
+        }
+    }
+
+    private func promptBinding(_ index: Int) -> Binding<String> {
+        Binding(
+            get: { prompts[index] },
+            set: { newValue in
+                prompts[index] = newValue
+                ensureTrailingBlankRow()
+            }
+        )
+    }
+
+    /// Keeps exactly one empty row at the end so there's always somewhere to
+    /// type the next prompt, without letting blank rows pile up in the middle.
+    private func ensureTrailingBlankRow() {
+        prompts.removeAll { $0.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty }
+        prompts.append("")
+    }
+
+    private func save() {
+        isSaving = true
+        saveError = nil
+        Task {
+            do {
+                let config = agent.configReplacing(greeting: greeting, suggestedPrompts: prompts)
+                try await hubStore.updateAgent(id: agent.id, config: config)
                 dismiss()
             } catch {
                 saveError = error.localizedDescription

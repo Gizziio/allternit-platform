@@ -97,10 +97,11 @@ final class AgentHubStore: ObservableObject {
 
     /// PUTs one or more editable fields, then refreshes the cached row.
     func updateAgent(id: String, model: String? = nil, provider: String? = nil,
-                     systemPrompt: String? = nil, avatar: String? = nil) async throws {
+                     systemPrompt: String? = nil, avatar: String? = nil,
+                     config: [String: JSONValue]? = nil) async throws {
         try await agentClient.updateAgent(
             id: id, model: model, provider: provider, systemPrompt: systemPrompt,
-            avatar: avatar
+            avatar: avatar, config: config
         )
         try await refreshAgent(id: id)
     }

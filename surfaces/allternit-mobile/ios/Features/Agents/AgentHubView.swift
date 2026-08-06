@@ -73,6 +73,16 @@ struct AgentHubView: View {
 
                     Spacer()
 
+                    NavigationLink(destination: MarketplaceView()) {
+                        Image(systemName: "storefront")
+                            .font(.system(size: 13, weight: .semibold))
+                            .foregroundColor(Color("TextSecondary"))
+                            .frame(width: 32, height: 32)
+                            .background(Color("BgPanel"))
+                            .clipShape(Circle())
+                    }
+                    .accessibilityLabel("Discover agents")
+
                     Button(action: {
                         let generator = UIImpactFeedbackGenerator(style: .light)
                         generator.impactOccurred()

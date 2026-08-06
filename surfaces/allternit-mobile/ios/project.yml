@@ -22,11 +22,37 @@ packages:
   Runestone:
     url: https://github.com/simonbs/Runestone
     from: "0.5.2"
+  # Per-language Tree-sitter parsers + Runestone bindings for the Workspace
+  # File Editor's syntax highlighting (Core/API/CodeLanguage.swift). Pinned
+  # exact like the other packages above — no newer tag verified yet.
+  TreeSitterLanguages:
+    url: https://github.com/simonbs/TreeSitterLanguages
+    exactVersion: "0.1.10"
   # Terminal emulator for the code thread's pty flip. swift-tools 5.9 / iOS
   # 14+, no transitive deps — safe for Xcode 16.2 (Swift 6.0).
   SwiftTerm:
     url: https://github.com/migueldeicaza/SwiftTerm
     from: "1.2.0"
+  # On-device inference for the fourth local-model data-plane tier (see
+  # docs/Audits_and_Research/BYOC_DESKTOP_CLOUD_IOS_ARCHITECTURE_AUDIT.md).
+  # Pinned like every other package here: mlx-swift's own tools-version
+  # jumps to 6.3 as of 0.30+ (5.12 at 0.30.1), beyond Xcode 16.2's Swift 6.0
+  # ceiling on this Mac — 0.29.1 is the newest tag still at tools 5.10. Bump
+  # after a macOS/Xcode upgrade, same as clerk-ios/MarkdownView above.
+  mlx-swift:
+    url: https://github.com/ml-explore/mlx-swift
+    exactVersion: "0.29.1"
+  # mlx-swift-examples' MLXLLM/MLXLMCommon libraries provide the actual chat
+  # loop (tokenizer, ModelConfiguration/Hub-based weight download, streaming
+  # generation) — no hand-written tensor kernels needed. 2.29.1 is the tag
+  # actually paired with mlx-swift 0.29.1 (`.upToNextMinor(from: "0.29.1")`
+  # in its own Package.swift) — 2.21.2 looked newer-enough at a glance but
+  # was written against an older mlx-swift API (`Quantizable` protocol
+  # shape changed), a real build failure caught by actually compiling, not
+  # by version-number pattern-matching alone.
+  mlx-swift-examples:
+    url: https://github.com/ml-explore/mlx-swift-examples
+    exactVersion: "2.29.1"
 targets:
   Allternit:
     type: application
@@ -94,7 +120,55 @@ targets:
         product: ClerkKitUI
       - package: MarkdownView
         product: MarkdownView
+      - package: mlx-swift-examples
+        product: MLXLLM
+      - package: mlx-swift-examples
+        product: MLXLMCommon
       - package: Runestone
         product: Runestone
+      - package: TreeSitterLanguages
+        product: TreeSitterJSONRunestone
+      - package: TreeSitterLanguages
+        product: TreeSitterMarkdownRunestone
+      - package: TreeSitterLanguages
+        product: TreeSitterPythonRunestone
+      - package: TreeSitterLanguages
+        product: TreeSitterJavaScriptRunestone
+      - package: TreeSitterLanguages
+        product: TreeSitterTypeScriptRunestone
+      - package: TreeSitterLanguages
+        product: TreeSitterYAMLRunestone
+      - package: TreeSitterLanguages
+        product: TreeSitterBashRunestone
+      - package: TreeSitterLanguages
+        product: TreeSitterSwiftRunestone
       - package: SwiftTerm
         product: SwiftTerm
+      - target: AllternitWidgets
+        embed: true
+  # Gap 4 (Live Activities): local (non-push) ActivityKit widget for a
+  # running Loop's iteration progress — see LoopLiveActivityManager.swift
+  # (main target) and AllternitWidgets/LoopLiveActivity.swift (here).
+  AllternitWidgets:
+    type: app-extension
+    platform: iOS
+    deploymentTarget: "17.0"
+    sources:
+      - path: AllternitWidgets
+      # Shared ActivityAttributes type only — NOT the whole Core/ tree.
+      - path: Core/LiveActivity
+      - path: Assets.xcassets
+    settings:
+      base:
+        INFOPLIST_FILE: AllternitWidgets/Info.plist
+        PRODUCT_BUNDLE_IDENTIFIER: com.allternit.mobile.widgets
+        PRODUCT_NAME: AllternitWidgets
+        SWIFT_VERSION: "6.0"
+        IPHONEOS_DEPLOYMENT_TARGET: "17.0"
+        TARGETED_DEVICE_FAMILY: "1,2"
+        MARKETING_VERSION: "1.0"
+        CURRENT_PROJECT_VERSION: "1"
+        # Same placeholder as the main app — set your team for device builds.
+        DEVELOPMENT_TEAM: ""
+        CODE_SIGN_STYLE: Automatic
+        SKIP_INSTALL: true
