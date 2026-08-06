@@ -6,6 +6,7 @@ use axum::{
     Json,
 };
 use serde::{Deserialize, Serialize};
+use tracing::warn;
 
 /// API error response
 #[derive(Debug, Serialize, Deserialize)]
@@ -91,6 +92,10 @@ impl IntoResponse for ApiError {
         let is_production = std::env::var("Allternit_API_DEVELOPMENT_MODE")
             .map(|v| v != "true" && v != "1")
             .unwrap_or(true);
+
+        // Log the real error detail server-side before any production sanitization
+        // so fly.io logs show the root cause instead of a generic message.
+        warn!(error = %self, "ApiError response");
 
         let (status, error_code, message) = match &self {
             ApiError::DeploymentNotFound(id) => {
