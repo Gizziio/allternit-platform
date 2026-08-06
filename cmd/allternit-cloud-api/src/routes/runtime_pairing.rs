@@ -363,17 +363,9 @@ async fn approve_pairing(
         ));
     }
 
-    // Ensure the user has a quota row and enforce guardrails before approval.
-    let quota = state.quota_service.ensure_quota(&user.id).await?;
-    state
-        .quota_service
-        .check_spend_cap(&user.id, &quota)
-        .await?;
-    state
-        .quota_service
-        .record_pairing_approved(&user.id)
-        .await?;
-
+    // Upsert the users row first. Both quota and usage tables FK-reference
+    // users(id), so creating the user before touching them avoids a latent
+    // foreign-key failure if SQLite foreign-key enforcement is ever enabled.
     let email = user
         .email
         .clone()
@@ -399,6 +391,17 @@ async fn approve_pairing(
     .bind(image_url)
     .execute(&state.db)
     .await?;
+
+    // Ensure the user has a quota row and enforce guardrails before approval.
+    let quota = state.quota_service.ensure_quota(&user.id).await?;
+    state
+        .quota_service
+        .check_spend_cap(&user.id, &quota)
+        .await?;
+    state
+        .quota_service
+        .record_pairing_approved(&user.id)
+        .await?;
 
     sqlx::query(
         r#"
