@@ -64,6 +64,19 @@ pub fn agent_router() -> Router<Arc<AppState>> {
             get(list_test_suites).post(create_test_suite),
         )
         .route("/agents/test", post(run_agent_test))
+        .route(
+            "/agent-marketplace/listings",
+            get(list_marketplace_listings).post(publish_agent),
+        )
+        .route(
+            "/agent-marketplace/listings/:id",
+            get(get_marketplace_listing).delete(unpublish_listing),
+        )
+        .route(
+            "/agent-marketplace/listings/:id/install",
+            post(install_listing),
+        )
+        .route("/agent-marketplace/listings/:id/rate", post(rate_listing))
 }
 
 /// SSE stream of Rails ledger events scoped to one agent
@@ -2572,4 +2585,447 @@ async fn run_agent_test(
         "session_id": result.session_id,
     }))
     .into_response()
+}
+
+// ─── Agent marketplace (V35__agent_marketplace.sql) ────────────────────────
+//
+// Publish/browse/search/install/rate shared agents — the PalsHub-equivalent
+// gap flagged in docs/SURFACE_AUDIT_FINAL_REPORT.md ("Allternit's Agents are
+// local-only, backend-CRUD, with no browse/search/install/rate/creator-
+// profile layer"). A listing snapshots the source agent's config at publish
+// time (same shape CreateAgentBody accepts) rather than pointing at it
+// live, so installers get their own independent copy that persist_agent
+// creates through the SAME single persistence path every other agent type
+// goes through — install re-validates the checklist exactly like
+// instantiate_template does, which is safe because the snapshot was taken
+// from an agent that already passed validation once to exist at all.
+
+#[derive(Serialize)]
+struct MarketplaceListingRow {
+    id: String,
+    title: String,
+    description: String,
+    category: Option<String>,
+    tags: Option<serde_json::Value>,
+    publisher_user_id: String,
+    publisher_name: Option<String>,
+    rating_avg: f64,
+    rating_count: i64,
+    install_count: i64,
+    created_at: String,
+    updated_at: String,
+}
+
+#[derive(Deserialize)]
+struct ListMarketplaceQuery {
+    q: Option<String>,
+    category: Option<String>,
+}
+
+async fn list_marketplace_listings(
+    State(state): State<Arc<AppState>>,
+    Query(query): Query<ListMarketplaceQuery>,
+) -> impl IntoResponse {
+    let db = state.db.clone();
+
+    let result = tokio::task::spawn_blocking(move || {
+        let conn = db.connect()?;
+        let like = query.q.as_ref().map(|s| format!("%{}%", s));
+        let mut stmt = conn.prepare(
+            "SELECT l.id, l.title, l.description, l.category, l.tags,
+                    l.publisher_user_id, u.name, l.rating_avg, l.rating_count,
+                    l.install_count, l.created_at, l.updated_at
+             FROM agent_marketplace_listings l
+             LEFT JOIN users u ON u.id = l.publisher_user_id
+             WHERE l.status = 'published'
+               AND (?1 IS NULL OR l.title LIKE ?1 OR l.description LIKE ?1)
+               AND (?2 IS NULL OR l.category = ?2)
+             ORDER BY l.install_count DESC, l.created_at DESC",
+        )?;
+        let rows = stmt
+            .query_map(params![like, query.category], |row| {
+                Ok(MarketplaceListingRow {
+                    id: row.get(0)?,
+                    title: row.get(1)?,
+                    description: row.get(2)?,
+                    category: row.get(3)?,
+                    tags: parse_json_column(row.get(4)?),
+                    publisher_user_id: row.get(5)?,
+                    publisher_name: row.get(6)?,
+                    rating_avg: row.get(7)?,
+                    rating_count: row.get(8)?,
+                    install_count: row.get(9)?,
+                    created_at: row.get(10)?,
+                    updated_at: row.get(11)?,
+                })
+            })?
+            .collect::<Result<Vec<_>, _>>()?;
+        Ok::<_, rusqlite::Error>(rows)
+    })
+    .await;
+
+    match result {
+        Ok(Ok(rows)) => Json(json!({ "listings": rows })).into_response(),
+        Ok(Err(e)) => {
+            warn!("DB error listing marketplace listings: {}", e);
+            (StatusCode::INTERNAL_SERVER_ERROR, Json(json!({"error": e.to_string()}))).into_response()
+        }
+        Err(e) => {
+            warn!("DB task panicked: {}", e);
+            (StatusCode::INTERNAL_SERVER_ERROR, Json(json!({"error": "internal error"}))).into_response()
+        }
+    }
+}
+
+#[derive(Serialize)]
+struct MarketplaceRatingRow {
+    user_id: String,
+    reviewer_name: Option<String>,
+    rating: i64,
+    review: Option<String>,
+    created_at: String,
+}
+
+async fn get_marketplace_listing(
+    State(state): State<Arc<AppState>>,
+    Path(id): Path<String>,
+) -> impl IntoResponse {
+    let db = state.db.clone();
+    let id_for_ratings = id.clone();
+
+    let result = tokio::task::spawn_blocking(move || {
+        let conn = db.connect()?;
+        let listing = conn.query_row(
+            "SELECT l.id, l.title, l.description, l.category, l.tags,
+                    l.publisher_user_id, u.name, l.rating_avg, l.rating_count,
+                    l.install_count, l.created_at, l.updated_at
+             FROM agent_marketplace_listings l
+             LEFT JOIN users u ON u.id = l.publisher_user_id
+             WHERE l.id = ?1 AND l.status = 'published'",
+            params![id],
+            |row| {
+                Ok(MarketplaceListingRow {
+                    id: row.get(0)?,
+                    title: row.get(1)?,
+                    description: row.get(2)?,
+                    category: row.get(3)?,
+                    tags: parse_json_column(row.get(4)?),
+                    publisher_user_id: row.get(5)?,
+                    publisher_name: row.get(6)?,
+                    rating_avg: row.get(7)?,
+                    rating_count: row.get(8)?,
+                    install_count: row.get(9)?,
+                    created_at: row.get(10)?,
+                    updated_at: row.get(11)?,
+                })
+            },
+        )?;
+
+        let mut ratings_stmt = conn.prepare(
+            "SELECT r.user_id, u.name, r.rating, r.review, r.created_at
+             FROM agent_marketplace_ratings r
+             LEFT JOIN users u ON u.id = r.user_id
+             WHERE r.listing_id = ?1
+             ORDER BY r.created_at DESC
+             LIMIT 20",
+        )?;
+        let ratings = ratings_stmt
+            .query_map(params![id_for_ratings], |row| {
+                Ok(MarketplaceRatingRow {
+                    user_id: row.get(0)?,
+                    reviewer_name: row.get(1)?,
+                    rating: row.get(2)?,
+                    review: row.get(3)?,
+                    created_at: row.get(4)?,
+                })
+            })?
+            .collect::<Result<Vec<_>, _>>()?;
+
+        Ok::<_, rusqlite::Error>((listing, ratings))
+    })
+    .await;
+
+    match result {
+        Ok(Ok((listing, ratings))) => {
+            Json(json!({ "listing": listing, "ratings": ratings })).into_response()
+        }
+        Ok(Err(rusqlite::Error::QueryReturnedNoRows)) => {
+            (StatusCode::NOT_FOUND, Json(json!({"error": "listing_not_found"}))).into_response()
+        }
+        Ok(Err(e)) => {
+            warn!("DB error fetching marketplace listing: {}", e);
+            (StatusCode::INTERNAL_SERVER_ERROR, Json(json!({"error": e.to_string()}))).into_response()
+        }
+        Err(e) => {
+            warn!("DB task panicked: {}", e);
+            (StatusCode::INTERNAL_SERVER_ERROR, Json(json!({"error": "internal error"}))).into_response()
+        }
+    }
+}
+
+#[derive(Deserialize)]
+struct PublishAgentBody {
+    source_agent_id: String,
+    title: String,
+    description: String,
+    category: Option<String>,
+    tags: Option<serde_json::Value>,
+}
+
+/// Publishes a snapshot of one of the caller's own agents. The snapshot is
+/// built from the SAME columns `get_agent` reads, reshaped into
+/// `CreateAgentBody`'s JSON field names (serde renames included) so install
+/// can deserialize it straight back into one.
+async fn publish_agent(
+    State(state): State<Arc<AppState>>,
+    Extension(user): Extension<AuthUser>,
+    Json(body): Json<PublishAgentBody>,
+) -> impl IntoResponse {
+    if body.title.trim().len() < 3 {
+        return (StatusCode::BAD_REQUEST, Json(json!({"error": "Title must be at least 3 characters"}))).into_response();
+    }
+    if body.description.trim().len() < 10 {
+        return (StatusCode::BAD_REQUEST, Json(json!({"error": "Description must be at least 10 characters"}))).into_response();
+    }
+
+    let db = state.db.clone();
+    let user_id = user.user_id;
+
+    let result = tokio::task::spawn_blocking(move || {
+        let conn = db.connect()?;
+
+        // Ownership check: only the agent's own creator can publish it.
+        let row = conn.query_row(
+            "SELECT name, description, type, model, provider, capabilities, system_prompt,
+                    tools, max_iterations, temperature, config, avatar, trust_tier,
+                    harness_config, enabled_modes, character_json, allowed_skills,
+                    allowed_tools, data_classification, write_scope
+             FROM agents WHERE id = ?1 AND user_id = ?2",
+            params![body.source_agent_id, user_id],
+            |row| {
+                Ok(json!({
+                    "name": row.get::<_, String>(0)?,
+                    "description": row.get::<_, Option<String>>(1)?,
+                    "type": row.get::<_, String>(2)?,
+                    "model": row.get::<_, String>(3)?,
+                    "provider": row.get::<_, String>(4)?,
+                    "capabilities": parse_json_column(row.get(5)?),
+                    "system_prompt": row.get::<_, Option<String>>(6)?,
+                    "tools": parse_json_column(row.get(7)?),
+                    "max_iterations": row.get::<_, i64>(8)?,
+                    "temperature": row.get::<_, f64>(9)?,
+                    "config": parse_json_column(row.get(10)?),
+                    "avatar": row.get::<_, Option<String>>(11)?,
+                    "trust_tier": row.get::<_, String>(12)?,
+                    "harness_config": parse_json_column(row.get(13)?),
+                    "enabled_modes": parse_json_column(row.get(14)?),
+                    "character_json": parse_json_column(row.get(15)?),
+                    "allowed_skills": parse_json_column(row.get(16)?),
+                    "allowed_tools": parse_json_column(row.get(17)?),
+                    "data_classification": row.get::<_, Option<String>>(18)?,
+                    "write_scope": row.get::<_, Option<String>>(19)?,
+                }))
+            },
+        )?;
+
+        let listing_id = uuid::Uuid::new_v4().to_string();
+        conn.execute(
+            "INSERT INTO agent_marketplace_listings
+                (id, source_agent_id, publisher_user_id, title, description, category, tags, agent_snapshot)
+             VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8)",
+            params![
+                listing_id,
+                body.source_agent_id,
+                user_id,
+                body.title,
+                body.description,
+                body.category,
+                json_to_string(body.tags),
+                row.to_string(),
+            ],
+        )?;
+        Ok::<_, rusqlite::Error>(listing_id)
+    })
+    .await;
+
+    match result {
+        Ok(Ok(listing_id)) => {
+            (StatusCode::CREATED, Json(json!({ "listing": { "id": listing_id } }))).into_response()
+        }
+        Ok(Err(rusqlite::Error::QueryReturnedNoRows)) => (
+            StatusCode::NOT_FOUND,
+            Json(json!({"error": "Agent not found, or it doesn't belong to you"})),
+        )
+            .into_response(),
+        Ok(Err(e)) => {
+            warn!("DB error publishing agent: {}", e);
+            (StatusCode::INTERNAL_SERVER_ERROR, Json(json!({"error": e.to_string()}))).into_response()
+        }
+        Err(e) => {
+            warn!("DB task panicked: {}", e);
+            (StatusCode::INTERNAL_SERVER_ERROR, Json(json!({"error": "internal error"}))).into_response()
+        }
+    }
+}
+
+async fn unpublish_listing(
+    State(state): State<Arc<AppState>>,
+    Extension(user): Extension<AuthUser>,
+    Path(id): Path<String>,
+) -> impl IntoResponse {
+    let db = state.db.clone();
+    let user_id = user.user_id;
+
+    let result = tokio::task::spawn_blocking(move || {
+        let conn = db.connect()?;
+        let affected = conn.execute(
+            "DELETE FROM agent_marketplace_listings WHERE id = ?1 AND publisher_user_id = ?2",
+            params![id, user_id],
+        )?;
+        Ok::<_, rusqlite::Error>(affected)
+    })
+    .await;
+
+    match result {
+        Ok(Ok(0)) => (
+            StatusCode::NOT_FOUND,
+            Json(json!({"error": "Listing not found, or it isn't yours"})),
+        )
+            .into_response(),
+        Ok(Ok(_)) => Json(json!({"success": true})).into_response(),
+        Ok(Err(e)) => {
+            warn!("DB error unpublishing listing: {}", e);
+            (StatusCode::INTERNAL_SERVER_ERROR, Json(json!({"error": e.to_string()}))).into_response()
+        }
+        Err(e) => {
+            warn!("DB task panicked: {}", e);
+            (StatusCode::INTERNAL_SERVER_ERROR, Json(json!({"error": "internal error"}))).into_response()
+        }
+    }
+}
+
+/// Clones the listing's snapshot into a brand-new agent owned by the
+/// installing user, via the same `persist_agent` path every other agent
+/// creation flow uses — re-runs the full creation checklist, which passes
+/// because the snapshot came from an agent that already passed it once.
+async fn install_listing(
+    State(state): State<Arc<AppState>>,
+    Extension(user): Extension<AuthUser>,
+    Path(id): Path<String>,
+) -> impl IntoResponse {
+    let db = state.db.clone();
+    let user_id = user.user_id;
+
+    let result = tokio::task::spawn_blocking(move || {
+        let conn = db.connect()?;
+        let snapshot_text: String = conn.query_row(
+            "SELECT agent_snapshot FROM agent_marketplace_listings WHERE id = ?1 AND status = 'published'",
+            params![id],
+            |row| row.get(0),
+        )?;
+
+        let mut body: CreateAgentBody = serde_json::from_str(&snapshot_text)
+            .map_err(|e| rusqlite::Error::InvalidColumnType(0, e.to_string(), rusqlite::types::Type::Text))?;
+        // Installed agents are standalone, never inherit the source's
+        // orchestrator/subagent wiring or its live status.
+        body.parent_agent_id = None;
+        body.mode = Some("primary".to_string());
+        body.status = Some("idle".to_string());
+
+        if let Err(msg) = validate_agent_against_checklist(&body) {
+            return Ok::<_, rusqlite::Error>(Err(msg));
+        }
+
+        let new_agent_id = persist_agent(&conn, &user_id, body)?;
+
+        conn.execute(
+            "INSERT INTO agent_marketplace_installs (id, listing_id, user_id, installed_agent_id)
+             VALUES (?1, ?2, ?3, ?4)",
+            params![uuid::Uuid::new_v4().to_string(), id, user_id, new_agent_id],
+        )?;
+        conn.execute(
+            "UPDATE agent_marketplace_listings SET install_count = install_count + 1 WHERE id = ?1",
+            params![id],
+        )?;
+
+        Ok(Ok(new_agent_id))
+    })
+    .await;
+
+    match result {
+        Ok(Ok(Ok(agent_id))) => {
+            (StatusCode::CREATED, Json(json!({ "agent": { "id": agent_id } }))).into_response()
+        }
+        Ok(Ok(Err(validation_msg))) => {
+            (StatusCode::UNPROCESSABLE_ENTITY, Json(json!({"error": validation_msg}))).into_response()
+        }
+        Ok(Err(rusqlite::Error::QueryReturnedNoRows)) => {
+            (StatusCode::NOT_FOUND, Json(json!({"error": "listing_not_found"}))).into_response()
+        }
+        Ok(Err(e)) => {
+            warn!("DB error installing listing: {}", e);
+            (StatusCode::INTERNAL_SERVER_ERROR, Json(json!({"error": e.to_string()}))).into_response()
+        }
+        Err(e) => {
+            warn!("DB task panicked: {}", e);
+            (StatusCode::INTERNAL_SERVER_ERROR, Json(json!({"error": "internal error"}))).into_response()
+        }
+    }
+}
+
+#[derive(Deserialize)]
+struct RateListingBody {
+    rating: i64,
+    review: Option<String>,
+}
+
+async fn rate_listing(
+    State(state): State<Arc<AppState>>,
+    Extension(user): Extension<AuthUser>,
+    Path(id): Path<String>,
+    Json(body): Json<RateListingBody>,
+) -> impl IntoResponse {
+    if !(1..=5).contains(&body.rating) {
+        return (StatusCode::BAD_REQUEST, Json(json!({"error": "rating must be between 1 and 5"}))).into_response();
+    }
+
+    let db = state.db.clone();
+    let user_id = user.user_id;
+
+    let result = tokio::task::spawn_blocking(move || {
+        let conn = db.connect()?;
+        conn.execute(
+            "INSERT INTO agent_marketplace_ratings (id, listing_id, user_id, rating, review)
+             VALUES (?1, ?2, ?3, ?4, ?5)
+             ON CONFLICT (listing_id, user_id)
+             DO UPDATE SET rating = excluded.rating, review = excluded.review, updated_at = CURRENT_TIMESTAMP",
+            params![uuid::Uuid::new_v4().to_string(), id, user_id, body.rating, body.review],
+        )?;
+
+        // Recompute the listing's rolled-up average/count from source of
+        // truth rather than incrementing — simplest correct approach for a
+        // ratings table this small, and immune to upsert double-counting.
+        conn.execute(
+            "UPDATE agent_marketplace_listings SET
+                rating_avg = (SELECT AVG(rating) FROM agent_marketplace_ratings WHERE listing_id = ?1),
+                rating_count = (SELECT COUNT(*) FROM agent_marketplace_ratings WHERE listing_id = ?1),
+                updated_at = CURRENT_TIMESTAMP
+             WHERE id = ?1",
+            params![id],
+        )?;
+        Ok::<_, rusqlite::Error>(())
+    })
+    .await;
+
+    match result {
+        Ok(Ok(())) => Json(json!({"success": true})).into_response(),
+        Ok(Err(e)) => {
+            warn!("DB error rating listing: {}", e);
+            (StatusCode::INTERNAL_SERVER_ERROR, Json(json!({"error": e.to_string()}))).into_response()
+        }
+        Err(e) => {
+            warn!("DB task panicked: {}", e);
+            (StatusCode::INTERNAL_SERVER_ERROR, Json(json!({"error": "internal error"}))).into_response()
+        }
+    }
 }
