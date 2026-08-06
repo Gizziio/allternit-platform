@@ -12,7 +12,7 @@
 
 use axum::{
     extract::State,
-    http::StatusCode,
+    http::{HeaderMap, StatusCode},
     response::IntoResponse,
     routing::{get, post},
     Json, Router,
@@ -23,6 +23,7 @@ use std::path::PathBuf;
 use std::sync::Arc;
 use tracing::{info, warn};
 
+use crate::agent_session_routes::gizzi_client;
 use crate::config::{save_user_config, AppConfig, SaveUserConfigPayload, UserConfig};
 use crate::AppState;
 
@@ -32,6 +33,7 @@ pub fn onboarding_router() -> Router<Arc<AppState>> {
         .route("/onboarding/provider", post(save_provider))
         .route("/onboarding/discover", get(onboarding_discover))
         .route("/onboarding/validate-key", post(onboarding_validate_key))
+        .route("/onboarding/init-project", post(init_project))
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -899,4 +901,45 @@ async fn validate_kimi_key(key: &str) -> Result<ValidationResult, String> {
         models: Some(vec![json!({"id": "kimi-k2", "name": "Kimi K2"})]),
         error: None,
     })
+}
+
+// ─── Project initialization proxy ─────────────────────────────────────────────
+
+#[derive(Deserialize)]
+struct InitProjectRequest {
+    dir: String,
+    #[serde(rename = "skipCodemap")]
+    skip_codemap: Option<bool>,
+}
+
+async fn init_project(
+    State(state): State<Arc<AppState>>,
+    headers: HeaderMap,
+    Json(body): Json<InitProjectRequest>,
+) -> impl IntoResponse {
+    let client = gizzi_client(&headers);
+    let gizzi_url = state.config.terminal_server_url().trim_end_matches('/').to_string();
+    let response = match client
+        .post(format!("{}/v1/project/init", gizzi_url))
+        .json(&json!({
+            "dir": body.dir,
+            "skipCodemap": body.skip_codemap.unwrap_or(false),
+        }))
+        .send()
+        .await
+    {
+        Ok(res) => res,
+        Err(err) => {
+            warn!("project init request failed: {}", err);
+            return (
+                StatusCode::BAD_GATEWAY,
+                Json(json!({ "error": "Gizzi unreachable", "message": err.to_string() })),
+            )
+                .into_response();
+        }
+    };
+
+    let status = StatusCode::from_u16(response.status().as_u16()).unwrap_or(StatusCode::BAD_GATEWAY);
+    let body_bytes = response.bytes().await.unwrap_or_default();
+    (status, Json(serde_json::from_slice::<serde_json::Value>(&body_bytes).unwrap_or(json!({"raw": String::from_utf8_lossy(&body_bytes)})))).into_response()
 }

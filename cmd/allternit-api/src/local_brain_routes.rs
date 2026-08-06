@@ -7,10 +7,10 @@
 use axum::body::Body;
 use axum::extract::Extension;
 use axum::{
-    extract::{Query, State},
+    extract::{Path, Query, State},
     http::{HeaderMap, StatusCode},
     response::{IntoResponse, Response},
-    routing::get,
+    routing::{delete, get},
     Json, Router,
 };
 use bytes::Bytes;
@@ -24,6 +24,9 @@ use tracing::warn;
 use crate::auth::get_user;
 use crate::auth::AuthUser;
 use crate::AppState;
+
+// Proxy helpers to the Gizzi sidecar HTTP surface.
+use crate::agent_session_routes::gizzi_client;
 
 fn unauthorized() -> axum::response::Response {
     (
@@ -44,6 +47,10 @@ pub fn local_brain_router() -> Router<Arc<AppState>> {
             "/local-brain/pull-custom",
             axum::routing::post(pull_custom_model),
         )
+        // Sidecar-backed arbitrary local model management.
+        .route("/local-brain/models", get(list_sidecar_models).post(install_sidecar_model))
+        .route("/local-brain/models/search", get(search_sidecar_models))
+        .route("/local-brain/models/:tag", delete(remove_sidecar_model))
 }
 
 // ─── Data models ──────────────────────────────────────────────────────────────
@@ -522,4 +529,153 @@ async fn brain_status(
         }
     }))
     .into_response()
+}
+
+// ─── Sidecar model management proxy ───────────────────────────────────────────
+
+#[derive(Deserialize)]
+struct InstallSidecarModelRequest {
+    repo_id: String,
+    quant_tag: Option<String>,
+}
+
+async fn list_sidecar_models(State(state): State<Arc<AppState>>, headers: HeaderMap) -> Response {
+    if get_user(&headers).is_none() {
+        return unauthorized();
+    }
+    let client = gizzi_client(&headers);
+    let gizzi_url = state.config.terminal_server_url().trim_end_matches('/').to_string();
+    match client
+        .get(format!("{}/v1/sidecar/models", gizzi_url))
+        .send()
+        .await
+    {
+        Ok(res) => {
+            let status = StatusCode::from_u16(res.status().as_u16()).unwrap_or(StatusCode::BAD_GATEWAY);
+            let body = res.bytes().await.unwrap_or_default();
+            (status, Body::from(body)).into_response()
+        }
+        Err(err) => {
+            warn!("sidecar list models request failed: {}", err);
+            (
+                StatusCode::BAD_GATEWAY,
+                Json(json!({ "error": "Gizzi unreachable", "message": err.to_string() })),
+            )
+                .into_response()
+        }
+    }
+}
+
+#[derive(Deserialize)]
+struct SearchSidecarModelsQuery {
+    q: Option<String>,
+    limit: Option<u32>,
+}
+
+async fn search_sidecar_models(
+    State(state): State<Arc<AppState>>,
+    headers: HeaderMap,
+    Query(query): Query<SearchSidecarModelsQuery>,
+) -> Response {
+    if get_user(&headers).is_none() {
+        return unauthorized();
+    }
+    let client = gizzi_client(&headers);
+    let gizzi_url = state.config.terminal_server_url().trim_end_matches('/').to_string();
+    let mut req = client.get(format!("{}/v1/sidecar/models/search", gizzi_url));
+    if let Some(q) = query.q {
+        req = req.query(&[("q", q)]);
+    }
+    if let Some(limit) = query.limit {
+        req = req.query(&[("limit", limit.to_string())]);
+    }
+    match req.send().await {
+        Ok(res) => {
+            let status = StatusCode::from_u16(res.status().as_u16()).unwrap_or(StatusCode::BAD_GATEWAY);
+            let body = res.bytes().await.unwrap_or_default();
+            (status, Body::from(body)).into_response()
+        }
+        Err(err) => {
+            warn!("sidecar search models request failed: {}", err);
+            (
+                StatusCode::BAD_GATEWAY,
+                Json(json!({ "error": "Gizzi unreachable", "message": err.to_string() })),
+            )
+                .into_response()
+        }
+    }
+}
+
+async fn install_sidecar_model(
+    State(state): State<Arc<AppState>>,
+    headers: HeaderMap,
+    Json(body): Json<InstallSidecarModelRequest>,
+) -> Response {
+    if get_user(&headers).is_none() {
+        return unauthorized();
+    }
+    let client = gizzi_client(&headers);
+    let gizzi_url = state.config.terminal_server_url().trim_end_matches('/').to_string();
+    let upstream = match client
+        .post(format!("{}/v1/sidecar/models/install", gizzi_url))
+        .json(&json!({
+            "repoId": body.repo_id,
+            "quantTag": body.quant_tag,
+        }))
+        .send()
+        .await
+    {
+        Ok(res) => res,
+        Err(err) => {
+            warn!("sidecar install model request failed: {}", err);
+            return (
+                StatusCode::BAD_GATEWAY,
+                Json(json!({ "error": "Gizzi unreachable", "message": err.to_string() })),
+            )
+                .into_response();
+        }
+    };
+
+    let status = StatusCode::from_u16(upstream.status().as_u16()).unwrap_or(StatusCode::BAD_GATEWAY);
+    let stream = upstream.bytes_stream();
+    Response::builder()
+        .status(status)
+        .header("Content-Type", "text/event-stream")
+        .header("Cache-Control", "no-cache")
+        .header("Connection", "keep-alive")
+        .header("X-Accel-Buffering", "no")
+        .body(Body::from_stream(stream))
+        .unwrap_or_else(|_| StatusCode::INTERNAL_SERVER_ERROR.into_response())
+}
+
+async fn remove_sidecar_model(
+    State(state): State<Arc<AppState>>,
+    Path(tag): Path<String>,
+    headers: HeaderMap,
+) -> Response {
+    if get_user(&headers).is_none() {
+        return unauthorized();
+    }
+    let client = gizzi_client(&headers);
+    let gizzi_url = state.config.terminal_server_url().trim_end_matches('/').to_string();
+    let encoded = urlencoding::encode(&tag);
+    match client
+        .delete(format!("{}/v1/sidecar/models/{}", gizzi_url, encoded))
+        .send()
+        .await
+    {
+        Ok(res) => {
+            let status = StatusCode::from_u16(res.status().as_u16()).unwrap_or(StatusCode::BAD_GATEWAY);
+            let body = res.bytes().await.unwrap_or_default();
+            (status, Body::from(body)).into_response()
+        }
+        Err(err) => {
+            warn!("sidecar remove model request failed: {}", err);
+            (
+                StatusCode::BAD_GATEWAY,
+                Json(json!({ "error": "Gizzi unreachable", "message": err.to_string() })),
+            )
+                .into_response()
+        }
+    }
 }

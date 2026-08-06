@@ -34,6 +34,7 @@ import { FileRoutes } from "@/runtime/server/routes/file"
 import { ConfigRoutes } from "@/runtime/server/routes/config"
 import { ExperimentalRoutes } from "@/runtime/server/routes/experimental"
 import { ProviderRoutes } from "@/runtime/server/routes/provider"
+import { SidecarRoutes } from "@/runtime/server/routes/sidecar"
 import { lazy } from "@/shared/util/lazy"
 import { InstanceBootstrap } from "@/runtime/context/project/bootstrap"
 import { NotFoundError } from "@/runtime/session/storage/db"
@@ -68,6 +69,7 @@ import { VcsRoutes } from "@/runtime/server/routes/vcs"
 import { PathRoutes } from "@/runtime/server/routes/path"
 import { MemoryRoutes } from "@/runtime/server/routes/memory"
 import { VaultRoutes } from "@/runtime/server/routes/vault"
+import { BrainRoutes } from "@/runtime/server/routes/brain"
 import { SandboxRoutes } from "@/runtime/server/routes/sandbox"
 import { VmSessionRoutes } from "@/runtime/server/routes/vm-session"
 import { WorkspaceRoutes } from "@/runtime/server/routes/workspace"
@@ -370,6 +372,7 @@ export namespace Server {
         .route("/permission", PermissionRoutes())
         .route("/question", QuestionRoutes())
         .route("/provider", ProviderRoutes())
+        .route("/sidecar", SidecarRoutes())
         .route("/", FileRoutes())
         .route("/mcp", McpRoutes())
         .route("/tui", TuiRoutes())
@@ -386,6 +389,7 @@ export namespace Server {
         .route("/skill", SkillRoutes())
         .route("/memory", MemoryRoutes())
         .route("/vault", VaultRoutes())
+        .route("/brain", BrainRoutes())
         .route("/sandbox", SandboxRoutes())
         .route("/vm-session", VmSessionRoutes())
         .route("/plugin", PluginRoutes())
@@ -460,6 +464,7 @@ export namespace Server {
             .route("/agent", AgentRoutes())
             .route("/command", CommandRoutes())
             .route("/provider", ProviderRoutes())
+            .route("/sidecar", SidecarRoutes())
             .route("/config", ConfigRoutes())
             .route("/mcp", McpRoutes())
             .route("/cron", CronRoutes())
@@ -476,6 +481,7 @@ export namespace Server {
             .route("/skill", SkillRoutes())
             .route("/memory", MemoryRoutes())
             .route("/vault", VaultRoutes())
+            .route("/brain", BrainRoutes())
             .route("/sandbox", SandboxRoutes())
             .route("/vm-session", VmSessionRoutes())
             .route("/plugin", PluginRoutes())
