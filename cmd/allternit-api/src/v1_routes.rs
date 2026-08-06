@@ -127,8 +127,76 @@ async fn health() -> impl IntoResponse {
 /// GET /api/v1/models — flattened `{id, name, provider}` catalog for the
 /// agent-creation wizard's model picker. Sourced from the same provider specs
 /// as the /providers endpoints; previously fell through to the 501 fallback.
-async fn list_available_models() -> impl IntoResponse {
-    Json(crate::provider_routes::available_model_catalog())
+///
+/// The static catalog only covers compile-time-known providers/models — it
+/// can never include user-installed local models (Sidecar's HF-downloaded
+/// GGUF pulls), which only exist at runtime, one deployment at a time. This
+/// merges in gizzi-code's live `GET /provider` `connected` list on top of
+/// the static entries, so newly-installed local models show up without a
+/// backend redeploy. Falls back to the static-only list if gizzi is
+/// unreachable — this endpoint must never hard-fail just because the
+/// harness happens to be down.
+async fn list_available_models(State(state): State<Arc<AppState>>) -> impl IntoResponse {
+    let mut catalog = crate::provider_routes::available_model_catalog();
+    catalog.extend(fetch_live_local_models(&state).await);
+    Json(catalog)
+}
+
+/// Fetches gizzi-code's live provider list and flattens any `connected`
+/// (i.e. actually-available-right-now) provider's models into the same
+/// `{id, name, provider, description, tier, supports_effort}` shape the
+/// static catalog uses. Currently only `sidecar` is a locally-hosted
+/// provider in practice, but this isn't sidecar-specific — any connected
+/// provider the static list doesn't already know about gets included.
+async fn fetch_live_local_models(state: &AppState) -> Vec<serde_json::Value> {
+    let base = state.config.terminal_server_url();
+    let client = match reqwest::Client::builder()
+        .timeout(std::time::Duration::from_secs(3))
+        .build()
+    {
+        Ok(client) => client,
+        Err(_) => return Vec::new(),
+    };
+
+    let resp = match client.get(format!("{}/provider", base.trim_end_matches('/'))).send().await {
+        Ok(resp) if resp.status().is_success() => resp,
+        _ => return Vec::new(),
+    };
+
+    let body: serde_json::Value = match resp.json().await {
+        Ok(body) => body,
+        Err(_) => return Vec::new(),
+    };
+
+    let connected: std::collections::HashSet<String> = body
+        .get("connected")
+        .and_then(|v| v.as_array())
+        .map(|arr| arr.iter().filter_map(|v| v.as_str().map(String::from)).collect())
+        .unwrap_or_default();
+
+    let all = body.get("all").and_then(|v| v.as_array()).cloned().unwrap_or_default();
+
+    let mut out = Vec::new();
+    for provider in all {
+        let provider_id = match provider.get("id").and_then(|v| v.as_str()) {
+            Some(id) if connected.contains(id) => id.to_string(),
+            _ => continue,
+        };
+        let provider_name = provider.get("name").and_then(|v| v.as_str()).unwrap_or(&provider_id).to_string();
+        let Some(models) = provider.get("models").and_then(|v| v.as_object()) else { continue };
+        for (model_id, model) in models {
+            let model_name = model.get("name").and_then(|v| v.as_str()).unwrap_or(model_id);
+            out.push(json!({
+                "id": format!("{}/{}", provider_id, model_id),
+                "name": format!("{} ({})", model_name, provider_name),
+                "provider": provider_id,
+                "description": serde_json::Value::Null,
+                "tier": "local",
+                "supports_effort": false,
+            }));
+        }
+    }
+    out
 }
 
 /// GET /api/v1/voice/voices — proxies the voice list from the optional

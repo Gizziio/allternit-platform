@@ -7,7 +7,6 @@ members = [
     "cmd/allternit-mux",
     "cmd/allternit-cloud-api",
     "cmd/allternit-cloud-wizard",
-    "cmd/allternit-mux",
     "cmd/launcher",
     "rails",
     "rails/cli",

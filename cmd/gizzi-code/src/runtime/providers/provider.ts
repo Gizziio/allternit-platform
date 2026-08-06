@@ -434,7 +434,7 @@ export namespace Provider {
 
     // Inject sidecar embedded model as a provider (if sidecar is available)
     if (!providers["sidecar"]) {
-      const sidecarConfig = Sidecar.providerConfig()
+      const sidecarConfig = await Sidecar.providerConfig()
       if (sidecarConfig) {
         const sidecarModels: Record<string, Model> = {}
         for (const [modelID, model] of Object.entries(sidecarConfig.models)) {
