@@ -480,10 +480,16 @@ export function createStartupWindow(options: StartupWindowOptions): BrowserWindo
     resizable: false,
     alwaysOnTop: true,
     titleBarStyle: 'hiddenInset',
+    backgroundColor: '#faf9f7',
+    show: false,
     webPreferences: {
       nodeIntegration: true,
       contextIsolation: false,
     },
+  });
+
+  window.once('ready-to-show', () => {
+    window.show();
   });
 
   // Log startup window console messages
