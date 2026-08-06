@@ -78,13 +78,25 @@ download(url, tarballPath, (err) => {
 
   console.log(`Extracting ${tarballName}...`);
   try {
-    // Extract only bin/limactl from the tarball
+    // Extract only bin/limactl from the tarball. Lima 2.1.2 archives have a
+    // leading "./" on every entry, so --strip-components=2 is required to end
+    // up with a flat `limactl` file in outDir.
     execSync(
-      `tar -xzf "${tarballPath}" --strip-components=1 -C "${outDir}" bin/limactl`,
+      `tar -xzf "${tarballPath}" --strip-components=2 -C "${outDir}" ./bin/limactl`,
       { stdio: 'pipe' }
     );
     fs.unlinkSync(tarballPath);
     fs.chmodSync(binaryPath, 0o755);
+    // Binaries fetched from GitHub carry the com.apple.quarantine extended
+    // attribute on macOS. The attribute causes the kernel to kill the binary
+    // with SIGKILL when the packaged app tries to spawn it, so strip it here.
+    if (process.platform === 'darwin') {
+      try {
+        execSync(`xattr -d com.apple.quarantine "${binaryPath}"`, { stdio: 'pipe' });
+      } catch {
+        // Attribute may already be absent; ignore.
+      }
+    }
     console.log(`limactl ${LIMA_VERSION} ready at ${binaryPath}`);
   } catch (e) {
     console.error('Extraction failed:', e.message);
