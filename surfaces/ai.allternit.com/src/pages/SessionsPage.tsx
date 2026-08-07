@@ -4,7 +4,7 @@
 import { useNavigate } from 'react-router-dom'
 import { useEffect, useRef, useState, useCallback } from 'react'
 import { ArrowsClockwise, Terminal, Clock, X, DownloadSimple, MagnifyingGlass } from '@phosphor-icons/react'
-import { usePlatformUser } from '@/lib/platform-auth-client'
+import { usePlatformUser, usePlatformAuth } from '@/lib/platform-auth-client'
 import { GATEWAY_BASE_URL } from '@/lib/agents/api-config'
 
 interface GizziSession {
@@ -35,6 +35,7 @@ function titleFor(s: GizziSession): string {
 
 export default function SessionsPage() {
   const { isLoaded, isSignedIn } = usePlatformUser()
+  const { getToken } = usePlatformAuth()
   const navigate = useNavigate()
   const [sessions, setSessions] = useState<GizziSession[]>([])
   const [statuses, setStatuses] = useState<Record<string, StatusInfo>>({})
@@ -43,11 +44,17 @@ export default function SessionsPage() {
   const [inspectedSession, setInspectedSession] = useState<GizziSession | null>(null)
   const esRef = useRef<EventSource | null>(null)
 
+  const authHeaders = useCallback(async () => {
+    const token = await getToken()
+    return token ? { Authorization: `Bearer ${token}` } : {}
+  }, [getToken])
+
   const fetchData = useCallback(async () => {
     try {
+      const headers = await authHeaders()
       const [sessRes, stRes] = await Promise.all([
-        fetch(`${GATEWAY_BASE_URL}/v1/session/list`),
-        fetch(`${GATEWAY_BASE_URL}/v1/session/status`),
+        fetch(`${GATEWAY_BASE_URL}/v1/session/list`, { headers }),
+        fetch(`${GATEWAY_BASE_URL}/v1/session/status`, { headers }),
       ])
       if (sessRes.ok) {
         const list: GizziSession[] = await sessRes.json()
@@ -175,7 +182,7 @@ export default function SessionsPage() {
               key={session.id}
               className="flex w-full items-center gap-2 px-4 py-4 text-left hover:bg-zinc-50 transition-colors"
             >
-              <button type="button" onClick={() => navigate(`/shell/session/${session.id}`)} className="min-w-0 flex-1 text-left">
+              <button type="button" onClick={() => setInspectedSession(session)} className="min-w-0 flex-1 text-left">
               <div className="flex items-start justify-between gap-4">
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2 mb-1">
@@ -218,7 +225,8 @@ function SessionTraceInspector({ session, onClose }: { session: GizziSession; on
 
   const refresh = useCallback(async () => {
     try {
-      const response = await fetch(`${GATEWAY_BASE_URL}/v1/session/${encodeURIComponent(session.id)}/replay?limit=1000&snapshot=true`)
+      const headers = await authHeaders()
+      const response = await fetch(`${GATEWAY_BASE_URL}/v1/session/${encodeURIComponent(session.id)}/replay?limit=1000&snapshot=true`, { headers })
       if (!response.ok) throw new Error(`Replay request failed (${response.status})`)
       const page = await response.json()
       setEntries(page.entries ?? [])
@@ -227,7 +235,7 @@ function SessionTraceInspector({ session, onClose }: { session: GizziSession; on
     } catch (reason) {
       setError(reason instanceof Error ? reason.message : String(reason))
     }
-  }, [session.id])
+  }, [session.id, authHeaders])
 
   useEffect(() => {
     void refresh()

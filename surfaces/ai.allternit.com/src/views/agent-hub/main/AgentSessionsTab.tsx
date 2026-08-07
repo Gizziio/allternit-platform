@@ -66,8 +66,14 @@ function formatSessionDate(ts: number): string {
 
 function openSession(item: AgentSessionItem) {
   SURFACE_STORES[item.surface].getState().setActiveSession(item.id);
-  window.dispatchEvent(new CustomEvent('allternit:switch-mode', { detail: { mode: item.surface } }));
-  window.dispatchEvent(new CustomEvent('allternit:open-view', { detail: { viewType: SURFACE_META[item.surface].viewType } }));
+  window.dispatchEvent(
+    new CustomEvent('allternit:open-view', {
+      detail: {
+        viewType: `${item.surface}-agent-session`,
+        context: { sessionId: item.id, originView: SURFACE_META[item.surface].viewType },
+      },
+    }),
+  );
 }
 
 export function AgentSessionsTab() {

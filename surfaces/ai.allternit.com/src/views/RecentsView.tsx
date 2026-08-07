@@ -236,15 +236,36 @@ export function RecentsView(): React.ReactNode {
   }, []);
 
   const openItem = useCallback((item: RecentItem) => {
+    const sessionId = item.sessionId ?? item.id;
+    const defaultViewForMode: Record<AppMode, string> = {
+      chat: 'chat',
+      cowork: 'workspace',
+      code: 'code',
+      design: 'design',
+      browser: 'browser',
+    };
+
+    function findSessionMode(): 'regular' | 'agent' | undefined {
+      if (item.mode === 'chat') {
+        return useChatSessionStore.getState().sessions.find((s) => s.id === sessionId)?.metadata?.sessionMode;
+      }
+      if (item.mode === 'code') {
+        return useCodeSessionStoreActions.getState().sessions.find((s) => s.id === sessionId)?.metadata?.sessionMode;
+      }
+      if (item.mode === 'cowork') {
+        return useCoworkSessionStoreActions.getState().sessions.find((s) => s.id === sessionId)?.metadata?.sessionMode;
+      }
+      return undefined;
+    }
+
+    const isAgent = findSessionMode() === 'agent';
+    const targetView = isAgent ? `${item.mode}-agent-session` : defaultViewForMode[item.mode];
+
     if (item.mode === 'chat') {
-      useChatSessionStore.getState().setActiveSession(item.sessionId ?? item.id);
-      useChatStore.getState().setActiveThread(item.sessionId ?? item.id);
-      window.dispatchEvent(new CustomEvent('allternit:switch-mode', { detail: { mode: 'chat' } }));
-      window.dispatchEvent(new CustomEvent('allternit:open-view', { detail: { viewType: 'chat' } }));
+      useChatSessionStore.getState().setActiveSession(sessionId);
+      useChatStore.getState().setActiveThread(sessionId);
     } else if (item.mode === 'code') {
-      useCodeSessionStoreActions.getState().setActiveSession(item.sessionId ?? item.id);
-      window.dispatchEvent(new CustomEvent('allternit:switch-mode', { detail: { mode: 'code' } }));
-      window.dispatchEvent(new CustomEvent('allternit:open-view', { detail: { viewType: 'code' } }));
+      useCodeSessionStoreActions.getState().setActiveSession(sessionId);
     } else if (item.mode === 'cowork') {
       if (item.kind === 'task' && item.id) {
         useCoworkStore.getState().setActiveTask(item.id);
@@ -252,12 +273,21 @@ export function RecentsView(): React.ReactNode {
       if (item.sessionId) {
         useCoworkSessionStoreActions.getState().setActiveSession(item.sessionId);
       }
-      window.dispatchEvent(new CustomEvent('allternit:switch-mode', { detail: { mode: 'cowork' } }));
-      window.dispatchEvent(new CustomEvent('allternit:open-view', { detail: { viewType: 'workspace' } }));
-    } else if (item.mode === 'browser') {
-      window.dispatchEvent(new CustomEvent('allternit:switch-mode', { detail: { mode: 'browser' } }));
-      window.dispatchEvent(new CustomEvent('allternit:open-view', { detail: { viewType: 'browser' } }));
     }
+
+    if (item.mode === 'browser') {
+      window.dispatchEvent(new CustomEvent('allternit:switch-mode', { detail: { mode: 'browser' } }));
+    } else {
+      window.dispatchEvent(new CustomEvent('allternit:switch-mode', { detail: { mode: item.mode } }));
+    }
+    window.dispatchEvent(
+      new CustomEvent('allternit:open-view', {
+        detail: {
+          viewType: targetView,
+          context: isAgent ? { sessionId, originView: defaultViewForMode[item.mode] } : undefined,
+        },
+      }),
+    );
   }, []);
 
   const handleNew = useCallback(() => {

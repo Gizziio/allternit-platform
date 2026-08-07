@@ -45,6 +45,7 @@ import { useChatSessionStore } from '../views/chat/ChatSessionStore';
 import { useBrowserAgentStore } from '../capsules/browser/browserAgent.store';
 import { useCodeSessionStore } from '../views/code/CodeSessionStore';
 import { useCoworkSessionStore } from '../views/cowork/CoworkSessionStore';
+import { useDesignSessionStore } from '../views/design/DesignSessionStore';
 import type { ModeSession } from '../lib/agents/mode-session-store';
 
 type NativeSession = ModeSession;  // For backward compatibility
@@ -68,6 +69,10 @@ const MINI_APP_CATEGORY_ICONS: Record<string, Icon> = {
   data:          Globe,
   tool:          Gear,
   custom:        AppWindow,
+};
+
+const MINI_APP_ID_ICONS: Record<string, Icon> = {
+  'second-brain': Brain,
 };
 
 function usePinnedMiniApps(): InstalledMiniApp[] {
@@ -116,21 +121,6 @@ interface ShellRailProps {
   onOpenCustomize?: (tab?: string) => void;
   sessionOnlyId?: string;
 }
-
-const BROWSER_MODE_VIEW_TYPES = new Set<string>([
-  'browser',
-  'browserview',
-  'mini-apps-store',
-  'browser-extensions',
-  'mini-app',
-  'addin-word',
-  'addin-excel',
-  'addin-ppt',
-  'hermes',
-  'openclaw',
-  'openclaw-chat',
-  'openclaw-sessions',
-]);
 
 export function ShellRail({
   activeViewType,
@@ -276,14 +266,15 @@ export function ShellRail({
 
     // Code sessions
     (codeSessions || []).forEach(s => {
+      const isAgent = (s.metadata as Record<string, unknown> | undefined)?.sessionMode === 'agent';
       list.push({
         id: s.id,
         title: s.name || 'Untitled Code Session',
         mode: 'code',
-        icon: Cpu,
+        icon: isAgent ? Robot : Cpu,
         isActive: activeCodeSessionId === s.id && activeViewType === 'code',
         updatedAt: new Date(s.updatedAt || 0).getTime(),
-        kind: 'code',
+        kind: isAgent ? 'agent' : 'code',
         status: 'active',
         sessionId: s.id,
       });
@@ -458,8 +449,8 @@ export function ShellRail({
       useCodeSessionStore.getState().setActiveSession(session.id);
     } else if (originSurface === 'cowork') {
       useCoworkSessionStore.getState().setActiveSession(session.id);
-    } else if (originSurface === 'browser') {
-      useChatSessionStore.getState().setActiveSession(session.id);
+    } else if (originSurface === 'design') {
+      useDesignSessionStore.getState().setActiveSession(session.id);
     } else {
       useChatSessionStore.getState().setActiveSession(session.id);
     }
@@ -472,16 +463,20 @@ export function ShellRail({
       return;
     }
 
-    if (originSurface === 'code') {
-      onModeChange?.('code');
-      onOpen?.('code');
-    } else if (originSurface === 'cowork') {
-      onModeChange?.('cowork');
-      onOpen?.('workspace');
-    } else {
-      onModeChange?.('chat');
-      onOpen?.('chat');
-    }
+    const defaultViews: Record<Exclude<typeof originSurface, 'browser'>, string> = {
+      chat: 'chat',
+      cowork: 'workspace',
+      code: 'code',
+      design: 'design',
+    };
+    const defaultView = defaultViews[originSurface] ?? 'chat';
+    const isAgent = descriptor.sessionMode === 'agent';
+    const targetView = isAgent ? `${originSurface}-agent-session` : defaultView;
+    onModeChange?.(originSurface === 'design' ? 'design' : originSurface === 'cowork' ? 'cowork' : originSurface === 'code' ? 'code' : 'chat');
+    onOpen?.(targetView, isAgent ? {
+      sessionId: session.id,
+      originView: defaultView,
+    } : undefined);
   }, [
     onModeChange,
     onOpen,
@@ -767,15 +762,21 @@ export function ShellRail({
                           : chatSessions.find(s => s.id === item.id);
                         if (session) openNativeSessionSurface(session);
                       } else if (item.kind === 'cowork') {
-                        useCoworkSessionStore.getState().setActiveSession(item.id);
+                        const sessionId = item.id;
+                        useCoworkSessionStore.getState().setActiveSession(sessionId);
+                        const session = coworkSessions.find(s => s.id === sessionId);
+                        const isAgent = session?.metadata?.sessionMode === 'agent';
                         onModeChange?.('cowork');
-                        onOpen?.('workspace');
+                        onOpen?.(isAgent ? 'cowork-agent-session' : 'workspace', isAgent ? { sessionId, originView: 'workspace' } : undefined);
                       } else if (item.mode === 'cowork') {
                         coworkStore.setActiveTask(item.id);
                         const coworkTask = coworkStore.tasks.find(t => t.id === item.id);
-                        useCoworkSessionStore.getState().setActiveSession(coworkTask?.sessionId ?? null);
+                        const sessionId = coworkTask?.sessionId ?? null;
+                        useCoworkSessionStore.getState().setActiveSession(sessionId);
+                        const session = sessionId ? coworkSessions.find(s => s.id === sessionId) : null;
+                        const isAgent = session?.metadata?.sessionMode === 'agent' || coworkTask?.mode === 'agent';
                         onModeChange?.('cowork');
-                        onOpen?.('workspace');
+                        onOpen?.(isAgent ? 'cowork-agent-session' : 'workspace', isAgent ? { sessionId, originView: 'workspace' } : undefined);
                       } else if (item.mode === 'browser') {
                         onModeChange?.('browser');
                         onOpen?.('browser');
@@ -819,12 +820,6 @@ export function ShellRail({
               label="Artifacts Library"
               isActive={activeViewType === 'library'}
               onClick={() => onOpen?.('library')}
-            />
-            <RailItem
-              icon={Brain}
-              label="Brain"
-              isActive={activeViewType === 'brain'}
-              onClick={() => onOpen?.('brain')}
             />
             <RailItem
               icon={Clock}
@@ -959,15 +954,21 @@ export function ShellRail({
                           : chatSessions.find(s => s.id === item.id);
                         if (session) openNativeSessionSurface(session);
                       } else if (item.kind === 'cowork') {
-                        useCoworkSessionStore.getState().setActiveSession(item.id);
+                        const sessionId = item.id;
+                        useCoworkSessionStore.getState().setActiveSession(sessionId);
+                        const session = coworkSessions.find(s => s.id === sessionId);
+                        const isAgent = session?.metadata?.sessionMode === 'agent';
                         onModeChange?.('cowork');
-                        onOpen?.('workspace');
+                        onOpen?.(isAgent ? 'cowork-agent-session' : 'workspace', isAgent ? { sessionId, originView: 'workspace' } : undefined);
                       } else if (item.mode === 'cowork') {
                         coworkStore.setActiveTask(item.id);
                         const coworkTask = coworkStore.tasks.find(t => t.id === item.id);
-                        useCoworkSessionStore.getState().setActiveSession(coworkTask?.sessionId ?? null);
+                        const sessionId = coworkTask?.sessionId ?? null;
+                        useCoworkSessionStore.getState().setActiveSession(sessionId);
+                        const session = sessionId ? coworkSessions.find(s => s.id === sessionId) : null;
+                        const isAgent = session?.metadata?.sessionMode === 'agent' || coworkTask?.mode === 'agent';
                         onModeChange?.('cowork');
-                        onOpen?.('workspace');
+                        onOpen?.(isAgent ? 'cowork-agent-session' : 'workspace', isAgent ? { sessionId, originView: 'workspace' } : undefined);
                       } else if (item.mode === 'browser') {
                         onModeChange?.('browser');
                         onOpen?.('browser');
@@ -1440,7 +1441,7 @@ function PinnedMiniAppItem({ app, isActive, onOpen, onUnpin }: {
   onUnpin: () => void;
 }): React.ReactNode {
   const [hovered, setHovered] = useState(false);
-  const AppIcon = (MINI_APP_CATEGORY_ICONS[app.category] ?? AppWindow) as Icon;
+  const AppIcon = (MINI_APP_ID_ICONS[app.id] ?? MINI_APP_CATEGORY_ICONS[app.category] ?? AppWindow) as Icon;
   return (
     <div
       className="relative flex items-center"

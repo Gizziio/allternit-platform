@@ -16,9 +16,11 @@ import {
   ElementsView 
 } from './ShellFallbacks';
 import { createViewRegistry } from '../views/registry';
-import type { ViewContext } from '../nav/nav.types';
+import type { ViewContext, ViewType } from '../nav/nav.types';
+import { useCoworkSessionStore } from '../views/cowork/CoworkSessionStore';
 import type { AppMode } from './ShellHeader';
 import type { CanonicalAgentModeId } from '@/lib/agents/agent-mode-contracts';
+import { ToastProvider } from '@/components/ui/toast-provider';
 
 const SkillsRegistryView   = lazy(() => import('../views/code/SkillsRegistryView').then(m => ({ default: m.SkillsRegistryView })));
 const DesignRegistryView   = lazy(() => import('../views/design/DesignRegistryView').then(m => ({ default: m.DesignRegistryView })));
@@ -27,7 +29,6 @@ const HermesView           = lazy(() => import('../views/hermes/HermesView').the
 const VaultViewerView      = lazy(() => import('../views/vault-viewer/VaultViewerView').then(m => ({ default: m.VaultViewerView })));
 const OhMyPiView           = lazy(() => import('../views/omp/OhMyPiView').then(m => ({ default: m.OhMyPiView })));
 const ChatModeAgentSession = lazy(() => import('../views/agent-sessions/ChatModeAgentSession').then(m => ({ default: m.ChatModeAgentSession })));
-const CoworkModeAgentTasks = lazy(() => import('../views/agent-sessions/CoworkModeAgentTasks').then(m => ({ default: m.CoworkModeAgentTasks })));
 const CodeModeAgentSession = lazy(() => import('../views/agent-sessions/CodeModeAgentSession').then(m => ({ default: m.CodeModeAgentSession })));
 const DesignModeAgentSession = lazy(() => import('../views/agent-sessions/DesignModeAgentSession').then(m => ({ default: m.DesignModeAgentSession })));
 const SwarmADE             = lazy(() => import('../views/swarm').then(m => ({ default: m.SwarmADE })));
@@ -705,8 +706,10 @@ export function getShellViewRegistry(handlers: {
       </ErrorBoundary>
     ),
     brain: ({ context }: { context?: ViewContext }) => (
-      <ErrorBoundary fallback={<ErrorFallbackWrapper viewName="Brain" />}>
-        <BrainView />
+      <ErrorBoundary fallback={<ErrorFallbackWrapper viewName="Second Brain" />}>
+        <ToastProvider>
+          <BrainView />
+        </ToastProvider>
       </ErrorBoundary>
     ),
     catalog: ({ context }: { context?: ViewContext }) => (
@@ -744,27 +747,46 @@ export function getShellViewRegistry(handlers: {
         <CodeProjectView />
       </ErrorBoundary>
     ),
-    'chat-agent-session': ({ context }: { context?: ViewContext }) => (
-      <ChatModeAgentSession
-        mode="chat"
-        sessionId={(context?.context as any)?.sessionId ?? context!.viewId}
-        context={typeof window !== 'undefined' ? window.sessionStorage.getItem('allternit-pending-agent-message') || undefined : undefined}
-        onClose={() => open('chat')}
-      />
-    ),
-    'cowork-agent-session': ({ context }: { context?: ViewContext }) => (
-      <CoworkModeAgentTasks mode="cowork" onClose={() => open('workspace')} />
-    ),
-    'code-agent-session': ({ context }: { context?: ViewContext }) => (
-      <ErrorBoundary fallback={<ErrorFallbackWrapper viewName="Code Agent Workspace" />}>
-        <CodeModeAgentSession sessionId={context!.viewId} onClose={() => open('code')} />
-      </ErrorBoundary>
-    ),
-    'design-agent-session': ({ context }: { context?: ViewContext }) => (
-      <ErrorBoundary fallback={<ErrorFallbackWrapper viewName="Design Agent Workspace" />}>
-        <DesignModeAgentSession sessionId={context!.viewId} onClose={() => open('design')} />
-      </ErrorBoundary>
-    ),
+    'chat-agent-session': ({ context }: { context?: ViewContext }) => {
+      const ctx = context?.context as { sessionId?: string; originView?: ViewType } | undefined;
+      return (
+        <ChatModeAgentSession
+          mode="chat"
+          sessionId={ctx?.sessionId ?? context!.viewId}
+          context={typeof window !== 'undefined' ? window.sessionStorage.getItem('allternit-pending-agent-message') || undefined : undefined}
+          onClose={() => open(ctx?.originView ?? 'chat')}
+        />
+      );
+    },
+    'cowork-agent-session': ({ context }: { context?: ViewContext }) => {
+      const ctx = context?.context as { sessionId?: string; originView?: ViewType } | undefined;
+      React.useEffect(() => {
+        if (ctx?.sessionId) {
+          useCoworkSessionStore.getState().setActiveSession(ctx.sessionId);
+        }
+      }, [ctx?.sessionId]);
+      return (
+        <ErrorBoundary fallback={<ErrorFallbackWrapper viewName="Cowork Agent Workspace" />}>
+          <CoworkRoot />
+        </ErrorBoundary>
+      );
+    },
+    'code-agent-session': ({ context }: { context?: ViewContext }) => {
+      const ctx = context?.context as { sessionId?: string; originView?: ViewType } | undefined;
+      return (
+        <ErrorBoundary fallback={<ErrorFallbackWrapper viewName="Code Agent Workspace" />}>
+          <CodeModeAgentSession sessionId={ctx?.sessionId ?? context!.viewId} onClose={() => open(ctx?.originView ?? 'code')} />
+        </ErrorBoundary>
+      );
+    },
+    'design-agent-session': ({ context }: { context?: ViewContext }) => {
+      const ctx = context?.context as { sessionId?: string; originView?: ViewType } | undefined;
+      return (
+        <ErrorBoundary fallback={<ErrorFallbackWrapper viewName="Design Agent Workspace" />}>
+          <DesignModeAgentSession sessionId={ctx?.sessionId ?? context!.viewId} onClose={() => open(ctx?.originView ?? 'design')} />
+        </ErrorBoundary>
+      );
+    },
     'new-document': ({ context }: { context?: ViewContext }) => (
       <ErrorBoundary fallback={<div style={{ padding: 16, color: 'var(--text-secondary)' }}>Failed to load</div>}>
         <CoworkRoot />

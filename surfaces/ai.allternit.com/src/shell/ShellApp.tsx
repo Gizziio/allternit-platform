@@ -154,9 +154,11 @@ function ShellAppInner(): React.ReactNode {
   useEffect(() => {
     if (!isDetachedCodeSession || !detachedSessionId) return;
     setActiveMode('code');
-    useCodeSessionStore.getState().setActiveSession(detachedSessionId);
-    if (detachedWorkspaceId) useCodeModeStore.getState().setActiveWorkspace(detachedWorkspaceId);
-    dispatch({ type: 'OPEN_VIEW', viewType: 'code' });
+    void useCodeSessionStore.getState().loadSessions().then(() => {
+      useCodeSessionStore.getState().setActiveSession(detachedSessionId);
+      if (detachedWorkspaceId) useCodeModeStore.getState().setActiveWorkspace(detachedWorkspaceId);
+      dispatch({ type: 'OPEN_VIEW', viewType: 'code' });
+    });
   }, [detachedSessionId, detachedWorkspaceId, isDetachedCodeSession, setActiveMode]);
 
   const {
@@ -232,7 +234,8 @@ function ShellAppInner(): React.ReactNode {
             (((error as { statusCode?: unknown }).statusCode) === 403));
 
     const initSessionSync = async () => {
-      if (!isSignedIn) {
+      const canSync = isSignedIn || isPlatformAuthDisabled() || desktopSelfHosted;
+      if (!canSync) {
         return;
       }
 
@@ -396,23 +399,19 @@ function ShellAppInner(): React.ReactNode {
           requiredCapabilities: contract.requiredCapabilities,
           requiredEvidence: contract.requiredEvidence,
           executionStatus: 'pending',
+          originSurface: targetSurface,
         },
       });
 
       store.getState().setActiveSession(sessionId);
 
-      const viewTypeMap: Record<AppMode, ViewType> = {
-        chat: 'chat',
-        cowork: 'workspace',
-        code: 'code',
-        design: 'design',
-        browser: 'browser',
-      };
-      if (targetSurface === 'design') {
-        openDesignWindow();
-      } else {
-        dispatch({ type: 'OPEN_VIEW', viewType: viewTypeMap[targetSurface] });
-      }
+      const agentSessionViewType = `${targetSurface}-agent-session` as ViewType;
+      const originView = active.viewType;
+      dispatch({
+        type: 'OPEN_VIEW',
+        viewType: agentSessionViewType,
+        context: { sessionId, originView },
+      });
       void store.getState().sendMessageStream(sessionId, { text });
     } catch (err) {
       logger.error({ err: err }, 'Failed to create session');
@@ -701,6 +700,7 @@ function ShellAppInner(): React.ReactNode {
                             .getState()
                             .agents.find((agent) => agent.id === selectedAgentId) ?? null
                         : null;
+                    const originView = active.viewType;
                     try {
                       if (originSurface === 'browser') {
                         open('browser');
@@ -719,6 +719,7 @@ function ShellAppInner(): React.ReactNode {
                         sessionMode: 'agent',
                         agentId: selectedAgent?.id,
                         agentName: selectedAgent?.name,
+                        metadata: { originSurface },
                       });
 
                       store.getState().setActiveSession(sessionId);
@@ -729,17 +730,12 @@ function ShellAppInner(): React.ReactNode {
                           .setSelectedAgent(originSurface, selectedAgent.id);
                       }
 
-                      if (originSurface === 'cowork') {
-                        handleModeChange('cowork');
-                        return;
-                      }
-
-                      if (originSurface === 'design') {
-                        handleModeChange('design');
-                        return;
-                      }
-
-                      handleModeChange(originSurface === 'code' ? 'code' : 'chat');
+                      const agentSessionViewType = `${originSurface}-agent-session` as ViewType;
+                      dispatch({
+                        type: 'OPEN_VIEW',
+                        viewType: agentSessionViewType,
+                        context: { sessionId, originView },
+                      });
                     } catch (error) {
                       logger.error({ err: error }, '[ShellApp] Failed to create agent session from rail controls');
                       open('native-agent');
