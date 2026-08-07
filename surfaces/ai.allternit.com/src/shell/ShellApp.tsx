@@ -85,6 +85,16 @@ const BROWSER_MODE_VIEW_TYPES = new Set<ViewType>([
   'openclaw',
   'openclaw-chat',
   'openclaw-sessions',
+  // Builtin mini-apps surfaced in the ACI Mini-apps rail section.
+  'brain',
+  'vault-viewer',
+  'oh-my-pi',
+  // Allternit Office editors are surfaced from the ACI "Office & Extensions"
+  // launcher and should stay in browser mode so the rail remains expanded.
+  'docs',
+  'sheets',
+  'slides',
+  'pdf',
 ]);
 
 // Inner app component that uses mode context
@@ -534,10 +544,21 @@ function ShellAppInner(): React.ReactNode {
   const { unreadCount: agentActivityUnreadCount } = useMonitorThreads();
   const [isControlCenterOpen, setIsControlCenterOpen] = useState(false);
   const permissions = usePermissionGuide();
+  const [permissionBannerDismissed, setPermissionBannerDismissed] = useState(() => {
+    if (typeof window === 'undefined') return false;
+    return window.localStorage.getItem('allternit-permission-banner-dismissed') === '1';
+  });
 
   const shouldHideRail = active.viewType === 'labs';
   const effectiveRailCollapsed = isRailCollapsed || shouldHideRail;
   const peekRail = isRailCollapsed && !shouldHideRail && isRailPeekOpen;
+
+  // Persist rail collapse state on the document root so embedded surfaces
+  // (Allternit Office, PDF viewer) can shift their top chrome clear of the
+  // fixed rail-controls widget / window traffic lights.
+  useEffect(() => {
+    document.documentElement.setAttribute('data-rail-collapsed', String(effectiveRailCollapsed));
+  }, [effectiveRailCollapsed]);
 
   return (
     <TooltipProvider>
@@ -546,7 +567,7 @@ function ShellAppInner(): React.ReactNode {
         <VisionGlass />
         <VoicePresence compact={false} />
 
-        {permissions.isSupported && permissions.anyDenied && (
+        {permissions.isSupported && permissions.anyDenied && !permissionBannerDismissed && (
           <div style={{
             position: 'fixed', top: 0, left: 0, right: 0, zIndex: 220,
             background: 'var(--status-warning)', color: 'var(--ui-text-inverse)', padding: '8px 16px',
@@ -581,6 +602,20 @@ function ShellAppInner(): React.ReactNode {
               }}
             >
               Settings
+            </button>
+            <button type="button"
+              onClick={() => {
+                setPermissionBannerDismissed(true);
+                window.localStorage.setItem('allternit-permission-banner-dismissed', '1');
+                void permissions.dismiss();
+              }}
+              style={{
+                padding: '4px 12px', borderRadius: 4, border: 'none',
+                background: 'transparent', color: 'var(--ui-text-inverse)', fontSize: 12,
+                textDecoration: 'underline', cursor: 'pointer', marginLeft: 8
+              }}
+            >
+              Dismiss
             </button>
           </div>
         )}

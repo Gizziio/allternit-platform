@@ -53,6 +53,11 @@ export function usePermissionGuide() {
     [api]
   );
 
+  const dismiss = useCallback(async () => {
+    if (!api) return { success: false, error: 'Not supported' };
+    return api.dismiss();
+  }, [api]);
+
   const readyForCheck = useCallback(async () => {
     if (!api) return;
     try {
@@ -102,5 +107,6 @@ export function usePermissionGuide() {
     refresh,
     presentGuide,
     readyForCheck,
+    dismiss,
   };
 }
