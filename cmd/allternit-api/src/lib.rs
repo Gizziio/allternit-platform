@@ -75,6 +75,7 @@ pub mod office_routes;
 pub mod onboarding_routes;
 pub mod open_connector_proxy;
 pub mod orchestrator_routes;
+pub mod permission_policy;
 pub mod platform_static;
 pub mod playground_routes;
 pub mod pricing;
@@ -162,6 +163,7 @@ pub mod test_helpers {
             office_cli_mcp_sessions: Arc::new(RwLock::new(HashMap::new())),
             design_skill_cache: DesignSkillCache::new(),
             terminal_sessions: TerminalSessionStore::new(),
+            approval_store: Arc::new(permission_policy::ApprovalStore::new()),
         })
     }
 }
@@ -229,6 +231,8 @@ pub struct AppState {
     pub design_skill_cache: DesignSkillCache,
     /// Local tmux-backed terminal sessions for Code Mode.
     pub terminal_sessions: TerminalSessionStore,
+    /// Pending/resolved tool-execution approval requests from `ask` policy decisions.
+    pub approval_store: Arc<crate::permission_policy::ApprovalStore>,
 }
 
 /// Return the default LLM provider/model pair used when a request does not

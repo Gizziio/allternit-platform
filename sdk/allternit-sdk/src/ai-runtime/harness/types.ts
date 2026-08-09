@@ -46,6 +46,21 @@ export interface SubprocessConfig {
 /**
  * Main harness configuration
  */
+export type PermissionAction = 'allow' | 'deny' | 'ask';
+
+export interface PermissionRule {
+  tool?: string;
+  file_path?: string;
+  network_host?: string;
+  action: PermissionAction;
+}
+
+export interface PermissionPolicy {
+  name?: string;
+  active?: boolean;
+  rules: PermissionRule[];
+}
+
 export interface HarnessConfig {
   mode: HarnessMode;
   byok?: {
@@ -64,6 +79,8 @@ export interface HarnessConfig {
   middleware?: HarnessMiddleware | HarnessMiddleware[];
   /** Fallback models to try when a provider refuses or content-filters a request. */
   fallbackModels?: Array<{ provider: string; model: string }>;
+  /** Optional agent-level permission policy applied to tool execution requests. */
+  permissionPolicy?: PermissionPolicy;
 }
 
 /**
