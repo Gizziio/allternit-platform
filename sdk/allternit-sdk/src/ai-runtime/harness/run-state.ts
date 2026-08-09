@@ -1,5 +1,6 @@
 import { ToolRegistry } from '../tools/registry.js';
 import { NativeToolBelt } from '../tools/search.js';
+import type { HarnessStopReason } from './types.js';
 import type { ToolDefinition } from '../tools/types.js';
 
 /**
@@ -70,6 +71,13 @@ export class RunState {
       this.emitLifecycleEvent('tool.failed', { toolName: name, callId: context.callId, error: String(error) });
       throw error;
     }
+  }
+
+  /**
+   * Record the normalized stop reason for this run and emit a lifecycle event.
+   */
+  public recordStopReason(reason: HarnessStopReason): void {
+    this.emitLifecycleEvent('run.stop', { stopReason: reason });
   }
 
   private emitLifecycleEvent(type: string, data: any) {

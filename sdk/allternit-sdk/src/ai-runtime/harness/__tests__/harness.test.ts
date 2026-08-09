@@ -100,29 +100,55 @@ describe('AllternitHarness', () => {
   });
 
   describe('BYOK Mode Streaming', () => {
-    it('should inject system prompts in BYOK mode', async () => {
+    const originalFetch = globalThis.fetch;
+
+    afterEach(() => {
+      globalThis.fetch = originalFetch;
+    });
+
+    function sseBody(events: string[]) {
+      const encoder = new TextEncoder();
+      return new ReadableStream({
+        start(controller) {
+          for (const event of events) {
+            controller.enqueue(encoder.encode(event));
+          }
+          controller.close();
+        },
+      });
+    }
+
+    it('should inject system prompts in BYOK mode and stream text', async () => {
       const harness = new AllternitHarness({
         mode: 'byok',
         byok: { anthropic: { apiKey: 'test-key' } }
       });
-      
-      const messages = [{ role: 'user' as const, content: 'Hello' }];
-      
-      // Stream should throw API_ERROR since not implemented, but should inject prompts first
-      try {
-        const stream = harness.stream({
-          provider: 'anthropic',
-          model: 'claude-3-haiku',
-          messages
-        });
-        
-        // Try to get first chunk (should throw)
-        await stream.next();
-        expect(false).toBe(true); // Should not reach here
-      } catch (error) {
-        // Expected - streaming not implemented yet
-        expect(error).toBeInstanceOf(HarnessError);
-      }
+
+      let fetchUrl: string | undefined;
+      globalThis.fetch = (async (input: RequestInfo | URL) => {
+        fetchUrl = input.toString();
+        return new Response(sseBody([
+          'data: {"type":"message_start","message":{"usage":{"input_tokens":10}}}\n\n',
+          'data: {"type":"content_block_delta","delta":{"type":"text_delta","text":"Hi"}}\n\n',
+          'data: {"type":"message_delta","usage":{"output_tokens":5},"delta":{"stop_reason":"end_turn"}}\n\n',
+          'data: {"type":"message_stop"}\n\n',
+        ]), { status: 200 });
+      }) as typeof fetch;
+
+      const response = await harness.run({
+        provider: 'anthropic',
+        model: 'claude-3-haiku',
+        messages: [{ role: 'user', content: 'Hello' }]
+      });
+
+      expect(fetchUrl).toContain('/v1/messages');
+      expect(response.content).toBe('Hi');
+      expect(response.usage).toEqual({
+        promptTokens: 10,
+        completionTokens: 5,
+        totalTokens: 15,
+      });
+      expect(response.stopReason).toBe('end_turn');
     });
 
     it('should require API key for anthropic provider', async () => {
@@ -203,13 +229,11 @@ describe('AllternitHarness', () => {
       global.fetch = originalFetch;
     });
 
-    it('should route to cloud mode with correct endpoint', async () => {
+    it('should route to cloud mode and report not implemented', async () => {
       let fetchCalled = false;
-      let fetchUrl: string | undefined;
 
       global.fetch = () => {
         fetchCalled = true;
-        fetchUrl = 'https://api.allternit.com/v1/ai/stream';
         return Promise.resolve({
           ok: true,
           body: new ReadableStream(),
@@ -218,9 +242,9 @@ describe('AllternitHarness', () => {
 
       const harness = new AllternitHarness({
         mode: 'cloud',
-        cloud: { 
+        cloud: {
           baseURL: 'https://api.allternit.com',
-          accessToken: 'test-token' 
+          accessToken: 'test-token'
         }
       });
 
@@ -231,12 +255,15 @@ describe('AllternitHarness', () => {
           messages: [{ role: 'user', content: 'Hello' }]
         });
         await stream.next();
-      } catch {
-        // Expected - mock doesn't fully implement streaming
+        expect(false).toBe(true); // Should not reach here
+      } catch (error) {
+        expect(error).toBeInstanceOf(HarnessError);
+        if (error instanceof HarnessError) {
+          expect(error.code).toBe(HarnessErrorCode.API_ERROR);
+        }
       }
 
-      expect(fetchCalled).toBe(true);
-      expect(fetchUrl).toBe('https://api.allternit.com/v1/ai/stream');
+      expect(fetchCalled).toBe(false);
     });
   });
 

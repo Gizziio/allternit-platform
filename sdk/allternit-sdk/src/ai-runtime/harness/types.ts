@@ -86,6 +86,15 @@ export interface CacheControl {
 
 export type ReasoningEffort = 'none' | 'minimal' | 'low' | 'medium' | 'high' | 'xhigh';
 
+/** Normalized reason a model turn ended. */
+export type HarnessStopReason =
+  | 'end_turn'
+  | 'max_tokens'
+  | 'stop_sequence'
+  | 'tool_use'
+  | 'pause_turn'
+  | 'refusal';
+
 export interface ThinkingConfig {
   enabled?: boolean;
   budgetTokens?: number;
@@ -125,6 +134,15 @@ export interface Tool {
 }
 
 /**
+ * Legacy OpenAI function-calling definition.
+ */
+export interface FunctionDefinition {
+  name: string;
+  description: string;
+  parameters: ToolParameter;
+}
+
+/**
  * Tool call from assistant
  */
 export interface ToolCall {
@@ -146,6 +164,8 @@ export interface StreamRequest {
   topK?: number;
   tools?: Tool[];
   toolChoice?: 'auto' | 'none' | 'required' | { name: string };
+  /** Legacy OpenAI function-calling format. When set, overrides `tools`. */
+  functions?: FunctionDefinition[];
   parallelToolCalls?: boolean;
   reasoning?: ThinkingConfig;
   responseFormat?: JsonSchemaResponseFormat;
@@ -228,6 +248,7 @@ export interface DoneChunk {
     completionTokens: number;
     totalTokens: number;
   };
+  stopReason?: HarnessStopReason;
 }
 
 /**
@@ -254,6 +275,7 @@ export interface HarnessResponse {
     completionTokens: number;
     totalTokens: number;
   };
+  stopReason?: HarnessStopReason;
 }
 
 /**

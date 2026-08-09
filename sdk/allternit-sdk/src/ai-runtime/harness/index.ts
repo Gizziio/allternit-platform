@@ -15,7 +15,7 @@ import {
   HarnessResponse,
   Citation,
 } from './types.js';
-import { toAnthropicRequest } from './provider-request.js';
+import { mapStopReason, toAnthropicRequest } from './provider-request.js';
 import { fetchWithRetry } from './retry.js';
 import {
   injectSystemPrompt,
@@ -209,11 +209,12 @@ export class AllternitHarness {
     return (await this.run(request)).content;
   }
 
-  /** Collect a stream into a response while retaining citations and usage. */
+  /** Collect a stream into a response while retaining citations, usage, and stop reason. */
   async run(request: StreamRequest): Promise<HarnessResponse> {
     const chunks: string[] = [];
     const citations: Citation[] = [];
     let usage: HarnessResponse['usage'];
+    let stopReason: HarnessResponse['stopReason'];
     for await (const chunk of this.stream(request)) {
       if (chunk.type === 'text' && chunk.text) {
         chunks.push(chunk.text);
@@ -221,12 +222,14 @@ export class AllternitHarness {
         citations.push(chunk.citation);
       } else if (chunk.type === 'done') {
         usage = chunk.usage;
+        stopReason = chunk.stopReason;
       }
     }
     return {
       content: chunks.join(''),
       ...(citations.length ? { citations } : {}),
       ...(usage ? { usage } : {}),
+      ...(stopReason ? { stopReason } : {}),
     };
   }
 
@@ -324,10 +327,17 @@ export class AllternitHarness {
 
     let inputTokens = 0;
     let outputTokens = 0;
+    let stopReason: import('./types.js').HarnessStopReason | undefined;
     for await (const event of readSseJson(response.body)) {
       const message = event as Record<string, any>;
       if (message.type === 'message_start') inputTokens = message.message?.usage?.input_tokens ?? 0;
-      if (message.type === 'message_delta') outputTokens = message.usage?.output_tokens ?? outputTokens;
+      if (message.type === 'message_delta') {
+        outputTokens = message.usage?.output_tokens ?? outputTokens;
+        stopReason = mapStopReason('anthropic', message.delta?.stop_reason ?? message.stop_reason) ?? stopReason;
+      }
+      if (message.type === 'message_stop') {
+        stopReason = mapStopReason('anthropic', message.message?.stop_reason) ?? stopReason;
+      }
       if (message.type === 'content_block_delta' && message.delta?.type === 'text_delta') {
         yield { type: 'text', text: message.delta.text ?? '' };
       }
@@ -342,7 +352,7 @@ export class AllternitHarness {
       promptTokens: inputTokens,
       completionTokens: outputTokens,
       totalTokens: inputTokens + outputTokens,
-    } };
+    }, stopReason };
   }
 
   /**

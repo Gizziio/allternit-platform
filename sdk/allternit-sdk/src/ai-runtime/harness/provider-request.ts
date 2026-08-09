@@ -1,4 +1,26 @@
-import type { Message, StreamRequest, Tool } from './types.js';
+import type { HarnessStopReason, Message, StreamRequest, Tool } from './types.js';
+
+/** Map a provider-specific stop/finish reason to the normalized taxonomy. */
+export function mapStopReason(
+  provider: 'anthropic' | 'openai',
+  raw: string | undefined
+): HarnessStopReason | undefined {
+  if (!raw) return undefined;
+  const value = raw.toLowerCase().replace(/[-_]/g, '_');
+  if (provider === 'anthropic') {
+    if (value === 'end_turn') return 'end_turn';
+    if (value === 'max_tokens') return 'max_tokens';
+    if (value === 'stop_sequence') return 'stop_sequence';
+    if (value === 'tool_use' || value === 'tool_calls') return 'tool_use';
+  }
+  if (provider === 'openai') {
+    if (value === 'stop') return 'end_turn';
+    if (value === 'length') return 'max_tokens';
+    if (value === 'tool_calls' || value === 'function_call') return 'tool_use';
+    if (value === 'content_filter') return 'refusal';
+  }
+  return undefined;
+}
 
 const openAiTool = (tool: Tool) => ({
   type: 'function',
@@ -15,6 +37,19 @@ const openAiToolChoice = (choice: StreamRequest['toolChoice']) =>
     ? { type: 'function', function: { name: choice.name } }
     : choice;
 
+const openAiFunction = (fn: { name: string; description: string; parameters: Record<string, unknown> }) => ({
+  name: fn.name,
+  description: fn.description,
+  parameters: fn.parameters,
+});
+
+const openAiFunctionCall = (choice: StreamRequest['toolChoice']) =>
+  typeof choice === 'object'
+    ? { name: choice.name }
+    : choice === 'required'
+      ? 'auto'
+      : choice;
+
 /** Convert the normalized harness contract to an OpenAI-compatible body. */
 export function toOpenAIRequest(request: StreamRequest): Record<string, unknown> {
   const responseFormat = request.responseFormat && {
@@ -26,14 +61,25 @@ export function toOpenAIRequest(request: StreamRequest): Record<string, unknown>
       strict: request.responseFormat.strict ?? true,
     },
   };
+
+  // Prefer the legacy `functions` array when callers request it; otherwise
+  // emit the current `tools` format.
+  const useFunctions = Array.isArray(request.functions) && request.functions.length > 0;
   return compact({
     model: request.model,
     messages: request.messages.map(({ cache, cache_control, ...message }) => message),
     temperature: request.temperature,
     max_tokens: request.maxTokens,
     top_p: request.topP,
-    tools: request.tools?.map(openAiTool),
-    tool_choice: openAiToolChoice(request.toolChoice),
+    ...(useFunctions
+      ? {
+          functions: request.functions?.map(openAiFunction),
+          function_call: openAiFunctionCall(request.toolChoice),
+        }
+      : {
+          tools: request.tools?.map(openAiTool),
+          tool_choice: openAiToolChoice(request.toolChoice),
+        }),
     parallel_tool_calls: request.parallelToolCalls,
     reasoning_effort: request.reasoning?.effort,
     response_format: responseFormat,
