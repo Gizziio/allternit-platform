@@ -31,8 +31,9 @@ use axum::{
     },
     Json,
 };
+use base64::{engine::general_purpose::STANDARD, Engine as _};
 use futures::StreamExt;
-use rusqlite::OptionalExtension;
+use rusqlite::{params, OptionalExtension};
 use serde::Deserialize;
 use serde_json::{json, Value};
 use std::collections::HashMap;
@@ -53,7 +54,8 @@ use super::router::{self, RoutingDecision};
 use super::translate::{
     map_finish_reason, message_to_gizzi_parts, messages_to_gizzi_parts, new_completion_id,
     stream_error_data, validate_request, Annotation, ChatCompletionChunk, ChatCompletionRequest,
-    ChatCompletionResponse, FileCitation, OpenAiErrorResponse, UrlCitation, Usage,
+    ChatCompletionResponse, ChatMessage, FileCitation, ImageUrlPart, MessageContent,
+    OpenAiErrorResponse, UrlCitation, Usage,
 };
 
 /// Hard cap on a single completion, from send to `session.status` idle.
@@ -77,6 +79,123 @@ fn is_anthropic_provider(requested: &str, resolved: &ResolvedModel) -> bool {
         || resolved.provider_id == "anthropic"
         || requested.starts_with("claude-")
         || resolved.model_id.starts_with("claude-")
+}
+
+/// Resolve any `file_id` references in message content to inline base64 data
+/// URLs. Session-scoped files are checked first, then the global files table.
+async fn resolve_file_references(
+    db: &DbHandle,
+    messages: Vec<ChatMessage>,
+) -> Result<Vec<ChatMessage>, OpenAiErrorResponse> {
+    let mut out = messages;
+    for message in &mut out {
+        let Some(MessageContent::Parts(parts)) = message.content.as_mut() else {
+            continue;
+        };
+        for part in parts {
+            let Some(file_id) = part.file_id.as_deref().filter(|s| !s.is_empty()) else {
+                continue;
+            };
+            let (mime, bytes) = load_file_by_id(db, file_id).await?;
+            let data_url = format!("data:{};base64,{}", mime, STANDARD.encode(&bytes));
+            part.image_url = Some(ImageUrlPart {
+                url: data_url,
+                detail: None,
+            });
+            part.file_id = None;
+        }
+    }
+    Ok(out)
+}
+
+async fn load_file_by_id(
+    db: &DbHandle,
+    file_id: &str,
+) -> Result<(String, Vec<u8>), OpenAiErrorResponse> {
+    let db = db.clone();
+    let file_id = file_id.to_string();
+    tokio::task::spawn_blocking(move || {
+        let conn = db.connect().map_err(|e| {
+            OpenAiErrorResponse::new(
+                StatusCode::INTERNAL_SERVER_ERROR,
+                format!("failed to open database: {e}"),
+                "server_error",
+                None,
+                Some(crate::llm_gateway::translate::error_code::INTERNAL_ERROR),
+            )
+        })?;
+
+        // Prefer session-scoped files.
+        let session_row: Option<(String, String)> = conn
+            .query_row(
+                "SELECT storage_path, mime_type FROM session_files WHERE id = ?1",
+                params![file_id],
+                |row| Ok((row.get(0)?, row.get(1)?)),
+            )
+            .optional()
+            .map_err(|e| {
+                OpenAiErrorResponse::new(
+                    StatusCode::INTERNAL_SERVER_ERROR,
+                    format!("database error: {e}"),
+                    "server_error",
+                    None,
+                    Some(crate::llm_gateway::translate::error_code::INTERNAL_ERROR),
+                )
+            })?;
+        if let Some((path, mime)) = session_row {
+            let bytes = std::fs::read(&path).map_err(|e| {
+                OpenAiErrorResponse::new(
+                    StatusCode::INTERNAL_SERVER_ERROR,
+                    format!("failed to read session file: {e}"),
+                    "server_error",
+                    None,
+                    Some(crate::llm_gateway::translate::error_code::INTERNAL_ERROR),
+                )
+            })?;
+            return Ok((mime, bytes));
+        }
+
+        // Fall back to the global files table used by /v1/files.
+        let global_row: Option<(Vec<u8>, String)> = conn
+            .query_row(
+                "SELECT bytes, filename FROM files WHERE id = ?1",
+                params![file_id],
+                |row| Ok((row.get(0)?, row.get(1)?)),
+            )
+            .optional()
+            .map_err(|e| {
+                OpenAiErrorResponse::new(
+                    StatusCode::INTERNAL_SERVER_ERROR,
+                    format!("database error: {e}"),
+                    "server_error",
+                    None,
+                    Some(crate::llm_gateway::translate::error_code::INTERNAL_ERROR),
+                )
+            })?;
+        if let Some((bytes, filename)) = global_row {
+            let mime = if filename.ends_with(".pdf") {
+                "application/pdf"
+            } else {
+                "application/octet-stream"
+            };
+            return Ok((mime.to_string(), bytes));
+        }
+
+        Err(OpenAiErrorResponse::invalid_request(
+            format!("file_id `{file_id}` not found."),
+            Some("file_id"),
+        ))
+    })
+    .await
+    .map_err(|e| {
+        OpenAiErrorResponse::new(
+            StatusCode::INTERNAL_SERVER_ERROR,
+            format!("failed to load file: {e}"),
+            "server_error",
+            None,
+            Some(crate::llm_gateway::translate::error_code::INTERNAL_ERROR),
+        )
+    })?
 }
 
 /// An `in_progress` idempotency row older than this is assumed abandoned
@@ -1265,6 +1384,13 @@ pub async fn chat_completions(
             PreHookOutcome::Abort(response) => return response,
         }
     }
+
+    // Resolve session-scoped (or global) file_id references to inline data so
+    // downstream Gizzi parts carry the actual file bytes.
+    request.messages = match resolve_file_references(&state.db, request.messages).await {
+        Ok(messages) => messages,
+        Err(response) => return response.into_response(),
+    };
 
     let stream = request.stream.unwrap_or(false);
 

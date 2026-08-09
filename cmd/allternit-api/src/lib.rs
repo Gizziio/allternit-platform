@@ -126,6 +126,7 @@ use cowork::background_service::BackgroundServiceHandle;
 use db::DbHandle;
 use design_connector_routes::DesignSkillCache;
 use rails::RailsState;
+use std::path::PathBuf;
 use std::sync::Arc;
 use terminal_routes::TerminalSessionStore;
 use tokio::sync::RwLock;
@@ -152,6 +153,7 @@ pub mod test_helpers {
         Arc::new(AppState {
             config,
             db,
+            data_dir: temp.to_path_buf(),
             jwks,
             auth_config,
             vm_driver: None,
@@ -205,6 +207,8 @@ pub struct AppState {
     pub config: AppConfig,
     /// SQLite database handle
     pub db: DbHandle,
+    /// Local data directory for on-disk file storage.
+    pub data_dir: PathBuf,
     /// Clerk JWKS manager for JWT verification
     pub jwks: JwksManager,
     /// Unified auth configuration
