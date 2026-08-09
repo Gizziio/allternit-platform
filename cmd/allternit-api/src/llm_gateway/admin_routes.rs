@@ -38,6 +38,79 @@ pub fn gateway_admin_router() -> Router<Arc<AppState>> {
         )
         .route("/gateway/dlp/rules", get(list_dlp_rules).put(put_dlp_rule))
         .route("/gateway/budgets", get(list_budgets).put(put_budget))
+        .route(
+            "/gateway/inference-hooks",
+            get(get_inference_hooks).put(put_inference_hooks),
+        )
+}
+
+// ─── GET/PUT /gateway/inference-hooks ───────────────────────────────────────
+
+async fn get_inference_hooks(
+    State(state): State<Arc<AppState>>,
+    Extension(user): Extension<AuthUser>,
+) -> Response {
+    let result = tokio::task::spawn_blocking(move || {
+        let conn = state.db.connect().map_err(internal_error)?;
+        let scope = admin_scope(&conn, &user)?;
+        let Some(organization_id) = scope.config_tenant(&user) else { return Err(bad_request("Inference hooks require an active organization.")); };
+        let hooks: Option<(Option<String>, Option<String>, i64)> = conn.query_row(
+            "SELECT pre_inference_url, post_inference_url, abort_on_pre_error FROM llm_inference_hooks WHERE organization_id = ?1",
+            [&organization_id], |row| Ok((row.get(0)?, row.get(1)?, row.get(2)?)),
+        ).optional().map_err(internal_error)?;
+        let (pre, post, abort) = hooks.unwrap_or((None, None, 1));
+        Ok::<_, ApiError>(json!({"organization_id": organization_id, "pre_inference_url": pre, "post_inference_url": post, "abort_on_pre_error": abort != 0}))
+    }).await;
+    respond(result)
+}
+
+#[derive(Debug, Deserialize)]
+struct PutInferenceHooksRequest {
+    pre_inference_url: Option<String>,
+    post_inference_url: Option<String>,
+    abort_on_pre_error: Option<bool>,
+}
+
+fn validate_hook_url(value: Option<String>) -> Result<Option<String>, ApiError> {
+    let Some(value) = value
+        .map(|v| v.trim().to_string())
+        .filter(|v| !v.is_empty())
+    else {
+        return Ok(None);
+    };
+    let parsed = reqwest::Url::parse(&value)
+        .map_err(|_| bad_request("Inference hook URLs must be valid HTTP(S) URLs."))?;
+    if !matches!(parsed.scheme(), "http" | "https") {
+        return Err(bad_request("Inference hook URLs must use HTTP or HTTPS."));
+    }
+    Ok(Some(value))
+}
+
+async fn put_inference_hooks(
+    State(state): State<Arc<AppState>>,
+    Extension(user): Extension<AuthUser>,
+    Json(payload): Json<PutInferenceHooksRequest>,
+) -> Response {
+    let pre = match validate_hook_url(payload.pre_inference_url) {
+        Ok(v) => v,
+        Err(e) => return e.into_response(),
+    };
+    let post = match validate_hook_url(payload.post_inference_url) {
+        Ok(v) => v,
+        Err(e) => return e.into_response(),
+    };
+    let abort = payload.abort_on_pre_error.unwrap_or(true);
+    let result = tokio::task::spawn_blocking(move || {
+        let conn = state.db.connect().map_err(internal_error)?;
+        let scope = admin_scope(&conn, &user)?;
+        let Some(organization_id) = scope.config_tenant(&user) else { return Err(bad_request("Inference hooks require an active organization.")); };
+        conn.execute(
+            "INSERT INTO llm_inference_hooks (organization_id, pre_inference_url, post_inference_url, abort_on_pre_error) VALUES (?1, ?2, ?3, ?4) ON CONFLICT(organization_id) DO UPDATE SET pre_inference_url = excluded.pre_inference_url, post_inference_url = excluded.post_inference_url, abort_on_pre_error = excluded.abort_on_pre_error, updated_at = CURRENT_TIMESTAMP",
+            params![organization_id, pre, post, abort as i64],
+        ).map_err(internal_error)?;
+        Ok::<_, ApiError>(json!({"organization_id": organization_id, "pre_inference_url": pre, "post_inference_url": post, "abort_on_pre_error": abort}))
+    }).await;
+    respond(result)
 }
 
 // ─── Errors & scoping ────────────────────────────────────────────────────────
