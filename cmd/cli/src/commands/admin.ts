@@ -182,12 +182,52 @@ export function createAdminCommand(): Command {
         }),
     );
 
+  const inferenceHooks = new Command('inference-hooks')
+    .description('Manage LLM gateway inference hooks')
+    .addCommand(
+      new Command('list').action(function (this: Command) {
+        return run(this, () => client(this).request('GET', '/api/v1/gateway/inference-hooks'));
+      }),
+    )
+    .addCommand(
+      new Command('create')
+        .option('--pre-url <url>', 'pre-inference webhook URL')
+        .option('--post-url <url>', 'post-inference webhook URL')
+        .option('--abort-on-pre-error [value]', 'abort request when pre-hook fails (true/false)', 'true')
+        .action(function (this: Command, options: { preUrl?: string; postUrl?: string; abortOnPreError?: string }) {
+          return run(this, () => client(this).request('POST', '/api/v1/gateway/inference-hooks', {
+            pre_inference_url: options.preUrl,
+            post_inference_url: options.postUrl,
+            abort_on_pre_error: options.abortOnPreError === 'true',
+          }));
+        }),
+    )
+    .addCommand(
+      new Command('update')
+        .option('--pre-url <url>', 'pre-inference webhook URL')
+        .option('--post-url <url>', 'post-inference webhook URL')
+        .option('--abort-on-pre-error [value]', 'abort request when pre-hook fails (true/false)')
+        .action(function (this: Command, options: { preUrl?: string; postUrl?: string; abortOnPreError?: string }) {
+          const payload: Record<string, unknown> = {};
+          if (options.preUrl !== undefined) payload.pre_inference_url = options.preUrl;
+          if (options.postUrl !== undefined) payload.post_inference_url = options.postUrl;
+          if (options.abortOnPreError !== undefined) payload.abort_on_pre_error = options.abortOnPreError === 'true';
+          return run(this, () => client(this).request('PUT', '/api/v1/gateway/inference-hooks', payload));
+        }),
+    )
+    .addCommand(
+      new Command('delete').action(function (this: Command) {
+        return run(this, () => client(this).request('DELETE', '/api/v1/gateway/inference-hooks'));
+      }),
+    );
+
   return new Command('admin')
     .description('Administer platform resources')
     .addCommand(workspaces)
     .addCommand(keys)
     .addCommand(budgets)
-    .addCommand(mcpTunnels);
+    .addCommand(mcpTunnels)
+    .addCommand(inferenceHooks);
 }
 
 export const adminCommand = createAdminCommand();
