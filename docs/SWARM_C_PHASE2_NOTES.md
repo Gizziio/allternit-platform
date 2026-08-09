@@ -11,7 +11,7 @@ files_changed:
   - cmd/allternit-api/src/memory_routes.rs
   - cmd/allternit-api/src/tool_routes.rs
   - cmd/allternit-api/src/lib.rs
-  - cmd/allternit-api/migrations/V41__session_memory.sql
+  - cmd/allternit-api/migrations/V47__session_memory.sql
 deviations:
   - The default `code_execution` runner in the SDK is a local subprocess fallback rather than a true WebVM/WASM sandbox. The API `tool_routes.rs` implementation also uses a subprocess fallback because the VM driver (`state.vm_driver`) is optional and not guaranteed to be available in offline tests. The runner is fully injectable, so callers can swap in the WebVM/cloud runtime driver when it is ready.
   - The `bash` tool in the SDK is registered separately from the existing `capabilities/bash.ts` `BashCapability`/`BASH_TOOL`. The new tool uses the WebVM contract (`command`, `timeout`, `restart`) and an injectable `BashRunner`.
@@ -37,7 +37,7 @@ remaining:
 
 ### Rust API (`cmd/allternit-api`)
 
-- **`migrations/V41__session_memory.sql`**: New `session_memory` table keyed by `(user_id, session_id, memory_key)` with indexes on `(user_id, session_id)` and `memory_key`.
+- **`migrations/V47__session_memory.sql`**: New `session_memory` table keyed by `(user_id, session_id, memory_key)` with indexes on `(user_id, session_id)` and `memory_key`.
 - **`src/session_memory_service.rs`**: New SQLite-backed service with `read_session_memory`, `list_session_memory`, `write_session_memory`, and `delete_session_memory`. Values are stored as JSON.
 - **`src/memory_routes.rs`**: Added REST endpoints:
   - `GET /api/v1/memory/session` — read one key
