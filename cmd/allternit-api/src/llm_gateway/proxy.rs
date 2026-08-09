@@ -1075,6 +1075,56 @@ async fn idempotency_begin(db: &DbHandle, key: &LlmKeyContext, idem_key: &str) -
 
 // ─── Handlers ───────────────────────────────────────────────────────────────
 
+/// Deterministic, provider-independent estimate used for preflight sizing.
+/// Four UTF-8 characters per token is intentionally simple and stable.
+pub fn estimate_tokens(request: &ChatCompletionRequest) -> u64 {
+    let characters = request
+        .messages
+        .iter()
+        .map(|message| message.role.chars().count() + message.content_text().chars().count())
+        .sum::<usize>();
+    ((characters + 3) / 4) as u64
+}
+
+/// `POST /tokens` — estimate input tokens for a chat-completions-shaped body.
+pub async fn count_tokens(
+    Extension(key): Extension<LlmKeyContext>,
+    body: axum::body::Bytes,
+) -> Response {
+    let request: ChatCompletionRequest = match serde_json::from_slice(&body) {
+        Ok(request) => request,
+        Err(err) => {
+            return OpenAiErrorResponse::invalid_request(
+                format!("Invalid request body: {err}"),
+                None,
+            )
+            .into_response()
+        }
+    };
+    if let Err(response) = validate_request(&request) {
+        return response.into_response();
+    }
+    if !key.model_allowed(&request.model) {
+        return OpenAiErrorResponse::new(
+            StatusCode::FORBIDDEN,
+            format!(
+                "This API key is not allowed to use model `{}`.",
+                request.model
+            ),
+            "permission_error",
+            Some("model"),
+            Some(crate::llm_gateway::translate::error_code::PERMISSION_DENIED),
+        )
+        .into_response();
+    }
+    Json(json!({
+        "object": "token_count",
+        "model": request.model,
+        "input_tokens": estimate_tokens(&request),
+    }))
+    .into_response()
+}
+
 /// `POST /chat/completions` — OpenAI-compatible completion via Gizzi.
 #[tracing::instrument(skip_all, name = "llm_gateway.chat_completions")]
 pub async fn chat_completions(
@@ -1677,4 +1727,20 @@ pub async fn list_models(
     }
 
     Json(json!({ "object": "list", "data": data })).into_response()
+}
+
+#[cfg(test)]
+mod token_tests {
+    use super::*;
+
+    #[test]
+    fn token_estimate_is_deterministic_and_rounds_up() {
+        let request: ChatCompletionRequest = serde_json::from_value(json!({
+            "model": "test/model",
+            "messages": [{ "role": "user", "content": "hello" }]
+        }))
+        .unwrap();
+        // "user" + "hello" = 9 characters, rounded up at four chars/token.
+        assert_eq!(estimate_tokens(&request), 3);
+    }
 }

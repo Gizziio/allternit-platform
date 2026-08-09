@@ -27,11 +27,12 @@ describe('normalized provider requests', () => {
   });
 
   it('maps Anthropic thinking and cache boundaries', () => {
-    const body = toAnthropicRequest(request) as any;
+    const body = toAnthropicRequest({ ...request, citations: true }) as any;
     expect(body.thinking.budget_tokens).toBe(2048);
     expect(body.system[0].cache_control.type).toBe('ephemeral');
     expect(body.tools[0].cache_control.type).toBe('ephemeral');
     expect(body.disable_parallel_tool_use).toBe(true);
+    expect(body.citations).toBe(true);
   });
 
   it('maps Kimi thinking without leaking reasoning_effort', () => {

@@ -65,3 +65,15 @@ Just did: Added V36 credential/vault schema, scoped enterprise credential manage
 Next: Stage and commit the completed Phase 0 files once the linked-worktree Git index is writable.
 
 Open questions: Commit is blocked because the sandbox denies creation of the linked-worktree `index.lock` under the canonical checkout's `.git/worktrees` directory. Builds/tests are intentionally not run under the Swarm E repository instructions.
+
+---
+
+## Swarm A checkpoint (2026-08-09)
+
+Goal: Complete Swarm A Core API / Harness Phase 1.
+
+Just did: Implemented owner-scoped batch metadata endpoints, deterministic token counting, Anthropic citation events/collection, and OpenAI-compatible embeddings. `cargo check --lib` passes; the focused Rust test is blocked by a pre-existing test compile error in `translate.rs`, and the TypeScript test runner is not locally installed.
+
+Next: Stage and commit the reviewed Swarm A files from a session with write access to the linked-worktree Git index.
+
+Open questions: Commit is blocked because the sandbox denies creation of the linked-worktree `index.lock` under the canonical checkout's `.git/worktrees` directory. Provider batch polling and result backfill remain Phase 2 by design.

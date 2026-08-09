@@ -1,5 +1,7 @@
 // Core harness
 export { AllternitHarness } from './harness/index.js';
+export { AllternitEmbeddings } from './embeddings.js';
+export type { EmbeddingsCreateRequest, EmbeddingsResponse, Embedding } from './embeddings.js';
 export type { 
   HarnessConfig, 
   StreamRequest, 
@@ -7,6 +9,7 @@ export type {
   HarnessResponse,
   HarnessStreamChunk,
   HarnessMode,
+  Citation,
 } from './harness/types.js';
 
 // Agent runtime

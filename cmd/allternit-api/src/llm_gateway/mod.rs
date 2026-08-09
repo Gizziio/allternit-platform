@@ -30,6 +30,7 @@
 
 pub mod admin_routes;
 pub mod auth;
+pub mod batches;
 pub mod benchmarks;
 pub mod dlp;
 pub mod dlp_patterns;
@@ -60,6 +61,14 @@ use crate::AppState;
 pub fn llm_gateway_router(state: Arc<AppState>) -> Router<Arc<AppState>> {
     Router::new()
         .route("/chat/completions", post(proxy::chat_completions))
+        .route("/tokens", post(proxy::count_tokens))
+        .route(
+            "/batches",
+            post(batches::create_batch).get(batches::list_batches),
+        )
+        .route("/batches/:id", get(batches::get_batch))
+        .route("/batches/:id/cancel", post(batches::cancel_batch))
+        .route("/batches/:id/results", get(batches::batch_results))
         .route("/models", get(proxy::list_models))
         // Layer order: the LAST layer added runs FIRST. Execution order is
         // therefore llm_key auth → rate limit → DLP → budget → handler.
