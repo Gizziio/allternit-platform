@@ -1,5 +1,13 @@
 import fs from "fs/promises"
 import path from "path"
+import { Auth } from "@/runtime/integrations/auth"
+import {
+  createCredentialWriter,
+  type CredentialStore,
+  type CredentialWriter,
+} from "./credential-store"
+
+const AUTH_PROFILE_SERVICE = "gizzi-auth-profile"
 
 export type AuthProfile = {
   provider: string
@@ -10,6 +18,7 @@ export type AuthProfile = {
 
 export type AuthProfiles = {
   active_profile?: string
+  credential_store?: CredentialStore
   profiles: Record<string, AuthProfile>
 }
 
@@ -20,6 +29,7 @@ function quote(value: string): string {
 function render(auth: AuthProfiles): string {
   const lines = ["[auth]"]
   if (auth.active_profile) lines.push(`active_profile = ${quote(auth.active_profile)}`)
+  if (auth.credential_store) lines.push(`credential_store = ${quote(auth.credential_store)}`)
 
   for (const name of Object.keys(auth.profiles).sort()) {
     const profile = auth.profiles[name]!
@@ -52,6 +62,7 @@ export async function readAuthProfiles(configPath: string): Promise<AuthProfiles
   const parsed = Bun.TOML.parse(text) as { auth?: Partial<AuthProfiles> }
   return {
     active_profile: parsed.auth?.active_profile,
+    credential_store: parsed.auth?.credential_store,
     profiles: parsed.auth?.profiles ?? {},
   }
 }
@@ -88,4 +99,121 @@ export async function setActiveAuthProfile(configPath: string, name: string): Pr
   if (!auth.profiles[name]) throw new Error(`Auth profile not found: ${name}`)
   auth.active_profile = name
   await writeAuthProfiles(configPath, auth)
+}
+
+export type LoginApiKeyResult = {
+  profile: string
+  method: "file" | "keyring"
+}
+
+/**
+ * Store an API key for CLI authentication.
+ *
+ * The key is written to the active/default auth profile. The storage location
+ * is controlled by `auth.credential_store` in config.toml (`"file"`,
+ * `"keyring"`, or `"auto"`). When the store is `"file"` the key is written
+ * inline in config.toml; for `"keyring"` it is delegated to the configured
+ * {@link CredentialWriter}. `"auto"` prefers keyring and falls back to file.
+ */
+export async function loginApiKey(
+  configPath: string,
+  apiKey: string,
+  options: {
+    profile?: string
+    provider?: string
+    credentialStore?: CredentialStore
+    writer?: CredentialWriter
+  } = {},
+): Promise<LoginApiKeyResult> {
+  const auth = await readAuthProfiles(configPath)
+  const profileName = options.profile ?? "default"
+  const store = options.credentialStore ?? auth.credential_store ?? "file"
+  const writer = options.writer ?? createCredentialWriter(store)
+
+  const existing = auth.profiles[profileName]
+  const profile: AuthProfile = {
+    provider: options.provider ?? existing?.provider ?? "anthropic",
+    api_key_env: existing?.api_key_env,
+    base_url: existing?.base_url,
+  }
+
+  let storedIn: "file" | "keyring" = "file"
+
+  if (store === "keyring") {
+    await writer.write(AUTH_PROFILE_SERVICE, profileName, apiKey)
+    storedIn = "keyring"
+  } else if (store === "auto") {
+    try {
+      await writer.write(AUTH_PROFILE_SERVICE, profileName, apiKey)
+      storedIn = "keyring"
+    } catch {
+      profile.api_key = apiKey
+      storedIn = "file"
+    }
+  } else {
+    profile.api_key = apiKey
+  }
+
+  auth.profiles[profileName] = profile
+  auth.active_profile = profileName
+  auth.credential_store = store
+  await writeAuthProfiles(configPath, auth)
+  return { profile: profileName, method: storedIn }
+}
+
+export type ApiKeySource = "config" | "keyring" | "env" | "none"
+
+/**
+ * Resolve the API key for a profile, respecting the configured credential store.
+ */
+export async function resolveApiKey(
+  configPath: string,
+  name?: string,
+  writer?: CredentialWriter,
+): Promise<{ source: ApiKeySource; key: string | null; profile?: AuthProfile; profileName?: string }> {
+  const auth = await readAuthProfiles(configPath)
+  const profileName = name ?? auth.active_profile
+  if (!profileName) return { source: "none", key: null }
+  const profile = auth.profiles[profileName]
+  if (!profile) return { source: "none", key: null, profileName }
+
+  if (profile.api_key_env && process.env[profile.api_key_env]) {
+    return { source: "env", key: process.env[profile.api_key_env]!, profile, profileName }
+  }
+
+  if (profile.api_key) {
+    return { source: "config", key: profile.api_key, profile, profileName }
+  }
+
+  const store = auth.credential_store ?? "file"
+  if (store === "keyring" || store === "auto") {
+    const key = await (writer ?? createCredentialWriter(store)).read(AUTH_PROFILE_SERVICE, profileName)
+    if (key) return { source: "keyring", key, profile, profileName }
+  }
+
+  return { source: "none", key: null, profile, profileName }
+}
+
+export type AuthMethod = "none" | "oauth_token" | "api_key"
+
+/**
+ * Determine the active authentication method.
+ *
+ * OAuth tokens stored in the runtime auth store take precedence. Otherwise, a
+ * resolved API key from config.toml or keyring is reported as `api_key`.
+ */
+export async function getAuthStatus(
+  configPath: string,
+  writer?: CredentialWriter,
+): Promise<{ method: AuthMethod; profile?: string }> {
+  const runtimeAuth = await Auth.all()
+  const hasOAuth = Object.values(runtimeAuth).some((info) => info.type === "oauth")
+  if (hasOAuth) return { method: "oauth_token" }
+
+  const resolved = await resolveApiKey(configPath, undefined, writer)
+  if (resolved.key !== null) {
+    return { method: "api_key", profile: resolved.profileName }
+  }
+
+  return { method: "none" }
 }

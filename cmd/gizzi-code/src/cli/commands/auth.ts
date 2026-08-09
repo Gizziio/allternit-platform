@@ -6,12 +6,60 @@ import { UI } from "@/cli/ui"
 import { Global } from "@/runtime/context/global"
 import {
   addAuthProfile,
+  getAuthStatus,
+  loginApiKey,
   readAuthProfiles,
   removeAuthProfile,
   setActiveAuthProfile,
 } from "@/runtime/context/config/auth-profiles"
 
 const configPath = () => path.join(Global.Path.config, "config.toml")
+
+const LoginCommand = cmd({
+  command: "login",
+  describe: "sign in with an API key",
+  builder: (yargs) =>
+    yargs
+      .option("api-key", { type: "string", describe: "API key" })
+      .option("provider", { type: "string", describe: "provider id", default: "anthropic" })
+      .option("profile", { type: "string", describe: "profile name", default: "default" }),
+  async handler(args) {
+    let apiKey = args.apiKey
+    if (!apiKey) {
+      const answer = await prompts.password({
+        message: "API key",
+        validate: (value) => value?.trim() ? undefined : "Required",
+      })
+      if (prompts.isCancel(answer)) throw new UI.CancelledError()
+      apiKey = answer.trim()
+    }
+    const result = await loginApiKey(configPath(), apiKey, {
+      provider: args.provider,
+      profile: args.profile,
+    })
+    UI.println(`Signed in with API key (${result.method}): ${result.profile}`)
+  },
+})
+
+const StatusCommand = cmd({
+  command: "status",
+  describe: "show active authentication method",
+  async handler() {
+    const status = await getAuthStatus(configPath())
+    switch (status.method) {
+      case "oauth_token":
+        UI.println("Authenticated via OAuth token")
+        break
+      case "api_key":
+        UI.println(`Authenticated via API key${status.profile ? `: ${status.profile}` : ""}`)
+        break
+      case "none":
+      default:
+        UI.println("Not authenticated")
+        break
+    }
+  },
+})
 
 const ProfileListCommand = cmd({
   command: "list",
@@ -111,6 +159,11 @@ const ProfileCommand = cmd({
 export const AuthCommand = cmd({
   command: "auth",
   describe: "manage authentication",
-  builder: (yargs: Argv) => yargs.command(ProfileCommand).demandCommand(),
+  builder: (yargs: Argv) =>
+    yargs
+      .command(LoginCommand)
+      .command(StatusCommand)
+      .command(ProfileCommand)
+      .demandCommand(),
   async handler() {},
 })

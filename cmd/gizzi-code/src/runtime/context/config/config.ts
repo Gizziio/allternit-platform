@@ -1269,6 +1269,7 @@ export namespace Config {
       auth: z
         .object({
           active_profile: z.string().optional(),
+          credential_store: z.enum(["file", "keyring", "auto"]).optional(),
           profiles: z
             .record(
               z.string(),
