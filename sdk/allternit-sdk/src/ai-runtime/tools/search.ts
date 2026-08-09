@@ -2,6 +2,9 @@ import type { ToolDefinition } from './types.js';
 import type { ToolRegistry } from './registry.js';
 import { NativeWebTools, type WebToolOptions } from './web.js';
 import { attachMcpServer, type McpServerAttachment } from './mcp.js';
+import { TextEditorTool, type TextEditorOptions } from './text-editor.js';
+
+export interface NativeToolBeltOptions extends WebToolOptions, TextEditorOptions {}
 
 /**
  * tool_search Tool Definition
@@ -34,7 +37,7 @@ export const TOOL_ACTIVATE_DEFINITION: ToolDefinition = {
 };
 
 export class NativeToolBelt {
-  constructor(private registry: ToolRegistry, webOptions: WebToolOptions = {}) {
+  constructor(private registry: ToolRegistry, options: NativeToolBeltOptions = {}) {
     // Register the search and activate tools themselves
     this.registry.registerTool({
       ...TOOL_SEARCH_DEFINITION,
@@ -52,9 +55,10 @@ export class NativeToolBelt {
       }
     });
 
-    for (const tool of new NativeWebTools(webOptions).definitions()) {
+    for (const tool of new NativeWebTools(options).definitions()) {
       this.registry.registerTool(tool, { strict: true });
     }
+    this.registry.registerTool(new TextEditorTool(options).definition(), { strict: true });
   }
 
   public attachMcpServer(server: McpServerAttachment): Promise<string[]> {

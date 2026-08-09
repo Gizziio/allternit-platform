@@ -1,6 +1,7 @@
 import type { ToolDefinition } from './types.js';
 
 export type WebSearchMode = 'cached' | 'indexed' | 'live';
+export type WebSearchProvider = 'duckduckgo' | 'tavily' | 'perplexity' | 'bing';
 
 export interface WebSearchResult {
   title: string;
@@ -10,6 +11,8 @@ export interface WebSearchResult {
 
 export interface WebToolOptions {
   fetch?: typeof globalThis.fetch;
+  provider?: WebSearchProvider;
+  apiKeys?: Partial<Record<Exclude<WebSearchProvider, 'duckduckgo'>, string>>;
   searchIndex?: (query: string, limit: number) => Promise<WebSearchResult[]>;
   liveSearch?: (query: string, limit: number) => Promise<WebSearchResult[]>;
   cache?: Map<string, WebSearchResult[]>;
@@ -95,6 +98,11 @@ export class NativeWebTools {
   }
 
   private async defaultLiveSearch(query: string, limit: number): Promise<WebSearchResult[]> {
+    const provider = this.resolveProvider();
+    if (provider === 'tavily') return this.searchTavily(query, limit);
+    if (provider === 'perplexity') return this.searchPerplexity(query, limit);
+    if (provider === 'bing') return this.searchBing(query, limit);
+
     const url = new URL('https://html.duckduckgo.com/html/');
     url.searchParams.set('q', query);
     const response = await this.fetchImpl(url, { headers: { accept: 'text/html' } });
@@ -108,6 +116,104 @@ export class NativeWebTools {
     }
     return results;
   }
+
+  private resolveProvider(): WebSearchProvider {
+    if (this.options.provider) return this.options.provider;
+    if (this.apiKey('tavily')) return 'tavily';
+    if (this.apiKey('perplexity')) return 'perplexity';
+    if (this.apiKey('bing')) return 'bing';
+    return 'duckduckgo';
+  }
+
+  private apiKey(provider: Exclude<WebSearchProvider, 'duckduckgo'>): string | undefined {
+    const configured = this.options.apiKeys?.[provider];
+    if (configured) return configured;
+    const environmentNames = {
+      tavily: 'TAVILY_API_KEY',
+      perplexity: 'PERPLEXITY_API_KEY',
+      bing: 'BING_SEARCH_API_KEY',
+    } as const;
+    return process.env[environmentNames[provider]];
+  }
+
+  private requireApiKey(provider: Exclude<WebSearchProvider, 'duckduckgo'>): string {
+    const key = this.apiKey(provider);
+    if (!key) throw new Error(`${provider} web search requires an API key`);
+    return key;
+  }
+
+  private async searchTavily(query: string, limit: number): Promise<WebSearchResult[]> {
+    const response = await this.fetchImpl('https://api.tavily.com/search', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json', accept: 'application/json' },
+      body: JSON.stringify({ api_key: this.requireApiKey('tavily'), query, max_results: limit }),
+    });
+    const data = await readSearchJson(response);
+    return asArray(data.results).slice(0, limit).map(result => ({
+      title: asString(result.title),
+      url: asString(result.url),
+      snippet: asString(result.content),
+    }));
+  }
+
+  private async searchPerplexity(query: string, limit: number): Promise<WebSearchResult[]> {
+    const response = await this.fetchImpl('https://api.perplexity.ai/chat/completions', {
+      method: 'POST',
+      headers: {
+        authorization: `Bearer ${this.requireApiKey('perplexity')}`,
+        'content-type': 'application/json',
+        accept: 'application/json',
+      },
+      body: JSON.stringify({ model: 'sonar', messages: [{ role: 'user', content: query }], max_tokens: 512 }),
+    });
+    const data = await readSearchJson(response);
+    const searchResults = asArray(data.search_results);
+    if (searchResults.length > 0) {
+      return searchResults.slice(0, limit).map(result => ({
+        title: asString(result.title),
+        url: asString(result.url),
+        snippet: asString(result.snippet ?? result.text),
+      }));
+    }
+    const citations = Array.isArray(data.citations) ? data.citations : [];
+    const answer = asString(asArray(data.choices)[0]?.message && (asArray(data.choices)[0].message as Record<string, unknown>).content);
+    return citations.slice(0, limit).map((url, index) => ({ title: `Source ${index + 1}`, url: asString(url), snippet: answer }));
+  }
+
+  private async searchBing(query: string, limit: number): Promise<WebSearchResult[]> {
+    const url = new URL('https://api.bing.microsoft.com/v7.0/search');
+    url.searchParams.set('q', query);
+    url.searchParams.set('count', String(limit));
+    const response = await this.fetchImpl(url, {
+      headers: { 'Ocp-Apim-Subscription-Key': this.requireApiKey('bing'), accept: 'application/json' },
+    });
+    const data = await readSearchJson(response);
+    const webPages = isRecord(data.webPages) ? data.webPages : {};
+    return asArray(webPages.value).slice(0, limit).map(result => ({
+      title: asString(result.name),
+      url: asString(result.url),
+      snippet: asString(result.snippet),
+    }));
+  }
+}
+
+async function readSearchJson(response: Response): Promise<Record<string, unknown>> {
+  if (!response.ok) throw new Error(`web_search failed with HTTP ${response.status}`);
+  const value: unknown = await response.json();
+  if (!isRecord(value)) throw new Error('web_search provider returned an invalid response');
+  return value;
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === 'object' && value !== null && !Array.isArray(value);
+}
+
+function asArray(value: unknown): Record<string, unknown>[] {
+  return Array.isArray(value) ? value.filter(isRecord) : [];
+}
+
+function asString(value: unknown): string {
+  return typeof value === 'string' ? value : '';
 }
 
 function parseWebUrl(input: string): URL {

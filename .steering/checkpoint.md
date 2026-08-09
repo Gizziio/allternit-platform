@@ -65,3 +65,15 @@ Just did: Added V36 credential/vault schema, scoped enterprise credential manage
 Next: Stage and commit the completed Phase 0 files once the linked-worktree Git index is writable.
 
 Open questions: Commit is blocked because the sandbox denies creation of the linked-worktree `index.lock` under the canonical checkout's `.git/worktrees` directory. Builds/tests are intentionally not run under the Swarm E repository instructions.
+
+---
+
+## Swarm C Phase 1 checkpoint (2026-08-09)
+
+Goal: Complete the mapped web adapters, text editor, and computer-use schema alignment.
+
+Just did: Implemented injected-fetch Tavily/Perplexity/Bing adapters with DuckDuckGo fallback; added a workspace-confined text editor with view/create/replace/insert/undo; aligned computer-use actions, pixel coordinates, metadata, and screenshot image blocks; added offline unit coverage; resolved a committed merge marker in mapped `tools/types.ts`.
+
+Next: From a session with write access to the canonical checkout's linked-worktree Git metadata, stage and commit the completed Phase 1 changes to `ao/p1-swarm-c`; run the targeted tool-belt test once dependencies are available.
+
+Open questions: Commit is blocked because the sandbox denies creation of `/Users/joe/Desktop/allternit-workspace/allternit/.git/worktrees/allternit-parity-p1-swarm-c/index.lock`. The targeted Vitest command also cannot start because this worktree has no installed Vitest binary.

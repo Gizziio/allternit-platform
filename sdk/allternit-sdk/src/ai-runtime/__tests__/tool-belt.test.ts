@@ -5,6 +5,10 @@ import { AgentRun } from '../agents/run.js';
 import { NativeToolBelt } from '../tools/search.js';
 import { ToolRegistry } from '../tools/registry.js';
 import { toStrictJsonSchema } from '../tools/schema.js';
+import { ComputerUseCapability } from '../capabilities/computer-use.js';
+import { mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
 
 describe('Native Agent Tool Belt', () => {
   let harness: AllternitHarness;
@@ -99,6 +103,7 @@ describe('Native Agent Tool Belt', () => {
     expect(schemas.map(s => s.name)).toContain('tool_activate');
     expect(schemas.map(s => s.name)).toContain('web_search');
     expect(schemas.map(s => s.name)).toContain('web_fetch');
+    expect(schemas.map(s => s.name)).toContain('str_replace_editor');
   });
 
   it('supports cached, indexed, and live web search modes', async () => {
@@ -130,6 +135,86 @@ describe('Native Agent Tool Belt', () => {
     expect(result.title).toBe('Example & Test');
     expect(result.text).toContain('Hello World');
     expect(result.text).not.toContain('bad()');
+  });
+
+  it.each([
+    {
+      provider: 'tavily' as const,
+      apiKeys: { tavily: 'tavily-key' },
+      response: { results: [{ title: 'Tavily', url: 'https://tavily.test', content: 'result' }] },
+      assertRequest: (url: string, init?: RequestInit) => {
+        expect(url).toBe('https://api.tavily.com/search');
+        expect(JSON.parse(String(init?.body))).toMatchObject({ api_key: 'tavily-key', query: 'tools', max_results: 2 });
+      },
+    },
+    {
+      provider: 'perplexity' as const,
+      apiKeys: { perplexity: 'perplexity-key' },
+      response: { search_results: [{ title: 'Perplexity', url: 'https://perplexity.test', snippet: 'result' }] },
+      assertRequest: (url: string, init?: RequestInit) => {
+        expect(url).toBe('https://api.perplexity.ai/chat/completions');
+        expect((init?.headers as Record<string, string>).authorization).toBe('Bearer perplexity-key');
+      },
+    },
+    {
+      provider: 'bing' as const,
+      apiKeys: { bing: 'bing-key' },
+      response: { webPages: { value: [{ name: 'Bing', url: 'https://bing.test', snippet: 'result' }] } },
+      assertRequest: (url: string, init?: RequestInit) => {
+        expect(url).toContain('api.bing.microsoft.com/v7.0/search');
+        expect((init?.headers as Record<string, string>)['Ocp-Apim-Subscription-Key']).toBe('bing-key');
+      },
+    },
+  ])('uses the $provider search adapter with injected fetch', async ({ provider, apiKeys, response, assertRequest }) => {
+    const registry = new ToolRegistry();
+    new NativeToolBelt(registry, {
+      provider,
+      apiKeys,
+      fetch: async (input, init) => {
+        assertRequest(String(input), init);
+        return Response.json(response);
+      },
+    });
+
+    const results = await registry.getTool('web_search')!.execute!({ query: 'tools', limit: 2 }, {});
+    expect(results).toHaveLength(1);
+    expect(results[0].snippet).toBe('result');
+  });
+
+  it('edits workspace text files and undoes the last edit', async () => {
+    const workspaceRoot = await mkdtemp(join(tmpdir(), 'allternit-editor-'));
+    try {
+      await writeFile(join(workspaceRoot, 'example.txt'), 'alpha\nbeta\n', 'utf8');
+      const registry = new ToolRegistry();
+      new NativeToolBelt(registry, { workspaceRoot });
+      const editor = registry.getTool('str_replace_editor')!;
+
+      expect(await editor.execute!({ command: 'view', path: 'example.txt', view_range: [2, 2] }, {})).toBe('2: beta');
+      await editor.execute!({ command: 'str_replace', path: 'example.txt', old_str: 'beta', new_str: 'gamma' }, {});
+      await editor.execute!({ command: 'insert', path: 'example.txt', insert_line: 1, new_str: 'inserted' }, {});
+      expect(await readFile(join(workspaceRoot, 'example.txt'), 'utf8')).toBe('alpha\ninserted\ngamma\n');
+      await editor.execute!({ command: 'undo', path: 'example.txt' }, {});
+      expect(await readFile(join(workspaceRoot, 'example.txt'), 'utf8')).toBe('alpha\ngamma\n');
+      await expect(editor.execute!({ command: 'view', path: '../outside.txt' }, {})).rejects.toThrow('within the active workspace');
+    } finally {
+      await rm(workspaceRoot, { recursive: true, force: true });
+    }
+  });
+
+  it('uses computer_20250124 actions and returns screenshot image blocks', async () => {
+    const capability = new ComputerUseCapability({
+      fetch: async () => Response.json({ screenshot: 'data:image/png;base64,cG5n' }),
+      displayWidthPx: 1280,
+      displayHeightPx: 720,
+    });
+    const tool = capability.getTool();
+
+    expect(tool.metadata).toMatchObject({ anthropicType: 'computer_20250124', display_width_px: 1280, display_height_px: 720 });
+    expect(tool.input_schema.properties.action.enum).toContain('scroll');
+    expect(await tool.execute!({ action: 'screenshot' }, {})).toEqual([{
+      type: 'image',
+      source: { type: 'base64', media_type: 'image/png', data: 'cG5n' },
+    }]);
   });
 
   it('namespaces tools and validates strict schemas', () => {
