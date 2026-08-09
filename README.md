@@ -248,27 +248,35 @@ function VerificationDashboard({ wihId }) {
 
 ## Build Instructions
 
-### Shell Web App
+### Full platform stack (recommended for local development)
 ```bash
-cd 7-apps/shell/web
-pnpm install
-pnpm dev
+pnpm dev:platform-stack
 ```
+Starts the Rust API (`:8013`), the Vite platform UI (`:3013`), and the Gizzi runtime (`:4096`) in one `concurrently` session.
 
-### UI Platform (Component Library)
+### Rust API only
 ```bash
-cd 6-ui/allternit-platform
-pnpm install
-pnpm build
-```
-
-### Rust Services
-```bash
-# Build all Rust services
-cargo build --release
-
-# Run specific service
+# From the workspace root
 cargo run -p allternit-api
+
+# Or use the Makefile target
+make api
+```
+
+### Platform web only
+```bash
+pnpm dev:platform
+```
+
+### Gizzi CLI / runtime
+```bash
+cd cmd/gizzi-code
+
+# Packaged CLI
+gizzi serve --port 4096 --hostname 127.0.0.1
+
+# Development build
+./dist/gizzi-code serve --port 4096 --hostname 127.0.0.1 --print-logs
 ```
 
 ---
@@ -289,23 +297,22 @@ The project has undergone significant restructuring. See [MIGRATION_PLAN.md](./M
 - [DESIGN.md](./DESIGN.md) - Design system v2.0 (tokens, typography, colors, animation, accessibility)
 - [docs/IMPLEMENTATION_DAG.md](./docs/IMPLEMENTATION_DAG.md) - Implementation DAG and service documentation
 - [docs/MASTER_INDEX.md](./docs/MASTER_INDEX.md) - Documentation index
+- [docs/public/api/reference.md](./docs/public/api/reference.md) - Public API reference
+- [docs/public/providers/parity-matrix.md](./docs/public/providers/parity-matrix.md) - Provider parity matrix
 
 ---
 
 ## Service Ports
 
-| Service | Port | Language | Description |
-|---------|------|----------|-------------|
-| Gateway | 8013 | Python | API Gateway |
-| API | 3000 | Rust | Public API |
-| Kernel | 3004 | Rust | Execution engine |
-| Memory | 3200 | Rust | State management |
-| Registry | 8080 | Rust | Agent/skill registry |
-| Voice | 8001 | Python | TTS service |
-| WebVM | 8002 | Rust | WebAssembly VMs |
-| Operator | 3010 | Python | Browser automation |
-| Rails | 3011 | Rust | Agent task planning |
-| Visual Verification | 50052 | TypeScript/gRPC | UI evidence capture |
+| Service | Port | Language / Runtime | Description |
+|---------|------|--------------------|-------------|
+| allternit-api | 8013 | Rust | Public REST API (Clerk-protected `/api/v1` and OpenAI-compatible `/v1`) |
+| ai.allternit.com (platform UI) | 3013 | Vite / React | Web platform surface |
+| gizzi-code runtime | 4096 | Bun / TypeScript | Local agent runtime and LLM session bus |
+| computer-use gateway | 8760 | (external) | Desktop control / screenshot gateway |
+| Ollama (local models) | 11434 | (external) | Default local OpenAI-compatible endpoint |
+
+Ports can be overridden via environment variables: `ALLTERNIT_API_PORT` for the API, `TERMINAL_SERVER_URL` for the Gizzi endpoint, and `VITE_ALLTERNIT_PLATFORM_URL` / `VITE_ALLTERNIT_GATEWAY_URL` for the web surface.
 
 ---
 
