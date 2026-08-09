@@ -379,6 +379,36 @@ fn tenant_hard_budget_cents(
     .optional()
 }
 
+/// Organization-level spend limit from `spend_limits`, in cents.
+/// `tenant_id` on virtual keys is populated from the active organization id,
+/// so the org spend cap applies using the same value.
+fn org_spend_limit_cents(
+    conn: &rusqlite::Connection,
+    org_id: &str,
+) -> rusqlite::Result<Option<i64>> {
+    conn.query_row(
+        "SELECT monthly_usd_cap FROM spend_limits WHERE org_id = ?1",
+        params![org_id],
+        |row| row.get(0),
+    )
+    .optional()
+}
+
+/// Current-calendar-month spend for one organization, in microdollars.
+fn org_month_spend_microdollars(
+    conn: &rusqlite::Connection,
+    org_id: &str,
+) -> rusqlite::Result<i64> {
+    conn.query_row(
+        "SELECT COALESCE(SUM(COALESCE(recomputed_cost_microdollars, cost_microdollars)), 0)
+         FROM llm_usage_events
+         WHERE tenant_id = ?1
+           AND created_at >= strftime('%Y-%m-01 00:00:00', 'now')",
+        params![org_id],
+        |row| row.get(0),
+    )
+}
+
 fn budget_exceeded(message: String) -> OpenAiErrorResponse {
     OpenAiErrorResponse::new(
         StatusCode::TOO_MANY_REQUESTS,
@@ -441,6 +471,24 @@ pub async fn budget_middleware(
                     return Err(budget_exceeded(format!(
                         "Monthly budget exceeded for this tenant ({:.2} USD cap).",
                         cap_cents as f64 / 100.0
+                    ))
+                    .into_response());
+                }
+            }
+
+            // Organization-level spend limit from `spend_limits` (V64).
+            if let Some(org_cap_cents) = org_spend_limit_cents(&conn, tenant_id).map_err(|err| {
+                warn!(error = %err, "budget pre-check org spend limit query failed");
+                server_error(format!("Internal error: {err}")).into_response()
+            })? {
+                let spent = org_month_spend_microdollars(&conn, tenant_id).map_err(|err| {
+                    warn!(error = %err, "budget pre-check org spend query failed");
+                    server_error(format!("Internal error: {err}")).into_response()
+                })?;
+                if spent >= org_cap_cents * MICRODOLLARS_PER_CENT {
+                    return Err(budget_exceeded(format!(
+                        "Monthly budget exceeded for this organization ({:.2} USD cap).",
+                        org_cap_cents as f64 / 100.0
                     ))
                     .into_response());
                 }
@@ -530,6 +578,18 @@ mod tests {
                 hard INTEGER NOT NULL DEFAULT 1,
                 created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
                 updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+            );
+            CREATE TABLE spend_limits (
+                org_id TEXT PRIMARY KEY,
+                monthly_usd_cap INTEGER NOT NULL DEFAULT 0,
+                current_month_spend INTEGER NOT NULL DEFAULT 0,
+                increase_request_status TEXT,
+                increase_request_amount INTEGER,
+                increase_request_reason TEXT,
+                increase_request_created_at DATETIME,
+                increase_request_updated_at DATETIME,
+                created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
             );",
         )
         .unwrap();
@@ -595,5 +655,34 @@ mod tests {
         let status = token_budget_status(&conn, &ctx).unwrap();
         assert_eq!(status.limit_cents, Some(500));
         assert_eq!(status.remaining_cents, Some(500));
+    }
+
+    #[test]
+    fn org_spend_limit_reads_cap_and_spend() {
+        let conn = in_memory_db();
+
+        // No row yet → no cap.
+        assert_eq!(org_spend_limit_cents(&conn, "org-1").unwrap(), None);
+
+        conn.execute(
+            "INSERT INTO spend_limits (org_id, monthly_usd_cap)
+             VALUES ('org-1', 1000)",
+            [],
+        )
+        .unwrap();
+
+        assert_eq!(org_spend_limit_cents(&conn, "org-1").unwrap(), Some(1000));
+        assert_eq!(org_month_spend_microdollars(&conn, "org-1").unwrap(), 0);
+
+        // Spend $5.00 (500 cents = 5_000_000 microdollars).
+        conn.execute(
+            "INSERT INTO llm_usage_events
+             (id, virtual_key_id, tenant_id, status, cost_microdollars)
+             VALUES ('e1', 'key-1', 'org-1', 'ok', 5000000)",
+            [],
+        )
+        .unwrap();
+
+        assert_eq!(org_month_spend_microdollars(&conn, "org-1").unwrap(), 5_000_000);
     }
 }

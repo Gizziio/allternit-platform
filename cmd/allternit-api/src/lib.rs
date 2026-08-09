@@ -4,6 +4,8 @@
 
 pub mod aci_routes;
 pub mod admin_audit_routes;
+pub mod admin_service_account_routes;
+pub mod admin_spend_limit_routes;
 pub mod admin_workspace_routes;
 pub mod agent_execution;
 pub mod agent_operations_routes;
