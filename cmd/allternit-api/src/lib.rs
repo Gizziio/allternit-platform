@@ -3,6 +3,7 @@
 //! Shared state and route handlers for the Allternit API.
 
 pub mod aci_routes;
+pub mod admin_audit_routes;
 pub mod admin_workspace_routes;
 pub mod agent_execution;
 pub mod agent_operations_routes;
@@ -33,6 +34,7 @@ pub mod canvas_routes;
 pub mod chat_routes;
 pub mod checkpoints_routes;
 pub mod cloud_credentials_routes;
+pub mod compliance_routes;
 pub mod config;
 pub mod connector_routes;
 pub mod conversation_routes;
@@ -83,6 +85,7 @@ pub mod rbac_routes;
 pub mod runtime_backend_routes;
 pub mod runtime_discover_routes;
 pub mod sandbox_routes;
+pub mod scim_routes;
 pub mod session_memory_service;
 pub mod slack_webhook_routes;
 pub mod ssh_key_routes;

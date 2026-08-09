@@ -12,6 +12,7 @@ use axum::{
     routing::post,
     Json, Router,
 };
+use base64::{engine::general_purpose::STANDARD, Engine as _};
 use rusqlite::{params, OptionalExtension};
 use serde::Deserialize;
 use serde_json::{json, Value};
@@ -32,6 +33,8 @@ pub fn router() -> Router<Arc<AppState>> {
                 .delete(delete_key),
         )
         .route("/admin/external-keys/:id/validate", post(validate_key))
+        .route("/admin/external-keys/:id/encrypt", post(encrypt_key))
+        .route("/admin/external-keys/:id/decrypt", post(decrypt_key))
 }
 
 type ApiError = (StatusCode, Json<Value>);
@@ -71,7 +74,22 @@ fn admin_org(conn: &rusqlite::Connection, user: &AuthUser) -> Result<String, Api
 }
 
 fn valid_provider(provider: &str) -> bool {
-    matches!(provider, "aws" | "azure" | "gcp")
+    matches!(provider, "aws" | "azure" | "gcp" | "aws_kms")
+}
+
+/// Validate an AWS KMS key ARN format: `arn:aws:kms:<region>:<account>:key/<uuid-or-alias>`.
+fn valid_aws_kms_arn(arn: &str) -> bool {
+    let parts: Vec<&str> = arn.split(':').collect();
+    if parts.len() < 6 {
+        return false;
+    }
+    parts[0] == "arn"
+        && parts[1] == "aws"
+        && parts[2] == "kms"
+        && !parts[3].is_empty()
+        && !parts[4].is_empty()
+        && parts[5].starts_with("key/")
+        && parts[5].len() > 4
 }
 
 fn key_json(row: &rusqlite::Row<'_>) -> rusqlite::Result<Value> {
@@ -108,14 +126,22 @@ fn validate_create(body: &CreateKey) -> Result<(), ApiError> {
         return Err(error(
             StatusCode::BAD_REQUEST,
             "invalid_provider",
-            "provider must be one of aws, azure, gcp.",
+            "provider must be one of aws, azure, gcp, aws_kms.",
         ));
     }
-    if body.key_ref.trim().is_empty() {
+    let key_ref = body.key_ref.trim();
+    if key_ref.is_empty() {
         return Err(error(
             StatusCode::BAD_REQUEST,
             "invalid_key_ref",
             "key_ref must not be empty.",
+        ));
+    }
+    if body.provider == "aws_kms" && !valid_aws_kms_arn(key_ref) {
+        return Err(error(
+            StatusCode::BAD_REQUEST,
+            "invalid_key_ref",
+            "aws_kms key_ref must be a valid KMS key ARN (arn:aws:kms:<region>:<account>:key/<id>).",
         ));
     }
     if body.name.trim().is_empty() || body.name.len() > 128 {
@@ -301,6 +327,76 @@ async fn validate_key(
     }
 }
 
+#[derive(Deserialize)]
+struct EncryptPayload {
+    plaintext: String,
+}
+
+#[derive(Deserialize)]
+struct DecryptPayload {
+    ciphertext: String,
+}
+
+/// Mock AWS KMS encrypt. Only `aws_kms` keys are supported; this returns a
+/// base64-wrapped ciphertext blob prefixed with the key id. Real KMS calls
+/// are Phase 4 follow-on work.
+async fn encrypt_key(
+    State(state): State<Arc<AppState>>,
+    Extension(user): Extension<AuthUser>,
+    Path(id): Path<String>,
+    Json(body): Json<EncryptPayload>,
+) -> Response {
+    let result = tokio::task::spawn_blocking(move || {
+        let conn = state.db.connect().map_err(internal)?;
+        let org = admin_org(&conn, &user)?;
+        let key = find_key(&conn, &id, &org)?;
+        if key["provider"].as_str() != Some("aws_kms") {
+            return Err(error(StatusCode::BAD_REQUEST, "unsupported_provider", "encrypt is only supported for aws_kms keys."));
+        }
+        if body.plaintext.is_empty() {
+            return Err(error(StatusCode::BAD_REQUEST, "invalid_plaintext", "plaintext must not be empty."));
+        }
+        let blob = format!("kms:{}:{}", id, STANDARD.encode(body.plaintext.as_bytes()));
+        Ok::<_, ApiError>(json!({"ciphertext": blob, "key_id": id }))
+    }).await;
+    match result {
+        Ok(Ok(v)) => Json(v).into_response(),
+        Ok(Err(e)) => e.into_response(),
+        Err(e) => internal(e).into_response(),
+    }
+}
+
+/// Mock AWS KMS decrypt. Only decrypts ciphertext produced by the mock
+/// encrypt handler for this key.
+async fn decrypt_key(
+    State(state): State<Arc<AppState>>,
+    Extension(user): Extension<AuthUser>,
+    Path(id): Path<String>,
+    Json(body): Json<DecryptPayload>,
+) -> Response {
+    let result = tokio::task::spawn_blocking(move || {
+        let conn = state.db.connect().map_err(internal)?;
+        let org = admin_org(&conn, &user)?;
+        let key = find_key(&conn, &id, &org)?;
+        if key["provider"].as_str() != Some("aws_kms") {
+            return Err(error(StatusCode::BAD_REQUEST, "unsupported_provider", "decrypt is only supported for aws_kms keys."));
+        }
+        let prefix = format!("kms:{}:", id);
+        if !body.ciphertext.starts_with(&prefix) {
+            return Err(error(StatusCode::BAD_REQUEST, "invalid_ciphertext", "ciphertext was not produced by this mock key."));
+        }
+        let b64 = &body.ciphertext[prefix.len()..];
+        let plaintext = STANDARD.decode(b64).map_err(|e| error(StatusCode::BAD_REQUEST, "invalid_ciphertext", e.to_string()))?;
+        let plaintext = String::from_utf8(plaintext).map_err(|_| error(StatusCode::BAD_REQUEST, "invalid_ciphertext", "plaintext is not valid UTF-8."))?;
+        Ok::<_, ApiError>(json!({"plaintext": plaintext, "key_id": id }))
+    }).await;
+    match result {
+        Ok(Ok(v)) => Json(v).into_response(),
+        Ok(Err(e)) => e.into_response(),
+        Err(e) => internal(e).into_response(),
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -310,8 +406,17 @@ mod tests {
         assert!(valid_provider("aws"));
         assert!(valid_provider("azure"));
         assert!(valid_provider("gcp"));
+        assert!(valid_provider("aws_kms"));
         assert!(!valid_provider("oci"));
         assert!(!valid_provider(""));
+    }
+
+    #[test]
+    fn kms_arn_validation_accepts_valid_arns() {
+        assert!(valid_aws_kms_arn("arn:aws:kms:us-east-1:123456789:key/12345678-1234-1234-1234-123456789abc"));
+        assert!(!valid_aws_kms_arn("arn:aws:kms:us-east-1:123456789"));
+        assert!(!valid_aws_kms_arn("not-an-arn"));
+        assert!(!valid_aws_kms_arn("arn:aws:kms:us-east-1:123456789:key/"));
     }
 
     #[test]
@@ -332,6 +437,17 @@ mod tests {
             ..ok_clone(&ok)
         };
         assert!(validate_create(&blank_ref).is_err());
+        let kms_ok = CreateKey {
+            provider: "aws_kms".into(),
+            key_ref: "arn:aws:kms:us-east-1:123456789:key/12345678-1234-1234-1234-123456789abc".into(),
+            name: "CMEK".into(),
+        };
+        assert!(validate_create(&kms_ok).is_ok());
+        let kms_bad = CreateKey {
+            key_ref: "bad-key".into(),
+            ..ok_clone(&kms_ok)
+        };
+        assert!(validate_create(&kms_bad).is_err());
     }
 
     fn ok_clone(k: &CreateKey) -> CreateKey {
