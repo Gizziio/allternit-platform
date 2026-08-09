@@ -1,4 +1,4 @@
-import type { ContentBlock, HarnessStopReason, Message, StreamRequest, Tool } from './types.js';
+import type { ContentBlock, HarnessStopReason, Message, StreamRequest, Tool, ToolResultContentBlock } from './types.js';
 import { flattenPdfToText } from './pdf.js';
 
 /** Map a provider-specific stop/finish reason to the normalized taxonomy. */
@@ -53,7 +53,13 @@ const openAiFunctionCall = (choice: StreamRequest['toolChoice']) =>
 
 export function hasCacheControl(request: StreamRequest): boolean {
   return (
-    request.messages.some((m) => !!m.cache_control || m.cache) ||
+    request.messages.some((m) => {
+      if (!!m.cache_control || m.cache) return true;
+      if (typeof m.content !== 'string') {
+        return m.content.some((b) => b.type === 'tool_result' && (!!b.cache_control || b.cache));
+      }
+      return false;
+    }) ||
     request.tools?.some((t) => !!t.cache_control || t.cache) ||
     false
   );
@@ -84,6 +90,8 @@ function openAiContentBlock(block: ContentBlock): Record<string, unknown> {
       return { type: 'text', text: `[vision_coordinates: ${block.x}, ${block.y}]` };
     case 'pdf':
       return { type: 'text', text: flattenPdfToText(block) };
+    case 'tool_result':
+      return { type: 'text', text: `[tool_result:${block.tool_use_id}] ${block.content}` };
     default:
       return { type: 'text', text: '' };
   }
@@ -123,6 +131,14 @@ function anthropicContentBlock(block: ContentBlock, cacheable: Pick<Message, 'ca
         };
       }
       return { type: 'text', text: flattenPdfToText(block), ...cacheMarker(cacheable) };
+    case 'tool_result':
+      return compact({
+        type: 'tool_result',
+        tool_use_id: block.tool_use_id,
+        content: block.content,
+        is_error: block.is_error,
+        ...cacheMarker(block as ToolResultContentBlock),
+      });
     default:
       return { type: 'text', text: '', ...cacheMarker(cacheable) };
   }
@@ -269,7 +285,7 @@ export function toKimiRequest(request: StreamRequest): Record<string, unknown> {
   });
 }
 
-function cacheMarker(value: Pick<Message | Tool, 'cache' | 'cache_control'>, fallback?: Message['cache_control']) {
+function cacheMarker(value: Pick<Message | Tool | ToolResultContentBlock, 'cache' | 'cache_control'>, fallback?: Message['cache_control']) {
   const cacheControl = value.cache_control ?? fallback ?? (value.cache ? { type: 'ephemeral' as const } : undefined);
   return cacheControl ? { cache_control: cacheControl } : {};
 }

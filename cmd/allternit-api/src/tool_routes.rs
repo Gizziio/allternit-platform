@@ -18,9 +18,31 @@ use tracing::{info, warn};
 use crate::auth::AuthUser;
 use crate::AppState;
 
+// ─── Cache-control helpers ──────────────────────────────────────────────────
+
+/// Character threshold above which a tool result is considered "large" and
+/// may be annotated with `cache_control: { type: "ephemeral" }` when the
+/// caller opts into caching. Aligns with Anthropic's prompt-caching minimum
+/// of roughly 1k tokens (~4k characters of JSON).
+const TOOL_RESULT_CACHE_THRESHOLD_CHARS: usize = 4_000;
+
+/// Return an Anthropic-style ephemeral cache_control hint when the result is
+/// large enough to benefit from prompt caching and the caller enabled it.
+fn tool_result_cache_control(result: &Value, cache_enabled: bool) -> Option<Value> {
+    if !cache_enabled {
+        return None;
+    }
+    let size = serde_json::to_string(result).map(|s| s.len()).unwrap_or(0);
+    if size >= TOOL_RESULT_CACHE_THRESHOLD_CHARS {
+        Some(json!({"type": "ephemeral"}))
+    } else {
+        None
+    }
+}
+
 // ─── Request/Response Types ─────────────────────────────────────────────────
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, Default)]
 pub struct ExecuteToolRequest {
     /// Tool identifier (e.g. "shell.exec", "file.read", "browser.navigate", "mcp:<server>:<tool>")
     /// `tool_name` alias: the web/desktop surface (`native-agent-api.ts`,
@@ -36,6 +58,10 @@ pub struct ExecuteToolRequest {
     /// Optional workspace context
     #[serde(default)]
     pub workspace_id: Option<String>,
+    /// When true, large tool results may include a `cache_control` hint for
+    /// providers that support prompt caching (e.g. Anthropic).
+    #[serde(default)]
+    pub cache: Option<bool>,
 }
 
 #[derive(Debug, Serialize)]
@@ -44,6 +70,8 @@ pub struct ExecuteToolResponse {
     pub result: Option<Value>,
     pub error: Option<String>,
     pub execution_time_ms: u64,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub cache_control: Option<Value>,
 }
 
 // ─── Router ─────────────────────────────────────────────────────────────────
@@ -104,12 +132,18 @@ async fn execute_tool(
     let start = std::time::Instant::now();
     info!("Executing tool '{}' for user '{}'", body.tool, user.user_id);
 
+    let cache_enabled = body.cache.unwrap_or(false);
+
     let result = match execute_tool_internal(&state, &body, &user.user_id).await {
-        Ok(result) => json!({
-            "success": true,
-            "result": result,
-            "execution_time_ms": start.elapsed().as_millis() as u64,
-        }),
+        Ok(result) => {
+            let cache_control = tool_result_cache_control(&result, cache_enabled);
+            json!({
+                "success": true,
+                "result": result,
+                "execution_time_ms": start.elapsed().as_millis() as u64,
+                "cache_control": cache_control,
+            })
+        }
         Err(e) => {
             warn!("Tool '{}' failed: {}", body.tool, e);
             json!({
@@ -872,6 +906,7 @@ mod tests {
             args: json!({ "command": "echo hello" }),
             timeout: Some(5),
             workspace_id: None,
+            ..Default::default()
         };
         let result = bash_exec(&req).await.unwrap();
         assert!(result["success"].as_bool().unwrap());
@@ -886,6 +921,7 @@ mod tests {
             args: json!({ "command": "sleep 5", "timeout": 1 }),
             timeout: Some(30),
             workspace_id: None,
+            ..Default::default()
         };
         let result = bash_exec(&req).await;
         assert!(result.is_err());
@@ -899,6 +935,7 @@ mod tests {
             args: json!({ "language": "python", "code": "print(21 + 21)" }),
             timeout: Some(5),
             workspace_id: None,
+            ..Default::default()
         };
         let result = code_execution(&req).await.unwrap();
         assert!(result["success"].as_bool().unwrap());
@@ -913,9 +950,33 @@ mod tests {
             args: json!({ "code": "print(1)" }),
             timeout: Some(5),
             workspace_id: None,
+            ..Default::default()
         };
         let result = code_execution(&req).await;
         assert!(result.is_err());
         assert!(result.unwrap_err().contains("language"));
+    }
+
+    #[test]
+    fn tool_result_cache_control_attaches_to_large_results_when_enabled() {
+        let large_content = "x".repeat(TOOL_RESULT_CACHE_THRESHOLD_CHARS);
+        let result = json!({ "content": large_content });
+        let cache = tool_result_cache_control(&result, true);
+        assert_eq!(cache, Some(json!({"type": "ephemeral"})));
+    }
+
+    #[test]
+    fn tool_result_cache_control_omitted_when_caching_disabled() {
+        let large_content = "x".repeat(TOOL_RESULT_CACHE_THRESHOLD_CHARS);
+        let result = json!({ "content": large_content });
+        let cache = tool_result_cache_control(&result, false);
+        assert_eq!(cache, None);
+    }
+
+    #[test]
+    fn tool_result_cache_control_omitted_for_small_results() {
+        let result = json!({ "content": "small" });
+        let cache = tool_result_cache_control(&result, true);
+        assert_eq!(cache, None);
     }
 }

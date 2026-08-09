@@ -121,6 +121,18 @@ export interface PdfContentBlock {
 }
 
 /**
+ * Tool result content block — returned output from a tool invocation.
+ */
+export interface ToolResultContentBlock {
+  type: 'tool_result';
+  tool_use_id: string;
+  content: string;
+  is_error?: boolean;
+  cache?: boolean;
+  cache_control?: CacheControl;
+}
+
+/**
  * Union of content blocks that can appear in a message
  */
 export type ContentBlock =
@@ -128,7 +140,8 @@ export type ContentBlock =
   | SearchResultBlock
   | VisionContentBlock
   | VisionCoordinatesContentBlock
-  | PdfContentBlock;
+  | PdfContentBlock
+  | ToolResultContentBlock;
 
 /**
  * Chat message structure

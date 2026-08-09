@@ -227,6 +227,24 @@ describe('toAnthropicRequest', () => {
     ]);
   });
 
+  it('passes tool-level cache_control through to Anthropic tools', () => {
+    const tool = {
+      name: 'get_weather',
+      description: 'Get weather',
+      parameters: { type: 'object', properties: {} },
+      cache_control: { type: 'ephemeral' as const },
+    };
+    const body = toAnthropicRequest({ ...baseRequest, provider: 'anthropic', tools: [tool] });
+    expect(body.tools).toEqual([
+      {
+        name: 'get_weather',
+        description: 'Get weather',
+        input_schema: { type: 'object', properties: {} },
+        cache_control: { type: 'ephemeral' },
+      },
+    ]);
+  });
+
   it('maps toolChoice object to named tool', () => {
     const body = toAnthropicRequest({
       ...baseRequest,
@@ -349,14 +367,40 @@ describe('toAnthropicRequest', () => {
       messages: [
         {
           role: 'user',
-          content: [
-            { type: 'pdf', source: 'file_id', fileId: 'file_123', title: 'uploaded.pdf' },
-          ],
+          content: [{ type: 'pdf', source: 'file_id', fileId: 'file_123', title: 'uploaded.pdf' }],
         },
       ],
     });
     expect((body.messages as any[])[0].content).toEqual([
       { type: 'text', text: '[uploaded.pdf: file_id=file_123]' },
+    ]);
+  });
+
+  it('maps tool_result content blocks to Anthropic tool_result blocks with cache_control', () => {
+    const body = toAnthropicRequest({
+      ...baseRequest,
+      provider: 'anthropic',
+      messages: [
+        {
+          role: 'user',
+          content: [
+            {
+              type: 'tool_result',
+              tool_use_id: 'call_1',
+              content: 'Large result payload',
+              cache_control: { type: 'ephemeral' },
+            },
+          ],
+        },
+      ],
+    });
+    expect(body.messages[0].content).toEqual([
+      {
+        type: 'tool_result',
+        tool_use_id: 'call_1',
+        content: 'Large result payload',
+        cache_control: { type: 'ephemeral' },
+      },
     ]);
   });
 });
