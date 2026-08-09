@@ -70,10 +70,16 @@ Open questions: Commit is blocked because the sandbox denies creation of the lin
 
 ## Swarm A checkpoint (2026-08-09)
 
-Goal: Complete Swarm A Core API / Harness Phase 1.
+Goal: Complete Swarm A Core API / Harness Phase 2.
 
-Just did: Implemented owner-scoped batch metadata endpoints, deterministic token counting, Anthropic citation events/collection, and OpenAI-compatible embeddings. `cargo check --lib` passes; the focused Rust test is blocked by a pre-existing test compile error in `translate.rs`, and the TypeScript test runner is not locally installed.
+Just did:
+- Verified the SDK retry/backoff interceptor (`retry.ts`) and wired it into the Anthropic BYOK fetch path.
+- Added `GET /v1/rate-limits` to the LLM gateway (`auth.rs`, `proxy.rs`, `mod.rs`) with unit tests.
+- Added normalized `HarnessStopReason` taxonomy to harness types, mapped Anthropic/OpenAI stop/finish reasons via `mapStopReason`, surfaced the reason in `run()`/`done` chunks, and emitted `run.stop` lifecycle events from `RunState`.
+- Added legacy OpenAI `functions`/`function_call` output support to `toOpenAIRequest` with tests.
+- Updated harness tests and added `provider-request.test.ts`.
+- `cargo check -p allternit-api` and `cargo test -p allternit-api --lib` pass (136 tests). Targeted `bun test` for `sdk/allternit-sdk/src/ai-runtime/harness/__tests__` passes (51 tests). Broader `bun test` in the SDK has pre-existing failures (missing `zod` dep, unimplemented Google/Local harness streaming) not introduced by these changes.
 
-Next: Stage and commit the reviewed Swarm A files from a session with write access to the linked-worktree Git index.
+Next: Stage all Phase 2 files and commit to `ao/p2-swarm-a`, then write `docs/SWARM_A_PHASE2_NOTES.md`.
 
-Open questions: Commit is blocked because the sandbox denies creation of the linked-worktree `index.lock` under the canonical checkout's `.git/worktrees` directory. Provider batch polling and result backfill remain Phase 2 by design.
+Open questions: None.
