@@ -25,7 +25,7 @@ use tracing::warn;
 use crate::auth::AuthUser;
 use crate::AppState;
 
-use super::{dlp_patterns, router as policy_router};
+use super::{dlp_patterns, inference_hooks, router as policy_router};
 
 pub fn gateway_admin_router() -> Router<Arc<AppState>> {
     Router::new()
@@ -40,11 +40,35 @@ pub fn gateway_admin_router() -> Router<Arc<AppState>> {
         .route("/gateway/budgets", get(list_budgets).put(put_budget))
         .route(
             "/gateway/inference-hooks",
-            get(get_inference_hooks).put(put_inference_hooks),
+            get(get_inference_hooks)
+                .put(put_inference_hooks)
+                .post(put_inference_hooks)
+                .delete(delete_inference_hooks),
         )
 }
 
-// ─── GET/PUT /gateway/inference-hooks ───────────────────────────────────────
+// ─── GET/PUT/POST/DELETE /gateway/inference-hooks ───────────────────────────
+
+fn ensure_hook_secret(conn: &rusqlite::Connection, organization_id: &str) -> Result<String, ApiError> {
+    let existing: Option<String> = conn
+        .query_row(
+            "SELECT hook_secret FROM llm_inference_hooks WHERE organization_id = ?1 AND hook_secret IS NOT NULL AND hook_secret != ''",
+            [organization_id],
+            |row| row.get(0),
+        )
+        .optional()
+        .map_err(internal_error)?;
+    if let Some(secret) = existing.filter(|s| !s.is_empty()) {
+        return Ok(secret);
+    }
+    let secret = inference_hooks::generate_hook_secret();
+    conn.execute(
+        "UPDATE llm_inference_hooks SET hook_secret = ?2 WHERE organization_id = ?1",
+        params![organization_id, &secret],
+    )
+    .map_err(internal_error)?;
+    Ok(secret)
+}
 
 async fn get_inference_hooks(
     State(state): State<Arc<AppState>>,
@@ -54,12 +78,15 @@ async fn get_inference_hooks(
         let conn = state.db.connect().map_err(internal_error)?;
         let scope = admin_scope(&conn, &user)?;
         let Some(organization_id) = scope.config_tenant(&user) else { return Err(bad_request("Inference hooks require an active organization.")); };
-        let hooks: Option<(Option<String>, Option<String>, i64)> = conn.query_row(
-            "SELECT pre_inference_url, post_inference_url, abort_on_pre_error FROM llm_inference_hooks WHERE organization_id = ?1",
-            [&organization_id], |row| Ok((row.get(0)?, row.get(1)?, row.get(2)?)),
+        let hooks: Option<(Option<String>, Option<String>, i64, Option<String>)> = conn.query_row(
+            "SELECT pre_inference_url, post_inference_url, abort_on_pre_error, hook_secret FROM llm_inference_hooks WHERE organization_id = ?1",
+            [&organization_id], |row| Ok((row.get(0)?, row.get(1)?, row.get(2)?, row.get(3)?)),
         ).optional().map_err(internal_error)?;
-        let (pre, post, abort) = hooks.unwrap_or((None, None, 1));
-        Ok::<_, ApiError>(json!({"organization_id": organization_id, "pre_inference_url": pre, "post_inference_url": post, "abort_on_pre_error": abort != 0}))
+        if let Some((pre, post, abort, _)) = hooks {
+            let secret = ensure_hook_secret(&conn, &organization_id)?;
+            return Ok::<_, ApiError>(json!({"organization_id": organization_id, "pre_inference_url": pre, "post_inference_url": post, "abort_on_pre_error": abort != 0, "hook_secret": secret}));
+        }
+        Ok::<_, ApiError>(json!({"organization_id": organization_id, "pre_inference_url": null, "post_inference_url": null, "abort_on_pre_error": true, "hook_secret": null}))
     }).await;
     respond(result)
 }
@@ -108,7 +135,26 @@ async fn put_inference_hooks(
             "INSERT INTO llm_inference_hooks (organization_id, pre_inference_url, post_inference_url, abort_on_pre_error) VALUES (?1, ?2, ?3, ?4) ON CONFLICT(organization_id) DO UPDATE SET pre_inference_url = excluded.pre_inference_url, post_inference_url = excluded.post_inference_url, abort_on_pre_error = excluded.abort_on_pre_error, updated_at = CURRENT_TIMESTAMP",
             params![organization_id, pre, post, abort as i64],
         ).map_err(internal_error)?;
-        Ok::<_, ApiError>(json!({"organization_id": organization_id, "pre_inference_url": pre, "post_inference_url": post, "abort_on_pre_error": abort}))
+        let secret = ensure_hook_secret(&conn, &organization_id)?;
+        Ok::<_, ApiError>(json!({"organization_id": organization_id, "pre_inference_url": pre, "post_inference_url": post, "abort_on_pre_error": abort, "hook_secret": secret}))
+    }).await;
+    respond(result)
+}
+
+async fn delete_inference_hooks(
+    State(state): State<Arc<AppState>>,
+    Extension(user): Extension<AuthUser>,
+) -> Response {
+    let result = tokio::task::spawn_blocking(move || {
+        let conn = state.db.connect().map_err(internal_error)?;
+        let scope = admin_scope(&conn, &user)?;
+        let Some(organization_id) = scope.config_tenant(&user) else { return Err(bad_request("Inference hooks require an active organization.")); };
+        conn.execute(
+            "DELETE FROM llm_inference_hooks WHERE organization_id = ?1",
+            params![organization_id],
+        )
+        .map_err(internal_error)?;
+        Ok::<_, ApiError>(json!({"deleted": true, "organization_id": organization_id}))
     }).await;
     respond(result)
 }

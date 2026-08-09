@@ -47,6 +47,7 @@ use crate::AppState;
 
 use super::auth::LlmKeyContext;
 use super::gizzi_bus::{self, GizziEvent};
+use super::inference_hooks::{self, InferenceHooks, PreHookOutcome};
 use super::llm_pricing::{self, TokenBreakdown};
 use super::router::{self, RoutingDecision};
 use super::translate::{
@@ -1218,7 +1219,7 @@ pub async fn chat_completions(
 ) -> Response {
     let started = Instant::now();
 
-    let request: ChatCompletionRequest = match serde_json::from_slice(&body) {
+    let mut request: ChatCompletionRequest = match serde_json::from_slice(&body) {
         Ok(request) => request,
         Err(err) => {
             return OpenAiErrorResponse::invalid_request(
@@ -1230,6 +1231,39 @@ pub async fn chat_completions(
     };
     if let Err(response) = validate_request(&request) {
         return response.into_response();
+    }
+
+    // Load organization-level inference hooks. Pre-hooks run before routing so
+    // mutations (e.g., model overrides) participate in allowlist checks.
+    let hooks: Option<InferenceHooks> = key
+        .tenant_id
+        .as_deref()
+        .and_then(|org| inference_hooks::load_hooks(&state.db, org).ok().flatten());
+
+    let mut body = body;
+    if let Some(hooks) = &hooks {
+        let hook_client = inference_hooks::hook_client();
+        match inference_hooks::run_pre_hook(&hook_client, hooks, body.clone()).await {
+            PreHookOutcome::Proceed(new_body) => {
+                if new_body != body {
+                    body = new_body;
+                    request = match serde_json::from_slice(&body) {
+                        Ok(request) => request,
+                        Err(err) => {
+                            return OpenAiErrorResponse::invalid_request(
+                                format!("Pre-hook returned invalid request body: {err}"),
+                                None,
+                            )
+                            .into_response();
+                        }
+                    };
+                    if let Err(response) = validate_request(&request) {
+                        return response.into_response();
+                    }
+                }
+            }
+            PreHookOutcome::Abort(response) => return response,
+        }
     }
 
     let stream = request.stream.unwrap_or(false);
@@ -1444,7 +1478,7 @@ pub async fn chat_completions(
 
     let idem_for_record = if idem_active { idempotency_key } else { None };
 
-    if stream {
+    let response = if stream {
         stream_completion(
             state,
             key,
@@ -1478,6 +1512,27 @@ pub async fn chat_completions(
             idem_for_record,
         )
         .await
+    };
+
+    // Inference hooks: post-hook runs after provider inference.
+    if let Some(hooks) = hooks {
+        let hook_client = inference_hooks::hook_client();
+        let latency_ms = started.elapsed().as_millis() as u64;
+        if stream {
+            inference_hooks::fire_post_hook(
+                &hook_client,
+                &hooks,
+                body,
+                response.status().as_u16(),
+                latency_ms,
+            )
+            .await;
+            response
+        } else {
+            inference_hooks::run_post_hook(&hook_client, &hooks, body, response, latency_ms).await
+        }
+    } else {
+        response
     }
 }
 

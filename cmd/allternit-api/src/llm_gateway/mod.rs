@@ -93,10 +93,6 @@ pub fn llm_gateway_router(state: Arc<AppState>) -> Router<Arc<AppState>> {
             auth::rate_limit_middleware,
         ))
         .layer(axum::middleware::from_fn_with_state(
-            state.clone(),
-            inference_hooks::inference_hook_middleware,
-        ))
-        .layer(axum::middleware::from_fn_with_state(
             state,
             auth::llm_key_middleware,
         ))

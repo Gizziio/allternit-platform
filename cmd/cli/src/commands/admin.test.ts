@@ -96,3 +96,65 @@ test('admin mcp-tunnels create with missing --name rejects', async () => {
     buildProgram().parseAsync(['node', 'allternit', 'admin', 'mcp-tunnels', 'create']),
   );
 });
+
+test('admin inference-hooks list sends GET /api/v1/gateway/inference-hooks', async () => {
+  const seen = await withMockedFetch(
+    () => new Response(JSON.stringify({ hooks: [] }), { status: 200, headers: { 'content-type': 'application/json' } }),
+    async () => {
+      await buildProgram().parseAsync(['node', 'allternit', 'admin', 'inference-hooks', 'list']);
+    },
+  );
+  assert.equal(seen.length, 1);
+  assert.equal(seen[0]?.method, 'GET');
+  assert.equal(seen[0]?.url, 'https://api.example/api/v1/gateway/inference-hooks');
+});
+
+test('admin inference-hooks create sends POST with hook config', async () => {
+  const seen = await withMockedFetch(
+    () => new Response(JSON.stringify({ ok: true }), { status: 200, headers: { 'content-type': 'application/json' } }),
+    async () => {
+      await buildProgram().parseAsync([
+        'node', 'allternit', 'admin', 'inference-hooks', 'create',
+        '--pre-url', 'https://hooks.example/pre',
+        '--post-url', 'https://hooks.example/post',
+        '--abort-on-pre-error', 'false',
+      ]);
+    },
+  );
+  assert.equal(seen.length, 1);
+  assert.equal(seen[0]?.method, 'POST');
+  assert.equal(seen[0]?.url, 'https://api.example/api/v1/gateway/inference-hooks');
+  assert.deepEqual(await seen[0]?.json(), {
+    pre_inference_url: 'https://hooks.example/pre',
+    post_inference_url: 'https://hooks.example/post',
+    abort_on_pre_error: false,
+  });
+});
+
+test('admin inference-hooks update sends PUT with provided fields', async () => {
+  const seen = await withMockedFetch(
+    () => new Response(JSON.stringify({ ok: true }), { status: 200, headers: { 'content-type': 'application/json' } }),
+    async () => {
+      await buildProgram().parseAsync([
+        'node', 'allternit', 'admin', 'inference-hooks', 'update',
+        '--pre-url', 'https://hooks.example/pre2',
+      ]);
+    },
+  );
+  assert.equal(seen.length, 1);
+  assert.equal(seen[0]?.method, 'PUT');
+  assert.equal(seen[0]?.url, 'https://api.example/api/v1/gateway/inference-hooks');
+  assert.deepEqual(await seen[0]?.json(), { pre_inference_url: 'https://hooks.example/pre2' });
+});
+
+test('admin inference-hooks delete sends DELETE', async () => {
+  const seen = await withMockedFetch(
+    () => new Response(JSON.stringify({ ok: true }), { status: 200, headers: { 'content-type': 'application/json' } }),
+    async () => {
+      await buildProgram().parseAsync(['node', 'allternit', 'admin', 'inference-hooks', 'delete']);
+    },
+  );
+  assert.equal(seen.length, 1);
+  assert.equal(seen[0]?.method, 'DELETE');
+  assert.equal(seen[0]?.url, 'https://api.example/api/v1/gateway/inference-hooks');
+});
