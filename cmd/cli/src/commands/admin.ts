@@ -37,6 +37,26 @@ const workspaces = new Command('workspaces')
       .action(function (this: Command, options: { name: string; slug?: string; description?: string }) {
         return run(this, () => client(this).request('POST', '/api/v1/workspaces', options));
       }),
+  )
+  .addCommand(
+    new Command('update')
+      .argument('<id>', 'workspace id')
+      .option('--name <name>', 'workspace name')
+      .option('--description <description>', 'workspace description')
+      .action(function (this: Command, id: string, options: { name?: string; description?: string }) {
+        return run(this, () => client(this).request(
+          'PUT',
+          `/api/v1/workspaces/${encodeURIComponent(id)}`,
+          options,
+        ));
+      }),
+  )
+  .addCommand(
+    new Command('delete')
+      .argument('<id>', 'workspace id')
+      .action(function (this: Command, id: string) {
+        return run(this, () => client(this).request('DELETE', `/api/v1/workspaces/${encodeURIComponent(id)}`));
+      }),
   );
 
 const keys = new Command('keys')
@@ -65,6 +85,36 @@ const keys = new Command('keys')
       .action(function (this: Command, id: string) {
         return run(this, () => client(this).request('DELETE', `/api/v1/gateway/keys/${encodeURIComponent(id)}`));
       }),
+  )
+  .addCommand(
+    new Command('update')
+      .argument('<id>', 'key id')
+      .option('--name <name>', 'key name')
+      .option('--monthly-budget-cents <cents>', 'monthly budget in cents', Number)
+      .option('--rate-limit-rpm <rpm>', 'requests per minute', Number)
+      .option('--allowed-models <models>', 'comma-separated model allowlist')
+      .action(function (this: Command, id: string, options: Record<string, unknown>) {
+        return run(this, () => client(this).request(
+          'PATCH',
+          `/api/v1/gateway/keys/${encodeURIComponent(id)}`,
+          {
+            name: options.name,
+            monthly_budget_cents: options.monthlyBudgetCents,
+            rate_limit_rpm: options.rateLimitRpm,
+            allowed_models: typeof options.allowedModels === 'string'
+              ? options.allowedModels.split(',').map((model) => model.trim()).filter(Boolean)
+              : undefined,
+          },
+        ));
+      }),
+  )
+  .addCommand(
+    new Command('delete')
+      .alias('remove')
+      .argument('<id>', 'key id')
+      .action(function (this: Command, id: string) {
+        return run(this, () => client(this).request('DELETE', `/api/v1/gateway/keys/${encodeURIComponent(id)}`));
+      }),
   );
 
 const budgets = new Command('budgets')
@@ -82,6 +132,16 @@ const budgets = new Command('budgets')
         return run(this, () => client(this).request('PUT', '/api/v1/gateway/budgets', {
           budget_cents: options.monthlyCents,
           hard: !options.soft,
+        }));
+      }),
+  )
+  .addCommand(
+    new Command('reset')
+      .description('Remove budget enforcement')
+      .action(function (this: Command) {
+        return run(this, () => client(this).request('PUT', '/api/v1/gateway/budgets', {
+          budget_cents: 0,
+          hard: false,
         }));
       }),
   );
