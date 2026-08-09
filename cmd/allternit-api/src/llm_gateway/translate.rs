@@ -138,6 +138,11 @@ pub struct ChatCompletionRequest {
     pub reasoning_effort: Option<String>,
     #[serde(default)]
     pub user: Option<String>,
+    /// Ask providers that support source citations to include them. For
+    /// non-Anthropic providers the gateway falls back to a RAG context block
+    /// and parses `[cite:<id>]` markers from the response.
+    #[serde(default)]
+    pub citations: Option<bool>,
 }
 
 #[derive(Debug, Clone, Deserialize)]
@@ -737,6 +742,8 @@ pub struct ChatCompletionResponse {
     pub choices: Vec<Choice>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub usage: Option<Usage>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub citations: Option<Vec<super::citations::Citation>>,
 }
 
 impl ChatCompletionResponse {
@@ -759,7 +766,16 @@ impl ChatCompletionResponse {
                 finish_reason,
             }],
             usage,
+            citations: None,
         }
+    }
+
+    /// Attach RAG fallback citations to the response body.
+    pub fn with_citations(mut self, citations: Vec<super::citations::Citation>) -> Self {
+        if !citations.is_empty() {
+            self.citations = Some(citations);
+        }
+        self
     }
 }
 

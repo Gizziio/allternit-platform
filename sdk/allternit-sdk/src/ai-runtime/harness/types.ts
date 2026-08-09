@@ -232,6 +232,8 @@ export interface Citation {
   citedText?: string;
   title?: string;
   url?: string;
+  documentTitle?: string;
+  pageNumber?: number;
   documentIndex?: number;
   startCharIndex?: number;
   endCharIndex?: number;

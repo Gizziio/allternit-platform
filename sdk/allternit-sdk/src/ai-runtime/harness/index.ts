@@ -666,12 +666,22 @@ async function* readSseJson(body: ReadableStream<Uint8Array>): AsyncGenerator<un
 }
 
 function anthropicCitation(value: Record<string, unknown>): Citation {
-  const known = new Set(['cited_text', 'document_title', 'url', 'document_index', 'start_char_index', 'end_char_index']);
+  const known = new Set([
+    'cited_text',
+    'document_title',
+    'url',
+    'document_index',
+    'start_char_index',
+    'end_char_index',
+    'page_number',
+  ]);
   return {
     type: 'citation',
     citedText: value.cited_text as string | undefined,
     title: value.document_title as string | undefined,
     url: value.url as string | undefined,
+    documentTitle: value.document_title as string | undefined,
+    pageNumber: typeof value.page_number === 'number' ? value.page_number : undefined,
     documentIndex: value.document_index as number | undefined,
     startCharIndex: value.start_char_index as number | undefined,
     endCharIndex: value.end_char_index as number | undefined,
