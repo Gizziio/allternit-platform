@@ -10,6 +10,10 @@ import { mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 
+/** Small single-page PDF fixture generated with pdf-lib for testing pdf_process. */
+const PDF_FIXTURE_BASE64 =
+  'JVBERi0xLjcKJYGBgYEKCjYgMCBvYmoKPDwKL0ZpbHRlciAvRmxhdGVEZWNvZGUKL0xlbmd0aCAyNjYKPj4Kc3RyZWFtCnicjVJNSwQxDL33V/QsiGkmecmAeNjdGTx4EeYPiKyyoocV8feb7IyCMAtLoaUvIe+jPZbNVKjm+nwtN/f79+/91+H56dqod3Ey7ytLnV5K7g+lnVpbVapGVKePcisNW2xNoMYY0JswKYkI4uywQZ91JkHU3MSyT+/q9FamqzJM5bEcz6nIYXBWeG2+qgK6qHAoGiTYBliwjXFeyMJE5KS9ozZeZ+GZRQUeLjqmebcuOHdG4VADY4wQ6wPPNDyTADAaL0hnf/p+E5r7IpGGuRq6ebg0nZiCpKtt/Y3U19NRMcN4GUu+l3YdzqejWFh26fVsEuks737qyN/AmUhgFNos0P++fwDD+JGPCmVuZHN0cmVhbQplbmRvYmoKCjcgMCBvYmoKPDwKL0ZpbHRlciAvRmxhdGVEZWNvZGUKL1R5cGUgL09ialN0bQovTiA1Ci9GaXJzdCAyNgovTGVuZ3RoIDQwMgo+PgpzdHJlYW0KeJzVU0tr3DAQvutXzLE9FI0lWY+yLGx21y2U0JAEWlp6cGyxuASp2NqS/vvO2JssIS09FzFIM9830rxUAYICY0CD82Cg1gpq8ErDaiXk7a8fEeRVe4iTkB+GfoKvxEG4hm9CbvMxFajEei3O3G1b2vt8EIsTVEx+ZFyNuT92cYRVs28aRIeI1pBYRLWjfUsSSBTphClPZxJnTkI2pxH1hrBmEesWH8Znbn3y39NOXMuc3cI1ftGf3uW39ssd6l/xhLWQl7nftSXCq91bhcqix1AZ7Sr95TWVY4xtyf9vcnP8Q05/zfBZn7m93OQx8gzMXZbXccrHsaO2M6/JhPDhfbz/GcvQtW8cBk9xOh9oxmaXMxacUdar2vqXGNfLYx28/ZNfjcYGhe4l5mqnaq3tkx+lID9/vPseuzk0VvcP5d1N4ZwXA9suYz+0F/mBph1p2UqBC4pnfpNSLvwL5vlPhbJnzZ7+xLMScQGEvDnelVllYyXkRTvFuTTnOCmI1OV+SAeQn4a0SdPwaOAbfwOUKOKMCmVuZHN0cmVhbQplbmRvYmoKCjggMCBvYmoKPDwKL1NpemUgOQovUm9vdCAyIDAgUgovSW5mbyAzIDAgUgovRmlsdGVyIC9GbGF0ZURlY29kZQovVHlwZSAvWFJlZgovTGVuZ3RoIDQxCi9XIFsgMSAyIDIgXQovSW5kZXggWyAwIDkgXQo+PgpzdHJlYW0KeJwVxLERADAIA7E3cJc2+1Fm/xkIViFgJjjg5MKlK3FBels2fF3YAwsKZW5kc3RyZWFtCmVuZG9iagoKc3RhcnR4cmVmCjg1OQolJUVPRg==';
+
 describe('Native Agent Tool Belt', () => {
   let harness: AllternitHarness;
   let agent: AllternitAgent;
@@ -354,6 +358,53 @@ describe('Native Agent Tool Belt', () => {
 
     const deleted = await memory.execute!({ operation: 'delete', key: 'mode' }, {});
     expect(deleted).toEqual({ key: 'mode', deleted: true });
+  });
+
+  it('registers the pdf_process document tool', () => {
+    const registry = new ToolRegistry();
+    new NativeToolBelt(registry);
+    const pdf = registry.getTool('pdf_process');
+    expect(pdf).toBeDefined();
+    expect(pdf!.input_schema.properties).toHaveProperty('source');
+    expect(pdf!.input_schema.properties).toHaveProperty('thumbnails');
+  });
+
+  it('extracts markdown text from a base64 PDF fixture', async () => {
+    const registry = new ToolRegistry();
+    new NativeToolBelt(registry);
+    const pdf = registry.getTool('pdf_process')!;
+
+    const result = await pdf.execute!({ source: { type: 'base64', data: PDF_FIXTURE_BASE64 } }, {});
+
+    expect(result.pages).toBe(1);
+    expect(result.markdown.length).toBeGreaterThan(0);
+    expect(result.markdown).toContain('Allternit PDF Skill Fixture');
+    expect(result.structure.headings.length).toBeGreaterThan(0);
+  });
+
+  it('renders optional page thumbnails from a base64 PDF fixture', async () => {
+    const registry = new ToolRegistry();
+    new NativeToolBelt(registry);
+    const pdf = registry.getTool('pdf_process')!;
+
+    const result = await pdf.execute!(
+      { source: { type: 'base64', data: PDF_FIXTURE_BASE64 }, thumbnails: true },
+      {},
+    );
+
+    expect(result.thumbnails).toBeDefined();
+    expect(result.thumbnails!.length).toBe(1);
+    expect(result.thumbnails![0]).toMatch(/^data:image\/png;base64,/);
+  });
+
+  it('rejects invalid pdf_process input', async () => {
+    const registry = new ToolRegistry();
+    new NativeToolBelt(registry);
+    const pdf = registry.getTool('pdf_process')!;
+
+    await expect(pdf.execute!({ source: { type: 'base64', data: 'not-valid-base64!!!' } }, {})).rejects.toThrow();
+    await expect(pdf.execute!({ source: { type: 'url', url: '' } }, {})).rejects.toThrow();
+    await expect(pdf.execute!({ source: { type: 'unknown' } }, {})).rejects.toThrow();
   });
 
   it('executes multiple tool calls concurrently and preserves call order', async () => {
