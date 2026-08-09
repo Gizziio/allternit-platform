@@ -19,6 +19,7 @@ pub mod audit_log_routes;
 pub mod auth;
 pub mod automation_routes;
 pub mod backend_install_routes;
+pub mod beta_session_routes;
 pub mod billing;
 pub mod board_routes;
 pub mod board_stream_routes;

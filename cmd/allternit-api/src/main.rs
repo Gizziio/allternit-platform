@@ -29,6 +29,7 @@ use allternit_api::agent_preferences_routes::agent_preferences_router;
 use allternit_api::agent_routes::agent_router;
 use allternit_api::agent_runtime_routes::agent_runtime_router;
 use allternit_api::agent_session_routes::agent_session_router;
+use allternit_api::beta_session_routes::beta_session_router;
 use allternit_api::agent_workspace_routes::agent_workspace_router;
 use allternit_api::agents_v1_routes::agents_v1_router;
 use allternit_api::alabs_routes::alabs_router;
@@ -291,6 +292,7 @@ async fn main() {
         .merge(agent_preferences_router())
         .merge(agent_workspace_router())
         .merge(agent_session_router())
+        .merge(beta_session_router())
         .merge(canvas_router())
         .merge(v1_router())
         .merge(task_routes::task_router())
