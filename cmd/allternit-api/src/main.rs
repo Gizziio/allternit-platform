@@ -247,6 +247,9 @@ async fn main() {
         terminal_sessions: TerminalSessionStore::new(),
     });
 
+    // Phase 5: start the in-process batch execution/polling worker.
+    allternit_api::llm_gateway::batches::spawn_batch_worker(Arc::clone(&state));
+
     // OfficeCLI idle reaper: evicts stale docs, closes idle resident sessions,
     // kills idle watch processes and MCP sessions.
     {
