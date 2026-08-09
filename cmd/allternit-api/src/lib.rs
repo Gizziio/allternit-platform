@@ -3,6 +3,7 @@
 //! Shared state and route handlers for the Allternit API.
 
 pub mod aci_routes;
+pub mod admin_workspace_routes;
 pub mod agent_execution;
 pub mod agent_operations_routes;
 pub mod agent_preferences_routes;
@@ -39,6 +40,7 @@ pub mod db;
 pub mod design_connector_routes;
 pub mod error;
 pub mod enterprise_auth;
+pub mod external_keys_routes;
 pub mod fallback_routes;
 pub mod file_routes;
 pub mod gizzi_chat_stream;
@@ -73,6 +75,7 @@ pub mod queue_routes;
 pub mod rails;
 pub mod rails_client_impl;
 pub mod rbac;
+pub mod rbac_routes;
 pub mod runtime_backend_routes;
 pub mod runtime_discover_routes;
 pub mod sandbox_routes;
