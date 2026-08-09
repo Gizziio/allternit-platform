@@ -145,6 +145,38 @@ describe('toOpenAIRequest', () => {
       },
     ]);
   });
+
+  it('flattens PDF base64 blocks to extracted text for OpenAI', () => {
+    const pdfBase64 =
+      'JVBERi0xLjQKMSAwIG9iago8PCAvVHlwZSAvQ2F0YWxvZyAvUGFnZXMgMiAwIFIgPj4KZW5kb2JqCjIgMCBvYmoKPDwgL1R5cGUgL1BhZ2VzIC9LaWRzIFszIDAgUl0gL0NvdW50IDEgPj4KZW5kb2JqCjMgMCBvYmoKPDwgL1R5cGUgL1BhZ2UgL1BhcmVudCAyIDAgUiAvTWVkaWFCb3ggWzAgMCA2MTIgNzkyXSAvQ29udGVudHMgNCAwIFIgPj4KZW5kb2JqCjQgMCBvYmoKPDwgL0xlbmd0aCA0NCA+PgpzdHJlYW0KQlQKL0YxIDEyIFRmCjEwMCA3MDAgVGQKKEhlbGxvIFBERikgVGoKRVQKZW5kc3RyZWFtCmVuZG9iagp4cmVmCjAgNQowMDAwMDAwMDAwIDY1NTM1IGYgCjAwMDAwMDAwMDkgMDAwMDAgbiAKMDAwMDAwMDA1OCAwMDAwMCBuIAowMDAwMDAwMTE1IDAwMDAwIG4gCjAwMDAwMDAyMTQgMDAwMDAgbiAKdHJhaWxlcgo8PCAvU2l6ZSA1IC9Sb290IDEgMCBSID4+CnN0YXJ0eHJlZgozMDkKJSVFT0YK';
+    const body = toOpenAIRequest({
+      ...baseRequest,
+      messages: [
+        {
+          role: 'user',
+          content: [{ type: 'pdf', source: 'base64', data: pdfBase64, title: 'sample.pdf' }],
+        },
+      ],
+    });
+    const text = (body.messages as any[])[0].content[0].text as string;
+    expect(text).toContain('[sample.pdf]');
+    expect(text).toContain('Hello PDF');
+  });
+
+  it('flattens PDF URL blocks to text for OpenAI', () => {
+    const body = toOpenAIRequest({
+      ...baseRequest,
+      messages: [
+        {
+          role: 'user',
+          content: [{ type: 'pdf', source: 'url', url: 'https://example.com/doc.pdf' }],
+        },
+      ],
+    });
+    expect((body.messages as any[])[0].content).toEqual([
+      { type: 'text', text: '[PDF document: https://example.com/doc.pdf]' },
+    ]);
+  });
 });
 
 describe('parseOpenAIUsage', () => {
@@ -287,6 +319,45 @@ describe('toAnthropicRequest', () => {
       ],
     });
     expect(body.system).toEqual([{ type: 'text', text: 'You are helpful.\n[image]' }]);
+  });
+
+  it('maps PDF base64 blocks to Anthropic document blocks', () => {
+    const pdfBase64 =
+      'JVBERi0xLjQKMSAwIG9iago8PCAvVHlwZSAvQ2F0YWxvZyAvUGFnZXMgMiAwIFIgPj4KZW5kb2JqCjIgMCBvYmoKPDwgL1R5cGUgL1BhZ2VzIC9LaWRzIFszIDAgUl0gL0NvdW50IDEgPj4KZW5kb2JqCjMgMCBvYmoKPDwgL1R5cGUgL1BhZ2UgL1BhcmVudCAyIDAgUiAvTWVkaWFCb3ggWzAgMCA2MTIgNzkyXSAvQ29udGVudHMgNCAwIFIgPj4KZW5kb2JqCjQgMCBvYmoKPDwgL0xlbmd0aCA0NCA+PgpzdHJlYW0KQlQKL0YxIDEyIFRmCjEwMCA3MDAgVGQKKEhlbGxvIFBERikgVGoKRVQKZW5kc3RyZWFtCmVuZG9iagp4cmVmCjAgNQowMDAwMDAwMDAwIDY1NTM1IGYgCjAwMDAwMDAwMDkgMDAwMDAgbiAKMDAwMDAwMDA1OCAwMDAwMCBuIAowMDAwMDAwMTE1IDAwMDAwIG4gCjAwMDAwMDAyMTQgMDAwMDAgbiAKdHJhaWxlcgo8PCAvU2l6ZSA1IC9Sb290IDEgMCBSID4+CnN0YXJ0eHJlZgozMDkKJSVFT0YK';
+    const body = toAnthropicRequest({
+      ...baseRequest,
+      provider: 'anthropic',
+      messages: [
+        {
+          role: 'user',
+          content: [{ type: 'pdf', source: 'base64', data: pdfBase64, title: 'sample.pdf' }],
+        },
+      ],
+    });
+    expect((body.messages as any[])[0].content).toEqual([
+      {
+        type: 'document',
+        source: { type: 'base64', media_type: 'application/pdf', data: pdfBase64 },
+      },
+    ]);
+  });
+
+  it('flattens PDF file_id blocks to text for Anthropic', () => {
+    const body = toAnthropicRequest({
+      ...baseRequest,
+      provider: 'anthropic',
+      messages: [
+        {
+          role: 'user',
+          content: [
+            { type: 'pdf', source: 'file_id', fileId: 'file_123', title: 'uploaded.pdf' },
+          ],
+        },
+      ],
+    });
+    expect((body.messages as any[])[0].content).toEqual([
+      { type: 'text', text: '[uploaded.pdf: file_id=file_123]' },
+    ]);
   });
 });
 

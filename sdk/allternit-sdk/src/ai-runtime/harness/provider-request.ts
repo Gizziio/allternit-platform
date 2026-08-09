@@ -1,4 +1,5 @@
 import type { ContentBlock, HarnessStopReason, Message, StreamRequest, Tool } from './types.js';
+import { flattenPdfToText } from './pdf.js';
 
 /** Map a provider-specific stop/finish reason to the normalized taxonomy. */
 export function mapStopReason(
@@ -81,6 +82,8 @@ function openAiContentBlock(block: ContentBlock): Record<string, unknown> {
       };
     case 'vision_coordinates':
       return { type: 'text', text: `[vision_coordinates: ${block.x}, ${block.y}]` };
+    case 'pdf':
+      return { type: 'text', text: flattenPdfToText(block) };
     default:
       return { type: 'text', text: '' };
   }
@@ -111,6 +114,15 @@ function anthropicContentBlock(block: ContentBlock, cacheable: Pick<Message, 'ca
       };
     case 'vision_coordinates':
       return { type: 'text', text: `[vision_coordinates: ${block.x}, ${block.y}]`, ...cacheMarker(cacheable) };
+    case 'pdf':
+      if (block.source === 'base64' && block.data) {
+        return {
+          type: 'document',
+          source: { type: 'base64', media_type: 'application/pdf', data: block.data },
+          ...cacheMarker(cacheable),
+        };
+      }
+      return { type: 'text', text: flattenPdfToText(block), ...cacheMarker(cacheable) };
     default:
       return { type: 'text', text: '', ...cacheMarker(cacheable) };
   }
@@ -130,6 +142,7 @@ function messageContentText(message: Message): string {
       if (block.type === 'search_result') return searchResultText(block);
       if (block.type === 'vision') return '[image]';
       if (block.type === 'vision_coordinates') return `[vision_coordinates: ${block.x}, ${block.y}]`;
+      if (block.type === 'pdf') return flattenPdfToText(block);
       return '';
     })
     .join('\n');
