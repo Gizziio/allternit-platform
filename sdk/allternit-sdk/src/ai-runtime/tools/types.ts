@@ -1,7 +1,7 @@
 import { z } from 'zod';
 
 export interface JsonSchema {
-  type?: 'object' | 'array' | 'string' | 'number' | 'integer' | 'boolean' | 'null';
+  type?: 'object' | 'array' | 'string' | 'number' | 'integer' | 'boolean' | 'null' | 'image';
   properties?: Record<string, JsonSchema>;
   required?: string[];
   additionalProperties?: boolean | JsonSchema;

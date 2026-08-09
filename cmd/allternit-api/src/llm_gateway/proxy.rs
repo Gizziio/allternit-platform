@@ -50,8 +50,9 @@ use super::gizzi_bus::{self, GizziEvent};
 use super::llm_pricing::{self, TokenBreakdown};
 use super::router::{self, RoutingDecision};
 use super::translate::{
-    map_finish_reason, messages_to_prompt, new_completion_id, stream_error_data, validate_request,
-    ChatCompletionChunk, ChatCompletionRequest, ChatCompletionResponse, OpenAiErrorResponse, Usage,
+    map_finish_reason, message_to_gizzi_parts, messages_to_gizzi_parts, new_completion_id,
+    stream_error_data, validate_request, ChatCompletionChunk, ChatCompletionRequest,
+    ChatCompletionResponse, OpenAiErrorResponse, Usage,
 };
 
 /// Hard cap on a single completion, from send to `session.status` idle.
@@ -1233,8 +1234,9 @@ pub async fn chat_completions(
         .into_response();
     }
 
-    // Prompt: system messages → Gizzi `system` field; history → transcript.
-    let (system, transcript) = messages_to_prompt(&request.messages);
+    // Prompt: system messages → Gizzi `system` field; history → Gizzi parts.
+    // Image content is preserved as `file` parts for vision-capable models.
+    let (system, all_parts) = messages_to_gizzi_parts(&request.messages);
 
     // Session strategy: fresh session titled `gateway:<key_prefix>`, or
     // reuse via header — then only the last user message is sent and Gizzi's
@@ -1246,17 +1248,25 @@ pub async fn chat_completions(
         .filter(|s| !s.is_empty())
         .map(str::to_string);
 
-    let (session_id, prompt_text) = match &reuse_session_id {
+    let (session_id, prompt_parts) = match &reuse_session_id {
         Some(existing) => {
             let last_user = request
                 .messages
                 .iter()
                 .rev()
-                .find(|m| m.role == "user")
-                .map(|m| m.content_text())
-                .filter(|t| !t.trim().is_empty());
+                .find(|m| m.role == "user");
             match last_user {
-                Some(text) => (existing.clone(), text),
+                Some(message) => {
+                    let parts = message_to_gizzi_parts(message);
+                    if parts.is_empty() {
+                        return OpenAiErrorResponse::invalid_request(
+                            "`messages` must contain a non-empty user message when reusing a session.",
+                            Some("messages"),
+                        )
+                        .into_response();
+                    }
+                    (existing.clone(), parts)
+                }
                 None => {
                     return OpenAiErrorResponse::invalid_request(
                         "`messages` must contain a non-empty user message when reusing a session.",
@@ -1269,13 +1279,13 @@ pub async fn chat_completions(
         None => {
             let title = format!("gateway:{}", key.key_prefix);
             match create_session(&client, &base, &title).await {
-                Ok(id) => (id, transcript),
+                Ok(id) => (id, all_parts),
                 Err(response) => return response.into_response(),
             }
         }
     };
 
-    if prompt_text.trim().is_empty() && system.is_none() {
+    if prompt_parts.is_empty() && system.is_none() {
         return OpenAiErrorResponse::invalid_request(
             "`messages` contain no usable content.",
             Some("messages"),
@@ -1310,7 +1320,7 @@ pub async fn chat_completions(
     let events = gizzi_bus::session_events(session_id.clone()).await;
 
     let mut payload = json!({
-        "parts": [{ "type": "text", "text": prompt_text }],
+        "parts": prompt_parts,
         "model": { "providerID": resolved.provider_id, "modelID": resolved.model_id },
     });
     if let Some(system) = &system {

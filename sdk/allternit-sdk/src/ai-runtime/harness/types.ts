@@ -67,9 +67,9 @@ export interface HarnessConfig {
 export type MessageRole = 'system' | 'user' | 'assistant' | 'tool';
 
 /**
- * Text content block.
+ * Text content block
  */
-export interface TextBlock {
+export interface TextContentBlock {
   type: 'text';
   text: string;
 }
@@ -86,9 +86,32 @@ export interface SearchResultBlock {
 }
 
 /**
- * Supported content blocks inside a message.
+ * Vision content block — image input for vision-capable models
  */
-export type ContentBlock = TextBlock | SearchResultBlock;
+export interface VisionContentBlock {
+  type: 'vision';
+  source:
+    | { type: 'base64'; media_type: string; data: string }
+    | { type: 'url'; url: string };
+}
+
+/**
+ * Vision coordinates content block — model-returned pointing coordinates
+ */
+export interface VisionCoordinatesContentBlock {
+  type: 'vision_coordinates';
+  x: number;
+  y: number;
+}
+
+/**
+ * Union of content blocks that can appear in a message
+ */
+export type ContentBlock =
+  | TextContentBlock
+  | SearchResultBlock
+  | VisionContentBlock
+  | VisionCoordinatesContentBlock;
 
 /**
  * Chat message structure
@@ -137,7 +160,7 @@ export interface JsonSchemaResponseFormat {
  * Tool parameter schema
  */
 export interface ToolParameter {
-  type: string;
+  type: 'object' | 'array' | 'string' | 'number' | 'integer' | 'boolean' | 'null' | 'image' | string;
   description?: string;
   enum?: string[];
   properties?: Record<string, ToolParameter>;
