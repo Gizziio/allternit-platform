@@ -251,4 +251,85 @@ describe('Native Agent Tool Belt', () => {
     expect(await tool.execute!({ id: 'abc' }, {})).toEqual({ content: 'document' });
     expect(calls).toEqual([{ name: 'read', args: { id: 'abc' } }]);
   });
+
+  it('registers new model-facing bash, code_execution, and memory tools', () => {
+    const registry = new ToolRegistry();
+    new NativeToolBelt(registry);
+    expect(registry.getTool('bash')).toBeDefined();
+    expect(registry.getTool('code_execution')).toBeDefined();
+    expect(registry.getTool('memory')).toBeDefined();
+    expect(registry.getTool('bash')!.input_schema.properties).toHaveProperty('command');
+    expect(registry.getTool('bash')!.input_schema.properties).toHaveProperty('timeout');
+    expect(registry.getTool('bash')!.input_schema.properties).toHaveProperty('restart');
+    expect(registry.getTool('code_execution')!.input_schema.properties).toHaveProperty('language');
+    expect(registry.getTool('code_execution')!.input_schema.properties).toHaveProperty('code');
+    expect(registry.getTool('code_execution')!.input_schema.properties).toHaveProperty('timeout_seconds');
+    expect(registry.getTool('code_execution')!.input_schema.properties).toHaveProperty('dependencies');
+    expect(registry.getTool('memory')!.input_schema.properties).toHaveProperty('operation');
+    expect(registry.getTool('memory')!.input_schema.properties).toHaveProperty('key');
+    expect(registry.getTool('memory')!.input_schema.properties).toHaveProperty('value');
+  });
+
+  it('executes bash through an injectable runner', async () => {
+    const registry = new ToolRegistry();
+    const calls: unknown[] = [];
+    new NativeToolBelt(registry, {
+      runner: {
+        run: async (args) => {
+          calls.push(args);
+          return { stdout: 'ok', stderr: '', exit_code: 0, success: true };
+        },
+      },
+    });
+    const result = await registry.getTool('bash')!.execute!({ command: 'echo hi', timeout: 5, restart: true }, {});
+    expect(result).toEqual({ stdout: 'ok', stderr: '', exit_code: 0, success: true });
+    expect(calls).toEqual([{ command: 'echo hi', timeout: 5, restart: true }]);
+  });
+
+  it('executes code through an injectable sandbox runner', async () => {
+    const registry = new ToolRegistry();
+    const calls: unknown[] = [];
+    new NativeToolBelt(registry, {
+      runner: {
+        execute: async (req) => {
+          calls.push(req);
+          return { stdout: '42', stderr: '', exit_code: 0, success: true, artifacts: [] };
+        },
+      },
+    });
+    const result = await registry.getTool('code_execution')!.execute!(
+      { language: 'python', code: 'print(42)', timeout_seconds: 10, dependencies: ['requests'] },
+      {},
+    );
+    expect(result).toEqual({ stdout: '42', stderr: '', exit_code: 0, success: true, artifacts: [] });
+    expect(calls).toEqual([
+      { language: 'python', code: 'print(42)', timeout_seconds: 10, dependencies: ['requests'] },
+    ]);
+  });
+
+  it('reads, writes, and deletes session memory through an injectable store', async () => {
+    const registry = new ToolRegistry();
+    const entries = new Map<string, unknown>();
+    new NativeToolBelt(registry, {
+      store: {
+        read: async (key) => (entries.has(key) ? { key, value: entries.get(key), updated_at: 'now' } : null),
+        write: async (key, value) => {
+          entries.set(key, value);
+          return { key, value, updated_at: 'now' };
+        },
+        delete: async (key) => entries.delete(key),
+      },
+    });
+    const memory = registry.getTool('memory')!;
+
+    await memory.execute!({ operation: 'write', key: 'mode', value: 'fast' }, {});
+    const read = await memory.execute!({ operation: 'read', key: 'mode' }, {});
+    expect(read).toEqual({ key: 'mode', value: 'fast', updated_at: 'now' });
+
+    const missing = await memory.execute!({ operation: 'read', key: 'missing' }, {});
+    expect(missing.value).toBeNull();
+
+    const deleted = await memory.execute!({ operation: 'delete', key: 'mode' }, {});
+    expect(deleted).toEqual({ key: 'mode', deleted: true });
+  });
 });

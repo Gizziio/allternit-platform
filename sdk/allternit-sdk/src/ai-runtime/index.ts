@@ -29,6 +29,9 @@ export { ToolRegistry } from './tools/registry.js';
 export { NativeToolBelt } from './tools/search.js';
 export { NativeWebTools } from './tools/web.js';
 export { TextEditorTool } from './tools/text-editor.js';
+export { BashTool } from './tools/bash.js';
+export { CodeExecutionTool } from './tools/code-execution.js';
+export { MemoryTool } from './tools/memory.js';
 export { attachMcpServer } from './tools/mcp.js';
 export { toStrictJsonSchema, validateJsonSchema } from './tools/schema.js';
 export type {
@@ -37,6 +40,9 @@ export type {
 } from './tools/types.js';
 export type { WebSearchMode, WebSearchProvider, WebSearchResult, WebToolOptions } from './tools/web.js';
 export type { TextEditorCommand, TextEditorOptions } from './tools/text-editor.js';
+export type { BashToolOptions, BashRunner, BashResult } from './tools/bash.js';
+export type { CodeExecutionOptions, CodeExecutionRequest, CodeExecutionResult, CodeExecutionRunner, CodeExecutionArtifact } from './tools/code-execution.js';
+export type { MemoryToolOptions, MemoryStore, MemoryValue, MemoryOperation } from './tools/memory.js';
 export type { McpServerAttachment, McpToolDescriptor } from './tools/mcp.js';
 
 // System prompts

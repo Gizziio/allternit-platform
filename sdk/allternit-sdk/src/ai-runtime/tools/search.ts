@@ -3,8 +3,11 @@ import type { ToolRegistry } from './registry.js';
 import { NativeWebTools, type WebToolOptions } from './web.js';
 import { attachMcpServer, type McpServerAttachment } from './mcp.js';
 import { TextEditorTool, type TextEditorOptions } from './text-editor.js';
+import { BashTool, type BashToolOptions } from './bash.js';
+import { CodeExecutionTool, type CodeExecutionOptions } from './code-execution.js';
+import { MemoryTool, type MemoryToolOptions } from './memory.js';
 
-export interface NativeToolBeltOptions extends WebToolOptions, TextEditorOptions {}
+export interface NativeToolBeltOptions extends WebToolOptions, TextEditorOptions, BashToolOptions, CodeExecutionOptions, MemoryToolOptions {}
 
 /**
  * tool_search Tool Definition
@@ -59,6 +62,9 @@ export class NativeToolBelt {
       this.registry.registerTool(tool, { strict: true });
     }
     this.registry.registerTool(new TextEditorTool(options).definition(), { strict: true });
+    this.registry.registerTool(new BashTool(options).definition(), { strict: true });
+    this.registry.registerTool(new CodeExecutionTool(options).definition(), { strict: true });
+    this.registry.registerTool(new MemoryTool(options).definition(), { strict: true });
   }
 
   public attachMcpServer(server: McpServerAttachment): Promise<string[]> {
