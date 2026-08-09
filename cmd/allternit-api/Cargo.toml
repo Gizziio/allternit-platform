@@ -48,6 +48,7 @@ refinery = { version = "0.9", features = ["rusqlite"] }
 uuid = { version = "1", features = ["v4", "serde"] }
 chrono = { version = "0.4", features = ["serde"] }
 thiserror = "1"
+rand = "0.8"
 anyhow = "1"
 dirs = "5"
 jsonwebtoken = "10"

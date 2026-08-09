@@ -272,6 +272,7 @@ dependencies = [
  "once_cell",
  "printpdf",
  "prometheus",
+ "rand 0.8.6",
  "refinery",
  "regex",
  "reqwest",

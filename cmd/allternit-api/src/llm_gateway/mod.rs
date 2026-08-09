@@ -35,6 +35,7 @@ pub mod benchmarks;
 pub mod citations;
 pub mod dlp;
 pub mod dlp_patterns;
+pub mod failover;
 pub mod files;
 pub mod gizzi_bus;
 pub mod inference_hooks;
