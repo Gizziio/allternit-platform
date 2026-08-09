@@ -1,5 +1,11 @@
 import { describe, it, expect } from 'bun:test';
-import { mapStopReason, toOpenAIRequest, toAnthropicRequest, toKimiRequest } from '../provider-request';
+import {
+  mapStopReason,
+  toOpenAIRequest,
+  toAnthropicRequest,
+  toKimiRequest,
+  parseOpenAIUsage,
+} from '../provider-request';
 
 const baseRequest = {
   provider: 'openai',
@@ -84,6 +90,63 @@ describe('toOpenAIRequest', () => {
   it('includes reasoning_effort when present', () => {
     const body = toOpenAIRequest({ ...baseRequest, reasoning: { effort: 'high' } });
     expect(body.reasoning_effort).toBe('high');
+  });
+
+  it('emits service_tier flex when a message has cache_control', () => {
+    const body = toOpenAIRequest({
+      ...baseRequest,
+      messages: [{ role: 'user', content: 'Hello', cache_control: { type: 'ephemeral' } }],
+    });
+    expect(body.service_tier).toBe('flex');
+    // OpenAI does not understand Anthropic cache hints; strip them from the wire.
+    expect((body.messages as any[])[0].cache_control).toBeUndefined();
+  });
+
+  it('emits service_tier flex when a tool has cache_control', () => {
+    const tool = {
+      name: 'get_weather',
+      description: 'Get weather',
+      parameters: { type: 'object', properties: {} },
+      cache_control: { type: 'ephemeral' },
+    };
+    const body = toOpenAIRequest({ ...baseRequest, tools: [tool] });
+    expect(body.service_tier).toBe('flex');
+  });
+
+  it('does not emit service_tier when no cache hints are present', () => {
+    const body = toOpenAIRequest(baseRequest);
+    expect(body.service_tier).toBeUndefined();
+  });
+});
+
+describe('parseOpenAIUsage', () => {
+  it('surfaces cached prompt tokens when present', () => {
+    const usage = parseOpenAIUsage({
+      prompt_tokens: 100,
+      completion_tokens: 20,
+      total_tokens: 120,
+      prompt_tokens_details: { cached_tokens: 40 },
+    });
+    expect(usage).toEqual({
+      promptTokens: 100,
+      completionTokens: 20,
+      totalTokens: 120,
+      cachedTokens: 40,
+    });
+  });
+
+  it('omits cachedTokens when no cached prompt tokens are reported', () => {
+    const usage = parseOpenAIUsage({
+      prompt_tokens: 100,
+      completion_tokens: 20,
+      total_tokens: 120,
+    });
+    expect(usage).toEqual({
+      promptTokens: 100,
+      completionTokens: 20,
+      totalTokens: 120,
+    });
+    expect('cachedTokens' in usage).toBe(false);
   });
 });
 

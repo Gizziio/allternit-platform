@@ -201,6 +201,22 @@ export interface TextChunk {
 }
 
 /**
+ * Anthropic thinking content delta
+ */
+export interface ThinkingDeltaChunk {
+  type: 'thinking_delta';
+  thinking: string;
+}
+
+/**
+ * Anthropic signature delta for a thinking block
+ */
+export interface SignatureDeltaChunk {
+  type: 'signature_delta';
+  signature: string;
+}
+
+/**
  * Tool call chunk (streaming)
  */
 export interface ToolCallChunk {
@@ -256,6 +272,8 @@ export interface DoneChunk {
  */
 export type HarnessStreamChunk =
   | TextChunk
+  | ThinkingDeltaChunk
+  | SignatureDeltaChunk
   | ToolCallChunk
   | ToolCallCompleteChunk
   | ToolResultChunk

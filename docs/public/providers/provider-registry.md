@@ -111,9 +111,30 @@ The API gateway maps Gizzi finish values to OpenAI `finish_reason` strings in `m
 | `tool-calls` / `tool_calls` | `tool_calls` |
 | `content-filter` / `content_filter` | `content_filter` |
 
+## SDK harness model registry
+
+The TypeScript harness keeps a focused model registry at `sdk/allternit-sdk/src/ai-runtime/harness/model-registry.ts` that maps provider/model pairs to known limits. It is used as a fallback for `StreamRequest.maxTokens` when the caller does not supply one.
+
+```typescript
+import { getModelMetadata } from '@allternit/sdk/harness';
+
+const meta = getModelMetadata('anthropic', 'claude-3-5-sonnet-20241022');
+console.log(meta?.contextWindow);      // 200000
+console.log(meta?.maxOutputTokens);    // 8192
+```
+
+| Provider | Model | Context window | Max output tokens |
+|----------|-------|----------------|-------------------|
+| `anthropic` | `claude-3-5-sonnet-20241022` | 200,000 | 8,192 |
+| `anthropic` | `claude-3-opus-20240229` | 200,000 | 4,096 |
+| `openai` | `gpt-4o` | 128,000 | 16,384 |
+| `openai` | `gpt-4` | 8,192 | 8,192 |
+| `google` | `gemini-1.5-pro` | 2,097,152 | 8,192 |
+
 ## Model selection flow
 
 1. The caller passes a `model` string to `POST /v1/chat/completions` or `AllternitHarness.stream()`.
 2. In the API gateway, a policy alias is resolved by the B5 router to a concrete `provider/model` plus a fallback chain.
 3. Explicit `provider/model` or bare model ids are looked up in the Gizzi catalog; the gateway derives a failover chain from the balanced scorecard.
 4. The resolved model is checked against the virtual key's `allowed_models` allowlist before any upstream request is made.
+5. In `AllternitHarness.stream()`, if `maxTokens` is omitted the harness fills it from the SDK harness model registry's `maxOutputTokens`.
