@@ -469,9 +469,28 @@ describe('Message Validation', () => {
     }).toThrow('Message at index 0 has invalid role');
   });
 
-  it('should throw error for non-string content', () => {
+  it('should throw error for non-string and non-array content', () => {
     expect(() => {
       validateMessages([{ role: 'user', content: 123 } as any]);
-    }).toThrow('Message at index 0 content must be a string');
+    }).toThrow('Message at index 0 content must be a string or array of content blocks');
+  });
+
+  it('should validate content block arrays', () => {
+    const messages = [
+      {
+        role: 'user' as const,
+        content: [
+          { type: 'text', text: 'Hello' },
+          { type: 'vision', source: { type: 'url', url: 'https://example.com/image.png' } },
+        ],
+      },
+    ];
+    expect(validateMessages(messages)).toBe(true);
+  });
+
+  it('should throw error for content blocks missing type', () => {
+    expect(() => {
+      validateMessages([{ role: 'user', content: [{ text: 'Hello' }] } as any]);
+    }).toThrow('Message at index 0 content block 0 missing type');
   });
 });

@@ -185,14 +185,32 @@ pub enum MessageContent {
     Parts(Vec<ContentPart>),
 }
 
-/// A content part. Only `text` is interpreted; other part kinds (image_url,
-/// input_audio, ...) are kept as their type marker only.
+/// A content part. `text` and `image_url` are interpreted and forwarded to
+/// Gizzi; other part kinds (input_audio, ...) are kept as their type marker
+/// only.
 #[derive(Debug, Clone, Deserialize)]
 pub struct ContentPart {
     #[serde(rename = "type")]
     pub part_type: String,
     #[serde(default)]
     pub text: Option<String>,
+    #[serde(default)]
+    pub image_url: Option<ImageUrlPart>,
+    #[serde(default)]
+    pub input_image: Option<InputImagePart>,
+}
+
+#[derive(Debug, Clone, Deserialize)]
+pub struct ImageUrlPart {
+    pub url: String,
+    #[serde(default)]
+    pub detail: Option<String>,
+}
+
+#[derive(Debug, Clone, Deserialize)]
+pub struct InputImagePart {
+    pub data: String,
+    pub format: String,
 }
 
 #[derive(Debug, Clone, Deserialize, Serialize)]
@@ -424,6 +442,214 @@ pub fn messages_to_prompt(messages: &[ChatMessage]) -> (Option<String>, String) 
         Some(system_parts.join("\n\n"))
     };
     (system, transcript)
+}
+
+/// Convert an OpenAI message list into Gizzi `parts` plus a separate system
+/// prompt. Image content (`image_url` / `input_image`) is preserved as Gizzi
+/// `file` parts so vision-capable models receive the actual image.
+pub fn messages_to_gizzi_parts(messages: &[ChatMessage]) -> (Option<String>, Vec<serde_json::Value>) {
+    let mut system_parts: Vec<String> = Vec::new();
+    let mut parts: Vec<serde_json::Value> = Vec::new();
+
+    fn push_text(parts: &mut Vec<serde_json::Value>, text: &str) {
+        if !text.is_empty() {
+            parts.push(json!({ "type": "text", "text": text }));
+        }
+    }
+
+    fn push_image(parts: &mut Vec<serde_json::Value>, url: String, mime: &str) {
+        parts.push(json!({
+            "type": "file",
+            "url": url,
+            "mime": mime,
+        }));
+    }
+
+    fn part_image_url(part: &ContentPart) -> Option<String> {
+        part.image_url.as_ref().map(|u| u.url.clone())
+    }
+
+    fn part_input_image_url(part: &ContentPart) -> Option<String> {
+        part.input_image.as_ref().map(|i| {
+            let mime = match i.format.as_str() {
+                "png" => "image/png",
+                "jpeg" | "jpg" => "image/jpeg",
+                "gif" => "image/gif",
+                "webp" => "image/webp",
+                _ => "image/png",
+            };
+            format!("data:{};base64,{}", mime, i.data)
+        })
+    }
+
+    fn image_mime_from_url(url: &str) -> &'static str {
+        if url.starts_with("data:image/png") {
+            "image/png"
+        } else if url.starts_with("data:image/jpeg") || url.starts_with("data:image/jpg") {
+            "image/jpeg"
+        } else if url.starts_with("data:image/gif") {
+            "image/gif"
+        } else if url.starts_with("data:image/webp") {
+            "image/webp"
+        } else {
+            "image/png"
+        }
+    }
+
+    for message in messages {
+        match message.role.as_str() {
+            "system" => {
+                let text = message.content_text();
+                if !text.is_empty() {
+                    system_parts.push(text);
+                }
+            }
+            "user" | "assistant" | "tool" => {
+                let prefix = match message.role.as_str() {
+                    "user" => match &message.name {
+                        Some(name) => format!("User ({name}):\n"),
+                        None => "User:\n".to_string(),
+                    },
+                    "assistant" => "Assistant:\n".to_string(),
+                    "tool" => format!("Tool result ({}):\n", message.tool_call_id.as_deref().unwrap_or("unknown")),
+                    _ => String::new(),
+                };
+
+                match &message.content {
+                    Some(MessageContent::Text(text)) => {
+                        push_text(&mut parts, &format!("{prefix}{text}"));
+                    }
+                    Some(MessageContent::Parts(content_parts)) => {
+                        let mut text_buffer = prefix;
+                        for part in content_parts {
+                            if let Some(url) = part_image_url(part).or_else(|| part_input_image_url(part)) {
+                                push_text(&mut parts, &text_buffer);
+                                text_buffer = String::new();
+                                let mime = image_mime_from_url(&url);
+                                push_image(&mut parts, url, mime);
+                            } else {
+                                let marker = match part.part_type.as_str() {
+                                    "text" => part.text.clone().unwrap_or_default(),
+                                    other => format!("[{other}]"),
+                                };
+                                if !text_buffer.is_empty() && !marker.is_empty() && !text_buffer.ends_with('\n') {
+                                    text_buffer.push('\n');
+                                }
+                                text_buffer.push_str(&marker);
+                            }
+                        }
+                        push_text(&mut parts, &text_buffer);
+                    }
+                    None => {
+                        push_text(&mut parts, &prefix);
+                    }
+                }
+
+                if message.role == "assistant" {
+                    if let Some(tool_calls) = &message.tool_calls {
+                        for call in tool_calls {
+                            push_text(
+                                &mut parts,
+                                &format!(
+                                    "[assistant called tool {}({})]",
+                                    call.function.name, call.function.arguments
+                                ),
+                            );
+                        }
+                    }
+                }
+            }
+            _ => {}
+        }
+    }
+
+    let system = if system_parts.is_empty() {
+        None
+    } else {
+        Some(system_parts.join("\n\n"))
+    };
+    (system, parts)
+}
+
+/// Convert a single OpenAI message into Gizzi `parts` without any role prefix.
+/// Used when reusing a Gizzi session and only the last user turn is forwarded.
+pub fn message_to_gizzi_parts(message: &ChatMessage) -> Vec<serde_json::Value> {
+    let mut parts: Vec<serde_json::Value> = Vec::new();
+
+    fn push_text(parts: &mut Vec<serde_json::Value>, text: &str) {
+        if !text.is_empty() {
+            parts.push(json!({ "type": "text", "text": text }));
+        }
+    }
+
+    fn push_image(parts: &mut Vec<serde_json::Value>, url: String, mime: &str) {
+        parts.push(json!({
+            "type": "file",
+            "url": url,
+            "mime": mime,
+        }));
+    }
+
+    fn part_image_url(part: &ContentPart) -> Option<String> {
+        part.image_url.as_ref().map(|u| u.url.clone())
+    }
+
+    fn part_input_image_url(part: &ContentPart) -> Option<String> {
+        part.input_image.as_ref().map(|i| {
+            let mime = match i.format.as_str() {
+                "png" => "image/png",
+                "jpeg" | "jpg" => "image/jpeg",
+                "gif" => "image/gif",
+                "webp" => "image/webp",
+                _ => "image/png",
+            };
+            format!("data:{};base64,{}" , mime, i.data)
+        })
+    }
+
+    fn image_mime_from_url(url: &str) -> &'static str {
+        if url.starts_with("data:image/png") {
+            "image/png"
+        } else if url.starts_with("data:image/jpeg") || url.starts_with("data:image/jpg") {
+            "image/jpeg"
+        } else if url.starts_with("data:image/gif") {
+            "image/gif"
+        } else if url.starts_with("data:image/webp") {
+            "image/webp"
+        } else {
+            "image/png"
+        }
+    }
+
+    match &message.content {
+        Some(MessageContent::Text(text)) => {
+            push_text(&mut parts, text);
+        }
+        Some(MessageContent::Parts(content_parts)) => {
+            let mut text_buffer = String::new();
+            for part in content_parts {
+                if let Some(url) = part_image_url(part).or_else(|| part_input_image_url(part)) {
+                    push_text(&mut parts, &text_buffer);
+                    text_buffer = String::new();
+                    let mime = image_mime_from_url(&url);
+                    push_image(&mut parts, url, mime);
+                } else {
+                    let marker = match part.part_type.as_str() {
+                        "text" => part.text.clone().unwrap_or_default(),
+                        other => format!("[{other}]"),
+                    };
+                    if !text_buffer.is_empty() && !marker.is_empty() && !text_buffer.ends_with('\n') {
+                        text_buffer.push('\n');
+                    }
+                    text_buffer.push_str(&marker);
+                }
+            }
+            push_text(&mut parts, &text_buffer);
+        }
+        None => {}
+    }
+
+    parts
 }
 
 /// Map a Gizzi/AI-SDK finish value to an OpenAI `finish_reason`.
@@ -775,6 +1001,63 @@ mod tests {
             transcript,
             "Assistant:\n\n[assistant called tool get_weather({\"city\":\"SF\"})]"
         );
+    }
+
+    #[test]
+    fn gizzi_parts_preserve_image_url_and_input_image() {
+        let req = parse(&json!({
+            "model": "m",
+            "messages": [
+                {"role": "user", "content": [
+                    {"type": "text", "text": "What is this?"},
+                    {"type": "image_url", "image_url": {"url": "https://example.com/image.png"}},
+                    {"type": "input_image", "input_image": {"data": "abc123", "format": "png"}}
+                ]}
+            ]
+        }))
+        .unwrap();
+        let (system, parts) = messages_to_gizzi_parts(&req.messages);
+        assert!(system.is_none());
+        assert_eq!(parts.len(), 3);
+        assert_eq!(parts[0], json!({"type": "text", "text": "User:\nWhat is this?"}));
+        assert_eq!(parts[1], json!({"type": "file", "url": "https://example.com/image.png", "mime": "image/png"}));
+        assert_eq!(parts[2], json!({"type": "file", "url": "data:image/png;base64,abc123", "mime": "image/png"}));
+    }
+
+    #[test]
+    fn gizzi_parts_extract_system_prompt_and_text() {
+        let req = parse(&json!({
+            "model": "m",
+            "messages": [
+                {"role": "system", "content": "Be terse."},
+                {"role": "user", "content": "Hello"}
+            ]
+        }))
+        .unwrap();
+        let (system, parts) = messages_to_gizzi_parts(&req.messages);
+        assert_eq!(system.as_deref(), Some("Be terse."));
+        assert_eq!(parts.len(), 1);
+        assert_eq!(parts[0], json!({"type": "text", "text": "User:\nHello"}));
+    }
+
+    #[test]
+    fn message_to_gizzi_parts_for_session_reuse() {
+        let message = ChatMessage {
+            role: "user".to_string(),
+            content: Some(MessageContent::Parts(vec![
+                ContentPart { part_type: "text".to_string(), text: Some("Look".to_string()), image_url: None, input_image: None },
+                ContentPart { part_type: "image_url".to_string(), text: None, image_url: Some(ImageUrlPart { url: "https://example.com/x.png".to_string(), detail: None }), input_image: None },
+            ])),
+            name: None,
+            tool_call_id: None,
+            tool_calls: None,
+            cache_control: None,
+            cache: None,
+        };
+        let parts = message_to_gizzi_parts(&message);
+        assert_eq!(parts.len(), 2);
+        assert_eq!(parts[0], json!({"type": "text", "text": "Look"}));
+        assert_eq!(parts[1], json!({"type": "file", "url": "https://example.com/x.png", "mime": "image/png"}));
     }
 
     #[test]

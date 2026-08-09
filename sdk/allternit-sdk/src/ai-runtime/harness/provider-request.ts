@@ -1,4 +1,4 @@
-import type { HarnessStopReason, Message, StreamRequest, Tool } from './types.js';
+import type { ContentBlock, HarnessStopReason, Message, StreamRequest, Tool } from './types.js';
 
 /** Map a provider-specific stop/finish reason to the normalized taxonomy. */
 export function mapStopReason(
@@ -50,6 +50,73 @@ const openAiFunctionCall = (choice: StreamRequest['toolChoice']) =>
       ? 'auto'
       : choice;
 
+function openAiContentBlock(block: ContentBlock): Record<string, unknown> {
+  switch (block.type) {
+    case 'text':
+      return { type: 'text', text: block.text };
+    case 'vision':
+      if (block.source.type === 'url') {
+        return { type: 'image_url', image_url: { url: block.source.url } };
+      }
+      return {
+        type: 'image_url',
+        image_url: {
+          url: `data:${block.source.media_type};base64,${block.source.data}`,
+        },
+      };
+    case 'vision_coordinates':
+      return { type: 'text', text: `[vision_coordinates: ${block.x}, ${block.y}]` };
+    default:
+      return { type: 'text', text: '' };
+  }
+}
+
+function toOpenAiMessage(message: Message): Record<string, unknown> {
+  const { cache, cache_control, ...rest } = message;
+  const content = typeof message.content === 'string'
+    ? message.content
+    : message.content.map(openAiContentBlock);
+  return { ...rest, content };
+}
+
+function anthropicContentBlock(block: ContentBlock, cacheable: Pick<Message, 'cache' | 'cache_control'>): Record<string, unknown> {
+  switch (block.type) {
+    case 'text':
+      return { type: 'text', text: block.text, ...cacheMarker(cacheable) };
+    case 'vision':
+      if (block.source.type === 'url') {
+        return { type: 'image', source: { type: 'url', url: block.source.url }, ...cacheMarker(cacheable) };
+      }
+      return {
+        type: 'image',
+        source: { type: 'base64', media_type: block.source.media_type, data: block.source.data },
+        ...cacheMarker(cacheable),
+      };
+    case 'vision_coordinates':
+      return { type: 'text', text: `[vision_coordinates: ${block.x}, ${block.y}]`, ...cacheMarker(cacheable) };
+    default:
+      return { type: 'text', text: '', ...cacheMarker(cacheable) };
+  }
+}
+
+function toAnthropicMessageContent(message: Message): unknown[] {
+  return typeof message.content === 'string'
+    ? [{ type: 'text', text: message.content, ...cacheMarker(message) }]
+    : message.content.map(block => anthropicContentBlock(block, message));
+}
+
+function messageContentText(message: Message): string {
+  if (typeof message.content === 'string') return message.content;
+  return message.content
+    .map(block => {
+      if (block.type === 'text') return block.text;
+      if (block.type === 'vision') return '[image]';
+      if (block.type === 'vision_coordinates') return `[vision_coordinates: ${block.x}, ${block.y}]`;
+      return '';
+    })
+    .join('\n');
+}
+
 /** Convert the normalized harness contract to an OpenAI-compatible body. */
 export function toOpenAIRequest(request: StreamRequest): Record<string, unknown> {
   const responseFormat = request.responseFormat && {
@@ -67,7 +134,7 @@ export function toOpenAIRequest(request: StreamRequest): Record<string, unknown>
   const useFunctions = Array.isArray(request.functions) && request.functions.length > 0;
   return compact({
     model: request.model,
-    messages: request.messages.map(({ cache, cache_control, ...message }) => message),
+    messages: request.messages.map(toOpenAiMessage),
     temperature: request.temperature,
     max_tokens: request.maxTokens,
     top_p: request.topP,
@@ -92,7 +159,7 @@ export function toAnthropicRequest(request: StreamRequest): Record<string, unkno
   const systemMessages = request.messages.filter(message => message.role === 'system');
   const system = systemMessages.map((message, index) => ({
     type: 'text',
-    text: message.content,
+    text: messageContentText(message),
     ...cacheMarker(message, index === systemMessages.length - 1 ? request.systemCacheControl : undefined),
   }));
   const tools = request.tools?.map(tool => compact({
@@ -107,7 +174,7 @@ export function toAnthropicRequest(request: StreamRequest): Record<string, unkno
     system: system.length ? system : undefined,
     messages: request.messages.filter(message => message.role !== 'system').map(message => ({
       role: message.role,
-      content: [{ type: 'text', text: message.content, ...cacheMarker(message) }],
+      content: toAnthropicMessageContent(message),
     })),
     max_tokens: request.maxTokens,
     temperature: request.temperature,

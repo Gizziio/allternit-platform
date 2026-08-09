@@ -38,9 +38,28 @@ function validateNode(schema: JsonSchema, value: unknown, path: string, errors: 
   const typeMatches = !expected
     || expected === actual
     || (expected === 'integer' && typeof value === 'number' && Number.isInteger(value))
-    || (expected === 'number' && typeof value === 'number' && Number.isFinite(value));
+    || (expected === 'number' && typeof value === 'number' && Number.isFinite(value))
+    || (expected === 'image' && value && typeof value === 'object' && !Array.isArray(value));
   if (!typeMatches) {
     errors.push(`${path} must be ${expected}`);
+    return;
+  }
+
+  if (expected === 'image' && value && typeof value === 'object' && !Array.isArray(value)) {
+    const record = value as Record<string, unknown>;
+    if (!record.source || typeof record.source !== 'object' || Array.isArray(record.source)) {
+      errors.push(`${path}.source must be an object`);
+      return;
+    }
+    const source = record.source as Record<string, unknown>;
+    if (source.type === 'url') {
+      if (typeof source.url !== 'string') errors.push(`${path}.source.url must be a string`);
+    } else if (source.type === 'base64') {
+      if (typeof source.media_type !== 'string') errors.push(`${path}.source.media_type must be a string`);
+      if (typeof source.data !== 'string') errors.push(`${path}.source.data must be a string`);
+    } else {
+      errors.push(`${path}.source.type must be "url" or "base64"`);
+    }
     return;
   }
 

@@ -166,8 +166,17 @@ export function validateMessages(messages: Message[]): boolean {
       );
     }
 
-    if (typeof message.content !== 'string') {
-      throw new Error(`Message at index ${index} content must be a string`);
+    const content = message.content;
+    if (typeof content !== 'string' && !Array.isArray(content)) {
+      throw new Error(`Message at index ${index} content must be a string or array of content blocks`);
+    }
+
+    if (Array.isArray(content)) {
+      for (const [blockIndex, block] of content.entries()) {
+        if (!block || typeof block !== 'object' || !('type' in block)) {
+          throw new Error(`Message at index ${index} content block ${blockIndex} missing type`);
+        }
+      }
     }
   }
 

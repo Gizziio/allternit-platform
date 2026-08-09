@@ -231,6 +231,29 @@ describe('Native Agent Tool Belt', () => {
     expect(toStrictJsonSchema({ type: 'object', properties: { nested: { type: 'object', properties: {} } } }).properties!.nested.additionalProperties).toBe(false);
   });
 
+  it('validates image type tool parameters with base64 and URL sources', () => {
+    const registry = new ToolRegistry();
+    registry.registerTool({
+      name: 'describe_image',
+      description: 'Describe an image',
+      input_schema: {
+        type: 'object',
+        properties: {
+          image: { type: 'image', description: 'Image content block' },
+        },
+        required: ['image'],
+      },
+    });
+
+    const base64Image = { source: { type: 'base64', media_type: 'image/png', data: 'cG5n' } };
+    const urlImage = { source: { type: 'url', url: 'https://example.com/image.png' } };
+
+    expect(registry.validateInput('describe_image', { image: base64Image }).valid).toBe(true);
+    expect(registry.validateInput('describe_image', { image: urlImage }).valid).toBe(true);
+    expect(registry.validateInput('describe_image', { image: 'not-an-image' }).valid).toBe(false);
+    expect(registry.validateInput('describe_image', { image: { source: { type: 'base64', data: 'cG5n' } } }).errors).toContain('$.image.source.media_type must be a string');
+  });
+
   it('attaches MCP server tools as namespaced model-facing tools', async () => {
     const registry = new ToolRegistry();
     const belt = new NativeToolBelt(registry);
@@ -331,5 +354,52 @@ describe('Native Agent Tool Belt', () => {
 
     const deleted = await memory.execute!({ operation: 'delete', key: 'mode' }, {});
     expect(deleted).toEqual({ key: 'mode', deleted: true });
+  });
+
+  it('executes multiple tool calls concurrently and preserves call order', async () => {
+    const run = createRun();
+    const active = new Set<string>();
+    let maxActive = 0;
+
+    for (let i = 0; i < 3; i++) {
+      run.runState.toolRegistry.registerTool({
+        name: `tool_${i}`,
+        description: `Tool ${i}`,
+        input_schema: { type: 'object', properties: {} },
+        execute: async () => {
+          active.add(`tool_${i}`);
+          maxActive = Math.max(maxActive, active.size);
+          await new Promise((resolve) => setTimeout(resolve, 30));
+          active.delete(`tool_${i}`);
+          return `result_${i}`;
+        },
+      });
+    }
+
+    const harness = agent.getHarness();
+    let streamCallCount = 0;
+    (harness as any).stream = async function* () {
+      streamCallCount++;
+      if (streamCallCount === 1) {
+        yield { type: 'tool_call_complete', id: 'call_0', name: 'tool_0', arguments: {} };
+        yield { type: 'tool_call_complete', id: 'call_1', name: 'tool_1', arguments: {} };
+        yield { type: 'tool_call_complete', id: 'call_2', name: 'tool_2', arguments: {} };
+      }
+      yield { type: 'done' };
+    };
+
+    const completed = new Promise<void>((resolve) => run.once('completed', resolve));
+    await run.execute();
+    await completed;
+
+    expect(maxActive).toBeGreaterThan(1);
+    const resultMessages = run.messages.filter((m) => m.role === 'user');
+    expect(resultMessages).toHaveLength(3);
+    const resultContents = resultMessages.map((m) =>
+      Array.isArray(m.content) ? (m.content[0] as any).content : m.content
+    );
+    expect(resultContents[0]).toContain('result_0');
+    expect(resultContents[1]).toContain('result_1');
+    expect(resultContents[2]).toContain('result_2');
   });
 });

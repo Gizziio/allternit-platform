@@ -85,6 +85,34 @@ describe('toOpenAIRequest', () => {
     const body = toOpenAIRequest({ ...baseRequest, reasoning: { effort: 'high' } });
     expect(body.reasoning_effort).toBe('high');
   });
+
+  it('maps vision content blocks to OpenAI image_url parts', () => {
+    const body = toOpenAIRequest({
+      ...baseRequest,
+      messages: [
+        {
+          role: 'user',
+          content: [
+            { type: 'text', text: 'What is this?' },
+            { type: 'vision', source: { type: 'url', url: 'https://example.com/image.png' } },
+            { type: 'vision', source: { type: 'base64', media_type: 'image/png', data: 'abc123' } },
+            { type: 'vision_coordinates', x: 100, y: 200 },
+          ],
+        },
+      ],
+    });
+    expect(body.messages).toEqual([
+      {
+        role: 'user',
+        content: [
+          { type: 'text', text: 'What is this?' },
+          { type: 'image_url', image_url: { url: 'https://example.com/image.png' } },
+          { type: 'image_url', image_url: { url: 'data:image/png;base64,abc123' } },
+          { type: 'text', text: '[vision_coordinates: 100, 200]' },
+        ],
+      },
+    ]);
+  });
 });
 
 describe('toAnthropicRequest', () => {
@@ -121,6 +149,52 @@ describe('toAnthropicRequest', () => {
       toolChoice: 'required',
     });
     expect(body.tool_choice).toEqual({ type: 'any' });
+  });
+
+  it('maps vision content blocks to Anthropic image blocks', () => {
+    const body = toAnthropicRequest({
+      ...baseRequest,
+      provider: 'anthropic',
+      messages: [
+        {
+          role: 'user',
+          content: [
+            { type: 'text', text: 'What is this?' },
+            { type: 'vision', source: { type: 'url', url: 'https://example.com/image.png' } },
+            { type: 'vision', source: { type: 'base64', media_type: 'image/png', data: 'abc123' } },
+            { type: 'vision_coordinates', x: 100, y: 200 },
+          ],
+        },
+      ],
+    });
+    expect(body.messages).toEqual([
+      {
+        role: 'user',
+        content: [
+          { type: 'text', text: 'What is this?' },
+          { type: 'image', source: { type: 'url', url: 'https://example.com/image.png' } },
+          { type: 'image', source: { type: 'base64', media_type: 'image/png', data: 'abc123' } },
+          { type: 'text', text: '[vision_coordinates: 100, 200]' },
+        ],
+      },
+    ]);
+  });
+
+  it('flattens system vision blocks to text for Anthropic', () => {
+    const body = toAnthropicRequest({
+      ...baseRequest,
+      provider: 'anthropic',
+      messages: [
+        {
+          role: 'system',
+          content: [
+            { type: 'text', text: 'You are helpful.' },
+            { type: 'vision', source: { type: 'url', url: 'https://example.com/image.png' } },
+          ],
+        },
+      ],
+    });
+    expect(body.system).toEqual([{ type: 'text', text: 'You are helpful.\n[image]' }]);
   });
 });
 
