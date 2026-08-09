@@ -60,6 +60,7 @@ pub mod llm_gateway;
 pub mod local_brain_routes;
 pub mod mcp_routes;
 pub mod mcp_server_routes;
+pub mod mcp_tunnel_auth;
 pub mod me_routes;
 pub mod memory_routes;
 pub mod metrics;
