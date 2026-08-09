@@ -21,7 +21,7 @@ use serde::{Deserialize, Serialize};
 use serde_json::{json, Value};
 use std::{convert::Infallible, sync::Arc, time::Duration};
 
-use crate::{auth::AuthUser, error::ApiError, AppState};
+use crate::{auth::AuthUser, error::ApiError, webhook_subscription_routes, AppState};
 
 const APPENDABLE_RUN_EVENT_TYPES: &[&str] = &[
     "thinking_delta",
@@ -461,6 +461,7 @@ async fn append_event(
         ));
     }
     let db = state.db.clone();
+    let session_id = id.clone();
     let result =
         tokio::task::spawn_blocking(move || {
             let mut conn = db.connect()?;
@@ -469,7 +470,7 @@ async fn append_event(
             "SELECT max_tokens, max_turns, max_tool_calls, context_window, truncation_strategy,
              tokens_used, turns_used, tool_calls_used
              FROM beta_sessions WHERE id = ?1 AND user_id = ?2 AND status = 'active'",
-            params![id, user.user_id],
+            params![session_id, user.user_id],
             |row| Ok(BudgetState {
                 max_tokens: row.get(0)?, max_turns: row.get(1)?, max_tool_calls: row.get(2)?,
                 context_window: row.get(3)?, truncation_strategy: row.get(4)?,
@@ -483,7 +484,7 @@ async fn append_event(
             if let Some(warning) = context_warning_state(budget, projected) {
                 insert_event(
                     &tx,
-                    &id,
+                    &session_id,
                     "context_warning",
                     &json!({
                         "threshold": warning.threshold, "usage": projected,
@@ -495,7 +496,7 @@ async fn append_event(
             if let Some(resource) = exceeded_budget(budget, body.usage) {
                 let event = insert_event(
                     &tx,
-                    &id,
+                    &session_id,
                     "budget_exceeded",
                     &json!({
                         "resource": resource, "usage": body.usage, "budget": budget_json(budget)
@@ -507,9 +508,9 @@ async fn append_event(
             tx.execute(
             "UPDATE beta_sessions SET tokens_used = tokens_used + ?1, turns_used = turns_used + ?2,
              tool_calls_used = tool_calls_used + ?3, updated_at = CURRENT_TIMESTAMP WHERE id = ?4",
-            params![body.usage.tokens, body.usage.turns, body.usage.tool_calls, id],
+            params![body.usage.tokens, body.usage.turns, body.usage.tool_calls, session_id],
         )?;
-            let event = insert_event(&tx, &id, &body.event_type, &body.data)?;
+            let event = insert_event(&tx, &session_id, &body.event_type, &body.data)?;
             tx.commit()?;
             Ok::<_, rusqlite::Error>((true, event))
         })
@@ -522,6 +523,13 @@ async fn append_event(
                 ApiError::DbError(e.to_string())
             }
         })?;
+    webhook_subscription_routes::deliver_session_event(
+        state.clone(),
+        user.organization_id.as_deref(),
+        &id,
+        &result.1,
+    )
+    .await;
     Ok(Json(json!({"accepted": result.0, "event": result.1})))
 }
 

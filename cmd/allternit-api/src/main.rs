@@ -96,6 +96,7 @@ use allternit_api::viz_routes::viz_router;
 use allternit_api::vm_session_routes::{new_vm_session_store, vm_session_router};
 use allternit_api::web_proxy_routes::web_proxy_router;
 use allternit_api::webhook_routes::webhook_router;
+use allternit_api::webhook_subscription_routes::webhook_subscription_router;
 use allternit_api::workflow_routes::workflow_router;
 use allternit_api::workspace_routes::workspace_router;
 use allternit_api::AppState;
@@ -303,6 +304,7 @@ async fn main() {
         .merge(beta_session_router())
         .merge(beta_deployment_router())
         .merge(beta_work_router())
+        .merge(webhook_subscription_router())
         .merge(beta_memory_store_router())
         .merge(canvas_router())
         .merge(v1_router())

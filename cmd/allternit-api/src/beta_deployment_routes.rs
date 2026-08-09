@@ -18,7 +18,7 @@ use serde::{Deserialize, Serialize};
 use serde_json::{json, Value};
 use std::sync::Arc;
 
-use crate::{auth::AuthUser, error::ApiError, AppState};
+use crate::{auth::AuthUser, error::ApiError, webhook_subscription_routes, AppState};
 
 const DEPLOYMENT_STATUSES: &[&str] = &["active", "paused", "archived"];
 const RUN_STATUSES: &[&str] = &["succeeded", "failed", "cancelled"];
@@ -390,6 +390,7 @@ async fn update_run(
     load_deployment(state.clone(), user.user_id, id.clone()).await?;
     let db = state.db.clone();
     let lookup_run_id = run_id.clone();
+    let deployment_id = id.clone();
     let affected = tokio::task::spawn_blocking(move || {
         let conn = db.connect()?;
         conn.execute(
@@ -400,7 +401,7 @@ async fn update_run(
                 body.result.map(|v| v.to_string()),
                 body.error,
                 run_id,
-                id
+                deployment_id
             ],
         )
     })
@@ -422,6 +423,14 @@ async fn update_run(
     .await
     .map_err(|e| ApiError::Internal(e.to_string()))?
     .map_err(|e: rusqlite::Error| ApiError::DbError(e.to_string()))?;
+    let run_value = serde_json::to_value(&run).unwrap_or_else(|_| json!({}));
+    webhook_subscription_routes::deliver_deployment_run_update(
+        state.clone(),
+        user.organization_id.as_deref(),
+        &id,
+        &run_value,
+    )
+    .await;
     Ok(Json(json!({"run": run})))
 }
 
