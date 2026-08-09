@@ -3,7 +3,7 @@ use axum::{
     extract::{Query, State},
     http::{HeaderMap, StatusCode},
     response::Json,
-    routing::{get, post},
+    routing::{delete, get, post},
     Router,
 };
 use rusqlite::params;
@@ -13,6 +13,10 @@ use std::sync::Arc;
 
 use crate::auth::get_user;
 use crate::auth::AuthUser;
+use crate::session_memory_service::{
+    delete_session_memory, list_session_memory, read_session_memory, write_session_memory,
+    DeleteSessionMemoryQuery, ReadSessionMemoryQuery, WriteSessionMemoryRequest,
+};
 use crate::AppState;
 
 pub fn memory_router() -> Router<Arc<AppState>> {
@@ -29,6 +33,10 @@ pub fn memory_router() -> Router<Arc<AppState>> {
         .route("/memory/edges", get(list_edges))
         .route("/memory/entities", get(list_entities).post(create_entity))
         .route("/memory/stats", get(memory_stats))
+        .route("/memory/session", get(read_session_memory_handler))
+        .route("/memory/session/list", get(list_session_memory_handler))
+        .route("/memory/session", post(write_session_memory_handler))
+        .route("/memory/session", delete(delete_session_memory_handler))
 }
 
 // ── Health ──────────────────────────────────────────────────────────────────
@@ -786,5 +794,153 @@ async fn memory_stats(
                 "vectors": 0,
             })),
         ),
+    }
+}
+
+// ── Session Memory (model-facing `memory` tool) ───────────────────────────────
+
+async fn read_session_memory_handler(
+    State(state): State<Arc<AppState>>,
+    headers: HeaderMap,
+    Query(params): Query<ReadSessionMemoryQuery>,
+) -> impl axum::response::IntoResponse {
+    let user = match get_user(&headers) {
+        Some(u) => u,
+        None => {
+            return (
+                StatusCode::UNAUTHORIZED,
+                Json(json!({"error": "Unauthorized"})),
+            ) as (StatusCode, Json<serde_json::Value>)
+        }
+    };
+
+    if params.session_id.is_empty() || params.key.is_empty() {
+        return (
+            StatusCode::BAD_REQUEST,
+            Json(json!({"error": "session_id and key are required"})),
+        );
+    }
+
+    match read_session_memory(&state.db, &user.user_id, &params.session_id, &params.key) {
+        Ok(Some(entry)) => (StatusCode::OK, Json(json!(entry))),
+        Ok(None) => (
+            StatusCode::NOT_FOUND,
+            Json(json!({"key": params.key, "value": serde_json::Value::Null})),
+        ),
+        Err(e) => {
+            tracing::warn!("Session memory read error: {}", e);
+            (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(json!({"error": e.to_string()})),
+            )
+        }
+    }
+}
+
+async fn list_session_memory_handler(
+    State(state): State<Arc<AppState>>,
+    headers: HeaderMap,
+    Query(params): Query<std::collections::HashMap<String, String>>,
+) -> impl axum::response::IntoResponse {
+    let user = match get_user(&headers) {
+        Some(u) => u,
+        None => {
+            return (
+                StatusCode::UNAUTHORIZED,
+                Json(json!({"error": "Unauthorized"})),
+            ) as (StatusCode, Json<serde_json::Value>)
+        }
+    };
+
+    let session_id = match params.get("session_id") {
+        Some(s) if !s.is_empty() => s.clone(),
+        _ => {
+            return (
+                StatusCode::BAD_REQUEST,
+                Json(json!({"error": "session_id is required"})),
+            );
+        }
+    };
+
+    match list_session_memory(&state.db, &user.user_id, &session_id) {
+        Ok(entries) => (StatusCode::OK, Json(json!({"entries": entries}))),
+        Err(e) => {
+            tracing::warn!("Session memory list error: {}", e);
+            (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(json!({"error": e.to_string()})),
+            )
+        }
+    }
+}
+
+async fn write_session_memory_handler(
+    State(state): State<Arc<AppState>>,
+    headers: HeaderMap,
+    Json(body): Json<WriteSessionMemoryRequest>,
+) -> impl axum::response::IntoResponse {
+    let user = match get_user(&headers) {
+        Some(u) => u,
+        None => {
+            return (
+                StatusCode::UNAUTHORIZED,
+                Json(json!({"error": "Unauthorized"})),
+            )
+        }
+    };
+
+    if body.session_id.is_empty() || body.key.is_empty() {
+        return (
+            StatusCode::BAD_REQUEST,
+            Json(json!({"error": "session_id and key are required"})),
+        );
+    }
+
+    match write_session_memory(&state.db, &user.user_id, &body.session_id, &body.key, &body.value) {
+        Ok(entry) => (StatusCode::OK, Json(json!(entry))),
+        Err(e) => {
+            tracing::warn!("Session memory write error: {}", e);
+            (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(json!({"error": e.to_string()})),
+            )
+        }
+    }
+}
+
+async fn delete_session_memory_handler(
+    State(state): State<Arc<AppState>>,
+    headers: HeaderMap,
+    Query(params): Query<DeleteSessionMemoryQuery>,
+) -> impl axum::response::IntoResponse {
+    let user = match get_user(&headers) {
+        Some(u) => u,
+        None => {
+            return (
+                StatusCode::UNAUTHORIZED,
+                Json(json!({"error": "Unauthorized"})),
+            )
+        }
+    };
+
+    if params.session_id.is_empty() || params.key.is_empty() {
+        return (
+            StatusCode::BAD_REQUEST,
+            Json(json!({"error": "session_id and key are required"})),
+        );
+    }
+
+    match delete_session_memory(&state.db, &user.user_id, &params.session_id, &params.key) {
+        Ok(deleted) => (
+            StatusCode::OK,
+            Json(json!({"key": params.key, "deleted": deleted})),
+        ),
+        Err(e) => {
+            tracing::warn!("Session memory delete error: {}", e);
+            (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(json!({"error": e.to_string()})),
+            )
+        }
     }
 }

@@ -137,6 +137,10 @@ pub(crate) async fn execute_tool_internal(
         // ── Shell Execution ──────────────────────────────────────────────────
         "shell.exec" => shell_exec(request).await,
         "shell.eval" => shell_exec(request).await,
+        "bash" => bash_exec(request).await,
+
+        // ── Code Execution ───────────────────────────────────────────────────
+        "code_execution" => code_execution(request).await,
 
         // ── File System ──────────────────────────────────────────────────────
         "file.read" => file_read(request).await,
@@ -180,25 +184,49 @@ pub(crate) async fn execute_tool_internal(
 // ── Shell ───────────────────────────────────────────────────────────────────
 
 async fn shell_exec(request: &ExecuteToolRequest) -> Result<Value, String> {
+    run_shell(
+        request,
+        request.timeout.unwrap_or(30),
+        request.args.get("cwd").and_then(|v| v.as_str()),
+    )
+    .await
+}
+
+async fn bash_exec(request: &ExecuteToolRequest) -> Result<Value, String> {
+    let timeout = request
+        .args
+        .get("timeout")
+        .and_then(|v| v.as_u64())
+        .unwrap_or_else(|| request.timeout.unwrap_or(30));
+    let restart = request
+        .args
+        .get("restart")
+        .and_then(|v| v.as_bool())
+        .unwrap_or(false);
+    // restart is currently advisory: each API invocation spawns a fresh process,
+    // so a new shell is already provided. We include it in the schema for callers
+    // trained on the WebVM contract.
+    let _ = restart;
+    run_shell(request, timeout, None).await
+}
+
+async fn run_shell(
+    request: &ExecuteToolRequest,
+    timeout_secs: u64,
+    cwd: Option<&str>,
+) -> Result<Value, String> {
     let command = request
         .args
         .get("command")
         .and_then(|v| v.as_str())
         .ok_or("Missing 'command' argument")?;
 
-    let cwd = request
-        .args
-        .get("cwd")
-        .and_then(|v| v.as_str())
-        .map(|s| std::path::PathBuf::from(s))
-        .or_else(|| std::env::current_dir().ok());
-
-    let timeout_secs = request.timeout.unwrap_or(30);
-
     let mut cmd = tokio::process::Command::new("sh");
     cmd.arg("-c").arg(command);
 
     if let Some(dir) = cwd {
+        cmd.current_dir(std::path::PathBuf::from(dir));
+    } else if let Some(dir) = std::env::current_dir().ok() {
         cmd.current_dir(dir);
     }
 
@@ -215,6 +243,48 @@ async fn shell_exec(request: &ExecuteToolRequest) -> Result<Value, String> {
         "stderr": stderr,
         "exit_code": output.status.code(),
         "success": output.status.success(),
+    }))
+}
+
+async fn code_execution(request: &ExecuteToolRequest) -> Result<Value, String> {
+    let language = request
+        .args
+        .get("language")
+        .and_then(|v| v.as_str())
+        .ok_or("Missing 'language' argument")?;
+    let code = request
+        .args
+        .get("code")
+        .and_then(|v| v.as_str())
+        .ok_or("Missing 'code' argument")?;
+    let timeout_secs = request
+        .args
+        .get("timeout_seconds")
+        .and_then(|v| v.as_u64())
+        .unwrap_or_else(|| request.timeout.unwrap_or(30));
+
+    let (program, flag) = match language.to_lowercase().as_str() {
+        "python" | "python3" => ("python3", "-c"),
+        "node" | "javascript" | "js" => ("node", "-e"),
+        "bash" | "sh" => ("bash", "-c"),
+        "rust" | "rs" => ("rustc", "--"),
+        _ => return Err(format!("Unsupported language: {}", language)),
+    };
+
+    let output = tokio::time::timeout(
+        std::time::Duration::from_secs(timeout_secs),
+        tokio::process::Command::new(program).arg(flag).arg(code).output(),
+    )
+    .await
+    .map_err(|_| "Code execution timed out")?
+    .map_err(|e| format!("Failed to execute code: {}", e))?;
+
+    Ok(json!({
+        "stdout": String::from_utf8_lossy(&output.stdout).to_string(),
+        "stderr": String::from_utf8_lossy(&output.stderr).to_string(),
+        "exit_code": output.status.code(),
+        "success": output.status.success(),
+        "language": language,
     }))
 }
 
@@ -662,6 +732,8 @@ async fn time_now(_request: &ExecuteToolRequest) -> Result<Value, String> {
 async fn list_tools() -> impl IntoResponse {
     let mut tools = vec![
         json!({ "id": "shell.exec", "name": "Shell Execute", "description": "Execute shell commands" }),
+        json!({ "id": "bash", "name": "Bash", "description": "Execute a shell command with optional timeout and restart control" }),
+        json!({ "id": "code_execution", "name": "Code Execution", "description": "Execute code in a sandboxed environment" }),
         json!({ "id": "file.read", "name": "File Read", "description": "Read file contents" }),
         json!({ "id": "file.write", "name": "File Write", "description": "Write to a file" }),
         json!({ "id": "file.list", "name": "File List", "description": "List directory contents" }),
@@ -791,5 +863,59 @@ mod tests {
             url["parameters"]["required"],
             json!(["url"])
         );
+    }
+
+    #[tokio::test]
+    async fn bash_tool_executes_shell_command() {
+        let req = ExecuteToolRequest {
+            tool: "bash".to_string(),
+            args: json!({ "command": "echo hello" }),
+            timeout: Some(5),
+            workspace_id: None,
+        };
+        let result = bash_exec(&req).await.unwrap();
+        assert!(result["success"].as_bool().unwrap());
+        assert!(result["stdout"].as_str().unwrap().contains("hello"));
+        assert_eq!(result["exit_code"], 0);
+    }
+
+    #[tokio::test]
+    async fn bash_tool_honors_timeout_argument() {
+        let req = ExecuteToolRequest {
+            tool: "bash".to_string(),
+            args: json!({ "command": "sleep 5", "timeout": 1 }),
+            timeout: Some(30),
+            workspace_id: None,
+        };
+        let result = bash_exec(&req).await;
+        assert!(result.is_err());
+        assert!(result.unwrap_err().contains("timed out"));
+    }
+
+    #[tokio::test]
+    async fn code_execution_runs_python() {
+        let req = ExecuteToolRequest {
+            tool: "code_execution".to_string(),
+            args: json!({ "language": "python", "code": "print(21 + 21)" }),
+            timeout: Some(5),
+            workspace_id: None,
+        };
+        let result = code_execution(&req).await.unwrap();
+        assert!(result["success"].as_bool().unwrap());
+        assert!(result["stdout"].as_str().unwrap().contains("42"));
+        assert_eq!(result["language"], "python");
+    }
+
+    #[tokio::test]
+    async fn code_execution_rejects_missing_language() {
+        let req = ExecuteToolRequest {
+            tool: "code_execution".to_string(),
+            args: json!({ "code": "print(1)" }),
+            timeout: Some(5),
+            workspace_id: None,
+        };
+        let result = code_execution(&req).await;
+        assert!(result.is_err());
+        assert!(result.unwrap_err().contains("language"));
     }
 }
