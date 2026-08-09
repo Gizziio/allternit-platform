@@ -19,7 +19,6 @@ export interface ToolDefinition {
   /** Optional namespace. Registered names become `<namespace>.<name>`. */
   namespace?: string;
   description: string;
-<<<<<<< HEAD
   input_schema: JsonSchema & { type: 'object'; properties: Record<string, JsonSchema>; required?: string[] };
   /** Require provider-side JSON Schema validation for tool arguments. */
   strict?: boolean;
