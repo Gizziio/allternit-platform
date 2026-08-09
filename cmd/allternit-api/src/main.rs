@@ -331,6 +331,8 @@ async fn main() {
         .merge(allternit_api::enterprise_auth::router())
         .merge(allternit_api::allternit_vault::router())
         .merge(allternit_api::admin_workspace_routes::router())
+        .merge(allternit_api::admin_service_account_routes::router())
+        .merge(allternit_api::admin_spend_limit_routes::router())
         .merge(allternit_api::rbac_routes::router())
         .merge(allternit_api::external_keys_routes::router())
         .merge(allternit_api::scim_routes::router())
