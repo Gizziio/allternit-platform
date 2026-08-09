@@ -342,6 +342,7 @@ async fn main() {
         .merge(allternit_api::eval_routes::router())
         .merge(allternit_api::eval_metric_routes::router())
         .merge(allternit_api::fallback_credit_routes::router())
+        .merge(allternit_api::fallback_retry_policy_routes::router())
         .merge(allternit_api::groundedness_check_routes::router())
         .merge(allternit_api::latency_budget_routes::router())
         .merge(allternit_api::server_tool_routes::router())
