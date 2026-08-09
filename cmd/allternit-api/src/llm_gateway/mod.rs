@@ -35,6 +35,7 @@ pub mod benchmarks;
 pub mod dlp;
 pub mod dlp_patterns;
 pub mod gizzi_bus;
+pub mod inference_hooks;
 pub mod keys;
 pub mod llm_pricing;
 pub mod proxy;
@@ -85,6 +86,10 @@ pub fn llm_gateway_router(state: Arc<AppState>) -> Router<Arc<AppState>> {
         .layer(axum::middleware::from_fn_with_state(
             state.clone(),
             auth::rate_limit_middleware,
+        ))
+        .layer(axum::middleware::from_fn_with_state(
+            state.clone(),
+            inference_hooks::inference_hook_middleware,
         ))
         .layer(axum::middleware::from_fn_with_state(
             state,

@@ -43,7 +43,7 @@ impl CredentialContext {
         } else {
             "write"
         };
-        let resource = if path.contains("/vault/") {
+        let resource = if path.contains("/vault/") || path.contains("/vaults") {
             "vault"
         } else {
             "api"
@@ -414,5 +414,7 @@ mod tests {
         assert!(context.allows_request(&axum::http::Method::GET, "/api/v1/agents"));
         assert!(!context.allows_request(&axum::http::Method::POST, "/api/v1/agents"));
         assert!(context.allows_request(&axum::http::Method::POST, "/api/v1/vault/credentials"));
+        assert!(context.allows_request(&axum::http::Method::POST, "/api/v1/beta/vaults"));
+        assert!(!context.allows_request(&axum::http::Method::GET, "/api/v1/beta/vaults"));
     }
 }
