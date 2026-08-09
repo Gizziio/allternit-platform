@@ -58,6 +58,7 @@ use allternit_api::fallback_routes::fallback_router;
 use allternit_api::file_routes::file_router;
 use allternit_api::h5i_routes::h5i_router;
 use allternit_api::health::health_router;
+use allternit_api::idempotency::idempotency_middleware;
 use allternit_api::inbox_routes::inbox_router;
 use allternit_api::library_routes::library_router;
 use allternit_api::local_brain_routes::local_brain_router;
@@ -74,6 +75,7 @@ use allternit_api::orchestrator_routes::orchestrator_router;
 use allternit_api::platform_static::platform_service;
 use allternit_api::playground_routes::playground_router;
 use allternit_api::provider_routes::provider_router;
+use allternit_api::rate_limit::rate_limit_middleware;
 use allternit_api::rails::{rails_router, RailsState};
 use allternit_api::rails_client_impl::create_local_rails_client;
 use allternit_api::runtime_backend_routes::runtime_backend_router;
@@ -371,7 +373,17 @@ async fn main() {
         .nest("/api", design_connector_router())
         .nest("/api", office_engine_router())
         .nest("/api", provider_router())
-        // Auth middleware applied to everything above
+        // Idempotency replay for POST/PUT/PATCH on the protected surface.
+        .layer(axum::middleware::from_fn_with_state(
+            state.clone(),
+            idempotency_middleware,
+        ))
+        // Per-organization rate-limit enforcement.
+        .layer(axum::middleware::from_fn_with_state(
+            state.clone(),
+            rate_limit_middleware,
+        ))
+        // Auth middleware applied to everything above (runs first).
         .layer(axum::middleware::from_fn_with_state(
             state.clone(),
             auth_middleware,
