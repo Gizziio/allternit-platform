@@ -340,6 +340,7 @@ async fn main() {
         .merge(allternit_api::llm_gateway::admin_routes::gateway_admin_router())
         .merge(allternit_api::enterprise_auth::router())
         .merge(allternit_api::eval_routes::router())
+        .merge(allternit_api::eval_metric_routes::router())
         .merge(allternit_api::fallback_credit_routes::router())
         .merge(allternit_api::groundedness_check_routes::router())
         .merge(allternit_api::latency_budget_routes::router())
