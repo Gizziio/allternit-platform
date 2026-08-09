@@ -58,6 +58,24 @@ function hasCacheControl(request: StreamRequest): boolean {
   );
 }
 
+function openAIMessageContent(content: Message['content']): string {
+  if (typeof content === 'string') {
+    return content;
+  }
+  return content
+    .map(block => {
+      if (block.type === 'text') {
+        return block.text;
+      }
+      if (block.type === 'search_result') {
+        const scoreSuffix = block.score !== undefined ? ` score=${block.score}` : '';
+        return `[search_result title="${block.title}" url="${block.url}"${scoreSuffix}]\n${block.content}\n[/search_result]`;
+      }
+      return String(block);
+    })
+    .join('\n\n');
+}
+
 /** Convert the normalized harness contract to an OpenAI-compatible body. */
 export function toOpenAIRequest(request: StreamRequest): Record<string, unknown> {
   const responseFormat = request.responseFormat && {
@@ -75,7 +93,10 @@ export function toOpenAIRequest(request: StreamRequest): Record<string, unknown>
   const useFunctions = Array.isArray(request.functions) && request.functions.length > 0;
   return compact({
     model: request.model,
-    messages: request.messages.map(({ cache, cache_control, ...message }) => message),
+    messages: request.messages.map(({ cache, cache_control, content, ...message }) => ({
+      ...message,
+      content: openAIMessageContent(content),
+    })),
     temperature: request.temperature,
     max_tokens: request.maxTokens,
     top_p: request.topP,
@@ -123,6 +144,25 @@ export function parseOpenAIUsage(usage: Record<string, unknown>): {
   };
 }
 
+function anthropicContentBlocks(content: Message['content']): unknown[] {
+  if (typeof content === 'string') {
+    return [{ type: 'text', text: content }];
+  }
+  return content.map(block => {
+    if (block.type === 'text') {
+      return { type: 'text', text: block.text };
+    }
+    if (block.type === 'search_result') {
+      const scoreSuffix = block.score !== undefined ? ` score=${block.score}` : '';
+      return {
+        type: 'text',
+        text: `[search_result title="${block.title}" url="${block.url}"${scoreSuffix}]\n${block.content}\n[/search_result]`,
+      };
+    }
+    return { type: 'text', text: String(block) };
+  });
+}
+
 /** Convert the normalized harness contract to Anthropic Messages fields. */
 export function toAnthropicRequest(request: StreamRequest): Record<string, unknown> {
   const systemMessages = request.messages.filter(message => message.role === 'system');
@@ -143,7 +183,10 @@ export function toAnthropicRequest(request: StreamRequest): Record<string, unkno
     system: system.length ? system : undefined,
     messages: request.messages.filter(message => message.role !== 'system').map(message => ({
       role: message.role,
-      content: [{ type: 'text', text: message.content, ...cacheMarker(message) }],
+      content: anthropicContentBlocks(message.content).map(block => ({
+        ...block,
+        ...cacheMarker(message),
+      })),
     })),
     max_tokens: request.maxTokens,
     temperature: request.temperature,

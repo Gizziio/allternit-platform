@@ -59,6 +59,7 @@ pub fn beta_session_router() -> Router<Arc<AppState>> {
             "/beta/sessions/:id/resources/:resource_id",
             delete(delete_resource),
         )
+        .route("/beta/sessions/:id/context/edit", post(edit_context))
 }
 
 #[derive(Debug, Default, Deserialize)]
@@ -66,6 +67,50 @@ struct BudgetInput {
     max_tokens: Option<u64>,
     max_turns: Option<u64>,
     max_tool_calls: Option<u64>,
+    context_window: Option<u64>,
+    #[serde(default)]
+    truncation_strategy: TruncationStrategy,
+}
+
+#[derive(Debug, Default, Deserialize, Serialize, Clone, Copy, PartialEq, Eq)]
+#[serde(rename_all = "snake_case")]
+enum TruncationStrategy {
+    #[default]
+    None,
+    DropOldestUser,
+    Summarize,
+}
+
+impl TruncationStrategy {
+    fn as_str(&self) -> &'static str {
+        match self {
+            TruncationStrategy::None => "none",
+            TruncationStrategy::DropOldestUser => "drop_oldest_user",
+            TruncationStrategy::Summarize => "summarize",
+        }
+    }
+}
+
+impl rusqlite::types::FromSql for TruncationStrategy {
+    fn column_result(value: rusqlite::types::ValueRef<'_>) -> rusqlite::types::FromSqlResult<Self> {
+        match value.as_str()? {
+            "none" => Ok(TruncationStrategy::None),
+            "drop_oldest_user" => Ok(TruncationStrategy::DropOldestUser),
+            "summarize" => Ok(TruncationStrategy::Summarize),
+            other => Err(rusqlite::types::FromSqlError::Other(Box::new(
+                std::io::Error::new(
+                    std::io::ErrorKind::InvalidData,
+                    format!("unknown truncation_strategy: {other}"),
+                ),
+            ))),
+        }
+    }
+}
+
+impl rusqlite::types::ToSql for TruncationStrategy {
+    fn to_sql(&self) -> rusqlite::Result<rusqlite::types::ToSqlOutput<'_>> {
+        Ok(rusqlite::types::ToSqlOutput::from(self.as_str()))
+    }
 }
 
 #[derive(Debug, Deserialize)]
@@ -133,6 +178,8 @@ struct BudgetState {
     max_tokens: Option<u64>,
     max_turns: Option<u64>,
     max_tool_calls: Option<u64>,
+    context_window: Option<u64>,
+    truncation_strategy: TruncationStrategy,
     tokens_used: u64,
     turns_used: u64,
     tool_calls_used: u64,
@@ -147,6 +194,7 @@ struct SessionRow {
     status: String,
     metadata: Value,
     budget: Value,
+    context: Value,
     created_at: String,
     updated_at: String,
     archived_at: Option<String>,
@@ -154,6 +202,7 @@ struct SessionRow {
 
 fn read_session(row: &rusqlite::Row<'_>) -> rusqlite::Result<SessionRow> {
     let metadata: String = row.get(5)?;
+    let truncation_strategy: TruncationStrategy = row.get(13)?;
     Ok(SessionRow {
         id: row.get(0)?,
         agent_id: row.get(1)?,
@@ -169,14 +218,19 @@ fn read_session(row: &rusqlite::Row<'_>) -> rusqlite::Result<SessionRow> {
             "turns_used": row.get::<_, u64>(10)?,
             "tool_calls_used": row.get::<_, u64>(11)?,
         }),
-        created_at: row.get(12)?,
-        updated_at: row.get(13)?,
-        archived_at: row.get(14)?,
+        context: json!({
+            "context_window": row.get::<_, Option<u64>>(12)?,
+            "truncation_strategy": truncation_strategy,
+        }),
+        created_at: row.get(14)?,
+        updated_at: row.get(15)?,
+        archived_at: row.get(16)?,
     })
 }
 
 const SESSION_SELECT: &str = "SELECT id, agent_id, name, parent_thread_id, status, metadata,
     max_tokens, max_turns, max_tool_calls, tokens_used, turns_used, tool_calls_used,
+    context_window, truncation_strategy,
     created_at, updated_at, archived_at FROM beta_sessions";
 
 async fn create_session(
@@ -206,11 +260,12 @@ async fn create_session(
         }
         tx.execute(
             "INSERT INTO beta_sessions
-             (id, user_id, agent_id, name, parent_thread_id, metadata, max_tokens, max_turns, max_tool_calls)
-             VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9)",
+             (id, user_id, agent_id, name, parent_thread_id, metadata, max_tokens, max_turns, max_tool_calls,
+              context_window, truncation_strategy)
+             VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11)",
             params![id, user_id, body.agent_id, body.name, body.parent_thread_id,
                 body.metadata.to_string(), body.budget.max_tokens, body.budget.max_turns,
-                body.budget.max_tool_calls],
+                body.budget.max_tool_calls, body.budget.context_window, body.budget.truncation_strategy],
         )?;
         insert_event(&tx, &id, "session_created", &json!({}))?;
         insert_event(&tx, &id, "budget_updated", &budget_limits_json(&body.budget))?;
@@ -325,8 +380,10 @@ async fn update_session(
                 max_tokens = CASE WHEN ?3 THEN ?4 ELSE max_tokens END,
                 max_turns = CASE WHEN ?3 THEN ?5 ELSE max_turns END,
                 max_tool_calls = CASE WHEN ?3 THEN ?6 ELSE max_tool_calls END,
+                context_window = CASE WHEN ?3 THEN ?7 ELSE context_window END,
+                truncation_strategy = CASE WHEN ?3 THEN ?8 ELSE truncation_strategy END,
                 updated_at = CURRENT_TIMESTAMP
-             WHERE id = ?7 AND user_id = ?8",
+             WHERE id = ?9 AND user_id = ?10",
             params![
                 body.name,
                 body.metadata.map(|v| v.to_string()),
@@ -334,6 +391,8 @@ async fn update_session(
                 body.budget.as_ref().and_then(|b| b.max_tokens),
                 body.budget.as_ref().and_then(|b| b.max_turns),
                 body.budget.as_ref().and_then(|b| b.max_tool_calls),
+                body.budget.as_ref().and_then(|b| b.context_window),
+                body.budget.as_ref().map(|b| b.truncation_strategy),
                 id,
                 update_user_id
             ],
@@ -407,13 +466,32 @@ async fn append_event(
             let mut conn = db.connect()?;
             let tx = conn.transaction()?;
             let budget = tx.query_row(
-            "SELECT max_tokens, max_turns, max_tool_calls, tokens_used, turns_used, tool_calls_used
+            "SELECT max_tokens, max_turns, max_tool_calls, context_window, truncation_strategy,
+             tokens_used, turns_used, tool_calls_used
              FROM beta_sessions WHERE id = ?1 AND user_id = ?2 AND status = 'active'",
             params![id, user.user_id],
-            |row| Ok(BudgetState { max_tokens: row.get(0)?, max_turns: row.get(1)?,
-                max_tool_calls: row.get(2)?, tokens_used: row.get(3)?, turns_used: row.get(4)?,
-                tool_calls_used: row.get(5)? }),
+            |row| Ok(BudgetState {
+                max_tokens: row.get(0)?, max_turns: row.get(1)?, max_tool_calls: row.get(2)?,
+                context_window: row.get(3)?, truncation_strategy: row.get(4)?,
+                tokens_used: row.get(5)?, turns_used: row.get(6)?, tool_calls_used: row.get(7)? }),
         )?;
+            let projected = UsageDelta {
+                tokens: budget.tokens_used.saturating_add(body.usage.tokens),
+                turns: budget.turns_used.saturating_add(body.usage.turns),
+                tool_calls: budget.tool_calls_used.saturating_add(body.usage.tool_calls),
+            };
+            if let Some(warning) = context_warning_state(budget, projected) {
+                insert_event(
+                    &tx,
+                    &id,
+                    "context_warning",
+                    &json!({
+                        "threshold": warning.threshold, "usage": projected,
+                        "context_window": budget.context_window,
+                        "truncation_strategy": budget.truncation_strategy,
+                    }),
+                )?;
+            }
             if let Some(resource) = exceeded_budget(budget, body.usage) {
                 let event = insert_event(
                     &tx,
@@ -488,6 +566,126 @@ async fn interrupt_session(
         }
     })?;
     Ok(Json(json!({"event": event})))
+}
+
+#[derive(Debug, Deserialize)]
+struct ContextEditOperation {
+    action: String,
+    start_sequence: i64,
+    end_sequence: i64,
+    #[serde(default)]
+    summary: String,
+    #[serde(default)]
+    tokens_removed: u64,
+}
+
+#[derive(Debug, Deserialize)]
+struct ContextEditBody {
+    operations: Vec<ContextEditOperation>,
+}
+
+#[derive(Debug, Serialize)]
+struct ContextEditResult {
+    operations_applied: usize,
+    events_deleted: u64,
+    events_inserted: u64,
+    tokens_used_after: u64,
+}
+
+async fn edit_context(
+    State(state): State<Arc<AppState>>,
+    Extension(user): Extension<AuthUser>,
+    Path(id): Path<String>,
+    Json(body): Json<ContextEditBody>,
+) -> Result<Json<Value>, ApiError> {
+    if body.operations.is_empty() {
+        return Err(ApiError::BadRequest("operations are required".into()));
+    }
+    for op in &body.operations {
+        if op.start_sequence < 1 || op.end_sequence < op.start_sequence {
+            return Err(ApiError::BadRequest(
+                "invalid sequence range".into(),
+            ));
+        }
+        if !["delete", "summarize"].contains(&op.action.as_str()) {
+            return Err(ApiError::BadRequest("unsupported action".into()));
+        }
+        if op.action == "summarize" && op.summary.trim().is_empty() {
+            return Err(ApiError::BadRequest(
+                "summary is required for summarize action".into(),
+            ));
+        }
+    }
+    load_session(state.clone(), user.user_id.clone(), id.clone()).await?;
+    let db = state.db.clone();
+    let result = tokio::task::spawn_blocking(move || {
+        let mut conn = db.connect()?;
+        let tx = conn.transaction()?;
+        let active = tx.query_row(
+            "SELECT EXISTS(SELECT 1 FROM beta_sessions WHERE id = ?1 AND user_id = ?2)",
+            params![id, user.user_id],
+            |row| row.get::<_, bool>(0),
+        )?;
+        if !active {
+            return Err(rusqlite::Error::QueryReturnedNoRows);
+        }
+        let mut events_deleted: u64 = 0;
+        let mut events_inserted: u64 = 0;
+        let mut total_tokens_removed: u64 = 0;
+        for op in &body.operations {
+            let deleted = tx.execute(
+                "DELETE FROM beta_session_events
+                 WHERE session_id = ?1 AND sequence >= ?2 AND sequence <= ?3",
+                params![id, op.start_sequence, op.end_sequence],
+            )?;
+            events_deleted += deleted as u64;
+            total_tokens_removed += op.tokens_removed;
+            if op.action == "summarize" {
+                insert_event(
+                    &tx,
+                    &id,
+                    "context_summary",
+                    &json!({
+                        "start_sequence": op.start_sequence,
+                        "end_sequence": op.end_sequence,
+                        "summary": op.summary.trim(),
+                    }),
+                )?;
+                events_inserted += 1;
+            }
+        }
+        tx.execute(
+            "UPDATE beta_sessions SET tokens_used = CASE
+                 WHEN tokens_used > ?1 THEN tokens_used - ?1
+                 ELSE 0
+             END,
+             updated_at = CURRENT_TIMESTAMP
+             WHERE id = ?2",
+            params![total_tokens_removed, id],
+        )?;
+        let tokens_used_after = tx.query_row(
+            "SELECT tokens_used FROM beta_sessions WHERE id = ?1",
+            params![id],
+            |row| row.get::<_, u64>(0),
+        )?;
+        tx.commit()?;
+        Ok::<ContextEditResult, rusqlite::Error>(ContextEditResult {
+            operations_applied: body.operations.len(),
+            events_deleted,
+            events_inserted,
+            tokens_used_after,
+        })
+    })
+    .await
+    .map_err(|e| ApiError::Internal(e.to_string()))?
+    .map_err(|e| {
+        if matches!(e, rusqlite::Error::QueryReturnedNoRows) {
+            ApiError::NotFound("session not found".into())
+        } else {
+            ApiError::DbError(e.to_string())
+        }
+    })?;
+    Ok(Json(json!({"result": result})))
 }
 
 async fn attach_resource(
@@ -748,13 +946,36 @@ fn exceeded_budget(state: BudgetState, delta: UsageDelta) -> Option<&'static str
 
 fn budget_limits_json(budget: &BudgetInput) -> Value {
     json!({"max_tokens": budget.max_tokens, "max_turns": budget.max_turns,
-        "max_tool_calls": budget.max_tool_calls})
+        "max_tool_calls": budget.max_tool_calls, "context_window": budget.context_window,
+        "truncation_strategy": budget.truncation_strategy})
 }
 
 fn budget_json(state: BudgetState) -> Value {
     json!({"max_tokens": state.max_tokens, "max_turns": state.max_turns,
-        "max_tool_calls": state.max_tool_calls, "tokens_used": state.tokens_used,
+        "max_tool_calls": state.max_tool_calls, "context_window": state.context_window,
+        "truncation_strategy": state.truncation_strategy, "tokens_used": state.tokens_used,
         "turns_used": state.turns_used, "tool_calls_used": state.tool_calls_used})
+}
+
+#[derive(Debug, Serialize)]
+struct ContextWarning {
+    threshold: f64,
+}
+
+/// Returns a warning when projected usage crosses the warning threshold (80%)
+/// of the configured context window.
+fn context_warning_state(state: BudgetState, projected: UsageDelta) -> Option<ContextWarning> {
+    const WARNING_THRESHOLD: f64 = 0.8;
+    state.context_window.and_then(|window| {
+        let ratio = projected.tokens as f64 / window as f64;
+        if ratio >= WARNING_THRESHOLD {
+            Some(ContextWarning {
+                threshold: WARNING_THRESHOLD,
+            })
+        } else {
+            None
+        }
+    })
 }
 
 #[cfg(test)]
@@ -847,6 +1068,17 @@ mod tests {
         Body::from(value.to_string())
     }
 
+    fn session_event_types(db: crate::db::DbHandle, session_id: &str) -> Vec<String> {
+        let conn = db.connect().expect("test db connection");
+        let mut stmt = conn
+            .prepare("SELECT event_type FROM beta_session_events WHERE session_id = ?1 ORDER BY sequence")
+            .unwrap();
+        stmt.query_map(params![session_id], |row| row.get(0))
+            .unwrap()
+            .collect::<Result<Vec<String>, _>>()
+            .unwrap()
+    }
+
     #[test]
     fn accepts_standard_runtime_event_types() {
         for event_type in [
@@ -874,6 +1106,8 @@ mod tests {
             max_tokens: Some(100),
             max_turns: Some(4),
             max_tool_calls: Some(2),
+            context_window: None,
+            truncation_strategy: TruncationStrategy::None,
             tokens_used: 90,
             turns_used: 4,
             tool_calls_used: 1,
@@ -1247,5 +1481,247 @@ mod tests {
             .await
             .unwrap();
         assert_eq!(resp.status(), StatusCode::NOT_FOUND);
+    }
+
+    #[tokio::test]
+    async fn session_context_window_is_returned_in_session_payload() {
+        let temp = temp_dir("context-window");
+        let state = test_app_state(&temp).await;
+        let app = beta_session_router().with_state(state);
+
+        let resp = app
+            .clone()
+            .oneshot(
+                Request::builder()
+                    .method("POST")
+                    .uri("/beta/sessions")
+                    .header("content-type", "application/json")
+                    .extension(test_user("user-a"))
+                    .body(json_body(&json!({
+                        "budget": {
+                            "context_window": 1000,
+                            "truncation_strategy": "drop_oldest_user"
+                        }
+                    })))
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+        assert_eq!(resp.status(), StatusCode::CREATED);
+        let body = body_json(resp.into_body()).await;
+        assert_eq!(body["session"]["context"]["context_window"], 1000);
+        assert_eq!(
+            body["session"]["context"]["truncation_strategy"],
+            "drop_oldest_user"
+        );
+    }
+
+    #[tokio::test]
+    async fn context_warning_is_emitted_before_budget_exceeded() {
+        let temp = temp_dir("context-warning");
+        let state = test_app_state(&temp).await;
+        let state_for_db = state.clone();
+        let app = beta_session_router().with_state(state);
+
+        let resp = app
+            .clone()
+            .oneshot(
+                Request::builder()
+                    .method("POST")
+                    .uri("/beta/sessions")
+                    .header("content-type", "application/json")
+                    .extension(test_user("user-a"))
+                    .body(json_body(&json!({
+                        "budget": {
+                            "max_tokens": 100,
+                            "context_window": 100
+                        }
+                    })))
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+        assert_eq!(resp.status(), StatusCode::CREATED);
+        let body = body_json(resp.into_body()).await;
+        let session_id = body["session"]["id"].as_str().unwrap().to_string();
+
+        // Append an event that crosses both the 80% warning threshold and the token budget.
+        let resp = app
+            .clone()
+            .oneshot(
+                Request::builder()
+                    .method("POST")
+                    .uri(format!("/beta/sessions/{}/events", session_id))
+                    .header("content-type", "application/json")
+                    .extension(test_user("user-a"))
+                    .body(json_body(&json!({
+                        "type": "thinking_delta",
+                        "data": {},
+                        "usage": { "tokens": 110, "turns": 0, "tool_calls": 0 }
+                    })))
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+        assert_eq!(resp.status(), StatusCode::OK);
+        let body = body_json(resp.into_body()).await;
+        assert_eq!(body["accepted"], false);
+        assert_eq!(body["event"]["type"], "budget_exceeded");
+
+        // Verify the context_warning event was emitted before budget_exceeded.
+        let types = session_event_types(state_for_db.db.clone(), &session_id);
+        let warning_idx = types.iter().position(|t| t == "context_warning").expect("context_warning event");
+        let exceeded_idx = types.iter().position(|t| t == "budget_exceeded").expect("budget_exceeded event");
+        assert!(
+            warning_idx < exceeded_idx,
+            "context_warning must be emitted before budget_exceeded"
+        );
+    }
+
+    #[tokio::test]
+    async fn context_edit_deletes_and_summarizes_event_ranges() {
+        let temp = temp_dir("context-edit");
+        let state = test_app_state(&temp).await;
+        let state_for_db = state.clone();
+        let app = beta_session_router().with_state(state);
+
+        let resp = app
+            .clone()
+            .oneshot(
+                Request::builder()
+                    .method("POST")
+                    .uri("/beta/sessions")
+                    .header("content-type", "application/json")
+                    .extension(test_user("user-a"))
+                    .body(json_body(&json!({
+                        "budget": { "tokens_used": 0 }
+                    })))
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+        assert_eq!(resp.status(), StatusCode::CREATED);
+        let body = body_json(resp.into_body()).await;
+        let session_id = body["session"]["id"].as_str().unwrap().to_string();
+
+        // Append three events to create a deletable/summarizable range.
+        for _ in 0..3 {
+            let resp = app
+                .clone()
+                .oneshot(
+                    Request::builder()
+                        .method("POST")
+                        .uri(format!("/beta/sessions/{}/events", session_id))
+                        .header("content-type", "application/json")
+                        .extension(test_user("user-a"))
+                        .body(json_body(&json!({
+                            "type": "thinking_delta",
+                            "data": { "text": "thought" },
+                            "usage": { "tokens": 10, "turns": 0, "tool_calls": 0 }
+                        })))
+                        .unwrap(),
+                )
+                .await
+                .unwrap();
+            assert_eq!(resp.status(), StatusCode::OK);
+        }
+
+        // Summarize events 4..5 and delete event 3.
+        let resp = app
+            .clone()
+            .oneshot(
+                Request::builder()
+                    .method("POST")
+                    .uri(format!("/beta/sessions/{}/context/edit", session_id))
+                    .header("content-type", "application/json")
+                    .extension(test_user("user-a"))
+                    .body(json_body(&json!({
+                        "operations": [
+                            {
+                                "action": "summarize",
+                                "start_sequence": 4,
+                                "end_sequence": 5,
+                                "summary": "Two thoughts summarized.",
+                                "tokens_removed": 15
+                            },
+                            {
+                                "action": "delete",
+                                "start_sequence": 3,
+                                "end_sequence": 3,
+                                "tokens_removed": 10
+                            }
+                        ]
+                    })))
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+        assert_eq!(resp.status(), StatusCode::OK);
+        let body = body_json(resp.into_body()).await;
+        assert_eq!(body["result"]["operations_applied"], 2);
+        assert_eq!(body["result"]["events_deleted"], 3);
+        assert_eq!(body["result"]["events_inserted"], 1);
+        assert_eq!(body["result"]["tokens_used_after"], 5);
+
+        // Verify the summary event exists.
+        let types = session_event_types(state_for_db.db.clone(), &session_id);
+        assert!(types.contains(&"context_summary".to_string()));
+        let conn = state_for_db.db.connect().expect("test db connection");
+        let summary_data: String = conn
+            .query_row(
+                "SELECT data FROM beta_session_events WHERE session_id = ?1 AND event_type = 'context_summary'",
+                params![session_id],
+                |row| row.get(0),
+            )
+            .unwrap();
+        assert!(summary_data.contains("Two thoughts summarized."));
+    }
+
+    #[tokio::test]
+    async fn context_edit_rejects_invalid_operations() {
+        let temp = temp_dir("context-edit-validation");
+        let state = test_app_state(&temp).await;
+        let app = beta_session_router().with_state(state);
+
+        let resp = app
+            .clone()
+            .oneshot(
+                Request::builder()
+                    .method("POST")
+                    .uri("/beta/sessions")
+                    .header("content-type", "application/json")
+                    .extension(test_user("user-a"))
+                    .body(json_body(&json!({})))
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+        assert_eq!(resp.status(), StatusCode::CREATED);
+        let body = body_json(resp.into_body()).await;
+        let session_id = body["session"]["id"].as_str().unwrap().to_string();
+
+        let resp = app
+            .clone()
+            .oneshot(
+                Request::builder()
+                    .method("POST")
+                    .uri(format!("/beta/sessions/{}/context/edit", session_id))
+                    .header("content-type", "application/json")
+                    .extension(test_user("user-a"))
+                    .body(json_body(&json!({
+                        "operations": [
+                            {
+                                "action": "summarize",
+                                "start_sequence": 2,
+                                "end_sequence": 1,
+                                "summary": "bad range"
+                            }
+                        ]
+                    })))
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+        assert_eq!(resp.status(), StatusCode::BAD_REQUEST);
     }
 }
