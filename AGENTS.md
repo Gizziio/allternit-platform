@@ -337,6 +337,16 @@ Output: /Users/macbook/Desktop/allternit-workspace/allternit/alabs-generated-cou
 - [ ] Build module generation directly into template system (agents output JSON, build script wraps)
 - [ ] Add completion webhooks (Canvas → platform notifications)
 
+## Tool Belt, MCP, and ACI Documentation
+
+Phase 4 added public docs for the agent runtime surfaces. When working on tools, MCP integrations, or computer-use features, consult the relevant reference first:
+
+- [`docs/public/tools/tool-belt.md`](./docs/public/tools/tool-belt.md) — Native Tool Belt: `web_search`, `web_fetch`, `bash`, `code_execution`, `memory`, `str_replace_editor`, and `computer`.
+- [`docs/public/tools/mcp.md`](./docs/public/tools/mcp.md) — Attaching MCP servers, server-side execution, bundled/remote directory pattern, and tunnel security.
+- [`docs/public/tools/strict-tool-use.md`](./docs/public/tools/strict-tool-use.md) — Strict JSON Schema validation and grammar-constrained inputs.
+- [`docs/public/aci/index.md`](./docs/public/aci/index.md) — Allternit Computer Interface overview, browser automation, and vision coordinates.
+- [`docs/public/guides/build-a-tool.md`](./docs/public/guides/build-a-tool.md) — Step-by-step guide for registering custom tools.
+
 ## Key Contacts / Context
 
 - **Canvas Instance:** Free For Teacher, `canvas.instructure.com`
