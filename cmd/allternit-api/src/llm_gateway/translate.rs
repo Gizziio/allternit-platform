@@ -16,6 +16,20 @@ use axum::{
 use serde::{Deserialize, Serialize};
 use serde_json::json;
 
+/// Stable machine-readable codes shared by every gateway error response.
+pub mod error_code {
+    pub const INVALID_REQUEST: &str = "allternit.invalid_request";
+    pub const AUTHENTICATION_FAILED: &str = "allternit.authentication_failed";
+    pub const PERMISSION_DENIED: &str = "allternit.permission_denied";
+    pub const RATE_LIMITED: &str = "allternit.rate_limited";
+    pub const BUDGET_EXCEEDED: &str = "allternit.budget_exceeded";
+    pub const IDEMPOTENCY_CONFLICT: &str = "allternit.idempotency_conflict";
+    pub const MODEL_NOT_FOUND: &str = "allternit.model_not_found";
+    pub const UPSTREAM_ERROR: &str = "allternit.upstream_error";
+    pub const INTERNAL_ERROR: &str = "allternit.internal_error";
+    pub const CONTENT_POLICY_VIOLATION: &str = "allternit.content_policy_violation";
+}
+
 // ─── Error body ─────────────────────────────────────────────────────────────
 
 /// OpenAI-shaped error body: `{"error": {message, type, param, code}}`.
@@ -62,14 +76,20 @@ impl OpenAiErrorResponse {
             message,
             "invalid_request_error",
             param,
-            None,
+            Some(error_code::INVALID_REQUEST),
         )
     }
 
     /// 502 for failures talking to the Gizzi runtime. `error_type` carries the
     /// Gizzi error name when one is known.
     pub fn upstream(message: impl Into<String>, error_type: &str) -> Self {
-        Self::new(StatusCode::BAD_GATEWAY, message, error_type, None, None)
+        Self::new(
+            StatusCode::BAD_GATEWAY,
+            message,
+            error_type,
+            None,
+            Some(error_code::UPSTREAM_ERROR),
+        )
     }
 }
 
@@ -112,6 +132,10 @@ pub struct ChatCompletionRequest {
     #[serde(default)]
     pub tool_choice: Option<serde_json::Value>,
     #[serde(default)]
+    pub parallel_tool_calls: Option<bool>,
+    #[serde(default)]
+    pub reasoning_effort: Option<String>,
+    #[serde(default)]
     pub user: Option<String>,
 }
 
@@ -126,6 +150,10 @@ pub struct ChatMessage {
     pub tool_call_id: Option<String>,
     #[serde(default)]
     pub tool_calls: Option<Vec<ToolCall>>,
+    #[serde(default)]
+    pub cache_control: Option<serde_json::Value>,
+    #[serde(default)]
+    pub cache: Option<bool>,
 }
 
 impl ChatMessage {
@@ -198,6 +226,23 @@ pub struct StreamOptions {
 pub struct ResponseFormat {
     #[serde(rename = "type")]
     pub format_type: String,
+    #[serde(default)]
+    pub json_schema: Option<JsonSchemaFormat>,
+    /// Normalized Allternit shorthand: `{type: "json_schema", schema: ...}`.
+    #[serde(default)]
+    pub schema: Option<serde_json::Value>,
+    #[serde(default)]
+    pub name: Option<String>,
+}
+
+#[derive(Debug, Clone, Deserialize)]
+pub struct JsonSchemaFormat {
+    pub name: String,
+    pub schema: serde_json::Value,
+    #[serde(default)]
+    pub description: Option<String>,
+    #[serde(default)]
+    pub strict: Option<bool>,
 }
 
 #[derive(Debug, Clone, Deserialize)]
@@ -214,6 +259,10 @@ pub struct ToolFunction {
     pub description: Option<String>,
     #[serde(default)]
     pub parameters: Option<serde_json::Value>,
+    #[serde(default)]
+    pub strict: Option<bool>,
+    #[serde(default)]
+    pub cache_control: Option<serde_json::Value>,
 }
 
 /// Validate the fields we understand. Returns an OpenAI-shaped 400 on the
@@ -232,7 +281,10 @@ pub fn validate_request(req: &ChatCompletionRequest) -> Result<(), OpenAiErrorRe
         ));
     }
     for (index, message) in req.messages.iter().enumerate() {
-        if !matches!(message.role.as_str(), "system" | "user" | "assistant" | "tool") {
+        if !matches!(
+            message.role.as_str(),
+            "system" | "user" | "assistant" | "tool"
+        ) {
             return Err(OpenAiErrorResponse::invalid_request(
                 format!("messages[{index}].role must be one of system, user, assistant, tool."),
                 Some("messages"),
@@ -277,6 +329,35 @@ pub fn validate_request(req: &ChatCompletionRequest) -> Result<(), OpenAiErrorRe
                     Some("tools"),
                 ));
             }
+        }
+    }
+    if let Some(format) = &req.response_format {
+        match format.format_type.as_str() {
+            "text" | "json_object" => {}
+            "json_schema" if format.json_schema.is_some() || format.schema.is_some() => {}
+            "json_schema" => {
+                return Err(OpenAiErrorResponse::invalid_request(
+                    "`response_format.json_schema` is required when type is `json_schema`.",
+                    Some("response_format"),
+                ))
+            }
+            _ => {
+                return Err(OpenAiErrorResponse::invalid_request(
+                    "`response_format.type` must be text, json_object, or json_schema.",
+                    Some("response_format"),
+                ))
+            }
+        }
+    }
+    if let Some(effort) = req.reasoning_effort.as_deref() {
+        if !matches!(
+            effort,
+            "none" | "minimal" | "low" | "medium" | "high" | "xhigh"
+        ) {
+            return Err(OpenAiErrorResponse::invalid_request(
+                "`reasoning_effort` must be one of none, minimal, low, medium, high, or xhigh.",
+                Some("reasoning_effort"),
+            ));
         }
     }
     Ok(())
@@ -378,10 +459,12 @@ impl Usage {
             prompt_tokens: prompt,
             completion_tokens: completion,
             total_tokens: prompt + completion,
-            completion_tokens_details: (reasoning > 0)
-                .then_some(CompletionTokensDetails { reasoning_tokens: reasoning }),
-            prompt_tokens_details: (cached > 0)
-                .then_some(PromptTokensDetails { cached_tokens: cached }),
+            completion_tokens_details: (reasoning > 0).then_some(CompletionTokensDetails {
+                reasoning_tokens: reasoning,
+            }),
+            prompt_tokens_details: (cached > 0).then_some(PromptTokensDetails {
+                cached_tokens: cached,
+            }),
         }
     }
 }
@@ -612,14 +695,37 @@ mod tests {
     }
 
     #[test]
+    fn request_accepts_normalized_reasoning_tools_and_json_schema() {
+        let req = parse(&json!({
+            "model": "m",
+            "messages": [{"role": "user", "content": "hi", "cache": true}],
+            "reasoning_effort": "high",
+            "parallel_tool_calls": false,
+            "response_format": {"type": "json_schema", "schema": {"type": "object"}},
+            "tools": [{"type": "function", "function": {
+                "name": "lookup", "parameters": {"type": "object"}, "strict": true,
+                "cache_control": {"type": "ephemeral"}
+            }}]
+        }))
+        .unwrap();
+        validate_request(&req).unwrap();
+        assert_eq!(req.reasoning_effort.as_deref(), Some("high"));
+        assert_eq!(req.parallel_tool_calls, Some(false));
+        assert_eq!(req.tools.unwrap()[0].function.strict, Some(true));
+    }
+
+    #[test]
     fn validation_rejects_bad_requests() {
-        let no_model = parse(&json!({"model": "  ", "messages": [{"role": "user", "content": "x"}]})).unwrap();
+        let no_model =
+            parse(&json!({"model": "  ", "messages": [{"role": "user", "content": "x"}]})).unwrap();
         assert!(validate_request(&no_model).is_err());
 
         let no_messages = parse(&json!({"model": "m", "messages": []})).unwrap();
         assert!(validate_request(&no_messages).is_err());
 
-        let bad_role = parse(&json!({"model": "m", "messages": [{"role": "hacker", "content": "x"}]})).unwrap();
+        let bad_role =
+            parse(&json!({"model": "m", "messages": [{"role": "hacker", "content": "x"}]}))
+                .unwrap();
         assert!(validate_request(&bad_role).is_err());
 
         let tool_without_id =
@@ -687,12 +793,15 @@ mod tests {
             "bad key",
             "invalid_request_error",
             None,
-            Some("invalid_api_key"),
+            Some(error_code::AUTHENTICATION_FAILED),
         );
         let body = json!({ "error": err.error });
         assert_eq!(body["error"]["message"], "bad key");
         assert_eq!(body["error"]["type"], "invalid_request_error");
-        assert_eq!(body["error"]["code"], "invalid_api_key");
+        assert_eq!(
+            body["error"]["code"],
+            error_code::AUTHENTICATION_FAILED
+        );
         assert!(body["error"].get("param").is_none());
     }
 
@@ -714,7 +823,10 @@ mod tests {
         let value = serde_json::to_value(&usage).unwrap();
         assert_eq!(value["choices"].as_array().unwrap().len(), 0);
         assert_eq!(value["usage"]["total_tokens"], 15);
-        assert_eq!(value["usage"]["completion_tokens_details"]["reasoning_tokens"], 2);
+        assert_eq!(
+            value["usage"]["completion_tokens_details"]["reasoning_tokens"],
+            2
+        );
         // cached == 0 → prompt_tokens_details omitted
         assert!(value["usage"].get("prompt_tokens_details").is_none());
     }

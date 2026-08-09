@@ -50,6 +50,7 @@ export interface HarnessConfig {
     anthropic?: BYOKProviderConfig;
     openai?: BYOKProviderConfig;
     google?: BYOKProviderConfig;
+    kimi?: BYOKProviderConfig;
   };
   cloud?: CloudConfig;
   local?: LocalConfig;
@@ -70,6 +71,29 @@ export interface Message {
   name?: string;
   tool_calls?: ToolCall[];
   tool_call_id?: string;
+  cache?: boolean;
+  cache_control?: CacheControl;
+}
+
+export interface CacheControl {
+  type: 'ephemeral';
+  ttl?: '5m' | '1h';
+}
+
+export type ReasoningEffort = 'none' | 'minimal' | 'low' | 'medium' | 'high' | 'xhigh';
+
+export interface ThinkingConfig {
+  enabled?: boolean;
+  budgetTokens?: number;
+  effort?: ReasoningEffort;
+}
+
+export interface JsonSchemaResponseFormat {
+  type: 'json_schema';
+  schema: Record<string, unknown>;
+  name?: string;
+  description?: string;
+  strict?: boolean;
 }
 
 /**
@@ -91,6 +115,9 @@ export interface Tool {
   name: string;
   description: string;
   parameters: ToolParameter;
+  strict?: boolean;
+  cache?: boolean;
+  cache_control?: CacheControl;
 }
 
 /**
@@ -114,6 +141,11 @@ export interface StreamRequest {
   topP?: number;
   topK?: number;
   tools?: Tool[];
+  toolChoice?: 'auto' | 'none' | 'required' | { name: string };
+  parallelToolCalls?: boolean;
+  reasoning?: ThinkingConfig;
+  responseFormat?: JsonSchemaResponseFormat;
+  systemCacheControl?: CacheControl;
   stream?: boolean;
 }
 

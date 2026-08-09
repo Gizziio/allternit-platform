@@ -77,12 +77,18 @@ fn invalid_api_key(message: &str) -> OpenAiErrorResponse {
         message,
         "invalid_request_error",
         None,
-        Some("invalid_api_key"),
+        Some(crate::llm_gateway::translate::error_code::AUTHENTICATION_FAILED),
     )
 }
 
 fn server_error(message: String) -> OpenAiErrorResponse {
-    OpenAiErrorResponse::new(StatusCode::INTERNAL_SERVER_ERROR, message, "server_error", None, None)
+    OpenAiErrorResponse::new(
+        StatusCode::INTERNAL_SERVER_ERROR,
+        message,
+        "server_error",
+        None,
+        Some(crate::llm_gateway::translate::error_code::INTERNAL_ERROR),
+    )
 }
 
 // ─── 1. Key authentication ──────────────────────────────────────────────────
@@ -162,9 +168,7 @@ pub async fn llm_key_middleware(
             request.extensions_mut().insert(ctx);
             next.run(request).await
         }
-        Ok(Ok(None)) => {
-            invalid_api_key("Unknown, revoked, or expired API key.").into_response()
-        }
+        Ok(Ok(None)) => invalid_api_key("Unknown, revoked, or expired API key.").into_response(),
         Ok(Err(err)) => {
             warn!(error = %err, "llm_virtual_keys lookup failed");
             server_error(format!("Internal error: {err}")).into_response()
@@ -222,7 +226,7 @@ pub async fn rate_limit_middleware(
             "error": {
                 "message": "Rate limit exceeded for this API key. Please retry after the Retry-After interval.",
                 "type": "rate_limit_exceeded",
-                "code": "rate_limit_exceeded"
+                "code": crate::llm_gateway::translate::error_code::RATE_LIMITED
             }
         });
         return (
@@ -240,7 +244,10 @@ pub async fn rate_limit_middleware(
 /// Current-calendar-month spend for one virtual key, in microdollars.
 /// Bills off the gateway-recomputed cost when present (single source of
 /// truth, per V27).
-fn key_month_spend_microdollars(conn: &rusqlite::Connection, key_id: &str) -> rusqlite::Result<i64> {
+fn key_month_spend_microdollars(
+    conn: &rusqlite::Connection,
+    key_id: &str,
+) -> rusqlite::Result<i64> {
     conn.query_row(
         "SELECT COALESCE(SUM(COALESCE(recomputed_cost_microdollars, cost_microdollars)), 0)
          FROM llm_usage_events
@@ -289,7 +296,7 @@ fn budget_exceeded(message: String) -> OpenAiErrorResponse {
         message,
         "budget_exceeded",
         None,
-        Some("budget_exceeded"),
+        Some(crate::llm_gateway::translate::error_code::BUDGET_EXCEEDED),
     )
 }
 
@@ -337,11 +344,10 @@ pub async fn budget_middleware(
                 server_error(format!("Internal error: {err}")).into_response()
             })?;
             if let Some(cap_cents) = cap_cents {
-                let spent =
-                    tenant_month_spend_microdollars(&conn, tenant_id).map_err(|err| {
-                        warn!(error = %err, "budget pre-check tenant spend query failed");
-                        server_error(format!("Internal error: {err}")).into_response()
-                    })?;
+                let spent = tenant_month_spend_microdollars(&conn, tenant_id).map_err(|err| {
+                    warn!(error = %err, "budget pre-check tenant spend query failed");
+                    server_error(format!("Internal error: {err}")).into_response()
+                })?;
                 if spent >= cap_cents * MICRODOLLARS_PER_CENT {
                     return Err(budget_exceeded(format!(
                         "Monthly budget exceeded for this tenant ({:.2} USD cap).",

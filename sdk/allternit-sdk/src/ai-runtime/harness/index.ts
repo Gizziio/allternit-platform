@@ -78,11 +78,12 @@ export class AllternitHarness {
         if (
           !config.byok.anthropic?.apiKey &&
           !config.byok.openai?.apiKey &&
-          !config.byok.google?.apiKey
+          !config.byok.google?.apiKey &&
+          !config.byok.kimi?.apiKey
         ) {
           throw new HarnessError(
             HarnessErrorCode.CONFIG_INVALID,
-            'BYOK mode requires at least one provider API key (anthropic, openai, or google)'
+            'BYOK mode requires at least one provider API key (anthropic, openai, google, or kimi)'
           );
         }
         break;
@@ -253,10 +254,14 @@ export class AllternitHarness {
       case 'google':
         yield* this.streamFromGoogle(request);
         break;
+      case 'kimi':
+      case 'moonshot':
+        yield* this.streamFromKimi(request);
+        break;
       default:
         throw new HarnessError(
           HarnessErrorCode.PROVIDER_NOT_FOUND,
-          `Provider "${provider}" not supported in BYOK mode. Supported: anthropic, openai, google`
+          `Provider "${provider}" not supported in BYOK mode. Supported: anthropic, openai, google, kimi`
         );
     }
   }
@@ -351,6 +356,15 @@ export class AllternitHarness {
     );
   }
 
+  private async *streamFromKimi(
+    request: StreamRequest
+  ): AsyncGenerator<HarnessStreamChunk> {
+    if (!this.config.byok?.kimi?.apiKey) {
+      throw new HarnessError(HarnessErrorCode.AUTHENTICATION_ERROR, 'Kimi API key not configured');
+    }
+    throw new HarnessError(HarnessErrorCode.API_ERROR, 'Kimi streaming not yet implemented');
+  }
+
   /**
    * Stream from local model (e.g., Ollama)
    * 
@@ -430,7 +444,8 @@ export class AllternitHarness {
             configured: !!(
               this.config.byok.anthropic?.apiKey ||
               this.config.byok.openai?.apiKey ||
-              this.config.byok.google?.apiKey
+              this.config.byok.google?.apiKey ||
+              this.config.byok.kimi?.apiKey
             ),
           }
         : undefined,
@@ -458,6 +473,7 @@ export class AllternitHarness {
 // Re-export types for convenience
 export * from './types.js';
 export * from './prompts.js';
+export * from './provider-request.js';
 
 // Default export
 export default AllternitHarness;

@@ -21,7 +21,9 @@ export class RunState {
     return this.toolRegistry.getActiveTools().map(tool => ({
       name: tool.name,
       description: tool.description,
-      input_schema: tool.input_schema
+      input_schema: tool.input_schema,
+      strict: tool.strict,
+      cache: tool.cache,
     }));
   }
 

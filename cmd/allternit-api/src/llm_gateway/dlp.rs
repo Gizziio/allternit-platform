@@ -144,7 +144,10 @@ fn load_tenant_rules(
 /// custom patterns with their actions).
 fn merge_rules(
     tenant_rules: Vec<TenantRule>,
-) -> (HashMap<&'static str, DlpAction>, Vec<(CustomPattern, DlpAction)>) {
+) -> (
+    HashMap<&'static str, DlpAction>,
+    Vec<(CustomPattern, DlpAction)>,
+) {
     let builtin = default_action();
     let mut actions: HashMap<&'static str, DlpAction> = dlp_patterns::builtin_patterns()
         .iter()
@@ -170,7 +173,9 @@ fn merge_rules(
                 },
                 rule.action,
             )),
-            Err(err) => warn!(rule = %rule.name, error = %err, "llm_dlp_rules regex does not compile; skipped"),
+            Err(err) => {
+                warn!(rule = %rule.name, error = %err, "llm_dlp_rules regex does not compile; skipped")
+            }
         }
     }
     (actions, customs)
@@ -190,12 +195,18 @@ struct ScanOutcome {
 impl ScanOutcome {
     fn blocked(&self, injection_block: u32) -> bool {
         self.injection_score >= injection_block
-            || self.matches.iter().any(|(_, _, action)| *action == DlpAction::Block)
+            || self
+                .matches
+                .iter()
+                .any(|(_, _, action)| *action == DlpAction::Block)
     }
 
     fn warned(&self, injection_warn: u32) -> bool {
         self.injection_score >= injection_warn
-            || self.matches.iter().any(|(_, _, action)| *action == DlpAction::Warn)
+            || self
+                .matches
+                .iter()
+                .any(|(_, _, action)| *action == DlpAction::Warn)
     }
 }
 
@@ -351,11 +362,7 @@ fn scan_and_redact_response(
 /// to redact or block a stream after the fact here; that would need
 /// per-chunk buffering with a hold-back window, which is real future work,
 /// not something to fake with a partial implementation.
-async fn scan_response(
-    state: &Arc<AppState>,
-    key: &LlmKeyContext,
-    response: Response,
-) -> Response {
+async fn scan_response(state: &Arc<AppState>, key: &LlmKeyContext, response: Response) -> Response {
     let is_streaming = response
         .headers()
         .get(axum::http::header::CONTENT_TYPE)
@@ -447,7 +454,7 @@ pub async fn dlp_middleware(
             "Internal error: missing key context",
             "server_error",
             None,
-            None,
+            Some(crate::llm_gateway::translate::error_code::INTERNAL_ERROR),
         )
         .into_response();
     };
@@ -467,7 +474,11 @@ pub async fn dlp_middleware(
     // Bodies that are not JSON are the proxy's job to reject — pass through.
     let mut body_value: Value = match serde_json::from_slice(&bytes) {
         Ok(value) => value,
-        Err(_) => return next.run(Request::from_parts(parts, Body::from(bytes))).await,
+        Err(_) => {
+            return next
+                .run(Request::from_parts(parts, Body::from(bytes)))
+                .await
+        }
     };
 
     // Load + merge tenant rules (small table; per-request is fine).
@@ -517,10 +528,7 @@ pub async fn dlp_middleware(
             .iter()
             .filter(|(_, _, action)| *action == DlpAction::Block)
             .map(|(id, _, _)| id.as_str())
-            .chain(
-                (outcome.injection_score >= block_threshold())
-                    .then_some("prompt_injection"),
-            )
+            .chain((outcome.injection_score >= block_threshold()).then_some("prompt_injection"))
             .collect();
 
         // One usage row per request — blocked requests included.
@@ -559,7 +567,7 @@ pub async fn dlp_middleware(
             ),
             "content_policy_violation",
             None,
-            Some("content_policy_violation"),
+            Some(crate::llm_gateway::translate::error_code::CONTENT_POLICY_VIOLATION),
         )
         .into_response();
     }

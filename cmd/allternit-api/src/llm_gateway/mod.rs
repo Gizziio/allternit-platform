@@ -41,6 +41,10 @@ pub mod router;
 pub mod translate;
 
 use axum::{
+    extract::Request,
+    http::StatusCode,
+    middleware::Next,
+    response::{IntoResponse, Response},
     routing::{get, patch, post},
     Router,
 };
@@ -77,6 +81,58 @@ pub fn llm_gateway_router(state: Arc<AppState>) -> Router<Arc<AppState>> {
             state,
             auth::llm_key_middleware,
         ))
+        // Header shape is request-global and is rejected before auth/spend.
+        .layer(axum::middleware::from_fn(idempotency_key_middleware))
+}
+
+/// Reject malformed idempotency keys before authentication, routing, or spend.
+/// Replay/persistence remains in the completion handler where the response body
+/// and usage record can be finalized atomically.
+async fn idempotency_key_middleware(request: Request, next: Next) -> Response {
+    if let Some(value) = request.headers().get("idempotency-key") {
+        let valid = value
+            .to_str()
+            .ok()
+            .map(str::trim)
+            .is_some_and(|key| !key.is_empty() && key.len() <= 255 && key.is_ascii());
+        if !valid {
+            return translate::OpenAiErrorResponse::new(
+                StatusCode::BAD_REQUEST,
+                "Idempotency-Key must be 1-255 ASCII characters.",
+                "invalid_request_error",
+                Some("Idempotency-Key"),
+                Some(translate::error_code::INVALID_REQUEST),
+            )
+            .into_response();
+        }
+    }
+    next.run(request).await
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use axum::{body::Body, routing::post};
+    use tower::ServiceExt;
+
+    #[tokio::test]
+    async fn rejects_invalid_idempotency_key_before_handler() {
+        let app = Router::new()
+            .route("/", post(|| async { StatusCode::NO_CONTENT }))
+            .layer(axum::middleware::from_fn(idempotency_key_middleware));
+        let response = app
+            .oneshot(
+                Request::builder()
+                    .method("POST")
+                    .uri("/")
+                    .header("idempotency-key", " ")
+                    .body(Body::empty())
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+        assert_eq!(response.status(), StatusCode::BAD_REQUEST);
+    }
 }
 
 /// Clerk-protected key-management router (merged into the `/api/v1` chain in

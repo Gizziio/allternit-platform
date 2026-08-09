@@ -11,6 +11,10 @@ export interface ToolDefinition {
     properties: Record<string, any>;
     required?: string[];
   };
+  /** Require provider-side JSON Schema validation for tool arguments. */
+  strict?: boolean;
+  /** Mark this definition as a reusable prompt-cache boundary. */
+  cache?: boolean;
   /**
    * Execution hooks
    */

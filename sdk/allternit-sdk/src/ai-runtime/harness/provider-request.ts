@@ -1,0 +1,106 @@
+import type { Message, StreamRequest, Tool } from './types.js';
+
+const openAiTool = (tool: Tool) => ({
+  type: 'function',
+  function: {
+    name: tool.name,
+    description: tool.description,
+    parameters: tool.parameters,
+    ...(tool.strict === undefined ? {} : { strict: tool.strict }),
+  },
+});
+
+const openAiToolChoice = (choice: StreamRequest['toolChoice']) =>
+  typeof choice === 'object'
+    ? { type: 'function', function: { name: choice.name } }
+    : choice;
+
+/** Convert the normalized harness contract to an OpenAI-compatible body. */
+export function toOpenAIRequest(request: StreamRequest): Record<string, unknown> {
+  const responseFormat = request.responseFormat && {
+    type: 'json_schema',
+    json_schema: {
+      name: request.responseFormat.name ?? 'response',
+      schema: request.responseFormat.schema,
+      ...(request.responseFormat.description ? { description: request.responseFormat.description } : {}),
+      strict: request.responseFormat.strict ?? true,
+    },
+  };
+  return compact({
+    model: request.model,
+    messages: request.messages.map(({ cache, cache_control, ...message }) => message),
+    temperature: request.temperature,
+    max_tokens: request.maxTokens,
+    top_p: request.topP,
+    tools: request.tools?.map(openAiTool),
+    tool_choice: openAiToolChoice(request.toolChoice),
+    parallel_tool_calls: request.parallelToolCalls,
+    reasoning_effort: request.reasoning?.effort,
+    response_format: responseFormat,
+    stream: request.stream,
+  });
+}
+
+/** Convert the normalized harness contract to Anthropic Messages fields. */
+export function toAnthropicRequest(request: StreamRequest): Record<string, unknown> {
+  const systemMessages = request.messages.filter(message => message.role === 'system');
+  const system = systemMessages.map((message, index) => ({
+    type: 'text',
+    text: message.content,
+    ...cacheMarker(message, index === systemMessages.length - 1 ? request.systemCacheControl : undefined),
+  }));
+  const tools = request.tools?.map(tool => compact({
+    name: tool.name,
+    description: tool.description,
+    input_schema: tool.parameters,
+    strict: tool.strict,
+    ...cacheMarker(tool),
+  }));
+  return compact({
+    model: request.model,
+    system: system.length ? system : undefined,
+    messages: request.messages.filter(message => message.role !== 'system').map(message => ({
+      role: message.role,
+      content: [{ type: 'text', text: message.content, ...cacheMarker(message) }],
+    })),
+    max_tokens: request.maxTokens,
+    temperature: request.temperature,
+    top_p: request.topP,
+    tools,
+    tool_choice: request.toolChoice && (typeof request.toolChoice === 'object'
+      ? { type: 'tool', name: request.toolChoice.name }
+      : { type: request.toolChoice === 'required' ? 'any' : request.toolChoice }),
+    disable_parallel_tool_use: request.parallelToolCalls === undefined ? undefined : !request.parallelToolCalls,
+    thinking: request.reasoning && request.reasoning.enabled !== false ? {
+      type: 'enabled',
+      budget_tokens: request.reasoning.budgetTokens ?? 1024,
+    } : undefined,
+    output_format: request.responseFormat && {
+      type: 'json_schema',
+      schema: request.responseFormat.schema,
+    },
+    stream: request.stream,
+  });
+}
+
+/** Kimi's OpenAI-compatible API uses `thinking` instead of reasoning_effort. */
+export function toKimiRequest(request: StreamRequest): Record<string, unknown> {
+  const body = toOpenAIRequest(request);
+  delete body.reasoning_effort;
+  return compact({
+    ...body,
+    thinking: request.reasoning && {
+      type: request.reasoning.enabled === false ? 'disabled' : 'enabled',
+      ...(request.reasoning.budgetTokens ? { budget_tokens: request.reasoning.budgetTokens } : {}),
+    },
+  });
+}
+
+function cacheMarker(value: Pick<Message | Tool, 'cache' | 'cache_control'>, fallback?: Message['cache_control']) {
+  const cacheControl = value.cache_control ?? fallback ?? (value.cache ? { type: 'ephemeral' as const } : undefined);
+  return cacheControl ? { cache_control: cacheControl } : {};
+}
+
+function compact<T extends Record<string, unknown>>(value: T): T {
+  return Object.fromEntries(Object.entries(value).filter(([, item]) => item !== undefined)) as T;
+}

@@ -155,6 +155,16 @@ pub struct ModelEntry {
     pub status: Option<String>,
     #[serde(default)]
     pub cost: Option<ModelCost>,
+    #[serde(default)]
+    pub limit: Option<ModelLimit>,
+}
+
+#[derive(Debug, Clone, Copy, Default, Deserialize)]
+pub struct ModelLimit {
+    #[serde(default)]
+    pub context: u64,
+    #[serde(default)]
+    pub output: u64,
 }
 
 /// $ per 1M tokens as reported by the Gizzi catalog (extra fields ignored).
@@ -221,12 +231,10 @@ async fn resolve_model(
             let db = db.clone();
             let tenant_id = tenant_id.map(str::to_string);
             let requested = requested.to_string();
-            tokio::task::spawn_blocking(
-                move || -> Result<RoutingDecision, router::RouterError> {
-                    let conn = db.connect().map_err(router::RouterError::from)?;
-                    router::resolve(&conn, tenant_id.as_deref(), &requested, &catalog)
-                },
-            )
+            tokio::task::spawn_blocking(move || -> Result<RoutingDecision, router::RouterError> {
+                let conn = db.connect().map_err(router::RouterError::from)?;
+                router::resolve(&conn, tenant_id.as_deref(), &requested, &catalog)
+            })
             .await
         };
         return match decision {
@@ -269,8 +277,7 @@ async fn resolve_model(
                 Some("model"),
             ));
         }
-        let fallbacks =
-            explicit_fallbacks(db, tenant_id, client, base, provider, model).await;
+        let fallbacks = explicit_fallbacks(db, tenant_id, client, base, provider, model).await;
         return Ok(ResolvedModel {
             policy: None,
             provider_id: provider.to_string(),
@@ -291,7 +298,8 @@ async fn resolve_model(
 
     match found {
         Some(provider) => {
-            let fallbacks = derive_fallbacks(db, tenant_id, &catalog, &provider.id, requested).await;
+            let fallbacks =
+                derive_fallbacks(db, tenant_id, &catalog, &provider.id, requested).await;
             Ok(ResolvedModel {
                 policy: None,
                 provider_id: provider.id.clone(),
@@ -305,7 +313,7 @@ async fn resolve_model(
             format!("The model `{requested}` does not exist or is not offered by any provider."),
             "invalid_request_error",
             Some("model"),
-            Some("model_not_found"),
+            Some(crate::llm_gateway::translate::error_code::MODEL_NOT_FOUND),
         )),
     }
 }
@@ -396,7 +404,10 @@ async fn create_session(
         .and_then(Value::as_str)
         .map(str::to_string)
         .ok_or_else(|| {
-            OpenAiErrorResponse::upstream("Gizzi session creation returned no id.", "upstream_error")
+            OpenAiErrorResponse::upstream(
+                "Gizzi session creation returned no id.",
+                "upstream_error",
+            )
         })
 }
 
@@ -950,7 +961,7 @@ fn idempotency_conflict(message: &str) -> Response {
         message,
         "invalid_request_error",
         None,
-        Some("idempotency_key_in_use"),
+        Some(crate::llm_gateway::translate::error_code::IDEMPOTENCY_CONFLICT),
     )
     .into_response()
 }
@@ -1040,7 +1051,7 @@ async fn idempotency_begin(db: &DbHandle, key: &LlmKeyContext, idem_key: &str) -
                     format!("Internal error: {err}"),
                     "server_error",
                     None,
-                    None,
+                    Some(crate::llm_gateway::translate::error_code::INTERNAL_ERROR),
                 )
                 .into_response(),
             )
@@ -1053,7 +1064,7 @@ async fn idempotency_begin(db: &DbHandle, key: &LlmKeyContext, idem_key: &str) -
                     format!("Internal error: {err}"),
                     "server_error",
                     None,
-                    None,
+                    Some(crate::llm_gateway::translate::error_code::INTERNAL_ERROR),
                 )
                 .into_response(),
             )
@@ -1106,7 +1117,15 @@ pub async fn chat_completions(
 
     // Resolve the requested model (policy alias, provider/model, or bare id).
     // Policy aliases go through B5 routing (winner + fallback chain).
-    let resolved = match resolve_model(&state.db, key.tenant_id.as_deref(), &client, &base, &request.model).await {
+    let resolved = match resolve_model(
+        &state.db,
+        key.tenant_id.as_deref(),
+        &client,
+        &base,
+        &request.model,
+    )
+    .await
+    {
         Ok(resolved) => resolved,
         Err(response) => return response.into_response(),
     };
@@ -1120,10 +1139,13 @@ pub async fn chat_completions(
     if !allowed {
         return OpenAiErrorResponse::new(
             StatusCode::FORBIDDEN,
-            format!("This API key is not allowed to use model `{}`.", request.model),
+            format!(
+                "This API key is not allowed to use model `{}`.",
+                request.model
+            ),
             "permission_error",
             Some("model"),
-            Some("model_not_allowed"),
+            Some(crate::llm_gateway::translate::error_code::PERMISSION_DENIED),
         )
         .into_response();
     }
@@ -1210,6 +1232,22 @@ pub async fn chat_completions(
     });
     if let Some(system) = &system {
         payload["system"] = json!(system);
+    }
+    if let Some(format) = &request.response_format {
+        if format.format_type == "json_schema" {
+            let schema = format
+                .json_schema
+                .as_ref()
+                .map(|value| value.schema.clone())
+                .or_else(|| format.schema.clone())
+                .unwrap_or_else(|| json!({}));
+            payload["format"] = json!({ "type": "json_schema", "schema": schema });
+        }
+    }
+    // Gizzi variants are the provider-neutral reasoning control and are
+    // translated by its provider adapters to reasoning_effort/thinking.
+    if let Some(effort) = &request.reasoning_effort {
+        payload["variant"] = json!(effort);
     }
     // B5: the router-derived failover chain (top 3 distinct providers).
     // Gizzi switches down this list on non-retryable provider errors and
@@ -1602,7 +1640,7 @@ pub async fn list_models(
         }
     }
 
-    let mut entries: Vec<(String, String, i64)> = Vec::new();
+    let mut entries: Vec<(String, String, i64, Option<ModelLimit>)> = Vec::new();
     for provider in &catalog.all {
         for model_id in provider.models.keys() {
             let full_id = format!("{}/{}", provider.id, model_id);
@@ -1617,16 +1655,23 @@ pub async fn list_models(
                 .and_then(|d| d.and_hms_opt(0, 0, 0))
                 .map(|dt| dt.and_utc().timestamp())
                 .unwrap_or(0);
-            entries.push((full_id, provider.id.clone(), created));
+            entries.push((
+                full_id,
+                provider.id.clone(),
+                created,
+                provider.models.get(model_id).and_then(|model| model.limit),
+            ));
         }
     }
     entries.sort_by(|a, b| a.0.cmp(&b.0));
-    for (full_id, provider_id, created) in entries {
+    for (full_id, provider_id, created, limit) in entries {
         data.push(json!({
             "id": full_id,
             "object": "model",
             "created": created,
             "owned_by": provider_id,
+            "context_window": limit.map(|value| value.context),
+            "max_output_tokens": limit.map(|value| value.output),
         }));
     }
 
