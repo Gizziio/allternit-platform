@@ -12,7 +12,10 @@ import {
   HarnessErrorCode,
   Message,
   Tool,
+  HarnessResponse,
+  Citation,
 } from './types.js';
+import { toAnthropicRequest } from './provider-request.js';
 import {
   injectSystemPrompt,
   injectProviderPrompt,
@@ -202,13 +205,28 @@ export class AllternitHarness {
    * @throws HarnessError for configuration or routing errors
    */
   async complete(request: StreamRequest): Promise<string> {
+    return (await this.run(request)).content;
+  }
+
+  /** Collect a stream into a response while retaining citations and usage. */
+  async run(request: StreamRequest): Promise<HarnessResponse> {
     const chunks: string[] = [];
+    const citations: Citation[] = [];
+    let usage: HarnessResponse['usage'];
     for await (const chunk of this.stream(request)) {
       if (chunk.type === 'text' && chunk.text) {
         chunks.push(chunk.text);
+      } else if (chunk.type === 'citation') {
+        citations.push(chunk.citation);
+      } else if (chunk.type === 'done') {
+        usage = chunk.usage;
       }
     }
-    return chunks.join('');
+    return {
+      content: chunks.join(''),
+      ...(citations.length ? { citations } : {}),
+      ...(usage ? { usage } : {}),
+    };
   }
 
   /**
@@ -284,16 +302,42 @@ export class AllternitHarness {
       );
     }
 
-    // TODO: Implement Anthropic streaming
-    // - Use Messages API
-    // - Handle streaming responses
-    // - Transform to HarnessStreamChunk format
-    // - Support tool use
+    const baseURL = this.config.byok?.anthropic?.baseURL ?? 'https://api.anthropic.com';
+    const response = await fetch(`${baseURL.replace(/\/$/, '')}/v1/messages`, {
+      method: 'POST',
+      headers: {
+        'content-type': 'application/json',
+        'x-api-key': apiKey,
+        'anthropic-version': '2023-06-01',
+      },
+      body: JSON.stringify(toAnthropicRequest({ ...request, stream: true })),
+    });
+    if (!response.ok || !response.body) {
+      throw new HarnessError(HarnessErrorCode.API_ERROR,
+        `Anthropic request failed with status ${response.status}`);
+    }
 
-    throw new HarnessError(
-      HarnessErrorCode.API_ERROR,
-      'Anthropic streaming not yet implemented'
-    );
+    let inputTokens = 0;
+    let outputTokens = 0;
+    for await (const event of readSseJson(response.body)) {
+      const message = event as Record<string, any>;
+      if (message.type === 'message_start') inputTokens = message.message?.usage?.input_tokens ?? 0;
+      if (message.type === 'message_delta') outputTokens = message.usage?.output_tokens ?? outputTokens;
+      if (message.type === 'content_block_delta' && message.delta?.type === 'text_delta') {
+        yield { type: 'text', text: message.delta.text ?? '' };
+      }
+      if (message.type === 'content_block_delta' && message.delta?.type === 'citations_delta') {
+        yield { type: 'citation', citation: anthropicCitation(message.delta.citation ?? {}) };
+      }
+      if (message.type === 'error') {
+        throw new HarnessError(HarnessErrorCode.API_ERROR, message.error?.message ?? 'Anthropic stream error');
+      }
+    }
+    yield { type: 'done', usage: {
+      promptTokens: inputTokens,
+      completionTokens: outputTokens,
+      totalTokens: inputTokens + outputTokens,
+    } };
   }
 
   /**
@@ -477,3 +521,40 @@ export * from './provider-request.js';
 
 // Default export
 export default AllternitHarness;
+
+async function* readSseJson(body: ReadableStream<Uint8Array>): AsyncGenerator<unknown> {
+  const reader = body.getReader();
+  const decoder = new TextDecoder();
+  let buffer = '';
+  try {
+    while (true) {
+      const { done, value } = await reader.read();
+      buffer += decoder.decode(value, { stream: !done });
+      let boundary: number;
+      while ((boundary = buffer.indexOf('\n\n')) >= 0) {
+        const frame = buffer.slice(0, boundary);
+        buffer = buffer.slice(boundary + 2);
+        const data = frame.split('\n').filter(line => line.startsWith('data:'))
+          .map(line => line.slice(5).trimStart()).join('\n');
+        if (data && data !== '[DONE]') yield JSON.parse(data);
+      }
+      if (done) break;
+    }
+  } finally {
+    reader.releaseLock();
+  }
+}
+
+function anthropicCitation(value: Record<string, unknown>): Citation {
+  const known = new Set(['cited_text', 'document_title', 'url', 'document_index', 'start_char_index', 'end_char_index']);
+  return {
+    type: 'citation',
+    citedText: value.cited_text as string | undefined,
+    title: value.document_title as string | undefined,
+    url: value.url as string | undefined,
+    documentIndex: value.document_index as number | undefined,
+    startCharIndex: value.start_char_index as number | undefined,
+    endCharIndex: value.end_char_index as number | undefined,
+    providerData: Object.fromEntries(Object.entries(value).filter(([key]) => !known.has(key))),
+  };
+}

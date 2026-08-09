@@ -146,7 +146,26 @@ export interface StreamRequest {
   reasoning?: ThinkingConfig;
   responseFormat?: JsonSchemaResponseFormat;
   systemCacheControl?: CacheControl;
+  /** Ask providers that support source citations to include them. */
+  citations?: boolean;
   stream?: boolean;
+}
+
+/** Provider-agnostic citation attached to generated text. */
+export interface Citation {
+  type: 'citation';
+  citedText?: string;
+  title?: string;
+  url?: string;
+  documentIndex?: number;
+  startCharIndex?: number;
+  endCharIndex?: number;
+  providerData?: Record<string, unknown>;
+}
+
+export interface CitationChunk {
+  type: 'citation';
+  citation: Citation;
 }
 
 /**
@@ -215,6 +234,7 @@ export type HarnessStreamChunk =
   | ToolCallChunk
   | ToolCallCompleteChunk
   | ToolResultChunk
+  | CitationChunk
   | ErrorChunk
   | DoneChunk;
 
@@ -224,6 +244,7 @@ export type HarnessStreamChunk =
 export interface HarnessResponse {
   content: string;
   toolCalls?: ToolCall[];
+  citations?: Citation[];
   usage?: {
     promptTokens: number;
     completionTokens: number;

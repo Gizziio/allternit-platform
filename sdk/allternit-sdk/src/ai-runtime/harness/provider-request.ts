@@ -79,6 +79,7 @@ export function toAnthropicRequest(request: StreamRequest): Record<string, unkno
       type: 'json_schema',
       schema: request.responseFormat.schema,
     },
+    citations: request.citations,
     stream: request.stream,
   });
 }
