@@ -5,7 +5,7 @@ import "drizzle-orm/sqlite-core/session.js"
 import "drizzle-orm/bun-sqlite/session.js"
 import yargs from "yargs"
 import { hideBin } from "yargs/helpers"
-import { RunCommand } from "@/cli/commands/run"
+import { ExecCommand, RunCommand } from "@/cli/commands/run"
 import { GenerateCommand } from "@/cli/commands/generate"
 import { Log } from "@/shared/util/log"
 import { ConnectCommand } from "@/cli/commands/connect"
@@ -182,6 +182,7 @@ const cli = yargs(hideBin(process.argv))
   .command(TuiThreadCommand)
   .command(AttachCommand)
   .command(RunCommand)
+  .command(ExecCommand)
   .command(GenerateCommand)
   .command(DebugCommand)
   .command(ConnectCommand)

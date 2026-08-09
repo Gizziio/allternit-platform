@@ -81,6 +81,44 @@ test("loads JSONC config file", async () => {
   })
 })
 
+test("loads config.toml defaults, auth profiles, and sandbox preferences", async () => {
+  await using tmp = await tmpdir({
+    init: async (dir) => {
+      await Filesystem.write(
+        path.join(dir, "config.toml"),
+        `default_model = "anthropic/claude-sonnet-4"
+
+[auth]
+active_profile = "work"
+
+[auth.profiles.work]
+provider = "anthropic"
+api_key_env = "ANTHROPIC_API_KEY"
+
+[sandbox]
+enabled = true
+allow_network = false
+allowed_domains = ["registry.npmjs.org"]
+`,
+      )
+    },
+  })
+  await Instance.provide({
+    directory: tmp.path,
+    fn: async () => {
+      const config = await Config.get()
+      expect(config.model).toBe("anthropic/claude-sonnet-4")
+      expect(config.auth?.active_profile).toBe("work")
+      expect(config.auth?.profiles?.work?.provider).toBe("anthropic")
+      expect(config.sandbox).toEqual({
+        enabled: true,
+        allow_network: false,
+        allowed_domains: ["registry.npmjs.org"],
+      })
+    },
+  })
+})
+
 test("merges multiple config files with correct precedence", async () => {
   await using tmp = await tmpdir({
     init: async (dir) => {

@@ -119,17 +119,17 @@ export namespace Flag {
   // is on by default for every Bash tool call. GIZZI_SANDBOX is kept as an
   // explicit "force on" signal for other call sites (cowork runtime, onboarding
   // UI); it is no longer required to enable sandboxing in bash.ts.
-  export const GIZZI_SANDBOX = truthy("GIZZI_SANDBOX")
+  export let GIZZI_SANDBOX = truthy("GIZZI_SANDBOX")
   // Explicit, intentional opt-out — mirrors --dangerously-skip-permissions.
   // Set this (or pass --dangerously-skip-sandbox) to run Bash fully unsandboxed.
   export let GIZZI_SANDBOX_DISABLE: boolean = truthy("GIZZI_SANDBOX_DISABLE")
   // When sandbox is on, allow outbound network. Default: denied — agents that
   // need npm/pip/cargo must opt in explicitly (matches Claude Code's default-deny).
-  export const GIZZI_SANDBOX_ALLOW_NETWORK = truthy("GIZZI_SANDBOX_ALLOW_NETWORK")
+  export let GIZZI_SANDBOX_ALLOW_NETWORK = truthy("GIZZI_SANDBOX_ALLOW_NETWORK")
   // Comma-separated hostname allowlist. When set (and network is allowed),
   // outbound traffic is restricted to these domains via a local proxy instead
   // of a wholesale allow — e.g. "registry.npmjs.org,pypi.org".
-  export const GIZZI_SANDBOX_ALLOWED_DOMAINS = list("GIZZI_SANDBOX_ALLOWED_DOMAINS")
+  export let GIZZI_SANDBOX_ALLOWED_DOMAINS = list("GIZZI_SANDBOX_ALLOWED_DOMAINS")
 
   // Cowork VM runtime endpoint (allternit-api POST /sandbox/execute)
   export const GIZZI_SANDBOX_RUNTIME_URL = env("GIZZI_SANDBOX_RUNTIME_URL")
