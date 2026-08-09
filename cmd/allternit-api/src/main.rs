@@ -33,6 +33,7 @@ use allternit_api::beta_deployment_routes::beta_deployment_router;
 use allternit_api::beta_memory_store_routes::beta_memory_store_router;
 use allternit_api::beta_session_routes::beta_session_router;
 use allternit_api::beta_work_routes::beta_work_router;
+use allternit_api::user_profile_routes::{enrollment_router, user_profile_router};
 use allternit_api::agent_workspace_routes::agent_workspace_router;
 use allternit_api::agents_v1_routes::agents_v1_router;
 use allternit_api::alabs_routes::alabs_router;
@@ -306,6 +307,7 @@ async fn main() {
         .merge(beta_work_router())
         .merge(webhook_subscription_router())
         .merge(beta_memory_store_router())
+        .merge(user_profile_router())
         .merge(canvas_router())
         .merge(v1_router())
         .merge(task_routes::task_router())
@@ -403,6 +405,7 @@ async fn main() {
     let mut public = Router::new()
         .nest("/health", health_router())
         .nest("/api", web_proxy_router())
+        .nest("/beta", enrollment_router())
         .merge(status_router())
         .merge(webhook_router())
         // Slack signs every request itself (`verify_slack_signature`), so

@@ -340,6 +340,16 @@ impl AppConfig {
             .filter(|s| !s.is_empty())
     }
 
+    /// Secret used to sign enrollment tokens for user-profile consent URLs.
+    /// Falls back to the platform encryption key so a packaged deployment has
+    /// a stable secret without extra configuration; explicit value preferred.
+    pub fn enrollment_secret(&self) -> Option<String> {
+        std::env::var("ALLTERNIT_ENROLLMENT_SECRET")
+            .ok()
+            .filter(|s| !s.is_empty())
+            .or_else(|| self.encryption_key())
+    }
+
     /// Tenant identifier for this packaged deployment.
     pub fn tenant_id(&self) -> String {
         self.company

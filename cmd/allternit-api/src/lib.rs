@@ -28,6 +28,7 @@ pub mod beta_deployment_routes;
 pub mod beta_memory_store_routes;
 pub mod beta_session_routes;
 pub mod beta_work_routes;
+pub mod user_profile_routes;
 pub mod billing;
 pub mod board_routes;
 pub mod board_stream_routes;
