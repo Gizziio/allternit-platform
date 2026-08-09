@@ -969,8 +969,9 @@ async fn idempotency_begin(db: &DbHandle, key: &LlmKeyContext, idem_key: &str) -
                 "SELECT status, response_body,
                         CAST(strftime('%s', 'now') AS INTEGER)
                           - CAST(strftime('%s', created_at) AS INTEGER) AS age_secs
-                 FROM llm_usage_events WHERE idempotency_key = ?1",
-                rusqlite::params![idem],
+                 FROM llm_usage_events
+                 WHERE idempotency_key = ?1 AND virtual_key_id = ?2",
+                rusqlite::params![idem, key_id],
                 |row| {
                     Ok((
                         row.get::<_, String>(0)?,
@@ -986,8 +987,8 @@ async fn idempotency_begin(db: &DbHandle, key: &LlmKeyContext, idem_key: &str) -
                 ("in_progress", _) if age_secs > IDEMPOTENCY_STALE_SECS => {
                     // Abandoned attempt (process died mid-request): allow retry.
                     conn.execute(
-                        "DELETE FROM llm_usage_events WHERE idempotency_key = ?1",
-                        rusqlite::params![idem],
+                        "DELETE FROM llm_usage_events WHERE idempotency_key = ?1 AND virtual_key_id = ?2",
+                        rusqlite::params![idem, key_id],
                     )?;
                 }
                 ("in_progress", _) => {
