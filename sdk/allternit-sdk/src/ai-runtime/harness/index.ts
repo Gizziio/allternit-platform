@@ -109,11 +109,12 @@ export class AllternitHarness {
           !config.byok.anthropic?.apiKey &&
           !config.byok.openai?.apiKey &&
           !config.byok.google?.apiKey &&
+          !config.byok.vertex?.apiKey &&
           !config.byok.kimi?.apiKey
         ) {
           throw new HarnessError(
             HarnessErrorCode.CONFIG_INVALID,
-            'BYOK mode requires at least one provider API key (anthropic, openai, google, or kimi)'
+            'BYOK mode requires at least one provider API key (anthropic, openai, google, vertex, or kimi)'
           );
         }
         break;
@@ -345,6 +346,9 @@ export class AllternitHarness {
       case 'google':
         yield* this.streamFromGoogle(request);
         break;
+      case 'vertex':
+        yield* this.streamFromVertex(request);
+        break;
       case 'kimi':
       case 'moonshot':
         yield* this.streamFromKimi(request);
@@ -352,7 +356,7 @@ export class AllternitHarness {
       default:
         throw new HarnessError(
           HarnessErrorCode.PROVIDER_NOT_FOUND,
-          `Provider "${provider}" not supported in BYOK mode. Supported: anthropic, openai, google, kimi`
+          `Provider "${provider}" not supported in BYOK mode. Supported: anthropic, openai, google, vertex, kimi`
         );
     }
   }
@@ -517,6 +521,36 @@ export class AllternitHarness {
     );
   }
 
+  /**
+   * Stream from Google Vertex AI API
+   *
+   * @param request - Stream request configured for Vertex
+   * @yields HarnessStreamChunk
+   */
+  private async *streamFromVertex(
+    request: StreamRequest
+  ): AsyncGenerator<HarnessStreamChunk> {
+    const apiKey = this.config.byok?.vertex?.apiKey;
+
+    if (!apiKey) {
+      throw new HarnessError(
+        HarnessErrorCode.AUTHENTICATION_ERROR,
+        'Vertex API key not configured'
+      );
+    }
+
+    // TODO: Implement Vertex streaming
+    // - Use Gemini API over Vertex AI endpoints
+    // - Handle streaming responses
+    // - Transform to HarnessStreamChunk format
+    // - Support function calling
+
+    throw new HarnessError(
+      HarnessErrorCode.API_ERROR,
+      'Vertex streaming not yet implemented'
+    );
+  }
+
   private async *streamFromKimi(
     request: StreamRequest
   ): AsyncGenerator<HarnessStreamChunk> {
@@ -606,6 +640,7 @@ export class AllternitHarness {
               this.config.byok.anthropic?.apiKey ||
               this.config.byok.openai?.apiKey ||
               this.config.byok.google?.apiKey ||
+              this.config.byok.vertex?.apiKey ||
               this.config.byok.kimi?.apiKey
             ),
           }

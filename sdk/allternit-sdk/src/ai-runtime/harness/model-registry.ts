@@ -9,6 +9,10 @@
 export interface ModelMetadata {
   contextWindow: number;
   maxOutputTokens: number;
+  /** Whether the model is deprecated by the provider. */
+  deprecated?: boolean;
+  /** Recommended replacement model id, if deprecated. */
+  replacement?: string;
 }
 
 export type ProviderModelRegistry = Record<string, ModelMetadata>;
@@ -39,6 +43,14 @@ export const MODEL_REGISTRY: Record<string, ProviderModelRegistry> = {
     'gemini-1.5-flash': { contextWindow: 1_048_576, maxOutputTokens: 8_192 },
     'gemini-1.5-flash-8b': { contextWindow: 1_048_576, maxOutputTokens: 8_192 },
     'gemini-1.0-pro': { contextWindow: 32_760, maxOutputTokens: 8_192 },
+  },
+  vertex: {
+    'gemini-1.5-pro': { contextWindow: 2_097_152, maxOutputTokens: 8_192 },
+    'gemini-1.5-pro-002': { contextWindow: 2_097_152, maxOutputTokens: 8_192 },
+    'gemini-1.5-flash': { contextWindow: 1_048_576, maxOutputTokens: 8_192 },
+    'gemini-1.5-flash-002': { contextWindow: 1_048_576, maxOutputTokens: 8_192 },
+    'gemini-1.5-flash-8b': { contextWindow: 1_048_576, maxOutputTokens: 8_192 },
+    'gemini-1.0-pro': { contextWindow: 32_760, maxOutputTokens: 8_192, deprecated: true, replacement: 'gemini-1.5-pro' },
   },
   kimi: {
     'kimi-latest': { contextWindow: 256_000, maxOutputTokens: 8_192 },

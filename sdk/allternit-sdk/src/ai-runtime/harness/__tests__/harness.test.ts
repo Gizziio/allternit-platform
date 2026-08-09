@@ -18,6 +18,18 @@ describe('AllternitHarness', () => {
       expect(config.byok?.configured).toBe(true);
     });
 
+    it('should create harness with Vertex BYOK key', () => {
+      const harness = new AllternitHarness({
+        mode: 'byok',
+        byok: { vertex: { apiKey: 'vertex-key' } }
+      });
+
+      expect(harness).toBeDefined();
+      const config = harness.getConfig();
+      expect(config.mode).toBe('byok');
+      expect(config.byok?.configured).toBe(true);
+    });
+
     it('should create harness with cloud mode', () => {
       const harness = new AllternitHarness({
         mode: 'cloud',
