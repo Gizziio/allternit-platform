@@ -4,7 +4,7 @@
 //! Tools can be local (filesystem, shell, browser) or proxied to MCP servers.
 
 use axum::{
-    extract::State,
+    extract::{Path, State},
     http::{HeaderMap, StatusCode},
     response::IntoResponse,
     routing::{get, post},
@@ -16,6 +16,7 @@ use std::sync::Arc;
 use tracing::{info, warn};
 
 use crate::auth::AuthUser;
+use crate::permission_policy::{evaluate, PermissionAction};
 use crate::AppState;
 
 // ─── Cache-control helpers ──────────────────────────────────────────────────
@@ -80,6 +81,25 @@ pub fn tool_router() -> Router<Arc<AppState>> {
     Router::new()
         .route("/tools", get(list_tools))
         .route("/tools/execute", post(execute_tool))
+        .route("/beta/approvals/:id/approve", post(approve_tool_execution))
+        .route("/beta/approvals/:id/deny", post(deny_tool_execution))
+}
+
+// ─── Permission helpers ─────────────────────────────────────────────────────
+
+/// Extract the file path a tool request targets, if any.
+fn request_file_path(args: &Value) -> Option<&str> {
+    args.get("path")
+        .and_then(|v| v.as_str())
+        .or_else(|| args.get("file_path").and_then(|v| v.as_str()))
+}
+
+/// Extract the network host a tool request targets, if any.
+fn request_network_host(args: &Value) -> Option<String> {
+    let url = args.get("url").and_then(|v| v.as_str())?;
+    reqwest::Url::parse(url)
+        .ok()
+        .and_then(|u| u.host_str().map(String::from))
 }
 
 // ─── Handlers ───────────────────────────────────────────────────────────────
@@ -129,6 +149,39 @@ async fn execute_tool(
         }
     };
 
+    // Evaluate agent-level permission policy before executing the tool.
+    let active_policy = state.config.active_permission_policy();
+    let decision = evaluate(
+        active_policy.as_ref(),
+        &body.tool,
+        request_file_path(&body.args),
+        request_network_host(&body.args).as_deref(),
+    );
+    match decision {
+        PermissionAction::Deny => {
+            return (
+                StatusCode::FORBIDDEN,
+                Json(json!({
+                    "error": "Tool execution denied by permission policy",
+                    "tool": body.tool,
+                })),
+            );
+        }
+        PermissionAction::Ask => {
+            let approval_id = state.approval_store.create(&user.user_id, &body.tool, &body.args);
+            info!("Policy asked for approval '{}' for tool '{}'", approval_id, body.tool);
+            return (
+                StatusCode::ACCEPTED,
+                Json(json!({
+                    "status": "approval_required",
+                    "approval_id": approval_id,
+                    "tool": body.tool,
+                })),
+            );
+        }
+        PermissionAction::Allow => {}
+    }
+
     let start = std::time::Instant::now();
     info!("Executing tool '{}' for user '{}'", body.tool, user.user_id);
 
@@ -155,6 +208,40 @@ async fn execute_tool(
     };
 
     (StatusCode::OK, Json(result))
+}
+
+async fn approve_tool_execution(
+    State(state): State<Arc<AppState>>,
+    Path(id): Path<String>,
+) -> impl IntoResponse {
+    if state.approval_store.approve(&id) {
+        (
+            StatusCode::OK,
+            Json(json!({ "approval_id": id, "status": "approved" })),
+        )
+    } else {
+        (
+            StatusCode::NOT_FOUND,
+            Json(json!({ "error": "Approval request not found" })),
+        )
+    }
+}
+
+async fn deny_tool_execution(
+    State(state): State<Arc<AppState>>,
+    Path(id): Path<String>,
+) -> impl IntoResponse {
+    if state.approval_store.deny(&id) {
+        (
+            StatusCode::OK,
+            Json(json!({ "approval_id": id, "status": "denied" })),
+        )
+    } else {
+        (
+            StatusCode::NOT_FOUND,
+            Json(json!({ "error": "Approval request not found" })),
+        )
+    }
 }
 
 // ─── Tool Implementations ───────────────────────────────────────────────────
@@ -801,6 +888,7 @@ async fn list_tools() -> impl IntoResponse {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::permission_policy::{PermissionPolicy, PermissionRule};
 
     #[test]
     fn truncate_markdown_leaves_short_output_untouched() {
@@ -978,5 +1066,127 @@ mod tests {
         let result = json!({ "content": "small" });
         let cache = tool_result_cache_control(&result, true);
         assert_eq!(cache, None);
+    }
+
+    async fn state_with_policy(policy: PermissionPolicy, active: &str) -> Arc<AppState> {
+        let temp = tempfile::tempdir().unwrap().into_path();
+        let state = crate::test_helpers::app_state(&temp).await;
+        let mut state = match Arc::try_unwrap(state) {
+            Ok(s) => s,
+            Err(_) => panic!("single app_state reference expected"),
+        };
+        state.config.user.permission_policies = Some(vec![policy]);
+        state.config.user.active_permission_policy = Some(active.to_string());
+        Arc::new(state)
+    }
+
+    fn user_headers() -> HeaderMap {
+        let mut headers = HeaderMap::new();
+        headers.insert("x-allternit-user-id", "user-1".parse().unwrap());
+        headers
+    }
+
+    async fn response_json(response: axum::response::Response) -> Value {
+        let bytes = axum::body::to_bytes(response.into_body(), usize::MAX)
+            .await
+            .unwrap();
+        serde_json::from_slice(&bytes).unwrap()
+    }
+
+    #[tokio::test]
+    async fn execute_tool_allows_when_policy_allows() {
+        let state = state_with_policy(
+            PermissionPolicy {
+                name: "allow-echo".to_string(),
+                rules: vec![PermissionRule {
+                    tool: Some("echo".to_string()),
+                    action: PermissionAction::Allow,
+                    ..Default::default()
+                }],
+            },
+            "allow-echo",
+        )
+        .await;
+        let body = ExecuteToolRequest {
+            tool: "echo".to_string(),
+            args: json!({ "message": "hi" }),
+            ..Default::default()
+        };
+        let response = execute_tool(State(state), user_headers(), Json(body)).await;
+        assert_eq!(response.into_response().status(), StatusCode::OK);
+    }
+
+    #[tokio::test]
+    async fn execute_tool_denies_when_policy_denies() {
+        let state = state_with_policy(
+            PermissionPolicy {
+                name: "deny-bash".to_string(),
+                rules: vec![PermissionRule {
+                    tool: Some("bash".to_string()),
+                    action: PermissionAction::Deny,
+                    ..Default::default()
+                }],
+            },
+            "deny-bash",
+        )
+        .await;
+        let body = ExecuteToolRequest {
+            tool: "bash".to_string(),
+            args: json!({ "command": "echo hi" }),
+            ..Default::default()
+        };
+        let response = execute_tool(State(state), user_headers(), Json(body)).await.into_response();
+        assert_eq!(response.status(), StatusCode::FORBIDDEN);
+        let json = response_json(response).await;
+        assert_eq!(json["tool"], "bash");
+    }
+
+    #[tokio::test]
+    async fn execute_tool_asks_when_policy_asks() {
+        let state = state_with_policy(
+            PermissionPolicy {
+                name: "ask-write".to_string(),
+                rules: vec![PermissionRule {
+                    tool: Some("file.write".to_string()),
+                    file_path: Some("/etc/*".to_string()),
+                    action: PermissionAction::Ask,
+                    ..Default::default()
+                }],
+            },
+            "ask-write",
+        )
+        .await;
+        let body = ExecuteToolRequest {
+            tool: "file.write".to_string(),
+            args: json!({ "path": "/etc/test.txt", "content": "x" }),
+            ..Default::default()
+        };
+        let response = execute_tool(State(state.clone()), user_headers(), Json(body))
+            .await
+            .into_response();
+        assert_eq!(response.status(), StatusCode::ACCEPTED);
+        let json = response_json(response).await;
+        let approval_id = json["approval_id"].as_str().unwrap();
+        assert_eq!(json["status"], "approval_required");
+
+        // Approve the request and verify the store reflects it.
+        let approve_response = approve_tool_execution(State(state.clone()), Path(approval_id.to_string())).await;
+        assert_eq!(approve_response.into_response().status(), StatusCode::OK);
+    }
+
+    #[tokio::test]
+    async fn approval_endpoints_return_404_for_unknown_id() {
+        let state = state_with_policy(
+            PermissionPolicy {
+                name: "empty".to_string(),
+                rules: vec![],
+            },
+            "empty",
+        )
+        .await;
+        let response = approve_tool_execution(State(state.clone()), Path("nope".to_string())).await;
+        assert_eq!(response.into_response().status(), StatusCode::NOT_FOUND);
+        let response = deny_tool_execution(State(state), Path("nope".to_string())).await;
+        assert_eq!(response.into_response().status(), StatusCode::NOT_FOUND);
     }
 }

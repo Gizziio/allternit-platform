@@ -3,6 +3,8 @@ import path from "path"
 
 export type PermissionAction = "ask" | "allow" | "deny"
 
+export const PERMISSION_ACTIONS: PermissionAction[] = ["ask", "allow", "deny"]
+
 export type PermissionProfile = {
   rules: Record<string, PermissionAction>
 }
@@ -14,6 +16,38 @@ export type PermissionProfiles = {
 
 function quote(value: string): string {
   return JSON.stringify(value)
+}
+
+/**
+ * Render a permission profile to the policy DSL: one `<tool> <action>` line per rule.
+ */
+export function renderDsl(profile: PermissionProfile): string {
+  const lines = Object.entries(profile.rules)
+    .sort(([a], [b]) => a.localeCompare(b))
+    .map(([tool, action]) => `${tool} ${action}`)
+  return lines.join("\n")
+}
+
+/**
+ * Parse a policy DSL text into a rule map. Lines starting with `#` are ignored.
+ */
+export function parseDsl(text: string): Record<string, PermissionAction> {
+  const rules: Record<string, PermissionAction> = {}
+  for (let line of text.split(/\r?\n/)) {
+    line = line.trim()
+    if (!line || line.startsWith("#")) continue
+    const [tool, action, ...rest] = line.split(/\s+/)
+    if (!tool || !action || rest.length > 0) {
+      throw new Error(`Invalid permission DSL line: "${line}"`)
+    }
+    if (!PERMISSION_ACTIONS.includes(action as PermissionAction)) {
+      throw new Error(
+        `Invalid permission action "${action}" in line "${line}", expected one of ${PERMISSION_ACTIONS.join(", ")}`,
+      )
+    }
+    rules[tool] = action as PermissionAction
+  }
+  return rules
 }
 
 function render(profiles: PermissionProfiles): string {
@@ -91,4 +125,37 @@ export async function setActivePermissionProfile(configPath: string, name: strin
   if (!profiles.profiles[name]) throw new Error(`Permission profile not found: ${name}`)
   profiles.active_profile = name
   await writePermissionProfiles(configPath, profiles)
+}
+
+export interface ImportPermissionProfileOptions {
+  overwrite?: boolean
+}
+
+/**
+ * Import a permission profile from a DSL text string.
+ */
+export async function importPermissionProfile(
+  configPath: string,
+  name: string,
+  dslText: string,
+  options: ImportPermissionProfileOptions = {},
+): Promise<void> {
+  const profiles = await readPermissionProfiles(configPath)
+  if (profiles.profiles[name] && !options.overwrite) {
+    throw new Error(`Permission profile already exists: ${name}`)
+  }
+  const rules = parseDsl(dslText)
+  profiles.profiles[name] = { rules }
+  profiles.active_profile ??= name
+  await writePermissionProfiles(configPath, profiles)
+}
+
+/**
+ * Export a permission profile to a DSL text string.
+ */
+export async function exportPermissionProfile(configPath: string, name: string): Promise<string> {
+  const profiles = await readPermissionProfiles(configPath)
+  const profile = profiles.profiles[name]
+  if (!profile) throw new Error(`Permission profile not found: ${name}`)
+  return renderDsl(profile)
 }

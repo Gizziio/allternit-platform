@@ -90,6 +90,7 @@ use allternit_api::swarm_routes::swarm_router;
 use allternit_api::task_routes;
 use allternit_api::team_skill_routes::team_skill_router;
 use allternit_api::terminal_routes::{terminal_router, TerminalSessionStore};
+use allternit_api::permission_policy::ApprovalStore;
 use allternit_api::tool_routes;
 use allternit_api::udemy_routes::udemy_router;
 use allternit_api::v1_routes::{agent_chat_router, v1_router};
@@ -248,6 +249,7 @@ async fn main() {
         design_skill_cache,
         terminal_sessions: TerminalSessionStore::new(),
         mcp_dispatcher: allternit_api::mcp_dispatcher::McpDispatcher::new(),
+        approval_store: Arc::new(ApprovalStore::new()),
     });
 
     // Phase 5: start the in-process batch execution/polling worker.

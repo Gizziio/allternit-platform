@@ -3,8 +3,12 @@ import path from "path"
 import { cmd } from "@/cli/commands/cmd"
 import { UI } from "@/cli/ui"
 import { Global } from "@/runtime/context/global"
+import fs from "fs/promises"
 import {
   addPermissionProfile,
+  exportPermissionProfile,
+  importPermissionProfile,
+  PERMISSION_ACTIONS,
   readPermissionProfiles,
   removePermissionProfile,
   setActivePermissionProfile,
@@ -12,8 +16,6 @@ import {
 } from "@/runtime/context/config/permission-profiles"
 
 const configPath = () => path.join(Global.Path.config, "config.toml")
-
-const PERMISSION_ACTIONS: PermissionAction[] = ["ask", "allow", "deny"]
 
 function parseRules(rules: string[] | undefined): Record<string, PermissionAction> {
   const result: Record<string, PermissionAction> = {}
@@ -87,8 +89,52 @@ const ProfileSetActiveCommand = cmd({
   },
 })
 
+const ProfileImportCommand = cmd({
+  command: "import <name>",
+  describe: "import a permission profile from a policy DSL file",
+  builder: (yargs) =>
+    yargs
+      .positional("name", { type: "string", demandOption: true })
+      .option("file", {
+        type: "string",
+        demandOption: true,
+        describe: "path to the policy DSL file to import",
+      })
+      .option("overwrite", {
+        type: "boolean",
+        default: false,
+        describe: "overwrite an existing profile with the same name",
+      }),
+  async handler(args) {
+    const dslText = await fs.readFile(args.file as string, "utf8")
+    await importPermissionProfile(configPath(), args.name, dslText, {
+      overwrite: args.overwrite as boolean,
+    })
+    UI.println(`Imported permission profile: ${args.name}`)
+  },
+})
+
+const ProfileExportCommand = cmd({
+  command: "export <name>",
+  describe: "export a permission profile to a policy DSL file",
+  builder: (yargs) =>
+    yargs
+      .positional("name", { type: "string", demandOption: true })
+      .option("file", {
+        type: "string",
+        demandOption: true,
+        describe: "path to write the exported policy DSL file",
+      }),
+  async handler(args) {
+    const dslText = await exportPermissionProfile(configPath(), args.name)
+    await fs.writeFile(args.file as string, dslText)
+    UI.println(`Exported permission profile to: ${args.file}`)
+  },
+})
+
 const ProfileCommand = cmd({
   command: "profile",
+  aliases: ["permission-profile"],
   describe: "manage named permission profiles",
   builder: (yargs: Argv) =>
     yargs
@@ -96,6 +142,8 @@ const ProfileCommand = cmd({
       .command(ProfileAddCommand)
       .command(ProfileRemoveCommand)
       .command(ProfileSetActiveCommand)
+      .command(ProfileImportCommand)
+      .command(ProfileExportCommand)
       .demandCommand(),
   async handler() {},
 })

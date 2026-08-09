@@ -79,6 +79,7 @@ pub mod office_routes;
 pub mod onboarding_routes;
 pub mod open_connector_proxy;
 pub mod orchestrator_routes;
+pub mod permission_policy;
 pub mod platform_static;
 pub mod playground_routes;
 pub mod pricing;
@@ -167,6 +168,7 @@ pub mod test_helpers {
             design_skill_cache: DesignSkillCache::new(),
             terminal_sessions: TerminalSessionStore::new(),
             mcp_dispatcher: crate::mcp_dispatcher::McpDispatcher::new(),
+            approval_store: Arc::new(permission_policy::ApprovalStore::new()),
         })
     }
 }
@@ -236,6 +238,8 @@ pub struct AppState {
     pub terminal_sessions: TerminalSessionStore,
     /// Attached MCP servers reachable through the server-side MCP dispatcher.
     pub mcp_dispatcher: crate::mcp_dispatcher::McpDispatcher,
+    /// Pending/resolved tool-execution approval requests from `ask` policy decisions.
+    pub approval_store: Arc<crate::permission_policy::ApprovalStore>,
 }
 
 /// Return the default LLM provider/model pair used when a request does not
