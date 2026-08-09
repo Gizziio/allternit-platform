@@ -64,6 +64,7 @@ pub mod internal_routes;
 pub mod library_routes;
 pub mod llm_gateway;
 pub mod local_brain_routes;
+pub mod mcp_dispatcher;
 pub mod mcp_routes;
 pub mod mcp_server_routes;
 pub mod mcp_tunnel_auth;
@@ -165,6 +166,7 @@ pub mod test_helpers {
             office_cli_mcp_sessions: Arc::new(RwLock::new(HashMap::new())),
             design_skill_cache: DesignSkillCache::new(),
             terminal_sessions: TerminalSessionStore::new(),
+            mcp_dispatcher: crate::mcp_dispatcher::McpDispatcher::new(),
         })
     }
 }
@@ -232,6 +234,8 @@ pub struct AppState {
     pub design_skill_cache: DesignSkillCache,
     /// Local tmux-backed terminal sessions for Code Mode.
     pub terminal_sessions: TerminalSessionStore,
+    /// Attached MCP servers reachable through the server-side MCP dispatcher.
+    pub mcp_dispatcher: crate::mcp_dispatcher::McpDispatcher,
 }
 
 /// Return the default LLM provider/model pair used when a request does not

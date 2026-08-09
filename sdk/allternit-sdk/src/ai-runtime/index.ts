@@ -51,7 +51,16 @@ export type { BashToolOptions, BashRunner, BashResult } from './tools/bash.js';
 export type { CodeExecutionOptions, CodeExecutionRequest, CodeExecutionResult, CodeExecutionRunner, CodeExecutionArtifact } from './tools/code-execution.js';
 export type { MemoryToolOptions, MemoryStore, MemoryValue, MemoryOperation } from './tools/memory.js';
 export type { PdfToolOptions, PdfSource, PdfProcessResult, PdfHeading, PdfTable } from './tools/pdf.js';
-export type { McpServerAttachment, McpToolDescriptor } from './tools/mcp.js';
+export type {
+  McpServerAttachment,
+  McpToolDescriptor,
+  McpServerConfig,
+  McpStdioConfig,
+  McpHttpConfig,
+  McpDirectoryOptions,
+  McpDirectoryEntry,
+} from './tools/mcp.js';
+export { createMcpServerAttachment, loadMcpServerDirectory, defaultMcpServerDirectoryPath } from './tools/mcp.js';
 
 // System prompts
 export { 

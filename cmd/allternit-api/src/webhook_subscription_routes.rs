@@ -552,6 +552,7 @@ mod tests {
             )),
             design_skill_cache: crate::design_connector_routes::DesignSkillCache::new(),
             terminal_sessions: crate::terminal_routes::TerminalSessionStore::new(),
+            mcp_dispatcher: crate::mcp_dispatcher::McpDispatcher::new(),
             office_cli_docs: Arc::new(RwLock::new(HashMap::new())),
             office_cli_watches: Arc::new(RwLock::new(HashMap::new())),
             office_cli_mcp_sessions: Arc::new(RwLock::new(HashMap::new())),

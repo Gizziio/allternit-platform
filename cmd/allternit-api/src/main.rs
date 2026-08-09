@@ -247,6 +247,7 @@ async fn main() {
         office_cli_mcp_sessions: Arc::new(RwLock::new(HashMap::new())),
         design_skill_cache,
         terminal_sessions: TerminalSessionStore::new(),
+        mcp_dispatcher: allternit_api::mcp_dispatcher::McpDispatcher::new(),
     });
 
     // Phase 5: start the in-process batch execution/polling worker.

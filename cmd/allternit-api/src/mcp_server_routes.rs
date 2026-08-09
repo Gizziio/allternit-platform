@@ -50,7 +50,7 @@ pub(crate) struct JsonRpcRequest {
     params: Value,
 }
 
-fn tool_catalog() -> Vec<Value> {
+async fn tool_catalog(state: &AppState) -> Vec<Value> {
     let mut tools = vec![
         json!({
             "name": "shell.exec",
@@ -162,6 +162,11 @@ fn tool_catalog() -> Vec<Value> {
             "description": tool.get("description").cloned().unwrap_or(Value::Null),
             "inputSchema": tool.get("parameters").cloned().unwrap_or(json!({})),
         }));
+    }
+
+    // Attached MCP servers from the dispatcher registry.
+    for remote in state.mcp_dispatcher.list_tools().await {
+        tools.push(remote);
     }
 
     tools
@@ -286,7 +291,7 @@ async fn handle_rpc_inner(
 
         "ping" => Json(success(id, json!({}))).into_response(),
 
-        "tools/list" => Json(success(id, json!({ "tools": tool_catalog() }))).into_response(),
+        "tools/list" => Json(success(id, json!({ "tools": tool_catalog(state).await }))).into_response(),
 
         "tools/call" => {
             let name = req
@@ -301,15 +306,28 @@ async fn handle_rpc_inner(
                 .cloned()
                 .unwrap_or_else(|| json!({}));
 
-            let exec_request = ExecuteToolRequest {
-                tool: name,
-                args: arguments,
-                timeout: None,
-                workspace_id: None,
-                ..Default::default()
+            // First, see if the requested tool belongs to an attached MCP server.
+            let remote_result = if name.contains('.') {
+                state.mcp_dispatcher.dispatch_call(&name, arguments.clone()).await.ok()
+            } else {
+                None
             };
 
-            match execute_tool_internal(state, &exec_request, user_id).await {
+            let result = match remote_result {
+                Some(result) => Ok(result),
+                None => {
+                    let exec_request = ExecuteToolRequest {
+                        tool: name,
+                        args: arguments,
+                        timeout: None,
+                        workspace_id: None,
+                        ..Default::default()
+                    };
+                    execute_tool_internal(state, &exec_request, user_id).await
+                }
+            };
+
+            match result {
                 Ok(result) => Json(success(
                     id,
                     json!({
