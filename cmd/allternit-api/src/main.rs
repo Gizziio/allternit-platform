@@ -341,6 +341,7 @@ async fn main() {
         .merge(allternit_api::enterprise_auth::router())
         .merge(allternit_api::eval_routes::router())
         .merge(allternit_api::fallback_credit_routes::router())
+        .merge(allternit_api::groundedness_check_routes::router())
         .merge(allternit_api::server_tool_routes::router())
         .merge(allternit_api::sandbox_template_routes::router())
         .merge(allternit_api::allternit_vault::router())

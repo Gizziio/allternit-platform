@@ -57,6 +57,7 @@ pub mod eval_routes;
 pub mod external_keys_routes;
 pub mod fallback_credit_routes;
 pub mod fallback_routes;
+pub mod groundedness_check_routes;
 pub mod file_routes;
 pub mod gizzi_chat_stream;
 pub mod gizzi_completion;
