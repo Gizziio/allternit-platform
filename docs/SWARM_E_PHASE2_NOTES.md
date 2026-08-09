@@ -1,9 +1,9 @@
 ---
 status: done
 files_changed:
-  - cmd/allternit-api/migrations/V41__admin_workspaces.sql
-  - cmd/allternit-api/migrations/V42__rbac_roles_and_groups.sql
-  - cmd/allternit-api/migrations/V43__external_keys.sql
+  - cmd/allternit-api/migrations/V44__admin_workspaces.sql
+  - cmd/allternit-api/migrations/V45__rbac_roles_and_groups.sql
+  - cmd/allternit-api/migrations/V46__external_keys.sql
   - cmd/allternit-api/src/admin_workspace_routes.rs
   - cmd/allternit-api/src/rbac_routes.rs
   - cmd/allternit-api/src/external_keys_routes.rs
