@@ -4,6 +4,7 @@
 
 pub mod aci_routes;
 pub mod admin_audit_routes;
+pub mod admin_mcp_tunnel_routes;
 pub mod admin_service_account_routes;
 pub mod admin_spend_limit_routes;
 pub mod admin_workspace_routes;

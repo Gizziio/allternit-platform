@@ -24,6 +24,7 @@ use tracing::warn;
 
 // Import from library
 use allternit_api::aci_routes::aci_router;
+use allternit_api::admin_mcp_tunnel_routes::router as admin_mcp_tunnel_router;
 use allternit_api::agent_operations_routes;
 use allternit_api::agent_preferences_routes::agent_preferences_router;
 use allternit_api::agent_routes::agent_router;
@@ -339,6 +340,7 @@ async fn main() {
         .merge(allternit_api::admin_workspace_routes::router())
         .merge(allternit_api::admin_service_account_routes::router())
         .merge(allternit_api::admin_spend_limit_routes::router())
+        .merge(admin_mcp_tunnel_router())
         .merge(allternit_api::rbac_routes::router())
         .merge(allternit_api::external_keys_routes::router())
         .merge(allternit_api::scim_routes::router())
