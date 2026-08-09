@@ -28,6 +28,7 @@ use allternit_api::admin_mcp_tunnel_routes::router as admin_mcp_tunnel_router;
 use allternit_api::agent_operations_routes;
 use allternit_api::federation_routes::router as federation_router;
 use allternit_api::outcome_rubric_routes::router as outcome_rubric_router;
+use allternit_api::quickstart_routes::router as quickstart_router;
 use allternit_api::agent_preferences_routes::agent_preferences_router;
 use allternit_api::agent_routes::agent_router;
 use allternit_api::agent_runtime_routes::agent_runtime_router;
@@ -345,6 +346,7 @@ async fn main() {
         .merge(admin_mcp_tunnel_router())
         .merge(outcome_rubric_router())
         .merge(federation_router())
+        .merge(quickstart_router())
         .merge(allternit_api::rbac_routes::router())
         .merge(allternit_api::external_keys_routes::router())
         .merge(allternit_api::scim_routes::router())

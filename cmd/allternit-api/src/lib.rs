@@ -8,6 +8,7 @@ pub mod admin_mcp_tunnel_routes;
 pub mod admin_service_account_routes;
 pub mod federation_routes;
 pub mod outcome_rubric_routes;
+pub mod quickstart_routes;
 pub mod admin_spend_limit_routes;
 pub mod admin_workspace_routes;
 pub mod agent_execution;
