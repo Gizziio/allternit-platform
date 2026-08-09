@@ -187,7 +187,8 @@ async fn execute_tool(
 
     let cache_enabled = body.cache.unwrap_or(false);
 
-    let result = match execute_tool_internal(&state, &body, &user.user_id).await {
+    let org_id = user.organization_id.as_deref().or(user.tenant_id.as_deref());
+    let result = match execute_tool_internal(&state, &body, &user.user_id, org_id).await {
         Ok(result) => {
             let cache_control = tool_result_cache_control(&result, cache_enabled);
             json!({
@@ -253,7 +254,18 @@ pub(crate) async fn execute_tool_internal(
     state: &AppState,
     request: &ExecuteToolRequest,
     user_id: &str,
+    tenant_id: Option<&str>,
 ) -> Result<Value, String> {
+    // Server-side tools take precedence over native tools when registered for
+    // the caller's organization. They run inside the platform sandbox.
+    if let Some(org_id) = tenant_id {
+        match crate::server_tool_routes::execute_server_tool(state, &request.tool, &request.args, org_id).await {
+            Ok(Some(result)) => return Ok(result),
+            Ok(None) => {}
+            Err(e) => return Err(e),
+        }
+    }
+
     match request.tool.as_str() {
         // ── Shell Execution ──────────────────────────────────────────────────
         "shell.exec" => shell_exec(request).await,

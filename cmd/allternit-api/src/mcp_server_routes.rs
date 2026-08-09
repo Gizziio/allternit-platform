@@ -220,7 +220,10 @@ async fn handle_rpc(
         issuer.as_deref(),
         audience.as_deref(),
     ) {
-        Ok(_) => handle_rpc_inner(&state, &user.user_id, req).await,
+        Ok(_) => {
+            let org_id = user.organization_id.as_deref().or(user.tenant_id.as_deref());
+            handle_rpc_inner(&state, &user.user_id, org_id, req).await
+        }
         Err(result) => (
             StatusCode::UNAUTHORIZED,
             Json(rpc_error(
@@ -254,8 +257,14 @@ pub async fn mcp_tools_internal(
         .map(str::trim)
         .filter(|s| !s.is_empty())
         .map(str::to_string);
+    let org_id = headers
+        .get("x-allternit-organization-id")
+        .and_then(|v| v.to_str().ok())
+        .map(str::trim)
+        .filter(|s| !s.is_empty())
+        .map(str::to_string);
     match user_id {
-        Some(user_id) => handle_rpc_inner(&state, &user_id, req).await,
+        Some(user_id) => handle_rpc_inner(&state, &user_id, org_id.as_deref(), req).await,
         None => (
             StatusCode::BAD_REQUEST,
             Json(json!({"error": "x-allternit-user-id header is required"})),
@@ -269,6 +278,7 @@ pub async fn mcp_tools_internal(
 async fn handle_rpc_inner(
     state: &AppState,
     user_id: &str,
+    org_id: Option<&str>,
     req: JsonRpcRequest,
 ) -> axum::response::Response {
     // JSON-RPC notifications (no `id`) get no response body — the caller
@@ -323,7 +333,7 @@ async fn handle_rpc_inner(
                         workspace_id: None,
                         ..Default::default()
                     };
-                    execute_tool_internal(state, &exec_request, user_id).await
+                    execute_tool_internal(state, &exec_request, user_id, org_id).await
                 }
             };
 

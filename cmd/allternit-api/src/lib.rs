@@ -100,6 +100,7 @@ pub mod runtime_backend_routes;
 pub mod runtime_discover_routes;
 pub mod sandbox_routes;
 pub mod scim_routes;
+pub mod server_tool_routes;
 pub mod session_memory_service;
 pub mod slack_webhook_routes;
 pub mod ssh_key_routes;
