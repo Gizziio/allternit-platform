@@ -23,7 +23,28 @@ describe('model registry', () => {
 
   it('contains expected providers', () => {
     expect(Object.keys(MODEL_REGISTRY).sort()).toEqual(
-      expect.arrayContaining(['anthropic', 'openai', 'google', 'kimi', 'ollama'])
+      expect.arrayContaining(['anthropic', 'openai', 'google', 'vertex', 'kimi', 'ollama'])
     );
+  });
+
+  it('returns Vertex model metadata', () => {
+    expect(getModelMetadata('vertex', 'gemini-1.5-pro')).toEqual({
+      contextWindow: 2_097_152,
+      maxOutputTokens: 8_192,
+    });
+    expect(getModelMetadata('vertex', 'gemini-1.5-flash')).toEqual({
+      contextWindow: 1_048_576,
+      maxOutputTokens: 8_192,
+    });
+  });
+
+  it('returns deprecation and replacement metadata', () => {
+    const metadata = getModelMetadata('vertex', 'gemini-1.0-pro');
+    expect(metadata).toEqual({
+      contextWindow: 32_760,
+      maxOutputTokens: 8_192,
+      deprecated: true,
+      replacement: 'gemini-1.5-pro',
+    });
   });
 });

@@ -3,7 +3,7 @@ import { flattenPdfToText } from './pdf.js';
 
 /** Map a provider-specific stop/finish reason to the normalized taxonomy. */
 export function mapStopReason(
-  provider: 'anthropic' | 'openai',
+  provider: 'anthropic' | 'openai' | 'vertex',
   raw: string | undefined
 ): HarnessStopReason | undefined {
   if (!raw) return undefined;
@@ -19,6 +19,12 @@ export function mapStopReason(
     if (value === 'length') return 'max_tokens';
     if (value === 'tool_calls' || value === 'function_call') return 'tool_use';
     if (value === 'content_filter') return 'refusal';
+  }
+  if (provider === 'vertex') {
+    if (value === 'stop') return 'end_turn';
+    if (value === 'max_tokens') return 'max_tokens';
+    if (value === 'safety' || value === 'recitation' || value === 'blocked') return 'refusal';
+    if (value === 'other') return undefined;
   }
   return undefined;
 }
@@ -282,6 +288,130 @@ export function toKimiRequest(request: StreamRequest): Record<string, unknown> {
       type: request.reasoning.enabled === false ? 'disabled' : 'enabled',
       ...(request.reasoning.budgetTokens ? { budget_tokens: request.reasoning.budgetTokens } : {}),
     },
+  });
+}
+
+function vertexPart(block: ContentBlock): Record<string, unknown> {
+  switch (block.type) {
+    case 'text':
+      return { text: block.text };
+    case 'search_result':
+      return { text: searchResultText(block) };
+    case 'vision':
+      if (block.source.type === 'url') {
+        return {
+          fileData: {
+            fileUri: block.source.url,
+            mimeType: block.source.media_type,
+          },
+        };
+      }
+      return {
+        inlineData: {
+          data: block.source.data,
+          mimeType: block.source.media_type,
+        },
+      };
+    case 'vision_coordinates':
+      return { text: `[vision_coordinates: ${block.x}, ${block.y}]` };
+    case 'pdf':
+      if (block.source === 'base64' && block.data) {
+        return {
+          inlineData: {
+            data: block.data,
+            mimeType: 'application/pdf',
+          },
+        };
+      }
+      if (block.source === 'url' && block.url) {
+        return {
+          fileData: {
+            fileUri: block.url,
+            mimeType: 'application/pdf',
+          },
+        };
+      }
+      return { text: flattenPdfToText(block) };
+    case 'tool_result':
+      return { text: `[tool_result:${block.tool_use_id}] ${block.content}` };
+    default:
+      return { text: '' };
+  }
+}
+
+function toVertexMessage(message: Message): Record<string, unknown> {
+  const role = message.role === 'assistant' ? 'model' : message.role;
+  const parts = typeof message.content === 'string'
+    ? [{ text: message.content }]
+    : message.content.map(vertexPart);
+  return { role, parts };
+}
+
+/** Convert the normalized harness contract to a Google Vertex AI (Gemini API) body. */
+export function toVertexRequest(request: StreamRequest): Record<string, unknown> {
+  const systemMessages = request.messages.filter((message) => message.role === 'system');
+  const contents = request.messages
+    .filter((message) => message.role !== 'system')
+    .map(toVertexMessage);
+
+  const tools = request.tools?.map((tool) => ({
+    functionDeclarations: [
+      {
+        name: tool.name,
+        description: tool.description,
+        parameters: tool.parameters,
+      },
+    ],
+  }));
+
+  const toolChoiceMode = typeof request.toolChoice === 'object'
+    ? 'ANY'
+    : request.toolChoice === 'required'
+      ? 'ANY'
+      : request.toolChoice === 'none'
+        ? 'NONE'
+        : 'AUTO';
+
+  const generationConfig: Record<string, unknown> = compact({
+    maxOutputTokens: request.maxTokens,
+    temperature: request.temperature,
+    topP: request.topP,
+    responseMimeType: request.responseFormat ? 'application/json' : undefined,
+    responseSchema: request.responseFormat?.schema,
+    thinkingConfig:
+      request.reasoning && request.reasoning.enabled !== false
+        ? {
+            includeThoughts: true,
+            thinkingBudget: request.reasoning.budgetTokens ?? 1024,
+          }
+        : undefined,
+  });
+
+  return compact({
+    model: request.model,
+    systemInstruction: systemMessages.length
+      ? {
+          parts: [
+            {
+              text: systemMessages.map((message) => messageContentText(message)).join('\n'),
+            },
+          ],
+        }
+      : undefined,
+    contents,
+    tools,
+    toolConfig: request.toolChoice
+      ? {
+          functionCallingConfig: compact({
+            mode: toolChoiceMode,
+            ...(typeof request.toolChoice === 'object'
+              ? { allowedFunctionNames: [request.toolChoice.name] }
+              : {}),
+          }),
+        }
+      : undefined,
+    generationConfig: Object.keys(generationConfig).length ? generationConfig : undefined,
+    stream: request.stream,
   });
 }
 

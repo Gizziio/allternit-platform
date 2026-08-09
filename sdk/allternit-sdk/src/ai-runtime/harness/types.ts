@@ -52,6 +52,7 @@ export interface HarnessConfig {
     anthropic?: BYOKProviderConfig;
     openai?: BYOKProviderConfig;
     google?: BYOKProviderConfig;
+    vertex?: BYOKProviderConfig;
     kimi?: BYOKProviderConfig;
   };
   cloud?: CloudConfig;

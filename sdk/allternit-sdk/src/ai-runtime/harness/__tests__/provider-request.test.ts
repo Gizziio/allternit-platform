@@ -4,6 +4,7 @@ import {
   toOpenAIRequest,
   toAnthropicRequest,
   toKimiRequest,
+  toVertexRequest,
   parseOpenAIUsage,
 } from '../provider-request';
 
@@ -34,6 +35,14 @@ describe('mapStopReason', () => {
     expect(mapStopReason('openai', undefined)).toBeUndefined();
     expect(mapStopReason('anthropic', undefined)).toBeUndefined();
     expect(mapStopReason('openai', 'unknown_reason')).toBeUndefined();
+  });
+
+  it('maps Vertex finish reasons to the taxonomy', () => {
+    expect(mapStopReason('vertex', 'STOP')).toBe('end_turn');
+    expect(mapStopReason('vertex', 'MAX_TOKENS')).toBe('max_tokens');
+    expect(mapStopReason('vertex', 'SAFETY')).toBe('refusal');
+    expect(mapStopReason('vertex', 'RECITATION')).toBe('refusal');
+    expect(mapStopReason('vertex', 'OTHER')).toBeUndefined();
   });
 });
 
@@ -414,5 +423,165 @@ describe('toKimiRequest', () => {
     });
     expect(body.reasoning_effort).toBeUndefined();
     expect(body.thinking).toEqual({ type: 'enabled', budget_tokens: 1024 });
+  });
+});
+
+describe('toVertexRequest', () => {
+  it('maps basic messages to Vertex contents', () => {
+    const body = toVertexRequest({
+      ...baseRequest,
+      provider: 'vertex',
+      model: 'gemini-1.5-pro',
+      messages: [
+        { role: 'system' as const, content: 'You are helpful.' },
+        { role: 'user' as const, content: 'Hello' },
+      ],
+    });
+    expect(body.model).toBe('gemini-1.5-pro');
+    expect(body.systemInstruction).toEqual({ parts: [{ text: 'You are helpful.' }] });
+    expect(body.contents).toEqual([{ role: 'user', parts: [{ text: 'Hello' }] }]);
+  });
+
+  it('maps tools to Vertex functionDeclarations', () => {
+    const tool = {
+      name: 'get_weather',
+      description: 'Get weather',
+      parameters: { type: 'object', properties: {} },
+    };
+    const body = toVertexRequest({
+      ...baseRequest,
+      provider: 'vertex',
+      tools: [tool],
+      toolChoice: { name: 'get_weather' },
+    });
+    expect(body.tools).toEqual([
+      {
+        functionDeclarations: [
+          {
+            name: 'get_weather',
+            description: 'Get weather',
+            parameters: { type: 'object', properties: {} },
+          },
+        ],
+      },
+    ]);
+    expect(body.toolConfig).toEqual({
+      functionCallingConfig: { mode: 'ANY', allowedFunctionNames: ['get_weather'] },
+    });
+  });
+
+  it('maps toolChoice required to ANY mode', () => {
+    const body = toVertexRequest({
+      ...baseRequest,
+      provider: 'vertex',
+      toolChoice: 'required',
+    });
+    expect(body.toolConfig).toEqual({ functionCallingConfig: { mode: 'ANY' } });
+  });
+
+  it('maps toolChoice none to NONE mode', () => {
+    const body = toVertexRequest({
+      ...baseRequest,
+      provider: 'vertex',
+      toolChoice: 'none',
+    });
+    expect(body.toolConfig).toEqual({ functionCallingConfig: { mode: 'NONE' } });
+  });
+
+  it('maps responseFormat to generationConfig', () => {
+    const body = toVertexRequest({
+      ...baseRequest,
+      provider: 'vertex',
+      responseFormat: {
+        type: 'json_schema',
+        schema: { type: 'object', properties: { answer: { type: 'string' } } },
+      },
+    });
+    expect(body.generationConfig).toEqual({
+      responseMimeType: 'application/json',
+      responseSchema: { type: 'object', properties: { answer: { type: 'string' } } },
+    });
+  });
+
+  it('maps reasoning to thinkingConfig', () => {
+    const body = toVertexRequest({
+      ...baseRequest,
+      provider: 'vertex',
+      reasoning: { enabled: true, budgetTokens: 2048 },
+    });
+    expect(body.generationConfig).toEqual({
+      thinkingConfig: { includeThoughts: true, thinkingBudget: 2048 },
+    });
+  });
+
+  it('uses default thinking budget when not specified', () => {
+    const body = toVertexRequest({
+      ...baseRequest,
+      provider: 'vertex',
+      reasoning: { enabled: true },
+    });
+    expect((body.generationConfig as any).thinkingConfig.thinkingBudget).toBe(1024);
+  });
+
+  it('omits thinkingConfig when reasoning is disabled', () => {
+    const body = toVertexRequest({
+      ...baseRequest,
+      provider: 'vertex',
+      reasoning: { enabled: false },
+    });
+    expect(body.generationConfig).toBeUndefined();
+  });
+
+  it('maps vision content blocks to Vertex parts', () => {
+    const body = toVertexRequest({
+      ...baseRequest,
+      provider: 'vertex',
+      messages: [
+        {
+          role: 'user',
+          content: [
+            { type: 'text', text: 'What is this?' },
+            { type: 'vision', source: { type: 'url', url: 'https://example.com/image.png', media_type: 'image/png' } },
+            { type: 'vision', source: { type: 'base64', media_type: 'image/png', data: 'abc123' } },
+          ],
+        },
+      ],
+    });
+    expect(body.contents).toEqual([
+      {
+        role: 'user',
+        parts: [
+          { text: 'What is this?' },
+          { fileData: { fileUri: 'https://example.com/image.png', mimeType: 'image/png' } },
+          { inlineData: { data: 'abc123', mimeType: 'image/png' } },
+        ],
+      },
+    ]);
+  });
+
+  it('maps PDF base64 blocks to Vertex inlineData', () => {
+    const pdfBase64 = 'abc123';
+    const body = toVertexRequest({
+      ...baseRequest,
+      provider: 'vertex',
+      messages: [
+        {
+          role: 'user',
+          content: [{ type: 'pdf', source: 'base64', data: pdfBase64, title: 'sample.pdf' }],
+        },
+      ],
+    });
+    expect((body.contents as any[])[0].parts).toEqual([
+      { inlineData: { data: 'abc123', mimeType: 'application/pdf' } },
+    ]);
+  });
+
+  it('maps assistant role to model role', () => {
+    const body = toVertexRequest({
+      ...baseRequest,
+      provider: 'vertex',
+      messages: [{ role: 'assistant', content: 'Hi!' }],
+    });
+    expect(body.contents).toEqual([{ role: 'model', parts: [{ text: 'Hi!' }] }]);
   });
 });
