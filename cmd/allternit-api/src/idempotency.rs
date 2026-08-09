@@ -187,18 +187,20 @@ async fn idempotency_middleware_inner(
     let method2 = method.clone();
     let path2 = path.clone();
     let captured2 = captured.clone();
-    tokio::task::spawn_blocking(move || {
-        if let Err(err) = complete(
+    if let Err(err) = tokio::task::spawn_blocking(move || {
+        complete(
             &db2,
             &scope2,
             &idem_key2,
             &method2,
             &path2,
             &captured2,
-        ) {
-            warn!(error = %err, "failed to persist idempotency response");
-        }
-    });
+        )
+    })
+    .await
+    {
+        warn!(error = %err, "failed to persist idempotency response");
+    }
 
     Ok(replay)
 }

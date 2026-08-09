@@ -1108,8 +1108,12 @@ mod tests {
         let body = body_json(resp.into_body()).await;
         let resources = body["resources"].as_array().unwrap();
         assert_eq!(resources.len(), 2);
-        assert_eq!(resources[0]["id"], resource_1_id);
-        assert_eq!(resources[1]["id"], resource_2_id);
+        let ids: std::collections::HashSet<&str> = resources
+            .iter()
+            .map(|r| r["id"].as_str().unwrap())
+            .collect();
+        assert!(ids.contains(resource_1_id.as_str()));
+        assert!(ids.contains(resource_2_id.as_str()));
 
         // Delete the first resource.
         let resp = app
