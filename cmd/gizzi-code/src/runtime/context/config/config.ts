@@ -118,7 +118,7 @@ export namespace Config {
 
     // Project config overrides global and remote config.
     if (!Flag.GIZZI_DISABLE_PROJECT_CONFIG) {
-      for (const file of ["gizzi.jsonc", "gizzi.json"]) {
+      for (const file of ["config.toml", "gizzi.jsonc", "gizzi.json"]) {
         const found = await Filesystem.findUp(file, Instance.directory, Instance.worktree)
         for (const resolved of found.toReversed()) {
           result = merge(result, await loadFile(resolved))
@@ -162,7 +162,7 @@ export namespace Config {
 
     for (const dir of unique(directories)) {
       if (dir.endsWith(".gizzi") || dir === Flag.GIZZI_CONFIG_DIR) {
-        for (const file of ["gizzi.jsonc", "gizzi.json"]) {
+        for (const file of ["config.toml", "gizzi.jsonc", "gizzi.json"]) {
           log.debug(`loading config from ${path.join(dir, file)}`)
           result = merge(result, await loadFile(path.join(dir, file)))
           // to satisfy the type checker
@@ -1181,6 +1181,31 @@ export namespace Config {
         .optional()
         .describe("When set, ONLY these providers will be enabled. All other providers will be ignored"),
       model: ModelId.describe("Model to use in the format of provider/model, eg anthropic/claude-2").optional(),
+      auth: z
+        .object({
+          active_profile: z.string().optional(),
+          profiles: z
+            .record(
+              z.string(),
+              z.object({
+                provider: z.string(),
+                api_key: z.string().optional(),
+                api_key_env: z.string().optional(),
+                base_url: z.string().optional(),
+              }),
+            )
+            .optional(),
+        })
+        .optional()
+        .describe("Named authentication profiles for CLI and provider selection"),
+      sandbox: z
+        .object({
+          enabled: z.boolean().optional(),
+          allow_network: z.boolean().optional(),
+          allowed_domains: z.array(z.string()).optional(),
+        })
+        .optional()
+        .describe("Default sandbox preferences for non-interactive execution"),
       small_model: ModelId.describe(
         "Small model to use for tasks like title generation in the format of provider/model",
       ).optional(),
@@ -1431,9 +1456,11 @@ export namespace Config {
     result = mergeDeep(result, await loadFile(path.join(legacyConfigDir, "config.json")))
     result = mergeDeep(result, await loadFile(path.join(legacyConfigDir, "gizzi.json")))
     result = mergeDeep(result, await loadFile(path.join(legacyConfigDir, "gizzi.jsonc")))
+    result = mergeDeep(result, await loadFile(path.join(legacyConfigDir, "config.toml")))
     result = mergeDeep(result, await loadFile(path.join(Global.Path.config, "config.json")))
     result = mergeDeep(result, await loadFile(path.join(Global.Path.config, "gizzi.json")))
     result = mergeDeep(result, await loadFile(path.join(Global.Path.config, "gizzi.jsonc")))
+    result = mergeDeep(result, await loadFile(path.join(Global.Path.config, "config.toml")))
 
     const legacy = path.join(Global.Path.config, "config")
     if (existsSync(legacy)) {
@@ -1463,7 +1490,22 @@ export namespace Config {
       throw new JsonError({ path: filepath }, { cause: err })
     })
     if (!text) return {}
+    if (filepath.endsWith(".toml")) return loadToml(text, filepath)
     return load(text, { path: filepath })
+  }
+
+  function loadToml(text: string, filepath: string): Info {
+    try {
+      const parsed = Bun.TOML.parse(text) as Record<string, unknown>
+      const { default_model, ...config } = parsed
+      if (default_model !== undefined && config.model === undefined) config.model = default_model
+      return Info.parse(config)
+    } catch (error) {
+      throw new InvalidError(
+        { path: filepath, message: error instanceof Error ? error.message : String(error) },
+        { cause: error },
+      )
+    }
   }
 
   async function load(text: string, options: { path: string } | { dir: string; source: string }) {
