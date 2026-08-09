@@ -65,3 +65,15 @@ Just did: Added V36 credential/vault schema, scoped enterprise credential manage
 Next: Stage and commit the completed Phase 0 files once the linked-worktree Git index is writable.
 
 Open questions: Commit is blocked because the sandbox denies creation of the linked-worktree `index.lock` under the canonical checkout's `.git/worktrees` directory. Builds/tests are intentionally not run under the Swarm E repository instructions.
+
+---
+
+## Swarm B Phase 1 checkpoint (2026-08-09)
+
+Goal: Complete the three Agent Runtime Foundation Phase 1 items in `docs/SWARM_B_PHASE1_MAP.md`.
+
+Just did: Added the beta-session WebSocket event route with `after` replay, named resource CRUD backed by encrypted inline values or opaque refs, and user interrupt event creation with archived-session rejection. Added the V37 resource migration and a resource-kind unit test.
+
+Next: Stage and commit the scoped implementation, migration, notes, and checkpoint update to `ao/p1-swarm-b` once the linked-worktree Git index is writable.
+
+Open questions: Staging is blocked because the sandbox denies creation of the linked-worktree `index.lock` under `/Users/joe/Desktop/allternit-workspace/allternit/.git/worktrees/allternit-parity-p1-swarm-b/`. Target-file rustfmt, `git diff --check`, and an isolated SQLite migration/schema check pass. Builds and Cargo tests remain intentionally unrun under repository/task constraints.
