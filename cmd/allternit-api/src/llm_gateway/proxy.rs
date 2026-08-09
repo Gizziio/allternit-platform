@@ -50,10 +50,11 @@ use super::auth::LlmKeyContext;
 use super::gizzi_bus::{self, GizziEvent};
 use super::inference_hooks::{self, InferenceHooks, PreHookOutcome};
 use super::llm_pricing::{self, TokenBreakdown};
+use super::refusal;
 use super::router::{self, RoutingDecision};
 use super::translate::{
-    map_finish_reason, message_to_gizzi_parts, messages_to_gizzi_parts, new_completion_id,
-    stream_error_data, validate_request, Annotation, ChatCompletionChunk, ChatCompletionRequest,
+    message_to_gizzi_parts, messages_to_gizzi_parts, new_completion_id, stream_error_data,
+    validate_request, Annotation, ChatCompletionChunk, ChatCompletionRequest,
     ChatCompletionResponse, ChatMessage, FileCitation, ImageUrlPart, MessageContent,
     OpenAiErrorResponse, UrlCitation, Usage,
 };
@@ -1704,36 +1705,53 @@ async fn nonstream_completion(
         None => {
             let completion_id = new_completion_id();
             let created = chrono::Utc::now().timestamp();
-            let finish = map_finish_reason(collector.usage.finish.as_deref());
+            let refusal = refusal::detect_refusal(&collector.text);
+            let upstream_finish = collector.usage.finish.as_deref();
+            let finish = refusal::normalized_finish_reason(upstream_finish, &collector.text);
+            let is_refusal = finish == "refusal";
             let usage = Usage::new(
                 collector.usage.prompt_tokens,
                 collector.usage.completion_tokens,
                 collector.usage.reasoning_tokens,
                 collector.usage.cached_tokens,
             );
-            let rag_citations = if citations_enabled && provider_id != "anthropic" {
+            let rag_citations = if citations_enabled && provider_id != "anthropic" && !is_refusal {
                 super::citations::CitationsService::global().parse_citations(&collector.text)
             } else {
                 Vec::new()
             };
-            let mut response = ChatCompletionResponse::new(
-                completion_id,
+            let assistant_message = if is_refusal {
+                super::translate::AssistantMessage::with_refusal(
+                    collector.text.clone(),
+                    refusal::refusal_message().to_string(),
+                )
+            } else {
+                super::translate::AssistantMessage::new(collector.text.clone())
+            };
+            let mut response = ChatCompletionResponse {
+                id: completion_id,
+                object: "chat.completion".to_string(),
                 created,
-                requested_model,
-                collector.text.clone(),
-                finish.to_string(),
-                Some(usage),
-            )
+                model: requested_model,
+                choices: vec![super::translate::Choice {
+                    index: 0,
+                    message: assistant_message,
+                    finish_reason: finish.clone(),
+                    refusal: refusal.map(|_| refusal::refusal_message().to_string()),
+                }],
+                usage: Some(usage),
+                citations: None,
+            }
             .with_citations(rag_citations);
-            if !collector.citations.is_empty() {
+            if !collector.citations.is_empty() && !is_refusal {
                 response = response.with_annotations(collector.citations.clone());
             }
             let body = serde_json::to_value(&response)
                 .unwrap_or_else(|_| json!({"error": "serialization failure"}));
 
             let outcome = RequestOutcome {
-                status: "ok",
-                error_type: None,
+                status: if is_refusal { "refused" } else { "ok" },
+                error_type: if is_refusal { Some("refusal".to_string()) } else { None },
                 usage: collector.usage,
                 policy,
                 fallback_from: collector.fallback_from.clone(),
@@ -1920,10 +1938,15 @@ async fn stream_completion(
                 };
             }
             None => {
-                let finish = map_finish_reason(collector.usage.finish.as_deref());
+                let refusal = refusal::detect_refusal(&collector.text);
+                let finish = refusal::normalized_finish_reason(collector.usage.finish.as_deref(), &collector.text);
+                let is_refusal = finish == "refusal";
                 yield Ok(Event::default().data(
-                    ChatCompletionChunk::finish_chunk(&completion_id, created, &wire_model, finish)
-                        .to_sse_data(),
+                    ChatCompletionChunk::finish_chunk_with_refusal(
+                        &completion_id, created, &wire_model, &finish,
+                        refusal.map(|_| refusal::refusal_message().to_string()),
+                    )
+                    .to_sse_data(),
                 ));
                 if include_usage {
                     let usage = Usage::new(
@@ -1941,8 +1964,8 @@ async fn stream_completion(
                 }
                 yield Ok(Event::default().data("[DONE]"));
                 outcome = RequestOutcome {
-                    status: "ok",
-                    error_type: None,
+                    status: if is_refusal { "refused" } else { "ok" },
+                    error_type: if is_refusal { Some("refusal".to_string()) } else { None },
                     usage: collector.usage,
                     policy,
                     fallback_from: collector.fallback_from,

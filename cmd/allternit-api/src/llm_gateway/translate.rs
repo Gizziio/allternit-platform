@@ -740,6 +740,8 @@ pub struct AssistantMessage {
     pub content: String,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub annotations: Option<Vec<Annotation>>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub refusal: Option<String>,
 }
 
 impl AssistantMessage {
@@ -748,6 +750,7 @@ impl AssistantMessage {
             role: "assistant".to_string(),
             content,
             annotations: None,
+            refusal: None,
         }
     }
 
@@ -756,6 +759,16 @@ impl AssistantMessage {
             role: "assistant".to_string(),
             content,
             annotations: Some(annotations),
+            refusal: None,
+        }
+    }
+
+    pub fn with_refusal(content: String, refusal: String) -> Self {
+        Self {
+            role: "assistant".to_string(),
+            content,
+            annotations: None,
+            refusal: Some(refusal),
         }
     }
 }
@@ -765,6 +778,8 @@ pub struct Choice {
     pub index: u32,
     pub message: AssistantMessage,
     pub finish_reason: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub refusal: Option<String>,
 }
 
 #[derive(Debug, Clone, Serialize)]
@@ -798,6 +813,7 @@ impl ChatCompletionResponse {
                 index: 0,
                 message: AssistantMessage::new(content),
                 finish_reason,
+                refusal: None,
             }],
             usage,
             citations: None,
@@ -837,6 +853,8 @@ pub struct ChunkChoice {
     pub delta: ChunkDelta,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub finish_reason: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub refusal: Option<String>,
 }
 
 #[derive(Debug, Clone, Serialize)]
@@ -872,6 +890,7 @@ impl ChatCompletionChunk {
                 content: None,
             },
             finish_reason: None,
+            refusal: None,
         });
         chunk
     }
@@ -886,12 +905,24 @@ impl ChatCompletionChunk {
                 content: Some(delta.to_string()),
             },
             finish_reason: None,
+            refusal: None,
         });
         chunk
     }
 
     /// Final content chunk: empty delta carrying the finish reason.
     pub fn finish_chunk(id: &str, created: i64, model: &str, finish_reason: &str) -> Self {
+        Self::finish_chunk_with_refusal(id, created, model, finish_reason, None)
+    }
+
+    /// Final content chunk with an optional refusal annotation.
+    pub fn finish_chunk_with_refusal(
+        id: &str,
+        created: i64,
+        model: &str,
+        finish_reason: &str,
+        refusal: Option<String>,
+    ) -> Self {
         let mut chunk = Self::base(id, created, model);
         chunk.choices.push(ChunkChoice {
             index: 0,
@@ -900,6 +931,7 @@ impl ChatCompletionChunk {
                 content: None,
             },
             finish_reason: Some(finish_reason.to_string()),
+            refusal,
         });
         chunk
     }

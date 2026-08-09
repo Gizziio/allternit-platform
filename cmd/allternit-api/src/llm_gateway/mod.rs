@@ -41,6 +41,7 @@ pub mod inference_hooks;
 pub mod keys;
 pub mod llm_pricing;
 pub mod proxy;
+pub mod refusal;
 pub mod router;
 pub mod translate;
 
