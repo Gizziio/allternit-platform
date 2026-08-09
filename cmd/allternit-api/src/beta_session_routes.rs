@@ -567,8 +567,10 @@ async fn list_resources(
             "SELECT id, name, kind, resource_ref, created_at
              FROM beta_session_resources WHERE session_id = ?1 ORDER BY created_at, id",
         )?;
-        stmt.query_map(params![id], read_resource)?
-            .collect::<Result<Vec<_>, _>>()
+        let rows = stmt
+            .query_map(params![id], read_resource)?
+            .collect::<Result<Vec<ResourceRow>, _>>()?;
+        Ok::<Vec<ResourceRow>, rusqlite::Error>(rows)
     })
     .await
     .map_err(|e| ApiError::Internal(e.to_string()))??;
