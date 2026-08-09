@@ -45,6 +45,7 @@ pub struct OpenAiError {
 }
 
 /// An OpenAI error paired with the HTTP status it should be returned with.
+#[derive(Debug)]
 pub struct OpenAiErrorResponse {
     pub status: StatusCode,
     pub error: OpenAiError,
