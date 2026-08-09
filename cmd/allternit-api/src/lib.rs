@@ -52,6 +52,7 @@ pub mod gizzi_completion;
 pub mod gizzi_provider_auth;
 pub mod h5i_routes;
 pub mod health;
+pub mod idempotency;
 pub mod inbox_routes;
 pub mod internal_auth;
 pub mod internal_routes;
@@ -77,6 +78,7 @@ pub mod pricing;
 pub mod provider_routes;
 pub mod queue_routes;
 pub mod rails;
+pub mod rate_limit;
 pub mod rails_client_impl;
 pub mod rbac;
 pub mod rbac_routes;
@@ -118,6 +120,46 @@ use std::sync::Arc;
 use terminal_routes::TerminalSessionStore;
 use tokio::sync::RwLock;
 use vm_session_routes::VmSessionStore;
+
+#[cfg(test)]
+pub mod test_helpers {
+    //! Minimal `AppState` factory for unit tests that need the full struct.
+    use super::*;
+    use std::collections::HashMap;
+    use std::path::Path;
+
+    pub async fn app_state(temp: &Path) -> Arc<AppState> {
+        let config = AppConfig {
+            company: config::CompanyConfig::default(),
+            user: config::UserConfig::default(),
+        };
+        let db = db::DbHandle::new(temp.join("test.db")).expect("test db");
+        let auth_config = auth::AuthConfig::from_app_config(&config);
+        let jwks = auth::JwksManager::new(&auth_config);
+        let rails = RailsState::new(temp.join("rails"))
+            .await
+            .expect("test rails");
+        Arc::new(AppState {
+            config,
+            db,
+            jwks,
+            auth_config,
+            vm_driver: None,
+            rails,
+            vm_sessions: vm_session_routes::new_vm_session_store(),
+            cowork_scheduler: None,
+            cowork_background: None,
+            cowork_run_manager: None,
+            webhook_secret: None,
+            office_runtime: Arc::new(RwLock::new(office_routes::OfficeRuntimeFile::default())),
+            office_cli_docs: Arc::new(RwLock::new(HashMap::new())),
+            office_cli_watches: Arc::new(RwLock::new(HashMap::new())),
+            office_cli_mcp_sessions: Arc::new(RwLock::new(HashMap::new())),
+            design_skill_cache: DesignSkillCache::new(),
+            terminal_sessions: TerminalSessionStore::new(),
+        })
+    }
+}
 
 /// Globally accessible application configuration, initialized once at startup.
 /// Routes and helpers that do not receive `AppState` can read from here so the
