@@ -165,7 +165,20 @@ See [Idempotency and retries](../guides/idempotency-and-retries.md) for the full
 
 ## POST /v1/batches
 
-Store a batch of chat-completion requests for later execution. Phase 1 provides metadata storage and lifecycle endpoints; execution and provider polling are Phase 2.
+Store a batch of chat-completion requests for asynchronous execution. Each element is validated as a `ChatCompletionRequest` and checked against the key's model allowlist. On creation the batch enters the `validating` state; an in-process worker submits it to the configured provider batch endpoint and polls it to completion.
+
+### Status lifecycle
+
+`validating` → `in_progress` → `completed` / `failed` / `cancelled`
+
+`cancelled` is terminal. A batch may be cancelled while it is `validating` or `in_progress`.
+
+### Provider configuration
+
+The worker posts to the provider's `/v1/batches` endpoint. The base URL defaults to the configured Gizzi terminal server URL and can be overridden with:
+
+- `ALLTERNIT_BATCH_PROVIDER_URL`
+- `ALLTERNIT_BATCH_PROVIDER_KEY` (sent as `Authorization: Bearer …`)
 
 ### Request body
 
@@ -177,8 +190,6 @@ Store a batch of chat-completion requests for later execution. Phase 1 provides 
   ]
 }
 ```
-
-Each element is validated as a `ChatCompletionRequest` and checked against the key's model allowlist.
 
 ### Response (201 Created)
 
@@ -219,7 +230,7 @@ curl -s "$ALLTERNIT_API_URL/batches/batch_..." \
 
 ## POST /v1/batches/:id/cancel
 
-Cancel a batch. Idempotent: cancelling an already-cancelled batch returns the current state.
+Cancel a batch. Only batches in `validating` or `in_progress` can be cancelled; cancelling an already-terminal batch is idempotent and returns the current state.
 
 ```bash
 curl -s -X POST "$ALLTERNIT_API_URL/batches/batch_.../cancel" \
@@ -228,7 +239,36 @@ curl -s -X POST "$ALLTERNIT_API_URL/batches/batch_.../cancel" \
 
 ## GET /v1/batches/:id/results
 
-Return the stored results json for a completed batch. Returns `404` if no results are stored.
+Return the stored results for a completed or failed batch. The response is a list of per-request result objects. Each object contains the request `index` and either a `response` or an `error`. Errors follow the batch error schema with `index`, `code`, and `message`.
+
+### Example response
+
+```json
+{
+  "object": "list",
+  "data": [
+    {
+      "index": 0,
+      "response": {
+        "id": "chatcmpl-...",
+        "object": "chat.completion",
+        "model": "allternit-balanced",
+        "choices": [{"index": 0, "message": {"role": "assistant", "content": "A is ..."}}]
+      }
+    },
+    {
+      "index": 1,
+      "error": {
+        "index": 1,
+        "code": "provider_failed",
+        "message": "Provider reported the batch failed"
+      }
+    }
+  ]
+}
+```
+
+Returns `404` if no results are stored.
 
 ```bash
 curl -s "$ALLTERNIT_API_URL/batches/batch_.../results" \
