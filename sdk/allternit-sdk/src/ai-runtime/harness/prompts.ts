@@ -96,7 +96,10 @@ export function injectSystemPrompt(
 
   // System message exists - prepend Allternit prompt
   const existingContent = messages[systemIndex].content;
-  const mergedContent = `${fullSystemPrompt}\n\n---\n\n${existingContent}`;
+  const mergedContent: Message['content'] =
+    typeof existingContent === 'string'
+      ? `${fullSystemPrompt}\n\n---\n\n${existingContent}`
+      : [{ type: 'text', text: fullSystemPrompt }, { type: 'text', text: '---' }, ...existingContent];
 
   const newMessages = [...messages];
   newMessages[systemIndex] = {
@@ -130,10 +133,16 @@ export function injectProviderPrompt(
     return messages;
   }
 
+  const existingContent = messages[systemIndex].content;
+  const mergedContent: Message['content'] =
+    typeof existingContent === 'string'
+      ? `${existingContent}\n\n${providerAddendum}`
+      : [...existingContent, { type: 'text', text: providerAddendum }];
+
   const newMessages = [...messages];
   newMessages[systemIndex] = {
     ...messages[systemIndex],
-    content: `${messages[systemIndex].content}\n\n${providerAddendum}`,
+    content: mergedContent,
   };
 
   return newMessages;
@@ -166,8 +175,18 @@ export function validateMessages(messages: Message[]): boolean {
       );
     }
 
-    if (typeof message.content !== 'string') {
-      throw new Error(`Message at index ${index} content must be a string`);
+    if (typeof message.content !== 'string' && !Array.isArray(message.content)) {
+      throw new Error(`Message at index ${index} content must be a string or content blocks`);
+    }
+
+    if (Array.isArray(message.content)) {
+      for (const [blockIndex, block] of message.content.entries()) {
+        if (!block || typeof block.type !== 'string') {
+          throw new Error(
+            `Message at index ${index} content block at ${blockIndex} missing type`
+          );
+        }
+      }
     }
   }
 

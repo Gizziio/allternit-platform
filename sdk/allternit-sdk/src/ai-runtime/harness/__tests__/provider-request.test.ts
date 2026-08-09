@@ -122,6 +122,35 @@ describe('toAnthropicRequest', () => {
     });
     expect(body.tool_choice).toEqual({ type: 'any' });
   });
+
+  it('maps search_result blocks to text with citation markers', () => {
+    const body = toAnthropicRequest({
+      ...baseRequest,
+      provider: 'anthropic',
+      messages: [
+        {
+          role: 'user',
+          content: [
+            { type: 'text', text: 'What is Allternit?' },
+            {
+              type: 'search_result',
+              title: 'Allternit Docs',
+              url: 'https://docs.allternit.com',
+              content: 'Allternit is an AI governance and workflow system.',
+              score: 0.95,
+            },
+          ],
+        },
+      ],
+    });
+    const content = body.messages[0].content as Array<{ type: string; text: string }>;
+    expect(content).toHaveLength(2);
+    expect(content[0]).toEqual({ type: 'text', text: 'What is Allternit?' });
+    expect(content[1].type).toBe('text');
+    expect(content[1].text).toContain('[search_result title="Allternit Docs" url="https://docs.allternit.com" score=0.95]');
+    expect(content[1].text).toContain('Allternit is an AI governance and workflow system.');
+    expect(content[1].text).toContain('[/search_result]');
+  });
 });
 
 describe('toKimiRequest', () => {

@@ -67,11 +67,35 @@ export interface HarnessConfig {
 export type MessageRole = 'system' | 'user' | 'assistant' | 'tool';
 
 /**
+ * Text content block.
+ */
+export interface TextBlock {
+  type: 'text';
+  text: string;
+}
+
+/**
+ * Search-result content block.
+ */
+export interface SearchResultBlock {
+  type: 'search_result';
+  title: string;
+  url: string;
+  content: string;
+  score?: number;
+}
+
+/**
+ * Supported content blocks inside a message.
+ */
+export type ContentBlock = TextBlock | SearchResultBlock;
+
+/**
  * Chat message structure
  */
 export interface Message {
   role: MessageRole;
-  content: string;
+  content: string | ContentBlock[];
   name?: string;
   tool_calls?: ToolCall[];
   tool_call_id?: string;
