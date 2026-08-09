@@ -1238,6 +1238,20 @@ pub async fn chat_completions(
     // Image content is preserved as `file` parts for vision-capable models.
     let (system, all_parts) = messages_to_gizzi_parts(&request.messages);
 
+    // RAG-attribution fallback: non-Anthropic providers get an explicit
+    // citations context block prepended to the system prompt.
+    let system = if request.citations == Some(true) && resolved.provider_id != "anthropic" {
+        match super::citations::CitationsService::global().format_prompt_context() {
+            Some(ctx) => Some(match system {
+                Some(existing) => format!("{ctx}\n\n{existing}"),
+                None => ctx,
+            }),
+            None => system,
+        }
+    } else {
+        system
+    };
+
     // Session strategy: fresh session titled `gateway:<key_prefix>`, or
     // reuse via header — then only the last user message is sent and Gizzi's
     // own session history provides the context.
@@ -1355,6 +1369,11 @@ pub async fn chat_completions(
             }))
             .collect::<Vec<_>>());
     }
+    // Forward the native citations flag to Gizzi for Anthropic; non-Anthropic
+    // providers get the explicit RAG context block injected above.
+    if request.citations == Some(true) && resolved.provider_id == "anthropic" {
+        payload["citations"] = json!(true);
+    }
 
     let message_url = format!(
         "{base}/v1/session/{}/message",
@@ -1399,6 +1418,8 @@ pub async fn chat_completions(
             started,
             session_id,
             request.model,
+            resolved.provider_id.clone(),
+            request.citations == Some(true),
             resolved.policy,
             resolved.routing_decision,
             idem_for_record,
@@ -1416,6 +1437,8 @@ async fn nonstream_completion(
     started: Instant,
     session_id: String,
     requested_model: String,
+    provider_id: String,
+    citations_enabled: bool,
     policy: Option<String>,
     routing_decision: Option<RoutingDecision>,
     idempotency_key: Option<String>,
@@ -1454,6 +1477,11 @@ async fn nonstream_completion(
                 collector.usage.reasoning_tokens,
                 collector.usage.cached_tokens,
             );
+            let citations = if citations_enabled && provider_id != "anthropic" {
+                super::citations::CitationsService::global().parse_citations(&collector.text)
+            } else {
+                Vec::new()
+            };
             let response = ChatCompletionResponse::new(
                 completion_id,
                 created,
@@ -1461,7 +1489,8 @@ async fn nonstream_completion(
                 collector.text.clone(),
                 finish.to_string(),
                 Some(usage),
-            );
+            )
+            .with_citations(citations);
             let body = serde_json::to_value(&response)
                 .unwrap_or_else(|_| json!({"error": "serialization failure"}));
 

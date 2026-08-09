@@ -32,6 +32,7 @@ pub mod admin_routes;
 pub mod auth;
 pub mod batches;
 pub mod benchmarks;
+pub mod citations;
 pub mod dlp;
 pub mod dlp_patterns;
 pub mod files;
