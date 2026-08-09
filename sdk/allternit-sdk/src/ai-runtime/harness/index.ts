@@ -16,6 +16,7 @@ import {
   Citation,
 } from './types.js';
 import { toAnthropicRequest } from './provider-request.js';
+import { fetchWithRetry } from './retry.js';
 import {
   injectSystemPrompt,
   injectProviderPrompt,
@@ -303,15 +304,19 @@ export class AllternitHarness {
     }
 
     const baseURL = this.config.byok?.anthropic?.baseURL ?? 'https://api.anthropic.com';
-    const response = await fetch(`${baseURL.replace(/\/$/, '')}/v1/messages`, {
-      method: 'POST',
-      headers: {
-        'content-type': 'application/json',
-        'x-api-key': apiKey,
-        'anthropic-version': '2023-06-01',
+    const response = await fetchWithRetry(
+      `${baseURL.replace(/\/$/, '')}/v1/messages`,
+      {
+        method: 'POST',
+        headers: {
+          'content-type': 'application/json',
+          'x-api-key': apiKey,
+          'anthropic-version': '2023-06-01',
+        },
+        body: JSON.stringify(toAnthropicRequest({ ...request, stream: true })),
       },
-      body: JSON.stringify(toAnthropicRequest({ ...request, stream: true })),
-    });
+      this.config.retry
+    );
     if (!response.ok || !response.body) {
       throw new HarnessError(HarnessErrorCode.API_ERROR,
         `Anthropic request failed with status ${response.status}`);
@@ -518,6 +523,7 @@ export class AllternitHarness {
 export * from './types.js';
 export * from './prompts.js';
 export * from './provider-request.js';
+export * from './retry.js';
 
 // Default export
 export default AllternitHarness;

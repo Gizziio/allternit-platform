@@ -3,6 +3,8 @@
  * Core type definitions for the harness SDK
  */
 
+import type { RetryOptions } from './retry.js';
+
 /**
  * Supported execution modes for the harness
  */
@@ -55,6 +57,8 @@ export interface HarnessConfig {
   cloud?: CloudConfig;
   local?: LocalConfig;
   subprocess?: SubprocessConfig;
+  /** Retry/backoff behavior for provider fetch calls. Omit to use defaults. */
+  retry?: RetryOptions;
 }
 
 /**
