@@ -531,6 +531,7 @@ mod tests {
         Arc::new(AppState {
             config,
             db,
+            data_dir: temp.to_path_buf(),
             jwks,
             auth_config,
             vm_driver: None,
@@ -548,6 +549,8 @@ mod tests {
             office_cli_docs: Arc::new(RwLock::new(HashMap::new())),
             office_cli_watches: Arc::new(RwLock::new(HashMap::new())),
             office_cli_mcp_sessions: Arc::new(RwLock::new(HashMap::new())),
+            mcp_dispatcher: crate::mcp_dispatcher::McpDispatcher::new(),
+            approval_store: Arc::new(crate::permission_policy::ApprovalStore::new()),
         })
     }
 
