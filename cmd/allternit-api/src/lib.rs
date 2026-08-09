@@ -55,6 +55,7 @@ pub mod error;
 pub mod enterprise_auth;
 pub mod eval_routes;
 pub mod external_keys_routes;
+pub mod fallback_credit_routes;
 pub mod fallback_routes;
 pub mod file_routes;
 pub mod gizzi_chat_stream;
