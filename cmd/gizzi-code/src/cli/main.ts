@@ -58,6 +58,7 @@ import { LabsCommand } from "@/cli/commands/labs"
 import { UdemyCommand } from "@/cli/commands/udemy"
 import { VaultCommand } from "@/cli/commands/vault"
 import { CodemapCommand } from "@/cli/commands/codemap"
+import { AuthCommand } from "@/cli/commands/auth"
 import path from "path"
 import { Global, init as initGlobal } from "@/runtime/context/global"
 import { JsonMigration } from "@/runtime/session/storage/json-migration"
@@ -225,6 +226,7 @@ const cli = yargs(hideBin(process.argv))
   .command(UdemyCommand)
   .command(VaultCommand)
   .command(CodemapCommand)
+  .command(AuthCommand)
   .fail((msg, err) => {
     if (
       msg?.startsWith("Unknown argument") ||

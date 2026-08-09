@@ -65,3 +65,18 @@ Just did: Added V36 credential/vault schema, scoped enterprise credential manage
 Next: Stage and commit the completed Phase 0 files once the linked-worktree Git index is writable.
 
 Open questions: Commit is blocked because the sandbox denies creation of the linked-worktree `index.lock` under the canonical checkout's `.git/worktrees` directory. Builds/tests are intentionally not run under the Swarm E repository instructions.
+Goal
+
+Complete Swarm D Phase 1 admin CLI flows and Gizzi auth profile management.
+
+Just did
+
+Implemented workspace/key update and delete commands, budget reset, a `gizzi auth profile` command tree, safe TOML profile mutations, and focused unit tests. Admin tests pass 2/2 and profile mutation tests pass 2/2 from the repo root.
+
+Next
+
+Have an authorized process stage and commit the completed Phase 1 changes to `ao/p1-swarm-d`.
+
+Open questions
+
+Commit is blocked because the sandbox denies creation of the linked-worktree `index.lock` under the canonical checkout's `.git/worktrees` directory. The broad Gizzi package test preload also cannot resolve `zod/v4` in this isolated worktree; focused tests avoid that unrelated preload dependency.

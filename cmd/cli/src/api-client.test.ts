@@ -23,3 +23,24 @@ test('ApiClient sends bearer auth and JSON bodies', async () => {
     globalThis.fetch = originalFetch;
   }
 });
+
+test('ApiClient supports update and delete requests', async () => {
+  const originalFetch = globalThis.fetch;
+  const seen: Request[] = [];
+  globalThis.fetch = async (input, init) => {
+    seen.push(new Request(input, init));
+    return new Response(JSON.stringify({ ok: true }), { status: 200 });
+  };
+  try {
+    const client = new ApiClient({ apiUrl: 'https://api.example' });
+    await client.request('PATCH', '/api/v1/gateway/keys/key%2Fone', { name: 'updated' });
+    await client.request('DELETE', '/api/v1/workspaces/workspace%2Fone');
+
+    assert.equal(seen[0]?.method, 'PATCH');
+    assert.deepEqual(await seen[0]?.json(), { name: 'updated' });
+    assert.equal(seen[1]?.method, 'DELETE');
+    assert.equal(seen[1]?.body, null);
+  } finally {
+    globalThis.fetch = originalFetch;
+  }
+});
