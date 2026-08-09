@@ -41,54 +41,77 @@ async function withMockedFetch(
   return seen;
 }
 
-test('admin mcp-tunnels list sends GET /api/v1/mcp-tunnels', async () => {
+test('admin mcp-tunnels list sends GET /api/v1/admin/mcp-tunnels', async () => {
   const seen = await withMockedFetch(
-    () => new Response(JSON.stringify({ tunnels: [] }), { status: 200, headers: { 'content-type': 'application/json' } }),
+    () => new Response(JSON.stringify({ items: [] }), { status: 200, headers: { 'content-type': 'application/json' } }),
     async () => {
       await buildProgram().parseAsync(['node', 'allternit', 'admin', 'mcp-tunnels', 'list']);
     },
   );
   assert.equal(seen.length, 1);
   assert.equal(seen[0]?.method, 'GET');
-  assert.equal(seen[0]?.url, 'https://api.example/api/v1/mcp-tunnels');
+  assert.equal(seen[0]?.url, 'https://api.example/api/v1/admin/mcp-tunnels');
 });
 
-test('admin mcp-tunnels create sends POST with name body', async () => {
+test('admin mcp-tunnels create sends POST with endpoint and auth options', async () => {
   const seen = await withMockedFetch(
     () => new Response(JSON.stringify({ id: 'tun_1' }), { status: 200, headers: { 'content-type': 'application/json' } }),
     async () => {
-      await buildProgram().parseAsync(['node', 'allternit', 'admin', 'mcp-tunnels', 'create', '--name', 'my-tunnel']);
+      await buildProgram().parseAsync([
+        'node', 'allternit', 'admin', 'mcp-tunnels', 'create',
+        '--name', 'my-tunnel',
+        '--endpoint-url', 'https://mcp.example.com/sse',
+        '--oauth-issuer', 'https://issuer.example',
+        '--audience', 'mcp-audience',
+      ]);
     },
   );
   assert.equal(seen.length, 1);
   assert.equal(seen[0]?.method, 'POST');
-  assert.equal(seen[0]?.url, 'https://api.example/api/v1/mcp-tunnels');
-  assert.deepEqual(await seen[0]?.json(), { name: 'my-tunnel' });
+  assert.equal(seen[0]?.url, 'https://api.example/api/v1/admin/mcp-tunnels');
+  assert.deepEqual(await seen[0]?.json(), {
+    name: 'my-tunnel',
+    endpoint_url: 'https://mcp.example.com/sse',
+    oauth_issuer: 'https://issuer.example',
+    audience: 'mcp-audience',
+  });
 });
 
 test('admin mcp-tunnels rotate sends POST to /:id/rotate', async () => {
   const seen = await withMockedFetch(
     () => new Response(JSON.stringify({ ok: true }), { status: 200, headers: { 'content-type': 'application/json' } }),
     async () => {
-      await buildProgram().parseAsync(['node', 'allternit', 'admin', 'mcp-tunnels', 'rotate', '--id', 'tun_1']);
+      await buildProgram().parseAsync(['node', 'allternit', 'admin', 'mcp-tunnels', 'rotate', 'tun_1']);
     },
   );
   assert.equal(seen.length, 1);
   assert.equal(seen[0]?.method, 'POST');
-  assert.equal(seen[0]?.url, 'https://api.example/api/v1/mcp-tunnels/tun_1/rotate');
+  assert.equal(seen[0]?.url, 'https://api.example/api/v1/admin/mcp-tunnels/tun_1/rotate');
   assert.equal(seen[0]?.body, null);
+});
+
+test('admin mcp-tunnels reveal sends POST to /:id/reveal', async () => {
+  const seen = await withMockedFetch(
+    () => new Response(JSON.stringify({ ok: true }), { status: 200, headers: { 'content-type': 'application/json' } }),
+    async () => {
+      await buildProgram().parseAsync(['node', 'allternit', 'admin', 'mcp-tunnels', 'reveal', 'tun_1']);
+    },
+  );
+  assert.equal(seen.length, 1);
+  assert.equal(seen[0]?.method, 'POST');
+  assert.equal(seen[0]?.url, 'https://api.example/api/v1/admin/mcp-tunnels/tun_1/reveal');
 });
 
 test('admin mcp-tunnels delete sends DELETE to /:id', async () => {
   const seen = await withMockedFetch(
     () => new Response(JSON.stringify({ ok: true }), { status: 200, headers: { 'content-type': 'application/json' } }),
     async () => {
-      await buildProgram().parseAsync(['node', 'allternit', 'admin', 'mcp-tunnels', 'delete', '--id', 'tun_1']);
+      await buildProgram().parseAsync(['node', 'allternit', 'admin', 'mcp-tunnels', 'delete', 'tun_1']);
     },
   );
   assert.equal(seen.length, 1);
   assert.equal(seen[0]?.method, 'DELETE');
-  assert.equal(seen[0]?.url, 'https://api.example/api/v1/mcp-tunnels/tun_1');
+  assert.equal(seen[0]?.url, 'https://api.example/api/v1/admin/mcp-tunnels/tun_1');
 });
 
 test('admin mcp-tunnels create with missing --name rejects', async () => {

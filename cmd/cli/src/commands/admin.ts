@@ -1,4 +1,5 @@
 import { Command } from 'commander';
+import { readFile } from 'node:fs/promises';
 import { ApiClient } from '../api-client.js';
 
 type GlobalOptions = { apiUrl: string; token?: string; json?: boolean };
@@ -151,33 +152,97 @@ export function createAdminCommand(): Command {
     .description('Manage MCP tunnel proxies')
     .addCommand(
       new Command('list').action(function (this: Command) {
-        return run(this, () => client(this).request('GET', '/api/v1/mcp-tunnels'));
+        return run(this, () => client(this).request('GET', '/api/v1/admin/mcp-tunnels'));
       }),
     )
     .addCommand(
       new Command('create')
         .requiredOption('--name <name>', 'tunnel name')
-        .action(function (this: Command, options: { name: string }) {
-          return run(this, () => client(this).request('POST', '/api/v1/mcp-tunnels', { name: options.name }));
+        .requiredOption('--endpoint-url <url>', 'MCP server endpoint URL')
+        .option('--description <description>', 'tunnel description')
+        .option('--client-cert-pem <path>', 'path to mTLS client certificate PEM file')
+        .option('--oauth-issuer <url>', 'allowed OAuth issuer URL')
+        .option('--audience <audience>', 'allowed OAuth audience')
+        .action(async function (this: Command, options: {
+          name: string;
+          endpointUrl: string;
+          description?: string;
+          clientCertPem?: string;
+          oauthIssuer?: string;
+          audience?: string;
+        }) {
+          const body: Record<string, unknown> = {
+            name: options.name,
+            endpoint_url: options.endpointUrl,
+          };
+          if (options.description) body.description = options.description;
+          if (options.clientCertPem) {
+            const pem = await readFile(options.clientCertPem, 'utf8');
+            body.client_cert_pem = pem;
+          }
+          if (options.oauthIssuer) body.oauth_issuer = options.oauthIssuer;
+          if (options.audience) body.audience = options.audience;
+          return run(this, () => client(this).request('POST', '/api/v1/admin/mcp-tunnels', body));
+        }),
+    )
+    .addCommand(
+      new Command('get')
+        .argument('<id>', 'tunnel id')
+        .action(function (this: Command, id: string) {
+          return run(this, () => client(this).request('GET', `/api/v1/admin/mcp-tunnels/${encodeURIComponent(id)}`));
+        }),
+    )
+    .addCommand(
+      new Command('update')
+        .argument('<id>', 'tunnel id')
+        .option('--name <name>', 'tunnel name')
+        .option('--endpoint-url <url>', 'MCP server endpoint URL')
+        .option('--description <description>', 'tunnel description')
+        .option('--oauth-issuer <url>', 'allowed OAuth issuer URL')
+        .option('--audience <audience>', 'allowed OAuth audience')
+        .action(function (this: Command, id: string, options: {
+          name?: string;
+          endpointUrl?: string;
+          description?: string;
+          oauthIssuer?: string;
+          audience?: string;
+        }) {
+          const body: Record<string, unknown> = {};
+          if (options.name) body.name = options.name;
+          if (options.endpointUrl) body.endpoint_url = options.endpointUrl;
+          if (options.description !== undefined) body.description = options.description;
+          if (options.oauthIssuer !== undefined) body.oauth_issuer = options.oauthIssuer;
+          if (options.audience !== undefined) body.audience = options.audience;
+          return run(this, () => client(this).request('PUT', `/api/v1/admin/mcp-tunnels/${encodeURIComponent(id)}`, body));
         }),
     )
     .addCommand(
       new Command('rotate')
-        .requiredOption('--id <id>', 'tunnel id')
-        .action(function (this: Command, options: { id: string }) {
+        .argument('<id>', 'tunnel id')
+        .action(function (this: Command, id: string) {
           return run(this, () => client(this).request(
             'POST',
-            `/api/v1/mcp-tunnels/${encodeURIComponent(options.id)}/rotate`,
+            `/api/v1/admin/mcp-tunnels/${encodeURIComponent(id)}/rotate`,
+          ));
+        }),
+    )
+    .addCommand(
+      new Command('reveal')
+        .argument('<id>', 'tunnel id')
+        .action(function (this: Command, id: string) {
+          return run(this, () => client(this).request(
+            'POST',
+            `/api/v1/admin/mcp-tunnels/${encodeURIComponent(id)}/reveal`,
           ));
         }),
     )
     .addCommand(
       new Command('delete')
-        .requiredOption('--id <id>', 'tunnel id')
-        .action(function (this: Command, options: { id: string }) {
+        .argument('<id>', 'tunnel id')
+        .action(function (this: Command, id: string) {
           return run(this, () => client(this).request(
             'DELETE',
-            `/api/v1/mcp-tunnels/${encodeURIComponent(options.id)}`,
+            `/api/v1/admin/mcp-tunnels/${encodeURIComponent(id)}`,
           ));
         }),
     );
