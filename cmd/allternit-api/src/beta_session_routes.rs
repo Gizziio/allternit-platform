@@ -30,7 +30,7 @@ const APPENDABLE_RUN_EVENT_TYPES: &[&str] = &[
     "refusal",
 ];
 
-const RESOURCE_KINDS: &[&str] = &["github_token", "vault_credential", "env_var"];
+const RESOURCE_KINDS: &[&str] = &["github_token", "vault_credential", "api_key"];
 
 fn empty_object() -> Value {
     json!({})
@@ -760,6 +760,92 @@ fn budget_json(state: BudgetState) -> Value {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use axum::body::Body;
+    use axum::http::{Request, StatusCode};
+    use http_body_util::BodyExt;
+    use std::collections::HashMap;
+    use std::path::Path as FsPath;
+    use std::sync::Once;
+    use tokio::sync::RwLock;
+    use tower::ServiceExt;
+
+    fn test_user(id: &str) -> AuthUser {
+        AuthUser {
+            user_id: id.to_string(),
+            email: Some(format!("{}@example.test", id)),
+            name: None,
+            avatar_url: None,
+            tenant_id: None,
+            organization_id: None,
+            organization_role: None,
+            organization_slug: None,
+        }
+    }
+
+    fn temp_dir(tag: &str) -> std::path::PathBuf {
+        let dir = std::env::temp_dir().join(format!(
+            "allternit-beta-session-{}-{}",
+            tag,
+            uuid::Uuid::new_v4()
+        ));
+        std::fs::create_dir_all(&dir).unwrap();
+        dir
+    }
+
+    static TEST_KEY_INIT: Once = Once::new();
+
+    fn init_test_encryption_key() {
+        TEST_KEY_INIT.call_once(|| {
+            std::env::set_var(
+                "ALLTERNIT_ENCRYPTION_KEY",
+                "test-session-resource-key-32bytes!",
+            );
+        });
+    }
+
+    async fn test_app_state(temp: &FsPath) -> Arc<AppState> {
+        init_test_encryption_key();
+        let config = crate::AppConfig {
+            company: Default::default(),
+            user: Default::default(),
+        };
+        let db = crate::db::DbHandle::new(temp.join("test.db")).expect("test db");
+        let auth_config = crate::auth::AuthConfig::from_app_config(&config);
+        let jwks = crate::auth::JwksManager::new(&auth_config);
+        let rails = crate::rails::RailsState::new(temp.join("rails"))
+            .await
+            .expect("test rails");
+        Arc::new(AppState {
+            config,
+            db,
+            jwks,
+            auth_config,
+            vm_driver: None,
+            rails,
+            vm_sessions: crate::vm_session_routes::new_vm_session_store(),
+            cowork_scheduler: None,
+            cowork_background: None,
+            cowork_run_manager: None,
+            webhook_secret: None,
+            office_runtime: Arc::new(RwLock::new(
+                crate::office_routes::OfficeRuntimeFile::default(),
+            )),
+            design_skill_cache: crate::design_connector_routes::DesignSkillCache::new(),
+            terminal_sessions: crate::terminal_routes::TerminalSessionStore::new(),
+            office_cli_docs: Arc::new(RwLock::new(HashMap::new())),
+            office_cli_watches: Arc::new(RwLock::new(HashMap::new())),
+            office_cli_mcp_sessions: Arc::new(RwLock::new(HashMap::new())),
+        })
+    }
+
+    async fn body_json(body: Body) -> Value {
+        let bytes = body.collect().await.unwrap().to_bytes();
+        serde_json::from_slice(&bytes).unwrap()
+    }
+
+    fn json_body(value: &Value) -> Body {
+        Body::from(value.to_string())
+    }
 
     #[test]
     fn accepts_standard_runtime_event_types() {
@@ -775,9 +861,10 @@ mod tests {
 
     #[test]
     fn accepts_only_supported_session_resource_kinds() {
-        for kind in ["github_token", "vault_credential", "env_var"] {
+        for kind in ["github_token", "vault_credential", "api_key"] {
             assert!(RESOURCE_KINDS.contains(&kind));
         }
+        assert!(!RESOURCE_KINDS.contains(&"env_var"));
         assert!(!RESOURCE_KINDS.contains(&"raw_secret"));
     }
 
@@ -824,5 +911,337 @@ mod tests {
             ),
             Some("turns")
         );
+    }
+
+    #[tokio::test]
+    async fn session_resource_validation_rejects_bad_input() {
+        let temp = temp_dir("validation");
+        let state = test_app_state(&temp).await;
+        let app = beta_session_router().with_state(state);
+
+        let resp = app
+            .clone()
+            .oneshot(
+                Request::builder()
+                    .method("POST")
+                    .uri("/beta/sessions")
+                    .header("content-type", "application/json")
+                    .extension(test_user("user-a"))
+                    .body(json_body(&json!({})))
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+        assert_eq!(resp.status(), StatusCode::CREATED);
+        let body = body_json(resp.into_body()).await;
+        let session_id = body["session"]["id"].as_str().unwrap();
+
+        let uri = format!("/beta/sessions/{}/resources", session_id);
+
+        // Unsupported kind.
+        let resp = app
+            .clone()
+            .oneshot(
+                Request::builder()
+                    .method("POST")
+                    .uri(&uri)
+                    .header("content-type", "application/json")
+                    .extension(test_user("user-a"))
+                    .body(json_body(&json!({
+                        "name": "bad",
+                        "kind": "env_var",
+                        "value": "x"
+                    })))
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+        assert_eq!(resp.status(), StatusCode::BAD_REQUEST);
+
+        // Empty name.
+        let resp = app
+            .clone()
+            .oneshot(
+                Request::builder()
+                    .method("POST")
+                    .uri(&uri)
+                    .header("content-type", "application/json")
+                    .extension(test_user("user-a"))
+                    .body(json_body(&json!({
+                        "name": "  ",
+                        "kind": "api_key",
+                        "value": "x"
+                    })))
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+        assert_eq!(resp.status(), StatusCode::BAD_REQUEST);
+
+        // Both value and ref.
+        let resp = app
+            .clone()
+            .oneshot(
+                Request::builder()
+                    .method("POST")
+                    .uri(&uri)
+                    .header("content-type", "application/json")
+                    .extension(test_user("user-a"))
+                    .body(json_body(&json!({
+                        "name": "both",
+                        "kind": "api_key",
+                        "value": "x",
+                        "ref": "ref"
+                    })))
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+        assert_eq!(resp.status(), StatusCode::BAD_REQUEST);
+
+        // Neither value nor ref.
+        let resp = app
+            .clone()
+            .oneshot(
+                Request::builder()
+                    .method("POST")
+                    .uri(&uri)
+                    .header("content-type", "application/json")
+                    .extension(test_user("user-a"))
+                    .body(json_body(&json!({
+                        "name": "neither",
+                        "kind": "api_key"
+                    })))
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+        assert_eq!(resp.status(), StatusCode::BAD_REQUEST);
+    }
+
+    #[tokio::test]
+    async fn session_resource_lifecycle_with_encryption() {
+        let temp = temp_dir("lifecycle");
+        let state = test_app_state(&temp).await;
+        let app = beta_session_router().with_state(state);
+
+        let resp = app
+            .clone()
+            .oneshot(
+                Request::builder()
+                    .method("POST")
+                    .uri("/beta/sessions")
+                    .header("content-type", "application/json")
+                    .extension(test_user("user-a"))
+                    .body(json_body(&json!({"name": "test-session"})))
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+        assert_eq!(resp.status(), StatusCode::CREATED);
+        let body = body_json(resp.into_body()).await;
+        let session_id = body["session"]["id"].as_str().unwrap().to_string();
+
+        // Attach an encrypted value resource.
+        let resp = app
+            .clone()
+            .oneshot(
+                Request::builder()
+                    .method("POST")
+                    .uri(format!("/beta/sessions/{}/resources", session_id))
+                    .header("content-type", "application/json")
+                    .extension(test_user("user-a"))
+                    .body(json_body(&json!({
+                        "name": "github",
+                        "kind": "github_token",
+                        "value": "ghp_secret"
+                    })))
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+        assert_eq!(resp.status(), StatusCode::CREATED);
+        let body = body_json(resp.into_body()).await;
+        let resource_1_id = body["resource"]["id"].as_str().unwrap().to_string();
+        assert_eq!(body["resource"]["name"], "github");
+        assert_eq!(body["resource"]["kind"], "github_token");
+        assert!(body["resource"]["value"].is_null());
+        assert!(body["resource"]["encrypted_value"].is_null());
+
+        // Attach a reference resource.
+        let resp = app
+            .clone()
+            .oneshot(
+                Request::builder()
+                    .method("POST")
+                    .uri(format!("/beta/sessions/{}/resources", session_id))
+                    .header("content-type", "application/json")
+                    .extension(test_user("user-a"))
+                    .body(json_body(&json!({
+                        "name": "vault",
+                        "kind": "vault_credential",
+                        "ref": "vault://prod/credential"
+                    })))
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+        assert_eq!(resp.status(), StatusCode::CREATED);
+        let body = body_json(resp.into_body()).await;
+        let resource_2_id = body["resource"]["id"].as_str().unwrap().to_string();
+        assert_eq!(body["resource"]["ref"], "vault://prod/credential");
+
+        // List resources ordered by created_at, id.
+        let resp = app
+            .clone()
+            .oneshot(
+                Request::builder()
+                    .method("GET")
+                    .uri(format!("/beta/sessions/{}/resources", session_id))
+                    .extension(test_user("user-a"))
+                    .body(Body::empty())
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+        assert_eq!(resp.status(), StatusCode::OK);
+        let body = body_json(resp.into_body()).await;
+        let resources = body["resources"].as_array().unwrap();
+        assert_eq!(resources.len(), 2);
+        assert_eq!(resources[0]["id"], resource_1_id);
+        assert_eq!(resources[1]["id"], resource_2_id);
+
+        // Delete the first resource.
+        let resp = app
+            .clone()
+            .oneshot(
+                Request::builder()
+                    .method("DELETE")
+                    .uri(format!(
+                        "/beta/sessions/{}/resources/{}",
+                        session_id, resource_1_id
+                    ))
+                    .extension(test_user("user-a"))
+                    .body(Body::empty())
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+        assert_eq!(resp.status(), StatusCode::NO_CONTENT);
+
+        // List again shows only the reference resource.
+        let resp = app
+            .clone()
+            .oneshot(
+                Request::builder()
+                    .method("GET")
+                    .uri(format!("/beta/sessions/{}/resources", session_id))
+                    .extension(test_user("user-a"))
+                    .body(Body::empty())
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+        assert_eq!(resp.status(), StatusCode::OK);
+        let body = body_json(resp.into_body()).await;
+        let resources = body["resources"].as_array().unwrap();
+        assert_eq!(resources.len(), 1);
+        assert_eq!(resources[0]["id"], resource_2_id);
+
+        // Deleting the same resource again is a 404.
+        let resp = app
+            .clone()
+            .oneshot(
+                Request::builder()
+                    .method("DELETE")
+                    .uri(format!(
+                        "/beta/sessions/{}/resources/{}",
+                        session_id, resource_1_id
+                    ))
+                    .extension(test_user("user-a"))
+                    .body(Body::empty())
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+        assert_eq!(resp.status(), StatusCode::NOT_FOUND);
+    }
+
+    #[tokio::test]
+    async fn session_resources_are_isolated_by_user() {
+        let temp = temp_dir("isolation");
+        let state = test_app_state(&temp).await;
+        let app = beta_session_router().with_state(state);
+
+        let resp = app
+            .clone()
+            .oneshot(
+                Request::builder()
+                    .method("POST")
+                    .uri("/beta/sessions")
+                    .header("content-type", "application/json")
+                    .extension(test_user("user-a"))
+                    .body(json_body(&json!({})))
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+        assert_eq!(resp.status(), StatusCode::CREATED);
+        let body = body_json(resp.into_body()).await;
+        let session_id = body["session"]["id"].as_str().unwrap().to_string();
+
+        let resp = app
+            .clone()
+            .oneshot(
+                Request::builder()
+                    .method("POST")
+                    .uri(format!("/beta/sessions/{}/resources", session_id))
+                    .header("content-type", "application/json")
+                    .extension(test_user("user-a"))
+                    .body(json_body(&json!({
+                        "name": "secret",
+                        "kind": "api_key",
+                        "value": "secret"
+                    })))
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+        assert_eq!(resp.status(), StatusCode::CREATED);
+        let body = body_json(resp.into_body()).await;
+        let resource_id = body["resource"]["id"].as_str().unwrap().to_string();
+
+        // Another user cannot list the session's resources.
+        let resp = app
+            .clone()
+            .oneshot(
+                Request::builder()
+                    .method("GET")
+                    .uri(format!("/beta/sessions/{}/resources", session_id))
+                    .extension(test_user("user-b"))
+                    .body(Body::empty())
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+        assert_eq!(resp.status(), StatusCode::NOT_FOUND);
+
+        // Another user cannot delete the resource.
+        let resp = app
+            .clone()
+            .oneshot(
+                Request::builder()
+                    .method("DELETE")
+                    .uri(format!(
+                        "/beta/sessions/{}/resources/{}",
+                        session_id, resource_id
+                    ))
+                    .extension(test_user("user-b"))
+                    .body(Body::empty())
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+        assert_eq!(resp.status(), StatusCode::NOT_FOUND);
     }
 }
