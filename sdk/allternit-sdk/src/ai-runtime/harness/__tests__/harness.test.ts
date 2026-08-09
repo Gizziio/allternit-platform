@@ -151,6 +151,88 @@ describe('AllternitHarness', () => {
       expect(response.stopReason).toBe('end_turn');
     });
 
+    it('falls back to registry max_output_tokens when maxTokens is omitted', async () => {
+      const harness = new AllternitHarness({
+        mode: 'byok',
+        byok: { anthropic: { apiKey: 'test-key' } }
+      });
+
+      let requestBody: Record<string, unknown> | undefined;
+      globalThis.fetch = (async (input: RequestInfo | URL, init?: RequestInit) => {
+        requestBody = JSON.parse(init?.body as string);
+        return new Response(sseBody([
+          'data: {"type":"message_start","message":{"usage":{"input_tokens":10}}}\n\n',
+          'data: {"type":"message_stop"}\n\n',
+        ]), { status: 200 });
+      }) as typeof fetch;
+
+      await harness.run({
+        provider: 'anthropic',
+        model: 'claude-3-5-sonnet-20241022',
+        messages: [{ role: 'user', content: 'Hello' }]
+      });
+
+      expect(requestBody?.max_tokens).toBe(8_192);
+    });
+
+    it('does not override an explicitly supplied maxTokens', async () => {
+      const harness = new AllternitHarness({
+        mode: 'byok',
+        byok: { anthropic: { apiKey: 'test-key' } }
+      });
+
+      let requestBody: Record<string, unknown> | undefined;
+      globalThis.fetch = (async (input: RequestInfo | URL, init?: RequestInit) => {
+        requestBody = JSON.parse(init?.body as string);
+        return new Response(sseBody([
+          'data: {"type":"message_start","message":{"usage":{"input_tokens":10}}}\n\n',
+          'data: {"type":"message_stop"}\n\n',
+        ]), { status: 200 });
+      }) as typeof fetch;
+
+      await harness.run({
+        provider: 'anthropic',
+        model: 'claude-3-5-sonnet-20241022',
+        messages: [{ role: 'user', content: 'Hello' }],
+        maxTokens: 512,
+      });
+
+      expect(requestBody?.max_tokens).toBe(512);
+    });
+
+    it('streams thinking_delta and signature_delta chunks', async () => {
+      const harness = new AllternitHarness({
+        mode: 'byok',
+        byok: { anthropic: { apiKey: 'test-key' } }
+      });
+
+      globalThis.fetch = (async () => new Response(sseBody([
+        'data: {"type":"content_block_delta","delta":{"type":"thinking_delta","thinking":"Thinking "}}\n\n',
+        'data: {"type":"content_block_delta","delta":{"type":"thinking_delta","thinking":"continues"}}\n\n',
+        'data: {"type":"content_block_delta","delta":{"type":"signature_delta","signature":"sig123"}}\n\n',
+        'data: {"type":"message_delta","usage":{"output_tokens":5},"delta":{"stop_reason":"end_turn"}}\n\n',
+        'data: {"type":"message_stop"}\n\n',
+      ]), { status: 200 })) as typeof fetch;
+
+      const chunks = [];
+      for await (const chunk of harness.stream({
+        provider: 'anthropic',
+        model: 'claude-3-5-sonnet-20241022',
+        messages: [{ role: 'user', content: 'Hello' }]
+      })) {
+        chunks.push(chunk);
+      }
+
+      const thinking = chunks.filter((c) => c.type === 'thinking_delta');
+      expect(thinking).toHaveLength(2);
+      expect((thinking[0] as any).thinking).toBe('Thinking ');
+      expect((thinking[1] as any).thinking).toBe('continues');
+
+      const signature = chunks.find((c) => c.type === 'signature_delta');
+      expect(signature).toBeDefined();
+      expect((signature as any).signature).toBe('sig123');
+    });
+
     it('should require API key for anthropic provider', async () => {
       const harness = new AllternitHarness({
         mode: 'byok',

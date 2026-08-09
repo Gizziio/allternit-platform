@@ -86,6 +86,9 @@ printpdf = "0.6"
 [target.'cfg(target_os = "macos")'.dependencies]
 allternit-apple-vf-driver = { path = "../../drivers/apple-vf" }
 
+# Token counting
+tiktoken-rs = "0.12.0"
+
 # Testing
 [dev-dependencies]
 axum-test = "14"

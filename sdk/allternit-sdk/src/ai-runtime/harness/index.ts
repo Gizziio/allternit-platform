@@ -16,6 +16,7 @@ import {
   Citation,
 } from './types.js';
 import { mapStopReason, toAnthropicRequest } from './provider-request.js';
+import { getModelMetadata } from './model-registry.js';
 import { fetchWithRetry } from './retry.js';
 import {
   injectSystemPrompt,
@@ -157,10 +158,19 @@ export class AllternitHarness {
     messages = injectProviderPrompt(messages, request.provider);
 
     // Create modified request with injected prompts
-    const modifiedRequest: StreamRequest = {
+    let modifiedRequest: StreamRequest = {
       ...request,
       messages,
     };
+
+    // Fall back to the registry's max_output_tokens when the caller does not
+    // supply an explicit limit.
+    if (modifiedRequest.maxTokens === undefined) {
+      const metadata = getModelMetadata(modifiedRequest.provider, modifiedRequest.model);
+      if (metadata) {
+        modifiedRequest = { ...modifiedRequest, maxTokens: metadata.maxOutputTokens };
+      }
+    }
 
     // Route to appropriate mode
     try {
@@ -340,6 +350,12 @@ export class AllternitHarness {
       }
       if (message.type === 'content_block_delta' && message.delta?.type === 'text_delta') {
         yield { type: 'text', text: message.delta.text ?? '' };
+      }
+      if (message.type === 'content_block_delta' && message.delta?.type === 'thinking_delta') {
+        yield { type: 'thinking_delta', thinking: message.delta.thinking ?? '' };
+      }
+      if (message.type === 'content_block_delta' && message.delta?.type === 'signature_delta') {
+        yield { type: 'signature_delta', signature: message.delta.signature ?? '' };
       }
       if (message.type === 'content_block_delta' && message.delta?.type === 'citations_delta') {
         yield { type: 'citation', citation: anthropicCitation(message.delta.citation ?? {}) };
@@ -533,6 +549,7 @@ export class AllternitHarness {
 export * from './types.js';
 export * from './prompts.js';
 export * from './provider-request.js';
+export * from './model-registry.js';
 export * from './retry.js';
 
 // Default export

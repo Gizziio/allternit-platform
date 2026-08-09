@@ -50,6 +50,14 @@ const openAiFunctionCall = (choice: StreamRequest['toolChoice']) =>
       ? 'auto'
       : choice;
 
+function hasCacheControl(request: StreamRequest): boolean {
+  return (
+    request.messages.some((m) => !!m.cache_control || m.cache) ||
+    request.tools?.some((t) => !!t.cache_control || t.cache) ||
+    false
+  );
+}
+
 /** Convert the normalized harness contract to an OpenAI-compatible body. */
 export function toOpenAIRequest(request: StreamRequest): Record<string, unknown> {
   const responseFormat = request.responseFormat && {
@@ -83,8 +91,36 @@ export function toOpenAIRequest(request: StreamRequest): Record<string, unknown>
     parallel_tool_calls: request.parallelToolCalls,
     reasoning_effort: request.reasoning?.effort,
     response_format: responseFormat,
+    service_tier: hasCacheControl(request) ? 'flex' : undefined,
     stream: request.stream,
   });
+}
+
+/** Extract normalized usage from an OpenAI chat.completion response. */
+export function parseOpenAIUsage(usage: Record<string, unknown>): {
+  promptTokens: number;
+  completionTokens: number;
+  totalTokens: number;
+  cachedTokens?: number;
+} {
+  const promptTokens = typeof usage.prompt_tokens === 'number' ? usage.prompt_tokens : 0;
+  const completionTokens =
+    typeof usage.completion_tokens === 'number' ? usage.completion_tokens : 0;
+  const totalTokens =
+    typeof usage.total_tokens === 'number' ? usage.total_tokens : promptTokens + completionTokens;
+
+  const promptDetails = usage.prompt_tokens_details as Record<string, unknown> | undefined;
+  const cachedTokens =
+    typeof promptDetails?.cached_tokens === 'number' ? promptDetails.cached_tokens : undefined;
+
+  return {
+    promptTokens,
+    completionTokens,
+    totalTokens,
+    ...(typeof cachedTokens === 'number' && cachedTokens > 0
+      ? { cachedTokens }
+      : {}),
+  };
 }
 
 /** Convert the normalized harness contract to Anthropic Messages fields. */

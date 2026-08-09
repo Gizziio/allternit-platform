@@ -1086,6 +1086,38 @@ pub fn estimate_tokens(request: &ChatCompletionRequest) -> u64 {
     ((characters + 3) / 4) as u64
 }
 
+/// Token count for a chat-completions-shaped body.
+///
+/// OpenAI models are counted with `tiktoken-rs` so the preflight estimate
+/// matches the upstream tokenizer. Unsupported model names fall back to the
+/// provider-independent heuristic.
+pub fn count_tokens_request(request: &ChatCompletionRequest) -> u64 {
+    let model = strip_openai_prefix(&request.model);
+    let messages: Vec<tiktoken_rs::ChatCompletionRequestMessage> = request
+        .messages
+        .iter()
+        .map(|message| tiktoken_rs::ChatCompletionRequestMessage {
+            role: message.role.clone(),
+            content: Some(message.content_text()),
+            name: message.name.clone(),
+            function_call: None,
+            tool_calls: Vec::new(),
+            refusal: None,
+        })
+        .collect();
+
+    tiktoken_rs::num_tokens_from_messages(model, &messages)
+        .map(|count| count as u64)
+        .unwrap_or_else(|_| estimate_tokens(request))
+}
+
+fn strip_openai_prefix(model: &str) -> &str {
+    model
+        .strip_prefix("openai/")
+        .or_else(|| model.strip_prefix("azure/"))
+        .unwrap_or(model)
+}
+
 /// `POST /tokens` — estimate input tokens for a chat-completions-shaped body.
 pub async fn count_tokens(
     Extension(key): Extension<LlmKeyContext>,
@@ -1120,7 +1152,7 @@ pub async fn count_tokens(
     Json(json!({
         "object": "token_count",
         "model": request.model,
-        "input_tokens": estimate_tokens(&request),
+        "input_tokens": count_tokens_request(&request),
     }))
     .into_response()
 }
@@ -1807,5 +1839,74 @@ mod token_tests {
         .unwrap();
         // "user" + "hello" = 9 characters, rounded up at four chars/token.
         assert_eq!(estimate_tokens(&request), 3);
+    }
+
+    #[test]
+    fn count_tokens_uses_tiktoken_for_openai_models() {
+        let request: ChatCompletionRequest = serde_json::from_value(json!({
+            "model": "gpt-4o",
+            "messages": [
+                { "role": "system", "content": "You are a helpful assistant." },
+                { "role": "user", "content": "Hello" }
+            ]
+        }))
+        .unwrap();
+
+        let count = count_tokens_request(&request);
+        let expected = tiktoken_rs::num_tokens_from_messages("gpt-4o", &[
+            tiktoken_rs::ChatCompletionRequestMessage {
+                role: "system".to_string(),
+                content: Some("You are a helpful assistant.".to_string()),
+                name: None,
+                function_call: None,
+                tool_calls: Vec::new(),
+                refusal: None,
+            },
+            tiktoken_rs::ChatCompletionRequestMessage {
+                role: "user".to_string(),
+                content: Some("Hello".to_string()),
+                name: None,
+                function_call: None,
+                tool_calls: Vec::new(),
+                refusal: None,
+            },
+        ])
+        .unwrap() as u64;
+
+        assert!(count > 0);
+        assert_eq!(count, expected);
+    }
+
+    #[test]
+    fn count_tokens_strips_openai_provider_prefix() {
+        let prefixed: ChatCompletionRequest = serde_json::from_value(json!({
+            "model": "openai/gpt-4o",
+            "messages": [
+                { "role": "system", "content": "You are a helpful assistant." },
+                { "role": "user", "content": "Hello" }
+            ]
+        }))
+        .unwrap();
+        let bare: ChatCompletionRequest = serde_json::from_value(json!({
+            "model": "gpt-4o",
+            "messages": [
+                { "role": "system", "content": "You are a helpful assistant." },
+                { "role": "user", "content": "Hello" }
+            ]
+        }))
+        .unwrap();
+
+        assert_eq!(count_tokens_request(&prefixed), count_tokens_request(&bare));
+    }
+
+    #[test]
+    fn count_tokens_falls_back_to_heuristic_for_unknown_models() {
+        let request: ChatCompletionRequest = serde_json::from_value(json!({
+            "model": "unknown-provider/unknown-model",
+            "messages": [{ "role": "user", "content": "hello" }]
+        }))
+        .unwrap();
+
+        assert_eq!(count_tokens_request(&request), estimate_tokens(&request));
     }
 }
