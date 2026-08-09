@@ -19,7 +19,8 @@ use axum::{
     Json,
 };
 use once_cell::sync::Lazy;
-use rusqlite::{params, OptionalExtension};
+use rusqlite::{params, Connection, OptionalExtension};
+use serde::Serialize;
 use serde_json::json;
 use sha2::{Digest, Sha256};
 use std::collections::{HashMap, VecDeque};
@@ -33,7 +34,7 @@ use crate::AppState;
 use super::translate::OpenAiErrorResponse;
 
 /// Default per-key rate limit when the key row has no override.
-const DEFAULT_RATE_LIMIT_RPM: i64 = 600;
+pub const DEFAULT_RATE_LIMIT_RPM: i64 = 600;
 /// Sliding-window length for the rate limiter.
 const RATE_WINDOW: Duration = Duration::from_secs(60);
 /// Microdollars per cent — `llm_usage_events.cost_microdollars` vs. the
@@ -239,6 +240,94 @@ pub async fn rate_limit_middleware(
     next.run(request).await
 }
 
+/// Read-only view of a key's current request-rate state.
+#[derive(Debug, Clone, Serialize)]
+pub struct RateLimitStatus {
+    pub remaining: usize,
+    pub limit: usize,
+    pub reset_in_secs: u64,
+}
+
+/// Snapshot of the caller's token (budget) quota.
+#[derive(Debug, Clone, Serialize)]
+pub struct TokenBudgetStatus {
+    pub limit_cents: Option<i64>,
+    pub remaining_cents: Option<i64>,
+}
+
+/// Returns the number of requests still allowed in the current sliding window
+/// and the seconds until the oldest tracked request falls out. Read-only:
+/// it prunes stale entries but never records a new request.
+pub fn rate_limit_status(key_id: &str, limit: usize) -> RateLimitStatus {
+    let now = Instant::now();
+    let mut windows = RATE_LIMIT_WINDOWS
+        .lock()
+        .unwrap_or_else(|poisoned| poisoned.into_inner());
+    let window = windows.entry(key_id.to_string()).or_default();
+    while window
+        .front()
+        .map(|t| now.duration_since(*t) > RATE_WINDOW)
+        .unwrap_or(false)
+    {
+        window.pop_front();
+    }
+    let used = window.len().min(limit);
+    let remaining = limit.saturating_sub(used);
+    let reset_in_secs = window
+        .front()
+        .map(|t| {
+            let elapsed = now.duration_since(*t);
+            if elapsed >= RATE_WINDOW {
+                0
+            } else {
+                (RATE_WINDOW - elapsed).as_secs().max(1)
+            }
+        })
+        .unwrap_or(0);
+    RateLimitStatus {
+        remaining,
+        limit,
+        reset_in_secs,
+    }
+}
+
+/// Compute the effective monthly token budget and what remains of it.
+/// When both a key-level budget and a tenant hard cap exist, the tighter
+/// (smaller remaining) value wins.
+pub fn token_budget_status(
+    conn: &Connection,
+    ctx: &LlmKeyContext,
+) -> rusqlite::Result<TokenBudgetStatus> {
+    let mut limit_cents: Option<i64> = None;
+    let mut remaining_cents: Option<i64> = None;
+
+    if let Some(cap_cents) = ctx.monthly_budget_cents {
+        let spent = key_month_spend_microdollars(conn, &ctx.key_id)?;
+        let remaining_micro = (cap_cents * MICRODOLLARS_PER_CENT).saturating_sub(spent);
+        limit_cents = Some(cap_cents);
+        remaining_cents = Some(remaining_micro / MICRODOLLARS_PER_CENT);
+    }
+
+    if let Some(tenant_id) = &ctx.tenant_id {
+        if let Some(cap_cents) = tenant_hard_budget_cents(conn, tenant_id)? {
+            let spent = tenant_month_spend_microdollars(conn, tenant_id)?;
+            let remaining_micro = (cap_cents * MICRODOLLARS_PER_CENT).saturating_sub(spent);
+            let tenant_remaining_cents = remaining_micro / MICRODOLLARS_PER_CENT;
+            limit_cents = Some(limit_cents.map(|l| l.min(cap_cents)).unwrap_or(cap_cents));
+            remaining_cents = Some(
+                remaining_cents
+                    .map(|r| r.min(tenant_remaining_cents))
+                    .unwrap_or(tenant_remaining_cents),
+            );
+        }
+    }
+
+    Ok(TokenBudgetStatus {
+        limit_cents,
+        remaining_cents,
+    })
+}
+
 // ─── 3. Budget pre-check ────────────────────────────────────────────────────
 
 /// Current-calendar-month spend for one virtual key, in microdollars.
@@ -369,5 +458,142 @@ pub async fn budget_middleware(
             warn!(error = %err, "budget pre-check task failed");
             server_error(format!("Internal error: {err}")).into_response()
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use rusqlite::Connection;
+
+    #[test]
+    fn rate_limit_status_defaults_to_limit_when_no_traffic() {
+        let status = rate_limit_status("key-1", 100);
+        assert_eq!(status.limit, 100);
+        assert_eq!(status.remaining, 100);
+        assert_eq!(status.reset_in_secs, 0);
+    }
+
+    #[test]
+    fn rate_limit_status_is_read_only() {
+        // Populate the window for a key.
+        {
+            let mut windows = RATE_LIMIT_WINDOWS
+                .lock()
+                .unwrap_or_else(|poisoned| poisoned.into_inner());
+            let window = windows.entry("key-ro".to_string()).or_default();
+            window.push_back(Instant::now());
+            window.push_back(Instant::now());
+        }
+
+        let first = rate_limit_status("key-ro", 10);
+        assert_eq!(first.remaining, 8);
+
+        // A second status check must not consume another slot.
+        let second = rate_limit_status("key-ro", 10);
+        assert_eq!(second.remaining, 8);
+    }
+
+    fn in_memory_db() -> Connection {
+        let conn = Connection::open_in_memory().unwrap();
+        conn.execute_batch(
+            "CREATE TABLE llm_usage_events (
+                id TEXT PRIMARY KEY,
+                virtual_key_id TEXT,
+                user_id TEXT,
+                tenant_id TEXT,
+                policy TEXT,
+                provider_id TEXT,
+                model_id TEXT,
+                fallback_from TEXT,
+                prompt_tokens INTEGER NOT NULL DEFAULT 0,
+                completion_tokens INTEGER NOT NULL DEFAULT 0,
+                reasoning_tokens INTEGER NOT NULL DEFAULT 0,
+                cached_tokens INTEGER NOT NULL DEFAULT 0,
+                cost_microdollars INTEGER NOT NULL DEFAULT 0,
+                latency_ms INTEGER NOT NULL DEFAULT 0,
+                ttft_ms INTEGER,
+                status TEXT NOT NULL,
+                error_type TEXT,
+                gizzi_session_id TEXT,
+                idempotency_key TEXT UNIQUE,
+                response_body TEXT,
+                recomputed_cost_microdollars INTEGER,
+                cost_mismatch INTEGER,
+                created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+            );
+            CREATE TABLE llm_budgets (
+                id TEXT PRIMARY KEY,
+                tenant_id TEXT NOT NULL,
+                period TEXT NOT NULL DEFAULT 'monthly',
+                budget_cents INTEGER NOT NULL,
+                hard INTEGER NOT NULL DEFAULT 1,
+                created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+            );",
+        )
+        .unwrap();
+        conn
+    }
+
+    fn ctx_with_budget(key_id: &str, budget_cents: i64) -> LlmKeyContext {
+        LlmKeyContext {
+            key_id: key_id.to_string(),
+            user_id: "u1".to_string(),
+            tenant_id: None,
+            key_prefix: "ak-test".to_string(),
+            monthly_budget_cents: Some(budget_cents),
+            rate_limit_rpm: None,
+            allowed_models: None,
+        }
+    }
+
+    #[test]
+    fn token_budget_status_uses_key_budget() {
+        let conn = in_memory_db();
+        let ctx = ctx_with_budget("key-budget", 1000); // $10.00
+
+        // No usage yet → full budget remains.
+        let status = token_budget_status(&conn, &ctx).unwrap();
+        assert_eq!(status.limit_cents, Some(1000));
+        assert_eq!(status.remaining_cents, Some(1000));
+
+        // Spend $1.23 (123 cents = 1_230_000 microdollars).
+        conn.execute(
+            "INSERT INTO llm_usage_events
+             (id, virtual_key_id, status, cost_microdollars)
+             VALUES ('e1', 'key-budget', 'ok', 1230000)",
+            [],
+        )
+        .unwrap();
+
+        let status = token_budget_status(&conn, &ctx).unwrap();
+        assert_eq!(status.remaining_cents, Some(877));
+    }
+
+    #[test]
+    fn token_budget_status_uses_tenant_cap_when_tighter() {
+        let conn = in_memory_db();
+        let ctx = LlmKeyContext {
+            key_id: "key-tenant".to_string(),
+            user_id: "u1".to_string(),
+            tenant_id: Some("t1".to_string()),
+            key_prefix: "ak-test".to_string(),
+            monthly_budget_cents: Some(1000),
+            rate_limit_rpm: None,
+            allowed_models: None,
+        };
+
+        // Tenant hard cap is tighter than the key budget.
+        conn.execute(
+            "INSERT INTO llm_budgets (id, tenant_id, budget_cents, hard)
+             VALUES ('b1', 't1', 500, 1)",
+            [],
+        )
+        .unwrap();
+
+        let status = token_budget_status(&conn, &ctx).unwrap();
+        assert_eq!(status.limit_cents, Some(500));
+        assert_eq!(status.remaining_cents, Some(500));
     }
 }

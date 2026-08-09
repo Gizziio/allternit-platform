@@ -63,6 +63,7 @@ pub fn llm_gateway_router(state: Arc<AppState>) -> Router<Arc<AppState>> {
     Router::new()
         .route("/chat/completions", post(proxy::chat_completions))
         .route("/tokens", post(proxy::count_tokens))
+        .route("/rate-limits", get(proxy::rate_limits))
         .route(
             "/batches",
             post(batches::create_batch).get(batches::list_batches),

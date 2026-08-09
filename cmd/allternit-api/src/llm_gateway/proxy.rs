@@ -1729,6 +1729,71 @@ pub async fn list_models(
     Json(json!({ "object": "list", "data": data })).into_response()
 }
 
+/// `GET /rate-limits` — caller quota snapshot derived from the key's rate
+/// limit, key monthly budget, and tenant hard cap (when present).
+pub async fn rate_limits(
+    State(state): State<Arc<AppState>>,
+    Extension(key): Extension<LlmKeyContext>,
+) -> Response {
+    let limit = key
+        .rate_limit_rpm
+        .unwrap_or(super::auth::DEFAULT_RATE_LIMIT_RPM)
+        .max(1) as usize;
+    let rate = super::auth::rate_limit_status(&key.key_id, limit);
+
+    let budget = tokio::task::spawn_blocking({
+        let db = state.db.clone();
+        let key = key.clone();
+        move || -> Result<super::auth::TokenBudgetStatus, rusqlite::Error> {
+            let conn = db.connect()?;
+            super::auth::token_budget_status(&conn, &key)
+        }
+    })
+    .await;
+
+    match budget {
+        Ok(Ok(budget)) => {
+            let reset_at = chrono::Utc::now()
+                + chrono::Duration::seconds(rate.reset_in_secs as i64);
+            Json(json!({
+                "object": "rate_limits",
+                "requests_remaining": rate.remaining,
+                "requests_limit": rate.limit,
+                "tokens_remaining": budget.remaining_cents,
+                "tokens_limit": budget.limit_cents,
+                "reset_at": reset_at.to_rfc3339_opts(chrono::SecondsFormat::Secs, true),
+            }))
+            .into_response()
+        }
+        Ok(Err(err)) => {
+            warn!(error = %err, "rate_limits DB query failed");
+            (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(json!({
+                    "error": {
+                        "message": format!("Internal error: {err}"),
+                        "type": "server_error",
+                    }
+                })),
+            )
+                .into_response()
+        }
+        Err(err) => {
+            warn!(error = %err, "rate_limits task failed");
+            (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(json!({
+                    "error": {
+                        "message": format!("Internal error: {err}"),
+                        "type": "server_error",
+                    }
+                })),
+            )
+                .into_response()
+        }
+    }
+}
+
 #[cfg(test)]
 mod token_tests {
     use super::*;
