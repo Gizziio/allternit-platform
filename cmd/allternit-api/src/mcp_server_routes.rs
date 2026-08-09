@@ -306,6 +306,7 @@ async fn handle_rpc_inner(
                 args: arguments,
                 timeout: None,
                 workspace_id: None,
+                ..Default::default()
             };
 
             match execute_tool_internal(state, &exec_request, user_id).await {
