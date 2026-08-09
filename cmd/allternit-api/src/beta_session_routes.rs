@@ -5,12 +5,17 @@
 //! contract for managed runs, child threads, events, and execution budgets.
 
 use axum::{
-    extract::{Extension, Path, Query, State},
+    extract::{
+        ws::{Message, WebSocket, WebSocketUpgrade},
+        Extension, Path, Query, State,
+    },
+    http::StatusCode,
     response::sse::{Event, KeepAlive, Sse},
-    routing::get,
+    response::IntoResponse,
+    routing::{delete, get, post},
     Json, Router,
 };
-use futures::Stream;
+use futures::{SinkExt, Stream, StreamExt};
 use rusqlite::{params, OptionalExtension};
 use serde::{Deserialize, Serialize};
 use serde_json::{json, Value};
@@ -24,6 +29,8 @@ const APPENDABLE_RUN_EVENT_TYPES: &[&str] = &[
     "tool_calls",
     "refusal",
 ];
+
+const RESOURCE_KINDS: &[&str] = &["github_token", "vault_credential", "env_var"];
 
 fn empty_object() -> Value {
     json!({})
@@ -41,6 +48,16 @@ pub fn beta_session_router() -> Router<Arc<AppState>> {
         .route(
             "/beta/sessions/:id/events",
             get(stream_events).post(append_event),
+        )
+        .route("/beta/sessions/:id/events/ws", get(stream_events_ws))
+        .route("/beta/sessions/:id/interrupt", post(interrupt_session))
+        .route(
+            "/beta/sessions/:id/resources",
+            get(list_resources).post(attach_resource),
+        )
+        .route(
+            "/beta/sessions/:id/resources/:resource_id",
+            delete(delete_resource),
         )
 }
 
@@ -77,6 +94,31 @@ struct AppendEventBody {
     data: Value,
     #[serde(default)]
     usage: UsageDelta,
+}
+
+#[derive(Debug, Deserialize)]
+struct InterruptBody {
+    #[serde(default)]
+    data: Value,
+}
+
+#[derive(Debug, Deserialize)]
+struct AttachResourceBody {
+    name: String,
+    kind: String,
+    value: Option<String>,
+    #[serde(rename = "ref")]
+    resource_ref: Option<String>,
+}
+
+#[derive(Debug, Serialize)]
+struct ResourceRow {
+    id: String,
+    name: String,
+    kind: String,
+    #[serde(rename = "ref", skip_serializing_if = "Option::is_none")]
+    resource_ref: Option<String>,
+    created_at: String,
 }
 
 #[derive(Clone, Copy, Debug, Default, Deserialize, Serialize)]
@@ -405,9 +447,236 @@ async fn append_event(
     Ok(Json(json!({"accepted": result.0, "event": result.1})))
 }
 
+async fn interrupt_session(
+    State(state): State<Arc<AppState>>,
+    Extension(user): Extension<AuthUser>,
+    Path(id): Path<String>,
+    Json(body): Json<InterruptBody>,
+) -> Result<Json<Value>, ApiError> {
+    if !body.data.is_object() {
+        return Err(ApiError::BadRequest("data must be an object".into()));
+    }
+    let session = load_session(state.clone(), user.user_id.clone(), id.clone()).await?;
+    if session.status == "archived" {
+        return Err(ApiError::BadRequest(
+            "archived sessions cannot be interrupted".into(),
+        ));
+    }
+    let db = state.db.clone();
+    let event = tokio::task::spawn_blocking(move || {
+        let mut conn = db.connect()?;
+        let tx = conn.transaction()?;
+        let active = tx.query_row(
+            "SELECT EXISTS(SELECT 1 FROM beta_sessions WHERE id = ?1 AND user_id = ?2 AND status = 'active')",
+            params![id, user.user_id],
+            |row| row.get::<_, bool>(0),
+        )?;
+        if !active {
+            return Err(rusqlite::Error::QueryReturnedNoRows);
+        }
+        let event = insert_event(&tx, &id, "user_interrupt", &body.data)?;
+        tx.commit()?;
+        Ok::<Value, rusqlite::Error>(event)
+    })
+    .await
+    .map_err(|e| ApiError::Internal(e.to_string()))?
+    .map_err(|e| {
+        if matches!(e, rusqlite::Error::QueryReturnedNoRows) {
+            ApiError::BadRequest("archived sessions cannot be interrupted".into())
+        } else {
+            ApiError::DbError(e.to_string())
+        }
+    })?;
+    Ok(Json(json!({"event": event})))
+}
+
+async fn attach_resource(
+    State(state): State<Arc<AppState>>,
+    Extension(user): Extension<AuthUser>,
+    Path(id): Path<String>,
+    Json(body): Json<AttachResourceBody>,
+) -> Result<(StatusCode, Json<Value>), ApiError> {
+    let name = body.name.trim();
+    if name.is_empty() {
+        return Err(ApiError::BadRequest("name is required".into()));
+    }
+    if !RESOURCE_KINDS.contains(&body.kind.as_str()) {
+        return Err(ApiError::BadRequest("unsupported resource kind".into()));
+    }
+    if body.value.as_ref().is_some_and(String::is_empty)
+        || body.resource_ref.as_ref().is_some_and(String::is_empty)
+        || (body.value.is_some() == body.resource_ref.is_some())
+    {
+        return Err(ApiError::BadRequest(
+            "exactly one non-empty value or ref is required".into(),
+        ));
+    }
+    load_session(state.clone(), user.user_id, id.clone()).await?;
+    let db = state.db.clone();
+    let resource_id = uuid::Uuid::new_v4().to_string();
+    let result_id = resource_id.clone();
+    let name = name.to_string();
+    let resource = tokio::task::spawn_blocking(move || {
+        let encrypted_value = match body.value {
+            Some(value) => {
+                if !crate::token_crypto::ensure_platform_key() {
+                    return Err(rusqlite::Error::InvalidParameterName(
+                        "session resource encryption key unavailable".into(),
+                    ));
+                }
+                Some(crate::token_crypto::seal(&value))
+            }
+            None => None,
+        };
+        let conn = db.connect()?;
+        conn.execute(
+            "INSERT INTO beta_session_resources
+             (id, session_id, name, kind, encrypted_value, resource_ref)
+             VALUES (?1, ?2, ?3, ?4, ?5, ?6)",
+            params![
+                resource_id,
+                id,
+                name,
+                body.kind,
+                encrypted_value,
+                body.resource_ref
+            ],
+        )?;
+        conn.query_row(
+            "SELECT id, name, kind, resource_ref, created_at
+             FROM beta_session_resources WHERE id = ?1",
+            params![result_id],
+            read_resource,
+        )
+    })
+    .await
+    .map_err(|e| ApiError::Internal(e.to_string()))??;
+    Ok((StatusCode::CREATED, Json(json!({"resource": resource}))))
+}
+
+async fn list_resources(
+    State(state): State<Arc<AppState>>,
+    Extension(user): Extension<AuthUser>,
+    Path(id): Path<String>,
+) -> Result<Json<Value>, ApiError> {
+    load_session(state.clone(), user.user_id, id.clone()).await?;
+    let db = state.db.clone();
+    let resources = tokio::task::spawn_blocking(move || {
+        let conn = db.connect()?;
+        let mut stmt = conn.prepare(
+            "SELECT id, name, kind, resource_ref, created_at
+             FROM beta_session_resources WHERE session_id = ?1 ORDER BY created_at, id",
+        )?;
+        stmt.query_map(params![id], read_resource)?
+            .collect::<Result<Vec<_>, _>>()
+    })
+    .await
+    .map_err(|e| ApiError::Internal(e.to_string()))??;
+    Ok(Json(json!({"resources": resources})))
+}
+
+async fn delete_resource(
+    State(state): State<Arc<AppState>>,
+    Extension(user): Extension<AuthUser>,
+    Path((id, resource_id)): Path<(String, String)>,
+) -> Result<StatusCode, ApiError> {
+    let db = state.db.clone();
+    let deleted = tokio::task::spawn_blocking(move || {
+        let conn = db.connect()?;
+        conn.execute(
+            "DELETE FROM beta_session_resources WHERE id = ?1 AND session_id = ?2
+             AND EXISTS(SELECT 1 FROM beta_sessions
+                        WHERE id = ?2 AND user_id = ?3)",
+            params![resource_id, id, user.user_id],
+        )
+    })
+    .await
+    .map_err(|e| ApiError::Internal(e.to_string()))??;
+    if deleted == 0 {
+        return Err(ApiError::NotFound("resource not found".into()));
+    }
+    Ok(StatusCode::NO_CONTENT)
+}
+
+fn read_resource(row: &rusqlite::Row<'_>) -> rusqlite::Result<ResourceRow> {
+    Ok(ResourceRow {
+        id: row.get(0)?,
+        name: row.get(1)?,
+        kind: row.get(2)?,
+        resource_ref: row.get(3)?,
+        created_at: row.get(4)?,
+    })
+}
+
 #[derive(Debug, Deserialize)]
 struct EventQuery {
     after: Option<i64>,
+}
+
+async fn stream_events_ws(
+    ws: WebSocketUpgrade,
+    State(state): State<Arc<AppState>>,
+    Extension(user): Extension<AuthUser>,
+    Path(id): Path<String>,
+    Query(query): Query<EventQuery>,
+) -> Result<impl IntoResponse, ApiError> {
+    load_session(state.clone(), user.user_id, id.clone()).await?;
+    Ok(ws.on_upgrade(move |socket| {
+        stream_events_to_websocket(socket, state.db.clone(), id, query.after.unwrap_or(0))
+    }))
+}
+
+async fn stream_events_to_websocket(
+    mut socket: WebSocket,
+    db: crate::db::DbHandle,
+    id: String,
+    mut cursor: i64,
+) {
+    loop {
+        if let Some((sequence, event_type, data)) = next_event(db.clone(), id.clone(), cursor).await
+        {
+            let data = serde_json::from_str::<Value>(&data).unwrap_or(Value::Null);
+            let message = json!({"sequence": sequence, "type": event_type, "data": data});
+            if socket
+                .send(Message::Text(message.to_string()))
+                .await
+                .is_err()
+            {
+                break;
+            }
+            cursor = sequence;
+        } else {
+            tokio::select! {
+                _ = tokio::time::sleep(Duration::from_millis(250)) => {},
+                message = socket.recv() => {
+                    if message.is_none() || message.is_some_and(|item| item.is_err()) {
+                        break;
+                    }
+                }
+            }
+        }
+    }
+}
+
+async fn next_event(
+    db: crate::db::DbHandle,
+    id: String,
+    cursor: i64,
+) -> Option<(i64, String, String)> {
+    tokio::task::spawn_blocking(move || -> rusqlite::Result<Option<(i64, String, String)>> {
+        let conn = db.connect()?;
+        conn.query_row(
+            "SELECT sequence, event_type, data FROM beta_session_events
+             WHERE session_id = ?1 AND sequence > ?2 ORDER BY sequence LIMIT 1",
+            params![id, cursor],
+            |row| Ok((row.get(0)?, row.get(1)?, row.get(2)?)),
+        )
+        .optional()
+    })
+    .await
+    .ok()
+    .and_then(Result::ok)
+    .flatten()
 }
 
 async fn stream_events(
@@ -422,24 +691,7 @@ async fn stream_events(
         (db, id, query.after.unwrap_or(0)),
         |(db, id, cursor)| async move {
             loop {
-                let query_db = db.clone();
-                let query_id = id.clone();
-                let next = tokio::task::spawn_blocking(
-                    move || -> rusqlite::Result<Option<(i64, String, String)>> {
-                        let conn = query_db.connect()?;
-                        conn.query_row(
-                            "SELECT sequence, event_type, data FROM beta_session_events
-                     WHERE session_id = ?1 AND sequence > ?2 ORDER BY sequence LIMIT 1",
-                            params![query_id, cursor],
-                            |row| Ok((row.get(0)?, row.get(1)?, row.get(2)?)),
-                        )
-                        .optional()
-                    },
-                )
-                .await
-                .ok()
-                .and_then(Result::ok)
-                .flatten();
+                let next = next_event(db.clone(), id.clone(), cursor).await;
                 if let Some((sequence, event_type, data)) = next {
                     let event = Event::default()
                         .id(sequence.to_string())
@@ -517,6 +769,14 @@ mod tests {
         ] {
             assert!(APPENDABLE_RUN_EVENT_TYPES.contains(&event_type));
         }
+    }
+
+    #[test]
+    fn accepts_only_supported_session_resource_kinds() {
+        for kind in ["github_token", "vault_credential", "env_var"] {
+            assert!(RESOURCE_KINDS.contains(&kind));
+        }
+        assert!(!RESOURCE_KINDS.contains(&"raw_secret"));
     }
 
     #[test]
