@@ -16,12 +16,20 @@ import {
   Citation,
 } from './types.js';
 import { mapStopReason, toAnthropicRequest } from './provider-request.js';
-import { fetchWithRetry } from './retry.js';
+import { RETRYABLE_STATUS_CODES } from './retry.js';
 import {
   injectSystemPrompt,
   injectProviderPrompt,
   validateMessages,
 } from './prompts.js';
+import {
+  applyAfterResponse,
+  applyBeforeRequest,
+  createRefusalFallbackMiddleware,
+  createRetryMiddleware,
+  normalizeMiddleware,
+} from './middleware.js';
+import type { HarnessMiddleware } from './types.js';
 
 /**
  * AllternitHarness provides a unified interface for streaming
@@ -29,6 +37,7 @@ import {
  */
 export class AllternitHarness {
   private config: HarnessConfig;
+  private middleware: HarnessMiddleware[];
 
   /**
    * Creates a new AllternitHarness instance
@@ -39,6 +48,22 @@ export class AllternitHarness {
   constructor(config: HarnessConfig) {
     this.validateConfig(config);
     this.config = config;
+    this.middleware = this.buildMiddleware();
+  }
+
+  /**
+   * Builds the middleware chain. Fallback is first so it can intercept refusals
+   * before the retry middleware, followed by user middleware, then the default
+   * retry middleware for backward compatibility with the legacy retry option.
+   */
+  private buildMiddleware(): HarnessMiddleware[] {
+    const list: HarnessMiddleware[] = [];
+    if (this.config.fallbackModels && this.config.fallbackModels.length > 0) {
+      list.push(createRefusalFallbackMiddleware(this.config.fallbackModels));
+    }
+    list.push(...normalizeMiddleware(this.config.middleware));
+    list.push(createRetryMiddleware(this.config.retry));
+    return list;
   }
 
   /**
@@ -151,14 +176,17 @@ export class AllternitHarness {
 
     // Validate and inject system prompts
     validateMessages(request.messages);
-    
-    const hasTools = !!request.tools && request.tools.length > 0;
-    let messages = injectSystemPrompt(request.messages, hasTools);
-    messages = injectProviderPrompt(messages, request.provider);
+
+    // Apply beforeRequest middleware before provider-specific prompt injection.
+    const middlewareRequest = await applyBeforeRequest(this.middleware, request);
+
+    const hasTools = !!middlewareRequest.tools && middlewareRequest.tools.length > 0;
+    let messages = injectSystemPrompt(middlewareRequest.messages, hasTools);
+    messages = injectProviderPrompt(messages, middlewareRequest.provider);
 
     // Create modified request with injected prompts
     const modifiedRequest: StreamRequest = {
-      ...request,
+      ...middlewareRequest,
       messages,
     };
 
@@ -185,16 +213,46 @@ export class AllternitHarness {
       }
     } catch (error) {
       // Re-wrap errors for consistent handling
-      if (error instanceof HarnessError) {
-        throw error;
+      const harnessError =
+        error instanceof HarnessError
+          ? error
+          : new HarnessError(
+              HarnessErrorCode.UNKNOWN_ERROR,
+              error instanceof Error ? error.message : 'Unknown error during streaming',
+              error
+            );
+
+      // Allow middleware to recover from the error.
+      const replacement = await this.applyOnError(harnessError, middlewareRequest);
+      if (replacement) {
+        yield* replacement;
+        return;
       }
 
-      throw new HarnessError(
-        HarnessErrorCode.UNKNOWN_ERROR,
-        error instanceof Error ? error.message : 'Unknown error during streaming',
-        error
-      );
+      throw harnessError;
     }
+  }
+
+  /**
+   * Invokes onError middleware. Returns a replacement stream if any middleware
+   * yields one; otherwise returns undefined so the original error is thrown.
+   */
+  private async applyOnError(
+    error: HarnessError,
+    request: StreamRequest
+  ): Promise<AsyncGenerator<HarnessStreamChunk> | undefined> {
+    for (const middleware of this.middleware) {
+      if (!middleware.onError) continue;
+      const result = await middleware.onError(error, {
+        request,
+        harness: this,
+      });
+      if (result && typeof (result as AsyncIterable<HarnessStreamChunk>)[Symbol.asyncIterator] === 'function') {
+        return result as AsyncGenerator<HarnessStreamChunk>;
+      }
+      // Undefined result means try the next middleware; thrown errors propagate.
+    }
+    return undefined;
   }
 
   /**
@@ -225,12 +283,13 @@ export class AllternitHarness {
         stopReason = chunk.stopReason;
       }
     }
-    return {
+    const response: HarnessResponse = {
       content: chunks.join(''),
       ...(citations.length ? { citations } : {}),
       ...(usage ? { usage } : {}),
       ...(stopReason ? { stopReason } : {}),
     };
+    return applyAfterResponse(this.middleware, response);
   }
 
   /**
@@ -307,22 +366,49 @@ export class AllternitHarness {
     }
 
     const baseURL = this.config.byok?.anthropic?.baseURL ?? 'https://api.anthropic.com';
-    const response = await fetchWithRetry(
-      `${baseURL.replace(/\/$/, '')}/v1/messages`,
-      {
-        method: 'POST',
-        headers: {
-          'content-type': 'application/json',
-          'x-api-key': apiKey,
-          'anthropic-version': '2023-06-01',
-        },
-        body: JSON.stringify(toAnthropicRequest({ ...request, stream: true })),
-      },
-      this.config.retry
-    );
-    if (!response.ok || !response.body) {
-      throw new HarnessError(HarnessErrorCode.API_ERROR,
-        `Anthropic request failed with status ${response.status}`);
+
+    let response: Response;
+    try {
+      response = await fetch(
+        `${baseURL.replace(/\/$/, '')}/v1/messages`,
+        {
+          method: 'POST',
+          headers: {
+            'content-type': 'application/json',
+            'x-api-key': apiKey,
+            'anthropic-version': '2023-06-01',
+          },
+          body: JSON.stringify(toAnthropicRequest({ ...request, stream: true })),
+        }
+      );
+    } catch (error) {
+      throw new HarnessError(
+        HarnessErrorCode.NETWORK_ERROR,
+        error instanceof Error ? error.message : 'Network error during Anthropic request',
+        error
+      );
+    }
+
+    if (!response.ok) {
+      let bodyText = '';
+      try {
+        bodyText = await response.text();
+      } catch {
+        // Ignore body-read failures.
+      }
+      const isRetryable = RETRYABLE_STATUS_CODES.has(response.status);
+      throw new HarnessError(
+        HarnessErrorCode.API_ERROR,
+        `Anthropic request failed with ${isRetryable ? 'retryable ' : ''}status ${response.status}${bodyText ? `: ${bodyText}` : ''}`,
+        { status: response.status, body: bodyText }
+      );
+    }
+
+    if (!response.body) {
+      throw new HarnessError(
+        HarnessErrorCode.API_ERROR,
+        'Anthropic response missing body'
+      );
     }
 
     let inputTokens = 0;
@@ -534,6 +620,7 @@ export * from './types.js';
 export * from './prompts.js';
 export * from './provider-request.js';
 export * from './retry.js';
+export * from './middleware.js';
 
 // Default export
 export default AllternitHarness;

@@ -124,6 +124,59 @@ BYOK mode currently supports streaming completions for `anthropic`. Other
 providers expose the same interface and are wired through the harness routing
 layer.
 
+## Middleware
+
+`AllternitHarness` supports middleware hooks that run on every request:
+`beforeRequest`, `afterResponse`, and `onError`. A retry middleware is enabled by
+default; the legacy `retry` option configures it.
+
+```typescript
+import { AllternitHarness } from '@allternit/sdk';
+
+const harness = new AllternitHarness({
+  mode: 'byok',
+  byok: {
+    anthropic: { apiKey: process.env.ANTHROPIC_API_KEY! },
+  },
+  middleware: {
+    beforeRequest: async (request) => {
+      console.log('Sending request to', request.provider, request.model);
+      return request;
+    },
+    afterResponse: async (response) => {
+      console.log('Tokens used:', response.usage);
+      return response;
+    },
+    onError: async (error) => {
+      console.error('Harness error:', error.code, error.message);
+      // Returning/yielding an async generator substitutes a replacement stream.
+      // Returning undefined lets the next middleware handle it.
+    },
+  },
+  // Retry up to 3 times with a 500 ms base delay (default).
+  retry: { maxRetries: 3, initialDelayMs: 500 },
+});
+```
+
+### Refusal fallback
+
+If a provider refuses or content-filters a request, you can automatically fall
+back to another configured provider or model:
+
+```typescript
+const harness = new AllternitHarness({
+  mode: 'byok',
+  byok: {
+    anthropic: { apiKey: process.env.ANTHROPIC_API_KEY! },
+    openai: { apiKey: process.env.OPENAI_API_KEY! },
+  },
+  fallbackModels: [
+    { provider: 'anthropic', model: 'claude-3-5-haiku-20241022' },
+    { provider: 'openai', model: 'gpt-4o-mini' },
+  ],
+});
+```
+
 ## Next steps
 
 See the runnable examples in [`examples/`](./examples/):
