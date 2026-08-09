@@ -9,6 +9,7 @@ use axum::{
 use rusqlite::{params, OptionalExtension};
 use serde::{Deserialize, Serialize};
 use serde_json::{json, Value};
+use std::path::PathBuf;
 use std::sync::Arc;
 use std::time::Duration;
 use tracing::{info, warn};
@@ -20,11 +21,45 @@ use super::{
     translate::{validate_request, ChatCompletionRequest, OpenAiErrorResponse},
 };
 
+/// Native batch creation body (`requests` array).
 #[derive(Debug, Deserialize)]
 pub struct CreateBatchRequest {
     pub requests: Vec<Value>,
 }
 
+/// OpenAI-compatible batch creation body.
+#[derive(Debug, Deserialize)]
+pub struct OpenAiCreateBatchRequest {
+    pub input_file_id: String,
+    pub endpoint: String,
+    pub completion_window: String,
+    #[serde(default)]
+    pub metadata: Option<Value>,
+}
+
+impl OpenAiCreateBatchRequest {
+    /// Convert the OpenAI request into the native `requests` array by reading
+    /// and parsing the input file. Returns an OpenAI-shaped 400 on any
+    /// validation failure.
+    pub fn into_requests(self) -> Result<Vec<Value>, OpenAiErrorResponse> {
+        if self.endpoint != "/v1/chat/completions" {
+            return Err(OpenAiErrorResponse::invalid_request(
+                "`endpoint` must be `/v1/chat/completions`.",
+                Some("endpoint"),
+            ));
+        }
+        if self.completion_window != "24h" {
+            return Err(OpenAiErrorResponse::invalid_request(
+                "`completion_window` must be `24h`.",
+                Some("completion_window"),
+            ));
+        }
+        load_batch_input_file(&self.input_file_id)
+    }
+}
+
+/// Internal batch record. This is the native shape persisted to SQLite; the
+/// OpenAI wire shape is built separately via [`OpenAiBatch::from`].
 #[derive(Debug, Clone, Serialize)]
 pub struct Batch {
     pub id: String,
@@ -36,6 +71,14 @@ pub struct Batch {
     pub updated_at: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub cancelled_at: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub endpoint: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub input_file_id: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub completion_window: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub metadata: Option<Value>,
 }
 
 pub struct BatchesService {
@@ -53,9 +96,49 @@ impl BatchesService {
             .map_err(|err| rusqlite::Error::ToSqlConversionFailure(Box::new(err)))?;
         let conn = self.db.connect()?;
         conn.execute(
-            "INSERT INTO llm_batches (id, virtual_key_id, user_id, tenant_id, requests_json, status)
-             VALUES (?1, ?2, ?3, ?4, ?5, 'validating')",
+            "INSERT INTO llm_batches
+             (id, virtual_key_id, user_id, tenant_id, requests_json, status, endpoint)
+             VALUES (?1, ?2, ?3, ?4, ?5, 'validating', '/v1/chat/completions')",
             params![id, key.key_id, key.user_id, key.tenant_id, requests_json],
+        )?;
+        self.get(&key.key_id, &id)?
+            .ok_or(rusqlite::Error::QueryReturnedNoRows)
+    }
+
+    pub fn create_openai(
+        &self,
+        key: &LlmKeyContext,
+        requests: &[Value],
+        input_file_id: &str,
+        endpoint: &str,
+        completion_window: &str,
+        metadata: Option<Value>,
+    ) -> rusqlite::Result<Batch> {
+        let id = format!("batch_{}", uuid::Uuid::new_v4().simple());
+        let requests_json = serde_json::to_string(requests)
+            .map_err(|err| rusqlite::Error::ToSqlConversionFailure(Box::new(err)))?;
+        let metadata_json = metadata
+            .as_ref()
+            .map(serde_json::to_string)
+            .transpose()
+            .map_err(|err| rusqlite::Error::ToSqlConversionFailure(Box::new(err)))?;
+        let conn = self.db.connect()?;
+        conn.execute(
+            "INSERT INTO llm_batches
+             (id, virtual_key_id, user_id, tenant_id, requests_json, status,
+              endpoint, input_file_id, completion_window, metadata)
+             VALUES (?1, ?2, ?3, ?4, ?5, 'validating', ?6, ?7, ?8, ?9)",
+            params![
+                id,
+                key.key_id,
+                key.user_id,
+                key.tenant_id,
+                requests_json,
+                endpoint,
+                input_file_id,
+                completion_window,
+                metadata_json,
+            ],
         )?;
         self.get(&key.key_id, &id)?
             .ok_or(rusqlite::Error::QueryReturnedNoRows)
@@ -64,7 +147,8 @@ impl BatchesService {
     pub fn list(&self, key_id: &str) -> rusqlite::Result<Vec<Batch>> {
         let conn = self.db.connect()?;
         let mut stmt = conn.prepare(
-            "SELECT id, status, requests_json, created_at, updated_at, cancelled_at
+            "SELECT id, status, requests_json, created_at, updated_at, cancelled_at,
+                    endpoint, input_file_id, completion_window, metadata
              FROM llm_batches WHERE virtual_key_id = ?1 ORDER BY created_at DESC, id DESC",
         )?;
         let rows = stmt.query_map([key_id], batch_from_row)?;
@@ -74,7 +158,8 @@ impl BatchesService {
     pub fn get(&self, key_id: &str, id: &str) -> rusqlite::Result<Option<Batch>> {
         let conn = self.db.connect()?;
         conn.query_row(
-            "SELECT id, status, requests_json, created_at, updated_at, cancelled_at
+            "SELECT id, status, requests_json, created_at, updated_at, cancelled_at,
+                    endpoint, input_file_id, completion_window, metadata
              FROM llm_batches WHERE virtual_key_id = ?1 AND id = ?2",
             params![key_id, id],
             batch_from_row,
@@ -127,7 +212,169 @@ fn batch_from_row(row: &rusqlite::Row<'_>) -> rusqlite::Result<Batch> {
         created_at: row.get(3)?,
         updated_at: row.get(4)?,
         cancelled_at: row.get(5)?,
+        endpoint: row.get(6)?,
+        input_file_id: row.get(7)?,
+        completion_window: row.get(8)?,
+        metadata: row
+            .get::<_, Option<String>>(9)?
+            .and_then(|raw| serde_json::from_str(&raw).ok()),
     })
+}
+
+/// Directory where batch input files are stored. Mirrors the uploads layout.
+fn batch_inputs_dir() -> PathBuf {
+    std::env::var("ALLTERNIT_DATA_DIR")
+        .ok()
+        .filter(|value| !value.is_empty())
+        .map(PathBuf::from)
+        .or_else(|| dirs::data_dir().map(|d| d.join("allternit")))
+        .unwrap_or_else(|| PathBuf::from("/var/lib/allternit"))
+        .join("batch_inputs")
+}
+
+/// Read a batch input file (JSONL) and map the OpenAI `body` entries to the
+/// native request array. Plain request objects are also accepted as a fallback.
+fn load_batch_input_file(input_file_id: &str) -> Result<Vec<Value>, OpenAiErrorResponse> {
+    load_batch_input_file_from(&batch_inputs_dir(), input_file_id)
+}
+
+fn load_batch_input_file_from(
+    base: &std::path::Path,
+    input_file_id: &str,
+) -> Result<Vec<Value>, OpenAiErrorResponse> {
+    if input_file_id.is_empty() || input_file_id.contains('/') || input_file_id.contains('\\') {
+        return Err(OpenAiErrorResponse::invalid_request(
+            "`input_file_id` is invalid.",
+            Some("input_file_id"),
+        ));
+    }
+    let path = base.join(input_file_id);
+    let content = std::fs::read_to_string(&path).map_err(|err| {
+        OpenAiErrorResponse::invalid_request(
+            format!("Unable to read input file `{input_file_id}`: {err}"),
+            Some("input_file_id"),
+        )
+    })?;
+
+    let mut requests = Vec::new();
+    for (index, line) in content.lines().enumerate() {
+        let line = line.trim();
+        if line.is_empty() {
+            continue;
+        }
+        let value: Value = serde_json::from_str(line).map_err(|err| {
+            OpenAiErrorResponse::invalid_request(
+                format!("Invalid JSON on line {}: {err}", index + 1),
+                Some("input_file_id"),
+            )
+        })?;
+        let body = value
+            .get("body")
+            .cloned()
+            .unwrap_or_else(|| value.clone());
+        requests.push(body);
+    }
+
+    if requests.is_empty() {
+        return Err(OpenAiErrorResponse::invalid_request(
+            "Input file contains no requests.",
+            Some("input_file_id"),
+        ));
+    }
+    Ok(requests)
+}
+
+/// OpenAI batch object returned by create/list/get/cancel.
+#[derive(Debug, Clone, Serialize)]
+pub struct OpenAiBatch {
+    pub id: String,
+    pub object: &'static str,
+    pub status: String,
+    pub endpoint: String,
+    pub input_file_id: String,
+    pub completion_window: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub output_file_id: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub error_file_id: Option<String>,
+    pub request_counts: OpenAiBatchRequestCounts,
+    pub created_at: i64,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub expires_at: Option<i64>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub finalizing_at: Option<i64>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub completed_at: Option<i64>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub failed_at: Option<i64>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub expired_at: Option<i64>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub cancelling_at: Option<i64>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub cancelled_at: Option<i64>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub metadata: Option<Value>,
+}
+
+#[derive(Debug, Clone, Serialize)]
+pub struct OpenAiBatchRequestCounts {
+    pub total: usize,
+    pub completed: usize,
+    pub failed: usize,
+}
+
+impl From<Batch> for OpenAiBatch {
+    fn from(batch: Batch) -> Self {
+        let total = batch.request_count;
+        let completed = if batch.status == "completed" { total } else { 0 };
+        let failed = if batch.status == "failed" { total } else { 0 };
+        Self {
+            id: batch.id.clone(),
+            object: "batch",
+            status: batch.status.clone(),
+            endpoint: batch.endpoint.unwrap_or_else(|| "/v1/chat/completions".to_string()),
+            input_file_id: batch
+                .input_file_id
+                .unwrap_or_else(|| format!("file_{}", batch.id)),
+            completion_window: batch.completion_window.unwrap_or_else(|| "24h".to_string()),
+            output_file_id: (batch.status == "completed").then_some(format!("{}_output", batch.id)),
+            error_file_id: (batch.status == "failed").then_some(format!("{}_errors", batch.id)),
+            request_counts: OpenAiBatchRequestCounts {
+                total,
+                completed,
+                failed,
+            },
+            created_at: parse_datetime(&batch.created_at).unwrap_or(0),
+            expires_at: None,
+            finalizing_at: None,
+            completed_at: (batch.status == "completed")
+                .then(|| parse_datetime(batch.updated_at.as_deref().unwrap_or(&batch.created_at)))
+                .flatten(),
+            failed_at: (batch.status == "failed")
+                .then(|| parse_datetime(batch.updated_at.as_deref().unwrap_or(&batch.created_at)))
+                .flatten(),
+            expired_at: None,
+            cancelling_at: None,
+            cancelled_at: batch.cancelled_at.as_deref().and_then(parse_datetime),
+            metadata: batch.metadata.clone(),
+        }
+    }
+}
+
+fn parse_datetime(raw: &str) -> Option<i64> {
+    chrono::NaiveDateTime::parse_from_str(raw, "%Y-%m-%d %H:%M:%S")
+        .ok()
+        .map(|dt| dt.and_utc().timestamp())
+}
+
+/// Creation body accepted by `POST /v1/batches`. Supports both the native
+/// `requests` array and the OpenAI `input_file_id` form.
+#[derive(Debug, Deserialize)]
+#[serde(untagged)]
+pub enum CreateBatchBody {
+    Native(CreateBatchRequest),
+    OpenAi(OpenAiCreateBatchRequest),
 }
 
 fn internal_error(err: impl std::fmt::Display) -> Response {
@@ -155,16 +402,38 @@ fn not_found(id: &str) -> Response {
 pub async fn create_batch(
     State(state): State<Arc<AppState>>,
     Extension(key): Extension<LlmKeyContext>,
-    Json(body): Json<CreateBatchRequest>,
+    Json(body): Json<CreateBatchBody>,
 ) -> Response {
-    if body.requests.is_empty() {
-        return OpenAiErrorResponse::invalid_request(
-            "`requests` must contain at least one request.",
-            Some("requests"),
-        )
-        .into_response();
-    }
-    for (index, value) in body.requests.iter().enumerate() {
+    let (requests, input_file_id, endpoint, completion_window, metadata) = match body {
+        CreateBatchBody::Native(native) => {
+            if native.requests.is_empty() {
+                return OpenAiErrorResponse::invalid_request(
+                    "`requests` must contain at least one request.",
+                    Some("requests"),
+                )
+                .into_response();
+            }
+            (
+                native.requests,
+                None,
+                "/v1/chat/completions".to_string(),
+                "24h".to_string(),
+                None,
+            )
+        }
+        CreateBatchBody::OpenAi(openai) => {
+            let input_file_id = openai.input_file_id.clone();
+            let endpoint = openai.endpoint.clone();
+            let completion_window = openai.completion_window.clone();
+            let metadata = openai.metadata.clone();
+            match openai.into_requests() {
+                Ok(requests) => (requests, Some(input_file_id), endpoint, completion_window, metadata),
+                Err(err) => return err.into_response(),
+            }
+        }
+    };
+
+    for (index, value) in requests.iter().enumerate() {
         let request: ChatCompletionRequest = match serde_json::from_value(value.clone()) {
             Ok(request) => request,
             Err(err) => {
@@ -192,8 +461,25 @@ pub async fn create_batch(
             .into_response();
         }
     }
-    match BatchesService::new(state.db.clone()).create(&key, &body.requests) {
-        Ok(batch) => (StatusCode::CREATED, Json(batch)).into_response(),
+
+    let result = if let Some(input_file_id) = &input_file_id {
+        BatchesService::new(state.db.clone()).create_openai(
+            &key,
+            &requests,
+            input_file_id,
+            &endpoint,
+            &completion_window,
+            metadata,
+        )
+    } else {
+        BatchesService::new(state.db.clone()).create(&key, &requests)
+    };
+
+    match result {
+        Ok(batch) => {
+            let openai_batch = OpenAiBatch::from(batch);
+            (StatusCode::CREATED, Json(openai_batch)).into_response()
+        }
         Err(err) => internal_error(err),
     }
 }
@@ -203,7 +489,10 @@ pub async fn list_batches(
     Extension(key): Extension<LlmKeyContext>,
 ) -> Response {
     match BatchesService::new(state.db.clone()).list(&key.key_id) {
-        Ok(data) => Json(json!({ "object": "list", "data": data })).into_response(),
+        Ok(data) => {
+            let openai_data: Vec<OpenAiBatch> = data.into_iter().map(OpenAiBatch::from).collect();
+            Json(json!({ "object": "list", "data": openai_data })).into_response()
+        }
         Err(err) => internal_error(err),
     }
 }
@@ -214,7 +503,7 @@ pub async fn get_batch(
     Path(id): Path<String>,
 ) -> Response {
     match BatchesService::new(state.db.clone()).get(&key.key_id, &id) {
-        Ok(Some(batch)) => Json(batch).into_response(),
+        Ok(Some(batch)) => Json(OpenAiBatch::from(batch)).into_response(),
         Ok(None) => not_found(&id),
         Err(err) => internal_error(err),
     }
@@ -226,7 +515,7 @@ pub async fn cancel_batch(
     Path(id): Path<String>,
 ) -> Response {
     match BatchesService::new(state.db.clone()).cancel(&key.key_id, &id) {
-        Ok(Some(batch)) => Json(batch).into_response(),
+        Ok(Some(batch)) => Json(OpenAiBatch::from(batch)).into_response(),
         Ok(None) => not_found(&id),
         Err(err) => internal_error(err),
     }
@@ -1005,5 +1294,85 @@ mod tests {
 
         let unchanged = service.get(&key.key_id, &batch.id).unwrap().unwrap();
         assert_eq!(unchanged.status, "cancelled");
+    }
+
+    #[test]
+    fn openai_create_request_validates_endpoint_and_window() {
+        let valid = OpenAiCreateBatchRequest {
+            input_file_id: "file_1".to_string(),
+            endpoint: "/v1/chat/completions".to_string(),
+            completion_window: "24h".to_string(),
+            metadata: None,
+        };
+        assert!(valid.into_requests().is_err()); // file does not exist
+
+        let bad_endpoint = OpenAiCreateBatchRequest {
+            input_file_id: "file_1".to_string(),
+            endpoint: "/v1/embeddings".to_string(),
+            completion_window: "24h".to_string(),
+            metadata: None,
+        };
+        let err = bad_endpoint.into_requests().unwrap_err();
+        assert_eq!(err.status, StatusCode::BAD_REQUEST);
+        assert!(err.error.message.contains("endpoint"));
+
+        let bad_window = OpenAiCreateBatchRequest {
+            input_file_id: "file_1".to_string(),
+            endpoint: "/v1/chat/completions".to_string(),
+            completion_window: "7d".to_string(),
+            metadata: None,
+        };
+        let err = bad_window.into_requests().unwrap_err();
+        assert_eq!(err.status, StatusCode::BAD_REQUEST);
+        assert!(err.error.message.contains("completion_window"));
+    }
+
+    #[test]
+    fn openai_input_file_maps_jsonl_bodies_to_requests() {
+        let dir = TempDir::new().unwrap();
+        let file_id = "batch_input.jsonl";
+        let jsonl = r#"{"custom_id":"req-1","method":"POST","url":"/v1/chat/completions","body":{"model":"allternit-balanced","messages":[{"role":"user","content":"Hi"}]}}
+{"custom_id":"req-2","method":"POST","url":"/v1/chat/completions","body":{"model":"allternit-balanced","messages":[{"role":"user","content":"Bye"}]}}"#;
+        std::fs::write(dir.path().join(file_id), jsonl).unwrap();
+
+        let requests = load_batch_input_file_from(dir.path(), file_id).unwrap();
+        assert_eq!(requests.len(), 2);
+        assert_eq!(requests[0]["model"], "allternit-balanced");
+        assert_eq!(requests[1]["messages"][0]["content"], "Bye");
+    }
+
+    #[tokio::test]
+    async fn openai_batch_response_matches_contract() {
+        let (db, _dir) = test_db();
+        let key = insert_test_key(&db);
+        let service = BatchesService::new(db.clone());
+        let requests = sample_requests();
+        let batch = service
+            .create_openai(
+                &key,
+                &requests,
+                "file_abc123",
+                "/v1/chat/completions",
+                "24h",
+                Some(json!({ "env": "test" })),
+            )
+            .unwrap();
+
+        let openai = OpenAiBatch::from(batch);
+        assert_eq!(openai.object, "batch");
+        assert_eq!(openai.endpoint, "/v1/chat/completions");
+        assert_eq!(openai.input_file_id, "file_abc123");
+        assert_eq!(openai.completion_window, "24h");
+        assert_eq!(openai.request_counts.total, 2);
+        assert_eq!(openai.request_counts.completed, 0);
+        assert_eq!(openai.request_counts.failed, 0);
+        assert!(openai.metadata.is_some());
+
+        let value = serde_json::to_value(&openai).unwrap();
+        assert_eq!(value["object"], "batch");
+        assert_eq!(value["status"], "validating");
+        assert_eq!(value["request_counts"]["total"], 2);
+        assert!(value.get("output_file_id").is_none());
+        assert_eq!(value["metadata"]["env"], "test");
     }
 }

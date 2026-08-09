@@ -136,13 +136,13 @@ pub struct ChatCompletionRequest {
     pub parallel_tool_calls: Option<bool>,
     #[serde(default)]
     pub reasoning_effort: Option<String>,
-    #[serde(default)]
-    pub user: Option<String>,
     /// Ask providers that support source citations to include them. For
     /// non-Anthropic providers the gateway falls back to a RAG context block
     /// and parses `[cite:<id>]` markers from the response.
     #[serde(default)]
     pub citations: Option<bool>,
+    #[serde(default)]
+    pub user: Option<String>,
 }
 
 #[derive(Debug, Clone, Deserialize)]
@@ -711,10 +711,32 @@ pub struct PromptTokensDetails {
     pub cached_tokens: i64,
 }
 
+/// OpenAI-style citation/source annotation attached to an assistant message.
+#[derive(Debug, Clone, Serialize)]
+#[serde(tag = "type", rename_all = "snake_case")]
+pub enum Annotation {
+    FileCitation { file_citation: FileCitation },
+    UrlCitation { url_citation: UrlCitation },
+}
+
+#[derive(Debug, Clone, Serialize)]
+pub struct FileCitation {
+    pub file_id: String,
+}
+
+#[derive(Debug, Clone, Serialize)]
+pub struct UrlCitation {
+    pub url: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub title: Option<String>,
+}
+
 #[derive(Debug, Clone, Serialize)]
 pub struct AssistantMessage {
     pub role: String,
     pub content: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub annotations: Option<Vec<Annotation>>,
 }
 
 impl AssistantMessage {
@@ -722,6 +744,15 @@ impl AssistantMessage {
         Self {
             role: "assistant".to_string(),
             content,
+            annotations: None,
+        }
+    }
+
+    pub fn with_annotations(content: String, annotations: Vec<Annotation>) -> Self {
+        Self {
+            role: "assistant".to_string(),
+            content,
+            annotations: Some(annotations),
         }
     }
 }
@@ -774,6 +805,14 @@ impl ChatCompletionResponse {
     pub fn with_citations(mut self, citations: Vec<super::citations::Citation>) -> Self {
         if !citations.is_empty() {
             self.citations = Some(citations);
+        }
+        self
+    }
+
+    /// Attach OpenAI-style source annotations to the assistant message.
+    pub fn with_annotations(mut self, annotations: Vec<Annotation>) -> Self {
+        if let Some(choice) = self.choices.first_mut() {
+            choice.message.annotations = Some(annotations);
         }
         self
     }
@@ -1146,5 +1185,54 @@ mod tests {
         assert_eq!(value["choices"][0]["message"]["role"], "assistant");
         assert_eq!(value["choices"][0]["finish_reason"], "stop");
         assert_eq!(value["usage"]["prompt_tokens_details"]["cached_tokens"], 1);
+    }
+
+    #[test]
+    fn request_accepts_citations_option() {
+        let req: ChatCompletionRequest = serde_json::from_value(json!({
+            "model": "anthropic/claude-sonnet-4",
+            "messages": [{"role": "user", "content": "cite sources"}],
+            "citations": true
+        }))
+        .unwrap();
+        assert_eq!(req.citations, Some(true));
+        validate_request(&req).unwrap();
+    }
+
+    #[test]
+    fn response_message_includes_annotations() {
+        let annotations = vec![
+            Annotation::UrlCitation {
+                url_citation: UrlCitation {
+                    url: "https://example.com/doc".to_string(),
+                    title: Some("Example doc".to_string()),
+                },
+            },
+            Annotation::FileCitation {
+                file_citation: FileCitation {
+                    file_id: "file_abc123".to_string(),
+                },
+            },
+        ];
+        let resp = ChatCompletionResponse::new(
+            new_completion_id(),
+            1_700_000_000,
+            "anthropic/claude-sonnet-4".to_string(),
+            "answer with citations".to_string(),
+            "stop".to_string(),
+            None,
+        )
+        .with_annotations(annotations);
+
+        let value = serde_json::to_value(&resp).unwrap();
+        let message = &value["choices"][0]["message"];
+        assert!(message["annotations"].is_array());
+        assert_eq!(message["annotations"].as_array().unwrap().len(), 2);
+        assert_eq!(message["annotations"][0]["type"], "url_citation");
+        assert_eq!(
+            message["annotations"][0]["url_citation"]["url"],
+            "https://example.com/doc"
+        );
+        assert_eq!(message["annotations"][1]["type"], "file_citation");
     }
 }

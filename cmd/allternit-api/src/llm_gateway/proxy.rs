@@ -51,8 +51,8 @@ use super::llm_pricing::{self, TokenBreakdown};
 use super::router::{self, RoutingDecision};
 use super::translate::{
     map_finish_reason, message_to_gizzi_parts, messages_to_gizzi_parts, new_completion_id,
-    stream_error_data, validate_request, ChatCompletionChunk, ChatCompletionRequest,
-    ChatCompletionResponse, OpenAiErrorResponse, Usage,
+    stream_error_data, validate_request, Annotation, ChatCompletionChunk, ChatCompletionRequest,
+    ChatCompletionResponse, FileCitation, OpenAiErrorResponse, UrlCitation, Usage,
 };
 
 /// Hard cap on a single completion, from send to `session.status` idle.
@@ -69,6 +69,14 @@ pub const POLICY_ALIASES: [&str; 6] = [
     "allternit-knowledge",
     "allternit-instruct",
 ];
+
+/// Whether the resolved provider is Anthropic, which supports native citations.
+fn is_anthropic_provider(requested: &str, resolved: &ResolvedModel) -> bool {
+    requested.starts_with("anthropic/")
+        || resolved.provider_id == "anthropic"
+        || requested.starts_with("claude-")
+        || resolved.model_id.starts_with("claude-")
+}
 
 /// An `in_progress` idempotency row older than this is assumed abandoned
 /// (worker died mid-request) and may be retried.
@@ -450,6 +458,7 @@ struct Collector {
     fallback_from: Option<String>,
     fallback_to: Option<String>,
     ttft: Option<Duration>,
+    citations: Vec<Annotation>,
 }
 
 impl Collector {
@@ -463,6 +472,7 @@ impl Collector {
             fallback_from: None,
             fallback_to: None,
             ttft: None,
+            citations: Vec::new(),
         }
     }
 
@@ -493,6 +503,7 @@ impl Collector {
                     return EventEffect::None;
                 }
                 self.usage = parse_assistant_usage(info);
+                self.citations = extract_citations(info);
                 if let Some(error) = info.get("error") {
                     let name = error
                         .get("name")
@@ -592,6 +603,45 @@ fn parse_assistant_usage(info: &Value) -> GizziUsage {
             .and_then(Value::as_str)
             .map(str::to_string),
     }
+}
+
+/// Extract citation annotations from a Gizzi assistant `message.updated` info
+/// block. The runtime currently does not emit structured citations, so this
+/// parses the documented shape ahead of the upstream landing and surfaces
+/// OpenAI-style `message.annotations` when present.
+fn extract_citations(info: &Value) -> Vec<Annotation> {
+    let Some(citations) = info.get("citations").and_then(Value::as_array) else {
+        return Vec::new();
+    };
+    citations
+        .iter()
+        .filter_map(|citation| {
+            let cited_text = citation.get("cited_text").and_then(Value::as_str)?;
+            if let Some(url) = citation.get("url").and_then(Value::as_str) {
+                return Some(Annotation::UrlCitation {
+                    url_citation: UrlCitation {
+                        url: url.to_string(),
+                        title: citation.get("title").and_then(Value::as_str).map(str::to_string),
+                    },
+                });
+            }
+            if let Some(file_id) = citation.get("file_id").and_then(Value::as_str) {
+                return Some(Annotation::FileCitation {
+                    file_citation: FileCitation {
+                        file_id: file_id.to_string(),
+                    },
+                });
+            }
+            // No recognized source: emit a URL citation using the cited text as
+            // the URL so the annotation is not silently dropped.
+            Some(Annotation::UrlCitation {
+                url_citation: UrlCitation {
+                    url: cited_text.to_string(),
+                    title: citation.get("title").and_then(Value::as_str).map(str::to_string),
+                },
+            })
+        })
+        .collect()
 }
 
 /// Everything learned about one completed request. This is the struct B4
@@ -1356,6 +1406,15 @@ pub async fn chat_completions(
     if let Some(effort) = &request.reasoning_effort {
         payload["variant"] = json!(effort);
     }
+    // Citations: Anthropic supports native citations; other providers get the
+    // explicit RAG context block prepended above and the native flag disabled.
+    if request.citations == Some(true) {
+        if is_anthropic_provider(&request.model, &resolved) {
+            payload["citations"] = json!({ "enabled": true });
+        } else {
+            payload["citations"] = json!({ "enabled": false });
+        }
+    }
     // B5: the router-derived failover chain (top 3 distinct providers).
     // Gizzi switches down this list on non-retryable provider errors and
     // reports each switch as `session.model_fallback`.
@@ -1369,12 +1428,6 @@ pub async fn chat_completions(
             }))
             .collect::<Vec<_>>());
     }
-    // Forward the native citations flag to Gizzi for Anthropic; non-Anthropic
-    // providers get the explicit RAG context block injected above.
-    if request.citations == Some(true) && resolved.provider_id == "anthropic" {
-        payload["citations"] = json!(true);
-    }
-
     let message_url = format!(
         "{base}/v1/session/{}/message",
         urlencoding::encode(&session_id)
@@ -1477,12 +1530,12 @@ async fn nonstream_completion(
                 collector.usage.reasoning_tokens,
                 collector.usage.cached_tokens,
             );
-            let citations = if citations_enabled && provider_id != "anthropic" {
+            let rag_citations = if citations_enabled && provider_id != "anthropic" {
                 super::citations::CitationsService::global().parse_citations(&collector.text)
             } else {
                 Vec::new()
             };
-            let response = ChatCompletionResponse::new(
+            let mut response = ChatCompletionResponse::new(
                 completion_id,
                 created,
                 requested_model,
@@ -1490,7 +1543,10 @@ async fn nonstream_completion(
                 finish.to_string(),
                 Some(usage),
             )
-            .with_citations(citations);
+            .with_citations(rag_citations);
+            if !collector.citations.is_empty() {
+                response = response.with_annotations(collector.citations.clone());
+            }
             let body = serde_json::to_value(&response)
                 .unwrap_or_else(|_| json!({"error": "serialization failure"}));
 
@@ -1947,5 +2003,67 @@ mod token_tests {
         .unwrap();
 
         assert_eq!(count_tokens_request(&request), estimate_tokens(&request));
+    }
+}
+
+#[cfg(test)]
+mod citation_tests {
+    use super::*;
+    use serde_json::json;
+
+    fn resolved(provider_id: &str, model_id: &str) -> ResolvedModel {
+        ResolvedModel {
+            policy: None,
+            provider_id: provider_id.to_string(),
+            model_id: model_id.to_string(),
+            fallbacks: Vec::new(),
+            routing_decision: None,
+        }
+    }
+
+    #[test]
+    fn detects_anthropic_provider() {
+        assert!(is_anthropic_provider(
+            "anthropic/claude-sonnet-4",
+            &resolved("anthropic", "claude-sonnet-4")
+        ));
+        assert!(is_anthropic_provider(
+            "allternit-balanced",
+            &resolved("anthropic", "claude-sonnet-4")
+        ));
+        assert!(is_anthropic_provider(
+            "claude-sonnet-4",
+            &resolved("openai", "gpt-4o")
+        ));
+        assert!(!is_anthropic_provider(
+            "openai/gpt-4o",
+            &resolved("openai", "gpt-4o")
+        ));
+    }
+
+    #[test]
+    fn extracts_citations_from_message_info() {
+        let info = json!({
+            "role": "assistant",
+            "citations": [
+                { "cited_text": "source one", "url": "https://example.com/1", "title": "One" },
+                { "cited_text": "source two", "file_id": "file_abc" }
+            ]
+        });
+        let annotations = extract_citations(&info);
+        assert_eq!(annotations.len(), 2);
+        match &annotations[0] {
+            Annotation::UrlCitation { url_citation } => {
+                assert_eq!(url_citation.url, "https://example.com/1");
+                assert_eq!(url_citation.title.as_deref(), Some("One"));
+            }
+            _ => panic!("expected URL citation"),
+        }
+        match &annotations[1] {
+            Annotation::FileCitation { file_citation } => {
+                assert_eq!(file_citation.file_id, "file_abc");
+            }
+            _ => panic!("expected file citation"),
+        }
     }
 }
