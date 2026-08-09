@@ -1,15 +1,21 @@
 // Core harness
 export { AllternitHarness } from './harness/index.js';
+export {
+  createRetryMiddleware,
+  createRefusalFallbackMiddleware,
+} from './harness/middleware.js';
 export { AllternitEmbeddings } from './embeddings.js';
 export type { EmbeddingsCreateRequest, EmbeddingsResponse, Embedding } from './embeddings.js';
-export type { 
-  HarnessConfig, 
-  StreamRequest, 
+export type {
+  HarnessConfig,
+  StreamRequest,
   Message,
   HarnessResponse,
   HarnessStreamChunk,
   HarnessMode,
   Citation,
+  HarnessMiddleware,
+  HarnessMiddlewareContext,
 } from './harness/types.js';
 
 // Agent runtime

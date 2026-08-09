@@ -59,6 +59,10 @@ export interface HarnessConfig {
   subprocess?: SubprocessConfig;
   /** Retry/backoff behavior for provider fetch calls. Omit to use defaults. */
   retry?: RetryOptions;
+  /** Middleware hooks applied to every request/response. */
+  middleware?: HarnessMiddleware | HarnessMiddleware[];
+  /** Fallback models to try when a provider refuses or content-filters a request. */
+  fallbackModels?: Array<{ provider: string; model: string }>;
 }
 
 /**
@@ -355,6 +359,53 @@ export interface ProviderRequestTransform {
  */
 export interface ProviderResponseTransform {
   (response: unknown): HarnessStreamChunk;
+}
+
+/**
+ * Context passed to middleware error handlers.
+ */
+export interface HarnessMiddlewareContext {
+  /** Request as seen by the harness after beforeRequest hooks. */
+  request: StreamRequest;
+  /** Harness instance for middleware that needs to re-invoke streaming. */
+  harness: { stream(request: StreamRequest): AsyncGenerator<HarnessStreamChunk> };
+}
+
+/**
+ * Middleware hook system for the harness.
+ *
+ * Middleware runs on every request/response. The default harness configuration
+ * always includes a retry middleware; callers may add custom middleware to
+ * observe, mutate, or recover from failures.
+ */
+export interface HarnessMiddleware {
+  /** Optional human-readable name for logging/debugging. */
+  name?: string;
+  /**
+   * Transform the request before it is routed to the provider.
+   * Called after request validation but before system/provider prompt injection.
+   */
+  beforeRequest?: (request: StreamRequest) => StreamRequest | Promise<StreamRequest>;
+  /**
+   * Transform the collected response before it is returned by run()/complete().
+   * Not applied when consuming the raw stream() generator.
+   */
+  afterResponse?: (response: HarnessResponse) => HarnessResponse | Promise<HarnessResponse>;
+  /**
+   * Handle an error thrown during streaming.
+   *
+   * Returning/yielding an async generator substitutes a replacement stream.
+   * Returning undefined passes control to the next onError hook. Throwing
+   * propagates the thrown error.
+   */
+  onError?: (
+    error: HarnessError,
+    context: HarnessMiddlewareContext
+  ) =>
+    | AsyncGenerator<HarnessStreamChunk>
+    | Promise<AsyncGenerator<HarnessStreamChunk>>
+    | void
+    | Promise<void>;
 }
 
 /**

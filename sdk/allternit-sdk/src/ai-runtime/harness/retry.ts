@@ -15,7 +15,7 @@ export interface RetryOptions {
   jitter?: boolean;
 }
 
-const DEFAULT_RETRY_OPTIONS: Required<RetryOptions> = {
+export const DEFAULT_RETRY_OPTIONS: Required<RetryOptions> = {
   maxRetries: 3,
   initialDelayMs: 500,
   maxDelayMs: 8000,
@@ -23,18 +23,18 @@ const DEFAULT_RETRY_OPTIONS: Required<RetryOptions> = {
 };
 
 /** HTTP status codes worth retrying: rate limits, transient conflicts, server errors. */
-const RETRYABLE_STATUS_CODES = new Set([408, 409, 429, 500, 502, 503, 504]);
+export const RETRYABLE_STATUS_CODES = new Set([408, 409, 429, 500, 502, 503, 504]);
 
-function resolveOptions(options?: RetryOptions): Required<RetryOptions> {
+export function resolveOptions(options?: RetryOptions): Required<RetryOptions> {
   return { ...DEFAULT_RETRY_OPTIONS, ...options };
 }
 
-function backoffDelayMs(attempt: number, options: Required<RetryOptions>): number {
+export function backoffDelayMs(attempt: number, options: Required<RetryOptions>): number {
   const exponential = Math.min(options.initialDelayMs * 2 ** attempt, options.maxDelayMs);
   return options.jitter ? Math.random() * exponential : exponential;
 }
 
-function sleep(ms: number): Promise<void> {
+export function sleep(ms: number): Promise<void> {
   return new Promise(resolve => setTimeout(resolve, ms));
 }
 
