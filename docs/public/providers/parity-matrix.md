@@ -67,6 +67,7 @@ The harness normalizes provider-specific values into a single taxonomy:
 | JSON Schema response | `JsonSchemaResponseFormat` | `sdk/allternit-sdk/src/ai-runtime/harness/types.ts` |
 | Tool definition | `Tool` | `sdk/allternit-sdk/src/ai-runtime/harness/types.ts` |
 | Stream chunk | `HarnessStreamChunk` | `sdk/allternit-sdk/src/ai-runtime/harness/types.ts` |
+| PDF document input | `PdfContentBlock` | `sdk/allternit-sdk/src/ai-runtime/harness/types.ts` **(DONE)** |
 
 ## Error-code parity
 

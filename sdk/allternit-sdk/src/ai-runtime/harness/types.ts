@@ -109,13 +109,26 @@ export interface VisionCoordinatesContentBlock {
 }
 
 /**
+ * PDF content block — document input for models that support PDFs
+ */
+export interface PdfContentBlock {
+  type: 'pdf';
+  source: 'base64' | 'url' | 'file_id';
+  data?: string;
+  url?: string;
+  fileId?: string;
+  title?: string;
+}
+
+/**
  * Union of content blocks that can appear in a message
  */
 export type ContentBlock =
   | TextContentBlock
   | SearchResultBlock
   | VisionContentBlock
-  | VisionCoordinatesContentBlock;
+  | VisionCoordinatesContentBlock
+  | PdfContentBlock;
 
 /**
  * Chat message structure

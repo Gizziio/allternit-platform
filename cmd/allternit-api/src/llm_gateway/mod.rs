@@ -34,6 +34,7 @@ pub mod batches;
 pub mod benchmarks;
 pub mod dlp;
 pub mod dlp_patterns;
+pub mod files;
 pub mod gizzi_bus;
 pub mod inference_hooks;
 pub mod keys;
@@ -72,6 +73,8 @@ pub fn llm_gateway_router(state: Arc<AppState>) -> Router<Arc<AppState>> {
         .route("/batches/:id/cancel", post(batches::cancel_batch))
         .route("/batches/:id/results", get(batches::batch_results))
         .route("/models", get(proxy::list_models))
+        .route("/files", post(files::create_file))
+        .route("/files/:id", get(files::get_file))
         // Layer order: the LAST layer added runs FIRST. Execution order is
         // therefore llm_key auth → rate limit → DLP → budget → handler.
         .layer(axum::middleware::from_fn_with_state(
