@@ -15,11 +15,12 @@ use axum::{
     routing::{delete, get, post},
     Json, Router,
 };
+use base64::{engine::general_purpose::STANDARD, Engine as _};
 use futures::{SinkExt, Stream, StreamExt};
 use rusqlite::{params, OptionalExtension};
 use serde::{Deserialize, Serialize};
 use serde_json::{json, Value};
-use std::{convert::Infallible, sync::Arc, time::Duration};
+use std::{convert::Infallible, io::Write, path::PathBuf, sync::Arc, time::Duration};
 
 use crate::{auth::AuthUser, error::ApiError, webhook_subscription_routes, AppState};
 
@@ -58,6 +59,11 @@ pub fn beta_session_router() -> Router<Arc<AppState>> {
         .route(
             "/beta/sessions/:id/resources/:resource_id",
             delete(delete_resource),
+        )
+        .route("/beta/sessions/:id/files", get(list_files).post(upload_file))
+        .route(
+            "/beta/sessions/:id/files/:file_id",
+            get(get_file).delete(delete_file),
         )
         .route("/beta/sessions/:id/context/edit", post(edit_context))
 }
@@ -816,6 +822,230 @@ fn read_resource(row: &rusqlite::Row<'_>) -> rusqlite::Result<ResourceRow> {
     })
 }
 
+// ─── Session-scoped files ───────────────────────────────────────────────────
+
+#[derive(Debug, Deserialize)]
+struct UploadFileBody {
+    filename: String,
+    mime_type: String,
+    content_base64: String,
+}
+
+#[derive(Debug, Serialize)]
+struct SessionFileRow {
+    id: String,
+    session_id: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    org_id: Option<String>,
+    filename: String,
+    mime_type: String,
+    #[serde(skip)]
+    storage_path: String,
+    size_bytes: i64,
+    created_at: String,
+}
+
+#[derive(Debug, Serialize)]
+struct SessionFileDetail {
+    #[serde(flatten)]
+    meta: SessionFileRow,
+    content_base64: String,
+}
+
+fn session_files_dir(state: &AppState) -> PathBuf {
+    state.data_dir.join("session-files")
+}
+
+fn ensure_session_files_dir(state: &AppState) -> Result<PathBuf, ApiError> {
+    let dir = session_files_dir(state);
+    std::fs::create_dir_all(&dir).map_err(|e| ApiError::Internal(format!("file storage: {e}")))?;
+    Ok(dir)
+}
+
+async fn upload_file(
+    State(state): State<Arc<AppState>>,
+    Extension(user): Extension<AuthUser>,
+    Path(id): Path<String>,
+    Json(body): Json<UploadFileBody>,
+) -> Result<(StatusCode, Json<Value>), ApiError> {
+    load_session(state.clone(), user.user_id.clone(), id.clone()).await?;
+
+    let filename = body.filename.trim().to_string();
+    if filename.is_empty() {
+        return Err(ApiError::BadRequest("filename is required".into()));
+    }
+    let mime_type = body.mime_type.trim().to_string();
+    if mime_type.is_empty() {
+        return Err(ApiError::BadRequest("mime_type is required".into()));
+    }
+    let bytes = STANDARD
+        .decode(&body.content_base64)
+        .map_err(|_| ApiError::BadRequest("invalid base64 content".into()))?;
+    if bytes.is_empty() {
+        return Err(ApiError::BadRequest("file content cannot be empty".into()));
+    }
+
+    let file_id = format!("file_{}", uuid::Uuid::new_v4().simple());
+    let dir = ensure_session_files_dir(&state)?;
+    let storage_path = dir.join(&file_id);
+    let size_bytes = bytes.len() as i64;
+
+    tokio::task::spawn_blocking({
+        let storage_path = storage_path.clone();
+        let bytes = bytes.clone();
+        move || {
+            let mut file = std::fs::File::create(&storage_path)
+                .map_err(|e| ApiError::Internal(format!("failed to create file: {e}")))?;
+            file.write_all(&bytes)
+                .map_err(|e| ApiError::Internal(format!("failed to write file: {e}")))?;
+            Ok::<(), ApiError>(())
+        }
+    })
+    .await
+    .map_err(|e| ApiError::Internal(e.to_string()))??;
+
+    let db = state.db.clone();
+    let result_id = file_id.clone();
+    let org_id = user.organization_id.clone();
+    let storage_path_str = storage_path.to_string_lossy().to_string();
+    let file = tokio::task::spawn_blocking(move || {
+        let conn = db.connect()?;
+        conn.execute(
+            "INSERT INTO session_files
+             (id, session_id, org_id, filename, mime_type, storage_path, size_bytes)
+             VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7)",
+            params![
+                file_id,
+                id,
+                org_id,
+                filename,
+                mime_type,
+                storage_path_str,
+                size_bytes
+            ],
+        )?;
+        conn.query_row(
+            "SELECT id, session_id, org_id, filename, mime_type, storage_path, size_bytes, created_at
+             FROM session_files WHERE id = ?1",
+            params![result_id],
+            read_session_file,
+        )
+    })
+    .await
+    .map_err(|e| ApiError::Internal(e.to_string()))?
+    .map_err(|e| ApiError::DbError(e.to_string()))?;
+
+    Ok((StatusCode::CREATED, Json(json!({ "file": file }))))
+}
+
+async fn list_files(
+    State(state): State<Arc<AppState>>,
+    Extension(user): Extension<AuthUser>,
+    Path(id): Path<String>,
+) -> Result<Json<Value>, ApiError> {
+    load_session(state.clone(), user.user_id.clone(), id.clone()).await?;
+    let db = state.db.clone();
+    let files = tokio::task::spawn_blocking(move || {
+        let conn = db.connect()?;
+        let mut stmt = conn.prepare(
+            "SELECT id, session_id, org_id, filename, mime_type, storage_path, size_bytes, created_at
+             FROM session_files WHERE session_id = ?1 ORDER BY created_at DESC, id",
+        )?;
+        let rows = stmt
+            .query_map(params![id], read_session_file)?
+            .collect::<Result<Vec<SessionFileRow>, _>>()?;
+        Ok::<Vec<SessionFileRow>, rusqlite::Error>(rows)
+    })
+    .await
+    .map_err(|e| ApiError::Internal(e.to_string()))??;
+    Ok(Json(json!({ "files": files })))
+}
+
+async fn get_file(
+    State(state): State<Arc<AppState>>,
+    Extension(user): Extension<AuthUser>,
+    Path((id, file_id)): Path<(String, String)>,
+) -> Result<Json<Value>, ApiError> {
+    load_session(state.clone(), user.user_id.clone(), id.clone()).await?;
+    let db = state.db.clone();
+    let detail = tokio::task::spawn_blocking(move || {
+        let conn = db.connect().map_err(|e| ApiError::DbError(e.to_string()))?;
+        let meta = conn
+            .query_row(
+                "SELECT id, session_id, org_id, filename, mime_type, storage_path, size_bytes, created_at
+                 FROM session_files WHERE id = ?1 AND session_id = ?2",
+                params![file_id, id],
+                read_session_file,
+            )
+            .optional()
+            .map_err(|e| ApiError::DbError(e.to_string()))?;
+        let meta = match meta {
+            Some(m) => m,
+            None => return Ok::<Option<SessionFileDetail>, ApiError>(None),
+        };
+        let bytes = std::fs::read(&meta.storage_path)
+            .map_err(|e| ApiError::Internal(format!("failed to read file: {e}")))?;
+        Ok(Some(SessionFileDetail {
+            meta,
+            content_base64: STANDARD.encode(&bytes),
+        }))
+    })
+    .await
+    .map_err(|e| ApiError::Internal(e.to_string()))?
+    ?
+    .ok_or_else(|| ApiError::NotFound("file not found".into()))?;
+    Ok(Json(json!({ "file": detail })))
+}
+
+async fn delete_file(
+    State(state): State<Arc<AppState>>,
+    Extension(user): Extension<AuthUser>,
+    Path((id, file_id)): Path<(String, String)>,
+) -> Result<StatusCode, ApiError> {
+    load_session(state.clone(), user.user_id.clone(), id.clone()).await?;
+    let db = state.db.clone();
+    let deleted = tokio::task::spawn_blocking(move || {
+        let conn = db.connect()?;
+        let storage_path: Option<String> = conn
+            .query_row(
+                "SELECT storage_path FROM session_files WHERE id = ?1 AND session_id = ?2",
+                params![file_id, id],
+                |row| row.get(0),
+            )
+            .optional()?;
+        if storage_path.is_none() {
+            return Ok::<usize, rusqlite::Error>(0);
+        }
+        let deleted = conn.execute(
+            "DELETE FROM session_files WHERE id = ?1 AND session_id = ?2",
+            params![file_id, id],
+        )?;
+        if let Some(path) = storage_path {
+            let _ = std::fs::remove_file(path);
+        }
+        Ok(deleted)
+    })
+    .await
+    .map_err(|e| ApiError::Internal(e.to_string()))??;
+    if deleted == 0 {
+        return Err(ApiError::NotFound("file not found".into()));
+    }
+    Ok(StatusCode::NO_CONTENT)
+}
+
+fn read_session_file(row: &rusqlite::Row<'_>) -> rusqlite::Result<SessionFileRow> {
+    Ok(SessionFileRow {
+        id: row.get(0)?,
+        session_id: row.get(1)?,
+        org_id: row.get(2)?,
+        filename: row.get(3)?,
+        mime_type: row.get(4)?,
+        storage_path: row.get(5)?,
+        size_bytes: row.get(6)?,
+        created_at: row.get(7)?,
+    })
+}
+
 #[derive(Debug, Deserialize)]
 struct EventQuery {
     after: Option<i64>,
@@ -1047,6 +1277,7 @@ mod tests {
         Arc::new(AppState {
             config,
             db,
+            data_dir: temp.to_path_buf(),
             jwks,
             auth_config,
             vm_driver: None,
@@ -1731,5 +1962,232 @@ mod tests {
             .await
             .unwrap();
         assert_eq!(resp.status(), StatusCode::BAD_REQUEST);
+    }
+
+    #[tokio::test]
+    async fn session_file_crud_lifecycle() {
+        let temp = temp_dir("files");
+        let state = test_app_state(&temp).await;
+        let app = beta_session_router().with_state(state);
+
+        let resp = app
+            .clone()
+            .oneshot(
+                Request::builder()
+                    .method("POST")
+                    .uri("/beta/sessions")
+                    .header("content-type", "application/json")
+                    .extension(test_user("user-a"))
+                    .body(json_body(&json!({})))
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+        assert_eq!(resp.status(), StatusCode::CREATED);
+        let body = body_json(resp.into_body()).await;
+        let session_id = body["session"]["id"].as_str().unwrap().to_string();
+
+        let content = b"hello session file";
+        let encoded = STANDARD.encode(content);
+
+        // Upload a file.
+        let resp = app
+            .clone()
+            .oneshot(
+                Request::builder()
+                    .method("POST")
+                    .uri(format!("/beta/sessions/{}/files", session_id))
+                    .header("content-type", "application/json")
+                    .extension(test_user("user-a"))
+                    .body(json_body(&json!({
+                        "filename": "notes.txt",
+                        "mime_type": "text/plain",
+                        "content_base64": encoded
+                    })))
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+        assert_eq!(resp.status(), StatusCode::CREATED);
+        let body = body_json(resp.into_body()).await;
+        let file_id = body["file"]["id"].as_str().unwrap().to_string();
+        assert_eq!(body["file"]["filename"], "notes.txt");
+        assert_eq!(body["file"]["mime_type"], "text/plain");
+        assert_eq!(body["file"]["size_bytes"], content.len() as i64);
+
+        // List files.
+        let resp = app
+            .clone()
+            .oneshot(
+                Request::builder()
+                    .method("GET")
+                    .uri(format!("/beta/sessions/{}/files", session_id))
+                    .extension(test_user("user-a"))
+                    .body(Body::empty())
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+        assert_eq!(resp.status(), StatusCode::OK);
+        let body = body_json(resp.into_body()).await;
+        let files = body["files"].as_array().unwrap();
+        assert_eq!(files.len(), 1);
+        assert_eq!(files[0]["id"], file_id);
+
+        // Retrieve file content.
+        let resp = app
+            .clone()
+            .oneshot(
+                Request::builder()
+                    .method("GET")
+                    .uri(format!("/beta/sessions/{}/files/{}", session_id, file_id))
+                    .extension(test_user("user-a"))
+                    .body(Body::empty())
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+        assert_eq!(resp.status(), StatusCode::OK);
+        let body = body_json(resp.into_body()).await;
+        assert_eq!(body["file"]["id"], file_id);
+        let decoded = STANDARD
+            .decode(body["file"]["content_base64"].as_str().unwrap())
+            .unwrap();
+        assert_eq!(decoded, content);
+
+        // Delete the file.
+        let resp = app
+            .clone()
+            .oneshot(
+                Request::builder()
+                    .method("DELETE")
+                    .uri(format!("/beta/sessions/{}/files/{}", session_id, file_id))
+                    .extension(test_user("user-a"))
+                    .body(Body::empty())
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+        assert_eq!(resp.status(), StatusCode::NO_CONTENT);
+
+        // List is empty and retrieval is 404.
+        let resp = app
+            .clone()
+            .oneshot(
+                Request::builder()
+                    .method("GET")
+                    .uri(format!("/beta/sessions/{}/files", session_id))
+                    .extension(test_user("user-a"))
+                    .body(Body::empty())
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+        assert_eq!(resp.status(), StatusCode::OK);
+        let body = body_json(resp.into_body()).await;
+        assert!(body["files"].as_array().unwrap().is_empty());
+
+        let resp = app
+            .clone()
+            .oneshot(
+                Request::builder()
+                    .method("GET")
+                    .uri(format!("/beta/sessions/{}/files/{}", session_id, file_id))
+                    .extension(test_user("user-a"))
+                    .body(Body::empty())
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+        assert_eq!(resp.status(), StatusCode::NOT_FOUND);
+    }
+
+    #[tokio::test]
+    async fn session_files_are_isolated_by_session_and_user() {
+        let temp = temp_dir("files-isolation");
+        let state = test_app_state(&temp).await;
+        let app = beta_session_router().with_state(state);
+
+        let resp = app
+            .clone()
+            .oneshot(
+                Request::builder()
+                    .method("POST")
+                    .uri("/beta/sessions")
+                    .header("content-type", "application/json")
+                    .extension(test_user("user-a"))
+                    .body(json_body(&json!({})))
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+        assert_eq!(resp.status(), StatusCode::CREATED);
+        let body = body_json(resp.into_body()).await;
+        let session_id = body["session"]["id"].as_str().unwrap().to_string();
+
+        let resp = app
+            .clone()
+            .oneshot(
+                Request::builder()
+                    .method("POST")
+                    .uri(format!("/beta/sessions/{}/files", session_id))
+                    .header("content-type", "application/json")
+                    .extension(test_user("user-a"))
+                    .body(json_body(&json!({
+                        "filename": "secret.txt",
+                        "mime_type": "text/plain",
+                        "content_base64": STANDARD.encode(b"secret")
+                    })))
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+        assert_eq!(resp.status(), StatusCode::CREATED);
+        let body = body_json(resp.into_body()).await;
+        let file_id = body["file"]["id"].as_str().unwrap().to_string();
+
+        // Another user cannot list files on the session.
+        let resp = app
+            .clone()
+            .oneshot(
+                Request::builder()
+                    .method("GET")
+                    .uri(format!("/beta/sessions/{}/files", session_id))
+                    .extension(test_user("user-b"))
+                    .body(Body::empty())
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+        assert_eq!(resp.status(), StatusCode::NOT_FOUND);
+
+        // Another user cannot retrieve or delete the file.
+        let resp = app
+            .clone()
+            .oneshot(
+                Request::builder()
+                    .method("GET")
+                    .uri(format!("/beta/sessions/{}/files/{}", session_id, file_id))
+                    .extension(test_user("user-b"))
+                    .body(Body::empty())
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+        assert_eq!(resp.status(), StatusCode::NOT_FOUND);
+
+        let resp = app
+            .clone()
+            .oneshot(
+                Request::builder()
+                    .method("DELETE")
+                    .uri(format!("/beta/sessions/{}/files/{}", session_id, file_id))
+                    .extension(test_user("user-b"))
+                    .body(Body::empty())
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+        assert_eq!(resp.status(), StatusCode::NOT_FOUND);
     }
 }

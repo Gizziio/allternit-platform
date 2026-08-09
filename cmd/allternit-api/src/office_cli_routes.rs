@@ -1736,6 +1736,7 @@ mod tests {
         Arc::new(AppState {
             config,
             db,
+            data_dir: temp.to_path_buf(),
             jwks,
             auth_config,
             vm_driver: None,

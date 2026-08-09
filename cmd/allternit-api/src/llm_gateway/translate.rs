@@ -192,7 +192,8 @@ pub enum MessageContent {
 
 /// A content part. `text` and `image_url` are interpreted and forwarded to
 /// Gizzi; other part kinds (input_audio, ...) are kept as their type marker
-/// only.
+/// only. A `file_id` may reference a session-scoped file and is resolved to
+/// base64 inline data before being forwarded.
 #[derive(Debug, Clone, Deserialize)]
 pub struct ContentPart {
     #[serde(rename = "type")]
@@ -203,6 +204,8 @@ pub struct ContentPart {
     pub image_url: Option<ImageUrlPart>,
     #[serde(default)]
     pub input_image: Option<InputImagePart>,
+    #[serde(default)]
+    pub file_id: Option<String>,
 }
 
 #[derive(Debug, Clone, Deserialize)]
@@ -1100,8 +1103,8 @@ mod tests {
         let message = ChatMessage {
             role: "user".to_string(),
             content: Some(MessageContent::Parts(vec![
-                ContentPart { part_type: "text".to_string(), text: Some("Look".to_string()), image_url: None, input_image: None },
-                ContentPart { part_type: "image_url".to_string(), text: None, image_url: Some(ImageUrlPart { url: "https://example.com/x.png".to_string(), detail: None }), input_image: None },
+                ContentPart { part_type: "text".to_string(), text: Some("Look".to_string()), image_url: None, input_image: None, file_id: None },
+                ContentPart { part_type: "image_url".to_string(), text: None, image_url: Some(ImageUrlPart { url: "https://example.com/x.png".to_string(), detail: None }), input_image: None, file_id: None },
             ])),
             name: None,
             tool_call_id: None,

@@ -231,6 +231,7 @@ async fn main() {
     let state = Arc::new(AppState {
         config: app_config.clone(),
         db,
+        data_dir: data_dir.clone(),
         jwks,
         auth_config,
         vm_driver,
