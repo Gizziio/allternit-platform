@@ -14,6 +14,51 @@ import { join } from 'node:path';
 const PDF_FIXTURE_BASE64 =
   'JVBERi0xLjcKJYGBgYEKCjYgMCBvYmoKPDwKL0ZpbHRlciAvRmxhdGVEZWNvZGUKL0xlbmd0aCAyNjYKPj4Kc3RyZWFtCnicjVJNSwQxDL33V/QsiGkmecmAeNjdGTx4EeYPiKyyoocV8feb7IyCMAtLoaUvIe+jPZbNVKjm+nwtN/f79+/91+H56dqod3Ey7ytLnV5K7g+lnVpbVapGVKePcisNW2xNoMYY0JswKYkI4uywQZ91JkHU3MSyT+/q9FamqzJM5bEcz6nIYXBWeG2+qgK6qHAoGiTYBliwjXFeyMJE5KS9ozZeZ+GZRQUeLjqmebcuOHdG4VADY4wQ6wPPNDyTADAaL0hnf/p+E5r7IpGGuRq6ebg0nZiCpKtt/Y3U19NRMcN4GUu+l3YdzqejWFh26fVsEuks737qyN/AmUhgFNos0P++fwDD+JGPCmVuZHN0cmVhbQplbmRvYmoKCjcgMCBvYmoKPDwKL0ZpbHRlciAvRmxhdGVEZWNvZGUKL1R5cGUgL09ialN0bQovTiA1Ci9GaXJzdCAyNgovTGVuZ3RoIDQwMgo+PgpzdHJlYW0KeJzVU0tr3DAQvutXzLE9FI0lWY+yLGx21y2U0JAEWlp6cGyxuASp2NqS/vvO2JssIS09FzFIM9830rxUAYICY0CD82Cg1gpq8ErDaiXk7a8fEeRVe4iTkB+GfoKvxEG4hm9CbvMxFajEei3O3G1b2vt8EIsTVEx+ZFyNuT92cYRVs28aRIeI1pBYRLWjfUsSSBTphClPZxJnTkI2pxH1hrBmEesWH8Znbn3y39NOXMuc3cI1ftGf3uW39ssd6l/xhLWQl7nftSXCq91bhcqix1AZ7Sr95TWVY4xtyf9vcnP8Q05/zfBZn7m93OQx8gzMXZbXccrHsaO2M6/JhPDhfbz/GcvQtW8cBk9xOh9oxmaXMxacUdar2vqXGNfLYx28/ZNfjcYGhe4l5mqnaq3tkx+lID9/vPseuzk0VvcP5d1N4ZwXA9suYz+0F/mBph1p2UqBC4pnfpNSLvwL5vlPhbJnzZ7+xLMScQGEvDnelVllYyXkRTvFuTTnOCmI1OV+SAeQn4a0SdPwaOAbfwOUKOKMCmVuZHN0cmVhbQplbmRvYmoKCjggMCBvYmoKPDwKL1NpemUgOQovUm9vdCAyIDAgUgovSW5mbyAzIDAgUgovRmlsdGVyIC9GbGF0ZURlY29kZQovVHlwZSAvWFJlZgovTGVuZ3RoIDQxCi9XIFsgMSAyIDIgXQovSW5kZXggWyAwIDkgXQo+PgpzdHJlYW0KeJwVxLERADAIA7E3cJc2+1Fm/xkIViFgJjjg5MKlK3FBels2fF3YAwsKZW5kc3RyZWFtCmVuZG9iagoKc3RhcnR4cmVmCjg1OQolJUVPRg==';
 
+function createMockMcpFetch() {
+  return async (_input: RequestInfo | URL, init?: RequestInit) => {
+    const body = JSON.parse(String(init?.body ?? '{}'));
+    const id = body.id ?? null;
+    if (body.method === 'initialize') {
+      return Response.json({
+        jsonrpc: '2.0',
+        id,
+        result: {
+          protocolVersion: '2025-03-26',
+          capabilities: {},
+          serverInfo: { name: 'mock', version: '1' },
+        },
+      });
+    }
+    if (body.method === 'tools/list') {
+      return Response.json({
+        jsonrpc: '2.0',
+        id,
+        result: {
+          tools: [
+            {
+              name: 'echo',
+              description: 'Echo input',
+              inputSchema: {
+                type: 'object',
+                properties: { message: { type: 'string' } },
+                required: ['message'],
+              },
+            },
+          ],
+        },
+      });
+    }
+    if (body.method === 'tools/call') {
+      return Response.json({
+        jsonrpc: '2.0',
+        id,
+        result: { content: [{ type: 'text', text: `echo ${body.params.arguments.message}` }] },
+      });
+    }
+    return new Response('not found', { status: 404 });
+  };
+}
+
 describe('Native Agent Tool Belt', () => {
   let harness: AllternitHarness;
   let agent: AllternitAgent;
@@ -452,5 +497,62 @@ describe('Native Agent Tool Belt', () => {
     expect(resultContents[0]).toContain('result_0');
     expect(resultContents[1]).toContain('result_1');
     expect(resultContents[2]).toContain('result_2');
+  });
+
+  it('attaches an HTTP MCP server from config and invokes a tool', async () => {
+    const registry = new ToolRegistry();
+    const belt = new NativeToolBelt(registry, { fetch: createMockMcpFetch() });
+    const names = await belt.attachMcpServer({
+      serverId: 'remote',
+      transport: 'http',
+      url: 'http://localhost:9999/mcp',
+      fetch: createMockMcpFetch(),
+    });
+
+    expect(names).toEqual(['remote.echo']);
+    const tool = registry.getTool('remote.echo')!;
+    expect(tool.input_schema.additionalProperties).toBe(false);
+    const result = await tool.execute!({ message: 'hi' }, {});
+    expect(result).toEqual({ content: [{ type: 'text', text: 'echo hi' }] });
+  });
+
+  it('loads enabled MCP servers from ~/.allternit/mcp-servers.json', async () => {
+    const dir = await mkdtemp(join(tmpdir(), 'allternit-mcp-dir-'));
+    try {
+      const path = join(dir, 'mcp-servers.json');
+      await writeFile(
+        path,
+        JSON.stringify({
+          mcpServers: {
+            docs: {
+              type: 'remote',
+              url: 'http://localhost:9999/mcp',
+              enabled: true,
+            },
+            ignored: {
+              type: 'remote',
+              url: 'http://localhost:9999/mcp',
+              enabled: false,
+            },
+          },
+        }),
+        'utf8',
+      );
+
+      const registry = new ToolRegistry();
+      const belt = new NativeToolBelt(registry, {
+        fetch: createMockMcpFetch(),
+        mcpDirectoryPath: path,
+      });
+      await belt.mcpDirectoryLoaded;
+
+      expect(registry.getTool('docs.echo')).toBeDefined();
+      expect(registry.getTool('ignored.echo')).toBeUndefined();
+
+      const result = await registry.getTool('docs.echo')!.execute!({ message: 'from-dir' }, {});
+      expect(result).toEqual({ content: [{ type: 'text', text: 'echo from-dir' }] });
+    } finally {
+      await rm(dir, { recursive: true, force: true });
+    }
   });
 });

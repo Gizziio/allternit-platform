@@ -1,14 +1,23 @@
 import type { ToolDefinition } from './types.js';
 import type { ToolRegistry } from './registry.js';
 import { NativeWebTools, type WebToolOptions } from './web.js';
-import { attachMcpServer, type McpServerAttachment } from './mcp.js';
+import {
+  attachMcpServer,
+  createMcpServerAttachment,
+  loadMcpServerDirectory,
+  type McpServerAttachment,
+  type McpServerConfig,
+} from './mcp.js';
 import { TextEditorTool, type TextEditorOptions } from './text-editor.js';
 import { BashTool, type BashToolOptions } from './bash.js';
 import { CodeExecutionTool, type CodeExecutionOptions } from './code-execution.js';
 import { MemoryTool, type MemoryToolOptions } from './memory.js';
 import { PdfTool, type PdfToolOptions } from './pdf.js';
 
-export interface NativeToolBeltOptions extends WebToolOptions, TextEditorOptions, BashToolOptions, CodeExecutionOptions, MemoryToolOptions, PdfToolOptions {}
+export interface NativeToolBeltOptions extends WebToolOptions, TextEditorOptions, BashToolOptions, CodeExecutionOptions, MemoryToolOptions, PdfToolOptions {
+  /** Override the default ~/.allternit/mcp-servers.json path. */
+  mcpDirectoryPath?: string;
+}
 
 /**
  * tool_search Tool Definition
@@ -41,6 +50,9 @@ export const TOOL_ACTIVATE_DEFINITION: ToolDefinition = {
 };
 
 export class NativeToolBelt {
+  /** Resolves once the initial ~/.allternit/mcp-servers.json directory load finishes. */
+  public readonly mcpDirectoryLoaded: Promise<void>;
+
   constructor(private registry: ToolRegistry, options: NativeToolBeltOptions = {}) {
     // Register the search and activate tools themselves
     this.registry.registerTool({
@@ -67,10 +79,20 @@ export class NativeToolBelt {
     this.registry.registerTool(new CodeExecutionTool(options).definition(), { strict: true });
     this.registry.registerTool(new MemoryTool(options).definition(), { strict: true });
     this.registry.registerTool(new PdfTool(options).definition(), { strict: true });
+
+    this.mcpDirectoryLoaded = loadMcpServerDirectory(
+      { attachMcpServer: (cfg) => this.attachMcpServer(cfg) },
+      { path: options.mcpDirectoryPath, fetch: options.fetch },
+    );
   }
 
-  public attachMcpServer(server: McpServerAttachment): Promise<string[]> {
-    return attachMcpServer(this.registry, server);
+  public attachMcpServer(server: McpServerAttachment): Promise<string[]>;
+  public attachMcpServer(config: McpServerConfig): Promise<string[]>;
+  public attachMcpServer(serverOrConfig: McpServerAttachment | McpServerConfig): Promise<string[]> {
+    if ('listTools' in serverOrConfig) {
+      return attachMcpServer(this.registry, serverOrConfig);
+    }
+    return attachMcpServer(this.registry, createMcpServerAttachment(serverOrConfig));
   }
 
   public getRegistry() {
