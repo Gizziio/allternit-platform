@@ -1473,7 +1473,12 @@ pub async fn chat_completions(
         .filter(|s| !s.is_empty())
         .map(str::to_string);
 
-    let (session_id, prompt_parts) = match &reuse_session_id {
+    // Keep the full conversation so retries can create a fresh session with
+    // complete context. Session reuse narrows `prompt_parts` to the last user
+    // message only.
+    let conversation_parts = all_parts.clone();
+
+    let (mut session_id, prompt_parts) = match &reuse_session_id {
         Some(existing) => {
             let last_user = request
                 .messages
@@ -1542,7 +1547,7 @@ pub async fn chat_completions(
     }
 
     // Subscribe to the session's bus events BEFORE sending the message.
-    let events = gizzi_bus::session_events(session_id.clone()).await;
+    let mut events = gizzi_bus::session_events(session_id.clone()).await;
 
     let mut payload = json!({
         "parts": prompt_parts,
@@ -1593,7 +1598,8 @@ pub async fn chat_completions(
         "{base}/v1/session/{}/message",
         urlencoding::encode(&session_id)
     );
-    let send_task = tokio::spawn(client.post(message_url).json(&payload).send());
+    let mut send_task = tokio::spawn(client.post(message_url).json(&payload).send());
+    let mut current_provider_id = resolved.provider_id.clone();
 
     info!(
         session_id = %session_id,
@@ -1603,42 +1609,179 @@ pub async fn chat_completions(
         "LLM gateway request dispatched to Gizzi"
     );
 
-    let idem_for_record = if idem_active { idempotency_key } else { None };
-
     let response = if stream {
         stream_completion(
             state,
-            key,
+            key.clone(),
             send_task,
             events,
             started,
             session_id,
-            request.model,
+            request.model.clone(),
             resolved.policy,
             resolved.routing_decision,
             request
                 .stream_options
                 .and_then(|o| o.include_usage)
                 .unwrap_or(false),
-            idem_for_record,
+            if idem_active { idempotency_key.clone() } else { None },
         )
         .await
     } else {
-        nonstream_completion(
-            state,
-            key,
-            send_task,
-            events,
-            started,
-            session_id,
-            request.model,
-            resolved.provider_id.clone(),
-            request.citations == Some(true),
-            resolved.policy,
-            resolved.routing_decision,
-            idem_for_record,
-        )
-        .await
+        // P9: non-streaming requests retry across the fallback chain on
+        // retryable errors or refusals. Only the final outcome is persisted.
+        let primary = super::failover::ModelRef {
+            provider_id: resolved.provider_id.clone(),
+            model_id: resolved.model_id.clone(),
+        };
+        let fallback_refs: Vec<super::failover::ModelRef> = resolved
+            .fallbacks
+            .iter()
+            .map(|c| super::failover::ModelRef {
+                provider_id: c.provider_id.clone(),
+                model_id: c.model_id.clone(),
+            })
+            .collect();
+        let policy = key
+            .tenant_id
+            .as_deref()
+            .map(|org| {
+                super::failover::load_policy(&state.db, org)
+                    .unwrap_or_else(|_| super::failover::RetryPolicy::default())
+            })
+            .unwrap_or_default();
+
+        let mut attempt: u32 = 1;
+        let (mut response, mut outcome): (Response, RequestOutcome);
+
+        loop {
+            (response, outcome) = nonstream_completion(
+                key.clone(),
+                send_task,
+                events,
+                started,
+                session_id.clone(),
+                request.model.clone(),
+                current_provider_id.clone(),
+                request.citations == Some(true),
+                resolved.policy.clone(),
+                resolved.routing_decision.clone(),
+            )
+            .await;
+
+            if outcome.status == "ok" {
+                break;
+            }
+
+            attempt += 1;
+            let error_type = outcome.error_type.as_deref();
+            if !super::failover::should_retry(outcome.status, error_type, attempt, &policy) {
+                break;
+            }
+            let Some(next_model) =
+                super::failover::select_fallback(attempt, &primary, &fallback_refs, &policy)
+            else {
+                break;
+            };
+
+            let backoff =
+                super::failover::next_backoff_ms(attempt, policy.base_delay_ms, policy.max_delay_ms);
+            tokio::time::sleep(Duration::from_millis(backoff)).await;
+
+            // Create a fresh session for the retry; a reused session may be in a
+            // failed state.
+            let title = format!("gateway:{}", key.key_prefix);
+            match create_session(&client, &base, &title).await {
+                Ok(new_session_id) => session_id = new_session_id,
+                Err(err_response) => {
+                    response = err_response.into_response();
+                    outcome = RequestOutcome {
+                        status: "error",
+                        error_type: Some("upstream_error".to_string()),
+                        usage: GizziUsage::default(),
+                        policy: resolved.policy.clone(),
+                        fallback_from: None,
+                        gizzi_session_id: None,
+                        latency_ms: started.elapsed().as_millis() as i64,
+                        ttft_ms: None,
+                        response_body: None,
+                        routing_decision: resolved.routing_decision.clone(),
+                    };
+                    break;
+                }
+            }
+
+            events = gizzi_bus::session_events(session_id.clone()).await;
+
+            let mut payload = json!({
+                "parts": conversation_parts.clone(),
+                "model": { "providerID": next_model.provider_id, "modelID": next_model.model_id },
+            });
+            if let Some(system) = &system {
+                payload["system"] = json!(system);
+            }
+            if let Some(format) = &request.response_format {
+                if format.format_type == "json_schema" {
+                    let schema = format
+                        .json_schema
+                        .as_ref()
+                        .map(|value| value.schema.clone())
+                        .or_else(|| format.schema.clone())
+                        .unwrap_or_else(|| json!({}));
+                    payload["format"] = json!({ "type": "json_schema", "schema": schema });
+                }
+            }
+            if let Some(effort) = &request.reasoning_effort {
+                payload["variant"] = json!(effort);
+            }
+            if request.citations == Some(true) {
+                let is_anthropic = next_model.provider_id == "anthropic"
+                    || next_model.model_id.starts_with("claude-")
+                    || request.model.starts_with("anthropic/")
+                    || request.model.starts_with("claude-");
+                payload["citations"] = json!({ "enabled": is_anthropic });
+            }
+            let remaining_fallbacks: Vec<_> = fallback_refs
+                .iter()
+                .skip(attempt.saturating_sub(1) as usize)
+                .map(|f| json!({ "providerID": f.provider_id, "modelID": f.model_id }))
+                .collect();
+            if !remaining_fallbacks.is_empty() {
+                payload["fallbackModels"] = json!(remaining_fallbacks);
+            }
+
+            let message_url = format!(
+                "{base}/v1/session/{}/message",
+                urlencoding::encode(&session_id)
+            );
+            send_task = tokio::spawn(client.post(message_url).json(&payload).send());
+            current_provider_id = next_model.provider_id.clone();
+
+            info!(
+                session_id = %session_id,
+                model = %request.model,
+                attempt,
+                fallback_provider = %current_provider_id,
+                "LLM gateway retry dispatched to Gizzi"
+            );
+        }
+
+        // Persist the final outcome once. For idempotent requests this
+        // finalizes the pre-inserted in_progress row; for non-idempotent
+        // requests it inserts the usage row.
+        let idem_for_record = if idem_active { idempotency_key.clone() } else { None };
+        let db = state.db.clone();
+        let key_for_record = key.clone();
+        tokio::task::spawn_blocking(move || {
+            record_usage_event(
+                &db,
+                &key_for_record,
+                &outcome,
+                idem_for_record.as_deref(),
+            )
+        });
+
+        response
     };
 
     // Inference hooks: post-hook runs after provider inference.
@@ -1664,9 +1807,12 @@ pub async fn chat_completions(
 }
 
 /// Non-streaming path: collect to completion, return one chat.completion.
+///
+/// The [`RequestOutcome`] is returned alongside the HTTP response so callers
+/// can implement retry/failover loops without re-parsing the body. The caller
+/// is responsible for persisting the final outcome with [`record_usage_event`].
 async fn nonstream_completion(
-    state: Arc<AppState>,
-    key: LlmKeyContext,
+    _key: LlmKeyContext,
     send_task: JoinHandle<Result<reqwest::Response, reqwest::Error>>,
     events: impl futures::Stream<Item = GizziEvent> + Send + 'static,
     started: Instant,
@@ -1676,8 +1822,7 @@ async fn nonstream_completion(
     citations_enabled: bool,
     policy: Option<String>,
     routing_decision: Option<RoutingDecision>,
-    idempotency_key: Option<String>,
-) -> Response {
+) -> (Response, RequestOutcome) {
     let Collection { collector, failure } = collect(send_task, events, started).await;
     let latency_ms = started.elapsed().as_millis() as i64;
 
@@ -1695,12 +1840,10 @@ async fn nonstream_completion(
                 response_body: None,
                 routing_decision,
             };
-            let db = state.db.clone();
-            let key_ctx = key.clone();
-            tokio::task::spawn_blocking(move || {
-                record_usage_event(&db, &key_ctx, &outcome, idempotency_key.as_deref())
-            });
-            OpenAiErrorResponse::upstream(message, &error_type).into_response()
+            (
+                OpenAiErrorResponse::upstream(message, &error_type).into_response(),
+                outcome,
+            )
         }
         None => {
             let completion_id = new_completion_id();
@@ -1761,11 +1904,6 @@ async fn nonstream_completion(
                 response_body: Some(body.clone()),
                 routing_decision,
             };
-            let db = state.db.clone();
-            tokio::task::spawn_blocking(move || {
-                record_usage_event(&db, &key, &outcome, idempotency_key.as_deref())
-            });
-
             let mut resp = (StatusCode::OK, Json(body)).into_response();
             if let Ok(value) = HeaderValue::from_str(&session_id) {
                 resp.headers_mut()
@@ -1777,7 +1915,7 @@ async fn nonstream_completion(
                         .insert(HeaderName::from_static(FALLBACK_HEADER), value);
                 }
             }
-            resp
+            (resp, outcome)
         }
     }
 }
