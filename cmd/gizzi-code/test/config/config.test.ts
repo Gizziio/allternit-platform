@@ -119,6 +119,33 @@ allowed_domains = ["registry.npmjs.org"]
   })
 })
 
+test("loads auth credential_store preference", async () => {
+  await using tmp = await tmpdir({
+    init: async (dir) => {
+      await Filesystem.write(
+        path.join(dir, "config.toml"),
+        `[auth]
+active_profile = "work"
+credential_store = "keyring"
+
+[auth.profiles.work]
+provider = "anthropic"
+api_key_env = "ANTHROPIC_API_KEY"
+`,
+      )
+    },
+  })
+  await Instance.provide({
+    directory: tmp.path,
+    fn: async () => {
+      const config = await Config.get()
+      expect(config.auth?.active_profile).toBe("work")
+      expect(config.auth?.credential_store).toBe("keyring")
+      expect(config.auth?.profiles?.work?.provider).toBe("anthropic")
+    },
+  })
+})
+
 test("merges multiple config files with correct precedence", async () => {
   await using tmp = await tmpdir({
     init: async (dir) => {
