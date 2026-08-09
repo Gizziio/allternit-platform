@@ -53,3 +53,15 @@ Modified:
 - `surfaces/ai.allternit.com/src/services/setup-api.ts`
 - `surfaces/ai.allternit.com/src/components/onboarding/OnboardingFlow.tsx`
 - `surfaces/allternit-desktop/resources/bin/allternit-api` (binary refresh)
+
+---
+
+## Swarm E checkpoint (2026-08-09)
+
+Goal: Complete Swarm E Enterprise Auth & Vault Phase 0.
+
+Just did: Added V36 credential/vault schema, scoped enterprise credential management and bearer authentication, encrypted AllternitVault storage, and authenticated gateway idempotency ownership.
+
+Next: Stage and commit the completed Phase 0 files once the linked-worktree Git index is writable.
+
+Open questions: Commit is blocked because the sandbox denies creation of the linked-worktree `index.lock` under the canonical checkout's `.git/worktrees` directory. Builds/tests are intentionally not run under the Swarm E repository instructions.

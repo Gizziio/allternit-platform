@@ -315,6 +315,8 @@ async fn main() {
         .merge(allternit_api::upload_routes::upload_router())
         .merge(allternit_api::llm_gateway::gateway_keys_router())
         .merge(allternit_api::llm_gateway::admin_routes::gateway_admin_router())
+        .merge(allternit_api::enterprise_auth::router())
+        .merge(allternit_api::allternit_vault::router())
         .merge(workspace_router())
         .merge(artifact_router())
         .merge(conversation_router())
