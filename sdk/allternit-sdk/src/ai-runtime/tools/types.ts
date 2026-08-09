@@ -1,16 +1,25 @@
 import { z } from 'zod';
 
+export interface JsonSchema {
+  type?: 'object' | 'array' | 'string' | 'number' | 'integer' | 'boolean' | 'null';
+  properties?: Record<string, JsonSchema>;
+  required?: string[];
+  additionalProperties?: boolean | JsonSchema;
+  items?: JsonSchema;
+  enum?: unknown[];
+  description?: string;
+  [keyword: string]: unknown;
+}
+
 /**
  * ToolDefinition - First-class contract for agent tools
  */
 export interface ToolDefinition {
   name: string;
+  /** Optional namespace. Registered names become `<namespace>.<name>`. */
+  namespace?: string;
   description: string;
-  input_schema: {
-    type: 'object';
-    properties: Record<string, any>;
-    required?: string[];
-  };
+  input_schema: JsonSchema & { type: 'object'; properties: Record<string, JsonSchema> };
   /**
    * Execution hooks
    */
