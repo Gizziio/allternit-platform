@@ -34,6 +34,11 @@ export class RunState {
     const tool = this.toolRegistry.getActiveTools().find(t => t.name === name);
     if (!tool) return null;
 
+    const validation = this.toolRegistry.validateInput(name, args);
+    if (!validation.valid) {
+      throw new Error(`Invalid input for ${name}: ${validation.errors.join('; ')}`);
+    }
+
     // 1. Pre-execution hook
     if (tool.preExecute) {
       const { proceed, reason } = await tool.preExecute(args, context);

@@ -3,6 +3,8 @@ import { AllternitAgent } from '../agents/controller.js';
 import { AllternitHarness } from '../harness/index.js';
 import { AgentRun } from '../agents/run.js';
 import { NativeToolBelt } from '../tools/search.js';
+import { ToolRegistry } from '../tools/registry.js';
+import { toStrictJsonSchema } from '../tools/schema.js';
 
 describe('Native Agent Tool Belt', () => {
   let harness: AllternitHarness;
@@ -95,5 +97,73 @@ describe('Native Agent Tool Belt', () => {
     // Should include tool_search and tool_activate by default
     expect(schemas.map(s => s.name)).toContain('tool_search');
     expect(schemas.map(s => s.name)).toContain('tool_activate');
+    expect(schemas.map(s => s.name)).toContain('web_search');
+    expect(schemas.map(s => s.name)).toContain('web_fetch');
+  });
+
+  it('supports cached, indexed, and live web search modes', async () => {
+    const registry = new ToolRegistry();
+    const cache = new Map([['cached query', [{ title: 'Cached', url: 'https://cached.test', snippet: 'hit' }]]]);
+    const belt = new NativeToolBelt(registry, {
+      cache,
+      searchIndex: async query => [{ title: 'Index', url: 'https://index.test', snippet: query }],
+      liveSearch: async query => [{ title: 'Live', url: 'https://live.test', snippet: query }],
+    });
+    const search = belt.getRegistry().getTool('web_search')!;
+
+    expect((await search.execute!({ query: 'cached query', mode: 'cached' }, {}))[0].title).toBe('Cached');
+    expect((await search.execute!({ query: 'index query', mode: 'indexed' }, {}))[0].title).toBe('Index');
+    expect((await search.execute!({ query: 'live query', mode: 'live' }, {}))[0].title).toBe('Live');
+    expect((await search.execute!({ query: 'live query', mode: 'cached' }, {}))[0].title).toBe('Live');
+  });
+
+  it('fetches URLs and extracts readable HTML content', async () => {
+    const registry = new ToolRegistry();
+    new NativeToolBelt(registry, {
+      fetch: async () => new Response(
+        '<html><head><title>Example &amp; Test</title><style>hidden</style></head><body><h1>Hello</h1><script>bad()</script><p>World</p></body></html>',
+        { status: 200, headers: { 'content-type': 'text/html' } },
+      ),
+    });
+
+    const result = await registry.getTool('web_fetch')!.execute!({ url: 'https://example.test/page' }, {});
+    expect(result.title).toBe('Example & Test');
+    expect(result.text).toContain('Hello World');
+    expect(result.text).not.toContain('bad()');
+  });
+
+  it('namespaces tools and validates strict schemas', () => {
+    const registry = new ToolRegistry();
+    registry.registerTool({
+      name: 'lookup',
+      description: 'Lookup a record',
+      input_schema: { type: 'object', properties: { id: { type: 'string' } }, required: ['id'] },
+    }, { namespace: 'crm', strict: true });
+
+    expect(registry.getTool('crm.lookup')).toBeDefined();
+    expect(registry.validateInput('crm.lookup', { id: '1' }).valid).toBe(true);
+    expect(registry.validateInput('crm.lookup', { id: '1', extra: true }).errors).toContain('$.extra is not allowed');
+    expect(toStrictJsonSchema({ type: 'object', properties: { nested: { type: 'object', properties: {} } } }).properties!.nested.additionalProperties).toBe(false);
+  });
+
+  it('attaches MCP server tools as namespaced model-facing tools', async () => {
+    const registry = new ToolRegistry();
+    const belt = new NativeToolBelt(registry);
+    const calls: unknown[] = [];
+    const names = await belt.attachMcpServer({
+      serverId: 'docs',
+      listTools: async () => [{
+        name: 'read',
+        description: 'Read a document',
+        inputSchema: { type: 'object', properties: { id: { type: 'string' } }, required: ['id'] },
+      }],
+      callTool: async (name, args) => { calls.push({ name, args }); return { content: 'document' }; },
+    });
+
+    expect(names).toEqual(['docs.read']);
+    const tool = registry.getTool('docs.read')!;
+    expect(tool.input_schema.additionalProperties).toBe(false);
+    expect(await tool.execute!({ id: 'abc' }, {})).toEqual({ content: 'document' });
+    expect(calls).toEqual([{ name: 'read', args: { id: 'abc' } }]);
   });
 });

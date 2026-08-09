@@ -1,5 +1,7 @@
 import type { ToolDefinition } from './types.js';
 import type { ToolRegistry } from './registry.js';
+import { NativeWebTools, type WebToolOptions } from './web.js';
+import { attachMcpServer, type McpServerAttachment } from './mcp.js';
 
 /**
  * tool_search Tool Definition
@@ -32,7 +34,7 @@ export const TOOL_ACTIVATE_DEFINITION: ToolDefinition = {
 };
 
 export class NativeToolBelt {
-  constructor(private registry: ToolRegistry) {
+  constructor(private registry: ToolRegistry, webOptions: WebToolOptions = {}) {
     // Register the search and activate tools themselves
     this.registry.registerTool({
       ...TOOL_SEARCH_DEFINITION,
@@ -49,6 +51,14 @@ export class NativeToolBelt {
         return `Tool ${args.toolId} successfully activated and ready for use.`;
       }
     });
+
+    for (const tool of new NativeWebTools(webOptions).definitions()) {
+      this.registry.registerTool(tool, { strict: true });
+    }
+  }
+
+  public attachMcpServer(server: McpServerAttachment): Promise<string[]> {
+    return attachMcpServer(this.registry, server);
   }
 
   public getRegistry() {

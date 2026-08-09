@@ -23,9 +23,16 @@ export type {
 
 // Tools
 export { ToolRegistry } from './tools/registry.js';
+export { NativeToolBelt } from './tools/search.js';
+export { NativeWebTools } from './tools/web.js';
+export { attachMcpServer } from './tools/mcp.js';
+export { toStrictJsonSchema, validateJsonSchema } from './tools/schema.js';
 export type {
   ToolDefinition,
+  JsonSchema,
 } from './tools/types.js';
+export type { WebSearchMode, WebSearchResult, WebToolOptions } from './tools/web.js';
+export type { McpServerAttachment, McpToolDescriptor } from './tools/mcp.js';
 
 // System prompts
 export { 
