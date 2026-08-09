@@ -6,8 +6,9 @@ import { TextEditorTool, type TextEditorOptions } from './text-editor.js';
 import { BashTool, type BashToolOptions } from './bash.js';
 import { CodeExecutionTool, type CodeExecutionOptions } from './code-execution.js';
 import { MemoryTool, type MemoryToolOptions } from './memory.js';
+import { PdfTool, type PdfToolOptions } from './pdf.js';
 
-export interface NativeToolBeltOptions extends WebToolOptions, TextEditorOptions, BashToolOptions, CodeExecutionOptions, MemoryToolOptions {}
+export interface NativeToolBeltOptions extends WebToolOptions, TextEditorOptions, BashToolOptions, CodeExecutionOptions, MemoryToolOptions, PdfToolOptions {}
 
 /**
  * tool_search Tool Definition
@@ -65,6 +66,7 @@ export class NativeToolBelt {
     this.registry.registerTool(new BashTool(options).definition(), { strict: true });
     this.registry.registerTool(new CodeExecutionTool(options).definition(), { strict: true });
     this.registry.registerTool(new MemoryTool(options).definition(), { strict: true });
+    this.registry.registerTool(new PdfTool(options).definition(), { strict: true });
   }
 
   public attachMcpServer(server: McpServerAttachment): Promise<string[]> {
