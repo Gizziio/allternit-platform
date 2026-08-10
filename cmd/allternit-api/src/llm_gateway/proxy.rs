@@ -287,6 +287,10 @@ pub struct ModelEntry {
     pub cost: Option<ModelCost>,
     #[serde(default)]
     pub limit: Option<ModelLimit>,
+    #[serde(default)]
+    pub deprecated: Option<bool>,
+    #[serde(default)]
+    pub replacement: Option<String>,
 }
 
 #[derive(Debug, Clone, Copy, Default, Deserialize)]
@@ -2160,38 +2164,35 @@ pub async fn list_models(
         }
     }
 
-    let mut entries: Vec<(String, String, i64, Option<ModelLimit>)> = Vec::new();
+    let mut entries: Vec<(String, String, i64, ModelEntry)> = Vec::new();
     for provider in &catalog.all {
         for model_id in provider.models.keys() {
             let full_id = format!("{}/{}", provider.id, model_id);
             if !(key.model_allowed(&full_id) || key.model_allowed(model_id)) {
                 continue;
             }
-            let created = provider
-                .models
-                .get(model_id)
-                .and_then(|m| m.release_date.as_deref())
+            let model = provider.models.get(model_id).cloned().unwrap_or_default();
+            let created = model
+                .release_date
+                .as_deref()
                 .and_then(|d| chrono::NaiveDate::parse_from_str(d, "%Y-%m-%d").ok())
                 .and_then(|d| d.and_hms_opt(0, 0, 0))
                 .map(|dt| dt.and_utc().timestamp())
                 .unwrap_or(0);
-            entries.push((
-                full_id,
-                provider.id.clone(),
-                created,
-                provider.models.get(model_id).and_then(|model| model.limit),
-            ));
+            entries.push((full_id, provider.id.clone(), created, model));
         }
     }
     entries.sort_by(|a, b| a.0.cmp(&b.0));
-    for (full_id, provider_id, created, limit) in entries {
+    for (full_id, provider_id, created, model) in entries {
         data.push(json!({
             "id": full_id,
             "object": "model",
             "created": created,
             "owned_by": provider_id,
-            "context_window": limit.map(|value| value.context),
-            "max_output_tokens": limit.map(|value| value.output),
+            "context_window": model.limit.map(|value| value.context),
+            "max_output_tokens": model.limit.map(|value| value.output),
+            "deprecated": model.deprecated.unwrap_or(false),
+            "replacement": model.replacement,
         }));
     }
 
@@ -2246,6 +2247,8 @@ pub async fn get_model(
                 "owned_by": provider.id,
                 "context_window": model.limit.map(|value| value.context),
                 "max_output_tokens": model.limit.map(|value| value.output),
+                "deprecated": model.deprecated.unwrap_or(false),
+                "replacement": model.replacement,
             }))
             .into_response();
         }
@@ -2470,5 +2473,34 @@ mod citation_tests {
             }
             _ => panic!("expected file citation"),
         }
+    }
+}
+
+#[cfg(test)]
+mod model_deprecation_tests {
+    use super::ModelEntry;
+    use serde_json::json;
+
+    #[test]
+    fn model_entry_parses_deprecation_fields() {
+        let entry: ModelEntry = serde_json::from_value(json!({
+            "release_date": "2024-01-01",
+            "status": "active",
+            "deprecated": true,
+            "replacement": "openai/gpt-5"
+        }))
+        .unwrap();
+        assert_eq!(entry.deprecated, Some(true));
+        assert_eq!(entry.replacement.as_deref(), Some("openai/gpt-5"));
+    }
+
+    #[test]
+    fn model_entry_defaults_deprecation_to_none() {
+        let entry: ModelEntry = serde_json::from_value(json!({
+            "release_date": "2024-01-01"
+        }))
+        .unwrap();
+        assert_eq!(entry.deprecated, None);
+        assert_eq!(entry.replacement, None);
     }
 }
