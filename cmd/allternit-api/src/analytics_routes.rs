@@ -24,6 +24,7 @@ pub fn analytics_router() -> Router<Arc<AppState>> {
         .route("/admin/analytics/token-usage", get(token_usage))
         .route("/admin/analytics/request-volume", get(request_volume))
         .route("/admin/analytics/per-user-cost", get(per_user_cost))
+        .route("/admin/analytics/active-users", get(active_users))
 }
 
 async fn analytics_csp_violation(
@@ -303,6 +304,52 @@ async fn per_user_cost(
     Ok::<Json<Value>, ApiError>(Json(json!({ "items": rows })))
 }
 
+async fn active_users(
+    State(state): State<Arc<AppState>>,
+    Extension(user): Extension<AuthUser>,
+    Query(query): Query<AnalyticsQuery>,
+) -> impl IntoResponse {
+    let conn = state.db.connect().map_err(internal)?;
+    let org = admin_org(&conn, &user)?;
+    validate_query(&query, &org)?;
+
+    let bucket = bucket_sql(&query.granularity);
+    let daily_sql = format!(
+        "SELECT {bucket} AS bucket,
+                COUNT(DISTINCT user_id) AS unique_users
+         FROM llm_usage_events
+         WHERE tenant_id = ?1 AND created_at >= ?2 AND created_at < ?3
+         GROUP BY bucket
+         ORDER BY bucket"
+    );
+    let mut stmt = conn.prepare(&daily_sql).map_err(internal)?;
+    let rows: Vec<Value> = stmt
+        .query_map(params![org, query.start, query.end], |row| {
+            Ok(json!({
+                "bucket": row.get::<_, String>(0)?,
+                "unique_users": row.get::<_, i64>(1)?,
+            }))
+        })
+        .map_err(internal)?
+        .collect::<Result<Vec<_>, _>>()
+        .map_err(internal)?;
+
+    let total_unique: i64 = conn
+        .query_row(
+            "SELECT COUNT(DISTINCT user_id)
+             FROM llm_usage_events
+             WHERE tenant_id = ?1 AND created_at >= ?2 AND created_at < ?3",
+            params![org, query.start, query.end],
+            |row| row.get(0),
+        )
+        .map_err(internal)?;
+
+    Ok::<Json<Value>, ApiError>(Json(json!({
+        "daily": rows,
+        "total_unique_users": total_unique,
+    })))
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -515,6 +562,35 @@ mod tests {
         assert_eq!(items.len(), 2);
         assert_eq!(items[0]["user_id"], "user-a");
         assert_eq!(items[0]["cost_microdollars"], 300_000);
+    }
+
+    #[tokio::test]
+    async fn active_users_counts_distinct_users_per_day() {
+        let temp = tempfile::tempdir().unwrap().keep();
+        let state = test_app_state(&temp).await;
+        seed_events(&state.db.connect().unwrap());
+        let app = analytics_router().with_state(state);
+
+        let resp = app
+            .oneshot(
+                Request::builder()
+                    .method("GET")
+                    .uri("/admin/analytics/active-users?organization_id=org-1&start=2026-08-01&end=2026-08-03&granularity=day")
+                    .extension(test_user("admin-1", Some("org-1")))
+                    .body(Body::empty())
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+        assert_eq!(resp.status(), StatusCode::OK);
+        let body = body_json(resp.into_body()).await;
+        let daily = body["daily"].as_array().unwrap();
+        assert_eq!(daily.len(), 2);
+        assert_eq!(daily[0]["bucket"], "2026-08-01");
+        assert_eq!(daily[0]["unique_users"], 1);
+        assert_eq!(daily[1]["bucket"], "2026-08-02");
+        assert_eq!(daily[1]["unique_users"], 1);
+        assert_eq!(body["total_unique_users"], 2);
     }
 
     #[tokio::test]
