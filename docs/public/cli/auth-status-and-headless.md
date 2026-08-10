@@ -24,13 +24,25 @@ gizzi auth profile list
 
 ## Sign out
 
-`gizzi-code` does not yet ship a dedicated `auth logout` command. To remove credentials, delete the active auth profile:
+Run `gizzi auth logout` to sign out and remove stored credentials:
+
+```bash
+gizzi auth logout
+```
+
+This removes the active API-key profile from `config.toml` and clears any OAuth tokens stored in the runtime auth store.
+
+To remove a specific profile without signing out of others:
+
+```bash
+gizzi auth logout --profile work
+```
+
+You can also remove a profile directly with:
 
 ```bash
 gizzi auth profile remove default
 ```
-
-Or delete the credentials file directly. The default location is `~/.config/gizzi-code/config.toml` on macOS and Linux, and `%APPDATA%\gizzi\config.toml` on Windows. Removing the `[auth.profiles]` and `[auth]` sections signs the CLI out.
 
 ## Headless and CI authentication
 
