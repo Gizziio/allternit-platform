@@ -1,6 +1,6 @@
 use axum::{
     body::Body,
-    extract::{Extension, State},
+    extract::{Extension, Query, State},
     http::{HeaderMap, StatusCode},
     response::{
         sse::{Event, KeepAlive, Sse},
@@ -12,6 +12,7 @@ use axum::{
 use futures::StreamExt;
 use once_cell::sync::Lazy;
 use rusqlite::{params, OptionalExtension};
+use serde::Deserialize;
 use serde_json::json;
 use std::{collections::HashMap, convert::Infallible, sync::Arc, sync::Mutex};
 use tracing::{info, warn};
@@ -113,6 +114,7 @@ pub fn v1_router() -> Router<Arc<AppState>> {
         .route("/ai/chat", post(agent_chat_bridge))
         .route("/health", get(health))
         .route("/models", get(list_available_models))
+        .route("/models/recommend", get(recommend_models))
         .route("/voice/voices", get(list_voice_presets))
         .route("/voice/tts/stream", post(proxy_voice_tts_stream))
         .route("/voice/stt/stream", post(proxy_voice_stt_stream))
@@ -197,6 +199,146 @@ async fn fetch_live_local_models(state: &AppState) -> Vec<serde_json::Value> {
         }
     }
     out
+}
+
+/// GET /api/v1/models/recommend — ranks available models for a task + priority.
+///
+/// Query params:
+/// - `task`: code | reasoning | knowledge | chat | balanced (default balanced)
+/// - `priority`: quality | cost | latency (default quality)
+///
+/// Returns a ranked list of `{id, name, provider, tier, score, reason}`.
+/// Scoring is heuristic: tier weight is adjusted by priority (quality keeps
+/// flagship on top; cost/latency boost fast/local), and task keyword affinity
+/// is pulled from the model id and description.
+#[derive(Deserialize)]
+struct RecommendQuery {
+    task: Option<String>,
+    priority: Option<String>,
+}
+
+async fn recommend_models(
+    State(state): State<Arc<AppState>>,
+    Query(query): Query<RecommendQuery>,
+) -> impl IntoResponse {
+    let task = query.task.as_deref().unwrap_or("balanced").to_lowercase();
+    let priority = query.priority.as_deref().unwrap_or("quality").to_lowercase();
+
+    let mut catalog = crate::provider_routes::available_model_catalog();
+    catalog.extend(fetch_live_local_models(&state).await);
+
+    let mut recommendations: Vec<serde_json::Value> = catalog
+        .into_iter()
+        .map(|model| {
+            let (score, reason) = score_model_for_task(&model, &task, &priority);
+            let mut rec = model.clone();
+            rec["score"] = json!(score);
+            rec["reason"] = json!(reason);
+            rec
+        })
+        .collect();
+
+    recommendations.sort_by(|a, b| {
+        let a_score = a.get("score").and_then(|v| v.as_f64()).unwrap_or(0.0);
+        let b_score = b.get("score").and_then(|v| v.as_f64()).unwrap_or(0.0);
+        b_score.partial_cmp(&a_score).unwrap_or(std::cmp::Ordering::Equal)
+    });
+
+    Json(json!({ "task": task, "priority": priority, "recommendations": recommendations }))
+}
+
+fn tier_base_weight(tier: &str) -> f64 {
+    match tier {
+        "flagship" => 1.0,
+        "premium" => 0.9,
+        "standard" => 0.75,
+        "fast" => 0.55,
+        "local" => 0.6,
+        "legacy" => 0.4,
+        _ => 0.65,
+    }
+}
+
+fn priority_multiplier(tier: &str, priority: &str) -> f64 {
+    match priority {
+        "latency" => match tier {
+            "fast" => 1.45,
+            "local" => 1.25,
+            "standard" => 0.95,
+            "premium" => 0.85,
+            "flagship" => 0.7,
+            "legacy" => 0.5,
+            _ => 0.9,
+        },
+        "cost" => match tier {
+            "fast" => 1.35,
+            "local" => 1.25,
+            "standard" => 0.95,
+            "premium" => 0.8,
+            "flagship" => 0.65,
+            "legacy" => 0.5,
+            _ => 0.9,
+        },
+        _ => match tier {
+            "flagship" => 1.05,
+            "premium" => 1.0,
+            "standard" => 0.95,
+            "fast" => 0.85,
+            "local" => 0.8,
+            "legacy" => 0.7,
+            _ => 0.9,
+        },
+    }
+}
+
+fn task_keyword_sets() -> Vec<(&'static str, Vec<&'static str>)> {
+    vec![
+        ("code", vec!["code", "coding", "codex", "dev", "program", "software", "engineer", "git", "debug", "qwen"]),
+        ("reasoning", vec!["reasoning", "logic", "math", "science", "complex", "challenge", "opus", "pro"]),
+        ("knowledge", vec!["knowledge", "facts", "answer", "research", "web", "grounded", "sonar"]),
+        ("chat", vec!["chat", "conversation", "everyday", "writing", "assistant", "haiku", "nano"]),
+    ]
+}
+
+fn task_affinity(model: &serde_json::Value, task: &str) -> f64 {
+    if task == "balanced" {
+        return 0.05;
+    }
+    let id = model.get("id").and_then(|v| v.as_str()).unwrap_or("").to_lowercase();
+    let desc = model.get("description").and_then(|v| v.as_str()).unwrap_or("").to_lowercase();
+    let name = model.get("name").and_then(|v| v.as_str()).unwrap_or("").to_lowercase();
+    let haystack = format!("{} {} {}", id, name, desc);
+
+    let sets = task_keyword_sets();
+    let keywords: Vec<&str> = sets
+        .iter()
+        .find(|(t, _)| *t == task)
+        .map(|(_, kws)| kws.clone())
+        .unwrap_or_default();
+    if keywords.is_empty() {
+        return 0.0;
+    }
+
+    let hits = keywords.iter().filter(|kw| haystack.contains(*kw)).count();
+    (hits as f64 / keywords.len() as f64).min(1.0) * 0.35
+}
+
+fn score_model_for_task(model: &serde_json::Value, task: &str, priority: &str) -> (f64, String) {
+    let tier = model.get("tier").and_then(|v| v.as_str()).unwrap_or("standard");
+    let id = model.get("id").and_then(|v| v.as_str()).unwrap_or("unknown");
+    let provider = model.get("provider").and_then(|v| v.as_str()).unwrap_or("unknown");
+
+    let base = tier_base_weight(tier);
+    let mult = priority_multiplier(tier, priority);
+    let affinity = task_affinity(model, task);
+    let score = ((base * mult) + affinity).min(1.0);
+
+    let reason = match priority {
+        "latency" => format!("{} is tuned for low-latency {} responses via {}.", id, task, provider),
+        "cost" => format!("{} is a cost-efficient {} choice on {}.", id, task, provider),
+        _ => format!("{} is the highest-quality {} option available on {}.", id, task, provider),
+    };
+    (score, reason)
 }
 
 /// GET /api/v1/voice/voices — proxies the voice list from the optional
@@ -1100,5 +1242,35 @@ mod tests {
             chat_style_directive("detailed"),
             Some("Response style: give thorough, detailed responses — full context, reasoning, and examples where they help.")
         );
+    }
+
+    #[test]
+    fn recommend_quality_prefers_flagship_for_reasoning() {
+        let flagship = json!({"id": "anthropic/claude-opus-4-6", "name": "Claude Opus 4.6", "provider": "anthropic", "description": "For your toughest challenges", "tier": "flagship", "supports_effort": true });
+        let fast = json!({"id": "anthropic/claude-haiku-4-5", "name": "Claude Haiku 4.5", "provider": "anthropic", "description": "Fastest for quick answers", "tier": "fast", "supports_effort": true });
+
+        let (flagship_score, _) = score_model_for_task(&flagship, "reasoning", "quality");
+        let (fast_score, _) = score_model_for_task(&fast, "reasoning", "quality");
+        assert!(flagship_score > fast_score, "flagship should outrank fast for quality/reasoning");
+    }
+
+    #[test]
+    fn recommend_latency_prefers_fast_for_code() {
+        let flagship = json!({"id": "openai/gpt-5-mini", "name": "GPT-5 Mini", "provider": "openai", "description": "Everyday reasoning and writing", "tier": "standard", "supports_effort": true });
+        let fast = json!({"id": "openai/gpt-5-nano", "name": "GPT-5 Nano", "provider": "openai", "description": "Fastest for quick answers", "tier": "fast", "supports_effort": false });
+
+        let (standard_score, _) = score_model_for_task(&flagship, "code", "latency");
+        let (fast_score, _) = score_model_for_task(&fast, "code", "latency");
+        assert!(fast_score > standard_score, "fast tier should outrank standard for latency/code");
+    }
+
+    #[test]
+    fn recommend_code_boosts_coding_models() {
+        let code_model = json!({"id": "codex-cli/codex-mini-latest", "name": "Codex Mini", "provider": "codex-cli", "description": "Coding-focused brain", "tier": "standard", "supports_effort": false });
+        let chat_model = json!({"id": "anthropic/claude-haiku-4-5", "name": "Claude Haiku 4.5", "provider": "anthropic", "description": "Fastest for quick answers", "tier": "fast", "supports_effort": true });
+
+        let (code_score, _) = score_model_for_task(&code_model, "code", "quality");
+        let (chat_score, _) = score_model_for_task(&chat_model, "code", "quality");
+        assert!(code_score > chat_score, "codex should outrank a chat-fast model for code");
     }
 }
