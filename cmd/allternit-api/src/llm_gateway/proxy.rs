@@ -2264,6 +2264,34 @@ pub async fn get_model(
     .into_response()
 }
 
+/// `GET /pricing` — cross-provider per-model pricing snapshot.
+///
+/// Returns the current models.dev cache rates as an OpenAI-style list of
+/// `model_pricing` objects. Rates are dollars per 1M tokens.
+pub async fn list_pricing() -> Response {
+    Json(build_pricing_response(&llm_pricing::pricing_snapshot())).into_response()
+}
+
+fn build_pricing_response(map: &llm_pricing::PricingMap) -> Value {
+    let mut data: Vec<Value> = map
+        .iter()
+        .map(|(id, pricing)| {
+            let mut value = serde_json::to_value(pricing).unwrap_or_else(|_| json!({}));
+            if let Some(obj) = value.as_object_mut() {
+                obj.insert("id".to_string(), json!(id));
+                obj.insert("object".to_string(), json!("model_pricing"));
+            }
+            value
+        })
+        .collect();
+    data.sort_by(|a, b| {
+        a.get("id")
+            .and_then(|v| v.as_str())
+            .cmp(&b.get("id").and_then(|v| v.as_str()))
+    });
+    json!({ "object": "list", "data": data })
+}
+
 /// `GET /rate-limits` — caller quota snapshot derived from the key's rate
 /// limit, key monthly budget, and tenant hard cap (when present).
 pub async fn rate_limits(
@@ -2502,5 +2530,52 @@ mod model_deprecation_tests {
         .unwrap();
         assert_eq!(entry.deprecated, None);
         assert_eq!(entry.replacement, None);
+    }
+}
+
+#[cfg(test)]
+mod pricing_tests {
+    use super::{build_pricing_response, llm_pricing::ModelPricing};
+    use std::collections::HashMap;
+
+    #[test]
+    fn pricing_response_lists_models_sorted() {
+        let mut map = HashMap::new();
+        map.insert(
+            "openai/gpt-4o".to_string(),
+            ModelPricing {
+                input: 2.5,
+                output: 10.0,
+                cache_read: 1.25,
+                cache_write: 0.0,
+                context_over_200k: None,
+            },
+        );
+        map.insert(
+            "anthropic/claude-sonnet-4-5".to_string(),
+            ModelPricing {
+                input: 3.0,
+                output: 15.0,
+                cache_read: 0.3,
+                cache_write: 3.75,
+                context_over_200k: None,
+            },
+        );
+
+        let resp = build_pricing_response(&map);
+        let data = resp["data"].as_array().unwrap();
+        assert_eq!(data.len(), 2);
+        assert_eq!(data[0]["id"], "anthropic/claude-sonnet-4-5");
+        assert_eq!(data[0]["object"], "model_pricing");
+        assert_eq!(data[0]["input"], 3.0);
+        assert_eq!(data[1]["id"], "openai/gpt-4o");
+        assert_eq!(data[1]["output"], 10.0);
+    }
+
+    #[test]
+    fn pricing_response_empty_when_no_cache() {
+        let resp = build_pricing_response(&HashMap::new());
+        assert_eq!(resp["data"].as_array().unwrap().len(), 0);
+        assert_eq!(resp["object"], "list");
     }
 }

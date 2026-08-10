@@ -77,6 +77,7 @@ pub fn llm_gateway_router(state: Arc<AppState>) -> Router<Arc<AppState>> {
         .route("/batches/:id/results", get(batches::batch_results))
         .route("/models", get(proxy::list_models))
         .route("/models/:id", get(proxy::get_model))
+        .route("/pricing", get(proxy::list_pricing))
         .route("/files", post(files::create_file).get(files::list_files))
         .route("/files/:id", get(files::get_file).delete(files::delete_file))
         // Layer order: the LAST layer added runs FIRST. Execution order is
