@@ -24,6 +24,9 @@ For interactive use with an Allternit or provider OAuth flow, use the web sign-i
 # Show the active authentication method
 gizzi auth status
 
+# Print diagnostic information
+gizzi auth diagnose
+
 # List profiles
 gizzi auth profile list
 
@@ -36,6 +39,8 @@ gizzi auth profile set-active work
 # Sign out
 gizzi auth logout
 ```
+
+`gizzi auth diagnose` prints the config path, active method, profile names, credential store, runtime auth keys, and relevant environment variables. Use it to debug connection or authentication issues.
 
 ## Login caching
 
