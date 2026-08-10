@@ -38,6 +38,8 @@ export namespace SessionProcessor {
     fallbackModels?: { providerID: string; modelID: string }[]
   }) {
     const toolcalls: Record<string, MessageV2.ToolPart> = {}
+    const toolCallOrder: Record<string, number> = {}
+    let nextToolCallIndex = 0
     let snapshot: string | undefined
     let blocked = false
     let attempt = 0
@@ -191,7 +193,7 @@ export namespace SessionProcessor {
                   }
                   break
 
-                case "tool-input-start":
+                case "tool-input-start": {
                   const part = (await Session.updatePart({
                     id: toolcalls[value.id]?.id ?? Identifier.ascending("part"),
                     messageID: input.assistantMessage.id,
@@ -206,14 +208,41 @@ export namespace SessionProcessor {
                     },
                   })) as MessageV2.ToolPart
                   toolcalls[value.id] = part
-                  
+                  if (!(value.id in toolCallOrder)) {
+                    toolCallOrder[value.id] = nextToolCallIndex++
+                  }
+
                   Bus.publish(MessageV2.Event.PartUpdated, {
                     part,
                   })
                   break
+                }
 
-                case "tool-input-delta":
+                case "tool-input-delta": {
+                  const match = toolcalls[value.id]
+                  if (match) {
+                    if (!(value.id in toolCallOrder)) {
+                      toolCallOrder[value.id] = nextToolCallIndex++
+                    }
+                    const index = toolCallOrder[value.id]
+                    await Session.updatePartDelta({
+                      sessionID: match.sessionID,
+                      messageID: match.messageID,
+                      partID: match.id,
+                      field: "tool_calls",
+                      delta: JSON.stringify({
+                        index,
+                        id: value.id,
+                        type: "function",
+                        function: {
+                          name: match.tool,
+                          arguments: value.delta,
+                        },
+                      }),
+                    })
+                  }
                   break
+                }
 
                 case "tool-input-end":
                   break

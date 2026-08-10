@@ -36,7 +36,7 @@ use futures::StreamExt;
 use rusqlite::{params, OptionalExtension};
 use serde::Deserialize;
 use serde_json::{json, Value};
-use std::collections::HashMap;
+use std::collections::{BTreeMap, HashMap};
 use std::convert::Infallible;
 use std::sync::{Arc, Mutex};
 use std::time::{Duration, Instant};
@@ -56,7 +56,7 @@ use super::translate::{
     message_to_gizzi_parts, messages_to_gizzi_parts, new_completion_id, stream_error_data,
     validate_request, Annotation, ChatCompletionChunk, ChatCompletionRequest,
     ChatCompletionResponse, ChatMessage, FileCitation, ImageUrlPart, MessageContent,
-    OpenAiErrorResponse, UrlCitation, Usage,
+    OpenAiErrorResponse, ToolCall, ToolCallDelta, ToolCallFunction, UrlCitation, Usage,
 };
 
 /// Hard cap on a single completion, from send to `session.status` idle.
@@ -569,8 +569,16 @@ pub struct GizziUsage {
 enum EventEffect {
     None,
     TextDelta(String),
+    ToolCallDelta(ToolCallDelta),
     Done,
     Error(String, String),
+}
+
+/// Accumulates incremental tool-call arguments for one tool call index.
+struct ToolCallAccumulator {
+    id: String,
+    name: String,
+    arguments: String,
 }
 
 /// Per-request aggregation of Gizzi bus events.
@@ -584,6 +592,7 @@ struct Collector {
     fallback_to: Option<String>,
     ttft: Option<Duration>,
     citations: Vec<Annotation>,
+    tool_calls: BTreeMap<u32, ToolCallAccumulator>,
 }
 
 impl Collector {
@@ -598,7 +607,28 @@ impl Collector {
             fallback_to: None,
             ttft: None,
             citations: Vec::new(),
+            tool_calls: BTreeMap::new(),
         }
+    }
+
+    /// Assemble the final tool_calls list from accumulated deltas, if any.
+    fn final_tool_calls(&self) -> Option<Vec<ToolCall>> {
+        if self.tool_calls.is_empty() {
+            return None;
+        }
+        Some(
+            self.tool_calls
+                .values()
+                .map(|acc| ToolCall {
+                    id: acc.id.clone(),
+                    call_type: "function".to_string(),
+                    function: ToolCallFunction {
+                        name: acc.name.clone(),
+                        arguments: acc.arguments.clone(),
+                    },
+                })
+                .collect(),
+        )
     }
 
     /// Fold one bus event (already filtered to this session) into the
@@ -608,15 +638,46 @@ impl Collector {
         match event.event_type.as_str() {
             "message.part.delta" => {
                 let field = props.get("field").and_then(Value::as_str).unwrap_or("text");
-                if field != "text" {
-                    return EventEffect::None;
-                }
-                if let Some(delta) = props.get("delta").and_then(Value::as_str) {
-                    if self.ttft.is_none() {
-                        self.ttft = Some(self.started.elapsed());
+                match field {
+                    "text" => {
+                        if let Some(delta) = props.get("delta").and_then(Value::as_str) {
+                            if self.ttft.is_none() {
+                                self.ttft = Some(self.started.elapsed());
+                            }
+                            self.text.push_str(delta);
+                            return EventEffect::TextDelta(delta.to_string());
+                        }
                     }
-                    self.text.push_str(delta);
-                    return EventEffect::TextDelta(delta.to_string());
+                    "tool_calls" => {
+                        if let Some(delta_json) = props.get("delta").and_then(Value::as_str) {
+                            if let Ok(delta) = serde_json::from_str::<ToolCallDelta>(delta_json) {
+                                if self.ttft.is_none() {
+                                    self.ttft = Some(self.started.elapsed());
+                                }
+                                let acc = self.tool_calls.entry(delta.index).or_insert_with(|| {
+                                    ToolCallAccumulator {
+                                        id: delta.id.clone().unwrap_or_default(),
+                                        name: delta
+                                            .function
+                                            .as_ref()
+                                            .and_then(|f| f.name.clone())
+                                            .unwrap_or_default(),
+                                        arguments: String::new(),
+                                    }
+                                });
+                                if let Some(func) = &delta.function {
+                                    if let Some(name) = &func.name {
+                                        acc.name.clone_from(name);
+                                    }
+                                    if let Some(args) = &func.arguments {
+                                        acc.arguments.push_str(args);
+                                    }
+                                }
+                                return EventEffect::ToolCallDelta(delta);
+                            }
+                        }
+                    }
+                    _ => {}
                 }
                 EventEffect::None
             }
@@ -1878,7 +1939,15 @@ async fn nonstream_completion(
                     refusal::refusal_message().to_string(),
                 )
             } else {
-                super::translate::AssistantMessage::new(collector.text.clone())
+                collector
+                    .final_tool_calls()
+                    .map(|tc| {
+                        super::translate::AssistantMessage::with_tool_calls(
+                            collector.text.clone(),
+                            tc,
+                        )
+                    })
+                    .unwrap_or_else(|| super::translate::AssistantMessage::new(collector.text.clone()))
             };
             let mut response = ChatCompletionResponse {
                 id: completion_id,
@@ -1934,6 +2003,7 @@ async fn nonstream_completion(
 enum Progress {
     Continue,
     Delta(String),
+    ToolCallDelta(ToolCallDelta),
     Done,
     Failed(String, String),
 }
@@ -2020,6 +2090,7 @@ async fn stream_completion(
                             }
                             match effect {
                                 EventEffect::TextDelta(delta) => Progress::Delta(delta),
+                                EventEffect::ToolCallDelta(delta) => Progress::ToolCallDelta(delta),
                                 EventEffect::Done => Progress::Done,
                                 EventEffect::Error(name, message) => Progress::Failed(name, message),
                                 EventEffect::None => Progress::Continue,
@@ -2043,6 +2114,14 @@ async fn stream_completion(
                     yield Ok(Event::default().data(
                         ChatCompletionChunk::content_chunk(
                             &completion_id, created, &wire_model, &delta,
+                        )
+                        .to_sse_data(),
+                    ));
+                }
+                Progress::ToolCallDelta(delta) => {
+                    yield Ok(Event::default().data(
+                        ChatCompletionChunk::tool_calls_chunk(
+                            &completion_id, created, &wire_model, vec![delta],
                         )
                         .to_sse_data(),
                     ));

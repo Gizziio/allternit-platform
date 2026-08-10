@@ -240,6 +240,27 @@ pub struct ToolCallFunction {
     pub arguments: String,
 }
 
+/// Incremental tool-call delta used in streaming chat completion chunks.
+/// Mirrors the OpenAI `choices[].delta.tool_calls[]` shape.
+#[derive(Debug, Clone, Deserialize, Serialize)]
+pub struct ToolCallFunctionDelta {
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub name: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub arguments: Option<String>,
+}
+
+#[derive(Debug, Clone, Deserialize, Serialize)]
+pub struct ToolCallDelta {
+    pub index: u32,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub id: Option<String>,
+    #[serde(rename = "type", skip_serializing_if = "Option::is_none")]
+    pub call_type: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub function: Option<ToolCallFunctionDelta>,
+}
+
 /// `stop` accepts a single string or an array of strings.
 #[derive(Debug, Clone, Deserialize)]
 #[serde(untagged)]
@@ -755,6 +776,8 @@ pub struct AssistantMessage {
     pub annotations: Option<Vec<Annotation>>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub refusal: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub tool_calls: Option<Vec<ToolCall>>,
 }
 
 impl AssistantMessage {
@@ -764,6 +787,7 @@ impl AssistantMessage {
             content,
             annotations: None,
             refusal: None,
+            tool_calls: None,
         }
     }
 
@@ -773,6 +797,7 @@ impl AssistantMessage {
             content,
             annotations: Some(annotations),
             refusal: None,
+            tool_calls: None,
         }
     }
 
@@ -782,6 +807,17 @@ impl AssistantMessage {
             content,
             annotations: None,
             refusal: Some(refusal),
+            tool_calls: None,
+        }
+    }
+
+    pub fn with_tool_calls(content: String, tool_calls: Vec<ToolCall>) -> Self {
+        Self {
+            role: "assistant".to_string(),
+            content,
+            annotations: None,
+            refusal: None,
+            tool_calls: Some(tool_calls),
         }
     }
 }
@@ -858,6 +894,8 @@ pub struct ChunkDelta {
     pub role: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub content: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub tool_calls: Option<Vec<ToolCallDelta>>,
 }
 
 #[derive(Debug, Clone, Serialize)]
@@ -901,6 +939,7 @@ impl ChatCompletionChunk {
             delta: ChunkDelta {
                 role: Some("assistant".to_string()),
                 content: None,
+                tool_calls: None,
             },
             finish_reason: None,
             refusal: None,
@@ -916,6 +955,23 @@ impl ChatCompletionChunk {
             delta: ChunkDelta {
                 role: None,
                 content: Some(delta.to_string()),
+                tool_calls: None,
+            },
+            finish_reason: None,
+            refusal: None,
+        });
+        chunk
+    }
+
+    /// Tool-call delta chunk.
+    pub fn tool_calls_chunk(id: &str, created: i64, model: &str, deltas: Vec<ToolCallDelta>) -> Self {
+        let mut chunk = Self::base(id, created, model);
+        chunk.choices.push(ChunkChoice {
+            index: 0,
+            delta: ChunkDelta {
+                role: None,
+                content: None,
+                tool_calls: Some(deltas),
             },
             finish_reason: None,
             refusal: None,
@@ -942,6 +998,7 @@ impl ChatCompletionChunk {
             delta: ChunkDelta {
                 role: None,
                 content: None,
+                tool_calls: None,
             },
             finish_reason: Some(finish_reason.to_string()),
             refusal,
@@ -1220,6 +1277,27 @@ mod tests {
         assert_eq!(value["choices"][0]["delta"]["role"], "assistant");
         assert!(value["choices"][0]["delta"].get("content").is_none());
         assert!(value.get("usage").is_none());
+
+        let tc = ChatCompletionChunk::tool_calls_chunk(
+            "chatcmpl-1",
+            1_700_000_000,
+            "auto",
+            vec![ToolCallDelta {
+                index: 0,
+                id: Some("call_1".to_string()),
+                call_type: Some("function".to_string()),
+                function: Some(ToolCallFunctionDelta {
+                    name: Some("get_weather".to_string()),
+                    arguments: Some("{\"city\": \"Paris\"}".to_string()),
+                }),
+            }],
+        );
+        let value = serde_json::to_value(&tc).unwrap();
+        let delta = &value["choices"][0]["delta"];
+        assert!(delta.get("content").is_none());
+        assert_eq!(delta["tool_calls"][0]["index"], 0);
+        assert_eq!(delta["tool_calls"][0]["id"], "call_1");
+        assert_eq!(delta["tool_calls"][0]["function"]["name"], "get_weather");
 
         let usage = ChatCompletionChunk::usage_chunk(
             "chatcmpl-1",
