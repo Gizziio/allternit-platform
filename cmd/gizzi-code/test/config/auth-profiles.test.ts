@@ -6,6 +6,7 @@ import { Auth } from "../../src/runtime/integrations/auth"
 import type { KeyringBackend } from "../../src/runtime/context/config/credential-store"
 import {
   addAuthProfile,
+  diagnoseAuth,
   getAuthStatus,
   loginApiKey,
   logout,
@@ -244,5 +245,26 @@ describe("logout", () => {
     expect(result.method).toBe("oauth_token")
 
     expect(await getAuthStatus(configPath)).toEqual({ method: "none" })
+  })
+})
+
+describe("diagnoseAuth", () => {
+  test("reports no auth when config is missing", async () => {
+    const configPath = await configFixture()
+    const diagnosis = await diagnoseAuth(configPath)
+    expect(diagnosis.config_exists).toBe(false)
+    expect(diagnosis.method).toBe("none")
+    expect(diagnosis.profile_count).toBe(0)
+  })
+
+  test("reports API-key auth and profile names", async () => {
+    const configPath = await configFixture()
+    await loginApiKey(configPath, "sk-diag", { profile: "work" })
+
+    const diagnosis = await diagnoseAuth(configPath)
+    expect(diagnosis.config_exists).toBe(true)
+    expect(diagnosis.method).toBe("api_key")
+    expect(diagnosis.active_profile).toBe("work")
+    expect(diagnosis.profile_names).toEqual(["work"])
   })
 })

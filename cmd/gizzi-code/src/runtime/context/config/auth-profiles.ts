@@ -249,3 +249,41 @@ export async function getAuthStatus(
 
   return { method: "none" }
 }
+
+export type AuthDiagnosis = {
+  config_path: string
+  config_exists: boolean
+  active_profile?: string
+  credential_store?: CredentialStore
+  profile_count: number
+  profile_names: string[]
+  method: AuthMethod
+  runtime_auth_keys: string[]
+  env_vars: Record<string, boolean>
+}
+
+/**
+ * Collect diagnostic information about the current authentication setup.
+ */
+export async function diagnoseAuth(configPath: string, writer?: CredentialWriter): Promise<AuthDiagnosis> {
+  const auth = await readAuthProfiles(configPath)
+  const runtimeAuth = await Auth.all()
+  const status = await getAuthStatus(configPath, writer)
+
+  return {
+    config_path: configPath,
+    config_exists: await fs.access(configPath).then(() => true).catch(() => false),
+    active_profile: auth.active_profile,
+    credential_store: auth.credential_store,
+    profile_count: Object.keys(auth.profiles).length,
+    profile_names: Object.keys(auth.profiles).sort(),
+    method: status.method,
+    runtime_auth_keys: Object.keys(runtimeAuth),
+    env_vars: {
+      ANTHROPIC_API_KEY: Boolean(process.env.ANTHROPIC_API_KEY),
+      OPENAI_API_KEY: Boolean(process.env.OPENAI_API_KEY),
+      GIZZI_API_KEY: Boolean(process.env.GIZZI_API_KEY),
+      DISABLE_TELEMETRY: Boolean(process.env.DISABLE_TELEMETRY),
+    },
+  }
+}

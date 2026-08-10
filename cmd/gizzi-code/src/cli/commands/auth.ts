@@ -6,6 +6,7 @@ import { UI } from "@/cli/ui"
 import { Global } from "@/runtime/context/global"
 import {
   addAuthProfile,
+  diagnoseAuth,
   getAuthStatus,
   loginApiKey,
   logout,
@@ -75,6 +76,25 @@ const LogoutCommand = cmd({
       UI.println(`Removed auth profile: ${result.profile}`)
     } else {
       UI.println("Not authenticated")
+    }
+  },
+})
+
+const DiagnoseCommand = cmd({
+  command: "diagnose",
+  describe: "print authentication diagnostic information",
+  async handler() {
+    const diagnosis = await diagnoseAuth(configPath())
+    UI.println(`Config path: ${diagnosis.config_path}`)
+    UI.println(`Config exists: ${diagnosis.config_exists}`)
+    UI.println(`Active method: ${diagnosis.method}`)
+    UI.println(`Active profile: ${diagnosis.active_profile ?? "(none)"}`)
+    UI.println(`Credential store: ${diagnosis.credential_store ?? "file (default)"}`)
+    UI.println(`Profiles (${diagnosis.profile_count}): ${diagnosis.profile_names.join(", ") || "(none)"}`)
+    UI.println(`Runtime auth keys: ${diagnosis.runtime_auth_keys.join(", ") || "(none)"}`)
+    UI.println("Environment variables:")
+    for (const [name, present] of Object.entries(diagnosis.env_vars)) {
+      UI.println(`  ${name}: ${present ? "set" : "not set"}`)
     }
   },
 })
@@ -182,6 +202,7 @@ export const AuthCommand = cmd({
       .command(LoginCommand)
       .command(StatusCommand)
       .command(LogoutCommand)
+      .command(DiagnoseCommand)
       .command(ProfileCommand)
       .demandCommand(),
   async handler() {},
