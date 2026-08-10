@@ -5,6 +5,7 @@
 pub mod aci_routes;
 pub mod admin_audit_routes;
 pub mod admin_mcp_tunnel_routes;
+pub mod admin_access_token_routes;
 pub mod admin_service_account_routes;
 pub mod federation_routes;
 pub mod outcome_rubric_routes;
