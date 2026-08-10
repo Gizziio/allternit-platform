@@ -23,7 +23,7 @@
 //!   and the derived fallback chain is sent to Gizzi as `fallbackModels`.
 
 use axum::{
-    extract::{Extension, State},
+    extract::{Extension, Path, State},
     http::{header, HeaderMap, HeaderName, HeaderValue, StatusCode},
     response::{
         sse::{Event, KeepAlive, Sse},
@@ -2196,6 +2196,69 @@ pub async fn list_models(
     }
 
     Json(json!({ "object": "list", "data": data })).into_response()
+}
+
+/// `GET /models/:id` — OpenAI-compatible model retrieval.
+pub async fn get_model(
+    State(_state): State<Arc<AppState>>,
+    Extension(key): Extension<LlmKeyContext>,
+    Path(model_id): Path<String>,
+) -> Response {
+    let base = gizzi_base();
+    let client = http_client();
+
+    // Policy aliases are allowed synthetic models.
+    if POLICY_ALIASES.contains(&model_id.as_str()) && key.model_allowed(&model_id) {
+        return Json(json!({
+            "id": model_id,
+            "object": "model",
+            "created": 0,
+            "owned_by": "allternit",
+        }))
+        .into_response();
+    }
+
+    let catalog = match fetch_catalog(&client, &base).await {
+        Ok(catalog) => catalog,
+        Err(response) => return response.into_response(),
+    };
+
+    for provider in &catalog.all {
+        for (id, model) in &provider.models {
+            let full_id = format!("{}/{}", provider.id, id);
+            if full_id != model_id && id != &model_id {
+                continue;
+            }
+            if !(key.model_allowed(&full_id) || key.model_allowed(id)) {
+                break;
+            }
+            let created = model
+                .release_date
+                .as_deref()
+                .and_then(|d| chrono::NaiveDate::parse_from_str(d, "%Y-%m-%d").ok())
+                .and_then(|d| d.and_hms_opt(0, 0, 0))
+                .map(|dt| dt.and_utc().timestamp())
+                .unwrap_or(0);
+            return Json(json!({
+                "id": full_id,
+                "object": "model",
+                "created": created,
+                "owned_by": provider.id,
+                "context_window": model.limit.map(|value| value.context),
+                "max_output_tokens": model.limit.map(|value| value.output),
+            }))
+            .into_response();
+        }
+    }
+
+    OpenAiErrorResponse::new(
+        StatusCode::NOT_FOUND,
+        format!("The model `{model_id}` does not exist or you do not have access to it."),
+        "invalid_request_error",
+        Some("model"),
+        Some(crate::llm_gateway::translate::error_code::MODEL_NOT_FOUND),
+    )
+    .into_response()
 }
 
 /// `GET /rate-limits` — caller quota snapshot derived from the key's rate
