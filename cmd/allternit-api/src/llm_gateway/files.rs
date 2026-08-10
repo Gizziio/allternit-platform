@@ -11,7 +11,7 @@ use axum::{
     Json,
 };
 use base64::{engine::general_purpose::STANDARD, Engine as _};
-use rusqlite::OptionalExtension;
+use rusqlite::{params, OptionalExtension};
 use serde::{Deserialize, Serialize};
 use serde_json::json;
 use std::sync::Arc;
@@ -142,6 +142,57 @@ pub async fn create_file(
     }
 }
 
+/// `GET /v1/files` — list stored files.
+pub async fn list_files(State(state): State<Arc<AppState>>) -> Response {
+    let db = state.db.clone();
+    let result = tokio::task::spawn_blocking(move || -> Result<Vec<FileObject>, rusqlite::Error> {
+        let conn = db.connect()?;
+        let mut stmt = conn.prepare(
+            "SELECT id, filename, purpose, size, CAST(strftime('%s', created_at) AS INTEGER)
+             FROM files ORDER BY created_at DESC",
+        )?;
+        let rows = stmt
+            .query_map([], |row| {
+                Ok(FileObject {
+                    id: row.get(0)?,
+                    object: "file",
+                    filename: row.get(1)?,
+                    purpose: row.get(2)?,
+                    bytes: row.get(3)?,
+                    created_at: row.get(4)?,
+                    data: None,
+                })
+            })?
+            .collect::<rusqlite::Result<Vec<_>>>()?;
+        Ok(rows)
+    })
+    .await;
+
+    match result {
+        Ok(Ok(rows)) => Json(json!({
+            "object": "list",
+            "data": rows,
+        }))
+        .into_response(),
+        Ok(Err(e)) => OpenAiErrorResponse::new(
+            StatusCode::INTERNAL_SERVER_ERROR,
+            format!("Failed to list files: {e}"),
+            "server_error",
+            None,
+            Some(error_code::INTERNAL_ERROR),
+        )
+        .into_response(),
+        Err(e) => OpenAiErrorResponse::new(
+            StatusCode::INTERNAL_SERVER_ERROR,
+            format!("Failed to list files: {e}"),
+            "server_error",
+            None,
+            Some(error_code::INTERNAL_ERROR),
+        )
+        .into_response(),
+    }
+}
+
 /// `GET /v1/files/:id` — retrieve a stored file's metadata and base64 content.
 pub async fn get_file(State(state): State<Arc<AppState>>, Path(id): Path<String>) -> Response {
     let db = state.db.clone();
@@ -199,6 +250,56 @@ pub async fn get_file(State(state): State<Arc<AppState>>, Path(id): Path<String>
         Err(e) => OpenAiErrorResponse::new(
             StatusCode::INTERNAL_SERVER_ERROR,
             format!("Failed to retrieve file: {e}"),
+            "server_error",
+            None,
+            Some(error_code::INTERNAL_ERROR),
+        )
+        .into_response(),
+    }
+}
+
+/// `DELETE /v1/files/:id` — remove a stored file.
+pub async fn delete_file(State(state): State<Arc<AppState>>, Path(id): Path<String>) -> Response {
+    let db = state.db.clone();
+    let id_for_db = id.clone();
+    let result = tokio::task::spawn_blocking(
+        move || -> Result<bool, rusqlite::Error> {
+            let conn = db.connect()?;
+            let changed = conn.execute("DELETE FROM files WHERE id = ?1", params![id_for_db])?;
+            Ok(changed > 0)
+        },
+    )
+    .await;
+
+    match result {
+        Ok(Ok(true)) => Json(json!({
+            "id": id,
+            "object": "file",
+            "deleted": true,
+        }))
+        .into_response(),
+        Ok(Ok(false)) => (
+            StatusCode::NOT_FOUND,
+            Json(json!({
+                "error": {
+                    "message": "File not found.",
+                    "type": "invalid_request_error",
+                    "code": error_code::INVALID_REQUEST,
+                }
+            })),
+        )
+            .into_response(),
+        Ok(Err(e)) => OpenAiErrorResponse::new(
+            StatusCode::INTERNAL_SERVER_ERROR,
+            format!("Failed to delete file: {e}"),
+            "server_error",
+            None,
+            Some(error_code::INTERNAL_ERROR),
+        )
+        .into_response(),
+        Err(e) => OpenAiErrorResponse::new(
+            StatusCode::INTERNAL_SERVER_ERROR,
+            format!("Failed to delete file: {e}"),
             "server_error",
             None,
             Some(error_code::INTERNAL_ERROR),
@@ -270,5 +371,50 @@ mod tests {
         assert_eq!(row.purpose, purpose);
         assert_eq!(row.bytes, bytes);
         assert_eq!(row.size, size);
+    }
+
+    #[test]
+    fn file_list_and_delete_helpers() {
+        let db = test_db();
+        let conn = db.connect().unwrap();
+        let insert = |id: &str, filename: &str, bytes: &[u8]| {
+            conn.execute(
+                "INSERT INTO files (id, filename, purpose, bytes, size)
+                 VALUES (?1, ?2, 'assistants', ?3, ?4)",
+                rusqlite::params![id, filename, bytes, bytes.len() as i64],
+            )
+            .unwrap();
+        };
+        insert("file_a", "a.pdf", b"a");
+        insert("file_b", "b.pdf", b"bb");
+
+        let mut stmt = conn.prepare(
+            "SELECT id, filename, purpose, size, CAST(strftime('%s', created_at) AS INTEGER)
+             FROM files ORDER BY created_at DESC",
+        ).unwrap();
+        let rows: Vec<FileObject> = stmt
+            .query_map([], |row| {
+                Ok(FileObject {
+                    id: row.get(0)?,
+                    object: "file",
+                    filename: row.get(1)?,
+                    purpose: row.get(2)?,
+                    bytes: row.get(3)?,
+                    created_at: row.get(4)?,
+                    data: None,
+                })
+            })
+            .unwrap()
+            .collect::<rusqlite::Result<Vec<_>>>()
+            .unwrap();
+        assert_eq!(rows.len(), 2);
+        let ids: std::collections::HashSet<_> = rows.iter().map(|r| r.id.clone()).collect();
+        assert!(ids.contains("file_a"));
+        assert!(ids.contains("file_b"));
+
+        let changed = conn.execute("DELETE FROM files WHERE id = 'file_a'", []).unwrap();
+        assert_eq!(changed, 1);
+        let remaining: i64 = conn.query_row("SELECT COUNT(*) FROM files", [], |r| r.get(0)).unwrap();
+        assert_eq!(remaining, 1);
     }
 }
