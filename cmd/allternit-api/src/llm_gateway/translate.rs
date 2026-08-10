@@ -136,6 +136,11 @@ pub struct ChatCompletionRequest {
     pub parallel_tool_calls: Option<bool>,
     #[serde(default)]
     pub reasoning_effort: Option<String>,
+    /// Provider service tier (e.g. `auto`, `default`, `flex`, `priority`).
+    /// Forwarded to Gizzi provider options so OpenAI requests can opt into
+    /// flex/priority processing.
+    #[serde(default)]
+    pub service_tier: Option<String>,
     /// Ask providers that support source citations to include them. For
     /// non-Anthropic providers the gateway falls back to a RAG context block
     /// and parses `[cite:<id>]` markers from the response.
@@ -384,6 +389,14 @@ pub fn validate_request(req: &ChatCompletionRequest) -> Result<(), OpenAiErrorRe
             return Err(OpenAiErrorResponse::invalid_request(
                 "`reasoning_effort` must be one of none, minimal, low, medium, high, or xhigh.",
                 Some("reasoning_effort"),
+            ));
+        }
+    }
+    if let Some(tier) = req.service_tier.as_deref() {
+        if !matches!(tier, "auto" | "default" | "flex" | "priority" | "scale") {
+            return Err(OpenAiErrorResponse::invalid_request(
+                "`service_tier` must be one of auto, default, flex, priority, or scale.",
+                Some("service_tier"),
             ));
         }
     }
@@ -1029,6 +1042,26 @@ mod tests {
         assert_eq!(req.reasoning_effort.as_deref(), Some("high"));
         assert_eq!(req.parallel_tool_calls, Some(false));
         assert_eq!(req.tools.unwrap()[0].function.strict, Some(true));
+    }
+
+    #[test]
+    fn request_accepts_and_validates_service_tier() {
+        let req = parse(&json!({
+            "model": "m",
+            "messages": [{"role": "user", "content": "hi"}],
+            "service_tier": "flex"
+        }))
+        .unwrap();
+        validate_request(&req).unwrap();
+        assert_eq!(req.service_tier.as_deref(), Some("flex"));
+
+        let bad = parse(&json!({
+            "model": "m",
+            "messages": [{"role": "user", "content": "hi"}],
+            "service_tier": "platinum"
+        }))
+        .unwrap();
+        assert!(validate_request(&bad).is_err());
     }
 
     #[test]

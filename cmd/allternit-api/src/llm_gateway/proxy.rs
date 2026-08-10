@@ -1576,6 +1576,11 @@ pub async fn chat_completions(
     if let Some(effort) = &request.reasoning_effort {
         payload["variant"] = json!(effort);
     }
+    // Service tier is forwarded as message metadata so Gizzi can set the
+    // provider-specific option (e.g. OpenAI's `service_tier`).
+    if let Some(tier) = &request.service_tier {
+        payload["metadata"] = json!({ "service_tier": tier });
+    }
     // Citations: Anthropic supports native citations; other providers get the
     // explicit RAG context block prepended above and the native flag disabled.
     if request.citations == Some(true) {
