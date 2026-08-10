@@ -52,6 +52,7 @@ use super::inference_hooks::{self, InferenceHooks, PreHookOutcome};
 use super::llm_pricing::{self, TokenBreakdown};
 use super::refusal;
 use super::router::{self, RoutingDecision};
+use super::safety;
 use super::translate::{
     message_to_gizzi_parts, messages_to_gizzi_parts, new_completion_id, stream_error_data,
     validate_request, Annotation, ChatCompletionChunk, ChatCompletionRequest,
@@ -1416,6 +1417,20 @@ pub async fn chat_completions(
     };
     if let Err(response) = validate_request(&request) {
         return response.into_response();
+    }
+
+    // On-premise safety classifier: reject obvious jailbreak / prompt-injection
+    // attempts before any routing or spend occurs.
+    if let Some(result) = safety::classify_messages(&request.messages) {
+        warn!(category = %result.category, "Safety classifier blocked request");
+        return OpenAiErrorResponse::new(
+            StatusCode::BAD_REQUEST,
+            format!("{}: {}", result.reason, result.category),
+            "content_filter",
+            None,
+            Some(crate::llm_gateway::translate::error_code::CONTENT_POLICY_VIOLATION),
+        )
+        .into_response();
     }
 
     // Load organization-level inference hooks. Pre-hooks run before routing so

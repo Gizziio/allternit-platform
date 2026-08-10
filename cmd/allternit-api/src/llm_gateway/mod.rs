@@ -44,6 +44,7 @@ pub mod llm_pricing;
 pub mod proxy;
 pub mod refusal;
 pub mod router;
+pub mod safety;
 pub mod translate;
 
 use axum::{
