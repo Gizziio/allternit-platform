@@ -78,6 +78,57 @@ fn hash_token(plain: &str) -> String {
     hex::encode(Sha256::digest(plain.as_bytes()))
 }
 
+/// Look up an organization access token by its plain value. Returns an
+/// `AuthUser` scoped to the token's organization when the token is active and
+/// not expired. Updates `last_used_at` on success.
+pub fn authenticate_access_token(db: &crate::db::DbHandle, token: &str) -> Option<AuthUser> {
+    if !token.starts_with("at-") {
+        return None;
+    }
+    let hashed = hash_token(token);
+    let conn = db.connect().ok()?;
+    let row: Option<(String, String, String, Option<String>, Option<String>)> = conn
+        .query_row(
+            "SELECT id, org_id, name, scopes, expires_at
+             FROM organization_access_tokens
+             WHERE hashed_token = ?1 AND revoked_at IS NULL
+             AND (expires_at IS NULL OR expires_at > ?2)",
+            rusqlite::params![hashed, chrono::Utc::now().to_rfc3339()],
+            |row| {
+                Ok((
+                    row.get::<_, String>(0)?,
+                    row.get::<_, String>(1)?,
+                    row.get::<_, String>(2)?,
+                    row.get::<_, Option<String>>(3)?,
+                    row.get::<_, Option<String>>(4)?,
+                ))
+            },
+        )
+        .optional()
+        .ok()?;
+
+    let (id, org_id, _name, scopes_json, _expires_at) = row?;
+    let _ = conn.execute(
+        "UPDATE organization_access_tokens SET last_used_at = ?1 WHERE id = ?2",
+        rusqlite::params![chrono::Utc::now().to_rfc3339(), &id],
+    );
+
+    let scopes: Vec<String> = scopes_json
+        .and_then(|s| serde_json::from_str::<Vec<String>>(&s).ok())
+        .unwrap_or_default();
+    let is_admin = scopes.iter().any(|s| s == "admin" || s == "owner");
+    Some(AuthUser {
+        user_id: format!("token:{id}"),
+        email: None,
+        name: Some(format!("Access token {id}")),
+        avatar_url: None,
+        tenant_id: Some(org_id.clone()),
+        organization_id: Some(org_id),
+        organization_role: Some(if is_admin { "owner".to_string() } else { "member".to_string() }),
+        organization_slug: None,
+    })
+}
+
 fn token_prefix(plain: &str) -> String {
     plain.chars().take(8).collect()
 }
@@ -500,5 +551,39 @@ mod tests {
             .unwrap();
         let get_body = body_json(get_resp.into_body()).await;
         assert!(get_body["revoked_at"].is_string());
+    }
+
+    #[tokio::test]
+    async fn authenticate_access_token_allows_bearer_use() {
+        let temp = tempfile::tempdir().unwrap().keep();
+        let state = test_app_state(&temp).await;
+        let app = router().with_state(state.clone());
+
+        let create_resp = app
+            .oneshot(
+                Request::builder()
+                    .method("POST")
+                    .uri("/admin/access-tokens")
+                    .extension(test_user("admin-1", Some("org-1")))
+                    .header("content-type", "application/json")
+                    .body(Body::from(
+                        serde_json::json!({ "name": "CLI", "scopes": "admin" }).to_string(),
+                    ))
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+        let create_body = body_json(create_resp.into_body()).await;
+        let plain = create_body["token"].as_str().unwrap().to_string();
+
+        let user = tokio::task::spawn_blocking(move || {
+            authenticate_access_token(&state.db, &plain)
+        })
+        .await
+        .unwrap();
+        assert!(user.is_some());
+        let user = user.unwrap();
+        assert_eq!(user.organization_id.as_deref(), Some("org-1"));
+        assert_eq!(user.organization_role.as_deref(), Some("owner"));
     }
 }

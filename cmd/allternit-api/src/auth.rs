@@ -741,6 +741,24 @@ pub async fn auth_middleware(
 
     // Try Clerk JWT first
     if let Some(token) = extract_bearer_token(request.headers()) {
+        if token.starts_with("at-") {
+            let db = state.db.clone();
+            let token_for_lookup = token.clone();
+            return match tokio::task::spawn_blocking(move || {
+                crate::admin_access_token_routes::authenticate_access_token(&db, &token_for_lookup)
+            })
+            .await
+            {
+                Ok(Some(user)) => {
+                    insert_user_headers(request.headers_mut(), &user);
+                    request.extensions_mut().insert(user);
+                    next.run(request).await
+                }
+                Ok(None) => AuthError::TokenDecode("Unknown, revoked, or expired access token".into()).into_response(),
+                Err(e) => AuthError::DbError(e.to_string()).into_response(),
+            };
+        }
+
         if token.starts_with("allternit_admin_") || token.starts_with("allternit_access_") {
             let db = state.db.clone();
             let token_for_lookup = token.clone();
