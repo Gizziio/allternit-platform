@@ -128,6 +128,30 @@ fn lcs_length(a: &[String], b: &[String]) -> usize {
     prev[b.len()]
 }
 
+/// Consistency score across multiple model responses.
+///
+/// Computes the average pairwise token-overlap F1. A single response is
+/// perfectly consistent (1.0); fewer than one response is undefined and
+/// returns 0.0.
+pub fn consistency(responses: &[String]) -> f64 {
+    if responses.len() <= 1 {
+        return 1.0;
+    }
+    let mut total = 0.0;
+    let mut count = 0usize;
+    for i in 0..responses.len() {
+        for j in (i + 1)..responses.len() {
+            total += token_overlap(&responses[i], &responses[j]);
+            count += 1;
+        }
+    }
+    if count == 0 {
+        0.0
+    } else {
+        (total / count as f64).clamp(0.0, 1.0)
+    }
+}
+
 /// Simplified ROUGE-L F1 score over token sequences.
 pub fn rouge_l(prediction: &str, reference: &str) -> f64 {
     let pred_tokens = tokenize(prediction);
@@ -226,6 +250,12 @@ pub fn list_metrics() -> Value {
                 "name": "LLM-as-judge",
                 "description": "Rubric-based judge score from an external LLM (placeholder).",
                 "range": [0.0, 1.0]
+            },
+            {
+                "id": "consistency",
+                "name": "Consistency",
+                "description": "Average pairwise token-overlap F1 across multiple responses.",
+                "range": [0.0, 1.0]
             }
         ]
     })
@@ -279,5 +309,24 @@ mod tests {
         assert_eq!(token_overlap("hello", ""), 0.0);
         assert_eq!(cosine_similarity("", ""), 1.0);
         assert_eq!(rouge_l("hello", ""), 0.0);
+    }
+
+    #[test]
+    fn consistency_perfect_and_partial() {
+        let identical = vec!["The quick brown fox".to_string(), "The quick brown fox".to_string()];
+        assert!((consistency(&identical) - 1.0).abs() < 1e-9);
+
+        let partial = vec![
+            "The quick brown fox".to_string(),
+            "The quick fox jumps".to_string(),
+        ];
+        let score = consistency(&partial);
+        assert!(score > 0.0 && score < 1.0, "unexpected consistency {score}");
+    }
+
+    #[test]
+    fn consistency_single_response_is_perfect() {
+        let one = vec!["hello world".to_string()];
+        assert_eq!(consistency(&one), 1.0);
     }
 }

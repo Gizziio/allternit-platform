@@ -17,7 +17,7 @@ use std::sync::Arc;
 
 use crate::{
     auth::AuthUser,
-    eval_metrics::{list_metrics, BuiltinMetric},
+    eval_metrics::{consistency, list_metrics, BuiltinMetric},
     AppState,
 };
 
@@ -25,6 +25,7 @@ pub fn router() -> Router<Arc<AppState>> {
     Router::new()
         .route("/admin/eval/metrics", get(list_builtin_metrics))
         .route("/admin/eval/metrics/score", post(score_example))
+        .route("/admin/eval/metrics/consistency", post(score_consistency))
 }
 
 type ApiError = (StatusCode, Json<Value>);
@@ -113,6 +114,43 @@ async fn score_example(
             "prediction": body.prediction,
             "reference": body.reference,
             "result": score,
+        })))
+    })
+    .await;
+    match result {
+        Ok(Ok(v)) => v.into_response(),
+        Ok(Err(e)) => e.into_response(),
+        Err(e) => internal(e).into_response(),
+    }
+}
+
+#[derive(Debug, Deserialize)]
+struct ConsistencyBody {
+    responses: Vec<String>,
+}
+
+async fn score_consistency(
+    State(state): State<Arc<AppState>>,
+    Extension(user): Extension<AuthUser>,
+    Json(body): Json<ConsistencyBody>,
+) -> Response {
+    if body.responses.len() < 2 {
+        return error(
+            StatusCode::BAD_REQUEST,
+            "insufficient_responses",
+            "At least two responses are required to compute consistency.",
+        )
+        .into_response();
+    }
+
+    let result = tokio::task::spawn_blocking(move || {
+        let conn = state.db.connect().map_err(internal)?;
+        let _org = admin_org(&conn, &user)?;
+        let score = consistency(&body.responses);
+        Ok::<_, ApiError>(Json(json!({
+            "metric": "consistency",
+            "responses": body.responses.len(),
+            "score": score,
         })))
     })
     .await;
