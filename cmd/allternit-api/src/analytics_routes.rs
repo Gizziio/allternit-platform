@@ -20,6 +20,7 @@ use crate::{auth::AuthUser, AppState};
 pub fn analytics_router() -> Router<Arc<AppState>> {
     Router::new()
         .route("/analytics/csp-violation", post(analytics_csp_violation))
+        .route("/analytics/gizzi-code/events", post(ingest_gizzi_code_events))
         .route("/admin/analytics/cost-over-time", get(cost_over_time))
         .route("/admin/analytics/token-usage", get(token_usage))
         .route("/admin/analytics/request-volume", get(request_volume))
@@ -30,6 +31,7 @@ pub fn analytics_router() -> Router<Arc<AppState>> {
         .route("/admin/analytics/connector-usage", get(connector_usage))
         .route("/admin/analytics/plugin-usage", get(plugin_usage))
         .route("/admin/analytics/skill-usage", get(skill_usage))
+        .route("/admin/analytics/gizzi-code/usage", get(gizzi_code_usage))
 }
 
 async fn analytics_csp_violation(
@@ -648,6 +650,151 @@ async fn skill_usage(
     Ok::<Json<Value>, ApiError>(Json(json!({ "items": rows })))
 }
 
+// ─── Gizzi-code (Allternit CLI) usage analytics ───────────────────────────────
+
+#[derive(Debug, Deserialize)]
+struct GizziCodeUsageEvent {
+    #[serde(default)]
+    session_id: Option<String>,
+    #[serde(default = "default_gizzi_event_type")]
+    event_type: String,
+    #[serde(default)]
+    model: Option<String>,
+    #[serde(default)]
+    provider: Option<String>,
+    #[serde(default)]
+    prompt_tokens: i64,
+    #[serde(default)]
+    completion_tokens: i64,
+    #[serde(default)]
+    cost_microdollars: i64,
+    #[serde(default)]
+    tool_calls_accepted: i64,
+    #[serde(default)]
+    tool_calls_rejected: i64,
+    #[serde(default)]
+    metadata: Option<serde_json::Value>,
+    #[serde(default)]
+    created_at: Option<String>,
+}
+
+fn default_gizzi_event_type() -> String {
+    "turn".to_string()
+}
+
+#[derive(Debug, Deserialize)]
+struct IngestGizziCodeEvents {
+    events: Vec<GizziCodeUsageEvent>,
+}
+
+async fn ingest_gizzi_code_events(
+    State(state): State<Arc<AppState>>,
+    Extension(user): Extension<AuthUser>,
+    Json(body): Json<IngestGizziCodeEvents>,
+) -> impl IntoResponse {
+    let tenant_id = user.organization_id.as_deref().ok_or_else(|| {
+        error(
+            StatusCode::FORBIDDEN,
+            "organization_required",
+            "An active organization is required to ingest CLI analytics.",
+        )
+    })?;
+
+    let db = state.db.clone();
+    let tenant_id = tenant_id.to_string();
+    let user_id = user.user_id.clone();
+    tokio::task::spawn_blocking(move || {
+        let conn = db.connect().map_err(internal)?;
+        let mut stmt = conn
+            .prepare(
+                "INSERT INTO gizzi_code_usage_events
+                 (id, tenant_id, user_id, session_id, event_type, model, provider,
+                  prompt_tokens, completion_tokens, cost_microdollars,
+                  tool_calls_accepted, tool_calls_rejected, metadata, created_at)
+                 VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13, ?14)",
+            )
+            .map_err(internal)?;
+        for event in body.events {
+            let created_at = event.created_at.unwrap_or_else(|| {
+                chrono::Utc::now().to_rfc3339_opts(chrono::SecondsFormat::Secs, true)
+            });
+            let metadata_json = event
+                .metadata
+                .map(|m| m.to_string())
+                .unwrap_or_else(|| "{}".to_string());
+            stmt.execute(params![
+                uuid::Uuid::new_v4().to_string(),
+                &tenant_id,
+                &user_id,
+                event.session_id,
+                event.event_type,
+                event.model,
+                event.provider,
+                event.prompt_tokens,
+                event.completion_tokens,
+                event.cost_microdollars,
+                event.tool_calls_accepted,
+                event.tool_calls_rejected,
+                metadata_json,
+                created_at,
+            ])
+            .map_err(internal)?;
+        }
+        Ok::<(), ApiError>(())
+    })
+    .await
+    .map_err(internal)??;
+
+    Ok::<Json<Value>, ApiError>(Json(json!({ "status": "ok" })))
+}
+
+async fn gizzi_code_usage(
+    State(state): State<Arc<AppState>>,
+    Extension(user): Extension<AuthUser>,
+    Query(query): Query<AnalyticsQuery>,
+) -> impl IntoResponse {
+    let conn = state.db.connect().map_err(internal)?;
+    let org = admin_org(&conn, &user)?;
+    validate_query(&query, &org)?;
+
+    let bucket = bucket_sql(&query.granularity);
+    let sql = format!(
+        "SELECT {bucket} AS bucket,
+                COUNT(*) AS events,
+                COUNT(DISTINCT user_id) AS unique_users,
+                COUNT(DISTINCT session_id) AS unique_sessions,
+                SUM(prompt_tokens) AS prompt_tokens,
+                SUM(completion_tokens) AS completion_tokens,
+                SUM(cost_microdollars) AS cost_microdollars,
+                SUM(tool_calls_accepted) AS tool_calls_accepted,
+                SUM(tool_calls_rejected) AS tool_calls_rejected
+         FROM gizzi_code_usage_events
+         WHERE tenant_id = ?1 AND created_at >= ?2 AND created_at < ?3
+         GROUP BY bucket
+         ORDER BY bucket"
+    );
+    let mut stmt = conn.prepare(&sql).map_err(internal)?;
+    let rows: Vec<Value> = stmt
+        .query_map(params![org, query.start, query.end], |row| {
+            Ok(json!({
+                "bucket": row.get::<_, String>(0)?,
+                "events": row.get::<_, i64>(1)?,
+                "unique_users": row.get::<_, i64>(2)?,
+                "unique_sessions": row.get::<_, i64>(3)?,
+                "prompt_tokens": row.get::<_, i64>(4)?,
+                "completion_tokens": row.get::<_, i64>(5)?,
+                "cost_microdollars": row.get::<_, i64>(6)?,
+                "tool_calls_accepted": row.get::<_, i64>(7)?,
+                "tool_calls_rejected": row.get::<_, i64>(8)?,
+            }))
+        })
+        .map_err(internal)?
+        .collect::<Result<Vec<_>, _>>()
+        .map_err(internal)?;
+
+    Ok::<Json<Value>, ApiError>(Json(json!({ "items": rows })))
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -1168,5 +1315,81 @@ mod tests {
         let aug2 = items.iter().find(|i| i["bucket"] == "2026-08-02").unwrap();
         assert_eq!(aug2["invocations"], 1);
         assert_eq!(aug2["skill_id"], "skill-1");
+    }
+
+    #[tokio::test]
+    async fn gizzi_code_usage_ingest_and_aggregate() {
+        let temp = tempfile::tempdir().unwrap().keep();
+        let state = test_app_state(&temp).await;
+        let app = analytics_router().with_state(state);
+
+        let ingest = app
+            .clone()
+            .oneshot(
+                Request::builder()
+                    .method("POST")
+                    .uri("/analytics/gizzi-code/events")
+                    .extension(test_user("admin-1", Some("org-1")))
+                    .header("content-type", "application/json")
+                    .body(Body::from(
+                        serde_json::json!({
+                            "events": [
+                                {
+                                    "session_id": "sess-a",
+                                    "event_type": "turn",
+                                    "model": "claude-sonnet-4-6",
+                                    "provider": "anthropic",
+                                    "prompt_tokens": 100,
+                                    "completion_tokens": 50,
+                                    "cost_microdollars": 5000,
+                                    "tool_calls_accepted": 1,
+                                    "tool_calls_rejected": 0,
+                                    "created_at": "2026-08-01T10:00:00Z",
+                                },
+                                {
+                                    "session_id": "sess-a",
+                                    "event_type": "turn",
+                                    "model": "claude-sonnet-4-6",
+                                    "provider": "anthropic",
+                                    "prompt_tokens": 200,
+                                    "completion_tokens": 100,
+                                    "cost_microdollars": 10000,
+                                    "tool_calls_accepted": 0,
+                                    "tool_calls_rejected": 1,
+                                    "created_at": "2026-08-02T10:00:00Z",
+                                },
+                            ]
+                        })
+                        .to_string(),
+                    ))
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+        assert_eq!(ingest.status(), StatusCode::OK);
+
+        let resp = app
+            .oneshot(
+                Request::builder()
+                    .method("GET")
+                    .uri("/admin/analytics/gizzi-code/usage?organization_id=org-1&start=2026-08-01&end=2026-08-03&granularity=day")
+                    .extension(test_user("admin-1", Some("org-1")))
+                    .body(Body::empty())
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+        assert_eq!(resp.status(), StatusCode::OK);
+        let body = body_json(resp.into_body()).await;
+        let items = body["items"].as_array().unwrap();
+        assert_eq!(items.len(), 2);
+        let aug1 = items.iter().find(|i| i["bucket"] == "2026-08-01").unwrap();
+        assert_eq!(aug1["events"], 1);
+        assert_eq!(aug1["prompt_tokens"], 100);
+        assert_eq!(aug1["tool_calls_accepted"], 1);
+        let aug2 = items.iter().find(|i| i["bucket"] == "2026-08-02").unwrap();
+        assert_eq!(aug2["events"], 1);
+        assert_eq!(aug2["completion_tokens"], 100);
+        assert_eq!(aug2["tool_calls_rejected"], 1);
     }
 }
