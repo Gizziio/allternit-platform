@@ -29,6 +29,7 @@ pub fn router() -> Router<Arc<AppState>> {
         )
         .route("/admin/spend-limits/approve", post(approve_increase))
         .route("/admin/spend-limits/reject", post(reject_increase))
+        .route("/users/me/balance", get(get_user_balance))
 }
 
 type ApiError = (StatusCode, Json<Value>);
@@ -114,6 +115,55 @@ async fn get_spend_limit(
         let conn = state.db.connect().map_err(internal)?;
         let org = admin_org(&conn, &user)?;
         find_row(&conn, &org)
+    }).await;
+    match result {
+        Ok(Ok(v)) => Json(v).into_response(),
+        Ok(Err(e)) => e.into_response(),
+        Err(e) => internal(e).into_response(),
+    }
+}
+
+fn user_org(user: &AuthUser) -> Result<String, ApiError> {
+    user.organization_id
+        .as_deref()
+        .or(user.tenant_id.as_deref())
+        .map(str::to_string)
+        .ok_or_else(|| {
+            error(
+                StatusCode::FORBIDDEN,
+                "organization_required",
+                "An active organization is required.",
+            )
+        })
+}
+
+fn get_balance_for_org(conn: &rusqlite::Connection, org: &str) -> Result<Value, ApiError> {
+    let row: Option<(i64, i64)> = conn
+        .query_row(
+            "SELECT monthly_usd_cap, current_month_spend FROM spend_limits WHERE org_id = ?1",
+            [org],
+            |r| Ok((r.get(0)?, r.get(1)?)),
+        )
+        .optional()
+        .map_err(internal)?;
+    let (cap, spend) = row.unwrap_or((0, 0));
+    let available = cap.saturating_sub(spend);
+    Ok(json!({
+        "object": "balance",
+        "available_balance": available,
+        "total_balance": cap,
+        "currency": "USD",
+    }))
+}
+
+async fn get_user_balance(
+    State(state): State<Arc<AppState>>,
+    Extension(user): Extension<AuthUser>,
+) -> Response {
+    let result = tokio::task::spawn_blocking(move || {
+        let conn = state.db.connect().map_err(internal)?;
+        let org = user_org(&user)?;
+        get_balance_for_org(&conn, &org)
     }).await;
     match result {
         Ok(Ok(v)) => Json(v).into_response(),
@@ -374,6 +424,33 @@ mod tests {
             )
             .unwrap();
         assert_eq!(changed, 0);
+
+        let _ = std::fs::remove_file(&path);
+    }
+
+    #[test]
+    fn user_balance_reflects_cap_and_spend() {
+        let (path, db) = test_db();
+        let conn = db.connect().unwrap();
+        seed_org_admin(&conn, "org-1", "user-1", "member");
+
+        // No row yet → zeros.
+        let balance = get_balance_for_org(&conn, "org-1").unwrap();
+        assert_eq!(balance["object"], "balance");
+        assert_eq!(balance["available_balance"], 0);
+        assert_eq!(balance["total_balance"], 0);
+        assert_eq!(balance["currency"], "USD");
+
+        // Cap of $100, spend of $30 → available $70 (cents).
+        conn.execute(
+            "INSERT OR REPLACE INTO spend_limits (org_id, monthly_usd_cap, current_month_spend)
+             VALUES ('org-1', 10000, 3000)",
+            [],
+        )
+        .unwrap();
+        let balance = get_balance_for_org(&conn, "org-1").unwrap();
+        assert_eq!(balance["available_balance"], 7000);
+        assert_eq!(balance["total_balance"], 10000);
 
         let _ = std::fs::remove_file(&path);
     }
