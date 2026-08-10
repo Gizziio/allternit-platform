@@ -8,6 +8,7 @@ import {
   addAuthProfile,
   getAuthStatus,
   loginApiKey,
+  logout,
   readAuthProfiles,
   removeAuthProfile,
   resolveApiKey,
@@ -198,6 +199,50 @@ describe("getAuthStatus", () => {
 
   test("reports none when no credentials exist", async () => {
     const configPath = await configFixture()
+    expect(await getAuthStatus(configPath)).toEqual({ method: "none" })
+  })
+})
+
+describe("logout", () => {
+  test("removes the active API-key profile and clears active_profile", async () => {
+    const configPath = await configFixture()
+    await loginApiKey(configPath, "sk-logout", { profile: "work" })
+
+    const result = await logout(configPath)
+    expect(result.method).toBe("api_key")
+    expect(result.profile).toBe("work")
+
+    expect(await getAuthStatus(configPath)).toEqual({ method: "none" })
+    const auth = await readAuthProfiles(configPath)
+    expect(auth.profiles.work).toBeUndefined()
+    expect(auth.active_profile).toBeUndefined()
+  })
+
+  test("removes a specific profile when named", async () => {
+    const configPath = await configFixture()
+    await loginApiKey(configPath, "sk-keep", { profile: "keep" })
+    await loginApiKey(configPath, "sk-remove", { profile: "remove" })
+
+    await logout(configPath, "remove")
+
+    const auth = await readAuthProfiles(configPath)
+    expect(auth.profiles.remove).toBeUndefined()
+    expect(auth.profiles.keep).toBeDefined()
+    expect(auth.active_profile).toBe("keep")
+  })
+
+  test("clears OAuth tokens from the runtime auth store", async () => {
+    const configPath = await configFixture()
+    await Auth.set("anthropic", {
+      type: "oauth",
+      access: "access-token",
+      refresh: "refresh-token",
+      expires: Date.now() + 60_000,
+    })
+
+    const result = await logout(configPath)
+    expect(result.method).toBe("oauth_token")
+
     expect(await getAuthStatus(configPath)).toEqual({ method: "none" })
   })
 })

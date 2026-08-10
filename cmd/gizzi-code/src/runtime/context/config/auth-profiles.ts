@@ -101,6 +101,38 @@ export async function setActiveAuthProfile(configPath: string, name: string): Pr
   await writeAuthProfiles(configPath, auth)
 }
 
+/**
+ * Sign out the active session.
+ *
+ * Removes the active API-key profile from config.toml and clears any OAuth
+ * credentials stored in the runtime auth store. If a profile name is supplied,
+ * only that profile is removed.
+ */
+export async function logout(configPath: string, name?: string, writer?: CredentialWriter): Promise<{ method: AuthMethod; profile?: string }> {
+  const status = await getAuthStatus(configPath, writer)
+  const targetProfile = name ?? status.profile
+
+  if (status.method === "oauth_token") {
+    const runtimeAuth = await Auth.all()
+    for (const key of Object.keys(runtimeAuth)) {
+      await Auth.remove(key)
+    }
+  }
+
+  if (targetProfile) {
+    const auth = await readAuthProfiles(configPath)
+    if (auth.profiles[targetProfile]) {
+      delete auth.profiles[targetProfile]
+      if (auth.active_profile === targetProfile) {
+        auth.active_profile = Object.keys(auth.profiles).sort()[0]
+      }
+      await writeAuthProfiles(configPath, auth)
+    }
+  }
+
+  return { method: status.method, profile: targetProfile }
+}
+
 export type LoginApiKeyResult = {
   profile: string
   method: "file" | "keyring"

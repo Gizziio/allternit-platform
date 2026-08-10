@@ -8,6 +8,7 @@ import {
   addAuthProfile,
   getAuthStatus,
   loginApiKey,
+  logout,
   readAuthProfiles,
   removeAuthProfile,
   setActiveAuthProfile,
@@ -57,6 +58,23 @@ const StatusCommand = cmd({
       default:
         UI.println("Not authenticated")
         break
+    }
+  },
+})
+
+const LogoutCommand = cmd({
+  command: "logout",
+  describe: "sign out and remove stored credentials",
+  builder: (yargs) =>
+    yargs.option("profile", { type: "string", describe: "specific profile to remove" }),
+  async handler(args) {
+    const result = await logout(configPath(), args.profile)
+    if (result.method === "oauth_token") {
+      UI.println("Signed out of OAuth session")
+    } else if (result.profile) {
+      UI.println(`Removed auth profile: ${result.profile}`)
+    } else {
+      UI.println("Not authenticated")
     }
   },
 })
@@ -163,6 +181,7 @@ export const AuthCommand = cmd({
     yargs
       .command(LoginCommand)
       .command(StatusCommand)
+      .command(LogoutCommand)
       .command(ProfileCommand)
       .demandCommand(),
   async handler() {},
