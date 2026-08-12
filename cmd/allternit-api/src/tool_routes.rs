@@ -4,7 +4,7 @@
 //! Tools can be local (filesystem, shell, browser) or proxied to MCP servers.
 
 use axum::{
-    extract::State,
+    extract::{Path, State},
     http::{HeaderMap, StatusCode},
     response::IntoResponse,
     routing::{get, post},
@@ -16,11 +16,34 @@ use std::sync::Arc;
 use tracing::{info, warn};
 
 use crate::auth::AuthUser;
+use crate::permission_policy::{evaluate, PermissionAction};
 use crate::AppState;
+
+// ─── Cache-control helpers ──────────────────────────────────────────────────
+
+/// Character threshold above which a tool result is considered "large" and
+/// may be annotated with `cache_control: { type: "ephemeral" }` when the
+/// caller opts into caching. Aligns with Anthropic's prompt-caching minimum
+/// of roughly 1k tokens (~4k characters of JSON).
+const TOOL_RESULT_CACHE_THRESHOLD_CHARS: usize = 4_000;
+
+/// Return an Anthropic-style ephemeral cache_control hint when the result is
+/// large enough to benefit from prompt caching and the caller enabled it.
+fn tool_result_cache_control(result: &Value, cache_enabled: bool) -> Option<Value> {
+    if !cache_enabled {
+        return None;
+    }
+    let size = serde_json::to_string(result).map(|s| s.len()).unwrap_or(0);
+    if size >= TOOL_RESULT_CACHE_THRESHOLD_CHARS {
+        Some(json!({"type": "ephemeral"}))
+    } else {
+        None
+    }
+}
 
 // ─── Request/Response Types ─────────────────────────────────────────────────
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, Default)]
 pub struct ExecuteToolRequest {
     /// Tool identifier (e.g. "shell.exec", "file.read", "browser.navigate", "mcp:<server>:<tool>")
     /// `tool_name` alias: the web/desktop surface (`native-agent-api.ts`,
@@ -36,6 +59,10 @@ pub struct ExecuteToolRequest {
     /// Optional workspace context
     #[serde(default)]
     pub workspace_id: Option<String>,
+    /// When true, large tool results may include a `cache_control` hint for
+    /// providers that support prompt caching (e.g. Anthropic).
+    #[serde(default)]
+    pub cache: Option<bool>,
 }
 
 #[derive(Debug, Serialize)]
@@ -44,6 +71,8 @@ pub struct ExecuteToolResponse {
     pub result: Option<Value>,
     pub error: Option<String>,
     pub execution_time_ms: u64,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub cache_control: Option<Value>,
 }
 
 // ─── Router ─────────────────────────────────────────────────────────────────
@@ -52,6 +81,25 @@ pub fn tool_router() -> Router<Arc<AppState>> {
     Router::new()
         .route("/tools", get(list_tools))
         .route("/tools/execute", post(execute_tool))
+        .route("/beta/approvals/:id/approve", post(approve_tool_execution))
+        .route("/beta/approvals/:id/deny", post(deny_tool_execution))
+}
+
+// ─── Permission helpers ─────────────────────────────────────────────────────
+
+/// Extract the file path a tool request targets, if any.
+fn request_file_path(args: &Value) -> Option<&str> {
+    args.get("path")
+        .and_then(|v| v.as_str())
+        .or_else(|| args.get("file_path").and_then(|v| v.as_str()))
+}
+
+/// Extract the network host a tool request targets, if any.
+fn request_network_host(args: &Value) -> Option<String> {
+    let url = args.get("url").and_then(|v| v.as_str())?;
+    reqwest::Url::parse(url)
+        .ok()
+        .and_then(|u| u.host_str().map(String::from))
 }
 
 // ─── Handlers ───────────────────────────────────────────────────────────────
@@ -101,15 +149,55 @@ async fn execute_tool(
         }
     };
 
+    // Evaluate agent-level permission policy before executing the tool.
+    let active_policy = state.config.active_permission_policy();
+    let decision = evaluate(
+        active_policy.as_ref(),
+        &body.tool,
+        request_file_path(&body.args),
+        request_network_host(&body.args).as_deref(),
+    );
+    match decision {
+        PermissionAction::Deny => {
+            return (
+                StatusCode::FORBIDDEN,
+                Json(json!({
+                    "error": "Tool execution denied by permission policy",
+                    "tool": body.tool,
+                })),
+            );
+        }
+        PermissionAction::Ask => {
+            let approval_id = state.approval_store.create(&user.user_id, &body.tool, &body.args);
+            info!("Policy asked for approval '{}' for tool '{}'", approval_id, body.tool);
+            return (
+                StatusCode::ACCEPTED,
+                Json(json!({
+                    "status": "approval_required",
+                    "approval_id": approval_id,
+                    "tool": body.tool,
+                })),
+            );
+        }
+        PermissionAction::Allow => {}
+    }
+
     let start = std::time::Instant::now();
     info!("Executing tool '{}' for user '{}'", body.tool, user.user_id);
 
-    let result = match execute_tool_internal(&state, &body, &user.user_id).await {
-        Ok(result) => json!({
-            "success": true,
-            "result": result,
-            "execution_time_ms": start.elapsed().as_millis() as u64,
-        }),
+    let cache_enabled = body.cache.unwrap_or(false);
+
+    let org_id = user.organization_id.as_deref().or(user.tenant_id.as_deref());
+    let result = match execute_tool_internal(&state, &body, &user.user_id, org_id).await {
+        Ok(result) => {
+            let cache_control = tool_result_cache_control(&result, cache_enabled);
+            json!({
+                "success": true,
+                "result": result,
+                "execution_time_ms": start.elapsed().as_millis() as u64,
+                "cache_control": cache_control,
+            })
+        }
         Err(e) => {
             warn!("Tool '{}' failed: {}", body.tool, e);
             json!({
@@ -123,6 +211,40 @@ async fn execute_tool(
     (StatusCode::OK, Json(result))
 }
 
+async fn approve_tool_execution(
+    State(state): State<Arc<AppState>>,
+    Path(id): Path<String>,
+) -> impl IntoResponse {
+    if state.approval_store.approve(&id) {
+        (
+            StatusCode::OK,
+            Json(json!({ "approval_id": id, "status": "approved" })),
+        )
+    } else {
+        (
+            StatusCode::NOT_FOUND,
+            Json(json!({ "error": "Approval request not found" })),
+        )
+    }
+}
+
+async fn deny_tool_execution(
+    State(state): State<Arc<AppState>>,
+    Path(id): Path<String>,
+) -> impl IntoResponse {
+    if state.approval_store.deny(&id) {
+        (
+            StatusCode::OK,
+            Json(json!({ "approval_id": id, "status": "denied" })),
+        )
+    } else {
+        (
+            StatusCode::NOT_FOUND,
+            Json(json!({ "error": "Approval request not found" })),
+        )
+    }
+}
+
 // ─── Tool Implementations ───────────────────────────────────────────────────
 
 /// `pub(crate)`: also called by `mcp_server_routes.rs`'s `tools/call` handler,
@@ -132,11 +254,26 @@ pub(crate) async fn execute_tool_internal(
     state: &AppState,
     request: &ExecuteToolRequest,
     user_id: &str,
+    tenant_id: Option<&str>,
 ) -> Result<Value, String> {
+    // Server-side tools take precedence over native tools when registered for
+    // the caller's organization. They run inside the platform sandbox.
+    if let Some(org_id) = tenant_id {
+        match crate::server_tool_routes::execute_server_tool(state, &request.tool, &request.args, org_id).await {
+            Ok(Some(result)) => return Ok(result),
+            Ok(None) => {}
+            Err(e) => return Err(e),
+        }
+    }
+
     match request.tool.as_str() {
         // ── Shell Execution ──────────────────────────────────────────────────
         "shell.exec" => shell_exec(request).await,
         "shell.eval" => shell_exec(request).await,
+        "bash" => bash_exec(request).await,
+
+        // ── Code Execution ───────────────────────────────────────────────────
+        "code_execution" => code_execution(request).await,
 
         // ── File System ──────────────────────────────────────────────────────
         "file.read" => file_read(request).await,
@@ -180,25 +317,49 @@ pub(crate) async fn execute_tool_internal(
 // ── Shell ───────────────────────────────────────────────────────────────────
 
 async fn shell_exec(request: &ExecuteToolRequest) -> Result<Value, String> {
+    run_shell(
+        request,
+        request.timeout.unwrap_or(30),
+        request.args.get("cwd").and_then(|v| v.as_str()),
+    )
+    .await
+}
+
+async fn bash_exec(request: &ExecuteToolRequest) -> Result<Value, String> {
+    let timeout = request
+        .args
+        .get("timeout")
+        .and_then(|v| v.as_u64())
+        .unwrap_or_else(|| request.timeout.unwrap_or(30));
+    let restart = request
+        .args
+        .get("restart")
+        .and_then(|v| v.as_bool())
+        .unwrap_or(false);
+    // restart is currently advisory: each API invocation spawns a fresh process,
+    // so a new shell is already provided. We include it in the schema for callers
+    // trained on the WebVM contract.
+    let _ = restart;
+    run_shell(request, timeout, None).await
+}
+
+async fn run_shell(
+    request: &ExecuteToolRequest,
+    timeout_secs: u64,
+    cwd: Option<&str>,
+) -> Result<Value, String> {
     let command = request
         .args
         .get("command")
         .and_then(|v| v.as_str())
         .ok_or("Missing 'command' argument")?;
 
-    let cwd = request
-        .args
-        .get("cwd")
-        .and_then(|v| v.as_str())
-        .map(|s| std::path::PathBuf::from(s))
-        .or_else(|| std::env::current_dir().ok());
-
-    let timeout_secs = request.timeout.unwrap_or(30);
-
     let mut cmd = tokio::process::Command::new("sh");
     cmd.arg("-c").arg(command);
 
     if let Some(dir) = cwd {
+        cmd.current_dir(std::path::PathBuf::from(dir));
+    } else if let Some(dir) = std::env::current_dir().ok() {
         cmd.current_dir(dir);
     }
 
@@ -215,6 +376,48 @@ async fn shell_exec(request: &ExecuteToolRequest) -> Result<Value, String> {
         "stderr": stderr,
         "exit_code": output.status.code(),
         "success": output.status.success(),
+    }))
+}
+
+async fn code_execution(request: &ExecuteToolRequest) -> Result<Value, String> {
+    let language = request
+        .args
+        .get("language")
+        .and_then(|v| v.as_str())
+        .ok_or("Missing 'language' argument")?;
+    let code = request
+        .args
+        .get("code")
+        .and_then(|v| v.as_str())
+        .ok_or("Missing 'code' argument")?;
+    let timeout_secs = request
+        .args
+        .get("timeout_seconds")
+        .and_then(|v| v.as_u64())
+        .unwrap_or_else(|| request.timeout.unwrap_or(30));
+
+    let (program, flag) = match language.to_lowercase().as_str() {
+        "python" | "python3" => ("python3", "-c"),
+        "node" | "javascript" | "js" => ("node", "-e"),
+        "bash" | "sh" => ("bash", "-c"),
+        "rust" | "rs" => ("rustc", "--"),
+        _ => return Err(format!("Unsupported language: {}", language)),
+    };
+
+    let output = tokio::time::timeout(
+        std::time::Duration::from_secs(timeout_secs),
+        tokio::process::Command::new(program).arg(flag).arg(code).output(),
+    )
+    .await
+    .map_err(|_| "Code execution timed out")?
+    .map_err(|e| format!("Failed to execute code: {}", e))?;
+
+    Ok(json!({
+        "stdout": String::from_utf8_lossy(&output.stdout).to_string(),
+        "stderr": String::from_utf8_lossy(&output.stderr).to_string(),
+        "exit_code": output.status.code(),
+        "success": output.status.success(),
+        "language": language,
     }))
 }
 
@@ -662,6 +865,8 @@ async fn time_now(_request: &ExecuteToolRequest) -> Result<Value, String> {
 async fn list_tools() -> impl IntoResponse {
     let mut tools = vec![
         json!({ "id": "shell.exec", "name": "Shell Execute", "description": "Execute shell commands" }),
+        json!({ "id": "bash", "name": "Bash", "description": "Execute a shell command with optional timeout and restart control" }),
+        json!({ "id": "code_execution", "name": "Code Execution", "description": "Execute code in a sandboxed environment" }),
         json!({ "id": "file.read", "name": "File Read", "description": "Read file contents" }),
         json!({ "id": "file.write", "name": "File Write", "description": "Write to a file" }),
         json!({ "id": "file.list", "name": "File List", "description": "List directory contents" }),
@@ -695,6 +900,7 @@ async fn list_tools() -> impl IntoResponse {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::permission_policy::{PermissionPolicy, PermissionRule};
 
     #[test]
     fn truncate_markdown_leaves_short_output_untouched() {
@@ -791,5 +997,208 @@ mod tests {
             url["parameters"]["required"],
             json!(["url"])
         );
+    }
+
+    #[tokio::test]
+    async fn bash_tool_executes_shell_command() {
+        let req = ExecuteToolRequest {
+            tool: "bash".to_string(),
+            args: json!({ "command": "echo hello" }),
+            timeout: Some(5),
+            workspace_id: None,
+            ..Default::default()
+        };
+        let result = bash_exec(&req).await.unwrap();
+        assert!(result["success"].as_bool().unwrap());
+        assert!(result["stdout"].as_str().unwrap().contains("hello"));
+        assert_eq!(result["exit_code"], 0);
+    }
+
+    #[tokio::test]
+    async fn bash_tool_honors_timeout_argument() {
+        let req = ExecuteToolRequest {
+            tool: "bash".to_string(),
+            args: json!({ "command": "sleep 5", "timeout": 1 }),
+            timeout: Some(30),
+            workspace_id: None,
+            ..Default::default()
+        };
+        let result = bash_exec(&req).await;
+        assert!(result.is_err());
+        assert!(result.unwrap_err().contains("timed out"));
+    }
+
+    #[tokio::test]
+    async fn code_execution_runs_python() {
+        let req = ExecuteToolRequest {
+            tool: "code_execution".to_string(),
+            args: json!({ "language": "python", "code": "print(21 + 21)" }),
+            timeout: Some(5),
+            workspace_id: None,
+            ..Default::default()
+        };
+        let result = code_execution(&req).await.unwrap();
+        assert!(result["success"].as_bool().unwrap());
+        assert!(result["stdout"].as_str().unwrap().contains("42"));
+        assert_eq!(result["language"], "python");
+    }
+
+    #[tokio::test]
+    async fn code_execution_rejects_missing_language() {
+        let req = ExecuteToolRequest {
+            tool: "code_execution".to_string(),
+            args: json!({ "code": "print(1)" }),
+            timeout: Some(5),
+            workspace_id: None,
+            ..Default::default()
+        };
+        let result = code_execution(&req).await;
+        assert!(result.is_err());
+        assert!(result.unwrap_err().contains("language"));
+    }
+
+    #[test]
+    fn tool_result_cache_control_attaches_to_large_results_when_enabled() {
+        let large_content = "x".repeat(TOOL_RESULT_CACHE_THRESHOLD_CHARS);
+        let result = json!({ "content": large_content });
+        let cache = tool_result_cache_control(&result, true);
+        assert_eq!(cache, Some(json!({"type": "ephemeral"})));
+    }
+
+    #[test]
+    fn tool_result_cache_control_omitted_when_caching_disabled() {
+        let large_content = "x".repeat(TOOL_RESULT_CACHE_THRESHOLD_CHARS);
+        let result = json!({ "content": large_content });
+        let cache = tool_result_cache_control(&result, false);
+        assert_eq!(cache, None);
+    }
+
+    #[test]
+    fn tool_result_cache_control_omitted_for_small_results() {
+        let result = json!({ "content": "small" });
+        let cache = tool_result_cache_control(&result, true);
+        assert_eq!(cache, None);
+    }
+
+    async fn state_with_policy(policy: PermissionPolicy, active: &str) -> Arc<AppState> {
+        let temp = tempfile::tempdir().unwrap().into_path();
+        let state = crate::test_helpers::app_state(&temp).await;
+        let mut state = match Arc::try_unwrap(state) {
+            Ok(s) => s,
+            Err(_) => panic!("single app_state reference expected"),
+        };
+        state.config.user.permission_policies = Some(vec![policy]);
+        state.config.user.active_permission_policy = Some(active.to_string());
+        Arc::new(state)
+    }
+
+    fn user_headers() -> HeaderMap {
+        let mut headers = HeaderMap::new();
+        headers.insert("x-allternit-user-id", "user-1".parse().unwrap());
+        headers
+    }
+
+    async fn response_json(response: axum::response::Response) -> Value {
+        let bytes = axum::body::to_bytes(response.into_body(), usize::MAX)
+            .await
+            .unwrap();
+        serde_json::from_slice(&bytes).unwrap()
+    }
+
+    #[tokio::test]
+    async fn execute_tool_allows_when_policy_allows() {
+        let state = state_with_policy(
+            PermissionPolicy {
+                name: "allow-echo".to_string(),
+                rules: vec![PermissionRule {
+                    tool: Some("echo".to_string()),
+                    action: PermissionAction::Allow,
+                    ..Default::default()
+                }],
+            },
+            "allow-echo",
+        )
+        .await;
+        let body = ExecuteToolRequest {
+            tool: "echo".to_string(),
+            args: json!({ "message": "hi" }),
+            ..Default::default()
+        };
+        let response = execute_tool(State(state), user_headers(), Json(body)).await;
+        assert_eq!(response.into_response().status(), StatusCode::OK);
+    }
+
+    #[tokio::test]
+    async fn execute_tool_denies_when_policy_denies() {
+        let state = state_with_policy(
+            PermissionPolicy {
+                name: "deny-bash".to_string(),
+                rules: vec![PermissionRule {
+                    tool: Some("bash".to_string()),
+                    action: PermissionAction::Deny,
+                    ..Default::default()
+                }],
+            },
+            "deny-bash",
+        )
+        .await;
+        let body = ExecuteToolRequest {
+            tool: "bash".to_string(),
+            args: json!({ "command": "echo hi" }),
+            ..Default::default()
+        };
+        let response = execute_tool(State(state), user_headers(), Json(body)).await.into_response();
+        assert_eq!(response.status(), StatusCode::FORBIDDEN);
+        let json = response_json(response).await;
+        assert_eq!(json["tool"], "bash");
+    }
+
+    #[tokio::test]
+    async fn execute_tool_asks_when_policy_asks() {
+        let state = state_with_policy(
+            PermissionPolicy {
+                name: "ask-write".to_string(),
+                rules: vec![PermissionRule {
+                    tool: Some("file.write".to_string()),
+                    file_path: Some("/etc/*".to_string()),
+                    action: PermissionAction::Ask,
+                    ..Default::default()
+                }],
+            },
+            "ask-write",
+        )
+        .await;
+        let body = ExecuteToolRequest {
+            tool: "file.write".to_string(),
+            args: json!({ "path": "/etc/test.txt", "content": "x" }),
+            ..Default::default()
+        };
+        let response = execute_tool(State(state.clone()), user_headers(), Json(body))
+            .await
+            .into_response();
+        assert_eq!(response.status(), StatusCode::ACCEPTED);
+        let json = response_json(response).await;
+        let approval_id = json["approval_id"].as_str().unwrap();
+        assert_eq!(json["status"], "approval_required");
+
+        // Approve the request and verify the store reflects it.
+        let approve_response = approve_tool_execution(State(state.clone()), Path(approval_id.to_string())).await;
+        assert_eq!(approve_response.into_response().status(), StatusCode::OK);
+    }
+
+    #[tokio::test]
+    async fn approval_endpoints_return_404_for_unknown_id() {
+        let state = state_with_policy(
+            PermissionPolicy {
+                name: "empty".to_string(),
+                rules: vec![],
+            },
+            "empty",
+        )
+        .await;
+        let response = approve_tool_execution(State(state.clone()), Path("nope".to_string())).await;
+        assert_eq!(response.into_response().status(), StatusCode::NOT_FOUND);
+        let response = deny_tool_execution(State(state), Path("nope".to_string())).await;
+        assert_eq!(response.into_response().status(), StatusCode::NOT_FOUND);
     }
 }

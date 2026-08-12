@@ -86,6 +86,14 @@ pub struct CompanyConfig {
     /// and there is no external Clerk tenant.
     #[serde(rename = "selfHosted")]
     pub self_hosted: Option<bool>,
+
+    /// Named agent-level permission policies baked into the deployment.
+    #[serde(rename = "permissionPolicies", default)]
+    pub permission_policies: Option<Vec<crate::permission_policy::PermissionPolicy>>,
+
+    /// Name of the company-level permission policy that is active by default.
+    #[serde(rename = "activePermissionPolicy", default)]
+    pub active_permission_policy: Option<String>,
 }
 
 /// User-level configuration. Written by the onboarding wizard and the settings
@@ -143,6 +151,14 @@ pub struct UserConfig {
     /// First-start wizard tracking (OpenClaw-style versioning).
     #[serde(rename = "wizard")]
     pub wizard: Option<WizardState>,
+
+    /// User-defined agent-level permission policies.
+    #[serde(rename = "permissionPolicies", default)]
+    pub permission_policies: Option<Vec<crate::permission_policy::PermissionPolicy>>,
+
+    /// Name of the active permission policy. Overrides the company-level default.
+    #[serde(rename = "activePermissionPolicy", default)]
+    pub active_permission_policy: Option<String>,
 }
 
 /// Tracks when the first-start / env wizard last ran so the app can prompt
@@ -338,6 +354,16 @@ impl AppConfig {
         std::env::var("ALLTERNIT_DESKTOP_ACCESS_TOKEN")
             .ok()
             .filter(|s| !s.is_empty())
+    }
+
+    /// Secret used to sign enrollment tokens for user-profile consent URLs.
+    /// Falls back to the platform encryption key so a packaged deployment has
+    /// a stable secret without extra configuration; explicit value preferred.
+    pub fn enrollment_secret(&self) -> Option<String> {
+        std::env::var("ALLTERNIT_ENROLLMENT_SECRET")
+            .ok()
+            .filter(|s| !s.is_empty())
+            .or_else(|| self.encryption_key())
     }
 
     /// Tenant identifier for this packaged deployment.
@@ -588,6 +614,30 @@ impl AppConfig {
             .unwrap_or(4096)
     }
 
+    /// Return the currently active permission policy, if one is configured.
+    /// User config selects the active policy name and overrides company policy
+    /// definitions with the same name.
+    pub fn active_permission_policy(&self) -> Option<crate::permission_policy::PermissionPolicy> {
+        let mut by_name: std::collections::HashMap<String, crate::permission_policy::PermissionPolicy> =
+            std::collections::HashMap::new();
+        if let Some(policies) = self.company.permission_policies.clone() {
+            for policy in policies {
+                by_name.insert(policy.name.clone(), policy);
+            }
+        }
+        if let Some(policies) = self.user.permission_policies.clone() {
+            for policy in policies {
+                by_name.insert(policy.name.clone(), policy);
+            }
+        }
+        let active_name = self
+            .user
+            .active_permission_policy
+            .as_ref()
+            .or_else(|| self.company.active_permission_policy.as_ref())?;
+        by_name.remove(active_name)
+    }
+
     /// Apply env-variable overrides to the in-memory config. This keeps the
     /// existing dev/CI workflow working while the file-based config becomes
     /// the primary path for packaged users.
@@ -773,6 +823,8 @@ impl From<SaveUserConfigPayload> for UserConfig {
             agent_workdir: payload.agent_workdir,
             cron_daemon_url: payload.cron_daemon_url,
             wizard: payload.wizard,
+            permission_policies: None,
+            active_permission_policy: None,
         }
     }
 }

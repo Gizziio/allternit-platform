@@ -24,7 +24,7 @@
 //! cost stands alone.
 
 use once_cell::sync::Lazy;
-use serde::Deserialize;
+use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::path::PathBuf;
 use std::sync::Mutex;
@@ -32,7 +32,7 @@ use std::time::SystemTime;
 use tracing::warn;
 
 /// Per-1M-token dollar rates for one model.
-#[derive(Debug, Clone, Default, PartialEq)]
+#[derive(Debug, Clone, Default, PartialEq, Serialize)]
 pub struct ModelPricing {
     pub input: f64,
     pub output: f64,
@@ -230,6 +230,12 @@ fn current_pricing() -> Option<PricingMap> {
         map: loaded.clone().unwrap_or_default(),
     });
     loaded
+}
+
+/// Return the current pricing map snapshot. Returns an empty map when the
+/// models.dev cache is missing or undecodable.
+pub fn pricing_snapshot() -> PricingMap {
+    current_pricing().unwrap_or_default()
 }
 
 /// Recompute the cost of one request in microdollars. Returns None when the

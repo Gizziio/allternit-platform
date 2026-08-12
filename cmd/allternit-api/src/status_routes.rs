@@ -1,5 +1,6 @@
 use axum::{extract::State, routing::get, Json, Router};
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
+use serde_json::{json, Value};
 use std::sync::Arc;
 use std::time::{Duration, Instant};
 
@@ -22,7 +23,33 @@ struct StatusResponse {
 }
 
 pub fn status_router() -> Router<Arc<AppState>> {
-    Router::new().route("/status", get(status_handler))
+    Router::new()
+        .route("/status", get(status_handler))
+        .route("/regions", get(regions_handler))
+}
+
+#[derive(Debug, Serialize, Deserialize, Clone)]
+struct Region {
+    id: String,
+    name: String,
+    location: String,
+    #[serde(default)]
+    egress_ips: Vec<String>,
+}
+
+fn load_regions() -> Vec<Region> {
+    std::env::var("ALLTERNIT_REGIONS")
+        .ok()
+        .and_then(|value| serde_json::from_str::<Vec<Region>>(&value).ok())
+        .unwrap_or_default()
+}
+
+async fn regions_handler() -> Json<Value> {
+    let regions = load_regions();
+    Json(json!({
+        "object": "list",
+        "data": regions,
+    }))
 }
 
 async fn status_handler(State(state): State<Arc<AppState>>) -> Json<StatusResponse> {
@@ -97,5 +124,26 @@ async fn probe_service(name: &str, slug: &str, url: &str) -> ServiceResult {
         status,
         latency_ms,
         checked_at: chrono::Utc::now().to_rfc3339(),
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn region_json_parses() {
+        let raw = r#"[{"id":"us-east","name":"US East","location":"Virginia","egress_ips":["192.0.2.0/24"]}]"#;
+        let regions: Vec<Region> = serde_json::from_str(raw).unwrap();
+        assert_eq!(regions.len(), 1);
+        assert_eq!(regions[0].id, "us-east");
+        assert_eq!(regions[0].egress_ips, vec!["192.0.2.0/24"]);
+    }
+
+    #[test]
+    fn region_missing_ips_defaults_empty() {
+        let raw = r#"[{"id":"eu-west","name":"EU West","location":"Ireland"}]"#;
+        let regions: Vec<Region> = serde_json::from_str(raw).unwrap();
+        assert!(regions[0].egress_ips.is_empty());
     }
 }

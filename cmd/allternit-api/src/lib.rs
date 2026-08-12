@@ -3,6 +3,15 @@
 //! Shared state and route handlers for the Allternit API.
 
 pub mod aci_routes;
+pub mod admin_audit_routes;
+pub mod admin_mcp_tunnel_routes;
+pub mod admin_access_token_routes;
+pub mod admin_service_account_routes;
+pub mod federation_routes;
+pub mod outcome_rubric_routes;
+pub mod quickstart_routes;
+pub mod admin_spend_limit_routes;
+pub mod admin_workspace_routes;
 pub mod agent_execution;
 pub mod agent_operations_routes;
 pub mod agent_preferences_routes;
@@ -13,12 +22,18 @@ pub mod agent_workspace_paths;
 pub mod agent_workspace_routes;
 pub mod agents_v1_routes;
 pub mod alabs_routes;
+pub mod allternit_vault;
 pub mod analytics_routes;
 pub mod artifact_routes;
 pub mod audit_log_routes;
 pub mod auth;
 pub mod automation_routes;
 pub mod backend_install_routes;
+pub mod beta_deployment_routes;
+pub mod beta_memory_store_routes;
+pub mod beta_session_routes;
+pub mod beta_work_routes;
+pub mod user_profile_routes;
 pub mod billing;
 pub mod board_routes;
 pub mod board_stream_routes;
@@ -27,30 +42,45 @@ pub mod canvas_routes;
 pub mod chat_routes;
 pub mod checkpoints_routes;
 pub mod cloud_credentials_routes;
+pub mod compliance_routes;
 pub mod config;
 pub mod connector_routes;
 pub mod conversation_routes;
 pub mod cowork;
 pub mod cowork_routes;
 pub mod cowork_team_routes;
+pub mod cron_lite;
 pub mod db;
 pub mod design_connector_routes;
 pub mod error;
+pub mod enterprise_auth;
+pub mod eval_metric_routes;
+pub mod eval_metrics;
+pub mod eval_routes;
+pub mod external_keys_routes;
+pub mod fallback_credit_routes;
+pub mod fallback_retry_policy_routes;
 pub mod fallback_routes;
+pub mod groundedness_check_routes;
+pub mod latency_budget_routes;
+pub mod prompt_leak_routes;
 pub mod file_routes;
 pub mod gizzi_chat_stream;
 pub mod gizzi_completion;
 pub mod gizzi_provider_auth;
 pub mod h5i_routes;
 pub mod health;
+pub mod idempotency;
 pub mod inbox_routes;
 pub mod internal_auth;
 pub mod internal_routes;
 pub mod library_routes;
 pub mod llm_gateway;
 pub mod local_brain_routes;
+pub mod mcp_dispatcher;
 pub mod mcp_routes;
 pub mod mcp_server_routes;
+pub mod mcp_tunnel_auth;
 pub mod me_routes;
 pub mod memory_routes;
 pub mod metrics;
@@ -62,17 +92,24 @@ pub mod office_routes;
 pub mod onboarding_routes;
 pub mod open_connector_proxy;
 pub mod orchestrator_routes;
+pub mod permission_policy;
 pub mod platform_static;
 pub mod playground_routes;
 pub mod pricing;
 pub mod provider_routes;
 pub mod queue_routes;
 pub mod rails;
+pub mod rate_limit;
 pub mod rails_client_impl;
 pub mod rbac;
+pub mod rbac_routes;
 pub mod runtime_backend_routes;
 pub mod runtime_discover_routes;
 pub mod sandbox_routes;
+pub mod sandbox_template_routes;
+pub mod scim_routes;
+pub mod server_tool_routes;
+pub mod session_memory_service;
 pub mod slack_webhook_routes;
 pub mod ssh_key_routes;
 pub mod ssh_routes;
@@ -92,6 +129,7 @@ pub mod viz_routes;
 pub mod vm_session_routes;
 pub mod web_proxy_routes;
 pub mod webhook_routes;
+pub mod webhook_subscription_routes;
 pub mod workflow_routes;
 pub mod workspace_routes;
 
@@ -103,10 +141,54 @@ use cowork::background_service::BackgroundServiceHandle;
 use db::DbHandle;
 use design_connector_routes::DesignSkillCache;
 use rails::RailsState;
+use std::path::PathBuf;
 use std::sync::Arc;
 use terminal_routes::TerminalSessionStore;
 use tokio::sync::RwLock;
 use vm_session_routes::VmSessionStore;
+
+#[cfg(test)]
+pub mod test_helpers {
+    //! Minimal `AppState` factory for unit tests that need the full struct.
+    use super::*;
+    use std::collections::HashMap;
+    use std::path::Path;
+
+    pub async fn app_state(temp: &Path) -> Arc<AppState> {
+        let config = AppConfig {
+            company: config::CompanyConfig::default(),
+            user: config::UserConfig::default(),
+        };
+        let db = db::DbHandle::new(temp.join("test.db")).expect("test db");
+        let auth_config = auth::AuthConfig::from_app_config(&config);
+        let jwks = auth::JwksManager::new(&auth_config);
+        let rails = RailsState::new(temp.join("rails"))
+            .await
+            .expect("test rails");
+        Arc::new(AppState {
+            config,
+            db,
+            data_dir: temp.to_path_buf(),
+            jwks,
+            auth_config,
+            vm_driver: None,
+            rails,
+            vm_sessions: vm_session_routes::new_vm_session_store(),
+            cowork_scheduler: None,
+            cowork_background: None,
+            cowork_run_manager: None,
+            webhook_secret: None,
+            office_runtime: Arc::new(RwLock::new(office_routes::OfficeRuntimeFile::default())),
+            office_cli_docs: Arc::new(RwLock::new(HashMap::new())),
+            office_cli_watches: Arc::new(RwLock::new(HashMap::new())),
+            office_cli_mcp_sessions: Arc::new(RwLock::new(HashMap::new())),
+            design_skill_cache: DesignSkillCache::new(),
+            terminal_sessions: TerminalSessionStore::new(),
+            mcp_dispatcher: crate::mcp_dispatcher::McpDispatcher::new(),
+            approval_store: Arc::new(permission_policy::ApprovalStore::new()),
+        })
+    }
+}
 
 /// Globally accessible application configuration, initialized once at startup.
 /// Routes and helpers that do not receive `AppState` can read from here so the
@@ -140,6 +222,8 @@ pub struct AppState {
     pub config: AppConfig,
     /// SQLite database handle
     pub db: DbHandle,
+    /// Local data directory for on-disk file storage.
+    pub data_dir: PathBuf,
     /// Clerk JWKS manager for JWT verification
     pub jwks: JwksManager,
     /// Unified auth configuration
@@ -171,6 +255,10 @@ pub struct AppState {
     pub design_skill_cache: DesignSkillCache,
     /// Local tmux-backed terminal sessions for Code Mode.
     pub terminal_sessions: TerminalSessionStore,
+    /// Attached MCP servers reachable through the server-side MCP dispatcher.
+    pub mcp_dispatcher: crate::mcp_dispatcher::McpDispatcher,
+    /// Pending/resolved tool-execution approval requests from `ask` policy decisions.
+    pub approval_store: Arc<crate::permission_policy::ApprovalStore>,
 }
 
 /// Return the default LLM provider/model pair used when a request does not

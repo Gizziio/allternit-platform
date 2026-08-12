@@ -1,12 +1,13 @@
 use axum::{
-    extract::{Extension, Query, State},
+    extract::{Extension, Path, Query, State},
     http::StatusCode,
-    response::{Html, Json},
-    routing::{get, post},
+    response::{Html, IntoResponse, Json},
+    routing::{delete, get, post},
     Router,
 };
 use rusqlite::params;
 use serde::{Deserialize, Serialize};
+use std::collections::HashMap;
 use std::sync::Arc;
 use tracing::{info, warn};
 
@@ -21,6 +22,11 @@ pub fn mcp_router() -> Router<Arc<AppState>> {
             get(list_mcp_connectors).post(create_mcp_connector),
         )
         .route("/test", post(test_mcp_connection))
+        .route(
+            "/servers",
+            get(list_mcp_servers).post(attach_mcp_server),
+        )
+        .route("/servers/:id", get(get_mcp_server).delete(detach_mcp_server))
 }
 
 #[derive(Debug, Deserialize)]
@@ -503,5 +509,115 @@ async fn test_mcp_connection(
             "success": false,
             "message": format!("Connection failed: {}", e),
         })),
+    }
+}
+
+// ─── Attached MCP server directory ───────────────────────────────────────────
+
+#[derive(Deserialize)]
+struct AttachMcpServerBody {
+    id: String,
+    url: String,
+    #[serde(default)]
+    headers: HashMap<String, String>,
+}
+
+async fn list_mcp_servers(
+    State(state): State<Arc<AppState>>,
+) -> Json<serde_json::Value> {
+    let servers = state.mcp_dispatcher.list_servers().await;
+    Json(serde_json::json!({
+        "servers": servers.iter().map(|s| serde_json::json!({
+            "id": s.id,
+            "url": s.url,
+            "tools": s.tools.len(),
+        })).collect::<Vec<_>>(),
+        "total": servers.len(),
+    }))
+}
+
+async fn get_mcp_server(
+    State(state): State<Arc<AppState>>,
+    Path(id): Path<String>,
+) -> impl axum::response::IntoResponse {
+    let servers = state.mcp_dispatcher.list_servers().await;
+    match servers.into_iter().find(|s| s.id == id) {
+        Some(s) => (
+            StatusCode::OK,
+            Json(serde_json::json!({
+                "id": s.id,
+                "url": s.url,
+                "tools": s.tools,
+            })),
+        ),
+        None => (
+            StatusCode::NOT_FOUND,
+            Json(serde_json::json!({"error": "server_not_found"})),
+        ),
+    }
+}
+
+async fn attach_mcp_server(
+    State(state): State<Arc<AppState>>,
+    headers: axum::http::HeaderMap,
+    Json(body): Json<AttachMcpServerBody>,
+) -> impl axum::response::IntoResponse {
+    let user = match get_user(&headers) {
+        Some(u) => u,
+        None => {
+            return (
+                StatusCode::UNAUTHORIZED,
+                Json(serde_json::json!({"error": "Unauthorized"})),
+            )
+                .into_response()
+        }
+    };
+
+    match state
+        .mcp_dispatcher
+        .attach_and_sync(body.id.clone(), body.url, body.headers)
+        .await
+    {
+        Ok(server) => {
+            info!(
+                user_id = %user.user_id,
+                server_id = %server.id,
+                tools = server.tools.len(),
+                "MCP server attached"
+            );
+            (
+                StatusCode::CREATED,
+                Json(serde_json::json!({
+                    "id": server.id,
+                    "url": server.url,
+                    "tools": server.tools.iter().map(|t| server.namespaced_name(&t.name)).collect::<Vec<_>>(),
+                })),
+            )
+                .into_response()
+        }
+        Err(e) => {
+            warn!("Failed to attach MCP server '{}': {}", body.id, e);
+            (
+                StatusCode::BAD_GATEWAY,
+                Json(serde_json::json!({"error": "attach_failed", "message": e})),
+            )
+                .into_response()
+        }
+    }
+}
+
+async fn detach_mcp_server(
+    State(state): State<Arc<AppState>>,
+    Path(id): Path<String>,
+) -> impl axum::response::IntoResponse {
+    match state.mcp_dispatcher.detach(&id).await {
+        Some(_) => (
+            StatusCode::OK,
+            Json(serde_json::json!({"id": id, "status": "detached"})),
+        ),
+        None => (
+            StatusCode::NOT_FOUND,
+            Json(serde_json::json!({"error": "server_not_found"})),
+        ),
     }
 }

@@ -1,5 +1,6 @@
 import { ToolRegistry } from '../tools/registry.js';
 import { NativeToolBelt } from '../tools/search.js';
+import type { HarnessStopReason } from './types.js';
 import type { ToolDefinition } from '../tools/types.js';
 
 /**
@@ -21,7 +22,9 @@ export class RunState {
     return this.toolRegistry.getActiveTools().map(tool => ({
       name: tool.name,
       description: tool.description,
-      input_schema: tool.input_schema
+      input_schema: tool.input_schema,
+      strict: tool.strict,
+      cache: tool.cache,
     }));
   }
 
@@ -31,6 +34,11 @@ export class RunState {
   public async handleToolCall(name: string, args: any, context: any): Promise<any> {
     const tool = this.toolRegistry.getActiveTools().find(t => t.name === name);
     if (!tool) return null;
+
+    const validation = this.toolRegistry.validateInput(name, args);
+    if (!validation.valid) {
+      throw new Error(`Invalid input for ${name}: ${validation.errors.join('; ')}`);
+    }
 
     // 1. Pre-execution hook
     if (tool.preExecute) {
@@ -63,6 +71,13 @@ export class RunState {
       this.emitLifecycleEvent('tool.failed', { toolName: name, callId: context.callId, error: String(error) });
       throw error;
     }
+  }
+
+  /**
+   * Record the normalized stop reason for this run and emit a lifecycle event.
+   */
+  public recordStopReason(reason: HarnessStopReason): void {
+    this.emitLifecycleEvent('run.stop', { stopReason: reason });
   }
 
   private emitLifecycleEvent(type: string, data: any) {

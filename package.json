@@ -15,6 +15,7 @@
     "dev:gizzi:watch": "node scripts/dev-stack-watch.cjs --gizzi-only",
     "config:company": "node scripts/generate-company-config.cjs",
     "config:company:write": "node scripts/generate-company-config.cjs --out=resources/company.json",
+    "docs:lint": "node scripts/docs-lint.cjs",
     "dev:api": "cd cmd/allternit-api && cargo run",
     "dev:research": "bash services/open-notebook/dev.sh",
     "test": "vitest run",

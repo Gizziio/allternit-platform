@@ -17,6 +17,7 @@ import { vmCommand } from './commands/vm.js';
 import { pluginsCommand } from './commands/plugins.js';
 import { computerUseCommand } from './commands/computer-use.js';
 import { agentCommand } from './commands/agent.js';
+import { adminCommand } from './commands/admin.js';
 import { version } from '../package.json' assert { type: 'json' };
 
 const program = new Command();
@@ -24,7 +25,10 @@ const program = new Command();
 program
   .name('allternit')
   .description('Allternit - AI-native runtime environment')
-  .version(version);
+  .version(version)
+  .option('--api-url <url>', 'Allternit API base URL', process.env.ALLTERNIT_API_URL ?? 'http://127.0.0.1:8013')
+  .option('--token <token>', 'Clerk bearer token', process.env.ALLTERNIT_TOKEN)
+  .option('--json', 'emit machine-readable JSON');
 
 // Register all commands
 program.addCommand(runCommand);
@@ -37,6 +41,7 @@ program.addCommand(vmCommand);
 program.addCommand(pluginsCommand);
 program.addCommand(computerUseCommand);
 program.addCommand(agentCommand);
+program.addCommand(adminCommand);
 
 // Parse and execute
 program.parse();

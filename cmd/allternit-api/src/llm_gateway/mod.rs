@@ -30,17 +30,28 @@
 
 pub mod admin_routes;
 pub mod auth;
+pub mod batches;
 pub mod benchmarks;
+pub mod citations;
 pub mod dlp;
 pub mod dlp_patterns;
+pub mod failover;
+pub mod files;
 pub mod gizzi_bus;
+pub mod inference_hooks;
 pub mod keys;
 pub mod llm_pricing;
 pub mod proxy;
+pub mod refusal;
 pub mod router;
+pub mod safety;
 pub mod translate;
 
 use axum::{
+    extract::Request,
+    http::StatusCode,
+    middleware::Next,
+    response::{IntoResponse, Response},
     routing::{get, patch, post},
     Router,
 };
@@ -56,7 +67,20 @@ use crate::AppState;
 pub fn llm_gateway_router(state: Arc<AppState>) -> Router<Arc<AppState>> {
     Router::new()
         .route("/chat/completions", post(proxy::chat_completions))
+        .route("/tokens", post(proxy::count_tokens))
+        .route("/rate-limits", get(proxy::rate_limits))
+        .route(
+            "/batches",
+            post(batches::create_batch).get(batches::list_batches),
+        )
+        .route("/batches/:id", get(batches::get_batch))
+        .route("/batches/:id/cancel", post(batches::cancel_batch))
+        .route("/batches/:id/results", get(batches::batch_results))
         .route("/models", get(proxy::list_models))
+        .route("/models/:id", get(proxy::get_model))
+        .route("/pricing", get(proxy::list_pricing))
+        .route("/files", post(files::create_file).get(files::list_files))
+        .route("/files/:id", get(files::get_file).delete(files::delete_file))
         // Layer order: the LAST layer added runs FIRST. Execution order is
         // therefore llm_key auth → rate limit → DLP → budget → handler.
         .layer(axum::middleware::from_fn_with_state(
@@ -77,6 +101,58 @@ pub fn llm_gateway_router(state: Arc<AppState>) -> Router<Arc<AppState>> {
             state,
             auth::llm_key_middleware,
         ))
+        // Header shape is request-global and is rejected before auth/spend.
+        .layer(axum::middleware::from_fn(idempotency_key_middleware))
+}
+
+/// Reject malformed idempotency keys before authentication, routing, or spend.
+/// Replay/persistence remains in the completion handler where the response body
+/// and usage record can be finalized atomically.
+async fn idempotency_key_middleware(request: Request, next: Next) -> Response {
+    if let Some(value) = request.headers().get("idempotency-key") {
+        let valid = value
+            .to_str()
+            .ok()
+            .map(str::trim)
+            .is_some_and(|key| !key.is_empty() && key.len() <= 255 && key.is_ascii());
+        if !valid {
+            return translate::OpenAiErrorResponse::new(
+                StatusCode::BAD_REQUEST,
+                "Idempotency-Key must be 1-255 ASCII characters.",
+                "invalid_request_error",
+                Some("Idempotency-Key"),
+                Some(translate::error_code::INVALID_REQUEST),
+            )
+            .into_response();
+        }
+    }
+    next.run(request).await
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use axum::{body::Body, routing::post};
+    use tower::ServiceExt;
+
+    #[tokio::test]
+    async fn rejects_invalid_idempotency_key_before_handler() {
+        let app = Router::new()
+            .route("/", post(|| async { StatusCode::NO_CONTENT }))
+            .layer(axum::middleware::from_fn(idempotency_key_middleware));
+        let response = app
+            .oneshot(
+                Request::builder()
+                    .method("POST")
+                    .uri("/")
+                    .header("idempotency-key", " ")
+                    .body(Body::empty())
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+        assert_eq!(response.status(), StatusCode::BAD_REQUEST);
+    }
 }
 
 /// Clerk-protected key-management router (merged into the `/api/v1` chain in

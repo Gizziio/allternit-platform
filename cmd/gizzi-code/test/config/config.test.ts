@@ -81,6 +81,71 @@ test("loads JSONC config file", async () => {
   })
 })
 
+test("loads config.toml defaults, auth profiles, and sandbox preferences", async () => {
+  await using tmp = await tmpdir({
+    init: async (dir) => {
+      await Filesystem.write(
+        path.join(dir, "config.toml"),
+        `default_model = "anthropic/claude-sonnet-4"
+
+[auth]
+active_profile = "work"
+
+[auth.profiles.work]
+provider = "anthropic"
+api_key_env = "ANTHROPIC_API_KEY"
+
+[sandbox]
+enabled = true
+allow_network = false
+allowed_domains = ["registry.npmjs.org"]
+`,
+      )
+    },
+  })
+  await Instance.provide({
+    directory: tmp.path,
+    fn: async () => {
+      const config = await Config.get()
+      expect(config.model).toBe("anthropic/claude-sonnet-4")
+      expect(config.auth?.active_profile).toBe("work")
+      expect(config.auth?.profiles?.work?.provider).toBe("anthropic")
+      expect(config.sandbox).toEqual({
+        enabled: true,
+        allow_network: false,
+        allowed_domains: ["registry.npmjs.org"],
+      })
+    },
+  })
+})
+
+test("loads auth credential_store preference", async () => {
+  await using tmp = await tmpdir({
+    init: async (dir) => {
+      await Filesystem.write(
+        path.join(dir, "config.toml"),
+        `[auth]
+active_profile = "work"
+credential_store = "keyring"
+
+[auth.profiles.work]
+provider = "anthropic"
+api_key_env = "ANTHROPIC_API_KEY"
+`,
+      )
+    },
+  })
+  await Instance.provide({
+    directory: tmp.path,
+    fn: async () => {
+      const config = await Config.get()
+      expect(config.auth?.active_profile).toBe("work")
+      expect(config.auth?.credential_store).toBe("keyring")
+      expect(config.auth?.profiles?.work?.provider).toBe("anthropic")
+    },
+  })
+})
+
 test("merges multiple config files with correct precedence", async () => {
   await using tmp = await tmpdir({
     init: async (dir) => {
@@ -1281,6 +1346,134 @@ test("permission config preserves key order", async () => {
         "tools_*",
         "pr_comments_*",
       ])
+    },
+  })
+})
+
+test("approval_policy mode applies a default permission action", async () => {
+  await using tmp = await tmpdir({
+    init: async (dir) => {
+      await writeConfig(dir, {
+        $schema: "https://gizzi.io/config.json",
+        approval_policy: { mode: "untrusted" },
+      })
+    },
+  })
+  await Instance.provide({
+    directory: tmp.path,
+    fn: async () => {
+      const config = await Config.get()
+      expect(config.permission?.["*"]).toBe("ask")
+    },
+  })
+})
+
+test("explicit permission config overrides approval_policy mode default", async () => {
+  await using tmp = await tmpdir({
+    init: async (dir) => {
+      await writeConfig(dir, {
+        $schema: "https://gizzi.io/config.json",
+        approval_policy: { mode: "untrusted" },
+        permission: { "*": "allow" },
+      })
+    },
+  })
+  await Instance.provide({
+    directory: tmp.path,
+    fn: async () => {
+      const config = await Config.get()
+      expect(config.permission?.["*"]).toBe("allow")
+    },
+  })
+})
+
+test("approval_policy granular rules apply skill, web search, and sandbox approval defaults", async () => {
+  await using tmp = await tmpdir({
+    init: async (dir) => {
+      await writeConfig(dir, {
+        $schema: "https://gizzi.io/config.json",
+        approval_policy: {
+          granular: {
+            skill_approval: true,
+            web_search: "disabled",
+            sandbox_approval: false,
+            rules: { grep: "allow" },
+          },
+        },
+      })
+    },
+  })
+  await Instance.provide({
+    directory: tmp.path,
+    fn: async () => {
+      const config = await Config.get()
+      expect(config.permission?.skill).toBe("ask")
+      expect(config.permission?.websearch).toBe("deny")
+      expect(config.permission?.bash).toBe("allow")
+      expect(config.permission?.grep).toBe("allow")
+    },
+  })
+})
+
+test("sandbox mode preset fills in enabled and allow_network defaults", async () => {
+  await using tmp = await tmpdir({
+    init: async (dir) => {
+      await writeConfig(dir, {
+        $schema: "https://gizzi.io/config.json",
+        sandbox: { mode: "read-only" },
+      })
+    },
+  })
+  await Instance.provide({
+    directory: tmp.path,
+    fn: async () => {
+      const config = await Config.get()
+      expect(config.sandbox?.enabled).toBe(true)
+      expect(config.sandbox?.allow_network).toBe(false)
+    },
+  })
+})
+
+test("explicit sandbox settings override the sandbox mode preset", async () => {
+  await using tmp = await tmpdir({
+    init: async (dir) => {
+      await writeConfig(dir, {
+        $schema: "https://gizzi.io/config.json",
+        sandbox: { mode: "read-only", allow_network: true },
+      })
+    },
+  })
+  await Instance.provide({
+    directory: tmp.path,
+    fn: async () => {
+      const config = await Config.get()
+      expect(config.sandbox?.enabled).toBe(true)
+      expect(config.sandbox?.allow_network).toBe(true)
+    },
+  })
+})
+
+test("active permission profile applies its rules as permission defaults", async () => {
+  await using tmp = await tmpdir({
+    init: async (dir) => {
+      await writeConfig(dir, {
+        $schema: "https://gizzi.io/config.json",
+        permission_profiles: {
+          active_profile: "strict",
+          profiles: {
+            strict: { rules: { bash: "ask", edit: "ask" } },
+          },
+        },
+        permission: { edit: "allow" },
+      })
+    },
+  })
+  await Instance.provide({
+    directory: tmp.path,
+    fn: async () => {
+      const config = await Config.get()
+      expect(config.permission?.bash).toBe("ask")
+      expect(config.permission?.edit).toBe("allow")
     },
   })
 })

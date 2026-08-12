@@ -47,6 +47,7 @@ import { SkillTool } from "@/runtime/tools/builtins/skill"
 import { BashTool } from "@/runtime/tools/builtins/bash"
 import { TodoWriteTool } from "@/runtime/tools/builtins/todo"
 import { Locale } from "@/shared/util/locale"
+import { Config } from "@/runtime/context/config/config"
 
 type ToolProps<T extends Tool.Info> = {
   input: Tool.InferParameters<T>
@@ -953,6 +954,26 @@ export const RunCommand = cmd({
     }
 
     await bootstrap(process.cwd(), async () => {
+      const config = await Config.get()
+      args.model ??= config.model
+      if (config.sandbox?.enabled !== undefined && process.env.GIZZI_SANDBOX === undefined && process.env.GIZZI_SANDBOX_DISABLE === undefined && !args.dangerouslySkipSandbox) {
+        Flag.GIZZI_SANDBOX = config.sandbox.enabled
+        Flag.GIZZI_SANDBOX_DISABLE = !config.sandbox.enabled
+      }
+      if (config.sandbox?.allow_network !== undefined && process.env.GIZZI_SANDBOX_ALLOW_NETWORK === undefined) {
+        Flag.GIZZI_SANDBOX_ALLOW_NETWORK = config.sandbox.allow_network
+      }
+      if (config.sandbox?.allowed_domains !== undefined && process.env.GIZZI_SANDBOX_ALLOWED_DOMAINS === undefined) {
+        Flag.GIZZI_SANDBOX_ALLOWED_DOMAINS = config.sandbox.allowed_domains
+      }
+      const profile = config.auth?.active_profile
+        ? config.auth.profiles?.[config.auth.active_profile]
+        : undefined
+      if (profile) {
+        const key = profile.api_key ?? (profile.api_key_env ? process.env[profile.api_key_env] : undefined)
+        if (key) process.env[`${profile.provider.toUpperCase().replace(/-/g, "_")}_API_KEY`] ??= key
+        if (profile.base_url) process.env[`${profile.provider.toUpperCase().replace(/-/g, "_")}_BASE_URL`] ??= profile.base_url
+      }
       const fetchFn = (async (input: RequestInfo | URL, init?: RequestInit) => {
         const request = new Request(input, init)
         return Server.App().fetch(request)
@@ -962,3 +983,17 @@ export const RunCommand = cmd({
     })
   },
 })
+
+/** Pipe-safe alias for automation and CI. Uses the same execution engine as `run`. */
+export const ExecCommand = {
+  ...RunCommand,
+  command: "exec [message..]",
+  describe: "run gizzi non-interactively and exit",
+  handler: async (args: any) =>
+    RunCommand.handler!({
+      ...args,
+      print: true,
+      outputFormat: args.outputFormat ?? "text",
+      permissionMode: args.permissionMode ?? "dontAsk",
+    } as any),
+}

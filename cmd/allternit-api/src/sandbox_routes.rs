@@ -13,11 +13,13 @@ use axum::{
 use serde::{Deserialize, Serialize};
 use serde_json::json;
 use std::sync::Arc;
+use std::time::Duration;
 use tokio::io::AsyncBufReadExt;
 use tracing::{debug, error};
 
 use allternit_driver_interface::{
-    CommandSpec, EnvironmentSpec, ExecutionId, PolicySpec, ResourceSpec, SpawnSpec, TenantId,
+    CommandSpec, EnvironmentSpec, ExecutionDriver, ExecutionId, PolicySpec, ResourceSpec, SpawnSpec,
+    TenantId,
 };
 
 use crate::AppState;
@@ -111,18 +113,20 @@ async fn execute_handler(
         "VM driver not available".to_string(),
     ))?;
 
-    // Build spawn spec
-    let spawn_spec = build_spawn_spec(&request)?;
+    let response = execute_with_driver(driver, &request)
+        .await
+        .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e))?;
+    Ok(Json(response))
+}
 
-    // Spawn execution environment
-    let handle = driver.spawn(spawn_spec).await.map_err(|e| {
-        (
-            StatusCode::INTERNAL_SERVER_ERROR,
-            format!("Failed to spawn: {}", e),
-        )
-    })?;
+async fn execute_with_driver(
+    driver: &Arc<dyn ExecutionDriver>,
+    request: &SandboxExecuteRequest,
+) -> Result<SandboxExecuteResponse, String> {
+    let spawn_spec = build_spawn_spec(request).map_err(|e| e.1)?;
 
-    // Build command spec
+    let handle = driver.spawn(spawn_spec).await.map_err(|e| format!("Failed to spawn: {e}"))?;
+
     let command_spec = CommandSpec {
         command: vec![
             get_interpreter(&request.language),
@@ -136,14 +140,11 @@ async fn execute_handler(
         capture_stderr: true,
     };
 
-    let result = driver.exec(&handle, command_spec).await.map_err(|e| {
-        (
-            StatusCode::INTERNAL_SERVER_ERROR,
-            format!("Execution failed: {}", e),
-        )
-    })?;
+    let result = driver
+        .exec(&handle, command_spec)
+        .await
+        .map_err(|e| format!("Execution failed: {e}"))?;
 
-    // Cleanup
     let _ = driver.destroy(&handle).await;
 
     let stdout = result
@@ -155,13 +156,52 @@ async fn execute_handler(
         .map(|v| String::from_utf8_lossy(&v).into_owned())
         .unwrap_or_default();
 
-    Ok(Json(SandboxExecuteResponse {
+    Ok(SandboxExecuteResponse {
         exit_code: result.exit_code,
         stdout,
         stderr,
         duration_ms: result.duration_ms,
         session_id: Some(handle.id.to_string()),
-    }))
+    })
+}
+
+/// Best-effort sandbox execution. Uses the VM driver when available; otherwise
+/// falls back to a local subprocess so server tools and tests can run without
+/// a full WebVM backend.
+pub async fn execute_sandbox_or_subprocess(
+    state: &AppState,
+    request: &SandboxExecuteRequest,
+) -> Result<SandboxExecuteResponse, String> {
+    if let Some(driver) = state.vm_driver.as_ref() {
+        execute_with_driver(driver, request).await
+    } else {
+        execute_subprocess_fallback(request).await
+    }
+}
+
+async fn execute_subprocess_fallback(
+    request: &SandboxExecuteRequest,
+) -> Result<SandboxExecuteResponse, String> {
+    let interpreter = get_interpreter(&request.language);
+    let mut cmd = tokio::process::Command::new(&interpreter);
+    cmd.arg("-c").arg(&request.code);
+    cmd.envs(&request.env);
+    if let Some(dir) = &request.workdir {
+        cmd.current_dir(dir);
+    }
+    let timeout = Duration::from_secs(request.timeout_secs.max(1));
+    let output = tokio::time::timeout(timeout, cmd.output())
+        .await
+        .map_err(|_| "Execution timed out".to_string())?
+        .map_err(|e| format!("Failed to execute: {e}"))?;
+
+    Ok(SandboxExecuteResponse {
+        exit_code: output.status.code().unwrap_or(-1),
+        stdout: String::from_utf8_lossy(&output.stdout).into_owned(),
+        stderr: String::from_utf8_lossy(&output.stderr).into_owned(),
+        duration_ms: 0,
+        session_id: None,
+    })
 }
 
 /// Execute code with streaming output (SSE)

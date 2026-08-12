@@ -86,6 +86,11 @@
       "types": "./dist/meta.d.ts"
     }
   },
+  "dependencies": {
+    "pdfjs-dist": "^5.4.54",
+    "@napi-rs/canvas": "^0.1.88",
+    "zod": "^3.x"
+  },
   "files": [
     "dist",
     "src",

@@ -1,12 +1,21 @@
 // Core harness
 export { AllternitHarness } from './harness/index.js';
-export type { 
-  HarnessConfig, 
-  StreamRequest, 
+export {
+  createRetryMiddleware,
+  createRefusalFallbackMiddleware,
+} from './harness/middleware.js';
+export { AllternitEmbeddings } from './embeddings.js';
+export type { EmbeddingsCreateRequest, EmbeddingsResponse, Embedding } from './embeddings.js';
+export type {
+  HarnessConfig,
+  StreamRequest,
   Message,
   HarnessResponse,
   HarnessStreamChunk,
   HarnessMode,
+  Citation,
+  HarnessMiddleware,
+  HarnessMiddlewareContext,
 } from './harness/types.js';
 
 // Agent runtime
@@ -23,9 +32,35 @@ export type {
 
 // Tools
 export { ToolRegistry } from './tools/registry.js';
+export { NativeToolBelt } from './tools/search.js';
+export { NativeWebTools } from './tools/web.js';
+export { TextEditorTool } from './tools/text-editor.js';
+export { BashTool } from './tools/bash.js';
+export { CodeExecutionTool } from './tools/code-execution.js';
+export { MemoryTool } from './tools/memory.js';
+export { PdfTool } from './tools/pdf.js';
+export { attachMcpServer } from './tools/mcp.js';
+export { toStrictJsonSchema, validateJsonSchema } from './tools/schema.js';
 export type {
   ToolDefinition,
+  JsonSchema,
 } from './tools/types.js';
+export type { WebSearchMode, WebSearchProvider, WebSearchResult, WebToolOptions } from './tools/web.js';
+export type { TextEditorCommand, TextEditorOptions } from './tools/text-editor.js';
+export type { BashToolOptions, BashRunner, BashResult } from './tools/bash.js';
+export type { CodeExecutionOptions, CodeExecutionRequest, CodeExecutionResult, CodeExecutionRunner, CodeExecutionArtifact } from './tools/code-execution.js';
+export type { MemoryToolOptions, MemoryStore, MemoryValue, MemoryOperation } from './tools/memory.js';
+export type { PdfToolOptions, PdfSource, PdfProcessResult, PdfHeading, PdfTable } from './tools/pdf.js';
+export type {
+  McpServerAttachment,
+  McpToolDescriptor,
+  McpServerConfig,
+  McpStdioConfig,
+  McpHttpConfig,
+  McpDirectoryOptions,
+  McpDirectoryEntry,
+} from './tools/mcp.js';
+export { createMcpServerAttachment, loadMcpServerDirectory, defaultMcpServerDirectoryPath } from './tools/mcp.js';
 
 // System prompts
 export { 

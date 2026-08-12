@@ -108,7 +108,7 @@ export namespace LLM {
           sessionID: input.sessionID,
           providerOptions: provider.options,
         })
-    const options: Record<string, any> = pipe(
+    let options: Record<string, any> = pipe(
       base,
       mergeDeep(input.model.options),
       mergeDeep(input.agent.options),
@@ -116,6 +116,15 @@ export namespace LLM {
     )
     if (isCodex) {
       options.instructions = SystemPrompt.instructions()
+    }
+    // Forward service tier from API bridges (e.g. OpenAI `service_tier`) into
+    // provider-specific options so the AI SDK can set the request body field.
+    const serviceTier = input.user.metadata?.service_tier
+    if (typeof serviceTier === "string") {
+      options = mergeDeep(
+        options,
+        ProviderTransform.providerOptions(input.model, { serviceTier }),
+      )
     }
 
     const params = await Plugin.trigger(

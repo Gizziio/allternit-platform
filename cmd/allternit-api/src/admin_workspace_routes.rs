@@ -1,0 +1,503 @@
+//! Enterprise admin workspaces — organization-scoped resource containers
+//! with an owner/admin/member roster. Distinct from the pre-existing
+//! user-owned `workspaces` table (see `workspace_routes.rs`), which has no
+//! organization scoping. All endpoints are gated to organization
+//! owners/admins, matching the `/admin/*` prefix used elsewhere in
+//! `enterprise_auth.rs`.
+
+use axum::{
+    extract::{Extension, Path, State},
+    http::StatusCode,
+    response::{IntoResponse, Response},
+    routing::{get, post},
+    Json, Router,
+};
+use rusqlite::{params, OptionalExtension};
+use serde::Deserialize;
+use serde_json::{json, Value};
+use std::sync::Arc;
+
+use crate::{auth::AuthUser, AppState};
+
+pub fn router() -> Router<Arc<AppState>> {
+    Router::new()
+        .route(
+            "/admin/workspaces",
+            post(create_workspace).get(list_workspaces),
+        )
+        .route(
+            "/admin/workspaces/:id",
+            get(get_workspace)
+                .put(update_workspace)
+                .delete(delete_workspace),
+        )
+        .route(
+            "/admin/workspaces/:id/members",
+            get(list_members).post(add_member),
+        )
+        .route(
+            "/admin/workspaces/:id/members/:member_id",
+            axum::routing::put(set_member_role).delete(remove_member),
+        )
+}
+
+type ApiError = (StatusCode, Json<Value>);
+
+fn error(status: StatusCode, code: &str, message: impl Into<String>) -> ApiError {
+    (
+        status,
+        Json(json!({"error": code, "message": message.into()})),
+    )
+}
+
+fn internal(err: impl std::fmt::Display) -> ApiError {
+    tracing::warn!(error = %err, "admin workspace operation failed");
+    error(
+        StatusCode::INTERNAL_SERVER_ERROR,
+        "internal_error",
+        err.to_string(),
+    )
+}
+
+fn admin_org(conn: &rusqlite::Connection, user: &AuthUser) -> Result<String, ApiError> {
+    let org = user.organization_id.as_deref().ok_or_else(|| {
+        error(
+            StatusCode::FORBIDDEN,
+            "organization_required",
+            "An active organization is required.",
+        )
+    })?;
+    if !crate::rbac::is_org_admin(conn, org, &user.user_id).map_err(internal)? {
+        return Err(error(
+            StatusCode::FORBIDDEN,
+            "insufficient_role",
+            "Only organization owners/admins can manage admin workspaces.",
+        ));
+    }
+    Ok(org.to_string())
+}
+
+fn valid_role(role: &str) -> bool {
+    matches!(role, "owner" | "admin" | "member")
+}
+
+fn workspace_json(row: &rusqlite::Row<'_>) -> rusqlite::Result<Value> {
+    Ok(json!({
+        "id": row.get::<_, String>(0)?,
+        "name": row.get::<_, String>(1)?,
+        "description": row.get::<_, Option<String>>(2)?,
+        "created_by": row.get::<_, String>(3)?,
+        "created_at": row.get::<_, String>(4)?,
+        "updated_at": row.get::<_, String>(5)?,
+    }))
+}
+
+fn find_workspace(conn: &rusqlite::Connection, id: &str, org: &str) -> Result<Value, ApiError> {
+    conn.query_row(
+        "SELECT id, name, description, created_by, created_at, updated_at FROM admin_workspaces WHERE id = ?1 AND organization_id = ?2",
+        params![id, org],
+        workspace_json,
+    )
+    .optional()
+    .map_err(internal)?
+    .ok_or_else(|| error(StatusCode::NOT_FOUND, "workspace_not_found", "No such admin workspace."))
+}
+
+#[derive(Deserialize)]
+struct CreateWorkspace {
+    name: String,
+    description: Option<String>,
+}
+
+fn validate_name(name: &str) -> Result<(), ApiError> {
+    if name.trim().is_empty() || name.len() > 128 {
+        return Err(error(
+            StatusCode::BAD_REQUEST,
+            "invalid_name",
+            "Name must be 1-128 characters.",
+        ));
+    }
+    Ok(())
+}
+
+async fn create_workspace(
+    State(state): State<Arc<AppState>>,
+    Extension(user): Extension<AuthUser>,
+    Json(body): Json<CreateWorkspace>,
+) -> Response {
+    if let Err(e) = validate_name(&body.name) {
+        return e.into_response();
+    }
+    let result = tokio::task::spawn_blocking(move || {
+        let mut conn = state.db.connect().map_err(internal)?;
+        let org = admin_org(&conn, &user)?;
+        let tx = conn.transaction().map_err(internal)?;
+        let id = uuid::Uuid::new_v4().to_string();
+        tx.execute(
+            "INSERT INTO admin_workspaces (id, organization_id, name, description, created_by) VALUES (?1, ?2, ?3, ?4, ?5)",
+            params![id, org, body.name.trim(), body.description, user.user_id],
+        ).map_err(internal)?;
+        tx.execute(
+            "INSERT INTO admin_workspace_members (id, workspace_id, user_id, role) VALUES (?1, ?2, ?3, 'owner')",
+            params![uuid::Uuid::new_v4().to_string(), id, user.user_id],
+        ).map_err(internal)?;
+        tx.commit().map_err(internal)?;
+        Ok::<_, ApiError>(json!({"id": id, "name": body.name.trim(), "description": body.description}))
+    }).await;
+    match result {
+        Ok(Ok(v)) => (StatusCode::CREATED, Json(v)).into_response(),
+        Ok(Err(e)) => e.into_response(),
+        Err(e) => internal(e).into_response(),
+    }
+}
+
+async fn list_workspaces(
+    State(state): State<Arc<AppState>>,
+    Extension(user): Extension<AuthUser>,
+) -> Response {
+    let result = tokio::task::spawn_blocking(move || -> Result<Vec<Value>, ApiError> {
+        let conn = state.db.connect().map_err(internal)?;
+        let org = admin_org(&conn, &user)?;
+        let mut stmt = conn.prepare("SELECT id, name, description, created_by, created_at, updated_at FROM admin_workspaces WHERE organization_id = ?1 ORDER BY created_at DESC").map_err(internal)?;
+        let rows = stmt.query_map([org], workspace_json).map_err(internal)?.collect::<rusqlite::Result<Vec<_>>>().map_err(internal)?;
+        Ok(rows)
+    }).await;
+    match result {
+        Ok(Ok(v)) => Json(json!({"workspaces": v})).into_response(),
+        Ok(Err(e)) => e.into_response(),
+        Err(e) => internal(e).into_response(),
+    }
+}
+
+async fn get_workspace(
+    State(state): State<Arc<AppState>>,
+    Extension(user): Extension<AuthUser>,
+    Path(id): Path<String>,
+) -> Response {
+    let result = tokio::task::spawn_blocking(move || {
+        let conn = state.db.connect().map_err(internal)?;
+        let org = admin_org(&conn, &user)?;
+        find_workspace(&conn, &id, &org)
+    })
+    .await;
+    match result {
+        Ok(Ok(v)) => Json(v).into_response(),
+        Ok(Err(e)) => e.into_response(),
+        Err(e) => internal(e).into_response(),
+    }
+}
+
+#[derive(Deserialize)]
+struct UpdateWorkspace {
+    name: Option<String>,
+    description: Option<String>,
+}
+
+async fn update_workspace(
+    State(state): State<Arc<AppState>>,
+    Extension(user): Extension<AuthUser>,
+    Path(id): Path<String>,
+    Json(body): Json<UpdateWorkspace>,
+) -> Response {
+    if let Some(name) = &body.name {
+        if let Err(e) = validate_name(name) {
+            return e.into_response();
+        }
+    }
+    let result = tokio::task::spawn_blocking(move || {
+        let conn = state.db.connect().map_err(internal)?;
+        let org = admin_org(&conn, &user)?;
+        find_workspace(&conn, &id, &org)?;
+        conn.execute(
+            "UPDATE admin_workspaces SET name = COALESCE(?1, name), description = COALESCE(?2, description), updated_at = CURRENT_TIMESTAMP WHERE id = ?3 AND organization_id = ?4",
+            params![body.name.as_deref().map(|n| n.trim()), body.description, id, org],
+        ).map_err(internal)?;
+        find_workspace(&conn, &id, &org)
+    }).await;
+    match result {
+        Ok(Ok(v)) => Json(v).into_response(),
+        Ok(Err(e)) => e.into_response(),
+        Err(e) => internal(e).into_response(),
+    }
+}
+
+async fn delete_workspace(
+    State(state): State<Arc<AppState>>,
+    Extension(user): Extension<AuthUser>,
+    Path(id): Path<String>,
+) -> Response {
+    let result = tokio::task::spawn_blocking(move || {
+        let conn = state.db.connect().map_err(internal)?;
+        let org = admin_org(&conn, &user)?;
+        let changed = conn
+            .execute(
+                "DELETE FROM admin_workspaces WHERE id = ?1 AND organization_id = ?2",
+                params![id, org],
+            )
+            .map_err(internal)?;
+        if changed == 0 {
+            return Err(error(
+                StatusCode::NOT_FOUND,
+                "workspace_not_found",
+                "No such admin workspace.",
+            ));
+        }
+        Ok::<_, ApiError>(())
+    })
+    .await;
+    match result {
+        Ok(Ok(())) => StatusCode::NO_CONTENT.into_response(),
+        Ok(Err(e)) => e.into_response(),
+        Err(e) => internal(e).into_response(),
+    }
+}
+
+fn member_json(row: &rusqlite::Row<'_>) -> rusqlite::Result<Value> {
+    Ok(json!({
+        "id": row.get::<_, String>(0)?,
+        "user_id": row.get::<_, String>(1)?,
+        "role": row.get::<_, String>(2)?,
+        "created_at": row.get::<_, String>(3)?,
+    }))
+}
+
+async fn list_members(
+    State(state): State<Arc<AppState>>,
+    Extension(user): Extension<AuthUser>,
+    Path(id): Path<String>,
+) -> Response {
+    let result = tokio::task::spawn_blocking(move || -> Result<Vec<Value>, ApiError> {
+        let conn = state.db.connect().map_err(internal)?;
+        let org = admin_org(&conn, &user)?;
+        find_workspace(&conn, &id, &org)?;
+        let mut stmt = conn.prepare("SELECT id, user_id, role, created_at FROM admin_workspace_members WHERE workspace_id = ?1 ORDER BY created_at ASC").map_err(internal)?;
+        let rows = stmt.query_map([&id], member_json).map_err(internal)?.collect::<rusqlite::Result<Vec<_>>>().map_err(internal)?;
+        Ok(rows)
+    }).await;
+    match result {
+        Ok(Ok(v)) => Json(json!({"members": v})).into_response(),
+        Ok(Err(e)) => e.into_response(),
+        Err(e) => internal(e).into_response(),
+    }
+}
+
+#[derive(Deserialize)]
+struct AddMember {
+    user_id: String,
+    #[serde(default = "default_role")]
+    role: String,
+}
+fn default_role() -> String {
+    "member".to_string()
+}
+
+async fn add_member(
+    State(state): State<Arc<AppState>>,
+    Extension(user): Extension<AuthUser>,
+    Path(id): Path<String>,
+    Json(body): Json<AddMember>,
+) -> Response {
+    if !valid_role(&body.role) {
+        return error(
+            StatusCode::BAD_REQUEST,
+            "invalid_role",
+            "role must be one of owner, admin, member.",
+        )
+        .into_response();
+    }
+    let result = tokio::task::spawn_blocking(move || {
+        let conn = state.db.connect().map_err(internal)?;
+        let org = admin_org(&conn, &user)?;
+        find_workspace(&conn, &id, &org)?;
+        let member_id = uuid::Uuid::new_v4().to_string();
+        conn.execute(
+            "INSERT INTO admin_workspace_members (id, workspace_id, user_id, role) VALUES (?1, ?2, ?3, ?4) ON CONFLICT(workspace_id, user_id) DO UPDATE SET role = excluded.role",
+            params![member_id, id, body.user_id, body.role],
+        ).map_err(internal)?;
+        Ok::<_, ApiError>(json!({"workspace_id": id, "user_id": body.user_id, "role": body.role}))
+    }).await;
+    match result {
+        Ok(Ok(v)) => (StatusCode::CREATED, Json(v)).into_response(),
+        Ok(Err(e)) => e.into_response(),
+        Err(e) => internal(e).into_response(),
+    }
+}
+
+#[derive(Deserialize)]
+struct SetRole {
+    role: String,
+}
+
+async fn set_member_role(
+    State(state): State<Arc<AppState>>,
+    Extension(user): Extension<AuthUser>,
+    Path((id, member_id)): Path<(String, String)>,
+    Json(body): Json<SetRole>,
+) -> Response {
+    if !valid_role(&body.role) {
+        return error(
+            StatusCode::BAD_REQUEST,
+            "invalid_role",
+            "role must be one of owner, admin, member.",
+        )
+        .into_response();
+    }
+    let result = tokio::task::spawn_blocking(move || {
+        let conn = state.db.connect().map_err(internal)?;
+        let org = admin_org(&conn, &user)?;
+        find_workspace(&conn, &id, &org)?;
+        let changed = conn.execute(
+            "UPDATE admin_workspace_members SET role = ?1 WHERE workspace_id = ?2 AND user_id = ?3",
+            params![body.role, id, member_id],
+        ).map_err(internal)?;
+        if changed == 0 {
+            return Err(error(StatusCode::NOT_FOUND, "member_not_found", "No such workspace member."));
+        }
+        Ok::<_, ApiError>(())
+    }).await;
+    match result {
+        Ok(Ok(())) => StatusCode::NO_CONTENT.into_response(),
+        Ok(Err(e)) => e.into_response(),
+        Err(e) => internal(e).into_response(),
+    }
+}
+
+async fn remove_member(
+    State(state): State<Arc<AppState>>,
+    Extension(user): Extension<AuthUser>,
+    Path((id, member_id)): Path<(String, String)>,
+) -> Response {
+    let result = tokio::task::spawn_blocking(move || {
+        let conn = state.db.connect().map_err(internal)?;
+        let org = admin_org(&conn, &user)?;
+        find_workspace(&conn, &id, &org)?;
+        let changed = conn
+            .execute(
+                "DELETE FROM admin_workspace_members WHERE workspace_id = ?1 AND user_id = ?2",
+                params![id, member_id],
+            )
+            .map_err(internal)?;
+        if changed == 0 {
+            return Err(error(
+                StatusCode::NOT_FOUND,
+                "member_not_found",
+                "No such workspace member.",
+            ));
+        }
+        Ok::<_, ApiError>(())
+    })
+    .await;
+    match result {
+        Ok(Ok(())) => StatusCode::NO_CONTENT.into_response(),
+        Ok(Err(e)) => e.into_response(),
+        Err(e) => internal(e).into_response(),
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn role_validation_accepts_only_known_roles() {
+        assert!(valid_role("owner"));
+        assert!(valid_role("admin"));
+        assert!(valid_role("member"));
+        assert!(!valid_role("superuser"));
+        assert!(!valid_role(""));
+    }
+
+    #[test]
+    fn name_validation_rejects_blank_and_oversized_names() {
+        assert!(validate_name("Engineering").is_ok());
+        assert!(validate_name("   ").is_err());
+        assert!(validate_name(&"x".repeat(129)).is_err());
+    }
+
+    use crate::db::DbHandle;
+
+    fn test_db() -> (String, DbHandle) {
+        let id = uuid::Uuid::new_v4().to_string();
+        let path = std::env::temp_dir().join(format!("allternit-admin-workspace-test-{}.db", id));
+        let db = DbHandle::new(path.clone()).unwrap();
+        (path.to_string_lossy().to_string(), db)
+    }
+
+    fn seed_org_admin(conn: &rusqlite::Connection, org_id: &str, user_id: &str, role: &str) {
+        conn.execute(
+            "INSERT OR IGNORE INTO organizations (id, name) VALUES (?1, 'Test Org')",
+            rusqlite::params![org_id],
+        )
+        .unwrap();
+        conn.execute(
+            "INSERT OR IGNORE INTO users (id, email) VALUES (?1, ?2)",
+            rusqlite::params![user_id, format!("{}@test.local", user_id)],
+        )
+        .unwrap();
+        conn.execute(
+            "INSERT OR IGNORE INTO organization_members (id, organization_id, user_id, role) VALUES (?1, ?2, ?3, ?4)",
+            rusqlite::params![format!("{}:{}", org_id, user_id), org_id, user_id, role],
+        )
+        .unwrap();
+    }
+
+    fn auth_user(org_id: Option<&str>, user_id: &str) -> AuthUser {
+        AuthUser {
+            user_id: user_id.to_string(),
+            email: Some(format!("{}@test.local", user_id)),
+            name: None,
+            avatar_url: None,
+            tenant_id: None,
+            organization_id: org_id.map(|s| s.to_string()),
+            organization_role: None,
+            organization_slug: None,
+        }
+    }
+
+    #[test]
+    fn admin_org_accepts_owner_and_rejects_member() {
+        let (path, db) = test_db();
+        let conn = db.connect().unwrap();
+        seed_org_admin(&conn, "org-1", "owner-1", "owner");
+        seed_org_admin(&conn, "org-1", "member-1", "member");
+
+        assert_eq!(admin_org(&conn, &auth_user(Some("org-1"), "owner-1")).unwrap(), "org-1");
+        let err = admin_org(&conn, &auth_user(Some("org-1"), "member-1")).unwrap_err();
+        assert_eq!(err.0, StatusCode::FORBIDDEN);
+        let err = admin_org(&conn, &auth_user(None, "owner-1")).unwrap_err();
+        assert_eq!(err.0, StatusCode::FORBIDDEN);
+
+        let _ = std::fs::remove_file(&path);
+    }
+
+    #[test]
+    fn workspace_roundtrip_and_members() {
+        let (path, db) = test_db();
+        let conn = db.connect().unwrap();
+        seed_org_admin(&conn, "org-1", "owner-1", "owner");
+        seed_org_admin(&conn, "org-1", "member-1", "member");
+
+        let ws_id = "ws-1";
+        conn.execute(
+            "INSERT INTO admin_workspaces (id, organization_id, name, description, created_by) VALUES (?1, ?2, ?3, ?4, ?5)",
+            rusqlite::params![ws_id, "org-1", "Engineering", "desc", "owner-1"],
+        )
+        .unwrap();
+
+        let ws = find_workspace(&conn, ws_id, "org-1").unwrap();
+        assert_eq!(ws["name"], "Engineering");
+
+        conn.execute(
+            "INSERT INTO admin_workspace_members (id, workspace_id, user_id, role) VALUES (?1, ?2, ?3, 'member')",
+            rusqlite::params!["mem-1", ws_id, "member-1"],
+        )
+        .unwrap();
+
+        let mut stmt = conn.prepare("SELECT id, user_id, role, created_at FROM admin_workspace_members WHERE workspace_id = ?1").unwrap();
+        let rows: Vec<_> = stmt.query_map([ws_id], member_json).unwrap().collect::<Result<_, _>>().unwrap();
+        assert_eq!(rows.len(), 1);
+        assert_eq!(rows[0]["user_id"], "member-1");
+
+        let _ = std::fs::remove_file(&path);
+    }
+}
