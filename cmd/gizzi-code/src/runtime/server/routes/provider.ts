@@ -10,6 +10,7 @@ import { mapValues } from "remeda"
 import { errors } from "@/runtime/server/error"
 import { lazy } from "@/shared/util/lazy"
 import { Auth } from "@/runtime/integrations/auth"
+import { MediaRegistry } from "@/runtime/providers/media"
 
 export const ProviderRoutes = lazy(() =>
   new Hono()
@@ -183,6 +184,75 @@ export const ProviderRoutes = lazy(() =>
           })
         }
         return c.json({ error: "provider_timeout", message: "MiniMax video generation timed out." }, 504)
+      },
+    )
+    .get(
+      "/media/providers",
+      describeRoute({
+        summary: "List media generation providers",
+        description: "Get image/video/website generation providers and their auth requirements.",
+        operationId: "provider.media.providers",
+        responses: { 200: { description: "Media providers", content: { "application/json": { schema: resolver(z.any()) } } } },
+      }),
+      async (c) => {
+        return c.json(MediaRegistry.mediaProviders())
+      },
+    )
+    .get(
+      "/media/:mode/providers",
+      describeRoute({
+        summary: "List media providers for a mode",
+        description: "Get providers that support a specific media mode (image, video, website, slides, sheets, doc).",
+        operationId: "provider.media.mode.providers",
+        responses: { 200: { description: "Media providers for mode", content: { "application/json": { schema: resolver(z.any()) } } } },
+      }),
+      validator("param", z.object({ mode: z.string() })),
+      async (c) => {
+        const { mode } = c.req.valid("param")
+        return c.json(MediaRegistry.providersForMode(MediaRegistry.ensureMode(mode)))
+      },
+    )
+    .post(
+      "/media/:mode/generate",
+      describeRoute({
+        summary: "Generate media with a runtime-owned provider credential",
+        description: "Runs image/video/website generation without exposing the provider API key to the browser or platform cloud.",
+        operationId: "provider.media.generate",
+        responses: { 200: { description: "Generated media", content: { "application/json": { schema: resolver(z.any()) } } } },
+      }),
+      validator("param", z.object({ mode: z.string() })),
+      validator("json", z.object({
+        providerID: z.string(),
+        prompt: z.string().min(1).max(20_000),
+        model: z.string().max(120).optional(),
+        width: z.number().int().optional(),
+        height: z.number().int().optional(),
+        aspectRatio: z.enum(["16:9", "9:16", "1:1", "4:3", "3:2", "2:3"]).optional(),
+        duration: z.number().int().min(1).max(60).optional(),
+        fps: z.number().int().min(1).max(120).optional(),
+        quality: z.enum(["low", "medium", "high", "ultra"]).optional(),
+        style: z.string().optional(),
+        negativePrompt: z.string().optional(),
+        seed: z.number().int().optional(),
+        content: z.record(z.string(), z.any()).optional(),
+        n: z.number().int().min(1).max(4).optional(),
+      })),
+      async (c) => {
+        const { mode } = c.req.valid("param")
+        const input = c.req.valid("json")
+        try {
+          const result = await MediaRegistry.generate(MediaRegistry.ensureMode(mode), input.providerID, input)
+          return c.json(result)
+        } catch (error) {
+          const message = error instanceof Error ? error.message : String(error)
+          if (message.includes("Connect") && message.includes("first")) {
+            return c.json({ error: "provider_not_connected", message }, 409)
+          }
+          if (message.includes("not reachable")) {
+            return c.json({ error: "provider_unavailable", message }, 503)
+          }
+          return c.json({ error: "provider_error", message }, 502)
+        }
       },
     )
     .post(

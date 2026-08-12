@@ -4,7 +4,7 @@ import * as React from 'react';
 import { DIAMOND_FILLED, DIAMOND_OPEN } from '../../constants/figures';
 import { NO_CONTENT_MESSAGE } from '../../constants/messages';
 import { Box, Text } from '../../ink';
-import { extractTag } from '../../utils/messages';
+import { extractTag } from '../../utils/extractTag.js';
 import { Markdown } from '../Markdown';
 import { MessageResponse } from '../MessageResponse';
 type Props = {

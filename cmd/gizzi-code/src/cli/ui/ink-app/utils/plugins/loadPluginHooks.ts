@@ -15,7 +15,6 @@ import {
 } from '../settings/settings.js'
 import type { PluginHookMatcher } from '../settings/types.js'
 import { jsonStringify } from '../slowOperations.js'
-import { clearPluginCache, loadAllPluginsCacheOnly } from './pluginLoader.js'
 
 // Track if hot reload subscription is set up
 let hotReloadSubscribed = false
@@ -90,6 +89,7 @@ function convertPluginHooksToMatchers(
  * Load and register hooks from all enabled plugins
  */
 export const loadPluginHooks = memoize(async (): Promise<void> => {
+  const { loadAllPluginsCacheOnly } = await import('./pluginLoader.js')
   const { enabled } = await loadAllPluginsCacheOnly()
   const allPluginHooks: Record<HookEvent, PluginHookMatcher[]> = {
     PreToolUse: [],
@@ -181,6 +181,7 @@ export async function pruneRemovedPluginHooks(): Promise<void> {
   // Early return when nothing to prune — avoids seeding the loadAllPluginsCacheOnly
   // memoize in test/preload.ts beforeEach (which clears registeredHooks).
   if (!getRegisteredHooks()) return
+  const { loadAllPluginsCacheOnly } = await import('./pluginLoader.js')
   const { enabled } = await loadAllPluginsCacheOnly()
   const enabledRoots = new Set(enabled.map(p => p.path))
 
@@ -262,7 +263,7 @@ export function setupPluginHookHotReload(): void {
   // Capture the initial snapshot so the first policySettings change can compare
   lastPluginSettingsSnapshot = getPluginAffectingSettingsSnapshot()
 
-  settingsChangeDetector.subscribe(source => {
+  settingsChangeDetector.subscribe(async source => {
     if (source === 'policySettings') {
       const newSnapshot = getPluginAffectingSettingsSnapshot()
       if (newSnapshot === lastPluginSettingsSnapshot) {
@@ -278,6 +279,7 @@ export function setupPluginHookHotReload(): void {
       )
 
       // Clear all plugin-related caches
+      const { clearPluginCache } = await import('./pluginLoader.js')
       clearPluginCache('loadPluginHooks: plugin-affecting settings changed')
       clearPluginHookCache()
 

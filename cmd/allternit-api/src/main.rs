@@ -55,6 +55,7 @@ use allternit_api::checkpoints_routes::checkpoints_router;
 use allternit_api::conversation_routes::conversation_router;
 use allternit_api::cowork::background_service::CoworkBackgroundService;
 use allternit_api::cowork::routes::{background_router, CoworkBgState};
+use allternit_api::cowork_preferences_routes::cowork_preferences_router;
 use allternit_api::cowork_routes::cowork_router;
 use allternit_api::cowork_team_routes::cowork_team_router;
 use allternit_api::db::DbHandle;
@@ -305,6 +306,7 @@ async fn main() {
         .merge(swarm_router())
         .merge(board_router())
         .merge(cowork_router())
+        .merge(cowork_preferences_router())
         .merge(allternit_api::rails::routes_cowork::cowork_routes())
         .merge(agent_router())
         .merge(agent_preferences_router())

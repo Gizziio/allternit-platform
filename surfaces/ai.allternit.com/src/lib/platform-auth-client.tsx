@@ -15,6 +15,7 @@ import {
 } from "@clerk/clerk-react"
 import { cn } from "@/lib/utils"
 import { useCompanyConfig } from "@/providers/company-config-provider"
+import { api } from "@/integration/api-client"
 import {
   env,
   envFlag,
@@ -443,6 +444,38 @@ function ClerkPlatformAuthBridge({ children }: { children: ReactNode }) {
     }
     setSessions([])
   }, [clerkAuth.isSignedIn, clerk.client])
+
+  // Sync Clerk's short-lived session JWT into the runtime API client. The
+  // token is refreshed just before Clerk's ~60s TTL expires so local gizzi
+  // requests stay authenticated; on sign-out the stored token is cleared.
+  useEffect(() => {
+    if (!clerkAuth.isSignedIn || typeof clerkAuth.getToken !== 'function') {
+      api.clearToken()
+      return
+    }
+
+    let active = true
+    const syncToken = async () => {
+      try {
+        const token = await clerkAuth.getToken()
+        if (!active) return
+        if (token) {
+          api.setToken(token)
+        } else {
+          api.clearToken()
+        }
+      } catch {
+        if (active) api.clearToken()
+      }
+    }
+
+    void syncToken()
+    const interval = setInterval(syncToken, 50_000)
+    return () => {
+      active = false
+      clearInterval(interval)
+    }
+  }, [clerkAuth.isSignedIn, clerkAuth.getToken])
 
   const value = useMemo(() => ({
     user: {

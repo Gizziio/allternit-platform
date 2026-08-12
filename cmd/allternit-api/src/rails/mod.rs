@@ -10,16 +10,19 @@ use axum::{
     extract::{Path, Query, State},
     http::StatusCode,
     response::IntoResponse,
-    routing::{get, post},
+    routing::{delete, get, post},
     Json, Router,
 };
 pub mod routes_cowork;
 use serde::{Deserialize, Serialize};
 use serde_json::json;
+use std::path::PathBuf;
 use std::sync::Arc;
+use std::time::Duration;
 use tracing::{debug, error, info};
 
 use crate::AppState;
+use allternit_agent_system_rails::bus::{Bus, NewBusMessage};
 use allternit_agent_system_rails::dependencies::{
     self, DependencyEdge, DependencyKind,
 };
@@ -32,10 +35,11 @@ use allternit_agent_system_rails::tickets::{
 };
 use allternit_agent_system_rails::wait_gates::WaitGateStore;
 use allternit_agent_system_rails::{
-    project_dag, resolve_thread_id, ContextPackSeal, ContextPackStore, ContextPackStoreOptions,
-    DagMutation, Gate, GateOptions, Index, IndexOptions, Leases, LeasesOptions, Ledger,
-    LedgerOptions, LedgerQuery, Mail, MailImportance, MailIndex, MailIndexOptions, MailOptions,
-    ReceiptRecord, ReceiptStore, ReceiptStoreOptions, TypedMessage, Vault, VaultOptions, WorkOps,
+    project_dag, resolve_thread_id, ActorType, ContextPackSeal, ContextPackStore,
+    ContextPackStoreOptions, DagMutation, Gate, GateOptions, Index, IndexOptions, Leases,
+    LeasesOptions, Ledger, LedgerOptions, LedgerQuery, Mail, MailImportance, MailIndex,
+    MailIndexOptions, MailOptions, PeerEnvelope, PeerRegistry, ReceiptRecord, ReceiptStore,
+    ReceiptStoreOptions, Steer, TypedMessage, Vault, VaultOptions, WorkOps, send_envelope,
 };
 
 // ============================================================================
@@ -55,6 +59,9 @@ pub struct RailsState {
     pub receipts: Arc<ReceiptStore>,
     pub work_ops: Arc<WorkOps>,
     pub context_packs: Arc<ContextPackStore>,
+    pub peers: Arc<PeerRegistry>,
+    pub bus: Arc<Bus>,
+    pub steer: Arc<Steer>,
     /// Shared graph analytics engine (content-hash cache) for the B2 robot
     /// surface under `/graph/*`.
     pub graph_analytics: Arc<GraphAnalytics>,
@@ -147,6 +154,21 @@ impl RailsState {
         // Initialize WorkOps
         let work_ops = Arc::new(WorkOps::new(ledger.clone(), Some("api".to_string()), None));
 
+        // Initialize peer registry + bus for cross-session messaging.
+        let peers = Arc::new(PeerRegistry::new(root_dir.clone())?);
+        let bus = Arc::new(
+            Bus::new(allternit_agent_system_rails::bus::BusOptions {
+                root_dir: root_dir.clone(),
+                ledger: ledger.clone(),
+                actor_id: Some("api".to_string()),
+                actor_type: Some(ActorType::Gate),
+            })
+            .await?,
+        );
+
+        // Initialize steering coordinator.
+        let steer = Arc::new(Steer::new(ledger.clone()));
+
         info!("Rails service state initialized successfully");
 
         Ok(Self {
@@ -160,6 +182,9 @@ impl RailsState {
             receipts,
             work_ops,
             context_packs,
+            peers,
+            bus,
+            steer,
             graph_analytics: Arc::new(GraphAnalytics::new()),
         })
     }
@@ -174,6 +199,16 @@ pub fn rails_router() -> Router<Arc<AppState>> {
         .route("/", get(rails_status))
         // Health
         .route("/health", get(health_check))
+        // Peers (cross-session messaging)
+        .route("/peers", get(list_peers).post(register_peer))
+        .route("/peers/:id_or_name", delete(unregister_peer))
+        .route("/peers/:id_or_name/heartbeat", post(heartbeat_peer))
+        .route("/peers/:id_or_name/send", post(send_to_peer))
+        .route("/peers/:id_or_name/inbox", get(poll_peer_inbox))
+        // Steer
+        .route("/steer/checkpoint", post(steer_checkpoint))
+        .route("/steer/consult", post(steer_consult))
+        .route("/steer/commit-gate", post(steer_commit_gate))
         // Ledger
         .route("/ledger/events", get(query_ledger))
         .route("/ledger/tail", post(tail_ledger))
@@ -261,6 +296,370 @@ async fn health_check(State(state): State<Arc<AppState>>) -> impl IntoResponse {
             "leases": true,
         }
     }))
+}
+
+// ----------------------------------------------------------------------------
+// Peer handlers (cross-session messaging)
+// ----------------------------------------------------------------------------
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+struct PeerInfoResponse {
+    peer_id: String,
+    name: String,
+    cwd: String,
+    vendor: String,
+    inbox_socket: String,
+    status: String,
+    registered_at: String,
+    last_heartbeat_at: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+struct PeerListResponse {
+    peers: Vec<PeerInfoResponse>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+struct PeerRegisterRequest {
+    name: String,
+    #[serde(default)]
+    vendor: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    cwd: Option<PathBuf>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+struct PeerRegisterResponse {
+    peer_id: String,
+    name: String,
+    inbox_socket: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+struct PeerSendRequest {
+    body: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    from: Option<String>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+struct PeerSendResponse {
+    delivered: bool,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    error: Option<String>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+struct PeerInboxResponse {
+    messages: Vec<allternit_agent_system_rails::bus::BusMessage>,
+}
+
+fn peer_to_response(peer: &allternit_agent_system_rails::peer::Peer) -> PeerInfoResponse {
+    PeerInfoResponse {
+        peer_id: peer.peer_id.clone(),
+        name: peer.name.clone(),
+        cwd: peer.cwd.to_string_lossy().to_string(),
+        vendor: peer.vendor.clone(),
+        inbox_socket: peer.inbox_socket.to_string_lossy().to_string(),
+        status: format!("{:?}", peer.status).to_lowercase(),
+        registered_at: peer.registered_at.clone(),
+        last_heartbeat_at: peer.last_heartbeat_at.clone(),
+    }
+}
+
+async fn list_peers(State(state): State<Arc<AppState>>) -> impl IntoResponse {
+    let peers = state.rails.peers.list();
+    (
+        StatusCode::OK,
+        Json(PeerListResponse {
+            peers: peers.iter().map(peer_to_response).collect(),
+        }),
+    )
+}
+
+async fn register_peer(
+    State(state): State<Arc<AppState>>,
+    Json(request): Json<PeerRegisterRequest>,
+) -> impl IntoResponse {
+    let cwd = request.cwd.unwrap_or_else(|| state.rails.root_dir.clone());
+    match state.rails.peers.register(&request.name, cwd, &request.vendor) {
+        Ok(peer) => (
+            StatusCode::CREATED,
+            Json(PeerRegisterResponse {
+                peer_id: peer.peer_id,
+                name: peer.name,
+                inbox_socket: peer.inbox_socket.to_string_lossy().to_string(),
+            }),
+        )
+            .into_response(),
+        Err(e) => (
+            StatusCode::BAD_REQUEST,
+            Json(json!({ "error": e.to_string() })),
+        )
+            .into_response(),
+    }
+}
+
+async fn unregister_peer(
+    State(state): State<Arc<AppState>>,
+    Path(id_or_name): Path<String>,
+) -> impl IntoResponse {
+    match state.rails.peers.unregister(&id_or_name) {
+        Ok(true) => (StatusCode::OK, Json(json!({ "unregistered": true }))).into_response(),
+        Ok(false) => (
+            StatusCode::NOT_FOUND,
+            Json(json!({ "error": "peer not found" })),
+        )
+            .into_response(),
+        Err(e) => (
+            StatusCode::INTERNAL_SERVER_ERROR,
+            Json(json!({ "error": e.to_string() })),
+        )
+            .into_response(),
+    }
+}
+
+async fn heartbeat_peer(
+    State(state): State<Arc<AppState>>,
+    Path(id_or_name): Path<String>,
+) -> impl IntoResponse {
+    match state.rails.peers.heartbeat(&id_or_name) {
+        Ok(()) => (StatusCode::OK, Json(json!({ "ok": true }))).into_response(),
+        Err(_) => (
+            StatusCode::NOT_FOUND,
+            Json(json!({ "error": "peer not found" })),
+        )
+            .into_response(),
+    }
+}
+
+async fn send_to_peer(
+    State(state): State<Arc<AppState>>,
+    Path(id_or_name): Path<String>,
+    Json(request): Json<PeerSendRequest>,
+) -> impl IntoResponse {
+    let peer = match state.rails.peers.resolve(&id_or_name) {
+        Some(p) => p,
+        None => {
+            return (
+                StatusCode::NOT_FOUND,
+                Json(json!({ "error": "peer not found" })),
+            )
+                .into_response();
+        }
+    };
+
+    let from = request.from.unwrap_or_else(|| "api".to_string());
+    let body = request.body;
+
+    // Persist the envelope to the bus so peers can retrieve it via HTTP polling
+    // even when the UDS push path is unavailable.
+    let bus_msg = NewBusMessage {
+        correlation_id: uuid::Uuid::new_v4().to_string(),
+        to: format!("peer:{}", peer.name),
+        from: from.clone(),
+        kind: "peer_envelope".to_string(),
+        payload: json!({ "body": body.clone(), "from": from.clone() }),
+        transport: "http".to_string(),
+    };
+    let bus_id = match state.rails.bus.send_message(bus_msg).await {
+        Ok(id) => Some(id),
+        Err(e) => {
+            tracing::warn!("failed to persist peer envelope to bus: {}", e);
+            None
+        }
+    };
+
+    let envelope = PeerEnvelope::new(&from, &peer.name, body);
+    let receipt = send_envelope(&peer.inbox_socket, &envelope, Duration::from_secs(5)).await;
+
+    // If UDS delivery succeeded, mark the bus message delivered so pollers do not
+    // receive it again.
+    if let (Ok(ref receipt), Some(bus_id)) = (&receipt, bus_id) {
+        if receipt.delivered {
+            let _ = state.rails.bus.mark_delivered(bus_id).await;
+        }
+    }
+
+    match receipt {
+        Ok(receipt) => (
+            StatusCode::OK,
+            Json(PeerSendResponse {
+                delivered: receipt.delivered,
+                error: receipt.error,
+            }),
+        )
+            .into_response(),
+        Err(e) => (
+            StatusCode::INTERNAL_SERVER_ERROR,
+            Json(json!({ "error": e.to_string() })),
+        )
+            .into_response(),
+    }
+}
+
+async fn poll_peer_inbox(
+    State(state): State<Arc<AppState>>,
+    Path(id_or_name): Path<String>,
+    Query(params): Query<std::collections::HashMap<String, String>>,
+) -> impl IntoResponse {
+    let peer = match state.rails.peers.resolve(&id_or_name) {
+        Some(p) => p,
+        None => {
+            return (
+                StatusCode::NOT_FOUND,
+                Json(json!({ "error": "peer not found" })),
+            )
+                .into_response();
+        }
+    };
+
+    let limit = params
+        .get("limit")
+        .and_then(|s| s.parse().ok())
+        .unwrap_or(20);
+    let recipient = format!("peer:{}", peer.name);
+    match state
+        .rails
+        .bus
+        .poll_pending_for(&recipient, Some("http"), limit)
+        .await
+    {
+        Ok(messages) => {
+            for msg in &messages {
+                let _ = state.rails.bus.mark_delivered(msg.id).await;
+            }
+            (StatusCode::OK, Json(PeerInboxResponse { messages })).into_response()
+        }
+        Err(e) => (
+            StatusCode::INTERNAL_SERVER_ERROR,
+            Json(json!({ "error": e.to_string() })),
+        )
+            .into_response(),
+    }
+}
+
+// ---------------------------------------------------------------------------
+// Steer handlers
+// ---------------------------------------------------------------------------
+
+#[derive(Debug, Deserialize)]
+struct SteerCheckpointRequest {
+    cwd: Option<std::path::PathBuf>,
+}
+
+#[derive(Debug, Serialize)]
+struct SteerCheckpointResponse {
+    changed: bool,
+    hash: String,
+    event_id: Option<String>,
+}
+
+#[derive(Debug, Deserialize)]
+struct SteerConsultRequest {
+    cwd: Option<std::path::PathBuf>,
+    prompt: Option<String>,
+}
+
+#[derive(Debug, Serialize)]
+struct SteerConsultResponse {
+    verdict: String,
+    body: String,
+}
+
+async fn steer_checkpoint(
+    State(state): State<Arc<AppState>>,
+    Json(request): Json<SteerCheckpointRequest>,
+) -> impl IntoResponse {
+    let cwd = request
+        .cwd
+        .unwrap_or_else(|| state.rails.root_dir.clone());
+    match state.rails.steer.checkpoint(&cwd).await {
+        Ok(result) => (
+            StatusCode::OK,
+            Json(SteerCheckpointResponse {
+                changed: result.changed,
+                hash: result.hash,
+                event_id: result.event_id,
+            }),
+        )
+            .into_response(),
+        Err(e) => (
+            StatusCode::INTERNAL_SERVER_ERROR,
+            Json(json!({ "error": e.to_string() })),
+        )
+            .into_response(),
+    }
+}
+
+async fn steer_consult(
+    State(state): State<Arc<AppState>>,
+    Json(request): Json<SteerConsultRequest>,
+) -> impl IntoResponse {
+    let cwd = request
+        .cwd
+        .unwrap_or_else(|| state.rails.root_dir.clone());
+    let context = match request.prompt {
+        Some(p) => p,
+        None => match state.rails.steer.build_context(&cwd) {
+            Ok(ctx) => ctx,
+            Err(e) => {
+                return (
+                    StatusCode::INTERNAL_SERVER_ERROR,
+                    Json(json!({ "error": e.to_string() })),
+                )
+                    .into_response();
+            }
+        },
+    };
+    match state.rails.steer.consult(&cwd, &context).await {
+        Ok(answer) => {
+            let lines: Vec<&str> = answer.lines().collect();
+            let first = lines
+                .first()
+                .map(|s| s.trim().trim_start_matches("• ").to_string())
+                .unwrap_or_default();
+            let verdict = if first.to_uppercase().starts_with("APPROVE") {
+                "APPROVE".to_string()
+            } else {
+                "STEER".to_string()
+            };
+            (
+                StatusCode::OK,
+                Json(SteerConsultResponse { verdict, body: answer }),
+            )
+                .into_response()
+        }
+        Err(e) => (
+            StatusCode::INTERNAL_SERVER_ERROR,
+            Json(json!({ "error": e.to_string() })),
+        )
+            .into_response(),
+    }
+}
+
+async fn steer_commit_gate(
+    State(state): State<Arc<AppState>>,
+    Json(request): Json<SteerConsultRequest>,
+) -> impl IntoResponse {
+    let cwd = request
+        .cwd
+        .unwrap_or_else(|| state.rails.root_dir.clone());
+    match state.rails.steer.commit_gate(&cwd).await {
+        Ok(result) => (
+            StatusCode::OK,
+            Json(SteerConsultResponse {
+                verdict: result.verdict,
+                body: result.body,
+            }),
+        )
+            .into_response(),
+        Err(e) => (
+            StatusCode::INTERNAL_SERVER_ERROR,
+            Json(json!({ "error": e.to_string() })),
+        )
+            .into_response(),
+    }
 }
 
 #[derive(Debug, Deserialize)]

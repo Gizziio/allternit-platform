@@ -27,7 +27,20 @@ import { getClaudeConfigHomeDir, isEnvTruthy } from './envUtils.js'
 import { getErrnoCode, isENOENT } from './errors.js'
 import { pathExists } from './file.js'
 import { logError } from './log.js'
-import { recordFileHistorySnapshot } from './sessionStorage.js'
+
+// Dynamic import to avoid a static circular import through sessionStorage.js.
+async function recordFileHistorySnapshot(
+  messageId: UUID,
+  snapshot: FileHistorySnapshot,
+  isSnapshotUpdate: boolean,
+) {
+  const sessionStorage = await import('./sessionStorage.js')
+  return sessionStorage.recordFileHistorySnapshot(
+    messageId,
+    snapshot,
+    isSnapshotUpdate,
+  )
+}
 
 type BackupFileName = string | null // The null value means the file does not exist in this version
 

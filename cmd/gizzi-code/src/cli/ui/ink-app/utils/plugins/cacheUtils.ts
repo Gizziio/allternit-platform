@@ -1,11 +1,8 @@
 // @ts-nocheck
 import { readdir, rm, stat, unlink, writeFile } from 'fs/promises'
 import { join } from 'path'
-import { clearCommandsCache } from '../../commands.js'
 import { clearAllOutputStylesCache } from '../../constants/outputStyles.js'
-import { clearAgentDefinitionsCache } from '../../tools/AgentTool/loadAgentsDir.js'
 import { clearPromptCache } from '../../tools/SkillTool/prompt.js'
-import { resetSentSkillNames } from '../attachments.js'
 import { logForDebugging } from '../debug.js'
 import { getErrnoCode } from '../errors.js'
 import { logError } from '../log.js'
@@ -17,7 +14,8 @@ import {
   pruneRemovedPluginHooks,
 } from './loadPluginHooks.js'
 import { clearPluginOutputStyleCache } from './loadPluginOutputStyles.js'
-import { clearPluginCache, getPluginCachePath } from './pluginLoader.js'
+import { getPluginCachePath } from './pluginCachePaths.js'
+import { clearPluginCache } from './pluginLoader.js'
 import { clearPluginOptionsCache } from './pluginOptionsStorage.js'
 import { isPluginZipCacheEnabled } from './zipCache.js'
 
@@ -44,9 +42,19 @@ export function clearAllPluginCaches(): void {
 
 export function clearAllCaches(): void {
   clearAllPluginCaches()
+  clearPromptCache()
+  void clearCommandAndAttachmentCaches()
+}
+
+async function clearCommandAndAttachmentCaches(): Promise<void> {
+  const [{ clearCommandsCache }, { clearAgentDefinitionsCache }, { resetSentSkillNames }] =
+    await Promise.all([
+      import('../../commands.js'),
+      import('../../tools/AgentTool/loadAgentsDir.js'),
+      import('../attachments.js'),
+    ])
   clearCommandsCache()
   clearAgentDefinitionsCache()
-  clearPromptCache()
   resetSentSkillNames()
 }
 

@@ -124,7 +124,7 @@ import type { ToolPermissionContext, Tool } from '../Tool';
 import { applyPermissionUpdate, applyPermissionUpdates, persistPermissionUpdate } from '../utils/permissions/PermissionUpdate';
 import { buildPermissionUpdates } from '../components/permissions/ExitPlanModePermissionRequest/ExitPlanModePermissionRequest';
 import { stripDangerousPermissionsForAutoMode } from '../utils/permissions/permissionSetup';
-import { getScratchpadDir, isScratchpadEnabled } from '../utils/permissions/filesystem';
+import { getScratchpadDir, isScratchpadEnabled } from '../utils/permissions/tempDir';
 import { WEB_FETCH_TOOL_NAME } from '../tools/WebFetchTool/prompt';
 import { SLEEP_TOOL_NAME } from '../tools/SleepTool/prompt';
 import { clearSpeculativeChecks } from '../tools/BashTool/bashPermissions';

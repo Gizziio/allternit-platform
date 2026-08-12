@@ -100,6 +100,7 @@ import { createUniver } from './create-univer'
 
 import { AgentLoop, composeSkills, type AgentImage } from './ai/agent-stub'
 import type { AiSettings } from './ai/ai-stubs'
+import { resolveOfficeModelId } from '@allternit/office-ai'
 import { type WorkbookOperation } from '@allternit/office-xlsx-engine/domain/workbook-dsl'
 import { columnIndex, columnLabel, parseAddress, parseRange } from '@allternit/office-xlsx-engine/domain/cell-address'
 import {
@@ -542,6 +543,7 @@ export function App(): React.JSX.Element {
   const aiSettingsRef = useRef<AiSettings | null>(null)
   aiSettingsRef.current = aiSettings
   const [aiBusy, setAiBusy] = useState(false)
+  const [aiModelId, setAiModelId] = useState<string | undefined>(() => resolveOfficeModelId('sheets'))
   // Display history survives restarts via localStorage; the AgentLoop's model
   // context does not, so restored turns are read-only transcript.
   const [chat, setChat] = useState<readonly AiChatMessage[]>([])
@@ -755,6 +757,7 @@ export function App(): React.JSX.Element {
   const agentLoopRef = useRef<AgentLoop | null>(null)
   if (!agentLoopRef.current) {
     agentLoopRef.current = new AgentLoop({
+      modelId: aiModelId,
       transport: createElectronTransport(() => aiSettingsRef.current!),
       systemSuffix: aiLangDirective,
       skill: composeSkills('sheets+files', '', [
@@ -890,6 +893,10 @@ export function App(): React.JSX.Element {
       },
     })
   }
+
+  useEffect(() => {
+    agentLoopRef.current?.setModelId(aiModelId)
+  }, [aiModelId])
 
   function isAgentConfigured(): boolean {
     const settings = aiSettingsRef.current
@@ -3002,6 +3009,8 @@ export function App(): React.JSX.Element {
         onCreateConsolidate={(config) => handleCreateConsolidateImpl(dataToolsContext(), config)}
         onGetConsolidateDefault={() => consolidateDefaultReferenceImpl(dataToolsContext())}
         onApplyHeaderFooter={(result) => handleApplyHeaderFooterImpl(pageLayoutContext(), result)}
+        aiModelId={aiModelId}
+        onAiModelChange={setAiModelId}
       />
       {advancedFilterColumns !== null && (
         <AdvancedFilterDialog

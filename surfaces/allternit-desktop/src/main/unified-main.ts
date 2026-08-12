@@ -220,8 +220,10 @@ async function startGizziRuntime(): Promise<string> {
       log.warn('[GizziManager] Legacy daemon migration deferred:', error);
     }
   }
+  const session = authManager.getSessionSnapshot();
   return gizziManager.start({
     existingPassword,
+    apiToken: session?.accessToken,
     extraEnv: authManager.getConnectorSidecarEnvironment(),
   });
 }

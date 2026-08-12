@@ -1,46 +1,11 @@
 #!/usr/bin/env bash
-# ao-spawn [--worktree] <slug> <repo-dir> <agent-launch-cmd...>
-# Creates tmux session "ao-<slug>" running the agent in <repo-dir> (or an
-# isolated git worktree of it). The agent runs under script(1), so a full
-# transcript lands in ~/.agent-orchestrator/logs/ from the first byte —
-# even if the command crashes instantly. Prints: "<session> <workdir> <logfile>".
+# ao-spawn — thin shim over allternit-rails orchestrator spawn.
+# Legacy semantics: [--worktree] <slug> <repo-dir> <agent-cmd...>
 set -euo pipefail
 
-WORKTREE=0
-if [ "${1:-}" = "--worktree" ]; then WORKTREE=1; shift; fi
-[ $# -ge 3 ] || { echo "usage: ao-spawn [--worktree] <slug> <repo-dir> <agent-cmd...>" >&2; exit 2; }
-
-SLUG=$1; DIR=$2; shift 2
-SESSION="ao-$SLUG"
-LOGDIR="$HOME/.agent-orchestrator/logs"
-mkdir -p "$LOGDIR"
-LOG="$LOGDIR/$SESSION-$(date +%Y%m%d-%H%M%S).log"
-RUNNER="$LOGDIR/$SESSION.cmd.sh"
-
-if tmux has-session -t "=$SESSION:" 2>/dev/null; then
-  echo "error: session $SESSION already exists (ao-status $SLUG to inspect)" >&2; exit 1
-fi
-
-if [ "$WORKTREE" = 1 ]; then
-  ROOT=$(git -C "$DIR" rev-parse --show-toplevel)
-  if [ "$ROOT" = "$HOME" ]; then
-    echo "error: git root is \$HOME — a worktree would checkout your whole home dir. Rerun without --worktree." >&2; exit 1
-  fi
-  WT="$(dirname "$ROOT")/$(basename "$ROOT")-ao-$SLUG"
-  git -C "$ROOT" worktree add "$WT" -b "ao/$SLUG" >/dev/null
-  DIR="$WT"
-fi
-
-# Runner file sidesteps quoting issues; script(1) captures the transcript.
-printf '%s\n' "$*" > "$RUNNER"
-tmux new-session -d -s "$SESSION" -c "$DIR" "script -q '$LOG' /bin/sh '$RUNNER'" \; \
-     set-option remain-on-exit on 2>/dev/null || true
-
-sleep 0.5
-if ! tmux has-session -t "=$SESSION:" 2>/dev/null; then
-  echo "error: agent exited immediately — transcript tail:" >&2
-  tail -5 "$LOG" >&2 2>/dev/null || true
+command -v allternit-rails >/dev/null 2>&1 || {
+  echo "error: allternit-rails is not on PATH (build it with cargo build -p allternit-agent-system-rails)" >&2
   exit 1
-fi
+}
 
-echo "$SESSION $DIR $LOG"
+exec allternit-rails orchestrator spawn "$@"

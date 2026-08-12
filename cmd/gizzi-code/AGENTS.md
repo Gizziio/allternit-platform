@@ -290,3 +290,66 @@ bun run build
 # Type check (note: tsc --noEmit is heavy and may OOM on full project)
 bun run typecheck
 ```
+
+---
+
+## Rails cross-session messaging
+
+gizzi-code integrates with the Allternit Agent System Rails so any local agent session can discover and message any other local agent session on the same machine.
+
+### Runtime tools
+
+- `ListPeers` (alias `ListAgents`) — lists local Rails peers: name, vendor, cwd, status.
+- `SendMessage` (alias `SendMessageToPeer`) — sends a message to a peer by name.
+
+`SendMessage.to` accepts:
+- A Rails peer name from `ListPeers` (tries Rails first, falls back to teammate mailbox).
+- `uds:/path/to.sock` for direct UDS delivery.
+- `bridge:<session_id>` for the existing Remote Control inter-session path (requires `UDS_INBOX`).
+
+### Files
+
+| Path | Purpose |
+|------|---------|
+| `src/runtime/tools/ListPeersTool/ListPeersTool.ts` | `ListPeers` runtime tool |
+| `src/runtime/tools/SendMessageTool/SendMessageTool.ts` | `SendMessage` runtime tool |
+| `src/runtime/gizzi-core/services/railsPeer.ts` | Peer registration + HTTP inbox poller |
+| `src/cli/ui/ink-app/components/RailsInboxBridge.tsx` | Bridges polled Rails envelopes into the TUI mailbox |
+| `src/shared/utils/udsClient.ts` | Node UDS client for direct socket sends |
+| `src/runtime/services/api/allternitApi.ts` | `listApiPeers`, `registerApiPeer`, `sendApiPeerMessage`, `pollApiPeerInbox` |
+
+### Enabling
+
+Local dev builds have `UDS_INBOX` disabled. To register as a Rails peer and enable the new tools:
+
+```bash
+GIZZI_ENABLE_RAILS_PEER=1 gizzi
+```
+
+On startup the session registers as `gizzi-<sessionId>`, polls the HTTP inbox for peer messages, and exports `ALLTERNIT_RAILS_PEER_NAME` / `ALLTERNIT_RAILS_INBOX`.
+
+### Steering checkpoint
+
+The Rails steering coordinator is also exposed over `/api/rails/steer/*` and via `allternit-rails steer`:
+
+- `POST /api/rails/steer/checkpoint` — hash `.steering/checkpoint.md` and emit a ledger event on change.
+- `POST /api/rails/steer/consult` — build prompt context and consult the configured steering backend.
+- `POST /api/rails/steer/commit-gate` — commit/push approval consult.
+
+### Testing
+
+- `bun run typecheck` ✅
+- `cargo test -p allternit-agent-system-rails` ✅
+- `cargo build -p allternit-api` ✅
+- `test/rails-peer-e2e.ts` — registers two peers via `/api/rails/peers`, lists them, and confirms Bus/UDS message delivery.
+- `../tmp/rails-two-session-test/run.sh` — automated two-session gizzi-code TUI exchange (evidence saved to `../tmp/rails-two-session-test/evidence/`).
+- `allternit-rails --root <repo> steer checkpoint --cwd <repo>` — verified from the shell.
+- Two live `GIZZI_ENABLE_RAILS_PEER=1 gizzi` sessions exchanged a `ListPeers` / `SendMessage` round-trip.
+
+### Product-update system prompts
+
+Load these into agent sessions to teach the Rails workflow:
+
+- `docs/RAILS_PRODUCT_UPDATE_SYSTEM_PROMPT.md` — full product update / system prompt.
+- `.allternit/context-packs/rails-product-update/inputs/INSTRUCTIONS.md` — concise agent-instruction context pack.
+- `.allternit/context-packs/rails-product-update/inputs/templates/QUICKSTART.md` — copy-paste quickstart.

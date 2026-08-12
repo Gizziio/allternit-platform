@@ -32,7 +32,9 @@ import {
   type ModelSetting,
 } from './model.js'
 import { has1mContext } from '../context.js'
-import { getGlobalConfig } from '../config.js'
+import { readFileSync } from 'fs'
+import { homedir } from 'os'
+import { join } from 'path'
 
 // @[MODEL LAUNCH]: Update all the available and default model option strings below.
 
@@ -41,6 +43,40 @@ export type ModelOption = {
   label: string
   description: string
   descriptionForModel?: string
+}
+
+/**
+ * Build /model picker entries from gizzi.json's local "provider" section
+ * (e.g. ~/.config/gizzi-code/gizzi.json) — same file and read pattern as
+ * getRuntimeConfigModel() in model.ts, kept synchronous since this runs in
+ * a render path. Covers every model on every locally-configured provider
+ * (local-mlx, muse-glimmer, maple-preview, or any future local/custom
+ * provider a user adds), not just the currently-active one.
+ */
+function getLocalModelOptions(): ModelOption[] {
+  try {
+    const configDir =
+      process.env.GIZZI_CONFIG_DIR ?? join(homedir(), '.config', 'gizzi-code')
+    const configPath = join(configDir, 'gizzi.json')
+    const raw = readFileSync(configPath, 'utf-8')
+    const parsed = JSON.parse(raw)
+    const options: ModelOption[] = []
+    for (const [providerID, provider] of Object.entries<any>(parsed.provider ?? {})) {
+      if (provider?.auth_type !== 'none') continue // local/custom servers only, not api-key providers
+      for (const [modelKey, model] of Object.entries<any>(provider.models ?? {})) {
+        const value = `${providerID}/${model?.id ?? modelKey}`
+        options.push({
+          value,
+          label: model?.name ?? modelKey,
+          description: `${provider.name ?? providerID} · local`,
+          descriptionForModel: `${model?.name ?? modelKey} — locally hosted via ${provider.name ?? providerID}`,
+        })
+      }
+    }
+    return options
+  } catch {
+    return []
+  }
 }
 
 export function getDefaultOptionForUser(fastMode = false): ModelOption {
@@ -460,7 +496,11 @@ function getKnownModelOption(model: string): ModelOption | null {
 }
 
 export function getModelOptions(fastMode = false): ModelOption[] {
-  const options = getModelOptionsBase(fastMode)
+  // Local-first: gizzi-code's /model picker lists locally-hosted models
+  // (from gizzi.json's provider config) instead of the Anthropic cloud
+  // catalog getModelOptionsBase() used to return. Anthropic models are no
+  // longer offered here — Eoj's call, 2026-08-11.
+  const options = getLocalModelOptions()
 
   // Add the custom model from the ANTHROPIC_CUSTOM_MODEL_OPTION env var
   const envCustomModel = process.env.ANTHROPIC_CUSTOM_MODEL_OPTION
@@ -477,12 +517,8 @@ export function getModelOptions(fastMode = false): ModelOption[] {
     })
   }
 
-  // Append additional model options fetched during bootstrap
-  for (const opt of getGlobalConfig().additionalModelOptionsCache ?? []) {
-    if (!options.some(existing => existing.value === opt.value)) {
-      options.push(opt)
-    }
-  }
+  // additionalModelOptionsCache (Anthropic cloud catalog, fetched during
+  // bootstrap) intentionally NOT merged in here — local-only picker.
 
   // Add custom model from either the current model value or the initial one
   // if it is not already in the options.

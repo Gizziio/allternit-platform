@@ -1,10 +1,10 @@
 {
   "mcpServers": {
     "rails": {
-      "command": "/Users/macbook/Desktop/allternit-workspace/allternit/target/debug/rails",
+      "command": "/Users/joe/Desktop/allternit-workspace/allternit/target/debug/rails",
       "args": [
         "--root",
-        "/Users/macbook/Library/Application Support/allternit",
+        "/Users/joe/Library/Application Support/allternit",
         "mcp"
       ]
     },

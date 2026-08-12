@@ -30,10 +30,20 @@ export const localLoader: ProviderLoader = async () => {
         })
         if (res.ok) {
           const json = (await res.json()) as { data?: { id: string }[] }
-          const first = json.data?.[0]?.id
-          if (first) {
-            log.debug("resolved local model id", { configured: modelID, resolved: first })
-            return sdk.languageModel(first)
+          const list = json.data ?? []
+          // mlx_lm.server lists every mlx-compatible model in the whole HF
+          // cache, not just the one it has loaded — it only appends the
+          // actually-loaded --model as its own entry, always last, and only
+          // when it's a local filesystem path. Picking data[0] there silently
+          // hot-swaps the server to a random cached model on every request
+          // (breaks generation quality and tool-calling support). An absolute
+          // path is the one reliable signal for "the model actually running",
+          // so prefer it; single-entry servers (Ollama, LM Studio) are
+          // unaffected since they only ever report the one model that matters.
+          const resolved = list.find((m) => m.id?.startsWith("/"))?.id ?? list[0]?.id
+          if (resolved) {
+            log.debug("resolved local model id", { configured: modelID, resolved })
+            return sdk.languageModel(resolved)
           }
         }
       } catch (e) {

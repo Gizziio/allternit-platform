@@ -7,7 +7,6 @@ import {
 import { microcompactMessages } from '@/services/compact/microCompact.js'
 import { getSdkBetas } from '@/bootstrap/state.js'
 import { getCommandName } from '../../cli/ui/ink-app/commands.js'
-import { getSystemContext } from '../../runtime/gizzi-core/context.js'
 import { getFeatureValue_CACHED_MAY_BE_STALE } from '../../runtime/services/analytics/growthbook.js'
 import {
   AUTOCOMPACT_BUFFER_TOKENS,
@@ -47,6 +46,11 @@ import type {
   UserMessage,
 } from '@/types/message.js'
 import { toolToAPISchema } from './api.js'
+import {
+  countTokensWithFallback,
+  countToolDefinitionTokens,
+  TOOL_TOKEN_COUNT_OVERHEAD,
+} from './analyzeContextTokens.js'
 import { filterInjectedMemoryFiles, getMemoryFiles } from './gizzimd.js'
 import { getContextWindowForModel } from './context.js'
 import { getCwd } from './cwd.js'
@@ -64,49 +68,6 @@ import { getCurrentUsage } from './tokens.js'
 
 const RESERVED_CATEGORY_NAME = 'Autocompact buffer'
 const MANUAL_COMPACT_BUFFER_NAME = 'Compact buffer'
-
-/**
- * Fixed token overhead added by the API when tools are present.
- * The API adds a tool prompt preamble (~500 tokens) once per API call when tools are present.
- * When we count tools individually via the token counting API, each call includes this overhead,
- * leading to N × overhead instead of 1 × overhead for N tools.
- * We subtract this overhead from per-tool counts to show accurate tool content sizes.
- */
-export const TOOL_TOKEN_COUNT_OVERHEAD = 500
-
-async function countTokensWithFallback(
-  messages: Anthropic.Beta.Messages.BetaMessageParam[],
-  tools: Anthropic.Beta.Messages.BetaToolUnion[],
-): Promise<number | null> {
-  try {
-    const result = await countMessagesTokensWithAPI(messages as any, tools as any)
-    if (result !== null) {
-      return result
-    }
-    logForDebugging(
-      `countTokensWithFallback: API returned null, trying haiku fallback (${tools.length} tools)`,
-    )
-  } catch (err) {
-    logForDebugging(`countTokensWithFallback: API failed: ${errorMessage(err)}`)
-    logError(err)
-  }
-
-  try {
-    const fallbackResult = await countTokensViaHaikuFallback(messages as any, tools as any)
-    if (fallbackResult === null) {
-      logForDebugging(
-        `countTokensWithFallback: haiku fallback also returned null (${tools.length} tools)`,
-      )
-    }
-    return fallbackResult
-  } catch (err) {
-    logForDebugging(
-      `countTokensWithFallback: haiku fallback failed: ${errorMessage(err)}`,
-    )
-    logError(err)
-    return null
-  }
-}
 
 interface ContextCategory {
   name: string
@@ -231,32 +192,6 @@ export interface ContextData {
   } | null
 }
 
-export async function countToolDefinitionTokens(
-  tools: Tools,
-  getToolPermissionContext: () => Promise<ToolPermissionContext>,
-  agentInfo: AgentDefinitionsResult | null,
-  model?: string,
-): Promise<number> {
-  const toolSchemas = await Promise.all(
-    tools.map(tool =>
-      toolToAPISchema(tool, {
-        getToolPermissionContext,
-        tools,
-        agents: agentInfo?.activeAgents ?? [],
-        model,
-      }),
-    ),
-  )
-  const result = await countTokensWithFallback([], toolSchemas as any)
-  if (result === null || result === 0) {
-    const toolNames = tools.map(t => t.name).join(', ')
-    logForDebugging(
-      `countToolDefinitionTokens returned ${result} for ${tools.length} tools: ${toolNames.slice(0, 100)}${toolNames.length > 100 ? '...' : ''}`,
-    )
-  }
-  return result ?? 0
-}
-
 /** Extract a human-readable name from a system prompt section's content */
 function extractSectionName(content: string): string {
   // Try to find first markdown heading
@@ -275,7 +210,9 @@ async function countSystemTokens(
   systemPromptTokens: number
   systemPromptSections: SystemPromptSectionDetail[]
 }> {
-  // Get system context (gitStatus, etc.) which is always included
+  // Get system context (gitStatus, etc.) which is always included.
+  // Dynamic import to avoid a static cycle: analyzeContext -> gizzi-core/context -> gizzimd -> ... -> analyzeContext.
+  const { getSystemContext } = await import('../../runtime/gizzi-core/context.js')
   const systemContext = await getSystemContext()
 
   // Build named entries: system prompt parts + system context values

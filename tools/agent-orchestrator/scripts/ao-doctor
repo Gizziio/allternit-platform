@@ -1,75 +1,11 @@
 #!/usr/bin/env bash
-# ao-doctor — verify the delegation toolchain before orchestrating.
-# Probes the transport (tmux, script, git) and every known executor CLI:
-# installed? which version? do the launch flags the matrix relies on still
-# appear in --help? The launch matrix is knowledge, not hope — verify it.
-# Mirrors doctor() in @allternit/orchestrator (runtime-discovery.ts).
-# Exit 0 when at least one executor is usable, 1 otherwise, 2 if the
-# transport itself is broken.
-set -uo pipefail
+# ao-doctor — thin shim over allternit-rails orchestrator doctor.
+# Verifies the delegation toolchain before orchestrating.
+set -euo pipefail
 
-TRANSPORT_OK=1
-USABLE=0
-
-echo "ao-doctor: transport"
-for t in tmux script git; do
-  if command -v "$t" >/dev/null 2>&1; then
-    echo "  $t: OK ($(command -v "$t"))"
-  else
-    echo "  $t: MISSING — delegation cannot run without it"
-    TRANSPORT_OK=0
-  fi
-done
-
-help_of() { "$1" --help 2>&1 | head -c 200000; }
-version_of() { "$1" --version 2>/dev/null | head -n 1; }
-
-# probe <vendor> <binary> <interactive-flags> <headless-flags-or-"-"> [note]
-probe() {
-  local vendor=$1 binary=$2 iflags=$3 hflags=$4 note=${5:-}
-  if ! command -v "$binary" >/dev/null 2>&1; then
-    echo "  $vendor ($binary): not installed"
-    return
-  fi
-  local help missing_i="" missing_h="" f
-  help=$(help_of "$binary")
-  for f in $iflags; do
-    case "$help" in *"$f"*) ;; *) missing_i="$missing_i $f";; esac
-  done
-  if [ "$hflags" != "-" ]; then
-    for f in $hflags; do
-      case "$help" in *"$f"*) ;; *) missing_h="$missing_h $f";; esac
-    done
-  fi
-
-  local i_ok="yes" h_ok="yes"
-  [ -z "$missing_i" ] || i_ok="no"
-  if [ "$hflags" = "-" ]; then h_ok="n/a"; elif [ -n "$missing_h" ]; then h_ok="no"; fi
-  [ "$i_ok" = "yes" ] && USABLE=1
-  [ "$h_ok" = "yes" ] && USABLE=1
-
-  local line="  $vendor ($binary): installed interactive=$i_ok headless=$h_ok"
-  local ver; ver=$(version_of "$binary")
-  [ -n "$ver" ] && line="$line version=$ver"
-  [ -n "$missing_i" ] && line="$line missing-interactive:$missing_i"
-  [ -n "$missing_h" ] && line="$line missing-headless:$missing_h"
-  [ -n "$note" ] && line="$line ($note)"
-  echo "$line"
+command -v allternit-rails >/dev/null 2>&1 || {
+  echo "error: allternit-rails is not on PATH" >&2
+  exit 1
 }
 
-echo "ao-doctor: executors"
-probe kimi   kimi   "--yolo"                                    "-"                                    "no headless: -p refuses --yolo/--auto"
-probe codex  codex  "--dangerously-bypass-approvals-and-sandbox" "exec"
-probe claude claude "--dangerously-skip-permissions"            "-p --dangerously-skip-permissions"
-probe agy    agy    "--dangerously-skip-permissions"            "-"
-
-if [ "$TRANSPORT_OK" -eq 0 ]; then
-  echo "ao-doctor: TRANSPORT BROKEN"
-  exit 2
-fi
-if [ "$USABLE" -eq 1 ]; then
-  echo "ao-doctor: OK — at least one executor is usable"
-  exit 0
-fi
-echo "ao-doctor: NO USABLE EXECUTORS"
-exit 1
+exec allternit-rails orchestrator doctor

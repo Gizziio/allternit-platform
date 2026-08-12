@@ -1,5 +1,5 @@
 // @ts-nocheck
-import { roughTokenCountEstimation } from '../services/tokenEstimation.js'
+import { roughTokenCountEstimation } from '../services/roughTokenEstimation.js'
 import type { Tool, ToolPermissionContext } from '../Tool.js'
 import type { AgentDefinitionsResult } from '../tools/AgentTool/loadAgentsDir.js'
 import { countMcpToolTokens } from './analyzeContext.js'

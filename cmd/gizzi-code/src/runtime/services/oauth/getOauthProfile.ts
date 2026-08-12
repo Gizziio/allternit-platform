@@ -2,13 +2,13 @@
 import axios from 'axios'
 import { getOauthConfig, OAUTH_BETA_HEADER } from '@/constants/oauth.js'
 import type { OAuthProfileResponse } from '@/services/oauth/types.js'
-import { getAnthropicApiKey } from '../../../utils/auth.js'
 import { getGlobalConfig } from '../../../utils/config.js'
 import { logError } from '../../../shared/utils/log.js'
 export async function getOauthProfileFromApiKey(): Promise<
   OAuthProfileResponse | undefined
 > {
   // Assumes interactive session
+  const { getAnthropicApiKey } = await import('../../../utils/auth.js')
   const config = getGlobalConfig()
   const accountUuid = config.oauthAccount?.accountUuid
   const apiKey = getAnthropicApiKey()

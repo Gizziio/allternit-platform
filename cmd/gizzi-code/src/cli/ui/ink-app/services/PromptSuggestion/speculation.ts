@@ -40,7 +40,7 @@ import {
   INTERRUPT_MESSAGE,
   INTERRUPT_MESSAGE_FOR_TOOL_USE,
 } from '../../utils/messages.js'
-import { getClaudeTempDir } from '../../utils/permissions/filesystem.js'
+import { getClaudeTempDir } from '../../utils/permissions/tempDir.js'
 import { extractReadFilesFromMessages } from '../../utils/queryHelpers.js'
 import { getTranscriptPath } from '../../utils/sessionStorage.js'
 import { jsonStringify } from '../../utils/slowOperations.js'

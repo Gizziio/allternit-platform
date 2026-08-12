@@ -197,6 +197,9 @@ interface ExcelShellProps {
   /// Session page-layout settings of the active sheet, echoed by the Page
   /// Layout tab's controls (untouched fields show the app default).
   readonly pageLayout: PageLayoutEcho
+  /// AI model override for this document.
+  readonly aiModelId?: string | undefined
+  readonly onAiModelChange?: (modelId: string | undefined) => void
 }
 
 export interface PageLayoutEcho {
@@ -265,6 +268,8 @@ export function ExcelShell({
   onAutoSaveChange,
   selectedChart,
   pageLayout,
+  aiModelId,
+  onAiModelChange,
 }: ExcelShellProps): React.JSX.Element {
   const { t } = useI18n()
   const [activeTab, setActiveTab] = useState<RibbonTab>('Home')
@@ -440,6 +445,8 @@ export function ExcelShell({
           onUndo={onUndo}
           onExpand={() => setIsCopilotOpen(true)}
           onCollapse={() => setIsCopilotOpen(false)}
+          modelId={aiModelId}
+          onModelChange={onAiModelChange}
         />
         <div className="sheet-main">
           {/* Excel's formula-bar row, Name Box only for now (fx bar TBD). */}

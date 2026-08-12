@@ -7,7 +7,7 @@ import { Ansi, Box, useTheme } from '../ink';
 import { type CliHighlight, getCliHighlightPromise } from '../utils/cliHighlight';
 import { hashContent } from '../utils/hash';
 import { configureMarked, formatToken } from '../utils/markdown';
-import { stripPromptXMLTags } from '../utils/messages';
+import { stripPromptXMLTags } from '../utils/syntheticMessages.js';
 import { MarkdownTable } from './MarkdownTable';
 type Props = {
   children: string;

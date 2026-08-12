@@ -5,7 +5,7 @@ import { Terminal, FolderOpen, GitBranch, GearSix, Paperclip, PaperPlaneTilt, Ci
 import { TEXT, MODE_COLORS } from '@/design/allternit.tokens';
 import { AgentSessionLayout } from './AgentSessionLayout';
 import type { BaseAgentSessionProps } from './types';
-import { useChatSessionStore } from '@/views/chat/ChatSessionStore';
+import { useCodeSessionStore, createCodeSession } from '@/views/code/CodeSessionStore';
 import { UnifiedMessageRenderer } from '@/components/ai-elements/UnifiedMessageRenderer';
 import { parseStructuredContent } from '@/lib/ai/rust-stream-adapter-extended';
 import { TerminalView } from '../TerminalView';
@@ -26,24 +26,26 @@ export function CodeModeAgentSession({
   const mode = 'code';
   const modeColors = MODE_COLORS[mode] as typeof MODE_COLORS.code;
 
-  const activeSessionId = useChatSessionStore((s) => s.activeSessionId);
+  const activeSessionId = useCodeSessionStore((s) => s.activeSessionId);
   const sessionId = sessionIdProp ?? activeSessionId;
 
-  const sessions = useChatSessionStore((s) => s.sessions);
+  const sessions = useCodeSessionStore((s) => s.sessions);
   const session = useMemo(
     () => sessions.find((s) => s.id === sessionId) ?? null,
     [sessions, sessionId]
   );
   const messages = session?.messages ?? [];
 
-  const streamingState = useChatSessionStore((s) =>
+  const streamingState = useCodeSessionStore((s) =>
     sessionId ? s.streamingBySession?.[sessionId] : null
   );
   const isStreaming = streamingState?.isStreaming ?? false;
 
-  const sendMessageStream = useChatSessionStore((s) => s.sendMessageStream);
-  const createSession = useChatSessionStore((s) => s.createSession);
-  const setActiveSession = useChatSessionStore((s) => s.setActiveSession);
+  const sendMessageStream = useCodeSessionStore((s) => s.sendMessageStream);
+  const setActiveSession = useCodeSessionStore((s) => s.setActiveSession);
+  const fetchMessages = useCodeSessionStore((s) => s.fetchMessages);
+
+  const loadedSessionRef = useRef<string | null>(null);
 
   const [input, setInput] = useState('');
   const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -53,6 +55,15 @@ export function CodeModeAgentSession({
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages.length, isStreaming]);
 
+  // Deep-link: when opened with an existing backend session id, load its
+  // messages from the backend instead of showing the empty state.
+  useEffect(() => {
+    if (!sessionId || !sessionId.startsWith('ses')) return;
+    if (loadedSessionRef.current === sessionId) return;
+    loadedSessionRef.current = sessionId;
+    void fetchMessages(sessionId);
+  }, [sessionId, fetchMessages]);
+
   const handleSend = useCallback(async () => {
     if (!input.trim() || isStreaming) return;
     const text = input.trim();
@@ -60,12 +71,12 @@ export function CodeModeAgentSession({
 
     let sid = sessionId;
     if (!sid) {
-      sid = await createSession({ name: 'Code Agent', sessionMode: 'agent', agentId });
+      sid = await createCodeSession({ name: 'Code Agent', sessionMode: 'agent', agentId });
       setActiveSession(sid);
     }
 
     await sendMessageStream(sid, { text });
-  }, [input, isStreaming, sessionId, createSession, agentId, setActiveSession, sendMessageStream]);
+  }, [input, isStreaming, sessionId, agentId, setActiveSession, sendMessageStream]);
 
   const rightPaneContent = useMemo(() => {
     switch (activeRightTab) {

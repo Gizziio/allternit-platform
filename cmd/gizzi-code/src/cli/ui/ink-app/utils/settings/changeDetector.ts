@@ -6,11 +6,7 @@ import { getIsRemoteMode } from '../../bootstrap/state.js'
 import { registerCleanup } from '../cleanupRegistry.js'
 import { logForDebugging } from '../debug.js'
 import { errorMessage } from '../errors.js'
-import {
-  type ConfigChangeSource,
-  executeConfigChangeHooks,
-  hasBlockingResult,
-} from '../hooks.js'
+import type { ConfigChangeSource } from '../hooks.js'
 import { createSignal } from '../signal.js'
 import { jsonStringify } from '../slowOperations.js'
 import { SETTING_SOURCES, type SettingSource } from './constants.js'
@@ -250,6 +246,23 @@ async function getWatchTargets(): Promise<{
   return { dirs: [...dirsWithExistingFiles], settingsFiles, dropInDir }
 }
 
+async function fireConfigChangeHook(
+  source: ConfigChangeSource,
+  path: string,
+  blockedMessage: string,
+  onAllowed: () => void,
+): Promise<void> {
+  const { executeConfigChangeHooks, hasBlockingResult } = await import(
+    '../hooks.js'
+  )
+  const results = await executeConfigChangeHooks(source, path)
+  if (hasBlockingResult(results)) {
+    logForDebugging(blockedMessage)
+    return
+  }
+  onAllowed()
+}
+
 function settingSourceToConfigChangeSource(
   source: SettingSource,
 ): ConfigChangeSource {
@@ -290,16 +303,12 @@ function handleChange(path: string): void {
 
   // Fire ConfigChange hook first — if blocked (exit code 2 or decision: 'block'),
   // skip applying the change to the session
-  void executeConfigChangeHooks(
+  void fireConfigChangeHook(
     settingSourceToConfigChangeSource(source),
     path,
-  ).then(results => {
-    if (hasBlockingResult(results)) {
-      logForDebugging(`ConfigChange hook blocked change to ${path}`)
-      return
-    }
-    fanOut(source)
-  })
+    `ConfigChange hook blocked change to ${path}`,
+    () => fanOut(source),
+  )
 }
 
 /**
@@ -342,16 +351,12 @@ function handleDelete(path: string): void {
       pendingDeletions.delete(p)
 
       // Fire ConfigChange hook first — if blocked, skip applying the deletion
-      void executeConfigChangeHooks(
+      void fireConfigChangeHook(
         settingSourceToConfigChangeSource(src),
         p,
-      ).then(results => {
-        if (hasBlockingResult(results)) {
-          logForDebugging(`ConfigChange hook blocked deletion of ${p}`)
-          return
-        }
-        fanOut(src)
-      })
+        `ConfigChange hook blocked deletion of ${p}`,
+        () => fanOut(src),
+      )
     },
     testOverrides?.deletionGrace ?? DELETION_GRACE_MS,
     path,

@@ -17,10 +17,8 @@ import {
   type AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
   getFileExtensionForAnalytics,
 } from '../../services/analytics/metadata.js'
-import {
-  countTokensWithAPI,
-  roughTokenCountEstimationForFileType,
-} from '../../services/tokenEstimation.js'
+import { roughTokenCountEstimationForFileType } from '../../services/roughTokenEstimation.js'
+import { countTokensWithAPI } from '../../services/tokenEstimation.js'
 import {
   activateConditionalSkillsForPaths,
   addSkillDirectories,
@@ -32,12 +30,12 @@ import { getCwd } from '../../utils/cwd.js'
 import { getClaudeConfigHomeDir, isEnvTruthy } from '../../utils/envUtils.js'
 import { getErrnoCode, isENOENT } from '../../utils/errors.js'
 import {
-  addLineNumbers,
   FILE_NOT_FOUND_CWD_NOTE,
   findSimilarFile,
   getFileModificationTimeAsync,
   suggestPathUnderCwd,
 } from '../../utils/file.js'
+import { addLineNumbers } from '../../utils/fileLineNumbers.js'
 import { logFileOperation } from '../../utils/fileOperationAnalytics.js'
 import { formatFileSize } from '../../utils/format.js'
 import { getFsImplementation } from '../../utils/fsOperations.js'

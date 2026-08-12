@@ -153,10 +153,14 @@ export function OfficeSuiteSection({ openView }: OfficeSuiteSectionProps) {
             <p className="mt-2 text-[11px] font-medium text-[var(--text-tertiary)]">{editor.formats.join(' · ')}</p>
             <button
               type="button"
-              onClick={() => openEditor(editor.id)}
+              onClick={() =>
+                editor.id === 'pdf'
+                  ? fileInputRef.current?.click()
+                  : openEditor(editor.id)
+              }
               className="mt-auto inline-flex h-9 items-center justify-center rounded-lg bg-[var(--text-primary)] px-4 text-sm font-medium text-[var(--bg-elevated)] transition-opacity hover:opacity-90"
             >
-              Create new
+              {editor.id === 'pdf' ? 'Open a PDF' : 'Create new'}
             </button>
           </article>
         ))}

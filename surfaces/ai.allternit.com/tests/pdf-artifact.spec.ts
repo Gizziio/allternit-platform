@@ -30,62 +30,16 @@ function makeArtifact(binaryBody: string, overrides: Record<string, unknown> = {
   };
 }
 
-test('pdf viewer loads artifact bytes and saves edited bytes back', async ({ page }) => {
+test('pdf viewer loads artifact bytes and stays read-only', async ({ page }) => {
   const binaryBody = makeHelloPdf().toString('base64');
-  const sectionPatches: { sectionId: string; body: Record<string, unknown> }[] = [];
-  const sectionPosts: Record<string, unknown>[] = [];
+  const artifactWrites: string[] = [];
 
-  await page.route('**/api/v1/artifacts/pdf-123/sections/*', async (route) => {
-    const request = route.request();
-    const url = new URL(request.url());
-    const sectionId = url.pathname.split('/').pop()!;
-    if (request.method() === 'PATCH') {
-      const body = request.postDataJSON() as Record<string, unknown>;
-      sectionPatches.push({ sectionId, body });
-      await route.fulfill({
-        status: 200,
-        contentType: 'application/json',
-        body: JSON.stringify({
-          section: {
-            id: sectionId,
-            artifactId: 'pdf-123',
-            heading: 'Document (pdf)',
-            kind: body.kind ?? 'pdf-viewer/binary',
-            body: body.body ?? '',
-            position: body.position ?? 0,
-            createdAt: NOW,
-            updatedAt: NOW,
-          },
-        }),
-      });
-      return;
+  await page.route('**/api/v1/artifacts/**', (route) => {
+    const method = route.request().method();
+    if (method === 'PATCH' || method === 'POST' || method === 'PUT') {
+      artifactWrites.push(`${method} ${new URL(route.request().url()).pathname}`);
     }
-    await route.fallback();
-  });
-
-  await page.route('**/api/v1/artifacts/pdf-123/sections', async (route) => {
-    if (route.request().method() === 'POST') {
-      const body = route.request().postDataJSON() as Record<string, unknown>;
-      sectionPosts.push(body);
-      await route.fulfill({
-        status: 200,
-        contentType: 'application/json',
-        body: JSON.stringify({
-          section: {
-            id: `sec-new-${sectionPosts.length}`,
-            artifactId: 'pdf-123',
-            heading: body.heading ?? 'Text',
-            kind: body.kind ?? 'pdf-viewer/plaintext',
-            body: body.body ?? '',
-            position: body.position ?? 1,
-            createdAt: NOW,
-            updatedAt: NOW,
-          },
-        }),
-      });
-      return;
-    }
-    await route.fallback();
+    return route.fallback();
   });
 
   await page.route('**/api/v1/artifacts/pdf-123', async (route) => {
@@ -102,31 +56,66 @@ test('pdf viewer loads artifact bytes and saves edited bytes back', async ({ pag
   await expect(page.locator('.app')).toBeVisible({ timeout: 30000 });
   await expect(page.locator('canvas').first()).toBeVisible({ timeout: 30000 });
 
-  // A real edit through the vendored UI: rotate the page via the thumbnail
-  // context menu. That marks the document dirty and enables Save.
+  // Allternit PDF is a viewer: editing actions are disabled and no artifact
+  // write-back is attempted. The badge says "View-only" (not "Encrypted").
+  const roBadge = page.locator('.tb-readonly');
+  await expect(roBadge).toBeVisible({ timeout: 30000 });
+  await expect(roBadge).toHaveText('View-only');
+
   await page.locator('.pdf-thumb').first().click({ button: 'right' });
-  await page.locator('.thumb-menu').getByRole('button', { name: 'Rotate right' }).click();
+  const rotateButton = page.locator('.thumb-menu').getByRole('button', { name: 'Rotate right' });
+  await expect(rotateButton).toBeDisabled();
 
   const saveButton = page.getByRole('button', { name: 'Save', exact: true });
-  await expect(saveButton).toBeEnabled();
-  await saveButton.click();
+  await expect(saveButton).toHaveCount(0);
 
-  // PdfView persists the saved bytes (debounced 1.5s): the binary section is
-  // PATCHed with fresh base64 that differs from the fixture (the rotation was
-  // applied), and a plaintext section is POSTed for iOS/search.
-  await expect
-    .poll(() => sectionPatches.length, { timeout: 30000 })
-    .toBeGreaterThan(0);
-  expect(sectionPatches[0].sectionId).toBe('sec-bin');
-  const savedBase64 = String(sectionPatches[0].body.body);
-  expect(savedBase64).not.toBe(binaryBody);
-  // Still a real PDF: base64 of "%PDF-".
-  expect(savedBase64.startsWith('JVBER')).toBe(true);
+  expect(artifactWrites).toHaveLength(0);
+});
 
-  await expect
-    .poll(() => sectionPosts.length, { timeout: 30000 })
-    .toBeGreaterThan(0);
-  expect(sectionPosts[0].kind).toBe('pdf-viewer/plaintext');
+test('pdf viewer selection shows Copy popup in read-only mode', async ({ page }) => {
+  const binaryBody = makeHelloPdf().toString('base64');
+
+  await page.route('**/api/v1/artifacts/pdf-123', async (route) => {
+    await route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify({ artifact: makeArtifact(binaryBody) }),
+    });
+  });
+
+  await page.goto('/pdf/pdf-123');
+  await expect(page.locator('.app')).toBeVisible({ timeout: 30000 });
+  await expect(page.locator('canvas').first()).toBeVisible({ timeout: 30000 });
+  const roBadge2 = page.locator('.tb-readonly');
+  await expect(roBadge2).toBeVisible({ timeout: 30000 });
+  await expect(roBadge2).toHaveText('View-only');
+
+  // pdf.js text layer renders selectable spans inside .textLayer.
+  const textLayer = page.locator('.textLayer').first();
+  await expect(textLayer).toBeVisible({ timeout: 30000 });
+
+  // Select all text in the text layer and dispatch mouseup so the viewer
+  // positions its floating popup.
+  const selected = await textLayer.evaluate((el) => {
+    const range = document.createRange();
+    range.selectNodeContents(el);
+    const sel = window.getSelection();
+    sel?.removeAllRanges();
+    sel?.addRange(range);
+    return sel?.toString() ?? '';
+  });
+  expect(selected).toContain('Hello Allternit PDF');
+
+  await page.locator('.pdf-scroll').dispatchEvent('mouseup');
+
+  const popup = page.locator('.pdf-sel-popup');
+  await expect(popup).toBeVisible({ timeout: 3000 });
+  await expect(popup.getByRole('button', { name: 'Copy' })).toBeVisible();
+
+  // Markup tools are editing actions and must be hidden in read-only mode.
+  await expect(popup.getByRole('button', { name: 'Highlight' })).toHaveCount(0);
+  await expect(popup.getByRole('button', { name: 'Underline' })).toHaveCount(0);
+  await expect(popup.getByRole('button', { name: 'Strikethrough' })).toHaveCount(0);
 });
 
 test('pdf viewer without artifact stays standalone (no artifact save)', async ({ page }) => {

@@ -2,7 +2,7 @@
 import type { ToolResultBlockParam } from '@allternit/sdk/providers/anthropic/resources/index.mjs';
 import * as React from 'react';
 import type { Message, ProgressMessage } from './../../types/message.ts';
-import { extractTag } from './../../utils/messages.ts';
+import { extractTag } from './../../utils/extractTag.js';
 import type { ThemeName } from './../../utils/theme.ts';
 import type { z } from 'zod/v4';
 import { FallbackToolUseErrorMessage } from '../../components/FallbackToolUseErrorMessage';

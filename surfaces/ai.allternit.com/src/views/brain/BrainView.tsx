@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState } from 'react';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import {
@@ -13,14 +13,17 @@ import {
   GitBranch,
 } from '@phosphor-icons/react';
 import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Pill } from '@/components/ui/Pill';
-import { EmptyState } from '@/components/settings/EmptyState';
 import { Text } from '@/components/typography/Text';
 import { cn } from '@/lib/utils';
+import { useToast } from '@/components/ui/toast-provider';
 import {
   fetchBrains,
   fetchBrainPages,
+  createBrain,
+  importBrain,
   type BrainSummary,
   type BrainPage,
 } from '@/services/brain-api';
@@ -145,7 +148,7 @@ function BrainDetail({ brain, onBack }: { brain: BrainSummary; onBack: () => voi
       <div className="flex items-center gap-3">
         <Button variant="outline" size="sm" onClick={onBack}>
           <ArrowLeft size={14} />
-          All brains
+          All second brains
         </Button>
         <Text variant="code" className="text-[13px] text-[var(--text-secondary)]">
           {shortId(brain.brain_id)}
@@ -165,18 +168,24 @@ function BrainDetail({ brain, onBack }: { brain: BrainSummary; onBack: () => voi
         </div>
       ) : isError ? (
         <div className="flex flex-col items-center justify-center gap-3 py-20 text-[var(--text-secondary)]">
-          <p className="text-sm">Failed to load brain pages.</p>
+          <p className="text-sm">Failed to load second brain pages.</p>
           <Button variant="outline" size="sm" onClick={() => refetch()}>
             <ArrowsClockwise size={14} />
             Retry
           </Button>
         </div>
       ) : groups.length === 0 ? (
-        <EmptyState
-          icon={<Brain size={48} />}
-          title="No pages yet"
-          caption="This brain has no markdown pages yet. Commit pages to its git repo and they will appear here."
-        />
+        <div className="flex flex-col items-center justify-center text-center py-12 px-6 rounded-xl border border-dashed border-[var(--border-subtle)] bg-[var(--bg-elevated)]">
+          <div className="text-[var(--text-tertiary)] mb-4">
+            <Brain size={48} />
+          </div>
+          <h3 className="text-[16px] font-semibold text-[var(--text-primary)] m-0 mb-1">
+            No pages yet
+          </h3>
+          <p className="text-[13px] text-[var(--text-secondary)] m-0 max-w-xs leading-relaxed">
+            This second brain has no markdown pages yet. Commit pages to its git repo and they will appear here.
+          </p>
+        </div>
       ) : (
         groups.map((group) => (
           <section key={group.directory} className="flex flex-col gap-3">
@@ -265,12 +274,126 @@ function BrainCard({ brain, onSelect }: { brain: BrainSummary; onSelect: () => v
   );
 }
 
+function BrainEmptyState({
+  onCreate,
+  onImport,
+  isCreating,
+  isImporting,
+}: {
+  onCreate: () => void;
+  onImport: (cloneUrl: string) => void;
+  isCreating: boolean;
+  isImporting: boolean;
+}) {
+  const [mode, setMode] = useState<'choose' | 'import'>('choose');
+  const [cloneUrl, setCloneUrl] = useState('');
+
+  if (mode === 'import') {
+    return (
+      <div className="flex flex-col items-center justify-center text-center py-12 px-6 rounded-xl border border-dashed border-[var(--border-subtle)] bg-[var(--bg-elevated)]">
+        <div className="text-[var(--text-tertiary)] mb-4">
+          <Brain size={48} />
+        </div>
+        <h3 className="text-[16px] font-semibold text-[var(--text-primary)] m-0 mb-1">
+          Import an existing second brain
+        </h3>
+        <p className="text-[13px] text-[var(--text-secondary)] m-0 max-w-xs leading-relaxed mb-5">
+          Paste the git clone URL of a brain you already have hosted. It will be cloned to this machine and linked.
+        </p>
+        <div className="w-full max-w-sm flex flex-col gap-3">
+          <Input
+            placeholder="https://host.example/your-brain.git"
+            value={cloneUrl}
+            onChange={(e) => setCloneUrl(e.target.value)}
+            disabled={isImporting}
+          />
+          <div className="flex gap-2 justify-center">
+            <Button
+              variant="outline"
+              onClick={() => {
+                setMode('choose');
+                setCloneUrl('');
+              }}
+              disabled={isImporting}
+            >
+              Back
+            </Button>
+            <Button
+              onClick={() => onImport(cloneUrl)}
+              disabled={isImporting || !cloneUrl.trim()}
+            >
+              {isImporting ? 'Importing…' : 'Import repo'}
+            </Button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="flex flex-col items-center justify-center text-center py-12 px-6 rounded-xl border border-dashed border-[var(--border-subtle)] bg-[var(--bg-elevated)]">
+      <div className="text-[var(--text-tertiary)] mb-4">
+        <Brain size={48} />
+      </div>
+      <h3 className="text-[16px] font-semibold text-[var(--text-primary)] m-0 mb-1">
+        No second brain yet
+      </h3>
+      <p className="text-[13px] text-[var(--text-secondary)] m-0 max-w-xs leading-relaxed mb-5">
+        Create a new second brain or import an existing git repo. Your brain is a local-first collection of identity, decisions, runbooks, and ideas.
+      </p>
+      <div className="flex flex-col sm:flex-row gap-2 justify-center">
+        <Button onClick={onCreate} disabled={isCreating}>
+          {isCreating ? 'Creating…' : 'Create second brain'}
+        </Button>
+        <Button variant="outline" onClick={() => setMode('import')} disabled={isCreating}>
+          Import existing repo
+        </Button>
+      </div>
+    </div>
+  );
+}
+
 export function BrainView() {
   const [selectedBrainId, setSelectedBrainId] = useState<string | null>(null);
+  const queryClient = useQueryClient();
+  const { addToast } = useToast();
 
   const { data: brains, isLoading, isError, refetch } = useQuery({
     queryKey: ['brains'],
     queryFn: ({ signal }) => fetchBrains(signal),
+  });
+
+  const createBrainMutation = useMutation({
+    mutationFn: createBrain,
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: ['brains'] });
+    },
+    onError: (error: Error) => {
+      addToast({
+        title: 'Failed to create second brain',
+        description: error.message,
+        type: 'error',
+      });
+    },
+  });
+
+  const importBrainMutation = useMutation({
+    mutationFn: importBrain,
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: ['brains'] });
+      addToast({
+        title: 'Second brain imported',
+        description: 'The repo was cloned and linked successfully.',
+        type: 'success',
+      });
+    },
+    onError: (error: Error) => {
+      addToast({
+        title: 'Failed to import second brain',
+        description: error.message,
+        type: 'error',
+      });
+    },
   });
 
   const selectedBrain = brains?.find((b) => b.brain_id === selectedBrainId) ?? null;
@@ -283,7 +406,7 @@ export function BrainView() {
             className="text-3xl font-medium tracking-tight"
             style={{ fontFamily: 'var(--font-serif)' }}
           >
-            Brain
+            Second Brain
           </h1>
         </div>
 
@@ -296,7 +419,7 @@ export function BrainView() {
             </div>
           ) : isError ? (
             <div className="flex flex-col items-center justify-center gap-3 py-20 text-[var(--text-secondary)]">
-              <p className="text-sm">Failed to load brains.</p>
+              <p className="text-sm">Failed to load second brains.</p>
               <Button variant="outline" size="sm" onClick={() => refetch()}>
                 <ArrowsClockwise size={14} />
                 Retry
@@ -305,10 +428,11 @@ export function BrainView() {
           ) : selectedBrain ? (
             <BrainDetail brain={selectedBrain} onBack={() => setSelectedBrainId(null)} />
           ) : !brains || brains.length === 0 ? (
-            <EmptyState
-              icon={<Brain size={48} />}
-              title="No brains yet"
-              caption="Create a second brain with `gizzi brain init` or by calling POST /api/v1/brains — once created, it will appear here."
+            <BrainEmptyState
+              onCreate={() => createBrainMutation.mutate()}
+              onImport={(url) => importBrainMutation.mutate(url)}
+              isCreating={createBrainMutation.isPending}
+              isImporting={importBrainMutation.isPending}
             />
           ) : (
             <div className="grid grid-cols-[repeat(auto-fill,minmax(300px,1fr))] gap-4">

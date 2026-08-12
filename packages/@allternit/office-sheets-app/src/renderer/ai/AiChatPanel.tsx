@@ -9,6 +9,13 @@ import sendEnterOn from '../assets/send-enter-on.png'
 import sendEnterOff from '../assets/send-enter-off.png'
 import sendStop from '../assets/send-stop.png'
 import attachIcon from '../assets/attach-icon.png'
+import {
+  getOfficeModelOptions,
+  getOfficeModelLabel,
+  refreshOfficeModelOptions,
+  setOfficeModelOverride,
+  type OfficeModelOption,
+} from '@allternit/office-ai'
 
 /** Clipboard bitmap MIME → attachment extension (matches the main process's
  * ATTACHMENT_IMAGE_EXTS) */
@@ -78,6 +85,8 @@ export function AiChatPanel({
   onUndo,
   onExpand,
   onCollapse,
+  modelId,
+  onModelChange,
 }: {
   readonly isOpen: boolean
   /** the workbook has cells with content — empty workbooks get "build me a sheet" copy instead */
@@ -105,6 +114,8 @@ export function AiChatPanel({
   readonly onUndo: () => void
   readonly onExpand: () => void
   readonly onCollapse: () => void
+  readonly modelId?: string | undefined
+  readonly onModelChange?: ((modelId: string | undefined) => void) | undefined
 }): React.JSX.Element {
   const { t } = useI18n()
   const chatRef = useRef<HTMLDivElement | null>(null)
@@ -269,6 +280,7 @@ export function AiChatPanel({
           Allternit AI
         </span>
         <div className="ai-panel-header-actions">
+          <ModelPicker value={modelId} onChange={onModelChange} />
           {(chat.length > 0 || historicChat.length > 0) && (
             <button className="ai-header-btn" onClick={onNewChat} title={t('aiNewChat')}>
               <IconNewChat size={15} />
@@ -458,6 +470,82 @@ export function AiChatPanel({
         />
       </div>
     </aside>
+  )
+}
+
+function ModelPicker({
+  value,
+  onChange,
+}: {
+  value?: string | undefined
+  onChange?: ((modelId: string | undefined) => void) | undefined
+}): React.JSX.Element {
+  const [open, setOpen] = useState(false)
+  const [options, setOptions] = useState<OfficeModelOption[]>(() => getOfficeModelOptions())
+  const selected = options.find((o) => o.id === (value ?? 'platform')) ?? options[0]
+  const menuRef = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    let cancelled = false
+    refreshOfficeModelOptions()
+      .then((next) => {
+        if (!cancelled) setOptions(next)
+      })
+      .catch(() => {})
+    return () => {
+      cancelled = true
+    }
+  }, [])
+
+  useEffect(() => {
+    if (!open) return
+    const onDocClick = (e: MouseEvent): void => {
+      if (!menuRef.current?.contains(e.target as Node)) setOpen(false)
+    }
+    document.addEventListener('mousedown', onDocClick)
+    return () => document.removeEventListener('mousedown', onDocClick)
+  }, [open])
+
+  return (
+    <div className="ai-model-picker" ref={menuRef}>
+      <button
+        type="button"
+        className="ai-model-picker-trigger"
+        aria-haspopup="listbox"
+        aria-expanded={open}
+        title={selected?.label}
+        onClick={() => setOpen((v) => !v)}
+      >
+        <span className="ai-model-picker-label">{selected?.label}</span>
+        <span className="ai-model-picker-caret" aria-hidden>
+          ▾
+        </span>
+      </button>
+      {open && (
+        <div className="ai-model-picker-menu" role="listbox">
+          {options.map((o) => (
+            <button
+              key={o.id}
+              type="button"
+              role="option"
+              aria-selected={o.id === selected?.id}
+              className={`ai-model-picker-option${o.id === selected?.id ? ' active' : ''}`}
+              onClick={() => {
+                const next = o.id === 'platform' ? undefined : o.id
+                setOfficeModelOverride('sheets', next)
+                onChange?.(next)
+                setOpen(false)
+              }}
+            >
+              <span className="ai-model-picker-option-label">{o.label}</span>
+              {o.provider && (
+                <span className="ai-model-picker-option-provider">{o.provider}</span>
+              )}
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
   )
 }
 

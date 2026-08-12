@@ -8,6 +8,8 @@ import {
   FileText,
   Code as CodeIcon,
   File as FileIcon,
+  VideoCamera,
+  Globe,
   MagnifyingGlass,
   SquaresFour,
   ArrowsClockwise,
@@ -28,6 +30,8 @@ import { ErrorBoundary } from '@/components/error-boundary';
 import { cn } from '@/lib/utils';
 import type { ViewType } from '@/nav/nav.types';
 import { fetchLibraryItems, useAuthBlobUrl, type LibraryItem } from '@/services/library-api';
+import { canvasApi, sessionApi } from '@/lib/agents/native-agent-api';
+import { generateMedia, fetchMediaProvidersForMode, type MediaProvider } from '@/services/media-api';
 import { LibraryItemDialog } from './LibraryItemDialog';
 
 type FilterId = 'all' | 'image' | 'artifact' | 'document' | 'file';
@@ -105,6 +109,7 @@ export function LibraryView({ openView }: LibraryViewProps) {
   const debouncedSearch = useDebouncedValue(search, 300);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [selectedIndex, setSelectedIndex] = useState(0);
+  const [creating, setCreating] = useState(false);
 
   const activeFilter = FILTERS.find((f) => f.id === filter) ?? FILTERS[0];
   const activeKind = activeFilter.kind;
@@ -232,13 +237,98 @@ export function LibraryView({ openView }: LibraryViewProps) {
               <DropdownMenuTrigger asChild>
                 <button
                   type="button"
-                  className="inline-flex items-center gap-1.5 h-9 px-4 rounded-lg bg-[var(--text-primary)] text-[var(--bg-elevated)] text-sm font-medium hover:opacity-90 transition-opacity"
+                  disabled={creating}
+                  className="inline-flex items-center gap-1.5 h-9 px-4 rounded-lg bg-[var(--text-primary)] text-[var(--bg-elevated)] text-sm font-medium hover:opacity-90 transition-opacity disabled:opacity-60"
                 >
-                  New artifact
+                  {creating ? 'Creating…' : 'New artifact'}
                   <CaretDown size={12} />
                 </button>
               </DropdownMenuTrigger>
-              <DropdownMenuContent align="end">
+              <DropdownMenuContent align="end" className="w-52">
+                <DropdownMenuItem
+                  onSelect={async () => {
+                    setCreating(true);
+                    try {
+                      await createArtifact('website');
+                      await refetch();
+                    } finally {
+                      setCreating(false);
+                    }
+                  }}
+                >
+                  <Globe size={16} className="mr-2" />
+                  Website
+                </DropdownMenuItem>
+                <DropdownMenuItem
+                  onSelect={async () => {
+                    setCreating(true);
+                    try {
+                      await createArtifact('document');
+                      await refetch();
+                    } finally {
+                      setCreating(false);
+                    }
+                  }}
+                >
+                  <FileText size={16} className="mr-2" />
+                  Document
+                </DropdownMenuItem>
+                <DropdownMenuItem
+                  onSelect={async () => {
+                    setCreating(true);
+                    try {
+                      await createArtifact('sheet');
+                      await refetch();
+                    } finally {
+                      setCreating(false);
+                    }
+                  }}
+                >
+                  <SquaresFour size={16} className="mr-2" />
+                  Spreadsheet
+                </DropdownMenuItem>
+                <DropdownMenuItem
+                  onSelect={async () => {
+                    setCreating(true);
+                    try {
+                      await createArtifact('slides');
+                      await refetch();
+                    } finally {
+                      setCreating(false);
+                    }
+                  }}
+                >
+                  <FileText size={16} className="mr-2" />
+                  Slide deck
+                </DropdownMenuItem>
+                <DropdownMenuItem
+                  onSelect={async () => {
+                    setCreating(true);
+                    try {
+                      await createArtifact('image');
+                      await refetch();
+                    } finally {
+                      setCreating(false);
+                    }
+                  }}
+                >
+                  <ImageIcon size={16} className="mr-2" />
+                  Image
+                </DropdownMenuItem>
+                <DropdownMenuItem
+                  onSelect={async () => {
+                    setCreating(true);
+                    try {
+                      await createArtifact('video');
+                      await refetch();
+                    } finally {
+                      setCreating(false);
+                    }
+                  }}
+                >
+                  <VideoCamera size={16} className="mr-2" />
+                  Video
+                </DropdownMenuItem>
                 <DropdownMenuItem onSelect={() => openView?.('chat')}>
                   <ChatCircleDots size={16} className="mr-2" />
                   Create chat artifact
@@ -337,11 +427,204 @@ export function LibraryView({ openView }: LibraryViewProps) {
   );
 }
 
+function inferArtifactLabel(item: LibraryItem): string {
+  if (item.kind !== 'artifact') return item.kind;
+  const url = item.url ?? '';
+  const content = item.content ?? '';
+  if (/\.(mp4|webm|mov|mkv|ogv)$/i.test(url) || url.includes('pollinations.ai/video')) return 'video';
+  if (url.startsWith('website://') || content.trimStart().startsWith('<')) return 'website';
+  if (item.title.toLowerCase().includes('slide')) return 'slides';
+  if (item.title.toLowerCase().includes('sheet')) return 'sheet';
+  return 'artifact';
+}
+
+const PLACEHOLDER_ICON: Record<string, React.ReactNode> = {
+  image: <ImageIcon size={28} />,
+  document: <FileText size={28} />,
+  code: <CodeIcon size={28} />,
+  artifact: <FileIcon size={28} />,
+  video: <VideoCamera size={28} />,
+  website: <Globe size={28} />,
+  slides: <FileText size={28} />,
+  sheet: <FileText size={28} />,
+};
+
+function makeTemplateArtifact(
+  type: 'website' | 'document' | 'sheet' | 'slides'
+): { artifactId: string; kind: string; title: string; content?: string; url?: string } {
+  const artifactId = `art-${type}-${Date.now()}`;
+  switch (type) {
+    case 'website':
+      return {
+        artifactId,
+        kind: 'html',
+        title: 'Allternit Website',
+        content: `<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Allternit</title>
+<style>
+  * { box-sizing: border-box; }
+  body { margin: 0; font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: #0b0b0c; color: #f5f5f5; }
+  .hero { min-height: 100vh; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; padding: 80px 24px; }
+  h1 { font-size: clamp(2.5rem, 6vw, 5rem); font-weight: 700; letter-spacing: -0.04em; margin: 0 0 16px; }
+  p { font-size: clamp(1rem, 2vw, 1.25rem); color: #a1a1aa; max-width: 560px; line-height: 1.6; margin: 0 0 32px; }
+  .cta { display: inline-flex; align-items: center; gap: 8px; padding: 14px 28px; background: #f5f5f5; color: #0b0b0c; border-radius: 999px; font-weight: 600; text-decoration: none; }
+  .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 24px; max-width: 960px; margin: 0 auto; padding: 80px 24px; }
+  .card { background: #141416; border: 1px solid #27272a; border-radius: 16px; padding: 24px; }
+  .card h3 { margin: 0 0 8px; font-size: 1.1rem; }
+  .card p { margin: 0; font-size: 0.95rem; color: #a1a1aa; }
+</style>
+</head>
+<body>
+  <section class="hero">
+    <h1>Create with confidence</h1>
+    <p>Websites, documents, slides, sheets, images and video — all in one deterministic workspace.</p>
+    <a class="cta" href="#">Start creating</a>
+  </section>
+  <section class="grid">
+    <div class="card"><h3>Websites</h3><p>Self-contained HTML artifacts that preview inline and export cleanly.</p></div>
+    <div class="card"><h3>Documents</h3><p>Rich text and markdown artifacts with one-click export.</p></div>
+    <div class="card"><h3>Slides</h3><p>Full-viewport slide decks you can present directly from the library.</p></div>
+    <div class="card"><h3>Media</h3><p>Images and video generated through your choice of provider.</p></div>
+  </section>
+</body>
+</html>`,
+      };
+    case 'document':
+      return {
+        artifactId,
+        kind: 'document',
+        title: 'Allternit Document',
+        content: `# Allternit Document
+
+This is a deterministic document artifact created from the Artifacts Library.
+
+## Capabilities
+- Clean inline preview
+- One-click download as Markdown or HTML
+- Source session tracking for regeneration
+
+## Next steps
+Use the **New artifact** menu to create websites, spreadsheets, slide decks, images, and videos with the provider of your choice.`,
+      };
+    case 'sheet':
+      return {
+        artifactId,
+        kind: 'sheet',
+        title: 'Allternit Spreadsheet',
+        content: `<div style="padding:16px;font-family:system-ui,sans-serif">
+<table style="border-collapse:collapse;width:100%">
+<thead><tr style="background:#f4f4f5"><th style="border:1px solid #d4d4d8;padding:10px;text-align:left">Quarter</th><th style="border:1px solid #d4d4d8;padding:10px;text-align:left">Revenue</th><th style="border:1px solid #d4d4d8;padding:10px;text-align:left">Growth</th></tr></thead>
+<tbody>
+<tr><td style="border:1px solid #d4d4d8;padding:10px">Q1</td><td style="border:1px solid #d4d4d8;padding:10px">$120,000</td><td style="border:1px solid #d4d4d8;padding:10px">12%</td></tr>
+<tr style="background:#fafafa"><td style="border:1px solid #d4d4d8;padding:10px">Q2</td><td style="border:1px solid #d4d4d8;padding:10px">$150,000</td><td style="border:1px solid #d4d4d8;padding:10px">25%</td></tr>
+<tr><td style="border:1px solid #d4d4d8;padding:10px">Q3</td><td style="border:1px solid #d4d4d8;padding:10px">$180,000</td><td style="border:1px solid #d4d4d8;padding:10px">20%</td></tr>
+<tr style="background:#fafafa"><td style="border:1px solid #d4d4d8;padding:10px">Q4</td><td style="border:1px solid #d4d4d8;padding:10px">$210,000</td><td style="border:1px solid #d4d4d8;padding:10px">17%</td></tr>
+</tbody>
+</table>
+</div>`,
+      };
+    case 'slides':
+      return {
+        artifactId,
+        kind: 'slides',
+        title: 'Allternit Slide Deck',
+        content: `<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8" />
+<style>
+  body { margin: 0; font-family: system-ui, -apple-system, sans-serif; background: #0b0b0c; color: #f5f5f5; }
+  .slide { min-height: 100vh; display: flex; flex-direction: column; justify-content: center; align-items: center; text-align: center; padding: 48px; box-sizing: border-box; }
+  .slide:nth-child(even) { background: #141416; }
+  h1 { font-size: clamp(2.5rem, 5vw, 4rem); margin: 0 0 16px; letter-spacing: -0.03em; }
+  p { font-size: clamp(1rem, 2vw, 1.35rem); color: #a1a1aa; max-width: 640px; line-height: 1.5; }
+</style>
+</head>
+<body>
+  <div class="slide"><h1>Allternit Deck</h1><p>Created deterministically from the Artifacts Library.</p></div>
+  <div class="slide"><h1>Beautiful by default</h1><p>Each slide is a full-viewport section you can scroll through and present directly.</p></div>
+  <div class="slide"><h1>Export ready</h1><p>Download the HTML or open the source session with one click.</p></div>
+</body>
+</html>`,
+      };
+  }
+}
+
+function pickProvider(providers: MediaProvider[], preferFree = true): MediaProvider | undefined {
+  if (preferFree) {
+    const free = providers.find((p) => p.available && p.tier === 'free');
+    if (free) return free;
+  }
+  return providers.find((p) => p.available) ?? providers[0];
+}
+
+async function createArtifact(
+  type: 'website' | 'document' | 'sheet' | 'slides' | 'image' | 'video'
+) {
+  const session = await sessionApi.createSession({
+    name: `Artifact: ${type}`,
+    origin_surface: 'code',
+    metadata: { artifact_creation: true, artifact_type: type },
+  });
+
+  let component: { type: string; artifactId: string; kind: string; title: string; content?: string; url?: string };
+
+  if (type === 'image' || type === 'video') {
+    const providers = await fetchMediaProvidersForMode(type);
+    const provider = pickProvider(providers, true);
+    if (!provider) {
+      throw new Error(`No ${type} provider available. Connect an image/video provider first.`);
+    }
+    const result = await generateMedia(type, {
+      providerID: provider.id,
+      prompt: type === 'image'
+        ? 'A polished, minimal product illustration for a modern AI creative platform, soft lighting, clean composition'
+        : 'Abstract gentle flowing light particles in deep blue and teal, cinematic, seamless loop',
+      aspectRatio: '16:9',
+      ...(type === 'video' ? { duration: 6, fps: 24 } : {}),
+    });
+    const artifact = result.artifacts[0];
+    if (!artifact || !artifact.url) {
+      throw new Error(`${provider.name} did not return a ${type} URL.`);
+    }
+    component = {
+      type: 'artifact',
+      artifactId: artifact.id,
+      kind: type,
+      title: `Allternit ${type === 'image' ? 'Image' : 'Video'}`,
+      url: artifact.url,
+    };
+  } else {
+    const template = makeTemplateArtifact(type);
+    component = {
+      type: 'artifact',
+      artifactId: template.artifactId,
+      kind: template.kind,
+      title: template.title,
+      content: template.content,
+    };
+  }
+
+  await canvasApi.createCanvas(session.id, {
+    title: component.title,
+    components: [component],
+    metadata: { artifactId: component.artifactId, kind: component.kind },
+  });
+
+  return component;
+}
+
 function LibraryCard({ item, onClick }: { item: LibraryItem; onClick: () => void }) {
   const src = item.kind === 'image' ? imageSrc(item) : undefined;
   const blobSrc = useAuthBlobUrl(src);
+  const label = inferArtifactLabel(item);
+  const isDocumentLike = item.kind === 'document' || item.kind === 'code';
   const textPreview =
-    item.kind !== 'image' && item.content && !item.content.startsWith('data:')
+    isDocumentLike && item.content && !item.content.startsWith('data:')
       ? item.content
       : undefined;
 
@@ -366,8 +649,9 @@ function LibraryCard({ item, onClick }: { item: LibraryItem; onClick: () => void
               </div>
             </div>
           ) : (
-            <div className="w-full h-full flex items-center justify-center text-[var(--text-tertiary)] opacity-50">
-              {KIND_ICON[item.kind] ?? <FileIcon size={28} />}
+            <div className="w-full h-full flex flex-col items-center justify-center gap-2 text-[var(--text-tertiary)] opacity-60">
+              {PLACEHOLDER_ICON[label] ?? <FileIcon size={28} />}
+              <span className="text-[10px] uppercase tracking-wider">{label}</span>
             </div>
           )}
 

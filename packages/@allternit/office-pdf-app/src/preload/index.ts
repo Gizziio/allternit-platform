@@ -3,6 +3,7 @@ import type { Lang } from '../renderer/i18n/i18n-core'
 import type { AiStreamChunk } from '../stubs/ai-provider'
 import { AI_CHANNELS, PDF_CHANNELS } from '../shared/ipc'
 import type { PdfApi } from '../shared/ipc'
+import { isPdfBridgeReadOnly } from '../platform-bridge'
 
 const api: PdfApi = {
   consumePending: () => ipcRenderer.invoke(PDF_CHANNELS.consumePending),
@@ -35,6 +36,7 @@ const api: PdfApi = {
     ipcRenderer.on(PDF_CHANNELS.languageChanged, listener)
     return () => ipcRenderer.removeListener(PDF_CHANNELS.languageChanged, listener)
   },
+  isReadOnly: () => isPdfBridgeReadOnly(),
   getAiSettings: () => ipcRenderer.invoke(AI_CHANNELS.getSettings),
   aiStream: (request) => ipcRenderer.invoke(AI_CHANNELS.stream, request),
   aiStreamCancel: (requestId) => ipcRenderer.invoke(AI_CHANNELS.streamCancel, requestId),

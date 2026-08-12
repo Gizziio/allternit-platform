@@ -10,10 +10,6 @@ import React, {
 import { MailboxProvider } from '../context/mailbox.js';
 import { useSettingsChange } from '../hooks/useSettingsChange.js';
 import { logForDebugging } from '../utils/debug.js';
-import {
-  createDisabledBypassPermissionsContext,
-  isBypassPermissionsModeDisabled,
-} from '../utils/permissions/permissionSetup.js';
 import { applySettingsChange } from '../utils/settings/applySettingsChange.js';
 import type { SettingSource } from '../utils/settings/constants.js';
 import { createStore } from './store.js';
@@ -73,19 +69,27 @@ export function AppStateProvider({
   );
 
   useEffect(() => {
-    const { toolPermissionContext } = store.getState();
-    if (
-      toolPermissionContext.isBypassPermissionsModeAvailable &&
-      isBypassPermissionsModeDisabled()
-    ) {
-      logForDebugging(
-        'Disabling bypass permissions mode on mount (remote settings loaded before mount)',
-      );
-      store.setState({
-        ...toolPermissionContext,
-        ...createDisabledBypassPermissionsContext(),
-      });
-    }
+    // Dynamic import to avoid a static circular import through
+    // permissionSetup.js (requires async module init).
+    void (async () => {
+      const {
+        createDisabledBypassPermissionsContext,
+        isBypassPermissionsModeDisabled,
+      } = await import('../utils/permissions/permissionSetup.js');
+      const { toolPermissionContext } = store.getState();
+      if (
+        toolPermissionContext.isBypassPermissionsModeAvailable &&
+        isBypassPermissionsModeDisabled()
+      ) {
+        logForDebugging(
+          'Disabling bypass permissions mode on mount (remote settings loaded before mount)',
+        );
+        store.setState({
+          ...toolPermissionContext,
+          ...createDisabledBypassPermissionsContext(),
+        });
+      }
+    })();
   }, [store]);
 
   const onSettingsChange = useEffectEvent((source: SettingSource) => {

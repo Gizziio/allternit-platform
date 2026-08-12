@@ -56,17 +56,61 @@ fn client_with_timeout(timeout: std::time::Duration) -> Result<Client, String> {
 pub async fn generate_video(
     payload: serde_json::Value,
 ) -> Result<(u16, serde_json::Value), String> {
-    let response = client_with_timeout(std::time::Duration::from_secs(330))?
-        .post(format!("{}/provider/video/generate", base_url()))
+    generate_media("video".to_string(), payload).await
+}
+
+pub async fn list_media_providers() -> Result<serde_json::Value, String> {
+    let response = client()?
+        .get(format!("{}/provider/media/providers", base_url()))
+        .send()
+        .await
+        .map_err(|error| format!("Could not reach Gizzi media providers: {error}"))?;
+    response
+        .json::<serde_json::Value>()
+        .await
+        .map_err(|error| format!("Gizzi returned an invalid media providers response: {error}"))
+}
+
+pub async fn list_media_providers_for_mode(mode: String) -> Result<serde_json::Value, String> {
+    let response = client()?
+        .get(format!(
+            "{}/provider/media/{}/providers",
+            base_url(),
+            urlencoding::encode(&mode)
+        ))
+        .send()
+        .await
+        .map_err(|error| format!("Could not reach Gizzi media providers: {error}"))?;
+    response
+        .json::<serde_json::Value>()
+        .await
+        .map_err(|error| format!("Gizzi returned an invalid media providers response: {error}"))
+}
+
+pub async fn generate_media(
+    mode: String,
+    payload: serde_json::Value,
+) -> Result<(u16, serde_json::Value), String> {
+    let timeout = if mode == "video" {
+        std::time::Duration::from_secs(330)
+    } else {
+        std::time::Duration::from_secs(120)
+    };
+    let response = client_with_timeout(timeout)?
+        .post(format!(
+            "{}/provider/media/{}/generate",
+            base_url(),
+            urlencoding::encode(&mode)
+        ))
         .json(&payload)
         .send()
         .await
-        .map_err(|error| format!("Could not reach Gizzi video provider: {error}"))?;
+        .map_err(|error| format!("Could not reach Gizzi media provider: {error}"))?;
     let status = response.status().as_u16();
     let payload = response
         .json::<serde_json::Value>()
         .await
-        .map_err(|error| format!("Gizzi returned an invalid video response: {error}"))?;
+        .map_err(|error| format!("Gizzi returned an invalid media response: {error}"))?;
     Ok((status, payload))
 }
 

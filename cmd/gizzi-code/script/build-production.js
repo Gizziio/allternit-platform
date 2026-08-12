@@ -23,6 +23,7 @@ import { existsSync } from "fs";
 import { devNull } from "os";
 import { dirname, resolve } from "path";
 import { copyNativeAssets } from "./native-assets.mjs";
+import { patchEsmAsyncWrappers } from "./patch-esm-async.js";
 const TARGETS = [
     { platform: "darwin", arch: "arm64", suffix: "", target: "bun-darwin-arm64" },
     { platform: "darwin", arch: "x64", suffix: "", target: "bun-darwin-x64" },
@@ -442,6 +443,11 @@ if (migrations.length > 0) {
 }
 await Bun.write(BUNDLE_FILE, bundleCode);
 console.log(`   ✓ Bundle written: ${BUNDLE_FILE} (${Math.round(bundleCode.length / 1024)} KB)`);
+const { code: patchedBundleCode, patched } = patchEsmAsyncWrappers(bundleCode);
+if (patched > 0) {
+    await Bun.write(BUNDLE_FILE, patchedBundleCode);
+    console.log(`   ✓ Patched ${patched} async ESM wrappers (Bun circular-dep workaround)`);
+}
 console.log("");
 console.log("🔨 Step 2: Compiling binaries...");
 // Ensure dist directory exists

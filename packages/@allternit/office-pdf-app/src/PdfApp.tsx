@@ -19,7 +19,7 @@ export interface PdfAppProps extends PdfBridgeOptions {
  * forms, stamps, signatures, page operations) mounted as a single component.
  * The vendored Electron main runs in-page via the IPC shim.
  */
-export function PdfApp({ language = 'en', document: initialDocument, onSave }: PdfAppProps) {
+export function PdfApp({ language = 'en', document: initialDocument, onSave, readOnly }: PdfAppProps) {
   const installed = useRef(false)
   if (!installed.current) {
     installed.current = true
@@ -27,6 +27,7 @@ export function PdfApp({ language = 'en', document: initialDocument, onSave }: P
     installPdfBridge({
       ...(initialDocument ? { document: initialDocument } : {}),
       ...(onSave ? { onSave } : {}),
+      readOnly,
     })
   }
   return (

@@ -109,6 +109,7 @@ const TablesView             = lazy(() => import('../views/cowork/TablesView').t
 const FilesView              = lazy(() => import('../views/cowork/FilesView').then(m => ({ default: m.FilesView })));
 const ExportsView            = lazy(() => import('../views/cowork/ExportsView').then(m => ({ default: m.ExportsView })));
 const ProductsDiscoveryView  = lazy(() => import('../views/products/ProductsDiscoveryView').then(m => ({ default: m.ProductsDiscoveryView })));
+const ManufacturingView      = lazy(() => import('../views/manufacturing/ManufacturingView').then(m => ({ default: m.ManufacturingView })));
 const LibraryView            = lazy(() => import('../views/library/LibraryView').then(m => ({ default: m.LibraryView })));
 const LabsView               = lazy(() => import('../views/LabsView').then(m => ({ default: m.LabsView })));
 const BrainView              = lazy(() => import('../views/brain/BrainView').then(m => ({ default: m.BrainView })));
@@ -693,6 +694,11 @@ export function getShellViewRegistry(handlers: {
     products: ({ context }: { context?: ViewContext }) => (
       <ErrorBoundary fallback={<ErrorFallbackWrapper viewName="Products Discovery" />}>
         <ProductsDiscoveryView />
+      </ErrorBoundary>
+    ),
+    manufacturing: ({ context }: { context?: ViewContext }) => (
+      <ErrorBoundary fallback={<ErrorFallbackWrapper viewName="Allternit Manufacturing" />}>
+        <ManufacturingView />
       </ErrorBoundary>
     ),
     library: ({ context }: { context?: ViewContext }) => (

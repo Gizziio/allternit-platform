@@ -20,8 +20,8 @@ import {
 import { getGlobalConfig } from '../utils/config.js'
 import { getPatchFromContents } from '../utils/diff.js'
 import { isENOENT } from '../utils/errors.js'
+import { callIdeRpc } from '../services/mcp/client.js'
 import {
-  callIdeRpc,
   getConnectedIdeClient,
   getConnectedIdeName,
   hasAccessToIDEExtensionDiffFeature,

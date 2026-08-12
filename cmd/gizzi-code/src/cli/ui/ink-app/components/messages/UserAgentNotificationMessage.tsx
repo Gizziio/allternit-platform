@@ -4,7 +4,7 @@ import type { TextBlockParam } from '@allternit/sdk/providers/anthropic/resource
 import * as React from 'react';
 import { BLACK_CIRCLE } from '../../constants/figures';
 import { Box, Text, type TextProps } from '../../ink';
-import { extractTag } from '../../utils/messages';
+import { extractTag } from '../../utils/extractTag.js';
 type Props = {
   addMargin: boolean;
   param: TextBlockParam;

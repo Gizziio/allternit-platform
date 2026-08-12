@@ -5,7 +5,7 @@ import { GearSix, Paperclip, PaperPlaneTilt, CircleNotch } from '@phosphor-icons
 import { TEXT, MODE_COLORS } from '@/design/allternit.tokens';
 import { AgentSessionLayout } from './AgentSessionLayout';
 import type { BaseAgentSessionProps } from './types';
-import { useChatSessionStore } from '@/views/chat/ChatSessionStore';
+import { useDesignSessionStore, createDesignSession } from '@/views/design/DesignSessionStore';
 import { UnifiedMessageRenderer } from '@/components/ai-elements/UnifiedMessageRenderer';
 import { parseStructuredContent } from '@/lib/ai/rust-stream-adapter-extended';
 import DesignModeView from '../design/DesignModeView';
@@ -24,24 +24,26 @@ export function DesignModeAgentSession({
   const mode = 'design';
   const modeColors = MODE_COLORS[mode] as typeof MODE_COLORS.design;
 
-  const activeSessionId = useChatSessionStore((s) => s.activeSessionId);
+  const activeSessionId = useDesignSessionStore((s) => s.activeSessionId);
   const sessionId = sessionIdProp ?? activeSessionId;
 
-  const sessions = useChatSessionStore((s) => s.sessions);
+  const sessions = useDesignSessionStore((s) => s.sessions);
   const session = useMemo(
     () => sessions.find((s) => s.id === sessionId) ?? null,
     [sessions, sessionId]
   );
   const messages = session?.messages ?? [];
 
-  const streamingState = useChatSessionStore((s) =>
+  const streamingState = useDesignSessionStore((s) =>
     sessionId ? s.streamingBySession?.[sessionId] : null
   );
   const isStreaming = streamingState?.isStreaming ?? false;
 
-  const sendMessageStream = useChatSessionStore((s) => s.sendMessageStream);
-  const createSession = useChatSessionStore((s) => s.createSession);
-  const setActiveSession = useChatSessionStore((s) => s.setActiveSession);
+  const sendMessageStream = useDesignSessionStore((s) => s.sendMessageStream);
+  const setActiveSession = useDesignSessionStore((s) => s.setActiveSession);
+  const fetchMessages = useDesignSessionStore((s) => s.fetchMessages);
+
+  const loadedSessionRef = useRef<string | null>(null);
 
   const [input, setInput] = useState('');
   const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -50,6 +52,15 @@ export function DesignModeAgentSession({
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages.length, isStreaming]);
 
+  // Deep-link: when opened with an existing backend session id, load its
+  // messages from the backend instead of showing the empty state.
+  useEffect(() => {
+    if (!sessionId || !sessionId.startsWith('ses')) return;
+    if (loadedSessionRef.current === sessionId) return;
+    loadedSessionRef.current = sessionId;
+    void fetchMessages(sessionId);
+  }, [sessionId, fetchMessages]);
+
   const handleSend = useCallback(async () => {
     if (!input.trim() || isStreaming) return;
     const text = input.trim();
@@ -57,12 +68,12 @@ export function DesignModeAgentSession({
 
     let sid = sessionId;
     if (!sid) {
-      sid = await createSession({ name: 'Design Agent', sessionMode: 'agent', agentId });
+      sid = await createDesignSession({ name: 'Design Agent', sessionMode: 'agent', agentId });
       setActiveSession(sid);
     }
 
     await sendMessageStream(sid, { text });
-  }, [input, isStreaming, sessionId, createSession, agentId, setActiveSession, sendMessageStream]);
+  }, [input, isStreaming, sessionId, agentId, setActiveSession, sendMessageStream]);
 
   return (
     <AgentSessionLayout

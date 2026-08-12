@@ -11,6 +11,14 @@ import sendStop from '../assets/send-stop.png'
 import { createPdfSkill } from './pdf-skill'
 import { createElectronTransport } from './transport'
 import type { PdfAiDeps } from './tools'
+import {
+  resolveOfficeModelId,
+  setOfficeModelOverride,
+  getOfficeModelLabel,
+  getOfficeModelOptions,
+  refreshOfficeModelOptions,
+  type OfficeModelOption,
+} from '@allternit/office-ai'
 
 const PANEL_WIDTH_KEY = 'pdf-ai-panel-width'
 const PANEL_WIDTH_DEFAULT = 360
@@ -60,6 +68,7 @@ export function AiPanel({
   const stickToBottomRef = useRef(true)
   const [panelWidth, setPanelWidth] = useState(loadPanelWidth)
   const [resizing, setResizing] = useState(false)
+  const [modelId, setModelId] = useState<string | undefined>(() => resolveOfficeModelId('pdf'))
   const asideRef = useRef<HTMLElement>(null)
 
   // The .ai-dock wrapper owns the animated width (docs-style 180ms slide);
@@ -104,6 +113,7 @@ export function AiPanel({
       deletePage: (idx) => apiRef.current.deletePage(idx),
     }
     loopRef.current = new AgentLoop({
+      modelId,
       transport: createElectronTransport(() => settingsRef.current!),
       skill: createPdfSkill(deps),
       systemSuffix: () => aiLangDirective(langRef.current),
@@ -274,6 +284,11 @@ export function AiPanel({
           Allternit
         </span>
         <div className="ai-panel-header-actions">
+          <ModelPicker value={modelId} onChange={(next) => {
+            setModelId(next)
+            setOfficeModelOverride('pdf', next)
+            loopRef.current?.setModelId(next)
+          }} />
           {chat.length > 0 && (
             <button
               className="ai-header-btn"
@@ -494,6 +509,80 @@ function ToolChipList({ tools }: { tools: ToolActivity[] }) {
           })}
         </div>
       </div>
+    </div>
+  )
+}
+
+function ModelPicker({
+  value,
+  onChange,
+}: {
+  value?: string | undefined
+  onChange?: (modelId: string | undefined) => void
+}): React.JSX.Element {
+  const [open, setOpen] = useState(false)
+  const [options, setOptions] = useState<OfficeModelOption[]>(() => getOfficeModelOptions())
+  const selected = options.find((o) => o.id === (value ?? 'platform')) ?? options[0]
+  const menuRef = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    let cancelled = false
+    refreshOfficeModelOptions()
+      .then((next) => {
+        if (!cancelled) setOptions(next)
+      })
+      .catch(() => {})
+    return () => {
+      cancelled = true
+    }
+  }, [])
+
+  useEffect(() => {
+    if (!open) return
+    const onDocClick = (e: MouseEvent): void => {
+      if (!menuRef.current?.contains(e.target as Node)) setOpen(false)
+    }
+    document.addEventListener('mousedown', onDocClick)
+    return () => document.removeEventListener('mousedown', onDocClick)
+  }, [open])
+
+  return (
+    <div className="ai-model-picker" ref={menuRef}>
+      <button
+        type="button"
+        className="ai-model-picker-trigger"
+        aria-haspopup="listbox"
+        aria-expanded={open}
+        title={selected?.label}
+        onClick={() => setOpen((v) => !v)}
+      >
+        <span className="ai-model-picker-label">{selected?.label}</span>
+        <span className="ai-model-picker-caret" aria-hidden>
+          ▾
+        </span>
+      </button>
+      {open && (
+        <div className="ai-model-picker-menu" role="listbox">
+          {options.map((o) => (
+            <button
+              key={o.id}
+              type="button"
+              role="option"
+              aria-selected={o.id === selected?.id}
+              className={`ai-model-picker-option${o.id === selected?.id ? ' active' : ''}`}
+              onClick={() => {
+                onChange?.(o.id === 'platform' ? undefined : o.id)
+                setOpen(false)
+              }}
+            >
+              <span className="ai-model-picker-option-label">{o.label}</span>
+              {o.provider && (
+                <span className="ai-model-picker-option-provider">{o.provider}</span>
+              )}
+            </button>
+          ))}
+        </div>
+      )}
     </div>
   )
 }

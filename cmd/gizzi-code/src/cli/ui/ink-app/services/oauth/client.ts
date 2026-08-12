@@ -1,5 +1,6 @@
 // @ts-nocheck
 // OAuth client for handling authentication flows with Claude services
+export { isOAuthTokenExpired, shouldUseClaudeAIAuth } from './scopes.js'
 import axios from 'axios'
 import {
   type AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
@@ -31,14 +32,6 @@ import type {
   SubscriptionType,
   UserRolesResponse,
 } from './types.js'
-
-/**
- * Check if the user has Claude.ai authentication scope
- * @private Only call this if you're OAuth / auth related code!
- */
-export function shouldUseClaudeAIAuth(scopes: string[] | undefined): boolean {
-  return Boolean(scopes?.includes(CLAUDE_AI_INFERENCE_SCOPE))
-}
 
 export function parseScopes(scopeString?: string): string[] {
   return scopeString?.split(' ').filter(Boolean) ?? []
@@ -340,17 +333,6 @@ export async function createAndStoreApiKey(
     })
     throw error
   }
-}
-
-export function isOAuthTokenExpired(expiresAt: number | null): boolean {
-  if (expiresAt === null) {
-    return false
-  }
-
-  const bufferTime = 5 * 60 * 1000
-  const now = Date.now()
-  const expiresWithBuffer = now + bufferTime
-  return expiresWithBuffer >= expiresAt
 }
 
 export async function fetchProfileInfo(accessToken: string): Promise<{

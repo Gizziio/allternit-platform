@@ -1,12 +1,9 @@
 // @ts-nocheck
 import { randomUUID } from 'crypto'
 import type { Tool, ToolUseContext } from '../Tool.js'
-import { BashTool } from '../tools/BashTool/BashTool.js'
 import { logForDebugging } from './debug.js'
 import { errorMessage, MalformedCommandError, ShellError } from './errors.js'
 import type { FrontmatterShell } from './frontmatterParser.js'
-import { createAssistantMessage } from './messages.js'
-import { hasPermissionsToUseTool } from './permissions/permissions.js'
 import { processToolResultBlock } from './toolResultStorage.js'
 
 // Narrow structural slice both BashTool and PowerShellTool satisfy. We can't
@@ -81,7 +78,7 @@ export async function executeShellCommandsInPrompt(
   const shellTool: PromptShellTool =
     shell === 'powershell' && isPowerShellToolEnabled()
       ? await getPowerShellTool()
-      : BashTool
+      : (await import('../tools/BashTool/BashTool.js')).BashTool
 
   // INLINE_PATTERN's lookbehind is ~100x slower than BLOCK_PATTERN on large
   // skill content (265µs vs 2µs @ 17KB). 93% of skills have no !` at all,
@@ -89,6 +86,9 @@ export async function executeShellCommandsInPrompt(
   // (```!) doesn't require !` in the text, so it's always scanned.
   const blockMatches = text.matchAll(BLOCK_PATTERN)
   const inlineMatches = text.includes('!`') ? text.matchAll(INLINE_PATTERN) : []
+
+  const { createAssistantMessage } = await import('./messages.js')
+  const { hasPermissionsToUseTool } = await import('./permissions/permissions.js')
 
   await Promise.all(
     [...blockMatches, ...inlineMatches].map(async match => {

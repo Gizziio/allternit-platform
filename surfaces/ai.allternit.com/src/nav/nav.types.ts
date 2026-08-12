@@ -132,6 +132,8 @@ export type ViewType =
   | "design-agent-session"
   // Product Discovery
   | "products"
+  // Manufacturing
+  | "manufacturing"
   // Library (generated artifacts)
   | "library"
   // A://Labs - Course Management

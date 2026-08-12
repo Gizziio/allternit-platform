@@ -47,6 +47,7 @@ pub mod config;
 pub mod connector_routes;
 pub mod conversation_routes;
 pub mod cowork;
+pub mod cowork_preferences_routes;
 pub mod cowork_routes;
 pub mod cowork_team_routes;
 pub mod cron_lite;

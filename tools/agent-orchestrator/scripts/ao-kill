@@ -1,31 +1,19 @@
 #!/usr/bin/env bash
-# ao-kill <slug> [--rm-worktree]
-# Kills the tmux session. With --rm-worktree, also removes the
-# <repo>-ao-<slug> worktree the pane was running in (branch ao/<slug> is
-# kept — delete it manually after the work is merged or rejected).
+# ao-kill — thin shim over allternit-rails orchestrator kill.
+# Legacy semantics: ao-kill <slug> [--rm-worktree]
 set -euo pipefail
+
+command -v allternit-rails >/dev/null 2>&1 || {
+  echo "error: allternit-rails is not on PATH" >&2
+  exit 1
+}
+
 [ $# -ge 1 ] || { echo "usage: ao-kill <slug> [--rm-worktree]" >&2; exit 2; }
 
-SLUG=$1; SESSION="ao-$SLUG"
-RM_WT=${2:-}
-
-WTDIR=""
-if tmux has-session -t "=$SESSION:" 2>/dev/null; then
-  WTDIR=$(tmux display-message -p -t "=$SESSION:" '#{pane_current_path}')
-  tmux kill-session -t "=$SESSION:"
-  echo "killed $SESSION"
-else
-  echo "no session $SESSION (already gone)"
-fi
+SLUG=$1; RM_WT=${2:-}
 
 if [ "$RM_WT" = "--rm-worktree" ]; then
-  case "$WTDIR" in
-    *-ao-"$SLUG")
-      git -C "$WTDIR" worktree remove --force "$WTDIR" 2>/dev/null \
-        || git worktree remove --force "$WTDIR" 2>/dev/null \
-        || echo "warn: could not remove worktree $WTDIR — remove manually" >&2
-      echo "removed worktree $WTDIR"
-      ;;
-    *) echo "warn: pane dir '$WTDIR' does not look like an ao worktree — not removing" >&2 ;;
-  esac
+  exec allternit-rails orchestrator kill "$SLUG" --rm-worktree
+else
+  exec allternit-rails orchestrator kill "$SLUG"
 fi

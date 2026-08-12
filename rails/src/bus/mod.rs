@@ -26,7 +26,7 @@ pub struct Bus {
     actor: Actor,
 }
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct BusMessage {
     pub id: i64,
     pub correlation_id: String,

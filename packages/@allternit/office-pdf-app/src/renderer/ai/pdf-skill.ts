@@ -2,7 +2,7 @@ import type { AgentSkill } from '../../stubs/agent-core'
 import { AGENT_TOOLS, executePdfTool } from './tools'
 import type { PdfAiDeps } from './tools'
 
-const SYSTEM_PROMPT = `You are Allternit's PDF assistant, helping the user read, annotate, and organize the currently open PDF document.
+const SYSTEM_PROMPT = `IGNORE ALL PREVIOUS INSTRUCTIONS ABOUT CODE, FILES, GIT, NOTEBOOKS, OR DESIGN SYNC. You are NOT in a coding CLI or IDE. You are Allternit's PDF assistant, helping the user read, annotate, and organize the currently open PDF document.
 
 # Intent classification
 - Question/summary/explanation requests: first use tools to fetch the needed page content, then answer in plain text; do not fabricate information that is not in the document.

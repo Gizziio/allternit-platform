@@ -1,0 +1,1056 @@
+{
+  "auditor": "kimi-k3",
+  "focus": "platform-services-api-kernel-governance",
+  "method": "Condensed OpenAI capability headings (docs/openai-audit/openai_capability_areas.md) grouped into major features; Allternit equivalents established by read-only code exploration with file:line evidence. Very similar headings are grouped per task instructions.",
+  "categories": [
+    {
+      "category": "api",
+      "findings": [
+        {
+          "openai_feature": "Responses API (create, input items, streaming events)",
+          "allternit_equivalent": "Replies runtime (POST /v1/replies, SSE run events) + OpenAI-compatible /v1/chat/completions gateway",
+          "status": "partial",
+          "evidence": [
+            "api/services/replies-runtime/src/replies.router.ts:4-8",
+            "api/services/replies-runtime/src/index.ts:32",
+            "cmd/allternit-api/src/llm_gateway/proxy.rs:6"
+          ],
+          "notes": "Stateful reply/run model with SSE exists, but no full Responses API surface (input items CRUD, encrypted reasoning items, hosted tool outputs). Gateway translates OpenAI chat-completions shape onto the internal Gizzi bus."
+        },
+        {
+          "openai_feature": "Chat Completions (create, streaming)",
+          "allternit_equivalent": "OpenAI-compatible LLM gateway /v1/chat/completions with SSE streaming and usage chunks",
+          "status": "present",
+          "evidence": [
+            "cmd/allternit-api/src/llm_gateway/mod.rs:58",
+            "cmd/allternit-api/src/llm_gateway/translate.rs:456-553",
+            "cmd/allternit-api/src/gizzi_chat_stream.rs:1-7"
+          ],
+          "notes": "Full middleware chain (key auth -> rate limit -> DLP -> budget) in front of proxy handler."
+        },
+        {
+          "openai_feature": "Completions (legacy text completions)",
+          "allternit_equivalent": "None",
+          "status": "gap",
+          "evidence": [],
+          "notes": "No legacy /v1/completions endpoint; low value since OpenAI itself deprecates it."
+        },
+        {
+          "openai_feature": "Function calling / tool use",
+          "allternit_equivalent": "Zod/JSON-schema tool registry + permission-gated tool-call loop in gizzi-code runtime; gateway validates OpenAI tool shapes",
+          "status": "present",
+          "evidence": [
+            "cmd/gizzi-code/src/runtime/tools/Tool-gizzi.ts:395",
+            "cmd/gizzi-code/src/runtime/session/llm.ts:157-194",
+            "packages/@allternit/provider-adapters/src/ai-sdk.ts:31",
+            "cmd/allternit-api/src/llm_gateway/translate.rs:272-277"
+          ],
+          "notes": "Gateway validates tools for shape but does not forward them to the agent bus (translate.rs:108-109); execution lives in the agent runtime. Only 'function' tool type accepted at the gateway."
+        },
+        {
+          "openai_feature": "Structured Outputs (JSON schema response_format)",
+          "allternit_equivalent": "Internal generateObject/streamObject with zod schemas; gateway response_format field shape-validated only",
+          "status": "partial",
+          "evidence": [
+            "cmd/gizzi-code/src/runtime/loop/agent.ts:436-450",
+            "cmd/allternit-api/src/llm_gateway/translate.rs:107"
+          ],
+          "notes": "No enforcement of schema-constrained decoding at the served API layer; no public structured-output endpoint."
+        },
+        {
+          "openai_feature": "Prompt caching",
+          "allternit_equivalent": "Cached-token accounting in usage pipeline",
+          "status": "partial",
+          "evidence": [
+            "cmd/allternit-api/src/llm_gateway/proxy.rs:411-414"
+          ],
+          "notes": "cached_tokens/cache_write_tokens recorded per request, but no cache-control feature exposed to callers."
+        },
+        {
+          "openai_feature": "Embeddings",
+          "allternit_equivalent": "None served; embeddings consumed from Ollama/local sidecars",
+          "status": "gap",
+          "evidence": [
+            "cmd/allternit-api/src/local_brain_routes.rs:487-506",
+            "services/memory/agent/src/store/vector-store.ts:4"
+          ],
+          "notes": "No /v1/embeddings route. Semantic search degrades to keyword fallback when no embedding service is configured."
+        },
+        {
+          "openai_feature": "Images API (generation/edits)",
+          "allternit_equivalent": "Provider-proxied generation route + agent image-generation mode (bonsai-local/openai/stability)",
+          "status": "partial",
+          "evidence": [
+            "cmd/allternit-api/src/provider_routes.rs:53",
+            "surfaces/ai.allternit.com/src/lib/agents/modes/image-generation.ts:10"
+          ],
+          "notes": "Thin proxy to third-party providers via runtime credentials; no self-hosted image model serving."
+        },
+        {
+          "openai_feature": "Vision / image inputs to models",
+          "allternit_equivalent": "Computer-use vision grounding loop; gateway degrades image parts to text placeholders",
+          "status": "partial",
+          "evidence": [
+            "domains/computer-use/core/core/planning_loop.py",
+            "domains/computer-use/core/vision/vision_providers.py",
+            "cmd/allternit-api/src/llm_gateway/translate.rs:133"
+          ],
+          "notes": "Real multimodal use exists in the computer-use pipeline, but the served chat API substitutes '[image_url]' placeholders instead of forwarding images."
+        },
+        {
+          "openai_feature": "Audio Speech (TTS)",
+          "allternit_equivalent": "Voice service TTS (Chatterbox/XTTS/Piper backends) POST /v1/voice/tts",
+          "status": "present",
+          "evidence": [
+            "services/voice/api/main.py:726",
+            "services/voice/voice/src/chatterbox/tts.py",
+            "services/voice/README.md:9"
+          ],
+          "notes": "Python FastAPI service is the real implementation; the Rust mirror is self-described as simulated."
+        },
+        {
+          "openai_feature": "Audio Transcriptions / Translations (STT)",
+          "allternit_equivalent": "Whisper-backed STT POST /v1/stt/transcribe",
+          "status": "present",
+          "evidence": [
+            "services/voice/api/main.py:604",
+            "services/voice/README.md:16"
+          ],
+          "notes": "No separate translation endpoint."
+        },
+        {
+          "openai_feature": "Audio Voices / Voice Consents (voice cloning admin)",
+          "allternit_equivalent": "Voice cloning endpoint + agent voice presets",
+          "status": "partial",
+          "evidence": [
+            "services/voice/api/main.py:826",
+            "surfaces/ai.allternit.com/src/lib/agents/voice.service.ts:1-7"
+          ],
+          "notes": "Clone endpoint exists; no consent-management resource model."
+        },
+        {
+          "openai_feature": "Realtime API (WebRTC/WebSocket speech-to-speech, Realtime Calls, Client Secrets)",
+          "allternit_equivalent": "Streaming TTS/STT endpoint stubs; WebRTC used only for browser screen streaming",
+          "status": "partial",
+          "evidence": [
+            "services/voice/src/server.rs:269",
+            "services/voice/src/server.rs:334",
+            "infrastructure/chrome-stream/README.md:5"
+          ],
+          "notes": "No bidirectional realtime audio session layer, no ephemeral client secrets; Rust streaming routes are stubs ('return the same as non-streaming')."
+        },
+        {
+          "openai_feature": "Batch API (async LLM batches)",
+          "allternit_equivalent": "General async job/task infrastructure (create/start/complete/cancel, queue claiming)",
+          "status": "partial",
+          "evidence": [
+            "cmd/allternit-cloud-api/src/routes/jobs.rs:86-391",
+            "cmd/allternit-cloud-api/src/routes/tasks.rs:363-367",
+            "cmd/allternit-api/src/queue_routes.rs"
+          ],
+          "notes": "Job infra exists for agent runs, but no OpenAI-style 24h discounted LLM batch endpoint."
+        },
+        {
+          "openai_feature": "Files API",
+          "allternit_equivalent": "Upload routes (base64, 20MB cap) + workspace file CRUD",
+          "status": "partial",
+          "evidence": [
+            "cmd/allternit-api/src/upload_routes.rs:27-34",
+            "cmd/allternit-api/src/file_routes.rs:17-23"
+          ],
+          "notes": "No purpose/expiration semantics; files are workspace artifacts, not LLM-context resources."
+        },
+        {
+          "openai_feature": "Uploads (multipart, parts)",
+          "allternit_equivalent": "None",
+          "status": "gap",
+          "evidence": [],
+          "notes": "Only base64-JSON envelope uploads exist; no multipart/resumable upload protocol."
+        },
+        {
+          "openai_feature": "Vector Stores (+ file batches, file search tool)",
+          "allternit_equivalent": "Memory fabric with vector search (Ollama embeddings; Qdrant enum) + /memory/query API",
+          "status": "partial",
+          "evidence": [
+            "services/memory/agent/src/store/vector-store.ts:4",
+            "services/memory/data/allternit-memory-provider/src/lib.rs:42",
+            "cmd/allternit-api/src/memory_routes.rs:28"
+          ],
+          "notes": "Semantic recall exists but no vector-store CRUD resources and no file-search tool over managed stores; vector index is in-memory with comments pointing at Qdrant/pgvector for production."
+        },
+        {
+          "openai_feature": "Moderations",
+          "allternit_equivalent": "None (DLP middleware covers secrets/injection, not content moderation)",
+          "status": "gap",
+          "evidence": [
+            "cmd/allternit-api/src/llm_gateway/dlp.rs"
+          ],
+          "notes": "No content-classifier endpoint or moderation model integration served; only outbound connector calls to OpenAI moderations."
+        },
+        {
+          "openai_feature": "Fine-tuning (jobs, checkpoints, checkpoint permissions)",
+          "allternit_equivalent": "None",
+          "status": "gap",
+          "evidence": [],
+          "notes": "Fine-tuning appears only in outbound third-party connectors (e.g. services/open-connector Mistral executors)."
+        },
+        {
+          "openai_feature": "Evals (+ runs, graders)",
+          "allternit_equivalent": "Benchmark-weighted model router with seeded scores; self-improve eval boundary (scaffold)",
+          "status": "partial",
+          "evidence": [
+            "cmd/allternit-api/src/llm_gateway/router.rs:1-22",
+            "cmd/allternit-api/src/llm_gateway/benchmark_seed.json",
+            "services/self-improve/src/eval.rs:1-6"
+          ],
+          "notes": "Benchmark scores influence routing but there is no user-defined eval/grader CRUD; self-improve module explicitly states no real evaluator lives there."
+        },
+        {
+          "openai_feature": "Models (list/retrieve)",
+          "allternit_equivalent": "OpenAI-shaped GET /v1/models plus flattened catalog merging static specs and live local models",
+          "status": "present",
+          "evidence": [
+            "cmd/allternit-api/src/llm_gateway/mod.rs:59",
+            "cmd/allternit-api/src/v1_routes.rs:127-140"
+          ],
+          "notes": "Catalog merges Ollama/HF GGUF live models; models.dev snapshot drives the provider catalog in gizzi-code."
+        },
+        {
+          "openai_feature": "Model routing / aliases (auto, tier aliases)",
+          "allternit_equivalent": "Policy-based cross-provider routing with fallback chains, cost/benchmark weights, routing-decision audit",
+          "status": "present",
+          "evidence": [
+            "cmd/allternit-api/src/llm_gateway/router.rs:22",
+            "cmd/allternit-api/src/llm_gateway/admin_routes.rs:34",
+            "cmd/allternit-api/src/llm_gateway/llm_pricing.rs"
+          ],
+          "notes": "Beyond OpenAI: cost-aware routing with persisted decisions linked to usage rows; server-side cost recompute from models.dev pricing cache."
+        },
+        {
+          "openai_feature": "Containers (+ container files/content)",
+          "allternit_equivalent": "Sandbox execute API + VM session API (Firecracker/Apple VF)",
+          "status": "present",
+          "evidence": [
+            "cmd/allternit-api/src/sandbox_routes.rs:87-91",
+            "cmd/allternit-api/src/vm_session_routes.rs:189-192",
+            "api/README.md:22"
+          ],
+          "notes": "Functionally a code-execution-container API, but not bound to LLM responses as a hosted tool the way OpenAI containers are."
+        },
+        {
+          "openai_feature": "Conversations (+ items)",
+          "allternit_equivalent": "Conversations CRUD with replies and fork",
+          "status": "present",
+          "evidence": [
+            "cmd/allternit-api/src/conversation_routes.rs:32-42",
+            "api/services/replies-runtime/src/conversations.router.ts"
+          ],
+          "notes": "Includes /conversations/:id/fork which OpenAI conversations lack."
+        },
+        {
+          "openai_feature": "Assistants API (assistants, threads, runs, run steps)",
+          "allternit_equivalent": "Agent CRUD with system prompts/tools + runs router in replies-runtime",
+          "status": "partial",
+          "evidence": [
+            "cmd/allternit-api/src/agents_v1_routes.rs:41-45",
+            "api/services/replies-runtime/src/runs.router.ts"
+          ],
+          "notes": "Assistants-like agent objects exist; no thread run-steps inspection API. OpenAI itself is deprecating Assistants in favor of Responses."
+        },
+        {
+          "openai_feature": "Built-in tools: web search",
+          "allternit_equivalent": "WebSearchTool/WebFetchTool builtins + search connectors (Brave, Tavily, Exa, Perplexity, SerpApi)",
+          "status": "present",
+          "evidence": [
+            "cmd/gizzi-code/src/runtime/tools/builtins/websearchtool/WebSearchTool.ts",
+            "packages/@allternit/plugin-sdk/src/types.ts:105-119"
+          ],
+          "notes": "Agent-side tools, not a hosted Responses-API tool type."
+        },
+        {
+          "openai_feature": "Built-in tools: code interpreter",
+          "allternit_equivalent": "Agent-side shell execution (BashTool) + executor backends with microVM sandboxing",
+          "status": "partial",
+          "evidence": [
+            "cmd/gizzi-code/src/runtime/tools/builtins/bash.ts",
+            "packages/@allternit/executor-core/src/index.ts",
+            "drivers/firecracker/README.md:11-13"
+          ],
+          "notes": "More powerful (full shell/VM) but self-managed; no managed notebook-style interpreter tool with file attachments."
+        },
+        {
+          "openai_feature": "Built-in tools: computer use",
+          "allternit_equivalent": "Full computer-use domain: plan-act-observe-reflect loop, pointer/keyboard protocol, multi-provider vision grounding",
+          "status": "present",
+          "evidence": [
+            "domains/computer-use/core/README.md:1-3",
+            "packages/@allternit/computer-use-protocol/src/index.ts:20-36",
+            "domains/computer-use/core/core/computer_use_executor.py"
+          ],
+          "notes": "One of Allternit's strongest areas; includes GIF session recording and persistent observation store."
+        },
+        {
+          "openai_feature": "Built-in tools: MCP tool / remote MCP servers",
+          "allternit_equivalent": "Full MCP client (stdio/SSE/streamable HTTP/WS, OAuth 2.1+PKCE, elicitation) + MCP server hosting",
+          "status": "present",
+          "evidence": [
+            "cmd/gizzi-code/src/runtime/services/mcp/client.ts:15-16",
+            "cmd/gizzi-code/src/runtime/services/mcp/elicitationHandler.ts:3-11",
+            "mcp/core/src/oauth/mod.rs:1",
+            "cmd/allternit-api/src/mcp_server_routes.rs"
+          ],
+          "notes": "TS client is full-featured; Rust mcp/core client lags (stdio+SSE only, mcp/core/src/transport/mod.rs:17-22)."
+        },
+        {
+          "openai_feature": "Webhooks (event notifications)",
+          "allternit_equivalent": "Inbound webhook receivers (Clerk/Svix, Stripe, Slack); outbound delivery stub only",
+          "status": "partial",
+          "evidence": [
+            "cmd/allternit-api/src/webhook_routes.rs:33-35",
+            "cmd/allternit-cloud-api/src/routes/billing_webhooks.rs:59",
+            "cmd/allternit-api/src/rails/mod.rs:2260"
+          ],
+          "notes": "No user-configurable outbound webhook subscriptions; webhook_secret field is a None stub. Events otherwise surface via SSE."
+        },
+        {
+          "openai_feature": "Usage / costs / rate limits API",
+          "allternit_equivalent": "Usage summary, gateway usage/logs/budgets, per-key sliding-window rate limiting, cloud cost APIs",
+          "status": "present",
+          "evidence": [
+            "cmd/allternit-api/src/usage_routes.rs:23",
+            "cmd/allternit-api/src/llm_gateway/admin_routes.rs:32-40",
+            "cmd/allternit-cloud-api/src/routes/costs.rs:185-389"
+          ],
+          "notes": "Cost recompute server-side from pricing cache; budgets enforced in the gateway middleware chain."
+        },
+        {
+          "openai_feature": "Organization admin (projects, users, groups, roles, invites, service accounts, admin API keys, audit logs)",
+          "allternit_equivalent": "Clerk JWT auth + RBAC helpers, virtual gateway keys, audit log routes, governance identities/orgs/roles/groups",
+          "status": "partial",
+          "evidence": [
+            "cmd/allternit-api/src/auth.rs:56-57",
+            "cmd/allternit-api/src/rbac.rs:15-22",
+            "cmd/allternit-api/src/audit_log_routes.rs:22-23",
+            "cmd/allternit-api/src/llm_gateway/keys.rs:140",
+            "domains/governance/governance-workflows/core-governance/src/lib.rs:23-65"
+          ],
+          "notes": "Strong identity/RBAC core, but no first-class projects/service-accounts/invites resource hierarchy mirroring OpenAI's org admin API."
+        },
+        {
+          "openai_feature": "Videos API (Sora video generation)",
+          "allternit_equivalent": "Provider-proxied video generation route + agent video mode (MiniMax, Runway, Pika, SVD)",
+          "status": "partial",
+          "evidence": [
+            "cmd/allternit-api/src/provider_routes.rs:53",
+            "surfaces/ai.allternit.com/src/lib/agents/modes/video-generation.ts:1-6"
+          ],
+          "notes": "All third-party integrations; no self-hosted video model."
+        },
+        {
+          "openai_feature": "ChatKit (embeddable chat UI + sessions)",
+          "allternit_equivalent": "SSE chat streaming endpoints for Allternit's own surfaces",
+          "status": "partial",
+          "evidence": [
+            "cmd/allternit-api/src/gizzi_chat_stream.rs:1-7",
+            "cmd/allternit-api/src/chat_routes.rs:42-43",
+            "cmd/allternit-api/src/playground_routes.rs:10"
+          ],
+          "notes": "No white-label embeddable chat component/server with a public embed API."
+        },
+        {
+          "openai_feature": "Agents SDK (Python/TS agent framework, tracing, guardrails)",
+          "allternit_equivalent": "Orchestrator + cowork-engine + skills + OTel telemetry in agent runtime",
+          "status": "partial",
+          "evidence": [
+            "packages/@allternit/orchestrator/src/orchestrator.interface.ts:91-102",
+            "packages/@allternit/cowork-engine/src/approval/gate.ts:8-13",
+            "cmd/gizzi-code/src/entrypoints/init.ts:45"
+          ],
+          "notes": "Agent-building capability exists but is not packaged as a standalone public SDK with a tracing UI."
+        },
+        {
+          "openai_feature": "API reference completeness / OpenAPI spec",
+          "allternit_equivalent": "Hand-registered Axum routes; OpenAPI only for sub-services",
+          "status": "partial",
+          "evidence": [
+            "cmd/allternit-api/src/main.rs:276-329",
+            "services/document-generator/openapi.yaml"
+          ],
+          "notes": "No spec-driven public API documentation for the main control plane."
+        }
+      ]
+    },
+    {
+      "category": "chatgpt-codex",
+      "findings": [
+        {
+          "openai_feature": "Codex CLI (agentic coding terminal/TUI)",
+          "allternit_equivalent": "gizzi-code ink TUI + allternit-mux PTY multiplexer",
+          "status": "present",
+          "evidence": [
+            "cmd/gizzi-code/src/cli/main.ts",
+            "cmd/gizzi-code/src/screens/REPL.tsx",
+            "cmd/allternit-mux/src/main.rs:14"
+          ],
+          "notes": "Heavily Claude-Code-derived with Allternit additions (cowork, swarm, vault, runtimes). The commander-based cmd/cli is mostly stubs."
+        },
+        {
+          "openai_feature": "Codex IDE extension",
+          "allternit_equivalent": "IDE detection + ACP protocol client; vscode:// deep links from platform",
+          "status": "partial",
+          "evidence": [
+            "cmd/gizzi-code/src/cli/commands/ide/ide.tsx:17",
+            "cmd/gizzi-code/src/runtime/integrations/acp/agent.ts:796",
+            "surfaces/ai.allternit.com/src/views/code/CodeThreadView.tsx:84"
+          ],
+          "notes": "No first-party VS Code/JetBrains extension found; integration is protocol-level (ACP) plus deep links."
+        },
+        {
+          "openai_feature": "ChatGPT/Codex desktop app",
+          "allternit_equivalent": "Electron desktop surface + Next.js web chat",
+          "status": "present",
+          "evidence": [
+            "surfaces/allternit-desktop/",
+            "surfaces/ai.allternit.com/src/views/chat/ChatComposer.tsx"
+          ],
+          "notes": ""
+        },
+        {
+          "openai_feature": "Codex cloud (delegate tasks to cloud sandboxes)",
+          "allternit_equivalent": "Paired-runtime daemon with WSS relay, hosted runtime on Fly, orchestrator 'cloud' backend",
+          "status": "present",
+          "evidence": [
+            "cmd/agent-daemon/src/index.ts:8",
+            "cmd/allternit-hosted-runtime/OPERATIONS.md",
+            "packages/@allternit/orchestrator/src/backends/delegated.backend.ts:3"
+          ],
+          "notes": ""
+        },
+        {
+          "openai_feature": "Subagents / multi-agent roles",
+          "allternit_equivalent": "Orchestrator spawn/watch/kill contract, coordinator mode, parallel-run multi-model variants, swarm commands",
+          "status": "present",
+          "evidence": [
+            "packages/@allternit/orchestrator/src/orchestrator.interface.ts:91-102",
+            "packages/@allternit/parallel-run/src/parallel-run.contract.ts:13-19",
+            "cmd/gizzi-code/src/coordinator/coordinatorMode.ts"
+          ],
+          "notes": ""
+        },
+        {
+          "openai_feature": "Agent Skills (SKILL.md packages, activation, distribution)",
+          "allternit_equivalent": "SKILL.md skill system with runtime activation tool, bundled skills, cross-CLI skill sync engine",
+          "status": "present",
+          "evidence": [
+            ".agents/skills/",
+            "cmd/gizzi-code/src/runtime/tools/builtins/skill.ts:88",
+            "platform/sdk/allternit-skill-portability/src/lib.rs:1-10"
+          ],
+          "notes": "Skill portability engine syncs skills across Claude Code, Codex, OpenCode, Kimi."
+        },
+        {
+          "openai_feature": "Custom instructions with AGENTS.md",
+          "allternit_equivalent": "GIZZI.md canonical + AGENTS.md/CLAUDE.md/CONTEXT.md compat reading; policy-bundle hashing of AGENTS.md",
+          "status": "present",
+          "evidence": [
+            "cmd/gizzi-code/src/runtime/session/instruction.ts:16-17",
+            "infrastructure/chrome-stream/agent-systems/allternit-dak-runner/src/policy/bundle-builder.ts:4-6"
+          ],
+          "notes": ""
+        },
+        {
+          "openai_feature": "Rules files (agent-configuration rules)",
+          "allternit_equivalent": "POLICY.md workspace files + approval auto-rules with risk tiers",
+          "status": "present",
+          "evidence": [
+            "domains/agent/POLICY.md",
+            "packages/@allternit/cowork-engine/src/approval/gate.ts:8-13",
+            "cmd/gizzi-code/src/runtime/server/routes/workspace.ts:185"
+          ],
+          "notes": ""
+        },
+        {
+          "openai_feature": "Memories (per-chat and cross-chat)",
+          "allternit_equivalent": "memdir subsystem + scoped memory service (userId/projectId/sessionId) with optional semantic search",
+          "status": "present",
+          "evidence": [
+            "cmd/gizzi-code/src/memdir/",
+            "packages/@allternit/cowork-engine/src/memory/service.ts:26-44",
+            "services/memory/README.md:11-16"
+          ],
+          "notes": ""
+        },
+        {
+          "openai_feature": "Automations / scheduled tasks",
+          "allternit_equivalent": "Cron CLI + TaskScheduler daemon + server-side scheduler service with misfire policy",
+          "status": "present",
+          "evidence": [
+            "cmd/gizzi-code/src/cli/commands/cron.ts:1-15",
+            "cmd/gizzi-code/src/scheduler/TaskScheduler.ts",
+            "infrastructure/scheduler/src/scheduler.rs:18-40",
+            "cmd/allternit-cloud-api/src/lib.rs:152"
+          ],
+          "notes": "Natural-language schedules supported; heartbeat executor on the platform side."
+        },
+        {
+          "openai_feature": "Code review (auto-review, /review, PR automation)",
+          "allternit_equivalent": "/review, /ultrareview, /autofix-pr, /pr commands + orchestrator review verdicts + reviewer agent template",
+          "status": "present",
+          "evidence": [
+            "cmd/gizzi-code/src/cli/commands-claude.ts:41",
+            "cmd/gizzi-code/src/runtime/server/routes/orchestrator.ts:290",
+            "surfaces/ai.allternit.com/src/lib/agents/agent-templates.specialist.ts:3139"
+          ],
+          "notes": ""
+        },
+        {
+          "openai_feature": "Codex Security (scanning, threat modeling, bulk repo scans)",
+          "allternit_equivalent": "/security-review, /bughunter, security-compliance plugin skill (LLM-driven)",
+          "status": "partial",
+          "evidence": [
+            "cmd/gizzi-code/src/cli/commands-claude.ts:54",
+            "cmd/gizzi-code/src/runtime/plugins/builtin/security-compliance/skills/security-review/SKILL.md"
+          ],
+          "notes": "LLM-driven review only; no deterministic SAST engine, no threat-model artifact workflow, no bulk scan management."
+        },
+        {
+          "openai_feature": "Sandboxing (read-only / workspace-write / danger-full-access profiles)",
+          "allternit_equivalent": "Safety tiers T0-T4 + PolicySpec permissive/restrictive profiles + WASM deny-by-default capabilities + microVM isolation",
+          "status": "present",
+          "evidence": [
+            "domains/governance/identity-access-control/policy-engine/src/lib.rs:36-42",
+            "platform/contracts/driver-interface/src/lib.rs:302-331",
+            "domains/kernel/core/wasm-runtime/src/sandbox.rs:64-99",
+            "drivers/firecracker/README.md:11-13"
+          ],
+          "notes": "Arguably deeper than Codex: capability-granted WASM sandbox plus Firecracker jailing; profile granularity differs from Codex's named three modes."
+        },
+        {
+          "openai_feature": "Approval policies (untrusted/on-request/never, granular prompts)",
+          "allternit_equivalent": "allow/deny/ask policy decisions, two-man rule for destructive tiers, approval request lifecycle, cloud approvals API",
+          "status": "present",
+          "evidence": [
+            "domains/governance/governor/src/policy-engine.ts:38-40",
+            "domains/governance/governance-workflows/core-governance/src/lib.rs:142-170",
+            "cmd/allternit-cloud-api/src/routes/approvals.rs:37-44"
+          ],
+          "notes": ""
+        },
+        {
+          "openai_feature": "Filesystem sandbox policy (writable roots, deny-read globs)",
+          "allternit_equivalent": "FilePolicy read/write paths + deny_dot_files + WASM path-scoped capability grants",
+          "status": "present",
+          "evidence": [
+            "platform/contracts/driver-interface/src/lib.rs:272-280",
+            "domains/governance/security-policy-controls/src/capability_grants.rs:11-16"
+          ],
+          "notes": "No glob-based deny-read rules beyond dotfiles."
+        },
+        {
+          "openai_feature": "Network access policy (domain allowlists, method scoping, proxy)",
+          "allternit_equivalent": "NetworkPolicy (egress, allowed hosts/ports, DNS) enforced via tc + iptables on microVM TAP devices; capsule allowlists",
+          "status": "present",
+          "evidence": [
+            "platform/contracts/driver-interface/src/lib.rs:259-269",
+            "drivers/firecracker/src/netpolicy.rs:19-40",
+            "platform/contracts/capsule/capsule-system/allternit-capsule-sdk/src/lib.rs:143-146"
+          ],
+          "notes": "Enforced at OS level (stronger than Codex's process proxy), but no HTTP-method scoping."
+        },
+        {
+          "openai_feature": "Agent internet access controls (admin-enforced requirements.toml)",
+          "allternit_equivalent": "Policy bundles hashed into ledger (AGENTS.md + .allternit dirs); no managed-config distribution",
+          "status": "partial",
+          "evidence": [
+            "rails/src/policy.rs:13-76"
+          ],
+          "notes": "Policy-as-code with hash-locked injection exists; no admin-pushed user-unoverridable settings channel like requirements.toml."
+        },
+        {
+          "openai_feature": "MCP servers in the agent (config, OAuth, elicitation)",
+          "allternit_equivalent": "Full MCP client config with all transports + OAuth 2.1/PKCE + elicitation hooks + policy-tier approval on tool calls",
+          "status": "present",
+          "evidence": [
+            "cmd/gizzi-code/src/runtime/services/mcp/client.ts:618",
+            "mcp/core/src/policy/client.rs:50-56",
+            "mcp/core/src/policy/mod.rs"
+          ],
+          "notes": ""
+        },
+        {
+          "openai_feature": "Plugins for Codex/ChatGPT (install, curated lists, marketplaces)",
+          "allternit_equivalent": "Plugin SDK (allternit-plugin-v1 manifests) + marketplace with curated manifests, submission/review flow, installer",
+          "status": "present",
+          "evidence": [
+            "packages/@allternit/plugin-sdk/src/types.ts:11-56",
+            "surfaces/ai.allternit.com/src/plugins/marketplaceApi.ts:1-5",
+            "surfaces/ai.allternit.com/src/views/plugins/PluginManager/components/PublishModals.tsx:294-305"
+          ],
+          "notes": ""
+        },
+        {
+          "openai_feature": "Git worktree management for concurrent agent sessions",
+          "allternit_equivalent": "worktree-manager Rust crate (.allternit/worktrees) + orchestrator worktree isolation + TUI worktree utils",
+          "status": "present",
+          "evidence": [
+            "worktree-manager/src/lib.rs:1-3",
+            "packages/@allternit/orchestrator/src/orchestrator.interface.ts:20",
+            "cmd/gizzi-code/src/shared/utils/worktree.ts"
+          ],
+          "notes": ""
+        },
+        {
+          "openai_feature": "Session management (fork, compact, resume, archive, rewind)",
+          "allternit_equivalent": "Compaction, resume, fork, checkpoint/rewind, teleport cross-host handoff",
+          "status": "present",
+          "evidence": [
+            "cmd/gizzi-code/src/runtime/session/compaction.ts",
+            "cmd/gizzi-code/src/runtime/session/resume.ts",
+            "cmd/gizzi-code/src/screens/REPL.tsx:1822-1953",
+            "cmd/gizzi-code/src/shared/utils/teleport.ts"
+          ],
+          "notes": "Thread archiving not found; everything else present including cross-host handoff."
+        },
+        {
+          "openai_feature": "Slash commands / custom prompts / prompt library",
+          "allternit_equivalent": "~100 CLI commands + composer slash API + markdown command files + template gallery",
+          "status": "present",
+          "evidence": [
+            "cmd/gizzi-code/src/cli/commands/",
+            "surfaces/ai.allternit.com/src/views/chat/ChatComposer.tsx:179"
+          ],
+          "notes": ""
+        },
+        {
+          "openai_feature": "Model selection / reasoning effort / alternative model providers",
+          "allternit_equivalent": "Multi-provider catalog (OpenAI, Anthropic, Google, Mistral, Kimi, Qwen, GLM, Ollama via openai-compatible), /models and /provider commands, reasoning effort, complexity-tier request scorer",
+          "status": "present",
+          "evidence": [
+            "cmd/gizzi-code/src/runtime/providers/adapters/bundled.ts:28-34",
+            "cmd/gizzi-code/src/runtime/providers/adapters/loaders/loaders.ts:1-17",
+            "surfaces/ai.allternit.com/src/lib/ai/providers.ts:147",
+            "packages/@allternit/request-scorer/src/types.ts:19-29"
+          ],
+          "notes": "Provider breadth exceeds Codex (which is OpenAI-first); models.dev-driven dynamic catalog."
+        },
+        {
+          "openai_feature": "Notifications (external notifier, web notifications)",
+          "allternit_equivalent": "Desktop/TUI notifier (osascript) + browser Notification API",
+          "status": "partial",
+          "evidence": [
+            "cmd/gizzi-code/src/runtime/services/notifier.ts",
+            "surfaces/ai.allternit.com/src/lib/agents/scheduled-jobs.runner.ts:276"
+          ],
+          "notes": "No Web Push / pushManager infrastructure found."
+        },
+        {
+          "openai_feature": "Voice in the agent (voice mode, dictation)",
+          "allternit_equivalent": "Voice service (STT/TTS) + TUI voice mode + /voice command + agent voice presets",
+          "status": "present",
+          "evidence": [
+            "services/voice/README.md:1",
+            "cmd/gizzi-code/src/voice/voiceModeEnabled.ts",
+            "src/services/voice/SpeechToText.ts"
+          ],
+          "notes": "No realtime speech-to-speech conversation loop."
+        },
+        {
+          "openai_feature": "Browser control / browser developer mode",
+          "allternit_equivalent": "browser-tools (Playwright sessions, quarantine) + WebRTC Chrome streaming + browser capsule + /chrome command",
+          "status": "present",
+          "evidence": [
+            "packages/@allternit/browser-tools/src/index.ts:1-31",
+            "infrastructure/chrome-stream/README.md:5",
+            "infrastructure/chrome-stream/sidecar/main.py:1-5"
+          ],
+          "notes": "WebRTC-embedded real Chrome is beyond ChatGPT's browser feature."
+        },
+        {
+          "openai_feature": "Computer use (operator)",
+          "allternit_equivalent": "Computer-use domain with plan-act-observe-reflect loop and multi-provider vision grounding",
+          "status": "present",
+          "evidence": [
+            "domains/computer-use/core/README.md:1-3",
+            "domains/computer-use/core/core/planning_loop.py",
+            "packages/@allternit/computer-use-protocol/src/index.ts:13-18"
+          ],
+          "notes": "Providers: local-playwright, extension-tab, browser-use, stagehand."
+        },
+        {
+          "openai_feature": "Screen context features (Appshots, Chronicle)",
+          "allternit_equivalent": "Screenshot/GIF recording pipeline + accessibility inspector + persistent observation store",
+          "status": "partial",
+          "evidence": [
+            "domains/computer-use/core/core/gif_recorder.py:4",
+            "domains/computer-use/core/core/accessibility_inspector.py"
+          ],
+          "notes": "Capture infrastructure exists for agent observation, but no user-facing 'recent screen context' product feature like Chronicle."
+        },
+        {
+          "openai_feature": "Mobile companion (iOS app, continue tasks from phone)",
+          "allternit_equivalent": "Native iOS app + phone-claim handoff + remote session manager + mesh tsnet iOS spike",
+          "status": "partial",
+          "evidence": [
+            "surfaces/allternit-mobile/ios/",
+            "surfaces/ai.allternit.com/src/lib/dispatch/handoff.ts:5-11",
+            "cmd/gizzi-code/src/remote/RemoteSessionManager.ts",
+            "infrastructure/mesh/tsnet-ios/README.md:1-5"
+          ],
+          "notes": "iOS app exists; tsnet mesh node is a feasibility spike; /mobile and /teleport CLI entry files are 0-byte stubs."
+        },
+        {
+          "openai_feature": "Telemetry / OTel / analytics on agent usage",
+          "allternit_equivalent": "OpenTelemetry in TUI + cost tracker + platform telemetry service + usage routes",
+          "status": "present",
+          "evidence": [
+            "cmd/gizzi-code/src/entrypoints/init.ts:45",
+            "cmd/gizzi-code/src/types/global.d.ts:222-236",
+            "surfaces/ai.allternit.com/src/lib/telemetry/telemetry.service.ts:14-18"
+          ],
+          "notes": "No productized analytics dashboard API like ChatGPT Work's Analytics API."
+        },
+        {
+          "openai_feature": "Enterprise admin (groups/provisioning, enforcement, data controls)",
+          "allternit_equivalent": "Governance domain: orgs/roles/groups/scoped tokens/mTLS, retention limits via purpose-binding, identity revocation, kill switch",
+          "status": "present",
+          "evidence": [
+            "domains/governance/governance-workflows/core-governance/src/lib.rs:23-65",
+            "domains/governance/identity-access-control/purpose-binding/src/enforcement.rs:29-31",
+            "rails/src/killswitch.rs:16-73",
+            "domains/governance/identity-access-control/policy-engine/src/lib.rs:452-481"
+          ],
+          "notes": "No data-residency region pinning or zero-data-retention mode found."
+        },
+        {
+          "openai_feature": "Audit logging of agent/user actions",
+          "allternit_equivalent": "Append-only HistoryLedger + audit events with trace ids + standalone audit HTTP service + rails receipts",
+          "status": "present",
+          "evidence": [
+            "domains/governance/identity-access-control/policy-engine/src/lib.rs:379-395",
+            "domains/governance/governance-workflows/core-governance/src/lib.rs:179-195",
+            "rails/src/receipts/store.rs:180-227"
+          ],
+          "notes": "Standalone audit service is in-memory (10k cap); rails ledger is the durable trail. Receipts are hash-verified but not cryptographically signed."
+        },
+        {
+          "openai_feature": "Codex App Server / remote Code Mode hosts",
+          "allternit_equivalent": "Agent-daemon pairing (ed25519 identity, token rotation) + runtime relay + remote session WebSocket",
+          "status": "present",
+          "evidence": [
+            "cmd/agent-daemon/src/index.ts:68-145",
+            "cmd/allternit-cloud-api/src/routes/runtime_relay.rs:251-257",
+            "cmd/gizzi-code/src/remote/SessionsWebSocket.ts"
+          ],
+          "notes": ""
+        },
+        {
+          "openai_feature": "Codex configuration (config.toml, profiles, feature flags)",
+          "allternit_equivalent": "config/allternit.json + gizzi-code runtime config + brain-presets for external agent CLIs",
+          "status": "present",
+          "evidence": [
+            "config/allternit.json",
+            "platform/configs/brain-presets/presets/default.json"
+          ],
+          "notes": ""
+        },
+        {
+          "openai_feature": "Sites (build and deploy websites from chat)",
+          "allternit_equivalent": "None found",
+          "status": "gap",
+          "evidence": [],
+          "notes": "No managed site-deploy product surface identified in the audited slices."
+        },
+        {
+          "openai_feature": "Import from other agents (Claude Code /import, config detection)",
+          "allternit_equivalent": "Brain presets for external CLIs (claude-code, aider, goose) + skill portability engine + vendor launch matrix",
+          "status": "present",
+          "evidence": [
+            "platform/configs/brain-presets/presets/default.json",
+            "packages/@allternit/orchestrator/src/vendors.ts:19-38",
+            "platform/sdk/allternit-skill-portability/src/lib.rs:1-10"
+          ],
+          "notes": "Allternit orchestrates competing CLIs rather than importing from them; functionally a superset."
+        }
+      ]
+    },
+    {
+      "category": "plugins",
+      "findings": [
+        {
+          "openai_feature": "Build an MCP server (Apps SDK fundamentals)",
+          "allternit_equivalent": "Plugin SDK MCP adapter (stdio/http/websocket) + open-connector McpServer exposing ~800 providers",
+          "status": "present",
+          "evidence": [
+            "packages/@allternit/plugin-sdk/src/adapters/mcp/index.ts:38-50",
+            "services/open-connector/src/mcp.ts:9",
+            "mcp/servers/src/index.ts:1-29"
+          ],
+          "notes": ""
+        },
+        {
+          "openai_feature": "Add UI to your MCP server (widgets/web components in chat)",
+          "allternit_equivalent": "MCP Apps app-bridge rendering (sandboxed iframe) + capsule HTML surfaces with declared permissions + signed mini-app system",
+          "status": "present",
+          "evidence": [
+            "surfaces/ai.allternit.com/src/components/ai-elements/McpAppFrame.tsx:6-9",
+            "packages/@allternit/provider-adapters/src/ai-sdk.ts:321-355",
+            "surfaces/ai.allternit.com/src/views/aci/mini-app-manifest.ts:59-85"
+          ],
+          "notes": "Two parallel systems: MCP Apps protocol widgets and Allternit's own Ed25519-signed mini-apps."
+        },
+        {
+          "openai_feature": "Widget CSP / permissions / display modes",
+          "allternit_equivalent": "Capsule NetworkPolicy/SecretsPolicy + mini-app permission explainers + CSP carried in mcp_app events",
+          "status": "present",
+          "evidence": [
+            "platform/contracts/capsule/capsule-system/allternit-capsule-sdk/src/lib.rs:143-161",
+            "surfaces/ai.allternit.com/src/views/aci/mini-app-permissions-explain.ts:53",
+            "packages/@allternit/provider-adapters/src/ai-sdk.ts:321-355"
+          ],
+          "notes": ""
+        },
+        {
+          "openai_feature": "Plugin authentication (OAuth 2.1, custom auth, per-user)",
+          "allternit_equivalent": "OAuth 2.1 + PKCE for MCP + per-mini-app OAuth connections and per-user secrets panels",
+          "status": "present",
+          "evidence": [
+            "mcp/core/src/oauth/mod.rs:1",
+            "surfaces/ai.allternit.com/src/views/aci/MiniAppConnectionsPanel.tsx:75-94",
+            "cmd/gizzi-code/src/runtime/services/mcp/client.ts:813"
+          ],
+          "notes": "OAuth vault stores tokens as plaintext JSON files (rails/src/vault/oauth.rs:18-34) — no KMS/encryption at rest."
+        },
+        {
+          "openai_feature": "Plugin marketplace / directory / curated lists / discovery",
+          "allternit_equivalent": "Marketplace API with curated manifests + GitHub fallback, installer, CLI marketplace command, iOS marketplace client",
+          "status": "present",
+          "evidence": [
+            "surfaces/ai.allternit.com/src/plugins/marketplaceApi.ts:1-5",
+            "cmd/gizzi-code/src/cli/commands/marketplace.ts",
+            "surfaces/allternit-mobile/ios/"
+          ],
+          "notes": ""
+        },
+        {
+          "openai_feature": "Plugin submission / review / approval-rejection-appeals",
+          "allternit_equivalent": "Submission endpoint with pending status + review console with manifest diffs and kill switches",
+          "status": "present",
+          "evidence": [
+            "surfaces/ai.allternit.com/src/views/plugins/PluginManager/components/PublishModals.tsx:294-305",
+            "surfaces/ai.allternit.com/src/views/aci/MiniAppReviewConsoleView.tsx:32-40"
+          ],
+          "notes": "Appeals flow not found."
+        },
+        {
+          "openai_feature": "Plugin monetization / checkout",
+          "allternit_equivalent": "None",
+          "status": "gap",
+          "evidence": [],
+          "notes": "No price/purchase/checkout flow in marketplace, plugin SDK, or mini-app manifests; Stripe exists only as a connector plugins can call."
+        },
+        {
+          "openai_feature": "Plugin packaging (@plugin-creator, create-and-test locally)",
+          "allternit_equivalent": "Plugin SDK manifest + host contract + multi-transport adapters; local testing implied by SDK structure",
+          "status": "partial",
+          "evidence": [
+            "packages/@allternit/plugin-sdk/src/types.ts:220-247",
+            "packages/@allternit/plugin-sdk/src/types.ts:481-496"
+          ],
+          "notes": "No dedicated scaffolding CLI like @plugin-creator found; platform/plugins is a second, thinner runtime that does not share SDK types."
+        },
+        {
+          "openai_feature": "Build skills / connect skills to MCP tools / distribute skills with plugins",
+          "allternit_equivalent": "Skill activation tool + skill-import/skill-growth + bundled plugin skills",
+          "status": "present",
+          "evidence": [
+            "cmd/gizzi-code/src/runtime/tools/builtins/skill.ts:88",
+            "cmd/gizzi-code/src/runtime/plugins/builtin/",
+            "cmd/gizzi-code/src/skills/loadSkillsDir.ts"
+          ],
+          "notes": ""
+        },
+        {
+          "openai_feature": "Plugin guidelines (design system, accessibility, fair play)",
+          "allternit_equivalent": "Review console + permission explainers; no published guideline docs for third-party developers",
+          "status": "partial",
+          "evidence": [
+            "surfaces/ai.allternit.com/src/views/aci/MiniAppReviewConsoleView.tsx:32-40"
+          ],
+          "notes": "Enforcement machinery exists; developer-facing guideline documentation does not."
+        }
+      ]
+    },
+    {
+      "category": "workspace-agents",
+      "findings": [
+        {
+          "openai_feature": "Workspace Agent access tokens (provision, scoped access)",
+          "allternit_equivalent": "ScopedToken with scopes/expiry/revocation + virtual gateway API keys + git-scoped brain tokens",
+          "status": "present",
+          "evidence": [
+            "domains/governance/governance-workflows/core-governance/src/lib.rs:107-117",
+            "cmd/allternit-api/src/llm_gateway/keys.rs:140",
+            "cmd/allternit-api/src/brain_routes.rs:9-14"
+          ],
+          "notes": ""
+        },
+        {
+          "openai_feature": "Trigger workspace agent runs (API endpoint)",
+          "allternit_equivalent": "POST /api/v1/runs with start/pause/resume/cancel + gateway agent-runs route",
+          "status": "present",
+          "evidence": [
+            "cmd/allternit-cloud-api/src/lib.rs:69-93",
+            "services/gateway/service/src/main.py:1900"
+          ],
+          "notes": "Gateway-mirrored variant (services/gateway) is a stub that returns pending and never executes; the cloud-api route is the real one."
+        },
+        {
+          "openai_feature": "Track run status (poll / inspect)",
+          "allternit_equivalent": "GET /runs/:id + SSE run events + checkpoints API",
+          "status": "present",
+          "evidence": [
+            "cmd/allternit-cloud-api/src/lib.rs:86-93",
+            "cmd/allternit-cloud-api/src/routes/tasks.rs:363"
+          ],
+          "notes": "SSE event stream and checkpoint inspection exceed the workspace-agents poll model."
+        }
+      ]
+    },
+    {
+      "category": "cookbook",
+      "findings": [
+        {
+          "openai_feature": "Cookbook code examples and patterns (grouped: 2581 headings of recipes)",
+          "allternit_equivalent": "docs/ architecture + guides + A://Labs generated courses",
+          "status": "partial",
+          "evidence": [
+            "docs/",
+            "alabs-generated-courses/",
+            "AGENTS.md"
+          ],
+          "notes": "Cookbook is OpenAI's example corpus, not a product capability; Allternit has internal docs and a course pipeline but no public developer-recipe corpus."
+        },
+        {
+          "openai_feature": "Run gpt-oss locally (Ollama/LM Studio/vLLM patterns)",
+          "allternit_equivalent": "Ollama live-model integration + HF GGUF catalog + local brain routes",
+          "status": "present",
+          "evidence": [
+            "cmd/allternit-api/src/provider_routes.rs:39-56",
+            "cmd/allternit-api/src/local_brain_routes.rs:487-506",
+            "cmd/allternit-api/src/v1_routes.rs:127-140"
+          ],
+          "notes": "Local-model operation is a first-class platform feature, stronger than a cookbook recipe."
+        },
+        {
+          "openai_feature": "Multi-hour problem solving with PLANS.md / ExecPlans",
+          "allternit_equivalent": "Workspace .md layer spec (SOUL/IDENTITY/MEMORY/POLICY/BRAIN) + checkpoint/resume + plan-approve execution",
+          "status": "present",
+          "evidence": [
+            "cmd/gizzi-code/src/runtime/server/routes/workspace.ts:185",
+            "domains/agent/allternit-agent-workspace/",
+            "cmd/gizzi-code/src/runtime/session/resume.ts"
+          ],
+          "notes": ""
+        }
+      ]
+    },
+    {
+      "category": "codex",
+      "findings": [
+        {
+          "openai_feature": "Codex CLI customization (themes, syntax highlighting, shell completions, prompt editor)",
+          "allternit_equivalent": "Ink TUI with screens/components and extensive command set",
+          "status": "partial",
+          "evidence": [
+            "cmd/gizzi-code/src/screens/REPL.tsx"
+          ],
+          "notes": "TUI is rich but explicit theme/shell-completion/prompt-editor docs equivalents were not identified."
+        },
+        {
+          "openai_feature": "Codex Configuration Reference (config.toml, requirements.toml)",
+          "allternit_equivalent": "config/allternit.json + policy bundles + brain presets",
+          "status": "present",
+          "evidence": [
+            "config/allternit.json",
+            "rails/src/policy.rs:13-76"
+          ],
+          "notes": "No single consolidated config-reference document found; config is spread across system config, presets, and policy bundles."
+        }
+      ]
+    },
+    {
+      "category": "ads",
+      "findings": [
+        {
+          "openai_feature": "OpenAI Ads API (campaigns, ad groups, creatives, conversions, insights)",
+          "allternit_equivalent": "None",
+          "status": "not-applicable",
+          "evidence": [],
+          "notes": "OpenAI's advertising business; not a platform capability Allternit would replicate. Grouped: all 152 unique headings."
+        }
+      ]
+    },
+    {
+      "category": "commerce",
+      "findings": [
+        {
+          "openai_feature": "Agentic commerce (product feeds, checkout spec, promotions)",
+          "allternit_equivalent": "None",
+          "status": "not-applicable",
+          "evidence": [],
+          "notes": "Merchant-feed/checkout protocol for ChatGPT shopping. If agentic payments ever matter, this is a gap; today it is out of scope. Grouped: all 131 unique headings."
+        }
+      ]
+    },
+    {
+      "category": "blog",
+      "findings": [
+        {
+          "openai_feature": "OpenAI developer blog posts",
+          "allternit_equivalent": "None",
+          "status": "not-applicable",
+          "evidence": [],
+          "notes": "Editorial content, not a capability. Grouped: all 290 unique headings."
+        }
+      ]
+    },
+    {
+      "category": "learn",
+      "findings": [
+        {
+          "openai_feature": "OpenAI Learn (docs MCP, developer plugin, guides)",
+          "allternit_equivalent": "A://Labs curriculum-as-code pipeline (10 courses, 65 modules, Canvas LMS sync)",
+          "status": "partial",
+          "evidence": [
+            "AGENTS.md",
+            "alabs-generated-courses/",
+            ".agents/skills/alabs-course-pipeline/SKILL.md"
+          ],
+          "notes": "Allternit has a real learning platform for its own codebase; no public docs-MCP server for external developers."
+        }
+      ]
+    },
+    {
+      "category": "platform",
+      "findings": [
+        {
+          "openai_feature": "Learning tracks (AI app development, building agents, model optimization)",
+          "allternit_equivalent": "A://Labs course catalog (CORE/OPS/AGENTS/ADV tiers)",
+          "status": "partial",
+          "evidence": [
+            "AGENTS.md",
+            "alabs-generated-courses/analysis/platform-course-outline.json"
+          ],
+          "notes": "Educational tracks exist for the Allternit platform itself. Grouped: all 59 unique headings."
+        }
+      ]
+    }
+  ],
+  "summary_counts": {
+    "present": 54,
+    "partial": 31,
+    "gap": 7,
+    "not_applicable": 3,
+    "total_findings": 95
+  }
+}

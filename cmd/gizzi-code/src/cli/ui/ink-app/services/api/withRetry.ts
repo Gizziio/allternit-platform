@@ -11,7 +11,7 @@ import type { SystemAPIErrorMessage } from './../../types/message.ts'
 import { isAwsCredentialsProviderError } from './../../utils/aws.ts'
 import { logForDebugging } from './../../utils/debug.ts'
 import { logError } from './../../utils/log.ts'
-import { createSystemAPIErrorMessage } from './../../utils/messages.ts'
+import { createSystemAPIErrorMessage } from './../../utils/systemAPIErrorMessage.ts'
 import { getAPIProviderForStatsig } from './../../utils/model/providers.ts'
 import {
   clearApiKeyHelperCache,

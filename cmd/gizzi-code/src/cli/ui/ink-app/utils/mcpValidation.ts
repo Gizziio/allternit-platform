@@ -5,10 +5,7 @@ import type {
   TextBlockParam,
 } from '@allternit/sdk/providers/anthropic/resources/index.mjs'
 import { getFeatureValue_CACHED_MAY_BE_STALE } from '../services/analytics/growthbook.js'
-import {
-  countMessagesTokensWithAPI,
-  roughTokenCountEstimation,
-} from '../services/tokenEstimation.js'
+import { roughTokenCountEstimation } from '../services/roughTokenEstimation.js'
 import { compressImageBlock } from './imageResizer.js'
 import { logError } from './log.js'
 
@@ -169,6 +166,9 @@ export async function mcpContentNeedsTruncation(
         ? [{ role: 'user' as const, content }]
         : [{ role: 'user' as const, content }]
 
+    const { countMessagesTokensWithAPI } = await import(
+      '../services/tokenEstimation.js'
+    )
     const tokenCount = await countMessagesTokensWithAPI(messages, [])
     return !!(tokenCount && tokenCount > getMaxMcpOutputTokens())
   } catch (error) {

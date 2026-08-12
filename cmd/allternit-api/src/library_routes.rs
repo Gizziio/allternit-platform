@@ -411,11 +411,16 @@ fn classify(raw_kind: &str, url: Option<&str>, content: Option<&str>) -> &'stati
         return "document";
     }
 
+    // Generated artifacts that don't fit image/document/code land here so they
+    // show up under the "Artifacts" filter (websites, videos, slides, etc.).
+    if k.contains("artifact")
+        || matches!(k.as_str(), "html" | "video" | "slides" | "sheet")
+    {
+        return "artifact";
+    }
+
     if k.contains("code")
-        || matches!(
-            k.as_str(),
-            "html" | "jsx" | "javascript" | "typescript" | "mermaid"
-        )
+        || matches!(k.as_str(), "jsx" | "javascript" | "typescript" | "mermaid")
         || u.starts_with("data:text/html")
         || ext_kind(&u) == Some("code")
     {
@@ -540,4 +545,28 @@ async fn collect_uploaded_items(user_id: &str) -> Vec<LibraryItem> {
     }
 
     items
+}
+
+#[cfg(test)]
+mod tests {
+    use super::classify;
+
+    #[test]
+    fn classify_generated_artifacts() {
+        // Website/html artifacts must land under the Artifacts filter, not Code.
+        assert_eq!(classify("html", None, None), "artifact");
+        assert_eq!(classify("HTML", None, None), "artifact");
+
+        // Videos and slide decks are also artifacts.
+        assert_eq!(classify("video", None, None), "artifact");
+        assert_eq!(classify("slides", None, None), "artifact");
+        assert_eq!(classify("sheet", None, None), "artifact");
+
+        // Images get their own filter tab.
+        assert_eq!(classify("image", None, None), "image");
+
+        // Documents and code keep their own buckets.
+        assert_eq!(classify("document", None, None), "document");
+        assert_eq!(classify("jsx", None, None), "code");
+    }
 }

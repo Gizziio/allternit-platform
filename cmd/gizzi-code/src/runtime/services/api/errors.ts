@@ -21,10 +21,8 @@ import {
   getOauthAccountInfo,
   isClaudeAISubscriber,
 } from '../../../utils/auth.js'
-import {
-  createAssistantAPIErrorMessage,
-  NO_RESPONSE_REQUESTED,
-} from '../../../shared/utils/messages.js'
+import { createAssistantAPIErrorMessage } from '../../../shared/utils/apiErrorMessage.js'
+import { NO_RESPONSE_REQUESTED } from '../../../shared/utils/syntheticMessages.js'
 import {
   getDefaultMainLoopModelSetting,
   isNonCustomOpusModel,

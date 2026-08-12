@@ -750,8 +750,10 @@ export default function App() {
     })()
   }, [openPath])
 
-  /** Documents opened with a password are treated as read-only: pdf-lib can't write back encrypted files */
-  const readOnly = status === 'ready' && passwordRef.current !== undefined
+  /** Documents opened with a password are treated as read-only: pdf-lib can't write back encrypted files.
+   *  The platform can also force read-only mode for the Allternit PDF viewer. */
+  const isEncrypted = status === 'ready' && passwordRef.current !== undefined
+  const readOnly = window.pdfApi.isReadOnly() || isEncrypted
 
   const clampScale = (s: number) => Math.min(MAX_SCALE, Math.max(MIN_SCALE, s))
 
@@ -1002,7 +1004,6 @@ export default function App() {
         return
       }
       if (!el.contains(sel.getRangeAt(0).commonAncestorContainer)) return
-      if (readOnly) return
       const box = sel.getRangeAt(0).getBoundingClientRect()
       if (box.width < 1 && box.height < 1) return
       setSelPopup({
@@ -1038,6 +1039,19 @@ export default function App() {
     pushUndo()
     setMarkups((prev) => [...prev, ...added])
     window.getSelection()?.removeAllRanges()
+  }
+
+  const copySelection = async () => {
+    const sel = window.getSelection()
+    if (!sel || sel.isCollapsed) return
+    const text = sel.toString()
+    try {
+      await navigator.clipboard.writeText(text)
+      setSelPopup(null)
+      window.getSelection()?.removeAllRanges()
+    } catch {
+      // Clipboard permission denied or unsupported — ignore.
+    }
   }
 
   // ── Annotation selection: click selects, deletion is explicit (delete popup / Delete key) ──
@@ -1627,10 +1641,33 @@ export default function App() {
   }
 
   if (status !== 'ready' || !doc) {
+    const isEmpty = status !== 'loading' && status !== 'error'
     return (
       <div className="app">
         <div className="pdf-placeholder">
-          {status === 'loading' ? t('loading') : status === 'error' ? t('loadError') : t('noFile')}
+          {isEmpty && (
+            <svg
+              width="48"
+              height="48"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="1.2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              aria-hidden
+              style={{ marginBottom: 16, opacity: 0.55 }}
+            >
+              <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+              <path d="M14 2v6h6" />
+              <path d="M12 18v-6" />
+              <path d="M9 15l3-3 3 3" />
+            </svg>
+          )}
+          <div className="pdf-placeholder-title">
+            {status === 'loading' ? t('loading') : status === 'error' ? t('loadError') : t('noFile')}
+          </div>
+          {isEmpty && <div className="pdf-placeholder-hint">{t('noFileHint')}</div>}
         </div>
       </div>
     )
@@ -1642,15 +1679,17 @@ export default function App() {
     <div className="app">
       <div className="ribbon">
         <div className="ribbon-tabs">
-          <button
-            className="qa-btn"
-            title={`${t('save')} (⌘S)`}
-            aria-label={t('save')}
-            disabled={!dirty || saveState === 'saving'}
-            onClick={() => void save()}
-          >
-            <IconSave />
-          </button>
+          {!readOnly && (
+            <button
+              className="qa-btn"
+              title={`${t('save')} (⌘S)`}
+              aria-label={t('save')}
+              disabled={!dirty || saveState === 'saving'}
+              onClick={() => void save()}
+            >
+              <IconSave />
+            </button>
+          )}
           <button
             className="qa-btn"
             title={`${t('undo')} (⌘Z)`}
@@ -1671,7 +1710,11 @@ export default function App() {
           <span className="ribbon-file" title={filePath}>
             {fileName}
           </span>
-          {readOnly && <span className="tb-readonly">{t('roEncrypted')}</span>}
+          {readOnly && (
+            <span className="tb-readonly">
+              {isEncrypted ? t('roEncrypted') : t('roViewOnly')}
+            </span>
+          )}
           {/* Unsaved-changes indicator next to the file name: the file on disk
               is only touched by an explicit save until then */}
           {saveState === 'saving' ? (
@@ -2274,15 +2317,22 @@ export default function App() {
             style={{ left: selPopup.x, top: selPopup.y }}
             onMouseDown={(e) => e.preventDefault()}
           >
-            <button type="button" title={t('highlight')} onClick={() => applyMarkup('highlight')}>
-              <span className="sel-swatch sel-swatch-hl" />
+            <button type="button" title={t('copy')} aria-label={t('copy')} onClick={() => void copySelection()}>
+              <span className="sel-swatch sel-swatch-copy">⎘</span>
             </button>
-            <button type="button" title={t('underline')} onClick={() => applyMarkup('underline')}>
-              <span className="sel-swatch sel-swatch-ul">U</span>
-            </button>
-            <button type="button" title={t('strikeout')} onClick={() => applyMarkup('strikeout')}>
-              <span className="sel-swatch sel-swatch-st">S</span>
-            </button>
+            {!readOnly && (
+              <>
+                <button type="button" title={t('highlight')} aria-label={t('highlight')} onClick={() => applyMarkup('highlight')}>
+                  <span className="sel-swatch sel-swatch-hl" />
+                </button>
+                <button type="button" title={t('underline')} aria-label={t('underline')} onClick={() => applyMarkup('underline')}>
+                  <span className="sel-swatch sel-swatch-ul">U</span>
+                </button>
+                <button type="button" title={t('strikeout')} aria-label={t('strikeout')} onClick={() => applyMarkup('strikeout')}>
+                  <span className="sel-swatch sel-swatch-st">S</span>
+                </button>
+              </>
+            )}
           </div>
         )}
         {selected && (
@@ -2313,6 +2363,7 @@ export default function App() {
         {thumbMenu && (
           <div className="thumb-menu file-menu" style={{ left: thumbMenu.x, top: thumbMenu.y }}>
             <button
+              disabled={readOnly}
               onClick={() => {
                 rotatePage(menuOrig, -90)
                 setThumbMenu(null)
@@ -2321,6 +2372,7 @@ export default function App() {
               {t('rotateLeft')}
             </button>
             <button
+              disabled={readOnly}
               onClick={() => {
                 rotatePage(menuOrig, 90)
                 setThumbMenu(null)
@@ -2329,7 +2381,7 @@ export default function App() {
               {t('rotateRight')}
             </button>
             <button
-              disabled={pageCount <= 1}
+              disabled={readOnly || pageCount <= 1}
               onClick={() => {
                 deletePage(menuOrig)
                 setThumbMenu(null)
@@ -2338,6 +2390,7 @@ export default function App() {
               {t('deletePage')}
             </button>
             <button
+              disabled={readOnly}
               onClick={() => {
                 setThumbMenu(null)
                 void extractPage(menuOrig)
@@ -2346,6 +2399,7 @@ export default function App() {
               {t('extractPage')}
             </button>
             <button
+              disabled={readOnly}
               onClick={() => {
                 setThumbMenu(null)
                 void insertPdf(menuOrig)

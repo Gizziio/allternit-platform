@@ -3,8 +3,6 @@ import type { PluginError } from '../../types/plugin.js'
 import { logForDebugging } from '../../utils/debug.js'
 import { errorMessage, toError } from '../../utils/errors.js'
 import { logError } from '../../utils/log.js'
-import { getPluginLspServers } from '../../utils/plugins/lspPluginIntegration.js'
-import { loadAllPluginsCacheOnly } from '../../utils/plugins/pluginLoader.js'
 import type { ScopedLspServerConfig } from './types.js'
 
 /**
@@ -19,6 +17,13 @@ export async function getAllLspServers(): Promise<{
   const allServers: Record<string, ScopedLspServerConfig> = {}
 
   try {
+    const { getPluginLspServers } = await import(
+      '../../utils/plugins/lspPluginIntegration.js'
+    )
+    const { loadAllPluginsCacheOnly } = await import(
+      '../../utils/plugins/pluginLoader.js'
+    )
+
     // Get all enabled plugins
     const { enabled: plugins } = await loadAllPluginsCacheOnly()
 

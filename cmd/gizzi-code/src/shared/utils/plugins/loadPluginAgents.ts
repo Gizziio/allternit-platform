@@ -20,15 +20,10 @@ import {
   parsePositiveIntFromFrontmatter,
 } from '../frontmatterParser.js'
 import { getFsImplementation, isDuplicatePath } from '../fsOperations.js'
-import {
-  parseAgentToolsFromFrontmatter,
-  parseSlashCommandToolsFromFrontmatter,
-} from '../markdownConfigLoader.js'
 import { loadAllPluginsCacheOnly } from './pluginLoader.js'
-import {
-  loadPluginOptions,
-  substitutePluginVariables,
-  substituteUserConfigInContent,
+import type {
+  PluginOptionSchema,
+  PluginOptionValues,
 } from './pluginOptionsStorage.js'
 import type { PluginManifest } from './schemas.js'
 import { walkPluginMarkdown } from './walkPluginMarkdown.js'
@@ -77,6 +72,13 @@ async function loadAgentFromFile(
     return null
   }
   try {
+    const { parseAgentToolsFromFrontmatter, parseSlashCommandToolsFromFrontmatter } =
+      await import('../markdownConfigLoader.js')
+    const {
+      loadPluginOptions,
+      substitutePluginVariables,
+      substituteUserConfigInContent,
+    } = await import('./pluginOptionsStorage.js')
     const content = await fs.readFile(filePath, { encoding: 'utf-8' })
     const { frontmatter, content: markdownContent } = parseFrontmatter(
       content,

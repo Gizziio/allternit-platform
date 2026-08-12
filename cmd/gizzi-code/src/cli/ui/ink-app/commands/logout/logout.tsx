@@ -8,7 +8,7 @@ import { clearPolicyLimitsCache } from '../../services/policyLimits/index';
 // flushTelemetry is loaded lazily to avoid pulling in ~1.1MB of OpenTelemetry at startup
 import { clearRemoteManagedSettingsCache } from '../../services/remoteManagedSettings/index';
 import { getClaudeAIOAuthTokens, removeApiKey } from '../../utils/auth';
-import { clearBetasCaches } from '../../utils/betas';
+import { clearBetasCaches } from '../../utils/betasCache';
 import { saveGlobalConfig } from '../../utils/config';
 import { gracefulShutdownSync } from '../../utils/gracefulShutdown';
 import { getSecureStorage } from '../../utils/secureStorage/index';

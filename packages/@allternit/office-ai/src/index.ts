@@ -5,3 +5,18 @@ export {
   type OfficeToolCall,
   type OfficeToolExecution,
 } from './loop'
+export {
+  resolvePlatformModelId,
+  resolvePlatformModelName,
+  getOfficeModelOverride,
+  setOfficeModelOverride,
+  resolveOfficeModelId,
+  resolveOfficeModelValue,
+  getOfficeModelLabel,
+  getOfficeModelOptions,
+  refreshOfficeModelOptions,
+  type PlatformModelSelection,
+  type OfficeAppKey,
+  type OfficeModelOverrides,
+  type OfficeModelOption,
+} from './model-selection'

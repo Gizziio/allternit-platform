@@ -388,4 +388,79 @@ After generating new modules:
 When adding new courses/modules, update:
 - `surfaces/ai.allternit.com/src/views/LabsView.tsx` — `ALABS_COURSES` array
 - Module counts, descriptions, demo URLs
-- Ensure `ADV` tier is included in the rendering loop
+
+---
+
+## Rails — agent communication and coordination
+
+This repo uses the **Allternit Agent System Rails** as its unified communication and coordination substrate:
+
+- `rails` — Rust library (`allternit-agent-system-rails`).
+- `cmd/allternit-api/src/rails/mod.rs` — HTTP surface mounted at `/api/rails` and `/rails`.
+- `cmd/gizzi-code/src/runtime/gizzi-core/services/railsPeer.ts` — gizzi-code peer registration + HTTP inbox poller.
+- `cmd/gizzi-code/src/cli/ui/ink-app/components/RailsInboxBridge.tsx` — bridges polled envelopes into the TUI mailbox.
+
+Every local agent session can register itself as a **peer** under `.allternit/peers/`. Peers can discover each other and send plain-text messages — the Allternit equivalent of Claude Code's `ListAgents` / `SendMessage`. Messages never leave the machine. UDS sockets are supported for direct push; gizzi-code uses HTTP polling of the durable Bus inbox. Any CLI can participate by registering and polling the HTTP inbox; `.allternit/mux` is not required for Rails messaging.
+
+### Current status (Phase 1–7 complete)
+
+The peer registry, UDS inbox transport, steering checkpoint, `/api/rails/peers` HTTP routes, `/api/rails/steer/*` routes, `allternit-rails` CLI commands, gizzi-code runtime tools, `ao-*` shims, and `.steering/bin` hook delegation are implemented and verified:
+
+- `POST /api/rails/peers` — register a peer (`{ name, cwd, vendor }`).
+- `GET /api/rails/peers` — list peers.
+- `POST /api/rails/peers/:name/send` — send a message to a peer by name.
+- `POST /api/rails/peers/:name/heartbeat` — keep a peer marked active.
+- `POST /api/rails/steer/checkpoint` — hash `.steering/checkpoint.md` and emit a `SteeringCheckpoint` ledger event when it changes.
+- `POST /api/rails/steer/consult` — build steering context and consult the configured backend.
+- `POST /api/rails/steer/commit-gate` — commit/push approval consult.
+
+From the shell:
+
+```bash
+allternit-rails peer register <name> --vendor <agent-family>
+allternit-rails peer list
+allternit-rails peer send <name> "<message>"
+allternit-rails peer heartbeat <name>
+allternit-rails peer inbox <name>
+allternit-rails orchestrator doctor
+allternit-rails steer checkpoint --cwd <dir>
+allternit-rails steer consult --cwd <dir>
+allternit-rails steer commit-gate --cwd <dir>
+```
+
+From gizzi-code, the runtime exposes:
+
+- `ListPeers` (alias `ListAgents`) — discover local agent peers.
+- `SendMessage` (alias `SendMessageToPeer`) — send to a Rails peer by name, with `uds:` and `bridge:` address support and teammate-mailbox fallback.
+
+### Enabling Rails peer mode in gizzi-code
+
+The `UDS_INBOX` bundle feature is disabled in local dev builds. To opt into Rails peer registration and the new messaging tools:
+
+```bash
+GIZZI_ENABLE_RAILS_PEER=1 gizzi
+```
+
+This registers the session as `gizzi-<sessionId>` with the Rails API and polls the HTTP inbox for peer messages. The process also exports:
+
+- `ALLTERNIT_RAILS_PEER_NAME`
+- `ALLTERNIT_RAILS_INBOX`
+
+### Verification
+
+- `cargo test -p allternit-agent-system-rails` ✅
+- `cargo build -p allternit-api` ✅
+- `bun run typecheck` in `cmd/gizzi-code` ✅
+- `cmd/gizzi-code/test/rails-peer-e2e.ts` registers two peers, lists them, and confirms Bus/UDS message delivery.
+- `tmp/rails-two-session-test/run.sh` automates a two-session `GIZZI_ENABLE_RAILS_PEER=1 gizzi-code` TUI exchange and saves evidence to `tmp/rails-two-session-test/evidence/`.
+- Two live `GIZZI_ENABLE_RAILS_PEER=1 gizzi` sessions exchanged a `ListPeers` / `SendMessage` round-trip (see `docs/RAILS_PRODUCT_UPDATE_SYSTEM_PROMPT.md`).
+
+### Product-update system prompts
+
+Load these into agent sessions to teach the Rails workflow:
+
+- `docs/RAILS_PRODUCT_UPDATE_SYSTEM_PROMPT.md` — full product update / system prompt.
+- `.allternit/context-packs/rails-product-update/inputs/INSTRUCTIONS.md` — concise agent-instruction context pack.
+- `.allternit/context-packs/rails-product-update/inputs/templates/QUICKSTART.md` — copy-paste quickstart.
+
+See `docs/RAILS_UNIFIED_COMMUNICATION_PLAN.md` for the full roadmap.

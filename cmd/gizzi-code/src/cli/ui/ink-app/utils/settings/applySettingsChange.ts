@@ -2,17 +2,27 @@
 import type { AppState } from '../../state/AppState.js'
 import { logForDebugging } from '../debug.js'
 import { updateHooksConfigSnapshot } from '../hooks/hooksConfigSnapshot.js'
-import {
-  createDisabledBypassPermissionsContext,
-  findOverlyBroadBashPermissions,
-  isBypassPermissionsModeDisabled,
-  removeDangerousPermissions,
-  transitionPlanAutoMode,
-} from '../permissions/permissionSetup.js'
-import { syncPermissionRulesFromDisk } from '../permissions/permissions.js'
 import { loadAllPermissionRulesFromDisk } from '../permissions/permissionsLoader.js'
 import type { SettingSource } from './constants.js'
 import { getInitialSettings } from './settings.js'
+
+// Lazy require() to avoid a circular init dependency through
+// permissionSetup.js / permissions.js. The earlier dynamic-import approach
+// (`void import(...).then(...)`) was converted by Bun's bundler into
+// `init_permissionSetup2().then(...)` inside a sync __esm factory, crashing
+// when init_permissionSetup2 wasn't yet defined. Using require() inside the
+// getter defers resolution until first call (well after all __esm factories
+// are assigned).
+/* eslint-disable @typescript-eslint/no-require-imports */
+let _permissionSetupModule: typeof import('../permissions/permissionSetup.js') | undefined
+let _permissionsModule: typeof import('../permissions/permissions.js') | undefined
+function getPermissionSetupModule() {
+  return (_permissionSetupModule ??= require('../permissions/permissionSetup.js') as typeof import('../permissions/permissionSetup.js'))
+}
+function getPermissionsModule() {
+  return (_permissionsModule ??= require('../permissions/permissions.js') as typeof import('../permissions/permissions.js'))
+}
+/* eslint-enable @typescript-eslint/no-require-imports */
 
 /**
  * Apply a settings change to app state. Re-reads settings from disk,
@@ -43,7 +53,7 @@ export function applySettingsChange(
   updateHooksConfigSnapshot()
 
   setAppState(prev => {
-    let newContext = syncPermissionRulesFromDisk(
+    let newContext = getPermissionsModule().syncPermissionRulesFromDisk(
       prev.toolPermissionContext,
       updatedRules,
     )
@@ -53,20 +63,29 @@ export function applySettingsChange(
       process.env.USER_TYPE === 'ant' &&
       process.env.CLAUDE_CODE_ENTRYPOINT !== 'local-agent'
     ) {
-      const overlyBroad = findOverlyBroadBashPermissions(updatedRules, [])
+      const overlyBroad = getPermissionSetupModule().findOverlyBroadBashPermissions(
+        updatedRules,
+        [],
+      )
       if (overlyBroad.length > 0) {
-        newContext = removeDangerousPermissions(newContext, overlyBroad)
+        newContext = getPermissionSetupModule().removeDangerousPermissions(
+          newContext,
+          overlyBroad,
+        )
       }
     }
 
     if (
       newContext.isBypassPermissionsModeAvailable &&
-      isBypassPermissionsModeDisabled()
+      getPermissionSetupModule().isBypassPermissionsModeDisabled()
     ) {
-      newContext = createDisabledBypassPermissionsContext(newContext)
+      newContext =
+        getPermissionSetupModule().createDisabledBypassPermissionsContext(
+          newContext,
+        )
     }
 
-    newContext = transitionPlanAutoMode(newContext)
+    newContext = getPermissionSetupModule().transitionPlanAutoMode(newContext)
 
     // Sync effortLevel from settings to top-level AppState when it changes
     // (e.g. via applyFlagSettings from IDE). Only propagate if the setting

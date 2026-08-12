@@ -53,6 +53,10 @@ import {
   generateTmuxSessionName,
   worktreeBranchName,
 } from 'src/shared/utils/worktree.js'
+import {
+  registerRailsPeer,
+  startRailsInboxListener,
+} from './services/railsPeer.js'
 
 export async function setup(
   cwd: string,
@@ -99,6 +103,15 @@ export async function setup(
         messagingSocketPath ?? m.getDefaultUdsSocketPath(),
         { isExplicit: messagingSocketPath !== undefined },
       )
+    }
+
+    // Register this gizzi-code session as a Rails peer so other local agents
+    // can discover and message it. The inbox listener routes incoming
+    // envelopes into the command queue as task notifications.
+    // Gate lives inside registerRailsPeer so the bundler keeps the module.
+    const peer = await registerRailsPeer(getSessionId())
+    if (peer) {
+      startRailsInboxListener()
     }
   }
 

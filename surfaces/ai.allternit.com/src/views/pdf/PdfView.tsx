@@ -1,33 +1,17 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { PdfApp } from '@allternit/office-pdf-app';
 import { takeFile } from '@/views/office/file-handoff';
-import {
-  createArtifactSection,
-  fetchArtifactById,
-  updateArtifact,
-  updateArtifactSection,
-  type ArtifactDto,
-} from '@/services/artifacts-api';
+import { fetchArtifactById, type ArtifactDto } from '@/services/artifacts-api';
 
 export interface PdfViewProps {
   artifactId?: string;
   handoffId?: string;
 }
 
-// Artifact mapping (mirrors the other office views): the real PDF bytes are
-// the source of truth, stored base64 in a `pdf-viewer/binary` section; a
-// `pdf-viewer/plaintext` section carries extracted text for iOS/search.
+// Artifact mapping: the real PDF bytes are the source of truth, stored base64
+// in a `pdf-viewer/binary` section. The Allternit PDF surface is a viewer,
+// so edits are not persisted back to the artifact.
 const BINARY_KIND = 'pdf-viewer/binary';
-const PLAINTEXT_KIND = 'pdf-viewer/plaintext';
-
-function toBase64(bytes: Uint8Array): string {
-  let binary = '';
-  const CHUNK = 8192;
-  for (let i = 0; i < bytes.length; i += CHUNK) {
-    binary += String.fromCharCode(...bytes.subarray(i, i + CHUNK));
-  }
-  return btoa(binary);
-}
 
 function fromBase64(value: string): Uint8Array {
   const binary = atob(value);
@@ -88,59 +72,6 @@ export function PdfView({ artifactId, handoffId }: PdfViewProps) {
     };
   }, [artifactId]);
 
-  const saveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-
-  const persistBytes = useCallback(
-    async (bytes: Uint8Array, name: string) => {
-      if (!artifact) return;
-      const title = name.replace(/\.pdf$/i, '').replace(/_/g, ' ').trim();
-      if (title && title !== artifact.title) {
-        await updateArtifact(artifact.id, { title });
-      }
-      const encoded = toBase64(bytes);
-      const sections = [...artifact.sections].sort((a, b) => a.position - b.position);
-      const binary = sections.find((s) => s.kind === BINARY_KIND);
-      if (binary) {
-        if (binary.body !== encoded) {
-          await updateArtifactSection(artifact.id, binary.id, { body: encoded });
-        }
-      } else {
-        await createArtifactSection(artifact.id, {
-          heading: 'Document (pdf)',
-          kind: BINARY_KIND,
-          body: encoded,
-          position: 0,
-        });
-      }
-      const plain = sections.find((s) => s.kind === PLAINTEXT_KIND);
-      if (!plain) {
-        await createArtifactSection(artifact.id, {
-          heading: 'Text',
-          kind: PLAINTEXT_KIND,
-          body: '',
-          position: 1,
-        });
-      }
-      const refreshed = await fetchArtifactById(artifact.id);
-      setArtifact(refreshed);
-    },
-    [artifact],
-  );
-
-  // Saves arrive on every successful save; debounce persistence.
-  const handleSave = useCallback(
-    (bytes: Uint8Array, name: string) => {
-      if (!artifact) return;
-      if (saveTimerRef.current) clearTimeout(saveTimerRef.current);
-      saveTimerRef.current = setTimeout(() => {
-        persistBytes(bytes, name).catch((err) => {
-          console.error('[PdfView] artifact save failed', err);
-        });
-      }, 1500);
-    },
-    [artifact, persistBytes],
-  );
-
   if (!loaded) {
     return <div style={{ width: '100%', height: '100%', background: 'var(--shell-view-bg, #141110)' }} />;
   }
@@ -150,7 +81,7 @@ export function PdfView({ artifactId, handoffId }: PdfViewProps) {
       <PdfApp
         key={artifact?.id ?? (handoffFileRef.current ? 'handoff' : 'standalone')}
         document={initialBytes ? { bytes: initialBytes, name: initialName ?? 'document.pdf' } : undefined}
-        onSave={artifact ? handleSave : undefined}
+        readOnly
       />
     </div>
   );

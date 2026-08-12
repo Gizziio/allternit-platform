@@ -10,7 +10,6 @@ import { readFileSync } from 'fs'
 import { homedir } from 'os'
 import { join } from 'path'
 import { logForDebugging } from '../../utils/debug.js'
-import { createAssistantAPIErrorMessage } from '../../utils/messages.js'
 import { asSystemPrompt, type SystemPrompt } from '../../utils/systemPromptType.js'
 import { zodToJsonSchema } from '../../utils/zodToJsonSchema.js'
 import type {
@@ -247,6 +246,9 @@ export async function* queryLocalModelWithStreaming({
   signal: AbortSignal
   options: Options
 }): AsyncGenerator<StreamEvent | AssistantMessage | SystemAPIErrorMessage, void> {
+  const { createAssistantAPIErrorMessage } = await import(
+    '../../utils/messages.js'
+  )
   const resolved = getLocalProviderConfig(options.model)
   if (!resolved) {
     yield createAssistantAPIErrorMessage({

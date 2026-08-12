@@ -174,6 +174,8 @@ export interface PdfApi {
   onSaveAsFlow(handler: (inFlight: boolean) => void): () => void
   getLanguage(): Promise<Lang>
   onLanguageChanged(handler: (lang: Lang) => void): () => void
+  /** True when the bridge was configured for read-only viewing (no edits/saves). */
+  isReadOnly(): boolean
   getAiSettings(): Promise<AiSettings>
   aiStream(request: AiStreamRequest): Promise<void>
   aiStreamCancel(requestId: string): Promise<void>

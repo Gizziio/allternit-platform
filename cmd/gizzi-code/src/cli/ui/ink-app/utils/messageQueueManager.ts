@@ -19,6 +19,7 @@ import { extractTextContent } from './messages.js'
 import { objectGroupBy } from './objectGroupBy.js'
 import { recordQueueOperation } from './sessionStorage.js'
 import { createSignal } from './signal.js'
+import { logForDiagnosticsNoPII } from './diagLogs.js'
 
 export type SetAppState = (f: (prev: AppState) => AppState) => void
 
@@ -143,6 +144,11 @@ export function enqueue(command: QueuedCommand): void {
 export function enqueuePendingNotification(command: QueuedCommand): void {
   commandQueue.push({ ...command, priority: command.priority ?? 'later' })
   notifySubscribers()
+  logForDiagnosticsNoPII('info', 'enqueue_pending_notification', {
+    queue_length: commandQueue.length,
+    mode: command.mode,
+    priority: command.priority ?? 'later',
+  })
   logOperation(
     'enqueue',
     typeof command.value === 'string' ? command.value : undefined,

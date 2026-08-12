@@ -70,10 +70,26 @@ button {
 .pdf-placeholder {
   flex: 1;
   display: flex;
+  flex-direction: column;
   align-items: center;
   justify-content: center;
   color: var(--text-dim);
-  font-size: 14px;
+  text-align: center;
+  padding: 24px;
+}
+
+.pdf-placeholder-title {
+  font-size: 15px;
+  font-weight: 500;
+  color: var(--text);
+}
+
+.pdf-placeholder-hint {
+  margin-top: 6px;
+  font-size: 13px;
+  color: var(--text-dim);
+  max-width: 280px;
+  line-height: 1.5;
 }
 
 /* ================= ribbon (aligned with docs/slides chrome) ================= */
@@ -93,6 +109,13 @@ button {
   padding: 5px 12px 0;
   min-height: 35px;
   gap: 4px;
+}
+
+/* When the platform rail is collapsed, the top-left rail-controls widget
+   (and macOS traffic lights) sit at y=0. Drop the ribbon tab row so it
+   clears them, matching the header inset used by Library/AutomationTasks. */
+html[data-rail-collapsed='true'] .ribbon-tabs {
+  margin-top: 44px;
 }
 
 .ribbon-file {
@@ -414,6 +437,12 @@ button {
 .sel-swatch-st {
   color: #db3830;
   text-decoration: line-through;
+}
+
+.sel-swatch-copy {
+  color: var(--text, #2a1f16);
+  font-size: 13px;
+  line-height: 1;
 }
 
 /* ── Unsaved markup overlay ── */
@@ -1688,6 +1717,94 @@ button {
   gap: 2px;
 }
 
+.ai-model-picker {
+  position: relative;
+  display: inline-block;
+}
+
+.ai-model-picker-trigger {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  max-width: 150px;
+  padding: 4px 8px;
+  background: var(--surface);
+  color: var(--text-dim);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  font-size: 11px;
+  font-weight: 500;
+  line-height: 1.2;
+  cursor: pointer;
+}
+
+.ai-model-picker-trigger:hover {
+  border-color: var(--text-dim);
+  color: var(--text);
+}
+
+.ai-model-picker-label {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.ai-model-picker-caret {
+  font-size: 9px;
+  opacity: 0.7;
+  flex-shrink: 0;
+}
+
+.ai-model-picker-menu {
+  position: absolute;
+  top: calc(100% + 4px);
+  right: 0;
+  min-width: 180px;
+  max-width: 260px;
+  max-height: 240px;
+  overflow: auto;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.18);
+  z-index: 100;
+  padding: 4px;
+}
+
+.ai-model-picker-option {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  width: 100%;
+  padding: 6px 8px;
+  background: none;
+  border: none;
+  border-radius: 6px;
+  color: var(--text);
+  font-size: 12px;
+  text-align: left;
+  cursor: pointer;
+}
+
+.ai-model-picker-option:hover,
+.ai-model-picker-option.active {
+  background: var(--hover);
+}
+
+.ai-model-picker-option-label {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.ai-model-picker-option-provider {
+  flex-shrink: 0;
+  font-size: 10px;
+  color: var(--text-dim);
+  text-transform: capitalize;
+}
+
 .ai-header-btn {
   display: flex;
   align-items: center;
@@ -2116,13 +2233,18 @@ button {
   --min-font-size-inv: calc(1 / var(--min-font-size));
 
   position: absolute;
+  text-align: initial;
   inset: 0;
   overflow: clip;
+  opacity: 1;
   line-height: 1;
+  -webkit-text-size-adjust: none;
+  -moz-text-size-adjust: none;
   text-size-adjust: none;
   forced-color-adjust: none;
   transform-origin: 0 0;
   caret-color: CanvasText;
+  z-index: 0;
 }
 
 .textLayer[data-main-rotation='90'] {
@@ -2160,8 +2282,21 @@ button {
   display: contents;
 }
 
-.textLayer span::selection {
-  background: rgba(56, 108, 255, 0.32);
+.textLayer span[role='img'] {
+  -webkit-user-select: none;
+  -moz-user-select: none;
+  user-select: none;
+  cursor: default;
+}
+
+.textLayer ::-moz-selection {
+  background: rgba(0 0 255 / 0.25);
+  background: color-mix(in srgb, AccentColor, transparent 75%);
+}
+
+.textLayer ::selection {
+  background: rgba(0 0 255 / 0.25);
+  background: color-mix(in srgb, AccentColor, transparent 75%);
 }
 
 /* pdfjs uses endOfContent to carry cross-page selection */

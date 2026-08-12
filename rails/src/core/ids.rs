@@ -40,3 +40,9 @@ pub fn create_blob_id() -> String {
     rand::thread_rng().fill_bytes(&mut buf);
     format!("blob_{}", hex::encode(buf))
 }
+
+pub fn create_peer_id() -> String {
+    let mut buf = [0u8; 6];
+    rand::thread_rng().fill_bytes(&mut buf);
+    format!("peer_{}", hex::encode(buf))
+}

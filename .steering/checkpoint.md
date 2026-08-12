@@ -195,3 +195,69 @@ Next: Reviewer can validate terminology and decide whether roadmap gaps should
 be promoted into implementation tasks.
 
 Open questions: None.
+
+---
+
+## Goal (parallel session: Second Brain rename + creation wiring)
+
+Rename the web UI's "Brain" surface to "Second Brain", wire Clerk JWT sync into the runtime API client, and add a gizzi-code `/brain/provision` route so the empty Brain view can actually create a hosted second brain.
+
+## Just did
+
+- Renamed visible strings: `ShellRail.tsx` nav label, `BrainView.tsx` heading/empty/error/copy, `ViewRegistry.tsx` error fallback.
+- Added `useEffect` in `ClerkPlatformAuthBridge` to push `clerkAuth.getToken()` into `api.setToken()` every ~50s and clear on sign-out.
+- Created `cmd/gizzi-code/src/runtime/server/routes/brain.ts` with `POST /brain/provision` (init → relay-authenticated create → link → sync), fail-closed 401.
+- Mounted `BrainRoutes()` in `cmd/gizzi-code/src/runtime/server/server.ts` under `/brain` and `/v1/brain`.
+- Added `createBrain()` in `surfaces/ai.allternit.com/src/services/brain-api.ts` calling gizzi-code via `apiRequest(gizziBaseUrl() + "/brain/provision")`.
+- Wired `useMutation` in `BrainView.tsx` to the `EmptyState` CTA; invalidates `['brains']` on success and toasts on error.
+- Typecheck clean for both `cmd/gizzi-code` and `surfaces/ai.allternit.com`; production Vite build succeeded.
+- Restarted the local gizzi-code HTTP server and verified `POST /brain/provision` returns 401 without `Authorization` and on both `/brain/provision` and `/v1/brain/provision`.
+
+## Follow-up change: move Second Brain from Home tab to Mini-apps
+
+- Removed the `Second Brain` `RailItem` from the Home-mode tabs in `ShellRail.tsx`.
+- Added a builtin `second-brain` mini-app in `mini-app-registry.ts` (seeded under the new `allternit-mini-apps-seeded-v7` key), surfaced as an `allternit-native` mini-app with `viewType: 'brain'` so it appears alongside Vault Viewer in Browser mode's pinned Mini-apps list.
+- Updated `PinnedMiniAppItem` to allow per-ID icon overrides, keeping the `Brain` icon for the Second Brain mini-app instead of the generic tool icon.
+- Added `brain`, `vault-viewer`, and `oh-my-pi` to `BROWSER_MODE_VIEW_TYPES` in `ShellApp.tsx` so clicking any pinned mini-app no longer flips the shell back to Home/Chat mode; it stays in ACI/Browser mode.
+- Wrapped `BrainView` in `ToastProvider` inside `ViewRegistry.tsx`; `BrainView` calls `useToast()` but the main shell canvas had no provider, causing a runtime crash and the "Second Brain Error" boundary screen.
+- Fixed `cmd/gizzi-code/src/runtime/server/routes/brain.ts` so `/brain/provision` no longer forwards gizzi-code's own HTTP Basic auth header to allternit-api. In Desktop mode the Electron broker authenticates to gizzi-code with Basic auth; the route now forwards only Clerk Bearer tokens upstream.
+- Switched the allternit-api create call to `apiFetchJson()` from `@/runtime/services/api/allternitApi`, which adds gizzi-code's runtime-device/local-dev auth headers (`x-allternit-user-id`, `x-allternit-desktop-access-token`) so allternit-api can authenticate the request even when no Clerk token is present.
+- Typecheck clean for both `surfaces/ai.allternit.com` and `cmd/gizzi-code`; production Vite build passed.
+
+## Next
+
+- Obtain a valid Clerk JWT (e.g. via browser devtools `window.Clerk.session.getToken()`) and curl-test the full create→link→sync chain through `/brain/provision`.
+- With the UI signed in, verify `localStorage['allternit_token']` populates on sign-in/clears on sign-out, then run the full empty-state → create → reflow click-through on a zero-brains account (now reachable via the Second Brain mini-app in Browser mode).
+- Stage and commit the scoped changes.
+
+## Open questions / limitations
+
+- Could not complete the live JWT click-through in this session: the running Desktop renderer page was a document view, not the signed-in shell, so no Clerk session token was obtainable via CDP. The 401 path and build artifacts are verified; the full E2E needs a signed-in shell.
+
+---
+
+## Goal (parallel session: Allternit Manufacturing productization)
+
+Add Allternit Manufacturing as a platform offering: create a strategic master plan, add the product to the Products Discovery catalog and spotlight carousel, and build a dedicated Manufacturing view.
+
+## Just did
+
+- Created `docs/ALLTERNIT_MANUFACTURING_MASTER_PLAN.md` with the 6-division structure, revenue model, build phases, 10-year roadmap, equipment list, AI agent roles, CAD-as-a-Service verticals, software licensing model, CAD/3D AI tool stack, robotics resources, and integration with the Allternit ecosystem.
+- Generated `docs/ALLTERNIT_MANUFACTURING_MASTER_PLAN.html` and `.pdf` as visual review decks (16 pages).
+- Added a new `Manufacturing` category and `Allternit Manufacturing` product card in `surfaces/ai.allternit.com/src/views/products/ProductsDiscoveryView.tsx`.
+- Added an `Allternit Manufacturing` spotlight carousel entry in `ProductsDiscoveryView.tsx`.
+- Created `surfaces/ai.allternit.com/src/views/manufacturing/ManufacturingView.tsx` as a first-class surface showing divisions, build phases, and revenue mix.
+- Registered `manufacturing` as a `ViewType` in `nav.types.ts` and wired the lazy-loaded component in `ViewRegistry.tsx`.
+- Inventoried relevant Twitter/CAD bookmarks on the Desktop and linked them in the master plan's reference section.
+- Verified `pnpm exec tsc --noEmit` passes for `surfaces/ai.allternit.com`.
+
+## Next
+
+- Build the manufacturing queue/quoting software MVP when Phase 1 equipment is acquired.
+- Curate the text-to-CAD, robotics, and print-farm bookmarks into actionable tool lists.
+- Create follow-up specs: software architecture, equipment roadmap, product catalog, and operations manual.
+
+## Open questions
+
+- Should Manufacturing have its own top-level navigation entry, or remain discoverable only through Products Discovery for now?
+- What is the Phase 1 equipment budget and target go-live date?

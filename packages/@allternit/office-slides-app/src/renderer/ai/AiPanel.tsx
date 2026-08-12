@@ -1,5 +1,18 @@
 import React, { useEffect, useRef, useState, useCallback } from 'react'
-import { AgentLoop, composeSkills, type AgentImage, type ToolDisplay } from '../../stubs/agent-core'
+import {
+  AgentLoop,
+  composeSkills,
+  type AgentImage,
+  type ToolDisplay,
+} from '../../stubs/agent-core'
+import {
+  resolveOfficeModelId,
+  setOfficeModelOverride,
+  getOfficeModelLabel,
+  getOfficeModelOptions,
+  refreshOfficeModelOptions,
+  type OfficeModelOption,
+} from '@allternit/office-ai'
 import type { RenderSlide } from '@allternit/office-pptx-render'
 import type { AiSettings, AttachmentAddResult, AttachmentMeta } from '../../shared/ipc'
 import { ATTACHMENT_IMAGE_EXTS } from '../../shared/ipc'
@@ -248,6 +261,7 @@ export function AiPanel({
   const [attachNotice, setAttachNotice] = useState<string | null>(null)
   const [dragOver, setDragOver] = useState(false)
   const [panelWidth, setPanelWidth] = useState(loadPanelWidth)
+  const [modelId, setModelId] = useState<string | undefined>(() => resolveOfficeModelId('slides'))
   const asideRef = useRef<HTMLElement>(null)
 
   // The .ai-dock wrapper owns the animated width (Excel-parity 180ms slide);
@@ -919,6 +933,7 @@ export function AiPanel({
     }
     accessRef.current = access
     loopRef.current = new AgentLoop({
+      modelId,
       transport: createElectronTransport(() => settingsRef.current),
       systemSuffix: aiLangDirective,
       skill: composeSkills('slides+files', '', [
@@ -1419,6 +1434,11 @@ export function AiPanel({
           {t('aiPanelTitle')}
         </span>
         <div className="ai-panel-header-actions">
+          <ModelPicker value={modelId} onChange={(next) => {
+            setModelId(next)
+            setOfficeModelOverride('slides', next)
+            loopRef.current?.setModelId(next)
+          }} />
           {chat.length > 0 && (
             <button className="ai-header-btn" onClick={newChat} title={t('aiNewChat')}>
               <IconNewChat size={15} />
@@ -1712,6 +1732,80 @@ export function AiPanel({
         </div>
       )}
     </aside>
+  )
+}
+
+function ModelPicker({
+  value,
+  onChange,
+}: {
+  value?: string | undefined
+  onChange?: (modelId: string | undefined) => void
+}): React.JSX.Element {
+  const [open, setOpen] = useState(false)
+  const [options, setOptions] = useState<OfficeModelOption[]>(() => getOfficeModelOptions())
+  const selected = options.find((o) => o.id === (value ?? 'platform')) ?? options[0]
+  const menuRef = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    let cancelled = false
+    refreshOfficeModelOptions()
+      .then((next) => {
+        if (!cancelled) setOptions(next)
+      })
+      .catch(() => {})
+    return () => {
+      cancelled = true
+    }
+  }, [])
+
+  useEffect(() => {
+    if (!open) return
+    const onDocClick = (e: MouseEvent): void => {
+      if (!menuRef.current?.contains(e.target as Node)) setOpen(false)
+    }
+    document.addEventListener('mousedown', onDocClick)
+    return () => document.removeEventListener('mousedown', onDocClick)
+  }, [open])
+
+  return (
+    <div className="ai-model-picker" ref={menuRef}>
+      <button
+        type="button"
+        className="ai-model-picker-trigger"
+        aria-haspopup="listbox"
+        aria-expanded={open}
+        title={selected?.label}
+        onClick={() => setOpen((v) => !v)}
+      >
+        <span className="ai-model-picker-label">{selected?.label}</span>
+        <span className="ai-model-picker-caret" aria-hidden>
+          ▾
+        </span>
+      </button>
+      {open && (
+        <div className="ai-model-picker-menu" role="listbox">
+          {options.map((o) => (
+            <button
+              key={o.id}
+              type="button"
+              role="option"
+              aria-selected={o.id === selected?.id}
+              className={`ai-model-picker-option${o.id === selected?.id ? ' active' : ''}`}
+              onClick={() => {
+                onChange?.(o.id === 'platform' ? undefined : o.id)
+                setOpen(false)
+              }}
+            >
+              <span className="ai-model-picker-option-label">{o.label}</span>
+              {o.provider && (
+                <span className="ai-model-picker-option-provider">{o.provider}</span>
+              )}
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
   )
 }
 

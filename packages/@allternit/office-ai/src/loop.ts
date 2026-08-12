@@ -71,6 +71,8 @@ interface OfficeAgentLoopOptions {
   }
   systemSuffix?: string | (() => string)
   transport?: unknown
+  /** Optional model override (provider/model); passed to /api/agent-chat as runtimeModelId */
+  modelId?: string | undefined
   /** hard cap on model round-trips per run (default 8) */
   maxTurns?: number
   [key: string]: unknown
@@ -185,6 +187,7 @@ export class OfficeAgentLoop {
   private readonly events: OfficeAgentLoopEvents
   private readonly skill?: OfficeAgentLoopOptions['skill']
   private readonly systemSuffix: string | (() => string) | undefined
+  private modelId: string | undefined
   private readonly maxTurns: number
   private history: HistoryEntry[] = []
   private abort: AbortController | null = null
@@ -201,6 +204,7 @@ export class OfficeAgentLoop {
     this.events = options.events ?? {}
     this.skill = options.skill
     this.systemSuffix = options.systemSuffix
+    this.modelId = options.modelId
     this.maxTurns = options.maxTurns ?? DEFAULT_MAX_TURNS
   }
 
@@ -219,6 +223,11 @@ export class OfficeAgentLoop {
     if (!this.busy) return
     this.cancelled = true
     this.abort?.abort()
+  }
+
+  /** Update the model override at runtime (e.g. when the user picks a different model). */
+  setModelId(modelId: string | undefined): void {
+    this.modelId = modelId
   }
 
   /** drop the conversation (e.g. when a different document is opened) */
@@ -384,6 +393,7 @@ export class OfficeAgentLoop {
       const nativeCalls: OfficeToolCall[] = []
       await streamOfficeAi({
         messages,
+        ...(this.modelId ? { modelId: this.modelId } : {}),
         ...(this.abort ? { signal: this.abort.signal } : {}),
         onChunk: (chunk) => {
           if (generation !== this.generation) return

@@ -11,7 +11,7 @@ import type { ToolProgressData } from '../../Tool';
 import type { ProgressMessage } from '../../types/message';
 import { FILE_NOT_FOUND_CWD_NOTE, getDisplayPath } from '../../utils/file';
 import { truncate } from '../../utils/format';
-import { extractTag } from '../../utils/messages';
+import { extractTag } from '../../utils/extractTag.js';
 
 // Reusable component for search result summaries
 function SearchResultSummary(t0) {

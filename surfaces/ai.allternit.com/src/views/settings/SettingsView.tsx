@@ -58,6 +58,7 @@ import { SkillsSettingsPanel } from './SkillsSettingsPanel';
 import { LensSettingsPanel } from './LensSettingsPanel';
 import { PluginsSettingsPanel } from './PluginsSettingsPanel';
 import { DispatchSettingsPanel } from './DispatchSettingsPanel';
+import { CoworkPreferencesPanel } from './CoworkPreferencesPanel';
 import { ResponseStylePanel } from './ResponseStylePanel';
 import { PluginManager } from '../plugins';
 import type { TabId as FullManagerTabId } from '../plugins/PluginManager/types';
@@ -1069,12 +1070,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
       </SettingsRow>
 
       <SectionHeading>Access</SectionHeading>
-      <SettingsRow label="Trusted folders" description="Folders Cowork agents may read and write">
-        <span className="text-[13px] text-[var(--text-tertiary)]">Coming soon</span>
-      </SettingsRow>
-      <SettingsRow label="Global instructions" description="Instructions applied to every Cowork session">
-        <span className="text-[13px] text-[var(--text-tertiary)]">Coming soon</span>
-      </SettingsRow>
+      <CoworkPreferencesPanel />
     </div>
   );
 

@@ -1,0 +1,402 @@
+# OpenAI Docs Feature Catalog
+
+**Pages analyzed:** 335
+**Total feature headings extracted:** 6418
+
+## Categories
+
+### ads (21 pages)
+- [Overview](https://developers.openai.com/ads/api-overview.md)
+  - Overview
+  - Overview
+    - Authentication
+    - Endpoints
+- [API Partner Setup](https://developers.openai.com/ads/api-partner-setup.md)
+  - API Partner Setup
+  - API Partner Setup
+- [Quickstart](https://developers.openai.com/ads/api-quickstart.md)
+  - Quickstart
+  - Quickstart
+    - Ad Structure
+- [Ad Account](https://developers.openai.com/ads/api-reference/ad-account.md)
+  - Ad Account
+  - Ad Account
+    - Update account brand metadata
+    - Get ad account metadata
+- [Ad Groups](https://developers.openai.com/ads/api-reference/ad-groups.md)
+  - Ad Groups
+  - Ad Groups
+    - List ad groups
+    - Create an ad group
+- [Ads](https://developers.openai.com/ads/api-reference/ads.md)
+    - List ads
+    - Create an ad
+      - Product-ad templates
+    - Retrieve an ad
+- [Authentication](https://developers.openai.com/ads/api-reference/authentication.md)
+  - Authentication
+  - Authentication
+    - Base URL
+    - Authorization
+- [Campaigns](https://developers.openai.com/ads/api-reference/campaigns.md)
+  - Campaigns
+  - Campaigns
+    - List campaigns
+    - Create a campaign
+- [Conversion Setup](https://developers.openai.com/ads/api-reference/conversion-setup.md)
+  - Conversion Setup
+  - Conversion Setup
+    - Create a pixel
+    - Create a Conversions API key
+- [Files](https://developers.openai.com/ads/api-reference/files.md)
+    - Upload from an image URL
+    - Upload a binary file
+    - Upload an account favicon
+    - Use the uploaded file in an ad
+- ... and 11 more pages
+
+### api (6 pages)
+- [Working with evals](https://developers.openai.com/api/docs/guides/evals.md)
+  - Working with evals
+  - Working with evals
+    - Create an eval for a task
+    - Test a prompt with your eval
+- [Function calling](https://developers.openai.com/api/docs/guides/function-calling.md)
+  - Function calling
+  - Function calling
+    - How it works
+      - The tool calling flow
+- [Image generation](https://developers.openai.com/api/docs/guides/image-generation.md)
+  - Image generation
+  - Image generation
+    - Overview
+      - Image API
+- [Realtime API with WebRTC](https://developers.openai.com/api/docs/guides/realtime-webrtc.md)
+  - Realtime API with WebRTC
+  - Realtime API with WebRTC
+    - Overview
+      - Connecting using the unified interface
+- [Developer quickstart](https://developers.openai.com/api/docs/quickstart.md)
+  - Developer quickstart
+  - Developer quickstart
+    - Create and export an API key
+    - Install the OpenAI SDK and Run an API Call
+- [](https://developers.openai.com/api/reference/resources/responses/methods/create.md)
+    - Create a model response
+      - Body Parameters
+      - Returns
+      - Example
+
+### blog (21 pages)
+- [15 lessons learned building ChatGPT Apps](https://developers.openai.com/blog/15-lessons-building-chatgpt-apps.md)
+  - 15 lessons learned building ChatGPT Apps
+  - 15 lessons learned building ChatGPT Apps
+    - The three body problem
+    - Reinventing UI for AI
+- [Building frontend UIs with Codex and Figma](https://developers.openai.com/blog/building-frontend-uis-with-codex-and-figma.md)
+  - Building frontend UIs with Codex and Figma
+  - Building frontend UIs with Codex and Figma
+      - Starting an app from a design
+      - From code to canvas
+- [How Codex ran OpenAI DevDay 2025](https://developers.openai.com/blog/codex-at-devday.md)
+  - How Codex ran OpenAI DevDay 2025
+  - How Codex ran OpenAI DevDay 2025
+    - Controlling cameras and creating a venue lighting MCP
+    - Bringing the beats
+- [Using Codex for education at Dagster Labs](https://developers.openai.com/blog/codex-for-documentation-dagster.md)
+  - Using Codex for education at Dagster Labs
+  - Using Codex for education at Dagster Labs
+    - The power of CONTRIBUTING.md files
+  - Contributing documentation
+- [Making private MCP servers reachable without making them public](https://developers.openai.com/blog/connect-private-mcp-servers-to-openai-products.md)
+  - Making private MCP servers reachable without making them public
+  - Making private MCP servers reachable without making them public
+    - The wrong defaults
+    - Why start with long-poll?
+- [Custom Code Review rules for Codex](https://developers.openai.com/blog/custom-code-review-rules-for-codex.md)
+  - Custom Code Review rules for Codex
+  - Custom Code Review rules for Codex
+    - Shipping more code
+    - The review bottleneck
+- [Designing delightful frontends with GPT-5.4](https://developers.openai.com/blog/designing-delightful-frontends-with-gpt-5-4.md)
+  - Designing delightful frontends with GPT-5.4
+  - Designing delightful frontends with GPT-5.4
+    - Model Improvements
+      - Image understanding and tool use
+- [Testing Agent Skills Systematically with Evals](https://developers.openai.com/blog/eval-skills.md)
+  - Testing Agent Skills Systematically with Evals
+  - Testing Agent Skills Systematically with Evals
+    - **1\. Define success before you write the skill**
+    - **2\. Create the skill**
+- [Hello, world!](https://developers.openai.com/blog/intro.md)
+  - Hello, world!
+  - Hello, world!
+    - Introducing the blog
+    - Who it's for
+- [Mastering remote engineering work from your phone](https://developers.openai.com/blog/mastering-codex-remote-for-engineering.md)
+  - Mastering remote engineering work from your phone
+  - Mastering remote engineering work from your phone
+    - The right mental model: Your phone is the control plane
+      - The release captain
+- ... and 11 more pages
+
+### chatgpt-codex (133 pages)
+- [Administration](https://learn.chatgpt.com/docs/administration.md)
+  - Administration
+  - Administration
+- [Agent approvals & security](https://learn.chatgpt.com/docs/agent-approvals-security.md)
+  - Agent approvals & security
+  - Agent approvals & security
+    - Sandbox and approvals
+    - Network access <ElevatedRiskBadge class="ml-2" />
+- [Custom instructions with AGENTS.md](https://learn.chatgpt.com/docs/agent-configuration/agents-md.md)
+  - Custom instructions with AGENTS.md
+  - Custom instructions with AGENTS.md
+    - How Codex discovers guidance
+    - Create global guidance
+- [Rules](https://learn.chatgpt.com/docs/agent-configuration/rules.md)
+    - Create a rules file
+    - Understand rule fields
+    - Shell wrappers and compound commands
+      - When Codex can safely split the script
+- [Speed](https://learn.chatgpt.com/docs/agent-configuration/speed.md)
+    - Fast mode
+    - Codex-Spark
+- [Subagents](https://learn.chatgpt.com/docs/agent-configuration/subagents.md)
+  - Subagents
+  - Subagents
+    - Availability
+    - Why subagent workflows help
+- [Use ChatGPT Work and Codex with Amazon Bedrock](https://learn.chatgpt.com/docs/amazon-bedrock.md)
+  - Use ChatGPT Work and Codex with Amazon Bedrock
+  - Use ChatGPT Work and Codex with Amazon Bedrock
+    - How it works
+    - Configure the provider
+- [ChatGPT desktop app](https://learn.chatgpt.com/docs/app.md)
+  - ChatGPT desktop app
+  - ChatGPT desktop app
+    - Your command center for complex work
+      - Why use the desktop app
+- [Codex App Server](https://learn.chatgpt.com/docs/app-server.md)
+  - Codex App Server
+  - Codex App Server
+    - Connect the CLI terminal UI
+    - Connect a remote Code Mode host
+- [Appshots](https://learn.chatgpt.com/docs/appshots.md)
+  - Appshots
+  - Appshots
+    - What appshots capture
+    - When to use appshots
+- ... and 123 more pages
+
+### codex (2 pages)
+- [CLI customization](https://developers.openai.com/codex/cli-customization.md)
+  - CLI customization
+  - CLI customization
+    - Syntax highlighting and themes
+    - Shell completions
+- [Configuration Reference](https://developers.openai.com/codex/config-file/config-reference.md)
+  - Configuration Reference
+  - Configuration Reference
+
+### commerce (15 pages)
+- [Best practices](https://developers.openai.com/commerce/guides/best-practices.md)
+  - Best practices
+  - Best practices
+    - Content quality
+      - Write factual descriptions
+- [Get Started](https://developers.openai.com/commerce/guides/get-started.md)
+  - Get Started
+  - Get Started
+    - Overview
+    - Integration path
+- [Key concepts](https://developers.openai.com/commerce/guides/key-concepts.md)
+  - Key concepts
+  - Key concepts
+    - Sharing a product feed
+    - Handling orders and checkout
+- [Agentic commerce in production](https://developers.openai.com/commerce/guides/production.md)
+  - Agentic commerce in production
+  - Agentic commerce in production
+    - Testing and launch certification
+      - Session creation and address handling
+- [Feeds](https://developers.openai.com/commerce/specs/api/feeds.md)
+    - Overview
+    - REST endpoints
+      - **GET /product_feeds/&#123;id&#125;**
+      - **POST /product_feeds**
+- [Overview](https://developers.openai.com/commerce/specs/api/overview.md)
+  - Overview
+  - Overview
+    - REST endpoints
+      - Request headers
+- [Products](https://developers.openai.com/commerce/specs/api/products.md)
+  - Products
+  - Products
+    - Overview
+    - REST endpoints
+- [Promotions](https://developers.openai.com/commerce/specs/api/promotions.md)
+  - Promotions
+  - Promotions
+    - Overview
+    - REST endpoints
+- [Agentic Checkout Spec](https://developers.openai.com/commerce/specs/checkout.md)
+  - Agentic Checkout Spec
+  - Agentic Checkout Spec
+    - Overview
+    - Checkout session
+- [File Upload](https://developers.openai.com/commerce/specs/file-upload/legacy.md)
+  - File Upload
+  - File Upload
+- ... and 5 more pages
+
+### cookbook (102 pages)
+- [Building workspace agents in ChatGPT to complete repeatable, end-to-end work](https://developers.openai.com/cookbook/articles/chatgpt-agents-sales-meeting-prep.md)
+  - Building workspace agents in ChatGPT to complete repeatable, end-to-end work
+  - Building workspace agents in ChatGPT to complete repeatable, end-to-end work
+    - Introduction
+    - Prerequisites and setup
+- [Using PLANS.md for multi-hour problem solving](https://developers.openai.com/cookbook/articles/codex_exec_plans.md)
+  - Using PLANS.md for multi-hour problem solving
+  - Using PLANS.md for multi-hour problem solving
+  - ExecPlans
+  - Codex Execution Plans (ExecPlans):
+- [**Build your own content fact-checker with OpenAI gpt-oss-120B, Cerebras, and Parallel**](https://developers.openai.com/cookbook/articles/gpt-oss/build-your-own-fact-checker-cerebras.md)
+  - **Build your own content fact-checker with OpenAI gpt-oss-120B, Cerebras, and Parallel**
+  - **Build your own content fact-checker with OpenAI gpt-oss-120B, Cerebras, and Parallel**
+      - **Step 1: Environment Setup (Colab or local)**
+  - API keys: Colab userdata (if available) -> env vars fallback
+- [](https://developers.openai.com/cookbook/articles/gpt-oss/fine-tune-korean.md)
+      - MXFP4 workflow clarifications · MXFP4 워크플로 정리
+      - LoRA targets (MoE) · LoRA 타깃(MoE 포함)
+    - Contents · 목차
+      - ⚙️ Training vs Quantization — What’s supported
+- [Fine-tuning a Multilingual Reasoner with Hugging Face](https://developers.openai.com/cookbook/articles/gpt-oss/fine-tune-transfomers.md)
+  - Fine-tuning a Multilingual Reasoner with Hugging Face
+  - Fine-tuning a Multilingual Reasoner with Hugging Face
+    - Prepare the dataset
+    - Prepare the model
+- [How to handle the raw chain of thought in gpt-oss](https://developers.openai.com/cookbook/articles/gpt-oss/handle-raw-cot.md)
+  - How to handle the raw chain of thought in gpt-oss
+  - How to handle the raw chain of thought in gpt-oss
+    - Harmony / chat template handling
+    - Chat Completions API
+- [How to run gpt-oss locally with LM Studio](https://developers.openai.com/cookbook/articles/gpt-oss/run-locally-lmstudio.md)
+  - How to run gpt-oss locally with LM Studio
+  - How to run gpt-oss locally with LM Studio
+    - Pick your model
+    - Quick setup
+- [How to run gpt-oss locally with Ollama](https://developers.openai.com/cookbook/articles/gpt-oss/run-locally-ollama.md)
+  - How to run gpt-oss locally with Ollama
+  - How to run gpt-oss locally with Ollama
+    - Pick your model
+    - Quick setup
+- [How to run gpt-oss with Hugging Face Transformers](https://developers.openai.com/cookbook/articles/gpt-oss/run-transformers.md)
+  - How to run gpt-oss with Hugging Face Transformers
+  - How to run gpt-oss with Hugging Face Transformers
+    - Pick your model
+    - Quick setup
+- [How to run gpt-oss with vLLM](https://developers.openai.com/cookbook/articles/gpt-oss/run-vllm.md)
+  - How to run gpt-oss with vLLM
+  - How to run gpt-oss with vLLM
+    - Pick your model
+    - Quick Setup
+- ... and 92 more pages
+
+### learn (2 pages)
+- [OpenAI Developers plugin](https://developers.openai.com/learn/developers-codex-plugin.md)
+  - OpenAI Developers plugin
+  - OpenAI Developers plugin
+    - Get started with Codex
+    - Install the plugin
+- [Docs MCP](https://developers.openai.com/learn/docs-mcp.md)
+  - Docs MCP
+  - Docs MCP
+    - What it provides
+    - Quickstart
+
+### platform (4 pages)
+- [AI app development: Concept to production](https://developers.openai.com/tracks/ai-application-development.md)
+  - AI app development: Concept to production
+  - AI app development: Concept to production
+    - Introduction
+      - Why follow this track
+- [Building agents](https://developers.openai.com/tracks/building-agents.md)
+  - Building agents
+  - Building agents
+    - Introduction
+      - What we will cover
+- [Model optimization](https://developers.openai.com/tracks/model-optimization.md)
+  - Model optimization
+  - Model optimization
+    - Introduction
+      - Core learning objectives
+- [Learning tracks](https://developers.openai.com/tracks.md)
+  - Learning tracks
+  - Learning tracks
+    - Documentation sets
+    - Ai Application Development
+
+### plugins (27 pages)
+- [Plugin guidelines](https://developers.openai.com/plugins/app-guidelines.md)
+  - Plugin guidelines
+  - Plugin guidelines
+    - Overview
+    - Plugin fundamentals
+- [MCP server and UI quickstart](https://developers.openai.com/plugins/build/app-quickstart.md)
+  - MCP server and UI quickstart
+  - MCP server and UI quickstart
+    - Introduction
+    - Build a web component
+- [Authentication](https://developers.openai.com/plugins/build/auth.md)
+  - Authentication
+  - Authentication
+    - Authenticate your users
+    - Custom auth with OAuth 2.1
+- [Add UI to your MCP server](https://developers.openai.com/plugins/build/chatgpt-ui.md)
+  - Add UI to your MCP server
+  - Add UI to your MCP server
+    - Overview
+    - Start with MCP Apps
+- [Examples](https://developers.openai.com/plugins/build/examples.md)
+  - Examples
+  - Examples
+    - Overview
+- [Build an MCP server](https://developers.openai.com/plugins/build/mcp-server.md)
+  - Build an MCP server
+  - Build an MCP server
+    - Choose an MCP software development kit
+  - TypeScript
+- [Checkout API reference](https://developers.openai.com/plugins/build/monetization.md)
+  - Checkout API reference
+  - Checkout API reference
+    - Overview
+    - Recommended Monetization Approach
+- [Package your plugin](https://developers.openai.com/plugins/build/plugins.md)
+  - Package your plugin
+  - Package your plugin
+    - Package with `@plugin-creator`
+      - Create and test a plugin locally with an MCP server
+- [Build skills](https://developers.openai.com/plugins/build/skills.md)
+  - Build skills
+  - Build skills
+    - Create a skill
+    - Write `SKILL.md`
+- [MCP server](https://developers.openai.com/plugins/concepts/mcp-server.md)
+  - MCP server
+  - MCP server
+    - What an MCP server provides
+    - How tool calls work
+- ... and 17 more pages
+
+### workspace-agents (2 pages)
+- [Authenticate with Workspace Agent access tokens](https://developers.openai.com/workspace-agents/authentication.md)
+  - Authenticate with Workspace Agent access tokens
+  - Authenticate with Workspace Agent access tokens
+    - Provision a token
+    - What this token can access
+- [Trigger workspace agent runs](https://developers.openai.com/workspace-agents/trigger-runs.md)
+  - Trigger workspace agent runs
+  - Trigger workspace agent runs
+    - Endpoint
+    - Authentication

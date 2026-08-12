@@ -9,7 +9,6 @@ import * as os from 'os'
 import { basename, join, sep as pathSeparator, resolve } from 'path'
 import { logEvent } from '@/services/analytics/index.js'
 import { getIsScrollDraining, getOriginalCwd } from '@/bootstrap/state.js'
-import { callIdeRpc } from '../../runtime/services/mcp/client.js'
 import type {
   ConnectedMCPServer,
   MCPServerConnection,
@@ -1241,8 +1240,6 @@ export function toIDEDisplayName(terminal: string | null): string {
   return capitalize(terminal)
 }
 
-export { callIdeRpc }
-
 /**
  * Gets the connected IDE client from a list of MCP clients
  * @param mcpClients - Array of wrapped MCP clients
@@ -1271,6 +1268,9 @@ export async function closeOpenDiffs(
   ideClient: ConnectedMCPServer,
 ): Promise<void> {
   try {
+    const { callIdeRpc } = await import(
+      '../../runtime/services/mcp/client.js'
+    )
     await callIdeRpc('closeAllDiffTabs', {}, ideClient)
   } catch (_) {
     // Silently ignore errors when closing diff tabs

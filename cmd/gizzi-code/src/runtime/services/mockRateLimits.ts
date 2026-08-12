@@ -7,7 +7,7 @@
 // Always validate against actual API responses before relying on this for production features.
 
 import type { SubscriptionType } from '@/services/oauth/types.js'
-import { setMockBillingAccessOverride } from '../../shared/utils/billing.js'
+import { setMockBillingAccessOverride } from '../../shared/utils/mockBillingOverride.js'
 import type { OverageDisabledReason } from './claudeAiLimits.js'
 
 type MockHeaders = {

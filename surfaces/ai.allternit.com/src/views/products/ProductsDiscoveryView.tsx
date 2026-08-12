@@ -9,7 +9,7 @@ import {
   PuzzlePiece as Puzzle,
   Laptop, ShoppingBag, GraduationCap,
   Brain, Robot, Palette, Note, GitBranch, UsersThree,
-  Monitor, Code,
+  Monitor, Code, Factory,
 } from '@phosphor-icons/react';
 import { useNav } from '@/nav/useNav';
 import { openInBrowser } from '@/lib/openInBrowser';
@@ -606,6 +606,14 @@ function makeSpotlight(): SpotlightItem[] {
       badges: ['Beta'], art: 'canvas-doc',
       ctaPrimary: { label: 'Open Canvas', action: d('allternit-canvas') },
     },
+    {
+      id: 'manufacturing', title: 'Allternit Manufacturing', tagline: 'Digital Microfactory',
+      description: 'Design, prototype, and produce AI hardware, robotics parts, and B2B components. From a single printer to a software-driven factory network.',
+      gradient: 'linear-gradient(135deg,#d97706,#b45309)', accent: '#d97706',
+      icon: <Factory size={26} weight="fill" className="text-[var(--ui-text-primary)]" />,
+      badges: ['Coming Soon', 'Hardware'], art: 'computer-use',
+      ctaPrimary: { label: 'Explore Manufacturing', action: d('manufacturing') },
+    },
   ];
 }
 
@@ -831,9 +839,10 @@ const ALL_PRODUCTS: MiniProduct[] = [
   { id:'labs',         name:'A://Labs',        description:'AI courses — 7 live in Canvas LMS',   icon:<GraduationCap size={17} weight="fill"/>, accent:'var(--status-warning)', gradient:'linear-gradient(135deg,#f59e0b,#b45309)', viewType:'labs',          status:'live',  category:'Learn' },
   { id:'marketplace',  name:'Marketplace',     description:'Discover plugins and extensions',      icon:<ShoppingBag size={17} weight="fill"/>,  accent:'var(--status-success)', gradient:'linear-gradient(135deg,#10b981,#059669)', viewType:'marketplace',   status:'beta',  category:'Ecosystem' },
   { id:'dev-portal',   name:'Dev Portal',      description:'APIs, SDKs, and documentation',        icon:<ArrowSquareOut size={17}/>,             accent:'#6366f1', gradient:'linear-gradient(135deg,#6366f1,#4338ca)', viewType:'dev-portal',    status:'live',  category:'Ecosystem' },
+  { id:'manufacturing',name:'Allternit Manufacturing', description:'Digital microfactory for AI hardware & B2B', icon:<Factory size={17} weight="fill"/>, accent:'#d97706', gradient:'linear-gradient(135deg,#d97706,#b45309)', viewType:'manufacturing', status:'soon', category:'Manufacturing' },
 ];
 
-const CATEGORIES = ['Core','AI Agents','Create','Infrastructure','Surfaces','Learn','Ecosystem'] as const;
+const CATEGORIES = ['Core','AI Agents','Create','Infrastructure','Surfaces','Learn','Ecosystem','Manufacturing'] as const;
 
 const STATUS_STYLE: Record<ProductStatus, { label:string; color:string; bg:string; border:string }> = {
   'live': { label:'Live',        color:'var(--status-success)', bg:'rgba(34,197,94,.1)',   border:'rgba(34,197,94,.2)' },

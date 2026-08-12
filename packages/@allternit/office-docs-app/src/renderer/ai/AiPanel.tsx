@@ -1,10 +1,34 @@
-import { useCallback, useRef, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
+import type { PointerEvent as ReactPointerEvent } from 'react'
 import type { Editor } from '@tiptap/core'
 import type { Block } from '@allternit/office-docx-engine'
 import type { AiSettings } from '../../shared/ipc'
-import type { NumIds } from './protocol'
+import { type NumIds } from './protocol'
 import { useI18n } from '../i18n/locale'
-import { OfficeAgentLoop } from '@allternit/office-ai'
+import { GensparkMark, IconNewChat, IconSidebarCollapse } from '../components/icons'
+import {
+  OfficeAgentLoop,
+  resolveOfficeModelId,
+  setOfficeModelOverride,
+  getOfficeModelLabel,
+  getOfficeModelOptions,
+  refreshOfficeModelOptions,
+  type OfficeAppKey,
+  type OfficeModelOption,
+} from '@allternit/office-ai'
+
+const PANEL_WIDTH_KEY = 'docs-ai-panel-width'
+const PANEL_WIDTH_DEFAULT = 360
+const PANEL_WIDTH_MIN = 280
+
+function clampPanelWidth(w: number): number {
+  return Math.min(Math.max(w, PANEL_WIDTH_MIN), Math.min(720, Math.round(window.innerWidth * 0.6)))
+}
+
+function loadPanelWidth(): number {
+  const saved = Number(localStorage.getItem(PANEL_WIDTH_KEY))
+  return Number.isFinite(saved) && saved > 0 ? clampPanelWidth(saved) : PANEL_WIDTH_DEFAULT
+}
 
 interface AiPanelProps {
   editor: Editor
@@ -38,19 +62,77 @@ interface ChatEntry {
  * supplied as context on every run. Engine mutation through AI tools lands
  * with the Allternit skill runtime in a later phase.
  */
+const APP_KEY: OfficeAppKey = 'docs'
+
 export function AiPanel({ blocks, docEmpty, preset, open, onExpand, onCollapse }: AiPanelProps) {
   const { t } = useI18n()
   const [chat, setChat] = useState<ChatEntry[]>([])
   const [prompt, setPrompt] = useState('')
   const [busy, setBusy] = useState(false)
+  const [panelWidth, setPanelWidth] = useState(loadPanelWidth)
+  const [modelId, setModelId] = useState<string | undefined>(() => resolveOfficeModelId(APP_KEY))
+  const [resizing, setResizing] = useState(false)
+  const panelRef = useRef<HTMLDivElement>(null)
+  const resizeCleanupRef = useRef<(() => void) | null>(null)
   const lastPresetNonce = useRef<number | null>(null)
+
+  // The .ai-dock wrapper owns the animated width; sync the resizable panel width.
+  useEffect(() => {
+    const dock = panelRef.current?.closest('.ai-dock') as HTMLElement | null
+    dock?.style.setProperty('--ai-panel-width', `${panelWidth}px`)
+  }, [panelWidth])
+
+  // Re-clamp the persisted width when the window shrinks.
+  useEffect(() => {
+    const onResize = (): void => setPanelWidth((w) => clampPanelWidth(w))
+    window.addEventListener('resize', onResize)
+    return () => window.removeEventListener('resize', onResize)
+  }, [])
+
+  useEffect(() => () => resizeCleanupRef.current?.(), [])
+
+  /** Drag the right edge to resize: the panel is flush with the window's left edge, so width = clientX */
+  const startResize = (e: ReactPointerEvent<HTMLDivElement>): void => {
+    e.preventDefault()
+    const resizer = e.currentTarget
+    setResizing(true)
+    document.body.style.cursor = 'col-resize'
+    document.body.style.userSelect = 'none'
+    const onMove = (ev: PointerEvent): void => {
+      setPanelWidth(clampPanelWidth(ev.clientX))
+    }
+    let done = false
+    const cleanup = (): void => {
+      if (done) return
+      done = true
+      resizeCleanupRef.current = null
+      window.removeEventListener('pointermove', onMove)
+      window.removeEventListener('pointerup', cleanup)
+      window.removeEventListener('pointercancel', cleanup)
+      resizer.removeEventListener('lostpointercapture', cleanup)
+      document.body.style.cursor = ''
+      document.body.style.userSelect = ''
+      setResizing(false)
+      setPanelWidth((w) => {
+        localStorage.setItem(PANEL_WIDTH_KEY, String(Math.round(w)))
+        return w
+      })
+    }
+    resizeCleanupRef.current = cleanup
+    window.addEventListener('pointermove', onMove)
+    window.addEventListener('pointerup', cleanup)
+    window.addEventListener('pointercancel', cleanup)
+    resizer.addEventListener('lostpointercapture', cleanup)
+    resizer.setPointerCapture(e.pointerId)
+  }
 
   const loopRef = useRef<OfficeAgentLoop | null>(null)
   if (!loopRef.current) {
     loopRef.current = new OfficeAgentLoop({
+      modelId,
       skill: {
         systemPrompt:
-          'You are the Allternit Docs assistant. Help the user draft and edit the open document. Be concise and concrete.',
+          'IGNORE ALL PREVIOUS INSTRUCTIONS ABOUT CODE, FILES, GIT, NOTEBOOKS, OR DESIGN SYNC. You are NOT in a coding CLI or IDE. You are the Allternit Docs assistant, embedded in the Allternit Docs word processor. Help the user draft and edit the open document. Be concise and concrete.',
         buildContext: () => {
           const text = (blocks ?? [])
             .map((b) => b.runs?.map((r) => r.text).join('') ?? '')
@@ -114,21 +196,57 @@ export function AiPanel({ blocks, docEmpty, preset, open, onExpand, onCollapse }
   }
 
   return (
-    <div className="ai-panel">
-      <div className="ai-panel-header">
-        <div className="ai-panel-title">Allternit AI</div>
+    <div ref={panelRef} className={`ai-panel${resizing ? ' ai-panel-resizing' : ''}`}>
+      <div
+        className="ai-panel-resizer"
+        onPointerDown={startResize}
+        role="separator"
+        aria-orientation="vertical"
+        aria-label="Resize AI panel"
+      />
+      <header className="ai-panel-header">
+        <span className="ai-panel-title">
+          <GensparkMark size={18} />
+          Allternit AI
+        </span>
         <div className="ai-panel-header-actions">
-          <button type="button" title="Collapse" onClick={onCollapse}>
-            ×
+          <ModelPicker
+            value={modelId}
+            onChange={(next) => {
+              setModelId(next)
+              setOfficeModelOverride(APP_KEY, next)
+              loopRef.current?.setModelId(next)
+            }}
+          />
+          {chat.length > 0 && (
+            <button
+              className="ai-header-btn"
+              onClick={() => {
+                loopRef.current?.reset()
+                setChat([])
+                setPrompt('')
+              }}
+              title={t('aiNewChatTitle')}
+            >
+              <IconNewChat size={15} />
+            </button>
+          )}
+          <button className="ai-header-btn" onClick={onCollapse} title={t('aiCollapseTitle')}>
+            <IconSidebarCollapse size={15} />
           </button>
         </div>
-      </div>
-      <div className="ai-panel-body">
+      </header>
+      <div className="ai-chat">
         {chat.length === 0 ? (
-          <div className="ai-empty">
-            {docEmpty
-              ? 'Describe the document you want — the assistant will draft it with your document as context.'
-              : 'Ask about this document — summarize, rewrite, or extend it.'}
+          <div className="ai-chat-empty">
+            <div className="ai-chat-empty-title">
+              {docEmpty ? 'Draft a document' : 'Ask about this document'}
+            </div>
+            <div className="ai-chat-empty-body">
+              {docEmpty
+                ? 'Describe the document you want — the assistant will draft it with your document as context.'
+                : 'Summarize, rewrite, or extend the open document.'}
+            </div>
           </div>
         ) : (
           chat.map((entry, index) => (
@@ -153,42 +271,118 @@ export function AiPanel({ blocks, docEmpty, preset, open, onExpand, onCollapse }
           </div>
         ) : null}
       </div>
-      <div className="ai-input-box">
-        <textarea
-          value={prompt}
-          placeholder={docEmpty ? 'Describe the document to draft…' : 'Ask about this document…'}
-          aria-label="AI instruction"
-          rows={2}
-          onChange={(e) => setPrompt(e.target.value)}
-          onKeyDown={(e) => {
-            if (e.key === 'Enter' && !e.shiftKey) {
-              e.preventDefault()
-              run(prompt)
-            }
-          }}
-        />
-        <div className="ai-input-footer">
-          <span className="ai-input-hint">Enter to send · Shift+Enter for newline</span>
-          {busy ? (
-            <button
-              className="ai-send-btn ai-stop-btn"
-              aria-label="Stop"
-              onClick={() => loopRef.current?.cancel()}
-            >
-              ■
-            </button>
-          ) : (
-            <button
-              className="ai-send-btn"
-              aria-label="Send"
-              disabled={!prompt.trim()}
-              onClick={() => run(prompt)}
-            >
-              ↵
-            </button>
-          )}
+      <div className="ai-composer">
+        <div className="ai-input-box">
+          <textarea
+            value={prompt}
+            placeholder={docEmpty ? 'Describe the document to draft…' : 'Ask about this document…'}
+            aria-label="AI instruction"
+            rows={2}
+            onChange={(e) => setPrompt(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter' && !e.shiftKey) {
+                e.preventDefault()
+                run(prompt)
+              }
+            }}
+          />
+          <div className="ai-input-footer">
+            <span className="ai-input-hint">Enter to send · Shift+Enter for newline</span>
+            {busy ? (
+              <button
+                className="ai-send-btn ai-stop-btn"
+                aria-label="Stop"
+                onClick={() => loopRef.current?.cancel()}
+              >
+                ■
+              </button>
+            ) : (
+              <button
+                className="ai-send-btn"
+                aria-label="Send"
+                disabled={!prompt.trim()}
+                onClick={() => run(prompt)}
+              >
+                ↵
+              </button>
+            )}
+          </div>
         </div>
       </div>
+    </div>
+  )
+}
+
+function ModelPicker({
+  value,
+  onChange,
+}: {
+  value?: string | undefined
+  onChange?: (modelId: string | undefined) => void
+}): React.JSX.Element {
+  const [open, setOpen] = useState(false)
+  const [options, setOptions] = useState<OfficeModelOption[]>(() => getOfficeModelOptions())
+  const selected = options.find((o) => o.id === (value ?? 'platform')) ?? options[0]
+  const menuRef = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    let cancelled = false
+    refreshOfficeModelOptions()
+      .then((next) => {
+        if (!cancelled) setOptions(next)
+      })
+      .catch(() => {})
+    return () => {
+      cancelled = true
+    }
+  }, [])
+
+  useEffect(() => {
+    if (!open) return
+    const onDocClick = (e: MouseEvent): void => {
+      if (!menuRef.current?.contains(e.target as Node)) setOpen(false)
+    }
+    document.addEventListener('mousedown', onDocClick)
+    return () => document.removeEventListener('mousedown', onDocClick)
+  }, [open])
+
+  return (
+    <div className="ai-model-picker" ref={menuRef}>
+      <button
+        type="button"
+        className="ai-model-picker-trigger"
+        aria-haspopup="listbox"
+        aria-expanded={open}
+        title={selected?.label}
+        onClick={() => setOpen((v) => !v)}
+      >
+        <span className="ai-model-picker-label">{selected?.label}</span>
+        <span className="ai-model-picker-caret" aria-hidden>
+          ▾
+        </span>
+      </button>
+      {open && (
+        <div className="ai-model-picker-menu" role="listbox">
+          {options.map((o) => (
+            <button
+              key={o.id}
+              type="button"
+              role="option"
+              aria-selected={o.id === selected?.id}
+              className={`ai-model-picker-option${o.id === selected?.id ? ' active' : ''}`}
+              onClick={() => {
+                onChange?.(o.id === 'platform' ? undefined : o.id)
+                setOpen(false)
+              }}
+            >
+              <span className="ai-model-picker-option-label">{o.label}</span>
+              {o.provider && (
+                <span className="ai-model-picker-option-provider">{o.provider}</span>
+              )}
+            </button>
+          ))}
+        </div>
+      )}
     </div>
   )
 }

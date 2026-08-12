@@ -9,8 +9,6 @@ import {
   parseFrontmatter,
 } from '../frontmatterParser.js'
 import { getFsImplementation, isDuplicatePath } from '../fsOperations.js'
-import { extractDescriptionFromMarkdown } from '../markdownConfigLoader.js'
-import { loadAllPluginsCacheOnly } from './pluginLoader.js'
 import { walkPluginMarkdown } from './walkPluginMarkdown.js'
 
 async function loadOutputStylesFromDirectory(
@@ -56,7 +54,9 @@ async function loadOutputStyleFromFile(
     const name = `${pluginName}:${baseStyleName}`
     const description =
       coerceDescriptionToString(frontmatter.description, name) ??
-      extractDescriptionFromMarkdown(
+      (
+        await import('../markdownConfigLoader.js')
+      ).extractDescriptionFromMarkdown(
         markdownContent,
         `Output style from ${pluginName} plugin`,
       )
@@ -88,6 +88,7 @@ async function loadOutputStyleFromFile(
 export const loadPluginOutputStyles = memoize(
   async (): Promise<OutputStyleConfig[]> => {
     // Only load output styles from enabled plugins
+    const { loadAllPluginsCacheOnly } = await import('./pluginLoader.js')
     const { enabled, errors } = await loadAllPluginsCacheOnly()
     const allStyles: OutputStyleConfig[] = []
 

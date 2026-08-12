@@ -51,6 +51,9 @@ pub fn provider_router() -> Router<Arc<AppState>> {
         )
         .route("/providers/auth/status", get(list_provider_auth_status))
         .route("/providers/video/generate", post(generate_video))
+        .route("/media/providers", get(list_media_providers))
+        .route("/media/:mode/providers", get(list_media_providers_for_mode))
+        .route("/media/:mode/generate", post(generate_media))
         .route("/provider/ollama/status", get(ollama_live_status))
         .route("/provider/ollama/models", get(list_ollama_models))
         .route("/provider/huggingface/search", get(search_huggingface))
@@ -62,6 +65,62 @@ async fn generate_video(headers: HeaderMap, Json(payload): Json<serde_json::Valu
         None => return unauthorized(),
     };
     match crate::gizzi_provider_auth::generate_video(payload).await {
+        Ok((status, payload)) => (
+            StatusCode::from_u16(status).unwrap_or(StatusCode::BAD_GATEWAY),
+            Json(payload),
+        )
+            .into_response(),
+        Err(error) => (
+            StatusCode::BAD_GATEWAY,
+            Json(json!({ "error": "gizzi_provider_error", "message": error })),
+        )
+            .into_response(),
+    }
+}
+
+async fn list_media_providers(headers: HeaderMap) -> Response {
+    let _user = match get_user(&headers) {
+        Some(user) => user,
+        None => return unauthorized(),
+    };
+    match crate::gizzi_provider_auth::list_media_providers().await {
+        Ok(payload) => Json(payload).into_response(),
+        Err(error) => (
+            StatusCode::BAD_GATEWAY,
+            Json(json!({ "error": "gizzi_provider_error", "message": error })),
+        )
+            .into_response(),
+    }
+}
+
+async fn list_media_providers_for_mode(
+    headers: HeaderMap,
+    Path(mode): Path<String>,
+) -> Response {
+    let _user = match get_user(&headers) {
+        Some(user) => user,
+        None => return unauthorized(),
+    };
+    match crate::gizzi_provider_auth::list_media_providers_for_mode(mode).await {
+        Ok(payload) => Json(payload).into_response(),
+        Err(error) => (
+            StatusCode::BAD_GATEWAY,
+            Json(json!({ "error": "gizzi_provider_error", "message": error })),
+        )
+            .into_response(),
+    }
+}
+
+async fn generate_media(
+    headers: HeaderMap,
+    Path(mode): Path<String>,
+    Json(payload): Json<serde_json::Value>,
+) -> Response {
+    let _user = match get_user(&headers) {
+        Some(user) => user,
+        None => return unauthorized(),
+    };
+    match crate::gizzi_provider_auth::generate_media(mode, payload).await {
         Ok((status, payload)) => (
             StatusCode::from_u16(status).unwrap_or(StatusCode::BAD_GATEWAY),
             Json(payload),

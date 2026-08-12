@@ -27,11 +27,18 @@ export interface PdfInitialDocument {
 export interface PdfBridgeOptions {
   document?: PdfInitialDocument | null
   onSave?: (bytes: Uint8Array, name: string) => void
+  /** Force the viewer into read-only mode (no editing, no save). */
+  readOnly?: boolean
 }
 
 const VIRTUAL_UPLOADS = '/virtual/uploads'
 
 let booted = false
+let bridgeReadOnly = false
+
+export function isPdfBridgeReadOnly(): boolean {
+  return bridgeReadOnly
+}
 
 function download(bytes: Uint8Array, name: string): void {
   const blob = new Blob([bytes as unknown as BlobPart], { type: 'application/pdf' })
@@ -46,6 +53,7 @@ function download(bytes: Uint8Array, name: string): void {
 export function installPdfBridge(options: PdfBridgeOptions = {}): void {
   if (booted) return
   booted = true
+  bridgeReadOnly = options.readOnly ?? false
 
   registerPdfIpc()
 

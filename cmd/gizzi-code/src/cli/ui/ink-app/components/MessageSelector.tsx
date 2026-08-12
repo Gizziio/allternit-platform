@@ -14,7 +14,9 @@ import { Box, Text } from '../ink';
 import { useKeybinding, useKeybindings } from '../keybindings/useKeybinding';
 import type { Message, PartialCompactDirection, UserMessage } from '../types/message';
 import { stripDisplayTags } from '../utils/displayTags';
-import { createUserMessage, extractTag, isEmptyMessageText, isSyntheticMessage, isToolUseResultMessage } from '../utils/messages';
+import { createUserMessage, isSyntheticMessage, isToolUseResultMessage } from '../utils/messages';
+import { extractTag } from '../utils/extractTag.js';
+import { isEmptyMessageText } from '../utils/syntheticMessages.js';
 import { type OptionWithDescription, Select } from './CustomSelect/select';
 import { Spinner } from './Spinner';
 function isTextBlock(block: ContentBlockParam): block is TextBlockParam {

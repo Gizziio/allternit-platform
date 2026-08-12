@@ -21,16 +21,6 @@ import {
 import { getOauthProfileFromOauthToken } from '../../services/oauth/getOauthProfile'
 import { OAuthService } from '../../services/oauth/index'
 import type { OAuthTokens } from '../../services/oauth/types'
-import {
-  clearOAuthTokenCache,
-  getAnthropicApiKeyWithSource,
-  getAuthTokenSource,
-  getOauthAccountInfo,
-  getSubscriptionType,
-  isUsing3PServices,
-  saveOAuthTokensIfNeeded,
-  validateForceLoginOrg,
-} from '../../utils/auth'
 import { saveGlobalConfig } from '../../utils/config'
 import { logForDebugging } from '../../utils/debug'
 import { isRunningOnHomespace } from '../../utils/envUtils'
@@ -49,6 +39,10 @@ import {
  * and sets up the local auth state.
  */
 export async function installOAuthTokens(tokens: OAuthTokens): Promise<void> {
+  const { clearOAuthTokenCache, saveOAuthTokensIfNeeded } = await import(
+    '../../utils/auth'
+  )
+
   // Clear old state before saving new credentials
   await performLogout({ clearOnboarding: false })
 
@@ -127,6 +121,8 @@ export async function authLogin({
     )
     process.exit(1)
   }
+
+  const { validateForceLoginOrg } = await import('../../utils/auth')
 
   const settings = getInitialSettings()
   // forceLoginMethod is a hard constraint (enterprise setting) — matches ConsoleOAuthFlow behavior.
@@ -234,6 +230,13 @@ export async function authStatus(opts: {
   json?: boolean
   text?: boolean
 }): Promise<void> {
+  const {
+    getAnthropicApiKeyWithSource,
+    getAuthTokenSource,
+    getOauthAccountInfo,
+    getSubscriptionType,
+    isUsing3PServices,
+  } = await import('../../utils/auth')
   const { source: authTokenSource, hasToken } = getAuthTokenSource()
   const { source: apiKeySource } = getAnthropicApiKeyWithSource()
   const hasApiKeyEnvVar =

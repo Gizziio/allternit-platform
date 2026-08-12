@@ -20,10 +20,6 @@ import {
   parseShellFrontmatter,
 } from '../frontmatterParser.js'
 import { getFsImplementation, isDuplicatePath } from '../fsOperations.js'
-import {
-  extractDescriptionFromMarkdown,
-  parseSlashCommandToolsFromFrontmatter,
-} from '../markdownConfigLoader.js'
 import { parseUserSpecifiedModel } from '../model/model.js'
 import { executeShellCommandsInPrompt } from '../promptShellExecution.js'
 import { loadAllPluginsCacheOnly } from './pluginLoader.js'
@@ -34,6 +30,21 @@ import {
 } from './pluginOptionsStorage.js'
 import type { CommandMetadata, PluginManifest } from './schemas.js'
 import { walkPluginMarkdown } from './walkPluginMarkdown.js'
+
+// Lazily loaded to avoid a static circular import through markdownConfigLoader.js.
+// Populated by ensureMarkdownConfigLoader() before any synchronous use.
+let markdownConfigLoaderModule:
+  | typeof import('../markdownConfigLoader.js')
+  | undefined
+
+async function ensureMarkdownConfigLoader(): Promise<
+  typeof import('../markdownConfigLoader.js')
+> {
+  if (!markdownConfigLoaderModule) {
+    markdownConfigLoaderModule = await import('../markdownConfigLoader.js')
+  }
+  return markdownConfigLoaderModule
+}
 
 // Similar to MarkdownFile but for plugin sources
 type PluginMarkdownFile = {
@@ -234,7 +245,7 @@ function createPluginCommand(
     )
     const description =
       validatedDescription ??
-      extractDescriptionFromMarkdown(
+      markdownConfigLoaderModule!.extractDescriptionFromMarkdown(
         content,
         isSkill ? 'Plugin skill' : 'Plugin command',
       )
@@ -257,9 +268,10 @@ function createPluginCommand(
                 : tool,
             )
           : rawAllowedTools
-    const allowedTools = parseSlashCommandToolsFromFrontmatter(
-      substitutedAllowedTools,
-    )
+    const allowedTools =
+      markdownConfigLoaderModule!.parseSlashCommandToolsFromFrontmatter(
+        substitutedAllowedTools,
+      )
 
     const argumentHint = frontmatter['argument-hint'] as string | undefined
     const argumentNames = parseArgumentNames(
@@ -413,6 +425,7 @@ function createPluginCommand(
 }
 
 export const getPluginCommands = memoize(async (): Promise<Command[]> => {
+  await ensureMarkdownConfigLoader()
   // --bare: skip marketplace plugin auto-load. Explicit --plugin-dir still
   // works — getInlinePlugins() is set by main.tsx from --plugin-dir.
   // loadAllPluginsCacheOnly already short-circuits to inline-only when
@@ -840,6 +853,7 @@ async function loadSkillsFromDirectory(
 }
 
 export const getPluginSkills = memoize(async (): Promise<Command[]> => {
+  await ensureMarkdownConfigLoader()
   // --bare: same gate as getPluginCommands above — honor explicit
   // --plugin-dir, skip marketplace auto-load.
   if (isBareMode() && getInlinePlugins().length === 0) {

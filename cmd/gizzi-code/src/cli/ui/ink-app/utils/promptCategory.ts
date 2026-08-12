@@ -3,7 +3,7 @@ import type { QuerySource } from './../constants/querySource.ts'
 import {
   DEFAULT_OUTPUT_STYLE_NAME,
   OUTPUT_STYLE_CONFIG,
-} from '../constants/outputStyles.js'
+} from '../constants/outputStyleConstants.js'
 import { getSettings_DEPRECATED } from './settings/settings.js'
 
 /**

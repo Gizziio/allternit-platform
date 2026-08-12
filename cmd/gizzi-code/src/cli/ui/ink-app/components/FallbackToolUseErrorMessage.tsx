@@ -3,7 +3,7 @@ import { c as _c } from "react/compiler-runtime";
 import type { ToolResultBlockParam } from '@allternit/sdk/providers/anthropic/resources/messages/messages.mjs';
 import * as React from 'react';
 import { stripUnderlineAnsi } from './shell/OutputLine.tsx';
-import { extractTag } from './../utils/messages.ts';
+import { extractTag } from './../utils/extractTag.js';
 import { removeSandboxViolationTags } from './../utils/sandbox/sandbox-ui-utils.ts';
 import { Box, Text } from '../ink';
 import { useShortcutDisplay } from '../keybindings/useShortcutDisplay';
