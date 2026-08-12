@@ -107,6 +107,26 @@ Open questions: None. Documentation-only work; no build was run.
 
 ---
 
+## Codex Security parity documentation (2026-08-12)
+
+Goal: Document Allternit parity for the assigned Codex Security cloud FAQ,
+CLI FAQ/reference/quickstart, TypeScript SDK, and plugin quickstart items.
+
+Just did: Created six parity pages and the required coverage report. Mapped the
+plugin-backed `/security-review` workflow, provider auth, sandbox/approval
+configuration, MCP, managed session budgets, and `gizzi verification`; marked
+the managed scanner, typed scan lifecycle/results, threat-model store, bulk
+resume, baseline matching, and SARIF surfaces as roadmap instead of presenting
+generic agent infrastructure as feature parity.
+
+Next: Reviewer can validate the mappings and decide which missing security
+product contracts should become implementation work.
+
+Open questions: The repository does not publish a guaranteed marketplace URL
+for the `security-review` plugin. Documentation-only work; no build was run.
+
+---
+
 ## Parity docs: developer commands (2026-08-12)
 
 Goal: Document Allternit parity for the 53 assigned ChatGPT/Codex developer-command items.

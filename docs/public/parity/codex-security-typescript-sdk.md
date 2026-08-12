@@ -16,8 +16,16 @@ import {
 const registry = new ToolRegistry()
 const tools = new NativeToolBelt(registry)
 const harness = new AllternitHarness({
-  tools: registry,
-  permissionPolicy: { defaultAction: 'deny' },
+  mode: 'local',
+  local: { baseURL: 'http://localhost:11434' },
+  permissionPolicy: {
+    name: 'read-only-security-review',
+    active: true,
+    rules: [
+      { tool: 'text_editor', action: 'deny' },
+      { tool: 'bash', action: 'ask' },
+    ],
+  },
 })
 ```
 
@@ -110,4 +118,3 @@ Treat model output as untrusted until schema validation and human review. Stable
 ## Handle scan errors
 
 Handle provider/authentication failures, tool denials, invalid model output, budget exhaustion, cancellation, and partial context separately. The harness middleware includes retry/fallback helpers, while the API uses stable errors such as `allternit.authentication_failed`, `allternit.permission_denied`, `allternit.rate_limited`, `allternit.budget_exceeded`, and `allternit.upstream_error`. Do not turn a partial or failed run into an empty "no findings" result.
-
