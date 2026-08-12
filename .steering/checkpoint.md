@@ -83,3 +83,95 @@ Just did:
 Next: Stage all Phase 2 files and commit to `ao/p2-swarm-a`, then write `docs/SWARM_A_PHASE2_NOTES.md`.
 
 Open questions: None.
+
+---
+
+## Codex manual parity part 3 checkpoint (2026-08-12)
+
+Goal: Document Allternit parity for the assigned Codex manual part 3 items
+covering configuration, UI, integrations, permissions, observability, and
+security workflows.
+
+Just did: Created `docs/public/parity/codex-manual-part3.md` and its required
+coverage report. Mapped project discovery, worktrees, approvals, credentials,
+provider endpoints, model availability, MCP/apps, agents/hooks, web search,
+TypeScript, TUI customization, analytics, OTLP, and vulnerability reporting;
+marked Codex-hosted and literal-schema-only features as not applicable or
+roadmap.
+
+Next: Reviewer can validate the semantic mappings and decide whether the
+documented network-proxy, Windows-isolation, TUI, OTLP, and security-workbench
+gaps should become implementation tasks.
+
+Open questions: None. Documentation-only work; no build was run.
+
+---
+
+## Parity docs: developer commands (2026-08-12)
+
+Goal: Document Allternit parity for the 53 assigned ChatGPT/Codex developer-command items.
+
+Just did: Researched the Gizzi TUI command registry, global CLI flags,
+keybinding schema, session lifecycle APIs, connector catalog, MCP server, work
+queue, memory, preferences, permissions, and hooks. Created
+`docs/public/parity/developer-commands.md` and the required coverage report.
+
+Next: Reviewer can validate command naming and roadmap classifications. No build
+is needed because the change is documentation-only.
+
+Open questions: None.
+
+---
+
+## Codex manual parity part 4 checkpoint (2026-08-12)
+
+Goal: Document Allternit parity for the assigned Codex manual part 4
+configuration literals.
+
+Just did: Created `docs/public/parity/codex-manual-part4.md` with researched
+mappings for providers, MCP/OAuth, compaction and memory, tools, sandboxing,
+history/OTel, TUI controls, authentication, connectors, and web search. Added
+the required `.parity-reports/codex-manual-part4.md` report. Unsupported
+Codex-hosted and configuration-specific controls are explicitly labeled not
+applicable or roadmap.
+
+Next: Reviewer can validate wording and roadmap classifications. No build is
+needed because the changes are documentation-only.
+
+Open questions: None.
+
+---
+
+## Parity docs: non-interactive, commands, prompts, administration, usage (2026-08-12)
+
+Goal: Document the 24 assigned OpenAI ChatGPT/Codex handoff items across five
+Allternit parity pages.
+
+Just did: Researched `gizzi exec`, stdin/structured output, auth profiles,
+session resume, TUI commands/keybindings/search, guarded deep links, custom
+command frontmatter, admin routes/CLI, gateway budgets, spend caps, and managed
+session budgets. Created the five public pages and the required coverage report;
+classified hosted ChatGPT subscription allowances and implicit external posting
+as not applicable to the self-host/BYOC model.
+
+Next: Reviewer can validate terminology and cross-links. No build is needed
+because the change is documentation-only.
+
+Open questions: None.
+
+---
+
+## Codex manual parity part 1 checkpoint (2026-08-12)
+
+Goal: Document Allternit parity for the 118 assigned Codex manual items through
+`History & File Opener`.
+
+Just did: Created `docs/public/parity/codex-manual-part1.md` with configuration,
+provider, sandbox, MCP, session, UI, analytics, governance, and security mappings;
+marked unsupported Codex syntax and SaaS-only concepts as not applicable/roadmap;
+created the required `.parity-reports/codex-manual-part1.md` report.
+
+Next: Reviewer can validate terminology and decide whether roadmap gaps should
+be promoted into implementation tasks.
+
+Open questions: None.
