@@ -1,0 +1,115 @@
+---
+status: done
+files_changed:
+  - docs/public/parity/codex-security-cloud-faq.md
+  - docs/public/parity/codex-security-cli-faq.md
+  - docs/public/parity/codex-security-cli-reference.md
+  - docs/public/parity/codex-security-typescript-sdk.md
+  - docs/public/parity/codex-security-cli-quickstart.md
+  - docs/public/parity/codex-security-plugin-quickstart.md
+  - .parity-reports/codex-security-cloud-faq-codex-security-cli-faq-codex-security-cli-reference-codex-security-typescript-sdk-codex-security-cli-quickstart-codex-security-plugin-quickstart.md
+items_covered:
+  - "Can I edit the threat model?"
+  - "Do I need to configure a scan before using threat modeling?"
+  - "Does Codex Security auto-apply patches?"
+  - "Does it replace SAST?"
+  - "Does it replace manual security review?"
+  - "Does the patch directly modify my PR branch?"
+  - "Does the project need to be built for scanning?"
+  - "How does Codex Security reduce false positives and avoid broken patches?"
+  - "How does Codex Security work?"
+  - "How is a threat model generated?"
+  - "How is customer code isolated?"
+  - "How long do initial scans take, and what happens after that?"
+  - "Validation"
+  - "What business problem does Codex Security solve?"
+  - "What does the proposed patch contain?"
+  - "What happens if validation fails?"
+  - "What is Codex Security?"
+  - "What is a threat model?"
+  - "What is auto-validation?"
+  - "What is the analysis pipeline?"
+  - "What languages are supported?"
+  - "What outputs do I get after the scan completes?"
+  - "Why does it matter?"
+  - "Automation and cost"
+  - "Can an interrupted bulk scan resume"
+  - "Can another application run scans directly"
+  - "Can scans check commits and pull requests"
+  - "Findings and coverage"
+  - "How can a scan use architecture and security policies"
+  - "How can a team confirm that a fix worked"
+  - "How do scan cost limits work"
+  - "How do scans distinguish new and known findings"
+  - "How does bulk repository scanning work"
+  - "How does false-positive feedback work"
+  - "Repository scans"
+  - "What does incomplete coverage mean"
+  - "What if the CLI can't save scan history"
+  - "Where can teams find earlier scan results"
+  - "Who can use the CLI"
+  - "Why can repeat scans return different findings"
+  - "Why does a scan use an API key after sign-in"
+  - "Add scan instructions"
+  - "Add security context"
+  - "Authentication and prerequisites"
+  - "Completion summary"
+  - "Configure deep scans"
+  - "Configure the runtime"
+  - "Discover commands and connect agents"
+  - "Exit codes and signals"
+  - "Find saved scans"
+  - "Inspect or repeat a scan"
+  - "Match and compare findings"
+  - "Read scan output"
+  - "Scan artifacts"
+  - "Select scan authentication"
+  - "Select the scan target"
+  - "Set output and policy options"
+  - "Use OpenRouter or Fireworks"
+  - "Verbose diagnostics"
+  - "Add a security knowledge base"
+  - "Add scan and follow-up instructions"
+  - "Check inputs with preflight"
+  - "Choose a scan target"
+  - "Handle scan errors"
+  - "Run a scan"
+  - "Scan committed changes"
+  - "Scan selected paths"
+  - "Scan the working tree"
+  - "Select deep mode"
+  - "Set up the SDK"
+  - "Track or cancel a scan"
+  - "Work with scan results"
+  - "Add architecture and security context"
+  - "Check the prerequisites"
+  - "Choose the next scan"
+  - "Prepare a scan"
+  - "Review the results"
+  - "Revisit a saved scan"
+  - "Run your first scan"
+  - "Scan changes before each commit"
+  - "Scan repositories in bulk"
+  - "Set a scan budget"
+  - "Set up and verify the CLI"
+  - "Sign in"
+  - "Choose your next workflow"
+  - "Install the plugin"
+  - "What the scan creates"
+items_missing:
+  - "Managed security cloud: no repository onboarding, scheduled scan, threat-model, findings dashboard, or managed patch pipeline."
+  - "First-class security CLI: no typed targets, preflight, deep mode, coverage summary, durable scans, resume, bulk scan, baseline matching, or security exit-code contract."
+  - "Security TypeScript SDK: no SecurityClient, ScanTarget, Scan handle, or Finding/ThreatModel/Patch/Coverage result types."
+  - "Security artifact interoperability: no stable finding fingerprints or SARIF export."
+  - "Public plugin distribution: the repository contains the plugin-backed command bridge but does not publish a guaranteed security-review marketplace URL."
+notes: "Docs-only work; no Rust code changed and no build was run. Existing unrelated worktree changes and parity files were left untouched. The pages distinguish the plugin-backed /security-review workflow from the separate gizzi verification subsystem and from generic managed-session APIs."
+---
+
+# Codex Security parity documentation report
+
+Created one documentation page for each assigned category and covered every listed handoff item. The pages map the usable Allternit pieces—gizzi-code's plugin-backed `/security-review`, provider profiles, sandbox and approval configuration, MCP, managed session budgets/events, and `gizzi verification`—while explicitly identifying the absence of a dedicated managed security product, scan CLI, and security SDK.
+
+The most important documentation decision is that generic agent/session infrastructure is presented as a foundation for a custom scanner, not as feature parity. Likewise, `gizzi verification` is documented as independent patch evidence rather than vulnerability auto-validation.
+
+No source code was changed. Per the task instructions, `cargo check -p allternit-api` was not run.
+

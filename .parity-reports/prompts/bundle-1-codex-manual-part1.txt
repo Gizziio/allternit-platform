@@ -1,0 +1,144 @@
+You are a technical documentation writer working in `/Users/joe/Desktop/allternit-parity-workspace` on branch `parity/swarm-sprint`.
+
+Read the task spec at `.parity-reports/TASK_SPEC.md` for context.
+
+Your assignment: create Allternit parity documentation for the following OpenAI ChatGPT/Codex handoff categories:
+
+codex-manual-part1
+
+The unchecked items for these categories are listed below. For each item, research whether Allternit has an equivalent capability by reading the codebase and existing docs (e.g., `cmd/allternit-api/src/`, `cmd/gizzi-code/`, `packages/@allternit/`, `sdk/allternit-sdk/`, `docs/public/`). Then create one docs page per category:
+
+- docs/public/parity/codex-manual-part1.md
+
+Each page should:
+- Briefly explain the original ChatGPT/Codex concept.
+- Map it to the equivalent Allternit feature, config, CLI command, API endpoint, tool, or workflow.
+- Include concrete examples (TOML config, curl, CLI commands) where applicable.
+- If a concept has no Allternit equivalent and is not applicable to the self-host/BYOC model, document it as "Not applicable / roadmap" and explain why.
+
+Do NOT edit `/Users/joe/Desktop/allternit-parity-handoff.md`. Do NOT run `git commit` or other git mutations. Run `cargo check -p allternit-api` only if you change Rust code; docs-only changes do not need builds.
+
+When finished, write a report file `.parity-reports/codex-manual-part1.md` with YAML frontmatter containing `status`, `files_changed`, `items_covered`, `items_missing`, and `notes`, followed by prose.
+
+Here are the unchecked items to cover:
+
+### Category: codex-manual-part1 (handoff lines 2293-2410)
+- [ ] [GAP] **"/absolute/path/to/secrets" = "deny"**
+- [ ] [GAP] **"/var/run/docker.sock" = "allow"**
+- [ ] [GAP] **":workspace_roots" = { "." = "write", "\*\*/\*.env" = "deny" }**
+- [ ] [GAP] **"\*" allows any public host that is not denied, so prefer scoped rules when possible.**
+- [ ] [GAP] **"\*.example.com" matches subdomains only; "\*\*.example.com" matches the apex plus subdomains.**
+- [ ] [GAP] **"api.openai.com" = "allow"**
+- [ ] [GAP] **"example.com" = "deny"**
+- [ ] [GAP] **"x-otlp-api-key" = "${OTLP_TOKEN}"**
+- [ ] [GAP] **"~/code/app" = true**
+- [ ] [GAP] **"~/code/shared-lib" = true**
+- [ ] [GAP] **--- Example: Azure/OpenAI-compatible provider ---**
+- [ ] [GAP] **--- Example: Local OSS (e.g., Ollama-compatible) ---**
+- [ ] [GAP] **--- Example: OpenAI data residency with explicit base URL or headers ---**
+- [ ] [GAP] **--- Example: STDIO transport ---**
+- [ ] [GAP] **--- Example: Streamable HTTP transport ---**
+- [ ] [GAP] **--- Example: built-in Amazon Bedrock provider options ---**
+- [ ] [GAP] **--- Example: command-backed bearer token auth ---**
+- [ ] [GAP] **.worktreeinclude**
+- [ ] [GAP] **Add an exact local IP literal or `localhost` allow rule for one target, or set it to true only when broader local access is required.**
+- [ ] [GAP] **Additional writable roots beyond the workspace (cwd). Default: []**
+- [ ] [GAP] **Advanced Configuration**
+- [ ] [GAP] **Allow login-shell semantics for shell-based tools when they request `login = true`.**
+- [ ] [GAP] **Allow outbound network access inside the sandbox. Default: false**
+- [ ] [GAP] **Allowed values: chatgpt | api**
+- [ ] [GAP] **Analytics API**
+- [ ] [GAP] **Append one JSON argument with the path and editor context.**
+- [ ] [GAP] **Append the opened path directly after the command.**
+- [ ] [GAP] **Approval & Sandbox**
+- [ ] [GAP] **Approvals, Sandboxing, and Security**
+- [ ] [GAP] **Apps / Connectors**
+- [ ] [GAP] **Authentication & Login**
+- [ ] [GAP] **Authentication and sessions**
+- [ ] [GAP] **Available IDs include app-name, project, spinner, status, thread, git-branch, model,**
+- [ ] [GAP] **Base URL for ChatGPT auth flow (not OpenAI API).**
+- [ ] [GAP] **Brainstorm plugin use cases**
+- [ ] [GAP] **Breaking changes**
+- [ ] [GAP] **Built-ins include:**
+- [ ] [GAP] **By default, deny read access to all files on disk.**
+- [ ] [GAP] **By extending the :workspace profile, :tmpdir and :slash_tmp are "write" by**
+- [ ] [GAP] **By extending the :workspace profile, you get Codex's safeguards to ensure**
+- [ ] [GAP] **CLI command reference**
+- [ ] [GAP] **CLI, IDE, App, and Cloud Behavior**
+- [ ] [GAP] **Canonical case-insensitive filters. "include" entries create an allowlist.**
+- [ ] [GAP] **Centralized Feature Flags (preferred)**
+- [ ] [GAP] **ChatGPT Voice**
+- [ ] [GAP] **ChatGPT Work admin FAQ**
+- [ ] [GAP] **ChatGPT on the web**
+- [ ] [GAP] **ChatGPT usage limits and spend controls**
+- [ ] [GAP] **Check for updates on startup. Default: true**
+- [ ] [GAP] **Cloud environments**
+- [ ] [GAP] **Code mode namespaces. This feature is under development and off by default.**
+- [ ] [GAP] **Codex Security TypeScript SDK**
+- [ ] [GAP] **Codex Security plugin changelog**
+- [ ] [GAP] **Codex Security plugin quickstart**
+- [ ] [GAP] **Codex appends a server-specific callback ID before OAuth login.**
+- [ ] [GAP] **Communication style for supported models. Allowed values: none | friendly | pragmatic**
+- [ ] [GAP] **Compliance API and audit events**
+- [ ] [GAP] **Config Profiles (separate files)**
+- [ ] [GAP] **Config basics**
+- [ ] [GAP] **Configuration, Authentication, and Models**
+- [ ] [GAP] **Connect and test your plugin**
+- [ ] [GAP] **Control alternate screen usage (auto skips it in Zellij to preserve scrollback).**
+- [ ] [GAP] **Control whether users can submit feedback from `/feedback`. Default: true**
+- [ ] [GAP] **Custom callback paths are supported. `mcp_oauth_callback_port` still controls the listener port.**
+- [ ] [GAP] **Custom key bindings. Selected composer actions fall back to matching [tui.keymap.global] bindings.**
+- [ ] [GAP] **Customization, Skills, Rules, MCP, and Integrations**
+- [ ] [GAP] **Cyber Safety**
+- [ ] [GAP] **Default OSS provider for --oss sessions. When unset, Codex prompts. Default: unset.**
+- [ ] [GAP] **Default local provider used with `--oss`**
+- [ ] [GAP] **Default model for spawned agents. An explicit spawn model takes precedence.**
+- [ ] [GAP] **Default reasoning effort for spawned agents. An explicit spawn effort takes precedence.**
+- [ ] [GAP] **Default: true. Set false to force non-login shells and reject explicit login-shell requests.**
+- [ ] [GAP] **Define MCP servers under this table. Leave empty to disable.**
+- [ ] [GAP] **Define tools**
+- [ ] [GAP] **Deploy the Windows app**
+- [ ] [GAP] **Desktop notifications from the TUI: boolean or filtered list. Default: true**
+- [ ] [GAP] **Developers**
+- [ ] [GAP] **Disable burst-paste detection in the TUI. Default: false**
+- [ ] [GAP] **Disable or re-enable a specific skill without deleting it.**
+- [ ] [GAP] **Disable surface-specific features when needed.**
+- [ ] [GAP] **Don't combine filters with legacy exclude or**
+- [ ] [GAP] **Enable memories with [features].memories, then tune memory behavior here.**
+- [ ] [GAP] **Enable or disable analytics for this machine. When unset, Codex uses its default behavior.**
+- [ ] [GAP] **Enable or disable multi-agent tools. Default: true**
+- [ ] [GAP] **Enable the feature before configuring sandboxed networking rules.**
+- [ ] [GAP] **Enables welcome/status/spinner animations. Default: true**
+- [ ] [GAP] **Environment Profile**
+- [ ] [GAP] **Environment label applied to telemetry. Default: "dev"**
+- [ ] [GAP] **Environment variables**
+- [ ] [GAP] **Exact hosts match only themselves.**
+- [ ] [GAP] **Example OTLP/HTTP exporter configuration**
+- [ ] [GAP] **Example OTLP/gRPC trace exporter configuration**
+- [ ] [GAP] **Example additional workspace roots that inherit this profile's**
+- [ ] [GAP] **Example filesystem profile. Use `"deny"` to deny reads for exact paths or**
+- [ ] [GAP] **Example granular approval policy:**
+- [ ] [GAP] **Example granular policy:**
+- [ ] [GAP] **Examples: false | ["agent-turn-complete", "approval-requested"]**
+- [ ] [GAP] **Exclude $TMPDIR from writable roots. Default: false**
+- [ ] [GAP] **Exclude /tmp from writable roots. Default: false**
+- [ ] [GAP] **Excludes apply before explicit set values and the include allowlist.**
+- [ ] [GAP] **Execution Model and Workflows**
+- [ ] [GAP] **Experimental: run via user shell profile. Default: false**
+- [ ] [GAP] **Explicit key/value overrides. Include filters can still remove them. Default: {}**
+- [ ] [GAP] **Export and track security findings**
+- [ ] [GAP] **Exporter: none (default) | otlp-http | otlp-grpc**
+- [ ] [GAP] **External notifier program (argv array). When unset: disabled.**
+- [ ] [GAP] **Feature Maturity**
+- [ ] [GAP] **Find By Topic**
+- [ ] [GAP] **Fix and verify security findings**
+- [ ] [GAP] **For example, a CI profile could live at $CODEX_HOME/ci.config.toml:**
+- [ ] [GAP] **Force enable or disable reasoning summaries for current model.**
+- [ ] [GAP] **Force login mechanism when Codex would normally auto-select. Default: unset.**
+- [ ] [GAP] **From your WSL shell**
+- [ ] [GAP] **Get started with ChatGPT Work**
+- [ ] [GAP] **Glossary**
+- [ ] [GAP] **Governance**
+- [ ] [GAP] **Groups and provisioning**
+- [ ] [GAP] **History & File Opener**
+
