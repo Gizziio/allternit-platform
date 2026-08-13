@@ -4,5 +4,6 @@ CREATE TABLE IF NOT EXISTS files (
     purpose TEXT NOT NULL DEFAULT 'assistants',
     bytes BLOB NOT NULL,
     size INTEGER NOT NULL,
+    content_type TEXT,
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP
 );
