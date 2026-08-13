@@ -61,6 +61,12 @@ export type {
   McpDirectoryEntry,
 } from './tools/mcp.js';
 export { createMcpServerAttachment, loadMcpServerDirectory, defaultMcpServerDirectoryPath } from './tools/mcp.js';
+export { ProgrammaticToolExecutor, parseBridgeOutput, bridgeHelperCode } from './tools/programmatic-execution.js';
+export type { ProgrammaticExecutionOptions } from './tools/programmatic-execution.js';
+export { executeComposition, sequence, parallel, parallelWithConcurrency, condition, loop, toolCall } from './tools/composition.js';
+export type { CompositionStep, CompositionContext, CompositionExecutionResult, SequenceStep, ParallelStep, ConditionStep, LoopStep, ToolCallStep } from './tools/composition.js';
+export { createAdvisorTool, readRepoContext, advisorSkillManifest } from './skills/advisor.js';
+export type { AdvisorOptions } from './skills/advisor.js';
 
 // System prompts
 export { 
