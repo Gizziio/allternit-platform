@@ -34,6 +34,7 @@ pub mod batches;
 pub mod benchmarks;
 pub mod cache;
 pub mod citations;
+pub mod context_cache;
 pub mod dlp;
 pub mod dlp_patterns;
 pub mod embeddings;
@@ -85,6 +86,8 @@ pub fn llm_gateway_router(state: Arc<AppState>) -> Router<Arc<AppState>> {
         .route("/batches/:id", get(batches::get_batch))
         .route("/batches/:id/cancel", post(batches::cancel_batch))
         .route("/batches/:id/results", get(batches::batch_results))
+        .route("/context-caches", post(context_cache::create_cache).get(context_cache::list_caches))
+        .route("/context-caches/:id", get(context_cache::get_cache).delete(context_cache::delete_cache))
         .route("/models", get(proxy::list_models))
         .route("/models/:id", get(proxy::get_model))
         .route("/pricing", get(proxy::list_pricing))

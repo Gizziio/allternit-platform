@@ -13,8 +13,10 @@ use axum::{
     Json, Router,
 };
 use rusqlite::{params, OptionalExtension};
-use serde::Deserialize;
+use serde::{Deserialize, Serialize};
 use serde_json::{json, Value};
+use std::net::IpAddr;
+use std::str::FromStr;
 use std::sync::Arc;
 
 use crate::{auth::AuthUser, AppState};
@@ -533,6 +535,40 @@ async fn remove_ip_allowlist_entry(
         Ok(Err(e)) => e.into_response(),
         Err(e) => internal(e).into_response(),
     }
+}
+
+/// Check whether `ip` is allowed by the workspace IP allowlist. An empty
+/// allowlist means "allow all".
+pub fn ip_allowed(conn: &rusqlite::Connection, workspace_id: &str, ip: &str) -> bool {
+    let client_ip = match IpAddr::from_str(ip) {
+        Ok(ip) => ip,
+        Err(_) => return false,
+    };
+    let entries: Vec<String> = conn
+        .prepare("SELECT ip_range FROM workspace_ip_allowlists WHERE workspace_id = ?1 AND enabled = 1")
+        .ok()
+        .and_then(|mut stmt| {
+            stmt.query_map([workspace_id], |row| row.get(0))
+                .ok()?
+                .collect::<Result<Vec<_>, _>>()
+                .ok()
+        })
+        .unwrap_or_default();
+    if entries.is_empty() {
+        return true;
+    }
+    for entry in entries {
+        if let Ok(allowed) = IpAddr::from_str(&entry) {
+            if allowed == client_ip {
+                return true;
+            }
+        } else if let Some((prefix, _)) = entry.split_once('/') {
+            if IpAddr::from_str(prefix).map(|allowed| allowed == client_ip).unwrap_or(false) {
+                return true;
+            }
+        }
+    }
+    false
 }
 
 #[cfg(test)]
