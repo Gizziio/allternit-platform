@@ -1,0 +1,64 @@
+{
+  "name": "gizzi-code-vscode",
+  "displayName": "Gizzi Code",
+  "description": "AI-powered code assistance from Allternit",
+  "version": "0.1.0",
+  "publisher": "allternit",
+  "engines": { "vscode": "^1.90.0" },
+  "categories": ["Other"],
+  "activationEvents": ["onStartupFinished"],
+  "main": "./dist/extension.js",
+  "contributes": {
+    "commands": [
+      { "command": "gizzi.openPanel", "title": "Gizzi Code: Open Panel" },
+      { "command": "gizzi.explainCode", "title": "Gizzi Code: Explain Selection" },
+      { "command": "gizzi.refactorCode", "title": "Gizzi Code: Refactor Selection" },
+      { "command": "gizzi.generateTests", "title": "Gizzi Code: Generate Tests" },
+      { "command": "gizzi.reviewCode", "title": "Gizzi Code: Review Selection" },
+      { "command": "gizzi.fixErrors", "title": "Gizzi Code: Fix Errors" }
+    ],
+    "viewsContainers": {
+      "activitybar": [
+        { "id": "gizzi-panel", "title": "Gizzi Code", "icon": "resources/icon.svg" }
+      ]
+    },
+    "views": {
+      "gizzi-panel": [
+        { "type": "webview", "id": "gizzi.sidebar", "name": "Gizzi Code" }
+      ]
+    },
+    "configuration": {
+      "title": "Gizzi Code",
+      "properties": {
+        "gizzi.apiUrl": {
+          "type": "string",
+          "default": "http://localhost:4096",
+          "description": "Allternit API URL"
+        },
+        "gizzi.apiKey": {
+          "type": "string",
+          "default": "",
+          "description": "Allternit API key"
+        },
+        "gizzi.model": {
+          "type": "string",
+          "default": "default",
+          "description": "Default model for code generation"
+        },
+        "gizzi.autoContext": {
+          "type": "boolean",
+          "default": true,
+          "description": "Automatically include surrounding file context"
+        }
+      }
+    }
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "watch": "tsc -watch -p tsconfig.json"
+  },
+  "devDependencies": {
+    "@types/vscode": "^1.90.0",
+    "typescript": "^5.4.0"
+  }
+}
