@@ -60,6 +60,11 @@ import { VaultCommand } from "@/cli/commands/vault"
 import { CodemapCommand } from "@/cli/commands/codemap"
 import { AuthCommand } from "@/cli/commands/auth"
 import { ConfigCommand } from "@/cli/commands/config"
+import { ProfileCommand } from "@/cli/commands/profile"
+import { PermissionProfileCommand } from "@/cli/commands/permission-profile"
+import { CompletionsCommand } from "@/cli/commands/completions"
+import { RemoteCommand } from "@/cli/commands/remote"
+import { CIMode } from "@/cli/ci"
 import path from "path"
 import { Global, init as initGlobal } from "@/runtime/context/global"
 import { JsonMigration } from "@/runtime/session/storage/json-migration"
@@ -112,6 +117,15 @@ const cli = yargs(hideBin(process.argv))
     describe: "force the setup onboarding wizard",
     type: "boolean",
   })
+  .option("ci", {
+    describe: "run in CI/non-interactive mode (structured output, no prompts)",
+    type: "boolean",
+  })
+  .option("ci-format", {
+    describe: "CI output format",
+    choices: ["ndjson", "text", "markdown"],
+    default: "ndjson",
+  })
   .middleware(async (opts) => {
     await initGlobal()
     if (opts.onboarding) {
@@ -129,6 +143,13 @@ const cli = yargs(hideBin(process.argv))
     RuntimeTelemetry.attach((record) => {
       Log.Default.info("runtime.telemetry", record)
     })
+
+    // Activate CI mode if --ci flag or CI environment detected
+    if (opts.ci || CIMode.isCIEnvironment()) {
+      CIMode.activate({
+        format: opts.ciFormat as "ndjson" | "text" | "markdown" | undefined,
+      })
+    }
 
     process.env.AGENT = "1"
     process.env.GIZZI = "1"
@@ -229,6 +250,10 @@ const cli = yargs(hideBin(process.argv))
   .command(CodemapCommand)
   .command(AuthCommand)
   .command(ConfigCommand)
+  .command(ProfileCommand)
+  .command(PermissionProfileCommand)
+  .command(CompletionsCommand)
+  .command(RemoteCommand)
   .fail((msg, err) => {
     if (
       msg?.startsWith("Unknown argument") ||
