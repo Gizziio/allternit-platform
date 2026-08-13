@@ -233,8 +233,6 @@ pub struct ContentPart {
     #[serde(default)]
     pub video_url: Option<VideoUrlPart>,
     #[serde(default)]
-    pub video_url: Option<VideoUrlPart>,
-    #[serde(default)]
     pub input_video: Option<InputVideoPart>,
     #[serde(default)]
     pub file_id: Option<String>,
@@ -262,6 +260,8 @@ pub struct InputImagePart {
 #[derive(Debug, Clone, Deserialize, Serialize)]
 pub struct VideoUrlPart {
     pub url: String,
+    #[serde(default)]
+    pub detail: Option<String>,
     /// Optional MIME type hint (e.g. `video/mp4`). Inferred from the URL or
     /// data-URI prefix when omitted.
     #[serde(default)]
@@ -270,13 +270,6 @@ pub struct VideoUrlPart {
     /// this field carries the encoded payload directly.
     #[serde(default)]
     pub data: Option<String>,
-}
-
-#[derive(Debug, Clone, Deserialize, Serialize)]
-pub struct VideoUrlPart {
-    pub url: String,
-    #[serde(default)]
-    pub detail: Option<String>,
 }
 
 #[derive(Debug, Clone, Deserialize, Serialize)]
@@ -716,7 +709,14 @@ pub fn messages_to_gizzi_parts(messages: &[ChatMessage]) -> (Option<String>, Vec
                         for part in content_parts {
                             if let Some(url) = part_image_url(part)
                                 .or_else(|| part_input_image_url(part))
-                                .or_else(|| part_video_url(part))
+                                .or_else(|| part.video_url.as_ref().map(|v| {
+                                    if let Some(data) = &v.data {
+                                        let mime = v.mime_type.as_deref().unwrap_or("video/mp4");
+                                        format!("data:{mime};base64,{data}")
+                                    } else {
+                                        v.url.clone()
+                                    }
+                                }))
                                 .or_else(|| part_input_video_url(part))
                             {
                                 push_text(&mut parts, &text_buffer);
@@ -877,7 +877,14 @@ pub fn message_to_gizzi_parts(message: &ChatMessage) -> Vec<serde_json::Value> {
             for part in content_parts {
                 if let Some(url) = part_image_url(part)
                     .or_else(|| part_input_image_url(part))
-                    .or_else(|| part_video_url(part))
+                    .or_else(|| part.video_url.as_ref().map(|v| {
+                        if let Some(data) = &v.data {
+                            let mime = v.mime_type.as_deref().unwrap_or("video/mp4");
+                            format!("data:{mime};base64,{data}")
+                        } else {
+                            v.url.clone()
+                        }
+                    }))
                     .or_else(|| part_input_video_url(part))
                 {
                     push_text(&mut parts, &text_buffer);
