@@ -357,6 +357,7 @@ async fn main() {
         .merge(allternit_api::admin_service_account_routes::router())
         .merge(allternit_api::admin_access_token_routes::router())
         .merge(allternit_api::admin_spend_limit_routes::router())
+        .merge(allternit_api::marketplace_routes::router())
         .merge(admin_mcp_tunnel_router())
         .merge(outcome_rubric_router())
         .merge(federation_router())

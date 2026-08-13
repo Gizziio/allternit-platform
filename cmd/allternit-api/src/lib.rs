@@ -84,6 +84,7 @@ pub mod mcp_dispatcher;
 pub mod mcp_routes;
 pub mod mcp_server_routes;
 pub mod mcp_tunnel_auth;
+pub mod marketplace_routes;
 pub mod me_routes;
 pub mod memory_reconstruction_routes;
 pub mod memory_routes;

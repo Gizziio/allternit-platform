@@ -1,0 +1,22 @@
+{
+  "name": "@allternit/docs-mcp-server",
+  "version": "1.0.0",
+  "description": "MCP server providing Allternit platform documentation lookup",
+  "type": "module",
+  "main": "dist/index.js",
+  "bin": {
+    "allternit-docs-mcp": "dist/index.js"
+  },
+  "scripts": {
+    "build": "tsc",
+    "start": "node dist/index.js",
+    "dev": "tsx src/index.ts"
+  },
+  "dependencies": {
+    "glob": "^11.0.0"
+  },
+  "devDependencies": {
+    "tsx": "^4.0.0",
+    "typescript": "^5.5.0"
+  }
+}
