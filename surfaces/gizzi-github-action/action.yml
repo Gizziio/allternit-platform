@@ -1,0 +1,36 @@
+name: 'Gizzi Code'
+description: 'AI-powered code review and generation with Allternit'
+branding:
+  icon: 'code'
+  color: 'orange'
+inputs:
+  action:
+    description: 'Action to perform: review, generate, fix, explain'
+    required: true
+    default: 'review'
+  api-url:
+    description: 'Allternit API URL'
+    required: false
+    default: 'https://api.allternit.com'
+  api-key:
+    description: 'Allternit API key'
+    required: true
+  target:
+    description: 'Target file or PR number'
+    required: false
+  model:
+    description: 'Model to use'
+    required: false
+    default: 'default'
+  max-tokens:
+    description: 'Maximum tokens for response'
+    required: false
+    default: '4096'
+outputs:
+  result:
+    description: 'The action result'
+  summary:
+    description: 'Summary of changes or review'
+runs:
+  using: 'node20'
+  main: 'dist/index.js'

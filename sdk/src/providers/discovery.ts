@@ -336,10 +336,10 @@ export class ProviderDiscoveryService {
   private inferPermissions(metadata: ProviderMetadata): string[] {
     const permissions: string[] = ['inference'];
     
-    if (metadata.features.streaming) permissions.push('streaming');
-    if (metadata.features.tools) permissions.push('tools');
-    if (metadata.features.vision) permissions.push('vision');
-    if (metadata.features.jsonMode) permissions.push('json_mode');
+    if (metadata.features.includes('streaming')) permissions.push('streaming');
+    if (metadata.features.includes('tools')) permissions.push('tools');
+    if (metadata.features.includes('vision')) permissions.push('vision');
+    if (metadata.features.includes('json-mode')) permissions.push('json_mode');
     
     return permissions;
   }

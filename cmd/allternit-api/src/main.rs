@@ -70,6 +70,7 @@ use allternit_api::library_routes::library_router;
 use allternit_api::local_brain_routes::local_brain_router;
 use allternit_api::mcp_routes::mcp_router;
 use allternit_api::me_routes::me_router;
+use allternit_api::memory_reconstruction_routes::memory_reconstruction_router;
 use allternit_api::memory_routes::memory_router;
 use allternit_api::metrics::metrics_router;
 use allternit_api::oauth_routes::oauth_router;
@@ -317,6 +318,7 @@ async fn main() {
         .merge(beta_work_router())
         .merge(webhook_subscription_router())
         .merge(beta_memory_store_router())
+        .merge(memory_reconstruction_router())
         .merge(user_profile_router())
         .merge(canvas_router())
         .merge(v1_router())
@@ -355,6 +357,7 @@ async fn main() {
         .merge(allternit_api::admin_service_account_routes::router())
         .merge(allternit_api::admin_access_token_routes::router())
         .merge(allternit_api::admin_spend_limit_routes::router())
+        .merge(allternit_api::marketplace_routes::router())
         .merge(admin_mcp_tunnel_router())
         .merge(outcome_rubric_router())
         .merge(federation_router())
@@ -364,6 +367,8 @@ async fn main() {
         .merge(allternit_api::scim_routes::router())
         .merge(allternit_api::admin_audit_routes::router())
         .merge(allternit_api::compliance_routes::router())
+        .merge(allternit_api::data_residency_routes::router())
+        .merge(allternit_api::device_attestation_routes::router())
         .merge(workspace_router())
         .merge(artifact_router())
         .merge(conversation_router())

@@ -1,0 +1,14 @@
+{
+  "name": "gizzi-github-action",
+  "version": "0.1.0",
+  "description": "Gizzi Code GitHub Action for AI-powered code review and generation",
+  "main": "dist/index.js",
+  "scripts": {
+    "build": "tsc",
+    "package": "tsc && node scripts/bundle.js"
+  },
+  "devDependencies": {
+    "typescript": "^5.4.0",
+    "@types/node": "^20.0.0"
+  }
+}

@@ -1,43 +1,76 @@
 "use client";
 
-import React from 'react';
+import React, { useState } from 'react';
 import {
   Storefront,
-  MagnifyingGlass,
-  PuzzlePiece,
   ArrowRight,
+  PuzzlePiece,
+  X,
 } from '@phosphor-icons/react';
-import { useMarketplaceManager } from './marketplace/main/useMarketplaceManager';
-import { MarketplaceItemCard } from './marketplace/main/MarketplaceItemCard';
+import { useCapabilityMarketplace } from './marketplace/main/useCapabilityMarketplace';
+import {
+  CapabilityCard,
+  CapabilityDetail,
+  CapabilitySearchBar,
+  CheckoutModal,
+} from '@/components/marketplace';
+import type { CheckoutItem } from '@/components/marketplace';
 import { EmptyState } from '@/components/settings/EmptyState';
-import { cn } from '@/lib/utils';
-import type { MarketplaceCategory } from './marketplace/main/Marketplace.types';
+import type { CapabilityCategory } from '@/components/marketplace/CapabilitySearchBar';
 
 export function MarketplaceView() {
   const {
+    capabilities,
     searchQuery,
     setSearchQuery,
     activeCategory,
     setActiveCategory,
-    showNotification,
-    filteredItems,
+    notification,
+    getStatus,
     handleInstall,
-  } = useMarketplaceManager();
+    handleUninstall,
+    handleDetails,
+    selectedCapability,
+    selectedCapabilityId,
+    setSelectedCapabilityId,
+  } = useCapabilityMarketplace();
 
-  const categories: { id: MarketplaceCategory; label: string }[] = [
-    { id: 'all', label: 'Featured' },
-    { id: 'agents', label: 'Agents' },
-    { id: 'plugins', label: 'Plugins' },
-    { id: 'workflows', label: 'Workflows' },
-    { id: 'knowledge', label: 'Knowledge' },
-  ];
+  const [checkoutItem, setCheckoutItem] = useState<CheckoutItem | null>(null);
+  const [isCheckoutProcessing, setIsCheckoutProcessing] = useState(false);
+
+  const handleInstallClick = (id: string) => {
+    const cap = capabilities.find((c) => c.id === id);
+    if (!cap) return;
+
+    if (cap.pricing === 'free') {
+      handleInstall(id);
+    } else {
+      setCheckoutItem({
+        id: cap.id,
+        name: cap.name,
+        author: cap.author,
+        pricing: cap.pricing,
+        amountCents: cap.amountCents,
+        currency: cap.currency,
+        icon: cap.icon,
+      });
+    }
+  };
+
+  const handleCheckoutConfirm = async (item: CheckoutItem) => {
+    setIsCheckoutProcessing(true);
+    await new Promise((resolve) => setTimeout(resolve, 1500));
+    setIsCheckoutProcessing(false);
+    setCheckoutItem(null);
+    handleInstall(item.id);
+  };
 
   return (
     <div className="flex flex-col h-full w-full bg-[var(--shell-view-bg)] relative overflow-hidden">
       {/* Toast Notification */}
-      {showNotification && (
+      {notification && (
         <div className="fixed top-6 right-6 z-[100] p-3 px-5 rounded-lg bg-[var(--bg-elevated)] border border-solid border-[var(--border-subtle)] shadow-2xl animate-in slide-in-from-right-4 duration-300">
-          <span className="text-[13px] font-semibold text-[var(--text-primary)]">{showNotification}</span>
+          <span className="text-[13px] font-semibold text-[var(--text-primary)]">{notification}</span>
         </div>
       )}
 
@@ -49,9 +82,11 @@ export function MarketplaceView() {
               <Storefront size={28} weight="duotone" className="text-[var(--accent-primary)]" />
             </div>
             <div>
-              <h1 className="text-[24px] font-bold m-0 tracking-tight text-[var(--text-primary)]">Marketplace</h1>
+              <h1 className="text-[24px] font-bold m-0 tracking-tight text-[var(--text-primary)]">
+                Capability Marketplace
+              </h1>
               <p className="text-[14px] text-[var(--text-secondary)] mt-1 m-0">
-                Discover and install extensions for your workspace
+                Discover and install skills, tools, plugins, and connectors for your workspace
               </p>
             </div>
           </div>
@@ -65,68 +100,94 @@ export function MarketplaceView() {
           </button>
         </div>
 
-        {/* Toolbar */}
-        <div className="flex flex-wrap items-center gap-4">
-          {/* Search */}
-          <div className="relative flex-1 min-w-[260px] max-w-[420px]">
-            <MagnifyingGlass size={18} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-[var(--text-tertiary)]" />
-            <input
-              aria-label="Search marketplace"
-              type="text"
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder="Search by name, type, or tags…"
-              className="w-full h-10 pl-10 pr-4 bg-[var(--bg-secondary)] border border-solid border-[var(--border-subtle)] rounded-xl text-[14px] text-[var(--text-primary)] placeholder:text-[var(--text-tertiary)] outline-none focus:border-[var(--accent-primary)] transition-colors"
-            />
-          </div>
-
-          {/* Categories */}
-          <nav className="flex items-center p-1 rounded-xl bg-[var(--bg-secondary)] border border-solid border-[var(--border-subtle)]">
-            {categories.map((cat) => (
-              <button
-                type="button"
-                key={cat.id}
-                onClick={() => setActiveCategory(cat.id)}
-                className={cn(
-                  "px-3.5 py-1.5 rounded-lg border-none text-[13px] font-semibold cursor-pointer transition-all duration-200",
-                  activeCategory === cat.id
-                    ? "bg-[var(--accent-primary)] text-[var(--ui-text-inverse)]"
-                    : "text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-[var(--surface-hover)]"
-                )}
-              >
-                {cat.label}
-              </button>
-            ))}
-          </nav>
-        </div>
+        {/* Search and Category Filter */}
+        <CapabilitySearchBar
+          query={searchQuery}
+          onQueryChange={setSearchQuery}
+          activeCategory={activeCategory}
+          onCategoryChange={setActiveCategory}
+        />
       </header>
 
       {/* Content */}
       <div className="flex-1 overflow-y-auto px-8 py-8 pb-20">
-        {filteredItems.length === 0 ? (
+        {capabilities.length === 0 ? (
           <EmptyState
             icon={<PuzzlePiece size={64} weight="thin" />}
-            title="No extensions found"
-            caption={searchQuery || activeCategory !== 'all'
-              ? 'Try adjusting your filters or searching for something else in the Allternit directory.'
-              : 'The marketplace is empty right now. Check back soon for new extensions.'}
+            title="No capabilities found"
+            caption={
+              searchQuery || activeCategory !== 'all'
+                ? 'Try adjusting your filters or searching for something else in the Allternit directory.'
+                : 'The marketplace is empty right now. Check back soon for new capabilities.'
+            }
             ctaLabel="Clear filters"
             primaryCta
-            onCtaClick={() => { setSearchQuery(''); setActiveCategory('all'); }}
+            onCtaClick={() => {
+              setSearchQuery('');
+              setActiveCategory('all');
+            }}
             className="bg-[var(--bg-secondary)] rounded-2xl border border-solid border-[var(--border-subtle)]"
           />
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5">
-            {filteredItems.map((item) => (
-              <MarketplaceItemCard
-                key={item.id}
-                item={item}
-                onInstall={handleInstall}
+            {capabilities.map((cap) => (
+              <CapabilityCard
+                key={cap.id}
+                id={cap.id}
+                name={cap.name}
+                description={cap.description}
+                author={cap.author}
+                version={cap.version}
+                kind={cap.kind}
+                pricing={cap.pricing}
+                rating={cap.rating}
+                installCount={cap.installCount}
+                icon={cap.icon}
+                tags={cap.tags}
+                status={getStatus(cap.id)}
+                onInstall={handleInstallClick}
+                onUninstall={handleUninstall}
+                onDetails={handleDetails}
               />
             ))}
           </div>
         )}
       </div>
+
+      {/* Detail Panel */}
+      {selectedCapability && (
+        <div className="fixed inset-0 z-[150] flex">
+          <div
+            className="absolute inset-0 bg-black/40 backdrop-blur-sm"
+            onClick={() => setSelectedCapabilityId(null)}
+          />
+          <div className="relative ml-auto w-full max-w-2xl bg-[var(--bg-elevated)] border-l border-solid border-[var(--border-subtle)] shadow-2xl animate-in slide-in-from-right-4 duration-300">
+            <CapabilityDetail
+              capability={{
+                ...selectedCapability,
+                longDescription: selectedCapability.longDescription,
+                tools: selectedCapability.tools,
+                permissions: selectedCapability.permissions,
+              }}
+              status={getStatus(selectedCapability.id)}
+              onClose={() => setSelectedCapabilityId(null)}
+              onInstall={handleInstallClick}
+              onUninstall={handleUninstall}
+            />
+          </div>
+        </div>
+      )}
+
+      {/* Checkout Modal */}
+      {checkoutItem && (
+        <CheckoutModal
+          item={checkoutItem}
+          isOpen={true}
+          onClose={() => setCheckoutItem(null)}
+          onConfirm={handleCheckoutConfirm}
+          isProcessing={isCheckoutProcessing}
+        />
+      )}
     </div>
   );
 }

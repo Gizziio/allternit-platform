@@ -1,0 +1,111 @@
+---
+title: Allternit Computer Interface (ACI)
+description: Let agents observe and control a computer through screenshots and mouse/keyboard actions
+---
+
+## Overview
+
+The **Allternit Computer Interface (ACI)** is the platform layer that lets an agent observe and control a computer — typically a browser or desktop environment — through a live screenshot stream, mouse/keyboard actions, and human-in-the-loop approvals.
+
+ACI routes requests through the Allternit Computer Use (ACU) gateway and surfaces the run state to web, desktop, and mobile clients.
+
+<Note>
+ACI runs on infrastructure you control. Code, screenshots, and credentials stay on the host.
+</Note>
+
+## ACI vs managed sandboxes
+
+| | ACI / self-hosted | Managed cloud sandbox |
+|---|---|---|
+| **Hosting** | Your machine, a private VPS, or a self-managed VM | Vendor-managed cloud account |
+| **Data residency** | Stays on the host | Leaves the host by default |
+| **Network access** | Same network as the host | Typically limited to public endpoints |
+| **Approval model** | Pauses for human approval before destructive actions | Depends on the provider |
+
+## Browser automation
+
+Start a browser run with a natural-language goal:
+
+```bash
+curl -X POST http://127.0.0.1:8013/api/aci/run \
+  -H "Content-Type: application/json" \
+  -d '{
+    "goal": "Find the latest release notes on github.com/allternit/allternit",
+    "model": "gizzi-pro",
+    "allowedSites": ["github.com"],
+    "autoVerify": false
+  }'
+```
+
+Response:
+
+```json
+{
+  "sessionId": "550e8400-e29b-41d4-a716-446655440000",
+  "adapterId": "browser"
+}
+```
+
+The run streams events over SSE at `/api/aci/stream/{sessionId}`.
+
+### Event types
+
+| Type | Meaning |
+|------|---------|
+| `trace` | Human-readable progress message from the ACU gateway |
+| `state` | Structured state update from the planning loop |
+| `done` | Run completed or was cancelled |
+
+### Control endpoints
+
+| Method | Path | Purpose |
+|--------|------|---------|
+| POST | `/api/aci/run` | Start a browser automation run |
+| GET | `/api/aci/stream/{id}` | SSE stream of run events |
+| POST | `/api/aci/stop/{id}` | Cancel a run |
+| POST | `/api/aci/approve/{id}?deny=true` | Approve or deny a pending action |
+
+## The `computer` tool
+
+The SDK's `ComputerUseCapability` exposes a `computer` tool that follows the standard computer-use schema. It forwards actions to the Allternit Computer Use gateway.
+
+```typescript
+import { ComputerUseCapability } from '@allternit/sdk/ai-runtime/capabilities/computer-use';
+
+const computer = new ComputerUseCapability({
+  displayWidthPx: 1280,
+  displayHeightPx: 720,
+});
+
+const tool = computer.getTool();
+const screenshot = await tool.execute!({ action: 'screenshot' }, {});
+```
+
+### Vision coordinates
+
+ACI uses absolute pixel coordinates for mouse actions. The capability advertises the display size in tool metadata so the model can reason about coordinates.
+
+### Supported actions
+
+| Action | Needs coordinate | Needs text |
+|--------|-----------------|------------|
+| `mouse_move`, `left_click`, `right_click`, `double_click`, `triple_click`, `left_click_drag` | yes | no |
+| `scroll` | yes | no |
+| `type`, `key`, `hold_key` | no | yes |
+| `screenshot`, `cursor_position`, `wait` | no | no |
+
+## Desktop tool
+
+In addition to browser automation, ACI provides a desktop-level tool that can control any window on the host machine. This is used by Gizzi Code for tasks like:
+
+- Filling forms in native applications
+- Reading data from GUI applications
+- Automating repetitive desktop workflows
+
+The desktop tool uses the same coordinate system and event streaming as browser automation.
+
+## Human-in-the-loop
+
+ACI pauses for human approval before executing destructive or irreversible actions. The UI surfaces a confirmation dialog; the API exposes `/api/aci/approve/{id}` for programmatic approval.
+
+Set `autoVerify: true` to skip approvals for read-only runs.

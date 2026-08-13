@@ -1,0 +1,49 @@
+---
+title: Tools Overview
+description: The Allternit tool ecosystem — native belt, MCP, and custom tools
+---
+
+## What are tools?
+
+Tools are model-facing functions that an agent can call to interact with the outside world. They are the bridge between an agent's reasoning and real-world actions — reading files, searching the web, editing code, running shell commands, automating a browser.
+
+Allternit provides three tool surfaces:
+
+<CardGroup cols={3}>
+  <Card title="Native Tool Belt" icon="wrench" href="/tools/tool-belt">
+    Built-in tools shipped with the SDK — web search, file editing, bash, code execution, memory
+  </Card>
+  <Card title="MCP Servers" icon="plug" href="/tools/mcp">
+    Attach external tools via the Model Context Protocol
+  </Card>
+  <Card title="Custom Tools" icon="code" href="/tools/build-a-tool">
+    Register your own tools with the Tool Registry
+  </Card>
+</CardGroup>
+
+## How tools are discovered
+
+Every tool is registered into a `ToolRegistry` with a name, JSON Schema input contract, and an `execute` function. The harness queries the registry at each turn to build the tool list sent to the model.
+
+```typescript
+import { ToolRegistry } from '@allternit/sdk/ai-runtime/tools';
+import { NativeToolBelt } from '@allternit/sdk/ai-runtime/tools/search';
+
+const registry = new ToolRegistry();
+new NativeToolBelt(registry, { workspaceRoot: process.cwd() });
+
+const active = registry.getActiveTools().map(t => t.name);
+// => ['tool_search', 'tool_activate', 'web_search', 'web_fetch',
+//     'str_replace_editor', 'bash', 'code_execution', 'memory']
+```
+
+## Active vs deferred tools
+
+- **Active tools** are included in every model turn.
+- **Deferred tools** are known to the registry but only activated on demand via `tool_activate`. This keeps the context window small when you have many tools available.
+
+## Strict schemas
+
+All native tools are registered with `strict: true` — the provider rejects arguments outside the declared schema. Custom tools can opt into strict mode at registration.
+
+See [Strict Tool Schemas](/tools/strict-tool-use) for details.

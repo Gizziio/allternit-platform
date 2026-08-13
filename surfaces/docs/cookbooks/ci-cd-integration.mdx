@@ -1,0 +1,187 @@
+---
+title: "Cookbook: CI/CD Integration"
+description: Run Gizzi Code in GitHub Actions, GitLab CI, and other pipelines
+---
+
+## Goal
+
+Integrate Gizzi Code into your CI/CD pipeline to automate code review, changelog generation, and test analysis on every pull request.
+
+## Prerequisites
+
+- An Allternit API key (stored as a CI secret)
+- Node.js 18+ in your CI environment
+- A git repository with PR workflows
+
+## GitHub Actions
+
+### Code review on PR
+
+```yaml
+# .github/workflows/agent-review.yml
+name: Agent Code Review
+on:
+  pull_request:
+    types: [opened, synchronize]
+
+jobs:
+  review:
+    runs-on: ubuntu-latest
+    env:
+      ALLTERNIT_API_KEY: ${{ secrets.ALLTERNIT_API_KEY }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - run: npm install -g @allternit/gizzi-code
+
+      - name: Review diff
+        id: review
+        run: |
+          REVIEW=$(git diff origin/main...HEAD | gizzi exec \
+            "Review this diff for bugs, security issues, performance problems, \
+            and style violations. Be specific and actionable.")
+          echo "review<<EOF" >> $GITHUB_OUTPUT
+          echo "$REVIEW" >> $GITHUB_OUTPUT
+          echo "EOF" >> $GITHUB_OUTPUT
+
+      - name: Post review comment
+        uses: actions/github-script@v7
+        with:
+          script: |
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: `## 🤖 Agent Code Review\n\n${{ steps.review.outputs.review }}`
+            })
+```
+
+### Changelog generation
+
+```yaml
+# .github/workflows/changelog.yml
+name: Generate Changelog
+on:
+  push:
+    branches: [main]
+
+jobs:
+  changelog:
+    runs-on: ubuntu-latest
+    env:
+      ALLTERNIT_API_KEY: ${{ secrets.ALLTERNIT_API_KEY }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - run: npm install -g @allternit/gizzi-code
+
+      - name: Generate changelog entry
+        run: |
+          git log --oneline $(git describe --tags --abbrev=0)..HEAD \
+            | gizzi exec "Write a changelog entry for these commits. \
+              Group by category (Features, Fixes, Internal). \
+              Keep it concise." >> CHANGELOG_NEW.md
+
+      - name: Commit changelog
+        run: |
+          git config user.name "allternit-agent"
+          git config user.email "agent@allternit.com"
+          git add CHANGELOG_NEW.md
+          git commit -m "docs: update changelog [skip ci]"
+          git push
+```
+
+## GitLab CI
+
+```yaml
+# .gitlab-ci.yml
+agent-review:
+  image: node:22
+  stage: test
+  variables:
+    ALLTERNIT_API_KEY: $ALLTERNIT_API_KEY
+  script:
+    - npm install -g @allternit/gizzi-code
+    - |
+      git diff $CI_MERGE_REQUEST_DIFF_BASE_SHA...HEAD | gizzi exec \
+        "Review this diff. Output a structured review with severity levels." \
+        > review.txt
+    - cat review.txt
+  rules:
+    - if: $CI_MERGE_REQUEST_ID
+  artifacts:
+    paths:
+      - review.txt
+```
+
+## Permission profiles for CI
+
+Create a restricted profile that limits what the agent can do in CI:
+
+```bash
+# ci-review profile: read-only, no file edits
+gizzi config profile add ci-review \
+  --rule bash=dontAsk \
+  --rule edit=deny \
+  --rule delete=deny \
+  --rule web_search=dontAsk
+```
+
+Use it in your pipeline:
+
+```bash
+gizzi exec --permission-profile ci-review "Review this diff"
+```
+
+## Streaming output for CI logs
+
+Use `--output-format stream-json` for structured output that CI log parsers can consume:
+
+```bash
+gizzi exec --output-format stream-json "Analyze test failures" \
+  | jq -r 'select(.type == "message") | .data'
+```
+
+## Budget control
+
+Set per-run token limits to prevent runaway costs:
+
+```bash
+gizzi exec --max-tokens 50000 "Review this diff"
+```
+
+## Caching
+
+Cache the global npm package to speed up subsequent runs:
+
+```yaml
+- uses: actions/cache@v4
+  with:
+    path: ~/.npm
+    key: gizzi-${{ runner.os }}-node22
+```
+
+## Explanation
+
+- **`gizzi exec`** — Non-interactive mode that prints the response and exits. Safe for CI pipelines.
+- **Permission profiles** — Restrict what the agent can do in CI (no file edits, no deletions).
+- **Token limits** — Prevent unexpected cost spikes from large diffs.
+- **Streaming output** — Structured JSON events are easier to parse in CI log systems.
+
+## Next steps
+
+- Add **approval gates** — require a human to approve agent suggestions before applying them.
+- Use **multi-agent workflows** — one agent reviews, another writes tests, another checks security.
+- Integrate with **Allternit Evals** to measure review quality over time.

@@ -1,0 +1,27 @@
+---
+title: Fallback Credits
+description: Credit policy for primary-provider failures resolved by fallback providers.
+---
+
+# Fallback Credits
+
+When a request fails on the primary provider but succeeds on a fallback provider, Allternit can credit the primary failure back to your spend limit. This prevents double-charging for retried requests.
+
+## Policy configuration
+
+| Field | Description |
+|-------|-------------|
+| `eligible_statuses` | Which failure statuses are eligible for credit |
+| `max_credit_percent` | Maximum credit as a percent of original cost |
+| `window_hours` | Lookback window for reconciliation |
+| `auto_apply` | Whether credits are applied automatically |
+
+## Endpoints
+
+| Method | Path | Description |
+|--------|------|-------------|
+| GET    | `/api/v1/admin/fallback-credit-policy` | Get policy |
+| PUT    | `/api/v1/admin/fallback-credit-policy` | Update policy |
+| GET    | `/api/v1/admin/fallback-credits` | List credits |
+| POST   | `/api/v1/admin/fallback-credits/reconcile` | Scan for eligible credits |
+| POST   | `/api/v1/admin/fallback-credits/:id/apply` | Apply a pending credit |

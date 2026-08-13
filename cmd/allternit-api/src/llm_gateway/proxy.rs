@@ -59,6 +59,7 @@ use super::translate::{
     ChatCompletionResponse, ChatMessage, FileCitation, ImageUrlPart, MessageContent,
     OpenAiErrorResponse, ToolCall, ToolCallDelta, ToolCallFunction, UrlCitation, Usage,
 };
+use super::context_cache;
 
 /// Hard cap on a single completion, from send to `session.status` idle.
 const COMPLETION_TIMEOUT: Duration = Duration::from_secs(120);
@@ -1356,7 +1357,7 @@ fn strip_openai_prefix(model: &str) -> &str {
         .unwrap_or(model)
 }
 
-/// `POST /tokens` — estimate input tokens for a chat-completions-shaped body.
+/// `POST /tokens` — estimate input tokens and cost for a chat-completions-shaped body.
 pub async fn count_tokens(
     Extension(key): Extension<LlmKeyContext>,
     body: axum::body::Bytes,
@@ -1387,10 +1388,183 @@ pub async fn count_tokens(
         )
         .into_response();
     }
+    let input_tokens = count_tokens_request(&request);
+    let estimated_cost = estimate_request_cost(&request.model, input_tokens, request.max_tokens);
     Json(json!({
         "object": "token_count",
         "model": request.model,
-        "input_tokens": count_tokens_request(&request),
+        "input_tokens": input_tokens,
+        "estimated_cost": estimated_cost,
+    }))
+    .into_response()
+}
+
+fn estimate_request_cost(model: &str, input_tokens: u64, max_tokens: Option<u32>) -> Value {
+    let snapshot = llm_pricing::pricing_snapshot();
+    // Try exact match, then bare-model suffix match.
+    let pricing = snapshot.get(model).or_else(|| {
+        let suffix = format!("/{model}");
+        snapshot.iter().find(|(k, _)| k.ends_with(&suffix)).map(|(_, v)| v)
+    });
+    let output_tokens = max_tokens.unwrap_or(0) as u64;
+    match pricing {
+        Some(p) => {
+            let input_cost = (input_tokens as f64 * p.input) / 1_000_000.0;
+            let output_cost = (output_tokens as f64 * p.output) / 1_000_000.0;
+            json!({
+                "currency": "USD",
+                "input_cost": input_cost,
+                "output_cost": output_cost,
+                "total_cost": input_cost + output_cost,
+                "priced": true,
+            })
+        }
+        None => json!({
+            "currency": "USD",
+            "input_cost": null,
+            "output_cost": null,
+            "total_cost": null,
+            "priced": false,
+        }),
+    }
+}
+
+fn local_api_base(state: &AppState) -> String {
+    format!("http://127.0.0.1:{}", state.config.api_port())
+}
+
+/// `POST /chat/completions:best-of` — generate N candidates and return the
+/// full set (or the single best when `best_of` is true). This is the native
+/// Allternit partial / best-of sampling surface.
+pub async fn best_of_completions(
+    State(state): State<Arc<AppState>>,
+    Extension(key): Extension<LlmKeyContext>,
+    headers: HeaderMap,
+    body: axum::body::Bytes,
+) -> Response {
+    let mut request: ChatCompletionRequest = match serde_json::from_slice(&body) {
+        Ok(request) => request,
+        Err(err) => {
+            return OpenAiErrorResponse::invalid_request(
+                format!("Invalid request body: {err}"),
+                None,
+            )
+            .into_response();
+        }
+    };
+    if let Err(response) = validate_request(&request) {
+        return response.into_response();
+    }
+    if !key.model_allowed(&request.model) {
+        return OpenAiErrorResponse::new(
+            StatusCode::FORBIDDEN,
+            format!("This API key is not allowed to use model `{}`.", request.model),
+            "permission_error",
+            Some("model"),
+            Some(crate::llm_gateway::translate::error_code::PERMISSION_DENIED),
+        )
+        .into_response();
+    }
+
+    let n = request.n.unwrap_or(1).min(10).max(1);
+    let best_only = request.best_of.unwrap_or(false);
+    request.stream = Some(false);
+    request.n = None;
+    request.best_of = None;
+
+    let auth_header = headers
+        .get(header::AUTHORIZATION)
+        .and_then(|v| v.to_str().ok())
+        .map(str::to_string);
+
+    let base = local_api_base(&state);
+    let client = reqwest::Client::builder()
+        .timeout(Duration::from_secs(120))
+        .build()
+        .unwrap_or_default();
+
+    let body_json = match serde_json::to_value(&request) {
+        Ok(v) => v,
+        Err(err) => {
+            return OpenAiErrorResponse::new(
+                StatusCode::INTERNAL_SERVER_ERROR,
+                format!("Failed to serialize request: {err}"),
+                "server_error",
+                None,
+                Some(crate::llm_gateway::translate::error_code::INTERNAL_ERROR),
+            )
+            .into_response()
+        }
+    };
+
+    let mut candidates: Vec<Value> = Vec::with_capacity(n as usize);
+    for index in 0..n {
+        let mut req = client
+            .post(format!("{base}/v1/chat/completions"))
+            .json(&body_json);
+        if let Some(auth) = &auth_header {
+            req = req.header(header::AUTHORIZATION, auth.clone());
+        }
+        match req.send().await {
+            Ok(resp) => {
+                let status = resp.status();
+                let text = resp.text().await.unwrap_or_default();
+                let mut value: Value = match serde_json::from_str(&text) {
+                    Ok(v) => v,
+                    Err(_) => {
+                        candidates.push(json!({
+                            "index": index,
+                            "error": { "message": text, "type": "parse_error" }
+                        }));
+                        continue;
+                    }
+                };
+                if let Some(obj) = value.as_object_mut() {
+                    obj.insert("index".to_string(), json!(index));
+                }
+                if !status.is_success() {
+                    candidates.push(json!({
+                        "index": index,
+                        "error": value,
+                        "status": status.as_u16()
+                    }));
+                    continue;
+                }
+                candidates.push(value);
+            }
+            Err(err) => {
+                candidates.push(json!({
+                    "index": index,
+                    "error": { "message": err.to_string(), "type": "request_error" }
+                }));
+            }
+        }
+    }
+
+    if best_only {
+        let best = candidates
+            .iter()
+            .filter_map(|c| {
+                let content = c
+                    .get("choices")?
+                    .get(0)?
+                    .get("message")?
+                    .get("content")?
+                    .as_str()?;
+                let len = content.len();
+                Some((len, c))
+            })
+            .max_by_key(|(len, _)| *len)
+            .map(|(_, c)| c.clone())
+            .unwrap_or_else(|| candidates.into_iter().next().unwrap_or(json!({})));
+        return Json(best).into_response();
+    }
+
+    Json(json!({
+        "object": "chat.completion.best_of",
+        "model": request.model,
+        "n": n,
+        "candidates": candidates,
     }))
     .into_response()
 }
@@ -1472,6 +1646,34 @@ pub async fn chat_completions(
         Ok(messages) => messages,
         Err(response) => return response.into_response(),
     };
+
+    // Prepend cached context messages when a cache id is supplied.
+    if let Some(cache_id) = &request.context_cache_id {
+        match context_cache::load_cache_messages(&state.db, &key.key_id, cache_id) {
+            Ok(Some(cached)) => {
+                let mut combined = cached;
+                combined.extend(request.messages);
+                request.messages = combined;
+            }
+            Ok(None) => {
+                return OpenAiErrorResponse::invalid_request(
+                    format!("context_cache_id `{cache_id}` not found or expired."),
+                    Some("context_cache_id"),
+                )
+                .into_response();
+            }
+            Err(err) => {
+                return OpenAiErrorResponse::new(
+                    StatusCode::INTERNAL_SERVER_ERROR,
+                    format!("Failed to load context cache: {err}"),
+                    "server_error",
+                    Some("context_cache_id"),
+                    Some(crate::llm_gateway::translate::error_code::INTERNAL_ERROR),
+                )
+                .into_response();
+            }
+        }
+    }
 
     let stream = request.stream.unwrap_or(false);
 

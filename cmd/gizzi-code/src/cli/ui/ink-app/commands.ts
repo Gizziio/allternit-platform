@@ -22,6 +22,7 @@ import diff from './commands/diff/index.js'
 import ctx_viz from './commands/ctx_viz/index.js'
 import doctor from './commands/doctor/index.js'
 import memory from './commands/memory/index.js'
+import memorySearch from './commands/memory-search/index.js'
 import help from './commands/help/index.js'
 import h5i from './commands/h5i/index.js'
 import ide from './commands/ide/index.js'
@@ -323,6 +324,7 @@ const COMMANDS = memoize((): Command[] => [
   installSlackApp,
   mcp,
   memory,
+  memorySearch,
   mobile,
   model,
   outputStyle,

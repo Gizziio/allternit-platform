@@ -1,0 +1,88 @@
+---
+title: Compliance
+description: Data export, deletion workflows, and retention policies
+---
+
+## Overview
+
+Allternit provides compliance APIs that let organization administrators manage data lifecycle — exporting user data, requesting deletion, and configuring retention policies.
+
+## Compliance requests
+
+Org admins can initiate compliance requests via the admin API:
+
+### Export data
+
+```bash
+curl -X POST http://localhost:8013/api/compliance/export \
+  -H "Authorization: Bearer $ALLTERNIT_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "user_id": "user_abc123",
+    "scope": ["sessions", "memory", "files"]
+  }'
+```
+
+Response:
+
+```json
+{
+  "request_id": "comp_export_xyz",
+  "status": "processing",
+  "estimated_completion": "2026-08-12T11:00:00Z"
+}
+```
+
+The export is assembled asynchronously. Poll `GET /api/compliance/requests/{id}` for status.
+
+### Delete data
+
+```bash
+curl -X POST http://localhost:8013/api/compliance/delete \
+  -H "Authorization: Bearer $ALLTERNIT_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "user_id": "user_abc123",
+    "scope": ["sessions", "memory", "files"],
+    "confirm": true
+  }'
+```
+
+<Warning>
+  Deletion is irreversible. The `confirm: true` flag is required.
+</Warning>
+
+## Retention policies
+
+Configure automatic data retention at the organization level:
+
+```bash
+curl -X PUT http://localhost:8013/api/compliance/retention \
+  -H "Authorization: Bearer $ALLTERNIT_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "sessions_days": 90,
+    "memory_days": 365,
+    "audit_days": 2555
+  }'
+```
+
+- `sessions_days` — Session transcripts and messages older than this are automatically deleted.
+- `memory_days` — Brain/memory store entries older than this are automatically deleted.
+- `audit_days` — Audit logs are retained for this many days (default: 7 years / 2555 days).
+
+## Data residency
+
+For self-hosted deployments, all data stays on customer-managed infrastructure. The `GET /regions` endpoint publishes egress IP ranges for firewall allow-listing.
+
+## Audit trail
+
+All compliance operations are recorded in the audit log with:
+
+- Request ID
+- Requester identity
+- Scope of data affected
+- Timestamp
+- Completion status
+
+See [Audit](/security/audit) for querying the audit log.

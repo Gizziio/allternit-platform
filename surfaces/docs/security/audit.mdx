@@ -1,0 +1,72 @@
+---
+title: Audit Logs
+description: Query administrative actions and usage events
+---
+
+## Overview
+
+Allternit persists audit logs for administrative actions, key lifecycle events, compliance requests, and usage events. Logs are scoped to an organization and retained according to the configured retention policy.
+
+## Querying the audit log
+
+```bash
+curl http://localhost:8013/api/audit/logs \
+  -H "Authorization: Bearer $ALLTERNIT_TOKEN" \
+  -G -d "from=2026-08-01T00:00:00Z&to=2026-08-12T23:59:59Z&limit=50"
+```
+
+Response:
+
+```json
+{
+  "logs": [
+    {
+      "id": "log_abc123",
+      "timestamp": "2026-08-12T14:30:00Z",
+      "actor": "user_xyz",
+      "action": "virtual_key.created",
+      "resource": "key_def456",
+      "details": { "name": "production-key", "model_allowlist": ["gizzi-pro"] }
+    }
+  ],
+  "next_cursor": "log_abc122"
+}
+```
+
+## Logged events
+
+| Category | Events |
+|----------|--------|
+| **Authentication** | Login, logout, failed auth, token refresh |
+| **Key management** | Virtual key created, rotated, revoked |
+| **Admin actions** | Workspace created/deleted, member added/removed, role changed |
+| **Compliance** | Export requested, deletion requested, retention policy updated |
+| **Usage** | LLM request completed (tokens, cost, model, latency, routing decision) |
+| **DLP** | DLP detection (warn/redact/block), prompt leak score |
+
+## Usage events
+
+Every LLM request is recorded with:
+
+- Request ID
+- Virtual key used
+- Model and provider
+- Input/output tokens
+- Estimated cost
+- Latency (ms)
+- Routing decision
+- DLP detections (if any)
+
+```bash
+curl http://localhost:8013/api/audit/usage \
+  -H "Authorization: Bearer $ALLTERNIT_TOKEN" \
+  -G -d "from=2026-08-01&key_id=key_def456"
+```
+
+## Retention
+
+Audit logs are retained according to the `audit_days` retention policy (default: 7 years / 2555 days). See [Compliance](/security/compliance) for configuring retention.
+
+## Export
+
+Audit logs can be exported as part of a compliance export request. See [Compliance](/security/compliance).

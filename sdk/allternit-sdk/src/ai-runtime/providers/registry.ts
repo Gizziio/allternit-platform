@@ -13,6 +13,7 @@ import { AllternitGroq } from './groq/index.js';
 import { AllternitTogether } from './together/index.js';
 import { AllternitAzureOpenAI } from './azure/index.js';
 import { AllternitBedrock } from './bedrock/index.js';
+import { AllternitMLX } from './mlx/index.js';
 
 export interface ProviderMetadata {
   name: string;
@@ -265,6 +266,27 @@ export const PROVIDER_REGISTRY: Map<string, ProviderEntry> = new Map([
       supportsStreaming: true,
       supportsTools: true,
       supportsVision: true,
+    },
+  }],
+  ['mlx', {
+    name: 'mlx',
+    class: AllternitMLX,
+    metadata: {
+      name: 'mlx',
+      displayName: 'Apple MLX',
+      description: 'Local on-device inference via Apple MLX',
+      features: ['streaming', 'system-prompt'],
+      defaultModel: 'default',
+      models: [
+        'default',
+        'mlx-community/Qwen2.5-7B-Instruct-4bit',
+        'mlx-community/Meta-Llama-3.1-8B-Instruct-4bit',
+        'mlx-community/Mistral-7B-Instruct-v0.3-4bit',
+      ],
+      requiresApiKey: false,
+      supportsStreaming: true,
+      supportsTools: false,
+      supportsVision: false,
     },
   }],
 ]);

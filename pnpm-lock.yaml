@@ -1859,7 +1859,17 @@ importers:
 
   platform/types/schemas: {}
 
-  sdk/allternit-sdk: {}
+  sdk/allternit-sdk:
+    dependencies:
+      '@napi-rs/canvas':
+        specifier: ^0.1.88
+        version: 0.1.94
+      pdfjs-dist:
+        specifier: ^5.4.54
+        version: 5.4.624
+      zod:
+        specifier: ^3.x
+        version: 3.25.76
 
   sdk/capsule-sdk:
     devDependencies:
@@ -3532,6 +3542,24 @@ importers:
       '@mintlify/cli':
         specifier: ^4.0.0
         version: 4.0.1110(@radix-ui/react-popover@1.1.15(@types/react-dom@18.3.7(@types/react@18.3.28))(@types/react@18.3.28)(react-dom@19.2.4(react@19.2.3))(react@19.2.3))(@types/node@25.6.2)(@types/react@18.3.28)(encoding@0.1.13)(react-dom@19.2.4(react@19.2.3))(ts-node@10.9.2(@types/node@25.6.2)(typescript@5.9.3))(typescript@5.9.3)
+
+  surfaces/gizzi-github-action:
+    devDependencies:
+      '@types/node':
+        specifier: ^20.0.0
+        version: 20.19.40
+      typescript:
+        specifier: ^5.4.0
+        version: 5.9.3
+
+  surfaces/gizzi-vscode:
+    devDependencies:
+      '@types/vscode':
+        specifier: ^1.90.0
+        version: 1.116.0
+      typescript:
+        specifier: ^5.4.0
+        version: 5.9.3
 
 packages:
 
@@ -32467,7 +32495,6 @@ snapshots:
       '@napi-rs/canvas-linux-x64-musl': 0.1.94
       '@napi-rs/canvas-win32-arm64-msvc': 0.1.94
       '@napi-rs/canvas-win32-x64-msvc': 0.1.94
-    optional: true
 
   '@napi-rs/cli@2.18.4': {}
 

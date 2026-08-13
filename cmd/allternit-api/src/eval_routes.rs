@@ -17,7 +17,7 @@ use serde::Deserialize;
 use serde_json::{json, Value};
 use std::sync::Arc;
 
-use crate::{auth::AuthUser, AppState};
+use crate::{auth::AuthUser, eval_metrics::score_rubric_criteria, AppState};
 
 pub fn router() -> Router<Arc<AppState>> {
     Router::new()
@@ -32,6 +32,7 @@ pub fn router() -> Router<Arc<AppState>> {
             get(get_run).delete(delete_run),
         )
         .route("/admin/eval/runs/:id/scores", post(record_scores))
+        .route("/admin/eval/runs/:id/grade", post(grade_run))
 }
 
 type ApiError = (StatusCode, Json<Value>);
@@ -83,6 +84,28 @@ fn validate_name(name: &str) -> Result<(), ApiError> {
 
 fn valid_status(status: &str) -> bool {
     matches!(status, "pending" | "running" | "completed" | "failed")
+}
+
+fn validate_rubric_id(
+    conn: &rusqlite::Connection,
+    rubric_id: &str,
+    org: &str,
+) -> Result<(), ApiError> {
+    let exists: bool = conn
+        .query_row(
+            "SELECT EXISTS(SELECT 1 FROM outcome_rubrics WHERE id = ?1 AND organization_id = ?2)",
+            params![rubric_id, org],
+            |row| row.get::<_, bool>(0),
+        )
+        .map_err(internal)?;
+    if !exists {
+        return Err(error(
+            StatusCode::BAD_REQUEST,
+            "rubric_not_found",
+            "The specified rubric does not exist or does not belong to this organization.",
+        ));
+    }
+    Ok(())
 }
 
 fn dataset_json(row: &rusqlite::Row<'_>) -> rusqlite::Result<Value> {
@@ -312,6 +335,9 @@ async fn create_run(
     let org = admin_org(&conn, &user)?;
     validate_name(&body.name)?;
     let _ = find_dataset(&conn, &body.dataset_id, &org)?;
+    if let Some(ref rubric_id) = body.rubric_id {
+        validate_rubric_id(&conn, rubric_id, &org)?;
+    }
 
     let id = uuid::Uuid::new_v4().to_string();
     let now = chrono::Utc::now().to_rfc3339();
@@ -435,6 +461,91 @@ async fn record_scores(
             updated_at = ?4
          WHERE id = ?5 AND organization_id = ?6",
         params![body.status, results_json, scores_json, now, id, org],
+    )
+    .map_err(internal)?;
+
+    let run = find_run(&conn, &id, &org)?;
+    Ok::<Json<Value>, ApiError>(Json(run))
+}
+
+#[derive(Deserialize)]
+struct GradeRun {
+    rubric_id: Option<String>,
+}
+
+async fn grade_run(
+    State(state): State<Arc<AppState>>,
+    Extension(user): Extension<AuthUser>,
+    Path(id): Path<String>,
+    Json(body): Json<GradeRun>,
+) -> impl IntoResponse {
+    let conn = state.db.connect().map_err(internal)?;
+    let org = admin_org(&conn, &user)?;
+    let run = find_run(&conn, &id, &org)?;
+
+    let rubric_id = body
+        .rubric_id
+        .or_else(|| run["rubric_id"].as_str().map(str::to_string))
+        .ok_or_else(|| {
+            error(
+                StatusCode::BAD_REQUEST,
+                "rubric_required",
+                "A rubric_id must be provided or set on the run.",
+            )
+        })?;
+    validate_rubric_id(&conn, &rubric_id, &org)?;
+
+    let criteria_json: String = conn
+        .query_row(
+            "SELECT criteria FROM outcome_rubrics WHERE id = ?1 AND organization_id = ?2",
+            params![rubric_id, org],
+            |row| row.get::<_, String>(0),
+        )
+        .map_err(internal)?;
+    let criteria: Vec<Value> = serde_json::from_str(&criteria_json).map_err(internal)?;
+
+    let results: Vec<Value> = serde_json::from_str(
+        &run["results"]
+            .as_str()
+            .map(str::to_string)
+            .unwrap_or_else(|| run["results"].to_string()),
+    )
+    .unwrap_or_default();
+
+    let mut grades = Vec::new();
+    for case in &results {
+        let prediction = case["prediction"].as_str().unwrap_or("");
+        let reference = case["expected"].as_str().unwrap_or("");
+        let criterion_scores = score_rubric_criteria(&criteria, prediction, reference);
+        grades.push(json!({
+            "case_index": case["case_index"],
+            "criterion_scores": criterion_scores,
+        }));
+    }
+
+    let mut scores = run["scores"].clone();
+    if let Some(scores_obj) = scores.as_object_mut() {
+        scores_obj.insert(
+            "rubric_grades".to_string(),
+            json!({
+                "rubric_id": rubric_id,
+                "grades": grades,
+            }),
+        );
+    } else {
+        scores = json!({
+            "rubric_grades": {
+                "rubric_id": rubric_id,
+                "grades": grades,
+            }
+        });
+    }
+
+    let scores_json = serde_json::to_string(&scores).map_err(internal)?;
+    let now = chrono::Utc::now().to_rfc3339();
+    conn.execute(
+        "UPDATE eval_runs SET scores = ?1, updated_at = ?2 WHERE id = ?3 AND organization_id = ?4",
+        params![scores_json, now, id, org],
     )
     .map_err(internal)?;
 

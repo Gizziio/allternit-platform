@@ -212,6 +212,60 @@ impl BuiltinMetric {
     }
 }
 
+/// Score a set of rubric criteria against a prediction/reference pair.
+/// Each criterion object may include `metric` (a built-in metric id) or
+/// `scoring_type` (`pass_fail`, `numeric`, `scale`). Returns a JSON array of
+/// per-criterion scores.
+pub fn score_rubric_criteria(
+    criteria: &[Value],
+    prediction: &str,
+    reference: &str,
+) -> Vec<Value> {
+    criteria
+        .iter()
+        .map(|criterion| {
+            let id = criterion["id"].as_str().unwrap_or("");
+            let name = criterion["name"].as_str().unwrap_or(id);
+            let metric_id = criterion["metric"].as_str();
+            let scoring_type = criterion["scoring_type"].as_str().unwrap_or("");
+
+            let score = if let Some(metric) = metric_id {
+                BuiltinMetric::try_from(metric)
+                    .map(|m| m.score(prediction, reference)["score"].as_f64().unwrap_or(0.0))
+                    .unwrap_or(0.0)
+            } else if scoring_type == "pass_fail" {
+                exact_match(prediction, reference)
+            } else if scoring_type == "contains" {
+                contains(prediction, reference)
+            } else {
+                token_overlap(prediction, reference)
+            };
+
+            json!({
+                "criterion_id": id,
+                "criterion_name": name,
+                "score": score,
+            })
+        })
+        .collect()
+}
+
+impl TryFrom<&str> for BuiltinMetric {
+    type Error = String;
+
+    fn try_from(value: &str) -> Result<Self, Self::Error> {
+        match value {
+            "exact_match" => Ok(BuiltinMetric::ExactMatch),
+            "contains" => Ok(BuiltinMetric::Contains),
+            "token_overlap" => Ok(BuiltinMetric::TokenOverlap),
+            "cosine_similarity" => Ok(BuiltinMetric::CosineSimilarity),
+            "rouge_l" => Ok(BuiltinMetric::RougeL),
+            "llm_as_judge" => Ok(BuiltinMetric::LlmAsJudge),
+            _ => Err(format!("unknown metric: {value}")),
+        }
+    }
+}
+
 pub fn list_metrics() -> Value {
     json!({
         "items": [

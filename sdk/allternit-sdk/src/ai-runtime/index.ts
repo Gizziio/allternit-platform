@@ -61,6 +61,12 @@ export type {
   McpDirectoryEntry,
 } from './tools/mcp.js';
 export { createMcpServerAttachment, loadMcpServerDirectory, defaultMcpServerDirectoryPath } from './tools/mcp.js';
+export { ProgrammaticToolExecutor, parseBridgeOutput, bridgeHelperCode } from './tools/programmatic-execution.js';
+export type { ProgrammaticExecutionOptions } from './tools/programmatic-execution.js';
+export { executeComposition, sequence, parallel, parallelWithConcurrency, condition, loop, toolCall } from './tools/composition.js';
+export type { CompositionStep, CompositionContext, CompositionExecutionResult, SequenceStep, ParallelStep, ConditionStep, LoopStep, ToolCallStep } from './tools/composition.js';
+export { createAdvisorTool, readRepoContext, advisorSkillManifest } from './skills/advisor.js';
+export type { AdvisorOptions } from './skills/advisor.js';
 
 // System prompts
 export { 
@@ -116,6 +122,25 @@ export {
 export {
   ACPHarnessBridge,
 } from './acp/harness-bridge.js';
+
+// Plugins / Capability SDK
+export { CapabilityBuilder, defineCapability } from './plugins/index.js';
+export { CapabilityRegistry } from './plugins/index.js';
+export type { CapabilityRegistryConfig } from './plugins/index.js';
+export type {
+  CapabilityKind,
+  CapabilityPricing,
+  CapabilityManifest,
+  CapabilityAuthor,
+  CapabilityPermission,
+  CapabilityRegistration,
+  CapabilityLifecycle,
+  CapabilityContext,
+  CapabilityPublishOptions,
+  CapabilityPublishResult,
+  CapabilitySearchOptions,
+  CapabilitySearchResult,
+} from './plugins/index.js';
 
 // Version
 export const VERSION = '1.0.0';

@@ -39,3 +39,5 @@ export * from "./vae-tiled-kernels.wgsl";
 export * from "./vae-tiled-feature-map";
 export * from "./gpu-readback";
 export * from "./owned-pipeline";
+export * from "./qwen-kernel-benchmark";
+export * from "./bonsai-runtime";

@@ -1,0 +1,32 @@
+---
+title: External Keys & CMEK
+description: Bring your own KMS and customer-managed encryption keys.
+---
+
+# External Keys & CMEK
+
+Allternit supports BYO KMS for organizations that need full control over encryption. External keys can be used for vault credentials, stored files, and audit logs.
+
+## Supported providers
+
+- AWS KMS
+- HashiCorp Vault (coming soon)
+- Google Cloud KMS (coming soon)
+
+## Endpoints
+
+| Method | Path | Description |
+|--------|------|-------------|
+| GET    | `/api/v1/admin/external-keys` | List external keys |
+| POST   | `/api/v1/admin/external-keys` | Register a new key |
+| GET    | `/api/v1/admin/external-keys/:id` | Get key details |
+| PATCH  | `/api/v1/admin/external-keys/:id` | Update key |
+| DELETE | `/api/v1/admin/external-keys/:id` | Remove key |
+
+## AWS KMS setup
+
+1. Create a KMS key in your AWS account.
+2. Grant Allternit's service account `kms:Decrypt` and `kms:GenerateDataKey*` permissions.
+3. Register the key ARN via the Admin API or dashboard.
+
+Once configured, all new vault credentials are encrypted with your key.

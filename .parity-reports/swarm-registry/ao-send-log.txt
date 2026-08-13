@@ -1,0 +1,20 @@
+error: prompt not found in ao-parity-p3-a-core-api pane after paste — cleared line with C-u, NOT submitted. Inspect with: tmux capture-pane -p -t ao-parity-p3-a-core-api
+---SENT parity-p3-a-core-api---
+error: prompt not found in ao-parity-p3-b-tools-aci pane after paste — cleared line with C-u, NOT submitted. Inspect with: tmux capture-pane -p -t ao-parity-p3-b-tools-aci
+---SENT parity-p3-b-tools-aci---
+error: prompt not found in ao-parity-p3-c-agents-memory pane after paste — cleared line with C-u, NOT submitted. Inspect with: tmux capture-pane -p -t ao-parity-p3-c-agents-memory
+---SENT parity-p3-c-agents-memory---
+error: prompt not found in ao-parity-p3-d-gizzi-cli pane after paste — cleared line with C-u, NOT submitted. Inspect with: tmux capture-pane -p -t ao-parity-p3-d-gizzi-cli
+---SENT parity-p3-d-gizzi-cli---
+error: prompt not found in ao-parity-p3-e-surfaces pane after paste — cleared line with C-u, NOT submitted. Inspect with: tmux capture-pane -p -t ao-parity-p3-e-surfaces
+---SENT parity-p3-e-surfaces---
+error: prompt not found in ao-parity-p3-f-enterprise pane after paste — cleared line with C-u, NOT submitted. Inspect with: tmux capture-pane -p -t ao-parity-p3-f-enterprise
+---SENT parity-p3-f-enterprise---
+error: prompt not found in ao-parity-p3-g-marketplace pane after paste — cleared line with C-u, NOT submitted. Inspect with: tmux capture-pane -p -t ao-parity-p3-g-marketplace
+---SENT parity-p3-g-marketplace---
+error: prompt not found in ao-parity-p3-k-kimi pane after paste — cleared line with C-u, NOT submitted. Inspect with: tmux capture-pane -p -t ao-parity-p3-k-kimi
+---SENT parity-p3-k-kimi---
+error: prompt not found in ao-parity-p3-q-qwen pane after paste — cleared line with C-u, NOT submitted. Inspect with: tmux capture-pane -p -t ao-parity-p3-q-qwen
+---SENT parity-p3-q-qwen---
+error: prompt not found in ao-parity-p3-z-docs pane after paste — cleared line with C-u, NOT submitted. Inspect with: tmux capture-pane -p -t ao-parity-p3-z-docs
+---SENT parity-p3-z-docs---

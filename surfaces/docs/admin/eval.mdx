@@ -1,0 +1,31 @@
+---
+title: Evaluation Datasets & Runs
+description: Benchmark agent performance over curated datasets.
+---
+
+# Evaluation Datasets & Runs
+
+The eval API lets you create datasets of test inputs and run agents against them. Results can be scored with [outcome rubrics](/admin/outcome-rubrics).
+
+## Endpoints
+
+| Method | Path | Description |
+|--------|------|-------------|
+| GET    | `/api/v1/admin/eval/datasets` | List datasets |
+| POST   | `/api/v1/admin/eval/datasets` | Create a dataset |
+| GET    | `/api/v1/admin/eval/datasets/:id` | Get a dataset |
+| POST   | `/api/v1/admin/eval/runs` | Start a run |
+| GET    | `/api/v1/admin/eval/runs/:id` | Get run status |
+| POST   | `/api/v1/admin/eval/runs/:id/scores` | Record scores |
+
+## Dataset format
+
+A dataset is a list of examples, each with an input and optional expected output:
+
+```json
+{
+  "examples": [
+    {"input": "What is 2+2?", "expected_output": "4"}
+  ]
+}
+```

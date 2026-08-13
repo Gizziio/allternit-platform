@@ -40,7 +40,7 @@ export type ProviderFeature =
 
 export interface ProviderEntry {
   name: string;
-  class: new (...args: unknown[]) => unknown;
+  class: new (...args: any[]) => any;
   metadata: ProviderMetadata;
 }
 

@@ -1,0 +1,166 @@
+---
+title: "Cookbook: RAG Pipeline"
+description: Build a retrieval-augmented generation pipeline with Allternit memory stores
+---
+
+## Goal
+
+Build a RAG pipeline that:
+1. Ingests documents into a memory store
+2. Retrieves relevant context for a query
+3. Augments the LLM prompt with retrieved context
+4. Returns a grounded answer with citations
+
+## Prerequisites
+
+- An Allternit API key
+- `@allternit/sdk` installed
+- Source documents (markdown, text, or PDF)
+
+## Implementation
+
+### 1. Create a memory store
+
+```typescript
+import { AllternitClient } from '@allternit/sdk';
+
+const client = new AllternitClient({
+  apiKey: process.env.ALLTERNIT_API_KEY!,
+});
+
+const store = await client.memory.createStore({
+  name: 'product-docs',
+  embeddingModel: 'text-embedding-3-small',
+});
+```
+
+### 2. Ingest documents
+
+```typescript
+import { readFileSync } from 'fs';
+import { globSync } from 'glob';
+
+const docs = globSync('./docs/**/*.md');
+
+for (const path of docs) {
+  const content = readFileSync(path, 'utf-8');
+  const chunks = chunkText(content, { maxTokens: 512, overlap: 50 });
+
+  for (const chunk of chunks) {
+    await client.memory.addEntry(store.id, {
+      content: chunk.text,
+      metadata: {
+        source: path,
+        section: chunk.section,
+        line_start: chunk.lineStart,
+        line_end: chunk.lineEnd,
+      },
+    });
+  }
+}
+
+console.log(`Ingested ${docs.length} documents`);
+```
+
+### 3. Retrieve context
+
+```typescript
+async function retrieve(query: string, topK = 5) {
+  const results = await client.memory.search(store.id, {
+    query,
+    limit: topK,
+  });
+
+  return results.entries.map((entry) => ({
+    content: entry.content,
+    source: entry.metadata.source,
+    score: entry.score,
+  }));
+}
+```
+
+### 4. Augmented generation
+
+```typescript
+async function askWithRAG(question: string) {
+  // Retrieve
+  const context = await retrieve(question);
+
+  // Build prompt
+  const contextBlock = context
+    .map((c, i) => `[Source ${i + 1}: ${c.source}]\n${c.content}`)
+    .join('\n\n---\n\n');
+
+  const messages = [
+    {
+      role: 'system',
+      content: `You are a helpful assistant. Answer the user's question using
+        the provided context. Always cite sources as [Source N]. If the context
+        doesn't contain the answer, say so.`,
+    },
+    {
+      role: 'user',
+      content: `Context:\n\n${contextBlock}\n\nQuestion: ${question}`,
+    },
+  ];
+
+  // Generate
+  const response = await client.chat.completions.create({
+    model: 'gizzi-pro',
+    messages,
+    temperature: 0.1,
+  });
+
+  return {
+    answer: response.choices[0].message.content,
+    sources: context.map((c) => c.source),
+  };
+}
+```
+
+### 5. Use it
+
+```typescript
+const result = await askWithRAG('How do I configure permission profiles?');
+console.log(result.answer);
+// "To configure permission profiles, use `gizzi config profile add`..."
+// Citations: [Source 1], [Source 2]
+console.log('Sources:', result.sources);
+```
+
+## Chunking helper
+
+```typescript
+function chunkText(
+  text: string,
+  { maxTokens = 512, overlap = 50 }: { maxTokens: number; overlap: number }
+) {
+  const words = text.split(/\s+/);
+  const chunks = [];
+  let start = 0;
+
+  while (start < words.length) {
+    const end = Math.min(start + maxTokens, words.length);
+    chunks.push({
+      text: words.slice(start, end).join(' '),
+      lineStart: start,
+      lineEnd: end,
+    });
+    start = end - overlap;
+  }
+
+  return chunks;
+}
+```
+
+## Explanation
+
+- **Chunking** — Documents are split into overlapping chunks to ensure relevant context isn't split across boundaries.
+- **Metadata** — Each chunk stores its source file and position, enabling citations in the generated answer.
+- **Low temperature** — RAG prompts use low temperature (0.1) to reduce hallucination and stay grounded in the retrieved context.
+
+## Next steps
+
+- Add **re-ranking** — retrieve more chunks than needed, then re-rank with a cross-encoder.
+- Use **prompt caching** — cache the system prompt to reduce cost on repeated queries.
+- Add **conversation history** — include previous Q&A pairs in the context for multi-turn RAG.

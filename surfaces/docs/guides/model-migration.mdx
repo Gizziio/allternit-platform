@@ -1,0 +1,91 @@
+---
+title: Model Migration
+description: Switch between LLM providers and models without changing your application code
+---
+
+## Overview
+
+Allternit's LLM gateway provides a unified API across multiple model providers. Switching models — or running multiple models in parallel — requires no code changes, just configuration.
+
+## Supported providers
+
+| Provider | Models | Virtual key prefix |
+|----------|--------|-------------------|
+| Allternit (gateway) | All models via aliases | `ak-` |
+| Local (Ollama) | Any GGUF/MLX model | *(direct)* |
+
+## Using model aliases
+
+Define aliases in your virtual key or workspace configuration:
+
+```json
+{
+  "aliases": {
+    "fast": "gizzi-fast",
+    "smart": "gizzi-pro",
+    "local": "llama3:8b"
+  }
+}
+```
+
+Then reference aliases in your API calls:
+
+```typescript
+const response = await client.chat.completions.create({
+  model: 'fast',  // Resolves to gizzi-fast
+  messages: [{ role: 'user', content: 'Hello' }],
+});
+```
+
+## Migration checklist
+
+1. **Create a new virtual key** pointing to the target provider/model.
+2. **Test with a small workload** — compare outputs, latency, and cost.
+3. **Update aliases** to point to the new model.
+4. **Monitor usage** via the audit log for the first 24 hours.
+5. **Remove the old key** once migration is confirmed.
+
+## Cost comparison
+
+Use the token estimation API to compare costs before migrating:
+
+```bash
+curl http://localhost:8013/api/v1/estimate \
+  -H "Authorization: Bearer $ALLTERNIT_API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "model": "gizzi-pro",
+    "input_tokens": 1000,
+    "output_tokens": 500
+  }'
+```
+
+## Prompt caching
+
+Allternit supports prompt caching for models that advertise it. Cached prompts reduce latency and cost for repeated system prompts:
+
+```typescript
+const response = await client.chat.completions.create({
+  model: 'smart',
+  messages: [
+    {
+      role: 'system',
+      content: 'You are a code reviewer...',
+      cache_control: { type: 'ephemeral' }
+    },
+    { role: 'user', content: diff }
+  ],
+});
+```
+
+## Reasoning mode
+
+Enable extended thinking for complex tasks:
+
+```typescript
+const response = await client.chat.completions.create({
+  model: 'smart',
+  messages: [{ role: 'user', content: 'Prove this theorem' }],
+  thinking: { type: 'enabled', budget_tokens: 10000 }
+});
+```

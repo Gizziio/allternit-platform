@@ -1,0 +1,31 @@
+---
+title: Federation
+description: External identity issuer rules for SSO and JIT provisioning.
+---
+
+# Federation
+
+Federation lets you map external identity providers (IdPs) to Allternit workspaces and roles. It supports OIDC-compliant issuers.
+
+## Endpoints
+
+| Method | Path | Description |
+|--------|------|-------------|
+| GET    | `/api/v1/admin/federation/issuers` | List issuers |
+| POST   | `/api/v1/admin/federation/issuers` | Add an issuer |
+| GET    | `/api/v1/admin/federation/rules` | List mapping rules |
+| POST   | `/api/v1/admin/federation/rules` | Add a rule |
+
+## Rule format
+
+```json
+{
+  "issuer_id": "iss_xxx",
+  "claim_name": "groups",
+  "claim_value": "engineering",
+  "role": "member",
+  "workspace_id": "ws_xxx"
+}
+```
+
+Valid roles are `owner`, `admin`, and `member`. Issuer URLs must use `https://`.

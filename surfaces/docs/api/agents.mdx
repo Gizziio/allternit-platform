@@ -1,0 +1,162 @@
+---
+title: Agents API
+description: Create, run, and manage agents
+---
+
+## Overview
+
+The Agents API lets you create, configure, run, and manage agents through the Allternit platform. Agents are persistent entities that can be run multiple times with different inputs.
+
+## Endpoints
+
+### List agents
+
+```
+GET /api/agents
+```
+
+Query parameters:
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `status` | string | Filter by status: `active`, `suspended`, `disposed` |
+| `limit` | integer | Max results (default 20, max 100) |
+| `cursor` | string | Pagination cursor |
+
+Response:
+
+```json
+{
+  "agents": [
+    {
+      "id": "agent_abc123",
+      "name": "Code Analyzer",
+      "status": "active",
+      "runtime": "gizzi-pro",
+      "skills": ["code", "web_search"],
+      "created_at": "2026-08-01T10:00:00Z"
+    }
+  ],
+  "next_cursor": "agent_abc122"
+}
+```
+
+### Create agent
+
+```
+POST /api/agents
+```
+
+Request body:
+
+```json
+{
+  "name": "code-reviewer",
+  "runtime": "gizzi-pro",
+  "skills": ["code", "web_search", "str_replace_editor"],
+  "system_prompt": "You are a senior code reviewer...",
+  "config": {
+    "temperature": 0.3,
+    "max_tokens": 4096,
+    "permission_profile": "suggest"
+  }
+}
+```
+
+Response: `201 Created`
+
+```json
+{
+  "id": "agent_def456",
+  "name": "code-reviewer",
+  "status": "ready",
+  "created_at": "2026-08-12T14:00:00Z"
+}
+```
+
+### Get agent
+
+```
+GET /api/agents/{id}
+```
+
+### Update agent
+
+```
+PATCH /api/agents/{id}
+```
+
+### Delete agent
+
+```
+DELETE /api/agents/{id}
+```
+
+### Run agent
+
+```
+POST /api/agents/{id}/run
+```
+
+Request body:
+
+```json
+{
+  "input": "Review this pull request for security issues",
+  "context": {
+    "repo": "my-org/my-repo",
+    "pr": 42
+  },
+  "max_tokens": 100000,
+  "max_tool_calls": 50
+}
+```
+
+Response (streaming via SSE):
+
+```
+event: message
+data: {"type": "message", "data": "Let me analyze the diff..."}
+
+event: tool_use
+data: {"type": "tool_use", "tool": "bash", "input": {"command": "git diff"}}
+
+event: message
+data: {"type": "message", "data": "The diff shows a potential SQL injection..."}
+
+event: result
+data: {"type": "result", "output": "...", "usage": {"tokens": 5420}}
+```
+
+### Approve action
+
+When an agent is suspended awaiting approval:
+
+```
+POST /api/agents/{id}/runs/{runId}/approve
+```
+
+```json
+{
+  "approved": true
+}
+```
+
+Or deny:
+
+```json
+{
+  "approved": false,
+  "reason": "Too risky"
+}
+```
+
+### Stop agent
+
+```
+POST /api/agents/{id}/stop
+```
+
+## Agent lifecycle
+
+See [Agent Lifecycle](/guides/agent-lifecycle) for the full state diagram and best practices.

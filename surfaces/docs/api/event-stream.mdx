@@ -1,0 +1,33 @@
+---
+title: Event Stream
+description: Server-sent events and WebSockets for real-time agent updates.
+---
+
+# Event Stream
+
+Allternit exposes two real-time channels for observing agent runs:
+
+- **Server-Sent Events (SSE)** at `/beta/sessions/:id/events`
+- **WebSocket** at `/beta/sessions/:id/events/ws`
+
+Both streams emit the same event types. Use SSE for simple clients and WebSockets when you need bidirectional communication (e.g., sending an interrupt).
+
+## Event types
+
+| Event | Description |
+|-------|-------------|
+| `run.created` | A new run started. |
+| `run.completed` | The run finished successfully. |
+| `run.failed` | The run failed. |
+| `message.delta` | A new content chunk from the model. |
+| `tool.call` | A tool was invoked. |
+| `tool.result` | A tool returned a result. |
+| `budget_exceeded` | The session hit a spend or token cap. |
+| `context_warning` | Context window is at 80% capacity. |
+
+## SSE example
+
+```bash
+curl -N -H "Authorization: Bearer $TOKEN" \
+  https://api.allternit.com/beta/sessions/sess_123/events
+```
