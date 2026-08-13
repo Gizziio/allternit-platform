@@ -1,5 +1,7 @@
 {
   "name": "Allternit Docs",
+  "theme": "mint",
+  "description": "Allternit documentation for Gizzi Code, the ACI platform, BYOC runtime, SDKs, and APIs.",
   "logo": {
     "light": "/logo/light.svg",
     "dark": "/logo/dark.svg"
@@ -8,162 +10,194 @@
   "colors": {
     "primary": "#FA7921",
     "light": "#FA7921",
-    "dark": "#E56A17",
-    "anchors": {
-      "from": "#FA7921",
-      "to": "#E56A17"
+    "dark": "#E56A17"
+  },
+  "navbar": {
+    "links": [
+      {
+        "label": "Support",
+        "href": "mailto:support@allternit.com"
+      }
+    ],
+    "primary": {
+      "type": "button",
+      "label": "Dashboard",
+      "href": "https://platform.allternit.com"
     }
   },
-  "topbarLinks": [
-    {
-      "name": "Support",
-      "url": "mailto:support@allternit.com"
+  "navigation": {
+    "tabs": [
+      {
+        "tab": "Documentation",
+        "groups": [
+          {
+            "group": "Get Started",
+            "pages": [
+              "introduction",
+              "quickstart",
+              "architecture"
+            ]
+          },
+          {
+            "group": "Core Concepts",
+            "pages": [
+              "core/gizzi-runtime",
+              "core/communication",
+              "core/git-dag",
+              "core/skills"
+            ]
+          },
+          {
+            "group": "Gizzi Code CLI",
+            "pages": [
+              "cli/overview",
+              "cli/installation",
+              "cli/configuration",
+              "cli/authentication",
+              "cli/headless-execution",
+              "cli/permission-profiles",
+              "cli/ci-mode"
+            ]
+          },
+          {
+            "group": "Tools & ACI",
+            "pages": [
+              "tools/overview",
+              "tools/tool-belt",
+              "tools/mcp",
+              "tools/computer-use",
+              "tools/strict-tool-use",
+              "tools/build-a-tool"
+            ]
+          },
+          {
+            "group": "Security & Enterprise",
+            "pages": [
+              "security/overview",
+              "security/security-model",
+              "security/rbac",
+              "security/vault",
+              "security/compliance",
+              "security/audit",
+              "security/scim"
+            ]
+          },
+          {
+            "group": "Admin API",
+            "pages": [
+              "admin/overview",
+              "admin/workspaces",
+              "admin/service-accounts",
+              "admin/spend-limits",
+              "admin/mcp-tunnels",
+              "admin/analytics",
+              "admin/external-keys",
+              "admin/inference-hooks",
+              "admin/user-profiles",
+              "admin/federation",
+              "admin/outcome-rubrics",
+              "admin/eval",
+              "admin/fallback-credits"
+            ]
+          },
+          {
+            "group": "BYOC Runtime",
+            "pages": [
+              "byoc/overview",
+              "byoc/installation",
+              "byoc/configuration",
+              "byoc/deployment"
+            ]
+          },
+          {
+            "group": "Surfaces",
+            "pages": [
+              "surfaces/desktop",
+              "surfaces/platform",
+              "surfaces/extensions",
+              "surfaces/anydoc"
+            ]
+          },
+          {
+            "group": "Guides",
+            "pages": [
+              "guides/agent-lifecycle",
+              "guides/model-migration",
+              "guides/idempotency-and-retries",
+              "guides/token-budgets",
+              "guides/webhooks",
+              "guides/pdf-citations"
+            ]
+          },
+          {
+            "group": "Cookbooks",
+            "pages": [
+              "cookbooks/overview",
+              "cookbooks/multi-agent-orchestration",
+              "cookbooks/browser-automation",
+              "cookbooks/rag-pipeline",
+              "cookbooks/ci-cd-integration"
+            ]
+          }
+        ]
+      },
+      {
+        "tab": "API Reference",
+        "groups": [
+          {
+            "group": "API Reference",
+            "pages": [
+              "api/authentication",
+              "api/endpoints",
+              "api/event-stream",
+              "api/chat-completions",
+              "api/agents",
+              "api/sessions",
+              "api/memory-stores",
+              "api/files",
+              "api/batches",
+              "api/webhooks",
+              "api/rate-limits",
+              "api/deployments",
+              "api/work-queue",
+              "api/sandbox"
+            ]
+          }
+        ]
+      },
+      {
+        "tab": "SDK",
+        "groups": [
+          {
+            "group": "SDK",
+            "pages": [
+              "sdk/typescript",
+              "sdk/python"
+            ]
+          }
+        ]
+      }
+    ],
+    "global": {
+      "anchors": [
+        {
+          "anchor": "GitHub",
+          "icon": "github",
+          "href": "https://github.com/allternit"
+        },
+        {
+          "anchor": "Community",
+          "icon": "discord",
+          "href": "https://discord.gg/allternit"
+        }
+      ]
     }
-  ],
-  "topbarCtaButton": {
-    "name": "Dashboard",
-    "url": "https://platform.allternit.com"
   },
-  "tabs": [
-    {
-      "name": "Documentation",
-      "url": ""
-    },
-    {
-      "name": "API Reference",
-      "url": "api"
-    },
-    {
-      "name": "SDK",
-      "url": "sdk"
+  "footer": {
+    "socials": {
+      "x": "https://twitter.com/allternit",
+      "github": "https://github.com/allternit",
+      "discord": "https://discord.gg/allternit"
     }
-  ],
-  "anchors": [
-    {
-      "name": "GitHub",
-      "icon": "github",
-      "url": "https://github.com/allternit"
-    },
-    {
-      "name": "Community",
-      "icon": "discord",
-      "url": "https://discord.gg/allternit"
-    }
-  ],
-  "navigation": [
-    {
-      "group": "Get Started",
-      "pages": [
-        "introduction",
-        "quickstart",
-        "architecture"
-      ]
-    },
-    {
-      "group": "Core Concepts",
-      "pages": [
-        "core/gizzi-runtime",
-        "core/communication",
-        "core/git-dag",
-        "core/skills"
-      ]
-    },
-    {
-      "group": "Gizzi Code CLI",
-      "pages": [
-        "cli/overview",
-        "cli/installation",
-        "cli/configuration",
-        "cli/authentication",
-        "cli/headless-execution",
-        "cli/permission-profiles",
-        "cli/ci-mode"
-      ]
-    },
-    {
-      "group": "Tools & ACI",
-      "pages": [
-        "tools/overview",
-        "tools/tool-belt",
-        "tools/mcp",
-        "tools/computer-use",
-        "tools/strict-tool-use",
-        "tools/build-a-tool"
-      ]
-    },
-    {
-      "group": "Security & Enterprise",
-      "pages": [
-        "security/overview",
-        "security/security-model",
-        "security/vault",
-        "security/compliance",
-        "security/audit",
-        "security/scim"
-      ]
-    },
-    {
-      "group": "BYOC Runtime",
-      "pages": [
-        "byoc/overview",
-        "byoc/installation",
-        "byoc/configuration",
-        "byoc/deployment"
-      ]
-    },
-    {
-      "group": "Surfaces",
-      "pages": [
-        "surfaces/desktop",
-        "surfaces/platform",
-        "surfaces/extensions",
-        "surfaces/anydoc"
-      ]
-    },
-    {
-      "group": "API Reference",
-      "pages": [
-        "api/authentication",
-        "api/endpoints",
-        "api/event-stream",
-        "api/chat-completions",
-        "api/agents",
-        "api/sessions",
-        "api/memory-stores",
-        "api/files",
-        "api/sandbox"
-      ]
-    },
-    {
-      "group": "SDK",
-      "pages": [
-        "sdk/typescript",
-        "sdk/python"
-      ]
-    },
-    {
-      "group": "Guides",
-      "pages": [
-        "guides/agent-lifecycle",
-        "guides/model-migration",
-        "guides/idempotency-and-retries",
-        "guides/token-budgets"
-      ]
-    },
-    {
-      "group": "Cookbooks",
-      "pages": [
-        "cookbooks/overview",
-        "cookbooks/multi-agent-orchestration",
-        "cookbooks/browser-automation",
-        "cookbooks/rag-pipeline",
-        "cookbooks/ci-cd-integration"
-      ]
-    }
-  ],
-  "footerSocials": {
-    "twitter": "https://twitter.com/allternit",
-    "github": "https://github.com/allternit",
-    "discord": "https://discord.gg/allternit"
   }
 }

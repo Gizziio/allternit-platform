@@ -1,60 +1,11 @@
-export interface PageAgentBridgeConfig {
-  apiKey?: string;
-  baseURL?: string;
-  model?: string;
-  language?: "en-US" | "zh-CN" | null;
-  maxSteps?: number | null;
-  systemInstruction?: string | null;
-  experimentalLlmsTxt?: boolean;
-}
+/**
+ * Page-agent configuration (re-exported from shared service package).
+ */
 
-interface BrowserPageAgentConfigSource {
-  language?: string;
-  extensionApiKey?: string;
-  extensionBaseUrl?: string;
-  extensionModel?: string;
-  extensionMaxSteps?: number | null;
-  extensionSystemInstruction?: string;
-  extensionExperimentalLlmsTxt?: boolean;
-}
-
-function normalizePageAgentLanguage(
-  language?: string,
-): PageAgentBridgeConfig["language"] {
-  if (language === "zh" || language === "zh-CN") return "zh-CN";
-  if (language === "en" || language === "en-US") return "en-US";
-  if (language === "system" || language === "") return null;
-  return undefined;
-}
-
-function buildPageAgentBridgeConfig(
-  source: BrowserPageAgentConfigSource,
-): PageAgentBridgeConfig {
-  return {
-    apiKey: source.extensionApiKey,
-    baseURL: source.extensionBaseUrl,
-    model: source.extensionModel,
-    language: normalizePageAgentLanguage(source.language),
-    maxSteps: source.extensionMaxSteps ?? null,
-    systemInstruction:
-      source.extensionSystemInstruction && source.extensionSystemInstruction.length > 0
-        ? source.extensionSystemInstruction
-        : null,
-    experimentalLlmsTxt: source.extensionExperimentalLlmsTxt ?? false,
-  };
-}
-
-function hasPageAgentBridgeConfig(
-  config: PageAgentBridgeConfig | null | undefined,
-): config is PageAgentBridgeConfig {
-  if (!config) return false;
-
-  return [
-    config.apiKey,
-    config.baseURL,
-    config.model,
-    config.language,
-    config.maxSteps,
-    config.systemInstruction,
-  ].some((value) => value !== undefined) || typeof config.experimentalLlmsTxt === "boolean";
-}
+export {
+  buildPageAgentBridgeConfig,
+  hasPageAgentBridgeConfig,
+  normalizePageAgentLanguage,
+  type BrowserPageAgentConfigSource,
+  type PageAgentBridgeConfig,
+} from "@allternit/page-agent";

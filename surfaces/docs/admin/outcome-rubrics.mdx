@@ -1,0 +1,28 @@
+---
+title: Outcome Rubrics
+description: Define scoring criteria for agent evaluation.
+---
+
+# Outcome Rubrics
+
+Outcome rubrics let you score agent runs against structured criteria. Rubrics can be created from scratch or from built-in templates.
+
+## Criteria types
+
+- `pass_fail` — binary result
+- `numeric` — integer or float in a range
+- `scale` — Likert-style scale
+
+## Endpoints
+
+| Method | Path | Description |
+|--------|------|-------------|
+| GET    | `/api/v1/admin/outcome-rubrics` | List rubrics |
+| POST   | `/api/v1/admin/outcome-rubrics` | Create a rubric |
+| POST   | `/api/v1/admin/outcome-rubrics/from-template` | Create from template |
+| GET    | `/api/v1/admin/outcome-rubrics/:id` | Get a rubric |
+| POST   | `/api/v1/admin/outcome-rubrics/:id/scores` | Record scores |
+
+## Templates
+
+Built-in templates include `task_fidelity`, `code_quality`, and `safety`.
