@@ -428,6 +428,8 @@ export class AllternitHarness {
     let inputTokens = 0;
     let outputTokens = 0;
     let stopReason: import('./types.js').HarnessStopReason | undefined;
+    // Per-tool-call streaming state: index → { id, name, argumentsJson }
+    const pendingToolCalls = new Map<number, { id: string; name: string; argumentsJson: string }>();
     for await (const event of readSseJson(response.body)) {
       const message = event as Record<string, any>;
       if (message.type === 'message_start') inputTokens = message.message?.usage?.input_tokens ?? 0;
@@ -437,6 +439,54 @@ export class AllternitHarness {
       }
       if (message.type === 'message_stop') {
         stopReason = mapStopReason('anthropic', message.message?.stop_reason) ?? stopReason;
+      }
+      // Track tool_use content block starts for fine-grained streaming
+      if (message.type === 'content_block_start' && message.content_block?.type === 'tool_use') {
+        const idx = message.index as number;
+        pendingToolCalls.set(idx, {
+          id: message.content_block.id ?? '',
+          name: message.content_block.name ?? '',
+          argumentsJson: '',
+        });
+        yield {
+          type: 'tool_call',
+          id: message.content_block.id ?? '',
+          name: message.content_block.name ?? '',
+          arguments: '',
+        } satisfies ToolCallChunk;
+      }
+      if (message.type === 'content_block_delta' && message.delta?.type === 'input_json_delta') {
+        const idx = message.index as number;
+        const pending = pendingToolCalls.get(idx);
+        if (pending) {
+          const partial = message.delta.partial_json ?? '';
+          pending.argumentsJson += partial;
+          yield {
+            type: 'tool_call',
+            id: pending.id,
+            name: pending.name,
+            arguments: partial,
+          } satisfies ToolCallChunk;
+        }
+      }
+      if (message.type === 'content_block_stop') {
+        const idx = message.index as number;
+        const pending = pendingToolCalls.get(idx);
+        if (pending) {
+          let parsed: Record<string, unknown> = {};
+          try {
+            parsed = JSON.parse(pending.argumentsJson || '{}');
+          } catch {
+            parsed = { _raw: pending.argumentsJson };
+          }
+          yield {
+            type: 'tool_call_complete',
+            id: pending.id,
+            name: pending.name,
+            arguments: parsed,
+          } satisfies ToolCallCompleteChunk;
+          pendingToolCalls.delete(idx);
+        }
       }
       if (message.type === 'content_block_delta' && message.delta?.type === 'text_delta') {
         yield { type: 'text', text: message.delta.text ?? '' };

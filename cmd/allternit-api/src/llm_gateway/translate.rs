@@ -169,8 +169,8 @@ pub struct ChatMessage {
 
 impl ChatMessage {
     /// Flatten string-or-multipart content into plain text. Non-text parts
-    /// (images, audio) become bracketed placeholders so the transcript still
-    /// reads sensibly.
+    /// (images, video, audio) become bracketed placeholders so the transcript
+    /// still reads sensibly.
     pub fn content_text(&self) -> String {
         match &self.content {
             Some(MessageContent::Text(text)) => text.clone(),
@@ -178,6 +178,14 @@ impl ChatMessage {
                 .iter()
                 .map(|part| match part.part_type.as_str() {
                     "text" => part.text.clone().unwrap_or_default(),
+                    "video_url" => {
+                        let url = part
+                            .video_url
+                            .as_ref()
+                            .map(|v| v.url.as_str())
+                            .unwrap_or("?");
+                        format!("[video_url url=\"{url}\"]")
+                    }
                     other => format!("[{other}]"),
                 })
                 .collect::<Vec<_>>()
@@ -195,10 +203,10 @@ pub enum MessageContent {
     Parts(Vec<ContentPart>),
 }
 
-/// A content part. `text` and `image_url` are interpreted and forwarded to
-/// Gizzi; other part kinds (input_audio, ...) are kept as their type marker
-/// only. A `file_id` may reference a session-scoped file and is resolved to
-/// base64 inline data before being forwarded.
+/// A content part. `text`, `image_url`, and `video_url` are interpreted and
+/// forwarded to Gizzi; other part kinds (input_audio, ...) are kept as their
+/// type marker only. A `file_id` may reference a session-scoped file and is
+/// resolved to base64 inline data before being forwarded.
 #[derive(Debug, Clone, Deserialize)]
 pub struct ContentPart {
     #[serde(rename = "type")]
@@ -209,6 +217,10 @@ pub struct ContentPart {
     pub image_url: Option<ImageUrlPart>,
     #[serde(default)]
     pub input_image: Option<InputImagePart>,
+    /// Video input: accepts a base64 data-URI (`data:video/mp4;base64,...`),
+    /// a plain URL, or a `file_id` reference to a session-scoped upload.
+    #[serde(default)]
+    pub video_url: Option<VideoUrlPart>,
     #[serde(default)]
     pub file_id: Option<String>,
 }
@@ -224,6 +236,25 @@ pub struct ImageUrlPart {
 pub struct InputImagePart {
     pub data: String,
     pub format: String,
+}
+
+/// Video content part for multimodal models that accept video input.
+///
+/// The `url` field accepts:
+/// - A plain HTTPS URL pointing to a video file
+/// - A base64 data-URI (`data:<mime>;base64,<encoded>`)
+/// - A `file_id` reference is resolved separately by the proxy layer
+#[derive(Debug, Clone, Deserialize, Serialize)]
+pub struct VideoUrlPart {
+    pub url: String,
+    /// Optional MIME type hint (e.g. `video/mp4`). Inferred from the URL or
+    /// data-URI prefix when omitted.
+    #[serde(default)]
+    pub mime_type: Option<String>,
+    /// When the video is provided as raw base64 (without a data-URI prefix),
+    /// this field carries the encoded payload directly.
+    #[serde(default)]
+    pub data: Option<String>,
 }
 
 #[derive(Debug, Clone, Deserialize, Serialize)]
@@ -507,6 +538,15 @@ pub fn messages_to_gizzi_parts(messages: &[ChatMessage]) -> (Option<String>, Vec
         }));
     }
 
+    fn push_video(parts: &mut Vec<serde_json::Value>, url: String, mime: &str) {
+        parts.push(json!({
+            "type": "file",
+            "url": url,
+            "mime": mime,
+            "kind": "video",
+        }));
+    }
+
     fn part_image_url(part: &ContentPart) -> Option<String> {
         part.image_url.as_ref().map(|u| u.url.clone())
     }
@@ -522,6 +562,40 @@ pub fn messages_to_gizzi_parts(messages: &[ChatMessage]) -> (Option<String>, Vec
             };
             format!("data:{};base64,{}", mime, i.data)
         })
+    }
+
+    fn part_video_url(part: &ContentPart) -> Option<(String, String)> {
+        part.video_url.as_ref().map(|v| {
+            let url = if let Some(data) = &v.data {
+                let mime = v.mime_type.as_deref().unwrap_or("video/mp4");
+                format!("data:{mime};base64,{data}")
+            } else {
+                v.url.clone()
+            };
+            let mime = v
+                .mime_type
+                .clone()
+                .unwrap_or_else(|| video_mime_from_url(&url).to_string());
+            (url, mime)
+        })
+    }
+
+    fn video_mime_from_url(url: &str) -> &'static str {
+        if url.starts_with("data:video/mp4") {
+            "video/mp4"
+        } else if url.starts_with("data:video/webm") {
+            "video/webm"
+        } else if url.starts_with("data:video/quicktime") {
+            "video/quicktime"
+        } else if url.ends_with(".mp4") {
+            "video/mp4"
+        } else if url.ends_with(".webm") {
+            "video/webm"
+        } else if url.ends_with(".mov") {
+            "video/quicktime"
+        } else {
+            "video/mp4"
+        }
     }
 
     fn image_mime_from_url(url: &str) -> &'static str {
@@ -564,7 +638,11 @@ pub fn messages_to_gizzi_parts(messages: &[ChatMessage]) -> (Option<String>, Vec
                     Some(MessageContent::Parts(content_parts)) => {
                         let mut text_buffer = prefix;
                         for part in content_parts {
-                            if let Some(url) = part_image_url(part).or_else(|| part_input_image_url(part)) {
+                            if let Some((url, mime)) = part_video_url(part) {
+                                push_text(&mut parts, &text_buffer);
+                                text_buffer = String::new();
+                                push_video(&mut parts, url, &mime);
+                            } else if let Some(url) = part_image_url(part).or_else(|| part_input_image_url(part)) {
                                 push_text(&mut parts, &text_buffer);
                                 text_buffer = String::new();
                                 let mime = image_mime_from_url(&url);
@@ -632,6 +710,15 @@ pub fn message_to_gizzi_parts(message: &ChatMessage) -> Vec<serde_json::Value> {
         }));
     }
 
+    fn push_video(parts: &mut Vec<serde_json::Value>, url: String, mime: &str) {
+        parts.push(json!({
+            "type": "file",
+            "url": url,
+            "mime": mime,
+            "kind": "video",
+        }));
+    }
+
     fn part_image_url(part: &ContentPart) -> Option<String> {
         part.image_url.as_ref().map(|u| u.url.clone())
     }
@@ -647,6 +734,40 @@ pub fn message_to_gizzi_parts(message: &ChatMessage) -> Vec<serde_json::Value> {
             };
             format!("data:{};base64,{}" , mime, i.data)
         })
+    }
+
+    fn part_video_url(part: &ContentPart) -> Option<(String, String)> {
+        part.video_url.as_ref().map(|v| {
+            let url = if let Some(data) = &v.data {
+                let mime = v.mime_type.as_deref().unwrap_or("video/mp4");
+                format!("data:{mime};base64,{data}")
+            } else {
+                v.url.clone()
+            };
+            let mime = v
+                .mime_type
+                .clone()
+                .unwrap_or_else(|| video_mime_from_url(&url).to_string());
+            (url, mime)
+        })
+    }
+
+    fn video_mime_from_url(url: &str) -> &'static str {
+        if url.starts_with("data:video/mp4") {
+            "video/mp4"
+        } else if url.starts_with("data:video/webm") {
+            "video/webm"
+        } else if url.starts_with("data:video/quicktime") {
+            "video/quicktime"
+        } else if url.ends_with(".mp4") {
+            "video/mp4"
+        } else if url.ends_with(".webm") {
+            "video/webm"
+        } else if url.ends_with(".mov") {
+            "video/quicktime"
+        } else {
+            "video/mp4"
+        }
     }
 
     fn image_mime_from_url(url: &str) -> &'static str {
@@ -670,7 +791,11 @@ pub fn message_to_gizzi_parts(message: &ChatMessage) -> Vec<serde_json::Value> {
         Some(MessageContent::Parts(content_parts)) => {
             let mut text_buffer = String::new();
             for part in content_parts {
-                if let Some(url) = part_image_url(part).or_else(|| part_input_image_url(part)) {
+                if let Some((url, mime)) = part_video_url(part) {
+                    push_text(&mut parts, &text_buffer);
+                    text_buffer = String::new();
+                    push_video(&mut parts, url, &mime);
+                } else if let Some(url) = part_image_url(part).or_else(|| part_input_image_url(part)) {
                     push_text(&mut parts, &text_buffer);
                     text_buffer = String::new();
                     let mime = image_mime_from_url(&url);
@@ -1225,8 +1350,8 @@ mod tests {
         let message = ChatMessage {
             role: "user".to_string(),
             content: Some(MessageContent::Parts(vec![
-                ContentPart { part_type: "text".to_string(), text: Some("Look".to_string()), image_url: None, input_image: None, file_id: None },
-                ContentPart { part_type: "image_url".to_string(), text: None, image_url: Some(ImageUrlPart { url: "https://example.com/x.png".to_string(), detail: None }), input_image: None, file_id: None },
+                ContentPart { part_type: "text".to_string(), text: Some("Look".to_string()), image_url: None, input_image: None, video_url: None, file_id: None },
+                ContentPart { part_type: "image_url".to_string(), text: None, image_url: Some(ImageUrlPart { url: "https://example.com/x.png".to_string(), detail: None }), input_image: None, video_url: None, file_id: None },
             ])),
             name: None,
             tool_call_id: None,

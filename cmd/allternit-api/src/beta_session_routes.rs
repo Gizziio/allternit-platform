@@ -66,6 +66,10 @@ pub fn beta_session_router() -> Router<Arc<AppState>> {
             get(get_file).delete(delete_file),
         )
         .route("/beta/sessions/:id/context/edit", post(edit_context))
+        .route(
+            "/beta/sessions/:id/tool-context",
+            get(get_tool_context).put(set_tool_context),
+        )
 }
 
 #[derive(Debug, Default, Deserialize)]
@@ -1214,6 +1218,160 @@ fn context_warning_state(state: BudgetState, projected: UsageDelta) -> Option<Co
             None
         }
     })
+}
+
+// ─── Tool Context Budget Routes ─────────────────────────────────────────────
+
+/// Per-tool context budget and active window configuration.
+/// Stored as a JSON blob inside `beta_session_tool_context`.
+#[derive(Debug, Clone, Serialize, Deserialize, Default)]
+struct ToolContextBudgetConfig {
+    /// Maximum number of tokens of tool output retained in the active context.
+    /// Older tool results are truncated or summarised once this is exceeded.
+    #[serde(default)]
+    max_tool_result_tokens: Option<u64>,
+    /// Maximum number of concurrent tool executions.
+    #[serde(default)]
+    max_concurrent_tools: Option<u32>,
+    /// Named tool budgets keyed by tool name.  Each value is the maximum
+    /// number of tokens that tool's results may occupy.
+    #[serde(default)]
+    per_tool_budgets: Option<serde_json::Value>,
+    /// When true, tool results are automatically truncated to fit the
+    /// remaining context window after text messages.
+    #[serde(default)]
+    auto_truncate: Option<bool>,
+}
+
+#[derive(Debug, Deserialize)]
+struct SetToolContextBody {
+    #[serde(flatten)]
+    config: ToolContextBudgetConfig,
+}
+
+#[derive(Debug, Serialize)]
+struct ToolContextBudgetResponse {
+    session_id: String,
+    config: ToolContextBudgetConfig,
+    active_tools: Vec<ActiveToolWindow>,
+    updated_at: String,
+}
+
+#[derive(Debug, Serialize)]
+struct ActiveToolWindow {
+    tool_name: String,
+    call_id: String,
+    tokens_estimate: u64,
+    created_at: String,
+}
+
+fn ensure_tool_context_table(conn: &rusqlite::Connection) -> rusqlite::Result<()> {
+    conn.execute_batch(
+        "CREATE TABLE IF NOT EXISTS beta_session_tool_context (
+            session_id TEXT NOT NULL,
+            config TEXT NOT NULL DEFAULT '{}',
+            updated_at TEXT NOT NULL DEFAULT (datetime('now')),
+            PRIMARY KEY (session_id)
+        )",
+    )
+}
+
+fn ensure_active_tool_windows_table(conn: &rusqlite::Connection) -> rusqlite::Result<()> {
+    conn.execute_batch(
+        "CREATE TABLE IF NOT EXISTS beta_session_active_tools (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            session_id TEXT NOT NULL,
+            tool_name TEXT NOT NULL,
+            call_id TEXT NOT NULL,
+            tokens_estimate INTEGER NOT NULL DEFAULT 0,
+            created_at TEXT NOT NULL DEFAULT (datetime('now'))
+        )",
+    )
+}
+
+async fn get_tool_context(
+    State(state): State<Arc<AppState>>,
+    Extension(user): Extension<AuthUser>,
+    Path(id): Path<String>,
+) -> Result<Json<Value>, ApiError> {
+    load_session(state.clone(), user.user_id.clone(), id.clone()).await?;
+    let db = state.db.clone();
+    let session_id = id.clone();
+    let result = tokio::task::spawn_blocking(move || {
+        let conn = db.connect()?;
+        ensure_tool_context_table(&conn)?;
+        ensure_active_tool_windows_table(&conn)?;
+        let config: String = conn
+            .query_row(
+                "SELECT config FROM beta_session_tool_context WHERE session_id = ?1",
+                params![session_id],
+                |row| row.get(0),
+            )
+            .optional()?
+            .unwrap_or_else(|| "{}".to_string());
+        let parsed: ToolContextBudgetConfig =
+            serde_json::from_str(&config).unwrap_or_default();
+        let updated_at: String = conn
+            .query_row(
+                "SELECT updated_at FROM beta_session_tool_context WHERE session_id = ?1",
+                params![session_id],
+                |row| row.get(0),
+            )
+            .optional()?
+            .unwrap_or_else(|| "1970-01-01T00:00:00".to_string());
+        let mut stmt = conn.prepare(
+            "SELECT tool_name, call_id, tokens_estimate, created_at
+             FROM beta_session_active_tools WHERE session_id = ?1 ORDER BY created_at",
+        )?;
+        let active: Vec<ActiveToolWindow> = stmt
+            .query_map(params![session_id], |row| {
+                Ok(ActiveToolWindow {
+                    tool_name: row.get(0)?,
+                    call_id: row.get(1)?,
+                    tokens_estimate: row.get(2)?,
+                    created_at: row.get(3)?,
+                })
+            })?
+            .collect::<Result<Vec<_>, _>>()?;
+        Ok::<ToolContextBudgetResponse, rusqlite::Error>(ToolContextBudgetResponse {
+            session_id,
+            config: parsed,
+            active_tools: active,
+            updated_at,
+        })
+    })
+    .await
+    .map_err(|e| ApiError::Internal(e.to_string()))?
+    .map_err(|e| ApiError::DbError(e.to_string()))?;
+    Ok(Json(serde_json::to_value(&result).unwrap()))
+}
+
+async fn set_tool_context(
+    State(state): State<Arc<AppState>>,
+    Extension(user): Extension<AuthUser>,
+    Path(id): Path<String>,
+    Json(body): Json<SetToolContextBody>,
+) -> Result<Json<Value>, ApiError> {
+    load_session(state.clone(), user.user_id.clone(), id.clone()).await?;
+    let db = state.db.clone();
+    let session_id = id.clone();
+    let config_str = serde_json::to_string(&body.config).unwrap_or_else(|_| "{}".to_string());
+    tokio::task::spawn_blocking(move || {
+        let conn = db.connect()?;
+        ensure_tool_context_table(&conn)?;
+        conn.execute(
+            "INSERT INTO beta_session_tool_context (session_id, config, updated_at)
+             VALUES (?1, ?2, datetime('now'))
+             ON CONFLICT(session_id) DO UPDATE SET config = ?2, updated_at = datetime('now')",
+            params![session_id, config_str],
+        )?;
+        Ok::<(), rusqlite::Error>(())
+    })
+    .await
+    .map_err(|e| ApiError::Internal(e.to_string()))?
+    .map_err(|e| ApiError::DbError(e.to_string()))?;
+    // Return the freshly persisted state
+    get_tool_context(State(state), Extension(user), Path(id)).await
 }
 
 #[cfg(test)]
