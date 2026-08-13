@@ -70,6 +70,7 @@ use allternit_api::library_routes::library_router;
 use allternit_api::local_brain_routes::local_brain_router;
 use allternit_api::mcp_routes::mcp_router;
 use allternit_api::me_routes::me_router;
+use allternit_api::memory_reconstruction_routes::memory_reconstruction_router;
 use allternit_api::memory_routes::memory_router;
 use allternit_api::metrics::metrics_router;
 use allternit_api::oauth_routes::oauth_router;
@@ -317,6 +318,7 @@ async fn main() {
         .merge(beta_work_router())
         .merge(webhook_subscription_router())
         .merge(beta_memory_store_router())
+        .merge(memory_reconstruction_router())
         .merge(user_profile_router())
         .merge(canvas_router())
         .merge(v1_router())

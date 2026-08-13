@@ -50,6 +50,8 @@ const RunReplayView        = lazy(() => import('../views/code/RunReplayView').th
 const AppsExtensionsView     = lazy(() => import('../views/AppsExtensionsView').then(m => ({ default: m.AppsExtensionsView })));
 const DispatchView           = lazy(() => import('../views/DispatchView').then(m => ({ default: m.DispatchView })));
 const PlaygroundView       = lazy(() => import('../views/PlaygroundView').then(m => ({ default: m.PlaygroundView })));
+const AllternitPlaygroundView = lazy(() => import('../views/AllternitPlaygroundView').then(m => ({ default: m.AllternitPlaygroundView })));
+const AgentStudioView      = lazy(() => import('../views/AgentStudioView').then(m => ({ default: m.AgentStudioView })));
 const DagIntegrationPage   = lazy(() => import('../views/DagIntegrationPage').then(m => ({ default: m.DagIntegrationPage })));
 const CloudDeployView      = lazy(() => import('../views/cloud-deploy/CloudDeployView').then(m => ({ default: m.CloudDeployView })));
 const DesignModeView         = lazy(() => import('../views/design/DesignModeView').then(m => ({ default: m.default })));
@@ -273,6 +275,16 @@ export function getShellViewRegistry(handlers: {
     playground: ({ context }: { context?: ViewContext }) => (
       <ErrorBoundary fallback={<ErrorFallbackWrapper viewName="Playground" />}>
         <PlaygroundView />
+      </ErrorBoundary>
+    ),
+    "allternit-playground": ({ context }: { context?: ViewContext }) => (
+      <ErrorBoundary fallback={<ErrorFallbackWrapper viewName="Allternit Playground" />}>
+        <AllternitPlaygroundView />
+      </ErrorBoundary>
+    ),
+    "agent-studio": ({ context }: { context?: ViewContext }) => (
+      <ErrorBoundary fallback={<ErrorFallbackWrapper viewName="Agent Studio" />}>
+        <AgentStudioView />
       </ErrorBoundary>
     ),
     elements: ({ context }: { context?: ViewContext }) => (
