@@ -1,0 +1,29 @@
+---
+title: Role-Based Access Control
+description: Roles, groups, and workspace scoping in Allternit.
+---
+
+# Role-Based Access Control (RBAC)
+
+Allternit uses RBAC to control access to organizations, workspaces, and admin APIs.
+
+## Built-in roles
+
+- `owner` — full organization control.
+- `admin` — manage workspaces, members, billing, and most admin APIs.
+- `member` — use assigned workspaces and agents.
+
+## Custom roles
+
+Create custom roles via `/api/v1/admin/rbac_roles` with a permission set such as `workspace:read`, `agent:write`, `billing:read`.
+
+## Groups
+
+RBAC groups bundle users and service accounts. Assign a group to a workspace to grant its members a role inside that workspace.
+
+## CLI
+
+```bash
+allternit admin workspaces members list --workspace-id ws_xxx
+allternit admin rbac-roles list
+```

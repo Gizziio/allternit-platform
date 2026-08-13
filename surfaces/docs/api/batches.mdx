@@ -1,0 +1,32 @@
+---
+title: Batches
+description: Asynchronous batch inference API.
+---
+
+# Batches
+
+The `/v1/batches` endpoint lets you submit a large number of chat-completion requests asynchronously and retrieve results later.
+
+## Endpoints
+
+| Method | Path | Description |
+|--------|------|-------------|
+| POST   | `/v1/batches` | Create a batch |
+| GET    | `/v1/batches` | List batches |
+| GET    | `/v1/batches/:id` | Get batch status |
+| POST   | `/v1/batches/:id/cancel` | Cancel a batch |
+| GET    | `/v1/batches/:id/results` | Download results |
+
+## Input format
+
+Submit a JSONL file where each line is a request object with `custom_id`, `method`, `url`, and `body`.
+
+## SDK
+
+```typescript
+const batch = await allternit.batches.create({
+  input_file_id: 'file_xxx',
+  endpoint: '/v1/chat/completions',
+  completion_window: '24h',
+});
+```
