@@ -1,0 +1,77 @@
+---
+title: CI Mode
+description: Run Gizzi Code in CI pipelines and non-interactive environments
+---
+
+## Overview
+
+Gizzi Code runs in CI pipelines via `gizzi exec`, which is pipe-safe, non-interactive, and exits with standard exit codes. Combined with permission profiles and environment-based authentication, it integrates into GitHub Actions, GitLab CI, and other CI systems.
+
+## Authentication in CI
+
+Pass the API key via environment variable — no interactive login required:
+
+```yaml
+# .github/workflows/agent.yml
+name: Agent Review
+on: [pull_request]
+jobs:
+  review:
+    runs-on: ubuntu-latest
+    env:
+      ALLTERNIT_API_KEY: ${{ secrets.ALLTERNIT_API_KEY }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - run: npm install -g @allternit/gizzi-code
+      - run: |
+          git diff origin/main...HEAD | gizzi exec \
+            "Review this diff for bugs, security issues, and style violations"
+```
+
+## Permission profiles for CI
+
+Create a restricted profile that only allows the tools needed for the task:
+
+```bash
+gizzi config profile add ci-review \
+  --rule bash=ask \
+  --rule edit=deny \
+  --rule delete=deny
+```
+
+Use it in your pipeline:
+
+```bash
+gizzi exec --permission-profile ci-review "Summarize the PR changes"
+```
+
+## Streaming output for logs
+
+Use `--output-format stream-json` to emit structured events that CI log parsers can consume:
+
+```bash
+gizzi exec --output-format stream-json "Generate a changelog entry" \
+  | jq -r 'select(.type == "message") | .data'
+```
+
+## Exit codes
+
+| Code | Meaning |
+|------|---------|
+| `0` | Success |
+| `1` | Agent error or timeout |
+| `2` | Auth or config failure |
+
+## Caching
+
+Gizzi Code downloads are small. Cache the global npm package to speed up subsequent runs:
+
+```yaml
+- uses: actions/cache@v4
+  with:
+    path: ~/.npm
+    key: gizzi-${{ runner.os }}-${{ hashFiles('package-lock.json') }}
+```

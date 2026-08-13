@@ -1,0 +1,74 @@
+---
+title: Idempotency & Retries
+description: Build reliable integrations with idempotent requests and retry strategies
+---
+
+## Idempotency keys
+
+Allternit supports idempotency keys on `POST` endpoints. Include an `Idempotency-Key` header to ensure that retries return the same result:
+
+```bash
+curl -X POST http://localhost:8013/api/v1/agents \
+  -H "Authorization: Bearer $ALLTERNIT_API_KEY" \
+  -H "Idempotency-Key: req_abc123" \
+  -H "Content-Type: application/json" \
+  -d '{ "name": "my-agent", "runtime": "gizzi-pro" }'
+```
+
+If the same `Idempotency-Key` is sent again within 24 hours, the server returns the cached response — no duplicate agent is created.
+
+## Retry strategy
+
+Allternit returns standard HTTP status codes. Implement exponential backoff for transient errors:
+
+| Status | Meaning | Retry? |
+|--------|---------|--------|
+| `200` | Success | No |
+| `400` | Bad request | No — fix the request |
+| `401` | Unauthorized | No — check credentials |
+| `429` | Rate limited | Yes — respect `Retry-After` header |
+| `500` | Internal error | Yes — with backoff |
+| `502` / `503` | Service unavailable | Yes — with backoff |
+
+## Implementation
+
+```typescript
+async function withRetry<T>(fn: () => Promise<T>, maxRetries = 3): Promise<T> {
+  for (let attempt = 0; attempt <= maxRetries; attempt++) {
+    try {
+      return await fn();
+    } catch (error: any) {
+      if (error.status === 429 || error.status >= 500) {
+        const retryAfter = error.headers?.['retry-after'];
+        const delay = retryAfter
+          ? parseInt(retryAfter, 10) * 1000
+          : Math.min(1000 * Math.pow(2, attempt), 30000);
+        await new Promise(resolve => setTimeout(resolve, delay));
+        continue;
+      }
+      throw error;
+    }
+  }
+  throw new Error('Max retries exceeded');
+}
+
+const agent = await withRetry(() =>
+  client.agents.create({ name: 'my-agent', runtime: 'gizzi-pro' })
+);
+```
+
+## Rate limits
+
+Rate limits are per-virtual-key. Check the response headers:
+
+```
+X-RateLimit-Limit: 600
+X-RateLimit-Remaining: 599
+X-RateLimit-Reset: 1640995200
+```
+
+When `Remaining` hits 0, wait until the `Reset` timestamp before retrying.
+
+## Batch operations
+
+For bulk operations, use the [Batch Inference API](/api/endpoints) instead of individual requests. Batches are processed asynchronously and are not subject to per-request rate limits.

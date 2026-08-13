@@ -1,0 +1,124 @@
+---
+title: Sandbox API
+description: Execute code in isolated VM sandboxes
+---
+
+## Overview
+
+The Sandbox API provides VM-based code execution with configurable resources, network access, and toolchains. Sandboxes run on infrastructure you control.
+
+## Endpoints
+
+### Get capabilities
+
+```
+GET /api/sandbox/capabilities
+```
+
+Response:
+
+```json
+{
+  "driver": "vm",
+  "languages": ["python", "javascript", "bash", "rust"],
+  "toolchains": ["python-3.12", "node-22", "rust-1.80"],
+  "max_cpu_cores": 4,
+  "max_memory_mb": 4096,
+  "snapshot_support": true,
+  "streaming_support": true
+}
+```
+
+### Execute code
+
+```
+POST /api/sandbox/execute
+```
+
+```json
+{
+  "code": "print('hello from sandbox')",
+  "language": "python",
+  "timeout_secs": 300,
+  "network_enabled": false,
+  "resources": {
+    "cpu_cores": 1,
+    "memory_mb": 512
+  },
+  "toolchains": ["python-3.12"]
+}
+```
+
+Response:
+
+```json
+{
+  "execution_id": "exec_abc123",
+  "status": "completed",
+  "stdout": "hello from sandbox\n",
+  "stderr": "",
+  "exit_code": 0,
+  "duration_ms": 142,
+  "resource_usage": {
+    "cpu_seconds": 0.12,
+    "memory_peak_mb": 48
+  }
+}
+```
+
+### Streaming execution
+
+Set `stream: true` to receive output as it's produced:
+
+```json
+{
+  "code": "import time\nfor i in range(5):\n  print(f'step {i}')\n  time.sleep(1)",
+  "language": "python",
+  "stream": true
+}
+```
+
+Response (SSE):
+
+```
+event: stdout
+data: step 0
+
+event: stdout
+data: step 1
+
+event: done
+data: {"exit_code": 0, "duration_ms": 5012}
+```
+
+### Take snapshot
+
+```
+POST /api/sandbox/executions/{id}/snapshot
+```
+
+Creates a snapshot of the sandbox state for later restoration.
+
+### List templates
+
+```
+GET /api/sandbox/templates
+```
+
+Sandbox templates define pre-configured environments with specific toolchains and dependencies.
+
+## Security
+
+- Each sandbox runs in an isolated VM — no shared state between executions.
+- Network access is disabled by default; enable explicitly.
+- Resource limits prevent runaway processes.
+- Execution timeout is enforced even if the process ignores signals.
+
+## Resource limits
+
+| Resource | Min | Max |
+|----------|-----|-----|
+| CPU cores | 1 | 4 |
+| Memory (MB) | 128 | 4096 |
+| Timeout (seconds) | 5 | 3600 |
+| Disk (MB) | 100 | 10240 |

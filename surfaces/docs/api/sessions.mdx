@@ -1,0 +1,103 @@
+---
+title: Sessions API
+description: Manage conversation sessions and message history
+---
+
+## Overview
+
+Sessions are conversation threads between a user and an agent. They maintain message history, tool call results, and context across turns.
+
+## Endpoints
+
+### List sessions
+
+```
+GET /api/sessions
+```
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `agent_id` | string | Filter by agent |
+| `status` | string | `active`, `completed`, `archived` |
+| `limit` | integer | Max results (default 20) |
+| `cursor` | string | Pagination cursor |
+
+### Create session
+
+```
+POST /api/sessions
+```
+
+```json
+{
+  "agent_id": "agent_abc123",
+  "title": "Code review session",
+  "metadata": { "project": "my-app" }
+}
+```
+
+### Get session
+
+```
+GET /api/sessions/{id}
+```
+
+### Send message
+
+```
+POST /api/sessions/{id}/messages
+```
+
+```json
+{
+  "role": "user",
+  "content": "Review the auth module"
+}
+```
+
+Response (streaming via SSE):
+
+```
+event: message
+data: {"role": "assistant", "content": "Let me look at the auth module..."}
+
+event: tool_use
+data: {"tool": "str_replace_editor", "input": {"command": "view", "path": "src/auth.ts"}}
+
+event: message
+data: {"role": "assistant", "content": "I found a potential issue..."}
+```
+
+### List messages
+
+```
+GET /api/sessions/{id}/messages
+```
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `limit` | integer | Max messages (default 50) |
+| `before` | string | Message ID cursor (older) |
+| `after` | string | Message ID cursor (newer) |
+
+### Archive session
+
+```
+POST /api/sessions/{id}/archive
+```
+
+### Delete session
+
+```
+DELETE /api/sessions/{id}
+```
+
+<Warning>
+  Deleting a session permanently removes all message history. This action is irreversible.
+</Warning>
+
+## Session memory
+
+Sessions can access the agent's persistent memory store. Memory entries persist across sessions for the same agent.
+
+See [Memory Stores](/api/memory-stores) for the memory API.

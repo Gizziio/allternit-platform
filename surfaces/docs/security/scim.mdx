@@ -1,0 +1,82 @@
+---
+title: SCIM Provisioning
+description: Enterprise SSO and automated user provisioning via SCIM
+---
+
+## Overview
+
+Allternit supports **SCIM 2.0** (System for Cross-domain Identity Management) for automated user provisioning and deprovisioning. Connect your identity provider to automatically sync users and groups into Allternit workspaces.
+
+## Supported identity providers
+
+Any SCIM 2.0-compliant identity provider can be connected. Common integrations include:
+
+- Microsoft Entra ID (Azure AD)
+- Okta
+- OneLogin
+- JumpCloud
+- Google Workspace
+
+## Setup
+
+### 1. Enable SCIM in Allternit
+
+An organization owner enables SCIM from the admin dashboard:
+
+1. Navigate to **Settings → Security → SCIM**
+2. Click **Enable SCIM**
+3. Copy the **SCIM Base URL** and **Bearer Token**
+
+### 2. Configure your identity provider
+
+In your identity provider's SCIM settings:
+
+- **Base URL**: `https://api.allternit.com/scim/v2`
+- **Authentication**: Bearer token (paste the token from step 1)
+- **Mapping**: Map your provider's user attributes to Allternit's schema
+
+### 3. Map groups to workspaces
+
+SCIM groups are mapped to Allternit workspaces:
+
+```
+SCIM Group "Engineering"  →  Allternit Workspace "engineering"
+SCIM Group "Marketing"    →  Allternit Workspace "marketing"
+```
+
+When a user is added to a SCIM group, they are automatically provisioned into the corresponding Allternit workspace with the default member role.
+
+## SCIM schema
+
+### User
+
+| Attribute | Required | Description |
+|-----------|----------|-------------|
+| `userName` | yes | Email address |
+| `name.givenName` | yes | First name |
+| `name.familyName` | yes | Last name |
+| `emails` | yes | Email addresses |
+| `active` | yes | Account status |
+
+### Group
+
+| Attribute | Required | Description |
+|-----------|----------|-------------|
+| `displayName` | yes | Group name |
+| `members` | no | Member user IDs |
+
+## Deprovisioning
+
+When a user is deactivated in your identity provider:
+
+1. The SCIM `PATCH` sets `active: false`.
+2. Allternit immediately revokes the user's sessions.
+3. The user's data is retained according to the organization's retention policy.
+4. Virtual keys owned by the user are flagged for rotation.
+
+## Role mapping
+
+By default, SCIM-provisioned users receive the **member** role. To assign admin roles:
+
+- Map a SCIM group to an Allternit workspace with the `admin` role.
+- Or promote the user manually from the admin dashboard after provisioning.

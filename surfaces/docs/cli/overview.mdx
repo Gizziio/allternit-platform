@@ -1,0 +1,57 @@
+---
+title: Gizzi Code Overview
+description: The agentic CLI for building, running, and debugging agents from the terminal
+---
+
+## What is Gizzi Code?
+
+**Gizzi Code** is the unified CLI for the Allternit agentic runtime. It is distributed as the `gizzi` executable and powers the same engine that drives the platform web, desktop, and mobile surfaces.
+
+The CLI gives you:
+
+- An interactive **TUI** (terminal user interface) for agent conversations
+- A **headless mode** for scripting and CI pipelines
+- Built-in **tool execution**, **code editing**, and **browser automation**
+- First-class **permission profiles** and **credential management**
+
+<CardGroup cols={3}>
+  <Card title="Installation" icon="download" href="/cli/installation">
+    Install Gizzi Code on macOS, Linux, or Windows
+  </Card>
+  <Card title="Configuration" icon="gear" href="/cli/configuration">
+    Configure profiles, models, and runtime options
+  </Card>
+  <Card title="Headless Execution" icon="terminal" href="/cli/headless-execution">
+    Run agents non-interactively in scripts and CI
+  </Card>
+</CardGroup>
+
+## Quick example
+
+Start an interactive session:
+
+```bash
+gizzi
+```
+
+Or run a single prompt and exit:
+
+```bash
+gizzi exec "Summarize the changes in the current git diff"
+```
+
+## How it fits
+
+```
+┌─────────────────────────────────────────────────┐
+│                  Allternit Platform              │
+│  ┌──────────┐  ┌──────────┐  ┌──────────────┐  │
+│  │ Web (ai.) │  │ Desktop  │  │ gizzi-code   │  │
+│  └─────┬────┘  └────┬─────┘  └──────┬───────┘  │
+│        └─────────────┴───────────────┘          │
+│                      │                           │
+│               Allternit API + Gizzi Runtime      │
+└─────────────────────────────────────────────────┘
+```
+
+Gizzi Code is one of many surfaces that talk to the same Allternit API and runtime. Anything you can do in the web platform, you can do from the terminal.

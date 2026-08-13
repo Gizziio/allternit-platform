@@ -1,0 +1,82 @@
+---
+title: Allternit Vault
+description: Encrypted credential storage for provider keys and tokens
+---
+
+## Overview
+
+The **Allternit Vault** is an encrypted credential store for provider API keys, connector tokens, and other secrets. It replaces plaintext environment variables with a managed, audited, and encrypted storage layer.
+
+## Architecture
+
+The vault is implemented in Rust (`allternit_vault.rs`) and exposes a REST API:
+
+| Method | Path | Purpose |
+|--------|------|---------|
+| POST | `/api/vault/secrets` | Store a secret |
+| GET | `/api/vault/secrets/{id}` | Retrieve a secret (decrypted) |
+| DELETE | `/api/vault/secrets/{id}` | Delete a secret |
+| GET | `/api/vault/secrets` | List secrets (metadata only, no values) |
+
+## Encryption
+
+- Secrets are encrypted at rest using AES-256-GCM with a configurable encryption key.
+- In headless/BYOC deployments, a runtime key is generated on first use and persisted in a local file with `0o600` permissions.
+- The encryption key is never returned via the API.
+
+## Usage
+
+### Store a provider key
+
+```bash
+curl -X POST http://localhost:8013/api/vault/secrets \
+  -H "Authorization: Bearer $ALLTERNIT_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "name": "provider-key-gpt",
+    "value": "sk-...",
+    "tags": ["provider", "gpt"]
+  }'
+```
+
+Response:
+
+```json
+{
+  "id": "secret_abc123",
+  "name": "provider-key-gpt",
+  "tags": ["provider", "gpt"],
+  "created_at": "2026-08-12T10:00:00Z"
+}
+```
+
+### Reference in virtual keys
+
+Virtual LLM keys can reference a vault secret by ID instead of embedding the provider key directly:
+
+```json
+{
+  "name": "my-virtual-key",
+  "vault_secret_id": "secret_abc123",
+  "model_allowlist": ["gizzi-pro", "gizzi-fast"],
+  "budget_monthly_usd": 100
+}
+```
+
+When the virtual key is used, the API server retrieves the provider key from the vault at runtime — the key is never exposed to the caller.
+
+## Access control
+
+- **Vault write** requires `admin:*` scope.
+- **Vault read** returns metadata only; the decrypted value is only returned to internal services (e.g., the LLM gateway).
+- All vault operations are audit-logged.
+
+## Rotation
+
+To rotate a provider key:
+
+1. Store the new key as a new vault secret.
+2. Update the virtual key's `vault_secret_id` to point to the new secret.
+3. Delete the old secret.
+
+This allows zero-downtime rotation without updating every virtual key simultaneously.

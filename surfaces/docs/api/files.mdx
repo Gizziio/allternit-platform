@@ -1,0 +1,97 @@
+---
+title: Files API
+description: Upload, manage, and reference files for agents and sessions
+---
+
+## Overview
+
+The Files API lets you upload files that agents can reference during runs. Files are scoped to an organization and can be tagged with a purpose for routing.
+
+## Endpoints
+
+### List files
+
+```
+GET /api/files
+```
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `purpose` | string | Filter by purpose: `data`, `assistants`, `batch`, `fine-tune` |
+| `limit` | integer | Max results (default 20) |
+
+### Upload file
+
+```
+POST /api/files
+Content-Type: multipart/form-data
+```
+
+```bash
+curl -X POST http://localhost:8013/api/files \
+  -H "Authorization: Bearer $ALLTERNIT_API_KEY" \
+  -F "file=@data.csv" \
+  -F "purpose=data"
+```
+
+Response:
+
+```json
+{
+  "id": "file_abc123",
+  "filename": "data.csv",
+  "bytes": 1024,
+  "purpose": "data",
+  "created_at": "2026-08-12T10:00:00Z"
+}
+```
+
+### Get file
+
+```
+GET /api/files/{id}
+```
+
+### Download file content
+
+```
+GET /api/files/{id}/content
+```
+
+### Delete file
+
+```
+DELETE /api/files/{id}
+```
+
+## File purposes
+
+| Purpose | Description |
+|---------|-------------|
+| `data` | General data files for agent consumption |
+| `assistants` | Files attached to agent runs |
+| `batch` | Input files for batch inference jobs |
+| `fine-tune` | Training data for fine-tuning jobs |
+
+## Size limits
+
+| Plan | Max file size | Max files |
+|------|---------------|-----------|
+| Free | 10 MB | 100 |
+| Pro | 100 MB | 10,000 |
+| Enterprise | 1 GB | Unlimited |
+
+## Using files in agent runs
+
+Reference uploaded files by ID in agent run context:
+
+```typescript
+const run = await client.agents.run(agentId, {
+  input: 'Analyze this dataset',
+  context: {
+    files: ['file_abc123'],
+  },
+});
+```
+
+The agent can read the file content using the `str_replace_editor` or `bash` tools.
