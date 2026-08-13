@@ -1,4 +1,9 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="120" height="32" viewBox="0 0 120 32" fill="none">
-  <path d="M8 26L16 6L24 26H20.5L16 14.5L11.5 26H8Z" fill="#FA7921"/>
-  <text x="30" y="22" font-family="system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif" font-size="16" font-weight="600" fill="#111827">allternit</text>
+<svg xmlns="http://www.w3.org/2000/svg" width="140" height="36" viewBox="0 0 140 36" fill="none">
+  <g fill="#111827">
+    <!-- A:// mark -->
+    <path d="M6 30L15.5 6L25 30H20.5L18 23H13L10.5 30H6ZM14.25 19H16.75L15.5 15.5L14.25 19Z"/>
+    <path d="M26 10H30V30H26V10Z"/>
+    <path d="M34 14H38V30H34V14Z"/>
+  </g>
+  <text x="46" y="24" font-family="Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif" font-size="17" font-weight="600" fill="#111827">allternit</text>
 </svg>
