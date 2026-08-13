@@ -101,3 +101,42 @@ DELETE /api/sessions/{id}
 Sessions can access the agent's persistent memory store. Memory entries persist across sessions for the same agent.
 
 See [Memory Stores](/api/memory-stores) for the memory API.
+
+## Context editing
+
+Edit the context window of an active session without sending a new message.
+
+```
+POST /beta/sessions/{id}/context/edit
+```
+
+```json
+{
+  "operation": "replace",
+  "target": "last",
+  "messages": [
+    { "role": "system", "content": "You are a security-focused reviewer." }
+  ]
+}
+```
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `operation` | string | `replace`, `insert`, `delete` |
+| `target` | string | `first`, `last`, `all`, or a message ID |
+| `messages` | array | Messages to insert or replace |
+
+The server emits a `context_warning` event when the session approaches its context limit. Use context editing to truncate or rewrite history before the limit is reached.
+
+## Session file store
+
+Upload and list files scoped to a session. Session files are automatically available to the agent as attachments.
+
+```
+POST   /beta/sessions/{id}/files
+GET    /beta/sessions/{id}/files
+GET    /beta/sessions/{id}/files/{file_id}
+DELETE /beta/sessions/{id}/files/{file_id}
+```
+
+Use multipart/form-data for uploads. Files are subject to the workspace storage quota and retention policy.

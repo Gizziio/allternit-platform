@@ -106,7 +106,8 @@
               "byoc/overview",
               "byoc/installation",
               "byoc/configuration",
-              "byoc/deployment"
+              "byoc/deployment",
+              "byoc/managed-agents"
             ]
           },
           {
@@ -123,10 +124,17 @@
             "pages": [
               "guides/agent-lifecycle",
               "guides/model-migration",
+              "guides/openai-migration",
               "guides/idempotency-and-retries",
               "guides/token-budgets",
               "guides/webhooks",
               "guides/pdf-citations"
+            ]
+          },
+          {
+            "group": "Release Notes",
+            "pages": [
+              "release-notes"
             ]
           },
           {
@@ -151,6 +159,7 @@
               "api/endpoints",
               "api/event-stream",
               "api/chat-completions",
+              "api/embeddings",
               "api/agents",
               "api/sessions",
               "api/memory-stores",

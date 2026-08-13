@@ -1,0 +1,58 @@
+---
+title: 'Embeddings'
+description: 'Generate text embeddings through the Allternit LLM gateway'
+---
+
+# Embeddings
+
+The `/v1/embeddings` endpoint returns vector embeddings for one or more input strings. It is provider-agnostic: Allternit normalizes the request, routes it to the configured provider, and returns a consistent response shape.
+
+## Create embeddings
+
+```bash
+curl -X POST https://api.allternit.com/v1/embeddings \
+  -H "Authorization: Bearer $ALLTERNIT_API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "model": "allternit-embed-3-small",
+    "input": ["Allternit is the open alternative to locked-in AI vendors."]
+  }'
+```
+
+### Request body
+
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| `model` | string | Yes | Embedding model ID. |
+| `input` | string \| string[] | Yes | Text to embed. |
+| `encoding_format` | `float` \| `base64` | No | Defaults to `float`. |
+| `dimensions` | integer | No | Truncate embeddings to this length if supported. |
+| `user` | string | No | End-user identifier for rate-limit attribution. |
+
+### Response
+
+```json
+{
+  "object": "list",
+  "data": [
+    {
+      "object": "embedding",
+      "index": 0,
+      "embedding": [0.0123, -0.0456, ...]
+    }
+  ],
+  "model": "allternit-embed-3-small",
+  "usage": {
+    "prompt_tokens": 12,
+    "total_tokens": 12
+  }
+}
+```
+
+## Batch embedding
+
+Pass an array of strings to embed multiple inputs in one request. The order of `data` matches the order of `input`.
+
+## Provider routing
+
+Allternit maps the requested model to the best available provider based on your workspace configuration and `service_tier`. Use the model registry to discover supported embedding models.

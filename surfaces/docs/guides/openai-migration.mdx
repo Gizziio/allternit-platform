@@ -1,0 +1,56 @@
+---
+title: 'Migrate from OpenAI'
+description: 'Move your OpenAI integration to Allternit with minimal code changes'
+---
+
+# Migrate from OpenAI
+
+Allternit's `/v1/chat/completions` endpoint is wire-compatible with OpenAI. In most cases you only need to change the base URL and API key.
+
+## Base URL and authentication
+
+| OpenAI | Allternit |
+|--------|-----------|
+| `https://api.openai.com/v1` | `https://api.allternit.com/v1` |
+| `Authorization: Bearer sk-...` | `Authorization: Bearer $ALLTERNIT_API_KEY` |
+
+## Chat completions
+
+```python
+from openai import OpenAI
+
+client = OpenAI(
+    base_url="https://api.allternit.com/v1",
+    api_key=os.environ["ALLTERNIT_API_KEY"]
+)
+
+response = client.chat.completions.create(
+    model="allternit-claude-sonnet-4",
+    messages=[{"role": "user", "content": "Hello"}]
+)
+```
+
+## Model mapping
+
+Allternit exposes normalized model IDs. You can also use provider-native names and let the gateway resolve them.
+
+| OpenAI model | Allternit equivalent |
+|--------------|----------------------|
+| `gpt-4o` | `allternit-gpt-4o` |
+| `gpt-4o-mini` | `allternit-gpt-4o-mini` |
+| `o1-preview` | `allternit-reasoning-preview` |
+| `text-embedding-3-small` | `allternit-embed-3-small` |
+
+Use `GET /v1/models` to list available models for your workspace.
+
+## Feature parity notes
+
+- **Function calling**: Allternit supports `tools`, `tool_choice`, and `parallel_tool_calls`.
+- **Streaming**: Server-sent events use the same format as OpenAI.
+- **JSON mode / structured outputs**: Pass `response_format: { "type": "json_object" }` or a JSON Schema.
+- **Vision**: Image URLs and base64 inputs are supported.
+- **Assistants API**: Use Allternit [Sessions](/api/sessions) and [Agents](/api/agents) for equivalent behavior.
+
+## BYOK and self-hosted models
+
+If you want to keep using OpenAI models under your own provider contract, add an OpenAI external key in the dashboard and route requests through Allternit for governance and audit.
