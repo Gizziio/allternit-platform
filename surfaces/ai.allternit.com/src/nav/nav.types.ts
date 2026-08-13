@@ -71,6 +71,9 @@ export type ViewType =
   | "context-control"
   | "memory-kernel"
   | "acf"
+  // Agents Sessions & Memory views
+  | "allternit-playground"
+  | "agent-studio"
   // AllternitOS View
   | "allternit-os"
   // Other views

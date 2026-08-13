@@ -50,6 +50,8 @@ pub fn beta_session_router() -> Router<Arc<AppState>> {
             "/beta/sessions/:id/events",
             get(stream_events).post(append_event),
         )
+        .route("/beta/sessions/:id/events/list", get(list_events_json))
+        .route("/beta/sessions/:id/memory/search", get(search_session_memory))
         .route("/beta/sessions/:id/events/ws", get(stream_events_ws))
         .route("/beta/sessions/:id/interrupt", post(interrupt_session))
         .route(
@@ -1142,6 +1144,101 @@ async fn stream_events(
         },
     );
     Ok(Sse::new(stream).keep_alive(KeepAlive::default()))
+}
+
+#[derive(Debug, Deserialize)]
+struct SearchQuery {
+    q: String,
+}
+
+async fn search_session_memory(
+    State(state): State<Arc<AppState>>,
+    Extension(user): Extension<AuthUser>,
+    Path(id): Path<String>,
+    Query(query): Query<SearchQuery>,
+) -> Result<Json<Value>, ApiError> {
+    load_session(state.clone(), user.user_id.clone(), id.clone()).await?;
+    let db = state.db.clone();
+    let user_id = user.user_id;
+    let search = query.q.trim().to_lowercase();
+    if search.is_empty() {
+        return Ok(Json(json!({ "results": [] })));
+    }
+
+    let results = tokio::task::spawn_blocking(move || {
+        let conn = db.connect()?;
+        let mut stmt = conn.prepare(
+            "SELECT e.sequence, e.event_type, e.data FROM beta_session_events e
+             JOIN beta_sessions s ON s.id = e.session_id
+             WHERE e.session_id = ?1 AND s.user_id = ?2
+             ORDER BY e.sequence DESC LIMIT 200",
+        )?;
+        let rows = stmt
+            .query_map(params![id, user_id], |row| {
+                Ok((row.get::<_, i64>(0)?, row.get::<_, String>(1)?, row.get::<_, String>(2)?))
+            })?
+            .collect::<Result<Vec<_>, _>>()?;
+
+        let mut matches = Vec::new();
+        for (sequence, event_type, data) in rows {
+            let text = format!("{} {}", event_type, data).to_lowercase();
+            if text.contains(&search) {
+                let excerpt = if data.len() > 160 {
+                    format!("{}…", &data[..160])
+                } else {
+                    data
+                };
+                matches.push(json!({
+                    "sequence": sequence,
+                    "type": event_type,
+                    "excerpt": excerpt,
+                }));
+            }
+        }
+        Ok::<Vec<Value>, rusqlite::Error>(matches)
+    })
+    .await
+    .map_err(|e| ApiError::Internal(e.to_string()))?
+    .map_err(|e| ApiError::DbError(e.to_string()))?;
+
+    Ok(Json(json!({ "results": results })))
+}
+
+async fn list_events_json(
+    State(state): State<Arc<AppState>>,
+    Extension(user): Extension<AuthUser>,
+    Path(id): Path<String>,
+) -> Result<Json<Value>, ApiError> {
+    load_session(state.clone(), user.user_id.clone(), id.clone()).await?;
+    let db = state.db.clone();
+    let user_id = user.user_id;
+
+    let results = tokio::task::spawn_blocking(move || {
+        let conn = db.connect()?;
+        let mut stmt = conn.prepare(
+            "SELECT e.sequence, e.event_type, e.data, e.created_at FROM beta_session_events e
+             JOIN beta_sessions s ON s.id = e.session_id
+             WHERE e.session_id = ?1 AND s.user_id = ?2
+             ORDER BY e.sequence DESC LIMIT 200",
+        )?;
+        let rows = stmt
+            .query_map(params![id, user_id], |row| {
+                let data: String = row.get(2)?;
+                Ok(json!({
+                    "id": row.get::<_, i64>(0)?.to_string(),
+                    "type": row.get::<_, String>(1)?,
+                    "data": serde_json::from_str(&data).unwrap_or(json!({})),
+                    "created_at": row.get::<_, String>(3)?,
+                }))
+            })?
+            .collect::<Result<Vec<Value>, _>>()?;
+        Ok::<Vec<Value>, rusqlite::Error>(rows)
+    })
+    .await
+    .map_err(|e| ApiError::Internal(e.to_string()))?
+    .map_err(|e| ApiError::DbError(e.to_string()))?;
+
+    Ok(Json(json!({ "events": results })))
 }
 
 fn insert_event(
