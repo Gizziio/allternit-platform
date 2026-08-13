@@ -9,7 +9,7 @@ use axum::{
     extract::{Extension, Path, State},
     http::StatusCode,
     response::{IntoResponse, Response},
-    routing::{get, post},
+    routing::{delete, get, post},
     Json, Router,
 };
 use rusqlite::{params, OptionalExtension};
@@ -38,6 +38,14 @@ pub fn router() -> Router<Arc<AppState>> {
         .route(
             "/admin/workspaces/:id/members/:member_id",
             axum::routing::put(set_member_role).delete(remove_member),
+        )
+        .route(
+            "/admin/workspaces/:id/ip-allowlist",
+            get(list_ip_allowlist).post(add_ip_allowlist_entry),
+        )
+        .route(
+            "/admin/workspaces/:id/ip-allowlist/:entry_id",
+            delete(remove_ip_allowlist_entry),
         )
 }
 
@@ -394,6 +402,139 @@ async fn remove_member(
     }
 }
 
+// ─── Workspace IP allowlisting ──────────────────────────────────────────────
+
+fn valid_cidr(ip_range: &str) -> bool {
+    let parts: Vec<&str> = ip_range.split('/').collect();
+    if parts.len() != 2 {
+        return false;
+    }
+    let addr = parts[0].parse::<std::net::IpAddr>();
+    let prefix = parts[1].parse::<u8>();
+    match (addr, prefix) {
+        (Ok(_), Ok(p)) => p <= 32,
+        _ => false,
+    }
+}
+
+fn ip_allowlist_json(row: &rusqlite::Row<'_>) -> rusqlite::Result<Value> {
+    Ok(json!({
+        "id": row.get::<_, String>(0)?,
+        "workspace_id": row.get::<_, String>(1)?,
+        "org_id": row.get::<_, String>(2)?,
+        "ip_range": row.get::<_, String>(3)?,
+        "description": row.get::<_, Option<String>>(4)?,
+        "enabled": row.get::<_, i64>(5)? != 0,
+        "created_at": row.get::<_, String>(6)?,
+        "updated_at": row.get::<_, String>(7)?,
+    }))
+}
+
+#[derive(Deserialize)]
+struct AddIpAllowlistEntry {
+    ip_range: String,
+    description: Option<String>,
+    #[serde(default = "default_enabled")]
+    enabled: bool,
+}
+
+fn default_enabled() -> bool {
+    true
+}
+
+async fn list_ip_allowlist(
+    State(state): State<Arc<AppState>>,
+    Extension(user): Extension<AuthUser>,
+    Path(id): Path<String>,
+) -> Response {
+    let result = tokio::task::spawn_blocking(move || -> Result<Vec<Value>, ApiError> {
+        let conn = state.db.connect().map_err(internal)?;
+        let org = admin_org(&conn, &user)?;
+        find_workspace(&conn, &id, &org)?;
+        let mut stmt = conn.prepare(
+            "SELECT id, workspace_id, org_id, ip_range, description, enabled, created_at, updated_at FROM workspace_ip_allowlists WHERE workspace_id = ?1 ORDER BY created_at DESC"
+        ).map_err(internal)?;
+        let rows = stmt
+            .query_map([&id], ip_allowlist_json)
+            .map_err(internal)?
+            .collect::<rusqlite::Result<Vec<_>>>()
+            .map_err(internal)?;
+        Ok(rows)
+    }).await;
+    match result {
+        Ok(Ok(v)) => Json(json!({"ip_allowlist": v})).into_response(),
+        Ok(Err(e)) => e.into_response(),
+        Err(e) => internal(e).into_response(),
+    }
+}
+
+async fn add_ip_allowlist_entry(
+    State(state): State<Arc<AppState>>,
+    Extension(user): Extension<AuthUser>,
+    Path(id): Path<String>,
+    Json(body): Json<AddIpAllowlistEntry>,
+) -> Response {
+    if !valid_cidr(&body.ip_range) {
+        return error(
+            StatusCode::BAD_REQUEST,
+            "invalid_cidr",
+            "ip_range must be a valid CIDR such as 203.0.113.0/24.",
+        )
+        .into_response();
+    }
+    let result = tokio::task::spawn_blocking(move || -> Result<Value, ApiError> {
+        let conn = state.db.connect().map_err(internal)?;
+        let org = admin_org(&conn, &user)?;
+        find_workspace(&conn, &id, &org)?;
+        let entry_id = uuid::Uuid::new_v4().to_string();
+        let enabled = if body.enabled { 1 } else { 0 };
+        conn.execute(
+            "INSERT INTO workspace_ip_allowlists (id, workspace_id, org_id, ip_range, description, enabled) VALUES (?1, ?2, ?3, ?4, ?5, ?6)",
+            params![entry_id, id, org, body.ip_range, body.description, enabled],
+        ).map_err(internal)?;
+        conn.query_row(
+            "SELECT id, workspace_id, org_id, ip_range, description, enabled, created_at, updated_at FROM workspace_ip_allowlists WHERE id = ?1",
+            [&entry_id],
+            ip_allowlist_json,
+        )
+        .map_err(internal)
+    }).await;
+    match result {
+        Ok(Ok(v)) => (StatusCode::CREATED, Json(v)).into_response(),
+        Ok(Err(e)) => e.into_response(),
+        Err(e) => internal(e).into_response(),
+    }
+}
+
+async fn remove_ip_allowlist_entry(
+    State(state): State<Arc<AppState>>,
+    Extension(user): Extension<AuthUser>,
+    Path((id, entry_id)): Path<(String, String)>,
+) -> Response {
+    let result = tokio::task::spawn_blocking(move || -> Result<(), ApiError> {
+        let conn = state.db.connect().map_err(internal)?;
+        let org = admin_org(&conn, &user)?;
+        find_workspace(&conn, &id, &org)?;
+        let changed = conn.execute(
+            "DELETE FROM workspace_ip_allowlists WHERE id = ?1 AND workspace_id = ?2 AND org_id = ?3",
+            params![entry_id, id, org],
+        ).map_err(internal)?;
+        if changed == 0 {
+            return Err(error(
+                StatusCode::NOT_FOUND,
+                "entry_not_found",
+                "No such IP allowlist entry.",
+            ));
+        }
+        Ok(())
+    }).await;
+    match result {
+        Ok(Ok(())) => StatusCode::NO_CONTENT.into_response(),
+        Ok(Err(e)) => e.into_response(),
+        Err(e) => internal(e).into_response(),
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -497,6 +638,43 @@ mod tests {
         let rows: Vec<_> = stmt.query_map([ws_id], member_json).unwrap().collect::<Result<_, _>>().unwrap();
         assert_eq!(rows.len(), 1);
         assert_eq!(rows[0]["user_id"], "member-1");
+
+        let _ = std::fs::remove_file(&path);
+    }
+
+    #[test]
+    fn cidr_validation_accepts_valid_ranges() {
+        assert!(valid_cidr("203.0.113.0/24"));
+        assert!(valid_cidr("10.0.0.0/8"));
+        assert!(!valid_cidr("not-a-cidr"));
+        assert!(!valid_cidr("203.0.113.0"));
+        assert!(!valid_cidr("203.0.113.0/99"));
+    }
+
+    #[test]
+    fn ip_allowlist_roundtrip() {
+        let (path, db) = test_db();
+        let conn = db.connect().unwrap();
+        seed_org_admin(&conn, "org-1", "owner-1", "owner");
+
+        let ws_id = "ws-1";
+        conn.execute(
+            "INSERT INTO admin_workspaces (id, organization_id, name, description, created_by) VALUES (?1, ?2, ?3, ?4, ?5)",
+            rusqlite::params![ws_id, "org-1", "Engineering", "desc", "owner-1"],
+        )
+        .unwrap();
+
+        conn.execute(
+            "INSERT INTO workspace_ip_allowlists (id, workspace_id, org_id, ip_range, description, enabled) VALUES (?1, ?2, ?3, ?4, ?5, ?6)",
+            rusqlite::params!["entry-1", ws_id, "org-1", "203.0.113.0/24", "Office", 1],
+        )
+        .unwrap();
+
+        let mut stmt = conn.prepare("SELECT id, workspace_id, org_id, ip_range, description, enabled, created_at, updated_at FROM workspace_ip_allowlists WHERE workspace_id = ?1").unwrap();
+        let rows: Vec<_> = stmt.query_map([ws_id], ip_allowlist_json).unwrap().collect::<Result<_, _>>().unwrap();
+        assert_eq!(rows.len(), 1);
+        assert_eq!(rows[0]["ip_range"], "203.0.113.0/24");
+        assert_eq!(rows[0]["enabled"], true);
 
         let _ = std::fs::remove_file(&path);
     }

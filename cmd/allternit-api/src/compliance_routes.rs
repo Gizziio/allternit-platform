@@ -20,9 +20,12 @@ pub fn router() -> Router<Arc<AppState>> {
         .route("/admin/compliance/activity", get(list_activity))
         .route("/admin/compliance/requests", post(create_request))
         .route("/admin/compliance/requests/:id", get(get_request))
+        .route("/admin/compliance/requests/:id/complete", post(complete_request))
+        .route("/admin/compliance/requests/:id/export", get(download_export))
         .route("/admin/compliance/chats", get(list_chats).delete(delete_chat))
         .route("/admin/compliance/projects", get(list_projects).delete(delete_project))
         .route("/admin/compliance/artifacts", get(list_artifacts).delete(delete_artifact))
+        .route("/admin/compliance/retention-policy", get(get_retention_policy).post(set_retention_policy))
 }
 
 type ApiError = (StatusCode, Json<Value>);
@@ -435,6 +438,201 @@ async fn delete_app_record(
     }
 }
 
+// ─── Request lifecycle ──────────────────────────────────────────────────────
+
+async fn complete_request(
+    State(state): State<Arc<AppState>>,
+    Extension(user): Extension<AuthUser>,
+    Path(id): Path<String>,
+) -> Response {
+    let result = tokio::task::spawn_blocking(move || -> Result<Value, ApiError> {
+        let mut conn = state.db.connect().map_err(internal)?;
+        let org = admin_org(&conn, &user)?;
+        let tx = conn.transaction().map_err(internal)?;
+        let changed = tx.execute(
+            "UPDATE compliance_requests SET status = 'completed', updated_at = CURRENT_TIMESTAMP WHERE id = ?1 AND organization_id = ?2 AND status IN ('pending', 'running')",
+            params![id, org],
+        ).map_err(internal)?;
+        if changed == 0 {
+            return Err(error(StatusCode::NOT_FOUND, "request_not_found", "No such pending or running compliance request."));
+        }
+        tx.execute(
+            "UPDATE compliance_content_references SET status = 'processed', processed_at = CURRENT_TIMESTAMP WHERE request_id = ?1 AND status = 'pending'",
+            params![id],
+        ).map_err(internal)?;
+        tx.commit().map_err(internal)?;
+        conn.query_row(
+            "SELECT id, kind, status, requested_by, created_at, updated_at FROM compliance_requests WHERE id = ?1",
+            params![id],
+            request_json,
+        )
+        .map_err(internal)
+    }).await;
+    match result {
+        Ok(Ok(v)) => Json(v).into_response(),
+        Ok(Err(e)) => e.into_response(),
+        Err(e) => internal(e).into_response(),
+    }
+}
+
+async fn download_export(
+    State(state): State<Arc<AppState>>,
+    Extension(user): Extension<AuthUser>,
+    Path(id): Path<String>,
+) -> Response {
+    let result = tokio::task::spawn_blocking(move || -> Result<Value, ApiError> {
+        let conn = state.db.connect().map_err(internal)?;
+        let org = admin_org(&conn, &user)?;
+        let request = conn
+            .query_row(
+                "SELECT id, kind, status, requested_by, created_at, updated_at FROM compliance_requests WHERE id = ?1 AND organization_id = ?2 AND kind = 'export'",
+                params![id, org],
+                request_json,
+            )
+            .optional()
+            .map_err(internal)?
+            .ok_or_else(|| error(StatusCode::NOT_FOUND, "export_not_found", "No such export request."))?;
+        let mut stmt = conn.prepare(
+            "SELECT app, record_id, status, processed_at FROM compliance_content_references WHERE request_id = ?1 ORDER BY app, created_at"
+        ).map_err(internal)?;
+        let refs = stmt
+            .query_map(params![id], |row| {
+                Ok(json!({
+                    "app": row.get::<_, String>(0)?,
+                    "record_id": row.get::<_, String>(1)?,
+                    "status": row.get::<_, String>(2)?,
+                    "processed_at": row.get::<_, Option<String>>(3)?,
+                }))
+            })
+            .map_err(internal)?
+            .collect::<rusqlite::Result<Vec<_>>>()
+            .map_err(internal)?;
+        Ok(json!({
+            "request": request,
+            "export": {
+                "format": "json",
+                "references": refs,
+            },
+        }))
+    }).await;
+    match result {
+        Ok(Ok(v)) => Json(v).into_response(),
+        Ok(Err(e)) => e.into_response(),
+        Err(e) => internal(e).into_response(),
+    }
+}
+
+// ─── Retention & zero data residence ────────────────────────────────────────
+
+#[derive(Deserialize)]
+struct SetRetentionPolicy {
+    chat_retention_days: Option<i64>,
+    project_retention_days: Option<i64>,
+    artifact_retention_days: Option<i64>,
+    #[serde(default)]
+    zero_data_residence: bool,
+    #[serde(default)]
+    zdr_regions: Vec<String>,
+}
+
+fn retention_policy_json(row: &rusqlite::Row<'_>) -> rusqlite::Result<Value> {
+    let zdr_raw: String = row.get(4)?;
+    let zdr_regions: Vec<String> = serde_json::from_str(&zdr_raw).unwrap_or_default();
+    Ok(json!({
+        "org_id": row.get::<_, String>(0)?,
+        "chat_retention_days": row.get::<_, Option<i64>>(1)?,
+        "project_retention_days": row.get::<_, Option<i64>>(2)?,
+        "artifact_retention_days": row.get::<_, Option<i64>>(3)?,
+        "zero_data_residence": row.get::<_, i64>(5)? != 0,
+        "zdr_regions": zdr_regions,
+        "created_at": row.get::<_, String>(6)?,
+        "updated_at": row.get::<_, String>(7)?,
+    }))
+}
+
+async fn get_retention_policy(
+    State(state): State<Arc<AppState>>,
+    Extension(user): Extension<AuthUser>,
+) -> Response {
+    let result = tokio::task::spawn_blocking(move || -> Result<Value, ApiError> {
+        let conn = state.db.connect().map_err(internal)?;
+        let org = admin_org(&conn, &user)?;
+        let policy = conn
+            .query_row(
+                "SELECT org_id, chat_retention_days, project_retention_days, artifact_retention_days, zdr_regions, zero_data_residence, created_at, updated_at FROM retention_policies WHERE org_id = ?1",
+                [&org],
+                retention_policy_json,
+            )
+            .optional()
+            .map_err(internal)?
+            .unwrap_or_else(|| {
+                json!({
+                    "org_id": org,
+                    "chat_retention_days": serde_json::Value::Null,
+                    "project_retention_days": serde_json::Value::Null,
+                    "artifact_retention_days": serde_json::Value::Null,
+                    "zero_data_residence": false,
+                    "zdr_regions": Vec::<String>::new(),
+                    "created_at": serde_json::Value::Null,
+                    "updated_at": serde_json::Value::Null,
+                })
+            });
+        Ok(policy)
+    }).await;
+    match result {
+        Ok(Ok(v)) => Json(v).into_response(),
+        Ok(Err(e)) => e.into_response(),
+        Err(e) => internal(e).into_response(),
+    }
+}
+
+async fn set_retention_policy(
+    State(state): State<Arc<AppState>>,
+    Extension(user): Extension<AuthUser>,
+    Json(body): Json<SetRetentionPolicy>,
+) -> Response {
+    if body.chat_retention_days.map(|d| d < 0).unwrap_or(false)
+        || body.project_retention_days.map(|d| d < 0).unwrap_or(false)
+        || body.artifact_retention_days.map(|d| d < 0).unwrap_or(false)
+    {
+        return error(
+            StatusCode::BAD_REQUEST,
+            "invalid_retention_days",
+            "Retention days must be non-negative.",
+        )
+        .into_response();
+    }
+    let result = tokio::task::spawn_blocking(move || -> Result<Value, ApiError> {
+        let conn = state.db.connect().map_err(internal)?;
+        let org = admin_org(&conn, &user)?;
+        let zdr_json = serde_json::to_string(&body.zdr_regions).unwrap_or_else(|_| "[]".into());
+        let zdr = if body.zero_data_residence { 1 } else { 0 };
+        conn.execute(
+            "INSERT INTO retention_policies (org_id, chat_retention_days, project_retention_days, artifact_retention_days, zdr_regions, zero_data_residence)
+             VALUES (?1, ?2, ?3, ?4, ?5, ?6)
+             ON CONFLICT(org_id) DO UPDATE SET
+                 chat_retention_days = excluded.chat_retention_days,
+                 project_retention_days = excluded.project_retention_days,
+                 artifact_retention_days = excluded.artifact_retention_days,
+                 zdr_regions = excluded.zdr_regions,
+                 zero_data_residence = excluded.zero_data_residence,
+                 updated_at = CURRENT_TIMESTAMP",
+            params![org, body.chat_retention_days, body.project_retention_days, body.artifact_retention_days, zdr_json, zdr],
+        ).map_err(internal)?;
+        conn.query_row(
+            "SELECT org_id, chat_retention_days, project_retention_days, artifact_retention_days, zdr_regions, zero_data_residence, created_at, updated_at FROM retention_policies WHERE org_id = ?1",
+            [&org],
+            retention_policy_json,
+        )
+        .map_err(internal)
+    }).await;
+    match result {
+        Ok(Ok(v)) => Json(v).into_response(),
+        Ok(Err(e)) => e.into_response(),
+        Err(e) => internal(e).into_response(),
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -522,6 +720,77 @@ mod tests {
         ).unwrap();
         assert_eq!(req["kind"], "export");
         assert_eq!(req["status"], "pending");
+
+        let _ = std::fs::remove_file(&path);
+    }
+
+    #[test]
+    fn retention_policy_roundtrip() {
+        let (path, db) = test_db();
+        let conn = db.connect().unwrap();
+        seed_org_user(&conn, "org-1", "admin-1", "admin");
+
+        conn.execute(
+            "INSERT INTO retention_policies (org_id, chat_retention_days, project_retention_days, artifact_retention_days, zdr_regions, zero_data_residence)
+             VALUES ('org-1', 30, 60, 90, '[]', 0)",
+            [],
+        ).unwrap();
+
+        let policy = conn
+            .query_row(
+                "SELECT org_id, chat_retention_days, project_retention_days, artifact_retention_days, zdr_regions, zero_data_residence, created_at, updated_at FROM retention_policies WHERE org_id = ?1",
+                rusqlite::params!["org-1"],
+                retention_policy_json,
+            )
+            .unwrap();
+        assert_eq!(policy["chat_retention_days"], 30);
+        assert_eq!(policy["artifact_retention_days"], 90);
+        assert_eq!(policy["zero_data_residence"], false);
+
+        let _ = std::fs::remove_file(&path);
+    }
+
+    #[test]
+    fn completing_request_updates_references() {
+        let (path, db) = test_db();
+        let conn = db.connect().unwrap();
+        seed_org_user(&conn, "org-1", "admin-1", "admin");
+
+        conn.execute(
+            "INSERT INTO compliance_requests (id, organization_id, kind, status, requested_by) VALUES ('req-1', 'org-1', 'export', 'running', 'admin-1')",
+            [],
+        ).unwrap();
+        conn.execute(
+            "INSERT INTO compliance_content_references (id, request_id, app, record_id, status) VALUES ('ref-1', 'req-1', 'chats', 'chat-1', 'pending')",
+            [],
+        ).unwrap();
+
+        conn.execute(
+            "UPDATE compliance_requests SET status = 'completed', updated_at = CURRENT_TIMESTAMP WHERE id = 'req-1' AND organization_id = 'org-1' AND status IN ('pending', 'running')",
+            [],
+        ).unwrap();
+        conn.execute(
+            "UPDATE compliance_content_references SET status = 'processed', processed_at = CURRENT_TIMESTAMP WHERE request_id = 'req-1' AND status = 'pending'",
+            [],
+        ).unwrap();
+
+        let status: String = conn
+            .query_row(
+                "SELECT status FROM compliance_requests WHERE id = 'req-1'",
+                [],
+                |row| row.get(0),
+            )
+            .unwrap();
+        assert_eq!(status, "completed");
+
+        let ref_status: String = conn
+            .query_row(
+                "SELECT status FROM compliance_content_references WHERE id = 'ref-1'",
+                [],
+                |row| row.get(0),
+            )
+            .unwrap();
+        assert_eq!(ref_status, "processed");
 
         let _ = std::fs::remove_file(&path);
     }

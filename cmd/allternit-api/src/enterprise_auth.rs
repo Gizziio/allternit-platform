@@ -8,7 +8,7 @@ use axum::{
     extract::{Extension, Path, State},
     http::StatusCode,
     response::{IntoResponse, Response},
-    routing::{delete, post},
+    routing::{delete, get, post},
     Json, Router,
 };
 use base64::{engine::general_purpose::URL_SAFE_NO_PAD, Engine as _};
@@ -76,6 +76,20 @@ pub fn router() -> Router<Arc<AppState>> {
         )
         .route("/auth/access-tokens/:id/rotate", post(rotate_access_token))
         .route("/auth/access-tokens/:id", delete(revoke_access_token))
+        .route(
+            "/auth/workload-identity/providers",
+            post(create_wif_provider).get(list_wif_providers),
+        )
+        .route(
+            "/auth/workload-identity/providers/:id",
+            get(get_wif_provider)
+                .patch(update_wif_provider)
+                .delete(delete_wif_provider),
+        )
+        .route(
+            "/auth/workload-identity/token",
+            post(exchange_workload_identity_token),
+        )
 }
 
 type ApiError = (StatusCode, Json<Value>);
@@ -375,6 +389,300 @@ pub fn authenticate_bearer(
     Ok(found)
 }
 
+// ─── Workload Identity Federation ───────────────────────────────────────────
+
+const WIF_PROVIDER_TYPES: &[&str] = &[
+    "aws",
+    "azure",
+    "gcp",
+    "github",
+    "kubernetes",
+    "okta",
+    "spiffe",
+];
+
+fn valid_wif_provider_type(kind: &str) -> bool {
+    WIF_PROVIDER_TYPES.contains(&kind)
+}
+
+#[derive(Deserialize)]
+struct CreateWifProvider {
+    name: String,
+    provider_type: String,
+    #[serde(default)]
+    config: Value,
+}
+
+#[derive(Deserialize)]
+struct UpdateWifProvider {
+    name: Option<String>,
+    #[serde(default)]
+    config: Option<Value>,
+    #[serde(default)]
+    enabled: Option<bool>,
+}
+
+#[derive(Deserialize)]
+struct ExchangeWorkloadToken {
+    provider_id: String,
+    #[serde(default)]
+    assertion: Option<String>,
+    #[serde(default)]
+    subject: Option<String>,
+}
+
+fn wif_provider_json(row: &rusqlite::Row<'_>) -> rusqlite::Result<Value> {
+    let config_raw: String = row.get(3)?;
+    let config: Value = serde_json::from_str(&config_raw).unwrap_or(json!({}));
+    Ok(json!({
+        "id": row.get::<_, String>(0)?,
+        "org_id": row.get::<_, String>(1)?,
+        "name": row.get::<_, String>(2)?,
+        "config": config,
+        "provider_type": row.get::<_, String>(4)?,
+        "enabled": row.get::<_, i64>(5)? != 0,
+        "created_at": row.get::<_, String>(6)?,
+        "updated_at": row.get::<_, String>(7)?,
+    }))
+}
+
+async fn create_wif_provider(
+    State(state): State<Arc<AppState>>,
+    Extension(user): Extension<AuthUser>,
+    Json(body): Json<CreateWifProvider>,
+) -> Response {
+    if body.name.trim().is_empty() || body.name.len() > 128 {
+        return error(
+            StatusCode::BAD_REQUEST,
+            "invalid_name",
+            "Name must be 1-128 characters.",
+        )
+        .into_response();
+    }
+    if !valid_wif_provider_type(&body.provider_type) {
+        return error(
+            StatusCode::BAD_REQUEST,
+            "invalid_provider_type",
+            "provider_type must be one of aws, azure, gcp, github, kubernetes, okta, spiffe.",
+        )
+        .into_response();
+    }
+    let result = tokio::task::spawn_blocking(move || {
+        let conn = state.db.connect().map_err(internal)?;
+        let org = admin_org(&conn, &user)?;
+        let id = uuid::Uuid::new_v4().to_string();
+        let config_json = serde_json::to_string(&body.config).unwrap_or_else(|_| "{}".into());
+        conn.execute(
+            "INSERT INTO workload_identity_providers (id, org_id, name, provider_type, config) VALUES (?1, ?2, ?3, ?4, ?5)",
+            params![id, org, body.name.trim(), body.provider_type, config_json],
+        ).map_err(internal)?;
+        conn.query_row(
+            "SELECT id, org_id, name, config, provider_type, enabled, created_at, updated_at FROM workload_identity_providers WHERE id = ?1",
+            [&id],
+            wif_provider_json,
+        )
+        .map_err(internal)
+    }).await;
+    match result {
+        Ok(Ok(v)) => (StatusCode::CREATED, Json(v)).into_response(),
+        Ok(Err(e)) => e.into_response(),
+        Err(e) => internal(e).into_response(),
+    }
+}
+
+async fn list_wif_providers(
+    State(state): State<Arc<AppState>>,
+    Extension(user): Extension<AuthUser>,
+) -> Response {
+    let result = tokio::task::spawn_blocking(move || -> Result<Vec<Value>, ApiError> {
+        let conn = state.db.connect().map_err(internal)?;
+        let org = admin_org(&conn, &user)?;
+        let mut stmt = conn.prepare(
+            "SELECT id, org_id, name, config, provider_type, enabled, created_at, updated_at FROM workload_identity_providers WHERE org_id = ?1 ORDER BY created_at DESC"
+        ).map_err(internal)?;
+        let rows = stmt
+            .query_map([&org], wif_provider_json)
+            .map_err(internal)?
+            .collect::<rusqlite::Result<Vec<_>>>()
+            .map_err(internal)?;
+        Ok(rows)
+    }).await;
+    match result {
+        Ok(Ok(v)) => Json(json!({"providers": v})).into_response(),
+        Ok(Err(e)) => e.into_response(),
+        Err(e) => internal(e).into_response(),
+    }
+}
+
+async fn get_wif_provider(
+    State(state): State<Arc<AppState>>,
+    Extension(user): Extension<AuthUser>,
+    Path(id): Path<String>,
+) -> Response {
+    let result = tokio::task::spawn_blocking(move || -> Result<Value, ApiError> {
+        let conn = state.db.connect().map_err(internal)?;
+        let org = admin_org(&conn, &user)?;
+        conn.query_row(
+            "SELECT id, org_id, name, config, provider_type, enabled, created_at, updated_at FROM workload_identity_providers WHERE id = ?1 AND org_id = ?2",
+            params![id, org],
+            wif_provider_json,
+        )
+        .optional()
+        .map_err(internal)?
+        .ok_or_else(|| error(StatusCode::NOT_FOUND, "provider_not_found", "No such workload identity provider."))
+    }).await;
+    match result {
+        Ok(Ok(v)) => Json(v).into_response(),
+        Ok(Err(e)) => e.into_response(),
+        Err(e) => internal(e).into_response(),
+    }
+}
+
+async fn update_wif_provider(
+    State(state): State<Arc<AppState>>,
+    Extension(user): Extension<AuthUser>,
+    Path(id): Path<String>,
+    Json(body): Json<UpdateWifProvider>,
+) -> Response {
+    if let Some(name) = &body.name {
+        if name.trim().is_empty() || name.len() > 128 {
+            return error(
+                StatusCode::BAD_REQUEST,
+                "invalid_name",
+                "Name must be 1-128 characters.",
+            )
+            .into_response();
+        }
+    }
+    let result = tokio::task::spawn_blocking(move || -> Result<Value, ApiError> {
+        let conn = state.db.connect().map_err(internal)?;
+        let org = admin_org(&conn, &user)?;
+        let existing = conn
+            .query_row(
+                "SELECT id FROM workload_identity_providers WHERE id = ?1 AND org_id = ?2",
+                params![id, org],
+                |row| row.get::<_, String>(0),
+            )
+            .optional()
+            .map_err(internal)?;
+        if existing.is_none() {
+            return Err(error(StatusCode::NOT_FOUND, "provider_not_found", "No such workload identity provider."));
+        }
+        let config_json = body.config.as_ref().and_then(|c| serde_json::to_string(c).ok());
+        let enabled = body.enabled.map(|e| if e { 1 } else { 0 });
+        conn.execute(
+            "UPDATE workload_identity_providers
+             SET name = COALESCE(?1, name),
+                 config = COALESCE(?2, config),
+                 enabled = COALESCE(?3, enabled),
+                 updated_at = CURRENT_TIMESTAMP
+             WHERE id = ?4 AND org_id = ?5",
+            params![body.name.as_deref().map(|n| n.trim()), config_json, enabled, id, org],
+        ).map_err(internal)?;
+        conn.query_row(
+            "SELECT id, org_id, name, config, provider_type, enabled, created_at, updated_at FROM workload_identity_providers WHERE id = ?1",
+            [&id],
+            wif_provider_json,
+        )
+        .map_err(internal)
+    }).await;
+    match result {
+        Ok(Ok(v)) => Json(v).into_response(),
+        Ok(Err(e)) => e.into_response(),
+        Err(e) => internal(e).into_response(),
+    }
+}
+
+async fn delete_wif_provider(
+    State(state): State<Arc<AppState>>,
+    Extension(user): Extension<AuthUser>,
+    Path(id): Path<String>,
+) -> Response {
+    let result = tokio::task::spawn_blocking(move || -> Result<(), ApiError> {
+        let conn = state.db.connect().map_err(internal)?;
+        let org = admin_org(&conn, &user)?;
+        let changed = conn.execute(
+            "DELETE FROM workload_identity_providers WHERE id = ?1 AND org_id = ?2",
+            params![id, org],
+        ).map_err(internal)?;
+        if changed == 0 {
+            return Err(error(
+                StatusCode::NOT_FOUND,
+                "provider_not_found",
+                "No such workload identity provider.",
+            ));
+        }
+        Ok(())
+    }).await;
+    match result {
+        Ok(Ok(())) => StatusCode::NO_CONTENT.into_response(),
+        Ok(Err(e)) => e.into_response(),
+        Err(e) => internal(e).into_response(),
+    }
+}
+
+async fn exchange_workload_identity_token(
+    State(state): State<Arc<AppState>>,
+    Extension(user): Extension<AuthUser>,
+    Json(body): Json<ExchangeWorkloadToken>,
+) -> Response {
+    if body.provider_id.trim().is_empty() {
+        return error(
+            StatusCode::BAD_REQUEST,
+            "invalid_provider_id",
+            "provider_id is required.",
+        )
+        .into_response();
+    }
+    let result = tokio::task::spawn_blocking(move || -> Result<Value, ApiError> {
+        let conn = state.db.connect().map_err(internal)?;
+        let org = admin_org(&conn, &user)?;
+        let provider = conn
+            .query_row(
+                "SELECT id, org_id, name, config, provider_type, enabled, created_at, updated_at FROM workload_identity_providers WHERE id = ?1 AND org_id = ?2 AND enabled = 1",
+                params![body.provider_id, org],
+                wif_provider_json,
+            )
+            .optional()
+            .map_err(internal)?
+            .ok_or_else(|| error(StatusCode::NOT_FOUND, "provider_not_found", "No enabled workload identity provider found."))?;
+
+        // Phase 1 scaffold: validate that an assertion or subject is present,
+        // persist a credential reference, and return a short-lived access token.
+        let assertion = body.assertion.as_deref().unwrap_or("");
+        let subject = body.subject.as_deref().unwrap_or("");
+        if assertion.is_empty() && subject.is_empty() {
+            return Err(error(
+                StatusCode::BAD_REQUEST,
+                "missing_assertion",
+                "assertion or subject is required to exchange a workload identity token.",
+            ));
+        }
+
+        let credential_id = uuid::Uuid::new_v4().to_string();
+        let token = generate_token(ACCESS_PREFIX);
+        let preview: String = token.chars().take(23).collect();
+        let expires_at = (chrono::Utc::now() + chrono::TimeDelta::hours(1)).to_rfc3339();
+        conn.execute(
+            "INSERT INTO workload_identity_credentials (id, provider_id, org_id, subject, token_preview, expires_at) VALUES (?1, ?2, ?3, ?4, ?5, ?6)",
+            params![credential_id, body.provider_id, org, subject, preview, expires_at],
+        ).map_err(internal)?;
+
+        Ok(json!({
+            "access_token": token,
+            "token_type": "Bearer",
+            "expires_at": expires_at,
+            "provider": provider,
+            "credential_id": credential_id,
+        }))
+    }).await;
+    match result {
+        Ok(Ok(v)) => Json(v).into_response(),
+        Ok(Err(e)) => e.into_response(),
+        Err(e) => internal(e).into_response(),
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -416,5 +724,12 @@ mod tests {
         assert!(context.allows_request(&axum::http::Method::POST, "/api/v1/vault/credentials"));
         assert!(context.allows_request(&axum::http::Method::POST, "/api/v1/beta/vaults"));
         assert!(!context.allows_request(&axum::http::Method::GET, "/api/v1/beta/vaults"));
+    }
+
+    #[test]
+    fn wif_provider_type_validation() {
+        assert!(valid_wif_provider_type("aws"));
+        assert!(valid_wif_provider_type("spiffe"));
+        assert!(!valid_wif_provider_type("custom"));
     }
 }

@@ -364,6 +364,8 @@ async fn main() {
         .merge(allternit_api::scim_routes::router())
         .merge(allternit_api::admin_audit_routes::router())
         .merge(allternit_api::compliance_routes::router())
+        .merge(allternit_api::data_residency_routes::router())
+        .merge(allternit_api::device_attestation_routes::router())
         .merge(workspace_router())
         .merge(artifact_router())
         .merge(conversation_router())
