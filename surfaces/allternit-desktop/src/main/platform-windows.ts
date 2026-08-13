@@ -5,7 +5,7 @@
  * auto-launch, native notifications, and firewall helpers.
  */
 
-import { app, Tray, Menu, Notification, nativeImage, BrowserWindow } from 'electron';
+import { app, Tray, Menu, Notification, nativeImage, BrowserWindow, type NativeImage } from 'electron';
 import { execFile } from 'node:child_process';
 import * as fs from 'node:fs';
 import * as path from 'node:path';
@@ -181,7 +181,7 @@ export function cleanupWindowsPlatform(): void {
 
 // ── Internal helpers ────────────────────────────────────────────────────
 
-function resolveTrayIcon(): nativeImage {
+function resolveTrayIcon(): NativeImage {
   const iconPaths = [
     path.join(process.resourcesPath ?? '', 'build', 'icon.ico'),
     path.join(app.getAppPath(), 'build', 'icon.ico'),

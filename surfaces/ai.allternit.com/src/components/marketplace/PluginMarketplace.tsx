@@ -9,7 +9,7 @@ import {
   HardDrive, 
   Wifi, 
   Sparkles,
-  ExternalLink,
+  ArrowUpRight,
   ChevronDown,
   ChevronUp,
   Users
@@ -529,7 +529,7 @@ export function PluginMarketplace() {
                 <SectionHeader
                   title="External Marketplaces"
                   subtitle="Discover more plugins from official sources"
-                  icon={ExternalLink}
+                  icon={ArrowUpRight}
                   color="bg-gradient-to-br from-emerald-600 to-emerald-700"
                   count={EXTERNAL_MARKETPLACE_SOURCES.length}
                   expanded={expandedSections.external}
@@ -558,7 +558,7 @@ export function PluginMarketplace() {
                                 {source.trust === 'official' ? 'Official' : 'Verified'}
                               </Badge>
                             </div>
-                            <ExternalLink className="size-5  text-zinc-600" />
+                            <ArrowUpRight className="size-5  text-zinc-600" />
                           </div>
                         </CardContent>
                         <CardFooter className="pt-0">

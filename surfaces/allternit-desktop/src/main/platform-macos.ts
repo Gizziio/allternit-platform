@@ -5,7 +5,7 @@
  * auto-launch via Login Items, and native notifications.
  */
 
-import { app, Tray, Menu, Notification, nativeImage } from 'electron';
+import { app, Tray, Menu, Notification, nativeImage, type NativeImage } from 'electron';
 import * as fs from 'node:fs';
 import * as path from 'node:path';
 import log from 'electron-log';
@@ -114,7 +114,7 @@ export function cleanupMacOSPlatform(): void {
 
 // ── Internal helpers ────────────────────────────────────────────────────
 
-function resolveTrayIcon(): nativeImage {
+function resolveTrayIcon(): NativeImage {
   const iconPaths = [
     path.join(app.getAppPath(), 'build', 'iconTemplate.png'),
     path.join(app.getAppPath(), 'build', 'icon.png'),

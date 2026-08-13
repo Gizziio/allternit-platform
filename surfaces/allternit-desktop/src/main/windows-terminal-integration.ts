@@ -15,6 +15,16 @@ const PROFILE_GUID = '{A11TERN17-DE5K-70P0-1N7E-GRATION00001}';
 const PROFILE_NAME = 'Allternit Terminal';
 const CONTEXT_MENU_KEY = 'Directory\\Background\\shell\\AllternitTerminal';
 
+interface WtProfile {
+  guid?: string;
+  [key: string]: unknown;
+}
+
+interface WtSettings {
+  profiles?: { list?: WtProfile[] };
+  schemes?: Array<Record<string, unknown>>;
+}
+
 /**
  * Detect whether Windows Terminal (wt.exe) is installed.
  * Checks the standard install location and the PATH.
@@ -78,7 +88,7 @@ export async function registerWindowsTerminalProfile(): Promise<boolean> {
   }
 
   try {
-    const settings = readJsonFile(settingsPath);
+    const settings = readJsonFile(settingsPath) as WtSettings;
     const profiles = settings.profiles?.list ?? [];
 
     const existing = profiles.findIndex(

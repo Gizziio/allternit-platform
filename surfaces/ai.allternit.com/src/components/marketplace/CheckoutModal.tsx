@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState } from 'react';
-import { X, ShoppingCart, Check, Loader2, CreditCard } from '@phosphor-icons/react';
+import { X, ShoppingCart, Check, CircleNotch, CreditCard } from '@phosphor-icons/react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
@@ -166,7 +166,7 @@ export function CheckoutModal({
           >
             {isProcessing ? (
               <>
-                <Loader2 size={16} weight="bold" className="mr-2 animate-spin" />
+                <CircleNotch size={16} weight="bold" className="mr-2 animate-spin" />
                 Processing...
               </>
             ) : isFree ? (

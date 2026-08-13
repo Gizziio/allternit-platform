@@ -1450,8 +1450,8 @@ mod tests {
         let message = ChatMessage {
             role: "user".to_string(),
             content: Some(MessageContent::Parts(vec![
-                ContentPart { part_type: "text".to_string(), text: Some("Look".to_string()), image_url: None, input_image: None, video_url: None, file_id: None },
-                ContentPart { part_type: "image_url".to_string(), text: None, image_url: Some(ImageUrlPart { url: "https://example.com/x.png".to_string(), detail: None }), input_image: None, video_url: None, file_id: None },
+                ContentPart { part_type: "text".to_string(), text: Some("Look".to_string()), image_url: None, input_image: None, video_url: None, input_video: None, file_id: None },
+                ContentPart { part_type: "image_url".to_string(), text: None, image_url: Some(ImageUrlPart { url: "https://example.com/x.png".to_string(), detail: None }), input_image: None, video_url: None, input_video: None, file_id: None },
             ])),
             name: None,
             tool_call_id: None,

@@ -1,7 +1,7 @@
 'use client';
 
 import React from 'react';
-import { Star, DownloadSimple, Check, X, Loader2 } from '@phosphor-icons/react';
+import { Star, DownloadSimple, Check, X, CircleNotch } from '@phosphor-icons/react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -181,7 +181,7 @@ export function CapabilityCard({
             >
               {isInstalling ? (
                 <>
-                  <Loader2 size={14} weight="bold" className="mr-1.5 animate-spin" />
+                  <CircleNotch size={14} weight="bold" className="mr-1.5 animate-spin" />
                   Installing...
                 </>
               ) : (

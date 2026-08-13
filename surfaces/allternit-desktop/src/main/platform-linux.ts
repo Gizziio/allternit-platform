@@ -5,7 +5,7 @@
  * XDG autostart, desktop notifications, and xdg-open integration.
  */
 
-import { app, Tray, Menu, Notification, nativeImage } from 'electron';
+import { app, Tray, Menu, Notification, nativeImage, type NativeImage } from 'electron';
 import { execFile } from 'node:child_process';
 import * as fs from 'node:fs';
 import * as path from 'node:path';
@@ -140,7 +140,7 @@ export function cleanupLinuxPlatform(): void {
 
 // ── Internal helpers ────────────────────────────────────────────────────
 
-function resolveTrayIcon(): nativeImage {
+function resolveTrayIcon(): NativeImage {
   const iconPaths = [
     path.join(app.getAppPath(), 'build', 'icon.png'),
     path.join(app.getAppPath(), 'static', 'icon.png'),

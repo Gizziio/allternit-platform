@@ -5,6 +5,15 @@ import type { CapabilityCardProps, CapabilityPricing, CapabilityStatus } from '@
 import type { CapabilityDetailData } from '@/components/marketplace/CapabilityDetail';
 import type { CapabilityCategory } from '@/components/marketplace/CapabilitySearchBar';
 
+const CATEGORY_TO_KIND: Record<Exclude<CapabilityCategory, 'all'>, MarketplaceCapability['kind']> = {
+  skills: 'skill',
+  tools: 'tool',
+  plugins: 'plugin',
+  mcps: 'mcp',
+  connectors: 'connector',
+  workflows: 'workflow',
+};
+
 export interface MarketplaceCapability {
   id: string;
   name: string;
@@ -238,7 +247,7 @@ export function useCapabilityMarketplace() {
         cap.description.toLowerCase().includes(searchQuery.toLowerCase()) ||
         cap.tags?.some((t) => t.toLowerCase().includes(searchQuery.toLowerCase()));
       const matchesCategory =
-        activeCategory === 'all' || cap.kind === activeCategory;
+        activeCategory === 'all' || cap.kind === CATEGORY_TO_KIND[activeCategory];
       return matchesSearch && matchesCategory;
     });
   }, [capabilities, searchQuery, activeCategory]);

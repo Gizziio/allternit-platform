@@ -50,7 +50,7 @@ export class BonsaiRuntime {
   private device?: GPUDevice;
   private pipeline?: OwnedBonsaiPipeline;
   private textEncoder?: BonsaiTextEncoderRunner;
-  private tokenizer?: QwenBpeTokenizer;
+  private tokenizer?: Promise<QwenBpeTokenizer>;
   private _status: BonsaiRuntimeStatus = "idle";
   private readonly onStatusChange?: (status: BonsaiRuntimeStatus) => void;
 

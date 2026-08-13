@@ -7,6 +7,7 @@ declare module "wxt/browser" {
     | "/"
     | "/assets/page-agent-64.png"
     | "/background.js"
+    | "/content-scripts/appshot-export.js"
     | "/content-scripts/content.js"
     | "/main-world.js"
     | "/sidepanel.html"

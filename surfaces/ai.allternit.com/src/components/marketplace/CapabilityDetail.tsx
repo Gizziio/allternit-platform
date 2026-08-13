@@ -1,7 +1,7 @@
 'use client';
 
 import React from 'react';
-import { X, Star, DownloadSimple, Calendar, User, Tag, ExternalLink, Shield, Loader2 } from '@phosphor-icons/react';
+import { X, Star, DownloadSimple, Calendar, User, Tag, ArrowSquareOut, Shield, CircleNotch, Check } from '@phosphor-icons/react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { ScrollArea } from '@/components/ui/scroll-area';
@@ -125,7 +125,7 @@ export function CapabilityDetail({
           >
             {isInstalling ? (
               <>
-                <Loader2 size={16} weight="bold" className="mr-2 animate-spin" />
+                <CircleNotch size={16} weight="bold" className="mr-2 animate-spin" />
                 Installing...
               </>
             ) : (
@@ -141,7 +141,7 @@ export function CapabilityDetail({
                 size="sm"
                 onClick={() => window.open(capability.homepage, '_blank', 'noopener,noreferrer')}
               >
-                <ExternalLink size={14} weight="bold" className="mr-1.5" />
+                <ArrowSquareOut size={14} weight="bold" className="mr-1.5" />
                 Website
               </Button>
             )}
@@ -151,7 +151,7 @@ export function CapabilityDetail({
                 size="sm"
                 onClick={() => window.open(capability.repository, '_blank', 'noopener,noreferrer')}
               >
-                <ExternalLink size={14} weight="bold" className="mr-1.5" />
+                <ArrowSquareOut size={14} weight="bold" className="mr-1.5" />
                 Source
               </Button>
             )}

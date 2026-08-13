@@ -3007,6 +3007,8 @@ importers:
         specifier: ^3.90.0
         version: 3.114.17(@cloudflare/workers-types@4.20260120.0)
 
+  surfaces/ai.allternit.com/src/generated/prisma: {}
+
   surfaces/allternit-desktop:
     dependencies:
       '@clerk/clerk-react':
@@ -3076,6 +3078,8 @@ importers:
       wait-on:
         specifier: ^8.0.2
         version: 8.0.5
+
+  surfaces/allternit-desktop/resources/office-engine: {}
 
   surfaces/allternit-docs:
     dependencies:
@@ -3538,6 +3542,24 @@ importers:
       '@mintlify/cli':
         specifier: ^4.0.0
         version: 4.0.1110(@radix-ui/react-popover@1.1.15(@types/react-dom@18.3.7(@types/react@18.3.28))(@types/react@18.3.28)(react-dom@19.2.4(react@19.2.3))(react@19.2.3))(@types/node@25.6.2)(@types/react@18.3.28)(encoding@0.1.13)(react-dom@19.2.4(react@19.2.3))(ts-node@10.9.2(@types/node@25.6.2)(typescript@5.9.3))(typescript@5.9.3)
+
+  surfaces/gizzi-github-action:
+    devDependencies:
+      '@types/node':
+        specifier: ^20.0.0
+        version: 20.19.40
+      typescript:
+        specifier: ^5.4.0
+        version: 5.9.3
+
+  surfaces/gizzi-vscode:
+    devDependencies:
+      '@types/vscode':
+        specifier: ^1.90.0
+        version: 1.116.0
+      typescript:
+        specifier: ^5.4.0
+        version: 5.9.3
 
 packages:
 
