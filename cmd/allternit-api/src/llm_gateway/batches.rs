@@ -763,13 +763,13 @@ struct PendingBatch {
     retry_count: usize,
 }
 
-pub struct BatchWorker<P: BatchProvider> {
+pub struct BatchWorker {
     db: DbHandle,
-    provider: Arc<P>,
+    provider: Arc<dyn BatchProvider>,
 }
 
-impl<P: BatchProvider> BatchWorker<P> {
-    pub fn new(db: DbHandle, provider: Arc<P>) -> Self {
+impl BatchWorker {
+    pub fn new(db: DbHandle, provider: Arc<dyn BatchProvider>) -> Self {
         Self { db, provider }
     }
 
@@ -999,10 +999,125 @@ impl<P: BatchProvider> BatchWorker<P> {
     }
 }
 
+/// Native batch provider: executes every request through the local
+/// `/v1/chat/completions` endpoint instead of delegating to an external
+/// provider. This makes batch jobs first-class citizens of the Allternit
+/// gateway and removes the external batch-API dependency.
+pub struct NativeBatchProvider {
+    client: reqwest::Client,
+    base_url: String,
+    api_key: Option<String>,
+}
+
+impl NativeBatchProvider {
+    pub fn new(base_url: String, api_key: Option<String>) -> Self {
+        Self {
+            client: reqwest::Client::new(),
+            base_url: base_url.trim_end_matches('/').to_string(),
+            api_key,
+        }
+    }
+
+    pub fn from_config(config: &crate::config::AppConfig) -> Self {
+        let base_url = format!("http://127.0.0.1:{}", config.api_port());
+        let api_key = std::env::var("ALLTERNIT_BATCH_NATIVE_KEY")
+            .ok()
+            .filter(|s| !s.is_empty());
+        Self::new(base_url, api_key)
+    }
+}
+
+#[async_trait::async_trait]
+impl BatchProvider for NativeBatchProvider {
+    async fn submit(&self, requests: &[Value]) -> Result<ProviderBatchJob, BatchProviderError> {
+        // Native batches complete synchronously; we execute all requests now
+        // and store the results for the first poll to return.
+        let results = self.run_requests(requests).await;
+        let id = format!("native_{}", uuid::Uuid::new_v4().simple());
+        let results_json = serde_json::to_string(&results)
+            .map_err(|err| BatchProviderError::permanent("serialize_error", err.to_string()))?;
+        std::fs::write(native_results_path(&id), results_json)
+            .map_err(|err| BatchProviderError::permanent("results_write_error", err.to_string()))?;
+        Ok(ProviderBatchJob {
+            id,
+            status: "in_progress".to_string(),
+        })
+    }
+
+    async fn poll(&self, provider_batch_id: &str) -> Result<ProviderBatchStatus, BatchProviderError> {
+        let path = native_results_path(provider_batch_id);
+        let text = std::fs::read_to_string(&path)
+            .map_err(|err| BatchProviderError::permanent("results_read_error", err.to_string()))?;
+        let results: Vec<Value> = serde_json::from_str(&text)
+            .map_err(|err| BatchProviderError::permanent("results_decode_error", err.to_string()))?;
+        let _ = std::fs::remove_file(&path);
+        Ok(ProviderBatchStatus {
+            status: BatchJobStatus::Completed,
+            results: Some(results),
+        })
+    }
+}
+
+impl NativeBatchProvider {
+    async fn run_requests(&self, requests: &[Value]) -> Vec<Value> {
+        let mut results = Vec::with_capacity(requests.len());
+        for (index, body) in requests.iter().enumerate() {
+            let mut req = self
+                .client
+                .post(format!("{}/v1/chat/completions", self.base_url))
+                .json(body);
+            if let Some(key) = &self.api_key {
+                req = req.header("Authorization", format!("Bearer {key}"));
+            }
+            let value = match req.send().await {
+                Ok(resp) => {
+                    let status = resp.status();
+                    let text = resp.text().await.unwrap_or_default();
+                    let mut value: Value = serde_json::from_str(&text).unwrap_or_else(|_| {
+                        json!({
+                            "id": format!("chatcmpl-native-err-{index}"),
+                            "object": "chat.completion",
+                            "choices": [],
+                            "error": { "message": text, "type": "upstream_error" }
+                        })
+                    });
+                    if !status.is_success() {
+                        value = json!({
+                            "index": index,
+                            "error": value,
+                            "status": status.as_u16()
+                        });
+                    }
+                    value
+                }
+                Err(err) => json!({
+                    "index": index,
+                    "error": { "message": err.to_string(), "type": "request_error" }
+                }),
+            };
+            results.push(value);
+        }
+        results
+    }
+}
+
+fn native_results_path(provider_batch_id: &str) -> PathBuf {
+    batch_inputs_dir().join(format!("{provider_batch_id}_results.json"))
+}
+
 pub fn spawn_batch_worker(state: Arc<AppState>) -> tokio::task::JoinHandle<()> {
-    let provider = Arc::new(HttpBatchProvider::from_config(&state.config));
+    let provider: Arc<dyn BatchProvider> = if std::env::var("ALLTERNIT_BATCH_NATIVE")
+        .ok()
+        .map(|v| v == "1" || v.eq_ignore_ascii_case("true"))
+        .unwrap_or(false)
+    {
+        info!("Starting native batch execution worker");
+        Arc::new(NativeBatchProvider::from_config(&state.config))
+    } else {
+        info!("Starting external batch execution worker");
+        Arc::new(HttpBatchProvider::from_config(&state.config))
+    };
     let worker = BatchWorker::new(state.db.clone(), provider);
-    info!("Starting batch execution worker");
     tokio::spawn(async move {
         worker.run(WORKER_INTERVAL).await;
     })

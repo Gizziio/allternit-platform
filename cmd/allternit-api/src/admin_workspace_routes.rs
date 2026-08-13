@@ -9,12 +9,14 @@ use axum::{
     extract::{Extension, Path, State},
     http::StatusCode,
     response::{IntoResponse, Response},
-    routing::{get, post},
+    routing::{delete, get, post, put},
     Json, Router,
 };
 use rusqlite::{params, OptionalExtension};
-use serde::Deserialize;
+use serde::{Deserialize, Serialize};
 use serde_json::{json, Value};
+use std::net::IpAddr;
+use std::str::FromStr;
 use std::sync::Arc;
 
 use crate::{auth::AuthUser, AppState};
@@ -38,6 +40,10 @@ pub fn router() -> Router<Arc<AppState>> {
         .route(
             "/admin/workspaces/:id/members/:member_id",
             axum::routing::put(set_member_role).delete(remove_member),
+        )
+        .route(
+            "/admin/workspaces/:id/allowlist",
+            get(get_allowlist).put(update_allowlist),
         )
 }
 
@@ -392,6 +398,138 @@ async fn remove_member(
         Ok(Err(e)) => e.into_response(),
         Err(e) => internal(e).into_response(),
     }
+}
+
+// ─── Workspace IP allowlisting ──────────────────────────────────────────────
+
+#[derive(Debug, Deserialize, Serialize)]
+struct Allowlist {
+    pub ips: Vec<String>,
+}
+
+fn validate_ip_or_cidr(entry: &str) -> Result<(), ApiError> {
+    if entry.is_empty() || entry.len() > 64 {
+        return Err(error(
+            StatusCode::BAD_REQUEST,
+            "invalid_ip",
+            "Each allowlist entry must be a valid IPv4/IPv6 address or CIDR and 1-64 characters.",
+        ));
+    }
+    // Plain IP?
+    if IpAddr::from_str(entry).is_ok() {
+        return Ok(());
+    }
+    // CIDR?
+    if entry.contains('/') {
+        let parts: Vec<&str> = entry.split('/').collect();
+        if parts.len() == 2 {
+            if IpAddr::from_str(parts[0]).is_ok() && parts[1].parse::<u8>().is_ok() {
+                return Ok(());
+            }
+        }
+    }
+    Err(error(
+        StatusCode::BAD_REQUEST,
+        "invalid_ip",
+        format!("`{entry}` is not a valid IP address or CIDR."),
+    ))
+}
+
+async fn get_allowlist(
+    State(state): State<Arc<AppState>>,
+    Extension(user): Extension<AuthUser>,
+    Path(id): Path<String>,
+) -> Response {
+    let result = tokio::task::spawn_blocking(move || {
+        let conn = state.db.connect().map_err(internal)?;
+        let org = admin_org(&conn, &user)?;
+        find_workspace(&conn, &id, &org)?;
+        let raw: Option<String> = conn
+            .query_row(
+                "SELECT allowed_ips FROM admin_workspaces WHERE id = ?1 AND organization_id = ?2",
+                params![id, org],
+                |row| row.get(0),
+            )
+            .optional()
+            .map_err(internal)?;
+        let ips = raw
+            .as_deref()
+            .and_then(|r| serde_json::from_str::<Vec<String>>(r).ok())
+            .unwrap_or_default();
+        Ok::<_, ApiError>(Allowlist { ips })
+    })
+    .await;
+    match result {
+        Ok(Ok(v)) => Json(v).into_response(),
+        Ok(Err(e)) => e.into_response(),
+        Err(e) => internal(e).into_response(),
+    }
+}
+
+async fn update_allowlist(
+    State(state): State<Arc<AppState>>,
+    Extension(user): Extension<AuthUser>,
+    Path(id): Path<String>,
+    Json(body): Json<Allowlist>,
+) -> Response {
+    for entry in &body.ips {
+        if let Err(e) = validate_ip_or_cidr(entry) {
+            return e.into_response();
+        }
+    }
+    let ips_json = match serde_json::to_string(&body.ips) {
+        Ok(json) => json,
+        Err(err) => return internal(err).into_response(),
+    };
+    let result = tokio::task::spawn_blocking(move || {
+        let conn = state.db.connect().map_err(internal)?;
+        let org = admin_org(&conn, &user)?;
+        find_workspace(&conn, &id, &org)?;
+        conn.execute(
+            "UPDATE admin_workspaces SET allowed_ips = ?1, updated_at = CURRENT_TIMESTAMP WHERE id = ?2 AND organization_id = ?3",
+            params![ips_json, id, org],
+        )
+        .map_err(internal)?;
+        Ok::<_, ApiError>(body)
+    })
+    .await;
+    match result {
+        Ok(Ok(v)) => Json(v).into_response(),
+        Ok(Err(e)) => e.into_response(),
+        Err(e) => internal(e).into_response(),
+    }
+}
+
+/// Check whether `ip` is allowed by the workspace allowlist. An empty or
+/// unparsable allowlist means "allow all".
+pub fn ip_allowed(conn: &rusqlite::Connection, workspace_id: &str, ip: &str) -> bool {
+    let raw: Option<String> = conn
+        .query_row(
+            "SELECT allowed_ips FROM admin_workspaces WHERE id = ?1",
+            params![workspace_id],
+            |row| row.get(0),
+        )
+        .optional()
+        .unwrap_or_default();
+    let entries = match raw.as_deref().and_then(|r| serde_json::from_str::<Vec<String>>(r).ok()) {
+        Some(entries) if !entries.is_empty() => entries,
+        _ => return true,
+    };
+    let client_ip = match IpAddr::from_str(ip) {
+        Ok(ip) => ip,
+        Err(_) => return false,
+    };
+    for entry in entries {
+        if IpAddr::from_str(&entry).map(|allowed| allowed == client_ip).unwrap_or(false) {
+            return true;
+        }
+        if let Some((prefix, _)) = entry.split_once('/') {
+            if IpAddr::from_str(prefix).map(|allowed| allowed == client_ip).unwrap_or(false) {
+                return true;
+            }
+        }
+    }
+    false
 }
 
 #[cfg(test)]

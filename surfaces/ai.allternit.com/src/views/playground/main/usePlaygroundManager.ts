@@ -14,6 +14,47 @@ import { getDefaultAgentModel } from '@/lib/agents/agent-models';
 
 const uid = () => Math.random().toString(36).slice(2, 9);
 
+const ALLTERNIT_AI_URL = process.env.NEXT_PUBLIC_ALLTERNIT_AI_URL || '';
+
+interface ChatCompletionMessage {
+  role: 'system' | 'user' | 'assistant';
+  content: string;
+}
+
+interface ChatCompletionResponse {
+  choices?: Array<{
+    message?: {
+      content?: string;
+    };
+  }>;
+}
+
+function extractArtifact(content: string): { text: string; artifact: Artifact | null } {
+  const fences = [
+    { type: 'html' as const, regex: /```html\n([\s\S]*?)\n```/ },
+    { type: 'jsx' as const, regex: /```jsx\n([\s\S]*?)\n```/ },
+    { type: 'svg' as const, regex: /```svg\n([\s\S]*?)\n```/ },
+    { type: 'mermaid' as const, regex: /```mermaid\n([\s\S]*?)\n```/ },
+    { type: 'markdown' as const, regex: /```markdown\n([\s\S]*?)\n```/ },
+  ];
+
+  for (const { type, regex } of fences) {
+    const match = content.match(regex);
+    if (match) {
+      const text = content.replace(match[0], '').trim();
+      return {
+        text,
+        artifact: {
+          type,
+          title: `${type.toUpperCase()} Artifact`,
+          content: match[1].trim(),
+        },
+      };
+    }
+  }
+  return { text: content, artifact: null };
+}
+
 export function usePlaygroundManager() {
   const [activeTemplate, setActiveTemplate] = useState<TemplateId>('raw');
   const currentTemplate = TEMPLATES.find((t) => t.id === activeTemplate) ?? TEMPLATES[0];
@@ -30,7 +71,8 @@ export function usePlaygroundManager() {
   const [isStreaming, setIsStreaming] = useState(false);
   const [streamText, setStreamText] = useState('');
   const [artifact, setArtifact] = useState<Artifact | null>(null);
-  const streamIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const abortRef = useRef<AbortController | null>(null);
 
   const [leftTab, setLeftTab] = useState<LeftTab>('prompt');
   const [rightTab, setRightTab] = useState<RightTab>('preview');
@@ -44,44 +86,81 @@ export function usePlaygroundManager() {
     setMessages([{ id: uid(), role: 'user', content: t.starterMessage }]);
     setStreamText('');
     setArtifact(null);
+    setError(null);
   }, []);
 
-  const handleRun = useCallback(() => {
+  const buildMessages = useCallback((): ChatCompletionMessage[] => {
+    const out: ChatCompletionMessage[] = [];
+    if (systemPrompt.trim()) {
+      out.push({ role: 'system', content: systemPrompt.trim() });
+    }
+    for (const msg of messages) {
+      out.push({ role: msg.role, content: msg.content });
+    }
+    return out;
+  }, [systemPrompt, messages]);
+
+  const handleRun = useCallback(async () => {
     if (isStreaming) {
-      if (streamIntervalRef.current) clearInterval(streamIntervalRef.current);
+      abortRef.current?.abort();
       setIsStreaming(false);
       return;
     }
     setIsStreaming(true);
     setStreamText('');
     setArtifact(null);
+    setError(null);
     setRightTab('console');
 
-    const demo = currentTemplate.demoArtifact;
-    const intro = `I'll create that for you now.\n\n\`\`\`${demo.type}\n`;
-    const full = intro + demo.content + '\n```\n';
-    let i = 0;
-    let accumulated = '';
-    const CHUNK = 60;
-    const TICK  = 30;
+    const abort = new AbortController();
+    abortRef.current = abort;
 
-    streamIntervalRef.current = setInterval(() => {
-      if (i >= full.length) {
-        if (streamIntervalRef.current) clearInterval(streamIntervalRef.current);
-        setIsStreaming(false);
-        setArtifact(demo);
-        setRightTab('preview');
-        return;
+    try {
+      const body = {
+        model,
+        messages: buildMessages(),
+        temperature,
+        max_tokens: maxTokens,
+        stream: false,
+      };
+
+      const base = ALLTERNIT_AI_URL || window.location.origin;
+      const res = await fetch(`${base}/api/chat/completions`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body),
+        signal: abort.signal,
+      });
+
+      if (!res.ok) {
+        const text = await res.text();
+        throw new Error(`Allternit AI error: ${res.status} ${res.statusText} — ${text}`);
       }
-      const chunk = full.slice(i, Math.min(i + CHUNK, full.length));
-      i += CHUNK;
-      accumulated += chunk;
-      setStreamText(accumulated);
-    }, TICK);
-  }, [isStreaming, currentTemplate]);
+
+      const data = (await res.json()) as ChatCompletionResponse;
+      const content = data.choices?.[0]?.message?.content || '';
+      const { text, artifact: extracted } = extractArtifact(content);
+      setStreamText(text || content);
+      if (extracted) {
+        setArtifact(extracted);
+        setRightTab('preview');
+      }
+    } catch (err) {
+      const message = err instanceof Error ? err.message : String(err);
+      if (message.includes('abort')) {
+        setStreamText((prev) => prev + '\n[stopped]');
+      } else {
+        setError(message);
+        setStreamText(`Error: ${message}`);
+      }
+    } finally {
+      setIsStreaming(false);
+      abortRef.current = null;
+    }
+  }, [isStreaming, model, temperature, maxTokens, buildMessages, messages, systemPrompt]);
 
   useEffect(() => () => {
-    if (streamIntervalRef.current) clearInterval(streamIntervalRef.current);
+    abortRef.current?.abort();
   }, []);
 
   const addMessage = useCallback((role: 'user' | 'assistant') => {
@@ -115,6 +194,7 @@ export function usePlaygroundManager() {
     isStreaming,
     streamText,
     artifact,
+    error,
     leftTab,
     setLeftTab,
     rightTab,

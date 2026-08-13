@@ -104,7 +104,7 @@ impl IntoResponse for OpenAiErrorResponse {
 
 /// OpenAI chat completion request. Unknown fields are tolerated on purpose
 /// (no `deny_unknown_fields`): OpenAI client libraries send extra keys.
-#[derive(Debug, Clone, Deserialize)]
+#[derive(Debug, Clone, Deserialize, Serialize)]
 pub struct ChatCompletionRequest {
     pub model: String,
     pub messages: Vec<ChatMessage>,
@@ -146,11 +146,22 @@ pub struct ChatCompletionRequest {
     /// and parses `[cite:<id>]` markers from the response.
     #[serde(default)]
     pub citations: Option<bool>,
+    /// Reference a reusable context cache created via `/v1/context-caches`.
+    /// Cached messages are prepended to the request messages before forwarding.
+    #[serde(default)]
+    pub context_cache_id: Option<String>,
+    /// Number of completions to generate for partial / best-of sampling.
+    #[serde(default)]
+    pub n: Option<u32>,
+    /// When set with `n > 1`, return only the single best completion instead
+    /// of all candidates.
+    #[serde(default)]
+    pub best_of: Option<bool>,
     #[serde(default)]
     pub user: Option<String>,
 }
 
-#[derive(Debug, Clone, Deserialize)]
+#[derive(Debug, Clone, Deserialize, Serialize)]
 pub struct ChatMessage {
     pub role: String,
     #[serde(default)]
@@ -188,7 +199,7 @@ impl ChatMessage {
 }
 
 /// Message content is either a plain string or an array of typed parts.
-#[derive(Debug, Clone, Deserialize)]
+#[derive(Debug, Clone, Deserialize, Serialize)]
 #[serde(untagged)]
 pub enum MessageContent {
     Text(String),
@@ -199,7 +210,7 @@ pub enum MessageContent {
 /// Gizzi; other part kinds (input_audio, ...) are kept as their type marker
 /// only. A `file_id` may reference a session-scoped file and is resolved to
 /// base64 inline data before being forwarded.
-#[derive(Debug, Clone, Deserialize)]
+#[derive(Debug, Clone, Deserialize, Serialize)]
 pub struct ContentPart {
     #[serde(rename = "type")]
     pub part_type: String,
@@ -210,20 +221,77 @@ pub struct ContentPart {
     #[serde(default)]
     pub input_image: Option<InputImagePart>,
     #[serde(default)]
+    pub video_url: Option<VideoUrlPart>,
+    #[serde(default)]
+    pub input_video: Option<InputVideoPart>,
+    #[serde(default)]
     pub file_id: Option<String>,
 }
 
-#[derive(Debug, Clone, Deserialize)]
+#[derive(Debug, Clone, Deserialize, Serialize)]
 pub struct ImageUrlPart {
     pub url: String,
     #[serde(default)]
     pub detail: Option<String>,
 }
 
-#[derive(Debug, Clone, Deserialize)]
+#[derive(Debug, Clone, Deserialize, Serialize)]
 pub struct InputImagePart {
     pub data: String,
     pub format: String,
+}
+
+#[derive(Debug, Clone, Deserialize, Serialize)]
+pub struct VideoUrlPart {
+    pub url: String,
+    #[serde(default)]
+    pub detail: Option<String>,
+}
+
+#[derive(Debug, Clone, Deserialize, Serialize)]
+pub struct InputVideoPart {
+    pub data: String,
+    pub format: String,
+}
+
+/// Push a video-aware file part to Gizzi parts.
+pub fn push_video(parts: &mut Vec<serde_json::Value>, url: String, mime: &str) {
+    parts.push(json!({
+        "type": "file",
+        "url": url,
+        "mime": mime,
+    }));
+}
+
+pub fn part_video_url(part: &ContentPart) -> Option<String> {
+    part.video_url.as_ref().map(|u| u.url.clone())
+}
+
+pub fn part_input_video_url(part: &ContentPart) -> Option<String> {
+    part.input_video.as_ref().map(|v| {
+        let mime = match v.format.as_str() {
+            "mp4" => "video/mp4",
+            "webm" => "video/webm",
+            "mov" => "video/quicktime",
+            "mkv" => "video/x-matroska",
+            _ => "video/mp4",
+        };
+        format!("data:{};base64,{}", mime, v.data)
+    })
+}
+
+pub fn video_mime_from_url(url: &str) -> &'static str {
+    if url.starts_with("data:video/mp4") {
+        "video/mp4"
+    } else if url.starts_with("data:video/webm") {
+        "video/webm"
+    } else if url.starts_with("data:video/quicktime") {
+        "video/quicktime"
+    } else if url.starts_with("data:video/x-matroska") {
+        "video/x-matroska"
+    } else {
+        "video/mp4"
+    }
 }
 
 #[derive(Debug, Clone, Deserialize, Serialize)]
@@ -262,20 +330,20 @@ pub struct ToolCallDelta {
 }
 
 /// `stop` accepts a single string or an array of strings.
-#[derive(Debug, Clone, Deserialize)]
+#[derive(Debug, Clone, Deserialize, Serialize)]
 #[serde(untagged)]
 pub enum StopSequences {
     Single(String),
     Multiple(Vec<String>),
 }
 
-#[derive(Debug, Clone, Deserialize)]
+#[derive(Debug, Clone, Deserialize, Serialize)]
 pub struct StreamOptions {
     #[serde(default)]
     pub include_usage: Option<bool>,
 }
 
-#[derive(Debug, Clone, Deserialize)]
+#[derive(Debug, Clone, Deserialize, Serialize)]
 pub struct ResponseFormat {
     #[serde(rename = "type")]
     pub format_type: String,
@@ -288,7 +356,7 @@ pub struct ResponseFormat {
     pub name: Option<String>,
 }
 
-#[derive(Debug, Clone, Deserialize)]
+#[derive(Debug, Clone, Deserialize, Serialize)]
 pub struct JsonSchemaFormat {
     pub name: String,
     pub schema: serde_json::Value,
@@ -298,14 +366,14 @@ pub struct JsonSchemaFormat {
     pub strict: Option<bool>,
 }
 
-#[derive(Debug, Clone, Deserialize)]
+#[derive(Debug, Clone, Deserialize, Serialize)]
 pub struct Tool {
     #[serde(rename = "type")]
     pub tool_type: String,
     pub function: ToolFunction,
 }
 
-#[derive(Debug, Clone, Deserialize)]
+#[derive(Debug, Clone, Deserialize, Serialize)]
 pub struct ToolFunction {
     pub name: String,
     #[serde(default)]
@@ -418,6 +486,14 @@ pub fn validate_request(req: &ChatCompletionRequest) -> Result<(), OpenAiErrorRe
             return Err(OpenAiErrorResponse::invalid_request(
                 "`service_tier` must be one of auto, default, flex, priority, or scale.",
                 Some("service_tier"),
+            ));
+        }
+    }
+    if let Some(n) = req.n {
+        if n == 0 || n > 10 {
+            return Err(OpenAiErrorResponse::invalid_request(
+                "`n` must be between 1 and 10.",
+                Some("n"),
             ));
         }
     }
@@ -564,11 +640,23 @@ pub fn messages_to_gizzi_parts(messages: &[ChatMessage]) -> (Option<String>, Vec
                     Some(MessageContent::Parts(content_parts)) => {
                         let mut text_buffer = prefix;
                         for part in content_parts {
-                            if let Some(url) = part_image_url(part).or_else(|| part_input_image_url(part)) {
+                            if let Some(url) = part_image_url(part)
+                                .or_else(|| part_input_image_url(part))
+                                .or_else(|| part_video_url(part))
+                                .or_else(|| part_input_video_url(part))
+                            {
                                 push_text(&mut parts, &text_buffer);
                                 text_buffer = String::new();
-                                let mime = image_mime_from_url(&url);
-                                push_image(&mut parts, url, mime);
+                                let mime = if part.video_url.is_some() || part.input_video.is_some() {
+                                    video_mime_from_url(&url)
+                                } else {
+                                    image_mime_from_url(&url)
+                                };
+                                if part.video_url.is_some() || part.input_video.is_some() {
+                                    push_video(&mut parts, url, mime);
+                                } else {
+                                    push_image(&mut parts, url, mime);
+                                }
                             } else {
                                 let marker = match part.part_type.as_str() {
                                     "text" => part.text.clone().unwrap_or_default(),
@@ -670,11 +758,24 @@ pub fn message_to_gizzi_parts(message: &ChatMessage) -> Vec<serde_json::Value> {
         Some(MessageContent::Parts(content_parts)) => {
             let mut text_buffer = String::new();
             for part in content_parts {
-                if let Some(url) = part_image_url(part).or_else(|| part_input_image_url(part)) {
+                if let Some(url) = part_image_url(part)
+                    .or_else(|| part_input_image_url(part))
+                    .or_else(|| part_video_url(part))
+                    .or_else(|| part_input_video_url(part))
+                {
                     push_text(&mut parts, &text_buffer);
                     text_buffer = String::new();
-                    let mime = image_mime_from_url(&url);
-                    push_image(&mut parts, url, mime);
+                    let is_video = part.video_url.is_some() || part.input_video.is_some();
+                    let mime = if is_video {
+                        video_mime_from_url(&url)
+                    } else {
+                        image_mime_from_url(&url)
+                    };
+                    if is_video {
+                        push_video(&mut parts, url, mime);
+                    } else {
+                        push_image(&mut parts, url, mime);
+                    }
                 } else {
                     let marker = match part.part_type.as_str() {
                         "text" => part.text.clone().unwrap_or_default(),
