@@ -5,7 +5,7 @@ import type { ProjectApi } from '../stubs/project-store'
 declare global {
   interface Window {
     slidesApi: SlidesApi
-    projectApi?: ProjectApi
+    readonly projectApi?: ProjectApi
   }
 }
 

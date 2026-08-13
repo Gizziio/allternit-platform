@@ -28,11 +28,11 @@ async function withMockedFetch(
 ): Promise<Request[]> {
   const originalFetch = globalThis.fetch;
   const seen: Request[] = [];
-  globalThis.fetch = async (input, init) => {
+  globalThis.fetch = (async (input, init) => {
     const request = new Request(input, init);
     seen.push(request);
     return respond(request);
-  };
+  }) as typeof globalThis.fetch;
   try {
     await fn();
   } finally {

@@ -2,7 +2,7 @@
 
 Permission profiles let you save named security presets and switch between them from the `gizzi-code` CLI. A profile bundles a set of permission decisions — sandbox boundaries, network access, tool approvals, and more — so you can move quickly between restrictive and permissive modes without editing `config.toml` by hand.
 
-For an overview of how permissions and approvals work together, see [Agent approvals and security](/docs/cli/agent-approvals-security). For the full configuration key list, see [Configuration reference](/docs/cli/config-reference).
+For an overview of how permissions and approvals work together, see [Agent approvals and security](./agent-approvals-security.md). For the full configuration key list, see [Configuration reference](./advanced-configuration.md).
 
 ---
 
@@ -171,7 +171,7 @@ Controls filesystem and process isolation.
 sandbox_mode = "workspace-write"   # Options: workspace-write, restricted, danger-full-access
 ```
 
-In `workspace-write` mode, the agent can write inside the workspace root. Some environments keep `.git/` and `.gizzi/` read-only even when the rest of the workspace is writable, so commands such as `git commit` may still require approval. To block specific commands automatically, add [rules](/docs/cli/rules).
+In `workspace-write` mode, the agent can write inside the workspace root. Some environments keep `.git/` and `.gizzi/` read-only even when the rest of the workspace is writable, so commands such as `git commit` may still require approval. To block specific commands automatically, add [rules](./advanced-configuration.md).
 
 ### Network access
 
@@ -319,7 +319,7 @@ In older versions of `gizzi-code`, profiles were declared inline under `[profile
 
 ## See also
 
-- [Agent approvals and security](/docs/cli/agent-approvals-security)
-- [Configuration reference](/docs/cli/config-reference)
-- [Rules](/docs/cli/rules)
-- [gizzi auth](/docs/cli/auth)
+- [Agent approvals and security](./agent-approvals-security.md)
+- [Configuration reference](./advanced-configuration.md)
+- [Rules](./advanced-configuration.md)
+- [gizzi auth](./authentication.md)

@@ -189,4 +189,4 @@ If the answer is not in the passages, say so.
 
 - [Model migration guide](./model-migration.md)
 - [Glossary](../glossary.md)
-- [Evaluation metrics](../api/eval-metrics.md)
+- [API reference](../api/reference.md)

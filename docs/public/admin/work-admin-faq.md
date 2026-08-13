@@ -52,7 +52,7 @@ Data retention is configured per organization. Allternit stores:
 - Audit events in the Access Transparency feed.
 - Vault credentials encrypted with the configured key store.
 
-See [API and data retention](./data-retention.md) for retention policy configuration.
+See the data retention policy configuration in your organization settings.
 
 ### Are prompts, outputs, files, actions, or tool calls logged?
 
@@ -121,7 +121,7 @@ For a new organization:
 
 ## Additional resources for your teams
 
-- [Admin API overview](./index.md)
+- [Admin FAQ](./work-admin-faq.md)
 - [Analytics API](../cli/analytics-api.md)
 - [Agent approvals and security](../cli/agent-approvals-security.md)
 - [Config and state locations](../cli/config-locations.md)

@@ -66,6 +66,7 @@ packages:
 overrides:
   '@types/react': ^18.3.28
   '@types/react-dom': ^18.3.1
+  '@types/express-serve-static-core': ^4.19.8
   '@reduxjs/toolkit': ^2.2.7
   react-redux: ^9.1.2
   redux: ^5.0.1

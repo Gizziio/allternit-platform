@@ -6,7 +6,7 @@ Allternit is language-agnostic at the API layer: you can send prompts, system me
 
 - **UTF-8 end-to-end** — Requests, responses, file uploads, and tool inputs are treated as UTF-8.
 - **Locale-agnostic tokenization** — Token counts are computed by the provider tokenizer, not a language-specific heuristic.
-- **Provider routing by language support** — If a model family is known to underperform for a target language, the [model registry](./providers/index.md) flags it as a limitation.
+- **Provider routing by language support** — If a model family is known to underperform for a target language, the model registry flags it as a limitation.
 
 ## Recommendations for prompts
 
@@ -73,5 +73,5 @@ Use the built-in `web_search` tool to retrieve locale-specific context, and inst
 ## Related resources
 
 - [Glossary](./glossary.md)
-- [Structured outputs guide](./api/structured-outputs.md)
-- [Tool registry](./tools/index.md)
+- [API reference](./api/reference.md)
+- [Build a tool guide](./guides/build-a-tool.md)

@@ -212,5 +212,5 @@ persistence = "none"
 max_bytes = 104857600  # 100 MiB
 ```
 
-For authentication options, see [gizzi auth](./auth.md). For the full list of
+For authentication options, see [gizzi auth](./authentication.md). For the full list of
 configuration keys, see the [`config.toml` reference](../gizzi/configuration.md).

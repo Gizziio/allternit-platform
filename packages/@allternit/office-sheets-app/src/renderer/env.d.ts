@@ -20,7 +20,13 @@ interface ProjectApi {
 declare global {
   interface Window {
     readonly desktopApi: DesktopApi
-    readonly projectApi?: ProjectApi
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    readonly projectApi?: {
+      appendChat(args: any): Promise<any>
+      resolveChat(args: any): Promise<{ projectId: string; chatId: string }>
+      loadChat(args: any): Promise<any[]>
+      rebindChat(args: any): Promise<any>
+    }
   }
 }
 

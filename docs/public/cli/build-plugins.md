@@ -91,7 +91,7 @@ For more advanced plugin authoring, including:
 - Configuring hooks and MCP servers
 - Publishing to a marketplace
 
-See the [Plugin authoring guide](../guides/plugin-authoring.md).
+See the [Build skills guide](./build-skills.md) for skill-only plugins.
 
 ## Related pages
 

@@ -39,12 +39,12 @@ export interface MuxBackendOptions {
 
 /** Minimal NDJSON client for the mux Unix socket protocol. */
 class MuxClient {
-  private constructor(private sock: any, private buffer: string, private pending: string[]) {}
+  private constructor(private sock: any, private pending: string[]) {}
 
   static connect(socketPath: string): Promise<MuxClient> {
     return new Promise((resolve, reject) => {
       const pending: string[] = [];
-      const client = new MuxClient(null as any, '', pending);
+      const client = new MuxClient(null as any, pending);
       const sock = netConnect(socketPath);
       let buffer = '';
       sock.on('connect', () => resolve(client));
@@ -59,7 +59,6 @@ class MuxClient {
         }
       });
       client.sock = sock;
-      (client as any).buffer = buffer;
     });
   }
 

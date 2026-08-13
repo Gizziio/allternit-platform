@@ -91,7 +91,7 @@ Example:
 cli_auth_credentials_store = "keyring"
 ```
 
-For the complete `config.toml` schema, see the [gizzi configuration reference](/docs/cli/config-reference).
+For the complete `config.toml` schema, see the [gizzi configuration reference](../gizzi/configuration.md).
 
 ## How credentials are cached
 
@@ -127,4 +127,4 @@ In managed Allternit workspaces, administrators may enforce storage or authentic
 
 For example, an admin may require keyring storage or restrict logins to a specific workspace. These settings are typically applied organization-wide rather than edited per-user.
 
-See [Managed configuration](/docs/admin/managed-configuration) for details on workspace-level policy controls.
+See [Work admin FAQ](../admin/work-admin-faq.md) for details on workspace-level policy controls.

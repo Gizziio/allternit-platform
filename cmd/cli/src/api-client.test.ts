@@ -5,13 +5,13 @@ import { ApiClient } from './api-client.js';
 test('ApiClient sends bearer auth and JSON bodies', async () => {
   const originalFetch = globalThis.fetch;
   let seen: Request | undefined;
-  globalThis.fetch = async (input, init) => {
+  globalThis.fetch = (async (input, init) => {
     seen = new Request(input, init);
     return new Response(JSON.stringify({ ok: true }), {
       status: 200,
       headers: { 'content-type': 'application/json' },
     });
-  };
+  }) as typeof globalThis.fetch;
   try {
     const result = await new ApiClient({ apiUrl: 'https://api.example/', token: 'secret' })
       .request('POST', '/api/v1/workspaces', { name: 'demo' });
@@ -27,10 +27,10 @@ test('ApiClient sends bearer auth and JSON bodies', async () => {
 test('ApiClient supports update and delete requests', async () => {
   const originalFetch = globalThis.fetch;
   const seen: Request[] = [];
-  globalThis.fetch = async (input, init) => {
+  globalThis.fetch = (async (input, init) => {
     seen.push(new Request(input, init));
     return new Response(JSON.stringify({ ok: true }), { status: 200 });
-  };
+  }) as typeof globalThis.fetch;
   try {
     const client = new ApiClient({ apiUrl: 'https://api.example' });
     await client.request('PATCH', '/api/v1/gateway/keys/key%2Fone', { name: 'updated' });

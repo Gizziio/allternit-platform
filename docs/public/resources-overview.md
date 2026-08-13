@@ -80,10 +80,9 @@ Tags propagate to usage exports and analytics filters.
 
 ## Resource limits
 
-Default per-organization limits are enforced by the control plane. See the [rate limits](./api/rate-limits.md) and [quotas](./admin/quotas.md) pages for current defaults. Requests that exceed a limit return `429 Too Many Requests` with a `Retry-After` header.
+Default per-organization limits are enforced by the control plane. See the [API reference](./api/reference.md) for current defaults. Requests that exceed a limit return `429 Too Many Requests` with a `Retry-After` header.
 
 ## Next steps
 
-- [API reference](./api/index.md)
+- [API reference](./api/reference.md)
 - [CLI reference](./gizzi/index.md)
-- [Self-hosting resources](./self-hosting/index.md)

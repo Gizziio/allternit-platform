@@ -24,4 +24,14 @@ declare global {
   }
 }
 
+declare module "react" {
+  // eslint-disable-next-line @typescript-eslint/no-namespace
+  namespace JSX {
+    interface IntrinsicElements {
+      "ink-box": Partial<Styles> & { [prop: string]: unknown }
+      "ink-text": Partial<Styles> & { [prop: string]: unknown }
+    }
+  }
+}
+
 export {}

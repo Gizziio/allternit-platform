@@ -11,13 +11,13 @@ Use the Analytics API when you need:
 - **Activity feeds** for security review or compliance audit trails.
 - **Programmatic access** to data that is also shown in the Allternit web console.
 
-For real-time event streaming, use [webhooks](../api/webhooks.md) or the [session event stream](../api/sessions.md) instead.
+For real-time event streaming, use webhooks or the [session event stream](../api/sessions.md) instead.
 
 ## Administration boundaries
 
 Analytics endpoints are scoped to the admin's organization. An organization owner or admin can query data for any workspace in their organization. Workspace members without the admin role receive a `403` response.
 
-All endpoints live under `/api/v1/admin/analytics/` and require an admin-scoped bearer token or session cookie.
+All endpoints live under `/api/v1/admin/analytics/` and require an admin-scoped bearer token or session cookie. See [Admin FAQ](../admin/work-admin-faq.md) for administration boundaries.
 
 ## Available endpoints
 
@@ -72,10 +72,10 @@ curl -H "Authorization: Bearer $ADMIN_TOKEN" \
 
 ## Retention
 
-Analytics aggregates are retained according to the organization's data retention policy. Raw event data may be retained for a shorter period than aggregated buckets. See [API and data retention](../admin/data-retention.md) for configuration.
+Analytics aggregates are retained according to the organization's data retention policy. Raw event data may be retained for a shorter period than aggregated buckets.
 
 ## Related pages
 
 - [Metrics](./metrics.md)
 - [Observability and telemetry](./observability.md)
-- [Admin API overview](../admin/index.md)
+- [Admin FAQ](../admin/work-admin-faq.md)
