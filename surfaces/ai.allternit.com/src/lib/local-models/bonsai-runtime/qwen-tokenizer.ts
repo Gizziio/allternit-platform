@@ -20,11 +20,14 @@ export class QwenBpeTokenizer {
   private readonly specials = new Map<string, number>();
   private readonly cache = new Map<string, number[]>();
   private readonly byteCharacters = byteToUnicode();
+  private readonly reverseVocab = new Map<number, string>();
+  private readonly specialById = new Map<number, string>();
 
   constructor(private readonly vocab: Record<string, number>, merges: Array<[string, string]>,
     addedTokens: Array<{ id: number; content: string }>) {
     merges.forEach((pair, rank) => this.ranks.set(pairKey(pair[0], pair[1]), rank));
-    addedTokens.forEach(token => this.specials.set(token.content, token.id));
+    addedTokens.forEach(token => { this.specials.set(token.content, token.id); this.specialById.set(token.id, token.content); });
+    for (const [piece, id] of Object.entries(vocab)) this.reverseVocab.set(id, piece);
   }
 
   static async fromPretrained(fetchImpl: typeof fetch = fetch): Promise<QwenBpeTokenizer> {
@@ -63,6 +66,34 @@ export class QwenBpeTokenizer {
     output.push(...this.encodeOrdinary(text.slice(offset)));
     return output;
   }
+
+  decode(ids: number[] | Uint32Array): string {
+    const reverseUnicode = unicodeToByte(this.byteCharacters);
+    let output = "";
+    for (const id of ids) {
+      const special = this.specialById.get(id);
+      if (special !== undefined) { output += special; continue; }
+      const piece = this.reverseVocab.get(id);
+      if (piece === undefined) { output += "\uFFFD"; continue; }
+      let bytes = "";
+      for (const char of piece) {
+        const byte = reverseUnicode[char.codePointAt(0)!];
+        if (byte !== undefined) bytes += String.fromCharCode(byte);
+      }
+      output += bytes;
+    }
+    try { return new TextDecoder("utf-8", { fatal: false }).decode(new TextEncoder().encode(output)); }
+    catch { return output; }
+  }
+
+  decodeStreaming(ids: number[] | Uint32Array, previousLength: number): string {
+    const full = this.decode(ids);
+    if (previousLength <= 0) return full;
+    const previous = this.decode(Array.isArray(ids) ? ids.slice(0, previousLength) : ids.slice(0, previousLength));
+    return full.slice(previous.length);
+  }
+
+  vocabularySize(): number { return this.reverseVocab.size + this.specials.size; }
 
   private encodeOrdinary(text: string): number[] {
     const normalized = text.normalize("NFC");
@@ -114,6 +145,15 @@ function byteToUnicode(): string[] {
 function range(start: number, end: number): number[] { return Array.from({ length: end - start + 1 }, (_, index) => start + index); }
 function pairKey(left: string, right: string): string { return `${left}\u0000${right}`; }
 function escapeRegex(value: string): string { return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"); }
+function unicodeToByte(mapping: string[]): Record<number, number> {
+  const reverse: Record<number, number> = {};
+  for (let byte = 0; byte < 256; byte += 1) {
+    const unicode = mapping[byte];
+    if (unicode !== undefined) reverse[unicode.codePointAt(0)!] = byte;
+  }
+  return reverse;
+}
+
 function pickBucket(length: number, cap: number): number {
   for (const bucket of [32, 64, 128, 256, 512]) if (bucket <= cap && bucket >= length) return bucket;
   return cap;
