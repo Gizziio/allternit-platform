@@ -1859,7 +1859,17 @@ importers:
 
   platform/types/schemas: {}
 
-  sdk/allternit-sdk: {}
+  sdk/allternit-sdk:
+    dependencies:
+      '@napi-rs/canvas':
+        specifier: ^0.1.88
+        version: 0.1.94
+      pdfjs-dist:
+        specifier: ^5.4.54
+        version: 5.4.624
+      zod:
+        specifier: ^3.x
+        version: 3.25.76
 
   sdk/capsule-sdk:
     devDependencies:
@@ -2997,8 +3007,6 @@ importers:
         specifier: ^3.90.0
         version: 3.114.17(@cloudflare/workers-types@4.20260120.0)
 
-  surfaces/ai.allternit.com/src/generated/prisma: {}
-
   surfaces/allternit-desktop:
     dependencies:
       '@clerk/clerk-react':
@@ -3068,8 +3076,6 @@ importers:
       wait-on:
         specifier: ^8.0.2
         version: 8.0.5
-
-  surfaces/allternit-desktop/resources/office-engine: {}
 
   surfaces/allternit-docs:
     dependencies:
@@ -32467,7 +32473,6 @@ snapshots:
       '@napi-rs/canvas-linux-x64-musl': 0.1.94
       '@napi-rs/canvas-win32-arm64-msvc': 0.1.94
       '@napi-rs/canvas-win32-x64-msvc': 0.1.94
-    optional: true
 
   '@napi-rs/cli@2.18.4': {}
 
