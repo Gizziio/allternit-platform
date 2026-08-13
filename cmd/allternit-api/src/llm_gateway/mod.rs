@@ -32,20 +32,27 @@ pub mod admin_routes;
 pub mod auth;
 pub mod batches;
 pub mod benchmarks;
+pub mod cache;
 pub mod citations;
 pub mod dlp;
 pub mod dlp_patterns;
+pub mod embeddings;
+pub mod estimation;
 pub mod failover;
 pub mod files;
 pub mod gizzi_bus;
+pub mod images;
 pub mod inference_hooks;
 pub mod keys;
 pub mod llm_pricing;
+pub mod partial;
 pub mod proxy;
+pub mod realtime_audio;
 pub mod refusal;
 pub mod router;
 pub mod safety;
 pub mod translate;
+pub mod vector_store;
 
 use axum::{
     extract::Request,
@@ -67,6 +74,8 @@ use crate::AppState;
 pub fn llm_gateway_router(state: Arc<AppState>) -> Router<Arc<AppState>> {
     Router::new()
         .route("/chat/completions", post(proxy::chat_completions))
+        .route("/chat/completions/best_of", post(partial::best_of_completions))
+        .route("/chat/completions/partial", post(partial::partial_completions))
         .route("/tokens", post(proxy::count_tokens))
         .route("/rate-limits", get(proxy::rate_limits))
         .route(
@@ -81,6 +90,18 @@ pub fn llm_gateway_router(state: Arc<AppState>) -> Router<Arc<AppState>> {
         .route("/pricing", get(proxy::list_pricing))
         .route("/files", post(files::create_file).get(files::list_files))
         .route("/files/:id", get(files::get_file).delete(files::delete_file))
+        .route("/images/generations", post(images::create_images))
+        .route("/images/edits", post(images::edit_images))
+        .route("/images/variations", post(images::create_image_variations))
+        .route("/embeddings", post(embeddings::create_embeddings))
+        .route("/estimates/tokens", post(estimation::estimate_tokens))
+        .route("/estimates/cost", post(estimation::estimate_cost))
+        .route("/cache/prompts", post(cache::create_cache).get(cache::list_caches))
+        .route("/cache/prompts/:id", get(cache::get_cache).delete(cache::delete_cache))
+        .route("/realtime/sessions", post(realtime_audio::create_session).get(realtime_audio::list_sessions))
+        .route("/realtime/sessions/:id", get(realtime_audio::get_session).delete(realtime_audio::delete_session))
+        .route("/realtime/sessions/:id/ws", get(realtime_audio::ws_handler))
+        .merge(vector_store::vector_store_router())
         // Layer order: the LAST layer added runs FIRST. Execution order is
         // therefore llm_key auth → rate limit → DLP → budget → handler.
         .layer(axum::middleware::from_fn_with_state(

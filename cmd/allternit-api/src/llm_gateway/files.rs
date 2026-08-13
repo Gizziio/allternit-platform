@@ -1,8 +1,11 @@
-//! OpenAI-compatible file endpoints for PDF upload and retrieval.
+//! OpenAI-compatible file endpoints with purpose-driven upload metadata (A8).
 //!
 //! Mounted under `/v1` by the LLM gateway router so the path surface matches
 //! OpenAI's `POST /v1/files` and `GET /v1/files/:id`. These endpoints use the
 //! gateway's existing virtual-key middleware chain for authentication.
+//!
+//! Supports purpose validation against known purposes:
+//! `fine-tune`, `assistants`, `batch`, `embeddings`, `vision`, `user_data`.
 
 use axum::{
     extract::{Path, State},
@@ -19,6 +22,38 @@ use std::sync::Arc;
 use crate::AppState;
 
 use super::translate::{OpenAiErrorResponse, error_code};
+
+/// Valid purpose values for file uploads.
+const VALID_PURPOSES: &[&str] = &[
+    "fine-tune",
+    "assistants",
+    "assistants_output",
+    "batch",
+    "batch_output",
+    "embeddings",
+    "vision",
+    "user_data",
+];
+
+/// Map file extensions to MIME types.
+fn detect_content_type(filename: &str) -> &'static str {
+    match filename.rsplit('.').next().unwrap_or("").to_lowercase().as_str() {
+        "pdf" => "application/pdf",
+        "jsonl" | "json" => "application/json",
+        "txt" | "log" => "text/plain",
+        "csv" => "text/csv",
+        "png" => "image/png",
+        "jpg" | "jpeg" => "image/jpeg",
+        "gif" => "image/gif",
+        "webp" => "image/webp",
+        "svg" => "image/svg+xml",
+        "mp3" => "audio/mpeg",
+        "wav" => "audio/wav",
+        "mp4" => "video/mp4",
+        "zip" => "application/zip",
+        _ => "application/octet-stream",
+    }
+}
 
 #[derive(Debug, Deserialize)]
 pub struct CreateFileRequest {
@@ -48,16 +83,34 @@ pub struct FileObject {
     pub created_at: i64,
     pub filename: String,
     pub purpose: String,
+    pub status: &'static str,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub status_details: Option<String>,
+    /// Detected MIME type based on filename extension.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub content_type: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub data: Option<String>,
 }
 
-/// `POST /v1/files` — store a base64-encoded PDF in SQLite and return an
-/// OpenAI-shaped file object.
+/// `POST /v1/files` — store a base64-encoded file in SQLite and return an
+/// OpenAI-shaped file object with purpose and content-type metadata.
 pub async fn create_file(
     State(state): State<Arc<AppState>>,
     Json(body): Json<CreateFileRequest>,
 ) -> Response {
+    // Validate purpose against known values.
+    if !VALID_PURPOSES.contains(&body.purpose.as_str()) {
+        return OpenAiErrorResponse::invalid_request(
+            format!(
+                "`purpose` must be one of {VALID_PURPOSES:?}, got `{}`.",
+                body.purpose
+            ),
+            Some("purpose"),
+        )
+        .into_response();
+    }
+
     let bytes = match STANDARD.decode(&body.file) {
         Ok(bytes) => bytes,
         Err(_) => {
@@ -83,6 +136,7 @@ pub async fn create_file(
         .into_response();
     }
 
+    let content_type = detect_content_type(&body.filename).to_string();
     let id = format!("file_{}", uuid::Uuid::new_v4().simple());
     let size = bytes.len() as i64;
     let filename = body.filename;
@@ -93,18 +147,20 @@ pub async fn create_file(
     let id_for_db = id.clone();
     let filename_for_db = filename.clone();
     let purpose_for_db = purpose.clone();
+    let ct_for_db = content_type.clone();
 
     let result = tokio::task::spawn_blocking(move || -> Result<(), rusqlite::Error> {
         let conn = db.connect()?;
         conn.execute(
-            "INSERT INTO files (id, filename, purpose, bytes, size, created_at)
-             VALUES (?1, ?2, ?3, ?4, ?5, datetime(?6, 'unixepoch'))",
+            "INSERT INTO files (id, filename, purpose, bytes, size, content_type, created_at)
+             VALUES (?1, ?2, ?3, ?4, ?5, ?6, datetime(?7, 'unixepoch'))",
             rusqlite::params![
                 id_for_db,
                 filename_for_db,
                 purpose_for_db,
                 bytes,
                 size,
+                ct_for_db,
                 created_at,
             ],
         )?;
@@ -120,6 +176,9 @@ pub async fn create_file(
             created_at,
             filename,
             purpose,
+            status: "processed",
+            status_details: None,
+            content_type: Some(content_type),
             data: None,
         })
         .into_response(),
@@ -148,7 +207,7 @@ pub async fn list_files(State(state): State<Arc<AppState>>) -> Response {
     let result = tokio::task::spawn_blocking(move || -> Result<Vec<FileObject>, rusqlite::Error> {
         let conn = db.connect()?;
         let mut stmt = conn.prepare(
-            "SELECT id, filename, purpose, size, CAST(strftime('%s', created_at) AS INTEGER)
+            "SELECT id, filename, purpose, size, CAST(strftime('%s', created_at) AS INTEGER), content_type
              FROM files ORDER BY created_at DESC",
         )?;
         let rows = stmt
@@ -160,6 +219,9 @@ pub async fn list_files(State(state): State<Arc<AppState>>) -> Response {
                     purpose: row.get(2)?,
                     bytes: row.get(3)?,
                     created_at: row.get(4)?,
+                    status: "processed",
+                    status_details: None,
+                    content_type: row.get(5)?,
                     data: None,
                 })
             })?
@@ -199,7 +261,7 @@ pub async fn get_file(State(state): State<Arc<AppState>>, Path(id): Path<String>
     let result = tokio::task::spawn_blocking(move || -> Result<Option<FileRow>, rusqlite::Error> {
         let conn = db.connect()?;
         conn.query_row(
-            "SELECT id, filename, purpose, bytes, size, CAST(strftime('%s', created_at) AS INTEGER) as created_at
+            "SELECT id, filename, purpose, bytes, size, CAST(strftime('%s', created_at) AS INTEGER) as created_at, content_type
              FROM files WHERE id = ?1",
             rusqlite::params![id],
             |row| {
@@ -210,6 +272,7 @@ pub async fn get_file(State(state): State<Arc<AppState>>, Path(id): Path<String>
                     bytes: row.get(3)?,
                     size: row.get(4)?,
                     created_at: row.get(5)?,
+                    content_type: row.get(6)?,
                 })
             },
         )
@@ -225,6 +288,9 @@ pub async fn get_file(State(state): State<Arc<AppState>>, Path(id): Path<String>
             created_at: row.created_at,
             filename: row.filename,
             purpose: row.purpose,
+            status: "processed",
+            status_details: None,
+            content_type: row.content_type,
             data: Some(STANDARD.encode(&row.bytes)),
         })
         .into_response(),
@@ -315,6 +381,7 @@ struct FileRow {
     bytes: Vec<u8>,
     size: i64,
     created_at: i64,
+    content_type: Option<String>,
 }
 
 #[cfg(test)]
@@ -350,7 +417,7 @@ mod tests {
         let conn = db.connect().unwrap();
         let row: FileRow = conn
             .query_row(
-                "SELECT id, filename, purpose, bytes, size, CAST(strftime('%s', created_at) AS INTEGER)
+                "SELECT id, filename, purpose, bytes, size, CAST(strftime('%s', created_at) AS INTEGER), content_type
                  FROM files WHERE id = ?1",
                 rusqlite::params![id],
                 |row| {
@@ -361,6 +428,7 @@ mod tests {
                         bytes: row.get(3)?,
                         size: row.get(4)?,
                         created_at: row.get(5)?,
+                        content_type: row.get(6)?,
                     })
                 },
             )
@@ -389,7 +457,7 @@ mod tests {
         insert("file_b", "b.pdf", b"bb");
 
         let mut stmt = conn.prepare(
-            "SELECT id, filename, purpose, size, CAST(strftime('%s', created_at) AS INTEGER)
+            "SELECT id, filename, purpose, size, CAST(strftime('%s', created_at) AS INTEGER), content_type
              FROM files ORDER BY created_at DESC",
         ).unwrap();
         let rows: Vec<FileObject> = stmt
@@ -401,6 +469,9 @@ mod tests {
                     purpose: row.get(2)?,
                     bytes: row.get(3)?,
                     created_at: row.get(4)?,
+                    status: "processed",
+                    status_details: None,
+                    content_type: row.get(5)?,
                     data: None,
                 })
             })
