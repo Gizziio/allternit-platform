@@ -1,0 +1,225 @@
+---
+title: Chat Completions API
+description: Send chat messages to LLM models through the Allternit gateway
+---
+
+## Overview
+
+The Chat Completions API is the primary interface for sending conversational messages to LLM models. It is wire-compatible with the standard chat completions format and supports streaming, tool calling, structured outputs, prompt caching, and reasoning mode.
+
+## Base URL
+
+```
+https://api.allternit.com/v1/chat/completions
+```
+
+Or for local development:
+
+```
+http://127.0.0.1:8013/v1/chat/completions
+```
+
+## Create a chat completion
+
+<CodeGroup>
+```bash cURL
+curl https://api.allternit.com/v1/chat/completions \
+  -H "Authorization: Bearer $ALLTERNIT_API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "model": "gizzi-pro",
+    "messages": [
+      {"role": "system", "content": "You are a helpful assistant."},
+      {"role": "user", "content": "What is Allternit?"}
+    ]
+  }'
+```
+
+```typescript TypeScript
+import { AllternitClient } from '@allternit/sdk';
+
+const client = new AllternitClient({ apiKey: process.env.ALLTERNIT_API_KEY! });
+
+const response = await client.chat.completions.create({
+  model: 'gizzi-pro',
+  messages: [
+    { role: 'system', content: 'You are a helpful assistant.' },
+    { role: 'user', content: 'What is Allternit?' },
+  ],
+});
+```
+
+```python Python
+import os
+from allternit import Allternit
+
+client = Allternit(api_key=os.environ["ALLTERNIT_API_KEY"])
+
+response = client.chat.completions.create(
+    model="gizzi-pro",
+    messages=[
+        {"role": "system", "content": "You are a helpful assistant."},
+        {"role": "user", "content": "What is Allternit?"},
+    ],
+)
+```
+</CodeGroup>
+
+## Request body
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `model` | string | yes | Model identifier or alias |
+| `messages` | array | yes | Array of message objects |
+| `temperature` | number | no | Sampling temperature (0-2, default 1) |
+| `max_tokens` | integer | no | Maximum tokens in the response |
+| `stream` | boolean | no | Enable streaming (default false) |
+| `tools` | array | no | Tool definitions for function calling |
+| `tool_choice` | string/object | no | Tool selection strategy |
+| `response_format` | object | no | Structured output format |
+| `thinking` | object | no | Enable reasoning mode |
+
+### Message object
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `role` | string | `system`, `user`, `assistant`, or `tool` |
+| `content` | string/array | Message content (text or multimodal) |
+| `name` | string | Optional participant name |
+| `cache_control` | object | Prompt caching directive |
+
+## Streaming
+
+Set `stream: true` to receive the response as server-sent events:
+
+```typescript
+const stream = await client.chat.completions.create({
+  model: 'gizzi-pro',
+  messages: [{ role: 'user', content: 'Tell me a story' }],
+  stream: true,
+});
+
+for await (const chunk of stream) {
+  process.stdout.write(chunk.choices[0]?.delta?.content || '');
+}
+```
+
+## Tool calling
+
+```json
+{
+  "model": "gizzi-pro",
+  "messages": [
+    {"role": "user", "content": "What's the weather in Austin?"}
+  ],
+  "tools": [
+    {
+      "type": "function",
+      "function": {
+        "name": "get_weather",
+        "description": "Get the current weather for a city",
+        "parameters": {
+          "type": "object",
+          "properties": {
+            "city": { "type": "string" }
+          },
+          "required": ["city"]
+        }
+      }
+    }
+  ]
+}
+```
+
+## Structured outputs
+
+Enforce JSON schema on the response:
+
+```json
+{
+  "model": "gizzi-pro",
+  "messages": [{"role": "user", "content": "Extract data from this text..."}],
+  "response_format": {
+    "type": "json_schema",
+    "json_schema": {
+      "name": "extraction",
+      "schema": {
+        "type": "object",
+        "properties": {
+          "name": { "type": "string" },
+          "age": { "type": "integer" }
+        },
+        "required": ["name", "age"]
+      }
+    }
+  }
+}
+```
+
+## Prompt caching
+
+Reduce latency and cost for repeated system prompts:
+
+```json
+{
+  "messages": [
+    {
+      "role": "system",
+      "content": "You are a code reviewer...",
+      "cache_control": { "type": "ephemeral" }
+    },
+    { "role": "user", "content": "Review this diff..." }
+  ]
+}
+```
+
+## Reasoning mode
+
+Enable extended thinking for complex tasks:
+
+```json
+{
+  "model": "gizzi-pro",
+  "messages": [{"role": "user", "content": "Prove this theorem"}],
+  "thinking": {
+    "type": "enabled",
+    "budget_tokens": 10000
+  }
+}
+```
+
+## Response
+
+```json
+{
+  "id": "chatcmpl-abc123",
+  "object": "chat.completion",
+  "created": 1723500000,
+  "model": "gizzi-pro",
+  "choices": [
+    {
+      "index": 0,
+      "message": {
+        "role": "assistant",
+        "content": "Allternit is an enterprise-grade agentic operating system..."
+      },
+      "finish_reason": "stop"
+    }
+  ],
+  "usage": {
+    "prompt_tokens": 25,
+    "completion_tokens": 100,
+    "total_tokens": 125
+  }
+}
+```
+
+## Error codes
+
+| Code | Meaning |
+|------|---------|
+| `invalid_request` | Malformed request body |
+| `model_not_found` | Unknown model identifier |
+| `rate_limited` | Rate or spend limit exceeded |
+| `context_length_exceeded` | Input exceeds model context window |
+| `budget_exceeded` | Virtual key budget exhausted |

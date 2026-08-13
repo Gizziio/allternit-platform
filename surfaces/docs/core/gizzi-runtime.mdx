@@ -106,14 +106,13 @@ Gizzi supports multiple LLM providers:
 ```typescript
 const agent = new Agent({
   model: {
-    provider: 'openai',
-    model: 'gpt-4',
+    provider: 'allternit',
+    model: 'gizzi-pro',
     temperature: 0.7,
   },
 });
 ```
 
 Supported providers:
-- OpenAI (GPT-4, GPT-3.5)
-- Anthropic (Claude)
-- Local (Ollama, LocalAI)
+- Allternit gateway (all models via aliases)
+- Local (Ollama, MLX, Bonsai WebGPU)

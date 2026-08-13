@@ -69,6 +69,40 @@
       ]
     },
     {
+      "group": "Gizzi Code CLI",
+      "pages": [
+        "cli/overview",
+        "cli/installation",
+        "cli/configuration",
+        "cli/authentication",
+        "cli/headless-execution",
+        "cli/permission-profiles",
+        "cli/ci-mode"
+      ]
+    },
+    {
+      "group": "Tools & ACI",
+      "pages": [
+        "tools/overview",
+        "tools/tool-belt",
+        "tools/mcp",
+        "tools/computer-use",
+        "tools/strict-tool-use",
+        "tools/build-a-tool"
+      ]
+    },
+    {
+      "group": "Security & Enterprise",
+      "pages": [
+        "security/overview",
+        "security/security-model",
+        "security/vault",
+        "security/compliance",
+        "security/audit",
+        "security/scim"
+      ]
+    },
+    {
       "group": "BYOC Runtime",
       "pages": [
         "byoc/overview",
@@ -91,7 +125,13 @@
       "pages": [
         "api/authentication",
         "api/endpoints",
-        "api/event-stream"
+        "api/event-stream",
+        "api/chat-completions",
+        "api/agents",
+        "api/sessions",
+        "api/memory-stores",
+        "api/files",
+        "api/sandbox"
       ]
     },
     {
@@ -99,6 +139,25 @@
       "pages": [
         "sdk/typescript",
         "sdk/python"
+      ]
+    },
+    {
+      "group": "Guides",
+      "pages": [
+        "guides/agent-lifecycle",
+        "guides/model-migration",
+        "guides/idempotency-and-retries",
+        "guides/token-budgets"
+      ]
+    },
+    {
+      "group": "Cookbooks",
+      "pages": [
+        "cookbooks/overview",
+        "cookbooks/multi-agent-orchestration",
+        "cookbooks/browser-automation",
+        "cookbooks/rag-pipeline",
+        "cookbooks/ci-cd-integration"
       ]
     }
   ],

@@ -1,0 +1,59 @@
+---
+title: Installation
+description: Install Gizzi Code on macOS, Linux, and Windows
+---
+
+## Install via package manager
+
+<CodeGroup>
+```bash npm
+npm install -g @allternit/gizzi-code
+```
+
+```bash yarn
+yarn global add @allternit/gizzi-code
+```
+
+```bash pnpm
+pnpm add -g @allternit/gizzi-code
+```
+
+```bash bun
+bun add -g @allternit/gizzi-code
+```
+</CodeGroup>
+
+## One-line installer
+
+For the full runtime (including BYOC components):
+
+```bash
+curl -fsSL https://install.allternit.com | bash
+```
+
+## Build from source
+
+Clone the monorepo and build the CLI:
+
+```bash
+git clone https://github.com/allternit/allternit.git
+cd allternit
+bun install
+bun run --cwd cmd/gizzi-code build
+```
+
+The binary is produced at `cmd/gizzi-code/dist/gizzi`.
+
+## Verify the installation
+
+```bash
+gizzi --version
+```
+
+## Post-install
+
+Configuration lives at `~/.config/gizzi-code/config.toml` by default. Run `gizzi auth login` to authenticate — see [Authentication](/cli/authentication).
+
+<Tip>
+  On macOS you can also install via Homebrew: `brew install allternit/tap/gizzi-code`.
+</Tip>

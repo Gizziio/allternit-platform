@@ -1,0 +1,113 @@
+---
+title: Memory Stores API
+description: Create and query persistent memory stores for agents
+---
+
+## Overview
+
+Memory stores provide persistent, searchable storage for agent context. They support semantic search via embeddings and are scoped to an organization.
+
+## Endpoints
+
+### List stores
+
+```
+GET /api/memory/stores
+```
+
+### Create store
+
+```
+POST /api/memory/stores
+```
+
+```json
+{
+  "name": "product-docs",
+  "embedding_model": "text-embedding-3-small",
+  "metadata": { "department": "engineering" }
+}
+```
+
+Response:
+
+```json
+{
+  "id": "store_abc123",
+  "name": "product-docs",
+  "embedding_model": "text-embedding-3-small",
+  "entry_count": 0,
+  "created_at": "2026-08-12T10:00:00Z"
+}
+```
+
+### Add entry
+
+```
+POST /api/memory/stores/{id}/entries
+```
+
+```json
+{
+  "content": "The Allternit API server runs on port 8013 by default.",
+  "metadata": {
+    "source": "docs/architecture.md",
+    "section": "deployment"
+  }
+}
+```
+
+### Search
+
+```
+POST /api/memory/stores/{id}/search
+```
+
+```json
+{
+  "query": "What port does the API server use?",
+  "limit": 5,
+  "min_score": 0.7
+}
+```
+
+Response:
+
+```json
+{
+  "entries": [
+    {
+      "id": "entry_xyz789",
+      "content": "The Allternit API server runs on port 8013 by default.",
+      "score": 0.95,
+      "metadata": { "source": "docs/architecture.md" }
+    }
+  ]
+}
+```
+
+### Get entry
+
+```
+GET /api/memory/stores/{id}/entries/{entryId}
+```
+
+### Delete entry
+
+```
+DELETE /api/memory/stores/{id}/entries/{entryId}
+```
+
+### Delete store
+
+```
+DELETE /api/memory/stores/{id}
+```
+
+## Use cases
+
+- **RAG pipelines** — Store document chunks and retrieve relevant context for LLM queries.
+- **Agent memory** — Persist facts and preferences across sessions.
+- **Knowledge bases** — Build searchable documentation that agents can query.
+
+See the [RAG Pipeline cookbook](/cookbooks/rag-pipeline) for a complete implementation.

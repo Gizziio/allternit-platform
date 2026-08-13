@@ -1,0 +1,150 @@
+---
+title: Native Tool Belt
+description: Built-in tools shipped with the Allternit SDK
+---
+
+## Overview
+
+The **Native Tool Belt** is a model-facing collection of general-purpose tools that an agent can call without any external MCP server. The belt is initialized by `NativeToolBelt` and registers tools into a `ToolRegistry`.
+
+```typescript
+import { ToolRegistry } from '@allternit/sdk/ai-runtime/tools';
+import { NativeToolBelt } from '@allternit/sdk/ai-runtime/tools/search';
+
+const registry = new ToolRegistry();
+new NativeToolBelt(registry, {
+  provider: 'tavily',
+  apiKeys: { tavily: process.env.TAVILY_API_KEY },
+  workspaceRoot: process.cwd(),
+});
+```
+
+## Registry primitives
+
+| Tool | Purpose |
+|------|---------|
+| `tool_search` | Search deferred tools known but not yet active |
+| `tool_activate` | Move a deferred tool into the active set |
+
+## Web tools
+
+### `web_search`
+
+Search the web using a configurable adapter. Results are cached per query and clamped to a maximum of 10 entries.
+
+**Supported providers**
+
+| Provider | API key env var |
+|----------|----------------|
+| `tavily` | `TAVILY_API_KEY` |
+| `perplexity` | `PERPLEXITY_API_KEY` |
+| `bing` | `BING_SEARCH_API_KEY` |
+| `duckduckgo` | *(none required)* |
+
+```json
+{
+  "name": "web_search",
+  "input_schema": {
+    "type": "object",
+    "properties": {
+      "query": { "type": "string" },
+      "mode": { "type": "string", "enum": ["cached", "indexed", "live"] },
+      "limit": { "type": "integer" }
+    },
+    "required": ["query"]
+  }
+}
+```
+
+### `web_fetch`
+
+Fetch a URL and return readable text. HTML responses have scripts and styles stripped. Output is truncated at 50,000 characters by default.
+
+```json
+{
+  "name": "web_fetch",
+  "input_schema": {
+    "type": "object",
+    "properties": {
+      "url": { "type": "string" }
+    },
+    "required": ["url"]
+  }
+}
+```
+
+## Workspace tool
+
+### `str_replace_editor`
+
+A file editor that operates within a single workspace root. All paths are resolved relative to the workspace and constrained to stay within it.
+
+Commands: `view`, `str_replace`, `create`, `insert`, `undo`, `undo_edit`.
+
+```typescript
+const editor = registry.getTool('str_replace_editor')!;
+await editor.execute!({ command: 'create', path: 'hello.txt', file_text: 'Hello\n' }, {});
+await editor.execute!({ command: 'str_replace', path: 'hello.txt', old_str: 'Hello', new_str: 'World' }, {});
+```
+
+## System tools
+
+### `bash`
+
+Execute a shell command with optional timeout (default 30s) and restart control.
+
+```json
+{
+  "name": "bash",
+  "input_schema": {
+    "type": "object",
+    "properties": {
+      "command": { "type": "string" },
+      "timeout": { "type": "integer" },
+      "restart": { "type": "boolean" }
+    },
+    "required": ["command"]
+  }
+}
+```
+
+### `code_execution`
+
+Run code in a sandboxed environment. Supports `python`, `node`, `bash`, and `rust`.
+
+```json
+{
+  "name": "code_execution",
+  "input_schema": {
+    "type": "object",
+    "properties": {
+      "language": { "type": "string", "enum": ["python", "node", "bash", "rust"] },
+      "code": { "type": "string" },
+      "timeout_seconds": { "type": "integer" },
+      "dependencies": { "type": "array", "items": { "type": "string" } }
+    },
+    "required": ["language", "code"]
+  }
+}
+```
+
+### `memory`
+
+Session-scoped key/value store. In-memory by default; production deployments inject a persistent store.
+
+```typescript
+await registry.getTool('memory')!.execute!({ operation: 'write', key: 'mode', value: 'fast' }, {});
+const entry = await registry.getTool('memory')!.execute!({ operation: 'read', key: 'mode' }, {});
+```
+
+## Customizing execution backends
+
+`NativeToolBelt` accepts injectable backends so the same tool contract works in tests, local CLI, and remote sandbox deployments:
+
+| Option | Type | Used by |
+|--------|------|---------|
+| `runner.run` | `BashRunner` | `bash` |
+| `runner.execute` | `CodeExecutionRunner` | `code_execution` |
+| `store` | `MemoryStore` | `memory` |
+| `fetch` | `typeof fetch` | `web_search`, `web_fetch` |
+| `workspaceRoot` | `string` | `str_replace_editor` |

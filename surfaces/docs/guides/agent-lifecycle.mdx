@@ -1,0 +1,101 @@
+---
+title: Agent Lifecycle
+description: Understand how agents are created, run, and terminated
+---
+
+## Overview
+
+Every Allternit agent follows a defined lifecycle — from creation through execution to disposal. Understanding this lifecycle helps you build reliable, long-running agents.
+
+## States
+
+```
+┌─────────┐    ┌───────────┐    ┌─────────┐    ┌────────┐
+│  init   │───►│ connecting│───►│  ready  │◄──►│  busy  │
+└─────────┘    └───────────┘    └────┬────┘    └───┬────┘
+                                     │             │
+                                ┌────┴────┐   ┌────┴────┐
+                                │  error  │◄──┤suspended│
+                                └────┬────┘   └─────────┘
+                                     │
+                                ┌────┴────┐
+                                │ disposed│
+                                └─────────┘
+```
+
+| State | Description |
+|-------|-------------|
+| `init` | Agent object created; runtime not yet connected |
+| `connecting` | Establishing connection to the Gizzi runtime |
+| `ready` | Connected and idle; waiting for input |
+| `busy` | Processing a run — calling tools, generating responses |
+| `suspended` | Paused (e.g., awaiting human approval) |
+| `error` | Unrecoverable error; inspect the error event |
+| `disposed` | Agent terminated; resources released |
+
+## Creating an agent
+
+```typescript
+import { AllternitClient } from '@allternit/sdk';
+
+const client = new AllternitClient({
+  apiKey: process.env.ALLTERNIT_API_KEY,
+});
+
+const agent = await client.agents.create({
+  name: 'code-reviewer',
+  runtime: 'gizzi-pro',
+  skills: ['code', 'web_search'],
+});
+```
+
+## Running an agent
+
+```typescript
+const run = await client.agents.run(agent.id, {
+  input: 'Review this pull request for security issues',
+  context: { repo: 'my-org/my-repo', pr: 42 },
+});
+
+// Stream events
+for await (const event of run.events()) {
+  if (event.type === 'message') console.log(event.data);
+  if (event.type === 'tool_use') console.log('Tool:', event.tool);
+}
+```
+
+## Suspending and resuming
+
+When an agent requires human approval (e.g., a destructive action), it enters the `suspended` state. Resume with an approval decision:
+
+```typescript
+await client.agents.approve(run.id, { approved: true });
+// or
+await client.agents.approve(run.id, { approved: false, reason: 'Too risky' });
+```
+
+## Terminating an agent
+
+```typescript
+await client.agents.stop(agent.id);
+```
+
+Or let the agent complete naturally — the runtime cleans up resources after the final event.
+
+## Error handling
+
+Agent errors are surfaced as events:
+
+```typescript
+run.events().on('error', (event) => {
+  console.error('Agent error:', event.code, event.message);
+  // Codes: RATE_LIMITED, MODEL_ERROR, TOOL_ERROR, TIMEOUT, INTERNAL
+});
+```
+
+## Best practices
+
+- **Reuse agents** for multiple runs rather than creating a new agent per request.
+- **Set timeouts** on long-running tasks to prevent runaway agents.
+- **Monitor usage** via the audit log to track token consumption and cost.
+- **Handle suspension** in production — agents waiting for approval will block indefinitely if never resumed.

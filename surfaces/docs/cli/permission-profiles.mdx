@@ -1,0 +1,75 @@
+---
+title: Permission Profiles
+description: Control what an agent can do without human approval
+---
+
+## Overview
+
+Permission profiles define default approval rules that are merged into the active permission set on startup. They let you declare — once — which operations an agent can run freely, which require confirmation, and which are always denied.
+
+## Permission modes
+
+| Mode | Behavior |
+|------|----------|
+| `suggest` | Agent proposes actions; user confirms each one |
+| `ask` | Agent asks before executing potentially destructive actions |
+| `dontAsk` | Agent executes without confirmation (use with care) |
+
+## Defining a profile
+
+```bash
+gizzi config profile add strict \
+  --rule bash=ask \
+  --rule edit=ask \
+  --rule delete=deny
+```
+
+Rules are matched in order. The first matching rule wins.
+
+## Rule syntax
+
+Each rule is `tool=mode`:
+
+| Tool pattern | Examples |
+|--------------|----------|
+| `bash` | Shell command execution |
+| `edit` | File edits via `str_replace_editor` |
+| `delete` | File deletion |
+| `web_search` | Web search |
+| `code_execution` | Sandbox code execution |
+| `*` | Wildcard — matches all tools |
+
+## Listing profiles
+
+```bash
+gizzi config profile list
+```
+
+## Activating a profile
+
+```bash
+gizzi config profile set-active strict
+```
+
+## Combining with config.toml
+
+Profiles defined via CLI are persisted in `config.toml` under `[permissions.profiles]`:
+
+```toml
+[permissions.profiles.strict]
+rules = [
+  { tool = "bash", mode = "ask" },
+  { tool = "edit", mode = "ask" },
+  { tool = "delete", mode = "deny" },
+]
+```
+
+## CI usage
+
+In CI pipelines, use `dontAsk` with a restricted tool allowlist:
+
+```bash
+gizzi exec --permission-profile ci-safe "Run the linter and fix issues"
+```
+
+Where `ci-safe` only allows `bash` (for the linter) and `edit`, denying everything else.

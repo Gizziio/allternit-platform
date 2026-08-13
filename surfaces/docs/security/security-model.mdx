@@ -1,0 +1,71 @@
+---
+title: Security Model
+description: Trust boundaries, data flows, and security controls
+---
+
+## Trust boundaries
+
+```
+┌─────────────────────────────────────────────────────────────────┐
+│                        Customer Environment                       │
+│  ┌──────────────┐  ┌──────────────┐  ┌──────────────────────┐   │
+│  │ Desktop / Web │  │ gizzi-code   │  │ Customer Identity    │   │
+│  │   UI Client   │  │   CLI / ACI  │  │ Provider (Clerk)     │   │
+│  └──────┬───────┘  └──────┬───────┘  └──────────────────────┘   │
+└─────────┼────────────────┼───────────────────────────────────────┘
+          │                │
+          │  TLS + Clerk   │  TLS + virtual key
+          │     JWT        │
+          ▼                ▼
+┌─────────────────────────────────────────────────────────────────┐
+│                     Allternit API Server                          │
+│  Auth (Clerk / LLM keys) → Rate limit → DLP → Budget → Router   │
+│  Audit log, compliance requests, vault, RBAC, analytics          │
+└─────────────────────────────────────────────────────────────────┘
+          │
+          │  TLS + provider credentials
+          ▼
+┌─────────────────────────────────────────────────────────────────┐
+│              External LLM Providers                               │
+└─────────────────────────────────────────────────────────────────┘
+```
+
+- **Customer environment** — End-user browsers, the `gizzi-code` CLI, and any custom callers. Customer identity is handled by Clerk; API calls carry short-lived JWTs or long-lived LLM gateway virtual keys.
+- **Allternit API server** — The central control plane. It enforces authentication, rate limits, DLP scanning, budget checks, and routing decisions before forwarding requests to the Gizzi runtime and upstream providers.
+- **External providers** — Third-party inference providers. Requests leave the Allternit server only after policy checks; provider API keys are managed through external keys or vault credentials and are never exposed to end users.
+
+## Authentication
+
+Allternit uses two primary authentication modes:
+
+1. **Clerk JWTs** for the web/desktop UI and admin APIs. Sessions are scoped to an organization and role (owner/admin/member).
+2. **Virtual LLM keys** (`ak-…`) for the OpenAI-compatible `/v1` surface. Each key is tied to an organization, optional model allowlist, monthly budget, and rate limit.
+
+See [SCIM](/security/scim) for enterprise SSO/SCIM provisioning and [Vault](/security/vault) for credential storage.
+
+## Authorization
+
+- **RBAC** — Organization owners and admins can manage workspaces, keys, budgets, DLP rules, and analytics. Members are restricted to permitted resources.
+- **Model allowlists** — Virtual keys can be restricted to specific models or aliases, preventing calls to unapproved providers.
+- **Workspace isolation** — Resources (agents, sessions, files, memory) are scoped to an organization and, where applicable, to individual users.
+
+## Data protection
+
+- **Encryption in transit** — All external and internal API traffic uses TLS.
+- **Encryption at rest** — SQLite databases and the vault store sensitive values. Connector tokens and vault entries are encrypted with a configurable encryption key; in headless deployments a runtime key is created on first use.
+- **DLP scanning** — The LLM gateway scans outgoing requests for secrets, PII, and prompt-injection patterns. Detections can `warn`, `redact`, or `block`.
+- **Prompt leak detection** — Admin endpoints let operators score user text against system prompts to detect accidental leakage.
+
+## Audit and compliance
+
+- **Audit logs** — Administrative actions, key lifecycle events, and compliance requests are persisted per organization.
+- **Usage events** — Every LLM request is recorded with tokens, cost, status, latency, and routing decision.
+- **Compliance requests** — Org admins can request data export or deletion workflows.
+
+## Self-hosting / BYOC
+
+Allternit is designed so the hosting infrastructure can be passed to the user:
+
+- The API server, Gizzi runtime, and Rails DAG engine can run on customer-managed infrastructure.
+- Encryption keys, provider credentials, and IP allow-lists remain under customer control.
+- The `GET /regions` endpoint publishes egress IP ranges for firewall allow-listing.

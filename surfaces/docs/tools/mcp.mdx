@@ -1,0 +1,85 @@
+---
+title: MCP Tool Registry
+description: Attach external tools via the Model Context Protocol
+---
+
+## Overview
+
+The [Model Context Protocol (MCP)](https://modelcontextprotocol.io) is an open standard for connecting AI models to external tools and data sources. Allternit supports MCP servers on both the client side (attaching remote tools to an agent) and the server side (exposing Allternit tools to external MCP clients).
+
+## Attaching an MCP server
+
+Configure MCP servers in the Gizzi Code `config.toml` or programmatically via the SDK:
+
+```toml
+# ~/.config/gizzi-code/config.toml
+
+[[mcp.servers]]
+id = "github"
+command = "npx"
+args = ["-y", "@modelcontextprotocol/server-github"]
+env = { GITHUB_TOKEN = "${GITHUB_TOKEN}" }
+
+[[mcp.servers]]
+id = "filesystem"
+command = "npx"
+args = ["-y", "@modelcontextprotocol/server-filesystem", "/workspace"]
+```
+
+```typescript
+import { AllternitClient } from '@allternit/sdk';
+
+const client = new AllternitClient({ apiKey: process.env.ALLTERNIT_API_KEY });
+
+await client.mcp.attach({
+  serverId: 'github',
+  command: 'npx',
+  args: ['-y', '@modelcontextprotocol/server-github'],
+  env: { GITHUB_TOKEN: process.env.GITHUB_TOKEN! },
+});
+```
+
+## Tool naming
+
+Tools from an MCP server are namespaced under the server ID: `github.create_issue`, `filesystem.read_file`, etc. Namespaces prevent collisions with native tools and other MCP servers.
+
+## Server-side: exposing Allternit tools
+
+You can also expose Allternit's native tools as an MCP server, making them available to any MCP-compatible client:
+
+```typescript
+import { NativeToolBelt } from '@allternit/sdk/ai-runtime/tools/search';
+import { ToolRegistry } from '@allternit/sdk/ai-runtime/tools';
+
+const registry = new ToolRegistry();
+const belt = new NativeToolBelt(registry, { workspaceRoot: process.cwd() });
+
+await belt.attachMcpServer({
+  serverId: 'allternit-tools',
+  listTools: async () => registry.getActiveTools().map(t => ({
+    name: t.name,
+    description: t.description,
+    inputSchema: t.input_schema,
+  })),
+  callTool: async (name, args) => {
+    const tool = registry.getTool(name);
+    if (!tool) throw new Error(`Unknown tool: ${name}`);
+    return tool.execute!(args, { callId: `mcp-${name}` });
+  },
+});
+```
+
+## Bundled vs remote servers
+
+| Mode | Description |
+|------|-------------|
+| **Bundled** | Server runs as a child process spawned by the CLI or SDK |
+| **Remote** | Server runs on a separate host; the SDK connects via HTTP/SSE |
+
+For production deployments, prefer remote MCP servers with tunnel-based authentication.
+
+## Security
+
+- MCP server processes run with the same permissions as the host process.
+- Environment variables passed via `env` are not logged or persisted.
+- Tool arguments are validated against the declared schema before execution.
