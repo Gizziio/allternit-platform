@@ -117,5 +117,24 @@ export {
   ACPHarnessBridge,
 } from './acp/harness-bridge.js';
 
+// Plugins / Capability SDK
+export { CapabilityBuilder, defineCapability } from './plugins/index.js';
+export { CapabilityRegistry } from './plugins/index.js';
+export type { CapabilityRegistryConfig } from './plugins/index.js';
+export type {
+  CapabilityKind,
+  CapabilityPricing,
+  CapabilityManifest,
+  CapabilityAuthor,
+  CapabilityPermission,
+  CapabilityRegistration,
+  CapabilityLifecycle,
+  CapabilityContext,
+  CapabilityPublishOptions,
+  CapabilityPublishResult,
+  CapabilitySearchOptions,
+  CapabilitySearchResult,
+} from './plugins/index.js';
+
 // Version
 export const VERSION = '1.0.0';
