@@ -1,0 +1,31 @@
+---
+title: MCP Tunnels
+description: Secure ingress for Model Context Protocol servers.
+---
+
+# MCP Tunnels
+
+MCP tunnels let you expose an internal MCP server to Allternit agents over HTTPS without opening a public port. Each tunnel supports mTLS client certificates and OAuth issuer/audience validation.
+
+## Endpoints
+
+| Method | Path | Description |
+|--------|------|-------------|
+| GET    | `/api/v1/admin/mcp-tunnels` | List tunnels |
+| POST   | `/api/v1/admin/mcp-tunnels` | Create a tunnel |
+| GET    | `/api/v1/admin/mcp-tunnels/:id` | Get a tunnel |
+| PATCH  | `/api/v1/admin/mcp-tunnels/:id` | Update a tunnel |
+| DELETE | `/api/v1/admin/mcp-tunnels/:id` | Delete a tunnel |
+| POST   | `/api/v1/admin/mcp-tunnels/:id/rotate` | Rotate tunnel token |
+| POST   | `/api/v1/admin/mcp-tunnels/:id/reveal` | Reveal tunnel token |
+
+## CLI
+
+```bash
+allternit admin mcp-tunnels list
+allternit admin mcp-tunnels create \
+  --name "internal-search" \
+  --endpoint-url https://mcp.example.com/sse \
+  --oauth-issuer https://auth.example.com \
+  --audience mcp-audience
+```

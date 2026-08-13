@@ -1,0 +1,25 @@
+---
+title: Git DAG
+description: How Allternit structures agent work as a persistent, auditable directed acyclic graph.
+---
+
+# Git DAG
+
+Every action, decision, tool call, and artifact in an Allternit session is recorded as a node in a Git-like directed acyclic graph (DAG). This gives you:
+
+- **Full auditability** — every step is immutable and signed.
+- **Branching runs** — fork a session, try a different approach, and merge the best result.
+- **Reproducibility** — replay any path through the DAG to reproduce an outcome.
+
+## Core concepts
+
+| Term | Meaning |
+|------|---------|
+| Node | A single event (user message, model response, tool call, artifact). |
+| Edge | A causal link from one node to the next. |
+| Branch | A divergent path from a parent node. |
+| Checkpoint | A named commit-like snapshot of a session state. |
+
+## Using the DAG
+
+The DAG is persisted automatically. Query it through the [Sessions API](/api/sessions) or inspect it with `gizzi history`.

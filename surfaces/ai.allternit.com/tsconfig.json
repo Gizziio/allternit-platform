@@ -47,6 +47,12 @@
       ],
       "@allternit/cowork-engine/*": [
         "../../packages/@allternit/cowork-engine/src/*"
+      ],
+      "@allternit/page-agent": [
+        "../../services/page-agent/src/index.ts"
+      ],
+      "@allternit/page-agent/*": [
+        "../../services/page-agent/src/*"
       ]
     },
     "allowJs": true,

@@ -1,0 +1,26 @@
+---
+title: User Profiles & Enrollment
+description: Managed user onboarding with consent tracking.
+---
+
+# User Profiles & Enrollment
+
+User profiles let organizations manage end users who interact with deployed agents. Each profile carries consent tracking and can be provisioned via signed enrollment URLs.
+
+## Endpoints
+
+| Method | Path | Description |
+|--------|------|-------------|
+| GET    | `/beta/user-profiles` | List profiles |
+| POST   | `/beta/user-profiles` | Create a profile |
+| GET    | `/beta/user-profiles/:id` | Get a profile |
+| PATCH  | `/beta/user-profiles/:id` | Update a profile |
+| DELETE | `/beta/user-profiles/:id` | Delete a profile |
+| POST   | `/beta/user-profiles/enrollment` | Create enrollment URL |
+| POST   | `/beta/user-profiles/enrollment/accept` | Accept enrollment |
+
+## Enrollment flow
+
+1. Admin creates an enrollment URL with required consent flags.
+2. User opens the URL and accepts the terms.
+3. Allternit creates the profile and links it to the organization.

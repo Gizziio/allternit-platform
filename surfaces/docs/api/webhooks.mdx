@@ -1,0 +1,29 @@
+---
+title: Webhooks
+description: Subscribe to session and deployment events with signed delivery.
+---
+
+# Webhooks
+
+Webhooks deliver real-time events for sessions, deployments, and runs to an HTTPS endpoint you control. Each delivery is signed with `X-Allternit-Signature` using HMAC-SHA256.
+
+## Endpoints
+
+| Method | Path | Description |
+|--------|------|-------------|
+| GET    | `/beta/webhooks` | List subscriptions |
+| POST   | `/beta/webhooks` | Create a subscription |
+| GET    | `/beta/webhooks/:id` | Get subscription |
+| PATCH  | `/beta/webhooks/:id` | Update subscription |
+| DELETE | `/beta/webhooks/:id` | Delete subscription |
+
+## Signature verification
+
+See the [Webhook verification guide](/guides/webhooks) for code examples in TypeScript and Python.
+
+## Events
+
+- `session.run.created`
+- `session.run.completed`
+- `deployment.run.updated`
+- `budget_exceeded`

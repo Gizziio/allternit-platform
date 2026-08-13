@@ -28,6 +28,7 @@ use allternit_api::admin_mcp_tunnel_routes::router as admin_mcp_tunnel_router;
 use allternit_api::agent_operations_routes;
 use allternit_api::federation_routes::router as federation_router;
 use allternit_api::outcome_rubric_routes::router as outcome_rubric_router;
+use allternit_api::page_agent_routes::page_agent_router;
 use allternit_api::quickstart_routes::router as quickstart_router;
 use allternit_api::agent_preferences_routes::agent_preferences_router;
 use allternit_api::agent_routes::agent_router;
@@ -408,6 +409,7 @@ async fn main() {
         .nest("/api", oauth_router())
         .nest("/api", onboarding_router())
         .nest("/api", aci_router())
+        .nest("/api", page_agent_router())
         .nest("/api", analytics_router())
         .nest("/api", playground_router())
         .nest("/api", checkpoints_router())

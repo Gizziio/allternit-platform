@@ -1,4 +1,5 @@
 import { Plugin, PluginContext } from './plugin.js';
+import { QwenMMPluginAdapter } from './adapters/qwen-mm.js';
 
 export class PluginRegistry {
   private plugins: Map<string, Plugin> = new Map();
@@ -53,7 +54,16 @@ export class PluginRegistry {
       await plugin.deactivate();
     }
   }
-  
+
+  async registerQwenMMPlugin(manifestPath: string, config?: Record<string, string>): Promise<void> {
+    const adapter = await QwenMMPluginAdapter.fromManifestPath(manifestPath);
+    if (config) {
+      Object.assign(adapter, { config });
+    }
+    this.register(adapter);
+    await this.activate(adapter.id);
+  }
+
   private createContext(plugin: Plugin): PluginContext {
     return {
       config: {},

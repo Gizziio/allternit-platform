@@ -1,0 +1,31 @@
+---
+title: Deployments
+description: Deploy agents as long-running services.
+---
+
+# Deployments
+
+Deployments turn an agent into a persistent service that can be triggered by HTTP, webhooks, or scheduled tasks.
+
+## Endpoints
+
+| Method | Path | Description |
+|--------|------|-------------|
+| GET    | `/beta/deployments` | List deployments |
+| POST   | `/beta/deployments` | Create a deployment |
+| GET    | `/beta/deployments/:id` | Get a deployment |
+| PATCH  | `/beta/deployments/:id` | Update a deployment |
+| DELETE | `/beta/deployments/:id` | Delete a deployment |
+| GET    | `/beta/deployments/:id/runs` | List run history |
+
+## Deployment config
+
+```json
+{
+  "agent_id": "ag_xxx",
+  "trigger": "webhook",
+  "environment": {
+    "model": "openai/gpt-4o"
+  }
+}
+```

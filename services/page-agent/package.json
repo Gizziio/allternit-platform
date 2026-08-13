@@ -1,0 +1,33 @@
+{
+  "name": "@allternit/page-agent",
+  "version": "1.0.0",
+  "description": "Shared page-agent service package for Allternit surfaces",
+  "type": "module",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "exports": {
+    ".": {
+      "import": "./dist/index.js",
+      "types": "./dist/index.d.ts"
+    }
+  },
+  "scripts": {
+    "build": "tsc",
+    "typecheck": "tsc --noEmit"
+  },
+  "keywords": [
+    "allternit",
+    "page-agent",
+    "browser-automation",
+    "agent"
+  ],
+  "author": "Allternit",
+  "license": "MIT",
+  "devDependencies": {
+    "@types/node": "^20.0.0",
+    "typescript": "^5.0.0"
+  },
+  "engines": {
+    "node": ">=20.0.0"
+  }
+}
