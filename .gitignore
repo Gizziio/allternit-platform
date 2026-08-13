@@ -126,3 +126,4 @@ infrastructure/mesh/tsnet-ios/Harness/harness
 
 # Publication edition photos are pipeline artifacts and deploy with the site
 !surfaces/ai.allternit.com/public/images/editions/**/*.png
+.parity-reports-archive/
