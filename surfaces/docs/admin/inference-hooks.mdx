@@ -1,0 +1,36 @@
+---
+title: Inference Hooks
+description: Pre/post middleware for every LLM request in your organization.
+---
+
+# Inference Hooks
+
+Inference hooks let you inspect, mutate, or reject LLM requests and responses at the organization level. They are useful for:
+
+- PII redaction
+- Custom guardrails
+- Logging to a SIEM
+- Request/response transformation
+
+## Hook types
+
+| Type | Timing | Can mutate? | Can reject? |
+|------|--------|-------------|-------------|
+| `pre_request` | Before sending to provider | Yes | Yes |
+| `post_response` | After receiving response | Yes | Yes |
+
+## Configuration
+
+Configure hooks via `/api/v1/admin/inference-hooks`:
+
+```json
+{
+  "name": "pii-guard",
+  "url": "https://hooks.example.com/guard",
+  "type": "pre_request",
+  "signature_secret": "whsec_xxx",
+  "timeout_ms": 5000
+}
+```
+
+All hook payloads are signed with HMAC-SHA256 using the configured secret.

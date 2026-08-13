@@ -1,0 +1,31 @@
+---
+title: Skills
+description: Reusable prompt and tool bundles for common agent workflows.
+---
+
+# Skills
+
+Skills are reusable packages of prompts, tools, and configuration that extend what an agent can do. They live in `~/.allternit/skills/` and can be shared through a marketplace or version control.
+
+## Skill format
+
+A skill is a directory with a `SKILL.md` manifest and optional tool definitions:
+
+```text
+my-skill/
+├── SKILL.md
+└── tools/
+    └── my-tool.json
+```
+
+## Loading skills
+
+Skills are loaded automatically from `~/.allternit/skills/` and from the workspace `.allternit/skills/` directory. Activate a skill for a session with:
+
+```bash
+gizzi --skill my-skill "do the thing"
+```
+
+## Built-in skills
+
+Allternit ships with skills such as `allternit/powerpoint` for presentation creation. See [Build a tool](/tools/build-a-tool) to add custom tools to a skill.

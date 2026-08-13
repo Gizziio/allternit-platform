@@ -1,0 +1,33 @@
+---
+title: Workspaces & RBAC
+description: Manage workspaces, members, RBAC roles, and RBAC groups.
+---
+
+# Workspaces & RBAC
+
+Workspaces isolate projects, data, and spend. Organization admins can create workspaces and assign members to roles.
+
+## Endpoints
+
+| Method | Path | Description |
+|--------|------|-------------|
+| GET    | `/api/v1/admin/workspaces` | List workspaces |
+| POST   | `/api/v1/admin/workspaces` | Create a workspace |
+| GET    | `/api/v1/admin/workspaces/:id` | Get a workspace |
+| PATCH  | `/api/v1/admin/workspaces/:id` | Update a workspace |
+| DELETE | `/api/v1/admin/workspaces/:id` | Delete a workspace |
+| GET    | `/api/v1/admin/rbac_roles` | List roles |
+| POST   | `/api/v1/admin/rbac_roles` | Create a role |
+| GET    | `/api/v1/admin/rbac_groups` | List groups |
+| POST   | `/api/v1/admin/rbac_groups` | Create a group |
+
+## Roles
+
+Built-in roles include `owner`, `admin`, and `member`. Custom roles can be created with fine-grained permissions.
+
+## CLI
+
+```bash
+allternit admin workspaces list
+allternit admin workspaces create --name "engineering"
+```

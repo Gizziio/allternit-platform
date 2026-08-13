@@ -9,6 +9,7 @@ pub mod admin_access_token_routes;
 pub mod admin_service_account_routes;
 pub mod federation_routes;
 pub mod outcome_rubric_routes;
+pub mod page_agent_routes;
 pub mod quickstart_routes;
 pub mod admin_spend_limit_routes;
 pub mod admin_workspace_routes;

@@ -1,0 +1,40 @@
+---
+title: PDFs & Citations
+description: Upload PDFs and attribute generated answers to source passages.
+---
+
+# PDFs & Citations
+
+Allternit can extract text from PDFs, pass it to models, and surface citations so users can verify answers against source documents.
+
+## PDF content blocks
+
+Upload a PDF via `/v1/files` and reference it in a message:
+
+```json
+{
+  "type": "pdf",
+  "file_id": "file_xxx"
+}
+```
+
+## Citation format
+
+Responses may include `citations` arrays:
+
+```json
+{
+  "citations": [
+    {
+      "id": "cite_1",
+      "document_title": "Annual Report 2026",
+      "page_number": 12,
+      "passage": "Revenue increased by 34% year over year."
+    }
+  ]
+}
+```
+
+## Tool
+
+Use the `pdf_process` Tool Belt tool to convert PDFs to markdown with structure detection and optional thumbnails.
