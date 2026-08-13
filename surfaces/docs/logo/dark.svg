@@ -1,9 +1,12 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="140" height="36" viewBox="0 0 140 36" fill="none">
-  <g fill="#FAFAFA">
-    <!-- A:// mark -->
-    <path d="M6 30L15.5 6L25 30H20.5L18 23H13L10.5 30H6ZM14.25 19H16.75L15.5 15.5L14.25 19Z"/>
-    <path d="M26 10H30V30H26V10Z"/>
-    <path d="M34 14H38V30H34V14Z"/>
+  <g transform="translate(2, 2) scale(1)">
+    <rect width="32" height="32" rx="6" fill="#D4B08C"/>
+    <rect x="6" y="6" width="20" height="14" rx="3" fill="#0a0a0f"/>
+    <circle cx="12" cy="13" r="2" fill="#D4B08C"/>
+    <circle cx="20" cy="13" r="2" fill="#D4B08C"/>
+    <text x="16" y="14" font-family="monospace" font-size="6" fill="#0a0a0f" text-anchor="middle">A</text>
+    <rect x="9" y="20" width="4" height="6" fill="#0a0a0f"/>
+    <rect x="19" y="20" width="4" height="6" fill="#0a0a0f"/>
   </g>
-  <text x="46" y="24" font-family="Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif" font-size="17" font-weight="600" fill="#FAFAFA">allternit</text>
+  <text x="40" y="24" font-family="Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif" font-size="18" font-weight="650" letter-spacing="-0.02em" fill="#FAFAFA">allternit</text>
 </svg>

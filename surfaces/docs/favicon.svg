@@ -1,7 +1,9 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 32 32" fill="none">
-  <rect width="32" height="32" rx="7" fill="#111827"/>
-  <g fill="#FA7921">
-    <path d="M6 26L16 4L26 26H21L18 19H14L11 26H6ZM14.75 15H17.25L16 11.5L14.75 15Z"/>
-    <path d="M24 8H28V26H24V8Z"/>
-  </g>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32">
+  <rect width="32" height="32" rx="6" fill="#0a0a0f"/>
+  <rect x="6" y="6" width="20" height="14" rx="3" fill="#D4B08C"/>
+  <circle cx="12" cy="13" r="2" fill="#111318"/>
+  <circle cx="20" cy="13" r="2" fill="#111318"/>
+  <text x="16" y="14" font-family="monospace" font-size="6" fill="#d4b08c" text-anchor="middle">A</text>
+  <rect x="9" y="20" width="4" height="6" fill="#8f6f56"/>
+  <rect x="19" y="20" width="4" height="6" fill="#8f6f56"/>
 </svg>
