@@ -1,0 +1,60 @@
+---
+title: Python SDK
+description: Use the Allternit Python SDK for chat completions, tool use, and batch runs.
+---
+
+# Python SDK
+
+The `allternit` Python SDK provides a provider-agnostic harness for chat completions, streaming, and tool use.
+
+## Installation
+
+```bash
+pip install allternit
+```
+
+## Quickstart
+
+```python
+from allternit import Harness
+
+harness = Harness(api_key="YOUR_API_KEY")
+response = harness.chat.completions.create(
+    model="openai/gpt-4o",
+    messages=[{"role": "user", "content": "Hello, world!"}]
+)
+print(response.choices[0].message.content)
+```
+
+## Streaming
+
+```python
+for chunk in harness.chat.completions.create(
+    model="openai/gpt-4o",
+    messages=[{"role": "user", "content": "Count to 10"}],
+    stream=True
+):
+    print(chunk.choices[0].delta.content or "", end="")
+```
+
+## Tool use
+
+```python
+def get_weather(location: str) -> str:
+    return f"Sunny in {location}"
+
+response = harness.chat.completions.create(
+    model="openai/gpt-4o",
+    messages=[{"role": "user", "content": "What's the weather in Berlin?"}],
+    tools=[{
+        "type": "function",
+        "function": {
+            "name": "get_weather",
+            "parameters": {
+                "type": "object",
+                "properties": {"location": {"type": "string"}}
+            }
+        }
+    }]
+)
+```

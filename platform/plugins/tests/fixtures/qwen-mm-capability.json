@@ -1,0 +1,42 @@
+{
+  "name": "core",
+  "version": "1.0.1",
+  "description": "Read and visualize any file (images, video, docs, 3D, and more), plus image tools as MCP tools.",
+  "tools": [
+    {
+      "name": "read_file",
+      "description": "Read an image or document file and return structured content.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "path": { "type": "string", "description": "Path to the file." },
+          "format": { "type": "string", "enum": ["auto", "markdown", "text"], "default": "auto" }
+        },
+        "required": ["path"]
+      }
+    },
+    {
+      "name": "crop_image",
+      "description": "Crop an image to specified bounds.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "path": { "type": "string" },
+          "x": { "type": "number" },
+          "y": { "type": "number" },
+          "width": { "type": "number" },
+          "height": { "type": "number" }
+        },
+        "required": ["path", "x", "y", "width", "height"]
+      }
+    }
+  ],
+  "server": {
+    "command": "uvx",
+    "args": ["qwen-mm-plugins-core"],
+    "env": { "DASHSCOPE_BASE_URL": "https://dashscope.aliyuncs.com" }
+  },
+  "config": {
+    "DASHSCOPE_API_KEY": ""
+  }
+}

@@ -1,0 +1,25 @@
+---
+title: Work Queue
+description: Distributed task queue for agent background jobs.
+---
+
+# Work Queue
+
+The `/beta/work` queue is a lightweight task queue for background agent jobs. Workers lease tasks, send heartbeats, and acknowledge completion.
+
+## Endpoints
+
+| Method | Path | Description |
+|--------|------|-------------|
+| POST   | `/beta/work/lease` | Lease a task |
+| POST   | `/beta/work/:id/heartbeat` | Send heartbeat |
+| POST   | `/beta/work/:id/ack` | Acknowledge completion |
+| POST   | `/beta/work/:id/nack` | Mark as failed/retryable |
+
+## Worker lifecycle
+
+1. Worker calls `lease` to get a task.
+2. Worker sends periodic `heartbeat` to prevent reassignment.
+3. Worker calls `ack` on success or `nack` on failure.
+
+Tasks that fail are retried with exponential backoff up to the configured maximum.

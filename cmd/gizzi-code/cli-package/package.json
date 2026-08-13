@@ -45,11 +45,11 @@
     "arm64"
   ],
   "scripts": {
-    "build": "bun build ./src/cli/main.ts --outfile ./dist/gizzi.js --target node --conditions=browser",
+    "build": "node scripts/build.cjs",
     "build:all": "npm run build:mac && npm run build:linux && npm run build:win",
-    "build:mac": "bun build ./src/cli/main.ts --outfile ./dist/gizzi-code-macos --target bun-darwin-arm64,bun-darwin-x64 --conditions=browser",
-    "build:linux": "bun build ./src/cli/main.ts --outfile ./dist/gizzi-code-linux --target bun-linux-arm64,bun-linux-x64 --conditions=browser",
-    "build:win": "bun build ./src/cli/main.ts --outfile ./dist/gizzi-code-win.exe --target bun-windows-x64 --conditions=browser",
+    "build:mac": "bun build ../src/cli/main.ts --outfile ./dist/gizzi-code-macos --target bun-darwin-arm64,bun-darwin-x64 --conditions=browser",
+    "build:linux": "bun build ../src/cli/main.ts --outfile ./dist/gizzi-code-linux --target bun-linux-arm64,bun-linux-x64 --conditions=browser",
+    "build:win": "bun build ../src/cli/main.ts --outfile ./dist/gizzi-code-win.exe --target bun-windows-x64 --conditions=browser",
     "prepublishOnly": "npm run build",
     "test": "bun test",
     "version": "echo $npm_package_version"

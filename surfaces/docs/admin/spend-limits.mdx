@@ -1,0 +1,21 @@
+---
+title: Spend Limits
+description: Configure monthly spend caps and request spend-limit increases.
+---
+
+# Spend Limits
+
+Spend limits protect against runaway usage. Organization owners set a monthly cap; admins can request an increase when needed.
+
+## Endpoints
+
+| Method | Path | Description |
+|--------|------|-------------|
+| GET    | `/api/v1/admin/spend-limits` | Current limits and usage |
+| PUT    | `/api/v1/admin/spend-limits` | Update limits |
+| POST   | `/api/v1/admin/spend-limits/increase-requests` | Request an increase |
+| GET    | `/api/v1/admin/spend-limits/increase-requests` | List requests |
+
+## Behavior
+
+When the cap is reached, the gateway returns `429` with `budget_exceeded` details. Existing runs are allowed to finish; new requests are rejected until the next billing period or an approved increase.

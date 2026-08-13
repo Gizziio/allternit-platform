@@ -1,0 +1,28 @@
+---
+title: Admin Analytics
+description: Cost, token usage, request volume, and per-user cost reports.
+---
+
+# Admin Analytics
+
+Admin analytics aggregate `llm_usage_events` into organization-scoped reports. Use them for budgeting, chargeback, and capacity planning.
+
+## Endpoints
+
+| Method | Path | Description |
+|--------|------|-------------|
+| GET    | `/api/v1/admin/analytics/cost-over-time` | Cost trends |
+| GET    | `/api/v1/admin/analytics/token-usage` | Token usage over time |
+| GET    | `/api/v1/admin/analytics/request-volume` | Request counts |
+| GET    | `/api/v1/admin/analytics/per-user-cost` | Cost per user |
+
+## Granularity
+
+All endpoints support `day`, `hour`, `week`, and `month` granularity via the `granularity` query parameter.
+
+## Example
+
+```bash
+curl -H "Authorization: Bearer $TOKEN" \
+  "https://api.allternit.com/api/v1/admin/analytics/cost-over-time?granularity=day"
+```
