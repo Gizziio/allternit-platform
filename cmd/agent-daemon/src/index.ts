@@ -2,7 +2,7 @@ import { generateKeyPairSync, sign } from 'node:crypto';
 import { mkdir, readFile, rename, writeFile } from 'node:fs/promises';
 import { hostname, homedir, platform, arch } from 'node:os';
 import { dirname, join } from 'node:path';
-import WebSocket from 'ws';
+import WebSocket, { type RawData } from 'ws';
 import { discoverAgentClis } from './discovery';
 
 const CLOUD_API_URL = (process.env.ALLTERNIT_CLOUD_API_URL || 'https://allternit-cloud-api.fly.dev').replace(/\/$/, '');
@@ -380,12 +380,15 @@ function handleRelaySocketOpen(relaySocket: WebSocket, message: any): void {
       relaySocket.send(JSON.stringify({ type: 'socket_ready', socket_id: socketId }));
     }
   });
-  local.on('message', (data, isBinary) => {
+  local.on('message', (data: RawData, isBinary) => {
     if (relaySocket.readyState !== WebSocket.OPEN) return;
+    const body = isBinary
+      ? Buffer.from(data as Buffer).toString('base64')
+      : (data as Buffer).toString();
     relaySocket.send(JSON.stringify({
       type: 'socket_data',
       socket_id: socketId,
-      body: isBinary ? Buffer.from(data).toString('base64') : data.toString(),
+      body,
       body_encoding: isBinary ? 'base64' : 'utf8',
     }));
   });

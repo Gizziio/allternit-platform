@@ -1,0 +1,35 @@
+---
+title: Rate Limits
+description: Organization and workspace rate-limit policy.
+---
+
+# Rate Limits
+
+Allternit enforces rate limits per organization and workspace. When a limit is exceeded, the API returns `429 Too Many Requests` with a `Retry-After` header.
+
+## Endpoints
+
+| Method | Path | Description |
+|--------|------|-------------|
+| GET    | `/v1/rate-limits` | Current limits and usage |
+
+## Limits
+
+Limits are applied to:
+
+- Requests per minute
+- Tokens per minute
+- Concurrent sessions
+- Batch jobs
+
+## Headers
+
+Every response includes:
+
+- `X-RateLimit-Limit`
+- `X-RateLimit-Remaining`
+- `X-RateLimit-Reset`
+
+## Increasing limits
+
+Contact support or request a limit increase through the dashboard.
