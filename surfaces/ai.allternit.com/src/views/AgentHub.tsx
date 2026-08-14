@@ -9,8 +9,12 @@ import { useAgentStore } from '@/lib/agents/agent.store';
 import { TABS, type AgentTab } from './agent-hub/main/AgentHub.constants';
 import { AgentHubContent } from './agent-hub/main/AgentHubContent';
 
-export function AgentHub() {
-  const [activeTab, setActiveTab] = useState<AgentTab>('studio');
+interface AgentHubProps {
+  initialTab?: AgentTab;
+}
+
+export function AgentHub({ initialTab = 'studio' }: AgentHubProps) {
+  const [activeTab, setActiveTab] = useState<AgentTab>(initialTab);
   const [showDropdown, setShowDropdown] = useState(false);
   const [isClient, setIsClient] = useState(false);
   const tabMenuRef = useRef<HTMLDivElement | null>(null);

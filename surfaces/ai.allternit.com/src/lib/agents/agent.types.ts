@@ -273,7 +273,49 @@ export interface Agent {
   isPublic?: boolean;
   /** If this agent represents a swarm, the swarm ID */
   swarmId?: string;
+
+  // ── Packaged Bot fields (OpenMausBot / Grok Bot integration) ─────────────
+  /** Marks this agent as a packaged bot discoverable in the Bots hub and CommRails */
+  isBot?: boolean;
+  /** Bot-specific UX metadata (only present when isBot is true) */
+  botProfile?: BotProfile;
 }
+
+/**
+ * Bot packaging overlay on top of the Agent type.
+ *
+ * Bots are agents with a curated identity and UX wrapper. The underlying
+ * Agent fields (characterLayer, trustTier, harness, agentCard, etc.) carry
+ * the real configuration; BotProfile adds the surface-level presentation.
+ */
+export interface BotProfile {
+  /** Display name shown in the bot hub and session header (may differ from agent.name) */
+  displayName?: string;
+  /** Short tagline shown on the welcome card */
+  tagline?: string;
+  /** Welcome message when a new session starts */
+  welcomeMessage?: string;
+  /** Starter prompts the user can click to begin a task */
+  starterPrompts?: string[];
+  /** Accent color for the bot's UI chrome (hex) */
+  accentColor?: string;
+  /** Whether this bot participates in group chats */
+  groupChatEnabled?: boolean;
+  /** Default WIH preset ID for new sessions (maps to Rails presets) */
+  defaultPresetId?: string;
+  /** Bot category for filtering in the hub */
+  botCategory?: BotCategory;
+}
+
+export type BotCategory =
+  | 'research'
+  | 'code'
+  | 'writing'
+  | 'data'
+  | 'sales'
+  | 'design'
+  | 'ops'
+  | 'custom';
 
 
 // Zod Schema for Agent
@@ -336,6 +378,17 @@ export const agentSchema = z.object({
   avgResponseTime: z.number().int().nonnegative().optional(),
   isPublic: z.boolean().optional(),
   swarmId: z.string().optional(),
+  isBot: z.boolean().optional(),
+  botProfile: z.object({
+    displayName: z.string().optional(),
+    tagline: z.string().optional(),
+    welcomeMessage: z.string().optional(),
+    starterPrompts: z.array(z.string()).optional(),
+    accentColor: z.string().optional(),
+    groupChatEnabled: z.boolean().optional(),
+    defaultPresetId: z.string().optional(),
+    botCategory: z.enum(['research', 'code', 'writing', 'data', 'sales', 'design', 'ops', 'custom']).optional(),
+  }).optional(),
 });
 
 // Schema for validating array of agents (API response)

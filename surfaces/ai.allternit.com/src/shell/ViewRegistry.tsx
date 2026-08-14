@@ -297,6 +297,11 @@ export function getShellViewRegistry(handlers: {
         <AgentHub />
       </ErrorBoundary>
     ),
+    'bots': ({ context }: { context?: ViewContext }) => (
+      <ErrorBoundary fallback={<ErrorFallbackWrapper viewName="Bots" />}>
+        <AgentHub initialTab="bots" />
+      </ErrorBoundary>
+    ),
     "native-agent": ({ context }: { context?: ViewContext }) => (
       <ErrorBoundary fallback={<ErrorFallbackWrapper viewName="Native Agent" />}>
         <NativeAgentView onOpenRuntimeOps={() => open("runtime-ops")} />

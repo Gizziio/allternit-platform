@@ -764,6 +764,8 @@ async function initializeBundledMode(): Promise<void> {
 
     // Step 3 — Platform URL
     // Dev:        local Next.js dev server on port ${PORTS.DEV_UI}
+    // Dev(static): ALLTERNIT_DESKTOP_USE_STATIC_UI forces the dev build to load
+    //              the local platform static export instead of the Vite server.
     // Bundled:    Prefer the local static UI build so the desktop app always
     //              ships with the matching platform version and is not at the
     //              mercy of a stale ai.allternit.com deployment. Fall back to
@@ -771,6 +773,18 @@ async function initializeBundledMode(): Promise<void> {
     // Offline:    If remote URL is unreachable, fall back to local static files
     //              served by the Rust API at the local API URL.
     let platformUrl: string = isDev ? URLS.DEV_UI : 'https://ai.allternit.com';
+
+    if (isDev && process.env.ALLTERNIT_DESKTOP_USE_STATIC_UI) {
+      const localStaticPath = resolveLocalPlatformStaticPath();
+      if (localStaticPath) {
+        log.info(`[Main] Dev mode forced to local platform static UI from ${localStaticPath}`);
+        platformUrl = staticUiUrl();
+        serviceState.platform = { status: 'up', detail: 'Local static UI (dev)' };
+      } else {
+        log.warn('[Main] ALLTERNIT_DESKTOP_USE_STATIC_UI set but no local static UI found; using dev server');
+      }
+      pushServiceState();
+    }
 
     if (!isDev) {
       const localStaticPath = resolveLocalPlatformStaticPath();
@@ -809,7 +823,7 @@ async function initializeBundledMode(): Promise<void> {
     }
 
     // Preserve offline/static detail if we fell back; otherwise set the normal label.
-    if (!['Offline mode (local static)', 'Local static UI'].includes(serviceState.platform.detail)) {
+    if (!['Offline mode (local static)', 'Local static UI', 'Local static UI (dev)'].includes(serviceState.platform.detail)) {
       serviceState.platform = { status: 'up', detail: isDev ? `Dev on port ${PORTS.DEV_UI}` : 'ai.allternit.com' };
       pushServiceState();
     }

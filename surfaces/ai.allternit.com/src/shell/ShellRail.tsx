@@ -806,6 +806,12 @@ export function ShellRail({
               onClick={() => onOpen?.('agent-hub')}
             />
             <RailItem
+              icon={Robot}
+              label="Bots"
+              isActive={activeViewType === 'bots'}
+              onClick={() => onOpen?.('bots')}
+            />
+            <RailItem
               icon={FolderOpen}
               label="Projects"
               isActive={activeViewType === 'project' && !chatStore.activeProjectId}
