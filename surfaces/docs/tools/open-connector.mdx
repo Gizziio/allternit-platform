@@ -1,0 +1,173 @@
+---
+title: 'Open Connector'
+description: 'Connect user app accounts once and expose a shared catalog of providers and actions to Allternit agents.'
+---
+
+## Overview
+
+The **Allternit Open Connector** is a connector gateway that lets agents access user app accounts without handling provider credentials directly. Connect an account once, then expose a shared catalog of providers and prebuilt actions to agents and applications through MCP, HTTP, or the TypeScript SDK.
+
+## Base URL
+
+Local development:
+
+```text
+http://127.0.0.1:3000
+```
+
+When deployed behind the Allternit platform gateway:
+
+```text
+https://api.allternit.com/v1/connector
+```
+
+## Authentication
+
+Runtime callers send a bearer token:
+
+```text
+Authorization: Bearer oct_...
+```
+
+Admin endpoints for the web console and setup use a separate admin token when configured.
+
+## Endpoints
+
+### Public runtime endpoints
+
+| Method | Path | Description |
+|--------|------|-------------|
+| GET | `/v1/health` | Runtime health check |
+| GET | `/v1/providers` | List available providers |
+| GET | `/v1/actions` | List executable actions |
+| GET | `/v1/actions?service=<service>` | Filter actions by provider |
+| GET | `/v1/actions/:actionId` | Get action metadata and schema |
+| POST | `/v1/actions/:actionId` | Execute an action |
+| GET | `/v1/actions/search` | Search actions by name or description |
+| GET | `/v1/apps` | List registered apps |
+| GET | `/v1/apps/services/:service` | Apps for a specific provider |
+| GET | `/v1/apps/authenticated` | Apps with stored connections |
+| POST | `/v1/proxy/:service` | Proxy a provider API request |
+
+### Local admin endpoints
+
+| Method | Path | Description |
+|--------|------|-------------|
+| GET | `/api/providers` | Provider catalog for console |
+| GET | `/api/providers/:service` | Provider details |
+| GET | `/api/actions` | Action catalog for console |
+| GET | `/api/actions/search` | Console action search |
+| GET | `/api/actions/:actionId` | Action details |
+| GET | `/api/actions/:actionId/agent.md` | Agent-readable action guide |
+| PUT | `/api/connections/:service` | Store a connection |
+| DELETE | `/api/connections/:service` | Remove a connection |
+| GET | `/api/connections` | List stored connections |
+| PUT | `/api/oauth/configs/:service` | Configure OAuth client |
+| POST | `/api/oauth/authorizations` | Start OAuth flow |
+| GET | `/oauth/callback` | OAuth callback |
+| GET | `/api/runtime-tokens` | List runtime tokens |
+| POST | `/api/runtime-tokens` | Create a runtime token |
+| DELETE | `/api/runtime-tokens/:id` | Revoke a token |
+| GET | `/api/runs` | Recent run logs |
+| POST | `/api/files` | Upload a transit file |
+| GET | `/api/files/:fileId` | Download a transit file |
+| DELETE | `/api/files/:fileId` | Delete a transit file |
+| POST | `/mcp` | MCP JSON-RPC endpoint |
+| GET | `/mcp/tools` | MCP discovery tools |
+| GET | `/openapi.json` | Generated OpenAPI document |
+
+## JSON examples
+
+### Execute an action
+
+```bash
+curl -s -X POST http://localhost:3000/v1/actions/github.get_current_user \
+  -H 'Authorization: Bearer oct_...' \
+  -H 'content-type: application/json' \
+  -d '{"input":{}}'
+```
+
+Response:
+
+```json
+{
+  "success": true,
+  "message": "OK",
+  "data": {
+    "login": "example-user",
+    "id": 123456
+  },
+  "meta": {}
+}
+```
+
+### Store a connection
+
+```bash
+curl -s -X PUT http://localhost:3000/api/connections/github \
+  -H 'Authorization: Bearer <admin-token>' \
+  -H 'content-type: application/json' \
+  -d '{
+    "authType": "api_key",
+    "values": { "apiKey": "github_pat_..." }
+  }'
+```
+
+### Proxy a provider request
+
+```bash
+curl -s -X POST http://localhost:3000/v1/proxy/github \
+  -H 'Authorization: Bearer oct_...' \
+  -H 'content-type: application/json' \
+  -d '{
+    "endpoint": "/user/repos",
+    "method": "GET",
+    "query": { "limit": "10" },
+    "headers": { "accept": "application/json" },
+    "body": {}
+  }'
+```
+
+## MCP tools
+
+The MCP endpoint exposes a discovery-oriented tool set:
+
+| Tool | Purpose |
+|------|---------|
+| `list_apps` | List connected apps |
+| `search_actions` | Find actions by description |
+| `get_action_guide` | Retrieve an agent-readable guide |
+| `execute_action` | Run an action |
+
+## Configuration
+
+| Variable | Default | Purpose |
+|----------|---------|---------|
+| `PORT` | `3000` | HTTP server port |
+| `HOST` | `127.0.0.1` | Bind address |
+| `OOMOL_CONNECT_ORIGIN` | `http://localhost:<PORT>` | OAuth redirect origin |
+| `OOMOL_CONNECT_DATA_DIR` | `./data` | SQLite and transit file directory |
+| `OOMOL_CONNECT_ENCRYPTION_KEY` | unset | AES-256-GCM credential encryption |
+| `OOMOL_CONNECT_ADMIN_TOKEN` | unset | Admin API bearer token |
+| `OOMOL_CONNECT_RUNTIME_TOKEN` | unset | Bootstrap runtime token |
+| `OOMOL_CONNECT_ALLOWED_ACTIONS` | unset | Action allowlist |
+| `OOMOL_CONNECT_BLOCKED_ACTIONS` | unset | Action denylist |
+
+## Error codes
+
+| HTTP | Code | Meaning |
+|------|------|---------|
+| 200 | — | Success (check `success` field) |
+| 400 | `bad_request` | Invalid request body |
+| 401 | `unauthorized` | Missing or invalid token |
+| 403 | `forbidden` | Action blocked by policy |
+| 404 | `not_found` | Action or connection not found |
+| 422 | `execution_failed` | Action executed but returned an error |
+| 503 | `service_unavailable` | Required binding or sidecar unavailable |
+
+## Related pages
+
+- [MCP Servers](/tools/mcp)
+- [Server Tools](/tools/server-tools)
+- [Native Tool Belt](/tools/tool-belt)
+- [BYOC Deployment](/byoc/deployment)

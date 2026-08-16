@@ -165,14 +165,14 @@ export function CodeUsageDashboard({ onClose }: { onClose?: () => void }) {
       style={{
         width: "100%",
         borderRadius: "var(--radius-lg, 16px)",
-        border: "1px solid var(--ui-border-default, rgba(154, 118, 88, 0.18))",
-        background: "var(--surface-floating, rgba(253, 248, 243, 0.95))",
-        boxShadow: "0 12px 40px rgba(42, 31, 22, 0.12)",
+        border: "1px solid var(--ui-border-default, rgba(255, 255, 255, 0.08))",
+        background: "rgba(255, 255, 255, 0.03)",
+        boxShadow: "0 12px 40px rgba(0, 0, 0, 0.25), inset 0 1px 0 rgba(255, 255, 255, 0.04)",
         padding: "var(--space-4, 16px)",
-        color: "var(--ui-text-primary, #2A1F16)",
+        color: "var(--ui-text-primary, #F6EEE7)",
         fontFamily: "var(--font-sans, 'Allternit Sans', Inter, sans-serif)",
-        backdropFilter: "blur(12px)",
-        WebkitBackdropFilter: "blur(12px)",
+        backdropFilter: "blur(20px)",
+        WebkitBackdropFilter: "blur(20px)",
       }}
     >
       {/* Header */}
@@ -189,7 +189,7 @@ export function CodeUsageDashboard({ onClose }: { onClose?: () => void }) {
             style={{
               fontSize: "var(--text-md, 15px)",
               fontWeight: 600,
-              color: "var(--ui-text-primary, #2A1F16)",
+              color: "var(--ui-text-primary, #F6EEE7)",
               letterSpacing: "-0.01em",
             }}
           >
@@ -209,16 +209,18 @@ export function CodeUsageDashboard({ onClose }: { onClose?: () => void }) {
                 borderRadius: "var(--radius-sm, 8px)",
                 border: "none",
                 background: "transparent",
-                color: "var(--ui-text-muted, #9A7658)",
+                color: "var(--ui-text-muted, #A1A1AA)",
                 cursor: "pointer",
                 padding: 0,
-                transition: "background var(--transition-fast, 150ms)",
+                transition: "background var(--transition-fast, 150ms), color var(--transition-fast, 150ms)",
               }}
               onMouseEnter={(e) => {
-                e.currentTarget.style.background = "var(--surface-hover, rgba(176, 141, 110, 0.08))";
+                e.currentTarget.style.background = "rgba(255, 255, 255, 0.08)";
+                e.currentTarget.style.color = "var(--ui-text-primary, #F6EEE7)";
               }}
               onMouseLeave={(e) => {
                 e.currentTarget.style.background = "transparent";
+                e.currentTarget.style.color = "var(--ui-text-muted, #A1A1AA)";
               }}
             >
               <X size={14} />
@@ -234,7 +236,7 @@ export function CodeUsageDashboard({ onClose }: { onClose?: () => void }) {
               gap: 2,
               padding: 2,
               borderRadius: "var(--radius-md, 12px)",
-              background: "var(--surface-panel-muted, #E8D9C8)",
+              background: "rgba(255, 255, 255, 0.05)",
             }}
           >
             {[
@@ -249,13 +251,13 @@ export function CodeUsageDashboard({ onClose }: { onClose?: () => void }) {
                   border: "none",
                   borderRadius: "var(--radius-sm, 8px)",
                   padding: "4px 10px",
-                  background: activeTab === tab.id ? "var(--surface-floating, #fff)" : "transparent",
-                  color: activeTab === tab.id ? "var(--ui-text-primary, #2A1F16)" : "var(--ui-text-muted, #9A7658)",
+                  background: activeTab === tab.id ? "rgba(255, 255, 255, 0.10)" : "transparent",
+                  color: activeTab === tab.id ? "var(--ui-text-primary, #F6EEE7)" : "var(--ui-text-muted, #A1A1AA)",
                   fontSize: "var(--text-sm, 13px)",
                   fontWeight: activeTab === tab.id ? 500 : 400,
                   cursor: "pointer",
                   fontFamily: "inherit",
-                  boxShadow: activeTab === tab.id ? "0 1px 2px rgba(42,31,22,0.06)" : "none",
+                  boxShadow: activeTab === tab.id ? "0 1px 2px rgba(0,0,0,0.20)" : "none",
                   transition: "all var(--transition-fast, 150ms)",
                 }}
               >
@@ -271,7 +273,7 @@ export function CodeUsageDashboard({ onClose }: { onClose?: () => void }) {
               gap: 2,
               padding: 2,
               borderRadius: "var(--radius-md, 12px)",
-              background: "var(--surface-panel-muted, #E8D9C8)",
+              background: "rgba(255, 255, 255, 0.05)",
             }}
           >
             {(["all", "30d", "7d"] as const).map((item) => (
@@ -283,13 +285,13 @@ export function CodeUsageDashboard({ onClose }: { onClose?: () => void }) {
                   border: "none",
                   borderRadius: "var(--radius-sm, 8px)",
                   padding: "4px 10px",
-                  background: range === item ? "var(--surface-floating, #fff)" : "transparent",
-                  color: range === item ? "var(--ui-text-primary, #2A1F16)" : "var(--ui-text-muted, #9A7658)",
+                  background: range === item ? "rgba(255, 255, 255, 0.10)" : "transparent",
+                  color: range === item ? "var(--ui-text-primary, #F6EEE7)" : "var(--ui-text-muted, #A1A1AA)",
                   fontSize: "var(--text-sm, 13px)",
                   fontWeight: range === item ? 500 : 400,
                   cursor: "pointer",
                   fontFamily: "inherit",
-                  boxShadow: range === item ? "0 1px 2px rgba(42,31,22,0.06)" : "none",
+                  boxShadow: range === item ? "0 1px 2px rgba(0,0,0,0.20)" : "none",
                   transition: "all var(--transition-fast, 150ms)",
                 }}
               >
@@ -329,7 +331,8 @@ export function CodeUsageDashboard({ onClose }: { onClose?: () => void }) {
             style={{
               marginTop: "var(--space-4, 16px)",
               borderRadius: "var(--radius-md, 12px)",
-              background: "var(--surface-panel, #F5EDE3)",
+              background: "rgba(255, 255, 255, 0.04)",
+              border: "1px solid rgba(255, 255, 255, 0.06)",
               padding: "var(--space-3, 12px)",
             }}
           >
@@ -345,11 +348,11 @@ export function CodeUsageDashboard({ onClose }: { onClose?: () => void }) {
                 const ratio = cell.count / maxHeat;
                 const background =
                   ratio === 0
-                    ? "var(--surface-panel-muted, #E8D9C8)"
+                    ? "rgba(255, 255, 255, 0.05)"
                     : ratio < 0.34
-                      ? `color-mix(in srgb, var(--accent-primary, #B08D6E) 35%, var(--surface-panel-muted, #E8D9C8))`
+                      ? "color-mix(in srgb, var(--accent-primary, #B08D6E) 35%, rgba(255,255,255,0.05))"
                       : ratio < 0.67
-                        ? `color-mix(in srgb, var(--accent-primary, #B08D6E) 65%, var(--surface-panel-muted, #E8D9C8))`
+                        ? "color-mix(in srgb, var(--accent-primary, #B08D6E) 65%, rgba(255,255,255,0.05))"
                         : "var(--accent-primary, #B08D6E)";
                 return (
                   <div
@@ -376,10 +379,10 @@ export function CodeUsageDashboard({ onClose }: { onClose?: () => void }) {
                 justifyContent: "space-between",
                 marginTop: "var(--space-3, 12px)",
                 paddingTop: "var(--space-2, 8px)",
-                borderTop: "1px solid var(--ui-border-muted, rgba(154,118,88,0.1))",
+                borderTop: "1px solid rgba(255, 255, 255, 0.06)",
               }}
             >
-              <span style={{ fontSize: 12, color: "var(--ui-text-muted, #9A7658)" }}>
+              <span style={{ fontSize: 12, color: "var(--ui-text-muted, #A1A1AA)" }}>
                 {metrics.tokens >= 576_000 ? (
                   <>
                     You&apos;ve used ~{Math.round(metrics.tokens / 576_000)}× more tokens than{" "}
@@ -392,7 +395,7 @@ export function CodeUsageDashboard({ onClose }: { onClose?: () => void }) {
                 )}
               </span>
               <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
-                <span style={{ fontSize: 12, color: "var(--ui-text-muted, #9A7658)" }}>Less</span>
+                <span style={{ fontSize: 12, color: "var(--ui-text-muted, #A1A1AA)" }}>Less</span>
                 {[0.15, 0.4, 0.65, 1].map((r) => (
                   <div
                     key={r}
@@ -402,12 +405,12 @@ export function CodeUsageDashboard({ onClose }: { onClose?: () => void }) {
                       borderRadius: 2,
                       background:
                         r === 0.15
-                          ? "var(--surface-panel-muted, #E8D9C8)"
-                          : `color-mix(in srgb, var(--accent-primary, #B08D6E) ${Math.round(r * 100)}%, var(--surface-panel-muted, #E8D9C8))`,
+                          ? "rgba(255, 255, 255, 0.05)"
+                          : `color-mix(in srgb, var(--accent-primary, #B08D6E) ${Math.round(r * 100)}%, rgba(255,255,255,0.05))`,
                     }}
                   />
                 ))}
-                <span style={{ fontSize: 12, color: "var(--ui-text-muted, #9A7658)" }}>More</span>
+                <span style={{ fontSize: 12, color: "var(--ui-text-muted, #A1A1AA)" }}>More</span>
               </div>
             </div>
           </div>
@@ -432,17 +435,27 @@ export function CodeUsageDashboard({ onClose }: { onClose?: () => void }) {
                   gap: "var(--space-3, 12px)",
                   alignItems: "center",
                   borderRadius: "var(--radius-md, 12px)",
-                  background: "var(--surface-panel, #F5EDE3)",
+                  background: "rgba(255, 255, 255, 0.04)",
+                  border: "1px solid rgba(255, 255, 255, 0.06)",
                   padding: "10px 12px",
                   fontSize: "var(--text-sm, 13px)",
                   fontVariantNumeric: "tabular-nums",
+                  transition: "background var(--transition-fast, 150ms), border-color var(--transition-fast, 150ms)",
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.background = "rgba(255, 255, 255, 0.07)";
+                  e.currentTarget.style.borderColor = "rgba(255, 255, 255, 0.10)";
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.background = "rgba(255, 255, 255, 0.04)";
+                  e.currentTarget.style.borderColor = "rgba(255, 255, 255, 0.06)";
                 }}
               >
-                <span style={{ color: "var(--ui-text-primary, #2A1F16)", fontWeight: 500 }}>{model}</span>
-                <span style={{ color: "var(--ui-text-secondary, #664E3A)" }}>{count} sessions</span>
+                <span style={{ color: "var(--ui-text-primary, #F6EEE7)", fontWeight: 500 }}>{model}</span>
+                <span style={{ color: "var(--ui-text-secondary, #D4D4D8)" }}>{count} sessions</span>
                 <span
                   style={{
-                    color: "var(--ui-text-muted, #9A7658)",
+                    color: "var(--ui-text-muted, #A1A1AA)",
                     minWidth: 36,
                     textAlign: "right",
                   }}
@@ -456,7 +469,7 @@ export function CodeUsageDashboard({ onClose }: { onClose?: () => void }) {
             <div
               style={{
                 padding: "24px 12px",
-                color: "var(--ui-text-muted, #9A7658)",
+                color: "var(--ui-text-muted, #A1A1AA)",
                 fontSize: "var(--text-sm, 13px)",
                 textAlign: "center",
               }}
@@ -475,22 +488,32 @@ function MetricCard({ label, value, title }: { label: string; value: string; tit
     <div
       style={{
         borderRadius: "var(--radius-md, 12px)",
-        background: "var(--surface-panel, #F5EDE3)",
+        background: "rgba(255, 255, 255, 0.04)",
+        border: "1px solid rgba(255, 255, 255, 0.06)",
         padding: "10px 10px",
         minHeight: 56,
         display: "flex",
         flexDirection: "column",
         justifyContent: "center",
         minWidth: 0,
+        transition: "background var(--transition-fast, 150ms), border-color var(--transition-fast, 150ms)",
+      }}
+      onMouseEnter={(e) => {
+        e.currentTarget.style.background = "rgba(255, 255, 255, 0.07)";
+        e.currentTarget.style.borderColor = "rgba(255, 255, 255, 0.10)";
+      }}
+      onMouseLeave={(e) => {
+        e.currentTarget.style.background = "rgba(255, 255, 255, 0.04)";
+        e.currentTarget.style.borderColor = "rgba(255, 255, 255, 0.06)";
       }}
     >
       <div
         style={{
-          fontSize: 12,
-          color: "var(--ui-text-muted, #9A7658)",
+          fontSize: 11,
+          color: "var(--ui-text-muted, #A1A1AA)",
           lineHeight: 1.2,
-          fontWeight: 500,
-          letterSpacing: "0.02em",
+          fontWeight: 600,
+          letterSpacing: "0.04em",
           textTransform: "uppercase",
         }}
       >
@@ -502,7 +525,7 @@ function MetricCard({ label, value, title }: { label: string; value: string; tit
           marginTop: 4,
           fontSize: "var(--text-lg, 16px)",
           fontWeight: 700,
-          color: "var(--ui-text-primary, #2A1F16)",
+          color: "var(--ui-text-primary, #F6EEE7)",
           fontVariantNumeric: "tabular-nums",
           letterSpacing: "-0.01em",
           overflow: "hidden",

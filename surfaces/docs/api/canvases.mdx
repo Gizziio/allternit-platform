@@ -1,0 +1,193 @@
+---
+title: 'Canvases API'
+description: 'Create, update, and retrieve persistent canvas artifacts for agent sessions.'
+---
+
+## Overview
+
+The Canvases API provides CRUD operations for persistent canvas artifacts. A canvas is a structured artifact published by an agent or surface, stored in the local SQLite database, and independent from the Gizzi Runtime session state. Canvases are scoped to a session and support stable artifact keys so the same artifact can be redeployed in place.
+
+## Base URL
+
+```text
+https://api.allternit.com/api
+```
+
+For local development:
+
+```text
+http://127.0.0.1:8013/api
+```
+
+## Authentication
+
+All routes require a valid bearer token in the `Authorization` header. See [Authentication](/api/authentication) for details.
+
+## Canvas object
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `id` | string | Unique canvas identifier. |
+| `session_id` | string | Owning agent session ID. |
+| `title` | string \| null | Canvas title. |
+| `components` | array | Canvas components (JSON). |
+| `layout` | any \| null | Layout metadata (JSON). |
+| `metadata` | any \| null | Arbitrary metadata (JSON). |
+| `artifact_key` | string \| null | Stable key used for redeploy-in-place. |
+| `version` | integer | Version incremented on each redeploy. |
+| `created_at` | string | ISO 8601 creation timestamp. |
+| `updated_at` | string | ISO 8601 update timestamp. |
+
+## Endpoints
+
+| Method | Path | Description |
+|--------|------|-------------|
+| `GET` | `/canvases` | List canvases for the authenticated user. |
+| `GET` | `/agent-sessions/:session_id/canvases` | List canvases for a session. |
+| `POST` | `/agent-sessions/:session_id/canvases` | Create or redeploy a canvas. |
+| `GET` | `/canvases/:canvas_id` | Retrieve a canvas. |
+| `PATCH` | `/canvases/:canvas_id` | Update a canvas. |
+| `DELETE` | `/canvases/:canvas_id` | Delete a canvas. |
+
+## List user canvases
+
+```bash
+curl https://api.allternit.com/api/canvases \
+  -H "Authorization: Bearer $ALLTERNIT_API_KEY"
+```
+
+### Response
+
+```json
+{
+  "canvases": [
+    {
+      "id": "cnv_abc123",
+      "session_id": "ses_xyz789",
+      "title": "Architecture diagram",
+      "components": [],
+      "layout": null,
+      "metadata": null,
+      "artifact_key": "architecture-diagram",
+      "version": 3,
+      "created_at": "2026-08-13T12:00:00Z",
+      "updated_at": "2026-08-13T14:00:00Z"
+    }
+  ]
+}
+```
+
+## List session canvases
+
+```bash
+curl https://api.allternit.com/api/agent-sessions/ses_xyz789/canvases \
+  -H "Authorization: Bearer $ALLTERNIT_API_KEY"
+```
+
+## Create a canvas
+
+```bash
+curl -X POST https://api.allternit.com/api/agent-sessions/ses_xyz789/canvases \
+  -H "Authorization: Bearer $ALLTERNIT_API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "title": "Architecture diagram",
+    "components": [
+      {"type": "heading", "text": "High-level design"},
+      {"type": "mermaid", "source": "graph LR\nA-->B"}
+    ],
+    "layout": {"width": "full"},
+    "metadata": {"source": "agent"}
+  }'
+```
+
+### Response
+
+```json
+{
+  "id": "cnv_abc123",
+  "session_id": "ses_xyz789",
+  "artifact_key": null,
+  "version": 1
+}
+```
+
+### Redeploy with a stable artifact key
+
+When `artifact_key` is supplied, a matching existing canvas for the same session is updated in place and its version is incremented.
+
+```bash
+curl -X POST https://api.allternit.com/api/agent-sessions/ses_xyz789/canvases \
+  -H "Authorization: Bearer $ALLTERNIT_API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "artifact_key": "architecture-diagram",
+    "title": "Architecture diagram v2",
+    "components": [{"type": "heading", "text": "Updated design"}]
+  }'
+```
+
+### Response
+
+```json
+{
+  "id": "cnv_abc123",
+  "session_id": "ses_xyz789",
+  "artifact_key": "architecture-diagram",
+  "version": 2,
+  "updated_at": "2026-08-13T15:00:00Z"
+}
+```
+
+## Retrieve a canvas
+
+```bash
+curl https://api.allternit.com/api/canvases/cnv_abc123 \
+  -H "Authorization: Bearer $ALLTERNIT_API_KEY"
+```
+
+## Update a canvas
+
+```bash
+curl -X PATCH https://api.allternit.com/api/canvases/cnv_abc123 \
+  -H "Authorization: Bearer $ALLTERNIT_API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "title": "Architecture diagram v3",
+    "components": [{"type": "heading", "text": "Final design"}]
+  }'
+```
+
+### Response
+
+```json
+{
+  "id": "cnv_abc123",
+  "updated_at": "2026-08-13T16:00:00Z",
+  "artifact_key": "architecture-diagram",
+  "version": 3
+}
+```
+
+## Delete a canvas
+
+```bash
+curl -X DELETE https://api.allternit.com/api/canvases/cnv_abc123 \
+  -H "Authorization: Bearer $ALLTERNIT_API_KEY"
+```
+
+Returns `204 No Content` on success.
+
+## Error codes
+
+| HTTP status | Code | Meaning |
+|-------------|------|---------|
+| 401 | `allternit.authentication_failed` | Missing or invalid bearer token. |
+| 404 | `allternit.not_found` | Canvas not found. |
+| 500 | `allternit.internal_error` | Database error. |
+
+## Related pages
+
+- [Agent Sessions](/api/agent-sessions) — sessions that own canvases
+- [Artifacts](/api/artifacts) — other artifact types
+- [ACI](/api/aci) — agent computer interface and canvas interactions

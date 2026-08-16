@@ -8,7 +8,7 @@
  * @module bot-profile
  */
 
-import type { Agent, BotProfile, BotCategory } from '../agents/agent.types';
+import type { Agent, BotProfile, BotCategory, AvatarConfig } from '../agents/agent.types';
 import { createModuleLogger } from '@/lib/logger';
 
 const logger = createModuleLogger('BotProfile');
@@ -114,6 +114,36 @@ export function isGroupChatEnabled(agent: Agent): boolean {
  */
 export function getBotCategory(agent: Agent): BotCategory | undefined {
   return agent.botProfile?.botCategory;
+}
+
+/**
+ * Resolve a displayable avatar URL for an agent/bot.
+ * Checks the canonical avatar config, legacy string avatar, teammate profile,
+ * and config avatar in that order.
+ */
+export function getBotAvatarUrl(agent: Agent | null | undefined): string | undefined {
+  if (!agent) return undefined;
+
+  const typedAvatar = agent.avatar as AvatarConfig | undefined;
+  if (typedAvatar?.type === 'image' && typedAvatar.uri) {
+    return typedAvatar.uri;
+  }
+  if (typeof agent.avatar === 'string' && agent.avatar) {
+    return agent.avatar;
+  }
+  if (agent.teammateProfile?.avatar) {
+    return agent.teammateProfile.avatar;
+  }
+
+  const configAvatar = agent.config?.avatar as AvatarConfig | string | undefined;
+  if (typeof configAvatar === 'object' && configAvatar?.type === 'image' && configAvatar.uri) {
+    return configAvatar.uri;
+  }
+  if (typeof configAvatar === 'string' && configAvatar) {
+    return configAvatar;
+  }
+
+  return undefined;
 }
 
 // ============================================================================

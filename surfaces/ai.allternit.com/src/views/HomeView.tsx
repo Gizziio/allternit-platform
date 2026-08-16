@@ -16,6 +16,8 @@ import {
 import { useChatSessionStore } from './chat/ChatSessionStore';
 import { useCodeSessionStore } from './code/CodeSessionStore';
 import { useCoworkSessionStore } from './cowork/CoworkSessionStore';
+import { useAgentStore } from '@/lib/agents/agent.store';
+import { isBot } from '@/lib/bots/bot-profile';
 
 interface ViewContext {
   viewType?: string;
@@ -51,16 +53,27 @@ export function HomeView({ onAction, context: _context }: HomeViewProps) {
   const chatSessions   = useChatSessionStore((s) => s.sessions);
   const codeSessions   = useCodeSessionStore((s) => s.sessions);
   const coworkSessions = useCoworkSessionStore((s) => s.sessions);
+  const agents = useAgentStore((s) => s.agents);
 
   const recentSessions = useMemo(() => {
+    const bots = agents.filter(isBot);
+    const botNames = new Set(bots.map((b) => b.name.toLowerCase()));
+    const isBotSession = (s: typeof chatSessions[0]) => {
+      if (s.metadata?.isBot === true) return true;
+      if (s.metadata?.agentId != null) return true;
+      if ((s.metadata as Record<string, unknown> | undefined)?.agent_id != null) return true;
+      if (s.metadata?.agentName && botNames.has(String(s.metadata.agentName).toLowerCase())) return true;
+      return false;
+    };
     const all = [
-      ...chatSessions.map((s) => ({ id: s.id, title: s.name || 'Untitled chat', type: 'chat', updatedAt: s.updatedAt })),
-      ...codeSessions.map((s) => ({ id: s.id, title: s.name || 'Untitled session', type: 'code', updatedAt: s.updatedAt })),
+      ...chatSessions
+        .filter((s) => !isBotSession(s))
+        .map((s) => ({ id: s.id, title: s.name || 'Untitled chat', type: 'chat', updatedAt: s.updatedAt })),
       ...coworkSessions.map((s) => ({ id: s.id, title: s.name || 'Untitled cowork', type: 'cowork', updatedAt: s.updatedAt })),
     ];
     all.sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime());
     return all.slice(0, 4);
-  }, [chatSessions, codeSessions, coworkSessions]);
+  }, [chatSessions, coworkSessions, agents]);
 
   return (
     <div className="p-10 h-full overflow-y-auto bg-[radial-gradient(circle_at_top_left,rgba(96,165,250,0.05),transparent_400px)] flex flex-col gap-12">

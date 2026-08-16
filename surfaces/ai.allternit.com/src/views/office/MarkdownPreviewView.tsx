@@ -144,13 +144,44 @@ export function MarkdownPreviewView({ handoffId, sourceUrl }: MarkdownPreviewVie
     if (!file) return;
     let cancelled = false;
     setState({ kind: 'loading', filename: file.name });
-    convertHandoff(file.name, file.bytes)
-      .then((result) => {
+
+    const ext = file.name.split('.').pop()?.toLowerCase() ?? '';
+    const isMarkdown = ext === 'md' || ext === 'markdown';
+
+    const load = async () => {
+      try {
+        if (isMarkdown) {
+          const decoder = new TextDecoder('utf-8');
+          const markdown = decoder.decode(file.bytes);
+          if (cancelled) return;
+          setState({
+            kind: 'ready',
+            result: {
+              filename: file.name,
+              format: 'markdown',
+              title: file.name,
+              markdown,
+            },
+          });
+          return;
+        }
+
+        const result = await convertHandoff(file.name, file.bytes);
         if (!cancelled) setState({ kind: 'ready', result });
-      })
-      .catch((err: ConversionError) => {
-        if (!cancelled) setState({ kind: 'error', filename: file.name, error: err });
-      });
+      } catch (err: ConversionError | unknown) {
+        if (!cancelled) {
+          setState({
+            kind: 'error',
+            filename: file.name,
+            error: (err as ConversionError)?.status
+              ? (err as ConversionError)
+              : { status: 500, error: (err as Error).message || 'Unknown error' },
+          });
+        }
+      }
+    };
+
+    void load();
     return () => {
       cancelled = true;
     };

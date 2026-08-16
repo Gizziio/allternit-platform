@@ -1,0 +1,94 @@
+---
+title: 'Udemy Catalog API'
+description: 'Search the Udemy public course catalog through the Allternit platform proxy.'
+---
+
+## Overview
+
+The Udemy Catalog API proxies search requests to Udemy's public `api-2.0/courses/` endpoint. It normalizes query parameters so that web, mobile, and Gizzi Runtime clients receive the same raw response shape (`count`, `next`, `previous`, `results`).
+
+## Base URL
+
+```text
+https://api.allternit.com/api/v1
+```
+
+For local development:
+
+```text
+http://127.0.0.1:8013/api/v1
+```
+
+## Authentication
+
+All requests require a valid bearer token in the `Authorization` header. See [Authentication](/api/authentication) for details.
+
+## Endpoints
+
+| Method | Path | Description |
+|--------|------|-------------|
+| `POST` | `/udemy/search` | Search the Udemy public course catalog. |
+
+## Search courses
+
+```bash
+curl -X POST https://api.allternit.com/api/v1/udemy/search \
+  -H "Authorization: Bearer $ALLTERNIT_API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "query": "machine learning",
+    "page": 1,
+    "page_size": 50,
+    "price": "paid",
+    "level": "beginner"
+  }'
+```
+
+### Request body
+
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| `query` | string | yes | Search term. |
+| `page` | integer | no | Page number (default 1). |
+| `page_size` | integer | no | Page size (default 50). |
+| `price` | string | no | `free` or `paid`. |
+| `level` | string | no | `beginner`, `intermediate`, or `expert`. |
+
+The endpoint always appends `ratings=4.0,4.5,5.0` and `closed_captions=en` to the upstream request.
+
+### Response
+
+```json
+{
+  "count": 1234,
+  "next": "https://www.udemy.com/api-2.0/courses/?page=2",
+  "previous": null,
+  "results": [
+    {
+      "id": 12345,
+      "title": "Machine Learning A-Z",
+      "url": "/course/machinelearning/",
+      "price": "",
+      "price_detail": null,
+      "rating": 4.5,
+      "num_reviews": 12345,
+      "image_125_H": "https://..."
+    }
+  ]
+}
+```
+
+The response is passed through directly from Udemy.
+
+## Error codes
+
+| HTTP status | Code | Meaning |
+|-------------|------|---------|
+| 400 | `allternit.invalid_request` | Missing or empty `query`. |
+| 401 | `allternit.authentication_failed` | Missing or invalid bearer token. |
+| 502 | `allternit.bad_gateway` | Udemy request failed or returned a non-success status. |
+
+## Related pages
+
+- [A://Labs](/api/alabs) — Allternit learning platform integration
+- [Marketplace](/api/marketplace) — content and skill marketplace

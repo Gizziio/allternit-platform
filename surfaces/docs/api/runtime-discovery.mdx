@@ -1,0 +1,88 @@
+---
+title: 'Runtime Discovery API'
+description: 'Probe and list available Gizzi Runtime instances on the local machine.'
+---
+
+## Overview
+
+The Runtime Discovery API reports the health and availability of local Gizzi Runtime instances. It performs a live HTTP probe to the Gizzi terminal server so the reported status reflects the actual runtime state rather than a hardcoded value.
+
+## Base URL
+
+```text
+https://api.allternit.com/api
+```
+
+For local development:
+
+```text
+http://127.0.0.1:8013/api
+```
+
+## Authentication
+
+This endpoint is typically called by an authenticated desktop session.
+
+## Endpoints
+
+| Method | Path | Description |
+|--------|------|-------------|
+| `GET` | `/runtime-discover` | Service status. |
+| `GET` | `/runtime/discover` | Discover and probe local runtimes. |
+
+## Discover runtimes
+
+```bash
+curl https://api.allternit.com/api/runtime/discover \
+  -H "Authorization: Bearer $ALLTERNIT_API_KEY"
+```
+
+### Response
+
+```json
+{
+  "runtimes": [
+    {
+      "id": "local-desktop",
+      "name": "Allternit Desktop (local)",
+      "type": "local",
+      "status": "ready",
+      "gateway_url": "http://127.0.0.1:8013",
+      "gizzi_url": "http://127.0.0.1:4096",
+      "gizzi_reachable": true,
+      "gizzi_http": 200,
+      "version": "0.0.0"
+    }
+  ],
+  "discovered_at": "2026-08-13T12:00:00Z"
+}
+```
+
+### Runtime fields
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `id` | string | Runtime identifier. |
+| `name` | string | Human-readable name. |
+| `type` | string | Runtime type, e.g. `local`. |
+| `status` | string | `ready` when Gizzi is reachable, otherwise `degraded`. |
+| `gateway_url` | string | Local gateway HTTP URL. |
+| `gizzi_url` | string | Gizzi terminal server URL. |
+| `gizzi_reachable` | boolean | Whether the Gizzi health endpoint returned success. |
+| `gizzi_http` | integer \| null | HTTP status code from the Gizzi health probe. |
+| `version` | string | API package version. |
+
+The probe uses a short timeout (1.5 seconds) so that the endpoint remains fast even when the runtime is not running.
+
+## Error codes
+
+| HTTP status | Code | Meaning |
+|-------------|------|---------|
+| 401 | `allternit.authentication_failed` | Missing or invalid bearer token. |
+| 500 | `allternit.internal_error` | Unexpected discovery failure. |
+
+## Related pages
+
+- [Runtime Backend](/api/runtime-backend) — switch and configure backends
+- [Agent Runtimes](/api/agent-runtimes) — runtime harness details
+- [Terminal](/api/terminal) — terminal server integration

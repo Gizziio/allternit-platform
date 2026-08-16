@@ -1,0 +1,269 @@
+---
+title: 'User Profiles API (Beta)'
+description: 'Manage human user profiles and consent-based enrollment for agents acting on behalf of people.'
+---
+
+## Overview
+
+User profiles bind a human (email + display name) to an agent within an organization. They are the foundation for human-in-the-loop flows where an agent acts on behalf of a person. Before an agent can operate on behalf of a profile, the human must enroll by accepting a signed, time-bound enrollment token.
+
+Profiles are scoped to an organization. All profile-management endpoints require the caller to have an `organization_id` in their authentication context. The enrollment acceptor endpoint is public and does not require authentication because the signed token itself is the credential.
+
+## Base URLs
+
+Protected profile endpoints:
+
+```
+https://api.allternit.com/v1/beta/user-profiles
+```
+
+Public enrollment endpoint:
+
+```
+https://api.allternit.com/beta/enroll
+```
+
+See [Authentication](/api/authentication) for Bearer-token usage.
+
+## The profile object
+
+```json
+{
+  "id": "up_1a2b3c4d",
+  "org_id": "org_1",
+  "agent_id": "ag_assistant",
+  "email": "human@example.com",
+  "display_name": "Human User",
+  "consent_given_at": "2026-08-13T10:05:00Z",
+  "enrollment_status": "enrolled",
+  "metadata": { "source": "directory-sync" },
+  "created_at": "2026-08-13T10:00:00Z",
+  "updated_at": "2026-08-13T10:05:00Z"
+}
+```
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `id` | string | Unique profile identifier. |
+| `org_id` | string | Owning organization. |
+| `agent_id` | string | Agent the profile is bound to. |
+| `email` | string? | Human's email address. |
+| `display_name` | string? | Human-readable display name. |
+| `consent_given_at` | string? | ISO 8601 timestamp when consent was recorded. |
+| `enrollment_status` | string | `pending`, `enrolled`, or `revoked`. |
+| `metadata` | object | Caller-provided key/value object. |
+| `created_at` | string | ISO 8601 timestamp. |
+| `updated_at` | string | ISO 8601 timestamp. |
+
+## Enrollment flow
+
+1. An administrator creates a profile with `POST /beta/user-profiles`.
+2. The administrator requests an enrollment URL with `POST /beta/user-profiles/:id/enrollment-url`. The URL contains a signed token that expires after 48 hours.
+3. The human visits the URL and submits the token to `POST /beta/enroll`.
+4. The profile's `enrollment_status` becomes `enrolled` and `consent_given_at` is recorded.
+5. Tokens are single-use; replaying an enrollment URL returns `400 Bad Request`.
+
+## Endpoints
+
+| Method | Path | Description |
+|--------|------|-------------|
+| GET | `/api/v1/beta/user-profiles` | List profiles in the organization. |
+| POST | `/api/v1/beta/user-profiles` | Create a profile. |
+| GET | `/api/v1/beta/user-profiles/:id` | Get a profile. |
+| PATCH | `/api/v1/beta/user-profiles/:id` | Update a profile. |
+| DELETE | `/api/v1/beta/user-profiles/:id` | Delete a profile. |
+| POST | `/api/v1/beta/user-profiles/:id/enrollment-url` | Create an enrollment URL. |
+| POST | `/beta/enroll` | Public: accept an enrollment token. |
+
+## List profiles
+
+```bash
+curl https://api.allternit.com/v1/beta/user-profiles \
+  -H "Authorization: Bearer $ALLTERNIT_API_KEY"
+```
+
+### Response
+
+```json
+{
+  "profiles": [
+    {
+      "id": "up_1a2b3c4d",
+      "org_id": "org_1",
+      "agent_id": "ag_assistant",
+      "email": "human@example.com",
+      "display_name": "Human User",
+      "consent_given_at": null,
+      "enrollment_status": "pending",
+      "metadata": { "source": "directory-sync" },
+      "created_at": "2026-08-13T10:00:00Z",
+      "updated_at": "2026-08-13T10:00:00Z"
+    }
+  ]
+}
+```
+
+## Create a profile
+
+```bash
+curl -X POST https://api.allternit.com/v1/beta/user-profiles \
+  -H "Authorization: Bearer $ALLTERNIT_API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "agent_id": "ag_assistant",
+    "email": "human@example.com",
+    "display_name": "Human User",
+    "metadata": { "source": "directory-sync" }
+  }'
+```
+
+### Request body
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `agent_id` | string | Required. Agent to bind the human to. |
+| `email` | string? | Human's email address. |
+| `display_name` | string? | Human-readable name. |
+| `metadata` | object | Defaults to `{}`. Must be an object. |
+
+### Response
+
+```json
+{
+  "profile": {
+    "id": "up_1a2b3c4d",
+    "org_id": "org_1",
+    "agent_id": "ag_assistant",
+    "email": "human@example.com",
+    "display_name": "Human User",
+    "consent_given_at": null,
+    "enrollment_status": "pending",
+    "metadata": { "source": "directory-sync" },
+    "created_at": "2026-08-13T10:00:00Z",
+    "updated_at": "2026-08-13T10:00:00Z"
+  },
+  "id": "up_1a2b3c4d"
+}
+```
+
+Creating a duplicate profile for the same organization returns `400 Bad Request`.
+
+## Get a profile
+
+```bash
+curl https://api.allternit.com/v1/beta/user-profiles/up_1a2b3c4d \
+  -H "Authorization: Bearer $ALLTERNIT_API_KEY"
+```
+
+### Response
+
+```json
+{
+  "profile": { ... }
+}
+```
+
+## Update a profile
+
+```bash
+curl -X PATCH https://api.allternit.com/v1/beta/user-profiles/up_1a2b3c4d \
+  -H "Authorization: Bearer $ALLTERNIT_API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "display_name": "Updated Name",
+    "enrollment_status": "revoked",
+    "metadata": { "source": "directory-sync", "updated": true }
+  }'
+```
+
+### Request body
+
+At least one field must be provided.
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `email` | string? | New email address. |
+| `display_name` | string? | New display name. |
+| `enrollment_status` | string? | `pending`, `enrolled`, or `revoked`. |
+| `metadata` | object? | Replaces the existing metadata object. Must be an object. |
+
+### Response
+
+```json
+{
+  "profile": { ... }
+}
+```
+
+## Delete a profile
+
+```bash
+curl -X DELETE https://api.allternit.com/v1/beta/user-profiles/up_1a2b3c4d \
+  -H "Authorization: Bearer $ALLTERNIT_API_KEY"
+```
+
+Returns `204 No Content`.
+
+## Create an enrollment URL
+
+```bash
+curl -X POST https://api.allternit.com/v1/beta/user-profiles/up_1a2b3c4d/enrollment-url \
+  -H "Authorization: Bearer $ALLTERNIT_API_KEY"
+```
+
+### Response
+
+```json
+{
+  "enrollment_url": "https://api.allternit.com/beta/enroll?token=AbCdEf...",
+  "expires_at": "2026-08-15T10:00:00Z"
+}
+```
+
+Enrollment URLs are single-use and expire after 48 hours. Requesting a URL for an already-enrolled profile returns `400 Bad Request`.
+
+## Accept enrollment
+
+The enrollment acceptor is public and does not require an `Authorization` header. The signed token authenticates the request.
+
+```bash
+curl -X POST https://api.allternit.com/beta/enroll \
+  -H "Content-Type: application/json" \
+  -d '{ "token": "AbCdEf..." }'
+```
+
+### Request body
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `token` | string | Enrollment token from the enrollment URL. |
+
+### Response
+
+```json
+{
+  "enrolled": true,
+  "profile_id": "up_1a2b3c4d"
+}
+```
+
+Tampered, expired, missing, or already-used tokens return `400 Bad Request`.
+
+## Error codes
+
+| Status | Meaning | Typical cause |
+|--------|---------|---------------|
+| 200 OK | Success | Request succeeded. |
+| 201 Created | Created | Profile or enrollment URL created. |
+| 204 No Content | No content | Profile deleted. |
+| 400 Bad Request | Invalid request | Missing `agent_id`, invalid `enrollment_status`, duplicate profile, metadata not an object, invalid/expired/used token. |
+| 401 Unauthorized | Unauthorized | Missing or invalid bearer token on protected endpoints. |
+| 404 Not Found | Not found | Unknown profile or access to another organization's profile. |
+| 429 Too Many Requests | Rate limited | Exceeded the request rate limit for the key. |
+| 500 Internal Server Error | Server error | Contact support. |
+
+## Related pages
+
+- [Authentication](/api/authentication)
+- [Agents](/api/agents)
+- [Admin User Profiles](/admin/user-profiles)

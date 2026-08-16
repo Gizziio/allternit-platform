@@ -1,0 +1,420 @@
+---
+title: 'Agent Sessions API'
+description: 'Create and manage runtime-backed agent sessions on the Allternit platform.'
+---
+
+## Overview
+
+Agent sessions are conversation threads backed by the Gizzi runtime. The Agent Sessions API translates the frontend session contract (`/api/agent-sessions`) into the Gizzi runtime contract (`/v1/session/*`), so the Rust API remains a thin gateway rather than a competing session database.
+
+Sessions support messages, abort, revert/unrevert, compaction, ephemeral incognito chats, and real-time event synchronization via SSE.
+
+## Base URL
+
+```
+https://api.allternit.com/api
+```
+
+## Authentication
+
+All requests must include a valid bearer token in the `Authorization` header. Gizzi-specific Basic auth is handled internally by the gateway when `GIZZI_PASSWORD` / `GIZZI_SERVER_PASSWORD` is configured.
+
+## Session object
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `id` | string | Session UUID. |
+| `name` | string \| null | Session title. |
+| `description` | null | Reserved for future use. |
+| `created_at` | string | ISO 8601 creation timestamp. |
+| `updated_at` | string | ISO 8601 update timestamp. |
+| `last_accessed` | string | Same as `updated_at`. |
+| `message_count` | integer | Always `0` in list responses; use messages endpoints for counts. |
+| `active` | boolean | `true` unless the session is archived. |
+| `tags` | array | Always empty in current responses. |
+| `metadata` | object | Runtime metadata including `project_id`, `directory`, `agent_id`, `surface`, `originSurface`, `permission`, and `ephemeral`. |
+
+## Endpoints
+
+### List sessions
+
+```http
+GET /api/agent-sessions
+```
+
+Returns sessions owned by the caller, filtered and searched on the gateway side. Ephemeral sessions are excluded from the list.
+
+#### Query parameters
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `surface` | string | Filter by original surface (`chat`, `cowork`, `code`, `browser`, `design`). |
+| `project_id` | string | Filter by cowork project ID. |
+| `q` | string | Case-insensitive substring search over title and message content. |
+
+#### Example request
+
+```bash
+curl -H "Authorization: Bearer $TOKEN" \
+  "https://api.allternit.com/api/agent-sessions?surface=chat&q=auth"
+```
+
+#### Example response
+
+```json
+{
+  "sessions": [
+    {
+      "id": "sess_9c1d...",
+      "name": "Auth module review",
+      "description": null,
+      "created_at": "2026-08-13T14:00:00Z",
+      "updated_at": "2026-08-13T14:22:00Z",
+      "last_accessed": "2026-08-13T14:22:00Z",
+      "message_count": 0,
+      "active": true,
+      "tags": [],
+      "metadata": {
+        "project_id": "proj_4d5e...",
+        "directory": null,
+        "version": null,
+        "agent_id": "agent_018f3a7c...",
+        "surface": "chat",
+        "originSurface": "chat",
+        "permission": null,
+        "ephemeral": false
+      }
+    }
+  ],
+  "count": 1
+}
+```
+
+### Create a session
+
+```http
+POST /api/agent-sessions
+```
+
+Creates a new Gizzi session. The gateway stamps the default model, resolves the agent harness config, and records the original surface so it can be restored later.
+
+#### Request body
+
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| `name` | string | No | Session title. Defaults to `New Session`. |
+| `agent_id` | string | No | Bind the session to an agent. |
+| `agent_name` | string | No | Ignored by the server. |
+| `origin_surface` | string | No | Original surface (`chat`, `cowork`, `code`, `browser`, `design`). |
+| `ephemeral` | boolean | No | If `true`, the session is hidden from lists and deleted on abort. |
+| `metadata` | object | No | Bag carried by clients. `metadata.surface`, `metadata.projectId`, and `metadata.project_id` are read by the gateway. |
+
+#### Example request
+
+```bash
+curl -X POST https://api.allternit.com/api/agent-sessions \
+  -H "Authorization: Bearer $TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "name": "Auth module review",
+    "agent_id": "agent_018f3a7c...",
+    "origin_surface": "code",
+    "metadata": {
+      "projectId": "proj_4d5e...",
+      "surface": "code"
+    }
+  }'
+```
+
+#### Example response
+
+```json
+{
+  "id": "sess_9c1d...",
+  "name": "Auth module review",
+  "description": null,
+  "created_at": "2026-08-13T14:00:00Z",
+  "updated_at": "2026-08-13T14:00:00Z",
+  "last_accessed": "2026-08-13T14:00:00Z",
+  "message_count": 0,
+  "active": true,
+  "tags": [],
+  "metadata": {
+    "project_id": "proj_4d5e...",
+    "directory": null,
+    "version": null,
+    "agent_id": "agent_018f3a7c...",
+    "surface": "chat",
+    "originSurface": "code",
+    "permission": null,
+    "ephemeral": false
+  }
+}
+```
+
+<Note>
+  The surface `design` is normalized to `chat` for Gizzi compatibility; the original value is preserved in `metadata.originSurface`.
+</Note>
+
+### Get a session
+
+```http
+GET /api/agent-sessions/:id
+```
+
+#### Example request
+
+```bash
+curl -H "Authorization: Bearer $TOKEN" \
+  https://api.allternit.com/api/agent-sessions/sess_9c1d...
+```
+
+#### Example response
+
+Same shape as the create response.
+
+### Update a session
+
+```http
+PATCH /api/agent-sessions/:id
+```
+
+Updates the session title, archived state, permission, or surface.
+
+#### Request body
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `name` | string | New title. |
+| `active` | boolean | `false` archives the session. |
+| `origin_surface` | string | New original surface. |
+| `metadata.permission` | object | Permission policy. |
+
+#### Example request
+
+```bash
+curl -X PATCH https://api.allternit.com/api/agent-sessions/sess_9c1d... \
+  -H "Authorization: Bearer $TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "name": "Renamed session",
+    "active": false
+  }'
+```
+
+#### Example response
+
+Same shape as the create response, with `active: false`.
+
+### Delete a session
+
+```http
+DELETE /api/agent-sessions/:id
+```
+
+Deletes the backing Gizzi session and clears any local ephemeral flag.
+
+#### Example response
+
+`204 No Content`
+
+### List messages
+
+```http
+GET /api/agent-sessions/:id/messages
+```
+
+Returns the session's messages in gateway-normalized form.
+
+#### Example response
+
+```json
+[
+  {
+    "id": "msg_1a2b...",
+    "role": "user",
+    "content": "Review the auth module",
+    "thinking": null,
+    "timestamp": "2026-08-13T14:01:00Z",
+    "metadata": {
+      "agent": null,
+      "model": null,
+      "parts": [{ "type": "text", "text": "Review the auth module" }],
+      "error": null
+    }
+  },
+  {
+    "id": "msg_2c3d...",
+    "role": "assistant",
+    "content": "I found a potential issue...",
+    "thinking": "Let me check the auth routes first...",
+    "timestamp": "2026-08-13T14:01:05Z",
+    "metadata": {
+      "agent": "agent_018f3a7c...",
+      "model": { "providerID": "ollama", "modelID": "qwen2.5:0.5b" },
+      "parts": [
+        { "type": "text", "text": "I found a potential issue..." },
+        { "type": "reasoning", "text": "Let me check the auth routes first..." }
+      ],
+      "error": null
+    }
+  }
+]
+```
+
+### Send a message
+
+```http
+POST /api/agent-sessions/:id/messages
+```
+
+Sends a message to the session. Only `role: "user"` messages are forwarded to the runtime; other roles are accepted locally and echoed back immediately.
+
+#### Request body
+
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| `text` | string | Yes | Message text. |
+| `role` | string | No | Defaults to `user`. |
+| `thinking` | string | No | Explicit reasoning text. |
+| `metadata` | object | No | May include `model` with `providerID`/`modelID` to override the brain. |
+
+#### Example request
+
+```bash
+curl -X POST https://api.allternit.com/api/agent-sessions/sess_9c1d.../messages \
+  -H "Authorization: Bearer $TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "text": "Review the auth module",
+    "metadata": {
+      "model": { "providerID": "ollama", "modelID": "qwen2.5:0.5b" }
+    }
+  }'
+```
+
+#### Example response
+
+Same shape as a message from `list messages`.
+
+### Abort a session
+
+```http
+POST /api/agent-sessions/:id/abort
+```
+
+Aborts the current turn. For ephemeral sessions, this also hard-deletes the backing session and clears the ephemeral flag.
+
+#### Example response
+
+```json
+{
+  "success": true
+}
+```
+
+### Revert a session
+
+```http
+POST /api/agent-sessions/:id/revert
+```
+
+Reverts file changes made during the session back to a given message.
+
+#### Request body
+
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| `messageId` | string | Yes | Message ID to revert to. |
+
+#### Example response
+
+Same shape as `get session`.
+
+### Unrevert a session
+
+```http
+POST /api/agent-sessions/:id/unrevert
+```
+
+Undoes a prior revert.
+
+#### Example response
+
+Same shape as `get session`.
+
+### Compact a session
+
+```http
+POST /api/agent-sessions/:id/compact
+```
+
+On-demand context condensation via Gizzi's summarize endpoint.
+
+#### Example response
+
+```json
+{
+  "summary": "The session discussed auth module security..."
+}
+```
+
+### Sync sessions (SSE)
+
+```http
+GET /api/agent-sessions/sync
+```
+
+Opens a server-sent event stream that forwards Gizzi bus events in a frontend-friendly shape. Supports `Last-Event-ID` reconnection.
+
+#### Supported event types
+
+| Type | Description |
+|------|-------------|
+| `created` | A session was created. |
+| `updated` | A session was updated or archived. |
+| `deleted` | A session was deleted. |
+| `message_added` | A new message completed. |
+| `permission_asked` | The runtime is asking for permission. |
+| `permission_replied` | A permission request was answered. |
+| `question_asked` | The runtime asked a clarifying question. |
+| `part_updated` | A message part was updated. |
+| `part_delta` | A streaming delta for a message part. |
+| `part_removed` | A message part was removed. |
+
+#### Example curl
+
+```bash
+curl -H "Authorization: Bearer $TOKEN" \
+  -H "Accept: text/event-stream" \
+  https://api.allternit.com/api/agent-sessions/sync
+```
+
+#### Example event
+
+```text
+event: message
+data: {"type":"message_added","session_id":"sess_9c1d...","id":"msg_2c3d...","role":"assistant","content":"I found a potential issue..."}
+```
+
+## Error codes
+
+| Status | Meaning |
+|--------|---------|
+| `200` | Success. |
+| `201` | Created. |
+| `204` | No content. |
+| `400` | Bad request. |
+| `401` | Unauthorized. |
+| `403` | Forbidden — agent not enabled for the requested surface. |
+| `404` | Session not found. |
+| `502` | Bad gateway — Gizzi runtime error. |
+| `500` | Internal server error. |
+
+## Related pages
+
+- [Agents API](/api/agents)
+- [Agent Workspaces](/api/agent-workspaces)
+- [Agent Preferences](/api/agent-preferences)
+- [Agent Runtimes](/api/agent-runtimes)
+- [Agent Operations](/api/agent-operations)

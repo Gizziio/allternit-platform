@@ -124,6 +124,7 @@ const CodeProjectView        = lazy(() => import('../views/code/CodeProjectView'
 const AllternitOSView        = lazy(() => import('../views/AllternitOSView').then(m => ({ default: m.AllternitOSView })));
 const VerificationView       = lazy(() => import('../views/VerificationView').then(m => ({ default: m.VerificationView })));
 const BrowserExtensionsView  = lazy(() => import('../views/BrowserExtensionsView').then(m => ({ default: m.BrowserExtensionsView })));
+const ApiCaptureView         = lazy(() => import('../views/api-capture/ApiCaptureView').then(m => ({ default: m.ApiCaptureView })));
 const GoalsListView          = lazy(() => import('../views/automation/GoalsListView').then(m => ({ default: m.GoalsListView })));
 const GoalDetailView         = lazy(() => import('../views/automation/GoalDetailView').then(m => ({ default: m.GoalDetailView })));
 const RoutinesListView       = lazy(() => import('../views/automation/RoutinesListView').then(m => ({ default: m.RoutinesListView })));
@@ -133,6 +134,7 @@ const SlidesView             = lazy(() => import('../views/slides/SlidesView').t
 const SheetsView             = lazy(() => import('../views/sheets/SheetsView').then(m => ({ default: m.SheetsView })));
 const PdfView                = lazy(() => import('../views/pdf/PdfView').then(m => ({ default: m.PdfView })));
 const MarkdownPreviewView    = lazy(() => import('../views/office/MarkdownPreviewView').then(m => ({ default: m.MarkdownPreviewView })));
+const DocuSealSigningView    = lazy(() => import('../views/office/DocuSealSigningView').then(m => ({ default: m.DocuSealSigningView })));
 
 export function getShellViewRegistry(handlers: {
   handleOpenAgentSession: (text: string, surface: AppMode, execution?: { modeId: CanonicalAgentModeId; templateTitle?: string }) => void;
@@ -242,6 +244,11 @@ export function getShellViewRegistry(handlers: {
         <BrowserExtensionsView openView={open} />
       </ErrorBoundary>
     ),
+    'site-apis': () => (
+      <ErrorBoundary fallback={<ErrorFallbackWrapper viewName="Site APIs" />}>
+        <ApiCaptureView />
+      </ErrorBoundary>
+    ),
     terminal: ({ context }: { context?: ViewContext }) => (
       <ErrorBoundary fallback={<ErrorFallbackWrapper viewName="Terminal" />}>
         <TerminalView />
@@ -293,7 +300,7 @@ export function getShellViewRegistry(handlers: {
       </ErrorBoundary>
     ),
     'agent-hub': ({ context }: { context?: ViewContext }) => (
-      <ErrorBoundary fallback={<ErrorFallbackWrapper viewName="Agent Hub" />}>
+      <ErrorBoundary fallback={<ErrorFallbackWrapper viewName="Agent | Bot Hub" />}>
         <AgentHub />
       </ErrorBoundary>
     ),
@@ -463,6 +470,11 @@ export function getShellViewRegistry(handlers: {
           handoffId={(context?.context as { handoffId?: string } | undefined)?.handoffId}
           sourceUrl={(context?.context as { sourceUrl?: string } | undefined)?.sourceUrl}
         />
+      </ErrorBoundary>
+    ),
+    sign: ({ context }: { context?: ViewContext }) => (
+      <ErrorBoundary fallback={<ErrorFallbackWrapper viewName="Sign Document" />}>
+        <DocuSealSigningView />
       </ErrorBoundary>
     ),
     "form-surfaces": ({ context }: { context?: ViewContext }) => (

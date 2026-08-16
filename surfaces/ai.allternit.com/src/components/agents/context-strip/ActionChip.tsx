@@ -23,7 +23,7 @@ export function ActionChip({
         "inline-flex items-center gap-1.5 rounded-full border border-solid px-2.5 py-1.5 text-[12px] font-bold cursor-pointer transition-colors",
         active 
           ? "bg-[var(--palette-soft)] border-[var(--palette-border)] text-[var(--palette-accent)]" 
-          : "bg-[var(--surface-hover)] border-[var(--ui-border-default)] text-[var(--ui-text-muted)]"
+          : "bg-white/5 backdrop-blur-sm border-[var(--ui-border-default)] text-[var(--ui-text-muted)]"
       )}
       style={{
         '--palette-soft': palette.soft,

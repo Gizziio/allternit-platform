@@ -1,0 +1,189 @@
+---
+title: 'Server Tools'
+description: 'Register organization-scoped tools that run inside the Allternit sandbox'
+---
+
+## Overview
+
+**Server tools** are custom tools that organization admins register on the Allternit platform. They run inside the Cloud Sandbox rather than on the caller's machine, and they are invoked through the same `/tools/execute` surface as native tools.
+
+Server tools are useful when:
+
+- The tool needs access to organization-wide secrets or APIs.
+- The tool should run in a controlled, isolated environment.
+- You want every member of the organization to share the same tool definition.
+
+## Base URL
+
+Server tools are managed under the organization-scoped admin prefix:
+
+```text
+https://api.allternit.com/api/v1/admin/server-tools
+```
+
+Local development:
+
+```text
+http://127.0.0.1:8013/api/v1/admin/server-tools
+```
+
+## Registration
+
+Server tools are scoped to an organization and can only be managed by organization owners or admins.
+
+### Endpoints
+
+| Method | Path | Description |
+|--------|------|-------------|
+| GET | `/api/v1/admin/server-tools` | List server tools for the organization |
+| POST | `/api/v1/admin/server-tools` | Create a server tool |
+| GET | `/api/v1/admin/server-tools/:id` | Get a server tool |
+| PUT | `/api/v1/admin/server-tools/:id` | Update a server tool |
+| DELETE | `/api/v1/admin/server-tools/:id` | Delete a server tool |
+
+### Tool schema
+
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| `name` | string | yes | 1-64 lowercase alphanumeric characters, dots, dashes, or underscores |
+| `description` | string | no | Human-readable description |
+| `runtime` | string | yes | One of `bash`, `python`, `node`, `rust` |
+| `source` | string | yes | Source code or script to execute |
+| `entrypoint` | string | no | Optional entrypoint script or function |
+| `env` | object | no | Environment variables as key/value strings |
+| `network_enabled` | boolean | no | Whether the tool may access the network; defaults to `false` |
+| `timeout_secs` | integer | no | Timeout in seconds; defaults to 30, max 3600 |
+
+### Create a server tool
+
+```bash
+curl -X POST http://127.0.0.1:8013/api/v1/admin/server-tools \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer <token>" \
+  -H "x-allternit-organization-id: org_456" \
+  -d '{
+    "name": "fetch_ticket",
+    "description": "Fetch a support ticket by ID",
+    "runtime": "bash",
+    "source": "jq -n --arg id \"$TICKET_ID\" '{id: $id, subject: \"Example\"}'",
+    "env": { "API_TOKEN": "secret" },
+    "timeout_secs": 30
+  }'
+```
+
+Response (HTTP 201):
+
+```json
+{
+  "id": "st_123",
+  "org_id": "org_456",
+  "name": "fetch_ticket",
+  "description": "Fetch a support ticket by ID",
+  "runtime": "bash",
+  "source": "jq -n --arg id \"$TICKET_ID\" '{id: $id, subject: \"Example\"}'",
+  "entrypoint": null,
+  "env": { "API_TOKEN": "secret" },
+  "network_enabled": false,
+  "timeout_secs": 30,
+  "created_at": "2026-04-01T12:00:00Z",
+  "updated_at": "2026-04-01T12:00:00Z"
+}
+```
+
+### List server tools
+
+```bash
+curl -X GET http://127.0.0.1:8013/api/v1/admin/server-tools \
+  -H "Authorization: Bearer <token>" \
+  -H "x-allternit-organization-id: org_456"
+```
+
+Response:
+
+```json
+{
+  "items": [
+    {
+      "id": "st_123",
+      "org_id": "org_456",
+      "name": "fetch_ticket",
+      "runtime": "bash",
+      "source": "...",
+      "env": { "API_TOKEN": "secret" },
+      "network_enabled": false,
+      "timeout_secs": 30
+    }
+  ]
+}
+```
+
+## Execution
+
+When a tool name is executed through `POST /api/v1/tools/execute`, the API first checks whether a server tool with that name is registered for the caller's organization. If it is, the server tool runs inside the sandbox. If not, the native tool executor handles the request.
+
+The tool arguments are serialized as JSON and injected into the sandbox environment as `ALLTERNIT_TOOL_ARGS`.
+
+```bash
+curl -X POST http://127.0.0.1:8013/api/v1/tools/execute \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer <token>" \
+  -H "x-allternit-user-id: user_123" \
+  -H "x-allternit-organization-id: org_456" \
+  -d '{
+    "tool": "fetch_ticket",
+    "args": { "ticket_id": "42" }
+  }'
+```
+
+If the sandbox stdout parses as JSON, that JSON is returned directly:
+
+```json
+{
+  "success": true,
+  "result": {
+    "id": "42",
+    "subject": "Example"
+  },
+  "execution_time_ms": 210
+}
+```
+
+If stdout is not valid JSON, the response wraps the captured output:
+
+```json
+{
+  "success": true,
+  "result": {
+    "stdout": "raw output\n",
+    "stderr": "",
+    "exit_code": 0
+  },
+  "execution_time_ms": 210
+}
+```
+
+## Server tools in the MCP catalog
+
+Server tools registered for an organization are also exposed through the `/mcp/server` JSON-RPC surface when the authenticated user belongs to that organization. The same precedence rule applies: a server tool shadows a native tool with the same name.
+
+## Error codes
+
+| HTTP | Code / Message | Meaning |
+|------|----------------|---------|
+| 200 | — | Success |
+| 201 | — | Server tool created |
+| 400 | `invalid_runtime` | Runtime not in `bash`, `python`, `node`, `rust` |
+| 400 | `invalid_name` | Name does not match the allowed pattern |
+| 400 | `missing_source` | Source is empty |
+| 400 | `invalid_timeout` | `timeout_secs` is not between 1 and 3600 |
+| 403 | `organization_required` | No active organization in the session |
+| 403 | `insufficient_role` | Caller is not an organization owner/admin |
+| 404 | `not_found` | Server tool not found |
+| 409 | `duplicate_name` | A server tool with this name already exists |
+
+## Related pages
+
+- [Native Tool Belt](/tools/tool-belt)
+- [Cloud Sandboxes](/tools/sandbox)
+- [MCP Servers](/tools/mcp)
+- [Build a Custom Tool](/tools/build-a-tool)

@@ -1,0 +1,236 @@
+---
+title: Marketplace
+description: Browse capabilities, create checkouts, and manage licenses.
+---
+
+# Marketplace
+
+The Marketplace API lets users browse capabilities (plugins and other extensions), create checkouts, validate licenses, and list their own licenses. Free capabilities are completed and licensed immediately; paid capabilities return a deferred checkout URL.
+
+## Base URL
+
+```text
+https://api.allternit.com/api/v1/marketplace
+```
+
+For local development:
+
+```text
+http://127.0.0.1:8013/api/v1/marketplace
+```
+
+## Endpoints
+
+| Method | Path | Description |
+|--------|------|-------------|
+| `GET` | `/api/v1/marketplace/capabilities` | List capabilities |
+| `GET` | `/api/v1/marketplace/capabilities/:id` | Get a capability |
+| `POST` | `/api/v1/marketplace/checkout` | Create a checkout/order |
+| `GET` | `/api/v1/marketplace/orders/:id` | Get an order |
+| `POST` | `/api/v1/marketplace/licenses/validate` | Validate a license |
+| `GET` | `/api/v1/marketplace/licenses/me` | List my licenses |
+
+## List capabilities
+
+```bash
+curl -G https://api.allternit.com/api/v1/marketplace/capabilities \
+  -H "Authorization: Bearer $TOKEN" \
+  -d "q=search" \
+  -d "kind=plugin" \
+  -d "pricing=free" \
+  -d "limit=20" \
+  -d "cursor=0"
+```
+
+### Query parameters
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `q` | string | Free-text search across name, display name, and description |
+| `kind` | string | Filter by capability kind |
+| `pricing` | string | `free`, `paid`, or `all` |
+| `tags` | string | Accepted but not filtered in Phase 1 |
+| `limit` | integer | Page size (1–100, default 20) |
+| `cursor` | string | Pagination offset as a stringified integer |
+
+### Response
+
+```json
+{
+  "items": [
+    {
+      "id": "cap_01hqx8x7x7x7x7x7x7x7x7x",
+      "name": "csv-importer",
+      "display_name": "CSV Importer",
+      "description": "Import CSV files into artifacts.",
+      "version": "1.0.0",
+      "kind": "plugin",
+      "author_name": "Allternit",
+      "pricing_type": "free",
+      "pricing_amount_cents": 0,
+      "pricing_currency": "USD",
+      "install_count": 42,
+      "rating": 4.8,
+      "manifest_json": "{}",
+      "created_at": "2026-08-13T18:00:00Z",
+      "updated_at": "2026-08-13T18:00:00Z"
+    }
+  ],
+  "total": 1,
+  "cursor": null
+}
+```
+
+## Get a capability
+
+```bash
+curl https://api.allternit.com/api/v1/marketplace/capabilities/cap_01hqx8x7x7x7x7x7x7x7x7x \
+  -H "Authorization: Bearer $TOKEN"
+```
+
+## Create a checkout
+
+```bash
+curl -X POST https://api.allternit.com/api/v1/marketplace/checkout \
+  -H "Authorization: Bearer $TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "capability_id": "cap_01hqx8x7x7x7x7x7x7x7x7x",
+    "pricing_type": "free",
+    "workspace_id": "ws_01hqx8x7x7x7x7x7x7x7x7x"
+  }'
+```
+
+### Request body
+
+```json
+{
+  "capability_id": "cap_01hqx8x7x7x7x7x7x7x7x7x",
+  "pricing_type": "free",
+  "workspace_id": "ws_01hqx8x7x7x7x7x7x7x7x7x"
+}
+```
+
+### Response for a free capability
+
+```json
+{
+  "order_id": "ord_01hqx8x7x7x7x7x7x7x7x7x",
+  "status": "completed",
+  "license_key": "lic_01hqx8x7x7x7x7x7x7x7x7x",
+  "checkout_url": null
+}
+```
+
+### Response for a paid capability
+
+```json
+{
+  "order_id": "ord_01hqx8x7x7x7x7x7x7x7x7x",
+  "status": "pending",
+  "license_key": null,
+  "checkout_url": "/marketplace/checkout/ord_01hqx8x7x7x7x7x7x7x7x7x?workspace=ws_01hqx8x7x7x7x7x7x7x7x7x"
+}
+```
+
+## Get an order
+
+```bash
+curl https://api.allternit.com/api/v1/marketplace/orders/ord_01hqx8x7x7x7x7x7x7x7x7x \
+  -H "Authorization: Bearer $TOKEN"
+```
+
+### Response
+
+```json
+{
+  "id": "ord_01hqx8x7x7x7x7x7x7x7x7x",
+  "user_id": "usr_01hqx8x7x7x7x7x7x7x7x7x",
+  "capability_id": "cap_01hqx8x7x7x7x7x7x7x7x7x",
+  "pricing_type": "free",
+  "amount_cents": 0,
+  "currency": "USD",
+  "status": "completed",
+  "license_key": "lic_01hqx8x7x7x7x7x7x7x7x7x",
+  "created_at": "2026-08-13T18:00:00Z",
+  "updated_at": "2026-08-13T18:00:00Z",
+  "line_items": [
+    {
+      "description": "CSV Importer",
+      "amount_cents": 0,
+      "currency": "USD"
+    }
+  ]
+}
+```
+
+Only the owning user may view an order.
+
+## Validate a license
+
+```bash
+curl -X POST https://api.allternit.com/api/v1/marketplace/licenses/validate \
+  -H "Authorization: Bearer $TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "license_key": "lic_01hqx8x7x7x7x7x7x7x7x7x",
+    "capability_id": "cap_01hqx8x7x7x7x7x7x7x7x7x"
+  }'
+```
+
+### Response
+
+```json
+{
+  "valid": true,
+  "license_key": "lic_01hqx8x7x7x7x7x7x7x7x7x",
+  "capability_id": "cap_01hqx8x7x7x7x7x7x7x7x7x",
+  "expires_at": null,
+  "status": "active"
+}
+```
+
+If `capability_id` does not match the license, `valid` will be `false` and `reason` will be `capability_mismatch`.
+
+## List my licenses
+
+```bash
+curl https://api.allternit.com/api/v1/marketplace/licenses/me \
+  -H "Authorization: Bearer $TOKEN"
+```
+
+### Response
+
+```json
+{
+  "items": [
+    {
+      "license_key": "lic_01hqx8x7x7x7x7x7x7x7x7x",
+      "capability_id": "cap_01hqx8x7x7x7x7x7x7x7x7x",
+      "order_id": "ord_01hqx8x7x7x7x7x7x7x7x7x",
+      "status": "active",
+      "expires_at": null,
+      "created_at": "2026-08-13T18:00:00Z",
+      "capability_name": "CSV Importer",
+      "pricing_type": "free"
+    }
+  ],
+  "total": 1
+}
+```
+
+## Error codes
+
+| Status | Code | Description |
+|--------|------|-------------|
+| `400` | `invalid_capability_id` | `capability_id` is required. |
+| `400` | `invalid_license_key` | `license_key` is required. |
+| `403` | `forbidden` | Caller does not own the requested order. |
+| `404` | `capability_not_found` | Capability does not exist. |
+| `404` | `order_not_found` | Order does not exist. |
+| `500` | `internal_error` | Database or server error. |
+
+## Related pages
+
+- [Tools / Server Tools](/tools/server-tools) — install and use server-side tools
+- [Security / Vault](/security/vault) — secure license and credential storage

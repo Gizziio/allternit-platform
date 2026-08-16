@@ -1,0 +1,141 @@
+---
+title: 'Team Skills API'
+description: 'Install, list, and manage reusable skills scoped to team workspaces.'
+---
+
+## Overview
+
+The Team Skills API lets workspace owners and admins install reusable skills into a workspace. Skills can carry a manifest, source repository, and version. The API enforces workspace access: members can read skills, while owners and admins can create or delete them.
+
+## Base URL
+
+```
+https://api.allternit.com/v1/team-skills
+```
+
+All endpoints require a valid Bearer token in the `Authorization` header. See [Authentication](/api/authentication) for details.
+
+## Endpoints
+
+| Method | Path | Description |
+|--------|------|-------------|
+| GET | `/team-skills` | List team skills. |
+| POST | `/team-skills` | Create a team skill. |
+| GET | `/team-skills/:id` | Get a team skill. |
+| DELETE | `/team-skills/:id` | Delete a team skill. |
+
+## List skills
+
+```bash
+GET /api/v1/team-skills?workspace_id=ws_1a2b3c4d
+```
+
+Query parameters:
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `workspace_id` | string | Optional workspace filter. Without it, all accessible workspaces are included. |
+
+Response:
+
+```json
+{
+  "skills": [
+    {
+      "id": "skill_2f8a9c4e5d3b",
+      "workspace_id": "ws_1a2b3c4d",
+      "name": "deploy-skill",
+      "description": "Deploy services to the BYOC runtime.",
+      "manifest": "{\"tools\":[\"bash\"]}",
+      "source_repo": "https://github.com/allternit/deploy-skill",
+      "version": "1.0.0",
+      "installed_by": "user_abc123",
+      "installed_at": "2026-08-13T10:00:00Z"
+    }
+  ]
+}
+```
+
+## Create skill
+
+```bash
+POST /api/v1/team-skills
+```
+
+Request body:
+
+```json
+{
+  "workspaceId": "ws_1a2b3c4d",
+  "name": "deploy-skill",
+  "description": "Deploy services to the BYOC runtime.",
+  "manifest": { "tools": ["bash"], "runtime": "gizzi" },
+  "sourceRepo": "https://github.com/allternit/deploy-skill",
+  "version": "1.0.0"
+}
+```
+
+Response:
+
+```json
+{
+  "skill": {
+    "id": "skill_2f8a9c4e5d3b",
+    "name": "deploy-skill"
+  }
+}
+```
+
+## Get skill
+
+```bash
+GET /api/v1/team-skills/skill_2f8a9c4e5d3b
+```
+
+Response:
+
+```json
+{
+  "skill": {
+    "id": "skill_2f8a9c4e5d3b",
+    "workspace_id": "ws_1a2b3c4d",
+    "name": "deploy-skill",
+    "description": "Deploy services to the BYOC runtime.",
+    "manifest": "{\"tools\":[\"bash\"]}",
+    "source_repo": "https://github.com/allternit/deploy-skill",
+    "version": "1.0.0",
+    "installed_by": "user_abc123",
+    "installed_at": "2026-08-13T10:00:00Z"
+  }
+}
+```
+
+## Delete skill
+
+```bash
+DELETE /api/v1/team-skills/skill_2f8a9c4e5d3b
+```
+
+Response:
+
+```json
+{ "success": true }
+```
+
+## Error codes
+
+| Status | Code | Description |
+|--------|------|-------------|
+| 200 | — | Success. |
+| 201 | — | Created successfully. |
+| 400 | `name is required` | Skill name is empty. |
+| 401 | `unauthorized` | Missing or invalid authentication. |
+| 403 | `Access denied` / `Workspace not found or access denied` | Caller lacks workspace access or admin role. |
+| 404 | `Not found` | Skill does not exist. |
+| 500 | `internal_error` | Unexpected server error. |
+
+## Related links
+
+- [Authentication](/api/authentication)
+- [Cowork Teams API](/api/cowork-teams)
+- [Skills concepts](/core/skills)

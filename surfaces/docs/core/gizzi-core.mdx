@@ -1,0 +1,168 @@
+---
+title: Gizzi Core
+description: Production-ready primitives that power Gizzi Code and the Allternit runtime.
+---
+
+# Gizzi Core
+
+Gizzi Core (`@allternit/gizzi-core`) is the shared primitive library that underpins Gizzi Code and the Allternit agent runtime. It bundles brand constants, an in-memory event bus, `.gizzi/` workspace management, semi-formal verification helpers, and Ink-based UI boot components. The package is fully type-checked and ships with an integration test suite.
+
+## Overview
+
+Use Gizzi Core when you are building:
+
+- A custom CLI or surface on top of Gizzi Runtime.
+- A local agent workspace that persists identity, memory, and conventions across sessions.
+- A plugin or tool that needs to publish and subscribe to runtime events.
+- A verification pipeline that combines empirical testing with logical reasoning.
+
+## Installation
+
+```bash
+npm install @allternit/gizzi-core
+```
+
+If you are working inside the Allternit monorepo, import it as a workspace dependency:
+
+```json
+{
+  "dependencies": {
+    "@allternit/gizzi-core": "workspace:*"
+  }
+}
+```
+
+## Usage
+
+### Brand constants
+
+Centralized product copy and identifiers keep all surfaces consistent.
+
+```typescript
+import { GIZZIBrand, GIZZICopy } from "@allternit/gizzi-core"
+
+console.log(GIZZIBrand.product) // "GIZZI Code"
+console.log(GIZZICopy.sidebar.onboardingTitle) // "Kernel ready"
+```
+
+### Event bus
+
+Publish and subscribe to typed events across decoupled components.
+
+```typescript
+import { Bus, WorkspaceInitialized } from "@allternit/gizzi-core"
+
+Bus.subscribe(WorkspaceInitialized, (event) => {
+  console.log("Workspace:", event.properties.path)
+})
+
+await Bus.publish(WorkspaceInitialized, { path: "./.gizzi", name: "local" })
+```
+
+| Method | Description |
+|--------|-------------|
+| `Bus.publish(def, properties)` | Emit an event to all subscribers of `def.type` and wildcard subscribers. |
+| `Bus.subscribe(def, callback)` | Subscribe to a specific event type. Returns an unsubscribe function. |
+| `Bus.once(def, callback)` | Subscribe to one occurrence of an event. |
+| `Bus.subscribeAll(callback)` | Subscribe to every event emitted on the bus. |
+| `Bus.stats()` | Return the number of event types and total subscriptions. |
+| `Bus.clear()` | Remove all subscriptions (useful in tests). |
+
+### Workspace management
+
+Initialize and read the `.gizzi/` directory, the flat OpenClaw-compatible agent identity format used by Gizzi Code.
+
+```typescript
+import { Workspace } from "@allternit/gizzi-core"
+
+await Workspace.init("./.gizzi", {
+  name: "Gizzi",
+  emoji: "⚡",
+  vibe: "Sharp, resourceful, autonomous."
+})
+```
+
+`Workspace.init` creates the following files when they do not already exist:
+
+| File | Purpose |
+|------|---------|
+| `IDENTITY.md` | Agent name, emoji, and vibe. |
+| `SOUL.md` | Behavioral guidelines and continuity contract. |
+| `USER.md` | User role, preferences, and context. |
+| `MEMORY.md` | Persistent memory written by the agent. |
+| `AGENTS.md` | Workspace-level conventions for all agents. |
+
+| Method | Description |
+|--------|-------------|
+| `Workspace.globalPath()` | Return `~/.gizzi`. |
+| `Workspace.localPath(cwd)` | Return `<cwd>/.gizzi`. |
+| `Workspace.resolvePath(cwd)` | Prefer local `.gizzi`; fall back to global. |
+| `Workspace.exists(workspacePath)` | Check whether a workspace directory exists. |
+| `Workspace.init(workspacePath, opts)` | Create the starter files idempotently. |
+| `Workspace.readFile(workspacePath, filename)` | Read a workspace markdown file. |
+| `Workspace.writeFile(workspacePath, filename, content)` | Write a workspace markdown file. |
+| `Workspace.listFiles(workspacePath)` | List all `.md` files in the workspace. |
+
+### Verification
+
+Register verifiers and run empirical or semi-formal checks.
+
+```typescript
+import { Verification } from "@allternit/gizzi-core"
+
+const result = await Verification.empirical("./src")
+console.log(result.passed, result.issues)
+```
+
+| Method | Description |
+|--------|-------------|
+| `Verification.register(verifier)` | Add a custom verifier to the registry. |
+| `Verification.getVerifiers(type)` | List registered verifiers for a verification type. |
+| `Verification.run(request)` | Run the first verifier that can handle the request target. |
+| `Verification.empirical(target, context?)` | Run a test-based verification. |
+| `Verification.semiFormal(target, context?)` | Run a reasoning-based verification. |
+
+### UI boot banner
+
+`ShimmeringBanner` is an Ink/React component used for the Gizzi Code boot animation.
+
+```tsx
+import { ShimmeringBanner } from "@allternit/gizzi-core"
+
+<ShimmeringBanner onComplete={() => console.log("Ready!")} />
+```
+
+## Exported modules
+
+| Module | Entry | Contents |
+|--------|-------|----------|
+| Default | `@allternit/gizzi-core` | Brand, Bus, Workspace, Verification, ShimmeringBanner, and related types. |
+| Brand | `@allternit/gizzi-core/brand` | `GIZZIBrand`, `GIZZICopy`. |
+| Bus | `@allternit/gizzi-core/bus` | `Bus`, `BusEvent`, typed events, and subscription types. |
+| Workspace | `@allternit/gizzi-core/workspace` | `Workspace` namespace and workspace types. |
+| Continuity | `@allternit/gizzi-core/continuity` | Session handoff and context-transfer types. |
+| Verification | `@allternit/gizzi-core/verification` | `Verification` namespace and verification types. |
+
+## Type-check, test, and build
+
+```bash
+# Type check
+bun run typecheck
+
+# Run tests
+bun test
+
+# Build
+bun run build
+```
+
+## Error handling
+
+Most methods return `Promise` and throw standard Node.js errors (`ENOENT`, `EACCES`) or internal verification errors. The event bus catches subscriber errors, logs them, and continues notifying remaining subscribers.
+
+## Related pages
+
+- [Gizzi Runtime](/core/gizzi-runtime) — the execution engine that consumes these primitives
+- [Gizzi Code CLI](/cli/overview) — the terminal surface built on Gizzi Core
+- [CommRails](/core/commrails) — the agent communication substrate
+- [Skills](/core/skills) — capability registry used by Gizzi Runtime

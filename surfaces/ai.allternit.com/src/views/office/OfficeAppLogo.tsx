@@ -5,6 +5,7 @@ export type OfficeProduct =
   | 'sheets'
   | 'slides'
   | 'pdf'
+  | 'sign'
   | 'word'
   | 'excel'
   | 'powerpoint';
@@ -16,7 +17,7 @@ interface ProductSpec {
   /** Darker shade for the monogram tab. */
   tab: string;
   letter: string;
-  glyph: 'lines' | 'grid' | 'frame' | 'pdf';
+  glyph: 'lines' | 'grid' | 'frame' | 'pdf' | 'signature';
 }
 
 const PRODUCTS: Record<OfficeProduct, ProductSpec> = {
@@ -24,6 +25,7 @@ const PRODUCTS: Record<OfficeProduct, ProductSpec> = {
   sheets: { from: '#2BB673', to: '#107C41', tab: '#0B5C30', letter: 'S', glyph: 'grid' },
   slides: { from: '#E06543', to: '#C43E1C', tab: '#9C2F12', letter: 'P', glyph: 'frame' },
   pdf: { from: '#E5564A', to: '#B91C1C', tab: '#8F1313', letter: 'F', glyph: 'pdf' },
+  sign: { from: '#8B5CF6', to: '#6366F1', tab: '#4338CA', letter: 'S', glyph: 'signature' },
   word: { from: '#3B8AE0', to: '#185ABD', tab: '#12459A', letter: 'W', glyph: 'lines' },
   excel: { from: '#2BB673', to: '#107C41', tab: '#0B5C30', letter: 'X', glyph: 'grid' },
   powerpoint: { from: '#E06543', to: '#C43E1C', tab: '#9C2F12', letter: 'P', glyph: 'frame' },
@@ -78,6 +80,26 @@ function Glyph({ kind, color }: { kind: ProductSpec['glyph']; color: string }) {
           <text x="29" y="27.5" textAnchor="middle" fontSize="5" fontWeight="800" fill={color} fontFamily="inherit">
             PDF
           </text>
+        </g>
+      );
+    case 'signature':
+      return (
+        <g>
+          <path
+            d="M24 25 c2 -4 5 -6 8 -4 c2 1 2 4 0 6 c-1 1 -3 2 -4 1"
+            fill="none"
+            stroke={color}
+            strokeWidth="1.8"
+            strokeLinecap="round"
+          />
+          <path
+            d="M32 22 l3 8"
+            fill="none"
+            stroke={color}
+            strokeWidth="1.6"
+            strokeLinecap="round"
+          />
+          <line x1="23" y1="31" x2="37" y2="31" stroke={color} strokeWidth="1.2" strokeLinecap="round" opacity="0.5" />
         </g>
       );
   }

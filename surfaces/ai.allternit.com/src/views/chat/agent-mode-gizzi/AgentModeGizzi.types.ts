@@ -12,6 +12,8 @@ export interface AgentModeGizziProps {
   pulse: number;
   surface: AgentModeSurface;
   selectedAgentName?: string | null;
+  /** Optional avatar image URL to replace the default Gizzi mascot. */
+  selectedAgentAvatarUrl?: string | null;
   theme: AgentModeGizziTheme;
   hasActionPills?: boolean;
   /** Position the rail guide above the composer (default) or as a bottom-right companion */

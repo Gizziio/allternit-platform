@@ -15,6 +15,9 @@ interface CanvasTileProps {
   onBringToFront?: () => void;
   onInteractionStart?: () => void;
   onSelect?: (additive: boolean) => void;
+  onMouseEnter?: () => void;
+  onMouseLeave?: () => void;
+  onClick?: () => void;
   /** Optional status badge rendered next to the label (e.g. executor state). */
   badge?: React.ReactNode;
   children: React.ReactNode;
@@ -54,6 +57,9 @@ export function CanvasTile({
   onBringToFront,
   onInteractionStart,
   onSelect,
+  onMouseEnter,
+  onMouseLeave,
+  onClick,
   badge,
   children,
 }: CanvasTileProps) {
@@ -199,7 +205,10 @@ export function CanvasTile({
       onClick={(e) => {
         e.stopPropagation();
         onSelect?.(e.shiftKey);
+        onClick?.();
       }}
+      onMouseEnter={onMouseEnter}
+      onMouseLeave={onMouseLeave}
       style={{
         position: 'absolute',
         left: tile.x,

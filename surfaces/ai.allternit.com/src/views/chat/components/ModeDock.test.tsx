@@ -43,7 +43,7 @@ describe('ModeDock', () => {
     fireEvent.click(screen.getByRole('button', { name: /Mode: Image/i }));
 
     await waitFor(() => {
-      expect(screen.getByText('Agent mode')).toBeInTheDocument();
+      expect(screen.getByText('Bot mode')).toBeInTheDocument();
     });
 
     fireEvent.click(screen.getByRole('button', { name: /Deep Research/i }));
@@ -62,24 +62,24 @@ describe('ModeDock', () => {
     fireEvent.click(screen.getByRole('button', { name: /Mode: Docs/i }));
 
     await waitFor(() => {
-      expect(screen.getByText('Agent mode')).toBeInTheDocument();
+      expect(screen.getByText('Bot mode')).toBeInTheDocument();
     });
 
     expect(screen.queryByText(/Featured Docs Cases/i)).not.toBeInTheDocument();
   });
 
-  it('only exposes the eight retained agent modes', async () => {
+  it('exposes all nine canonical bot modes', async () => {
     render(<ModeDock selectedMode="swarms" onSelectMode={() => {}} agentModeSurface="chat" />);
     fireEvent.click(screen.getByRole('button', { name: /Mode: Agent Swarm/i }));
 
-    await waitFor(() => expect(screen.getByText('Agent mode')).toBeInTheDocument());
+    await waitFor(() => expect(screen.getByText('Bot mode')).toBeInTheDocument());
     const popover = screen.getByRole('dialog');
     expect(within(popover).getByRole('button', { name: /Agent Swarm/i })).toBeInTheDocument();
     expect(within(popover).getByRole('button', { name: /Deep Research/i })).toBeInTheDocument();
     expect(within(popover).getByRole('button', { name: /Websites/i })).toBeInTheDocument();
     expect(within(popover).getByRole('button', { name: /Docs/i })).toBeInTheDocument();
     expect(within(popover).getByRole('button', { name: /Sheets/i })).toBeInTheDocument();
-    expect(within(popover).queryByRole('button', { name: /^Code$/i })).not.toBeInTheDocument();
+    expect(within(popover).getByRole('button', { name: /^Code$/i })).toBeInTheDocument();
     expect(within(popover).queryByRole('button', { name: /^Flow$/i })).not.toBeInTheDocument();
     expect(within(popover).queryByRole('button', { name: /^Computer$/i })).not.toBeInTheDocument();
   });

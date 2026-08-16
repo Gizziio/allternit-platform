@@ -1,0 +1,129 @@
+---
+title: 'Process Driver'
+description: 'OS process-based execution driver for Allternit development and testing.'
+---
+
+## Overview
+
+The **Allternit Process Driver** is an OS process-based execution driver for development and testing. It spawns native processes with basic resource limits, working-directory isolation, environment injection, and output capture.
+
+<Warning>
+The Process Driver provides limited isolation and should only be used in development environments. For production, use the MicroVM driver.
+</Warning>
+
+## Base URL
+
+The driver is consumed as a Rust library crate. It implements the `allternit-driver-interface` contract.
+
+## Capabilities
+
+| Capability | Value |
+|------------|-------|
+| Driver type | `Process` |
+| Isolation level | `Limited` |
+| Max CPU | 8 cores (8000 millicores) |
+| Max memory | 32 GiB |
+| Max disk | 100 GiB |
+| Supported env specs | `Oci` (via container runtime wrapper) |
+| Snapshot | No |
+| Live restore | No |
+| GPU | No |
+| Prewarm | No |
+
+## Configuration
+
+```rust
+use allternit_driver_interface::*;
+use allternit_process_driver::ProcessDriver;
+
+let config = DriverConfig {
+    driver_type: DriverType::Process,
+    default_resources: ResourceSpec::standard(),
+    env_vars: HashMap::new(),
+    default_mounts: vec![],
+    network_policy: NetworkPolicy::default(),
+    default_timeout_seconds: 300,
+    enable_prewarm: false,
+};
+
+let driver = ProcessDriver::with_config(config);
+```
+
+## Lifecycle
+
+The driver implements the `ExecutionDriver` trait:
+
+| Method | Description |
+|--------|-------------|
+| `spawn` | Prepare a process environment (lazy) |
+| `exec` | Run a command and capture output |
+| `pause_vm` | No-op for process driver |
+| `resume_vm` | No-op for process driver |
+| `stream_logs` | Returns empty (not supported) |
+| `get_artifacts` | Returns empty (limited support) |
+| `destroy` | Kill the active process |
+| `get_consumption` | Returns default consumption |
+| `get_receipt` | Returns a minimal receipt |
+| `health_check` | Reports operational health |
+
+## JSON examples
+
+### Execute a command
+
+```rust
+use allternit_driver_interface::*;
+use allternit_process_driver::ProcessDriver;
+
+let driver = ProcessDriver::new();
+let spec = SpawnSpec {
+    tenant: TenantId::new("default").unwrap(),
+    run_id: Some(ExecutionId::new()),
+    env: EnvironmentSpec {
+        spec_type: EnvSpecType::Oci,
+        image: "alpine:latest".to_string(),
+        ..Default::default()
+    },
+    ..Default::default()
+};
+
+let handle = driver.spawn(spec).await?;
+let result = driver.exec(&handle, CommandSpec {
+    command: vec!["echo".to_string(), "hello".to_string()],
+    env_vars: HashMap::new(),
+    working_dir: None,
+    stdin_data: None,
+    capture_stdout: true,
+    capture_stderr: true,
+}).await?;
+```
+
+Response:
+
+```json
+{
+  "exit_code": 0,
+  "stdout": "aGVsbG8=",
+  "stderr": null,
+  "duration_ms": 42,
+  "resource_usage": {
+    "cpu_millis_used": 42,
+    "memory_mib_peak": 32768,
+    "disk_mib_used": 0,
+    "network_egress_kib": 0
+  }
+}
+```
+
+## Error codes
+
+| Error | Meaning |
+|-------|---------|
+| `SpawnFailed` | Could not spawn the process |
+| `ExecTimeout` | Command exceeded the configured timeout |
+| `InternalError` | I/O or wait error |
+
+## Related pages
+
+- [VM Executor](/byoc/vm-executor)
+- [Session Manager](/core/session-manager)
+- [BYOC Deployment](/byoc/deployment)

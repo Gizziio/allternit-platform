@@ -1,6 +1,6 @@
 import React, { useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { LinkSimple, UploadSimple } from '@phosphor-icons/react';
+import { LinkSimple, Signature, UploadSimple } from '@phosphor-icons/react';
 import { stashFile } from './file-handoff';
 import { OfficeAppLogo } from './OfficeAppLogo';
 
@@ -14,7 +14,7 @@ export interface OfficeSuiteSectionProps {
 }
 
 interface EditorCard {
-  id: 'docs' | 'sheets' | 'slides' | 'pdf'
+  id: 'docs' | 'sheets' | 'slides' | 'pdf' | 'sign'
   name: string
   description: string
   formats: string[]
@@ -48,6 +48,12 @@ const EDITORS: EditorCard[] = [
     description: 'PDF viewing with pdf.js rendering, page navigation, zoom, and text extraction.',
     formats: ['.pdf'],
   },
+  {
+    id: 'sign',
+    name: 'Allternit Sign',
+    description: 'Native electronic signing powered by the open-source DocuSeal platform.',
+    formats: ['.pdf', '.docx'],
+  },
 ]
 
 const ROUTE_BY_EXT: Record<string, RouteTarget> = {
@@ -55,6 +61,8 @@ const ROUTE_BY_EXT: Record<string, RouteTarget> = {
   xlsx: 'sheets',
   pptx: 'slides',
   pdf: 'pdf',
+  md: 'markdown-preview',
+  markdown: 'markdown-preview',
   // Formats with no native editor open in the anydoc markdown preview.
   doc: 'markdown-preview',
   docm: 'markdown-preview',
@@ -153,14 +161,18 @@ export function OfficeSuiteSection({ openView }: OfficeSuiteSectionProps) {
             <p className="mt-2 text-[11px] font-medium text-[var(--text-tertiary)]">{editor.formats.join(' · ')}</p>
             <button
               type="button"
-              onClick={() =>
-                editor.id === 'pdf'
-                  ? fileInputRef.current?.click()
-                  : openEditor(editor.id)
-              }
+              onClick={() => {
+                if (editor.id === 'pdf') {
+                  fileInputRef.current?.click();
+                } else if (editor.id === 'sign') {
+                  openEditor('sign');
+                } else {
+                  openEditor(editor.id);
+                }
+              }}
               className="mt-auto inline-flex h-9 items-center justify-center rounded-lg bg-[var(--text-primary)] px-4 text-sm font-medium text-[var(--bg-elevated)] transition-opacity hover:opacity-90"
             >
-              {editor.id === 'pdf' ? 'Open a PDF' : 'Create new'}
+              {editor.id === 'pdf' ? 'Open a PDF' : editor.id === 'sign' ? 'Sign a document' : 'Create new'}
             </button>
           </article>
         ))}

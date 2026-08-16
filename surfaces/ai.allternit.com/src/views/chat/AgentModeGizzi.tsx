@@ -19,7 +19,7 @@ import { ExitEffects } from './agent-mode-gizzi/components/ExitEffects';
 import { OutOfTokensNotice } from './agent-mode-gizzi/components/OutOfTokensNotice';
 
 export function AgentModeGizzi(props: AgentModeGizziProps) {
-  const { surface, selectedAgentName, theme, hasActionPills = false, position = 'top' } = props;
+  const { surface, selectedAgentName, selectedAgentAvatarUrl, theme, hasActionPills = false, position = 'top' } = props;
   const isClient = useIsClient();
   
   const {
@@ -165,17 +165,41 @@ export function AgentModeGizzi(props: AgentModeGizziProps) {
                   animation: isCompanion && isBubblePinned ? 'gizziCompanionPulse 820ms cubic-bezier(0.22, 1, 0.36, 1)' : undefined,
                 }}
               >
-                <GizziMascot
-                  size={isCompanion ? companionMascotSize : config.mascotSize}
-                  emotion={emotion}
-                  attention={attention}
-                  locomotion={{
-                    style: surface === 'cowork' ? 'cowork' : 'chat',
-                    phase: locomotionPhase,
-                    direction: locomotionDirection,
-                  }}
-                  label={`Gizzi agent guide for ${surface} mode`}
-                />
+                {selectedAgentAvatarUrl ? (
+                  <div
+                    className={cn(
+                      'rounded-full border-2 shadow-lg overflow-hidden bg-surface-floating',
+                      isCompanion ? 'size-14' : 'size-[var(--mascot-size)]'
+                    )}
+                    style={{
+                      borderColor: theme.accent,
+                      boxShadow: `0 0 20px ${theme.glow}`,
+                    }}
+                  >
+                    <img
+                      src={selectedAgentAvatarUrl}
+                      alt={selectedAgentName ? `${selectedAgentName} avatar` : 'Bot avatar'}
+                      className="w-full h-full object-cover"
+                      onError={(e) => {
+                        // Fallback to Gizzi if the avatar fails to load by
+                        // clearing the src so the parent can render the mascot.
+                        (e.currentTarget as HTMLImageElement).style.display = 'none';
+                      }}
+                    />
+                  </div>
+                ) : (
+                  <GizziMascot
+                    size={isCompanion ? companionMascotSize : config.mascotSize}
+                    emotion={emotion}
+                    attention={attention}
+                    locomotion={{
+                      style: surface === 'cowork' ? 'cowork' : 'chat',
+                      phase: locomotionPhase,
+                      direction: locomotionDirection,
+                    }}
+                    label={`Gizzi agent guide for ${surface} mode`}
+                  />
+                )}
               </div>
             </m.div>
           )}

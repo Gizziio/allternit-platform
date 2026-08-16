@@ -1,0 +1,196 @@
+---
+title: 'Webhook Subscriptions API'
+description: 'Create, manage, and receive signed webhook event deliveries for sessions and deployments.'
+---
+
+## Overview
+
+The Webhook Subscriptions API lets an organization register HTTPS endpoints that receive signed JSON payloads when subscribed events occur. Subscriptions are scoped to an organization, and every delivery includes an `X-Allternit-Signature` header computed with HMAC-SHA256 over the payload.
+
+For details on verifying delivery signatures and example consumers, see the general [Webhooks](/api/webhooks) page.
+
+## Base URL
+
+```
+https://api.allternit.com/api/v1/beta/webhooks
+```
+
+For local development:
+
+```
+http://127.0.0.1:8013/api/v1/beta/webhooks
+```
+
+## Authentication
+
+All subscription routes require a valid bearer token and an active organization. See [Authentication](/api/authentication).
+
+## Subscription object
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `id` | string | Subscription UUID. |
+| `org_id` | string | Owning organization. |
+| `url` | string | HTTPS endpoint that receives events. |
+| `events` | string[] | Subscribed event types; `*` matches all events. |
+| `active` | boolean | Whether the subscription is delivering events. |
+| `created_at` | string | ISO 8601 timestamp. |
+| `updated_at` | string | ISO 8601 timestamp. |
+
+## Endpoints
+
+| Method | Path | Description |
+|--------|------|-------------|
+| `GET` | `/api/v1/beta/webhooks` | List organization subscriptions. |
+| `POST` | `/api/v1/beta/webhooks` | Create a subscription. |
+| `GET` | `/api/v1/beta/webhooks/:id` | Get a subscription. |
+| `PATCH` | `/api/v1/beta/webhooks/:id` | Update a subscription. |
+| `DELETE` | `/api/v1/beta/webhooks/:id` | Delete a subscription. |
+
+## Events
+
+| Event | Description |
+|-------|-------------|
+| `session.event_created` | A new event was appended to a managed session. |
+| `deployment.run_updated` | A deployment run reached a terminal status. |
+| `*` | Wildcard — subscribe to all events. |
+
+## Create a subscription
+
+```http
+POST /api/v1/beta/webhooks
+```
+
+### Request body
+
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| `url` | string | Yes | HTTPS endpoint URL. |
+| `events` | string[] | Yes | Non-empty list of event types. |
+| `secret` | string | Yes | Secret used to sign deliveries. |
+
+### Example request
+
+```bash
+curl -X POST https://api.allternit.com/api/v1/beta/webhooks \
+  -H "Authorization: Bearer $TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "url": "https://example.com/webhooks/allternit",
+    "events": ["session.event_created", "deployment.run_updated"],
+    "secret": "whsec_01hqx8x7x7x7x7x7x7x7x7x"
+  }'
+```
+
+### Example response
+
+```json
+{
+  "subscription": {
+    "id": "wh_01hqx8x7x7x7x7x7x7x7x7x",
+    "org_id": "org_01hqx8x7x7x7x7x7x7x7x7x",
+    "url": "https://example.com/webhooks/allternit",
+    "events": ["session.event_created", "deployment.run_updated"],
+    "active": true,
+    "created_at": "2026-08-13T18:00:00Z",
+    "updated_at": "2026-08-13T18:00:00Z"
+  }
+}
+```
+
+## List subscriptions
+
+```http
+GET /api/v1/beta/webhooks
+```
+
+Returns subscriptions for the caller's organization only.
+
+### Example response
+
+```json
+{
+  "subscriptions": [
+    {
+      "id": "wh_01hqx8x7x7x7x7x7x7x7x7x",
+      "org_id": "org_01hqx8x7x7x7x7x7x7x7x7x",
+      "url": "https://example.com/webhooks/allternit",
+      "events": ["session.event_created"],
+      "active": true,
+      "created_at": "2026-08-13T18:00:00Z",
+      "updated_at": "2026-08-13T18:00:00Z"
+    }
+  ],
+  "total": 1
+}
+```
+
+## Update a subscription
+
+```http
+PATCH /api/v1/beta/webhooks/:id
+```
+
+Partial update. At least one field must be provided.
+
+### Request body
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `url` | string | HTTPS endpoint URL. |
+| `events` | string[] | Non-empty list of event types. |
+| `secret` | string | New signing secret. |
+| `active` | boolean | Enable or disable delivery. |
+
+### Example request
+
+```bash
+curl -X PATCH https://api.allternit.com/api/v1/beta/webhooks/wh_01hqx8x7x7x7x7x7x7x7x7x \
+  -H "Authorization: Bearer $TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "active": false,
+    "events": ["deployment.run_updated"]
+  }'
+```
+
+## Delete a subscription
+
+```http
+DELETE /api/v1/beta/webhooks/:id
+```
+
+Returns `204 No Content` on success.
+
+## Delivery payload
+
+```json
+{
+  "event": "session.event_created",
+  "session_id": "sess_01hqx8x7x7x7x7x7x7x7x7x",
+  "event_data": {
+    "type": "thinking_delta",
+    "delta": "hello"
+  }
+}
+```
+
+## Error codes
+
+| Status | Code | Description |
+|--------|------|-------------|
+| `201 Created` | — | Subscription created. |
+| `200 OK` | — | Read or update succeeded. |
+| `204 No Content` | — | Subscription deleted. |
+| `400 Bad Request` | `url must be an http/https URL` | Invalid URL, empty events, missing secret, or no fields provided. |
+| `400 Bad Request` | `organization required` | Caller has no active organization. |
+| `401 Unauthorized` | — | Missing or invalid bearer token. |
+| `404 Not Found` | `subscription not found` | Subscription missing or belongs to another organization. |
+| `500 Internal Server Error` | — | Database or server error. |
+
+## Related pages
+
+- [Webhooks](/api/webhooks)
+- [Verifying Webhook Signatures](/guides/webhooks)
+- [Sessions API](/api/sessions)
+- [Deployments API](/api/deployments)

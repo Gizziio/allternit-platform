@@ -1,0 +1,204 @@
+---
+title: 'Onboarding API'
+description: 'Configure the Allternit Platform app, discover local models, validate credentials, and initialize projects.'
+---
+
+## Overview
+
+The Onboarding API powers the brain-setup wizard in the packaged Allternit Platform app. It reads and saves user configuration, discovers local-model providers and CLI subprocess brains, validates provider credentials, and proxies project initialization to the Gizzi Runtime.
+
+Provider credentials are handed directly to Gizzi and are never persisted by the API.
+
+## Base URL
+
+```text
+https://api.allternit.com/api
+```
+
+For local development:
+
+```text
+http://127.0.0.1:8013/api
+```
+
+## Authentication
+
+Routes that mutate state require a valid bearer token. Read-only discovery endpoints may be called by an authenticated desktop session.
+
+## Endpoints
+
+| Method | Path | Description |
+|--------|------|-------------|
+| `GET` | `/onboarding/config` | Read current company and user configuration. |
+| `POST` | `/onboarding/config` | Save user preferences. |
+| `POST` | `/onboarding/provider` | Save a provider and its metadata to Gizzi config. |
+| `GET` | `/onboarding/discover` | Discover local models and CLI subprocess brains. |
+| `POST` | `/onboarding/validate-key` | Validate a provider API key. |
+| `POST` | `/onboarding/init-project` | Initialize a project through Gizzi. |
+
+## Read configuration
+
+```bash
+curl https://api.allternit.com/api/onboarding/config \
+  -H "Authorization: Bearer $ALLTERNIT_API_KEY"
+```
+
+### Response
+
+```json
+{
+  "company": {
+    "clerkPublishableKey": null,
+    "gatewayUrl": "http://127.0.0.1:8013",
+    "terminalServerUrl": "http://127.0.0.1:4096",
+    "tenantId": "default",
+    "selfHosted": false
+  },
+  "user": {
+    "default_model": "allternit-local/qwen-coder",
+    "onboarding_complete": true
+  },
+  "onboardingComplete": true,
+  "encryptionEnabled": true
+}
+```
+
+## Save configuration
+
+```bash
+curl -X POST https://api.allternit.com/api/onboarding/config \
+  -H "Authorization: Bearer $ALLTERNIT_API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "default_model": "allternit-local/qwen-coder",
+    "onboarding_complete": true
+  }'
+```
+
+Provider API keys are stripped from this payload and must be saved through the provider endpoint.
+
+## Save a provider
+
+```bash
+curl -X POST https://api.allternit.com/api/onboarding/provider \
+  -H "Authorization: Bearer $ALLTERNIT_API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "provider": "allternit-local",
+    "name": "Allternit Local Models",
+    "defaultModel": "allternit-local/qwen-coder",
+    "apiKey": "sk-...",
+    "baseURL": "http://127.0.0.1:11434",
+    "authType": "api_key",
+    "set_default": true
+  }'
+```
+
+### Provider fields
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `provider` | string | Provider identifier. |
+| `name` | string \| null | Human-readable name. |
+| `npm` | string \| null | NPM package used by the AI SDK adapter. |
+| `defaultModel` | string \| null | Default model for this provider. |
+| `apiKey` | string \| null | Provider key; forwarded to Gizzi's credential store. |
+| `baseURL` | string \| null | Provider base URL. |
+| `authType` | string \| null | `api_key`, `none`, or `subprocess`. |
+| `subprocessCmd` | string \| null | CLI command for subprocess providers. |
+| `models` | object \| null | Models exposed by this provider. |
+| `set_default` | boolean | Whether to set this provider as the platform default. |
+
+### Response
+
+```json
+{
+  "success": true,
+  "provider": "allternit-local"
+}
+```
+
+## Discover local models
+
+```bash
+curl https://api.allternit.com/api/onboarding/discover \
+  -H "Authorization: Bearer $ALLTERNIT_API_KEY"
+```
+
+### Response
+
+```json
+{
+  "ollama": {
+    "running": true,
+    "models": [
+      { "id": "qwen2.5-coder:14b", "name": "qwen2.5-coder:14b" }
+    ]
+  },
+  "lmstudio": {
+    "running": false,
+    "models": []
+  },
+  "cli": [
+    { "name": "Allternit", "command": "allternit", "installed": true, "version": null },
+    { "name": "aider", "command": "aider", "installed": false, "version": null }
+  ]
+}
+```
+
+The endpoint probes local-model servers, desktop model gateways, and a configurable set of CLI subprocess brains. CLI entries report whether the binary is on `PATH` and its version string.
+
+## Validate a provider key
+
+```bash
+curl -X POST https://api.allternit.com/api/onboarding/validate-key \
+  -H "Authorization: Bearer $ALLTERNIT_API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "provider": "remote-provider",
+    "key": "sk-..."
+  }'
+```
+
+### Response
+
+```json
+{
+  "valid": true,
+  "models": [
+    { "id": "gpt-5", "name": "gpt-5" }
+  ],
+  "error": null
+}
+```
+
+Validation is provider-specific. For unknown providers, the endpoint accepts the key without remote validation and returns a warning in `error`.
+
+## Initialize a project
+
+```bash
+curl -X POST https://api.allternit.com/api/onboarding/init-project \
+  -H "Authorization: Bearer $ALLTERNIT_API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "dir": "~/projects/new-app",
+    "skipCodemap": false
+  }'
+```
+
+Proxies the request to Gizzi's `/v1/project/init` endpoint and returns the runtime response verbatim.
+
+## Error codes
+
+| HTTP status | Code | Meaning |
+|-------------|------|---------|
+| 400 | `allternit.invalid_request` | Missing required fields such as `provider` or `query`. |
+| 401 | `allternit.authentication_failed` | Missing or invalid bearer token. |
+| 500 | `allternit.internal_error` | Failed to save config or provider metadata. |
+| 502 | `allternit.bad_gateway` | Gizzi Runtime is unreachable during project initialization. |
+
+## Related pages
+
+- [Providers](/api/providers) — provider discovery and connection
+- [Local Brains](/api/local-brains) — self-hosted and local model setup
+- [Brains](/api/brains) — managed brain configuration

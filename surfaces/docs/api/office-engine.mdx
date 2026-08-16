@@ -1,0 +1,161 @@
+---
+title: 'Office Engine API'
+description: 'Parse, roundtrip, extract, and render Office documents through the Allternit Office engine proxy.'
+---
+
+## Overview
+
+The Office Engine API is a transparent proxy to the standalone TypeScript Office engine service (`services/office-engine`). It parses and re-serializes Office documents without the gateway becoming a second source of document state. Both the legacy `/api/office/*` surface and the converged `/api/v1/office/engines/*` surface are supported.
+
+## Base URL
+
+Legacy surface:
+
+```
+https://api.allternit.com/api/office
+```
+
+Converged v1 surface:
+
+```
+https://api.allternit.com/api/v1/office/engines
+```
+
+For local development:
+
+```
+http://127.0.0.1:8013/api/office
+http://127.0.0.1:8013/api/v1/office/engines
+```
+
+## Authentication
+
+Office engine routes inherit the standard bearer-token auth middleware. The raw request body and `x-office-filename` header are forwarded verbatim to the engine.
+
+## Endpoints
+
+| Method | Path | Description |
+|--------|------|-------------|
+| `POST` | `/api/office/parse` / `/api/v1/office/engines/parse` | Parse an Office document into a structured JSON representation. |
+| `POST` | `/api/office/roundtrip` / `/api/v1/office/engines/roundtrip` | Round-trip a DOCX file through the parser. |
+| `POST` | `/api/office/pptx/parse` / `/api/v1/office/engines/pptx/parse` | Parse a PPTX presentation. |
+| `POST` | `/api/office/pptx/roundtrip` / `/api/v1/office/engines/pptx/roundtrip` | Round-trip a PPTX file. |
+| `POST` | `/api/office/extract` / `/api/v1/office/engines/extract` | Extract text and metadata. |
+| `POST` | `/api/office/markdown` / `/api/v1/office/engines/markdown` | Convert document content to Markdown. |
+| `POST` | `/api/office/markdown-url` / `/api/v1/office/engines/markdown-url` | Convert a URL to Markdown. |
+| `POST` | `/api/office/xlsx/parse` / `/api/v1/office/engines/xlsx/parse` | Parse an XLSX workbook. |
+| `POST` | `/api/office/xlsx/recalc` / `/api/v1/office/engines/xlsx/recalc` | Recalculate workbook formulas. |
+| `POST` | `/api/office/xlsx/read` / `/api/v1/office/engines/xlsx/read` | Read workbook data. |
+| `POST` | `/api/office/xlsx/session/:op` / `/api/v1/office/engines/xlsx/session/:op` | Workbook session operations: `open`, `range`, `formulas`, `session-recalc`, `save`, `close`. |
+
+## Parse a document
+
+```http
+POST /api/v1/office/engines/parse
+```
+
+Parses an uploaded Office document into JSON. The binary body is forwarded as-is.
+
+### Headers
+
+| Header | Description |
+|--------|-------------|
+| `Content-Type` | Passthrough content type. |
+| `x-office-filename` | Optional filename for the engine. |
+
+### Example request
+
+```bash
+curl -X POST https://api.allternit.com/api/v1/office/engines/parse \
+  -H "Authorization: Bearer $TOKEN" \
+  -H "Content-Type: application/vnd.openxmlformats-officedocument.wordprocessingml.document" \
+  -H "x-office-filename: report.docx" \
+  --data-binary @report.docx
+```
+
+### Example response
+
+```json
+{
+  "document": {
+    "paragraphs": [...],
+    "tables": [...]
+  }
+}
+```
+
+## Convert to Markdown
+
+```http
+POST /api/v1/office/engines/markdown
+```
+
+Converts an uploaded document to Markdown.
+
+### Example request
+
+```bash
+curl -X POST https://api.allternit.com/api/v1/office/engines/markdown \
+  -H "Authorization: Bearer $TOKEN" \
+  -H "Content-Type: application/vnd.openxmlformats-officedocument.wordprocessingml.document" \
+  --data-binary @report.docx
+```
+
+### Example response
+
+```json
+{
+  "markdown": "# Report\n\n..."
+}
+```
+
+## Convert URL to Markdown
+
+```http
+POST /api/v1/office/engines/markdown-url
+```
+
+Accepts a JSON `{ "url": "..." }` body and returns Markdown extracted from the remote Office document.
+
+### Example request
+
+```bash
+curl -X POST https://api.allternit.com/api/v1/office/engines/markdown-url \
+  -H "Authorization: Bearer $TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{"url": "https://example.com/report.docx"}'
+```
+
+## XLSX session
+
+```http
+POST /api/v1/office/engines/xlsx/session/:op
+```
+
+Supported operations: `open`, `range`, `formulas`, `session-recalc`, `save`, `close`. The request body is forwarded verbatim to the engine.
+
+### Example request
+
+```bash
+curl -X POST https://api.allternit.com/api/v1/office/engines/xlsx/session/open \
+  -H "Authorization: Bearer $TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{"workbook_id": "wb_123"}'
+```
+
+## Error codes
+
+| Status | Code | Meaning |
+|--------|------|---------|
+| `200 OK` | — | Engine returned a successful response. |
+| `400 Bad Request` | — | Engine rejected the request body. |
+| `401 Unauthorized` | — | Missing or invalid bearer token. |
+| `404 Not Found` | `unknown_session_op` | Invalid XLSX session operation. |
+| `502 Bad Gateway` | `office_engine_unavailable` | Office engine service is unreachable. |
+| `502 Bad Gateway` | `invalid_office_engine_response` | Could not read the engine response. |
+
+## Related pages
+
+- [Office Runtime API](/api/office)
+- [Files API](/api/files)
+- [Authentication](/api/authentication)

@@ -1,0 +1,145 @@
+---
+title: 'Proxy'
+description: 'Gateway middleware, routing, failover, and usage recording'
+---
+
+## Overview
+
+The gateway proxy is the public `/v1` surface that sits between client applications and the Allternit runtime. It authenticates requests, applies guardrails, resolves models, handles retries, records usage, and emits metrics. This page describes the request lifecycle, middleware order, and the controls available to callers.
+
+## Base URL
+
+```
+https://api.allternit.com/v1
+```
+
+For local development:
+
+```
+http://127.0.0.1:8013/v1
+```
+
+## Request lifecycle
+
+A request to any `/v1` endpoint flows through the following layers before reaching the handler:
+
+1. **Idempotency-key validation** — rejects malformed `Idempotency-Key` headers.
+2. **Virtual-key authentication** — validates the `Authorization: Bearer ak-...` token against `llm_virtual_keys`.
+3. **Rate limiting** — per-key sliding-window limit.
+4. **DLP scanning** — secret and injection screening.
+5. **Budget pre-check** — monthly key, tenant, and organization spend caps.
+6. **Handler logic** — routing, allowlists, runtime dispatch, and response shaping.
+7. **Usage recording** — persists one `llm_usage_events` row per request.
+8. **Metrics emission** — Prometheus counters and histograms.
+
+## Virtual-key authentication
+
+Clients authenticate with a bearer token whose value is a virtual key starting with `ak-`. The gateway stores only the SHA-256 hash of the key; the plaintext is shown once at creation and cannot be recovered. See [Authentication](/api/authentication) for key management.
+
+```bash
+curl https://api.allternit.com/v1/chat/completions \
+  -H "Authorization: Bearer $ALLTERNIT_API_KEY" \
+  ...
+```
+
+## Rate limiting and budgets
+
+Each virtual key has a configurable requests-per-minute limit. The gateway also enforces monthly spend caps at the key, tenant, and organization levels. Requests that exceed a cap are rejected before any provider call is made.
+
+Callers can inspect their current quota at any time:
+
+```bash
+curl https://api.allternit.com/v1/rate-limits \
+  -H "Authorization: Bearer $ALLTERNIT_API_KEY"
+```
+
+## Model routing
+
+The proxy resolves the requested `model` string in three ways:
+
+1. **Policy alias** (`auto`, `allternit-balanced`, `allternit-code`, `allternit-reasoning`, `allternit-knowledge`, `allternit-instruct`) — the router scores connected providers using benchmark weights and cost efficiency, selects a winner, and derives a fallback chain of up to three distinct providers.
+2. **Explicit `provider/model`** — uses the requested pair and still derives a fallback chain.
+3. **Bare model id** — looks up the first connected provider that offers the model.
+
+If routing cannot decide (no connected providers, no candidates), policy-alias requests degrade to an automatic passthrough so completions keep working.
+
+## Cross-provider failover
+
+For non-streaming chat completions, the proxy retries across the fallback chain on retryable runtime or provider errors. Each retry creates a fresh runtime session and sleeps an exponential backoff. Only the final outcome is persisted.
+
+When a fallback occurs, the response includes the header:
+
+```
+x-allternit-fallback: provider-a/model-x->provider-b/model-y
+```
+
+## Session reuse
+
+The proxy creates a fresh runtime session for each completion unless the caller supplies:
+
+```
+x-allternit-session-id: sess_abc123
+```
+
+When reusing a session, only the last user message is forwarded and the runtime supplies the conversation context. The response echoes the same session id in the `x-allternit-session-id` header.
+
+## Idempotency
+
+Non-streaming requests may include an `Idempotency-Key` header (1–255 ASCII characters). The gateway stores the response body and replays it for subsequent requests with the same key scoped to the same virtual key. Streaming requests ignore the header.
+
+## Safety and content policy
+
+Before routing, the proxy runs an on-premise safety classifier on the request messages. Requests flagged as jailbreak or prompt-injection attempts are rejected with a `content_policy_violation` error before any spend occurs.
+
+## Inference hooks
+
+Organizations can register pre- and post-inference HTTP hooks. Pre-hooks can mutate the request body; post-hooks receive status and latency after the response is produced. Hooks are configured through the admin API and require an active organization.
+
+## File and cache resolution
+
+`file_id` references inside message content are resolved to inline base64 data before the request reaches the runtime. If a `context_cache_id` is supplied, the cached messages are prepended to the request messages.
+
+## Usage recording and pricing hardening
+
+Every completed request writes one `llm_usage_events` row with:
+
+- Request and response metadata
+- Prompt, completion, reasoning, and cache token counts
+- Runtime-reported cost in microdollars
+- Gateway-recomputed cost from the models cache
+- A `cost_mismatch` flag when the figures differ by more than 1%
+- The routing decision for policy-alias requests
+
+Billing reads the recomputed cost when available and falls back to the runtime-reported cost otherwise.
+
+## Headers
+
+| Header | Direction | Description |
+|--------|-----------|-------------|
+| `Authorization` | request | `Bearer ak-...` virtual key. |
+| `Idempotency-Key` | request | Optional idempotency key for non-streaming requests. |
+| `x-allternit-session-id` | request/response | Reuse or receive a runtime session id. |
+| `x-allternit-fallback` | response | Present when a fallback was exercised. |
+
+## Error codes
+
+| HTTP status | Code | Meaning |
+|-------------|------|---------|
+| 400 | `allternit.invalid_request` | Malformed request. |
+| 401 | `allternit.authentication_failed` | Invalid or missing virtual key. |
+| 403 | `allternit.permission_denied` | Model not allowed for this key. |
+| 429 | `allternit.rate_limited` | Rate limit exceeded. |
+| 429 | `allternit.budget_exceeded` | Spend cap exceeded. |
+| 409 | `allternit.idempotency_conflict` | Idempotency key conflict. |
+| 400 | `allternit.model_not_found` | Unknown model. |
+| 502 | `allternit.upstream_error` | Runtime or provider error. |
+| 500 | `allternit.internal_error` | Internal gateway error. |
+| 400 | `allternit.content_policy_violation` | Safety classifier block. |
+
+## Related pages
+
+- [Chat Completions](/api/chat-completions) — primary proxy endpoint
+- [Models](/api/models) — model registry and routing policies
+- [Translate](/api/translate) — wire-format translation layer
+- [Authentication](/api/authentication) — virtual keys
+- [Rate limits](/api/rate-limits) — quota details

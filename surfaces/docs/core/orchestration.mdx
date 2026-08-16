@@ -1,0 +1,162 @@
+---
+title: 'Orchestration'
+description: 'Platform orchestration, conflict arbitration, and control-plane services for Allternit.'
+---
+
+## Overview
+
+The **Allternit Orchestration** layer starts and coordinates platform services, resolves conflicts between concurrent changes, and exposes control-plane registries for tools, agents, and fabric resources.
+
+## Components
+
+| Service | Path | Purpose |
+|---------|------|---------|
+| Platform Orchestrator | `services/orchestration/platform-orchestration-service` | Unified binary that starts all platform services |
+| Conflict Arbitration | `services/orchestration/conflict-arbitration` | Detects and resolves conflicting changes |
+| Node Registry | `services/orchestration/node-registry` | Registry of runtime nodes |
+| Policy Service | `services/orchestration/policy-service` | Policy evaluation |
+| Budget Metering | `services/orchestration/budget-metering` | Usage budgets and metering |
+| BYOC Edge Runner | `services/orchestration/byoc-edge-runner` | Edge execution for BYOC deployments |
+| Unified Registry | `services/orchestration/control-plane/unified-registry` | Tool, agent, and fabric registries |
+
+## Platform Orchestrator
+
+The orchestrator reads `.allternit/services.json` and starts services in dependency order.
+
+### Commands
+
+| Command | Description |
+|---------|-------------|
+| `a2 up` | Start all platform services |
+| `a2 down` | Stop all platform services |
+| `a2 status` | Check platform health |
+| `a2 doctor` | Run system diagnostics |
+
+### Default service order
+
+1. Memory Service — port `3008`
+2. Kernel Service — port `8080`
+3. WebVM Service — port `3001`
+4. Voice Service — port `3002`
+5. IO Daemon — port `3003`
+6. Observation Service — port `3004`
+7. Canvas Monitor — port `3005`
+8. Framework Service — port `3006`
+9. Local Inference — port `3007`
+10. Pattern Service — port `3010`
+
+### Example services.json snippet
+
+```json
+{
+  "version": "1.0.0",
+  "hosts": {
+    "internal": "127.0.0.1",
+    "public": "api.allternit.com"
+  },
+  "ports": {
+    "memory": 3008,
+    "kernel": 8080
+  },
+  "services": [
+    {
+      "id": "memory",
+      "command": "cargo",
+      "args": ["run", "-p", "allternit-memory"],
+      "order": 1
+    }
+  ]
+}
+```
+
+## Conflict Arbitration
+
+The Conflict Arbitration Engine detects and resolves conflicts between concurrent changes.
+
+### Overlap types
+
+| Type | Description | Severity |
+|------|-------------|----------|
+| `DirectOverlap` | Same lines modified | Critical |
+| `Adjacent` | Within 3 lines of each other | Medium |
+| `SameFunction` | Same function or method modified | High |
+| `SameLogicalBlock` | Same struct or impl block | Medium |
+| `None` | No overlap | Low |
+
+### Decisions
+
+| Decision | Description |
+|----------|-------------|
+| `AcceptA` | Accept change A |
+| `AcceptB` | Accept change B |
+| `Merge` | Merge non-critical overlaps |
+| `Split` | Recommend separate PRs |
+| `ManualResolution` | Require human review |
+
+### Default weights
+
+- `priority_weight`: `0.4`
+- `evidence_weight`: `0.6`
+- `auto_resolve_threshold`: `0.8`
+
+## Endpoints
+
+The orchestration layer exposes health and control endpoints through the platform gateway:
+
+| Method | Path | Description |
+|--------|------|-------------|
+| GET | `/api/orchestrator/health` | Orchestrator health |
+| POST | `/api/orchestrator/up` | Start services |
+| POST | `/api/orchestrator/down` | Stop services |
+| GET | `/api/orchestrator/status` | Service status |
+| POST | `/api/arbitration/detect` | Detect conflicts |
+| POST | `/api/arbitration/arbitrate` | Arbitrate conflicts |
+| POST | `/api/arbitration/splits` | Recommend PR splits |
+
+## JSON examples
+
+### Detect conflicts
+
+```bash
+curl -X POST https://api.allternit.com/api/arbitration/detect \
+  -H 'content-type: application/json' \
+  -d '{
+    "changes": [
+      { "id": "a", "path": "src/lib.rs", "start_line": 10, "end_line": 20 },
+      { "id": "b", "path": "src/lib.rs", "start_line": 15, "end_line": 25 }
+    ]
+  }'
+```
+
+Response:
+
+```json
+{
+  "conflicts": [
+    {
+      "change_a": "a",
+      "change_b": "b",
+      "overlap_type": "DirectOverlap",
+      "severity": "Critical"
+    }
+  ],
+  "compatible_changes": []
+}
+```
+
+## Error codes
+
+| HTTP | Code | Meaning |
+|------|------|---------|
+| 200 | — | Success |
+| 400 | `bad_request` | Invalid request |
+| 409 | `port_conflict` | Required port already in use |
+| 422 | `arbitration_failed` | Could not arbitrate conflict |
+| 500 | `internal_error` | Orchestrator error |
+
+## Related pages
+
+- [Gizzi Runtime](/core/gizzi-runtime)
+- [Session Manager](/core/session-manager)
+- [Process Driver](/core/process-driver)
+- [BYOC Deployment](/byoc/deployment)

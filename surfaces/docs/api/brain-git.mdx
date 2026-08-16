@@ -1,0 +1,104 @@
+---
+title: 'Brain Git API'
+description: 'Clone, push, and pull Allternit brains using standard git smart-HTTP.'
+---
+
+## Overview
+
+Brains are per-user bare Git repositories that act as hosted knowledge remotes for agents. The Brain Git API exposes each brain through standard git smart-HTTP so you can use ordinary git clients to clone, push, and pull knowledge pages. Brain management and git-token lifecycle are covered on the [Brains API](/api/brains) page; this page covers the git transport.
+
+## Base URL
+
+Management and read endpoints:
+
+```
+https://api.allternit.com/api/v1
+```
+
+Git smart-HTTP endpoints:
+
+```
+https://api.allternit.com/api/v1/brains/:id/git
+```
+
+For local development:
+
+```
+http://127.0.0.1:8013/api/v1/brains/:id/git
+```
+
+## Authentication
+
+Git smart-HTTP routes require an `allternit_git_...` token. The token can be passed as a `Bearer` header or as the password in HTTP Basic auth (the username is ignored). Management routes (`/api/v1/brains`, `/api/v1/tokens/git`) require a platform bearer token. See [Authentication](/api/authentication) and [Brains API](/api/brains) for minting git tokens.
+
+## Endpoints
+
+| Method | Path | Description |
+|--------|------|-------------|
+| `GET/POST` | `/api/v1/brains/:id/git/*path` | Git smart-HTTP clone/push/pull. |
+
+## Clone a brain
+
+Use the clone URL returned by `POST /api/v1/brains` or `GET /api/v1/brains`.
+
+### With Bearer header
+
+```bash
+git clone https://api.allternit.com/v1/brains/brain_8f7e6d5c/git \
+  --config http.extraHeader="Authorization: Bearer allternit_git_a1b2c3d4e5f678901234567890123456"
+```
+
+### With HTTP Basic auth
+
+```bash
+git clone https://x-allternit-git-token:allternit_git_a1b2c3d4e5f678901234567890123456@api.allternit.com/v1/brains/brain_8f7e6d5c/git
+```
+
+## Push and pull
+
+Once cloned, ordinary `git push` and `git pull` work with the same credential. The gateway proxies the git smart-HTTP conversation to `git http-backend`, so all standard git operations are supported.
+
+```bash
+cd brain_8f7e6d5c
+git pull
+echo "# New runbook" > runbooks/deploy.md
+git add runbooks/deploy.md
+git commit -m "Add deployment runbook"
+git push
+```
+
+## Read brain pages over HTTP
+
+To read the markdown pages from the default branch without using git, use:
+
+```http
+GET /api/v1/brains/:id/pages
+```
+
+This route is documented on the [Brains API](/api/brains) page.
+
+## Git token lifecycle
+
+Git tokens are minted, listed, and revoked through the management surface:
+
+- `POST /api/v1/tokens/git` — mint a token (plaintext shown once).
+- `GET /api/v1/tokens/git` — list tokens without plaintext.
+- `DELETE /api/v1/tokens/git/:id` — revoke a token.
+
+See [Brains API](/api/brains) for examples.
+
+## Error codes
+
+| Status | Meaning | Typical cause |
+|--------|---------|---------------|
+| `200 OK` | Success | Git operation succeeded. |
+| `401 Unauthorized` | Authentication required | Missing or invalid git token. |
+| `404 Not Found` | Brain not found | Unknown brain id or token owner mismatch. |
+| `500 Internal Server Error` | Git backend error | `git http-backend` or filesystem error. |
+
+## Related pages
+
+- [Brains API](/api/brains)
+- [Local Brains API](/api/local-brains)
+- [Memory API](/api/memory)
+- [Authentication](/api/authentication)

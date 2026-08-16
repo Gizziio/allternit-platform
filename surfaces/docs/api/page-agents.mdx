@@ -1,0 +1,171 @@
+---
+title: 'Page Agents API'
+description: 'Start, stream, stop, and configure browser-surface page-agent runs through the Allternit runtime.'
+---
+
+## Overview
+
+The Page Agents API is a surface-agnostic proxy to the local Gizzi brain runtime for browser and page-agent workflows. It lets you start a goal-driven run, stream runtime events over SSE, stop an active run, and save runtime configuration. In Phase 1 the runtime target defaults to `http://127.0.0.1:4096` and can be overridden with the `ALLTERNIT_PAGE_AGENT_URL` environment variable.
+
+## Base URL
+
+```
+https://api.allternit.com/api
+```
+
+## Authentication
+
+Page-agent routes are served through the gateway, so include a valid bearer token in the `Authorization` header. See [Authentication](/api/authentication) for details.
+
+## Endpoints
+
+| Method | Path | Description |
+|--------|------|-------------|
+| `POST` | `/api/page-agent/run` | Start a new page-agent run. |
+| `GET`  | `/api/page-agent/stream/:session_id` | Stream runtime events over SSE. |
+| `POST` | `/api/page-agent/stop/:session_id` | Stop an active run. |
+| `GET`  | `/api/page-agent/status/:session_id` | Check runtime health for a session. |
+| `POST` | `/api/page-agent/config` | Save or validate page-agent configuration. |
+
+## Start a run
+
+```http
+POST /api/page-agent/run
+```
+
+Creates a runtime browser session for the supplied goal. The gateway forwards the request to the configured page-agent runtime and returns the runtime session ID.
+
+### Request body
+
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| `goal` | string | Yes | The task or objective for the page agent. Must be non-empty. |
+| `config` | object | No | Runtime configuration object forwarded by the client. Phase 1 echoes it back. |
+
+### Example request
+
+```bash
+curl -X POST https://api.allternit.com/api/page-agent/run \
+  -H "Authorization: Bearer $TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "goal": "Summarize the pricing page and return a structured comparison table."
+  }'
+```
+
+### Example response
+
+```json
+{
+  "sessionId": "sess_4a5b6c7d",
+  "goal": "Summarize the pricing page and return a structured comparison table."
+}
+```
+
+## Stream events
+
+```http
+GET /api/page-agent/stream/:session_id
+```
+
+Opens a server-sent event stream that proxies events from the page-agent runtime. Each upstream event is tagged with `requestedSessionId` so clients can correlate frames even when the upstream runtime does not include the session ID.
+
+### Example curl
+
+```bash
+curl -N -H "Authorization: Bearer $TOKEN" \
+  -H "Accept: text/event-stream" \
+  https://api.allternit.com/api/page-agent/stream/sess_4a5b6c7d
+```
+
+### Example event
+
+```text
+event: message
+data: {"type":"content_block_delta","delta":"...","requestedSessionId":"sess_4a5b6c7d"}
+```
+
+## Stop a run
+
+```http
+POST /api/page-agent/stop/:session_id
+```
+
+Aborts the runtime session. The gateway forwards the abort request to the page-agent runtime.
+
+### Example response
+
+```json
+{
+  "sessionId": "sess_4a5b6c7d",
+  "status": "stopped"
+}
+```
+
+## Check status
+
+```http
+GET /api/page-agent/status/:session_id
+```
+
+Probes the page-agent runtime health and returns a lightweight status object. Phase 2 will add a persistent session store with richer status.
+
+### Example response
+
+```json
+{
+  "sessionId": "sess_4a5b6c7d",
+  "status": "running"
+}
+```
+
+## Save configuration
+
+```http
+POST /api/page-agent/config
+```
+
+Phase 1 echoes the supplied configuration back as a validation/save stub. Future phases will persist the configuration on the server.
+
+### Example request
+
+```bash
+curl -X POST https://api.allternit.com/api/page-agent/config \
+  -H "Authorization: Bearer $TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "headless": true,
+    "viewport": { "width": 1280, "height": 800 }
+  }'
+```
+
+### Example response
+
+```json
+{
+  "ok": true,
+  "config": {
+    "headless": true,
+    "viewport": { "width": 1280, "height": 800 }
+  }
+}
+```
+
+## Error codes
+
+| Status | Meaning | Typical cause |
+|--------|---------|---------------|
+| `200 OK` | Success | Request succeeded. |
+| `201 Created` | Created | Not used in Phase 1. |
+| `400 Bad Request` | Invalid request | Missing or empty `goal`. |
+| `401 Unauthorized` | Unauthorized | Missing or invalid bearer token. |
+| `502 Bad Gateway` | Runtime error | Page-agent runtime returned an error or is unreachable. |
+| `503 Service Unavailable` | Unavailable | Local runtime is not running. |
+| `500 Internal Server Error` | Server error | Contact support. |
+
+## Related pages
+
+- [Agents API](/api/agents)
+- [Agent Sessions](/api/agent-sessions)
+- [Sessions](/api/sessions)
+- [Local Brains](/api/local-brains)

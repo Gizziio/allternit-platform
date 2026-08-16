@@ -1,0 +1,154 @@
+---
+title: 'Runtime Adapter'
+description: 'Bridge Allternit governance to the Gizzi Runtime.'
+---
+
+## Overview
+
+The **Allternit Runtime Adapter** connects Allternit governance to the Gizzi Runtime. It provides adapters, wrappers, and hooks so sessions, tool executions, file operations, and plugin loading can be governed by the Allternit kernel.
+
+## Installation
+
+```bash
+pnpm add @allternit/runtime
+```
+
+## Base URL
+
+The adapter is consumed as a TypeScript package. It wraps runtime clients and tools rather than exposing standalone HTTP endpoints.
+
+## Components
+
+### Adapters
+
+| Adapter | Purpose |
+|---------|---------|
+| `SessionAdapter` | Injects WIH governance at session initialization |
+| `PluginAdapter` | Governs plugin loading and tool registration |
+
+### Wrappers
+
+| Wrapper | Purpose |
+|---------|---------|
+| `ToolWrapper` | Intercepts tool execution with routing |
+| `FileWrapper` | Governs file operations |
+
+### Hooks
+
+| Hook | Purpose |
+|------|---------|
+| `HookManager` | Lifecycle hooks for session, tool, and file events |
+
+## Configuration
+
+```typescript
+interface RuntimeBridgeConfig {
+  kernel: AllternitKernel;
+  enforceWih?: boolean;
+  defaultToolPolicy?: ToolPolicy;
+  fileAccessMode?: 'standard' | 'read-only' | 'restricted';
+  allowedWorkspaces?: string[];
+  auditLogging?: {
+    enabled: boolean;
+    destination?: 'console' | 'file' | 'callback';
+    filePath?: string;
+    callback?: (log: AuditLogEntry) => void;
+  };
+}
+```
+
+## JSON examples
+
+### Initialize a governed session
+
+```typescript
+import { prepareSessionInit, getSessionContext } from '@allternit/runtime';
+
+const result = await prepareSessionInit({
+  allternitKernel: kernel,
+  wihId: 'P3-T0300',
+  workspaceRoot: '/project',
+  enforceWih: true,
+});
+
+const context = getSessionContext(result.sessionId);
+```
+
+### Wrap a tool execution
+
+```typescript
+import { wrapToolExecution } from '@allternit/runtime';
+
+const result = await wrapToolExecution(
+  {
+    kernel,
+    sessionId: 'sess-xxx',
+    agentId: 'agent-1',
+    workspaceRoot: '/project',
+    wihId: 'P3-T0301',
+    originalExecutor: runtimeExecutor,
+  },
+  'read_file',
+  { path: '/project/file.txt' }
+);
+
+if (result.decision === 'allow') {
+  console.log('Result:', result.result);
+}
+```
+
+### Governed file operations
+
+```typescript
+import { createWrappedFileOperations } from '@allternit/runtime';
+
+const fileOps = createWrappedFileOperations({
+  kernel,
+  sessionId: 'sess-xxx',
+  agentId: 'agent-1',
+  workspaceRoot: '/project',
+  wihId: 'P3-T0302',
+});
+
+const { data } = await fileOps.read('/file.txt', 'utf-8');
+```
+
+### Plugin management
+
+```typescript
+import { PluginAdapter } from '@allternit/runtime';
+
+const adapter = new PluginAdapter({
+  kernel,
+  allowedPlugins: ['git', 'github'],
+  requireWih: true,
+});
+
+await adapter.loadPlugin(myPlugin, { wihId: 'P3-T0303' });
+const tools = adapter.getAllTools();
+```
+
+## Integration points
+
+| Runtime Component | Integration File | Adapter |
+|-------------------|------------------|---------|
+| `GatewayClient` | `src/gateway/client.ts` | Session Adapter |
+| `ToolPolicy` | `src/agents/tool-policy.ts` | Tool Wrapper |
+| `FileSafe` | `src/infra/fs-safe.ts` | File Wrapper |
+| `PluginLoader` | `src/plugins/tools.ts` | Plugin Adapter |
+
+## Error codes
+
+| Error | Meaning |
+|-------|---------|
+| `wih_required` | A Work-In-Hand identifier is required but missing |
+| `wih_invalid` | The provided WIH is invalid or not found |
+| `tool_denied` | Tool execution denied by policy |
+| `file_access_denied` | File operation denied by policy |
+| `plugin_not_allowed` | Plugin is not in the allowlist |
+
+## Related pages
+
+- [Gizzi Runtime](/core/gizzi-runtime)
+- [Session Manager](/core/session-manager)
+- [Permission Policies](/security/permission-policies)

@@ -1,0 +1,302 @@
+---
+title: Artifacts API
+description: Create, version, and section long-lived content artifacts on the Allternit platform.
+---
+
+## Overview
+
+The Artifacts API stores user-owned content artifacts in a local SQLite database. Each artifact belongs to a workspace, carries a status (for example `draft` or `final`), supports tags, and is composed of ordered sections. Every update creates a revision snapshot so changes remain auditable.
+
+## Base URL
+
+```text
+https://api.allternit.com/api
+```
+
+For local development:
+
+```text
+http://127.0.0.1:8013/api
+```
+
+## Authentication
+
+All requests require a valid bearer token in the `Authorization` header. See [Authentication](/api/authentication) for details.
+
+## Artifact object
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `id` | string | Unique artifact identifier. |
+| `user_id` | string | Owner identifier. |
+| `workspace_id` | string | Workspace the artifact belongs to. |
+| `title` | string | Artifact title. |
+| `type` | string | Artifact type, defaults to `document`. |
+| `status` | string | Current status, e.g. `draft`, `final`. |
+| `summary` | string \| null | Short summary. |
+| `tags` | string[] | Normalized tag list. |
+| `created_at` | string | ISO 8601 creation timestamp. |
+| `updated_at` | string | ISO 8601 update timestamp. |
+| `sections` | object[] | Ordered section objects. |
+| `revisions` | object[] | Historical snapshots. |
+
+## Section object
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `id` | string | Unique section identifier. |
+| `artifact_id` | string | Parent artifact id. |
+| `heading` | string | Section heading. |
+| `kind` | string | Section mime-style kind, e.g. `document/markdown`. |
+| `body` | string | Section body content. |
+| `position` | integer | Ordering index. |
+| `created_at` | string | ISO 8601 timestamp. |
+| `updated_at` | string | ISO 8601 timestamp. |
+
+## Endpoints
+
+| Method | Path | Description |
+|--------|------|-------------|
+| `GET` | `/artifacts` | List artifacts for the authenticated user. |
+| `POST` | `/artifacts` | Create a new artifact. |
+| `GET` | `/artifacts/:id` | Get an artifact with sections and revisions. |
+| `PATCH` | `/artifacts/:id` | Update artifact metadata. |
+| `DELETE` | `/artifacts/:id` | Delete an artifact. |
+| `GET` | `/artifacts/search` | Search across titles, summaries, tags, and sections. |
+| `GET` | `/artifacts/stats` | Per-workspace artifact counts. |
+| `GET` | `/artifacts/:id/revisions` | List revision snapshots. |
+| `GET` | `/artifacts/:id/sections` | List sections. |
+| `POST` | `/artifacts/:id/sections` | Add a section. |
+| `PATCH` | `/artifacts/:id/sections/:section_id` | Update a section. |
+| `DELETE` | `/artifacts/:id/sections/:section_id` | Delete a section. |
+
+## List artifacts
+
+```bash
+curl "https://api.allternit.com/api/artifacts?workspaceId=ws_01hqx8x7x7x7x7x7x7x7x7x&status=draft&type=document" \
+  -H "Authorization: Bearer $TOKEN"
+```
+
+### Query parameters
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `workspaceId` | string | Filter by workspace. |
+| `status` | string | Filter by status. |
+| `type` | string | Filter by artifact type. |
+| `_q` | string | Reserved generic search parameter. |
+
+### Response
+
+```json
+{
+  "artifacts": [
+    {
+      "id": "art_01hqx8x7x7x7x7x7x7x7x7x",
+      "user_id": "user_2d9e...",
+      "workspace_id": "ws_01hqx8x7x7x7x7x7x7x7x7x",
+      "title": "ACI Design Doc",
+      "type": "document",
+      "status": "draft",
+      "summary": "Initial architecture for the ACI surface.",
+      "tags": ["aci", "design"],
+      "created_at": "2026-08-13T18:00:00Z",
+      "updated_at": "2026-08-13T18:05:00Z",
+      "sections": [],
+      "revisions": []
+    }
+  ]
+}
+```
+
+## Create artifact
+
+```bash
+curl -X POST https://api.allternit.com/api/artifacts \
+  -H "Authorization: Bearer $TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "workspace_id": "ws_01hqx8x7x7x7x7x7x7x7x7x",
+    "title": "BYOC Deployment Runbook",
+    "type": "document",
+    "status": "draft",
+    "summary": "Step-by-step BYOC deployment guide.",
+    "tags": ["byoc", "ops"],
+    "sections": [
+      {
+        "heading": "Prerequisites",
+        "kind": "document/markdown",
+        "body": "- CommRails installed\n- BYOC token",
+        "position": 0
+      }
+    ]
+  }'
+```
+
+### Request body
+
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| `workspace_id` | string | yes | Workspace identifier. |
+| `title` | string | yes | Artifact title. |
+| `type` | string | no | Artifact type, default `document`. |
+| `status` | string | no | Status, default `draft`. |
+| `summary` | string | no | Optional summary. |
+| `tags` | array | no | Tag list. |
+| `sections` | object[] | no | Initial sections. |
+
+### Response
+
+```json
+{
+  "artifact": {
+    "id": "art_02hqx8x7x7x7x7x7x7x7x7x",
+    "user_id": "user_2d9e...",
+    "workspace_id": "ws_01hqx8x7x7x7x7x7x7x7x7x",
+    "title": "BYOC Deployment Runbook",
+    "type": "document",
+    "status": "draft",
+    "summary": "Step-by-step BYOC deployment guide.",
+    "tags": ["byoc", "ops"],
+    "created_at": "2026-08-13T18:00:00Z",
+    "updated_at": "2026-08-13T18:00:00Z",
+    "sections": [
+      {
+        "id": "sec_01hqx8x7x7x7x7x7x7x7x7x",
+        "artifact_id": "art_02hqx8x7x7x7x7x7x7x7x7x",
+        "heading": "Prerequisites",
+        "kind": "document/markdown",
+        "body": "- CommRails installed\n- BYOC token",
+        "position": 0,
+        "created_at": "2026-08-13T18:00:00Z",
+        "updated_at": "2026-08-13T18:00:00Z"
+      }
+    ],
+    "revisions": [
+      {
+        "id": "rev_01hqx8x7x7x7x7x7x7x7x7x",
+        "artifact_id": "art_02hqx8x7x7x7x7x7x7x7x7x",
+        "reason": "created",
+        "snapshot": { "title": "BYOC Deployment Runbook", ... },
+        "created_at": "2026-08-13T18:00:00Z"
+      }
+    ]
+  }
+}
+```
+
+## Update artifact
+
+```bash
+curl -X PATCH https://api.allternit.com/api/artifacts/art_02hqx8x7x7x7x7x7x7x7x7x \
+  -H "Authorization: Bearer $TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "status": "final",
+    "tags": ["byoc", "ops", "approved"]
+  }'
+```
+
+### Response
+
+```json
+{
+  "artifact": {
+    "id": "art_02hqx8x7x7x7x7x7x7x7x7x",
+    "status": "final",
+    "tags": ["byoc", "ops", "approved"],
+    ...
+  }
+}
+```
+
+## Search artifacts
+
+```bash
+curl "https://api.allternit.com/api/artifacts/search?q=BYOC&workspaceId=ws_01hqx8x7x7x7x7x7x7x7x7x" \
+  -H "Authorization: Bearer $TOKEN"
+```
+
+### Response
+
+```json
+{
+  "artifacts": [
+    {
+      "id": "art_02hqx8x7x7x7x7x7x7x7x7x",
+      "title": "BYOC Deployment Runbook",
+      ...
+    }
+  ]
+}
+```
+
+## Artifact stats
+
+```bash
+curl https://api.allternit.com/api/artifacts/stats \
+  -H "Authorization: Bearer $TOKEN"
+```
+
+### Response
+
+```json
+{
+  "stats": [
+    {
+      "workspace_id": "ws_01hqx8x7x7x7x7x7x7x7x7x",
+      "total": 12,
+      "drafts": 8,
+      "final": 4,
+      "updated_at": "2026-08-13T18:05:00Z"
+    }
+  ]
+}
+```
+
+## Add a section
+
+```bash
+curl -X POST https://api.allternit.com/api/artifacts/art_02hqx8x7x7x7x7x7x7x7x7x/sections \
+  -H "Authorization: Bearer $TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "heading": "Rollback",
+    "kind": "document/markdown",
+    "body": "1. Drain sessions\n2. Restore snapshot",
+    "position": 1
+  }'
+```
+
+### Response
+
+```json
+{
+  "section": {
+    "id": "sec_02hqx8x7x7x7x7x7x7x7x7x",
+    "artifact_id": "art_02hqx8x7x7x7x7x7x7x7x7x",
+    "heading": "Rollback",
+    "kind": "document/markdown",
+    "body": "1. Drain sessions\n2. Restore snapshot",
+    "position": 1,
+    "created_at": "2026-08-13T18:10:00Z",
+    "updated_at": "2026-08-13T18:10:00Z"
+  }
+}
+```
+
+## Error codes
+
+| Status | Code | Description |
+|--------|------|-------------|
+| `400` | `workspace_id and title are required` | Missing required creation fields. |
+| `400` | `heading is required` | Section heading missing. |
+| `401` | `Unauthorized` | Missing or invalid bearer token. |
+| `404` | `Artifact not found` / `Section not found` | Resource not found. |
+| `500` | `internal_error` | Database or server error. |
+
+## Related pages
+
+- [Library](/api/library)
+- [Agent Workspaces](/api/agent-workspaces)
+- [Boards](/api/boards)

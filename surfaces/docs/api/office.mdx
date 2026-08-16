@@ -1,0 +1,217 @@
+---
+title: 'Office Runtime API'
+description: 'Bootstrap, sync, and list Office add-in bindings and sessions for the Allternit Office runtime.'
+---
+
+## Overview
+
+The Office Runtime API tracks Office add-in bindings and active sessions on the local gateway. It is used by the Allternit Office add-in to bootstrap a document binding, sync runtime state, and query active bindings. State is persisted to `~/.allternit/gateway-office-runtime.json` and cleaned up automatically based on TTL rules.
+
+A binding represents a unique Office document; a session represents one active add-in instance attached to a binding.
+
+## Base URL
+
+```
+https://api.allternit.com/api/v1/office
+```
+
+For local development:
+
+```
+http://127.0.0.1:8013/api/v1/office
+```
+
+## Authentication
+
+Office runtime routes are currently local-gateway routes. When accessed through the platform API they inherit the standard bearer-token auth middleware. See [Authentication](/api/authentication).
+
+## Data models
+
+### OfficeBinding
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `id` | string | Binding UUID. |
+| `document_key` | string | Stable hash derived from document identity. |
+| `host` | string | Office host, e.g. `word`, `excel`, `powerpoint`. |
+| `title` | string | Document title. |
+| `label` | string | Binding label. |
+| `summary` | string | Document summary. |
+| `document_url` | string | Document URL, if available. |
+| `document_id` | string | Document id, if available. |
+| `fingerprint` | string | Document fingerprint, if available. |
+| `project_id` | string | Associated project id. |
+| `workspace_id` | string | Associated workspace id. |
+| `taskpane_origin` | string | Task pane origin. |
+| `taskpane_url` | string | Task pane URL. |
+| `manifest_url` | string | Add-in manifest URL. |
+| `platform_origin` | string | Platform origin. |
+| `connected` | boolean | Whether the binding is currently connected. |
+| `created_at` | string | ISO 8601 timestamp. |
+| `updated_at` | string | ISO 8601 timestamp. |
+| `last_seen_at` | string | ISO 8601 timestamp. |
+
+### OfficeRuntimeSession
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `id` | string | Session UUID. |
+| `binding_id` | string | Parent binding id. |
+| `status` | string | Runtime status. |
+| `page_label` | string | Current page label. |
+| `current_task` | string | Current task description. |
+| `history_count` | integer | History counter. |
+| `connected` | boolean | Session connection state. |
+| `created_at` | string | ISO 8601 timestamp. |
+| `updated_at` | string | ISO 8601 timestamp. |
+| `last_seen_at` | string | ISO 8601 timestamp. |
+
+## Endpoints
+
+| Method | Path | Description |
+|--------|------|-------------|
+| `POST` | `/api/v1/office/bootstrap` | Create or update a binding and session for a document. |
+| `POST` | `/api/v1/office/runtime/state` | Sync runtime state for an existing binding/session. |
+| `GET` | `/api/v1/office/bindings` | List all bindings with active sessions. |
+| `GET` | `/api/v1/office/bindings/:binding_id` | Get a single binding with active sessions. |
+
+## Bootstrap a document
+
+```http
+POST /api/v1/office/bootstrap
+```
+
+Creates a binding for the document if one does not exist, creates or updates a session, and returns both plus gateway metadata.
+
+### Request body
+
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| `session_id` | string | No | Existing session id; a new one is minted if omitted. |
+| `project_id` | string | No | Project context. |
+| `workspace_id` | string | No | Workspace context. |
+| `document` | object | Yes | `{ host, title?, label?, summary?, document_url?, document_id?, fingerprint? }`. |
+| `platform` | object | No | `{ taskpane_origin?, taskpane_url?, manifest_url?, platform_origin? }`. |
+| `runtime_state` | object | No | `{ status?, page_label?, current_task?, history_count?, connected? }`. |
+
+### Example request
+
+```bash
+curl -X POST https://api.allternit.com/api/v1/office/bootstrap \
+  -H "Authorization: Bearer $TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "document": {
+      "host": "word",
+      "title": "Q3 Plan",
+      "label": "Q3 Plan.docx",
+      "document_id": "doc_123"
+    },
+    "platform": {
+      "taskpane_origin": "https://office.allternit.com",
+      "taskpane_url": "https://office.allternit.com/taskpane"
+    },
+    "runtime_state": {
+      "status": "active",
+      "connected": true
+    }
+  }'
+```
+
+### Example response
+
+```json
+{
+  "ok": true,
+  "binding": {
+    "id": "bind_550e8400",
+    "document_key": "...",
+    "host": "word",
+    "title": "Q3 Plan",
+    "connected": true,
+    "active_sessions": [
+      {
+        "id": "sess_550e8400",
+        "binding_id": "bind_550e8400",
+        "connected": true,
+        "history_count": 0
+      }
+    ],
+    "active_session_count": 1
+  },
+  "session": {
+    "id": "sess_550e8400",
+    "binding_id": "bind_550e8400",
+    "connected": true,
+    "history_count": 0
+  },
+  "gateway": {
+    "base_url": "/api/v1",
+    "supports_runtime_sync": true
+  }
+}
+```
+
+## Sync runtime state
+
+```http
+POST /api/v1/office/runtime/state
+```
+
+Updates an existing binding and session with new document, platform, or runtime state.
+
+### Request body
+
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| `binding_id` | string | Yes | Binding to update. |
+| `session_id` | string | Yes | Session to update. |
+| `project_id` | string | No | Project context. |
+| `workspace_id` | string | No | Workspace context. |
+| `document` | object | No | Partial document fields. |
+| `platform` | object | No | Partial platform fields. |
+| `runtime_state` | object | No | Partial runtime state. |
+
+### Example response
+
+Same shape as `/bootstrap`.
+
+## List bindings
+
+```http
+GET /api/v1/office/bindings
+```
+
+Returns all non-stale bindings with their active sessions.
+
+### Example response
+
+```json
+{
+  "ok": true,
+  "bindings": [...],
+  "count": 1
+}
+```
+
+## Get a binding
+
+```http
+GET /api/v1/office/bindings/:binding_id
+```
+
+Returns a single binding with active sessions.
+
+## Error codes
+
+| Status | Meaning | Typical cause |
+|--------|---------|---------------|
+| `200 OK` | Success. | Request succeeded. |
+| `404 Not Found` | Binding or session not found. | Stale or unknown `binding_id`/`session_id`. |
+| `500 Internal Server Error` | Server error. | Failed to persist runtime file. |
+
+## Related pages
+
+- [Office Engine API](/api/office-engine)
+- [Agents API](/api/agents)
+- [Authentication](/api/authentication)

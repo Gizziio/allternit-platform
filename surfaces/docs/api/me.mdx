@@ -1,0 +1,109 @@
+---
+title: 'Me API'
+description: 'Read the current user profile, personal usage, and create a personal organization for self-hosted deployments.'
+---
+
+## Overview
+
+The Me API returns the current authenticated user's profile, proxies weekly usage metering from the cloud API, and lets self-hosted users create a personal organization when no Clerk-managed organization is available.
+
+## Base URL
+
+```
+https://api.allternit.com/v1/me
+```
+
+All endpoints require a valid Bearer token in the `Authorization` header. See [Authentication](/api/authentication) for details.
+
+## Endpoints
+
+| Method | Path | Description |
+|--------|------|-------------|
+| GET | `/me` | Get the current user profile. |
+| GET | `/me/usage` | Get weekly usage metering for the caller. |
+| POST | `/me/organization` | Create a personal organization (self-hosted/no-Clerk only). |
+
+## Get current user
+
+```bash
+GET /api/v1/me
+```
+
+Response:
+
+```json
+{
+  "user": {
+    "id": "user_abc123",
+    "clerk_id": "usr_clerk_abc123",
+    "email": "dev@example.com",
+    "name": "Example User",
+    "avatar_url": "https://example.com/avatar.png",
+    "role": "user",
+    "status": "active",
+    "created_at": "2026-01-01T00:00:00Z",
+    "organization_id": "org_abc123",
+    "organization_role": "owner"
+  }
+}
+```
+
+If the user row is not yet persisted, a synthetic profile is returned from the authentication claims.
+
+## Get my usage
+
+```bash
+GET /api/v1/me/usage
+```
+
+Proxies the cloud API quota/entitlements service. The cloud API URL is resolved from `ALLTERNIT_CLOUD_API_URL` or company config `cloudApiUrl`.
+
+Response:
+
+```json
+{
+  "plan": "pro",
+  "weeklyUsed": 42.5,
+  "weeklyLimit": 100,
+  "resetsAt": "2026-08-17T00:00:00Z",
+  "credits": 150
+}
+```
+
+If no cloud API is configured or the service is unreachable, the endpoint returns `503 Service Unavailable` with a clear error.
+
+## Create personal organization
+
+```bash
+POST /api/v1/me/organization
+```
+
+Creates a personal organization for the caller and assigns the owner role. This is primarily useful for self-hosted or no-Clerk-key deployments where the middleware does not auto-synthesize an organization. If the caller already has an organization, the endpoint returns the existing one with `created: false`.
+
+Response:
+
+```json
+{
+  "organization_id": "org_abc123",
+  "created": true
+}
+```
+
+## Error codes
+
+| Status | Code | Description |
+|--------|------|-------------|
+| 200 | — | Success. |
+| 201 | — | Personal organization created. |
+| 401 | `unauthorized` | Missing or invalid authentication. |
+| 503 | `usage_metering_unavailable` | No cloud API URL configured. |
+| 503 | `usage_metering_unreachable` | Cloud API could not be reached. |
+| 503 | `usage_metering_upstream_error` | Cloud API returned a non-2xx status. |
+| 503 | `usage_metering_bad_response` | Cloud API response could not be decoded. |
+| 500 | `db_error` / `internal_error` | Unexpected server error. |
+
+## Related links
+
+- [Authentication](/api/authentication)
+- [Usage API](/api/usage)
+- [BYOC Runtime](/byoc/overview)

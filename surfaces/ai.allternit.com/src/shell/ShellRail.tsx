@@ -200,12 +200,13 @@ export function ShellRail({
 
   // Per-mode rail tab visibility (browser/code only; home has no More menu)
   const [browserRailTabs, setBrowserRailTabs] = useState<Record<string, boolean>>(() => {
-    if (typeof window === 'undefined') return { 'mini-apps-store': true, 'browser-extensions': true };
+    const defaults = { 'mini-apps-store': true, 'browser-extensions': true, 'site-apis': true };
+    if (typeof window === 'undefined') return defaults;
     try {
       const saved = JSON.parse(localStorage.getItem('allternit-browser-rail-tabs') ?? '{}');
-      return { 'mini-apps-store': true, 'browser-extensions': true, ...saved };
+      return { ...defaults, ...saved };
     } catch {
-      return { 'mini-apps-store': true, 'browser-extensions': true };
+      return defaults;
     }
   });
   const [codeRailTabs, setCodeRailTabs] = useState<Record<string, boolean>>(() => {
@@ -633,10 +634,19 @@ export function ShellRail({
                 onClick={() => onOpen?.('browser-extensions')}
               />
             )}
+            {browserRailTabs['site-apis'] && (
+              <RailItem
+                icon={Plugs}
+                label="Site APIs"
+                isActive={activeViewType === 'site-apis'}
+                onClick={() => onOpen?.('site-apis')}
+              />
+            )}
             <MoreDropdown
               tabs={[
                 { id: 'mini-apps-store', label: 'Mini-apps Store', icon: AppWindow, visible: browserRailTabs['mini-apps-store'] },
                 { id: 'browser-extensions', label: 'Office & Extensions', icon: PuzzlePiece, visible: browserRailTabs['browser-extensions'] },
+                { id: 'site-apis', label: 'Site APIs', icon: Plugs, visible: browserRailTabs['site-apis'] },
               ]}
               onToggle={toggleBrowserRailTab}
               onCustomize={() => onOpenCustomize?.()}
@@ -801,7 +811,7 @@ export function ShellRail({
           <div className="px-2 pb-2 shrink-0 flex flex-col gap-0.5">
             <RailItem
               icon={Robot}
-              label="Agent Hub"
+              label="Agent | Bot Hub"
               isActive={activeViewType === 'agent-hub'}
               onClick={() => onOpen?.('agent-hub')}
             />
@@ -1000,7 +1010,7 @@ export function ShellRail({
             {codeRailTabs['agent-hub'] && (
               <RailItem
                 icon={Robot}
-                label="Agent Hub"
+                label="Agent | Bot Hub"
                 isActive={activeViewType === 'agent-hub'}
                 onClick={() => onOpen?.('agent-hub')}
               />
@@ -1035,7 +1045,7 @@ export function ShellRail({
             )}
             <MoreDropdown
               tabs={[
-                { id: 'agent-hub', label: 'Agent Hub', icon: Robot, visible: codeRailTabs['agent-hub'] },
+                { id: 'agent-hub', label: 'Agent | Bot Hub', icon: Robot, visible: codeRailTabs['agent-hub'] },
                 { id: 'projects', label: 'Projects', icon: FolderOpen, visible: codeRailTabs['projects'] },
                 { id: 'artifacts-library', label: 'Artifacts Library', icon: FileText, visible: codeRailTabs['artifacts-library'] },
                 { id: 'code-automations', label: 'Automation Tasks', icon: Clock, visible: codeRailTabs['code-automations'] },

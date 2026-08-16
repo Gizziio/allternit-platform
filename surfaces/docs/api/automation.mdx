@@ -1,0 +1,321 @@
+---
+title: 'Automation API'
+description: 'Manage goals, scheduled routines, and session-scoped loops through the Allternit automation surface.'
+---
+
+## Overview
+
+The Automation API surfaces Gizzi Code's cron/routine/loop runtime through the Allternit platform API. A **goal** is a platform-owned objective that can own **routines** (persistent scheduled jobs) and **loops** (session-scoped recurring jobs). Routines and loops can execute locally or in the cloud via the Gizzi cron daemon.
+
+## Base URL
+
+```
+https://api.allternit.com/api/v1/automation
+```
+
+For local development:
+
+```
+http://127.0.0.1:8013/api/v1/automation
+```
+
+## Authentication
+
+All automation routes require a valid bearer token. See [Authentication](/api/authentication).
+
+## Data models
+
+### Goal
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `id` | string | Goal UUID. |
+| `user_id` | string | Owner. |
+| `workspace_id` | string | Optional workspace context. |
+| `agent_id` | string | Optional associated agent. |
+| `title` | string | Goal title. |
+| `description` | string | Optional description. |
+| `status` | string | `active`, `paused`, `completed`, etc. |
+| `priority` | string | `low`, `medium`, `high`, etc. |
+| `target_date` | string | Optional ISO 8601 target date. |
+| `progress` | integer | Progress percentage. |
+| `metadata` | object | Arbitrary metadata. |
+| `created_at` | string | ISO 8601 timestamp. |
+| `updated_at` | string | ISO 8601 timestamp. |
+
+### Routine
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `id` | string | Routine UUID. |
+| `user_id` | string | Owner. |
+| `goal_id` | string | Optional parent goal. |
+| `agent_id` | string | Optional agent to run. |
+| `gizzi_job_id` | string | Daemon job id when cloud scheduled. |
+| `name` | string | Routine name. |
+| `description` | string | Optional description. |
+| `status` | string | `active`, `paused`, etc. |
+| `schedule_type` | string | `cron`, `interval`, `manual`, or `once`. |
+| `schedule_expression` | string | Cron expression or interval shorthand. |
+| `timezone` | string | Optional timezone. |
+| `execution_domain` | string | `local` or `cloud`. |
+| `config` | object | Routine configuration including `jobType`. |
+| `max_runs` | integer | Optional maximum run count. |
+| `timeout_seconds` | integer | Optional per-run timeout. |
+| `max_retries` | integer | Optional retry count. |
+
+### Loop
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `id` | string | Loop UUID. |
+| `user_id` | string | Owner. |
+| `goal_id` | string | Optional parent goal. |
+| `agent_id` | string | Optional agent to run. |
+| `session_id` | string | Optional associated session. |
+| `gizzi_job_id` | string | Daemon job id when cloud scheduled. |
+| `name` | string | Loop name. |
+| `description` | string | Optional description. |
+| `status` | string | `active`, `paused`, etc. |
+| `schedule_type` | string | `cron`, `interval`, `manual`, or `once`. |
+| `schedule_expression` | string | Cron expression or interval shorthand. |
+| `execution_domain` | string | `local` or `cloud`. |
+| `config` | object | Loop configuration. |
+| `expires_at` | string | Optional ISO 8601 expiry. |
+
+## Endpoints
+
+### Goals
+
+| Method | Path | Description |
+|--------|------|-------------|
+| `GET` | `/api/v1/automation/goals` | List goals. |
+| `POST` | `/api/v1/automation/goals` | Create a goal. |
+| `GET` | `/api/v1/automation/goals/:id` | Get a goal. |
+| `PUT` | `/api/v1/automation/goals/:id` | Update a goal. |
+| `DELETE` | `/api/v1/automation/goals/:id` | Delete a goal. |
+| `GET` | `/api/v1/automation/goals/:id/children` | List routines and loops under a goal. |
+
+### Routines
+
+| Method | Path | Description |
+|--------|------|-------------|
+| `GET` | `/api/v1/automation/routines` | List routines. |
+| `POST` | `/api/v1/automation/routines` | Create a routine. |
+| `GET` | `/api/v1/automation/routines/:id` | Get a routine. |
+| `PUT` | `/api/v1/automation/routines/:id` | Update a routine. |
+| `DELETE` | `/api/v1/automation/routines/:id` | Delete a routine. |
+| `POST` | `/api/v1/automation/routines/:id/run` | Trigger a cloud routine immediately. |
+| `GET` | `/api/v1/automation/routines/:id/runs` | List routine runs. |
+| `GET` | `/api/v1/automation/routines/:id/metrics` | Get routine metrics. |
+
+### Loops
+
+| Method | Path | Description |
+|--------|------|-------------|
+| `GET` | `/api/v1/automation/loops` | List loops. |
+| `POST` | `/api/v1/automation/loops` | Create a loop. |
+| `GET` | `/api/v1/automation/loops/:id` | Get a loop. |
+| `PUT` | `/api/v1/automation/loops/:id` | Update a loop. |
+| `DELETE` | `/api/v1/automation/loops/:id` | Delete a loop. |
+| `POST` | `/api/v1/automation/loops/:id/run` | Trigger a cloud loop immediately. |
+
+### Local scheduler
+
+| Method | Path | Description |
+|--------|------|-------------|
+| `GET` | `/api/v1/automation/local-schedules` | List local-domain routines and loops. |
+
+## Create a goal
+
+```http
+POST /api/v1/automation/goals
+```
+
+### Request body
+
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| `title` | string | Yes | Goal title. |
+| `workspace_id` | string | No | Workspace id. |
+| `agent_id` | string | No | Associated agent id. |
+| `description` | string | No | Description. |
+| `priority` | string | No | Defaults to `medium`. |
+| `target_date` | string | No | ISO 8601 date. |
+| `metadata` | object | No | Arbitrary metadata. |
+
+### Example request
+
+```bash
+curl -X POST https://api.allternit.com/api/v1/automation/goals \
+  -H "Authorization: Bearer $TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "title": "Ship Q3 release",
+    "description": "Coordinate release tasks",
+    "priority": "high",
+    "target_date": "2026-09-01"
+  }'
+```
+
+### Example response
+
+```json
+{
+  "id": "goal_550e8400",
+  "user_id": "user_550e8400",
+  "title": "Ship Q3 release",
+  "description": "Coordinate release tasks",
+  "status": "active",
+  "priority": "high",
+  "target_date": "2026-09-01",
+  "progress": 0,
+  "metadata": null,
+  "created_at": "2026-08-13T10:00:00Z",
+  "updated_at": "2026-08-13T10:00:00Z"
+}
+```
+
+## Create a routine
+
+```http
+POST /api/v1/automation/routines
+```
+
+### Request body
+
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| `name` | string | Yes | Routine name. |
+| `schedule_type` | string | Yes | `cron`, `interval`, `manual`, or `once`. |
+| `schedule_expression` | string | Yes | Cron expression or interval shorthand (`5m`, `1h`, etc.). |
+| `workspace_id` | string | No | Workspace id. |
+| `agent_id` | string | No | Agent to run. |
+| `goal_id` | string | No | Parent goal. |
+| `description` | string | No | Description. |
+| `timezone` | string | No | Timezone. |
+| `execution_domain` | string | No | `local` or `cloud`; defaults to `local`. |
+| `config` | object | No | Routine config; include `jobType` to control daemon job type. |
+| `tags` | string[] | No | Tags. |
+| `metadata` | object | No | Metadata. |
+| `max_runs` | integer | No | Maximum runs. |
+| `timeout_seconds` | integer | No | Timeout. |
+| `max_retries` | integer | No | Retries. |
+
+### Example request
+
+```bash
+curl -X POST https://api.allternit.com/api/v1/automation/routines \
+  -H "Authorization: Bearer $TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "name": "Daily standup summary",
+    "schedule_type": "cron",
+    "schedule_expression": "0 9 * * *",
+    "execution_domain": "cloud",
+    "agent_id": "agent_550e8400",
+    "config": { "jobType": "agent" }
+  }'
+```
+
+### Example response
+
+```json
+{
+  "id": "rtn_550e8400",
+  "user_id": "user_550e8400",
+  "agent_id": "agent_550e8400",
+  "gizzi_job_id": "job_550e8400",
+  "name": "Daily standup summary",
+  "status": "active",
+  "schedule_type": "cron",
+  "schedule_expression": "0 9 * * *",
+  "execution_domain": "cloud",
+  "config": { "jobType": "agent" },
+  "created_at": "2026-08-13T10:00:00Z",
+  "updated_at": "2026-08-13T10:00:00Z"
+}
+```
+
+## Trigger a routine
+
+```http
+POST /api/v1/automation/routines/:id/run
+```
+
+Triggers a cloud-scheduled routine immediately through the Gizzi cron daemon. Local-domain routines return `501 Not Implemented`.
+
+## List routine runs
+
+```http
+GET /api/v1/automation/routines/:id/runs
+```
+
+Returns stored runs for the routine and attempts to sync the latest history from the Gizzi cron daemon.
+
+### Example response
+
+```json
+{
+  "runs": [
+    {
+      "id": "run_550e8400",
+      "routine_id": "rtn_550e8400",
+      "gizzi_run_id": "grun_550e8400",
+      "status": "completed",
+      "scheduled_at": "2026-08-13T09:00:00Z",
+      "started_at": "2026-08-13T09:00:01Z",
+      "finished_at": "2026-08-13T09:00:05Z",
+      "duration_ms": 4000,
+      "output": "Standup summary generated.",
+      "error": null,
+      "attempt": 1,
+      "triggered_by": "schedule"
+    }
+  ],
+  "sync": { "attempted": true, "synced": 1, "error": null }
+}
+```
+
+## Create a loop
+
+```http
+POST /api/v1/automation/loops
+```
+
+Same request shape as a routine, plus an optional `session_id` and `expires_at`.
+
+## List local schedules
+
+```http
+GET /api/v1/automation/local-schedules
+```
+
+Returns all routines and loops whose `execution_domain` is `local`.
+
+### Example response
+
+```json
+{
+  "routines": [...],
+  "loops": [...]
+}
+```
+
+## Error codes
+
+| Status | Meaning |
+|--------|---------|
+| `200 OK` | Success. |
+| `201 Created` | Resource created. |
+| `204 No Content` | Resource deleted. |
+| `401 Unauthorized` | Missing or invalid bearer token. |
+| `404 Not Found` | Goal, routine, or loop not found. |
+| `501 Not Implemented` | Attempted to run a local-domain schedule through the cloud daemon. |
+| `500 Internal Server Error` | Database or daemon error. |
+
+## Related pages
+
+- [Agents API](/api/agents)
+- [Sessions API](/api/sessions)
+- [Authentication](/api/authentication)

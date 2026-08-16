@@ -108,7 +108,7 @@ export function AgentContextStrip({
               <Sparkle size={12} weight="fill" />
               {formatSurfaceLabel(surface)} Agent
             </span>
-            <span className="rounded-full border border-solid border-[var(--ui-border-muted)] bg-[var(--surface-hover)] text-[#d1c3b4] px-2 py-1 text-[12px] font-bold tracking-[0.08em] uppercase">
+            <span className="rounded-full border border-solid border-[var(--ui-border-muted)] bg-white/5 backdrop-blur-sm text-[#d1c3b4] px-2 py-1 text-[12px] font-bold tracking-[0.08em] uppercase">
               {statusLabel}
             </span>
           </div>

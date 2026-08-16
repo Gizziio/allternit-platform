@@ -1,0 +1,179 @@
+---
+title: 'Server Tools API'
+description: 'Register and manage custom tools that run inside the Allternit platform sandbox.'
+---
+
+## Overview
+
+The Server Tools API lets organization admins register custom tools that execute inside the Allternit platform sandbox rather than on the caller's machine. Registered tools are invoked through the same `/tools/execute` surface as native tools and are also reachable from the MCP server tool list.
+
+Management routes are gated to organization owners and admins.
+
+## Base URL
+
+```
+https://api.allternit.com/api/v1/admin/server-tools
+```
+
+For local development:
+
+```
+http://127.0.0.1:8013/api/v1/admin/server-tools
+```
+
+## Authentication
+
+Organization admins only. All requests require a valid bearer token and an active organization membership with owner or admin role. See [Authentication](/api/authentication).
+
+## Tool object
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `id` | string | Tool UUID. |
+| `org_id` | string | Owning organization. |
+| `name` | string | Tool name (`a-z0-9._-`, 1–64 chars). |
+| `description` | string | Tool description. |
+| `runtime` | string | `bash`, `python`, `node`, or `rust`. |
+| `source` | string | Source code executed by the sandbox. |
+| `entrypoint` | string | Optional entrypoint path or command. |
+| `env` | object | Environment variables injected into the sandbox. |
+| `network_enabled` | boolean | Whether network access is allowed. |
+| `timeout_secs` | integer | Execution timeout (1–3600, default 30). |
+| `created_at` | string | ISO 8601 timestamp. |
+| `updated_at` | string | ISO 8601 timestamp. |
+
+## Endpoints
+
+| Method | Path | Description |
+|--------|------|-------------|
+| `GET` | `/api/v1/admin/server-tools` | List server tools for the organization. |
+| `POST` | `/api/v1/admin/server-tools` | Create a server tool. |
+| `GET` | `/api/v1/admin/server-tools/:id` | Get a server tool. |
+| `PUT` | `/api/v1/admin/server-tools/:id` | Update a server tool. |
+| `DELETE` | `/api/v1/admin/server-tools/:id` | Delete a server tool. |
+
+## Create a server tool
+
+```http
+POST /api/v1/admin/server-tools
+```
+
+### Request body
+
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| `name` | string | Yes | Tool name. |
+| `description` | string | No | Description. |
+| `runtime` | string | Yes | `bash`, `python`, `node`, or `rust`. |
+| `source` | string | Yes | Source code to execute. |
+| `entrypoint` | string | No | Entrypoint override. |
+| `env` | object | No | Environment variables. |
+| `network_enabled` | boolean | No | Defaults to `false`. |
+| `timeout_secs` | integer | No | Defaults to `30`. |
+
+### Example request
+
+```bash
+curl -X POST https://api.allternit.com/api/v1/admin/server-tools \
+  -H "Authorization: Bearer $TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "name": "hello.team",
+    "description": "Greets a team member",
+    "runtime": "bash",
+    "source": "echo \"Hello, ${ALLTERNIT_TOOL_ARGS}\"",
+    "timeout_secs": 10
+  }'
+```
+
+### Example response
+
+```json
+{
+  "id": "st_550e8400",
+  "org_id": "org_550e8400",
+  "name": "hello.team",
+  "description": "Greets a team member",
+  "runtime": "bash",
+  "source": "echo \"Hello, ${ALLTERNIT_TOOL_ARGS}\"",
+  "entrypoint": null,
+  "env": {},
+  "network_enabled": false,
+  "timeout_secs": 10,
+  "created_at": "2026-08-13T10:00:00Z",
+  "updated_at": "2026-08-13T10:00:00Z"
+}
+```
+
+## List server tools
+
+```http
+GET /api/v1/admin/server-tools
+```
+
+### Example response
+
+```json
+{
+  "items": [
+    {
+      "id": "st_550e8400",
+      "name": "hello.team",
+      "runtime": "bash"
+    }
+  ]
+}
+```
+
+## Update a server tool
+
+```http
+PUT /api/v1/admin/server-tools/:id
+```
+
+Replaces the tool fields. The same validation rules apply as for creation.
+
+## Delete a server tool
+
+```http
+DELETE /api/v1/admin/server-tools/:id
+```
+
+### Example response
+
+```json
+{
+  "deleted": true
+}
+```
+
+## Execution environment
+
+When a server tool is invoked, the sandbox receives:
+
+- `ALLTERNIT_TOOL_ARGS`: JSON-stringified arguments passed to the tool call.
+- Any custom `env` entries defined on the tool.
+
+The tool output is best-effort parsed as JSON; otherwise the raw `stdout`, `stderr`, and `exit_code` are returned.
+
+## Error codes
+
+| Status | Code | Description |
+|--------|------|-------------|
+| `200 OK` | — | Success. |
+| `201 Created` | — | Tool created. |
+| `400 Bad Request` | `invalid_name` | Tool name does not match `^[a-z0-9][a-z0-9_.-]{0,63}$`. |
+| `400 Bad Request` | `invalid_runtime` | Runtime not in allowed list. |
+| `400 Bad Request` | `missing_source` | Empty source. |
+| `400 Bad Request` | `invalid_timeout` | Timeout outside 1–3600. |
+| `401 Unauthorized` | — | Missing or invalid bearer token. |
+| `403 Forbidden` | `organization_required` / `insufficient_role` | Caller is not an org owner/admin. |
+| `404 Not Found` | `not_found` | Tool not found. |
+| `409 Conflict` | `duplicate_name` | Tool name already exists in the org. |
+
+## Related pages
+
+- [Authentication](/api/authentication)
+- [MCP Servers API](/api/mcp-servers)
+- [Connectors API](/api/connectors)
+- [Sandbox API](/api/sandbox)

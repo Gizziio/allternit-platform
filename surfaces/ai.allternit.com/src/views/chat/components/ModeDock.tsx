@@ -11,6 +11,7 @@ import {
   UsersThree,
   CaretDown,
   Check,
+  Code,
 } from '@phosphor-icons/react';
 import { useAgentStreamingStatus } from '@/hooks/useAgentStreamingStatus';
 import { TextShimmer } from '@/components/agent-elements/text-shimmer';
@@ -24,6 +25,7 @@ interface ModeDockProps {
   agentModeSurface: AgentModeSurface;
   isLoading?: boolean;
   selectedSurfaceAgent?: { name: string } | null;
+  variant?: 'popover' | 'bar';
 }
 
 export const MODE_TABS = [
@@ -35,12 +37,13 @@ export const MODE_TABS = [
   { id: 'slides', label: 'Slides', color: 'var(--status-warning)', icon: PresentationChart },
   { id: 'image', label: 'Image', color: '#8b5cf6', icon: Image },
   { id: 'video', label: 'Video', color: '#ec4899', icon: VideoCamera },
+  { id: 'code', label: 'Code', color: '#f59e0b', icon: Code },
 ] as const;
 
 const SURFACE_MODES: Record<AgentModeSurface, string[]> = {
-  chat: ['swarms', 'research', 'website', 'docs', 'data', 'slides', 'image', 'video'],
-  cowork: ['swarms', 'research', 'website', 'docs', 'data', 'slides', 'image', 'video'],
-  code: ['swarms', 'website', 'docs'],
+  chat: ['swarms', 'research', 'website', 'docs', 'data', 'slides', 'image', 'video', 'code'],
+  cowork: ['swarms', 'research', 'website', 'docs', 'data', 'slides', 'image', 'video', 'code'],
+  code: ['swarms', 'website', 'docs', 'code'],
   browser: ['research', 'website', 'docs', 'data'],
   design: ['website', 'slides', 'image', 'video'],
 };
@@ -51,6 +54,7 @@ export function ModeDock({
   agentModeSurface,
   isLoading,
   selectedSurfaceAgent,
+  variant = 'popover',
 }: ModeDockProps) {
   const [open, setOpen] = useState(false);
   const allowedModes = agentModeSurface ? SURFACE_MODES[agentModeSurface] : MODE_TABS.map((m) => m.id);
@@ -72,6 +76,62 @@ export function ModeDock({
   );
 
   const SelectedIcon = selectedModeData?.icon ?? null;
+
+  if (variant === 'bar') {
+    return (
+      <div className="w-full flex flex-col items-start gap-3">
+        {agentStatus && (
+          <div className="flex items-center gap-2 py-1" aria-label="Agent status">
+            <div className="size-1.5 rounded-full animate-pulse bg-[var(--accent-chat,#D4B08C)]" />
+            <TextShimmer as="span" className="text-xs font-medium">
+              {agentStatus}
+            </TextShimmer>
+          </div>
+        )}
+        <div
+          role="tablist"
+          aria-label="Bot mode"
+          className="inline-flex items-center gap-1.5 overflow-x-auto no-scrollbar"
+        >
+          {visibleTabs.map((mode, index) => {
+            const isSelected = selectedMode === mode.id;
+            const ModeIcon = mode.icon;
+            return (
+              <React.Fragment key={mode.id}>
+                {index > 0 && (
+                  <span className="text-[var(--chat-composer-border)] select-none">|</span>
+                )}
+                <button
+                  type="button"
+                  role="tab"
+                  aria-selected={isSelected}
+                  onClick={() => onSelectMode(mode.id)}
+                  className={cn(
+                    'inline-flex items-center gap-1.5 whitespace-nowrap rounded-lg px-2 py-1 text-xs font-bold transition-all border border-transparent',
+                    isSelected
+                      ? 'bg-composer-hover text-primary'
+                      : 'text-secondary hover:text-primary hover:bg-hover'
+                  )}
+                  style={isSelected ? { boxShadow: `inset 0 0 0 1.5px ${mode.color}50` } : undefined}
+                >
+                  <span
+                    className="flex items-center justify-center size-5 rounded-md"
+                    style={{
+                      background: `${mode.color}18`,
+                      color: mode.color,
+                    }}
+                  >
+                    <ModeIcon size={11} weight={isSelected ? 'fill' : 'bold'} />
+                  </span>
+                  {mode.label}
+                </button>
+              </React.Fragment>
+            );
+          })}
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="w-full flex flex-col items-start gap-3">
@@ -124,7 +184,7 @@ export function ModeDock({
         >
           <div className="mb-2">
             <div className="text-xs font-extrabold text-muted tracking-wider uppercase">
-              Agent mode
+              Bot mode
             </div>
           </div>
           <div className="grid grid-cols-4 gap-1.5">

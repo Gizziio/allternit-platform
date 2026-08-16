@@ -1,0 +1,171 @@
+---
+title: Marketplace
+description: Discover and install capabilities for your Allternit workspace
+---
+
+## Overview
+
+The **Capability Marketplace** is the platform surface for discovering, installing, and managing skills, tools, plugins, MCP servers, connectors, and workflows. Capabilities can be free, paid, subscription, or enterprise, and include metadata such as ratings, install counts, permissions, and bundled tools.
+
+## Base URL / usage
+
+Public marketplace page:
+
+```text
+https://app.allternit.com/marketplace
+```
+
+Inside the platform shell:
+
+```text
+https://app.allternit.com/shell?view=marketplace
+```
+
+Open from shell code:
+
+```typescript
+open('marketplace');
+```
+
+API base:
+
+```text
+https://api.allternit.com/api/v1/marketplace
+```
+
+## Capability kinds
+
+| Kind | Description |
+|---|---|
+| `skill` | Agent skill or persona |
+| `tool` | Standalone tool |
+| `plugin` | Platform plugin |
+| `mcp` | Model Context Protocol server |
+| `connector` | External service connector |
+| `workflow` | Pre-built DAG or automation |
+
+## Pricing types
+
+| Type | Description |
+|---|---|
+| `free` | No charge |
+| `paid` | One-time purchase |
+| `subscription` | Recurring billing |
+| `enterprise` | Custom / sales-led |
+
+## Endpoints / commands
+
+| Method | Path | Description |
+|---|---|---|
+| `GET` | `/api/v1/marketplace/capabilities` | List capabilities |
+| `GET` | `/api/v1/marketplace/capabilities/:id` | Get a capability |
+| `POST` | `/api/v1/marketplace/checkout` | Create a checkout/order |
+| `GET` | `/api/v1/marketplace/orders/:id` | Get an order |
+| `POST` | `/api/v1/marketplace/licenses/validate` | Validate a license |
+| `GET` | `/api/v1/marketplace/licenses/me` | List my licenses |
+
+## JSON request / response examples
+
+### List capabilities
+
+```bash
+curl -G https://api.allternit.com/api/v1/marketplace/capabilities \
+  -H "Authorization: Bearer $TOKEN" \
+  -d "q=research" \
+  -d "kind=skill" \
+  -d "pricing=free" \
+  -d "limit=20"
+```
+
+Response:
+
+```json
+{
+  "items": [
+    {
+      "id": "cap-web-researcher",
+      "name": "Advanced Web Researcher",
+      "description": "Specialized agent skill for deep technical research.",
+      "author": "Allternit Labs",
+      "version": "2.1.0",
+      "kind": "skill",
+      "pricing": "free",
+      "rating": 4.8,
+      "install_count": 12400,
+      "tags": ["research", "web", "verification"],
+      "tools": [
+        { "name": "deep_search", "description": "Multi-source web search" }
+      ]
+    }
+  ],
+  "total": 1,
+  "cursor": null
+}
+```
+
+### Install a free capability
+
+```bash
+curl -X POST https://api.allternit.com/api/v1/marketplace/checkout \
+  -H "Authorization: Bearer $TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "capability_id": "cap-web-researcher",
+    "pricing_type": "free",
+    "workspace_id": "ws_018f3a7c..."
+  }'
+```
+
+Response:
+
+```json
+{
+  "order_id": "ord_1a2b...",
+  "status": "completed",
+  "license_key": "lic_1a2b...",
+  "checkout_url": null
+}
+```
+
+### Validate a license
+
+```bash
+curl -X POST https://api.allternit.com/api/v1/marketplace/licenses/validate \
+  -H "Authorization: Bearer $TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "license_key": "lic_1a2b...",
+    "capability_id": "cap-web-researcher"
+  }'
+```
+
+Response:
+
+```json
+{
+  "valid": true,
+  "license_key": "lic_1a2b...",
+  "capability_id": "cap-web-researcher",
+  "expires_at": null,
+  "status": "active"
+}
+```
+
+## Error codes
+
+| HTTP | Code | Meaning |
+|---|---|---|
+| 200 | — | Success |
+| 400 | `invalid_capability_id` | `capability_id` is required |
+| 400 | `invalid_license_key` | `license_key` is required |
+| 403 | `forbidden` | Caller does not own the order |
+| 404 | `capability_not_found` | Capability does not exist |
+| 404 | `order_not_found` | Order does not exist |
+| 500 | `internal_error` | Marketplace service error |
+
+## Related links
+
+- [Marketplace API](/api/marketplace)
+- [Plugin adapters](/tools/plugin-adapters)
+- [Capsule SDK](/sdk/capsule)
+- [MCP servers](/tools/mcp)

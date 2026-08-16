@@ -43,7 +43,7 @@ export function AgentHub({ initialTab = 'studio' }: AgentHubProps) {
     <div className="flex h-full w-full flex-col overflow-hidden bg-[var(--bg-elevated)] text-[var(--text-primary)]">
       <div className="shrink-0">
         <div className="mx-auto flex w-full max-w-6xl items-center justify-between gap-4 px-8 pt-10">
-        <h1 className="text-3xl font-medium tracking-tight" style={{ fontFamily: 'var(--font-serif)' }}>Agent Hub</h1>
+        <h1 className="text-3xl font-medium tracking-tight" style={{ fontFamily: 'var(--font-serif)' }}>Agent | Bot Hub</h1>
 
         <div className="flex items-center gap-2">
           {activeTab === 'studio' && (
@@ -53,7 +53,7 @@ export function AgentHub({ initialTab = 'studio' }: AgentHubProps) {
               className="inline-flex h-9 items-center gap-1.5 rounded-lg bg-[var(--text-primary)] px-4 text-sm font-medium text-[var(--bg-elevated)] transition-opacity hover:opacity-90"
             >
               <Plus size={16} />
-              Create Agent
+              Create Agent | Bot
             </button>
           )}
 

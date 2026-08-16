@@ -1,0 +1,226 @@
+---
+title: Vector Stores
+description: Manage vector stores and search attached files through the Allternit LLM gateway
+---
+
+## Overview
+
+The Vector Store API lets you create collections of files for retrieval-augmented generation (RAG). Files uploaded via `/v1/files` can be attached to a vector store, and the store can be searched semantically to retrieve relevant passages.
+
+## Base URL
+
+```
+https://api.allternit.com/v1
+```
+
+For local development:
+
+```
+http://127.0.0.1:8013/v1
+```
+
+## Endpoints
+
+| Method | Path | Description |
+|--------|------|-------------|
+| `POST` | `/v1/vector_stores` | Create a vector store |
+| `GET`  | `/v1/vector_stores` | List vector stores |
+| `GET`  | `/v1/vector_stores/:id` | Retrieve a vector store |
+| `DELETE` | `/v1/vector_stores/:id` | Delete a vector store |
+| `POST` | `/v1/vector_stores/:id/files` | Attach a file to a store |
+| `GET`  | `/v1/vector_stores/:id/files` | List files in a store |
+| `DELETE` | `/v1/vector_stores/:id/files/:file_id` | Detach a file |
+| `POST` | `/v1/vector_stores/:id/search` | Search a vector store |
+
+## Authentication
+
+All requests require a virtual key in the `Authorization` header. See [Authentication](/api/authentication).
+
+## Create a vector store
+
+### Request body
+
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| `name` | string | yes | Human-readable name for the store. |
+| `metadata` | object | no | Arbitrary metadata attached to the store. |
+| `expires_after` | object | no | Expiration policy: `{ "anchor": "last_active_at", "days": 7 }`. |
+
+### Example request
+
+```bash
+curl -X POST https://api.allternit.com/v1/vector_stores \
+  -H "Authorization: Bearer $ALLTERNIT_API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "name": "platform-documentation",
+    "metadata": {"team": "developer-relations"},
+    "expires_after": {"anchor": "last_active_at", "days": 30}
+  }'
+```
+
+### Example response
+
+```json
+{
+  "id": "vs_abc123",
+  "object": "vector_store",
+  "name": "platform-documentation",
+  "status": "in_progress",
+  "created_at": 1723500000,
+  "file_counts": {
+    "in_progress": 0,
+    "completed": 0,
+    "failed": 0,
+    "cancelled": 0,
+    "total": 0
+  },
+  "metadata": {"team": "developer-relations"}
+}
+```
+
+## List vector stores
+
+```bash
+curl https://api.allternit.com/v1/vector_stores \
+  -H "Authorization: Bearer $ALLTERNIT_API_KEY"
+```
+
+```json
+{
+  "object": "list",
+  "data": [
+    {
+      "id": "vs_abc123",
+      "object": "vector_store",
+      "name": "platform-documentation",
+      "status": "completed",
+      "created_at": 1723500000,
+      "file_counts": {
+        "in_progress": 0,
+        "completed": 3,
+        "failed": 0,
+        "cancelled": 0,
+        "total": 3
+      }
+    }
+  ]
+}
+```
+
+## Attach a file
+
+```bash
+curl -X POST https://api.allternit.com/v1/vector_stores/vs_abc123/files \
+  -H "Authorization: Bearer $ALLTERNIT_API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{"file_id": "file_abc123"}'
+```
+
+### Example response
+
+```json
+{
+  "id": "vsf_abc123",
+  "object": "vector_store.file",
+  "vector_store_id": "vs_abc123",
+  "file_id": "file_abc123",
+  "status": "in_progress",
+  "created_at": 1723500000
+}
+```
+
+## List attached files
+
+```bash
+curl https://api.allternit.com/v1/vector_stores/vs_abc123/files \
+  -H "Authorization: Bearer $ALLTERNIT_API_KEY"
+```
+
+```json
+{
+  "object": "list",
+  "data": [
+    {
+      "id": "vsf_abc123",
+      "object": "vector_store.file",
+      "vector_store_id": "vs_abc123",
+      "file_id": "file_abc123",
+      "status": "completed",
+      "created_at": 1723500000
+    }
+  ]
+}
+```
+
+## Search a vector store
+
+### Request body
+
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| `query` | string | yes | Search query. |
+| `max_results` | integer | no | Maximum results. `1`–`100`. Defaults to `10`. |
+| `filter` | object | no | Metadata filter. |
+
+### Example request
+
+```bash
+curl -X POST https://api.allternit.com/v1/vector_stores/vs_abc123/search \
+  -H "Authorization: Bearer $ALLTERNIT_API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "query": "How do I configure BYOC?",
+    "max_results": 5
+  }'
+```
+
+### Example response
+
+```json
+{
+  "object": "list",
+  "data": [
+    {
+      "id": "vsf_abc123_chunk_1",
+      "score": 0.92,
+      "content": "Bring-your-own-compute (BYOC) lets you run Allternit agents on infrastructure you control...",
+      "metadata": {"file_id": "file_abc123", "page": 4}
+    }
+  ],
+  "has_more": false
+}
+```
+
+## Delete a vector store
+
+```bash
+curl -X DELETE https://api.allternit.com/v1/vector_stores/vs_abc123 \
+  -H "Authorization: Bearer $ALLTERNIT_API_KEY"
+```
+
+```json
+{
+  "id": "vs_abc123",
+  "object": "vector_store.deleted",
+  "deleted": true
+}
+```
+
+## Error codes
+
+| HTTP status | Code | Meaning |
+|-------------|------|---------|
+| 400 | `allternit.invalid_request` | Empty `name`, empty `query`, or `max_results > 100`. |
+| 401 | `allternit.authentication_failed` | Missing or invalid API key. |
+| 404 | `allternit.invalid_request` | Store or file not found. |
+| 429 | `allternit.rate_limited` | Per-key rate limit exceeded. |
+| 429 | `allternit.budget_exceeded` | Monthly key or tenant budget exhausted. |
+| 500 | `allternit.internal_error` | Internal gateway error. |
+| 502 | `allternit.upstream_error` | Embedding or search provider error. |
+
+## Related pages
+
+- [Files](/api/files) — upload files before attaching them
+- [Chat Completions](/api/chat-completions) — use retrieved context in completions
+- [Cookbooks: RAG Pipeline](/cookbooks/rag-pipeline) — end-to-end RAG guide

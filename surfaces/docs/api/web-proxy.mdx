@@ -1,0 +1,68 @@
+---
+title: 'Web Proxy API'
+description: 'Fetch and proxy external web pages through the Allternit API with URL rewriting for embedded use.'
+---
+
+## Overview
+
+The Web Proxy API fetches external `http` or `https` URLs and rewrites links so they can be embedded inside Allternit surfaces. It blocks private and loopback addresses and injects a small script that intercepts navigation and posts messages to the parent frame.
+
+## Base URL
+
+```
+https://api.allternit.com/api/web-proxy
+```
+
+This endpoint is public; no authentication is required. It is intended for server-side proxying on behalf of authenticated clients.
+
+## Endpoints
+
+| Method | Path | Description |
+|--------|------|-------------|
+| GET | `/api/web-proxy?url=<url>` | Fetch and rewrite a target URL. |
+
+## Proxy request
+
+```bash
+GET /api/web-proxy?url=https%3A%2F%2Fexample.com
+```
+
+Query parameters:
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `url` | string | Target URL to fetch. Required. |
+
+For non-HTML responses, the proxy returns the upstream bytes with the original `Content-Type` and `Access-Control-Allow-Origin: *`.
+
+For HTML responses, the proxy:
+
+- Sets `<base href="{origin}/">`.
+- Rewrites `iframe`, `frame`, `form`, and `a` tag URLs to point back through the proxy.
+- Injects a script that intercepts clicks and `history.pushState`/`replaceState` calls, posting `allternit-navigate` messages to the parent window.
+
+## Error responses
+
+Error responses are returned as JSON:
+
+```json
+{
+  "error": "Missing ?url= query parameter"
+}
+```
+
+## Error codes
+
+| Status | Code | Description |
+|--------|------|-------------|
+| 200 | — | Success. |
+| 400 | `Missing ?url= query parameter` / `Invalid URL` | Bad or missing URL. |
+| 403 | `Only http/https URLs are allowed` | Non-HTTP scheme requested. |
+| 403 | `Requests to private/loopback addresses are blocked` | Target is localhost, private, or link-local. |
+| 502 | `Failed to fetch upstream URL` / `Failed to read response body` | Upstream could not be fetched. |
+| 500 | `Failed to build proxy client` | Internal client setup failed. |
+
+## Related links
+
+- [Authentication](/api/authentication)
+- [ACI Overview](/aci/index)

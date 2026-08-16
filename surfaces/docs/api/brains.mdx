@@ -1,0 +1,216 @@
+---
+title: 'Brains API'
+description: 'Provision hosted brain remotes, mint git tokens, and read markdown pages from git-backed knowledge repositories.'
+---
+
+## Overview
+
+The Brains API provisions per-user bare Git repositories that act as hosted knowledge remotes for agents. Each brain is isolated to its owner, exposed through standard git smart-HTTP push and pull, and can be read as a collection of markdown pages with parsed frontmatter. Use this surface to version agent knowledge with the same tools you use for code.
+
+## Base URL
+
+Management and read endpoints:
+
+```
+https://api.allternit.com/v1
+```
+
+Git smart-HTTP endpoints:
+
+```
+https://api.allternit.com/v1/brains/:id/git
+```
+
+## Authentication
+
+- Management routes (`/brains`, `/tokens/git`) require a valid bearer token via the gateway. See [Authentication](/api/authentication).
+- Git smart-HTTP routes require an `allternit_git_...` token. The token can be passed as a `Bearer` header or as the password in HTTP Basic auth (the username is ignored).
+
+## Endpoints
+
+| Method | Path | Description |
+|--------|------|-------------|
+| `POST` | `/api/v1/brains` | Provision a new bare-git brain. |
+| `GET`  | `/api/v1/brains` | List your brains. |
+| `GET`  | `/api/v1/brains/:id/pages` | Read markdown pages from the default branch. |
+| `POST` | `/api/v1/tokens/git` | Mint a git access token. |
+| `GET`  | `/api/v1/tokens/git` | List git tokens. |
+| `DELETE` | `/api/v1/tokens/git/:id` | Revoke a git token. |
+| `GET/POST` | `/api/v1/brains/:id/git/*path` | Git smart-HTTP clone/push/pull. |
+
+## Provision a brain
+
+```http
+POST /api/v1/brains
+```
+
+Creates a bare Git repository for the authenticated user and returns its clone URL.
+
+### Example request
+
+```bash
+curl -X POST https://api.allternit.com/v1/brains \
+  -H "Authorization: Bearer $TOKEN"
+```
+
+### Example response
+
+```json
+{
+  "brain_id": "brain_8f7e6d5c",
+  "clone_url": "https://api.allternit.com/v1/brains/brain_8f7e6d5c/git",
+  "created_at": "2026-08-13T10:00:00Z"
+}
+```
+
+## List brains
+
+```http
+GET /api/v1/brains
+```
+
+Returns all brains owned by the caller, including their clone URLs.
+
+### Example response
+
+```json
+[
+  {
+    "brain_id": "brain_8f7e6d5c",
+    "created_at": "2026-08-13T10:00:00Z",
+    "clone_url": "https://api.allternit.com/v1/brains/brain_8f7e6d5c/git"
+  }
+]
+```
+
+## Read brain pages
+
+```http
+GET /api/v1/brains/:id/pages
+```
+
+Reads every `*.md` blob on the default branch and parses leading YAML frontmatter into a JSON object. The body is returned as plain markdown.
+
+### Example response
+
+```json
+{
+  "brain_id": "brain_8f7e6d5c",
+  "branch": "main",
+  "pages": [
+    {
+      "path": "runbooks/deployment.md",
+      "frontmatter": {
+        "type": "runbook",
+        "status": "published",
+        "domain": "platform"
+      },
+      "content": "# Deployment runbook\n\n1. Run pre-flight checks..."
+    }
+  ]
+}
+```
+
+## Mint a git token
+
+```http
+POST /api/v1/tokens/git
+```
+
+Creates a long-lived `allternit_git_...` token for authenticating git operations. The plaintext token is returned only once; only its SHA-256 digest is stored.
+
+### Request body
+
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| `name` | string | No | Human-readable label for the token. |
+
+### Example request
+
+```bash
+curl -X POST https://api.allternit.com/v1/tokens/git \
+  -H "Authorization: Bearer $TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{"name": "laptop"}'
+```
+
+### Example response
+
+```json
+{
+  "id": "gt_9a8b7c6d",
+  "token": "allternit_git_a1b2c3d4e5f678901234567890123456",
+  "note": "Store this token now — it is never shown again."
+}
+```
+
+## List git tokens
+
+```http
+GET /api/v1/tokens/git
+```
+
+Lists your tokens without revealing the plaintext.
+
+### Example response
+
+```json
+[
+  {
+    "id": "gt_9a8b7c6d",
+    "name": "laptop",
+    "created_at": "2026-08-13T10:00:00Z",
+    "last_used_at": "2026-08-13T11:00:00Z"
+  }
+]
+```
+
+## Revoke a git token
+
+```http
+DELETE /api/v1/tokens/git/:id
+```
+
+Revokes a token. Git operations that use the token will fail immediately.
+
+### Example response
+
+```json
+{
+  "revoked": true
+}
+```
+
+## Clone and push a brain
+
+Use the clone URL from provision/list with the git token as the password:
+
+```bash
+git clone https://api.allternit.com/v1/brains/brain_8f7e6d5c/git \
+  --config http.extraHeader="Authorization: Bearer allternit_git_a1b2c3d4e5f678901234567890123456"
+```
+
+Or use HTTP Basic auth:
+
+```bash
+git clone https://x-allternit-git-token:allternit_git_a1b2c3d4e5f678901234567890123456@api.allternit.com/v1/brains/brain_8f7e6d5c/git
+```
+
+## Error codes
+
+| Status | Meaning | Typical cause |
+|--------|---------|---------------|
+| `200 OK` | Success | Request succeeded. |
+| `201 Created` | Created | Brain or git token created. |
+| `400 Bad Request` | Invalid request | Malformed request body. |
+| `401 Unauthorized` | Unauthorized | Missing or invalid bearer/git token. |
+| `404 Not Found` | Not found | Brain or token does not exist or is owned by another user. |
+| `429 Too Many Requests` | Rate limited | Exceeded request rate limit. |
+| `500 Internal Server Error` | Server error | Contact support. |
+
+## Related pages
+
+- [Local Brains API](/api/local-brains)
+- [Memory API](/api/memory)
+- [Agents API](/api/agents)
+- [Agent Workspaces](/api/agent-workspaces)

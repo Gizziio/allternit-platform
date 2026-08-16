@@ -1,0 +1,160 @@
+---
+title: 'Agent Daemon'
+description: 'Paired runtime daemon that relays browser requests to your local Allternit runtime.'
+---
+
+## Overview
+
+The Allternit Agent Daemon (`@allternit/agent-daemon`) is a TypeScript/Node daemon that runs on a self-hosted or managed runtime. It pairs the box with the Allternit Cloud API using the runtime pairing protocol, then maintains an outbound WebSocket relay so the browser can proxy requests to the local Gizzi Runtime without exposing any inbound ports.
+
+The daemon is bundled into the Allternit Hosted Runtime container and can also be installed directly on a VPS, desktop, or CI worker.
+
+## What the daemon does
+
+1. Loads an existing runtime identity from `~/.config/allternit/runtime-identity.json`.
+2. If no identity exists, performs first-party runtime pairing with the cloud API.
+3. Sends periodic heartbeats and rotates the device credential before expiry.
+4. Opens an outbound WebSocket to the cloud runtime relay.
+5. Proxies relayed requests from the browser into the local Gizzi gateway.
+6. Bridges WebSocket connections for streaming endpoints such as terminals, event streams, and panes.
+
+## Configuration
+
+The daemon is configured through environment variables:
+
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `ALLTERNIT_CLOUD_API_URL` | `https://allternit-cloud-api.fly.dev` | Cloud API base URL. |
+| `ALLTERNIT_GATEWAY_URL` | `http://127.0.0.1:8013` | Local Gizzi gateway URL. |
+| `ALLTERNIT_RUNTIME_NAME` | `<hostname> VPS` | Display name for this runtime. |
+| `ALLTERNIT_RUNTIME_IDENTITY_PATH` | `~/.config/allternit/runtime-identity.json` | Path to the stored identity. |
+| `ALLTERNIT_PAIRING_MODE` | — | Set to `hosted_auto` for managed-runtime bootstrap. |
+| `ALLTERNIT_HOSTED_INSTANCE_ID` | — | Required for `hosted_auto` pairing. |
+| `ALLTERNIT_HOSTED_BOOTSTRAP_TOKEN` | — | Required for `hosted_auto` pairing. |
+
+## Identity file
+
+The identity file stores the Ed25519 keypair and device token. It must be readable only by the owner:
+
+```json
+{
+  "runtimeId": "rt_xyz789",
+  "userId": "user_123",
+  "userEmail": "ops@example.com",
+  "organizationId": "org_456",
+  "deviceToken": "allternit_runtime_...",
+  "expiresAt": "2026-11-11T19:50:00Z",
+  "capabilities": ["runtime:connect", "runtime:execute", "runtime:files", "runtime:terminal", "providers:connect", "providers:use"],
+  "privateKeyPem": "-----BEGIN PRIVATE KEY-----\n...",
+  "publicKey": "base64url-public-key"
+}
+```
+
+The daemon creates the parent directory with mode `0700` and the file with mode `0600`. If the file is malformed, it is renamed with a `.invalid-<timestamp>` suffix and pairing restarts.
+
+## Pairing flow
+
+### Standard pairing
+
+1. Generate an Ed25519 keypair.
+2. POST `/api/v1/runtime-pairings` with the public key and capabilities.
+3. Display the `userCode` and `verificationUrl` to the user.
+4. Poll `POST /api/v1/runtime-pairings/exchange` with a signature over `allternit-runtime-pairing:<pairingId>:<challenge>`.
+5. Store the returned identity.
+
+### Hosted auto-pairing
+
+When `ALLTERNIT_PAIRING_MODE=hosted_auto`, the daemon uses the hosted bootstrap token to create an already-approved pairing and exchanges it in one step.
+
+## Relay protocol
+
+After pairing, the daemon connects to:
+
+```
+wss://api.allternit.com/api/v1/runtime-relay/connect/<runtimeId>
+```
+
+It authenticates with:
+
+```json
+{
+  "type": "authenticate",
+  "runtime_id": "rt_xyz789",
+  "device_token": "allternit_runtime_..."
+}
+```
+
+Relay message types handled by the daemon:
+
+| Type | Direction | Description |
+|------|-----------|-------------|
+| `authenticate` | Outbound | Initial authentication. |
+| `authenticated` | Inbound | Confirms successful auth. |
+| `request` | Inbound | Proxied HTTP request from the browser. |
+| `response_start` | Outbound | Start of an HTTP response. |
+| `response_chunk` | Outbound | Response body chunk (base64 or utf8). |
+| `response_end` | Outbound | End of response. |
+| `socket_open` | Inbound | Open a local WebSocket on behalf of the browser. |
+| `socket_data` | Both | WebSocket data frame. |
+| `socket_close` | Both | Close a bridged WebSocket. |
+| `ping` / `pong` | Both | Keepalive. |
+
+The daemon validates that every proxied path starts with an allowed gateway prefix such as `/api`, `/terminal`, `/cowork`, `/rails`, `/ws`, `/panes`, or `/v1`.
+
+## Heartbeat and credential rotation
+
+- Heartbeat interval: 30 seconds.
+- Device credentials expire after 90 days.
+- Rotation begins 7 days before expiry (`ROTATION_SKEW_MS`).
+- A 15-minute grace window allows multiple components sharing the same token to self-heal after rotation.
+
+If the cloud API responds with `401` or `403` during heartbeat, the daemon exits with an error indicating the runtime was revoked.
+
+## Running the daemon
+
+```bash
+npm install -g @allternit/agent-daemon
+allternit-agent-daemon
+```
+
+Or with environment overrides:
+
+```bash
+ALLTERNIT_CLOUD_API_URL=https://api.allternit.com \
+ALLTERNIT_RUNTIME_NAME="ci-runner-01" \
+allternit-agent-daemon
+```
+
+In development you can run from source:
+
+```bash
+cd cmd/agent-daemon
+npm install
+npm run build
+npm start
+```
+
+## Error codes and log messages
+
+| Log / exit | Meaning |
+|------------|---------|
+| `Unable to begin runtime pairing (400)` | Bad pairing request, for example missing public key. |
+| `Pairing failed (403)` | Pairing was denied. |
+| `authorization_pending` | Waiting for browser approval. |
+| `expired_token` | Pairing request expired before approval. |
+| `This VPS runtime was revoked` | The device token was revoked; delete the identity file and re-pair. |
+| `runtime_proxy_error` | The local gateway returned an error or was unreachable. |
+
+## Security properties
+
+- The runtime never receives or stores the human's Clerk JWT.
+- Pairing exchange requires proof of possession of the Ed25519 private key.
+- Outbound-only relay: no public inbound port is required.
+- Provider credentials and platform encryption keys never leave the runtime.
+
+## Related pages
+
+- [Cloud API](/api/cloud-api)
+- [BYOC Deploy Wizard](/byoc/deploy-wizard)
+- [Hosted Runtime](/byoc/hosted-runtime)
+- [BYOC Overview](/byoc/overview)

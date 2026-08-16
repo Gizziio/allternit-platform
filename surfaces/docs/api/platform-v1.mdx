@@ -1,0 +1,218 @@
+---
+title: 'Platform v1 API'
+description: 'Chat bridge, model catalog, voice proxy, and utility endpoints for the Allternit Platform v1 surface.'
+---
+
+## Overview
+
+The Platform v1 API groups utility endpoints used by the Allternit Platform surfaces: an agent chat bridge to the Gizzi Runtime, a model catalog with live local-model merging, model recommendations, voice TTS/STT proxying, and CLI tool stubs.
+
+## Base URL
+
+```text
+https://api.allternit.com/api/v1
+```
+
+For local development:
+
+```text
+http://127.0.0.1:8013/api/v1
+```
+
+## Authentication
+
+All routes require a valid bearer token in the `Authorization` header. The chat bridge forwards relevant auth headers to the Gizzi Runtime so that password-protected local daemons work correctly.
+
+## Endpoints
+
+| Method | Path | Description |
+|--------|------|-------------|
+| `POST` | `/ai/chat` | Bridge a chat message to a Gizzi session with streaming response. |
+| `GET` | `/health` | Platform health check. |
+| `GET` | `/models` | List available models, including live local models. |
+| `GET` | `/models/recommend` | Rank models for a task and priority. |
+| `GET` | `/voice/voices` | List voice presets. |
+| `POST` | `/voice/tts/stream` | Stream text-to-speech audio. |
+| `POST` | `/voice/stt/stream` | Stream speech-to-text audio. |
+| `GET` | `/cli-tools` | List CLI tools (stub). |
+| `GET` | `/cli-tools/installed` | List installed CLI tools (stub). |
+
+## Health
+
+```bash
+curl https://api.allternit.com/api/v1/health \
+  -H "Authorization: Bearer $ALLTERNIT_API_KEY"
+```
+
+### Response
+
+```json
+{
+  "status": "ok"
+}
+```
+
+## List models
+
+```bash
+curl https://api.allternit.com/api/v1/models \
+  -H "Authorization: Bearer $ALLTERNIT_API_KEY"
+```
+
+### Response
+
+```json
+[
+  {
+    "id": "allternit-local/qwen-coder",
+    "name": "Qwen Coder (Allternit Local Models)",
+    "provider": "allternit-local",
+    "description": null,
+    "tier": "local",
+    "supports_effort": false
+  }
+]
+```
+
+The endpoint merges a static provider catalog with Gizzi's live `GET /provider` connected list so that newly-installed local models appear without restarting the API.
+
+## Recommend models
+
+```bash
+curl "https://api.allternit.com/api/v1/models/recommend?task=code&priority=quality" \
+  -H "Authorization: Bearer $ALLTERNIT_API_KEY"
+```
+
+### Query parameters
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `task` | string | `code`, `reasoning`, `knowledge`, `chat`, or `balanced` (default). |
+| `priority` | string | `quality`, `cost`, or `latency` (default `quality`). |
+
+### Response
+
+```json
+{
+  "task": "code",
+  "priority": "quality",
+  "recommendations": [
+    {
+      "id": "allternit-local/qwen-coder",
+      "name": "Qwen Coder (Allternit Local Models)",
+      "provider": "allternit-local",
+      "tier": "local",
+      "supports_effort": false,
+      "score": 0.95,
+      "reason": "allternit-local/qwen-coder is the highest-quality code option available on allternit-local."
+    }
+  ]
+}
+```
+
+## Agent chat bridge
+
+```bash
+curl -X POST https://api.allternit.com/api/v1/ai/chat \
+  -H "Authorization: Bearer $ALLTERNIT_API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "chatId": "chat_abc123",
+    "message": "Explain the project structure",
+    "agent_id": "agent_01J8X...",
+    "runtimeModelId": "allternit-local/qwen-coder",
+    "effort": "medium"
+  }'
+```
+
+The endpoint returns a server-sent event (SSE) stream. The first event is a `message_start`, followed by `content_block_delta` events for text and reasoning, and a final `finish` event.
+
+### Request body
+
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| `chatId` | string | yes | Stable platform chat identifier. |
+| `message` | string | yes | User message text. |
+| `agent_id` | string | no | Agent ID to load profile and workspace context. |
+| `agentId` | string | no | Alias for `agent_id`. |
+| `runtimeModelId` | string | no | Target model (supports `provider/model` or `provider::model`). |
+| `modelId` | string | no | Alias for `runtimeModelId`. |
+| `systemPrompt` | string | no | Client-supplied system prompt appended last. |
+| `effort` | string | no | Reasoning effort (`low`, `medium`, `high`). |
+| `attachments` | array | no | Inline file attachments (`url` or `dataBase64` + `mediaType`). |
+| `metadata.tools` | object | no | Tool preference overrides. |
+
+### SSE event example
+
+```text
+data: {"type":"message_start","messageId":"msg_abc123","modelId":"allternit-local/qwen-coder","runtimeModelId":"allternit-local/qwen-coder"}
+
+data: {"type":"content_block_delta","messageId":"msg_abc123","partId":"text-1","delta":{"type":"text_delta","text":"The project uses a monorepo layout..."}}
+
+data: {"type":"finish","messageId":"msg_abc123","status":"complete","metadata":{"status":"complete"}}
+```
+
+## Voice presets
+
+```bash
+curl https://api.allternit.com/api/v1/voice/voices \
+  -H "Authorization: Bearer $ALLTERNIT_API_KEY"
+```
+
+Returns `{ "voices": [] }` when the optional voice service is not running.
+
+## Stream TTS
+
+```bash
+curl -X POST https://api.allternit.com/api/v1/voice/tts/stream \
+  -H "Authorization: Bearer $ALLTERNIT_API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{"text":"Hello from Allternit"}' \
+  --output speech.mp3
+```
+
+Audio bytes are streamed from the voice service.
+
+## Stream STT
+
+```bash
+curl -X POST https://api.allternit.com/api/v1/voice/stt/stream \
+  -H "Authorization: Bearer $ALLTERNIT_API_KEY" \
+  -H "Content-Type: application/octet-stream" \
+  --data-binary @recording.wav
+```
+
+## CLI tools stubs
+
+```bash
+curl https://api.allternit.com/api/v1/cli-tools \
+  -H "Authorization: Bearer $ALLTERNIT_API_KEY"
+```
+
+### Response
+
+```json
+{
+  "tools": [],
+  "total": 0
+}
+```
+
+The platform UI's filesystem scanner is the real source of CLI tool discovery; these endpoints exist to keep client fallbacks quiet.
+
+## Error codes
+
+| HTTP status | Code | Meaning |
+|-------------|------|---------|
+| 400 | `allternit.invalid_request` | Missing required fields such as `chatId` or `message`. |
+| 401 | `allternit.authentication_failed` | Missing or invalid bearer token. |
+| 404 | `allternit.not_found` | Agent not found. |
+| 500 | `allternit.internal_error` | Gizzi session or stream failure. |
+| 503 | `allternit.service_unavailable` | Voice service is unreachable. |
+
+## Related pages
+
+- [Agent Chat](/api/agent-chat) — dedicated chat completion surface
+- [Chat Completions](/api/chat-completions) — remote-model-compatible completions
+- [Voice](/api/voice) — voice gateway endpoints
+- [Providers](/api/providers) — model provider configuration

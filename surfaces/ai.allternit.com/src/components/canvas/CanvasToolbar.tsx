@@ -9,7 +9,7 @@ import {
   ChatTeardropText,
   SquaresFour,
   Terminal as TerminalIcon,
-  NotePencil,
+  Rows,
   Shield,
   GitCommit,
   GitDiff,
@@ -63,6 +63,7 @@ interface CanvasToolbarProps {
   onMcp?: () => void;
   onExport?: () => void;
   onImport?: () => void;
+  onOpenTerminalSessions?: () => void;
 }
 
 export function CanvasToolbar({
@@ -81,6 +82,7 @@ export function CanvasToolbar({
   onMcp,
   onExport,
   onImport,
+  onOpenTerminalSessions,
 }: CanvasToolbarProps) {
   const addCanvasTile = useCodeModeStore((s) => s.addCanvasTile);
   const autoArrange = useCodeModeStore((s) => s.autoArrangeCanvasTiles);
@@ -119,9 +121,8 @@ export function CanvasToolbar({
       width: size.width,
       height: size.height,
       zIndex: Date.now(),
-      label: opts?.label ?? (type === 'session' ? 'New Session' : type === 'notes' ? 'Shared context' : type),
+      label: opts?.label ?? (type === 'session' ? 'New Session' : type),
       startupCommand: opts?.startupCommand,
-      shared: type === 'notes' ? true : undefined,
     });
   };
 
@@ -172,6 +173,11 @@ export function CanvasToolbar({
       <ToolbarButton label="Arrange tiles" onClick={() => autoArrange(workspaceId)} style={buttonStyle}>
         <SquaresFour size={16} />
       </ToolbarButton>
+      {onOpenTerminalSessions && (
+        <ToolbarButton label="Terminal sessions" onClick={onOpenTerminalSessions} style={buttonStyle}>
+          <Rows size={16} />
+        </ToolbarButton>
+      )}
       {onFitView && (
         <ToolbarButton label="Fit all tiles" onClick={onFitView} style={buttonStyle}>
           <ArrowsOutSimple size={16} />
@@ -365,7 +371,6 @@ interface SpawnMenuProps {
 const SPAWN_ITEMS: Array<{ type: CodeCanvasTile['type']; label: string; icon: typeof Plus }> = [
   { type: 'session', label: 'Session', icon: ChatTeardropText },
   { type: 'terminal', label: 'Terminal', icon: TerminalIcon },
-  { type: 'notes', label: 'Notes', icon: NotePencil },
 ];
 
 function SpawnMenu({ onSpawn, onSpawnAgent, onOrchestrate, buttonStyle }: SpawnMenuProps) {
@@ -585,7 +590,7 @@ function OrchestratedAgentDialog({ workspacePath, onClose }: OrchestratedAgentDi
         workdir: workspacePath,
         vendor,
         mode,
-        backend: 'mux',
+        backend: 'tmux',
         isolation: worktree ? 'worktree' : 'none',
         taskFile: taskFile.trim() || undefined,
         notesFile: `docs/${trimmedSlug}_NOTES.md`,
@@ -636,7 +641,7 @@ function OrchestratedAgentDialog({ workspacePath, onClose }: OrchestratedAgentDi
             Orchestrated agent
           </div>
           <div style={{ marginTop: 3, fontSize: 11, color: 'var(--text-muted)' }}>
-            Background executor on the mux via the orchestrator. Its tile appears on this canvas.
+            Background executor on tmux via the orchestrator. Its tile appears on this canvas.
           </div>
         </div>
 

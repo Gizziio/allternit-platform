@@ -482,51 +482,54 @@ export function AciMiniAppsView() {
   return (
     <div className="h-full w-full overflow-auto bg-[var(--bg-elevated)] text-[var(--text-primary)]">
       <div className="mx-auto flex w-full max-w-6xl flex-col px-8 pb-12 pt-10">
-        <div className="flex items-center justify-between gap-4">
-          <h1 className="text-3xl font-medium tracking-tight" style={{ fontFamily: 'var(--font-serif)' }}>Miniapps Store</h1>
+        <div className="flex items-start justify-between gap-4">
+          <div>
+            <h1 className="text-3xl font-medium tracking-tight" style={{ fontFamily: 'var(--font-serif)' }}>Miniapps Store</h1>
+            <p className="mt-1 text-sm text-[var(--text-secondary)]">Discover, install, and manage agent-connected mini-apps.</p>
+          </div>
           <div className="flex shrink-0 items-center gap-2">
-          <button type="button"
-            onClick={() => openView('mini-app-review')}
-            title="Review console"
-            aria-label="Review console"
-            className="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-[var(--border-default)] bg-[var(--bg-elevated)] text-[var(--text-tertiary)] transition-colors hover:border-[var(--border-hover)] hover:text-[var(--text-secondary)]"
-          >
-            <ShieldCheck size={14} />
-          </button>
-          <button type="button" onClick={() => setAddOpen(true)} className="inline-flex h-9 items-center gap-1.5 rounded-lg bg-[var(--text-primary)] px-3.5 text-sm font-medium text-[var(--bg-elevated)]"><Plus size={14} />Add miniapp</button>
-          <button type="button"
-            onClick={reprobe}
-            disabled={probing}
-            className="inline-flex h-9 items-center gap-1.5 rounded-lg border border-[var(--border-default)] bg-[var(--bg-elevated)] px-3.5 text-sm text-[var(--text-secondary)] transition-colors hover:border-[var(--border-hover)]"
-          >
-            {probing ? <CircleNotch size={14} className="animate-spin" /> : <ArrowsClockwise size={14} />}
-            Scan
-          </button>
-          <button type="button"
-            onClick={() => setStoreMode('discover')}
-            className={cn("inline-flex h-9 items-center gap-1.5 rounded-lg border px-3.5 text-sm transition-colors", storeMode === 'discover' ? "border-[var(--text-primary)] bg-[var(--text-primary)] text-[var(--bg-elevated)]" : "border-[var(--border-default)] bg-[var(--bg-elevated)] text-[var(--text-secondary)] hover:border-[var(--border-hover)]")}
-          >
-            <Storefront size={14} />
-            Discover
-          </button>
-          <button type="button"
-            onClick={() => setStoreMode('installed')}
-            className={cn("inline-flex h-9 items-center gap-1.5 rounded-lg border px-3.5 text-sm transition-colors", storeMode === 'installed' ? "border-[var(--text-primary)] bg-[var(--text-primary)] text-[var(--bg-elevated)]" : "border-[var(--border-default)] bg-[var(--bg-elevated)] text-[var(--text-secondary)] hover:border-[var(--border-hover)]")}
-          >
-            <GearSix size={14} />
-            My Miniapps
-          </button>
+            <button type="button"
+              onClick={() => openView('mini-app-review')}
+              title="Review console"
+              aria-label="Review console"
+              className="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-[var(--border-default)] bg-[var(--bg-elevated)] text-[var(--text-tertiary)] transition-colors hover:border-[var(--border-hover)] hover:text-[var(--text-secondary)]"
+            >
+              <ShieldCheck size={14} />
+            </button>
+            <button type="button" onClick={() => setAddOpen(true)} className="inline-flex h-9 items-center gap-1.5 rounded-lg bg-[var(--text-primary)] px-3.5 text-sm font-medium text-[var(--bg-elevated)] transition-opacity hover:opacity-90"><Plus size={14} />Add miniapp</button>
+            <button type="button"
+              onClick={reprobe}
+              disabled={probing}
+              className="inline-flex h-9 items-center gap-1.5 rounded-lg border border-[var(--border-default)] bg-[var(--bg-elevated)] px-3.5 text-sm text-[var(--text-secondary)] transition-colors hover:border-[var(--border-hover)]"
+            >
+              {probing ? <CircleNotch size={14} className="animate-spin" /> : <ArrowsClockwise size={14} />}
+              Scan
+            </button>
+            <button type="button"
+              onClick={() => setStoreMode('discover')}
+              className={cn("inline-flex h-9 items-center gap-1.5 rounded-lg border px-3.5 text-sm transition-colors", storeMode === 'discover' ? "border-[var(--text-primary)] bg-[var(--text-primary)] text-[var(--bg-elevated)]" : "border-[var(--border-default)] bg-[var(--bg-elevated)] text-[var(--text-secondary)] hover:border-[var(--border-hover)]")}
+            >
+              <Storefront size={14} />
+              Discover
+            </button>
+            <button type="button"
+              onClick={() => setStoreMode('installed')}
+              className={cn("inline-flex h-9 items-center gap-1.5 rounded-lg border px-3.5 text-sm transition-colors", storeMode === 'installed' ? "border-[var(--text-primary)] bg-[var(--text-primary)] text-[var(--bg-elevated)]" : "border-[var(--border-default)] bg-[var(--bg-elevated)] text-[var(--text-secondary)] hover:border-[var(--border-hover)]")}
+            >
+              <GearSix size={14} />
+              My Miniapps
+            </button>
           </div>
         </div>
 
-        <div className="relative mt-6">
+        <div className="relative mt-8">
           <MagnifyingGlass size={16} className="absolute left-4 top-1/2 -translate-y-1/2 text-[var(--text-tertiary)]" />
-          <input aria-label="Search mini-apps" value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Search miniapps…" className="h-11 w-full rounded-xl border border-[var(--border-default)] bg-[var(--bg-elevated)] pl-10 pr-4 text-[15px] text-[var(--text-primary)] outline-none placeholder:text-[var(--text-tertiary)] focus:border-[var(--accent-primary)]" />
+          <input aria-label="Search mini-apps" value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Search miniapps by name, description, or repo…" className="h-11 w-full rounded-xl border border-[var(--border-default)] bg-[var(--bg-elevated)] pl-10 pr-4 text-[15px] text-[var(--text-primary)] outline-none placeholder:text-[var(--text-tertiary)] focus:border-[var(--accent-primary)]" />
         </div>
-        <div className="mt-4 flex items-center gap-1 overflow-x-auto border-b border-[var(--border-subtle)] pb-3">{categories.map((item) => <button type="button" key={item} onClick={() => setCategory(item)} className={cn("h-8 rounded-lg px-3 text-xs font-medium capitalize transition-colors", category === item ? "bg-[var(--text-primary)] text-[var(--bg-elevated)]" : "text-[var(--text-secondary)] hover:bg-[var(--surface-hover)] hover:text-[var(--text-primary)]")}>{item}</button>)}</div>
-        <div className="mt-4 flex flex-wrap items-center gap-3">
-          <label className="text-xs text-[var(--text-tertiary)]">Source <select value={source} onChange={(event) => setSource(event.target.value as typeof source)} className="ml-2 h-8 rounded-lg border border-[var(--border-default)] bg-[var(--bg-elevated)] px-2 text-xs text-[var(--text-primary)]"><option value="all">All sources</option><option value="allternit">Allternit Verified</option><option value="mcp">MCP Registry</option><option value="github">GitHub</option><option value="url">URL</option><option value="local">Local</option><option value="workspace">Workspace</option></select></label>
-          <label className="text-xs text-[var(--text-tertiary)]">Experience <select value={experience} onChange={(event) => setExperience(event.target.value as typeof experience)} className="ml-2 h-8 rounded-lg border border-[var(--border-default)] bg-[var(--bg-elevated)] px-2 text-xs text-[var(--text-primary)]"><option value="all">All experiences</option><option value="native">Native</option><option value="hybrid">Hybrid</option><option value="embedded">Embedded</option></select></label>
+        <div className="mt-5 flex items-center gap-1 overflow-x-auto pb-3">{categories.map((item) => <button type="button" key={item} onClick={() => setCategory(item)} className={cn("h-8 rounded-full px-3.5 text-xs font-medium capitalize transition-colors", category === item ? "bg-[var(--text-primary)] text-[var(--bg-elevated)]" : "border border-[var(--border-subtle)] text-[var(--text-secondary)] hover:border-[var(--border-hover)] hover:text-[var(--text-primary)]")}>{item}</button>)}</div>
+        <div className="mt-2 flex flex-wrap items-center gap-3">
+          <label className="flex items-center gap-2 rounded-full border border-[var(--border-subtle)] px-3 py-1.5 text-xs text-[var(--text-tertiary)] hover:border-[var(--border-hover)]">Source <select value={source} onChange={(event) => setSource(event.target.value as typeof source)} className="bg-transparent text-[var(--text-primary)] outline-none"><option value="all">All sources</option><option value="allternit">Allternit Verified</option><option value="mcp">MCP Registry</option><option value="github">GitHub</option><option value="url">URL</option><option value="local">Local</option><option value="workspace">Workspace</option></select></label>
+          <label className="flex items-center gap-2 rounded-full border border-[var(--border-subtle)] px-3 py-1.5 text-xs text-[var(--text-tertiary)] hover:border-[var(--border-hover)]">Experience <select value={experience} onChange={(event) => setExperience(event.target.value as typeof experience)} className="bg-transparent text-[var(--text-primary)] outline-none"><option value="all">All experiences</option><option value="native">Native</option><option value="hybrid">Hybrid</option><option value="embedded">Embedded</option></select></label>
         </div>
 
       <div className="mt-8">

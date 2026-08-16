@@ -73,6 +73,7 @@ import {
   type Agent,
   type OpenClawDiscoveredAgent,
 } from '@/lib/agents';
+import { getBotAvatarUrl } from '@/lib/bots/bot-profile';
 import { useActiveChatSession } from './ChatSessionStore';
 import { AgentModeGizzi } from './AgentModeGizzi';
 import { getAgentModeSurfaceTheme } from './agentModeSurfaceTheme';
@@ -1605,6 +1606,182 @@ export function ChatComposer({
     }
   };
 
+  const plusMenuPanel = showPlusMenu ? (
+    <div
+      className="absolute bottom-[calc(100%+12px)] left-0 w-60 bg-menu-bg backdrop-blur-[20px] rounded-xl border border-menu-border shadow-xl p-1.5 z-200"
+      onMouseEnter={() => setTrackingAttention(-0.48, 0.5, 'locked-on')}
+      onMouseLeave={() => {
+        if (!activeSubMenu) setShowPlusMenu(false);
+        setTrackingAttention(0, 0.44);
+      }}
+    >
+      {isBrowserSurface && (
+        <>
+          <button
+            type="button"
+            onClick={handleCaptureScreenshot}
+            className="w-full flex items-center gap-2.5 py-2 px-3 rounded-lg bg-transparent border-none text-primary text-sm cursor-pointer transition-colors hover:bg-hover"
+          >
+            <span className="text-secondary"><Camera size={16} /></span>
+            <span>Take a screenshot</span>
+          </button>
+          <button
+            type="button"
+            onClick={handleToggleGifRecording}
+            className={cn(
+              'w-full flex items-center gap-2.5 py-2 px-3 rounded-lg border-none text-sm cursor-pointer transition-colors',
+              isGifRecording ? 'bg-status-error-bg text-status-error hover:bg-status-error/18' : 'bg-transparent text-primary hover:bg-hover'
+            )}
+          >
+            <span className={cn(isGifRecording ? 'text-status-error' : 'text-secondary')}>
+              {isGifRecording ? <Square size={16} fill="currentColor" /> : <Video size={16} />}
+            </span>
+            <span>{isGifRecording ? `Stop recording (${gifDuration}s)` : 'Record screen (GIF)'}</span>
+          </button>
+          <button
+            type="button"
+            onClick={() => { fileInputRef.current?.click(); setShowPlusMenu(false); }}
+            className="w-full flex items-center gap-2.5 py-2 px-3 rounded-lg bg-transparent border-none text-primary text-sm cursor-pointer transition-colors hover:bg-hover"
+          >
+            <span className="text-secondary"><ImageIcon size={16} /></span>
+            <span>Add an image</span>
+          </button>
+          <div className="h-px bg-menu-border my-1 mx-2" />
+        </>
+      )}
+      {showGitHubInput && (
+        <div className="p-2">
+          <div className="flex items-center gap-1.5 bg-hover rounded-lg p-2 border border-menu-border">
+            <LinkIcon size={13} className="text-secondary flex-shrink-0" />
+            <input aria-label="GitHub file URL" autoFocus
+              value={githubUrl}
+              onChange={(e) => setGithubUrl(e.target.value)}
+              onKeyDown={(e) => { if (e.key === 'Enter') handleGitHubFetch(); if (e.key === 'Escape') { setShowGitHubInput(false); setGithubUrl(''); } }}
+              placeholder="github.com/user/repo/blob/main/file"
+              className="flex-1 bg-transparent border-none outline-none text-xs text-primary"
+            />
+            {githubLoading
+              ? <CircleNotch size={13} className="text-secondary animate-spin" />
+              : <button type="button" onClick={handleGitHubFetch} className="bg-transparent border-none cursor-pointer text-accent text-xs font-semibold p-0">Add</button>
+            }
+          </div>
+        </div>
+      )}
+      <div className="py-0.5 px-2 text-xs font-semibold text-muted tracking-widest uppercase">Attach</div>
+      {PLUS_MENU_ITEMS.filter(i => ['files', 'github'].includes(i.id)).map((item) => (
+        <div key={item.id} className="relative">
+          <button
+            type="button"
+            onClick={() => {
+              if (item.id === 'files') { fileInputRef.current?.click(); setShowPlusMenu(false); }
+              if (item.id === 'github') { setShowGitHubInput((v) => !v); setActiveSubMenu(null); }
+            }}
+            onMouseEnter={() => { setActiveSubMenu(null); setTrackingAttention(-0.48, 0.5, 'locked-on'); }}
+            className={cn(
+              'w-full flex items-center gap-2.5 py-2 px-3 rounded-lg border-none text-primary text-sm cursor-pointer transition-colors',
+              item.id === 'github' && showGitHubInput ? 'bg-hover' : 'bg-transparent'
+            )}
+          >
+            <span className="text-secondary">{item.icon}</span>
+            <span className="flex-1 text-left">{item.label}</span>
+          </button>
+        </div>
+      ))}
+      <div className="h-px bg-menu-border my-1 mx-2" />
+      <div className="py-0.5 px-2 text-xs font-semibold text-muted tracking-widest uppercase">Context</div>
+      {PLUS_MENU_ITEMS.filter(i => ['project', 'web'].includes(i.id)).map((item) => (
+        <div key={item.id} className="relative">
+          <button
+            type="button"
+            onClick={() => {
+              if (item.id === 'web') { setWebSearchEnabled((v) => !v); setShowPlusMenu(false); }
+            }}
+            onMouseEnter={() => {
+              if (item.hasSubmenu) setActiveSubMenu(item.id); else setActiveSubMenu(null);
+              setTrackingAttention(-0.48, 0.5, 'locked-on');
+            }}
+            className={cn(
+              'w-full flex items-center gap-2.5 py-2 px-3 rounded-lg border-none text-sm cursor-pointer transition-colors',
+              (item.id === 'web' && webSearchEnabled) ? 'bg-accent/12 text-accent' : activeSubMenu === item.id ? 'bg-hover text-primary' : 'bg-transparent text-primary'
+            )}
+          >
+            <span className={cn((item.id === 'web' && webSearchEnabled) ? 'text-accent' : 'text-secondary')}>{item.icon}</span>
+            <span className="flex-1 text-left">{item.label}</span>
+            {item.hasSubmenu && <CaretRight size={14} className="opacity-50" />}
+            {item.id === 'web' && webSearchEnabled && <Check size={14} className="text-accent" />}
+          </button>
+          {activeSubMenu === item.id && item.submenuItems && (
+            <div
+              className="absolute left-[calc(100%+10px)] bottom-0 w-52 bg-menu-bg backdrop-blur-[20px] rounded-xl border border-menu-border shadow-xl p-1.5 z-210"
+              onMouseEnter={() => setTrackingAttention(-0.26, 0.46, 'locked-on')}
+              onMouseLeave={() => setTrackingAttention(-0.48, 0.5, 'locked-on')}
+            >
+              {item.submenuItems.map((sub) => (
+                <button
+                  key={sub.id}
+                  type="button"
+                  onClick={() => { if (item.id === 'project' && sub.id === 'new-project') { import('@/views/chat/ChatStore').then(m => m.useChatStore.getState().createProject('New Project')); setShowPlusMenu(false); } }}
+                  className="w-full flex items-center gap-2 py-2 px-3 rounded-lg bg-transparent border-none text-primary text-sm cursor-pointer hover:bg-hover"
+                  onMouseEnter={() => setTrackingAttention(-0.24, 0.46, 'locked-on')}
+                >
+                  {sub.icon && <span className="text-secondary">{sub.icon}</span>}
+                  <span>{sub.label}</span>
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
+      ))}
+      <div className="h-px bg-menu-border my-1 mx-2" />
+      <div className="py-0.5 px-2 text-xs font-semibold text-muted tracking-widest uppercase">Style</div>
+      {PLUS_MENU_ITEMS.filter(i => ['style', 'connectors'].includes(i.id)).map((item) => (
+        <div key={item.id} className="relative">
+          <button
+            type="button"
+            onClick={() => {
+              if (item.id === 'connectors') { setShowProviderConnect(true); setShowPlusMenu(false); }
+            }}
+            onMouseEnter={() => {
+              if (item.hasSubmenu) setActiveSubMenu(item.id); else setActiveSubMenu(null);
+              setTrackingAttention(-0.48, 0.5, 'locked-on');
+            }}
+            className={cn(
+              'w-full flex items-center gap-2.5 py-2 px-3 rounded-lg border-none text-sm cursor-pointer transition-colors',
+              (item.id === 'style' && activeStyle) ? 'bg-accent/12 text-accent' : activeSubMenu === item.id ? 'bg-hover text-primary' : 'bg-transparent text-primary'
+            )}
+          >
+            <span className={cn((item.id === 'style' && activeStyle) ? 'text-accent' : 'text-secondary')}>{item.icon}</span>
+            <span className="flex-1 text-left">{item.id === 'style' && activeStyle ? `Style: ${activeStyle.charAt(0).toUpperCase() + activeStyle.slice(1)}` : item.label}</span>
+            {item.hasSubmenu && <CaretRight size={14} className="opacity-50" />}
+            {item.id === 'style' && activeStyle && <Check size={14} className="text-accent" />}
+          </button>
+          {activeSubMenu === item.id && item.submenuItems && (
+            <div
+              className="absolute left-[calc(100%+10px)] bottom-0 w-52 bg-menu-bg backdrop-blur-[20px] rounded-xl border border-menu-border shadow-xl p-1.5 z-210"
+              onMouseEnter={() => setTrackingAttention(-0.26, 0.46, 'locked-on')}
+              onMouseLeave={() => setTrackingAttention(-0.48, 0.5, 'locked-on')}
+            >
+              {item.submenuItems.map((sub) => (
+                <button
+                  key={sub.id}
+                  type="button"
+                  onClick={() => { if (item.id === 'style') { setActiveStyle(activeStyle === sub.id ? null : sub.id as 'formal' | 'creative' | 'technical'); setShowPlusMenu(false); } }}
+                  className={cn(
+                    'w-full flex items-center gap-2 py-2 px-3 rounded-lg border-none text-sm cursor-pointer',
+                    activeStyle === sub.id ? 'bg-accent/12 text-accent' : 'bg-transparent text-primary hover:bg-hover'
+                  )}
+                >
+                  {activeStyle === sub.id && <Check size={12} className="text-accent" />}
+                  <span>{sub.label}</span>
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
+      ))}
+    </div>
+  ) : null;
+
   return (
     <div
       className={cn(
@@ -1745,6 +1922,7 @@ export function ChatComposer({
             pulse={agentModePulse}
             surface={agentModeSurface || 'chat'}
             selectedAgentName={selectedSurfaceAgent?.name ?? null}
+            selectedAgentAvatarUrl={getBotAvatarUrl(selectedSurfaceAgent)}
             theme={agentModeTheme}
             hasActionPills={showTopActions}
           />
@@ -1909,18 +2087,19 @@ export function ChatComposer({
                   />
                 </div>
               )}
-              <div className="flex items-center gap-2 py-2 px-3">
+              <div className="flex items-center gap-2 py-2 px-3 relative">
                 <AttachmentButton
-                  onClick={() => fileInputRef.current?.click()}
+                  onClick={() => { setShowPlusMenu(!showPlusMenu); setActiveSubMenu(null); }}
                   className="size-7 transition-colors bg-transparent shadow-none border-none text-composer-muted hover:text-primary"
                   icon={
                     <Plus
                       size={18}
                       strokeWidth={2.5}
-                      className="transition-transform"
+                      className={cn('transition-transform', showPlusMenu && 'rotate-45')}
                     />
                   }
                 />
+                {plusMenuPanel}
                 {selectedPluginMention && (
                   <PluginMentionChip
                     target={selectedPluginMention}
@@ -2290,181 +2469,7 @@ export function ChatComposer({
                 }}
               />
 
-              {showPlusMenu && (
-                <div
-                  className="absolute bottom-[calc(100%+12px)] left-0 w-60 bg-menu-bg backdrop-blur-[20px] rounded-xl border border-menu-border shadow-xl p-1.5 z-200"
-                  onMouseEnter={() => setTrackingAttention(-0.48, 0.5, 'locked-on')}
-                  onMouseLeave={() => {
-                    if (!activeSubMenu) setShowPlusMenu(false);
-                    setTrackingAttention(0, 0.44);
-                  }}
-                >
-                  {isBrowserSurface && (
-                    <>
-                      <button
-                        type="button"
-                        onClick={handleCaptureScreenshot}
-                        className="w-full flex items-center gap-2.5 py-2 px-3 rounded-lg bg-transparent border-none text-primary text-sm cursor-pointer transition-colors hover:bg-hover"
-                      >
-                        <span className="text-secondary"><Camera size={16} /></span>
-                        <span>Take a screenshot</span>
-                      </button>
-                      <button
-                        type="button"
-                        onClick={handleToggleGifRecording}
-                        className={cn(
-                          'w-full flex items-center gap-2.5 py-2 px-3 rounded-lg border-none text-sm cursor-pointer transition-colors',
-                          isGifRecording ? 'bg-status-error-bg text-status-error hover:bg-status-error/18' : 'bg-transparent text-primary hover:bg-hover'
-                        )}
-                      >
-                        <span className={cn(isGifRecording ? 'text-status-error' : 'text-secondary')}>
-                          {isGifRecording ? <Square size={16} fill="currentColor" /> : <Video size={16} />}
-                        </span>
-                        <span>{isGifRecording ? `Stop recording (${gifDuration}s)` : 'Record screen (GIF)'}</span>
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => { fileInputRef.current?.click(); setShowPlusMenu(false); }}
-                        className="w-full flex items-center gap-2.5 py-2 px-3 rounded-lg bg-transparent border-none text-primary text-sm cursor-pointer transition-colors hover:bg-hover"
-                      >
-                        <span className="text-secondary"><ImageIcon size={16} /></span>
-                        <span>Add an image</span>
-                      </button>
-                      <div className="h-px bg-menu-border my-1 mx-2" />
-                    </>
-                  )}
-                  {showGitHubInput && (
-                    <div className="p-2">
-                      <div className="flex items-center gap-1.5 bg-hover rounded-lg p-2 border border-menu-border">
-                        <LinkIcon size={13} className="text-secondary flex-shrink-0" />
-                        <input aria-label="GitHub file URL" autoFocus
-                          value={githubUrl}
-                          onChange={(e) => setGithubUrl(e.target.value)}
-                          onKeyDown={(e) => { if (e.key === 'Enter') handleGitHubFetch(); if (e.key === 'Escape') { setShowGitHubInput(false); setGithubUrl(''); } }}
-                          placeholder="github.com/user/repo/blob/main/file"
-                          className="flex-1 bg-transparent border-none outline-none text-xs text-primary"
-                        />
-                        {githubLoading
-                          ? <CircleNotch size={13} className="text-secondary animate-spin" />
-                          : <button type="button" onClick={handleGitHubFetch} className="bg-transparent border-none cursor-pointer text-accent text-xs font-semibold p-0">Add</button>
-                        }
-                      </div>
-                    </div>
-                  )}
-                  <div className="py-0.5 px-2 text-xs font-semibold text-muted tracking-widest uppercase">Attach</div>
-                  {PLUS_MENU_ITEMS.filter(i => ['files', 'github'].includes(i.id)).map((item) => (
-                    <div key={item.id} className="relative">
-                      <button
-                        type="button"
-                        onClick={() => {
-                          if (item.id === 'files') { fileInputRef.current?.click(); setShowPlusMenu(false); }
-                          if (item.id === 'github') { setShowGitHubInput((v) => !v); setActiveSubMenu(null); }
-                        }}
-                        onMouseEnter={() => { setActiveSubMenu(null); setTrackingAttention(-0.48, 0.5, 'locked-on'); }}
-                        className={cn(
-                          'w-full flex items-center gap-2.5 py-2 px-3 rounded-lg border-none text-primary text-sm cursor-pointer transition-colors',
-                          item.id === 'github' && showGitHubInput ? 'bg-hover' : 'bg-transparent'
-                        )}
-                      >
-                        <span className="text-secondary">{item.icon}</span>
-                        <span className="flex-1 text-left">{item.label}</span>
-                      </button>
-                    </div>
-                  ))}
-                  <div className="h-px bg-menu-border my-1 mx-2" />
-                  <div className="py-0.5 px-2 text-xs font-semibold text-muted tracking-widest uppercase">Context</div>
-                  {PLUS_MENU_ITEMS.filter(i => ['project', 'web'].includes(i.id)).map((item) => (
-                    <div key={item.id} className="relative">
-                      <button
-                        type="button"
-                        onClick={() => {
-                          if (item.id === 'web') { setWebSearchEnabled((v) => !v); setShowPlusMenu(false); }
-                        }}
-                        onMouseEnter={() => {
-                          if (item.hasSubmenu) setActiveSubMenu(item.id); else setActiveSubMenu(null);
-                          setTrackingAttention(-0.48, 0.5, 'locked-on');
-                        }}
-                        className={cn(
-                          'w-full flex items-center gap-2.5 py-2 px-3 rounded-lg border-none text-sm cursor-pointer transition-colors',
-                          (item.id === 'web' && webSearchEnabled) ? 'bg-accent/12 text-accent' : activeSubMenu === item.id ? 'bg-hover text-primary' : 'bg-transparent text-primary'
-                        )}
-                      >
-                        <span className={cn((item.id === 'web' && webSearchEnabled) ? 'text-accent' : 'text-secondary')}>{item.icon}</span>
-                        <span className="flex-1 text-left">{item.label}</span>
-                        {item.hasSubmenu && <CaretRight size={14} className="opacity-50" />}
-                        {item.id === 'web' && webSearchEnabled && <Check size={14} className="text-accent" />}
-                      </button>
-                      {activeSubMenu === item.id && item.submenuItems && (
-                        <div
-                          className="absolute left-[calc(100%+10px)] bottom-0 w-52 bg-menu-bg backdrop-blur-[20px] rounded-xl border border-menu-border shadow-xl p-1.5 z-210"
-                          onMouseEnter={() => setTrackingAttention(-0.26, 0.46, 'locked-on')}
-                          onMouseLeave={() => setTrackingAttention(-0.48, 0.5, 'locked-on')}
-                        >
-                          {item.submenuItems.map((sub) => (
-                            <button
-                              key={sub.id}
-                              type="button"
-                              onClick={() => { if (item.id === 'project' && sub.id === 'new-project') { import('@/views/chat/ChatStore').then(m => m.useChatStore.getState().createProject('New Project')); setShowPlusMenu(false); } }}
-                              className="w-full flex items-center gap-2 py-2 px-3 rounded-lg bg-transparent border-none text-primary text-sm cursor-pointer hover:bg-hover"
-                              onMouseEnter={() => setTrackingAttention(-0.24, 0.46, 'locked-on')}
-                            >
-                              {sub.icon && <span className="text-secondary">{sub.icon}</span>}
-                              <span>{sub.label}</span>
-                            </button>
-                          ))}
-                        </div>
-                      )}
-                    </div>
-                  ))}
-                  <div className="h-px bg-menu-border my-1 mx-2" />
-                  <div className="py-0.5 px-2 text-xs font-semibold text-muted tracking-widest uppercase">Style</div>
-                  {PLUS_MENU_ITEMS.filter(i => ['style', 'connectors'].includes(i.id)).map((item) => (
-                    <div key={item.id} className="relative">
-                      <button
-                        type="button"
-                        onClick={() => {
-                          if (item.id === 'connectors') { setShowProviderConnect(true); setShowPlusMenu(false); }
-                        }}
-                        onMouseEnter={() => {
-                          if (item.hasSubmenu) setActiveSubMenu(item.id); else setActiveSubMenu(null);
-                          setTrackingAttention(-0.48, 0.5, 'locked-on');
-                        }}
-                        className={cn(
-                          'w-full flex items-center gap-2.5 py-2 px-3 rounded-lg border-none text-sm cursor-pointer transition-colors',
-                          (item.id === 'style' && activeStyle) ? 'bg-accent/12 text-accent' : activeSubMenu === item.id ? 'bg-hover text-primary' : 'bg-transparent text-primary'
-                        )}
-                      >
-                        <span className={cn((item.id === 'style' && activeStyle) ? 'text-accent' : 'text-secondary')}>{item.icon}</span>
-                        <span className="flex-1 text-left">{item.id === 'style' && activeStyle ? `Style: ${activeStyle.charAt(0).toUpperCase() + activeStyle.slice(1)}` : item.label}</span>
-                        {item.hasSubmenu && <CaretRight size={14} className="opacity-50" />}
-                        {item.id === 'style' && activeStyle && <Check size={14} className="text-accent" />}
-                      </button>
-                      {activeSubMenu === item.id && item.submenuItems && (
-                        <div
-                          className="absolute left-[calc(100%+10px)] bottom-0 w-52 bg-menu-bg backdrop-blur-[20px] rounded-xl border border-menu-border shadow-xl p-1.5 z-210"
-                          onMouseEnter={() => setTrackingAttention(-0.26, 0.46, 'locked-on')}
-                          onMouseLeave={() => setTrackingAttention(-0.48, 0.5, 'locked-on')}
-                        >
-                          {item.submenuItems.map((sub) => (
-                            <button
-                              key={sub.id}
-                              type="button"
-                              onClick={() => { if (item.id === 'style') { setActiveStyle(activeStyle === sub.id ? null : sub.id as 'formal' | 'creative' | 'technical'); setShowPlusMenu(false); } }}
-                              className={cn(
-                                'w-full flex items-center gap-2 py-2 px-3 rounded-lg border-none text-sm cursor-pointer',
-                                activeStyle === sub.id ? 'bg-accent/12 text-accent' : 'bg-transparent text-primary hover:bg-hover'
-                              )}
-                            >
-                              {activeStyle === sub.id && <Check size={12} className="text-accent" />}
-                              <span>{sub.label}</span>
-                            </button>
-                          ))}
-                        </div>
-                      )}
-                    </div>
-                  ))}
-                </div>
-              )}
+              {plusMenuPanel}
             </div>
 
             <div className="flex items-center gap-1 flex-1 pl-1 overflow-hidden">
@@ -2645,6 +2650,7 @@ export function ChatComposer({
               agentModeSurface={agentModeSurface}
               isLoading={isLoading}
               selectedSurfaceAgent={selectedSurfaceAgent}
+              variant="bar"
             />
           </div>
           {selectedModeId === 'swarms' && (

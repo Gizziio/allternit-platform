@@ -1,5 +1,6 @@
 
 import React from 'react';
+import { cn } from '@/lib/utils';
 import type { Agent } from '@/lib/agents';
 
 const THEME = {
@@ -22,6 +23,7 @@ interface AgentSelectorDropdownProps {
   onSelect: (agent: Agent) => void;
   onClear?: () => void;
   onClose: () => void;
+  className?: string;
 }
 
 export function AgentSelectorDropdown({
@@ -35,12 +37,16 @@ export function AgentSelectorDropdown({
   onSelect,
   onClear,
   onClose,
+  className,
 }: AgentSelectorDropdownProps) {
   return (
     <>
       <div role="button" tabIndex={0} className="fixed inset-0 z-199" onClick={onClose} />
       <div
-        className="absolute bottom-full right-36 w-72 max-h-80 bg-menu-bg backdrop-blur-[20px] rounded-xl border border-menu-border shadow-xl z-200 flex flex-col overflow-hidden"
+        className={cn(
+          'absolute bottom-full left-0 w-72 max-h-80 bg-menu-bg backdrop-blur-[20px] rounded-xl border border-menu-border shadow-xl z-200 flex flex-col overflow-hidden',
+          className
+        )}
         style={{
           boxShadow: '0 10px 30px var(--shell-overlay-backdrop)',
         }}
@@ -48,10 +54,10 @@ export function AgentSelectorDropdown({
         <div className="flex items-center justify-between gap-2 p-3 border-b border-input-border">
           <div>
             <div className="text-xs font-extrabold text-muted tracking-wider uppercase">
-              Agent Workspace
+              Bot Workspace
             </div>
             <div className="mt-0.5 text-sm text-primary">
-              Choose an agent
+              Choose a bot
             </div>
           </div>
           {onClear ? (

@@ -1,0 +1,135 @@
+---
+title: Capsule Manager
+description: Manage MCP Interactive Capsules for agent tools in the Allternit platform
+---
+
+## Overview
+
+The **Capsule Manager** is the platform surface for managing MCP Interactive Capsules. Capsules are small, scoped UI surfaces attached to agent tools. They let tools expose interactive HTML/CSS/JS views, exchange events with the platform, and invoke platform tools on behalf of the agent.
+
+## Base URL / usage
+
+Capsule Manager runs inside the platform shell:
+
+```text
+https://app.allternit.com/shell?view=capsules
+```
+
+Open programmatically:
+
+```typescript
+open('capsules');
+```
+
+## Capsule lifecycle
+
+| State | Description |
+|---|---|
+| `active` | Capsule is running and visible |
+| `paused` | Capsule is suspended but retains state |
+| `closed` | Capsule has been dismissed |
+
+## Capsule surface
+
+| Field | Type | Description |
+|---|---|---|
+| `html` | string | Capsule markup |
+| `css` | string | Capsule styles |
+| `js` | string | Capsule client script |
+| `permissions` | string[] | Required permissions |
+
+## Endpoints / commands
+
+| Command | Description |
+|---|---|
+| `capsule.create` | Create a new capsule for a tool |
+| `capsule.render` | Render a capsule in the platform shell |
+| `capsule.event` | Send an event between capsule and platform |
+| `capsule.invoke` | Invoke a platform tool from the capsule |
+| `capsule.close` | Dismiss the capsule |
+
+## JSON request / response examples
+
+### Capsule object
+
+```json
+{
+  "id": "cap_1a2b...",
+  "type": "form",
+  "state": "active",
+  "toolId": "test-tool",
+  "surface": {
+    "html": "<div>Test Capsule</div>",
+    "css": "",
+    "js": "",
+    "permissions": []
+  },
+  "createdAt": "2026-08-13T18:00:00Z",
+  "updatedAt": "2026-08-13T18:00:00Z"
+}
+```
+
+### Send a capsule event
+
+```bash
+curl -X POST https://api.allternit.com/api/v1/capsules/cap_1a2b.../events \
+  -H "Authorization: Bearer $TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "id": "event-001",
+    "capsuleId": "cap_1a2b...",
+    "direction": "to_ui",
+    "type": "form_submit",
+    "payload": { "value": "hello" },
+    "timestamp": "2026-08-13T18:00:00Z",
+    "source": "user"
+  }'
+```
+
+Response:
+
+```json
+{
+  "success": true,
+  "event_id": "event-001"
+}
+```
+
+### Invoke a platform tool from a capsule
+
+```bash
+curl -X POST https://api.allternit.com/api/v1/capsules/cap_1a2b.../invoke \
+  -H "Authorization: Bearer $TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "tool_name": "test-tool",
+    "params": { "test": true }
+  }'
+```
+
+Response:
+
+```json
+{
+  "success": true,
+  "result": { "acknowledged": true }
+}
+```
+
+## Error codes
+
+| HTTP | Code | Meaning |
+|---|---|---|
+| 200 | — | Event sent or tool invoked |
+| 400 | `invalid_capsule` | Capsule payload is malformed |
+| 401 | `unauthorized` | Missing or invalid bearer token |
+| 404 | `not_found` | Capsule or tool not found |
+| 403 | `forbidden` | Capsule lacks required permission |
+| 500 | `internal_error` | Capsule runtime failure |
+
+## Related links
+
+- [Capsule SDK](/sdk/capsule)
+- [MCP servers](/tools/mcp)
+- [Computer Use MCP](/tools/computer-use-mcp)
+- [Plugin adapters](/tools/plugin-adapters)

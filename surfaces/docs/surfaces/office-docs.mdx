@@ -1,0 +1,134 @@
+---
+title: Office Docs
+description: GenOffice-powered document editor surface for Allternit
+---
+
+## Overview
+
+**Office Docs** is the Allternit document editor surface. It wraps `@allternit/office-docs-app` inside the platform shell (`surfaces/ai.allternit.com`) and gives agents and users a native `.docx` editing experience. Documents are persisted as artifacts with a binary docx section and an extracted plaintext section for search and cowork.
+
+## Base URL / usage
+
+Local dev server for the standalone surface:
+
+```bash
+cd surfaces/allternit-docs
+pnpm dev   # http://localhost:3014
+```
+
+Inside the platform shell:
+
+```text
+https://app.allternit.com/docs/:artifactId?
+```
+
+Open a document from the shell with view type `docs`:
+
+```typescript
+open('docs', { artifactId: 'art_018f3a7c...' });
+```
+
+## Endpoints / commands
+
+### Shell view commands
+
+| Command | View type | Context | Description |
+|---|---|---|---|
+| Open blank document | `docs` | — | Create a new document |
+| Open artifact document | `docs` | `{ artifactId }` | Edit an existing artifact |
+| Open handoff document | `docs` | `{ handoffId }` | Open a file handed off from the launcher |
+
+### Artifact API used
+
+| Method | Path | Description |
+|---|---|---|
+| `GET` | `/api/artifacts/:id` | Load artifact and sections |
+| `PUT` | `/api/artifacts/:id` | Update artifact title |
+| `PUT` | `/api/artifacts/:id/sections/:sectionId` | Update binary or plaintext section |
+| `POST` | `/api/artifacts/:id/sections` | Create binary or plaintext section |
+
+## Document artifact sections
+
+A persisted document artifact contains at least these sections:
+
+| Kind | Purpose |
+|---|---|
+| `docs-editor/binary` | Base64-encoded `.docx` bytes (source of truth) |
+| `docs-editor/plaintext` | Extracted text for search, iOS, and cowork |
+
+Legacy `docs-editor/<block>` text sections are upgraded on load by generating a `.docx` from their blocks.
+
+## JSON request / response examples
+
+### Load a document artifact
+
+```bash
+curl https://api.allternit.com/api/artifacts/art_018f3a7c... \
+  -H "Authorization: Bearer $TOKEN"
+```
+
+Response:
+
+```json
+{
+  "id": "art_018f3a7c...",
+  "title": "Q3 Roadmap",
+  "sections": [
+    {
+      "id": "sec_9a1b...",
+      "kind": "docs-editor/binary",
+      "body": "UEsDBBQABgAI...",
+      "position": 0
+    },
+    {
+      "id": "sec_2c3d...",
+      "kind": "docs-editor/plaintext",
+      "body": "Q3 Roadmap\n\nObjective...",
+      "position": 1
+    }
+  ]
+}
+```
+
+### Persist a document update
+
+```bash
+curl -X PUT https://api.allternit.com/api/artifacts/art_018f3a7c.../sections/sec_9a1b... \
+  -H "Authorization: Bearer $TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{"body":"UEsDBBQABgAI..."}'
+```
+
+Response:
+
+```json
+{
+  "id": "sec_9a1b...",
+  "kind": "docs-editor/binary",
+  "updated_at": "2026-08-13T18:00:00Z"
+}
+```
+
+### Update plaintext index
+
+```bash
+curl -X PUT https://api.allternit.com/api/artifacts/art_018f3a7c.../sections/sec_2c3d... \
+  -H "Authorization: Bearer $TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{"body":"Updated roadmap content..."}'
+```
+
+## Error codes
+
+| HTTP | Code | Meaning |
+|---|---|---|
+| 200 | — | Success |
+| 401 | `unauthorized` | Missing or invalid bearer token |
+| 404 | `not_found` | Artifact or section does not exist |
+| 500 | `internal_error` | Document engine or artifact service failure |
+
+## Related links
+
+- [Artifacts API](/api/artifacts)
+- [Platform surface](/surfaces/platform)
+- [Office Engine tools](/tools/office-engine)

@@ -1,0 +1,525 @@
+---
+title: 'Cloud API'
+description: 'Allternit Cloud API control plane for runtime pairing, relay, hosted runtimes, and Cowork execution.'
+---
+
+## Overview
+
+The Allternit Cloud API is the hosted control plane that binds user accounts to self-hosted and managed runtimes. It provides the runtime pairing protocol, the browser-to-runtime relay, hosted runtime lifecycle, the BYO-VPS deploy wizard, and the Cowork Runtime execution API.
+
+The API is built from `cmd/allternit-cloud-api` and runs at `https://api.allternit.com` in production.
+
+## Base URL
+
+```
+https://api.allternit.com
+```
+
+Public health endpoints require no authentication. Runtime pairing creation and exchange are public (like an OAuth device flow). All other endpoints require either a Clerk session JWT or a runtime device token in the `Authorization: Bearer <token>` header.
+
+## Runtime pairing
+
+First-party device pairing binds a desktop or VPS runtime to a human account without giving the runtime the human's Clerk session token. The runtime generates an Ed25519 keypair, polls for approval, and exchanges the pairing for a revocable device credential.
+
+### Pairing endpoints
+
+| Method | Path | Auth | Description |
+|--------|------|------|-------------|
+| POST | `/api/v1/runtime-pairings` | Public | Create a pairing request. |
+| POST | `/api/v1/runtime-pairings/exchange` | Public | Exchange an approved pairing for a device token. |
+| GET | `/api/v1/runtime-pairings/code/:code` | Clerk / device | Inspect a pairing by user code. |
+| POST | `/api/v1/runtime-pairings/code/:code/approve` | Clerk / device | Approve a pairing request. |
+| POST | `/api/v1/runtime-pairings/code/:code/deny` | Clerk / device | Deny a pairing request. |
+| GET | `/api/v1/runtime-devices` | Clerk / device | List paired runtimes. |
+| POST | `/api/v1/runtime-devices/verify-token` | Device token | Introspect a device token. |
+| DELETE | `/api/v1/runtime-devices/:id` | Clerk | Revoke a runtime. |
+| POST | `/api/v1/runtime-devices/:id/heartbeat` | Device token | Runtime heartbeat. |
+| POST | `/api/v1/runtime-devices/:id/rotate` | Device token | Rotate device credential. |
+| POST | `/api/v1/runtime-devices/:id/revoke-self` | Device token | Self-revoke a runtime. |
+
+### Create a pairing
+
+```bash
+curl -X POST https://api.allternit.com/api/v1/runtime-pairings \
+  -H "Content-Type: application/json" \
+  -d '{
+    "name": "Production VPS",
+    "runtimeType": "vps",
+    "hostname": "prod-01",
+    "platform": "linux-amd64",
+    "version": "0.1.0",
+    "publicKey": "base64url-encoded-32-byte-public-key",
+    "capabilities": [
+      "runtime:connect",
+      "runtime:execute",
+      "runtime:files",
+      "runtime:terminal",
+      "providers:connect",
+      "providers:use"
+    ]
+  }'
+```
+
+### Response
+
+```json
+{
+  "pairingId": "pair_abc123",
+  "deviceCode": "secret",
+  "userCode": "ABCD-2345",
+  "challenge": "secret",
+  "verificationUrl": "https://platform.allternit.com/pair?code=ABCD-2345",
+  "expiresAt": "2026-08-13T20:00:00Z",
+  "pollIntervalSeconds": 2
+}
+```
+
+### Exchange a pairing
+
+The runtime signs the challenge with its Ed25519 private key and polls the exchange endpoint.
+
+```bash
+curl -X POST https://api.allternit.com/api/v1/runtime-pairings/exchange \
+  -H "Content-Type: application/json" \
+  -d '{
+    "pairingId": "pair_abc123",
+    "deviceCode": "secret",
+    "signature": "base64url-ed25519-signature-of-allternit-runtime-pairing:pairingId:challenge"
+  }'
+```
+
+### Response
+
+```json
+{
+  "runtimeId": "rt_xyz789",
+  "userId": "user_123",
+  "userEmail": "ops@example.com",
+  "organizationId": "org_456",
+  "deviceToken": "allternit_runtime_...",
+  "tokenType": "Bearer",
+  "expiresAt": "2026-11-11T19:50:00Z",
+  "capabilities": ["runtime:connect", "runtime:execute", "runtime:files", "runtime:terminal", "providers:connect", "providers:use"]
+}
+```
+
+While approval is pending, the endpoint returns HTTP `428`:
+
+```json
+{
+  "error": "authorization_pending",
+  "status": "pending"
+}
+```
+
+### Capability scopes
+
+| Capability | Allows |
+|------------|--------|
+| `runtime:connect` | Heartbeat and accept relay connections. |
+| `runtime:execute` | Generic API execution through the relay. |
+| `runtime:files` | File and workspace endpoints. |
+| `runtime:terminal` | Terminal and PTY endpoints. |
+| `providers:connect` | Write provider credentials. |
+| `providers:use` | Read and use provider connections. |
+
+## Runtime relay
+
+Once paired, a runtime opens an outbound WebSocket to the cloud API. A Clerk-authenticated browser can then proxy HTTP requests and WebSocket traffic to that runtime without exposing the runtime's loopback API publicly.
+
+### Relay endpoints
+
+| Method | Path | Auth | Description |
+|--------|------|------|-------------|
+| WS | `/api/v1/runtime-relay/connect/:id` | Device token | Runtime relay WebSocket. |
+| POST | `/api/v1/runtime-devices/:id/proxy` | Clerk | Proxy an HTTP request to the runtime. |
+| POST | `/api/v1/runtime-devices/:id/socket-ticket` | Clerk | Create a one-time WebSocket ticket. |
+| WS | `/api/v1/runtime-devices/:id/socket?ticket=...` | Ticket | Browser WebSocket to the runtime. |
+
+### Proxy a request to a runtime
+
+```bash
+curl -X POST https://api.allternit.com/api/v1/runtime-devices/rt_xyz789/proxy \
+  -H "Authorization: Bearer <clerk-session-token>" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "method": "GET",
+    "path": "/api/v1/health",
+    "headers": {},
+    "body": "",
+    "bodyEncoding": "utf8"
+  }'
+```
+
+The cloud API verifies ownership and capability, forwards the request over the runtime WebSocket, and streams the response back.
+
+### WebSocket ticket
+
+For streaming endpoints, request a ticket first:
+
+```bash
+curl -X POST https://api.allternit.com/api/v1/runtime-devices/rt_xyz789/socket-ticket \
+  -H "Authorization: Bearer <clerk-session-token>" \
+  -H "Content-Type: application/json" \
+  -d '{"path": "/api/v1/runs/run_123/events/stream"}'
+```
+
+### Response
+
+```json
+{
+  "ticket": "ticket_uuid",
+  "expiresInSeconds": 30
+}
+```
+
+Connect to the ticketed WebSocket:
+
+```bash
+wscat -c "wss://api.allternit.com/api/v1/runtime-devices/rt_xyz789/socket?ticket=ticket_uuid"
+```
+
+### Allowed relay paths
+
+The runtime proxy only accepts paths under the following prefixes:
+
+```
+/api, /viz, /sandbox, /vm-session, /rails, /stream, /terminal, /mcp,
+/platform, /metrics, /alabs, /cowork, /webhooks, /ws, /panes, /status,
+/health, /v1
+```
+
+## Hosted runtimes
+
+Paid users can provision managed runtimes as Fly Machines. The `agent-daemon` inside the machine auto-pairs using a one-time bootstrap token.
+
+### Hosted runtime endpoints
+
+| Method | Path | Auth | Description |
+|--------|------|------|-------------|
+| GET | `/api/v1/hosted-runtimes` | Clerk | List hosted runtimes. |
+| POST | `/api/v1/hosted-runtimes` | Clerk | Create a hosted runtime. |
+| GET | `/api/v1/hosted-runtimes/entitlement` | Clerk | Get current plan entitlement. |
+| POST | `/api/v1/hosted-runtimes/:id/start` | Clerk | Start a stopped runtime. |
+| POST | `/api/v1/hosted-runtimes/:id/stop` | Clerk | Stop a runtime. |
+| DELETE | `/api/v1/hosted-runtimes/:id` | Clerk | Destroy a runtime. |
+
+### Create a hosted runtime
+
+```bash
+curl -X POST https://api.allternit.com/api/v1/hosted-runtimes \
+  -H "Authorization: Bearer <clerk-session-token>" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "region": "lax",
+    "memoryMb": 1024,
+    "name": "Allternit Hosted (lax)"
+  }'
+```
+
+### Response
+
+```json
+{
+  "id": "hr_abc123",
+  "name": "Allternit Hosted (lax)",
+  "region": "lax",
+  "status": "starting",
+  "runtimeDeviceId": null,
+  "cpus": 1,
+  "memoryMb": 1024,
+  "idleTimeoutMinutes": 15,
+  "lastActivityAt": "2026-08-13T19:50:00Z",
+  "stopReason": null,
+  "monthlyUsageSeconds": 0,
+  "monthlyEstimatedCostUsd": 0.0,
+  "createdAt": "2026-08-13T19:50:00Z",
+  "startedAt": "2026-08-13T19:50:00Z",
+  "stoppedAt": null
+}
+```
+
+## BYO-VPS deploy wizard
+
+The wizard provisions a self-hosted runtime on Hetzner, DigitalOcean, AWS, or a manual SSH target. It runs idempotent bootstrap over SSH, joins the box to the mesh, registers it as a gizzi instance, and mints a one-time pairing token.
+
+### Wizard endpoints
+
+| Method | Path | Auth | Description |
+|--------|------|------|-------------|
+| POST | `/api/v1/cloud/wizard/deployments` | Clerk | Start a wizard deployment. |
+| GET | `/api/v1/cloud/wizard/deployments` | Clerk | List wizard sessions. |
+| GET | `/api/v1/cloud/wizard/deployments/:id` | Clerk | Get wizard state. |
+| POST | `/api/v1/cloud/wizard/deployments/:id/advance` | Clerk | Advance to the next step. |
+| POST | `/api/v1/cloud/wizard/deployments/:id/resume` | Clerk | Resume after a human checkpoint. |
+| POST | `/api/v1/cloud/wizard/deployments/:id/cancel` | Clerk | Cancel the wizard. |
+| DELETE | `/api/v1/cloud/wizard/deployments/:id` | Clerk | Delete a terminal wizard session. |
+| POST | `/api/v1/cloud/wizard/deployments/:id/bootstrap` | Clerk | Run or retry the bootstrap step. |
+
+### Start a wizard
+
+```bash
+curl -X POST https://api.allternit.com/api/v1/cloud/wizard/deployments \
+  -H "Authorization: Bearer <clerk-session-token>" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "provider": "hetzner",
+    "apiToken": "hetzner-api-token",
+    "instanceName": "allternit-prod-01",
+    "region": "fsn1",
+    "instanceType": "cx21",
+    "storageGb": 50
+  }'
+```
+
+### Response
+
+```json
+{
+  "deploymentId": "dep_abc123",
+  "currentStep": "SelectProvider",
+  "context": {
+    "provider": "hetzner",
+    "instanceName": "allternit-prod-01",
+    "region": "fsn1",
+    "instanceType": "cx21",
+    "storageGb": 50
+  }
+}
+```
+
+The response is redacted: `apiToken`, `sshPrivateKey`, and `sshPassword` are never echoed.
+
+### Bootstrap the box
+
+```bash
+curl -X POST https://api.allternit.com/api/v1/cloud/wizard/deployments/dep_abc123/bootstrap \
+  -H "Authorization: Bearer <clerk-session-token>"
+```
+
+### Response
+
+```json
+{
+  "deploymentId": "dep_abc123",
+  "status": "complete",
+  "meshIp": "100.64.0.5",
+  "instanceName": "allternit-prod-01",
+  "url": "http://100.64.0.5:8013",
+  "paired": true,
+  "runtimeId": "rt_xyz789",
+  "wizard": { ... }
+}
+```
+
+If the bootstrap fails for a recoverable reason, retry the same request. Non-recoverable failures or exhausted attempt caps return HTTP `409`:
+
+```json
+{
+  "error": "bootstrap_not_retryable",
+  "recoverable": false,
+  "bootstrapAttempts": 3,
+  "maxBootstrapAttempts": 3
+}
+```
+
+## Cowork Runtime
+
+Runs are the core execution unit in the Cowork Runtime. The cloud API exposes run lifecycle, event streaming, schedules, approvals, jobs, and checkpoints.
+
+### Run endpoints
+
+| Method | Path | Description |
+|--------|------|-------------|
+| POST | `/api/v1/runs` | Create a run. |
+| GET | `/api/v1/runs` | List runs. |
+| GET | `/api/v1/runs/:id` | Get a run. |
+| PUT | `/api/v1/runs/:id` | Update run metadata. |
+| DELETE | `/api/v1/runs/:id` | Delete a run. |
+| POST | `/api/v1/runs/:id/start` | Start a run. |
+| POST | `/api/v1/runs/:id/pause` | Pause a run. |
+| POST | `/api/v1/runs/:id/resume` | Resume a run. |
+| POST | `/api/v1/runs/:id/cancel` | Cancel a run. |
+| POST | `/api/v1/runs/:id/attach` | Attach a client. |
+| POST | `/api/v1/runs/:id/detach` | Detach a client. |
+| GET | `/api/v1/runs/:id/attachments` | List attachments. |
+| GET | `/api/v1/runs/:id/events` | List events. |
+| GET | `/api/v1/runs/:id/events/stream` | Stream events (SSE). |
+| WS | `/ws/runs/:id` | Stream events (WebSocket). |
+| POST | `/api/v1/runs/:id/checkpoints` | Create a checkpoint. |
+| GET | `/api/v1/runs/:id/checkpoints` | List checkpoints. |
+| GET | `/api/v1/checkpoints/:id` | Get a checkpoint. |
+| DELETE | `/api/v1/checkpoints/:id` | Delete a checkpoint. |
+| POST | `/api/v1/runs/:id/restore` | Restore a checkpoint. |
+
+### Create a run
+
+```bash
+curl -X POST https://api.allternit.com/api/v1/runs \
+  -H "Authorization: Bearer $ALLTERNIT_API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "name": "Nightly sync",
+    "description": "Sync production database",
+    "mode": "local",
+    "config": {
+      "command": "./scripts/sync.sh",
+      "args": ["--verbose"],
+      "workingDir": "/workspace",
+      "env": { "API_KEY": "secret123" },
+      "resourceLimits": {
+        "memoryMb": 2048,
+        "cpuCores": 2.0,
+        "diskGb": 10,
+        "timeoutSeconds": 3600
+      }
+    },
+    "autoStart": true
+  }'
+```
+
+### Response
+
+```json
+{
+  "id": "run_abc123",
+  "name": "Nightly sync",
+  "description": "Sync production database",
+  "mode": "local",
+  "status": "pending",
+  "stepCursor": null,
+  "totalSteps": null,
+  "completedSteps": 0,
+  "config": { ... },
+  "ownerId": null,
+  "tenantId": "user_123",
+  "runtimeId": null,
+  "runtimeType": null,
+  "scheduleId": null,
+  "createdAt": "2026-08-13T19:50:00Z",
+  "updatedAt": "2026-08-13T19:50:00Z",
+  "startedAt": null,
+  "completedAt": null,
+  "errorMessage": null,
+  "errorDetails": null
+}
+```
+
+### Stream events
+
+```bash
+curl -N https://api.allternit.com/api/v1/runs/run_abc123/events/stream \
+  -H "Authorization: Bearer $ALLTERNIT_API_KEY"
+```
+
+Each SSE line is a JSON event:
+
+```json
+{
+  "id": "evt_001",
+  "runId": "run_abc123",
+  "sequence": 1,
+  "eventType": "run_created",
+  "payload": { "runName": "Nightly sync", "mode": "local" },
+  "sourceClientId": null,
+  "sourceClientType": null,
+  "createdAt": "2026-08-13T19:50:00Z"
+}
+```
+
+### Schedule endpoints
+
+| Method | Path | Description |
+|--------|------|-------------|
+| GET | `/api/v1/schedules` | List schedules. |
+| POST | `/api/v1/schedules` | Create a schedule. |
+| GET | `/api/v1/schedules/:id` | Get a schedule. |
+| PUT | `/api/v1/schedules/:id` | Update a schedule. |
+| DELETE | `/api/v1/schedules/:id` | Delete a schedule. |
+| POST | `/api/v1/schedules/:id/enable` | Enable a schedule. |
+| POST | `/api/v1/schedules/:id/disable` | Disable a schedule. |
+| POST | `/api/v1/schedules/:id/trigger` | Trigger a schedule manually. |
+
+### Approval endpoints
+
+| Method | Path | Description |
+|--------|------|-------------|
+| GET | `/api/v1/approvals` | List approvals. |
+| POST | `/api/v1/approvals` | Create an approval. |
+| GET | `/api/v1/approvals/:id` | Get an approval. |
+| POST | `/api/v1/approvals/:id/approve` | Approve a request. |
+| POST | `/api/v1/approvals/:id/deny` | Deny a request. |
+| POST | `/api/v1/approvals/:id/cancel` | Cancel an approval. |
+
+## Health and metrics
+
+| Method | Path | Auth | Description |
+|--------|------|------|-------------|
+| GET | `/api/v1/health` | Public | Database health. |
+| GET | `/api/v1/health/ready` | Public | Readiness probe. |
+| GET | `/api/v1/health/live` | Public | Liveness probe. |
+| GET | `/api/v1/metrics` | Public | Prometheus metrics. |
+
+```bash
+curl https://api.allternit.com/api/v1/health/live
+```
+
+```json
+{ "alive": true }
+```
+
+## Error codes
+
+| Status | Code | Meaning |
+|--------|------|---------|
+| 200 | `ok` | Success. |
+| 201 | `created` | Resource created. |
+| 204 | `no_content` | Resource deleted. |
+| 400 | `bad_request` | Invalid request parameters. |
+| 401 | `unauthorized` | Missing or invalid authentication. |
+| 403 | `forbidden` | Permission denied or plan limit reached. |
+| 404 | `not_found` | Resource not found. |
+| 409 | `conflict` | Resource conflict, non-retryable bootstrap, or terminal state mismatch. |
+| 410 | `expired_token` | Pairing or credential expired. |
+| 428 | `authorization_pending` | Pairing waiting for approval. |
+| 429 | `rate_limited` | Too many requests. |
+| 502 | `bad_gateway` | Upstream runtime or mesh error. |
+| 503 | `service_unavailable` | Service not configured or runtime warming/offline. |
+| 504 | `gateway_timeout` | Runtime did not respond in time. |
+
+## Rate limits
+
+- Authenticated API routes: 60 requests per minute by default (`RATE_LIMIT_RPM`).
+- Public pairing and relay routes: 30 requests per minute by default (`PUBLIC_RATE_LIMIT_RPM`).
+
+Rate limit headers are included on responses:
+
+```http
+X-RateLimit-Limit: 60
+X-RateLimit-Remaining: 59
+X-RateLimit-Reset: 1723575600
+```
+
+## Environment variables
+
+| Variable | Purpose |
+|----------|---------|
+| `PORT` / `BIND_ADDR` | HTTP server bind address. |
+| `DATABASE_URL` | SQLite path or Postgres URL. |
+| `CLERK_ISSUER` / `CLERK_JWKS_URL` | Clerk JWT verification. |
+| `ALLTERNIT_PLATFORM_URL` | Browser pairing origin. |
+| `CORS_ALLOWED_ORIGINS` | Allowed browser origins. |
+| `ALLTERNIT_CREDENTIALS_KEY` | AES-256-GCM key for provider tokens and wizard checkpoints. |
+| `FLY_API_TOKEN` / `FLY_ORG_SLUG` | Hosted runtime provisioning. |
+| `HEADSCALE_API_KEY` | Mesh enrollment service. |
+| `STRIPE_WEBHOOK_SECRET` | Billing webhook verification. |
+
+## Related pages
+
+- [Authentication](/api/authentication)
+- [BYOC Runtime](/byoc/overview)
+- [BYOC Deploy Wizard](/byoc/deploy-wizard)
+- [Hosted Runtime](/byoc/hosted-runtime)
+- [Agent Daemon](/cli/agent-daemon)
+- [Work Queue](/api/work-queue)
+- [Deployments](/api/deployments)

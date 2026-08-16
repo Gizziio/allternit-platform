@@ -1,0 +1,162 @@
+---
+title: 'Memory Fabric'
+description: 'Unified memory and data fabric for the Allternit platform.'
+---
+
+## Overview
+
+The **Allternit Memory Fabric** is the unified memory and persistence layer for the Allternit platform. It provides a common Rust interface for storing, retrieving, and querying memory across backends, with an append-only, cryptographically chained ledger for auditability.
+
+## Base URL
+
+The fabric is consumed as a library crate. The top-level memory service exposes HTTP endpoints at:
+
+```text
+http://127.0.0.1:3008
+```
+
+## Components
+
+| Component | Crate | Purpose |
+|-----------|-------|---------|
+| `allternit-memory-fabric` | `services/memory/data/memory-fabric` | Core traits, plane, router, and ledger |
+| `allternit-memory` | `services/memory` | HTTP-enabled service and in-memory provider |
+| Memory Agent | `services/memory/agent` | TypeScript long-term semantic memory implementation |
+| Observation | `services/memory/observation` | Records GUI/system observations into the ledger |
+
+## Core traits
+
+### `MemoryProvider`
+
+Every memory backend implements:
+
+```rust
+#[async_trait]
+pub trait MemoryProvider: Send + Sync {
+    async fn store(&self, key: &str, value: Value) -> Result<(), MemoryError>;
+    async fn store_entry(&self, entry: MemoryEntry) -> Result<(), MemoryError>;
+    async fn retrieve(&self, key: &str) -> Result<Option<Value>, MemoryError>;
+    async fn retrieve_entry(&self, key: &str) -> Result<Option<MemoryEntry>, MemoryError>;
+    async fn query(&self, query: &MemoryQuery) -> Result<Vec<MemoryEntry>, MemoryError>;
+    async fn delete(&self, key: &str) -> Result<(), MemoryError>;
+    async fn exists(&self, key: &str) -> Result<bool, MemoryError>;
+    fn backend_type(&self) -> BackendType;
+    fn capabilities(&self) -> MemoryCapabilities;
+    async fn ping(&self) -> Result<bool, MemoryError>;
+}
+```
+
+### `MemoryFabric`
+
+The recommended entry point for Rust services:
+
+```rust
+use allternit_memory_fabric::{MemoryFabric, MemoryProvider, MemoryQuery};
+
+let fabric = MemoryFabric::new_in_memory().await?;
+fabric.store("greeting", serde_json::json!("hello")).await?;
+let value = fabric.retrieve("greeting").await?;
+```
+
+## Data types
+
+### `MemoryEntry`
+
+```rust
+pub struct MemoryEntry {
+    pub id: String,
+    pub key: String,
+    pub value: Value,
+    pub tags: Vec<String>,
+    pub created_at: u64,
+    pub updated_at: u64,
+    pub expires_at: Option<u64>,
+    pub tenant_id: Option<String>,
+    pub session_id: Option<String>,
+    pub embedding: Option<Vec<f32>>,
+}
+```
+
+### `MemoryQuery`
+
+```rust
+pub struct MemoryQuery {
+    pub query: String,
+    pub filters: HashMap<String, Value>,
+    pub limit: Option<usize>,
+    pub offset: Option<usize>,
+    pub sort_by: Option<String>,
+    pub ascending: Option<bool>,
+    pub min_similarity: Option<f32>,
+    pub tags: Vec<String>,
+    pub tenant_id: Option<String>,
+    pub session_id: Option<String>,
+}
+```
+
+## Backend types
+
+| Type | Description |
+|------|-------------|
+| `SimpleInMemory` | Fast, non-persistent provider for tests |
+| `MemoryAgentHttp` | HTTP adapter to the TypeScript Memory Agent |
+| `Redis` | Reserved for future persistent backend |
+| `Qdrant` | Reserved for vector backend |
+| `Sqlite` | Reserved for SQLite backend |
+| `AdvancedFabric` | Reserved for advanced tiered memory |
+
+## Routing rules
+
+`MemoryRouter::determine_backend` evaluates rules in priority order:
+
+1. `TagMatch` — route by memory tag.
+2. `TenantSpecific` / `SessionSpecific` — route by tenant or session.
+3. `PersistenceRequired` — route to a persistent backend.
+4. `PerformanceRequirement` — route by latency requirement.
+5. `SizeThreshold` — reserved for size-based routing.
+
+If no rule matches, the configured `default_backend` is used. Fallbacks are tried when the selected backend fails `ping` and `fallback_enabled` is true.
+
+## Ledger format
+
+The `HistoryLedger` writes one JSON object per line (JSONL). Each line is a `LedgerEntry`:
+
+```json
+{
+  "id": "<uuid>",
+  "prev_hash": "<hex-sha256-or-null>",
+  "content_hash": "<hex-sha256>",
+  "content": {
+    "op": "store",
+    "key": "greeting",
+    "value": "hello",
+    "timestamp": 1234567890
+  },
+  "timestamp": 1234567890
+}
+```
+
+Integrity verification checks that every `content_hash` matches its content, the first entry has a `null` `prev_hash`, and each subsequent entry's `prev_hash` equals the previous entry's `content_hash`.
+
+## Error codes
+
+All fabric operations return `MemoryError`:
+
+| Variant | Meaning |
+|---------|---------|
+| `Io` | Underlying I/O failure |
+| `Serialization` | JSON serialization error |
+| `NotFound` | Key or entry not found |
+| `PermissionDenied` | Access denied |
+| `Validation` | Input validation failed |
+| `Connection` | Backend connection failure |
+| `Timeout` | Operation timed out |
+| `CapacityExceeded` | Storage capacity exceeded |
+| `Backend` | Generic backend error |
+| `History` | Ledger integrity error |
+
+## Related pages
+
+- [Gizzi Runtime](/core/gizzi-runtime)
+- [Session Manager](/core/session-manager)
+- [API Memory](/api/memory)

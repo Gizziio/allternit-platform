@@ -12,7 +12,7 @@ export function InfoChip({
 }) {
   return (
     <span
-      className="inline-flex items-center gap-1.5 rounded-full px-[9px] py-[5px] bg-[var(--surface-hover)] border border-solid border-[var(--palette-border)] text-[#eadfd4] text-[12px] leading-none"
+      className="inline-flex items-center gap-1.5 rounded-full px-[9px] py-[5px] bg-white/5 backdrop-blur-sm border border-solid border-[var(--palette-border)] text-[#eadfd4] text-[12px] leading-none"
       style={{
         '--palette-border': palette.border,
         '--palette-accent': palette.accent,

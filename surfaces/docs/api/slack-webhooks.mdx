@@ -1,0 +1,101 @@
+---
+title: 'Slack Webhooks API'
+description: 'Receive inbound Slack Events API messages and route them to Gizzi agent sessions.'
+---
+
+## Overview
+
+The Slack Webhooks API lets Allternit receive inbound messages from Slack via the Slack Events API. When a user sends a message in a connected Slack channel, the API routes it to a Gizzi agent session and posts the assistant's reply back to the same thread.
+
+## Base URL
+
+```
+https://api.allternit.com/webhooks/slack/events
+```
+
+This endpoint is public because Slack signs every request with its own signature. Verification is performed using the Slack signing secret rather than the standard Allternit Bearer token. See [Authentication](/api/authentication) for user-facing authentication details.
+
+## Endpoints
+
+| Method | Path | Description |
+|--------|------|-------------|
+| POST | `/webhooks/slack/events` | Receive a Slack event. |
+
+## Request signature
+
+Slack signs each request with `X-Slack-Signature` and a timestamp in `X-Slack-Request-Timestamp`. The signature is verified over the string `v0:{timestamp}:{raw_body}`. Requests with timestamps outside a 5-minute window are rejected.
+
+## URL verification
+
+When configuring the Events Subscriptions URL, Slack sends a `url_verification` event:
+
+```json
+{
+  "type": "url_verification",
+  "challenge": "abc123challenge"
+}
+```
+
+Response:
+
+```json
+{
+  "challenge": "abc123challenge"
+}
+```
+
+## Message events
+
+For `event_callback` events with a plain `message` subtype (no `bot_id`), the API spawns a background task that:
+
+1. Reuses or creates a Gizzi session for the channel/thread pair.
+2. Sends the message text to the session.
+3. Polls for the assistant's completed reply.
+4. Posts the reply to the same Slack thread via `chat.postMessage`.
+
+The endpoint immediately returns `200 OK` to avoid Slack retries.
+
+## Configuration
+
+The following environment variables must be set:
+
+| Variable | Description |
+|----------|-------------|
+| `ALLTERNIT_SLACK_SIGNING_SECRET` | Slack app signing secret for request verification. |
+| `ALLTERNIT_SLACK_BOT_TOKEN` | Bot token used to post replies. |
+
+## Example event
+
+```json
+{
+  "type": "event_callback",
+  "event": {
+    "type": "message",
+    "channel": "C1234567890",
+    "user": "U1234567890",
+    "text": "What is the status of the deployment?",
+    "ts": "1234567890.123456"
+  }
+}
+```
+
+## Response
+
+```json
+{ "ok": true }
+```
+
+## Error codes
+
+| Status | Code | Description |
+|--------|------|-------------|
+| 200 | — | Event acknowledged. |
+| 400 | `invalid_json` | Request body is not valid JSON. |
+| 401 | `invalid_signature` | Slack signature verification failed. |
+| 503 | `slack_not_configured` | `ALLTERNIT_SLACK_SIGNING_SECRET` is not set. |
+
+## Related links
+
+- [Authentication](/api/authentication)
+- [Webhooks API](/api/webhooks)
+- [Agent Chat API](/api/agent-chat)

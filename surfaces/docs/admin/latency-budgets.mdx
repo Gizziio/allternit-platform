@@ -1,0 +1,175 @@
+---
+title: Latency Budgets
+description: Set per-model latency budgets and compare them against percentile reports.
+---
+
+# Latency Budgets
+
+Latency budgets let organizations define per-model targets for end-to-end request latency and time-to-first-token (TTFT). The reporting endpoint compares actual percentiles from `llm_usage_events` against budgets and reports whether each percentile is within budget, exceeded, or missing data.
+
+All latency budget endpoints require the caller to be an organization owner or admin.
+
+## Base URL
+
+```text
+https://api.allternit.com/api/v1/admin/latency-budgets
+```
+
+For local development:
+
+```text
+http://127.0.0.1:8013/api/v1/admin/latency-budgets
+```
+
+## Endpoints
+
+| Method | Path | Description |
+|--------|------|-------------|
+| `GET` | `/api/v1/admin/latency-budgets` | List budgets |
+| `PUT` | `/api/v1/admin/latency-budgets/:model_id` | Set or update a budget |
+| `DELETE` | `/api/v1/admin/latency-budgets/:model_id` | Remove a budget |
+| `GET` | `/api/v1/admin/latency-budgets/report` | Percentile report vs budgets |
+
+## Budget fields
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `model_id` | string | Model id or `*` for a global default |
+| `p50_ms` | integer | Target 50th percentile latency |
+| `p95_ms` | integer | Target 95th percentile latency |
+| `p99_ms` | integer | Target 99th percentile latency |
+| `ttft_p95_ms` | integer | Target 95th percentile TTFT |
+| `enabled` | boolean | Whether the budget is active |
+| `updated_at` | string | Last update timestamp |
+
+Use `*` as the `model_id` to define a global default budget.
+
+## List budgets
+
+```bash
+curl https://api.allternit.com/api/v1/admin/latency-budgets \
+  -H "Authorization: Bearer $ADMIN_TOKEN"
+```
+
+### Response
+
+```json
+{
+  "items": [
+    {
+      "model_id": "*",
+      "p50_ms": 500,
+      "p95_ms": 2000,
+      "p99_ms": 5000,
+      "ttft_p95_ms": 300,
+      "enabled": true,
+      "updated_at": "2026-08-13T18:00:00Z"
+    },
+    {
+      "model_id": "allternit-balanced",
+      "p50_ms": 300,
+      "p95_ms": 1500,
+      "p99_ms": 3000,
+      "ttft_p95_ms": 200,
+      "enabled": true,
+      "updated_at": "2026-08-13T18:00:00Z"
+    }
+  ]
+}
+```
+
+## Set a budget
+
+```bash
+curl -X PUT https://api.allternit.com/api/v1/admin/latency-budgets/allternit-balanced \
+  -H "Authorization: Bearer $ADMIN_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "p50_ms": 300,
+    "p95_ms": 1500,
+    "p99_ms": 3000,
+    "ttft_p95_ms": 200,
+    "enabled": true
+  }'
+```
+
+### Response
+
+```json
+{
+  "updated": true
+}
+```
+
+## Delete a budget
+
+```bash
+curl -X DELETE https://api.allternit.com/api/v1/admin/latency-budgets/allternit-balanced \
+  -H "Authorization: Bearer $ADMIN_TOKEN"
+```
+
+Returns `204 No Content` on success.
+
+## Latency report
+
+```bash
+curl -G https://api.allternit.com/api/v1/admin/latency-budgets/report \
+  -H "Authorization: Bearer $ADMIN_TOKEN" \
+  -d "window_hours=24"
+```
+
+`window_hours` defaults to 24 and is capped at 168 (7 days).
+
+### Response
+
+```json
+{
+  "items": [
+    {
+      "model_id": "allternit-balanced",
+      "window_hours": 24,
+      "samples": 1250,
+      "p50_ms": 250.0,
+      "p95_ms": 1400.0,
+      "p99_ms": 2800.0,
+      "ttft_p95_ms": 180.0,
+      "budget": {
+        "p50_ms": 300,
+        "p95_ms": 1500,
+        "p99_ms": 3000,
+        "ttft_p95_ms": 200
+      },
+      "status": {
+        "p50_ms": "within_budget",
+        "p95_ms": "within_budget",
+        "p99_ms": "within_budget",
+        "ttft_p95_ms": "within_budget"
+      }
+    }
+  ]
+}
+```
+
+### Status values
+
+| Status | Meaning |
+|--------|---------|
+| `within_budget` | Actual percentile is at or below the budget |
+| `exceeded` | Actual percentile is above the budget |
+| `no_budget` | No budget is set for this metric |
+| `no_data` | No successful requests in the window |
+
+## Error codes
+
+| Status | Code | Description |
+|--------|------|-------------|
+| `400` | `invalid_model_id` | `model_id` is empty, too long, or contains invalid characters. |
+| `403` | `organization_required` | Caller is not associated with an organization. |
+| `403` | `insufficient_role` | Caller is not an organization owner or admin. |
+| `404` | `not_found` | Latency budget not found. |
+| `500` | `internal_error` | Database or server error. |
+
+## Related pages
+
+- [Admin Analytics](/admin/analytics) — request volume and token usage reports
+- [Fallback Retry Policy](/admin/fallback-retry-policy) — configure retries for slow or failing providers

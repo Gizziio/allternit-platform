@@ -1,0 +1,204 @@
+---
+title: Inference Hooks
+description: Pre- and post-inference HTTP hooks for request transformation and policy enforcement
+---
+
+Inference hooks let organizations attach custom HTTP endpoints that run immediately before and after LLM inference. Pre-hooks can inspect and mutate the request body; post-hooks can inspect and mutate the final response.
+
+## How hooks work
+
+The LLM gateway loads hook configuration from the `llm_inference_hooks` table for the active organization. When configured:
+
+- **Pre-inference hook** — Called with the original request body before routing to a provider. A successful hook may return a replacement body. A non-success response can abort the request when `abort_on_pre_error` is enabled.
+- **Post-inference hook** — Called with the request body and provider response after inference completes. A successful hook may return a replacement response body.
+- **Streaming post-hook** — For streaming responses, where the body is not available for mutation, a best-effort hook fires with the request and streaming metadata.
+
+## Authentication and authorization
+
+Hook configuration is managed through the LLM gateway admin endpoints, which require a Clerk JWT and organization owner or admin role.
+
+## Configure hooks
+
+### Endpoints
+
+| Method | Path | Description |
+|--------|------|-------------|
+| `GET` | `/api/v1/gateway/inference-hooks` | Get current hook configuration |
+| `PUT` / `POST` | `/api/v1/gateway/inference-hooks` | Create or update hook configuration |
+| `DELETE` | `/api/v1/gateway/inference-hooks` | Remove hook configuration |
+
+### Get configuration
+
+```bash
+curl https://api.allternit.com/api/v1/gateway/inference-hooks \
+  -H "Authorization: Bearer $ALLTERNIT_TOKEN"
+```
+
+**Response `200 OK`**
+
+```json
+{
+  "organization_id": "org_01J",
+  "pre_inference_url": "https://hooks.example.com/pre",
+  "post_inference_url": "https://hooks.example.com/post",
+  "abort_on_pre_error": true,
+  "hook_secret": "a1b2c3d4-e5f6-7890-abcd-ef1234567890"
+}
+```
+
+### Set configuration
+
+```bash
+curl -X PUT https://api.allternit.com/api/v1/gateway/inference-hooks \
+  -H "Authorization: Bearer $ALLTERNIT_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "pre_inference_url": "https://hooks.example.com/pre",
+    "post_inference_url": "https://hooks.example.com/post",
+    "abort_on_pre_error": true
+  }'
+```
+
+**Response `200 OK`**
+
+```json
+{
+  "organization_id": "org_01J",
+  "pre_inference_url": "https://hooks.example.com/pre",
+  "post_inference_url": "https://hooks.example.com/post",
+  "abort_on_pre_error": true,
+  "hook_secret": "a1b2c3d4-e5f6-7890-abcd-ef1234567890"
+}
+```
+
+If no hook secret exists, one is generated automatically and returned in the response.
+
+### Remove configuration
+
+```bash
+curl -X DELETE https://api.allternit.com/api/v1/gateway/inference-hooks \
+  -H "Authorization: Bearer $ALLTERNIT_TOKEN"
+```
+
+**Response `200 OK`**
+
+```json
+{
+  "deleted": true,
+  "organization_id": "org_01J"
+}
+```
+
+## Hook payload and signature
+
+Every hook request includes the payload body and an HMAC-SHA256 signature in the `X-Allternit-Hook-Signature` header.
+
+```http
+POST /pre HTTP/1.1
+Host: hooks.example.com
+Content-Type: application/json
+X-Allternit-Hook-Signature: 6b86b273ff34fce19d6b804eff5a3f5747ada4eaa22f1d49c01e52ddb7875b4b
+
+{
+  "model": "gizzi-pro",
+  "messages": [
+    {"role": "user", "content": "Hello"}
+  ]
+}
+```
+
+Verify the signature using the `hook_secret`:
+
+```python
+import hmac
+import hashlib
+
+def verify_signature(secret: str, payload: bytes, signature: str) -> bool:
+    expected = hmac.new(
+        secret.encode(),
+        payload,
+        hashlib.sha256
+    ).hexdigest()
+    return hmac.compare_digest(expected, signature)
+```
+
+## Post-hook payload
+
+Post-hooks receive a JSON envelope containing the original request and provider response:
+
+```json
+{
+  "request": {
+    "model": "gizzi-pro",
+    "messages": [
+      {"role": "user", "content": "Hello"}
+    ]
+  },
+  "response": {
+    "status_code": 200,
+    "body": {
+      "choices": [
+        {"message": {"role": "assistant", "content": "Hi there"}}
+      ]
+    },
+    "latency_ms": 450
+  }
+}
+```
+
+For streaming responses, the post-hook payload indicates that the response was streaming:
+
+```json
+{
+  "request": { ... },
+  "response": {
+    "status_code": 200,
+    "streaming": true,
+    "latency_ms": 450
+  }
+}
+```
+
+## Hook behavior
+
+| Property | Value |
+|----------|-------|
+| Timeout | 5 seconds per attempt |
+| Retries | 1 retry after the first failed attempt |
+| Method | `POST` |
+| Content-Type | `application/json` |
+| Success status | 2xx |
+
+### Pre-hook outcomes
+
+| Hook response | `abort_on_pre_error: true` | `abort_on_pre_error: false` |
+|---------------|---------------------------|-----------------------------|
+| 2xx with non-empty body | Proceed with mutated body | Proceed with mutated body |
+| 2xx with empty body | Proceed with original body | Proceed with original body |
+| Non-2xx | Abort with hook response | Proceed with original body |
+| Transport failure | Abort with `502 Bad Gateway` | Proceed with original body |
+
+### Post-hook outcomes
+
+| Hook response | Outcome |
+|---------------|---------|
+| 2xx with non-empty body | Return hook body with hook status |
+| 2xx with empty body | Return original response |
+| Non-2xx | Return hook response instead of provider response |
+| Transport failure | Return original response |
+
+## Error codes
+
+| HTTP | Code | Meaning |
+|------|------|---------|
+| 400 | `invalid_request` | Hook URL is missing, malformed, or not HTTP/HTTPS |
+| 400 | `no_organization` / missing tenant | Caller has no active organization or profile tenant |
+| 403 | `insufficient_role` | Caller is not an owner/admin |
+| 500 | `internal_error` | Unexpected server error |
+
+## Related pages
+
+- [Admin API overview](/admin/overview) — LLM gateway administration
+- [LLM Gateway Admin](/admin/gateway) — gateway administration endpoints
+- [Security model](/security/security-model) — trust boundaries and data flows
+- [DLP](/security/dlp) — content policy enforcement in the gateway

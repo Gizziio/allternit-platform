@@ -1,0 +1,329 @@
+---
+title: 'Agent Runtimes API'
+description: 'Register, monitor, and dispatch jobs to agent runtimes.'
+---
+
+## Overview
+
+The Agent Runtimes API manages external or local agent runtimes. A runtime record tracks a host, a status, a heartbeat, a list of CLI binaries the runtime can execute, and an optional workspace association. Jobs can be dispatched to a runtime; the gateway persists the queued job, runs it through the local agent runtime, and updates the record with the result.
+
+## Base URL
+
+```
+https://api.allternit.com/api
+```
+
+## Authentication
+
+All requests must include a valid bearer token in the `Authorization` header.
+
+## Runtime object
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `id` | string | Unique runtime identifier. |
+| `name` | string | Human-readable name. |
+| `host` | string | Runtime host address. |
+| `agent_clis` | string \| null | JSON array of available CLI binaries. |
+| `status` | string | Current status, e.g. `online`. |
+| `last_heartbeat` | string \| null | ISO 8601 heartbeat timestamp. |
+| `workspace_id` | string \| null | Associated workspace. |
+| `created_at` | string | ISO 8601 creation timestamp. |
+| `updated_at` | string | ISO 8601 update timestamp. |
+
+## Job object
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `id` | string | Unique job identifier. |
+| `runtime_id` | string | Runtime the job belongs to. |
+| `status` | string | `queued`, `completed`, or `failed`. |
+| `command` | string \| null | Executed command. |
+| `args` | string \| null | JSON array of arguments. |
+| `env` | string \| null | JSON object of environment variables. |
+| `working_dir` | string \| null | Working directory. |
+| `result` | string \| null | JSON result payload. |
+| `exit_code` | integer \| null | Process exit code. |
+| `stdout` | string \| null | Captured standard output. |
+| `stderr` | string \| null | Captured standard error. |
+| `duration_ms` | integer \| null | Execution duration in milliseconds. |
+| `created_at` | string | ISO 8601 creation timestamp. |
+| `updated_at` | string | ISO 8601 update timestamp. |
+
+## Endpoints
+
+### List runtimes
+
+```http
+GET /api/agent-runtimes
+```
+
+Returns all runtimes owned by the caller.
+
+#### Example request
+
+```bash
+curl -H "Authorization: Bearer $TOKEN" \
+  https://api.allternit.com/api/agent-runtimes
+```
+
+#### Example response
+
+```json
+{
+  "runtimes": [
+    {
+      "id": "rt_1a2b...",
+      "name": "Local Agent Runtime",
+      "host": "127.0.0.1",
+      "agent_clis": "[\"allternit-agent\", \"gizzi\"]",
+      "status": "online",
+      "last_heartbeat": "2026-08-13T14:22:00Z",
+      "workspace_id": null,
+      "created_at": "2026-08-01T10:00:00Z",
+      "updated_at": "2026-08-13T14:22:00Z"
+    }
+  ]
+}
+```
+
+### Create a runtime
+
+```http
+POST /api/agent-runtimes
+```
+
+#### Request body
+
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| `name` | string | Yes | Runtime name. |
+| `host` | string | Yes | Runtime host. |
+| `agentClis` / `agent_clis` | array | No | CLI binaries available on the runtime. |
+| `workspaceId` / `workspace_id` | string | No | Workspace ID. |
+
+#### Example request
+
+```bash
+curl -X POST https://api.allternit.com/api/agent-runtimes \
+  -H "Authorization: Bearer $TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "name": "Local Agent Runtime",
+    "host": "127.0.0.1",
+    "agentClis": ["allternit-agent", "gizzi"]
+  }'
+```
+
+#### Example response
+
+```json
+{
+  "runtime": {
+    "id": "rt_1a2b...",
+    "name": "Local Agent Runtime",
+    "status": "online"
+  }
+}
+```
+
+### Get a runtime
+
+```http
+GET /api/agent-runtimes/:id
+```
+
+#### Example response
+
+```json
+{
+  "runtime": {
+    "id": "rt_1a2b...",
+    "name": "Local Agent Runtime",
+    "host": "127.0.0.1",
+    "agent_clis": "[\"allternit-agent\", \"gizzi\"]",
+    "status": "online",
+    "last_heartbeat": "2026-08-13T14:22:00Z",
+    "workspace_id": null,
+    "created_at": "2026-08-01T10:00:00Z",
+    "updated_at": "2026-08-13T14:22:00Z"
+  }
+}
+```
+
+### Update a runtime
+
+```http
+PATCH /api/agent-runtimes/:id
+```
+
+At least one field must be provided.
+
+#### Request body
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `name` | string | New name. |
+| `host` | string | New host. |
+| `status` | string | New status. |
+| `agentClis` / `agent_clis` | array | New CLI list. |
+
+#### Example request
+
+```bash
+curl -X PATCH https://api.allternit.com/api/agent-runtimes/rt_1a2b... \
+  -H "Authorization: Bearer $TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "status": "maintenance"
+  }'
+```
+
+#### Example response
+
+```json
+{
+  "id": "rt_1a2b...",
+  "updated": true
+}
+```
+
+### Heartbeat a runtime
+
+```http
+POST /api/agent-runtimes/:id/heartbeat
+```
+
+Updates `last_heartbeat`. Optionally updates `status`.
+
+#### Request body
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `status` | string | Optional new status. |
+
+#### Example request
+
+```bash
+curl -X POST https://api.allternit.com/api/agent-runtimes/rt_1a2b.../heartbeat \
+  -H "Authorization: Bearer $TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{"status": "online"}'
+```
+
+#### Example response
+
+```json
+{
+  "id": "rt_1a2b...",
+  "heartbeat": "ok"
+}
+```
+
+### Delete a runtime
+
+```http
+DELETE /api/agent-runtimes/:id
+```
+
+#### Example response
+
+`204 No Content`
+
+### List runtime jobs
+
+```http
+GET /api/agent-runtimes/:id/jobs
+```
+
+Returns all jobs for the runtime, newest first.
+
+#### Example response
+
+```json
+{
+  "jobs": [
+    {
+      "id": "job_3f4a...",
+      "runtime_id": "rt_1a2b...",
+      "status": "completed",
+      "command": "allternit-agent",
+      "args": "[\"run\", \"agent_018f3a7c...\"]",
+      "env": "{\"LOG_LEVEL\": \"info\"}",
+      "working_dir": "/tmp",
+      "result": "{\"exit_code\": 0, \"stdout\": \"...\", \"stderr\": \"\", \"duration_ms\": 420}",
+      "exit_code": 0,
+      "stdout": "...",
+      "stderr": "",
+      "duration_ms": 420,
+      "created_at": "2026-08-13T14:20:00Z",
+      "updated_at": "2026-08-13T14:20:01Z"
+    }
+  ]
+}
+```
+
+### Create a runtime job
+
+```http
+POST /api/agent-runtimes/:id/jobs
+```
+
+Queues and immediately dispatches a job on the runtime. The gateway updates the job record with the outcome.
+
+#### Request body
+
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| `command` | string | Yes | Executable or command. |
+| `args` | array | No | Arguments. Defaults to `[]`. |
+| `env` | object | No | Environment variables. Defaults to `{}`. |
+| `working_dir` | string | No | Working directory. |
+
+#### Example request
+
+```bash
+curl -X POST https://api.allternit.com/api/agent-runtimes/rt_1a2b.../jobs \
+  -H "Authorization: Bearer $TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "command": "allternit-agent",
+    "args": ["run", "agent_018f3a7c..."],
+    "env": { "LOG_LEVEL": "info" },
+    "working_dir": "/tmp"
+  }'
+```
+
+#### Example response
+
+```json
+{
+  "job": {
+    "id": "job_3f4a...",
+    "runtime_id": "rt_1a2b...",
+    "status": "completed",
+    "exit_code": 0,
+    "stdout": "...",
+    "stderr": "",
+    "duration_ms": 420
+  }
+}
+```
+
+## Error codes
+
+| Status | Meaning |
+|--------|---------|
+| `200` | Success. |
+| `201` | Created. |
+| `204` | No content. |
+| `400` | Bad request — no fields to update or invalid body. |
+| `401` | Unauthorized. |
+| `404` | Runtime not found. |
+| `500` | Internal server error. |
+
+## Related pages
+
+- [Agents API](/api/agents)
+- [Agent Sessions](/api/agent-sessions)
+- [Agent Operations](/api/agent-operations)

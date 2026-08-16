@@ -93,13 +93,13 @@ function AgentModePill({
     : null;
   const label = agentModeEnabled
     ? selectedSurfaceAgent && selectedModeLabel
-      ? `Agent | ${selectedModeLabel}`
+      ? `Bot | ${selectedModeLabel}`
       : selectedModeLabel
-        ? `Agent | ${selectedModeLabel}`
+        ? `Bot | ${selectedModeLabel}`
         : selectedSurfaceAgent
-          ? `Agent | ${selectedSurfaceAgent.name}`
-          : 'Agent On'
-    : 'Agent Off';
+          ? `Bot | ${selectedSurfaceAgent.name}`
+          : 'Bot On'
+    : 'Bot Off';
 
   return (
     <div
@@ -230,29 +230,28 @@ export function BottomDock({
       )}
 
       {showAgentMenu && agentModeSurface && (
-        <div className="absolute bottom-full left-4 mb-2">
-          <AgentSelectorDropdown
-            agents={agents.filter((a) => {
-              const allowedSurfaces = (a.allowedSurfaces as string[] | undefined) || [];
-              return allowedSurfaces.includes(agentModeSurface);
-            })}
-            isLoading={isLoadingAgents}
-            selectedAgent={selectedSurfaceAgentId}
-            workspaceArtifacts={workspaceArtifacts}
-            error={agentError}
-            openClawCandidatesCount={openClawCandidatesCount}
-            onOpenImportWizard={onOpenImportWizard}
-            onSelect={(agent) => {
-              onSelectAgent?.(agent);
-              setShowAgentMenu(false);
-            }}
-            onClear={() => {
-              onClearAgent?.();
-              setShowAgentMenu(false);
-            }}
-            onClose={() => setShowAgentMenu(false)}
-          />
-        </div>
+        <AgentSelectorDropdown
+          className="absolute bottom-full left-0 mb-2"
+          agents={agents.filter((a) => {
+            const allowedSurfaces = (a.allowedSurfaces as string[] | undefined) || [];
+            return allowedSurfaces.includes(agentModeSurface);
+          })}
+          isLoading={isLoadingAgents}
+          selectedAgent={selectedSurfaceAgentId}
+          workspaceArtifacts={workspaceArtifacts}
+          error={agentError}
+          openClawCandidatesCount={openClawCandidatesCount}
+          onOpenImportWizard={onOpenImportWizard}
+          onSelect={(agent) => {
+            onSelectAgent?.(agent);
+            setShowAgentMenu(false);
+          }}
+          onClear={() => {
+            onClearAgent?.();
+            setShowAgentMenu(false);
+          }}
+          onClose={() => setShowAgentMenu(false)}
+        />
       )}
     </div>
   );

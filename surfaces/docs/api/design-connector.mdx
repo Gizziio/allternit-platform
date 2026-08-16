@@ -1,0 +1,240 @@
+---
+title: 'Design Connector API'
+description: 'Discover skills, detect local agent adapters, and install plugins for Allternit Design.'
+---
+
+## Overview
+
+The Design Connector API provides Allternit Design with skill discovery, adapter detection, adapter spawning, and plugin installation. It vendors the Open Design connector catalog in-process and points live connector actions to the owned connector standard at `/api/v1/connectors`.
+
+Adapter detection and spawn helpers look for local agent-tool configurations without requiring third-party keys.
+
+## Base URL
+
+```
+https://api.allternit.com/api/v1/design
+```
+
+For local development:
+
+```
+http://127.0.0.1:8013/api/v1/design
+```
+
+## Authentication
+
+Design routes inherit the standard bearer-token auth middleware. See [Authentication](/api/authentication).
+
+## Endpoints
+
+| Method | Path | Description |
+|--------|------|-------------|
+| `GET` | `/api/v1/design/composio/connections` | List the in-process connector catalog. |
+| `POST` | `/api/v1/design/composio/connect` | Redirect to the owned connector connect flow. |
+| `POST` | `/api/v1/design/connectors/slack` | Owned Slack connect pointer. |
+| `POST` | `/api/v1/design/connectors/notion` | Owned Notion connect pointer. |
+| `POST` | `/api/v1/design/connectors/linear` | Owned Linear connect pointer. |
+| `POST` | `/api/v1/design/connectors/github` | Owned GitHub connect pointer. |
+| `GET` | `/api/v1/design/skills/discover` | Discover local Open Design skills. |
+| `GET` | `/api/v1/design/adapters` | List supported adapter kinds. |
+| `POST` | `/api/v1/design/adapters/detect` | Detect which adapters are available locally. |
+| `POST` | `/api/v1/design/adapters/spawn` | Spawn a local adapter process. |
+| `POST` | `/api/v1/design/plugins/install` | Install a plugin manifest to a target adapter directory. |
+
+## Connector catalog pointer
+
+### List in-process catalog
+
+```http
+GET /api/v1/design/composio/connections
+```
+
+Returns the vendored Open Design connector catalog. Live connect/execute is owned and routed through `/api/v1/connectors/:id/connect` and `/api/v1/connectors/:id/execute`.
+
+### Connect pointer
+
+```http
+POST /api/v1/design/composio/connect
+```
+
+### Request body
+
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| `connector` / `connectorId` | string | Yes | Connector id. |
+
+### Example response
+
+```json
+{
+  "status": "use_owned_connect",
+  "connector": "slack",
+  "owned": true,
+  "owned_endpoint": "/api/v1/connectors/slack/connect",
+  "owned_execute": "/api/v1/connectors/slack/execute",
+  "catalog": { ... },
+  "message": "Allternit owns this connector in-process..."
+}
+```
+
+## Discover skills
+
+```http
+GET /api/v1/design/skills/discover?cwd=:cwd
+```
+
+Scans local skill directories for Open Design skills. Results are cached for five seconds.
+
+### Query parameters
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `cwd` | string | Working directory to scan. |
+
+### Skill object
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `id` | string | Skill directory name. |
+| `name` | string | Skill display name. |
+| `path` | string | Absolute path to the skill. |
+| `source` | string | Skill source location. |
+| `manifest` | object | Parsed `open-design.json`/`manifest.json`/`design-manifest.json`, if present. |
+
+### Example response
+
+```json
+{
+  "skills": [
+    {
+      "id": "deploy-check",
+      "name": "Deploy Check",
+      "path": "/Users/ada/project/skills/deploy-check",
+      "source": "allternit-local",
+      "manifest": { "name": "Deploy Check", "version": "1.0.0" }
+    }
+  ],
+  "scanned_paths": ["/Users/ada/project/skills", "/Users/ada/.allternit/skills"],
+  "total": 1
+}
+```
+
+## Adapters
+
+### List adapter kinds
+
+```http
+GET /api/v1/design/adapters
+```
+
+Returns the adapter kinds the gateway knows how to detect and spawn.
+
+### AdapterKind object
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `id` | string | Adapter kind id. |
+| `name` | string | Display name. |
+| `description` | string | Description. |
+| `runtime` | string | Runtime mode, e.g. `mcp`, `subprocess`, `local`. |
+| `required_env` | string[] | Required environment variables. |
+| `optional_env` | string[] | Optional environment variables. |
+
+### Detect adapters
+
+```http
+POST /api/v1/design/adapters/detect
+```
+
+Scans the local machine for available adapters.
+
+### Request body
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `cwd` | string | Working directory for context-aware detection. |
+
+### Example response
+
+```json
+{
+  "available": ["allternit-local", "generic-mcp"],
+  "missing": [],
+  "env": {
+    "MCP_COMMAND": "npx -y @modelcontextprotocol/server-filesystem /tmp"
+  }
+}
+```
+
+### Spawn an adapter
+
+```http
+POST /api/v1/design/adapters/spawn
+```
+
+Starts the adapter process in the background.
+
+### Request body
+
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| `kind` | string | Yes | Adapter kind id. |
+| `cwd` | string | No | Working directory. |
+| `env` | object | No | Extra environment variables. |
+
+### Example response
+
+```json
+{
+  "kind": "generic-mcp",
+  "status": "spawned",
+  "command": "npx -y @modelcontextprotocol/server-filesystem /tmp",
+  "pid": 12345
+}
+```
+
+## Install a plugin
+
+```http
+POST /api/v1/design/plugins/install
+```
+
+Writes a plugin manifest to the target adapter's skill/plugin directory.
+
+### Request body
+
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| `agent_id` | string | Yes | Agent id owning the plugin. |
+| `agent_name` | string | No | Agent display name. |
+| `target` | string | No | Adapter target directory type; defaults to a local skill path. |
+| `workspace_path` | string | No | Workspace root for relative install paths. |
+| `plugin` | object | Yes | Plugin manifest object; must include `id` and `name`. |
+
+### Example response
+
+```json
+{
+  "installed": true,
+  "path": "/Users/ada/project/.allternit/plugins/my-plugin/manifest.json",
+  "target": "allternit-local",
+  "message": "Installed My Plugin to /Users/ada/project/.allternit/plugins/my-plugin"
+}
+```
+
+## Error codes
+
+| Status | Meaning |
+|--------|---------|
+| `200 OK` | Success. |
+| `400 Bad Request` | Missing connector id or invalid request body. |
+| `401 Unauthorized` | Missing or invalid bearer token. |
+| `404 Not Found` | Unknown connector or adapter kind. |
+| `500 Internal Server Error` | Filesystem or spawn error. |
+
+## Related pages
+
+- [Connectors API](/api/connectors)
+- [MCP Servers API](/api/mcp-servers)
+- [Agents API](/api/agents)
+- [Authentication](/api/authentication)

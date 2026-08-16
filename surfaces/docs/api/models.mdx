@@ -1,0 +1,165 @@
+---
+title: 'Models'
+description: 'List models, retrieve model metadata, and view per-token pricing'
+---
+
+## Overview
+
+The Models API exposes the models that the connected Allternit runtime can serve, along with routing policy aliases and a cross-provider pricing snapshot. Model listings are filtered by the virtual key's allowlist, so callers only see models they are permitted to use.
+
+## Base URL
+
+```
+https://api.allternit.com/v1
+```
+
+For local development:
+
+```
+http://127.0.0.1:8013/v1
+```
+
+## Endpoints
+
+| Method | Path | Description |
+|--------|------|-------------|
+| `GET` | `/v1/models` | List available models and policy aliases |
+| `GET` | `/v1/models/:id` | Retrieve a single model or policy alias |
+| `GET` | `/v1/pricing` | List per-model pricing |
+
+## List models
+
+```bash
+curl https://api.allternit.com/v1/models \
+  -H "Authorization: Bearer $ALLTERNIT_API_KEY"
+```
+
+### Example response
+
+```json
+{
+  "object": "list",
+  "data": [
+    {
+      "id": "auto",
+      "object": "model",
+      "created": 0,
+      "owned_by": "allternit"
+    },
+    {
+      "id": "allternit-balanced",
+      "object": "model",
+      "created": 0,
+      "owned_by": "allternit"
+    },
+    {
+      "id": "provider/model-id",
+      "object": "model",
+      "created": 1704067200,
+      "owned_by": "provider",
+      "context_window": 128000,
+      "max_output_tokens": 4096,
+      "deprecated": false,
+      "replacement": null
+    }
+  ]
+}
+```
+
+### Model object fields
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `id` | string | Model id or policy alias. |
+| `object` | string | `model`. |
+| `created` | integer | Release-date timestamp, or `0` for aliases. |
+| `owned_by` | string | Provider id, or `allternit` for aliases. |
+| `context_window` | integer | Maximum context tokens, when known. |
+| `max_output_tokens` | integer | Maximum output tokens, when known. |
+| `deprecated` | boolean | Whether the model is deprecated. |
+| `replacement` | string | Recommended replacement id, if deprecated. |
+
+## Policy aliases
+
+Policy aliases are synthetic models that trigger the gateway's benchmark-weighted router. The router picks a concrete provider/model pair and derives a cross-provider fallback chain.
+
+| Alias | Optimization target |
+|-------|---------------------|
+| `auto` | Same as `allternit-balanced`. |
+| `allternit-balanced` | Balanced quality and cost across all benchmarks. |
+| `allternit-code` | Coding and software-engineering tasks. |
+| `allternit-reasoning` | Reasoning, math, and science tasks. |
+| `allternit-knowledge` | Knowledge and recall tasks. |
+| `allternit-instruct` | Instruction-following and chat quality. |
+
+## Retrieve a model
+
+```bash
+curl https://api.allternit.com/v1/models/allternit-balanced \
+  -H "Authorization: Bearer $ALLTERNIT_API_KEY"
+```
+
+```json
+{
+  "id": "allternit-balanced",
+  "object": "model",
+  "created": 0,
+  "owned_by": "allternit"
+}
+```
+
+If the model does not exist or is not in the key's allowlist, the gateway returns a `404` with code `allternit.model_not_found`.
+
+## Pricing
+
+`GET /v1/pricing` returns the current per-model rates in dollars per 1 million tokens.
+
+```bash
+curl https://api.allternit.com/v1/pricing \
+  -H "Authorization: Bearer $ALLTERNIT_API_KEY"
+```
+
+```json
+{
+  "object": "list",
+  "data": [
+    {
+      "id": "provider/model-id",
+      "object": "model_pricing",
+      "input": 2.50,
+      "output": 10.00,
+      "cache_read": 1.25,
+      "cache_write": 0.00,
+      "context_over_200k": null
+    }
+  ]
+}
+```
+
+### Pricing fields
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `id` | string | `provider/model` id. |
+| `object` | string | `model_pricing`. |
+| `input` | number | Input-token price per 1M tokens. |
+| `output` | number | Output-token price per 1M tokens. |
+| `cache_read` | number | Cache-read price per 1M tokens. |
+| `cache_write` | number | Cache-write price per 1M tokens. |
+| `context_over_200k` | object | Higher rates when input plus cache read exceeds 200k tokens. |
+
+## Error codes
+
+| HTTP status | Code | Meaning |
+|-------------|------|---------|
+| 401 | `allternit.authentication_failed` | Missing or invalid API key. |
+| 404 | `allternit.model_not_found` | Model not found or not allowed. |
+| 429 | `allternit.rate_limited` | Per-key rate limit exceeded. |
+| 429 | `allternit.budget_exceeded` | Monthly key or tenant budget exhausted. |
+| 500 | `allternit.internal_error` | Internal gateway error. |
+
+## Related pages
+
+- [Chat Completions](/api/chat-completions) — use models and aliases in completions
+- [Proxy](/api/proxy) — how the gateway routes model requests
+- [Translate](/api/translate) — wire-format translation details

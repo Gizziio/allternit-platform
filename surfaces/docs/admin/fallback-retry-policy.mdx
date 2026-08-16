@@ -1,0 +1,110 @@
+---
+title: Fallback Retry Policy
+description: Configure automatic request-level retries and cross-provider fallback chains.
+---
+
+# Fallback Retry Policy
+
+The Fallback Retry Policy API configures how the Allternit LLM gateway retries failed requests and whether it sends a cross-provider `fallbackModels` chain to the Gizzi runtime. The actual retry orchestration lives in the gateway failover layer; this API owns the durable configuration.
+
+All fallback retry policy endpoints require the caller to be an organization owner or admin.
+
+## Base URL
+
+```text
+https://api.allternit.com/api/v1/admin/fallback-retry-policy
+```
+
+For local development:
+
+```text
+http://127.0.0.1:8013/api/v1/admin/fallback-retry-policy
+```
+
+## Endpoints
+
+| Method | Path | Description |
+|--------|------|-------------|
+| `GET` | `/api/v1/admin/fallback-retry-policy` | Read the policy |
+| `PUT` | `/api/v1/admin/fallback-retry-policy` | Update the policy |
+
+## Policy fields
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `enabled` | boolean | Whether retries and fallback chains are enabled |
+| `max_retries` | integer | Maximum retries per request (0–5) |
+| `retryable_statuses` | string[] | Statuses that trigger a retry |
+| `retryable_errors` | string[] | Error types or `*` for all errors |
+| `base_delay_ms` | integer | Initial retry delay in milliseconds |
+| `max_delay_ms` | integer | Maximum retry delay in milliseconds |
+| `fallback_chain_enabled` | boolean | Whether to send `fallbackModels` to the runtime |
+
+Retryable statuses: `refusal`, `error`, `rate_limited`, `budget_exceeded`, `dlp_blocked`, `client_disconnected`, `timeout`.
+
+## Get the policy
+
+```bash
+curl https://api.allternit.com/api/v1/admin/fallback-retry-policy \
+  -H "Authorization: Bearer $ADMIN_TOKEN"
+```
+
+### Response
+
+```json
+{
+  "org_id": "org_01hqx8x7x7x7x7x7x7x7x7x",
+  "enabled": true,
+  "max_retries": 2,
+  "retryable_statuses": ["refusal", "error", "rate_limited", "timeout"],
+  "retryable_errors": ["*"],
+  "base_delay_ms": 500,
+  "max_delay_ms": 8000,
+  "fallback_chain_enabled": true,
+  "created_at": "2026-08-13T18:00:00Z",
+  "updated_at": "2026-08-13T18:00:00Z"
+}
+```
+
+## Update the policy
+
+```bash
+curl -X PUT https://api.allternit.com/api/v1/admin/fallback-retry-policy \
+  -H "Authorization: Bearer $ADMIN_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "enabled": true,
+    "max_retries": 3,
+    "retryable_statuses": ["refusal", "error", "rate_limited", "timeout"],
+    "retryable_errors": ["rate_limit", "server_error"],
+    "base_delay_ms": 1000,
+    "max_delay_ms": 16000,
+    "fallback_chain_enabled": true
+  }'
+```
+
+### Response
+
+```json
+{
+  "updated": true
+}
+```
+
+## Error codes
+
+| Status | Code | Description |
+|--------|------|-------------|
+| `400` | `invalid_max_retries` | `max_retries` must be between 0 and 5. |
+| `400` | `invalid_statuses` | `retryable_statuses` must be a non-empty array. |
+| `400` | `invalid_status` | One or more statuses are not retryable. |
+| `400` | `invalid_delay` | `base_delay_ms` or `max_delay_ms` must be positive. |
+| `403` | `organization_required` | Caller is not associated with an organization. |
+| `403` | `insufficient_role` | Caller is not an organization owner or admin. |
+| `500` | `internal_error` | Database or server error. |
+
+## Related pages
+
+- [Fallback Credits](/admin/fallback-credits) — credit primary-provider failures resolved by fallbacks
+- [Admin Analytics](/admin/analytics) — monitor request volume and status breakdowns
+- [Latency Budgets](/admin/latency-budgets) — set and monitor model latency budgets

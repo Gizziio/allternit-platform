@@ -1,0 +1,83 @@
+---
+title: 'H5I API'
+description: 'Human-in-the-Loop Intelligence context tracing and summarization surface.'
+---
+
+## Overview
+
+The H5I (Human-in-the-Loop Intelligence) API defines context tracing, summarization, and commit-claim endpoints for agent workflows that require human review. The current implementation is a stub surface that returns status placeholders while the H5I feature set is finalized.
+
+## Base URL
+
+```
+https://api.allternit.com/api/v1/h5i
+```
+
+For local development:
+
+```
+http://127.0.0.1:8013/api/v1/h5i
+```
+
+## Authentication
+
+H5I routes inherit the standard bearer-token auth middleware. See [Authentication](/api/authentication).
+
+## Endpoints
+
+| Method | Path | Description |
+|--------|------|-------------|
+| `GET` | `/api/v1/h5i/status` | H5I status. |
+| `POST` | `/api/v1/h5i/init` | Initialize H5I context. |
+| `POST` | `/api/v1/h5i/summarize` | Summarize context. |
+| `GET` | `/api/v1/h5i/summary/list` | List summaries. |
+| `POST` | `/api/v1/h5i/context/start` | Start a context trace. |
+| `POST` | `/api/v1/h5i/context/finish` | Finish a context trace. |
+| `POST` | `/api/v1/h5i/context/diff` | Diff two context traces. |
+| `GET` | `/api/v1/h5i/context/trace` | Read a context trace. |
+| `POST` | `/api/v1/h5i/commit` | Commit reviewed changes. |
+| `GET` | `/api/v1/h5i/claims/list` | List claims. |
+| `POST` | `/api/v1/h5i/agent-hooks/install` | Install agent hooks. |
+| `GET` | `/api/v1/h5i/mcp/config` | H5I MCP configuration. |
+| `POST` | `/api/v1/h5i/vibe` | Vibe-check endpoint. |
+
+## Example request
+
+```bash
+curl -X POST https://api.allternit.com/api/v1/h5i/init \
+  -H "Authorization: Bearer $TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{"context_id": "ctx_550e8400"}'
+```
+
+## Example response
+
+```json
+{
+  "status": "ok",
+  "stub": true
+}
+```
+
+List endpoints return an empty data array:
+
+```json
+{
+  "status": "ok",
+  "stub": true,
+  "data": []
+}
+```
+
+## Error codes
+
+| Status | Meaning |
+|--------|---------|
+| `200 OK` | Request received; response is a stub. |
+| `401 Unauthorized` | Missing or invalid bearer token. |
+
+## Related pages
+
+- [Authentication](/api/authentication)
+- [Agents API](/api/agents)
+- [Sessions API](/api/sessions)

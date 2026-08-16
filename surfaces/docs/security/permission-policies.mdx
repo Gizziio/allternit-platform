@@ -1,0 +1,127 @@
+---
+title: Permission Policies
+description: Agent-level permission rules and approval lifecycle for tool execution.
+---
+
+# Permission Policies
+
+Permission policies let organizations and users define fine-grained rules that classify tool execution requests as `allow`, `deny`, or `ask`. When a request matches an `ask` rule, the runtime records a pending approval and waits for user action before proceeding.
+
+Permission policies are evaluated by the Gizzi runtime and the Allternit API. They layer on top of organization RBAC and workspace membership.
+
+## Policy structure
+
+A policy is a named ordered list of rules. Each rule can match on:
+
+| Field | Description |
+|-------|-------------|
+| `tool` | Tool name or glob, e.g. `bash`, `file.read`, `http.*` |
+| `file_path` | File path, prefix, or glob |
+| `network_host` | Network host or glob |
+| `action` | `allow`, `deny`, or `ask` |
+
+## Pattern matching
+
+Rules support glob-style patterns:
+
+| Pattern | Matches |
+|---------|---------|
+| `*` | Anything |
+| `prefix*` | Values starting with `prefix` |
+| `*suffix` | Values ending with `suffix` |
+| `*contains*` | Values containing `contains` |
+| exact | Exact equality |
+
+## Rule evaluation
+
+Rules are evaluated in order. The first matching rule wins. If no rule matches, the default action is `allow`.
+
+A rule matches only when every field that is present matches the request. For example, a rule with `tool` and `file_path` set matches only when both the tool and the file path match.
+
+## Example policy
+
+```json
+{
+  "name": " cautious-default",
+  "rules": [
+    {
+      "tool": "bash",
+      "action": "ask"
+    },
+    {
+      "tool": "file.write",
+      "file_path": "/etc/*",
+      "action": "deny"
+    },
+    {
+      "tool": "http.get",
+      "network_host": "*.internal.example.com",
+      "action": "ask"
+    },
+    {
+      "tool": "*",
+      "action": "allow"
+    }
+  ]
+}
+```
+
+This policy:
+
+- Asks before running any `bash` command.
+- Denies writing to `/etc/*`.
+- Asks before making HTTP requests to internal hosts.
+- Allows everything else.
+
+## Approval lifecycle
+
+When a rule produces `ask`, the runtime creates a pending approval request with these fields:
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `id` | string | Approval request identifier |
+| `user_id` | string | User who initiated the tool call |
+| `tool` | string | Tool being requested |
+| `args` | object | Tool arguments |
+| `status` | string | `pending`, `approved`, or `denied` |
+| `created_at` | string | ISO 8601 timestamp |
+
+The request can be approved or denied through the runtime surface. Approved requests allow the tool to execute; denied requests return an error to the agent.
+
+## Configuring policies
+
+Policies are typically configured in Gizzi Code settings or company-level configuration. The active policy is selected by name and merged from company and user config.
+
+### CLI example
+
+```bash
+# Select a policy in gizzi-code settings
+{
+  "permission_policy": "cautious-default"
+}
+```
+
+## Approval endpoints
+
+Pending approvals are resolved through the runtime approval endpoints:
+
+| Method | Path | Description |
+|--------|------|-------------|
+| `GET` | `/api/v1/beta/approvals/:id` | Get an approval request |
+| `POST` | `/api/v1/beta/approvals/:id/approve` | Approve a request |
+| `POST` | `/api/v1/beta/approvals/:id/deny` | Deny a request |
+
+## Error codes
+
+Permission policy evaluation itself does not return HTTP errors. When a policy denies a request, the tool call fails with a permission-denied error. Approval endpoints may return:
+
+| HTTP | Code | Meaning |
+|------|------|---------|
+| `404` | `approval_not_found` | Approval request does not exist |
+| `409` | `already_resolved` | Approval was already approved or denied |
+
+## Related pages
+
+- [CLI permission profiles](/cli/permission-profiles) — Local permission configuration in Gizzi Code
+- [Tools / Tool Belt](/tools/tool-belt) — Built-in tools and their arguments
+- [Security model](/security/security-model) — Trust boundaries and authorization layers

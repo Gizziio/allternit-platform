@@ -1,0 +1,172 @@
+---
+title: Context Caches
+description: Store reusable conversation prefixes for the Allternit LLM gateway
+---
+
+## Overview
+
+The Context Cache API stores entire message prefixes — such as long system instructions, reference documents, or few-shot examples — so they can be reused across chat-completion requests. When a cache id is supplied, the gateway prepends the cached messages to the request before routing to the runtime, reducing repeated token costs and latency.
+
+## Base URL
+
+```
+https://api.allternit.com/v1
+```
+
+For local development:
+
+```
+http://127.0.0.1:8013/v1
+```
+
+## Endpoints
+
+| Method | Path | Description |
+|--------|------|-------------|
+| `POST` | `/v1/context-caches` | Create a context cache |
+| `GET`  | `/v1/context-caches` | List context caches |
+| `GET`  | `/v1/context-caches/:id` | Retrieve a context cache |
+| `DELETE` | `/v1/context-caches/:id` | Delete a context cache |
+
+## Authentication
+
+All requests require a virtual key in the `Authorization` header. See [Authentication](/api/authentication).
+
+```bash
+curl https://api.allternit.com/v1/context-caches \
+  -H "Authorization: Bearer $ALLTERNIT_API_KEY"
+```
+
+## Create a context cache
+
+### Request body
+
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| `messages` | array | yes | Array of chat messages to cache. Must contain at least one message. |
+| `name` | string | no | Human-readable label. |
+| `ttl_seconds` | integer | no | Time-to-live in seconds. `0` means no expiry. Defaults to `3600` (1 hour). |
+
+### Example request
+
+```bash
+curl -X POST https://api.allternit.com/v1/context-caches \
+  -H "Authorization: Bearer $ALLTERNIT_API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "name": "platform-onboarding-context",
+    "ttl_seconds": 86400,
+    "messages": [
+      {
+        "role": "system",
+        "content": "You are an expert on the Allternit platform. Answer questions using the following reference material."
+      },
+      {
+        "role": "user",
+        "content": "Reference material: Allternit is an enterprise-grade agentic operating system..."
+      },
+      {
+        "role": "assistant",
+        "content": "I have reviewed the reference material and am ready to answer questions."
+      }
+    ]
+  }'
+```
+
+### Example response
+
+```json
+{
+  "id": "ctxcache_abc123",
+  "object": "context_cache",
+  "name": "platform-onboarding-context",
+  "message_count": 3,
+  "created_at": 1723500000,
+  "expires_at": 1723586400
+}
+```
+
+## List context caches
+
+```bash
+curl https://api.allternit.com/v1/context-caches \
+  -H "Authorization: Bearer $ALLTERNIT_API_KEY"
+```
+
+```json
+{
+  "object": "list",
+  "data": [
+    {
+      "id": "ctxcache_abc123",
+      "object": "context_cache",
+      "name": "platform-onboarding-context",
+      "message_count": 3,
+      "created_at": 1723500000,
+      "expires_at": 1723586400
+    }
+  ]
+}
+```
+
+## Retrieve a context cache
+
+```bash
+curl https://api.allternit.com/v1/context-caches/ctxcache_abc123 \
+  -H "Authorization: Bearer $ALLTERNIT_API_KEY"
+```
+
+## Delete a context cache
+
+```bash
+curl -X DELETE https://api.allternit.com/v1/context-caches/ctxcache_abc123 \
+  -H "Authorization: Bearer $ALLTERNIT_API_KEY"
+```
+
+```json
+{
+  "id": "ctxcache_abc123",
+  "object": "context_cache.deleted",
+  "deleted": true
+}
+```
+
+## Use a context cache in chat completions
+
+Pass the cache id in the `context_cache_id` field of a chat-completion request. The cached messages are prepended to the request messages before routing.
+
+```bash
+curl https://api.allternit.com/v1/chat/completions \
+  -H "Authorization: Bearer $ALLTERNIT_API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "model": "auto",
+    "context_cache_id": "ctxcache_abc123",
+    "messages": [
+      {"role": "user", "content": "What deployment options does Allternit support?"}
+    ]
+  }'
+```
+
+## Cache lifecycle
+
+- Caches are keyed by content hash, so identical messages return the same cache object.
+- Caches expire automatically after `ttl_seconds`.
+- Deleting a cache removes it immediately; subsequent requests referencing it return a `404`.
+
+## Error codes
+
+| HTTP status | Code | Meaning |
+|-------------|------|---------|
+| 400 | `allternit.invalid_request` | Empty `messages` array or invalid `ttl_seconds`. |
+| 401 | `allternit.authentication_failed` | Missing or invalid API key. |
+| 404 | `allternit.invalid_request` | Cache id not found or expired. |
+| 429 | `allternit.rate_limited` | Per-key rate limit exceeded. |
+| 429 | `allternit.budget_exceeded` | Monthly key or tenant budget exhausted. |
+| 500 | `allternit.internal_error` | Internal gateway error. |
+
+## Related pages
+
+- [Chat Completions](/api/chat-completions) — use context caches in completions
+- [Cache](/api/cache) — reusable prompt caches for single prompts
+- [Files](/api/files) — upload documents for retrieval

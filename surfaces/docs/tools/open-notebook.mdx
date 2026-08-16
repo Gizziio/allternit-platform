@@ -1,0 +1,149 @@
+---
+title: 'Open Notebook'
+description: 'Headless notebook engine for grounded research, RAG, and citations in Allternit.'
+---
+
+## Overview
+
+**Allternit Open Notebook** is a headless research backend that powers NotebookLM-style RAG without Docker. It stores notebooks, sources, and chat messages in SurrealDB, chunks and indexes sources, and provides grounded chat with citations.
+
+## Base URL
+
+Local development:
+
+```text
+http://127.0.0.1:5055
+```
+
+When mounted behind the Allternit platform gateway:
+
+```text
+https://api.allternit.com/api/notebooks
+```
+
+## Endpoints
+
+| Method | Path | Description |
+|--------|------|-------------|
+| GET | `/health` | Service health |
+| GET | `/api/notebooks` | List notebooks |
+| POST | `/api/notebooks` | Create a notebook |
+| GET | `/api/notebooks/{id}` | Get a notebook |
+| PATCH | `/api/notebooks/{id}` | Update a notebook |
+| DELETE | `/api/notebooks/{id}` | Delete a notebook and its data |
+| POST | `/api/notebooks/{id}/share` | Share a notebook |
+| POST | `/api/notebooks/{id}/unshare` | Unshare a notebook |
+| GET | `/api/notebooks/{id}/sources` | List sources |
+| POST | `/api/notebooks/{id}/sources` | Add a source |
+| DELETE | `/api/notebooks/{id}/sources/{source_id}` | Remove a source |
+| GET | `/api/notebooks/{id}/chat/messages` | List chat messages |
+| POST | `/api/notebooks/{id}/chat` | Stream a grounded chat response |
+| GET | `/api/search` | Search across notebooks |
+| POST | `/api/transform` | Transform content |
+| POST | `/api/podcast` | Generate podcast audio |
+| GET/POST | `/api/connectors/*` | Connector integrations |
+| POST | `/api/canvas-sync/*` | Canvas LMS sync |
+| GET/POST | `/api/reddit/*` | Reddit research helpers |
+
+## JSON examples
+
+### Create a notebook
+
+```bash
+curl -X POST http://127.0.0.1:5055/api/notebooks \
+  -H 'content-type: application/json' \
+  -d '{
+    "title": "Q3 Research",
+    "description": "Quarterly research notes",
+    "owner_id": "user_123"
+  }'
+```
+
+Response:
+
+```json
+{
+  "id": "nb_1",
+  "title": "Q3 Research",
+  "description": "Quarterly research notes",
+  "owner_id": "user_123",
+  "shared_with": [],
+  "source_count": 0,
+  "token_count": 0,
+  "created_at": "2026-08-13T19:00:00.000Z",
+  "updated_at": "2026-08-13T19:00:00.000Z"
+}
+```
+
+### Add a source
+
+```bash
+curl -X POST http://127.0.0.1:5055/api/notebooks/nb_1/sources \
+  -H 'content-type: application/json' \
+  -d '{
+    "type": "text",
+    "title": "Annual Report",
+    "content": "Revenue increased by 20% year over year..."
+  }'
+```
+
+Response:
+
+```json
+{
+  "id": "src_1",
+  "notebook_id": "nb_1",
+  "type": "text",
+  "title": "Annual Report",
+  "content": "Revenue increased by 20% year over year...",
+  "token_count": 12,
+  "status": "extracted",
+  "created_at": "2026-08-13T19:00:00.000Z",
+  "updated_at": "2026-08-13T19:00:00.000Z"
+}
+```
+
+### Grounded chat
+
+```bash
+curl -X POST http://127.0.0.1:5055/api/notebooks/nb_1/chat \
+  -H 'content-type: application/json' \
+  -d '{"message":"What was the revenue growth?"}'
+```
+
+Response (SSE):
+
+```text
+data: {"text":"Revenue grew"}
+data: {"text":" by 20%"}
+data: {"citation":{"index":1,"source_id":"src_1","excerpt":"Revenue increased by 20% year over year"}}
+data: {"done":true}
+```
+
+## Configuration
+
+| Variable | Purpose |
+|----------|---------|
+| `PORT` | HTTP port (default `5055`) |
+| `SURREALDB_URL` | SurrealDB connection URL |
+| `SURREALDB_NS` | SurrealDB namespace |
+| `SURREALDB_DB` | SurrealDB database |
+| `SURREALDB_USER` / `SURREALDB_PASS` | SurrealDB credentials |
+| `QDRANT_URL` | Qdrant vector store URL |
+| `ALLTERNIT_API_KEY` | Allternit gateway key for LLM proxy |
+
+## Error codes
+
+| HTTP | Code | Meaning |
+|------|------|---------|
+| 200 | — | Success |
+| 400 | `bad_request` | Invalid payload |
+| 404 | `not_found` | Notebook or source not found |
+| 422 | `unprocessable_entity` | Validation failed |
+| 500 | `internal_error` | Unexpected server error |
+
+## Related pages
+
+- [Native Tool Belt](/tools/tool-belt)
+- [Memory Fabric](/core/memory-fabric)
+- [Open Connector](/tools/open-connector)

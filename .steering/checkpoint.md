@@ -261,3 +261,41 @@ Add Allternit Manufacturing as a platform offering: create a strategic master pl
 
 - Should Manufacturing have its own top-level navigation entry, or remain discoverable only through Products Discovery for now?
 - What is the Phase 1 equipment budget and target go-live date?
+
+---
+
+## Goal (platform polish: Agent | Bot Hub, ACI, Code, Home, iOS)
+
+Work through the user's platform todo list across ACI, Code mode, Home/bots, and iOS parity, starting with the smallest high-impact UI fixes and progressing to larger features.
+
+## Just did
+
+- Created linked worktree `allternit-session-platform-polish` from `main`.
+- Copied 192 dirty/untracked files from the shared checkout into the worktree so we work on the current state (WIP from previous sessions).
+- Installed dependencies with `pnpm install --ignore-scripts`.
+- Established baseline typecheck: `pnpm exec tsc --project tsconfig.typecheck.json --noEmit` reports 952 lines of pre-existing errors.
+- Mapped key surfaces: `ShellApp.tsx`, `ShellRail.tsx`, `ViewRegistry.tsx`, `views/api-capture/ApiCaptureView.tsx`, `views/HomeView.tsx`, `views/AgentHub.tsx`, `views/bots/`.
+
+## Just did (continued)
+
+- **Site API tab rail fix**: registered `site-apis` as a `ViewType`, wired it into `ViewRegistry.tsx`, and added it to `BROWSER_MODE_VIEW_TYPES` in `ShellApp.tsx` so opening Site APIs no longer jumps the rail to Home. Added "Site APIs" to the Browser-mode rail and its More dropdown.
+- **Site API tab polish**: improved `ApiCaptureView.tsx` header with a subtle gradient, larger icon container, and shadow.
+- **Chat top-deck pills glass effect**: changed `InfoChip`, `ActionChip` (inactive), and the agent status pill in `AgentContextStrip` to `bg-white/5 backdrop-blur-sm` for a see-through glass look.
+- **Composer + button parity**: updated the compact composer path so the + button now toggles the existing Claude-style attachment/context/style menu (rotates to ×) instead of directly opening the file picker. Extracted the menu into a shared `plusMenuPanel` variable used by both compact and full composer layouts.
+- **Usage card polish**: converted `CodeUsageDashboard.tsx` from a light parchment surface to a dark glass card (`rgba(255,255,255,0.03)` + `backdrop-blur(20px)`), updated tab/range switchers, metric cards, heatmap, and model rows to match the dark glass Allternit style.
+- **Agent | Bot Hub rename**: updated visible labels in `AgentHub.tsx`, `ShellRail.tsx`, rail configs (`rail.config.tsx`, `cowork.config.ts`, `code.config.ts`), `ViewRegistry.tsx` error fallback, and `ProductsDiscoveryView.tsx`.
+- **Verification**: `pnpm exec tsc --project tsconfig.typecheck.json --noEmit` still reports 952 lines (same baseline; no new errors introduced).
+
+## Next
+
+1. Phase 2 — Home & bots rework: bot toggle modes/mascot, session routing, workspace audit.
+2. Phase 3 — ACI & mini-apps: file-open integration, mini-app store/catalog polish, browser chat branding.
+3. Phase 4 — Code mode: console branding, terminal session canvas redesign, ACI dev server sideline.
+4. Phase 5 spikes: choose DocuSign alternative, locate and audit Allternit iOS project.
+
+## Open questions
+
+- User clarified rename should be "Agent | Bot Hub" (not "Agents & Bots").
+- User wants me to choose the best open-source DocuSign alternative (leaning toward DocuSeal for modern API-first UX).
+- iOS project exists as "allternit ios" and needs parity upgrades; exact path still to locate.
+- Code canvas should be kept, simplified, and redesigned for organized terminal-session overlays.
