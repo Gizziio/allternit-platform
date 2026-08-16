@@ -3,14 +3,14 @@ import { AgentView } from "../../AgentView";
 import { PerformanceAnalyticsView } from "@/components/agents/PerformanceAnalyticsView";
 import { AgentSessionsTab } from "./AgentSessionsTab";
 import { AgentWorkspacePanel } from "@/components/agent-workspace/AgentWorkspacePanel";
-import { AgentHubBotsTab } from "./AgentHubBotsTab";
 import type { AgentTab } from "./AgentHub.constants";
 
 interface AgentHubContentProps {
   activeTab: AgentTab;
+  onSessionStarted?: (sessionId: string) => void;
 }
 
-export const AgentHubContent: React.FC<AgentHubContentProps> = ({ activeTab }) => {
+export const AgentHubContent: React.FC<AgentHubContentProps> = ({ activeTab, onSessionStarted }) => {
   switch (activeTab) {
     case 'studio':
       return (
@@ -36,12 +36,6 @@ export const AgentHubContent: React.FC<AgentHubContentProps> = ({ activeTab }) =
       return (
         <div className="flex-1 overflow-hidden flex flex-col">
           <AgentWorkspacePanel />
-        </div>
-      );
-    case 'bots':
-      return (
-        <div className="flex-1 overflow-hidden">
-          <AgentHubBotsTab />
         </div>
       );
     default:

@@ -6,7 +6,7 @@ import {
   Sparkle,
   CheckCircle,
 } from "@phosphor-icons/react";
-import type { Agent, CreateAgentInput } from "@/lib/agents/agent.types";
+import type { Agent, CreateAgentInput, BotProfile } from "@/lib/agents/agent.types";
 import { AGENT_TYPES } from "../AgentView.constants";
 import {
   Input,
@@ -20,6 +20,14 @@ import {
   Label,
 } from "@/components/ui";
 import { TagInput } from "@/components/ui/tag-input";
+
+function slugifyHandle(value: string) {
+  return value
+    .trim()
+    .toLowerCase()
+    .replace(/\s+/g, '-')
+    .replace(/[^a-z0-9-]/g, '');
+}
 
 interface PersonalityState {
   openness: number;
@@ -37,6 +45,7 @@ interface IdentityStepProps {
   personality: PersonalityState;
   setPersonality: React.Dispatch<React.SetStateAction<PersonalityState>>;
   orchestrators: Agent[];
+  isBotMode?: boolean;
 }
 
 const getTypeIcon = (typeId: string) => {
@@ -56,40 +65,100 @@ export function IdentityStep({
   personality,
   setPersonality,
   orchestrators,
+  isBotMode,
 }: IdentityStepProps) {
+  const botProfile = (formData.botProfile || {}) as Partial<BotProfile>;
+
+  const updateBotProfile = (updates: Partial<BotProfile>) => {
+    setFormData((prev) => ({
+      ...prev,
+      botProfile: { ...(prev.botProfile || {}), ...updates } as BotProfile,
+    }));
+  };
+
   return (
     <section className="rounded-xl border border-solid border-[var(--border-subtle)] bg-[var(--bg-card)] p-6 mb-6">
       <div className="mb-6">
         <h2 className="text-[18px] font-semibold text-[var(--text-primary)] m-0 mb-4 font-research flex items-center gap-2">
           <Sparkle size={20} className="text-[var(--accent-primary)]" />
-          Agent Identity
+          {isBotMode ? 'Bot Identity' : 'Agent Identity'}
         </h2>
         <p className="text-[14px] text-[var(--text-secondary)] m-0 mb-5">
-          Define the ownership boundary and runtime role for this agent.
+          {isBotMode
+            ? 'Define the handle, display name, and tagline for this bot. The handle is what users type after @.'
+            : 'Define the ownership boundary and runtime role for this agent.'}
         </p>
       </div>
 
       <div className="h-px bg-[var(--border-subtle)] my-6" />
 
       <div className="mb-5">
-        <div className="text-[14px] font-medium text-[var(--text-primary)] mb-2 block">Agent Name</div>
+        <div className="text-[14px] font-medium text-[var(--text-primary)] mb-2 block">
+          {isBotMode ? 'Bot Handle' : 'Agent Name'}
+        </div>
         <Input
           id="name"
           value={formData.name}
-          onChange={(e) => setFormData((prev) => ({ ...prev, name: e.target.value }))}
-          placeholder="e.g., Code Review Sentinel"
+          onChange={(e) => {
+            const name = isBotMode ? slugifyHandle(e.target.value) : e.target.value;
+            setFormData((prev) => {
+              const next = { ...prev, name };
+              if (isBotMode && !prev.botProfile?.displayName) {
+                next.botProfile = { ...(prev.botProfile || {}), displayName: name } as BotProfile;
+              }
+              return next;
+            });
+          }}
+          placeholder={isBotMode ? 'cronfather' : 'e.g., Code Review Sentinel'}
           required
           className="bg-[var(--bg-primary)] border border-solid border-[var(--border-subtle)] text-[var(--text-primary)]"
         />
+        {isBotMode && (
+          <p className="text-[12px] text-[var(--text-muted)] mt-1.5">
+            Lowercase, no spaces. Used for @mentions and internal routing.
+          </p>
+        )}
       </div>
 
+      {isBotMode && (
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-5">
+          <div>
+            <div className="text-[14px] font-medium text-[var(--text-primary)] mb-2 block">Display Name</div>
+            <Input
+              value={botProfile.displayName || ''}
+              onChange={(e) => {
+                const displayName = e.target.value;
+                updateBotProfile({ displayName });
+                setFormData((prev) => ({
+                  ...prev,
+                  name: prev.name || slugifyHandle(displayName),
+                }));
+              }}
+              placeholder="e.g., The Cronfather"
+              className="bg-[var(--bg-primary)] border border-solid border-[var(--border-subtle)] text-[var(--text-primary)]"
+            />
+          </div>
+          <div>
+            <div className="text-[14px] font-medium text-[var(--text-primary)] mb-2 block">Tagline</div>
+            <Input
+              value={botProfile.tagline || ''}
+              onChange={(e) => updateBotProfile({ tagline: e.target.value })}
+              placeholder="Short description shown in the bot picker"
+              className="bg-[var(--bg-primary)] border border-solid border-[var(--border-subtle)] text-[var(--text-primary)]"
+            />
+          </div>
+        </div>
+      )}
+
       <div className="mb-5">
-        <div className="text-[14px] font-medium text-[var(--text-primary)] mb-2 block">Description</div>
+        <div className="text-[14px] font-medium text-[var(--text-primary)] mb-2 block">
+          {isBotMode ? 'Bot Purpose' : 'Description'}
+        </div>
         <Textarea
           id="description"
           value={formData.description}
           onChange={(e) => setFormData((prev) => ({ ...prev, description: e.target.value }))}
-          placeholder="What this agent owns and what it should deliver."
+          placeholder={isBotMode ? 'What this bot owns and what it should deliver autonomously.' : 'What this agent owns and what it should deliver.'}
           required
           className="bg-[var(--bg-primary)] border border-solid border-[var(--border-subtle)] text-[var(--text-primary)] min-h-[80px]"
         />

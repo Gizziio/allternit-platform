@@ -1,0 +1,161 @@
+---
+title: 'SSH Keys API'
+description: 'Store, generate, import, and manage SSH keys for use with SSH connections and VM provisioning.'
+---
+
+## Overview
+
+The SSH Keys API stores SSH public/private key pairs, generates new keys with `ssh-keygen`, imports existing private keys to derive their public keys, and returns fingerprints for key identification. Keys are scoped to the authenticated user.
+
+## Base URL
+
+```
+https://api.allternit.com/v1/ssh-keys
+```
+
+All endpoints require a valid Bearer token in the `Authorization` header. See [Authentication](/api/authentication) for details.
+
+## Endpoints
+
+| Method | Path | Description |
+|--------|------|-------------|
+| GET | `/ssh-keys` | List SSH keys. |
+| POST | `/ssh-keys` | Store an SSH key. |
+| POST | `/ssh-keys/generate` | Generate a new SSH key pair. |
+| POST | `/ssh-keys/import` | Import a private key and derive its public key. |
+| GET | `/ssh-keys/:id` | Get an SSH key. |
+| PUT | `/ssh-keys/:id` | Update an SSH key. |
+| DELETE | `/ssh-keys/:id` | Delete an SSH key. |
+
+## List keys
+
+```bash
+GET /api/v1/ssh-keys
+```
+
+Response:
+
+```json
+[
+  {
+    "id": "key_2f8a9c4e5d3b",
+    "name": "Laptop key",
+    "fingerprint": "a1:b2:c3:d4:e5:f6",
+    "public_key": "ssh-ed25519 AAAAC3NzaC1...",
+    "key_type": "ed25519",
+    "bits": 256,
+    "last_used_at": null,
+    "created_at": "2026-08-13T10:00:00Z",
+    "updated_at": "2026-08-13T10:00:00Z"
+  }
+]
+```
+
+## Store key
+
+```bash
+POST /api/v1/ssh-keys
+```
+
+Request body:
+
+```json
+{
+  "name": "Laptop key",
+  "public_key": "ssh-ed25519 AAAAC3NzaC1...",
+  "private_key": null,
+  "passphrase": null,
+  "key_type": "ed25519",
+  "bits": 256
+}
+```
+
+Response:
+
+```json
+{
+  "id": "key_2f8a9c4e5d3b",
+  "name": "Laptop key",
+  "fingerprint": "a1:b2:c3:d4:e5:f6",
+  "public_key": "ssh-ed25519 AAAAC3NzaC1...",
+  "key_type": "ed25519",
+  "bits": 256
+}
+```
+
+## Generate key
+
+```bash
+POST /api/v1/ssh-keys/generate
+```
+
+Request body:
+
+```json
+{
+  "name": "CI deploy key",
+  "type": "ed25519",
+  "bits": 256
+}
+```
+
+Response:
+
+```json
+{
+  "id": "key_7e1a2b3c",
+  "name": "CI deploy key",
+  "public_key": "ssh-ed25519 AAAAC3NzaC1...",
+  "private_key": "-----BEGIN OPENSSH PRIVATE KEY-----\n...",
+  "fingerprint": "a1:b2:c3:d4:e5:f6"
+}
+```
+
+Supported key types: `ed25519`, `rsa`, `ecdsa`. RSA defaults to 4096 bits; others default to 256 bits.
+
+## Import key
+
+```bash
+POST /api/v1/ssh-keys/import
+```
+
+Request body:
+
+```json
+{
+  "name": "Imported key",
+  "private_key": "-----BEGIN OPENSSH PRIVATE KEY-----\n...",
+  "passphrase": null
+}
+```
+
+Response:
+
+```json
+{
+  "id": "key_5e6f7a8b",
+  "name": "Imported key",
+  "fingerprint": "a1:b2:c3:d4:e5:f6",
+  "public_key": "ssh-ed25519 AAAAC3NzaC1...",
+  "created_at": "2026-08-13T10:00:00Z"
+}
+```
+
+## Error codes
+
+| Status | Code | Description |
+|--------|------|-------------|
+| 200 | — | Success. |
+| 201 | — | Created successfully. |
+| 400 | `Name is required` | Missing key name. |
+| 400 | `private_key is required` | Import request missing private key. |
+| 400 | `Failed to derive public key from private key` | Import failed. |
+| 401 | `unauthorized` | Missing or invalid authentication. |
+| 404 | `SSH key not found` | Key does not exist. |
+| 500 | `internal_error` | Unexpected server error. |
+
+## Related links
+
+- [Authentication](/api/authentication)
+- [SSH Connections API](/api/ssh)
+- [VM Sessions API](/api/vm-sessions)

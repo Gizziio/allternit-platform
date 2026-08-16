@@ -1,4 +1,4 @@
-import React from 'react';
+import React from "react";
 import { cn } from "@/lib/utils";
 import type { SurfacePalette } from "./context-strip.types";
 
@@ -20,18 +20,18 @@ export function ActionChip({
       type="button"
       onClick={onClick}
       className={cn(
-        "inline-flex items-center gap-1.5 rounded-full border border-solid px-2.5 py-1.5 text-[12px] font-bold cursor-pointer transition-colors",
-        active 
-          ? "bg-[var(--palette-soft)] border-[var(--palette-border)] text-[var(--palette-accent)]" 
-          : "bg-[var(--surface-hover)] border-[var(--ui-border-default)] text-[var(--ui-text-muted)]"
+        "inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1.5 text-[11px] font-semibold cursor-pointer transition-colors",
+        active
+          ? "bg-[var(--palette-soft)] border-[var(--palette-border)] text-[var(--palette-accent)]"
+          : "bg-[var(--surface-hover)] border-[var(--border-subtle)] text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:border-[var(--border-default)]"
       )}
       style={{
-        '--palette-soft': palette.soft,
-        '--palette-border': palette.border,
-        '--palette-accent': palette.accent,
+        "--palette-soft": palette.soft,
+        "--palette-border": palette.border,
+        "--palette-accent": palette.accent,
       } as React.CSSProperties}
     >
-      <Icon size={13} weight={active ? "fill" : "bold"} />
+      <Icon size={12} weight={active ? "fill" : "bold"} />
       {label}
     </button>
   );

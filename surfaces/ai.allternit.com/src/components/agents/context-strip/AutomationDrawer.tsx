@@ -191,7 +191,7 @@ export function AutomationDrawer({ automationEnabled, palette }: AutomationDrawe
       )}
 
       <div
-        className="flex items-center gap-2 p-[10px_12px] rounded-[10px] bg-[rgba(16,12,10,0.24)] border border-solid border-[var(--palette-border)]"
+        className="flex items-center gap-2 p-[10px_12px] rounded-[10px] bg-[var(--bg-card)] border border-solid border-[var(--palette-border)]"
         style={{ '--palette-border': palette.border } as React.CSSProperties}
       >
         <ClockCounterClockwise
@@ -200,10 +200,10 @@ export function AutomationDrawer({ automationEnabled, palette }: AutomationDrawe
           style={{ color: palette.accent }}
         />
         <div className="flex-1">
-          <div className="text-[12px] font-semibold text-[#f6eee7]">
+          <div className="text-[12px] font-semibold text-[var(--text-primary)]">
             Runtime-Managed Session
           </div>
-          <div className="text-[12px] text-[#a8998c]">
+          <div className="text-[12px] text-[var(--text-secondary)]">
             {automationEnabled
               ? `Automation hooks are active | ${jobs.length} job${jobs.length !== 1 ? "s" : ""}`
               : "Enable automation to schedule jobs"}
@@ -212,7 +212,7 @@ export function AutomationDrawer({ automationEnabled, palette }: AutomationDrawe
         <div
           className={cn(
             "px-2 py-1 rounded-full text-[12px] font-bold",
-            automationEnabled ? "bg-[#79C47C]/20 text-[#79C47C]" : "bg-[var(--ui-border-muted)] text-[#a8998c]"
+            automationEnabled ? "bg-[#79C47C]/20 text-[#79C47C]" : "bg-[var(--ui-border-muted)] text-[var(--text-secondary)]"
           )}
         >
           {automationEnabled ? "Enabled" : "Disabled"}
@@ -228,7 +228,7 @@ export function AutomationDrawer({ automationEnabled, palette }: AutomationDrawe
           onClick={() => setActiveTab("scheduled")}
           className={cn(
             "flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg border-none text-[12px] font-bold cursor-pointer transition-all",
-            activeTab === "scheduled" ? "bg-[var(--palette-soft)] text-[var(--palette-accent)]" : "bg-transparent text-[#a8998c] hover:bg-[var(--surface-hover)]"
+            activeTab === "scheduled" ? "bg-[var(--palette-soft)] text-[var(--palette-accent)]" : "bg-transparent text-[var(--text-secondary)] hover:bg-[var(--surface-hover)]"
           )}
           style={activeTab === "scheduled" ? {
             '--palette-soft': palette.soft,
@@ -243,7 +243,7 @@ export function AutomationDrawer({ automationEnabled, palette }: AutomationDrawe
           onClick={() => setActiveTab("history")}
           className={cn(
             "flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg border-none text-[12px] font-bold cursor-pointer transition-all",
-            activeTab === "history" ? "bg-[var(--palette-soft)] text-[var(--palette-accent)]" : "bg-transparent text-[#a8998c] hover:bg-[var(--surface-hover)]"
+            activeTab === "history" ? "bg-[var(--palette-soft)] text-[var(--palette-accent)]" : "bg-transparent text-[var(--text-secondary)] hover:bg-[var(--surface-hover)]"
           )}
           style={activeTab === "history" ? {
             '--palette-soft': palette.soft,
@@ -258,7 +258,7 @@ export function AutomationDrawer({ automationEnabled, palette }: AutomationDrawe
           onClick={() => setActiveTab("config")}
           className={cn(
             "flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg border-none text-[12px] font-bold cursor-pointer transition-all",
-            activeTab === "config" ? "bg-[var(--palette-soft)] text-[var(--palette-accent)]" : "bg-transparent text-[#a8998c] hover:bg-[var(--surface-hover)]"
+            activeTab === "config" ? "bg-[var(--palette-soft)] text-[var(--palette-accent)]" : "bg-transparent text-[var(--text-secondary)] hover:bg-[var(--surface-hover)]"
           )}
           style={activeTab === "config" ? {
             '--palette-soft': palette.soft,
@@ -330,7 +330,7 @@ function ScheduledJobsView({
 }: any) {
   if (isLoading) {
     return (
-      <div className="p-5 text-center text-[#a8998c]">
+      <div className="p-5 text-center text-[var(--text-secondary)]">
         <div className="text-[13px]">Loading scheduled jobs...</div>
       </div>
     );
@@ -339,11 +339,11 @@ function ScheduledJobsView({
   if (jobs.length === 0) {
     return (
       <div
-        className="p-5 rounded-xl bg-[rgba(16,12,10,0.24)] border border-solid border-[var(--palette-border)] text-center"
+        className="p-5 rounded-xl bg-[var(--bg-card)] border border-solid border-[var(--palette-border)] text-center"
         style={{ '--palette-border': palette.border } as React.CSSProperties}
       >
         <Calendar size={24} className="mx-auto mb-2" style={{ color: palette.accent }} />
-        <div className="text-[12px] text-[#b3a395] mb-2">
+        <div className="text-[12px] text-[var(--text-secondary)] mb-2">
           No scheduled jobs configured
         </div>
         <button
@@ -364,7 +364,7 @@ function ScheduledJobsView({
           Create Job
         </button>
         {!automationEnabled && (
-          <div className="text-[12px] text-[#888] mt-2">
+          <div className="text-[12px] text-[var(--text-tertiary)] mt-2">
             Enable automation to create scheduled jobs
           </div>
         )}
@@ -375,14 +375,14 @@ function ScheduledJobsView({
   return (
     <div className="flex flex-col gap-2">
       <div className="flex items-center justify-between">
-        <span className="text-[12px] text-[#a8998c]">
+        <span className="text-[12px] text-[var(--text-secondary)]">
           {jobs.filter((j: any) => j.status === "active").length} active
         </span>
         <div className="flex gap-1.5">
           <button
             type="button"
             onClick={onRefresh}
-            className="flex items-center gap-1 px-2 py-1 rounded-md border border-solid border-[var(--palette-border)] bg-transparent text-[#a8998c] text-[12px] cursor-pointer hover:bg-[var(--surface-hover)] transition-colors"
+            className="flex items-center gap-1 px-2 py-1 rounded-md border border-solid border-[var(--palette-border)] bg-transparent text-[var(--text-secondary)] text-[12px] cursor-pointer hover:bg-[var(--surface-hover)] transition-colors"
             style={{ '--palette-border': palette.border } as React.CSSProperties}
           >
             <ArrowCounterClockwise size={12} />
@@ -436,7 +436,7 @@ function JobCard({ job, palette, automationEnabled, onEdit, onDelete, onRunNow, 
 
   return (
     <div
-      className="rounded-xl border border-solid border-[var(--palette-border)] bg-[rgba(16,12,10,0.24)] overflow-hidden"
+      className="rounded-xl border border-solid border-[var(--palette-border)] bg-[var(--bg-card)] overflow-hidden"
       style={{ '--palette-border': palette.border } as React.CSSProperties}
     >
       <div className="p-3">
@@ -444,7 +444,7 @@ function JobCard({ job, palette, automationEnabled, onEdit, onDelete, onRunNow, 
           <div className="flex items-center gap-2 min-w-0">
             <Calendar size={14} className="shrink-0" style={{ color: palette.accent }} />
             <span 
-              className="text-[12px] font-semibold text-[#f6eee7] overflow-hidden text-ellipsis whitespace-nowrap"
+              className="text-[12px] font-semibold text-[var(--text-primary)] overflow-hidden text-ellipsis whitespace-nowrap"
               title={job.name}
             >
               {job.name}
@@ -479,10 +479,10 @@ function JobCard({ job, palette, automationEnabled, onEdit, onDelete, onRunNow, 
             style={{ '--palette-accent': palette.accent } as React.CSSProperties}
           >{job.schedule}</span>
           <span className="text-[#666]">•</span>
-          <span className="text-[#a8998c]">{scheduleDescription}</span>
+          <span className="text-[var(--text-secondary)]">{scheduleDescription}</span>
         </div>
 
-        <div className="flex flex-wrap gap-3 text-[12px] text-[#a8998c]">
+        <div className="flex flex-wrap gap-3 text-[12px] text-[var(--text-secondary)]">
           {job.runCount > 0 && (
             <span title="Total runs">{job.runCount} run{job.runCount !== 1 ? "s" : ""}</span>
           )}
@@ -507,7 +507,7 @@ function JobCard({ job, palette, automationEnabled, onEdit, onDelete, onRunNow, 
         </div>
 
         {job.description && (
-          <div className="mt-2 text-[12px] text-[#888] leading-relaxed">
+          <div className="mt-2 text-[12px] text-[var(--text-tertiary)] leading-relaxed">
             {job.description}
           </div>
         )}
@@ -557,7 +557,7 @@ function ActionButton({
         "flex items-center gap-1 px-2.5 py-1 rounded-md border border-solid text-[12px] font-medium transition-all",
         disabled ? "bg-transparent border-[var(--palette-border)] text-[#666] cursor-not-allowed opacity-60" :
         danger ? "bg-[var(--status-error-bg)] border-red-500/30 text-red-500 cursor-pointer hover:opacity-90" :
-        "bg-transparent border-[var(--palette-border)] text-[#a8998c] cursor-pointer hover:bg-[var(--surface-hover)]"
+        "bg-transparent border-[var(--palette-border)] text-[var(--text-secondary)] cursor-pointer hover:bg-[var(--surface-hover)]"
       )}
       style={{ '--palette-border': palette.border } as React.CSSProperties}
     >
@@ -603,7 +603,7 @@ function JobHistoryView({ palette }: { palette: SurfacePalette }) {
 
   if (isLoading) {
     return (
-      <div className="p-5 text-center text-[#a8998c]">
+      <div className="p-5 text-center text-[var(--text-secondary)]">
         <div className="text-[13px]">Loading execution history...</div>
       </div>
     );
@@ -612,14 +612,14 @@ function JobHistoryView({ palette }: { palette: SurfacePalette }) {
   if (history.length === 0) {
     return (
       <div
-        className="p-5 rounded-xl bg-[rgba(16,12,10,0.24)] border border-solid border-[var(--palette-border)] text-center"
+        className="p-5 rounded-xl bg-[var(--bg-card)] border border-solid border-[var(--palette-border)] text-center"
         style={{ '--palette-border': palette.border, '--palette-accent': palette.accent } as React.CSSProperties}
       >
         <ClockCounterClockwise size={24} className="mx-auto mb-2 text-[var(--palette-accent)]" />
-        <div className="text-[12px] text-[#b3a395]">
+        <div className="text-[12px] text-[var(--text-secondary)]">
           No execution history yet
         </div>
-        <div className="text-[12px] text-[#888] mt-1">
+        <div className="text-[12px] text-[var(--text-tertiary)] mt-1">
           Job runs will be recorded here
         </div>
       </div>
@@ -636,7 +636,7 @@ function JobHistoryView({ palette }: { palette: SurfacePalette }) {
   return (
     <div className="flex flex-col gap-1.5">
       <div className="flex justify-between items-center px-1">
-        <span className="text-[12px] text-[#a8998c]">
+        <span className="text-[12px] text-[var(--text-secondary)]">
           Last {history.length} execution{history.length !== 1 ? "s" : ""}
         </span>
         <button
@@ -645,7 +645,7 @@ function JobHistoryView({ palette }: { palette: SurfacePalette }) {
             clearExecutionHistory();
             setHistory([]);
           }}
-          className="text-[12px] text-[#888] bg-transparent border-none cursor-pointer hover:text-[#f6eee7] transition-colors"
+          className="text-[12px] text-[var(--text-tertiary)] bg-transparent border-none cursor-pointer hover:text-[var(--text-primary)] transition-colors"
         >
           Clear History
         </button>
@@ -653,7 +653,7 @@ function JobHistoryView({ palette }: { palette: SurfacePalette }) {
       {history.slice(0, 10).map((execution) => (
         <div
           key={execution.executionId}
-          className="p-2.5 rounded-lg bg-[rgba(16,12,10,0.24)] border border-solid border-[var(--palette-border)] flex items-center gap-2.5"
+          className="p-2.5 rounded-lg bg-[var(--bg-card)] border border-solid border-[var(--palette-border)] flex items-center gap-2.5"
           style={{ '--palette-border': palette.border } as React.CSSProperties}
         >
           <div
@@ -663,10 +663,10 @@ function JobHistoryView({ palette }: { palette: SurfacePalette }) {
             }}
           />
           <div className="flex-1 min-w-0">
-            <div className="text-[12px] text-[#f6eee7] font-medium truncate">
+            <div className="text-[12px] text-[var(--text-primary)] font-medium truncate">
               {execution.jobId}
             </div>
-            <div className="text-[12px] text-[#888]">
+            <div className="text-[12px] text-[var(--text-tertiary)]">
               {new Date(execution.startedAt).toLocaleString()}
             </div>
           </div>
@@ -737,7 +737,7 @@ function AutomationConfigView({ palette }: { palette: SurfacePalette }) {
       </div>
 
       <div
-        className="mt-2 p-2.5 rounded-[10px] bg-[var(--surface-hover)] border border-solid border-[var(--palette-border)] text-[12px] text-[#a8998c] leading-relaxed"
+        className="mt-2 p-2.5 rounded-[10px] bg-[var(--surface-hover)] border border-solid border-[var(--palette-border)] text-[12px] text-[var(--text-secondary)] leading-relaxed"
         style={{ '--palette-border': palette.border } as React.CSSProperties}
       >
         The job runner polls for due jobs every minute and executes them via native agent sessions. 

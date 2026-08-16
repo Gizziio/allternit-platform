@@ -1,0 +1,304 @@
+---
+title: LLM Gateway Admin
+description: Monitor usage, logs, routing decisions, budgets, and policies for the Allternit LLM gateway
+---
+
+## Overview
+
+The LLM Gateway Admin API provides observability and policy controls for organization owners and admins. It covers usage aggregation, request logs, routing decisions, DLP rules, budgets, and inference hooks. All admin routes require a Clerk JWT and organization owner or admin role.
+
+## Base URL
+
+```
+https://api.allternit.com/api/v1/gateway
+```
+
+For local development:
+
+```
+http://127.0.0.1:8013/api/v1/gateway
+```
+
+## Endpoints
+
+| Method | Path | Description |
+|--------|------|-------------|
+| `GET` | `/api/v1/gateway/usage` | Usage aggregation by day, provider, model, and key |
+| `GET` | `/api/v1/gateway/logs` | Request logs with filtering and cursor pagination |
+| `GET` | `/api/v1/gateway/routing/decisions` | Routing decisions for policy-alias requests |
+| `GET` / `PUT` | `/api/v1/gateway/routing/policies` | List or update routing policies |
+| `GET` / `PUT` | `/api/v1/gateway/dlp/rules` | List or update DLP rules |
+| `GET` / `PUT` | `/api/v1/gateway/budgets` | List or update budgets |
+| `GET` / `PUT` / `POST` / `DELETE` | `/api/v1/gateway/inference-hooks` | Manage inference hooks |
+| `POST` / `GET` / `PATCH` / `DELETE` | `/api/v1/gateway/keys` | Manage virtual keys |
+
+Virtual-key management is documented on the [Authentication](/api/authentication) page.
+
+## Authentication
+
+```bash
+curl https://api.allternit.com/api/v1/gateway/usage \
+  -H "Authorization: Bearer $ALLTERNIT_TOKEN"
+```
+
+## Usage
+
+### Query parameters
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `from` | string | Start date in `YYYY-MM-DD` format. |
+| `to` | string | End date in `YYYY-MM-DD` format. |
+
+### Example request
+
+```bash
+curl "https://api.allternit.com/api/v1/gateway/usage?from=2026-08-01&to=2026-08-13" \
+  -H "Authorization: Bearer $ALLTERNIT_TOKEN"
+```
+
+### Example response
+
+```json
+{
+  "from": "2026-08-01",
+  "to": "2026-08-13",
+  "usage": [
+    {
+      "day": "2026-08-13",
+      "provider_id": "provider-a",
+      "model_id": "model-x",
+      "virtual_key_id": "key_abc123",
+      "key_prefix": "ak-prod",
+      "requests": 1240,
+      "prompt_tokens": 450000,
+      "completion_tokens": 120000,
+      "reasoning_tokens": 8000,
+      "spend_microdollars": 1250000,
+      "cost_mismatches": 2
+    }
+  ],
+  "totals": {
+    "requests": 1240,
+    "prompt_tokens": 450000,
+    "completion_tokens": 120000,
+    "spend_microdollars": 1250000
+  }
+}
+```
+
+## Logs
+
+### Query parameters
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `limit` | integer | Page size. `1`–`200`. Defaults to `50`. |
+| `cursor` | string | Pagination cursor in the form `created_at|id`. |
+| `status` | string | Filter by request status. |
+
+### Example request
+
+```bash
+curl "https://api.allternit.com/api/v1/gateway/logs?limit=10&status=completed" \
+  -H "Authorization: Bearer $ALLTERNIT_TOKEN"
+```
+
+### Example response
+
+```json
+{
+  "logs": [
+    {
+      "id": "evt_abc123",
+      "status": "completed",
+      "error_type": null,
+      "policy": "allternit-balanced",
+      "provider_id": "provider-a",
+      "model_id": "model-x",
+      "fallback_from": null,
+      "prompt_tokens": 120,
+      "completion_tokens": 45,
+      "cost_microdollars": 1250,
+      "latency_ms": 890,
+      "ttft_ms": 120,
+      "gizzi_session_id": "sess_abc123",
+      "key_prefix": "ak-prod",
+      "created_at": 1723500000
+    }
+  ],
+  "next_cursor": "1723500000|evt_abc123"
+}
+```
+
+## Routing decisions
+
+### Query parameters
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `limit` | integer | Page size. |
+| `cursor` | string | Pagination cursor. |
+
+### Example request
+
+```bash
+curl "https://api.allternit.com/api/v1/gateway/routing/decisions?limit=5" \
+  -H "Authorization: Bearer $ALLTERNIT_TOKEN"
+```
+
+### Example response
+
+```json
+{
+  "decisions": [
+    {
+      "id": "rd_abc123",
+      "policy": "allternit-code",
+      "winner": {
+        "provider_id": "provider-a",
+        "model_id": "model-x"
+      },
+      "fallbacks": [
+        {"provider_id": "provider-b", "model_id": "model-y"},
+        {"provider_id": "provider-c", "model_id": "model-z"}
+      ],
+      "scores": [
+        {
+          "provider_id": "provider-a",
+          "model_id": "model-x",
+          "quality": 0.92,
+          "cost_efficiency": 0.78,
+          "total": 0.89,
+          "heuristic": "benchmark_weighted",
+          "benchmarks": {"humaneval": 0.91, "mmlu": 0.88}
+        }
+      ],
+      "rules_fired": ["allternit-code"],
+      "served_provider_id": "provider-a",
+      "served_model_id": "model-x",
+      "status": "served",
+      "usage_event_id": "evt_abc123"
+    }
+  ],
+  "next_cursor": "1723500000|rd_abc123"
+}
+```
+
+## Routing policies
+
+### List policies
+
+```bash
+curl https://api.allternit.com/api/v1/gateway/routing/policies \
+  -H "Authorization: Bearer $ALLTERNIT_TOKEN"
+```
+
+```json
+{
+  "policies": [
+    {
+      "name": "allternit-balanced",
+      "weights": {
+        "humaneval": 0.20,
+        "mmlu": 0.20,
+        "gpqa": 0.15,
+        "gsm8k": 0.15,
+        "arena_elo": 0.15,
+        "aider": 0.15
+      },
+      "source": "preset"
+    }
+  ]
+}
+```
+
+### Update a policy
+
+```bash
+curl -X PUT https://api.allternit.com/api/v1/gateway/routing/policies \
+  -H "Authorization: Bearer $ALLTERNIT_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "name": "custom-code-policy",
+    "weights": {
+      "humaneval": 0.50,
+      "mmlu": 0.10,
+      "aider": 0.40
+    }
+  }'
+```
+
+## Budgets
+
+### List budgets
+
+```bash
+curl https://api.allternit.com/api/v1/gateway/budgets \
+  -H "Authorization: Bearer $ALLTERNIT_TOKEN"
+```
+
+```json
+{
+  "budgets": [
+    {
+      "id": "budget_abc123",
+      "scope": "organization",
+      "budget_cents": 100000,
+      "hard": true,
+      "current_month_spend_microdollars": 45230000
+    }
+  ],
+  "tenant_id": "tenant_abc123",
+  "current_month_spend_microdollars": 45230000
+}
+```
+
+### Update a budget
+
+```bash
+curl -X PUT https://api.allternit.com/api/v1/gateway/budgets \
+  -H "Authorization: Bearer $ALLTERNIT_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "budget_cents": 150000,
+    "hard": true
+  }'
+```
+
+A `hard` budget blocks requests when exceeded. Soft budgets are used for reporting and alerts.
+
+## Inference hooks
+
+Inference hooks are documented in detail on the [Security: Inference Hooks](/security/inference-hooks) page. Admin endpoints:
+
+| Method | Path | Description |
+|--------|------|-------------|
+| `GET` | `/api/v1/gateway/inference-hooks` | Get hook configuration |
+| `PUT` / `POST` | `/api/v1/gateway/inference-hooks` | Create or update hooks |
+| `DELETE` | `/api/v1/gateway/inference-hooks` | Remove hooks |
+
+## DLP rules
+
+DLP rules are documented on the [Security: DLP](/security/dlp) page. Admin endpoints:
+
+| Method | Path | Description |
+|--------|------|-------------|
+| `GET` | `/api/v1/gateway/dlp/rules` | List rules and default action |
+| `PUT` | `/api/v1/gateway/dlp/rules` | Create or update a rule |
+
+## Error codes
+
+| HTTP status | Code | Meaning |
+|-------------|------|---------|
+| 400 | `allternit.invalid_request` | Malformed query parameter or request body. |
+| 403 | `allternit.insufficient_role` | Caller is not an owner or admin. |
+| 404 | `allternit.not_found` | Rule, budget, or log entry not found. |
+| 500 | `allternit.internal_error` | Internal gateway error. |
+
+## Related pages
+
+- [Authentication](/api/authentication) — virtual-key management
+- [Proxy](/api/proxy) — gateway middleware and routing
+- [Security: DLP](/security/dlp) — secret scanning and injection detection
+- [Security: Inference Hooks](/security/inference-hooks) — pre/post-inference hooks

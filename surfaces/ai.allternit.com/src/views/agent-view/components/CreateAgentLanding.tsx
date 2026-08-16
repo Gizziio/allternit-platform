@@ -17,13 +17,22 @@ import {
   MagnifyingGlass,
   Palette,
   UsersThree,
+  UploadSimple,
+  FileZip,
+  Warning,
+  CheckCircle,
 } from "@phosphor-icons/react";
 import { STUDIO_THEME } from "../AgentView.constants";
+import { importBotFromZip, previewBotImport, type BotImportResult } from "@/lib/bots/bot-import";
+import { BOT_TEMPLATES, type BotTemplate } from "@/lib/bots/bots.manifest";
+import type { Agent } from "@/lib/agents";
 
 interface CreateAgentLandingProps {
   onStart: () => void;
   onBack?: () => void;
   onBrowseAgents?: () => void;
+  onBotImported?: (agent: Agent) => void;
+  onStartFromTemplate?: (template: BotTemplate) => void;
 }
 
 const FEATURES = [
@@ -50,37 +59,6 @@ const FEATURES = [
     title: "Run anywhere",
     description: "Deploy to chat, code, cowork, and design — then monitor from Analytics.",
     color: "var(--status-warning)",
-  },
-];
-
-const TEMPLATES = [
-  {
-    id: "coding",
-    name: "Coding Agent",
-    description: "Senior engineer that writes, reviews, and ships code.",
-    icon: Code,
-    color: "var(--status-info)",
-  },
-  {
-    id: "research",
-    name: "Research Analyst",
-    description: "Synthesizes data, searches the web, and cites sources.",
-    icon: MagnifyingGlass,
-    color: "var(--status-success)",
-  },
-  {
-    id: "creative",
-    name: "Creative Partner",
-    description: "Brainstorms copy, visuals, and campaign ideas.",
-    icon: Palette,
-    color: "var(--status-warning)",
-  },
-  {
-    id: "orchestrator",
-    name: "Team Orchestrator",
-    description: "Coordinates a swarm of agents toward a shared goal.",
-    icon: UsersThree,
-    color: "var(--accent-primary)",
   },
 ];
 
@@ -338,7 +316,50 @@ function AgentBuilderIllustration() {
   );
 }
 
-export function CreateAgentLanding({ onStart, onBack, onBrowseAgents }: CreateAgentLandingProps) {
+export function CreateAgentLanding({ onStart, onBack, onBrowseAgents, onBotImported, onStartFromTemplate }: CreateAgentLandingProps) {
+  const fileInputRef = React.useRef<HTMLInputElement>(null);
+  const [isImporting, setIsImporting] = React.useState(false);
+  const [importError, setImportError] = React.useState<string | null>(null);
+  const [importSuccess, setImportSuccess] = React.useState<BotImportResult | null>(null);
+
+  const handleFileSelect = React.useCallback(
+    async (e: React.ChangeEvent<HTMLInputElement>) => {
+      const file = e.target.files?.[0];
+      if (!file) return;
+
+      setIsImporting(true);
+      setImportError(null);
+      setImportSuccess(null);
+
+      try {
+        const preview = await previewBotImport(file);
+        if (!preview.valid) {
+          setImportError(`Invalid bot package: ${preview.errors.join('; ')}`);
+          setIsImporting(false);
+          return;
+        }
+
+        const result = await importBotFromZip(file, { importPrompt: 'Import into Allternit Agent Studio.' });
+        if (!result.success || !result.agent) {
+          setImportError(result.error ?? 'Import failed');
+          setIsImporting(false);
+          return;
+        }
+
+        setImportSuccess(result);
+        onBotImported?.(result.agent);
+      } catch (err) {
+        setImportError(err instanceof Error ? err.message : 'Import failed');
+      } finally {
+        setIsImporting(false);
+        if (fileInputRef.current) {
+          fileInputRef.current.value = '';
+        }
+      }
+    },
+    [onBotImported]
+  );
+
   return (
     <div className="relative h-full w-full overflow-y-auto bg-[var(--shell-frame-bg)]">
       {/* Animated mesh background */}
@@ -436,6 +457,31 @@ export function CreateAgentLanding({ onStart, onBack, onBrowseAgents }: CreateAg
                   className="transition-transform duration-200 group-hover:translate-x-1"
                 />
               </motion.button>
+              <motion.button
+                type="button"
+                onClick={() => fileInputRef.current?.click()}
+                disabled={isImporting}
+                whileHover={{ scale: isImporting ? 1 : 1.03 }}
+                whileTap={{ scale: isImporting ? 1 : 0.98 }}
+                className="flex items-center gap-2 rounded-xl border px-6 py-3.5 text-[15px] font-medium backdrop-blur-sm transition-colors hover:bg-[var(--surface-hover)] disabled:opacity-60 disabled:cursor-not-allowed"
+                style={{
+                  borderColor: STUDIO_THEME.border,
+                  color: STUDIO_THEME.textSecondary,
+                  background: "color-mix(in srgb, var(--surface-panel) 60%, transparent)",
+                }}
+              >
+                {isImporting ? (
+                  <>
+                    <span className="size-4 animate-spin rounded-full border-2 border-current border-t-transparent" />
+                    Importing…
+                  </>
+                ) : (
+                  <>
+                    <UploadSimple size={18} />
+                    Import bot
+                  </>
+                )}
+              </motion.button>
               {(onBrowseAgents || onBack) && (
                 <motion.button
                   type="button"
@@ -462,7 +508,39 @@ export function CreateAgentLanding({ onStart, onBack, onBrowseAgents }: CreateAg
                   )}
                 </motion.button>
               )}
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept=".zip,application/zip,application/x-zip-compressed"
+                onChange={handleFileSelect}
+                className="hidden"
+              />
             </div>
+
+            {(importError || importSuccess) && (
+              <motion.div
+                initial={{ opacity: 0, y: 8 }}
+                animate={{ opacity: 1, y: 0 }}
+                className="mt-4 flex items-start gap-2.5 rounded-xl border px-4 py-3 text-[13px]"
+                style={{
+                  background: importError
+                    ? 'color-mix(in srgb, var(--status-error) 10%, transparent)'
+                    : 'color-mix(in srgb, var(--status-success) 10%, transparent)',
+                  borderColor: importError
+                    ? 'color-mix(in srgb, var(--status-error) 30%, transparent)'
+                    : 'color-mix(in srgb, var(--status-success) 30%, transparent)',
+                  color: importError ? 'var(--status-error)' : 'var(--status-success)',
+                }}
+              >
+                {importError ? <Warning size={18} /> : <CheckCircle size={18} />}
+                <span>
+                  {importError ??
+                    `Imported ${importSuccess?.agent?.name}. ${importSuccess?.warnings.length
+                      ? `${importSuccess.warnings.length} warning(s).`
+                      : ''}`}
+                </span>
+              </motion.div>
+            )}
           </motion.div>
 
           {/* Right illustration */}
@@ -485,13 +563,15 @@ export function CreateAgentLanding({ onStart, onBack, onBrowseAgents }: CreateAg
             </span>
           </div>
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
-            {TEMPLATES.map((template, i) => {
+            {BOT_TEMPLATES.map((template, i) => {
               const Icon = template.icon;
+              const bot = template.create();
+              const accentColor = bot.botProfile?.accentColor ?? STUDIO_THEME.accent;
               return (
                 <motion.button
                   key={template.id}
                   type="button"
-                  onClick={onStart}
+                  onClick={() => onStartFromTemplate?.(template)}
                   initial={{ opacity: 0, y: 20 }}
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ delay: 0.6 + i * 0.08, duration: 0.4 }}
@@ -504,22 +584,22 @@ export function CreateAgentLanding({ onStart, onBack, onBrowseAgents }: CreateAg
                 >
                   <div
                     className="absolute left-0 top-0 h-full w-1 transition-all group-hover:w-1.5"
-                    style={{ background: template.color }}
+                    style={{ background: accentColor }}
                   />
                   <div
                     className="mb-4 flex h-11 w-11 items-center justify-center rounded-xl"
                     style={{
-                      background: `color-mix(in srgb, ${template.color} 15%, transparent)`,
-                      color: template.color,
+                      background: `color-mix(in srgb, ${accentColor} 15%, transparent)`,
+                      color: accentColor,
                     }}
                   >
-                    <Icon size={24} weight="duotone" />
+                    <Icon size={24} />
                   </div>
                   <h3 className="mb-1 text-sm font-semibold" style={{ color: STUDIO_THEME.textPrimary }}>
-                    {template.name}
+                    {bot.botProfile?.displayName ?? bot.name}
                   </h3>
                   <p className="text-[12px] leading-relaxed" style={{ color: STUDIO_THEME.textMuted }}>
-                    {template.description}
+                    {bot.description}
                   </p>
                 </motion.button>
               );

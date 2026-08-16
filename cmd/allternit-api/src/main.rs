@@ -29,6 +29,7 @@ use allternit_api::agent_operations_routes;
 use allternit_api::federation_routes::router as federation_router;
 use allternit_api::outcome_rubric_routes::router as outcome_rubric_router;
 use allternit_api::page_agent_routes::page_agent_router;
+use allternit_api::allternit_bus_routes::{allternit_bus_router, allternit_bus_webhook_router};
 use allternit_api::quickstart_routes::router as quickstart_router;
 use allternit_api::agent_preferences_routes::agent_preferences_router;
 use allternit_api::agent_routes::agent_router;
@@ -64,11 +65,14 @@ use allternit_api::design_connector_routes::{design_connector_router, DesignSkil
 use allternit_api::fallback_routes::fallback_router;
 use allternit_api::file_routes::file_router;
 use allternit_api::h5i_routes::h5i_router;
+use allternit_api::har_api_routes::har_api_router;
 use allternit_api::health::health_router;
 use allternit_api::idempotency::idempotency_middleware;
 use allternit_api::inbox_routes::inbox_router;
 use allternit_api::library_routes::library_router;
 use allternit_api::local_brain_routes::local_brain_router;
+use allternit_api::local_engine_routes::local_engine_router;
+use allternit_api::local_studio_routes::local_studio_router;
 use allternit_api::mcp_routes::mcp_router;
 use allternit_api::me_routes::me_router;
 use allternit_api::memory_reconstruction_routes::memory_reconstruction_router;
@@ -323,6 +327,7 @@ async fn main() {
         .merge(user_profile_router())
         .merge(canvas_router())
         .merge(v1_router())
+        .merge(allternit_bus_router())
         .merge(task_routes::task_router())
         .merge(agent_operations_routes::agent_operations_router())
         .merge(allternit_api::queue_routes::queue_router())
@@ -392,6 +397,9 @@ async fn main() {
         .nest("/api", agent_chat_router())
         .nest("/api", tool_routes::tool_router())
         .nest("/api", local_brain_router())
+        .nest("/api", local_engine_router())
+        .nest("/api", local_studio_router())
+        .nest("/api", har_api_router())
         // Feature routes
         .nest("/viz", viz_router())
         .nest("/sandbox", sandbox_router())
@@ -443,6 +451,9 @@ async fn main() {
         // this is public the same way `webhook_router()` above is — no
         // Clerk session exists for a server-to-server call from Slack.
         .merge(allternit_api::slack_webhook_routes::slack_webhook_router())
+        // Photon.codes inbound-message webhook is also server-to-server and
+        // carries no Clerk session; route it to the recipient bot's inbox.
+        .merge(allternit_bus_webhook_router())
         // OAuth provider redirect targets — the browser arrives from the
         // provider's consent screen with no Clerk JWT, so these must be
         // public: the curated-3 loopback callback (moved out of the protected

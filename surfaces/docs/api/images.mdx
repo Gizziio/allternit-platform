@@ -1,0 +1,182 @@
+---
+title: Images
+description: Generate, edit, and vary images through the Allternit LLM gateway
+---
+
+## Overview
+
+The Images API provides a wire-compatible surface for image generation, editing, and variations. Requests are authenticated with a virtual key and routed to the configured image provider. When no provider is configured, the gateway returns placeholder SVGs for development and testing.
+
+## Base URL
+
+```
+https://api.allternit.com/v1
+```
+
+For local development:
+
+```
+http://127.0.0.1:8013/v1
+```
+
+## Endpoints
+
+| Method | Path | Description |
+|--------|------|-------------|
+| `POST` | `/v1/images/generations` | Generate an image from a prompt |
+| `POST` | `/v1/images/edits` | Edit an existing image |
+| `POST` | `/v1/images/variations` | Create variations of an image |
+
+## Authentication
+
+All requests require a virtual key in the `Authorization` header. See [Authentication](/api/authentication).
+
+## Generate an image
+
+### Request body
+
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| `prompt` | string | yes | Text description of the desired image. |
+| `model` | string | no | Image model id. Defaults to `allternit-image-1`. |
+| `n` | integer | no | Number of images to generate. `1`–`10`. Defaults to `1`. |
+| `size` | string | no | Image dimensions. Defaults to `1024x1024`. |
+| `quality` | string | no | `standard` or `hd`. Defaults to `standard`. |
+| `style` | string | no | `vivid` or `natural`. Defaults to `vivid`. |
+| `response_format` | string | no | `url` or `b64_json`. Defaults to `url`. |
+| `user` | string | no | End-user identifier for attribution. |
+
+### Valid sizes
+
+| Size | Orientation |
+|------|-------------|
+| `256x256` | Square |
+| `512x512` | Square |
+| `1024x1024` | Square |
+| `1792x1024` | Landscape |
+| `1024x1792` | Portrait |
+
+### Example request
+
+```bash
+curl -X POST https://api.allternit.com/v1/images/generations \
+  -H "Authorization: Bearer $ALLTERNIT_API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "prompt": "A futuristic Allternit workspace with orange accents",
+    "model": "allternit-image-1",
+    "n": 1,
+    "size": "1024x1024",
+    "quality": "standard",
+    "style": "vivid",
+    "response_format": "url"
+  }'
+```
+
+### Example response
+
+```json
+{
+  "created": 1723500000,
+  "data": [
+    {
+      "url": "https://api.allternit.com/v1/files/img_abc123",
+      "revised_prompt": "A futuristic workspace rendered in the Allternit brand style with orange accents."
+    }
+  ]
+}
+```
+
+## Edit an image
+
+Provide a base64-encoded source image and a mask (optional). The gateway returns the edited result.
+
+### Request body
+
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| `image` | string | yes | Base64-encoded source image. |
+| `prompt` | string | yes | Edit instruction. |
+| `mask` | string | no | Base64-encoded mask image. |
+| `model` | string | no | Defaults to `allternit-image-1`. |
+| `n` | integer | no | `1`–`10`. Defaults to `1`. |
+| `size` | string | no | Defaults to `1024x1024`. |
+| `response_format` | string | no | `url` or `b64_json`. Defaults to `url`. |
+| `user` | string | no | End-user identifier. |
+
+### Example request
+
+```bash
+curl -X POST https://api.allternit.com/v1/images/edits \
+  -H "Authorization: Bearer $ALLTERNIT_API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "image": "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==",
+    "prompt": "Add an orange logo to the corner",
+    "n": 1,
+    "size": "1024x1024"
+  }'
+```
+
+## Create image variations
+
+Generate variations of a base64-encoded source image.
+
+### Request body
+
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| `image` | string | yes | Base64-encoded source image. |
+| `model` | string | no | Defaults to `allternit-image-1`. |
+| `n` | integer | no | `1`–`10`. Defaults to `1`. |
+| `size` | string | no | Defaults to `1024x1024`. |
+| `response_format` | string | no | `url` or `b64_json`. Defaults to `url`. |
+| `user` | string | no | End-user identifier. |
+
+### Example request
+
+```bash
+curl -X POST https://api.allternit.com/v1/images/variations \
+  -H "Authorization: Bearer $ALLTERNIT_API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "image": "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==",
+    "n": 3,
+    "size": "1024x1024"
+  }'
+```
+
+## Response format
+
+All image endpoints return:
+
+```json
+{
+  "created": 1723500000,
+  "data": [
+    {
+      "url": "https://api.allternit.com/v1/files/img_abc123",
+      "b64_json": null,
+      "revised_prompt": "..."
+    }
+  ]
+}
+```
+
+When `response_format` is `b64_json`, the `b64_json` field contains the base64-encoded image bytes and `url` is omitted.
+
+## Error codes
+
+| HTTP status | Code | Meaning |
+|-------------|------|---------|
+| 400 | `allternit.invalid_request` | Empty prompt, invalid `size`, invalid `n`, invalid `response_format`, or invalid base64. |
+| 401 | `allternit.authentication_failed` | Missing or invalid API key. |
+| 429 | `allternit.rate_limited` | Per-key rate limit exceeded. |
+| 429 | `allternit.budget_exceeded` | Monthly key or tenant budget exhausted. |
+| 500 | `allternit.internal_error` | Internal gateway error. |
+| 502 | `allternit.upstream_error` | Provider returned an error. |
+
+## Related pages
+
+- [Files](/api/files) — uploaded images are stored as files
+- [Chat Completions](/api/chat-completions) — multimodal chat with images

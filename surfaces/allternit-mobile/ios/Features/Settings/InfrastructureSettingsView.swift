@@ -188,7 +188,7 @@ struct InfrastructureSettingsView: View {
                 modeStore.selectBarItem(.agents)
             }) {
                 HStack {
-                    Text("Manage agents")
+                    Text("agent | bot hub")
                         .font(.subheadline)
                         .foregroundColor(Color("TextPrimary"))
                     Spacer()
@@ -200,7 +200,7 @@ struct InfrastructureSettingsView: View {
             }
             .buttonStyle(.plain)
         } header: {
-            Text("Agents")
+            Text("agent | bot")
         }
     }
 }

@@ -1,25 +1,312 @@
 ---
-title: Work Queue
-description: Distributed task queue for agent background jobs.
+title: 'Work Queue API (Beta)'
+description: 'Poll-based task queue for self-hosted workers running agent jobs in sandboxes.'
 ---
 
-# Work Queue
+## Overview
 
-The `/beta/work` queue is a lightweight task queue for background agent jobs. Workers lease tasks, send heartbeats, and acknowledge completion.
+The `/beta/work` API is a small, poll-based protocol for self-hosted sandbox workers. Instead of pushing jobs to workers, workers lease tasks from a queue using their owning user's API credentials. Leasing is exclusive: once a worker claims a task, the task moves to `leased` and is held for 60 seconds. Heartbeats renew the lease and mark the task `running`. When the job finishes, the worker acknowledges success or stops the task.
+
+Tasks may optionally be tied to a session or a deployment so that background work is linked back to the originating resource.
+
+## Base URL
+
+```
+https://api.allternit.com/v1/beta/work
+```
+
+All requests require a Bearer token. See [Authentication](/api/authentication).
+
+## The task object
+
+```json
+{
+  "id": "task_5e6f7a8b",
+  "session_id": "sess_2f8a9c4e5d3b",
+  "deployment_id": null,
+  "status": "running",
+  "payload": { "command": "cargo test" },
+  "sandbox_image": "alpine:latest",
+  "env": { "FOO": "bar" },
+  "lease_worker_id": "worker-1",
+  "lease_expires_at": "2026-08-13T10:01:00Z",
+  "result": null,
+  "error": null,
+  "created_at": "2026-08-13T10:00:00Z",
+  "updated_at": "2026-08-13T10:00:05Z"
+}
+```
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `id` | string | Unique task identifier. |
+| `session_id` | string? | Optional linked session. |
+| `deployment_id` | string? | Optional linked deployment. |
+| `status` | string | `queued`, `leased`, `running`, `succeeded`, or `cancelled`. |
+| `payload` | object | Caller-provided job payload. |
+| `sandbox_image` | string? | Sandbox image for the worker. |
+| `env` | object | Environment variables for the worker. |
+| `lease_worker_id` | string? | Worker currently holding the lease. |
+| `lease_expires_at` | string? | ISO 8601 expiration timestamp. |
+| `result` | object? | Result JSON reported by the worker. |
+| `error` | string? | Error reported on stop. |
+| `created_at` | string | ISO 8601 timestamp. |
+| `updated_at` | string | ISO 8601 timestamp. |
+
+## Worker lifecycle
+
+1. **Enqueue** — a caller creates a task with `POST /beta/work`.
+2. **Lease** — a worker calls `GET /beta/work/queue?worker_id=<id>` to claim the oldest available task.
+3. **Heartbeat** — while executing, the worker calls `POST /beta/work/:id/heartbeat` to renew the lease and mark the task `running`.
+4. **Complete** — the worker calls `POST /beta/work/:id/ack` with a result, or `POST /beta/work/:id/stop` to cancel/fail the task.
+
+If a worker crashes without heartbeating, its lease expires after 60 seconds and another worker can reclaim the task.
 
 ## Endpoints
 
 | Method | Path | Description |
 |--------|------|-------------|
-| POST   | `/beta/work/lease` | Lease a task |
-| POST   | `/beta/work/:id/heartbeat` | Send heartbeat |
-| POST   | `/beta/work/:id/ack` | Acknowledge completion |
-| POST   | `/beta/work/:id/nack` | Mark as failed/retryable |
+| GET | `/api/v1/beta/work` | List tasks. |
+| POST | `/api/v1/beta/work` | Create a task. |
+| GET | `/api/v1/beta/work/queue` | Lease the next available task. |
+| POST | `/api/v1/beta/work/:id/heartbeat` | Renew a lease and mark running. |
+| POST | `/api/v1/beta/work/:id/ack` | Mark a task as succeeded. |
+| POST | `/api/v1/beta/work/:id/stop` | Cancel or fail a task. |
 
-## Worker lifecycle
+## List tasks
 
-1. Worker calls `lease` to get a task.
-2. Worker sends periodic `heartbeat` to prevent reassignment.
-3. Worker calls `ack` on success or `nack` on failure.
+```bash
+curl -G https://api.allternit.com/v1/beta/work \
+  -H "Authorization: Bearer $ALLTERNIT_API_KEY" \
+  -d "status=running"
+```
 
-Tasks that fail are retried with exponential backoff up to the configured maximum.
+### Query parameters
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `status` | string? | Filter by task status. |
+
+### Response
+
+```json
+{
+  "tasks": [
+    {
+      "id": "task_5e6f7a8b",
+      "session_id": "sess_2f8a9c4e5d3b",
+      "deployment_id": null,
+      "status": "running",
+      "payload": { "command": "cargo test" },
+      "sandbox_image": "alpine:latest",
+      "env": { "FOO": "bar" },
+      "lease_worker_id": "worker-1",
+      "lease_expires_at": "2026-08-13T10:01:00Z",
+      "result": null,
+      "error": null,
+      "created_at": "2026-08-13T10:00:00Z",
+      "updated_at": "2026-08-13T10:00:05Z"
+    }
+  ]
+}
+```
+
+## Create a task
+
+```bash
+curl -X POST https://api.allternit.com/v1/beta/work \
+  -H "Authorization: Bearer $ALLTERNIT_API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "session_id": "sess_2f8a9c4e5d3b",
+    "sandbox_image": "alpine:latest",
+    "env": { "FOO": "bar" },
+    "payload": { "command": "cargo test" }
+  }'
+```
+
+### Request body
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `session_id` | string? | Existing session to link. Must belong to the caller. |
+| `deployment_id` | string? | Existing deployment to link. Must belong to the caller. |
+| `sandbox_image` | string? | Sandbox image the worker should run. |
+| `env` | object | Environment variables. Defaults to `{}`. Must be an object. |
+| `payload` | object | Job payload. Defaults to `{}`. Must be an object. |
+
+### Response
+
+```json
+{
+  "task": {
+    "id": "task_5e6f7a8b",
+    "session_id": "sess_2f8a9c4e5d3b",
+    "deployment_id": null,
+    "status": "queued",
+    "payload": { "command": "cargo test" },
+    "sandbox_image": "alpine:latest",
+    "env": { "FOO": "bar" },
+    "lease_worker_id": null,
+    "lease_expires_at": null,
+    "result": null,
+    "error": null,
+    "created_at": "2026-08-13T10:00:00Z",
+    "updated_at": "2026-08-13T10:00:00Z"
+  },
+  "id": "task_5e6f7a8b"
+}
+```
+
+Referencing a session or deployment that does not exist returns `400 Bad Request`.
+
+## Lease a task
+
+```bash
+curl -G https://api.allternit.com/v1/beta/work/queue \
+  -H "Authorization: Bearer $ALLTERNIT_API_KEY" \
+  -d "worker_id=worker-1"
+```
+
+### Query parameters
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `worker_id` | string | Unique worker identifier. |
+
+### Response when a task is available
+
+```json
+{
+  "task": {
+    "id": "task_5e6f7a8b",
+    "status": "leased",
+    "lease_worker_id": "worker-1",
+    "lease_expires_at": "2026-08-13T10:01:00Z",
+    ...
+  }
+}
+```
+
+### Response when the queue is empty
+
+```json
+{
+  "task": null
+}
+```
+
+Leasing selects the oldest `queued` task, or a previously leased/running task whose lease has expired (crash recovery).
+
+## Heartbeat a task
+
+```bash
+curl -X POST https://api.allternit.com/v1/beta/work/task_5e6f7a8b/heartbeat \
+  -H "Authorization: Bearer $ALLTERNIT_API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{ "worker_id": "worker-1" }'
+```
+
+### Request body
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `worker_id` | string | Worker that holds the lease. |
+
+### Response
+
+```json
+{
+  "task": {
+    "id": "task_5e6f7a8b",
+    "status": "running",
+    "lease_worker_id": "worker-1",
+    "lease_expires_at": "2026-08-13T10:02:00Z",
+    ...
+  }
+}
+```
+
+Heartbeats return `404 Not Found` if the task is not leased by the supplied worker.
+
+## Acknowledge a task
+
+```bash
+curl -X POST https://api.allternit.com/v1/beta/work/task_5e6f7a8b/ack \
+  -H "Authorization: Bearer $ALLTERNIT_API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "worker_id": "worker-1",
+    "result": { "exit_code": 0, "output": "test passed" }
+  }'
+```
+
+### Request body
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `worker_id` | string | Worker that holds the lease. |
+| `result` | object? | Arbitrary result JSON. |
+
+### Response
+
+```json
+{
+  "task": {
+    "id": "task_5e6f7a8b",
+    "status": "succeeded",
+    "lease_worker_id": null,
+    "lease_expires_at": null,
+    "result": { "exit_code": 0, "output": "test passed" },
+    ...
+  }
+}
+```
+
+## Stop a task
+
+```bash
+curl -X POST https://api.allternit.com/v1/beta/work/task_5e6f7a8b/stop \
+  -H "Authorization: Bearer $ALLTERNIT_API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "worker_id": "worker-1",
+    "error": "user cancelled"
+  }'
+```
+
+### Request body
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `worker_id` | string? | Optional worker ID. The owner may omit this to cancel before leasing. |
+| `error` | string? | Optional error or cancellation reason. |
+
+### Response
+
+```json
+{
+  "stopped": true
+}
+```
+
+Stop returns `404 Not Found` if the task is already terminal, does not exist, or is leased by a different worker and `worker_id` is supplied.
+
+## Error codes
+
+| Status | Meaning | Typical cause |
+|--------|---------|---------------|
+| 200 OK | Success | Request succeeded. |
+| 201 Created | Created | Task created. |
+| 400 Bad Request | Invalid request | Missing `worker_id`, invalid linked session/deployment, `env`/`payload` not objects. |
+| 401 Unauthorized | Unauthorized | Missing or invalid bearer token. |
+| 404 Not Found | Not found | Unknown task, task leased by another worker, or task already terminal. |
+| 429 Too Many Requests | Rate limited | Exceeded the request rate limit for the key. |
+| 500 Internal Server Error | Server error | Contact support. |
+
+## Related pages
+
+- [Authentication](/api/authentication)
+- [Sessions](/api/sessions)
+- [Deployments](/api/deployments)
+- [Sandbox](/api/sandbox)

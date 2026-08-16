@@ -1,0 +1,157 @@
+---
+title: 'Checkpoints API'
+description: 'Create, list, tag, and restore git-based workspace checkpoints through the Allternit API.'
+---
+
+## Overview
+
+The Checkpoints API treats git commits as workspace checkpoints. You can list the checkpoint history, create a new checkpoint by committing the current working tree, tag a checkpoint, and restore the workspace to a previous checkpoint. This is file-system checkpointing for local or VM-bound workspaces, distinct from run/job cursor state.
+
+## Base URL
+
+```
+https://api.allternit.com/api/checkpoints
+```
+
+All endpoints require authentication via a Bearer token in the `Authorization` header unless the route is otherwise noted. See [Authentication](/api/authentication) for details.
+
+## Endpoints
+
+| Method | Path | Description |
+|--------|------|-------------|
+| GET | `/api/checkpoints` | List checkpoints for a working directory. |
+| POST | `/api/checkpoints` | Create a checkpoint by committing the working tree. |
+| POST | `/api/checkpoints/commit` | Alias for creating a checkpoint. |
+| POST | `/api/checkpoints/tag` | Tag an existing checkpoint. |
+| POST | `/api/checkpoints/:id/restore` | Restore the workspace to a checkpoint. |
+
+## List checkpoints
+
+```bash
+GET /api/checkpoints?workdir=/path/to/repo
+```
+
+Query parameters:
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `workdir` | string | Optional absolute path to the git working directory. Defaults to the server process current directory. |
+
+Response when inside a git repository:
+
+```json
+{
+  "checkpoints": [
+    {
+      "id": "a1b2c3d4e5f6",
+      "hash": "a1b2c3d4e5f6",
+      "message": "WIP: refactor auth module",
+      "author": "Gizzi Code",
+      "timestamp": "2026-08-13T10:00:00Z",
+      "tags": ["release-v1.2"],
+      "branch": "main"
+    }
+  ],
+  "currentBranch": "main",
+  "initialized": true
+}
+```
+
+Response when not inside a git repository:
+
+```json
+{
+  "checkpoints": [],
+  "currentBranch": "main",
+  "initialized": false
+}
+```
+
+## Create checkpoint
+
+```bash
+POST /api/checkpoints
+```
+
+Request body:
+
+```json
+{
+  "message": "WIP: refactor auth module",
+  "workdir": "/path/to/repo"
+}
+```
+
+Response:
+
+```json
+{
+  "hash": "a1b2c3d4e5f6",
+  "id": "a1b2c3d4e5f6",
+  "author": "Gizzi Code",
+  "status": "created"
+}
+```
+
+The endpoint stages all changes (`git add -A`) and creates a commit with the provided message. An empty message returns `400 Bad Request`.
+
+## Tag checkpoint
+
+```bash
+POST /api/checkpoints/tag
+```
+
+Request body:
+
+```json
+{
+  "checkpointId": "a1b2c3d4e5f6",
+  "tagName": "release-v1.2",
+  "workdir": "/path/to/repo"
+}
+```
+
+Response:
+
+```json
+{
+  "status": "tagged",
+  "checkpointId": "a1b2c3d4e5f6",
+  "tagName": "release-v1.2"
+}
+```
+
+## Restore checkpoint
+
+```bash
+POST /api/checkpoints/a1b2c3d4e5f6/restore
+```
+
+Before restoring, any uncommitted work is stashed with the message `pre-restore-<checkpointId>`. The current branch is then reset hard to the target commit.
+
+Response:
+
+```json
+{
+  "restored": true,
+  "checkpointId": "a1b2c3d4e5f6"
+}
+```
+
+## Error codes
+
+| Status | Code | Description |
+|--------|------|-------------|
+| 200 | — | Success. |
+| 400 | `message is required` | Checkpoint creation request is missing a message. |
+| 400 | `tagName is required` | Tag request is missing a tag name. |
+| 401 | `unauthorized` | Missing or invalid authentication. |
+| 404 | `unknown checkpoint` | The requested checkpoint hash does not exist. |
+| 409 | `workdir is not a git repository` | The target directory is not inside a git working tree. |
+| 500 | `internal_error` | Unexpected server error. |
+
+## Related links
+
+- [Authentication](/api/authentication)
+- [VM Sessions API](/api/vm-sessions)
+- [Git DAG concepts](/core/git-dag)

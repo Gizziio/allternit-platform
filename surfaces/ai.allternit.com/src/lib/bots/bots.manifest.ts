@@ -63,7 +63,7 @@ function createBaseAgent(
   }
 ): Agent {
   const now = new Date().toISOString();
-
+  
   // Map BotCategory to Agent.category
   const categoryMap: Record<BotCategory, Agent['category']> = {
     research: 'research',
@@ -75,7 +75,7 @@ function createBaseAgent(
     ops: 'operations',
     custom: 'general',
   };
-
+  
   return {
     id: `bot_${id}`,
     name,

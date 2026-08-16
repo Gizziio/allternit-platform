@@ -192,6 +192,55 @@ export type AgentStatus = 'idle' | 'running' | 'paused' | 'error';
 // Agent Configuration
 type ModelProvider = 'openai' | 'anthropic' | 'google' | 'local' | 'custom';
 
+/**
+ * Bot packaging overlay on top of the Agent type.
+ *
+ * Bots are agents with a curated identity and UX wrapper. The underlying
+ * Agent fields (characterLayer, trustTier, harness, agentCard, etc.) carry
+ * the real configuration; BotProfile adds the surface-level presentation.
+ *
+ * displayName is required because a packaged bot must have a user-facing name.
+ */
+export interface BotProfile {
+  /** Display name shown in the bot hub and session header (may differ from agent.name) */
+  displayName: string;
+  /** Short tagline shown on the welcome card */
+  tagline?: string;
+  /** Welcome message when a new session starts */
+  welcomeMessage?: string;
+  /** Starter prompts the user can click to begin a task */
+  starterPrompts?: string[];
+  /** Accent color for the bot's UI chrome (hex) */
+  accentColor?: string;
+  /** Whether this bot participates in group chats */
+  groupChatEnabled?: boolean;
+  /** Default WIH preset ID for new sessions (maps to Rails presets) */
+  defaultPresetId?: string;
+  /** Bot category for filtering in the hub */
+  botCategory?: BotCategory;
+}
+
+export type BotCategory =
+  | 'research'
+  | 'code'
+  | 'writing'
+  | 'data'
+  | 'sales'
+  | 'design'
+  | 'ops'
+  | 'custom';
+
+/**
+ * A packaged bot: an Agent with a required BotProfile.
+ *
+ * Every Bot is an Agent; not every Agent is a Bot. This is the type to use
+ * when filtering, selecting, or rendering a packaged bot in the UI.
+ */
+export type Bot = Agent & {
+  isBot: true;
+  botProfile: BotProfile;
+};
+
 export interface Agent {
   id: string;
   name: string;
@@ -279,44 +328,244 @@ export interface Agent {
   isBot?: boolean;
   /** Bot-specific UX metadata (only present when isBot is true) */
   botProfile?: BotProfile;
+
+  // ── Autonomous Bot primitives ────────────────────────────────────────────
+  /** Connectors bound to this agent for autonomous use */
+  connectorBindings?: AgentConnectorBinding[];
+  /** Secret references required by the agent runtime */
+  secretRefs?: AgentSecretRef[];
+  /** Cloud orchestration / cross-surface messaging configuration */
+  messagingConfig?: AgentMessagingConfig;
+  /** Owned external identity channels (email, phone, wallet) */
+  identityChannels?: AgentIdentityChannels;
+  /** VM / sandbox operator configuration for running tasks in a virtual computer */
+  vmOperator?: AgentVMOperatorConfig;
+}
+
+// ============================================================================
+// Autonomous Bot Primitives
+// ============================================================================
+
+/**
+ * A connector binding declares that an agent may use a specific owned connector
+ * instance autonomously. The credential itself stays in the connector service;
+ * the binding is just a permission + capability mapping.
+ */
+export interface AgentConnectorBinding {
+  /** Reference to an owned connector instance */
+  connectorId: string;
+  /** Provider slug, e.g. slack, gmail, github */
+  provider: string;
+  /** Human-readable label */
+  label?: string;
+  /** Capability labels this connector satisfies */
+  capabilities: string[];
+  /** Whether the runtime may use this connector without human approval */
+  autonomous: boolean;
+  /** Allowed actions for this connector (provider-specific) */
+  allowedActions?: string[];
 }
 
 /**
- * Bot packaging overlay on top of the Agent type.
- *
- * Bots are agents with a curated identity and UX wrapper. The underlying
- * Agent fields (characterLayer, trustTier, harness, agentCard, etc.) carry
- * the real configuration; BotProfile adds the surface-level presentation.
+ * A secret reference tells the runtime which vault secret to inject and under
+ * what key. The actual secret material is never stored in the agent record.
  */
-export interface BotProfile {
-  /** Display name shown in the bot hub and session header (may differ from agent.name) */
-  displayName?: string;
-  /** Short tagline shown on the welcome card */
-  tagline?: string;
-  /** Welcome message when a new session starts */
-  welcomeMessage?: string;
-  /** Starter prompts the user can click to begin a task */
-  starterPrompts?: string[];
-  /** Accent color for the bot's UI chrome (hex) */
-  accentColor?: string;
-  /** Whether this bot participates in group chats */
-  groupChatEnabled?: boolean;
-  /** Default WIH preset ID for new sessions (maps to Rails presets) */
-  defaultPresetId?: string;
-  /** Bot category for filtering in the hub */
-  botCategory?: BotCategory;
+export interface AgentSecretRef {
+  /** Human-readable label */
+  name: string;
+  /** Environment variable or config key injected at runtime */
+  key: string;
+  /** Vault reference (backend-resolved) */
+  vaultRef?: string;
+  /** Optional hint shown during setup */
+  description?: string;
+  /** Whether the runtime requires this secret to start */
+  required: boolean;
+  /**
+   * Secret value captured during creation/editing. Never persisted in the agent
+   * record; the backend encrypts and stores it separately, then strips this
+   * field from responses.
+   */
+  value?: string;
 }
 
-export type BotCategory =
-  | 'research'
-  | 'code'
-  | 'writing'
-  | 'data'
-  | 'sales'
-  | 'design'
-  | 'ops'
-  | 'custom';
+/**
+ * Messaging configuration for cloud orchestration and cross-surface sessions.
+ */
+export interface AgentMessagingConfig {
+  /** Enable Photon-style cloud orchestration messaging */
+  photonEnabled?: boolean;
+  /** Agent's inbound Photon endpoint / topic */
+  photonEndpoint?: string;
+  /** Cross-surface session routing */
+  crossSurfaceEnabled?: boolean;
+  /** Allowed surface types this bot may bridge to */
+  allowedSurfaces?: AppMode[];
+}
 
+/**
+ * Owned external identity channels for an agent.
+ */
+export interface AgentIdentityChannels {
+  /** Agent-owned email address */
+  email?: AgentEmailChannel;
+  /** Agent-owned phone / SMS channel */
+  phone?: AgentPhoneChannel;
+  /** Wallet / payment identity */
+  wallet?: AgentWalletChannel;
+}
+
+export interface AgentEmailChannel {
+  address: string;
+  provider: 'commrails' | 'custom' | 'google_workspace' | 'microsoft_365' | 'agent_mail' | 'generic_imap';
+  /** Whether the agent may send email autonomously */
+  sendEnabled: boolean;
+  /** Whether the agent may receive email */
+  receiveEnabled: boolean;
+}
+
+export interface AgentPhoneChannel {
+  number: string;
+  provider: 'vapi' | 'twilio' | 'telnyx' | 'android_bridge' | 'photon';
+  voiceEnabled: boolean;
+  smsEnabled: boolean;
+  /** Photon.codes project id when this phone channel is backed by Photon. */
+  photonProjectId?: string;
+  /** Photon.codes line id when this phone channel is backed by Photon. */
+  photonLineId?: string;
+}
+
+export interface AgentWalletChannel {
+  /** Wallet provider; 'etrid' is the Allternit-native wallet */
+  provider: 'etrid' | 'metamask' | 'coinbase_wallet' | 'rainbow' | 'phantom' | 'custom';
+  /** Public address / identifier */
+  address?: string;
+  /** Chain identifier when applicable */
+  chainId?: string | number;
+  /** Vault reference to the encrypted key material */
+  keyVaultRef?: string;
+  /** Allowed payment capabilities */
+  allowedMethods?: AgentWalletPaymentMethod[];
+}
+
+export type AgentWalletPaymentMethod = 'send' | 'receive' | 'swap' | 'stake' | 'invoice';
+
+/**
+ * VM Operator configuration for agents/bots that run tasks inside a sandboxed
+ * virtual computer. This is the schema-level primitive; the actual runtime may
+ * dispatch to OpenSandbox, Docker, Kubernetes, or a local runner based on the
+ * provider field.
+ */
+export interface AgentVMOperatorConfig {
+  /** Whether the bot may use a virtual computer to execute tasks */
+  enabled: boolean;
+  /** Runtime provider that provisions and manages the sandbox */
+  provider: 'opensandbox' | 'docker' | 'kubernetes' | 'local' | 'custom';
+  /** Sandbox image / environment (e.g. opensandbox/desktop:v1.0.0) */
+  image?: string;
+  /** Resource limits for the sandbox */
+  resources?: {
+    cpu?: string;
+    memory?: string;
+    disk?: string;
+  };
+  /** Actions the bot is allowed to perform inside the sandbox */
+  allowedActions?: ('command' | 'browser' | 'file' | 'desktop' | 'code')[];
+  /** Network isolation level */
+  networkPolicy?: 'isolated' | 'restricted' | 'open';
+  /** Lifetime of the sandbox filesystem */
+  persistence?: 'ephemeral' | 'session' | 'persistent';
+  /** Default task timeout in minutes */
+  timeoutMinutes?: number;
+  /** Whether to expose a VNC/desktop stream */
+  vncEnabled?: boolean;
+  /** Start a sandbox automatically when the bot receives a task */
+  autoStart?: boolean;
+  /** Extra environment variables injected into the sandbox */
+  env?: Record<string, string>;
+  /** Optional default entrypoint command */
+  command?: string;
+}
+
+export type AgentVMAction = NonNullable<AgentVMOperatorConfig['allowedActions']>[number];
+export type AgentVMProvider = AgentVMOperatorConfig['provider'];
+export type AgentVMNetworkPolicy = NonNullable<AgentVMOperatorConfig['networkPolicy']>;
+export type AgentVMPersistence = NonNullable<AgentVMOperatorConfig['persistence']>;
+
+// Zod schemas for autonomous bot primitives
+export const agentConnectorBindingSchema = z.object({
+  connectorId: z.string().min(1),
+  provider: z.string().min(1),
+  label: z.string().optional(),
+  capabilities: z.array(z.string()).default([]),
+  autonomous: z.boolean().default(false),
+  allowedActions: z.array(z.string()).optional(),
+});
+
+export const agentSecretRefSchema = z.object({
+  name: z.string().min(1),
+  key: z.string().min(1),
+  vaultRef: z.string().optional(),
+  description: z.string().optional(),
+  required: z.boolean().default(false),
+  value: z.string().optional(),
+});
+
+export const agentMessagingConfigSchema = z.object({
+  photonEnabled: z.boolean().optional(),
+  photonEndpoint: z.string().optional(),
+  crossSurfaceEnabled: z.boolean().optional(),
+  allowedSurfaces: z.array(z.enum(['chat', 'cowork', 'code', 'design', 'browser'])).optional(),
+});
+
+export const agentEmailChannelSchema = z.object({
+  address: z.string().email(),
+  provider: z.enum(['commrails', 'custom', 'google_workspace', 'microsoft_365', 'agent_mail', 'generic_imap']),
+  sendEnabled: z.boolean(),
+  receiveEnabled: z.boolean(),
+});
+
+export const agentPhoneChannelSchema = z.object({
+  number: z.string().min(1),
+  provider: z.enum(['vapi', 'twilio', 'telnyx', 'android_bridge', 'photon']),
+  voiceEnabled: z.boolean(),
+  smsEnabled: z.boolean(),
+  photonProjectId: z.string().optional(),
+  photonLineId: z.string().optional(),
+});
+
+export const agentWalletChannelSchema = z.object({
+  provider: z.enum(['etrid', 'metamask', 'coinbase_wallet', 'rainbow', 'phantom', 'custom']),
+  address: z.string().optional(),
+  chainId: z.union([z.string(), z.number()]).optional(),
+  keyVaultRef: z.string().optional(),
+  allowedMethods: z.array(z.enum(['send', 'receive', 'swap', 'stake', 'invoice'])).optional(),
+});
+
+export const agentIdentityChannelsSchema = z.object({
+  email: agentEmailChannelSchema.optional(),
+  phone: agentPhoneChannelSchema.optional(),
+  wallet: agentWalletChannelSchema.optional(),
+});
+
+export const agentVMOperatorConfigSchema = z.object({
+  enabled: z.boolean(),
+  provider: z.enum(['opensandbox', 'docker', 'kubernetes', 'local', 'custom']),
+  image: z.string().optional(),
+  resources: z.object({
+    cpu: z.string().optional(),
+    memory: z.string().optional(),
+    disk: z.string().optional(),
+  }).optional(),
+  allowedActions: z.array(z.enum(['command', 'browser', 'file', 'desktop', 'code'])).optional(),
+  networkPolicy: z.enum(['isolated', 'restricted', 'open']).optional(),
+  persistence: z.enum(['ephemeral', 'session', 'persistent']).optional(),
+  timeoutMinutes: z.number().int().min(1).max(1440).optional(),
+  vncEnabled: z.boolean().optional(),
+  autoStart: z.boolean().optional(),
+  env: z.record(z.string()).optional(),
+  command: z.string().optional(),
+});
 
 // Zod Schema for Agent
 export const agentSchema = z.object({
@@ -380,7 +629,7 @@ export const agentSchema = z.object({
   swarmId: z.string().optional(),
   isBot: z.boolean().optional(),
   botProfile: z.object({
-    displayName: z.string().optional(),
+    displayName: z.string().min(1),
     tagline: z.string().optional(),
     welcomeMessage: z.string().optional(),
     starterPrompts: z.array(z.string()).optional(),
@@ -389,6 +638,10 @@ export const agentSchema = z.object({
     defaultPresetId: z.string().optional(),
     botCategory: z.enum(['research', 'code', 'writing', 'data', 'sales', 'design', 'ops', 'custom']).optional(),
   }).optional(),
+  connectorBindings: z.array(agentConnectorBindingSchema).optional(),
+  secretRefs: z.array(agentSecretRefSchema).optional(),
+  messagingConfig: agentMessagingConfigSchema.optional(),
+  identityChannels: agentIdentityChannelsSchema.optional(),
 });
 
 // Schema for validating array of agents (API response)
@@ -470,6 +723,24 @@ export interface CreateAgentInput {
   tags?: string[];
   dataClassification?: string;
   writeScope?: string;
+
+  // ── Packaged Bot fields ──────────────────────────────────────────────────
+  /** Marks this agent as a packaged bot discoverable in the Bots hub and composer */
+  isBot?: boolean;
+  /** Bot-specific UX metadata (only present when isBot is true) */
+  botProfile?: BotProfile;
+
+  // ── Autonomous Bot primitives ────────────────────────────────────────────
+  /** Connectors bound to this agent for autonomous use */
+  connectorBindings?: AgentConnectorBinding[];
+  /** Secret references required by the agent runtime */
+  secretRefs?: AgentSecretRef[];
+  /** Cloud orchestration / cross-surface messaging configuration */
+  messagingConfig?: AgentMessagingConfig;
+  /** Owned external identity channels (email, phone, wallet) */
+  identityChannels?: AgentIdentityChannels;
+  /** VM / sandbox operator configuration for running tasks in a virtual computer */
+  vmOperator?: AgentVMOperatorConfig;
 }
 
 // Zod Schema for CreateAgentInput
@@ -501,6 +772,22 @@ const createAgentInputSchema = z.object({
   tags: z.array(z.string()).optional(),
   dataClassification: z.string().optional(),
   writeScope: z.string().optional(),
+  isBot: z.boolean().optional(),
+  botProfile: z.object({
+    displayName: z.string().min(1),
+    tagline: z.string().optional(),
+    welcomeMessage: z.string().optional(),
+    starterPrompts: z.array(z.string()).optional(),
+    accentColor: z.string().optional(),
+    groupChatEnabled: z.boolean().optional(),
+    defaultPresetId: z.string().optional(),
+    botCategory: z.enum(['research', 'code', 'writing', 'data', 'sales', 'design', 'ops', 'custom']).optional(),
+  }).optional(),
+  connectorBindings: z.array(agentConnectorBindingSchema).optional(),
+  secretRefs: z.array(agentSecretRefSchema).optional(),
+  messagingConfig: agentMessagingConfigSchema.optional(),
+  identityChannels: agentIdentityChannelsSchema.optional(),
+  vmOperator: agentVMOperatorConfigSchema.optional(),
 });
 
 // Extended Agent with typed avatar
@@ -1023,7 +1310,7 @@ export const SETUP_CAPABILITY_PRESETS: Record<string, string[]> = {
   generalist: ['reasoning', 'web-search', 'code-generation', 'memory'],
 };
 
-export type CreateFlowStepId = 'identity' | 'character' | 'avatar' | 'runtime' | 'workspace' | 'review';
+export type CreateFlowStepId = 'identity' | 'character' | 'avatar' | 'runtime' | 'connectors' | 'identityChannels' | 'harness' | 'review';
 
 export interface CreateFlowStep {
   id: CreateFlowStepId;
@@ -1037,7 +1324,9 @@ export const CREATE_FLOW_STEPS: CreateFlowStep[] = [
   { id: 'character', title: 'Character', label: 'Character', description: 'Specialty skills, hard bans, and voice' },
   { id: 'avatar', title: 'Avatar', label: 'Avatar', description: 'Choose a visual identity' },
   { id: 'runtime', title: 'Runtime', label: 'Runtime', description: 'Tools, model settings, and capabilities' },
-  { id: 'workspace', title: 'Workspace', label: 'Workspace', description: 'Workspace layers and governance documents' },
+  { id: 'connectors', title: 'Connectors', label: 'Connectors', description: 'Integrations and secrets for autonomous work' },
+  { id: 'identityChannels', title: 'Channels', label: 'Channels', description: 'Email, phone, and wallet identity' },
+  { id: 'harness', title: 'Harness', label: 'Harness', description: 'AI routing and mode surfaces' },
   { id: 'review', title: 'Review', label: 'Review', description: 'Review and create your agent' },
 ];
 

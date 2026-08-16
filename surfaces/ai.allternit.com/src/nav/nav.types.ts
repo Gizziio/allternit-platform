@@ -16,7 +16,8 @@ export type ViewType =
   | "addin-ppt"
   // Agent views
   | "agent-hub"
-  | "bots"
+  | "bot-home"
+  | "bot-inbox"
   | "native-agent"
   | "registry"
   | "memory"
@@ -168,7 +169,13 @@ export type ViewType =
   // Markdown preview (anydoc conversion)
   | "markdown-preview"
   // Browser Extensions hub
-  | "browser-extensions";
+  | "browser-extensions"
+  // API Capture / Site APIs
+  | "site-apis"
+  // Model Lab
+  | "model-lab"
+  // Allternit Sign (native client-side PDF signing)
+  | "sign";
 
 export type ViewId = string;
 

@@ -1,0 +1,109 @@
+---
+title: 'Status API'
+description: 'Check Allternit platform health and list available deployment regions.'
+---
+
+## Overview
+
+The Status API returns a real-time health summary of the Allternit gateway and Gizzi Runtime, plus the list of configured deployment regions. It is useful for dashboards, liveness checks, and region selection for BYOC and data-residency flows.
+
+## Base URL
+
+```
+https://api.allternit.com/api
+```
+
+## Authentication
+
+Status endpoints are public and do not require authentication.
+
+## Endpoints
+
+| Method | Path | Description |
+|--------|------|-------------|
+| `GET` | `/api/status` | Platform health status. |
+| `GET` | `/api/regions` | Configured deployment regions. |
+
+## Platform status
+
+```http
+GET /api/status
+```
+
+Probes the gateway and the Gizzi Runtime and returns an overall status. Latency above 800 ms marks a service as `degraded`; connection failures mark it as `outage`.
+
+### Example response
+
+```json
+{
+  "services": [
+    {
+      "name": "Gateway",
+      "slug": "gateway",
+      "status": "operational",
+      "latency_ms": 12,
+      "checked_at": "2026-08-13T10:00:00Z"
+    },
+    {
+      "name": "Gizzi Runtime",
+      "slug": "gizzi-runtime",
+      "status": "operational",
+      "latency_ms": 45,
+      "checked_at": "2026-08-13T10:00:00Z"
+    }
+  ],
+  "overall": "operational",
+  "checked_at": "2026-08-13T10:00:00Z"
+}
+```
+
+### Service status values
+
+| Value | Meaning |
+|-------|---------|
+| `operational` | Service is healthy. |
+| `degraded` | Service is responding but latency is elevated. |
+| `outage` | Service is unreachable or returning errors. |
+
+## List regions
+
+```http
+GET /api/regions
+```
+
+Returns the regions configured in the `ALLTERNIT_REGIONS` environment variable.
+
+### Example response
+
+```json
+{
+  "object": "list",
+  "data": [
+    {
+      "id": "us-east",
+      "name": "US East",
+      "location": "Virginia",
+      "egress_ips": ["192.0.2.0/24"]
+    },
+    {
+      "id": "eu-west",
+      "name": "EU West",
+      "location": "Ireland",
+      "egress_ips": []
+    }
+  ]
+}
+```
+
+## Error codes
+
+| Status | Meaning | Typical cause |
+|--------|---------|---------------|
+| `200 OK` | Success | Request succeeded. |
+| `500 Internal Server Error` | Server error | Contact support. |
+
+## Related pages
+
+- [Architecture](/architecture)
+- [BYOC Overview](/byoc/overview)
+- [Authentication](/api/authentication)

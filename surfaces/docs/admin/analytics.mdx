@@ -1,28 +1,403 @@
 ---
 title: Admin Analytics
-description: Cost, token usage, request volume, and per-user cost reports.
+description: Organization-scoped cost, token, volume, and activity analytics for the Allternit LLM gateway.
 ---
 
 # Admin Analytics
 
-Admin analytics aggregate `llm_usage_events` into organization-scoped reports. Use them for budgeting, chargeback, and capacity planning.
+The Admin Analytics API aggregates `llm_usage_events` and related organization activity into time-series and per-dimension reports. Use these endpoints for budgeting, chargeback, capacity planning, and understanding how agents, plugins, skills, and connectors are used across your organization.
+
+All analytics endpoints are organization-scoped and require the caller to be an organization owner or admin.
+
+## Base URL
+
+```text
+https://api.allternit.com/api/v1/admin/analytics
+```
+
+For local development:
+
+```text
+http://127.0.0.1:8013/api/v1/admin/analytics
+```
 
 ## Endpoints
 
 | Method | Path | Description |
 |--------|------|-------------|
-| GET    | `/api/v1/admin/analytics/cost-over-time` | Cost trends |
-| GET    | `/api/v1/admin/analytics/token-usage` | Token usage over time |
-| GET    | `/api/v1/admin/analytics/request-volume` | Request counts |
-| GET    | `/api/v1/admin/analytics/per-user-cost` | Cost per user |
+| `POST` | `/api/v1/analytics/csp-violation` | Stub endpoint for reporting CSP violations |
+| `POST` | `/api/v1/analytics/gizzi-code/events` | Ingest Gizzi Code CLI usage events |
+| `GET` | `/api/v1/admin/analytics/cost-over-time` | Cost trends over time |
+| `GET` | `/api/v1/admin/analytics/token-usage` | Token usage over time |
+| `GET` | `/api/v1/admin/analytics/request-volume` | Request volume with status breakdown |
+| `GET` | `/api/v1/admin/analytics/per-user-cost` | Cost per user |
+| `GET` | `/api/v1/admin/analytics/active-users` | Active user counts |
+| `GET` | `/api/v1/admin/analytics/artifact-activity` | Artifact, revision, and section creation |
+| `GET` | `/api/v1/admin/analytics/chat-project-usage` | Co-worker project and session activity |
+| `GET` | `/api/v1/admin/analytics/connector-usage` | Connector connection counts and statuses |
+| `GET` | `/api/v1/admin/analytics/plugin-usage` | Plugin invocation counts |
+| `GET` | `/api/v1/admin/analytics/skill-usage` | Skill installs and invocations |
+| `GET` | `/api/v1/admin/analytics/gizzi-code/usage` | Aggregate Gizzi Code CLI usage |
 
-## Granularity
+## Query parameters
 
-All endpoints support `day`, `hour`, `week`, and `month` granularity via the `granularity` query parameter.
+Most `GET` endpoints accept:
 
-## Example
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `organization_id` | string | Yes | Organization to query |
+| `start` | string | Yes | Start of range (ISO 8601) |
+| `end` | string | Yes | End of range (ISO 8601) |
+| `granularity` | string | No | `hour`, `day` (default), `week`, or `month` |
+
+`per-user-cost` and `connector-usage` do not support `granularity`.
+
+## Cost over time
 
 ```bash
-curl -H "Authorization: Bearer $TOKEN" \
-  "https://api.allternit.com/api/v1/admin/analytics/cost-over-time?granularity=day"
+curl -G https://api.allternit.com/api/v1/admin/analytics/cost-over-time \
+  -H "Authorization: Bearer $ADMIN_TOKEN" \
+  -d "organization_id=org_01hqx8x7x7x7x7x7x7x7x7x" \
+  -d "start=2026-08-01" \
+  -d "end=2026-08-08" \
+  -d "granularity=day"
 ```
+
+### Response
+
+```json
+{
+  "items": [
+    {
+      "bucket": "2026-08-01",
+      "cost_microdollars": 300000,
+      "requests": 42
+    },
+    {
+      "bucket": "2026-08-02",
+      "cost_microdollars": 200000,
+      "requests": 31
+    }
+  ]
+}
+```
+
+## Token usage
+
+```bash
+curl -G https://api.allternit.com/api/v1/admin/analytics/token-usage \
+  -H "Authorization: Bearer $ADMIN_TOKEN" \
+  -d "organization_id=org_01hqx8x7x7x7x7x7x7x7x7x" \
+  -d "start=2026-08-01" \
+  -d "end=2026-08-08" \
+  -d "granularity=day"
+```
+
+### Response
+
+```json
+{
+  "items": [
+    {
+      "bucket": "2026-08-01",
+      "prompt_tokens": 3000,
+      "completion_tokens": 1500,
+      "reasoning_tokens": 500,
+      "cached_tokens": 250,
+      "requests": 42
+    }
+  ]
+}
+```
+
+## Request volume
+
+```bash
+curl -G https://api.allternit.com/api/v1/admin/analytics/request-volume \
+  -H "Authorization: Bearer $ADMIN_TOKEN" \
+  -d "organization_id=org_01hqx8x7x7x7x7x7x7x7x7x" \
+  -d "start=2026-08-01" \
+  -d "end=2026-08-08" \
+  -d "granularity=day"
+```
+
+### Response
+
+```json
+{
+  "items": [
+    {
+      "bucket": "2026-08-01",
+      "requests": 42,
+      "ok": 38,
+      "errors": 2,
+      "budget_exceeded": 1,
+      "rate_limited": 1,
+      "dlp_blocked": 0
+    }
+  ]
+}
+```
+
+## Per-user cost
+
+```bash
+curl -G https://api.allternit.com/api/v1/admin/analytics/per-user-cost \
+  -H "Authorization: Bearer $ADMIN_TOKEN" \
+  -d "organization_id=org_01hqx8x7x7x7x7x7x7x7x7x" \
+  -d "start=2026-08-01" \
+  -d "end=2026-08-08"
+```
+
+### Response
+
+```json
+{
+  "items": [
+    {
+      "user_id": "usr_01hqx8x7x7x7x7x7x7x7x7x",
+      "cost_microdollars": 300000,
+      "requests": 42
+    }
+  ]
+}
+```
+
+## Active users
+
+```bash
+curl -G https://api.allternit.com/api/v1/admin/analytics/active-users \
+  -H "Authorization: Bearer $ADMIN_TOKEN" \
+  -d "organization_id=org_01hqx8x7x7x7x7x7x7x7x7x" \
+  -d "start=2026-08-01" \
+  -d "end=2026-08-08" \
+  -d "granularity=day"
+```
+
+### Response
+
+```json
+{
+  "daily": [
+    {
+      "bucket": "2026-08-01",
+      "unique_users": 12
+    }
+  ],
+  "total_unique_users": 15
+}
+```
+
+## Artifact activity
+
+```bash
+curl -G https://api.allternit.com/api/v1/admin/analytics/artifact-activity \
+  -H "Authorization: Bearer $ADMIN_TOKEN" \
+  -d "organization_id=org_01hqx8x7x7x7x7x7x7x7x7x" \
+  -d "start=2026-08-01" \
+  -d "end=2026-08-08" \
+  -d "granularity=day"
+```
+
+### Response
+
+```json
+{
+  "items": [
+    {
+      "bucket": "2026-08-01",
+      "artifacts_created": 3,
+      "revisions_created": 5,
+      "sections_created": 12
+    }
+  ]
+}
+```
+
+## Chat project usage
+
+```bash
+curl -G https://api.allternit.com/api/v1/admin/analytics/chat-project-usage \
+  -H "Authorization: Bearer $ADMIN_TOKEN" \
+  -d "organization_id=org_01hqx8x7x7x7x7x7x7x7x7x" \
+  -d "start=2026-08-01" \
+  -d "end=2026-08-08" \
+  -d "granularity=day"
+```
+
+### Response
+
+```json
+{
+  "items": [
+    {
+      "bucket": "2026-08-01",
+      "projects_created": 2,
+      "sessions_created": 8,
+      "projects_active": 3
+    }
+  ]
+}
+```
+
+## Connector usage
+
+```bash
+curl -G https://api.allternit.com/api/v1/admin/analytics/connector-usage \
+  -H "Authorization: Bearer $ADMIN_TOKEN" \
+  -d "organization_id=org_01hqx8x7x7x7x7x7x7x7x7x" \
+  -d "start=2026-08-01" \
+  -d "end=2026-08-08"
+```
+
+### Response
+
+```json
+{
+  "items": [
+    {
+      "connector_id": "github",
+      "connection_count": 10,
+      "active_count": 8,
+      "error_count": 2
+    }
+  ]
+}
+```
+
+## Plugin usage
+
+```bash
+curl -G https://api.allternit.com/api/v1/admin/analytics/plugin-usage \
+  -H "Authorization: Bearer $ADMIN_TOKEN" \
+  -d "organization_id=org_01hqx8x7x7x7x7x7x7x7x7x" \
+  -d "start=2026-08-01" \
+  -d "end=2026-08-08" \
+  -d "granularity=day"
+```
+
+### Response
+
+```json
+{
+  "items": [
+    {
+      "bucket": "2026-08-01",
+      "plugin_id": "vscode",
+      "action": "invoke",
+      "invocations": 25
+    }
+  ]
+}
+```
+
+## Skill usage
+
+```bash
+curl -G https://api.allternit.com/api/v1/admin/analytics/skill-usage \
+  -H "Authorization: Bearer $ADMIN_TOKEN" \
+  -d "organization_id=org_01hqx8x7x7x7x7x7x7x7x7x" \
+  -d "start=2026-08-01" \
+  -d "end=2026-08-08" \
+  -d "granularity=day"
+```
+
+### Response
+
+```json
+{
+  "items": [
+    {
+      "bucket": "2026-08-01",
+      "skills_installed": 2,
+      "skill_id": "skill-1",
+      "action": "invoke",
+      "invocations": 5
+    }
+  ]
+}
+```
+
+## Gizzi Code CLI analytics
+
+The Gizzi Code CLI can report usage events to the analytics pipeline.
+
+### Ingest events
+
+```bash
+curl -X POST https://api.allternit.com/api/v1/analytics/gizzi-code/events \
+  -H "Authorization: Bearer $ADMIN_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "events": [
+      {
+        "session_id": "sess_01hqx8x7x7x7x7x7x7x7x7x",
+        "event_type": "turn",
+        "model": "allternit-balanced",
+        "provider": "allternit",
+        "prompt_tokens": 100,
+        "completion_tokens": 50,
+        "cost_microdollars": 5000,
+        "tool_calls_accepted": 1,
+        "tool_calls_rejected": 0,
+        "created_at": "2026-08-01T10:00:00Z"
+      }
+    ]
+  }'
+```
+
+### Response
+
+```json
+{
+  "status": "ok"
+}
+```
+
+### Aggregate CLI usage
+
+```bash
+curl -G https://api.allternit.com/api/v1/admin/analytics/gizzi-code/usage \
+  -H "Authorization: Bearer $ADMIN_TOKEN" \
+  -d "organization_id=org_01hqx8x7x7x7x7x7x7x7x7x" \
+  -d "start=2026-08-01" \
+  -d "end=2026-08-08" \
+  -d "granularity=day"
+```
+
+### Response
+
+```json
+{
+  "items": [
+    {
+      "bucket": "2026-08-01",
+      "events": 10,
+      "unique_users": 3,
+      "unique_sessions": 5,
+      "prompt_tokens": 1000,
+      "completion_tokens": 500,
+      "cost_microdollars": 50000,
+      "tool_calls_accepted": 8,
+      "tool_calls_rejected": 1
+    }
+  ]
+}
+```
+
+## Error codes
+
+| Status | Code | Description |
+|--------|------|-------------|
+| `400` | `invalid_range` | `start` must be before `end`. |
+| `403` | `organization_required` | Caller is not associated with an organization. |
+| `403` | `insufficient_role` | Caller is not an organization owner or admin. |
+| `403` | `organization_mismatch` | Requested organization does not match the active organization. |
+| `500` | `internal_error` | Database or server error. |
+
+## Related pages
+
+- [Spend Limits](/admin/spend-limits) — set and manage organization budgets
+- [Fallback Credits](/admin/fallback-credits) — credit primary-provider failures resolved by fallbacks
+- [Fallback Retry Policy](/admin/fallback-retry-policy) — configure automatic retries and fallback chains
+- [Latency Budgets](/admin/latency-budgets) — set and monitor model latency budgets

@@ -1,0 +1,259 @@
+---
+title: 'Voice API'
+description: 'Text-to-speech, speech-to-text, and voice session management for the Allternit voice service.'
+---
+
+## Overview
+
+The Voice API provides text-to-speech (TTS), speech-to-text (STT), voice session management, and service introspection. The Rust voice service (`services/voice`) exposes a lightweight, simulated HTTP API on port `8001` that mirrors the contract of the full Python voice wrapper, so callers can integrate against a stable contract while inference runs in the Python service or a downstream model host.
+
+## Base URL
+
+```
+http://localhost:8001/v1
+```
+
+The voice service binds to `0.0.0.0:8001` by default. When deployed behind the Allternit gateway, it may be exposed under a platform path; consult your deployment's routing table.
+
+## Authentication
+
+The standalone voice service does not require authentication in local development. When exposed through the platform API, standard bearer-token auth applies. See [Authentication](/api/authentication).
+
+## Resources
+
+### VoiceModel
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `id` | string | Voice preset identifier. |
+| `name` | string | Human-readable name. |
+| `language` | string | Language code. |
+| `gender` | string | Gender tag. |
+| `sample_rate` | integer | Output sample rate in Hz. |
+
+### SttModel
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `id` | string | Model identifier. |
+| `name` | string | Human-readable name. |
+| `language` | string | Supported language. |
+| `supports_streaming` | boolean | Whether streaming is supported. |
+
+### VoiceSession
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `session_id` | string | UUIDv4 session identifier. |
+| `created_at` | ISO8601 | Creation timestamp. |
+| `last_activity` | ISO8601 | Last activity timestamp. |
+| `mode` | string | `tts`, `stt`, or `both`. |
+| `language` | string | Session language. |
+
+## Endpoints
+
+| Method | Path | Description |
+|--------|------|-------------|
+| `GET` | `/health` | Service liveness. |
+| `GET` | `/v1/health` | Versioned service liveness. |
+| `GET` | `/v1/voices` | List TTS voices. |
+| `GET` | `/v1/voices/:id` | Get a specific voice. |
+| `GET` | `/v1/stt/models` | List STT models. |
+| `POST` | `/v1/tts` | Convert text to speech. |
+| `POST` | `/v1/tts/stream` | Streaming TTS. |
+| `POST` | `/v1/stt` | Transcribe audio (multipart). |
+| `POST` | `/v1/stt/stream` | Streaming STT WebSocket URL. |
+| `GET` | `/v1/sessions` | List active sessions. |
+| `POST` | `/v1/sessions` | Create a session. |
+| `GET` | `/v1/sessions/:id` | Get a session. |
+| `DELETE` | `/v1/sessions/:id` | Delete a session. |
+| `GET` | `/v1/stats` | Service metrics. |
+
+## Health check
+
+```http
+GET /v1/health
+```
+
+### Example response
+
+```json
+{
+  "service": "voice",
+  "status": "healthy",
+  "version": "0.1.0",
+  "timestamp": 1754541600000,
+  "features": ["tts", "stt", "streaming"]
+}
+```
+
+## List voices
+
+```http
+GET /v1/voices
+```
+
+### Example response
+
+```json
+[
+  {
+    "id": "default",
+    "name": "Default Voice",
+    "language": "en",
+    "gender": "neutral",
+    "sample_rate": 24000
+  },
+  {
+    "id": "en-us-female",
+    "name": "US English Female",
+    "language": "en-US",
+    "gender": "female",
+    "sample_rate": 24000
+  }
+]
+```
+
+## Text-to-speech
+
+```http
+POST /v1/tts
+```
+
+### Request body
+
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| `text` | string | Yes | Text to synthesize. |
+| `voice_id` | string | No | Voice preset; defaults to `default`. |
+| `language` | string | No | Language hint. |
+| `speed` | number | No | Speech speed multiplier. |
+
+### Example request
+
+```bash
+curl -X POST http://localhost:8001/v1/tts \
+  -H "Content-Type: application/json" \
+  -d '{
+    "text": "Hello from Allternit",
+    "voice_id": "en-us-female"
+  }'
+```
+
+### Example response
+
+```json
+{
+  "audio_url": "/v1/audio/550e8400.wav",
+  "duration_secs": 1.6,
+  "sample_rate": 24000,
+  "format": "wav"
+}
+```
+
+## Speech-to-text
+
+```http
+POST /v1/stt
+```
+
+Transcribes uploaded audio passed as multipart form data.
+
+### Request body (multipart)
+
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| `audio` | bytes | Yes | Raw audio bytes. |
+| `language` | string | No | Language hint. |
+
+### Example request
+
+```bash
+curl -X POST http://localhost:8001/v1/stt \
+  -F "audio=@recording.wav" \
+  -F "language=en"
+```
+
+### Example response
+
+```json
+{
+  "text": "This is a simulated transcription result from the voice service.",
+  "confidence": 0.95,
+  "language": "en",
+  "segments": [
+    {
+      "start_time": 0.0,
+      "end_time": 2.1,
+      "text": "Simulated transcription",
+      "confidence": 0.95
+    }
+  ]
+}
+```
+
+## Create a session
+
+```http
+POST /v1/sessions
+```
+
+### Request body
+
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| `mode` | string | Yes | `tts`, `stt`, or `both`. |
+| `language` | string | No | Session language; defaults to `en`. |
+
+### Example request
+
+```bash
+curl -X POST http://localhost:8001/v1/sessions \
+  -H "Content-Type: application/json" \
+  -d '{"mode": "both", "language": "en-US"}'
+```
+
+### Example response
+
+```json
+{
+  "session_id": "550e8400-e29b-41d4-a716-446655440000",
+  "created_at": "2026-08-13T10:00:00Z",
+  "last_activity": "2026-08-13T10:00:00Z",
+  "mode": "both",
+  "language": "en-US"
+}
+```
+
+## Service stats
+
+```http
+GET /v1/stats
+```
+
+### Example response
+
+```json
+{
+  "active_sessions": 0,
+  "tts_models": 3,
+  "stt_models": 1,
+  "total_requests": 42,
+  "timestamp": 1754541600000
+}
+```
+
+## Error codes
+
+| Status | Meaning |
+|--------|---------|
+| `200 OK` | Success. |
+| `204 No Content` | Session deleted successfully. |
+| `400 Bad Request` | Missing audio data or unknown voice id. |
+| `404 Not Found` | Voice or session not found. |
+
+## Related pages
+
+- [Realtime Audio API](/api/realtime-audio)
+- [Sessions API](/api/sessions)
+- [Authentication](/api/authentication)

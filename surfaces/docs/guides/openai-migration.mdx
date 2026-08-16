@@ -25,21 +25,21 @@ client = OpenAI(
 )
 
 response = client.chat.completions.create(
-    model="allternit-claude-sonnet-4",
+    model="auto",
     messages=[{"role": "user", "content": "Hello"}]
 )
 ```
 
 ## Model mapping
 
-Allternit exposes normalized model IDs. You can also use provider-native names and let the gateway resolve them.
+Allternit exposes normalized model IDs. You can also use policy aliases and let the gateway route to the best connected model.
 
 | OpenAI model | Allternit equivalent |
 |--------------|----------------------|
-| `gpt-4o` | `allternit-gpt-4o` |
-| `gpt-4o-mini` | `allternit-gpt-4o-mini` |
-| `o1-preview` | `allternit-reasoning-preview` |
-| `text-embedding-3-small` | `allternit-embed-3-small` |
+| `gpt-4o` | `auto` or `allternit-balanced` |
+| `gpt-4o-mini` | `auto` or `allternit-balanced` |
+| `o1-preview` | `allternit-reasoning` |
+| `text-embedding-3-small` | `allternit-embedding-3-small` |
 
 Use `GET /v1/models` to list available models for your workspace.
 
@@ -53,4 +53,4 @@ Use `GET /v1/models` to list available models for your workspace.
 
 ## BYOK and self-hosted models
 
-If you want to keep using OpenAI models under your own provider contract, add an OpenAI external key in the dashboard and route requests through Allternit for governance and audit.
+If you want to keep using your existing provider contracts, add an external key in the dashboard and route requests through Allternit for governance and audit.

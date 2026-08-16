@@ -1,0 +1,330 @@
+---
+title: Enterprise Authentication
+description: Admin API keys, access tokens, and workload identity federation for enterprise integrations.
+---
+
+# Enterprise Authentication
+
+The Enterprise Authentication API provides organization-scoped credentials for service-to-service integrations, automation, and workload identity federation. It complements organization access tokens with long-lived admin API keys, short-lived access tokens, and workload identity providers.
+
+## Authentication and authorization
+
+Enterprise auth endpoints require a Clerk JWT and an active organization. Only organization owners and admins can create or revoke admin API keys and workload identity providers.
+
+## Base URL
+
+```text
+/api/v1/auth
+```
+
+## Admin API key endpoints
+
+| Method | Path | Description |
+|--------|------|-------------|
+| `POST` | `/api/v1/auth/admin-api-keys` | Create an admin API key |
+| `GET` | `/api/v1/auth/admin-api-keys` | List admin API keys |
+| `DELETE` | `/api/v1/auth/admin-api-keys/:id` | Revoke an admin API key |
+
+## Access token endpoints
+
+| Method | Path | Description |
+|--------|------|-------------|
+| `POST` | `/api/v1/auth/access-tokens` | Create an access token |
+| `GET` | `/api/v1/auth/access-tokens` | List access tokens |
+| `POST` | `/api/v1/auth/access-tokens/:id/rotate` | Rotate an access token |
+| `DELETE` | `/api/v1/auth/access-tokens/:id` | Revoke an access token |
+
+## Workload identity endpoints
+
+| Method | Path | Description |
+|--------|------|-------------|
+| `POST` | `/api/v1/auth/workload-identity/providers` | Create a workload identity provider |
+| `GET` | `/api/v1/auth/workload-identity/providers` | List providers |
+| `GET` | `/api/v1/auth/workload-identity/providers/:id` | Get a provider |
+| `PATCH` | `/api/v1/auth/workload-identity/providers/:id` | Update a provider |
+| `DELETE` | `/api/v1/auth/workload-identity/providers/:id` | Delete a provider |
+| `POST` | `/api/v1/auth/workload-identity/token` | Exchange a workload identity assertion for a token |
+
+## Credential prefixes
+
+| Credential | Prefix | Example |
+|------------|--------|---------|
+| Admin API key | `allternit_admin_` | `allternit_admin_xxxxxxxxxxxxxxxx` |
+| Access token | `allternit_access_` | `allternit_access_xxxxxxxxxxxxxxxx` |
+
+## Admin API keys
+
+Admin API keys are long-lived credentials scoped to an organization. Only SHA-256 hashes and a 22-character prefix are stored; the plaintext key is returned only on creation.
+
+### Create an admin API key
+
+```bash
+curl -X POST https://api.allternit.com/api/v1/auth/admin-api-keys \
+  -H "Authorization: Bearer $ALLTERNIT_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "name": "Production CI",
+    "scopes": ["api:read", "api:write"],
+    "expires_at": "2027-08-13T18:00:00Z"
+  }'
+```
+
+### Request body
+
+```json
+{
+  "name": "Production CI",
+  "scopes": ["api:read", "api:write"],
+  "expires_at": "2027-08-13T18:00:00Z"
+}
+```
+
+### Response
+
+```json
+{
+  "id": "key_01hqx8x7x7x7x7x7x7x7x7x",
+  "key": "allternit_admin_550e8400e29b41d4a716446655440000",
+  "key_prefix": "allternit_admin_550e84",
+  "scopes": ["api:read", "api:write"],
+  "expires_at": "2027-08-13T18:00:00Z"
+}
+```
+
+<Warning>
+  Save the `key` immediately. It cannot be retrieved later.
+</Warning>
+
+### List admin API keys
+
+```bash
+curl https://api.allternit.com/api/v1/auth/admin-api-keys \
+  -H "Authorization: Bearer $ALLTERNIT_TOKEN"
+```
+
+### Response
+
+```json
+{
+  "keys": [
+    {
+      "id": "key_01hqx8x7x7x7x7x7x7x7x7x",
+      "key_prefix": "allternit_admin_550e84",
+      "name": "Production CI",
+      "scopes": ["api:read", "api:write"],
+      "revoked": false,
+      "expires_at": "2027-08-13T18:00:00Z",
+      "last_used_at": "2026-08-13T18:00:00Z",
+      "created_at": "2026-08-13T18:00:00Z"
+    }
+  ]
+}
+```
+
+### Revoke an admin API key
+
+```bash
+curl -X DELETE https://api.allternit.com/api/v1/auth/admin-api-keys/key_01hqx8x7x7x7x7x7x7x7x7x \
+  -H "Authorization: Bearer $ALLTERNIT_TOKEN"
+```
+
+Returns `204 No Content` on success.
+
+## Access tokens
+
+Access tokens are user-scoped, short-lived credentials. They require an `expires_at` value in the future and can be rotated to issue a new token while revoking the previous one.
+
+### Create an access token
+
+```bash
+curl -X POST https://api.allternit.com/api/v1/auth/access-tokens \
+  -H "Authorization: Bearer $ALLTERNIT_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "name": "Local script",
+    "scopes": ["api:read"],
+    "expires_at": "2026-08-14T18:00:00Z"
+  }'
+```
+
+### Response
+
+```json
+{
+  "id": "tok_01hqx8x7x7x7x7x7x7x7x7x",
+  "token": "allternit_access_550e8400e29b41d4a716446655440000",
+  "token_prefix": "allternit_access_550e84",
+  "scopes": ["api:read"],
+  "expires_at": "2026-08-14T18:00:00Z"
+}
+```
+
+<Warning>
+  Save the `token` immediately. It cannot be retrieved later.
+</Warning>
+
+### Rotate an access token
+
+```bash
+curl -X POST https://api.allternit.com/api/v1/auth/access-tokens/tok_01hqx8x7x7x7x7x7x7x7x7x/rotate \
+  -H "Authorization: Bearer $ALLTERNIT_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "name": "Local script",
+    "scopes": ["api:read"],
+    "expires_at": "2026-08-21T18:00:00Z"
+  }'
+```
+
+The previous token is revoked and a new token is returned.
+
+## Workload Identity Federation
+
+Workload Identity Federation lets external identity providers (AWS, Azure, GCP, GitHub, Kubernetes, Okta, SPIFFE) exchange short-lived assertions for Allternit access tokens.
+
+### Supported provider types
+
+| Provider | Type value |
+|----------|------------|
+| AWS | `aws` |
+| Azure | `azure` |
+| Google Cloud | `gcp` |
+| GitHub | `github` |
+| Kubernetes | `kubernetes` |
+| Okta | `okta` |
+| SPIFFE | `spiffe` |
+
+### Create a provider
+
+```bash
+curl -X POST https://api.allternit.com/api/v1/auth/workload-identity/providers \
+  -H "Authorization: Bearer $ALLTERNIT_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "name": "GitHub Actions",
+    "provider_type": "github",
+    "config": {
+      "allowed_subjects": ["repo:myorg/myrepo:ref:refs/heads/main"]
+    }
+  }'
+```
+
+### Response
+
+```json
+{
+  "id": "wif_01hqx8x7x7x7x7x7x7x7x7x",
+  "org_id": "org_01hqx8x7x7x7x7x7x7x7x7x",
+  "name": "GitHub Actions",
+  "config": {
+    "allowed_subjects": ["repo:myorg/myrepo:ref:refs/heads/main"]
+  },
+  "provider_type": "github",
+  "enabled": true,
+  "created_at": "2026-08-13T18:00:00Z",
+  "updated_at": "2026-08-13T18:00:00Z"
+}
+```
+
+### Exchange a workload identity assertion
+
+```bash
+curl -X POST https://api.allternit.com/api/v1/auth/workload-identity/token \
+  -H "Authorization: Bearer $ALLTERNIT_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "provider_id": "wif_01hqx8x7x7x7x7x7x7x7x7x",
+    "assertion": "eyJhbGci...",
+    "subject": "repo:myorg/myrepo:ref:refs/heads/main"
+  }'
+```
+
+### Response
+
+```json
+{
+  "access_token": "allternit_access_7c9e6f5d4c3b2a1908e7f6d5c4b3a291",
+  "token_type": "Bearer",
+  "expires_at": "2026-08-13T19:00:00Z",
+  "provider": {
+    "id": "wif_01hqx8x7x7x7x7x7x7x7x7x",
+    "name": "GitHub Actions",
+    "provider_type": "github",
+    "enabled": true
+  },
+  "credential_id": "wifcred_01hqx8x7x7x7x7x7x7x7x7x"
+}
+```
+
+The returned access token is valid for one hour.
+
+## Scopes
+
+Enterprise credentials are evaluated with scopes such as:
+
+- `api:read` — read access to non-vault endpoints
+- `api:write` — write access to non-vault endpoints
+- `vault:read` — read access to vault resources
+- `vault:write` — write access to vault resources
+- `*` — wildcard access
+
+## Authenticate with enterprise credentials
+
+Pass the credential as a Bearer token in the `Authorization` header:
+
+```bash
+curl https://api.allternit.com/api/v1/admin/workspaces \
+  -H "Authorization: Bearer allternit_admin_550e8400e29b41d4a716446655440000"
+```
+
+## Request/response fields
+
+### Admin API key object
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `id` | string | Key identifier |
+| `key_prefix` | string | Public prefix of the key |
+| `name` | string | Human-readable name |
+| `scopes` | string[] | Granted scopes |
+| `revoked` | boolean | Whether the key is revoked |
+| `expires_at` | string \| null | ISO 8601 expiration |
+| `last_used_at` | string \| null | ISO 8601 timestamp |
+| `created_at` | string | ISO 8601 timestamp |
+
+### Workload identity provider object
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `id` | string | Provider identifier |
+| `org_id` | string | Organization identifier |
+| `name` | string | Human-readable name |
+| `provider_type` | string | One of the supported types |
+| `config` | object | Provider-specific configuration |
+| `enabled` | boolean | Whether the provider is active |
+| `created_at` | string | ISO 8601 timestamp |
+| `updated_at` | string | ISO 8601 timestamp |
+
+## Error codes
+
+| HTTP | Code | Meaning |
+|------|------|---------|
+| `400` | `invalid_name` | Name must be 1–128 characters |
+| `400` | `invalid_scopes` | At least one non-empty scope is required |
+| `400` | `expiration_required` | Access tokens require `expires_at` |
+| `400` | `invalid_expiration` | `expires_at` is not RFC 3339 or is in the past |
+| `400` | `invalid_provider_type` | Provider type is not supported |
+| `400` | `missing_assertion` | `assertion` or `subject` is required for exchange |
+| `403` | `organization_required` | Caller has no active organization |
+| `403` | `insufficient_role` | Caller is not an owner/admin |
+| `403` | `Forbidden` | Credential scope does not grant the request |
+| `404` | `key_not_found` | Admin API key does not exist |
+| `404` | `token_not_found` | Access token does not exist |
+| `404` | `provider_not_found` | Workload identity provider does not exist or is disabled |
+| `500` | `internal_error` | Unexpected server error |
+
+## Related pages
+
+- [Access tokens](/admin/access-tokens) — Organization access tokens for CLI surfaces
+- [Service accounts](/admin/service-accounts) — Machine identities for automation
+- [Vault](/security/vault) — Encrypted credential storage

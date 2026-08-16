@@ -46,14 +46,24 @@ export async function listOwnedConnectors(): Promise<OwnedConnector[]> {
 
 export async function connectOwned(
   id: string,
-  opts?: { via?: string; api_key?: string },
+  opts?: { via?: string; api_key?: string; values?: Record<string, string> },
 ): Promise<OwnedConnectStatus> {
   const res = await fetch(`${BASE}/${encodeURIComponent(id)}/connect`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(opts ?? {}),
   });
-  return res.json();
+  const data = (await res.json()) as Record<string, unknown>;
+  if (!res.ok) {
+    const message =
+      typeof data.message === 'string'
+        ? data.message
+        : typeof data.error === 'string'
+          ? data.error
+          : `Connect failed (${res.status})`;
+    throw new Error(message);
+  }
+  return data as OwnedConnectStatus;
 }
 
 export async function refreshOwned(id: string): Promise<OwnedConnectStatus> {

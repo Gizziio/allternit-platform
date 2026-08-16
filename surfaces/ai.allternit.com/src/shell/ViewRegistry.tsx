@@ -20,6 +20,7 @@ import type { ViewContext, ViewType } from '../nav/nav.types';
 import { useCoworkSessionStore } from '../views/cowork/CoworkSessionStore';
 import type { AppMode } from './ShellHeader';
 import type { CanonicalAgentModeId } from '@/lib/agents/agent-mode-contracts';
+import type { Agent } from '@/lib/agents/agent.types';
 import { ToastProvider } from '@/components/ui/toast-provider';
 
 const SkillsRegistryView   = lazy(() => import('../views/code/SkillsRegistryView').then(m => ({ default: m.SkillsRegistryView })));
@@ -31,6 +32,8 @@ const OhMyPiView           = lazy(() => import('../views/omp/OhMyPiView').then(m
 const ChatModeAgentSession = lazy(() => import('../views/agent-sessions/ChatModeAgentSession').then(m => ({ default: m.ChatModeAgentSession })));
 const CodeModeAgentSession = lazy(() => import('../views/agent-sessions/CodeModeAgentSession').then(m => ({ default: m.CodeModeAgentSession })));
 const DesignModeAgentSession = lazy(() => import('../views/agent-sessions/DesignModeAgentSession').then(m => ({ default: m.DesignModeAgentSession })));
+const BotInboxView = lazy(() => import('../views/bots/BotInboxView').then(m => ({ default: m.BotInboxView })));
+const BotHomeView = lazy(() => import('../views/bots/BotHomeView').then(m => ({ default: m.BotHomeView })));
 const SwarmADE             = lazy(() => import('../views/swarm').then(m => ({ default: m.SwarmADE })));
 const AllternitCanvasView  = lazy(() => import('../views/AllternitCanvasView').then(m => ({ default: m.AllternitCanvasView })));
 const CoworkRoot           = lazy(() => import('../views/cowork/CoworkRoot').then(m => ({ default: m.CoworkRoot })));
@@ -116,6 +119,7 @@ const LibraryView            = lazy(() => import('../views/library/LibraryView')
 const LabsView               = lazy(() => import('../views/LabsView').then(m => ({ default: m.LabsView })));
 const BrainView              = lazy(() => import('../views/brain/BrainView').then(m => ({ default: m.BrainView })));
 const CatalogView            = lazy(() => import('../views/CatalogView').then(m => ({ default: m.CatalogView })));
+const ModelLabView           = lazy(() => import('../views/model-lab').then(m => ({ default: m.ModelLabView })));
 const ExplorerView           = lazy(() => import('../views/code/ExplorerView').then(m => ({ default: m.ExplorerView })));
 const GitView                = lazy(() => import('../views/code/GitView').then(m => ({ default: m.GitView })));
 const ThreadsView            = lazy(() => import('../views/code/ThreadsView').then(m => ({ default: m.ThreadsView })));
@@ -133,17 +137,20 @@ const SlidesView             = lazy(() => import('../views/slides/SlidesView').t
 const SheetsView             = lazy(() => import('../views/sheets/SheetsView').then(m => ({ default: m.SheetsView })));
 const PdfView                = lazy(() => import('../views/pdf/PdfView').then(m => ({ default: m.PdfView })));
 const MarkdownPreviewView    = lazy(() => import('../views/office/MarkdownPreviewView').then(m => ({ default: m.MarkdownPreviewView })));
+const ApiCaptureView         = lazy(() => import('../views/api-capture/ApiCaptureView').then(m => ({ default: m.ApiCaptureView })));
+const NativeSigningView      = lazy(() => import('../views/office/NativeSigningView').then(m => ({ default: m.NativeSigningView })));
 
 export function getShellViewRegistry(handlers: {
   handleOpenAgentSession: (text: string, surface: AppMode, execution?: { modeId: CanonicalAgentModeId; templateTitle?: string }) => void;
+  handleStartBotSession?: (agent: Agent) => void;
   open: (viewType: any, context?: any) => void;
 }) {
-  const { handleOpenAgentSession, open } = handlers;
-  
+  const { handleOpenAgentSession, handleStartBotSession, open } = handlers;
+
   return createViewRegistry({
-    home: () => <ChatViewWrapper onOpenAgentSession={handleOpenAgentSession} />,
-    chat: () => <ChatViewWrapper onOpenAgentSession={handleOpenAgentSession} />,
-    "chat-legacy": () => <ChatViewWrapper onOpenAgentSession={handleOpenAgentSession} />,
+    home: () => <ChatViewWrapper onOpenAgentSession={handleOpenAgentSession} onStartBotSession={handleStartBotSession} />,
+    chat: () => <ChatViewWrapper onOpenAgentSession={handleOpenAgentSession} onStartBotSession={handleStartBotSession} />,
+    "chat-legacy": () => <ChatViewWrapper onOpenAgentSession={handleOpenAgentSession} onStartBotSession={handleStartBotSession} />,
     project: ({ context }: { context?: ViewContext }) => (
       <ErrorBoundary fallback={<ErrorFallbackWrapper viewName="Projects" />}>
         <ProjectView />
@@ -293,15 +300,26 @@ export function getShellViewRegistry(handlers: {
       </ErrorBoundary>
     ),
     'agent-hub': ({ context }: { context?: ViewContext }) => (
-      <ErrorBoundary fallback={<ErrorFallbackWrapper viewName="Agent Hub" />}>
-        <AgentHub />
+      <ErrorBoundary fallback={<ErrorFallbackWrapper viewName="Agent | Bot Hub" />}>
+        <AgentHub onSessionStarted={(sessionId) => open('chat-agent-session', { sessionId })} />
       </ErrorBoundary>
     ),
-    'bots': ({ context }: { context?: ViewContext }) => (
-      <ErrorBoundary fallback={<ErrorFallbackWrapper viewName="Bots" />}>
-        <AgentHub initialTab="bots" />
-      </ErrorBoundary>
-    ),
+    'bot-inbox': ({ context }: { context?: ViewContext }) => {
+      const ctx = context?.context as { botId?: string } | undefined;
+      return (
+        <ErrorBoundary fallback={<ErrorFallbackWrapper viewName="Bot Inbox" />}>
+          <BotInboxView botId={ctx?.botId ?? context?.viewId ?? ''} />
+        </ErrorBoundary>
+      );
+    },
+    'bot-home': ({ context }: { context?: ViewContext }) => {
+      const ctx = context?.context as { botId?: string } | undefined;
+      return (
+        <ErrorBoundary fallback={<ErrorFallbackWrapper viewName="Bot Home" />}>
+          <BotHomeView botId={ctx?.botId ?? context?.viewId ?? ''} />
+        </ErrorBoundary>
+      );
+    },
     "native-agent": ({ context }: { context?: ViewContext }) => (
       <ErrorBoundary fallback={<ErrorFallbackWrapper viewName="Native Agent" />}>
         <NativeAgentView onOpenRuntimeOps={() => open("runtime-ops")} />
@@ -463,6 +481,11 @@ export function getShellViewRegistry(handlers: {
           handoffId={(context?.context as { handoffId?: string } | undefined)?.handoffId}
           sourceUrl={(context?.context as { sourceUrl?: string } | undefined)?.sourceUrl}
         />
+      </ErrorBoundary>
+    ),
+    sign: () => (
+      <ErrorBoundary fallback={<ErrorFallbackWrapper viewName="Allternit Sign" />}>
+        <NativeSigningView />
       </ErrorBoundary>
     ),
     "form-surfaces": ({ context }: { context?: ViewContext }) => (
@@ -740,6 +763,11 @@ export function getShellViewRegistry(handlers: {
         <CatalogView />
       </ErrorBoundary>
     ),
+    'model-lab': ({ context }: { context?: ViewContext }) => (
+      <ErrorBoundary fallback={<ErrorFallbackWrapper viewName="Model Lab" />}>
+        <ModelLabView />
+      </ErrorBoundary>
+    ),
     'code-explorer': ({ context }: { context?: ViewContext }) => (
       <ErrorBoundary fallback={<ErrorFallbackWrapper viewName="Code Explorer" />}>
         <ExplorerView />
@@ -823,6 +851,11 @@ export function getShellViewRegistry(handlers: {
     verification: ({ context }: { context?: ViewContext }) => (
       <ErrorBoundary fallback={<ErrorFallbackWrapper viewName="Visual Verification" />}>
         <VerificationView />
+      </ErrorBoundary>
+    ),
+    'site-apis': ({ context }: { context?: ViewContext }) => (
+      <ErrorBoundary fallback={<ErrorFallbackWrapper viewName="Site APIs" />}>
+        <ApiCaptureView />
       </ErrorBoundary>
     ),
     'goals-list': ({ context }: { context?: ViewContext }) => (

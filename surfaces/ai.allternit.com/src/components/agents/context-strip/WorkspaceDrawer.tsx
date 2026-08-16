@@ -41,8 +41,7 @@ export function WorkspaceDrawer({ workspaceScope, canvasCount, tags, palette }: 
     <div className="flex flex-col gap-3">
       {/* Tab Navigation */}
       <div 
-        className="flex gap-2 border-b border-solid border-[var(--palette-border)] pb-2"
-        style={{ '--palette-border': palette.border } as React.CSSProperties}
+        className="flex gap-2 border-b border-[var(--border-subtle)] pb-2"
       >
         <WorkspaceTab
           active={activeTab === "files"}
@@ -110,8 +109,8 @@ function WorkspaceTab({
       type="button"
       onClick={onClick}
       className={cn(
-        "flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg border-none text-[12px] font-bold cursor-pointer transition-all",
-        active ? "bg-[var(--palette-soft)] text-[var(--palette-accent)]" : "bg-transparent text-[#a8998c] hover:bg-[var(--surface-hover)]"
+        "flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg border-none text-[12px] font-semibold cursor-pointer transition-all",
+        active ? "bg-[var(--palette-soft)] text-[var(--palette-accent)]" : "bg-transparent text-[var(--text-tertiary)] hover:bg-[var(--surface-hover)] hover:text-[var(--text-secondary)]"
       )}
       style={active ? {
         '--palette-soft': palette.soft,
@@ -137,7 +136,7 @@ function FileBrowser({
 }) {
   if (isLoading) {
     return (
-      <div className="p-5 text-center text-[#a8998c]">
+      <div className="p-5 text-center text-[var(--text-tertiary)]">
         <div className="text-[13px]">Loading workspace files...</div>
       </div>
     );
@@ -146,13 +145,12 @@ function FileBrowser({
   if (!workspaceScope) {
     return (
       <div
-        className="p-4 rounded-xl bg-[rgba(16,12,10,0.24)] border border-solid border-[var(--palette-border)] text-center"
-        style={{ '--palette-border': palette.border } as React.CSSProperties}
+        className="p-4 rounded-xl border border-dashed border-[var(--border-subtle)] bg-[var(--bg-card)] text-center"
       >
-        <FolderSimple size={24} className="mx-auto mb-2 text-[var(--palette-accent)]"
+        <FolderSimple size={24} className="mx-auto mb-2"
           style={{ color: palette.accent }}
         />
-        <div className="text-[12px] text-[#b3a395] leading-relaxed">
+        <div className="text-[12px] text-[var(--text-secondary)] leading-relaxed">
           No workspace scope configured. This session uses a default scoped workspace.
         </div>
       </div>
@@ -162,14 +160,14 @@ function FileBrowser({
   return (
     <div>
       <div
-        className="flex items-center gap-2 mb-2.5 p-[8px_10px] bg-[var(--surface-hover)] rounded-lg text-[12px] text-[#a8998c] font-mono overflow-hidden text-ellipsis whitespace-nowrap"
+        className="flex items-center gap-2 mb-2.5 p-2 bg-[var(--surface-hover)] rounded-lg text-[12px] text-[var(--text-tertiary)] font-mono overflow-hidden text-ellipsis whitespace-nowrap"
       >
         <FolderSimple size={12} />
         {workspaceScope}
       </div>
 
       {fileTree.length === 0 ? (
-        <div className="text-center p-5 text-[#7a6b5d] text-[12px]">
+        <div className="text-center p-5 text-[var(--text-tertiary)] text-[12px]">
           No files found in workspace
         </div>
       ) : (
@@ -201,26 +199,24 @@ function FileNodeItem({
         type="button"
         onClick={() => isDirectory && setExpanded(!expanded)}
         className={cn(
-          "w-full flex items-center gap-1.5 py-1 px-2 border-none bg-transparent rounded-md text-left text-[12px] transition-colors",
+          "w-full flex items-center gap-1.5 py-1 px-2 border-none bg-transparent rounded-md text-left text-[12px] transition-colors hover:bg-[var(--surface-hover)]",
           isDirectory ? "cursor-pointer" : "cursor-default"
         )}
-        style={{ paddingLeft: `calc(8px + var(--depth-padding) * 16px)`, '--depth-padding': depth } as React.CSSProperties}
-        onMouseEnter={(e) => {
-          e.currentTarget.classList.add("bg-[var(--surface-hover)]");
-        }}
-        onMouseLeave={(e) => {
-          e.currentTarget.classList.remove("bg-[var(--surface-hover)]");
-        }}
+        style={{ paddingLeft: `calc(8px + ${depth} * 16px)` }}
       >
         {isDirectory ? (
-          <span className="text-[var(--palette-accent)] text-[12px]"
-            style={{ '--palette-accent': palette.accent } as React.CSSProperties}
+          <span
+            className="text-[12px]"
+            style={{ color: palette.accent }}
           >{expanded ? "▼" : "▶"}</span>
         ) : (
-          <span className="text-[#7a6b5d] text-[12px]">•</span>
+          <span className="text-[var(--text-tertiary)] text-[12px]">•</span>
         )}
-        <span className={cn(isDirectory ? "text-[var(--palette-accent)]" : "text-[#d1c3b4]")}
-          style={isDirectory ? { '--palette-accent': palette.accent } as React.CSSProperties : {}}
+        <span
+          className={cn(
+            isDirectory ? "" : "text-[var(--text-secondary)]"
+          )}
+          style={isDirectory ? { color: palette.accent } : {}}
         >{node.name}</span>
       </button>
 
@@ -240,11 +236,10 @@ function CanvasesView({ canvasCount, palette }: { canvasCount: number; palette: 
     <div>
       {canvasCount === 0 ? (
         <div
-          className="p-4 rounded-xl bg-[rgba(16,12,10,0.24)] border border-solid border-[var(--palette-border)] text-center"
-          style={{ '--palette-border': palette.border, '--palette-accent': palette.accent } as React.CSSProperties}
+          className="p-4 rounded-xl border border-dashed border-[var(--border-subtle)] bg-[var(--bg-card)] text-center"
         >
-          <FileText size={24} className="mx-auto mb-2 text-[var(--palette-accent)]" />
-          <div className="text-[12px] text-[#b3a395] leading-relaxed">
+          <FileText size={24} className="mx-auto mb-2" style={{ color: palette.accent }} />
+          <div className="text-[12px] text-[var(--text-secondary)] leading-relaxed">
             No canvases attached to this session yet. Canvases will appear here when created.
           </div>
         </div>
@@ -253,13 +248,12 @@ function CanvasesView({ canvasCount, palette }: { canvasCount: number; palette: 
           {Array.from({ length: canvasCount }).map((_, i) => (
             <div
               key={`canvas-${i}`}
-              className="flex items-center gap-2 p-2.5 rounded-[10px] bg-[rgba(16,12,10,0.24)] border border-solid border-[var(--palette-border)]"
-              style={{ '--palette-border': palette.border, '--palette-accent': palette.accent } as React.CSSProperties}
+              className="flex items-center gap-2 p-2.5 rounded-lg border border-[var(--border-subtle)] bg-[var(--bg-card)]"
             >
-              <FileText size={16} className="text-[var(--palette-accent)]" />
+              <FileText size={16} style={{ color: palette.accent }} />
               <div className="flex-1">
-                <div className="text-[12px] text-[#f6eee7]">Canvas {i + 1}</div>
-                <div className="text-[12px] text-[#7a6b5d]">Session artifact</div>
+                <div className="text-[12px] text-[var(--text-primary)]">Canvas {i + 1}</div>
+                <div className="text-[12px] text-[var(--text-tertiary)]">Session artifact</div>
               </div>
             </div>
           ))}
@@ -286,11 +280,11 @@ function WorkspaceInfo({
         value={workspaceScope || "Session scoped (no explicit path)"}
       />
       <div
-        className="rounded-[14px] border border-solid border-[var(--surface-hover)] bg-[rgba(16,12,10,0.24)] p-[12px_12px_11px]"
+        className="rounded-xl border border-[var(--border-subtle)] bg-[var(--bg-card)] p-3"
       >
         <div
-          className="text-[12px] font-extrabold text-[var(--palette-accent)] uppercase tracking-[0.08em] mb-2"
-          style={{ '--palette-accent': palette.accent } as React.CSSProperties}
+          className="text-[11px] font-bold uppercase tracking-wider mb-2"
+          style={{ color: palette.accent }}
         >
           Tags
         </div>
@@ -310,7 +304,7 @@ function WorkspaceInfo({
             ))}
           </div>
         ) : (
-          <div className="text-[12px] text-[#7a6b5d]">No tags</div>
+          <div className="text-[12px] text-[var(--text-tertiary)]">No tags</div>
         )}
       </div>
     </div>

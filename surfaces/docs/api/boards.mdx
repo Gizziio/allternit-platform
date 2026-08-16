@@ -1,0 +1,203 @@
+---
+title: Boards API
+description: Manage workspace board items, assignments, and comments on the Allternit platform.
+---
+
+## Overview
+
+The Boards API stores workspace-scoped board items such as tasks, tickets, or planning cards. Access is enforced through workspace membership (owner or member). Items support status, priority, labels, deadlines, dependencies, assignment, and comments.
+
+## Base URL
+
+```text
+https://api.allternit.com/api
+```
+
+For local development:
+
+```text
+http://127.0.0.1:8013/api
+```
+
+## Authentication
+
+All requests require a valid bearer token in the `Authorization` header. See [Authentication](/api/authentication) for details.
+
+## Board item object
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `id` | string | Unique item identifier. |
+| `workspaceId` | string | Workspace identifier. |
+| `title` | string | Item title. |
+| `description` | string \| null | Optional description. |
+| `status` | string | Current status, default `backlog`. |
+| `priority` | integer | Priority value. |
+| `labels` | string[] | Label list. |
+| `estimatedMinutes` | integer \| null | Optional effort estimate. |
+| `deadline` | string \| null | Optional ISO 8601 deadline. |
+| `dependencies` | string[] | Dependency item ids. |
+| `reporterId` | string \| null | User who created the item. |
+| `assigneeId` | string \| null | Assigned user id. |
+| `createdAt` | string | ISO 8601 creation timestamp. |
+| `updatedAt` | string | ISO 8601 update timestamp. |
+
+## Endpoints
+
+| Method | Path | Description |
+|--------|------|-------------|
+| `GET` | `/board-items` | List board items in a workspace. |
+| `POST` | `/board-items` | Create a board item. |
+| `GET` | `/board-items/:id` | Get a board item. |
+| `PUT` | `/board-items/:id` | Update a board item. |
+| `DELETE` | `/board-items/:id` | Delete a board item. |
+| `POST` | `/board-items/:id/assign` | Assign the item to a user. |
+| `GET` | `/board-items/:id/comments` | List comments on an item. |
+| `POST` | `/board-items/:id/comments` | Add a comment to an item. |
+
+## List board items
+
+```bash
+curl "https://api.allternit.com/api/board-items?workspace_id=ws_01hqx8x7x7x7x7x7x7x7x7x" \
+  -H "Authorization: Bearer $TOKEN"
+```
+
+### Query parameters
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `workspace_id` | string | Required workspace identifier. |
+
+### Response
+
+```json
+{
+  "items": [
+    {
+      "id": "bi_01hqx8x7x7x7x7x7x7x7x7x",
+      "workspaceId": "ws_01hqx8x7x7x7x7x7x7x7x7x",
+      "title": "Integrate ACI adapter",
+      "description": "Wire the ACI surface into the orchestrator.",
+      "status": "in_progress",
+      "priority": 3,
+      "labels": ["aci", "backend"],
+      "createdAt": "2026-08-13T18:00:00Z",
+      "updatedAt": "2026-08-13T18:05:00Z"
+    }
+  ]
+}
+```
+
+## Create board item
+
+```bash
+curl -X POST https://api.allternit.com/api/board-items \
+  -H "Authorization: Bearer $TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "workspaceId": "ws_01hqx8x7x7x7x7x7x7x7x7x",
+    "title": "Document CommRails CLI",
+    "description": "Write Mintlify pages for CommRails commands.",
+    "status": "backlog",
+    "priority": 2,
+    "labels": ["docs", "commrails"],
+    "estimatedMinutes": 120,
+    "deadline": "2026-08-20T18:00:00Z",
+    "dependencies": []
+  }'
+```
+
+### Request body
+
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| `workspaceId` | string | yes | Workspace identifier. |
+| `title` | string | yes | Item title. |
+| `description` | string | no | Optional description. |
+| `status` | string | no | Status, default `backlog`. |
+| `priority` | integer | no | Priority, default `0`. |
+| `labels` | string[] | no | Label list. |
+| `estimatedMinutes` | integer | no | Effort estimate. |
+| `deadline` | string | no | ISO 8601 deadline. |
+| `dependencies` | string[] | no | Dependency item ids. |
+
+### Response
+
+```json
+{
+  "item": {
+    "id": "bi_02hqx8x7x7x7x7x7x7x7x7x",
+    "title": "Document CommRails CLI",
+    "status": "backlog"
+  }
+}
+```
+
+## Update board item
+
+```bash
+curl -X PUT https://api.allternit.com/api/board-items/bi_02hqx8x7x7x7x7x7x7x7x7x \
+  -H "Authorization: Bearer $TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "status": "in_progress",
+    "priority": 3
+  }'
+```
+
+### Response
+
+```json
+{
+  "success": true
+}
+```
+
+## Assign board item
+
+```bash
+curl -X POST https://api.allternit.com/api/board-items/bi_02hqx8x7x7x7x7x7x7x7x7x/assign \
+  -H "Authorization: Bearer $TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{"assigneeId": "user_2d9e..."}'
+```
+
+### Response
+
+```json
+{
+  "success": true
+}
+```
+
+## Add comment
+
+```bash
+curl -X POST https://api.allternit.com/api/board-items/bi_02hqx8x7x7x7x7x7x7x7x7x/comments \
+  -H "Authorization: Bearer $TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{"body": "Draft is ready for review."}'
+```
+
+### Response
+
+```json
+{
+  "id": "cm_01hqx8x7x7x7x7x7x7x7x7x"
+}
+```
+
+## Error codes
+
+| Status | Code | Description |
+|--------|------|-------------|
+| `401` | `Unauthorized` | Missing or invalid bearer token. |
+| `403` | `Access denied` | User is not a member of the workspace. |
+| `404` | `not_found` | Board item not found. |
+| `500` | `internal_error` / `DB error` | Database or server error. |
+
+## Related pages
+
+- [Board Streams](/api/board-streams)
+- [Tasks](/api/tasks)
+- [Agent Workspaces](/api/agent-workspaces)

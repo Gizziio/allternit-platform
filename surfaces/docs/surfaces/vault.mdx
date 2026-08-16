@@ -1,0 +1,162 @@
+---
+title: 'Vault'
+description: 'Self-hosted, Obsidian-compatible web vault for Allternit agents and users.'
+---
+
+## Overview
+
+The **Allternit Vault** is a self-hosted, Obsidian-compatible web application for managing Markdown knowledge bases. Point it at a folder of Markdown files and edit notes from any browser, or let Allternit agents read and write the vault through a scoped REST API.
+
+## Base URL
+
+Local development:
+
+```text
+http://127.0.0.1:8787
+```
+
+Agent API base:
+
+```text
+http://127.0.0.1:8787/api/v1
+```
+
+## Authentication
+
+The web app is protected by a single master password stored as a scrypt hash. The agent API uses scoped API keys created in **Settings → API Keys**.
+
+```text
+Authorization: Bearer wok_xxx
+X-API-Key: wok_xxx
+```
+
+API key scopes: `read`, `write`, `search`.
+
+## Endpoints
+
+### Agent API
+
+| Method | Path | Scope | Description |
+|--------|------|-------|-------------|
+| GET | `/api/v1/health` | — | Liveness check |
+| GET | `/api/v1/notes` | read | List notes (paginated) |
+| GET | `/api/v1/notes/{path}` | read | Read a note and its metadata |
+| PUT | `/api/v1/notes/{path}` | write | Create or overwrite a note |
+| PATCH | `/api/v1/notes/{path}` | write | Append content to a note |
+| DELETE | `/api/v1/notes/{path}` | write | Move a note to trash |
+| GET | `/api/v1/search` | search | QMD full-text search |
+| GET | `/api/v1/backlinks` | read | Backlinks for a note |
+| GET | `/api/v1/tags` | read | All tags with counts |
+
+### Web app
+
+| Path | Description |
+|------|-------------|
+| `/` | Vault editor and graph view |
+| `/share/{token}` | Public read-only shared note |
+
+## JSON examples
+
+### List notes
+
+```bash
+curl -H "X-API-Key: wok_xxx" \
+  "http://127.0.0.1:8787/api/v1/notes?limit=10"
+```
+
+Response:
+
+```json
+[
+  {
+    "path": "Welcome.md",
+    "title": "Welcome",
+    "tags": ["welcome"],
+    "updated_at": "2026-08-13T19:00:00.000Z"
+  }
+]
+```
+
+### Create or update a note
+
+```bash
+curl -X PUT \
+  -H "X-API-Key: wok_xxx" \
+  -H 'Content-Type: application/json' \
+  -d '{"content":"# From the agent\n\nHello vault."}' \
+  "http://127.0.0.1:8787/api/v1/notes/Agent/Generated.md"
+```
+
+Response:
+
+```json
+{
+  "path": "Agent/Generated.md",
+  "title": "Generated",
+  "content": "# From the agent\n\nHello vault.",
+  "tags": [],
+  "frontmatter": {}
+}
+```
+
+### Search notes
+
+```bash
+curl -H "X-API-Key: wok_xxx" \
+  "http://127.0.0.1:8787/api/v1/search?q=tag:idea&limit=5"
+```
+
+Response:
+
+```json
+{
+  "query": "tag:idea",
+  "hits": [
+    {
+      "path": "Notes/Ideas.md",
+      "title": "Ideas",
+      "score": 4.2,
+      "tags": ["idea"],
+      "snippet": "..."
+    }
+  ]
+}
+```
+
+## Configuration
+
+### Docker environment
+
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `VAULT_HOST_PATH` | `./sample-vault` | Host path mounted to `/vault` |
+| `HTTP_BIND` | `0.0.0.0` | Interface to publish |
+| `HTTP_PORT` | `8787` | Host port |
+| `WEBOBSIDIAN_PASSWORD` | — | Seed or override the master password |
+| `WEBOBSIDIAN_WATCH` | `auto` | File-watch mode (`auto` or `polling`) |
+
+### App-level environment
+
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `PORT` | `8787` | HTTP port |
+| `VAULT_PATH` | `./sample-vault` | Path to the notes vault |
+| `DATA_DIR` | `./data` | Settings and search index directory |
+| `ALLOWED_ROOTS` | — | Comma-separated roots the vault picker may browse |
+| `NODE_OPTIONS` | `--max-old-space-size=4096` | Node heap size |
+
+## Error codes
+
+| HTTP | Code | Meaning |
+|------|------|---------|
+| 200 | — | Success |
+| 401 | `unauthorized` | Invalid or missing API key |
+| 403 | `forbidden` | API key scope does not allow the operation |
+| 404 | `not_found` | Note or path not found |
+| 429 | `rate_limited` | Per-key rate limit exceeded |
+| 500 | `internal_error` | Unexpected server error |
+
+## Related pages
+
+- [Security Vault](/security/vault)
+- [Native Tool Belt](/tools/tool-belt)

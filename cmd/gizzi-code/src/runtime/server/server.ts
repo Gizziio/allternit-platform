@@ -35,6 +35,7 @@ import { ConfigRoutes } from "@/runtime/server/routes/config"
 import { ExperimentalRoutes } from "@/runtime/server/routes/experimental"
 import { ProviderRoutes } from "@/runtime/server/routes/provider"
 import { SidecarRoutes } from "@/runtime/server/routes/sidecar"
+import { Pty } from "@/runtime/integrations/pty"
 import { lazy } from "@/shared/util/lazy"
 import { InstanceBootstrap } from "@/runtime/context/project/bootstrap"
 import { NotFoundError } from "@/runtime/session/storage/db"
@@ -644,6 +645,10 @@ export namespace Server {
     if (!server) throw new Error(`Failed to start server on port ${opts.port}`)
 
     _url = server.url
+
+    // Eagerly start the mux daemon so platform /terminal routes (served by
+    // allternit-api) find the socket ready instead of failing on first use.
+    void Pty.warmup()
 
     // Initialize local cron scheduler so /cron routes are functional.
     // The scheduler lifetime is bound to the gizzi server process (Kimi-style local scheduling).

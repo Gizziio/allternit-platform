@@ -1,9 +1,10 @@
-import React from "react";
+import React, { useEffect } from "react";
 import {
   Network,
   CheckCircle,
+  Robot,
 } from "@phosphor-icons/react";
-import type { CreateAgentInput, HarnessConfig, AppMode } from "@/lib/agents/agent.types";
+import type { CreateAgentInput, HarnessConfig, AppMode, BotCategory, BotProfile } from "@/lib/agents/agent.types";
 import {
   Input,
   Textarea,
@@ -19,9 +20,24 @@ import { TagInput } from "@/components/ui/tag-input";
 interface HarnessStepProps {
   formData: Partial<CreateAgentInput>;
   setFormData: React.Dispatch<React.SetStateAction<Partial<CreateAgentInput>>>;
+  isBotMode?: boolean;
 }
 
-export function HarnessStep({ formData, setFormData }: HarnessStepProps) {
+export function HarnessStep({ formData, setFormData, isBotMode }: HarnessStepProps) {
+  // Bots should participate in group mentions by default.
+  useEffect(() => {
+    if (!isBotMode) return;
+    setFormData((prev) => {
+      if (prev.botProfile && prev.botProfile.groupChatEnabled == null) {
+        return {
+          ...prev,
+          botProfile: { ...prev.botProfile, groupChatEnabled: true } as BotProfile,
+        };
+      }
+      return prev;
+    });
+  }, []);
+
   return (
     <section className="flex flex-col gap-6">
       <div className="rounded-xl border border-solid border-[var(--border-subtle)] bg-[var(--bg-card)] p-6 mb-6">
@@ -244,6 +260,182 @@ export function HarnessStep({ formData, setFormData }: HarnessStepProps) {
               </button>
             ))}
           </div>
+        </div>
+
+        <div className="h-px bg-[var(--border-subtle)] my-6" />
+
+        <div className="mb-6">
+          <h3 className="text-[16px] font-semibold text-[var(--text-primary)] m-0 mb-4 flex items-center gap-2">
+            <Robot size={18} className="text-[var(--accent-primary)]" />
+            {isBotMode ? 'Bot Profile' : 'Bot Packaging'}
+          </h3>
+          <p className="text-[14px] text-[var(--text-secondary)] m-0 mb-4">
+            {isBotMode
+              ? 'Configure how your bot appears in the Bots hub, composer, and session header.'
+              : 'Package this agent as a discoverable bot. Packaged bots appear in the Bots hub, can be @mentioned in chat, and start dedicated bot sessions.'}
+          </p>
+
+          {!isBotMode && (
+            <button
+              type="button"
+              onClick={() => {
+                setFormData((prev) => {
+                  const nextIsBot = !prev.isBot;
+                  return {
+                    ...prev,
+                    isBot: nextIsBot,
+                    botProfile: nextIsBot
+                      ? {
+                          displayName: prev.name || 'My Bot',
+                          tagline: prev.description || '',
+                          welcomeMessage: `Hi, I'm ${prev.name || 'My Bot'}. How can I help?`,
+                          starterPrompts: [],
+                          accentColor: '#6366f1',
+                          groupChatEnabled: true,
+                          botCategory: (prev.category || 'custom') as BotCategory,
+                        }
+                      : undefined,
+                  };
+                });
+              }}
+              className={`w-full rounded-[10px] border border-solid p-4 text-left transition-all duration-200 cursor-pointer flex items-start gap-3 ${
+                formData.isBot
+                  ? 'border-[var(--accent-primary)] bg-[var(--accent-primary)]/10'
+                  : 'border-[var(--border-subtle)] bg-transparent hover:bg-[var(--surface-hover)]'
+              }`}
+            >
+              <div className="mt-0.5">
+                {formData.isBot ? (
+                  <CheckCircle size={20} className="text-[var(--accent-primary)]" />
+                ) : (
+                  <Robot size={20} className="text-[var(--text-secondary)]" />
+                )}
+              </div>
+              <div>
+                <div className="font-medium text-[var(--text-primary)]">Package as Bot</div>
+                <div className="text-[12px] text-[var(--text-secondary)] mt-0.5">
+                  Makes this agent discoverable as a bot in the composer and Bots hub.
+                </div>
+              </div>
+            </button>
+          )}
+
+          {formData.isBot && (
+            <div className="mt-4 grid grid-cols-[repeat(auto-fit,minmax(240px,1fr))] gap-4">
+              <div className="flex flex-col gap-2">
+                <Label className="text-[var(--text-primary)] text-[13px]">Display Name</Label>
+                <Input
+                  value={formData.botProfile?.displayName || ''}
+                  onChange={(e) => setFormData((prev) => ({
+                    ...prev,
+                    botProfile: { ...(prev.botProfile || {}), displayName: e.target.value } as BotProfile,
+                  }))}
+                  placeholder="My Bot"
+                  className="bg-[var(--bg-primary)] border border-solid border-[var(--border-subtle)] text-[var(--text-primary)]"
+                />
+              </div>
+              <div className="flex flex-col gap-2">
+                <Label className="text-[var(--text-primary)] text-[13px]">Tagline</Label>
+                <Input
+                  value={formData.botProfile?.tagline || ''}
+                  onChange={(e) => setFormData((prev) => ({
+                    ...prev,
+                    botProfile: { ...(prev.botProfile || {}), tagline: e.target.value } as BotProfile,
+                  }))}
+                  placeholder="Short description shown in the bot picker"
+                  className="bg-[var(--bg-primary)] border border-solid border-[var(--border-subtle)] text-[var(--text-primary)]"
+                />
+              </div>
+              <div className="flex flex-col gap-2">
+                <Label className="text-[var(--text-primary)] text-[13px]">Accent Color</Label>
+                <div className="flex items-center gap-2">
+                  <Input
+                    type="color"
+                    value={formData.botProfile?.accentColor || '#6366f1'}
+                    onChange={(e) => setFormData((prev) => ({
+                      ...prev,
+                      botProfile: { ...(prev.botProfile || {}), accentColor: e.target.value } as BotProfile,
+                    }))}
+                    className="h-10 w-14 bg-[var(--bg-primary)] border border-solid border-[var(--border-subtle)]"
+                  />
+                  <Input
+                    value={formData.botProfile?.accentColor || '#6366f1'}
+                    onChange={(e) => setFormData((prev) => ({
+                      ...prev,
+                      botProfile: { ...(prev.botProfile || {}), accentColor: e.target.value } as BotProfile,
+                    }))}
+                    placeholder="#6366f1"
+                    className="flex-1 bg-[var(--bg-primary)] border border-solid border-[var(--border-subtle)] text-[var(--text-primary)]"
+                  />
+                </div>
+              </div>
+              <div className="flex flex-col gap-2">
+                <Label className="text-[var(--text-primary)] text-[13px]">Bot Category</Label>
+                <Select
+                  value={formData.botProfile?.botCategory || 'custom'}
+                  onValueChange={(value) => setFormData((prev) => ({
+                    ...prev,
+                    botProfile: { ...(prev.botProfile || {}), botCategory: value as BotCategory } as BotProfile,
+                  }))}
+                >
+                  <SelectTrigger className="bg-[var(--bg-primary)] border border-solid border-[var(--border-subtle)] text-[var(--text-primary)] h-10">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent className="bg-[var(--bg-card)] border border-solid border-[var(--border-subtle)]">
+                    <SelectItem value="research">Research</SelectItem>
+                    <SelectItem value="code">Code</SelectItem>
+                    <SelectItem value="writing">Writing</SelectItem>
+                    <SelectItem value="data">Data</SelectItem>
+                    <SelectItem value="sales">Sales</SelectItem>
+                    <SelectItem value="design">Design</SelectItem>
+                    <SelectItem value="ops">Operations</SelectItem>
+                    <SelectItem value="custom">Custom</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="flex flex-col gap-2 md:col-span-2">
+                <Label className="text-[var(--text-primary)] text-[13px]">Welcome Message</Label>
+                <Textarea
+                  value={formData.botProfile?.welcomeMessage || ''}
+                  onChange={(e) => setFormData((prev) => ({
+                    ...prev,
+                    botProfile: { ...(prev.botProfile || {}), welcomeMessage: e.target.value } as BotProfile,
+                  }))}
+                  placeholder="Hi, I'm your bot. How can I help?"
+                  className="bg-[var(--bg-primary)] border border-solid border-[var(--border-subtle)] text-[var(--text-primary)] min-h-[80px]"
+                />
+              </div>
+
+              <div className="flex flex-col gap-2 md:col-span-2">
+                <Label className="text-[var(--text-primary)] text-[13px]">Starter Prompts (max 5)</Label>
+                <TagInput
+                  value={formData.botProfile?.starterPrompts || []}
+                  onChange={(tags) => setFormData((prev) => ({
+                    ...prev,
+                    botProfile: { ...(prev.botProfile || {}), starterPrompts: tags.slice(0, 5) } as BotProfile,
+                  }))}
+                  placeholder="Add quick-start prompts users can click..."
+                />
+              </div>
+
+              <div className="flex items-center gap-3 rounded-lg border border-solid border-[var(--border-subtle)] bg-[var(--bg-primary)] p-3">
+                <input
+                  id="groupChatEnabled"
+                  type="checkbox"
+                  checked={formData.botProfile?.groupChatEnabled ?? false}
+                  onChange={(e) => setFormData((prev) => ({
+                    ...prev,
+                    botProfile: { ...(prev.botProfile || {}), groupChatEnabled: e.target.checked } as BotProfile,
+                  }))}
+                  className="size-4 accent-[var(--accent-primary)]"
+                />
+                <Label htmlFor="groupChatEnabled" className="text-[var(--text-primary)] text-[13px] m-0 cursor-pointer">
+                  Allow group chat mentions
+                </Label>
+              </div>
+            </div>
+          )}
         </div>
 
         <div className="h-px bg-[var(--border-subtle)] my-6" />

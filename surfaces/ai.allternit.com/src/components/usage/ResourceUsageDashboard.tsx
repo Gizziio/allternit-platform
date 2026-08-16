@@ -13,6 +13,15 @@ import {
   TerminalWindow,
   DownloadSimple,
   ArrowsClockwise,
+  ChatTeardropText,
+  Hash,
+  CurrencyDollar,
+  House,
+  Cloud,
+  Calendar,
+  Brain,
+  UsersThree,
+  ChartBar,
 } from '@phosphor-icons/react';
 import { useIsClient } from '@/lib/hooks/use-is-client';
 import { cn } from '@/lib/utils';
@@ -211,11 +220,17 @@ export function ResourceUsageDashboard() {
   const { grandTotal } = data;
 
   return (
-    <div className="bg-[var(--bg-secondary)] p-6 rounded-2xl border border-[var(--border-subtle)] font-sans space-y-6">
+    <div className="bg-[var(--bg-elevated)] p-6 rounded-2xl border border-[var(--border-subtle)] font-sans space-y-6">
       {/* Header */}
       <div className="flex items-center justify-between">
-        <div className="text-[12px] text-[var(--text-tertiary)] uppercase tracking-widest font-bold">
-          Brain usage · metered at the gizzi boundary
+        <div className="flex items-center gap-3">
+          <div className="grid h-10 w-10 place-items-center rounded-xl bg-[var(--accent-primary)]/10 text-[var(--accent-primary)]">
+            <ChartBar size={20} weight="duotone" />
+          </div>
+          <div>
+            <h2 className="text-[15px] font-semibold text-[var(--text-primary)]">Brain usage</h2>
+            <p className="text-[12px] text-[var(--text-tertiary)]">Metered at the gizzi boundary</p>
+          </div>
         </div>
         <div className="flex items-center gap-3">
           <button type="button"
@@ -250,15 +265,15 @@ export function ResourceUsageDashboard() {
       </div>
 
       {/* Grid Stats — all real */}
-      <div className="grid grid-cols-4 gap-3">
-        <StatBlock label="Sessions" value={grandTotal.sessions.toLocaleString()} />
-        <StatBlock label="Messages" value={grandTotal.messages.toLocaleString()} />
-        <StatBlock label="Total tokens" value={formatTokens(grandTotal.tokens)} />
-        <StatBlock label="Cost" value={formatCost(grandTotal.cost)} />
-        <StatBlock label="Local tokens" value={formatTokens(derived.localTokens)} />
-        <StatBlock label="Cloud tokens" value={formatTokens(derived.cloudTokens)} />
-        <StatBlock label="Active days" value={derived.activeDays.toString()} />
-        <StatBlock label="Top model" value={derived.topModel} />
+      <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+        <StatBlock label="Sessions" value={grandTotal.sessions.toLocaleString()} icon={UsersThree} />
+        <StatBlock label="Messages" value={grandTotal.messages.toLocaleString()} icon={ChatTeardropText} />
+        <StatBlock label="Total tokens" value={formatTokens(grandTotal.tokens)} icon={Hash} />
+        <StatBlock label="Cost" value={formatCost(grandTotal.cost)} icon={CurrencyDollar} />
+        <StatBlock label="Local tokens" value={formatTokens(derived.localTokens)} icon={House} />
+        <StatBlock label="Cloud tokens" value={formatTokens(derived.cloudTokens)} icon={Cloud} />
+        <StatBlock label="Active days" value={derived.activeDays.toString()} icon={Calendar} />
+        <StatBlock label="Top model" value={derived.topModel} icon={Brain} />
       </div>
 
       {/* Daily tokens — real, replaces the random heatmap */}
@@ -310,12 +325,16 @@ export function ResourceUsageDashboard() {
         </div>
 
         {/* Live Kernel Console — real sync lines */}
-        <div className="bg-black p-4 rounded-xl border border-[var(--border-subtle)] font-mono flex flex-col">
+        <div className="bg-[var(--bg-primary)] p-4 rounded-xl border border-[var(--border-subtle)] font-mono flex flex-col">
           <div className="flex items-center justify-between mb-3 text-[var(--text-tertiary)] text-xs">
             <span className="flex items-center gap-2"><TerminalWindow size={14} /> Live Kernel</span>
-            <span className="flex gap-1.5"><span className="size-2 rounded-full bg-red-500/50" /><span className="size-2 rounded-full bg-yellow-500/50" /><span className="size-2 rounded-full bg-green-500/50" /></span>
+            <span className="flex gap-1.5">
+              <span className="size-2 rounded-full bg-[var(--status-error)]/50" />
+              <span className="size-2 rounded-full bg-[var(--status-warning)]/50" />
+              <span className="size-2 rounded-full bg-[var(--status-success)]/50" />
+            </span>
           </div>
-          <div className="flex-1 overflow-y-auto text-xs space-y-1 text-[#666]">
+          <div className="flex-1 overflow-y-auto text-xs space-y-1 text-[var(--text-secondary)]">
             {logs.length === 0 && <div className="opacity-50">waiting for first sync…</div>}
             {logs.map((log, i) => (
               <div key={`resourceusagedashboard-${i}`} className={i === 0 ? 'text-[var(--accent-primary)]' : ''}>
@@ -329,11 +348,34 @@ export function ResourceUsageDashboard() {
   );
 }
 
-function StatBlock({ label, value }: { label: string; value: string }) {
+function StatBlock({
+  label,
+  value,
+  icon: Icon,
+}: {
+  label: string;
+  value: string;
+  icon?: React.ComponentType<Record<string, unknown>>;
+}) {
   return (
-    <div className="bg-[var(--bg-primary)] border border-[var(--border-subtle)] p-4 rounded-xl flex flex-col justify-center min-w-0">
-      <div className="text-[var(--text-tertiary)] text-sm mb-1">{label}</div>
-      <div className="text-[var(--text-primary)] text-2xl font-bold truncate" title={value}>{value}</div>
+    <div className="group relative overflow-hidden rounded-xl border border-[var(--border-subtle)] bg-[var(--bg-primary)] p-4 transition-colors hover:border-[var(--border-hover)]">
+      <div className="flex items-start justify-between gap-3">
+        <div className="min-w-0 flex-1">
+          <div className="text-[12px] font-medium text-[var(--text-tertiary)]">{label}</div>
+          <div className="mt-1 text-2xl font-bold text-[var(--text-primary)] truncate" title={value}>
+            {value}
+          </div>
+        </div>
+        {Icon ? (
+          <div className="grid h-8 w-8 shrink-0 place-items-center rounded-lg bg-[var(--accent-primary)]/10 text-[var(--accent-primary)]">
+            <Icon size={16} weight="duotone" />
+          </div>
+        ) : null}
+      </div>
+      <div
+        className="pointer-events-none absolute -right-4 -top-4 h-16 w-16 rounded-full opacity-0 transition-opacity group-hover:opacity-100"
+        style={{ background: 'radial-gradient(circle, var(--accent-primary)/10 0%, transparent 70%)' }}
+      />
     </div>
   );
 }

@@ -1,28 +1,261 @@
 ---
 title: Outcome Rubrics
-description: Define scoring criteria for agent evaluation.
+description: Define reusable scoring criteria for agent evaluation and manual review.
 ---
 
 # Outcome Rubrics
 
-Outcome rubrics let you score agent runs against structured criteria. Rubrics can be created from scratch or from built-in templates.
+Outcome rubrics let you define reusable, organization-scoped scoring criteria for evaluating agent runs. Each rubric contains one or more criteria with a scoring type and optional weight. Rubrics can be created from scratch or from built-in templates.
 
-## Criteria types
+All outcome rubric endpoints require the caller to be an organization owner or admin.
 
-- `pass_fail` — binary result
-- `numeric` — integer or float in a range
-- `scale` — Likert-style scale
+## Base URL
+
+```text
+https://api.allternit.com/api/v1/admin/outcome-rubrics
+```
+
+For local development:
+
+```text
+http://127.0.0.1:8013/api/v1/admin/outcome-rubrics
+```
 
 ## Endpoints
 
 | Method | Path | Description |
 |--------|------|-------------|
-| GET    | `/api/v1/admin/outcome-rubrics` | List rubrics |
-| POST   | `/api/v1/admin/outcome-rubrics` | Create a rubric |
-| POST   | `/api/v1/admin/outcome-rubrics/from-template` | Create from template |
-| GET    | `/api/v1/admin/outcome-rubrics/:id` | Get a rubric |
-| POST   | `/api/v1/admin/outcome-rubrics/:id/scores` | Record scores |
+| `GET` | `/api/v1/admin/outcome-rubrics` | List rubrics |
+| `POST` | `/api/v1/admin/outcome-rubrics` | Create a rubric |
+| `GET` | `/api/v1/admin/outcome-rubrics/:id` | Get a rubric |
+| `PUT` | `/api/v1/admin/outcome-rubrics/:id` | Update a rubric |
+| `DELETE` | `/api/v1/admin/outcome-rubrics/:id` | Delete a rubric |
+| `POST` | `/api/v1/admin/outcome-rubrics/:id/scores` | Score a run or session against a rubric |
+| `GET` | `/api/v1/admin/outcome-rubrics/:id/scores` | List scores for a rubric |
+| `GET` | `/api/v1/admin/outcome-rubric-templates` | List built-in templates |
+| `POST` | `/api/v1/admin/outcome-rubrics/from-template` | Create a rubric from a template |
 
-## Templates
+## Criteria types
 
-Built-in templates include `task_fidelity`, `code_quality`, and `safety`.
+| Type | Description |
+|------|-------------|
+| `pass_fail` | Binary 0 or 1 |
+| `numeric` | Integer or float in a range |
+| `scale` | Likert-style scale |
+
+Each criterion has an `id`, `name`, optional `description`, `scoring_type`, and optional `weight`. When weights are provided, the total score is a weighted average; otherwise a simple average is used.
+
+## Create a rubric
+
+```bash
+curl -X POST https://api.allternit.com/api/v1/admin/outcome-rubrics \
+  -H "Authorization: Bearer $ADMIN_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "name": "Code quality",
+    "description": "Evaluates generated code quality",
+    "criteria": [
+      { "id": "correctness", "name": "Correctness", "description": "Code functions as intended", "scoring_type": "numeric", "weight": 2.0 },
+      { "id": "readability", "name": "Readability", "description": "Code is clear and maintainable", "scoring_type": "scale", "weight": 1.0 },
+      { "id": "tests", "name": "Tests", "description": "Includes appropriate tests", "scoring_type": "pass_fail", "weight": 1.0 }
+    ]
+  }'
+```
+
+### Request body
+
+```json
+{
+  "name": "Code quality",
+  "description": "Evaluates generated code quality",
+  "criteria": [
+    { "id": "correctness", "name": "Correctness", "scoring_type": "numeric", "weight": 2.0 },
+    { "id": "readability", "name": "Readability", "scoring_type": "scale", "weight": 1.0 },
+    { "id": "tests", "name": "Tests", "scoring_type": "pass_fail", "weight": 1.0 }
+  ]
+}
+```
+
+### Response
+
+```json
+{
+  "id": "or_01hqx8x7x7x7x7x7x7x7x7x",
+  "organization_id": "org_01hqx8x7x7x7x7x7x7x7x7x",
+  "name": "Code quality",
+  "description": "Evaluates generated code quality",
+  "criteria": [
+    { "id": "correctness", "name": "Correctness", "scoring_type": "numeric", "weight": 2.0 },
+    { "id": "readability", "name": "Readability", "scoring_type": "scale", "weight": 1.0 },
+    { "id": "tests", "name": "Tests", "scoring_type": "pass_fail", "weight": 1.0 }
+  ],
+  "created_by": "usr_01hqx8x7x7x7x7x7x7x7x7x",
+  "created_at": "2026-08-13T18:00:00Z",
+  "updated_at": "2026-08-13T18:00:00Z"
+}
+```
+
+## Create from a template
+
+```bash
+curl -X POST https://api.allternit.com/api/v1/admin/outcome-rubrics/from-template \
+  -H "Authorization: Bearer $ADMIN_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "template_id": "task_fidelity",
+    "name": "My fidelity rubric",
+    "description": "Task fidelity rubric for onboarding evals"
+  }'
+```
+
+### Built-in templates
+
+| Template ID | Description |
+|-------------|-------------|
+| `task_fidelity` | Did the agent complete the task as instructed? |
+| `code_quality` | Evaluates generated code quality |
+| `safety` | Checks for harmful or policy-violating outputs |
+
+### Response
+
+```json
+{
+  "id": "or_01hqx8x7x7x7x7x7x7x7x7x",
+  "organization_id": "org_01hqx8x7x7x7x7x7x7x7x7x",
+  "name": "My fidelity rubric",
+  "description": "Task fidelity rubric for onboarding evals",
+  "criteria": [
+    { "id": "instructions_followed", "name": "Instructions followed", "scoring_type": "pass_fail", "weight": 2.0 },
+    { "id": "output_correctness", "name": "Output correctness", "scoring_type": "numeric", "weight": 2.0 },
+    { "id": "format_compliance", "name": "Format compliance", "scoring_type": "pass_fail", "weight": 1.0 }
+  ],
+  "created_by": "usr_01hqx8x7x7x7x7x7x7x7x7x",
+  "created_at": "2026-08-13T18:00:00Z",
+  "updated_at": "2026-08-13T18:00:00Z"
+}
+```
+
+## Score against a rubric
+
+```bash
+curl -X POST https://api.allternit.com/api/v1/admin/outcome-rubrics/or_01hqx8x7x7x7x7x7x7x7x7x/scores \
+  -H "Authorization: Bearer $ADMIN_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "run_id": "run_01hqx8x7x7x7x7x7x7x7x7x",
+    "scores": [
+      { "criterion_id": "correctness", "value": 4.0, "comment": "Handles edge cases" },
+      { "criterion_id": "readability", "value": 3.5 },
+      { "criterion_id": "tests", "value": 1.0 }
+    ]
+  }'
+```
+
+### Request body
+
+```json
+{
+  "run_id": "run_01hqx8x7x7x7x7x7x7x7x7x",
+  "scores": [
+    { "criterion_id": "correctness", "value": 4.0, "comment": "Handles edge cases" },
+    { "criterion_id": "readability", "value": 3.5 },
+    { "criterion_id": "tests", "value": 1.0 }
+  ]
+}
+```
+
+### Response
+
+```json
+{
+  "id": "ors_01hqx8x7x7x7x7x7x7x7x7x",
+  "rubric_id": "or_01hqx8x7x7x7x7x7x7x7x7x",
+  "run_id": "run_01hqx8x7x7x7x7x7x7x7x7x",
+  "session_id": null,
+  "scores": [
+    { "criterion_id": "correctness", "value": 4.0, "comment": "Handles edge cases" },
+    { "criterion_id": "readability", "value": 3.5, "comment": null },
+    { "criterion_id": "tests", "value": 1.0, "comment": null }
+  ],
+  "total_score": 3.0,
+  "created_by": "usr_01hqx8x7x7x7x7x7x7x7x7x",
+  "created_at": "2026-08-13T18:05:00Z"
+}
+```
+
+The example above computes a weighted average: `(4*2 + 3.5*1 + 1*1) / (2+1+1) = 3.0`.
+
+## List rubrics
+
+```bash
+curl https://api.allternit.com/api/v1/admin/outcome-rubrics \
+  -H "Authorization: Bearer $ADMIN_TOKEN"
+```
+
+### Response
+
+```json
+{
+  "items": [
+    {
+      "id": "or_01hqx8x7x7x7x7x7x7x7x7x",
+      "organization_id": "org_01hqx8x7x7x7x7x7x7x7x7x",
+      "name": "Code quality",
+      "description": "Evaluates generated code quality",
+      "criteria": [...],
+      "created_by": "usr_01hqx8x7x7x7x7x7x7x7x7x",
+      "created_at": "2026-08-13T18:00:00Z",
+      "updated_at": "2026-08-13T18:00:00Z"
+    }
+  ]
+}
+```
+
+## Update a rubric
+
+```bash
+curl -X PUT https://api.allternit.com/api/v1/admin/outcome-rubrics/or_01hqx8x7x7x7x7x7x7x7x7x \
+  -H "Authorization: Bearer $ADMIN_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "name": "Code quality v2",
+    "criteria": [
+      { "id": "correctness", "name": "Correctness", "scoring_type": "numeric", "weight": 2.0 }
+    ]
+  }'
+```
+
+## Delete a rubric
+
+```bash
+curl -X DELETE https://api.allternit.com/api/v1/admin/outcome-rubrics/or_01hqx8x7x7x7x7x7x7x7x7x \
+  -H "Authorization: Bearer $ADMIN_TOKEN"
+```
+
+### Response
+
+```json
+{
+  "deleted": true
+}
+```
+
+## Error codes
+
+| Status | Code | Description |
+|--------|------|-------------|
+| `400` | `invalid_name` | Name must be 1–128 characters. |
+| `400` | `invalid_criteria` | At least one criterion is required. |
+| `400` | `invalid_criterion` | Each criterion must have a non-empty `id` and `name`. |
+| `400` | `invalid_scoring_type` | Scoring type must be `pass_fail`, `numeric`, or `scale`. |
+| `400` | `invalid_claim` | `claim_name` and `claim_value` must be updated together. |
+| `400` | `invalid_template` | Unknown rubric template. |
+| `403` | `organization_required` | Caller is not associated with an organization. |
+| `403` | `insufficient_role` | Caller is not an organization owner or admin. |
+| `404` | `rubric_not_found` | Rubric does not exist or belongs to another organization. |
+| `500` | `internal_error` | Database or server error. |
+
+## Related pages
+
+- [Evaluation Datasets & Runs](/admin/eval) — create datasets and schedule runs
+- [Eval Metrics](/admin/eval-metrics) — built-in automated metrics

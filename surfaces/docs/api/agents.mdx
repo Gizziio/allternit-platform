@@ -1,162 +1,1221 @@
 ---
-title: Agents API
-description: Create, run, and manage agents
+title: 'Agents API'
+description: 'Create, configure, run, and manage agents on the Allternit platform.'
 ---
 
 ## Overview
 
-The Agents API lets you create, configure, run, and manage agents through the Allternit platform. Agents are persistent entities that can be run multiple times with different inputs.
+The Agents API is the central surface for creating, configuring, running, and managing agents on the Allternit platform. Agents are persistent, user-owned entities that combine a brain (provider + model), a system prompt, a tool policy, a harness configuration, and a set of enabled surfaces. Once created, an agent can be run on demand, instantiated from a template, published to the marketplace, or wired as a subagent under an orchestrator.
+
+All agent routes are mounted under `/api` and require a valid bearer token via the platform auth middleware.
+
+## Base URL
+
+```
+https://api.allternit.com/api
+```
+
+## Authentication
+
+All requests must include a valid bearer token in the `Authorization` header. See [Authentication](/api/authentication) for details.
+
+## Agent object
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `id` | string | Unique agent identifier (UUID). |
+| `user_id` | string | Owner of the agent. |
+| `name` | string | Human-readable name. |
+| `description` | string \| null | Long-form description. |
+| `type` | string | Agent type, e.g. `worker`, `orchestrator`. |
+| `parent_agent_id` | string \| null | For subagents, the orchestrator they belong to. |
+| `mode` | string | `primary`, `subagent`, `orchestrator`, or `council`. |
+| `model` | string | Model identifier. |
+| `provider` | string | Provider identifier. |
+| `capabilities` | object \| null | Capability flags. |
+| `system_prompt` | string \| null | System prompt text. |
+| `tools` | array \| object \| null | Declared tools. |
+| `max_iterations` | integer | Maximum reasoning iterations. |
+| `temperature` | number | Sampling temperature. |
+| `config` | object \| null | Opaque configuration object. |
+| `status` | string | Current status, e.g. `idle`. |
+| `workspace_id` | string \| null | Associated workspace. |
+| `avatar` | string \| null | Avatar URL or identifier. |
+| `identity_key` | string \| null | Bound public identity key. |
+| `trust_tier` | string | Trust tier, e.g. `standard`. |
+| `harness_config` | object \| null | Harness mode (`byok`, `cloud`, `local`, `subprocess`). |
+| `enabled_modes` | array | Surfaces the agent may run on (`chat`, `cowork`, `code`, `browser`, `design`). |
+| `character_json` | object \| null | Character metadata. |
+| `allowed_skills` | array \| null | Allowed skill IDs. |
+| `allowed_tools` | array \| null | Allowed tool IDs. |
+| `category` | string \| null | Marketplace-style category. |
+| `tags` | array \| null | Tags. |
+| `data_classification` | string \| null | Data classification label. |
+| `write_scope` | string \| null | Write-scope policy. |
+| `is_primary` | boolean | Whether this is the user's primary Companion agent. |
+| `delegates` | object \| null | Delegate/subagent wiring. |
+| `created_at` | string | ISO 8601 creation timestamp. |
+| `updated_at` | string | ISO 8601 update timestamp. |
+| `last_run_at` | string \| null | ISO 8601 timestamp of the most recent run. |
+
+## Agent creation checklist
+
+Every creation flow enforces the same validation rules:
+
+- `name` must be at least 3 characters.
+- `description` must be at least 10 characters.
+- `type` is required.
+- `model` and `provider` are required.
+- `harness_config.mode` must be one of `byok`, `cloud`, `local`, or `subprocess`.
+- `enabled_modes` must contain at least one surface.
+- `trust_tier` is required.
 
 ## Endpoints
 
 ### List agents
 
-```
+```http
 GET /api/agents
 ```
 
-Query parameters:
+Returns all agents owned by the authenticated user, newest first.
+
+#### Query parameters
 
 | Parameter | Type | Description |
 |-----------|------|-------------|
-| `status` | string | Filter by status: `active`, `suspended`, `disposed` |
-| `limit` | integer | Max results (default 20, max 100) |
-| `cursor` | string | Pagination cursor |
+| `workspace_id` | string | Filter by workspace. |
+| `status` | string | Filter by status. |
+| `type` | string | Filter by agent type. |
 
-Response:
+#### Example request
+
+```bash
+curl -H "Authorization: Bearer $TOKEN" \
+  "https://api.allternit.com/api/agents?status=idle&type=worker"
+```
+
+#### Example response
 
 ```json
 {
   "agents": [
     {
-      "id": "agent_abc123",
-      "name": "Code Analyzer",
-      "status": "active",
-      "runtime": "gizzi-pro",
-      "skills": ["code", "web_search"],
-      "created_at": "2026-08-01T10:00:00Z"
+      "id": "agent_018f3a7c...",
+      "user_id": "user_2d9e...",
+      "name": "Code Reviewer",
+      "description": "Reviews pull requests for security and style issues.",
+      "type": "worker",
+      "parent_agent_id": null,
+      "mode": "primary",
+      "model": "qwen2.5:0.5b",
+      "provider": "ollama",
+      "capabilities": { "execute_code": true, "file_search": true },
+      "system_prompt": "You are a senior code reviewer.",
+      "tools": null,
+      "max_iterations": 10,
+      "temperature": 0.7,
+      "config": null,
+      "status": "idle",
+      "workspace_id": null,
+      "avatar": null,
+      "identity_key": null,
+      "trust_tier": "standard",
+      "harness_config": { "mode": "local" },
+      "enabled_modes": ["chat", "code"],
+      "character_json": null,
+      "allowed_skills": null,
+      "allowed_tools": null,
+      "category": null,
+      "tags": null,
+      "data_classification": null,
+      "write_scope": null,
+      "created_at": "2026-08-01T10:00:00Z",
+      "updated_at": "2026-08-13T14:22:00Z",
+      "last_run_at": null,
+      "is_primary": false,
+      "delegates": null
     }
-  ],
-  "next_cursor": "agent_abc122"
+  ]
 }
 ```
 
-### Create agent
+### Create an agent
 
-```
+```http
 POST /api/agents
 ```
 
-Request body:
+Creates a new agent. The request body is validated against the agent creation checklist.
+
+#### Request body
+
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| `name` | string | Yes | Agent name (≥ 3 chars). |
+| `description` | string | Yes | Agent description (≥ 10 chars). |
+| `type` | string | Yes | Agent type. |
+| `model` | string | Yes | Model identifier. |
+| `provider` | string | Yes | Provider identifier. |
+| `mode` | string | No | `primary`, `subagent`, `orchestrator`, or `council`. Defaults to `primary`. |
+| `parent_agent_id` | string | No | Parent orchestrator ID. |
+| `capabilities` | object | No | Capability flags. |
+| `system_prompt` | string | No | System prompt. |
+| `tools` | array \| object | No | Tool declarations. |
+| `max_iterations` | integer | No | Defaults to `10`. |
+| `temperature` | number | No | Defaults to `0.7`. |
+| `config` | object | No | Opaque config. |
+| `status` | string | No | Defaults to `idle`. |
+| `workspace_id` | string | No | Workspace ID. |
+| `avatar` | string | No | Avatar reference. |
+| `identity_key` | string | No | Public identity key. |
+| `trust_tier` | string | No | Defaults to `standard`. |
+| `harness_config` | object | Yes | Must include `mode`. |
+| `enabled_modes` | array | Yes | At least one surface. |
+| `character_json` | object | No | Character metadata. |
+| `allowed_skills` | array | No | Skill allow-list. |
+| `allowed_tools` | array | No | Tool allow-list. |
+| `category` | string | No | Category label. |
+| `tags` | array | No | Tags. |
+| `data_classification` | string | No | Data classification. |
+| `write_scope` | string | No | Write scope. |
+
+#### Example request
+
+```bash
+curl -X POST https://api.allternit.com/api/agents \
+  -H "Authorization: Bearer $TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "name": "Code Reviewer",
+    "description": "Reviews pull requests for security and style issues.",
+    "type": "worker",
+    "model": "qwen2.5:0.5b",
+    "provider": "ollama",
+    "harness_config": { "mode": "local" },
+    "enabled_modes": ["chat", "code"],
+    "trust_tier": "standard",
+    "system_prompt": "You are a senior code reviewer. Be concise.",
+    "capabilities": { "execute_code": true, "file_search": true }
+  }'
+```
+
+#### Example response
 
 ```json
 {
-  "name": "code-reviewer",
-  "runtime": "gizzi-pro",
-  "skills": ["code", "web_search", "str_replace_editor"],
-  "system_prompt": "You are a senior code reviewer...",
-  "config": {
-    "temperature": 0.3,
-    "max_tokens": 4096,
-    "permission_profile": "suggest"
+  "agent": {
+    "id": "agent_018f3a7c..."
   }
 }
 ```
 
-Response: `201 Created`
+### Get an agent
+
+```http
+GET /api/agents/:id
+```
+
+Returns the full agent record.
+
+#### Example request
+
+```bash
+curl -H "Authorization: Bearer $TOKEN" \
+  https://api.allternit.com/api/agents/agent_018f3a7c...
+```
+
+#### Example response
 
 ```json
 {
-  "id": "agent_def456",
-  "name": "code-reviewer",
-  "status": "ready",
-  "created_at": "2026-08-12T14:00:00Z"
+  "agent": {
+    "id": "agent_018f3a7c...",
+    "name": "Code Reviewer",
+    "description": "Reviews pull requests for security and style issues.",
+    "type": "worker",
+    "mode": "primary",
+    "model": "qwen2.5:0.5b",
+    "provider": "ollama",
+    "status": "idle",
+    "is_primary": false,
+    "created_at": "2026-08-01T10:00:00Z",
+    "updated_at": "2026-08-13T14:22:00Z"
+  }
 }
 ```
 
-### Get agent
+### Update an agent
 
-```
-GET /api/agents/{id}
-```
-
-### Update agent
-
-```
-PATCH /api/agents/{id}
+```http
+PUT /api/agents/:id
 ```
 
-### Delete agent
+Partial update using `COALESCE` semantics: omitted fields keep their current values. The same harness-mode and enabled-modes validations apply.
 
-```
-DELETE /api/agents/{id}
+#### Example request
+
+```bash
+curl -X PUT https://api.allternit.com/api/agents/agent_018f3a7c... \
+  -H "Authorization: Bearer $TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "system_prompt": "You are a senior security-focused code reviewer.",
+    "temperature": 0.3
+  }'
 ```
 
-### Run agent
-
-```
-POST /api/agents/{id}/run
-```
-
-Request body:
+#### Example response
 
 ```json
 {
-  "input": "Review this pull request for security issues",
-  "context": {
-    "repo": "my-org/my-repo",
-    "pr": 42
+  "success": true
+}
+```
+
+### Delete an agent
+
+```http
+DELETE /api/agents/:id
+```
+
+Deletes the agent and its database row. Best-effort cleanup of related runtime state may happen asynchronously.
+
+#### Example response
+
+```json
+{
+  "success": true
+}
+```
+
+## Subagents
+
+Subagents are agents whose `mode` is `subagent` and whose `parent_agent_id` points to an orchestrator or the primary Companion. They are created through the same checklist as any other agent.
+
+### List subagents
+
+```http
+GET /api/agents/:id/subagents
+```
+
+Returns a compact view of all subagents under the parent agent.
+
+#### Example response
+
+```json
+{
+  "subagents": [
+    {
+      "id": "agent_9b2c...",
+      "name": "Security Scanner",
+      "type": "worker",
+      "mode": "subagent",
+      "parent_agent_id": "agent_018f3a7c...",
+      "model": "qwen2.5:0.5b",
+      "provider": "ollama",
+      "status": "idle",
+      "created_at": "2026-08-10T09:15:00Z"
+    }
+  ]
+}
+```
+
+### Create a subagent
+
+```http
+POST /api/agents/:id/subagents
+```
+
+Creates a subagent under the parent. The route forces `parent_agent_id` to `:id` and `mode` to `subagent`. The parent must exist and belong to the caller.
+
+#### Example request
+
+```bash
+curl -X POST https://api.allternit.com/api/agents/agent_018f3a7c.../subagents \
+  -H "Authorization: Bearer $TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "name": "Security Scanner",
+    "description": "Scans code for known vulnerability patterns.",
+    "type": "worker",
+    "model": "qwen2.5:0.5b",
+    "provider": "ollama",
+    "harness_config": { "mode": "local" },
+    "enabled_modes": ["code"],
+    "trust_tier": "standard"
+  }'
+```
+
+#### Example response
+
+```json
+{
+  "agent": {
+    "id": "agent_9b2c...",
+    "parent_agent_id": "agent_018f3a7c...",
+    "mode": "subagent"
+  }
+}
+```
+
+## Companion agent
+
+### Ensure Companion
+
+```http
+POST /api/agents/companion/ensure
+```
+
+Idempotently ensures the user has a primary "Allternit Companion" agent. If one already exists, the existing agent is returned; otherwise a new orchestrator is created using a runnable local brain fallback.
+
+#### Example response (created)
+
+```json
+{
+  "agent": {
+    "id": "agent_7d4e...",
+    "name": "Allternit Companion",
+    "model": "qwen2.5:0.5b",
+    "provider": "ollama",
+    "mode": "orchestrator",
+    "is_primary": true
   },
-  "max_tokens": 100000,
-  "max_tool_calls": 50
+  "created": true
 }
 ```
 
-Response (streaming via SSE):
-
-```
-event: message
-data: {"type": "message", "data": "Let me analyze the diff..."}
-
-event: tool_use
-data: {"type": "tool_use", "tool": "bash", "input": {"command": "git diff"}}
-
-event: message
-data: {"type": "message", "data": "The diff shows a potential SQL injection..."}
-
-event: result
-data: {"type": "result", "output": "...", "usage": {"tokens": 5420}}
-```
-
-### Approve action
-
-When an agent is suspended awaiting approval:
-
-```
-POST /api/agents/{id}/runs/{runId}/approve
-```
+#### Example response (existing)
 
 ```json
 {
-  "approved": true
+  "agent": {
+    "id": "agent_7d4e...",
+    "name": "Allternit Companion",
+    "model": "qwen2.5:0.5b",
+    "provider": "ollama",
+    "mode": "orchestrator",
+    "is_primary": true
+  },
+  "created": false
 }
 ```
 
-Or deny:
+## Templates
+
+Templates are persisted agent patterns (orchestrator + subagents) stored in the `agent_templates` table.
+
+### List templates
+
+```http
+GET /api/agent-templates
+```
+
+Returns all agent templates, built-ins first.
+
+#### Example response
 
 ```json
 {
-  "approved": false,
-  "reason": "Too risky"
+  "templates": [
+    {
+      "id": "tmpl_a1b2...",
+      "name": "Code Review Crew",
+      "description": "An orchestrator plus two specialist subagents.",
+      "category": "engineering",
+      "spec": { "pattern": "crew", "agent": { ... }, "subagents": [ ... ] },
+      "is_builtin": true,
+      "created_at": "2026-07-01T12:00:00Z"
+    }
+  ]
 }
 ```
 
-### Stop agent
+### Instantiate a template
 
+```http
+POST /api/agents/from-template
 ```
-POST /api/agents/{id}/stop
+
+Creates a live orchestrator and its subagents from a template. The brain can be overridden; otherwise the user's default model is used, falling back to a local Ollama brain.
+
+#### Request body
+
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| `template_id` | string | Yes | Template ID. |
+| `brain` | object | No | `{ "provider": "...", "model": "..." }`. |
+| `name_override` | string | No | Override the orchestrator name. |
+
+#### Example request
+
+```bash
+curl -X POST https://api.allternit.com/api/agents/from-template \
+  -H "Authorization: Bearer $TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "template_id": "tmpl_a1b2...",
+    "brain": { "provider": "ollama", "model": "qwen2.5:0.5b" },
+    "name_override": "My Review Crew"
+  }'
 ```
 
-## Agent lifecycle
+#### Example response
 
-See [Agent Lifecycle](/guides/agent-lifecycle) for the full state diagram and best practices.
+```json
+{
+  "pattern": "crew",
+  "orchestrator": {
+    "id": "agent_orch...",
+    "name": "My Review Crew"
+  },
+  "subagents": [
+    { "id": "agent_sub1...", "name": "Security Scanner" },
+    { "id": "agent_sub2...", "name": "Style Checker" }
+  ]
+}
+```
+
+## Running agents
+
+### Run an agent
+
+```http
+POST /api/agents/:id/runs
+```
+
+Sends `input` through the Gizzi runtime using the agent's configured brain and system prompt. The call records a run, persists the outcome, and emits CommRails ledger events.
+
+#### Request body
+
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| `input` | string | Yes | User prompt. |
+| `plan` | object | No | Opaque plan metadata. |
+| `metadata` | object | No | Opaque run metadata. |
+
+#### Example request
+
+```bash
+curl -X POST https://api.allternit.com/api/agents/agent_018f3a7c.../runs \
+  -H "Authorization: Bearer $TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{"input": "Review this function for SQL injection risks."}'
+```
+
+#### Example response (success)
+
+```json
+{
+  "run_id": "run_3f8a...",
+  "agent_id": "agent_018f3a7c...",
+  "session_id": "sess_9c1d...",
+  "status": "completed",
+  "output": "The function uses parameterized queries, so it is safe from SQL injection.",
+  "model": "qwen2.5:0.5b",
+  "provider": "ollama"
+}
+```
+
+#### Example response (brain error)
+
+```json
+{
+  "run_id": "run_3f8a...",
+  "agent_id": "agent_018f3a7c...",
+  "session_id": "sess_9c1d...",
+  "status": "error",
+  "error": "model not found",
+  "model": "qwen2.5:0.5b",
+  "provider": "ollama"
+}
+```
+
+### List agent runs
+
+```http
+GET /api/agents/:id/runs
+```
+
+Returns up to 50 run records for the agent, newest first.
+
+#### Example response
+
+```json
+{
+  "runs": [
+    {
+      "id": "run_3f8a...",
+      "agent_id": "agent_018f3a7c...",
+      "status": "completed",
+      "output": "The function uses parameterized queries...",
+      "error": null,
+      "duration_ms": 1240,
+      "created_at": "2026-08-13T14:22:00Z",
+      "completed_at": "2026-08-13T14:22:01Z"
+    }
+  ]
+}
+```
+
+### Stream agent events
+
+```http
+GET /api/agents/:id/events
+```
+
+Server-sent events (SSE) stream of CommRails ledger events scoped to the agent. Replays up to 50 recent matching events on connect, then polls for new events every 2 seconds.
+
+#### Example curl
+
+```bash
+curl -H "Authorization: Bearer $TOKEN" \
+  -H "Accept: text/event-stream" \
+  https://api.allternit.com/api/agents/agent_018f3a7c.../events
+```
+
+#### Example event
+
+```text
+event: message
+data: {"event_type":"agent.run.completed","agent_id":"agent_018f3a7c...","run_id":"run_3f8a...","timestamp":"2026-08-13T14:22:01Z","data":{"duration_ms":1240}}
+```
+
+## Agent identity
+
+### Get agent identity
+
+```http
+GET /api/agents/identity?agent_id=:agent_id
+```
+
+Returns whether the agent has a bound identity key and the key itself.
+
+#### Example response
+
+```json
+{
+  "has_identity": true,
+  "public_key": "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAID..."
+}
+```
+
+### Set agent identity
+
+```http
+POST /api/agents/identity
+```
+
+Binds a caller-supplied public key to the agent. The platform never generates or returns private keys.
+
+#### Request body
+
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| `agentId` / `agent_id` | string | Yes | Agent ID. |
+| `publicKey` / `public_key` | string | Yes | Public key to bind. |
+
+#### Example request
+
+```bash
+curl -X POST https://api.allternit.com/api/agents/identity \
+  -H "Authorization: Bearer $TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "agentId": "agent_018f3a7c...",
+    "publicKey": "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAID..."
+  }'
+```
+
+#### Example response
+
+```json
+{
+  "success": true,
+  "public_key": "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAID..."
+}
+```
+
+## Agent metrics
+
+### List metrics
+
+```http
+GET /api/agents/metrics
+```
+
+Returns event-style metric samples for the caller's agents. Defaults to the last 7 days.
+
+#### Query parameters
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `agentId` / `agent_id` | string | Filter by agent. |
+| `metricType` / `metric_type` | string | Filter by metric type. |
+| `days` | integer | Lookback window (default `7`). |
+
+#### Example response
+
+```json
+{
+  "metrics": [
+    {
+      "id": "metric_4d5e...",
+      "agent_id": "agent_018f3a7c...",
+      "metric_type": "run_success",
+      "value": 1,
+      "unit": "count",
+      "metadata": "{\"run_id\":\"run_3f8a...\"}",
+      "timestamp": "2026-08-13T14:22:01Z"
+    }
+  ]
+}
+```
+
+## Test suites
+
+### List test suites
+
+```http
+GET /api/agents/suites?agentId=:agent_id
+```
+
+Returns test suites for the caller, optionally filtered by agent.
+
+#### Example response
+
+```json
+{
+  "suites": [
+    {
+      "id": "suite_8a9b...",
+      "user_id": "user_2d9e...",
+      "agent_id": "agent_018f3a7c...",
+      "name": "Security cases",
+      "description": "Regression cases for security scanning.",
+      "cases": "[{\"input\":\"...\",\"expected\":\"...\"}]",
+      "created_at": "2026-08-12T10:00:00Z"
+    }
+  ]
+}
+```
+
+### Create a test suite
+
+```http
+POST /api/agents/suites
+```
+
+#### Request body
+
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| `agentId` / `agent_id` | string | Yes | Agent ID. |
+| `name` | string | Yes | Suite name. |
+| `description` | string | No | Suite description. |
+| `cases` | array \| object | No | Test cases. |
+
+#### Example request
+
+```bash
+curl -X POST https://api.allternit.com/api/agents/suites \
+  -H "Authorization: Bearer $TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "agentId": "agent_018f3a7c...",
+    "name": "Security cases",
+    "description": "Regression cases for security scanning.",
+    "cases": [
+      { "input": "Find SQL injection", "expected": "parameterized" }
+    ]
+  }'
+```
+
+#### Example response
+
+```json
+{
+  "suite": {
+    "id": "suite_8a9b...",
+    "name": "Security cases"
+  }
+}
+```
+
+### Run an agent test
+
+```http
+POST /api/agents/test
+```
+
+Runs a single real round-trip against the agent's brain using the last user message in `messages`, or a default connectivity probe.
+
+#### Request body
+
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| `agentId` / `agent_id` | string | Yes | Agent ID. |
+| `messages` | array | No | Conversation messages. |
+| `variables` | object | No | Opaque variables. |
+
+#### Example request
+
+```bash
+curl -X POST https://api.allternit.com/api/agents/test \
+  -H "Authorization: Bearer $TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "agentId": "agent_018f3a7c...",
+    "messages": [
+      { "role": "user", "content": "Say hello in one word." }
+    ]
+  }'
+```
+
+#### Example response
+
+```json
+{
+  "success": true,
+  "response": {
+    "role": "assistant",
+    "content": "Hello."
+  },
+  "metrics": {
+    "latency_ms": 420,
+    "tokens": 12
+  },
+  "tool_calls": [],
+  "session_id": "sess_9c1d..."
+}
+```
+
+## Agent marketplace
+
+The marketplace lets users publish snapshots of their agents, browse published listings, install copies, and rate them.
+
+### List listings
+
+```http
+GET /api/agent-marketplace/listings
+```
+
+#### Query parameters
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `q` | string | Substring search in title and description. |
+| `category` | string | Filter by category. |
+
+#### Example response
+
+```json
+{
+  "listings": [
+    {
+      "id": "list_1a2b...",
+      "title": "Code Reviewer",
+      "description": "Reviews pull requests for security and style issues.",
+      "category": "engineering",
+      "tags": ["code", "security"],
+      "publisher_user_id": "user_2d9e...",
+      "publisher_name": "Ada Lovelace",
+      "rating_avg": 4.5,
+      "rating_count": 12,
+      "install_count": 87,
+      "created_at": "2026-08-01T10:00:00Z",
+      "updated_at": "2026-08-10T10:00:00Z"
+    }
+  ]
+}
+```
+
+### Publish an agent
+
+```http
+POST /api/agent-marketplace/listings
+```
+
+Publishes a snapshot of one of the caller's own agents. Only the agent's owner can publish it.
+
+#### Request body
+
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| `source_agent_id` | string | Yes | Agent to snapshot. |
+| `title` | string | Yes | Listing title (≥ 3 chars). |
+| `description` | string | Yes | Listing description (≥ 10 chars). |
+| `category` | string | No | Category. |
+| `tags` | array | No | Tags. |
+
+#### Example response
+
+```json
+{
+  "listing": {
+    "id": "list_1a2b..."
+  }
+}
+```
+
+### Get a listing
+
+```http
+GET /api/agent-marketplace/listings/:id
+```
+
+Returns the listing plus up to 20 recent ratings.
+
+#### Example response
+
+```json
+{
+  "listing": {
+    "id": "list_1a2b...",
+    "title": "Code Reviewer",
+    "description": "Reviews pull requests for security and style issues.",
+    "rating_avg": 4.5,
+    "rating_count": 12,
+    "install_count": 87
+  },
+  "ratings": [
+    {
+      "user_id": "user_9f8e...",
+      "reviewer_name": "Grace Hopper",
+      "rating": 5,
+      "review": "Caught a real bug.",
+      "created_at": "2026-08-10T10:00:00Z"
+    }
+  ]
+}
+```
+
+### Unpublish a listing
+
+```http
+DELETE /api/agent-marketplace/listings/:id
+```
+
+Only the publisher can unpublish.
+
+#### Example response
+
+```json
+{
+  "success": true
+}
+```
+
+### Install a listing
+
+```http
+POST /api/agent-marketplace/listings/:id/install
+```
+
+Clones the listing's snapshot into a brand-new agent owned by the caller. The creation checklist is re-run; the new agent is standalone (`mode: primary`, no parent).
+
+#### Example response
+
+```json
+{
+  "agent": {
+    "id": "agent_new..."
+  }
+}
+```
+
+### Rate a listing
+
+```http
+POST /api/agent-marketplace/listings/:id/rate
+```
+
+#### Request body
+
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| `rating` | integer | Yes | 1–5 stars. |
+| `review` | string | No | Free-form review. |
+
+#### Example request
+
+```bash
+curl -X POST https://api.allternit.com/api/agent-marketplace/listings/list_1a2b.../rate \
+  -H "Authorization: Bearer $TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{"rating": 5, "review": "Caught a real bug."}'
+```
+
+#### Example response
+
+```json
+{
+  "success": true
+}
+```
+
+## Agents v1 remote compatibility surface
+
+The `/api/agents/v1/*` surface mirrors the shape of widely-used remote agent APIs so existing client code can point at Allternit with minimal changes.
+
+### Status
+
+```http
+GET /api/agents-v1
+```
+
+#### Example response
+
+```json
+{
+  "status": "ok",
+  "service": "agents-v1"
+}
+```
+
+### List models
+
+```http
+GET /api/agents/v1/models
+GET /api/agents/v1/responses/models
+```
+
+Returns the caller's agents as model objects.
+
+#### Example response
+
+```json
+{
+  "object": "list",
+  "data": [
+    {
+      "id": "agent_018f3a7c...",
+      "object": "model",
+      "created": 1754541600,
+      "owned_by": "allternit",
+      "profile": {
+        "agentId": "agent_018f3a7c...",
+        "version": "1",
+        "instructions": "You are a senior code reviewer.",
+        "modelConfig": {
+          "provider": "ollama",
+          "model": "qwen2.5:0.5b",
+          "temperature": 0.7,
+          "maxContextTokens": null,
+          "maxOutputTokens": null,
+          "maxSteps": 10
+        },
+        "capabilities": { "execute_code": true, "file_search": true },
+        "toolPolicy": {
+          "builtInToolIds": [],
+          "mcpServerIds": [],
+          "allowedMcpToolIds": [],
+          "deferredToolIds": []
+        },
+        "files": null,
+        "artifactPolicy": null
+      }
+    }
+  ]
+}
+```
+
+### Get a model
+
+```http
+GET /api/agents/v1/models/:model
+```
+
+#### Example response
+
+Same shape as an item from `list models`.
+
+### List tools
+
+```http
+GET /api/agents/v1/tools?model=:agent_id
+```
+
+Returns the tools available to the agent profile, including deferred MCP tools and built-in platform tools.
+
+#### Example response
+
+```json
+{
+  "object": "list",
+  "data": [
+    {
+      "id": "web_search",
+      "label": "Web Search",
+      "serverId": "allternit-api",
+      "description": "Search the public web.",
+      "parameters": {}
+    }
+  ],
+  "model": "agent_018f3a7c..."
+}
+```
+
+### Search tools
+
+```http
+POST /api/agents/v1/tools/search
+```
+
+#### Request body
+
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| `model` | string | Yes | Agent ID. |
+| `query` | string | No | Substring filter. |
+
+#### Example response
+
+Same shape as `list tools`.
+
+### Activate tools
+
+```http
+POST /api/agents/v1/tools/activate
+```
+
+Activates one or more tools for a session, persisting the selection in the session metadata.
+
+#### Request body
+
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| `model` / `model_id` | string | Yes | Agent ID. |
+| `session_id` | string | Yes | Session ID. |
+| `tool_ids` | array | No | Tools to activate. |
+| `tool_id` | string | No | Single tool to activate. |
+
+#### Example request
+
+```bash
+curl -X POST https://api.allternit.com/api/agents/v1/tools/activate \
+  -H "Authorization: Bearer $TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "model": "agent_018f3a7c...",
+    "session_id": "sess_9c1d...",
+    "tool_ids": ["web_search"]
+  }'
+```
+
+#### Example response
+
+```json
+{
+  "success": true,
+  "sessionId": "sess_9c1d...",
+  "model": "agent_018f3a7c...",
+  "activatedToolIds": ["web_search"]
+}
+```
+
+### Get a response
+
+```http
+GET /api/agents/v1/responses/:id
+```
+
+Retrieves a completed assistant response by `response_id`, discovered from conversation message metadata.
+
+#### Example response
+
+```json
+{
+  "id": "resp_7g8h...",
+  "object": "response",
+  "created_at": 1754541600,
+  "status": "completed",
+  "model": "agent_018f3a7c...",
+  "output_text": "The function is safe.",
+  "output": [
+    {
+      "id": "msg_resp_7g8h...",
+      "type": "message",
+      "role": "assistant",
+      "status": "completed",
+      "content": [
+        {
+          "type": "output_text",
+          "text": "The function is safe.",
+          "annotations": [],
+          "logprobs": []
+        }
+      ]
+    }
+  ],
+  "allternit": {
+    "conversation_id": "conv_2b3c...",
+    "agent_profile": null,
+    "artifacts": []
+  }
+}
+```
+
+## Workspace initialization
+
+### Initialize agent workspace
+
+```http
+POST /api/agents/:id/workspace/initialize
+```
+
+Creates the agent's workspace directory and writes a batch of documents into it. Paths must be relative. Parent directories are created as needed.
+
+#### Request body
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `documents` | array | List of `{ "path": "...", "content": "..." }`. |
+
+#### Example request
+
+```bash
+curl -X POST https://api.allternit.com/api/agents/agent_018f3a7c.../workspace/initialize \
+  -H "Authorization: Bearer $TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "documents": [
+      { "path": "README.md", "content": "# Code Reviewer\n\nReviews PRs." },
+      { "path": "rules.json", "content": "{\"max_lines\": 100}" }
+    ]
+  }'
+```
+
+#### Example response
+
+```json
+{
+  "success": true,
+  "workspace_path": "/Users/joe/Library/Application Support/allternit/agent-workspaces/agent_018f3a7c...",
+  "written_files": ["README.md", "rules.json"]
+}
+```
+
+## Error codes
+
+| Status | Meaning |
+|--------|---------|
+| `200` | Success. |
+| `201` | Created. |
+| `204` | No content (delete success). |
+| `400` | Bad request — validation failed (checklist, missing fields, invalid rating). |
+| `401` | Unauthorized — missing or invalid bearer token. |
+| `403` | Forbidden — agent not enabled for the requested surface. |
+| `404` | Not found — agent, listing, run result, or parent not found. |
+| `422` | Unprocessable entity — template or dataset parse error. |
+| `502` | Bad gateway — upstream Gizzi runtime error. |
+| `500` | Internal server error. |
+
+## Related pages
+
+- [Agent Sessions](/api/agent-sessions)
+- [Agent Workspaces](/api/agent-workspaces)
+- [Agent Preferences](/api/agent-preferences)
+- [Agent Runtimes](/api/agent-runtimes)
+- [Agent Operations](/api/agent-operations)
+- [Authentication](/api/authentication)

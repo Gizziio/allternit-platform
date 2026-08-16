@@ -8,7 +8,8 @@
  * @module bot-profile
  */
 
-import type { Agent, BotProfile, BotCategory } from '../agents/agent.types';
+import type { Agent, Bot, BotProfile, BotCategory } from '../agents/agent.types';
+import { packageAgentAsBot } from './bot-contract';
 import { createModuleLogger } from '@/lib/logger';
 
 const logger = createModuleLogger('BotProfile');
@@ -19,39 +20,42 @@ const logger = createModuleLogger('BotProfile');
 
 /**
  * Check if an agent is a packaged bot.
+ *
+ * This is a strict type guard: when it returns true, TypeScript knows the
+ * agent has `isBot: true` and a required `botProfile` with `displayName`.
  */
-export function isBot(agent: Agent): boolean {
+export function isBot(agent: Agent): agent is Bot {
   return agent.isBot === true && agent.botProfile !== undefined;
 }
 
 /**
  * Filter agents to only return bots.
  */
-export function getBots(agents: Agent[]): Agent[] {
+export function getBots(agents: Agent[]): Bot[] {
   return agents.filter(isBot);
 }
 
 /**
  * Filter bots by category.
  */
-export function getBotsByCategory(agents: Agent[], category: BotCategory): Agent[] {
+export function getBotsByCategory(agents: Agent[], category: BotCategory): Bot[] {
   return getBots(agents).filter(
-    (agent) => agent.botProfile?.botCategory === category
+    (agent) => agent.botProfile.botCategory === category
   );
 }
 
 /**
  * Search bots by name, description, or tags.
  */
-export function searchBots(agents: Agent[], query: string): Agent[] {
+export function searchBots(agents: Agent[], query: string): Bot[] {
   const q = query.trim().toLowerCase();
   if (!q) return getBots(agents);
 
   return getBots(agents).filter((agent) => {
     const profile = agent.botProfile;
-    const name = (profile?.displayName ?? agent.name).toLowerCase();
+    const name = profile.displayName.toLowerCase();
     const description = agent.description.toLowerCase();
-    const tagline = (profile?.tagline ?? '').toLowerCase();
+    const tagline = (profile.tagline ?? '').toLowerCase();
     const tags = agent.tags ?? [];
 
     return (
@@ -128,30 +132,24 @@ export function createBotAgent(
   baseAgent: Omit<Agent, 'isBot' | 'botProfile'>,
   botProfile: BotProfile
 ): Agent {
-  return {
+  const withDefaults: Agent = {
     ...baseAgent,
-    isBot: true,
-    botProfile,
-    // Ensure bot has sensible defaults
     type: baseAgent.type ?? 'specialist',
     status: baseAgent.status ?? 'idle',
     tools: baseAgent.tools ?? [],
     capabilities: baseAgent.capabilities ?? [],
-  };
+  } as Agent;
+
+  return packageAgentAsBot({ agent: withDefaults, botProfile });
 }
 
 /**
  * Update a bot's profile while preserving the agent.
  */
 export function updateBotProfile(
-  agent: Agent,
+  agent: Bot,
   updates: Partial<BotProfile>
-): Agent {
-  if (!agent.isBot) {
-    logger.warn({ agentId: agent.id }, 'updateBotProfile called on non-bot agent');
-    return agent;
-  }
-
+): Bot {
   return {
     ...agent,
     botProfile: {

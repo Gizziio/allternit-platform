@@ -5,6 +5,7 @@ import { LAUNCH_TOP_PADDING, LAUNCH_SECTION_GAP } from "./launchScreenLayout";
 import { LaunchHeader } from "./LaunchHeader";
 import type { AgentModeSurface } from "@/stores/agent-surface-mode.store";
 import type { CanonicalAgentModeId } from "@/lib/agents/agent-mode-contracts";
+import type { Agent } from "@/lib/agents/agent.types";
 import type { PluginMentionTarget } from "@/lib/mentions/use-mention-targets";
 
 interface ChatEmptyStateProps {
@@ -21,6 +22,7 @@ interface ChatEmptyStateProps {
   greeting: { title: string; tagline: string; effectType: "typing" | "reveal" };
   handleSend: (text: string) => void;
   onOpenAgentSession?: (text: string, surface: AgentModeSurface, execution?: { modeId: CanonicalAgentModeId; templateTitle?: string }) => void;
+  onStartBotSession?: (agent: Agent) => void;
   agentSurface: AgentModeSurface;
   setMentionAgentId: (id: string | null) => void;
   mentionAgentId: string | null;
@@ -50,6 +52,7 @@ export const ChatEmptyState: React.FC<ChatEmptyStateProps> = ({
   greeting,
   handleSend,
   onOpenAgentSession,
+  onStartBotSession,
   agentSurface,
   setMentionAgentId,
   mentionAgentId,
@@ -112,6 +115,7 @@ export const ChatEmptyState: React.FC<ChatEmptyStateProps> = ({
         <ChatComposer
           onSend={handleSend}
           onAgentSend={onOpenAgentSession ? (text, execution) => onOpenAgentSession(text, agentSurface, execution) : undefined}
+          onStartBotSession={onStartBotSession}
           onMentionAgentChange={setMentionAgentId}
           mentionAgentId={mentionAgentId}
           onPluginMentionChange={setPluginMention}

@@ -1,0 +1,280 @@
+---
+title: 'Connectors API'
+description: 'Discover, connect, and execute Allternit-owned connectors through the in-process registry and the open-connector sidecar.'
+---
+
+## Overview
+
+The Connectors API is Allternit's owned connector standard. It exposes a unified catalog plus connection engine for third-party services. Curated connectors (GitHub, Notion, Slack) execute in-process using owned auth methods such as local CLI tokens, API keys, OAuth2 PKCE/loopback, and device flow. All other catalog entries are served by the vendored open-connector sidecar (`services/open-connector`), which holds credentials in its own encrypted SQLite store while the gateway keeps only an index row.
+
+The API also exposes a unified MCP surface at `/api/v1/connectors/mcp` so any MCP-capable agent host can call sidecar-backed connectors through JSON-RPC.
+
+## Base URL
+
+```
+https://api.allternit.com/api/v1/connectors
+```
+
+For local development:
+
+```
+http://127.0.0.1:8013/api/v1/connectors
+```
+
+OAuth callbacks are public redirect targets:
+
+```
+https://api.allternit.com/api/v1/connectors/oauth/callback
+https://api.allternit.com/oauth/callback
+```
+
+## Authentication
+
+- Connector management routes require a valid bearer token via the platform auth middleware.
+- `/api/v1/connectors/mcp` accepts the same bearer token.
+- The internal MCP proxy (`/internal/connectors/mcp`) accepts a cloud-issued runtime-device token (`Authorization: Bearer allternit_runtime_...`) or the internal service token plus `x-allternit-user-id`.
+
+See [Authentication](/api/authentication).
+
+## Connector object
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `id` | string | Connector catalog identifier. |
+| `name` | string | Human-readable name. |
+| `category` | string | Connector category. |
+| `provider` | string | Always `"allternit"` for owned connectors. |
+| `auth_type` | string | `local_cli`, `api_key`, `oauth2`, `device_flow`, `no_auth`, or `unknown`. |
+| `connectable` | boolean | Whether the connector can be connected in the current environment. |
+| `executable` | boolean | Whether the connector has executable actions. |
+| `tier` | integer | Connector tier. |
+| `mcp_backed` | boolean | Whether the connector is exposed through the MCP surface. |
+| `backend` | string | `rust_native` for curated connectors, `open_connector` for sidecar-backed connectors. |
+| `connection` | object | `{ "status": "connected" \| "disconnected" \| "pending", "account": string }`. |
+
+## Endpoints
+
+| Method | Path | Description |
+|--------|------|-------------|
+| `GET` | `/api/v1/connectors` | List all connectors in the catalog with live status. |
+| `GET` | `/api/v1/connectors/:id` | Get one connector with live status. |
+| `POST` | `/api/v1/connectors/:id/connect` | Start or complete a connection. |
+| `POST` | `/api/v1/connectors/:id/refresh` | Refresh an existing connection. |
+| `POST` | `/api/v1/connectors/:id/poll` | Poll a device-flow authorization. |
+| `POST` | `/api/v1/connectors/:id/execute` | Execute a connector action. |
+| `DELETE` | `/api/v1/connectors/:id/disconnect` | Disconnect and clear stored credentials. |
+| `POST` | `/api/v1/connectors/mcp` | Unified MCP JSON-RPC proxy for sidecar-backed connectors. |
+
+## List connectors
+
+```http
+GET /api/v1/connectors
+```
+
+Returns the merged catalog: Allternit's in-process catalog plus any sidecar-only providers. The response includes per-user connection status and sidecar health.
+
+### Example response
+
+```json
+{
+  "connectors": [
+    {
+      "id": "github",
+      "name": "GitHub",
+      "category": "Developer Tools",
+      "provider": "allternit",
+      "auth_type": "local_cli",
+      "connectable": true,
+      "executable": true,
+      "tier": 2,
+      "mcp_backed": false,
+      "connection": { "status": "connected", "account": "ada" }
+    }
+  ],
+  "total": 1,
+  "source": "allternit-owned",
+  "standard": "mcp+owned-oauth+openapi",
+  "sidecar": "ok"
+}
+```
+
+## Get a connector
+
+```http
+GET /api/v1/connectors/:id
+```
+
+Returns the merged connector entry, including live connection status. If the id is sidecar-only and not in the legacy catalog, the entry is synthesized from the sidecar provider summary.
+
+## Connect a connector
+
+```http
+POST /api/v1/connectors/:id/connect
+```
+
+Starts a connection flow. The request body and response shape depend on the connector's auth type.
+
+### Request body
+
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| `via` | string | No | Force an auth type (`local_cli`, `api_key`, `oauth2`, `device_flow`, `no_auth`). |
+| `api_key` | string | No | API key for `api_key` connectors. |
+
+### Local CLI example (GitHub)
+
+```bash
+curl -X POST https://api.allternit.com/api/v1/connectors/github/connect \
+  -H "Authorization: Bearer $TOKEN"
+```
+
+```json
+{
+  "status": "connected",
+  "connector": "github",
+  "auth_type": "local_cli",
+  "owned": true,
+  "account": "ada"
+}
+```
+
+### OAuth2 example
+
+```bash
+curl -X POST https://api.allternit.com/api/v1/connectors/some-oauth/connect \
+  -H "Authorization: Bearer $TOKEN"
+```
+
+```json
+{
+  "status": "authorization_required",
+  "auth_type": "oauth2",
+  "owned": true,
+  "connector": "some-oauth",
+  "authorize_url": "https://provider.example.com/oauth/authorize?client_id=...",
+  "redirect_uri": "https://api.allternit.com/api/v1/connectors/oauth/callback",
+  "state": "...",
+  "instructions": "Open authorize_url, approve Allternit..."
+}
+```
+
+### API key example
+
+```bash
+curl -X POST https://api.allternit.com/api/v1/connectors/some-api/connect \
+  -H "Authorization: Bearer $TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{"api_key": "sk_xxxxxxxx"}'
+```
+
+```json
+{
+  "status": "connected",
+  "connector": "some-api",
+  "auth_type": "api_key",
+  "owned": true
+}
+```
+
+## Execute a connector action
+
+```http
+POST /api/v1/connectors/:id/execute
+```
+
+Executes a tool or action against a connected connector.
+
+### Request body
+
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| `tool` | string | No | Action or tool name. |
+| `input` | object | No | Action arguments. |
+| `path` | string | No | Generic API path for raw passthrough. |
+| `method` | string | No | HTTP method for raw passthrough. |
+
+### Example request
+
+```bash
+curl -X POST https://api.allternit.com/api/v1/connectors/github/execute \
+  -H "Authorization: Bearer $TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "tool": "github_search_repositories",
+    "input": { "query": "allternit" }
+  }'
+```
+
+### Example response
+
+```json
+{
+  "status": "ok",
+  "connector": "github",
+  "tool": "github_search_repositories",
+  "provider_status": 200,
+  "result": { "total_count": 1, "items": [...] }
+}
+```
+
+## Disconnect a connector
+
+```http
+DELETE /api/v1/connectors/:id/disconnect
+```
+
+Clears the connection row. For sidecar-backed connectors, the sidecar credential is removed first.
+
+### Example response
+
+```json
+{
+  "status": "disconnected",
+  "connector": "github"
+}
+```
+
+## MCP proxy
+
+```http
+POST /api/v1/connectors/mcp
+```
+
+Proxies a single JSON-RPC request to the open-connector sidecar's `/mcp` endpoint. Curated connectors are not reachable through this surface.
+
+### Example request
+
+```bash
+curl -X POST https://api.allternit.com/api/v1/connectors/mcp \
+  -H "Authorization: Bearer $TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "jsonrpc": "2.0",
+    "id": 1,
+    "method": "tools/list",
+    "params": {}
+  }'
+```
+
+## Error codes
+
+| Status | Code | Meaning |
+|--------|------|---------|
+| `200 OK` | — | Success. |
+| `400 Bad Request` | `unsupported_auth_type` | The `via` auth type is not supported. |
+| `400 Bad Request` | `api_key_required` | Missing API key for an `api_key` connector. |
+| `400 Bad Request` | `local_cli_missing` | Required CLI binary not found. |
+| `400 Bad Request` | `local_cli_not_authenticated` | CLI binary exists but is not logged in. |
+| `401 Unauthorized` | — | Missing or invalid bearer token. |
+| `404 Not Found` | `connector_not_found` | Connector id not in catalog or sidecar. |
+| `409 Conflict` | `not_connected` | Execute or refresh called before connect. |
+| `409 Conflict` | `duplicate_name` | Server-side naming conflict. |
+| `502 Bad Gateway` | `sidecar_unavailable` | The open-connector sidecar is unreachable. |
+| `502 Bad Gateway` | `provider_request_failed` | Upstream provider request failed. |
+
+## Related pages
+
+- [Authentication](/api/authentication)
+- [MCP Servers API](/api/mcp-servers)
+- [Server Tools API](/api/server-tools)
+- [Design Connector API](/api/design-connector)

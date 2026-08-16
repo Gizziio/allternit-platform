@@ -1,8 +1,8 @@
 import SwiftUI
 
-/// Bottom-sheet agent picker (mockup B2, docs/agent-hub-options.html):
-/// the platform's Agent Hub condensed to a quick-switcher — "Default
-/// agent" plus every registry agent valid for this surface, one tap to
+/// Bottom-sheet agent | bot picker (mockup B2, docs/agent-hub-options.html):
+/// the platform's agent | bot hub condensed to a quick-switcher — "Default
+/// agent/bot" plus every registry agent valid for this surface, one tap to
 /// select. Presented by `AgentSelectionMenu` (the deck pill) on chat and
 /// cowork; the selection itself lives in AgentModeStore, per surface,
 /// persisted.
@@ -23,7 +23,7 @@ struct AgentSelectionSheet: View {
                 LazyVStack(spacing: 8) {
                     // Section label — same caps style as the hub's.
                     HStack {
-                        Text("CHOOSE AGENT")
+                        Text("CHOOSE AGENT | BOT")
                             .font(.system(size: 11, weight: .bold))
                             .tracking(1)
                             .foregroundColor(Color("TextSecondary"))
@@ -52,8 +52,8 @@ struct AgentSelectionSheet: View {
                             .padding(.vertical, 8)
                     }
 
-                    actionCard("New agent from template", systemImage: "plus", action: openHub)
-                    actionCard("Manage agents", systemImage: "cpu", action: openHub)
+                    actionCard("New from template", systemImage: "plus", action: openHub)
+                    actionCard("agent | bot hub", systemImage: "cpu", action: openHub)
                 }
                 .padding(.horizontal, 20)
                 .padding(.vertical, 16)
@@ -100,7 +100,7 @@ struct AgentSelectionSheet: View {
 
                 VStack(alignment: .leading, spacing: 2) {
                     HStack(spacing: 6) {
-                        Text(agent?.name ?? "Default agent")
+                        Text(agent?.name ?? "Default agent/bot")
                             .font(.system(size: 14, weight: .semibold))
                             .foregroundColor(Color("TextPrimary"))
                             .lineLimit(1)

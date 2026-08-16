@@ -80,6 +80,10 @@ pub struct CompanyConfig {
     #[serde(rename = "cronDaemonUrl")]
     pub cron_daemon_url: Option<String>,
 
+    /// URL of the Etrid native agent wallet service.
+    #[serde(rename = "etridUrl")]
+    pub etrid_url: Option<String>,
+
     /// When true, the packaged app runs in self-hosted mode. Clerk JWT
     /// verification is skipped and the desktop bootstrap headers are trusted
     /// instead. This is for deployments where the app bundle is the authority
@@ -147,6 +151,10 @@ pub struct UserConfig {
     /// Cron daemon URL.
     #[serde(rename = "cronDaemonUrl")]
     pub cron_daemon_url: Option<String>,
+
+    /// Etrid native agent wallet service URL.
+    #[serde(rename = "etridUrl")]
+    pub etrid_url: Option<String>,
 
     /// First-start wizard tracking (OpenClaw-style versioning).
     #[serde(rename = "wizard")]
@@ -418,6 +426,16 @@ impl AppConfig {
             .unwrap_or_else(|| "http://127.0.0.1:8080".to_string())
     }
 
+    /// URL of the Etrid native agent wallet service.
+    pub fn etrid_url(&self) -> String {
+        std::env::var("ALLTERNIT_ETRID_URL")
+            .ok()
+            .filter(|s| !s.is_empty())
+            .or_else(|| self.user.etrid_url.clone())
+            .or_else(|| self.company.etrid_url.clone())
+            .unwrap_or_else(|| "http://127.0.0.1:8723".to_string())
+    }
+
     /// Rails workspace ID for this deployment.
     pub fn rails_workspace_id(&self) -> String {
         std::env::var("ALLTERNIT_RAILS_WORKSPACE_ID")
@@ -682,6 +700,11 @@ impl AppConfig {
                 self.user.cron_daemon_url = Some(v);
             }
         }
+        if let Ok(v) = std::env::var("ALLTERNIT_ETRID_URL") {
+            if !v.is_empty() {
+                self.user.etrid_url = Some(v);
+            }
+        }
     }
 }
 
@@ -801,6 +824,8 @@ pub struct SaveUserConfigPayload {
     pub agent_workdir: Option<String>,
     #[serde(rename = "cronDaemonUrl")]
     pub cron_daemon_url: Option<String>,
+    #[serde(rename = "etridUrl")]
+    pub etrid_url: Option<String>,
     #[serde(rename = "wizard")]
     pub wizard: Option<WizardState>,
 }
@@ -822,6 +847,7 @@ impl From<SaveUserConfigPayload> for UserConfig {
             voice_url: None,
             agent_workdir: payload.agent_workdir,
             cron_daemon_url: payload.cron_daemon_url,
+            etrid_url: payload.etrid_url,
             wizard: payload.wizard,
             permission_policies: None,
             active_permission_policy: None,

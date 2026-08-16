@@ -1,0 +1,145 @@
+---
+title: Estimates
+description: Token and cost estimation for the Allternit LLM gateway
+---
+
+## Overview
+
+The Estimates API lets you preview token counts and costs before sending a request to a model. This is useful for budgeting, comparing models, and validating prompt sizes.
+
+## Base URL
+
+```
+https://api.allternit.com/v1
+```
+
+For local development:
+
+```
+http://127.0.0.1:8013/v1
+```
+
+## Endpoints
+
+| Method | Path | Description |
+|--------|------|-------------|
+| `POST` | `/v1/estimates/tokens` | Estimate input tokens for a chat-completion-shaped body |
+| `POST` | `/v1/estimates/cost` | Estimate token counts and cost |
+
+## Authentication
+
+All requests require a virtual key in the `Authorization` header. See [Authentication](/api/authentication).
+
+## Estimate tokens
+
+### Request body
+
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| `model` | string | yes | Model id or policy alias. |
+| `messages` | array | yes | Chat messages. Must contain at least one message. |
+| `tools` | array | no | Tool definitions to include in the token count. |
+
+### Example request
+
+```bash
+curl -X POST https://api.allternit.com/v1/estimates/tokens \
+  -H "Authorization: Bearer $ALLTERNIT_API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "model": "auto",
+    "messages": [
+      {"role": "system", "content": "You are a helpful assistant."},
+      {"role": "user", "content": "Explain the Allternit LLM gateway in one paragraph."}
+    ]
+  }'
+```
+
+### Example response
+
+```json
+{
+  "object": "token_estimate",
+  "model": "auto",
+  "input_tokens": 42,
+  "details": {
+    "message_tokens": 38,
+    "tool_tokens": 0
+  }
+}
+```
+
+## Estimate cost
+
+### Request body
+
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| `model` | string | yes | Model id or policy alias. |
+| `messages` | array | yes | Chat messages. Must contain at least one message. |
+| `max_tokens` | integer | no | Expected output tokens. |
+| `tools` | array | no | Tool definitions to include in the estimate. |
+
+### Example request
+
+```bash
+curl -X POST https://api.allternit.com/v1/estimates/cost \
+  -H "Authorization: Bearer $ALLTERNIT_API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "model": "auto",
+    "messages": [
+      {"role": "system", "content": "You are a helpful assistant."},
+      {"role": "user", "content": "Explain the Allternit LLM gateway in one paragraph."}
+    ],
+    "max_tokens": 256
+  }'
+```
+
+### Example response
+
+```json
+{
+  "object": "cost_estimate",
+  "model": "auto",
+  "input_tokens": 42,
+  "output_tokens": 256,
+  "total_tokens": 298,
+  "cost": {
+    "currency": "USD",
+    "input_cents": 0.00105,
+    "output_cents": 0.01280,
+    "total_cents": 0.01385
+  },
+  "details": {
+    "message_tokens": 38,
+    "tool_tokens": 0,
+    "pricing": {
+      "input_per_million_tokens": 2.50,
+      "output_per_million_tokens": 50.00
+    }
+  }
+}
+```
+
+## Estimation methodology
+
+- Token counts use a heuristic of approximately 4 characters per token plus a per-message overhead.
+- Cost is computed from the gateway pricing cache. If a model is not in the cache, the gateway falls back to conservative default rates.
+- Pricing is expressed in cents and is normalized per 1 million tokens.
+
+## Error codes
+
+| HTTP status | Code | Meaning |
+|-------------|------|---------|
+| 400 | `allternit.invalid_request` | Empty `messages` or invalid `model`. |
+| 401 | `allternit.authentication_failed` | Missing or invalid API key. |
+| 429 | `allternit.rate_limited` | Per-key rate limit exceeded. |
+| 429 | `allternit.budget_exceeded` | Monthly key or tenant budget exhausted. |
+| 500 | `allternit.internal_error` | Internal gateway error. |
+
+## Related pages
+
+- [Chat Completions](/api/chat-completions) — request shape used for estimates
+- [Models](/api/models) — model registry and pricing
+- [Token Budgets](/guides/token-budgets) — budgeting guidance

@@ -27,6 +27,8 @@ This tracker is the single source of truth for status, scope, and next actions f
 | 1.4 | **phone-harness** | ✅ Done | Agent swarm | `ao/p1-phone-harness` | Python Flask adapter under `platform/phone-harness/`. iPhone Mirroring window discovery + `/health`, `/devices`, `/action`. `py_compile` clean. |
 | 1.5 | **Unsloth training backend** | ✅ Done | Agent swarm | `ao/p1-unsloth` | Model Lab worker under `services/model-lab/` + Rust proxy + API routes in `cmd/allternit-api/src/model_lab_routes.rs`. `cargo check` clean; 385 `allternit-api` tests passing. |
 | 1.6 | **treg connector** | ✅ Done | Agent swarm | `ao/p1-treg-2` | Rust crate `platform/agent-tools-router/` with manifest loader, schema translator, `/health`, `/tools`, `/tools/{id}/execute`. `cargo check` clean; 4 smoke tests passing. |
+| 1.7 | **Allternit Local Engine** | ✅ Done | This session | `ao/p1-local-engine` | Native local model serving layer for Allternit Model Lab. Controller service (`services/local-engine/`) + runtime recipes (vLLM/SGLang/llama.cpp/MLX) + model cache + GPU monitoring + OpenAI-compatible proxy. `/api/local-engine/*` proxy routes in `cmd/allternit-api`. Model Lab UI extended with Engine + Playground tabs; Unsloth jobs get **Serve locally** action. `cargo check` clean; 15 tests passing. |
+| 1.8 | **ApiTap / HAR-derived API Capture** | ✅ Done | This session | `ao/p1-apitap-capture` | Native capture→derive→replay subsystem. Rust service (`services/api-capture/`) with HAR v1.2 parser, SQLite persistence, contract derivation, replay executor, and `/api/api-capture/*` proxy. Surface UI panel **Site APIs** registered in rail. Cross-surface integration: `api_capture_*` tools added to `sdk/computer-use` MCP specs, `packages/computer-use` plugin tool belt, and `allternit-os/kernel/AgentTools.ts` agent runtime. Browser toolbar has a **Record network requests** toggle that injects a HAR recorder into the active webview/iframe, ingests traffic, and derives a Site API contract. `cargo check` clean; 4 integration tests passing. TypeScript typecheck clean for touched files.
 
 ---
 
@@ -51,6 +53,7 @@ This tracker is the single source of truth for status, scope, and next actions f
 | 2.15 | Vercel agent plugin adapter | ✅ Done | Agent swarm | `ao/p2-vercel-agent-plugin` | `VercelAgentPluginAdapter` + schema + registry + 13 tests. `bun test` and `tsc --noEmit` clean. |
 | 2.16 | Qwen-MM-Plugins | ✅ Done | Agent swarm | `ao/p1-qwen-mm-plugins` | `QwenMMPluginAdapter` + schema + registry helper + 10 tests. `bun test` clean. |
 | 2.17 | openresearch-cli / hyperresearch | ✅ Done | Agent swarm | `ao/p1-openresearch-tools` | `allternit-agent-tools-router` crate + OpenResearch/HyperResearch adapters + API routes + `gizzi research` CLI. 6 tests passing. |
+| 2.18 | **Unsloth guides & notebooks feed** | ⏳ Queued | — | — | Discovery section inside Model Lab that surfaces Unsloth docs, model-specific guides, and free fine-tuning notebooks (e.g., Muse Glimmer 30B, GRPO RL). Users can browse, filter by model/task, and launch a notebook into a training job. |
 
 ---
 
@@ -61,8 +64,8 @@ This tracker is the single source of truth for status, scope, and next actions f
 | 3.1 | OpenTag (Slack/Teams bridge) | ❌ Rejected as tagging solution | Audit | — | Misidentified initially; OpenTag is a Slack/Teams agent, not a tagging UI. Reclassify as optional P3 Slack/Teams bridge only if needed. |
 | 3.2 | computer-use-mcp | ✅ Done | Agent swarm | `ao/p3-computer-use-mcp-audit` | Audit report: 28-tool catalog, outcome contract, canonical provider gap analysis. |
 | 3.3 | page-agent | ✅ Done | Agent swarm | `ao/p3-page-agent-promotion` | Shared `services/page-agent/` package + API routes + surface re-exports. `cargo check` and typecheck clean after fix. |
-| 3.4 | apitap.io | ⏸️ Blocked | — | — | Overlaps with existing providers; needs unique value proof. |
-| 3.5 | hermes-eats-world PR | ⏸️ Blocked | — | — | Single PR, immature. |
+| 3.4 | apitap.io | 🔄 Promoted to P1 | — | `ao/p1-apitap-capture` | Unique API-discovery-and-replay capability verified. Now tracked as **1.8 ApiTap / HAR-derived API Capture**. |
+| 3.5 | hermes-eats-world PR | ❌ Rejected | — | — | The repository-level PR is immature. The relevant capability (HAR-derived API client) is captured under **1.8 ApiTap / HAR-derived API Capture**. |
 | 3.6 | GuppyLM | ✅ Done | Agent swarm | `ao/p3-guppylm-audit` | Audit report: 8.7M transformer, ONNX→WASM pipeline, Browser Training tab plan. |
 | 3.7 | loopany.ai templates | ✅ Done | Agent swarm | `ao/p2-loopany-spawn` | 18 curated templates + gallery + import into Automation Tasks. Typecheck clean for touched files. |
 | 3.8 | SPAWN.md | ✅ Done | Agent swarm | `ao/p3-spawn-md-audit` | Audit report: workflow tracks, conformance map, agent creation integration plan. |
@@ -105,23 +108,24 @@ This tracker is the single source of truth for status, scope, and next actions f
 | 2026-08-13 | SPAWN.md audit | Audit report: workflow tracks, conformance map, agent creation integration plan |
 | 2026-08-13 | GuppyLM audit | Audit report: 8.7M transformer, ONNX→WASM pipeline, Browser Training tab plan |
 | 2026-08-13 | Grok Bot (x.ai/bot) audit | Audit report: persistent bots, shared cloud computer, skills/routines, approval model, integration plan |
+| 2026-08-13 | ApiTap research & unblock | Audited ApiTap and Hermes `har-derived-api-client`; promoted ApiTap from blocked to P1 |
+| 2026-08-13 | Allternit Local Engine | `services/local-engine/` + `/api/local-engine/*` proxy + Model Lab Engine/Playground tabs + Unsloth **Serve locally** action; `cargo check` clean; 15 tests passing |
+| 2026-08-13 | ApiTap / HAR-derived API Capture | `services/api-capture/` + `/api/api-capture/*` proxy + Site APIs surface panel; HAR ingest, contract derivation, replay; `cargo check` clean; 4 tests passing |
+| 2026-08-13 | ApiTap cross-surface integration | `sdk/computer-use/src/mcp-tool-spec.ts` + `packages/computer-use/plugins/allternit-computer-use/tools/tool-definitions.ts` + `surfaces/ai.allternit.com/src/allternit-os/kernel/AgentTools.ts` + browser toolbar record toggle + `useApiCaptureRecorder` hook; typecheck clean for touched files; cargo tests passing |
 
 ---
 
 ## Next Actions
 
-All roadmap items are now accounted for. Remaining work is limited to:
-
-1. **Blocked items** — await external prerequisite or unique value proof:
-   - `3.4 apitap.io`
-   - `3.5 hermes-eats-world PR`
-2. **Rejected items** — no further action unless product direction changes:
+1. **Unsloth guides & notebooks feed (2.18)** — design and implement a discovery
+   section in Model Lab that pulls/curates Unsloth guides and notebooks and lets
+   users launch them as training jobs.
+2. **Merge/integration readiness** — schedule the integration sprint to land all
+   validated feature branches (`ao/p1-local-engine`, `ao/p1-apitap-capture`, and
+   earlier P1/P2 branches) into `main` with CI validation.
+3. **Rejected/blocked items** — no action unless product direction changes:
    - `3.1 OpenTag` (as a tagging solution)
    - `3.9 Vercel AI CLI`
-3. **Merge/integration readiness** — P1–P2 implementations are validated in their
-   feature worktrees/branches. The next engineering phase is to review, reconcile,
-   and land each branch into `main` with CI validation. This is outside the current
-   research/scaffold phase and should be scheduled as a separate integration sprint.
 
 ---
 

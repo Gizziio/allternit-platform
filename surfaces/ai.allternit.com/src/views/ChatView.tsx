@@ -6,6 +6,7 @@ import { useChatStore } from "@/views/chat/ChatStore";
 import { useModelSelection } from "@/providers/model-selection-provider";
 import { ModelPicker } from "@/components/model-picker";
 import { AgentContextStrip } from "@/components/agents/AgentContextStrip";
+import type { AgentContextStripProps } from "@/components/agents/context-strip/context-strip.types";
 
 import { ArtifactSidePanel, type SelectedArtifact } from "@/components/ai-elements/artifact-panel";
 import { DEFAULT_LAUNCH_GREETING, getLaunchGreeting, peekLaunchGreeting } from "@/views/chat/main/launchGreeting";
@@ -29,6 +30,11 @@ import type { CanonicalAgentModeId } from "@/lib/agents/agent-mode-contracts";
 import { useUnifiedStore } from "@/lib/agents/unified.store";
 import { useModeCanvasBridge } from "@/hooks/useModeCanvasBridge";
 import { useLocalBrainStatus } from "@/hooks/useLocalBrainStatus";
+import { buildBotRuntimeEnv } from "@/lib/bots/bot-runtime-env";
+import { getBotAccentColor } from "@/lib/bots/bot-profile";
+import type { ResolvedSecret } from "@/lib/agents/agent-secrets-resolver";
+import type { ResolvedConnectorCredential } from "@/lib/agents/agent-connectors-resolver";
+import type { Agent, HarnessConfig } from "@/lib/agents/agent.types";
 import { useVoice } from "@/providers/voice-provider";
 import {
   ComposerPermissionInfoBar,
@@ -51,18 +57,20 @@ import { createModuleLogger } from '@/lib/logger';
 
 const logger = createModuleLogger('ChatView');
 
-export function ChatView({ 
-  hideEmptyState = false, 
+export function ChatView({
+  hideEmptyState = false,
   mode = 'chat',
   initialMessage,
   onInitialMessageSent,
   onOpenAgentSession,
-}: { 
-  hideEmptyState?: boolean, 
+  onStartBotSession,
+}: {
+  hideEmptyState?: boolean,
   mode?: 'chat' | 'cowork' | 'code',
   initialMessage?: string,
   onInitialMessageSent?: () => void,
   onOpenAgentSession?: (text: string, surface: AgentModeSurface, execution?: { modeId: CanonicalAgentModeId; templateTitle?: string }) => void;
+  onStartBotSession?: (agent: Agent) => void;
 }) {
   const { id: chatId } = useChatId();
   const { renameThread } = useChatStore();
@@ -181,6 +189,12 @@ export function ChatView({
   const voiceWasLoadingRef = useRef(false);
   const lastSpokenMessageRef = useRef<string | null>(null);
 
+  const isBotSession = Boolean(activeNativeSession?.metadata?.isBot);
+  const [agentCardDismissed, setAgentCardDismissed] = useState(false);
+  useEffect(() => {
+    setAgentCardDismissed(false);
+  }, [embeddedAgentSession.sessionId]);
+
   useEffect(() => {
     if (activeIsLoading) {
       voiceWasLoadingRef.current = true;
@@ -252,26 +266,11 @@ export function ChatView({
   }, [chatId, chatStreaming, renameThread]);
 
   const dismissEmbeddedAgentSession = useCallback(() => {
-    if (embeddedAgentSession.sessionId) {
-      appendOptimisticEvent(embeddedAgentSession.sessionId, {
-        id: `evt_agent_mode_dismiss_${Date.now()}`,
-        sessionId: embeddedAgentSession.sessionId,
-        actor: 'ui',
-        surface: agentSurface,
-        type: 'agent.mode.changed',
-        payload: {
-          enabled: false,
-          scope: 'surface',
-          reason: 'dismissed',
-        },
-        createdAt: new Date().toISOString(),
-        seq: 0,
-      });
-    }
-    if (embeddedAgentSession.sessionId && embeddedAgentSession.sessionId === activeNativeSessionId) {
-      setActiveNativeSession(null);
-    }
-  }, [activeNativeSessionId, agentSurface, appendOptimisticEvent, embeddedAgentSession.sessionId, setActiveNativeSession]);
+    // Hide the agent context card instead of tearing down the active session.
+    // Previously this closed the session, which caused a crash for bot sessions
+    // and left the user with no way to continue the conversation.
+    setAgentCardDismissed(true);
+  }, []);
 
   const handleScroll = useCallback(() => {
     if (!scrollContainerRef.current) return;
@@ -486,20 +485,74 @@ export function ChatView({
   const hasAgentBinding = Boolean(
     embeddedAgentDescriptor.agentId || embeddedAgentDescriptor.agentName,
   );
-  const embeddedAgentStrip = isAgentSessionEmbedded && hasAgentBinding ? (
+  // For bot sessions, show the context card only while the session is empty.
+  // Once the user starts messaging, the card is hidden so the conversation
+  // owns the screen; the X button safely dismisses it without crashing.
+  const showAgentCard =
+    isAgentSessionEmbedded &&
+    hasAgentBinding &&
+    !agentCardDismissed &&
+    (!isBotSession || nativeMessages.length === 0);
+
+  // Build runtime context for bot sessions so the card shows what the bot
+  // actually has configured (connectors, secrets, harness) and what is missing.
+  const sessionMetadata = embeddedAgentSession.session?.metadata as Record<string, unknown> | undefined;
+  const botRuntimeEnv = useMemo(() => {
+    if (!isBotSession) return undefined;
+    return buildBotRuntimeEnv({
+      harness: (sessionMetadata?.harness as HarnessConfig | undefined) ?? selectedAgent?.harness,
+      resolvedSecrets: (sessionMetadata?.resolvedSecrets as ResolvedSecret[] | undefined) ?? undefined,
+      resolvedConnectors: (sessionMetadata?.resolvedConnectors as ResolvedConnectorCredential[] | undefined) ?? undefined,
+      vmOperator: (sessionMetadata?.vmOperator as Agent['vmOperator']) ?? selectedAgent?.vmOperator,
+    });
+  }, [isBotSession, sessionMetadata, selectedAgent?.harness, selectedAgent?.vmOperator]);
+  const runtimeEnvEntries = useMemo(() => {
+    if (!botRuntimeEnv) return undefined;
+    return Object.entries(botRuntimeEnv.env).map(([key, value]) => ({
+      key,
+      value: String(value),
+      source: 'runtime' as const,
+    }));
+  }, [botRuntimeEnv]);
+  const missingRuntimeKeys = useMemo(() => {
+    if (!isBotSession) return undefined;
+    const missing: string[] = [];
+    const missingSecrets = sessionMetadata?.missingSecrets;
+    const missingConnectors = sessionMetadata?.missingConnectors;
+    if (Array.isArray(missingSecrets)) missing.push(...missingSecrets.map(String));
+    if (Array.isArray(missingConnectors)) missing.push(...missingConnectors.map(String));
+    return missing.length > 0 ? missing : undefined;
+  }, [isBotSession, sessionMetadata]);
+
+  const botProfile = sessionMetadata?.botProfile as { welcomeMessage?: string; tagline?: string; starterPrompts?: string[] } | undefined;
+  const botSessionDescription =
+    embeddedAgentSession.session?.description ||
+    botProfile?.welcomeMessage ||
+    botProfile?.tagline ||
+    selectedAgent?.description;
+
+  const embeddedAgentStrip = showAgentCard ? (
     <AgentContextStrip
       surface={agentSurface}
       sessionName={embeddedAgentSession.session?.name || "Agent Session"}
-      sessionDescription={embeddedAgentSession.session?.description}
+      sessionDescription={botSessionDescription}
       agentName={embeddedAgentDescriptor.agentName || selectedAgent?.name || undefined}
       harnessMode={selectedAgent?.harness?.mode}
-      statusLabel={getAgentSessionStatusLabel(embeddedAgentSession.session)}
+      statusLabel={isBotSession ? "Bot" : getAgentSessionStatusLabel(embeddedAgentSession.session)}
       messageCount={embeddedAgentSession.session?.messageCount ?? nativeMessages.length}
       workspaceScope={embeddedAgentDescriptor.workspaceScope}
       canvasCount={embeddedCanvasIds.length}
       tags={embeddedAgentSession.session?.tags}
       toolsEnabled={embeddedAgentDescriptor.agentFeatures?.tools === true}
       automationEnabled={embeddedAgentDescriptor.agentFeatures?.automation === true}
+      runtimeEnv={botRuntimeEnv?.env}
+      runtimeEnvEntries={runtimeEnvEntries}
+      connectorBindings={(sessionMetadata?.connectorBindings as AgentContextStripProps["connectorBindings"]) ?? selectedAgent?.connectorBindings}
+      secretRefs={(sessionMetadata?.secretRefs as AgentContextStripProps["secretRefs"]) ?? selectedAgent?.secretRefs}
+      missingRuntimeKeys={missingRuntimeKeys}
+      vmOperator={(sessionMetadata?.vmOperator as Agent["vmOperator"]) ?? selectedAgent?.vmOperator}
+      vmSandbox={(sessionMetadata?.vmSandbox as AgentContextStripProps["vmSandbox"]) ?? undefined}
+      accentColor={selectedAgent && isBotSession ? getBotAccentColor(selectedAgent) ?? undefined : undefined}
       onDismiss={dismissEmbeddedAgentSession}
     />
   ) : null;
@@ -532,6 +585,7 @@ export function ChatView({
               greeting={greeting}
               handleSend={handleSend}
               onOpenAgentSession={onOpenAgentSession}
+              onStartBotSession={onStartBotSession}
               agentSurface={agentSurface}
               setMentionAgentId={setMentionAgentId}
               mentionAgentId={mentionAgentId}

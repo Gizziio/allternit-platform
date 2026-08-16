@@ -1,0 +1,31 @@
+[package]
+name = "allternit-etrid"
+version = "0.1.0"
+edition = "2021"
+license = "MIT OR Apache-2.0"
+description = "Allternit-native agent wallet: key management, signing, payments, and vault integration for autonomous bots."
+
+[[bin]]
+name = "etrid"
+path = "src/main.rs"
+
+[lib]
+name = "allternit_etrid"
+path = "src/lib.rs"
+
+[dependencies]
+serde = { workspace = true }
+serde_json = { workspace = true }
+thiserror = { workspace = true }
+chrono = { workspace = true }
+rand = { workspace = true }
+hex = { workspace = true }
+base64 = { workspace = true }
+sha2 = { workspace = true }
+ed25519-dalek = { workspace = true }
+urlencoding = "2"
+axum = { workspace = true }
+tokio = { workspace = true }
+
+[dev-dependencies]
+tempfile = { workspace = true }

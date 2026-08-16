@@ -47,28 +47,43 @@ export function officeTitleFor(target: OfficeTarget): string {
 }
 
 const EDITOR_BY_EXT: Record<string, OfficeFileTarget> = {
+  // Modern Microsoft Office formats
   docx: 'docs',
+  docm: 'docs',
+  // Legacy Microsoft Word formats
+  doc: 'docs',
+  dotx: 'docs',
+  dotm: 'docs',
+  // Modern Microsoft Excel formats
   xlsx: 'sheets',
+  xlsm: 'sheets',
+  xltx: 'sheets',
+  xltm: 'sheets',
+  // Legacy Microsoft Excel formats
+  xls: 'sheets',
+  xlsb: 'sheets',
+  // Modern Microsoft PowerPoint formats
   pptx: 'slides',
+  pptm: 'slides',
+  potx: 'slides',
+  potm: 'slides',
+  ppsx: 'slides',
+  ppsm: 'slides',
+  // Legacy Microsoft PowerPoint formats
+  ppt: 'slides',
+  pps: 'slides',
+  pot: 'slides',
+  // PDF and Markdown
   pdf: 'pdf',
+  md: 'markdown',
   // Formats with no native editor open in the anydoc markdown preview.
-  doc: 'markdown',
-  docm: 'markdown',
-  ppt: 'markdown',
-  pps: 'markdown',
-  pot: 'markdown',
-  pptm: 'markdown',
-  ppsx: 'markdown',
-  ppsm: 'markdown',
-  xls: 'markdown',
-  xlsm: 'markdown',
-  xlsb: 'markdown',
   odt: 'markdown',
   ods: 'markdown',
   odp: 'markdown',
   rtf: 'markdown',
   epub: 'markdown',
   csv: 'markdown',
+  txt: 'markdown',
 };
 
 /** Map a file path/extension to its editor, or null when unsupported. */
@@ -77,10 +92,34 @@ export function editorForFile(filePath: string): OfficeFileTarget | null {
   return EDITOR_BY_EXT[ext] ?? null;
 }
 
+// Flags that do NOT consume the next argv value.
+const BOOLEAN_FLAGS = new Set([
+  '--inspect',
+  '--inspect-brk',
+  '--no-sandbox',
+  '--disable-gpu',
+  '--disable-software-rasterizer',
+  '--enable-logging',
+  '--single-instance',
+]);
+
 /** Find the first office file path in a process argv (file-association launch). */
 export function extractOfficeFileArg(argv: string[]): string | null {
-  for (const value of argv) {
-    if (/^--/.test(value)) continue;
+  let skipNext = false;
+  for (let i = 0; i < argv.length; i++) {
+    const value = argv[i];
+    if (skipNext) {
+      skipNext = false;
+      continue;
+    }
+    if (/^--/.test(value)) {
+      // Treat unknown flags as key/value pairs and skip their value; known
+      // boolean flags are skipped alone so the next arg can still be a file.
+      if (!BOOLEAN_FLAGS.has(value) && i + 1 < argv.length && !/^--/.test(argv[i + 1])) {
+        skipNext = true;
+      }
+      continue;
+    }
     if (editorForFile(value)) return value;
   }
   return null;

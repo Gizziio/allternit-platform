@@ -30,4 +30,7 @@ const mintBin = fs.existsSync(path.join(binDir, 'mint'))
     ? path.join(binDir, 'mintlify')
     : 'mint';
 
-execSync(`${JSON.stringify(mintBin)} validate`, { stdio: 'inherit' });
+execSync(`${JSON.stringify(mintBin)} validate`, {
+  stdio: 'inherit',
+  cwd: path.join(__dirname, '..'),
+});

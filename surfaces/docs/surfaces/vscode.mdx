@@ -1,0 +1,200 @@
+---
+title: VS Code Extension
+description: Gizzi Code for VS Code — AI code assistance, chat, review, and refactoring inside the editor
+---
+
+## Overview
+
+The **Gizzi Code VS Code extension** brings Allternit code assistance directly into Visual Studio Code. It provides commands for explaining, refactoring, generating tests, reviewing, and fixing code, plus an interactive sidebar chat panel.
+
+The extension communicates with any Allternit-compatible API endpoint via the chat-completions protocol.
+
+## Base URL
+
+Install from the `.vsix` package or the VS Code Marketplace when published.
+
+```
+https://marketplace.visualstudio.com/items?itemName=allternit.gizzi-code-vscode
+```
+
+Default API endpoint in settings:
+
+```
+http://localhost:4096
+```
+
+## Commands
+
+| Command | ID | Description |
+|---|---|---|
+| `Gizzi Code: Open Panel` | `gizzi.openPanel` | Focus the Gizzi Code sidebar |
+| `Gizzi Code: Explain Selection` | `gizzi.explainCode` | Explain selected code |
+| `Gizzi Code: Refactor Selection` | `gizzi.refactorCode` | Refactor selected code |
+| `Gizzi Code: Generate Tests` | `gizzi.generateTests` | Generate unit tests for the current file |
+| `Gizzi Code: Review Selection` | `gizzi.reviewCode` | Review selected code for issues |
+| `Gizzi Code: Fix Errors` | `gizzi.fixErrors` | Fix VS Code diagnostics with AI |
+
+## Configuration
+
+| Setting | Default | Description |
+|---|---|---|
+| `gizzi.apiUrl` | `http://localhost:4096` | Allternit API URL |
+| `gizzi.apiKey` | _(empty)_ | Allternit API key |
+| `gizzi.model` | `default` | Default model for code generation |
+| `gizzi.autoContext` | `true` | Include surrounding file context automatically |
+
+Configure in `settings.json`:
+
+```json
+{
+  "gizzi.apiUrl": "https://api.allternit.com",
+  "gizzi.apiKey": "${env:ALLTERNIT_API_KEY}",
+  "gizzi.model": "default",
+  "gizzi.autoContext": true
+}
+```
+
+## Endpoints used
+
+| Method | Path | Description |
+|---|---|---|
+| `POST` | `/v1/chat/completions` | Code explanations, refactoring, tests, review, fixes, and chat |
+
+## Request / response examples
+
+### Explain selection
+
+The extension sends the active editor content and selection:
+
+```json
+{
+  "model": "default",
+  "messages": [
+    {
+      "role": "system",
+      "content": "You are a code explanation assistant..."
+    },
+    {
+      "role": "user",
+      "content": "Explain this code:\n\nFile: src/utils.ts\nLanguage: typescript\n...\nSelected code:\n```typescript\nfunction add(a: number, b: number) { return a + b; }\n```"
+    }
+  ],
+  "max_tokens": 4096,
+  "temperature": 0.7
+}
+```
+
+Response:
+
+```json
+{
+  "choices": [
+    {
+      "message": {
+        "role": "assistant",
+        "content": "This function returns the sum of two numbers."
+      }
+    }
+  ]
+}
+```
+
+### Refactor selection
+
+```json
+{
+  "model": "default",
+  "messages": [
+    {
+      "role": "system",
+      "content": "You are a code refactoring assistant..."
+    },
+    {
+      "role": "user",
+      "content": "Refactor this code:\n\n..."
+    }
+  ],
+  "max_tokens": 4096,
+  "temperature": 0.7
+}
+```
+
+The extension extracts a markdown code block from the response and offers to replace the full document content.
+
+### Generate tests
+
+```json
+{
+  "model": "default",
+  "messages": [
+    {
+      "role": "system",
+      "content": "You are a test generation assistant..."
+    },
+    {
+      "role": "user",
+      "content": "Generate tests for this code:\n\n..."
+    }
+  ],
+  "max_tokens": 4096,
+  "temperature": 0.7
+}
+```
+
+The generated test code is opened in a new untitled editor.
+
+## Sidebar chat
+
+The Gizzi Code sidebar is a webview chat panel. Messages are exchanged between the webview and the extension host:
+
+```typescript
+// webview → extension
+{ type: "userMessage", content: "How do I refactor this?" }
+
+// extension → webview
+{ type: "assistantMessage", content: "..." }
+{ type: "error", content: "Failed to get response: ..." }
+{ type: "chatCleared" }
+```
+
+## Build and install
+
+```bash
+cd surfaces/gizzi-vscode
+npm install
+npm run build
+npx @vscode/vsce package
+```
+
+Install the resulting `.vsix` through VS Code: **Extensions → ⋯ → Install from VSIX...**
+
+Development mode:
+
+```bash
+npm run watch
+# Press F5 in VS Code to launch the Extension Development Host
+```
+
+## Error codes
+
+The extension surfaces errors as VS Code notifications:
+
+| Error | Cause | Fix |
+|---|---|---|
+| `Allternit API error (401)` | Invalid or missing API key | Set `gizzi.apiKey` |
+| `Allternit API error (404)` | Wrong `gizzi.apiUrl` | Verify the endpoint |
+| `Allternit API returned an empty response` | Model produced no content | Retry or change model |
+| `Gizzi Code: No active editor` | Command invoked with no file open | Open a file first |
+
+## Requirements
+
+- VS Code 1.90.0 or later
+- A running Allternit API instance (local or remote)
+- An Allternit API key for authenticated endpoints
+
+## Related links
+
+- [Gizzi Code CLI](/cli/overview)
+- [GitHub Action](/ci-cd/github-action)
+- [API Authentication](/api/authentication)
+- [Chat Completions API](/api/chat-completions)

@@ -17,12 +17,15 @@ export interface CheckoutItem {
   icon?: string;
 }
 
+export type SettlementMethod = 'etrid' | 'card' | 'crypto';
+
 export interface CheckoutModalProps {
   item: CheckoutItem;
   isOpen: boolean;
   onClose: () => void;
-  onConfirm: (item: CheckoutItem) => void;
+  onConfirm: (item: CheckoutItem, method: SettlementMethod) => void;
   isProcessing?: boolean;
+  error?: string;
   className?: string;
 }
 
@@ -40,9 +43,11 @@ export function CheckoutModal({
   onClose,
   onConfirm,
   isProcessing,
+  error,
   className,
 }: CheckoutModalProps) {
   const [acceptedTerms, setAcceptedTerms] = useState(false);
+  const [method, setMethod] = useState<SettlementMethod>('etrid');
 
   if (!isOpen) return null;
 
@@ -152,6 +157,45 @@ export function CheckoutModal({
               </span>
             </label>
           )}
+
+          {/* Payment method for paid */}
+          {!isFree && (
+            <div className="space-y-2">
+              <div className="text-[12px] text-zinc-400">Pay with</div>
+              <div className="grid grid-cols-3 gap-2">
+                {([
+                  { id: 'etrid', label: 'Etrid Wallet' },
+                  { id: 'card', label: 'Card' },
+                  { id: 'crypto', label: 'Crypto' },
+                ] as { id: SettlementMethod; label: string }[]).map((m) => (
+                  <button
+                    key={m.id}
+                    type="button"
+                    onClick={() => setMethod(m.id)}
+                    disabled={isProcessing}
+                    className={`rounded-lg border border-solid px-3 py-2 text-[12px] font-medium transition-colors ${
+                      method === m.id
+                        ? 'border-[var(--accent-primary)] bg-[var(--accent-primary)]/10 text-[var(--accent-primary)]'
+                        : 'border-[var(--border-subtle)] bg-[var(--bg-primary)] text-[var(--text-secondary)] hover:bg-[var(--surface-hover)]'
+                    }`}
+                  >
+                    {m.label}
+                  </button>
+                ))}
+              </div>
+              {method === 'etrid' && (
+                <p className="text-[11px] text-zinc-500">
+                  Settles via your agent's Etrid wallet. If no wallet exists, one will be provisioned.
+                </p>
+              )}
+            </div>
+          )}
+
+          {error && (
+            <div className="rounded-lg bg-red-500/10 border border-red-500/30 p-3 text-[12px] text-[var(--status-error)]">
+              {error}
+            </div>
+          )}
         </div>
 
         {/* Footer */}
@@ -160,7 +204,7 @@ export function CheckoutModal({
             Cancel
           </Button>
           <Button
-            onClick={() => onConfirm(item)}
+            onClick={() => onConfirm(item, method)}
             disabled={!canConfirm || isProcessing}
             className="font-bold h-10 px-6 bg-[var(--accent-primary)] hover:brightness-110"
           >

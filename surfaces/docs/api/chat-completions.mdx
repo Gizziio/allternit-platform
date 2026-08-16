@@ -1,117 +1,207 @@
 ---
-title: Chat Completions API
-description: Send chat messages to LLM models through the Allternit gateway
+title: 'Chat Completions'
+description: 'Send conversational messages to LLM models through the Allternit gateway'
 ---
 
 ## Overview
 
-The Chat Completions API is the primary interface for sending conversational messages to LLM models. It is wire-compatible with the standard chat completions format and supports streaming, tool calling, structured outputs, prompt caching, and reasoning mode.
+The Chat Completions API is the primary gateway surface for sending multi-turn messages to language models. It accepts a standard chat-completions request body, routes the request through the Allternit model selector or to an explicit provider/model pair, and returns a completion in a familiar shape with usage metadata.
+
+The gateway supports non-streaming and streaming responses, tool-call deltas, structured JSON outputs, reasoning controls, multimodal inputs, session reuse, automatic cross-provider failover, and prompt caching.
 
 ## Base URL
 
 ```
-https://api.allternit.com/v1/chat/completions
+https://api.allternit.com/v1
 ```
 
-Or for local development:
+For local development:
 
 ```
-http://127.0.0.1:8013/v1/chat/completions
+http://127.0.0.1:8013/v1
+```
+
+## Endpoints
+
+| Method | Path | Description |
+|--------|------|-------------|
+| `POST` | `/v1/chat/completions` | Create a chat completion |
+| `POST` | `/v1/chat/completions/best_of` | Generate `n` candidates and return the best one (native Allternit surface) |
+| `POST` | `/v1/chat/completions/partial` | Partial / speculative sampling surface |
+| `POST` | `/v1/tokens` | Estimate input tokens and cost for a chat-completions-shaped body |
+| `GET`  | `/v1/rate-limits` | Caller quota snapshot (see [Rate limits](/api/rate-limits)) |
+
+## Authentication
+
+All gateway requests use a virtual key in the `Authorization` header. Keys are created through the [Keys API](/api/authentication) and have the prefix `ak-`.
+
+```bash
+curl https://api.allternit.com/v1/chat/completions \
+  -H "Authorization: Bearer $ALLTERNIT_API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{"model":"auto","messages":[{"role":"user","content":"Hello"}]}'
 ```
 
 ## Create a chat completion
 
-<CodeGroup>
-```bash cURL
-curl https://api.allternit.com/v1/chat/completions \
-  -H "Authorization: Bearer $ALLTERNIT_API_KEY" \
-  -H "Content-Type: application/json" \
-  -d '{
-    "model": "gizzi-pro",
-    "messages": [
-      {"role": "system", "content": "You are a helpful assistant."},
-      {"role": "user", "content": "What is Allternit?"}
-    ]
-  }'
-```
+### Request body
 
-```typescript TypeScript
-import { AllternitClient } from '@allternit/sdk';
-
-const client = new AllternitClient({ apiKey: process.env.ALLTERNIT_API_KEY! });
-
-const response = await client.chat.completions.create({
-  model: 'gizzi-pro',
-  messages: [
-    { role: 'system', content: 'You are a helpful assistant.' },
-    { role: 'user', content: 'What is Allternit?' },
-  ],
-});
-```
-
-```python Python
-import os
-from allternit import Allternit
-
-client = Allternit(api_key=os.environ["ALLTERNIT_API_KEY"])
-
-response = client.chat.completions.create(
-    model="gizzi-pro",
-    messages=[
-        {"role": "system", "content": "You are a helpful assistant."},
-        {"role": "user", "content": "What is Allternit?"},
-    ],
-)
-```
-</CodeGroup>
-
-## Request body
-
-| Parameter | Type | Required | Description |
-|-----------|------|----------|-------------|
-| `model` | string | yes | Model identifier or alias |
-| `messages` | array | yes | Array of message objects |
-| `temperature` | number | no | Sampling temperature (0-2, default 1) |
-| `max_tokens` | integer | no | Maximum tokens in the response |
-| `stream` | boolean | no | Enable streaming (default false) |
-| `tools` | array | no | Tool definitions for function calling |
-| `tool_choice` | string/object | no | Tool selection strategy |
-| `response_format` | object | no | Structured output format |
-| `thinking` | object | no | Enable reasoning mode |
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| `model` | string | yes | Model identifier. Use a policy alias (`auto`, `allternit-balanced`, `allternit-code`, `allternit-reasoning`, `allternit-knowledge`, `allternit-instruct`), an explicit `provider/model` id, or a bare model id. |
+| `messages` | array | yes | Conversation messages. At least one message is required. |
+| `temperature` | number | no | Sampling temperature. Must be between `0` and `2`. |
+| `top_p` | number | no | Nucleus sampling. Must be between `0` and `1`. |
+| `max_tokens` | integer | no | Maximum completion tokens. Must be at least `1` when provided. |
+| `stop` | string \| string[] | no | Stop sequence(s). |
+| `presence_penalty` | number | no | Presence penalty. |
+| `frequency_penalty` | number | no | Frequency penalty. |
+| `stream` | boolean | no | Return a server-sent event stream. Default `false`. |
+| `stream_options` | object | no | `{ "include_usage": true }` to receive a final usage chunk in streams. |
+| `response_format` | object | no | Structured output: `{ "type": "text" }`, `{ "type": "json_object" }`, or `{ "type": "json_schema", "json_schema": { "name": "...", "schema": {...} } }`. |
+| `tools` | array | no | Function-tool definitions. Only `type: "function"` tools are accepted. |
+| `tool_choice` | string \| object | no | Tool-selection strategy. |
+| `parallel_tool_calls` | boolean | no | Whether the model may call multiple tools in parallel. |
+| `reasoning_effort` | string | no | Reasoning control: `none`, `minimal`, `low`, `medium`, `high`, or `xhigh`. |
+| `service_tier` | string | no | Provider service tier: `auto`, `default`, `flex`, `priority`, or `scale`. |
+| `citations` | boolean | no | Ask providers that support source citations to include them. |
+| `context_cache_id` | string | no | Prepend a reusable context cache created via `/v1/context-caches`. |
+| `n` | integer | no | Number of completions for `best_of` sampling. Must be `1`–`10`. |
+| `best_of` | boolean | no | When `true` with `n > 1`, return only the single best candidate. |
+| `user` | string | no | End-user identifier for attribution. |
 
 ### Message object
 
 | Field | Type | Description |
 |-------|------|-------------|
-| `role` | string | `system`, `user`, `assistant`, or `tool` |
-| `content` | string/array | Message content (text or multimodal) |
-| `name` | string | Optional participant name |
-| `cache_control` | object | Prompt caching directive |
+| `role` | string | `system`, `user`, `assistant`, or `tool`. |
+| `content` | string \| array | Text or an array of content parts. |
+| `name` | string | Optional participant name. |
+| `tool_calls` | array | Tool calls emitted by the assistant. |
+| `tool_call_id` | string | Required for `role: "tool"` messages. |
+| `cache_control` | object | Caching directive for supported providers. |
+| `cache` | boolean | Native cache hint. |
+
+### Content parts
+
+A message `content` array may contain:
+
+| `type` | Fields | Description |
+|--------|--------|-------------|
+| `text` | `text` | Plain text. |
+| `image_url` | `image_url.url`, `image_url.detail` | Image URL or base64 data URI. |
+| `input_image` | `input_image.data`, `input_image.format` | Raw base64 image (`png`, `jpeg`, `gif`, `webp`). |
+| `video_url` | `video_url.url`, `video_url.mime_type`, `video_url.data` | Video URL or base64 data URI. |
+| `input_video` | `input_video.data`, `input_video.format` | Raw base64 video (`mp4`, `webm`, `mov`, `mkv`). |
+| (with `file_id`) | `file_id` | Reference a file uploaded via `/v1/files` or a session-scoped upload. |
+
+### Example request
+
+```bash
+curl https://api.allternit.com/v1/chat/completions \
+  -H "Authorization: Bearer $ALLTERNIT_API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "model": "auto",
+    "messages": [
+      {"role": "system", "content": "You are a helpful assistant."},
+      {"role": "user", "content": "What is Allternit?"}
+    ],
+    "temperature": 0.7,
+    "max_tokens": 256
+  }'
+```
+
+### Example response
+
+```json
+{
+  "id": "chatcmpl-abc123",
+  "object": "chat.completion",
+  "created": 1723500000,
+  "model": "auto",
+  "choices": [
+    {
+      "index": 0,
+      "message": {
+        "role": "assistant",
+        "content": "Allternit is an enterprise-grade agentic operating system..."
+      },
+      "finish_reason": "stop"
+    }
+  ],
+  "usage": {
+    "prompt_tokens": 25,
+    "completion_tokens": 100,
+    "total_tokens": 125
+  }
+}
+```
+
+### Response fields
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `id` | string | Completion id (`chatcmpl-...`). |
+| `object` | string | `chat.completion`. |
+| `created` | integer | Unix timestamp. |
+| `model` | string | Requested model string. |
+| `choices` | array | One or more completion choices. |
+| `choices[].message.role` | string | `assistant`. |
+| `choices[].message.content` | string | Generated text. |
+| `choices[].message.tool_calls` | array | Completed tool calls, if any. |
+| `choices[].message.annotations` | array | Source citations when `citations` is enabled. |
+| `choices[].message.refusal` | string | Refusal message when the output is flagged as a refusal. |
+| `choices[].finish_reason` | string | `stop`, `length`, `tool_calls`, `content_filter`, or `refusal`. |
+| `usage` | object | Token counts, including `completion_tokens_details.reasoning_tokens` and `prompt_tokens_details.cached_tokens` when applicable. |
+| `citations` | array | RAG fallback citations for non-native citation providers. |
+
+## Model selection
+
+The `model` field supports three forms:
+
+1. **Policy alias** — `auto`, `allternit-balanced`, `allternit-code`, `allternit-reasoning`, `allternit-knowledge`, or `allternit-instruct`. The gateway scores connected providers against benchmark weights and picks a winner plus a cross-provider fallback chain.
+2. **Explicit provider/model** — e.g. `provider/model`. The gateway uses that pair as the primary and still derives a fallback chain from the balanced scorecard.
+3. **Bare model id** — The gateway looks the model up in the connected catalog and selects the first provider that offers it.
+
+The resolved fallback chain is sent to the runtime and is used automatically on retryable provider failures.
 
 ## Streaming
 
-Set `stream: true` to receive the response as server-sent events:
+Set `stream: true` to receive server-sent events. The stream emits a role chunk, content deltas, optional tool-call deltas, a finish chunk, and (when `stream_options.include_usage` is `true`) a final usage chunk followed by `[DONE]`.
 
-```typescript
-const stream = await client.chat.completions.create({
-  model: 'gizzi-pro',
-  messages: [{ role: 'user', content: 'Tell me a story' }],
-  stream: true,
-});
+```bash
+curl https://api.allternit.com/v1/chat/completions \
+  -H "Authorization: Bearer $ALLTERNIT_API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "model": "auto",
+    "messages": [{"role": "user", "content": "Count to ten"}],
+    "stream": true,
+    "stream_options": {"include_usage": true}
+  }'
+```
 
-for await (const chunk of stream) {
-  process.stdout.write(chunk.choices[0]?.delta?.content || '');
-}
+```text
+data: {"id":"chatcmpl-...","object":"chat.completion.chunk","created":1723500000,"model":"auto","choices":[{"index":0,"delta":{"role":"assistant"}}]}
+
+data: {"id":"chatcmpl-...","object":"chat.completion.chunk","created":1723500000,"model":"auto","choices":[{"index":0,"delta":{"content":"One"}}]}
+
+data: {"id":"chatcmpl-...","object":"chat.completion.chunk","created":1723500000,"model":"auto","choices":[{"index":0,"delta":{},"finish_reason":"stop"}]}
+
+data: {"id":"chatcmpl-...","object":"chat.completion.chunk","created":1723500000,"model":"auto","choices":[],"usage":{"prompt_tokens":10,"completion_tokens":10,"total_tokens":20}}
+
+data: [DONE]
 ```
 
 ## Tool calling
 
+Tool definitions are validated but execution happens inside the Allternit runtime. The final assistant message may include `tool_calls` describing the requested tool invocations.
+
 ```json
 {
-  "model": "gizzi-pro",
-  "messages": [
-    {"role": "user", "content": "What's the weather in Austin?"}
-  ],
+  "model": "auto",
+  "messages": [{"role": "user", "content": "What's the weather in Austin?"}],
   "tools": [
     {
       "type": "function",
@@ -133,12 +223,12 @@ for await (const chunk of stream) {
 
 ## Structured outputs
 
-Enforce JSON schema on the response:
+Enforce a JSON schema on the response:
 
 ```json
 {
-  "model": "gizzi-pro",
-  "messages": [{"role": "user", "content": "Extract data from this text..."}],
+  "model": "auto",
+  "messages": [{"role": "user", "content": "Extract name and age"}],
   "response_format": {
     "type": "json_schema",
     "json_schema": {
@@ -156,70 +246,120 @@ Enforce JSON schema on the response:
 }
 ```
 
-## Prompt caching
+## Reasoning mode
 
-Reduce latency and cost for repeated system prompts:
+Use `reasoning_effort` to request extended thinking:
 
 ```json
 {
+  "model": "allternit-reasoning",
+  "messages": [{"role": "user", "content": "Prove this theorem"}],
+  "reasoning_effort": "high"
+}
+```
+
+## Multimodal inputs
+
+Images and videos are accepted as content parts:
+
+```json
+{
+  "model": "auto",
   "messages": [
     {
-      "role": "system",
-      "content": "You are a code reviewer...",
-      "cache_control": { "type": "ephemeral" }
-    },
-    { "role": "user", "content": "Review this diff..." }
+      "role": "user",
+      "content": [
+        {"type": "text", "text": "What is in this image?"},
+        {"type": "image_url", "image_url": {"url": "https://example.com/image.png"}}
+      ]
+    }
   ]
 }
 ```
 
-## Reasoning mode
+## Session reuse
 
-Enable extended thinking for complex tasks:
+Pass the header `x-allternit-session-id` from a previous completion to continue the same runtime session. Only the last user message is forwarded; the runtime supplies the historical context.
 
-```json
-{
-  "model": "gizzi-pro",
-  "messages": [{"role": "user", "content": "Prove this theorem"}],
-  "thinking": {
-    "type": "enabled",
-    "budget_tokens": 10000
-  }
-}
+```bash
+curl https://api.allternit.com/v1/chat/completions \
+  -H "Authorization: Bearer $ALLTERNIT_API_KEY" \
+  -H "x-allternit-session-id: sess_abc123" \
+  -H "Content-Type: application/json" \
+  -d '{"model":"auto","messages":[{"role":"user","content":"Follow-up question"}]}'
 ```
 
-## Response
+## Idempotency
+
+Include an `Idempotency-Key` header (1–255 ASCII characters) on non-streaming requests. The gateway stores the response body and replays it for identical keys. Keys are scoped to the virtual key and ignored for streaming requests.
+
+```bash
+curl https://api.allternit.com/v1/chat/completions \
+  -H "Authorization: Bearer $ALLTERNIT_API_KEY" \
+  -H "Idempotency-Key: create-user-prompt-42" \
+  -H "Content-Type: application/json" \
+  -d '{"model":"auto","messages":[{"role":"user","content":"Hello"}]}'
+```
+
+## Token and cost estimation
+
+`POST /v1/tokens` returns a token count and cost estimate without invoking a model.
+
+```bash
+curl https://api.allternit.com/v1/tokens \
+  -H "Authorization: Bearer $ALLTERNIT_API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "model": "auto",
+    "messages": [
+      {"role": "system", "content": "You are a helpful assistant."},
+      {"role": "user", "content": "Hello"}
+    ]
+  }'
+```
 
 ```json
 {
-  "id": "chatcmpl-abc123",
-  "object": "chat.completion",
-  "created": 1723500000,
-  "model": "gizzi-pro",
-  "choices": [
-    {
-      "index": 0,
-      "message": {
-        "role": "assistant",
-        "content": "Allternit is an enterprise-grade agentic operating system..."
-      },
-      "finish_reason": "stop"
-    }
-  ],
-  "usage": {
-    "prompt_tokens": 25,
-    "completion_tokens": 100,
-    "total_tokens": 125
+  "object": "token_count",
+  "model": "auto",
+  "input_tokens": 25,
+  "estimated_cost": {
+    "currency": "USD",
+    "input_cost": 0.00005,
+    "output_cost": 0.0002,
+    "total_cost": 0.00025,
+    "priced": true
   }
 }
 ```
 
 ## Error codes
 
-| Code | Meaning |
-|------|---------|
-| `invalid_request` | Malformed request body |
-| `model_not_found` | Unknown model identifier |
-| `rate_limited` | Rate or spend limit exceeded |
-| `context_length_exceeded` | Input exceeds model context window |
-| `budget_exceeded` | Virtual key budget exhausted |
+| HTTP status | Code | Meaning |
+|-------------|------|---------|
+| 400 | `allternit.invalid_request` | Malformed request body or parameter. |
+| 401 | `allternit.authentication_failed` | Missing or invalid API key. |
+| 403 | `allternit.permission_denied` | Model not allowed for this key. |
+| 429 | `allternit.rate_limited` | Per-key rate limit exceeded. |
+| 429 | `allternit.budget_exceeded` | Monthly key or tenant budget exhausted. |
+| 409 | `allternit.idempotency_conflict` | A request with this idempotency key is already in progress. |
+| 400 | `allternit.model_not_found` | Unknown model identifier. |
+| 502 | `allternit.upstream_error` | Runtime or provider returned an error. |
+| 500 | `allternit.internal_error` | Internal gateway error. |
+| 400 | `allternit.content_policy_violation` | Request blocked by the safety classifier. |
+
+## Related pages
+
+- [Models](/api/models) — list models and pricing
+- [Embeddings](/api/embeddings) — text embeddings
+- [Files](/api/files) — upload and reference files
+- [Batches](/api/batches) — asynchronous batch inference
+- [Cache](/api/cache) — reusable prompt caches
+- [Context Caches](/api/context-caches) — reusable message prefixes
+- [Images](/api/images) — image generation and editing
+- [Realtime Audio](/api/realtime-audio) — voice sessions
+- [Vector Stores](/api/vector-stores) — file collections for retrieval
+- [Estimates](/api/estimates) — token and cost estimation
+- [Proxy](/api/proxy) — gateway middleware and routing
+- [Translate](/api/translate) — wire-format translation layer
+- [Authentication](/api/authentication) — virtual keys

@@ -603,6 +603,18 @@ const hyperframesAPI = {
   },
 };
 
+// ─── Browser API Capture ─────────────────────────────────────────────────────
+// Records network traffic from the ACI browser and returns a HAR archive for
+// the platform's HAR-derived API service.
+
+const browserCaptureAPI = {
+  isAvailable: (): Promise<boolean> => ipcRenderer.invoke('browser-capture:is-available'),
+  start: (options?: { filterUrls?: string[] }): Promise<{ success: boolean; sessionId?: string; error?: string }> =>
+    ipcRenderer.invoke('browser-capture:start', options),
+  stop: (sessionId: string): Promise<{ success: boolean; har?: string; error?: string }> =>
+    ipcRenderer.invoke('browser-capture:stop', sessionId),
+};
+
 // ─── Expose ───────────────────────────────────────────────────────────────────
 
 const allternitDesktopAPI = {
@@ -635,6 +647,7 @@ const allternitDesktopAPI = {
   worker: workerAPI,
   hyperframes: hyperframesAPI,
   miniApps: miniAppsAPI,
+  browserCapture: browserCaptureAPI,
 };
 
 contextBridge.exposeInMainWorld('allternit', allternitDesktopAPI);

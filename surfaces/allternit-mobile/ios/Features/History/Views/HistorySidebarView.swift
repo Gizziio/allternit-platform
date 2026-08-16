@@ -290,15 +290,18 @@ struct HistorySidebarView: View {
 
     // MARK: - Filtering
 
-    /// History filtered by active mode (ShellRail mode isolation). Incognito
-    /// (ephemeral) sessions are excluded server-side; no client-side filtering
-    /// happens here.
+    /// History filtered by active mode (ShellRail mode isolation). Bot/agent
+    /// sessions (those with an `agent_id`) live in the agent | bot hub, not in
+    /// Home recents. Code sessions live in Code mode. Incognito (ephemeral)
+    /// sessions are excluded server-side.
     private var visibleGroups: [HistoryGroup] {
         let activeMode = modeStore.mode
         return historyGroups.compactMap { group -> HistoryGroup? in
             let modeSessions = group.sessions.filter { session in
                 guard session.active else { return false }
                 let surface = session.originSurface ?? ""
+                // Bot sessions belong in the agent | bot hub regardless of origin surface.
+                guard session.agentId == nil else { return false }
                 switch activeMode {
                 case .chat, .cowork:
                     return surface == "chat" || surface == "cowork" || surface.isEmpty

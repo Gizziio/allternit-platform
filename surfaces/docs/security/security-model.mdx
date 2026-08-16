@@ -39,7 +39,7 @@ description: Trust boundaries, data flows, and security controls
 Allternit uses two primary authentication modes:
 
 1. **Clerk JWTs** for the web/desktop UI and admin APIs. Sessions are scoped to an organization and role (owner/admin/member).
-2. **Virtual LLM keys** (`ak-…`) for the OpenAI-compatible `/v1` surface. Each key is tied to an organization, optional model allowlist, monthly budget, and rate limit.
+2. **Virtual LLM keys** (`ak-…`) for the wire-compatible `/v1` surface. Each key is tied to an organization, optional model allowlist, monthly budget, and rate limit.
 
 See [SCIM](/security/scim) for enterprise SSO/SCIM provisioning and [Vault](/security/vault) for credential storage.
 
@@ -66,6 +66,6 @@ See [SCIM](/security/scim) for enterprise SSO/SCIM provisioning and [Vault](/sec
 
 Allternit is designed so the hosting infrastructure can be passed to the user:
 
-- The API server, Gizzi runtime, and Rails DAG engine can run on customer-managed infrastructure.
+- The API server, Gizzi runtime, and CommRails DAG engine can run on customer-managed infrastructure.
 - Encryption keys, provider credentials, and IP allow-lists remain under customer control.
 - The `GET /regions` endpoint publishes egress IP ranges for firewall allow-listing.

@@ -5,6 +5,11 @@ import React, { useCallback, useEffect, useState } from 'react';
 import { openInBrowser } from '@/lib/openInBrowser';
 import { MiniAppRuntimeSurface } from '@/views/aci/MiniAppRuntimeSurface';
 import type { InstalledMiniApp } from '@/views/aci/mini-app.types';
+import { Button } from '@/components/ui/button';
+import { Pill } from '@/components/ui/Pill';
+import { Text } from '@/components/typography/Text';
+import { Input } from '@/components/ui/input';
+import { Skeleton } from '@/components/ui/skeleton';
 
 const VAULT_VIEWER_URL = 'http://127.0.0.1:8787';
 const OBSIDIAN_VAULT_NAME_KEY = 'allternit:vault-viewer:obsidian-vault-name';
@@ -92,81 +97,110 @@ export function VaultViewerView() {
   const busy = phase === 'checking' || phase === 'installing' || phase === 'starting';
 
   return (
-    <div className="h-full overflow-auto bg-[var(--bg-primary)] p-8 text-[var(--text-primary)]">
-      <div className="mx-auto flex h-full max-w-6xl flex-col space-y-5">
+    <div className="h-full overflow-auto bg-[var(--bg-elevated)] text-[var(--text-primary)]">
+      <div className="mx-auto flex h-full max-w-6xl flex-col px-8 pt-10 pb-12 gap-5">
         <div className="flex items-start justify-between gap-4">
-          <div>
-            <div className="text-xs font-semibold uppercase tracking-[0.18em] text-[var(--accent-primary)]">Knowledge vault</div>
-            <h1 className="mt-2 text-2xl font-semibold">Vault Viewer</h1>
-            <p className="mt-2 max-w-2xl text-sm leading-6 text-[var(--text-secondary)]">
-              Browse, search, and edit your Allternit knowledge vault — wikilinks, backlinks, graph view, and live
-              editing, powered by a self-hosted, Obsidian-compatible editor pointed at your real vault files.
-            </p>
+          <div className="flex items-center gap-3">
+            <BookOpen size={22} className="text-[var(--accent-primary)] shrink-0" />
+            <div>
+              <Text variant="label" className="text-[10px] uppercase tracking-wide text-[var(--accent-primary)]">Knowledge vault</Text>
+              <h1 className="text-2xl font-semibold text-[var(--text-primary)]">Vault Viewer</h1>
+            </div>
+            <Pill
+              size="sm"
+              icon={status.running
+                ? <CheckCircle size={11} className="text-[var(--status-success)]" />
+                : <Warning size={11} className="text-[var(--status-warning)]" />}
+              className={status.running
+                ? 'border-[var(--status-success)]/30 bg-[var(--status-success)]/10 text-[var(--status-success)]'
+                : 'border-[var(--status-warning)]/30 bg-[var(--status-warning)]/10 text-[var(--status-warning)]'}
+            >
+              {status.running ? 'Running' : 'Offline'}
+            </Pill>
           </div>
-          <div className="flex gap-2">
+          <div className="flex flex-wrap gap-2">
             {editingVaultName ? (
-              <input
+              <Input
                 autoFocus
                 defaultValue={obsidianVaultName}
                 placeholder="Obsidian vault name"
                 onBlur={(e) => { saveVaultName(e.target.value.trim()); setEditingVaultName(false); }}
                 onKeyDown={(e) => { if (e.key === 'Enter') (e.target as HTMLInputElement).blur(); }}
-                className="rounded-lg border border-[var(--border-subtle)] bg-[var(--bg-secondary)] px-3 py-2 text-xs"
+                className="w-44 h-8 text-xs"
               />
             ) : (
-              <button
-                type="button"
+              <Button
+                variant="outline"
+                size="sm"
                 onClick={() => (obsidianVaultName ? openInObsidian() : setEditingVaultName(true))}
                 onDoubleClick={() => setEditingVaultName(true)}
                 disabled={!status.running}
                 title={obsidianVaultName ? `Open in Obsidian (vault: ${obsidianVaultName})` : 'Set your Obsidian vault name first'}
-                className="flex items-center gap-1.5 rounded-lg border border-[var(--border-subtle)] px-3 py-2 text-xs disabled:opacity-50"
               >
                 <BookOpen size={13} />
                 {obsidianVaultName ? 'Open in Obsidian' : 'Set Obsidian vault…'}
-              </button>
+              </Button>
             )}
-            <button
-              type="button"
+            <Button
+              variant="outline"
+              size="sm"
               onClick={() => openInBrowser(VAULT_VIEWER_URL)}
               disabled={!status.running}
-              className="flex items-center gap-1.5 rounded-lg border border-[var(--border-subtle)] px-3 py-2 text-xs disabled:opacity-50"
             >
               <ArrowSquareOut size={13} />
               Open in browser tab
-            </button>
-            <button
-              type="button"
+            </Button>
+            <Button
+              size="sm"
               onClick={() => void openVault()}
               disabled={!miniApps || busy}
-              className="flex items-center gap-1.5 rounded-lg bg-[var(--accent-primary)] px-3 py-2 text-xs text-[var(--bg-primary)] disabled:opacity-50"
             >
               <ArrowSquareOut size={13} />
               {status.running ? 'Vault open' : phase === 'installing' ? 'Installing…' : phase === 'starting' ? 'Starting…' : 'Open Vault'}
-            </button>
+            </Button>
           </div>
         </div>
 
-        {!status.running && (
-          <div className="rounded-2xl border border-[var(--border-subtle)] bg-[var(--bg-secondary)] p-5">
-            <div className="flex items-center gap-3">
-              {status.running ? <CheckCircle size={22} className="text-green-500" /> : <Warning size={22} className="text-[var(--text-muted)]" />}
-              <div className="flex-1">
-                <div className="font-medium">Vault Viewer is not running</div>
-                <div className="mt-1 text-xs text-[var(--text-muted)]">Click "Open Vault" to install (first run only) and start it.</div>
-              </div>
-              <button type="button" onClick={() => void refresh()} disabled={busy} title="Refresh status" className="rounded-lg p-2">
-                <ArrowsClockwise size={15} className={phase === 'checking' ? 'animate-spin' : ''} />
-              </button>
-            </div>
-            {!miniApps && <p className="mt-4 text-xs text-[var(--text-muted)]">Vault Viewer is available in Allternit Desktop.</p>}
-            {message && <p className="mt-4 text-xs text-red-500">{message}</p>}
-            {busy && <CircleNotch size={16} className="mt-4 animate-spin text-[var(--accent-primary)]" />}
+        <Text variant="body" className="max-w-2xl text-sm leading-6 text-[var(--text-secondary)]">
+          Browse, search, and edit your Allternit knowledge vault — wikilinks, backlinks, graph view, and live
+          editing, powered by a self-hosted, Obsidian-compatible editor pointed at your real vault files.
+        </Text>
+
+        {phase === 'checking' ? (
+          <div className="rounded-xl border border-[var(--border-subtle)] bg-[var(--bg-elevated)] p-5">
+            <Skeleton variant="rounded" width="100%" height={120} />
           </div>
-        )}
+        ) : !status.running ? (
+          <div className="rounded-xl border border-[var(--border-subtle)] bg-[var(--bg-elevated)] p-5 space-y-5">
+            <div className="flex items-center gap-3">
+              <Warning size={22} className="text-[var(--status-warning)]" />
+              <div className="flex-1">
+                <Text variant="body" className="font-medium text-[var(--text-primary)]">Vault Viewer is not running</Text>
+                <Text variant="caption" className="text-[var(--text-tertiary)]">Click "Open Vault" to install (first run only) and start it.</Text>
+              </div>
+              <Button variant="ghost" size="icon" onClick={() => void refresh()} disabled={busy} title="Refresh status">
+                <ArrowsClockwise size={15} className={busy ? 'animate-spin' : ''} />
+              </Button>
+            </div>
+
+            {!miniApps && (
+              <Text variant="caption" className="text-[var(--text-tertiary)] block">
+                Vault Viewer is available in Allternit Desktop.
+              </Text>
+            )}
+
+            {message && (
+              <div className="rounded-lg bg-[var(--status-error)]/10 border border-[var(--status-error)]/20 p-3 text-xs text-[var(--status-error)]">
+                {message}
+              </div>
+            )}
+
+            {busy && <CircleNotch size={16} className="animate-spin text-[var(--accent-primary)]" />}
+          </div>
+        ) : null}
 
         {status.running && (
-          <MiniAppRuntimeSurface app={VAULT_VIEWER_APP} title="Vault Viewer" className="min-h-[600px] flex-1 rounded-2xl border border-[var(--border-subtle)]" />
+          <MiniAppRuntimeSurface app={VAULT_VIEWER_APP} title="Vault Viewer" className="min-h-[600px] flex-1 rounded-xl border border-[var(--border-subtle)]" />
         )}
       </div>
     </div>

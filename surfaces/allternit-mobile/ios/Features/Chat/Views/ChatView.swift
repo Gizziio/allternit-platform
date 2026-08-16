@@ -2369,17 +2369,23 @@ private struct TerminalCursor: View {
 
 // MARK: - Gizzi mascot
 
-/// Gizzi mascot perched on the top edge of the composer bar while agent
+/// Agent/bot mascot perched on the top edge of the composer bar while agent
 /// mode is active. It follows the user's finger: touch and drag along the
-/// bar and Gizzi walks that way (leaning into the direction), staying where
+/// bar and it walks that way (leaning into the direction), staying where
 /// it's left — no autonomous movement.
+///
+/// When a default bot is selected, the mascot shows that bot's avatar;
+/// otherwise it falls back to the classic Gizzi image.
 private struct GizziMascotPill: View {
+    @EnvironmentObject private var modeStore: AppModeStore
+    @EnvironmentObject private var agentModeStore: AgentModeStore
+
     /// Committed walk position along the bar (points from center).
     @State private var walkOffset: CGFloat = 0
     /// Live drag translation while a finger is down.
     @GestureState private var dragOffset: CGFloat = 0
 
-    /// Farthest Gizzi may roam from center — keeps it on the composer card.
+    /// Farthest the mascot may roam from center — keeps it on the composer card.
     private let maxWalk: CGFloat = 150
     /// Resting perch, near the card's right corner: clear of the top-deck
     /// pills that hug the card's leading edge when agent mode is on.
@@ -2389,29 +2395,40 @@ private struct GizziMascotPill: View {
         restX + min(max(walkOffset + dragOffset, -maxWalk - restX), maxWalk - restX)
     }
 
+    private var selectedAgent: AgentRecord? {
+        agentModeStore.selectedAgent(for: modeStore.mode)
+    }
+
     var body: some View {
-        Image("GizziMascot")
-            .resizable()
-            .scaledToFit()
-            .frame(width: 44, height: 44)
-            // Lean into the walk direction while being dragged.
-            .rotationEffect(.degrees(dragOffset == 0 ? 0 : (dragOffset > 0 ? 7 : -7)))
-            // Feet sit on the top edge of the card (a few points inside so it
-            // looks grounded, not hovering).
-            .offset(x: totalOffset, y: -38)
-            .contentShape(Rectangle())
-            .gesture(
-                DragGesture(minimumDistance: 3)
-                    .updating($dragOffset) { value, state, _ in
-                        state = value.translation.width
+        Group {
+            if let agent = selectedAgent {
+                AgentAvatarView(agent: agent, size: 44)
+                    .shadow(color: .black.opacity(0.1), radius: 4, x: 0, y: 2)
+            } else {
+                Image("GizziMascot")
+                    .resizable()
+                    .scaledToFit()
+                    .frame(width: 44, height: 44)
+            }
+        }
+        // Lean into the walk direction while being dragged.
+        .rotationEffect(.degrees(dragOffset == 0 ? 0 : (dragOffset > 0 ? 7 : -7)))
+        // Feet sit on the top edge of the card (a few points inside so it
+        // looks grounded, not hovering).
+        .offset(x: totalOffset, y: -38)
+        .contentShape(Rectangle())
+        .gesture(
+            DragGesture(minimumDistance: 3)
+                .updating($dragOffset) { value, state, _ in
+                    state = value.translation.width
+                }
+                .onEnded { value in
+                    withAnimation(.spring(response: 0.4, dampingFraction: 0.72)) {
+                        walkOffset = min(max(walkOffset + value.translation.width, -maxWalk - restX), maxWalk - restX)
                     }
-                    .onEnded { value in
-                        withAnimation(.spring(response: 0.4, dampingFraction: 0.72)) {
-                            walkOffset = min(max(walkOffset + value.translation.width, -maxWalk - restX), maxWalk - restX)
-                        }
-                    }
-            )
-            .transition(.scale.combined(with: .opacity))
-            .accessibilityLabel("Gizzi")
+                }
+        )
+        .transition(.scale.combined(with: .opacity))
+        .accessibilityLabel(selectedAgent?.name ?? "Gizzi")
     }
 }

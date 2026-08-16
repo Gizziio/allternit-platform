@@ -1270,7 +1270,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
           <div className="flex flex-col gap-2">
             {visibleConnectors.map((c) => {
               const isConnected = c.connection?.status === 'connected';
-              const logoUrl = getConnectorLogoUrl(c.base_url);
+              const { url: logoUrl } = getConnectorLogoUrl(c.base_url, c.id);
               return (
                 <div
                   key={c.id}
@@ -1278,11 +1278,16 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                     isConnected ? 'border-[rgba(34,197,94,0.2)] bg-[rgba(34,197,94,0.04)]' : 'border-[var(--border-subtle)]'
                   }`}
                 >
-                  <div className="shrink-0 size-8 rounded-lg overflow-hidden flex items-center justify-center bg-[var(--bg-secondary)]">
+                  <div
+                    className="shrink-0 size-8 rounded-lg overflow-hidden flex items-center justify-center"
+                    style={{ background: 'color-mix(in srgb, var(--accent-primary) 14%, transparent)' }}
+                  >
                     {logoUrl ? (
                       <img src={logoUrl} alt="" className="size-5 object-contain" onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }} />
                     ) : (
-                      <PlugsConnected size={16} className="text-[var(--text-tertiary)]" />
+                      <span className="text-[12px] font-bold uppercase text-[var(--accent-primary)]">
+                        {c.name.charAt(0)}
+                      </span>
                     )}
                   </div>
                   <div className="flex-1 min-w-0">

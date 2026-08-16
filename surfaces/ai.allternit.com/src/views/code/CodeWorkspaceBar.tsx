@@ -84,7 +84,7 @@ export function CodeWorkspaceBar({
   return (
     <div
       data-testid="code-workspace-bar"
-      className="relative z-0 w-full h-[56px] -mb-3 box-border bg-input-bg border-t border-r border-l border-input-border rounded-t-2xl px-4 pb-3 flex items-center gap-3 animate-deck-rise"
+      className="relative z-0 w-full h-[56px] -mb-3 box-border bg-[var(--chat-composer-bg)]/60 border-t border-r border-l border-[var(--chat-composer-border)]/60 rounded-t-2xl px-4 pb-3 flex items-center gap-3 animate-deck-rise backdrop-blur-md"
     >
       <EnvironmentPill />
 
@@ -131,10 +131,10 @@ function Pill({
       data-testid={testId}
       onClick={onClick}
       className={cn(
-        'flex items-center gap-1.5 h-7 pl-2 pr-1.5 rounded-full text-xs font-semibold border transition-all shrink-0',
+        'flex items-center gap-1.5 h-7 pl-2 pr-1.5 rounded-full text-xs font-semibold border backdrop-blur-md transition-all shrink-0',
         isOpen
-          ? 'bg-composer-hover border-composer-border text-primary'
-          : 'bg-composer-soft border-composer-border text-secondary hover:text-primary hover:bg-composer-hover'
+          ? 'bg-[var(--glass-bg)]/80 border-[var(--border-subtle)]/60 text-[var(--text-primary)] shadow-sm'
+          : 'bg-[var(--glass-bg)]/60 border-[var(--border-subtle)]/50 text-[var(--text-primary)] hover:bg-[var(--glass-bg)]/80'
       )}
     >
       {children}

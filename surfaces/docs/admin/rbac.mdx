@@ -1,0 +1,207 @@
+---
+title: RBAC
+description: Define custom roles and groups for fine-grained access control inside an organization.
+---
+
+# RBAC
+
+The Role-Based Access Control (RBAC) API lets organization admins define custom roles, bundle them into groups, and assign users to those groups. It layers on top of the built-in organization roles (`owner`, `admin`, `member`) and is scoped to a single organization.
+
+## Base URL
+
+```text
+/api/v1/admin
+```
+
+## Role endpoints
+
+| Method | Path | Description |
+|--------|------|-------------|
+| `POST` | `/api/v1/admin/rbac_roles` | Create a role |
+| `GET` | `/api/v1/admin/rbac_roles` | List roles |
+| `GET` | `/api/v1/admin/rbac_roles/:id` | Get a role |
+| `PUT` | `/api/v1/admin/rbac_roles/:id` | Update a role |
+| `DELETE` | `/api/v1/admin/rbac_roles/:id` | Delete a role |
+
+## Group endpoints
+
+| Method | Path | Description |
+|--------|------|-------------|
+| `POST` | `/api/v1/admin/rbac_groups` | Create a group |
+| `GET` | `/api/v1/admin/rbac_groups` | List groups |
+| `GET` | `/api/v1/admin/rbac_groups/:id` | Get a group |
+| `PUT` | `/api/v1/admin/rbac_groups/:id` | Update a group |
+| `DELETE` | `/api/v1/admin/rbac_groups/:id` | Delete a group |
+| `GET` | `/api/v1/admin/rbac_groups/:id/members` | List group members |
+| `POST` | `/api/v1/admin/rbac_groups/:id/members` | Add a member |
+| `DELETE` | `/api/v1/admin/rbac_groups/:id/members/:user_id` | Remove a member |
+
+## Roles vs. groups
+
+- **Role** — a named set of permissions, such as `["read:agents", "run:agents"]`.
+- **Group** — a named bundle of role IDs. Users added to the group inherit the combined permissions of those roles.
+
+## Create a role
+
+```bash
+curl -X POST https://api.allternit.com/api/v1/admin/rbac_roles \
+  -H "Authorization: Bearer $ADMIN_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "name": "Agent Reader",
+    "permissions": ["read:agents", "read:runs"]
+  }'
+```
+
+### Request body
+
+```json
+{
+  "name": "Agent Reader",
+  "permissions": ["read:agents", "read:runs"]
+}
+```
+
+### Response
+
+```json
+{
+  "id": "role_01hqx8x7x7x7x7x7x7x7x7x",
+  "name": "Agent Reader",
+  "permissions": ["read:agents", "read:runs"],
+  "created_by": "usr_01hqx8x7x7x7x7x7x7x7x7x",
+  "created_at": "2026-08-13T18:00:00Z",
+  "updated_at": "2026-08-13T18:00:00Z"
+}
+```
+
+## List roles
+
+```bash
+curl -X GET https://api.allternit.com/api/v1/admin/rbac_roles \
+  -H "Authorization: Bearer $ADMIN_TOKEN"
+```
+
+### Response
+
+```json
+{
+  "roles": [
+    {
+      "id": "role_01hqx8x7x7x7x7x7x7x7x7x",
+      "name": "Agent Reader",
+      "permissions": ["read:agents", "read:runs"],
+      "created_by": "usr_01hqx8x7x7x7x7x7x7x7x7x",
+      "created_at": "2026-08-13T18:00:00Z",
+      "updated_at": "2026-08-13T18:00:00Z"
+    }
+  ]
+}
+```
+
+## Update a role
+
+```bash
+curl -X PUT https://api.allternit.com/api/v1/admin/rbac_roles/role_01hqx8x7x7x7x7x7x7x7x7x \
+  -H "Authorization: Bearer $ADMIN_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "name": "Agent Operator",
+    "permissions": ["read:agents", "run:agents", "read:runs"]
+  }'
+```
+
+### Response
+
+```json
+{
+  "id": "role_01hqx8x7x7x7x7x7x7x7x7x",
+  "name": "Agent Operator",
+  "permissions": ["read:agents", "run:agents", "read:runs"],
+  "created_by": "usr_01hqx8x7x7x7x7x7x7x7x7x",
+  "created_at": "2026-08-13T18:00:00Z",
+  "updated_at": "2026-08-13T18:05:00Z"
+}
+```
+
+## Create a group
+
+```bash
+curl -X POST https://api.allternit.com/api/v1/admin/rbac_groups \
+  -H "Authorization: Bearer $ADMIN_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "name": "Engineering",
+    "role_ids": ["role_01hqx8x7x7x7x7x7x7x7x7x"]
+  }'
+```
+
+### Request body
+
+```json
+{
+  "name": "Engineering",
+  "role_ids": ["role_01hqx8x7x7x7x7x7x7x7x7x"]
+}
+```
+
+### Response
+
+```json
+{
+  "id": "group_01hqx8x7x7x7x7x7x7x7x7x",
+  "name": "Engineering",
+  "role_ids": ["role_01hqx8x7x7x7x7x7x7x7x7x"],
+  "created_by": "usr_01hqx8x7x7x7x7x7x7x7x7x",
+  "created_at": "2026-08-13T18:00:00Z",
+  "updated_at": "2026-08-13T18:00:00Z"
+}
+```
+
+All `role_ids` must exist in the same organization.
+
+## Add a member to a group
+
+```bash
+curl -X POST https://api.allternit.com/api/v1/admin/rbac_groups/group_01hqx8x7x7x7x7x7x7x7x7x/members \
+  -H "Authorization: Bearer $ADMIN_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{"user_id": "usr_01hqx8x7x7x7x7x7x7x7x7x"}'
+```
+
+### Response
+
+```json
+{
+  "group_id": "group_01hqx8x7x7x7x7x7x7x7x7x",
+  "user_id": "usr_01hqx8x7x7x7x7x7x7x7x7x"
+}
+```
+
+## Remove a member from a group
+
+```bash
+curl -X DELETE https://api.allternit.com/api/v1/admin/rbac_groups/group_01hqx8x7x7x7x7x7x7x7x7x/members/usr_01hqx8x7x7x7x7x7x7x7x7x \
+  -H "Authorization: Bearer $ADMIN_TOKEN"
+```
+
+Returns `204 No Content` on success.
+
+## Error codes
+
+| Status | Code | Description |
+|--------|------|-------------|
+| `400` | `invalid_name` | Name must be 1–128 characters. |
+| `400` | `invalid_permissions` | Permissions must not contain empty strings. |
+| `400` | `invalid_role_id` | A role ID in the group does not exist. |
+| `403` | `organization_required` | Caller is not associated with an organization. |
+| `403` | `insufficient_role` | Caller is not an organization owner or admin. |
+| `404` | `role_not_found` | Role does not exist. |
+| `404` | `group_not_found` | Group does not exist. |
+| `404` | `member_not_found` | User is not a member of the group. |
+
+## Related pages
+
+- [Workspaces](/admin/workspaces) — workspace membership and IP allowlists
+- [Service accounts](/admin/service-accounts) — machine identities for automation
+- [Federation](/admin/federation) — map external identity claims to workspace roles

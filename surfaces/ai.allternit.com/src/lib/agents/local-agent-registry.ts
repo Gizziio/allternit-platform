@@ -138,6 +138,20 @@ function coerceAgent(value: unknown): Agent | null {
     trustTier: typeof value.trustTier === "string" ? (value.trustTier as unknown as Agent["trustTier"]) : "standard",
     writeScope: typeof value.writeScope === "string" ? value.writeScope : "workspace",
     characterLayer: isRecord(value.characterLayer) ? (value.characterLayer as unknown as Agent["characterLayer"]) : undefined,
+    isBot: value.isBot === true,
+    botProfile: isRecord(value.botProfile) ? (value.botProfile as unknown as Agent["botProfile"]) : undefined,
+    connectorBindings: Array.isArray(value.connectorBindings)
+      ? (value.connectorBindings as unknown as Agent["connectorBindings"])
+      : undefined,
+    secretRefs: Array.isArray(value.secretRefs)
+      ? (value.secretRefs as unknown as Agent["secretRefs"])
+      : undefined,
+    messagingConfig: isRecord(value.messagingConfig)
+      ? (value.messagingConfig as unknown as Agent["messagingConfig"])
+      : undefined,
+    identityChannels: isRecord(value.identityChannels)
+      ? (value.identityChannels as unknown as Agent["identityChannels"])
+      : undefined,
   };
 }
 
@@ -220,6 +234,12 @@ function toAgent(input: CreateAgentInput): Agent {
       progression: { class: "Agent", relevantStats: [], level: { maxLevel: 99, xpFormula: "linear" } },
       avatar: { type: "mascot", mascot: { template: "bot" }, style: { primaryColor: "#6366f1", accentColor: "#1e1c1a" } },
     },
+    isBot: input.isBot === true,
+    botProfile: isRecord(input.botProfile) ? (input.botProfile as unknown as Agent["botProfile"]) : undefined,
+    connectorBindings: input.connectorBindings,
+    secretRefs: input.secretRefs,
+    messagingConfig: input.messagingConfig,
+    identityChannels: input.identityChannels,
     config: {
       ...(isRecord(input.config) ? input.config : {}),
       localRegistry: {
@@ -323,6 +343,22 @@ export function updateLocalAgent(
     trustTier: updates.trustTier !== undefined ? updates.trustTier : current.trustTier,
     writeScope: updates.writeScope !== undefined ? updates.writeScope : current.writeScope,
     characterLayer: updates.characterLayer !== undefined ? updates.characterLayer : current.characterLayer,
+    isBot: updates.isBot !== undefined ? updates.isBot : current.isBot,
+    botProfile: updates.botProfile !== undefined ? updates.botProfile : current.botProfile,
+    connectorBindings:
+      updates.connectorBindings !== undefined
+        ? updates.connectorBindings
+        : current.connectorBindings,
+    secretRefs:
+      updates.secretRefs !== undefined ? updates.secretRefs : current.secretRefs,
+    messagingConfig:
+      updates.messagingConfig !== undefined
+        ? updates.messagingConfig
+        : current.messagingConfig,
+    identityChannels:
+      updates.identityChannels !== undefined
+        ? updates.identityChannels
+        : current.identityChannels,
     updatedAt: new Date().toISOString(),
   };
 

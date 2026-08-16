@@ -17,6 +17,8 @@ interface AgentMentionDropdownProps {
   /** Unified plugins + connectors section (pre-filtered by the composer). */
   pluginTargets?: PluginMentionTarget[];
   onSelectPluginTarget?: (target: PluginMentionTarget) => void;
+  /** Currently selected bot/agent in the composer. */
+  activeAgentId?: string | null;
 }
 
 const THEME = {
@@ -39,12 +41,16 @@ export function AgentMentionDropdown({
   position,
   pluginTargets = [],
   onSelectPluginTarget,
+  activeAgentId,
 }: AgentMentionDropdownProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const itemRefs = useRef<(HTMLButtonElement | null)[]>([]);
 
-  const filtered = agents.filter((agent) =>
-    agent.name.toLowerCase().includes(query.toLowerCase())
+  const botAgents = agents.filter((agent) => agent.isBot === true);
+  const filtered = botAgents.filter((agent) =>
+    (agent.botProfile?.displayName ?? agent.name)
+      .toLowerCase()
+      .includes(query.toLowerCase())
   );
   const targetOffset = filtered.length;
 
@@ -89,7 +95,7 @@ export function AgentMentionDropdown({
           color: THEME.textSecondary,
         }}
       >
-        No agents, plugins, or connectors matching "{query}"
+        No bots or connectors matching "{query}"
       </div>
     );
   }
@@ -126,7 +132,7 @@ export function AgentMentionDropdown({
               textTransform: "uppercase",
             }}
           >
-            Mention an agent
+            Mention a bot
           </div>
           <div style={{ overflowY: "auto", padding: 6, flexShrink: 0, maxHeight: 140 }}>
             {filtered.map((agent, index) => {
@@ -177,6 +183,19 @@ export function AgentMentionDropdown({
                     style={{ background: 'transparent', border: 'none', padding: 0, flex: 1 }}
                     onClick={() => onSelect(agent)}
                   />
+                  {activeAgentId && activeAgentId !== agent.id && (
+                    <span
+                      style={{
+                        marginLeft: 'auto',
+                        fontSize: 10,
+                        fontWeight: 600,
+                        color: THEME.accent,
+                        whiteSpace: 'nowrap',
+                      }}
+                    >
+                      Handoff
+                    </span>
+                  )}
                 </button>
               );
             })}

@@ -14,13 +14,13 @@ export interface OfficeSuiteSectionProps {
 }
 
 interface EditorCard {
-  id: 'docs' | 'sheets' | 'slides' | 'pdf'
+  id: 'docs' | 'sheets' | 'slides' | 'pdf' | 'sign'
   name: string
   description: string
   formats: string[]
 }
 
-/** Open-a-file targets: the four editors plus the anydoc markdown preview. */
+/** Open-a-file targets: the editors, Allternit Sign, plus the anydoc markdown preview. */
 type RouteTarget = EditorCard['id'] | 'markdown-preview'
 
 const EDITORS: EditorCard[] = [
@@ -48,6 +48,12 @@ const EDITORS: EditorCard[] = [
     description: 'PDF viewing with pdf.js rendering, page navigation, zoom, and text extraction.',
     formats: ['.pdf'],
   },
+  {
+    id: 'sign',
+    name: 'Allternit Sign',
+    description: 'Native PDF signing — add signers, place signature fields on the page, and download the signed document. No cloud service or API key required.',
+    formats: ['.pdf'],
+  },
 ]
 
 const ROUTE_BY_EXT: Record<string, RouteTarget> = {
@@ -55,6 +61,7 @@ const ROUTE_BY_EXT: Record<string, RouteTarget> = {
   xlsx: 'sheets',
   pptx: 'slides',
   pdf: 'pdf',
+  md: 'markdown-preview',
   // Formats with no native editor open in the anydoc markdown preview.
   doc: 'markdown-preview',
   docm: 'markdown-preview',
@@ -153,14 +160,22 @@ export function OfficeSuiteSection({ openView }: OfficeSuiteSectionProps) {
             <p className="mt-2 text-[11px] font-medium text-[var(--text-tertiary)]">{editor.formats.join(' · ')}</p>
             <button
               type="button"
-              onClick={() =>
-                editor.id === 'pdf'
-                  ? fileInputRef.current?.click()
-                  : openEditor(editor.id)
-              }
+              onClick={() => {
+                if (editor.id === 'pdf') {
+                  fileInputRef.current?.click();
+                } else if (editor.id === 'sign') {
+                  if (openView) {
+                    openView('sign');
+                  } else {
+                    navigate('/sign');
+                  }
+                } else {
+                  openEditor(editor.id);
+                }
+              }}
               className="mt-auto inline-flex h-9 items-center justify-center rounded-lg bg-[var(--text-primary)] px-4 text-sm font-medium text-[var(--bg-elevated)] transition-opacity hover:opacity-90"
             >
-              {editor.id === 'pdf' ? 'Open a PDF' : 'Create new'}
+              {editor.id === 'pdf' ? 'Open a PDF' : editor.id === 'sign' ? 'Open Sign' : 'Create new'}
             </button>
           </article>
         ))}

@@ -1,0 +1,119 @@
+---
+title: 'Docmost'
+description: 'Collaborative wiki and documentation surface for Allternit teams.'
+---
+
+## Overview
+
+**Allternit Docmost** is the collaborative wiki and documentation surface for Allternit teams. It provides real-time collaborative editing, spaces, permissions, comments, page history, and file attachments in a self-hosted package.
+
+## Base URL
+
+When deployed as part of the Allternit platform:
+
+```text
+https://docs.allternit.com
+```
+
+Local development:
+
+```text
+http://127.0.0.1:3000
+```
+
+## Endpoints
+
+Docmost exposes its native API at `/api` and a web UI at `/`. Common surfaces include:
+
+| Path | Description |
+|------|-------------|
+| `/` | Web application |
+| `/api/spaces` | List and manage spaces |
+| `/api/pages` | List and manage pages |
+| `/api/pages/{id}` | Page CRUD and history |
+| `/api/attachments` | File attachments |
+| `/api/search` | Full-text search |
+| `/api/groups` | Group management |
+| `/api/comments` | Page comments |
+
+## Features
+
+- Real-time collaborative editing
+- Diagrams (Draw.io, Excalidraw, Mermaid)
+- Spaces and nested pages
+- Permissions and groups
+- Page comments
+- Page history and diffs
+- Full-text search
+- File attachments
+- Embeds
+- Multi-language translations
+
+## Configuration
+
+Docmost is configured through environment variables. Refer to the upstream Docmost self-hosting documentation for the full variable list, including database, mail, and storage settings.
+
+## JSON examples
+
+### List spaces
+
+```bash
+curl -H 'Authorization: Bearer <token>' \
+  https://docs.allternit.com/api/spaces
+```
+
+Response:
+
+```json
+{
+  "spaces": [
+    {
+      "id": "space_1",
+      "name": "Engineering",
+      "slug": "engineering",
+      "created_at": "2026-08-13T19:00:00.000Z"
+    }
+  ]
+}
+```
+
+### Create a page
+
+```bash
+curl -X POST https://docs.allternit.com/api/pages \
+  -H 'Authorization: Bearer <token>' \
+  -H 'content-type: application/json' \
+  -d '{
+    "spaceId": "space_1",
+    "title": "Runbook",
+    "content": "{\"type\":\"doc\",\"content\":[]}"
+  }'
+```
+
+Response:
+
+```json
+{
+  "id": "page_1",
+  "spaceId": "space_1",
+  "title": "Runbook",
+  "slug": "runbook",
+  "created_at": "2026-08-13T19:00:00.000Z"
+}
+```
+
+## Error codes
+
+| HTTP | Meaning |
+|------|---------|
+| 200 | Success |
+| 400 | Invalid request |
+| 401 | Unauthorized |
+| 403 | Forbidden |
+| 404 | Space or page not found |
+| 500 | Internal error |
+
+## Related pages
+
+- [Surfaces](/surfaces/platform)
+- [Vault](/surfaces/vault)

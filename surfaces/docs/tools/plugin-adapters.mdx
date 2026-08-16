@@ -1,0 +1,263 @@
+---
+title: 'Plugin Adapters'
+description: 'Load, register, and run capability manifests through the Allternit plugin adapter system'
+---
+
+## Overview
+
+The **Allternit Plugin Adapter** layer lets you bring external capability manifests into the platform as first-class plugins. Adapters translate a foreign manifest format into the native `Plugin` / `PluginContext` contract so that third-party tools, views, and commands can be discovered and executed by the Allternit runtime without rewriting them.
+
+The reference adapter implements the multi-modal capability format used by local-model plugin ecosystems. It validates a manifest, spawns the declared server process, and registers each capability tool into the runtime `ToolRegistry`.
+
+## Base path / usage
+
+Plugin adapters live in the platform plugin runtime:
+
+```text
+platform/plugins/src/
+├── plugin.ts          # Plugin and PluginContext contracts
+├── loader.ts          # File-system plugin loader
+├── registry.ts        # PluginRegistry activation and lookup
+└── adapters/
+    ├── qwen-mm.ts     # Multi-modal capability adapter
+    └── qwen-mm.schema.ts   # Manifest validators
+```
+
+The adapter is consumed by `PluginRegistry.registerQwenMMPlugin()` or instantiated directly in SDK / CLI code:
+
+```typescript
+import { PluginRegistry } from '@allternit/platform/plugins';
+
+const registry = new PluginRegistry();
+await registry.registerQwenMMPlugin('./manifest.json', {
+  API_KEY: 'sk-...',
+});
+```
+
+## Concepts
+
+| Concept | Description |
+|---------|-------------|
+| `Capability manifest` | A JSON file describing one capability: metadata, tools, input schemas, and a server command |
+| `Marketplace manifest` | A catalog of capabilities published by an owner, used for discovery and install |
+| `PluginContext` | The contract passed to `activate()`: logging, event bus, and registration helpers for commands, views, and tools |
+| `BasePlugin` | Abstract base class that handles lifecycle state (`active`, `context`) |
+| `Tool` | A runtime tool with `id`, `name`, and an async `execute(params)` function |
+
+## Manifest schema
+
+### Capability manifest
+
+```json
+{
+  "name": "web-fetch",
+  "version": "1.0.0",
+  "description": "Fetch and parse web pages",
+  "tools": [
+    {
+      "name": "fetch_url",
+      "description": "Fetch a URL and return markdown",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "url": { "type": "string" }
+        },
+        "required": ["url"]
+      }
+    }
+  ],
+  "server": {
+    "command": "uvx",
+    "args": ["run", "web-fetch-mcp@1.0.0"],
+    "env": {
+      "LOG_LEVEL": "info"
+    }
+  },
+  "config": {
+    "API_KEY": ""
+  }
+}
+```
+
+### Marketplace manifest
+
+```json
+{
+  "name": "local-model-toolkit",
+  "owner": {
+    "name": "Allternit Labs",
+    "url": "https://allternit.com"
+  },
+  "metadata": {
+    "description": "Curated tools for local model runtimes",
+    "version": "2026.08.1"
+  },
+  "plugins": [
+    {
+      "name": "web-fetch",
+      "description": "Fetch and parse web pages",
+      "source": {
+        "source": "git-subdir",
+        "url": "https://github.com/allternit/local-model-toolkit",
+        "path": "plugins/web-fetch",
+        "ref": "v1.0.0"
+      }
+    }
+  ]
+}
+```
+
+## API / commands
+
+| Method / command | Signature | Description |
+|------------------|-----------|-------------|
+| `QwenMMPluginAdapter.fromManifestPath` | `(manifestPath: string) => Promise<QwenMMPluginAdapter>` | Load and validate a capability manifest from disk |
+| `QwenMMPluginAdapter.fromMarketplaceManifest` | `(manifestPath: string, capabilityName: string) => Promise<QwenMMPluginAdapter \| null>` | Build an adapter from a marketplace entry |
+| `adapter.activate` | `(context: PluginContext) => Promise<void>` | Register the adapter's tools into the context |
+| `adapter.deactivate` | `() => Promise<void>` | Clear tool registration state |
+| `adapter.getTools` | `() => ToolInfo[]` | Return tool IDs, names, descriptions, and input schemas |
+| `adapter.getServerCommand` | `() => { command, args, env }` | Return the server spawn command merged with config |
+| `PluginRegistry.register` | `(plugin: Plugin) => void` | Add a plugin to the registry |
+| `PluginRegistry.activate` | `(pluginId: string) => Promise<void>` | Activate a registered plugin |
+| `PluginRegistry.registerQwenMMPlugin` | `(manifestPath, config?) => Promise<void>` | Load, register, and activate in one call |
+
+## Registering a capability
+
+### TypeScript SDK
+
+```typescript
+import { PluginRegistry } from '@allternit/platform/plugins';
+
+const registry = new PluginRegistry();
+await registry.registerQwenMMPlugin('./manifests/web-fetch.json', {
+  API_KEY: process.env.FETCH_API_KEY!,
+});
+
+const tool = registry.getTool('qwen-mm-web-fetch:fetch_url');
+const result = await tool.execute({ url: 'https://allternit.com/docs' });
+```
+
+### CLI
+
+```bash
+# Gizzi Code exposes plugin adapters through the plugin command group
+gizzi plugin install --manifest ./manifests/web-fetch.json
+gizzi plugin list
+gizzi plugin activate qwen-mm-web-fetch
+```
+
+## Request / response examples
+
+### Load a capability manifest
+
+Request:
+
+```typescript
+const adapter = await QwenMMPluginAdapter.fromManifestPath(
+  './plugins/web-fetch/manifest.json'
+);
+```
+
+Response shape (the adapter instance):
+
+```json
+{
+  "id": "qwen-mm-web-fetch",
+  "name": "Qwen MM: web-fetch",
+  "version": "1.0.0",
+  "description": "Fetch and parse web pages"
+}
+```
+
+### Activate and invoke a tool
+
+Request:
+
+```typescript
+const registry = new PluginRegistry();
+registry.register(adapter);
+await registry.activate(adapter.id);
+
+const tool = registry.getTool('qwen-mm-web-fetch:fetch_url');
+await tool.execute({ url: 'https://allternit.com' });
+```
+
+Response:
+
+```json
+{
+  "tool": "fetch_url",
+  "params": { "url": "https://allternit.com" },
+  "status": "invoked"
+}
+```
+
+### Get server spawn command
+
+Request:
+
+```typescript
+adapter.getServerCommand();
+```
+
+Response:
+
+```json
+{
+  "command": "uvx",
+  "args": ["run", "web-fetch-mcp@1.0.0"],
+  "env": {
+    "LOG_LEVEL": "info",
+    "API_KEY": "sk-..."
+  }
+}
+```
+
+## Validation errors
+
+| Error | Code / message | Meaning |
+|-------|----------------|---------|
+| `QwenMMValidationError` | `Qwen MM manifest validation failed at "name": expected non-empty string` | A required string field is missing or empty |
+| `QwenMMValidationError` | `Qwen MM manifest validation failed at "tools": expected array` | `tools` must be an array |
+| `QwenMMValidationError` | `Qwen MM manifest validation failed at "server": expected object` | `server` block is missing or malformed |
+| `Error` | `Plugin qwen-mm-<name> is not active` | `invokeTool()` called before `activate()` |
+| `Error` | `Unknown tool "<name>" in capability "<capability>"` | Tool name not found in manifest |
+| `Error` | `Plugin not found: <id>` | `PluginRegistry.activate()` called with an unregistered ID |
+
+## Lifecycle
+
+```
+fromManifestPath() / fromMarketplaceManifest()
+        │
+        ▼
+   PluginRegistry.register()
+        │
+        ▼
+   PluginContext created
+        │
+        ▼
+   plugin.activate(context)
+        │
+        ▼
+   tools registered into ToolRegistry
+        │
+        ▼
+   tool.execute() ──► invokeTool() ──► adapter server process
+        │
+        ▼
+   plugin.deactivate()
+```
+
+## Security notes
+
+- Adapters spawn a child process using the command declared in the manifest. Review the command and arguments before loading an untrusted manifest.
+- Config values are merged into the server environment. Do not commit secrets to manifest files; pass them through `config` at runtime.
+- Tool input schemas are validated by the runtime before `execute()` is called, but the adapter itself does not re-validate at invocation time.
+
+## Related pages
+
+- [Build a Custom Tool](/tools/build-a-tool)
+- [MCP Servers](/tools/mcp)
+- [Native Tool Belt](/tools/tool-belt)
+- [Server Tools](/tools/server-tools)
+- [Allternit Computer Interface (ACI)](/tools/computer-use)

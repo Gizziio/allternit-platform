@@ -1,0 +1,228 @@
+---
+title: 'Local Brains API'
+description: 'Search local memory, query the local brain, and manage sidecar models on the Gizzi runtime.'
+---
+
+## Overview
+
+The Local Brains API exposes the Allternit local brain surface. It lets clients perform keyword search across memory documents, events, and conversations; probe Ollama and embedding service health; pull local models; and manage models through the Gizzi sidecar. When no embedding service is available, search falls back to keyword search against the local SQLite memory tables.
+
+## Base URL
+
+```
+https://api.allternit.com/api
+```
+
+## Authentication
+
+All endpoints require a valid bearer token in the `Authorization` header. See [Authentication](/api/authentication) for details.
+
+## Endpoints
+
+| Method | Path | Description |
+|--------|------|-------------|
+| `GET`  | `/api/local-brain` | Probe local brain status or search memory. |
+| `POST` | `/api/local-brain` | Pull the default local brain model (SSE). |
+| `GET`  | `/api/local-brain/status` | Get Ollama and embedding service health. |
+| `POST` | `/api/local-brain/pull-custom` | Pull an arbitrary Hugging Face GGUF model (SSE). |
+| `GET`  | `/api/local-brain/models` | List sidecar models. |
+| `GET`  | `/api/local-brain/models/search` | Search sidecar models. |
+| `POST` | `/api/local-brain/models` | Install a sidecar model (SSE). |
+| `DELETE` | `/api/local-brain/models/:tag` | Remove a sidecar model. |
+
+## Probe local brain status
+
+```http
+GET /api/local-brain
+```
+
+When called without a `q` parameter, returns the status of the local Ollama instance and the models that are already pulled.
+
+### Example response
+
+```json
+{
+  "ollamaRunning": true,
+  "modelReady": true,
+  "modelId": "llama3.2:3b",
+  "pulledModels": ["llama3.2:3b", "nomic-embed-text:latest"]
+}
+```
+
+## Search local memory
+
+```http
+GET /api/local-brain?q=:query&limit=:limit&type=:type
+```
+
+Searches memory documents, events, and conversations using keyword search. The `type` filter accepts `documents`, `events`, `conversations`, or `all` (default).
+
+### Query parameters
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `q` | string | Search query. |
+| `limit` | integer | Maximum results (default `10`). |
+| `type` | string | Result type filter (default `all`). |
+
+### Example request
+
+```bash
+curl -G https://api.allternit.com/api/local-brain \
+  -H "Authorization: Bearer $TOKEN" \
+  -d "q=auth refactor" \
+  -d "limit=5" \
+  -d "type=documents"
+```
+
+### Example response
+
+```json
+{
+  "query": "auth refactor",
+  "results": [
+    {
+      "id": "doc_1a2b3c",
+      "type": "document",
+      "title": "Auth service refactor plan",
+      "snippet": "Move password validation into a dedicated module...",
+      "score": 0.85,
+      "source_url": null,
+      "created_at": "2026-08-13T10:00:00Z"
+    }
+  ],
+  "count": 1,
+  "note": "Keyword search (semantic search unavailable — no embedding service configured)"
+}
+```
+
+## Pull the default local brain
+
+```http
+POST /api/local-brain
+```
+
+Streams an Ollama pull for the default local brain model (`llama3.2:3b`) over SSE.
+
+### Example curl
+
+```bash
+curl -N -X POST https://api.allternit.com/api/local-brain \
+  -H "Authorization: Bearer $TOKEN" \
+  -H "Accept: text/event-stream"
+```
+
+### Example event
+
+```text
+data: {"status":"pulling manifest","completed":null,"total":null}
+```
+
+## Get brain status
+
+```http
+GET /api/local-brain/status
+```
+
+Returns the availability of Ollama and the embedding service, plus capability flags.
+
+### Example response
+
+```json
+{
+  "status": "healthy",
+  "services": {
+    "ollama": { "url": "http://127.0.0.1:11434", "available": true },
+    "embedding": { "url": "http://127.0.0.1:8000", "available": true }
+  },
+  "capabilities": {
+    "keyword_search": true,
+    "semantic_search": true,
+    "vector_store": true
+  },
+  "note": "Semantic search available"
+}
+```
+
+## Pull a custom model
+
+```http
+POST /api/local-brain/pull-custom
+```
+
+Pulls an arbitrary Hugging Face GGUF model through Ollama. The response is an SSE stream of pull progress events.
+
+### Request body
+
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| `repo` | string | Yes | Hugging Face repo id, e.g. `bartowski/Llama-3.2-3B-Instruct-GGUF`. |
+| `quant` | string | No | Quantization tag, e.g. `Q4_K_M`. |
+
+### Example request
+
+```bash
+curl -N -X POST https://api.allternit.com/api/local-brain/pull-custom \
+  -H "Authorization: Bearer $TOKEN" \
+  -H "Content-Type: application/json" \
+  -H "Accept: text/event-stream" \
+  -d '{"repo": "bartowski/Llama-3.2-3B-Instruct-GGUF", "quant": "Q4_K_M"}'
+```
+
+## Sidecar model management
+
+The `/api/local-brain/models` endpoints proxy to the Gizzi sidecar model surface.
+
+### List sidecar models
+
+```http
+GET /api/local-brain/models
+```
+
+Returns the sidecar model list. Response shape matches the Gizzi sidecar contract.
+
+### Search sidecar models
+
+```http
+GET /api/local-brain/models/search?q=:query&limit=:limit
+```
+
+### Install a sidecar model
+
+```http
+POST /api/local-brain/models
+```
+
+#### Request body
+
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| `repo_id` | string | Yes | Model repo id. |
+| `quant_tag` | string | No | Quantization tag. |
+
+The response is an SSE stream of installation progress events.
+
+### Remove a sidecar model
+
+```http
+DELETE /api/local-brain/models/:tag
+```
+
+## Error codes
+
+| Status | Meaning | Typical cause |
+|--------|---------|---------------|
+| `200 OK` | Success | Request succeeded. |
+| `201 Created` | Created | Model installation started. |
+| `400 Bad Request` | Invalid request | Invalid `repo` id. |
+| `401 Unauthorized` | Unauthorized | Missing or invalid bearer token. |
+| `502 Bad Gateway` | Upstream error | Gizzi sidecar or Ollama returned an error. |
+| `503 Service Unavailable` | Unavailable | Ollama or sidecar is not running. |
+| `500 Internal Server Error` | Server error | Contact support. |
+
+## Related pages
+
+- [Brains API](/api/brains)
+- [Memory API](/api/memory)
+- [Agents API](/api/agents)
+- [BYOC Installation](/byoc/installation)

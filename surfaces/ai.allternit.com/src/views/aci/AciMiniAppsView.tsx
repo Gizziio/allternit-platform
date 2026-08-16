@@ -21,8 +21,14 @@ import {
   MagnifyingGlass,
   Plus,
   ShieldCheck,
+  Faders,
 } from '@phosphor-icons/react';
 import { cn } from '@/lib/utils';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Skeleton } from '@/components/ui/skeleton';
+import { Pill } from '@/components/ui/Pill';
+import { Text } from '@/components/typography/Text';
 import { useMiniAppDiscovery } from './use-mini-app-discovery';
 import { pinMiniApp, removeMiniApp, saveMiniApp, unpinMiniApp } from './mini-app-registry';
 import type { InstalledMiniApp } from './mini-app.types';
@@ -37,12 +43,12 @@ function openView(viewType: string, context?: Record<string, unknown>): void {
 }
 
 const CATEGORY_ICONS: Record<string, React.ReactNode> = {
-  runtime: <Cpu size={16} />,
-  connector: <Globe size={16} />,
-  data: <Lightning size={16} />,
-  tool: <GearSix size={16} />,
-  communication: <Globe size={16} />,
-  custom: <Globe size={16} />,
+  runtime: <Cpu size={18} />,
+  connector: <Globe size={18} />,
+  data: <Lightning size={18} />,
+  tool: <GearSix size={18} />,
+  communication: <Globe size={18} />,
+  custom: <Globe size={18} />,
 };
 
 const STATUS_COLOR: Record<InstalledMiniApp['status'], string> = {
@@ -72,12 +78,12 @@ type InstallState =
   | { phase: 'done'; lines: ProgressLine[] }
   | { phase: 'error'; lines: ProgressLine[]; error: string };
 
-function GitHubAvatar({ repo, size = 32 }: { repo?: string; size?: number }) {
+function GitHubAvatar({ repo, size = 40 }: { repo?: string; size?: number }) {
   const [error, setError] = useState(false);
   if (!repo || error) {
     return (
-      <div className="flex items-center justify-center rounded border border-[var(--border-subtle)] bg-[var(--bg-primary)] text-[var(--text-secondary)]">
-        <GithubLogo size={16} />
+      <div className="flex size-full items-center justify-center text-[var(--text-tertiary)]">
+        <GithubLogo size={size * 0.45} />
       </div>
     );
   }
@@ -87,7 +93,7 @@ function GitHubAvatar({ repo, size = 32 }: { repo?: string; size?: number }) {
       alt=""
       width={size}
       height={size}
-      className="rounded border border-[var(--border-subtle)] object-cover"
+      className="size-full object-cover"
       onError={() => setError(true)}
     />
   );
@@ -116,14 +122,14 @@ function InstallPanel({
   const isError = state.phase === 'error';
 
   return (
-    <div className="mt-3 rounded border border-[var(--border-subtle)] bg-[#0a0806] overflow-hidden">
-      <div className="flex items-center gap-2 px-3 py-1.5 border-b border-[var(--border-subtle)] bg-[#0d0a07]">
+    <div className="mt-3 overflow-hidden rounded-xl border border-[var(--border-subtle)] bg-[#0a0806]">
+      <div className="flex items-center gap-2 border-b border-[var(--border-subtle)] bg-[#0d0a07] px-3 py-1.5">
         <Terminal size={11} className="text-[var(--text-tertiary)]" />
-        <span className="text-[11px] text-[var(--text-tertiary)] font-mono">
+        <Text variant="code" className="text-[11px] text-[var(--text-tertiary)]">
           {isActive ? (state.phase === 'installing' ? 'Installing…' : 'Starting service…') : ''}
           {isDone ? 'Done' : ''}
           {isError ? 'Failed' : ''}
-        </span>
+        </Text>
         {isActive && <CircleNotch size={10} className="ml-auto animate-spin text-[var(--accent-primary)]" />}
         {isDone && <CheckCircle size={11} className="ml-auto text-green-400" />}
         {isError && <XCircle size={11} className="ml-auto text-red-400" />}
@@ -146,10 +152,11 @@ function InstallPanel({
         ))}
       </div>
       {(isDone || isError) && onDismiss && (
-        <div className="px-3 py-1.5 border-t border-[var(--border-subtle)]">
-          <button type="button"
+        <div className="border-t border-[var(--border-subtle)] px-3 py-1.5">
+          <button
+            type="button"
             onClick={onDismiss}
-            className="text-[11px] text-[var(--text-tertiary)] hover:text-[var(--text-secondary)] transition-colors"
+            className="text-[11px] text-[var(--text-tertiary)] transition-colors hover:text-[var(--text-secondary)]"
           >
             Dismiss
           </button>
@@ -160,6 +167,15 @@ function InstallPanel({
 }
 
 // ─── Mini-App Card ────────────────────────────────────────────────────────────
+
+function StatusPill({ status, className }: { status: InstalledMiniApp['status']; className?: string }) {
+  return (
+    <Pill size="sm" className={cn('gap-1.5 capitalize', className)}>
+      <span className={cn('size-1.5 rounded-full', STATUS_COLOR[status])} />
+      {STATUS_LABEL[status]}
+    </Pill>
+  );
+}
 
 function MiniAppCard({ app, onOpen, onPin, onUnpin, onReprobe, onDetails }: {
   app: InstalledMiniApp;
@@ -181,7 +197,6 @@ function MiniAppCard({ app, onOpen, onPin, onUnpin, onReprobe, onDetails }: {
     const miniApps = window.allternit?.miniApps;
     if (!miniApps) return;
 
-    // Use a local array as accumulator to avoid stale-closure issues across awaits
     const accumulated: ProgressLine[] = [];
     const push = (p: { id: string; line: string; type: string }) => {
       if (p.id !== app.id) return;
@@ -260,6 +275,7 @@ function MiniAppCard({ app, onOpen, onPin, onUnpin, onReprobe, onDetails }: {
   }, [app.id, app.name, onReprobe]);
 
   const isInstalling = installState.phase === 'installing' || installState.phase === 'starting';
+  const presentation = resolveMiniAppPresentation(app);
 
   return (
     <div
@@ -273,39 +289,58 @@ function MiniAppCard({ app, onOpen, onPin, onUnpin, onReprobe, onDetails }: {
         }
       }}
       className={cn(
-        'flex min-h-[190px] cursor-pointer flex-col gap-3 rounded-xl border p-5 transition-all duration-200',
+        'flex min-h-[200px] cursor-pointer flex-col gap-4 rounded-xl border p-5 transition-all duration-200',
         isRunning
           ? 'border-green-500/30 bg-green-500/[0.04] hover:border-green-500/50 hover:shadow-md'
           : 'border-[var(--border-subtle)] bg-[var(--bg-elevated)] hover:border-[var(--border-hover)] hover:shadow-md',
       )}
     >
-      <div className="flex items-start justify-between gap-2">
-        <div className={cn(
-          'flex size-11 shrink-0 items-center justify-center rounded-xl border overflow-hidden',
-          isRunning ? 'border-green-800/40 bg-green-950/30 text-green-400' : 'border-[var(--border-subtle)] bg-[var(--bg-primary)] text-[var(--text-secondary)]',
-        )}>
-          {app.repo ? <GitHubAvatar repo={app.repo} size={32} /> : (CATEGORY_ICONS[app.category] ?? <Globe size={16} />)}
+      <div className="flex items-start justify-between gap-3">
+        <div
+          className={cn(
+            'flex size-12 shrink-0 items-center justify-center overflow-hidden rounded-xl border',
+            isRunning
+              ? 'border-green-800/40 bg-green-950/30 text-green-400'
+              : 'border-[var(--border-subtle)] bg-[var(--bg-primary)] text-[var(--text-secondary)]',
+          )}
+        >
+          {app.repo ? <GitHubAvatar repo={app.repo} size={40} /> : (CATEGORY_ICONS[app.category] ?? <Globe size={18} />)}
         </div>
-        <div className={cn(
-          'flex items-center gap-1.5 rounded-full px-2 py-1 text-[10px] font-semibold uppercase tracking-wide',
-          isRunning ? 'bg-green-950/40 text-green-400' : 'bg-[var(--bg-tertiary)] text-[var(--text-tertiary)]',
-        )}>
-          <span className={cn('size-1.5 rounded-full', STATUS_COLOR[app.status])} />
-          {STATUS_LABEL[app.status]}
-        </div>
+        <StatusPill status={app.status} />
       </div>
 
-      <div className="flex-1">
-        <div className="flex items-center gap-2 mb-0.5">
-          <span className="text-[15px] font-semibold text-[var(--text-primary)]">{app.name}</span>
-          {app.version && <span className="text-[12px] text-[var(--text-tertiary)]">v{app.version}</span>}
+      <div className="flex flex-1 flex-col gap-2">
+        <div className="flex min-w-0 items-center gap-2">
+          <Text variant="body" className="truncate text-[15px] font-semibold text-[var(--text-primary)]">
+            {app.name}
+          </Text>
+          {app.version && (
+            <Text variant="caption" className="shrink-0 text-[12px] text-[var(--text-tertiary)]">
+              v{app.version}
+            </Text>
+          )}
         </div>
-        <p className="text-[13px] text-[var(--text-secondary)] leading-relaxed line-clamp-2">{app.description}</p>
-        <div className="mt-2 flex flex-wrap gap-1.5">
-          <span className="rounded-full bg-[var(--surface-hover)] px-2 py-0.5 text-[10px] font-medium capitalize text-[var(--text-tertiary)]">{app.catalogSource || app.source}</span>
-          <span className="rounded-full bg-[var(--surface-hover)] px-2 py-0.5 text-[10px] font-medium capitalize text-[var(--text-tertiary)]">{resolveMiniAppPresentation(app).mode}</span>
-          {app.verified && <span className="rounded-full bg-green-500/10 px-2 py-0.5 text-[10px] font-medium text-green-500">Verified</span>}
+        <Text variant="caption" className="line-clamp-2 text-[13px] leading-relaxed text-[var(--text-secondary)]">
+          {app.description}
+        </Text>
+
+        <div className="mt-1 flex flex-wrap items-center gap-1.5">
+          <Pill size="sm" variant="outline" className="max-w-full truncate capitalize">
+            {app.category}
+          </Pill>
+          <Pill size="sm" variant="ghost" className="max-w-full truncate capitalize">
+            {app.catalogSource || app.source}
+          </Pill>
+          <Pill size="sm" variant="ghost" className="max-w-full truncate capitalize">
+            {presentation.mode}
+          </Pill>
+          {app.verified && (
+            <Pill size="sm" className="border-green-500/30 bg-green-500/10 text-green-500">
+              Verified
+            </Pill>
+          )}
         </div>
+
         {app.repo && (
           <a
             href={app.githubUrl}
@@ -313,66 +348,72 @@ function MiniAppCard({ app, onOpen, onPin, onUnpin, onReprobe, onDetails }: {
             rel="noopener noreferrer"
             onClick={(event) => event.stopPropagation()}
             onKeyDown={(event) => event.stopPropagation()}
-            className="mt-1 inline-flex items-center gap-1 text-[11px] text-[var(--text-tertiary)] hover:text-[var(--accent-primary)] transition-colors"
+            className="mt-1 inline-flex items-center gap-1 text-[11px] text-[var(--text-tertiary)] transition-colors hover:text-[var(--accent-primary)]"
           >
             <GithubLogo size={10} />
             {app.repo}
           </a>
         )}
       </div>
-      <button type="button" onClick={(event) => { event.stopPropagation(); onDetails(app); }} onKeyDown={(event) => event.stopPropagation()} className="self-start text-xs font-medium text-[var(--accent-primary)] hover:underline">View details</button>
 
-      <div className="flex items-center justify-between gap-2" onClick={(event) => event.stopPropagation()} onKeyDown={(event) => event.stopPropagation()}>
-        <button type="button"
-          onClick={() => isPinned ? onUnpin(app.id) : onPin(app)}
-          className="flex items-center gap-1 text-[12px] text-[var(--text-tertiary)] hover:text-[var(--text-secondary)] transition-colors"
+      <div
+        className="flex flex-wrap items-center gap-2 border-t border-[var(--border-subtle)] pt-3"
+        onClick={(event) => event.stopPropagation()}
+        onKeyDown={(event) => event.stopPropagation()}
+      >
+        <Button
+          variant="ghost"
+          size="sm"
+          className="shrink-0"
+          onClick={() => (isPinned ? onUnpin(app.id) : onPin(app))}
         >
-          {isPinned
-            ? <><PushPinSlash size={11} /> Unpin</>
-            : <><PushPin size={11} /> Pin</>}
-        </button>
-        <div className="flex items-center gap-2">
+          {isPinned ? <PushPinSlash size={13} /> : <PushPin size={13} />}
+          {isPinned ? 'Unpin' : 'Pin'}
+        </Button>
+        <div className="flex flex-1 flex-wrap items-center justify-end gap-2">
           {canInstall && installState.phase === 'idle' && (
-            <button type="button"
-              onClick={() => void handleInstall()}
-              disabled={isInstalling}
-              className="flex items-center gap-1.5 rounded px-2.5 py-1 text-xs font-medium transition-colors bg-[var(--bg-primary)] text-[var(--text-primary)] hover:bg-[var(--bg-tertiary)] border border-[var(--border-subtle)]"
-            >
-              <Download size={10} />
+            <Button variant="outline" size="sm" onClick={() => void handleInstall()} disabled={isInstalling}>
+              <Download size={12} />
               Install
-            </button>
+            </Button>
           )}
           {isOffline && isDesktop && app.downloadable && installState.phase === 'idle' && (
-            <button type="button"
-              onClick={() => void handleStart()}
-              className="flex items-center gap-1.5 rounded px-2.5 py-1 text-xs font-medium transition-colors bg-[var(--bg-tertiary)] text-[var(--text-primary)] hover:bg-[var(--bg-primary)] border border-[var(--border-subtle)]"
-            >
-              <ArrowSquareOut size={10} />
+            <Button variant="outline" size="sm" onClick={() => void handleStart()}>
+              <ArrowSquareOut size={12} />
               Start
-            </button>
+            </Button>
           )}
           {isInstalling && (
-            <div className="flex items-center gap-1.5 rounded px-2.5 py-1 text-xs text-[var(--text-tertiary)]">
-              <CircleNotch size={10} className="animate-spin" />
+            <div className="flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-xs text-[var(--text-tertiary)]">
+              <CircleNotch size={12} className="animate-spin" />
               {installState.phase === 'installing' ? 'Installing…' : 'Starting…'}
             </div>
           )}
           {isRunning && !isInstalling && (
-            <button type="button" onClick={() => void handleStop()} className="flex items-center gap-1.5 rounded border border-[var(--border-subtle)] px-2.5 py-1 text-xs font-medium text-[var(--text-secondary)] hover:bg-[var(--surface-hover)]">Stop</button>
+            <Button variant="outline" size="sm" onClick={() => void handleStop()}>
+              Stop
+            </Button>
           )}
           {!isOffline && !app.registryName && (
-            <button type="button"
-              onClick={() => onOpen(app)}
-              className={cn(
-                'flex items-center gap-1.5 rounded px-2.5 py-1 text-xs font-medium transition-colors',
+            <Button
+              size="sm"
+              onClick={() => {
+                if (!isPinned) onPin(app);
+                void onOpen(app);
+              }}
+              style={
                 isRunning
-                  ? 'bg-green-950/40 text-green-400 hover:bg-green-950/60 border border-green-900/40'
-                  : 'bg-[var(--bg-tertiary)] text-[var(--text-primary)] hover:bg-[var(--bg-primary)] border border-[var(--border-subtle)]',
-              )}
+                  ? {
+                      background: 'rgba(6, 78, 59, 0.4)',
+                      color: '#4ade80',
+                      border: '1px solid rgba(20, 83, 45, 0.4)',
+                    }
+                  : undefined
+              }
             >
-              {isRunning ? 'Open ↗' : 'Launch'}
-              <ArrowSquareOut size={10} />
-            </button>
+              {isRunning ? 'Open' : 'Launch'}
+              <ArrowSquareOut size={12} />
+            </Button>
           )}
         </div>
       </div>
@@ -393,28 +434,63 @@ function MiniAppCard({ app, onOpen, onPin, onUnpin, onReprobe, onDetails }: {
   );
 }
 
+// ─── Empty & Loading States ───────────────────────────────────────────────────
+
 function EmptyState({ probing, onScan }: { probing: boolean; onScan: () => void }) {
   return (
-    <div className="flex flex-col items-center justify-center gap-3 py-24 text-center">
-      <AppWindow size={48} className="text-[var(--text-tertiary)] opacity-40" weight="duotone" />
-      <div>
-        <p className="text-sm text-[var(--text-secondary)]">No mini-apps yet.</p>
-        <p className="mt-1 text-xs text-[var(--text-secondary)] max-w-xs">
-          Start a local service like OpenClaw or Hermes and click Scan, or add any URL as a mini-app in{' '}
-          <span className="text-[var(--accent-primary)]">Settings → Integrations</span>.
-        </p>
+    <div className="flex flex-col items-center justify-center rounded-xl border border-dashed border-[var(--border-subtle)] bg-[var(--bg-elevated)] px-6 py-16 text-center">
+      <div className="mb-4 text-[var(--text-tertiary)]">
+        <AppWindow size={48} weight="duotone" />
       </div>
-      <button type="button"
-        onClick={onScan}
-        disabled={probing}
-        className="mt-2 flex h-9 items-center gap-2 rounded-lg bg-[var(--text-primary)] px-4 text-sm font-medium text-[var(--bg-elevated)] transition-opacity hover:opacity-90"
-      >
-        {probing ? <CircleNotch size={14} className="animate-spin" /> : <ArrowsClockwise size={14} />}
-        Scan for local services
-      </button>
+      <h3 className="m-0 mb-1 text-[16px] font-semibold text-[var(--text-primary)]">
+        No mini-apps yet
+      </h3>
+      <Text variant="caption" className="m-0 max-w-xs leading-relaxed">
+        Start a local service like OpenClaw or Hermes and click Scan, or add any URL as a mini-app in{' '}
+        <span className="text-[var(--accent-primary)]">Settings → Integrations</span>.
+      </Text>
+      <div className="mt-5">
+        <Button onClick={onScan} disabled={probing}>
+          {probing ? <CircleNotch size={14} className="animate-spin" /> : <ArrowsClockwise size={14} />}
+          Scan for local services
+        </Button>
+      </div>
     </div>
   );
 }
+
+function NoResultsState({ onClear }: { onClear: () => void }) {
+  return (
+    <div className="col-span-full flex flex-col items-center justify-center rounded-xl border border-dashed border-[var(--border-subtle)] bg-[var(--bg-elevated)] px-6 py-16 text-center">
+      <div className="mb-4 text-[var(--text-tertiary)]">
+        <Faders size={48} weight="duotone" />
+      </div>
+      <h3 className="m-0 mb-1 text-[16px] font-semibold text-[var(--text-primary)]">
+        No miniapps match your search
+      </h3>
+      <Text variant="caption" className="m-0 max-w-xs leading-relaxed">
+        Try changing your filters or search terms.
+      </Text>
+      <div className="mt-5">
+        <Button variant="outline" onClick={onClear}>
+          Clear filters
+        </Button>
+      </div>
+    </div>
+  );
+}
+
+function CatalogSkeleton() {
+  return (
+    <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+      {Array.from({ length: 4 }).map((_, i) => (
+        <Skeleton.Card key={`catalog-skeleton-${i}`} height={220} />
+      ))}
+    </div>
+  );
+}
+
+// ─── Main View ────────────────────────────────────────────────────────────────
 
 export function AciMiniAppsView() {
   const { all, pinned, probing, reprobe } = useMiniAppDiscovery();
@@ -426,15 +502,22 @@ export function AciMiniAppsView() {
   const [category, setCategory] = useState<'all' | InstalledMiniApp['category']>('all');
   const [source, setSource] = useState<'all' | NonNullable<InstalledMiniApp['catalogSource']>>('all');
   const [experience, setExperience] = useState<'all' | 'native' | 'hybrid' | 'embedded'>('all');
+
   const activeCollection = storeMode === 'installed' ? pinned : catalogApps;
-  const categories = useMemo(() => ['all', ...Array.from(new Set(activeCollection.map((app) => app.category)))] as Array<'all' | InstalledMiniApp['category']>, [activeCollection]);
-  const visibleApps = useMemo(() => activeCollection.filter((app) => {
-    const normalizedQuery = query.trim().toLowerCase();
-    const matchesQuery = !normalizedQuery || `${app.name} ${app.description} ${app.repo || ''}`.toLowerCase().includes(normalizedQuery);
-    const matchesSource = source === 'all' || (app.catalogSource || (app.source === 'builtin' ? 'allternit' : app.source)) === source;
-    const matchesExperience = experience === 'all' || resolveMiniAppPresentation(app).mode === experience;
-    return matchesQuery && matchesSource && matchesExperience && (category === 'all' || app.category === category);
-  }), [activeCollection, category, experience, query, source]);
+  const categories = useMemo(
+    () => ['all', ...Array.from(new Set(activeCollection.map((app) => app.category)))] as Array<'all' | InstalledMiniApp['category']>,
+    [activeCollection],
+  );
+  const visibleApps = useMemo(
+    () => activeCollection.filter((app) => {
+      const normalizedQuery = query.trim().toLowerCase();
+      const matchesQuery = !normalizedQuery || `${app.name} ${app.description} ${app.repo || ''}`.toLowerCase().includes(normalizedQuery);
+      const matchesSource = source === 'all' || (app.catalogSource || (app.source === 'builtin' ? 'allternit' : app.source)) === source;
+      const matchesExperience = experience === 'all' || resolveMiniAppPresentation(app).mode === experience;
+      return matchesQuery && matchesSource && matchesExperience && (category === 'all' || app.category === category);
+    }),
+    [activeCollection, category, experience, query, source],
+  );
 
   const handleOpen = useCallback(async (app: InstalledMiniApp) => {
     const integration = await ensureMiniAppAgent(app);
@@ -477,81 +560,159 @@ export function AciMiniAppsView() {
     setSelectedApp(app);
   }, []);
 
-  if (selectedApp) return <MiniAppDetailView app={selectedApp} onBack={() => setSelectedApp(null)} onOpen={handleOpen} onPin={handlePin} onUnpin={handleUnpin} onRemove={handleRemove} onUpdate={handleUpdate} />;
+  const clearFilters = useCallback(() => {
+    setQuery('');
+    setCategory('all');
+    setSource('all');
+    setExperience('all');
+  }, []);
+
+  if (selectedApp) {
+    return (
+      <MiniAppDetailView
+        app={selectedApp}
+        onBack={() => setSelectedApp(null)}
+        onOpen={handleOpen}
+        onPin={handlePin}
+        onUnpin={handleUnpin}
+        onRemove={handleRemove}
+        onUpdate={handleUpdate}
+      />
+    );
+  }
 
   return (
     <div className="h-full w-full overflow-auto bg-[var(--bg-elevated)] text-[var(--text-primary)]">
       <div className="mx-auto flex w-full max-w-6xl flex-col px-8 pb-12 pt-10">
         <div className="flex items-center justify-between gap-4">
-          <h1 className="text-3xl font-medium tracking-tight" style={{ fontFamily: 'var(--font-serif)' }}>Miniapps Store</h1>
+          <h1 className="text-3xl font-medium tracking-tight" style={{ fontFamily: 'var(--font-serif)' }}>
+            Miniapps Store
+          </h1>
           <div className="flex shrink-0 items-center gap-2">
-          <button type="button"
-            onClick={() => openView('mini-app-review')}
-            title="Review console"
-            aria-label="Review console"
-            className="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-[var(--border-default)] bg-[var(--bg-elevated)] text-[var(--text-tertiary)] transition-colors hover:border-[var(--border-hover)] hover:text-[var(--text-secondary)]"
-          >
-            <ShieldCheck size={14} />
-          </button>
-          <button type="button" onClick={() => setAddOpen(true)} className="inline-flex h-9 items-center gap-1.5 rounded-lg bg-[var(--text-primary)] px-3.5 text-sm font-medium text-[var(--bg-elevated)]"><Plus size={14} />Add miniapp</button>
-          <button type="button"
-            onClick={reprobe}
-            disabled={probing}
-            className="inline-flex h-9 items-center gap-1.5 rounded-lg border border-[var(--border-default)] bg-[var(--bg-elevated)] px-3.5 text-sm text-[var(--text-secondary)] transition-colors hover:border-[var(--border-hover)]"
-          >
-            {probing ? <CircleNotch size={14} className="animate-spin" /> : <ArrowsClockwise size={14} />}
-            Scan
-          </button>
-          <button type="button"
-            onClick={() => setStoreMode('discover')}
-            className={cn("inline-flex h-9 items-center gap-1.5 rounded-lg border px-3.5 text-sm transition-colors", storeMode === 'discover' ? "border-[var(--text-primary)] bg-[var(--text-primary)] text-[var(--bg-elevated)]" : "border-[var(--border-default)] bg-[var(--bg-elevated)] text-[var(--text-secondary)] hover:border-[var(--border-hover)]")}
-          >
-            <Storefront size={14} />
-            Discover
-          </button>
-          <button type="button"
-            onClick={() => setStoreMode('installed')}
-            className={cn("inline-flex h-9 items-center gap-1.5 rounded-lg border px-3.5 text-sm transition-colors", storeMode === 'installed' ? "border-[var(--text-primary)] bg-[var(--text-primary)] text-[var(--bg-elevated)]" : "border-[var(--border-default)] bg-[var(--bg-elevated)] text-[var(--text-secondary)] hover:border-[var(--border-hover)]")}
-          >
-            <GearSix size={14} />
-            My Miniapps
-          </button>
+            <Button
+              variant="outline"
+              size="icon"
+              onClick={() => openView('mini-app-review')}
+              title="Review console"
+              aria-label="Review console"
+            >
+              <ShieldCheck size={14} />
+            </Button>
+            <Button onClick={() => setAddOpen(true)}>
+              <Plus size={14} />
+              Add miniapp
+            </Button>
+            <Button
+              variant="outline"
+              onClick={reprobe}
+              disabled={probing}
+            >
+              {probing ? <CircleNotch size={14} className="animate-spin" /> : <ArrowsClockwise size={14} />}
+              Scan
+            </Button>
+            <Button
+              variant={storeMode === 'discover' ? 'default' : 'outline'}
+              onClick={() => setStoreMode('discover')}
+            >
+              <Storefront size={14} />
+              Discover
+            </Button>
+            <Button
+              variant={storeMode === 'installed' ? 'default' : 'outline'}
+              onClick={() => setStoreMode('installed')}
+            >
+              <GearSix size={14} />
+              My Miniapps
+            </Button>
           </div>
         </div>
 
-        <div className="relative mt-6">
+        <div className="relative mt-8">
           <MagnifyingGlass size={16} className="absolute left-4 top-1/2 -translate-y-1/2 text-[var(--text-tertiary)]" />
-          <input aria-label="Search mini-apps" value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Search miniapps…" className="h-11 w-full rounded-xl border border-[var(--border-default)] bg-[var(--bg-elevated)] pl-10 pr-4 text-[15px] text-[var(--text-primary)] outline-none placeholder:text-[var(--text-tertiary)] focus:border-[var(--accent-primary)]" />
-        </div>
-        <div className="mt-4 flex items-center gap-1 overflow-x-auto border-b border-[var(--border-subtle)] pb-3">{categories.map((item) => <button type="button" key={item} onClick={() => setCategory(item)} className={cn("h-8 rounded-lg px-3 text-xs font-medium capitalize transition-colors", category === item ? "bg-[var(--text-primary)] text-[var(--bg-elevated)]" : "text-[var(--text-secondary)] hover:bg-[var(--surface-hover)] hover:text-[var(--text-primary)]")}>{item}</button>)}</div>
-        <div className="mt-4 flex flex-wrap items-center gap-3">
-          <label className="text-xs text-[var(--text-tertiary)]">Source <select value={source} onChange={(event) => setSource(event.target.value as typeof source)} className="ml-2 h-8 rounded-lg border border-[var(--border-default)] bg-[var(--bg-elevated)] px-2 text-xs text-[var(--text-primary)]"><option value="all">All sources</option><option value="allternit">Allternit Verified</option><option value="mcp">MCP Registry</option><option value="github">GitHub</option><option value="url">URL</option><option value="local">Local</option><option value="workspace">Workspace</option></select></label>
-          <label className="text-xs text-[var(--text-tertiary)]">Experience <select value={experience} onChange={(event) => setExperience(event.target.value as typeof experience)} className="ml-2 h-8 rounded-lg border border-[var(--border-default)] bg-[var(--bg-elevated)] px-2 text-xs text-[var(--text-primary)]"><option value="all">All experiences</option><option value="native">Native</option><option value="hybrid">Hybrid</option><option value="embedded">Embedded</option></select></label>
+          <Input
+            aria-label="Search mini-apps"
+            value={query}
+            onChange={(event) => setQuery(event.target.value)}
+            placeholder="Search miniapps…"
+            className="h-11 w-full rounded-xl border-[var(--border-default)] bg-[var(--bg-elevated)] pl-10 pr-4 text-[15px] placeholder:text-[var(--text-tertiary)]"
+          />
         </div>
 
-      <div className="mt-8">
-        {storeMode === 'discover' && catalogError && <div className="mb-5 rounded-xl border border-amber-500/20 bg-amber-500/5 px-4 py-3 text-xs text-[var(--text-secondary)]">The public MCP registry is temporarily unavailable. Showing the local Allternit catalog.</div>}
-        {activeCollection.length === 0 ? (
-          <EmptyState probing={probing} onScan={reprobe} />
-        ) : (
-          <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-            {visibleApps.map((app) => (
-              <MiniAppCard
-                key={app.id}
-                app={app}
-                onOpen={handleOpen}
-                onPin={handlePin}
-                onUnpin={handleUnpin}
-                onReprobe={reprobe}
-                onDetails={setSelectedApp}
-              />
-            ))}
-            {visibleApps.length === 0 && <div className="col-span-full flex flex-col items-center justify-center gap-2 py-24 text-center"><AppWindow size={48} className="text-[var(--text-tertiary)] opacity-40" /><div className="text-sm text-[var(--text-secondary)]">No miniapps match your search.</div><button type="button" onClick={() => { setQuery(''); setCategory('all'); }} className="mt-2 text-sm font-medium text-[var(--accent-primary)] hover:underline">Clear filters</button></div>}
-            {storeMode === 'discover' && catalogLoading && <div className="col-span-full flex items-center justify-center gap-2 py-5 text-xs text-[var(--text-tertiary)]"><CircleNotch size={14} className="animate-spin" /> Loading public registry…</div>}
-          </div>
-        )}
-      </div>
-      <MiniAppAddModal isOpen={addOpen} onClose={() => setAddOpen(false)} onAdd={handleAdd} />
+        <div className="mt-4 flex items-center gap-1 overflow-x-auto border-b border-[var(--border-subtle)] pb-3">
+          {categories.map((item) => (
+            <Pill
+              key={item}
+              size="sm"
+              active={category === item}
+              onClick={() => setCategory(item)}
+              className="capitalize"
+            >
+              {item}
+            </Pill>
+          ))}
+        </div>
+
+        <div className="mt-4 flex flex-wrap items-center gap-3">
+          <label className="flex items-center gap-2 text-xs text-[var(--text-tertiary)]">
+            Source
+            <select
+              value={source}
+              onChange={(event) => setSource(event.target.value as typeof source)}
+              className="h-8 rounded-lg border border-[var(--border-default)] bg-[var(--bg-elevated)] px-2 text-xs text-[var(--text-primary)] outline-none focus:border-[var(--accent-primary)]"
+            >
+              <option value="all">All sources</option>
+              <option value="allternit">Allternit Verified</option>
+              <option value="mcp">MCP Registry</option>
+              <option value="github">GitHub</option>
+              <option value="url">URL</option>
+              <option value="local">Local</option>
+              <option value="workspace">Workspace</option>
+            </select>
+          </label>
+          <label className="flex items-center gap-2 text-xs text-[var(--text-tertiary)]">
+            Experience
+            <select
+              value={experience}
+              onChange={(event) => setExperience(event.target.value as typeof experience)}
+              className="h-8 rounded-lg border border-[var(--border-default)] bg-[var(--bg-elevated)] px-2 text-xs text-[var(--text-primary)] outline-none focus:border-[var(--accent-primary)]"
+            >
+              <option value="all">All experiences</option>
+              <option value="native">Native</option>
+              <option value="hybrid">Hybrid</option>
+              <option value="embedded">Embedded</option>
+            </select>
+          </label>
+        </div>
+
+        <div className="mt-8">
+          {storeMode === 'discover' && catalogError && (
+            <div className="mb-5 rounded-xl border border-amber-500/20 bg-amber-500/5 px-4 py-3 text-xs text-[var(--text-secondary)]">
+              The public MCP registry is temporarily unavailable. Showing the local Allternit catalog.
+            </div>
+          )}
+
+          {storeMode === 'discover' && catalogLoading && activeCollection.length === 0 ? (
+            <CatalogSkeleton />
+          ) : activeCollection.length === 0 ? (
+            <EmptyState probing={probing} onScan={reprobe} />
+          ) : (
+            <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+              {visibleApps.map((app) => (
+                <MiniAppCard
+                  key={app.id}
+                  app={app}
+                  onOpen={handleOpen}
+                  onPin={handlePin}
+                  onUnpin={handleUnpin}
+                  onReprobe={reprobe}
+                  onDetails={setSelectedApp}
+                />
+              ))}
+              {visibleApps.length === 0 && <NoResultsState onClear={clearFilters} />}
+            </div>
+          )}
+        </div>
+        <MiniAppAddModal isOpen={addOpen} onClose={() => setAddOpen(false)} onAdd={handleAdd} />
       </div>
     </div>
   );

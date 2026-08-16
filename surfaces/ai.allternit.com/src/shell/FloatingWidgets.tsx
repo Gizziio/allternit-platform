@@ -1,8 +1,9 @@
 import React, { useEffect, useRef, useState } from 'react';
 import {
   SidebarSimple,
+  CaretLeft,
+  CaretRight,
   NotePencil,
-  MagnifyingGlass,
   Bell,
   House,
   TerminalWindow,
@@ -20,7 +21,6 @@ interface RailControlsProps {
   onNewAgentSession: () => void | Promise<void>;
   isRailCollapsed: boolean;
   railWidth?: number;
-  onSearchOpen?: () => void;
   onAgentActivityOpen?: () => void;
   agentActivityUnreadCount?: number;
   onModeHover?: (mode: AppMode | null) => void;
@@ -48,7 +48,6 @@ export function RailControls({
   onNewAgentSession,
   isRailCollapsed,
   railWidth = 248,
-  onSearchOpen,
   onAgentActivityOpen,
   agentActivityUnreadCount = 0,
   onModeHover,
@@ -58,10 +57,9 @@ export function RailControls({
   const [collapsedHovered, setCollapsedHovered] = useState(false);
   const createMenuRef = useRef<HTMLDivElement | null>(null);
 
-  // The 100px leading offset clears the frameless window's traffic-light
-  // controls, which only exist inside the Electron desktop shell. Plain
-  // browsers (and mobile web) have no traffic lights — use a normal inset.
-  const trafficLightClearance = isElectronShell() ? 100 : 8;
+  // Tight leading offset for the frameless window's traffic-light controls
+  // in the Electron desktop shell; on the web there's no traffic-light strip.
+  const trafficLightClearance = isElectronShell() ? 72 : 4;
 
   useEffect(() => {
     if (!showCreateMenu) return;
@@ -88,12 +86,22 @@ export function RailControls({
         >
           <div
             className={cn(
-              "flex items-center gap-1 rounded-lg transition-all duration-200",
+              "flex items-center gap-0.5 rounded-lg transition-all duration-200",
               collapsedHovered
                 ? "bg-[var(--shell-control-bg)] border border-solid border-[var(--border-subtle)] px-1 py-0.5"
                 : "border border-solid border-transparent"
             )}
           >
+            {collapsedHovered && (
+              <>
+                <TitleBarButton onClick={() => window.history.back()} title="Back">
+                  <CaretLeft size={15} weight="bold" />
+                </TitleBarButton>
+                <TitleBarButton onClick={() => window.history.forward()} title="Forward">
+                  <CaretRight size={15} weight="bold" />
+                </TitleBarButton>
+              </>
+            )}
             <TitleBarButton
               onClick={onToggleRail}
               title="Expand Sidebar"
@@ -157,7 +165,15 @@ export function RailControls({
         className="h-11 flex items-center pr-2 pointer-events-auto [WebkitAppRegion:no-drag]"
         style={{ paddingLeft: trafficLightClearance }}
       >
-        <div className="flex items-center gap-1 [WebkitAppRegion:no-drag]">
+        <div className="flex items-center gap-0.5 [WebkitAppRegion:no-drag]">
+          <TitleBarButton onClick={() => window.history.back()} title="Back">
+            <CaretLeft size={15} weight="bold" />
+          </TitleBarButton>
+
+          <TitleBarButton onClick={() => window.history.forward()} title="Forward">
+            <CaretRight size={15} weight="bold" />
+          </TitleBarButton>
+
           <TitleBarButton
             onClick={onToggleRail}
             title={isRailCollapsed ? 'Expand Sidebar' : 'Collapse Sidebar'}
@@ -188,10 +204,6 @@ export function RailControls({
               </div>
             )}
           </div>
-
-          <TitleBarButton onClick={onSearchOpen} title="Search">
-            <MagnifyingGlass size={15} weight="bold" />
-          </TitleBarButton>
 
           <div className="relative">
             <TitleBarButton onClick={onAgentActivityOpen} title="Agent Activity (⌘⇧M)">

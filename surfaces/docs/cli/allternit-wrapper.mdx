@@ -1,0 +1,144 @@
+---
+title: 'allternit Wrapper'
+description: 'Unified shell entry point for the Allternit platform.'
+---
+
+## Overview
+
+The `allternit` wrapper is the unified shell entry point for the Allternit platform. The `bin/allternit` script delegates to the TypeScript CLI in `cmd/gizzi-code/src/cli/allternit.ts`, which provides platform lifecycle commands and launches the Gizzi Terminal UI.
+
+This wrapper replaces the older multi-binary CLI approach with a single command that works in both development and bundled distributions.
+
+## Installation
+
+The wrapper is available after installing Gizzi Code. Make sure `bun` is installed and on your `PATH`, then run:
+
+```bash
+curl -fsSL https://gizzi.sh/install | sh
+```
+
+Or invoke the wrapper directly from a clone of the repository:
+
+```bash
+./bin/allternit --help
+```
+
+## Commands
+
+```bash
+allternit [command]
+```
+
+| Command | Description |
+|---------|-------------|
+| `tui` (default) | Launch the Gizzi Terminal UI. |
+| `up` | Start platform services. |
+| `down` | Stop platform services. |
+| `status` | Show platform status. |
+| `doctor` | Run diagnostics. |
+| `logs` | Show platform log location. |
+| `help` | Show help. |
+
+## Examples
+
+### Launch the TUI
+
+```bash
+allternit
+# or explicitly
+allternit tui
+```
+
+### Start the platform
+
+```bash
+allternit up
+```
+
+Expected output:
+
+```
+Starting GIZZI platform...
+✓ Platform starting (check status in a few seconds)
+```
+
+### Check status
+
+```bash
+allternit status
+```
+
+Expected output:
+
+```
+Platform: RUNNING
+
+Services:
+  ● api         http://127.0.0.1:3000
+  ● gateway     http://127.0.0.1:8013
+```
+
+### Run diagnostics
+
+```bash
+allternit doctor
+```
+
+Expected output:
+
+```
+Running diagnostics...
+
+  ✓ api         reachable
+  ✓ gateway     reachable
+  ! local-models not configured
+
+✓ System healthy
+```
+
+### Stop the platform
+
+```bash
+allternit down
+```
+
+## Configuration directory
+
+Platform-wide defaults are stored in `cmd/allternit/system/config.json`. User overrides are managed by Gizzi Code's settings system. Common settings include:
+
+| Setting | Default | Description |
+|---------|---------|-------------|
+| `api.bind_address` | `127.0.0.1:3000` | Local API bind address. |
+| `kernel.url` | `http://127.0.0.1:3004` | Kernel service URL. |
+| `agent.default_model` | — | Default agent model. |
+| `agent.timeout_seconds` | `120` | Agent request timeout. |
+| `logging.level` | `info` | Log level. |
+
+## How it fits
+
+```
+bin/allternit
+    │
+    ▼
+cmd/gizzi-code/src/cli/allternit.ts
+    │
+    ├── TUI launcher (gizzi)
+    ├── platform daemon (up/down/status)
+    └── diagnostics (doctor)
+```
+
+The wrapper does not contain logic itself; it is a thin shim that ensures the correct TypeScript entry point is executed with `bun run`.
+
+## Error codes
+
+| Exit code | Meaning |
+|-----------|---------|
+| `0` | Success or healthy diagnostics. |
+| `1` | Command failed or diagnostics detected issues. |
+
+## Related pages
+
+- [Gizzi Code CLI](/cli/overview)
+- [CLI Installation](/cli/installation)
+- [CLI Configuration](/cli/configuration)
+- [Headless Execution](/cli/headless-execution)

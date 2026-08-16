@@ -1,0 +1,127 @@
+---
+title: Library
+description: List generated artifacts and uploaded files across sessions.
+---
+
+# Library
+
+The Library API provides an aggregated, user-scoped view of generated artifacts and uploaded files. It flattens components stored in agent canvases and merges them with uploaded files, deduplicating by artifact id so each artifact appears once.
+
+## Base URL
+
+```text
+https://api.allternit.com/api/v1/library
+```
+
+For local development:
+
+```text
+http://127.0.0.1:8013/api/v1/library
+```
+
+## Endpoints
+
+| Method | Path | Description |
+|--------|------|-------------|
+| `GET` | `/api/v1/library` | List library items |
+| `GET` | `/api/v1/library/stats` | Per-kind counts |
+
+## List library items
+
+```bash
+curl -G https://api.allternit.com/api/v1/library \
+  -H "Authorization: Bearer $TOKEN" \
+  -d "kind=code" \
+  -d "search=parser" \
+  -d "limit=60" \
+  -d "cursor=0"
+```
+
+### Query parameters
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `kind` | string | Filter by kind: `image`, `document`, `code`, `artifact`, or `file` |
+| `search` | string | Case-insensitive title search |
+| `limit` | integer | Page size (1–200, default 60) |
+| `cursor` | string | Pagination offset as a stringified integer |
+
+### Response
+
+```json
+{
+  "items": [
+    {
+      "id": "canvas_01hqx8x7x7x7x7x7x7x7x7x:3",
+      "artifact_id": "art_01hqx8x7x7x7x7x7x7x7x7x",
+      "kind": "code",
+      "title": "parser.ts",
+      "url": null,
+      "content": "export function parse(...) {}",
+      "session_id": "sess_01hqx8x7x7x7x7x7x7x7x7x",
+      "canvas_id": "canvas_01hqx8x7x7x7x7x7x7x7x7x",
+      "origin": "generated",
+      "created_at": "2026-08-13T18:00:00Z"
+    },
+    {
+      "id": "file:reports/q3.pdf",
+      "artifact_id": null,
+      "kind": "document",
+      "title": "q3.pdf",
+      "url": "/api/v1/files/raw?path=reports%2Fq3.pdf",
+      "content": null,
+      "session_id": "",
+      "canvas_id": "",
+      "origin": "uploaded",
+      "created_at": "2026-08-13T18:00:00Z"
+    }
+  ],
+  "next_cursor": "60",
+  "total": 2
+}
+```
+
+### Kinds
+
+| Kind | Description |
+|------|-------------|
+| `image` | Images and image-like data |
+| `document` | Documents, PDFs, markdown, text |
+| `code` | Source code, JSON, HTML, CSS |
+| `artifact` | Generated artifacts such as websites, videos, slides |
+| `file` | Any uploaded file with a downloadable URL |
+
+## Library stats
+
+```bash
+curl https://api.allternit.com/api/v1/library/stats \
+  -H "Authorization: Bearer $TOKEN"
+```
+
+### Response
+
+```json
+{
+  "stats": {
+    "image": 5,
+    "document": 12,
+    "code": 8,
+    "artifact": 3,
+    "file": 4,
+    "total": 32
+  }
+}
+```
+
+Counts reflect the same deduplicated set shown in the list endpoint.
+
+## Error codes
+
+| Status | Code | Description |
+|--------|------|-------------|
+| `500` | `internal_error` | Database or server error. |
+
+## Related pages
+
+- [Files](/api/files) — upload and download raw files
+- [Agent Sessions](/api/agent-sessions) — sessions that produce canvas components

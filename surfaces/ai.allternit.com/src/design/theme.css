@@ -183,7 +183,7 @@
   --shell-control-fg: var(--ui-text-primary);
   --shell-control-muted-fg: var(--ui-text-secondary);
   --shell-control-active-fg: var(--ui-text-inverse);
-  --shell-overlay-backdrop: rgba(18, 20, 24, 0.14);
+  --shell-overlay-backdrop: color-mix(in srgb, var(--accent-primary) 18%, rgba(18, 20, 24, 0.12));
   --shell-dialog-bg: linear-gradient(180deg, color-mix(in srgb, var(--surface-floating) 96%, var(--surface-panel)) 0%, color-mix(in srgb, var(--surface-panel) 94%, var(--surface-canvas)) 100%);
   --shell-dialog-border: color-mix(in srgb, var(--accent-primary) 22%, var(--ui-border-default));
   --shell-dialog-title: var(--shell-item-active-fg);
@@ -362,7 +362,7 @@
   --shell-control-fg: var(--ui-text-primary);
   --shell-control-muted-fg: var(--ui-text-secondary);
   --shell-control-active-fg: #ffffff;
-  --shell-overlay-backdrop: rgba(0, 0, 0, 0.72);
+  --shell-overlay-backdrop: color-mix(in srgb, var(--accent-primary) 22%, rgba(10, 8, 6, 0.78));
   --shell-dialog-bg: linear-gradient(180deg, color-mix(in srgb, var(--surface-panel) 98%, #201915) 0%, color-mix(in srgb, var(--surface-canvas) 98%, #120f0c) 100%);
   --shell-dialog-border: color-mix(in srgb, var(--accent-primary) 26%, var(--ui-border-default));
   --shell-dialog-title: var(--shell-item-active-fg);

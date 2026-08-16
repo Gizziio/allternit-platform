@@ -1,0 +1,379 @@
+---
+title: 'Office CLI Gateway'
+description: 'Server-side Office document automation through the officecli binary'
+---
+
+## Overview
+
+The **Office CLI Gateway** lets agents and integrations read, mutate, and render Microsoft Office documents (`docx`, `xlsx`, `pptx`) by running the `officecli` binary server-side. The gateway handles document uploads, resident sessions, batch commands, artifact generation, live previews, and an MCP passthrough surface.
+
+Use the gateway when you need to:
+
+- Extract or update text, tables, or slides in Office documents.
+- Generate rendered HTML or PNG previews of a document.
+- Mail-merge documents from JSON data.
+- Expose officecli capabilities to an MCP client.
+
+## Base URL
+
+All Office CLI gateway routes are mounted under the protected router:
+
+```text
+https://api.allternit.com/api/v1/office/cli
+```
+
+Local development:
+
+```text
+http://127.0.0.1:8013/api/v1/office/cli
+```
+
+## Authentication
+
+Office CLI routes require a valid session. The gateway resolves the caller from the standard Allternit auth middleware and falls back to the `x-allternit-user-id` header in local development. Documents are isolated per user; one user cannot access another user's uploads or artifacts.
+
+## Endpoints
+
+| Method | Path | Description |
+|--------|------|-------------|
+| POST | `/api/v1/office/cli/document` | Upload a `.docx`, `.xlsx`, or `.pptx` snapshot |
+| POST | `/api/v1/office/cli/exec` | Run an officecli command against a document |
+| GET | `/api/v1/office/cli/document/:doc_id/artifact/:name` | Download a produced artifact or the document itself |
+| GET | `/api/v1/office/cli/capabilities` | Probe officecli and list allowed commands |
+| POST | `/api/v1/office/cli/watch` | Start a live preview watch process |
+| GET | `/api/v1/office/cli/watch/:doc_id/proxy/*rest` | Proxy a request into the watch process |
+| DELETE | `/api/v1/office/cli/watch/:doc_id` | Stop the watch process |
+| POST | `/api/v1/office/cli/mcp` | JSON-RPC passthrough to the officecli MCP server |
+
+## Upload a document
+
+Upload a binary Office document. The call returns a `doc_id` used for all subsequent operations.
+
+```bash
+curl -X POST http://127.0.0.1:8013/api/v1/office/cli/document \
+  -H "Authorization: Bearer <token>" \
+  -H "Content-Type: application/octet-stream" \
+  -H "x-office-filename: report.docx" \
+  --data-binary @report.docx
+```
+
+### Request headers
+
+| Header | Required | Description |
+|--------|----------|-------------|
+| `x-office-filename` | yes | Original filename; must end in `.docx`, `.xlsx`, or `.pptx` |
+| `x-office-binding-id` | no | Optional add-in binding identifier |
+
+### Response
+
+```json
+{
+  "ok": true,
+  "doc_id": "550e8400-e29b-41d4-a716-446655440000",
+  "size": 28140,
+  "format": "docx"
+}
+```
+
+## Execute a command
+
+Run any allowed officecli command against an uploaded document. Commands that modify the document should set `session: true` so the gateway opens a resident session first.
+
+```bash
+curl -X POST http://127.0.0.1:8013/api/v1/office/cli/exec \
+  -H "Authorization: Bearer <token>" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "doc_id": "550e8400-e29b-41d4-a716-446655440000",
+    "command": "get",
+    "path": "/document/body",
+    "session": true
+  }'
+```
+
+### Request body
+
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| `command` | string | yes | One of the allowed officecli commands |
+| `doc_id` | string | yes* | Uploaded document ID (*required unless `live_path` is used) |
+| `new_filename` | string | yes* | Output filename for `create` and `merge` |
+| `path` | string | no | In-document selector for path-addressing commands |
+| `props` | object | no | Key/value properties rendered as `--prop k=v` |
+| `args` | array | no | Extra positional arguments |
+| `commands` | string | no | JSON string for `batch` commands |
+| `timeout_ms` | integer | no | Per-command timeout; default 60s, max 300s |
+| `session` | boolean | no | Open a resident session before the command |
+| `template_doc_id` | string | no | Template document for `merge` |
+| `live_path` | string | no | Absolute on-disk path for live-fs gateways |
+
+### Allowed commands
+
+| Command | Purpose |
+|---------|---------|
+| `create` | Create a new blank document |
+| `view` | Render the document to HTML or PNG |
+| `get` | Read a document element |
+| `query` | Query document content |
+| `set`, `add`, `remove`, `move`, `swap` | Mutate document content |
+| `validate` | Validate document structure |
+| `batch` | Run multiple commands in one call |
+| `dump` | Dump document structure to JSON |
+| `merge` | Mail-merge with a data document |
+| `raw`, `raw-set` | Raw XML read/write |
+| `add-part`, `refresh` | Package manipulation |
+| `open`, `save`, `close` | Resident session lifecycle |
+| `plugins`, `load_skill` | Plugin and skill management |
+
+### Response
+
+```json
+{
+  "ok": true,
+  "exit_code": 0,
+  "result": {
+    "text": "Quarterly report"
+  },
+  "stdout": null,
+  "stderr": "",
+  "artifacts": [],
+  "duration_ms": 245,
+  "truncated": false
+}
+```
+
+A non-zero exit code still returns HTTP 200 when officecli produced structured JSON output:
+
+```json
+{
+  "ok": false,
+  "exit_code": 1,
+  "result": {
+    "code": "element_not_found",
+    "suggestion": "Check the path selector"
+  },
+  "stdout": null,
+  "stderr": "",
+  "artifacts": [],
+  "duration_ms": 89,
+  "truncated": false
+}
+```
+
+### Render an artifact
+
+`view` writes an HTML or PNG artifact that can be downloaded separately:
+
+```bash
+curl -X POST http://127.0.0.1:8013/api/v1/office/cli/exec \
+  -H "Authorization: Bearer <token>" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "doc_id": "550e8400-e29b-41d4-a716-446655440000",
+    "command": "view",
+    "args": ["html"]
+  }'
+```
+
+Response:
+
+```json
+{
+  "ok": true,
+  "exit_code": 0,
+  "result": null,
+  "stdout": null,
+  "stderr": "",
+  "artifacts": [
+    {
+      "name": "20260813120000-page.html",
+      "kind": "html",
+      "url": "/api/v1/office/cli/document/550e8400-e29b-41d4-a716-446655440000/artifact/20260813120000-page.html"
+    }
+  ],
+  "duration_ms": 412,
+  "truncated": false
+}
+```
+
+## Download an artifact
+
+Download the produced artifact or the original document by filename:
+
+```bash
+curl -O http://127.0.0.1:8013/api/v1/office/cli/document/550e8400-e29b-41d4-a716-446655440000/artifact/20260813120000-page.html \
+  -H "Authorization: Bearer <token>"
+```
+
+The response `Content-Type` is inferred from the file extension (`html`, `png`, `docx`, etc.).
+
+## Capabilities
+
+Probe the installed `officecli` binary and list the commands the gateway will accept:
+
+```bash
+curl -X GET http://127.0.0.1:8013/api/v1/office/cli/capabilities \
+  -H "Authorization: Bearer <token>"
+```
+
+Response:
+
+```json
+{
+  "ok": true,
+  "available": true,
+  "version": "officecli 1.0.138",
+  "commands": [
+    "create", "view", "get", "query", "set", "add", "remove", "move", "swap",
+    "validate", "batch", "dump", "merge", "raw", "raw-set", "add-part",
+    "refresh", "open", "save", "close", "plugins", "load_skill"
+  ],
+  "live_fs": false
+}
+```
+
+## Live preview watch
+
+Start a long-lived `officecli watch` process for a document and proxy preview requests into it:
+
+```bash
+curl -X POST http://127.0.0.1:8013/api/v1/office/cli/watch \
+  -H "Authorization: Bearer <token>" \
+  -H "Content-Type: application/json" \
+  -d '{"doc_id":"550e8400-e29b-41d4-a716-446655440000"}'
+```
+
+Response:
+
+```json
+{
+  "ok": true,
+  "watch_url": "http://127.0.0.1:26400",
+  "port": 26400,
+  "proxy_url": "/api/v1/office/cli/watch/550e8400-e29b-41d4-a716-446655440000/proxy"
+}
+```
+
+Proxy the preview:
+
+```bash
+curl http://127.0.0.1:8013/api/v1/office/cli/watch/550e8400-e29b-41d4-a716-446655440000/proxy \
+  -H "Authorization: Bearer <token>"
+```
+
+Stop the watch:
+
+```bash
+curl -X DELETE http://127.0.0.1:8013/api/v1/office/cli/watch/550e8400-e29b-41d4-a716-446655440000 \
+  -H "Authorization: Bearer <token>"
+```
+
+Response:
+
+```json
+{ "ok": true }
+```
+
+## MCP passthrough
+
+The gateway exposes the officecli MCP server over `POST /api/v1/office/cli/mcp`. The gateway maintains one stdio MCP session per user, lazily spawns it, and retries once if the child dies.
+
+```bash
+curl -X POST http://127.0.0.1:8013/api/v1/office/cli/mcp \
+  -H "Authorization: Bearer <token>" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "jsonrpc": "2.0",
+    "id": 1,
+    "method": "tools/list"
+  }'
+```
+
+Response:
+
+```json
+{
+  "jsonrpc": "2.0",
+  "id": 1,
+  "result": {
+    "tools": [
+      {
+        "name": "docx_get",
+        "description": "Read content from a Word document",
+        "inputSchema": { "type": "object" }
+      }
+    ]
+  }
+}
+```
+
+To target an uploaded document, pass `doc_id` at the top level. The gateway resolves the path, rewrites `@doc` placeholders inside `params`, and strips `doc_id` before forwarding:
+
+```bash
+curl -X POST http://127.0.0.1:8013/api/v1/office/cli/mcp \
+  -H "Authorization: Bearer <token>" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "jsonrpc": "2.0",
+    "id": 2,
+    "doc_id": "550e8400-e29b-41d4-a716-446655440000",
+    "method": "tools/call",
+    "params": {
+      "name": "docx_get",
+      "arguments": {
+        "command": "view @doc outline"
+      }
+    }
+  }'
+```
+
+## Live filesystem mode
+
+When `ALLTERNIT_OFFICECLI_LIVE_FS` is enabled, commands may target an absolute on-disk path via `live_path` instead of an uploaded `doc_id`. This is intended for trusted gateways that edit documents in place. Artifact-producing commands and file-creation verbs still require the upload flow.
+
+```json
+{
+  "command": "get",
+  "live_path": "/data/invoices/invoice-42.docx",
+  "path": "/document/body"
+}
+```
+
+## Resource and lifecycle limits
+
+| Limit | Default | Description |
+|-------|---------|-------------|
+| Per-command timeout | 60s | Max 300s via `timeout_ms` |
+| Stdout cap | 1 MiB | Hard truncation beyond this size |
+| Document TTL | 24h | Idle documents are evicted |
+| Resident idle | 15m | Idle resident sessions are closed |
+| Watch idle | 30m | Idle watch processes are killed |
+| MCP idle | 15m | Idle MCP sessions are reaped |
+
+## Error codes
+
+| HTTP | Code / Message | Meaning |
+|------|----------------|---------|
+| 200 | — | Command executed; check `ok` and `exit_code` for the officecli-level result |
+| 400 | `Missing required header: x-office-filename` | Upload is missing the filename header |
+| 400 | `Invalid x-office-filename` | Filename failed sanitization |
+| 400 | `Unsupported file extension` | Not `.docx`, `.xlsx`, or `.pptx` |
+| 400 | `Command 'x' is not allowed` | Command is not in the allow list |
+| 400 | `create requires new_filename` | `create` target validation failed |
+| 400 | `merge requires new_filename plus doc_id and/or template_doc_id` | `merge` target validation failed |
+| 400 | `Pass exactly one of doc_id, new_filename or live_path` | Target validation failed |
+| 400 | `live_path is disabled on this gateway` | Live-fs mode is not enabled |
+| 400 | `live_path must be an absolute path without '..'` | Live path validation failed |
+| 400 | `Missing JSON-RPC 'id'` | MCP request is missing a JSON-RPC id |
+| 404 | `Office CLI document not found` | Document does not exist or belongs to another user |
+| 404 | `Artifact not found` | Artifact name is invalid or file is missing |
+| 404 | `Office CLI watch not found` | Watch process not found or not owned by caller |
+| 502 | `Watch proxy error` | Could not reach the watch upstream |
+| -32603 | `officecli MCP request failed` | MCP passthrough failed after one retry |
+
+## Related pages
+
+- [Native Tool Belt](/tools/tool-belt)
+- [MCP Servers](/tools/mcp)
+- [Cloud Sandboxes](/tools/sandbox)
+- [Build a Custom Tool](/tools/build-a-tool)

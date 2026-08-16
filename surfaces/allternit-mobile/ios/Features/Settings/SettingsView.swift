@@ -533,7 +533,7 @@ struct SettingsView: View {
                 }
             }) {
                 HStack {
-                    Text("Manage agents")
+                    Text("agent | bot hub")
                         .font(.subheadline)
                         .foregroundColor(Color("TextPrimary"))
                     Spacer()

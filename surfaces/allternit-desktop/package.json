@@ -202,6 +202,24 @@
         "name": "PDF Document",
         "description": "Portable Document Format file",
         "role": "Viewer"
+      },
+      {
+        "ext": "md",
+        "name": "Markdown Document",
+        "description": "Markdown text file",
+        "role": "Viewer"
+      },
+      {
+        "ext": "doc",
+        "name": "Word 97-2003 Document",
+        "description": "Legacy Microsoft Word document",
+        "role": "Viewer"
+      },
+      {
+        "ext": "xls",
+        "name": "Excel 97-2003 Workbook",
+        "description": "Legacy Microsoft Excel workbook",
+        "role": "Viewer"
       }
     ],
     "mac": {

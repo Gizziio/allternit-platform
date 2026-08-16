@@ -1,0 +1,491 @@
+---
+title: 'Agent Operations API'
+description: 'Run evaluations, manage autonomous factory tasks, and execute garbage-collection agents.'
+---
+
+## Overview
+
+The Agent Operations API groups quality-assurance and maintenance endpoints for agents and projects:
+
+- **Evaluations** — run a dataset of test cases against an agent and grade the replies.
+- **Benchmark history** — view aggregate evaluation scores over time.
+- **Factory tasks** — create and approve/reject autonomous spec-driven tasks.
+- **GC agents** — run repository-analyzer agents that find code-quality issues and compute entropy reduction.
+
+## Base URL
+
+```
+https://api.allternit.com/api
+```
+
+## Authentication
+
+All requests must include a valid bearer token in the `Authorization` header.
+
+## Evaluations
+
+### List evaluations
+
+```http
+GET /api/agents/operations/evaluations
+```
+
+Returns the caller's evaluation definitions.
+
+#### Example response
+
+```json
+{
+  "evaluations": [
+    {
+      "id": "eval_1a2b...",
+      "name": "Security baseline",
+      "type": "security_agent",
+      "status": "completed",
+      "score": 87,
+      "lastRun": "2026-08-13T14:00:00Z"
+    }
+  ]
+}
+```
+
+### Create an evaluation
+
+```http
+POST /api/agents/operations/evaluations
+```
+
+#### Request body
+
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| `name` | string | Yes | Evaluation name. |
+| `type` / `target` | string | Yes | Agent or target identifier. |
+| `dataset` | array | No | List of test cases. |
+
+A test case object has the following shape:
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `input` | string | Prompt sent to the agent. |
+| `expected` | string | Optional substring the reply must contain. |
+| `contains` | array | Optional list of substrings the reply must contain. |
+
+#### Example request
+
+```bash
+curl -X POST https://api.allternit.com/api/agents/operations/evaluations \
+  -H "Authorization: Bearer $TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "name": "Security baseline",
+    "type": "security_agent",
+    "dataset": [
+      {
+        "input": "Is this SQL safe? SELECT * FROM users WHERE id = " + user_input",
+        "expected": "parameterized",
+        "contains": ["injection", "unsafe"]
+      },
+      {
+        "input": "What is the OWASP Top 10?",
+        "contains": ["injection", "broken access control"]
+      }
+    ]
+  }'
+```
+
+#### Example response
+
+```json
+{
+  "evaluation": {
+    "id": "eval_1a2b...",
+    "name": "Security baseline",
+    "type": "security_agent",
+    "status": "pending",
+    "score": 0,
+    "lastRun": null
+  }
+}
+```
+
+### Run an evaluation
+
+```http
+POST /api/agents/operations/evaluations/:id/run
+```
+
+Runs each case in a throwaway Gizzi session, grades the reply, and persists the results. Evaluations are capped at 10 cases and 20 seconds per case.
+
+#### Example response
+
+```json
+{
+  "runId": "run_eval_3f4a...",
+  "evaluationId": "eval_1a2b...",
+  "status": "completed",
+  "summary": {
+    "total": 2,
+    "passed": 2,
+    "failed": 0,
+    "skipped": 0
+  },
+  "duration": 1840,
+  "details": [
+    {
+      "input": "Is this SQL safe? SELECT * FROM users WHERE id = ...",
+      "reply": "This is unsafe because it is vulnerable to SQL injection. Use parameterized queries.",
+      "passed": true
+    }
+  ]
+}
+```
+
+### Get evaluation results
+
+```http
+GET /api/agents/operations/evaluations/:id/results
+```
+
+Returns the most recent run for the evaluation.
+
+#### Example response
+
+Same shape as the `run` response.
+
+### Benchmark history
+
+```http
+GET /api/agents/operations/benchmarks/history
+```
+
+Returns daily aggregate scores and total test counts for the last 30 days.
+
+#### Example response
+
+```json
+{
+  "history": [
+    {
+      "date": "2026-08-13",
+      "score": 87,
+      "tests": 24
+    },
+    {
+      "date": "2026-08-12",
+      "score": 82,
+      "tests": 18
+    }
+  ]
+}
+```
+
+## Factory tasks
+
+Factory tasks represent autonomous spec-driven work items that produce changes awaiting human approval.
+
+### List factory tasks
+
+```http
+GET /api/agents/operations/factory/tasks
+```
+
+#### Example response
+
+```json
+{
+  "tasks": [
+    {
+      "id": "task_5c6d...",
+      "specRef": "specs/auth-refactor",
+      "status": "pending_approval",
+      "progress": 95,
+      "createdAt": "2026-08-13T14:00:00Z",
+      "requirements": ["Extract auth service", "Add tests"]
+    }
+  ]
+}
+```
+
+### Create a factory task
+
+```http
+POST /api/agents/operations/factory/tasks
+```
+
+#### Request body
+
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| `specRef` | string | Yes | Spec reference. |
+| `requirements` | array | Yes | List of requirements. |
+
+#### Example request
+
+```bash
+curl -X POST https://api.allternit.com/api/agents/operations/factory/tasks \
+  -H "Authorization: Bearer $TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "specRef": "specs/auth-refactor",
+    "requirements": ["Extract auth service", "Add tests", "Update docs"]
+  }'
+```
+
+#### Example response
+
+```json
+{
+  "task": {
+    "id": "task_5c6d...",
+    "specRef": "specs/auth-refactor",
+    "requirements": ["Extract auth service", "Add tests", "Update docs"],
+    "status": "pending_approval",
+    "progress": 95,
+    "createdAt": "2026-08-13T14:00:00Z"
+  }
+}
+```
+
+### Approve a change
+
+```http
+POST /api/agents/operations/factory/tasks/:task_id/changes/:change_id/approve
+```
+
+Approves a pending change, marking the task `completed` and progress `100`.
+
+#### Example response
+
+```json
+{
+  "taskId": "task_5c6d...",
+  "changeId": "change-1",
+  "status": "approved"
+}
+```
+
+### Reject a change
+
+```http
+POST /api/agents/operations/factory/tasks/:task_id/changes/:change_id/reject
+```
+
+Rejects a pending change, marking the task `rejected` and progress `95`.
+
+#### Example response
+
+```json
+{
+  "taskId": "task_5c6d...",
+  "changeId": "change-1",
+  "status": "rejected"
+}
+```
+
+## GC agents
+
+GC agents are repository analyzers that run against a cowork project's git remote and report code-quality issues. Six agents are built in:
+
+| Agent | Description | Default threshold |
+|-------|-------------|-------------------|
+| `duplicate_detector` | Finds duplicate code using AST analysis. | 0.80 |
+| `boundary_type_checker` | Checks for untyped boundaries (`unwrap`, `expect`). | 0.75 |
+| `dependency_validator` | Validates layer dependency directions. | 0.85 |
+| `observability_checker` | Finds missing tracing and logging. | 0.70 |
+| `documentation_sync` | Detects spec vs implementation drift. | 0.65 |
+| `test_coverage_checker` | Identifies test coverage gaps. | 0.80 |
+
+All GC endpoints require `?projectId=:project_id`.
+
+### List GC policies
+
+```http
+GET /api/agents/operations/gc/policies?projectId=:project_id
+```
+
+Seeds default policies for the project if they do not exist, then returns them.
+
+#### Example response
+
+```json
+{
+  "policies": [
+    {
+      "id": "duplicate_detector",
+      "name": "Duplicate Detector",
+      "enabled": true,
+      "threshold": 0.80,
+      "description": "Finds duplicate code using AST analysis"
+    }
+  ]
+}
+```
+
+### Update a GC policy
+
+```http
+PUT /api/agents/operations/gc/policies/:id?projectId=:project_id
+```
+
+#### Request body
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `enabled` | boolean | Enable or disable the policy. |
+| `threshold` | number | 0.0–1.0 sensitivity threshold. |
+
+#### Example request
+
+```bash
+curl -X PUT "https://api.allternit.com/api/agents/operations/gc/policies/duplicate_detector?projectId=proj_4d5e..." \
+  -H "Authorization: Bearer $TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{"enabled": true, "threshold": 0.85}'
+```
+
+#### Example response
+
+```json
+{
+  "policy": {
+    "id": "duplicate_detector",
+    "name": "Duplicate Detector",
+    "enabled": true,
+    "threshold": 0.85,
+    "description": "Finds duplicate code using AST analysis"
+  }
+}
+```
+
+### Get GC queue
+
+```http
+GET /api/agents/operations/gc/queue?projectId=:project_id
+```
+
+Returns agents with outstanding issues from their last run.
+
+#### Example response
+
+```json
+{
+  "queue": [
+    {
+      "id": "queue-duplicate_detector",
+      "agent": "duplicate_detector",
+      "items": 7,
+      "priority": "high",
+      "status": "pending"
+    }
+  ]
+}
+```
+
+### Run a GC agent
+
+```http
+POST /api/agents/operations/gc/agents/:agent_name/run?projectId=:project_id
+```
+
+Clones or pulls the project's repository into a cached workspace, runs the analyzer, and persists the results.
+
+#### Example request
+
+```bash
+curl -X POST "https://api.allternit.com/api/agents/operations/gc/agents/duplicate_detector/run?projectId=proj_4d5e..." \
+  -H "Authorization: Bearer $TOKEN"
+```
+
+#### Example response
+
+```json
+{
+  "runId": "gc_6e7f...",
+  "agentName": "duplicate_detector",
+  "executedAt": "2026-08-13T14:22:00Z",
+  "issuesFound": [
+    {
+      "id": "issue_7g8h...",
+      "agent": "duplicate_detector",
+      "severity": "warning",
+      "location": "src/utils.ts",
+      "description": "Duplicate validation logic",
+      "suggestion": "Extract a shared validator function.",
+      "fixed": false,
+      "lineNumber": 42
+    }
+  ],
+  "issuesFixed": 0,
+  "entropyReduction": 0.15,
+  "metadata": {}
+}
+```
+
+### Run GC cleanup
+
+```http
+POST /api/agents/operations/gc/cleanup?projectId=:project_id
+```
+
+Runs all enabled GC agents for the project and returns aggregated results.
+
+#### Example response
+
+```json
+{
+  "status": "completed",
+  "agentsRun": 3,
+  "issuesFound": 12,
+  "issuesFixed": 2,
+  "entropyReduction": 0.55,
+  "results": [
+    { "agentName": "duplicate_detector", "issuesFound": [...], ... }
+  ]
+}
+```
+
+### Get GC history
+
+```http
+GET /api/agents/operations/gc/history?projectId=:project_id
+```
+
+Returns daily aggregate GC metrics for the last 30 days and a computed `entropyScore`.
+
+#### Example response
+
+```json
+{
+  "history": [
+    {
+      "date": "2026-08-13",
+      "agentsRun": 3,
+      "issuesFound": 12,
+      "issuesFixed": 2,
+      "entropyReduction": 0.55,
+      "runId": "gc_6e7f..."
+    }
+  ],
+  "entropyScore": 84.45
+}
+```
+
+## Error codes
+
+| Status | Meaning |
+|--------|---------|
+| `200` | Success. |
+| `201` | Created. |
+| `400` | Bad request — invalid rating, threshold, or missing fields. |
+| `401` | Unauthorized. |
+| `404` | Evaluation, task, change, GC agent, or project not found. |
+| `422` | Unprocessable entity — project has no repository or dataset is invalid. |
+| `502` | Bad gateway — git or workspace failure. |
+| `500` | Internal server error or analyzer failure. |
+
+## Related pages
+
+- [Agents API](/api/agents)
+- [Agent Runtimes](/api/agent-runtimes)
+- [Agent Sessions](/api/agent-sessions)

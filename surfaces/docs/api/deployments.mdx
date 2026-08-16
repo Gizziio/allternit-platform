@@ -1,31 +1,332 @@
 ---
-title: Deployments
-description: Deploy agents as long-running services.
+title: 'Deployments API (Beta)'
+description: 'Schedule agents with cron expressions, trigger runs, and inspect run history.'
 ---
 
-# Deployments
+## Overview
 
-Deployments turn an agent into a persistent service that can be triggered by HTTP, webhooks, or scheduled tasks.
+The `/beta/deployments` API turns an agent into a scheduled service. A deployment binds an agent to a cron expression and tracks every execution in a separate run history. The scheduler recomputes `next_run_at` whenever the deployment is created, updated, or triggered.
+
+Deployments are scoped to the authenticated user.
+
+## Base URL
+
+```
+https://api.allternit.com/v1/beta/deployments
+```
+
+All requests require a Bearer token. See [Authentication](/api/authentication).
+
+## The deployment object
+
+```json
+{
+  "id": "dep_7a8b9c0d",
+  "agent_id": "ag_nightly_reporter",
+  "cron": "0 9 * * *",
+  "next_run_at": "2026-08-14T09:00:00Z",
+  "last_run_at": null,
+  "status": "active",
+  "metadata": { "region": "us-east", "team": "platform" },
+  "created_at": "2026-08-13T10:00:00Z",
+  "updated_at": "2026-08-13T10:00:00Z"
+}
+```
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `id` | string | Unique deployment identifier. |
+| `agent_id` | string? | Agent to execute. |
+| `cron` | string | Cron expression in standard 5-field format. |
+| `next_run_at` | string? | ISO 8601 timestamp of the next scheduled run. |
+| `last_run_at` | string? | ISO 8601 timestamp of the most recent triggered run. |
+| `status` | string | `active`, `paused`, or `archived`. |
+| `metadata` | object | Caller-provided key/value object. |
+| `created_at` | string | ISO 8601 timestamp. |
+| `updated_at` | string | ISO 8601 timestamp. |
+
+## The run object
+
+```json
+{
+  "id": "run_3d4e5f6a",
+  "deployment_id": "dep_7a8b9c0d",
+  "status": "succeeded",
+  "result": { "reports_generated": 3 },
+  "error": null,
+  "started_at": "2026-08-13T09:00:00Z",
+  "finished_at": "2026-08-13T09:00:05Z"
+}
+```
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `id` | string | Unique run identifier. |
+| `deployment_id` | string | Parent deployment. |
+| `status` | string | `running`, `succeeded`, `failed`, or `cancelled`. |
+| `result` | object? | Arbitrary result JSON reported by the worker. |
+| `error` | string? | Error message for failed/cancelled runs. |
+| `started_at` | string | ISO 8601 timestamp. |
+| `finished_at` | string? | Set when the run reaches a terminal state. |
 
 ## Endpoints
 
 | Method | Path | Description |
 |--------|------|-------------|
-| GET    | `/beta/deployments` | List deployments |
-| POST   | `/beta/deployments` | Create a deployment |
-| GET    | `/beta/deployments/:id` | Get a deployment |
-| PATCH  | `/beta/deployments/:id` | Update a deployment |
-| DELETE | `/beta/deployments/:id` | Delete a deployment |
-| GET    | `/beta/deployments/:id/runs` | List run history |
+| GET | `/api/v1/beta/deployments` | List deployments. |
+| POST | `/api/v1/beta/deployments` | Create a deployment. |
+| GET | `/api/v1/beta/deployments/:id` | Get a deployment. |
+| PATCH | `/api/v1/beta/deployments/:id` | Update a deployment. |
+| DELETE | `/api/v1/beta/deployments/:id` | Delete a deployment. |
+| GET | `/api/v1/beta/deployments/:id/runs` | List run history. |
+| POST | `/api/v1/beta/deployments/:id/runs` | Trigger a run manually. |
+| PATCH | `/api/v1/beta/deployments/:id/runs/:run_id` | Update a run's terminal state. |
 
-## Deployment config
+## List deployments
+
+```bash
+curl -G https://api.allternit.com/v1/beta/deployments \
+  -H "Authorization: Bearer $ALLTERNIT_API_KEY" \
+  -d "status=active"
+```
+
+### Query parameters
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `status` | string? | Filter by `active`, `paused`, or `archived`. |
+
+### Response
 
 ```json
 {
-  "agent_id": "ag_xxx",
-  "trigger": "webhook",
-  "environment": {
-    "model": "openai/gpt-4o"
+  "deployments": [
+    {
+      "id": "dep_7a8b9c0d",
+      "agent_id": "ag_nightly_reporter",
+      "cron": "0 9 * * *",
+      "next_run_at": "2026-08-14T09:00:00Z",
+      "last_run_at": null,
+      "status": "active",
+      "metadata": { "team": "platform" },
+      "created_at": "2026-08-13T10:00:00Z",
+      "updated_at": "2026-08-13T10:00:00Z"
+    }
+  ]
+}
+```
+
+## Create a deployment
+
+```bash
+curl -X POST https://api.allternit.com/v1/beta/deployments \
+  -H "Authorization: Bearer $ALLTERNIT_API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "agent_id": "ag_nightly_reporter",
+    "cron": "0 9 * * *",
+    "metadata": { "team": "platform", "region": "us-east" }
+  }'
+```
+
+### Request body
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `agent_id` | string? | Agent to execute. |
+| `cron` | string | Cron expression in standard 5-field format. |
+| `metadata` | object | Defaults to `{}`. Must be an object. |
+
+### Response
+
+```json
+{
+  "deployment": {
+    "id": "dep_7a8b9c0d",
+    "agent_id": "ag_nightly_reporter",
+    "cron": "0 9 * * *",
+    "next_run_at": "2026-08-14T09:00:00Z",
+    "last_run_at": null,
+    "status": "active",
+    "metadata": { "team": "platform", "region": "us-east" },
+    "created_at": "2026-08-13T10:00:00Z",
+    "updated_at": "2026-08-13T10:00:00Z"
+  },
+  "id": "dep_7a8b9c0d"
+}
+```
+
+Invalid cron expressions return `400 Bad Request`.
+
+## Get a deployment
+
+```bash
+curl https://api.allternit.com/v1/beta/deployments/dep_7a8b9c0d \
+  -H "Authorization: Bearer $ALLTERNIT_API_KEY"
+```
+
+### Response
+
+```json
+{
+  "deployment": { ... }
+}
+```
+
+## Update a deployment
+
+```bash
+curl -X PATCH https://api.allternit.com/v1/beta/deployments/dep_7a8b9c0d \
+  -H "Authorization: Bearer $ALLTERNIT_API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "cron": "30 10 * * *",
+    "status": "paused",
+    "metadata": { "team": "platform", "priority": "high" }
+  }'
+```
+
+### Request body
+
+At least one field must be provided.
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `agent_id` | string? | New agent to bind. |
+| `cron` | string? | New cron expression. |
+| `status` | string? | `active`, `paused`, or `archived`. |
+| `metadata` | object? | Replaces the existing metadata object. Must be an object. |
+
+### Response
+
+```json
+{
+  "deployment": { ... }
+}
+```
+
+`next_run_at` is recomputed on every update, even if only `status` changes.
+
+## Delete a deployment
+
+Deleting a deployment cascades to its run history.
+
+```bash
+curl -X DELETE https://api.allternit.com/v1/beta/deployments/dep_7a8b9c0d \
+  -H "Authorization: Bearer $ALLTERNIT_API_KEY"
+```
+
+Returns `204 No Content`.
+
+## List runs
+
+```bash
+curl https://api.allternit.com/v1/beta/deployments/dep_7a8b9c0d/runs \
+  -H "Authorization: Bearer $ALLTERNIT_API_KEY"
+```
+
+### Response
+
+```json
+{
+  "runs": [
+    {
+      "id": "run_3d4e5f6a",
+      "deployment_id": "dep_7a8b9c0d",
+      "status": "succeeded",
+      "result": { "reports_generated": 3 },
+      "error": null,
+      "started_at": "2026-08-13T09:00:00Z",
+      "finished_at": "2026-08-13T09:00:05Z"
+    }
+  ]
+}
+```
+
+## Trigger a run
+
+Manually enqueue a run and advance the deployment's schedule. This is useful for testing or for forcing an out-of-cycle execution.
+
+```bash
+curl -X POST https://api.allternit.com/v1/beta/deployments/dep_7a8b9c0d/runs \
+  -H "Authorization: Bearer $ALLTERNIT_API_KEY"
+```
+
+### Response
+
+```json
+{
+  "run": {
+    "id": "run_3d4e5f6a",
+    "deployment_id": "dep_7a8b9c0d",
+    "status": "running",
+    "result": null,
+    "error": null,
+    "started_at": "2026-08-13T10:00:00Z",
+    "finished_at": null
+  },
+  "id": "run_3d4e5f6a"
+}
+```
+
+Triggering a run also updates `last_run_at` and recomputes `next_run_at` on the deployment.
+
+## Update a run
+
+Report the terminal outcome of a run. Only `succeeded`, `failed`, and `cancelled` are accepted.
+
+```bash
+curl -X PATCH https://api.allternit.com/v1/beta/deployments/dep_7a8b9c0d/runs/run_3d4e5f6a \
+  -H "Authorization: Bearer $ALLTERNIT_API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "status": "succeeded",
+    "result": { "reports_generated": 3 }
+  }'
+```
+
+### Request body
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `status` | string | `succeeded`, `failed`, or `cancelled`. |
+| `result` | object? | Arbitrary result JSON. |
+| `error` | string? | Error or cancellation reason. |
+
+### Response
+
+```json
+{
+  "run": {
+    "id": "run_3d4e5f6a",
+    "deployment_id": "dep_7a8b9c0d",
+    "status": "succeeded",
+    "result": { "reports_generated": 3 },
+    "error": null,
+    "started_at": "2026-08-13T10:00:00Z",
+    "finished_at": "2026-08-13T09:00:05Z"
   }
 }
 ```
+
+A successful run update may also trigger a [webhook](/api/webhooks) delivery for `deployment.run.updated`.
+
+## Error codes
+
+| Status | Meaning | Typical cause |
+|--------|---------|---------------|
+| 200 OK | Success | Request succeeded. |
+| 201 Created | Created | POST created a deployment or run. |
+| 204 No Content | No content | DELETE removed a deployment. |
+| 400 Bad Request | Invalid request | Invalid cron expression, unsupported status, metadata not an object. |
+| 401 Unauthorized | Unauthorized | Missing or invalid bearer token. |
+| 404 Not Found | Not found | Unknown deployment, run, or access to another user's resource. |
+| 429 Too Many Requests | Rate limited | Exceeded the request rate limit for the key. |
+| 500 Internal Server Error | Server error | Contact support. |
+
+## Related pages
+
+- [Authentication](/api/authentication)
+- [Work Queue](/api/work-queue)
+- [Webhooks](/api/webhooks)
+- [Sessions](/api/sessions)

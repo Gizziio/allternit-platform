@@ -1,6 +1,8 @@
 import { useCallback, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { allternitAiSessionApi } from '@/services/allternit-ai/session-api';
+import { resolveAgentSecrets } from '@/lib/agents/agent-secrets-resolver';
+import { resolveAgentConnectors } from '@/lib/agents/agent-connectors-resolver';
 import type { Agent } from '../agents/agent.types';
 
 export interface UseBotSessionReturn {
@@ -20,6 +22,13 @@ export function useBotSession(): UseBotSessionReturn {
       setError(null);
 
       try {
+        // Resolve declared secrets and connectors so the runtime can inject
+        // them without storing credential material in the agent record.
+        const [secretsResult, connectorsResult] = await Promise.all([
+          resolveAgentSecrets(agent.id, agent.secretRefs),
+          resolveAgentConnectors(agent.id, agent.connectorBindings),
+        ]);
+
         const session = await allternitAiSessionApi.createSession({
           name: agent.botProfile?.displayName ?? agent.name,
           description: agent.description,
@@ -36,6 +45,17 @@ export function useBotSession(): UseBotSessionReturn {
             tags: agent.tags,
             category: agent.category,
             trustTier: agent.trustTier,
+            harness: agent.harness,
+            allowedTools: agent.allowedTools,
+            allowedSkills: agent.allowedSkills,
+            connectorBindings: agent.connectorBindings,
+            secretRefs: agent.secretRefs,
+            resolvedSecrets: secretsResult.secrets,
+            missingSecrets: secretsResult.missing,
+            resolvedConnectors: connectorsResult.credentials,
+            missingConnectors: connectorsResult.missing,
+            messagingConfig: agent.messagingConfig,
+            identityChannels: agent.identityChannels,
           },
         });
 

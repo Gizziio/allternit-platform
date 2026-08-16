@@ -21,6 +21,7 @@ members = [
     "services/session-manager",
     "services/vm-executor",
     "services/self-improve",
+    "services/etrid",
     "mcp/core",
     "mcp/mcp-client",
     "infrastructure/cloud",
@@ -49,6 +50,7 @@ members = [
     "platform/sdk/adapters/rust/marketplace",
     "platform/types/a2ui-types",
     "domains/governance/evidence-management/receipts-schema",
+    "services/local-engine",
     "services/memory",
     "services/memory/data/memory-fabric",
     # Referenced by workspace.dependencies but previously outside the workspace

@@ -1,31 +1,209 @@
 ---
 title: Federation
-description: External identity issuer rules for SSO and JIT provisioning.
+description: Configure external identity issuers and claim-to-role mapping rules for SSO and JIT provisioning.
 ---
 
 # Federation
 
-Federation lets you map external identity providers (IdPs) to Allternit workspaces and roles. It supports OIDC-compliant issuers.
+Federation lets you map external identity providers (IdPs) to Allternit workspaces and roles. It supports OIDC-compliant issuers and claim-based rules for just-in-time provisioning.
 
-## Endpoints
+## Base URL
+
+```text
+/api/v1/admin/federation
+```
+
+## Issuer endpoints
 
 | Method | Path | Description |
 |--------|------|-------------|
-| GET    | `/api/v1/admin/federation/issuers` | List issuers |
-| POST   | `/api/v1/admin/federation/issuers` | Add an issuer |
-| GET    | `/api/v1/admin/federation/rules` | List mapping rules |
-| POST   | `/api/v1/admin/federation/rules` | Add a rule |
+| `POST` | `/api/v1/admin/federation/issuers` | Add an issuer |
+| `GET` | `/api/v1/admin/federation/issuers` | List issuers |
+| `GET` | `/api/v1/admin/federation/issuers/:id` | Get an issuer |
+| `PUT` | `/api/v1/admin/federation/issuers/:id` | Update an issuer |
+| `DELETE` | `/api/v1/admin/federation/issuers/:id` | Delete an issuer |
 
-## Rule format
+## Rule endpoints
+
+| Method | Path | Description |
+|--------|------|-------------|
+| `POST` | `/api/v1/admin/federation/rules` | Add a mapping rule |
+| `GET` | `/api/v1/admin/federation/rules` | List mapping rules |
+| `GET` | `/api/v1/admin/federation/rules/:id` | Get a mapping rule |
+| `PUT` | `/api/v1/admin/federation/rules/:id` | Update a mapping rule |
+| `DELETE` | `/api/v1/admin/federation/rules/:id` | Delete a mapping rule |
+
+## Add an issuer
+
+```bash
+curl -X POST https://api.allternit.com/api/v1/admin/federation/issuers \
+  -H "Authorization: Bearer $ADMIN_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "issuer_url": "https://accounts.example.com",
+    "enabled": true
+  }'
+```
+
+### Request body
 
 ```json
 {
-  "issuer_id": "iss_xxx",
-  "claim_name": "groups",
-  "claim_value": "engineering",
-  "role": "member",
-  "workspace_id": "ws_xxx"
+  "issuer_url": "https://accounts.example.com",
+  "enabled": true
 }
 ```
 
-Valid roles are `owner`, `admin`, and `member`. Issuer URLs must use `https://`.
+### Response
+
+```json
+{
+  "id": "iss_01hqx8x7x7x7x7x7x7x7x7x",
+  "organization_id": "org_01hqx8x7x7x7x7x7x7x7x7x",
+  "issuer_url": "https://accounts.example.com",
+  "enabled": true,
+  "created_by": "usr_01hqx8x7x7x7x7x7x7x7x7x",
+  "created_at": "2026-08-13T18:00:00Z",
+  "updated_at": "2026-08-13T18:00:00Z"
+}
+```
+
+Issuer URLs must use `https://` and be ≤ 512 characters.
+
+## Add a mapping rule
+
+```bash
+curl -X POST https://api.allternit.com/api/v1/admin/federation/rules \
+  -H "Authorization: Bearer $ADMIN_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "issuer_id": "iss_01hqx8x7x7x7x7x7x7x7x7x",
+    "claim_name": "groups",
+    "claim_value": "engineering",
+    "workspace_id": "ws_01hqx8x7x7x7x7x7x7x7x7x",
+    "role": "admin"
+  }'
+```
+
+### Request body
+
+```json
+{
+  "issuer_id": "iss_01hqx8x7x7x7x7x7x7x7x7x",
+  "claim_name": "groups",
+  "claim_value": "engineering",
+  "workspace_id": "ws_01hqx8x7x7x7x7x7x7x7x7x",
+  "role": "admin"
+}
+```
+
+### Response
+
+```json
+{
+  "id": "fr_01hqx8x7x7x7x7x7x7x7x7x",
+  "organization_id": "org_01hqx8x7x7x7x7x7x7x7x7x",
+  "issuer_id": "iss_01hqx8x7x7x7x7x7x7x7x7x",
+  "claim_name": "groups",
+  "claim_value": "engineering",
+  "workspace_id": "ws_01hqx8x7x7x7x7x7x7x7x7x",
+  "role": "admin",
+  "created_by": "usr_01hqx8x7x7x7x7x7x7x7x7x",
+  "created_at": "2026-08-13T18:00:00Z",
+  "updated_at": "2026-08-13T18:00:00Z"
+}
+```
+
+Valid roles are `owner`, `admin`, and `member`. Omit `workspace_id` for organization-level role assignment.
+
+## List rules
+
+```bash
+curl -X GET https://api.allternit.com/api/v1/admin/federation/rules \
+  -H "Authorization: Bearer $ADMIN_TOKEN"
+```
+
+### Response
+
+```json
+{
+  "items": [
+    {
+      "id": "fr_01hqx8x7x7x7x7x7x7x7x7x",
+      "organization_id": "org_01hqx8x7x7x7x7x7x7x7x7x",
+      "issuer_id": "iss_01hqx8x7x7x7x7x7x7x7x7x",
+      "claim_name": "groups",
+      "claim_value": "engineering",
+      "workspace_id": "ws_01hqx8x7x7x7x7x7x7x7x7x",
+      "role": "admin",
+      "created_by": "usr_01hqx8x7x7x7x7x7x7x7x7x",
+      "created_at": "2026-08-13T18:00:00Z",
+      "updated_at": "2026-08-13T18:00:00Z"
+    }
+  ]
+}
+```
+
+## Update an issuer
+
+```bash
+curl -X PUT https://api.allternit.com/api/v1/admin/federation/issuers/iss_01hqx8x7x7x7x7x7x7x7x7x \
+  -H "Authorization: Bearer $ADMIN_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "issuer_url": "https://auth.example.com",
+    "enabled": false
+  }'
+```
+
+## Update a rule
+
+```bash
+curl -X PUT https://api.allternit.com/api/v1/admin/federation/rules/fr_01hqx8x7x7x7x7x7x7x7x7x \
+  -H "Authorization: Bearer $ADMIN_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "claim_name": "groups",
+    "claim_value": "platform",
+    "role": "member"
+  }'
+```
+
+`claim_name` and `claim_value` must be updated together.
+
+## Delete an issuer
+
+```bash
+curl -X DELETE https://api.allternit.com/api/v1/admin/federation/issuers/iss_01hqx8x7x7x7x7x7x7x7x7x \
+  -H "Authorization: Bearer $ADMIN_TOKEN"
+```
+
+### Response
+
+```json
+{
+  "deleted": true
+}
+```
+
+Deleting an issuer cascades to its mapping rules.
+
+## Error codes
+
+| Status | Code | Description |
+|--------|------|-------------|
+| `400` | `invalid_issuer_url` | Issuer URL must use `https://` and be ≤ 512 characters. |
+| `400` | `invalid_claim_name` | Claim name must be 1–128 characters. |
+| `400` | `invalid_claim_value` | Claim value must be 1–512 characters. |
+| `400` | `invalid_claim` | `claim_name` and `claim_value` must be updated together. |
+| `400` | `invalid_role` | Role must be `owner`, `admin`, or `member`. |
+| `403` | `organization_required` | Caller is not associated with an organization. |
+| `403` | `insufficient_role` | Caller is not an organization owner or admin. |
+| `404` | `issuer_not_found` | Issuer does not exist or belongs to another organization. |
+| `404` | `rule_not_found` | Mapping rule does not exist or belongs to another organization. |
+
+## Related pages
+
+- [Workspaces](/admin/workspaces) — workspace roles and membership
+- [RBAC](/admin/rbac) — custom roles and groups
+- [Security / SCIM](/security/scim) — directory provisioning

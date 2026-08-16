@@ -70,6 +70,7 @@ hmac = "0.12"
 sha2 = "0.10"
 md5 = "0.7"
 aes-gcm = "0.10"
+ed25519-dalek = { version = "2", features = ["rand_core"] }
 
 # SSH client
 russh = "0.60"

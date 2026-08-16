@@ -1,88 +1,272 @@
 ---
 title: Compliance
-description: Data export, deletion workflows, and retention policies
+description: Data export, deletion workflows, and retention policies for organizations
 ---
 
-## Overview
+The Compliance API lets organization administrators manage data lifecycle: requesting exports, deleting application records, and configuring retention policies including zero-data-residence regions.
 
-Allternit provides compliance APIs that let organization administrators manage data lifecycle — exporting user data, requesting deletion, and configuring retention policies.
+## Authentication and authorization
+
+Compliance endpoints require a Clerk JWT and an active organization. Only organization owners and admins can access these endpoints.
+
+## Endpoints
+
+| Method | Path | Description |
+|--------|------|-------------|
+| GET | `/api/v1/admin/compliance/activity` | List compliance request activity |
+| POST | `/api/v1/admin/compliance/requests` | Create an export or deletion request |
+| GET | `/api/v1/admin/compliance/requests/{id}` | Retrieve a request and its references |
+| POST | `/api/v1/admin/compliance/requests/{id}/complete` | Mark a request as completed |
+| GET | `/api/v1/admin/compliance/requests/{id}/export` | Download an export manifest |
+| GET | `/api/v1/admin/compliance/chats` | List organization chat records |
+| DELETE | `/api/v1/admin/compliance/chats` | Delete a chat record |
+| GET | `/api/v1/admin/compliance/projects` | List organization project records |
+| DELETE | `/api/v1/admin/compliance/projects` | Delete a project record |
+| GET | `/api/v1/admin/compliance/artifacts` | List organization artifact records |
+| DELETE | `/api/v1/admin/compliance/artifacts` | Delete an artifact record |
+| GET | `/api/v1/admin/compliance/retention-policy` | Get the organization retention policy |
+| POST | `/api/v1/admin/compliance/retention-policy` | Set the organization retention policy |
 
 ## Compliance requests
 
-Org admins can initiate compliance requests via the admin API:
-
-### Export data
+### Create an export request
 
 ```bash
-curl -X POST http://localhost:8013/api/compliance/export \
+curl -X POST https://api.allternit.com/api/v1/admin/compliance/requests \
   -H "Authorization: Bearer $ALLTERNIT_TOKEN" \
   -H "Content-Type: application/json" \
   -d '{
-    "user_id": "user_abc123",
-    "scope": ["sessions", "memory", "files"]
+    "kind": "export",
+    "app_filters": ["chats", "projects", "artifacts"]
   }'
 ```
 
-Response:
+**Response `201 Created`**
 
 ```json
 {
-  "request_id": "comp_export_xyz",
-  "status": "processing",
-  "estimated_completion": "2026-08-12T11:00:00Z"
+  "id": "req_01J4N",
+  "kind": "export",
+  "status": "running",
+  "requested_by": "user_01J",
+  "created_at": "2026-08-12T10:00:00Z",
+  "updated_at": "2026-08-12T10:00:00Z"
 }
 ```
 
-The export is assembled asynchronously. Poll `GET /api/compliance/requests/{id}` for status.
+If `app_filters` is omitted or empty, the request covers all supported apps: `chats`, `projects`, and `artifacts`.
 
-### Delete data
+### Create a deletion request
 
 ```bash
-curl -X POST http://localhost:8013/api/compliance/delete \
+curl -X POST https://api.allternit.com/api/v1/admin/compliance/requests \
   -H "Authorization: Bearer $ALLTERNIT_TOKEN" \
   -H "Content-Type: application/json" \
   -d '{
-    "user_id": "user_abc123",
-    "scope": ["sessions", "memory", "files"],
-    "confirm": true
+    "kind": "delete",
+    "app_filters": ["chats"]
   }'
 ```
 
-<Warning>
-  Deletion is irreversible. The `confirm: true` flag is required.
-</Warning>
-
-## Retention policies
-
-Configure automatic data retention at the organization level:
+### Retrieve a request
 
 ```bash
-curl -X PUT http://localhost:8013/api/compliance/retention \
+curl https://api.allternit.com/api/v1/admin/compliance/requests/req_01J4N \
+  -H "Authorization: Bearer $ALLTERNIT_TOKEN"
+```
+
+**Response `200 OK`**
+
+```json
+{
+  "request": {
+    "id": "req_01J4N",
+    "kind": "export",
+    "status": "running",
+    "requested_by": "user_01J",
+    "created_at": "2026-08-12T10:00:00Z",
+    "updated_at": "2026-08-12T10:00:00Z"
+  },
+  "references": [
+    {
+      "id": "ref_01J4N",
+      "app": "chats",
+      "record_id": "chat_01J",
+      "status": "pending",
+      "processed_at": null,
+      "created_at": "2026-08-12T10:00:00Z"
+    }
+  ]
+}
+```
+
+### Complete a request
+
+Mark a pending or running request as completed. This also marks all pending references as processed.
+
+```bash
+curl -X POST https://api.allternit.com/api/v1/admin/compliance/requests/req_01J4N/complete \
+  -H "Authorization: Bearer $ALLTERNIT_TOKEN"
+```
+
+### Download an export
+
+```bash
+curl https://api.allternit.com/api/v1/admin/compliance/requests/req_01J4N/export \
+  -H "Authorization: Bearer $ALLTERNIT_TOKEN"
+```
+
+**Response `200 OK`**
+
+```json
+{
+  "request": {
+    "id": "req_01J4N",
+    "kind": "export",
+    "status": "completed",
+    "requested_by": "user_01J",
+    "created_at": "2026-08-12T10:00:00Z",
+    "updated_at": "2026-08-12T10:00:00Z"
+  },
+  "export": {
+    "format": "json",
+    "references": [
+      {
+        "app": "chats",
+        "record_id": "chat_01J",
+        "status": "processed",
+        "processed_at": "2026-08-12T10:05:00Z"
+      }
+    ]
+  }
+}
+```
+
+## Per-app record management
+
+Admins can list and delete records directly. Delete operations are irreversible.
+
+### List chats
+
+```bash
+curl "https://api.allternit.com/api/v1/admin/compliance/chats?limit=50&offset=0" \
+  -H "Authorization: Bearer $ALLTERNIT_TOKEN"
+```
+
+**Response `200 OK`**
+
+```json
+{
+  "app": "chats",
+  "records": [
+    {
+      "id": "chat_01J",
+      "title": "Deployment planning",
+      "owner_id": "user_01J",
+      "created_at": "2026-08-12T10:00:00Z"
+    }
+  ],
+  "total": 1,
+  "limit": 50,
+  "offset": 0
+}
+```
+
+### Delete a chat
+
+```bash
+curl -X DELETE "https://api.allternit.com/api/v1/admin/compliance/chats?id=chat_01J" \
+  -H "Authorization: Bearer $ALLTERNIT_TOKEN"
+```
+
+**Response `204 No Content`**
+
+Deleting a chat also removes its messages and replies. Deleting a project removes its files. Deleting an artifact removes its sections and revisions.
+
+## Retention policy
+
+Configure how long each app class is retained and whether zero data residence (`zero_data_residence`) is enforced.
+
+### Get the current policy
+
+```bash
+curl https://api.allternit.com/api/v1/admin/compliance/retention-policy \
+  -H "Authorization: Bearer $ALLTERNIT_TOKEN"
+```
+
+**Response `200 OK`**
+
+```json
+{
+  "org_id": "org_01J",
+  "chat_retention_days": 90,
+  "project_retention_days": 365,
+  "artifact_retention_days": 365,
+  "zero_data_residence": true,
+  "zdr_regions": ["us-east-1", "eu-west-1"],
+  "created_at": "2026-08-01T10:00:00Z",
+  "updated_at": "2026-08-12T10:00:00Z"
+}
+```
+
+If no policy has been set, the response returns the organization ID with all retention fields set to `null` and `zero_data_residence` set to `false`.
+
+### Set the retention policy
+
+```bash
+curl -X POST https://api.allternit.com/api/v1/admin/compliance/retention-policy \
   -H "Authorization: Bearer $ALLTERNIT_TOKEN" \
   -H "Content-Type: application/json" \
   -d '{
-    "sessions_days": 90,
-    "memory_days": 365,
-    "audit_days": 2555
+    "chat_retention_days": 90,
+    "project_retention_days": 365,
+    "artifact_retention_days": 365,
+    "zero_data_residence": true,
+    "zdr_regions": ["us-east-1", "eu-west-1"]
   }'
 ```
 
-- `sessions_days` — Session transcripts and messages older than this are automatically deleted.
-- `memory_days` — Brain/memory store entries older than this are automatically deleted.
-- `audit_days` — Audit logs are retained for this many days (default: 7 years / 2555 days).
+## Request/response fields
 
-## Data residency
+### Compliance request object
 
-For self-hosted deployments, all data stays on customer-managed infrastructure. The `GET /regions` endpoint publishes egress IP ranges for firewall allow-listing.
+| Field | Type | Description |
+|-------|------|-------------|
+| `id` | string | Unique request identifier |
+| `kind` | string | `export` or `delete` |
+| `status` | string | `pending`, `running`, or `completed` |
+| `requested_by` | string | User ID that created the request |
+| `created_at` | string | ISO 8601 timestamp |
+| `updated_at` | string | ISO 8601 timestamp |
 
-## Audit trail
+### Retention policy object
 
-All compliance operations are recorded in the audit log with:
+| Field | Type | Description |
+|-------|------|-------------|
+| `org_id` | string | Organization identifier |
+| `chat_retention_days` | integer \| null | Chat retention period in days |
+| `project_retention_days` | integer \| null | Project retention period in days |
+| `artifact_retention_days` | integer \| null | Artifact retention period in days |
+| `zero_data_residence` | boolean | Whether zero data residence is enabled |
+| `zdr_regions` | string[] | Approved regions for zero data residence |
+| `created_at` | string \| null | ISO 8601 timestamp |
+| `updated_at` | string \| null | ISO 8601 timestamp |
 
-- Request ID
-- Requester identity
-- Scope of data affected
-- Timestamp
-- Completion status
+## Error codes
 
-See [Audit](/security/audit) for querying the audit log.
+| HTTP | Code | Meaning |
+|------|------|---------|
+| 400 | `invalid_kind` | `kind` is not `export` or `delete` |
+| 400 | `invalid_retention_days` | A retention value is negative |
+| 403 | `organization_required` | Caller has no active organization |
+| 403 | `insufficient_role` | Caller is not an owner/admin |
+| 404 | `request_not_found` | Compliance request does not exist or is not in this organization |
+| 404 | `export_not_found` | Request is not an export or does not exist |
+| 404 | `record_not_found` | Per-app record does not exist in this organization |
+| 500 | `internal_error` | Unexpected server error |
+
+## Related pages
+
+- [Audit logs](/security/audit) — Query administrative actions and compliance events
+- [Security model](/security/security-model) — Trust boundaries and data protection
+- [BYOC runtime](/byoc/overview) — Self-hosted and zero-data-residence deployments

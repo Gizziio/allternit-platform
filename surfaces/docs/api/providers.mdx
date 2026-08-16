@@ -1,0 +1,279 @@
+---
+title: Providers
+description: Discover, connect, and authenticate LLM providers and media generators.
+---
+
+# Providers
+
+The Providers API lists available LLM providers, reports their authentication status, discovers models, and connects subscription or API-key providers through the Gizzi runtime. Provider credentials are stored by Gizzi; the API only reads connection metadata.
+
+## Base URL
+
+```text
+https://api.allternit.com/api/v1
+```
+
+For local development:
+
+```text
+http://127.0.0.1:8013/api/v1
+```
+
+## Endpoints
+
+| Method | Path | Description |
+|--------|------|-------------|
+| `GET` | `/api/v1/providers` | List providers |
+| `GET` | `/api/v1/providers/:id` | Get a provider |
+| `GET` | `/api/v1/providers/:id/auth/status` | Get provider auth status |
+| `GET` | `/api/v1/providers/:id/models` | Discover provider models |
+| `POST` | `/api/v1/providers/:id/connect` | Start a provider connect flow |
+| `GET` | `/api/v1/providers/:id/connect/status` | Check connect status |
+| `POST` | `/api/v1/providers/:id/connect/confirm` | Confirm a completed connect flow |
+| `GET` | `/api/v1/providers/auth/status` | List auth status for all providers |
+| `POST` | `/api/v1/providers/video/generate` | Generate a video via a media provider |
+| `GET` | `/api/v1/media/providers` | List media providers |
+| `GET` | `/api/v1/media/:mode/providers` | List media providers for a mode |
+| `POST` | `/api/v1/media/:mode/generate` | Generate media for a mode |
+| `GET` | `/api/v1/provider/ollama/status` | Probe local brain status |
+| `GET` | `/api/v1/provider/ollama/models` | List local brain models |
+| `GET` | `/api/v1/provider/huggingface/search` | Search public GGUF model registry |
+
+## List providers
+
+```bash
+curl https://api.allternit.com/api/v1/providers \
+  -H "Authorization: Bearer $TOKEN"
+```
+
+### Response
+
+```json
+{
+  "providers": [
+    {
+      "id": "provider-a",
+      "name": "Provider A",
+      "provider_type": "api",
+      "base_url": null,
+      "api_key_set": true,
+      "models": ["model-a-mini", "model-a-large"],
+      "status": "active"
+    },
+    {
+      "id": "local-brain",
+      "name": "Local Brain",
+      "provider_type": "local",
+      "base_url": "http://127.0.0.1:11434",
+      "api_key_set": false,
+      "models": ["local-model:3b"],
+      "status": "active"
+    }
+  ],
+  "all": [...]
+}
+```
+
+### Provider status values
+
+| Status | Meaning |
+|--------|---------|
+| `active` | Ready to route requests |
+| `unconfigured` | No API key or credential detected |
+| `missing_key` | Binary or config present but auth missing |
+| `offline` | Local or subprocess provider not reachable |
+| `unknown` | Reachability not yet determined |
+
+## Get provider auth status
+
+```bash
+curl https://api.allternit.com/api/v1/providers/provider-a/auth/status \
+  -H "Authorization: Bearer $TOKEN"
+```
+
+### Response
+
+```json
+{
+  "provider": {
+    "provider_id": "provider-a",
+    "status": "ok",
+    "authenticated": true,
+    "auth_required": true,
+    "auth_profile_id": "provider-a-auth",
+    "chat_profile_ids": ["provider-a-default"],
+    "details": {
+      "provider_type": "api",
+      "base_url": null,
+      "api_key_set": true,
+      "model_count": 2,
+      "capabilities": {
+        "tool_call": true,
+        "vision": true,
+        "limits": { "context": 128000, "output": 16384 },
+        "default_model": "model-a-large"
+      }
+    }
+  }
+}
+```
+
+## Discover provider models
+
+```bash
+curl https://api.allternit.com/api/v1/providers/provider-a/models \
+  -H "Authorization: Bearer $TOKEN"
+```
+
+### Response
+
+```json
+{
+  "supported": true,
+  "models": [
+    { "id": "model-a-mini", "name": "model-a-mini" }
+  ],
+  "default_model_id": "model-a-mini",
+  "allow_freeform": true
+}
+```
+
+For subprocess providers, `supported` may be `false` because the runtime owns model discovery, but `allow_freeform` remains `true`.
+
+## Connect a provider
+
+```bash
+curl -X POST https://api.allternit.com/api/v1/providers/cli-provider/connect \
+  -H "Authorization: Bearer $TOKEN"
+```
+
+### Response states
+
+```json
+{
+  "status": "already_connected",
+  "provider": "cli-provider",
+  "label": "CLI Provider"
+}
+```
+
+Possible statuses: `already_connected`, `connected`, `needs_api_key`, `not_installed`, `started`.
+
+## Check connect status
+
+```bash
+curl https://api.allternit.com/api/v1/providers/cli-provider/connect/status \
+  -H "Authorization: Bearer $TOKEN"
+```
+
+### Response
+
+```json
+{
+  "status": "success",
+  "provider": "cli-provider",
+  "label": "CLI Provider"
+}
+```
+
+## Confirm connect
+
+```bash
+curl -X POST https://api.allternit.com/api/v1/providers/cli-provider/connect/confirm \
+  -H "Authorization: Bearer $TOKEN"
+```
+
+### Response
+
+```json
+{
+  "status": "success",
+  "provider": "cli-provider",
+  "confirmed": true
+}
+```
+
+## Media generation
+
+### List media providers
+
+```bash
+curl https://api.allternit.com/api/v1/media/providers \
+  -H "Authorization: Bearer $TOKEN"
+```
+
+### Generate media
+
+```bash
+curl -X POST https://api.allternit.com/api/v1/media/video/generate \
+  -H "Authorization: Bearer $TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "prompt": "A calm mountain lake at sunrise"
+  }'
+```
+
+## Local brains
+
+### Local brain status
+
+```bash
+curl https://api.allternit.com/api/v1/provider/ollama/status \
+  -H "Authorization: Bearer $TOKEN"
+```
+
+### Response
+
+```json
+{
+  "running": true,
+  "models": ["local-model:3b", "local-model:7b"]
+}
+```
+
+### Local brain models
+
+```bash
+curl https://api.allternit.com/api/v1/provider/ollama/models \
+  -H "Authorization: Bearer $TOKEN"
+```
+
+### Public GGUF model search
+
+```bash
+curl -G https://api.allternit.com/api/v1/provider/huggingface/search \
+  -H "Authorization: Bearer $TOKEN" \
+  -d "q=llama" \
+  -d "limit=20"
+```
+
+### Response
+
+```json
+{
+  "models": [
+    {
+      "repoId": "org/local-model-3b-instruct-gguf",
+      "downloads": 125000,
+      "likes": 850
+    }
+  ]
+}
+```
+
+## Error codes
+
+| Status | Code | Description |
+|--------|------|-------------|
+| `401` | `Unauthorized` | Missing or invalid bearer token. |
+| `404` | `not_found` / `unknown_provider` | Provider not found. |
+| `502` | `gizzi_provider_error` | Gizzi runtime returned an error for media generation. |
+| `502` | `huggingface_error` | Public registry returned a non-success status. |
+| `502` | `huggingface_unreachable` | Could not reach the public registry. |
+| `500` | `internal_error` | Database or server error. |
+
+## Related pages
+
+- [Models](/api/models) — list available models and policy aliases
+- [Chat Completions](/api/chat-completions) — send requests through providers
+- [BYOC Runtime](/byoc/overview) — run Allternit on your own infrastructure

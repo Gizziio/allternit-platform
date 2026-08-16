@@ -186,8 +186,10 @@ async fn ollama_live_status(State(state): State<Arc<AppState>>, headers: HeaderM
     }
 }
 
-/// Probe a local OpenAI-compatible brain (Ollama/LM Studio) for reachability and
-/// its installed models. Cheap local GET with a short timeout; never throws.
+/// Probe a local OpenAI-compatible brain (Ollama/LM Studio/Local Engine) for
+/// reachability and its installed models. Cheap local GET with a short timeout;
+/// never throws. Tries the Ollama `/api/tags` endpoint first, then falls back
+/// to the OpenAI-compatible `/v1/models` endpoint.
 async fn probe_local_brain(url: &str) -> (bool, Vec<String>) {
     let url = url.trim_end_matches('/').to_string();
     tokio::task::spawn_blocking(move || {
@@ -198,8 +200,10 @@ async fn probe_local_brain(url: &str) -> (bool, Vec<String>) {
             Ok(c) => c,
             Err(_) => return (false, Vec::<String>::new()),
         };
-        match client.get(format!("{}/api/tags", url)).send() {
-            Ok(res) if res.status().is_success() => {
+
+        // Ollama-style endpoint.
+        if let Ok(res) = client.get(format!("{}/api/tags", url)).send() {
+            if res.status().is_success() {
                 let models = res
                     .json::<serde_json::Value>()
                     .ok()
@@ -214,10 +218,32 @@ async fn probe_local_brain(url: &str) -> (bool, Vec<String>) {
                             .collect()
                     })
                     .unwrap_or_default();
-                (true, models)
+                return (true, models);
             }
-            _ => (false, vec![]),
         }
+
+        // OpenAI-compatible endpoint (Local Engine, LM Studio, vLLM, etc.).
+        if let Ok(res) = client.get(format!("{}/v1/models", url)).send() {
+            if res.status().is_success() {
+                let models = res
+                    .json::<serde_json::Value>()
+                    .ok()
+                    .and_then(|b| b.get("data").and_then(|d| d.as_array()).cloned())
+                    .map(|arr| {
+                        arr.iter()
+                            .filter_map(|m| {
+                                m.get("id")
+                                    .and_then(|v| v.as_str())
+                                    .map(|s| s.to_string())
+                            })
+                            .collect()
+                    })
+                    .unwrap_or_default();
+                return (true, models);
+            }
+        }
+
+        (false, vec![])
     })
     .await
     .unwrap_or((false, vec![]))
@@ -1004,7 +1030,13 @@ async fn discover_provider_models(
         None => return unauthorized(),
     };
 
-    if id == "ollama" {
+    // Normalize chat-profile ids (e.g. "omlx-default") back to provider ids.
+    let normalized_id = id
+        .trim_end_matches("-default")
+        .trim_end_matches("-auth")
+        .to_string();
+
+    if normalized_id == "ollama" {
         return list_ollama_models(State(state), Extension(_user), headers)
             .await
             .into_response();
@@ -1014,7 +1046,7 @@ async fn discover_provider_models(
 
     // For env-driven API providers, return the static model list.
     let env = env_provider_rows();
-    if let Some(row) = env.into_iter().find(|p| p.id == id) {
+    if let Some(row) = env.into_iter().find(|p| p.id == normalized_id) {
         return Json(json!({
             "supported": true,
             "models": row.models.iter().map(|m| json!({ "id": m, "name": m })).collect::<Vec<_>>(),
@@ -1026,7 +1058,7 @@ async fn discover_provider_models(
 
     // For Gizzi-configured providers, return the configured models.
     let gizzi = read_gizzi_providers(&connected);
-    if let Some(row) = gizzi.into_iter().find(|p| p.id == id) {
+    if let Some(row) = gizzi.into_iter().find(|p| p.id == normalized_id) {
         return Json(json!({
             "supported": true,
             "models": row.models.iter().map(|m| json!({ "id": m, "name": m })).collect::<Vec<_>>(),
@@ -1038,7 +1070,7 @@ async fn discover_provider_models(
 
     // For subprocess providers, the runtime owns model discovery.
     let subprocess = subprocess_provider_rows(&connected);
-    if let Some(row) = subprocess.into_iter().find(|p| p.id == id) {
+    if let Some(row) = subprocess.into_iter().find(|p| p.id == normalized_id) {
         return Json(json!({
             "supported": false,
             "models": row.models.iter().map(|m| json!({ "id": m, "name": m })).collect::<Vec<_>>(),

@@ -1,4 +1,12 @@
 {
+  "photon": {
+    "auth_type": "api_key",
+    "base_url": "https://api.photon.codes",
+    "tier": 1,
+    "mcp_backed": false,
+    "connectable": true,
+    "scopes": []
+  },
   "github": {
     "auth_type": "local_cli",
     "alt": ["device_flow"],

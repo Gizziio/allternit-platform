@@ -2,6 +2,164 @@
 
 ## Goal
 
+Wire Memory Kernel V2 runtime hooks into the agent execution loop, checkpoint store, and heartbeat executor.
+
+## Just did
+
+- Wired **PreTurn Recall** in `mode-session-store.ts` (`sendMessageWithContext`) to automatically query `memoryClient.recall(text, { agentId, sessionId })` and inject formatted `<agent_memory>` context into `agentContext.systemPrompt` prior to model inference.
+- Wired **PostTurn Retention** in `mode-session-store.ts` to asynchronously persist user turns on message send and assistant turns on streaming `onDone` via `memoryClient.retainTurn()`.
+- Added **Tool Execution Observations** in `mode-session-store.ts` (`onToolResult`) to log tool execution results to `memory_observations`.
+- Added **Checkpoint Persistence** in `agent-checkpoint-store.ts` (`setCheckpoint`) to record structured `kind: 'checkpoint'` observations on status updates.
+- Added **Decision Observations** in `agent-heartbeat-executor.ts` (`executeNightlyReview`) on nightly review completion.
+- Implemented **4-Way Reciprocal Rank Fusion (RRF)** and float vector `cosine_similarity` in `cmd/allternit-api/src/memory_kernel_service.rs` blending lexical match (0.25), semantic/confidence (0.35), entity graph (0.20), and 72-hour half-life recency decay (0.20).
+- Implemented **Outbound Photon Message Dispatcher** (`send_photon_outbound_message`) in `cmd/allternit-api/src/allternit_bus_routes.rs` connecting agent replies directly to `https://api.photon.codes/v1/messages`.
+- Completed all pending Phase 1 task batches across `docs/agent-tasks/`:
+  - **Model Lab Training & Recipes** (`MODEL_LAB_TRAINING_MAP.md`, `MODEL_LAB_TRAINING_PHASE_1_NOTES.md`)
+  - **Agent Hub & Packaged Bots** (`AGENT_HUB_BOTS_MAP.md`, `AGENT_HUB_BOTS_PHASE_1_NOTES.md`)
+  - **Plugins, CLI, Artifacts, iOS & Docs** (`PLUGINS_CLI_ARTIFACTS_IOS_MAP.md`, `PLUGINS_CLI_ARTIFACTS_IOS_PHASE_1_NOTES.md`)
+  - **Computer Use Harness Integration** (`COMPUTER_USE_HARNESS_MAP.md`, `COMPUTER_USE_HARNESS_PHASE_1_NOTES.md`)
+  - **Model Lab Discover & Reorganization** (`MODEL_LAB_DISCOVER_PHASE_1_NOTES.md`, `MODEL_LAB_REORG_PHASE_1_NOTES.md`)
+- Verified automated tests: Rust memory kernel tests passed 100% (3/3), frontend vitest suite passed 897 tests across 117 suites, `cargo check` and `tsc` report 0 errors.
+
+## Next
+
+- Run live user acceptance smoke tests across agent sessions and Photon webhook channels.
+- Expand physical mobile harness and native accessibility adapters in Phase 2.
+
+## Open questions
+
+- None.
+
+---
+
+## Goal
+
+Fix the Site APIs tab rail selection and polish the Site APIs (ApiCaptureView) UI in the Allternit platform web surface.
+
+## Just did
+
+- Added `site-apis` to `BROWSER_MODE_VIEW_TYPES` in `ShellApp.tsx` so opening Site APIs keeps the shell in browser/ACI mode and highlights the Site APIs rail item.
+- Polished `ApiCaptureView.tsx` with design-token cards (`bg-[var(--bg-elevated)]`, `border-[var(--border-subtle)]`, `rounded-xl`), a clearer workflow step strip with step numbers and connector arrows, and empty states for sessions/contracts/no-selection.
+- Converted the endpoint list from a table to compact cards and improved the replay panel and generated-client panel visuals while preserving HAR upload, contract selection, replay, client generation, publish skill, and delete functionality.
+- Verification: `pnpm exec tsc --project tsconfig.typecheck.json --noEmit` only reports pre-existing `office-*` asset errors and the `comrails-mail.store.ts` error; baseline vitest suite reports 13 passed.
+
+## Next
+
+- Review the rail behavior and visual polish in the browser surface.
+
+## Open questions
+
+- None.
+
+---
+
+## Goal
+
+Build iOS parity for the renamed Agent | Bot Hub in the Allternit mobile surface.
+
+## Just did
+
+- Renamed visible "Agent Hub" UI strings to "agent | bot hub" across `AppMode.swift`, `AgentHubView.swift`, `MarketplaceView.swift`, `AgentSelectionSheet.swift`, `SettingsView.swift`, and `InfrastructureSettingsView.swift`.
+- Refactored `AgentHubView.swift` into a Bot Home landing with `Home | Sessions | Workspace | Config` tabs, a hero with package bots, stats cards, and a templates section.
+- Added a Bot on/off pill toggle in the hero that opens a populated `BotSelectionSheet` when turned on.
+- Added a pipe-separated (`|`) mode selector above the bot list, binding to `AgentModeStore`'s tile selection.
+- Made the composer mascot customizable: `GizziMascotPill` now shows the selected default bot's `AgentAvatarView` instead of the Gizzi image when a bot is selected.
+- Updated `HistorySidebarView` so Home recents exclude bot/agent sessions (`agentId != nil`); bot sessions stay in the agent | bot hub and code sessions stay in Code mode.
+- Verified the iOS target builds successfully for the `Allternit` scheme on the iPhone 16 simulator (`xcodebuild -scheme Allternit -destination 'platform=iOS Simulator,name=iPhone 16' build`).
+
+## Next
+
+- Run the app in the simulator to smoke-test the new hub tabs, bot toggle, mode selector, and mascot behavior.
+- Address any runtime layout issues found during manual QA.
+
+## Open questions
+
+- None.
+
+---
+
+## Goal
+
+Apply the Second Brain UI standard to the four existing mini-app views in the Allternit platform web surface.
+
+## Just did
+
+- Refactored `OpenClawView.tsx`, `HermesView.tsx`, `OhMyPiView.tsx`, and `VaultViewerView.tsx` to align with `BrainView.tsx`.
+- Added consistent page headers with icon + title + status `Pill`, replaced hardcoded status colors with design-token classes, and wrapped content in `rounded-xl bg-[var(--bg-elevated)] border-[var(--border-subtle)]` cards.
+- Reused shared components (`Button`, `Pill`, `Text`, `Input`, `Skeleton`) where appropriate and added loading skeletons and styled error states where missing.
+- Preserved all existing runtime contracts: health checks, install/start/open actions, logs, Obsidian vault name handling, and OpenClaw tabs.
+- Fixed introduced TypeScript narrowing errors in `HermesView.tsx` and `VaultViewerView.tsx`.
+- Verification: `pnpm exec tsc --project tsconfig.typecheck.json --noEmit` only reports pre-existing `office-*` asset errors; baseline vitest suite reports 13 passed.
+
+## Next
+
+- Review the visual changes for consistency and merge when convenient.
+
+## Open questions
+
+- None.
+
+---
+
+## Goal
+
+Move the bot creation entry point out of the chat-view sidebar and into the Home rail as a collapsible "Bots" panel above Recents, with Gizzi set up as a real packaged bot.
+
+## Just did
+
+- Added a collapsible `BotsPanel` to `ShellRail.tsx` in Home/Chat mode, placed above the existing `RecentsPanel` and using the same expand/collapse caret widget.
+- Made Gizzi a real packaged bot by updating `GIZZI_SEED` in `useAgentBootstrap.ts` with `isBot: true` and a `botProfile`, and changed bootstrap to always ensure exactly one Gizzi bot exists.
+- Removed the synthetic Gizzi entry from `ShellRail.tsx` and `HomeView.tsx` so the panel renders the actual agent-store bots (now including Gizzi).
+- Added a hover-revealed "Create Bot" (+) button in the Bots panel header that opens Agent Hub.
+- Removed every "Create Bot" CTA from `BotRosterSidebar.tsx` (both the bottom button and the empty-state button).
+- Removed `<BotRosterSidebar />` from `ChatView.tsx` so the bots strip no longer appears at the top of the chat canvas; bots live only in the left rail panel.
+- Verified `pnpm exec tsc --noEmit` in `surfaces/ai.allternit.com` passes cleanly.
+
+## Next
+
+- Refresh the browser to load the updated bootstrap and UI.
+- Smoke-test: the chat canvas no longer shows a Bots strip, the left rail has the collapsible Bots panel with Gizzi, and Create Bot opens Agent Hub.
+- Address any runtime issues found.
+- Stage and commit scoped changes.
+
+## Open questions
+
+- Worktree policy: AGENTS.md requires linked worktrees, but the user's request was to fix the current checkout directly. Should we migrate to a worktree before committing?
+
+---
+
+## Goal
+
+Standardize the Allternit Platform bots experience: remove the 7 hardcoded bot templates from the Bots hub, let users create/package bots in Agent Studio, rename agent-mode UI to bot-mode, and wire bot selection and `@mentions` to dedicated bot sessions.
+
+## Just did
+
+- Added bot packaging fields (`isBot`, `botProfile`) to `CreateAgentInput` and agent persistence (API + local registry fallback in `config`).
+- Added a "Package as Bot" toggle to the agent creation flow (`HarnessStep`) with display name, tagline, accent color, and category.
+- Rewrote `AgentHubBotsTab` to display user-created bots from the agent store instead of the 7 hardcoded `BOT_TEMPLATES`.
+- Deleted the hardcoded `src/lib/bots/bots.manifest.ts` and `src/lib/bots/bot-icons.tsx` files now that the UI no longer depends on them.
+- Renamed agent-mode UI strings to bot-mode (`BottomDock`, `ModeDock`, `AgentSelectorDropdown`, `AgentMentionDropdown`, `ChatComposer` helper text).
+- Filtered bot picker and `@mention` dropdown to only show packaged bots (`isBot === true`).
+- Synced bot selection in the composer: selecting a bot from the picker sets the `@mention` chip, and `@mention`ing a bot binds it as the surface's selected bot.
+- Opened the bot picker automatically when bot mode is toggled on and no bot is selected.
+- Updated `AgentPill` and `AgentStorefrontCard` to show bot display names, `@` prefix, accent colors, and bot taglines.
+- Routed bot-mode sends in `ShellApp.handleOpenAgentSession` to `allternitAiSessionApi.createSession` (bot session) and streamed the opening message via `allternitAiChatApi.streamChat`.
+- Verified `pnpm exec tsc --noEmit` in `surfaces/ai.allternit.com`; only pre-existing `ApiCaptureView` errors remain.
+
+## Next
+
+- Run the platform dev stack and smoke-test the create-bot → Bots hub → composer `@mention` → bot session flow.
+- Address any runtime issues found in testing.
+- Stage and commit the scoped changes.
+
+## Open questions
+
+- Worktree policy: AGENTS.md requires linked worktrees, but the user's request was to fix the current checkout directly. Should we migrate to a worktree before committing?
+
+---
+
+## Goal
+
 Finish the Allternit Desktop auth/onboarding handoff: review fixes 1–13, implement the two remaining items (#14 Sidecar-backed Local Brain model routes + ModesStep rework, #15 `gizzi init` wiring), then build/test/package and commit scoped changes.
 
 ## Just did
@@ -261,3 +419,26 @@ Add Allternit Manufacturing as a platform offering: create a strategic master pl
 
 - Should Manufacturing have its own top-level navigation entry, or remain discoverable only through Products Discovery for now?
 - What is the Phase 1 equipment budget and target go-live date?
+
+---
+
+## Goal (ApiCaptureView polish)
+
+Improve `surfaces/ai.allternit.com/src/views/api-capture/ApiCaptureView.tsx` per user feedback: add a browser-capture CTA in the header, clarify the Contracts by Domain empty state, surface a selection hint + New capture button when contracts exist, and polish the workflow strip / empty state spacing.
+
+## Just did
+
+- Added a primary "Open browser to capture" CTA in the Site APIs header next to Upload HAR / Refresh; it dispatches `allternit:open-view` with `viewType: 'browser'`.
+- Clarified the Contracts by Domain empty state: helper text now explains that contracts come from HAR uploads or browser capture, and added a secondary "Capture from browser" action.
+- Added a "New capture" button at the top of the domain list and a hint that selecting a domain shows its endpoints.
+- Polished `EmptyState` and `WorkflowStep` spacing and icon sizing while keeping the existing components.
+- Verified `pnpm exec tsc --project tsconfig.typecheck.json --noEmit` reports no errors in `src/views/api-capture` or `src/lib/api-capture`.
+- Confirmed there are no existing api-capture unit tests to run.
+
+## Next
+
+- Parent review and merge.
+
+## Open questions
+
+- None.

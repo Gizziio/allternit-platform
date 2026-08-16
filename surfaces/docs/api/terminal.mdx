@@ -1,0 +1,160 @@
+---
+title: 'Terminal API'
+description: 'Create, interact with, resize, stream, and close persistent terminal sessions backed by allternit-mux.'
+---
+
+## Overview
+
+The Terminal API provides persistent PTY-based terminals backed by `allternit-mux`. Each terminal session is a real shell process owned by the mux daemon, survives API restarts, and supports scrollback replay plus live streaming. This replaces older tmux-backed implementations by removing the tmux dependency and providing persistent session ownership.
+
+## Base URL
+
+```
+https://api.allternit.com/terminal
+```
+
+All endpoints require a valid Bearer token in the `Authorization` header. See [Authentication](/api/authentication) for details.
+
+The API connects to `allternit-mux` over a Unix domain socket. By default the socket is at `~/.allternit/mux/mux.sock`; override with `ALLTERNIT_MUX_SOCKET`.
+
+## Endpoints
+
+| Method | Path | Description |
+|--------|------|-------------|
+| POST | `/terminal` | Create a terminal session. |
+| POST | `/terminal/:session_id/input` | Send input to a session. |
+| POST | `/terminal/:session_id/close` | Close a session. |
+| POST | `/terminal/:session_id/resize` | Resize a session. |
+| GET | `/terminal/:session_id/stream` | Stream session output as server-sent events. |
+
+## Create terminal
+
+```bash
+POST /terminal
+```
+
+Request body:
+
+```json
+{
+  "shell": "/bin/zsh",
+  "cwd": "/Users/dev/project",
+  "cols": 80,
+  "rows": 24
+}
+```
+
+All fields are optional. Defaults:
+
+| Field | Default |
+|-------|---------|
+| `shell` | `/bin/zsh` |
+| `cwd` | Current process working directory |
+| `cols` | `80` |
+| `rows` | `24` |
+
+Response:
+
+```json
+{
+  "success": true,
+  "message": "Terminal session created",
+  "data": {
+    "session_id": "term_2f8a9c4e5d3b"
+  }
+}
+```
+
+## Send input
+
+```bash
+POST /terminal/term_2f8a9c4e5d3b/input
+```
+
+Request body:
+
+```json
+{
+  "content": "ls -la\r"
+}
+```
+
+Response:
+
+```json
+{
+  "success": true,
+  "message": "Input forwarded",
+  "data": null
+}
+```
+
+## Resize terminal
+
+```bash
+POST /terminal/term_2f8a9c4e5d3b/resize
+```
+
+Request body:
+
+```json
+{
+  "cols": 120,
+  "rows": 40
+}
+```
+
+Response:
+
+```json
+{
+  "success": true,
+  "message": "Terminal resized",
+  "data": null
+}
+```
+
+## Close terminal
+
+```bash
+POST /terminal/term_2f8a9c4e5d3b/close
+```
+
+Response:
+
+```json
+{
+  "success": true,
+  "message": "Terminal session closed",
+  "data": null
+}
+```
+
+## Stream output
+
+```bash
+GET /terminal/term_2f8a9c4e5d3b/stream
+```
+
+The response is a `text/event-stream`. The server first replays the full persistent scrollback, then subscribes to live `pane.output` events from the mux daemon. Ping events are emitted every 15 seconds when no output is available.
+
+Example event:
+
+```text
+data: {"type":"data","data":"total 128\r\ndrwxr-xr-x ..."}
+```
+
+## Error codes
+
+| Status | Code | Description |
+|--------|------|-------------|
+| 200 | — | Success. |
+| 404 | `not_found` | Terminal session not found. |
+| 503 | `service_unavailable` | `allternit-mux` is not reachable. |
+| 500 | `internal_error` | Unexpected server or mux error. |
+
+## Related links
+
+- [Authentication](/api/authentication)
+- [allternit-mux CLI](/cli/allternit-mux)
+- [VM Sessions API](/api/vm-sessions)

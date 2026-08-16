@@ -84,18 +84,35 @@ interface UnifiedTask {
   folder?: string;
 }
 
-export function AutomationTasksView({ initialTab = 'all' }: { initialTab?: 'all' | 'goal' | 'routine' | 'loop' | 'heartbeat' }) {
+interface AutomationTasksViewProps {
+  initialTab?: 'all' | 'goal' | 'routine' | 'loop' | 'heartbeat';
+  agentId?: string;
+  title?: string;
+  hideAgentSelector?: boolean;
+  embedded?: boolean;
+  /** Hide only the page title/description; keep filters, tabs, search, and create controls. */
+  hideTitle?: boolean;
+}
+
+export function AutomationTasksView({
+  initialTab = 'all',
+  agentId,
+  title,
+  hideAgentSelector,
+  embedded,
+  hideTitle,
+}: AutomationTasksViewProps) {
   const [activeTab, setActiveTab] = useState<'all' | 'goal' | 'routine' | 'loop' | 'heartbeat'>(initialTab);
   const [searchQuery, setSearchQuery] = useState('');
   const [sortBy, setSortBy] = useState<'name' | 'date' | 'type'>('date');
   const [showSortDropdown, setShowSortDropdown] = useState(false);
   const [showNewDropdown, setShowNewDropdown] = useState(false);
-  
+
   const [showCreateForm, setShowCreateForm] = useState(false);
   const [showEditForm, setShowEditForm] = useState(false);
   const [editingTask, setEditingTask] = useState<UnifiedTask | null>(null);
   const [selectedTask, setSelectedTask] = useState<UnifiedTask | null>(null);
-  const [selectedHeartbeatAgent, setSelectedHeartbeatAgent] = useState<string | null>(null);
+  const [selectedHeartbeatAgent, setSelectedHeartbeatAgent] = useState<string | null>(agentId ?? null);
 
   const [tasks, setTasks] = useState<UnifiedTask[]>([]);
   const [goalsList, setGoalsList] = useState<any[]>([]);
@@ -243,6 +260,11 @@ export function AutomationTasksView({ initialTab = 'all' }: { initialTab?: 'all'
   const filteredTasks = useMemo(() => {
     let result = tasks;
 
+    // Bot-scoped filter
+    if (agentId) {
+      result = result.filter((t) => t.agentId === agentId);
+    }
+
     // Tab filter
     if (activeTab !== 'all') {
       result = result.filter(t => t.type === activeTab);
@@ -266,7 +288,7 @@ export function AutomationTasksView({ initialTab = 'all' }: { initialTab?: 'all'
     });
 
     return result;
-  }, [tasks, activeTab, searchQuery, sortBy]);
+  }, [tasks, activeTab, searchQuery, sortBy, agentId]);
 
   const handleCreateTask = async (data: Omit<UnifiedTask, 'id' | 'createdAt' | 'updatedAt' | 'status' | 'isActive'> & {
     addRoutine?: boolean;
@@ -518,21 +540,33 @@ export function AutomationTasksView({ initialTab = 'all' }: { initialTab?: 'all'
   };
 
   return (
-    <div className="h-full w-full flex flex-col bg-[var(--bg-elevated)] text-[var(--text-primary)] overflow-auto">
-      <div className="w-full max-w-6xl mx-auto px-8 pt-10 pb-12 flex flex-col">
-        
-        {/* Header */}
-        <div className="flex items-center justify-between gap-4">
-          <div>
+    <div className={cn(
+      "w-full flex flex-col bg-[var(--bg-elevated)] text-[var(--text-primary)]",
+      embedded ? "" : "h-full overflow-auto"
+    )}>
+      <div className={cn(
+        "w-full max-w-6xl mx-auto px-8 flex flex-col",
+        embedded ? "pt-0 pb-0" : "pt-10 pb-12 h-full"
+      )}>
+
+        {!hideTitle && (
+          <div className="mb-6">
             <h1
               className="text-3xl font-medium tracking-tight m-0"
               style={{ fontFamily: 'var(--font-serif)' }}
             >
-              Automation Tasks
+              {title || 'Automation Tasks'}
             </h1>
-            <p className="m-0 mt-1 text-sm text-[var(--text-secondary)]">Manage workflows, persistent schedules, and continuous execution loops</p>
+            <p className="m-0 mt-1 text-sm text-[var(--text-secondary)]">
+              {agentId
+                ? 'Workflows, schedules, and loops for this bot'
+                : 'Manage workflows, persistent schedules, and continuous execution loops'}
+            </p>
           </div>
+        )}
 
+        {/* Controls */}
+        <div className="flex items-center justify-between gap-4">
           <div className="flex items-center gap-2 flex-shrink-0">
             {/* Filter / Tabs Dropdown */}
             <DropdownMenu>
@@ -571,33 +605,33 @@ export function AutomationTasksView({ initialTab = 'all' }: { initialTab?: 'all'
                 <DropdownMenuItem onSelect={() => setSortBy('type')} className={cn(sortBy === 'type' && 'font-medium')}>Type</DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
-
-            {/* New Task dropdown */}
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <button
-                  type="button"
-                  className="inline-flex items-center gap-1.5 h-9 px-4 rounded-lg bg-[var(--text-primary)] text-[var(--bg-elevated)] text-sm font-medium hover:opacity-90 transition-all cursor-pointer"
-                >
-                  New task
-                  <CaretDown size={12} />
-                </button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end">
-                <DropdownMenuItem onSelect={() => { setPrefilledData(null); setShowCreateForm(true); }}>
-                  <Plus size={16} className="mr-2" />
-                  Set up manually
-                </DropdownMenuItem>
-                <DropdownMenuItem onSelect={() => {
-                  const ev = new CustomEvent('allternit:switch-mode', { detail: { mode: 'chat', text: '/schedule ' } });
-                  window.dispatchEvent(ev);
-                }}>
-                  <Robot size={16} className="mr-2" />
-                  Create with Assistant
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
           </div>
+
+          {/* New Task dropdown */}
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <button
+                type="button"
+                className="inline-flex items-center gap-1.5 h-9 px-4 rounded-lg bg-[var(--text-primary)] text-[var(--bg-elevated)] text-sm font-medium hover:opacity-90 transition-all cursor-pointer"
+              >
+                New task
+                <CaretDown size={12} />
+              </button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              <DropdownMenuItem onSelect={() => { setPrefilledData(null); setShowCreateForm(true); }}>
+                <Plus size={16} className="mr-2" />
+                Set up manually
+              </DropdownMenuItem>
+              <DropdownMenuItem onSelect={() => {
+                const ev = new CustomEvent('allternit:switch-mode', { detail: { mode: 'chat', text: '/schedule ' } });
+                window.dispatchEvent(ev);
+              }}>
+                <Robot size={16} className="mr-2" />
+                Create with Assistant
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
         </div>
 
         {/* Tab Strip */}
@@ -719,6 +753,8 @@ export function AutomationTasksView({ initialTab = 'all' }: { initialTab?: 'all'
           routines={routinesList}
           agents={agents}
           prefilledData={prefilledData}
+          agentId={agentId}
+          hideAgentSelector={hideAgentSelector}
           onClose={() => { setShowCreateForm(false); setPrefilledData(null); }}
           onSave={(taskId, data) => handleCreateTask(data)}
         />
@@ -731,6 +767,8 @@ export function AutomationTasksView({ initialTab = 'all' }: { initialTab?: 'all'
           routines={routinesList}
           agents={agents}
           initialTask={editingTask}
+          agentId={agentId}
+          hideAgentSelector={hideAgentSelector}
           onClose={() => { setShowEditForm(false); setEditingTask(null); }}
           onSave={handleUpdateTask}
         />
@@ -877,6 +915,8 @@ function AutomationWizardForm({
   agents,
   prefilledData,
   initialTask,
+  agentId,
+  hideAgentSelector,
   onClose,
   onSave,
 }: {
@@ -886,6 +926,8 @@ function AutomationWizardForm({
   agents: any[];
   prefilledData?: any;
   initialTask?: UnifiedTask;
+  agentId?: string;
+  hideAgentSelector?: boolean;
   onClose: () => void;
   onSave: (taskId: string, data: any) => void;
 }) {
@@ -898,11 +940,11 @@ function AutomationWizardForm({
     schedule_expression: initialTask?.schedule_expression || prefilledData?.schedule_expression || '0 9 * * *',
     goalId: initialTask?.goalId || '',
     routineId: initialTask?.routineId || '',
-    agentId: initialTask?.agentId || '',
+    agentId: initialTask?.agentId || agentId || '',
     priority: initialTask?.priority || 'medium',
     targetDate: initialTask?.targetDate || '',
     folder: initialTask?.folder || '',
-    executorType: (initialTask?.agentId ? 'agent' : 'model') as 'model' | 'agent',
+    executorType: (initialTask?.agentId || agentId ? 'agent' : 'model') as 'model' | 'agent',
     modelSelection: null as ModelSelection | null,
 
     // Packaging optional fields
@@ -1287,13 +1329,13 @@ function AutomationWizardForm({
           )}
 
           {/* Executor / Agent Allocation (Not for Goal) */}
-          {formData.type !== 'goal' && (
+          {formData.type !== 'goal' && !hideAgentSelector && (
             <div className="space-y-3 pt-4 border-t border-solid border-[var(--border-subtle)]">
               <FormField label="Executor Selection">
                 <div className="flex gap-2">
                   <button
                     type="button"
-                    onClick={() => setFormData({ ...formData, executorType: 'model', agentId: '' })}
+                    onClick={() => setFormData({ ...formData, executorType: 'model', agentId: agentId || '' })}
                     className={cn(
                       "flex-1 py-2 rounded-lg border border-solid flex items-center justify-center gap-1.5 text-[13px] font-semibold cursor-pointer transition-all",
                       formData.executorType === 'model'

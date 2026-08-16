@@ -51,13 +51,24 @@ fn aliases() -> &'static HashMap<String, String> {
 
 /// Reverse lookup: sidecar provider id -> Allternit catalog id. Used when the
 /// sidecar reports live connections under its own spelling.
+/// When a sidecar id maps to multiple Allternit ids (e.g. "monday" serves both
+/// legacy "monday" and aliased "mondaymcp"), prefer the exact-spelling match.
 fn reverse_aliases() -> &'static HashMap<String, String> {
     static R: OnceLock<HashMap<String, String>> = OnceLock::new();
     R.get_or_init(|| {
-        aliases()
-            .iter()
-            .map(|(k, v)| (v.clone(), k.clone()))
-            .collect()
+        let mut map: HashMap<String, String> = HashMap::new();
+        for (allternit_id, sidecar_id) in aliases().iter() {
+            // First pass: only exact matches, so they can't be overwritten.
+            if allternit_id == sidecar_id {
+                map.insert(sidecar_id.clone(), allternit_id.clone());
+            }
+        }
+        for (allternit_id, sidecar_id) in aliases().iter() {
+            // Second pass: fill in aliases for sidecar ids that don't already
+            // have an exact-spelling Allternit id.
+            map.entry(sidecar_id.clone()).or_insert_with(|| allternit_id.clone());
+        }
+        map
     })
 }
 
@@ -240,16 +251,26 @@ pub async fn provider_summaries() -> Result<Arc<HashMap<String, ProviderSummary>
                 .and_then(|v| v.as_str())
                 .map(|s| s.to_string());
             // Expose under the Allternit catalog spelling when one exists.
-            let key = allternit_id(service).unwrap_or_else(|| service.to_string());
-            map.insert(
-                key,
-                ProviderSummary {
-                    auth_types,
-                    executable_actions,
-                    display_name,
-                    homepage_url,
-                },
-            );
+            // Also keep the sidecar's own spelling so an Allternit id that
+            // happens to equal the sidecar service id is still reachable
+            // (e.g. legacy "monday" alongside aliased "mondaymcp" -> "monday").
+            let keys: std::collections::HashSet<String> = [
+                allternit_id(service).unwrap_or_else(|| service.to_string()),
+                service.to_string(),
+            ]
+            .into_iter()
+            .collect();
+            for key in keys {
+                map.insert(
+                    key,
+                    ProviderSummary {
+                        auth_types: auth_types.clone(),
+                        executable_actions,
+                        display_name: display_name.clone(),
+                        homepage_url: homepage_url.clone(),
+                    },
+                );
+            }
         }
     }
     let map = Arc::new(map);

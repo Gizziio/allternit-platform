@@ -13,6 +13,7 @@ use axum::{
     routing::{get, post},
     Json, Router,
 };
+use reqwest::Client;
 use rusqlite::params;
 use serde::{Deserialize, Serialize};
 use serde_json::json;
@@ -58,6 +59,7 @@ pub fn agent_router() -> Router<Arc<AppState>> {
             "/agents/identity",
             get(get_agent_identity).post(set_agent_identity),
         )
+        .route("/agents/:id/identity/wallet", post(provision_agent_wallet))
         .route("/agents/metrics", get(list_agent_metrics))
         .route(
             "/agents/suites",
@@ -332,10 +334,167 @@ struct CreateAgentBody {
     tags: Option<serde_json::Value>,
     data_classification: Option<String>,
     write_scope: Option<String>,
+    #[serde(default)]
+    is_bot: Option<bool>,
+    bot_profile: Option<serde_json::Value>,
+    #[serde(default)]
+    connector_bindings: Option<serde_json::Value>,
+    #[serde(default)]
+    secret_refs: Option<serde_json::Value>,
+    #[serde(default)]
+    messaging_config: Option<serde_json::Value>,
+    #[serde(default)]
+    identity_channels: Option<serde_json::Value>,
 }
 
 fn json_to_string(value: Option<serde_json::Value>) -> Option<String> {
     value.map(|v| v.to_string())
+}
+
+/// Merge bot/autonomous primitive metadata into `config` so the agent record
+/// round-trips even when dedicated columns are not present.
+fn merge_autonomous_primitives_into_config(
+    mut config: Option<serde_json::Value>,
+    is_bot: Option<bool>,
+    bot_profile: Option<serde_json::Value>,
+    connector_bindings: Option<serde_json::Value>,
+    messaging_config: Option<serde_json::Value>,
+    identity_channels: Option<serde_json::Value>,
+) -> Option<serde_json::Value> {
+    let mut map = config.unwrap_or_else(|| json!({})).as_object_mut()?.clone();
+    if let Some(v) = is_bot {
+        map.insert("isBot".to_string(), json!(v));
+    }
+    if let Some(v) = bot_profile {
+        map.insert("botProfile".to_string(), v);
+    }
+    if let Some(v) = connector_bindings {
+        map.insert("connectorBindings".to_string(), v);
+    }
+    if let Some(v) = messaging_config {
+        map.insert("messagingConfig".to_string(), v);
+    }
+    if let Some(v) = identity_channels {
+        map.insert("identityChannels".to_string(), v);
+    }
+    Some(json!(map))
+}
+
+fn as_array(value: Option<&serde_json::Value>) -> Vec<&serde_json::Value> {
+    value
+        .and_then(|v| v.as_array())
+        .map(|arr| arr.iter().collect())
+        .unwrap_or_default()
+}
+
+fn as_str(value: Option<&serde_json::Value>) -> Option<String> {
+    value.and_then(|v| v.as_str()).map(String::from)
+}
+
+fn persist_agent_secrets(
+    conn: &rusqlite::Connection,
+    agent_id: &str,
+    user_id: &str,
+    secret_refs: Option<&serde_json::Value>,
+) -> rusqlite::Result<()> {
+    for r in as_array(secret_refs) {
+        let key = as_str(r.get("key")).unwrap_or_default();
+        if key.is_empty() {
+            continue;
+        }
+        let value = as_str(r.get("value")).unwrap_or_default();
+        if value.is_empty() {
+            continue;
+        }
+        let name = as_str(r.get("name")).unwrap_or_else(|| key.clone());
+        let required = r.get("required").and_then(|v| v.as_bool()).unwrap_or(false);
+        let description = as_str(r.get("description"));
+        let id = uuid::Uuid::new_v4().to_string();
+        conn.execute(
+            "INSERT INTO agent_secrets (id, agent_id, user_id, name, key, encrypted_value, required, description, updated_at)
+             VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, CURRENT_TIMESTAMP)
+             ON CONFLICT(agent_id, key) DO UPDATE SET
+                 name = excluded.name,
+                 encrypted_value = excluded.encrypted_value,
+                 required = excluded.required,
+                 description = excluded.description,
+                 updated_at = CURRENT_TIMESTAMP",
+            params![
+                id,
+                agent_id,
+                user_id,
+                name,
+                key,
+                crate::token_crypto::seal(&value),
+                required as i32,
+                description
+            ],
+        )?;
+    }
+    Ok(())
+}
+
+fn persist_agent_identity_channels(
+    conn: &rusqlite::Connection,
+    agent_id: &str,
+    user_id: &str,
+    identity_channels: Option<&serde_json::Value>,
+) -> rusqlite::Result<()> {
+    let Some(channels) = identity_channels else { return Ok(()) };
+    let email = channels.get("email");
+    let phone = channels.get("phone");
+    let wallet = channels.get("wallet");
+
+    if email.is_none() && phone.is_none() && wallet.is_none() {
+        return Ok(());
+    }
+
+    let id = uuid::Uuid::new_v4().to_string();
+    conn.execute(
+        "INSERT INTO agent_identity_channels (
+            id, agent_id, user_id,
+            email_address, email_provider, email_send_enabled, email_receive_enabled,
+            phone_number, phone_provider, phone_voice_enabled, phone_sms_enabled,
+            wallet_address, wallet_provider, wallet_chain_id, wallet_allowed_methods,
+            updated_at
+        ) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13, ?14, ?15, CURRENT_TIMESTAMP)
+        ON CONFLICT(agent_id) DO UPDATE SET
+            email_address = COALESCE(excluded.email_address, email_address),
+            email_provider = COALESCE(excluded.email_provider, email_provider),
+            email_send_enabled = COALESCE(excluded.email_send_enabled, email_send_enabled),
+            email_receive_enabled = COALESCE(excluded.email_receive_enabled, email_receive_enabled),
+            phone_number = COALESCE(excluded.phone_number, phone_number),
+            phone_provider = COALESCE(excluded.phone_provider, phone_provider),
+            phone_voice_enabled = COALESCE(excluded.phone_voice_enabled, phone_voice_enabled),
+            phone_sms_enabled = COALESCE(excluded.phone_sms_enabled, phone_sms_enabled),
+            wallet_address = COALESCE(excluded.wallet_address, wallet_address),
+            wallet_provider = COALESCE(excluded.wallet_provider, wallet_provider),
+            wallet_chain_id = COALESCE(excluded.wallet_chain_id, wallet_chain_id),
+            wallet_allowed_methods = COALESCE(excluded.wallet_allowed_methods, wallet_allowed_methods),
+            updated_at = CURRENT_TIMESTAMP",
+        params![
+            id,
+            agent_id,
+            user_id,
+            email.and_then(|v| as_str(v.get("address"))),
+            email.and_then(|v| as_str(v.get("provider"))).or(Some("custom".to_string())),
+            email.and_then(|v| v.get("sendEnabled").and_then(|x| x.as_bool())).unwrap_or(false) as i32,
+            email.and_then(|v| v.get("receiveEnabled").and_then(|x| x.as_bool())).unwrap_or(false) as i32,
+            phone.and_then(|v| as_str(v.get("number"))),
+            phone.and_then(|v| as_str(v.get("provider"))).or(Some("vapi".to_string())),
+            phone.and_then(|v| v.get("voiceEnabled").and_then(|x| x.as_bool())).unwrap_or(false) as i32,
+            phone.and_then(|v| v.get("smsEnabled").and_then(|x| x.as_bool())).unwrap_or(false) as i32,
+            wallet.and_then(|v| as_str(v.get("address"))),
+            wallet.and_then(|v| as_str(v.get("provider"))).or(Some("etrid".to_string())),
+            wallet.and_then(|v| as_str(v.get("chainId"))),
+            wallet.and_then(|v| {
+                v.get("allowedMethods")
+                    .and_then(|m| m.as_array())
+                    .map(|arr| arr.iter().filter_map(|x| x.as_str()).collect::<Vec<_>>().join(","))
+            }),
+        ],
+    )?;
+    Ok(())
 }
 
 /// Validate that an agent satisfies the platform creation checklist.
@@ -460,6 +619,17 @@ async fn create_agent(
     let ledger_workspace_id = body.workspace_id.clone();
     let ledger_trust_tier = body.trust_tier.clone();
 
+    let merged_config = merge_autonomous_primitives_into_config(
+        body.config.clone(),
+        body.is_bot,
+        body.bot_profile.clone(),
+        body.connector_bindings.clone(),
+        body.messaging_config.clone(),
+        body.identity_channels.clone(),
+    );
+    let secret_refs = body.secret_refs.clone();
+    let identity_channels = body.identity_channels.clone();
+
     let result = tokio::task::spawn_blocking(move || {
         let conn = db.connect()?;
         conn.execute(
@@ -484,7 +654,7 @@ async fn create_agent(
                 json_to_string(body.tools),
                 body.max_iterations.unwrap_or(10),
                 body.temperature.unwrap_or(0.7),
-                json_to_string(body.config),
+                json_to_string(merged_config),
                 body.status.unwrap_or_else(|| "idle".to_string()),
                 body.workspace_id,
                 body.avatar,
@@ -502,6 +672,8 @@ async fn create_agent(
                 body.mode.unwrap_or_else(|| "primary".to_string()),
             ],
         )?;
+        persist_agent_secrets(&conn, &id2, &user_id_for_db, secret_refs.as_ref())?;
+        persist_agent_identity_channels(&conn, &id2, &user_id_for_db, identity_channels.as_ref())?;
         Ok::<_, rusqlite::Error>(())
     })
     .await;
@@ -1126,6 +1298,17 @@ struct UpdateAgentBody {
     tags: Option<serde_json::Value>,
     data_classification: Option<String>,
     write_scope: Option<String>,
+    #[serde(default)]
+    is_bot: Option<bool>,
+    bot_profile: Option<serde_json::Value>,
+    #[serde(default)]
+    connector_bindings: Option<serde_json::Value>,
+    #[serde(default)]
+    secret_refs: Option<serde_json::Value>,
+    #[serde(default)]
+    messaging_config: Option<serde_json::Value>,
+    #[serde(default)]
+    identity_channels: Option<serde_json::Value>,
 }
 
 async fn update_agent(
@@ -1172,8 +1355,49 @@ async fn update_agent(
     let db = state.db.clone();
     let user_id = user.user_id;
 
+    let has_primitives = body.is_bot.is_some()
+        || body.bot_profile.is_some()
+        || body.connector_bindings.is_some()
+        || body.messaging_config.is_some()
+        || body.identity_channels.is_some();
+    let secret_refs = body.secret_refs.clone();
+    let identity_channels = body.identity_channels.clone();
+    let config_from_body = body.config.clone();
+    let is_bot = body.is_bot;
+    let bot_profile = body.bot_profile.clone();
+    let connector_bindings = body.connector_bindings.clone();
+    let messaging_config = body.messaging_config.clone();
+
     let result = tokio::task::spawn_blocking(move || {
         let conn = db.connect()?;
+
+        // Merge autonomous primitives into config. If the request didn't send a
+        // config, read the existing one so the merge doesn't clobber it.
+        let merged_config = if has_primitives || config_from_body.is_some() {
+            let base_config = config_from_body.or_else(|| {
+                conn.query_row(
+                    "SELECT config FROM agents WHERE id = ?1 AND user_id = ?2",
+                    params![id, user_id],
+                    |row| {
+                        let raw: Option<String> = row.get(0)?;
+                        Ok(raw.and_then(|s| serde_json::from_str(&s).ok()))
+                    },
+                )
+                .ok()
+                .flatten()
+            });
+            merge_autonomous_primitives_into_config(
+                base_config,
+                is_bot,
+                bot_profile,
+                connector_bindings,
+                messaging_config,
+                identity_channels.clone(),
+            )
+        } else {
+            None
+        };
+
         conn.execute(
             "UPDATE agents SET
                 name = COALESCE(?1, name),
@@ -1216,7 +1440,7 @@ async fn update_agent(
                 json_to_string(body.tools),
                 body.max_iterations,
                 body.temperature,
-                json_to_string(body.config),
+                json_to_string(merged_config),
                 body.status,
                 body.workspace_id,
                 body.avatar,
@@ -1235,6 +1459,8 @@ async fn update_agent(
                 user_id,
             ],
         )?;
+        persist_agent_secrets(&conn, &id, &user_id, secret_refs.as_ref())?;
+        persist_agent_identity_channels(&conn, &id, &user_id, identity_channels.as_ref())?;
         Ok::<_, rusqlite::Error>(())
     })
     .await;
@@ -1498,6 +1724,146 @@ async fn set_agent_identity(
             Json(json!({"error": "Failed to set identity"})),
         )
             .into_response(),
+    }
+}
+
+// ─── Agent wallet provisioning ────────────────────────────────────────────────
+
+#[derive(Deserialize)]
+struct ProvisionWalletBody {
+    #[serde(default)]
+    kind: Option<String>,
+    #[serde(default, alias = "chainId")]
+    chain_id: Option<String>,
+    #[serde(default, alias = "allowedMethods")]
+    allowed_methods: Option<Vec<String>>,
+}
+
+#[derive(Serialize)]
+struct ProvisionedWalletResponse {
+    id: String,
+    address: Option<String>,
+    #[serde(rename = "keyVaultRef")]
+    key_vault_ref: String,
+    provider: String,
+}
+
+/// Provision an Etrid wallet for an agent. The platform owns the relationship
+/// with the Etrid service so the UI never talks directly to wallet key material.
+async fn provision_agent_wallet(
+    State(state): State<Arc<AppState>>,
+    Extension(user): Extension<AuthUser>,
+    _headers: HeaderMap,
+    Path(agent_id): Path<String>,
+    Json(body): Json<ProvisionWalletBody>,
+) -> impl IntoResponse {
+    // Verify the agent exists and belongs to the authenticated user.
+    let db = state.db.clone();
+    let user_id = user.user_id;
+    let agent_id_check = agent_id.clone();
+    let authorized = tokio::task::spawn_blocking(move || {
+        let conn = db.connect()?;
+        let exists: bool = conn
+            .query_row(
+                "SELECT 1 FROM agents WHERE id = ?1 AND user_id = ?2",
+                params![agent_id_check, user_id],
+                |_| Ok(true),
+            )
+            .unwrap_or(false);
+        Ok::<_, rusqlite::Error>(exists)
+    })
+    .await;
+
+    match authorized {
+        Ok(Ok(false)) => {
+            return (StatusCode::NOT_FOUND, Json(json!({"error": "agent_not_found"}))).into_response();
+        }
+        Ok(Err(e)) => {
+            warn!("DB error checking agent ownership: {}", e);
+            return (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(json!({"error": "internal error"})),
+            )
+                .into_response();
+        }
+        Err(e) => {
+            warn!("DB task panicked: {}", e);
+            return (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(json!({"error": "internal error"})),
+            )
+                .into_response();
+        }
+        _ => {}
+    }
+
+    let etrid_url = state.config.etrid_url();
+    let client = Client::new();
+    let kind = body.kind.unwrap_or_else(|| "identity".to_string());
+    let request_body = json!({
+        "agent_id": agent_id,
+        "kind": kind,
+        "chain_id": body.chain_id,
+        "allowed_methods": body.allowed_methods,
+    });
+
+    match client
+        .post(format!("{}/wallets", etrid_url))
+        .json(&request_body)
+        .send()
+        .await
+    {
+        Ok(response) => {
+            let status = response.status();
+            if status.is_success() {
+                match response.json::<serde_json::Value>().await {
+                    Ok(wallet) => {
+                        let id = wallet.get("id").and_then(|v| v.as_str()).unwrap_or("").to_string();
+                        let address = wallet
+                            .get("address")
+                            .and_then(|v| v.as_str())
+                            .map(str::to_string);
+                        let key_vault_ref = wallet
+                            .get("key_vault_ref")
+                            .and_then(|v| v.as_str())
+                            .unwrap_or("")
+                            .to_string();
+                        Json(json!({
+                            "wallet": ProvisionedWalletResponse {
+                                id,
+                                address,
+                                key_vault_ref,
+                                provider: "etrid".to_string(),
+                            }
+                        }))
+                        .into_response()
+                    }
+                    Err(e) => {
+                        warn!("Etrid wallet response was not valid JSON: {}", e);
+                        (
+                            StatusCode::BAD_GATEWAY,
+                            Json(json!({"error": "invalid etrid response"})),
+                        )
+                            .into_response()
+                    }
+                }
+            } else {
+                let text = response.text().await.unwrap_or_default();
+                (
+                    StatusCode::from_u16(status.as_u16()).unwrap_or(StatusCode::BAD_GATEWAY),
+                    Json(json!({"error": text})),
+                )
+                    .into_response()
+            }
+        }
+        Err(e) => {
+            warn!("Etrid wallet service unreachable: {}", e);
+            (
+                StatusCode::BAD_GATEWAY,
+                Json(json!({"error": format!("Etrid wallet service unreachable: {}", e)})),
+            )
+                .into_response()
+        }
     }
 }
 

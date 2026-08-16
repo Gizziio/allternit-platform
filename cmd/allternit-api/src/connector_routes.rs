@@ -760,6 +760,7 @@ async fn get_connector(
 struct ConnectBody {
     via: Option<String>,
     api_key: Option<String>,
+    values: Option<Value>,
 }
 
 async fn connect_connector(
@@ -778,6 +779,7 @@ async fn connect_connector(
     let body = body.map(|Json(b)| b).unwrap_or(ConnectBody {
         via: None,
         api_key: None,
+        values: None,
     });
     if !is_curated(&id) {
         return connect_sidecar(&state, &user_id, &id, &c, body).await;
@@ -791,7 +793,17 @@ async fn connect_connector(
 
     match via.as_str() {
         "local_cli" => connect_local_cli(&state, &user_id, &id, &c, &m).await,
-        "api_key" => connect_api_key(&state, &user_id, &id, &c, body.api_key.as_deref()).await,
+        "api_key" => {
+            connect_api_key(
+                &state,
+                &user_id,
+                &id,
+                &c,
+                body.api_key.as_deref(),
+                body.values.as_ref(),
+            )
+            .await
+        }
         "oauth2" => connect_oauth2(&state, &user_id, &id, &c, &m).await,
         "device_flow" => connect_device(&state, &user_id, &id, &c, &m).await,
         other => (
@@ -923,12 +935,27 @@ async fn connect_sidecar(
                 sidecar::upsert_credential(id, user_id, json!({ "authType": "no_auth" })).await;
             finish_sidecar_connect(state, user_id, id, c, "no_auth", resp).await
         }
-        "custom_credential" => (
-            StatusCode::BAD_REQUEST,
-            Json(
-                json!({ "error": "custom_credential_requires_values", "id": id, "message": "This provider needs structured credentials the connect dialog cannot collect yet." }),
-            ),
-        ),
+        "custom_credential" => {
+            let values = body
+                .values
+                .and_then(|v| v.as_object().cloned())
+                .unwrap_or_default();
+            if values.is_empty() {
+                return (
+                    StatusCode::BAD_REQUEST,
+                    Json(
+                        json!({ "error": "custom_credential_requires_values", "id": id, "message": "This provider needs structured credentials. Pass them in `values`." }),
+                    ),
+                );
+            }
+            let resp = sidecar::upsert_credential(
+                id,
+                user_id,
+                json!({ "authType": "custom_credential", "values": values }),
+            )
+            .await;
+            finish_sidecar_connect(state, user_id, id, c, "custom_credential", resp).await
+        }
         other => (
             StatusCode::BAD_REQUEST,
             Json(json!({ "error": "unsupported_auth_type", "via": other })),
@@ -1082,6 +1109,7 @@ async fn refresh_connector(
                     ConnectBody {
                         via: Some(other.to_string()),
                         api_key: None,
+                        values: None,
                     },
                 )
                 .await
@@ -1250,8 +1278,26 @@ async fn connect_api_key(
     id: &str,
     c: &Value,
     api_key: Option<&str>,
+    values: Option<&Value>,
 ) -> (StatusCode, Json<Value>) {
-    let key = api_key.map(|s| s.trim().to_string()).unwrap_or_default();
+    let key = if let Some(k) = api_key.map(str::trim).filter(|s| !s.is_empty()) {
+        k.to_string()
+    } else if let Some(v) = values {
+        if let Some(s) = v.as_str() {
+            s.trim().to_string()
+        } else if v.is_object() && !v.as_object().unwrap().is_empty() {
+            if let Some(ak) = v.get("apiKey").or_else(|| v.get("api_key")).and_then(|s| s.as_str()) {
+                ak.trim().to_string()
+            } else {
+                v.to_string()
+            }
+        } else {
+            String::new()
+        }
+    } else {
+        String::new()
+    };
+
     if key.is_empty() {
         return (
             StatusCode::BAD_REQUEST,

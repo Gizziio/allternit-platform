@@ -11,8 +11,10 @@ import { AgentGalleryGrid } from "./agent-view/main/AgentGalleryGrid";
 import { CreateAgentLanding } from "./agent-view/components/CreateAgentLanding";
 
 // UI Components
-import { CircleNotch, Plus, Warning } from '@phosphor-icons/react';
+import { CircleNotch, Plus, Warning, Robot, UserCircle } from '@phosphor-icons/react';
 import { Alert, AlertDescription } from "@/components/ui/alert";
+import { isBot } from '@/lib/bots/bot-profile';
+import { cn } from '@/lib/utils';
 
 interface AgentViewProps {
   context?: unknown;
@@ -62,6 +64,13 @@ export function AgentView({ hideCreateButton = false, forceListMode = false, tit
 
   const [searchQuery, setSearchQuery] = useState('');
   const [showLanding, setShowLanding] = useState(showLandingOnEntry && !forceListMode);
+  const [studioFilter, setStudioFilter] = useState<'all' | 'bots' | 'agents'>('all');
+
+  const filteredAgents = agents.filter((agent) => {
+    if (studioFilter === 'bots') return isBot(agent);
+    if (studioFilter === 'agents') return !isBot(agent);
+    return true;
+  });
 
   // Render based on view mode
   if (viewMode === 'create' && !forceListMode) {
@@ -110,6 +119,31 @@ export function AgentView({ hideCreateButton = false, forceListMode = false, tit
           }}
           onBrowseAgents={() => setShowLanding(false)}
           onBack={() => setShowLanding(false)}
+          onBotImported={async (agent) => {
+            setShowLanding(false);
+            await selectAgent(agent.id);
+          }}
+          onStartFromTemplate={(template) => {
+            const bot = template.create();
+            setDraftAgent({
+              isBot: true,
+              botProfile: bot.botProfile,
+              name: bot.name,
+              description: bot.description,
+              type: bot.type,
+              model: bot.model,
+              provider: bot.provider,
+              capabilities: bot.capabilities,
+              systemPrompt: bot.systemPrompt,
+              tools: bot.tools,
+              maxIterations: bot.maxIterations,
+              temperature: bot.temperature,
+              tags: bot.tags,
+              category: bot.category,
+            });
+            setShowLanding(false);
+            setIsCreating(true);
+          }}
         />
       </div>
     );
@@ -161,14 +195,73 @@ export function AgentView({ hideCreateButton = false, forceListMode = false, tit
             }}
           />
         ) : (
-          <AgentGalleryGrid
-              agents={agents}
+          <div className="flex flex-col gap-6">
+            <div className="flex items-center justify-between gap-3">
+              <div className="inline-flex items-center rounded-lg border border-[var(--border-default)] bg-[var(--bg-elevated)] p-1">
+                <FilterButton
+                  active={studioFilter === 'all'}
+                  onClick={() => setStudioFilter('all')}
+                  label="All"
+                />
+                <FilterButton
+                  active={studioFilter === 'bots'}
+                  onClick={() => setStudioFilter('bots')}
+                  label="Bots"
+                  icon={Robot}
+                />
+                <FilterButton
+                  active={studioFilter === 'agents'}
+                  onClick={() => setStudioFilter('agents')}
+                  label="Agents"
+                  icon={UserCircle}
+                />
+              </div>
+              <button
+                type="button"
+                onClick={() => {
+                  if (studioFilter === 'bots') {
+                    setDraftAgent({
+                      isBot: true,
+                      botProfile: {
+                        displayName: '',
+                        tagline: '',
+                        welcomeMessage: '',
+                        starterPrompts: [],
+                        accentColor: '#6366f1',
+                        groupChatEnabled: true,
+                        botCategory: 'custom',
+                      },
+                    });
+                  } else {
+                    setDraftAgent(undefined);
+                  }
+                  setIsCreating(true);
+                }}
+                className="inline-flex h-9 items-center gap-1.5 rounded-lg bg-[var(--text-primary)] px-3 text-[13px] font-medium text-[var(--bg-elevated)] transition-opacity hover:opacity-90"
+              >
+                <Plus size={16} />
+                {studioFilter === 'bots' ? 'Create Bot' : 'Create Agent'}
+              </button>
+            </div>
+            <AgentGalleryGrid
+              agents={filteredAgents}
               searchQuery={searchQuery}
               onSearchChange={setSearchQuery}
               onSelectAgent={selectAgent}
               forceListMode={forceListMode}
               compact={compactGrid}
             />
+            {filteredAgents.length === 0 && agents.length > 0 && (
+              <div className="py-12 text-center text-[var(--text-secondary)]">
+                <Robot size={40} className="mx-auto mb-3 text-[var(--text-tertiary)] opacity-40" />
+                <p className="text-sm">
+                  {studioFilter === 'bots'
+                    ? 'No bots yet. Create one to package an agent.'
+                    : 'No agents yet. Create one to get started.'}
+                </p>
+              </div>
+            )}
+          </div>
         )}
         </div>
       </div>
@@ -190,6 +283,34 @@ function CreateAgentFlow({ onClose }: { onClose: () => void }) {
         onClose();
       }}
     />
+  );
+}
+
+function FilterButton({
+  active,
+  onClick,
+  label,
+  icon: Icon,
+}: {
+  active: boolean;
+  onClick: () => void;
+  label: string;
+  icon?: React.ElementType;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className={cn(
+        'inline-flex h-8 items-center gap-1.5 rounded-md px-3 text-[13px] font-medium transition-colors',
+        active
+          ? 'bg-[var(--accent-primary)] text-white'
+          : 'text-[var(--text-secondary)] hover:bg-[var(--surface-hover)] hover:text-[var(--text-primary)]'
+      )}
+    >
+      {Icon && <Icon size={14} />}
+      {label}
+    </button>
   );
 }
 

@@ -32,6 +32,7 @@ import {
   DotsThreeVertical,
   Check,
   Brain,
+  Play,
 } from '@phosphor-icons/react';
 import { getPinnedMiniApps, unpinMiniApp, seedDefaultMiniApps } from '../views/aci/mini-app-registry';
 import type { InstalledMiniApp } from '../views/aci/mini-app.types';
@@ -59,6 +60,18 @@ import { SettingsDrilldown } from './SettingsDrilldown';
 import { getAgentModeSurfaceTheme } from '../views/chat/agentModeSurfaceTheme';
 import type { AgentModeSurface } from '../stores/agent-surface-mode.store';
 import { cn } from '@/lib/utils';
+import { BOT_TEMPLATES } from '@/lib/bots/bots.manifest';
+import { getBotIcon } from '@/lib/bots/bot-icons';
+import { useStartBotSession } from '@/lib/bots/useStartBotSession';
+import { useAgentStore } from '@/lib/agents/agent.store';
+import { useCommRailsUnreadCount } from '@/lib/bots/comrails-mail.store';
+import {
+  getBotAccentColor,
+  getBotDisplayName,
+  getBotTagline,
+  isBot,
+} from '@/lib/bots/bot-profile';
+import type { Agent } from '@/lib/agents/agent.types';
 import { Popover, PopoverTrigger, PopoverContent } from '@/components/ui/popover';
 import { DeleteConfirmModal } from './DeleteConfirmModal';
 
@@ -181,9 +194,28 @@ export function ShellRail({
 
   const browserAgentSessions = useBrowserAgentStore((state) => state.pageAgentSessions);
   const aciSessionId = useBrowserAgentStore((state) => state.aciSessionId);
+  const activeChatThreadId = useChatStore((s) => s.activeThreadId);
   const pinnedMiniApps = usePinnedMiniApps();
 
+  // The "New" rail button should only look active when the user is on an
+  // empty surface for that mode (no active session/thread selected).
+  const isNewActive =
+    mode === 'browser'
+      ? activeViewType === 'browser' && !aciSessionId
+      : mode === 'code'
+        ? activeViewType === 'code' && !activeCodeSessionId
+        : activeViewType === 'chat' && !activeChatSessionId && !activeChatThreadId;
+
   const [recentsExpanded, setRecentsExpanded] = useState(true);
+  const [botsExpanded, setBotsExpanded] = useState(() => {
+    if (typeof window === 'undefined') return true;
+    try {
+      return window.localStorage.getItem('allternit:rail:bots-expanded') !== 'false';
+    } catch {
+      return true;
+    }
+  });
+  const [startingBotId, setStartingBotId] = useState<string | null>(null);
   const [typeFilter, setTypeFilter] = useState<'all' | 'chat' | 'cowork' | 'task' | 'agent' | 'browser' | 'code'>('all');
   const [statusFilter, setStatusFilter] = useState<'all' | 'active' | 'completed' | 'archived'>('all');
   const [dateFilter, setDateFilter] = useState<'all' | 'today' | 'week' | 'month'>('all');
@@ -200,12 +232,13 @@ export function ShellRail({
 
   // Per-mode rail tab visibility (browser/code only; home has no More menu)
   const [browserRailTabs, setBrowserRailTabs] = useState<Record<string, boolean>>(() => {
-    if (typeof window === 'undefined') return { 'mini-apps-store': true, 'browser-extensions': true };
+    const defaults = { 'mini-apps-store': true, 'browser-extensions': true, 'site-apis': true };
+    if (typeof window === 'undefined') return defaults;
     try {
       const saved = JSON.parse(localStorage.getItem('allternit-browser-rail-tabs') ?? '{}');
-      return { 'mini-apps-store': true, 'browser-extensions': true, ...saved };
+      return { ...defaults, ...saved };
     } catch {
-      return { 'mini-apps-store': true, 'browser-extensions': true };
+      return defaults;
     }
   });
   const [codeRailTabs, setCodeRailTabs] = useState<Record<string, boolean>>(() => {
@@ -235,6 +268,47 @@ export function ShellRail({
     });
   }, []);
 
+  const { startSession: startBotSession } = useStartBotSession(
+    useCallback((sessionId: string) => {
+      // Open the bot session view so the rail entry is tied to a real session,
+      // not a generic home chat.
+      onOpen?.('chat-agent-session', { sessionId, originView: activeViewType ?? 'chat' });
+    }, [onOpen, activeViewType])
+  );
+
+  const agents = useAgentStore((s) => s.agents);
+  const bots = useMemo(() => agents.filter(isBot), [agents]);
+
+  const handleBotsToggle = useCallback(() => {
+    setBotsExpanded((prevBots) => {
+      const nextBots = !prevBots;
+      try { localStorage.setItem('allternit:rail:bots-expanded', String(nextBots)); } catch {}
+      // Mutually exclusive: expanding Bots collapses Recents.
+      setRecentsExpanded((prevRecents) => (nextBots ? false : prevRecents));
+      return nextBots;
+    });
+  }, []);
+
+  const handleCreateBot = useCallback(() => {
+    onOpen?.('agent-hub');
+  }, [onOpen]);
+
+  const handleStartBot = useCallback(async (bot: Agent) => {
+    setStartingBotId(bot.id);
+    try {
+      await startBotSession(bot);
+      // Bind this bot as the chat surface's selected agent so the composer
+      // shows the bot pill and the mode dock for switching execution modes.
+      useAgentSurfaceModeStore.getState().setSelectedAgent('chat', bot.id);
+    } finally {
+      setStartingBotId(null);
+    }
+  }, [startBotSession]);
+
+  const handleOpenBotHome = useCallback((bot: Agent) => {
+    onOpen?.('bot-home', { botId: bot.id });
+  }, [onOpen]);
+
   const recentItems = useMemo(() => {
     const list: {
       id: string;
@@ -248,9 +322,20 @@ export function ShellRail({
       sessionId?: string | null;
     }[] = [];
 
-    // Chat sessions
+    const botIds = new Set(bots.map((b) => b.id));
+    const botNames = new Set(bots.map((b) => b.name.toLowerCase()));
+
+    const isAgentSession = (md?: Record<string, unknown>) =>
+      md?.isBot === true ||
+      md?.agentId != null ||
+      md?.agent_id != null ||
+      (md?.agentName && botNames.has(String(md.agentName).toLowerCase()));
+
+    // Chat sessions (agent/bot sessions live under the Bots panel or Agent | Bot Hub, not Recents)
     (chatSessions || []).forEach(s => {
-      const isAgent = (s.metadata as Record<string, unknown> | undefined)?.sessionMode === 'agent';
+      const md = s.metadata as Record<string, unknown> | undefined;
+      if (isAgentSession(md)) return;
+      const isAgent = md?.sessionMode === 'agent';
       list.push({
         id: s.id,
         title: s.name || 'Untitled Session',
@@ -264,9 +349,11 @@ export function ShellRail({
       });
     });
 
-    // Code sessions
+    // Code sessions (agent/bot sessions live under the Bots panel or Agent | Bot Hub, not Recents)
     (codeSessions || []).forEach(s => {
-      const isAgent = (s.metadata as Record<string, unknown> | undefined)?.sessionMode === 'agent';
+      const md = s.metadata as Record<string, unknown> | undefined;
+      if (isAgentSession(md)) return;
+      const isAgent = md?.sessionMode === 'agent';
       list.push({
         id: s.id,
         title: s.name || 'Untitled Code Session',
@@ -332,7 +419,7 @@ export function ShellRail({
     });
 
     return list.sort((a, b) => b.updatedAt - a.updatedAt);
-  }, [chatSessions, activeChatSessionId, codeSessions, activeCodeSessionId, coworkSessions, activeCoworkSessionId, coworkStore.tasks, coworkStore.activeTaskId, browserAgentSessions, aciSessionId, activeViewType]);
+  }, [chatSessions, activeChatSessionId, codeSessions, activeCodeSessionId, coworkSessions, activeCoworkSessionId, coworkStore.tasks, coworkStore.activeTaskId, browserAgentSessions, aciSessionId, activeViewType, bots]);
 
   const filteredRecentItems = useMemo(() => {
     const now = new Date();
@@ -346,7 +433,9 @@ export function ShellRail({
     // other modes show the merged cross-mode recents.
     const base = mode === 'browser'
       ? recentItems.filter((item) => item.mode === 'browser')
-      : recentItems;
+      : mode === 'code'
+        ? recentItems.filter((item) => item.mode === 'code')
+        : recentItems.filter((item) => item.mode === 'chat' || item.mode === 'cowork');
 
     const filtered = base.filter((item) => {
       // The ACI panel has no type filter; ignore typeFilter there so a value
@@ -589,7 +678,7 @@ export function ShellRail({
       </div>
 
       {/* NEW BUTTON */}
-      <div className="px-3 pb-2 shrink-0">
+      <div className="px-2 pb-2 shrink-0">
         <button
           type="button"
           onClick={() => {
@@ -605,9 +694,14 @@ export function ShellRail({
               onOpen?.('chat');
             }
           }}
-          className="w-full flex items-center gap-2 py-1.5 px-3 max-md:min-h-11 rounded-xl border-none bg-[var(--surface-hover)] hover:bg-[var(--surface-active)] text-[var(--shell-item-fg)] font-semibold cursor-pointer text-left transition-colors"
+          className={cn(
+            "group w-full flex items-center gap-2 py-1.5 px-3 max-md:min-h-11 rounded-xl border-none cursor-pointer text-left transition-colors font-semibold",
+            isNewActive
+              ? "bg-[var(--surface-active)] text-[var(--shell-item-active-fg)]"
+              : "bg-transparent text-[var(--shell-item-fg)] hover:bg-[var(--surface-hover)] hover:text-[var(--shell-item-active-fg)]"
+          )}
         >
-          <Plus size={16} weight="bold" className="text-[var(--accent-primary)]" />
+          <Plus size={16} weight="bold" className={isNewActive ? "text-[var(--accent-primary)]" : "text-[var(--shell-item-muted)] group-hover:text-[var(--accent-primary)] transition-colors"} />
           <span className="text-[12px]">{mode === 'browser' ? 'New Session' : isCodeMode ? 'New Thread' : 'New'}</span>
         </button>
       </div>
@@ -633,10 +727,19 @@ export function ShellRail({
                 onClick={() => onOpen?.('browser-extensions')}
               />
             )}
+            {browserRailTabs['site-apis'] && (
+              <RailItem
+                icon={Plugs}
+                label="Site APIs"
+                isActive={activeViewType === 'site-apis'}
+                onClick={() => onOpen?.('site-apis')}
+              />
+            )}
             <MoreDropdown
               tabs={[
                 { id: 'mini-apps-store', label: 'Mini-apps Store', icon: AppWindow, visible: browserRailTabs['mini-apps-store'] },
                 { id: 'browser-extensions', label: 'Office & Extensions', icon: PuzzlePiece, visible: browserRailTabs['browser-extensions'] },
+                { id: 'site-apis', label: 'Site APIs', icon: Plugs, visible: browserRailTabs['site-apis'] },
               ]}
               onToggle={toggleBrowserRailTab}
               onCustomize={() => onOpenCustomize?.()}
@@ -741,58 +844,40 @@ export function ShellRail({
                 No recent items match your filters
               </div>
             )}
-            {filteredRecentItems.map((item) => {
-              const IconComponent = item.icon;
-              return (
-                <div
-                  key={item.id}
-                  className={cn(
-                    "group relative w-full flex items-center gap-2.5 py-1.5 px-3 max-md:min-h-11 rounded-xl cursor-pointer transition-all duration-200 font-medium",
-                    item.isActive
-                      ? "bg-[var(--shell-item-active-bg)] text-[var(--shell-item-active-fg)] font-semibold"
-                      : "bg-transparent text-[var(--shell-item-fg)] hover:text-[var(--accent-primary)] hover:bg-[var(--shell-item-hover)]"
-                  )}
-                >
-                  <button
-                    type="button"
-                    onClick={() => {
-                      if (item.mode === 'chat' || item.mode === 'code') {
-                        const session = item.mode === 'code'
-                          ? codeSessions.find(s => s.id === item.id)
-                          : chatSessions.find(s => s.id === item.id);
-                        if (session) openNativeSessionSurface(session);
-                      } else if (item.kind === 'cowork') {
-                        const sessionId = item.id;
-                        useCoworkSessionStore.getState().setActiveSession(sessionId);
-                        const session = coworkSessions.find(s => s.id === sessionId);
-                        const isAgent = session?.metadata?.sessionMode === 'agent';
-                        onModeChange?.('cowork');
-                        onOpen?.(isAgent ? 'cowork-agent-session' : 'workspace', isAgent ? { sessionId, originView: 'workspace' } : undefined);
-                      } else if (item.mode === 'cowork') {
-                        coworkStore.setActiveTask(item.id);
-                        const coworkTask = coworkStore.tasks.find(t => t.id === item.id);
-                        const sessionId = coworkTask?.sessionId ?? null;
-                        useCoworkSessionStore.getState().setActiveSession(sessionId);
-                        const session = sessionId ? coworkSessions.find(s => s.id === sessionId) : null;
-                        const isAgent = session?.metadata?.sessionMode === 'agent' || coworkTask?.mode === 'agent';
-                        onModeChange?.('cowork');
-                        onOpen?.(isAgent ? 'cowork-agent-session' : 'workspace', isAgent ? { sessionId, originView: 'workspace' } : undefined);
-                      } else if (item.mode === 'browser') {
-                        onModeChange?.('browser');
-                        onOpen?.('browser');
-                      }
-                    }}
-                    className="flex-1 min-w-0 flex items-center gap-2.5 bg-transparent border-none p-0 text-left cursor-pointer font-medium"
-                  >
-                    <IconComponent size={15} weight={item.isActive ? 'fill' : 'bold'} />
-                    <span className="text-[12px] overflow-hidden text-ellipsis whitespace-nowrap min-w-0 flex-1">{item.title}</span>
-                  </button>
-                  <RecentItemMenu
-                    onDelete={() => setDeleteTarget({ id: item.id, title: item.title, kind: item.kind })}
-                  />
-                </div>
-              );
-            })}
+            {filteredRecentItems.map((item) => (
+              <RecentRailItem
+                key={item.id}
+                item={item}
+                onClick={() => {
+                  if (item.mode === 'chat' || item.mode === 'code') {
+                    const session = item.mode === 'code'
+                      ? codeSessions.find(s => s.id === item.id)
+                      : chatSessions.find(s => s.id === item.id);
+                    if (session) openNativeSessionSurface(session);
+                  } else if (item.kind === 'cowork') {
+                    const sessionId = item.id;
+                    useCoworkSessionStore.getState().setActiveSession(sessionId);
+                    const session = coworkSessions.find(s => s.id === sessionId);
+                    const isAgent = session?.metadata?.sessionMode === 'agent';
+                    onModeChange?.('cowork');
+                    onOpen?.(isAgent ? 'cowork-agent-session' : 'workspace', isAgent ? { sessionId, originView: 'workspace' } : undefined);
+                  } else if (item.mode === 'cowork') {
+                    coworkStore.setActiveTask(item.id);
+                    const coworkTask = coworkStore.tasks.find(t => t.id === item.id);
+                    const sessionId = coworkTask?.sessionId ?? null;
+                    useCoworkSessionStore.getState().setActiveSession(sessionId);
+                    const session = sessionId ? coworkSessions.find(s => s.id === sessionId) : null;
+                    const isAgent = session?.metadata?.sessionMode === 'agent' || coworkTask?.mode === 'agent';
+                    onModeChange?.('cowork');
+                    onOpen?.(isAgent ? 'cowork-agent-session' : 'workspace', isAgent ? { sessionId, originView: 'workspace' } : undefined);
+                  } else if (item.mode === 'browser') {
+                    onModeChange?.('browser');
+                    onOpen?.('browser');
+                  }
+                }}
+                onDelete={() => setDeleteTarget({ id: item.id, title: item.title, kind: item.kind })}
+              />
+            ))}
           </RecentsPanel>
         </>
       ) : !isCodeMode ? (
@@ -801,15 +886,9 @@ export function ShellRail({
           <div className="px-2 pb-2 shrink-0 flex flex-col gap-0.5">
             <RailItem
               icon={Robot}
-              label="Agent Hub"
+              label="Agent | Bot Hub"
               isActive={activeViewType === 'agent-hub'}
               onClick={() => onOpen?.('agent-hub')}
-            />
-            <RailItem
-              icon={Robot}
-              label="Bots"
-              isActive={activeViewType === 'bots'}
-              onClick={() => onOpen?.('bots')}
             />
             <RailItem
               icon={FolderOpen}
@@ -826,6 +905,12 @@ export function ShellRail({
               label="Artifacts Library"
               isActive={activeViewType === 'library'}
               onClick={() => onOpen?.('library')}
+            />
+            <RailItem
+              icon={Cpu}
+              label="Model Lab"
+              isActive={activeViewType === 'model-lab'}
+              onClick={() => onOpen?.('model-lab')}
             />
             <RailItem
               icon={Clock}
@@ -852,13 +937,30 @@ export function ShellRail({
             />
           </div>
 
-          {/* HOME RECENTS */}
+        {/* HOME RECENTS + BOTS */}
           <RecentsPanel
             expanded={recentsExpanded}
-            onToggle={() => setRecentsExpanded((v) => !v)}
+            onToggle={() => {
+              setRecentsExpanded((v) => {
+                const next = !v;
+                // Mutually exclusive: expanding Recents collapses Bots.
+                if (next) {
+                  setBotsExpanded(false);
+                  try { localStorage.setItem('allternit:rail:bots-expanded', 'false'); } catch {}
+                }
+                return next;
+              });
+            }}
             title="Recents"
             openAllTitle="Open all recents"
             onOpenAll={() => onOpen?.('recents')}
+            botsExpanded={botsExpanded}
+            onBotsToggle={handleBotsToggle}
+            bots={bots}
+            startingBotId={startingBotId}
+            onStartBot={handleStartBot}
+            onOpenBotHome={handleOpenBotHome}
+            onCreateBot={handleCreateBot}
             filter={
               <Popover>
                 <PopoverTrigger asChild>
@@ -939,58 +1041,40 @@ export function ShellRail({
                 No recent items match your filters
               </div>
             )}
-            {filteredRecentItems.map((item) => {
-              const IconComponent = item.icon;
-              return (
-                <div
-                  key={item.id}
-                  className={cn(
-                    "group relative w-full flex items-center gap-2.5 py-1.5 px-3 max-md:min-h-11 rounded-xl cursor-pointer transition-all duration-200 font-medium",
-                    item.isActive
-                      ? "bg-[var(--shell-item-active-bg)] text-[var(--shell-item-active-fg)] font-semibold"
-                      : "bg-transparent text-[var(--shell-item-fg)] hover:text-[var(--accent-primary)] hover:bg-[var(--shell-item-hover)]"
-                  )}
-                >
-                  <button
-                    type="button"
-                    onClick={() => {
-                      if (item.mode === 'chat' || item.mode === 'code') {
-                        const session = item.mode === 'code'
-                          ? codeSessions.find(s => s.id === item.id)
-                          : chatSessions.find(s => s.id === item.id);
-                        if (session) openNativeSessionSurface(session);
-                      } else if (item.kind === 'cowork') {
-                        const sessionId = item.id;
-                        useCoworkSessionStore.getState().setActiveSession(sessionId);
-                        const session = coworkSessions.find(s => s.id === sessionId);
-                        const isAgent = session?.metadata?.sessionMode === 'agent';
-                        onModeChange?.('cowork');
-                        onOpen?.(isAgent ? 'cowork-agent-session' : 'workspace', isAgent ? { sessionId, originView: 'workspace' } : undefined);
-                      } else if (item.mode === 'cowork') {
-                        coworkStore.setActiveTask(item.id);
-                        const coworkTask = coworkStore.tasks.find(t => t.id === item.id);
-                        const sessionId = coworkTask?.sessionId ?? null;
-                        useCoworkSessionStore.getState().setActiveSession(sessionId);
-                        const session = sessionId ? coworkSessions.find(s => s.id === sessionId) : null;
-                        const isAgent = session?.metadata?.sessionMode === 'agent' || coworkTask?.mode === 'agent';
-                        onModeChange?.('cowork');
-                        onOpen?.(isAgent ? 'cowork-agent-session' : 'workspace', isAgent ? { sessionId, originView: 'workspace' } : undefined);
-                      } else if (item.mode === 'browser') {
-                        onModeChange?.('browser');
-                        onOpen?.('browser');
-                      }
-                    }}
-                    className="flex-1 min-w-0 flex items-center gap-2.5 bg-transparent border-none p-0 text-left cursor-pointer font-medium"
-                  >
-                    <IconComponent size={15} weight={item.isActive ? 'fill' : 'bold'} />
-                    <span className="text-[12px] overflow-hidden text-ellipsis whitespace-nowrap min-w-0 flex-1">{item.title}</span>
-                  </button>
-                  <RecentItemMenu
-                    onDelete={() => setDeleteTarget({ id: item.id, title: item.title, kind: item.kind })}
-                  />
-                </div>
-              );
-            })}
+            {filteredRecentItems.map((item) => (
+              <RecentRailItem
+                key={item.id}
+                item={item}
+                onClick={() => {
+                  if (item.mode === 'chat' || item.mode === 'code') {
+                    const session = item.mode === 'code'
+                      ? codeSessions.find(s => s.id === item.id)
+                      : chatSessions.find(s => s.id === item.id);
+                    if (session) openNativeSessionSurface(session);
+                  } else if (item.kind === 'cowork') {
+                    const sessionId = item.id;
+                    useCoworkSessionStore.getState().setActiveSession(sessionId);
+                    const session = coworkSessions.find(s => s.id === sessionId);
+                    const isAgent = session?.metadata?.sessionMode === 'agent';
+                    onModeChange?.('cowork');
+                    onOpen?.(isAgent ? 'cowork-agent-session' : 'workspace', isAgent ? { sessionId, originView: 'workspace' } : undefined);
+                  } else if (item.mode === 'cowork') {
+                    coworkStore.setActiveTask(item.id);
+                    const coworkTask = coworkStore.tasks.find(t => t.id === item.id);
+                    const sessionId = coworkTask?.sessionId ?? null;
+                    useCoworkSessionStore.getState().setActiveSession(sessionId);
+                    const session = sessionId ? coworkSessions.find(s => s.id === sessionId) : null;
+                    const isAgent = session?.metadata?.sessionMode === 'agent' || coworkTask?.mode === 'agent';
+                    onModeChange?.('cowork');
+                    onOpen?.(isAgent ? 'cowork-agent-session' : 'workspace', isAgent ? { sessionId, originView: 'workspace' } : undefined);
+                  } else if (item.mode === 'browser') {
+                    onModeChange?.('browser');
+                    onOpen?.('browser');
+                  }
+                }}
+                onDelete={() => setDeleteTarget({ id: item.id, title: item.title, kind: item.kind })}
+              />
+            ))}
           </RecentsPanel>
         </>
       ) : (
@@ -1000,7 +1084,7 @@ export function ShellRail({
             {codeRailTabs['agent-hub'] && (
               <RailItem
                 icon={Robot}
-                label="Agent Hub"
+                label="Agent | Bot Hub"
                 isActive={activeViewType === 'agent-hub'}
                 onClick={() => onOpen?.('agent-hub')}
               />
@@ -1035,7 +1119,7 @@ export function ShellRail({
             )}
             <MoreDropdown
               tabs={[
-                { id: 'agent-hub', label: 'Agent Hub', icon: Robot, visible: codeRailTabs['agent-hub'] },
+                { id: 'agent-hub', label: 'Agent | Bot Hub', icon: Robot, visible: codeRailTabs['agent-hub'] },
                 { id: 'projects', label: 'Projects', icon: FolderOpen, visible: codeRailTabs['projects'] },
                 { id: 'artifacts-library', label: 'Artifacts Library', icon: FileText, visible: codeRailTabs['artifacts-library'] },
                 { id: 'code-automations', label: 'Automation Tasks', icon: Clock, visible: codeRailTabs['code-automations'] },
@@ -1304,6 +1388,250 @@ export function ShellRail({
   );
 }
 
+function formatRelativeTime(ts: number): string {
+  if (!ts || Number.isNaN(ts)) return '';
+  const now = Date.now();
+  const diff = now - ts;
+  const seconds = Math.floor(diff / 1000);
+  if (seconds < 60) return `${seconds}s`;
+  const minutes = Math.floor(seconds / 60);
+  if (minutes < 60) return `${minutes}m`;
+  const hours = Math.floor(minutes / 60);
+  if (hours < 24) return `${hours}h`;
+  const days = Math.floor(hours / 24);
+  return `${days}d`;
+}
+
+function getLastMessagePreview(messages?: Array<{ role: string; content: string }>, maxLength = 28): string {
+  if (!messages || messages.length === 0) return '';
+  for (let i = messages.length - 1; i >= 0; i--) {
+    const m = messages[i];
+    if (!m) continue;
+    const text = (m.content || '').trim();
+    if (!text) continue;
+    if (text.length > maxLength) return `${text.slice(0, maxLength)}…`;
+    return text;
+  }
+  return '';
+}
+
+interface SessionSummary {
+  lastMessage: string;
+  lastMessageAt: number;
+  isStreaming: boolean;
+  unread: number;
+}
+
+function useSessionSummary(sessionId?: string | null): SessionSummary {
+  return useStoreWithEqualityFn(
+    useChatSessionStore,
+    useCallback(
+      (state) => {
+        if (!sessionId) {
+          return { lastMessage: '', lastMessageAt: 0, isStreaming: false, unread: 0 };
+        }
+        const session = state.sessions.find((s) => s.id === sessionId);
+        const streaming = state.streamingBySession[sessionId]?.isStreaming ?? false;
+        const unread = state.unreadCounts[sessionId] || 0;
+        if (!session) {
+          return { lastMessage: '', lastMessageAt: 0, isStreaming: streaming, unread };
+        }
+        return {
+          lastMessage: getLastMessagePreview(session.messages),
+          lastMessageAt: new Date(session.updatedAt || 0).getTime(),
+          isStreaming: streaming,
+          unread,
+        };
+      },
+      [sessionId]
+    ),
+    shallow
+  );
+}
+
+function RecentRailItem({
+  item,
+  onClick,
+  onDelete,
+}: {
+  item: {
+    id: string;
+    title: string;
+    mode: AppMode;
+    icon: any;
+    isActive: boolean;
+    updatedAt: number;
+    kind: 'chat' | 'cowork' | 'task' | 'agent' | 'browser' | 'code';
+    status: 'active' | 'completed' | 'archived';
+    sessionId?: string | null;
+  };
+  onClick: () => void;
+  onDelete: () => void;
+}): React.ReactNode {
+  const IconComponent = item.icon;
+  const sessionSummary = useSessionSummary(
+    item.sessionId && (item.mode === 'chat' || item.kind === 'agent') ? item.sessionId : null
+  );
+  const { lastMessage, isStreaming, unread } = sessionSummary;
+  const hasUnread = unread > 0;
+  const isDone = item.status === 'completed' || (!isStreaming && lastMessage && !hasUnread);
+  const timeText = item.updatedAt ? formatRelativeTime(item.updatedAt) : '';
+
+  return (
+    <div
+      className={cn(
+        "group relative w-full flex items-center gap-2.5 py-1.5 px-3 max-md:min-h-11 rounded-xl cursor-pointer transition-all duration-200 font-medium",
+        item.isActive
+          ? "bg-[var(--shell-item-active-bg)] text-[var(--shell-item-active-fg)] font-semibold"
+          : "bg-transparent text-[var(--shell-item-fg)] hover:text-[var(--accent-primary)] hover:bg-[var(--shell-item-hover)]"
+      )}
+    >
+      <button
+        type="button"
+        onClick={onClick}
+        className="flex-1 min-w-0 flex items-center gap-2.5 bg-transparent border-none p-0 text-left cursor-pointer font-medium"
+      >
+        <div className="relative shrink-0">
+          <IconComponent size={15} weight={item.isActive ? 'fill' : 'bold'} />
+          {isStreaming && (
+            <span className="absolute -right-0.5 -top-0.5 size-2 rounded-full bg-[var(--accent-primary)] border border-[var(--shell-rail-bg)]" />
+          )}
+          {!isStreaming && hasUnread && (
+            <span className="absolute -right-0.5 -top-0.5 size-2 rounded-full bg-[var(--accent-primary)] border border-[var(--shell-rail-bg)]" />
+          )}
+          {!isStreaming && !hasUnread && isDone && (
+            <span className="absolute -right-0.5 -top-0.5 size-2 rounded-full bg-[var(--status-success)] border border-[var(--shell-rail-bg)]" />
+          )}
+        </div>
+        <div className="flex-1 min-w-0">
+          <div className="text-[12px] overflow-hidden text-ellipsis whitespace-nowrap min-w-0">
+            {item.title}
+          </div>
+          <div className="flex items-center gap-1.5 text-[11px] text-[var(--shell-item-muted)] overflow-hidden">
+            {isStreaming && (
+              <span className="relative flex size-1.5">
+                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-[var(--accent-primary)] opacity-75" />
+                <span className="relative inline-flex rounded-full size-1.5 bg-[var(--accent-primary)]" />
+              </span>
+            )}
+            <span className="truncate flex-1">{isStreaming ? 'Working…' : lastMessage || ''}</span>
+            {timeText && <span className="shrink-0 text-[10px] opacity-60">{timeText}</span>}
+          </div>
+        </div>
+      </button>
+      <RecentItemMenu onDelete={onDelete} />
+    </div>
+  );
+}
+
+function BotMailBadge({ botId }: { botId: string }): React.ReactNode | null {
+  const unread = useCommRailsUnreadCount(botId);
+  if (unread <= 0) return null;
+  return (
+    <span className="ml-1.5 inline-flex items-center justify-center min-w-[18px] h-[18px] px-1.5 rounded-full text-[10px] font-bold bg-[var(--accent-primary)] text-[var(--accent-primary-contrast)]">
+      {unread > 99 ? '99+' : unread}
+    </span>
+  );
+}
+
+function BotRailItem({
+  id,
+  name,
+  accentColor,
+  isStarting,
+  badge,
+  onClick,
+  onStart,
+}: {
+  id: string;
+  name: string;
+  accentColor: string;
+  isStarting: boolean;
+  badge?: React.ReactNode;
+  onClick: () => void;
+  onStart: (e: React.MouseEvent) => void;
+}): React.ReactNode {
+  const sessionId = useStoreWithEqualityFn(
+    useChatSessionStore,
+    useCallback(
+      (state) => {
+        const session = state.sessions
+          .filter((s) => s.metadata?.agentId === id)
+          .sort((a, b) => new Date(b.updatedAt || 0).getTime() - new Date(a.updatedAt || 0).getTime())[0];
+        return session?.id ?? null;
+      },
+      [id]
+    ),
+    shallow
+  );
+  const sessionSummary = useSessionSummary(sessionId);
+  const initials = name
+    .split(/\s+/)
+    .slice(0, 2)
+    .map((p) => p[0]?.toUpperCase())
+    .join('');
+
+  const { lastMessage, lastMessageAt, isStreaming } = sessionSummary;
+  const statusText = isStarting
+    ? 'Starting…'
+    : isStreaming
+    ? 'Working…'
+    : lastMessage || '';
+  const timeText = !isStarting && !isStreaming && lastMessageAt ? formatRelativeTime(lastMessageAt) : '';
+
+  return (
+    <div
+      data-rail-item={id}
+      className="group w-full flex items-center gap-0.5 py-1.5 px-2 max-md:min-h-11 rounded-xl transition-all duration-200 font-medium bg-transparent text-[var(--shell-item-fg)] hover:text-[var(--accent-primary)] hover:bg-[var(--shell-item-hover)]"
+    >
+      <button
+        type="button"
+        disabled={isStarting}
+        onClick={onClick}
+        className="flex flex-1 min-w-0 items-center gap-2.5 border-none bg-transparent p-0 text-left cursor-pointer font-medium text-[var(--shell-item-fg)] hover:text-[var(--accent-primary)] disabled:opacity-50"
+      >
+        <div
+          className="flex shrink-0 items-center justify-center rounded-lg text-[10px] font-bold"
+          style={{
+            width: 24,
+            height: 24,
+            background: `color-mix(in srgb, ${accentColor} 20%, transparent)`,
+            color: accentColor,
+            border: `1.5px solid ${accentColor}40`,
+          }}
+        >
+          {initials}
+        </div>
+        <div className="flex-1 min-w-0">
+          <div className="flex items-center text-[12px] overflow-hidden text-ellipsis whitespace-nowrap">
+            <span className="truncate">{name}</span>
+            {badge}
+          </div>
+          <div className="flex items-center gap-1.5 text-[11px] text-[var(--shell-item-muted)] overflow-hidden">
+            {isStreaming && (
+              <span className="relative flex size-1.5">
+                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-[var(--accent-primary)] opacity-75" />
+                <span className="relative inline-flex rounded-full size-1.5 bg-[var(--accent-primary)]" />
+              </span>
+            )}
+            <span className="truncate flex-1">{statusText}</span>
+            {timeText && <span className="shrink-0 text-[10px] opacity-60">{timeText}</span>}
+          </div>
+        </div>
+      </button>
+      <button
+        type="button"
+        onClick={onStart}
+        disabled={isStarting}
+        className="opacity-0 group-hover:opacity-100 shrink-0 rounded-md p-1 text-[var(--shell-item-muted)] hover:text-[var(--accent-primary)] hover:bg-[var(--shell-item-hover)] disabled:opacity-50 transition-opacity border-none bg-transparent cursor-pointer"
+        title="Start session"
+      >
+        <Play size={12} weight="fill" />
+      </button>
+    </div>
+  );
+}
+
 function RecentsPanel({
   expanded,
   onToggle,
@@ -1312,6 +1640,13 @@ function RecentsPanel({
   openAllTitle,
   onOpenAll,
   filter,
+  botsExpanded,
+  onBotsToggle,
+  bots,
+  startingBotId,
+  onStartBot,
+  onOpenBotHome,
+  onCreateBot,
 }: {
   expanded: boolean;
   onToggle: () => void;
@@ -1320,25 +1655,83 @@ function RecentsPanel({
   openAllTitle?: string;
   onOpenAll?: () => void;
   filter?: React.ReactNode;
+  botsExpanded?: boolean;
+  onBotsToggle?: () => void;
+  bots?: Agent[];
+  startingBotId?: string | null;
+  onStartBot?: (bot: Agent) => void;
+  onOpenBotHome?: (bot: Agent) => void;
+  onCreateBot?: () => void;
 }): React.ReactNode {
+  const combined = botsExpanded !== undefined && onBotsToggle && bots && onStartBot && onOpenBotHome && onCreateBot;
   return (
     <div className="flex-1 min-h-0 flex flex-col px-2">
       <div className="group px-1 py-2 flex items-center justify-between text-[var(--shell-item-muted)] text-[12px] font-extrabold uppercase tracking-[0.08em] select-none">
-        <button
-          type="button"
-          onClick={onToggle}
-          className="flex items-center gap-1.5 bg-transparent border-none text-[var(--shell-item-muted)] hover:text-[var(--shell-item-fg)] cursor-pointer"
-        >
-          <CaretRight
-            size={12}
-            className={cn(
-              "transition-transform duration-200",
-              expanded && "rotate-90"
-            )}
-          />
-          <span>{title}</span>
-        </button>
+        {combined ? (
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={onBotsToggle}
+              className={cn(
+                "flex items-center gap-1.5 bg-transparent border-none cursor-pointer transition-colors",
+                botsExpanded ? "text-[var(--shell-item-fg)]" : "text-[var(--shell-item-muted)] hover:text-[var(--shell-item-fg)]"
+              )}
+            >
+              <CaretRight
+                size={12}
+                className={cn(
+                  "transition-transform duration-200",
+                  botsExpanded && "rotate-90"
+                )}
+              />
+              <span>Bots</span>
+            </button>
+            <span className="text-[var(--shell-item-muted)]" aria-hidden="true">|</span>
+            <button
+              type="button"
+              onClick={onToggle}
+              className={cn(
+                "flex items-center gap-1.5 bg-transparent border-none cursor-pointer transition-colors",
+                expanded ? "text-[var(--shell-item-fg)]" : "text-[var(--shell-item-muted)] hover:text-[var(--shell-item-fg)]"
+              )}
+            >
+              <CaretRight
+                size={12}
+                className={cn(
+                  "transition-transform duration-200",
+                  expanded && "rotate-90"
+                )}
+              />
+              <span>{title}</span>
+            </button>
+          </div>
+        ) : (
+          <button
+            type="button"
+            onClick={onToggle}
+            className="flex items-center gap-1.5 bg-transparent border-none text-[var(--shell-item-muted)] hover:text-[var(--shell-item-fg)] cursor-pointer"
+          >
+            <CaretRight
+              size={12}
+              className={cn(
+                "transition-transform duration-200",
+                expanded && "rotate-90"
+              )}
+            />
+            <span>{title}</span>
+          </button>
+        )}
         <div className="flex items-center gap-0.5 bg-[var(--shell-rail-bg)] pl-2 pr-1 -mr-1 rounded-md">
+          {combined && (
+            <button
+              type="button"
+              onClick={onCreateBot}
+              className="opacity-0 max-md:opacity-100 group-hover:opacity-100 size-6 max-md:size-11 rounded-md bg-transparent border-none text-[var(--shell-item-muted)] hover:text-[var(--shell-item-fg)] hover:bg-[var(--shell-item-hover)] cursor-pointer flex items-center justify-center transition-all"
+              title="Create Bot"
+            >
+              <Plus size={13} />
+            </button>
+          )}
           {onOpenAll && (
             <button
               type="button"
@@ -1352,9 +1745,38 @@ function RecentsPanel({
           {filter}
         </div>
       </div>
-      {expanded && (
+      {(expanded || (combined && botsExpanded)) && (
         <div className="flex-1 overflow-y-auto flex flex-col gap-0.5">
-          {children}
+          {combined && botsExpanded && (
+            <div className="flex flex-col gap-0.5 pb-2">
+              {bots.length === 0 && (
+                <div className="px-3 py-2 text-[12px] text-[var(--shell-item-muted)]">
+                  No bots yet.
+                </div>
+              )}
+              {bots.map((bot) => {
+                const displayName = getBotDisplayName(bot);
+                const accentColor = getBotAccentColor(bot) ?? 'var(--accent-primary)';
+                const isStarting = startingBotId === bot.id;
+                return (
+                  <BotRailItem
+                    key={bot.id}
+                    id={bot.id}
+                    name={displayName}
+                    accentColor={accentColor}
+                    isStarting={isStarting}
+                    badge={<BotMailBadge botId={bot.id} />}
+                    onClick={() => onOpenBotHome(bot)}
+                    onStart={(e) => {
+                      e.stopPropagation();
+                      onStartBot(bot);
+                    }}
+                  />
+                );
+              })}
+            </div>
+          )}
+          {expanded && <div className="flex flex-col gap-0.5">{children}</div>}
         </div>
       )}
     </div>
@@ -1375,7 +1797,7 @@ function RailItem({ id, icon: Icon, label, isActive, onClick }: {
       className={cn(
         "w-full flex items-center gap-2.5 py-1.5 px-3 max-md:min-h-11 rounded-xl border-none cursor-pointer text-left transition-all duration-200 font-medium",
         isActive
-          ? "bg-[var(--shell-item-active-bg)] text-[var(--shell-item-active-fg)] font-semibold"
+          ? "bg-[var(--shell-item-active-bg)] text-[var(--shell-item-active-fg)] font-semibold shadow-[inset_3px_0_0_0_var(--shell-item-active-fg)]"
           : "bg-transparent text-[var(--shell-item-fg)] hover:text-[var(--accent-primary)] hover:bg-[var(--shell-item-hover)]"
       )}
     >

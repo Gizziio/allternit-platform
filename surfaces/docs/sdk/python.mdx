@@ -20,7 +20,7 @@ from allternit import Harness
 
 harness = Harness(api_key="YOUR_API_KEY")
 response = harness.chat.completions.create(
-    model="openai/gpt-4o",
+    model="allternit-balanced",
     messages=[{"role": "user", "content": "Hello, world!"}]
 )
 print(response.choices[0].message.content)
@@ -30,7 +30,7 @@ print(response.choices[0].message.content)
 
 ```python
 for chunk in harness.chat.completions.create(
-    model="openai/gpt-4o",
+    model="allternit-balanced",
     messages=[{"role": "user", "content": "Count to 10"}],
     stream=True
 ):
@@ -44,7 +44,7 @@ def get_weather(location: str) -> str:
     return f"Sunny in {location}"
 
 response = harness.chat.completions.create(
-    model="openai/gpt-4o",
+    model="allternit-balanced",
     messages=[{"role": "user", "content": "What's the weather in Berlin?"}],
     tools=[{
         "type": "function",

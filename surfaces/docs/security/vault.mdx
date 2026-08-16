@@ -1,82 +1,252 @@
 ---
-title: Allternit Vault
-description: Encrypted credential storage for provider keys and tokens
+title: Vault
+description: Encrypted credential storage for OAuth tokens, provider keys, and organization secrets
 ---
 
-## Overview
+The Allternit Vault provides encrypted, organization-scoped storage for credentials. It supports both a legacy agent/session credential store and a first-class vault resource model for managing collections of secrets.
 
-The **Allternit Vault** is an encrypted credential store for provider API keys, connector tokens, and other secrets. It replaces plaintext environment variables with a managed, audited, and encrypted storage layer.
+## Authentication and authorization
 
-## Architecture
-
-The vault is implemented in Rust (`allternit_vault.rs`) and exposes a REST API:
-
-| Method | Path | Purpose |
-|--------|------|---------|
-| POST | `/api/vault/secrets` | Store a secret |
-| GET | `/api/vault/secrets/{id}` | Retrieve a secret (decrypted) |
-| DELETE | `/api/vault/secrets/{id}` | Delete a secret |
-| GET | `/api/vault/secrets` | List secrets (metadata only, no values) |
+All vault endpoints require a Clerk JWT or a scoped API credential. The caller must belong to an active organization. Write operations additionally require organization owner or admin role, or a credential context that grants the relevant vault scope.
 
 ## Encryption
 
-- Secrets are encrypted at rest using AES-256-GCM with a configurable encryption key.
-- In headless/BYOC deployments, a runtime key is generated on first use and persisted in a local file with `0o600` permissions.
-- The encryption key is never returned via the API.
+Values are sealed at rest using the same `token_crypto::seal` primitive used for connector tokens. The encryption key is configurable in self-hosted deployments; in headless mode a runtime key is generated on first use. Decrypted values are never returned by the read/list endpoints.
 
-## Usage
+## Legacy credentials
 
-### Store a provider key
+These endpoints store OAuth-style credentials keyed by provider, optional `agent_id`, and optional `session_id`. They are retained for existing callers and are not associated with a named vault.
+
+### Endpoints
+
+| Method | Path | Description |
+|--------|------|-------------|
+| POST | `/api/v1/vault/credentials` | Store or replace a legacy credential |
+| DELETE | `/api/v1/vault/credentials/{id}` | Revoke a legacy credential |
+
+### Store a legacy credential
 
 ```bash
-curl -X POST http://localhost:8013/api/vault/secrets \
+curl -X POST https://api.allternit.com/api/v1/vault/credentials \
   -H "Authorization: Bearer $ALLTERNIT_TOKEN" \
   -H "Content-Type: application/json" \
   -d '{
-    "name": "provider-key-gpt",
-    "value": "sk-...",
-    "tags": ["provider", "gpt"]
+    "provider": "github",
+    "agent_id": "agent_01J",
+    "session_id": "session_01J",
+    "oauth_value": "gho_xxxxxxxx",
+    "expires_at": "2026-09-01T00:00:00Z"
   }'
 ```
 
-Response:
+<Note>
+  Either `agent_id` or `session_id` is required for legacy credentials.
+</Note>
+
+**Response `201 Created`**
 
 ```json
 {
-  "id": "secret_abc123",
-  "name": "provider-key-gpt",
-  "tags": ["provider", "gpt"],
-  "created_at": "2026-08-12T10:00:00Z"
+  "id": "cred_01J4N",
+  "provider": "github",
+  "agent_id": "agent_01J",
+  "session_id": "session_01J",
+  "expires_at": "2026-09-01T00:00:00Z"
 }
 ```
 
-### Reference in virtual keys
+### Revoke a legacy credential
 
-Virtual LLM keys can reference a vault secret by ID instead of embedding the provider key directly:
+```bash
+curl -X DELETE https://api.allternit.com/api/v1/vault/credentials/cred_01J4N \
+  -H "Authorization: Bearer $ALLTERNIT_TOKEN"
+```
+
+**Response `204 No Content`**
+
+## Vault resources (beta)
+
+Vault resources let you group related credentials under a named container. Credentials inside a vault are stored independently from legacy credentials and are revoked when the vault is deleted.
+
+### Endpoints
+
+| Method | Path | Description |
+|--------|------|-------------|
+| POST | `/api/v1/beta/vaults` | Create a vault |
+| GET | `/api/v1/beta/vaults` | List organization vaults |
+| GET | `/api/v1/beta/vaults/{id}` | Retrieve a vault |
+| DELETE | `/api/v1/beta/vaults/{id}` | Delete a vault and revoke its credentials |
+| POST | `/api/v1/beta/vaults/{id}/credentials` | Add or update a credential in a vault |
+| GET | `/api/v1/beta/vaults/{id}/credentials` | List credentials in a vault |
+| DELETE | `/api/v1/beta/vaults/{id}/credentials/{credential_id}` | Revoke a vault credential |
+
+### Create a vault
+
+```bash
+curl -X POST https://api.allternit.com/api/v1/beta/vaults \
+  -H "Authorization: Bearer $ALLTERNIT_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "name": "Production Provider Keys",
+    "description": "Sealed keys for production inference providers"
+  }'
+```
+
+**Response `201 Created`**
 
 ```json
 {
-  "name": "my-virtual-key",
-  "vault_secret_id": "secret_abc123",
-  "model_allowlist": ["gizzi-pro", "gizzi-fast"],
-  "budget_monthly_usd": 100
+  "id": "vault_01J4N",
+  "name": "Production Provider Keys",
+  "description": "Sealed keys for production inference providers"
 }
 ```
 
-When the virtual key is used, the API server retrieves the provider key from the vault at runtime — the key is never exposed to the caller.
+### List vaults
 
-## Access control
+```bash
+curl https://api.allternit.com/api/v1/beta/vaults \
+  -H "Authorization: Bearer $ALLTERNIT_TOKEN"
+```
 
-- **Vault write** requires `admin:*` scope.
-- **Vault read** returns metadata only; the decrypted value is only returned to internal services (e.g., the LLM gateway).
-- All vault operations are audit-logged.
+**Response `200 OK`**
 
-## Rotation
+```json
+{
+  "vaults": [
+    {
+      "id": "vault_01J4N",
+      "name": "Production Provider Keys",
+      "description": "Sealed keys for production inference providers",
+      "created_by": "user_01J",
+      "created_at": "2026-08-12T10:00:00Z",
+      "updated_at": "2026-08-12T10:00:00Z"
+    }
+  ]
+}
+```
 
-To rotate a provider key:
+### Retrieve a vault
 
-1. Store the new key as a new vault secret.
-2. Update the virtual key's `vault_secret_id` to point to the new secret.
-3. Delete the old secret.
+```bash
+curl https://api.allternit.com/api/v1/beta/vaults/vault_01J4N \
+  -H "Authorization: Bearer $ALLTERNIT_TOKEN"
+```
 
-This allows zero-downtime rotation without updating every virtual key simultaneously.
+### Delete a vault
+
+```bash
+curl -X DELETE https://api.allternit.com/api/v1/beta/vaults/vault_01J4N \
+  -H "Authorization: Bearer $ALLTERNIT_TOKEN"
+```
+
+**Response `204 No Content`**
+
+### Add a credential to a vault
+
+```bash
+curl -X POST https://api.allternit.com/api/v1/beta/vaults/vault_01J4N/credentials \
+  -H "Authorization: Bearer $ALLTERNIT_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "provider": "compatible-llm",
+    "agent_id": "agent_01J",
+    "session_id": "session_01J",
+    "oauth_value": "sk-xxxxxxxx",
+    "expires_at": "2026-09-01T00:00:00Z"
+  }'
+```
+
+**Response `201 Created`**
+
+```json
+{
+  "id": "cred_01J4N",
+  "vault_id": "vault_01J4N",
+  "provider": "compatible-llm",
+  "agent_id": "agent_01J",
+  "session_id": "session_01J",
+  "expires_at": "2026-09-01T00:00:00Z"
+}
+```
+
+### List vault credentials
+
+```bash
+curl https://api.allternit.com/api/v1/beta/vaults/vault_01J4N/credentials \
+  -H "Authorization: Bearer $ALLTERNIT_TOKEN"
+```
+
+**Response `200 OK`**
+
+```json
+{
+  "credentials": [
+    {
+      "id": "cred_01J4N",
+      "provider": "compatible-llm",
+      "agent_id": "agent_01J",
+      "session_id": "session_01J",
+      "expires_at": "2026-09-01T00:00:00Z",
+      "created_at": "2026-08-12T10:00:00Z",
+      "updated_at": "2026-08-12T10:00:00Z"
+    }
+  ]
+}
+```
+
+### Revoke a vault credential
+
+```bash
+curl -X DELETE https://api.allternit.com/api/v1/beta/vaults/vault_01J4N/credentials/cred_01J4N \
+  -H "Authorization: Bearer $ALLTERNIT_TOKEN"
+```
+
+**Response `204 No Content`**
+
+## Request/response fields
+
+### `Vault` object
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `id` | string | Vault unique identifier |
+| `name` | string | Human-readable name (1-128 characters) |
+| `description` | string \| null | Optional description |
+| `created_by` | string | User ID that created the vault |
+| `created_at` | string | ISO 8601 timestamp |
+| `updated_at` | string | ISO 8601 timestamp |
+
+### `Credential` object
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `id` | string | Credential unique identifier |
+| `provider` | string | Provider or credential type |
+| `agent_id` | string \| null | Optional agent scope |
+| `session_id` | string \| null | Optional session scope |
+| `expires_at` | string \| null | Optional ISO 8601 expiration |
+| `created_at` | string | ISO 8601 timestamp |
+| `updated_at` | string | ISO 8601 timestamp |
+
+The `oauth_value` is write-only and never returned.
+
+## Error codes
+
+| HTTP | Code | Meaning |
+|------|------|---------|
+| 400 | `invalid_name` | Vault name is empty or exceeds 128 characters |
+| 400 | `invalid_request` | `provider` and `oauth_value` are required, or `agent_id`/`session_id` missing for legacy credentials |
+| 403 | `organization_required` | Caller has no active organization |
+| 403 | `insufficient_scope` | Credential context lacks the required vault scope |
+| 403 | `insufficient_role` | Caller is not an organization owner/admin |
+| 404 | `vault_not_found` | Vault does not exist or is not in this organization |
+| 404 | `credential_not_found` | Credential does not exist or was already revoked |
+| 500 | `vault_error` / `internal_error` | Unexpected server error |
+
+## Related pages
+
+- [Cloud credentials](/security/cloud-credentials) — BYOC provider credentials for AWS, GCP, and Azure
+- [Compliance](/security/compliance) — Data retention and deletion workflows
+- [Audit logs](/security/audit) — Query administrative actions
+- [Security model](/security/security-model) — Trust boundaries and encryption

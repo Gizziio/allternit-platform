@@ -26,7 +26,7 @@ export function SwarmSubModeTabs({ selectedSubMode, onSelectSubMode }: SwarmSubM
     <div
       role="tablist"
       aria-label="Agent Swarm sub-mode"
-      className="inline-flex items-center gap-1 rounded-xl border border-white/[0.08] bg-white/[0.03] p-1"
+      className="inline-flex items-center gap-1 rounded-xl border border-[var(--chat-composer-glass-border)] bg-[var(--chat-composer-glass-bg)] backdrop-blur-md p-1"
     >
       {SWARM_SUB_MODE_TABS.map((tab) => {
         const isSelected = selectedSubMode === tab.id;
@@ -40,17 +40,22 @@ export function SwarmSubModeTabs({ selectedSubMode, onSelectSubMode }: SwarmSubM
             onClick={() => onSelectSubMode(tab.id)}
             className={cn(
               'group relative flex items-center gap-2 rounded-lg px-3 py-1.5 text-xs transition-all',
-              isSelected ? 'bg-composer-hover' : 'hover:bg-hover'
+              isSelected
+                ? 'bg-[var(--chat-composer-glass-bg)] border border-[var(--chat-composer-glass-border)] backdrop-blur-md'
+                : 'hover:bg-hover'
             )}
-            style={isSelected ? { boxShadow: `inset 0 0 0 1.5px ${tab.color}50` } : undefined}
+            style={isSelected ? { boxShadow: `inset 0 0 0 1.5px ${tab.color}40` } : undefined}
           >
             <span
-              className="flex items-center justify-center size-5 rounded-md transition-transform group-hover:scale-105"
-              style={{ background: `${tab.color}18`, color: tab.color }}
+              className="flex items-center justify-center size-5 rounded-md transition-transform group-hover:scale-105 border border-white/[0.06]"
+              style={{ background: `${tab.color}14`, color: tab.color }}
             >
               <TabIcon size={12} weight={isSelected ? 'fill' : 'bold'} />
             </span>
-            <span className={cn(isSelected ? 'font-bold text-primary' : 'font-medium text-secondary')}>
+            <span
+              className={cn('font-medium', isSelected && 'font-bold')}
+              style={isSelected ? { color: tab.color } : undefined}
+            >
               {tab.label}
             </span>
           </button>

@@ -21,19 +21,19 @@ describe('office-programs', () => {
 
   it('maps office file extensions to editors', () => {
     expect(editorForFile('/tmp/report.docx')).toBe('docs');
+    expect(editorForFile('/tmp/legacy.DOC')).toBe('docs');
     expect(editorForFile('/tmp/book.XLSX')).toBe('sheets');
+    expect(editorForFile('/tmp/legacy.xls')).toBe('sheets');
     expect(editorForFile('C:\\ decks\\pitch.pptx')).toBe('slides');
+    expect(editorForFile('legacy.ppt')).toBe('slides');
     expect(editorForFile('scan.pdf')).toBe('pdf');
-    expect(editorForFile('notes.txt')).toBeNull();
+    expect(editorForFile('notes.txt')).toBe('markdown');
     expect(editorForFile('no-extension')).toBeNull();
   });
 
   it('routes formats with no editor to the markdown preview', () => {
     expect(editorForFile('/tmp/memo.rtf')).toBe('markdown');
     expect(editorForFile('data.csv')).toBe('markdown');
-    expect(editorForFile('legacy.DOC')).toBe('markdown');
-    expect(editorForFile('slides.ppt')).toBe('markdown');
-    expect(editorForFile('book.xls')).toBe('markdown');
     expect(editorForFile('notes.odt')).toBe('markdown');
     expect(editorForFile('novel.epub')).toBe('markdown');
     // Editor-owned formats stay with their editors (not hijacked).

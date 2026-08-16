@@ -88,6 +88,7 @@ const SheetsPage = lazy(() => import('./pages/SheetsPage'))
 const PdfPage = lazy(() => import('./pages/PdfPage'))
 const MarkdownPreviewPage = lazy(() => import('./pages/MarkdownPreviewPage'))
 const OfficeLauncherPage = lazy(() => import('./pages/OfficeLauncherPage'))
+const SignDocumentPage = lazy(() => import('./pages/SignDocumentPage'))
 
 export default function AppRoutes() {
   const navigate = useNavigate();
@@ -140,6 +141,7 @@ export default function AppRoutes() {
         <Route path="/pdf/:artifactId?" element={<PdfPage />} />
         <Route path="/markdown-preview" element={<MarkdownPreviewPage />} />
         <Route path="/office" element={<OfficeLauncherPage />} />
+        <Route path="/sign" element={<SignDocumentPage />} />
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
     </Suspense>

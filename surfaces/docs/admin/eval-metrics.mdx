@@ -1,0 +1,159 @@
+---
+title: Eval Metrics
+description: Built-in metrics for scoring predictions and measuring response consistency.
+---
+
+# Eval Metrics
+
+The Eval Metrics API exposes the built-in metrics library used by the evaluation framework. All metrics return scores in the range `[0.0, 1.0]` where higher is better. Use them directly for quick experiments or reference them from [outcome rubrics](/admin/outcome-rubrics) and [eval runs](/admin/eval).
+
+All eval metric endpoints require the caller to be an organization owner or admin.
+
+## Base URL
+
+```text
+https://api.allternit.com/api/v1/admin/eval/metrics
+```
+
+For local development:
+
+```text
+http://127.0.0.1:8013/api/v1/admin/eval/metrics
+```
+
+## Endpoints
+
+| Method | Path | Description |
+|--------|------|-------------|
+| `GET` | `/api/v1/admin/eval/metrics` | List built-in metrics |
+| `POST` | `/api/v1/admin/eval/metrics/score` | Score a prediction against a reference |
+| `POST` | `/api/v1/admin/eval/metrics/consistency` | Compute consistency across multiple responses |
+
+## Built-in metrics
+
+| Metric ID | Name | Description |
+|-----------|------|-------------|
+| `exact_match` | Exact match | Normalized string equality |
+| `contains` | Contains | Case-insensitive substring match |
+| `token_overlap` | Token overlap F1 | Token-set F1 between prediction and reference |
+| `cosine_similarity` | Cosine similarity | Cosine similarity over term-frequency vectors |
+| `rouge_l` | ROUGE-L | Longest common subsequence F1 over tokens |
+| `llm_as_judge` | LLM-as-judge | Rubric-based judge score from an external LLM (placeholder) |
+| `consistency` | Consistency | Average pairwise token-overlap F1 across multiple responses |
+
+## List metrics
+
+```bash
+curl https://api.allternit.com/api/v1/admin/eval/metrics \
+  -H "Authorization: Bearer $ADMIN_TOKEN"
+```
+
+### Response
+
+```json
+{
+  "items": [
+    {
+      "id": "exact_match",
+      "name": "Exact match",
+      "description": "Normalized string equality.",
+      "range": [0.0, 1.0]
+    },
+    {
+      "id": "token_overlap",
+      "name": "Token overlap F1",
+      "description": "Token-set F1 between prediction and reference.",
+      "range": [0.0, 1.0]
+    }
+  ]
+}
+```
+
+## Score a prediction
+
+```bash
+curl -X POST https://api.allternit.com/api/v1/admin/eval/metrics/score \
+  -H "Authorization: Bearer $ADMIN_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "metric": "token_overlap",
+    "prediction": "The quick brown fox",
+    "reference": "A quick fox jumps"
+  }'
+```
+
+### Request body
+
+```json
+{
+  "metric": "token_overlap",
+  "prediction": "The quick brown fox",
+  "reference": "A quick fox jumps"
+}
+```
+
+### Response
+
+```json
+{
+  "metric": "token_overlap",
+  "prediction": "The quick brown fox",
+  "reference": "A quick fox jumps",
+  "result": {
+    "score": 0.6666666666666666
+  }
+}
+```
+
+## Score consistency
+
+```bash
+curl -X POST https://api.allternit.com/api/v1/admin/eval/metrics/consistency \
+  -H "Authorization: Bearer $ADMIN_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "responses": [
+      "The quick brown fox",
+      "The quick fox jumps",
+      "The quick brown fox jumps"
+    ]
+  }'
+```
+
+### Request body
+
+```json
+{
+  "responses": [
+    "The quick brown fox",
+    "The quick fox jumps"
+  ]
+}
+```
+
+### Response
+
+```json
+{
+  "metric": "consistency",
+  "responses": 2,
+  "score": 0.6666666666666666
+}
+```
+
+At least two responses are required.
+
+## Error codes
+
+| Status | Code | Description |
+|--------|------|-------------|
+| `400` | `unknown_metric` | Metric ID is not recognized. |
+| `400` | `insufficient_responses` | At least two responses are required for consistency. |
+| `403` | `organization_required` | Caller is not associated with an organization. |
+| `403` | `insufficient_role` | Caller is not an organization owner or admin. |
+| `500` | `internal_error` | Database or server error. |
+
+## Related pages
+
+- [Evaluation Datasets & Runs](/admin/eval) — create datasets and schedule runs
+- [Outcome Rubrics](/admin/outcome-rubrics) — define scoring criteria

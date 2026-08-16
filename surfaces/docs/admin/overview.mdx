@@ -15,15 +15,17 @@ Allternit's Admin API gives organization owners and admins programmatic control 
 
 ## Areas
 
-- [Workspaces](/admin/workspaces) — create workspaces, invite members, manage roles.
+- [Workspaces](/admin/workspaces) — create workspaces, invite members, manage roles, and configure IP allowlists.
+- [RBAC](/admin/rbac) — custom roles, groups, and group membership.
 - [Service accounts](/admin/service-accounts) — scoped API keys for automation.
-- [Spend limits](/admin/spend-limits) — monthly caps and increase requests.
-- [MCP tunnels](/admin/mcp-tunnels) — secure MCP server ingress.
+- [Access tokens](/admin/access-tokens) — organization access tokens for CLI and headless surfaces.
+- [Spend limits](/admin/spend-limits) — monthly caps, increase requests, and balance checks.
+- [MCP tunnels](/admin/mcp-tunnels) — secure MCP server ingress with mTLS and OAuth.
 - [Analytics](/admin/analytics) — cost, token, and request volume reports.
 - [Inference hooks](/admin/inference-hooks) — pre/post middleware for every LLM request.
 - [External keys](/admin/external-keys) — BYO KMS and CMEK configuration.
 - [User profiles](/admin/user-profiles) — enrollment URLs and consent tracking.
-- [Federation](/admin/federation) — external identity issuer rules.
+- [Federation](/admin/federation) — external identity issuer rules and claim-to-role mapping.
 - [Outcome rubrics](/admin/outcome-rubrics) — eval scoring criteria.
 - [Eval](/admin/eval) — datasets and runs for agent evaluation.
 - [Fallback credits](/admin/fallback-credits) — credit policy and reconciliation.
@@ -31,3 +33,7 @@ Allternit's Admin API gives organization owners and admins programmatic control 
 ## Authentication
 
 Use a service-account or admin API key in the `Authorization: Bearer <token>` header. See [Authentication](/api/authentication).
+
+## Organization scoping
+
+All admin endpoints require the caller to be a member of an organization with role `owner` or `admin`. Calls from users without an organization, or from members with only the `member` role, return `403 Forbidden`.

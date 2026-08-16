@@ -150,6 +150,17 @@ export function AgentGalleryCard({ agent, onClick, index = 0 }: AgentGalleryCard
       maxIterations: agent.maxIterations,
       temperature: agent.temperature,
       source: "personal",
+      isBot: agent.isBot,
+      botProfile: agent.botProfile
+        ? {
+            ...agent.botProfile,
+            displayName: `${agent.botProfile.displayName} (Copy)`,
+          }
+        : undefined,
+      connectorBindings: agent.connectorBindings,
+      secretRefs: agent.secretRefs,
+      messagingConfig: agent.messagingConfig,
+      identityChannels: agent.identityChannels,
     });
     setIsCreating(true);
   };

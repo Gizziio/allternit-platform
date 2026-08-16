@@ -10,6 +10,7 @@ import {
   ArrowUp,
   ArrowElbowDownRight,
   CaretDown,
+  CaretUp,
   Folder,
   Code,
   Pen as PenTool,
@@ -73,6 +74,7 @@ import {
   type Agent,
   type OpenClawDiscoveredAgent,
 } from '@/lib/agents';
+import { getBotDisplayName } from '@/lib/bots/bot-profile';
 import { useActiveChatSession } from './ChatSessionStore';
 import { AgentModeGizzi } from './AgentModeGizzi';
 import { getAgentModeSurfaceTheme } from './agentModeSurfaceTheme';
@@ -80,7 +82,7 @@ import { useRecordingStore } from '@/stores/recording.store';
 import { useBrowserAgentStore } from '@/capsules/browser/browserAgent.store';
 import { useUnifiedStore } from '@/lib/agents/unified.store';
 import { TaskBar } from './components/TaskBar';
-import { ModeDock } from './components/ModeDock';
+import { ModeDock, MODE_TABS, SURFACE_MODES } from './components/ModeDock';
 import { TemplateGallery } from './components/TemplateGallery';
 import { SwarmSubModeTabs } from './components/SwarmSubModeTabs';
 import { MiroFishPanel } from './panels/MiroFishPanel';
@@ -211,6 +213,8 @@ interface ChatComposerProps {
   onAddAttachment?: (attachment: ChatAttachment) => void;
   /** Called when sending in agent mode - if provided, opens full agent session view instead of embedded chat */
   onAgentSend?: (text: string, execution?: { modeId: CanonicalAgentModeId; templateTitle?: string }) => void;
+  /** Called when bot mode is toggled on or a bot is selected from the home-view composer; starts a real bot session. */
+  onStartBotSession?: (agent: Agent) => void;
   /** Called when the @mention agent selection changes (Phase 2: per-message routing) */
   onMentionAgentChange?: (agentId: string | null) => void;
   /** Called when the @mention plugin/connector selection changes */
@@ -431,6 +435,7 @@ export function ChatComposer({
   topInfoBarContent,
   questionBarContent,
   topDeckContent,
+  onStartBotSession,
 }: ChatComposerProps) {
   const [input, setInput] = useState(inputValue);
   const isMobile = useIsMobile();
@@ -463,6 +468,7 @@ export function ChatComposer({
   const [githubLoading, setGithubLoading] = useState(false);
   const [showAgentMenu, setShowAgentMenu] = useState(false);
   const [showModelMenu, setShowModelMenu] = useState(false);
+  const [showModeSelectorMenu, setShowModeSelectorMenu] = useState(false);
   const [showProviderConnect, setShowProviderConnect] = useState(false);
   const [showOpenClawImportDialog, setShowOpenClawImportDialog] = useState(false);
   const [activeSubMenu, setActiveSubMenu] = useState<string | null>(null);
@@ -517,10 +523,6 @@ export function ChatComposer({
     });
   }, [isSavingExecMode, optimisticMode, setExecutionMode]);
 
-  const handleToggleAgentMode = useCallback(() => {
-    setLocallyEnabled((prev) => !prev);
-  }, []);
-  
   const [showAgentGuidePadding, setShowAgentGuidePadding] = useState(
     Boolean(agentModeEnabled && showAgentRailGuide),
   );
@@ -601,7 +603,9 @@ export function ChatComposer({
     const q = mentionQuery.toLowerCase();
     return agents.filter(
       (a) =>
-        a.name.toLowerCase().includes(q) &&
+        a.isBot === true &&
+        (a.name.toLowerCase().includes(q) ||
+          (a.botProfile?.displayName ?? '').toLowerCase().includes(q)) &&
         isAgentAllowedOnSurface(a, agentModeSurface ?? 'chat'),
     );
   }, [mentionOpen, mentionQuery, agents, agentModeSurface]);
@@ -637,10 +641,15 @@ export function ChatComposer({
     setMentionOpen(false);
     setMentionQuery('');
     setMentionIndex(0);
+    // If the user @mentioned a bot, also bind it as the surface's selected bot
+    // so the composer and session creation are aligned.
+    if (agent.isBot && agentModeSurface) {
+      setSelectedSurfaceAgent(agentModeSurface, agent.id);
+    }
     window.requestAnimationFrame(() => {
       textareaRef.current?.focus();
     });
-  }, [input, mentionQuery, onMentionAgentChange, onPluginMentionChange]);
+  }, [input, mentionQuery, onMentionAgentChange, onPluginMentionChange, agentModeSurface, setSelectedSurfaceAgent]);
 
   const handleSelectPluginMention = useCallback((target: PluginMentionTarget) => {
     const lastAtIndex = input.lastIndexOf('@');
@@ -746,6 +755,26 @@ export function ChatComposer({
         : null,
     [agents, selectedSurfaceAgentId],
   );
+
+  const handleToggleAgentMode = useCallback(() => {
+    setLocallyEnabled((prev) => {
+      const next = !prev;
+      if (next) {
+        // When a bot is already selected, mount its session in the rail
+        // instead of leaving the user on a generic home chat.
+        if (selectedSurfaceAgent?.isBot && onStartBotSession) {
+          onStartBotSession(selectedSurfaceAgent);
+          return next;
+        }
+        // When turning bot mode on and no bot is selected, open the bot picker
+        // so the user can choose one immediately.
+        if (!selectedSurfaceAgent && agents.some((a) => a.isBot)) {
+          setShowAgentMenu(true);
+        }
+      }
+      return next;
+    });
+  }, [selectedSurfaceAgent, agents, onStartBotSession]);
 
   const selectedWorkspacePreview = useMemo<AgentWorkspacePreview>(() => {
     if (!selectedSurfaceAgent) {
@@ -971,6 +1000,15 @@ export function ChatComposer({
     }
   }, [agentModeEnabled, showAgentMenu]);
 
+  // When a bot is selected as the surface agent, surface it as an @mention chip
+  // in the composer so the user sees which bot will handle the message.
+  useEffect(() => {
+    if (selectedSurfaceAgent?.isBot) {
+      setSelectedMentionAgentId(selectedSurfaceAgent.id);
+      setLocallyEnabled(true);
+    }
+  }, [selectedSurfaceAgent?.id, selectedSurfaceAgent?.isBot]);
+
   useEffect(() => {
     const handler = (e: Event) => {
       const { agentId, agentName } = (e as CustomEvent).detail;
@@ -1174,21 +1212,22 @@ export function ChatComposer({
     : selectedWorkspacePreview.source === 'openclaw'
       ? 'OpenClaw workspace linked'
     : 'Workspace profile will compile on first use';
+  const availableBots = useMemo(() => agents.filter((a) => a.isBot === true), [agents]);
   const agentHelperText = !requiresAgentSelection
     ? null
       : selectedSurfaceAgent
-        ? `${selectedSurfaceAgent.name} active. ${agentWorkspaceSummary}.`
-        : isLoadingAgents && agents.length === 0
-          ? 'Loading agents...'
-          : agents.length > 0
-            ? 'Choose an agent before sending so this surface can bind to a real agent workspace.'
+        ? `${getBotDisplayName(selectedSurfaceAgent)} active. ${agentWorkspaceSummary}.`
+        : isLoadingAgents && availableBots.length === 0
+          ? 'Loading bots...'
+          : availableBots.length > 0
+            ? 'Choose a bot before sending so this surface can bind to a real bot workspace.'
             : openClawCandidates.length > 0
               ? openClawCandidates.length === 1 && openClawCandidates[0]?.display_name
                 ? `Found "${openClawCandidates[0].display_name}" OpenClaw agent. Import to continue.`
                 : `Detected ${openClawCandidates.length} OpenClaw agent${openClawCandidates.length === 1 ? '' : 's'} on this machine. Import one to continue.`
               : agentError === 'API_OFFLINE'
-                ? 'Agent registry is offline. Turn Agent Off or bring the gateway back to choose an agent.'
-                : 'No agents are available yet. Create one in Agent Studio first.';
+                ? 'Bot registry is offline. Turn Bot Off or bring the gateway back to choose a bot.'
+                : 'No bots are available yet. Create one in Agent Studio and package it as a bot.';
 
   const closeOpenClawPrompt = useCallback(() => {
     setShowOpenClawImportDialog(false);
@@ -1659,24 +1698,14 @@ export function ChatComposer({
                 onInteractionSignal?.(CATEGORY_EMOTIONS[cat.id]?.select ?? 'focused');
               }}
               className={cn(
-                'flex items-center gap-1.5 py-1.5 px-3.5 rounded-lg text-sm transition-all',
+                'flex items-center gap-1.5 py-1.5 px-3.5 rounded-lg text-sm border backdrop-blur-md transition-all',
                 activeCategory === cat.id
-                  ? 'bg-chat-mode-pill-active-bg border-accent-chat/30 text-chat-mode-pill-active-fg font-semibold'
-                  : 'bg-chat-mode-pill-bg border-input-border text-chat-mode-pill-fg font-medium'
+                  ? 'bg-[var(--accent-chat)]/15 border-[var(--accent-chat)]/30 text-[var(--text-primary)] font-semibold'
+                  : 'bg-[var(--surface-panel)]/30 border-[var(--border-subtle)]/40 text-[var(--text-primary)] font-medium hover:bg-[var(--surface-panel)]/50'
               )}
-              onMouseEnter={(e) => {
+              onMouseEnter={() => {
                 onInteractionSignal?.(CATEGORY_EMOTIONS[cat.id]?.hover ?? 'curious');
                 setTrackingAttention((index - (ACTION_CATEGORIES.length - 1) / 2) * 0.24, 0.18, 'locked-on');
-                if (activeCategory !== cat.id) {
-                  e.currentTarget.style.background = THEME.hoverBg;
-                  e.currentTarget.style.color = THEME.textPrimary;
-                }
-              }}
-              onMouseLeave={(e) => {
-                if (activeCategory !== cat.id) {
-                  e.currentTarget.style.background = 'var(--chat-mode-pill-bg)';
-                  e.currentTarget.style.color = 'var(--chat-mode-pill-fg)';
-                }
               }}
             >
               {cat.icon}
@@ -1745,6 +1774,7 @@ export function ChatComposer({
             pulse={agentModePulse}
             surface={agentModeSurface || 'chat'}
             selectedAgentName={selectedSurfaceAgent?.name ?? null}
+            selectedAgent={selectedSurfaceAgent}
             theme={agentModeTheme}
             hasActionPills={showTopActions}
           />
@@ -1912,10 +1942,13 @@ export function ChatComposer({
               <div className="flex items-center gap-2 py-2 px-3">
                 <AttachmentButton
                   onClick={() => fileInputRef.current?.click()}
-                  className="size-7 transition-colors bg-transparent shadow-none border-none text-composer-muted hover:text-primary"
+                  className={cn(
+                    'rounded-full border border-[var(--border-subtle)] bg-[var(--surface-panel)]/40 backdrop-blur-md text-[var(--text-primary)] transition-all hover:scale-105 hover:brightness-110 hover:bg-[var(--surface-panel)]/70',
+                    isMobile ? 'size-11' : 'size-8'
+                  )}
                   icon={
                     <Plus
-                      size={18}
+                      size={isMobile ? 22 : 20}
                       strokeWidth={2.5}
                       className="transition-transform"
                     />
@@ -2241,17 +2274,15 @@ export function ChatComposer({
               <AttachmentButton
                 onClick={() => { setShowPlusMenu(!showPlusMenu); setActiveSubMenu(null); }}
                 className={cn(
-                  'transition-colors bg-transparent shadow-none border-none',
-                  isMobile ? 'size-11' : 'size-8'
+                  'rounded-full border border-[var(--border-subtle)] bg-[var(--surface-panel)]/40 backdrop-blur-md text-[var(--text-primary)] transition-all hover:scale-105 hover:brightness-110 hover:bg-[var(--surface-panel)]/70',
+                  isMobile ? 'size-11' : 'size-8',
+                  showPlusMenu && 'bg-[var(--surface-panel)]/70'
                 )}
                 icon={
                   <Plus
-                    size={20}
+                    size={isMobile ? 22 : 20}
                     strokeWidth={2.5}
-                    className={cn(
-                      'text-composer-muted transition-transform',
-                      showPlusMenu && 'rotate-45'
-                    )}
+                    className="transition-transform"
                   />
                 }
                 onMouseEnter={() => {
@@ -2275,6 +2306,8 @@ export function ChatComposer({
                 onToggleAgentMode={handleToggleAgentMode}
                 customLeftContent={bottomDockContent}
                 showModeToggle={showModeToggle}
+                sessionLocked={showModeToggle === false}
+                onOpenModeMenu={() => setShowModeSelectorMenu(true)}
                 agents={agents}
                 isLoadingAgents={isLoadingAgents}
                 selectedSurfaceAgentId={selectedSurfaceAgentId}
@@ -2284,185 +2317,212 @@ export function ChatComposer({
                 onOpenImportWizard={() => setShowOpenClawImportDialog(true)}
                 onSelectAgent={(agent) => {
                   if (agentModeSurface) setSelectedSurfaceAgent(agentModeSurface, agent.id);
+                  // Selecting a bot from the home-view picker mounts a real bot
+                  // session in the rail rather than just changing the surface agent.
+                  if (agent.isBot && onStartBotSession) {
+                    onStartBotSession(agent);
+                  }
                 }}
                 onClearAgent={() => {
                   if (agentModeSurface) setSelectedSurfaceAgent(agentModeSurface, null);
                 }}
               />
 
+              {showModeSelectorMenu && agentModeSurface && (
+                <div
+                  className="absolute bottom-[calc(100%+12px)] left-4 mb-2 w-[340px] p-3 bg-menu-bg backdrop-blur-[20px] rounded-2xl border border-menu-border shadow-xl z-200"
+                  onMouseEnter={() => setTrackingAttention(-0.4, 0.5, 'locked-on')}
+                  onMouseLeave={() => {
+                    setShowModeSelectorMenu(false);
+                    setTrackingAttention(0, 0.44);
+                  }}
+                >
+                  <div className="mb-2">
+                    <div className="text-xs font-extrabold text-muted tracking-wider uppercase">
+                      Bot mode
+                    </div>
+                  </div>
+                  <div className="grid grid-cols-4 gap-1.5">
+                    {MODE_TABS.filter((mode) => {
+                      const allowed = agentModeSurface ? SURFACE_MODES[agentModeSurface] : MODE_TABS.map((m) => m.id);
+                      return allowed.includes(mode.id);
+                    }).map((mode) => {
+                      const isSelected = selectedModeId === mode.id;
+                      const ModeIcon = mode.icon;
+                      return (
+                        <button
+                          type="button"
+                          key={mode.id}
+                          onClick={() => {
+                            if (agentModeSurface) {
+                              setSelectedMode(agentModeSurface, mode.id as AgentModeId);
+                              setSelectedTemplateTitle(undefined);
+                            }
+                            setShowModeSelectorMenu(false);
+                          }}
+                          className={cn(
+                            'group relative flex flex-col items-center gap-1 p-1.5 rounded-xl text-center transition-all',
+                            isSelected ? 'bg-composer-hover' : 'hover:bg-hover'
+                          )}
+                          style={isSelected ? { boxShadow: `inset 0 0 0 1.5px ${mode.color}50` } : undefined}
+                        >
+                          <div
+                            className="flex items-center justify-center size-9 rounded-lg transition-transform group-hover:scale-105"
+                            style={{ background: `${mode.color}18`, color: mode.color }}
+                          >
+                            <ModeIcon size={16} weight={isSelected ? 'fill' : 'bold'} />
+                          </div>
+                          <span
+                            className={cn(
+                              'text-[10px] leading-tight',
+                              isSelected ? 'font-bold text-primary' : 'font-medium text-secondary'
+                            )}
+                          >
+                            {mode.label}
+                          </span>
+                          {isSelected && (
+                            <div
+                              className="absolute top-1 right-1 size-3 rounded-full flex items-center justify-center"
+                              style={{ background: mode.color }}
+                            >
+                              <Check size={7} weight="bold" className="text-white" />
+                            </div>
+                          )}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
+
               {showPlusMenu && (
                 <div
-                  className="absolute bottom-[calc(100%+12px)] left-0 w-60 bg-menu-bg backdrop-blur-[20px] rounded-xl border border-menu-border shadow-xl p-1.5 z-200"
-                  onMouseEnter={() => setTrackingAttention(-0.48, 0.5, 'locked-on')}
+                  className="absolute bottom-[calc(100%+14px)] left-1/2 -translate-x-1/2 w-[min(420px,calc(100vw-32px))] rounded-2xl border border-[var(--border-subtle)] bg-[var(--surface-floating)] p-3 shadow-xl z-[200] backdrop-blur-xl"
+                  style={{ boxShadow: '0 10px 40px var(--shell-overlay-backdrop)' }}
+                  onMouseEnter={() => setTrackingAttention(-0.44, 0.56, 'locked-on')}
                   onMouseLeave={() => {
                     if (!activeSubMenu) setShowPlusMenu(false);
                     setTrackingAttention(0, 0.44);
                   }}
                 >
-                  {isBrowserSurface && (
-                    <>
-                      <button
-                        type="button"
-                        onClick={handleCaptureScreenshot}
-                        className="w-full flex items-center gap-2.5 py-2 px-3 rounded-lg bg-transparent border-none text-primary text-sm cursor-pointer transition-colors hover:bg-hover"
-                      >
-                        <span className="text-secondary"><Camera size={16} /></span>
-                        <span>Take a screenshot</span>
-                      </button>
-                      <button
-                        type="button"
-                        onClick={handleToggleGifRecording}
-                        className={cn(
-                          'w-full flex items-center gap-2.5 py-2 px-3 rounded-lg border-none text-sm cursor-pointer transition-colors',
-                          isGifRecording ? 'bg-status-error-bg text-status-error hover:bg-status-error/18' : 'bg-transparent text-primary hover:bg-hover'
-                        )}
-                      >
-                        <span className={cn(isGifRecording ? 'text-status-error' : 'text-secondary')}>
-                          {isGifRecording ? <Square size={16} fill="currentColor" /> : <Video size={16} />}
-                        </span>
-                        <span>{isGifRecording ? `Stop recording (${gifDuration}s)` : 'Record screen (GIF)'}</span>
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => { fileInputRef.current?.click(); setShowPlusMenu(false); }}
-                        className="w-full flex items-center gap-2.5 py-2 px-3 rounded-lg bg-transparent border-none text-primary text-sm cursor-pointer transition-colors hover:bg-hover"
-                      >
-                        <span className="text-secondary"><ImageIcon size={16} /></span>
-                        <span>Add an image</span>
-                      </button>
-                      <div className="h-px bg-menu-border my-1 mx-2" />
-                    </>
-                  )}
+                  <div className="flex items-center justify-between mb-2 pb-2 border-b border-[var(--border-subtle)]">
+                    <span className="text-[11px] font-bold uppercase tracking-wider text-[var(--text-tertiary)]">Add to message</span>
+                    <button
+                      type="button"
+                      onClick={() => { setShowPlusMenu(false); setActiveSubMenu(null); setShowGitHubInput(false); }}
+                      className="p-1 rounded-md text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-[var(--surface-hover)] transition-colors"
+                      aria-label="Close menu"
+                    >
+                      <X size={14} />
+                    </button>
+                  </div>
+
                   {showGitHubInput && (
-                    <div className="p-2">
-                      <div className="flex items-center gap-1.5 bg-hover rounded-lg p-2 border border-menu-border">
-                        <LinkIcon size={13} className="text-secondary flex-shrink-0" />
-                        <input aria-label="GitHub file URL" autoFocus
+                    <div className="mb-3 p-2 rounded-xl border border-[var(--border-subtle)] bg-[var(--bg-tertiary)]/40">
+                      <div className="flex items-center gap-1.5">
+                        <LinkIcon size={13} className="text-[var(--text-secondary)] shrink-0" />
+                        <input
+                          aria-label="GitHub file URL"
+                          autoFocus
                           value={githubUrl}
                           onChange={(e) => setGithubUrl(e.target.value)}
                           onKeyDown={(e) => { if (e.key === 'Enter') handleGitHubFetch(); if (e.key === 'Escape') { setShowGitHubInput(false); setGithubUrl(''); } }}
                           placeholder="github.com/user/repo/blob/main/file"
-                          className="flex-1 bg-transparent border-none outline-none text-xs text-primary"
+                          className="flex-1 bg-transparent border-none outline-none text-xs text-[var(--text-primary)] placeholder:text-[var(--text-tertiary)]"
                         />
-                        {githubLoading
-                          ? <CircleNotch size={13} className="text-secondary animate-spin" />
-                          : <button type="button" onClick={handleGitHubFetch} className="bg-transparent border-none cursor-pointer text-accent text-xs font-semibold p-0">Add</button>
-                        }
+                        {githubLoading ? (
+                          <CircleNotch size={13} className="text-[var(--text-secondary)] animate-spin" />
+                        ) : (
+                          <button type="button" onClick={handleGitHubFetch} className="bg-transparent border-none cursor-pointer text-[var(--accent-chat)] text-xs font-semibold p-0">Add</button>
+                        )}
                       </div>
                     </div>
                   )}
-                  <div className="py-0.5 px-2 text-xs font-semibold text-muted tracking-widest uppercase">Attach</div>
-                  {PLUS_MENU_ITEMS.filter(i => ['files', 'github'].includes(i.id)).map((item) => (
-                    <div key={item.id} className="relative">
-                      <button
-                        type="button"
-                        onClick={() => {
-                          if (item.id === 'files') { fileInputRef.current?.click(); setShowPlusMenu(false); }
-                          if (item.id === 'github') { setShowGitHubInput((v) => !v); setActiveSubMenu(null); }
-                        }}
-                        onMouseEnter={() => { setActiveSubMenu(null); setTrackingAttention(-0.48, 0.5, 'locked-on'); }}
-                        className={cn(
-                          'w-full flex items-center gap-2.5 py-2 px-3 rounded-lg border-none text-primary text-sm cursor-pointer transition-colors',
-                          item.id === 'github' && showGitHubInput ? 'bg-hover' : 'bg-transparent'
-                        )}
-                      >
-                        <span className="text-secondary">{item.icon}</span>
-                        <span className="flex-1 text-left">{item.label}</span>
-                      </button>
+
+                  <div className="grid grid-cols-4 gap-2">
+                    {isBrowserSurface && (
+                      <>
+                        <PlusMenuIconButton
+                          icon={<Camera size={18} />}
+                          label="Screenshot"
+                          onClick={handleCaptureScreenshot}
+                        />
+                        <PlusMenuIconButton
+                          icon={isGifRecording ? <Square size={18} weight="fill" /> : <Video size={18} />}
+                          label={isGifRecording ? `Stop (${gifDuration}s)` : 'GIF'}
+                          onClick={handleToggleGifRecording}
+                          danger={isGifRecording}
+                        />
+                        <PlusMenuIconButton
+                          icon={<ImageIcon size={18} />}
+                          label="Image"
+                          onClick={() => { fileInputRef.current?.click(); setShowPlusMenu(false); }}
+                        />
+                      </>
+                    )}
+                    <PlusMenuIconButton
+                      icon={<ImageIcon size={18} />}
+                      label="Files"
+                      onClick={() => { fileInputRef.current?.click(); setShowPlusMenu(false); }}
+                    />
+                    <PlusMenuIconButton
+                      icon={<Github size={18} />}
+                      label="GitHub"
+                      active={showGitHubInput}
+                      onClick={() => { setShowGitHubInput((v) => !v); setActiveSubMenu(null); }}
+                    />
+                    <PlusMenuIconButton
+                      icon={<Folder size={18} />}
+                      label="Project"
+                      active={activeSubMenu === 'project'}
+                      onClick={() => setActiveSubMenu(activeSubMenu === 'project' ? null : 'project')}
+                    />
+                    <PlusMenuIconButton
+                      icon={<Globe size={18} />}
+                      label="Web"
+                      active={webSearchEnabled}
+                      check={webSearchEnabled}
+                      onClick={() => { setWebSearchEnabled((v) => !v); setShowPlusMenu(false); }}
+                    />
+                    <PlusMenuIconButton
+                      icon={<PenTool size={18} />}
+                      label={activeStyle ? activeStyle.charAt(0).toUpperCase() + activeStyle.slice(1) : 'Style'}
+                      active={activeSubMenu === 'style'}
+                      onClick={() => setActiveSubMenu(activeSubMenu === 'style' ? null : 'style')}
+                    />
+                    <PlusMenuIconButton
+                      icon={<Lightning size={18} />}
+                      label="Connectors"
+                      onClick={() => { setShowProviderConnect(true); setShowPlusMenu(false); }}
+                    />
+                  </div>
+
+                  {activeSubMenu === 'project' && (
+                    <div className="mt-2 flex flex-col gap-1 p-1.5 rounded-xl border border-[var(--border-subtle)] bg-[var(--bg-tertiary)]/30">
+                      {PLUS_MENU_ITEMS.find(i => i.id === 'project')?.submenuItems?.map((sub) => (
+                        <PlusMenuListItem
+                          key={sub.id}
+                          icon={sub.icon}
+                          label={sub.label}
+                          onClick={() => { if (sub.id === 'new-project') { import('@/views/chat/ChatStore').then(m => m.useChatStore.getState().createProject('New Project')); } setShowPlusMenu(false); setActiveSubMenu(null); }}
+                        />
+                      ))}
                     </div>
-                  ))}
-                  <div className="h-px bg-menu-border my-1 mx-2" />
-                  <div className="py-0.5 px-2 text-xs font-semibold text-muted tracking-widest uppercase">Context</div>
-                  {PLUS_MENU_ITEMS.filter(i => ['project', 'web'].includes(i.id)).map((item) => (
-                    <div key={item.id} className="relative">
-                      <button
-                        type="button"
-                        onClick={() => {
-                          if (item.id === 'web') { setWebSearchEnabled((v) => !v); setShowPlusMenu(false); }
-                        }}
-                        onMouseEnter={() => {
-                          if (item.hasSubmenu) setActiveSubMenu(item.id); else setActiveSubMenu(null);
-                          setTrackingAttention(-0.48, 0.5, 'locked-on');
-                        }}
-                        className={cn(
-                          'w-full flex items-center gap-2.5 py-2 px-3 rounded-lg border-none text-sm cursor-pointer transition-colors',
-                          (item.id === 'web' && webSearchEnabled) ? 'bg-accent/12 text-accent' : activeSubMenu === item.id ? 'bg-hover text-primary' : 'bg-transparent text-primary'
-                        )}
-                      >
-                        <span className={cn((item.id === 'web' && webSearchEnabled) ? 'text-accent' : 'text-secondary')}>{item.icon}</span>
-                        <span className="flex-1 text-left">{item.label}</span>
-                        {item.hasSubmenu && <CaretRight size={14} className="opacity-50" />}
-                        {item.id === 'web' && webSearchEnabled && <Check size={14} className="text-accent" />}
-                      </button>
-                      {activeSubMenu === item.id && item.submenuItems && (
-                        <div
-                          className="absolute left-[calc(100%+10px)] bottom-0 w-52 bg-menu-bg backdrop-blur-[20px] rounded-xl border border-menu-border shadow-xl p-1.5 z-210"
-                          onMouseEnter={() => setTrackingAttention(-0.26, 0.46, 'locked-on')}
-                          onMouseLeave={() => setTrackingAttention(-0.48, 0.5, 'locked-on')}
-                        >
-                          {item.submenuItems.map((sub) => (
-                            <button
-                              key={sub.id}
-                              type="button"
-                              onClick={() => { if (item.id === 'project' && sub.id === 'new-project') { import('@/views/chat/ChatStore').then(m => m.useChatStore.getState().createProject('New Project')); setShowPlusMenu(false); } }}
-                              className="w-full flex items-center gap-2 py-2 px-3 rounded-lg bg-transparent border-none text-primary text-sm cursor-pointer hover:bg-hover"
-                              onMouseEnter={() => setTrackingAttention(-0.24, 0.46, 'locked-on')}
-                            >
-                              {sub.icon && <span className="text-secondary">{sub.icon}</span>}
-                              <span>{sub.label}</span>
-                            </button>
-                          ))}
-                        </div>
-                      )}
+                  )}
+
+                  {activeSubMenu === 'style' && (
+                    <div className="mt-2 flex flex-col gap-1 p-1.5 rounded-xl border border-[var(--border-subtle)] bg-[var(--bg-tertiary)]/30">
+                      {PLUS_MENU_ITEMS.find(i => i.id === 'style')?.submenuItems?.map((sub) => (
+                        <PlusMenuListItem
+                          key={sub.id}
+                          icon={activeStyle === sub.id ? <Check size={14} /> : undefined}
+                          label={sub.label}
+                          active={activeStyle === sub.id}
+                          onClick={() => { setActiveStyle(activeStyle === sub.id ? null : sub.id as 'formal' | 'creative' | 'technical'); setShowPlusMenu(false); setActiveSubMenu(null); }}
+                        />
+                      ))}
                     </div>
-                  ))}
-                  <div className="h-px bg-menu-border my-1 mx-2" />
-                  <div className="py-0.5 px-2 text-xs font-semibold text-muted tracking-widest uppercase">Style</div>
-                  {PLUS_MENU_ITEMS.filter(i => ['style', 'connectors'].includes(i.id)).map((item) => (
-                    <div key={item.id} className="relative">
-                      <button
-                        type="button"
-                        onClick={() => {
-                          if (item.id === 'connectors') { setShowProviderConnect(true); setShowPlusMenu(false); }
-                        }}
-                        onMouseEnter={() => {
-                          if (item.hasSubmenu) setActiveSubMenu(item.id); else setActiveSubMenu(null);
-                          setTrackingAttention(-0.48, 0.5, 'locked-on');
-                        }}
-                        className={cn(
-                          'w-full flex items-center gap-2.5 py-2 px-3 rounded-lg border-none text-sm cursor-pointer transition-colors',
-                          (item.id === 'style' && activeStyle) ? 'bg-accent/12 text-accent' : activeSubMenu === item.id ? 'bg-hover text-primary' : 'bg-transparent text-primary'
-                        )}
-                      >
-                        <span className={cn((item.id === 'style' && activeStyle) ? 'text-accent' : 'text-secondary')}>{item.icon}</span>
-                        <span className="flex-1 text-left">{item.id === 'style' && activeStyle ? `Style: ${activeStyle.charAt(0).toUpperCase() + activeStyle.slice(1)}` : item.label}</span>
-                        {item.hasSubmenu && <CaretRight size={14} className="opacity-50" />}
-                        {item.id === 'style' && activeStyle && <Check size={14} className="text-accent" />}
-                      </button>
-                      {activeSubMenu === item.id && item.submenuItems && (
-                        <div
-                          className="absolute left-[calc(100%+10px)] bottom-0 w-52 bg-menu-bg backdrop-blur-[20px] rounded-xl border border-menu-border shadow-xl p-1.5 z-210"
-                          onMouseEnter={() => setTrackingAttention(-0.26, 0.46, 'locked-on')}
-                          onMouseLeave={() => setTrackingAttention(-0.48, 0.5, 'locked-on')}
-                        >
-                          {item.submenuItems.map((sub) => (
-                            <button
-                              key={sub.id}
-                              type="button"
-                              onClick={() => { if (item.id === 'style') { setActiveStyle(activeStyle === sub.id ? null : sub.id as 'formal' | 'creative' | 'technical'); setShowPlusMenu(false); } }}
-                              className={cn(
-                                'w-full flex items-center gap-2 py-2 px-3 rounded-lg border-none text-sm cursor-pointer',
-                                activeStyle === sub.id ? 'bg-accent/12 text-accent' : 'bg-transparent text-primary hover:bg-hover'
-                              )}
-                            >
-                              {activeStyle === sub.id && <Check size={12} className="text-accent" />}
-                              <span>{sub.label}</span>
-                            </button>
-                          ))}
-                        </div>
-                      )}
-                    </div>
-                  ))}
+                  )}
                 </div>
               )}
             </div>
@@ -2631,7 +2691,7 @@ export function ChatComposer({
       {/* Agent-mode bottom deck — tray tucked behind the card's bottom
           edge (z-0 under the composer card's z-10), sliding down from behind
           with the same deck-rise/fall motion as the top deck. */}
-      {agentModeSurface && agentModeEnabled && !voiceModeActive && (
+      {agentModeSurface && agentModeEnabled && selectedSurfaceAgent && !voiceModeActive && (
         <div className="w-full max-w-[600px] lg:max-w-[760px] flex flex-col items-center">
           <div className="relative z-0 w-full h-[60px] -mt-3 box-border bg-input-bg border-b border-r border-l border-input-border rounded-b-2xl px-4 pt-4 flex items-start gap-3 animate-deck-fall">
             <ModeDock
@@ -2687,6 +2747,7 @@ export function ChatComposer({
           onHoverIndex={setMentionIndex}
           pluginTargets={filteredPluginTargets}
           onSelectPluginTarget={handleSelectPluginMention}
+          activeAgentId={selectedSurfaceAgent?.id}
           onClose={() => {
             setMentionOpen(false);
             setMentionQuery('');
@@ -2813,5 +2874,89 @@ export function ChatComposer({
         </DialogContent>
       </Dialog>
     </div>
+  );
+}
+
+function PlusMenuIconButton({
+  icon,
+  label,
+  onClick,
+  active,
+  danger,
+  check,
+}: {
+  icon: React.ReactNode;
+  label: string;
+  onClick: () => void;
+  active?: boolean;
+  danger?: boolean;
+  check?: boolean;
+}): React.ReactNode {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className={cn(
+        'group relative flex flex-col items-center gap-1.5 rounded-xl border p-2 text-center transition-all',
+        active
+          ? 'border-[var(--accent-chat)]/40 bg-[color-mix(in_srgb,var(--accent-chat)_12%,var(--surface-floating))] text-[var(--accent-chat)]'
+          : danger
+            ? 'border-transparent bg-[color-mix(in_srgb,var(--status-error)_10%,var(--surface-floating))] text-[var(--status-error)] hover:bg-[color-mix(in_srgb,var(--status-error)_16%,var(--surface-floating))]'
+            : 'border-transparent bg-[var(--bg-tertiary)]/30 text-[var(--text-primary)] hover:bg-[var(--surface-hover)]'
+      )}
+    >
+      <span
+        className={cn(
+          'flex h-9 w-9 shrink-0 items-center justify-center rounded-lg transition-transform group-hover:scale-105',
+          active
+            ? 'bg-[color-mix(in_srgb,var(--accent-chat)_18%,var(--surface-floating))] text-[var(--accent-chat)]'
+            : danger
+              ? 'bg-[color-mix(in_srgb,var(--status-error)_16%,var(--surface-floating))] text-[var(--status-error)]'
+              : 'bg-[var(--bg-tertiary)]/60 text-[var(--text-secondary)]'
+        )}
+      >
+        {icon}
+      </span>
+      <span className="text-[10px] font-semibold leading-tight">{label}</span>
+      {check && (
+        <span className="absolute right-1.5 top-1.5 flex h-3.5 w-3.5 items-center justify-center rounded-full bg-[var(--accent-chat)] text-[var(--text-inverse)]">
+          <Check size={8} weight="bold" />
+        </span>
+      )}
+    </button>
+  );
+}
+
+function PlusMenuListItem({
+  icon,
+  label,
+  active,
+  onClick,
+}: {
+  icon?: React.ReactNode;
+  label: string;
+  active?: boolean;
+  onClick: () => void;
+}): React.ReactNode {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className={cn(
+        'flex w-full items-center gap-2 rounded-lg border-none px-2 py-1.5 text-left text-xs transition-colors',
+        active
+          ? 'bg-[color-mix(in_srgb,var(--accent-chat)_12%,var(--surface-floating))] text-[var(--accent-chat)]'
+          : 'bg-transparent text-[var(--text-primary)] hover:bg-[var(--surface-hover)]'
+      )}
+    >
+      {icon ? (
+        <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded bg-[var(--bg-tertiary)]/60 text-[var(--text-secondary)]">
+          {icon}
+        </span>
+      ) : (
+        <span className="h-5 w-5 shrink-0" />
+      )}
+      <span>{label}</span>
+    </button>
   );
 }

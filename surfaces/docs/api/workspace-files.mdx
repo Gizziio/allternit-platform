@@ -1,0 +1,225 @@
+---
+title: 'Workspace Files API'
+description: 'Read, write, list, and manage files on the local workspace filesystem through the Allternit API.'
+---
+
+## Overview
+
+The Workspace Files API exposes filesystem operations for the packaged Allternit Platform app. It resolves paths against the user's home directory (supporting the `~` shorthand) and sandboxes requests through a caller identity derived from the auth header. This API is the HTTP fallback used when the desktop preload does not expose direct filesystem access.
+
+## Base URL
+
+```text
+https://api.allternit.com/api
+```
+
+For local development:
+
+```text
+http://127.0.0.1:8013/api
+```
+
+## Authentication
+
+Requests are authorized through the platform auth middleware. The route also accepts a desktop-bootstrap header as a lenient fallback so Electron desktop sessions can operate without requiring the middleware to populate an `AuthUser` extension.
+
+## Endpoints
+
+| Method | Path | Description |
+|--------|------|-------------|
+| `GET` | `/files/list` | List entries in a directory. |
+| `GET` | `/files/read` | Read a text file. |
+| `GET` | `/files/raw` | Read a file as raw bytes with a MIME type. |
+| `GET` | `/files/exists` | Check whether a path exists (JSON response). |
+| `HEAD` | `/files/exists` | Check whether a path exists (status only). |
+| `POST` | `/files/mkdir` | Create a directory. |
+| `DELETE` | `/files/delete` | Delete a file or directory. |
+| `POST` | `/files/write` | Write a text file. |
+
+## Path resolution
+
+All paths are resolved relative to the caller's home directory:
+
+- `~/projects/app` resolves to `<home>/projects/app`.
+- `/absolute/path` is used as-is.
+- `relative/path` resolves to `<home>/relative/path`.
+
+## List files
+
+```bash
+curl "https://api.allternit.com/api/files/list?path=~/projects/app&recursive=false" \
+  -H "Authorization: Bearer $ALLTERNIT_API_KEY"
+```
+
+### Query parameters
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `path` | string | Directory path to list. |
+| `recursive` | string | Set to `true` for a recursive listing. |
+
+### Response
+
+```json
+{
+  "path": "/Users/joe/projects/app",
+  "entries": [
+    {
+      "name": "src",
+      "path": "/Users/joe/projects/app/src",
+      "type": "directory",
+      "size": null,
+      "modified_at": "2026-08-13T12:00:00Z"
+    },
+    {
+      "name": "package.json",
+      "path": "/Users/joe/projects/app/package.json",
+      "type": "file",
+      "size": 1024,
+      "modified_at": "2026-08-13T11:00:00Z"
+    }
+  ]
+}
+```
+
+Recursive listings are capped at a depth of 8 and a maximum of 1,000 entries. If the directory does not exist, the endpoint returns an empty `entries` array rather than an error.
+
+## Read a text file
+
+```bash
+curl "https://api.allternit.com/api/files/read?path=~/projects/app/package.json" \
+  -H "Authorization: Bearer $ALLTERNIT_API_KEY"
+```
+
+### Response
+
+```json
+{
+  "content": "{\"name\":\"example\"}"
+}
+```
+
+## Read a raw file
+
+```bash
+curl "https://api.allternit.com/api/files/raw?path=~/projects/app/logo.png" \
+  -H "Authorization: Bearer $ALLTERNIT_API_KEY" \
+  --output logo.png
+```
+
+The response is returned with the detected `Content-Type` header.
+
+## Check existence
+
+JSON variant (always returns 200):
+
+```bash
+curl "https://api.allternit.com/api/files/exists?path=~/projects/app/package.json" \
+  -H "Authorization: Bearer $ALLTERNIT_API_KEY"
+```
+
+### Response
+
+```json
+{
+  "exists": true
+}
+```
+
+HEAD variant:
+
+```bash
+curl -I "https://api.allternit.com/api/files/exists?path=~/projects/app/package.json" \
+  -H "Authorization: Bearer $ALLTERNIT_API_KEY"
+```
+
+Returns `200 OK` if the path exists, otherwise `404 Not Found`.
+
+## Create a directory
+
+```bash
+curl -X POST "https://api.allternit.com/api/files/mkdir?path=~/projects/app/new-folder" \
+  -H "Authorization: Bearer $ALLTERNIT_API_KEY"
+```
+
+### Response
+
+```json
+{
+  "ok": true
+}
+```
+
+## Delete a file or directory
+
+```bash
+curl -X DELETE "https://api.allternit.com/api/files/delete?path=~/projects/app/old-folder" \
+  -H "Authorization: Bearer $ALLTERNIT_API_KEY"
+```
+
+### Response
+
+```json
+{
+  "ok": true
+}
+```
+
+## Write a file
+
+```bash
+curl -X POST "https://api.allternit.com/api/files/write?path=~/projects/app/readme.md" \
+  -H "Authorization: Bearer $ALLTERNIT_API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "path": "~/projects/app/readme.md",
+    "content": "# Hello Allternit"
+  }'
+```
+
+The path may be supplied either as a query parameter or in the JSON body. Parent directories are created automatically.
+
+### Response
+
+```json
+{
+  "ok": true,
+  "path": "/Users/joe/projects/app/readme.md",
+  "bytesWritten": 17,
+  "operation": "write"
+}
+```
+
+## Supported MIME types
+
+The `/files/raw` endpoint detects the following common types from the file extension:
+
+| Extension | MIME type |
+|-----------|-----------|
+| `.png` | `image/png` |
+| `.jpg`, `.jpeg` | `image/jpeg` |
+| `.gif` | `image/gif` |
+| `.webp` | `image/webp` |
+| `.svg` | `image/svg+xml` |
+| `.pdf` | `application/pdf` |
+| `.txt`, `.md` | `text/plain; charset=utf-8` |
+| `.html`, `.htm` | `text/html; charset=utf-8` |
+| `.css` | `text/css; charset=utf-8` |
+| `.js` | `text/javascript; charset=utf-8` |
+| `.json` | `application/json` |
+| other | `application/octet-stream` |
+
+## Error codes
+
+| HTTP status | Code | Meaning |
+|-------------|------|---------|
+| 400 | `allternit.invalid_request` | Missing `path` parameter. |
+| 401 | `allternit.authentication_failed` | Missing or invalid bearer token. |
+| 404 | `allternit.not_found` | File or directory does not exist. |
+| 500 | `allternit.internal_error` | Read/write/delete failure. |
+
+## Related pages
+
+- [Files](/api/files) — upload and reference files for LLM requests
+- [Agent Workspaces](/api/agent-workspaces) — workspace directories and paths
+- [ACI](/api/aci) — computer-interface filesystem actions

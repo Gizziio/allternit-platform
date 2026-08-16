@@ -44,6 +44,18 @@ export namespace Pty {
   // running, spawn one instead of failing. Resolution order for the binary:
   // ALLTERNIT_MUX_BIN → PATH → repo target/debug (dev).
   let spawnAttempt: Promise<void> | undefined
+
+  /** Public hook to pre-warm the mux daemon so /terminal routes served by the
+   *  platform API can connect to the socket without waiting for a gizzi PTY
+   *  request to lazily start it. */
+  export async function warmup(): Promise<void> {
+    try {
+      await ensureMuxDaemon()
+    } catch (err) {
+      log.warn("mux warmup failed; will retry on first PTY request", { error: err })
+    }
+  }
+
   async function ensureMuxDaemon(): Promise<void> {
     const socket = muxSocketPath()
     const { existsSync, unlinkSync } = await import("node:fs")

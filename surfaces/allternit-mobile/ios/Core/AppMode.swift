@@ -50,10 +50,10 @@ final class AppModeStore: ObservableObject {
     }
 
     /// The sidebar tab whose surface fills the content pane. Chats/Code/ACI
-    /// track `mode`; Projects, Artifacts Library, Agents, and Automation
-    /// Tasks are iOS-only surfaces layered on top (the mode — and so history
-    /// filtering, theme accent, and session stamping — stays wherever it
-    /// was).
+    /// track `mode`; Projects, Artifacts Library, agent | bot hub, Automation
+    /// Tasks, and Models are iOS-only surfaces layered on top (the mode —
+    /// and so history filtering, theme accent, and session stamping — stays
+    /// wherever it was).
     @Published var activeTab: ModeBarItem
 
     /// Which sub-surface the Automation Tasks tab shows: cron jobs
@@ -103,7 +103,7 @@ enum ModeBarItem: CaseIterable {
         case .chats: return "Chats"
         case .projects: return "Projects"
         case .artifacts: return "Artifacts Library"
-        case .agents: return "Agents"
+        case .agents: return "agent | bot hub"
         case .automation: return "Automation Tasks"
         case .models: return "Models"
         case .code: return "Code"

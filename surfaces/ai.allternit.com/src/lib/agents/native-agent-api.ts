@@ -77,6 +77,12 @@ export interface AgentContext {
   governanceContext?: {
     workspaceFiles?: string[];
   };
+  /** Runtime env vars resolved from harness, vault secrets, and connectors. */
+  runtimeEnv?: Record<string, string>;
+  /** Bot messaging and cross-surface configuration. */
+  messagingConfig?: Record<string, unknown>;
+  /** Bot-owned identity channels (email, phone, wallet). */
+  identityChannels?: Record<string, unknown>;
   [key: string]: unknown;
 }
 

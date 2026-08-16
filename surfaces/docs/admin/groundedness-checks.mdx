@@ -1,0 +1,154 @@
+---
+title: Groundedness Checks
+description: Score responses against source passages to detect hallucinations.
+---
+
+# Groundedness Checks
+
+Groundedness checks score an LLM response against a set of source passages to estimate how well the response is grounded in the provided context. The default scorer uses deterministic token-overlap coverage, so it runs without calling an external embedding model or LLM.
+
+All groundedness endpoints require the caller to be an organization owner or admin.
+
+## Base URL
+
+```text
+https://api.allternit.com/api/v1/admin/groundedness-checks
+```
+
+For local development:
+
+```text
+http://127.0.0.1:8013/api/v1/admin/groundedness-checks
+```
+
+## Endpoints
+
+| Method | Path | Description |
+|--------|------|-------------|
+| `GET` | `/api/v1/admin/groundedness-checks` | List historical checks |
+| `POST` | `/api/v1/admin/groundedness-checks` | Run a groundedness check |
+
+## Methods
+
+| Method ID | Description |
+|-----------|-------------|
+| `token_overlap` | Fraction of response tokens that appear in at least one passage |
+
+## Run a check
+
+```bash
+curl -X POST https://api.allternit.com/api/v1/admin/groundedness-checks \
+  -H "Authorization: Bearer $ADMIN_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "response_text": "The capital of France is Paris.",
+    "passages": [
+      {
+        "id": "p1",
+        "title": "France",
+        "content": "The capital of France is Paris.",
+        "url": "https://docs.example.com/france"
+      },
+      {
+        "id": "p2",
+        "title": "Germany",
+        "content": "The capital of Germany is Berlin.",
+        "url": "https://docs.example.com/germany"
+      }
+    ],
+    "method": "token_overlap"
+  }'
+```
+
+### Request body
+
+```json
+{
+  "response_text": "The capital of France is Paris.",
+  "passages": [
+    {
+      "id": "p1",
+      "title": "France",
+      "content": "The capital of France is Paris."
+    }
+  ],
+  "method": "token_overlap"
+}
+```
+
+### Response
+
+```json
+{
+  "id": "gc_01hqx8x7x7x7x7x7x7x7x7x",
+  "score": 1.0,
+  "status": "completed",
+  "method": "token_overlap",
+  "details": {
+    "response_tokens": 6,
+    "matched_tokens": 6,
+    "coverage": 1.0,
+    "per_passage": [
+      {
+        "id": "p1",
+        "title": "France",
+        "shared_tokens": 6,
+        "coverage": 1.0
+      },
+      {
+        "id": "p2",
+        "title": "Germany",
+        "shared_tokens": 0,
+        "coverage": 0.0
+      }
+    ]
+  }
+}
+```
+
+## List historical checks
+
+```bash
+curl -G https://api.allternit.com/api/v1/admin/groundedness-checks \
+  -H "Authorization: Bearer $ADMIN_TOKEN" \
+  -d "limit=20" \
+  -d "offset=0"
+```
+
+### Response
+
+```json
+{
+  "items": [
+    {
+      "id": "gc_01hqx8x7x7x7x7x7x7x7x7x",
+      "org_id": "org_01hqx8x7x7x7x7x7x7x7x7x",
+      "response_text": "The capital of France is Paris.",
+      "passages": [...],
+      "method": "token_overlap",
+      "score": 1.0,
+      "status": "completed",
+      "details": {...},
+      "created_at": "2026-08-13T18:00:00Z"
+    }
+  ],
+  "limit": 20,
+  "offset": 0
+}
+```
+
+## Error codes
+
+| Status | Code | Description |
+|--------|------|-------------|
+| `400` | `missing_response` | `response_text` must not be empty. |
+| `400` | `missing_passages` | At least one passage is required. |
+| `400` | `unsupported_method` | Only `token_overlap` is currently supported. |
+| `403` | `organization_required` | Caller is not associated with an organization. |
+| `403` | `insufficient_role` | Caller is not an organization owner or admin. |
+| `500` | `internal_error` | Database or server error. |
+
+## Related pages
+
+- [RAG Pipeline Cookbook](/cookbooks/rag-pipeline) — build retrieval-augmented generation flows
+- [PDF Citations](/guides/pdf-citations) — cite source documents in responses

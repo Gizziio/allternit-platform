@@ -266,15 +266,21 @@ export interface MailThread {
   thread_id: string;
   topic: string;
   created_at: string;
+  participants?: string[];
 }
 
 export interface MailMessage {
   message_id: string;
   thread_id: string;
   from_agent: string;
+  to_agent?: string;
   body: string;
   timestamp: string;
   acknowledged?: boolean;
+  /** Message subject/topic (mirrors MailSendRequest). */
+  subject?: string;
+  /** Message priority. */
+  priority?: 'low' | 'normal' | 'high' | 'urgent';
 }
 
 export interface MailShareResponse {
@@ -284,6 +290,14 @@ export interface MailShareResponse {
 export interface MailSendRequest {
   thread_id: string;
   body_ref: string;
+  /** Message body (newer backends accept this directly). */
+  body?: string;
+  /** Recipient agent id (newer backends accept this). */
+  to_agent_id?: string;
+  /** Message subject/topic. */
+  subject?: string;
+  /** Message priority. */
+  priority?: 'low' | 'normal' | 'high' | 'urgent';
   attachments?: string[];
 }
 
@@ -548,9 +562,9 @@ export const railsApi = {
   
   mail: {
     /** Ensure/create thread */
-    ensureThread: (topic: string) => apiRequestWithError<{ thread_id: string }>(
+    ensureThread: (topic: string, participants?: string[]) => apiRequestWithError<{ thread_id: string }>(
       `${RAILS_BASE}/mail/threads`,
-      { method: "POST", body: JSON.stringify({ topic }) }
+      { method: "POST", body: JSON.stringify({ topic, participants }) }
     ),
 
     /** Send message */

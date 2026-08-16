@@ -1,33 +1,75 @@
 ---
-title: Event Stream
-description: Server-sent events and WebSockets for real-time agent updates.
+title: 'Event Stream'
+description: 'Server-sent events and WebSockets for observing agent session updates in real time.'
 ---
 
 # Event Stream
 
-Allternit exposes two real-time channels for observing agent runs:
+Allternit exposes two real-time channels for observing beta session events:
 
-- **Server-Sent Events (SSE)** at `/beta/sessions/:id/events`
-- **WebSocket** at `/beta/sessions/:id/events/ws`
+- **Server-Sent Events (SSE)** at `GET /api/v1/beta/sessions/:id/events`
+- **WebSocket** at `GET /api/v1/beta/sessions/:id/events/ws`
 
-Both streams emit the same event types. Use SSE for simple clients and WebSockets when you need bidirectional communication (e.g., sending an interrupt).
+Both streams emit the same underlying events. Use SSE for simple one-way observation. Use WebSockets when you need bidirectional communication, such as closing the connection from the client side or sending an interrupt through a separate HTTP call.
+
+## Authentication
+
+Both endpoints require a valid bearer token. See [Authentication](/api/authentication).
 
 ## Event types
 
 | Event | Description |
 |-------|-------------|
-| `run.created` | A new run started. |
-| `run.completed` | The run finished successfully. |
-| `run.failed` | The run failed. |
-| `message.delta` | A new content chunk from the model. |
-| `tool.call` | A tool was invoked. |
-| `tool.result` | A tool returned a result. |
-| `budget_exceeded` | The session hit a spend or token cap. |
-| `context_warning` | Context window is at 80% capacity. |
+| `session_created` | The session was created. |
+| `budget_updated` | The session budget was created or changed. |
+| `thinking_delta` | A reasoning delta appended by a caller. |
+| `content_block_delta` | A content delta appended by a caller. |
+| `tool_calls` | One or more tool calls were appended. |
+| `refusal` | A refusal event was appended. |
+| `context_warning` | Projected usage crossed 80% of `context_window`. |
+| `budget_exceeded` | A hard budget limit was exceeded. |
+| `user_interrupt` | A user interrupt was posted. |
+| `context_summary` | Events were summarized during context editing. |
+| `session_archived` | The session was archived. |
+
+Only `thinking_delta`, `content_block_delta`, `tool_calls`, and `refusal` may be appended directly by callers. All other event types are emitted by the platform.
 
 ## SSE example
 
 ```bash
-curl -N -H "Authorization: Bearer $TOKEN" \
-  https://api.allternit.com/beta/sessions/sess_123/events
+curl -N -H "Authorization: Bearer $ALLTERNIT_API_KEY" \
+  https://api.allternit.com/v1/beta/sessions/sess_123/events
 ```
+
+Add `?after=<sequence>` to resume from a known sequence number.
+
+### Stream format
+
+```text
+event: tool_calls
+id: 7
+data: {"calls":[{"name":"bash","input":{"command":"cargo test"}}]}
+```
+
+## WebSocket example
+
+```bash
+websocat -H "Authorization: Bearer $ALLTERNIT_API_KEY" \
+  wss://api.allternit.com/v1/beta/sessions/sess_123/events/ws
+```
+
+Each message is a JSON object:
+
+```json
+{
+  "sequence": 7,
+  "type": "tool_calls",
+  "data": { "calls": [{ "name": "bash", "input": { "command": "cargo test" } }] }
+}
+```
+
+## Related pages
+
+- [Sessions API](/api/sessions)
+- [Authentication](/api/authentication)
+- [Webhooks](/api/webhooks)

@@ -17,7 +17,7 @@ describe('RailControls', () => {
         onNewChat={() => {}}
         onNewAgentSession={() => {}}
         isRailCollapsed={true}
-        onSearchOpen={() => {}}
+
       />
     );
 
@@ -35,7 +35,7 @@ describe('RailControls', () => {
         onNewChat={() => {}}
         onNewAgentSession={() => {}}
         isRailCollapsed={true}
-        onSearchOpen={() => {}}
+
       />
     );
 
@@ -56,7 +56,7 @@ describe('RailControls', () => {
         onNewChat={() => {}}
         onNewAgentSession={() => {}}
         isRailCollapsed={true}
-        onSearchOpen={() => {}}
+
       />
     );
 
@@ -78,7 +78,7 @@ describe('RailControls', () => {
         onNewChat={() => {}}
         onNewAgentSession={() => {}}
         isRailCollapsed={true}
-        onSearchOpen={() => {}}
+
         onCollapsedHover={onCollapsedHover}
       />
     );
@@ -100,7 +100,7 @@ describe('RailControls', () => {
         onNewChat={() => {}}
         onNewAgentSession={() => {}}
         isRailCollapsed={true}
-        onSearchOpen={() => {}}
+
         onModeHover={onModeHover}
       />
     );
@@ -122,7 +122,7 @@ describe('RailControls', () => {
         onNewChat={() => {}}
         onNewAgentSession={() => {}}
         isRailCollapsed={false}
-        onSearchOpen={() => {}}
+
       />
     );
 

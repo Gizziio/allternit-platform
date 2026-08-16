@@ -117,3 +117,17 @@ const snapshot = registry.snapshot();
 const restored = new ToolRegistry();
 restored.rehydrate(snapshot);
 ```
+
+## Hosting tools on the platform
+
+For tools that need organization-wide sharing, sandbox isolation, or access to shared secrets, register them as **server tools** instead of local custom tools. Server tools run inside the Cloud Sandbox and shadow native tools with the same name.
+
+See [Server Tools](/tools/server-tools) for the admin API and execution flow.
+
+## Related pages
+
+- [Native Tool Belt](/tools/tool-belt)
+- [Strict Tool Schemas](/tools/strict-tool-use)
+- [Server Tools](/tools/server-tools)
+- [MCP Servers](/tools/mcp)
+- [Cloud Sandboxes](/tools/sandbox)

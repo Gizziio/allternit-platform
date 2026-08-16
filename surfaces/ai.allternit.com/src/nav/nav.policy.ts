@@ -22,7 +22,9 @@ export const DEFAULT_POLICIES: Record<ViewType, SpawnPolicy> = {
   memory: { singleton: true, maxInstances: 1, allowNew: false, surface: "view", ownsTabs: false },
   settings: { singleton: true, maxInstances: 1, allowNew: false, surface: "view", ownsTabs: false },
   "agent-hub": { singleton: true, maxInstances: 1, allowNew: false, surface: "view", ownsTabs: false },
-  
+  "bot-home": { singleton: false, maxInstances: 10, allowNew: true, surface: "view", ownsTabs: false },
+  "bot-inbox": { singleton: false, maxInstances: 10, allowNew: true, surface: "view", ownsTabs: false },
+
   // Mode-specific Agent Session views
   "chat-agent-session": { singleton: false, maxInstances: 10, allowNew: true, surface: "view", ownsTabs: false },
   "cowork-agent-session": { singleton: false, maxInstances: 10, allowNew: true, surface: "view", ownsTabs: false },
@@ -191,6 +193,12 @@ export const DEFAULT_POLICIES: Record<ViewType, SpawnPolicy> = {
   pdf: { singleton: false, maxInstances: 5, allowNew: true, surface: 'view', ownsTabs: false },
   // Markdown preview (anydoc)
   'markdown-preview': { singleton: false, maxInstances: 5, allowNew: true, surface: 'view', ownsTabs: false },
+  // API Capture / Site APIs
+  'site-apis': { singleton: true, maxInstances: 1, allowNew: false, surface: 'view', ownsTabs: false },
+  // Model Lab
+  'model-lab': { singleton: true, maxInstances: 1, allowNew: false, surface: 'view', ownsTabs: false },
+  // Allternit Sign (native client-side PDF signing)
+  sign: { singleton: true, maxInstances: 1, allowNew: false, surface: 'view', ownsTabs: false },
 
 };
 

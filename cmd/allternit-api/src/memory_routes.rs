@@ -37,6 +37,12 @@ pub fn memory_router() -> Router<Arc<AppState>> {
         .route("/memory/session/list", get(list_session_memory_handler))
         .route("/memory/session", post(write_session_memory_handler))
         .route("/memory/session", delete(delete_session_memory_handler))
+        .route("/memory/v2/observation", post(record_observation_v2_handler))
+        .route("/memory/v2/observations", get(list_observations_v2_handler))
+        .route("/memory/v2/recall", post(recall_v2_handler))
+        .route("/memory/v2/retain", post(retain_turn_v2_handler))
+        .route("/memory/v2/facts", get(list_facts_v2_handler))
+        .route("/memory/v2/entities", get(list_entities_v2_handler))
 }
 
 // ── Health ──────────────────────────────────────────────────────────────────
@@ -941,6 +947,199 @@ async fn delete_session_memory_handler(
                 StatusCode::INTERNAL_SERVER_ERROR,
                 Json(json!({"error": e.to_string()})),
             )
+        }
+    }
+}
+
+// ── Memory Kernel V2 Handlers ───────────────────────────────────────────────
+
+#[derive(Debug, Deserialize)]
+pub struct ListV2Query {
+    pub agent_id: Option<String>,
+    pub limit: Option<usize>,
+}
+
+async fn record_observation_v2_handler(
+    State(state): State<Arc<AppState>>,
+    headers: HeaderMap,
+    Json(payload): Json<crate::memory_kernel_service::RecordObservationRequest>,
+) -> impl axum::response::IntoResponse {
+    let user = match get_user(&headers) {
+        Some(u) => u,
+        None => {
+            return (
+                StatusCode::UNAUTHORIZED,
+                Json(json!({"error": "Unauthorized"})),
+            )
+        }
+    };
+
+    match crate::memory_kernel_service::record_observation(
+        &state.db,
+        &user.user_id,
+        payload.agent_id.as_deref(),
+        payload.session_id.as_deref(),
+        &payload.kind,
+        &payload.content,
+        payload.source.as_deref(),
+    ) {
+        Ok(id) => (StatusCode::CREATED, Json(json!({"id": id, "status": "recorded"}))),
+        Err(e) => {
+            tracing::warn!("Record observation error: {}", e);
+            (StatusCode::INTERNAL_SERVER_ERROR, Json(json!({"error": e.to_string()})))
+        }
+    }
+}
+
+async fn recall_v2_handler(
+    State(state): State<Arc<AppState>>,
+    headers: HeaderMap,
+    Json(payload): Json<crate::memory_kernel_service::RecallQuery>,
+) -> impl axum::response::IntoResponse {
+    let user = match get_user(&headers) {
+        Some(u) => u,
+        None => {
+            return (
+                StatusCode::UNAUTHORIZED,
+                Json(json!({"error": "Unauthorized"})),
+            )
+        }
+    };
+
+    let limit = payload.limit.unwrap_or(10);
+    match crate::memory_kernel_service::recall(
+        &state.db,
+        &user.user_id,
+        payload.agent_id.as_deref(),
+        payload.session_id.as_deref(),
+        &payload.query,
+        limit,
+    ) {
+        Ok(results) => (StatusCode::OK, Json(json!({"results": results, "count": results.len()}))),
+        Err(e) => {
+            tracing::warn!("Recall error: {}", e);
+            (StatusCode::INTERNAL_SERVER_ERROR, Json(json!({"error": e.to_string()})))
+        }
+    }
+}
+
+async fn retain_turn_v2_handler(
+    State(state): State<Arc<AppState>>,
+    headers: HeaderMap,
+    Json(payload): Json<crate::memory_kernel_service::RetainTurnRequest>,
+) -> impl axum::response::IntoResponse {
+    let user = match get_user(&headers) {
+        Some(u) => u,
+        None => {
+            return (
+                StatusCode::UNAUTHORIZED,
+                Json(json!({"error": "Unauthorized"})),
+            )
+        }
+    };
+
+    match crate::memory_kernel_service::retain_turn(
+        &state.db,
+        &user.user_id,
+        payload.agent_id.as_deref(),
+        payload.session_id.as_deref(),
+        &payload.role,
+        &payload.content,
+    ) {
+        Ok(id) => (StatusCode::OK, Json(json!({"observation_id": id, "status": "retained"}))),
+        Err(e) => {
+            tracing::warn!("Retain turn error: {}", e);
+            (StatusCode::INTERNAL_SERVER_ERROR, Json(json!({"error": e.to_string()})))
+        }
+    }
+}
+
+async fn list_observations_v2_handler(
+    State(state): State<Arc<AppState>>,
+    headers: HeaderMap,
+    Query(params): Query<ListV2Query>,
+) -> impl axum::response::IntoResponse {
+    let user = match get_user(&headers) {
+        Some(u) => u,
+        None => {
+            return (
+                StatusCode::UNAUTHORIZED,
+                Json(json!({"error": "Unauthorized"})),
+            )
+        }
+    };
+
+    let limit = params.limit.unwrap_or(50);
+    match crate::memory_kernel_service::list_observations(
+        &state.db,
+        &user.user_id,
+        params.agent_id.as_deref(),
+        limit,
+    ) {
+        Ok(observations) => (StatusCode::OK, Json(json!({"observations": observations, "count": observations.len()}))),
+        Err(e) => {
+            tracing::warn!("List observations error: {}", e);
+            (StatusCode::INTERNAL_SERVER_ERROR, Json(json!({"error": e.to_string()})))
+        }
+    }
+}
+
+async fn list_facts_v2_handler(
+    State(state): State<Arc<AppState>>,
+    headers: HeaderMap,
+    Query(params): Query<ListV2Query>,
+) -> impl axum::response::IntoResponse {
+    let user = match get_user(&headers) {
+        Some(u) => u,
+        None => {
+            return (
+                StatusCode::UNAUTHORIZED,
+                Json(json!({"error": "Unauthorized"})),
+            )
+        }
+    };
+
+    let limit = params.limit.unwrap_or(50);
+    match crate::memory_kernel_service::list_facts(
+        &state.db,
+        &user.user_id,
+        params.agent_id.as_deref(),
+        limit,
+    ) {
+        Ok(facts) => (StatusCode::OK, Json(json!({"facts": facts, "count": facts.len()}))),
+        Err(e) => {
+            tracing::warn!("List facts error: {}", e);
+            (StatusCode::INTERNAL_SERVER_ERROR, Json(json!({"error": e.to_string()})))
+        }
+    }
+}
+
+async fn list_entities_v2_handler(
+    State(state): State<Arc<AppState>>,
+    headers: HeaderMap,
+    Query(params): Query<ListV2Query>,
+) -> impl axum::response::IntoResponse {
+    let user = match get_user(&headers) {
+        Some(u) => u,
+        None => {
+            return (
+                StatusCode::UNAUTHORIZED,
+                Json(json!({"error": "Unauthorized"})),
+            )
+        }
+    };
+
+    let limit = params.limit.unwrap_or(50);
+    match crate::memory_kernel_service::list_entities(
+        &state.db,
+        &user.user_id,
+        params.agent_id.as_deref(),
+        limit,
+    ) {
+        Ok(entities) => (StatusCode::OK, Json(json!({"entities": entities, "count": entities.len()}))),
+        Err(e) => {
+            tracing::warn!("List entities error: {}", e);
+            (StatusCode::INTERNAL_SERVER_ERROR, Json(json!({"error": e.to_string()})))
         }
     }
 }

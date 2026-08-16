@@ -3,6 +3,7 @@
 import React from "react";
 import { createContext, useContext, useState, useCallback, ReactNode, useMemo, useRef, useEffect } from "react";
 import type { ModelSelection } from "@/components/model-picker";
+import { usePendingChatModelStore } from "@/stores/pending-chat-model.store";
 
 interface ModelSelectionContextType {
   // Current selection
@@ -47,6 +48,25 @@ export function ModelSelectionProvider({
       setSelection(defaultSelection);
     }
   }, [defaultSelection]);
+
+  // Apply a model selection requested from outside the chat surface (e.g. Model Lab).
+  // This runs on mount and whenever a new pending request arrives.
+  useEffect(() => {
+    const pending = usePendingChatModelStore.getState().pending;
+    if (pending) {
+      setSelection(pending);
+      usePendingChatModelStore.getState().setPending(null);
+    }
+
+    const unsubscribe = usePendingChatModelStore.subscribe((state, prevState) => {
+      if (state.pending && state.pending !== prevState.pending) {
+        setSelection(state.pending);
+        usePendingChatModelStore.getState().setPending(null);
+      }
+    });
+
+    return () => unsubscribe();
+  }, []);
 
   // Persist the selection so non-React code (e.g. the session store building
   // the agent-chat payload) can resolve the current provider/model.

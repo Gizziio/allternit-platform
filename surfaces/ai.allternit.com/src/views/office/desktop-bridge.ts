@@ -18,6 +18,7 @@ const ROUTE_BY_EXT: Record<string, string> = {
   xlsx: 'sheets',
   pptx: 'slides',
   pdf: 'pdf',
+  md: 'markdown-preview',
   // Formats with no native editor open in the anydoc markdown preview
   // (mirrors OfficeSuiteSection.ROUTE_BY_EXT).
   doc: 'markdown-preview',

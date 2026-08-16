@@ -14,7 +14,7 @@ import {
   CapabilitySearchBar,
   CheckoutModal,
 } from '@/components/marketplace';
-import type { CheckoutItem } from '@/components/marketplace';
+import type { CheckoutItem, SettlementMethod } from '@/components/marketplace';
 import { EmptyState } from '@/components/settings/EmptyState';
 import type { CapabilityCategory } from '@/components/marketplace/CapabilitySearchBar';
 
@@ -30,13 +30,31 @@ export function MarketplaceView() {
     handleInstall,
     handleUninstall,
     handleDetails,
+    handleCheckout,
+    handleCloseCheckout,
+    handleSettle,
+    settlements,
     selectedCapability,
     selectedCapabilityId,
     setSelectedCapabilityId,
+    checkoutCapability,
   } = useCapabilityMarketplace();
 
-  const [checkoutItem, setCheckoutItem] = useState<CheckoutItem | null>(null);
-  const [isCheckoutProcessing, setIsCheckoutProcessing] = useState(false);
+  const checkoutItem: CheckoutItem | null = checkoutCapability
+    ? {
+        id: checkoutCapability.id,
+        name: checkoutCapability.name,
+        author: checkoutCapability.author,
+        pricing: checkoutCapability.pricing,
+        amountCents: checkoutCapability.amountCents,
+        currency: checkoutCapability.currency,
+        icon: checkoutCapability.icon,
+      }
+    : null;
+
+  const checkoutSettlement = checkoutCapability
+    ? settlements[checkoutCapability.id]
+    : undefined;
 
   const handleInstallClick = (id: string) => {
     const cap = capabilities.find((c) => c.id === id);
@@ -45,24 +63,12 @@ export function MarketplaceView() {
     if (cap.pricing === 'free') {
       handleInstall(id);
     } else {
-      setCheckoutItem({
-        id: cap.id,
-        name: cap.name,
-        author: cap.author,
-        pricing: cap.pricing,
-        amountCents: cap.amountCents,
-        currency: cap.currency,
-        icon: cap.icon,
-      });
+      handleCheckout(id);
     }
   };
 
-  const handleCheckoutConfirm = async (item: CheckoutItem) => {
-    setIsCheckoutProcessing(true);
-    await new Promise((resolve) => setTimeout(resolve, 1500));
-    setIsCheckoutProcessing(false);
-    setCheckoutItem(null);
-    handleInstall(item.id);
+  const handleCheckoutConfirm = async (item: CheckoutItem, method: SettlementMethod) => {
+    await handleSettle(item.id, method);
   };
 
   return (
@@ -183,9 +189,10 @@ export function MarketplaceView() {
         <CheckoutModal
           item={checkoutItem}
           isOpen={true}
-          onClose={() => setCheckoutItem(null)}
+          onClose={handleCloseCheckout}
           onConfirm={handleCheckoutConfirm}
-          isProcessing={isCheckoutProcessing}
+          isProcessing={checkoutSettlement?.status === 'processing'}
+          error={checkoutSettlement?.error}
         />
       )}
     </div>

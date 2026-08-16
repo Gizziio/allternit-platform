@@ -1,0 +1,199 @@
+---
+title: 'Agent Workspaces API'
+description: 'Initialize, list, read, and write files in agent workspaces.'
+---
+
+## Overview
+
+Every agent has a private workspace directory on the local filesystem. The Agent Workspaces API lets you bulk-initialize that workspace, list its files, and read or write individual files. All paths are relative to the agent's workspace and are guarded against directory traversal.
+
+The gateway rejects any path that is absolute, contains `..`, or includes backslashes or NUL bytes.
+
+## Base URL
+
+```
+https://api.allternit.com/api
+```
+
+## Authentication
+
+All requests must include a valid bearer token in the `Authorization` header.
+
+## File object
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `path` | string | Relative file path. |
+| `size_bytes` | integer | File size in bytes. |
+| `modified_at` | string \| null | ISO 8601 modification timestamp. |
+
+## Endpoints
+
+### Initialize workspace
+
+```http
+POST /api/agents/:id/workspace/initialize
+```
+
+Creates the agent's workspace directory and writes a batch of documents. Parent directories are created automatically. This endpoint lives in the main Agents router and is included here for completeness.
+
+#### Request body
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `documents` | array | List of `{ "path": "...", "content": "..." }`. |
+
+#### Example request
+
+```bash
+curl -X POST https://api.allternit.com/api/agents/agent_018f3a7c.../workspace/initialize \
+  -H "Authorization: Bearer $TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "documents": [
+      { "path": "README.md", "content": "# Code Reviewer\n\nReviews PRs." },
+      { "path": "config/rules.json", "content": "{\"max_lines\": 100}" }
+    ]
+  }'
+```
+
+#### Example response
+
+```json
+{
+  "success": true,
+  "workspace_path": "/Users/joe/Library/Application Support/allternit/agent-workspaces/agent_018f3a7c...",
+  "written_files": ["README.md", "config/rules.json"]
+}
+```
+
+### List workspace files
+
+```http
+GET /api/agents/:id/workspace/files
+```
+
+Recursively lists all files in the agent's workspace.
+
+#### Example request
+
+```bash
+curl -H "Authorization: Bearer $TOKEN" \
+  https://api.allternit.com/api/agents/agent_018f3a7c.../workspace/files
+```
+
+#### Example response
+
+```json
+{
+  "files": [
+    {
+      "path": "README.md",
+      "size_bytes": 256,
+      "modified_at": "2026-08-13T14:00:00Z"
+    },
+    {
+      "path": "STYLE.md",
+      "size_bytes": 512,
+      "modified_at": "2026-08-13T14:22:00Z"
+    },
+    {
+      "path": "config/rules.json",
+      "size_bytes": 64,
+      "modified_at": "2026-08-13T14:00:00Z"
+    }
+  ]
+}
+```
+
+### Read a workspace file
+
+```http
+GET /api/agents/:id/workspace/file?path=:path
+```
+
+Reads a single file as UTF-8 text.
+
+#### Query parameters
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `path` | string | Relative file path. |
+
+#### Example request
+
+```bash
+curl -H "Authorization: Bearer $TOKEN" \
+  "https://api.allternit.com/api/agents/agent_018f3a7c.../workspace/file?path=README.md"
+```
+
+#### Example response
+
+```json
+{
+  "path": "README.md",
+  "content": "# Code Reviewer\n\nReviews PRs."
+}
+```
+
+### Write a workspace file
+
+```http
+PUT /api/agents/:id/workspace/file
+```
+
+Writes a file to the workspace. Parent directories are created as needed. Existing files are overwritten.
+
+#### Request body
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `path` | string | Relative file path. |
+| `content` | string | File contents. |
+
+#### Example request
+
+```bash
+curl -X PUT https://api.allternit.com/api/agents/agent_018f3a7c.../workspace/file \
+  -H "Authorization: Bearer $TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "path": "config/rules.json",
+    "content": "{\"max_lines\": 200, \"require_tests\": true}"
+  }'
+```
+
+#### Example response
+
+```json
+{
+  "success": true,
+  "path": "config/rules.json"
+}
+```
+
+## Path safety
+
+The API rejects paths that:
+
+- Are absolute (start with `/` or a Windows drive letter).
+- Contain `..` components.
+- Contain backslashes (`\`) or NUL bytes.
+
+Attempts return `400 Bad Request` with `"error": "invalid_path"`.
+
+## Error codes
+
+| Status | Meaning |
+|--------|---------|
+| `200` | Success. |
+| `400` | Invalid path or request body. |
+| `401` | Unauthorized. |
+| `404` | Agent or file not found. |
+| `500` | Internal server error. |
+
+## Related pages
+
+- [Agents API](/api/agents)
+- [Agent Preferences](/api/agent-preferences)
+- [Agent Sessions](/api/agent-sessions)

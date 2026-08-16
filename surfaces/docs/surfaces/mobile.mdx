@@ -1,0 +1,188 @@
+---
+title: Mobile
+description: Allternit iOS client — native SwiftUI surface for chat, cowork, and agent management
+---
+
+## Overview
+
+The **Allternit iOS** client is a native SwiftUI application that brings the Allternit platform to iPhone. It supports chat with agents, cowork project tracking, cloud-instance management, BYOC monitoring, agent hub management, and push-driven live activities.
+
+The mobile surface uses the same backend APIs as the web and desktop surfaces: Clerk authentication, `agent-sessions`, `agent-chat`, and the full platform REST API.
+
+## Base URL
+
+The iOS client connects to the Allternit platform API:
+
+```
+https://api.allternit.com/api
+```
+
+Local development targets:
+
+```
+http://127.0.0.1:8013/api
+```
+
+Authentication is performed with the Clerk iOS SDK. The backend receives `Authorization: Bearer <Clerk JWT>`.
+
+## Key platform endpoints
+
+The mobile client consumes these live platform endpoints.
+
+| Method | Path | Purpose |
+|---|---|---|
+| `POST` | `/api/v1/agent-sessions` | Create a chat session |
+| `GET` | `/api/v1/agent-sessions` | List sessions / history |
+| `GET` | `/api/v1/agent-sessions/:id/messages` | Fetch session messages |
+| `POST` | `/api/agent-chat` | Send a message and stream the reply |
+| `POST` | `/api/v1/agent-sessions/:id/abort` | Stop an in-flight reply |
+| `GET` | `/api/v1/agent-preferences` | Read user response-style preferences |
+| `PUT` | `/api/v1/agent-preferences` | Update response-style preferences |
+| `GET` | `/agents/:id/workspace/file` | Read an agent workspace file |
+| `PUT` | `/agents/:id/workspace/files` | Write an agent workspace file |
+
+## Request / response examples
+
+### Create a session
+
+```bash
+curl -X POST https://api.allternit.com/api/v1/agent-sessions \
+  -H "Authorization: Bearer $CLERK_JWT" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "name": "Mobile chat",
+    "origin_surface": "chat",
+    "session_mode": "regular",
+    "metadata": { "device": "ios" }
+  }'
+```
+
+```json
+{
+  "id": "ses_abc123",
+  "name": "Mobile chat",
+  "origin_surface": "chat",
+  "session_mode": "regular",
+  "created_at": "2026-08-13T19:50:00Z"
+}
+```
+
+### Stream a chat reply
+
+```bash
+curl -X POST https://api.allternit.com/api/agent-chat \
+  -H "Authorization: Bearer $CLERK_JWT" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "chatId": "ses_abc123",
+    "message": "Explain this code",
+    "runtimeModelId": "default"
+  }'
+```
+
+Response body is SSE-style `data: {json}` lines:
+
+```text
+data: {"type":"message_start","messageId":"msg_1","modelId":"default","runtimeModelId":"default"}
+data: {"type":"content_block_delta","messageId":"msg_1","partId":"p1","delta":{"type":"text_delta","text":"This function..."}}
+data: {"type":"finish","status":"complete"}
+```
+
+### Read agent preferences
+
+```bash
+curl https://api.allternit.com/api/v1/agent-preferences \
+  -H "Authorization: Bearer $CLERK_JWT"
+```
+
+```json
+{
+  "response_style": "concise",
+  "custom_instructions": "Prefer TypeScript examples."
+}
+```
+
+### Update agent preferences
+
+```bash
+curl -X PUT https://api.allternit.com/api/v1/agent-preferences \
+  -H "Authorization: Bearer $CLERK_JWT" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "response_style": "verbose",
+    "custom_instructions": "Include unit tests in answers."
+  }'
+```
+
+```json
+{
+  "updated": true,
+  "style_md_synced": true
+}
+```
+
+### Abort a session
+
+```bash
+curl -X POST https://api.allternit.com/api/v1/agent-sessions/ses_abc123/abort \
+  -H "Authorization: Bearer $CLERK_JWT"
+```
+
+```json
+{
+  "aborted": true
+}
+```
+
+## Capabilities
+
+- **Chat** — streaming conversations with agents, markdown rendering, syntax highlighting, and artifact cards.
+- **Agent Hub** — browse, create, edit, and template agents; switch agents from the composer.
+- **Cowork** — view and manage cowork projects and tasks.
+- **Cloud instances** — monitor and operate cloud and BYOC deployments.
+- **IntelliSchedule** — time-aware agent scheduling from the device.
+- **Live Activities** — keep a long-running loop visible on the lock screen.
+- **Push notifications** — background refresh and push-driven alerts.
+
+## Technology stack
+
+| Component | Choice |
+|---|---|
+| Deployment target | iOS 17 |
+| Auth | Clerk iOS SDK |
+| Chat UI | Custom SwiftUI with `LazyVStack` or `exyte/Chat` |
+| Markdown | `MarkdownView` incremental streaming renderer |
+| Code artifact preview | `WKWebView` with custom `WKURLSchemeHandler` |
+| Inline code highlight | `Highlightr` |
+| SSE transport | Hand-rolled `URLSession.bytes(for:)` + `AsyncThrowingStream` |
+
+## Build and run
+
+```bash
+cd surfaces/allternit-mobile/ios
+# open Allternit.xcodeproj in Xcode
+# or build from the command line with xcodebuild
+```
+
+## Error codes
+
+The iOS client surfaces API errors through the standard HTTP status codes:
+
+| Status | Meaning |
+|---|---|
+| `200 OK` | Success |
+| `400 Bad Request` | Invalid request payload |
+| `401 Unauthorized` | Clerk JWT missing, expired, or invalid |
+| `404 Not Found` | Session or agent not found |
+| `429 Too Many Requests` | Rate limited |
+| `500 Internal Server Error` | Backend error |
+
+Client-side errors are reported as device alerts and logged to the in-app diagnostics view.
+
+## Related links
+
+- [CommRails](/core/commrails)
+- [Agent Sessions API](/api/agent-sessions)
+- [Agent Chat API](/api/agent-chat)
+- [Agent Preferences API](/api/agent-preferences)
+- [Desktop](/surfaces/desktop)

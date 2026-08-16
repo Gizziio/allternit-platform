@@ -3,6 +3,12 @@ import {
   CheckCircle,
   Robot,
   FolderOpen,
+  Plugs,
+  Key,
+  EnvelopeSimple,
+  Phone,
+  Wallet,
+  Cloud,
 } from "@phosphor-icons/react";
 import type { CreateAgentInput, AgentSetup, CreationTemperament } from "@/lib/agents/agent.types";
 import { generateEnhancedWorkspaceDocuments } from "@/lib/agents";
@@ -36,9 +42,10 @@ interface ReviewStepProps {
   blueprint: BlueprintState;
   cardSeed: CardSeedState;
   projectedStats: ProjectedStats;
+  isBotMode?: boolean;
 }
 
-export function ReviewStep({ formData, blueprint, cardSeed, projectedStats }: ReviewStepProps) {
+export function ReviewStep({ formData, blueprint, cardSeed, projectedStats, isBotMode }: ReviewStepProps) {
   // The exact document set the submit path POSTs to /workspace/initialize —
   // computed with the same generator so the preview cannot drift from what
   // actually lands on disk.
@@ -101,6 +108,155 @@ export function ReviewStep({ formData, blueprint, cardSeed, projectedStats }: Re
           <div className="p-3 rounded-lg bg-[var(--bg-primary)] border border-solid border-[var(--border-subtle)]">
             <div className="text-[12px] text-[var(--text-muted)] uppercase mb-1">Description</div>
             <div className="text-[14px] text-[var(--text-primary)]">{formData.description}</div>
+          </div>
+
+          {isBotMode && formData.botProfile && (
+            <div className="p-4 rounded-xl border border-solid border-[var(--accent-primary)]/20 bg-[var(--accent-primary)]/5">
+              <div className="flex items-center gap-2 mb-3">
+                <Robot size={18} className="text-[var(--accent-primary)]" />
+                <span className="font-semibold text-[14px]">Bot Profile</span>
+              </div>
+              <div className="grid grid-cols-2 gap-x-6 gap-y-2">
+                <div className="flex justify-between">
+                  <span className="text-[13px] text-[var(--text-secondary)]">Display Name</span>
+                  <span className="text-[13px] font-medium text-[var(--text-primary)]">{formData.botProfile.displayName}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-[13px] text-[var(--text-secondary)]">Category</span>
+                  <span className="text-[13px] font-medium text-[var(--text-primary)] capitalize">{formData.botProfile.botCategory || 'Custom'}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-[13px] text-[var(--text-secondary)]">Accent</span>
+                  <span className="flex items-center gap-2 text-[13px] font-medium text-[var(--text-primary)]">
+                    <span className="inline-block size-3 rounded-full" style={{ backgroundColor: formData.botProfile.accentColor || '#6366f1' }} />
+                    {formData.botProfile.accentColor || '#6366f1'}
+                  </span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-[13px] text-[var(--text-secondary)]">Group Chat</span>
+                  <span className="text-[13px] font-medium text-[var(--text-primary)]">{formData.botProfile.groupChatEnabled ? 'Enabled' : 'Disabled'}</span>
+                </div>
+              </div>
+              {formData.botProfile.tagline && (
+                <div className="mt-3 text-[13px] text-[var(--text-secondary)]">
+                  {formData.botProfile.tagline}
+                </div>
+              )}
+              {formData.botProfile.welcomeMessage && (
+                <div className="mt-3 rounded-lg bg-[var(--bg-primary)] p-3 text-[13px] text-[var(--text-primary)]">
+                  {formData.botProfile.welcomeMessage}
+                </div>
+              )}
+              {formData.botProfile.starterPrompts && formData.botProfile.starterPrompts.length > 0 && (
+                <div className="mt-3 flex flex-wrap gap-2">
+                  {formData.botProfile.starterPrompts.map((prompt, idx) => (
+                    <span key={idx} className="rounded-full bg-[var(--bg-primary)] px-2.5 py-1 text-[12px] text-[var(--text-secondary)]">
+                      {prompt}
+                    </span>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* Autonomous primitives summary */}
+          <div className="p-4 rounded-xl border border-solid border-[var(--accent-primary)]/20 bg-[var(--accent-primary)]/5">
+            <div className="flex items-center gap-2 mb-3">
+              <Plugs size={18} className="text-[var(--accent-primary)]" />
+              <span className="font-semibold text-[14px]">Connectors & Integrations</span>
+            </div>
+            {formData.connectorBindings && formData.connectorBindings.length > 0 ? (
+              <div className="flex flex-wrap gap-2 mb-3">
+                {formData.connectorBindings.map((binding) => (
+                  <span
+                    key={binding.connectorId}
+                    className="inline-flex items-center gap-1.5 rounded-full bg-[var(--bg-primary)] px-2.5 py-1 text-[12px] text-[var(--text-primary)] border border-[var(--border-subtle)]"
+                  >
+                    {binding.label || binding.provider}
+                    {binding.autonomous && (
+                      <span className="text-[10px] uppercase tracking-wide text-[var(--accent-primary)]">auto</span>
+                    )}
+                  </span>
+                ))}
+              </div>
+            ) : (
+              <p className="text-[13px] text-[var(--text-muted)] mb-3">No connectors bound.</p>
+            )}
+
+            <div className="flex items-center gap-2 mb-3 mt-4">
+              <Key size={18} className="text-[var(--accent-primary)]" />
+              <span className="font-semibold text-[14px]">Secrets & API Keys</span>
+            </div>
+            {formData.secretRefs && formData.secretRefs.length > 0 ? (
+              <div className="flex flex-wrap gap-2">
+                {formData.secretRefs.map((secret, idx) => (
+                  <span
+                    key={idx}
+                    className="inline-flex items-center gap-1.5 rounded-full bg-[var(--bg-primary)] px-2.5 py-1 text-[12px] text-[var(--text-primary)] border border-[var(--border-subtle)]"
+                  >
+                    {secret.name || secret.key}
+                    {secret.required && (
+                      <span className="text-[10px] uppercase tracking-wide text-[var(--status-warning)]">required</span>
+                    )}
+                  </span>
+                ))}
+              </div>
+            ) : (
+              <p className="text-[13px] text-[var(--text-muted)]">No secret references declared.</p>
+            )}
+          </div>
+
+          <div className="p-4 rounded-xl border border-solid border-[var(--accent-primary)]/20 bg-[var(--accent-primary)]/5">
+            <div className="flex items-center gap-2 mb-3">
+              <EnvelopeSimple size={18} className="text-[var(--accent-primary)]" />
+              <span className="font-semibold text-[14px]">Identity Channels</span>
+            </div>
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+              <div className="rounded-lg bg-[var(--bg-primary)] p-3 border border-solid border-[var(--border-subtle)]">
+                <div className="flex items-center gap-2 text-[13px] text-[var(--text-secondary)] mb-1">
+                  <EnvelopeSimple size={14} />
+                  Email
+                </div>
+                <div className="text-[13px] font-medium text-[var(--text-primary)]">
+                  {formData.identityChannels?.email?.address || 'Not configured'}
+                </div>
+              </div>
+              <div className="rounded-lg bg-[var(--bg-primary)] p-3 border border-solid border-[var(--border-subtle)]">
+                <div className="flex items-center gap-2 text-[13px] text-[var(--text-secondary)] mb-1">
+                  <Phone size={14} />
+                  Phone
+                </div>
+                <div className="text-[13px] font-medium text-[var(--text-primary)]">
+                  {formData.identityChannels?.phone?.number || 'Not configured'}
+                </div>
+              </div>
+              <div className="rounded-lg bg-[var(--bg-primary)] p-3 border border-solid border-[var(--border-subtle)]">
+                <div className="flex items-center gap-2 text-[13px] text-[var(--text-secondary)] mb-1">
+                  <Wallet size={14} />
+                  Wallet
+                </div>
+                <div className="text-[13px] font-medium text-[var(--text-primary)]">
+                  {formData.identityChannels?.wallet?.provider
+                    ? `${formData.identityChannels.wallet.provider}${formData.identityChannels.wallet.address ? ` · ${String(formData.identityChannels.wallet.address).slice(0, 8)}…` : ''}`
+                    : 'Not configured'}
+                </div>
+              </div>
+            </div>
+
+            <div className="flex items-center gap-2 mb-3 mt-4">
+              <Cloud size={18} className="text-[var(--accent-primary)]" />
+              <span className="font-semibold text-[14px]">Cloud Messaging</span>
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div className="flex justify-between">
+                <span className="text-[13px] text-[var(--text-secondary)]">Photon Orchestration</span>
+                <span className="text-[13px] font-medium text-[var(--text-primary)]">{formData.messagingConfig?.photonEnabled ? 'Enabled' : 'Disabled'}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-[13px] text-[var(--text-secondary)]">Cross-Surface Sessions</span>
+                <span className="text-[13px] font-medium text-[var(--text-primary)]">{formData.messagingConfig?.crossSurfaceEnabled ? 'Enabled' : 'Disabled'}</span>
+              </div>
+            </div>
           </div>
 
           <div className="p-4 rounded-xl border border-solid border-[var(--accent-primary)]/20 bg-[var(--accent-primary)]/5">

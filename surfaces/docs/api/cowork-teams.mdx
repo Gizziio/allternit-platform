@@ -1,0 +1,274 @@
+---
+title: 'Cowork Teams API'
+description: 'Manage team workspaces, members, skills, runtimes, and board assignments for multi-user agent collaboration.'
+---
+
+## Overview
+
+The Cowork Teams API extends the Cowork API with organization-scoped team features: shared workspaces, workspace members, team skills, registered runtimes, team agents, and board item assignment. Access is enforced by workspace ownership or member role.
+
+## Base URL
+
+```
+https://api.allternit.com/v1/cowork-team
+```
+
+All endpoints require a valid Bearer token in the `Authorization` header. See [Authentication](/api/authentication) for details.
+
+## Endpoints
+
+| Method | Path | Description |
+|--------|------|-------------|
+| GET | `/cowork-team` | Service status check. |
+| GET | `/cowork-team/workspaces` | List team workspaces. |
+| POST | `/cowork-team/workspaces` | Create a team workspace. |
+| GET | `/cowork-team/workspaces/:id` | Get a workspace. |
+| PUT | `/cowork-team/workspaces/:id` | Update a workspace. |
+| DELETE | `/cowork-team/workspaces/:id` | Delete a workspace. |
+| GET | `/cowork-team/workspaces/:id/members` | List workspace members. |
+| POST | `/cowork-team/workspaces/:id/members` | Add a workspace member. |
+| GET | `/cowork-team/skills` | List team skills. |
+| POST | `/cowork-team/skills` | Create a team skill. |
+| GET | `/cowork-team/skills/:id` | Get a team skill. |
+| PUT | `/cowork-team/skills/:id` | Update a team skill. |
+| DELETE | `/cowork-team/skills/:id` | Delete a team skill. |
+| GET | `/cowork-team/agents` | List team agents. |
+| GET | `/cowork-team/runtimes` | List team runtimes. |
+| POST | `/cowork-team/runtimes` | Register a team runtime. |
+| POST | `/cowork-team/board/:id/assign` | Assign a board item. |
+| DELETE | `/cowork-team/board/:id/assign` | Unassign a board item. |
+| POST | `/cowork-team/parse-prd` | Parse a PRD description into tasks. |
+
+## Workspaces
+
+### Create workspace
+
+```bash
+POST /api/v1/cowork-team/workspaces
+```
+
+Request body:
+
+```json
+{
+  "name": "Platform Team",
+  "description": "Shared workspace for platform engineering."
+}
+```
+
+Response:
+
+```json
+{
+  "workspace": {
+    "id": "ws_1a2b3c4d",
+    "name": "Platform Team",
+    "slug": "platform-team"
+  }
+}
+```
+
+### Update workspace
+
+```bash
+PUT /api/v1/cowork-team/ws_1a2b3c4d
+```
+
+Request body:
+
+```json
+{
+  "name": "Platform Engineering",
+  "description": "Updated team description."
+}
+```
+
+Response:
+
+```json
+{ "success": true }
+```
+
+## Members
+
+### Add a member
+
+```bash
+POST /api/v1/cowork-team/workspaces/ws_1a2b3c4d/members
+```
+
+Request body:
+
+```json
+{
+  "userId": "user_xyz789",
+  "role": "member"
+}
+```
+
+Response:
+
+```json
+{
+  "member": {
+    "id": "mem_9d8e7f6a",
+    "role": "member"
+  }
+}
+```
+
+## Team skills
+
+### Create team skill
+
+```bash
+POST /api/v1/cowork-team/skills
+```
+
+Request body:
+
+```json
+{
+  "workspaceId": "ws_1a2b3c4d",
+  "name": "deploy-skill",
+  "description": "Deploy services to the BYOC runtime.",
+  "manifest": { "tools": ["bash"], "runtime": "gizzi" },
+  "sourceRepo": "https://github.com/allternit/deploy-skill",
+  "version": "1.0.0"
+}
+```
+
+Response:
+
+```json
+{
+  "skill": {
+    "id": "skill_7e1a2b3c",
+    "name": "deploy-skill"
+  }
+}
+```
+
+## Team runtimes
+
+### Register a runtime
+
+```bash
+POST /api/v1/cowork-team/runtimes
+```
+
+Request body:
+
+```json
+{
+  "name": "mac-studio-runtime",
+  "host": "runtime.local",
+  "agentClis": ["gizzi"],
+  "workspaceId": "ws_1a2b3c4d"
+}
+```
+
+Response:
+
+```json
+{
+  "runtime": {
+    "id": "rt_5e6f7a8b",
+    "name": "mac-studio-runtime",
+    "status": "online"
+  }
+}
+```
+
+## Board assignments
+
+### Assign board item
+
+```bash
+POST /api/v1/cowork-team/board/item_1a2b3c4d/assign
+```
+
+Request body:
+
+```json
+{
+  "assigneeType": "agent",
+  "assigneeId": "ag_analyzer"
+}
+```
+
+Response:
+
+```json
+{
+  "item": { "id": "item_1a2b3c4d" }
+}
+```
+
+### Unassign board item
+
+```bash
+DELETE /api/v1/cowork-team/board/item_1a2b3c4d/assign
+```
+
+Response:
+
+```json
+{
+  "item": { "id": "item_1a2b3c4d" }
+}
+```
+
+## PRD parser
+
+### Parse a PRD into tasks
+
+```bash
+POST /api/v1/cowork-team/parse-prd
+```
+
+Request body:
+
+```json
+{
+  "description": "Build a REST API for managing team skills with CRUD endpoints and RBAC.",
+  "existingTitles": ["Create skill"],
+  "maxTasks": 5,
+  "modelId": null
+}
+```
+
+Response:
+
+```json
+{
+  "items": [
+    {
+      "title": "Task 1 from PRD",
+      "description": "Auto-generated task based on PRD description: Build a REST API for managing team skills...",
+      "priority": "high"
+    }
+  ],
+  "summary": "Parsed 5 tasks from PRD description",
+  "task_count": 5
+}
+```
+
+## Error codes
+
+| Status | Code | Description |
+|--------|------|-------------|
+| 200 | — | Success. |
+| 201 | — | Created successfully. |
+| 400 | `bad_request` | Invalid request body or parameters. |
+| 401 | `unauthorized` | Missing or invalid authentication. |
+| 403 | `access_denied` | Caller lacks workspace ownership or admin role. |
+| 404 | `not_found` | Resource does not exist or is not accessible. |
+| 500 | `internal_error` | Unexpected server error. |
+
+## Related links
+
+- [Authentication](/api/authentication)
+- [Cowork API](/api/cowork)
+- [Boards API](/api/boards)
+- [Team Skills API](/api/team-skills)

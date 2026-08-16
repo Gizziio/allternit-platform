@@ -3,33 +3,53 @@ title: 'Embeddings'
 description: 'Generate text embeddings through the Allternit LLM gateway'
 ---
 
-# Embeddings
+## Overview
 
-The `/v1/embeddings` endpoint returns vector embeddings for one or more input strings. It is provider-agnostic: Allternit normalizes the request, routes it to the configured provider, and returns a consistent response shape.
+The `/v1/embeddings` endpoint returns vector embeddings for one or more input strings. Allternit normalizes the request, routes it to the configured embeddings provider when available, and returns a consistent response shape. If no provider is configured, the gateway falls back to deterministic hash-based embeddings suitable for development and testing.
+
+## Base URL
+
+```
+https://api.allternit.com/v1
+```
+
+For local development:
+
+```
+http://127.0.0.1:8013/v1
+```
+
+## Endpoints
+
+| Method | Path | Description |
+|--------|------|-------------|
+| `POST` | `/v1/embeddings` | Generate embeddings for one or more input texts |
 
 ## Create embeddings
+
+### Request body
+
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| `input` | string \| string[] | yes | Text to embed. At least one non-empty string; at most 2048 strings. |
+| `model` | string | no | Embedding model id. Defaults to `allternit-embedding-3-small`. |
+| `encoding_format` | string | no | `float` or `base64`. Defaults to `float`. |
+| `dimensions` | integer | no | Desired embedding dimension. Must be `1`–`3072`. Defaults to `1536`. |
+| `user` | string | no | End-user identifier for attribution. |
+
+### Example request
 
 ```bash
 curl -X POST https://api.allternit.com/v1/embeddings \
   -H "Authorization: Bearer $ALLTERNIT_API_KEY" \
   -H "Content-Type: application/json" \
   -d '{
-    "model": "allternit-embed-3-small",
+    "model": "allternit-embedding-3-small",
     "input": ["Allternit is the open alternative to locked-in AI vendors."]
   }'
 ```
 
-### Request body
-
-| Field | Type | Required | Description |
-|-------|------|----------|-------------|
-| `model` | string | Yes | Embedding model ID. |
-| `input` | string \| string[] | Yes | Text to embed. |
-| `encoding_format` | `float` \| `base64` | No | Defaults to `float`. |
-| `dimensions` | integer | No | Truncate embeddings to this length if supported. |
-| `user` | string | No | End-user identifier for rate-limit attribution. |
-
-### Response
+### Example response
 
 ```json
 {
@@ -38,10 +58,10 @@ curl -X POST https://api.allternit.com/v1/embeddings \
     {
       "object": "embedding",
       "index": 0,
-      "embedding": [0.0123, -0.0456, ...]
+      "embedding": [0.0123, -0.0456, 0.0789, "..."]
     }
   ],
-  "model": "allternit-embed-3-small",
+  "model": "allternit-embedding-3-small",
   "usage": {
     "prompt_tokens": 12,
     "total_tokens": 12
@@ -51,8 +71,72 @@ curl -X POST https://api.allternit.com/v1/embeddings \
 
 ## Batch embedding
 
-Pass an array of strings to embed multiple inputs in one request. The order of `data` matches the order of `input`.
+Pass an array of strings to embed multiple inputs in a single request. The order of `data` matches the order of `input`.
 
-## Provider routing
+```bash
+curl -X POST https://api.allternit.com/v1/embeddings \
+  -H "Authorization: Bearer $ALLTERNIT_API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "model": "allternit-embedding-3-small",
+    "input": [
+      "First document",
+      "Second document",
+      "Third document"
+    ]
+  }'
+```
 
-Allternit maps the requested model to the best available provider based on your workspace configuration and `service_tier`. Use the model registry to discover supported embedding models.
+```json
+{
+  "object": "list",
+  "data": [
+    {"object": "embedding", "index": 0, "embedding": [...]},
+    {"object": "embedding", "index": 1, "embedding": [...]},
+    {"object": "embedding", "index": 2, "embedding": [...]}
+  ],
+  "model": "allternit-embedding-3-small",
+  "usage": {
+    "prompt_tokens": 36,
+    "total_tokens": 36
+  }
+}
+```
+
+## Base64 encoding
+
+Request `encoding_format: "base64"` to receive embeddings as base64-encoded little-endian `f32` bytes. The `data[].embedding` array is a placeholder when base64 is requested; decode the actual payload separately if your provider returns it.
+
+```bash
+curl -X POST https://api.allternit.com/v1/embeddings \
+  -H "Authorization: Bearer $ALLTERNIT_API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "model": "allternit-embedding-3-small",
+    "input": ["hello"],
+    "encoding_format": "base64"
+  }'
+```
+
+## Validation rules
+
+- `input` must contain at least one string and at most 2048 strings.
+- Each input string must be non-empty.
+- `encoding_format` must be `float` or `base64`.
+- `dimensions` must be between `1` and `3072`.
+
+## Error codes
+
+| HTTP status | Code | Meaning |
+|-------------|------|---------|
+| 400 | `allternit.invalid_request` | Malformed `input`, `encoding_format`, or `dimensions`. |
+| 401 | `allternit.authentication_failed` | Missing or invalid API key. |
+| 429 | `allternit.rate_limited` | Per-key rate limit exceeded. |
+| 429 | `allternit.budget_exceeded` | Monthly key or tenant budget exhausted. |
+| 500 | `allternit.internal_error` | Internal gateway error. |
+
+## Related pages
+
+- [Chat Completions](/api/chat-completions) — conversational LLM requests
+- [Files](/api/files) — upload documents for retrieval
+- [Models](/api/models) — model registry and pricing

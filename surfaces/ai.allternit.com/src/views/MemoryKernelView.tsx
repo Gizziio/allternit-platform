@@ -45,8 +45,9 @@ interface Edge {
 }
 
 import { MemoryVaultStats } from '@/components/memory/MemoryVaultStats';
+import { memoryClient, MemoryObservation, MemoryFact, MemoryEntity as MemoryEntityV2 } from '@/lib/agents/memory-client';
 
-type MemoryTab = 'Events' | 'Entities' | 'Edges' | 'Health';
+type MemoryTab = 'Events' | 'Entities' | 'Edges' | 'Memory v2' | 'Health';
 
 
 function EventTypeIcon({ type }: { type: string }) {
@@ -171,10 +172,21 @@ export function MemoryKernelView() {
   const [searchQuery, setSearchQuery] = useState('');
   const [filterType, setFilterType] = useState<string>('all');
 
+  // Memory v2 state
+  const [v2Observations, setV2Observations] = useState<MemoryObservation[]>([]);
+  const [v2Facts, setV2Facts] = useState<MemoryFact[]>([]);
+  const [v2Entities, setV2Entities] = useState<MemoryEntityV2[]>([]);
+  const [v2SubTab, setV2SubTab] = useState<'facts' | 'observations' | 'entities'>('facts');
+
   useEffect(() => {
     fetch('/api/v1/memory/events').then(r => r.json()).then(setEvents).catch(() => {});
     fetch('/api/v1/memory/entities').then(r => r.json()).then(setEntities).catch(() => {});
     fetch('/api/v1/memory/edges').then(r => r.json()).then(setEdges).catch(() => {});
+
+    // Fetch v2 memory
+    memoryClient.listObservations().then(setV2Observations);
+    memoryClient.listFacts().then(setV2Facts);
+    memoryClient.listEntities().then(setV2Entities);
   }, []);
 
   const toggleEventExpand = (id: string) => {
@@ -201,7 +213,7 @@ export function MemoryKernelView() {
                 Memory Kernel
               </h1>
               <p className="text-sm text-[var(--text-tertiary)] mt-1">
-                Three-layer memory system (AMK)
+                Native Rust/SQLite memory pipeline & three-layer memory system
               </p>
             </div>
           </div>
@@ -210,7 +222,7 @@ export function MemoryKernelView() {
 
       {/* Stats bar */}
       <div className="px-6 py-4 border-b border-[var(--border-subtle)] bg-[var(--bg-secondary)]">
-        <div className="grid grid-cols-3 gap-6">
+        <div className="grid grid-cols-4 gap-6">
           <div>
             <div className="text-xs text-[var(--text-tertiary)] uppercase font-semibold mb-2 flex items-center gap-2">
               <Stack size={16} />
@@ -223,10 +235,19 @@ export function MemoryKernelView() {
           <div>
             <div className="text-xs text-[var(--text-tertiary)] uppercase font-semibold mb-2 flex items-center gap-2">
               <Tag size={16} />
-              Total Entities
+              V2 Facts
             </div>
-            <div className="text-2xl font-bold text-[var(--accent-primary)]">
-              {entities.length}
+            <div className="text-2xl font-bold text-[var(--status-success)]">
+              {v2Facts.length}
+            </div>
+          </div>
+          <div>
+            <div className="text-xs text-[var(--text-tertiary)] uppercase font-semibold mb-2 flex items-center gap-2">
+              <Database size={16} />
+              V2 Observations
+            </div>
+            <div className="text-2xl font-bold text-[var(--status-info)]">
+              {v2Observations.length}
             </div>
           </div>
           <div>
@@ -243,7 +264,7 @@ export function MemoryKernelView() {
 
       {/* Tabs */}
       <div className="px-6 pt-4 border-b border-[var(--border-subtle)] flex gap-8">
-        {(['Events', 'Entities', 'Edges', 'Health'] as MemoryTab[]).map((tab) => (
+        {(['Events', 'Entities', 'Edges', 'Memory v2', 'Health'] as MemoryTab[]).map((tab) => (
           <button type="button"
             key={tab}
             onClick={() => setActiveTab(tab)}
@@ -263,6 +284,132 @@ export function MemoryKernelView() {
         {activeTab === 'Health' && (
           <div className="p-6">
             <MemoryVaultStats />
+          </div>
+        )}
+
+        {activeTab === 'Memory v2' && (
+          <div className="p-6">
+            {/* Sub-tab navigation */}
+            <div className="flex gap-4 mb-6 border-b border-[var(--border-subtle)] pb-2">
+              <button
+                type="button"
+                onClick={() => setV2SubTab('facts')}
+                className={`text-xs font-semibold uppercase px-3 py-1.5 rounded-lg transition-colors ${
+                  v2SubTab === 'facts'
+                    ? 'bg-[var(--accent-primary)] text-white'
+                    : 'text-[var(--text-secondary)] hover:bg-[var(--bg-secondary)]'
+                }`}
+              >
+                Facts ({v2Facts.length})
+              </button>
+              <button
+                type="button"
+                onClick={() => setV2SubTab('observations')}
+                className={`text-xs font-semibold uppercase px-3 py-1.5 rounded-lg transition-colors ${
+                  v2SubTab === 'observations'
+                    ? 'bg-[var(--accent-primary)] text-white'
+                    : 'text-[var(--text-secondary)] hover:bg-[var(--bg-secondary)]'
+                }`}
+              >
+                Observations ({v2Observations.length})
+              </button>
+              <button
+                type="button"
+                onClick={() => setV2SubTab('entities')}
+                className={`text-xs font-semibold uppercase px-3 py-1.5 rounded-lg transition-colors ${
+                  v2SubTab === 'entities'
+                    ? 'bg-[var(--accent-primary)] text-white'
+                    : 'text-[var(--text-secondary)] hover:bg-[var(--bg-secondary)]'
+                }`}
+              >
+                Entities ({v2Entities.length})
+              </button>
+            </div>
+
+            {v2SubTab === 'facts' && (
+              <div className="space-y-3">
+                {v2Facts.length === 0 ? (
+                  <div className="text-sm text-[var(--text-tertiary)] py-8 text-center bg-[var(--bg-secondary)] rounded-xl border border-[var(--border-subtle)]">
+                    No extracted facts found yet. Facts are automatically extracted when retainTurn is called.
+                  </div>
+                ) : (
+                  v2Facts.map((fact) => (
+                    <div
+                      key={fact.id}
+                      className="p-4 rounded-xl border border-[var(--border-subtle)] bg-[var(--bg-secondary)] flex items-start justify-between gap-4"
+                    >
+                      <div>
+                        <p className="text-sm text-[var(--text-primary)] font-medium">{fact.fact}</p>
+                        <div className="flex items-center gap-3 mt-2 text-xs text-[var(--text-tertiary)] font-mono">
+                          <span>{fact.valid_from}</span>
+                          {fact.agent_id && <span>Agent: {fact.agent_id}</span>}
+                        </div>
+                      </div>
+                      <span className="px-2 py-0.5 rounded text-xs font-mono bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 flex-shrink-0">
+                        {(fact.confidence * 100).toFixed(0)}% conf
+                      </span>
+                    </div>
+                  ))
+                )}
+              </div>
+            )}
+
+            {v2SubTab === 'observations' && (
+              <div className="space-y-3">
+                {v2Observations.length === 0 ? (
+                  <div className="text-sm text-[var(--text-tertiary)] py-8 text-center bg-[var(--bg-secondary)] rounded-xl border border-[var(--border-subtle)]">
+                    No observations logged yet.
+                  </div>
+                ) : (
+                  v2Observations.map((obs) => (
+                    <div
+                      key={obs.id}
+                      className="p-4 rounded-xl border border-[var(--border-subtle)] bg-[var(--bg-secondary)]"
+                    >
+                      <div className="flex items-center justify-between mb-2">
+                        <span className="px-2 py-0.5 rounded text-xs uppercase font-semibold bg-sky-500/10 text-sky-400 border border-sky-500/20">
+                          {obs.kind}
+                        </span>
+                        <span className="text-xs text-[var(--text-tertiary)] font-mono">
+                          {obs.timestamp}
+                        </span>
+                      </div>
+                      <p className="text-sm text-[var(--text-primary)] whitespace-pre-wrap">{obs.content}</p>
+                    </div>
+                  ))
+                )}
+              </div>
+            )}
+
+            {v2SubTab === 'entities' && (
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                {v2Entities.length === 0 ? (
+                  <div className="col-span-full text-sm text-[var(--text-tertiary)] py-8 text-center bg-[var(--bg-secondary)] rounded-xl border border-[var(--border-subtle)]">
+                    No entities tracked yet.
+                  </div>
+                ) : (
+                  v2Entities.map((ent) => (
+                    <div
+                      key={ent.id}
+                      className="p-4 rounded-xl border border-[var(--border-subtle)] bg-[var(--bg-secondary)]"
+                    >
+                      <div className="flex items-start justify-between mb-2">
+                        <h4 className="font-semibold text-sm text-[var(--text-primary)]">{ent.name}</h4>
+                        <span className="px-2 py-0.5 rounded text-xs bg-purple-500/10 text-purple-400 border border-purple-500/20">
+                          {ent.type}
+                        </span>
+                      </div>
+                      {ent.summary && (
+                        <p className="text-xs text-[var(--text-secondary)] mt-1">{ent.summary}</p>
+                      )}
+                      <p className="text-xs text-[var(--text-tertiary)] font-mono mt-3">
+                        Updated: {ent.last_updated}
+                      </p>
+                    </div>
+                  ))
+                )}
+              </div>
+            )}
           </div>
         )}
 

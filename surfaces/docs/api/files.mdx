@@ -1,97 +1,204 @@
 ---
-title: Files API
-description: Upload, manage, and reference files for agents and sessions
+title: 'Files'
+description: 'Upload, manage, and reference files for the Allternit LLM gateway'
 ---
 
 ## Overview
 
-The Files API lets you upload files that agents can reference during runs. Files are scoped to an organization and can be tagged with a purpose for routing.
+The Files API lets you upload files that can be referenced by chat-completion requests, batch jobs, agents, and sessions. Files are stored in the gateway database with a purpose and a detected content type. Retrieval returns the file metadata plus the base64-encoded bytes.
+
+## Base URL
+
+```
+https://api.allternit.com/v1
+```
+
+For local development:
+
+```
+http://127.0.0.1:8013/v1
+```
 
 ## Endpoints
 
-### List files
+| Method | Path | Description |
+|--------|------|-------------|
+| `POST` | `/v1/files` | Upload a base64-encoded file |
+| `GET`  | `/v1/files` | List files |
+| `GET`  | `/v1/files/:id` | Retrieve a file and its content |
+| `DELETE` | `/v1/files/:id` | Delete a file |
 
-```
-GET /api/files
-```
+## Upload a file
 
-| Parameter | Type | Description |
-|-----------|------|-------------|
-| `purpose` | string | Filter by purpose: `data`, `assistants`, `batch`, `fine-tune` |
-| `limit` | integer | Max results (default 20) |
+Uploads use a JSON body with a base64-encoded `file` field so clients can upload binary content without a multipart dependency.
 
-### Upload file
+### Request body
 
-```
-POST /api/files
-Content-Type: multipart/form-data
-```
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| `file` | string | yes | Base64-encoded file bytes. |
+| `filename` | string | no | File name. Defaults to `upload.pdf`. |
+| `purpose` | string | no | Purpose tag. Defaults to `assistants`. |
+
+### Valid purposes
+
+| Purpose | Description |
+|---------|-------------|
+| `fine-tune` | Training data for fine-tuning jobs. |
+| `assistants` | Files attached to assistant runs. |
+| `assistants_output` | Output files from assistant runs. |
+| `batch` | Input files for batch inference. |
+| `batch_output` | Output files from batch jobs. |
+| `embeddings` | Files used to generate embeddings. |
+| `vision` | Image or video inputs for vision models. |
+| `user_data` | General user-provided data. |
+
+### Example request
 
 ```bash
-curl -X POST http://localhost:8013/api/files \
+curl -X POST https://api.allternit.com/v1/files \
   -H "Authorization: Bearer $ALLTERNIT_API_KEY" \
-  -F "file=@data.csv" \
-  -F "purpose=data"
+  -H "Content-Type: application/json" \
+  -d '{
+    "file": "JVBERi0xLjQK...",
+    "filename": "report.pdf",
+    "purpose": "assistants"
+  }'
 ```
 
-Response:
+### Example response
 
 ```json
 {
   "id": "file_abc123",
-  "filename": "data.csv",
+  "object": "file",
   "bytes": 1024,
-  "purpose": "data",
-  "created_at": "2026-08-12T10:00:00Z"
+  "created_at": 1723500000,
+  "filename": "report.pdf",
+  "purpose": "assistants",
+  "status": "processed",
+  "content_type": "application/pdf"
 }
 ```
 
-### Get file
+## List files
 
-```
-GET /api/files/{id}
-```
-
-### Download file content
-
-```
-GET /api/files/{id}/content
+```bash
+curl https://api.allternit.com/v1/files \
+  -H "Authorization: Bearer $ALLTERNIT_API_KEY"
 ```
 
-### Delete file
-
-```
-DELETE /api/files/{id}
-```
-
-## File purposes
-
-| Purpose | Description |
-|---------|-------------|
-| `data` | General data files for agent consumption |
-| `assistants` | Files attached to agent runs |
-| `batch` | Input files for batch inference jobs |
-| `fine-tune` | Training data for fine-tuning jobs |
-
-## Size limits
-
-| Plan | Max file size | Max files |
-|------|---------------|-----------|
-| Free | 10 MB | 100 |
-| Pro | 100 MB | 10,000 |
-| Enterprise | 1 GB | Unlimited |
-
-## Using files in agent runs
-
-Reference uploaded files by ID in agent run context:
-
-```typescript
-const run = await client.agents.run(agentId, {
-  input: 'Analyze this dataset',
-  context: {
-    files: ['file_abc123'],
-  },
-});
+```json
+{
+  "object": "list",
+  "data": [
+    {
+      "id": "file_abc123",
+      "object": "file",
+      "bytes": 1024,
+      "created_at": 1723500000,
+      "filename": "report.pdf",
+      "purpose": "assistants",
+      "status": "processed",
+      "content_type": "application/pdf"
+    }
+  ]
+}
 ```
 
-The agent can read the file content using the `str_replace_editor` or `bash` tools.
+## Retrieve a file
+
+```bash
+curl https://api.allternit.com/v1/files/file_abc123 \
+  -H "Authorization: Bearer $ALLTERNIT_API_KEY"
+```
+
+The response includes the base64-encoded file content in the `data` field.
+
+```json
+{
+  "id": "file_abc123",
+  "object": "file",
+  "bytes": 1024,
+  "created_at": 1723500000,
+  "filename": "report.pdf",
+  "purpose": "assistants",
+  "status": "processed",
+  "content_type": "application/pdf",
+  "data": "JVBERi0xLjQK..."
+}
+```
+
+## Delete a file
+
+```bash
+curl -X DELETE https://api.allternit.com/v1/files/file_abc123 \
+  -H "Authorization: Bearer $ALLTERNIT_API_KEY"
+```
+
+```json
+{
+  "id": "file_abc123",
+  "object": "file",
+  "deleted": true
+}
+```
+
+## Content types
+
+The gateway detects the MIME type from the filename extension:
+
+| Extension | Content type |
+|-----------|--------------|
+| `.pdf` | `application/pdf` |
+| `.json`, `.jsonl` | `application/json` |
+| `.txt`, `.log` | `text/plain` |
+| `.csv` | `text/csv` |
+| `.png` | `image/png` |
+| `.jpg`, `.jpeg` | `image/jpeg` |
+| `.gif` | `image/gif` |
+| `.webp` | `image/webp` |
+| `.svg` | `image/svg+xml` |
+| `.mp3` | `audio/mpeg` |
+| `.wav` | `audio/wav` |
+| `.mp4` | `video/mp4` |
+| `.zip` | `application/zip` |
+| other | `application/octet-stream` |
+
+## Using files in completions
+
+Reference an uploaded file by id in a chat-completion message part:
+
+```json
+{
+  "model": "auto",
+  "messages": [
+    {
+      "role": "user",
+      "content": [
+        {"type": "text", "text": "Summarize this document."},
+        {"type": "file_id", "file_id": "file_abc123"}
+      ]
+    }
+  ]
+}
+```
+
+The gateway resolves `file_id` references to inline data before forwarding the request to the runtime.
+
+## Error codes
+
+| HTTP status | Code | Meaning |
+|-------------|------|---------|
+| 400 | `allternit.invalid_request` | Invalid base64, empty file, or invalid `purpose`. |
+| 401 | `allternit.authentication_failed` | Missing or invalid API key. |
+| 404 | `allternit.invalid_request` | File not found. |
+| 429 | `allternit.rate_limited` | Per-key rate limit exceeded. |
+| 429 | `allternit.budget_exceeded` | Monthly key or tenant budget exhausted. |
+| 500 | `allternit.internal_error` | Internal gateway error. |
+
+## Related pages
+
+- [Chat Completions](/api/chat-completions) — reference files in messages
+- [Batches](/api/batches) — use files as batch inputs
+- [Embeddings](/api/embeddings) — embed text from files

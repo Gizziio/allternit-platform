@@ -157,6 +157,65 @@ impl PtyManager {
     }
 }
 
+/// Recursively send `signal` to every descendant of `pid`, then to `pid`
+/// itself. Background jobs started by an interactive shell create their own
+/// process groups, so a single process-group kill leaves them orphaned; a
+/// tree walk ensures they are terminated too.
+#[cfg(unix)]
+fn kill_process_tree(pid: u32, signal: libc::c_int) {
+    let pids = collect_process_tree(pid);
+    // Kill children first so they are not reparented to init and lost.
+    for p in pids.iter().rev() {
+        unsafe {
+            let _ = libc::kill(*p as libc::pid_t, signal);
+        }
+    }
+}
+
+#[cfg(unix)]
+fn collect_process_tree(pid: u32) -> Vec<u32> {
+    let mut tree = vec![pid];
+    let mut i = 0;
+    while i < tree.len() {
+        let parent = tree[i];
+        if let Some(children) = process_children(parent) {
+            for child in children {
+                if !tree.contains(&child) {
+                    tree.push(child);
+                }
+            }
+        }
+        i += 1;
+    }
+    tree
+}
+
+#[cfg(unix)]
+fn process_children(pid: u32) -> Option<Vec<u32>> {
+    // Prefer the kernel children file on Linux; fall back to pgrep elsewhere.
+    let path = format!("/proc/{}/task/{}/children", pid, pid);
+    if let Ok(raw) = std::fs::read_to_string(&path) {
+        let children: Vec<u32> = raw
+            .split_whitespace()
+            .filter_map(|s| s.parse().ok())
+            .collect();
+        return Some(children);
+    }
+
+    let output = std::process::Command::new("pgrep")
+        .args(["-P", &pid.to_string()])
+        .output()
+        .ok()?;
+    if !output.status.success() {
+        return None;
+    }
+    let children: Vec<u32> = String::from_utf8_lossy(&output.stdout)
+        .split_whitespace()
+        .filter_map(|s| s.parse().ok())
+        .collect();
+    Some(children)
+}
+
 #[allow(clippy::too_many_arguments)]
 fn run_pty_task(
     program: String,
@@ -271,9 +330,26 @@ fn run_pty_task(
     });
 
     // Reaper: wait for exit or kill request.
+    // When killing, terminate the entire process tree so background jobs
+    // spawned by the shell (npm run dev, docker, etc.) don't outlive the pane.
+    let pid = child.process_id();
+    let mut kill_sent_at: Option<std::time::Instant> = None;
     let exit_code = loop {
         if kill_flag.load(Ordering::Relaxed) {
-            let _ = child.kill();
+            if kill_sent_at.is_none() {
+                kill_sent_at = Some(std::time::Instant::now());
+                if let Some(pid) = pid {
+                    kill_process_tree(pid, libc::SIGTERM);
+                }
+                let _ = child.kill();
+            } else if kill_sent_at.unwrap().elapsed() > Duration::from_millis(500) {
+                // Escalate to SIGKILL for the whole tree if SIGTERM didn't
+                // finish things quickly enough.
+                if let Some(pid) = pid {
+                    kill_process_tree(pid, libc::SIGKILL);
+                }
+                let _ = child.kill();
+            }
         }
         match child.try_wait() {
             Ok(Some(status)) => break status.exit_code() as i32,

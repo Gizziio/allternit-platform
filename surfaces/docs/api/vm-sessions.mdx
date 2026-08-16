@@ -1,0 +1,168 @@
+---
+title: 'VM Sessions API'
+description: 'Provision long-lived VM sessions, execute commands inside them, and destroy them when finished.'
+---
+
+## Overview
+
+The VM Sessions API provisions long-lived virtual machine sessions where the VM stays alive across multiple command executions. This preserves filesystem state, installed packages, and running processes between calls, unlike one-shot sandbox execution.
+
+## Base URL
+
+```
+https://api.allternit.com/vm-session
+```
+
+All endpoints require a valid Bearer token in the `Authorization` header. See [Authentication](/api/authentication) for details.
+
+## Endpoints
+
+| Method | Path | Description |
+|--------|------|-------------|
+| POST | `/vm-session` | Provision a new VM session. |
+| GET | `/vm-session/:session_id` | Get session status. |
+| POST | `/vm-session/:session_id/execute` | Execute a command inside the live VM. |
+| DELETE | `/vm-session/:session_id` | Destroy the VM session. |
+
+## Provision VM session
+
+```bash
+POST /vm-session
+```
+
+Request body:
+
+```json
+{
+  "workdir": "/Users/dev/project",
+  "env": { "API_KEY": "secret" },
+  "network_enabled": true,
+  "cpu_cores": 2,
+  "memory_mb": 4096,
+  "git_remote": "https://github.com/allternit/project",
+  "git_branch": "main",
+  "ssh_key_b64": null,
+  "extra_packages": ["htop"],
+  "skip_bootstrap": false,
+  "exa_api_key": null,
+  "gizzi_server_url": "http://192.168.64.1:3000",
+  "config_dir": "/Users/dev/.gizzi",
+  "extra_env": { "NODE_ENV": "development" }
+}
+```
+
+Field reference:
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `workdir` | string | Absolute host path to share into the VM at `/workspace`. |
+| `env` | object | Environment variables available to all execs. |
+| `network_enabled` | boolean | Allow outbound internet access. Default `true`. |
+| `cpu_cores` | number | CPU cores allocated. Default `2`. |
+| `memory_mb` | integer | Memory in MB. Default `4096`. |
+| `git_remote` | string? | Git remote to clone into `/workspace`. |
+| `git_branch` | string? | Branch or ref to checkout. |
+| `ssh_key_b64` | string? | Base64 PEM SSH private key for private repos. |
+| `extra_packages` | string[] | Additional apt packages to install. |
+| `skip_bootstrap` | boolean | Skip default toolchain bootstrap. |
+| `exa_api_key` | string? | API key for the WebSearch tool. |
+| `gizzi_server_url` | string? | Host URL reachable from inside the VM. |
+| `config_dir` | string? | Host config directory bind-mounted at `/gizzi-config`. |
+| `extra_env` | object | Additional environment variables. |
+
+Response:
+
+```json
+{
+  "session_id": "vm_2f8a9c4e5d3b",
+  "status": "running",
+  "workspace_path": "/workspace",
+  "vm_backed": true,
+  "git_cloned": true,
+  "bootstrap_log": "[gizzi-bootstrap] Bootstrap complete ..."
+}
+```
+
+If no VM driver is available on the API host, the endpoint returns `503 Service Unavailable` rather than falling back to unsandboxed execution.
+
+## Get session
+
+```bash
+GET /vm-session/vm_2f8a9c4e5d3b
+```
+
+Response:
+
+```json
+{
+  "id": "vm_2f8a9c4e5d3b",
+  "created_at": "2026-08-13T10:00:00Z",
+  "last_used": "2026-08-13T10:05:00Z",
+  "workdir": "/Users/dev/project",
+  "workspace_path": "/workspace",
+  "status": "running",
+  "git_cloned": true
+}
+```
+
+## Execute command
+
+```bash
+POST /vm-session/vm_2f8a9c4e5d3b/execute
+```
+
+Request body:
+
+```json
+{
+  "command": "cargo test",
+  "env": { "RUST_BACKTRACE": "1" },
+  "timeout_secs": 300,
+  "workdir": null
+}
+```
+
+Response:
+
+```json
+{
+  "exit_code": 0,
+  "stdout": "running 10 tests\n...",
+  "stderr": "",
+  "duration_ms": 15420,
+  "vm_backed": true
+}
+```
+
+## Destroy session
+
+```bash
+DELETE /vm-session/vm_2f8a9c4e5d3b
+```
+
+Response:
+
+```json
+{
+  "destroyed": true,
+  "session_id": "vm_2f8a9c4e5d3b"
+}
+```
+
+## Error codes
+
+| Status | Code | Description |
+|--------|------|-------------|
+| 200 | — | Success. |
+| 201 | — | VM session created. |
+| 404 | `not_found` | VM session not found. |
+| 409 | `conflict` | Session is not running. |
+| 503 | `service_unavailable` | No VM driver is available on this API host. |
+| 500 | `internal_error` | Unexpected server or driver error. |
+
+## Related links
+
+- [Authentication](/api/authentication)
+- [Sandbox API](/api/sandbox)
+- [Terminal API](/api/terminal)
+- [BYOC Runtime](/byoc/overview)

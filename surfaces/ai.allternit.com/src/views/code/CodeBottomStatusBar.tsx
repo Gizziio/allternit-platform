@@ -9,6 +9,8 @@ import { useDrawerStore } from '@/drawers/drawer.store';
 interface CodeBottomStatusBarProps {
   sessionMode: CodeSessionMode;
   onSessionModeChange: (mode: CodeSessionMode) => void;
+  onOpenTerminals?: () => void;
+  terminalsOpen?: boolean;
 }
 
 const BORDER = 'rgba(255, 255, 255, 0.08)';
@@ -25,6 +27,8 @@ const MODE_ITEMS: { id: CodeSessionMode; index: number }[] = [
 export function CodeBottomStatusBar({
   sessionMode,
   onSessionModeChange,
+  onOpenTerminals,
+  terminalsOpen = false,
 }: CodeBottomStatusBarProps): React.ReactNode {
   return (
     <div
@@ -38,7 +42,10 @@ export function CodeBottomStatusBar({
       }}
     >
       <ModeSelector sessionMode={sessionMode} onChange={onSessionModeChange} />
-      <ConsoleTab />
+      <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+        <TerminalsTab onClick={onOpenTerminals} isOpen={terminalsOpen} />
+        <ConsoleTab />
+      </div>
     </div>
   );
 }
@@ -77,6 +84,48 @@ function ConsoleTab() {
     >
       <Terminal size={14} />
       <span>Console</span>
+    </button>
+  );
+}
+
+function TerminalsTab({
+  onClick,
+  isOpen,
+}: {
+  onClick?: () => void;
+  isOpen: boolean;
+}) {
+  return (
+    <button
+      type="button"
+      role="tab"
+      aria-selected={isOpen}
+      aria-controls="code-terminal-canvas"
+      data-testid="code-bottom-status-terminals"
+      onClick={onClick}
+      disabled={!onClick}
+      style={{
+        height: 28,
+        position: 'relative',
+        display: 'inline-flex',
+        alignItems: 'center',
+        gap: 6,
+        padding: '0 9px',
+        border: `1px solid ${isOpen ? 'color-mix(in srgb, var(--accent-code) 45%, transparent)' : BORDER}`,
+        borderRadius: 999,
+        background: isOpen
+          ? 'color-mix(in srgb, var(--accent-code) 12%, transparent)'
+          : 'rgba(255, 255, 255, 0.025)',
+        color: isOpen ? TEXT_PRIMARY : TEXT_SECONDARY,
+        fontSize: 12,
+        fontWeight: isOpen ? 700 : 600,
+        cursor: onClick ? 'pointer' : 'default',
+        opacity: onClick ? 1 : 0.5,
+        transition: 'color 140ms ease, background 140ms ease',
+      }}
+    >
+      <Terminal size={14} />
+      <span>Terminals</span>
     </button>
   );
 }

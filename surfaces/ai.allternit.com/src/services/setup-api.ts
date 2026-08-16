@@ -165,7 +165,15 @@ export const setupApi = {
   },
 
   searchLocalModels(query: string, limit = 20): Promise<{
-    models: Array<{ repoId: string; downloads: number; likes: number }>;
+    models: Array<{
+      repoId: string;
+      downloads: number;
+      likes: number;
+      tags?: string[];
+      pipeline_tag?: string;
+      lastModified?: string;
+      sizeBytes?: number;
+    }>;
   }> {
     const qs = new URLSearchParams({ q: query, limit: String(limit) });
     return api.get(`/api/local-brain/models/search?${qs.toString()}`);

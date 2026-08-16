@@ -1,73 +1,332 @@
 ---
-title: MCP Tool Registry
-description: Attach external tools via the Model Context Protocol
+title: 'MCP Servers'
+description: 'Attach external tools and expose the Allternit registry via the Model Context Protocol'
 ---
 
 ## Overview
 
-The [Model Context Protocol (MCP)](https://modelcontextprotocol.io) is an open standard for connecting AI models to external tools and data sources. Allternit supports MCP servers on both the client side (attaching remote tools to an agent) and the server side (exposing Allternit tools to external MCP clients).
+The [Model Context Protocol (MCP)](https://modelcontextprotocol.io) is an open standard for connecting agents to external tools and data sources. Allternit supports MCP in three ways:
 
-## Attaching an MCP server
+1. **MCP connectors** — a persisted catalog of remote MCP servers.
+2. **Attached MCP servers** — live JSON-RPC proxies that register their tools into the Allternit dispatcher.
+3. **Allternit as an MCP server** — expose the native tool belt to external MCP clients.
 
-Configure MCP servers in the Gizzi Code `config.toml` or programmatically via the SDK:
+## Base URL
 
-```toml
-# ~/.config/gizzi-code/config.toml
+All MCP routes are mounted under:
 
-[[mcp.servers]]
-id = "github"
-command = "npx"
-args = ["-y", "@modelcontextprotocol/server-github"]
-env = { GITHUB_TOKEN = "${GITHUB_TOKEN}" }
-
-[[mcp.servers]]
-id = "filesystem"
-command = "npx"
-args = ["-y", "@modelcontextprotocol/server-filesystem", "/workspace"]
+```text
+https://api.allternit.com/mcp
 ```
 
-```typescript
-import { AllternitClient } from '@allternit/sdk';
+Local development:
 
-const client = new AllternitClient({ apiKey: process.env.ALLTERNIT_API_KEY });
-
-await client.mcp.attach({
-  serverId: 'github',
-  command: 'npx',
-  args: ['-y', '@modelcontextprotocol/server-github'],
-  env: { GITHUB_TOKEN: process.env.GITHUB_TOKEN! },
-});
+```text
+http://127.0.0.1:8013/mcp
 ```
 
 ## Tool naming
 
-Tools from an MCP server are namespaced under the server ID: `github.create_issue`, `filesystem.read_file`, etc. Namespaces prevent collisions with native tools and other MCP servers.
+Tools from an attached MCP server are namespaced under the server ID to avoid collisions:
 
-## Server-side: exposing Allternit tools
-
-You can also expose Allternit's native tools as an MCP server, making them available to any MCP-compatible client:
-
-```typescript
-import { NativeToolBelt } from '@allternit/sdk/ai-runtime/tools/search';
-import { ToolRegistry } from '@allternit/sdk/ai-runtime/tools';
-
-const registry = new ToolRegistry();
-const belt = new NativeToolBelt(registry, { workspaceRoot: process.cwd() });
-
-await belt.attachMcpServer({
-  serverId: 'allternit-tools',
-  listTools: async () => registry.getActiveTools().map(t => ({
-    name: t.name,
-    description: t.description,
-    inputSchema: t.input_schema,
-  })),
-  callTool: async (name, args) => {
-    const tool = registry.getTool(name);
-    if (!tool) throw new Error(`Unknown tool: ${name}`);
-    return tool.execute!(args, { callId: `mcp-${name}` });
-  },
-});
 ```
+github.create_issue
+filesystem.read_file
+```
+
+Native tools and server-side tools have no namespace prefix. When the MCP server surface receives a namespaced call, it dispatches to the attached server; otherwise it runs the tool through the native tool executor.
+
+## Authentication
+
+- Connector and attached-server REST routes use the standard Allternit session.
+- The `/mcp/server` JSON-RPC route also accepts optional tunnel-auth headers for mTLS/OAuth-gated deployments:
+  - `x-allternit-tunnel-id`
+  - `x-allternit-client-cert-thumbprint`
+  - `x-allternit-oauth-issuer`
+  - `x-allternit-oauth-audience`
+
+## Tunnel authentication
+
+When a request to `/mcp/server` includes `x-allternit-tunnel-id`, the gateway loads the tunnel's auth policy and enforces any configured checks. The policy is fail-closed: if a check is configured but not satisfied, the request is rejected with JSON-RPC error `-32001`.
+
+| Check | Header / claim | Failure |
+|-------|----------------|---------|
+| mTLS | `x-allternit-client-cert-thumbprint` | Missing cert or thumbprint mismatch |
+| OAuth issuer | `iss` claim from bearer token | Missing or mismatched issuer |
+| OAuth audience | `aud` claim from bearer token | Mismatched audience |
+
+Issuer comparison is case-insensitive and ignores a trailing slash. If no audience is configured, any audience is accepted.
+
+## REST endpoints
+
+| Method | Path | Description |
+|--------|------|-------------|
+| GET | `/mcp/connectors` | List persisted MCP connectors |
+| POST | `/mcp/connectors` | Create a new MCP connector |
+| POST | `/mcp/test` | Probe an MCP server URL |
+| GET | `/mcp/servers` | List currently attached MCP servers |
+| POST | `/mcp/servers` | Attach and sync an MCP server |
+| GET | `/mcp/servers/:id` | Get one attached server with its tool catalog |
+| DELETE | `/mcp/servers/:id` | Detach an MCP server |
+| GET | `/mcp/oauth/callback` | OAuth authorization-code callback |
+
+### List connectors
+
+```bash
+curl -X GET http://127.0.0.1:8013/mcp/connectors \
+  -H "Authorization: Bearer <token>"
+```
+
+Response:
+
+```json
+{
+  "connectors": [
+    {
+      "id": "conn_123",
+      "name": "GitHub",
+      "name_id": "github",
+      "url": "https://github-mcp.example.com/mcp",
+      "type": "http",
+      "oauth_client_id": null,
+      "enabled": true,
+      "created_at": "2026-04-01T12:00:00Z",
+      "updated_at": "2026-04-01T12:00:00Z"
+    }
+  ],
+  "total": 1
+}
+```
+
+### Create a connector
+
+```bash
+curl -X POST http://127.0.0.1:8013/mcp/connectors \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer <token>" \
+  -d '{
+    "name": "GitHub",
+    "name_id": "github",
+    "url": "https://github-mcp.example.com/mcp",
+    "type": "http",
+    "oauth_client_id": "Ov23li...",
+    "oauth_client_secret": "..."
+  }'
+```
+
+Response (HTTP 201):
+
+```json
+{
+  "id": "conn_123",
+  "status": "created"
+}
+```
+
+### Test a connection
+
+```bash
+curl -X POST http://127.0.0.1:8013/mcp/test \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer <token>" \
+  -d '{"url":"https://github-mcp.example.com"}'
+```
+
+Response:
+
+```json
+{
+  "success": true,
+  "message": "MCP server responded successfully",
+  "info": { "name": "github-mcp", "version": "1.0.0" }
+}
+```
+
+### Attach a server
+
+Attaching a server initializes an MCP session, fetches its tool catalog, and caches it in the dispatcher.
+
+```bash
+curl -X POST http://127.0.0.1:8013/mcp/servers \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer <token>" \
+  -d '{
+    "id": "github",
+    "url": "https://github-mcp.example.com/mcp",
+    "headers": { "Authorization": "Bearer <mcp-token>" }
+  }'
+```
+
+Response (HTTP 201):
+
+```json
+{
+  "id": "github",
+  "url": "https://github-mcp.example.com/mcp",
+  "tools": ["github.create_issue", "github.search_issues"]
+}
+```
+
+### List attached servers
+
+```bash
+curl -X GET http://127.0.0.1:8013/mcp/servers \
+  -H "Authorization: Bearer <token>"
+```
+
+Response:
+
+```json
+{
+  "servers": [
+    { "id": "github", "url": "https://github-mcp.example.com/mcp", "tools": 2 }
+  ],
+  "total": 1
+}
+```
+
+### Detach a server
+
+```bash
+curl -X DELETE http://127.0.0.1:8013/mcp/servers/github \
+  -H "Authorization: Bearer <token>"
+```
+
+Response:
+
+```json
+{ "id": "github", "status": "detached" }
+```
+
+### OAuth callback
+
+The OAuth callback route renders an HTML result page. It is called by the OAuth provider after the user authorizes a connector. The handler exchanges the authorization code for tokens when a token endpoint is discoverable.
+
+```
+GET /mcp/oauth/callback?code=abc123&state=xyz
+```
+
+On success the browser receives a page confirming the connection.
+
+## MCP server surface
+
+Allternit can also expose its tool registry as an MCP server at `/mcp/server`. The endpoint speaks JSON-RPC over plain HTTP POST. It supports single requests (not batches) and is stateless.
+
+### Methods
+
+| Method | Description |
+|--------|-------------|
+| `initialize` | Exchange protocol version and capabilities |
+| `ping` | Health check |
+| `tools/list` | List all available tools, including attached MCP server tools |
+| `tools/call` | Execute a tool by name |
+
+### Initialize
+
+```bash
+curl -X POST http://127.0.0.1:8013/mcp/server \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer <token>" \
+  -d '{
+    "jsonrpc": "2.0",
+    "id": 1,
+    "method": "initialize",
+    "params": {
+      "protocolVersion": "2025-03-26",
+      "capabilities": {},
+      "clientInfo": { "name": "example-client", "version": "1.0.0" }
+    }
+  }'
+```
+
+Response:
+
+```json
+{
+  "jsonrpc": "2.0",
+  "id": 1,
+  "result": {
+    "protocolVersion": "2025-03-26",
+    "capabilities": { "tools": {} },
+    "serverInfo": { "name": "allternit-api", "version": "0.1.0" }
+  }
+}
+```
+
+### List tools
+
+```bash
+curl -X POST http://127.0.0.1:8013/mcp/server \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer <token>" \
+  -d '{
+    "jsonrpc": "2.0",
+    "id": 2,
+    "method": "tools/list",
+    "params": {}
+  }'
+```
+
+Response:
+
+```json
+{
+  "jsonrpc": "2.0",
+  "id": 2,
+  "result": {
+    "tools": [
+      {
+        "name": "bash",
+        "description": "Execute a shell command on the allternit-api host.",
+        "inputSchema": {
+          "type": "object",
+          "properties": { "command": { "type": "string" } },
+          "required": ["command"]
+        }
+      },
+      {
+        "name": "github.create_issue",
+        "description": "Create a GitHub issue",
+        "inputSchema": { "type": "object", "properties": { "title": { "type": "string" } } }
+      }
+    ]
+  }
+}
+```
+
+### Call a tool
+
+```bash
+curl -X POST http://127.0.0.1:8013/mcp/server \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer <token>" \
+  -d '{
+    "jsonrpc": "2.0",
+    "id": 3,
+    "method": "tools/call",
+    "params": {
+      "name": "bash",
+      "arguments": { "command": "echo hello" }
+    }
+  }'
+```
+
+Response:
+
+```json
+{
+  "jsonrpc": "2.0",
+  "id": 3,
+  "result": {
+    "content": [
+      { "type": "text", "text": "{\"stdout\":\"hello\\n\",\"stderr\":\"\",\"exit_code\":0,\"success\":true}" }
+    ],
+    "isError": false
+  }
+}
+```
+
+If the tool name contains a `.`, the dispatcher first tries the attached MCP server namespace; otherwise the native tool executor is used. Errors are returned with `isError: true` rather than a JSON-RPC error object.
 
 ## Bundled vs remote servers
 
@@ -78,8 +337,22 @@ await belt.attachMcpServer({
 
 For production deployments, prefer remote MCP servers with tunnel-based authentication.
 
-## Security
+## Error codes
 
-- MCP server processes run with the same permissions as the host process.
-- Environment variables passed via `env` are not logged or persisted.
-- Tool arguments are validated against the declared schema before execution.
+| HTTP | Code / Message | Meaning |
+|------|----------------|---------|
+| 200 | — | Successful REST or JSON-RPC result |
+| 201 | — | Connector or server attached successfully |
+| 400 | `Invalid MCP callback` | Missing OAuth `code` or `state` |
+| 401 | `Unauthorized` | Missing or invalid session |
+| 404 | `server_not_found` | Attached server ID not found |
+| 502 | `attach_failed` | Could not reach or initialize the remote MCP server |
+| -32001 | `MCP tunnel auth failed` | Tunnel mTLS/OAuth check failed |
+| -32601 | `Method not found` | Unknown JSON-RPC method |
+
+## Related pages
+
+- [Native Tool Belt](/tools/tool-belt)
+- [Server Tools](/tools/server-tools)
+- [Build a Custom Tool](/tools/build-a-tool)
+- [Cloud Sandboxes](/tools/sandbox)

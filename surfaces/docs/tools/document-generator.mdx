@@ -1,0 +1,143 @@
+---
+title: 'Document Generator'
+description: 'Generate academic and office artifacts through the Allternit Document Generator service.'
+---
+
+## Overview
+
+The **Allternit Document Generator** is a FastAPI service that generates office artifacts such as photo-card decks, study guides, and rubric spreadsheets. Generated files can be returned directly or uploaded to a configured document store.
+
+## Base URL
+
+Local development:
+
+```text
+http://127.0.0.1:8000
+```
+
+When deployed behind the Allternit platform gateway:
+
+```text
+https://api.allternit.com/api/documents
+```
+
+## Authentication
+
+All action endpoints require the `X-API-Key` header:
+
+```text
+X-API-Key: your-secret-api-key
+```
+
+## Endpoints
+
+| Method | Path | Description |
+|--------|------|-------------|
+| GET | `/health` | Health check |
+| POST | `/actions/generatePhotoCardDeck` | Generate a PPTX photo-card deck |
+| POST | `/actions/generateStudyGuide` | Generate a DOCX or PDF study guide |
+| POST | `/actions/generateRubricSpreadsheet` | Generate an XLSX rubric or tracker |
+
+## JSON examples
+
+### Generate a photo-card deck
+
+```bash
+curl -X POST http://127.0.0.1:8000/actions/generatePhotoCardDeck \
+  -H 'X-API-Key: your-secret-api-key' \
+  -H 'content-type: application/json' \
+  -d '{
+    "title": "Solar System",
+    "cards": [
+      { "term": "Mercury", "definition": "Closest planet to the Sun" },
+      { "term": "Venus", "definition": "Second planet from the Sun" }
+    ]
+  }'
+```
+
+Response:
+
+```json
+{
+  "success": true,
+  "download_url": "https://sharepoint.example.com/files/solar-system.pptx",
+  "format": "pptx",
+  "created_at": "2026-08-13T19:00:00.000Z"
+}
+```
+
+### Generate a study guide
+
+```bash
+curl -X POST http://127.0.0.1:8000/actions/generateStudyGuide \
+  -H 'X-API-Key: your-secret-api-key' \
+  -H 'content-type: application/json' \
+  -d '{
+    "title": "Biology 101",
+    "sections": [
+      { "heading": "Cell Structure", "content": "Cells are the basic unit of life." }
+    ],
+    "format": "pdf"
+  }'
+```
+
+Response:
+
+```json
+{
+  "success": true,
+  "download_url": "https://sharepoint.example.com/files/biology-101.pdf",
+  "format": "pdf",
+  "created_at": "2026-08-13T19:00:00.000Z"
+}
+```
+
+### Generate a rubric spreadsheet
+
+```bash
+curl -X POST http://127.0.0.1:8000/actions/generateRubricSpreadsheet \
+  -H 'X-API-Key: your-secret-api-key' \
+  -H 'content-type: application/json' \
+  -d '{
+    "title": "Essay Rubric",
+    "criteria": [
+      { "name": "Thesis", "points": 25 },
+      { "name": "Evidence", "points": 25 }
+    ]
+  }'
+```
+
+Response:
+
+```json
+{
+  "success": true,
+  "download_url": "https://sharepoint.example.com/files/essay-rubric.xlsx",
+  "format": "xlsx",
+  "created_at": "2026-08-13T19:00:00.000Z"
+}
+```
+
+## Configuration
+
+| Variable | Purpose |
+|----------|---------|
+| `API_KEY` | Secret key for API authentication |
+| `TENANT_ID` | Microsoft tenant ID for document store integration |
+| `CLIENT_ID` | Microsoft app client ID |
+| `CLIENT_SECRET` | Microsoft app client secret |
+
+## Error codes
+
+| HTTP | Code | Meaning |
+|------|------|---------|
+| 200 | — | Success |
+| 400 | `bad_request` | Invalid payload |
+| 401 | `unauthorized` | Missing or invalid `X-API-Key` |
+| 422 | `generation_failed` | Artifact generation failed |
+| 500 | `internal_error` | Unexpected server error |
+
+## Related pages
+
+- [Office Engine](/tools/office-engine)
+- [Native Tool Belt](/tools/tool-belt)

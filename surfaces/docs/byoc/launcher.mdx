@@ -1,0 +1,96 @@
+---
+title: 'Platform Launcher'
+description: 'Single-binary launcher that embeds the Allternit API and UI assets.'
+---
+
+## Overview
+
+The Allternit Platform Launcher is a single-binary distribution of the Allternit platform. It embeds the Rust `allternit-api` binary and the static UI assets from `surfaces/ai.allternit.com`, then self-extracts to the user's cache directory on first run. This gives users a true double-clickable executable that starts both the API server and the local UI.
+
+The launcher lives in `cmd/launcher` and is published as `allternit-platform-launcher`.
+
+## Why a standalone launcher?
+
+- `include_bytes!` and `include_dir!` require the embedded artifacts to exist at compile time.
+- Keeping the launcher crate outside the root workspace lets `cargo check --workspace` pass without requiring every developer to build the full UI and API binary first.
+- Users get one file that starts the complete platform locally.
+
+## Embed pipeline
+
+The launcher embeds two artifacts:
+
+1. `embed/allternit-api` — the compiled `allternit-api` release binary.
+2. `embed/ui` — the built static UI assets.
+
+### Build the artifacts
+
+```bash
+./cmd/launcher/script/build-embed.sh
+```
+
+This script:
+
+- Builds `allternit-api` in release mode.
+- Builds the UI with `pnpm install && pnpm build`.
+- Copies both artifacts into `cmd/launcher/embed/`.
+
+### Build the launcher
+
+```bash
+cd cmd/launcher
+cargo build --release -p allternit-platform-launcher
+```
+
+The resulting binary is at `target/release/allternit-platform-launcher`.
+
+## Runtime behavior
+
+On first run, the launcher:
+
+1. Creates a persistent cache directory (for example, `~/.cache/allternit-platform` on macOS).
+2. Extracts the API binary and UI assets to the cache directory.
+3. Starts the API server on `127.0.0.1:3010`.
+4. Starts a minimal static-file UI server on `127.0.0.1:3456`.
+5. Opens the user's browser to the UI.
+
+On subsequent runs, the launcher reuses the cached extraction if the binary size matches the embedded artifact.
+
+## Default ports
+
+| Service | Default port |
+|---------|--------------|
+| API | `3010` |
+| UI | `3456` |
+
+## Environment variables
+
+The launcher sets the following environment variables for the API child process:
+
+| Variable | Value | Purpose |
+|----------|-------|---------|
+| `ALLTERNIT_OPERATOR_URL` | `http://127.0.0.1:3010` | API self-reference. |
+| `ALLTERNIT_DATA_DIR` | `<cache>/data` | Local data directory. |
+| `RUST_LOG` | `info` | Logging level. |
+
+## Stopping the launcher
+
+Press `Ctrl+C` in the terminal. The launcher sends SIGTERM to the API child process and exits cleanly. The cache directory is intentionally not deleted so the next startup is faster.
+
+## Logs and troubleshooting
+
+The API process writes logs to stdout/stderr, which the launcher pipes through. Check the terminal output for startup errors.
+
+Common issues:
+
+| Symptom | Cause | Fix |
+|---------|-------|-----|
+| `API failed to start within 15 seconds` | Port conflict or API crash. | Check ports `3010` and `3456` are free. |
+| UI shows connection error | API not healthy. | Review API logs in the launcher terminal. |
+| Binary size mismatch on every run | Cache directory permissions. | Remove `~/.cache/allternit-platform` and retry. |
+
+## Related pages
+
+- [BYOC Overview](/byoc/overview)
+- [BYOC Installation](/byoc/installation)
+- [Cloud API](/api/cloud-api)
+- [Gizzi Code CLI](/cli/overview)

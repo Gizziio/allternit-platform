@@ -1,0 +1,130 @@
+---
+title: Data Loss Prevention
+description: Secret scanning and injection detection for the Allternit LLM gateway
+---
+
+## Overview
+
+The Allternit LLM gateway includes built-in Data Loss Prevention (DLP) middleware that scans request and response bodies for secrets, credentials, and prompt-injection attempts. DLP runs after virtual-key authentication and rate limiting, but before the budget check and provider routing, so sensitive data is caught before any spend occurs.
+
+## How DLP works
+
+1. The gateway buffers the request body (up to 16 MB).
+2. Pattern matchers scan text for known secret types and injection heuristics.
+3. Each match is assigned an action: `block`, `redact`, or `warn`.
+4. Blocked requests return a `content_policy_violation` error and are recorded in usage events with status `dlp_blocked`.
+5. Redacted requests continue, with matched secrets replaced by placeholders.
+6. Warned requests continue, with a warning header returned to the caller.
+
+## Built-in secret patterns
+
+| Pattern | Example match |
+|---------|---------------|
+| AWS access key | `AKIA...` |
+| AWS secret key | Base64 secret when "aws" appears nearby |
+| GitHub token | `ghp_...`, `gho_...`, `github_pat_...` |
+| Provider API keys | Virtual keys and third-party provider API keys |
+| Slack token | `xoxb-...`, `xoxp-...` |
+| PEM private key | `-----BEGIN PRIVATE KEY-----` |
+| JWT | `eyJ...` JSON Web Tokens |
+| US Social Security number | `123-45-6789` (with SSA validation) |
+| Credit card number | 16-digit numbers passing Luhn validation |
+
+Secrets are never logged in plaintext. The gateway records only the pattern id and a SHA-256 hash of the matched bytes.
+
+## Injection heuristics
+
+The DLP layer also scores messages for prompt-injection and jailbreak attempts:
+
+| Heuristic | Weight | Description |
+|-----------|--------|-------------|
+| Instruction override | 2 | Phrases that attempt to override system instructions. |
+| Chat markup delimiter | 3 | Delimiters such as `\<|im_start|>`, `[INST]`, or similar sequence-breakers. |
+| Base64 blob | 2 | Base64-encoded blobs longer than 400 characters that decode successfully. Capped at 4. |
+
+Default thresholds:
+
+| Action | Threshold |
+|--------|-----------|
+| Warn | score ≥ 2 |
+| Block | score ≥ 5 |
+
+## Actions
+
+| Action | Behavior | HTTP response |
+|--------|----------|---------------|
+| `block` | Reject the request. | `400` with `allternit.content_policy_violation` |
+| `redact` | Replace matched secrets with `[REDACTED]`. | Continues with `x-allternit-dlp: redacted` |
+| `warn` | Allow the request and add a warning header. | Continues with `x-allternit-dlp: warned` |
+
+## Configuration
+
+Administrators can manage custom DLP rules through the LLM gateway admin API. The default action for built-in patterns is controlled by the environment variable `ALLTERNIT_DLP_DEFAULT_ACTION` (`block`, `redact`, or `warn`).
+
+### Environment variables
+
+| Variable | Values | Default | Description |
+|----------|--------|---------|-------------|
+| `ALLTERNIT_DLP_DEFAULT_ACTION` | `block`, `redact`, `warn` | `block` | Default action for built-in pattern matches. |
+| `ALLTERNIT_DLP_INJECTION_WARN_THRESHOLD` | integer | `2` | Score at which to warn on injection heuristics. |
+| `ALLTERNIT_DLP_INJECTION_BLOCK_THRESHOLD` | integer | `5` | Score at which to block on injection heuristics. |
+
+## Admin DLP rules
+
+Organization admins can list and update custom rules at `/api/v1/gateway/dlp/rules`.
+
+### List rules
+
+```bash
+curl https://api.allternit.com/api/v1/gateway/dlp/rules \
+  -H "Authorization: Bearer $ALLTERNIT_TOKEN"
+```
+
+```json
+{
+  "rules": [
+    {
+      "id": "rule_abc123",
+      "name": "custom-internal-token",
+      "pattern": "internal_[a-z0-9]{32}",
+      "action": "block",
+      "enabled": true
+    }
+  ],
+  "default_action": "block"
+}
+```
+
+### Create or update a rule
+
+```bash
+curl -X PUT https://api.allternit.com/api/v1/gateway/dlp/rules \
+  -H "Authorization: Bearer $ALLTERNIT_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "name": "custom-internal-token",
+    "pattern": "internal_[a-z0-9]{32}",
+    "action": "block",
+    "enabled": true
+  }'
+```
+
+## Response-side DLP
+
+For non-streaming chat completions, the gateway can also scan the assistant response. When response-side redaction occurs, the header `x-allternit-dlp-response: redacted` is included.
+
+## Error codes
+
+| HTTP status | Code | Meaning |
+|-------------|------|---------|
+| 400 | `allternit.content_policy_violation` | Request blocked by DLP or safety classifier. |
+| 400 | `allternit.invalid_request` | Malformed DLP rule. |
+| 403 | `allternit.insufficient_role` | Caller is not an organization owner or admin. |
+| 404 | `allternit.not_found` | DLP rule not found. |
+| 500 | `allternit.internal_error` | Internal gateway error. |
+
+## Related pages
+
+- [Security overview](/security/overview) — security model and controls
+- [Inference hooks](/security/inference-hooks) — custom pre/post-processing hooks
+- [Admin gateway](/admin/gateway) — LLM gateway administration endpoints

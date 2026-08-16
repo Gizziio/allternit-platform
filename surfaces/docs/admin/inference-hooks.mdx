@@ -1,36 +1,100 @@
 ---
 title: Inference Hooks
-description: Pre/post middleware for every LLM request in your organization.
+description: Manage organization-scoped LLM inference hooks through the Allternit admin API
 ---
 
-# Inference Hooks
+## Overview
 
-Inference hooks let you inspect, mutate, or reject LLM requests and responses at the organization level. They are useful for:
+Inference hooks let organization owners and admins attach custom HTTP endpoints that run immediately before and after LLM inference. Pre-hooks can inspect and mutate the request body; post-hooks can inspect and mutate the final response. This page focuses on the admin API for configuring hooks.
 
-- PII redaction
-- Custom guardrails
-- Logging to a SIEM
-- Request/response transformation
+For a detailed explanation of hook behavior, payload format, and signature verification, see [Security: Inference Hooks](/security/inference-hooks).
 
-## Hook types
+## Base URL
 
-| Type | Timing | Can mutate? | Can reject? |
-|------|--------|-------------|-------------|
-| `pre_request` | Before sending to provider | Yes | Yes |
-| `post_response` | After receiving response | Yes | Yes |
+```
+https://api.allternit.com/api/v1/gateway
+```
 
-## Configuration
+## Endpoints
 
-Configure hooks via `/api/v1/admin/inference-hooks`:
+| Method | Path | Description |
+|--------|------|-------------|
+| `GET` | `/api/v1/gateway/inference-hooks` | Get current hook configuration |
+| `PUT` / `POST` | `/api/v1/gateway/inference-hooks` | Create or update hook configuration |
+| `DELETE` | `/api/v1/gateway/inference-hooks` | Remove hook configuration |
+
+## Authentication
+
+All endpoints require a Clerk JWT and organization owner or admin role.
+
+```bash
+curl https://api.allternit.com/api/v1/gateway/inference-hooks \
+  -H "Authorization: Bearer $ALLTERNIT_TOKEN"
+```
+
+## Get configuration
+
+```bash
+curl https://api.allternit.com/api/v1/gateway/inference-hooks \
+  -H "Authorization: Bearer $ALLTERNIT_TOKEN"
+```
 
 ```json
 {
-  "name": "pii-guard",
-  "url": "https://hooks.example.com/guard",
-  "type": "pre_request",
-  "signature_secret": "whsec_xxx",
-  "timeout_ms": 5000
+  "organization_id": "org_01J",
+  "pre_inference_url": "https://hooks.example.com/pre",
+  "post_inference_url": "https://hooks.example.com/post",
+  "abort_on_pre_error": true,
+  "hook_secret": "a1b2c3d4-e5f6-7890-abcd-ef1234567890"
 }
 ```
 
-All hook payloads are signed with HMAC-SHA256 using the configured secret.
+## Set configuration
+
+```bash
+curl -X PUT https://api.allternit.com/api/v1/gateway/inference-hooks \
+  -H "Authorization: Bearer $ALLTERNIT_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "pre_inference_url": "https://hooks.example.com/pre",
+    "post_inference_url": "https://hooks.example.com/post",
+    "abort_on_pre_error": true
+  }'
+```
+
+If no hook secret exists, one is generated automatically and returned in the response.
+
+## Remove configuration
+
+```bash
+curl -X DELETE https://api.allternit.com/api/v1/gateway/inference-hooks \
+  -H "Authorization: Bearer $ALLTERNIT_TOKEN"
+```
+
+```json
+{
+  "deleted": true,
+  "organization_id": "org_01J"
+}
+```
+
+## Request body fields
+
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| `pre_inference_url` | string | no | URL called before inference. |
+| `post_inference_url` | string | no | URL called after inference. |
+| `abort_on_pre_error` | boolean | no | When `true`, non-2xx pre-hook responses abort the request. |
+
+## Error codes
+
+| HTTP status | Code | Meaning |
+|-------------|------|---------|
+| 400 | `allternit.invalid_request` | Malformed hook URL or missing organization. |
+| 403 | `allternit.insufficient_role` | Caller is not an owner or admin. |
+| 500 | `allternit.internal_error` | Internal gateway error. |
+
+## Related pages
+
+- [Security: Inference Hooks](/security/inference-hooks) — detailed behavior, payload examples, and signature verification
+- [LLM Gateway Admin](/admin/gateway) — other gateway administration endpoints

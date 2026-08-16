@@ -48,7 +48,7 @@ export const COWORK_RAIL_CONFIG: RailConfigSection[] = [
     items: [
       {
         id: 'cw-agent-hub',
-        label: 'Agent Hub',
+        label: 'Agent | Bot Hub',
         icon: Robot,
         payload: 'agent-hub',
         shortcut: '⌘⇧A'

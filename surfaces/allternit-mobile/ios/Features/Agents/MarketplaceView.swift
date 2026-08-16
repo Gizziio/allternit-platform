@@ -1,7 +1,8 @@
 import SwiftUI
 
-/// Agent marketplace — browse/search/install/rate shared agents
-/// (PalsHub-equivalent). Reached from AgentHubView's "Discover" entry point.
+/// Agent | bot marketplace — browse/search/install/rate shared agents
+/// and bots (PalsHub-equivalent). Reached from AgentHubView's "Discover"
+/// entry point.
 struct MarketplaceView: View {
     @StateObject private var store = MarketplaceStore.shared
     @State private var searchText = ""
@@ -18,7 +19,7 @@ struct MarketplaceView: View {
                     .font(.caption)
                     .foregroundColor(Theme.statusWarning)
             } else if store.listings.isEmpty {
-                Text("No published agents yet.")
+                Text("No published agents or bots yet.")
                     .font(.caption)
                     .foregroundColor(Color("TextSecondary"))
             } else {
@@ -32,7 +33,7 @@ struct MarketplaceView: View {
         .listStyle(.insetGrouped)
         .scrollContentBackground(.hidden)
         .background(Color("BgPrimary"))
-        .navigationTitle("Discover Agents")
+        .navigationTitle("Discover agents | bots")
         .navigationBarTitleDisplayMode(.inline)
         .searchable(text: $searchText, prompt: "Search agents")
         .onChange(of: searchText) { _, newValue in

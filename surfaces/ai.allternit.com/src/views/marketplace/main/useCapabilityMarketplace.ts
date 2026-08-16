@@ -181,6 +181,13 @@ const INITIAL_CAPABILITIES: MarketplaceCapability[] = [
   },
 ];
 
+export interface SettlementState {
+  capabilityId: string;
+  status: 'pending' | 'processing' | 'completed' | 'failed';
+  error?: string;
+  txRef?: string;
+}
+
 export function useCapabilityMarketplace() {
   const [capabilities] = useState<MarketplaceCapability[]>(INITIAL_CAPABILITIES);
   const [installedIds, setInstalledIds] = useState<Set<string>>(new Set());
@@ -189,6 +196,8 @@ export function useCapabilityMarketplace() {
   const [activeCategory, setActiveCategory] = useState<CapabilityCategory>('all');
   const [notification, setNotification] = useState<string | null>(null);
   const [selectedCapabilityId, setSelectedCapabilityId] = useState<string | null>(null);
+  const [checkoutCapabilityId, setCheckoutCapabilityId] = useState<string | null>(null);
+  const [settlements, setSettlements] = useState<Record<string, SettlementState>>({});
 
   const notify = useCallback((msg: string) => {
     setNotification(msg);
@@ -239,6 +248,48 @@ export function useCapabilityMarketplace() {
     setSelectedCapabilityId(id);
   }, []);
 
+  const handleCheckout = useCallback((id: string) => {
+    setCheckoutCapabilityId(id);
+  }, []);
+
+  const handleCloseCheckout = useCallback(() => {
+    setCheckoutCapabilityId(null);
+  }, []);
+
+  const handleSettle = useCallback(
+    async (id: string, paymentMethod: 'etrid' | 'card' | 'crypto') => {
+      const cap = capabilities.find((c) => c.id === id);
+      if (!cap || cap.pricing === 'free') return;
+
+      setSettlements((prev) => ({
+        ...prev,
+        [id]: { capabilityId: id, status: 'processing' },
+      }));
+
+      try {
+        // TODO: wire to real settlement backend (Etrid invoice, Stripe, Plisio, etc.)
+        await new Promise((resolve) => setTimeout(resolve, 1500));
+        const txRef = `tx-${Date.now()}-${id}`;
+
+        setSettlements((prev) => ({
+          ...prev,
+          [id]: { capabilityId: id, status: 'completed', txRef },
+        }));
+        notify(`Paid for ${cap.name} via ${paymentMethod}`);
+        setCheckoutCapabilityId(null);
+        handleInstall(id);
+      } catch (err) {
+        const message = err instanceof Error ? err.message : 'Settlement failed';
+        setSettlements((prev) => ({
+          ...prev,
+          [id]: { capabilityId: id, status: 'failed', error: message },
+        }));
+        notify(`Payment failed: ${message}`);
+      }
+    },
+    [capabilities, handleInstall, notify],
+  );
+
   const filteredCapabilities = useMemo(() => {
     return capabilities.filter((cap) => {
       const matchesSearch =
@@ -256,6 +307,10 @@ export function useCapabilityMarketplace() {
     return capabilities.find((c) => c.id === selectedCapabilityId) || null;
   }, [capabilities, selectedCapabilityId]);
 
+  const checkoutCapability = useMemo(() => {
+    return capabilities.find((c) => c.id === checkoutCapabilityId) || null;
+  }, [capabilities, checkoutCapabilityId]);
+
   return {
     capabilities: filteredCapabilities,
     searchQuery,
@@ -267,8 +322,14 @@ export function useCapabilityMarketplace() {
     handleInstall,
     handleUninstall,
     handleDetails,
+    handleCheckout,
+    handleCloseCheckout,
+    handleSettle,
+    settlements,
     selectedCapability,
     selectedCapabilityId,
     setSelectedCapabilityId,
+    checkoutCapability,
+    checkoutCapabilityId,
   };
 }

@@ -1,0 +1,102 @@
+---
+title: Agent Chat API
+description: Stream messages to Gizzi Runtime sessions from the Allternit platform API.
+---
+
+## Overview
+
+The Agent Chat API forwards user messages to a live Gizzi Runtime session and streams the runtime's event bus back to the caller. The `chatId` is the platform agent session id created through the agent-sessions flow; the platform simply proxies the payload, preserving provider, model, harness, and system prompt overrides.
+
+## Base URL
+
+```text
+https://api.allternit.com/api
+```
+
+For local development:
+
+```text
+http://127.0.0.1:8013/api
+```
+
+## Authentication
+
+All requests require a valid bearer token in the `Authorization` header. See [Authentication](/api/authentication) for details.
+
+## Endpoints
+
+| Method | Path | Description |
+|--------|------|-------------|
+| `POST` | `/agent-chat` | Send a message to a Gizzi Runtime session and stream the response. |
+| `POST` | `/chat/action` | Acknowledge a chat-level action such as stop or regenerate. |
+
+## Send a chat message
+
+```bash
+curl -N -X POST https://api.allternit.com/api/agent-chat \
+  -H "Authorization: Bearer $TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "chatId": "sess_01hqx8x7x7x7x7x7x7x7x7x",
+    "message": "Refactor the auth module to useCommRails.",
+    "runtimeModelId": "qwen2.5:0.5b",
+    "agentProvider": "ollama",
+    "agentModel": "qwen2.5:0.5b",
+    "agentName": "code-reviewer",
+    "systemPrompt": "You are a senior engineer using Allternit-native terminology.",
+    "harness": { "mode": "byok" }
+  }'
+```
+
+### Request body
+
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| `chatId` | string | yes | Platform agent session id (also the Gizzi session id). |
+| `message` | string | yes | User message to forward. |
+| `runtimeModelId` | string | no | Model override for this turn. |
+| `agentProvider` | string | no | Provider override for this turn. |
+| `agentModel` | string | no | Model identifier override. |
+| `agentName` | string | no | Agent name override. |
+| `harness` | object | no | Harness configuration for the turn. |
+| `systemPrompt` | string | no | System prompt override passed through `context`. |
+
+### Response
+
+Returns a server-sent event stream from Gizzi Runtime. Each event is a JSON payload on the event bus, for example:
+
+```text
+event: content_block_delta
+data: {"type":"content_block_delta","delta":{"type":"text_delta","text":"Here is the refactored module..."}}
+```
+
+## Chat action
+
+```bash
+curl -X POST https://api.allternit.com/api/chat/action \
+  -H "Authorization: Bearer $TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{"action": "stop", "chatId": "sess_01hqx8x7x7x7x7x7x7x7x7x"}'
+```
+
+### Response
+
+```json
+{
+  "status": "ok"
+}
+```
+
+## Error codes
+
+| Status | Code | Description |
+|--------|------|-------------|
+| `401` | `Unauthorized` | Missing or invalid bearer token. |
+| `502` | `bad_gateway` | Gizzi Runtime is unreachable. |
+| `500` | `internal_error` | Platform proxy error. |
+
+## Related pages
+
+- [Agent Sessions](/api/agent-sessions)
+- [Event Stream](/api/event-stream)
+- [Agents API](/api/agents)

@@ -63,6 +63,11 @@ import { workerBus } from './workers/worker-bus.js';
 import { mcpHostManager } from './mcp-host-manager.js';
 import { isLimaInstalled, installLima, startVM, stopVM, getVMStatus } from './lima.js';
 import { computerUseDriverManager } from './computer-use-driver-manager.js';
+import {
+  createCaptureSession,
+  stopCaptureSession,
+  isCaptureAvailable,
+} from './browser-capture-manager.js';
 
 // Fix PATH for macOS
 fixPath();
@@ -2851,3 +2856,25 @@ ipcMain.handle('miniApps:oauthCancel', (_event, flowId: string) => oauthBroker()
 ipcMain.handle('miniApps:oauthAccounts', (_event, appId: string) => oauthBroker().listAccounts(appId));
 ipcMain.handle('miniApps:oauthDisconnect', (_event, appId: string, providerId: string, accountId: string) =>
   oauthBroker().disconnect(appId, providerId, accountId));
+
+// ─── Browser API Capture (HAR-derived API client) ───────────────────────────
+// Records network traffic from the default Electron session and returns a HAR
+// archive that the platform ingests to derive reusable API contracts.
+
+ipcMain.handle('browser-capture:is-available', () => isCaptureAvailable());
+ipcMain.handle('browser-capture:start', (_event, options?: { filterUrls?: string[] }) => {
+  try {
+    const { sessionId } = createCaptureSession(options);
+    return { success: true as const, sessionId };
+  } catch (error) {
+    log.error('[BrowserCapture] Failed to start session:', error);
+    return { success: false as const, error: error instanceof Error ? error.message : 'Unknown error' };
+  }
+});
+ipcMain.handle('browser-capture:stop', (_event, sessionId: string) => {
+  const result = stopCaptureSession(sessionId);
+  if (!result) {
+    return { success: false as const, error: 'Session not found' };
+  }
+  return { success: true as const, har: result.har };
+});

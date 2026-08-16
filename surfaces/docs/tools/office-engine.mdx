@@ -1,0 +1,151 @@
+---
+title: 'Office Engine'
+description: 'Parse, extract, and round-trip Office documents through the Allternit Office Engine HTTP service.'
+---
+
+## Overview
+
+The **Allternit Office Engine** exposes document processing capabilities behind a small HTTP service. It parses DOCX and PPTX files, extracts plain text, converts supported formats to Markdown, and reads or recalculates XLSX workbooks through a Rust sidecar.
+
+## Base URL
+
+Local development:
+
+```text
+http://127.0.0.1:8099
+```
+
+When mounted behind the Allternit platform gateway:
+
+```text
+https://api.allternit.com/api/office
+```
+
+## Endpoints
+
+| Method | Path | Description |
+|--------|------|-------------|
+| GET | `/health` | Service health and engine status |
+| POST | `/parse` | Parse a DOCX file |
+| POST | `/docx/roundtrip` | Parse and re-save a DOCX file |
+| POST | `/pptx/parse` | Parse a PPTX file |
+| POST | `/pptx/roundtrip` | Parse and re-save a PPTX file |
+| POST | `/extract` | Extract text from supported formats |
+| POST | `/markdown` | Convert supported files to GFM Markdown |
+| POST | `/markdown-url` | Fetch a URL and convert to Markdown |
+| POST | `/xlsx/parse` | Parse an XLSX workbook |
+| POST | `/xlsx/read` | Read sheet cells for grid rendering |
+| POST | `/xlsx/recalc` | Apply edits and recalculate formulas |
+| POST | `/xlsx/session/open` | Open a workbook session |
+| POST | `/xlsx/session/range` | Read a cell range |
+| POST | `/xlsx/session/formulas` | Get formulas in a range |
+| POST | `/xlsx/session/session-recalc` | Recalculate within a session |
+| POST | `/xlsx/session/save` | Save the workbook |
+| POST | `/xlsx/session/close` | Close the workbook session |
+
+## JSON examples
+
+### Parse a DOCX file
+
+```bash
+curl -X POST http://127.0.0.1:8099/parse \
+  -H 'x-office-filename: report.docx' \
+  --data-binary '@report.docx'
+```
+
+Response:
+
+```json
+{
+  "id": "550e8400-e29b-41d4-a716-446655440000",
+  "type": "office-document",
+  "title": "Quarterly Report",
+  "filename": "report.docx",
+  "mimeType": "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+  "sizeBytes": 24576,
+  "extractedText": "Quarterly Report\n\nRevenue increased...",
+  "stats": {
+    "paragraphCount": 12,
+    "tableCount": 1,
+    "textLength": 1842
+  },
+  "engine": {
+    "name": "@allternit/office-docx-engine",
+    "phase": "prototype"
+  },
+  "createdAt": "2026-08-13T19:00:00.000Z"
+}
+```
+
+### Convert a file to Markdown
+
+```bash
+curl -X POST http://127.0.0.1:8099/markdown \
+  -H 'x-office-filename: brief.pdf' \
+  --data-binary '@brief.pdf'
+```
+
+Response:
+
+```json
+{
+  "id": "550e8400-e29b-41d4-a716-446655440001",
+  "type": "markdown-conversion",
+  "title": "brief.pdf",
+  "filename": "brief.pdf",
+  "mimeType": "text/markdown",
+  "sizeBytes": 8192,
+  "markdown": "# Executive Summary\n\n...",
+  "format": "pdf",
+  "stats": {
+    "textLength": 1204
+  },
+  "engine": {
+    "name": "@firecrawl/anydoc",
+    "phase": "prototype"
+  },
+  "createdAt": "2026-08-13T19:00:00.000Z"
+}
+```
+
+### Recalculate an XLSX workbook
+
+```bash
+curl -X POST http://127.0.0.1:8099/xlsx/recalc \
+  -H 'content-type: application/json' \
+  -d '{
+    "workbookBase64": "UEsDBBQAAAAI...",
+    "edits": [
+      { "sheetId": "Sheet1", "row": 0, "column": 1, "value": 100 }
+    ],
+    "reads": [
+      { "sheetId": "Sheet1", "row": 1, "column": 2 }
+    ]
+  }'
+```
+
+Response:
+
+```json
+{
+  "values": [
+    { "sheetId": "Sheet1", "row": 1, "column": 2, "value": 200 }
+  ]
+}
+```
+
+## Error codes
+
+| HTTP | Code | Meaning |
+|------|------|---------|
+| 200 | — | Success |
+| 400 | `empty body` | Request body is empty |
+| 415 | `unsupported format` | Format not supported by the converter |
+| 422 | `parse failed` | Parsing or conversion failed |
+| 503 | `xlsx_sidecar_unavailable` | XLSX sidecar binary not found |
+
+## Related pages
+
+- [Document Generator](/tools/document-generator)
+- [Native Tool Belt](/tools/tool-belt)
+- [Computer Use & ACI](/tools/computer-use)

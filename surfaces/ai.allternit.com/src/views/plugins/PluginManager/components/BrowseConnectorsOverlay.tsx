@@ -75,8 +75,8 @@ export function BrowseConnectorsOverlay({
       style={{
         position: 'fixed',
         inset: 0,
-        backgroundColor: 'rgba(0, 0, 0, 0.72)',
-        backdropFilter: 'blur(6px)',
+        backgroundColor: 'var(--shell-overlay-backdrop)',
+        backdropFilter: 'blur(8px)',
         zIndex: 210,
         display: 'flex',
         alignItems: 'center',
@@ -90,8 +90,8 @@ export function BrowseConnectorsOverlay({
         style={{
           width: 'min(980px, 100%)',
           maxHeight: 'calc(100vh - 80px)',
-          backgroundColor: '#1b1917',
-          border: `1px solid ${THEME.borderStrong}`,
+          backgroundColor: 'var(--bg-primary)',
+          border: `1px solid var(--border-subtle)`,
           borderRadius: 14,
           display: 'flex',
           flexDirection: 'column',

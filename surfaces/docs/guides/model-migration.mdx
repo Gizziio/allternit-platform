@@ -9,54 +9,65 @@ Allternit's LLM gateway provides a unified API across multiple model providers. 
 
 ## Supported providers
 
-| Provider | Models | Virtual key prefix |
-|----------|--------|-------------------|
-| Allternit (gateway) | All models via aliases | `ak-` |
-| Local (Ollama) | Any GGUF/MLX model | *(direct)* |
+| Provider | Models | How to connect |
+|----------|--------|----------------|
+| Allternit Gateway | Policy aliases and connected models | Default |
+| Local (Ollama) | Any GGUF/MLX model | Connect via [Providers API](/api/providers) |
+| Commercial API providers | Provider-native model catalogs | Connect via [Providers API](/api/providers) |
 
-## Using model aliases
+## Using policy aliases
 
-Define aliases in your virtual key or workspace configuration:
+Policy aliases are the simplest way to migrate. The gateway resolves an alias to a concrete provider/model pair and derives a cross-provider fallback chain automatically.
 
-```json
-{
-  "aliases": {
-    "fast": "gizzi-fast",
-    "smart": "gizzi-pro",
-    "local": "llama3:8b"
-  }
-}
-```
-
-Then reference aliases in your API calls:
+| Alias | Optimization target |
+|-------|---------------------|
+| `auto` | Same as `allternit-balanced`. |
+| `allternit-balanced` | Balanced quality and cost across all benchmarks. |
+| `allternit-code` | Coding and software-engineering tasks. |
+| `allternit-reasoning` | Reasoning, math, and science tasks. |
+| `allternit-knowledge` | Knowledge and recall tasks. |
+| `allternit-instruct` | Instruction-following and chat quality. |
 
 ```typescript
 const response = await client.chat.completions.create({
-  model: 'fast',  // Resolves to gizzi-fast
+  model: 'allternit-code',
+  messages: [{ role: 'user', content: 'Refactor this function' }],
+});
+```
+
+## Using explicit provider/model ids
+
+For deterministic routing, pass a connected provider and model directly:
+
+```typescript
+const response = await client.chat.completions.create({
+  model: 'provider-id/model-id',
   messages: [{ role: 'user', content: 'Hello' }],
 });
 ```
 
 ## Migration checklist
 
-1. **Create a new virtual key** pointing to the target provider/model.
-2. **Test with a small workload** — compare outputs, latency, and cost.
-3. **Update aliases** to point to the new model.
-4. **Monitor usage** via the audit log for the first 24 hours.
-5. **Remove the old key** once migration is confirmed.
+1. **List connected models** with `GET /v1/models`.
+2. **Test with a small workload** using a policy alias or explicit model.
+3. **Compare outputs, latency, and cost** via the [Estimates API](/api/estimates) and [Usage logs](/admin/gateway).
+4. **Update your application** to use the new model string.
+5. **Monitor usage** via the audit log for the first 24 hours.
 
 ## Cost comparison
 
-Use the token estimation API to compare costs before migrating:
+Use the cost estimation API before migrating:
 
 ```bash
-curl http://localhost:8013/api/v1/estimate \
+curl -X POST https://api.allternit.com/v1/estimates/cost \
   -H "Authorization: Bearer $ALLTERNIT_API_KEY" \
   -H "Content-Type: application/json" \
   -d '{
-    "model": "gizzi-pro",
-    "input_tokens": 1000,
-    "output_tokens": 500
+    "model": "allternit-code",
+    "messages": [
+      {"role": "user", "content": "Refactor this function"}
+    ],
+    "max_tokens": 500
   }'
 ```
 
@@ -66,7 +77,7 @@ Allternit supports prompt caching for models that advertise it. Cached prompts r
 
 ```typescript
 const response = await client.chat.completions.create({
-  model: 'smart',
+  model: 'allternit-balanced',
   messages: [
     {
       role: 'system',
@@ -78,14 +89,16 @@ const response = await client.chat.completions.create({
 });
 ```
 
+For caching entire message arrays, see [Context Caches](/api/context-caches).
+
 ## Reasoning mode
 
 Enable extended thinking for complex tasks:
 
 ```typescript
 const response = await client.chat.completions.create({
-  model: 'smart',
+  model: 'allternit-reasoning',
   messages: [{ role: 'user', content: 'Prove this theorem' }],
-  thinking: { type: 'enabled', budget_tokens: 10000 }
+  reasoning_effort: 'high'
 });
 ```

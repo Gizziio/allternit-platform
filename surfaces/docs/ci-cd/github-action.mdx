@@ -1,0 +1,192 @@
+---
+title: GitHub Action
+description: Gizzi Code GitHub Action — AI-powered code review, generation, fixes, and explanations in CI/CD
+---
+
+## Overview
+
+The **Gizzi Code GitHub Action** runs Gizzi Code inside GitHub Actions workflows. It can review pull requests, generate code, fix files, and explain code — all powered by the Allternit API.
+
+The action is published as `allternit/gizzi-github-action@v1`.
+
+## Base URL
+
+```yaml
+uses: allternit/gizzi-github-action@v1
+```
+
+Action source:
+
+```
+https://github.com/allternit/gizzi-github-action
+```
+
+## Inputs
+
+| Input | Required | Default | Description |
+|---|---|---|---|
+| `action` | Yes | `review` | Operation to perform: `review`, `generate`, `fix`, `explain` |
+| `api-url` | No | `https://api.allternit.com` | Allternit API base URL |
+| `api-key` | Yes | — | Allternit API key (`secrets.ALLTERNIT_API_KEY`) |
+| `target` | No | — | Target file path, PR number, or generation instruction |
+| `model` | No | `default` | Model to use |
+| `max-tokens` | No | `4096` | Maximum tokens for the response |
+
+## Outputs
+
+| Output | Description |
+|---|---|
+| `result` | Full action result text |
+| `summary` | Markdown summary of changes or review |
+
+## Endpoints used
+
+The action calls the Allternit API chat-completions endpoint internally.
+
+| Method | Path | Description |
+|---|---|---|
+| `POST` | `/v1/chat/completions` | Chat completion for review, generate, fix, and explain |
+
+## Request / response examples
+
+### Review a pull request
+
+```yaml
+name: Code Review
+on:
+  pull_request:
+    types: [opened, synchronize]
+
+jobs:
+  review:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pull-requests: write
+    steps:
+      - uses: actions/checkout@v4
+      - uses: allternit/gizzi-github-action@v1
+        with:
+          action: review
+          api-key: ${{ secrets.ALLTERNIT_API_KEY }}
+```
+
+The action posts per-file review comments and a summary comment on the pull request.
+
+### Generate tests
+
+```yaml
+name: Generate Tests
+on:
+  workflow_dispatch:
+    inputs:
+      file:
+        description: 'File to generate tests for'
+        required: true
+
+jobs:
+  generate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: allternit/gizzi-github-action@v1
+        with:
+          action: generate
+          api-key: ${{ secrets.ALLTERNIT_API_KEY }}
+          target: ${{ github.event.inputs.file }}
+```
+
+### Fix a file
+
+```yaml
+- uses: allternit/gizzi-github-action@v1
+  with:
+    action: fix
+    api-key: ${{ secrets.ALLTERNIT_API_KEY }}
+    target: src/utils/helpers.ts
+```
+
+### Explain a file
+
+```yaml
+- uses: allternit/gizzi-github-action@v1
+  with:
+    action: explain
+    api-key: ${{ secrets.ALLTERNIT_API_KEY }}
+    target: src/core/engine.ts
+```
+
+## Example chat-completion request
+
+The action sends a request like this to the Allternit API when reviewing a diff:
+
+```json
+{
+  "model": "default",
+  "messages": [
+    {
+      "role": "system",
+      "content": "You are an expert code reviewer..."
+    },
+    {
+      "role": "user",
+      "content": "Review this diff for `src/auth.ts`:\n\n```diff\n...\n```"
+    }
+  ],
+  "max_tokens": 4096,
+  "temperature": 0.3
+}
+```
+
+Example response:
+
+```json
+{
+  "choices": [
+    {
+      "message": {
+        "role": "assistant",
+        "content": "🔴 Critical...\n🟡 Warning..."
+      }
+    }
+  ]
+}
+```
+
+## Error codes
+
+| Status | Meaning |
+|---|---|
+| `0` | Action completed successfully |
+| `1` | Action failed (API error, missing input, or workflow error) |
+
+API errors surface in the action logs as:
+
+```text
+Allternit API error (401): Unauthorized
+```
+
+Common failures:
+
+| Symptom | Cause | Fix |
+|---|---|---|
+| `api-key required` | `ALLTERNIT_API_KEY` not set | Add the secret to repository settings |
+| `No PR context` | `action: review` outside a `pull_request` event | Trigger on `pull_request` |
+| `Allternit API error (404)` | Invalid `api-url` | Use the default or a verified endpoint |
+
+## Permissions
+
+For PR review workflows, grant:
+
+```yaml
+permissions:
+  contents: read
+  pull-requests: write
+```
+
+## Related links
+
+- [Gizzi Code CLI](/cli/overview)
+- [VS Code Extension](/surfaces/vscode)
+- [API Authentication](/api/authentication)
+- [CI/CD Cookbook](/cookbooks/ci-cd-integration)

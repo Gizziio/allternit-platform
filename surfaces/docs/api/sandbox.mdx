@@ -5,112 +5,137 @@ description: Execute code in isolated VM sandboxes
 
 ## Overview
 
-The Sandbox API provides VM-based code execution with configurable resources, network access, and toolchains. Sandboxes run on infrastructure you control.
+The Sandbox API provides VM-based code execution with configurable resources, network access, and toolchains. Sandboxes run on infrastructure you control. For organization-scoped templates and long-lived instances, see [Cloud Sandboxes](/tools/sandbox).
+
+## Base URL
+
+```text
+https://api.allternit.com/sandbox
+```
+
+Local development:
+
+```text
+http://127.0.0.1:8013/sandbox
+```
 
 ## Endpoints
 
+| Method | Path | Description |
+|--------|------|-------------|
+| GET | `/sandbox/` | Service status |
+| POST | `/sandbox/execute` | Execute code synchronously |
+| POST | `/sandbox/execute/stream` | Execute code with streaming output |
+| GET | `/sandbox/capabilities` | Driver capabilities |
+| GET | `/sandbox/health` | Driver health |
+
 ### Get capabilities
 
-```
-GET /api/sandbox/capabilities
+```bash
+curl -X GET http://127.0.0.1:8013/sandbox/capabilities \
+  -H "Authorization: Bearer <token>"
 ```
 
 Response:
 
 ```json
 {
-  "driver": "vm",
-  "languages": ["python", "javascript", "bash", "rust"],
-  "toolchains": ["python-3.12", "node-22", "rust-1.80"],
-  "max_cpu_cores": 4,
-  "max_memory_mb": 4096,
-  "snapshot_support": true,
-  "streaming_support": true
+  "driver_type": "vm",
+  "isolation_level": "vm",
+  "supported_languages": ["python", "node", "bash", "rust"],
+  "available_toolchains": ["python-3.12", "node-22", "rust-stable"],
+  "max_concurrent_sessions": 10,
+  "supports_snapshots": true,
+  "supports_streaming": true
 }
 ```
 
 ### Execute code
 
-```
-POST /api/sandbox/execute
+```bash
+curl -X POST http://127.0.0.1:8013/sandbox/execute \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer <token>" \
+  -d '{
+    "code": "print('"'"'hello from sandbox'"'"')",
+    "language": "python",
+    "timeout_secs": 300,
+    "network_enabled": false,
+    "resources": {
+      "cpu_cores": 1,
+      "memory_mb": 512
+    },
+    "toolchains": ["python-3.12"]
+  }'
 ```
 
-```json
-{
-  "code": "print('hello from sandbox')",
-  "language": "python",
-  "timeout_secs": 300,
-  "network_enabled": false,
-  "resources": {
-    "cpu_cores": 1,
-    "memory_mb": 512
-  },
-  "toolchains": ["python-3.12"]
-}
-```
+Request body:
+
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| `code` | string | yes | Code or command to execute |
+| `language` | string | yes | `python`, `node`, `bash`, or `rust` |
+| `timeout_secs` | integer | no | Timeout in seconds; default 300 |
+| `workdir` | string | no | Working directory inside the sandbox |
+| `env` | object | no | Environment variables as key/value strings |
+| `resources` | object | no | `{ "cpu_cores": number, "memory_mb": integer }` |
+| `toolchains` | array | no | Toolchain layers to install |
+| `network_enabled` | boolean | no | Whether the sandbox may access the network |
 
 Response:
 
 ```json
 {
-  "execution_id": "exec_abc123",
-  "status": "completed",
+  "exit_code": 0,
   "stdout": "hello from sandbox\n",
   "stderr": "",
-  "exit_code": 0,
   "duration_ms": 142,
-  "resource_usage": {
-    "cpu_seconds": 0.12,
-    "memory_peak_mb": 48
-  }
+  "session_id": "sess_abc123"
 }
 ```
 
 ### Streaming execution
 
-Set `stream: true` to receive output as it's produced:
-
-```json
-{
-  "code": "import time\nfor i in range(5):\n  print(f'step {i}')\n  time.sleep(1)",
-  "language": "python",
-  "stream": true
-}
+```bash
+curl -N -X POST http://127.0.0.1:8013/sandbox/execute/stream \
+  -H "Content-Type: application/json" \
+  -H "Accept: text/event-stream" \
+  -H "Authorization: Bearer <token>" \
+  -d '{
+    "code": "import time\nfor i in range(3):\n  print(f'step {i}')\n  time.sleep(1)",
+    "language": "python"
+  }'
 ```
 
 Response (SSE):
 
 ```
-event: stdout
-data: step 0
+data: {"type":"stdout","line":"step 0"}
 
-event: stdout
-data: step 1
+data: {"type":"stdout","line":"step 1"}
 
-event: done
-data: {"exit_code": 0, "duration_ms": 5012}
+data: {"type":"stdout","line":"step 2"}
+
+data: {"type":"done","exit_code":0}
 ```
 
-### Take snapshot
+### Health check
 
-```
-POST /api/sandbox/executions/{id}/snapshot
-```
-
-Creates a snapshot of the sandbox state for later restoration.
-
-### List templates
-
-```
-GET /api/sandbox/templates
+```bash
+curl -X GET http://127.0.0.1:8013/sandbox/health \
+  -H "Authorization: Bearer <token>"
 ```
 
-Sandbox templates define pre-configured environments with specific toolchains and dependencies.
+Response:
+
+```text
+OK
+```
 
 ## Security
 
 - Each sandbox runs in an isolated VM — no shared state between executions.
-- Network access is disabled by default; enable explicitly.
+- Network access is disabled by default; enable explicitly with `network_enabled`.
 - Resource limits prevent runaway processes.
 - Execution timeout is enforced even if the process ignores signals.
 
@@ -122,3 +147,17 @@ Sandbox templates define pre-configured environments with specific toolchains an
 | Memory (MB) | 128 | 4096 |
 | Timeout (seconds) | 5 | 3600 |
 | Disk (MB) | 100 | 10240 |
+
+## Error codes
+
+| HTTP | Code / Message | Meaning |
+|------|----------------|---------|
+| 200 | — | Execution succeeded; check `exit_code` |
+| 503 | `VM driver not available` | No VM driver is initialized |
+| 503 | `VM driver not initialized` | Health check failed |
+
+## Related pages
+
+- [Cloud Sandboxes](/tools/sandbox)
+- [Server Tools](/tools/server-tools)
+- [Native Tool Belt](/tools/tool-belt)

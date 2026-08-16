@@ -35,6 +35,7 @@ import { CodeLaunchBranding } from './CodeLaunchBranding';
 import { CodeWorkspaceBar } from './CodeWorkspaceBar';
 import { CodeBottomStatusBar } from './CodeBottomStatusBar';
 import { CodeUsageDashboard } from './CodeUsageDashboard';
+
 import {
   buildAgentConversationContext,
   useSurfaceAgentSelection,
@@ -247,12 +248,14 @@ const pillControlStyle: React.CSSProperties = {
   gap: 6,
   padding: '6px 12px',
   borderRadius: 10,
-  border: '1px solid rgba(255, 255, 255, 0.08)',
-  background: 'rgba(255, 255, 255, 0.03)',
-  color: 'var(--text-secondary)',
+  border: '1px solid color-mix(in srgb, var(--border-subtle) 50%, transparent)',
+  background: 'color-mix(in srgb, var(--surface-panel) 30%, transparent)',
+  color: 'var(--text-primary)',
   fontSize: 12,
   fontWeight: 600,
   cursor: 'pointer',
+  backdropFilter: 'blur(12px)',
+  WebkitBackdropFilter: 'blur(12px)',
 };
 
 const codeMenuTheme = {
@@ -709,6 +712,20 @@ function CodeSessionSurface({
     activeSession?.mode ?? 'DEFAULT',
   );
   useEffect(() => {
+    if (!activeWorkspaceId || layoutMode !== 'canvas') return;
+    const hasTerminal = activeWorkspace?.canvasTiles?.some((tile) => tile.type === 'terminal') ?? false;
+    if (hasTerminal) return;
+    useCodeModeStore.getState().addCanvasTile(activeWorkspaceId, {
+      type: 'terminal',
+      x: 48,
+      y: 48,
+      width: 480,
+      height: 320,
+      zIndex: Date.now(),
+      label: 'Terminal',
+    });
+  }, [activeWorkspaceId, layoutMode, activeWorkspace]);
+  useEffect(() => {
     setSessionMode(activeSession?.mode ?? 'DEFAULT');
   }, [activeSession?.mode, activeSession?.session_id]);
   const handleSessionModeChange = useCallback(
@@ -963,30 +980,83 @@ function CodeSessionSurface({
     <CodeBottomStatusBar
       sessionMode={sessionMode}
       onSessionModeChange={handleSessionModeChange}
+      onOpenTerminals={handleToggleLayoutMode}
+      terminalsOpen={layoutMode === 'canvas'}
     />
   );
 
   if (hasMessages) {
     return (
-      <ConversationStage
-        activeAction={activeAction}
-        activeSession={activeSession}
+      <>
+        <ConversationStage
+          activeAction={activeAction}
+          activeSession={activeSession}
+          activeWorkspace={activeWorkspace}
+          agentContextStrip={embeddedAgentStrip}
+          composerSeed={composerSeed}
+          composerVersion={composerVersion}
+          isEmbeddedAgentSession={isEmbeddedAgentSession}
+          isProcessing={isProcessing}
+          messages={displayMessages}
+          onOpenConsole={onOpenConsole}
+          onRegenerate={handleRegenerate}
+          onSelectModel={onSelectModel}
+          onPreviewTemplate={onPreviewTemplate}
+          onSelectTemplate={onSelectTemplate}
+          onSend={handleSend}
+          onSetActiveSession={onSetActiveSession}
+          onStop={handleStop}
+          onToggleAction={onToggleAction}
+          onToggleSessionPicker={onToggleSessionPicker}
+          onToggleWorkspacePicker={onToggleWorkspacePicker}
+          selectedModel={selectedModel}
+          selectedModelDisplayName={selectedModelDisplayName}
+          showSessionPicker={showSessionPicker}
+          showWorkspacePicker={showWorkspacePicker}
+          workspaceReady={effectiveWorkspaceReady}
+          workspaceSessions={workspaceSessions}
+          workspaces={workspaces}
+          activeSessionId={activeSessionId}
+          activeWorkspaceId={activeWorkspaceId}
+          agentModeEnabled={agentModeEnabled}
+          agentModePulse={agentModePulse}
+          selectedAgentName={selectedAgent?.name ?? null}
+          onConfirmWorkspace={onConfirmWorkspace}
+          attachments={attachments}
+          onRemoveAttachment={onRemoveAttachment}
+          onAddChatAttachment={onAddChatAttachment}
+          attachmentPreviewItems={attachmentPreviewItems}
+          onPreviewAttachment={onPreviewAttachment}
+          previewItem={previewItem}
+          previewModalOpen={previewModalOpen}
+          onClosePreviewModal={onClosePreviewModal}
+          composerTopInfoBar={composerTopInfoBar}
+          composerQuestionBar={composerQuestionBar}
+          bottomDockContent={bottomDockContent}
+          onOpenFolder={handleOpenFolder}
+          onRefreshWorkspace={handleRefreshWorkspace}
+          onToggleWorktree={handleToggleWorktree}
+          worktreeEnabled={worktreeEnabled}
+          onSwitchBranch={handleSwitchBranch}
+        />
+      </>
+    );
+  }
+
+  return (
+    <>
+      <LaunchpadStage
         activeWorkspace={activeWorkspace}
+        activeSession={activeSession}
         agentContextStrip={embeddedAgentStrip}
         composerSeed={composerSeed}
         composerVersion={composerVersion}
         isEmbeddedAgentSession={isEmbeddedAgentSession}
         isProcessing={isProcessing}
-        messages={displayMessages}
         onOpenConsole={onOpenConsole}
-        onRegenerate={handleRegenerate}
         onSelectModel={onSelectModel}
-        onPreviewTemplate={onPreviewTemplate}
-        onSelectTemplate={onSelectTemplate}
         onSend={handleSend}
         onSetActiveSession={onSetActiveSession}
-        onStop={handleStop}
-        onToggleAction={onToggleAction}
         onToggleSessionPicker={onToggleSessionPicker}
         onToggleWorkspacePicker={onToggleWorkspacePicker}
         selectedModel={selectedModel}
@@ -1019,54 +1089,7 @@ function CodeSessionSurface({
         worktreeEnabled={worktreeEnabled}
         onSwitchBranch={handleSwitchBranch}
       />
-    );
-  }
-
-  return (
-    <LaunchpadStage
-      activeWorkspace={activeWorkspace}
-      activeSession={activeSession}
-      agentContextStrip={embeddedAgentStrip}
-      composerSeed={composerSeed}
-      composerVersion={composerVersion}
-      isEmbeddedAgentSession={isEmbeddedAgentSession}
-      isProcessing={isProcessing}
-      onOpenConsole={onOpenConsole}
-      onSelectModel={onSelectModel}
-      onSend={handleSend}
-      onSetActiveSession={onSetActiveSession}
-      onToggleSessionPicker={onToggleSessionPicker}
-      onToggleWorkspacePicker={onToggleWorkspacePicker}
-      selectedModel={selectedModel}
-      selectedModelDisplayName={selectedModelDisplayName}
-      showSessionPicker={showSessionPicker}
-      showWorkspacePicker={showWorkspacePicker}
-      workspaceReady={effectiveWorkspaceReady}
-      workspaceSessions={workspaceSessions}
-      workspaces={workspaces}
-      activeSessionId={activeSessionId}
-      activeWorkspaceId={activeWorkspaceId}
-      agentModeEnabled={agentModeEnabled}
-      agentModePulse={agentModePulse}
-      selectedAgentName={selectedAgent?.name ?? null}
-      onConfirmWorkspace={onConfirmWorkspace}
-      attachments={attachments}
-      onRemoveAttachment={onRemoveAttachment}
-      onAddChatAttachment={onAddChatAttachment}
-      attachmentPreviewItems={attachmentPreviewItems}
-      onPreviewAttachment={onPreviewAttachment}
-      previewItem={previewItem}
-      previewModalOpen={previewModalOpen}
-      onClosePreviewModal={onClosePreviewModal}
-      composerTopInfoBar={composerTopInfoBar}
-      composerQuestionBar={composerQuestionBar}
-      bottomDockContent={bottomDockContent}
-      onOpenFolder={handleOpenFolder}
-      onRefreshWorkspace={handleRefreshWorkspace}
-      onToggleWorktree={handleToggleWorktree}
-      worktreeEnabled={worktreeEnabled}
-      onSwitchBranch={handleSwitchBranch}
-    />
+    </>
   );
 }
 
@@ -1219,7 +1242,7 @@ function LaunchpadStage({
           Run a command or describe a task to start coding.
         </div>
         {showUsage ? (
-          <div style={{ marginTop: 24 }}>
+          <div style={{ marginTop: 16 }}>
             <CodeUsageDashboard onClose={() => setShowUsage(false)} />
           </div>
         ) : (

@@ -14,8 +14,20 @@ Allternit is designed for enterprise deployments where data protection, auditabi
   <Card title="Vault" icon="lock" href="/security/vault">
     Encrypted credential storage for provider keys and tokens
   </Card>
+  <Card title="Cloud Credentials" icon="cloud" href="/security/cloud-credentials">
+    BYOC credential management for AWS, GCP, and Azure
+  </Card>
   <Card title="Compliance" icon="check" href="/security/compliance">
     Data export, deletion workflows, and retention policies
+  </Card>
+  <Card title="Audit Logs" icon="list" href="/security/audit">
+    Organization-scoped administrative and resource events
+  </Card>
+  <Card title="SCIM" icon="users" href="/security/scim">
+    Automated user and group provisioning
+  </Card>
+  <Card title="Inference Hooks" icon="rotate" href="/security/inference-hooks">
+    Pre- and post-inference HTTP hooks
   </Card>
 </CardGroup>
 
@@ -24,7 +36,7 @@ Allternit is designed for enterprise deployments where data protection, auditabi
 Allternit uses two primary authentication modes:
 
 1. **Clerk JWTs** for the web/desktop UI and admin APIs. Sessions are scoped to an organization and role (owner/admin/member).
-2. **Virtual LLM keys** (`ak-…`) for the OpenAI-compatible `/v1` surface. Each key is tied to an organization, optional model allowlist, monthly budget, and rate limit.
+2. **Virtual LLM keys** (`ak-…`) for the wire-compatible `/v1` surface. Each key is tied to an organization, optional model allowlist, monthly budget, and rate limit.
 
 ## Authorization
 
@@ -49,7 +61,7 @@ Allternit uses two primary authentication modes:
 
 Allternit is designed so the hosting infrastructure can be passed to the user:
 
-- The API server, Gizzi runtime, and Rails DAG engine can run on customer-managed infrastructure.
+- The API server, Gizzi runtime, and CommRails DAG engine can run on customer-managed infrastructure.
 - Encryption keys, provider credentials, and IP allow-lists remain under customer control.
 - The `GET /regions` endpoint publishes egress IP ranges for firewall allow-listing.
 

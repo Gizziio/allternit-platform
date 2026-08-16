@@ -29,7 +29,7 @@ import {
   type AgentContext,
 } from './native-agent-api';
 import { useAgentStore } from './agent.store';
-import type { HarnessConfig } from './agent.types';
+import type { Agent, HarnessConfig } from './agent.types';
 import { subscribeSSE } from '../sse/global-sse-manager';
 import { createModuleLogger } from '@/lib/logger';
 import { emitArtifact } from '@/lib/canvas/canvas-artifact-events';
@@ -38,6 +38,8 @@ import type { AgentArtifactKind, CanonicalAgentModeId } from './agent-mode-contr
 import { getAgentModeContract, validateAgentModeExecution } from './agent-mode-contracts';
 import { executeAgentMode } from './agent-mode-executor';
 import { gizziBaseUrl } from './api-config';
+import { buildBotRuntimeEnv } from '@/lib/bots/bot-runtime-env';
+import { memoryClient } from './memory-client';
 
 const logger = createModuleLogger('ModeSessionStore');
 import type {
@@ -104,6 +106,12 @@ export interface ModeSession {
     isolation?: 'worktree' | 'none';
     codePermissionMode?: 'default' | 'acceptEdits' | 'plan';
     gizziPermissionModeApplied?: 'default' | 'acceptEdits' | 'plan';
+    resolvedSecrets?: Array<import('@/lib/agents/agent-secrets-resolver').ResolvedSecret>;
+    missingSecrets?: string[];
+    resolvedConnectors?: Array<import('@/lib/agents/agent-connectors-resolver').ResolvedConnectorCredential>;
+    missingConnectors?: string[];
+    messagingConfig?: Record<string, unknown>;
+    identityChannels?: Record<string, unknown>;
   };
   // Runtime context pack (not persisted, rebuilt on load)
   _contextPack?: AgentContextPack;
@@ -602,6 +610,12 @@ async function streamMessageWithContext(
         ? useAgentStore.getState().agents.find((a) => a.id === session.metadata.agentId)
         : undefined;
       // Convert to API context format
+      const runtimeEnv = buildBotRuntimeEnv({
+        harness: agent?.harness,
+        resolvedSecrets: session.metadata.resolvedSecrets as import('@/lib/agents/agent-secrets-resolver').ResolvedSecret[] | undefined,
+        resolvedConnectors: session.metadata.resolvedConnectors as import('@/lib/agents/agent-connectors-resolver').ResolvedConnectorCredential[] | undefined,
+        vmOperator: (session.metadata.vmOperator as Agent['vmOperator']) ?? agent?.vmOperator,
+      });
       agentContext = {
         agentId: contextPack.agentId,
         agentName: contextPack.agentName || agent?.name,
@@ -623,6 +637,9 @@ async function streamMessageWithContext(
         governanceContext: {
           workspaceFiles: contextPack.workspaceFiles,
         },
+        runtimeEnv: runtimeEnv.env,
+        messagingConfig: session.metadata.messagingConfig as Record<string, unknown> | undefined,
+        identityChannels: session.metadata.identityChannels as Record<string, unknown> | undefined,
       };
     } else if (session.metadata.systemPrompt) {
       // Session has a custom system prompt but no agent workspace (e.g. Studio mode)
@@ -646,6 +663,39 @@ async function streamMessageWithContext(
         ? `${agentContext.systemPrompt}\n\n${mentionNote}`
         : mentionNote,
     };
+  }
+  
+  // PreTurn Hook: Recall relevant memories and inject into prompt context
+  if (!skipContext) {
+    try {
+      const memoryItems = await memoryClient.recall(text, {
+        agentId: session.metadata.agentId,
+        sessionId: session.id,
+        limit: 5,
+      });
+      if (memoryItems && memoryItems.length > 0) {
+        const memoryLines = memoryItems.map((m) => `- [${m.item_type}] ${m.content}`);
+        const memoryBlock = `Memory Context (relevant facts & knowledge):\n${memoryLines.join('\n')}`;
+        agentContext = {
+          ...(agentContext ?? {}),
+          systemPrompt: agentContext?.systemPrompt
+            ? `${agentContext.systemPrompt}\n\n${memoryBlock}`
+            : memoryBlock,
+        };
+      }
+    } catch {
+      // Degrade silently if memory recall fails
+    }
+
+    // Retain user turn observation in background
+    try {
+      void memoryClient.retainTurn('user', text, {
+        agentId: session.metadata.agentId,
+        sessionId: session.id,
+      });
+    } catch {
+      // Degrade silently
+    }
   }
   
   // Use chat API with context
@@ -1356,6 +1406,22 @@ export function createModeSessionStore(config: StoreConfig) {
                     // canvas view can render them without requiring a backend artifact
                     // event. This mirrors the behavior in rust-stream-adapter.ts.
                     const tr = toolResult as { toolName?: string; result?: unknown } | undefined;
+                    if (tr?.toolName && tr.toolName !== 'read_session_memory') {
+                      try {
+                        const preview = typeof tr.result === 'string' ? tr.result : JSON.stringify(tr.result ?? '');
+                        void memoryClient.recordObservation(
+                          'tool',
+                          `${tr.toolName}: ${preview.slice(0, 400)}`,
+                          {
+                            agentId: session.metadata.agentId,
+                            sessionId: session.id,
+                            source: tr.toolName,
+                          }
+                        );
+                      } catch {
+                        // Degrade silently
+                      }
+                    }
                     if (tr?.toolName === 'generateWebArtifact' && tr.result && typeof tr.result === 'object') {
                       const r = tr.result as { content?: string; kind?: string; title?: string };
                       if (r.content) {
@@ -1496,6 +1562,18 @@ export function createModeSessionStore(config: StoreConfig) {
                           : s
                       ),
                     }));
+                    // PostTurn Hook: Retain assistant response and extract facts in background
+                    if (assistantContent.trim()) {
+                      try {
+                        void memoryClient.retainTurn('assistant', assistantContent, {
+                          agentId: session.metadata.agentId,
+                          sessionId: session.id,
+                        });
+                      } catch {
+                        // Degrade silently
+                      }
+                    }
+
                     options.callbacks?.onDone?.();
                   },
                   onError: (error) => {

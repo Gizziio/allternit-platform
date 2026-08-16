@@ -93,6 +93,21 @@ export const AGENT_CREATION_CHECKLIST: ChecklistItem[] = [
     required: false,
     validate: (input) => Boolean(input.avatar),
   },
+  {
+    id: 'botProfile',
+    label: 'Bot Profile',
+    description: 'Packaged bots require a display name and valid accent color.',
+    required: false,
+    validate: (input) => {
+      if (!input.isBot) return true;
+      const profile = input.botProfile;
+      if (!profile) return false;
+      if (!profile.displayName || profile.displayName.trim().length < 1) return false;
+      if (profile.accentColor && !/^#[0-9A-F]{6}$/i.test(profile.accentColor)) return false;
+      if (profile.starterPrompts && profile.starterPrompts.length > 5) return false;
+      return true;
+    },
+  },
 ];
 
 export interface ChecklistResult {

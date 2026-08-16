@@ -1,32 +1,210 @@
 ---
-title: Batches
-description: Asynchronous batch inference API.
+title: 'Batches'
+description: 'Asynchronous batch inference through the Allternit LLM gateway'
 ---
 
-# Batches
+## Overview
 
-The `/v1/batches` endpoint lets you submit a large number of chat-completion requests asynchronously and retrieve results later.
+The `/v1/batches` endpoint lets you submit a large number of chat-completion requests asynchronously and retrieve the results later. It supports both a native Allternit request array and a file-based input format compatible with common batch SDKs.
+
+A background worker validates each batch, submits it to the configured batch provider, polls for completion, and stores the results. You can cancel a batch while it is still `validating` or `in_progress`.
+
+## Base URL
+
+```
+https://api.allternit.com/v1
+```
+
+For local development:
+
+```
+http://127.0.0.1:8013/v1
+```
 
 ## Endpoints
 
 | Method | Path | Description |
 |--------|------|-------------|
-| POST   | `/v1/batches` | Create a batch |
-| GET    | `/v1/batches` | List batches |
-| GET    | `/v1/batches/:id` | Get batch status |
-| POST   | `/v1/batches/:id/cancel` | Cancel a batch |
-| GET    | `/v1/batches/:id/results` | Download results |
+| `POST` | `/v1/batches` | Create a batch |
+| `GET`  | `/v1/batches` | List batches |
+| `GET`  | `/v1/batches/:id` | Get batch status |
+| `POST` | `/v1/batches/:id/cancel` | Cancel a batch |
+| `GET`  | `/v1/batches/:id/results` | Download results |
 
-## Input format
+## Create a batch
 
-Submit a JSONL file where each line is a request object with `custom_id`, `method`, `url`, and `body`.
+### Native request array
 
-## SDK
+Submit the requests inline as a JSON array. Each element is a chat-completion request body.
 
-```typescript
-const batch = await allternit.batches.create({
-  input_file_id: 'file_xxx',
-  endpoint: '/v1/chat/completions',
-  completion_window: '24h',
-});
+```bash
+curl -X POST https://api.allternit.com/v1/batches \
+  -H "Authorization: Bearer $ALLTERNIT_API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "requests": [
+      {
+        "model": "auto",
+        "messages": [{"role": "user", "content": "Summarize this."}]
+      },
+      {
+        "model": "auto",
+        "messages": [{"role": "user", "content": "Translate to French."}]
+      }
+    ]
+  }'
 ```
+
+### File-based input
+
+Submit a batch that references a JSONL file uploaded to the gateway's batch input directory.
+
+```bash
+curl -X POST https://api.allternit.com/v1/batches \
+  -H "Authorization: Bearer $ALLTERNIT_API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "input_file_id": "file_batch_input.jsonl",
+    "endpoint": "/v1/chat/completions",
+    "completion_window": "24h",
+    "metadata": {"job": "weekly-summaries"}
+  }'
+```
+
+### JSONL input file format
+
+Each line is a JSON object. The standard shape includes `custom_id`, `method`, `url`, and `body`. Plain request objects are also accepted as a fallback.
+
+```jsonl
+{"custom_id":"task-1","method":"POST","url":"/v1/chat/completions","body":{"model":"auto","messages":[{"role":"user","content":"Summarize A"}]}}
+{"custom_id":"task-2","method":"POST","url":"/v1/chat/completions","body":{"model":"auto","messages":[{"role":"user","content":"Summarize B"}]}}
+```
+
+### Request body fields
+
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| `requests` | array | yes* | Native array of chat-completion request bodies. |
+| `input_file_id` | string | yes* | File id for file-based batches. |
+| `endpoint` | string | yes (file) | Must be `/v1/chat/completions`. |
+| `completion_window` | string | yes (file) | Must be `24h`. |
+| `metadata` | object | no | Arbitrary metadata attached to the batch. |
+
+\* One of `requests` or `input_file_id` must be provided.
+
+### Example response
+
+```json
+{
+  "id": "batch_abc123",
+  "object": "batch",
+  "status": "validating",
+  "endpoint": "/v1/chat/completions",
+  "input_file_id": "file_batch_input.jsonl",
+  "completion_window": "24h",
+  "request_counts": {
+    "total": 2,
+    "completed": 0,
+    "failed": 0
+  },
+  "created_at": 1723500000,
+  "metadata": {"job": "weekly-summaries"}
+}
+```
+
+## List batches
+
+```bash
+curl https://api.allternit.com/v1/batches \
+  -H "Authorization: Bearer $ALLTERNIT_API_KEY"
+```
+
+```json
+{
+  "object": "list",
+  "data": [
+    {
+      "id": "batch_abc123",
+      "object": "batch",
+      "status": "completed",
+      "endpoint": "/v1/chat/completions",
+      "input_file_id": "file_batch_input.jsonl",
+      "completion_window": "24h",
+      "output_file_id": "batch_abc123_output",
+      "error_file_id": null,
+      "request_counts": {
+        "total": 2,
+        "completed": 2,
+        "failed": 0
+      },
+      "created_at": 1723500000,
+      "completed_at": 1723500100
+    }
+  ]
+}
+```
+
+## Get a batch
+
+```bash
+curl https://api.allternit.com/v1/batches/batch_abc123 \
+  -H "Authorization: Bearer $ALLTERNIT_API_KEY"
+```
+
+## Cancel a batch
+
+```bash
+curl -X POST https://api.allternit.com/v1/batches/batch_abc123/cancel \
+  -H "Authorization: Bearer $ALLTERNIT_API_KEY"
+```
+
+## Retrieve results
+
+```bash
+curl https://api.allternit.com/v1/batches/batch_abc123/results \
+  -H "Authorization: Bearer $ALLTERNIT_API_KEY"
+```
+
+```json
+{
+  "object": "list",
+  "data": [
+    {"index": 0, "custom_id": "task-1", "response": {...}},
+    {"index": 1, "custom_id": "task-2", "response": {...}}
+  ]
+}
+```
+
+## Batch statuses
+
+| Status | Description |
+|--------|-------------|
+| `validating` | The batch is being validated and submitted to the provider. |
+| `in_progress` | The provider is processing the batch. |
+| `completed` | All requests finished successfully. |
+| `failed` | The batch failed or produced per-request errors. |
+| `cancelled` | The batch was cancelled before completion. |
+
+## Validation and permissions
+
+- Every request inside a batch is validated individually.
+- Each request's `model` is checked against the virtual key's allowlist.
+- The maximum number of retries for transient provider errors is three.
+
+## Error codes
+
+| HTTP status | Code | Meaning |
+|-------------|------|---------|
+| 400 | `allternit.invalid_request` | Invalid `endpoint`, `completion_window`, input file, or request body. |
+| 401 | `allternit.authentication_failed` | Missing or invalid API key. |
+| 403 | `allternit.permission_denied` | A requested model is not allowed for this key. |
+| 404 | `allternit.invalid_request` | Batch not found. |
+| 429 | `allternit.rate_limited` | Per-key rate limit exceeded. |
+| 429 | `allternit.budget_exceeded` | Monthly key or tenant budget exhausted. |
+| 500 | `allternit.internal_error` | Internal gateway error. |
+
+## Related pages
+
+- [Chat Completions](/api/chat-completions) — request shape for batch items
+- [Files](/api/files) — upload batch input files
+- [Models](/api/models) — model registry and pricing

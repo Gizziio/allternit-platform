@@ -1,0 +1,154 @@
+---
+title: 'Session Manager'
+description: 'Create, manage, and destroy execution sessions across Allternit drivers.'
+---
+
+## Overview
+
+The **Allternit Session Manager** provides high-level session management that orchestrates execution drivers. It supports process-based isolation for development and MicroVM-based isolation for production via Firecracker on Linux and Apple Virtualization Framework on macOS.
+
+## Base URL
+
+The crate is consumed as a Rust library. It persists session state in SQLite and exposes an HTTP surface through the platform gateway at:
+
+```text
+https://api.allternit.com/api/sessions
+```
+
+## Session lifecycle
+
+```text
+Creating → Ready ↔ Running
+             ↓
+        Paused | Stopped | Error | Destroyed
+```
+
+## Drivers
+
+| Driver | Platform | Use case |
+|--------|----------|----------|
+| Process | All | Development and fast iteration |
+| Firecracker | Linux | Production MicroVMs |
+| Apple VF | macOS | Production virtual machines |
+
+## Endpoints
+
+| Method | Path | Description |
+|--------|------|-------------|
+| POST | `/api/sessions` | Create a session |
+| GET | `/api/sessions` | List sessions |
+| GET | `/api/sessions/:id` | Get a session |
+| POST | `/api/sessions/:id/exec` | Execute a command |
+| POST | `/api/sessions/:id/destroy` | Destroy a session |
+
+## JSON examples
+
+### Create a session
+
+```bash
+curl -X POST https://api.allternit.com/api/sessions \
+  -H 'content-type: application/json' \
+  -d '{
+    "spec": {
+      "name": "research-session",
+      "working_dir": "/workspace",
+      "env_vars": {},
+      "resources": {
+        "cpu_cores": 2.0,
+        "memory_mib": 2048,
+        "disk_mib": 10240
+      },
+      "use_vm": false,
+      "image": "default",
+      "timeout_secs": 3600
+    }
+  }'
+```
+
+Response:
+
+```json
+{
+  "id": "550e8400-e29b-41d4-a716-446655440000",
+  "name": "research-session",
+  "status": "ready",
+  "spec": {
+    "working_dir": "/workspace",
+    "use_vm": false,
+    "image": "default",
+    "timeout_secs": 3600
+  },
+  "created_at": "2026-08-13T19:00:00.000Z",
+  "last_activity_at": "2026-08-13T19:00:00.000Z",
+  "driver_handle_id": "hdl_1",
+  "driver_type": "Process",
+  "exit_code": null,
+  "error_message": null
+}
+```
+
+### Execute a command
+
+```bash
+curl -X POST https://api.allternit.com/api/sessions/550e8400-e29b-41d4-a716-446655440000/exec \
+  -H 'content-type: application/json' \
+  -d '{
+    "command": ["uname", "-a"],
+    "env_vars": {},
+    "timeout_ms": 30000
+  }'
+```
+
+Response:
+
+```json
+{
+  "exit_code": 0,
+  "stdout": "Darwin host 23.0.0 ...\n",
+  "stderr": "",
+  "duration_ms": 42
+}
+```
+
+### Destroy a session
+
+```bash
+curl -X POST https://api.allternit.com/api/sessions/550e8400-e29b-41d4-a716-446655440000/destroy \
+  -H 'content-type: application/json' \
+  -d '{"force": false}'
+```
+
+Response:
+
+```json
+{ "success": true }
+```
+
+## Configuration
+
+| Field | Default | Description |
+|-------|---------|-------------|
+| `database_url` | `sqlite:<data_dir>/sessions.db` | SQLite persistence URL |
+| `default_working_dir` | `/workspace` | Default session working directory |
+| `max_sessions` | `100` | Maximum concurrent sessions |
+| `cleanup_interval_secs` | `60` | Background cleanup interval |
+| `firecracker_config` | `None` | Firecracker driver configuration |
+| `apple_vf_config` | `None` | Apple VF configuration (macOS only) |
+
+## Error codes
+
+| HTTP | Code | Meaning |
+|------|------|---------|
+| 200 | — | Success |
+| 400 | `bad_request` | Invalid session specification |
+| 404 | `session_not_found` | Session ID not found |
+| 409 | `session_already_exists` | Duplicate session ID |
+| 422 | `invalid_state` | Session is not in the expected state |
+| 429 | `session_limit_reached` | Maximum concurrent sessions exceeded |
+| 500 | `driver_error` | Execution driver failure |
+
+## Related pages
+
+- [Process Driver](/core/process-driver)
+- [VM Executor](/byoc/vm-executor)
+- [Gizzi Runtime](/core/gizzi-runtime)
