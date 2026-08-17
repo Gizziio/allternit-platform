@@ -1,5 +1,10 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
-import { SheetsApp } from '@allternit/office-sheets-app';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import {
+  SheetsApp,
+  OfficeHostProvider,
+  createBrowserHost,
+  type OfficeHost,
+} from '@allternit/allternit-office-suite';
 import { xlsxToText } from '@allternit/office-file-parse/xlsx';
 import { takeFile } from '@/views/office/file-handoff';
 import {
@@ -148,17 +153,31 @@ export function SheetsView({ artifactId, handoffId }: SheetsViewProps) {
     [artifact, persistBytes],
   );
 
+  // Host contract passed to the suite adapter.
+  const saveFileRef = useRef(handleSave);
+  saveFileRef.current = handleSave;
+  const host = useMemo<OfficeHost>(
+    () =>
+      createBrowserHost({
+        saveFile: async (bytes: Uint8Array, name: string) => {
+          saveFileRef.current(bytes, name);
+        },
+      }),
+    [],
+  );
+
   if (!loaded) {
     return <div style={{ width: '100%', height: '100%', background: 'var(--shell-view-bg, #141110)' }} />;
   }
 
   return (
     <div style={{ width: '100%', height: '100%' }}>
-      <SheetsApp
-        key={artifact?.id ?? (handoffFileRef.current ? 'handoff' : 'standalone')}
-        document={initialBytes ? { bytes: initialBytes, name: initialName ?? 'workbook.xlsx' } : undefined}
-        onSave={artifact ? handleSave : undefined}
-      />
+      <OfficeHostProvider host={host}>
+        <SheetsApp
+          key={artifact?.id ?? (handoffFileRef.current ? 'handoff' : 'standalone')}
+          document={initialBytes ? { bytes: initialBytes, name: initialName ?? 'workbook.xlsx' } : undefined}
+        />
+      </OfficeHostProvider>
     </div>
   );
 }

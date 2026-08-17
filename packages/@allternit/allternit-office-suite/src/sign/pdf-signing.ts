@@ -1,8 +1,8 @@
 /**
- * Native, client-side PDF signing utilities.
+ * Host-agnostic, client-side PDF signing utilities.
  *
- * No external services, no API keys, no Docker. We render PDF pages with
- * pdfjs-dist and stamp signatures/images onto the document with pdf-lib,
+ * No external services, no API keys, no Docker. Renders PDF pages with
+ * pdfjs-dist and stamps signature PNGs onto the document with pdf-lib,
  * entirely inside the browser.
  */
 
@@ -103,4 +103,16 @@ export async function canvasToPngBytes(canvas: HTMLCanvasElement): Promise<Uint8
       resolve(new Uint8Array(buffer));
     }, 'image/png');
   });
+}
+
+/**
+ * Convert PNG bytes to a base64 data URL for immediate preview.
+ */
+export function pngBytesToDataUrl(pngBytes: Uint8Array): string {
+  let binary = '';
+  const len = pngBytes.byteLength;
+  for (let i = 0; i < len; i++) {
+    binary += String.fromCharCode(pngBytes[i]);
+  }
+  return `data:image/png;base64,${window.btoa(binary)}`;
 }
