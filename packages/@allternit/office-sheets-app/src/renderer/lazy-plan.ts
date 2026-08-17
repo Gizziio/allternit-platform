@@ -6,8 +6,8 @@ import {
   layoutOpLabel,
   structuralOpLabel,
   type WorkbookCommandBatch,
-} from '@allternit/office-xlsx-engine/domain/workbook-dsl'
-import type { CellState, ChangePlan } from '@allternit/office-xlsx-engine/domain/workbook.types'
+} from '@allternit/allternit-office-suite/xlsx'
+import type { CellState, ChangePlan } from '@allternit/allternit-office-suite/xlsx'
 
 /// Builds an AI change preview against a live (imported) workbook: "before"
 /// states come from the current on-screen cells, and the same reader is used

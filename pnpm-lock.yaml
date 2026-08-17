@@ -1126,6 +1126,9 @@ importers:
 
   packages/@allternit/allternit-office-suite:
     dependencies:
+      '@allternit/office-ai':
+        specifier: workspace:*
+        version: link:../office-ai
       '@allternit/office-docs-app':
         specifier: workspace:*
         version: link:../office-docs-app
@@ -1150,6 +1153,9 @@ importers:
       '@allternit/office-slides-editor':
         specifier: workspace:*
         version: link:../office-slides-editor
+      '@allternit/office-xlsx-engine':
+        specifier: workspace:*
+        version: link:../office-xlsx-engine
       '@phosphor-icons/react':
         specifier: ^2.1.10
         version: 2.1.10(react-dom@18.3.1(react@18.3.1))(react@18.3.1)
@@ -1315,9 +1321,6 @@ importers:
 
   packages/@allternit/office-docs-app:
     dependencies:
-      '@allternit/office-ai':
-        specifier: workspace:*
-        version: link:../office-ai
       '@allternit/office-docx-engine':
         specifier: workspace:*
         version: link:../office-docx-engine
@@ -1421,9 +1424,6 @@ importers:
 
   packages/@allternit/office-pdf-app:
     dependencies:
-      '@allternit/office-ai':
-        specifier: workspace:*
-        version: link:../office-ai
       buffer:
         specifier: ^6.0.3
         version: 6.0.3
@@ -1533,12 +1533,6 @@ importers:
 
   packages/@allternit/office-sheets-app:
     dependencies:
-      '@allternit/office-ai':
-        specifier: workspace:*
-        version: link:../office-ai
-      '@allternit/office-xlsx-engine':
-        specifier: workspace:*
-        version: link:../office-xlsx-engine
       '@fluentui/react-icons':
         specifier: ^2.0.333
         version: 2.0.334(react@18.3.1)
@@ -1628,9 +1622,6 @@ importers:
 
   packages/@allternit/office-slides-app:
     dependencies:
-      '@allternit/office-ai':
-        specifier: workspace:*
-        version: link:../office-ai
       '@allternit/office-pptx-engine':
         specifier: workspace:*
         version: link:../office-pptx-engine

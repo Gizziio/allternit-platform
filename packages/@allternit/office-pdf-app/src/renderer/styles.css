@@ -2212,6 +2212,9 @@ html[data-rail-collapsed='true'] .ribbon-tabs {
 
 .ai-send-btn:disabled {
   cursor: default;
+  /* the send-enter-off art already encodes the disabled look;
+     without this the global button:disabled 0.48 opacity washes it out vs slides */
+  opacity: 1;
 }
 
 /* Stop button while generating: brand-supplied art (white square on black), transparent button chrome */

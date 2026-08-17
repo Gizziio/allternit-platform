@@ -450,6 +450,14 @@ export function SignApp({ file: initialFile }: SignAppProps): React.ReactNode {
                     >
                       <div className="aos-sign-signer-row">
                         <div className="aos-sign-color-dot" style={{ background: signer.color }} />
+                        {signer.signaturePng ? (
+                          <img
+                            src={pngBytesToDataUrl(signer.signaturePng)}
+                            alt="Signature preview"
+                            className="aos-sign-signer-thumb"
+                            onClick={(e) => e.stopPropagation()}
+                          />
+                        ) : null}
                         <div className="aos-sign-signer-fields">
                           <input
                             type="text"

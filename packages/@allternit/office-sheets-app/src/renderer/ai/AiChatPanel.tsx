@@ -1,21 +1,16 @@
 import React, { useEffect, useRef, useState } from 'react'
+import { useOfficeAi } from '@allternit/allternit-office-suite/bridge'
+import { type OfficeModelOption } from '@allternit/allternit-office-suite/ai'
 import { AiComposer, AiTypingIndicator } from './ui-stubs'
 import { GensparkMark } from '../ribbon-icons'
-import type { ChangePlan } from '@allternit/office-xlsx-engine/domain/workbook.types'
-import type { AttachmentMeta } from '@allternit/office-xlsx-engine/shared/desktop-api'
+import type { ChangePlan } from '@allternit/allternit-office-suite/xlsx'
+import type { AttachmentMeta } from '@allternit/allternit-office-suite/xlsx'
 import { useI18n, type TFunc } from '../i18n/locale'
 import { Markdown } from './ui-stubs'
 import sendEnterOn from '../assets/send-enter-on.png'
 import sendEnterOff from '../assets/send-enter-off.png'
 import sendStop from '../assets/send-stop.png'
 import attachIcon from '../assets/attach-icon.png'
-import {
-  getOfficeModelOptions,
-  getOfficeModelLabel,
-  refreshOfficeModelOptions,
-  setOfficeModelOverride,
-  type OfficeModelOption,
-} from '@allternit/office-ai'
 
 /** Clipboard bitmap MIME → attachment extension (matches the main process's
  * ATTACHMENT_IMAGE_EXTS) */
@@ -118,6 +113,7 @@ export function AiChatPanel({
   readonly onModelChange?: ((modelId: string | undefined) => void) | undefined
 }): React.JSX.Element {
   const { t } = useI18n()
+  const ai = useOfficeAi()
   const chatRef = useRef<HTMLDivElement | null>(null)
   const inputRef = useRef<HTMLTextAreaElement | null>(null)
   const stickToBottomRef = useRef(true)
@@ -480,14 +476,15 @@ function ModelPicker({
   value?: string | undefined
   onChange?: ((modelId: string | undefined) => void) | undefined
 }): React.JSX.Element {
+  const ai = useOfficeAi()
   const [open, setOpen] = useState(false)
-  const [options, setOptions] = useState<OfficeModelOption[]>(() => getOfficeModelOptions())
+  const [options, setOptions] = useState<OfficeModelOption[]>(() => ai.getModelOptions())
   const selected = options.find((o) => o.id === (value ?? 'platform')) ?? options[0]
   const menuRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
     let cancelled = false
-    refreshOfficeModelOptions()
+    ai.refreshModelOptions()
       .then((next) => {
         if (!cancelled) setOptions(next)
       })
@@ -532,7 +529,7 @@ function ModelPicker({
               className={`ai-model-picker-option${o.id === selected?.id ? ' active' : ''}`}
               onClick={() => {
                 const next = o.id === 'platform' ? undefined : o.id
-                setOfficeModelOverride('sheets', next)
+                ai.setModelOverride('sheets', next)
                 onChange?.(next)
                 setOpen(false)
               }}

@@ -22,8 +22,7 @@
     "buffer": "^6.0.3",
     "konva": "^9.3.20",
     "react-konva": "^18.2.11",
-    "harfbuzzjs": "^0.4.11",
-    "@allternit/office-ai": "workspace:*"
+    "harfbuzzjs": "^0.4.11"
   },
   "devDependencies": {
     "@types/react": "^18.3.28",

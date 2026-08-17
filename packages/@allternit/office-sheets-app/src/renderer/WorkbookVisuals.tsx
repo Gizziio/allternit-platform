@@ -10,10 +10,10 @@ import {
   formatCategoryLabel,
   scatterAxisBounds,
   splitSheetRef,
-} from '@allternit/office-xlsx-engine/domain/chart-visual'
-import { parseAddress } from '@allternit/office-xlsx-engine/domain/cell-address'
+} from '@allternit/allternit-office-suite/xlsx'
+import { parseAddress } from '@allternit/allternit-office-suite/xlsx'
 import { t } from './i18n/locale'
-import type { WorkbookChartEdit, WorkbookFile, WorkbookVisualObject } from '@allternit/office-xlsx-engine/shared/desktop-api'
+import type { WorkbookChartEdit, WorkbookFile, WorkbookVisualObject } from '@allternit/allternit-office-suite/xlsx'
 
 type UniverRuntime = ReturnType<typeof createUniver>
 type ActiveWorkbook = NonNullable<ReturnType<UniverRuntime['univerAPI']['getActiveWorkbook']>>

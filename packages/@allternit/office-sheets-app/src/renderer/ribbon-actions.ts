@@ -11,14 +11,14 @@ import {
   type ICellData,
   type IStyleData,
 } from '@univerjs/core'
-import { columnLabel } from '@allternit/office-xlsx-engine/domain/cell-address'
-import { transposeChartSeries, type ChartSeriesVisualState } from '@allternit/office-xlsx-engine/domain/chart-visual'
-import { applyFlashFillTemplate, inferFlashFillTemplate } from '@allternit/office-xlsx-engine/domain/flash-fill'
+import { columnLabel } from '@allternit/allternit-office-suite/xlsx'
+import { transposeChartSeries, type ChartSeriesVisualState } from '@allternit/allternit-office-suite/xlsx'
+import { applyFlashFillTemplate, inferFlashFillTemplate } from '@allternit/allternit-office-suite/xlsx'
 import type {
   WorkbookChartEdit,
   WorkbookStyleEdit,
   WorkbookVisualObject,
-} from '@allternit/office-xlsx-engine/shared/desktop-api'
+} from '@allternit/allternit-office-suite/xlsx'
 import {
   CELL_STYLE_PRESETS,
   CHART_LABEL_COMMANDS,

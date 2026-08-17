@@ -41,12 +41,87 @@ export interface OfficeModelInfo {
   provider?: string;
 }
 
+export type OfficeAppKey = 'docs' | 'sheets' | 'slides' | 'pdf';
+
+export interface OfficeModelOption {
+  id: string;
+  /** provider/model runtime id */
+  runtimeId: string;
+  label: string;
+  /** provider name, e.g. "Kimi" or "OpenAI" */
+  provider?: string | undefined;
+}
+
+export interface OfficeToolExecution {
+  output?: string | undefined;
+  isError?: boolean | undefined;
+  summary: string;
+  mutated?: boolean | undefined;
+  display?: { [key: string]: unknown } | undefined;
+}
+
+export interface OfficeAgentLoopEvents {
+  onText?: ((text: string) => void) | undefined;
+  onToolStart?: ((call: { name: string; input?: unknown }) => void) | undefined;
+  onToolExecuted?:
+    | ((payload: {
+        call: { name: string; input?: unknown };
+        execution: OfficeToolExecution;
+      }) => void)
+    | undefined;
+  onDone?:
+    | ((result: { text: string; cancelled: boolean; turnLimit: boolean }) => void)
+    | undefined;
+  onTurnEnd?: ((payload?: unknown) => void) | undefined;
+  onError?: ((error: string) => void) | undefined;
+}
+
+export interface OfficeAgentLoopOptions {
+  events?: OfficeAgentLoopEvents | undefined;
+  skill?: unknown | undefined;
+  systemSuffix?: string | (() => string) | undefined;
+  transport?: unknown | undefined;
+  modelId?: string | undefined;
+  maxTurns?: number | undefined;
+  [key: string]: unknown;
+}
+
+export interface OfficeAgentLoop {
+  busy: boolean;
+  run(instruction: string, images?: unknown[]): void;
+  cancel(): void;
+  setModelId(modelId: string | undefined): void;
+  reset(): void;
+  restore(messages: readonly { role: string; text: string }[]): void;
+}
+
+export interface OfficeAgentLoopConstructor {
+  new (options: OfficeAgentLoopOptions): OfficeAgentLoop;
+}
+
 /**
- * Optional AI client supplied by the host.
+ * AI services supplied by the host. The vendored office apps consume this
+ * contract for model selection and the agent loop instead of importing
+ * `@allternit/office-ai` directly.
  */
 export interface OfficeAiClient {
-  stream: (messages: OfficeMessage[], abortSignal?: AbortSignal) => AsyncIterable<string>;
-  getModels: () => Promise<OfficeModelInfo[]>;
+  /** Resolve the effective runtime model id for an office app. */
+  resolveModelId: (appKey: OfficeAppKey) => string | undefined;
+  /** Persist a per-app model override. */
+  setModelOverride: (appKey: OfficeAppKey, modelId: string | undefined) => void;
+  /** Return the current model picker options. */
+  getModelOptions: () => OfficeModelOption[];
+  /** Refresh picker options from the host's model catalog. */
+  refreshModelOptions: () => Promise<OfficeModelOption[]>;
+  /** Human-readable label for a picker value. */
+  getModelLabel: (value?: string) => string;
+  /** Agent loop constructor used by the office apps. */
+  AgentLoop: OfficeAgentLoopConstructor;
+
+  /** Optional custom chat stream for hosts that want to own the wire protocol. */
+  stream?: ((messages: OfficeMessage[], abortSignal?: AbortSignal) => AsyncIterable<string>) | undefined;
+  /** Optional model catalog for custom chat streams. */
+  getModels?: (() => Promise<OfficeModelInfo[]>) | undefined;
 }
 
 /**

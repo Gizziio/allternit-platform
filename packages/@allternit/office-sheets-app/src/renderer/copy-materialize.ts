@@ -8,7 +8,7 @@
  */
 import { ISheetClipboardService } from '@univerjs/sheets-ui'
 
-import { formatAddress } from '@allternit/office-xlsx-engine/domain/cell-address'
+import { formatAddress } from '@allternit/allternit-office-suite/xlsx'
 import { t } from './i18n/locale'
 import { ensureLazyRangeLoaded } from './univer-sync'
 import type { LazyWorkbookState, UniverRuntime } from './univer-state'

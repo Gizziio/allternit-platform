@@ -13,9 +13,12 @@ const blocksuiteIconsLit = require.resolve('@blocksuite/icons/lit')
 // on. Without this, the platform surface's legacy design-mode editor pins
 // @univerjs/core@0.21.1, which conflicts with office-sheets-app's 0.25.x
 // plugins and silently breaks the grid render.
-const univerCore = require.resolve('@univerjs/core', {
+const univerCoreEntry = require.resolve('@univerjs/core', {
   paths: [path.resolve(__dirname, '../../packages/@allternit/office-sheets-app')],
 })
+// require.resolve returns lib/{cjs|es}/index.js; the alias must point at the
+// package root so subpath imports like @univerjs/core/facade still resolve.
+const univerCore = path.dirname(path.dirname(path.dirname(univerCoreEntry)))
 
 /**
  * Development-only dispatch handoff endpoints.
@@ -114,15 +117,25 @@ export default defineConfig({
   // broaden this to arbitrary process environment variables.
   envPrefix: ['VITE_', 'NEXT_PUBLIC_'],
   resolve: {
-    alias: {
-      '@': path.resolve(__dirname, './src'),
-      '@univerjs/core': univerCore,
+    alias: [
+      { find: '@', replacement: path.resolve(__dirname, './src') },
+      // Force Univer to use the same @univerjs/core@0.25.1 that
+      // office-sheets-app depends on. The bare import and every subpath
+      // (e.g. @univerjs/core/facade, @univerjs/core/lib/facade) must be
+      // rewritten to the ESM build or preserved under lib/ respectively.
+      { find: /^@univerjs\/core$/, replacement: path.resolve(univerCore, 'lib/es/index.js') },
+      // Both @univerjs/core/facade and the legacy @univerjs/core/lib/facade
+      // must resolve to the same module instance, or Univer's facade mixin
+      // extensions (e.g. getActiveWorkbook) are applied to the wrong FUniver
+      // class and the sheets renderer crashes at runtime.
+      { find: /^@univerjs\/core\/lib\/(.+)$/, replacement: `${univerCore}/lib/es/$1` },
+      { find: /^@univerjs\/core\/(.+)$/, replacement: `${univerCore}/lib/es/$1` },
       // @blocksuite/data-view@0.19.5 imports a misspelled icon name that was
       // removed from @blocksuite/icons. Keep the workaround in source so a
       // clean frozen-lockfile CI install behaves exactly like local builds.
-      '@blocksuite/icons/lit': path.resolve(__dirname, './src/shims/blocksuite-icons-lit.ts'),
-      'virtual:allternit-blocksuite-icons-lit-original': blocksuiteIconsLit,
-    },
+      { find: '@blocksuite/icons/lit', replacement: path.resolve(__dirname, './src/shims/blocksuite-icons-lit.ts') },
+      { find: 'virtual:allternit-blocksuite-icons-lit-original', replacement: blocksuiteIconsLit },
+    ],
     // Force a single copy of packages that break when duplicated across the
     // workspace graph (e.g. office-slides-app on React 18 must resolve the
     // same react as the platform surface; Univer plugins must all share one

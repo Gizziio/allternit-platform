@@ -26,18 +26,18 @@ import type {
   CellFormatPatch,
   SetDataValidationOperation,
   SetHyperlinkOperation,
-} from '@allternit/office-xlsx-engine/domain/workbook-dsl'
+} from '@allternit/allternit-office-suite/xlsx'
 import {
   columnIndex,
   columnLabel,
   parseAddress,
   parseRange,
   rangeCellCount,
-} from '@allternit/office-xlsx-engine/domain/cell-address'
-import { splitSheetRef, type CellBounds } from '@allternit/office-xlsx-engine/domain/chart-visual'
-import { InMemoryWorkbookAdapter } from '@allternit/office-xlsx-engine/domain/in-memory-workbook'
-import { WORST_FIRST_ICON_SETS } from '@allternit/office-xlsx-engine/gateway/xlsx-cf'
-import type { CellFormatState, CellState, WorkbookSnapshot } from '@allternit/office-xlsx-engine/domain/workbook.types'
+} from '@allternit/allternit-office-suite/xlsx'
+import { splitSheetRef, type CellBounds } from '@allternit/allternit-office-suite/xlsx'
+import { InMemoryWorkbookAdapter } from '@allternit/allternit-office-suite/xlsx'
+import { WORST_FIRST_ICON_SETS } from '@allternit/allternit-office-suite/xlsx'
+import type { CellFormatState, CellState, WorkbookSnapshot } from '@allternit/allternit-office-suite/xlsx'
 import type {
   WorkbookCellStyle,
   WorkbookCfState,
@@ -49,7 +49,7 @@ import type {
   WorkbookRangeResult,
   WorkbookRichRun,
   WorkbookVisualObject,
-} from '@allternit/office-xlsx-engine/shared/desktop-api'
+} from '@allternit/allternit-office-suite/xlsx'
 import {
   fromNeutralStyle,
   isSheetRemoved,
