@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useCallback, useMemo, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useState } from "react";
 import {
   Robot,
   Play,
@@ -30,6 +30,7 @@ import {
   SquaresFour,
   X,
   PaperPlaneTilt,
+  WebhooksLogo,
 } from "@phosphor-icons/react";
 import { useAgentStore } from "@/lib/agents/agent.store";
 import { useChatSessionStore } from "@/views/chat/ChatSessionStore";
@@ -43,6 +44,7 @@ import {
 } from "@/lib/bots/bot-profile";
 import { useStartBotSession } from "@/lib/bots/useStartBotSession";
 import { getConnectorLogoUrl } from "@/lib/design/connector-logo";
+import { listWebhookTriggers, type WebhookTrigger } from "@/lib/webhook-api";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { GlassSurface } from "@/design/GlassSurface";
@@ -817,6 +819,69 @@ function TabHeader({
   );
 }
 
+function WebhooksCard({
+  botId,
+  accentColor,
+}: {
+  botId: string;
+  accentColor: string;
+}) {
+  const [triggers, setTriggers] = useState<WebhookTrigger[]>([]);
+  const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    setLoading(true);
+    listWebhookTriggers()
+      .then((rows) => setTriggers(rows.filter((t) => t.target_bot_id === botId)))
+      .catch(() => setTriggers([]))
+      .finally(() => setLoading(false));
+  }, [botId]);
+
+  const openSettings = () => {
+    window.dispatchEvent(
+      new CustomEvent("allternit:open-settings", { detail: { section: "webhooks" } })
+    );
+  };
+
+  return (
+    <GlassSurface className="p-5 rounded-xl">
+      <div className="flex items-center justify-between gap-4">
+        <div className="flex items-center gap-3">
+          <div
+            className="flex shrink-0 items-center justify-center rounded-xl"
+            style={{
+              width: 40,
+              height: 40,
+              background: `color-mix(in srgb, ${accentColor} 14%, transparent)`,
+            }}
+          >
+            <WebhooksLogo size={20} style={{ color: accentColor }} />
+          </div>
+          <div>
+            <h3 className="text-[14px] font-semibold text-[var(--text-primary)]">
+              Webhook triggers
+            </h3>
+            <p className="text-[13px] text-[var(--text-secondary)]">
+              {loading
+                ? "Loading…"
+                : triggers.length === 0
+                  ? "No triggers wake this bot yet"
+                  : `${triggers.length} trigger${triggers.length === 1 ? "" : "s"} wake this bot`}
+            </p>
+          </div>
+        </div>
+        <button
+          type="button"
+          onClick={openSettings}
+          className="text-[13px] font-medium text-[var(--text-primary)] hover:text-[var(--accent-primary)] transition-colors"
+        >
+          Configure webhooks →
+        </button>
+      </div>
+    </GlassSurface>
+  );
+}
+
 function HomeTab({
   bot,
   accentColor,
@@ -940,6 +1005,9 @@ function HomeTab({
           onClick={onViewRuntime}
         />
       </div>
+
+      {/* Webhooks */}
+      <WebhooksCard botId={bot.id} accentColor={accentColor} />
 
       {/* Recent session */}
       {latestSession && (

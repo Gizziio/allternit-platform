@@ -57,6 +57,7 @@ import { SecurityPanel } from './SecurityPanel';
 import { SkillsSettingsPanel } from './SkillsSettingsPanel';
 import { LensSettingsPanel } from './LensSettingsPanel';
 import { PluginsSettingsPanel } from './PluginsSettingsPanel';
+import { WebhooksSettingsPanel } from './WebhooksSettingsPanel';
 import { DispatchSettingsPanel } from './DispatchSettingsPanel';
 import { CoworkPreferencesPanel } from './CoworkPreferencesPanel';
 import { ResponseStylePanel } from './ResponseStylePanel';
@@ -1395,6 +1396,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
       case 'environment': return <ToastProvider><EnvironmentSettings /></ToastProvider>;
       case 'security': return <SecurityPanel />;
       case 'agents': return <AgentOpsPanel />;
+      case 'webhooks': return <WebhooksSettingsPanel />;
       case 'about': return renderAboutPanel();
       case 'signin': return <ClerkAuthPanel />;
       case 'organization': return <OrganizationAccessPanel />;

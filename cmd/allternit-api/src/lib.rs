@@ -141,6 +141,7 @@ pub mod vm_session_routes;
 pub mod web_proxy_routes;
 pub mod webhook_routes;
 pub mod webhook_subscription_routes;
+pub mod webhook_trigger_routes;
 pub mod workflow_routes;
 pub mod workspace_routes;
 

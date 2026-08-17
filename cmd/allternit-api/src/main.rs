@@ -110,6 +110,9 @@ use allternit_api::vm_session_routes::{new_vm_session_store, vm_session_router};
 use allternit_api::web_proxy_routes::web_proxy_router;
 use allternit_api::webhook_routes::webhook_router;
 use allternit_api::webhook_subscription_routes::webhook_subscription_router;
+use allternit_api::webhook_trigger_routes::{
+    webhook_trigger_public_router, webhook_trigger_router,
+};
 use allternit_api::workflow_routes::workflow_router;
 use allternit_api::workspace_routes::workspace_router;
 use allternit_api::AppState;
@@ -322,6 +325,7 @@ async fn main() {
         .merge(beta_deployment_router())
         .merge(beta_work_router())
         .merge(webhook_subscription_router())
+        .merge(webhook_trigger_router())
         .merge(beta_memory_store_router())
         .merge(memory_reconstruction_router())
         .merge(user_profile_router())
@@ -447,6 +451,7 @@ async fn main() {
         .nest("/beta", enrollment_router())
         .merge(status_router())
         .merge(webhook_router())
+        .merge(webhook_trigger_public_router())
         // Slack signs every request itself (`verify_slack_signature`), so
         // this is public the same way `webhook_router()` above is — no
         // Clerk session exists for a server-to-server call from Slack.

@@ -442,3 +442,36 @@ Improve `surfaces/ai.allternit.com/src/views/api-capture/ApiCaptureView.tsx` per
 ## Open questions
 
 - None.
+
+---
+
+## Goal
+
+Add native inbound webhook triggers to the Allternit platform and a day-of-week selector for automation schedules.
+
+## Just did
+
+- Added `V87__webhook_triggers.sql` migration with `webhook_triggers` and `webhook_trigger_deliveries` tables.
+- Created `cmd/allternit-api/src/webhook_trigger_routes.rs`:
+  - Protected CRUD at `/api/v1/webhook-triggers` and delivery logs at `/api/v1/webhook-triggers/:id/deliveries`.
+  - Public HMAC-verified receiver at `/webhooks/inbound/:id` that creates a Rails ticket assigned to the target bot.
+- Wired the new router into `cmd/allternit-api/src/lib.rs` and `cmd/allternit-api/src/main.rs` (protected v1 + public routers).
+- Created `surfaces/ai.allternit.com/src/lib/webhook-api.ts` typed client.
+- Created `surfaces/ai.allternit.com/src/views/settings/WebhooksSettingsPanel.tsx` with list/create/edit/delete, URL copy, and delivery logs.
+- Added a `webhooks` section to `settings.config.ts` (Infrastructure group) and `SettingsView.tsx` rendering.
+- Added a `WebhooksCard` to `BotHomeView.tsx` that shows trigger count and opens Settings › Webhooks.
+- Created `surfaces/ai.allternit.com/src/views/cowork/DayOfWeekSelector.tsx` and integrated it into `AutomationTasksView.tsx`; it syncs with the cron day-of-week field.
+- Added docs at `docs/infra/webhooks.md`.
+- Verification:
+  - `cargo build -p allternit-api` ✅
+  - `cargo test -p allternit-api webhook_trigger_routes` ✅ (2/2)
+  - `pnpm run typecheck:fast` reports no errors in the new/modified files (global pre-existing `office-*` asset errors remain).
+
+## Next
+
+- Smoke-test webhook creation and delivery against a running backend.
+- Run the automation day picker in the browser to confirm preset/day-toggle sync.
+
+## Open questions
+
+- None.

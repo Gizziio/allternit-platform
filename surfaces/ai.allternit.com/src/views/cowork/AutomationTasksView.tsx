@@ -55,6 +55,11 @@ import {
 } from '@/lib/agents/scheduled-jobs.service';
 import { cn } from '@/lib/utils';
 import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem } from '@/components/ui/dropdown-menu';
+import {
+  DayOfWeekSelector,
+  parseCronDays,
+  applyCronDays,
+} from './DayOfWeekSelector';
 
 // Unified types
 type TaskType = 'goal' | 'routine' | 'loop' | 'heartbeat';
@@ -938,6 +943,7 @@ function AutomationWizardForm({
     prompt: initialTask?.prompt || prefilledData?.prompt || '',
     frequency: initialTask?.frequency || prefilledData?.frequency || 'daily' as Frequency,
     schedule_expression: initialTask?.schedule_expression || prefilledData?.schedule_expression || '0 9 * * *',
+    selectedDays: parseCronDays(initialTask?.schedule_expression || prefilledData?.schedule_expression || '0 9 * * *'),
     goalId: initialTask?.goalId || '',
     routineId: initialTask?.routineId || '',
     agentId: initialTask?.agentId || agentId || '',
@@ -975,13 +981,26 @@ function AutomationWizardForm({
 
   const handleFrequencyChange = (freq: Frequency) => {
     let expr = '0 9 * * *';
-    if (freq === 'hourly') expr = '0 * * * *';
-    else if (freq === 'daily') expr = '0 9 * * *';
-    else if (freq === 'weekdays') expr = '0 9 * * 1-5';
-    else if (freq === 'weekly') expr = '0 9 * * 1';
-    else if (freq === 'continuous') expr = '5m';
+    let days: number[] = [0, 1, 2, 3, 4, 5, 6];
+    if (freq === 'hourly') {
+      expr = '0 * * * *';
+    } else if (freq === 'daily') {
+      expr = '0 9 * * *';
+    } else if (freq === 'weekdays') {
+      expr = '0 9 * * 1-5';
+      days = [1, 2, 3, 4, 5];
+    } else if (freq === 'weekly') {
+      expr = '0 9 * * 1';
+      days = [1];
+    } else if (freq === 'continuous') {
+      expr = '5m';
+      days = [];
+    } else if (freq === 'manual') {
+      expr = '';
+      days = [];
+    }
 
-    setFormData({ ...formData, frequency: freq, schedule_expression: expr });
+    setFormData({ ...formData, frequency: freq, schedule_expression: expr, selectedDays: days });
   };
 
   return (
@@ -1320,12 +1339,30 @@ function AutomationWizardForm({
                 <input
                   type="text"
                   value={formData.schedule_expression}
-                  onChange={(e) => setFormData({ ...formData, schedule_expression: e.target.value })}
+                  onChange={(e) => setFormData({ ...formData, schedule_expression: e.target.value, selectedDays: parseCronDays(e.target.value) })}
                   placeholder={formData.frequency === 'continuous' ? "5m" : "0 9 * * *"}
                   className="w-full p-2.5 bg-[var(--bg-elevated)] border border-solid border-[var(--border-default)] rounded-lg text-[var(--text-primary)] text-[14px] outline-none focus:border-[var(--text-primary)]"
                 />
               </FormField>
             </div>
+          )}
+
+          {/* Day-of-week selector (supplements cron for scheduled frequencies) */}
+          {formData.type !== 'goal' &&
+            formData.frequency !== 'manual' &&
+            formData.frequency !== 'continuous' && (
+            <FormField label="Days of week">
+              <DayOfWeekSelector
+                value={formData.selectedDays}
+                onChange={(days) =>
+                  setFormData({
+                    ...formData,
+                    selectedDays: days,
+                    schedule_expression: applyCronDays(formData.schedule_expression, days),
+                  })
+                }
+              />
+            </FormField>
           )}
 
           {/* Executor / Agent Allocation (Not for Goal) */}
