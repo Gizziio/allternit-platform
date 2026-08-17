@@ -30,7 +30,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { Pill } from '@/components/ui/Pill';
 import { Text } from '@/components/typography/Text';
 import { useMiniAppDiscovery } from './use-mini-app-discovery';
-import { pinMiniApp, removeMiniApp, saveMiniApp, unpinMiniApp } from './mini-app-registry';
+import { getInstalledMiniApps, pinMiniApp, removeMiniApp, saveMiniApp, unpinMiniApp } from './mini-app-registry';
 import type { InstalledMiniApp } from './mini-app.types';
 import { ensureMiniAppAgent } from './mini-app-harness';
 import { MiniAppDetailView } from './MiniAppDetailView';
@@ -289,10 +289,10 @@ function MiniAppCard({ app, onOpen, onPin, onUnpin, onReprobe, onDetails }: {
         }
       }}
       className={cn(
-        'flex min-h-[200px] cursor-pointer flex-col gap-4 rounded-xl border p-5 transition-all duration-200',
+        'group flex min-h-[200px] cursor-pointer flex-col gap-3 overflow-hidden rounded-2xl border p-4 transition-all duration-200',
         isRunning
           ? 'border-green-500/30 bg-green-500/[0.04] hover:border-green-500/50 hover:shadow-md'
-          : 'border-[var(--border-subtle)] bg-[var(--bg-elevated)] hover:border-[var(--border-hover)] hover:shadow-md',
+          : 'border-[var(--border-subtle)] bg-[var(--bg-elevated)] hover:border-[var(--border-hover)] hover:bg-[var(--surface-panel)] hover:shadow-lg',
       )}
     >
       <div className="flex items-start justify-between gap-3">
@@ -357,46 +357,47 @@ function MiniAppCard({ app, onOpen, onPin, onUnpin, onReprobe, onDetails }: {
       </div>
 
       <div
-        className="flex flex-wrap items-center gap-2 border-t border-[var(--border-subtle)] pt-3"
+        className="mt-auto flex flex-wrap items-center gap-2 border-t border-[var(--border-subtle)] pt-3"
         onClick={(event) => event.stopPropagation()}
         onKeyDown={(event) => event.stopPropagation()}
       >
         <Button
           variant="ghost"
           size="sm"
-          className="shrink-0"
+          className="h-8 shrink-0 gap-1.5 px-2 text-xs"
           onClick={() => (isPinned ? onUnpin(app.id) : onPin(app))}
         >
           {isPinned ? <PushPinSlash size={13} /> : <PushPin size={13} />}
-          {isPinned ? 'Unpin' : 'Pin'}
+          <span className="hidden sm:inline">{isPinned ? 'Unpin' : 'Pin'}</span>
         </Button>
         <div className="flex flex-1 flex-wrap items-center justify-end gap-2">
           {canInstall && installState.phase === 'idle' && (
-            <Button variant="outline" size="sm" onClick={() => void handleInstall()} disabled={isInstalling}>
+            <Button variant="outline" size="sm" className="h-8 gap-1.5 px-2.5 text-xs" onClick={() => void handleInstall()} disabled={isInstalling}>
               <Download size={12} />
               Install
             </Button>
           )}
           {isOffline && isDesktop && app.downloadable && installState.phase === 'idle' && (
-            <Button variant="outline" size="sm" onClick={() => void handleStart()}>
+            <Button variant="outline" size="sm" className="h-8 gap-1.5 px-2.5 text-xs" onClick={() => void handleStart()}>
               <ArrowSquareOut size={12} />
               Start
             </Button>
           )}
           {isInstalling && (
-            <div className="flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-xs text-[var(--text-tertiary)]">
+            <div className="flex h-8 items-center gap-1.5 rounded-lg px-2.5 text-xs text-[var(--text-tertiary)]">
               <CircleNotch size={12} className="animate-spin" />
               {installState.phase === 'installing' ? 'Installing…' : 'Starting…'}
             </div>
           )}
           {isRunning && !isInstalling && (
-            <Button variant="outline" size="sm" onClick={() => void handleStop()}>
+            <Button variant="outline" size="sm" className="h-8 gap-1.5 px-2.5 text-xs" onClick={() => void handleStop()}>
               Stop
             </Button>
           )}
           {!isOffline && !app.registryName && (
             <Button
               size="sm"
+              className="h-8 gap-1.5 px-2.5 text-xs"
               onClick={() => {
                 if (!isPinned) onPin(app);
                 void onOpen(app);
@@ -560,6 +561,15 @@ export function AciMiniAppsView() {
     setSelectedApp(app);
   }, []);
 
+  const handleDetails = useCallback((app: InstalledMiniApp) => {
+    const installed = getInstalledMiniApps();
+    const existing = installed.find((item) => item.id === app.id);
+    if (!existing || existing.isPinned === false) {
+      pinMiniApp(app);
+    }
+    setSelectedApp(app);
+  }, []);
+
   const clearFilters = useCallback(() => {
     setQuery('');
     setCategory('all');
@@ -705,7 +715,7 @@ export function AciMiniAppsView() {
                   onPin={handlePin}
                   onUnpin={handleUnpin}
                   onReprobe={reprobe}
-                  onDetails={setSelectedApp}
+                  onDetails={handleDetails}
                 />
               ))}
               {visibleApps.length === 0 && <NoResultsState onClear={clearFilters} />}

@@ -16,6 +16,8 @@ import {
   Gear,
   RocketLaunch,
   X,
+  Terminal,
+  ChatCenteredText,
 } from '@phosphor-icons/react';
 import { cn } from '@/lib/utils';
 import {
@@ -56,6 +58,8 @@ interface CodeWorkspaceBarProps {
   onToggleWorktree?: () => void;
   branches?: string[];
   onSwitchBranch?: (branch: string) => void;
+  terminalCanvasOpen?: boolean;
+  onToggleTerminalCanvas?: () => void;
 }
 
 const BORDER = 'var(--chat-composer-border, rgba(255, 255, 255, 0.08))';
@@ -76,6 +80,8 @@ export function CodeWorkspaceBar({
   onToggleWorktree,
   branches,
   onSwitchBranch,
+  terminalCanvasOpen = false,
+  onToggleTerminalCanvas,
 }: CodeWorkspaceBarProps): React.ReactNode {
   const branch = activeWorkspace?.repo_status?.branch ?? 'main';
   const displayName = activeWorkspace?.display_name ?? 'Workspace';
@@ -104,10 +110,33 @@ export function CodeWorkspaceBar({
 
       <WorktreePill enabled={worktreeEnabled} onToggle={onToggleWorktree} />
 
+      <CanvasTogglePill isOpen={terminalCanvasOpen} onToggle={onToggleTerminalCanvas} />
+
       <RemoteControlPill />
 
       <SyncPill onRefresh={onRefresh} />
     </div>
+  );
+}
+
+function CanvasTogglePill({
+  isOpen,
+  onToggle,
+}: {
+  isOpen: boolean;
+  onToggle?: () => void;
+}) {
+  return (
+    <Pill
+      ariaLabel={isOpen ? 'Switch to chat' : 'Switch to terminal canvas'}
+      testId="code-workspace-bar-canvas-toggle"
+      onClick={() => onToggle?.()}
+    >
+      <IconWrapper>
+        {isOpen ? <ChatCenteredText size={14} /> : <Terminal size={14} />}
+      </IconWrapper>
+      <span>{isOpen ? 'Chat' : 'Canvas'}</span>
+    </Pill>
   );
 }
 
@@ -133,8 +162,8 @@ function Pill({
       className={cn(
         'flex items-center gap-1.5 h-7 pl-2 pr-1.5 rounded-full text-xs font-semibold border backdrop-blur-md transition-all shrink-0',
         isOpen
-          ? 'bg-[var(--glass-bg)]/80 border-[var(--border-subtle)]/60 text-[var(--text-primary)] shadow-sm'
-          : 'bg-[var(--glass-bg)]/60 border-[var(--border-subtle)]/50 text-[var(--text-primary)] hover:bg-[var(--glass-bg)]/80'
+          ? 'bg-[var(--glass-bg)]/35 border-[var(--border-subtle)]/60 text-[var(--text-primary)] shadow-sm'
+          : 'bg-[var(--glass-bg)]/25 border-[var(--border-subtle)]/50 text-[var(--text-primary)] hover:bg-[var(--glass-bg)]/40'
       )}
     >
       {children}

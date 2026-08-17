@@ -76,6 +76,10 @@ export default defineConfig({
       'notifications',
       'downloads',
       'contextMenus',
+      // api capture fallback (debugger primary, webRequest fallback)
+      'debugger',
+      'webRequest',
+      // webRequestBlocking is MV2-only and intentionally omitted for this MV3 extension
     ],
     commands: {
       'open-sidepanel': {

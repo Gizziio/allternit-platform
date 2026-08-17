@@ -206,13 +206,20 @@ export function ShellRail({
         ? activeViewType === 'code' && !activeCodeSessionId
         : activeViewType === 'chat' && !activeChatSessionId && !activeChatThreadId;
 
-  const [recentsExpanded, setRecentsExpanded] = useState(true);
-  const [botsExpanded, setBotsExpanded] = useState(() => {
+  const [recentsExpanded, setRecentsExpanded] = useState(() => {
     if (typeof window === 'undefined') return true;
     try {
-      return window.localStorage.getItem('allternit:rail:bots-expanded') !== 'false';
+      return window.localStorage.getItem('allternit:rail:bots-expanded') !== 'true';
     } catch {
       return true;
+    }
+  });
+  const [botsExpanded, setBotsExpanded] = useState(() => {
+    if (typeof window === 'undefined') return false;
+    try {
+      return window.localStorage.getItem('allternit:rail:bots-expanded') === 'true';
+    } catch {
+      return false;
     }
   });
   const [startingBotId, setStartingBotId] = useState<string | null>(null);
@@ -279,15 +286,25 @@ export function ShellRail({
   const agents = useAgentStore((s) => s.agents);
   const bots = useMemo(() => agents.filter(isBot), [agents]);
 
-  const handleBotsToggle = useCallback(() => {
-    setBotsExpanded((prevBots) => {
-      const nextBots = !prevBots;
-      try { localStorage.setItem('allternit:rail:bots-expanded', String(nextBots)); } catch {}
-      // Mutually exclusive: expanding Bots collapses Recents.
-      setRecentsExpanded((prevRecents) => (nextBots ? false : prevRecents));
-      return nextBots;
-    });
+  const handleSelectBots = useCallback(() => {
+    setBotsExpanded(true);
+    setRecentsExpanded(false);
+    try { localStorage.setItem('allternit:rail:bots-expanded', 'true'); } catch {}
   }, []);
+
+  const handleSelectRecents = useCallback(() => {
+    setRecentsExpanded(true);
+    setBotsExpanded(false);
+    try { localStorage.setItem('allternit:rail:bots-expanded', 'false'); } catch {}
+  }, []);
+
+  const handleToggleExpanded = useCallback(() => {
+    if (botsExpanded) {
+      setBotsExpanded((v) => !v);
+    } else {
+      setRecentsExpanded((v) => !v);
+    }
+  }, [botsExpanded]);
 
   const handleCreateBot = useCallback(() => {
     onOpen?.('agent-hub');
@@ -940,22 +957,13 @@ export function ShellRail({
         {/* HOME RECENTS + BOTS */}
           <RecentsPanel
             expanded={recentsExpanded}
-            onToggle={() => {
-              setRecentsExpanded((v) => {
-                const next = !v;
-                // Mutually exclusive: expanding Recents collapses Bots.
-                if (next) {
-                  setBotsExpanded(false);
-                  try { localStorage.setItem('allternit:rail:bots-expanded', 'false'); } catch {}
-                }
-                return next;
-              });
-            }}
+            onToggle={handleSelectRecents}
             title="Recents"
             openAllTitle="Open all recents"
             onOpenAll={() => onOpen?.('recents')}
             botsExpanded={botsExpanded}
-            onBotsToggle={handleBotsToggle}
+            onBotsToggle={handleSelectBots}
+            onToggleExpanded={handleToggleExpanded}
             bots={bots}
             startingBotId={startingBotId}
             onStartBot={handleStartBot}
@@ -1642,6 +1650,7 @@ function RecentsPanel({
   filter,
   botsExpanded,
   onBotsToggle,
+  onToggleExpanded,
   bots,
   startingBotId,
   onStartBot,
@@ -1657,6 +1666,7 @@ function RecentsPanel({
   filter?: React.ReactNode;
   botsExpanded?: boolean;
   onBotsToggle?: () => void;
+  onToggleExpanded?: () => void;
   bots?: Agent[];
   startingBotId?: string | null;
   onStartBot?: (bot: Agent) => void;
@@ -1664,6 +1674,7 @@ function RecentsPanel({
   onCreateBot?: () => void;
 }): React.ReactNode {
   const combined = botsExpanded !== undefined && onBotsToggle && bots && onStartBot && onOpenBotHome && onCreateBot;
+  const listExpanded = expanded || (combined && botsExpanded);
   return (
     <div className="flex-1 min-h-0 flex flex-col px-2">
       <div className="group px-1 py-2 flex items-center justify-between text-[var(--shell-item-muted)] text-[12px] font-extrabold uppercase tracking-[0.08em] select-none">
@@ -1673,17 +1684,10 @@ function RecentsPanel({
               type="button"
               onClick={onBotsToggle}
               className={cn(
-                "flex items-center gap-1.5 bg-transparent border-none cursor-pointer transition-colors",
+                "bg-transparent border-none cursor-pointer transition-colors",
                 botsExpanded ? "text-[var(--shell-item-fg)]" : "text-[var(--shell-item-muted)] hover:text-[var(--shell-item-fg)]"
               )}
             >
-              <CaretRight
-                size={12}
-                className={cn(
-                  "transition-transform duration-200",
-                  botsExpanded && "rotate-90"
-                )}
-              />
               <span>Bots</span>
             </button>
             <span className="text-[var(--shell-item-muted)]" aria-hidden="true">|</span>
@@ -1691,17 +1695,10 @@ function RecentsPanel({
               type="button"
               onClick={onToggle}
               className={cn(
-                "flex items-center gap-1.5 bg-transparent border-none cursor-pointer transition-colors",
+                "bg-transparent border-none cursor-pointer transition-colors",
                 expanded ? "text-[var(--shell-item-fg)]" : "text-[var(--shell-item-muted)] hover:text-[var(--shell-item-fg)]"
               )}
             >
-              <CaretRight
-                size={12}
-                className={cn(
-                  "transition-transform duration-200",
-                  expanded && "rotate-90"
-                )}
-              />
               <span>{title}</span>
             </button>
           </div>
@@ -1743,9 +1740,21 @@ function RecentsPanel({
             </button>
           )}
           {filter}
+          <button
+            type="button"
+            onClick={onToggleExpanded ?? onToggle}
+            className="size-6 max-md:size-11 rounded-md bg-transparent border-none text-[var(--shell-item-muted)] hover:text-[var(--shell-item-fg)] hover:bg-[var(--shell-item-hover)] cursor-pointer flex items-center justify-center transition-colors"
+            title={listExpanded ? 'Hide sessions' : 'Show sessions'}
+          >
+            {listExpanded ? (
+              <CaretDown size={12} className="transition-transform duration-200" />
+            ) : (
+              <CaretRight size={12} className="transition-transform duration-200" />
+            )}
+          </button>
         </div>
       </div>
-      {(expanded || (combined && botsExpanded)) && (
+      {listExpanded && (
         <div className="flex-1 overflow-y-auto flex flex-col gap-0.5">
           {combined && botsExpanded && (
             <div className="flex flex-col gap-0.5 pb-2">

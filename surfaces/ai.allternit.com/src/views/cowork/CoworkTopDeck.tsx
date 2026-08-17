@@ -46,8 +46,8 @@ function TopDeckDropdown({ label, value, icon, options, onSelect, isOpen, onTogg
         className={cn(
           'flex items-center gap-1.5 h-7 pl-2 pr-1.5 rounded-full text-xs font-semibold border backdrop-blur-md transition-all',
           isOpen
-            ? 'bg-[var(--glass-bg)]/80 border-[var(--border-subtle)]/60 text-[var(--text-primary)] shadow-sm'
-            : 'bg-[var(--glass-bg)]/60 border-[var(--border-subtle)]/50 text-[var(--text-primary)] hover:bg-[var(--glass-bg)]/80'
+            ? 'bg-[var(--glass-bg)]/35 border-[var(--border-subtle)]/60 text-[var(--text-primary)] shadow-sm'
+            : 'bg-[var(--glass-bg)]/25 border-[var(--border-subtle)]/50 text-[var(--text-primary)] hover:bg-[var(--glass-bg)]/40'
         )}
       >
         {icon}

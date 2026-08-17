@@ -654,7 +654,7 @@ export function BotRuntimeConfigModal({ bot, isOpen, onClose, onSaved, initialSe
         if (e.target === e.currentTarget) onClose();
       }}
     >
-      <div className="w-full max-w-3xl max-h-[85vh] flex flex-col rounded-2xl overflow-hidden bg-[var(--bg-primary)] border border-[var(--border-subtle)] shadow-2xl">
+      <div className="w-full max-w-3xl max-h-[85vh] flex flex-col rounded-2xl overflow-hidden bg-[var(--bg-elevated)] border border-[var(--border-subtle)] shadow-2xl">
         {/* Header */}
         <div className="flex items-center justify-between p-5 border-b border-[var(--border-subtle)] shrink-0">
           <div>
@@ -721,31 +721,6 @@ export function BotRuntimeConfigModal({ bot, isOpen, onClose, onSaved, initialSe
                 onBind={bindConnector}
                 onUnbind={unbindConnector}
               />
-
-              {bindings.length > 0 && (
-                <div className="mt-4">
-                  <h4 className="text-[12px] font-semibold text-[var(--text-secondary)] mb-2">
-                    Bound connectors
-                  </h4>
-                  <div className="flex flex-wrap gap-2">
-                    {bindings.map((binding) => (
-                      <span
-                        key={binding.connectorId}
-                        className="inline-flex items-center gap-1.5 rounded-full bg-[var(--bg-primary)] border border-[var(--border-subtle)] px-3 py-1 text-[12px] text-[var(--text-primary)]"
-                      >
-                        {binding.label || binding.provider}
-                        <button
-                          type="button"
-                          onClick={() => removeBinding(binding.connectorId)}
-                          className="text-[var(--text-tertiary)] hover:text-[var(--status-error)] transition-colors"
-                        >
-                          <X size={12} weight="bold" />
-                        </button>
-                      </span>
-                    ))}
-                  </div>
-                </div>
-              )}
             </section>
           )}
 
