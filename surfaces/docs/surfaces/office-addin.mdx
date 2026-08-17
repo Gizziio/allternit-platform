@@ -1,0 +1,401 @@
+---
+title: Office Add-in
+description: Allternit task pane add-ins for Microsoft Word, Excel, and PowerPoint
+---
+
+## Overview
+
+The **Allternit Office Add-in** is a family of host-specific Microsoft Office task pane add-ins that connect **Word**, **Excel**, and **PowerPoint** to the Allternit platform brain. Each host is a separate product — **Allternit for Word**, **Allternit for Excel**, and **Allternit for PowerPoint** — with its own manifest, ribbon identity, installation health, and specialized tool surface.
+
+When the add-in loads inside a real Microsoft Office runtime, it uses **Office.js** to read and mutate the live document. If Office.js is not present (for example, in a browser preview), the pane renders as a **companion preview** and never reports a false live-document connection.
+
+The add-in reuses the same `ExtensionSidepanelShell` as the Allternit Chrome extension, so users get a consistent, branded experience across every surface.
+
+<CardGroup cols={3}>
+  <Card title="Allternit for Word" icon="file-word">
+    Rewrite text with tracked changes, improve grammar, summarize documents, create tables, fill templates, and redline contracts.
+  </Card>
+  <Card title="Allternit for Excel" icon="file-excel">
+    Analyze data, generate formulas, create charts, build financial models, clean data, and format ranges.
+  </Card>
+  <Card title="Allternit for PowerPoint" icon="file-powerpoint">
+    Add slides, rewrite content, generate full decks from outlines, apply branding, and create speaker notes.
+  </Card>
+</CardGroup>
+
+## Capabilities by Office host
+
+| Host | What Allternit can do | Plugin pattern | Notable commands |
+| --- | --- | --- | --- |
+| **Excel** | Analyze data, generate formulas, create charts, build financial models, clean data, format cells, add validation | `code-generation` | `excel:analyze`, `excel:formula`, `excel:chart`, `excel:table`, `excel:model`, `excel:clean` |
+| **PowerPoint** | Add slides, rewrite content, generate full presentations from outlines, apply branding, create speaker notes | `code-generation` | `ppt:slide`, `ppt:rewrite`, `ppt:outline`, `ppt:design`, `ppt:notes`, `ppt:summarize` |
+| **Word** | Rewrite text with tracked changes, improve grammar, summarize documents, create tables, fill templates, redline contracts | `hybrid` | `word:rewrite`, `word:improve`, `word:summarize`, `word:table`, `word:redline`, `word:template`, `word:structure` |
+
+## Development quick start
+
+The add-in is developed in **debug / sideload mode**. Marketplace certification is not part of the current launch path.
+
+### 1. Install dependencies
+
+```bash
+cd surfaces/extensions/allternit-office-addin
+npm install
+```
+
+### 2. Install HTTPS certificates (one-time)
+
+Office refuses to load HTTP task panes. Generate trusted localhost certificates before the first run:
+
+```bash
+npm run certs
+# Writes dev certs to ~/.office-addin-dev-certs/
+```
+
+### 3. Start for a specific Office host
+
+```bash
+npm run dev:excel       # Vite + sideload in Excel
+npm run dev:powerpoint  # Vite + sideload in PowerPoint
+npm run dev:word        # Vite + sideload in Word
+```
+
+### 4. Stop debugging
+
+```bash
+npm run stop
+```
+
+These commands use `office-addin-debugging` — the Office equivalent of Chrome's **Load unpacked**.
+
+## Architecture
+
+```text
+Microsoft Office Host (Word / Excel / PowerPoint)
+  -> host-specific developer manifest
+  -> hosted HTTPS task pane
+  -> Office.js host adapter (bridge-factory.ts)
+  -> Allternit gateway document binding
+  -> Allternit Computer Agent
+```
+
+Key files in the task pane runtime:
+
+| File | Responsibility |
+| --- | --- |
+| `src/lib/bridge-factory.ts` | Routes `getContext()` and `insertText()` to the correct Office.js host API. |
+| `src/lib/plugin-loader.ts` | Loads per-host plugin config, system prompt, and command list. |
+| `src/lib/code-executor.ts` | Extracts and executes Office.js code from AI responses, with retry and error categorization. |
+| `src/lib/tool-dispatcher.ts` | Converts validated structured tool calls into executable Office.js code. |
+| `src/lib/storage.ts` | Wraps `OfficeRuntime.storage` with a `localStorage` fallback. |
+| `src/lib/host-detector.ts` | Detects the Office host from `Office.context` or the `?product=` query param. |
+
+## Production topology
+
+In production, the real Microsoft Word, Excel, and PowerPoint runtimes are hosted by Microsoft — not by Allternit. The add-in is a connector surface; the platform is a companion and control surface.
+
+```text
+┌──────────────────────┐
+│ Microsoft Office Host│ Word / Excel / PowerPoint desktop or web
+│  (authoritative doc) │
+└──────────┬───────────┘
+           │ loads HTTPS task pane
+           ▼
+┌──────────────────────┐
+│ Allternit Task Pane  │ Office.js bridge, auth, document binding
+└──────────┬───────────┘
+           │ workspace / session / artifact APIs
+           ▼
+┌──────────────────────┐
+│ Allternit Backend    │ owns users, orgs, projects, bindings, sessions
+│  (cmd/allternit-api) │
+└──────────┬───────────┘
+           │ broadcasts state changes
+           ▼
+┌──────────────────────┐
+│ Allternit Platform   │ ai.allternit.com companion view of Office session
+└──────────────────────┘
+```
+
+The platform companion and the task pane read the same backend records under the same user and organization identity.
+
+## Document binding contract
+
+The canonical binding links an Office document to an Allternit workspace and project. Both the task pane and the gateway must agree on this schema.
+
+```typescript
+interface OfficeBinding {
+  bindingId: string
+  userId: string
+  organizationId: string | null
+  officeHost: 'word' | 'excel' | 'powerpoint'
+  documentExternalId: string   // stable Office-side identity when available
+  documentTitle: string
+  workspaceId: string
+  projectId: string | null
+  activeSessionId: string | null
+  createdAt: string            // ISO-8601
+  updatedAt: string
+}
+```
+
+A runtime session record is shared by the task pane and the platform companion:
+
+```typescript
+interface OfficeRuntimeSession {
+  sessionId: string
+  bindingId: string
+  currentTask: string | null
+  timeline: OfficeSessionEvent[]
+  hostContext: Record<string, unknown>
+  artifactIds: string[]
+  pendingApprovals: { id: string; prompt: string; at: string }[]
+  createdAt: string
+  updatedAt: string
+}
+```
+
+The task pane stores bindings locally via `Office.settings` / `localStorage` today; server persistence is provided by the gateway at `/api/v1/office/bootstrap` and `/api/v1/office/runtime/state`.
+
+## Plugin system per host
+
+Each Office host has a dedicated plugin under `plugins/{excel,powerpoint,word}/`:
+
+```text
+plugins/
+├── plugin-registry.json            # central registry for all three plugins
+├── excel/
+│   ├── .allternit-plugin/plugin.json  # commands, skills manifest
+│   ├── system-prompt.md            # Excel-specific AI system prompt
+│   ├── skills/                     # 8 skill reference files
+│   ├── commands/                   # 7 command definitions
+│   ├── cookbooks/                  # 4 step-by-step guides
+│   └── tools/tool-definitions.ts   # 10 typed tool schemas
+├── powerpoint/                     # 6 skills, 6 commands, 4 cookbooks, 9 tools
+└── word/                           # 8 skills, 7 commands, 4 cookbooks, 10 tools
+```
+
+The plugin loader (`src/lib/plugin-loader.ts`) automatically selects the correct plugin based on the active Office app, then injects the system prompt, execution rules, and command list into every AI conversation.
+
+### Per-host plugin config
+
+| Host | Execution pattern | Max retries | Special rules |
+| --- | --- | --- | --- |
+| **Excel** | `code-generation` | 3 | — |
+| **PowerPoint** | `code-generation` | 2 | — |
+| **Word** | `hybrid` | 2 | Always prefer tracked changes; `body.clear()` is forbidden |
+
+### Example plugin command list (Word)
+
+| Command | Trigger phrases | Description |
+| --- | --- | --- |
+| `word:rewrite` | "rewrite this", "make more professional" | Rewrite selected text with tracked changes |
+| `word:improve` | "fix grammar", "polish this draft" | Grammar and style improvement |
+| `word:summarize` | "summarize this document", "TL;DR" | Summarize document content |
+| `word:table` | "create a table", "insert a table" | Insert Word tables |
+| `word:redline` | "redline this", "tracked changes" | Redline with tracked changes |
+| `word:template` | "fill in this template", "populate template" | Fill content controls and placeholders |
+| `word:structure` | "show structure", "add table of contents" | Analyze and improve document structure |
+
+## Code execution
+
+The add-in can execute Office.js code generated by the AI. Two gates control execution.
+
+### Structured execution
+
+Most tool calls are converted to Office.js code by `buildToolCallCode()` in `src/lib/tool-dispatcher.ts`. The templates are trusted, arguments are escaped, and the resulting code runs through `executeStructuredCode()`. This path is **always allowed** but still passes through the security validator in `src/lib/code-validator.ts` as defense in depth.
+
+### Freeform execution
+
+Freeform code extracted directly from an AI text response runs through `executeCode()` in `src/lib/code-executor.ts`. Because it is evaluated with `new Function()`, this path is **default-denied**. Users must explicitly opt in via a persisted setting (`allternit.addin.allowFreeformCode`).
+
+### Security validation
+
+`src/lib/code-validator.ts` blocks dangerous patterns on both paths:
+
+| Blocked pattern | Reason |
+| --- | --- |
+| `fetch(...)`, `XMLHttpRequest`, `WebSocket` | Network exfiltration |
+| `eval(...)`, `new Function(...)` | Dynamic code execution |
+| `localStorage`, `sessionStorage`, `indexedDB`, `document.cookie` | Storage access |
+| `window.parent/top/opener/location/postMessage` | Frame escape |
+| Dynamic `import(...)` / `require(...)` | External module loading |
+| `setTimeout` / `setInterval` with string args | Code-injection risk |
+
+### Error categories
+
+`src/lib/code-executor.ts` categorizes failures so the agent can self-correct:
+
+| Category | When it happens | Retryable? |
+| --- | --- | --- |
+| `api_not_found` | `GeneralException`, unsupported API | Yes |
+| `invalid_argument` | Wrong enum, bad range address | Yes |
+| `permission_denied` | Protected sheet, read-only doc | No |
+| `syntax` | JavaScript syntax error | Yes |
+| `network` | Failed fetch inside code block | Yes |
+| `runtime` / `unknown` | Unexpected error | Yes (unknown) |
+
+## OfficeCLI backend gateway
+
+For work that Office.js cannot do efficiently — full-document rendering, structural analysis, schema validation, atomic batch edits, template merge, and new-document generation — the add-in offloads to **OfficeCLI**. OfficeCLI is a single-binary Office engine that runs **server-side inside the Allternit API gateway** (`cmd/allternit-api`, port `8013`).
+
+### How snapshot sync works
+
+1. The add-in exports the live document with `Office.getFileAsync` (compressed `.docx`/`.xlsx`/`.pptx` bytes, sliced).
+2. The binary body is uploaded to `POST /api/v1/office/cli/document`.
+3. All `officecli` tools run against that server-side snapshot.
+4. After any Office.js mutation, the snapshot is marked dirty and lazily re-synced.
+
+### Gateway routes
+
+All routes are under `/api/v1/office/cli/` and inherit auth from the protected router.
+
+| Route | Purpose |
+| --- | --- |
+| `POST /document` | Upload a document snapshot. Returns `doc_id`. |
+| `POST /exec` | Run an allowlisted `officecli` subcommand via argv arrays (no shell). |
+| `GET /document/:doc_id/artifact/:name` | Stream a produced artifact (PNG/HTML/JSON/Office file). |
+| `GET /capabilities` | OfficeCLI availability, version, and `live_fs` flag. |
+| `POST /watch` / `DELETE /watch/:doc_id` | Start/stop a live auto-refreshing HTML preview (SSE). |
+| `POST /mcp` | JSON-RPC 2.0 passthrough to a per-user `officecli mcp` stdio server. |
+
+### Tool surface
+
+| Tool | Purpose |
+| --- | --- |
+| `officecli_view` / `officecli_get` / `officecli_query` | Read content, structure, and styles |
+| `officecli_render` | Screenshot (PNG) or HTML render — the agent's "eyes" |
+| `officecli_analyze` | Schema validation + issue enumeration |
+| `officecli_edit` / `officecli_batch` | Single or atomic multi-op edits |
+| `officecli_create` / `officecli_merge` / `officecli_dump` | New files, `{{key}}` template merge, round-trip dump |
+| `officecli_raw` / `officecli_exec` | Raw-XML fallback and allowlisted escape hatch |
+| `officecli_watch_start` / `officecli_watch_stop` | Live auto-refreshing HTML preview |
+| `mcp_officecli_*` | Tools discovered dynamically from OfficeCLI's MCP server |
+
+### Operational requirements
+
+- `officecli` must be installed on the gateway host (`brew install officecli` or the official installer); override with `OFFICECLI_BIN`.
+- Production should disable auto-update: `officecli config autoUpdate false`.
+- `ALLTERNIT_OFFICECLI_LIVE_FS` gates direct file-path editing (default on only for local dev).
+- Upload body limit is **64 MiB** on `POST /document`.
+
+## Desktop add-in manager lifecycle
+
+Allternit Desktop owns the developer-registration lifecycle through `office-addin-manager.ts`:
+
+- **detect**
+- **install**
+- **update**
+- **repair**
+- **remove**
+
+The manager only touches Allternit-owned registrations and never modifies unrelated Office add-ins.
+
+### Installation paths
+
+| Platform | Location | Notes |
+| --- | --- | --- |
+| **macOS** | `~/Library/Containers/com.microsoft.{Word,Excel,Powerpoint}/Data/Documents/wef/allternit-{manifest}.xml` | Copies the host-specific manifest into the Office `wef` directory. |
+| **Windows** | `HKCU\SOFTWARE\Microsoft\Office\16.0\Wef\Developer` | Writes the stable Allternit add-in ID and sets `RefreshAddins=1`. |
+| **Office web** | Guided manifest upload | Microsoft requires the user to accept developer mode and upload the matching manifest. Browser-profile-specific health. |
+
+### Health states
+
+| State | Meaning |
+| --- | --- |
+| `not-installed` | No Allternit manifest found for the host. |
+| `installed` | Manifest matches the current source. |
+| `update-available` | Source manifest has a newer version. |
+| `needs-repair` | ID mismatch, missing file, or manifest not found. |
+| `unsupported` | Platform cannot manage desktop Office add-ins. |
+
+Install, repair, update, and remove can be performed independently for each host.
+
+## Manifest generation
+
+`scripts/build-manifest.mjs` generates three stable, host-specific manifests:
+
+- `manifests/word.xml` (`Document`)
+- `manifests/excel.xml` (`Workbook`)
+- `manifests/powerpoint.xml` (`Presentation`)
+
+`manifest.xml` is retained only as a Word compatibility alias for legacy local tooling.
+
+### Environment variables
+
+| Variable | Purpose | Default |
+| --- | --- | --- |
+| `ALLTERNIT_OFFICE_APP_BASE_URL` | HTTPS base URL of the hosted task pane | `https://localhost:3000` if certs exist, else `http://localhost:3000` |
+| `ALLTERNIT_PLATFORM_URL` | Allternit platform origin | `http://localhost:3013` |
+| `ALLTERNIT_SUPPORT_URL` | Support URL shown in the manifest | `https://allternit.com` |
+| `ALLTERNIT_OFFICE_VERSION` | Manifest version | `1.0.0.0` |
+| `ALLTERNIT_OFFICE_WORD_GUID` | Stable Word add-in ID | `b765c354-dc5c-4b98-9f54-320e110c42d1` |
+| `ALLTERNIT_OFFICE_EXCEL_GUID` | Stable Excel add-in ID | `b765c354-dc5c-4b98-9f54-320e110c42d2` |
+| `ALLTERNIT_OFFICE_POWERPOINT_GUID` | Stable PowerPoint add-in ID | `b765c354-dc5c-4b98-9f54-320e110c42d3` |
+
+Each manifest points to a host-specific task pane URL:
+
+```text
+{APP_BASE_URL}/src/taskpane/index.html?product=word
+{APP_BASE_URL}/src/taskpane/index.html?product=excel
+{APP_BASE_URL}/src/taskpane/index.html?product=powerpoint
+```
+
+The `?product=` query identifies the companion preview; a live Office.js host is still required before the pane reports document access.
+
+## Deployment
+
+### Prepare production assets
+
+```bash
+export ALLTERNIT_OFFICE_APP_BASE_URL=https://ai.allternit.com/office-addins
+export ALLTERNIT_PLATFORM_URL=https://ai.allternit.com
+export VITE_ALLTERNIT_GATEWAY_URL=https://api.allternit.com
+export VITE_ALLTERNIT_PLATFORM_URL=https://ai.allternit.com
+export VITE_ALLTERNIT_OFFICE_BASE_PATH=/office-addins/
+./deploy.sh
+```
+
+Publish the contents of `deployment/office-addins/` at `ALLTERNIT_OFFICE_APP_BASE_URL`. Never publish a development build whose manifests point at `localhost`.
+
+### Release checks
+
+- Build the task pane with the production base path.
+- Validate all three XML manifests.
+- Confirm each manifest declares only its matching host.
+- Install, repair, update, and remove each product independently.
+- Verify the hosted task pane from Windows Office, macOS Office, and Office web.
+- Verify that clearing Office-web browser storage changes health to `needs-repair` instead of leaving a false `installed` state.
+
+### Hosted smoke test
+
+```bash
+pnpm test:hosted -- https://your-host.example/office-addins
+```
+
+This rejects SPA fallbacks, validates content types, follows built assets, checks stable unique IDs, and confirms that every manifest declares exactly one matching Office host.
+
+### Live Office binding test
+
+Office on the web is the fastest real-host acceptance test:
+
+1. Deploy the runtime and gateway to public HTTPS origins, then run `test:hosted`.
+2. Open a document at `word.office.com`, `excel.office.com`, or `powerpoint.office.com`.
+3. Upload the matching manifest (`word.xml`, `excel.xml`, or `powerpoint.xml`) via **Home → Add-ins → More Add-ins → My Add-ins → Upload My Add-in**.
+4. Open **Allternit for Word/Excel/PowerPoint** from the ribbon and connect your account.
+5. Start a suggested action and confirm it attaches to the same document binding.
+6. Run the binding test against the gateway:
+
+```bash
+ALLTERNIT_GATEWAY_URL=http://127.0.0.1:8013 pnpm test:binding -- word
+ALLTERNIT_GATEWAY_URL=http://127.0.0.1:8013 pnpm test:binding -- excel
+ALLTERNIT_GATEWAY_URL=http://127.0.0.1:8013 pnpm test:binding -- powerpoint
+```
+
+A pass requires a connected binding with at least one active Office session; merely rendering the task pane webpage does not pass.
+
+## Related links
+
+- [Office CLI tools](/tools/office-cli)
+- [Office Engine tools](/tools/office-engine)
+- [Office Docs](/surfaces/office-docs)
+- [Office API](/api/office)

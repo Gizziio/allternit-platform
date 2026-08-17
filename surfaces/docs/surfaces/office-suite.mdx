@@ -1,0 +1,135 @@
+---
+title: Office Suite
+description: Allternit's unified document workspace — Docs, Sheets, Slides, PDF, and Sign — inside the platform shell and desktop app.
+---
+
+## Overview
+
+The **Allternit Office Suite** is a family of document surfaces built on the `@allternit/office-*` engine and editor packages. Every editor runs inside the platform shell as a first-class ACI view, on dedicated desktop windows for "Open with" workflows, and inside the iOS read-only viewer. A single artifact contract stores the real file bytes, so the same `.docx`, `.xlsx`, `.pptx`, or `.pdf` can move between web, desktop, and mobile without conversion.
+
+<CardGroup cols={2}>
+  <Card title="Allternit Docs" icon="file-text">
+    OpenXML word-processing editor (.docx) with byte-preserving save and a web-worker round-trip pipeline.
+  </Card>
+  <Card title="Allternit Sheets" icon="table">
+    OpenXML spreadsheet editor (.xlsx) with server-side IronCalc recalculation through the office engine.
+  </Card>
+  <Card title="Allternit Slides" icon="display">
+    OpenXML presentation editor (.pptx) with engine patch-save and web-worker round-trip.
+  </Card>
+  <Card title="Allternit PDF" icon="file-pdf">
+    PDF viewer built on pdf.js with page navigation, zoom, text extraction, and a handoff to Allternit Sign.
+  </Card>
+  <Card title="Allternit Sign" icon="signature">
+    Native, client-side PDF signing — add signers, place fields, draw or type signatures, and download the signed document.
+  </Card>
+</CardGroup>
+
+All five surfaces are reachable from the unified launcher at **`/office`**, which is also embedded in the shell's **Office & Extensions** hub.
+
+## Routes and shell view types
+
+| Surface | Route | Shell view type | What it accepts |
+|---|---|---|---|
+| **Allternit Docs** | `/docs/:artifactId?` | `docs` | Blank document, artifact ID, or file handoff |
+| **Allternit Sheets** | `/sheets/:artifactId?` | `sheets` | Blank workbook, artifact ID, or file handoff |
+| **Allternit Slides** | `/slides/:artifactId?` | `slides` | Blank deck, artifact ID, or file handoff |
+| **Allternit PDF** | `/pdf/:artifactId?` | `pdf` | Artifact ID or file handoff (viewer only) |
+| **Allternit Sign** | `/sign` | `sign` | Upload a PDF or receive a handoff from the PDF viewer |
+| **Office Launcher** | `/office` | `browser-extensions` / standalone | Create-new cards and "Open a file" for any supported format |
+
+Each route is optional-`artifactId`, so `/docs` opens a blank document and `/docs/art_018f3a7c...` loads that artifact directly.
+
+## Artifact section kinds
+
+Every editor persists (or reads) the same artifact payload, regardless of whether it is opened from the shell, a desktop window, or the iOS viewer.
+
+| Editor | Binary section kind | Plaintext section kind | Notes |
+|---|---|---|---|
+| **Allternit Docs** | `docs-editor/binary` | `docs-editor/plaintext` | Base64-encoded `.docx` bytes are the source of truth; plaintext is extracted for search and iOS |
+| **Allternit Sheets** | `sheets-editor/binary` | `sheets-editor/plaintext` | Base64-encoded `.xlsx` bytes; plaintext extracted for search and iOS |
+| **Allternit Slides** | `slides-editor/binary` | `slides-editor/plaintext` | Base64-encoded `.pptx` bytes; plaintext extracted for search and iOS |
+| **Allternit PDF** | `pdf-viewer/binary` | — | Viewer only; the original PDF bytes are read but not written back |
+| **Allternit Sign** | `pdf` | — | The signed output is saved as a `pdf` data-URL section in a document artifact |
+
+<Note>
+  Legacy section kinds such as `docs-editor/<block>`, `sheets-editor/sheet`, `slides-editor/slide`, and `pdf-viewer/page` are upgraded on load where needed; new saves write the binary/plaintext pair above.
+</Note>
+
+## Desktop integration
+
+On the Electron desktop app (`surfaces/allternit-desktop`), the suite follows a **shell-first** model. In normal use, Docs, Sheets, Slides, and PDF open as ACI shell views using the same `docs`/`sheets`/`slides`/`pdf` view types as the web platform. The Office launcher at `/office` — and the shell's **Office & Extensions** hub — reuses a single `OfficeSuiteSection` component that calls the registry's `open` to launch in-shell editors.
+
+Dedicated desktop windows are reserved for two cases: **"Open with Allternit"** file associations and explicit pop-out / multi-window use. The desktop registers `fileAssociations` for `.docx`, `.xlsx`, `.pptx`, and `.pdf`; macOS `open-file`, Windows `second-instance`, and cold-start argv are all routed through `openOfficeWithFile()`. The payload is delivered to the renderer over `office:open-file` IPC, the platform's `desktop-bridge.ts` stashes it in the one-shot file handoff, and the launcher navigates to the correct editor route.
+
+Because the same artifact section contract drives routes, shell views, desktop windows, and mobile, a document saved on the web opens byte-for-byte identically on desktop and iOS.
+
+## iOS read-only viewer
+
+Editing on iOS is deferred until the web editor fully stabilizes; the current mobile surface is a **read-only viewer**. The iOS feature lives in `surfaces/allternit-mobile/ios/Features/Office/` and includes:
+
+- `OfficeArtifactClient` — artifact-service client for fetching documents.
+- `OfficeDocumentsView` — list presented from the Artifacts library toolbar.
+- `OfficeDocumentView` — native read-only rendering of every editor's section mapping (doc blocks, slide cards, sheet TSV grid, and PDF pages).
+- `OfficeEditorWebView` — `WKWebView` to the platform editor route with a Bearer-signed initial navigation.
+
+DEBUG builds support `-open-office-documents` and `-open-office-document-id <id>` regression arguments. The flow is verified end-to-end in the iPhone simulator: a live artifact from the gateway is listed, and the native read-only view renders its heading and paragraphs.
+
+## Office AI assistant
+
+The suite includes an Allternit-backed AI assistant via the **`@allternit/office-ai`** package. It replaces the upstream editor's chat transport with one that streams from the platform's own agent runtime:
+
+- `streamOfficeAi()` POSTs `/api/agent-chat` and normalizes the platform SSE `{chunk_type, chunk}` stream into `delta`, `tool-call`, `tool-result`, `done`, and `error` chunks.
+- `OfficeAgentLoop` exposes the same `AgentLoop` interface (`busy`, `run`, `cancel`, `reset`, `restore`, and the usual events) so the vendored AI panels work unchanged.
+- The Docs editor uses a real `AiPanel.tsx` implementation that streams document blocks as context. Sheets, Slides, and PDF re-export the loop through their agent stubs so their existing panels connect immediately.
+- A settings gate returns provider `allternit` with a platform-managed key, satisfying the panel's configuration check without shipping real credentials to the client.
+
+The E2E suite at `surfaces/ai.allternit.com/tests/office-ai.spec.ts` streams answers into all four editor assistant panels from a mocked SSE endpoint.
+
+## Opening editors from code
+
+### Shell view registry
+
+Inside the platform shell, use the registry's `open` helper with a view type and optional context:
+
+```typescript
+// Open an existing artifact
+open('docs', { artifactId: 'art_018f3a7c...' });
+open('sheets', { artifactId: 'art_018f3a7c...' });
+open('slides', { artifactId: 'art_018f3a7c...' });
+open('pdf', { artifactId: 'art_018f3a7c...' });
+
+// Open a blank editor
+open('docs');
+open('sign');
+```
+
+### File handoff
+
+For files that do not already live as artifacts, stash the bytes and pass the handoff ID:
+
+```typescript
+import { stashFile } from '@/views/office/file-handoff';
+
+const handoffId = stashFile({ name: 'report.docx', bytes: docxUint8Array });
+open('docs', { handoffId });
+```
+
+The launcher uses the same `stashFile`/`takeFile` one-shot handoff, so desktop file associations and the **Open a file** button flow through the exact same path.
+
+### Direct route navigation
+
+If you are outside the shell (for example, in a standalone page or a test), navigate to the route directly:
+
+```typescript
+navigate('/docs/art_018f3a7c...');
+navigate('/sheets', { state: { handoffId } });
+navigate('/office');
+```
+
+## Related pages
+
+- [Office Docs](/surfaces/office-docs)
+- [Office Engine](/tools/office-engine)
+- [Artifacts API](/api/artifacts)
+- [Platform surface](/surfaces/platform)

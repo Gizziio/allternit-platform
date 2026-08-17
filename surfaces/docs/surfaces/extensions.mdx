@@ -1,38 +1,35 @@
 ---
 title: Extensions
-description: Browser extensions and Office add-ins for Allternit
+description: Allternit Chrome extension and native messaging host for browser automation
 ---
 
 ## Overview
 
-`allternit-extensions` contains two distinct extension surfaces:
+`allternit-extensions` ships the **Allternit Chrome extension** (`allternit-extension`) and its companion **native host** (`native-host`). Together they bring Allternit into the browser: agents can see the current page, drive it programmatically, and — through native messaging — reach the local Allternit runtime for file-system and system-level work.
 
-<CardGroup cols={2}>
-  <Card title="Chrome Extension" icon="puzzle">
-    Browser automation + page agent — inject Allternit into any webpage
-  </Card>
-  <Card title="Office Add-ins" icon="file-text">
-    Excel, PowerPoint, and Word task pane integration
-  </Card>
-</CardGroup>
+<Note>
+  For the Microsoft Office integration, see the dedicated [Allternit Office Add-in](/surfaces/office-addin) page.
+</Note>
 
 ## Chrome Extension (`allternit-extension`)
 
-A unified Chrome extension built with [WXT](https://wxt.dev/) that provides browser automation and an in-page agent presence.
+A unified Chrome extension built with [WXT](https://wxt.dev/). It exposes Allternit agents directly inside the browser and on every webpage.
 
 ### Features
 
-- **Browser Automation** — Allternit agents can control the browser (click, type, navigate, scrape)
-- **Page Agent** — Floating chat panel injected into any page
-- **Native Messaging** — Connects to the `native-host` bridge for local system access
+- **Browser automation** — Allternit agents can click, type, navigate, scroll, and extract data from the active tab using the same computer-use protocol as the rest of the platform.
+- **Page agent** — A floating chat panel is injected into any page so users can ask Allternit to act on what they are looking at.
+- **Native messaging** — The extension talks to the `native-host` bridge to forward actions to the local Allternit Desktop bridge on TCP `127.0.0.1:3011`.
 
 ### Development
 
 ```bash
 cd surfaces/allternit-extensions/allternit-extension
-pnpm dev    # launches Chrome with extension loaded
+
+pnpm dev    # launches Chrome with the extension loaded
 pnpm build  # builds to dist/
 pnpm zip    # packages for Chrome Web Store submission
+pnpm test   # run the Vitest suite
 ```
 
 ### Structure
@@ -40,27 +37,92 @@ pnpm zip    # packages for Chrome Web Store submission
 ```
 allternit-extension/
 ├── src/
-│   ├── background/    # Service worker — messaging hub
-│   ├── content/       # Content scripts injected into pages
-│   ├── popup/         # Extension popup UI
-│   └── sidepanel/     # Side panel UI
-├── plugins/           # WXT plugins
-└── wxt.config.ts      # Build config
+│   ├── agent/          # Agent-side automation logic
+│   ├── assets/         # Static assets
+│   ├── browser-agent/  # Browser-use / computer-use executor
+│   ├── components/     # Shared React components
+│   ├── entrypoints/    # WXT entrypoints (background, content, popup, sidepanel)
+│   ├── html-to-figma/  # Page-to-Figma conversion utilities
+│   └── lib/            # Shared utilities and hooks
+├── plugins/            # WXT plugins
+├── public/             # Public static files
+└── wxt.config.ts       # Build config
 ```
 
-## Office Add-ins (`allternit-office-addin`)
+### Entrypoints
 
-Task pane add-ins for Microsoft Office applications — Excel, PowerPoint, and Word.
-
-```bash
-cd surfaces/allternit-extensions/allternit-office-addin
-pnpm dev    # starts Office Add-in dev server
-```
+| Entrypoint | Purpose |
+|---|---|
+| `background` | Service worker — native messaging hub and cross-tab coordination |
+| `content` | Injected scripts that mount the page agent and browser automation runtime |
+| `popup` | Toolbar popup UI |
+| `sidepanel` | Chrome side panel UI |
 
 ## Native Host (`native-host`)
 
-A native messaging host that bridges the Chrome extension to the local system and Allternit runtime. Required for file system access and local agent execution from the browser.
+The native messaging host bridges the Chrome extension to the local system and the Allternit runtime. It is required for file system access and local agent execution from the browser.
 
-## Shared Code (`extension-shared`)
+The host uses the single native messaging name:
 
-Common utilities and types shared between the Chrome extension and Office add-ins.
+```text
+com.allternit.desktop
+```
+
+### Register the host
+
+Chrome native messaging manifests require exact extension origins; wildcards are not allowed.
+
+```bash
+# From the workspace root
+ALLTERNIT_EXTENSION_ID=<32-character-chrome-extension-id> pnpm --filter @allternit/desktop-native-host register
+
+# Register against a custom Chromium profile
+pnpm --filter @allternit/desktop-native-host register -- --extension-id <id> --profile-dir <browser-user-data-dir>
+
+# Dry-run / doctor check
+pnpm --filter @allternit/desktop-native-host run doctor -- --extension-id <32-character-chrome-extension-id>
+```
+
+For direct shell usage you can also use the bundled script:
+
+```bash
+cd surfaces/allternit-extensions/native-host
+./register.sh --extension-id <32-character-chrome-extension-id>
+./register.sh --doctor --extension-id <32-character-chrome-extension-id>
+./register.sh --uninstall
+```
+
+### What the installer does
+
+1. Builds an executable wrapper at `dist/allternit-native-host-wrapper`.
+2. Writes `com.allternit.desktop.json` into supported Chromium native messaging host directories.
+3. Points the manifest `path` to the wrapper executable.
+4. Sets `allowed_origins` to the concrete `chrome-extension://<id>/` origin.
+
+### Supported browsers
+
+On macOS and Linux the installer registers the host for:
+
+- Google Chrome
+- Google Chrome for Testing
+- Microsoft Edge
+- Brave
+- Chromium
+
+On macOS it also registers Arc. Windows registry wiring is handled separately.
+
+### Validation
+
+```bash
+pnpm --filter @allternit/desktop-native-host test
+pnpm --filter @allternit/desktop-native-host smoke:browser-mode
+pnpm --filter @allternit/extension test
+pnpm --filter @allternit/extension build
+```
+
+`smoke:browser-mode` launches Chrome for Testing with the development extension, stages the native-host manifest into the temporary profile, starts a TCP `3011` bridge, and verifies that `chrome.runtime.connectNative('com.allternit.desktop')` reaches the host and returns `pong`.
+
+## Related links
+
+- [Allternit Office Add-in](/surfaces/office-addin)
+- [Browser Automation cookbook](/cookbooks/browser-automation)
