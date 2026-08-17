@@ -10,6 +10,7 @@ struct OfficeDocumentsView: View {
     @State private var artifacts: [OfficeArtifactSummary] = []
     @State private var error: String?
     @State private var isLoading = true
+    @State private var isSignPDFPresented = false
 
     var body: some View {
         NavigationStack {
@@ -54,6 +55,16 @@ struct OfficeDocumentsView: View {
             }
             .navigationTitle("Office documents")
             .background(Color("BgPrimary").ignoresSafeArea())
+            .toolbar {
+                ToolbarItem(placement: .topBarTrailing) {
+                    Button(action: { isSignPDFPresented = true }) {
+                        Label("Sign PDF", systemImage: "signature")
+                    }
+                }
+            }
+            .sheet(isPresented: $isSignPDFPresented) {
+                PDFSignView(sourceURL: nil)
+            }
             .task {
                 do {
                     artifacts = try await OfficeArtifactClient.shared.listArtifacts()

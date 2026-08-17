@@ -15,6 +15,7 @@ struct AllternitApp: App {
     /// the root swap from OnboardingView to the workspace.
     @StateObject private var onboardingStore = OnboardingStore.shared
     @Environment(\.scenePhase) private var scenePhase
+    @State private var openedDocumentURL: URL?
 
     init() {
         AuthManager.shared.configure(publishableKey: AppConfig.clerkPublishableKey)
@@ -58,6 +59,17 @@ struct AllternitApp: App {
                     authManager.refreshAuthState()
                 } else if newPhase == .background {
                     BackgroundRefreshManager.scheduleNextRefresh()
+                }
+            }
+            .onOpenURL { url in
+                openedDocumentURL = url
+            }
+            .sheet(isPresented: Binding(
+                get: { openedDocumentURL != nil },
+                set: { if !$0 { openedDocumentURL = nil } }
+            )) {
+                if let url = openedDocumentURL {
+                    LocalDocumentView(fileURL: url)
                 }
             }
         }
