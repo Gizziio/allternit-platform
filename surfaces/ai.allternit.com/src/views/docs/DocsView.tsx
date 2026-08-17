@@ -1,5 +1,10 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
-import { DocsApp } from '@allternit/office-docs-app';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import {
+  DocsApp,
+  OfficeHostProvider,
+  createBrowserHost,
+  type OfficeHost,
+} from '@allternit/allternit-office-suite';
 import { buildBlankDocx, parseDocx, saveDocx } from '@allternit/office-docx-engine';
 import { takeFile } from '@/views/office/file-handoff';
 import {
@@ -181,17 +186,32 @@ export function DocsView({ artifactId, handoffId }: DocsViewProps) {
     [artifact, persistBytes],
   );
 
+  // Host contract passed to the suite adapter. The browser host provides file
+  // picking and download fallbacks; we override saveFile with artifact persistence.
+  const saveFileRef = useRef(handleSave);
+  saveFileRef.current = handleSave;
+  const host = useMemo<OfficeHost>(
+    () =>
+      createBrowserHost({
+        saveFile: async (bytes: Uint8Array, name: string) => {
+          saveFileRef.current(bytes, name);
+        },
+      }),
+    [],
+  );
+
   if (!loaded) {
     return <div style={{ width: '100%', height: '100%', background: 'var(--shell-view-bg, #141110)' }} />;
   }
 
   return (
     <div style={{ width: '100%', height: '100%' }}>
-      <DocsApp
-        key={artifact?.id ?? (handoffFileRef.current ? 'handoff' : 'standalone')}
-        document={initialBytes ? { bytes: initialBytes, name: initialName ?? 'document.docx' } : undefined}
-        onSave={artifact ? handleSave : undefined}
-      />
+      <OfficeHostProvider host={host}>
+        <DocsApp
+          key={artifact?.id ?? (handoffFileRef.current ? 'handoff' : 'standalone')}
+          document={initialBytes ? { bytes: initialBytes, name: initialName ?? 'document.docx' } : undefined}
+        />
+      </OfficeHostProvider>
     </div>
   );
 }
