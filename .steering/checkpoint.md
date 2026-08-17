@@ -2,6 +2,37 @@
 
 ## Goal
 
+Continue iOS parity sweep: polish the chat composer (glass deck pills, plus-menu parity, bot mode selector) and build remaining platform surfaces on iOS (Site APIs, Code usage, Office/PDF signing).
+
+## Just did
+
+- Added `ResponseStyle` enum to `ToolOptionsStore.swift` and wired style + web-search prefixes into `ChatViewModel.sendMessage` so the iOS composer matches the web's enriched send behavior.
+- Rewrote `ComposerPlusSheet.swift` with a glass modal backdrop, compact icon grid, GitHub URL fetch, Style submenu, Project submenu, and glass panel chrome for every section.
+- Replaced `AgentPill` with `AgentBotChip` (Bot off / Bot on) and converted `AgentModeBottomDeck` to a horizontally scrolling pipe-separated mode tab bar.
+- Made all composer deck pills and trays glass (`BgPanel` + `.ultraThinMaterial`) with `TextPrimary` labels.
+
+## Next
+
+- Build iOS SiteAPIsView, CodeUsageCard, and PDF/Office signing surface.
+- Run `xcodebuild` to verify Swift compiles.
+
+## Done (verification update)
+
+- Built `SiteAPIsView.swift` with a create-API CTA that opens Safari to the platform.
+- Added `CodeUsageCard` to `CodeModeView` as a horizontal glass summary.
+- Built `PDFSignView.swift` with a native PencilKit signature pad and PDF composition.
+- Wired both new surfaces into `ACITabView` and `OfficeDocumentsView`.
+- Regenerated `Allternit.xcodeproj` with `xcodegen`; fetched `libgit2.xcframework`.
+- `swiftc -parse` passes for every touched Swift file. Full `xcodebuild` is blocked by the missing `Mesh.xcframework` (requires Go/gomobile setup that is not functional in this environment).
+
+## Open questions
+
+- None.
+
+---
+
+## Goal
+
 Wire Memory Kernel V2 runtime hooks into the agent execution loop, checkpoint store, and heartbeat executor.
 
 ## Just did
@@ -451,7 +482,7 @@ Add native inbound webhook triggers to the Allternit platform and a day-of-week 
 
 ## Just did
 
-- Added `V87__webhook_triggers.sql` migration with `webhook_triggers` and `webhook_trigger_deliveries` tables.
+- Added `V88__webhook_triggers.sql` migration with `webhook_triggers` and `webhook_trigger_deliveries` tables.
 - Created `cmd/allternit-api/src/webhook_trigger_routes.rs`:
   - Protected CRUD at `/api/v1/webhook-triggers` and delivery logs at `/api/v1/webhook-triggers/:id/deliveries`.
   - Public HMAC-verified receiver at `/webhooks/inbound/:id` that creates a Rails ticket assigned to the target bot.
