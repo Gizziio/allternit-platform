@@ -1,34 +1,32 @@
 # Steering checkpoint
 
 ## Goal
+Implement the approved Allternit Office Suite standalone plan: create `@allternit/allternit-office-suite`, refactor the four office apps and Sign to use an injectable `OfficeHost` contract, decouple `@allternit/office-ai` and the xlsx engine from platform endpoints, and build `surfaces/office.allternit.com` as a standalone host. Platform (`surfaces/ai.allternit.com`) remains the primary entry point.
 
-Wire Memory Kernel V2 runtime hooks into the agent execution loop, checkpoint store, and heartbeat executor.
+## Milestones
+- [x] **Milestone 1**: Scaffold `@allternit/allternit-office-suite` with `OfficeHost`, `OfficeAiClient`, `XlsxEngineHost`, `OfficeStorageProvider`, bridge context, and theme.
+- [x] **Milestone 2**: Wrap Docs/Sheets/Slides/PDF with host-aware adapters; platform views provide a browser host that overrides `saveFile` with artifact persistence.
+- [ ] **Milestone 3**: Decouple `@allternit/office-ai` and the xlsx engine from platform endpoints via the host contract.
+- [x] **Milestone 4**: Extract Allternit Sign into the suite and normalize its UI palette.
+- [x] **Milestone 5**: Build `surfaces/office.allternit.com` standalone host.
+- [ ] **Milestone 6**: Verification, tests, and documentation.
 
 ## Just did
-
-- Wired **PreTurn Recall** in `mode-session-store.ts` (`sendMessageWithContext`) to automatically query `memoryClient.recall(text, { agentId, sessionId })` and inject formatted `<agent_memory>` context into `agentContext.systemPrompt` prior to model inference.
-- Wired **PostTurn Retention** in `mode-session-store.ts` to asynchronously persist user turns on message send and assistant turns on streaming `onDone` via `memoryClient.retainTurn()`.
-- Added **Tool Execution Observations** in `mode-session-store.ts` (`onToolResult`) to log tool execution results to `memory_observations`.
-- Added **Checkpoint Persistence** in `agent-checkpoint-store.ts` (`setCheckpoint`) to record structured `kind: 'checkpoint'` observations on status updates.
-- Added **Decision Observations** in `agent-heartbeat-executor.ts` (`executeNightlyReview`) on nightly review completion.
-- Implemented **4-Way Reciprocal Rank Fusion (RRF)** and float vector `cosine_similarity` in `cmd/allternit-api/src/memory_kernel_service.rs` blending lexical match (0.25), semantic/confidence (0.35), entity graph (0.20), and 72-hour half-life recency decay (0.20).
-- Implemented **Outbound Photon Message Dispatcher** (`send_photon_outbound_message`) in `cmd/allternit-api/src/allternit_bus_routes.rs` connecting agent replies directly to `https://api.photon.codes/v1/messages`.
-- Completed all pending Phase 1 task batches across `docs/agent-tasks/`:
-  - **Model Lab Training & Recipes** (`MODEL_LAB_TRAINING_MAP.md`, `MODEL_LAB_TRAINING_PHASE_1_NOTES.md`)
-  - **Agent Hub & Packaged Bots** (`AGENT_HUB_BOTS_MAP.md`, `AGENT_HUB_BOTS_PHASE_1_NOTES.md`)
-  - **Plugins, CLI, Artifacts, iOS & Docs** (`PLUGINS_CLI_ARTIFACTS_IOS_MAP.md`, `PLUGINS_CLI_ARTIFACTS_IOS_PHASE_1_NOTES.md`)
-  - **Computer Use Harness Integration** (`COMPUTER_USE_HARNESS_MAP.md`, `COMPUTER_USE_HARNESS_PHASE_1_NOTES.md`)
-  - **Model Lab Discover & Reorganization** (`MODEL_LAB_DISCOVER_PHASE_1_NOTES.md`, `MODEL_LAB_REORG_PHASE_1_NOTES.md`)
-- Verified automated tests: Rust memory kernel tests passed 100% (3/3), frontend vitest suite passed 897 tests across 117 suites, `cargo check` and `tsc` report 0 errors.
+- Merged `session/office-fixes-1786972324` into `main` so the standalone suite work lands in the shared checkout.
+- Milestone 4 (Sign): extracted `SignApp` into the suite, normalized its palette to match office apps, and updated the platform `NativeSigningView` to host it via `OfficeHostProvider`.
+- Milestone 5 (standalone surface): `surfaces/office.allternit.com/` hosts Docs/Sheets/Slides/PDF/Sign tabs using `createBrowserHost`; added missing AI-panel PNG icons and a Vite fallback plugin for asset inlining.
+- Added `surfaces/office.allternit.com/README.md` documenting usage and architecture.
+- Verified `@allternit/allternit-office-suite` and `@allternit/ai` typechecks pass.
 
 ## Next
-
-- Run live user acceptance smoke tests across agent sessions and Photon webhook channels.
-- Expand physical mobile harness and native accessibility adapters in Phase 2.
+- Address the runtime rendering errors reported in platform Sheets/Slides and the PDF chat composer button.
+- Map office view types to a stable ACI/Browser rail mode so the left rail stays in the expected mode.
+- Return to **Milestone 3** once the platform smoke-test regressions are fixed.
 
 ## Open questions
 
-- None.
+- Should the standalone Sheets host implement a client-side recalc engine, or gracefully degrade to the simpler `@allternit/office-sheets-editor`?
+- Should the standalone AI host default to Ollama, a no-op, or a lightweight built-in LLM stub?
 
 ---
 

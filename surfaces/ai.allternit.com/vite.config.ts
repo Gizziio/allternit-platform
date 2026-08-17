@@ -9,6 +9,13 @@ import { designSkillsPlugin } from './src/lib/design/design-skills-plugin'
 
 const require = createRequire(import.meta.url)
 const blocksuiteIconsLit = require.resolve('@blocksuite/icons/lit')
+// Force Univer to use the same @univerjs/core that office-sheets-app depends
+// on. Without this, the platform surface's legacy design-mode editor pins
+// @univerjs/core@0.21.1, which conflicts with office-sheets-app's 0.25.x
+// plugins and silently breaks the grid render.
+const univerCore = require.resolve('@univerjs/core', {
+  paths: [path.resolve(__dirname, '../../packages/@allternit/office-sheets-app')],
+})
 
 /**
  * Development-only dispatch handoff endpoints.
@@ -109,12 +116,18 @@ export default defineConfig({
   resolve: {
     alias: {
       '@': path.resolve(__dirname, './src'),
+      '@univerjs/core': univerCore,
       // @blocksuite/data-view@0.19.5 imports a misspelled icon name that was
       // removed from @blocksuite/icons. Keep the workaround in source so a
       // clean frozen-lockfile CI install behaves exactly like local builds.
       '@blocksuite/icons/lit': path.resolve(__dirname, './src/shims/blocksuite-icons-lit.ts'),
       'virtual:allternit-blocksuite-icons-lit-original': blocksuiteIconsLit,
     },
+    // Force a single copy of packages that break when duplicated across the
+    // workspace graph (e.g. office-slides-app on React 18 must resolve the
+    // same react as the platform surface; Univer plugins must all share one
+    // @univerjs/core instance).
+    dedupe: ['react', 'react-dom', '@univerjs/core'],
   },
   build: {
     outDir: 'dist',

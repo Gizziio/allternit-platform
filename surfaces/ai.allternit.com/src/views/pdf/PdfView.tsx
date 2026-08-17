@@ -1,5 +1,10 @@
-import { useEffect, useRef, useState } from 'react';
-import { PdfApp } from '@allternit/office-pdf-app';
+import { useEffect, useMemo, useRef, useState } from 'react';
+import {
+  PdfApp,
+  OfficeHostProvider,
+  createBrowserHost,
+  type OfficeHost,
+} from '@allternit/allternit-office-suite';
 import { takeFile } from '@/views/office/file-handoff';
 import { fetchArtifactById, type ArtifactDto } from '@/services/artifacts-api';
 
@@ -72,17 +77,31 @@ export function PdfView({ artifactId, handoffId }: PdfViewProps) {
     };
   }, [artifactId]);
 
+  // Host contract passed to the suite adapter. PDF is read-only in the platform
+  // surface, so saves are no-ops.
+  const host = useMemo<OfficeHost>(
+    () =>
+      createBrowserHost({
+        saveFile: async () => {
+          /* read-only viewer: edits are not persisted back to the artifact */
+        },
+      }),
+    [],
+  );
+
   if (!loaded) {
     return <div style={{ width: '100%', height: '100%', background: 'var(--shell-view-bg, #141110)' }} />;
   }
 
   return (
     <div style={{ width: '100%', height: '100%' }}>
-      <PdfApp
-        key={artifact?.id ?? (handoffFileRef.current ? 'handoff' : 'standalone')}
-        document={initialBytes ? { bytes: initialBytes, name: initialName ?? 'document.pdf' } : undefined}
-        readOnly
-      />
+      <OfficeHostProvider host={host}>
+        <PdfApp
+          key={artifact?.id ?? (handoffFileRef.current ? 'handoff' : 'standalone')}
+          document={initialBytes ? { bytes: initialBytes, name: initialName ?? 'document.pdf' } : undefined}
+          readOnly
+        />
+      </OfficeHostProvider>
     </div>
   );
 }

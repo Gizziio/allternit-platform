@@ -53,18 +53,40 @@ export const AiComposer = forwardRef<HTMLTextAreaElement, AiComposerProps>(funct
       }
     },
   }
+
+  const hint = props.busy ? props.hintBusy : props.hintIdle
+  const canSend = !props.busy && props.value.trim().length > 0
+
   return (
-    <div className="ai-composer">
+    <div className="ai-input-box">
       <textarea ref={props.textareaRef ?? forwardedRef} {...textareaProps} />
-      <div className="ai-composer-footer">
+      <div className="ai-input-footer">
         {props.footerStart}
+        {hint ? (
+          <span className="ai-input-hint" title={props.busy ? undefined : props.hintIdleTitle}>
+            {hint}
+          </span>
+        ) : null}
         {props.busy ? (
-          <button onClick={props.onStop} aria-label={props.stopLabel}>
+          <button
+            className="ai-send-btn ai-stop-btn"
+            onClick={props.onStop}
+            aria-label={props.stopLabel}
+            type="button"
+          >
             {props.stopIcon ?? props.stopLabel ?? 'Stop'}
           </button>
         ) : (
-          <button onClick={props.onSend} aria-label={props.sendLabel} disabled={!props.value.trim()}>
-            {props.sendIconEnabled ?? props.sendLabel ?? 'Send'}
+          <button
+            className="ai-send-btn"
+            onClick={props.onSend}
+            aria-label={props.sendLabel}
+            disabled={!canSend}
+            type="button"
+          >
+            {canSend
+              ? (props.sendIconEnabled ?? props.sendLabel ?? 'Send')
+              : (props.sendIconDisabled ?? props.sendIconEnabled ?? props.sendLabel ?? 'Send')}
           </button>
         )}
       </div>
