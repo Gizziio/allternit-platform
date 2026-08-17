@@ -1,0 +1,106 @@
+---
+title: Session Management
+description: List, export, and delete Gizzi Code sessions from the terminal
+---
+
+## Overview
+
+Every interaction with Gizzi Code happens inside a **session** — a persisted conversation context that includes messages, tool calls, traces, and metadata. The `gizzi session` command group lets you manage those sessions directly from the terminal: list recent work, export a session for offline analysis or sharing, and remove sessions you no longer need.
+
+Sessions are typically created when you run `gizzi`, `gizzi run`, or `gizzi exec`. Use `gizzi session` when you want to inspect history without reopening the TUI, archive a transcript, or clean up disk storage.
+
+## Command reference
+
+| Command | Description |
+|---------|-------------|
+| `gizzi session list` | List root sessions, newest first |
+| `gizzi session delete <sessionID>` | Permanently delete a session |
+| `gizzi session export [sessionID]` | Export a session as JSON to stdout |
+
+## `gizzi session list`
+
+Show your recent root sessions. In an interactive terminal the output is paged with `less`; in non-TTY environments it prints to stdout.
+
+```bash
+# Default table view
+gizzi session list
+
+# Show the 10 most recent sessions
+gizzi session list --max-count 10
+
+# Machine-readable JSON
+gizzi session list --format json
+```
+
+The JSON output contains one object per session:
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `id` | string | Unique session identifier |
+| `title` | string | Session title, usually derived from the first prompt |
+| `updated` | number | Last update timestamp (milliseconds) |
+| `created` | number | Creation timestamp (milliseconds) |
+| `projectId` | string \| null | Associated project identifier, if any |
+| `directory` | string | Working directory the session ran in |
+
+## `gizzi session delete`
+
+Delete a session permanently. You must provide the full session ID.
+
+```bash
+gizzi session delete sess_abc123xyz
+```
+
+<Warning>
+  Deletion is immediate and cannot be undone. Exported archives are not affected.
+</Warning>
+
+## `gizzi session export`
+
+Export a complete session snapshot as formatted JSON. The export includes session metadata, all messages and parts, and the session trace.
+
+```bash
+# Export a specific session
+gizzi session export sess_abc123xyz > session-backup.json
+
+# Interactive selection when no ID is provided
+gizzi session export
+```
+
+The exported JSON object has three top-level keys:
+
+| Key | Contents |
+|-----|----------|
+| `info` | Session metadata (ID, title, timestamps, directory) |
+| `messages` | Array of messages and their parts |
+| `trace` | Trace head and recent entries |
+
+Export is useful for attaching context to bug reports, importing into another tool, or keeping a long-term archive outside of Gizzi Code.
+
+## Common flags
+
+| Flag | Applies to | Description |
+|------|------------|-------------|
+| `-n, --max-count <N>` | `list` | Limit to the N most recent sessions |
+| `--format \<table\|json\>` | `list` | Output format (default: `table`) |
+
+## Runtime session flags
+
+Sessions are usually created and continued through `gizzi run` or `gizzi exec`. The relevant flags are:
+
+| Flag | Description |
+|------|-------------|
+| `-c, --continue` | Continue the most recent session |
+| `-s, --session <id>` | Continue a specific session |
+| `--fork` | Fork the session before continuing (requires `--continue` or `--session`) |
+| `--share` | Share the session and print a public URL when available |
+| `--title <text>` | Set a custom session title |
+
+See [Headless Execution](/cli/headless-execution) for pipe-safe, non-interactive usage with `gizzi exec`.
+
+## Related docs
+
+- [Gizzi Code Overview](/cli/overview) — Interactive TUI, headless mode, and platform integration
+- [Headless Execution](/cli/headless-execution) — Run agents non-interactively in scripts and CI
+- [Configuration](/cli/configuration) — Config files, profiles, and environment variables
+- [Permission Profiles](/cli/permission-profiles) — Approval rules for tools and edits

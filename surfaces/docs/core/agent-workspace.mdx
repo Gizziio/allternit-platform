@@ -1,0 +1,418 @@
+---
+title: Agent Workspace
+description: The 5-layer living workspace runtime that bridges agents, markdown, and the Allternit kernel.
+---
+
+## Overview
+
+The **Agent Workspace** is the client-side runtime that gives every Allternit agent a persistent, inspectable, and reproducible home on disk. It is implemented by the `allternit-agent-workspace` crate and provides the **5-layer living workspace architecture** that sits between the user, the agent, and the kernel's deterministic enforcement systems.
+
+The workspace is deliberately **not the kernel**. It is the bridge:
+
+- **Users** edit markdown files to express identity, policy, and goals.
+- **Agents** read those markdown files to understand constraints and context.
+- **The kernel** enforces policy, maintains the ledger, and executes tool calls.
+
+The workspace keeps the agent grounded across sessions, crashes, and compaction boundaries by rehydrating state from markdown and checkpoints on every boot.
+
+## Key principle
+
+```text
+┌─────────────────────────────────────────────────────────────────────┐
+│  KERNEL (Authoritative)          │  MARKDOWN         │  AGENT       │
+│  ─────────────────────           │  ────────         │  ─────       │
+│  • System Law                    │  • AGENTS.md      │  • Reads     │
+│  • Governance Engine             │  • IDENTITY.md    │  • Decides   │
+│  • Policy Enforcement            │  • POLICY.md      │  • Acts      │
+│  • Ledger/Receipts               │  • MEMORY.md      │  • Logs      │
+│  • Context Pack Builder          │  • BRAIN.md       │  • Syncs     │
+└─────────────────────────────────────────────────────────────────────┘
+          ↑                           ↑                         ↑
+          │                           │                         │
+          └─────────── SYNC ──────────┴──────── REHYDRATE ─────┘
+```
+
+**The Kernel enforces.** The Markdown distills. The Agent consumes.
+
+## The 5 layers
+
+The workspace is organized into five layers, each represented by markdown files under `.allternit/`.
+
+| Layer | Purpose | Key files |
+|---|---|---|
+| **Cognitive Persistence** | Working memory, task graph, session continuity | `BRAIN.md`, `MEMORY.md`, `memory/*.md`, `active-tasks.md`, `lessons.md` |
+| **Identity Stabilization** | Agent self-concept, voice, user preferences | `IDENTITY.md`, `SOUL.md`, `USER.md`, `VOICE.md`, `POLICY.md` |
+| **Governance & Decision** | Constitution, procedures, tool policies | `AGENTS.md`, `PLAYBOOK.md`, `TOOLS.md`, `HEARTBEAT.md`, `SYSTEM.md`, `CHANNELS.md` |
+| **Modular Skills** | Reusable capabilities with contracts | `skills/{name}/SKILL.md`, `skills/{name}/contract.json` |
+| **Business Topology** | Multi-tenancy, clients, projects | `CLIENTS.md`, `business/crm/`, `business/projects/`, `business/content/` |
+
+### Layer 1: Cognitive Persistence
+
+Cognitive files keep the agent's working memory human-readable and recoverable.
+
+- `BRAIN.md` — Human view of the active task graph.
+- `MEMORY.md` — Index into daily session logs.
+- `memory/YYYY-MM-DD.md` — Daily logs synced from the kernel ledger.
+- `active-tasks.md` — Current task queue.
+- `lessons.md` — Curated learnings.
+- `self-review.md` — Introspection logs.
+
+### Layer 2: Identity Stabilization
+
+Identity files stabilize who the agent is and how it should behave.
+
+- `IDENTITY.md` — Name, nature, vibe.
+- `SOUL.md` — Behavior guidelines.
+- `USER.md` — User preferences.
+- `VOICE.md` — Voice and tone configuration.
+- `POLICY.md` — Runtime policy overrides that take effect immediately.
+
+### Layer 3: Governance & Decision
+
+Governance files are the constitution and rulebook.
+
+- `AGENTS.md` — Supreme law. All agents must read this first.
+- `PLAYBOOK.md` — Operational procedures distilled from cookbooks.
+- `TOOLS.md` — Tool configuration for this workspace.
+- `SYSTEM.md` — Environment constraints.
+- `CHANNELS.md` — MCP and external channel configuration.
+
+### Layer 4: Modular Skills
+
+Skills are reusable capabilities kept in `skills/{name}/`.
+
+```text
+.allternit/skills/
+├── _template/
+│   ├── SKILL.md
+│   └── contract.json
+└── my-skill/
+    ├── SKILL.md
+    └── contract.json
+```
+
+Each skill has a human-readable `SKILL.md` procedure and a machine-readable `contract.json` with triggers, permissions, and input/output schemas.
+
+### Layer 5: Business Topology
+
+Business files enable multi-tenancy and project management.
+
+- `CLIENTS.md` — Client registry.
+- `business/crm/` — Contact management.
+- `business/projects/` — Project workspaces.
+- `business/content/` — Content templates.
+
+## Boot sequence
+
+When an agent starts, the workspace runs a deterministic 21-phase boot sequence grouped into six phases.
+
+```text
+Phase 1: System Initialization
+├── Step 1: Lock acquisition
+├── Step 2: Load manifest
+└── Step 3: Crash recovery
+
+Phase 2: Identity & Governance
+├── Step 4: Load IDENTITY.md
+├── Step 5: Load AGENTS.md (constitution)
+├── Step 6: Load SOUL.md
+└── Step 7: Load USER.md
+
+Phase 3: Environment & Tools
+├── Step 8: Load TOOLS.md
+├── Step 9: Load SYSTEM.md
+├── Step 10: Load CHANNELS.md
+└── Step 11: Load POLICY.md
+
+Phase 4: Memory Hydration
+├── Step 12: Load MEMORY.md
+├── Step 13: Load daily logs
+├── Step 14: Load active tasks
+├── Step 15: Load lessons
+└── Step 16: Load self-reviews
+
+Phase 5: Capabilities
+├── Step 17: Index skills
+├── Step 18: Load tool registry
+└── Step 19: Load provider configs
+
+Phase 6: Context Build
+├── Step 20: Build context pack
+└── Step 21: Resume work
+```
+
+The boot sequence produces a `BootContext` that the agent uses for the rest of the session.
+
+## Components
+
+The `allternit-agent-workspace` crate exposes the following primary components.
+
+| Component | Responsibility |
+|---|---|
+| `BootSequence` | 21-phase deterministic workspace initialization |
+| `PolicyEngine` | Parse `AGENTS.md` and `POLICY.md` for fast client-side checks |
+| `ContextPackBuilder` | Aggregate the 5 layers into a deterministic context bundle |
+| `SkillsRegistry` | Discover, index, and route to skills |
+| `CheckpointManager` | Save and restore agent state for crash recovery |
+| `WorkspaceCompiler` | Compile markdown into structured data |
+
+## Quick start
+
+### Add the crate
+
+```toml
+[dependencies]
+allternit-agent-workspace = "0.1.0"
+```
+
+### Initialize a workspace
+
+```rust
+use allternit_agent_workspace::initialize_workspace;
+use std::path::Path;
+
+#[tokio::main]
+async fn main() -> anyhow::Result<()> {
+    let workspace = Path::new("./my-agent");
+    let context = initialize_workspace(workspace).await?;
+
+    println!("Agent: {}", context.agent_name());
+    println!("Focus: {}", context.current_focus());
+
+    Ok(())
+}
+```
+
+### Check policy
+
+```rust
+use allternit_agent_workspace::{PolicyEngine, PolicyDecision};
+use std::collections::HashMap;
+
+let engine = PolicyEngine::from_workspace("./my-agent")?;
+let args = HashMap::new();
+
+match engine.check_tool("filesystem.delete", &args) {
+    PolicyDecision::Allow => println!("Tool allowed"),
+    PolicyDecision::RequireApproval(reason) => {
+        println!("Approval required: {}", reason)
+    }
+    PolicyDecision::Deny(reason) => println!("Denied: {}", reason),
+}
+```
+
+### Build a context pack
+
+```rust
+use allternit_agent_workspace::ContextPackBuilder;
+
+let mut builder = ContextPackBuilder::new("./my-agent");
+builder.load_identity()?;
+builder.load_governance()?;
+builder.load_cognitive()?;
+builder.load_skills()?;
+builder.build_summary()?;
+
+let pack = builder.build()?;
+println!("Context pack: {} bytes", pack.total_size_bytes());
+```
+
+### Save and restore checkpoints
+
+```rust
+use allternit_agent_workspace::checkpoint::{
+    CheckpointManager, AgentState, TaskState,
+};
+
+let manager = CheckpointManager::new("./my-agent");
+let checkpoint = manager.create(
+    "session-1",
+    AgentState { /* ... */ },
+    TaskState { /* ... */ },
+)?;
+
+// Later, restore from the checkpoint
+manager.restore(&checkpoint.id)?;
+```
+
+## CLI usage
+
+The crate also ships a `workspace-cli` binary.
+
+```bash
+# Initialize a new workspace
+allternit-workspace init --name my-agent --nature "Code Assistant"
+
+# Boot the workspace
+allternit-workspace boot
+
+# Check workspace status
+allternit-workspace status
+
+# Check policy for a tool
+allternit-workspace check filesystem.delete
+
+# List skills
+allternit-workspace skills
+
+# Build context pack
+allternit-workspace build-pack
+```
+
+## Workspace layout
+
+A fully populated `.allternit/` directory looks like this:
+
+```text
+.allternit/
+├── manifest.json                # Workspace metadata
+├── brain/
+│   └── BRAIN.md                 # Task graph human view
+├── memory/
+│   ├── YYYY-MM-DD.md           # Daily session logs
+│   ├── active-tasks.md         # Current task queue
+│   ├── lessons.md              # Curated learnings
+│   └── self-review.md          # Introspection logs
+├── identity/
+│   ├── IDENTITY.md             # Agent identity
+│   ├── SOUL.md                 # Agent behavior
+│   ├── USER.md                 # User preferences
+│   ├── VOICE.md                # Voice config
+│   └── POLICY.md               # Runtime overrides
+├── governance/
+│   ├── PLAYBOOK.md             # Procedures
+│   ├── TOOLS.md                # Tool configuration
+│   ├── HEARTBEAT.md            # Periodic tasks
+│   ├── SYSTEM.md               # Environment constraints
+│   └── CHANNELS.md             # MCP/external channels
+├── skills/
+│   ├── _template/              # Skill template
+│   └── {skill_name}/           # Individual skills
+│       ├── SKILL.md
+│       └── contract.json
+├── business/
+│   ├── CLIENTS.md              # Client registry
+│   ├── crm/                    # Contact info
+│   ├── projects/               # Project workspaces
+│   └── content/                # Content templates
+├── contracts/
+│   ├── skills.index.json       # Skill registry index
+│   └── tools.registry.json     # Tool registry
+├── context/
+│   └── pack.current.json       # Compiled context pack
+└── state/
+    ├── taskgraph.json          # Machine task graph
+    ├── checkpoints.jsonl       # Session checkpoints
+    └── locks/                  # Workspace locks
+```
+
+## Kernel sync
+
+The workspace is designed to sync bidirectionally with the authoritative kernel.
+
+```text
+Kernel Ledger Receipts
+         ↓
+   ┌─────────────┐
+   │ Sync Engine │
+   └─────────────┘
+         ↓
+┌──────────────────┐
+│ memory/*.md      │  ← Human-readable session logs
+│ MEMORY.md index  │  ← Index of all memories
+└──────────────────┘
+         ↓
+   Agent Context
+```
+
+### Sync directions
+
+| Direction | Trigger | Data |
+|---|---|---|
+| Kernel → Markdown | Every tool call / turn | Receipts, task updates, policy changes, skill registry |
+| Markdown → Kernel | File writes | `POLICY.md` reloads, new skills indexed |
+| Agent → Kernel | Tool calls | PreToolUse gate checks, ledger receipts, WIH completion |
+
+When the kernel is unavailable, the workspace falls back to offline mode using cached context packs and local policy.
+
+## Deterministic rehydration
+
+At every context boundary the agent is rehydrated from the workspace:
+
+1. **New session** → Full boot sequence.
+2. **Post-compaction** → Load checkpoint + recent memory.
+3. **Subagent spawn** → Inherit parent context pack.
+4. **Tool call boundary** → Policy check + receipt logging.
+5. **Crash recovery** → Restore from checkpoint.
+
+## WASM build for Shell UI
+
+The crate can be compiled to WebAssembly for browser-based interfaces such as the Shell UI.
+
+```bash
+# Build for std (CLI usage)
+cargo build --features std
+
+# Build WASM package for browser
+cargo build --target wasm32-unknown-unknown \
+  --no-default-features --features wasm --release
+
+# Generate JS/TS bindings
+wasm-bindgen target/wasm32-unknown-unknown/release/allternit_agent_workspace.wasm \
+  --out-dir pkg \
+  --typescript \
+  --target web
+```
+
+```typescript
+import { WorkspaceApi } from '@allternit/agent-workspace';
+
+const workspace = new WorkspaceApi('/path/to/workspace');
+const result = await workspace.boot();
+console.log(result);
+
+const policyResult = workspace.checkTool('filesystem.write');
+console.log(policyResult);
+```
+
+## Configuration
+
+Kernel sync and workspace behavior can be configured in `.allternit/config.toml`.
+
+```toml
+[kernel]
+endpoint = "https://kernel.allternit.io"
+workspace_id = "ws-abc123"
+api_key = "${KERNEL_API_KEY}"
+
+[sync]
+auto = true
+interval = 300  # 5 minutes
+on_boot = true
+on_shutdown = true
+
+[sync.policies]
+conflict_resolution = "ask"  # ask, local, remote, merge
+policy_changes_require_approval = true
+```
+
+## Concepts
+
+- **Workspace** — A directory on disk that contains the 5-layer markdown structure under `.allternit/`.
+- **Boot context** — The assembled state produced by the 21-phase boot sequence.
+- **Context pack** — A deterministic bundle of all workspace layers prepared for the agent's working memory.
+- **Policy engine** — Client-side parser for `AGENTS.md` and `POLICY.md` that gates tool and file operations.
+- **Skill** — A reusable capability made of `SKILL.md` plus `contract.json`.
+- **Checkpoint** — A snapshot of agent and task state used for crash recovery and session continuity.
+- **Rehydration** — The process of restoring agent context from markdown and checkpoints at a boundary.
+- **Kernel sync** — Bidirectional flow of receipts, policy, skills, and checkpoints between the workspace and the authoritative kernel.
+
+## Related links
+
+- [Gizzi Runtime](/core/gizzi-runtime)
+- [CommRails](/core/commrails)
+- [Skills](/core/skills)
+- [Session Manager](/core/session-manager)
+- [Memory Fabric](/core/memory-fabric)
+- [Git DAG](/core/git-dag)
+- [Orchestration](/core/orchestration)

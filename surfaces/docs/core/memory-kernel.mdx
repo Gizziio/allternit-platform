@@ -1,0 +1,232 @@
+---
+title: Memory Kernel
+description: Three-layer semantic memory for agent sessions — events, entities, and summaries.
+---
+
+## Overview
+
+The **Allternit Memory Kernel** is the experimental three-layer memory model that sits on top of the [Memory Fabric](/core/memory-fabric). It organizes raw session traces into a queryable knowledge graph and periodically distills that graph into compact, reusable summaries.
+
+The kernel is intentionally separate from the low-level fabric: the fabric stores and routes opaque key/value entries, while the kernel gives them semantic shape — people, projects, concepts, code, documents, and the facts that connect them.
+
+The canonical implementation is the `allternit-memory-kernel` Rust crate in `services/memory/data/memory-kernel`.
+
+## Three layers
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│                    Summary Layer                             │
+│         Weekly regenerated entity snapshots                  │
+│                 (summary_text, counts)                       │
+└──────────────────────────┬──────────────────────────────────┘
+                           │ derives from
+┌──────────────────────────▼──────────────────────────────────┐
+│                    Entity Layer                              │
+│         Typed entities • facts • relationships               │
+│    Person ──works_at──► Company  Project ──uses──► Code      │
+└──────────────────────────┬──────────────────────────────────┘
+                           │ derived from
+┌──────────────────────────▼──────────────────────────────────┐
+│                     Event Layer                              │
+│         Append-only log of every memory event                │
+│              traces.ndjson / MemoryEvent                     │
+└─────────────────────────────────────────────────────────────┘
+```
+
+| Layer | Purpose | Primary data structure |
+|---|---|---|
+| **Events** | Capture every observation, action, or state change as an immutable record. | `MemoryEvent` |
+| **Entities** | Extract and maintain typed objects, atomic facts, and relationships from events. | `Entity`, `EntityFact`, `EntityRelationship` |
+| **Summaries** | Regenerate concise views of active facts for fast retrieval and context packing. | `EntitySummary` |
+
+## Event layer
+
+Events are append-only. Once written they are never mutated; corrections are modeled as new events or as entity-layer fact supersession.
+
+```rust
+use allternit_memory_kernel::MemoryEvent;
+
+let event = MemoryEvent::new(
+    "user_request",
+    serde_json::json!({
+        "text": "Refactor the checkout service",
+        "workspace_id": "ws_abc123"
+    }),
+);
+
+let event_id = kernel.append_event(event).await;
+```
+
+Every event carries:
+
+| Field | Meaning |
+|---|---|
+| `event_id` | Stable identifier, prefixed `evt_` |
+| `event_type` | Semantic category (`user_request`, `tool_call`, `decision`, …) |
+| `timestamp` | UTC time of capture |
+| `session_id` | Optional originating session |
+| `agent_id` | Optional originating agent |
+| `content` | Arbitrary JSON payload |
+| `tags` | Classification tags for filtering |
+
+The kernel can query events by type, by session, or by recency:
+
+```rust
+let recent = kernel.get_recent_events(50).await;
+let requests = kernel.query_events_by_type("user_request").await;
+```
+
+## Entity layer
+
+Entities turn raw events into structured knowledge. Each entity has a type, a collection of timestamped facts, and bidirectional relationships to other entities.
+
+### Entity types
+
+```rust
+pub enum EntityType {
+    Person,
+    Company,
+    Project,
+    Concept,
+    Document,
+    Code,
+    Other,
+}
+```
+
+### Creating entities and adding facts
+
+```rust
+use allternit_memory_kernel::{EntityType, MemoryKernel};
+
+let person_id = kernel
+    .get_or_create_entity("Jane Chen", EntityType::Person)
+    .await;
+
+kernel
+    .add_fact(&person_id, "role", "Staff Engineer", "onboarding", 0.92)
+    .await?;
+
+kernel
+    .add_fact(&person_id, "team", "Platform", "workspace_profile", 0.88)
+    .await?;
+```
+
+### Facts are versioned
+
+Facts can be superseded instead of deleted. The old fact keeps its history while the new fact becomes active.
+
+```rust
+let old = kernel
+    .add_fact(&person_id, "role", "Staff Engineer", "review", 0.9)
+    .await?;
+
+let new = kernel
+    .add_fact(&person_id, "role", "Principal Engineer", "review", 0.95)
+    .await?;
+
+kernel.supersede_fact(&old, &new).await?;
+```
+
+After supersession, the old fact has `status = Superseded` and `superseded_by` points to the new fact. Queries that operate on active facts can filter by `FactStatus::Active`.
+
+### Relationships
+
+Relationships are first-class and stored on both participating entities.
+
+```rust
+let company_id = kernel
+    .get_or_create_entity("Allternit", EntityType::Company)
+    .await;
+
+kernel
+    .add_relationship(&person_id, &company_id, "works_at")
+    .await?;
+```
+
+Typical relationship queries:
+
+```rust
+let people = kernel.query_entities_by_type(EntityType::Person).await;
+let hits = kernel.search_entities("Allternit").await;
+let person = kernel.get_entity(&person_id).await;
+```
+
+## Summary layer
+
+Summaries are regenerated from active facts. A summary captures the most salient information about an entity in a short text block plus metadata counts.
+
+```rust
+let summary = kernel.generate_summary(&person_id).await?;
+
+println!("{} facts, {} relationships",
+    summary.active_facts_count,
+    summary.relationships_count
+);
+```
+
+Summaries are cached in the kernel and attached to the entity, so subsequent reads are cheap:
+
+```rust
+if let Some(summary) = kernel.get_summary(&person_id).await {
+    // use summary.summary_text
+}
+```
+
+In production, the summary layer is expected to run on a schedule (for example, weekly) and to be driven by the `MemoryEvolutionEngine`, which can merge, prune, and rewrite summaries based on importance and recency.
+
+## Memory evolution engine
+
+The kernel receives an `allternit_evolution_layer::MemoryEvolutionEngine` at construction. The engine is responsible for higher-order memory maintenance: consolidation, decay, conflict resolution, and summarization policy. The kernel keeps the structured records; the engine decides how they evolve over time.
+
+```rust
+use allternit_evolution_layer::MemoryEvolutionEngine;
+use allternit_memory_kernel::MemoryKernel;
+use std::sync::Arc;
+
+let engine = Arc::new(MemoryEvolutionEngine::new());
+let kernel = MemoryKernel::new(engine);
+```
+
+## Determinism and verification
+
+The kernel can compute a SHA-256 hash over its event IDs and entity IDs. This is useful for tests, reproducibility checks, and context-pack validation.
+
+```rust
+let hash = kernel.compute_hash().await;
+```
+
+Statistics are also available for health checks:
+
+```rust
+let stats = kernel.get_stats().await;
+println!(
+    "events: {}, entities: {}, summaries: {}",
+    stats.event_count, stats.entity_count, stats.summary_count
+);
+```
+
+## Error handling
+
+Operations return `MemoryError`:
+
+| Variant | Meaning |
+|---|---|
+| `NotFound` | Entity or fact does not exist |
+| `Io` | Underlying I/O failure |
+| `Json` | JSON serialization error |
+
+## Status and relationship to other memory systems
+
+The Memory Kernel is experimental and not yet wired into the main workspace build. It complements, rather than replaces, the production memory stack:
+
+- **[Memory Fabric](/core/memory-fabric)** provides the low-level provider trait, ledger, and routing for all memory operations.
+- **Memory Agent** (`services/memory/agent`) is the TypeScript long-term memory service with vector search and LLM-driven consolidation.
+- **Memory Kernel** (`services/memory/data/memory-kernel`) is the structured, three-layer semantic model that future surfaces can use when they need typed entities and versioned facts.
+
+## Related docs
+
+- [Memory Fabric](/core/memory-fabric)
+- [Gizzi Runtime](/core/gizzi-runtime)
+- [Session Manager](/core/session-manager)
+- [CommRails](/core/commrails)

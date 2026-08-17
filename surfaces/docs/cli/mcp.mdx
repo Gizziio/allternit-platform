@@ -1,0 +1,203 @@
+---
+title: MCP Servers
+description: Manage Model Context Protocol servers with gizzi mcp
+---
+
+## Overview
+
+`gizzi mcp` manages Model Context Protocol (MCP) servers that extend the Allternit runtime with external tools and context sources. You can register local command-based servers, connect to remote HTTP servers, and handle OAuth authentication from the terminal.
+
+MCP servers declared through the CLI are written to your `gizzi.json` or `gizzi.jsonc` configuration, either in the current project or globally.
+
+## Command reference
+
+| Command | Alias | Description |
+| ------- | ----- | ----------- |
+| `gizzi mcp list` | `ls` | List configured MCP servers and their connection status |
+| `gizzi mcp add` | — | Add a new MCP server interactively |
+| `gizzi mcp remove [name]` | `rm` | Remove an MCP server from config |
+| `gizzi mcp auth [name]` | — | Authenticate with an OAuth-enabled remote MCP server |
+| `gizzi mcp auth list` | `ls` | List OAuth-capable servers and their auth status |
+| `gizzi mcp logout [name]` | — | Remove stored OAuth credentials for a server |
+| `gizzi mcp debug <name>` | — | Debug OAuth connectivity for a remote MCP server |
+
+## Listing servers
+
+Show every configured server and its current status:
+
+```bash
+gizzi mcp list
+```
+
+Each entry displays:
+
+- Server name and type (`local` or `remote`)
+- Connection status: `connected`, `disabled`, `needs authentication`, `failed`, or `not initialized`
+- For remote servers, the target URL and whether OAuth credentials are stored
+- Error hints when a server failed to connect
+
+## Adding a server
+
+Run the interactive wizard to register a server:
+
+```bash
+gizzi mcp add
+```
+
+The wizard prompts for:
+
+1. **Location** — current project (`gizzi.json` or `.gizzi/gizzi.json`) or global config.
+2. **Name** — a short identifier used in commands and runtime tool routing.
+3. **Type** — `local` or `remote`.
+
+### Local server
+
+For a local server, provide the shell command to start it:
+
+```bash
+Enter command to run: npx -y @modelcontextprotocol/server-filesystem /Users/joe/projects
+```
+
+This writes an entry like:
+
+```json
+{
+  "mcp": {
+    "filesystem": {
+      "type": "local",
+      "command": ["npx", "-y", "@modelcontextprotocol/server-filesystem", "/Users/joe/projects"]
+    }
+  }
+}
+```
+
+### Remote server
+
+For a remote server, provide the HTTPS URL. You can then opt into OAuth and supply a pre-registered client ID and optional client secret, or leave OAuth empty to use dynamic client registration.
+
+```json
+{
+  "mcp": {
+    "my-server": {
+      "type": "remote",
+      "url": "https://example.com/mcp",
+      "oauth": {
+        "clientId": "your-client-id",
+        "clientSecret": "your-client-secret"
+      }
+    }
+  }
+}
+```
+
+To disable OAuth for a remote server, set `"oauth": false`.
+
+## Removing a server
+
+Remove a server interactively:
+
+```bash
+gizzi mcp remove
+```
+
+Or pass the name directly:
+
+```bash
+gizzi mcp remove filesystem
+```
+
+The command locates the config file that defines the server (project or global) and removes the entry while preserving JSONC comments.
+
+## Authenticating with OAuth
+
+Remote MCP servers that require OAuth can be authenticated through the browser:
+
+```bash
+gizzi mcp auth my-server
+```
+
+If you omit the name, the CLI lists all OAuth-capable servers and lets you pick one. The command opens the provider's authorization URL in your default browser and stores the tokens locally.
+
+If the browser cannot be opened automatically, the URL is printed so you can complete the flow manually.
+
+Check the current auth status at any time:
+
+```bash
+gizzi mcp auth list
+```
+
+Statuses shown are `authenticated`, `expired`, or `not authenticated`.
+
+## Logging out
+
+Delete stored OAuth tokens and client registration for a server:
+
+```bash
+gizzi mcp logout my-server
+```
+
+Running `logout` without a name presents a picker for all servers that have stored credentials.
+
+## Debugging OAuth
+
+Use `debug` to inspect the OAuth handshake and basic HTTP connectivity:
+
+```bash
+gizzi mcp debug my-server
+```
+
+The command prints:
+
+- Stored auth status and token expiry
+- Whether a refresh token is present
+- Client registration details
+- HTTP response status from the server
+- `WWW-Authenticate` header analysis
+- Whether the OAuth flow can be triggered successfully
+
+This is useful when a remote server shows `needs authentication` or `failed` in `gizzi mcp list`.
+
+## Server status reference
+
+| Status | Meaning |
+| ------ | ------- |
+| `connected` | The server is running and reachable |
+| `disabled` | The server is configured but disabled |
+| `needs authentication` | OAuth credentials are missing or expired |
+| `needs client registration` | OAuth client registration is missing or invalid |
+| `failed` | The server returned an error; see the printed hint |
+| `not initialized` | The server is configured but has not been started yet |
+
+## Common positional arguments
+
+| Argument | Commands | Description |
+| -------- | -------- | ----------- |
+| `name` | `remove`, `auth`, `logout`, `debug` | Identifier of the MCP server as declared in config |
+
+Most `mcp` commands are interactive by default when `name` is omitted, except for `debug` where the name is required.
+
+## Configuration file locations
+
+The CLI searches for a config file in this order inside the project:
+
+1. `gizzi.jsonc`
+2. `gizzi.json`
+3. `.gizzi/gizzi.jsonc`
+4. `.gizzi/gizzi.json`
+
+If none exist, the wizard defaults to `gizzi.json`. For global scope it writes to the equivalent path under `~/.config/gizzi-code/`.
+
+## Disabling MCP support
+
+MCP support is enabled by default. To disable it for a session:
+
+```bash
+GIZZI_MCP_ENABLED=0 gizzi
+```
+
+## Related docs
+
+- [Gizzi Code Overview](/cli/overview) — what the CLI is and how it fits into the Allternit platform
+- [Configuration](/cli/configuration) — config files, profiles, and environment variables
+- [Headless Execution](/cli/headless-execution) — running agents non-interactively with `gizzi exec`
+- [Permission Profiles](/cli/permission-profiles) — controlling tool approval rules

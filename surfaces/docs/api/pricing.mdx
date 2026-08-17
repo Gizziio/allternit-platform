@@ -1,0 +1,144 @@
+---
+title: 'Pricing API'
+description: 'Server-side compute-usage cost calculation and usage-event ingestion for the Allternit platform.'
+---
+
+## Overview
+
+The Pricing API is the single source of truth for compute-usage cost calculation on the Allternit platform. Cost is always derived server-side from the measured quantity, unit, and resource type reported by the ACU (computer-use) Python gateway. The gateway posts usage events to this surface, and the platform computes `computed_cost_cents` from the canonical rate card in `cmd/allternit-api/src/pricing.rs`.
+
+Never trust a client-supplied cost. Pricing and margin logic lives in exactly one place so it can change without touching every caller.
+
+## Base URL
+
+```
+https://api.allternit.com/internal
+```
+
+For local development:
+
+```
+http://127.0.0.1:8013/internal
+```
+
+## Authentication
+
+Pricing routes are internal-only and gated by service-to-service authentication, not the standard Clerk bearer-token middleware. The caller must supply a shared secret in the `x-allternit-internal-token` header.
+
+| Header | Required | Description |
+|--------|----------|-------------|
+| `x-allternit-internal-token` | Yes* | Shared internal service token. |
+
+*In local development, a localhost-only bypass is allowed when no internal token is configured. In production, missing or invalid tokens fail closed with `401 Unauthorized`.
+
+See [Authentication](/api/authentication) for platform authentication details.
+
+## Rate card
+
+Costs are computed in cents per unit. The default rates are:
+
+| Resource type | Unit | Cents per unit |
+|---------------|------|----------------|
+| `sandbox_runtime` | `seconds` | `0.02` |
+| `vcpu_seconds` | `seconds` | `0.01` |
+| `gpu_seconds` | `seconds` | `0.5` |
+
+These defaults are placeholders pending final margin decisions. Override any rate at runtime with an environment variable:
+
+```bash
+ALLTERNIT_PRICE_<RESOURCE_TYPE>_<UNIT>=<cents_per_unit>
+```
+
+For example:
+
+```bash
+ALLTERNIT_PRICE_GPU_SECONDS_SECONDS=0.75
+```
+
+The environment key is derived from the `resource_type:unit` pair by upper-casing the string and replacing non-alphanumeric characters with underscores. Unknown `resource_type:unit` pairs price at zero rather than erroring, so unrecognized meters do not block ingestion or silently invent a price.
+
+## Endpoints
+
+| Method | Path | Description |
+|--------|------|-------------|
+| `POST` | `/internal/usage-events` | Ingest a usage-metering event and return the server-computed cost. |
+
+## Ingest a usage event
+
+```http
+POST /internal/usage-events
+```
+
+Records one usage event. The request body carries the measured quantity and metadata; the response returns the cost in cents computed by the platform. The call is idempotent on `idempotency_key` — retrying a delivery with the same key is a no-op, not a double charge.
+
+### Request body
+
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| `organization_id` | string | Yes | Organization that owns the usage. |
+| `environment_id` | string | Yes | Environment where the usage occurred. |
+| `resource_type` | string | Yes | Metered resource, e.g. `sandbox_runtime`, `vcpu_seconds`, `gpu_seconds`. |
+| `quantity` | number | Yes | Measured quantity. |
+| `unit` | string | Yes | Unit of measure, e.g. `seconds`, `token`. |
+| `provider` | string | No | Cloud or resource provider. |
+| `started_at` | string | Yes | ISO 8601 start timestamp. |
+| `ended_at` | string | Yes | ISO 8601 end timestamp. |
+| `idempotency_key` | string | No | Client-generated key for exactly-once ingestion. |
+| `metadata` | object | No | Opaque metadata object. |
+
+### Example request
+
+```bash
+curl -X POST https://api.allternit.com/internal/usage-events \
+  -H "x-allternit-internal-token: $INTERNAL_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "organization_id": "org_abc123",
+    "environment_id": "env_def456",
+    "resource_type": "sandbox_runtime",
+    "quantity": 300,
+    "unit": "seconds",
+    "provider": "aws",
+    "started_at": "2026-08-17T18:00:00Z",
+    "ended_at": "2026-08-17T18:05:00Z",
+    "idempotency_key": "uev_018f3a7c...",
+    "metadata": {"sandbox_id": "sbx_7d4e..."}
+  }'
+```
+
+### Example response
+
+```json
+{
+  "computed_cost_cents": 6
+}
+```
+
+The cost is rounded to the nearest cent: `300 seconds × 0.02 cents/second = 6 cents`.
+
+### Response fields
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `computed_cost_cents` | integer | Cost computed server-side from the rate card. |
+
+## Error codes
+
+| Status | Code | Description |
+|--------|------|-------------|
+| `201 Created` | — | Event persisted and cost computed. |
+| `400 Bad Request` | — | Invalid JSON or missing required fields. |
+| `401 Unauthorized` | `unauthorized` | Missing or invalid `x-allternit-internal-token`. |
+| `500 Internal Server Error` | `db_error` | Database error while persisting the event. |
+| `500 Internal Server Error` | `task_join_error` | Spawned task failed before completing. |
+
+## Idempotency
+
+The ingestion route is idempotent on `idempotency_key`. If two requests arrive with the same key, only the first is inserted; the second returns the same `computed_cost_cents` without creating a duplicate row. Always supply a stable `idempotency_key` when retrying network failures.
+
+## Related pages
+
+- [Authentication](/api/authentication)
+- [Usage API](/api/usage)
+- [Estimates API](/api/estimates)
+- [Analytics API](/api/analytics)

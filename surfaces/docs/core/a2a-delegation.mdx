@@ -1,0 +1,213 @@
+---
+title: A2A Delegation
+description: How Allternit routes @mentions to swarms, sub-agents, and peer agents via the agent-to-agent delegation layer.
+---
+
+## Overview
+
+**A2A Delegation** is the runtime routing layer that decides what happens when a user @mentions an agent in an Allternit surface such as chat or cowork. Instead of every agent running the request itself, `useA2ADelegation` inspects the target agent's identity and dispatches the task to the right execution path: a swarm run, a direct agent-to-agent (A2A) message, or a normal single-agent run.
+
+The hook lives in `surfaces/ai.allternit.com/src/lib/agents/use-a2a-delegation.ts` and is the bridge between the social convention of @mentioning an agent and the platform's multi-agent execution primitives.
+
+## When to use A2A Delegation
+
+Use A2A delegation whenever an agent needs to hand work to another runtime identity:
+
+- **Swarm execution** — route a task to a group of agents configured with a strategy such as hierarchical, democratic, or specialist.
+- **Sub-agent routing** — ask a delegate-capable parent agent to spawn or coordinate its sub-agents.
+- **Peer agent messaging** — send a typed A2A message to another agent for direct collaboration.
+- **Fallback single-agent runs** — when the target is a regular agent, the caller can continue without extra routing.
+
+## Key concepts
+
+<CardGroup cols={2}>
+  <Card title="Agent Card" icon="id-card">
+    A public metadata block on every agent that declares capabilities, trust tier, example prompts, and whether the agent can delegate to others.
+  </Card>
+  <Card title="canDelegate" icon="sitemap">
+    A boolean flag in `agent.agentCard.canDelegate`. When `true`, @mentions are routed as A2A messages so the agent can hand work to sub-agents or peers.
+  </Card>
+  <Card title="Swarm-as-Agent Bridge" icon="users">
+    `swarmToAgent()` converts an `AgentSwarm` into an `Agent` with a `swarm_`-prefixed ID. Swarms appear in agent lists and can be @mentioned like any other agent.
+  </Card>
+  <Card title="Loop Guard" icon="shield">
+    The agent communication tool tracks hop counters per `correlationId` and escalates to a human after a configurable number of hops to prevent infinite delegation loops.
+  </Card>
+</CardGroup>
+
+## Delegation flow
+
+When a surface detects an @mention, it calls `delegate(fromAgentId, toAgentId, task)`. The hook resolves the target agent and chooses one of three paths:
+
+```
+User @mentions an agent
+        │
+        ▼
+┌───────────────────┐
+│ useA2ADelegation  │
+└─────────┬─────────┘
+          │
+          ▼
+   Resolve target agent
+          │
+   ┌──────┴──────┬───────────────┐
+   ▼             ▼               ▼
+Swarm ID    canDelegate=true   Regular agent
+   │             │               │
+   ▼             ▼               ▼
+startSwarmRun  send A2A      No extra routing
+               message       needed
+```
+
+### 1. Swarm execution
+
+If the target ID starts with `swarm_`, the hook extracts the original swarm ID and calls `startSwarmRun(swarmId, task)`. This begins a collaborative run inside the configured swarm.
+
+```typescript
+import { useA2ADelegation } from '@/lib/agents/use-a2a-delegation';
+
+function MentionHandler() {
+  const { delegate } = useA2ADelegation();
+
+  const onMention = async (task: string) => {
+    const result = await delegate('user', 'swarm_dev-team', task);
+
+    if (!result.success) {
+      console.error(result.message);
+      return;
+    }
+
+    // result.delegatedTo === "swarm:dev-team"
+    console.log('Started swarm run:', result.message);
+  };
+}
+```
+
+### 2. A2A message for delegate agents
+
+If the target agent's card has `canDelegate: true`, the hook sends a direct A2A message through the agent communication store. The message carries the task content, sender/recipient metadata, a correlation ID, and a type of `direct`.
+
+```typescript
+{
+  from: { agentId: fromAgentId, agentName: 'User', agentRole: 'orchestrator' },
+  to: { agentId: toAgentId },
+  content: task,
+  type: 'direct',
+  correlationId: `a2a_${Date.now()}`,
+}
+```
+
+The receiving agent can then decide whether to handle the task itself, spawn a sub-agent, or forward the message again. Each forward increments the loop guard hop counter.
+
+### 3. Regular agent fallback
+
+If the target is a normal agent without delegation capabilities, the hook returns success with `delegatedTo` set to the agent ID and no side effects. The calling surface can start a standard single-agent run.
+
+## Configuring an agent for delegation
+
+Delegation behavior is declared on the agent record. The `agentCard` block is the source of truth.
+
+```typescript
+import type { Agent } from '@/lib/agents';
+
+const orchestrator: Agent = {
+  id: 'ops-orchestrator',
+  name: 'Ops Orchestrator',
+  type: 'orchestrator',
+  model: 'gizzi-pro',
+  provider: 'custom',
+  capabilities: ['planning', 'dispatch'],
+  tools: [],
+  maxIterations: 20,
+  temperature: 0.5,
+  status: 'idle',
+  createdAt: new Date().toISOString(),
+  updatedAt: new Date().toISOString(),
+  config: {},
+  agentCard: {
+    tagline: 'Routes operational work to specialized agents',
+    capabilityDescription: 'Plans tasks and delegates to the right sub-agent or swarm.',
+    trustTier: 'medium',
+    canDelegate: true,
+    a2aVersion: '1.0',
+    examples: [
+      '@Ops Orchestrator deploy the latest staging build',
+      '@Ops Orchestrator review yesterday’s incidents',
+    ],
+  },
+};
+```
+
+## Making a swarm mentionable
+
+Swarms are not agents by default. Use `swarmToAgent()` from `swarm-as-agent.ts` to expose a swarm as an @mentionable identity.
+
+```typescript
+import { swarmToAgent } from '@/lib/agents/swarm-as-agent';
+import type { AgentSwarm } from '@/lib/agents/agent-advanced.types';
+
+const devSwarm: AgentSwarm = {
+  id: 'dev-team',
+  name: 'Dev Team',
+  strategy: 'hierarchical',
+  agents: [
+    { agentId: 'lead-dev', role: 'leader', weight: 1.0, canInitiate: true },
+    { agentId: 'code-reviewer', role: 'critic', weight: 0.8 },
+    { agentId: 'tester', role: 'worker', weight: 0.6 },
+  ],
+  consensusThreshold: 0.7,
+  maxRounds: 10,
+};
+
+const swarmAgent = swarmToAgent(devSwarm);
+
+// swarmAgent.id === 'swarm_dev-team'
+// swarmAgent.agentCard.canDelegate === true
+```
+
+## Return shape and error handling
+
+`delegate()` returns a promise that resolves to:
+
+| Field | Type | Description |
+| --- | --- | --- |
+| `success` | `boolean` | Whether the delegation request was accepted. |
+| `delegatedTo` | `string` (optional) | The ID or `swarm:<id>` that received the task. |
+| `message` | `string` (optional) | Human-readable status or error reason. |
+
+Common outcomes:
+
+| Condition | `success` | `delegatedTo` | Meaning |
+| --- | --- | --- | --- |
+| Target not found | `false` | — | The agent ID does not exist in the local store. |
+| Invalid swarm ID | `false` | — | The ID looks like a swarm but is malformed. |
+| Swarm run fails | `false` | — | `startSwarmRun` threw an error. |
+| Delegate agent | `true` | agent ID | A2A message was enqueued. |
+| Swarm agent | `true` | `swarm:<id>` | Swarm run was created. |
+| Regular agent | `true` | agent ID | No routing needed; caller can run directly. |
+
+## Integration with the rest of the platform
+
+A2A Delegation sits between the chat surface and the agent execution backends:
+
+- **Agent Store** (`useAgentStore`) supplies the agent registry used to resolve mentions.
+- **Advanced Agent Store** (`useAdvancedAgentStore`) provides `startSwarmRun` for swarm execution.
+- **Agent Communication Store** (`useAgentCommunicationStore`) delivers the typed message bus and loop guard used for peer-to-peer A2A messages.
+- **Swarm-as-Agent Bridge** (`swarm-as-agent.ts`) exposes swarms as first-class agent identities.
+- **CommRails** can carry A2A envelopes across local peers when a workspace spans multiple sessions or machines.
+
+## Best practices
+
+- Keep `canDelegate` off for leaf agents that should never forward work.
+- Use descriptive `agentCard.examples` so users know when to @mention the agent.
+- Always set a `correlationId` when forwarding A2A messages so the loop guard and audit trail stay intact.
+- Handle `success: false` in the UI with clear feedback rather than silently retrying.
+- For swarms, prefer the `swarm_` prefix when persisting agent lists so the hook can identify them without extra metadata.
+
+## Related docs
+
+- [Agent Communication Layer](/core/communication)
+- [CommRails](/core/commrails)
+- [Orchestration](/core/orchestration)
+- [Gizzi Runtime](/core/gizzi-runtime)
+- [Registry](/core/registry)

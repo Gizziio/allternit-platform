@@ -1,0 +1,203 @@
+---
+title: 'HAR-derived API'
+description: 'Ingest browser HAR archives and generate parameterized API clients for agent replay.'
+---
+
+## Overview
+
+The HAR-derived API turns browser HAR archives into structured, parameterized API client specs. Upload a HAR file captured from a web session, and the endpoint extracts repeatable API calls, templatizes path, query, and body parameters, and emits code-ready client templates in Python, TypeScript, or curl.
+
+All routes are mounted under `/api/har-derived-api` and require a valid bearer token via the platform auth middleware.
+
+## Base URL
+
+```
+https://api.allternit.com/api/har-derived-api
+```
+
+For local development:
+
+```
+http://127.0.0.1:8013/api/har-derived-api
+```
+
+## Authentication
+
+All requests must include a valid bearer token in the `Authorization` header. See [Authentication](/api/authentication) for details.
+
+## Endpoints
+
+| Method | Path | Description |
+|--------|------|-------------|
+| `POST` | `/api/har-derived-api/ingest` | Ingest a HAR archive and extract API endpoints. |
+| `POST` | `/api/har-derived-api/client` | Generate a replayable client for selected endpoint IDs. |
+
+## Ingest a HAR archive
+
+```http
+POST /api/har-derived-api/ingest
+```
+
+Accepts a HAR archive as a JSON string, parses the `log.entries` array, and returns the API calls that look repeatable. Static assets, error responses, and duplicate requests are automatically filtered out.
+
+### Request body
+
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| `har` | string | Yes | The full HAR archive serialized as a JSON string. |
+
+### Example request
+
+```bash
+curl -X POST https://api.allternit.com/api/har-derived-api/ingest \
+  -H "Authorization: Bearer $TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{"har":"{\"log\":{\"entries\":[{\"request\":{\"method\":\"GET\",\"url\":\"https://api.example.com/v1/users/550e8400-e29b-41d4-a716-446655440000\",\"headers\":[{\"name\":\"Accept\",\"value\":\"application/json\"}],\"queryString\":[]},\"response\":{\"status\":200,\"content\":{\"mimeType\":\"application/json\",\"text\":\"{\\\"id\\\":\\\"550e8400-e29b-41d4-a716-446655440000\\\"}\"}}}]}}"}'
+```
+
+### Example response
+
+```json
+{
+  "endpoints": [
+    {
+      "id": "GET https://api.example.com/v1/users/550e8400-e29b-41d4-a716-446655440000",
+      "method": "GET",
+      "url": "https://api.example.com/v1/users/550e8400-e29b-41d4-a716-446655440000",
+      "host": "api.example.com",
+      "path": "/v1/users/550e8400-e29b-41d4-a716-446655440000",
+      "path_template": "/v1/users/{id}",
+      "path_params": [
+        {
+          "name": "id",
+          "value": "550e8400-e29b-41d4-a716-446655440000",
+          "templated": true,
+          "suggested_default": "550e8400-e29b-41d4-a716-446655440000"
+        }
+      ],
+      "headers": [
+        {
+          "name": "Accept",
+          "value": "application/json",
+          "templated": false
+        }
+      ],
+      "status_code": 200,
+      "response_sample": "{\"id\":\"550e8400-e29b-41d4-a716-446655440000\"}"
+    }
+  ],
+  "stats": {
+    "total_entries": 1,
+    "api_entries": 1,
+    "hosts": ["api.example.com"]
+  }
+}
+```
+
+### Endpoint object
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `id` | string | Composite identifier (`METHOD URL`) used to select endpoints in the client generator. |
+| `method` | string | HTTP method in uppercase. |
+| `url` | string | Original request URL. |
+| `host` | string | Request host. |
+| `path` | string | Original URL path. |
+| `path_template` | string | Path with inferred path parameters replaced by `{name}` placeholders. |
+| `summary` | string \| null | Optional human-readable summary. |
+| `query_params` | array | Extracted query parameters as `TemplatedParam` objects. |
+| `path_params` | array | Inferred path parameters as `TemplatedParam` objects. |
+| `headers` | array | Retained request headers as `TemplatedParam` objects. Hop-by-hop and sensitive headers are stripped. |
+| `body_template` | string \| null | Original request body text, if present. |
+| `body_mime_type` | string \| null | MIME type of the request body, if present. |
+| `body_params` | array | Extracted body parameters for form-encoded or JSON bodies. |
+| `status_code` | integer | HTTP status code from the HAR response. |
+| `response_sample` | string \| null | Truncated sample of the response body, if present. |
+
+### TemplatedParam object
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `name` | string | Parameter name. |
+| `value` | string | Original captured value. |
+| `templated` | boolean | Whether the value is treated as a variable. |
+| `suggested_default` | string \| null | Suggested default when the value is templated. |
+
+### IngestStats object
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `total_entries` | integer | Total entries in the HAR log. |
+| `api_entries` | integer | Number of entries extracted as API endpoints. |
+| `hosts` | array | Sorted, deduplicated list of hosts found in extracted endpoints. |
+
+## Generate a client
+
+```http
+POST /api/har-derived-api/client
+```
+
+Generates a replayable client snippet for the endpoint IDs selected from an ingest response. Supported languages are `python`, `typescript`, and `curl`.
+
+### Request body
+
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| `endpoints` | array | Yes | Array of endpoint `id` strings to include in the generated client. |
+| `language` | string | Yes | Target language: `python`, `typescript`, or `curl`. |
+| `include_auth` | boolean | No | Reserved hint for including auth scaffolding. Defaults to `false`. |
+
+### Example request
+
+```bash
+curl -X POST https://api.allternit.com/api/har-derived-api/client \
+  -H "Authorization: Bearer $TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "endpoints": [
+      "GET https://api.example.com/v1/users/550e8400-e29b-41d4-a716-446655440000"
+    ],
+    "language": "python",
+    "include_auth": true
+  }'
+```
+
+### Example response
+
+```json
+{
+  "language": "python",
+  "code": "import os\nimport requests\n\nclass HarApiClient:\n    def __init__(self, base_url=None, api_key=None):\n        self.base_url = base_url or os.environ.get('API_BASE_URL', '')\n        self.api_key = api_key or os.environ.get('API_KEY')\n        self.session = requests.Session()\n        if self.api_key:\n            self.session.headers['Authorization'] = f'Bearer {self.api_key}'\n\n    # Endpoint 1\n    def call_1(self, **kwargs):\n        url = self.base_url + kwargs.get('path', '')\n        return self.session.request(kwargs.get('method', 'GET'), url, json=kwargs.get('json')).json()\n",
+  "notes": [
+    "Review extracted parameters and secrets before committing.",
+    "Replace hard-coded auth values with environment variables."
+  ]
+}
+```
+
+## Filtering and parameter inference
+
+The ingest route applies the following heuristics:
+
+- Entries with a response status `>= 400` are skipped.
+- Static asset paths ending in `.js`, `.css`, `.png`, `.jpg`, `.jpeg`, `.gif`, `.svg`, `.ico`, `.woff`, `.woff2`, `.ttf`, `.eot`, `.otf`, `.map`, `.json`, `.xml`, or `.webp` are skipped.
+- Duplicate `METHOD URL` pairs are deduplicated, keeping the first occurrence.
+- Hop-by-hop and sensitive headers such as `Authorization`, `Cookie`, `X-Api-Key`, and `Api-Key` are stripped.
+- Path segments that look like integers, UUIDs, or long hyphenated strings are converted to `{id}`, `{id2}`, and so on.
+- Query and JSON body values longer than 8 characters, numeric values, or strings that look like secrets are marked as templated.
+
+## Error codes
+
+| Status | Code | Meaning |
+|--------|------|---------|
+| `200 OK` | — | Request succeeded. |
+| `400 Bad Request` | `Invalid HAR JSON` | The `har` field could not be parsed as a HAR archive. |
+| `400 Bad Request` | `Unsupported language` | The requested client language is not `python`, `typescript`, or `curl`. |
+| `401 Unauthorized` | — | Missing or invalid bearer token. |
+
+## Related pages
+
+- [Authentication](/api/authentication)
+- [Agents API](/api/agents)
+- [Files API](/api/files)
+- [Web Proxy API](/api/web-proxy)

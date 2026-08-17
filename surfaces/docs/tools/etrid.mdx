@@ -1,0 +1,289 @@
+---
+title: 'Etrid'
+description: 'Allternit-native agent wallet for scoped cryptographic identity, signing, and payments'
+---
+
+## Overview
+
+**Etrid** is the Allternit-native wallet for autonomous agents and bots. It gives every bot a scoped cryptographic identity and payment capability without requiring users to bring their own wallet.
+
+Etrid provisions Ed25519 identity keys for agent authentication and Allternit Communication Protocol (ACP) signatures, with an EVM-compatible key path planned for on-chain operations. The service is designed to be backed by the Allternit vault or an external KMS so private key material is sealed at rest and only unsealed at signing time.
+
+<Note>
+Etrid is currently in phase 1. The local service stores keys in memory for development. Production deployments must plug in a `KeyVault` implementation backed by the Allternit vault or an external KMS.
+</Note>
+
+## When to use Etrid
+
+| Scenario | Why Etrid |
+|----------|-----------|
+| Bot needs an identity key | Each bot gets a unique Ed25519 key pair for signing and authentication. |
+| Agent-to-agent signatures | Sign messages for ACP or other Allternit runtime protocols. |
+| Receive payments | Create invoices and payment URIs scoped to a wallet. |
+| No external wallet provider | Users do not need to supply MetaMask, hardware wallets, or third-party custody. |
+
+## Wallet kinds
+
+Etrid supports two wallet kinds. Only `identity` is implemented in phase 1.
+
+| Kind | Curve | Purpose |
+|------|-------|---------|
+| `identity` | Ed25519 | Agent identity, message signing, ACP signatures. |
+| `evm` | secp256k1 | EVM on-chain operations (phase 2). |
+
+## Payment methods
+
+Each wallet declares the payment operations it is allowed to perform. If `allowed_methods` is empty when a wallet is created, Etrid defaults to `["receive", "invoice"]`.
+
+| Method | Description |
+|--------|-------------|
+| `send` | Transfer funds from the wallet. |
+| `receive` | Accept incoming payments. |
+| `swap` | Exchange assets. |
+| `stake` | Stake assets. |
+| `invoice` | Create payment invoices and URIs. |
+
+## Architecture
+
+```text
+services/etrid
+├── src/lib.rs      # Wallet types, WalletStore, signing, invoices
+├── src/vault.rs    # KeyVault trait + in-memory dev vault
+└── src/main.rs     # Axum HTTP service
+```
+
+- **`WalletStore`** — in-memory scaffolding store. Holds wallet metadata and, in phase 1, raw private key bytes.
+- **`KeyVault`** trait — production backend contract for sealing and unsealing keys.
+- **`InMemoryVault`** — local development implementation of `KeyVault`.
+
+Wallet IDs are generated as `etrid-{agent_prefix}-{segments}`. The wallet address is derived by taking the first 20 bytes of the SHA-256 hash of the Ed25519 public key and hex-encoding them with an `0x` prefix.
+
+## Run locally
+
+```bash
+cargo run -p allternit-etrid
+```
+
+The service binds to:
+
+```text
+http://0.0.0.0:8723
+```
+
+Local health check:
+
+```bash
+curl http://127.0.0.1:8723/health
+```
+
+## HTTP API
+
+### Base URL
+
+```text
+http://127.0.0.1:8723
+```
+
+### Endpoints
+
+| Method | Path | Description |
+|--------|------|-------------|
+| GET | `/health` | Liveness check |
+| POST | `/wallets` | Create a wallet |
+| GET | `/wallets/:agent_id` | List wallets for an agent |
+| POST | `/wallets/:id/sign` | Sign a message |
+| POST | `/invoices` | Create a payment invoice |
+
+### Health
+
+```bash
+curl http://127.0.0.1:8723/health
+```
+
+Response:
+
+```json
+{"status":"ok"}
+```
+
+### Create a wallet
+
+```bash
+curl -X POST http://127.0.0.1:8723/wallets \
+  -H "Content-Type: application/json" \
+  -d '{
+    "agent_id": "agent_123",
+    "kind": "identity",
+    "chain_id": null,
+    "allowed_methods": ["receive", "invoice"]
+  }'
+```
+
+#### Request body
+
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| `agent_id` | string | yes | Agent that owns the wallet. |
+| `kind` | string | yes | `"identity"` or `"evm"`. |
+| `chain_id` | string / null | no | Chain identifier for EVM wallets. |
+| `allowed_methods` | array | no | Allowed payment methods. Defaults to `["receive", "invoice"]`. |
+
+Response:
+
+```json
+{
+  "id": "etrid-agent_123-a1b2c3d4-e5f6-7890-abcd-ef1234567890",
+  "agent_id": "agent_123",
+  "kind": "identity",
+  "public_key": "Base64Ed25519PublicKey...",
+  "address": "0x1234abcd...",
+  "chain_id": null,
+  "allowed_methods": ["receive", "invoice"],
+  "created_at": "2026-08-17T18:30:00Z",
+  "key_vault_ref": "vault://etrid/keys/etrid-agent_123-a1b2c3d4-e5f6-7890-abcd-ef1234567890"
+}
+```
+
+### List agent wallets
+
+```bash
+curl http://127.0.0.1:8723/wallets/agent_123
+```
+
+Response:
+
+```json
+[
+  {
+    "id": "etrid-agent_123-a1b2c3d4-e5f6-7890-abcd-ef1234567890",
+    "agent_id": "agent_123",
+    "kind": "identity",
+    "public_key": "Base64Ed25519PublicKey...",
+    "address": "0x1234abcd...",
+    "chain_id": null,
+    "allowed_methods": ["receive", "invoice"],
+    "created_at": "2026-08-17T18:30:00Z",
+    "key_vault_ref": "vault://etrid/keys/etrid-agent_123-a1b2c3d4-e5f6-7890-abcd-ef1234567890"
+  }
+]
+```
+
+### Sign a message
+
+```bash
+curl -X POST http://127.0.0.1:8723/wallets/etrid-agent_123-a1b2c3d4-e5f6-7890-abcd-ef1234567890/sign \
+  -H "Content-Type: application/json" \
+  -d '{
+    "wallet_id": "etrid-agent_123-a1b2c3d4-e5f6-7890-abcd-ef1234567890",
+    "message": "hello world"
+  }'
+```
+
+<Note>
+The `wallet_id` field in the request body is overwritten by the `:id` path parameter.
+</Note>
+
+Response:
+
+```json
+{
+  "signature": "Base64Ed25519Signature...",
+  "public_key": "Base64Ed25519PublicKey..."
+}
+```
+
+### Create an invoice
+
+```bash
+curl -X POST http://127.0.0.1:8723/invoices \
+  -H "Content-Type: application/json" \
+  -d '{
+    "wallet_id": "etrid-agent_123-a1b2c3d4-e5f6-7890-abcd-ef1234567890",
+    "amount": "100.00",
+    "currency": "USD",
+    "description": "Agent compute usage",
+    "expires_in_seconds": 3600
+  }'
+```
+
+#### Request body
+
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| `wallet_id` | string | yes | Wallet that receives the payment. |
+| `amount` | string | yes | Invoice amount. |
+| `currency` | string | yes | Currency or token code. |
+| `description` | string / null | no | Human-readable memo. |
+| `expires_in_seconds` | number / null | no | TTL before the invoice expires. |
+
+Response:
+
+```json
+{
+  "invoice_id": "inv-a1b2c3d4",
+  "wallet_id": "etrid-agent_123-a1b2c3d4-e5f6-7890-abcd-ef1234567890",
+  "amount": "100.00",
+  "currency": "USD",
+  "description": "Agent compute usage",
+  "payment_uri": "etrid://0x1234abcd.../pay?invoice=inv-a1b2c3d4&amount=100.00&currency=USD",
+  "expires_at": "2026-08-17T19:30:00Z"
+}
+```
+
+The wallet must have `invoice` or `receive` in its `allowed_methods`, otherwise Etrid returns a `method not allowed` error.
+
+## Error handling
+
+Errors are returned as HTTP 400 with a JSON body:
+
+```json
+{ "error": "wallet not found: etrid-agent_123-..." }
+```
+
+| HTTP | Message | Meaning |
+|------|---------|---------|
+| 200 | — | Successful GET or POST. |
+| 400 | `wallet not found: {id}` | Wallet ID does not exist. |
+| 400 | `method not allowed: invoice` | Wallet cannot create invoices. |
+| 400 | `invalid key material` | Private key is missing or corrupted. |
+| 400 | `vault error: ...` | Vault backend failure. |
+
+## Vault integration
+
+Etrid defines a `KeyVault` trait in `src/vault.rs` so production deployments can replace the in-memory store with a sealed backend:
+
+```rust
+pub trait KeyVault: Send + Sync {
+    type Error: std::error::Error + Send + Sync + 'static;
+
+    fn seal(&self, key_bytes: &[u8]) -> Result<SealedKey, Self::Error>;
+    fn unseal(&self, vault_ref: &str) -> Result<Vec<u8>, Self::Error>;
+}
+```
+
+A sealed key contains a vault reference, ciphertext, and nonce. In production, plug in the Allternit vault service or an external KMS so keys are never held in application memory.
+
+## Bot integration
+
+Bots declare an Etrid wallet by setting:
+
+```json
+{
+  "AgentIdentityChannels": {
+    "wallet": {
+      "provider": "etrid"
+    }
+  }
+}
+```
+
+During bot creation the Allternit platform calls `POST /wallets` and writes the returned `key_vault_ref` and `address` back into the agent record.
+
+## Related pages
+
+- [Native Tool Belt](/tools/tool-belt)
+- [Server Tools](/tools/server-tools)
+- [Vault](/security/vault)
+- [Security Model](/security/security-model)
+- [BYOC Runtime](/byoc/overview)
+- [Bots](/surfaces/bots)

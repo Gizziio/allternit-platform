@@ -1,0 +1,288 @@
+---
+title: 'Tools Gateway'
+description: 'The Allternit IO Service — the constitutional boundary for executing tools and side effects'
+---
+
+## Overview
+
+The **Tools Gateway** (also called the **IO Service**) is the only permitted path for executing side effects in Allternit. It runs as a standalone Axum service that receives tool execution requests, enforces policy, journals every call to the history ledger, and dispatches to the correct adapter.
+
+Every tool call that performs IO, invokes an external system, or mutates state must flow through this gateway. Kernel services and runners remain pure logic layers; the gateway owns execution.
+
+<Note>
+The gateway binds to `127.0.0.1` by default and is intended for internal use. Direct exposure to the public internet is not recommended.
+</Note>
+
+## Responsibilities
+
+| Responsibility | What it does |
+|----------------|--------------|
+| **Constitutional boundary** | Implements `LAW-ONT-002`: only this service executes side effects. |
+| **Policy gating** | Every execution is evaluated by the policy engine before dispatch. |
+| **Audit and replay** | Journaled via the history ledger and emitted on the messaging event bus. |
+| **Sandboxing** | Restricts filesystem access to the current run's artifact and receipt directories. |
+| **Adapter routing** | Dispatches to local commands, HTTP endpoints, SDK executors, subprocess workers, or MCP servers. |
+
+## Base URL
+
+The gateway is mounted on its own port:
+
+```text
+http://127.0.0.1:3510
+```
+
+The host and port are configurable through environment variables:
+
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `ALLTERNIT_IO_SERVICE_HOST` | `127.0.0.1` | Bind host |
+| `ALLTERNIT_IO_SERVICE_PORT` | `3510` | Bind port |
+
+## Running the gateway
+
+Build and run the service from the crate root:
+
+```bash
+cd api/gateway/routing
+cargo build --bin allternit-tools-gateway
+cargo run --bin allternit-tools-gateway
+```
+
+On startup it initializes the policy engine, history ledger, messaging system, and registers the `io-service` identity.
+
+## Endpoints
+
+| Method | Path | Description |
+|--------|------|-------------|
+| `GET` | `/health` | Service health and ontology compliance |
+| `POST` | `/v1/tools/execute` | Execute a registered tool |
+| `GET` | `/v1/tools` | List registered tools |
+| `POST` | `/v1/tools` | Register a new tool |
+
+## Health check
+
+```bash
+curl -X GET http://127.0.0.1:3510/health
+```
+
+Response:
+
+```json
+{
+  "status": "ok",
+  "service": "allternit-io-service",
+  "version": "0.1.0",
+  "ontology_compliance": true
+}
+```
+
+## Execute a tool
+
+`POST /v1/tools/execute` is the only permitted side-effect path. The gateway validates the request, checks policy, derives a filesystem write scope from `run_id`, executes the tool, writes a receipt, and appends the result to the history ledger.
+
+### Request body
+
+```bash
+curl -X POST http://127.0.0.1:3510/v1/tools/execute \
+  -H "Content-Type: application/json" \
+  -d '{
+    "tool_id": "echo.test",
+    "input": { "message": "hello" },
+    "correlation_id": "corr_abc123",
+    "run_id": "run_xyz789",
+    "wih_id": "wih_456"
+  }'
+```
+
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| `tool_id` | string | yes | Registered tool identifier |
+| `input` | object | yes | Tool-specific input payload |
+| `correlation_id` | string | yes | Idempotency and trace correlation key |
+| `run_id` | string | yes | Run scope used for filesystem isolation |
+| `wih_id` | string | yes | Workflow invocation handle context |
+
+### Response body
+
+```json
+{
+  "success": true,
+  "output": { "raw_output": "hello\n" },
+  "error": null,
+  "io_captured": true,
+  "policy_enforced": true
+}
+```
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `success` | boolean | `true` when execution completed without error |
+| `output` | object / null | Tool output when successful |
+| `error` | object / null | Error code, message, and optional details |
+| `io_captured` | boolean | Whether the call was journaled |
+| `policy_enforced` | boolean | Whether policy was evaluated |
+
+### Error shape
+
+```json
+{
+  "success": false,
+  "output": null,
+  "error": {
+    "code": "TOOL_EXECUTION_FAILED",
+    "message": "Tool not found: echo.test",
+    "details": null
+  },
+  "io_captured": false,
+  "policy_enforced": false
+}
+```
+
+## Register a tool
+
+`POST /v1/tools` registers a `ToolDefinition` with the gateway. Tools must declare their adapter type, input/output schemas, side effects, safety tier, and resource limits.
+
+```bash
+curl -X POST http://127.0.0.1:3510/v1/tools \
+  -H "Content-Type: application/json" \
+  -d '{
+    "id": "echo.test",
+    "name": "Echo Test Tool",
+    "description": "Returns the input unchanged",
+    "tool_type": "Local",
+    "command": "echo",
+    "endpoint": "",
+    "input_schema": {
+      "type": "object",
+      "properties": { "message": { "type": "string" } },
+      "required": ["message"]
+    },
+    "output_schema": { "type": "object" },
+    "side_effects": [],
+    "idempotency_behavior": "idempotent",
+    "retryable": false,
+    "failure_classification": "transient",
+    "safety_tier": "T0",
+    "resource_limits": {
+      "cpu": null,
+      "memory": null,
+      "network": "None",
+      "filesystem": "None",
+      "time_limit": 30
+    },
+    "subprocess": null
+  }'
+```
+
+Response:
+
+```text
+Tool registered: echo.test
+```
+
+## Tool types
+
+The gateway dispatches each tool to an adapter based on `tool_type`:
+
+| Type | Adapter |
+|------|---------|
+| `Local` | Local command via `tokio::process::Command` |
+| `Http` | HTTP client via `reqwest` |
+| `Sdk` | In-process SDK executor trait |
+| `Subprocess` | Worker subprocess with scoped filesystem policy |
+| `Mcp` | MCP server bridge (`src/mcp_bridge.rs`) |
+
+### Tool definition fields
+
+| Field | Description |
+|-------|-------------|
+| `id` | Unique tool identifier |
+| `name` / `description` | Human-readable metadata |
+| `tool_type` | Adapter used for execution |
+| `command` | Command path for `Local` tools |
+| `endpoint` | URL for `Http` tools |
+| `input_schema` / `output_schema` | JSON Schema contracts |
+| `side_effects` | Declared side-effect categories |
+| `safety_tier` | `T0` (read-only) through `T4` (actuation) |
+| `resource_limits` | CPU, memory, network, filesystem, and timeout constraints |
+| `subprocess` | Worker specification for `Subprocess` tools |
+
+## List registered tools
+
+```bash
+curl -X GET http://127.0.0.1:3510/v1/tools
+```
+
+Response:
+
+```json
+[]
+```
+
+<Note>
+The current handler returns an empty array. The underlying `ToolGateway::list_tools()` method is implemented and can be wired to the REST surface as the registry expands.
+</Note>
+
+## Policy and sandboxing
+
+Before any tool runs, the gateway builds a `PolicyRequest` and asks the policy engine for a decision:
+
+- `identity_id`: `io-service`
+- `resource`: `tool:{tool_id}`
+- `action`: `execute`
+- `requested_tier`: the tool's declared `safety_tier`
+
+If the decision is `Deny`, execution aborts and the caller receives a `TOOL_EXECUTION_FAILED` error with the policy reason.
+
+### Filesystem sandbox
+
+The REST handler derives a `WriteScope` from `run_id`:
+
+- `/.allternit/artifacts/{run_id}/**`
+- `/.allternit/receipts/{run_id}/**`
+
+The gateway rejects any request whose write scope leaves `/.allternit/`, targets denied paths, or touches another run's receipts.
+
+## Idempotency and receipts
+
+Tools that declare side effects require an `idempotency_key`. The REST surface supplies `correlation_id` as the idempotency key.
+
+After each execution the gateway writes a receipt under `/.allternit/receipts/{run_id}/` containing hashes of the tool definition, policy decision, inputs, outputs, and execution metadata. This enables deterministic replay and audit trails per `LAW-ONT-008`.
+
+## MCP bridge
+
+The gateway includes an MCP bridge that connects to MCP servers over stdio or SSE and registers their tools under prefixed names:
+
+```text
+mcp__{server_id}__{tool_name}
+```
+
+MCP tool calls flow through the same policy, audit, and receipt pipeline as native tools. See [MCP Servers](/tools/mcp) for details on registering and attaching MCP servers.
+
+## Error handling
+
+| HTTP | Code / Message | Meaning |
+|------|----------------|---------|
+| 200 | — | Successful execution or JSON-RPC result |
+| 201 | `Tool registered: {tool_id}` | Tool registration succeeded |
+| 500 | `Failed to register tool: {reason}` | Tool registration failed |
+| 200 (success=false) | `TOOL_EXECUTION_FAILED` | Execution failed, policy denied, or tool not found |
+
+Common `TOOL_EXECUTION_FAILED` messages:
+
+| Message | Cause |
+|---------|-------|
+| `Tool not found: {tool_id}` | The tool has not been registered |
+| `Policy denied execution: ...` | The policy engine denied the request |
+| `Idempotency key required for tools with side effects` | Side-effecting tool called without `correlation_id` |
+| `write_scope root must be under /.allternit/` | Filesystem scope validation failed |
+| `Subprocess timed out` | Worker subprocess exceeded its wall-clock timeout |
+
+## Related pages
+
+- [Tools Overview](/tools/overview)
+- [Native Tool Belt](/tools/tool-belt)
+- [MCP Servers](/tools/mcp)
+- [Build a Custom Tool](/tools/build-a-tool)
+- [Server Tools](/tools/server-tools)
+- [Cloud Sandboxes](/tools/sandbox)

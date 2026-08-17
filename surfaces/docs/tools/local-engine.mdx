@@ -1,0 +1,393 @@
+---
+title: 'Local Engine'
+description: 'Download models from the Hugging Face Hub and manage local inference runtimes behind a standard chat completions proxy'
+---
+
+## Overview
+
+The **Allternit Local Engine** is a self-hosted service that downloads model weights from the Hugging Face Hub, keeps them in a local cache, and manages the lifecycle of local inference backends. It exposes a small HTTP API for model download/import, runtime launch/stop, hardware status, and a `/v1/chat/completions` proxy that routes requests to a healthy backend serving the requested model.
+
+<Note>
+Models, runtime logs, and inference traffic stay on the host. Nothing is sent to Allternit-managed inference endpoints unless you explicitly route traffic through them.
+</Note>
+
+## Base URL
+
+Local development (default):
+
+```text
+http://127.0.0.1:3015
+```
+
+The host and port can be changed with environment variables:
+
+| Variable | Default | Purpose |
+|----------|---------|---------|
+| `HOST` | `127.0.0.1` | Bind address |
+| `PORT` | `3015` | HTTP port |
+
+## What it does
+
+1. **Model cache** — tracks downloaded and imported models with their byte-level progress, status, and local paths.
+2. **Hugging Face downloads** — verifies the repo, filters out non-essential files, resumes partial downloads, and validates safe filesystem paths.
+3. **Local imports** — registers models already on disk, including exports produced by Unsloth training jobs.
+4. **Runtime manager** — spawns inference backends on a free port, polls their health endpoint, and captures logs.
+5. **Chat proxy** — forwards `/v1/chat/completions` requests to the correct healthy runtime using the `model` field.
+6. **Host diagnostics** — reports CPU, RAM, disk, and GPU information so clients can pick compatible models.
+
+## Installation
+
+The Local Engine is a Rust binary in the Allternit workspace.
+
+```bash
+cd services/local-engine
+cargo run --release
+```
+
+Or from the workspace root:
+
+```bash
+cargo run -p allternit-local-engine --release
+```
+
+### Requirements
+
+- Rust toolchain (workspace edition 2021)
+- For the `llama.cpp` backend, `llama-server` must be on `PATH`
+- Sufficient disk space under the OS data directory for cached models
+
+The service creates two directories on startup:
+
+```text
+{data_dir}/allternit-local-engine/models   # downloaded/imported weights
+{data_dir}/allternit-local-engine/logs/runtimes  # per-runtime stdout/stderr logs
+```
+
+`{data_dir}` is `dirs::data_dir()` on your platform (for example, `~/Library/Application Support` on macOS or `~/.local/share` on Linux).
+
+## Endpoints
+
+| Method | Path | Description |
+|--------|------|-------------|
+| GET | `/health` | Service health |
+| GET | `/status` | Service and host diagnostics |
+| GET | `/models` | List cached models |
+| POST | `/models/download` | Queue a Hugging Face download |
+| POST | `/models/import` | Register a local model directory |
+| GET | `/runtimes` | List runtimes |
+| POST | `/runtimes/launch` | Launch a backend runtime |
+| POST | `/runtimes/:id/stop` | Stop a runtime |
+| POST | `/v1/chat/completions` | Proxy chat completions to a healthy runtime |
+
+## Model cache
+
+Every cached model has a stable local ID derived from the source repo, revision, and optional quantization suffix:
+
+```text
+{repo_id_normalized}@{revision}[:{quantization}]
+```
+
+For example, `meta-llama/Llama-2-7b-hf` at `main` becomes:
+
+```text
+meta-llama--Llama-2-7b-hf@main
+```
+
+### Model status values
+
+| Status | Meaning |
+|--------|---------|
+| `pending` | Queued but not yet started |
+| `downloading` | Files are being streamed from Hugging Face |
+| `ready` | All files are present and available |
+| `failed` | Download or verification failed |
+
+### List cached models
+
+```bash
+curl -X GET http://127.0.0.1:3015/models
+```
+
+Response:
+
+```json
+{
+  "models": [
+    {
+      "id": "meta-llama--Llama-2-7b-hf@main",
+      "name": "meta-llama/Llama-2-7b-hf",
+      "source": "hugging_face",
+      "path": "/Users/you/Library/Application Support/allternit-local-engine/models/meta-llama--Llama-2-7b-hf",
+      "status": "ready",
+      "downloaded_bytes": 2671234567,
+      "total_bytes": 2671234567,
+      "created_at": "2026-08-17T10:00:00Z"
+    }
+  ]
+}
+```
+
+## Download a model
+
+```bash
+curl -X POST http://127.0.0.1:3015/models/download \
+  -H "Content-Type: application/json" \
+  -d '{
+    "repo_id": "meta-llama/Llama-2-7b-hf",
+    "revision": "main",
+    "quantization": "Q4_K_M"
+  }'
+```
+
+Response:
+
+```json
+{
+  "id": "meta-llama--Llama-2-7b-hf@main:Q4_K_M",
+  "repo_id": "meta-llama/Llama-2-7b-hf",
+  "revision": "main",
+  "status": "pending",
+  "message": "download queued"
+}
+```
+
+The download runs in the background. Poll `/models` to watch `downloaded_bytes` and `status`. The engine filters the Hugging Face tree to keep only config/tokenizer files and weight files (`.safetensors`, `.bin`, `.gguf`, `.mlx`, `.pt`, `.pth`), while skipping READMEs, images, and metadata files. Partial `.part` files are resumed when possible.
+
+## Import a local model
+
+Use this for weights already on disk or for Unsloth exports.
+
+```bash
+curl -X POST http://127.0.0.1:3015/models/import \
+  -H "Content-Type: application/json" \
+  -d '{
+    "path": "/path/to/local/llama-7b-gguf",
+    "name": "my-llama-7b",
+    "source": "local_path"
+  }'
+```
+
+Response:
+
+```json
+{
+  "id": "local--my-llama-7b--1692283200000",
+  "name": "my-llama-7b",
+  "source": "local_path",
+  "path": "/path/to/local/llama-7b-gguf",
+  "status": "pending",
+  "downloaded_bytes": 0,
+  "total_bytes": 0,
+  "created_at": "2026-08-17T10:00:00Z"
+}
+```
+
+`source` can be `local_path` or `unsloth_output`. The `path` must be a directory.
+
+## Launch a runtime
+
+A **recipe** tells the engine which backend to spawn and how to configure it.
+
+```bash
+curl -X POST http://127.0.0.1:3015/runtimes/launch \
+  -H "Content-Type: application/json" \
+  -d '{
+    "model_id": "local--my-llama-7b--1692283200000",
+    "recipe": {
+      "backend": "llama_cpp",
+      "model_path": "/path/to/local/llama-7b-gguf/llama-7b.Q4_K_M.gguf",
+      "n_gpu_layers": 32,
+      "n_ctx": 4096,
+      "flash_attn": true
+    }
+  }'
+```
+
+Response:
+
+```json
+{
+  "runtime": {
+    "id": "550e8400-e29b-41d4-a716-446655440000",
+    "model_id": "local--my-llama-7b--1692283200000",
+    "recipe": {
+      "backend": "llama_cpp",
+      "model_path": "/path/to/local/llama-7b-gguf/llama-7b.Q4_K_M.gguf",
+      "n_gpu_layers": 32,
+      "n_ctx": 4096,
+      "flash_attn": true
+    },
+    "pid": 12345,
+    "port": 45678,
+    "status": "starting",
+    "health": null
+  }
+}
+```
+
+The engine allocates a free port on `127.0.0.1`, spawns the backend, and polls its `/health` endpoint for up to 30 seconds. Once healthy, `status` becomes `running`. Logs are written to `{data_dir}/allternit-local-engine/logs/runtimes/{runtime_id}.log`.
+
+### Supported backends
+
+The recipe schema supports four backends. Today, `llama_cpp` is fully implemented; the others are reserved for future releases.
+
+| Backend | Recipe `backend` value | Notes |
+|---------|------------------------|-------|
+| llama.cpp | `llama_cpp` | Requires `llama-server` on `PATH` |
+| vLLM | `vllm` | Planned |
+| SGLang | `sglang` | Planned |
+| MLX | `mlx` | Apple Silicon; planned |
+
+### Recipe fields for llama.cpp
+
+| Field | Type | Default | Description |
+|-------|------|---------|-------------|
+| `model_path` | string | required | Absolute path to the model file |
+| `n_gpu_layers` | integer | `0` | Layers to offload to GPU (`-ngl`) |
+| `n_ctx` | integer | `4096` | Context size (`-c`) |
+| `flash_attn` | boolean | `false` | Enable Flash Attention (`-fa`) |
+
+## List and stop runtimes
+
+### List runtimes
+
+```bash
+curl -X GET http://127.0.0.1:3015/runtimes
+```
+
+Response:
+
+```json
+{
+  "runtimes": [
+    {
+      "id": "550e8400-e29b-41d4-a716-446655440000",
+      "model_id": "local--my-llama-7b--1692283200000",
+      "recipe": { "backend": "llama_cpp", ... },
+      "pid": 12345,
+      "port": 45678,
+      "status": "running",
+      "health": {
+        "reachable": true,
+        "last_check_at": "2026-08-17T10:05:00Z",
+        "error": null
+      }
+    }
+  ]
+}
+```
+
+### Stop a runtime
+
+```bash
+curl -X POST http://127.0.0.1:3015/runtimes/550e8400-e29b-41d4-a716-446655440000/stop
+```
+
+Response:
+
+```json
+{
+  "id": "550e8400-e29b-41d4-a716-446655440000",
+  "model_id": "local--my-llama-7b--1692283200000",
+  "recipe": { "backend": "llama_cpp", ... },
+  "pid": 12345,
+  "port": 45678,
+  "status": "stopped",
+  "health": {
+    "reachable": false,
+    "last_check_at": "2026-08-17T10:05:00Z",
+    "error": null
+  }
+}
+```
+
+## Chat completions proxy
+
+Once a runtime is `running`, send chat completion requests through the Local Engine. The proxy reads the `model` field, finds a healthy runtime serving that model ID, and forwards the request to the backend.
+
+```bash
+curl -X POST http://127.0.0.1:3015/v1/chat/completions \
+  -H "Content-Type: application/json" \
+  -d '{
+    "model": "local--my-llama-7b--1692283200000",
+    "messages": [
+      { "role": "system", "content": "You are a helpful assistant." },
+      { "role": "user", "content": "Summarize local model serving in one sentence." }
+    ],
+    "stream": false
+  }'
+```
+
+The response shape is whatever the backend returns, so it works with any client that speaks the standard `/v1/chat/completions` schema.
+
+## Service status and diagnostics
+
+```bash
+curl -X GET http://127.0.0.1:3015/status
+```
+
+Response:
+
+```json
+{
+  "status": "healthy",
+  "active_runtimes": 1,
+  "cached_models": 2,
+  "platform": {
+    "os": "macOS 14.6",
+    "arch": "aarch64",
+    "kernel": "23.6.0",
+    "hostname": "allternit-dev"
+  },
+  "cpu": {
+    "model": "Apple M3 Max",
+    "cores": 14,
+    "threads": 14
+  },
+  "ram": {
+    "total_bytes": 12884901888,
+    "used_bytes": 4294967296,
+    "total_mb": 12288,
+    "used_mb": 4096
+  },
+  "disk": {
+    "path": "/Users/you/Library/Application Support",
+    "total_bytes": 994662584320,
+    "free_bytes": 412316860416,
+    "used_bytes": 582345723904
+  },
+  "gpu": [
+    {
+      "name": "Apple M3 Max",
+      "memory_total_mb": 12288,
+      "memory_used_mb": 4096
+    }
+  ]
+}
+```
+
+GPU detection uses `system_profiler` on macOS and `nvidia-smi` on Linux. On Apple Silicon, GPU memory is reported as shared system memory.
+
+## Error codes
+
+| HTTP | Code / Message | Meaning |
+|------|----------------|---------|
+| 200 | — | Success |
+| 400 | `repo_id must not be empty` / `invalid repo id` | Bad model download request |
+| 400 | `path must not be empty` / `import path must be a directory` | Bad import request |
+| 400 | `model_id must not be empty` | Bad runtime launch request |
+| 400 | `invalid request body` | Malformed chat completion request |
+| 404 | `runtime not found` | Runtime ID does not exist |
+| 404 | `no_running_runtime` | No healthy runtime serves the requested model |
+| 409 | `model import already tracked` | Import ID collision |
+| 501 | `unsupported backend` / `binary not on PATH` | Backend not yet implemented or missing binary |
+| 502 | `runtime_unavailable` | Healthy runtime could not be reached for chat proxy |
+| 503 | `no free port available` | Could not allocate a local port |
+| 500 | varies | Internal error |
+
+## Related pages
+
+- [Native Tool Belt](/tools/tool-belt)
+- [Server Tools](/tools/server-tools)
+- [Cloud Sandboxes](/tools/sandbox)
+- [Build a Custom Tool](/tools/build-a-tool)

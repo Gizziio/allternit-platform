@@ -1,0 +1,86 @@
+---
+title: Manufacturing
+description: Strategic surface for Allternit's digital microfactory, hardware divisions, and manufacturing roadmap
+---
+
+## Overview
+
+**Allternit Manufacturing** is the physical production arm of Allternit. It is a strategic planning surface inside the platform shell that describes how Allternit designs, prototypes, and produces its own hardware — from compute boxes and battery systems to rack accessories and robotics parts — while selling excess manufacturing capacity to local businesses.
+
+The surface lays out the six operating divisions, the staged build plan, and the target revenue mix for turning the microfactory into an AI-driven manufacturing operating system and, eventually, a distributed manufacturing network.
+
+<Note>
+  Manufacturing is currently marked as **Strategic Draft**. The numbers, phases, and service mix are planning targets rather than live production data.
+</Note>
+
+## How to access it
+
+Manufacturing runs inside the Allternit platform shell:
+
+```text
+https://app.allternit.com/shell?view=manufacturing
+```
+
+Open it programmatically from shell code:
+
+```typescript
+open('manufacturing');
+```
+
+## Features
+
+<CardGroup cols={2}>
+  <Card title="Six divisions" icon="factory">
+    Visual breakdown of Design Studio, Prototype Lab, Digital Manufacturing, Product Manufacturing, Manufacturing Services, and Hardware R&D.
+  </Card>
+  <Card title="Build phases" icon="rocket">
+    Staged roadmap from validation (months 1–3) through scale (months 4–12) to full automation (year 2+).
+  </Card>
+  <Card title="Revenue mix" icon="pie-chart">
+    Target allocation across internal products, B2B manufacturing as a service, engineering services, catalog sales, and startup prototyping.
+  </Card>
+  <Card title="Master plan links" icon="file-text">
+    Quick access to the Allternit Manufacturing Master Plan and the public Docs Portal.
+  </Card>
+</CardGroup>
+
+## Key concepts
+
+### Divisions
+
+Allternit Manufacturing is organized into six divisions that cover the full hardware lifecycle:
+
+| Division | What it does |
+|---|---|
+| **Design Studio** | Industrial design, CAD modeling, reverse engineering, and material selection. |
+| **Prototype Lab** | Same-day iteration for Allternit hardware and customer projects. |
+| **Digital Manufacturing** | Material-specific print farms for PLA/PETG, ABS/ASA, engineering nylon, and resin. |
+| **Product Manufacturing** | Allternit's own catalog of physical products. |
+| **Manufacturing Services** | B2B production for replacement parts, jigs, fixtures, and low-volume runs. |
+| **Hardware R&D** | Supports the broader Allternit ecosystem with portable AI stations, edge servers, and robotics platforms. |
+
+### Build phases
+
+The roadmap is split into three phases:
+
+| Phase | Timeframe | Goals |
+|---|---|---|
+| **Phase 1 — Validate** | Months 1–3 | 3 printers, 1 workstation, 1 shipping station; first internal compute box prototype; 3–5 pilot B2B customers; $2k–$5k monthly revenue. |
+| **Phase 2 — Scale** | Months 4–12 | 10 printers + resin capability; standard service packages; internal manufacturing queue software; $10k+ monthly revenue. |
+| **Phase 3 — Automate** | Year 2+ | 40 printers across material farms; AI scheduling and failure detection; customer portal live; $30k+ monthly revenue. |
+
+### Target revenue mix
+
+| Stream | Share |
+|---|---|
+| Internal product manufacturing | 30% |
+| B2B industrial printing / MaaS | 30% |
+| Engineering & CAD services | 20% |
+| Consumer / catalog products | 10% |
+| Prototyping for startups | 10% |
+
+## Related links
+
+- [Allternit Manufacturing Master Plan](https://github.com/allternit/allternit/blob/main/docs/ALLTERNIT_MANUFACTURING_MASTER_PLAN.md)
+- [Platform](/surfaces/platform)
+- [Agent Studio](/surfaces/agent-studio)

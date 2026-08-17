@@ -1,0 +1,170 @@
+---
+title: 'OAuth API'
+description: 'Initiate and manage OAuth authorization codes for Allternit desktop, browser, and code clients.'
+---
+
+## Overview
+
+The OAuth API lets authenticated users authorize third-party Allternit clients — such as the browser extension and the Gizzi code agent — to act on their behalf. It implements a minimal OAuth 2.0-style authorization-code flow: the user is already authenticated through the platform auth middleware, the endpoint validates the client and redirect URI, and then redirects back to the client with a short-lived authorization code.
+
+All OAuth routes are mounted under `/api` and require a valid bearer token via the platform auth middleware.
+
+## Base URL
+
+```
+https://api.allternit.com/api
+```
+
+For local development:
+
+```
+http://127.0.0.1:8013/api
+```
+
+## Authentication
+
+All requests must include a valid bearer token in the `Authorization` header. The middleware resolves the token to the calling user and stores the authorization code bound to that user. See [Authentication](/api/authentication) for details.
+
+## Supported clients and redirect URIs
+
+The authorize endpoint only allows the following registered `client_id` values:
+
+| Client ID | Purpose |
+|-----------|---------|
+| `gizzi-code` | Gizzi code agent integration. |
+| `gizzi-browser` | Gizzi browser extension integration. |
+
+Allowed `redirect_uri` schemes depend on the client:
+
+| Scheme | Allowed hosts | Example |
+|--------|---------------|---------|
+| `allternit://` | any | `allternit://auth/callback` |
+| `gizzi://` | any | `gizzi://auth/callback` |
+| `http://` | `127.0.0.1`, `localhost`, `::1` | `http://127.0.0.1:3000/callback` |
+
+The legacy `allternit-desktop` client ID is retired. Requests that use it receive HTTP `410 Gone` with instructions to use runtime device pairing at `https://platform.allternit.com/pair`.
+
+## Endpoints
+
+| Method | Path | Description |
+|--------|------|-------------|
+| `POST` | `/api/oauth/authorize` | Generate an authorization code and redirect back to the client. |
+| `POST` | `/api/oauth/revoke-user` | Revoke all OAuth sessions for a user. |
+
+## Authorize a client
+
+```http
+POST /api/oauth/authorize
+```
+
+Validates the client and redirect URI, generates a unique authorization code, persists it in the `mcp_oauth_sessions` table bound to the authenticated user, and returns an HTTP `302 Found` redirect to the supplied `redirect_uri` with `code` and `state` query parameters.
+
+The generated code is a one-time UUID stored as the session ID. The session is marked authenticated and records the redirect URI, optional user email, optional PKCE challenge, and creation timestamp.
+
+### Request body
+
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| `client_id` | string | Yes | Registered client ID. Must be `gizzi-code` or `gizzi-browser`. |
+| `redirect_uri` | string | Yes | Callback URI. Must use an allowed scheme and host. |
+| `state` | string | No | Opaque state value echoed back to the client. |
+| `user_email` | string | No | Email address to associate with the session. |
+| `code_challenge` | string | No | PKCE code challenge. |
+| `code_challenge_method` | string | No | PKCE code challenge method, e.g. `S256`. |
+
+### Example request
+
+```bash
+curl -X POST https://api.allternit.com/api/oauth/authorize \
+  -H "Authorization: Bearer $TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "client_id": "gizzi-code",
+    "redirect_uri": "allternit://auth/callback",
+    "state": "abc123",
+    "user_email": "dev@example.com",
+    "code_challenge": "dBjftJeZ4CVP-mB92K27uhbUJU1p1r_wW1gFWFOEjXk",
+    "code_challenge_method": "S256"
+  }'
+```
+
+### Example response — success
+
+On success the endpoint responds with HTTP `302 Found` and a `Location` header:
+
+```http
+HTTP/2 302 Found
+Location: allternit://auth/callback?code=018f3a7c-...&state=abc123
+```
+
+The client should capture the `code` and exchange it for tokens through its own token flow.
+
+### Example response — retired desktop client
+
+```json
+{
+  "error": "desktop_oauth_retired",
+  "message": "Allternit Desktop now uses runtime device pairing at https://platform.allternit.com/pair"
+}
+```
+
+### Example response — invalid redirect URI
+
+```json
+{
+  "error": "invalid_redirect_uri"
+}
+```
+
+## Revoke user sessions
+
+```http
+POST /api/oauth/revoke-user
+```
+
+Deletes all `mcp_oauth_sessions` rows for the target user. By default the target is the authenticated caller; an administrator-style caller may supply a different `user_id` to revoke that user's sessions.
+
+### Request body
+
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| `user_id` | string | No | User ID whose sessions should be revoked. Defaults to the authenticated user. Also accepted as `userId`. |
+
+### Example request
+
+```bash
+curl -X POST https://api.allternit.com/api/oauth/revoke-user \
+  -H "Authorization: Bearer $TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{}'
+```
+
+### Example response
+
+```json
+{
+  "status": "ok",
+  "revoked": true
+}
+```
+
+## Error codes
+
+| Status | Code | Meaning |
+|--------|------|---------|
+| `200 OK` | — | Revocation completed successfully. |
+| `302 Found` | — | Authorization succeeded; redirect to the client callback. |
+| `400 Bad Request` | `invalid_redirect_uri` | Client ID or redirect URI is not allowed. |
+| `401 Unauthorized` | `Unauthorized` | Missing or invalid bearer token. |
+| `410 Gone` | `desktop_oauth_retired` | The `allternit-desktop` client ID is no longer supported. |
+| `500 Internal Server Error` | `Failed to generate authorization code` | Database error while storing the authorization code. |
+| `500 Internal Server Error` | `Failed to revoke sessions` | Database error while revoking sessions. |
+| `500 Internal Server Error` | `internal error` | Unexpected task or runtime error. |
+| `500 Internal Server Error` | `Invalid redirect_uri` | The constructed redirect location is not a valid HTTP header value. |
+
+## Related pages
+
+- [Authentication](/api/authentication)
+- [MCP Servers](/api/mcp-servers)
+- [Server Tools](/api/server-tools)
+- [Connectors](/api/connectors)

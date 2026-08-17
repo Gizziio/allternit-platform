@@ -1,0 +1,108 @@
+---
+title: Plugin Management
+description: Install, remove, list, and manage Gizzi Code plugins from the terminal
+---
+
+## Overview
+
+The `gizzi plugin` command manages plugins for Gizzi Code. Plugins extend the runtime with additional tools, agents, commands, output styles, and integrations. You can install packages from npm, search the registry, list currently configured plugins, and temporarily enable or disable plugins for the current session.
+
+Plugin configuration is stored in the Gizzi Code settings file (typically `~/.config/gizzi/gizzi.json`). Session-level enable and disable state is managed independently so you can turn plugins on or off without changing your saved configuration.
+
+## Command reference
+
+| Command | Description |
+|---------|-------------|
+| `gizzi plugin install <package>` | Install or update an npm package as a plugin |
+| `gizzi plugin remove <package>` | Remove a plugin package from configuration |
+| `gizzi plugin list` | List configured plugins |
+| `gizzi plugin search <query>` | Search the npm registry for packages |
+| `gizzi plugin enable <name>` | Re-enable a disabled plugin for the current session |
+| `gizzi plugin disable <name>` | Disable a plugin for the current session |
+
+## Install a plugin
+
+Install a plugin package from npm. If the package is already configured, the entry is updated to the new version.
+
+```bash
+# Install the latest version
+gizzi plugin install my-plugin
+
+# Install a specific version
+gizzi plugin install my-plugin@1.2.3
+```
+
+The package name is written to the Gizzi Code configuration file. Duplicate base names are deduplicated by package name, ignoring the version suffix, so installing `my-plugin@1.0.0` followed by `my-plugin@2.0.0` updates the existing entry rather than adding a second one.
+
+## Remove a plugin
+
+Remove a plugin from your configuration by base package name.
+
+```bash
+gizzi plugin remove my-plugin
+```
+
+If `my-plugin@1.2.3` is configured, `gizzi plugin remove my-plugin` removes it. A message is printed if the package is not found.
+
+## List configured plugins
+
+```bash
+gizzi plugin list
+```
+
+Output shows each configured package, including any version pin. If no plugins are configured, the command prints `No plugins configured`.
+
+## Search the npm registry
+
+```bash
+gizzi plugin search frontend
+```
+
+The command runs `npm search` and prints the top 10 results with package name, version, and description. You can then install a package with `gizzi plugin install <package>`.
+
+## Enable or disable a plugin for the current session
+
+Use `enable` and `disable` to change plugin state for the running session without editing your configuration file. This is useful for testing or temporarily avoiding a plugin.
+
+```bash
+# Disable a plugin for this session
+gizzi plugin disable my-plugin
+
+# Re-enable it later
+gizzi plugin enable my-plugin
+```
+
+These commands affect only the current Gizzi Code process. The next time Gizzi Code starts, it reverts to the enabled state defined in your configuration.
+
+## Configuration file location
+
+`gizzi plugin install` and `gizzi plugin remove` write to the first existing file found in this order:
+
+1. `~/.config/gizzi/gizzi.jsonc`
+2. `~/.config/gizzi/gizzi.json`
+3. `~/.config/gizzi/config.json`
+
+If none exist, the command creates `~/.config/gizzi/gizzi.json`.
+
+## Common options
+
+Most `gizzi plugin` subcommands take a single positional argument. There are no shared flags across the group, but each subcommand accepts `--help` for usage details.
+
+```bash
+gizzi plugin install --help
+gizzi plugin search --help
+```
+
+## Troubleshooting
+
+| Symptom | Cause | Fix |
+|---------|-------|-----|
+| `Plugin my-plugin not found in config` | The package name does not match any configured plugin | Check `gizzi plugin list` and use the base package name without the version |
+| `Search failed` | npm is not installed or the registry is unreachable | Verify `npm` is on your PATH and your network connection |
+| `No plugins configured` | The plugin list in settings is empty | Install a plugin with `gizzi plugin install <package>` |
+
+## Related docs
+
+- [Configuration](/cli/configuration) — Gizzi Code settings files and environment variables
+- [Headless Execution](/cli/headless-execution) — Running Gizzi Code non-interactively in scripts and CI
+- [CLI Overview](/cli/overview) — Introduction to the Gizzi Code command-line interface
