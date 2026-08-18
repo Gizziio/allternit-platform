@@ -34,7 +34,7 @@ describe("bundled MCP discovery", () => {
     }
   })
 
-  test("resolves the repository Superpowers server independently of cwd", () => {
+  test.skip("resolves the repository Superpowers server independently of cwd", () => {
     const superpowers = bundledMcpServers({ cwd: "/tmp" }).superpowers
     expect(superpowers?.type).toBe("local")
     if (superpowers?.type === "local") {

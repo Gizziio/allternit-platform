@@ -7,7 +7,7 @@
  * WIH: GAP-78/GAP-79 TUI Integration
  */
 
-import { getArsContextaRuntime } from "@/cli/ui/components/gizzi/ars-contexta-runtime"
+import { getArsContextaRuntime } from "@/ui/allternit/ars-contexta-runtime"
 import { Log } from "@/shared/util/log"
 
 const log = Log.create({ service: "ars-contexta-tui-bridge" })

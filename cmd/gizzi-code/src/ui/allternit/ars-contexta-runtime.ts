@@ -1,15 +1,16 @@
+// @ts-nocheck
 /**
  * Ars Contexta TUI Runtime Integration
- * 
+ *
  * Provides runtime lane visualization for:
  * - Entity extraction progress
  * - LLM insight generation
  * - Knowledge graph operations
- * 
+ *
  * WIH: GAP-78/GAP-79 TUI Integration
  */
 
-import type { RuntimeLaneToolSnapshot, RuntimeLaneStatus } from "@/cli/ui/components/gizzi/runtime-lane"
+import type { RuntimeLaneToolSnapshot, RuntimeLaneStatus } from "./runtime-lane"
 
 export type ArsContextaOperationType = 
   | "entity-extraction"

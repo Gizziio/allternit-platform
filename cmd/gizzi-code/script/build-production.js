@@ -102,19 +102,6 @@ try {
 catch (e) {
     console.log("   ℹ No migrations found");
 }
-// Stub namespace for the jsx-runtime virtual module
-const JSX_RUNTIME_NS = "opentui-jsx-runtime-stub";
-// Bun automatically injects `import { jsx } from "@opentui/solid/jsx-runtime"` on every
-// .tsx file (driven by tsconfig jsxImportSource). That subpath only ships a .d.ts with no
-// JS implementation. We intercept the import and return a lightweight stub — babel-preset-solid
-// has already replaced all JSX with createComponent/h calls so these stubs are never invoked.
-const JSX_RUNTIME_STUB = `
-import { createComponent, mergeProps } from "@opentui/solid";
-export const jsx = (type, props) => createComponent(type, props ?? {});
-export const jsxs = jsx;
-export const jsxDEV = jsx;
-export const Fragment = undefined;
-`;
 // Some source files were pre-processed with React Compiler and contain imports from
 // "react/compiler-runtime". The build pipeline does not run React Compiler, so we stub
 // the runtime to keep those files bundlable. This disables compiler memoization but
@@ -174,9 +161,9 @@ const textEmbedPlugin = {
         });
     },
 };
-// Create the Solid JSX transform plugin
-const solidPlugin = {
-    name: "solid-jsx-transform",
+// Create the bundle plugin
+const bundlePlugin = {
+    name: "bundle-plugin",
     setup(build) {
         // Resolve @/ and @tui/ aliases manually for the transform.
         // Mirrors the tsconfig path rules: specific subtrees point at the tree
@@ -273,13 +260,6 @@ const solidPlugin = {
         build.onResolve({ filter: /^@allternit\/orchestrator$/ }, () => ({
             path: resolve("../../packages/@allternit/orchestrator/src/index.ts"),
         }));
-        build.onResolve({ filter: /^@opentui\/core-[a-z0-9-]+/ }, () => {
-            const platform = process.platform;
-            const arch = process.arch;
-            const rootPath = resolve(`../../node_modules/@opentui/core-${platform}-${arch}/index.ts`);
-            if (Bun.file(rootPath).size > 0) return { path: rootPath };
-            return { path: resolve(`node_modules/@opentui/core-${platform}-${arch}/index.ts`) };
-        });
         // Redirect @allternit/extension to the local stub (real extension package isn't vendored)
         build.onResolve({ filter: /^@allternit\/extension$/ }, () => ({
             path: resolve("src/vendor/anthropic-stubs/allternit-extension.ts"),
@@ -304,15 +284,6 @@ const solidPlugin = {
             }
             return { path: resolve(pkgDir, "dist/index.js") };
         });
-        // Redirect @opentui/solid/jsx-runtime and jsx-dev-runtime to our stub
-        build.onResolve({ filter: /@opentui\/solid\/jsx(?:-dev)?-runtime/ }, () => ({
-            path: JSX_RUNTIME_NS,
-            namespace: JSX_RUNTIME_NS,
-        }));
-        build.onLoad({ filter: /.*/, namespace: JSX_RUNTIME_NS }, () => ({
-            contents: JSX_RUNTIME_STUB,
-            loader: "js",
-        }));
         // Redirect react/compiler-runtime to a no-op stub.
         build.onResolve({ filter: /^react\/compiler-runtime$/ }, () => ({
             path: REACT_COMPILER_RUNTIME_NS,
@@ -327,7 +298,7 @@ const solidPlugin = {
     },
 };
 console.log("");
-console.log("🔨 Step 1: Bundling with Solid JSX transform...");
+console.log("🔨 Step 1: Bundling...");
 // Ensure build directory exists
 await mkdir("./.build", { recursive: true });
 // Temporarily move bunfig.toml for the bundle step too
@@ -353,45 +324,6 @@ if (migrations.length > 0) {
 }
 // Step 1: Bundle to single JS file
 console.log("🔨 Step 1a: Bundling worker...");
-// The worker is the headless backend — it must never load the OpenTUI
-// renderer. Tangled barrel imports (e.g. utils -> components/index) can drag
-// @opentui/solid -> @opentui/core into the worker graph; @opentui/core is
-// native (bun:ffi) and unresolvable from the blob: worker inside a compiled
-// binary, which killed the worker at startup ("Worker has been terminated"
-// on every query). Stub all @opentui/* imports in the worker bundle only.
-const OPENTUI_WORKER_STUB_NS = "opentui-worker-stub";
-const OPENTUI_WORKER_STUB_NAMES = [
-  "ASCIIFontRenderable","BaseRenderable","BoxRenderable","CliRenderer","CodeRenderable",
-  "DiffRenderable","InputRenderable","InputRenderableEvents","LineNumberRenderable",
-  "MarkdownRenderable","Renderable","RootTextNodeRenderable","ScrollBoxRenderable",
-  "SelectRenderable","SelectRenderableEvents","TabSelectRenderable","TabSelectRenderableEvents",
-  "TextAttributes","TextNodeRenderable","TextRenderable","TextareaRenderable",
-  "TimeToFirstDrawRenderable","Timeline","Yoga","createCliRenderer","createTestRenderer",
-  "createTextAttributes","engine","isTextNodeRenderable","parseColor",
-  "Portal","useKeyboard","useRenderer","useTerminalDimensions","createComponent","mergeProps",
-];
-const OPENTUI_WORKER_STUB = `
-var _stub = new Proxy(function () {}, {
-  get: function (t, k) { return k === Symbol.toPrimitive ? function () { return 0; } : _stub; },
-  apply: function () { return _stub; },
-  construct: function () { return {}; },
-});
-${OPENTUI_WORKER_STUB_NAMES.map((n) => `export var ${n} = _stub;`).join("\n")}
-export default _stub;
-`;
-const opentuiWorkerStubPlugin = {
-    name: "opentui-worker-stub",
-    setup(build) {
-        build.onResolve({ filter: /^@opentui\// }, () => ({
-            path: OPENTUI_WORKER_STUB_NS,
-            namespace: OPENTUI_WORKER_STUB_NS,
-        }));
-        build.onLoad({ filter: /.*/, namespace: OPENTUI_WORKER_STUB_NS }, () => ({
-            contents: OPENTUI_WORKER_STUB,
-            loader: "js",
-        }));
-    },
-};
 const workerBundleResult = await Bun.build({
     entrypoints: ["./src/cli/ui/ink-app/worker.ts"],
     target: "bun",
@@ -399,8 +331,8 @@ const workerBundleResult = await Bun.build({
     minify: { whitespace: true, syntax: false, identifiers: false },
     define,
     conditions: ["browser"],
-    external: ["electron", "chromium-bidi/*", "playwright-core/*", "@opentui/core", "@opentui/core-*"],
-    plugins: [wasmEmbedPlugin, textEmbedPlugin, solidPlugin, opentuiWorkerStubPlugin],
+    external: ["electron", "chromium-bidi/*", "playwright-core/*"],
+    plugins: [wasmEmbedPlugin, textEmbedPlugin, bundlePlugin],
 });
 if (!workerBundleResult.success) {
     console.error("Worker bundle failed:");
@@ -421,8 +353,8 @@ const bundleResult = await Bun.build({
         "GIZZI_WORKER_CODE": JSON.stringify(workerCode),
     },
     conditions: ["browser"],
-    external: ["electron", "chromium-bidi/*", "playwright-core/*", "@opentui/core", "@opentui/core-*"],
-    plugins: [wasmEmbedPlugin, textEmbedPlugin, solidPlugin],
+    external: ["electron", "chromium-bidi/*", "playwright-core/*"],
+    plugins: [wasmEmbedPlugin, textEmbedPlugin, bundlePlugin],
 });
 if (!bundleResult.success) {
     console.error("Bundle failed:");

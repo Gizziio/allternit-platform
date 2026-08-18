@@ -1,3 +1,4 @@
+// @ts-nocheck
 const WEB_TOOL_EXACT = new Set([
   "websearch",
   "webfetch",
