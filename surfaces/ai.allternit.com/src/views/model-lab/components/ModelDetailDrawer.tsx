@@ -20,8 +20,8 @@ import {
 } from '@phosphor-icons/react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import type { HuggingFaceModel, HuggingFaceModelDetails, RuntimeRecipe } from '@/lib/model-lab/api';
-import { fetchHuggingFaceModelDetails } from '@/lib/model-lab/api';
+import type { HuggingFaceModel, HuggingFaceModelDetails, RuntimeRecipe, ModelAssessment, EngineStatus } from '@/lib/model-lab/api';
+import { fetchHuggingFaceModelDetails, assessModel } from '@/lib/model-lab/api';
 import { useBrowserStore } from '@/capsules/browser';
 import { useModelLabStore } from '@/lib/model-lab/store';
 import { usePendingChatModelStore } from '@/stores/pending-chat-model.store';
@@ -61,6 +61,32 @@ function formatSizeGB(repoId: string, sizeBytes?: number): string {
   return `~${(params * bytesPerParam).toFixed(1)} GB`;
 }
 
+function fitBadgeClass(fit: string): string {
+  switch (fit) {
+    case 'fits':
+      return 'bg-green-500/10 text-green-500 border-green-500/20';
+    case 'tight':
+      return 'bg-amber-500/10 text-amber-500 border-amber-500/20';
+    case 'no':
+      return 'bg-red-500/10 text-red-500 border-red-500/20';
+    default:
+      return 'bg-[var(--bg-secondary)] text-[var(--text-secondary)] border-[var(--border-subtle)]';
+  }
+}
+
+function hardwareSummary(status: EngineStatus | null): string {
+  if (!status) return 'Hardware not detected';
+  const gpu = status.gpu?.[0];
+  const totalGB = ((gpu?.memory_total_mb ?? status.ram.total_mb) / 1024).toFixed(1);
+  if (status.apple_chip) {
+    return `${status.apple_chip} · ${totalGB} GB unified memory`;
+  }
+  if (gpu?.name) {
+    return `${gpu.name} · ${totalGB} GB`;
+  }
+  return `${status.cpu.model} · ${totalGB} GB RAM`;
+}
+
 interface ModelDetailDrawerProps {
   model: HuggingFaceModel | null;
   installing: boolean;
@@ -77,6 +103,7 @@ export function ModelDetailDrawer({
   const { addTab } = useBrowserStore();
   const {
     engineModels,
+    engineStatus,
     launchRuntime,
     registerEngineAsBrain,
     brainRegisterLoading,
@@ -87,13 +114,17 @@ export function ModelDetailDrawer({
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [actionLoading, setActionLoading] = useState<Record<string, boolean>>({});
+  const [assessment, setAssessment] = useState<ModelAssessment | null>(null);
+  const [assessmentLoading, setAssessmentLoading] = useState(false);
 
   useEffect(() => {
     if (!model) {
       setDetails(null);
+      setAssessment(null);
       return;
     }
     setLoading(true);
+    setAssessmentLoading(true);
     setError(null);
     fetchHuggingFaceModelDetails(model.repoId)
       .then((d) => {
@@ -102,6 +133,11 @@ export function ModelDetailDrawer({
       })
       .catch((e) => setError(e instanceof Error ? e.message : 'Failed to load details'))
       .finally(() => setLoading(false));
+
+    assessModel(model.repoId)
+      .then((a) => setAssessment(a))
+      .catch(() => setAssessment(null))
+      .finally(() => setAssessmentLoading(false));
   }, [model]);
 
   if (!model) return null;
@@ -249,6 +285,66 @@ export function ModelDetailDrawer({
             </Badge>
           </div>
 
+          {/* On your machine */}
+          <div className="space-y-3 rounded-xl border border-[var(--border-subtle)] bg-[var(--bg-secondary)]/30 p-4">
+            <div className="flex items-center justify-between">
+              <h3 className="text-sm font-semibold text-[var(--text-primary)]">On your machine</h3>
+              <span className="text-[11px] text-[var(--text-tertiary)]">{hardwareSummary(engineStatus)}</span>
+            </div>
+
+            {assessmentLoading ? (
+              <div className="flex items-center gap-2 text-xs text-[var(--text-secondary)]">
+                <ArrowsClockwise size={14} className="animate-spin" />
+                Estimating fit…
+              </div>
+            ) : assessment ? (
+              <div className="space-y-3">
+                <div className="flex flex-wrap items-center gap-2">
+                  <Badge
+                    variant="secondary"
+                    className={cn('text-[11px] capitalize border', fitBadgeClass(assessment.fit))}
+                    title={assessment.fit_reason}
+                  >
+                    {assessment.fit === 'fits' ? 'Fits' : assessment.fit === 'tight' ? 'Tight' : 'Too big'}
+                  </Badge>
+                  <Badge variant="outline" className="text-[11px] capitalize">
+                    {assessment.confidence}
+                  </Badge>
+                  <Badge variant="outline" className="text-[11px]">
+                    {assessment.recommended_backend}
+                  </Badge>
+                </div>
+
+                <div className="grid grid-cols-2 gap-3">
+                  <StatBox
+                    icon={<Memory size={16} />}
+                    label="Download size"
+                    value={`${(assessment.estimated_download_bytes / 1024 ** 3).toFixed(1)} GB`}
+                  />
+                  <StatBox
+                    icon={<Memory size={16} />}
+                    label="Loaded (4K ctx)"
+                    value={`${(assessment.estimated_loaded_bytes / 1024 ** 3).toFixed(1)} GB`}
+                  />
+                </div>
+
+                <div className="space-y-1">
+                  <p className="text-[11px] font-medium text-[var(--text-secondary)]">Estimated decode speed</p>
+                  <div className="grid grid-cols-4 gap-2">
+                    <TokBox label="4K" value={assessment.estimated_tok_per_second.context_4k} />
+                    <TokBox label="8K" value={assessment.estimated_tok_per_second.context_8k} />
+                    <TokBox label="16K" value={assessment.estimated_tok_per_second.context_16k} />
+                    <TokBox label="32K" value={assessment.estimated_tok_per_second.context_32k} />
+                  </div>
+                </div>
+
+                <p className="text-[11px] text-[var(--text-tertiary)]">{assessment.fit_reason}</p>
+              </div>
+            ) : (
+              <p className="text-xs text-[var(--text-tertiary)]">Could not estimate fit for this model.</p>
+            )}
+          </div>
+
           {/* Description */}
           {description ? (
             <div className="space-y-2">
@@ -375,6 +471,15 @@ function StatBox({
     <div className="p-3 rounded-xl border border-[var(--border-subtle)] bg-[var(--bg-secondary)]/30 text-center">
       <div className="flex justify-center text-[var(--accent-primary)] mb-1">{icon}</div>
       <div className="text-sm font-semibold text-[var(--text-primary)]">{value}</div>
+      <div className="text-[10px] text-[var(--text-tertiary)] uppercase tracking-wide">{label}</div>
+    </div>
+  );
+}
+
+function TokBox({ label, value }: { label: string; value: number }) {
+  return (
+    <div className="p-2 rounded-lg border border-[var(--border-subtle)] bg-[var(--bg-elevated)] text-center">
+      <div className="text-sm font-semibold text-[var(--text-primary)]">{value.toFixed(1)}</div>
       <div className="text-[10px] text-[var(--text-tertiary)] uppercase tracking-wide">{label}</div>
     </div>
   );
