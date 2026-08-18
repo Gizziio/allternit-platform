@@ -1,44 +1,53 @@
 import type { ReactNode } from 'react'
-import {
-  FileText,
-  Table,
-  PresentationChart,
-  FilePdf,
-  Signature,
-  CloudArrowUp,
-  ArrowRight,
-} from '@phosphor-icons/react'
+import { OfficeAppLogo, type OfficeProduct } from './components/OfficeAppLogo'
 
 export interface HomePageProps {
   onLaunch: () => void
   disclosure?: ReactNode
 }
 
-const FEATURES = [
+interface FeatureCard {
+  id: OfficeProduct
+  name: string
+  description: string
+  formats: string[]
+}
+
+const FEATURES: FeatureCard[] = [
   {
-    title: 'Docs',
-    desc: 'AI-assisted word processing with smart editing, summarization, and rewriting.',
-    icon: FileText,
+    id: 'docs',
+    name: 'Allternit Docs',
+    description:
+      'Word-compatible documents with byte-preserving save, powered by the GenOffice docx engine.',
+    formats: ['.docx'],
   },
   {
-    title: 'Sheets',
-    desc: 'Spreadsheets that understand formulas, data, and natural-language queries.',
-    icon: Table,
+    id: 'sheets',
+    name: 'Allternit Sheets',
+    description:
+      'Excel-compatible workbooks with server-side recalculation through the office engine.',
+    formats: ['.xlsx'],
   },
   {
-    title: 'Slides',
-    desc: 'Create and refine presentations with an AI design partner at your side.',
-    icon: PresentationChart,
+    id: 'slides',
+    name: 'Allternit Slides',
+    description:
+      'PowerPoint-compatible decks with engine patch-save and a web-worker round-trip pipeline.',
+    formats: ['.pptx'],
   },
   {
-    title: 'PDF',
-    desc: 'Chat with your PDFs, extract answers, and annotate with ease.',
-    icon: FilePdf,
+    id: 'pdf',
+    name: 'Allternit PDF',
+    description:
+      'PDF viewing with pdf.js rendering, page navigation, zoom, text extraction, and AI chat.',
+    formats: ['.pdf'],
   },
   {
-    title: 'Sign',
-    desc: 'Request signatures, track progress, and finalize documents securely.',
-    icon: Signature,
+    id: 'sign',
+    name: 'Allternit Sign',
+    description:
+      'Native PDF signing — add signers, place signature fields on the page, and download the signed document.',
+    formats: ['.pdf'],
   },
 ]
 
@@ -51,6 +60,7 @@ export function HomePage({ onLaunch, disclosure }: HomePageProps) {
         overflow: 'auto',
         background: 'var(--bg-primary)',
         color: 'var(--text-primary)',
+        fontFamily: 'var(--font-sans)',
       }}
     >
       {/* Top navigation */}
@@ -65,35 +75,21 @@ export function HomePage({ onLaunch, disclosure }: HomePageProps) {
           gap: 'var(--space-4)',
           padding: 'var(--space-4) var(--space-6)',
           borderBottom: '1px solid var(--border-default)',
-          background: 'color-mix(in srgb, var(--bg-primary) 88%, transparent)',
+          background: 'var(--glass-bg-thick)',
           backdropFilter: 'blur(12px)',
           WebkitBackdropFilter: 'blur(12px)',
         }}
       >
         <span
           style={{
-            fontWeight: 'var(--font-weight-bold)',
-            fontSize: 'var(--text-xl)',
-            color: 'var(--accent-primary)',
+            fontWeight: 'var(--font-weight-semibold)',
+            fontSize: 'var(--text-lg)',
+            color: 'var(--text-primary)',
             letterSpacing: '-0.01em',
           }}
         >
           Allternit Office
         </span>
-
-        <nav
-          style={{
-            display: 'none',
-            gap: 'var(--space-6)',
-            fontSize: 'var(--text-sm)',
-            color: 'var(--text-secondary)',
-            alignItems: 'center',
-          }}
-        >
-          {FEATURES.map((f) => (
-            <span key={f.title}>{f.title}</span>
-          ))}
-        </nav>
 
         <button
           type="button"
@@ -102,20 +98,18 @@ export function HomePage({ onLaunch, disclosure }: HomePageProps) {
             padding: 'var(--space-2) var(--space-4)',
             borderRadius: 'var(--radius-md)',
             border: 'none',
-            background: 'var(--accent-primary)',
-            color: 'var(--text-inverse)',
-            fontWeight: 'var(--font-weight-semibold)',
+            background: 'var(--text-primary)',
+            color: 'var(--bg-primary)',
+            fontWeight: 'var(--font-weight-medium)',
             fontSize: 'var(--text-sm)',
             cursor: 'pointer',
-            transition: 'filter var(--transition-fast), transform var(--transition-fast)',
+            transition: 'opacity var(--transition-fast)',
           }}
           onMouseEnter={(e) => {
-            e.currentTarget.style.filter = 'brightness(1.08)'
-            e.currentTarget.style.transform = 'translateY(-1px)'
+            e.currentTarget.style.opacity = '0.9'
           }}
           onMouseLeave={(e) => {
-            e.currentTarget.style.filter = 'none'
-            e.currentTarget.style.transform = 'none'
+            e.currentTarget.style.opacity = '1'
           }}
         >
           Open Office
@@ -129,7 +123,7 @@ export function HomePage({ onLaunch, disclosure }: HomePageProps) {
           flexDirection: 'column',
           alignItems: 'center',
           textAlign: 'center',
-          padding: 'var(--space-24) var(--space-6) var(--space-16)',
+          padding: 'var(--space-20) var(--space-6) var(--space-12)',
           position: 'relative',
         }}
       >
@@ -150,9 +144,9 @@ export function HomePage({ onLaunch, disclosure }: HomePageProps) {
             gap: 'var(--space-2)',
             padding: 'var(--space-1) var(--space-3)',
             borderRadius: 'var(--radius-full)',
-            background: 'color-mix(in srgb, var(--accent-primary) 10%, transparent)',
+            background: 'var(--bg-secondary)',
             border: '1px solid var(--border-default)',
-            color: 'var(--accent-primary)',
+            color: 'var(--text-secondary)',
             fontSize: 'var(--text-xs)',
             fontWeight: 'var(--font-weight-semibold)',
             letterSpacing: '0.04em',
@@ -161,18 +155,18 @@ export function HomePage({ onLaunch, disclosure }: HomePageProps) {
             position: 'relative',
           }}
         >
-          <CloudArrowUp size={14} weight="bold" />
           Local-first, Cloud-powered
         </div>
 
         <h1
           style={{
             margin: 0,
-            fontSize: 'clamp(2.75rem, 6vw, 4.5rem)',
-            fontWeight: 'var(--font-weight-bold)',
+            fontFamily: 'var(--font-sans)',
+            fontSize: 'clamp(2.5rem, 6vw, 4rem)',
+            fontWeight: 'var(--font-weight-semibold)',
             lineHeight: 'var(--line-height-tight)',
             letterSpacing: '-0.03em',
-            maxWidth: 900,
+            maxWidth: 820,
             position: 'relative',
           }}
         >
@@ -182,16 +176,17 @@ export function HomePage({ onLaunch, disclosure }: HomePageProps) {
 
         <p
           style={{
-            margin: 'var(--space-6) 0 0',
-            maxWidth: 640,
+            margin: 'var(--space-5) 0 0',
+            maxWidth: 600,
+            fontFamily: 'var(--font-sans)',
             fontSize: 'var(--text-xl)',
             lineHeight: 'var(--line-height-relaxed)',
             color: 'var(--text-secondary)',
             position: 'relative',
           }}
         >
-          Allternit Office brings Docs, Sheets, Slides, PDF, and Sign into one intelligent workspace —
-          with an AI assistant that can read, edit, and reason across your files.
+          Docs, Sheets, Slides, PDF, and Sign in one intelligent workspace — with an AI assistant
+          that can read, edit, and reason across your files.
         </p>
 
         <div
@@ -214,28 +209,24 @@ export function HomePage({ onLaunch, disclosure }: HomePageProps) {
               padding: 'var(--space-3) var(--space-6)',
               borderRadius: 'var(--radius-md)',
               border: 'none',
-              background: 'var(--accent-primary)',
-              color: 'var(--text-inverse)',
-              fontSize: 'var(--text-lg)',
+              background: 'var(--text-primary)',
+              color: 'var(--bg-primary)',
+              fontSize: 'var(--text-md)',
               fontWeight: 'var(--font-weight-semibold)',
               cursor: 'pointer',
               boxShadow: 'var(--shadow-md)',
-              transition:
-                'filter var(--transition-fast), transform var(--transition-fast), box-shadow var(--transition-fast)',
+              transition: 'opacity var(--transition-fast), transform var(--transition-fast)',
             }}
             onMouseEnter={(e) => {
-              e.currentTarget.style.filter = 'brightness(1.08)'
-              e.currentTarget.style.transform = 'translateY(-2px)'
-              e.currentTarget.style.boxShadow = 'var(--shadow-lg), var(--shadow-glow)'
+              e.currentTarget.style.opacity = '0.9'
+              e.currentTarget.style.transform = 'translateY(-1px)'
             }}
             onMouseLeave={(e) => {
-              e.currentTarget.style.filter = 'none'
+              e.currentTarget.style.opacity = '1'
               e.currentTarget.style.transform = 'none'
-              e.currentTarget.style.boxShadow = 'var(--shadow-md)'
             }}
           >
             Launch Allternit Office
-            <ArrowRight size={20} weight="bold" />
           </button>
         </div>
       </section>
@@ -244,78 +235,77 @@ export function HomePage({ onLaunch, disclosure }: HomePageProps) {
       <section
         style={{
           display: 'grid',
-          gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))',
+          gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))',
           gap: 'var(--space-5)',
           maxWidth: 1140,
           margin: '0 auto',
-          padding: '0 var(--space-6) var(--space-20)',
+          padding: '0 var(--space-6) var(--space-16)',
         }}
       >
-        {FEATURES.map((f, index) => {
-          const Icon = f.icon
-          return (
-            <div
-              key={f.title}
+        {FEATURES.map((feature) => (
+          <article
+            key={feature.id}
+            style={{
+              display: 'flex',
+              minHeight: 224,
+              flexDirection: 'column',
+              padding: 'var(--space-5)',
+              borderRadius: 'var(--radius-lg)',
+              background: 'var(--bg-card)',
+              border: '1px solid var(--border-default)',
+              boxShadow: 'var(--shadow-sm)',
+              transition:
+                'transform var(--transition-base), box-shadow var(--transition-base), border-color var(--transition-base)',
+            }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.transform = 'translateY(-3px)'
+              e.currentTarget.style.boxShadow = 'var(--shadow-md)'
+              e.currentTarget.style.borderColor = 'var(--border-hover)'
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.transform = 'none'
+              e.currentTarget.style.boxShadow = 'var(--shadow-sm)'
+              e.currentTarget.style.borderColor = 'var(--border-default)'
+            }}
+          >
+            <OfficeAppLogo product={feature.id} size={48} />
+            <h3
               style={{
-                padding: 'var(--space-6)',
-                borderRadius: 'var(--radius-lg)',
-                background: 'var(--bg-card)',
-                border: '1px solid var(--border-default)',
-                boxShadow: 'var(--shadow-sm)',
-                transition:
-                  'transform var(--transition-base), box-shadow var(--transition-base), border-color var(--transition-base)',
-                animationDelay: `${index * 60}ms`,
-              }}
-              onMouseEnter={(e) => {
-                e.currentTarget.style.transform = 'translateY(-4px)'
-                e.currentTarget.style.boxShadow = 'var(--shadow-md)'
-                e.currentTarget.style.borderColor = 'var(--border-hover)'
-              }}
-              onMouseLeave={(e) => {
-                e.currentTarget.style.transform = 'none'
-                e.currentTarget.style.boxShadow = 'var(--shadow-sm)'
-                e.currentTarget.style.borderColor = 'var(--border-default)'
+                margin: 'var(--space-4) 0 var(--space-2)',
+                fontFamily: 'var(--font-sans)',
+                fontSize: 'var(--text-md)',
+                fontWeight: 'var(--font-weight-semibold)',
+                color: 'var(--text-primary)',
               }}
             >
-              <div
-                style={{
-                  width: 44,
-                  height: 44,
-                  borderRadius: 'var(--radius-md)',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  background:
-                    'color-mix(in srgb, var(--accent-primary) 10%, transparent)',
-                  color: 'var(--accent-primary)',
-                  marginBottom: 'var(--space-4)',
-                }}
-              >
-                <Icon size={24} weight="duotone" />
-              </div>
-              <h3
-                style={{
-                  margin: '0 0 var(--space-2)',
-                  fontSize: 'var(--text-lg)',
-                  color: 'var(--text-primary)',
-                  fontWeight: 'var(--font-weight-semibold)',
-                }}
-              >
-                {f.title}
-              </h3>
-              <p
-                style={{
-                  margin: 0,
-                  fontSize: 'var(--text-base)',
-                  lineHeight: 'var(--line-height-relaxed)',
-                  color: 'var(--text-secondary)',
-                }}
-              >
-                {f.desc}
-              </p>
-            </div>
-          )
-        })}
+              {feature.name}
+            </h3>
+            <p
+              style={{
+                margin: 0,
+                fontFamily: 'var(--font-sans)',
+                fontSize: 'var(--text-sm)',
+                lineHeight: 'var(--line-height-relaxed)',
+                color: 'var(--text-secondary)',
+              }}
+            >
+              {feature.description}
+            </p>
+            <p
+              style={{
+                marginTop: 'auto',
+                paddingTop: 'var(--space-3)',
+                fontFamily: 'var(--font-sans)',
+                fontSize: 'var(--text-xs)',
+                fontWeight: 'var(--font-weight-semibold)',
+                color: 'var(--text-tertiary)',
+                letterSpacing: '0.02em',
+              }}
+            >
+              {feature.formats.join(' · ')}
+            </p>
+          </article>
+        ))}
       </section>
 
       {/* Local / cloud disclosure */}
@@ -324,14 +314,14 @@ export function HomePage({ onLaunch, disclosure }: HomePageProps) {
           style={{
             maxWidth: 720,
             margin: '0 auto',
-            padding: '0 var(--space-6) var(--space-24)',
+            padding: '0 var(--space-6) var(--space-20)',
           }}
         >
           <div
             style={{
               padding: 'var(--space-5) var(--space-6)',
               borderRadius: 'var(--radius-lg)',
-              background: 'color-mix(in srgb, var(--accent-primary) 6%, transparent)',
+              background: 'var(--bg-secondary)',
               border: '1px solid var(--border-default)',
               color: 'var(--text-secondary)',
               fontSize: 'var(--text-sm)',
