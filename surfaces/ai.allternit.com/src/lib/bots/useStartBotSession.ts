@@ -2,7 +2,12 @@ import { useCallback, useState } from 'react';
 import { useChatSessionStore } from '@/views/chat/ChatSessionStore';
 import { resolveAgentSecrets } from '@/lib/agents/agent-secrets-resolver';
 import { resolveAgentConnectors } from '@/lib/agents/agent-connectors-resolver';
-import { createSandbox, getSandboxForAgent, type Sandbox } from './vm-operator';
+import {
+  createSandbox,
+  getSandboxForAgent,
+  isBotDesktopPaused,
+  type Sandbox,
+} from './vm-operator';
 import { useBotAllternitBusStore } from './bot-allternit-bus';
 import type { Agent } from '../agents/agent.types';
 
@@ -17,6 +22,7 @@ interface BotSessionStartResult {
   sessionId: string;
   sandbox?: Sandbox;
   sandboxError?: string;
+  notice?: string;
 }
 
 function buildVMSystemPrompt(vmConfig: NonNullable<Agent['vmOperator']>, sandbox?: Sandbox): string {
@@ -85,8 +91,16 @@ export function useStartBotSession(
 
     let sandbox: Sandbox | undefined;
     let sandboxError: string | undefined;
+    let notice: string | undefined;
     const vmConfig = agent.vmOperator;
-    const shouldStartSandbox = vmConfig?.enabled === true && vmConfig?.autoStart !== false;
+    const isDesktopPaused = isBotDesktopPaused(agent.id);
+    const shouldStartSandbox =
+      vmConfig?.enabled === true && vmConfig?.autoStart !== false && !isDesktopPaused;
+
+    if (isDesktopPaused) {
+      notice =
+        'Desktop is under human control. The bot will resume autonomous computer use after you hand the desktop back.';
+    }
 
     if (shouldStartSandbox) {
       // Prefer the bot's existing persistent computer so state (toolchain,
@@ -114,7 +128,7 @@ export function useStartBotSession(
     }
 
     const basePrompt = agent.systemPrompt ?? '';
-    const systemPrompt = vmPrompt ? `${basePrompt}\n\n${vmPrompt}` : basePrompt;
+    const systemPrompt = [basePrompt, vmPrompt, notice].filter(Boolean).join('\n\n');
 
     const sessionId = await store.createSession({
       name: displayName,
@@ -144,10 +158,11 @@ export function useStartBotSession(
         vmOperator: agent.vmOperator,
         vmSandbox: sandbox ? { id: sandbox.id, provider: sandbox.provider, status: sandbox.status, vncUrl: sandbox.vncUrl } : undefined,
         vmSandboxError: sandboxError,
+        vmControlNotice: notice,
       },
     });
 
-    return { sessionId, sandbox, sandboxError };
+    return { sessionId, sandbox, sandboxError, notice };
   }, []);
 
   const startSession = useCallback(

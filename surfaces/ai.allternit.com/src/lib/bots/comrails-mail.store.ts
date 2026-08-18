@@ -104,17 +104,17 @@ export const useCommRailsMailStore = createWithEqualityFn<CommRailsMailState & C
       try {
         const participants = [fromAgentId, input.toAgentId].filter(Boolean) as string[];
         const thread = await railsApi.mail.ensureThread(input.subject, participants);
-        const bodyRef = `body-${Date.now()}`;
-        await railsApi.mail.send({
+        const result = await railsApi.mail.send({
           thread_id: thread.thread_id,
-          body_ref: bodyRef,
           body: input.body,
-          to_agent_id: input.toAgentId,
+          from_agent: fromAgentId,
+          to_agents: [input.toAgentId],
           subject: input.subject,
           priority: input.priority,
+          requires_ack: input.requiresAck,
           attachments: input.attachments?.map((a) => a.ref),
         });
-        return { sent: true, messageId: bodyRef };
+        return { sent: result.sent, messageId: result.message_id };
       } catch (err) {
         const message = err instanceof Error ? err.message : 'Failed to send mail';
         logger.error({ from: fromAgentId, to: input.toAgentId, err }, message);
@@ -138,15 +138,15 @@ export const useCommRailsMailStore = createWithEqualityFn<CommRailsMailState & C
 
     sendGroupMail: async (fromAgentId: string, input: SendGroupMailInput) => {
       try {
-        const bodyRef = `body-${Date.now()}`;
-        await railsApi.mail.send({
+        const result = await railsApi.mail.send({
           thread_id: input.threadId,
-          body_ref: bodyRef,
           body: input.body,
+          from_agent: fromAgentId,
           subject: input.subject || 'Group message',
           priority: input.priority,
+          requires_ack: input.requiresAck,
         });
-        return { sent: true, messageId: bodyRef };
+        return { sent: result.sent, messageId: result.message_id };
       } catch (err) {
         const message = err instanceof Error ? err.message : 'Failed to send group mail';
         logger.error({ from: fromAgentId, threadId: input.threadId, err }, message);
@@ -186,21 +186,32 @@ export const useCommRailsMailStore = createWithEqualityFn<CommRailsMailState & C
 );
 
 function transformRailsMessage(m: MailMessage): AgentMailMessage {
+  const toAgents = Array.isArray(m.to_agents) ? m.to_agents : [];
+  const requiresAck = Boolean(m.ack_required);
   return {
     id: String(m.message_id || m.timestamp),
     threadId: String(m.thread_id || 'default'),
     fromAgentId: String(m.from_agent || ''),
     fromAgentName: undefined,
-    toAgentId: typeof m.to_agent === 'string' ? m.to_agent : undefined,
+    toAgentId: toAgents[0] || (typeof m.to_agent === 'string' ? m.to_agent : undefined),
     subject: typeof m.subject === 'string' ? m.subject : 'Message',
     body: String(m.body || ''),
-    bodyRef: undefined,
-    status: m.acknowledged ? 'acknowledged' : 'unread',
-    priority: m.priority ?? 'normal',
+    bodyRef: typeof m.body_ref === 'string' ? m.body_ref : undefined,
+    status: requiresAck ? 'unread' : 'read',
+    priority: mapRailsPriority(m.priority ?? m.importance),
     timestamp: String(m.timestamp || new Date().toISOString()),
-    requiresAck: !m.acknowledged,
-    ackedAt: m.acknowledged ? String(m.timestamp) : undefined,
+    requiresAck,
   };
+}
+
+function mapRailsPriority(value: unknown): AgentMailMessage['priority'] {
+  if (typeof value !== 'string') return 'normal';
+  switch (value.toLowerCase()) {
+    case 'low': return 'low';
+    case 'high':
+    case 'urgent': return 'high';
+    default: return 'normal';
+  }
 }
 
 function transformRailsThreadSummary(

@@ -12,6 +12,8 @@
  */
 
 import type { AgentVMOperatorConfig } from '@/lib/agents/agent.types';
+import { API_BASE_URL } from '@/lib/agents/api-config';
+import { useChatSessionStore } from '@/views/chat/ChatSessionStore';
 import { createModuleLogger } from '@/lib/logger';
 
 const logger = createModuleLogger('VMOperator');
@@ -230,7 +232,12 @@ export async function restoreSandbox(
 export async function runCommand(
   sandboxId: string,
   command: string,
+  agentId?: string,
 ): Promise<VMOperatorResult<CommandResult>> {
+  if (agentId && isBotDesktopPaused(agentId)) {
+    return pausedResult<CommandResult>();
+  }
+
   const baseURL = getSandboxBaseURL();
   if (!baseURL) return notConfigured<CommandResult>();
 
@@ -261,7 +268,12 @@ export async function runBrowserTask(
   sandboxId: string,
   url: string,
   instructions: string,
+  agentId?: string,
 ): Promise<VMOperatorResult<BrowserTaskResult>> {
+  if (agentId && isBotDesktopPaused(agentId)) {
+    return pausedResult<BrowserTaskResult>();
+  }
+
   const baseURL = getSandboxBaseURL();
   if (!baseURL) return notConfigured<BrowserTaskResult>();
 
@@ -323,5 +335,156 @@ export async function healthCheck(): Promise<VMOperatorResult<{ status: string }
   } catch (err) {
     logger.error({ err }, 'Sandbox health check failed');
     return { ok: false, error: err instanceof Error ? err.message : 'Health check failed' };
+  }
+}
+
+/**
+ * Check whether the desktop for a given bot is currently under human control.
+ * The source of truth is the bot's chat session metadata, which is updated by
+ * the Desktop view when the user takes over or hands back.
+ */
+export function isBotDesktopPaused(agentId: string): boolean {
+  if (typeof window === 'undefined') return false;
+  const sessions = useChatSessionStore.getState().sessions;
+  return sessions.some(
+    (s) =>
+      s.metadata?.agentId === agentId &&
+      s.metadata?.vmControlState === 'human_controls',
+  );
+}
+
+function pausedResult<T>(): VMOperatorResult<T> {
+  return {
+    ok: false,
+    error:
+      'Desktop is under human control. The bot will resume autonomous computer use after you hand the desktop back.',
+  };
+}
+
+export interface BotDesktopStatus {
+  status: 'running' | 'off' | 'error';
+  control_state: 'bot_controls' | 'human_controls' | 'human_observing';
+  ws_url?: string;
+  protocol: 'vnc' | 'novnc' | 'none';
+  sandbox_id: string;
+}
+
+export interface BotDesktopSandbox {
+  sandbox_id: string;
+  status: string;
+  provider: string;
+  host?: string;
+}
+
+function botDesktopUrl(botId: string, sandboxId: string) {
+  return `${API_BASE_URL}/bots/${encodeURIComponent(botId)}/desktop?sandbox_id=${encodeURIComponent(sandboxId)}`;
+}
+
+/**
+ * Provision a persistent virtual computer for a bot.
+ *
+ * The sandbox is owned by the bot and survives across chat sessions.
+ */
+export async function provisionBotDesktop(
+  botId: string,
+): Promise<VMOperatorResult<BotDesktopSandbox>> {
+  try {
+    const res = await fetch(`${API_BASE_URL}/bots/${encodeURIComponent(botId)}/desktop/provision`, {
+      method: 'POST',
+    });
+    if (!res.ok) {
+      const text = await res.text();
+      throw new Error(`Platform returned ${res.status}: ${text}`);
+    }
+    const data = (await res.json()) as BotDesktopSandbox;
+    return { ok: true, data };
+  } catch (err) {
+    logger.error({ err, botId }, 'Failed to provision bot desktop');
+    return { ok: false, error: err instanceof Error ? err.message : 'Desktop provisioning failed' };
+  }
+}
+
+/**
+ * Get the desktop status for a bot's persistent sandbox.
+ */
+export async function getBotDesktopStatus(
+  botId: string,
+  sandboxId: string,
+): Promise<VMOperatorResult<BotDesktopStatus>> {
+  try {
+    const res = await fetch(botDesktopUrl(botId, sandboxId));
+    if (!res.ok) {
+      const text = await res.text();
+      throw new Error(`Platform returned ${res.status}: ${text}`);
+    }
+    const data = (await res.json()) as BotDesktopStatus;
+    return { ok: true, data };
+  } catch (err) {
+    logger.error({ err, botId, sandboxId }, 'Failed to get bot desktop status');
+    return { ok: false, error: err instanceof Error ? err.message : 'Desktop status failed' };
+  }
+}
+
+/**
+ * Human starts observing the bot's desktop without taking control.
+ * Bot autonomous actions continue running; the human gets a read-only VNC view.
+ */
+export async function observeBotDesktop(
+  botId: string,
+  sandboxId: string,
+): Promise<VMOperatorResult<{ control_state: string }>> {
+  try {
+    const res = await fetch(botDesktopUrl(botId, sandboxId) + '/observe', { method: 'POST' });
+    if (!res.ok) {
+      const text = await res.text();
+      throw new Error(`Platform returned ${res.status}: ${text}`);
+    }
+    const data = (await res.json()) as { control_state: string };
+    return { ok: true, data };
+  } catch (err) {
+    logger.error({ err, botId, sandboxId }, 'Failed to observe bot desktop');
+    return { ok: false, error: err instanceof Error ? err.message : 'Observe failed' };
+  }
+}
+
+/**
+ * Human takes over the bot's desktop. Bot autonomous actions should pause.
+ */
+export async function takeOverBotDesktop(
+  botId: string,
+  sandboxId: string,
+): Promise<VMOperatorResult<{ control_state: string }>> {
+  try {
+    const res = await fetch(botDesktopUrl(botId, sandboxId) + '/take-over', { method: 'POST' });
+    if (!res.ok) {
+      const text = await res.text();
+      throw new Error(`Platform returned ${res.status}: ${text}`);
+    }
+    const data = (await res.json()) as { control_state: string };
+    return { ok: true, data };
+  } catch (err) {
+    logger.error({ err, botId, sandboxId }, 'Failed to take over bot desktop');
+    return { ok: false, error: err instanceof Error ? err.message : 'Take over failed' };
+  }
+}
+
+/**
+ * Human hands the desktop back to the bot. Autonomous actions may resume.
+ */
+export async function handBackBotDesktop(
+  botId: string,
+  sandboxId: string,
+): Promise<VMOperatorResult<{ control_state: string }>> {
+  try {
+    const res = await fetch(botDesktopUrl(botId, sandboxId) + '/hand-back', { method: 'POST' });
+    if (!res.ok) {
+      const text = await res.text();
+      throw new Error(`Platform returned ${res.status}: ${text}`);
+    }
+    const data = (await res.json()) as { control_state: string };
+    return { ok: true, data };
+  } catch (err) {
+    logger.error({ err, botId, sandboxId }, 'Failed to hand back bot desktop');
+    return { ok: false, error: err instanceof Error ? err.message : 'Hand back failed' };
   }
 }

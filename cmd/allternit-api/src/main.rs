@@ -51,6 +51,8 @@ use allternit_api::automation_routes::automation_router;
 use allternit_api::backend_install_routes::backend_install_router;
 use allternit_api::board_routes::board_router;
 use allternit_api::board_stream_routes::board_stream_router;
+use allternit_api::bot_desktop_routes::bot_desktop_router;
+use allternit_api::bot_desktop_stream::bot_desktop_stream_router;
 use allternit_api::brain_routes::{brain_git_router, brain_router};
 use allternit_api::canvas_routes::canvas_router;
 use allternit_api::checkpoints_routes::checkpoints_router;
@@ -251,6 +253,7 @@ async fn main() {
         jwks,
         auth_config,
         vm_driver,
+        bot_desktop_sessions: Arc::new(RwLock::new(HashMap::new())),
         rails,
         vm_sessions: new_vm_session_store(),
         cowork_scheduler,
@@ -346,6 +349,7 @@ async fn main() {
         .merge(board_stream_router())
         .merge(runtime_backend_router())
         .merge(agents_v1_router())
+        .merge(bot_desktop_router())
         .merge(allternit_api::connector_routes::connector_router())
         .merge(allternit_api::cloud_credentials_routes::cloud_credentials_router())
         .merge(allternit_api::usage_routes::usage_router())
@@ -411,6 +415,7 @@ async fn main() {
         .nest("/rails", rails_router())
         .nest("/api/rails", rails_router())
         .nest("/stream", stream_router())
+        .nest("/ws/bots", bot_desktop_stream_router())
         .nest("/terminal", terminal_router())
         .nest(
             "/mcp",
@@ -797,6 +802,23 @@ async fn initialize_cowork_scheduler(
 async fn initialize_vm_driver(
     app_config: &allternit_api::config::AppConfig,
 ) -> Option<Arc<dyn allternit_driver_interface::ExecutionDriver>> {
+    // If OpenSandbox is explicitly configured, prefer it over the local
+    // platform driver so bots can use a persistent cloud sandbox.
+    if let Ok(open_sandbox_url) = std::env::var("OPEN_SANDBOX_URL") {
+        use allternit_driver_interface::ExecutionDriver;
+        use allternit_opensandbox_driver::{OpenSandboxConfig, OpenSandboxDriver};
+        let config = OpenSandboxConfig::new(open_sandbox_url);
+        let driver = OpenSandboxDriver::new(config);
+        match driver.health_check().await {
+            Ok(health) if health.healthy => {
+                info!("OpenSandbox driver initialized from OPEN_SANDBOX_URL");
+                return Some(Arc::new(driver));
+            }
+            Ok(health) => warn!("OpenSandbox health check returned unhealthy: {:?}", health),
+            Err(e) => warn!("OpenSandbox health check failed: {}", e),
+        }
+    }
+
     // Get packaged VM directory from desktop app (if available)
     let vm_dir = app_config.vm_dir().map(|p| p.to_string_lossy().to_string());
     if let Some(ref dir) = vm_dir {

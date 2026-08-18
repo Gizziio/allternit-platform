@@ -49,6 +49,7 @@ import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { GlassSurface } from "@/design/GlassSurface";
 import { BotRuntimeConfigModal } from "./BotRuntimeConfigModal";
+import { BotDesktopView } from "./BotDesktopView";
 import { AutomationTasksView } from "@/views/cowork/AutomationTasksView";
 import { EditAgentForm } from "@/views/agent-view/components/EditAgentForm";
 
@@ -56,7 +57,7 @@ interface BotHomeViewProps {
   botId: string;
 }
 
-type BotHomeTab = "home" | "tasks" | "artifacts" | "runtime" | "automation";
+type BotHomeTab = "home" | "tasks" | "artifacts" | "runtime" | "desktop" | "automation";
 
 function botInitials(name: string): string {
   return (name || "Bot")
@@ -302,6 +303,7 @@ export function BotHomeView({ botId }: BotHomeViewProps) {
     { id: "tasks" as const, label: "Tasks", icon: ChatTeardropText },
     { id: "artifacts" as const, label: "Artifacts", icon: FolderOpen },
     { id: "runtime" as const, label: "Runtime", icon: Lightning },
+    { id: "desktop" as const, label: "Desktop", icon: Desktop },
     { id: "automation" as const, label: "Automation Tasks", icon: ClockCounterClockwise },
   ];
 
@@ -505,6 +507,14 @@ export function BotHomeView({ botId }: BotHomeViewProps) {
                 setRuntimeModalSection("vm");
                 setIsRuntimeModalOpen(true);
               }}
+            />
+          )}
+          {activeTab === "desktop" && (
+            <BotDesktopView
+              bot={bot}
+              accentColor={accentColor}
+              activeVM={activeVM}
+              onBack={() => setActiveTab("home")}
             />
           )}
           {activeTab === "automation" && (

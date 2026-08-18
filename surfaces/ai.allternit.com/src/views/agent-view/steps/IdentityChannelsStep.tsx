@@ -12,6 +12,7 @@ import { Input, Label, Select, SelectTrigger, SelectValue, SelectContent, Select
 import { Button } from "@/components/ui/button";
 import { sealAgentSecret } from "@/lib/agents/agent-secrets.service";
 import { createAgentWallet } from "@/lib/bots/agent-wallet-factory";
+import { provisionAgentEmail, provisionAgentPhone } from "@/lib/bots/agent-identity.service";
 import {
   getIdentityMappingForConnector,
   getConnectorAccountIdentifier,
@@ -173,41 +174,61 @@ export function IdentityChannelsStep({
     setConnectError((prev) => ({ ...prev, email: '' }));
     setConnectStatus((prev) => ({ ...prev, email: 'idle' }));
     try {
+      if (channels.email.provider === "commrails") {
+        const result = await provisionAgentEmail(agentId);
+        updateChannels({
+          email: {
+            ...channels.email,
+            address: result.address,
+            provider: 'commrails',
+            sendEnabled: true,
+            receiveEnabled: true,
+          },
+        });
+        setConnectStatus((prev) => ({ ...prev, email: 'connected' }));
+        return;
+      }
+
       const address = channels.email.address.trim();
       if (!address) throw new Error("Enter the email address to bind.");
 
       if (channels.email.provider === "google_workspace") {
-        const result = await connectOwned("gmail", { via: "oauth2" });
-        if (result.status === "connected") {
-          ensureConnectorBinding("gmail", "Gmail", "gmail");
-          setConnectStatus((prev) => ({ ...prev, email: 'connected' }));
-        } else if (result.status === "authorization_required") {
-          const url = (result as { authorize_url?: string }).authorize_url;
-          if (url) window.open(url, "_blank", "noopener,noreferrer");
-        } else {
-          throw new Error("Gmail connection did not complete.");
+        try {
+          const result = await connectOwned("gmail", { via: "oauth2" });
+          if (result.status === "connected") {
+            ensureConnectorBinding("gmail", "Gmail", "gmail");
+            setConnectStatus((prev) => ({ ...prev, email: 'connected' }));
+          } else if (result.status === "authorization_required") {
+            const url = (result as { authorize_url?: string }).authorize_url;
+            if (url) window.open(url, "_blank", "noopener,noreferrer");
+          } else {
+            throw new Error("Gmail connection did not complete.");
+          }
+        } catch (err) {
+          const msg = err instanceof Error ? err.message : String(err);
+          if (msg.includes("connector_not_found") || msg.includes("unknown_service")) {
+            throw new Error("The Gmail connector is not available in this workspace yet. Use Generic IMAP/SMTP or CommRails instead.");
+          }
+          throw err;
         }
       } else if (channels.email.provider === "microsoft_365") {
-        const result = await connectOwned("outlook", { via: "oauth2" });
-        if (result.status === "connected") {
-          ensureConnectorBinding("outlook", "Outlook", "outlook");
-          setConnectStatus((prev) => ({ ...prev, email: 'connected' }));
-        } else if (result.status === "authorization_required") {
-          const url = (result as { authorize_url?: string }).authorize_url;
-          if (url) window.open(url, "_blank", "noopener,noreferrer");
-        } else {
-          throw new Error("Outlook connection did not complete.");
-        }
-      } else if (channels.email.provider === "agent_mail") {
-        const key = emailApiKey.trim();
-        if (!key) throw new Error("Enter your AgentMail API key.");
-        const result = await connectOwned("agent-mail", { via: "api_key", api_key: key });
-        if (result.status === "connected") {
-          await sealAgentSecret({ agentId, key: "AGENT_MAIL_API_KEY", value: key });
-          ensureConnectorBinding("agent-mail", "AgentMail", "agent_mail");
-          setConnectStatus((prev) => ({ ...prev, email: 'connected' }));
-        } else {
-          throw new Error("AgentMail connection failed.");
+        try {
+          const result = await connectOwned("outlook", { via: "oauth2" });
+          if (result.status === "connected") {
+            ensureConnectorBinding("outlook", "Outlook", "outlook");
+            setConnectStatus((prev) => ({ ...prev, email: 'connected' }));
+          } else if (result.status === "authorization_required") {
+            const url = (result as { authorize_url?: string }).authorize_url;
+            if (url) window.open(url, "_blank", "noopener,noreferrer");
+          } else {
+            throw new Error("Outlook connection did not complete.");
+          }
+        } catch (err) {
+          const msg = err instanceof Error ? err.message : String(err);
+          if (msg.includes("connector_not_found") || msg.includes("unknown_service")) {
+            throw new Error("The Outlook connector is not available in this workspace yet. Use Generic IMAP/SMTP or CommRails instead.");
+          }
+          throw err;
         }
       } else if (channels.email.provider === "generic_imap") {
         const password = emailPassword.trim();
@@ -217,29 +238,13 @@ export function IdentityChannelsStep({
         const smtpPort = emailSmtpPort.trim() || "587";
         if (!password) throw new Error("Enter the email password so the bot can authenticate.");
         if (!imapHost || !smtpHost) throw new Error("Enter the IMAP and SMTP server hosts.");
-        const result = await connectOwned("generic-email", {
-          via: "custom_credential",
-          values: {
-            email: address,
-            password,
-            imapHost,
-            imapPort,
-            smtpHost,
-            smtpPort,
-          },
-        });
-        if (result.status === "connected") {
-          await sealAgentSecret({ agentId, key: "BOT_EMAIL_ADDRESS", value: address });
-          await sealAgentSecret({ agentId, key: "BOT_EMAIL_PASSWORD", value: password });
-          await sealAgentSecret({ agentId, key: "BOT_EMAIL_IMAP_HOST", value: imapHost });
-          await sealAgentSecret({ agentId, key: "BOT_EMAIL_IMAP_PORT", value: imapPort });
-          await sealAgentSecret({ agentId, key: "BOT_EMAIL_SMTP_HOST", value: smtpHost });
-          await sealAgentSecret({ agentId, key: "BOT_EMAIL_SMTP_PORT", value: smtpPort });
-          ensureConnectorBinding("generic-email", "Generic Email (IMAP/SMTP)", "generic_email");
-          setConnectStatus((prev) => ({ ...prev, email: 'connected' }));
-        } else {
-          throw new Error("Generic email connection failed.");
-        }
+        await sealAgentSecret({ agentId, key: "BOT_EMAIL_ADDRESS", value: address });
+        await sealAgentSecret({ agentId, key: "BOT_EMAIL_PASSWORD", value: password });
+        await sealAgentSecret({ agentId, key: "BOT_EMAIL_IMAP_HOST", value: imapHost });
+        await sealAgentSecret({ agentId, key: "BOT_EMAIL_IMAP_PORT", value: imapPort });
+        await sealAgentSecret({ agentId, key: "BOT_EMAIL_SMTP_HOST", value: smtpHost });
+        await sealAgentSecret({ agentId, key: "BOT_EMAIL_SMTP_PORT", value: smtpPort });
+        setConnectStatus((prev) => ({ ...prev, email: 'connected' }));
       } else {
         const password = emailPassword.trim();
         if (!password) throw new Error("Enter the email password so the bot can authenticate.");
@@ -264,6 +269,21 @@ export function IdentityChannelsStep({
     setConnectError((prev) => ({ ...prev, phone: '' }));
     setConnectStatus((prev) => ({ ...prev, phone: 'idle' }));
     try {
+      if (channels.phone.provider === "vapi") {
+        const result = await provisionAgentPhone(agentId);
+        updateChannels({
+          phone: {
+            ...channels.phone,
+            number: result.number,
+            provider: 'vapi',
+            voiceEnabled: true,
+            smsEnabled: true,
+          },
+        });
+        setConnectStatus((prev) => ({ ...prev, phone: 'connected' }));
+        return;
+      }
+
       const number = channels.phone.number.trim();
       if (!number) throw new Error("Enter the phone number to bind.");
 
@@ -279,7 +299,7 @@ export function IdentityChannelsStep({
           ensureConnectorBinding("twilio", "Twilio", "twilio");
           setConnectStatus((prev) => ({ ...prev, phone: 'connected' }));
         } else {
-          throw new Error("Twilio connection failed.");
+          throw new Error("Twilio connection did not complete.");
         }
       } else if (channels.phone.provider === "telnyx") {
         const key = phoneTelnyxKey.trim();
@@ -291,26 +311,17 @@ export function IdentityChannelsStep({
           ensureConnectorBinding("telnyx", "Telnyx", "telnyx");
           setConnectStatus((prev) => ({ ...prev, phone: 'connected' }));
         } else {
-          throw new Error("Telnyx connection failed.");
+          throw new Error("Telnyx connection did not complete.");
         }
       } else if (channels.phone.provider === "android_bridge") {
         const baseUrl = phoneAndroidBaseUrl.trim();
         const deviceId = phoneAndroidDeviceId.trim();
         if (!baseUrl) throw new Error("Enter the Android Bridge base URL.");
         if (!deviceId) throw new Error("Enter the paired Android device ID.");
-        const result = await connectOwned("android-bridge", {
-          via: "custom_credential",
-          values: { baseUrl, deviceId },
-        });
-        if (result.status === "connected") {
-          await sealAgentSecret({ agentId, key: "BOT_PHONE_NUMBER", value: number });
-          await sealAgentSecret({ agentId, key: "ANDROID_BRIDGE_BASE_URL", value: baseUrl });
-          await sealAgentSecret({ agentId, key: "ANDROID_BRIDGE_DEVICE_ID", value: deviceId });
-          ensureConnectorBinding("android-bridge", "Android Bridge", "android_bridge");
-          setConnectStatus((prev) => ({ ...prev, phone: 'connected' }));
-        } else {
-          throw new Error("Android Bridge connection failed.");
-        }
+        await sealAgentSecret({ agentId, key: "BOT_PHONE_NUMBER", value: number });
+        await sealAgentSecret({ agentId, key: "ANDROID_BRIDGE_BASE_URL", value: baseUrl });
+        await sealAgentSecret({ agentId, key: "ANDROID_BRIDGE_DEVICE_ID", value: deviceId });
+        setConnectStatus((prev) => ({ ...prev, phone: 'connected' }));
       } else if (channels.phone.provider === "photon") {
         const projectId = phonePhotonProjectId.trim();
         const projectSecret = phonePhotonProjectSecret.trim();
@@ -322,7 +333,6 @@ export function IdentityChannelsStep({
         if (phonePhotonLineId.trim()) {
           await sealAgentSecret({ agentId, key: "PHOTON_LINE_ID", value: phonePhotonLineId.trim() });
         }
-        ensureConnectorBinding("photon", "Photon.codes", "photon");
         setConnectStatus((prev) => ({ ...prev, phone: 'connected' }));
       } else {
         await sealAgentSecret({ agentId, key: "BOT_PHONE_NUMBER", value: number });
@@ -509,15 +519,22 @@ export function IdentityChannelsStep({
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="commrails">CommRails</SelectItem>
+                    <SelectItem value="commrails">CommRails (platform email)</SelectItem>
                     <SelectItem value="google_workspace">Gmail / Google Workspace</SelectItem>
                     <SelectItem value="microsoft_365">Outlook / Microsoft 365</SelectItem>
-                    <SelectItem value="agent_mail">AgentMail (API key)</SelectItem>
                     <SelectItem value="generic_imap">Generic IMAP/SMTP</SelectItem>
                     <SelectItem value="custom">Custom</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
+              {channels.email.provider === "commrails" && (
+                <div className="sm:col-span-2 rounded-lg border border-[var(--border-subtle)] bg-[var(--bg-elevated)] p-3">
+                  <p className="text-[12px] text-[var(--text-secondary)]">
+                    CommRails provisions a platform-managed mailbox. The backend generates
+                    the address and credentials; click Connect to allocate one.
+                  </p>
+                </div>
+              )}
               <div className="flex items-center gap-4">
                 <label className="flex items-center gap-2 text-[13px] text-[var(--text-primary)] cursor-pointer">
                   <input
@@ -538,19 +555,7 @@ export function IdentityChannelsStep({
                   Receive
                 </label>
               </div>
-              {channels.email.provider === "agent_mail" && (
-                <div className="space-y-2 sm:col-span-2">
-                  <Label className="text-[12px] text-[var(--text-secondary)]">AgentMail API key</Label>
-                  <Input
-                    type="password"
-                    value={emailApiKey}
-                    onChange={(e) => setEmailApiKey(e.target.value)}
-                    placeholder="am_..."
-                    className="bg-[var(--bg-card)] border-[var(--border-subtle)] text-[var(--text-primary)]"
-                  />
-                </div>
-              )}
-              {(channels.email.provider === "generic_imap" || channels.email.provider === "custom" || channels.email.provider === "commrails") && (
+              {(channels.email.provider === "generic_imap" || channels.email.provider === "custom") && (
                 <div className="space-y-2 sm:col-span-2">
                   <Label className="text-[12px] text-[var(--text-secondary)]">Password</Label>
                   <Input
@@ -603,7 +608,7 @@ export function IdentityChannelsStep({
                 </>
               )}
               <div className="sm:col-span-2 flex justify-end">
-                {agentId && renderConnectButton('email', connectEmail, channels.email.address.trim().length > 0)}
+                {agentId && renderConnectButton('email', connectEmail, channels.email.provider === 'commrails' || channels.email.address.trim().length > 0)}
               </div>
             </div>
           )}
@@ -688,7 +693,7 @@ export function IdentityChannelsStep({
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="vapi">Vapi</SelectItem>
+                    <SelectItem value="vapi">Vapi (platform number)</SelectItem>
                     <SelectItem value="twilio">Twilio</SelectItem>
                     <SelectItem value="telnyx">Telnyx</SelectItem>
                     <SelectItem value="android_bridge">Android Bridge (real device)</SelectItem>
@@ -696,6 +701,14 @@ export function IdentityChannelsStep({
                   </SelectContent>
                 </Select>
               </div>
+              {channels.phone.provider === "vapi" && (
+                <div className="sm:col-span-2 rounded-lg border border-[var(--border-subtle)] bg-[var(--bg-elevated)] p-3">
+                  <p className="text-[12px] text-[var(--text-secondary)]">
+                    Vapi provisions a platform-managed phone number from the pool. Click
+                    Connect to allocate one.
+                  </p>
+                </div>
+              )}
               <div className="flex items-center gap-4">
                 <label className="flex items-center gap-2 text-[13px] text-[var(--text-primary)] cursor-pointer">
                   <input
@@ -816,7 +829,7 @@ export function IdentityChannelsStep({
                 </>
               )}
               <div className="sm:col-span-2 flex justify-end">
-                {agentId && renderConnectButton('phone', connectPhone, channels.phone.number.trim().length > 0)}
+                {agentId && renderConnectButton('phone', connectPhone, channels.phone.provider === 'vapi' || channels.phone.number.trim().length > 0)}
               </div>
             </div>
           )}

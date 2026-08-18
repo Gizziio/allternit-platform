@@ -1,7 +1,24 @@
--- Production tables for autonomous bot primitives.
--- Secrets are encrypted at rest via token_crypto.rs (AES-256-GCM when a key is set).
+-- Session memory + autonomous bot primitives (merged from the two V47 migrations).
+
+-- ── Session memory ───────────────────────────────────────────────────────────
+CREATE TABLE IF NOT EXISTS session_memory (
+    id TEXT PRIMARY KEY,
+    user_id TEXT NOT NULL,
+    session_id TEXT NOT NULL,
+    memory_key TEXT NOT NULL,
+    value TEXT NOT NULL,
+    created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE(user_id, session_id, memory_key)
+);
+
+CREATE INDEX IF NOT EXISTS session_memory_user_session_idx
+    ON session_memory(user_id, session_id);
+CREATE INDEX IF NOT EXISTS session_memory_key_idx
+    ON session_memory(memory_key);
 
 -- ── Agent secrets ────────────────────────────────────────────────────────────
+-- Secrets are encrypted at rest via token_crypto.rs (AES-256-GCM when a key is set).
 CREATE TABLE IF NOT EXISTS agent_secrets (
     id          TEXT PRIMARY KEY,
     agent_id    TEXT NOT NULL,
