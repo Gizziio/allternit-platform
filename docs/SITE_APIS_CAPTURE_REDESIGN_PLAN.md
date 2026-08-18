@@ -128,11 +128,17 @@ The "Site APIs" surface in the Allternit platform is unpolished and does not wor
 ## Verification
 
 - `cargo check -p allternit-api` ✅ passes (warnings only).
-- `cargo test -p allternit-api har_api` ✅ 3 passed.
+- `cargo test -p allternit-api extract_endpoints` ✅ passes.
 - `cargo test -p allternit-api tool_routes` ✅ 21 passed.
 - `pnpm exec tsc --project tsconfig.typecheck.json --noEmit` in `surfaces/ai.allternit.com` reports no errors in touched files (pre-existing `office-*` asset errors remain).
 - `pnpm test -- browser-capture-manager.test.ts` in `surfaces/allternit-desktop` ✅ 94 passed.
 - `pnpm exec wxt build` in `surfaces/allternit-extensions/allternit-extension` ✅ succeeded.
+- **Headless backend smoke test** (`cmd/allternit-api/scripts/test-api-capture.mjs`) ✅ exercises ingest → session → contract → replay → client generation.
+- **Headless Electron capture test** (`surfaces/allternit-desktop/tests/api-capture-headless.spec.ts`) ✅ records httpbin.org traffic through the real preload API and produces a HAR.
+
+## Bug found and fixed during testing
+
+The backend HAR extractor expected snake_case field names (`query_string`, `post_data`, `mime_type`) while Electron and Chrome export standard camelCase HAR (`queryString`, `postData`, `mimeType`). Added `#[serde(rename_all = "camelCase")]` to the HAR structs in `cmd/allternit-api/src/har_api_service.rs`.
 
 ## Open questions
 

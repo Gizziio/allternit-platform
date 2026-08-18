@@ -149,12 +149,14 @@ struct HarLog {
 }
 
 #[derive(Debug, Deserialize)]
+#[serde(rename_all = "camelCase")]
 struct HarEntry {
     request: HarRequest,
     response: HarResponse,
 }
 
 #[derive(Debug, Deserialize)]
+#[serde(rename_all = "camelCase")]
 struct HarRequest {
     method: String,
     url: String,
@@ -167,6 +169,7 @@ struct HarRequest {
 }
 
 #[derive(Debug, Deserialize)]
+#[serde(rename_all = "camelCase")]
 struct HarResponse {
     status: u16,
     #[serde(default)]
@@ -186,6 +189,7 @@ struct HarParam {
 }
 
 #[derive(Debug, Deserialize)]
+#[serde(rename_all = "camelCase")]
 struct HarPostData {
     #[serde(default)]
     mime_type: Option<String>,
@@ -194,6 +198,7 @@ struct HarPostData {
 }
 
 #[derive(Debug, Deserialize)]
+#[serde(rename_all = "camelCase")]
 struct HarContent {
     #[serde(default)]
     text: Option<String>,
