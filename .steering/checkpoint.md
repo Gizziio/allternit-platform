@@ -1,5 +1,38 @@
 # Steering checkpoint
 
+## Site APIs / Cross-surface HAR capture
+
+### Goal
+Implement the cross-surface Site APIs / HAR-derived API capture redesign.
+
+### Just did
+- Added backend persistence, replay proxy, real client generation, and agent tools (`api_capture_record`, `api_capture_stop`, `api_capture_replay`).
+- Created frontend capture adapter (desktop → extension → upload) and migrated store to backend APIs.
+- Added extension capture fallback via `chrome.debugger`/`webRequest`.
+- **Fixed HAR camelCase bug**: backend extractor expected snake_case (`query_string`, `post_data`) but Electron/Chrome export camelCase (`queryString`, `postData`). Added `#[serde(rename_all = "camelCase")]` to HAR structs in `har_api_service.rs`.
+- Added headless smoke tests:
+  - `cmd/allternit-api/scripts/test-api-capture.mjs` — backend ingest → session → contract → replay → client.
+  - `surfaces/allternit-desktop/tests/api-capture-headless.spec.ts` — Electron desktop capture through the preload API without UI screenshots.
+- Both smoke tests pass.
+
+### Verification
+- `cargo check -p allternit-api` ✅
+- `cargo test -p allternit-api extract_endpoints` ✅
+- `cargo test -p allternit-api tool_routes` ✅ 21 passed
+- `pnpm exec tsc` in `surfaces/ai.allternit.com` ✅ no capture-file errors
+- `pnpm test` in `surfaces/allternit-desktop` ✅ 94 passed
+- `pnpm exec wxt build` in extension ✅
+- `node cmd/allternit-api/scripts/test-api-capture.mjs` ✅
+- `pnpm exec playwright test surfaces/allternit-desktop/tests/api-capture-headless.spec.ts` ✅
+
+### Commit / Push status
+- Worktree: `/Users/joe/Desktop/allternit-workspace/allternit-session-site-apis-capture`
+- Branch: `session/site-apis-capture`
+- Changes staged and committed locally: backend HAR service fix, redesign plan, headless smoke tests, backend integration test, removal of flaky e2e spec.
+- **Pending steering approval** before `git push origin session/site-apis-capture` and PR/merge to `main`.
+
+---
+
 ## Wave 2 — Goal, plan, task, validation, and loop runtime (2026-08-17)
 
 ### Goal
