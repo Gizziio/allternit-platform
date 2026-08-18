@@ -389,6 +389,31 @@ export interface AgentSecretRef {
   value?: string;
 }
 
+export interface BotProfile {
+  /** Display name shown in the bot hub and session header (required for packaged bots) */
+  displayName: string;
+  /** Unique stable handle (e.g., 'researcher-v1') */
+  handle?: string;
+  /** Semantic version string of the packaged bot template/configuration */
+  version?: string;
+  /** Short tagline shown on the welcome card */
+  tagline?: string;
+  /** Welcome message when a new session starts */
+  welcomeMessage?: string;
+  /** Starter prompts the user can click to begin a task */
+  starterPrompts?: string[];
+  /** Accent color for the bot's UI chrome (hex) */
+  accentColor?: string;
+  /** Whether this bot participates in group chats */
+  groupChatEnabled?: boolean;
+  /** Default WIH preset ID for new sessions (maps to Rails presets) */
+  defaultPresetId?: string;
+  /** Functional bot category for filtering in the hub (distinct from agent category) */
+  botCategory?: BotCategory;
+  /** Lifecycle state: draft, active, archived, deprecated */
+  lifecycle?: 'draft' | 'active' | 'archived' | 'deprecated';
+}
+
 /**
  * Messaging configuration for cloud orchestration and cross-surface sessions.
  */
@@ -630,6 +655,8 @@ export const agentSchema = z.object({
   isBot: z.boolean().optional(),
   botProfile: z.object({
     displayName: z.string().min(1),
+    handle: z.string().optional(),
+    version: z.string().optional(),
     tagline: z.string().optional(),
     welcomeMessage: z.string().optional(),
     starterPrompts: z.array(z.string()).optional(),
@@ -637,6 +664,7 @@ export const agentSchema = z.object({
     groupChatEnabled: z.boolean().optional(),
     defaultPresetId: z.string().optional(),
     botCategory: z.enum(['research', 'code', 'writing', 'data', 'sales', 'design', 'ops', 'custom']).optional(),
+    lifecycle: z.enum(['draft', 'active', 'archived', 'deprecated']).optional(),
   }).optional(),
   connectorBindings: z.array(agentConnectorBindingSchema).optional(),
   secretRefs: z.array(agentSecretRefSchema).optional(),

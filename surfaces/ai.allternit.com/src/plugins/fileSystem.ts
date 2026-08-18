@@ -130,8 +130,9 @@ const BINARY_FILE_EXTENSIONS = new Set([
 
 const OH_MY_OPENCODE_BUILTIN_COMMANDS = [
   'init-deep',
-  'ralph-loop',
-  'cancel-ralph',
+  // Renamed from 'ralph-loop' / 'cancel-ralph' as part of Wave 2 deprecation (W2-003).
+  'agent-loop',
+  'cancel-agent-loop',
   'ulw-loop',
   'refactor',
   'start-work',
