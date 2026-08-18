@@ -1,5 +1,5 @@
-import { OfficeAgentLoop } from '@allternit/office-ai'
 import type { OfficeAiClient, OfficeAppKey } from '@allternit/allternit-office-suite'
+import { NeedleAgentLoop } from './NeedleAgentLoop'
 
 const OVERRIDES_KEY = 'allternit-office-standalone:model-overrides'
 
@@ -30,25 +30,22 @@ function writeOverrides(overrides: Overrides): void {
 }
 
 /**
- * Standalone AI client for the office surface.
+ * Standalone, no-login AI client for the office surface.
  *
- * Wires the vendored office apps to the Pages Function at /api/agent-chat
- * using the generic OfficeAgentLoop from @allternit/office-ai. The model
- * catalog is intentionally minimal (a single default) because the standalone
- * surface has no platform model catalog; per-app overrides are persisted in
- * localStorage.
+ * Uses Cactus Needle (≈14 MB, browser-local) as the agent loop so the office
+ * apps can route user requests to their tools without any server or API key.
  */
 export function createStandaloneAiClient(): OfficeAiClient {
   return {
     resolveModelId: (appKey: OfficeAppKey) => {
       const overrides = readOverrides()
       const value = overrides[appKey]
-      return value && value !== 'platform' ? value : undefined
+      return value && value !== 'local' ? value : undefined
     },
 
     setModelOverride: (appKey: OfficeAppKey, modelId: string | undefined) => {
       const overrides = readOverrides()
-      if (modelId && modelId !== 'platform') {
+      if (modelId && modelId !== 'local') {
         overrides[appKey] = modelId
       } else {
         delete overrides[appKey]
@@ -58,9 +55,9 @@ export function createStandaloneAiClient(): OfficeAiClient {
 
     getModelOptions: () => [
       {
-        id: 'platform',
-        runtimeId: 'platform',
-        label: 'Default model',
+        id: 'local',
+        runtimeId: 'local',
+        label: 'Local (Cactus Needle)',
       },
     ],
 
@@ -69,10 +66,10 @@ export function createStandaloneAiClient(): OfficeAiClient {
     },
 
     getModelLabel: (value?: string) => {
-      if (!value || value === 'platform') return 'Default model'
+      if (!value || value === 'local') return 'Local (Cactus Needle)'
       return value
     },
 
-    AgentLoop: OfficeAgentLoop as OfficeAiClient['AgentLoop'],
+    AgentLoop: NeedleAgentLoop as OfficeAiClient['AgentLoop'],
   }
 }
