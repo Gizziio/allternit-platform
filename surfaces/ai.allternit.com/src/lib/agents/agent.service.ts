@@ -240,6 +240,7 @@ export async function createAgent(input: CreateAgentInput): Promise<Agent> {
     write_scope: input.writeScope,
     is_bot: input.isBot,
     bot_profile: input.botProfile,
+    brain_id: input.brainId,
     connector_bindings: input.connectorBindings,
     secret_refs: input.secretRefs,
     messaging_config: input.messagingConfig,
@@ -254,6 +255,7 @@ export async function createAgent(input: CreateAgentInput): Promise<Agent> {
       ...(apiInput.config as Record<string, unknown> || {}),
       isBot: true,
       botProfile: input.botProfile,
+      ...(input.brainId ? { brainId: input.brainId } : {}),
     };
   }
 
@@ -390,6 +392,7 @@ export function transformAgentFromApi(apiAgent: unknown): Agent {
       a.botProfile as Agent['botProfile'],
       config.botProfile as Agent['botProfile'],
     ) || undefined,
+    brainId: pick<string>(a.brain_id, a.brainId, config.brainId as string),
     connectorBindings: pick<Agent['connectorBindings']>(
       Array.isArray(a.connector_bindings) ? a.connector_bindings : undefined,
       Array.isArray(a.connectorBindings) ? a.connectorBindings : undefined,
@@ -463,6 +466,7 @@ export async function updateAgent(
   if (updates.writeScope !== undefined) apiUpdates.write_scope = updates.writeScope;
   if (updates.isBot !== undefined) apiUpdates.is_bot = updates.isBot;
   if (updates.botProfile !== undefined) apiUpdates.bot_profile = updates.botProfile;
+  if (updates.brainId !== undefined) apiUpdates.brain_id = updates.brainId;
   if (updates.connectorBindings !== undefined) apiUpdates.connector_bindings = updates.connectorBindings;
   if (updates.secretRefs !== undefined) apiUpdates.secret_refs = updates.secretRefs;
   if (updates.messagingConfig !== undefined) apiUpdates.messaging_config = updates.messagingConfig;

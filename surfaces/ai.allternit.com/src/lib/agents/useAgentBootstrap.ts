@@ -30,6 +30,11 @@ const GIZZI_SEED: AgentDefinition = {
     groupChatEnabled: false,
     botCategory: 'custom',
   },
+  avatar: {
+    type: 'mascot',
+    mascotTemplate: 'gizzi',
+    currentEmotion: 'pleased',
+  },
   character: {
     className: 'Assistant',
     personalityTraits: ['friendly', 'helpful'],

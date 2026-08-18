@@ -177,6 +177,12 @@ export default defineConfig({
         changeOrigin: true,
         rewrite: (path) => path.replace(/^\/local-ai/, ''),
       },
+      // Chat streaming is handled by the local gizzi runtime in dev; the
+      // allternit-api backend does not yet implement /agent-chat.
+      '/api/agent-chat': {
+        target: 'http://127.0.0.1:4096',
+        changeOrigin: true,
+      },
       '/api': {
         target: 'http://127.0.0.1:8013',
         changeOrigin: true,

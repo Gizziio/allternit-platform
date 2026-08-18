@@ -197,6 +197,11 @@ export function useStartBotSession(
         const store = useChatSessionStore.getState();
         store.setActiveSession(sessionId);
 
+        // Open the chat surface immediately so the user sees the session and
+        // streaming indicator instead of a frozen "Starting..." modal while the
+        // local sidecar model loads on its first turn.
+        onSessionStarted?.(sessionId);
+
         // Send the task as the first message so the bot starts working immediately.
         // A small delay ensures the session is active before streaming begins.
         await new Promise((resolve) => window.setTimeout(resolve, 50));
@@ -209,7 +214,6 @@ export function useStartBotSession(
           setError(sandboxError);
         }
 
-        onSessionStarted?.(sessionId);
         return sessionId;
       } catch (err) {
         const message = err instanceof Error ? err.message : 'Failed to start bot task';

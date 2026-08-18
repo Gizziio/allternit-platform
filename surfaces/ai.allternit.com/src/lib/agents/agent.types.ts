@@ -328,6 +328,8 @@ export interface Agent {
   isBot?: boolean;
   /** Bot-specific UX metadata (only present when isBot is true) */
   botProfile?: BotProfile;
+  /** Gizzi brain this bot routes through (chosen from /api/v1/brains) */
+  brainId?: string;
 
   // ── Autonomous Bot primitives ────────────────────────────────────────────
   /** Connectors bound to this agent for autonomous use */
@@ -638,6 +640,7 @@ export const agentSchema = z.object({
     defaultPresetId: z.string().optional(),
     botCategory: z.enum(['research', 'code', 'writing', 'data', 'sales', 'design', 'ops', 'custom']).optional(),
   }).optional(),
+  brainId: z.string().optional(),
   connectorBindings: z.array(agentConnectorBindingSchema).optional(),
   secretRefs: z.array(agentSecretRefSchema).optional(),
   messagingConfig: agentMessagingConfigSchema.optional(),
@@ -729,6 +732,8 @@ export interface CreateAgentInput {
   isBot?: boolean;
   /** Bot-specific UX metadata (only present when isBot is true) */
   botProfile?: BotProfile;
+  /** Gizzi brain this bot routes through (chosen from /api/v1/brains) */
+  brainId?: string;
 
   // ── Autonomous Bot primitives ────────────────────────────────────────────
   /** Connectors bound to this agent for autonomous use */
@@ -783,6 +788,7 @@ const createAgentInputSchema = z.object({
     defaultPresetId: z.string().optional(),
     botCategory: z.enum(['research', 'code', 'writing', 'data', 'sales', 'design', 'ops', 'custom']).optional(),
   }).optional(),
+  brainId: z.string().optional(),
   connectorBindings: z.array(agentConnectorBindingSchema).optional(),
   secretRefs: z.array(agentSecretRefSchema).optional(),
   messagingConfig: agentMessagingConfigSchema.optional(),

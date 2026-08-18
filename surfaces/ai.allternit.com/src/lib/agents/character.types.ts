@@ -196,6 +196,15 @@ export interface AvatarConfig {
   fallbackColor?: string;
   mascotTemplate?: string;
 
+  // Optional Codex-style animated pet/spritesheet companion
+  pet?: {
+    spriteUrl: string;
+    frameWidth: number;
+    frameHeight: number;
+    columns: number;
+    rows: number;
+  };
+
   // UI positioning (for draggable floating avatars)
   position?: { x: number; y: number };
 }
