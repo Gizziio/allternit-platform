@@ -13,6 +13,7 @@ import { SkillsCommand } from "@/cli/commands/skills"
 import { UpgradeCommand } from "@/cli/commands/upgrade"
 import { UninstallCommand } from "@/cli/commands/uninstall"
 import { ModelsCommand } from "@/cli/commands/models"
+import { HardwareCommand } from "@/cli/commands/hardware"
 import { UI } from "@/cli/ui"
 import { Installation } from "@/shared/installation"
 import { NamedErrorBase } from "@allternit/gizzi-util/error.js"
@@ -217,6 +218,7 @@ const cli = yargs(hideBin(process.argv))
   .command(LoginCommand)
   .command(WebCommand)
   .command(ModelsCommand)
+  .command(HardwareCommand)
   .command(StatsCommand)
   .command(StatusCommand)
   .command(ExportCommand)
