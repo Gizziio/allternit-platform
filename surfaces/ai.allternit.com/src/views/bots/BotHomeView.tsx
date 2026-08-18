@@ -544,13 +544,13 @@ export function BotHomeView({ botId }: BotHomeViewProps) {
             if (e.target === e.currentTarget) setIsEditModalOpen(false);
           }}
         >
-          <GlassSurface className="w-full max-w-3xl max-h-[90vh] flex flex-col rounded-2xl overflow-hidden">
+          <div className="w-full max-w-3xl max-h-[90vh] flex flex-col rounded-2xl overflow-hidden bg-[var(--bg-elevated)] border border-[var(--border-subtle)] shadow-2xl">
             <EditAgentForm
               agent={bot}
               onCancel={() => setIsEditModalOpen(false)}
               onSaved={() => setIsEditModalOpen(false)}
             />
-          </GlassSurface>
+          </div>
         </div>
       )}
 
@@ -561,7 +561,7 @@ export function BotHomeView({ botId }: BotHomeViewProps) {
             if (e.target === e.currentTarget) setIsCloudModalOpen(false);
           }}
         >
-          <GlassSurface className="w-full max-w-lg rounded-2xl overflow-hidden p-6">
+          <div className="w-full max-w-lg rounded-2xl overflow-hidden p-6 bg-[var(--bg-elevated)] border border-[var(--border-subtle)] shadow-2xl">
             <div className="flex items-start justify-between gap-4 mb-4">
               <div>
                 <h2 className="text-[18px] font-semibold text-[var(--text-primary)] flex items-center gap-2">
@@ -640,7 +640,7 @@ export function BotHomeView({ botId }: BotHomeViewProps) {
                 Open Runtime
               </Button>
             </div>
-          </GlassSurface>
+          </div>
         </div>
       )}
 
@@ -651,7 +651,7 @@ export function BotHomeView({ botId }: BotHomeViewProps) {
             if (e.target === e.currentTarget) setIsTaskComposerOpen(false);
           }}
         >
-          <GlassSurface className="w-full max-w-2xl rounded-2xl overflow-hidden flex flex-col">
+          <div className="w-full max-w-2xl rounded-2xl overflow-hidden flex flex-col bg-[var(--bg-elevated)] border border-[var(--border-subtle)] shadow-2xl">
             <div className="p-5 border-b border-[var(--border-subtle)] flex items-start justify-between gap-4">
               <div>
                 <h2 className="text-[18px] font-semibold text-[var(--text-primary)] flex items-center gap-2">
@@ -725,7 +725,7 @@ export function BotHomeView({ botId }: BotHomeViewProps) {
                 </div>
               </div>
             </div>
-          </GlassSurface>
+          </div>
         </div>
       )}
     </div>

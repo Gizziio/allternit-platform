@@ -7,6 +7,8 @@ struct ToolOptions: Encodable, Sendable {
     let research: Bool
     /// "auto" | "on_demand" | "always" (ToolAccess raw values).
     let toolAccess: String
+    /// Optional response style override: "formal" | "creative" | "technical".
+    let style: String?
 }
 
 /// One composer-staged attachment in the agent-chat body. `url` is the

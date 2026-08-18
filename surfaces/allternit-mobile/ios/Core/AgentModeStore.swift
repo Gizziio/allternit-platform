@@ -117,11 +117,26 @@ final class AgentModeStore: ObservableObject {
         defaults.set(enabled, forKey: Keys.enabled(mode))
         if enabled {
             isAgentModeDeckExpanded[mode] = true
+            // Mount the default bot for this surface so the Gizzi mascot
+            // immediately becomes the selected bot's avatar and the composer
+            // is ready to create an agent session.
+            if selectedAgentId(for: mode) == nil,
+               let defaultAgent = defaultAgent(for: mode) {
+                selectAgent(defaultAgent, for: mode)
+            }
         }
     }
 
     func toggleAgent(for mode: AppMode) {
         setAgentEnabled(!isAgentEnabled(for: mode), for: mode)
+    }
+
+    /// The default bot for a surface: the primary agent if it supports the
+    /// surface, otherwise the first visible agent. nil when the registry is
+    /// empty — the backend will bind the session to its own default.
+    func defaultAgent(for mode: AppMode) -> AgentRecord? {
+        let surfaceAgents = agentsForSurface(mode)
+        return surfaceAgents.first { $0.isPrimary } ?? surfaceAgents.first
     }
 
     func isAgentModeDeckExpanded(for mode: AppMode) -> Bool {

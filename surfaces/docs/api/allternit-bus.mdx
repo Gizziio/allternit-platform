@@ -1,0 +1,473 @@
+---
+title: 'AllternitBus API'
+description: 'Messaging, secrets, identity channels, and connector resolution for autonomous agents on the Allternit platform.'
+---
+
+## Overview
+
+The AllternitBus API provides the runtime surface agents use to send and receive messages, store encrypted secrets, resolve connector credentials, and manage identity channels such as email, phone, and wallet addresses. All authenticated routes are mounted under `/api/v1` and require a valid bearer token via the platform auth middleware. The public inbound webhook is mounted at `/webhooks/photon` and is called server-to-server by Photon.codes.
+
+## Base URL
+
+Authenticated surface:
+
+```
+https://api.allternit.com/api/v1
+```
+
+Public webhook surface:
+
+```
+https://api.allternit.com/webhooks/photon
+```
+
+For local development:
+
+```
+http://127.0.0.1:8013/api/v1
+http://127.0.0.1:8013/webhooks/photon
+```
+
+## Authentication
+
+All authenticated routes require a valid bearer token in the `Authorization` header. The inbound Photon webhook is authenticated server-to-server by Photon.codes and does not carry a Clerk session. See [Authentication](/api/authentication) for details.
+
+## Endpoints
+
+| Method | Path | Description |
+|--------|------|-------------|
+| `POST` | `/api/v1/photon/agents/:agent_id/inbox` | Deliver a message to an agent inbox. |
+| `GET` | `/api/v1/photon/agents/:agent_id/inbox` | List messages in an agent inbox. |
+| `PUT` | `/api/v1/agents/:agent_id/secrets/:key` | Set or update an encrypted agent secret. |
+| `POST` | `/api/v1/agents/:agent_id/secrets/resolve` | Resolve one or more agent secrets by reference. |
+| `POST` | `/api/v1/agents/:agent_id/connectors/resolve` | Resolve connector credentials for an agent. |
+| `GET` | `/api/v1/agents/:agent_id/identity` | Get an agent's identity channels. |
+| `POST` | `/api/v1/agents/:agent_id/identity/email` | Provision an email address for an agent. |
+| `POST` | `/api/v1/agents/:agent_id/identity/phone` | Provision a phone number for an agent. |
+| `POST` | `/api/v1/photon/sessions/:session_id/bridge` | Bridge a session to another surface. |
+| `POST` | `/webhooks/photon` | Public webhook for inbound Photon messages. |
+
+## Message inbox
+
+### Send a message
+
+```http
+POST /api/v1/photon/agents/:agent_id/inbox
+```
+
+Delivers a message to the agent's inbox. The route path is kept for backward compatibility with the Photon.codes integration.
+
+#### Request body
+
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| `from` | string | Yes | Sender identifier. |
+| `content` | string | Yes | Message body. |
+| `surface` | string | No | Surface or channel the message arrived on. |
+
+#### Example request
+
+```bash
+curl -X POST https://api.allternit.com/api/v1/photon/agents/agent_018f3a7c.../inbox \
+  -H "Authorization: Bearer $TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "from": "user_2d9e...",
+    "content": "Please summarize the latest report.",
+    "surface": "chat"
+  }'
+```
+
+#### Example response
+
+```json
+{
+  "id": "msg_7a1b...",
+  "status": "delivered"
+}
+```
+
+### List inbox messages
+
+```http
+GET /api/v1/photon/agents/:agent_id/inbox
+```
+
+Returns messages for the agent, newest first.
+
+#### Query parameters
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `since` | string | ISO 8601 timestamp; only return messages created after this time. |
+| `limit` | integer | Maximum number of messages (default `100`, max `500`). |
+
+#### Example request
+
+```bash
+curl -H "Authorization: Bearer $TOKEN" \
+  "https://api.allternit.com/api/v1/photon/agents/agent_018f3a7c.../inbox?limit=10"
+```
+
+#### Example response
+
+```json
+{
+  "agent_id": "agent_018f3a7c...",
+  "messages": [
+    {
+      "id": "msg_7a1b...",
+      "from": "user_2d9e...",
+      "to": "agent_018f3a7c...",
+      "content": "Please summarize the latest report.",
+      "surface": "chat",
+      "created_at": "2026-08-13T14:22:00Z"
+    }
+  ]
+}
+```
+
+## Inbound webhook
+
+### Receive an inbound message
+
+```http
+POST /webhooks/photon
+```
+
+Public webhook called by Photon.codes when an inbound SMS or message arrives. The payload is routed to the agent whose identity channel matches the `to` phone number. No bearer token is required.
+
+#### Request body
+
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| `from` | string | Yes | Originating address. |
+| `to` | string | Yes | Destination phone number. |
+| `body` | string | Yes | Message body. |
+| `channel` | string | Yes | Channel the message arrived on. |
+| `message_id` | string | Yes | External message identifier. |
+
+#### Example request
+
+```bash
+curl -X POST https://api.allternit.com/webhooks/photon \
+  -H "Content-Type: application/json" \
+  -d '{
+    "from": "+15551234567",
+    "to": "+15559876543",
+    "body": "Hello, can you help me?",
+    "channel": "sms",
+    "message_id": "photon_msg_9c1d..."
+  }'
+```
+
+#### Example response
+
+```json
+{
+  "status": "accepted"
+}
+```
+
+## Secrets
+
+### Set a secret
+
+```http
+PUT /api/v1/agents/:agent_id/secrets/:key
+```
+
+Stores an encrypted secret value for the agent. Values are sealed at rest via `token_crypto`. If a secret with the same key already exists, it is overwritten.
+
+#### Request body
+
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| `value` | string | Yes | Secret value to encrypt and store. |
+| `name` | string | No | Human-readable name; defaults to `:key`. |
+| `description` | string | No | Optional description. |
+| `required` | boolean | No | Whether the secret is required for agent operation. |
+
+#### Example request
+
+```bash
+curl -X PUT https://api.allternit.com/api/v1/agents/agent_018f3a7c.../secrets/PHOTON_API_KEY \
+  -H "Authorization: Bearer $TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "value": "sk_live_...",
+    "name": "Photon API Key",
+    "description": "Project secret for outbound messaging.",
+    "required": true
+  }'
+```
+
+#### Example response
+
+```
+204 No Content
+```
+
+### Resolve secrets
+
+```http
+POST /api/v1/agents/:agent_id/secrets/resolve
+```
+
+Decrypts and returns values for the requested secret references. Required secrets that are missing or cannot be decrypted are reported in `missing` and `errors`.
+
+#### Request body
+
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| `refs` | array | Yes | List of secret references to resolve. |
+
+Each reference:
+
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| `name` | string | Yes | Human-readable name. |
+| `key` | string | Yes | Stored secret key. |
+| `required` | boolean | No | Whether absence is reported as missing. |
+
+#### Example request
+
+```bash
+curl -X POST https://api.allternit.com/api/v1/agents/agent_018f3a7c.../secrets/resolve \
+  -H "Authorization: Bearer $TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "refs": [
+      { "name": "Photon API Key", "key": "PHOTON_API_KEY", "required": true }
+    ]
+  }'
+```
+
+#### Example response
+
+```json
+{
+  "secrets": [
+    {
+      "key": "PHOTON_API_KEY",
+      "value": "sk_live_...",
+      "source": "vault"
+    }
+  ],
+  "missing": [],
+  "errors": []
+}
+```
+
+## Connectors
+
+### Resolve connector credentials
+
+```http
+POST /api/v1/agents/:agent_id/connectors/resolve
+```
+
+Resolves live credentials for the requested connector bindings. The route first looks up a connected `connector_connections` row for the caller, then falls back to legacy `allternit_vault_credentials` that belong to the agent and user.
+
+#### Request body
+
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| `bindings` | array | Yes | Connector bindings to resolve. |
+
+Each binding:
+
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| `connector_id` | string | Yes | Connector identifier. |
+| `provider` | string | Yes | Provider slug. |
+| `label` | string | No | Display label used in missing-credential messages. |
+| `capabilities` | array | No | Capability strings. |
+| `autonomous` | boolean | No | Whether the connector may act autonomously. |
+| `allowed_actions` | array | No | Action allow-list. |
+
+#### Example request
+
+```bash
+curl -X POST https://api.allternit.com/api/v1/agents/agent_018f3a7c.../connectors/resolve \
+  -H "Authorization: Bearer $TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "bindings": [
+      {
+        "connector_id": "conn_4d5e...",
+        "provider": "photon",
+        "label": "Photon SMS",
+        "required": true
+      }
+    ]
+  }'
+```
+
+#### Example response
+
+```json
+{
+  "credentials": [
+    {
+      "connector_id": "conn_4d5e...",
+      "provider": "photon",
+      "key": "PHOTON_ACCESS_TOKEN",
+      "value": "sk_live_...",
+      "source": "connector_connections"
+    }
+  ],
+  "missing": [],
+  "errors": []
+}
+```
+
+## Identity channels
+
+### Get identity channels
+
+```http
+GET /api/v1/agents/:agent_id/identity
+```
+
+Returns the agent's bound identity channels: email, phone, and wallet. Channels that have not been provisioned are returned as `null`.
+
+#### Example request
+
+```bash
+curl -H "Authorization: Bearer $TOKEN" \
+  https://api.allternit.com/api/v1/agents/agent_018f3a7c.../identity
+```
+
+#### Example response
+
+```json
+{
+  "agent_id": "agent_018f3a7c...",
+  "email": {
+    "address": "agent_018f3a7c...@bots.allternit.com",
+    "provider": "custom",
+    "sendEnabled": true,
+    "receiveEnabled": true
+  },
+  "phone": {
+    "number": "+15559876543",
+    "provider": "vapi",
+    "voiceEnabled": true,
+    "smsEnabled": true
+  },
+  "wallet": null
+}
+```
+
+### Provision email
+
+```http
+POST /api/v1/agents/:agent_id/identity/email
+```
+
+Provisions an email address for the agent using the domain configured in `ALLTERNIT_BOT_EMAIL_DOMAIN`.
+
+#### Example request
+
+```bash
+curl -X POST https://api.allternit.com/api/v1/agents/agent_018f3a7c.../identity/email \
+  -H "Authorization: Bearer $TOKEN"
+```
+
+#### Example response
+
+```json
+{
+  "address": "agent_018f3a7c...@bots.allternit.com",
+  "provider": "custom"
+}
+```
+
+### Provision phone
+
+```http
+POST /api/v1/agents/:agent_id/identity/phone
+```
+
+Assigns a phone number to the agent from the comma-separated pool in `ALLTERNIT_BOT_PHONE_POOL`. The first number not already assigned to another agent is chosen.
+
+#### Example request
+
+```bash
+curl -X POST https://api.allternit.com/api/v1/agents/agent_018f3a7c.../identity/phone \
+  -H "Authorization: Bearer $TOKEN"
+```
+
+#### Example response
+
+```json
+{
+  "number": "+15559876543",
+  "provider": "vapi"
+}
+```
+
+## Cross-surface bridge
+
+### Bridge a session
+
+```http
+POST /api/v1/photon/sessions/:session_id/bridge
+```
+
+Requests a cross-surface bridge for a session. The route path is kept for backward compatibility. The payload is echoed back with a `bridged` status.
+
+#### Request body
+
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| `target_surface` | string | Yes | Surface to bridge the session to. |
+| `payload` | object | Yes | Opaque bridge payload. |
+
+#### Example request
+
+```bash
+curl -X POST https://api.allternit.com/api/v1/photon/sessions/sess_9c1d.../bridge \
+  -H "Authorization: Bearer $TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "target_surface": "cowork",
+    "payload": { "thread_id": "thread_3f8a..." }
+  }'
+```
+
+#### Example response
+
+```json
+{
+  "session_id": "sess_9c1d...",
+  "target_surface": "cowork",
+  "status": "bridged",
+  "payload": { "thread_id": "thread_3f8a..." }
+}
+```
+
+## Error codes
+
+| Status | Code | Meaning |
+|--------|------|---------|
+| `200 OK` | — | Request succeeded. |
+| `202 Accepted` | — | Message or bridge accepted for processing. |
+| `204 No Content` | — | Secret stored successfully. |
+| `400 Bad Request` | `invalid_key` | Secret key cannot be empty. |
+| `400 Bad Request` | `empty_value` | Secret value cannot be empty. |
+| `401 Unauthorized` | — | Missing or invalid bearer token. |
+| `403 Forbidden` | `forbidden` | Agent does not belong to the caller. |
+| `404 Not Found` | `not_found` | Agent not found. |
+| `409 Conflict` | `phone_pool_exhausted` | No phone numbers left in the configured pool. |
+| `500 Internal Server Error` | `internal_error` | Unexpected server error. |
+| `501 Not Implemented` | `email_domain_not_configured` | `ALLTERNIT_BOT_EMAIL_DOMAIN` is not set. |
+| `501 Not Implemented` | `phone_pool_not_configured` | `ALLTERNIT_BOT_PHONE_POOL` is not set. |
+| `501 Not Implemented` | `phone_pool_empty` | `ALLTERNIT_BOT_PHONE_POOL` is empty. |
+
+## Related pages
+
+- [Agents API](/api/agents)
+- [Authentication](/api/authentication)
+- [Connectors API](/api/connectors)

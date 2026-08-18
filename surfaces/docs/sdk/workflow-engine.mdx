@@ -1,0 +1,352 @@
+---
+title: Workflow Engine SDK
+description: Define, execute, and visualize DAG-based workflows with the Allternit Workflow Engine SDK.
+---
+
+# Workflow Engine SDK
+
+The Workflow Engine SDK (`@allternit/workflow-engine`) is a TypeScript library for defining and running directed acyclic graph (DAG) workflows. It provides a lightweight engine, a parallel task scheduler, and visualizers that export workflows to SVG, Mermaid, or Graphviz.
+
+## Overview
+
+Use this SDK when you want to:
+
+- Build deterministic, multi-step automation pipelines in TypeScript.
+- Orchestrate HTTP requests, transforms, conditional branches, delays, and loops from a single workflow graph.
+- Execute workflows locally with built-in concurrency controls and lifecycle hooks.
+- Render workflow definitions as diagrams for documentation or a visual editor.
+
+## Installation
+
+```bash
+npm install @allternit/workflow-engine
+```
+
+## Quick start
+
+```typescript
+import { createWorkflowEngine } from '@allternit/workflow-engine';
+
+const engine = createWorkflowEngine();
+
+engine.registerWorkflow({
+  id: 'data-pipeline',
+  name: 'Data Pipeline',
+  version: '1.0.0',
+  nodes: [
+    { id: 'trigger', type: 'trigger:webhook', name: 'Webhook Trigger' },
+    {
+      id: 'fetch',
+      type: 'http:request',
+      name: 'Fetch Data',
+      config: { method: 'GET' },
+    },
+    {
+      id: 'filter',
+      type: 'transform:filter',
+      name: 'Filter Items',
+      config: { condition: 'item.active === true' },
+    },
+    { id: 'output', type: 'output:result', name: 'Return Results' },
+  ],
+  connections: [
+    { id: 'c1', source: 'trigger', target: 'fetch' },
+    { id: 'c2', source: 'fetch', target: 'filter' },
+    { id: 'c3', source: 'filter', target: 'output' },
+  ],
+});
+
+const execution = await engine.execute('data-pipeline', {
+  url: 'https://api.allternit.com/items',
+});
+
+console.log(execution.status); // 'completed'
+console.log(execution.outputs);
+```
+
+## Core concepts
+
+### Workflow
+
+A workflow is a declarative DAG made of nodes and connections. It is registered by ID and version, then executed by calling `engine.execute(workflowId, inputs)`. Each execution receives its own execution ID and isolated context.
+
+### Nodes and connections
+
+Nodes are the units of work. Connections describe the directed edges between them. The engine starts with nodes that have no incoming connections, then walks the graph as each node completes.
+
+### Execution context
+
+Every workflow execution maintains a context that carries workflow variables, node results, and the execution path. Node executors receive this context plus resolved inputs, and return a result object that downstream nodes can consume.
+
+### Scheduler
+
+The scheduler manages parallel task submission, concurrency limits, and cancellation. You can use it directly for advanced scenarios or let the engine manage execution for you.
+
+### Visualizer
+
+The visualizer computes layered layouts and exports them to SVG, Mermaid, or Graphviz DOT format for embedding in documentation or a UI canvas.
+
+## Built-in node types
+
+### Triggers
+
+| Type | Description |
+|------|-------------|
+| `trigger:manual` | Manual or API trigger. |
+| `trigger:schedule` | Scheduled execution trigger. |
+| `trigger:webhook` | HTTP webhook trigger. |
+
+### Transforms
+
+| Type | Description |
+|------|-------------|
+| `transform:map` | Transform data with a JavaScript expression. |
+| `transform:filter` | Filter array items with a condition. |
+
+### Logic
+
+| Type | Description |
+|------|-------------|
+| `condition:if` | Branch execution based on a boolean expression. |
+| `loop:for-each` | Iterate over an array of items. |
+
+### Actions
+
+| Type | Description |
+|------|-------------|
+| `http:request` | Make an HTTP request with configurable method, headers, and timeout. |
+| `delay:wait` | Pause execution for a number of milliseconds. |
+| `output:result` | Set workflow output. |
+| `output:log` | Log a message to the console. |
+
+## Engine configuration
+
+```typescript
+const engine = createWorkflowEngine({
+  maxConcurrentExecutions: 10,
+  defaultTimeout: 300000,
+  enableHistory: true,
+  historyRetentionDays: 7,
+  hooks: {
+    beforeExecute: async (execution) => {
+      console.log('Starting', execution.id);
+    },
+    afterExecute: async (execution) => {
+      console.log('Finished', execution.status);
+    },
+    onError: async (error) => {
+      console.error('Workflow error:', error.message);
+    },
+  },
+});
+```
+
+## Execution lifecycle
+
+```typescript
+const execution = await engine.execute('data-pipeline', { url: '...' });
+
+// Inspect state at any time
+const state = engine.getExecution(execution.id);
+console.log(state?.status);
+
+// Pause, resume, or cancel
+engine.pauseExecution(execution.id);
+engine.resumeExecution(execution.id);
+engine.cancelExecution(execution.id);
+```
+
+Execution statuses:
+
+| Status | Meaning |
+|--------|---------|
+| `pending` | Waiting to start. |
+| `running` | Currently executing. |
+| `paused` | Paused and resumable. |
+| `completed` | Finished successfully. |
+| `failed` | Finished with an error. |
+| `cancelled` | Cancelled before completion. |
+| `timeout` | Exceeded the execution timeout. |
+
+## Conditional branching
+
+Add a `condition` property to a connection to route execution dynamically:
+
+```typescript
+connections: [
+  { id: 'yes', source: 'check', target: 'send-alert', condition: 'result.allowed === true' },
+  { id: 'no', source: 'check', target: 'skip', condition: 'result.allowed !== true' },
+];
+```
+
+The condition is evaluated against the source node's result and the current execution context.
+
+## Input and output mappings
+
+Map workflow variables into node inputs using expressions:
+
+```typescript
+{
+  id: 'fetch',
+  type: 'http:request',
+  name: 'Fetch Items',
+  inputs: [
+    { target: 'url', source: '${inputs.url}' },
+    { target: 'headers', source: '${inputs.headers}', default: {} },
+  ],
+}
+```
+
+Workflow outputs are collected automatically from every `output:result` node at the end of execution.
+
+## Custom node types
+
+Register your own node types to extend the engine:
+
+```typescript
+engine.registerNodeType({
+  type: 'custom:processor',
+  category: 'custom',
+  displayName: 'Data Processor',
+  description: 'Process data with custom logic',
+  inputs: [{ name: 'data', type: 'object', required: true }],
+  outputs: [{ name: 'result', type: 'object' }],
+  configSchema: [
+    { name: 'multiplier', type: 'number', default: 1 },
+  ],
+  executor: async (node, context, inputs) => {
+    const multiplier = (node.config?.multiplier as number) || 1;
+    const result = (inputs.data as number) * multiplier;
+    return { result };
+  },
+});
+```
+
+## Scheduler
+
+Use the scheduler directly when you need fine-grained control over task concurrency:
+
+```typescript
+import { createScheduler } from '@allternit/workflow-engine';
+
+const scheduler = createScheduler({
+  maxConcurrency: 5,
+  defaultTimeout: 30000,
+  enablePriority: true,
+});
+
+await scheduler.submit({
+  id: 'task-1',
+  node: workflowNode,
+  execution: workflowExecution,
+  priority: 10,
+});
+
+const status = scheduler.getStatus();
+console.log(status.running, status.queued);
+```
+
+| Method | Description |
+|--------|-------------|
+| `submit(task)` | Queue a task for execution. |
+| `submitAll(tasks)` | Queue multiple tasks in parallel. |
+| `cancel(taskId)` | Cancel a queued or running task. |
+| `getStatus()` | Get running, queued, completed, and failed counts. |
+| `pause()` | Pause processing new tasks. |
+| `resume()` | Resume processing. |
+
+## Visualization
+
+```typescript
+import { createVisualizer } from '@allternit/workflow-engine';
+
+const visualizer = createVisualizer({
+  width: 1200,
+  height: 800,
+  autoLayout: true,
+});
+
+const svg = visualizer.toSVG(workflow);
+const mermaid = visualizer.toMermaid(workflow);
+const dot = visualizer.toDOT(workflow);
+```
+
+The visualizer performs a layered auto-layout based on topological order and assigns colors and icons for built-in node types.
+
+## Engine methods
+
+| Method | Description |
+|--------|-------------|
+| `registerWorkflow(workflow)` | Register a workflow definition. |
+| `getWorkflow(id)` | Retrieve a registered workflow. |
+| `listWorkflows()` | List all registered workflows. |
+| `deleteWorkflow(id)` | Remove a registered workflow. |
+| `execute(workflowId, inputs?)` | Start a new execution. |
+| `getExecution(executionId)` | Get execution state. |
+| `cancelExecution(executionId)` | Cancel a running execution. |
+| `pauseExecution(executionId)` | Pause a running execution. |
+| `resumeExecution(executionId)` | Resume a paused execution. |
+| `registerNodeType(nodeType)` | Register a custom node type. |
+| `getNodeType(type)` | Retrieve a registered node type. |
+
+## Types
+
+All workflow types are exported for TypeScript users:
+
+```typescript
+import {
+  Workflow,
+  WorkflowNode,
+  Connection,
+  WorkflowExecution,
+  ExecutionContext,
+  NodeType,
+  NodeExecutor,
+  WorkflowEngineConfig,
+  WorkflowHooks,
+  ParameterSchema,
+  InputMapping,
+  OutputMapping,
+} from '@allternit/workflow-engine';
+```
+
+## Error handling
+
+Errors are captured per node and surfaced on the execution object:
+
+```typescript
+const execution = await engine.execute('data-pipeline');
+
+if (execution.status === 'failed') {
+  console.error(execution.error?.code);
+  console.error(execution.error?.message);
+  console.error(execution.error?.nodeId);
+}
+```
+
+Common errors:
+
+| Scenario | Behavior |
+|----------|----------|
+| Unknown workflow ID | Throws `Workflow not found: <id>`. |
+| Unknown node type | Throws `Unknown node type: <type>`. |
+| Missing executor | Throws `No executor for node type: <type>`. |
+| Missing `expression` on `transform:map` | Throws `Expression required`. |
+| Max concurrent executions | Throws `Max concurrent executions reached`. |
+
+## Global instances
+
+For convenience, the package exports pre-created singletons:
+
+```typescript
+import { globalWorkflowEngine, globalScheduler, globalVisualizer } from '@allternit/workflow-engine';
+```
+
+These are useful for scripts and small prototypes. For production services, prefer `createWorkflowEngine()` and `createScheduler()` so instances remain isolated.
+
+## Related pages
+
+- [Workflows API](/api/workflows) — cloud workflow definitions and executions
+- [Orchestration](/core/orchestration) — platform orchestration services
+- [TypeScript SDK](/sdk/typescript) — general Allternit TypeScript client
+- [Computer Use SDK](/sdk/computer-use) — browser and desktop automation SDK

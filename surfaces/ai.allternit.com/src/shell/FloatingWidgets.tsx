@@ -25,6 +25,10 @@ interface RailControlsProps {
   agentActivityUnreadCount?: number;
   onModeHover?: (mode: AppMode | null) => void;
   onCollapsedHover?: (hovered: boolean) => void;
+  onBack?: () => void;
+  onForward?: () => void;
+  canGoBack?: boolean;
+  canGoForward?: boolean;
 }
 
 interface ModeButton {
@@ -52,6 +56,10 @@ export function RailControls({
   agentActivityUnreadCount = 0,
   onModeHover,
   onCollapsedHover,
+  onBack,
+  onForward,
+  canGoBack = true,
+  canGoForward = true,
 }: RailControlsProps): React.ReactNode {
   const [showCreateMenu, setShowCreateMenu] = useState(false);
   const [collapsedHovered, setCollapsedHovered] = useState(false);
@@ -89,19 +97,15 @@ export function RailControls({
               "flex items-center gap-0.5 rounded-lg transition-all duration-200",
               collapsedHovered
                 ? "bg-[var(--shell-control-bg)] border border-solid border-[var(--border-subtle)] px-1 py-0.5"
-                : "border border-solid border-transparent"
+                : "bg-[var(--shell-control-bg)]/60 border border-solid border-transparent"
             )}
           >
-            {collapsedHovered && (
-              <>
-                <TitleBarButton onClick={() => window.history.back()} title="Back">
-                  <CaretLeft size={15} weight="bold" />
-                </TitleBarButton>
-                <TitleBarButton onClick={() => window.history.forward()} title="Forward">
-                  <CaretRight size={15} weight="bold" />
-                </TitleBarButton>
-              </>
-            )}
+            <TitleBarButton onClick={onBack} title="Back" disabled={!canGoBack}>
+              <CaretLeft size={15} weight="bold" />
+            </TitleBarButton>
+            <TitleBarButton onClick={onForward} title="Forward" disabled={!canGoForward}>
+              <CaretRight size={15} weight="bold" />
+            </TitleBarButton>
             <TitleBarButton
               onClick={onToggleRail}
               title="Expand Sidebar"
@@ -166,11 +170,11 @@ export function RailControls({
         style={{ paddingLeft: trafficLightClearance }}
       >
         <div className="flex items-center gap-0.5 [WebkitAppRegion:no-drag]">
-          <TitleBarButton onClick={() => window.history.back()} title="Back">
+          <TitleBarButton onClick={onBack} title="Back" disabled={!canGoBack}>
             <CaretLeft size={15} weight="bold" />
           </TitleBarButton>
 
-          <TitleBarButton onClick={() => window.history.forward()} title="Forward">
+          <TitleBarButton onClick={onForward} title="Forward" disabled={!canGoForward}>
             <CaretRight size={15} weight="bold" />
           </TitleBarButton>
 
@@ -231,17 +235,20 @@ function TitleBarButton({
   children,
   onClick,
   title,
+  disabled,
 }: {
   children: React.ReactNode;
   onClick?: () => void;
   title?: string;
+  disabled?: boolean;
 }): React.ReactNode {
   return (
     <button type="button"
       onClick={onClick}
       onMouseDown={(e) => e.stopPropagation()}
       title={title}
-      className="bg-transparent border-none rounded-md w-11 h-11 md:w-7 md:h-7 flex items-center justify-center text-[var(--shell-item-muted)] cursor-pointer transition-all duration-150 shrink-0 [WebkitAppRegion:no-drag] hover:bg-[var(--shell-item-hover)] hover:text-[var(--shell-item-fg)]"
+      disabled={disabled}
+      className="bg-transparent border-none rounded-md w-11 h-11 md:w-7 md:h-7 flex items-center justify-center text-[var(--shell-item-muted)] cursor-pointer transition-all duration-150 shrink-0 [WebkitAppRegion:no-drag] hover:bg-[var(--shell-item-hover)] hover:text-[var(--shell-item-fg)] disabled:opacity-40 disabled:cursor-not-allowed"
     >
       {children}
     </button>

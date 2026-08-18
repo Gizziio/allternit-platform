@@ -76,6 +76,7 @@ import {
 } from '@/lib/agents';
 import { getBotDisplayName } from '@/lib/bots/bot-profile';
 import { useActiveChatSession } from './ChatSessionStore';
+import { useChatStore } from './ChatStore';
 import { AgentModeGizzi } from './AgentModeGizzi';
 import { getAgentModeSurfaceTheme } from './agentModeSurfaceTheme';
 import { useRecordingStore } from '@/stores/recording.store';
@@ -85,6 +86,7 @@ import { TaskBar } from './components/TaskBar';
 import { ModeDock, MODE_TABS, SURFACE_MODES } from './components/ModeDock';
 import { TemplateGallery } from './components/TemplateGallery';
 import { SwarmSubModeTabs } from './components/SwarmSubModeTabs';
+import { ComposerPlusSheet, type ToolAccessLevel, type ResponseStyle } from './components/ComposerPlusSheet';
 import { MiroFishPanel } from './panels/MiroFishPanel';
 import { useMiroFishRunStore } from '@/stores/mirofish-run.store';
 import { BottomDock } from './components/BottomDock';
@@ -339,34 +341,6 @@ const ACTION_CATEGORIES = [
   },
 ];
 
-const PLUS_MENU_ITEMS: ComposerMenuItem[] = [
-  { id: 'files', label: 'Add files or photos', icon: <ImageIcon size={16} /> },
-  {
-    id: 'project',
-    label: 'Add to project',
-    icon: <Folder size={16} />,
-    hasSubmenu: true,
-    submenuItems: [
-      { id: 'new-project', label: 'Start a new project', icon: <Plus size={14} /> },
-      { id: 'existing-project', label: 'How to use Allternit', icon: <FileText size={14} /> },
-    ]
-  },
-  { id: 'github', label: 'Add from GitHub', icon: <Github size={16} /> },
-  { id: 'web', label: 'Web search', icon: <Globe size={16} />, isActive: true },
-  {
-    id: 'style',
-    label: 'Use style',
-    icon: <PenTool size={16} />,
-    hasSubmenu: true,
-    submenuItems: [
-      { id: 'formal', label: 'Formal' },
-      { id: 'creative', label: 'Creative' },
-      { id: 'technical', label: 'Technical' },
-    ]
-  },
-  { id: 'connectors', label: 'Add connectors', icon: <Lightning size={16} /> },
-];
-
 function getTextareaCaretPosition(
   textarea: HTMLTextAreaElement,
   text: string,
@@ -462,8 +436,13 @@ export function ChatComposer({
   const [activeCategory, setActiveCategory] = useState<string | null>(null);
   const [showPlusMenu, setShowPlusMenu] = useState(false);
   const [webSearchEnabled, setWebSearchEnabled] = useState(false);
-  const [activeStyle, setActiveStyle] = useState<'formal' | 'creative' | 'technical' | null>(null);
-  const [showGitHubInput, setShowGitHubInput] = useState(false);
+  const [researchEnabled, setResearchEnabled] = useState(false);
+  const [toolAccess, setToolAccess] = useState<ToolAccessLevel>('all');
+  const [activeStyle, setActiveStyle] = useState<ResponseStyle | null>(null);
+  const chatProjects = useChatStore((s) => s.projects);
+  const chatActiveProjectId = useChatStore((s) => s.activeProjectId);
+  const chatSetActiveProject = useChatStore((s) => s.setActiveProject);
+  const chatCreateProject = useChatStore((s) => s.createProject);
   const [githubUrl, setGithubUrl] = useState('');
   const [githubLoading, setGithubLoading] = useState(false);
   const [showAgentMenu, setShowAgentMenu] = useState(false);
@@ -471,7 +450,6 @@ export function ChatComposer({
   const [showModeSelectorMenu, setShowModeSelectorMenu] = useState(false);
   const [showProviderConnect, setShowProviderConnect] = useState(false);
   const [showOpenClawImportDialog, setShowOpenClawImportDialog] = useState(false);
-  const [activeSubMenu, setActiveSubMenu] = useState<string | null>(null);
   const [openClawCandidates, setOpenClawCandidates] = useState<OpenClawDiscoveredAgent[]>([]);
   const [isLoadingOpenClawCandidates, setIsLoadingOpenClawCandidates] = useState(false);
   const [openClawError, setOpenClawError] = useState<string | null>(null);
@@ -1145,6 +1123,17 @@ export function ChatComposer({
   );
   const canSubmit = Boolean(input.trim()) && !isLoading && (!requiresAgentSelection || Boolean(selectedSurfaceAgent));
 
+  const buildEnrichedInput = useCallback((baseInput: string) => {
+    const parts: string[] = [];
+    if (webSearchEnabled) parts.push('[web_search_enabled]');
+    if (researchEnabled) parts.push('[research_enabled]');
+    if (toolAccess !== 'all') parts.push(`[tool_access:${toolAccess}]`);
+    const stylePrefix = activeStyle
+      ? { formal: 'Respond in a formal, professional tone. ', creative: 'Respond in a creative, imaginative style. ', technical: 'Respond in a precise, technical manner. ' }[activeStyle]
+      : '';
+    return `${parts.join(' ')}${parts.length > 0 ? ' ' : ''}${stylePrefix}${baseInput}`.trim();
+  }, [activeStyle, researchEnabled, toolAccess, webSearchEnabled]);
+
   const enterVoiceMode = useCallback(async () => {
     clearVoiceTranscript();
     setInteractionMode('voice');
@@ -1173,11 +1162,7 @@ export function ChatComposer({
       return;
     }
 
-    const stylePrefix = activeStyle
-      ? { formal: 'Respond in a formal, professional tone. ', creative: 'Respond in a creative, imaginative style. ', technical: 'Respond in a precise, technical manner. ' }[activeStyle]
-      : '';
-    const webSearchPrefix = webSearchEnabled ? '[web_search_enabled] ' : '';
-    const enrichedInput = `${webSearchPrefix}${stylePrefix}${spokenInput}`.trim();
+    const enrichedInput = buildEnrichedInput(spokenInput);
 
     if (selectedModeId === 'computer-use') {
       useBrowserAgentStore.getState().runAcuTask(enrichedInput);
@@ -1194,6 +1179,7 @@ export function ChatComposer({
     activeStyle,
     agentModeEnabled,
     agentModeSurface,
+    buildEnrichedInput,
     clearVoiceTranscript,
     onAgentSend,
     onSend,
@@ -1203,7 +1189,6 @@ export function ChatComposer({
     setInteractionMode,
     voiceModeActive,
     voiceTranscript,
-    webSearchEnabled,
   ]);
   const hasTopInfoBar = Boolean(topInfoBarContent);
   const hasQuestionBar = Boolean(questionBarContent);
@@ -1304,11 +1289,7 @@ export function ChatComposer({
   const handleSubmit = () => {
     if (!canSubmit) return;
 
-    const stylePrefix = activeStyle
-      ? { formal: 'Respond in a formal, professional tone. ', creative: 'Respond in a creative, imaginative style. ', technical: 'Respond in a precise, technical manner. ' }[activeStyle]
-      : '';
-    const webSearchPrefix = webSearchEnabled ? '[web_search_enabled] ' : '';
-    const enrichedInput = `${webSearchPrefix}${stylePrefix}${input}`.trim();
+    const enrichedInput = buildEnrichedInput(input);
 
     if (selectedModeId === 'computer-use') {
       useBrowserAgentStore.getState().runAcuTask(enrichedInput);
@@ -1391,7 +1372,6 @@ export function ChatComposer({
     } finally {
       setGithubLoading(false);
       setGithubUrl('');
-      setShowGitHubInput(false);
       setShowPlusMenu(false);
     }
   }, [githubUrl, addAttachment]);
@@ -2272,7 +2252,7 @@ export function ChatComposer({
           {!compact && (<div className={cn('flex items-center justify-between', isMobile ? 'p-2' : 'p-3')}>
             <div className="flex items-center gap-1 relative">
               <AttachmentButton
-                onClick={() => { setShowPlusMenu(!showPlusMenu); setActiveSubMenu(null); }}
+                onClick={() => { setShowPlusMenu(!showPlusMenu); }}
                 className={cn(
                   'rounded-full border border-[var(--border-subtle)] bg-[var(--surface-panel)]/40 backdrop-blur-md text-[var(--text-primary)] transition-all hover:scale-105 hover:brightness-110 hover:bg-[var(--surface-panel)]/70',
                   isMobile ? 'size-11' : 'size-8',
@@ -2282,7 +2262,7 @@ export function ChatComposer({
                   <Plus
                     size={isMobile ? 22 : 20}
                     strokeWidth={2.5}
-                    className="transition-transform"
+                    className={cn('transition-transform duration-200', showPlusMenu && 'rotate-45')}
                   />
                 }
                 onMouseEnter={() => {
@@ -2395,136 +2375,39 @@ export function ChatComposer({
                 </div>
               )}
 
-              {showPlusMenu && (
-                <div
-                  className="absolute bottom-[calc(100%+14px)] left-1/2 -translate-x-1/2 w-[min(420px,calc(100vw-32px))] rounded-2xl border border-[var(--border-subtle)] bg-[var(--surface-floating)] p-3 shadow-xl z-[200] backdrop-blur-xl"
-                  style={{ boxShadow: '0 10px 40px var(--shell-overlay-backdrop)' }}
-                  onMouseEnter={() => setTrackingAttention(-0.44, 0.56, 'locked-on')}
-                  onMouseLeave={() => {
-                    if (!activeSubMenu) setShowPlusMenu(false);
-                    setTrackingAttention(0, 0.44);
-                  }}
-                >
-                  <div className="flex items-center justify-between mb-2 pb-2 border-b border-[var(--border-subtle)]">
-                    <span className="text-[11px] font-bold uppercase tracking-wider text-[var(--text-tertiary)]">Add to message</span>
-                    <button
-                      type="button"
-                      onClick={() => { setShowPlusMenu(false); setActiveSubMenu(null); setShowGitHubInput(false); }}
-                      className="p-1 rounded-md text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-[var(--surface-hover)] transition-colors"
-                      aria-label="Close menu"
-                    >
-                      <X size={14} />
-                    </button>
-                  </div>
-
-                  {showGitHubInput && (
-                    <div className="mb-3 p-2 rounded-xl border border-[var(--border-subtle)] bg-[var(--bg-tertiary)]/40">
-                      <div className="flex items-center gap-1.5">
-                        <LinkIcon size={13} className="text-[var(--text-secondary)] shrink-0" />
-                        <input
-                          aria-label="GitHub file URL"
-                          autoFocus
-                          value={githubUrl}
-                          onChange={(e) => setGithubUrl(e.target.value)}
-                          onKeyDown={(e) => { if (e.key === 'Enter') handleGitHubFetch(); if (e.key === 'Escape') { setShowGitHubInput(false); setGithubUrl(''); } }}
-                          placeholder="github.com/user/repo/blob/main/file"
-                          className="flex-1 bg-transparent border-none outline-none text-xs text-[var(--text-primary)] placeholder:text-[var(--text-tertiary)]"
-                        />
-                        {githubLoading ? (
-                          <CircleNotch size={13} className="text-[var(--text-secondary)] animate-spin" />
-                        ) : (
-                          <button type="button" onClick={handleGitHubFetch} className="bg-transparent border-none cursor-pointer text-[var(--accent-chat)] text-xs font-semibold p-0">Add</button>
-                        )}
-                      </div>
-                    </div>
-                  )}
-
-                  <div className="grid grid-cols-4 gap-2">
-                    {isBrowserSurface && (
-                      <>
-                        <PlusMenuIconButton
-                          icon={<Camera size={18} />}
-                          label="Screenshot"
-                          onClick={handleCaptureScreenshot}
-                        />
-                        <PlusMenuIconButton
-                          icon={isGifRecording ? <Square size={18} weight="fill" /> : <Video size={18} />}
-                          label={isGifRecording ? `Stop (${gifDuration}s)` : 'GIF'}
-                          onClick={handleToggleGifRecording}
-                          danger={isGifRecording}
-                        />
-                        <PlusMenuIconButton
-                          icon={<ImageIcon size={18} />}
-                          label="Image"
-                          onClick={() => { fileInputRef.current?.click(); setShowPlusMenu(false); }}
-                        />
-                      </>
-                    )}
-                    <PlusMenuIconButton
-                      icon={<ImageIcon size={18} />}
-                      label="Files"
-                      onClick={() => { fileInputRef.current?.click(); setShowPlusMenu(false); }}
-                    />
-                    <PlusMenuIconButton
-                      icon={<Github size={18} />}
-                      label="GitHub"
-                      active={showGitHubInput}
-                      onClick={() => { setShowGitHubInput((v) => !v); setActiveSubMenu(null); }}
-                    />
-                    <PlusMenuIconButton
-                      icon={<Folder size={18} />}
-                      label="Project"
-                      active={activeSubMenu === 'project'}
-                      onClick={() => setActiveSubMenu(activeSubMenu === 'project' ? null : 'project')}
-                    />
-                    <PlusMenuIconButton
-                      icon={<Globe size={18} />}
-                      label="Web"
-                      active={webSearchEnabled}
-                      check={webSearchEnabled}
-                      onClick={() => { setWebSearchEnabled((v) => !v); setShowPlusMenu(false); }}
-                    />
-                    <PlusMenuIconButton
-                      icon={<PenTool size={18} />}
-                      label={activeStyle ? activeStyle.charAt(0).toUpperCase() + activeStyle.slice(1) : 'Style'}
-                      active={activeSubMenu === 'style'}
-                      onClick={() => setActiveSubMenu(activeSubMenu === 'style' ? null : 'style')}
-                    />
-                    <PlusMenuIconButton
-                      icon={<Lightning size={18} />}
-                      label="Connectors"
-                      onClick={() => { setShowProviderConnect(true); setShowPlusMenu(false); }}
-                    />
-                  </div>
-
-                  {activeSubMenu === 'project' && (
-                    <div className="mt-2 flex flex-col gap-1 p-1.5 rounded-xl border border-[var(--border-subtle)] bg-[var(--bg-tertiary)]/30">
-                      {PLUS_MENU_ITEMS.find(i => i.id === 'project')?.submenuItems?.map((sub) => (
-                        <PlusMenuListItem
-                          key={sub.id}
-                          icon={sub.icon}
-                          label={sub.label}
-                          onClick={() => { if (sub.id === 'new-project') { import('@/views/chat/ChatStore').then(m => m.useChatStore.getState().createProject('New Project')); } setShowPlusMenu(false); setActiveSubMenu(null); }}
-                        />
-                      ))}
-                    </div>
-                  )}
-
-                  {activeSubMenu === 'style' && (
-                    <div className="mt-2 flex flex-col gap-1 p-1.5 rounded-xl border border-[var(--border-subtle)] bg-[var(--bg-tertiary)]/30">
-                      {PLUS_MENU_ITEMS.find(i => i.id === 'style')?.submenuItems?.map((sub) => (
-                        <PlusMenuListItem
-                          key={sub.id}
-                          icon={activeStyle === sub.id ? <Check size={14} /> : undefined}
-                          label={sub.label}
-                          active={activeStyle === sub.id}
-                          onClick={() => { setActiveStyle(activeStyle === sub.id ? null : sub.id as 'formal' | 'creative' | 'technical'); setShowPlusMenu(false); setActiveSubMenu(null); }}
-                        />
-                      ))}
-                    </div>
-                  )}
-                </div>
-              )}
+              <ComposerPlusSheet
+                open={showPlusMenu}
+                onClose={() => { setShowPlusMenu(false); }}
+                isBrowserSurface={isBrowserSurface}
+                onFilesClick={() => { fileInputRef.current?.click(); }}
+                onCameraClick={() => { fileInputRef.current?.click(); }}
+                onScreenshotClick={handleCaptureScreenshot}
+                onGifClick={handleToggleGifRecording}
+                isGifRecording={isGifRecording}
+                gifDuration={gifDuration}
+                githubUrl={githubUrl}
+                setGithubUrl={setGithubUrl}
+                githubLoading={githubLoading}
+                onGitHubFetch={handleGitHubFetch}
+                webSearchEnabled={webSearchEnabled}
+                setWebSearchEnabled={setWebSearchEnabled}
+                researchEnabled={researchEnabled}
+                setResearchEnabled={setResearchEnabled}
+                activeStyle={activeStyle}
+                setActiveStyle={setActiveStyle}
+                toolAccess={toolAccess}
+                setToolAccess={setToolAccess}
+                projects={chatProjects.map((p) => ({ id: p.id, title: p.title }))}
+                activeProjectId={chatActiveProjectId}
+                setActiveProjectId={(id) => chatSetActiveProject(id)}
+                onCreateProject={() => { void chatCreateProject('New Project'); }}
+                onOpenConnectors={() => setShowProviderConnect(true)}
+                onOpenFormSurfaces={() => window.dispatchEvent(new CustomEvent('allternit:open-view', { detail: { viewType: 'form-surfaces' } }))}
+                onOpenBrainCapture={() => window.dispatchEvent(new CustomEvent('allternit:open-view', { detail: { viewType: 'brain' } }))}
+                onOpenCoworkTasks={() => window.dispatchEvent(new CustomEvent('allternit:open-view', { detail: { viewType: 'cowork-tasks' } }))}
+                onOpenAgentActivity={() => window.dispatchEvent(new CustomEvent('allternit:open-agent-activity'))}
+                onOpenPermissions={() => window.dispatchEvent(new CustomEvent('allternit:open-settings', { detail: { section: 'permissions' } }))}
+              />
             </div>
 
             <div className="flex items-center gap-1 flex-1 pl-1 overflow-hidden">
@@ -2877,86 +2760,4 @@ export function ChatComposer({
   );
 }
 
-function PlusMenuIconButton({
-  icon,
-  label,
-  onClick,
-  active,
-  danger,
-  check,
-}: {
-  icon: React.ReactNode;
-  label: string;
-  onClick: () => void;
-  active?: boolean;
-  danger?: boolean;
-  check?: boolean;
-}): React.ReactNode {
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      className={cn(
-        'group relative flex flex-col items-center gap-1.5 rounded-xl border p-2 text-center transition-all',
-        active
-          ? 'border-[var(--accent-chat)]/40 bg-[color-mix(in_srgb,var(--accent-chat)_12%,var(--surface-floating))] text-[var(--accent-chat)]'
-          : danger
-            ? 'border-transparent bg-[color-mix(in_srgb,var(--status-error)_10%,var(--surface-floating))] text-[var(--status-error)] hover:bg-[color-mix(in_srgb,var(--status-error)_16%,var(--surface-floating))]'
-            : 'border-transparent bg-[var(--bg-tertiary)]/30 text-[var(--text-primary)] hover:bg-[var(--surface-hover)]'
-      )}
-    >
-      <span
-        className={cn(
-          'flex h-9 w-9 shrink-0 items-center justify-center rounded-lg transition-transform group-hover:scale-105',
-          active
-            ? 'bg-[color-mix(in_srgb,var(--accent-chat)_18%,var(--surface-floating))] text-[var(--accent-chat)]'
-            : danger
-              ? 'bg-[color-mix(in_srgb,var(--status-error)_16%,var(--surface-floating))] text-[var(--status-error)]'
-              : 'bg-[var(--bg-tertiary)]/60 text-[var(--text-secondary)]'
-        )}
-      >
-        {icon}
-      </span>
-      <span className="text-[10px] font-semibold leading-tight">{label}</span>
-      {check && (
-        <span className="absolute right-1.5 top-1.5 flex h-3.5 w-3.5 items-center justify-center rounded-full bg-[var(--accent-chat)] text-[var(--text-inverse)]">
-          <Check size={8} weight="bold" />
-        </span>
-      )}
-    </button>
-  );
-}
 
-function PlusMenuListItem({
-  icon,
-  label,
-  active,
-  onClick,
-}: {
-  icon?: React.ReactNode;
-  label: string;
-  active?: boolean;
-  onClick: () => void;
-}): React.ReactNode {
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      className={cn(
-        'flex w-full items-center gap-2 rounded-lg border-none px-2 py-1.5 text-left text-xs transition-colors',
-        active
-          ? 'bg-[color-mix(in_srgb,var(--accent-chat)_12%,var(--surface-floating))] text-[var(--accent-chat)]'
-          : 'bg-transparent text-[var(--text-primary)] hover:bg-[var(--surface-hover)]'
-      )}
-    >
-      {icon ? (
-        <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded bg-[var(--bg-tertiary)]/60 text-[var(--text-secondary)]">
-          {icon}
-        </span>
-      ) : (
-        <span className="h-5 w-5 shrink-0" />
-      )}
-      <span>{label}</span>
-    </button>
-  );
-}

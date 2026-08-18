@@ -1,4 +1,4 @@
-import type { DesktopApi } from '@allternit/office-xlsx-engine/shared/desktop-api'
+import type { DesktopApi } from '@allternit/allternit-office-suite/xlsx'
 
 /** Chat-history record as returned by the project store. */
 export interface ProjectChatMessage {

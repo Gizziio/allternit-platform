@@ -11,9 +11,9 @@ import type {
   WorkbookVisualAdd,
   WorkbookVisualEdit,
   WorkbookVisualObject,
-} from '@allternit/office-xlsx-engine/shared/desktop-api'
-import { columnLabel, parseRange } from '@allternit/office-xlsx-engine/domain/cell-address'
-import { splitSheetRef } from '@allternit/office-xlsx-engine/domain/chart-visual'
+} from '@allternit/allternit-office-suite/xlsx'
+import { columnLabel, parseRange } from '@allternit/allternit-office-suite/xlsx'
+import { splitSheetRef } from '@allternit/allternit-office-suite/xlsx'
 import { INDENT_STEP_PX } from './selection-format'
 
 /// Tracks the user's cell edits on a streamed external workbook. Streaming

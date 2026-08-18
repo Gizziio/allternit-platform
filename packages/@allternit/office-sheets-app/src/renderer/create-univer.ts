@@ -8,7 +8,7 @@
 /// small composition helper here (collaboration mode intentionally omitted).
 import { LogLevel, Univer } from '@univerjs/core'
 import type { DependencyOverride, IUniverConfig, Plugin, PluginCtor } from '@univerjs/core'
-import { FUniver } from '@univerjs/core/lib/facade'
+import { FUniver } from '@univerjs/core/facade'
 
 type PluginEntry = PluginCtor<Plugin> | [PluginCtor<Plugin>, ConstructorParameters<PluginCtor<Plugin>>[0]]
 

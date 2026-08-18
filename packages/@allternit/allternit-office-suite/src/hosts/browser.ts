@@ -1,4 +1,12 @@
-import type { OfficeHost, OpenedFile, OpenOptions, RecentFile } from '../bridge/types';
+import type { OfficeAiClient, OfficeHost, OpenedFile, OpenOptions, RecentFile } from '../bridge/types';
+import {
+  getOfficeModelLabel,
+  getOfficeModelOptions,
+  refreshOfficeModelOptions,
+  resolveOfficeModelId,
+  setOfficeModelOverride,
+  OfficeAgentLoop,
+} from '../ai';
 
 export interface BrowserHostOptions {
   /** Override save behavior. Defaults to a file download. */
@@ -9,6 +17,8 @@ export interface BrowserHostOptions {
   getRecentFiles?: () => Promise<RecentFile[]>;
   /** Override the reported locale. Defaults to `'en'`. */
   getLanguage?: () => string;
+  /** Override the default AI client. Defaults to the platform-style office-ai layer. */
+  ai?: OfficeAiClient;
 }
 
 function buildAcceptString(accept?: Record<string, string[]>): string {
@@ -60,6 +70,17 @@ function downloadBytes(bytes: Uint8Array, name: string): void {
   URL.revokeObjectURL(url);
 }
 
+function createBrowserAi(): OfficeAiClient {
+  return {
+    resolveModelId: resolveOfficeModelId,
+    setModelOverride: setOfficeModelOverride,
+    getModelOptions: getOfficeModelOptions,
+    refreshModelOptions: refreshOfficeModelOptions,
+    getModelLabel: getOfficeModelLabel,
+    AgentLoop: OfficeAgentLoop as OfficeAiClient['AgentLoop'],
+  };
+}
+
 /**
  * Create a browser-based `OfficeHost`.
  *
@@ -75,5 +96,6 @@ export function createBrowserHost(options: BrowserHostOptions = {}): OfficeHost 
       await (options.saveFile ?? downloadBytes)(bytes, name);
     },
     getRecentFiles: options.getRecentFiles ?? (async () => []),
+    ai: options.ai ?? createBrowserAi(),
   };
 }

@@ -1,0 +1,399 @@
+---
+title: 'Cloud Backend'
+description: 'WebSocket bridge for browser extensions, thin clients, and agent sessions'
+---
+
+## Overview
+
+The **Allternit Cloud Backend** is a lightweight WebSocket relay that connects browser extensions, thin clients, and agent runtimes into a single real-time session. It is the glue layer for integrations that need to execute actions inside a browser or exchange messages with a lightweight control surface without running a full agent locally.
+
+Built from `cmd/cloud-backend`, the service runs as a standalone Node process and exposes:
+
+- A WebSocket endpoint for bidirectional messaging.
+- An HTTP health endpoint for load balancers and orchestrators.
+- Per-session routing so multiple clients can share a single context.
+- Automatic stale-connection cleanup.
+
+<Note>
+The Cloud Backend relays messages between clients in the same session. It does not run model inference itself; reasoning is handled by the agent or runtime that connects as a controlling client.
+</Note>
+
+## When to use it
+
+| Scenario | How the Cloud Backend helps |
+|----------|----------------------------|
+| Browser extension integration | A browser extension receives DOM actions (`click`, `type`, `scroll`) from an agent and returns screenshots or results. |
+| Thin client chat | A lightweight web or mobile client sends chat messages and receives replies streamed from an agent runtime. |
+| Multi-client session | A browser extension, a thin client, and an agent runtime share one session and see the same tab state. |
+| BYOC deployment | You run the relay inside your own network so browser traffic and credentials never leave your infrastructure. |
+
+## Key concepts
+
+### Session
+
+Every WebSocket connection is assigned a `sessionId` when it first connects. Messages that are marked for broadcast are forwarded to all authenticated clients in the same session, so a browser extension and a thin client stay in sync.
+
+### Client types
+
+| Type | Role |
+|------|------|
+| `browser-extension` | Runs inside the browser and executes page-level actions. |
+| `thin-client` | A minimal chat or control client, often a web widget or mobile app. |
+| `agent` | An agent runtime or service that issues actions and consumes results. |
+
+### Message envelope
+
+All WebSocket traffic uses the same envelope:
+
+```json
+{
+  "id": "msg_123",
+  "type": "execute",
+  "payload": { ... },
+  "timestamp": 1723575600000
+}
+```
+
+| Field | Description |
+|-------|-------------|
+| `id` | Client-generated message identifier; responses echo it back. |
+| `type` | Message type that determines routing. |
+| `payload` | Type-specific data. |
+| `timestamp` | Unix epoch in milliseconds. |
+
+## Installation
+
+The service is a TypeScript Node project in `cmd/cloud-backend`.
+
+```bash
+cd cmd/cloud-backend
+npm install
+npm run build
+npm start
+```
+
+For local development:
+
+```bash
+npm run dev
+```
+
+Requirements:
+
+- Node.js 18 or later
+- WebSocket clients must be able to reach `ws://<host>:<port>/ws/extension`
+
+## Configuration
+
+Configure the service with environment variables:
+
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `PORT` | `8080` | HTTP and WebSocket port. |
+| `HOST` | `0.0.0.0` | Interface to bind. |
+
+You can run multiple instances behind a load balancer as long as clients that need to share a session land on the same instance. For horizontal scaling, replace the in-memory `clients` and `sessions` maps with a shared store such as Redis.
+
+## HTTP endpoints
+
+| Method | Path | Description |
+|--------|------|-------------|
+| `GET` | `/health` | Service health and connection statistics. |
+| `GET` | `/` | Same response as `/health`. |
+| `OPTIONS` | `*` | CORS preflight for browser connections. |
+
+### Health check
+
+```bash
+curl http://localhost:8080/health
+```
+
+Response:
+
+```json
+{
+  "status": "ok",
+  "service": "Allternit Cloud Backend",
+  "connections": 3,
+  "sessions": 1,
+  "uptime": 45.2,
+  "version": "1.0.0",
+  "timestamp": "2026-08-13T19:50:00.000Z"
+}
+```
+
+## WebSocket endpoint
+
+```text
+ws://<host>:<port>/ws/extension
+```
+
+Connect, authenticate, and then send messages. The server closes the connection if authentication fails.
+
+## Authentication
+
+After connecting, send an `auth` message:
+
+```json
+{
+  "id": "auth-1",
+  "type": "auth",
+  "payload": {
+    "token": "<your-token>",
+    "clientType": "browser-extension",
+    "version": "1.0.0"
+  },
+  "timestamp": 1723575600000
+}
+```
+
+Success response:
+
+```json
+{
+  "id": "auth-1",
+  "type": "auth:response",
+  "payload": {
+    "success": true,
+    "sessionId": "550e8400-e29b-41d4-a716-446655440000",
+    "clientId": "client_abc123"
+  },
+  "timestamp": 1723575600000
+}
+```
+
+Failure response:
+
+```json
+{
+  "id": "auth-1",
+  "type": "auth:response",
+  "payload": {
+    "success": false,
+    "error": "Invalid authentication token"
+  },
+  "timestamp": 1723575600000
+}
+```
+
+<Warning>
+The default implementation accepts any non-empty token and derives a user ID from it. Production deployments should validate tokens against your auth service before accepting the connection.
+</Warning>
+
+## Message types
+
+| Type | Direction | Description |
+|------|-----------|-------------|
+| `auth` | Inbound | Authenticate the connection. |
+| `auth:response` | Outbound | Authentication result. |
+| `ping` | Inbound | Client keepalive. |
+| `pong` | Outbound | Server keepalive response. |
+| `connected` | Outbound | Sent immediately after the WebSocket handshake. |
+| `execute` | Inbound | Request a browser action. |
+| `execute:error` | Outbound | Error executing or routing an action. |
+| `getTabs` | Inbound | Request the list of browser tabs. |
+| `tabs` | Outbound | Tab list response. |
+| `tab:activated` | Both | Tab activated event, broadcast to the session. |
+| `tab:updated` | Both | Tab updated event, broadcast to the session. |
+| `action:complete` | Both | Action completion event, broadcast to the session. |
+| `chat` | Inbound | Chat message from a thin client. |
+| `chat:response` | Outbound | Chat response. |
+| `error` | Outbound | Generic error, including invalid JSON or unknown types. |
+
+## Usage examples
+
+### Browser extension + agent
+
+A browser extension connects and authenticates:
+
+```json
+{
+  "id": "auth-1",
+  "type": "auth",
+  "payload": {
+    "token": "<token>",
+    "clientType": "browser-extension",
+    "version": "1.0.0"
+  },
+  "timestamp": 1723575600000
+}
+```
+
+An agent in the same session requests a click:
+
+```json
+{
+  "id": "exec-1",
+  "type": "execute",
+  "payload": {
+    "action": "click",
+    "selector": "#submit"
+  },
+  "timestamp": 1723575600000
+}
+```
+
+The server forwards the `execute` message to the browser extension, which performs the action and sends back an `action:complete` message. The server broadcasts that completion to every other client in the session:
+
+```json
+{
+  "id": "complete-1",
+  "type": "action:complete",
+  "payload": {
+    "requestId": "exec-1",
+    "result": { "success": true }
+  },
+  "timestamp": 1723575600100
+}
+```
+
+If no browser extension is connected, the caller receives:
+
+```json
+{
+  "id": "exec-1",
+  "type": "execute:error",
+  "payload": {
+    "message": "No browser extension connected in this session"
+  },
+  "timestamp": 1723575600000
+}
+```
+
+### Request browser tabs
+
+A controlling client asks for the current tab list:
+
+```json
+{
+  "id": "tabs-1",
+  "type": "getTabs",
+  "timestamp": 1723575600000
+}
+```
+
+If a browser extension is connected, the message is forwarded to it and the extension returns a `tabs` message. If no extension is connected, the server replies immediately with an empty array:
+
+```json
+{
+  "id": "tabs-1",
+  "type": "tabs",
+  "payload": [],
+  "timestamp": 1723575600000
+}
+```
+
+### Thin client chat
+
+A thin client sends:
+
+```json
+{
+  "id": "chat-1",
+  "type": "chat",
+  "payload": {
+    "message": "What is on this page?"
+  },
+  "timestamp": 1723575600000
+}
+```
+
+The default implementation echoes the message:
+
+```json
+{
+  "id": "chat-2",
+  "type": "chat:response",
+  "payload": {
+    "message": "Received: What is on this page?",
+    "sender": "agent"
+  },
+  "timestamp": 1723575600100
+}
+```
+
+In a production deployment, route `chat` messages to your agent runtime and stream the model response back as one or more `chat:response` messages.
+
+### JavaScript client snippet
+
+```javascript
+const ws = new WebSocket('ws://localhost:8080/ws/extension');
+
+ws.onopen = () => {
+  ws.send(JSON.stringify({
+    id: 'auth-1',
+    type: 'auth',
+    payload: {
+      token: '<token>',
+      clientType: 'thin-client',
+      version: '1.0.0'
+    },
+    timestamp: Date.now()
+  }));
+};
+
+ws.onmessage = (event) => {
+  const message = JSON.parse(event.data);
+  console.log(message.type, message.payload);
+};
+
+function execute(action, selector) {
+  ws.send(JSON.stringify({
+    id: crypto.randomUUID(),
+    type: 'execute',
+    payload: { action, selector },
+    timestamp: Date.now()
+  }));
+}
+```
+
+## Session broadcast
+
+The server automatically broadcasts these message types to all other authenticated clients in the same session:
+
+- `action:complete`
+- `tab:activated`
+- `tab:updated`
+
+This keeps a thin client, browser extension, and agent runtime synchronized without each client tracking the others directly.
+
+## Keepalive and cleanup
+
+Every 30 seconds the server sends a WebSocket ping and checks the time since the last message or pong from each client. Connections that are silent for more than 60 seconds are closed with code `1001` and removed from the session.
+
+Clients should respond to application-level `ping` messages with a `pong`:
+
+```json
+{ "id": "ping-1", "type": "ping", "timestamp": 1723575600000 }
+```
+
+```json
+{ "id": "ping-1", "type": "pong", "timestamp": 1723575600000 }
+```
+
+## Error handling
+
+| Status / message | Meaning |
+|------------------|---------|
+| `Invalid message format` | The WebSocket frame was not valid JSON. |
+| `Not authenticated` | An authenticated action was sent before `auth`. |
+| `No browser extension connected in this session` | `execute` or `getTabs` could not find a browser-extension peer in the session. |
+| `Unknown message type: <type>` | The server does not recognize the message type. |
+| `Invalid authentication token` | The `auth` token was missing or rejected. |
+
+## Security notes
+
+- Run the Cloud Backend behind a reverse proxy or API gateway that terminates TLS in production.
+- Replace the default token acceptance logic with validation against your identity provider.
+- For multi-instance deployments, move session state from in-memory maps to a shared store so clients can reconnect to any instance.
+- Restrict CORS origins instead of using `*` if the service is exposed to the public internet.
+
+## Related pages
+
+- [Native Tool Belt](/tools/tool-belt)
+- [Computer Use](/tools/computer-use)
+- [MCP Servers](/tools/mcp)
+- [Server Tools](/tools/server-tools)
+- [BYOC Cloud Backend](/byoc/cloud-backend)
+- [Surfaces: Extensions](/surfaces/extensions)
+- [BYOC Runtime Overview](/byoc/overview)

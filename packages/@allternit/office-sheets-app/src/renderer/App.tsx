@@ -98,35 +98,35 @@ import '@univerjs/preset-sheets-table/lib/index.css'
 import { greenTheme } from '@univerjs/themes'
 import { createUniver } from './create-univer'
 
-import { AgentLoop, composeSkills, type AgentImage } from './ai/agent-stub'
+import { useOfficeAi, type OfficeAgentLoop } from '@allternit/allternit-office-suite/bridge'
+import { composeSkills, type AgentImage } from './ai/agent-stub'
 import type { AiSettings } from './ai/ai-stubs'
-import { resolveOfficeModelId } from '@allternit/office-ai'
-import { type WorkbookOperation } from '@allternit/office-xlsx-engine/domain/workbook-dsl'
-import { columnIndex, columnLabel, parseAddress, parseRange } from '@allternit/office-xlsx-engine/domain/cell-address'
+import { type WorkbookOperation } from '@allternit/allternit-office-suite/xlsx'
+import { columnIndex, columnLabel, parseAddress, parseRange } from '@allternit/allternit-office-suite/xlsx'
 import {
   applyChartStateEdit,
   chartSupportsDataLabels,
   chartSupportsSeriesReplace,
   withDefaultBarLabels,
   type CellBounds,
-} from '@allternit/office-xlsx-engine/domain/chart-visual'
-import { InMemoryWorkbookAdapter } from '@allternit/office-xlsx-engine/domain/in-memory-workbook'
-import { iconSetSaveable } from '@allternit/office-xlsx-engine/gateway/xlsx-cf'
-import type { ApplyOutcome, ChangePlan } from '@allternit/office-xlsx-engine/domain/workbook.types'
+} from '@allternit/allternit-office-suite/xlsx'
+import { InMemoryWorkbookAdapter } from '@allternit/allternit-office-suite/xlsx'
+import { iconSetSaveable } from '@allternit/allternit-office-suite/xlsx'
+import type { ApplyOutcome, ChangePlan } from '@allternit/allternit-office-suite/xlsx'
 import { createElectronTransport } from './ai/transport'
 import type { ActiveSheetInfo, SheetsSkillDeps } from './ai/tools'
 import type { AiChatMessage } from './ai/AiChatPanel'
 import { createWorkbookSkill } from './ai/workbook-skill'
 import { createFilesSkill } from './ai/files-skill'
 import { createSearchSkill } from './ai/search-skill'
-import { ATTACHMENT_IMAGE_EXTS } from '@allternit/office-xlsx-engine/shared/desktop-api'
+import { ATTACHMENT_IMAGE_EXTS } from '@allternit/allternit-office-suite/xlsx'
 import type {
   AttachmentAddResult,
   AttachmentMeta,
   MenuAction,
   WorkbookFile,
   WorkbookVisualObject,
-} from '@allternit/office-xlsx-engine/shared/desktop-api'
+} from '@allternit/allternit-office-suite/xlsx'
 import type { PageSetupJournalState } from './edit-journal'
 import {
   AUTO_FILL_COMMAND,
@@ -297,6 +297,7 @@ import { ChartFormatPane, SelectDataDialog } from './ChartPanels'
 let pendingCopySource: string | undefined
 
 export function App(): React.JSX.Element {
+  const ai = useOfficeAi()
   const adapterRef = useRef(new InMemoryWorkbookAdapter(initialSnapshot))
   const univerRef = useRef<UniverRuntime | null>(null)
   const lazyWorkbookRef = useRef<LazyWorkbookState | null>(null)
@@ -543,7 +544,7 @@ export function App(): React.JSX.Element {
   const aiSettingsRef = useRef<AiSettings | null>(null)
   aiSettingsRef.current = aiSettings
   const [aiBusy, setAiBusy] = useState(false)
-  const [aiModelId, setAiModelId] = useState<string | undefined>(() => resolveOfficeModelId('sheets'))
+  const [aiModelId, setAiModelId] = useState<string | undefined>(() => ai.resolveModelId('sheets'))
   // Display history survives restarts via localStorage; the AgentLoop's model
   // context does not, so restored turns are read-only transcript.
   const [chat, setChat] = useState<readonly AiChatMessage[]>([])
@@ -754,9 +755,9 @@ export function App(): React.JSX.Element {
   /** true once any tool of the run mutated the workbook */
   const runMutatedRef = useRef(false)
 
-  const agentLoopRef = useRef<AgentLoop | null>(null)
+  const agentLoopRef = useRef<OfficeAgentLoop | null>(null)
   if (!agentLoopRef.current) {
-    agentLoopRef.current = new AgentLoop({
+    agentLoopRef.current = new ai.AgentLoop({
       modelId: aiModelId,
       transport: createElectronTransport(() => aiSettingsRef.current!),
       systemSuffix: aiLangDirective,

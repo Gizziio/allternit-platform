@@ -13,7 +13,6 @@ import {
   Lightning,
   Brain,
   Sun,
-  Robot,
   ChartBar,
   CaretDown,
   CaretUp,
@@ -199,16 +198,17 @@ export function CodeUsageDashboard({ onClose }: { onClose?: () => void }) {
     };
   }, [filteredSessions]);
 
-  const maxHeat = Math.max(1, ...metrics.heatmap.map((cell) => cell.count));
+  const sparklineDays = metrics.heatmap.slice(-14);
+  const maxSpark = Math.max(1, ...sparklineDays.map((cell) => cell.count));
 
   return (
     <div
       data-testid="code-usage-dashboard"
-      className="w-full rounded-2xl border border-[var(--border-subtle)] bg-[var(--bg-elevated)] shadow-lg overflow-hidden"
-      style={{ boxShadow: "var(--shadow-lg)" }}
+      className="w-full rounded-2xl border border-[var(--border-subtle)] bg-[var(--glass-bg)] backdrop-blur-md shadow-lg overflow-hidden"
+      style={{ boxShadow: "var(--shadow-lg)", maxHeight: expanded ? 220 : 72 }}
     >
-      {/* Compact horizontal usage bar */}
-      <div className="flex items-center gap-3 p-2.5">
+      {/* Primary horizontal usage bar */}
+      <div className="flex items-center gap-3 px-3 py-2 h-[72px]">
         <div className="grid h-9 w-9 shrink-0 place-items-center rounded-xl bg-[var(--accent-code)]/10 text-[var(--accent-code)]">
           <ChartBar size={20} weight="duotone" />
         </div>
@@ -219,155 +219,115 @@ export function CodeUsageDashboard({ onClose }: { onClose?: () => void }) {
           </p>
         </div>
 
-        <div className="ml-auto flex items-center gap-2 min-w-0">
-          <div className="hidden md:flex items-center gap-2">
-            <MiniStat value={metrics.sessions.toLocaleString()} label="Sessions" />
-            <MiniStat value={formatCompact(metrics.tokens)} label="Tokens" />
-            <MiniStat value={formatCurrency(metrics.estimatedCost)} label="Cost" />
+        <div className="flex-1 min-w-0">
+          <div className="flex items-center gap-2 overflow-x-auto no-scrollbar">
+            <MiniPill value={metrics.sessions.toLocaleString()} label="Sessions" icon={TerminalWindow} />
+            <MiniPill value={formatCompact(metrics.tokens)} label="Tokens" icon={Hash} />
+            <MiniPill value={formatCurrency(metrics.estimatedCost)} label="Cost" icon={CurrencyDollar} />
+            <MiniPill value={metrics.activeDays.toString()} label="Days" icon={Calendar} />
+            <MiniPill value={metrics.favoriteModel ?? "—"} label="Top model" icon={Brain} />
           </div>
+        </div>
 
-          <div className="flex items-center gap-1.5 shrink-0">
-            <div className="flex bg-[var(--bg-primary)] p-0.5 rounded-lg border border-[var(--border-subtle)]">
-              {(["all", "30d", "7d"] as const).map((item) => (
-                <button
-                  key={item}
-                  type="button"
-                  onClick={() => setRange(item)}
-                  className={`px-2 py-1 rounded-md text-[11px] font-medium transition-colors ${
-                    range === item
-                      ? "bg-[var(--bg-tertiary)] text-[var(--text-primary)]"
-                      : "text-[var(--text-tertiary)] hover:text-[var(--text-primary)]"
-                  }`}
-                >
-                  {item === "all" ? "All" : item}
-                </button>
-              ))}
-            </div>
+        <div className="flex items-center gap-1.5 shrink-0">
+          <div className="flex bg-[var(--bg-primary)] p-0.5 rounded-lg border border-[var(--border-subtle)]">
+            {(["all", "30d", "7d"] as const).map((item) => (
+              <button
+                key={item}
+                type="button"
+                onClick={() => setRange(item)}
+                className={`px-2 py-1 rounded-md text-[11px] font-medium transition-colors ${
+                  range === item
+                    ? "bg-[var(--bg-tertiary)] text-[var(--text-primary)]"
+                    : "text-[var(--text-tertiary)] hover:text-[var(--text-primary)]"
+                }`}
+              >
+                {item === "all" ? "All" : item}
+              </button>
+            ))}
+          </div>
+          <button
+            type="button"
+            onClick={() => setExpanded((v) => !v)}
+            aria-label={expanded ? "Show less" : "Show more"}
+            title={expanded ? "Show less" : "Show more"}
+            className="grid h-8 w-8 place-items-center rounded-lg border border-[var(--border-subtle)] bg-[var(--bg-primary)] text-[var(--text-tertiary)] transition-colors hover:text-[var(--text-primary)] hover:bg-[var(--surface-hover)]"
+          >
+            {expanded ? <CaretUp size={14} /> : <CaretDown size={14} />}
+          </button>
+          {onClose && (
             <button
               type="button"
-              onClick={() => setExpanded((v) => !v)}
-              aria-label={expanded ? "Show less" : "Show more"}
-              title={expanded ? "Show less" : "Show more"}
+              onClick={onClose}
+              aria-label="Close usage"
+              title="Close usage"
               className="grid h-8 w-8 place-items-center rounded-lg border border-[var(--border-subtle)] bg-[var(--bg-primary)] text-[var(--text-tertiary)] transition-colors hover:text-[var(--text-primary)] hover:bg-[var(--surface-hover)]"
             >
-              {expanded ? <CaretUp size={14} /> : <CaretDown size={14} />}
+              <X size={14} />
             </button>
-            {onClose && (
-              <button
-                type="button"
-                onClick={onClose}
-                aria-label="Close usage"
-                title="Close usage"
-                className="grid h-8 w-8 place-items-center rounded-lg border border-[var(--border-subtle)] bg-[var(--bg-primary)] text-[var(--text-tertiary)] transition-colors hover:text-[var(--text-primary)] hover:bg-[var(--surface-hover)]"
-              >
-                <X size={14} />
-              </button>
-            )}
-          </div>
+          )}
         </div>
       </div>
 
-      {/* Expanded details */}
+      {/* Expanded horizontal detail strip */}
       {expanded && (
-        <div className="border-t border-[var(--border-subtle)] bg-[var(--bg-primary)] p-3">
-          {/* Progress strip */}
-          <div className="mb-3">
-            <div className="flex items-center justify-between gap-3 text-[11px] text-[var(--text-tertiary)] mb-1.5">
-              <span>
-                {formatCompact(metrics.tokens)} of {formatCompact(TOKEN_BUDGET)} tokens
-              </span>
-              <span className="text-[var(--text-primary)] font-semibold">{metrics.budgetUsed}%</span>
-            </div>
-            <div className="h-1.5 w-full overflow-hidden rounded-full bg-[var(--bg-tertiary)]">
-              <div
-                className="h-full rounded-full transition-all"
-                style={{
-                  width: `${metrics.budgetUsed}%`,
-                  backgroundColor: metrics.budgetUsed >= 90 ? "var(--status-error)" : "var(--accent-code)",
-                }}
-              />
-            </div>
-          </div>
-
-          {/* Stat grid */}
-          <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-4">
-            <StatCard label="Sessions" value={metrics.sessions.toLocaleString()} icon={TerminalWindow} tone="code" />
-            <StatCard label="Messages" value={metrics.messages.toLocaleString()} icon={Hash} tone="code" />
-            <StatCard label="Total tokens" value={formatCompact(metrics.tokens)} icon={Hash} tone="code" />
-            <StatCard label="Est. cost" value={formatCurrency(metrics.estimatedCost)} icon={CurrencyDollar} tone="code" />
-            <StatCard label="Active time" value={formatDuration(metrics.activeMinutes)} icon={Clock} tone="code" />
-            <StatCard label="Active days" value={metrics.activeDays.toString()} icon={Calendar} tone="code" />
-            <StatCard label="Current streak" value={`${metrics.streaks.current}d`} icon={Fire} tone="warning" />
-            <StatCard label="Longest streak" value={`${metrics.streaks.longest}d`} icon={Lightning} tone="warning" />
-          </div>
-
-          {/* Heatmap */}
-          <div className="mt-3 rounded-xl border border-[var(--border-subtle)] bg-[var(--bg-elevated)] p-3">
-            <div className="mb-2 flex items-center justify-between">
-              <span className="text-xs font-medium text-[var(--text-primary)]">Last 30 days</span>
-              <span className="text-[11px] text-[var(--text-tertiary)]">
-                {metrics.tokens >= 576_000 ? (
-                  <>
-                    ~{Math.round(metrics.tokens / 576_000)}× <em>Lord of the Rings</em>
-                  </>
-                ) : metrics.tokens > 0 ? (
-                  <>
-                    {formatCompact(metrics.tokens)} tokens across {metrics.sessions} session{metrics.sessions === 1 ? "" : "s"}
-                  </>
-                ) : (
-                  "Send a message to start tracking usage"
-                )}
-              </span>
+        <div className="border-t border-[var(--border-subtle)] bg-[var(--bg-primary)]/60 px-3 py-2.5 h-[148px]">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-3 h-full">
+            {/* Activity sparkline */}
+            <div className="flex flex-col min-h-0">
+              <div className="flex items-center justify-between mb-1.5">
+                <span className="text-[11px] font-semibold uppercase tracking-wider text-[var(--text-tertiary)]">Activity</span>
+                <span className="text-[10px] text-[var(--text-tertiary)]">Last 14 days</span>
+              </div>
+              <div className="flex-1 flex items-end gap-0.5 min-h-0">
+                {sparklineDays.map((cell) => {
+                  const ratio = cell.count / maxSpark;
+                  const height = Math.max(4, Math.round(ratio * 100));
+                  return (
+                    <div
+                      key={cell.date}
+                      title={`${cell.date}: ${cell.count} messages`}
+                      className="flex-1 rounded-sm bg-[var(--accent-code)]/80 hover:bg-[var(--accent-code)] transition-colors"
+                      style={{ height: `${height}%`, minHeight: 3 }}
+                    />
+                  );
+                })}
+              </div>
             </div>
 
-            <div className="grid grid-cols-[repeat(30,minmax(0,1fr))] gap-1">
-              {metrics.heatmap.map((cell) => {
-                const ratio = cell.count / maxHeat;
-                const background =
-                  ratio === 0
-                    ? "var(--bg-tertiary)"
-                    : ratio < 0.34
-                      ? `color-mix(in srgb, var(--accent-code) 35%, var(--bg-tertiary))`
-                      : ratio < 0.67
-                        ? `color-mix(in srgb, var(--accent-code) 65%, var(--bg-tertiary))`
-                        : "var(--accent-code)";
-                return (
+            {/* Budget & averages */}
+            <div className="flex flex-col justify-between min-h-0">
+              <div>
+                <div className="flex items-center justify-between mb-1.5">
+                  <span className="text-[11px] font-semibold uppercase tracking-wider text-[var(--text-tertiary)]">Budget</span>
+                  <span className="text-[11px] text-[var(--text-primary)] font-semibold">{metrics.budgetUsed}%</span>
+                </div>
+                <div className="h-1.5 w-full overflow-hidden rounded-full bg-[var(--bg-tertiary)]">
                   <div
-                    key={cell.date}
-                    title={`${cell.date}: ${cell.count} messages`}
-                    className="w-full rounded-sm transition-transform hover:scale-110"
-                    style={{ aspectRatio: "1 / 2", background }}
+                    className="h-full rounded-full transition-all"
+                    style={{
+                      width: `${metrics.budgetUsed}%`,
+                      backgroundColor: metrics.budgetUsed >= 90 ? "var(--status-error)" : "var(--accent-code)",
+                    }}
                   />
-                );
-              })}
+                </div>
+                <div className="mt-1 text-[10px] text-[var(--text-tertiary)]">
+                  {formatCompact(metrics.tokens)} of {formatCompact(TOKEN_BUDGET)} tokens
+                </div>
+              </div>
+              <div className="grid grid-cols-2 gap-2">
+                <TinyStat label="Avg tokens/msg" value={metrics.avgTokensPerMessage.toLocaleString()} />
+                <TinyStat label="Active time" value={formatDuration(metrics.activeMinutes)} />
+              </div>
             </div>
 
-            <div className="mt-2 flex items-center justify-end gap-2 text-[11px] text-[var(--text-tertiary)]">
-              <span>Less</span>
-              {[0.15, 0.4, 0.65, 1].map((r) => (
-                <div
-                  key={r}
-                  className="h-2 w-2 rounded-sm"
-                  style={{
-                    background:
-                      r === 0.15
-                        ? "var(--bg-tertiary)"
-                        : `color-mix(in srgb, var(--accent-code) ${Math.round(r * 100)}%, var(--bg-tertiary))`,
-                  }}
-                />
-              ))}
-              <span>More</span>
+            {/* Insights */}
+            <div className="grid grid-cols-2 gap-2 min-h-0">
+              <InsightTile label="Current streak" value={`${metrics.streaks.current}d`} icon={Fire} />
+              <InsightTile label="Longest streak" value={`${metrics.streaks.longest}d`} icon={Lightning} />
+              <InsightTile label="Peak hour" value={metrics.peakHour === null ? "—" : `${metrics.peakHour % 12 || 12} ${metrics.peakHour >= 12 ? "PM" : "AM"}`} icon={Sun} />
+              <InsightTile label="Assistant msgs" value={metrics.assistantMessages.toLocaleString()} icon={Clock} />
             </div>
-          </div>
-
-          {/* Secondary insights */}
-          <div className="mt-3 grid grid-cols-1 gap-2 sm:grid-cols-2">
-            <InsightCard label="Favorite model" value={metrics.favoriteModel ?? "—"} icon={Brain} />
-            <InsightCard
-              label="Peak hour"
-              value={metrics.peakHour === null ? "—" : `${metrics.peakHour % 12 || 12} ${metrics.peakHour >= 12 ? "PM" : "AM"}`}
-              icon={Sun}
-            />
           </div>
         </div>
       )}
@@ -375,56 +335,37 @@ export function CodeUsageDashboard({ onClose }: { onClose?: () => void }) {
   );
 }
 
-function MiniStat({ value, label }: { value: string; label: string }) {
+function MiniPill({ value, label, icon: Icon }: { value: string; label: string; icon?: PhosphorIcon }) {
   return (
-    <div className="flex flex-col items-start px-2 py-1 rounded-lg bg-[var(--bg-primary)] border border-[var(--border-subtle)]">
-      <span className="text-xs font-bold text-[var(--text-primary)]">{value}</span>
-      <span className="text-[9px] uppercase tracking-wider text-[var(--text-tertiary)]">{label}</span>
-    </div>
-  );
-}
-
-function StatCard({
-  label,
-  value,
-  icon: Icon,
-  tone = "code",
-}: {
-  label: string;
-  value: string;
-  icon?: PhosphorIcon;
-  tone?: "code" | "warning" | "neutral";
-}) {
-  const accentVar = tone === "code" ? "var(--accent-code)" : tone === "warning" ? "var(--status-warning)" : "var(--accent-primary)";
-  return (
-    <div className="group relative overflow-hidden rounded-xl border border-[var(--border-subtle)] bg-[var(--bg-elevated)] p-2.5 transition-colors hover:border-[var(--border-hover)]">
-      <div className="flex items-start justify-between gap-2">
-        <div className="min-w-0 flex-1">
-          <div className="text-[11px] font-medium text-[var(--text-tertiary)]">{label}</div>
-          <div className="mt-0.5 text-base font-bold text-[var(--text-primary)] truncate" title={value}>
-            {value}
-          </div>
-        </div>
-        {Icon ? (
-          <div className="grid h-7 w-7 shrink-0 place-items-center rounded-lg" style={{ background: `${accentVar}14`, color: accentVar }}>
-            <Icon size={14} weight="duotone" />
-          </div>
-        ) : null}
+    <div className="flex items-center gap-1.5 px-2 py-1 rounded-lg bg-[var(--bg-primary)] border border-[var(--border-subtle)] shrink-0">
+      {Icon ? <Icon size={12} weight="duotone" className="text-[var(--accent-code)] shrink-0" /> : null}
+      <div className="flex items-baseline gap-1.5">
+        <span className="text-xs font-bold text-[var(--text-primary)]">{value}</span>
+        <span className="text-[9px] uppercase tracking-wider text-[var(--text-tertiary)]">{label}</span>
       </div>
     </div>
   );
 }
 
-function InsightCard({ label, value, icon: Icon }: { label: string; value: string; icon?: PhosphorIcon }) {
+function TinyStat({ label, value }: { label: string; value: string }) {
   return (
-    <div className="flex items-center gap-2 rounded-xl border border-[var(--border-subtle)] bg-[var(--bg-elevated)] px-3 py-2">
+    <div className="rounded-lg border border-[var(--border-subtle)] bg-[var(--bg-elevated)] px-2 py-1">
+      <div className="text-[9px] uppercase tracking-wider text-[var(--text-tertiary)]">{label}</div>
+      <div className="text-xs font-semibold text-[var(--text-primary)] truncate" title={value}>{value}</div>
+    </div>
+  );
+}
+
+function InsightTile({ label, value, icon: Icon }: { label: string; value: string; icon?: PhosphorIcon }) {
+  return (
+    <div className="flex items-center gap-2 rounded-lg border border-[var(--border-subtle)] bg-[var(--bg-elevated)] px-2.5 py-1.5">
       {Icon ? (
-        <div className="grid h-7 w-7 shrink-0 place-items-center rounded-lg bg-[var(--accent-primary)]/10 text-[var(--accent-primary)]">
-          <Icon size={14} weight="duotone" />
+        <div className="grid h-6 w-6 shrink-0 place-items-center rounded-md bg-[var(--accent-code)]/10 text-[var(--accent-code)]">
+          <Icon size={12} weight="duotone" />
         </div>
       ) : null}
       <div className="min-w-0">
-        <div className="text-[11px] text-[var(--text-tertiary)]">{label}</div>
+        <div className="text-[9px] uppercase tracking-wider text-[var(--text-tertiary)]">{label}</div>
         <div className="truncate text-xs font-semibold text-[var(--text-primary)]" title={value}>
           {value}
         </div>

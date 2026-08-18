@@ -246,7 +246,7 @@ export function BrowserExtensionComposer({
         tabIndex={-1}
       >
         <div aria-hidden="true" style={{ alignSelf: "center", display: "flex", alignItems: "center", justifyContent: "center" }}>
-          <MatrixLogo state="idle" size={16} />
+          <MatrixLogo state="idle" size={14} />
         </div>
         <textarea
           className="focus:outline-none focus:ring-1 focus:ring-[var(--accent-primary)]"

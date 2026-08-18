@@ -23,6 +23,7 @@ struct CodeModeView: View {
 
     @EnvironmentObject private var modeStore: AppModeStore
     @StateObject private var environmentStore = EnvironmentStore.shared
+    @StateObject private var usageStore = UsageStore.shared
 
     @State private var sessions: [AgentSession] = []
     @State private var isLoading = false
@@ -361,7 +362,13 @@ struct CodeModeView: View {
             .padding(.top, 60)
             .frame(maxWidth: .infinity)
         } else {
-            VStack(alignment: .leading, spacing: 28) {
+            VStack(alignment: .leading, spacing: 20) {
+                if usageStore.availability == .available {
+                    CodeUsageCard()
+                        .padding(.horizontal, 20)
+                        .padding(.top, 16)
+                }
+
                 ForEach(groups) { group in
                     VStack(alignment: .leading, spacing: 10) {
                         Text(group.title)
@@ -1558,5 +1565,94 @@ private struct CodeStatusFilterSheet: View {
             Spacer()
         }
         .background(Color("BgPrimary"))
+    }
+}
+
+
+// MARK: - Code usage card
+
+/// Horizontal usage summary for the Code tab. Mirrors the web settings usage
+/// summary but laid out horizontally so it doesn't push the composer out of
+/// frame. Shows plan, consumed %, credits balance, and reset time.
+private struct CodeUsageCard: View {
+    @StateObject private var usageStore = UsageStore.shared
+
+    var body: some View {
+        HStack(spacing: 14) {
+            VStack(alignment: .leading, spacing: 6) {
+                HStack(spacing: 8) {
+                    Text(usageStore.snapshot?.plan.capitalized ?? "Plan")
+                        .font(.system(size: 12, weight: .bold))
+                        .foregroundColor(Color("TextPrimary"))
+                        .padding(.horizontal, 8)
+                        .padding(.vertical, 3)
+                        .background(Color("AccentPrimary").opacity(0.14))
+                        .clipShape(Capsule())
+
+                    if let credits = usageStore.snapshot?.credits {
+                        Label(
+                            String(format: "%.0f credits", credits),
+                            systemImage: "dollarsign.circle"
+                        )
+                        .font(.system(size: 11, weight: .medium))
+                        .foregroundColor(Color("TextSecondary"))
+                    }
+                }
+
+                if let percent = usageStore.percentUsed {
+                    GeometryReader { geo in
+                        ZStack(alignment: .leading) {
+                            RoundedRectangle(cornerRadius: 3)
+                                .fill(Color("BorderSubtle").opacity(0.4))
+                                .frame(height: 6)
+                            RoundedRectangle(cornerRadius: 3)
+                                .fill(barColor(for: percent))
+                                .frame(width: max(4, geo.size.width * CGFloat(min(percent, 100) / 100)), height: 6)
+                        }
+                    }
+                    .frame(height: 6)
+
+                    Text("\(Int(percent.rounded()))% used")
+                        .font(.system(size: 11, weight: .semibold))
+                        .foregroundColor(barColor(for: percent))
+                }
+
+                if let resetsLabel = usageStore.resetsLabel {
+                    Text("Resets \(resetsLabel)")
+                        .font(.caption)
+                        .foregroundColor(Color("TextSecondary"))
+                }
+            }
+
+            Spacer(minLength: 4)
+
+            Button(action: { usageStore.refresh() }) {
+                Image(systemName: "arrow.clockwise")
+                    .font(.system(size: 14, weight: .semibold))
+                    .foregroundColor(Color("TextSecondary"))
+                    .frame(width: 32, height: 32)
+                    .background(Color("BgPanel").opacity(0.55))
+                    .clipShape(Circle())
+            }
+            .buttonStyle(.plain)
+            .disabled(usageStore.isLoading)
+        }
+        .padding(14)
+        .background(
+            RoundedRectangle(cornerRadius: Theme.radiusLG)
+                .fill(Color("BgPanel").opacity(0.55))
+                .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: Theme.radiusLG))
+        )
+        .overlay(
+            RoundedRectangle(cornerRadius: Theme.radiusLG)
+                .stroke(Color("BorderSubtle").opacity(0.55), lineWidth: 1)
+        )
+        .onAppear { usageStore.fetchUsageIfNeeded() }
+    }
+
+    private func barColor(for percent: Double) -> Color {
+        if percent >= 100 { return Theme.statusError }
+        if percent >= 80 { return Theme.statusWarning }
+        return Theme.statusSuccess
     }
 }

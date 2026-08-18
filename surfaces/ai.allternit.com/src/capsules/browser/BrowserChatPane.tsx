@@ -103,7 +103,7 @@ export function BrowserChatPane(): React.ReactNode {
         <div className="flex items-center gap-2">
           <div className="flex size-7 items-center justify-center rounded-lg bg-[var(--accent-primary)]/10 text-[var(--accent-primary)]">
             {activeTab === "agent" ? (
-              <MatrixLogo state="idle" size={16} className="opacity-90" />
+              <MatrixLogo state="idle" size={14} className="opacity-90" />
             ) : (
               <Plugs size={16} weight="duotone" />
             )}
@@ -123,7 +123,7 @@ export function BrowserChatPane(): React.ReactNode {
                 : "bg-transparent text-[var(--text-tertiary)] hover:text-[var(--text-primary)]"
             )}
           >
-            <MatrixLogo state="idle" size={16} className="opacity-90" />
+            <MatrixLogo state="idle" size={14} className="opacity-90" />
             Agent
           </button>
           <button

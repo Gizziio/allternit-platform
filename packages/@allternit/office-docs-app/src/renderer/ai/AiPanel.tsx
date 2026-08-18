@@ -6,16 +6,8 @@ import type { AiSettings } from '../../shared/ipc'
 import { type NumIds } from './protocol'
 import { useI18n } from '../i18n/locale'
 import { GensparkMark, IconNewChat, IconSidebarCollapse } from '../components/icons'
-import {
-  OfficeAgentLoop,
-  resolveOfficeModelId,
-  setOfficeModelOverride,
-  getOfficeModelLabel,
-  getOfficeModelOptions,
-  refreshOfficeModelOptions,
-  type OfficeAppKey,
-  type OfficeModelOption,
-} from '@allternit/office-ai'
+import { useOfficeAi, type OfficeAgentLoop } from '@allternit/allternit-office-suite/bridge'
+import { type OfficeModelOption } from '@allternit/allternit-office-suite/ai'
 
 const PANEL_WIDTH_KEY = 'docs-ai-panel-width'
 const PANEL_WIDTH_DEFAULT = 360
@@ -62,15 +54,16 @@ interface ChatEntry {
  * supplied as context on every run. Engine mutation through AI tools lands
  * with the Allternit skill runtime in a later phase.
  */
-const APP_KEY: OfficeAppKey = 'docs'
+const APP_KEY = 'docs' as const
 
 export function AiPanel({ blocks, docEmpty, preset, open, onExpand, onCollapse }: AiPanelProps) {
   const { t } = useI18n()
+  const ai = useOfficeAi()
   const [chat, setChat] = useState<ChatEntry[]>([])
   const [prompt, setPrompt] = useState('')
   const [busy, setBusy] = useState(false)
   const [panelWidth, setPanelWidth] = useState(loadPanelWidth)
-  const [modelId, setModelId] = useState<string | undefined>(() => resolveOfficeModelId(APP_KEY))
+  const [modelId, setModelId] = useState<string | undefined>(() => ai.resolveModelId(APP_KEY))
   const [resizing, setResizing] = useState(false)
   const panelRef = useRef<HTMLDivElement>(null)
   const resizeCleanupRef = useRef<(() => void) | null>(null)
@@ -128,7 +121,7 @@ export function AiPanel({ blocks, docEmpty, preset, open, onExpand, onCollapse }
 
   const loopRef = useRef<OfficeAgentLoop | null>(null)
   if (!loopRef.current) {
-    loopRef.current = new OfficeAgentLoop({
+    loopRef.current = new ai.AgentLoop({
       modelId,
       skill: {
         systemPrompt:
@@ -214,7 +207,7 @@ export function AiPanel({ blocks, docEmpty, preset, open, onExpand, onCollapse }
             value={modelId}
             onChange={(next) => {
               setModelId(next)
-              setOfficeModelOverride(APP_KEY, next)
+              ai.setModelOverride(APP_KEY, next)
               loopRef.current?.setModelId(next)
             }}
           />
@@ -321,13 +314,14 @@ function ModelPicker({
   onChange?: (modelId: string | undefined) => void
 }): React.JSX.Element {
   const [open, setOpen] = useState(false)
-  const [options, setOptions] = useState<OfficeModelOption[]>(() => getOfficeModelOptions())
+  const ai = useOfficeAi()
+  const [options, setOptions] = useState<OfficeModelOption[]>(() => ai.getModelOptions())
   const selected = options.find((o) => o.id === (value ?? 'platform')) ?? options[0]
   const menuRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
     let cancelled = false
-    refreshOfficeModelOptions()
+    ai.refreshModelOptions()
       .then((next) => {
         if (!cancelled) setOptions(next)
       })

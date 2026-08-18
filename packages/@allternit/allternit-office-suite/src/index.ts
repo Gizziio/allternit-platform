@@ -3,6 +3,7 @@ export {
   OfficeHostProvider,
   useOfficeHost,
   useOfficeHostRequired,
+  useOfficeAi,
   localStorageProvider,
 } from './bridge/OfficeHostContext';
 export type {
@@ -14,6 +15,13 @@ export type {
   OfficeAiClient,
   OfficeMessage,
   OfficeModelInfo,
+  OfficeAppKey,
+  OfficeModelOption,
+  OfficeAgentLoop,
+  OfficeAgentLoopOptions,
+  OfficeAgentLoopEvents,
+  OfficeAgentLoopConstructor,
+  OfficeToolExecution,
   OfficeStorageProvider,
   XlsxEngineHost,
   XlsxSessionHandle,

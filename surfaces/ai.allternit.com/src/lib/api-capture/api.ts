@@ -108,6 +108,18 @@ export async function generateClient(
   return api.post<GeneratedClient>('/api/har-derived-api/client', { endpoints: endpointIds, language });
 }
 
+/**
+ * Try to load persisted contracts from the backend. Falls back to an empty list
+ * when the endpoint is unavailable so the UI can merge with localStorage data.
+ */
+export async function fetchPersistedContracts(): Promise<SiteApiContract[]> {
+  try {
+    return await api.get<SiteApiContract[]>('/api/har-derived-api/contracts');
+  } catch {
+    return [];
+  }
+}
+
 // Placeholder: sessions/contracts are local-only until a persistent backend store exists.
 // We persist derived contracts in localStorage so they survive reloads.
 const CONTRACTS_KEY = 'allternit:har-derived-contracts';

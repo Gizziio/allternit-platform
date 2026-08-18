@@ -1,0 +1,237 @@
+---
+title: API Client SDK
+description: Official JavaScript/TypeScript client for the Allternit platform API.
+---
+
+# API Client SDK
+
+The `@allternit/api-client` package is the official JavaScript/TypeScript client for the Allternit platform API. It wraps the Allternit REST API with a small, type-safe surface for managing workspaces, plugins, and tasks, executing plugin actions, and handling errors consistently across Node.js, browser, and edge runtimes.
+
+## Overview
+
+Use this SDK when you want to:
+
+- Manage Allternit workspaces, plugins, and tasks from a TypeScript or JavaScript application.
+- Execute installed plugins programmatically.
+- Handle platform API errors with structured `AllternitApiError` objects.
+- Run in environments that support the standard `fetch` API (Node.js 18+, modern browsers, Deno, Cloudflare Workers, etc.).
+
+## Installation
+
+```bash
+npm install @allternit/api-client
+```
+
+For Yarn, pnpm, or bun, use the equivalent command for your package manager.
+
+## Quick start
+
+```typescript
+import { AllternitClient } from '@allternit/api-client';
+
+const client = new AllternitClient({
+  apiKey: process.env.ALLTERNIT_API_KEY!,
+  baseUrl: 'https://api.allternit.com', // optional, uses default
+});
+
+const workspaces = await client.workspaces.list();
+console.log(workspaces);
+```
+
+## Client configuration
+
+```typescript
+const client = new AllternitClient({
+  apiKey: 'your-api-key',              // Required
+  baseUrl: 'https://api.allternit.com', // Optional
+  timeout: 30000,                       // Optional, default 30000 ms
+});
+```
+
+| Option | Type | Required | Default | Description |
+|--------|------|----------|---------|-------------|
+| `apiKey` | `string` | Yes | — | Your Allternit API key. |
+| `baseUrl` | `string` | No | `https://api.allternit.com` | API base URL. |
+| `timeout` | `number` | No | `30000` | Request timeout in milliseconds. |
+
+<Note>
+For local development, point `baseUrl` to your local Allternit API instance, for example `http://127.0.0.1:8013`.
+</Note>
+
+## Key concepts
+
+### Resource namespaces
+
+The client groups related API operations under namespace objects:
+
+- `client.workspaces` — list, get, create, and delete workspaces.
+- `client.plugins` — list, get, install, and uninstall plugins.
+- `client.tasks` — list, get, create, and cancel tasks.
+
+### Direct execution helper
+
+The top-level `client.execute(pluginId, params)` method invokes a plugin action without needing to manage plugin state manually.
+
+### Structured errors
+
+All network and HTTP failures are normalized to `AllternitApiError`, which exposes a machine-readable `code`, a human-readable `message`, and optional `details`.
+
+## Workspaces
+
+```typescript
+// List all workspaces
+const workspaces = await client.workspaces.list();
+
+// Get a specific workspace
+const workspace = await client.workspaces.get('ws_01hqx8x7x7x7x7x7x7x7x7x');
+
+// Create a workspace
+const created = await client.workspaces.create({
+  name: 'Engineering',
+  description: 'Engineering workspace',
+});
+
+// Delete a workspace
+await client.workspaces.delete('ws_01hqx8x7x7x7x7x7x7x7x7x');
+```
+
+## Plugins
+
+```typescript
+// List all plugins
+const plugins = await client.plugins.list();
+
+// Get a specific plugin
+const plugin = await client.plugins.get('plugin_01hqx8x7x7x7x7x7x7x7x7x');
+
+// Install a plugin
+const installed = await client.plugins.install('market-research');
+
+// Uninstall a plugin
+await client.plugins.uninstall('market-research');
+```
+
+## Tasks
+
+```typescript
+// List all tasks
+const tasks = await client.tasks.list();
+
+// Get a specific task
+const task = await client.tasks.get('task_01hqx8x7x7x7x7x7x7x7x7x');
+
+// Create a task
+const created = await client.tasks.create({
+  name: 'Generate weekly report',
+  config: { format: 'pdf' },
+});
+
+// Cancel a running task
+await client.tasks.cancel('task_01hqx8x7x7x7x7x7x7x7x7x');
+```
+
+For more details on the Tasks API, see the [Tasks API reference](/api/tasks).
+
+## Execute a plugin
+
+```typescript
+const result = await client.execute('market-research', {
+  topic: 'AI agents',
+});
+
+if (result.success) {
+  console.log(result.result);
+} else {
+  console.error(result.error);
+}
+```
+
+## Health check
+
+```typescript
+const health = await client.health();
+console.log(health.status, health.version);
+```
+
+## Core methods
+
+| Method | HTTP | Description |
+|--------|------|-------------|
+| `workspaces.list()` | `GET /v1/workspaces` | List all workspaces. |
+| `workspaces.get(id)` | `GET /v1/workspaces/{id}` | Get a workspace. |
+| `workspaces.create(data)` | `POST /v1/workspaces` | Create a workspace. |
+| `workspaces.delete(id)` | `DELETE /v1/workspaces/{id}` | Delete a workspace. |
+| `plugins.list()` | `GET /v1/plugins` | List all plugins. |
+| `plugins.get(id)` | `GET /v1/plugins/{id}` | Get a plugin. |
+| `plugins.install(id)` | `POST /v1/plugins/{id}/install` | Install a plugin. |
+| `plugins.uninstall(id)` | `DELETE /v1/plugins/{id}` | Uninstall a plugin. |
+| `tasks.list()` | `GET /v1/tasks` | List all tasks. |
+| `tasks.get(id)` | `GET /v1/tasks/{id}` | Get a task. |
+| `tasks.create(data)` | `POST /v1/tasks` | Create a task. |
+| `tasks.cancel(id)` | `POST /v1/tasks/{id}/cancel` | Cancel a task. |
+| `execute(pluginId, params)` | `POST /v1/plugins/{pluginId}/execute` | Execute a plugin action. |
+| `health()` | `GET /health` | Check platform health. |
+
+## Error handling
+
+```typescript
+import { AllternitApiError } from '@allternit/api-client';
+
+try {
+  await client.workspaces.get('invalid-id');
+} catch (error) {
+  if (error instanceof AllternitApiError) {
+    console.error(error.code);    // Error code
+    console.error(error.message); // Error message
+    console.error(error.details); // Additional details
+  }
+}
+```
+
+Common error codes:
+
+| Code | Meaning |
+|------|---------|
+| `UNKNOWN_ERROR` | The platform returned an error body without a recognized code. |
+| `REQUEST_FAILED` | A network, timeout, or non-HTTP failure occurred. |
+
+<Warning>
+Never commit your Allternit API key to version control. Load it from an environment variable or secrets manager.
+</Warning>
+
+## Types
+
+All SDK types are exported for TypeScript users:
+
+```typescript
+import {
+  AllternitClient,
+  AllternitClientConfig,
+  AllternitApiError,
+  Workspace,
+  Plugin,
+  Task,
+  ApiError,
+  createClient,
+} from '@allternit/api-client';
+```
+
+## Alternative constructor
+
+You can also create a client with the `createClient` factory:
+
+```typescript
+import { createClient } from '@allternit/api-client';
+
+const client = createClient({ apiKey: process.env.ALLTERNIT_API_KEY! });
+```
+
+## Related pages
+
+- [TypeScript SDK](/sdk/typescript) — higher-level agent SDK
+- [Computer Use SDK](/sdk/computer-use) — browser and desktop automation
+- [Python SDK](/sdk/python) — Python SDK for chat completions and tool use
+- [Plugin Adapters](/tools/plugin-adapters) — load and run capability manifests
+- [Tasks API](/api/tasks) — REST reference for tasks
+- [Authentication](/api/authentication) — virtual keys and gateway auth
+- [Quickstart](/quickstart) — get started with the Allternit CLI

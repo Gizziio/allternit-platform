@@ -16,9 +16,9 @@ import { NameManagerDialog, type DefinedNameAction, type DefinedNameRow } from '
 import { categoryOptionForPattern, NUMBER_FORMAT_CATEGORIES } from './number-format'
 import { type SelectionFormat } from './selection-format'
 
-import type { ChartSeriesVisualState } from '@allternit/office-xlsx-engine/domain/chart-visual'
-import type { ChangePlan } from '@allternit/office-xlsx-engine/domain/workbook.types'
-import type { AttachmentMeta } from '@allternit/office-xlsx-engine/shared/desktop-api'
+import type { ChartSeriesVisualState } from '@allternit/allternit-office-suite/xlsx'
+import type { ChangePlan } from '@allternit/allternit-office-suite/xlsx'
+import type { AttachmentMeta } from '@allternit/allternit-office-suite/xlsx'
 import { AiChatPanel, type AiChatMessage } from './ai/AiChatPanel'
 import {
   PivotDialog,

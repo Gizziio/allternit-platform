@@ -80,7 +80,7 @@ The bot can then pick up the ticket through the normal Rails ticket flow.
 
 ## Database schema
 
-See migration `cmd/allternit-api/migrations/V87__webhook_triggers.sql`.
+See migration `cmd/allternit-api/migrations/V88__webhook_triggers.sql`.
 
 ## Frontend surfaces
 

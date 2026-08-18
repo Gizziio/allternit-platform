@@ -1,5 +1,13 @@
 import React, { createContext, useContext, useMemo } from 'react';
-import type { OfficeHost, OfficeStorageProvider } from './types';
+import {
+  getOfficeModelLabel,
+  getOfficeModelOptions,
+  refreshOfficeModelOptions,
+  resolveOfficeModelId,
+  setOfficeModelOverride,
+  OfficeAgentLoop,
+} from '../ai';
+import type { OfficeAiClient, OfficeHost, OfficeStorageProvider } from './types';
 
 const OfficeHostContext = createContext<OfficeHost | null>(null);
 
@@ -33,6 +41,24 @@ export function useOfficeHostRequired(): OfficeHost {
     throw new Error('useOfficeHostRequired must be used within an OfficeHostProvider');
   }
   return host;
+}
+
+const defaultOfficeAi: OfficeAiClient = {
+  resolveModelId: resolveOfficeModelId,
+  setModelOverride: setOfficeModelOverride,
+  getModelOptions: getOfficeModelOptions,
+  refreshModelOptions: refreshOfficeModelOptions,
+  getModelLabel: getOfficeModelLabel,
+  AgentLoop: OfficeAgentLoop as OfficeAiClient['AgentLoop'],
+};
+
+/**
+ * Read the AI services from the current host. Falls back to the default
+ * platform-style office-ai implementation when the host does not provide one.
+ */
+export function useOfficeAi(): OfficeAiClient {
+  const host = useContext(OfficeHostContext);
+  return host?.ai ?? defaultOfficeAi;
 }
 
 /**

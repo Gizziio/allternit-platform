@@ -1,0 +1,162 @@
+---
+title: Context Usage
+description: Inspect token usage, context window composition, and collapse status with the /context slash command
+---
+
+## Overview
+
+The `/context` slash command shows exactly what is occupying the agent's context window in the current session. It applies the same pre-API transforms — compact boundary, context collapse, and microcompact — so the token count matches what the model actually sees, not the raw conversation history.
+
+Use `/context` when:
+
+- A session feels sluggish or starts losing earlier details
+- You want to verify how much of the window is consumed by tools, skills, memory, or agents
+- You need to decide whether to compact, fork, or start a new session
+- You are debugging why a long attachment or MCP server is not loaded
+
+The command has two forms:
+
+| Form | Mode | Output |
+|------|------|--------|
+| `/context` | Interactive TUI | Colored grid, legends, and category tables |
+| `/context` | Non-interactive (`gizzi exec` / CI) | Plain markdown tables |
+
+## Basic usage
+
+In an interactive session, type:
+
+```bash
+/context
+```
+
+The TUI renders a grid where each block represents a slice of the context window, color-coded by category.
+
+In non-interactive mode, the same command prints a markdown report:
+
+```bash
+gizzi exec "/context"
+```
+
+## What the report shows
+
+The output is split into several sections.
+
+### Header
+
+```
+Model:   gizzi-pro
+Tokens:  18,421 / 200,000 (9.2%)
+```
+
+- **Model** — the active main-loop model
+- **Tokens** — estimated tokens currently in context versus the model's effective window
+- **Percentage** — share of the window consumed
+
+### Context strategy
+
+When context collapse is enabled, a one-liner describes the current strategy:
+
+```
+Context strategy: collapse (2 spans summarized (47 msgs), 1 staged)
+```
+
+This tells you that earlier conversation spans were summarized and replaced with `<collapsed>` placeholders, and that another span is queued for summarization.
+
+### Estimated usage by category
+
+| Category | Tokens | Percentage |
+|----------|--------|------------|
+| Conversation | 8,200 | 4.1% |
+| System prompt | 3,100 | 1.6% |
+| Tool definitions | 4,500 | 2.3% |
+| Skills | 1,800 | 0.9% |
+| Memory files | 600 | 0.3% |
+| Free space | 181,800 | 90.9% |
+
+Categories include conversation history, system prompt, built-in and MCP tool definitions, custom agents, memory files, skills, and any autocompact or manual compact buffer.
+
+### MCP tools
+
+Lists attached Model Context Protocol servers and the token cost of their exposed tools:
+
+| Tool | Server | Tokens |
+|------|--------|--------|
+| `fetch_docs` | docs-server | 1,200 |
+| `run_tests` | local-mcp | 800 |
+
+Tools that exceed the available budget are marked as deferred and are not sent to the model.
+
+### Custom agents
+
+| Agent Type | Source | Tokens |
+|------------|--------|--------|
+| `code-reviewer` | Project | 900 |
+| `release-bot` | User | 600 |
+
+Source can be **Project**, **User**, **Local**, **Flag**, **Policy**, **Plugin**, or **Built-in**.
+
+### Memory files
+
+| Type | Path | Tokens |
+|------|------|--------|
+| `.gizzi.md` | `/Users/joe/project/.gizzi.md` | 400 |
+| `BRAIN.md` | `~/brain/BRAIN.md` | 200 |
+
+### Skills
+
+| Skill | Source | Tokens |
+|-------|--------|--------|
+| `commit` | Bundled | 350 |
+| `docs-style` | Plugin | 500 |
+
+### Message breakdown
+
+A detailed breakdown of where conversation tokens come from:
+
+| Category | Tokens |
+|----------|--------|
+| Tool calls | 2,100 |
+| Tool results | 3,400 |
+| Attachments | 1,200 |
+| Assistant messages (non-tool) | 900 |
+| User messages (non-tool-result) | 600 |
+
+Plus top tools and attachments by token cost.
+
+## Understanding the colored grid
+
+The interactive visualization divides the context window into squares. Each square is color-coded by category, and partially filled squares indicate categories that do not align cleanly with a single grid cell. Hovering is not required — the legend beneath the grid maps colors to categories and token counts.
+
+Colors are stable within a session, so you can run `/context` multiple times and watch a single category grow or shrink after compactions.
+
+## When numbers change
+
+The token estimate updates immediately after:
+
+- A message is sent or received
+- A tool definition is loaded or deferred
+- A skill, agent, or memory file is added or removed
+- Context collapse summarizes a span
+- Autocompact or manual compact rewrites history
+
+Because `/context` uses the same code path as the API request, its total should match the billed input tokens closely. Small differences are expected due to provider-specific tokenization and caching metadata.
+
+## Non-interactive output
+
+When running through `gizzi exec`, `/context` returns the same data as markdown instead of Ink graphics:
+
+```bash
+gizzi exec "/context" --output-format text
+```
+
+This is useful for:
+
+- Logging context state in CI pipelines
+- Comparing token usage across sessions
+- Generating reports from headless runs
+
+## Related docs
+
+- [Headless Execution](/cli/headless-execution) — run slash commands and prompts without the TUI
+- [Configuration](/cli/configuration) — set default models, context limits, and autocompact behavior
+- [Permission Profiles](/cli/permission-profiles) — control tool approval rules that affect context composition

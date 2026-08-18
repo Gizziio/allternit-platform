@@ -3,19 +3,19 @@
  * the App component passes a VisualActionContext built fresh per call so
  * refs and state never go stale.
  */
-import { columnLabel, parseAddress, parseRange } from '@allternit/office-xlsx-engine/domain/cell-address'
-import { buildChartVisual, chartDataFromValues } from '@allternit/office-xlsx-engine/domain/chart-visual'
-import type { InMemoryWorkbookAdapter } from '@allternit/office-xlsx-engine/domain/in-memory-workbook'
-import { buildPivotChartData } from '@allternit/office-xlsx-engine/domain/pivot-chart'
+import { columnLabel, parseAddress, parseRange } from '@allternit/allternit-office-suite/xlsx'
+import { buildChartVisual, chartDataFromValues } from '@allternit/allternit-office-suite/xlsx'
+import type { InMemoryWorkbookAdapter } from '@allternit/allternit-office-suite/xlsx'
+import { buildPivotChartData } from '@allternit/allternit-office-suite/xlsx'
 import type {
   AddChartOperation,
   AddImageOperation,
   AddShapeOperation,
   EditChartOperation,
   EditShapeOperation,
-} from '@allternit/office-xlsx-engine/domain/workbook-dsl'
-import type { ChangePlan } from '@allternit/office-xlsx-engine/domain/workbook.types'
-import type { WorkbookVisualObject } from '@allternit/office-xlsx-engine/shared/desktop-api'
+} from '@allternit/allternit-office-suite/xlsx'
+import type { ChangePlan } from '@allternit/allternit-office-suite/xlsx'
+import type { WorkbookVisualObject } from '@allternit/allternit-office-suite/xlsx'
 import {
   isSheetRemoved,
   journalSize,

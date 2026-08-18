@@ -4,8 +4,8 @@
 /// translate screen → file, streamed results translate file → screen; rows
 /// and columns inserted this session have no file backing (`null`).
 
-import type { StructuralOp } from '@allternit/office-xlsx-engine/gateway/xlsx-structure'
-import type { WorkbookRangeResult } from '@allternit/office-xlsx-engine/shared/desktop-api'
+import type { StructuralOp } from '@allternit/allternit-office-suite/xlsx'
+import type { WorkbookRangeResult } from '@allternit/allternit-office-suite/xlsx'
 
 export type Axis = 'row' | 'column'
 

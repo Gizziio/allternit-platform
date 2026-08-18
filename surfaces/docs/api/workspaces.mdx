@@ -1,0 +1,449 @@
+---
+title: 'Workspaces API'
+description: 'Create and manage Allternit workspaces, their members, and invitations.'
+---
+
+## Overview
+
+The Workspaces API provides local SQLite persistence for organizing people, agents, and resources on the Allternit platform. A workspace is owned by a user and can include both human members and agent members. Owners can invite additional users via email, and workspace administrators can help manage membership and invitations.
+
+All workspace routes are mounted under `/api` and require a valid bearer token via the platform auth middleware.
+
+## Base URL
+
+```
+https://api.allternit.com/api
+```
+
+For local development:
+
+```
+http://127.0.0.1:8013/api
+```
+
+## Authentication
+
+All requests must include a valid bearer token in the `Authorization` header. The authenticated user is resolved through the platform auth middleware and exposed to the routes as the caller's `user_id`. See [Authentication](/api/authentication) for details.
+
+## Workspace object
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `id` | string | Unique workspace identifier (UUID). |
+| `name` | string | Human-readable workspace name. |
+| `slug` | string | URL-friendly identifier derived from `name` when not provided. |
+| `owner_id` | string | User ID of the workspace owner. |
+| `description` | string \| null | Optional long-form description. |
+| `created_at` | string | ISO 8601 creation timestamp. |
+| `updated_at` | string | ISO 8601 update timestamp. |
+
+## Member object
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `id` | string | Unique membership identifier (UUID). |
+| `workspace_id` | string | Workspace the membership belongs to. |
+| `user_id` | string \| null | Human user ID, if this member is a user. |
+| `agent_id` | string \| null | Agent ID, if this member is an agent. |
+| `role` | string | Membership role, e.g. `owner`, `admin`, `member`. |
+| `joined_at` | string | ISO 8601 timestamp when the member was added. |
+
+## Invitation object
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `id` | string | Unique invitation identifier (UUID). |
+| `workspace_id` | string | Workspace the invitation belongs to. |
+| `email` | string | Email address of the invited user. |
+| `role` | string | Role the invited user will receive, e.g. `member`. |
+| `token` | string | Invitation token used to accept the invite. |
+| `expires_at` | string | ISO 8601 expiration timestamp. |
+| `created_at` | string | ISO 8601 creation timestamp. |
+
+## Endpoints
+
+| Method | Path | Description |
+|--------|------|-------------|
+| `GET` | `/api/workspaces` | List workspaces the caller owns or belongs to. |
+| `POST` | `/api/workspaces` | Create a new workspace. |
+| `GET` | `/api/workspaces/:id` | Get a single workspace. |
+| `PUT` | `/api/workspaces/:id` | Update a workspace's name or description. |
+| `DELETE` | `/api/workspaces/:id` | Delete a workspace and all related members and invitations. |
+| `GET` | `/api/workspaces/:id/members` | List members of a workspace. |
+| `POST` | `/api/workspaces/:id/members` | Add a member or agent to a workspace. |
+| `DELETE` | `/api/workspaces/:id/members/:member_id` | Remove a member from a workspace. |
+| `GET` | `/api/workspaces/:id/invites` | List pending invitations for a workspace. |
+| `POST` | `/api/workspaces/:id/invites` | Create an email invitation for a workspace. |
+| `DELETE` | `/api/workspaces/:id/invites/:invite_id` | Cancel a pending invitation. |
+
+## List workspaces
+
+```http
+GET /api/workspaces
+```
+
+Returns all workspaces owned by the authenticated user or where the user is a member, ordered newest first.
+
+### Example request
+
+```bash
+curl -H "Authorization: Bearer $TOKEN" \
+  https://api.allternit.com/api/workspaces
+```
+
+### Example response
+
+```json
+{
+  "workspaces": [
+    {
+      "id": "ws_7a8b9c0d...",
+      "name": "Platform Team",
+      "slug": "platform-team",
+      "owner_id": "user_2d9e...",
+      "description": "Workspace for the core platform engineering team.",
+      "created_at": "2026-08-01T10:00:00Z",
+      "updated_at": "2026-08-13T14:22:00Z"
+    }
+  ]
+}
+```
+
+## Create a workspace
+
+```http
+POST /api/workspaces
+```
+
+Creates a new workspace owned by the authenticated user. If `slug` is omitted, it is generated from `name` by lowercasing and replacing spaces with hyphens.
+
+### Request body
+
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| `name` | string | Yes | Workspace name. |
+| `slug` | string | No | URL-friendly identifier. |
+| `description` | string | No | Workspace description. |
+
+### Example request
+
+```bash
+curl -X POST https://api.allternit.com/api/workspaces \
+  -H "Authorization: Bearer $TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "name": "Platform Team",
+    "description": "Workspace for the core platform engineering team."
+  }'
+```
+
+### Example response
+
+```json
+{
+  "workspace": {
+    "id": "ws_7a8b9c0d..."
+  }
+}
+```
+
+## Get a workspace
+
+```http
+GET /api/workspaces/:id
+```
+
+Returns the full workspace record. The caller must be the owner or a member of the workspace.
+
+### Example request
+
+```bash
+curl -H "Authorization: Bearer $TOKEN" \
+  https://api.allternit.com/api/workspaces/ws_7a8b9c0d...
+```
+
+### Example response
+
+```json
+{
+  "workspace": {
+    "id": "ws_7a8b9c0d...",
+    "name": "Platform Team",
+    "slug": "platform-team",
+    "owner_id": "user_2d9e...",
+    "description": "Workspace for the core platform engineering team.",
+    "created_at": "2026-08-01T10:00:00Z",
+    "updated_at": "2026-08-13T14:22:00Z"
+  }
+}
+```
+
+## Update a workspace
+
+```http
+PUT /api/workspaces/:id
+```
+
+Updates the workspace name or description. The caller must be the workspace owner or have an `owner` or `admin` role in the workspace. Omitted fields keep their current values.
+
+### Request body
+
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| `name` | string | No | New workspace name. |
+| `description` | string | No | New workspace description. |
+
+### Example request
+
+```bash
+curl -X PUT https://api.allternit.com/api/workspaces/ws_7a8b9c0d... \
+  -H "Authorization: Bearer $TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "description": "Core platform engineering and infrastructure team."
+  }'
+```
+
+### Example response
+
+```json
+{
+  "success": true
+}
+```
+
+## Delete a workspace
+
+```http
+DELETE /api/workspaces/:id
+```
+
+Deletes the workspace and all of its member and invitation rows. Only the workspace owner can delete a workspace.
+
+### Example request
+
+```bash
+curl -X DELETE https://api.allternit.com/api/workspaces/ws_7a8b9c0d... \
+  -H "Authorization: Bearer $TOKEN"
+```
+
+### Example response
+
+```json
+{
+  "success": true
+}
+```
+
+## List members
+
+```http
+GET /api/workspaces/:id/members
+```
+
+Returns all members of the workspace. Only the workspace owner can list members.
+
+### Example request
+
+```bash
+curl -H "Authorization: Bearer $TOKEN" \
+  https://api.allternit.com/api/workspaces/ws_7a8b9c0d.../members
+```
+
+### Example response
+
+```json
+{
+  "members": [
+    {
+      "id": "mem_1a2b3c4d...",
+      "workspace_id": "ws_7a8b9c0d...",
+      "user_id": "user_2d9e...",
+      "agent_id": null,
+      "role": "owner",
+      "joined_at": "2026-08-01T10:00:00Z"
+    },
+    {
+      "id": "mem_5e6f7g8h...",
+      "workspace_id": "ws_7a8b9c0d...",
+      "user_id": null,
+      "agent_id": "agent_018f3a7c...",
+      "role": "member",
+      "joined_at": "2026-08-10T09:15:00Z"
+    }
+  ]
+}
+```
+
+## Add a member
+
+```http
+POST /api/workspaces/:id/members
+```
+
+Adds a user or agent member to the workspace. Only the workspace owner can add members. Either `user_id` or `agent_id` should be provided. If `role` is omitted, it defaults to `member`.
+
+### Request body
+
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| `user_id` | string | No | User ID to add as a member. |
+| `agent_id` | string | No | Agent ID to add as a member. |
+| `role` | string | No | Role for the new member. Defaults to `member`. |
+
+### Example request
+
+```bash
+curl -X POST https://api.allternit.com/api/workspaces/ws_7a8b9c0d.../members \
+  -H "Authorization: Bearer $TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "agent_id": "agent_018f3a7c...",
+    "role": "member"
+  }'
+```
+
+### Example response
+
+```json
+{
+  "member": {
+    "id": "mem_5e6f7g8h..."
+  }
+}
+```
+
+## Remove a member
+
+```http
+DELETE /api/workspaces/:id/members/:member_id
+```
+
+Removes a member from the workspace by membership ID. Only the workspace owner can remove members.
+
+### Example request
+
+```bash
+curl -X DELETE https://api.allternit.com/api/workspaces/ws_7a8b9c0d.../members/mem_5e6f7g8h... \
+  -H "Authorization: Bearer $TOKEN"
+```
+
+### Example response
+
+```json
+{
+  "success": true
+}
+```
+
+## List invitations
+
+```http
+GET /api/workspaces/:id/invites
+```
+
+Returns all pending email invitations for the workspace. The caller must be the owner or a member of the workspace.
+
+### Example request
+
+```bash
+curl -H "Authorization: Bearer $TOKEN" \
+  https://api.allternit.com/api/workspaces/ws_7a8b9c0d.../invites
+```
+
+### Example response
+
+```json
+{
+  "invitations": [
+    {
+      "id": "inv_9i0j1k2l...",
+      "workspace_id": "ws_7a8b9c0d...",
+      "email": "ada@example.com",
+      "role": "member",
+      "token": "a1b2c3d4...",
+      "expires_at": "2026-08-24T10:00:00Z",
+      "created_at": "2026-08-17T10:00:00Z"
+    }
+  ]
+}
+```
+
+## Create an invitation
+
+```http
+POST /api/workspaces/:id/invites
+```
+
+Creates an email invitation that expires in seven days. The caller must be the workspace owner or have an `owner` or `admin` role in the workspace. If `role` is omitted, it defaults to `member`.
+
+### Request body
+
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| `email` | string | Yes | Email address of the invited user. |
+| `role` | string | No | Role the invited user will receive. Defaults to `member`. |
+
+### Example request
+
+```bash
+curl -X POST https://api.allternit.com/api/workspaces/ws_7a8b9c0d.../invites \
+  -H "Authorization: Bearer $TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "email": "ada@example.com",
+    "role": "admin"
+  }'
+```
+
+### Example response
+
+```json
+{
+  "invitation": {
+    "id": "inv_9i0j1k2l..."
+  }
+}
+```
+
+## Delete an invitation
+
+```http
+DELETE /api/workspaces/:id/invites/:invite_id
+```
+
+Cancels a pending invitation. The caller must be the workspace owner or have an `owner` or `admin` role in the workspace.
+
+### Example request
+
+```bash
+curl -X DELETE https://api.allternit.com/api/workspaces/ws_7a8b9c0d.../invites/inv_9i0j1k2l... \
+  -H "Authorization: Bearer $TOKEN"
+```
+
+### Example response
+
+```json
+{
+  "success": true
+}
+```
+
+## Error codes
+
+| Status | Code | Meaning |
+|--------|------|---------|
+| `200 OK` | — | Request succeeded. |
+| `201 Created` | — | Resource was created successfully. |
+| `400 Bad Request` | — | Malformed JSON or invalid request body. |
+| `401 Unauthorized` | — | Missing or invalid bearer token. |
+| `403 Forbidden` | `Access denied` | Caller does not have permission to access or modify the workspace. |
+| `404 Not Found` | `not_found` | Workspace does not exist or the caller cannot access it. |
+| `500 Internal Server Error` | `internal error` or DB message | Unexpected server or database error. |
+
+## Related pages
+
+- [Authentication](/api/authentication)
+- [Agents API](/api/agents)
+- [Workspace Files API](/api/workspace-files)
+- [Team Skills API](/api/team-skills)

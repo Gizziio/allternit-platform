@@ -46,6 +46,13 @@
               "core/commrails",
               "core/communication",
               "core/memory-fabric",
+              "core/agent-workspace",
+              "core/a2a-delegation",
+              "core/canonical-computer-use",
+              "core/intent-graph-kernel",
+              "core/memory-kernel",
+              "core/hooks-system",
+              "core/evolution-layer",
               "core/git-dag",
               "core/skills",
               "core/orchestration",
@@ -66,6 +73,16 @@
               "cli/authentication",
               "cli/headless-execution",
               "cli/permission-profiles",
+              "cli/skills",
+              "cli/mcp",
+              "cli/plugin",
+              "cli/runtime",
+              "cli/session",
+              "cli/tasks",
+              "cli/doctor",
+              "cli/context",
+              "cli/usage",
+              "cli/plan",
               "cli/ci-mode",
               "cli/commrails-cli",
               "cli/cli-typescript",
@@ -87,6 +104,13 @@
               "tools/plugin-adapters",
               "tools/sandbox",
               "tools/server-tools",
+              "tools/agent-swarm",
+              "tools/gateway",
+              "tools/etrid",
+              "tools/local-engine",
+              "tools/voice",
+              "tools/android-bridge",
+              "tools/cloud-backend",
               "tools/office-cli",
               "tools/office-engine",
               "tools/open-connector",
@@ -163,6 +187,7 @@
               "surfaces/desktop",
               "surfaces/platform",
               "surfaces/agent-studio",
+              "surfaces/agent-hub",
               "surfaces/bots",
               "surfaces/canvas",
               "surfaces/operator-browser",
@@ -175,6 +200,12 @@
               "surfaces/office-addin",
               "surfaces/extensions",
               "surfaces/anydoc",
+              "surfaces/site-apis",
+              "surfaces/model-lab",
+              "surfaces/allternit-os",
+              "surfaces/playground",
+              "surfaces/manufacturing",
+              "surfaces/native-agent",
               "surfaces/mobile",
               "surfaces/vscode",
               "surfaces/docmost",
@@ -246,7 +277,8 @@
               "api/vector-stores",
               "api/estimates",
               "api/proxy",
-              "api/translate"
+              "api/translate",
+              "api/local-engine"
             ]
           },
           {
@@ -277,7 +309,8 @@
             "pages": [
               "api/work-queue",
               "api/deployments",
-              "api/batches"
+              "api/batches",
+              "api/beta"
             ]
           },
           {
@@ -298,6 +331,7 @@
             "pages": [
               "api/aci",
               "api/connectors",
+              "api/tools",
               "api/office",
               "api/office-engine",
               "api/voice",
@@ -318,6 +352,7 @@
               "api/boards",
               "api/board-streams",
               "api/inbox",
+              "api/allternit-bus",
               "api/cowork",
               "api/cowork-teams",
               "api/workflows",
@@ -342,6 +377,11 @@
               "api/platform-v1",
               "api/h5i",
               "api/visualizations",
+              "api/workspaces",
+              "api/har",
+              "api/oauth",
+              "api/pricing",
+              "api/backend-install",
               "api/brain-git",
               "api/cloud-api",
               "api/udemy"
@@ -387,6 +427,11 @@
             "pages": [
               "sdk/typescript",
               "sdk/python",
+              "sdk/api-client",
+              "sdk/plugin-sdk",
+              "sdk/workflow-engine",
+              "sdk/browser-tools",
+              "sdk/computer-use-protocol",
               "sdk/capsule",
               "sdk/computer-use"
             ]

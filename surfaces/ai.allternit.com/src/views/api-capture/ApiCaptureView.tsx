@@ -29,6 +29,15 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 
+const API_CREATOR_URL =
+  process.env.NEXT_PUBLIC_API_CREATOR_URL ||
+  "https://allternit.com/developers/api-creator";
+
+function openApiCreator() {
+  if (typeof window === "undefined") return;
+  window.open(API_CREATOR_URL, "_blank", "noopener,noreferrer");
+}
+
 const CLIENT_LANGUAGES = [
   { value: "python", label: "Python" },
   { value: "typescript", label: "TypeScript" },
@@ -264,6 +273,14 @@ export function ApiCaptureView() {
             />
             Refresh
           </Button>
+          <Button
+            size="sm"
+            onClick={openApiCreator}
+            className="gap-2"
+          >
+            <Lightning size={16} />
+            Open API Creator
+          </Button>
         </div>
       </header>
 
@@ -415,13 +432,17 @@ export function ApiCaptureView() {
                       <ArrowSquareOut size={14} />
                       Capture from browser
                     </Button>
+                    <Button variant="ghost" size="sm" onClick={openApiCreator} className="gap-2">
+                      <Lightning size={14} />
+                      Open API Creator
+                    </Button>
                   </div>
                 }
               />
             ) : (
               <>
                 <p className="text-[12px] text-[var(--text-tertiary)] mb-3">
-                  Select a domain to view its endpoints and replay requests.
+                  Contracts are derived from captured traffic and stored locally in this browser. Real contracts are added by uploading a HAR file or capturing live traffic.
                 </p>
                 <div className="flex flex-col gap-4">
                   {Array.from(contractsByDomain.entries()).map(([domain, domainContracts]) => (

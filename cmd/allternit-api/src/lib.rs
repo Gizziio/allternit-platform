@@ -76,6 +76,7 @@ pub mod gizzi_completion;
 pub mod gizzi_provider_auth;
 pub mod h5i_routes;
 pub mod har_api_routes;
+pub mod har_api_service;
 pub mod health;
 pub mod idempotency;
 pub mod inbox_routes;

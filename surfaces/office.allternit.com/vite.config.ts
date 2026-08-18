@@ -50,6 +50,8 @@ export default defineConfig({
   },
   build: {
     outDir: 'dist',
-    sourcemap: true,
+    // Cloudflare Pages rejects assets > 25 MiB; the JS source maps exceed that
+    // in production, so skip them in CI. Keep them enabled locally for debugging.
+    sourcemap: process.env.CI !== 'true',
   },
 })

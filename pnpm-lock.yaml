@@ -1126,6 +1126,9 @@ importers:
 
   packages/@allternit/allternit-office-suite:
     dependencies:
+      '@allternit/office-ai':
+        specifier: workspace:*
+        version: link:../office-ai
       '@allternit/office-docs-app':
         specifier: workspace:*
         version: link:../office-docs-app
@@ -1150,6 +1153,9 @@ importers:
       '@allternit/office-slides-editor':
         specifier: workspace:*
         version: link:../office-slides-editor
+      '@allternit/office-xlsx-engine':
+        specifier: workspace:*
+        version: link:../office-xlsx-engine
       '@phosphor-icons/react':
         specifier: ^2.1.10
         version: 2.1.10(react-dom@18.3.1(react@18.3.1))(react@18.3.1)
@@ -1315,9 +1321,6 @@ importers:
 
   packages/@allternit/office-docs-app:
     dependencies:
-      '@allternit/office-ai':
-        specifier: workspace:*
-        version: link:../office-ai
       '@allternit/office-docx-engine':
         specifier: workspace:*
         version: link:../office-docx-engine
@@ -1421,9 +1424,6 @@ importers:
 
   packages/@allternit/office-pdf-app:
     dependencies:
-      '@allternit/office-ai':
-        specifier: workspace:*
-        version: link:../office-ai
       buffer:
         specifier: ^6.0.3
         version: 6.0.3
@@ -1533,12 +1533,6 @@ importers:
 
   packages/@allternit/office-sheets-app:
     dependencies:
-      '@allternit/office-ai':
-        specifier: workspace:*
-        version: link:../office-ai
-      '@allternit/office-xlsx-engine':
-        specifier: workspace:*
-        version: link:../office-xlsx-engine
       '@fluentui/react-icons':
         specifier: ^2.0.333
         version: 2.0.334(react@18.3.1)
@@ -1628,9 +1622,6 @@ importers:
 
   packages/@allternit/office-slides-app:
     dependencies:
-      '@allternit/office-ai':
-        specifier: workspace:*
-        version: link:../office-ai
       '@allternit/office-pptx-engine':
         specifier: workspace:*
         version: link:../office-pptx-engine
@@ -2569,9 +2560,6 @@ importers:
       '@modelcontextprotocol/server-pdf':
         specifier: ^1.3.1
         version: 1.5.0(@cfworker/json-schema@4.1.1)(react-dom@18.3.1(react@18.3.1))(react@18.3.1)
-      '@novnc/novnc':
-        specifier: ^1.7.0
-        version: 1.7.0
       '@openuidev/react-headless':
         specifier: ^0.8.1
         version: 0.8.1(react@18.3.1)(zustand@4.5.7(@types/react@18.3.28)(immer@11.1.4)(react@18.3.1))
@@ -3093,6 +3081,8 @@ importers:
         specifier: ^3.90.0
         version: 3.114.17(@cloudflare/workers-types@4.20260120.0)
 
+  surfaces/ai.allternit.com/src/generated/prisma: {}
+
   surfaces/allternit-desktop:
     dependencies:
       '@clerk/clerk-react':
@@ -3162,6 +3152,8 @@ importers:
       wait-on:
         specifier: ^8.0.2
         version: 8.0.5
+
+  surfaces/allternit-desktop/resources/office-engine: {}
 
   surfaces/allternit-docs:
     dependencies:
@@ -3241,7 +3233,7 @@ importers:
         version: 1.2.8(@types/react-dom@18.3.7(@types/react@18.3.28))(@types/react@18.3.28)(react-dom@19.2.4(react@19.2.4))(react@19.2.4)
       '@tailwindcss/vite':
         specifier: ^4.0.0
-        version: 4.2.2(vite@8.0.12(@types/node@25.6.2)(esbuild@0.28.0)(jiti@2.6.1)(sass@1.51.0)(sugarss@5.0.1(postcss@8.5.14))(terser@5.47.1)(tsx@4.21.0)(yaml@2.8.4))
+        version: 4.2.2(vite@8.0.12(@types/node@25.6.2)(esbuild@0.27.3)(jiti@2.6.1)(sass@1.51.0)(sugarss@5.0.1(postcss@8.5.14))(terser@5.47.1)(tsx@4.21.0)(yaml@2.8.4))
       '@types/chrome':
         specifier: ^0.1.37
         version: 0.1.39
@@ -3253,7 +3245,7 @@ importers:
         version: 18.3.7(@types/react@18.3.28)
       '@wxt-dev/module-react':
         specifier: ^1.2.2
-        version: 1.2.2(vite@8.0.12(@types/node@25.6.2)(esbuild@0.28.0)(jiti@2.6.1)(sass@1.51.0)(sugarss@5.0.1(postcss@8.5.14))(terser@5.47.1)(tsx@4.21.0)(yaml@2.8.4))(wxt@0.20.20(@types/node@25.6.2)(canvas@3.2.1)(eslint@9.39.4(jiti@2.6.1))(jiti@2.6.1)(rollup@4.55.1)(sass@1.51.0)(sugarss@5.0.1(postcss@8.5.14))(terser@5.47.1)(tsx@4.21.0)(yaml@2.8.4))
+        version: 1.2.2(vite@8.0.12(@types/node@25.6.2)(esbuild@0.27.3)(jiti@2.6.1)(sass@1.51.0)(sugarss@5.0.1(postcss@8.5.14))(terser@5.47.1)(tsx@4.21.0)(yaml@2.8.4))(wxt@0.20.20(@types/node@25.6.2)(canvas@3.2.1)(eslint@9.39.4(jiti@2.6.1))(jiti@2.6.1)(rollup@4.55.1)(sass@1.51.0)(sugarss@5.0.1(postcss@8.5.14))(terser@5.47.1)(tsx@4.21.0)(yaml@2.8.4))
       ai-motion:
         specifier: ^0.4.8
         version: 0.4.8
@@ -3372,7 +3364,7 @@ importers:
         version: 18.3.7(@types/react@18.3.28)
       '@wxt-dev/module-react':
         specifier: ^1.2.2
-        version: 1.2.2(vite@8.0.12(@types/node@25.6.2)(esbuild@0.27.3)(jiti@2.6.1)(sass@1.51.0)(sugarss@5.0.1(postcss@8.5.14))(terser@5.47.1)(tsx@4.21.0)(yaml@2.8.4))(wxt@0.20.20(@types/node@25.6.2)(canvas@3.2.1)(eslint@9.39.4(jiti@2.6.1))(jiti@2.6.1)(rollup@4.55.1)(sass@1.51.0)(sugarss@5.0.1(postcss@8.5.14))(terser@5.47.1)(tsx@4.21.0)(yaml@2.8.4))
+        version: 1.2.2(vite@8.0.12(@types/node@25.6.2)(esbuild@0.28.0)(jiti@2.6.1)(sass@1.51.0)(sugarss@5.0.1(postcss@8.5.14))(terser@5.47.1)(tsx@4.21.0)(yaml@2.8.4))(wxt@0.20.20(@types/node@25.6.2)(canvas@3.2.1)(eslint@9.39.4(jiti@2.6.1))(jiti@2.6.1)(rollup@4.55.1)(sass@1.51.0)(sugarss@5.0.1(postcss@8.5.14))(terser@5.47.1)(tsx@4.21.0)(yaml@2.8.4))
       class-variance-authority:
         specifier: ^0.7.1
         version: 0.7.1
@@ -8579,9 +8571,6 @@ packages:
   '@nodelib/fs.walk@1.2.8':
     resolution: {integrity: sha512-oGB+UxlgWcgQkgwo8GcEGwemoTFt3FIO9ababBmaGwXIoBKZ+GTy0pP185beGg7Llih/NSHSV2XAs1lnznocSg==}
     engines: {node: '>= 8'}
-
-  '@novnc/novnc@1.7.0':
-    resolution: {integrity: sha512-ucEJOx4T2avIRCleodk7YobZj5O2Ga2AeLfQ69A/yjG9HHba2+PDgwSkN3FttrmG+70ZGx21sElNFouK13RzyA==}
 
   '@npmcli/fs@1.1.1':
     resolution: {integrity: sha512-8KG5RD0GVP4ydEzRn/I4BNDuxDtqVbOdm8675T49OIG/NGhaK0pjPX7ZcDlvKYbA+ulvVK3ztfcF4uBdOxuJbQ==}
@@ -32673,8 +32662,6 @@ snapshots:
       '@nodelib/fs.scandir': 2.1.5
       fastq: 1.20.1
 
-  '@novnc/novnc@1.7.0': {}
-
   '@npmcli/fs@1.1.1':
     dependencies:
       '@gar/promisify': 1.1.3
@@ -36310,12 +36297,12 @@ snapshots:
       tailwindcss: 4.2.2
       vite: 6.4.1(@types/node@25.6.2)(jiti@2.6.1)(lightningcss@1.32.0)(sass@1.51.0)(sugarss@5.0.1(postcss@8.5.14))(terser@5.47.1)(tsx@4.21.0)(yaml@2.8.4)
 
-  '@tailwindcss/vite@4.2.2(vite@8.0.12(@types/node@25.6.2)(esbuild@0.28.0)(jiti@2.6.1)(sass@1.51.0)(sugarss@5.0.1(postcss@8.5.14))(terser@5.47.1)(tsx@4.21.0)(yaml@2.8.4))':
+  '@tailwindcss/vite@4.2.2(vite@8.0.12(@types/node@25.6.2)(esbuild@0.27.3)(jiti@2.6.1)(sass@1.51.0)(sugarss@5.0.1(postcss@8.5.14))(terser@5.47.1)(tsx@4.21.0)(yaml@2.8.4))':
     dependencies:
       '@tailwindcss/node': 4.2.2
       '@tailwindcss/oxide': 4.2.2
       tailwindcss: 4.2.2
-      vite: 8.0.12(@types/node@25.6.2)(esbuild@0.28.0)(jiti@2.6.1)(sass@1.51.0)(sugarss@5.0.1(postcss@8.5.14))(terser@5.47.1)(tsx@4.21.0)(yaml@2.8.4)
+      vite: 8.0.12(@types/node@25.6.2)(esbuild@0.27.3)(jiti@2.6.1)(sass@1.51.0)(sugarss@5.0.1(postcss@8.5.14))(terser@5.47.1)(tsx@4.21.0)(yaml@2.8.4)
 
   '@tanstack/query-core@5.99.2': {}
 

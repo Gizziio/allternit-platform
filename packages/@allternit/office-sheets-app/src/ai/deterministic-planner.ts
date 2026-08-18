@@ -1,4 +1,4 @@
-import type { WorkbookCommandBatch } from '@allternit/office-xlsx-engine/domain/workbook-dsl'
+import type { WorkbookCommandBatch } from '@allternit/allternit-office-suite/xlsx'
 
 export class UnsupportedPromptError extends Error {
   constructor() {

@@ -541,6 +541,14 @@ function ShellAppInner(): React.ReactNode {
     return () => window.removeEventListener('allternit:open-view', handleOpenView);
   }, []);
 
+  useEffect(() => {
+    const handleOpenAgentActivity = (): void => {
+      setAgentActivityPanelOpen(true);
+    };
+    window.addEventListener('allternit:open-agent-activity', handleOpenAgentActivity);
+    return () => window.removeEventListener('allternit:open-agent-activity', handleOpenAgentActivity);
+  }, []);
+
   const handleModeChange = useCallback((mode: AppMode): void => {
     if (mode === 'design') {
       openDesignWindow();
@@ -798,6 +806,10 @@ function ShellAppInner(): React.ReactNode {
                     }
                   }}
                   isRailCollapsed={isRailCollapsed}
+                  onBack={() => dispatch({ type: 'BACK' })}
+                  onForward={() => dispatch({ type: 'FORWARD' })}
+                  canGoBack={nav.history.length > 1}
+                  canGoForward={nav.future.length > 0}
                 />}
         <FindInPageOverlay open={isFindInPageOpen} onClose={() => setIsFindInPageOpen(false)} />
         {active.viewType === 'code' && <ConsoleDrawer />}

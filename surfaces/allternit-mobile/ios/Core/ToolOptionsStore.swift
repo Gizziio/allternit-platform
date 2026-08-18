@@ -26,10 +26,37 @@ enum ToolAccess: String, CaseIterable, Sendable {
     }
 }
 
+/// Response style override selected from the "+" sheet's Style submenu
+/// (ChatComposer.tsx parity: Formal / Creative / Technical).
+enum ComposerResponseStyle: String, CaseIterable, Sendable {
+    case formal
+    case creative
+    case technical
+
+    var label: String {
+        switch self {
+        case .formal: return "Formal"
+        case .creative: return "Creative"
+        case .technical: return "Technical"
+        }
+    }
+
+    /// Prefix injected into the next user message when the style is active
+    /// (mirrors ChatComposer.tsx:1176-1180).
+    var promptPrefix: String {
+        switch self {
+        case .formal: return "Respond in a formal, professional tone. "
+        case .creative: return "Respond in a creative, imaginative style. "
+        case .technical: return "Respond in a precise, technical manner. "
+        }
+    }
+}
+
 /// Composer tool options behind the "+" sheet's toggles — Web search,
-/// Research, and the Tool access mode. Persisted app-wide (UserDefaults),
-/// mirroring AgentModeStore's persistence pattern. Sent on every agent-chat
-/// request as `metadata.tools` (see AgentChatClient.AgentChatRequest).
+/// Research, the Tool access mode, and Response style. Persisted app-wide
+/// (UserDefaults), mirroring AgentModeStore's persistence pattern. Sent on
+/// every agent-chat request as `metadata.tools` (see
+/// AgentChatClient.AgentChatRequest).
 @MainActor
 final class ToolOptionsStore: ObservableObject {
     static let shared = ToolOptionsStore()
@@ -43,6 +70,9 @@ final class ToolOptionsStore: ObservableObject {
     @Published var toolAccess: ToolAccess {
         didSet { defaults.set(toolAccess.rawValue, forKey: Keys.toolAccess) }
     }
+    @Published var activeStyle: ComposerResponseStyle? {
+        didSet { defaults.set(activeStyle?.rawValue, forKey: Keys.activeStyle) }
+    }
 
     private let defaults: UserDefaults
 
@@ -50,6 +80,7 @@ final class ToolOptionsStore: ObservableObject {
         static let webSearch = "allternit-tool-web-search"
         static let research = "allternit-tool-research"
         static let toolAccess = "allternit-tool-access"
+        static let activeStyle = "allternit-tool-active-style"
     }
 
     init(defaults: UserDefaults = .standard) {
@@ -62,10 +93,24 @@ final class ToolOptionsStore: ObservableObject {
         self.research = defaults.bool(forKey: Keys.research)
         self.toolAccess = defaults.string(forKey: Keys.toolAccess)
             .flatMap(ToolAccess.init(rawValue:)) ?? .auto
+        self.activeStyle = defaults.string(forKey: Keys.activeStyle)
+            .flatMap(ComposerResponseStyle.init(rawValue:))
     }
 
     /// Wire shape for the agent-chat request body's `metadata.tools`.
     var optionsForSend: ToolOptions {
-        ToolOptions(webSearch: webSearch, research: research, toolAccess: toolAccess.rawValue)
+        ToolOptions(webSearch: webSearch, research: research, toolAccess: toolAccess.rawValue, style: activeStyle?.rawValue)
+    }
+
+    /// Enriches the user's message with active composer prefixes
+    /// (web search marker + style prefix) before it is sent, while the UI
+    /// bubble still shows the original text.
+    func enrichedText(_ text: String) -> String {
+        var parts: [String] = []
+        if webSearch { parts.append("[web_search_enabled]") }
+        if let activeStyle { parts.append(activeStyle.promptPrefix) }
+        let body = text.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !parts.isEmpty else { return body }
+        return (parts + [body]).joined(separator: " ")
     }
 }

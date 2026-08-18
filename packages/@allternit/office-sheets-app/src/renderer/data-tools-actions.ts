@@ -6,7 +6,7 @@
  */
 import { ILayoutService } from '@univerjs/preset-sheets-core'
 
-import { columnLabel } from '@allternit/office-xlsx-engine/domain/cell-address'
+import { columnLabel } from '@allternit/allternit-office-suite/xlsx'
 import type { AdvancedFilterColumn, AdvancedFilterCriteria } from './AdvancedFilterDialog'
 import {
   buildLabelMatrix,

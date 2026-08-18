@@ -84,11 +84,24 @@ export function App() {
         </nav>
 
         <main style={{ flex: 1, minHeight: 0, position: 'relative' }}>
-          {activeTab === 'docs' && <DocsApp key="docs" language="en" />}
-          {activeTab === 'sheets' && <SheetsApp key="sheets" language="en" />}
-          {activeTab === 'slides' && <SlidesApp key="slides" language="en" />}
-          {activeTab === 'pdf' && <PdfApp key="pdf" language="en" />}
-          {activeTab === 'sign' && <SignApp key="sign" />}
+          {/* Keep every app mounted but hidden so heavy editors (Univer, Konva)
+              do not unmount/remount on tab switches, which avoids React root
+              teardown races in the vendored apps. */}
+          <div style={{ display: activeTab === 'docs' ? 'block' : 'none', width: '100%', height: '100%' }}>
+            <DocsApp language="en" />
+          </div>
+          <div style={{ display: activeTab === 'sheets' ? 'block' : 'none', width: '100%', height: '100%' }}>
+            <SheetsApp language="en" />
+          </div>
+          <div style={{ display: activeTab === 'slides' ? 'block' : 'none', width: '100%', height: '100%' }}>
+            <SlidesApp language="en" />
+          </div>
+          <div style={{ display: activeTab === 'pdf' ? 'block' : 'none', width: '100%', height: '100%' }}>
+            <PdfApp language="en" />
+          </div>
+          <div style={{ display: activeTab === 'sign' ? 'block' : 'none', width: '100%', height: '100%' }}>
+            <SignApp />
+          </div>
         </main>
       </div>
     </OfficeHostProvider>
