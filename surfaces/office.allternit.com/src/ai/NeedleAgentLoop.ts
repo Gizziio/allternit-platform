@@ -4,11 +4,7 @@ import type {
   OfficeAgentLoopOptions,
   OfficeToolExecution,
 } from '@allternit/allternit-office-suite'
-
-const NEEDLE_WEIGHTS_URL =
-  'https://huggingface.co/Abdalrahman/needle-rs-safetensors/resolve/main/needle.safetensors'
-const NEEDLE_VOCAB_URL =
-  'https://huggingface.co/Abdalrahman/needle-rs-safetensors/resolve/main/vocab.txt'
+import { getNeedleEngine, loadNeedle } from './needleLoader'
 
 interface ToolDefLike {
   name: string
@@ -38,9 +34,6 @@ export class NeedleAgentLoop implements OfficeAgentLoop {
   private readonly systemSuffix?: string | (() => string)
   private modelId?: string
 
-  private needleModule: typeof import('needle-rs') | null = null
-  private engine: import('needle-rs').NeedleWasm | null = null
-  private loading: Promise<void> | null = null
   private cancelled = false
   private generation = 0
 
@@ -119,40 +112,21 @@ export class NeedleAgentLoop implements OfficeAgentLoop {
     return query
   }
 
-  private async ensureLoaded(): Promise<void> {
-    if (this.engine) return
-    if (this.loading) return this.loading
-
-    this.loading = (async () => {
-      const mod = await import('needle-rs')
-      await mod.default()
-      this.needleModule = mod
-
-      const [weightsRes, vocabRes] = await Promise.all([
-        fetch(NEEDLE_WEIGHTS_URL),
-        fetch(NEEDLE_VOCAB_URL),
-      ])
-      if (!weightsRes.ok) throw new Error(`failed to load Needle weights (${weightsRes.status})`)
-      if (!vocabRes.ok) throw new Error(`failed to load Needle vocab (${vocabRes.status})`)
-
-      const weights = new Uint8Array(await weightsRes.arrayBuffer())
-      const vocab = await vocabRes.text()
-
-      const engine = mod.NeedleWasm.load(weights, vocab)
-      if (!engine) throw new Error('NeedleWasm.load returned undefined')
-      this.engine = engine
-    })()
-
-    return this.loading
-  }
 
   private async runInternal(generation: number, instruction: string): Promise<void> {
     try {
       this.events.onText?.('Loading local model…')
-      await this.ensureLoaded()
+      await loadNeedle((progress) => {
+        this.events.onText?.(progress.message)
+      })
       if (generation !== this.generation || this.cancelled) {
         this.finishRun('', true)
         return
+      }
+
+      const engine = getNeedleEngine()
+      if (!engine) {
+        throw new Error('local model failed to initialize')
       }
 
       const tools = this.toolDefs()
@@ -175,7 +149,6 @@ export class NeedleAgentLoop implements OfficeAgentLoop {
       )
 
       this.events.onText?.('Thinking…')
-      const engine = this.engine!
       const result = engine.run(query, toolsJson)
       if (generation !== this.generation || this.cancelled) {
         this.finishRun('', true)

@@ -1,8 +1,11 @@
+import type { ReactNode } from 'react'
+
 export interface HomePageProps {
   onLaunch: () => void
+  disclosure?: ReactNode
 }
 
-export function HomePage({ onLaunch }: HomePageProps) {
+export function HomePage({ onLaunch, disclosure }: HomePageProps) {
   return (
     <div
       style={{
