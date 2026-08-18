@@ -1,19 +1,15 @@
 /**
  * Cloudflare Pages Function: /api/agent-chat
  *
- * Proxies the office apps' agent-chat requests to an OpenAI-compatible chat
+ * Proxies the office apps' agent-chat requests to any OpenAI-compatible chat
  * completions endpoint. The API key stays server-side; the browser only sends
  * the instruction and an optional system prompt.
  *
  * Required environment variables (set in the Cloudflare Pages dashboard):
- *   OPENAI_API_KEY  - Bearer token for the model API
- * Optional:
- *   OPENAI_API_BASE - defaults to https://api.openai.com/v1
- *   OFFICE_MODEL    - defaults to gpt-4o-mini
+ *   MODEL_API_KEY  - Bearer token for the model API
+ *   MODEL_API_BASE - Base URL for the provider, e.g. https://api.provider.com/v1
+ *   MODEL_ID       - Model id, e.g. gpt-4o, claude-3-5-sonnet, etc.
  */
-
-const DEFAULT_API_BASE = 'https://api.openai.com/v1'
-const DEFAULT_MODEL = 'gpt-4o-mini'
 
 function corsHeaders(origin) {
   return {
@@ -36,16 +32,22 @@ export async function onRequestPost(context) {
   const cors = corsHeaders(origin)
 
   const env = context.env
-  const apiKey = env.OPENAI_API_KEY
-  if (!apiKey) {
-    return new Response(JSON.stringify({ error: 'OPENAI_API_KEY not configured' }), {
-      status: 500,
-      headers: { ...cors, 'Content-Type': 'application/json' },
-    })
-  }
+  const apiKey = env.MODEL_API_KEY
+  const apiBase = typeof env.MODEL_API_BASE === 'string' ? env.MODEL_API_BASE.trim().replace(/\/$/, '') : ''
+  const model = typeof env.MODEL_ID === 'string' ? env.MODEL_ID.trim() : ''
 
-  const apiBase = (env.OPENAI_API_BASE || DEFAULT_API_BASE).replace(/\/$/, '')
-  const model = env.OFFICE_MODEL || DEFAULT_MODEL
+  if (!apiKey || !apiBase || !model) {
+    return new Response(
+      JSON.stringify({
+        error:
+          'Model not configured. Set MODEL_API_KEY, MODEL_API_BASE, and MODEL_ID in the Pages environment variables.',
+      }),
+      {
+        status: 500,
+        headers: { ...cors, 'Content-Type': 'application/json' },
+      },
+    )
+  }
 
   let body
   try {
