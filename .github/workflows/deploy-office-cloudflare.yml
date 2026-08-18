@@ -46,7 +46,7 @@ jobs:
       - name: Build office surface and dependencies
         # Build the full dependency graph (office-* engines, apps, etc.) so that
         # packages whose `dist/` directories are not committed are available.
-        run: pnpm --filter "...@allternit/office-surface" build
+        run: pnpm --filter "@allternit/office-surface..." build
 
       - name: Deploy to Cloudflare Pages
         uses: cloudflare/wrangler-action@v3
