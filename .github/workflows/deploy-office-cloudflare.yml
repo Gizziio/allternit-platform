@@ -52,3 +52,21 @@ jobs:
           apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
           command: pages deploy surfaces/office.allternit.com/dist --project-name=allternit-office --branch=main
+
+      - name: Attach office.allternit.com custom domain
+        run: |
+          curl -s -X POST \
+            "https://api.cloudflare.com/client/v4/accounts/${{ secrets.CLOUDFLARE_ACCOUNT_ID }}/pages/projects/allternit-office/domains" \
+            -H "Authorization: Bearer ${{ secrets.CLOUDFLARE_API_TOKEN }}" \
+            -H "Content-Type: application/json" \
+            --data '{"name":"office.allternit.com"}' || true
+
+      - name: Ensure office.allternit.com DNS record
+        run: |
+          ZONE_ID=$(curl -s "https://api.cloudflare.com/client/v4/zones?name=allternit.com" \
+            -H "Authorization: Bearer ${{ secrets.CLOUDFLARE_API_TOKEN }}" \
+            -H "Content-Type: application/json" | jq -r '.result[0].id')
+          curl -s -X POST "https://api.cloudflare.com/client/v4/zones/${ZONE_ID}/dns_records" \
+            -H "Authorization: Bearer ${{ secrets.CLOUDFLARE_API_TOKEN }}" \
+            -H "Content-Type: application/json" \
+            --data '{"type":"CNAME","name":"office","content":"allternit-office.pages.dev","ttl":1,"proxied":true}' || true
