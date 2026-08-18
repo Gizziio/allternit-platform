@@ -28,8 +28,10 @@ Implement the cross-surface Site APIs / HAR-derived API capture redesign.
 ### Commit / Push status
 - Worktree: `/Users/joe/Desktop/allternit-workspace/allternit-session-site-apis-capture`
 - Branch: `session/site-apis-capture`
-- Changes staged and committed locally: backend HAR service fix, redesign plan, headless smoke tests, backend integration test, removal of flaky e2e spec.
-- **Pending steering approval** before `git push origin session/site-apis-capture` and PR/merge to `main`.
+- Commit: `a68c49d7a`
+- Changes committed locally: backend HAR service fix, redesign plan, headless smoke tests, backend integration test, removal of flaky e2e spec.
+- **Steering consult blocked**: `ao-steer` (Claude Code reviewer session) is at a session limit dialog (`You've hit your session limit · resets 5am (America/Chicago)`) and cannot process the commit-gate request. `steer-stop.sh` returned `verdict=CONSULT_FAILED`.
+- Need explicit user approval (or `STEER_GUARD_OFF=1`) before `git push origin session/site-apis-capture` and PR/merge to `main`.
 
 ---
 
