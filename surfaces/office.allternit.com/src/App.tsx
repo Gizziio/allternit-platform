@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
+import { ClerkProvider, SignInButton } from '@clerk/clerk-react'
 import {
   OfficeHostProvider,
   createBrowserHost,
@@ -11,6 +12,7 @@ import {
 } from '@allternit/allternit-office-suite'
 import { createStandaloneAiClient } from './ai/createStandaloneAiClient'
 import { loadNeedle, type NeedleProgress } from './ai/needleLoader'
+import { CLERK_PUBLISHABLE_KEY } from './clerkConfig'
 import { HomePage } from './HomePage'
 import { ModelDownloadWizard } from './ModelDownloadWizard'
 
@@ -46,26 +48,24 @@ function CloudPromptBanner() {
           For complex, multi-step reasoning, sign in to Allternit Cloud.
         </span>
       </span>
-      <button
-        type="button"
-        onClick={() => {
-          // TODO: wire to platform auth / cloud mode
-          alert('Cloud sign-in integration coming next.')
-        }}
-        style={{
-          flexShrink: 0,
-          padding: '4px 10px',
-          borderRadius: 6,
-          border: 'none',
-          background: 'var(--accent)',
-          color: '#fff',
-          fontSize: 12,
-          fontWeight: 600,
-          cursor: 'pointer',
-        }}
-      >
-        Sign in to Allternit
-      </button>
+      <SignInButton mode="modal">
+        <button
+          type="button"
+          style={{
+            flexShrink: 0,
+            padding: '4px 10px',
+            borderRadius: 6,
+            border: 'none',
+            background: 'var(--accent)',
+            color: '#fff',
+            fontSize: 12,
+            fontWeight: 600,
+            cursor: 'pointer',
+          }}
+        >
+          Sign in to Allternit
+        </button>
+      </SignInButton>
     </div>
   )
 }
@@ -164,7 +164,7 @@ function OfficeWorkspace({ onBack }: { onBack: () => void }) {
   )
 }
 
-export function App() {
+function AppContent() {
   const [view, setView] = useState<'home' | 'loading' | 'office'>('home')
   const [progress, setProgress] = useState<NeedleProgress>({
     phase: 'init',
@@ -224,4 +224,12 @@ export function App() {
   }
 
   return <OfficeWorkspace onBack={() => setView('home')} />
+}
+
+export function App() {
+  return (
+    <ClerkProvider publishableKey={CLERK_PUBLISHABLE_KEY}>
+      <AppContent />
+    </ClerkProvider>
+  )
 }

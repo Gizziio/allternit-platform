@@ -46,6 +46,8 @@ jobs:
       - name: Build office surface and dependencies
         # Build the full dependency graph (office-* engines, apps, etc.) so that
         # packages whose `dist/` directories are not committed are available.
+        env:
+          VITE_CLERK_PUBLISHABLE_KEY: pk_live_Y2xlcmsucGxhdGZvcm0uYWxsdGVybml0LmNvbSQ
         run: pnpm --filter "@allternit/office-surface..." build
 
       - name: Deploy to Cloudflare Pages

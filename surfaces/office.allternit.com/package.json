@@ -13,6 +13,7 @@
   "dependencies": {
     "@allternit/allternit-office-suite": "workspace:*",
     "@allternit/office-ai": "workspace:*",
+    "@clerk/clerk-react": "^5.30.0",
     "@huggingface/transformers": "^4.2.0",
     "needle-rs": "^0.1.0",
     "react": "^18.3.1",
