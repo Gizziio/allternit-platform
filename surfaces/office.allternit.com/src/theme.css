@@ -254,7 +254,7 @@ body {
   width: 100%;
   min-height: 100dvh;
   height: 100%;
-  overflow: hidden;
+  overflow-y: auto;
   background-color: var(--bg-primary);
   background-image: var(--bg-grid), var(--bg-gradient);
   background-size: 40px 40px, 100% 100%;
