@@ -8,8 +8,8 @@
  * @module bot-profile
  */
 
-import type { Agent, Bot, BotProfile, BotCategory } from '../agents/agent.types';
-import { packageAgentAsBot } from './bot-contract';
+import type { Agent, BotProfile, BotCategory } from '../agents/agent.types';
+import { BotSchema, type Bot } from './orpc-contracts';
 import { createModuleLogger } from '@/lib/logger';
 
 const logger = createModuleLogger('BotProfile');
@@ -123,6 +123,42 @@ export function getBotCategory(agent: Agent): BotCategory | undefined {
 // ============================================================================
 // Bot Creation Helpers
 // ============================================================================
+
+const VALID_BOT_TYPES: Bot['type'][] = [
+  'orchestrator',
+  'sub-agent',
+  'worker',
+  'specialist',
+  'reviewer',
+];
+
+/**
+ * Convert an Agent that represents a packaged bot into the canonical Bot
+ * contract used by the duplication and roster services.
+ *
+ * Drops agent-only fields that are not part of the Bot contract.
+ */
+export function agentToBot(agent: Agent): Bot {
+  const botType = VALID_BOT_TYPES.includes(agent.type as Bot['type'])
+    ? (agent.type as Bot['type'])
+    : 'specialist';
+
+  return BotSchema.parse({
+    id: agent.id,
+    name: agent.name,
+    description: agent.description,
+    type: botType,
+    model: agent.model ?? 'default',
+    provider: agent.provider ?? 'custom',
+    avatar: undefined,
+    isBot: true,
+    botProfile: agent.botProfile,
+    operationalState: undefined,
+    parentBotId: undefined,
+    createdAt: agent.createdAt,
+    updatedAt: agent.updatedAt,
+  });
+}
 
 /**
  * Create a bot agent from a base agent configuration.
