@@ -1,0 +1,119 @@
+---
+title: Usage
+description: Inspect token usage, context window, and session cost with the /usage command
+---
+
+## Overview
+
+The `/usage` command is an inline command available inside an interactive Gizzi Code session. It prints a live summary of the current session's consumption, including the active model, context-window utilization, total cost, duration, and token breakdown.
+
+Use it when you want to:
+
+- Check how much of the model's context window is occupied
+- See the running cost and duration of the current session
+- Verify which model and directory the session is using
+- Diagnose rate-limit or context-overflow warnings
+
+<Note>
+  `/usage` is a session-local command, not a top-level shell command. Run it from the Gizzi Code REPL/TUI prompt by typing `/usage` and pressing Enter.
+</Note>
+
+## Command reference
+
+| Command | Description |
+|---------|-------------|
+| `/usage` | Show token usage, context window, and session cost inline |
+
+`/usage` works in both interactive and non-interactive sessions. It does not modify session state and can be run any number of times.
+
+## Output sections
+
+Running `/usage` produces a small inline panel with the following sections.
+
+### Session context
+
+| Field | Description |
+|-------|-------------|
+| `Model` | The active model for the current session |
+| `Directory` | The working directory the session is running in |
+| `Session` | The unique session identifier |
+
+### Context window
+
+A progress bar shows the percentage of the active model's context window currently consumed. The bar changes color based on utilization:
+
+| Color | Threshold | Meaning |
+|-------|-----------|---------|
+| Green | `< 75%` | Healthy context headroom |
+| Yellow | `75% – 89%` | Context window is filling up |
+| Red | `≥ 90%` | Critical — consider starting a new session or compacting context |
+
+The count includes input tokens, cache-read tokens, and cache-creation tokens.
+
+### Session totals
+
+| Field | Description |
+|-------|-------------|
+| `Cost` | Total estimated cost of the session in USD |
+| `Duration` | Wall-clock time since the session started |
+| `Tokens` | Total tokens consumed (input + output) |
+| `Cache read / Cache write` | Breakdown of cached input tokens, when applicable |
+
+## Usage examples
+
+### Check usage mid-session
+
+```text
+/usage
+```
+
+Example output:
+
+```text
+╭────────────────────────────────────────╮
+│  Usage                                 │
+╰────────────────────────────────────────╯
+
+  Model:     gizzi-pro
+  Directory: /Users/joe/projects/my-app
+  Session:   sess_abc123xyz
+
+Context window
+  ████████████████░░░░░░░░░░░░  42% (12.3k / 200k)
+  Color: green
+
+Session totals
+  Cost:      $0.0234
+  Duration:  4m 12s
+  Tokens:    28.5k
+             12.3k in / 16.2k out
+             3.1k cache read / 0 cache write
+```
+
+### Use in non-interactive mode
+
+`/usage` is also available in non-interactive sessions, making it useful in scripts or remote/attached sessions where you want a quick consumption snapshot without leaving the terminal.
+
+```text
+/usage
+```
+
+## Common flags
+
+`/usage` does not accept any flags or arguments. All displayed values are derived automatically from the current session state.
+
+## Interpreting context-window color
+
+If the context bar is yellow or red, consider one of the following:
+
+- Start a fresh session for a new task
+- Use `gizzi run --continue` or `gizzi run --session` to fork or switch sessions
+- Compact the conversation with `/compact` if available
+- Reduce the amount of attached context or file attachments
+
+## Related docs
+
+- [Gizzi Code Overview](/cli/overview) — Interactive TUI, headless mode, and platform integration
+- [Session Management](/cli/session) — List, export, and delete sessions
+- [Headless Execution](/cli/headless-execution) — Run agents non-interactively with `gizzi exec`
+- [Configuration](/cli/configuration) — Config files, models, and environment variables

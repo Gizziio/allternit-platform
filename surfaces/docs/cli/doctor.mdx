@@ -1,0 +1,132 @@
+---
+title: gizzi doctor
+description: Run system health and configuration diagnostics from the terminal
+---
+
+## Overview
+
+`gizzi doctor` runs a set of local health checks across your Gizzi Code installation and working environment. Use it when the CLI behaves unexpectedly, before opening a bug report, or after installing or upgrading Gizzi Code.
+
+The command inspects the runtime, required dependencies, configured providers, the local database, global configuration, and the current project directory. Each check prints either a passing status or a clear failure message describing what is wrong and how to fix it.
+
+<Note>
+  `gizzi doctor` is a read-only diagnostic command. It does not modify sessions, files, or settings unless you follow the remediation steps it prints.
+</Note>
+
+## Command reference
+
+| Command | Description |
+|---------|-------------|
+| `gizzi doctor` | Run system health and configuration diagnostics |
+
+`gizzi doctor` takes no subcommands and no flags.
+
+## Diagnostic categories
+
+The command groups checks into the following sections.
+
+### Runtime
+
+| Check | Passing result | Failure result |
+|-------|----------------|----------------|
+| Bun runtime | `✓ Bun <version>` | Bun version not detected |
+| Node compatibility layer | `✓ Node compatibility: v<version>` | Node compatibility layer not available |
+
+### Dependencies
+
+| Check | Passing result | Failure result |
+|-------|----------------|----------------|
+| Ripgrep (`rg`) | `✓ Ripgrep found: <path>` | Ripgrep not found — file search will be unavailable |
+| Git | `✓ Git found: <path>` | Git not found — version control features will be unavailable |
+
+### Providers
+
+| Check | Passing result | Failure result |
+|-------|----------------|----------------|
+| Configured providers | `✓ <N> provider(s) configured` | No providers configured — run `gizzi connect login` |
+
+When providers are configured, each provider ID is listed with the number of available models.
+
+### Database
+
+| Check | Passing result | Failure result |
+|-------|----------------|----------------|
+| Local database | `✓ Database exists: <path> (<size> MB)` | Database not found, or data directory does not exist |
+
+### Config
+
+| Check | Passing result | Failure result |
+|-------|----------------|----------------|
+| Global config directory | `✓ Global config directory exists: <path>` | Global config directory not found |
+
+### Project
+
+The project section inspects the current working directory.
+
+| Check | Result |
+|-------|--------|
+| Project instructions file | Pass if present; otherwise noted as not found |
+| `.gizzi` directory | Pass if present; otherwise noted as not found |
+| Git repository | Pass if `.git` exists; otherwise noted as not a git repository |
+
+## Basic usage
+
+```bash
+# Run all diagnostics
+gizzi doctor
+```
+
+Typical output looks like this:
+
+```
+gizzi doctor
+
+── Runtime ──
+✓ Bun 1.2.4
+✓ Node compatibility: v22.14.0
+
+── Dependencies ──
+✓ Ripgrep found: /opt/homebrew/bin/rg
+✓ Git found: /opt/homebrew/bin/git
+
+── Providers ──
+✓ 2 provider(s) configured
+  allternit (12 models)
+  local (3 models)
+
+── Database ──
+✓ Database exists: /Users/you/.local/share/gizzi/gizzi.db (24.1 MB)
+
+── Config ──
+✓ Global config directory exists: /Users/you/.config/gizzi-code
+
+── Project ──
+✓ AGENTS.md found: /Users/you/project/AGENTS.md
+  .gizzi directory not found in current directory
+✓ Git repository detected
+```
+
+## Interpreting failures
+
+When a check fails, `gizzi doctor` prints an `✗` line with a specific message:
+
+- **Bun or Node failure** — Gizzi Code requires a working Bun runtime. Reinstall or upgrade Bun, then run the command again.
+- **Ripgrep missing** — Install `ripgrep` through your package manager (`brew install ripgrep`, `apt install ripgrep`, etc.). Without it, file search and globbing tools are unavailable.
+- **Git missing** — Install Git. Version control features such as diff context and branch awareness depend on it.
+- **No providers configured** — Run `gizzi connect login` to add credentials for at least one provider.
+- **Database or config directory missing** — These are created automatically during normal use. If they remain missing, verify permissions in `~/.local/share/gizzi` and `~/.config/gizzi-code`.
+
+## Interactive diagnostics
+
+Inside the interactive TUI (`gizzi` with no arguments), the `/doctor` screen provides the same core checks plus additional context: installation type, auto-update status, version locks, agent parse errors, plugin errors, MCP parsing warnings, keybinding warnings, and environment-variable validation. Use `/doctor` when you want a more detailed, interactive view of the same health data.
+
+## Common flags
+
+`gizzi doctor` does not define any flags. Global flags such as `--help` and `--version` still apply.
+
+## Related docs
+
+- [Installation](/cli/installation) — Install or upgrade Gizzi Code
+- [Configuration](/cli/configuration) — Manage profiles, models, and runtime options
+- [Authentication](/cli/authentication) — Log in to providers with `gizzi connect login`
+- [CLI Overview](/cli/overview) — How Gizzi Code fits into the Allternit platform

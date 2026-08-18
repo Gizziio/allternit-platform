@@ -14,14 +14,12 @@ export interface IdentityConnectorMapping {
 }
 
 const IDENTITY_CONNECTOR_MAP: Record<string, IdentityConnectorMapping> = {
-  gmail: { kind: 'email', provider: 'google_workspace', label: 'Gmail' },
-  outlook: { kind: 'email', provider: 'microsoft_365', label: 'Outlook' },
-  'agent-mail': { kind: 'email', provider: 'agent_mail', label: 'AgentMail' },
-  'generic-email': { kind: 'email', provider: 'generic_imap', label: 'Generic Email' },
+  // Email: the open-connector catalog does not ship Gmail/Outlook/IMAP providers
+  // in this workspace, so email identity is platform-managed (CommRails) or
+  // configured through raw secrets. Do not map fake connector ids here.
   twilio: { kind: 'phone', provider: 'twilio', label: 'Twilio' },
   telnyx: { kind: 'phone', provider: 'telnyx', label: 'Telnyx' },
-  'android-bridge': { kind: 'phone', provider: 'android_bridge', label: 'Android Bridge' },
-  photon: { kind: 'phone', provider: 'photon', label: 'Photon.codes' },
+  vapi: { kind: 'phone', provider: 'vapi', label: 'Vapi' },
 };
 
 export function getIdentityMappingForConnector(

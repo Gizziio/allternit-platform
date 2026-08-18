@@ -5,7 +5,7 @@
  * per-sheet print settings; nothing renders in the grid (Univer has no
  * page-layout view), everything lands in the saved file.
  */
-import { columnLabel } from '@allternit/office-xlsx-engine/domain/cell-address'
+import { columnLabel } from '@allternit/allternit-office-suite/xlsx'
 import { isSheetRemoved, journalSize, recordPageSetup, type PageSetupJournalState } from './edit-journal'
 import type { HeaderFooterResult } from './HeaderFooterDialog'
 import { t } from './i18n/locale'

@@ -12,6 +12,7 @@ struct HistorySidebarView: View {
     @Binding var isSidebarOpen: Bool
 
     @EnvironmentObject private var modeStore: AppModeStore
+    @EnvironmentObject private var agentModeStore: AgentModeStore
     @EnvironmentObject private var authManager: AuthManager
 
     @State private var historyGroups: [HistoryGroup] = []
@@ -237,7 +238,7 @@ struct HistorySidebarView: View {
                 .padding(.horizontal, 20)
                 .padding(.top, 40)
                 .frame(maxWidth: .infinity)
-        } else if visibleGroups.isEmpty {
+        } else if visibleGroups.isEmpty, !showActiveBot {
             // History is loaded but the mode filter leaves nothing for this
             // surface — distinct from the "no chats yet" empty state.
             Text("No conversations here yet.")
@@ -249,6 +250,8 @@ struct HistorySidebarView: View {
                 .frame(maxWidth: .infinity)
         } else {
             VStack(alignment: .leading, spacing: 28) {
+                activeBotSection
+
                 ForEach(visibleGroups) { group in
                     VStack(alignment: .leading, spacing: 10) {
                         Text(group.title)
@@ -284,6 +287,61 @@ struct HistorySidebarView: View {
                         }
                     }
                 }
+            }
+        }
+    }
+
+    // MARK: - Active bot
+
+    /// True when agent/bot mode is on for the current surface and a registry
+    /// agent is selected. The rail then surfaces that bot as the mounted
+    /// session instead of hiding it in recents.
+    private var showActiveBot: Bool {
+        agentModeStore.isAgentEnabled(for: modeStore.mode)
+            && agentModeStore.selectedAgent(for: modeStore.mode) != nil
+    }
+
+    /// The mounted bot row: avatar + name, highlighted while bot mode is on.
+    /// Tapping it mounts a fresh bot chat in the main view.
+    @ViewBuilder
+    private var activeBotSection: some View {
+        if showActiveBot, let agent = agentModeStore.selectedAgent(for: modeStore.mode) {
+            VStack(alignment: .leading, spacing: 10) {
+                Text("ACTIVE BOT")
+                    .font(.system(size: 11, weight: .bold))
+                    .tracking(1)
+                    .foregroundColor(Color("TextSecondary"))
+                    .padding(.horizontal, 20)
+
+                Button(action: {
+                    let generator = UIImpactFeedbackGenerator(style: .light)
+                    generator.impactOccurred()
+                    selectedSessionId = nil
+                    modeStore.selectBarItem(.chats)
+                    withAnimation(.spring(response: 0.35, dampingFraction: 0.86, blendDuration: 0)) {
+                        isSidebarOpen = false
+                    }
+                }) {
+                    HStack(spacing: 12) {
+                        AgentAvatarView(agent: agent, size: 28)
+
+                        Text(agent.name)
+                            .font(.subheadline)
+                            .foregroundColor(Color("TextPrimary"))
+                            .lineLimit(1)
+
+                        Spacer()
+
+                        Image(systemName: "checkmark.circle.fill")
+                            .font(.system(size: 15))
+                            .foregroundColor(Color("AccentPrimary"))
+                    }
+                    .padding(.vertical, 8)
+                    .padding(.horizontal, 20)
+                    .background(Color("BgTertiary").opacity(0.5))
+                    .cornerRadius(8)
+                }
+                .buttonStyle(.plain)
             }
         }
     }

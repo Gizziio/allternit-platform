@@ -1,0 +1,549 @@
+---
+title: 'Local Engine API'
+description: 'Proxy to the Allternit Local Engine controller for cached models, runtime lifecycle, and chat-completions inference.'
+---
+
+## Overview
+
+The Local Engine API is a thin, authenticated proxy to the Allternit Local Engine controller (`services/local-engine`). All routes are mounted under `/api/local-engine` and forward request bodies and responses verbatim, so the gateway never becomes a second source of model or runtime state.
+
+Use this surface to:
+
+- Inspect the health and host status of the local engine.
+- Manage cached models: list, import from disk, and queue downloads from Hugging Face.
+- Launch and stop local model runtimes.
+- Call a running local model through a chat-completions-compatible surface.
+
+## Base URL
+
+Production:
+
+```
+https://api.allternit.com/api/local-engine
+```
+
+Local development (against the Allternit API server):
+
+```
+http://127.0.0.1:8013/api/local-engine
+```
+
+The API server proxies requests to the Local Engine controller at the URL configured by `LOCAL_ENGINE_URL`, defaulting to `http://127.0.0.1:3015`.
+
+## Authentication
+
+All routes require a valid bearer token in the `Authorization` header. Requests without a recognized user receive `401 Unauthorized`. See [Authentication](/api/authentication) for details.
+
+```bash
+curl https://api.allternit.com/api/local-engine/health \
+  -H "Authorization: Bearer $ALLTERNIT_API_KEY"
+```
+
+## Endpoints
+
+| Method | Path | Description |
+|--------|------|-------------|
+| `GET` | `/api/local-engine/health` | Controller health check. |
+| `GET` | `/api/local-engine/status` | Host diagnostics and engine state. |
+| `GET` | `/api/local-engine/models` | List cached/downloaded models. |
+| `POST` | `/api/local-engine/models/import` | Import a model from a local directory. |
+| `POST` | `/api/local-engine/models/download` | Queue a Hugging Face model download. |
+| `GET` | `/api/local-engine/runtimes` | List active model runtimes. |
+| `POST` | `/api/local-engine/runtimes/launch` | Launch a model runtime from a recipe. |
+| `POST` | `/api/local-engine/runtimes/:id/stop` | Stop a running runtime. |
+| `GET` | `/api/local-engine/v1/models` | Chat-completions-compatible models list. |
+| `POST` | `/api/local-engine/v1/chat/completions` | Chat-completions-compatible inference. |
+
+## Health
+
+```http
+GET /api/local-engine/health
+```
+
+Returns the controller's health and version.
+
+### Example request
+
+```bash
+curl https://api.allternit.com/api/local-engine/health \
+  -H "Authorization: Bearer $ALLTERNIT_API_KEY"
+```
+
+### Example response
+
+```json
+{
+  "status": "ok",
+  "version": "0.1.0"
+}
+```
+
+## Status
+
+```http
+GET /api/local-engine/status
+```
+
+Returns host-level diagnostics, including active runtimes, cached models, CPU, RAM, disk, and GPU information when available.
+
+### Example response
+
+```json
+{
+  "status": "healthy",
+  "active_runtimes": 1,
+  "cached_models": 3,
+  "platform": {
+    "os": "macOS 14.5",
+    "arch": "aarch64",
+    "kernel": "23.5.0",
+    "hostname": "allternit-workstation"
+  },
+  "cpu": {
+    "model": "Apple M3 Max",
+    "cores": 14,
+    "threads": 14
+  },
+  "ram": {
+    "total_bytes": 137438953472,
+    "used_bytes": 41271951360,
+    "total_mb": 131072,
+    "used_mb": 39360
+  },
+  "disk": {
+    "path": "/Users/joe/Library/Application Support/allternit-local-engine/models",
+    "total_bytes": 994662584320,
+    "free_bytes": 312455497728,
+    "used_bytes": 682207086592
+  },
+  "gpu": [
+    {
+      "name": "Apple GPU",
+      "memory_total_mb": 131072,
+      "memory_used_mb": 39360
+    }
+  ]
+}
+```
+
+## List models
+
+```http
+GET /api/local-engine/models
+```
+
+Returns every model currently tracked in the local cache.
+
+### Example response
+
+```json
+{
+  "models": [
+    {
+      "id": "local--Llama-3.2-3B-Instruct-1723500000000",
+      "name": "Llama-3.2-3B-Instruct",
+      "source": "local_path",
+      "path": "/Users/joe/.cache/allternit/models/Llama-3.2-3B-Instruct",
+      "status": "ready",
+      "downloaded_bytes": 0,
+      "total_bytes": 0,
+      "created_at": "2026-08-17T10:00:00Z"
+    }
+  ]
+}
+```
+
+### Model object fields
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `id` | string | Unique model identifier. |
+| `name` | string | Human-readable model name. |
+| `source` | string | Source type, e.g. `local_path` or `unsloth_output`. |
+| `path` | string | Absolute filesystem path. |
+| `status` | string | Current cache status. |
+| `downloaded_bytes` | integer | Bytes already downloaded. |
+| `total_bytes` | integer | Total expected bytes. |
+| `created_at` | string | ISO 8601 timestamp. |
+
+## Import a model
+
+```http
+POST /api/local-engine/models/import
+```
+
+Imports a model that already exists on disk into the local cache. The path must be a directory and must be accessible to the controller.
+
+### Request body
+
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| `path` | string | Yes | Absolute or relative path to the model directory. |
+| `name` | string | No | Display name. Defaults to the directory basename. |
+| `source` | string | No | `local_path` or `unsloth_output`. Defaults to `local_path`. |
+
+### Example request
+
+```bash
+curl -X POST https://api.allternit.com/api/local-engine/models/import \
+  -H "Authorization: Bearer $ALLTERNIT_API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "path": "/Users/joe/models/Llama-3.2-3B-Instruct",
+    "name": "Llama-3.2-3B-Instruct",
+    "source": "local_path"
+  }'
+```
+
+### Example response
+
+```json
+{
+  "id": "local--Llama-3.2-3B-Instruct-1723500000000",
+  "name": "Llama-3.2-3B-Instruct",
+  "source": "local_path",
+  "path": "/Users/joe/models/Llama-3.2-3B-Instruct",
+  "status": "ready",
+  "downloaded_bytes": 0,
+  "total_bytes": 0,
+  "created_at": "2026-08-17T10:00:00Z"
+}
+```
+
+## Download a model
+
+```http
+POST /api/local-engine/models/download
+```
+
+Queues a download from a Hugging Face repository. The returned state reflects the current tracking entry; the download continues asynchronously.
+
+### Request body
+
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| `repo_id` | string | Yes | Hugging Face repository id, e.g. `bartowski/Llama-3.2-3B-Instruct-GGUF`. |
+| `revision` | string | No | Git revision. Defaults to `main`. |
+| `quantization` | string | No | Quantization tag, e.g. `Q4_K_M`. |
+
+### Example request
+
+```bash
+curl -X POST https://api.allternit.com/api/local-engine/models/download \
+  -H "Authorization: Bearer $ALLTERNIT_API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "repo_id": "bartowski/Llama-3.2-3B-Instruct-GGUF",
+    "revision": "main",
+    "quantization": "Q4_K_M"
+  }'
+```
+
+### Example response
+
+```json
+{
+  "id": "bartowski/Llama-3.2-3B-Instruct-GGUF/main/Q4_K_M",
+  "repo_id": "bartowski/Llama-3.2-3B-Instruct-GGUF",
+  "revision": "main",
+  "status": "downloading",
+  "message": "download queued"
+}
+```
+
+## List runtimes
+
+```http
+GET /api/local-engine/runtimes
+```
+
+Returns all runtimes known to the controller, including starting, running, stopped, and errored instances.
+
+### Example response
+
+```json
+{
+  "runtimes": [
+    {
+      "id": "550e8400-e29b-41d4-a716-446655440000",
+      "model_id": "local--Llama-3.2-3B-Instruct-1723500000000",
+      "recipe": "llamacpp",
+      "recipe_value": {
+        "backend": "llamacpp",
+        "model_path": "/Users/joe/.cache/allternit/models/Llama-3.2-3B-Instruct/Llama-3.2-3B-Instruct.Q4_K_M.gguf",
+        "n_gpu_layers": 32,
+        "n_ctx": 4096,
+        "flash_attn": true
+      },
+      "pid": 12345,
+      "port": 49231,
+      "status": "running",
+      "health": {
+        "reachable": true,
+        "last_check_at": "2026-08-17T10:05:00Z",
+        "error": null
+      }
+    }
+  ]
+}
+```
+
+### Runtime object fields
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `id` | string | Runtime UUID. |
+| `model_id` | string | Model identifier this runtime serves. |
+| `recipe` | string | Backend label, e.g. `llamacpp`. |
+| `recipe_value` | object | Structured launch recipe. |
+| `pid` | integer \| null | OS process id, when known. |
+| `port` | integer | TCP port the backend is listening on. |
+| `status` | string | `starting`, `running`, `stopped`, or `error`. |
+| `health` | object \| null | Last health-check result. |
+
+## Launch a runtime
+
+```http
+POST /api/local-engine/runtimes/launch
+```
+
+Spawns a local backend process from a recipe and returns the runtime snapshot immediately. Health is checked in the background; poll `GET /api/local-engine/runtimes` to wait for `status: "running"`.
+
+### Request body
+
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| `model_id` | string | Yes | Cached model id to serve. |
+| `recipe` | object | Yes | Backend launch recipe. |
+| `port` | integer | No | Fixed TCP port. Omit to auto-allocate. |
+
+### Recipe variants
+
+The `recipe` object is a tagged union keyed by `backend`.
+
+| `backend` | Fields | Description |
+|-----------|--------|-------------|
+| `llamacpp` | `model_path`, `n_gpu_layers`, `n_ctx`, `flash_attn` | llama.cpp server backend. |
+| `vllm` | `model_path`, `tensor_parallel_size`, `gpu_memory_utilization`, `dtype`, `quantization` | vLLM backend. |
+| `sglang` | `model_path`, `tensor_parallel_size`, `context_length` | SGLang backend. |
+| `mlx` | `model_path`, `quantize`, `max_tokens` | MLX backend (Apple Silicon). |
+
+### Example request
+
+```bash
+curl -X POST https://api.allternit.com/api/local-engine/runtimes/launch \
+  -H "Authorization: Bearer $ALLTERNIT_API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "model_id": "local--Llama-3.2-3B-Instruct-1723500000000",
+    "recipe": {
+      "backend": "llamacpp",
+      "model_path": "/Users/joe/.cache/allternit/models/Llama-3.2-3B-Instruct/Llama-3.2-3B-Instruct.Q4_K_M.gguf",
+      "n_gpu_layers": 32,
+      "n_ctx": 4096,
+      "flash_attn": true
+    }
+  }'
+```
+
+### Example response
+
+```json
+{
+  "runtime": {
+    "id": "550e8400-e29b-41d4-a716-446655440000",
+    "model_id": "local--Llama-3.2-3B-Instruct-1723500000000",
+    "recipe": "llamacpp",
+    "recipe_value": {
+      "backend": "llamacpp",
+      "model_path": "/Users/joe/.cache/allternit/models/Llama-3.2-3B-Instruct/Llama-3.2-3B-Instruct.Q4_K_M.gguf",
+      "n_gpu_layers": 32,
+      "n_ctx": 4096,
+      "flash_attn": true
+    },
+    "pid": 12345,
+    "port": 49231,
+    "status": "starting",
+    "health": null
+  }
+}
+```
+
+## Stop a runtime
+
+```http
+POST /api/local-engine/runtimes/:id/stop
+```
+
+Stops the runtime with the given id. The runtime entry remains in the list with `status: "stopped"`.
+
+### Path parameters
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `id` | string | Runtime UUID. |
+
+### Example request
+
+```bash
+curl -X POST https://api.allternit.com/api/local-engine/runtimes/550e8400-e29b-41d4-a716-446655440000/stop \
+  -H "Authorization: Bearer $ALLTERNIT_API_KEY"
+```
+
+### Example response
+
+```json
+{
+  "id": "550e8400-e29b-41d4-a716-446655440000",
+  "model_id": "local--Llama-3.2-3B-Instruct-1723500000000",
+  "recipe": "llamacpp",
+  "recipe_value": { "backend": "llamacpp", "model_path": "...", "n_gpu_layers": 32, "n_ctx": 4096, "flash_attn": true },
+  "pid": 12345,
+  "port": 49231,
+  "status": "stopped",
+  "health": { "reachable": false, "last_check_at": "2026-08-17T10:06:00Z", "error": null }
+}
+```
+
+## Chat-completions models list
+
+```http
+GET /api/local-engine/v1/models
+```
+
+Returns a chat-completions-compatible model list backed by the local cache.
+
+### Example response
+
+```json
+{
+  "object": "list",
+  "data": [
+    {
+      "id": "local--Llama-3.2-3B-Instruct-1723500000000",
+      "object": "model",
+      "created": 1723500000,
+      "owned_by": "allternit"
+    }
+  ]
+}
+```
+
+## Chat completions
+
+```http
+POST /api/local-engine/v1/chat/completions
+```
+
+Proxies a chat-completions-shaped request to a healthy local runtime serving the requested `model`. Both non-streaming and streaming (`stream: true`) requests are supported; streaming responses are returned as server-sent events.
+
+The request body is forwarded verbatim, so all standard chat-completions options—`temperature`, `max_tokens`, `tools`, `response_format`, and `stream`—are supported when the underlying backend accepts them.
+
+### Request body
+
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| `model` | string | Yes | Local model id served by a running runtime. |
+| `messages` | array | Yes | Conversation messages. |
+| `temperature` | number | No | Sampling temperature. |
+| `max_tokens` | integer | No | Maximum tokens to generate. |
+| `stream` | boolean | No | Stream SSE deltas. Default `false`. |
+| `tools` | array | No | Tool definitions for the model to call. |
+
+### Example request
+
+```bash
+curl -X POST https://api.allternit.com/api/local-engine/v1/chat/completions \
+  -H "Authorization: Bearer $ALLTERNIT_API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "model": "local--Llama-3.2-3B-Instruct-1723500000000",
+    "messages": [
+      {"role": "system", "content": "You are a helpful assistant."},
+      {"role": "user", "content": "Summarize local engine routing in one sentence."}
+    ],
+    "temperature": 0.7,
+    "max_tokens": 256
+  }'
+```
+
+### Example response
+
+```json
+{
+  "id": "chatcmpl-local-abc123",
+  "object": "chat.completion",
+  "created": 1723500000,
+  "model": "local--Llama-3.2-3B-Instruct-1723500000000",
+  "choices": [
+    {
+      "index": 0,
+      "message": {
+        "role": "assistant",
+        "content": "The Local Engine API forwards authenticated requests to the Allternit Local Engine controller for model caching, runtime management, and inference."
+      },
+      "finish_reason": "stop"
+    }
+  ],
+  "usage": {
+    "prompt_tokens": 32,
+    "completion_tokens": 24,
+    "total_tokens": 56
+  }
+}
+```
+
+### Streaming example
+
+Set `stream: true` and `Accept: text/event-stream` to receive incremental deltas:
+
+```bash
+curl -N -X POST https://api.allternit.com/api/local-engine/v1/chat/completions \
+  -H "Authorization: Bearer $ALLTERNIT_API_KEY" \
+  -H "Content-Type: application/json" \
+  -H "Accept: text/event-stream" \
+  -d '{
+    "model": "local--Llama-3.2-3B-Instruct-1723500000000",
+    "messages": [{"role": "user", "content": "Count to three."}],
+    "stream": true
+  }'
+```
+
+```text
+data: {"id":"chatcmpl-local-abc123","object":"chat.completion.chunk","created":1723500000,"model":"local--Llama-3.2-3B-Instruct-1723500000000","choices":[{"index":0,"delta":{"role":"assistant"}}]}
+
+data: {"id":"chatcmpl-local-abc123","object":"chat.completion.chunk","created":1723500000,"model":"local--Llama-3.2-3B-Instruct-1723500000000","choices":[{"index":0,"delta":{"content":"One"}}]}
+
+data: {"id":"chatcmpl-local-abc123","object":"chat.completion.chunk","created":1723500000,"model":"local--Llama-3.2-3B-Instruct-1723500000000","choices":[{"index":0,"delta":{"content":", two"}}]}
+
+data: {"id":"chatcmpl-local-abc123","object":"chat.completion.chunk","created":1723500000,"model":"local--Llama-3.2-3B-Instruct-1723500000000","choices":[{"index":0,"delta":{"content":", three."},"finish_reason":"stop"}]}
+
+data: [DONE]
+```
+
+## Error codes
+
+| Status | Code | Meaning |
+|--------|------|---------|
+| `200 OK` | — | Request succeeded or upstream returned a success status. |
+| `400 Bad Request` | `invalid_request` / upstream error | Malformed request body or upstream validation failure. |
+| `401 Unauthorized` | `Unauthorized` | Missing or invalid bearer token. |
+| `404 Not Found` | `runtime_not_found` | Runtime id does not exist (stop). |
+| `404 Not Found` | `no_running_runtime` | No healthy runtime is serving the requested model (chat completions). |
+| `409 Conflict` | `model import already tracked` | Model id is already present in the cache. |
+| `501 Not Implemented` | `unsupported_backend` | The requested backend is not yet supported by the controller. |
+| `502 Bad Gateway` | `local_engine_unavailable` | Local Engine controller is unreachable. |
+| `502 Bad Gateway` | `failed to read upstream response` | Upstream returned a response but the body could not be read. |
+| `503 Service Unavailable` | `no_free_port` | Controller could not allocate a free TCP port. |
+| `500 Internal Server Error` | — | Unexpected platform or controller error. |
+
+Upstream status codes and response bodies are forwarded transparently whenever possible, so a `400` from the controller is returned as a `400` to the caller.
+
+## Related pages
+
+- [Local Brains API](/api/local-brains) — Ollama-based local memory and sidecar models
+- [Models](/api/models) — gateway model catalog and policy aliases
+- [Chat Completions](/api/chat-completions) — hosted gateway chat-completions surface
+- [Runtime Backend API](/api/runtime-backend) — configure local, BYOC, and remote runtimes
+- [Runtime Discovery API](/api/runtime-discovery) — probe local runtime instances
+- [Authentication](/api/authentication) — virtual keys and bearer tokens

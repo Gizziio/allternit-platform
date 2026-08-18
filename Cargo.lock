@@ -249,6 +249,7 @@ dependencies = [
  "allternit-driver-interface",
  "allternit-firecracker-driver",
  "allternit-gc-agents",
+ "allternit-opensandbox-driver",
  "allternit-session-manager",
  "anyhow",
  "async-stream",
@@ -1470,6 +1471,23 @@ dependencies = [
  "tower-http",
  "tracing",
  "tracing-subscriber",
+ "uuid",
+]
+
+[[package]]
+name = "allternit-opensandbox-driver"
+version = "0.1.0"
+dependencies = [
+ "allternit-driver-interface",
+ "async-trait",
+ "chrono",
+ "reqwest",
+ "serde",
+ "serde_json",
+ "thiserror 1.0.69",
+ "tokio",
+ "tokio-util",
+ "tracing",
  "uuid",
 ]
 

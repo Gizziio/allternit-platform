@@ -1,0 +1,500 @@
+---
+title: Browser Tools SDK
+description: Type-safe browser automation toolkit for Allternit agent task execution.
+---
+
+# Browser Tools SDK
+
+The Browser Tools SDK (`@allternit/browser-tools`) is a type-safe browser automation toolkit for Allternit agent task execution. It is built on Playwright and exposes high-level functions for session management, navigation, DOM extraction, element interaction, screenshots, real-time event streaming, and safety controls.
+
+## Overview
+
+Use this SDK when you want to:
+
+- Control a browser programmatically from TypeScript or Node.js.
+- Extract structured page content such as links, forms, tables, and images.
+- Perform element actions like clicks, typing, selects, scrolls, hovers, and key presses.
+- Stream browser events such as navigation, DOM changes, clicks, inputs, and screenshots.
+- Enforce host restrictions, action approvals, and audit logging for agent-driven browsing.
+
+## Installation
+
+```bash
+npm install @allternit/browser-tools
+```
+
+The SDK depends on Playwright, which downloads browser binaries on install. If you need to install browsers separately:
+
+```bash
+npx playwright install
+```
+
+<Note>
+`@allternit/mcp-apps-adapter` is a peer dependency for MCP-style tool registration. Install it if you are registering Browser Tools with an MCP server.
+</Note>
+
+## Quick start
+
+```typescript
+import {
+  createSession,
+  closeSession,
+  navigate,
+  click,
+  type,
+  takeScreenshot,
+  extractContent,
+  eventStreamManager,
+} from '@allternit/browser-tools';
+
+// Create an isolated browser session
+const { success, data: session, error } = await createSession({
+  viewport: { width: 1280, height: 720 },
+  headless: false,
+});
+
+if (!success || !session) {
+  throw new Error(error?.message ?? 'Failed to create session');
+}
+
+// Subscribe to browser events
+const streamId = eventStreamManager.subscribe(
+  session.id,
+  (event) => {
+    console.log(`[${event.type}]`, event.payload);
+  },
+  {
+    captureNavigation: true,
+    captureDOMChanges: true,
+    captureClicks: true,
+  }
+);
+
+// Navigate to a URL
+const navResult = await navigate(session.id, {
+  url: 'https://example.com',
+  waitUntil: 'networkidle',
+});
+
+if (!navResult.success) {
+  throw new Error(navResult.error?.message);
+}
+
+// Extract structured content
+const content = await extractContent(session.id);
+console.log(content.data?.text);
+console.log(content.data?.links);
+
+// Interact with the page
+await click(session.id, { selector: '#submit-button' });
+await type(session.id, { selector: '#search-input', text: 'Allternit agents' });
+
+// Capture a screenshot
+const screenshot = await takeScreenshot(session.id, { fullPage: true });
+console.log(screenshot.data?.base64);
+
+// Clean up
+await closeSession(session.id);
+eventStreamManager.unsubscribe(streamId);
+```
+
+## Session management
+
+A session represents an isolated browser context. Each session has its own viewport, lifecycle status, navigation history, and quarantine policy.
+
+```typescript
+import { createSession, closeSession, getSessionInfo } from '@allternit/browser-tools';
+
+const { data: session } = await createSession({
+  viewport: { width: 1280, height: 720, deviceScaleFactor: 1, isMobile: false },
+  headless: true,
+  incognito: true,
+  userAgent: 'CustomAgent/1.0',
+  locale: 'en-US',
+  timezone: 'America/New_York',
+});
+
+const info = await getSessionInfo(session.id);
+console.log(info.data?.status, info.data?.url);
+
+await closeSession(session.id);
+```
+
+| Function | Description |
+|----------|-------------|
+| `createSession(params?)` | Create a new browser session. |
+| `closeSession(sessionId)` | Close the session and release resources. |
+| `getSessionInfo(sessionId)` | Get the current status, URL, title, and viewport. |
+| `setViewport(sessionId, params)` | Update the viewport dimensions and scale. |
+
+## Navigation
+
+Navigate between pages and control browser history.
+
+```typescript
+import { navigate, goBack, goForward, reload } from '@allternit/browser-tools';
+
+await navigate(session.id, {
+  url: 'https://example.com',
+  waitUntil: 'networkidle',
+  timeout: 30000,
+});
+
+await goBack(session.id);
+await goForward(session.id);
+await reload(session.id, { cache: false });
+```
+
+| Function | Description |
+|----------|-------------|
+| `navigate(sessionId, params)` | Open a URL with optional wait state and timeout. |
+| `goBack(sessionId)` | Navigate back in history. |
+| `goForward(sessionId)` | Navigate forward in history. |
+| `reload(sessionId, options?)` | Reload the current page. |
+
+`waitUntil` accepts `load`, `domcontentloaded`, or `networkidle`.
+
+## Content extraction
+
+Extract readable text and structured data from the current page.
+
+```typescript
+import { extractContent, findElement } from '@allternit/browser-tools';
+
+const content = await extractContent(session.id, {
+  includeHidden: false,
+  maxLength: 5000,
+  includeSelectors: true,
+});
+
+console.log(content.data?.text);
+console.log(content.data?.forms);
+console.log(content.data?.tables);
+
+const element = await findElement(session.id, {
+  selector: '[data-testid="primary-button"]',
+});
+
+const byText = await findElement(session.id, {
+  text: 'Get started',
+  nth: 0,
+});
+```
+
+| Function | Description |
+|----------|-------------|
+| `extractContent(sessionId, options?)` | Extract text, links, images, forms, and tables. |
+| `findElement(sessionId, options)` | Find a single element by selector, text, tag, or attribute. |
+
+`extractContent` returns an `ExtractedContent` object:
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `text` | `string` | Visible text content of the page. |
+| `links` | `LinkInfo[]` | Anchor tags with text, href, and selector. |
+| `images` | `ImageInfo[]` | Image sources, alt text, dimensions, and selectors. |
+| `forms` | `FormInfo[]` | Forms and their input fields. |
+| `tables` | `TableInfo[]` | Table headers and row data. |
+
+`findElement` returns a `DOMElement` with `tag`, `text`, `attributes`, `bounds`, `isVisible`, `isInteractive`, and a generated selector.
+
+## Actions
+
+Perform element-level interactions on the current page.
+
+```typescript
+import { click, type, clear, select, scroll, hover, press, wait } from '@allternit/browser-tools';
+
+await click(session.id, {
+  selector: '#submit',
+  button: 'left',
+  clickCount: 1,
+  waitForNavigation: true,
+});
+
+await type(session.id, {
+  selector: '#email',
+  text: 'hello@example.com',
+  clearFirst: true,
+});
+
+await clear(session.id, { selector: '#search' });
+
+await select(session.id, {
+  selector: '#country',
+  label: 'United States',
+});
+
+await scroll(session.id, { selector: '#footer' });
+await scroll(session.id, { x: 0, y: 500, behavior: 'smooth' });
+
+await hover(session.id, { selector: '#menu' });
+
+await press(session.id, {
+  selector: '#input',
+  key: 'Enter',
+  modifiers: ['ctrl'],
+});
+
+await wait(session.id, { selector: '#results', state: 'visible', timeout: 10000 });
+await wait(session.id, { time: 1000 });
+```
+
+| Function | Description |
+|----------|-------------|
+| `click(sessionId, params)` | Click an element. |
+| `type(sessionId, params)` | Type text into an input or textarea. |
+| `clear(sessionId, params)` | Clear the value of an input. |
+| `select(sessionId, params)` | Select a dropdown option by value, label, or index. |
+| `scroll(sessionId, params)` | Scroll to an element or to absolute coordinates. |
+| `hover(sessionId, params)` | Hover over an element. |
+| `press(sessionId, params)` | Press a key, optionally with modifiers, on an element or globally. |
+| `wait(sessionId, params)` | Wait for an element state or a fixed duration. |
+
+`wait` supports `visible`, `hidden`, `attached`, and `detached` states.
+
+## Event streaming
+
+Subscribe to real-time browser events during a session.
+
+```typescript
+import { eventStreamManager } from '@allternit/browser-tools';
+
+const streamId = eventStreamManager.subscribe(
+  session.id,
+  (event) => {
+    switch (event.type) {
+      case 'navigation':
+        console.log('Navigated to', event.payload.to);
+        break;
+      case 'dom_change':
+        console.log('DOM changed:', event.payload.selector);
+        break;
+      case 'click':
+        console.log('Click at', event.payload.x, event.payload.y);
+        break;
+      case 'input':
+        console.log('Input on', event.payload.selector);
+        break;
+      case 'screenshot':
+        console.log('Screenshot captured');
+        break;
+    }
+  },
+  {
+    captureNavigation: true,
+    captureDOMChanges: true,
+    captureClicks: true,
+    captureInputs: true,
+    captureScrolls: false,
+    captureScreenshots: false,
+    screenshotInterval: 5000,
+  }
+);
+
+// Add another handler
+eventStreamManager.addHandler(streamId, (event) => {
+  console.log('Second handler:', event.type);
+});
+
+// Later
+eventStreamManager.unsubscribe(streamId);
+```
+
+| Event type | Payload |
+|------------|---------|
+| `navigation` | `{ from, to, title, timestamp }` |
+| `dom_change` | `{ selector, changeType, previousText?, currentText? }` |
+| `click` | `{ tag, id, class, text, x, y }` |
+| `input` | `{ tag, type, name, selector, value }` |
+| `scroll` | `{ x, y }` |
+| `screenshot` | `{ base64, format }` |
+| `action_complete` | Action-specific result data. |
+| `error` | Error details. |
+
+### Server-Sent Events
+
+For HTTP APIs, format browser events as SSE using `SSEEventStream`:
+
+```typescript
+import { sseEventStream } from '@allternit/browser-tools';
+
+const browserEvent = {
+  id: 'evt-1',
+  sessionId: session.id,
+  timestamp: new Date(),
+  type: 'navigation',
+  payload: { to: 'https://example.com' },
+};
+
+const bytes = sseEventStream.formatBrowserEvent(browserEvent);
+```
+
+## Safety and quarantine
+
+Browser Tools includes a safety layer to restrict navigation, require approvals for sensitive actions, and maintain audit logs.
+
+```typescript
+import {
+  DEFAULT_SAFETY_POLICY,
+  STRICT_SAFETY_POLICY,
+  checkNavigationSafety,
+  checkActionSafety,
+  quarantineManager,
+  approvalQueue,
+} from '@allternit/browser-tools';
+
+// Check whether a URL is allowed
+const safety = checkNavigationSafety(
+  'https://example.com',
+  DEFAULT_SAFETY_POLICY,
+  0
+);
+
+if (!safety.allowed) {
+  console.log('Blocked:', safety.reason);
+}
+
+// Create a quarantine session with a custom policy
+quarantineManager.createSession(session.id, 'incognito', {
+  allowedHosts: ['example.com', '*.example.com'],
+  blockedHosts: ['localhost', '127.0.0.1'],
+  allowedSchemes: ['https:'],
+  maxNavigationDepth: 10,
+  requireApprovalFor: ['click', 'type'],
+  dataSensitivity: 'high',
+});
+
+// Check whether an action requires approval
+const actionSafety = checkActionSafety('click', '#submit', quarantineManager.getPolicy(session.id)!);
+if (actionSafety.requiresApproval) {
+  approvalQueue.requestApproval({
+    id: 'approval-1',
+    sessionId: session.id,
+    action: 'click',
+    target: '#submit',
+    timestamp: new Date(),
+    expiresAt: new Date(Date.now() + 60000),
+  });
+}
+
+// Inspect the audit log
+const log = quarantineManager.getAuditLog(session.id);
+```
+
+### Built-in policies
+
+| Policy | Behavior |
+|--------|----------|
+| `DEFAULT_SAFETY_POLICY` | Allows all public hosts, blocks localhost and private networks, and requires approval for click, type, select, and clear actions. |
+| `STRICT_SAFETY_POLICY` | Requires explicit host allowlists, allows only HTTPS, limits navigation depth, and requires approval for most actions. |
+
+### Policy fields
+
+| Field | Description |
+|-------|-------------|
+| `allowedHosts` | Host patterns that are allowed. Use `*` to allow all. |
+| `blockedHosts` | Host patterns that are blocked, including wildcard and IP-range patterns. |
+| `allowedSchemes` | Permitted URL schemes, such as `https:`. |
+| `maxNavigationDepth` | Maximum number of navigations before further navigation is blocked. |
+| `requireApprovalFor` | Action types that trigger an approval request. |
+| `dataSensitivity` | `low`, `medium`, or `high`. |
+
+## Tool registries
+
+The SDK exposes grouped tool registries for use with agent tool-calling frameworks:
+
+```typescript
+import {
+  browserControlTools,
+  domExtractionTools,
+  actionTools,
+} from '@allternit/browser-tools';
+
+// Each registry maps a tool name to its function
+console.log(Object.keys(browserControlTools));
+// ['browser.create_session', 'browser.close_session', 'browser.get_session_info', ...]
+
+console.log(Object.keys(actionTools));
+// ['browser.click', 'browser.type', 'browser.clear', ...]
+
+console.log(Object.keys(domExtractionTools));
+// ['extractContent', 'findElement']
+```
+
+| Registry | Tool names |
+|----------|------------|
+| `browserControlTools` | `browser.create_session`, `browser.close_session`, `browser.get_session_info`, `browser.navigate`, `browser.go_back`, `browser.go_forward`, `browser.reload`, `browser.screenshot`, `browser.set_viewport` |
+| `actionTools` | `browser.click`, `browser.type`, `browser.clear`, `browser.select`, `browser.scroll`, `browser.hover`, `browser.press`, `browser.wait` |
+| `domExtractionTools` | `extractContent`, `findElement` |
+
+## Types
+
+All TypeScript types are exported from the package entry point:
+
+```typescript
+import {
+  BrowserSession,
+  Viewport,
+  DOMElement,
+  ExtractedContent,
+  LinkInfo,
+  ImageInfo,
+  FormInfo,
+  TableInfo,
+  ActionType,
+  ActionRequest,
+  ActionResult,
+  ActionError,
+  SafetyPolicy,
+  QuarantineSession,
+  NetworkPolicy,
+  DataRetentionPolicy,
+  AuditEvent,
+  BrowserEvent,
+  BrowserEventType,
+  NavigationEvent,
+  DOMChangeEvent,
+  ToolResult,
+  ScreenshotResult,
+  NavigationResult,
+} from '@allternit/browser-tools';
+```
+
+## Error handling
+
+Most functions return a `ToolResult<T>` object that surfaces success, data, and errors without throwing.
+
+```typescript
+const result = await navigate(session.id, { url: 'https://blocked.test' });
+
+if (!result.success) {
+  console.error(result.error?.code, result.error?.message);
+  // e.g. NAVIGATION_BLOCKED, URL blocked by safety policy
+}
+```
+
+Common error codes:
+
+| Code | Meaning |
+|------|---------|
+| `SESSION_CREATE_FAILED` | Could not create the browser session. |
+| `SESSION_CLOSE_FAILED` | Could not close the session cleanly. |
+| `NAVIGATION_BLOCKED` | The URL failed the safety policy check. |
+| `NAVIGATION_FAILED` | Playwright could not complete navigation. |
+| `CLICK_FAILED`, `TYPE_FAILED`, etc. | The requested action could not be completed. |
+| `EXTRACTION_FAILED` | Page content could not be extracted. |
+| `FIND_ELEMENT_FAILED` | The element search failed. |
+| `SCREENSHOT_FAILED` | The screenshot could not be captured. |
+
+## Browser support
+
+The SDK uses Playwright and supports Chromium, Firefox, and WebKit. Chromium is the default browser engine.
+
+## Related pages
+
+- [Computer Use SDK](/sdk/computer-use) — high-level HTTP client for the Allternit Computer Use Engine
+- [Allternit Computer Interface (ACI)](/tools/computer-use) — platform concepts for browser and desktop automation
+- [Browser automation cookbook](/cookbooks/browser-automation) — end-to-end browser automation examples
+- [Native Tool Belt](/tools/tool-belt) — built-in agent tools
+- [TypeScript SDK](/sdk/typescript) — general-purpose Allternit TypeScript client

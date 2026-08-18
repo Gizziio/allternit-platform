@@ -35,6 +35,7 @@ import { getBotAccentColor } from "@/lib/bots/bot-profile";
 import type { ResolvedSecret } from "@/lib/agents/agent-secrets-resolver";
 import type { ResolvedConnectorCredential } from "@/lib/agents/agent-connectors-resolver";
 import type { Agent, HarnessConfig } from "@/lib/agents/agent.types";
+import { BotRuntimeConfigModal } from "./bots/BotRuntimeConfigModal";
 import { useVoice } from "@/providers/voice-provider";
 import {
   ComposerPermissionInfoBar,
@@ -191,6 +192,7 @@ export function ChatView({
 
   const isBotSession = Boolean(activeNativeSession?.metadata?.isBot);
   const [agentCardDismissed, setAgentCardDismissed] = useState(false);
+  const [isRuntimeModalOpen, setIsRuntimeModalOpen] = useState(false);
   useEffect(() => {
     setAgentCardDismissed(false);
   }, [embeddedAgentSession.sessionId]);
@@ -553,6 +555,8 @@ export function ChatView({
       vmOperator={(sessionMetadata?.vmOperator as Agent["vmOperator"]) ?? selectedAgent?.vmOperator}
       vmSandbox={(sessionMetadata?.vmSandbox as AgentContextStripProps["vmSandbox"]) ?? undefined}
       accentColor={selectedAgent && isBotSession ? getBotAccentColor(selectedAgent) ?? undefined : undefined}
+      botId={isBotSession ? selectedAgent?.id : undefined}
+      onEditRuntime={isBotSession ? () => setIsRuntimeModalOpen(true) : undefined}
       onDismiss={dismissEmbeddedAgentSession}
     />
   ) : null;
@@ -664,6 +668,15 @@ export function ChatView({
         onCancel={cancelSelection}
         trigger={<div className="hidden" />}
       />
+
+      {isBotSession && selectedAgent && (
+        <BotRuntimeConfigModal
+          bot={selectedAgent}
+          isOpen={isRuntimeModalOpen}
+          onClose={() => setIsRuntimeModalOpen(false)}
+          onSaved={() => setIsRuntimeModalOpen(false)}
+        />
+      )}
     </ChatBackground>
   );
 }

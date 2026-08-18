@@ -34,6 +34,8 @@ pub mod beta_deployment_routes;
 pub mod beta_memory_store_routes;
 pub mod beta_session_routes;
 pub mod beta_work_routes;
+pub mod bot_desktop_routes;
+pub mod bot_desktop_stream;
 pub mod user_profile_routes;
 pub mod billing;
 pub mod board_routes;
@@ -74,6 +76,7 @@ pub mod gizzi_completion;
 pub mod gizzi_provider_auth;
 pub mod h5i_routes;
 pub mod har_api_routes;
+pub mod har_api_service;
 pub mod health;
 pub mod idempotency;
 pub mod inbox_routes;
@@ -153,6 +156,7 @@ use cowork::background_service::BackgroundServiceHandle;
 use db::DbHandle;
 use design_connector_routes::DesignSkillCache;
 use rails::RailsState;
+use std::collections::HashMap;
 use std::path::PathBuf;
 use std::sync::Arc;
 use terminal_routes::TerminalSessionStore;
@@ -184,6 +188,7 @@ pub mod test_helpers {
             jwks,
             auth_config,
             vm_driver: None,
+            bot_desktop_sessions: Arc::new(RwLock::new(HashMap::new())),
             rails,
             vm_sessions: vm_session_routes::new_vm_session_store(),
             cowork_scheduler: None,
@@ -228,6 +233,24 @@ pub type OfficeCliWatchState =
 pub type OfficeCliMcpState =
     Arc<RwLock<std::collections::HashMap<String, crate::office_cli_mcp::McpSession>>>;
 
+/// Runtime state for a bot's virtual-computer desktop session.
+#[derive(Debug, Clone)]
+pub struct BotDesktopSession {
+    pub bot_id: String,
+    pub sandbox_id: String,
+    pub control_state: BotDesktopControlState,
+    pub taken_over_by_user_id: Option<String>,
+    pub taken_over_at: Option<chrono::DateTime<chrono::Utc>>,
+    pub handed_back_at: Option<chrono::DateTime<chrono::Utc>>,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum BotDesktopControlState {
+    BotControls,
+    HumanControls,
+    HumanObserving,
+}
+
 /// Application state shared across all route handlers
 pub struct AppState {
     /// Unified app configuration (company + user + env overrides)
@@ -240,8 +263,10 @@ pub struct AppState {
     pub jwks: JwksManager,
     /// Unified auth configuration
     pub auth_config: AuthConfig,
-    /// VM execution driver (Firecracker on Linux, Apple VF on macOS)
+    /// VM execution driver (Firecracker on Linux, Apple VF on macOS, OpenSandbox)
     pub vm_driver: Option<Arc<dyn allternit_driver_interface::ExecutionDriver>>,
+    /// Bot desktop take-over state: bot_id -> session metadata + control state.
+    pub bot_desktop_sessions: Arc<RwLock<HashMap<String, BotDesktopSession>>>,
     /// Rails service state (Ledger, Gate, Leases, etc.)
     pub rails: RailsState,
     /// Persistent VM sessions — each gizzi-code session gets one VM that stays

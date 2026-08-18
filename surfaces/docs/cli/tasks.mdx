@@ -1,0 +1,113 @@
+---
+title: Task Management
+description: Create, track, and clean up local tasks with the gizzi tasks command
+---
+
+## Overview
+
+The `gizzi tasks` command is a lightweight, local task queue for tracking work from the terminal. It stores tasks in `~/.config/gizzi/tasks.json` and supports creating, listing, starting, cancelling, and deleting tasks without leaving the CLI.
+
+Use it to:
+
+- Queue ad-hoc work items alongside an agent session
+- Track progress on long-running jobs
+- Clean up completed or stale tasks
+
+## Command reference
+
+| Command | Description |
+|---------|-------------|
+| `gizzi tasks list [status]` | List tasks, optionally filtered by status |
+| `gizzi tasks create <name>` | Create a new pending task |
+| `gizzi tasks show <id>` | Show details for a task |
+| `gizzi tasks start <id>` | Mark a task as running |
+| `gizzi tasks cancel <id>` | Cancel a task |
+| `gizzi tasks delete <id>` | Delete a task permanently |
+| `gizzi tasks cleanup [days]` | Remove completed/failed/cancelled tasks older than `days` |
+
+The default subcommand is `list`, so `gizzi tasks` is equivalent to `gizzi tasks list`.
+
+## Task statuses
+
+Tasks move through one of the following statuses:
+
+| Status | Meaning |
+|--------|---------|
+| `pending` | Created but not yet started |
+| `running` | Started with `gizzi tasks start` |
+| `completed` | Finished successfully |
+| `failed` | Finished with an error |
+| `cancelled` | Cancelled manually |
+
+## Usage examples
+
+### List tasks
+
+```bash
+# Show all tasks (default)
+gizzi tasks
+
+# Show only running tasks
+gizzi tasks list running
+
+# Alias
+gizzi tasks ls pending
+```
+
+### Create a task
+
+```bash
+gizzi tasks create "Refactor auth middleware"
+# Created task: task_1
+```
+
+Task names can contain spaces; everything after `create` becomes the task name.
+
+### Show task details
+
+```bash
+gizzi tasks show task_1
+```
+
+### Start and cancel tasks
+
+```bash
+gizzi tasks start task_1
+gizzi tasks cancel task_1
+```
+
+### Delete a task
+
+```bash
+gizzi tasks delete task_1
+```
+
+### Clean up old tasks
+
+```bash
+# Remove completed/failed/cancelled tasks older than 7 days (default)
+gizzi tasks cleanup
+
+# Remove tasks older than 30 days
+gizzi tasks cleanup 30
+```
+
+## Task storage
+
+Tasks are persisted to:
+
+```
+~/.config/gizzi/tasks.json
+```
+
+The file is created automatically on first use. Each task includes an `id`, `name`, optional `description`, `status`, `progress` percentage (0–100), and timestamps for creation, start, and completion.
+
+## Common flags
+
+`gizzi tasks` does not define command-line flags. All behavior is controlled through subcommands and positional arguments.
+
+## Related docs
+
+- [Gizzi Code Overview](/cli/overview)
+- [Configuration](/cli/configuration)
+- [Headless Execution](/cli/headless-execution)

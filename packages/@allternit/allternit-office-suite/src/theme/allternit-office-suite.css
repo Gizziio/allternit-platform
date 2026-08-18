@@ -1,0 +1,591 @@
+/**
+ * Default design tokens for the Allternit Office Suite when rendered outside the
+ * platform shell (e.g. in the standalone web app or an Electron wrapper).
+ *
+ * These values mirror the neutral, light-theme palette used by the embedded
+ * office apps. The platform surface overrides them with its own CSS variables.
+ */
+
+:root {
+  /* Typography */
+  --gs-font-sans:
+    'Arial', 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue',
+    sans-serif;
+
+  /* Neutral light palette */
+  --color-text-primary: #232425;
+  --color-text-secondary: #606366;
+  --color-text-tertiary: #909499;
+  --color-bg-page: #ffffff;
+  --color-bg-subtle: #f5f5f5;
+  --color-border-default: #eaeaea;
+  --color-border-strong: #d0d3d8;
+
+  /* Accent — Allternit office red/orange to match Docs/Sheets/Slides/PDF chrome */
+  --accent-primary: #c43e1c;
+  --accent-secondary: #a33517;
+
+  /* Status */
+  --status-success: #16a34a;
+  --status-success-bg: #dcfce7;
+  --status-error: #dc2626;
+  --status-error-bg: #fee2e2;
+  --status-warning: #ca8a04;
+
+  /* Radii / motion */
+  --radius-16: 16px;
+  --transition-fast: 150ms cubic-bezier(0.4, 0, 0.2, 1);
+
+  /* Sizing / type scale */
+  --text-caption: 12px;
+  --text-small: 14px;
+  --text-body-lg: 18px;
+}
+
+/* ── Allternit Sign ─────────────────────────────────────────────────────── */
+/*
+ * Sign uses its own scoped CSS variables so it keeps a consistent neutral
+ * office-style palette even when embedded inside the platform shell, which
+ * may define global accent/text tokens differently.
+ */
+.aos-sign-root {
+  /* Inherit the host/platform accent so Sign matches the surrounding office UI;
+     fall back to the standalone office-suite red/orange when no platform token is set. */
+  --aos-sign-accent: var(--accent-primary, #c43e1c);
+  --aos-sign-accent-secondary: var(--accent-secondary, #a33517);
+  --aos-sign-text-primary: #232425;
+  --aos-sign-text-secondary: #606366;
+  --aos-sign-text-tertiary: #909499;
+  --aos-sign-bg-page: #ffffff;
+  --aos-sign-bg-subtle: #f5f5f5;
+  --aos-sign-bg-canvas: #f8f9fa;
+  --aos-sign-bg-panel: #ffffff;
+  --aos-sign-bg-hover: #f3f4f6;
+  --aos-sign-border-default: #eaeaea;
+  --aos-sign-border-dashed: #e5e7eb;
+  --aos-sign-success: #16a34a;
+  --aos-sign-success-bg: #dcfce7;
+  --aos-sign-error: #dc2626;
+  --aos-sign-error-bg: #fee2e2;
+  --aos-sign-warning: #ca8a04;
+
+  height: 100%;
+  overflow: auto;
+  background: var(--aos-sign-bg-canvas);
+  font-family: var(--gs-font-sans);
+  color: var(--aos-sign-text-primary);
+  padding: 24px;
+}
+
+.aos-sign-card {
+  max-width: 1152px;
+  margin: 0 auto;
+  border: 1px solid var(--aos-sign-border-default);
+  border-radius: var(--radius-16);
+  background: var(--aos-sign-bg-panel);
+  padding: 24px;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.06);
+}
+
+.aos-sign-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.aos-sign-title-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.aos-sign-icon {
+  display: grid;
+  place-items: center;
+  width: 40px;
+  height: 40px;
+  border-radius: 12px;
+  background: linear-gradient(135deg, var(--aos-sign-accent), var(--aos-sign-accent-secondary));
+  color: #fff;
+}
+
+.aos-sign-title {
+  margin: 0;
+  font-size: var(--text-body-lg);
+  font-weight: 600;
+}
+
+.aos-sign-subtitle {
+  margin: 4px 0 0;
+  font-size: var(--text-caption);
+  color: var(--aos-sign-text-secondary);
+}
+
+.aos-sign-header-actions,
+.aos-sign-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.aos-sign-actions.justify-end {
+  justify-content: flex-end;
+}
+
+.aos-sign-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 7px 12px;
+  border: 1px solid var(--aos-sign-border-default);
+  border-radius: 8px;
+  background: var(--aos-sign-bg-panel);
+  color: var(--aos-sign-text-secondary);
+  font-size: var(--text-caption);
+  font-weight: 500;
+  cursor: pointer;
+  transition: background var(--transition-fast), opacity var(--transition-fast);
+}
+
+.aos-sign-btn:hover:not(:disabled) {
+  background: var(--aos-sign-bg-hover);
+}
+
+.aos-sign-btn.primary {
+  border-color: transparent;
+  background: var(--aos-sign-accent);
+  color: #fff;
+}
+
+.aos-sign-btn.primary:hover:not(:disabled) {
+  opacity: 0.9;
+}
+
+.aos-sign-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.aos-sign-btn.block {
+  width: 100%;
+}
+
+.aos-sign-hidden-input {
+  display: none;
+}
+
+.aos-sign-upload {
+  margin-top: 32px;
+}
+
+.aos-sign-upload-button {
+  display: flex;
+  width: 100%;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  padding: 48px;
+  border: 2px dashed var(--aos-sign-border-dashed);
+  border-radius: var(--radius-16);
+  background: var(--aos-sign-bg-panel);
+  color: inherit;
+  cursor: pointer;
+  transition: border-color var(--transition-fast), background var(--transition-fast);
+}
+
+.aos-sign-upload-button:hover:not(:disabled) {
+  border-color: var(--aos-sign-accent);
+  background: var(--aos-sign-bg-hover);
+}
+
+.aos-sign-upload-button:disabled {
+  opacity: 0.5;
+}
+
+.aos-sign-upload-icon {
+  display: grid;
+  place-items: center;
+  width: 56px;
+  height: 56px;
+  border-radius: var(--radius-16);
+  background: var(--aos-sign-bg-canvas);
+  color: var(--aos-sign-accent);
+}
+
+.aos-sign-upload-title {
+  margin: 0;
+  font-size: var(--text-small);
+  font-weight: 600;
+}
+
+.aos-sign-upload-hint {
+  margin: 4px 0 0;
+  font-size: var(--text-caption);
+  color: var(--aos-sign-text-tertiary);
+}
+
+.aos-sign-workspace {
+  display: grid;
+  grid-template-columns: 340px 1fr;
+  gap: 24px;
+  margin-top: 24px;
+}
+
+@media (max-width: 1024px) {
+  .aos-sign-workspace {
+    grid-template-columns: 1fr;
+  }
+}
+
+.aos-sign-sidebar {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.aos-sign-panel {
+  border: 1px solid var(--aos-sign-border-default);
+  border-radius: 12px;
+  background: var(--aos-sign-bg-panel);
+  padding: 16px;
+}
+
+.aos-sign-panel-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 12px;
+}
+
+.aos-sign-section-label {
+  margin: 0;
+  font-size: var(--text-caption);
+  font-weight: 600;
+  color: var(--aos-sign-text-secondary);
+}
+
+.aos-sign-text-btn {
+  padding: 4px 8px;
+  border: none;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--aos-sign-accent);
+  font-size: var(--text-caption);
+  font-weight: 500;
+  cursor: pointer;
+}
+
+.aos-sign-text-btn:hover {
+  background: var(--aos-sign-bg-hover);
+}
+
+.aos-sign-signer-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.aos-sign-signer {
+  border: 1px solid var(--aos-sign-border-default);
+  border-radius: 12px;
+  padding: 12px;
+  cursor: pointer;
+  transition: border-color var(--transition-fast), background var(--transition-fast);
+}
+
+.aos-sign-signer:hover {
+  background: var(--aos-sign-bg-hover);
+}
+
+.aos-sign-signer.selected {
+  border-color: var(--aos-sign-accent);
+  background: color-mix(in srgb, var(--aos-sign-accent) 8%, transparent);
+}
+
+.aos-sign-signer-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+}
+
+.aos-sign-color-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  flex-shrink: 0;
+  margin-top: 5px;
+}
+
+.aos-sign-signer-thumb {
+  width: 48px;
+  height: 28px;
+  flex-shrink: 0;
+  border: 1px solid var(--aos-sign-border-default);
+  border-radius: 4px;
+  background: #fff;
+  object-fit: contain;
+}
+
+.aos-sign-signer-fields {
+  min-width: 0;
+  flex: 1;
+}
+
+.aos-sign-inline-input {
+  width: 100%;
+  border: none;
+  background: transparent;
+  color: var(--aos-sign-text-primary);
+  font-size: var(--text-small);
+  font-weight: 500;
+  outline: none;
+}
+
+.aos-sign-inline-input::placeholder {
+  color: var(--aos-sign-text-tertiary);
+}
+
+.aos-sign-inline-input.small {
+  margin-top: 4px;
+  font-size: var(--text-caption);
+  color: var(--aos-sign-text-secondary);
+}
+
+.aos-sign-status {
+  margin: 6px 0 0;
+  font-size: 11px;
+  font-weight: 500;
+}
+
+.aos-sign-status.success {
+  color: var(--aos-sign-success);
+}
+
+.aos-sign-status.warning {
+  color: var(--aos-sign-warning);
+}
+
+.aos-sign-icon-btn {
+  display: grid;
+  place-items: center;
+  width: 28px;
+  height: 28px;
+  border: none;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--aos-sign-text-secondary);
+  font-size: 18px;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.aos-sign-icon-btn:hover:not(:disabled) {
+  background: var(--aos-sign-bg-hover);
+}
+
+.aos-sign-icon-btn:disabled {
+  opacity: 0.4;
+}
+
+.aos-sign-icon-btn.danger {
+  color: var(--aos-sign-error);
+}
+
+.aos-sign-icon-btn.danger:hover {
+  background: var(--aos-sign-error-bg);
+}
+
+.aos-sign-signature-capture {
+  margin-top: 16px;
+  padding-top: 16px;
+  border-top: 1px solid var(--aos-sign-border-default);
+}
+
+.aos-sign-capture-choices {
+  display: flex;
+  gap: 8px;
+}
+
+.aos-sign-pad-panel {
+  border: 1px solid var(--aos-sign-border-default);
+  border-radius: 12px;
+  background: var(--aos-sign-bg-panel);
+  padding: 16px;
+}
+
+.aos-sign-pad {
+  width: 100%;
+  height: 140px;
+  border: 1px dashed var(--aos-sign-border-dashed);
+  border-radius: 8px;
+  background: var(--aos-sign-bg-panel);
+  cursor: crosshair;
+  touch-action: none;
+}
+
+.aos-sign-preview-canvas {
+  width: 100%;
+  height: 100px;
+  margin-top: 12px;
+  border: 1px dashed var(--aos-sign-border-dashed);
+  border-radius: 8px;
+  background: var(--aos-sign-bg-panel);
+}
+
+.aos-sign-text-input {
+  width: 100%;
+  padding: 9px 12px;
+  border: 1px solid var(--aos-sign-border-default);
+  border-radius: 8px;
+  background: var(--aos-sign-bg-canvas);
+  color: var(--aos-sign-text-primary);
+  font-size: var(--text-small);
+  outline: none;
+}
+
+.aos-sign-text-input:focus {
+  border-color: var(--aos-sign-accent);
+}
+
+.aos-sign-field-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.aos-sign-field {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 10px;
+  border-radius: 8px;
+  background: var(--aos-sign-bg-subtle);
+  font-size: var(--text-caption);
+}
+
+.aos-sign-field-info {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+
+.aos-sign-hint {
+  margin: 0;
+  font-size: var(--text-caption);
+  color: var(--aos-sign-text-tertiary);
+}
+
+.aos-sign-alert {
+  padding: 8px 12px;
+  border-radius: 8px;
+  font-size: var(--text-caption);
+}
+
+.aos-sign-alert.error {
+  border: 1px solid rgba(220, 38, 38, 0.2);
+  background: var(--aos-sign-error-bg);
+  color: var(--aos-sign-error);
+}
+
+.aos-sign-alert.success {
+  border: 1px solid rgba(22, 163, 74, 0.2);
+  background: var(--aos-sign-success-bg);
+  color: var(--aos-sign-success);
+}
+
+.aos-sign-preview-panel {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  border: 1px solid var(--aos-sign-border-default);
+  border-radius: 12px;
+  background: var(--aos-sign-bg-panel);
+  padding: 16px;
+}
+
+.aos-sign-preview-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+
+.aos-sign-pagination {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.aos-sign-page-number {
+  min-width: 80px;
+  text-align: center;
+  font-size: var(--text-caption);
+  font-weight: 500;
+}
+
+.aos-sign-zoom {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.aos-sign-zoom-slider {
+  width: 112px;
+  accent-color: var(--aos-sign-accent);
+}
+
+.aos-sign-zoom-value {
+  width: 32px;
+  text-align: right;
+  font-size: var(--text-caption);
+  color: var(--aos-sign-text-secondary);
+}
+
+.aos-sign-canvas-wrap {
+  position: relative;
+  flex: 1;
+  overflow: auto;
+  border-radius: 8px;
+  background: var(--aos-sign-bg-canvas);
+  min-height: 320px;
+}
+
+.aos-sign-canvas {
+  position: absolute;
+  left: 0;
+  top: 0;
+  transform-origin: top left;
+}
+
+.aos-sign-canvas.placing {
+  cursor: crosshair;
+}
+
+.aos-sign-field-overlay {
+  position: absolute;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 2px solid;
+  border-radius: 6px;
+  font-size: 10px;
+  font-weight: 600;
+  pointer-events: none;
+  overflow: hidden;
+}
+
+.aos-sign-field-image {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  background: #fff;
+}

@@ -568,6 +568,78 @@ pub trait ExecutionDriver: Send + Sync + fmt::Debug {
 
     /// Health check
     async fn health_check(&self) -> std::result::Result<DriverHealth, DriverError>;
+
+    /// Resolve the desktop endpoint (VNC / noVNC) for an execution handle.
+    ///
+    /// Default implementation returns `NotSupported` so drivers can opt-in
+    /// only when they expose a remote desktop stream.
+    async fn get_desktop_endpoint(
+        &self,
+        _handle: &ExecutionHandle,
+    ) -> std::result::Result<Option<DesktopEndpoint>, DriverError> {
+        Err(DriverError::NotSupported {
+            feature: "desktop endpoint".to_string(),
+        })
+    }
+
+    /// Resolve the desktop endpoint by the driver's native sandbox id.
+    ///
+    /// This is used when the platform only knows the sandbox id returned by
+    /// the driver, not the full execution handle.
+    async fn get_desktop_endpoint_by_native_id(
+        &self,
+        _sandbox_id: &str,
+    ) -> std::result::Result<Option<DesktopEndpoint>, DriverError> {
+        Err(DriverError::NotSupported {
+            feature: "desktop endpoint by native id".to_string(),
+        })
+    }
+
+    /// Whether this driver can expose a remote desktop stream for bots.
+    fn supports_desktop(&self) -> bool {
+        false
+    }
+
+    /// Register a sandbox that was created through another path (or recovered
+    /// from persistence after a restart) so the driver can resolve its desktop.
+    ///
+    /// Default implementation returns `NotSupported`; drivers that expose a
+    /// desktop endpoint should override this.
+    async fn register_native_sandbox(
+        &self,
+        _native_id: &str,
+        _agent_id: &str,
+        _host: &str,
+    ) -> std::result::Result<(), DriverError> {
+        Err(DriverError::NotSupported {
+            feature: "register native sandbox".to_string(),
+        })
+    }
+}
+
+/// Protocol used for the remote desktop stream.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum DesktopProtocol {
+    /// Raw VNC over TCP (RFB protocol). Best proxied through a WebSocket.
+    Vnc,
+    /// noVNC HTTP endpoint served directly by the sandbox runtime.
+    NoVncHttp,
+}
+
+/// Resolved desktop endpoint for a sandbox.
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+pub struct DesktopEndpoint {
+    /// Connection URL. For `Vnc` this is typically `tcp://host:port`;
+    /// for `NoVncHttp` it is an HTTP URL the browser can load directly.
+    pub url: String,
+    /// Desktop protocol.
+    pub protocol: DesktopProtocol,
+    /// Optional authentication token or VNC password. The platform treats this
+    /// as opaque and never forwards it to the browser; it is used when the
+    /// platform itself opens a downstream TCP connection.
+    #[serde(default)]
+    pub token: Option<String>,
 }
 
 /// Driver health status

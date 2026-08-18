@@ -14,6 +14,7 @@ import {
   persistApiSkills,
   notifyApiSkillsChanged,
   createApiSkillFromContract,
+  fetchPersistedContracts,
   type CaptureSession,
   type Endpoint,
   type ReplayInput,
@@ -82,7 +83,21 @@ export const useApiCaptureStore = create<ApiCaptureState>((set, get) => ({
   },
 
   fetchContracts: async () => {
-    set({ contracts: loadPersistedContracts() });
+    set({ isLoadingContracts: true });
+    try {
+      const remote = await fetchPersistedContracts();
+      const local = loadPersistedContracts();
+      const seen = new Set<string>();
+      const merged: SiteApiContract[] = [];
+      for (const contract of [...remote, ...local]) {
+        if (seen.has(contract.id)) continue;
+        seen.add(contract.id);
+        merged.push(contract);
+      }
+      set({ contracts: merged, isLoadingContracts: false });
+    } catch {
+      set({ contracts: loadPersistedContracts(), isLoadingContracts: false });
+    }
   },
 
   ingestHarFile: async (harJson, source = 'upload') => {

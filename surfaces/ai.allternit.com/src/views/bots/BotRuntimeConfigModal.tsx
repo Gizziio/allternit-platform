@@ -6,6 +6,7 @@ import type { Agent, AgentConnectorBinding, AgentSecretRef, AgentWalletPaymentMe
 import { updateAgent } from "@/lib/agents/agent.service";
 import { sealAgentSecret } from "@/lib/agents/agent-secrets.service";
 import { createAgentWallet } from "@/lib/bots/agent-wallet-factory";
+import { provisionAgentEmail, provisionAgentPhone } from "@/lib/bots/agent-identity.service";
 import {
   getIdentityMappingForConnector,
   getConnectorAccountIdentifier,
@@ -280,41 +281,62 @@ export function BotRuntimeConfigModal({ bot, isOpen, onClose, onSaved, initialSe
     setIdentityErrors((prev) => ({ ...prev, email: undefined }));
     setEmailConnectionStatus("idle");
     try {
-      if (!emailAddress.trim()) throw new Error("Enter the email address to bind.");
+      if (emailProvider === "commrails") {
+        // Platform-managed mailbox: backend provisions the address from
+        // ALLTERNIT_BOT_EMAIL_DOMAIN and owns the credentials.
+        const result = await provisionAgentEmail(bot.id);
+        setEmailAddress(result.address);
+        setEmailProvider("commrails");
+        setEmailSend(true);
+        setEmailReceive(true);
+        setEmailConnectionStatus("connected");
+        return;
+      }
+
       const address = emailAddress.trim();
+      if (!address) throw new Error("Enter the email address to bind.");
 
       if (emailProvider === "google_workspace") {
-        const result = await connectOwned("gmail", { via: "oauth2" });
-        if (result.status === "connected") {
-          ensureConnectorBinding("gmail", "Gmail", "gmail");
-          setEmailConnectionStatus("connected");
-        } else if (result.status === "authorization_required") {
-          const url = (result as { authorize_url?: string }).authorize_url;
-          if (url) window.open(url, "_blank", "noopener,noreferrer");
-        } else {
-          throw new Error("Gmail connection did not complete.");
+        try {
+          const result = await connectOwned("gmail", { via: "oauth2" });
+          if (result.status === "connected") {
+            ensureConnectorBinding("gmail", "Gmail", "gmail");
+            setEmailConnectionStatus("connected");
+          } else if (result.status === "authorization_required") {
+            const url = (result as { authorize_url?: string }).authorize_url;
+            if (url) window.open(url, "_blank", "noopener,noreferrer");
+          } else {
+            throw new Error("Gmail connection did not complete.");
+          }
+        } catch (err) {
+          const msg = err instanceof Error ? err.message : String(err);
+          if (msg.includes("connector_not_found") || msg.includes("unknown_service")) {
+            throw new Error(
+              "The Gmail connector is not available in this workspace yet. Use Generic IMAP/SMTP or CommRails instead.",
+            );
+          }
+          throw err;
         }
       } else if (emailProvider === "microsoft_365") {
-        const result = await connectOwned("outlook", { via: "oauth2" });
-        if (result.status === "connected") {
-          ensureConnectorBinding("outlook", "Outlook", "outlook");
-          setEmailConnectionStatus("connected");
-        } else if (result.status === "authorization_required") {
-          const url = (result as { authorize_url?: string }).authorize_url;
-          if (url) window.open(url, "_blank", "noopener,noreferrer");
-        } else {
-          throw new Error("Outlook connection did not complete.");
-        }
-      } else if (emailProvider === "agent_mail") {
-        const key = emailApiKey.trim();
-        if (!key) throw new Error("Enter your AgentMail API key.");
-        const result = await connectOwned("agent-mail", { via: "api_key", api_key: key });
-        if (result.status === "connected") {
-          await sealAgentSecret({ agentId: bot.id, key: "AGENT_MAIL_API_KEY", value: key });
-          ensureConnectorBinding("agent-mail", "AgentMail", "agent_mail");
-          setEmailConnectionStatus("connected");
-        } else {
-          throw new Error("AgentMail connection failed.");
+        try {
+          const result = await connectOwned("outlook", { via: "oauth2" });
+          if (result.status === "connected") {
+            ensureConnectorBinding("outlook", "Outlook", "outlook");
+            setEmailConnectionStatus("connected");
+          } else if (result.status === "authorization_required") {
+            const url = (result as { authorize_url?: string }).authorize_url;
+            if (url) window.open(url, "_blank", "noopener,noreferrer");
+          } else {
+            throw new Error("Outlook connection did not complete.");
+          }
+        } catch (err) {
+          const msg = err instanceof Error ? err.message : String(err);
+          if (msg.includes("connector_not_found") || msg.includes("unknown_service")) {
+            throw new Error(
+              "The Outlook connector is not available in this workspace yet. Use Generic IMAP/SMTP or CommRails instead.",
+            );
+          }
+          throw err;
         }
       } else if (emailProvider === "generic_imap") {
         const password = emailPassword.trim();
@@ -324,31 +346,15 @@ export function BotRuntimeConfigModal({ bot, isOpen, onClose, onSaved, initialSe
         const smtpPort = emailSmtpPort.trim() || "587";
         if (!password) throw new Error("Enter the email password so the bot can authenticate.");
         if (!imapHost || !smtpHost) throw new Error("Enter the IMAP and SMTP server hosts.");
-        const result = await connectOwned("generic-email", {
-          via: "custom_credential",
-          values: {
-            email: address,
-            password,
-            imapHost,
-            imapPort,
-            smtpHost,
-            smtpPort,
-          },
-        });
-        if (result.status === "connected") {
-          await sealAgentSecret({ agentId: bot.id, key: "BOT_EMAIL_ADDRESS", value: address });
-          await sealAgentSecret({ agentId: bot.id, key: "BOT_EMAIL_PASSWORD", value: password });
-          await sealAgentSecret({ agentId: bot.id, key: "BOT_EMAIL_IMAP_HOST", value: imapHost });
-          await sealAgentSecret({ agentId: bot.id, key: "BOT_EMAIL_IMAP_PORT", value: imapPort });
-          await sealAgentSecret({ agentId: bot.id, key: "BOT_EMAIL_SMTP_HOST", value: smtpHost });
-          await sealAgentSecret({ agentId: bot.id, key: "BOT_EMAIL_SMTP_PORT", value: smtpPort });
-          ensureConnectorBinding("generic-email", "Generic Email (IMAP/SMTP)", "generic_email");
-          setEmailConnectionStatus("connected");
-        } else {
-          throw new Error("Generic email connection failed.");
-        }
+        await sealAgentSecret({ agentId: bot.id, key: "BOT_EMAIL_ADDRESS", value: address });
+        await sealAgentSecret({ agentId: bot.id, key: "BOT_EMAIL_PASSWORD", value: password });
+        await sealAgentSecret({ agentId: bot.id, key: "BOT_EMAIL_IMAP_HOST", value: imapHost });
+        await sealAgentSecret({ agentId: bot.id, key: "BOT_EMAIL_IMAP_PORT", value: imapPort });
+        await sealAgentSecret({ agentId: bot.id, key: "BOT_EMAIL_SMTP_HOST", value: smtpHost });
+        await sealAgentSecret({ agentId: bot.id, key: "BOT_EMAIL_SMTP_PORT", value: smtpPort });
+        setEmailConnectionStatus("connected");
       } else {
-        // custom / commrails: seal address + password so the runtime can use them.
+        // custom / any other provider: seal address + password so the runtime can use them.
         const password = emailPassword.trim();
         if (!password) throw new Error("Enter the email password so the bot can authenticate.");
         await sealAgentSecret({ agentId: bot.id, key: "BOT_EMAIL_ADDRESS", value: address });
@@ -364,15 +370,36 @@ export function BotRuntimeConfigModal({ bot, isOpen, onClose, onSaved, initialSe
     } finally {
       setEmailConnecting(false);
     }
-  }, [bot.id, emailAddress, emailProvider, emailApiKey, emailPassword, emailImapHost, emailImapPort, emailSmtpHost, emailSmtpPort, ensureConnectorBinding]);
+  }, [
+    bot.id,
+    emailAddress,
+    emailProvider,
+    emailPassword,
+    emailImapHost,
+    emailImapPort,
+    emailSmtpHost,
+    emailSmtpPort,
+    ensureConnectorBinding,
+  ]);
 
   const handleConnectPhone = useCallback(async () => {
     setPhoneConnecting(true);
     setIdentityErrors((prev) => ({ ...prev, phone: undefined }));
     setPhoneConnectionStatus("idle");
     try {
-      if (!phoneNumber.trim()) throw new Error("Enter the phone number to bind.");
+      if (phoneProvider === "vapi") {
+        // Platform-managed number: backend allocates from ALLTERNIT_BOT_PHONE_POOL.
+        const result = await provisionAgentPhone(bot.id);
+        setPhoneNumber(result.number);
+        setPhoneProvider("vapi");
+        setPhoneVoice(true);
+        setPhoneSms(true);
+        setPhoneConnectionStatus("connected");
+        return;
+      }
+
       const number = phoneNumber.trim();
+      if (!number) throw new Error("Enter the phone number to bind.");
 
       if (phoneProvider === "twilio") {
         const accountSid = phoneTwilioSid.trim();
@@ -389,7 +416,7 @@ export function BotRuntimeConfigModal({ bot, isOpen, onClose, onSaved, initialSe
           ensureConnectorBinding("twilio", "Twilio", "twilio");
           setPhoneConnectionStatus("connected");
         } else {
-          throw new Error("Twilio connection failed.");
+          throw new Error("Twilio connection did not complete.");
         }
       } else if (phoneProvider === "telnyx") {
         const key = phoneTelnyxKey.trim();
@@ -401,26 +428,17 @@ export function BotRuntimeConfigModal({ bot, isOpen, onClose, onSaved, initialSe
           ensureConnectorBinding("telnyx", "Telnyx", "telnyx");
           setPhoneConnectionStatus("connected");
         } else {
-          throw new Error("Telnyx connection failed.");
+          throw new Error("Telnyx connection did not complete.");
         }
       } else if (phoneProvider === "android_bridge") {
         const baseUrl = phoneAndroidBaseUrl.trim();
         const deviceId = phoneAndroidDeviceId.trim();
         if (!baseUrl) throw new Error("Enter the Android Bridge base URL.");
         if (!deviceId) throw new Error("Enter the paired Android device ID.");
-        const result = await connectOwned("android-bridge", {
-          via: "custom_credential",
-          values: { baseUrl, deviceId },
-        });
-        if (result.status === "connected") {
-          await sealAgentSecret({ agentId: bot.id, key: "BOT_PHONE_NUMBER", value: number });
-          await sealAgentSecret({ agentId: bot.id, key: "ANDROID_BRIDGE_BASE_URL", value: baseUrl });
-          await sealAgentSecret({ agentId: bot.id, key: "ANDROID_BRIDGE_DEVICE_ID", value: deviceId });
-          ensureConnectorBinding("android-bridge", "Android Bridge", "android_bridge");
-          setPhoneConnectionStatus("connected");
-        } else {
-          throw new Error("Android Bridge connection failed.");
-        }
+        await sealAgentSecret({ agentId: bot.id, key: "BOT_PHONE_NUMBER", value: number });
+        await sealAgentSecret({ agentId: bot.id, key: "ANDROID_BRIDGE_BASE_URL", value: baseUrl });
+        await sealAgentSecret({ agentId: bot.id, key: "ANDROID_BRIDGE_DEVICE_ID", value: deviceId });
+        setPhoneConnectionStatus("connected");
       } else if (phoneProvider === "photon") {
         const projectId = phonePhotonProjectId.trim();
         const projectSecret = phonePhotonProjectSecret.trim();
@@ -432,10 +450,8 @@ export function BotRuntimeConfigModal({ bot, isOpen, onClose, onSaved, initialSe
         if (phonePhotonLineId.trim()) {
           await sealAgentSecret({ agentId: bot.id, key: "PHOTON_LINE_ID", value: phonePhotonLineId.trim() });
         }
-        ensureConnectorBinding("photon", "Photon.codes", "photon");
         setPhoneConnectionStatus("connected");
       } else {
-        // vapi / generic: just seal the number for now.
         await sealAgentSecret({ agentId: bot.id, key: "BOT_PHONE_NUMBER", value: number });
         setPhoneConnectionStatus("connected");
       }
@@ -654,7 +670,7 @@ export function BotRuntimeConfigModal({ bot, isOpen, onClose, onSaved, initialSe
         if (e.target === e.currentTarget) onClose();
       }}
     >
-      <div className="w-full max-w-3xl max-h-[85vh] flex flex-col rounded-2xl overflow-hidden bg-[var(--bg-primary)] border border-[var(--border-subtle)] shadow-2xl">
+      <div className="w-full max-w-3xl max-h-[85vh] flex flex-col rounded-2xl overflow-hidden bg-[var(--bg-elevated)] border border-[var(--border-subtle)] shadow-2xl">
         {/* Header */}
         <div className="flex items-center justify-between p-5 border-b border-[var(--border-subtle)] shrink-0">
           <div>
@@ -721,31 +737,6 @@ export function BotRuntimeConfigModal({ bot, isOpen, onClose, onSaved, initialSe
                 onBind={bindConnector}
                 onUnbind={unbindConnector}
               />
-
-              {bindings.length > 0 && (
-                <div className="mt-4">
-                  <h4 className="text-[12px] font-semibold text-[var(--text-secondary)] mb-2">
-                    Bound connectors
-                  </h4>
-                  <div className="flex flex-wrap gap-2">
-                    {bindings.map((binding) => (
-                      <span
-                        key={binding.connectorId}
-                        className="inline-flex items-center gap-1.5 rounded-full bg-[var(--bg-primary)] border border-[var(--border-subtle)] px-3 py-1 text-[12px] text-[var(--text-primary)]"
-                      >
-                        {binding.label || binding.provider}
-                        <button
-                          type="button"
-                          onClick={() => removeBinding(binding.connectorId)}
-                          className="text-[var(--text-tertiary)] hover:text-[var(--status-error)] transition-colors"
-                        >
-                          <X size={12} weight="bold" />
-                        </button>
-                      </span>
-                    ))}
-                  </div>
-                </div>
-              )}
             </section>
           )}
 
@@ -989,14 +980,21 @@ export function BotRuntimeConfigModal({ bot, isOpen, onClose, onSaved, initialSe
                         }}
                         className="w-full h-9 rounded-md border border-[var(--border-subtle)] bg-[var(--bg-elevated)] text-[var(--text-primary)] text-[13px] px-2"
                       >
-                        <option value="commrails">CommRails</option>
+                        <option value="commrails">CommRails (platform email)</option>
                         <option value="google_workspace">Gmail / Google Workspace</option>
                         <option value="microsoft_365">Outlook / Microsoft 365</option>
-                        <option value="agent_mail">AgentMail (API key)</option>
                         <option value="generic_imap">Generic IMAP/SMTP</option>
                         <option value="custom">Custom</option>
                       </select>
                     </div>
+                    {emailProvider === "commrails" && (
+                      <div className="sm:col-span-2 rounded-lg border border-[var(--border-subtle)] bg-[var(--bg-elevated)] p-3">
+                        <p className="text-[12px] text-[var(--text-secondary)]">
+                          CommRails provisions a platform-managed mailbox. The backend generates
+                          the address and credentials; click Connect to allocate one.
+                        </p>
+                      </div>
+                    )}
                     <div className="flex items-center gap-4">
                       <label className="flex items-center gap-2 text-[13px] text-[var(--text-primary)] cursor-pointer">
                         <input
@@ -1029,7 +1027,7 @@ export function BotRuntimeConfigModal({ bot, isOpen, onClose, onSaved, initialSe
                         />
                       </div>
                     )}
-                    {(emailProvider === "generic_imap" || emailProvider === "custom" || emailProvider === "commrails") && (
+                    {(emailProvider === "generic_imap" || emailProvider === "custom") && (
                       <div className="space-y-1.5 sm:col-span-2">
                         <Label className="text-[12px] text-[var(--text-secondary)]">Password</Label>
                         <Input
@@ -1093,10 +1091,16 @@ export function BotRuntimeConfigModal({ bot, isOpen, onClose, onSaved, initialSe
                       variant="outline"
                       size="sm"
                       onClick={() => void handleConnectEmail()}
-                      disabled={emailConnecting || !emailAddress.trim()}
+                      disabled={emailConnecting || (emailProvider !== "commrails" && !emailAddress.trim())}
                       className="gap-1.5 shrink-0"
                     >
-                      {emailConnecting ? "Connecting…" : "Connect email"}
+                      {emailConnecting
+                        ? emailProvider === "commrails"
+                          ? "Provisioning…"
+                          : "Connecting…"
+                        : emailProvider === "commrails"
+                          ? "Provision CommRails email"
+                          : "Connect email"}
                     </Button>
                   </div>
                   {identityErrors.email && (
@@ -1155,13 +1159,21 @@ export function BotRuntimeConfigModal({ bot, isOpen, onClose, onSaved, initialSe
                         }}
                         className="w-full h-9 rounded-md border border-[var(--border-subtle)] bg-[var(--bg-elevated)] text-[var(--text-primary)] text-[13px] px-2"
                       >
-                        <option value="vapi">Vapi</option>
+                        <option value="vapi">Vapi (platform number)</option>
                         <option value="twilio">Twilio</option>
                         <option value="telnyx">Telnyx</option>
                         <option value="android_bridge">Android Bridge (real device)</option>
                         <option value="photon">Photon.codes</option>
                       </select>
                     </div>
+                    {phoneProvider === "vapi" && (
+                      <div className="sm:col-span-2 rounded-lg border border-[var(--border-subtle)] bg-[var(--bg-elevated)] p-3">
+                        <p className="text-[12px] text-[var(--text-secondary)]">
+                          Vapi provisions a platform-managed phone number from the pool. Click
+                          Connect to allocate one.
+                        </p>
+                      </div>
+                    )}
                     <div className="flex items-center gap-4">
                       <label className="flex items-center gap-2 text-[13px] text-[var(--text-primary)] cursor-pointer">
                         <input
@@ -1293,10 +1305,16 @@ export function BotRuntimeConfigModal({ bot, isOpen, onClose, onSaved, initialSe
                       variant="outline"
                       size="sm"
                       onClick={() => void handleConnectPhone()}
-                      disabled={phoneConnecting || !phoneNumber.trim()}
+                      disabled={phoneConnecting || (phoneProvider !== "vapi" && !phoneNumber.trim())}
                       className="gap-1.5 shrink-0"
                     >
-                      {phoneConnecting ? "Connecting…" : "Connect phone"}
+                      {phoneConnecting
+                        ? phoneProvider === "vapi"
+                          ? "Provisioning…"
+                          : "Connecting…"
+                        : phoneProvider === "vapi"
+                          ? "Provision Vapi number"
+                          : "Connect phone"}
                     </Button>
                   </div>
                   {identityErrors.phone && (

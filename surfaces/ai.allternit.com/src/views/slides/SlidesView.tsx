@@ -1,5 +1,10 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
-import { SlidesApp } from '@allternit/office-slides-app';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import {
+  SlidesApp,
+  OfficeHostProvider,
+  createBrowserHost,
+  type OfficeHost,
+} from '@allternit/allternit-office-suite';
 import { takeFile } from '@/views/office/file-handoff';
 import {
   createArtifactSection,
@@ -141,17 +146,31 @@ export function SlidesView({ artifactId, handoffId }: SlidesViewProps) {
     [artifact, persistBytes],
   );
 
+  // Host contract passed to the suite adapter.
+  const saveFileRef = useRef(handleSave);
+  saveFileRef.current = handleSave;
+  const host = useMemo<OfficeHost>(
+    () =>
+      createBrowserHost({
+        saveFile: async (bytes: Uint8Array, name: string) => {
+          saveFileRef.current(bytes, name);
+        },
+      }),
+    [],
+  );
+
   if (!loaded) {
     return <div style={{ width: '100%', height: '100%', background: 'var(--shell-view-bg, #141110)' }} />;
   }
 
   return (
     <div style={{ width: '100%', height: '100%' }}>
-      <SlidesApp
-        key={artifact?.id ?? (handoffFileRef.current ? 'handoff' : 'standalone')}
-        document={initialBytes ? { bytes: initialBytes, name: initialName ?? 'deck.pptx' } : undefined}
-        onSave={artifact ? handleSave : undefined}
-      />
+      <OfficeHostProvider host={host}>
+        <SlidesApp
+          key={artifact?.id ?? (handoffFileRef.current ? 'handoff' : 'standalone')}
+          document={initialBytes ? { bytes: initialBytes, name: initialName ?? 'deck.pptx' } : undefined}
+        />
+      </OfficeHostProvider>
     </div>
   );
 }

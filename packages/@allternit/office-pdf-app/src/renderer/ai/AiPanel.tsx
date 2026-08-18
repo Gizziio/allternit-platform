@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import type { PointerEvent as ReactPointerEvent, ReactElement } from 'react'
-import { AgentLoop } from '../../stubs/agent-core'
+import { useOfficeAi, type OfficeAgentLoop } from '@allternit/allternit-office-suite/bridge'
+import { type OfficeModelOption } from '@allternit/allternit-office-suite/ai'
 import type { AiSettings } from '../../stubs/ai-provider'
 import { AiComposer, AiTypingIndicator } from '../../stubs/ui'
 import { aiLangDirective, t as tGlobal, useI18n } from '../i18n/locale'
@@ -11,14 +12,6 @@ import sendStop from '../assets/send-stop.png'
 import { createPdfSkill } from './pdf-skill'
 import { createElectronTransport } from './transport'
 import type { PdfAiDeps } from './tools'
-import {
-  resolveOfficeModelId,
-  setOfficeModelOverride,
-  getOfficeModelLabel,
-  getOfficeModelOptions,
-  refreshOfficeModelOptions,
-  type OfficeModelOption,
-} from '@allternit/office-ai'
 
 const PANEL_WIDTH_KEY = 'pdf-ai-panel-width'
 const PANEL_WIDTH_DEFAULT = 360
@@ -60,6 +53,7 @@ export function AiPanel({
   onCollapse: () => void
 }): ReactElement {
   const { lang, t } = useI18n()
+  const ai = useOfficeAi()
   const [chat, setChat] = useState<ChatEntry[]>([])
   const [prompt, setPrompt] = useState('')
   const [busy, setBusy] = useState(false)
@@ -68,7 +62,7 @@ export function AiPanel({
   const stickToBottomRef = useRef(true)
   const [panelWidth, setPanelWidth] = useState(loadPanelWidth)
   const [resizing, setResizing] = useState(false)
-  const [modelId, setModelId] = useState<string | undefined>(() => resolveOfficeModelId('pdf'))
+  const [modelId, setModelId] = useState<string | undefined>(() => ai.resolveModelId('pdf'))
   const asideRef = useRef<HTMLElement>(null)
 
   // The .ai-dock wrapper owns the animated width (docs-style 180ms slide);
@@ -94,7 +88,7 @@ export function AiPanel({
   }
 
   // The loop is built once; every mutable value goes through a ref getter
-  const loopRef = useRef<AgentLoop | null>(null)
+  const loopRef = useRef<OfficeAgentLoop | null>(null)
   if (!loopRef.current) {
     const deps: PdfAiDeps = {
       doc: () => apiRef.current.doc(),
@@ -112,7 +106,7 @@ export function AiPanel({
       rotatePage: (idx, dir) => apiRef.current.rotatePage(idx, dir),
       deletePage: (idx) => apiRef.current.deletePage(idx),
     }
-    loopRef.current = new AgentLoop({
+    loopRef.current = new ai.AgentLoop({
       modelId,
       transport: createElectronTransport(() => settingsRef.current!),
       skill: createPdfSkill(deps),
@@ -286,7 +280,7 @@ export function AiPanel({
         <div className="ai-panel-header-actions">
           <ModelPicker value={modelId} onChange={(next) => {
             setModelId(next)
-            setOfficeModelOverride('pdf', next)
+            ai.setModelOverride('pdf', next)
             loopRef.current?.setModelId(next)
           }} />
           {chat.length > 0 && (
@@ -520,14 +514,15 @@ function ModelPicker({
   value?: string | undefined
   onChange?: (modelId: string | undefined) => void
 }): React.JSX.Element {
+  const ai = useOfficeAi()
   const [open, setOpen] = useState(false)
-  const [options, setOptions] = useState<OfficeModelOption[]>(() => getOfficeModelOptions())
+  const [options, setOptions] = useState<OfficeModelOption[]>(() => ai.getModelOptions())
   const selected = options.find((o) => o.id === (value ?? 'platform')) ?? options[0]
   const menuRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
     let cancelled = false
-    refreshOfficeModelOptions()
+    ai.refreshModelOptions()
       .then((next) => {
         if (!cancelled) setOptions(next)
       })

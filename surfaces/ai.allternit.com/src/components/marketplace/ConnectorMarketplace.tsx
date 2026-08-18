@@ -20,6 +20,7 @@ import {
   CheckCircle,
   ArrowSquareOut,
   Spinner,
+  CaretDown,
 } from "@phosphor-icons/react";
 
 export interface ConnectorMarketplaceProps {
@@ -34,6 +35,8 @@ export interface ConnectorMarketplaceProps {
   onBind?: (connector: OwnedConnector) => void;
   onUnbind?: (connector: OwnedConnector) => void;
   className?: string;
+  /** Group connectors under category headings. */
+  groupByCategory?: boolean;
 }
 
 export function ConnectorMarketplace({
@@ -44,10 +47,12 @@ export function ConnectorMarketplace({
   onBind,
   onUnbind,
   className,
+  groupByCategory = true,
 }: ConnectorMarketplaceProps) {
   const [connectors, setConnectors] = useState<OwnedConnector[]>([]);
   const [loading, setLoading] = useState(true);
   const [query, setQuery] = useState("");
+  const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
   const [busyId, setBusyId] = useState<string | null>(null);
   const [note, setNote] = useState<Record<string, string>>({});
   const [apiKey, setApiKey] = useState<Record<string, string>>({});
@@ -67,15 +72,30 @@ export function ConnectorMarketplace({
     void refresh();
   }, []);
 
+  const categories = useMemo(() => {
+    const map = new Map<string, number>();
+    for (const c of connectors) {
+      const cat = c.category || "Other";
+      map.set(cat, (map.get(cat) || 0) + 1);
+    }
+    return Array.from(map.entries())
+      .sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]))
+      .map(([name]) => name);
+  }, [connectors]);
+
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
-    if (!q) return connectors;
-    return connectors.filter((c) =>
-      [c.id, c.name, c.category, c.description].some((v) =>
-        (v || "").toLowerCase().includes(q),
-      ),
-    );
-  }, [connectors, query]);
+    return connectors.filter((c) => {
+      const matchesQuery =
+        !q ||
+        [c.id, c.name, c.category, c.description].some((v) =>
+          (v || "").toLowerCase().includes(q),
+        );
+      const matchesCategory =
+        !selectedCategory || (c.category || "Other") === selectedCategory;
+      return matchesQuery && matchesCategory;
+    });
+  }, [connectors, query, selectedCategory]);
 
   function setInline(id: string, msg: string) {
     setNote((prev) => ({ ...prev, [id]: msg }));
@@ -119,17 +139,15 @@ export function ConnectorMarketplace({
         }
         case "device_provider_reached":
         case "owned_oauth_endpoint_mapping_needed":
-          setInline(c.id, (r as { message?: string }).message || r.status);
+          setInline(c.id, (r as { message?: string }).message || r.status || "Unexpected response");
           break;
         default:
-          setInline(c.id, (r as { message?: string }).message || `Status: ${r.status}`);
+          setInline(c.id, (r as { message?: string }).message || (r.status ? `Status: ${r.status}` : "Connect returned an unexpected response. Please try again."));
       }
     } catch (e) {
       setInline(c.id, e instanceof Error ? e.message : "connect failed");
     } finally {
       setBusyId(null);
-      // Keep the input open on error so the user can retry; close it on success
-      // is handled above.
     }
   }
 
@@ -150,26 +168,59 @@ export function ConnectorMarketplace({
 
   return (
     <div className={cn("flex flex-col gap-4", className)}>
-      {/* Search */}
-      <div className="relative">
-        <MagnifyingGlass
-          size={16}
-          className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--text-tertiary)]"
-        />
-        <Input
-          value={query}
-          onChange={(e) => setQuery(e.target.value)}
-          placeholder={`Search ${connectors.length} connectors…`}
-          className="pl-9 bg-[var(--bg-card)] border-[var(--border-subtle)] text-[var(--text-primary)]"
-        />
-        {query && (
-          <button
-            type="button"
-            onClick={() => setQuery("")}
-            className="absolute right-3 top-1/2 -translate-y-1/2 text-[var(--text-tertiary)] hover:text-[var(--text-primary)]"
-          >
-            <X size={14} />
-          </button>
+      {/* Search + category filter */}
+      <div className="flex flex-col sm:flex-row gap-3">
+        <div className="relative flex-1">
+          <MagnifyingGlass
+            size={16}
+            className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--text-tertiary)]"
+          />
+          <Input
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+            placeholder={`Search ${connectors.length} connectors…`}
+            className="pl-9 bg-[var(--bg-card)] border-[var(--border-subtle)] text-[var(--text-primary)]"
+          />
+          {query && (
+            <button
+              type="button"
+              onClick={() => setQuery("")}
+              className="absolute right-3 top-1/2 -translate-y-1/2 text-[var(--text-tertiary)] hover:text-[var(--text-primary)]"
+            >
+              <X size={14} />
+            </button>
+          )}
+        </div>
+        {groupByCategory && categories.length > 1 && (
+          <div className="flex items-center gap-2 overflow-x-auto pb-1 sm:pb-0 no-scrollbar">
+            <button
+              type="button"
+              onClick={() => setSelectedCategory(null)}
+              className={cn(
+                "shrink-0 px-3 py-1.5 rounded-full text-[12px] font-medium transition-colors border",
+                selectedCategory === null
+                  ? "bg-[var(--accent-primary)] text-white border-[var(--accent-primary)]"
+                  : "bg-[var(--bg-card)] text-[var(--text-secondary)] border-[var(--border-subtle)] hover:border-[var(--border-default)]"
+              )}
+            >
+              All
+            </button>
+            {categories.slice(0, 12).map((cat) => (
+              <button
+                key={cat}
+                type="button"
+                onClick={() => setSelectedCategory(cat)}
+                className={cn(
+                  "shrink-0 px-3 py-1.5 rounded-full text-[12px] font-medium transition-colors border",
+                  selectedCategory === cat
+                    ? "bg-[var(--accent-primary)] text-white border-[var(--accent-primary)]"
+                    : "bg-[var(--bg-card)] text-[var(--text-secondary)] border-[var(--border-subtle)] hover:border-[var(--border-default)]"
+                )}
+              >
+                {cat}
+              </button>
+            ))}
+          </div>
         )}
       </div>
 
@@ -185,6 +236,23 @@ export function ConnectorMarketplace({
             <Plugs size={40} className="mx-auto mb-3 text-[var(--text-tertiary)] opacity-40" />
             <p className="text-sm">No connectors match your search.</p>
           </div>
+        ) : groupByCategory && !query && !selectedCategory ? (
+          <GroupedConnectorGrid
+            connectors={filtered}
+            busyId={busyId}
+            notes={note}
+            keyInputId={keyInputId}
+            apiKey={apiKey}
+            setApiKey={setApiKey}
+            setKeyInputId={setKeyInputId}
+            onConnect={handleConnect}
+            onDisconnect={handleDisconnect}
+            onBind={onBind}
+            onUnbind={onUnbind}
+            isConnected={isConnected}
+            isBound={isBound}
+            bindOnConnect={bindOnConnect}
+          />
         ) : (
           <ConnectorGrid
             connectors={filtered}
@@ -244,173 +312,254 @@ function ConnectorGrid({
   return (
     <div className="grid grid-cols-[repeat(auto-fill,minmax(220px,1fr))] gap-3">
       <AnimatePresence>
-        {connectors.map((c) => {
-          const connected = isConnected(c);
-          const bound = isBound?.(c);
-          const { url: logo } = getConnectorLogoUrl(c.base_url, c.id, 32);
-
-          return (
-            <motion.div
-              key={c.id}
-              layout
-              initial={{ opacity: 0, y: 8 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, scale: 0.95 }}
-              className={cn(
-                "group rounded-xl border p-4 flex flex-col gap-3 transition-colors",
-                connected || bound
-                  ? "border-[var(--accent-primary)]/40 bg-[var(--accent-primary)]/5"
-                  : "border-[var(--border-subtle)] bg-[var(--bg-card)] hover:bg-[var(--surface-hover)]",
-              )}
-            >
-              <div className="flex items-start gap-3">
-                {logo ? (
-                  <img
-                    src={logo}
-                    alt={c.name}
-                    className="w-9 h-9 rounded-lg object-contain bg-[var(--bg-primary)] p-1"
-                  />
-                ) : (
-                  <div
-                    className="w-9 h-9 rounded-lg flex items-center justify-center"
-                    style={{ background: "color-mix(in srgb, var(--accent-primary) 14%, transparent)" }}
-                  >
-                    <span
-                      className="text-[13px] font-bold uppercase"
-                      style={{ color: "var(--accent-primary)" }}
-                    >
-                      {c.name.charAt(0)}
-                    </span>
-                  </div>
-                )}
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-1.5">
-                    <span className="font-semibold text-[var(--text-primary)] text-[13px] truncate">
-                      {c.name}
-                    </span>
-                    {(connected || bound) && (
-                      <CheckCircle size={14} className="text-[var(--accent-primary)] shrink-0" />
-                    )}
-                  </div>
-                  <div className="text-[11px] text-[var(--text-secondary)] capitalize">
-                    {c.auth_type}
-                  </div>
-                </div>
-              </div>
-
-              <p className="text-[12px] text-[var(--text-secondary)] line-clamp-2 flex-1">
-                {c.description || `${c.name} connector`}
-              </p>
-
-              {notes[c.id] && (
-                <p className="text-[11px] text-[var(--text-tertiary)] bg-[var(--bg-primary)] rounded-md p-2">
-                  {notes[c.id]}
-                </p>
-              )}
-
-              {keyInputId === c.id && (
-                <div className="flex flex-col gap-2">
-                  <Input
-                    type="password"
-                    placeholder={`${c.name} API key`}
-                    value={apiKey[c.id] ?? ""}
-                    onChange={(e) =>
-                      setApiKey((prev) => ({ ...prev, [c.id]: e.target.value }))
-                    }
-                    className="h-8 text-[12px] bg-[var(--bg-primary)] border-[var(--border-subtle)] text-[var(--text-primary)]"
-                    autoFocus
-                    onKeyDown={(e) => {
-                      if (e.key === "Enter") {
-                        e.preventDefault();
-                        onConnect(c);
-                      }
-                    }}
-                  />
-                  <div className="flex items-center gap-2">
-                    <Button
-                      type="button"
-                      size="sm"
-                      className="flex-1 text-[12px] h-8"
-                      onClick={() => onConnect(c)}
-                      disabled={busyId === c.id || !apiKey[c.id]?.trim()}
-                    >
-                      {busyId === c.id ? (
-                        <Spinner size={14} className="animate-spin" />
-                      ) : (
-                        "Save & Connect"
-                      )}
-                    </Button>
-                    <Button
-                      type="button"
-                      size="sm"
-                      variant="outline"
-                      className="text-[12px] h-8"
-                      onClick={() => setKeyInputId(null)}
-                    >
-                      Cancel
-                    </Button>
-                  </div>
-                </div>
-              )}
-
-              <div className="flex items-center gap-2 mt-auto">
-                {connected ? (
-                  <>
-                    <Button
-                      type="button"
-                      size="sm"
-                      variant="outline"
-                      className="flex-1 text-[12px] h-8"
-                      onClick={() => onDisconnect(c)}
-                      disabled={busyId === c.id}
-                    >
-                      {busyId === c.id ? <Spinner size={14} className="animate-spin" /> : "Disconnect"}
-                    </Button>
-                    {bindOnConnect && (
-                      <Button
-                        type="button"
-                        size="sm"
-                        variant={bound ? "default" : "outline"}
-                        className="flex-1 text-[12px] h-8"
-                        onClick={() => (bound ? onUnbind?.(c) : onBind?.(c))}
-                      >
-                        {bound ? "Bound" : "Bind"}
-                      </Button>
-                    )}
-                  </>
-                ) : (
-                  <Button
-                    type="button"
-                    size="sm"
-                    className="flex-1 text-[12px] h-8"
-                    onClick={() => onConnect(c)}
-                    disabled={busyId === c.id}
-                  >
-                    {busyId === c.id ? (
-                      <Spinner size={14} className="animate-spin" />
-                    ) : c.auth_type === "no_auth" ? (
-                      "Add"
-                    ) : (
-                      "Connect"
-                    )}
-                  </Button>
-                )}
-                {c.base_url && (
-                  <a
-                    href={c.base_url}
-                    target="_blank"
-                    rel="noreferrer"
-                    className="p-1.5 rounded-md text-[var(--text-tertiary)] hover:text-[var(--text-primary)] hover:bg-[var(--surface-hover)]"
-                    title="Open website"
-                  >
-                    <ArrowSquareOut size={14} />
-                  </a>
-                )}
-              </div>
-            </motion.div>
-          );
-        })}
+        {connectors.map((c) => (
+          <ConnectorCard
+            key={c.id}
+            connector={c}
+            busyId={busyId}
+            notes={notes}
+            keyInputId={keyInputId}
+            apiKey={apiKey}
+            setApiKey={setApiKey}
+            setKeyInputId={setKeyInputId}
+            onConnect={onConnect}
+            onDisconnect={onDisconnect}
+            onBind={onBind}
+            onUnbind={onUnbind}
+            isConnected={isConnected}
+            isBound={isBound}
+            bindOnConnect={bindOnConnect}
+          />
+        ))}
       </AnimatePresence>
     </div>
+  );
+}
+
+function GroupedConnectorGrid(props: ConnectorGridProps) {
+  const groups = useMemo(() => {
+    const map = new Map<string, OwnedConnector[]>();
+    for (const c of props.connectors) {
+      const cat = c.category || "Other";
+      if (!map.has(cat)) map.set(cat, []);
+      map.get(cat)!.push(c);
+    }
+    return Array.from(map.entries()).sort((a, b) => a[0].localeCompare(b[0]));
+  }, [props.connectors]);
+
+  return (
+    <div className="space-y-6">
+      {groups.map(([category, items]) => (
+        <section key={category}>
+          <h4 className="sticky top-0 z-10 flex items-center gap-2 mb-3 px-1 py-1.5 text-[12px] font-semibold uppercase tracking-wider text-[var(--text-tertiary)] bg-[var(--bg-elevated)]/90 backdrop-blur-sm">
+            <CaretDown size={12} />
+            {category}
+            <span className="ml-auto text-[11px] normal-case opacity-80">{items.length}</span>
+          </h4>
+          <div className="grid grid-cols-[repeat(auto-fill,minmax(220px,1fr))] gap-3">
+            <AnimatePresence>
+              {items.map((c) => (
+                <ConnectorCard
+                  key={c.id}
+                  connector={c}
+                  busyId={props.busyId}
+                  notes={props.notes}
+                  keyInputId={props.keyInputId}
+                  apiKey={props.apiKey}
+                  setApiKey={props.setApiKey}
+                  setKeyInputId={props.setKeyInputId}
+                  onConnect={props.onConnect}
+                  onDisconnect={props.onDisconnect}
+                  onBind={props.onBind}
+                  onUnbind={props.onUnbind}
+                  isConnected={props.isConnected}
+                  isBound={props.isBound}
+                  bindOnConnect={props.bindOnConnect}
+                />
+              ))}
+            </AnimatePresence>
+          </div>
+        </section>
+      ))}
+    </div>
+  );
+}
+
+interface ConnectorCardProps extends Omit<ConnectorGridProps, "connectors"> {
+  connector: OwnedConnector;
+}
+
+function ConnectorCard({
+  connector: c,
+  busyId,
+  notes,
+  keyInputId,
+  apiKey,
+  setApiKey,
+  setKeyInputId,
+  onConnect,
+  onDisconnect,
+  onBind,
+  onUnbind,
+  isConnected,
+  isBound,
+  bindOnConnect,
+}: ConnectorCardProps) {
+  const connected = isConnected(c);
+  const bound = isBound?.(c);
+  const { url: logo } = getConnectorLogoUrl(c.base_url, c.id, 32);
+
+  return (
+    <motion.div
+      layout
+      initial={{ opacity: 0, y: 8 }}
+      animate={{ opacity: 1, y: 0 }}
+      exit={{ opacity: 0, scale: 0.95 }}
+      className={cn(
+        "group rounded-xl border p-4 flex flex-col gap-3 transition-colors",
+        connected || bound
+          ? "border-[var(--accent-primary)]/40 bg-[var(--accent-primary)]/5"
+          : "border-[var(--border-subtle)] bg-[var(--bg-card)] hover:bg-[var(--surface-hover)]",
+      )}
+    >
+      <div className="flex items-start gap-3">
+        {logo ? (
+          <img
+            src={logo}
+            alt={c.name}
+            className="w-9 h-9 rounded-lg object-contain bg-[var(--bg-primary)] p-1"
+          />
+        ) : (
+          <div
+            className="w-9 h-9 rounded-lg flex items-center justify-center"
+            style={{ background: "color-mix(in srgb, var(--accent-primary) 14%, transparent)" }}
+          >
+            <span
+              className="text-[13px] font-bold uppercase"
+              style={{ color: "var(--accent-primary)" }}
+            >
+              {c.name.charAt(0)}
+            </span>
+          </div>
+        )}
+        <div className="flex-1 min-w-0">
+          <div className="flex items-center gap-1.5">
+            <span className="font-semibold text-[var(--text-primary)] text-[13px] truncate">
+              {c.name}
+            </span>
+            {(connected || bound) && (
+              <CheckCircle size={14} className="text-[var(--accent-primary)] shrink-0" />
+            )}
+          </div>
+          <div className="text-[11px] text-[var(--text-secondary)] capitalize">
+            {c.auth_type}
+          </div>
+        </div>
+      </div>
+
+      <p className="text-[12px] text-[var(--text-secondary)] line-clamp-2 flex-1">
+        {c.description || `${c.name} connector`}
+      </p>
+
+      {notes[c.id] && (
+        <p className="text-[11px] text-[var(--text-tertiary)] bg-[var(--bg-primary)] rounded-md p-2">
+          {notes[c.id]}
+        </p>
+      )}
+
+      {keyInputId === c.id && (
+        <div className="flex flex-col gap-2">
+          <Input
+            type="password"
+            placeholder={`${c.name} API key`}
+            value={apiKey[c.id] ?? ""}
+            onChange={(e) => setApiKey((prev) => ({ ...prev, [c.id]: e.target.value }))}
+            className="h-8 text-[12px] bg-[var(--bg-primary)] border-[var(--border-subtle)] text-[var(--text-primary)]"
+            autoFocus
+            onKeyDown={(e) => {
+              if (e.key === "Enter") {
+                e.preventDefault();
+                onConnect(c);
+              }
+            }}
+          />
+          <div className="flex items-center gap-2">
+            <Button
+              type="button"
+              size="sm"
+              className="flex-1 text-[12px] h-8"
+              onClick={() => onConnect(c)}
+              disabled={busyId === c.id || !apiKey[c.id]?.trim()}
+            >
+              {busyId === c.id ? <Spinner size={14} className="animate-spin" /> : "Save & Connect"}
+            </Button>
+            <Button
+              type="button"
+              size="sm"
+              variant="outline"
+              className="text-[12px] h-8"
+              onClick={() => setKeyInputId(null)}
+            >
+              Cancel
+            </Button>
+          </div>
+        </div>
+      )}
+
+      <div className="flex items-center gap-2 mt-auto">
+        {connected ? (
+          <>
+            <Button
+              type="button"
+              size="sm"
+              variant="outline"
+              className="flex-1 text-[12px] h-8"
+              onClick={() => onDisconnect(c)}
+              disabled={busyId === c.id}
+            >
+              {busyId === c.id ? <Spinner size={14} className="animate-spin" /> : "Disconnect"}
+            </Button>
+            {bindOnConnect && (
+              <Button
+                type="button"
+                size="sm"
+                variant={bound ? "default" : "outline"}
+                className="flex-1 text-[12px] h-8"
+                onClick={() => (bound ? onUnbind?.(c) : onBind?.(c))}
+              >
+                {bound ? "Bound" : "Bind"}
+              </Button>
+            )}
+          </>
+        ) : (
+          <Button
+            type="button"
+            size="sm"
+            className="flex-1 text-[12px] h-8"
+            onClick={() => onConnect(c)}
+            disabled={busyId === c.id}
+          >
+            {busyId === c.id ? (
+              <Spinner size={14} className="animate-spin" />
+            ) : c.auth_type === "no_auth" ? (
+              "Add"
+            ) : (
+              "Connect"
+            )}
+          </Button>
+        )}
+        {c.base_url && (
+          <a
+            href={c.base_url}
+            target="_blank"
+            rel="noreferrer"
+            className="p-1.5 rounded-md text-[var(--text-tertiary)] hover:text-[var(--text-primary)] hover:bg-[var(--surface-hover)]"
+            title="Open website"
+          >
+            <ArrowSquareOut size={14} />
+          </a>
+        )}
+      </div>
+    </motion.div>
   );
 }

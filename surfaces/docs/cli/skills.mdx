@@ -1,0 +1,145 @@
+---
+title: Skills and Agents
+description: Create agents and generate skills with the gizzi skills command
+---
+
+## Overview
+
+The `gizzi skills` command manages the agents and skills available to the Allternit runtime. It can create new agents from a description, list all registered agents, and generate new skills with AI assistance.
+
+Use it to:
+
+- Bootstrap agents for specific workflows or code-review roles
+- Inspect the agents currently available to Gizzi Code
+- Generate reusable skills from a plain-language description
+
+## Command reference
+
+| Command | Description |
+|---------|-------------|
+| `gizzi skills create` | Create a new agent from a description |
+| `gizzi skills list` | List all available agents |
+| `gizzi skills create-skill` | Generate a new skill with AI assistance |
+
+`gizzi skills` requires a subcommand. Run `gizzi skills --help` to see the available options.
+
+## Agent modes
+
+When creating an agent with `gizzi skills create`, choose how the agent can be used:
+
+| Mode | Description |
+|------|-------------|
+| `all` | Can function as either a primary or subagent |
+| `primary` | Acts as the main agent in a session |
+| `subagent` | Called by other agents for delegated tasks |
+
+## Available tools
+
+Agents created with `gizzi skills create` can be granted access to a subset of the runtime tool belt. Pass a comma-separated list to `--tools`:
+
+- `bash` — shell command execution
+- `read` — read files
+- `write` — write files
+- `edit` — edit files
+- `list` — list directories
+- `glob` — file globbing
+- `grep` — search file contents
+- `webfetch` — fetch web pages
+- `task` — spawn subagent tasks
+- `todowrite` — write todo lists
+- `todoread` — read todo lists
+
+Omit `--tools` entirely to enable every tool.
+
+## Usage examples
+
+### List agents
+
+```bash
+gizzi skills list
+```
+
+### Create an agent interactively
+
+```bash
+gizzi skills create
+```
+
+### Create an agent non-interactively
+
+```bash
+gizzi skills create \
+  --description "Review pull requests for security issues" \
+  --mode subagent \
+  --tools read,grep,webfetch \
+  --model allternit/gizzi-pro
+```
+
+### Create an agent in a custom directory
+
+```bash
+gizzi skills create \
+  --path ./my-agents \
+  --description "Generate JSDoc for exported functions" \
+  --mode all \
+  --tools read,write,edit
+```
+
+### Generate a skill
+
+```bash
+gizzi skills create-skill \
+  --description "Summarize the current git diff for a standup update"
+```
+
+### Generate a skill in a specific directory
+
+```bash
+gizzi skills create-skill \
+  --path ./.gizzi/skills \
+  --description "Draft release notes from CHANGELOG.md" \
+  --model allternit/gizzi-pro
+```
+
+## Where agents and skills are stored
+
+- **Agents** created without `--path` are written to `.gizzi/agent/` in the current project, or to the global Gizzi Code config directory when global scope is selected interactively.
+- **Skills** created without `--path` are written to `./.gizzi/skills/`.
+
+## Common flags
+
+### `gizzi skills create`
+
+| Flag | Description |
+|------|-------------|
+| `--path` | Directory path to generate the agent file in |
+| `--description` | What the agent should do |
+| `--mode` | Agent mode: `all`, `primary`, or `subagent` |
+| `--tools` | Comma-separated list of tools to enable (default: all) |
+| `-m`, `--model` | Model to use in `provider/model` format |
+
+### `gizzi skills create-skill`
+
+| Flag | Description |
+|------|-------------|
+| `-d`, `--description` | What the skill should do |
+| `--path` | Directory to create the skill in |
+| `-m`, `--model` | Model to use for generation |
+
+### Global options
+
+| Flag | Description |
+|------|-------------|
+| `--ci` | Run in non-interactive mode with structured output |
+| `--ci-format` | CI output format: `ndjson`, `text`, or `markdown` |
+| `--log-level` | Log level: `DEBUG`, `INFO`, `WARN`, or `ERROR` |
+| `--print-logs` | Print logs to stderr |
+| `-h`, `--help` | Show help |
+| `-v`, `--version` | Show version number |
+
+## Related docs
+
+- [Gizzi Code Overview](/cli/overview)
+- [Configuration](/cli/configuration)
+- [Permission Profiles](/cli/permission-profiles)
+- [Headless Execution](/cli/headless-execution)

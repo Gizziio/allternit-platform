@@ -300,6 +300,11 @@ pub(crate) async fn execute_tool_internal(
         // ── Echo / Debug ─────────────────────────────────────────────────────
         "echo" => Ok(request.args.clone()),
 
+        // ── HAR-derived API capture ──────────────────────────────────────────
+        "api_capture_record" => api_capture_record(state, request, user_id).await,
+        "api_capture_stop" => api_capture_stop(state, request, user_id).await,
+        "api_capture_replay" => api_capture_replay(state, request, user_id).await,
+
         // ── Unknown ──────────────────────────────────────────────────────────
         _ => {
             if request.tool.starts_with("mcp:") {
@@ -860,7 +865,107 @@ async fn time_now(_request: &ExecuteToolRequest) -> Result<Value, String> {
     }))
 }
 
-// ─── List tools (stub) ───────────────────────────────────────────────────────
+// ─── HAR-derived API capture tools ───────────────────────────────────────────
+
+async fn api_capture_record(
+    state: &AppState,
+    request: &ExecuteToolRequest,
+    user_id: &str,
+) -> Result<Value, String> {
+    let domain = request.args.get("domain").and_then(|v| v.as_str());
+    let source = request.args.get("source").and_then(|v| v.as_str());
+
+    let session_id = crate::har_api_service::create_capture_session(
+        &state.db,
+        user_id,
+        domain,
+        source,
+    )
+    .await?;
+
+    // If the caller already has a HAR (e.g. from an upload or extension),
+    // stop the session immediately and persist the contract.
+    if let Some(har) = request.args.get("har").and_then(|v| v.as_str()) {
+        let result = crate::har_api_service::stop_capture_session(&state.db, &session_id, Some(har)).await?;
+        return Ok(json!({
+            "session_id": session_id,
+            "contract": result.get("contract"),
+            "instructions": "HAR ingested directly; no further browser workflow needed.",
+        }));
+    }
+
+    Ok(json!({
+        "session_id": session_id,
+        "instructions": "Perform the website workflow in the active browser tab, then call api_capture_stop.",
+    }))
+}
+
+async fn api_capture_stop(
+    state: &AppState,
+    request: &ExecuteToolRequest,
+    user_id: &str,
+) -> Result<Value, String> {
+    let session_id = request
+        .args
+        .get("session_id")
+        .and_then(|v| v.as_str())
+        .ok_or("Missing 'session_id' argument")?;
+
+    // Ownership check: the session must belong to the caller.
+    let session = crate::har_api_service::get_capture_session(&state.db, session_id)?
+        .ok_or_else(|| format!("Capture session not found: {}", session_id))?;
+    if session.user_id != user_id {
+        return Err("Unauthorized".to_string());
+    }
+
+    let har = request.args.get("har").and_then(|v| v.as_str());
+    crate::har_api_service::stop_capture_session(&state.db, session_id, har).await
+}
+
+async fn api_capture_replay(
+    state: &AppState,
+    request: &ExecuteToolRequest,
+    user_id: &str,
+) -> Result<Value, String> {
+    let contract_id = request
+        .args
+        .get("contract_id")
+        .and_then(|v| v.as_str())
+        .ok_or("Missing 'contract_id' argument")?;
+    let endpoint_id = request
+        .args
+        .get("endpoint_id")
+        .and_then(|v| v.as_str())
+        .ok_or("Missing 'endpoint_id' argument")?;
+
+    // Ownership check: the endpoint must belong to a contract owned by the user.
+    let contract = crate::har_api_service::get_contract_with_endpoints(&state.db, contract_id)?
+        .ok_or_else(|| format!("Contract not found: {}", contract_id))?;
+    if contract.0.user_id != user_id {
+        return Err("Unauthorized".to_string());
+    }
+    if !contract.1.iter().any(|e| e.id == endpoint_id) {
+        return Err(format!("Endpoint not found in contract: {}", endpoint_id));
+    }
+
+    let path_params = request.args.get("path_params");
+    let query_params = request.args.get("query_params");
+    let headers = request.args.get("headers");
+    let body = request.args.get("body");
+
+    crate::har_api_service::replay_endpoint(
+        &state.db,
+        contract_id,
+        endpoint_id,
+        path_params,
+        query_params,
+        headers,
+        body,
+    )
+    .await
+}
+
+// ─── List tools ─────────────────────────────────────────────────────────────
 
 async fn list_tools() -> impl IntoResponse {
     let mut tools = vec![
@@ -874,6 +979,49 @@ async fn list_tools() -> impl IntoResponse {
         json!({ "id": "http.post", "name": "HTTP POST", "description": "Make HTTP POST requests" }),
         json!({ "id": "system.info", "name": "System Info", "description": "Get system information" }),
         json!({ "id": "echo", "name": "Echo", "description": "Echo back arguments" }),
+        json!({
+            "id": "api_capture_record",
+            "name": "API Capture Record",
+            "description": "Start a HAR-derived API capture session. Perform the workflow in the browser, then call api_capture_stop.",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "domain": { "type": "string", "description": "Optional domain being captured" },
+                    "source": { "type": "string", "description": "Optional capture source (desktop, extension, upload)" },
+                    "har": { "type": "string", "description": "Optional HAR JSON to ingest directly instead of capturing live" }
+                }
+            }
+        }),
+        json!({
+            "id": "api_capture_stop",
+            "name": "API Capture Stop",
+            "description": "Stop a capture session and persist the derived API contract. Optionally supply a HAR JSON string.",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "session_id": { "type": "string", "description": "The capture session ID returned by api_capture_record" },
+                    "har": { "type": "string", "description": "Optional HAR JSON to derive endpoints from" }
+                },
+                "required": ["session_id"]
+            }
+        }),
+        json!({
+            "id": "api_capture_replay",
+            "name": "API Capture Replay",
+            "description": "Replay a captured endpoint server-side with supplied path, query, header, and body parameters.",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "contract_id": { "type": "string", "description": "The contract ID containing the endpoint" },
+                    "endpoint_id": { "type": "string", "description": "The endpoint ID to replay" },
+                    "path_params": { "type": "object", "description": "Path parameter substitutions" },
+                    "query_params": { "type": "object", "description": "Query parameter substitutions" },
+                    "headers": { "type": "object", "description": "Header overrides" },
+                    "body": { "type": "object", "description": "Request body JSON" }
+                },
+                "required": ["contract_id", "endpoint_id"]
+            }
+        }),
     ];
     for tool in markdown_builtin_tools() {
         tools.push(json!({

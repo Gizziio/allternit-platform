@@ -21,13 +21,12 @@ import * as simpleIcons from "simple-icons";
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const ROOT = path.resolve(__dirname, "..");
 const CATALOG_DIR = path.join(ROOT, "services", "open-connector", "catalog", "apps");
-const ICONS_DIR = path.join(ROOT, "surfaces", "ai.allternit.com", "public", "icons", "connectors");
-const MAP_FILE = path.join(ROOT, "surfaces", "ai.allternit.com", "src", "lib", "design", "connector-icon-map.ts");
-
 if (!fs.existsSync(CATALOG_DIR)) {
   console.error("Sidecar catalog not found:", CATALOG_DIR);
   process.exit(1);
 }
+const ICONS_DIR = path.join(ROOT, "surfaces", "ai.allternit.com", "public", "icons", "connectors");
+const MAP_FILE = path.join(ROOT, "surfaces", "ai.allternit.com", "src", "lib", "design", "connector-icon-map.ts");
 
 // Build simple-icons lookup maps.
 const allIcons = Object.values(simpleIcons).filter((i) => i && i.slug);

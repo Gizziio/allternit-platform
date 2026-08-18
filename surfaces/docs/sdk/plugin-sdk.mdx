@@ -1,0 +1,338 @@
+---
+title: Plugin SDK
+description: Build cross-platform plugins for the Allternit runtime and external agent surfaces.
+---
+
+# Plugin SDK
+
+The Plugin SDK (`@allternit/plugin-sdk`) is a universal runtime for authoring plugins once and deploying them across multiple surfaces. It defines a single plugin contract, then adapts that contract to Model Context Protocol (MCP) servers, HTTP APIs, terminal/CLI workflows, editor extensions, and the native Allternit runtime.
+
+## Overview
+
+Use the Plugin SDK when you want to:
+
+- Package domain logic as a reusable plugin with a typed manifest.
+- Expose plugin functions over MCP, HTTP, or a command-line interface.
+- Build plugins that degrade gracefully when host capabilities differ.
+- Run the same plugin inside the Allternit platform and on external surfaces.
+
+## Installation
+
+```bash
+npm install @allternit/plugin-sdk
+```
+
+For global CLI usage:
+
+```bash
+npm install -g @allternit/plugin-sdk
+```
+
+Requires Node.js 18 or later.
+
+## Quick start
+
+### Create a plugin from the CLI
+
+```bash
+npx @allternit/plugin-sdk create my-plugin
+cd my-plugin
+npm install
+npm run build
+npx @allternit/plugin-sdk run --input "Hello world"
+```
+
+### Programmatic usage
+
+```typescript
+import {
+  BasePlugin,
+  PluginRuntime,
+  HttpAdapter,
+  McpAdapter,
+  PluginManifest,
+} from '@allternit/plugin-sdk';
+
+const manifest: PluginManifest = {
+  id: 'my-plugin',
+  name: 'My Plugin',
+  version: '1.0.0',
+  runtime: 'allternit-plugin-v1',
+  description: 'A sample plugin',
+  category: 'custom',
+  requires: { tools: [] },
+  provides: {
+    functions: [
+      {
+        name: 'greet',
+        description: 'Greet the user',
+        parameters: {
+          type: 'object',
+          properties: {
+            name: { type: 'string', description: 'Name to greet' },
+          },
+          required: ['name'],
+        },
+        returns: {
+          type: 'object',
+          properties: {
+            content: { type: 'string' },
+          },
+        },
+      },
+    ],
+  },
+  adapters: { mcp: './dist', http: './dist' },
+};
+
+class MyPlugin extends BasePlugin {
+  readonly manifest = manifest;
+
+  async execute(functionName: string, params: Record<string, any>) {
+    if (functionName === 'greet') {
+      return {
+        success: true,
+        content: `Hello, ${params.name}!`,
+      };
+    }
+
+    return {
+      success: false,
+      error: {
+        code: 'NOT_FOUND',
+        message: 'Unknown function',
+        retryable: false,
+      },
+    };
+  }
+}
+
+const plugin = new MyPlugin();
+const runtime = new PluginRuntime({
+  adapters: [
+    { name: 'http', adapter: new HttpAdapter(), config: { port: 3000 } },
+    { name: 'mcp', adapter: new McpAdapter() },
+  ],
+});
+
+await runtime.start();
+```
+
+## Key concepts
+
+### Plugin manifest
+
+Every plugin declares its identity, required host capabilities, and exposed functions through a `PluginManifest`. The manifest is the contract that adapters use to expose the plugin on each surface.
+
+```typescript
+import { PluginManifest } from '@allternit/plugin-sdk';
+
+const manifest: PluginManifest = {
+  id: 'market-research',
+  name: 'Market Research',
+  version: '1.0.0',
+  runtime: 'allternit-plugin-v1',
+  description: 'Research markets and summarize findings',
+  category: 'research',
+  requires: {
+    llm: { capabilities: ['reasoning', 'tool_use'] },
+    tools: ['web_search', 'web_browse'],
+  },
+  provides: {
+    functions: [
+      {
+        name: 'research',
+        description: 'Research a topic',
+        parameters: {
+          type: 'object',
+          properties: {
+            topic: { type: 'string', description: 'Topic to research' },
+          },
+          required: ['topic'],
+        },
+        returns: {
+          type: 'object',
+          properties: {
+            content: { type: 'string', format: 'markdown' },
+          },
+        },
+      },
+    ],
+  },
+  adapters: { mcp: './dist', http: './dist', allternit: './dist' },
+};
+```
+
+### PluginHost interface
+
+`PluginHost` is the universal runtime contract passed to a plugin during initialization. It abstracts the underlying platform so plugin code can use LLM completions, tools, UI rendering, storage, and logging without knowing which surface is running it.
+
+| Capability | Description |
+|------------|-------------|
+| `host.llm` | Prompt completion, streaming, token counting, and model metadata. |
+| `host.tools` | Discover and execute tools provided by the host. |
+| `host.ui` | Render markdown, code, images, charts, tables, forms, and panels. |
+| `host.storage` | Persistent or ephemeral key/value storage. |
+| `host.session` | Session identity and conversation history. |
+| `host.logger` | Structured logging. |
+
+```typescript
+import { PluginHost } from '@allternit/plugin-sdk';
+
+export async function run(host: PluginHost, params: any) {
+  const result = await host.llm.complete(`Analyze: ${params.topic}`);
+  host.ui.renderMarkdown(result);
+
+  if (host.tools.has('web_browse')) {
+    return host.tools.execute('web_browse', { url: params.url });
+  }
+
+  return host.llm.complete(`Research: ${params.url}`);
+}
+```
+
+### Adapters
+
+Adapters map the universal plugin contract to a specific surface. The SDK ships with adapters for the most common deployment patterns.
+
+| Adapter | Surface | Best for |
+|---------|---------|----------|
+| `McpAdapter` | MCP server | MCP-compatible clients and agents. |
+| `HttpAdapter` | REST API + WebSocket | Web apps, mobile backends, and custom integrations. |
+| `CliAdapter` | Terminal/CLI | Scripts, terminal-based agents, and CI pipelines. |
+| `VSCodeAdapter` | Editor extension | IDE extensions and editor AI assistants. |
+| `NativeAdapter` | Allternit runtime | First-class execution inside the Allternit platform. |
+| `LangChainAdapter` | Python tool | Python agent ecosystems. |
+
+Each adapter implements the `Adapter` interface:
+
+```typescript
+import { Adapter, AdapterInstance, Plugin } from '@allternit/plugin-sdk';
+
+class CustomAdapter implements Adapter {
+  readonly name = 'custom';
+  readonly version = '1.0.0';
+
+  canActivate(): boolean {
+    return true;
+  }
+
+  async initialize(
+    plugin: Plugin,
+    config?: Record<string, any>
+  ): Promise<AdapterInstance> {
+    // Return an AdapterInstance with start(), stop(), and getEndpoint()
+  }
+}
+```
+
+### Plugin lifecycle
+
+Plugins follow a simple lifecycle:
+
+1. **Register** — Add the plugin to a `PluginRegistry`.
+2. **Initialize** — The adapter calls `plugin.initialize(host)`.
+3. **Execute** — The adapter routes incoming requests to `plugin.execute(functionName, params, context)`.
+4. **Destroy** — The adapter calls `plugin.destroy()` on shutdown.
+
+```typescript
+import { BasePlugin, ExecutionContext, ExecutionResult } from '@allternit/plugin-sdk';
+
+class ResearchPlugin extends BasePlugin {
+  readonly manifest = manifest;
+
+  protected async onInit() {
+    this.host.logger.info('Research plugin initialized');
+  }
+
+  async execute(
+    functionName: string,
+    params: Record<string, any>,
+    context: ExecutionContext
+  ): Promise<ExecutionResult> {
+    this.host.logger.info(`Executing ${functionName}`, { executionId: context.executionId });
+    // ...
+  }
+
+  async destroy() {
+    this.host.logger.info('Research plugin shutting down');
+  }
+}
+```
+
+## Running a plugin
+
+### As an MCP server
+
+```bash
+npx @allternit/plugin-sdk run --adapter mcp
+```
+
+Configure an MCP client to point at the generated server command.
+
+### As an HTTP API
+
+```bash
+npx @allternit/plugin-sdk serve --port 3000
+```
+
+Call the API:
+
+```bash
+curl http://localhost:3000/v1/execute/greet \
+  -H 'Content-Type: application/json' \
+  -d '{"inputs": {"name": "Allternit"}}'
+```
+
+The HTTP adapter also supports WebSocket execution and Server-Sent Events for streaming results.
+
+### In the Allternit runtime
+
+```typescript
+import { NativeAdapter } from '@allternit/plugin-sdk';
+import plugin from './plugins/market-research';
+
+const adapter = new NativeAdapter();
+const instance = await adapter.initialize(plugin, { runtime });
+await instance.start();
+```
+
+### From a terminal script
+
+```bash
+npx @allternit/plugin-sdk run my-plugin --name "Allternit"
+```
+
+## Utility helpers
+
+The SDK exports helpers for manifest validation, manifest loading, and plugin packaging.
+
+```typescript
+import { utils } from '@allternit/plugin-sdk';
+
+const isValid = utils.validateManifest(manifest);
+const loaded = await utils.loadManifest('./plugin/manifest.json');
+await utils.packagePlugin('./plugin', './plugin.allp');
+```
+
+## Error handling
+
+Adapters return structured `ExecutionResult` objects. Check `result.success` before reading `result.content` or `result.data`.
+
+```typescript
+const result = await plugin.execute('research', { topic: 'AI agents' }, context);
+
+if (!result.success) {
+  console.error(result.error.code, result.error.message);
+  return;
+}
+
+console.log(result.content);
+```
+
+## Related pages
+
+- [TypeScript SDK](/sdk/typescript) — build agents with the core TypeScript SDK
+- [Computer Use SDK](/sdk/computer-use) — control browsers and desktops
+- [Capsule SDK](/sdk/capsule) — headless capsule lifecycle and contracts
+- [Plugin Adapters](/tools/plugin-adapters) — load external capability manifests into Allternit

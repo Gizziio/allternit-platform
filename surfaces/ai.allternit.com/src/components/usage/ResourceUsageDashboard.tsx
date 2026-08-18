@@ -10,7 +10,6 @@ import {
   ResponsiveContainer,
 } from 'recharts';
 import {
-  TerminalWindow,
   DownloadSimple,
   ArrowsClockwise,
   ChatTeardropText,
@@ -23,7 +22,6 @@ import {
   UsersThree,
   ChartBar,
 } from '@phosphor-icons/react';
-import { useIsClient } from '@/lib/hooks/use-is-client';
 import { cn } from '@/lib/utils';
 import { gizziBaseUrl } from '@/lib/agents/api-config';
 
@@ -110,12 +108,10 @@ function entryTokens(e: { tokens: UsageTokens }): number {
 const DAYS_FOR_RANGE: Record<'all' | '30d' | '7d', number> = { all: 365, '30d': 30, '7d': 7 };
 
 export function ResourceUsageDashboard() {
-  const isClient = useIsClient();
   const [data, setData] = useState<UsageSummary | null>(null);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [logs, setLogs] = useState<string[]>([]);
   const [timeRange, setTimeRange] = useState<'all' | '30d' | '7d'>('30d');
   const dailyChartRef = useRef<HTMLDivElement>(null);
   const modelsChartRef = useRef<HTMLDivElement>(null);
@@ -131,13 +127,6 @@ export function ResourceUsageDashboard() {
       if (!res.ok) throw new Error(`gizzi /global/usage returned ${res.status}`);
       const summary = (await res.json()) as UsageSummary;
       setData(summary);
-      if (isClient) {
-        setLogs((prev) => [
-          `[${new Date().toLocaleTimeString()}] Gizzi sync: ${summary.grandTotal.messages} messages · ${summary.grandTotal.sessions} sessions`,
-          `[${new Date().toLocaleTimeString()}] Tokens (${range}): ${formatTokens(summary.grandTotal.tokens)} · cost ${formatCost(summary.grandTotal.cost)}`,
-          ...prev,
-        ].slice(0, 50));
-      }
     } catch (err) {
       logger.error({ err }, 'Failed to fetch usage data');
       setError(err instanceof Error ? err.message : 'Failed to reach gizzi runtime');
@@ -145,7 +134,7 @@ export function ResourceUsageDashboard() {
       setLoading(false);
       setRefreshing(false);
     }
-  }, [isClient]);
+  }, []);
 
   useEffect(() => {
     void fetchUsage(timeRange);
@@ -220,127 +209,120 @@ export function ResourceUsageDashboard() {
   const { grandTotal } = data;
 
   return (
-    <div className="bg-[var(--bg-elevated)] p-6 rounded-2xl border border-[var(--border-subtle)] font-sans space-y-6">
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-3">
-          <div className="grid h-10 w-10 place-items-center rounded-xl bg-[var(--accent-primary)]/10 text-[var(--accent-primary)]">
-            <ChartBar size={20} weight="duotone" />
+    <div className="bg-[var(--glass-bg)] backdrop-blur-md border border-[var(--border-subtle)] rounded-2xl font-sans overflow-hidden" style={{ maxHeight: 220 }}>
+      <div className="flex flex-col h-full">
+        {/* Top bar: title, key metrics, controls */}
+        <div className="flex items-center gap-4 px-4 py-3 border-b border-[var(--border-subtle)]">
+          <div className="flex items-center gap-2.5 shrink-0">
+            <div className="grid h-9 w-9 place-items-center rounded-xl bg-[var(--accent-primary)]/10 text-[var(--accent-primary)]">
+              <ChartBar size={18} weight="duotone" />
+            </div>
+            <div className="hidden sm:block">
+              <h2 className="text-sm font-semibold text-[var(--text-primary)]">Brain usage</h2>
+              <p className="text-[11px] text-[var(--text-tertiary)]">Metered at the gizzi boundary</p>
+            </div>
           </div>
-          <div>
-            <h2 className="text-[15px] font-semibold text-[var(--text-primary)]">Brain usage</h2>
-            <p className="text-[12px] text-[var(--text-tertiary)]">Metered at the gizzi boundary</p>
+
+          <div className="flex-1 min-w-0">
+            <div className="flex items-center gap-2 overflow-x-auto no-scrollbar">
+              <MetricPill label="Sessions" value={grandTotal.sessions.toLocaleString()} icon={UsersThree} />
+              <MetricPill label="Messages" value={grandTotal.messages.toLocaleString()} icon={ChatTeardropText} />
+              <MetricPill label="Tokens" value={formatTokens(grandTotal.tokens)} icon={Hash} />
+              <MetricPill label="Cost" value={formatCost(grandTotal.cost)} icon={CurrencyDollar} />
+              <MetricPill label="Local" value={formatTokens(derived.localTokens)} icon={House} />
+              <MetricPill label="Cloud" value={formatTokens(derived.cloudTokens)} icon={Cloud} />
+              <MetricPill label="Days" value={derived.activeDays.toString()} icon={Calendar} />
+              <MetricPill label="Top model" value={derived.topModel} icon={Brain} />
+            </div>
+          </div>
+
+          <div className="flex items-center gap-2 shrink-0">
+            <button type="button"
+              onClick={() => void fetchUsage(timeRange)}
+              disabled={refreshing}
+              className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-[var(--bg-primary)] border border-[var(--border-subtle)] text-[var(--text-tertiary)] hover:text-[var(--text-primary)] text-xs font-medium transition-colors disabled:opacity-50"
+            >
+              <ArrowsClockwise size={14} className={refreshing ? 'animate-spin' : ''} />
+              <span className="hidden md:inline">{refreshing ? 'Syncing…' : 'Refresh'}</span>
+            </button>
+            <button type="button"
+              onClick={handleExport}
+              className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-[var(--bg-primary)] border border-[var(--border-subtle)] text-[var(--text-tertiary)] hover:text-[var(--text-primary)] text-xs font-medium transition-colors"
+            >
+              <DownloadSimple size={14} />
+              <span className="hidden md:inline">Export</span>
+            </button>
+            <div className="flex bg-[var(--bg-primary)] p-0.5 rounded-lg border border-[var(--border-subtle)]">
+              {(['all', '30d', '7d'] as const).map((range) => (
+                <button type="button"
+                  key={range}
+                  onClick={() => setTimeRange(range)}
+                  className={cn(
+                    'px-2.5 py-1.5 rounded-md text-xs font-medium transition-colors',
+                    timeRange === range ? 'bg-[var(--bg-tertiary)] text-[var(--text-primary)]' : 'text-[var(--text-tertiary)] hover:text-[var(--text-primary)]',
+                  )}
+                >
+                  {range === 'all' ? 'All' : range}
+                </button>
+              ))}
+            </div>
           </div>
         </div>
-        <div className="flex items-center gap-3">
-          <button type="button"
-            onClick={() => void fetchUsage(timeRange)}
-            disabled={refreshing}
-            className="flex items-center gap-2 px-3 py-1.5 rounded-md bg-[var(--bg-primary)] border border-[var(--border-subtle)] text-[var(--text-tertiary)] hover:text-[var(--text-primary)] text-sm font-medium transition-colors disabled:opacity-50"
-          >
-            <ArrowsClockwise size={16} className={refreshing ? 'animate-spin' : ''} />
-            {refreshing ? 'Refreshing…' : 'Refresh'}
-          </button>
-          <button type="button"
-            onClick={handleExport}
-            className="flex items-center gap-2 px-3 py-1.5 rounded-md bg-[var(--bg-primary)] border border-[var(--border-subtle)] text-[var(--text-tertiary)] hover:text-[var(--text-primary)] text-sm font-medium transition-colors"
-          >
-            <DownloadSimple size={16} /> Export JSON
-          </button>
-          <div className="flex bg-[var(--bg-primary)] p-1 rounded-lg border border-[var(--border-subtle)]">
-            {(['all', '30d', '7d'] as const).map((range) => (
-              <button type="button"
-                key={range}
-                onClick={() => setTimeRange(range)}
-                className={cn(
-                  'px-3 py-1.5 rounded-md text-sm font-medium transition-colors',
-                  timeRange === range ? 'bg-[var(--bg-tertiary)] text-[var(--text-primary)]' : 'text-[var(--text-tertiary)] hover:text-[var(--text-primary)]',
+
+        {/* Bottom row: side-by-side charts */}
+        <div className="flex-1 grid grid-cols-1 sm:grid-cols-2 min-h-0">
+          {/* Daily tokens */}
+          <div className="px-4 py-2.5 border-b sm:border-b-0 sm:border-r border-[var(--border-subtle)] flex flex-col min-h-0">
+            <div className="flex items-center justify-between mb-1.5 shrink-0">
+              <h3 className="text-[11px] font-semibold uppercase tracking-wider text-[var(--text-tertiary)]">Daily tokens</h3>
+              {derived.peakDay && (
+                <span className="text-[11px] text-[var(--text-tertiary)]">
+                  Peak {derived.peakDay.date}: {formatTokens(derived.peakDay.total.tokens)}
+                </span>
+              )}
+            </div>
+            {derived.dailyAsc.length === 0 ? (
+              <div className="flex-1 flex items-center justify-center text-[11px] text-[var(--text-tertiary)]">No usage recorded in this range yet.</div>
+            ) : (
+              <div ref={dailyChartRef} className="flex-1 min-h-0">
+                {dailyChartSized && (
+                  <ResponsiveContainer width="100%" height="100%">
+                    <BarChart data={derived.dailyAsc.map((d) => ({ date: d.date.slice(5), tokens: d.total.tokens }))} margin={{ left: -20, right: 0, top: 4, bottom: -4 }}>
+                      <XAxis dataKey="date" axisLine={false} tickLine={false} tick={{ fill: 'var(--text-tertiary)', fontSize: 10 }} interval="preserveStartEnd" />
+                      <YAxis hide />
+                      <Tooltip cursor={{ fill: 'var(--surface-hover)' }} contentStyle={{ backgroundColor: 'var(--bg-secondary)', border: '1px solid var(--border-subtle)', borderRadius: '8px' }} formatter={(v: any) => formatTokens(Number(v))} />
+                      <Bar dataKey="tokens" fill="var(--accent-primary)" radius={[3, 3, 0, 0]} barSize={8} />
+                    </BarChart>
+                  </ResponsiveContainer>
                 )}
-              >
-                {range}
-              </button>
-            ))}
-          </div>
-        </div>
-      </div>
-
-      {/* Grid Stats — all real */}
-      <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-        <StatBlock label="Sessions" value={grandTotal.sessions.toLocaleString()} icon={UsersThree} />
-        <StatBlock label="Messages" value={grandTotal.messages.toLocaleString()} icon={ChatTeardropText} />
-        <StatBlock label="Total tokens" value={formatTokens(grandTotal.tokens)} icon={Hash} />
-        <StatBlock label="Cost" value={formatCost(grandTotal.cost)} icon={CurrencyDollar} />
-        <StatBlock label="Local tokens" value={formatTokens(derived.localTokens)} icon={House} />
-        <StatBlock label="Cloud tokens" value={formatTokens(derived.cloudTokens)} icon={Cloud} />
-        <StatBlock label="Active days" value={derived.activeDays.toString()} icon={Calendar} />
-        <StatBlock label="Top model" value={derived.topModel} icon={Brain} />
-      </div>
-
-      {/* Daily tokens — real, replaces the random heatmap */}
-      <div className="bg-[var(--bg-primary)] border border-[var(--border-subtle)] rounded-xl p-4">
-        <div className="flex items-center justify-between mb-3">
-          <h3 className="text-[var(--text-tertiary)] text-sm font-medium">Daily tokens</h3>
-          {derived.peakDay && (
-            <span className="text-[12px] text-[var(--text-tertiary)]">
-              Peak {derived.peakDay.date}: {formatTokens(derived.peakDay.total.tokens)}
-            </span>
-          )}
-        </div>
-        {derived.dailyAsc.length === 0 ? (
-          <div className="text-[12px] text-[var(--text-tertiary)] py-6 text-center">No usage recorded in this range yet.</div>
-        ) : (
-          <div ref={dailyChartRef} className="h-[140px]">
-            {dailyChartSized && (
-            <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={derived.dailyAsc.map((d) => ({ date: d.date.slice(5), tokens: d.total.tokens }))} margin={{ left: -20, right: 0, top: 0, bottom: 0 }}>
-                <XAxis dataKey="date" axisLine={false} tickLine={false} tick={{ fill: 'var(--text-tertiary)', fontSize: 11 }} interval="preserveStartEnd" />
-                <YAxis hide />
-                <Tooltip cursor={{ fill: 'var(--surface-hover)' }} contentStyle={{ backgroundColor: 'var(--bg-secondary)', border: '1px solid var(--border-subtle)', borderRadius: '8px' }} formatter={(v: any) => formatTokens(Number(v))} />
-                <Bar dataKey="tokens" fill="var(--accent-primary)" radius={[4, 4, 0, 0]} barSize={10} />
-              </BarChart>
-            </ResponsiveContainer>
-            )}
-          </div>
-        )}
-      </div>
-
-      <div className="grid grid-cols-2 gap-4">
-        {/* Top Models — real, replaces "Top Tools" tool-distribution fabrication */}
-        <div className="bg-[var(--bg-primary)] border border-[var(--border-subtle)] p-4 rounded-xl">
-          <h3 className="text-[var(--text-tertiary)] text-sm font-medium mb-4">Top models by tokens</h3>
-          <div ref={modelsChartRef} className="h-[150px]">
-            {derived.modelRows.length === 0 ? (
-              <div className="text-[12px] text-[var(--text-tertiary)] py-6 text-center">No model usage yet.</div>
-            ) : !modelsChartSized ? null : (
-              <ResponsiveContainer width="100%" height="100%">
-                <BarChart data={derived.modelRows.slice(0, 6)} layout="vertical" margin={{ left: -20, right: 0, top: 0, bottom: 0 }}>
-                  <XAxis type="number" hide />
-                  <YAxis dataKey="name" type="category" axisLine={false} tickLine={false} tick={{ fill: 'var(--text-tertiary)', fontSize: 12 }} width={110} />
-                  <Tooltip cursor={{ fill: 'var(--surface-hover)' }} contentStyle={{ backgroundColor: 'var(--bg-secondary)', border: '1px solid var(--border-subtle)', borderRadius: '8px' }} formatter={(v: any) => formatTokens(Number(v))} />
-                  <Bar dataKey="tokens" fill="var(--accent-primary)" radius={[0, 4, 4, 0]} barSize={12} />
-                </BarChart>
-              </ResponsiveContainer>
-            )}
-          </div>
-        </div>
-
-        {/* Live Kernel Console — real sync lines */}
-        <div className="bg-[var(--bg-primary)] p-4 rounded-xl border border-[var(--border-subtle)] font-mono flex flex-col">
-          <div className="flex items-center justify-between mb-3 text-[var(--text-tertiary)] text-xs">
-            <span className="flex items-center gap-2"><TerminalWindow size={14} /> Live Kernel</span>
-            <span className="flex gap-1.5">
-              <span className="size-2 rounded-full bg-[var(--status-error)]/50" />
-              <span className="size-2 rounded-full bg-[var(--status-warning)]/50" />
-              <span className="size-2 rounded-full bg-[var(--status-success)]/50" />
-            </span>
-          </div>
-          <div className="flex-1 overflow-y-auto text-xs space-y-1 text-[var(--text-secondary)]">
-            {logs.length === 0 && <div className="opacity-50">waiting for first sync…</div>}
-            {logs.map((log, i) => (
-              <div key={`resourceusagedashboard-${i}`} className={i === 0 ? 'text-[var(--accent-primary)]' : ''}>
-                <span className="opacity-30">❯</span> {log}
               </div>
-            ))}
+            )}
+          </div>
+
+          {/* Top models */}
+          <div className="px-4 py-2.5 flex flex-col min-h-0">
+            <div className="flex items-center justify-between mb-1.5 shrink-0">
+              <h3 className="text-[11px] font-semibold uppercase tracking-wider text-[var(--text-tertiary)]">Top models</h3>
+              {derived.modelRows.length > 0 && (
+                <span className="text-[11px] text-[var(--text-tertiary)]">{derived.modelRows.length} model{derived.modelRows.length === 1 ? '' : 's'}</span>
+              )}
+            </div>
+            {derived.modelRows.length === 0 ? (
+              <div className="flex-1 flex items-center justify-center text-[11px] text-[var(--text-tertiary)]">No model usage yet.</div>
+            ) : (
+              <div ref={modelsChartRef} className="flex-1 min-h-0">
+                {modelsChartSized && (
+                  <ResponsiveContainer width="100%" height="100%">
+                    <BarChart data={derived.modelRows.slice(0, 5)} layout="vertical" margin={{ left: -20, right: 8, top: 4, bottom: -4 }}>
+                      <XAxis type="number" hide />
+                      <YAxis dataKey="name" type="category" axisLine={false} tickLine={false} tick={{ fill: 'var(--text-tertiary)', fontSize: 10 }} width={100} />
+                      <Tooltip cursor={{ fill: 'var(--surface-hover)' }} contentStyle={{ backgroundColor: 'var(--bg-secondary)', border: '1px solid var(--border-subtle)', borderRadius: '8px' }} formatter={(v: any) => formatTokens(Number(v))} />
+                      <Bar dataKey="tokens" fill="var(--accent-primary)" radius={[0, 3, 3, 0]} barSize={10} />
+                    </BarChart>
+                  </ResponsiveContainer>
+                )}
+              </div>
+            )}
           </div>
         </div>
       </div>
@@ -348,7 +330,7 @@ export function ResourceUsageDashboard() {
   );
 }
 
-function StatBlock({
+function MetricPill({
   label,
   value,
   icon: Icon,
@@ -358,24 +340,18 @@ function StatBlock({
   icon?: React.ComponentType<Record<string, unknown>>;
 }) {
   return (
-    <div className="group relative overflow-hidden rounded-xl border border-[var(--border-subtle)] bg-[var(--bg-primary)] p-4 transition-colors hover:border-[var(--border-hover)]">
-      <div className="flex items-start justify-between gap-3">
-        <div className="min-w-0 flex-1">
-          <div className="text-[12px] font-medium text-[var(--text-tertiary)]">{label}</div>
-          <div className="mt-1 text-2xl font-bold text-[var(--text-primary)] truncate" title={value}>
-            {value}
-          </div>
+    <div className="flex items-center gap-2 px-2.5 py-1.5 rounded-lg bg-[var(--bg-primary)] border border-[var(--border-subtle)] shrink-0">
+      {Icon ? (
+        <div className="grid h-6 w-6 shrink-0 place-items-center rounded-md bg-[var(--accent-primary)]/10 text-[var(--accent-primary)]">
+          <Icon size={12} weight="duotone" />
         </div>
-        {Icon ? (
-          <div className="grid h-8 w-8 shrink-0 place-items-center rounded-lg bg-[var(--accent-primary)]/10 text-[var(--accent-primary)]">
-            <Icon size={16} weight="duotone" />
-          </div>
-        ) : null}
+      ) : null}
+      <div className="min-w-0">
+        <div className="text-[10px] uppercase tracking-wider font-medium text-[var(--text-tertiary)]">{label}</div>
+        <div className="text-xs font-bold text-[var(--text-primary)] truncate" title={value}>
+          {value}
+        </div>
       </div>
-      <div
-        className="pointer-events-none absolute -right-4 -top-4 h-16 w-16 rounded-full opacity-0 transition-opacity group-hover:opacity-100"
-        style={{ background: 'radial-gradient(circle, var(--accent-primary)/10 0%, transparent 70%)' }}
-      />
     </div>
   );
 }

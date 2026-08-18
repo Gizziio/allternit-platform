@@ -1,0 +1,287 @@
+---
+title: 'Agent Swarm Tools'
+description: 'Canonical registry and reference implementations for tools that Allternit agents can call.'
+---
+
+## Overview
+
+**Agent Swarm** is Allternit's canonical tool registry and the home for agent-facing tool implementations. It defines the JSON Schema contracts, safety metadata, and entrypoints that the runtime uses to discover and execute tools, and it ships reference implementations for browser automation, document generation, and implementation-run landing.
+
+The registry lives at `tools/agent-swarm/tool_registry.json` and is validated by the platform's law/audit scripts. Each entry declares:
+
+- A stable tool `id` and human-readable title.
+- `kind` (`read`, `write`, `exec`, `destructive`) for permission policy matching.
+- `safety_level` (`safe`, `caution`, `danger`, `critical`) for approval gating.
+- `inputs_schema` and `outputs_schema` in JSON Schema.
+- `preconditions` such as `WIH_VALID`, `TASK_RUNNING`, and `APPROVAL_TOKEN_VALID`.
+- An `entrypoint` that maps to a source file, kernel tool, or HTTP endpoint.
+
+Tool implementations are plain TypeScript modules that export `tool`, `inputSchema`, `outputSchema`, and an `execute` function. The runtime loads them into the [Native Tool Belt](/tools/tool-belt) or forwards calls to the appropriate service.
+
+## What's in Agent Swarm
+
+The `tools/agent-swarm/` directory contains three reference tool implementations plus the registry:
+
+| Path | Purpose |
+|------|---------|
+| `tool_registry.json` | Canonical catalog of tool contracts and entrypoints |
+| `agent-browser/mod.ts` | Headless browser automation via snapshot-based interaction |
+| `autoland/mod.ts` | Proxy interface for landing a completed implementation run |
+| `document-generator/mod.ts` | HTTP bridge to the Document Generator service |
+
+The registry also references tools implemented elsewhere — kernel file-system tools, Canvas connectors, Office local handlers, desktop automation, and the [ACI computer tool](/tools/computer-use). At execution time the dispatcher resolves the `entrypoint` to the right backend.
+
+## Registry schema
+
+Each tool in `tool_registry.json` follows this shape:
+
+```json
+{
+  "id": "agent-browser.automation",
+  "title": "Agent Browser Automation",
+  "kind": "write",
+  "safety_level": "caution",
+  "entrypoint": "tools/agent-browser/mod.ts",
+  "inputs_schema": { "type": "object", "required": ["action"], ... },
+  "outputs_schema": { "type": "object", "properties": { "success": { "type": "boolean" } } },
+  "preconditions": ["WIH_VALID", "TASK_RUNNING"]
+}
+```
+
+### Kinds
+
+| Kind | Meaning |
+|------|---------|
+| `read` | Observes state without changing it |
+| `write` | Mutates state in a recoverable way |
+| `exec` | Runs a command or process |
+| `destructive` | Performs irreversible actions such as clicking or typing on the desktop |
+
+### Safety levels
+
+| Level | Typical gating |
+|-------|----------------|
+| `safe` | Runs without approval |
+| `caution` | May pause for approval depending on policy |
+| `danger` | Usually requires approval |
+| `critical` | Requires a valid approval token or explicit sign-off |
+
+### Preconditions
+
+| Precondition | Meaning |
+|--------------|---------|
+| `WIH_VALID` | The active Work Implementation Harness (WIH) session is valid |
+| `TASK_RUNNING` | A task is currently in progress |
+| `APPROVAL_TOKEN_VALID` | A fresh approval token is present for destructive operations |
+| `PATH_UNDER_Allternit` | File paths are scoped under the workspace |
+| `PATH_MATCHES_GLOBS` | File paths match configured allow patterns |
+
+## Agent Browser
+
+The `agent-browser.automation` tool controls a headless browser through a small CLI wrapper. It is optimized for agent use: it returns accessibility snapshots with deterministic element refs (`@e1`, `@e2`) and supports semantic selectors, screenshots, and session persistence.
+
+### Setup
+
+Install the `agent-browser` CLI globally and download Chromium:
+
+```bash
+npm install -g agent-browser
+agent-browser install
+```
+
+### Actions
+
+| Action | Required params | Optional params |
+|--------|-----------------|-----------------|
+| `open` | `url` | `session_id`, `profile` |
+| `snapshot` | — | `json` |
+| `click` | `selector` | `session_id` |
+| `fill` / `type` | `selector`, `value` | `session_id` |
+| `screenshot` | — | `path`, `session_id` |
+| `get_text` / `get_html` / `get_value` | `selector` | `session_id` |
+| `wait` | `timeout` or `selector` | `session_id` |
+| `find` | `selector` | `session_id` |
+| `close` | — | `session_id` |
+
+### Example: navigate and extract text
+
+```typescript
+import { execute } from 'tools/agent-swarm/agent-browser/mod.ts';
+
+await execute({ action: 'open', url: 'https://example.com' });
+const { snapshot } = await execute({ action: 'snapshot' });
+console.log(snapshot?.elements);
+// [{ ref: '@e1', role: 'heading', text: 'Example Domain' }, ...]
+
+const { data } = await execute({ action: 'get_text', selector: '@e1' });
+```
+
+### Example: fill a form
+
+```typescript
+await execute({ action: 'fill', selector: '@e3', value: 'user@example.com' });
+await execute({ action: 'click', selector: '@e5' });
+```
+
+### Selectors
+
+- **Deterministic refs** (recommended): `@e1`, `@e2` from a snapshot.
+- **Semantic**: `role=button[name='Submit']`, `label=Email`, `text='Sign in'`, `placeholder=Search`.
+- **CSS**: `#login`, `.nav > a:first-child`.
+
+## Autoland
+
+The `autoland` tool requests that a completed and validated implementation run be landed into the project root. It acts as the agent-facing proxy for the Rails autoland gate.
+
+### Input
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `wih_id` | string | ID of the WIH / implementation run to land |
+
+### Example
+
+```typescript
+import { execute } from 'tools/agent-swarm/autoland/mod.ts';
+
+const result = await execute({ wih_id: 'wih_2026_001' });
+// { success: true, message: 'Autoland request for WIH wih_2026_001 initiated.' }
+```
+
+In production the platform routes this call to the internal Rails service at `POST /api/v1/rails/gate/autoland`. The tool itself only exposes the contract; the actual merge happens inside the gated Rails flow.
+
+## Document Generator
+
+The `document-generator` tool is a Zod-typed HTTP bridge to the [Document Generator](/tools/document-generator) FastAPI service. It generates PPTX photo-card decks, DOCX/PDF study guides, XLSX rubrics, and Canvas modules.
+
+### Configuration
+
+| Variable | Default | Purpose |
+|----------|---------|---------|
+| `DOCUMENT_GENERATOR_URL` | `http://localhost:8000` | Base URL of the Document Generator service |
+| `DOCUMENT_GENERATOR_API_KEY` | `your-secret-api-key` | API key sent in the `X-API-Key` header |
+
+### Actions
+
+| Action | Description |
+|--------|-------------|
+| `generatePhotoCardDeck` | PPTX deck with photo-card slides |
+| `generateStudyGuide` | DOCX or PDF study guide |
+| `generateRubricSpreadsheet` | XLSX rubric, tracker, study plan, or grade calculator |
+| `createCanvasModule` | Create a module in a Canvas course |
+| `healthCheck` | Ping the service `/health` endpoint |
+
+### Example: generate a study guide
+
+```typescript
+import { execute } from 'tools/agent-swarm/document-generator/mod.ts';
+
+const result = await execute({
+  action: 'generateStudyGuide',
+  topic: 'Cell Biology',
+  format: 'docx',
+  length: 'short',
+  learning_objectives: ['Describe the cell membrane', 'Explain mitosis'],
+  key_terms: ['nucleus', 'mitochondria', 'cytoplasm'],
+});
+```
+
+### Example: generate a photo-card deck
+
+```typescript
+const result = await execute({
+  action: 'generatePhotoCardDeck',
+  title: 'Solar System',
+  slide_count: 6,
+  key_points: ['Mercury is closest to the Sun', 'Venus is the hottest planet'],
+  deck_style: 'photo_card',
+});
+```
+
+## Calling tools through the runtime
+
+Tools registered in Agent Swarm are surfaced through the same execution paths as the Native Tool Belt:
+
+- In-process via the `ToolRegistry` and `NativeToolBelt`.
+- Over HTTP via `POST /api/v1/tools/execute`.
+- Via the MCP server surface at `/mcp/server`.
+
+### REST example
+
+```bash
+curl -X POST http://127.0.0.1:8013/api/v1/tools/execute \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer <token>" \
+  -H "x-allternit-user-id: user_123" \
+  -d '{
+    "tool": "agent-browser.automation",
+    "args": { "action": "open", "url": "https://example.com" }
+  }'
+```
+
+Response:
+
+```json
+{
+  "success": true,
+  "result": { "success": true, "execution_time_ms": 420 },
+  "execution_time_ms": 425,
+  "cache_control": null
+}
+```
+
+### SDK example
+
+```typescript
+import { ToolRegistry } from '@allternit/sdk/ai-runtime/tools';
+import agentBrowser from 'tools/agent-swarm/agent-browser/mod.ts';
+
+const registry = new ToolRegistry();
+registry.registerTool({
+  name: agentBrowser.tool.id,
+  description: agentBrowser.tool.description,
+  input_schema: agentBrowser.inputs_schema,
+  execute: agentBrowser.execute,
+});
+
+const result = await registry.getTool('agent-browser.automation')!.execute!(
+  { action: 'snapshot' },
+  { callId: 'snapshot-1' }
+);
+```
+
+## Adding a new tool to the registry
+
+1. Create a TypeScript module under `tools/agent-swarm/<tool-name>/mod.ts`.
+2. Export `tool`, `inputSchema`, `outputSchema`, and `execute`.
+3. Add an entry to `tools/agent-swarm/tool_registry.json` with the correct `kind`, `safety_level`, and `preconditions`.
+4. Run the registry validation script:
+
+```bash
+python scripts/validate_law.py
+```
+
+For tools that need organization-wide sharing or sandbox isolation, prefer [Server Tools](/tools/server-tools) instead.
+
+## Error handling
+
+Tool implementations return tool-level failures with `success: false` and an `error` string rather than throwing. HTTP callers receive HTTP 200 and inspect `success`:
+
+```json
+{
+  "success": false,
+  "error": "Selector required for 'click' action",
+  "execution_time_ms": 1
+}
+```
+
+Permission policies may also return HTTP 202 with `approval_required` before the tool runs. See [Native Tool Belt](/tools/tool-belt) for details on approvals and policy rules.
+
+## Related pages
+
+- [Native Tool Belt](/tools/tool-belt)
+- [Build a Custom Tool](/tools/build-a-tool)
+- [Server Tools](/tools/server-tools)
+- [MCP Servers](/tools/mcp)
+- [Document Generator](/tools/document-generator)
+- [Allternit Computer Interface (ACI)](/tools/computer-use)

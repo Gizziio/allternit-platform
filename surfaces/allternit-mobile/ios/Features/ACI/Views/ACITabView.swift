@@ -30,6 +30,7 @@ struct ACITabView: View {
     @State private var destination: Destination
     @State private var input = ""
     @State private var isMiniAppsStorePresented = false
+    @State private var isSiteAPIsPresented = false
     /// Mirrors BrowserPane's agent toggle (`setAgentMode('Assist'|'Human')`).
     @State private var agentActive = false
     /// Set when the chat's own Back clears the selection — the resulting
@@ -146,6 +147,9 @@ struct ACITabView: View {
         }
         .sheet(isPresented: $isMiniAppsStorePresented) {
             MiniAppsStoreView()
+        }
+        .sheet(isPresented: $isSiteAPIsPresented) {
+            SiteAPIsView()
         }
     }
 
@@ -321,9 +325,42 @@ struct ACITabView: View {
         .buttonStyle(.plain)
     }
 
+    /// Shortcut opening the Site APIs capture sheet.
+    private var siteAPIsShortcut: some View {
+        Button(action: {
+            let generator = UIImpactFeedbackGenerator(style: .light)
+            generator.impactOccurred()
+            isSiteAPIsPresented = true
+        }) {
+            VStack(spacing: 8) {
+                ZStack {
+                    Circle().fill(theme.accentSoft)
+                    Image(systemName: "network")
+                        .font(.system(size: 16))
+                        .foregroundColor(theme.accent)
+                }
+                .frame(width: 48, height: 48)
+                Text("Site APIs")
+                    .font(.system(size: 12))
+                    .foregroundColor(Color("TextSecondary"))
+                    .lineLimit(1)
+            }
+            .frame(maxWidth: .infinity)
+            .padding(.vertical, 16)
+            .background(Color("BgPrimary"))
+            .clipShape(RoundedRectangle(cornerRadius: Theme.radiusMD))
+            .overlay(
+                RoundedRectangle(cornerRadius: Theme.radiusMD)
+                    .stroke(Color("BorderSubtle"), lineWidth: 1)
+            )
+        }
+        .buttonStyle(.plain)
+    }
+
     private var shortcutGrid: some View {
         LazyVGrid(columns: [GridItem(.adaptive(minimum: 80), spacing: 12)], spacing: 12) {
             miniAppsShortcut
+            siteAPIsShortcut
             ForEach(Self.shortcuts) { shortcut in
                 Button(action: {
                     if let url = URL(string: shortcut.url) {

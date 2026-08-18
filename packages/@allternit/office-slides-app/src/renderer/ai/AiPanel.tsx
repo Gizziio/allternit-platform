@@ -1,18 +1,11 @@
 import React, { useEffect, useRef, useState, useCallback } from 'react'
+import { useOfficeAi, type OfficeAgentLoop } from '@allternit/allternit-office-suite/bridge'
+import { type OfficeModelOption } from '@allternit/allternit-office-suite/ai'
 import {
-  AgentLoop,
   composeSkills,
   type AgentImage,
   type ToolDisplay,
 } from '../../stubs/agent-core'
-import {
-  resolveOfficeModelId,
-  setOfficeModelOverride,
-  getOfficeModelLabel,
-  getOfficeModelOptions,
-  refreshOfficeModelOptions,
-  type OfficeModelOption,
-} from '@allternit/office-ai'
 import type { RenderSlide } from '@allternit/office-pptx-render'
 import type { AiSettings, AttachmentAddResult, AttachmentMeta } from '../../shared/ipc'
 import { ATTACHMENT_IMAGE_EXTS } from '../../shared/ipc'
@@ -252,6 +245,7 @@ export function AiPanel({
   currentFilePath,
 }: AiPanelProps) {
   const { t } = useI18n()
+  const ai = useOfficeAi()
   const [input, setInput] = useState('')
   const [busy, setBusy] = useState(false)
   const [chat, setChat] = useState<ChatEntry[]>([])
@@ -261,7 +255,7 @@ export function AiPanel({
   const [attachNotice, setAttachNotice] = useState<string | null>(null)
   const [dragOver, setDragOver] = useState(false)
   const [panelWidth, setPanelWidth] = useState(loadPanelWidth)
-  const [modelId, setModelId] = useState<string | undefined>(() => resolveOfficeModelId('slides'))
+  const [modelId, setModelId] = useState<string | undefined>(() => ai.resolveModelId('slides'))
   const asideRef = useRef<HTMLElement>(null)
 
   // The .ai-dock wrapper owns the animated width (Excel-parity 180ms slide);
@@ -486,7 +480,7 @@ export function AiPanel({
     })
   }
 
-  const loopRef = useRef<AgentLoop | null>(null)
+  const loopRef = useRef<OfficeAgentLoop | null>(null)
   if (!loopRef.current) {
     // The three slides generation steps (style/planning/per-page HTML) force the high-quality model (only with the anthropic provider;
     // other providers keep the user setting, avoiding passing nonexistent model names). Chat/fine-tuning still uses the user's configured model.
@@ -932,7 +926,7 @@ export function AiPanel({
           .map((a) => a.name),
     }
     accessRef.current = access
-    loopRef.current = new AgentLoop({
+    loopRef.current = new ai.AgentLoop({
       modelId,
       transport: createElectronTransport(() => settingsRef.current),
       systemSuffix: aiLangDirective,
@@ -1436,7 +1430,7 @@ export function AiPanel({
         <div className="ai-panel-header-actions">
           <ModelPicker value={modelId} onChange={(next) => {
             setModelId(next)
-            setOfficeModelOverride('slides', next)
+            ai.setModelOverride('slides', next)
             loopRef.current?.setModelId(next)
           }} />
           {chat.length > 0 && (
@@ -1742,14 +1736,15 @@ function ModelPicker({
   value?: string | undefined
   onChange?: (modelId: string | undefined) => void
 }): React.JSX.Element {
+  const ai = useOfficeAi()
   const [open, setOpen] = useState(false)
-  const [options, setOptions] = useState<OfficeModelOption[]>(() => getOfficeModelOptions())
+  const [options, setOptions] = useState<OfficeModelOption[]>(() => ai.getModelOptions())
   const selected = options.find((o) => o.id === (value ?? 'platform')) ?? options[0]
   const menuRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
     let cancelled = false
-    refreshOfficeModelOptions()
+    ai.refreshModelOptions()
       .then((next) => {
         if (!cancelled) setOptions(next)
       })

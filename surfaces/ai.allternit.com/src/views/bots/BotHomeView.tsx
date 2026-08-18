@@ -49,6 +49,7 @@ import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { GlassSurface } from "@/design/GlassSurface";
 import { BotRuntimeConfigModal } from "./BotRuntimeConfigModal";
+import { BotDesktopView } from "./BotDesktopView";
 import { AutomationTasksView } from "@/views/cowork/AutomationTasksView";
 import { EditAgentForm } from "@/views/agent-view/components/EditAgentForm";
 
@@ -56,7 +57,7 @@ interface BotHomeViewProps {
   botId: string;
 }
 
-type BotHomeTab = "home" | "tasks" | "artifacts" | "runtime" | "automation";
+type BotHomeTab = "home" | "tasks" | "artifacts" | "runtime" | "desktop" | "automation";
 
 function botInitials(name: string): string {
   return (name || "Bot")
@@ -302,6 +303,7 @@ export function BotHomeView({ botId }: BotHomeViewProps) {
     { id: "tasks" as const, label: "Tasks", icon: ChatTeardropText },
     { id: "artifacts" as const, label: "Artifacts", icon: FolderOpen },
     { id: "runtime" as const, label: "Runtime", icon: Lightning },
+    { id: "desktop" as const, label: "Desktop", icon: Desktop },
     { id: "automation" as const, label: "Automation Tasks", icon: ClockCounterClockwise },
   ];
 
@@ -507,6 +509,14 @@ export function BotHomeView({ botId }: BotHomeViewProps) {
               }}
             />
           )}
+          {activeTab === "desktop" && (
+            <BotDesktopView
+              bot={bot}
+              accentColor={accentColor}
+              activeVM={activeVM}
+              onBack={() => setActiveTab("home")}
+            />
+          )}
           {activeTab === "automation" && (
             <AutomationTasksTab
               bot={bot}
@@ -534,13 +544,13 @@ export function BotHomeView({ botId }: BotHomeViewProps) {
             if (e.target === e.currentTarget) setIsEditModalOpen(false);
           }}
         >
-          <GlassSurface className="w-full max-w-3xl max-h-[90vh] flex flex-col rounded-2xl overflow-hidden">
+          <div className="w-full max-w-3xl max-h-[90vh] flex flex-col rounded-2xl overflow-hidden bg-[var(--bg-elevated)] border border-[var(--border-subtle)] shadow-2xl">
             <EditAgentForm
               agent={bot}
               onCancel={() => setIsEditModalOpen(false)}
               onSaved={() => setIsEditModalOpen(false)}
             />
-          </GlassSurface>
+          </div>
         </div>
       )}
 
@@ -551,7 +561,7 @@ export function BotHomeView({ botId }: BotHomeViewProps) {
             if (e.target === e.currentTarget) setIsCloudModalOpen(false);
           }}
         >
-          <GlassSurface className="w-full max-w-lg rounded-2xl overflow-hidden p-6">
+          <div className="w-full max-w-lg rounded-2xl overflow-hidden p-6 bg-[var(--bg-elevated)] border border-[var(--border-subtle)] shadow-2xl">
             <div className="flex items-start justify-between gap-4 mb-4">
               <div>
                 <h2 className="text-[18px] font-semibold text-[var(--text-primary)] flex items-center gap-2">
@@ -630,7 +640,7 @@ export function BotHomeView({ botId }: BotHomeViewProps) {
                 Open Runtime
               </Button>
             </div>
-          </GlassSurface>
+          </div>
         </div>
       )}
 
@@ -641,7 +651,7 @@ export function BotHomeView({ botId }: BotHomeViewProps) {
             if (e.target === e.currentTarget) setIsTaskComposerOpen(false);
           }}
         >
-          <GlassSurface className="w-full max-w-2xl rounded-2xl overflow-hidden flex flex-col">
+          <div className="w-full max-w-2xl rounded-2xl overflow-hidden flex flex-col bg-[var(--bg-elevated)] border border-[var(--border-subtle)] shadow-2xl">
             <div className="p-5 border-b border-[var(--border-subtle)] flex items-start justify-between gap-4">
               <div>
                 <h2 className="text-[18px] font-semibold text-[var(--text-primary)] flex items-center gap-2">
@@ -715,7 +725,7 @@ export function BotHomeView({ botId }: BotHomeViewProps) {
                 </div>
               </div>
             </div>
-          </GlassSurface>
+          </div>
         </div>
       )}
     </div>

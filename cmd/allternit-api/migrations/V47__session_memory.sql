@@ -1,6 +1,3 @@
--- Combined V47 migration: session memory + autonomous bot primitives.
-
--- ── Session memory ───────────────────────────────────────────────────────────
 CREATE TABLE IF NOT EXISTS session_memory (
     id TEXT PRIMARY KEY,
     user_id TEXT NOT NULL,
@@ -16,9 +13,10 @@ CREATE INDEX IF NOT EXISTS session_memory_user_session_idx
     ON session_memory(user_id, session_id);
 CREATE INDEX IF NOT EXISTS session_memory_key_idx
     ON session_memory(memory_key);
+-- Production tables for autonomous bot primitives.
+-- Secrets are encrypted at rest via token_crypto.rs (AES-256-GCM when a key is set).
 
 -- ── Agent secrets ────────────────────────────────────────────────────────────
--- Secrets are encrypted at rest via token_crypto.rs (AES-256-GCM when a key is set).
 CREATE TABLE IF NOT EXISTS agent_secrets (
     id          TEXT PRIMARY KEY,
     agent_id    TEXT NOT NULL,

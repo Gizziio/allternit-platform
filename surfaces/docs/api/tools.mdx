@@ -1,0 +1,451 @@
+---
+title: 'Tools API'
+description: 'Execute local and server-side tools through the Allternit gateway.'
+---
+
+## Overview
+
+The Tools API exposes a unified gateway for executing agent tools. Tools can be built-in runtime primitives such as shell, file-system, HTTP, and code execution, or server-side tools that run inside the platform sandbox. The same registry backs the REST surface, the server-tools catalog, and the Model Context Protocol server, so every consumer sees the same tool set.
+
+## Base URL
+
+```
+https://api.allternit.com/api
+```
+
+The same routes are also available under the converged v1 surface:
+
+```
+https://api.allternit.com/api/v1
+```
+
+## Authentication
+
+`POST /tools/execute` requires the caller to be identified through the `x-allternit-user-id` header. The platform auth middleware typically injects this header from a valid bearer token; direct calls must supply it explicitly. Optional identity headers are forwarded to tool handlers and audit logs.
+
+### Headers
+
+| Header | Required | Description |
+|--------|----------|-------------|
+| `Authorization` | Yes | Bearer token for the platform auth middleware. |
+| `x-allternit-user-id` | Yes | Unique user identifier. |
+| `x-allternit-user-email` | No | User email. |
+| `x-allternit-user-name` | No | User display name. |
+| `x-allternit-tenant-id` | No | Tenant / organization scope. |
+| `x-allternit-organization-id` | No | Organization scope. |
+| `x-allternit-organization-role` | No | Organization role. |
+| `x-allternit-organization-slug` | No | Organization slug. |
+
+## Endpoints
+
+| Method | Path | Description |
+|--------|------|-------------|
+| `GET` | `/tools` | List available tools. |
+| `POST` | `/tools/execute` | Execute a tool by name with arguments. |
+| `POST` | `/beta/approvals/:id/approve` | Approve a pending tool execution request. |
+| `POST` | `/beta/approvals/:id/deny` | Deny a pending tool execution request. |
+
+## List tools
+
+```http
+GET /api/tools
+```
+
+Returns the built-in tool catalog. The response mirrors the same list under both `tools` and `native` so web and desktop registry consumers see a consistent catalog.
+
+### Example request
+
+```bash
+curl -H "Authorization: Bearer $TOKEN" \
+  https://api.allternit.com/api/tools
+```
+
+### Example response
+
+```json
+{
+  "tools": [
+    {
+      "id": "shell.exec",
+      "name": "Shell Execute",
+      "description": "Execute shell commands"
+    },
+    {
+      "id": "file.read",
+      "name": "File Read",
+      "description": "Read file contents"
+    },
+    {
+      "id": "document_to_markdown",
+      "name": "Document to Markdown",
+      "description": "Convert an uploaded document or artifact into GitHub-flavored Markdown.",
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "uploadId": { "type": "string" },
+          "artifactId": { "type": "string" }
+        }
+      }
+    }
+  ],
+  "native": [...],
+  "total": 12
+}
+```
+
+## Execute a tool
+
+```http
+POST /api/tools/execute
+```
+
+Runs the requested tool with the supplied arguments. Execution is gated by the active permission policy. If the policy resolves to `ask`, the request is held and an `approval_id` is returned; use the approval endpoints to release it.
+
+### Request body
+
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| `tool` / `tool_name` | string | Yes | Tool identifier. |
+| `args` / `parameters` | object | Yes | Tool-specific arguments. |
+| `timeout` | integer | No | Timeout in seconds. Defaults to `30`. |
+| `workspace_id` | string | No | Optional workspace context. |
+| `cache` | boolean | No | When `true`, large results may include a `cache_control` hint. |
+
+### Response body
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `success` | boolean | Whether the tool completed successfully. |
+| `result` | object \| null | Tool-specific result payload. |
+| `error` | string \| null | Error message when `success` is `false`. |
+| `execution_time_ms` | integer | Time spent executing the tool. |
+| `cache_control` | object \| null | Present for large results when `cache: true`. |
+
+## Built-in tools
+
+### Shell execution
+
+**Tool:** `shell.exec`, `shell.eval`, `bash`
+
+Execute a shell command. For `bash`, an optional `timeout` argument and a `restart` advisory flag are accepted.
+
+#### Example request
+
+```bash
+curl -X POST https://api.allternit.com/api/tools/execute \
+  -H "Authorization: Bearer $TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "tool": "bash",
+    "args": {
+      "command": "echo hello",
+      "timeout": 10
+    }
+  }'
+```
+
+#### Example response
+
+```json
+{
+  "success": true,
+  "result": {
+    "stdout": "hello\n",
+    "stderr": "",
+    "exit_code": 0,
+    "success": true
+  },
+  "execution_time_ms": 45,
+  "error": null
+}
+```
+
+### Code execution
+
+**Tool:** `code_execution`
+
+Runs code in a sandboxed subprocess. Supported languages include `python`, `node` / `javascript`, `bash`, and `rust`.
+
+#### Example request
+
+```bash
+curl -X POST https://api.allternit.com/api/tools/execute \
+  -H "Authorization: Bearer $TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "tool": "code_execution",
+    "args": {
+      "language": "python",
+      "code": "print(21 + 21)",
+      "timeout_seconds": 5
+    }
+  }'
+```
+
+#### Example response
+
+```json
+{
+  "success": true,
+  "result": {
+    "stdout": "42\n",
+    "stderr": "",
+    "exit_code": 0,
+    "success": true,
+    "language": "python"
+  },
+  "execution_time_ms": 120,
+  "error": null
+}
+```
+
+### File system
+
+**Tools:** `file.read`, `file.write`, `file.list`, `file.exists`, `file.remove`
+
+Read, write, list, check, or remove files on the local filesystem.
+
+#### Read a file
+
+```bash
+curl -X POST https://api.allternit.com/api/tools/execute \
+  -H "Authorization: Bearer $TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "tool": "file.read",
+    "args": { "path": "/workspace/README.md" }
+  }'
+```
+
+```json
+{
+  "success": true,
+  "result": {
+    "content": "# Allternit\n",
+    "path": "/workspace/README.md"
+  },
+  "execution_time_ms": 12,
+  "error": null
+}
+```
+
+#### Write a file
+
+```bash
+curl -X POST https://api.allternit.com/api/tools/execute \
+  -H "Authorization: Bearer $TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "tool": "file.write",
+    "args": {
+      "path": "/workspace/notes.txt",
+      "content": "session notes"
+    }
+  }'
+```
+
+```json
+{
+  "success": true,
+  "result": {
+    "path": "/workspace/notes.txt",
+    "written": true
+  },
+  "execution_time_ms": 8,
+  "error": null
+}
+```
+
+### HTTP requests
+
+**Tools:** `http.get`, `http.post`
+
+Make outbound HTTP requests. `http.post` accepts optional `body` and `headers` arguments.
+
+#### Example request
+
+```bash
+curl -X POST https://api.allternit.com/api/tools/execute \
+  -H "Authorization: Bearer $TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "tool": "http.get",
+    "args": { "url": "https://status.allternit.com/api/health" },
+    "timeout": 10
+  }'
+```
+
+#### Example response
+
+```json
+{
+  "success": true,
+  "result": {
+    "status": 200,
+    "body": "{\"status\":\"ok\"}"
+  },
+  "execution_time_ms": 230,
+  "error": null
+}
+```
+
+### System information
+
+**Tools:** `system.info`, `system.env`
+
+Return platform and environment details. `system.env` returns a single variable when `key` is provided, otherwise all environment variables.
+
+#### Example request
+
+```bash
+curl -X POST https://api.allternit.com/api/tools/execute \
+  -H "Authorization: Bearer $TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{ "tool": "system.info", "args": {} }'
+```
+
+#### Example response
+
+```json
+{
+  "success": true,
+  "result": {
+    "platform": "linux",
+    "arch": "x86_64",
+    "family": "unix",
+    "hostname": "sandbox-01",
+    "cwd": "/workspace",
+    "pid": 1234
+  },
+  "execution_time_ms": 3,
+  "error": null
+}
+```
+
+### Document conversion
+
+**Tools:** `document_to_markdown`, `url_to_markdown`
+
+Convert uploaded documents or remote URLs into GitHub-flavored Markdown through the Office engine. Long output is truncated at 30,000 characters with an explicit note.
+
+`document_to_markdown` accepts exactly one of `uploadId` (from [Uploads](/api/uploads)) or `artifactId` (from [Artifacts](/api/artifacts)). `url_to_markdown` requires `url`.
+
+#### Example request
+
+```bash
+curl -X POST https://api.allternit.com/api/tools/execute \
+  -H "Authorization: Bearer $TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "tool": "url_to_markdown",
+    "args": { "url": "https://example.com/report.docx" },
+    "timeout": 60
+  }'
+```
+
+#### Example response
+
+```json
+{
+  "success": true,
+  "result": {
+    "markdown": "# Report\n\n...",
+    "truncated": false,
+    "title": "Report",
+    "format": "docx",
+    "sourceUrl": "https://example.com/report.docx"
+  },
+  "execution_time_ms": 890,
+  "error": null
+}
+```
+
+### Time
+
+**Tool:** `time.now`
+
+Return the current UTC time in several formats.
+
+### Echo
+
+**Tool:** `echo`
+
+Return the supplied arguments unchanged. Useful for connectivity tests.
+
+## Approval flow
+
+When the active permission policy resolves to `ask`, `POST /tools/execute` returns `202 Accepted` with an `approval_id`. The tool is not executed until the caller or an authorized reviewer approves it.
+
+### Approval required response
+
+```json
+{
+  "status": "approval_required",
+  "approval_id": "apr_9c1d...",
+  "tool": "file.write"
+}
+```
+
+### Approve execution
+
+```http
+POST /api/beta/approvals/:id/approve
+```
+
+```bash
+curl -X POST https://api.allternit.com/api/beta/approvals/apr_9c1d.../approve \
+  -H "Authorization: Bearer $TOKEN"
+```
+
+```json
+{
+  "approval_id": "apr_9c1d...",
+  "status": "approved"
+}
+```
+
+### Deny execution
+
+```http
+POST /api/beta/approvals/:id/deny
+```
+
+```bash
+curl -X POST https://api.allternit.com/api/beta/approvals/apr_9c1d.../deny \
+  -H "Authorization: Bearer $TOKEN"
+```
+
+```json
+{
+  "approval_id": "apr_9c1d...",
+  "status": "denied"
+}
+```
+
+Approving an execution runs the tool in the background; denying it discards the request. Both endpoints return `404 Not Found` if the approval ID does not exist.
+
+## Server-side tools
+
+When `x-allternit-organization-id` or `x-allternit-tenant-id` is present, the gateway first checks for a matching server-side tool registered for that organization. Server-side tools take precedence over built-in tools and run inside the platform sandbox. See [Server Tools](/api/server-tools) and [MCP Servers](/api/mcp-servers) for registration details.
+
+## Error codes
+
+| Status | Code | Meaning |
+|--------|------|---------|
+| `200 OK` | — | Tool executed and returned a result. `success` may still be `false` if the tool itself failed. |
+| `202 Accepted` | `approval_required` | The permission policy requires explicit approval. |
+| `401 Unauthorized` | — | Missing `x-allternit-user-id` header or invalid bearer token. |
+| `403 Forbidden` | — | Tool execution denied by the active permission policy. |
+| `404 Not Found` | — | Approval ID not found. |
+| `500 Internal Server Error` | — | Unexpected gateway error. |
+
+## Related pages
+
+- [Agents API](/api/agents)
+- [Server Tools API](/api/server-tools)
+- [MCP Servers API](/api/mcp-servers)
+- [Office Engine API](/api/office-engine)
+- [Uploads API](/api/uploads)
+- [Artifacts API](/api/artifacts)
+- [Files API](/api/files)
+- [Authentication](/api/authentication)

@@ -120,4 +120,4 @@ interface AgentLoopEvents {
 
 // The real loop: streams the Allternit agent-chat endpoint (see
 // @allternit/office-ai). Interface-compatible with the upstream AgentLoop.
-export { OfficeAgentLoop as AgentLoop } from '@allternit/office-ai' 
+export { OfficeAgentLoop as AgentLoop } from '@allternit/allternit-office-suite/ai' 

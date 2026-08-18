@@ -1,0 +1,102 @@
+---
+title: Plan Mode
+description: Use the /plan command to design and approve an implementation strategy before making changes
+---
+
+## Overview
+
+Plan mode is a read-only planning phase for complex tasks. In plan mode, the agent explores the codebase, considers approaches, and writes a concrete implementation plan before any files are edited. The `/plan` slash command toggles plan mode from inside the Gizzi Code TUI, or displays the current session plan when already in plan mode.
+
+Use plan mode when you want to review a strategy before the agent starts writing code, running tests, or making destructive changes.
+
+## Command reference
+
+| Command | Description |
+|---------|-------------|
+| `/plan` | Enter plan mode if not already active. If already in plan mode, display the current plan. |
+| `/plan <description>` | Enter plan mode and immediately ask the agent to start planning for `<description>`. |
+| `/plan open` | Open the current session plan in your configured external editor. Only works when already in plan mode. |
+
+## Basic usage
+
+Enter plan mode from the Gizzi Code TUI:
+
+```bash
+/plan
+```
+
+Enter plan mode with a specific task:
+
+```bash
+/plan Refactor the auth module to use JWT-based sessions
+```
+
+View the plan that the agent has written so far:
+
+```bash
+/plan
+```
+
+Edit the plan in your default external editor:
+
+```bash
+/plan open
+```
+
+## How plan mode works
+
+When you enter plan mode, the agent switches to a read-only stance:
+
+- It explores the codebase and existing patterns.
+- It asks clarifying questions if the approach is ambiguous.
+- It writes a design and implementation plan to the session plan file.
+- It does **not** create, edit, or delete files except the plan file itself.
+
+When the plan is ready, the agent exits plan mode and presents the plan for your approval. After approval, the agent implements the plan using the normal permission rules.
+
+## Plan file
+
+Each session in plan mode writes its plan to a Markdown file under the Gizzi Code configuration directory:
+
+```
+~/.gizzi/plans/<word-slug>.md
+```
+
+For subagent sessions, the file name includes the agent ID:
+
+```
+~/.gizzi/plans/<word-slug>-agent-<agentId>.md
+```
+
+You can override the plans directory with the `plansDirectory` setting, but it must remain within the project root for safety. Plans are persisted across session resumes and forks.
+
+## Starting in plan mode from the CLI
+
+You can also start a session directly in plan mode without using the TUI slash command:
+
+```bash
+# Interactive session
+gizzi run --permission-mode plan
+
+# Non-interactive, print-only session
+gizzi exec --permission-mode plan "Plan a refactor of the checkout flow"
+```
+
+In these cases the agent behaves the same way as if `/plan` had been invoked: it explores, designs, and writes a plan before making any changes.
+
+## Exiting plan mode
+
+Plan mode ends when:
+
+- The agent calls the `ExitPlanMode` tool and presents the plan for approval.
+- You run `/exit` to leave plan mode manually.
+- The session ends.
+
+After exiting, the session returns to its previous permission mode and the agent can proceed with implementation.
+
+## Related docs
+
+- [Permission Profiles](/cli/permission-profiles) — Approval rules for tools and edits
+- [Headless Execution](/cli/headless-execution) — Run agents non-interactively with `gizzi exec`
+- [Session Management](/cli/session) — List, export, and continue sessions
+- [Configuration](/cli/configuration) — Config files, environment variables, and flags

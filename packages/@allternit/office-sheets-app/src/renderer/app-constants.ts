@@ -3,8 +3,8 @@
  * vocabularies, Univer mutation/command names the edit journal listens to,
  * and the Home → Cell Styles presets. Extracted from App.tsx verbatim.
  */
-import type { CellFormatPatch } from '@allternit/office-xlsx-engine/domain/workbook-dsl'
-import type { WorkbookSnapshot } from '@allternit/office-xlsx-engine/domain/workbook.types'
+import type { CellFormatPatch } from '@allternit/allternit-office-suite/xlsx'
+import type { WorkbookSnapshot } from '@allternit/allternit-office-suite/xlsx'
 import type { ChartEditData } from './WorkbookVisuals'
 
 export const CHART_TYPE_COMMANDS = ['column', 'bar', 'line', 'area', 'pie', 'doughnut'] as const

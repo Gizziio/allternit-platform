@@ -1,0 +1,217 @@
+---
+title: 'Backend Install API'
+description: 'Legacy compatibility surface for backend installation status, progress, and connection tests.'
+---
+
+## Overview
+
+The Backend Install API is a legacy compatibility surface that returns installation status and progress information without performing real provisioning. WebSocket installation streaming has been removed; new integrations should use the canonical SSH and runtime backend flows instead.
+
+## Base URL
+
+```
+https://api.allternit.com/api/v1/backend-install
+```
+
+## Authentication
+
+All Backend Install routes are protected and require a valid bearer token in the `Authorization` header. See [Authentication](/api/authentication) for details.
+
+## Endpoints
+
+| Method | Path | Description |
+|--------|------|-------------|
+| `GET` | `/api/v1/backend-install` | Returns the service status. |
+| `GET` | `/api/v1/backend-install/progress` | Returns legacy installation progress metadata. |
+| `POST` | `/api/v1/backend-install/progress` | Legacy install completion stub. |
+| `POST` | `/api/v1/backend-install/test` | Returns a stubbed connection test result. |
+
+## Get install status
+
+```http
+GET /api/v1/backend-install
+```
+
+Returns a simple health/status payload for the legacy `backend-install` surface.
+
+### Example request
+
+```bash
+curl -H "Authorization: Bearer $TOKEN" \
+  https://api.allternit.com/api/v1/backend-install
+```
+
+### Example response
+
+```json
+{
+  "status": "ok",
+  "service": "backend-install"
+}
+```
+
+### Response fields
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `status` | string | Always `"ok"` when the surface is reachable. |
+| `service` | string | Always `"backend-install"`. |
+
+## Get install progress
+
+```http
+GET /api/v1/backend-install/progress
+```
+
+Returns metadata describing the legacy install flow and points callers to the canonical replacement routes.
+
+### Example request
+
+```bash
+curl -H "Authorization: Bearer $TOKEN" \
+  https://api.allternit.com/api/v1/backend-install/progress
+```
+
+### Example response
+
+```json
+{
+  "websocket_url": null,
+  "compatibility_mode": true,
+  "deprecated": true,
+  "install_url": "/api/v1/backend-install/progress",
+  "canonical_routes": [
+    "/api/v1/ssh-connections",
+    "/api/v1/ssh-connections/:id/connect",
+    "/api/v1/ssh-connections/:id/install-agent",
+    "/api/v1/runtime/backend"
+  ],
+  "message": "WebSocket installation streaming has been removed. Use the canonical SSH/runtime backend flow."
+}
+```
+
+### Response fields
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `websocket_url` | string \| null | Always `null`. WebSocket streaming is no longer supported. |
+| `compatibility_mode` | boolean | Always `true`. |
+| `deprecated` | boolean | Always `true`. |
+| `install_url` | string | Legacy path for this surface. |
+| `canonical_routes` | array | Recommended replacement routes under `/api/v1`. |
+| `message` | string | Human-readable migration guidance. |
+
+## Report install progress
+
+```http
+POST /api/v1/backend-install/progress
+```
+
+Legacy install completion stub. The endpoint accepts any JSON body (or an empty body) and returns a success message.
+
+### Example request
+
+```bash
+curl -X POST https://api.allternit.com/api/v1/backend-install/progress \
+  -H "Authorization: Bearer $TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{}'
+```
+
+### Example response
+
+```json
+{
+  "success": true,
+  "message": "Allternit backend installed and activated successfully",
+  "installation_log": [
+    "Legacy install flow — use /api/v1/ssh-connections instead"
+  ],
+  "version": "0.0.0",
+  "api_url": null,
+  "reachable_from_shell": true
+}
+```
+
+### Response fields
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `success` | boolean | Always `true`. |
+| `message` | string | Human-readable completion message. |
+| `installation_log` | array | Stubbed log lines. |
+| `version` | string | API server version at runtime. |
+| `api_url` | string \| null | Always `null`. |
+| `reachable_from_shell` | boolean | Always `true`. |
+
+## Test backend connection
+
+```http
+POST /api/v1/backend-install/test
+```
+
+Returns a stubbed system-info payload for a legacy connection test. Real connectivity tests should use the SSH connections surface.
+
+### Example request
+
+```bash
+curl -X POST https://api.allternit.com/api/v1/backend-install/test \
+  -H "Authorization: Bearer $TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{}'
+```
+
+### Example response
+
+```json
+{
+  "success": true,
+  "system_info": {
+    "os": "linux",
+    "distro": "ubuntu",
+    "version": "22.04",
+    "architecture": "x86_64"
+  },
+  "message": "SSH connection test stub — use /api/v1/ssh-connections for real tests"
+}
+```
+
+### Response fields
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `success` | boolean | Always `true`. |
+| `system_info` | object | Stubbed target system metadata. |
+| `system_info.os` | string | Stubbed operating system. |
+| `system_info.distro` | string | Stubbed distribution. |
+| `system_info.version` | string | Stubbed OS version. |
+| `system_info.architecture` | string | Stubbed CPU architecture. |
+| `message` | string | Human-readable migration guidance. |
+
+## Migration
+
+This surface is preserved only for backwards compatibility. New code should target the canonical routes returned by `GET /api/v1/backend-install/progress`:
+
+- `POST /api/v1/ssh-connections` — register an SSH connection.
+- `POST /api/v1/ssh-connections/:id/connect` — open a connection.
+- `POST /api/v1/ssh-connections/:id/install-agent` — install an agent remotely.
+- `POST /api/v1/runtime/backend` — register or update a runtime backend.
+
+See [SSH Connections](/api/ssh), [SSH Keys](/api/ssh-keys), [Runtime Backend](/api/runtime-backend), and [Runtime Discovery](/api/runtime-discovery) for the current surfaces.
+
+## Error codes
+
+| Status | Meaning |
+|--------|---------|
+| `200 OK` | The legacy stub returned successfully. |
+| `401 Unauthorized` | Missing or invalid bearer token. |
+| `404 Not Found` | Route not found. |
+| `429 Too Many Requests` | Rate limit exceeded. |
+
+## Related pages
+
+- [Authentication](/api/authentication)
+- [SSH Connections](/api/ssh)
+- [SSH Keys](/api/ssh-keys)
+- [Runtime Backend](/api/runtime-backend)
+- [Runtime Discovery](/api/runtime-discovery)

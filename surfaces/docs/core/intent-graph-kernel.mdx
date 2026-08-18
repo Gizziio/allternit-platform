@@ -1,0 +1,419 @@
+---
+title: Intent Graph Kernel
+description: Persistent, queryable graph of intent nodes and edges that underpins UI, context, and memory projections across Allternit.
+---
+
+## Overview
+
+The **Allternit Intent Graph Kernel (IGK)** is a durable, queryable graph database for intent, work, and memory. It stores typed **nodes** (intents, tasks, goals, decisions, plans, artifacts, and memories) and typed **edges** that describe how those nodes relate to one another. Every mutation is recorded as a provenance event, so the graph remains auditable and reproducible over time.
+
+IGK serves as the substrate for higher-level projections in the Allternit platform:
+
+- **UI projections** — render boards, canvases, and agent workspaces from live graph state.
+- **Context projections** — assemble token-bounded context windows for agent reasoning.
+- **Memory projections** — surface now / next / later views of active and pending work.
+
+The kernel is implemented as the Rust crate `intent-graph-kernel` and exposes an HTTP service on port `3120` by default.
+
+## Core invariants
+
+IGK enforces four design invariants that keep agent reasoning grounded:
+
+| Invariant | Meaning |
+|---|---|
+| **Single Reality** | No branching or forking. Each real-world entity maps to exactly one node. |
+| **Append-Only Provenance** | Every change is appended as an event. History is never overwritten. |
+| **Policy-Gated Mutation** | AI or automation proposes mutations; policy decides whether to commit them. |
+| **No Silent State** | Every state change must be citeable to a source object or policy decision. |
+
+These invariants make IGK suitable for agent systems where accountability and reproducibility matter as much as throughput.
+
+## Key concepts
+
+### Nodes
+
+A node is the primary entity in the graph. Each node carries a UUID, type, status, priority, owner, source references, and arbitrary JSON attributes.
+
+| Node type | Purpose |
+|---|---|
+| `intent` | Something a user or agent wants to accomplish. |
+| `task` | A concrete unit of work to be executed. |
+| `goal` | A high-level objective that groups intents and tasks. |
+| `decision` | A resolved or unresolved decision point. |
+| `plan` | An execution plan composed of ordered steps. |
+| `artifact` | A produced file, document, or output. |
+| `memory` | A persistent memory fragment. |
+
+### Node statuses
+
+| Status | Meaning |
+|---|---|
+| `proposed` | Suggested but not yet committed. |
+| `active` | Committed and in progress. |
+| `completed` | Finished successfully. |
+| `deprecated` | Replaced or no longer relevant. |
+
+### Edges
+
+Edges connect nodes and describe semantic relationships.
+
+| Edge type | Meaning |
+|---|---|
+| `depends_on` | The source node depends on the target node. |
+| `blocks` | The source node blocks the target node. |
+| `part_of` | The source node is a component of the target node. |
+| `implements` | The source node implements the target node. |
+| `context_for` | The source node provides context for the target node. |
+
+### Source references
+
+Every node can cite one or more `SourceRef` objects that point back to the origin of the information. A source reference has a `kind` (for example, `file`, `message`, or `ledger_event`), a `locator`, an optional `excerpt`, and an optional content `hash`. Source refs make it possible to answer "where did this come from?" for any node in the graph.
+
+## Architecture
+
+```
+┌─────────────────────────────────────────────────────────────────┐
+│                     Allternit surfaces                          │
+│   Boards · Canvases · Agent workspaces · Context windows        │
+└─────────────────────────────────┬───────────────────────────────┘
+                                  │
+          ┌───────────────────────┼───────────────────────┐
+          │                       │                       │
+          ▼                       ▼                       ▼
+┌─────────────────┐   ┌──────────────────┐   ┌──────────────────┐
+│  UI projection  │   │ Context projection│   │Memory projection │
+│    engine       │   │     engine        │   │     engine       │
+└────────┬────────┘   └────────┬─────────┘   └────────┬─────────┘
+         │                     │                      │
+         └─────────────────────┼──────────────────────┘
+                               │
+                    ┌──────────▼──────────┐
+                    │    QueryEngine      │
+                    │   MutationEngine    │
+                    │  ProjectionEngine   │
+                    └──────────┬──────────┘
+                               │
+                    ┌──────────▼──────────┐
+                    │      Storage        │
+                    │   (SQLite + sqlx)   │
+                    └──────────┬──────────┘
+                               │
+         ┌─────────────────────┼─────────────────────┐
+         │                     │                     │
+         ▼                     ▼                     ▼
+┌─────────────────┐   ┌─────────────────┐   ┌─────────────────┐
+│  nodes          │   │  edges          │   │  events         │
+│  intent graph   │   │  relationships  │   │  provenance log │
+└─────────────────┘   └─────────────────┘   └─────────────────┘
+```
+
+### Storage layer
+
+IGK persists data in three SQLite tables:
+
+- `nodes` — stores the typed intent graph nodes.
+- `edges` — stores directed relationships between nodes.
+- `events` — stores an append-only log of every mutation, including actor, action, target, before/after state, and optional policy decision.
+
+The schema is created automatically by the migration at `migrations/001_init.sql` when the service starts.
+
+### Engines
+
+| Engine | Responsibility |
+|---|---|
+| `QueryEngine` | Fetch nodes, search by type/owner, and retrieve subgraphs. |
+| `MutationEngine` | Propose and commit node/edge creations with provenance events. |
+| `ProjectionEngine` | Compute temporal views (`now` / `next` / `later`) and token-bounded context windows. |
+
+## Running the service
+
+The kernel service reads the database path from `IGK_DB_PATH` and listens on `HOST`/`PORT`.
+
+```bash
+export IGK_DB_PATH=./igk.db
+export HOST=127.0.0.1
+export PORT=3120
+
+cargo run -p intent-graph-kernel
+```
+
+On startup the service applies migrations, then serves an Axum router on `http://127.0.0.1:3120`.
+
+## HTTP API
+
+### Endpoints
+
+| Method | Path | Description |
+|---|---|---|
+| `GET` | `/health` | Service health check. |
+| `GET` | `/nodes/:id` | Retrieve a node by UUID. |
+| `POST` | `/nodes` | Create a new node. |
+| `POST` | `/edges` | Create a new edge between nodes. |
+| `POST` | `/query/subgraph` | Query the subgraph rooted at a node. |
+| `POST` | `/query/projections` | Compute temporal projections for a root node. |
+| `POST` | `/context/window` | Build a token-bounded context window. |
+
+### Create a node
+
+```bash
+curl -X POST http://127.0.0.1:3120/nodes \
+  -H "Content-Type: application/json" \
+  -d '{
+    "node_type": "goal",
+    "priority": 10,
+    "owner": "orchestrator",
+    "source_refs": [
+      {
+        "kind": "message",
+        "locator": "thread:abc123",
+        "excerpt": "Refactor the checkout module",
+        "hash": null
+      }
+    ],
+    "attributes": {
+      "title": "Refactor checkout",
+      "description": "Split the monolithic checkout module into smaller services."
+    },
+    "policy_decision": "approved"
+  }'
+```
+
+```json
+{
+  "node_id": "a1b2c3d4-e5f6-7890-abcd-ef1234567890",
+  "status": "created"
+}
+```
+
+### Create an edge
+
+```bash
+curl -X POST http://127.0.0.1:3120/edges \
+  -H "Content-Type: application/json" \
+  -d '{
+    "from_node_id": "a1b2c3d4-e5f6-7890-abcd-ef1234567890",
+    "to_node_id": "b2c3d4e5-f6a7-8901-bcde-f12345678901",
+    "edge_type": "depends_on",
+    "metadata": {"reason": "checkout depends on payment service"},
+    "policy_decision": "approved"
+  }'
+```
+
+### Query a subgraph
+
+```bash
+curl -X POST http://127.0.0.1:3120/query/subgraph \
+  -H "Content-Type: application/json" \
+  -d '{
+    "root_node_id": "a1b2c3d4-e5f6-7890-abcd-ef1234567890",
+    "depth": 3
+  }'
+```
+
+```json
+{
+  "node": { "node_id": "...", "node_type": "goal", ... },
+  "edges": [ ... ],
+  "edge_count": 2
+}
+```
+
+### Compute projections
+
+```bash
+curl -X POST http://127.0.0.1:3120/query/projections \
+  -H "Content-Type: application/json" \
+  -d '{
+    "root_node_id": "a1b2c3d4-e5f6-7890-abcd-ef1234567890"
+  }'
+```
+
+```json
+{
+  "now": 1,
+  "next": 3,
+  "later": 5
+}
+```
+
+### Build a context window
+
+```bash
+curl -X POST http://127.0.0.1:3120/context/window \
+  -H "Content-Type: application/json" \
+  -d '{
+    "root_node_id": "a1b2c3d4-e5f6-7890-abcd-ef1234567890",
+    "token_budget": 4096
+  }'
+```
+
+```json
+{
+  "token_count": 1820,
+  "budget": 4096,
+  "within_budget": true,
+  "node_count": 4
+}
+```
+
+## Using the Rust crate
+
+### Add the dependency
+
+```toml
+[dependencies]
+intent-graph-kernel = { path = "domains/kernel/allternit-intent-graph-kernel/allternit-intent-graph-kernel" }
+```
+
+### Create a node with policy-gated mutation
+
+```rust
+use intent_graph_kernel::{
+    Node, NodeType, NodeStatus, SourceRef,
+    mutation::MutationEngine,
+    storage::Storage,
+};
+use uuid::Uuid;
+use chrono::Utc;
+
+let storage = Storage::new(pool.clone());
+let mutation = MutationEngine::new(storage);
+
+let node = Node {
+    node_id: Uuid::new_v4(),
+    node_type: NodeType::Intent,
+    status: NodeStatus::Proposed,
+    priority: 5,
+    owner: "builder-agent".to_string(),
+    source_refs: vec![SourceRef {
+        kind: "file".to_string(),
+        locator: "src/checkout.rs:42".to_string(),
+        excerpt: Some("Payment validation is duplicated here.".to_string()),
+        hash: None,
+    }],
+    attributes: serde_json::json!({
+        "title": "Deduplicate payment validation",
+        "effort": "small"
+    }),
+    created_at: Utc::now(),
+    updated_at: Utc::now(),
+};
+
+let event = mutation
+    .commit_create_node(&node, "builder-agent", Some("approved".to_string()))
+    .await?;
+```
+
+### Query nodes
+
+```rust
+use intent_graph_kernel::query::QueryEngine;
+use intent_graph_kernel::schema::NodeType;
+
+let query = QueryEngine::new(storage);
+let intents = query
+    .search_nodes(Some(NodeType::Intent), Some("builder-agent"), Some(10))
+    .await?;
+```
+
+### Compute temporal projections
+
+```rust
+use intent_graph_kernel::projection::ProjectionEngine;
+
+let projection = ProjectionEngine::new(storage);
+let views = projection
+    .compute_temporal_projections(&root_node_id)
+    .await?;
+
+for node in views.now {
+    println!("now: {:?}", node.attributes);
+}
+```
+
+## Policy-gated mutation
+
+IGK distinguishes between **proposing** and **committing** a mutation. The mutation engine can mark a node as requiring policy approval based on its type (`intent` and `goal` require policy by default). When a policy decision is supplied, the commit path writes both the node/edge and a provenance event that records the decision.
+
+```
+AI proposes mutation
+        │
+        ▼
+┌───────────────┐
+│ Policy engine │
+│ evaluates risk│
+└───────┬───────┘
+        │
+   approved / denied
+        │
+        ▼
+┌───────────────┐
+│ MutationEngine│
+│ commits node  │
+│ + event       │
+└───────────────┘
+```
+
+This design lets autonomous agents plan freely while keeping consequential changes under explicit policy control.
+
+## Projections
+
+### Temporal projections
+
+The projection engine divides nodes into three buckets relative to a root node:
+
+- **now** — the root node itself plus anything updated within the last hour.
+- **next** — nodes updated recently but not directly under the root.
+- **later** — everything else.
+
+Temporal projections are useful for surfacing "what needs my attention right now?" in agent UIs.
+
+### Context windows
+
+A context window is a `ContextSlice` composed of root nodes, selected edges, source references, and a token budget. The projection engine estimates token usage from node attributes and source excerpts, then returns the subset that fits within budget.
+
+```rust
+use intent_graph_kernel::schema::ContextSlice;
+
+let slice = ContextSlice {
+    root_nodes: vec![root_node_id],
+    edges: vec![edge_id],
+    sources: vec![source_ref],
+    token_budget: 4096,
+};
+
+let window = projection.compute_context_window(&slice).await?;
+assert!(window.within_budget);
+```
+
+## Error handling
+
+IGK operations return `IGKError`:
+
+| Variant | Meaning |
+|---|---|
+| `Database` | SQLite or `sqlx` failure. |
+| `Serialization` | JSON serialization/deserialization failure. |
+| `NodeNotFound` | Requested node does not exist. |
+| `PolicyViolation` | Mutation rejected by policy. |
+| `DuplicateNode` | Attempted to create a node that already exists. |
+| `Internal` | Unexpected internal error. |
+
+HTTP endpoints translate these into standard status codes: `200 OK`, `201 Created`, `400 Bad Request`, `404 Not Found`, and `500 Internal Server Error`.
+
+## Configuration
+
+| Environment variable | Default | Description |
+|---|---|---|
+| `IGK_DB_PATH` | `igk.db` | SQLite database file. |
+| `HOST` | `127.0.0.1` | Bind address. |
+| `PORT` | `3120` | Listen port. |
+
+## Related docs
+
+- [Gizzi Runtime](/core/gizzi-runtime)
+- [Gizzi Core](/core/gizzi-core)
+- [CommRails](/core/commrails)
+- [Memory Fabric](/core/memory-fabric)
+- [Orchestration](/core/orchestration)
+- [Session Manager](/core/session-manager)
