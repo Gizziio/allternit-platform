@@ -3640,6 +3640,9 @@ importers:
       '@allternit/allternit-office-suite':
         specifier: workspace:*
         version: link:../../packages/@allternit/allternit-office-suite
+      '@allternit/office-ai':
+        specifier: workspace:*
+        version: link:../../packages/@allternit/office-ai
       react:
         specifier: ^18.3.1
         version: 18.3.1

@@ -9,6 +9,8 @@ import {
   SignApp,
   type OfficeHost,
 } from '@allternit/allternit-office-suite'
+import { createStandaloneAiClient } from './ai/createStandaloneAiClient'
+import { HomePage } from './HomePage'
 
 type AppTab = 'docs' | 'sheets' | 'slides' | 'pdf' | 'sign'
 
@@ -20,16 +22,16 @@ const TABS: { id: AppTab; label: string }[] = [
   { id: 'sign', label: 'Sign' },
 ]
 
-export function App() {
+function OfficeWorkspace({ onBack }: { onBack: () => void }) {
   const [activeTab, setActiveTab] = useState<AppTab>('docs')
 
-  const host = useMemo<OfficeHost>(
-    () =>
-      createBrowserHost({
-        getLanguage: () => 'en',
-      }),
-    []
-  )
+  const host = useMemo<OfficeHost>(() => {
+    const ai = createStandaloneAiClient()
+    return createBrowserHost({
+      getLanguage: () => 'en',
+      ai,
+    })
+  }, [])
 
   return (
     <OfficeHostProvider host={host}>
@@ -53,15 +55,21 @@ export function App() {
             background: 'var(--surface)',
           }}
         >
-          <span
+          <button
+            type="button"
+            onClick={onBack}
             style={{
               fontWeight: 600,
               marginRight: 12,
               color: 'var(--accent)',
+              background: 'transparent',
+              border: 'none',
+              cursor: 'pointer',
+              fontSize: 14,
             }}
           >
             Allternit Office
-          </span>
+          </button>
           {TABS.map((tab) => (
             <button
               key={tab.id}
@@ -84,9 +92,7 @@ export function App() {
         </nav>
 
         <main style={{ flex: 1, minHeight: 0, position: 'relative' }}>
-          {/* Keep every app mounted but hidden so heavy editors (Univer, Konva)
-              do not unmount/remount on tab switches, which avoids React root
-              teardown races in the vendored apps. */}
+          {/* Keep every app mounted but hidden so heavy editors do not unmount/remount on tab switches. */}
           <div style={{ display: activeTab === 'docs' ? 'block' : 'none', width: '100%', height: '100%' }}>
             <DocsApp language="en" />
           </div>
@@ -106,4 +112,14 @@ export function App() {
       </div>
     </OfficeHostProvider>
   )
+}
+
+export function App() {
+  const [view, setView] = useState<'home' | 'office'>('home')
+
+  if (view === 'home') {
+    return <HomePage onLaunch={() => setView('office')} />
+  }
+
+  return <OfficeWorkspace onBack={() => setView('home')} />
 }
