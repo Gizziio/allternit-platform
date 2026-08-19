@@ -4246,7 +4246,7 @@ src/cli/ui/ink-app/components/Messages.tsx:463:  const disableVirtualScroll = us
 src/cli/ui/ink-app/components/PromptInput/Notifications.tsx:309:            {isEnvTruthy(process.env.CLAUDE_CODE_REMOTE) ? 'Authentication error · Try again' : 'Not logged in · Run /login'}
 src/cli/ui/ink-app/components/ScrollKeybindingHandler.tsx:46:// event/notch — users on those can set CLAUDE_CODE_SCROLL_SPEED=3 to match
 src/cli/ui/ink-app/components/ScrollKeybindingHandler.tsx:300:/** Read CLAUDE_CODE_SCROLL_SPEED, default 1, clamp (0, 20].
-src/cli/ui/ink-app/components/ScrollKeybindingHandler.tsx:303: *  set CLAUDE_CODE_SCROLL_SPEED=3 to match vim/nvim/opencode. We can't
+src/cli/ui/ink-app/components/ScrollKeybindingHandler.tsx:303: *  set CLAUDE_CODE_SCROLL_SPEED=3 to match vim/nvim/gizzi. We can't
 src/cli/ui/ink-app/components/ScrollKeybindingHandler.tsx:307:  const raw = process.env.CLAUDE_CODE_SCROLL_SPEED;
 src/cli/ui/ink-app/components/Spinner.tsx:73:  useMemo(() => isEnvTruthy(process.env.CLAUDE_CODE_BRIEF), []) : false;
 src/cli/ui/ink-app/components/LogoV2/LogoV2.tsx:120:    t4 = !hasReleaseNotes && !showOnboarding && !isEnvTruthy(process.env.CLAUDE_CODE_FORCE_FULL_LOGO);

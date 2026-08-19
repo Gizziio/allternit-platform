@@ -42,11 +42,7 @@ const SKILL_DIR_CANDIDATES = [SKILLS_DIR, '.agents/skills', '.codex/skills'];
 const COMMAND_DIR_CANDIDATES = [COMMANDS_DIR, '.agents/commands', '.codex/commands'];
 const COMMAND_MARKDOWN_DIR_CANDIDATES = ['.claude/commands'];
 const COMMAND_CONFIG_FILE_CANDIDATES = [
-  '.config/allternit-shell/opencode.json',
-  '.config/gizzi/opencode.json',
   '.config/gizzi/allternit.json',
-  '.config/opencode/opencode.json',
-  '.config/opencode/oh-my-opencode.json',
   '.config/gizzi-code/allternit.json',
   '.claude/settings.json',
 ];
@@ -62,9 +58,6 @@ const MCP_CONFIG_FILE_CANDIDATES = [
   '.config/allternit-shell/allternit.json',
   '.config/gizzi/allternit.json',
   '.config/gizzi-code/allternit.json',
-  '.config/allternit-shell/opencode.json',
-  '.config/gizzi/opencode.json',
-  '.config/opencode/opencode.json',
   '.claude/settings.json',
   '.codex/config.toml',
   '.gemini/mcp.json',
@@ -72,8 +65,6 @@ const MCP_CONFIG_FILE_CANDIDATES = [
 const WEBHOOK_DIR_CANDIDATES = [WEBHOOKS_DIR, '.agents/webhooks', '.codex/webhooks'];
 const WEBHOOK_CONFIG_FILE_CANDIDATES = [
   '.codex/config.toml',
-  '.config/allternit-shell/opencode.json',
-  '.config/opencode/opencode.json',
   '.claude/settings.json',
 ];
 const CONNECTOR_DIR_CANDIDATES = [CONNECTORS_DIR, '.agents/connectors', '.codex/connectors'];
@@ -127,18 +118,6 @@ const BINARY_FILE_EXTENSIONS = new Set([
   'bin', 'dat', 'db', 'sqlite', 'sqlite3', 'wasm', 'exe', 'dll', 'so', 'dylib',
   'jar', 'class', 'pyc', 'pyo', 'ds_store',
 ]);
-
-const OH_MY_OPENCODE_BUILTIN_COMMANDS = [
-  'init-deep',
-  // Renamed from 'ralph-loop' / 'cancel-ralph' as part of Wave 2 deprecation (W2-003).
-  'agent-loop',
-  'cancel-agent-loop',
-  'ulw-loop',
-  'refactor',
-  'start-work',
-  'stop-continuation',
-  'handoff',
-];
 
 // Types are already imported at the top of the file
 
@@ -957,23 +936,6 @@ class CapabilityScanner {
           });
         };
 
-        const pluginList = [
-          ...this.asStringArray(config.plugin),
-          ...this.asStringArray(config.plugins),
-        ];
-        if (pluginList.some((entry) => entry.toLowerCase().includes('oh-my-opencode'))) {
-          const disabled = new Set(this.asStringArray(config.disabled_commands));
-          for (const builtin of OH_MY_OPENCODE_BUILTIN_COMMANDS) {
-            if (disabled.has(builtin)) continue;
-            pushCommandEntry(
-              `/${builtin}`,
-              this.toDisplayLabel(builtin),
-              `Built-in slash command from oh-my-opencode (${builtin})`,
-              'Gizzi/OpenCode'
-            );
-          }
-        }
-
         const commandEntries = config.commands;
         if (Array.isArray(commandEntries)) {
           for (const entry of commandEntries) {
@@ -1058,7 +1020,7 @@ class CapabilityScanner {
               mentionTrigger,
               this.toDisplayLabel(agentName),
               description,
-              'Gizzi/OpenCode',
+              'Runtime Agent',
               metadata
             );
           }

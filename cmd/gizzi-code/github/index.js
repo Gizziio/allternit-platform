@@ -19,7 +19,7 @@ let exitCode = 0;
 try {
     assertContextEvent("issue_comment", "pull_request_review_comment");
     assertPayloadKeyword();
-    await assertOpencodeConnected();
+    await assertGizziConnected();
     accessToken = await getAccessToken();
     octoRest = new Octokit({ auth: accessToken });
     octoGraph = graphql.defaults({
@@ -30,7 +30,7 @@ try {
     await assertPermissions();
     const comment = await createComment();
     commentId = comment.data.id;
-    // Setup opencode session
+    // Setup gizzi session
     const repoData = await fetchRepo();
     session = await client.session.create().then((r) => r.data);
     await subscribeSessionEvents();
@@ -42,7 +42,7 @@ try {
         await client.session.share({ path: session });
         return session.id.slice(-8);
     })();
-    console.log("opencode session", session.id);
+    console.log("gizzi session", session.id);
     if (shareId) {
         console.log("Share link:", `${useShareUrl()}/s/${shareId}`);
     }
@@ -119,7 +119,7 @@ function createAllternit() {
     const host = "127.0.0.1";
     const port = 4096;
     const url = `http://${host}:${port}`;
-    const proc = spawn(`opencode`, [`serve`, `--hostname=${host}`, `--port=${port}`]);
+    const proc = spawn(`gizzi-code`, [`serve`, `--hostname=${host}`, `--port=${port}`]);
     const client = createAllternitClient({ baseUrl: url });
     return {
         server: { url, close: () => proc.kill() },
@@ -129,8 +129,8 @@ function createAllternit() {
 function assertPayloadKeyword() {
     const payload = useContext().payload;
     const body = payload.comment.body.trim();
-    if (!body.match(/(?:^|\s)(?:\/opencode|\/oc)(?=$|\s)/)) {
-        throw new Error("Comments must mention `/opencode` or `/oc`");
+    if (!body.match(/(?:^|\s)(?:\/gizzi|\/gz)(?=$|\s)/)) {
+        throw new Error("Comments must mention `/gizzi` or `/gz`");
     }
 }
 function getReviewCommentContext() {
@@ -149,7 +149,7 @@ function getReviewCommentContext() {
         originalCommitId: payload.comment.original_commit_id,
     };
 }
-async function assertOpencodeConnected() {
+async function assertGizziConnected() {
     let retry = 0;
     let connected = false;
     do {
@@ -168,7 +168,7 @@ async function assertOpencodeConnected() {
         await Bun.sleep(300);
     } while (retry++ < 30);
     if (!connected) {
-        throw new Error("Failed to connect to opencode server");
+        throw new Error("Failed to connect to gizzi-code server");
     }
 }
 function assertContextEvent(...events) {
@@ -252,7 +252,7 @@ async function getAccessToken() {
         });
     }
     else {
-        const oidcToken = await core.getIDToken("opencode-github-action");
+        const oidcToken = await core.getIDToken("gizzi-code-github-action");
         response = await fetch("https://api.allternit.dev/exchange_github_app_token", {
             method: "POST",
             headers: {
@@ -283,19 +283,19 @@ async function getUserPrompt() {
     const reviewContext = getReviewCommentContext();
     let prompt = (() => {
         const body = payload.comment.body.trim();
-        if (body === "/opencode" || body === "/oc") {
+        if (body === "/gizzi" || body === "/gz") {
             if (reviewContext) {
                 return `Review this code change and suggest improvements for the commented lines:\n\nFile: ${reviewContext.file}\nLines: ${reviewContext.line}\n\n${reviewContext.diffHunk}`;
             }
             return "Summarize this thread";
         }
-        if (body.includes("/opencode") || body.includes("/oc")) {
+        if (body.includes("/gizzi") || body.includes("/gz")) {
             if (reviewContext) {
                 return `${body}\n\nContext: You are reviewing a comment on file "${reviewContext.file}" at line ${reviewContext.line}.\n\nDiff context:\n${reviewContext.diffHunk}`;
             }
             return body;
         }
-        throw new Error("Comments must mention `/opencode` or `/oc`");
+        throw new Error("Comments must mention `/gizzi` or `/gz`");
     })();
     // Handle images
     const imgData = [];
@@ -448,7 +448,7 @@ async function resolveAgent() {
     return envAgent;
 }
 async function chat(text, files = []) {
-    console.log("Sending message to opencode...");
+    console.log("Sending message to gizzi-code...");
     const { providerID, modelID } = useEnvModel();
     const agent = await resolveAgent();
     const chat = await client.session.chat({
@@ -499,8 +499,8 @@ async function configureGit(appToken) {
     const newCredentials = Buffer.from(`x-access-token:${appToken}`, "utf8").toString("base64");
     await $ `git config --local --unset-all ${config}`;
     await $ `git config --local ${config} "AUTHORIZATION: basic ${newCredentials}"`;
-    await $ `git config --global user.name "opencode-agent[bot]"`;
-    await $ `git config --global user.email "opencode-agent[bot]@users.noreply.github.com"`;
+    await $ `git config --global user.name "gizzi-agent[bot]"`;
+    await $ `git config --global user.email "gizzi-agent[bot]@users.noreply.github.com"`;
 }
 async function restoreGitConfig() {
     if (gitConfig === undefined)
@@ -538,7 +538,7 @@ function generateBranchName(type) {
         .replace(/\.\d{3}Z/, "")
         .split("T")
         .join("");
-    return `opencode/${type}${useIssueId()}-${timestamp}`;
+    return `gizzi/${type}${useIssueId()}-${timestamp}`;
 }
 async function pushToNewBranch(summary, branch) {
     console.log("Pushing to new branch...");
@@ -632,9 +632,9 @@ function footer(opts) {
             return "";
         const titleAlt = encodeURIComponent(session.title.substring(0, 50));
         const title64 = Buffer.from(session.title.substring(0, 700), "utf8").toString("base64");
-        return `<a href="${useShareUrl()}/s/${shareId}"><img width="200" alt="${titleAlt}" src="https://social-cards.sst.dev/opencode-share/${title64}.png?model=${providerID}/${modelID}&version=${session.version}&id=${shareId}" /></a>\n`;
+        return `<a href="${useShareUrl()}/s/${shareId}"><img width="200" alt="${titleAlt}" src="https://social-cards.sst.dev/gizzi-share/${title64}.png?model=${providerID}/${modelID}&version=${session.version}&id=${shareId}" /></a>\n`;
     })();
-    const shareUrl = shareId ? `[opencode session](${useShareUrl()}/s/${shareId})&nbsp;&nbsp;|&nbsp;&nbsp;` : "";
+    const shareUrl = shareId ? `[gizzi session](${useShareUrl()}/s/${shareId})&nbsp;&nbsp;|&nbsp;&nbsp;` : "";
     return `\n\n${image}${shareUrl}[github run](${useEnvRunUrl()})`;
 }
 async function fetchRepo() {

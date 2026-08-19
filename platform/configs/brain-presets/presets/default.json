@@ -267,34 +267,7 @@
     "event_mode": "jsonl",
     "capabilities": ["code", "terminal", "files"]
   },
-  "open-code-cli": {
-    "id": "open-code-cli",
-    "name": "Open Code CLI",
-    "vendor": "Open Code",
-    "type": "cli",
-    "logo_asset": "open-code-logo.svg",
-    "description": "Open Code AI-powered development assistant",
-    "auth": {
-      "required": true,
-      "instructions": "First run requires API key or login",
-      "detection_regex": "Successfully authenticated|Ready to assist"
-    },
-    "install": {
-      "darwin": "npm install -g @opencode/cli",
-      "linux": "npm install -g @opencode/cli",
-      "windows": "npm install -g @opencode/cli"
-    },
-    "verify": {
-      "command": "open-code",
-      "args": ["--version"]
-    },
-    "launch": {
-      "command": "open-code",
-      "args": []
-    },
-    "event_mode": "acp",
-    "capabilities": ["code", "terminal", "files", "ui-automation"]
-  },
+
   "cursor-cli": {
     "id": "cursor-cli",
     "name": "Cursor CLI",

@@ -368,7 +368,7 @@ name: gizzi-skill
 description: A skill in the .gizzi/skill directory.
 ---
 
-# OpenCode Skill
+# Gizzi Skill
 `,
       )
       await Bun.write(
@@ -378,7 +378,7 @@ name: gizzi-skill
 description: A skill in the .gizzi/skills directory.
 ---
 
-# OpenCode Skill
+# Gizzi Skill
 `,
       )
     },

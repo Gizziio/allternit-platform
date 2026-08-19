@@ -52,8 +52,8 @@ setup-token` also supported).
 Model refs are normalized to lowercase. Provider aliases like `z.ai/*` normalize
 to `zai/*`.
 
-Provider configuration examples (including OpenCode Zen) live in
-[/gateway/configuration](/gateway/configuration#opencode-zen-multi-model-proxy).
+Provider configuration examples live in
+[/gateway/configuration](/gateway/configuration).
 
 ## “Model is not allowed” (and why replies stop)
 

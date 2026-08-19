@@ -110,26 +110,6 @@ const ZEN_MODELS: ModelData[] = [
     logo: LOGOS.qwen,
     features: { vision: false, fileUpload: false, webSearch: false, reasoning: false, codeExecution: false },
   },
-  {
-    id: "big-pickle",
-    name: "Big Pickle (Free)",
-    provider: "opencode",
-    modelId: "big-pickle",
-    runtimeType: "api",
-    description: "Free zen model via OpenCode",
-    logo: LOGOS.goose,
-    features: { vision: false, fileUpload: false, webSearch: false, reasoning: false, codeExecution: false },
-  },
-  {
-    id: "minimax-m2.5-free",
-    name: "MiniMax M2.5 (Free)",
-    provider: "opencode",
-    modelId: "minimax-m2.5-free",
-    runtimeType: "api",
-    description: "Free MiniMax model via OpenCode zen",
-    logo: LOGOS.goose,
-    features: { vision: false, fileUpload: false, webSearch: false, reasoning: false, codeExecution: false },
-  },
 ];
 
 const AI_SDK_MODELS: ModelData[] = [...ZEN_MODELS, ...GATEWAY_MODELS];

@@ -226,7 +226,7 @@ pub fn detect_legacy_workspace() -> Option<LegacyFormat> {
     }
     
     // Check for Agent Studio structure
-    if Path::new(".opencode/agent/").exists() {
+    if Path::new(".gizzi/agent/").exists() {
         return Some(LegacyFormat::AgentStudio);
     }
     

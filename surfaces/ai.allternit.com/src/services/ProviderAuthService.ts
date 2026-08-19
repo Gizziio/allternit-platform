@@ -2,7 +2,7 @@
  * Provider Auth & Model Discovery Service
  * 
  * Handles authentication status checking and runtime model discovery
- * from kernel brain providers (ACP/JSONL runtimes like OpenCode, Gemini, etc.)
+ * from kernel brain providers (ACP/JSONL runtimes like Gemini, Claude, etc.)
  */
 
 import axios, { AxiosInstance } from 'axios';

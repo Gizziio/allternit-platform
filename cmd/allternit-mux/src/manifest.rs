@@ -70,7 +70,6 @@ fn builtin_manifests() -> Vec<AgentManifest> {
         mk("codex", &["codex"], &[r"(?i)\[a\]llow", r"(?i)approve (command|patch)"]),
         mk("agy", &["agy"], &[]),
         mk("gizzi", &["gizzi", "gizzi-code"], &[]),
-        mk("opencode", &["opencode"], &[]),
         mk("pi", &["pi"], &[]),
         mk("amp", &["amp"], &[]),
         // Fallback for any known-looking agent process matched by path.

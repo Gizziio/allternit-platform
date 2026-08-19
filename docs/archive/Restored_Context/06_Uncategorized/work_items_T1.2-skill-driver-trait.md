@@ -89,7 +89,7 @@ pub trait SkillDriver: Send + Sync {
 pub enum LLMType {
     Claude,
     Codex,
-    OpenCode,
+    Gizzi Code,
     Kimi,
 }
 ```

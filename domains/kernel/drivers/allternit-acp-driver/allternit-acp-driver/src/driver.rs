@@ -333,7 +333,7 @@ pub const ACP_SCHEMA_VERSION: &str = "0.10.8";
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::testdata::{parse_transcript, OPENCODE_SESSION_TRANSCRIPT};
+    use crate::testdata::{parse_transcript, SAMPLE_SESSION_TRANSCRIPT};
 
     #[test]
     fn test_acp_schema_version() {
@@ -355,7 +355,7 @@ mod tests {
 
     #[test]
     fn test_golden_transcript_parsing() {
-        let lines = parse_transcript(OPENCODE_SESSION_TRANSCRIPT);
+        let lines = parse_transcript(SAMPLE_SESSION_TRANSCRIPT);
         assert_eq!(lines.len(), 10, "Transcript should have 10 lines");
 
         // Verify JSON-RPC structure

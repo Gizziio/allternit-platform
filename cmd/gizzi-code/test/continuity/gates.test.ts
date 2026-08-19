@@ -24,7 +24,7 @@ describe("CI Gates", () => {
 
   const baseContext: SessionContext = {
     session_id: "test-session-12345",
-    source_tool: "opencode",
+    source_tool: "gizzi",
     workspace_path: testWorkspace,
     time_start: Date.now(),
     objective: "Implement feature X",

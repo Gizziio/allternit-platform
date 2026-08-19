@@ -11,7 +11,6 @@ const AGENT_CLI_COMMANDS = [
   { name: 'claude', flag: '--version', alias: 'Claude Code' },
   { name: 'codex', flag: '--version', alias: 'OpenAI Codex' },
   { name: 'openclaw', flag: '--version', alias: 'OpenClaw' },
-  { name: 'opencode', flag: '--version', alias: 'OpenCode' },
   { name: 'hermes', flag: '--version', alias: 'Hermes' },
   { name: 'gemini', flag: '--version', alias: 'Gemini CLI' },
   { name: 'pi', flag: '--version', alias: 'Pi CLI' },

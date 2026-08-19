@@ -38,7 +38,7 @@ describe("ResumeSession", () => {
   const sampleBatonContent = `# GIZZI Session Baton
 
 **Session:** test-session-abc123  
-**Tool:** opencode  
+**Tool:** gizzi  
 **Workspace:** ${testWorkspace}  
 **Generated:** ${new Date().toISOString()}  
 **Reason:** threshold
@@ -133,7 +133,7 @@ Implement user authentication system with JWT tokens and session management.
 ## Evidence Pointers
 
 - **Session ID:** test-session-abc123
-- **Source Tool:** opencode
+- **Source Tool:** gizzi
 - **Workspace:** ${testWorkspace}
 - **Time Range:** ${new Date().toISOString()} - ongoing
 
@@ -158,7 +158,7 @@ Implement user authentication system with JWT tokens and session management.
       expect(context.parseErrors).toHaveLength(0)
       expect(context.batonPath).toBe(sampleBatonPath)
       expect(context.metadata.sessionId).toBe("test-session-abc123")
-      expect(context.metadata.sourceTool).toBe("opencode")
+      expect(context.metadata.sourceTool).toBe("gizzi")
       expect(context.metadata.workspacePath).toBe(testWorkspace)
       expect(context.sessionContext.objective).toContain("authentication")
     })
@@ -215,7 +215,7 @@ Implement user authentication system with JWT tokens and session management.
     it("should extract metadata correctly", async () => {
       const context = await ResumeSession.load(sampleBatonPath)
 
-      expect(context.metadata.sourceTool).toBe("opencode")
+      expect(context.metadata.sourceTool).toBe("gizzi")
       expect(context.metadata.compactReason).toBe("threshold")
       expect(context.metadata.generatedAt).toBeGreaterThan(0)
     })
@@ -303,7 +303,7 @@ Implement user authentication system with JWT tokens and session management.
 
       expect(display).toContain("GIZZI SESSION HANDOFF BATON")
       expect(display).toContain(context.metadata.sessionId)
-      expect(display).toContain("opencode")
+      expect(display).toContain("gizzi")
       expect(display).toContain("Objective")
     })
 

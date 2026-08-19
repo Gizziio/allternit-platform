@@ -1293,28 +1293,28 @@
       },
       {
         "url": "https://platform.kimi.com/docs/guide/open-code.md",
-        "title": "在 OpenCode 中使用 Kimi 模型",
+        "title": "在 Gizzi Code 中使用 Kimi 模型",
         "filename": "platform-kimi-com--docs--guide--open-code-md.md",
         "sections": [
           {
             "level": 1,
-            "title": "在 OpenCode 中使用 Kimi 模型",
+            "title": "在 Gizzi Code 中使用 Kimi 模型",
             "snippet": "URL: https://platform."
           },
           {
             "level": 1,
-            "title": "在 OpenCode 中使用 Kimi 模型",
-            "snippet": "> 安装 OpenCode，通过内置认证接入中国区 Kimi 开放平台，并使用 Kimi K3 及其推理强度档位。\n\n 是一款开源的编程 Agent 产品。本文介绍如何通过内置认证将 OpenCode 接入中国区 Kimi 开放平台，并使用具备 1M token 上下文的 kimi-k3 模型。\n\n<Note>\n  本文内容基于 OpenCode 1."
+            "title": "在 Gizzi Code 中使用 Kimi 模型",
+            "snippet": "> 安装 Gizzi Code，通过内置认证接入中国区 Kimi 开放平台，并使用 Kimi K3 及其推理强度档位。\n\n 是一款开源的编程 Agent 产品。本文介绍如何通过内置认证将 Gizzi Code 接入中国区 Kimi 开放平台，并使用具备 1M token 上下文的 kimi-k3 模型。\n\n<Note>\n  本文内容基于 Gizzi Code 1."
           },
           {
             "level": 2,
             "title": "第一步：配置 API Key",
-            "snippet": "运行 opencode auth login，在 Provider 列表中选择 Moonshot AI (China)：\n\ntext theme={null}\n$ opencode auth login\n┌  Add credential\n│\n◆  Select provider\n│  Search: Moon█ (2 matches)\n│  ● Moonshot AI (China)\n│  ↑/"
+            "snippet": "运行 gizzi auth login，在 Provider 列表中选择 Moonshot AI (China)：\n\ntext theme={null}\n$ gizzi auth login\n┌  Add credential\n│\n◆  Select provider\n│  Search: Moon█ (2 matches)\n│  ● Moonshot AI (China)\n│  ↑/"
           },
           {
             "level": 2,
             "title": "第二步：选择 Kimi K3 模型",
-            "snippet": "运行 opencode 启动 OpenCode：\n\nbash theme={null}\nopencode\n\n\n在输入框中执行 /models 命令：\n\n<img src=\"https://mintcdn."
+            "snippet": "运行 gizzi 启动 Gizzi Code：\n\nbash theme={null}\ngizzi\n\n\n在输入框中执行 /models 命令：\n\n<img src=\"https://mintcdn."
           },
           {
             "level": 2,
@@ -4115,35 +4115,35 @@
     },
     {
       "category": "guide",
-      "page_title": "在 OpenCode 中使用 Kimi 模型",
+      "page_title": "在 Gizzi Code 中使用 Kimi 模型",
       "url": "https://platform.kimi.com/docs/guide/open-code.md",
-      "feature": "在 OpenCode 中使用 Kimi 模型",
+      "feature": "在 Gizzi Code 中使用 Kimi 模型",
       "snippet": "URL: https://platform."
     },
     {
       "category": "guide",
-      "page_title": "在 OpenCode 中使用 Kimi 模型",
+      "page_title": "在 Gizzi Code 中使用 Kimi 模型",
       "url": "https://platform.kimi.com/docs/guide/open-code.md",
-      "feature": "在 OpenCode 中使用 Kimi 模型",
-      "snippet": "> 安装 OpenCode，通过内置认证接入中国区 Kimi 开放平台，并使用 Kimi K3 及其推理强度档位。\n\n 是一款开源的编程 Agent 产品。本文介绍如何通过内置认证将 OpenCode 接入中国区 Kimi 开放平台，并使用具备 1M token 上下文的 kimi-k3 模型。\n\n<Note>\n  本文内容基于 OpenCode 1."
+      "feature": "在 Gizzi Code 中使用 Kimi 模型",
+      "snippet": "> 安装 Gizzi Code，通过内置认证接入中国区 Kimi 开放平台，并使用 Kimi K3 及其推理强度档位。\n\n 是一款开源的编程 Agent 产品。本文介绍如何通过内置认证将 Gizzi Code 接入中国区 Kimi 开放平台，并使用具备 1M token 上下文的 kimi-k3 模型。\n\n<Note>\n  本文内容基于 Gizzi Code 1."
     },
     {
       "category": "guide",
-      "page_title": "在 OpenCode 中使用 Kimi 模型",
+      "page_title": "在 Gizzi Code 中使用 Kimi 模型",
       "url": "https://platform.kimi.com/docs/guide/open-code.md",
       "feature": "第一步：配置 API Key",
-      "snippet": "运行 opencode auth login，在 Provider 列表中选择 Moonshot AI (China)：\n\ntext theme={null}\n$ opencode auth login\n┌  Add credential\n│\n◆  Select provider\n│  Search: Moon█ (2 matches)\n│  ● Moonshot AI (China)\n│  ↑/"
+      "snippet": "运行 gizzi auth login，在 Provider 列表中选择 Moonshot AI (China)：\n\ntext theme={null}\n$ gizzi auth login\n┌  Add credential\n│\n◆  Select provider\n│  Search: Moon█ (2 matches)\n│  ● Moonshot AI (China)\n│  ↑/"
     },
     {
       "category": "guide",
-      "page_title": "在 OpenCode 中使用 Kimi 模型",
+      "page_title": "在 Gizzi Code 中使用 Kimi 模型",
       "url": "https://platform.kimi.com/docs/guide/open-code.md",
       "feature": "第二步：选择 Kimi K3 模型",
-      "snippet": "运行 opencode 启动 OpenCode：\n\nbash theme={null}\nopencode\n\n\n在输入框中执行 /models 命令：\n\n<img src=\"https://mintcdn."
+      "snippet": "运行 gizzi 启动 Gizzi Code：\n\nbash theme={null}\ngizzi\n\n\n在输入框中执行 /models 命令：\n\n<img src=\"https://mintcdn."
     },
     {
       "category": "guide",
-      "page_title": "在 OpenCode 中使用 Kimi 模型",
+      "page_title": "在 Gizzi Code 中使用 Kimi 模型",
       "url": "https://platform.kimi.com/docs/guide/open-code.md",
       "feature": "第三步：调节推理强度",
       "snippet": "在输入框中执行 /variants 命令：\n\n<img src=\"https://mintcdn."

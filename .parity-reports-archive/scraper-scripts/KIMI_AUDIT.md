@@ -98,7 +98,7 @@ Allternit is an enterprise agentic operating system rather than a single-model A
 - **Enforce JSON Mode** — wire the existing `response_format` parsing into a gateway-level JSON-mode flag.
 - **Real Playground** — replace the simulated `usePlaygroundManager` stream with a real call to `/v1/chat/completions`.
 - **Token-count endpoint** — expose Gizzi's tokenizer or provider tokenizers behind `/v1/tokenizers/estimate-token-count`.
-- **Publish integration guides** — document Claude Code / Codex / OpenCode setup using the existing OpenAI-compatible base URL.
+- **Publish integration guides** — document Claude Code / Codex / Gizzi Code setup using the existing OpenAI-compatible base URL.
 
 ---
 

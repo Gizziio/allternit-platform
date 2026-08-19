@@ -69,7 +69,7 @@ prose help
 
 ### What AI assistants are supported?
 
-Claude Code, OpenCode, and Amp. Any harness that runs a sufficiently intelligent model and supports primitives like subagents are considered "Prose Complete".
+Claude Code, Gizzi Code, and Amp. Any harness that runs a sufficiently intelligent model and supports primitives like subagents are considered "Prose Complete".
 
 ### How is this a VM?
 

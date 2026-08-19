@@ -200,18 +200,6 @@ const ProviderLogos: Record<string, React.FC<{ size?: number }>> = {
       <path d="M6 8l4 4-4 4M10 16h8" stroke="#9CA3AF" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
     </svg>
   ),
-  'opencode': ({ size = 20 }) => (
-    <svg width={size} height={size} viewBox="0 0 24 24" fill="none">
-      <defs>
-        <linearGradient id="opencodeGrad" x1="0%" y1="0%" x2="100%" y2="100%">
-          <stop offset="0%" stopColor="#6366F1"/>
-          <stop offset="100%" stopColor="#8B5CF6"/>
-        </linearGradient>
-      </defs>
-      <path d="M8 7l-5 5 5 5M16 7l5 5-5 5" stroke="url(#opencodeGrad)" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"/>
-      <circle cx="12" cy="12" r="2" fill="url(#opencodeGrad)"/>
-    </svg>
-  ),
 };
 
 export function getProviderLogo(providerId: string): React.FC<{ size?: number }> {

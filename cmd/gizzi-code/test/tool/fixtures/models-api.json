@@ -20975,11 +20975,11 @@
   },
   "opencode": {
     "id": "opencode",
-    "env": ["OPENCODE_API_KEY"],
+    "env": ["GIZZI_API_KEY"],
     "npm": "@ai-sdk/openai-compatible",
-    "api": "https://opencode.ai/zen/v1",
-    "name": "OpenCode Zen",
-    "doc": "https://opencode.ai/docs/zen",
+    "api": "https://gizzi.io/zen/v1",
+    "name": "Gizzi Zen",
+    "doc": "https://docs.gizziio.com/zen",
     "models": {
       "glm-4.7": {
         "id": "glm-4.7",

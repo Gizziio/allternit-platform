@@ -41,7 +41,7 @@ test("build agent has correct default properties", async () => {
       expect(build?.native).toBe(true)
       expect(evalPerm(build, "edit")).toBe("allow")
       // gizzi's build defaults are `"*": "ask"` (src/runtime/loop/agent.ts) —
-      // unlike upstream opencode, bash is not blanket-allowed for the build agent.
+      // unlike upstream, bash is not blanket-allowed for the build agent.
       expect(evalPerm(build, "bash")).toBe("ask")
     },
   })

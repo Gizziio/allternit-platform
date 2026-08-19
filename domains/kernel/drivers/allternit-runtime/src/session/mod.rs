@@ -19,7 +19,7 @@ pub struct SessionConfig {
     pub model_id: Option<String>,
     pub max_tool_calls: u32,
     pub tool_timeout_secs: u64,
-    /// Command to execute (e.g., "npx", "claude", "opencode")
+    /// Command to execute (e.g., "npx", "claude")
     pub command: Option<String>,
     /// Arguments for the command
     pub args: Option<Vec<String>>,

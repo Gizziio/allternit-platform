@@ -18,7 +18,7 @@ This spec defines the documentation structure and content requirements for Gizzi
 
 | Install Method | Status | Why It Fails | Fix Required |
 |----------------|--------|--------------|--------------|
-| `curl \| bash` | ❌ BROKEN | Points to `anomalyco/opencode` repo | Update to `Gizziio/gizzi-code` |
+| `curl \| bash` | ❌ BROKEN | Points to `Gizziio/allternit-platform` repo | Update to `Gizziio/gizzi-code` |
 | `npm install -g` | ❌ BROKEN | Package `@gizzi/gizzi-code` doesn't exist | Publish to NPM or fix package name |
 | `brew install` | ❌ BROKEN | SHA256 placeholders, no releases | Create releases, update SHA256s |
 | `irm \| iex` (Windows) | ❌ BROKEN | Script exists but no releases | Deploy script, create releases |
@@ -31,7 +31,7 @@ This spec defines the documentation structure and content requirements for Gizzi
   
 - [ ] **Step 2:** Fix `install` script (bash)
   - Change `APP=allternit` → `APP=gizzi-code`
-  - Change repo from `anomalyco/opencode` → `Gizziio/gizzi-code`
+  - Change repo from `Gizziio/allternit-platform` → `Gizziio/gizzi-code`
   - Update install path from `~/.allternit/bin` → `~/.gizzi/bin`
   - Deploy to `install.gizziio.com/install`
 

@@ -124,7 +124,7 @@ export function useMessageState(sessionID: string) {
 **Files**:
 - Create: `src/usage/collector.ts`
 - Create: `src/usage/types.ts`
-- Create: `src/usage/parsers/opencode.ts`
+- Create: `src/usage/parsers/gizzi.ts`
 - Create: `src/usage/parsers/claude.ts`
 - Create: `src/usage/parsers/codex.ts`
 
@@ -319,7 +319,7 @@ src/
 │   ├── collector.ts
 │   ├── types.ts
 │   └── parsers/
-│       ├── opencode.ts
+│       ├── gizzi.ts
 │       ├── claude.ts
 │       └── codex.ts
 └── continuity/                     # MoX-CONT-001

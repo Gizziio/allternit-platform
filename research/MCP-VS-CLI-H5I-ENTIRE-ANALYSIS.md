@@ -103,7 +103,7 @@ Your Branch (main/feature)          entire/checkpoints/v1
 | Cursor | ✅ | ❌ |
 | Gemini CLI | ✅ | ❌ |
 | Copilot CLI | ✅ | ❌ |
-| OpenCode | ✅ | ❌ |
+| Gizzi Code | ✅ | ❌ |
 | Factory AI Droid | ✅ | ❌ |
 
 **Entire wins on agent coverage** — supports 7 agents vs h5i's 2.
@@ -117,7 +117,7 @@ Your Branch (main/feature)          entire/checkpoints/v1
 | **License** | Apache 2.0 | MIT | Tie |
 | **Language** | Rust | Go | Tie |
 | **Storage** | Git refs (`refs/h5i/*`) — invisible, zero pollution | Git branch (`entire/checkpoints/v1`) — visible, separate branch | **h5i** (cleaner) |
-| **Agent hooks** | 2 (Claude Code, Codex) | 7 (Claude, Codex, Cursor, Gemini, Copilot, OpenCode, Factory AI) | **Entire** |
+| **Agent hooks** | 2 (Claude Code, Codex) | 7 (Claude, Codex, Cursor, Gemini, Copilot, Gizzi Code, Factory AI) | **Entire** |
 | **Setup** | Manual (`h5i init` + paste hooks) | Interactive (`entire enable` auto-installs) | **Entire** |
 | **Claims system** | ✅ Content-addressed facts, auto-invalidate | ❌ | **h5i** |
 | **Summaries** | Manual `h5i summary set` | Auto-summarization at commit (Claude CLI) | **Entire** |

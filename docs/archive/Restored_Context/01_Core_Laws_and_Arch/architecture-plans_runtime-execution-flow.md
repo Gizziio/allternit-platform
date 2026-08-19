@@ -23,7 +23,7 @@
 │                                                        ▼                     │
 │                                               ┌─────────────────────┐       │
 │                                               │   CLI Runtimes      │       │
-│                                               │   (opencode,        │       │
+│                                               │   (gizzi,        │       │
 │                                               │    gemini, kimi)    │       │
 │                                               └─────────────────────┘       │
 └─────────────────────────────────────────────────────────────────────────────┘
@@ -55,10 +55,10 @@ async fn main() {
 
 **Loaded Brain Profiles:**
 ```yaml
-opencode-acp:
+gizzi-acp:
   brain_type: cli
   event_mode: acp
-  command: opencode
+  command: gizzi
   args: [acp]
   
 gemini-acp:
@@ -144,12 +144,12 @@ User clicks model picker
 │ - Return status       │
 └───────────────────────┘
         │
-        │ {providers: [{provider_id: "opencode", status: "missing", ...}]}
+        │ {providers: [{provider_id: "gizzi", status: "missing", ...}]}
         ▼
 ┌───────────────────────┐
 │ ChatUI                │
 │ - Show "Authenticate" │
-│   button for OpenCode │
+│   button for Gizzi Code │
 │ - Show lock icons     │
 └───────────────────────┘
 ```
@@ -157,7 +157,7 @@ User clicks model picker
 **Auth Status Check:**
 ```bash
 # Kernel checks for auth tokens
-ls ~/.config/opencode/auth.json  # missing = locked
+ls ~/.config/gizzi/auth.json  # missing = locked
 ls ~/.config/gemini/credentials  # exists = unlocked
 ```
 
@@ -168,7 +168,7 @@ ls ~/.config/gemini/credentials  # exists = unlocked
 ### Flow: Unlock Provider
 
 ```
-User clicks "Authenticate" on OpenCode
+User clicks "Authenticate" on Gizzi Code
         │
         ▼
 ┌───────────────────────┐
@@ -176,7 +176,7 @@ User clicks "Authenticate" on OpenCode
 │ POST /v1/sessions     │
 │ {                     │
 │   brain_profile_id:   │
-│     "opencode-auth",  │
+│     "gizzi-auth",  │
 │   source: "terminal"  │ ← Important!
 │ }                     │
 └───────────────────────┘
@@ -188,7 +188,7 @@ User clicks "Authenticate" on OpenCode
 │   source=terminal     │
 │   event_mode=terminal │
 │ - Creates PTY session │
-│ - Spawns: opencode    │
+│ - Spawns: gizzi    │
 │   login               │
 └───────────────────────┘
         │
@@ -199,7 +199,7 @@ User clicks "Authenticate" on OpenCode
 │ - Opens Terminal view │
 │ - Attaches to sess    │
 │ - User types:         │
-│   "opencode login"    │
+│   "gizzi login"    │
 └───────────────────────┘
         │
         ▼
@@ -217,13 +217,13 @@ User clicks "Authenticate" on OpenCode
         ▼
 ┌───────────────────────┐
 │ GET /v1/providers/    │
-│ opencode/auth/status  │
+│ gizzi/auth/status  │
 │ Returns: "ok"         │
 └───────────────────────┘
         │
         ▼
 ┌───────────────────────┐
-│ UI unlocks OpenCode   │
+│ UI unlocks Gizzi Code   │
 │ Model picker enabled  │
 └───────────────────────┘
 ```
@@ -235,7 +235,7 @@ User clicks "Authenticate" on OpenCode
 ### Flow: Discovery
 
 ```
-OpenCode unlocked, user opens model dropdown
+Gizzi Code unlocked, user opens model dropdown
         │
         ▼
 ┌───────────────────────┐
@@ -244,12 +244,12 @@ OpenCode unlocked, user opens model dropdown
 │ - Fetch models        │
 └───────────────────────┘
         │
-        │ GET /v1/providers/opencode/models
-        │ ?profile_id=opencode-acp
+        │ GET /v1/providers/gizzi/models
+        │ ?profile_id=gizzi-acp
         ▼
 ┌───────────────────────┐
 │ Kernel Service        │
-│ - Spawns: opencode    │
+│ - Spawns: gizzi    │
 │   acp --list-models   │
 │ - Parses JSON output  │
 └───────────────────────┘
@@ -306,7 +306,7 @@ User: "Explain this code"
 ┌───────────────────────┐
 │ ChatUI                │
 │ - Selected:           │
-│   provider=opencode   │
+│   provider=gizzi   │
 │   model=anthropic:    │
 │          claude-3-7   │
 │ - Call sendMessage()  │
@@ -323,7 +323,7 @@ User: "Explain this code"
         │ {
         │   message: "Explain...",
         │   chatId: "chat_123",
-        │   modelId: "opencode-acp",
+        │   modelId: "gizzi-acp",
         │   runtimeModelId: 
         │     "anthropic:claude-3-7"
         │ }
@@ -339,7 +339,7 @@ User: "Explain this code"
         │ POST /v1/sessions
         │ {
         │   brain_profile_id: 
-        │     "opencode-acp",
+        │     "gizzi-acp",
         │   source: "chat",      ← CRITICAL!
         │   runtime_overrides: {
         │     model_id: 
@@ -361,7 +361,7 @@ User: "Explain this code"
 │    (pipes, NOT PTY)   │
 │                       │
 │ 3. SPAWNING           │
-│    Command: opencode  │
+│    Command: gizzi  │
 │    Args: [acp]        │
 │    Stdio: piped       │
 │    (NO PTY!)          │
@@ -525,15 +525,15 @@ User selects "claude-code-tui"
 ├─────────────────────────────────────────────────────────┤
 │                                                          │
 │  UI Layer                                                │
-│  ├─ Provider: OpenCode                                   │
-│  ├─ Brain Profile: opencode-acp                         │
+│  ├─ Provider: Gizzi Code                                   │
+│  ├─ Brain Profile: gizzi-acp                         │
 │  └─ Runtime Model: anthropic:claude-3-7-sonnet         │
 │     (opaque string from runtime)                        │
 │                                                          │
 │  ↓                                                       │
 │                                                          │
 │  API Layer                                               │
-│  ├─ brain_profile_id: "opencode-acp"                    │
+│  ├─ brain_profile_id: "gizzi-acp"                    │
 │  ├─ source: "chat"                                      │
 │  └─ runtime_overrides: {                                │
 │       model_id: "anthropic:claude-3-7-sonnet"          │
@@ -543,7 +543,7 @@ User selects "claude-code-tui"
 │                                                          │
 │  Kernel Layer                                            │
 │  ├─ Routes to AcpProtocolDriver                         │
-│  ├─ Spawns: opencode acp                                │
+│  ├─ Spawns: gizzi acp                                │
 │  └─ Sends ACP message: {                                │
 │       method: "session/prompt",                         │
 │       params: {                                         │
@@ -556,7 +556,7 @@ User selects "claude-code-tui"
 │                                                          │
 │  ↓                                                       │
 │                                                          │
-│  OpenCode Runtime                                        │
+│  Gizzi Code Runtime                                        │
 │  ├─ Receives model_id                                   │
 │  ├─ Routes to Anthropic API                             │
 │  └─ Streams back responses                              │
@@ -618,7 +618,7 @@ User: "Read src/main.rs"
         │
         ▼
 ┌───────────────────────┐
-│ OpenCode continues    │
+│ Gizzi Code continues    │
 │ with tool result      │
 │ in context            │
 └───────────────────────┘
