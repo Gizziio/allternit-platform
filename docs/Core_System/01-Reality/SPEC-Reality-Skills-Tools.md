@@ -20,7 +20,7 @@ Tools are executed based on their domain:
 - **Capsules:** Interactive UI-returning tools that use the `allternit-capsule-sdk`.
 
 ## 4. Skill Portability & Adapters
-The system includes a **Skill Portability** engine (`packages/@allternit/sdk/allternit-skill-portability`) that allows skills written for other platforms (Claude, Kimi, OpenCode) to be bridged into the Allternit runtime.
+The system includes a **Skill Portability** engine (`packages/@allternit/sdk/allternit-skill-portability`) that allows skills written for other platforms (Claude, Kimi, Gizzi Code) to be bridged into the Allternit runtime.
 
 ## 5. Current Gaps vs Target
 - **RL Hooks:** While the target spec mentions Reinforcement Learning (RL) hooks for skill optimization, the current implementation is focused primarily on deterministic execution and portability.

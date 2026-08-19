@@ -13,7 +13,7 @@
 Make ChatUI support:
 1. Auth wizard flow (terminal PTY session)
 2. Protocol chat flow (ACP / JSONL) after auth
-3. Selecting provider models inside a runtime (ex: OpenCode has many models)
+3. Selecting provider models inside a runtime (ex: Gizzi Code has many models)
 
 ---
 
@@ -84,12 +84,12 @@ Also validate `session.started.source === "chat"` in chat view.
 
 ---
 
-## 3) Runtime Model Selection (OpenCode / Gemini / Kimi etc)
+## 3) Runtime Model Selection (Gizzi Code / Gemini / Kimi etc)
 
 ### Key concept
 
 There are two selections:
-- **Brain profile (runtime)**: `opencode-acp`, `gemini-acp`, `kimi-acp`, etc.
+- **Brain profile (runtime)**: `gizzi-acp`, `gemini-acp`, `kimi-acp`, etc.
 - **Model inside runtime** (provider's internal model list)
 
 ### Immediate implementation (no kernel changes required)
@@ -102,7 +102,7 @@ When creating a chat session, include it in the request body as:
 
 ```json
 {
-  "brain_profile_id": "opencode-acp",
+  "brain_profile_id": "gizzi-acp",
   "source": "chat",
   "runtime_overrides": {
     "model_id": "anthropic:claude-3-7-sonnet"
@@ -115,11 +115,11 @@ If `runtime_overrides` isn't supported yet by API → add it in API proxy body u
 ### UX rules
 - If provider is locked: disable model selector and show Authenticate CTA
 - If provider is unlocked: allow model selection
-- For OpenCode: default to a sensible `model_id` string (store it)
+- For Gizzi Code: default to a sensible `model_id` string (store it)
 
 ### Why this works
 
-OpenCode is a router runtime; the model is not kernel-owned. ChatUI must support "brain profile + runtime model id" as the canonical pairing.
+Gizzi Code is a router runtime; the model is not kernel-owned. ChatUI must support "brain profile + runtime model id" as the canonical pairing.
 
 ---
 
@@ -136,7 +136,7 @@ OpenCode is a router runtime; the model is not kernel-owned. ChatUI must support
 - no ANSI / no `terminal.delta` in chat view
 
 **D) Runtime model selection:**
-- user can choose "OpenCode runtime + model_id"
+- user can choose "Gizzi Code runtime + model_id"
 - `model_id` is sent in session create payload as `runtime_overrides.model_id`
 
 ---
@@ -145,7 +145,7 @@ OpenCode is a router runtime; the model is not kernel-owned. ChatUI must support
 
 - Do not add tool names / provider-specific logic inside ChatUI stream parsing
 - Do not assume kernel "model field" means provider model selection
-- Do not create many brain profiles per OpenCode model (wrong abstraction)
+- Do not create many brain profiles per Gizzi Code model (wrong abstraction)
 
 ---
 

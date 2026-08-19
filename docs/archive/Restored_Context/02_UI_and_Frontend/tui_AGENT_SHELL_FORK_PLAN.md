@@ -93,7 +93,7 @@ Agent-shell has separate files for each provider. Our TUI does NOT need these - 
 | `agent-shell-anthropic.el` | Via kernel-service → allternit-providers |
 | `agent-shell-google.el` | Via kernel-service → allternit-providers |
 | `agent-shell-cursor.el` | Via kernel-service → allternit-providers |
-| `agent-shell-opencode.el` | Via kernel-service → allternit-providers |
+| `agent-shell-allternit.el` | Via kernel-service → allternit-providers |
 | `agent-shell-qwen.el` | Via kernel-service → allternit-providers |
 
 ---

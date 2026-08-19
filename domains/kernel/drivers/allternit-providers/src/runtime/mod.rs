@@ -44,7 +44,6 @@ pub use models::{
     ModelDiscoveryResponse,
     OllamaModelAdapter,
     OpenAiModelAdapter,
-    OpenCodeModelAdapter,
     OpenRouterModelAdapter,
     PerplexityModelAdapter,
     ProviderModel,
@@ -65,5 +64,5 @@ pub use usage::{NormalizedUsage, UsageAggregator};
 pub use adapters::{
     ClaudeAdapter, CodexAdapter, CohereAdapter, DeepSeekAdapter, FireworksAdapter, GeminiAdapter,
     GroqAdapter, KimiAdapter, LmStudioAdapter, MistralAdapter, OllamaAdapter, OpenAiAdapter,
-    OpenCodeAdapter, OpenRouterAdapter, PerplexityAdapter, TogetherAdapter,
+    OpenRouterAdapter, PerplexityAdapter, TogetherAdapter,
 };

@@ -2,6 +2,28 @@
 
 ## Goal
 
+Purge every `opencode` reference/dependency from `cmd/gizzi-code`, keeping only `opencode` as a model/provider selection identifier, then verify with `bun run typecheck`, `bun run build`, `bun run test`, and `./dist/gizzi-code --help`.
+
+## Just did
+
+- Created linked worktree `allternit-platform-session-opencode-cleanup` on branch `session/opencode-cleanup`.
+- Scanned `cmd/gizzi-code` and found 106 files still containing `opencode`.
+
+## Next
+
+- Remove/replace opencode references in scripts, SDKs, infra, source comments, and docs.
+- Remove opencode from continuity/handoff parsers and types.
+- Update tests to use gizzi/claude/generic identifiers (except model-selection provider IDs).
+- Run validation suite and commit.
+
+## Open questions
+
+- None.
+
+---
+
+## Goal
+
 Continue iOS parity sweep: polish the chat composer (glass deck pills, plus-menu parity, bot mode selector) and build remaining platform surfaces on iOS (Site APIs, Code usage, Office/PDF signing).
 
 ## Just did

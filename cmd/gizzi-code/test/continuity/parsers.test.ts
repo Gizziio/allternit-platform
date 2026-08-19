@@ -17,19 +17,6 @@ describe("Tool Parsers", () => {
     } catch {}
   })
 
-  describe("OpenCode Parser", () => {
-    it("should parse basic OpenCode session", async () => {
-      const sessionPath = path.join(testDir, "opencode-session")
-      await mkdir(sessionPath, { recursive: true })
-      
-      const { source } = await ToolParsers.parseOpenCode(sessionPath, "test-123")
-      
-      expect(source.id).toBe("test-123")
-      expect(source.tool).toBe("opencode")
-      expect(source.workspace_path).toBe(sessionPath)
-    })
-  })
-
   describe("Claude Code Parser", () => {
     it("should parse Claude Code session with project.json", async () => {
       const sessionPath = path.join(testDir, "claude-session")

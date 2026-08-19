@@ -8,7 +8,7 @@
   //! This is the primary "brain runtime" driver for protocol-capable CLIs.
   //!
   //! ACP Registry Commands:
-  //! - OpenCode: opencode acp
+  //! - Gizzi Code: gizzi acp
   //! - Gemini: npx @google/gemini-cli --experimental-acp
   //! - Kimi: kimi acp
   //! - Qwen: npx @qwen-code/qwen-code --acp
@@ -1245,24 +1245,24 @@
   ───────────────────────────────────────────────────────────────────────────────
   5️⃣ Brain Profile Registry Entries
 
-  ACP Profile: opencode-acp
+  ACP Profile: gizzi-acp
 
   model_router
       .register_profile(brain::router::BrainProfile {
           config: brain::types::BrainConfig {
-              id: "opencode-acp".to_string(),
-              name: "OpenCode (ACP Native)".to_string(),
+              id: "gizzi-acp".to_string(),
+              name: "Gizzi Code (ACP Native)".to_string(),
               brain_type: brain::types::BrainType::Cli,
               model: Some("gpt-4o".to_string()),
               endpoint: None,
               api_key_env: None,
-              command: Some("opencode".to_string()),
+              command: Some("gizzi".to_string()),
               args: Some(vec!["acp".to_string()]),
               prompt_arg: None,
               env: None,
               cwd: None,
               requirements: vec![brain::types::BrainRequirement::Binary {
-                  name: "opencode".to_string(),
+                  name: "gizzi".to_string(),
               }],
               sandbox: None,
               event_mode: Some(brain::types::EventMode::Acp),

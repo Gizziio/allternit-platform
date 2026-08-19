@@ -1071,7 +1071,7 @@ test("migrates legacy write tool to edit permission", async () => {
 })
 
 // Managed settings tests
-// Note: preload.ts sets OPENCODE_TEST_MANAGED_CONFIG which Global.Path.managedConfig uses
+// Note: preload.ts sets GIZZI_TEST_MANAGED_CONFIG_DIR which Global.Path.managedConfig uses
 
 test("managed settings override user settings", async () => {
   await using tmp = await tmpdir({
@@ -1717,14 +1717,14 @@ describe("getPluginName", () => {
   })
 
   test("extracts name from npm package with version", () => {
-    expect(Config.getPluginName("oh-my-opencode@2.4.3")).toBe("oh-my-opencode")
+    expect(Config.getPluginName("oh-my-gizzi@2.4.3")).toBe("oh-my-gizzi")
     expect(Config.getPluginName("some-plugin@1.0.0")).toBe("some-plugin")
     expect(Config.getPluginName("plugin@latest")).toBe("plugin")
   })
 
   test("extracts name from scoped npm package", () => {
     expect(Config.getPluginName("@scope/pkg@1.0.0")).toBe("@scope/pkg")
-    expect(Config.getPluginName("@opencode/plugin@2.0.0")).toBe("@opencode/plugin")
+    expect(Config.getPluginName("@gizzi/plugin@2.0.0")).toBe("@gizzi/plugin")
   })
 
   test("returns full string for package without version", () => {
@@ -1747,12 +1747,12 @@ describe("deduplicatePlugins", () => {
   })
 
   test("prefers local file over npm package with same name", () => {
-    const plugins = ["oh-my-opencode@2.4.3", "file:///project/.gizzi/plugin/oh-my-opencode.js"]
+    const plugins = ["oh-my-gizzi@2.4.3", "file:///project/.gizzi/plugin/oh-my-gizzi.js"]
 
     const result = Config.deduplicatePlugins(plugins)
 
     expect(result.length).toBe(1)
-    expect(result[0]).toBe("file:///project/.gizzi/plugin/oh-my-opencode.js")
+    expect(result[0]).toBe("file:///project/.gizzi/plugin/oh-my-gizzi.js")
   })
 
   test("preserves order of remaining plugins", () => {
@@ -1852,8 +1852,8 @@ describe("GIZZI_DISABLE_PROJECT_CONFIG", () => {
         fn: async () => {
           const directories = await Config.directories()
           // Project .gizzi should NOT be in directories list
-          const hasProjectOpencode = directories.some((d) => d.startsWith(tmp.path))
-          expect(hasProjectOpencode).toBe(false)
+          const hasProjectGizzi = directories.some((d) => d.startsWith(tmp.path))
+          expect(hasProjectGizzi).toBe(false)
         },
       })
     } finally {

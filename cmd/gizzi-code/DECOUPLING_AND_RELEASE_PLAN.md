@@ -13,7 +13,7 @@ allternit/                          ← Monorepo
 └── cmd/
     └── gizzi-code/                 ← Gizzi Code buried here
         ├── package.json            ← Name: @allternit/gizzi-code
-        ├── install                 ← Points to anomalyco/opencode
+        ├── install                 ← Points to Gizziio/allternit-platform
         └── ...
 
 Gizziio/gizzi-code                  ← Empty GitHub repo (page enabled)
@@ -132,7 +132,7 @@ cd /tmp/gizzi-export
 ```bash
 # Fix install script (bash)
 # Change: APP=allternit → APP=gizzi-code
-# Change: anomalyco/opencode → Gizziio/gizzi-code
+# Change: Gizziio/allternit-platform → Gizziio/gizzi-code
 # Change: ~/.allternit/bin → ~/.gizzi/bin
 # Change: allternit.dev/docs → docs.gizziio.com
 

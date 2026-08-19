@@ -306,7 +306,7 @@
           "notes": "Workspaces and org management are present, but there is no full Kimi-style organization/project/limit API."
         },
         {
-          "kimi_feature": "在 Claude Code / Codex CLI / Kimi Code CLI / OpenCode / Hermes Agent / OpenClaw 中使用 Kimi",
+          "kimi_feature": "在 Claude Code / Codex CLI / Kimi Code CLI / Gizzi Code / Hermes Agent / OpenClaw 中使用 Kimi",
           "allternit_equivalent": "Allternit ships gizzi-code CLI and has Claude integration planning docs; no Kimi-branded distribution guides.",
           "status": "partial",
           "evidence": [
@@ -315,7 +315,7 @@
             "cmd/gizzi-code/CLAUDE_INTEGRATION_STATUS.md",
             "cmd/allternit-api/src/onboarding_routes.rs:878"
           ],
-          "notes": "gizzi-code is the native CLI agent. Third-party IDE/agent integration docs exist for Claude but are not yet shipped as public guides for Codex/OpenCode/Hermes/OpenClaw."
+          "notes": "gizzi-code is the native CLI agent. Third-party IDE/agent integration docs exist for Claude but are not yet shipped as public guides for Codex/Gizzi Code/Hermes/OpenClaw."
         },
         {
           "kimi_feature": "在 Playground 中配置 MCP 服务器 / 使用 Playground 调试模型",
@@ -447,7 +447,7 @@
     "Wire the existing response_format parsing into JSON-mode enforcement.",
     "Replace the simulated Playground streaming with a real call to /v1/chat/completions.",
     "Add a token-count endpoint that calls Gizzi's tokenizer or provider tokenizers.",
-    "Document Claude/Codex/OpenCode integration using the existing OpenAI-compatible base URL."
+    "Document Claude/Codex/Gizzi Code integration using the existing OpenAI-compatible base URL."
   ],
   "extra_allternit_capabilities": [
     "Computer Use desktop + browser hybrid automation (53-command macOS accessibility adapter plus Playwright/CDP/browser-use).",

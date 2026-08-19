@@ -13,7 +13,7 @@ use super::models::{ModelDiscoveryResponse, ValidateModelResponse};
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
 pub enum AuthMethodType {
-    /// CLI login wizard (e.g., `opencode auth login`)
+    /// CLI login wizard (e.g., `claude auth login`)
     CliWizard,
     /// Environment variable (e.g., OPENAI_API_KEY)
     EnvVar { name: String },
@@ -115,7 +115,6 @@ impl ProviderAdapterRegistry {
     fn register_builtin_adapters(&mut self) {
         use super::adapters::*;
 
-        self.register(Box::new(OpenCodeAdapter::new()));
         self.register(Box::new(GeminiAdapter::new()));
         self.register(Box::new(ClaudeAdapter::new()));
         self.register(Box::new(KimiAdapter::new()));
@@ -171,7 +170,7 @@ mod tests {
     fn test_registry_creation() {
         let registry = ProviderAdapterRegistry::new();
         let adapters = registry.list();
-        assert_eq!(adapters.len(), 16);
+        assert_eq!(adapters.len(), 15);
     }
 
     #[test]
@@ -186,7 +185,7 @@ mod tests {
     fn test_registry_metadata() {
         let registry = ProviderAdapterRegistry::new();
         let metadata = registry.list_metadata();
-        assert_eq!(metadata.len(), 16);
+        assert_eq!(metadata.len(), 15);
 
         // Check that all have required fields
         for meta in metadata {

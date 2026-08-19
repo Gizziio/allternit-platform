@@ -34,7 +34,7 @@ brew install gizzi-code
 |-----------|--------|-------|
 | **Bash Script** | `APP=allternit` | `APP=gizzi-code` |
 | | `~/.allternit/bin` | `~/.gizzi/bin` |
-| | `anomalyco/opencode` | `Gizziio/allternit-platform` |
+| | `Gizziio/allternit-platform` | `Gizziio/allternit-platform` |
 | | `allternit.dev/docs` | `docs.gizziio.com` |
 | **PowerShell** | `Gizziio/gizzi-code` | `Gizziio/allternit-platform` |
 | **Homebrew** | `gizzi.sh` | `docs.gizziio.com` |

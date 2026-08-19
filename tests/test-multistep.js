@@ -15,7 +15,7 @@ async function test() {
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
       parts: [{ type: 'text', text: 'Create todo: 1) HTML 2) CSS 3) JS' }],
-      model: { providerID: 'opencode', modelID: 'big-pickle' },
+      model: { providerID: 'allternit', modelID: 'default' },
     }),
   });
   

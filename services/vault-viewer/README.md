@@ -205,7 +205,7 @@ then pass it as a header. Full reference: **[docs/AGENT_API.md](docs/AGENT_API.m
 
 ### 🧩 Drop-in agent skill (no clone needed)
 
-Want your coding agent (Claude Code, Codex, OpenCode, Cursor…) to work with your vault
+Want your coding agent (Claude Code, Codex, Gizzi Code, Cursor…) to work with your vault
 directly? **Copy the block below and paste it to your agent.** It downloads the skill from
 GitHub, asks for your URL + API key once, saves them to `~/.webobsidian/credentials.json`,
 and can then read/write/search your notes on request.
@@ -217,7 +217,7 @@ SYSTEM / TASK — Install the "webobsidian" agent skill from GitHub, then set up
 Do every step in order; do not skip the credential step.
 
 STEP 1 — Download the skill into your runtime's skills directory
-  (Claude Code: ~/.claude/skills · Codex: ~/.codex/skills · OpenCode: ~/.opencode/skills):
+  (Claude Code: ~/.claude/skills · Codex: ~/.codex/skills · Gizzi Code: ~/.gizzi/skills):
       SKILLS_DIR=~/.claude/skills        # change for your runtime
       mkdir -p "$SKILLS_DIR/webobsidian"
       curl -fsSL https://raw.githubusercontent.com/xnohat/webobsidian/main/docs/agent-skill/webobsidian/SKILL.md \

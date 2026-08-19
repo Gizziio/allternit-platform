@@ -304,7 +304,7 @@
 
 ### Gizzi-Code Has
 - **Config-based loading**: `plugin: string[]` in config, auto npm install via Bun
-- **Built-in plugins**: CodexAuthPlugin, opencode-anthropic-auth
+- **Built-in plugins**: CodexAuthPlugin, gizzi-anthropic-auth
 - **Rich plugin hooks** (25+ hooks):
   - **Auth**: OAuth, API key, token refresh, model filtering
   - **Chat**: message intercept, params modify, headers modify

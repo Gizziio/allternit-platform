@@ -28,7 +28,7 @@ You must assume:
 
 Allternit is becoming:
 
-**A top-level CLI-driven agent runtime that orchestrates other CLIs (OpenCode, Claude Code, Gemini, AMP) as subprocess brains, exposes them via HTTP/SSE, renders them via OpenWork (forked), and augments them with UI-TARS for computer use — all surfaced visually through the Shell UI.**
+**A top-level CLI-driven agent runtime that orchestrates other CLIs (Gizzi Code, Claude Code, Gemini, AMP) as subprocess brains, exposes them via HTTP/SSE, renders them via OpenWork (forked), and augments them with UI-TARS for computer use — all surfaced visually through the Shell UI.**
 
 You must align to this, not reinterpret it.
 
@@ -54,7 +54,7 @@ Before proposing changes, you must produce an audit report that answers the foll
 
 3. Where would subprocess spawning live for CLI brains?
    - Find existing subprocess/PTY management code
-   - Identify where OpenCode/Claude/Gemini wrappers would go
+   - Identify where Gizzi Code/Claude/Gemini wrappers would go
 
 4. Does session state already exist?
    - Find session management structures
@@ -113,7 +113,7 @@ Before proposing changes, you must produce an audit report that answers the foll
    - Check if there's a generic brain driver trait
    - Identify how command-line tools would be wrapped
 
-2. Are OpenCode / Claude Code / Gemini already integrated?
+2. Are Gizzi Code / Claude Code / Gemini already integrated?
    - Search for "openwork", "openwork_ai", "claude", "gemini"
    - Check if brain adapters exist
    - Verify if any are wired to session management
@@ -143,8 +143,8 @@ Before proposing changes, you must produce an audit report that answers the foll
    - Verify it's a standalone Next.js project
    - Check its build/runtime dependencies
 
-2. Does it wrap OpenCode?
-   - Find OpenCode integration in OpenWork codebase
+2. Does it wrap Gizzi Code?
+   - Find Gizzi Code integration in OpenWork codebase
    - Check how OpenWork connects to agent sessions
    - Identify the API surface between OpenWork and agents
 
@@ -286,7 +286,7 @@ a2 (CLI, top process)
 │   └── Session registry
 │
 ├── brain sessions (HTTP + SSE)
-│   ├── OpenCode (PTY subprocess)
+│   ├── Gizzi Code (PTY subprocess)
 │   ├── Claude Code (PTY subprocess)
 │   ├── Gemini (PTY subprocess)
 │   └── AMP (PTY subprocess)
@@ -596,7 +596,7 @@ At the end, I should be able to:
 
 1. Run `a2 up` → All services start successfully
 2. Launch OpenWork → Appears as a tab in Shell UI
-3. Start a session → Choose Claude/OpenCode, see it running
+3. Start a session → Choose Claude/Gizzi Code, see it running
 4. Watch it live → See events streaming in OpenWork UI
 5. Let it click/type → UI-TARS executes GUI actions
 6. Minimize, tab, restore → All window behaviors work

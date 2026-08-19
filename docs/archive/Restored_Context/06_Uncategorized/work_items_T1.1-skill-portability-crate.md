@@ -72,7 +72,7 @@ allternit-skill-portability/
 │   │   ├── mod.rs
 │   │   ├── claude.rs
 │   │   ├── codex.rs
-│   │   ├── opencode.rs
+│   │   ├── allternit.rs
 │   │   └── kimi.rs
 │   └── sync.rs
 └── tests/

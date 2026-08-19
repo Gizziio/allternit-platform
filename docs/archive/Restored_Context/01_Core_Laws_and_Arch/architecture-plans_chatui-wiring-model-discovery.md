@@ -1,6 +1,6 @@
 # ChatUI Wiring — Runtime Model Discovery (No Hardcoded Lists)
 
-**Problem**: Hardcoded model IDs rot. Provider runtimes (OpenCode, Gemini, etc.) change their available models frequently.
+**Problem**: Hardcoded model IDs rot. Provider runtimes (Gizzi Code, Gemini, etc.) change their available models frequently.
 
 **Solution**: Treat model IDs as runtime-owned data, discoverable on-demand.
 
@@ -27,7 +27,7 @@ GET /v1/providers/:provider/models?profile_id=<brain_profile_id>
 ```
 
 **Kernel implementation:**
-- Queries the runtime using ACP method or provider CLI (`opencode models`, `gemini models`)
+- Queries the runtime using ACP method or provider CLI (`gizzi models`, `gemini models`)
 - Runs in protocol mode (pipes), parses JSON response
 - No tool-logic in drivers
 
@@ -35,8 +35,8 @@ GET /v1/providers/:provider/models?profile_id=<brain_profile_id>
 
 ```json
 {
-  "provider": "opencode",
-  "profile_id": "opencode-acp",
+  "provider": "gizzi",
+  "profile_id": "gizzi-acp",
   "fetched_at": "2026-02-14T02:13:00Z",
   "models": [
     {
@@ -63,7 +63,7 @@ POST /v1/providers/:provider/models/validate
 **Body:**
 ```json
 {
-  "profile_id": "opencode-acp",
+  "profile_id": "gizzi-acp",
   "model_id": "anthropic:claude-3-7-sonnet"
 }
 ```
@@ -113,8 +113,8 @@ Don't fetch on every keystroke.
 
 ```typescript
 interface ModelSelectorProps {
-  brainProfileId: string;      // e.g., "opencode-acp"
-  provider: string;            // e.g., "opencode"
+  brainProfileId: string;      // e.g., "gizzi-acp"
+  provider: string;            // e.g., "gizzi"
   runtimeModelId: string;      // current selection (opaque)
   onChange: (modelId: string) => void;
 }
@@ -164,7 +164,7 @@ interface ModelSelectorProps {
 
 ```json
 {
-  "brain_profile_id": "opencode-acp",
+  "brain_profile_id": "gizzi-acp",
   "source": "chat",
   "runtime_overrides": {
     "model_id": "anthropic:claude-3-7-sonnet"

@@ -144,11 +144,11 @@ export function ChatInput() {
 7. Should show ✓ "Valid model"
 8. Click **Confirm**
 
-### Scenario 2: Unauthenticated Provider (OpenCode)
+### Scenario 2: Unauthenticated Provider (Gizzi Code)
 1. Click **"Select Model"** button
-2. OpenCode shows **[Auth]** button
-3. Click **OpenCode**
-4. Step 2 shows: "Provider 'opencode' is not authenticated"
+2. Gizzi Code shows **[Auth]** button
+3. Click **Gizzi Code**
+4. Step 2 shows: "Provider 'gizzi' is not authenticated"
 5. Cannot proceed - need to auth first
 
 ### Scenario 3: Validation with Suggestions

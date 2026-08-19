@@ -4,7 +4,7 @@
 
 ### 1. Storage Inconsistency
 ```
-Studio Format:    .opencode/agent/{name}.md
+Studio Format:    .gizzi/agent/{name}.md
 OpenClaw Format:  .agent/IDENTITY.md, SOUL.md, HEARTBEAT.md
 ```
 
@@ -248,8 +248,8 @@ get_agent_storage_path(storage, format) -> PathBuf
    - Written in second person
 
 4. **Storage Location**
-   - Project: `.opencode/agent/`
-   - Global: `~/.opencode/agent/`
+   - Project: `.gizzi/agent/`
+   - Global: `~/.gizzi/agent/`
 
 ### OpenClaw Format
 1. **Identity Fields**
@@ -374,8 +374,8 @@ Remove the format choice - always create unified format:
 ```
 
 ### 3. Rename Platform References
-- `.opencode/agent/` → `.allternit/agents/`
-- `~/.opencode/agent/` → `~/.allternit/agents/`
+- `.gizzi/agent/` → `.allternit/agents/`
+- `~/.gizzi/agent/` → `~/.allternit/agents/`
 - `.agent/` → `.allternit/agents/` (unified)
 - `~/.openclaw/workspace/` → `~/.allternit/workspace/`
 

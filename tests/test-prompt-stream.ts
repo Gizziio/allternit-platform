@@ -24,7 +24,7 @@ async function main() {
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
       parts: [{ type: 'text', text: 'Say hello in exactly 5 words' }],
-      model: { providerID: 'opencode', modelID: 'big-pickle' },
+      model: { providerID: 'allternit', modelID: 'default' },
     }),
   });
   

@@ -79,13 +79,6 @@ const PROVIDER_REGISTRY: Record<string, ProviderMeta> = {
     icon: 'openai-logo.svg', // Codex is OpenAI
     textColor: '#FFFFFF',
   },
-  opencode: {
-    id: 'opencode',
-    name: 'OpenCode',
-    color: '#000000',
-    icon: 'open-code-logo.svg',
-    textColor: '#FFFFFF',
-  },
   allternit: {
     id: 'allternit',
     name: 'Allternit',

@@ -29,7 +29,7 @@ This document explains how the Shell UI integrates with the Agent Shell's server
 │  ┌──────────────────────────────────────────────────────────┐  │
 │  │                   CLI Sidecar Process                     │  │
 │  │  ┌─────────────────────────────────────────────────────┐  │  │
-│  │  │              HTTP Server (opencode serve)            │  │  │
+│  │  │              HTTP Server (gizzi serve)            │  │  │
 │  │  │  ┌──────────┐ ┌──────────┐ ┌──────────┐ ┌─────────┐ │  │  │
 │  │  │  │ Workspace│ │  Brain   │ │  Policy  │ │ Skills  │ │  │  │
 │  │  │  │   API    │ │   API    │ │   API    │ │   API   │ │  │  │
@@ -63,7 +63,7 @@ pub fn spawn_local_server(
     port: u32,
     password: String,
 ) -> (CommandChild, HealthCheck) {
-    // Spawns: opencode serve --hostname {hostname} --port {port}
+    // Spawns: gizzi serve --hostname {hostname} --port {port}
     let (child, exit) = cli::serve(&app, &hostname, port, &password);
     // Health check loop ensures server is ready
 }
@@ -90,7 +90,7 @@ async function checkServerHealth(url: string): Promise<boolean> {
 All API requests use HTTP Basic Auth:
 
 ```typescript
-const username = 'opencode';
+const username = 'gizzi';
 const password = 'generated-password';
 
 const headers = {
@@ -173,7 +173,7 @@ export class WorkspaceWebSocket {
       // Authenticate
       this.ws.send(JSON.stringify({
         type: 'auth',
-        token: btoa(`opencode:${password}`)
+        token: btoa(`gizzi:${password}`)
       }));
     };
     
@@ -371,15 +371,15 @@ match decision {
 
 ### Server Not Found
 
-1. Check if CLI is installed: `opencode --version`
-2. Try manual start: `opencode serve --port 8080`
+1. Check if CLI is installed: `gizzi --version`
+2. Try manual start: `gizzi serve --port 8080`
 3. Check firewall settings (should allow localhost)
 
 ### Authentication Failed
 
 1. Clear stored credentials in Tauri store
 2. Restart the desktop app to generate new password
-3. Check `~/.config/opencode/config.json` for server settings
+3. Check `~/.config/gizzi/config.json` for server settings
 
 ### CORS Issues
 

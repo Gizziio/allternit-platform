@@ -33,7 +33,7 @@
 
 **Purpose:**
 - Defines all 5 deliverables with acceptance criteria
-- Expands PTY tool coverage (opencode, claude, codex, amp, goose, aider, qwen, gemini, cursor, verdant)
+- Expands PTY tool coverage (gizzi, claude, codex, amp, goose, aider, qwen, gemini, cursor, verdant)
 - Sets A2 CLI as top orchestrator
 - Requires OpenWork fork integration (no stubs)
 - Wires UI-TARS as real automation tool
@@ -347,7 +347,7 @@ cat docs/audit/A2_REUSE_VS_BUILD.md
 
 | Gap | Impact | Effort | Priority |
 |-----|--------|--------|----------|
-| **CLI Brain Wrappers** | Blocks OpenCode/Claude/Gemini | 3-5 days | HIGH |
+| **CLI Brain Wrappers** | Blocks Gizzi Code/Claude/Gemini | 3-5 days | HIGH |
 | **Session HTTP API** | Blocks external brain access | 2-3 days | HIGH |
 | **OpenWork Tab** | No ops center in shell | 1-2 days | HIGH |
 | **GUI Tools** | UI-TARS can't execute | 1-2 days | MEDIUM |
@@ -387,7 +387,7 @@ At the end of implementation, you should be able to:
 
 1. ✅ Run `a2 up` → All services start successfully
 2. ✅ Launch OpenWork → Appears as tab in Shell UI
-3. ✅ Start session → Choose Claude/OpenCode, see it running
+3. ✅ Start session → Choose Claude/Gizzi Code, see it running
 4. ✅ Watch live → Events stream in OpenWork UI
 5. ✅ Click/type → UI-TARS executes GUI actions
 6. ✅ Minimize/tab/restore → All window behaviors work

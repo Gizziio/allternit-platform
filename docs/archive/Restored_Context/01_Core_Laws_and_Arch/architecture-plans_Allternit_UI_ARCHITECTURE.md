@@ -263,7 +263,7 @@ interface ModelCatalogEntry {
 - Anthropic (Claude)
 - OpenAI (GPT, Codex)
 - Google (Gemini)
-- OpenCode/Zen
+- Gizzi Code/Zen
 - Ollama (local)
 - GitHub Copilot
 - Venice

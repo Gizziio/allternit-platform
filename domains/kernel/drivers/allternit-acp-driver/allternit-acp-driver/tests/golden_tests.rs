@@ -104,7 +104,6 @@ fn test_all_fixtures_exist() {
     let dir = golden_dir();
 
     let expected_files = vec![
-        "opencode_acp_stream.jsonl",
         "claude_acp_stream.jsonl",
         "gemini_jsonl_stream.jsonl",
         "ollama_stream.jsonl",
@@ -128,22 +127,6 @@ fn test_all_fixtures_exist() {
                 .expect(&format!("Invalid JSON in {} line {}", file, i + 1));
         }
     }
-}
-
-/// Test OpenCode ACP stream transcript
-#[test]
-fn test_opencode_acp_stream_replay() {
-    let path = golden_dir().join("opencode_acp_stream.jsonl");
-    let lines = parse_transcript(path.to_str().unwrap());
-
-    verify_jsonrpc_structure(&lines);
-    verify_session_new_flow(&lines);
-
-    let update_types = count_update_types(&lines);
-    assert!(update_types.contains_key("agent_message_chunk"), "Should have agent_message_chunk");
-    assert!(update_types.contains_key("agent_message_complete"), "Should have agent_message_complete");
-
-    verify_tolerant_parsing(path.to_str().unwrap());
 }
 
 /// Test Claude ACP stream transcript with tool calls
@@ -286,7 +269,7 @@ fn test_malformed_delta_replay() {
 /// Test deterministic output - same transcript should produce same results
 #[test]
 fn test_deterministic_replay() {
-    let path = golden_dir().join("opencode_acp_stream.jsonl");
+    let path = golden_dir().join("claude_acp_stream.jsonl");
 
     let lines1 = parse_transcript(path.to_str().unwrap());
     let lines2 = parse_transcript(path.to_str().unwrap());

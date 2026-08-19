@@ -13,60 +13,6 @@ const log = Log.create({ service: "continuity.parsers" })
 
 export namespace ToolParsers {
   /**
-   * Parse an OpenCode session
-   * OpenCode uses JSONL messages and optional metadata files
-   */
-  export async function parseOpenCode(
-    sessionPath: string,
-    id: string
-  ): Promise<{ source: SessionSource; context?: Partial<SessionContext> }> {
-    log.debug("Parsing OpenCode session", { path: sessionPath, id })
-
-    const source: SessionSource = {
-      id,
-      tool: "unknown",
-      workspace_path: sessionPath,
-      created_at: Date.now(),
-      modified_at: Date.now(),
-      message_count: 0,
-    }
-
-    // Try to read metadata for workspace and title
-    try {
-      const metadataPath = path.join(sessionPath, "metadata.json")
-      const metadataExists = await Filesystem.exists(metadataPath)
-      if (metadataExists) {
-        const metadata = await Filesystem.readJson(metadataPath)
-        if (metadata.workspace) {
-          source.workspace_path = metadata.workspace
-        }
-        if (metadata.title) {
-          source.title = metadata.title
-        }
-        if (metadata.created_at) {
-          source.created_at = new Date(metadata.created_at).getTime()
-        }
-      }
-    } catch (e) {
-      log.debug("Failed to read OpenCode metadata", { error: e })
-    }
-
-    // Try to count messages from messages.jsonl
-    try {
-      const messagesPath = path.join(sessionPath, "messages.jsonl")
-      const messagesExists = await Filesystem.exists(messagesPath)
-      if (messagesExists) {
-        const content = await Filesystem.readText(messagesPath)
-        source.message_count = content.split("\n").filter((l) => l.trim()).length
-      }
-    } catch (e) {
-      log.debug("Failed to read OpenCode messages", { error: e })
-    }
-
-    return { source }
-  }
-
-  /**
    * Parse an GIZZI session
    * GIZZI uses SQLite database for conversation storage
    */

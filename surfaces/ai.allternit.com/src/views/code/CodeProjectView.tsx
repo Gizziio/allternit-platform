@@ -107,7 +107,7 @@ export function CodeProjectView({ workspaceId, onBack: externalOnBack }: CodePro
     setActiveSession(sessionId);
   };
 
-  const openCodeView = () => {
+  const openCodingView = () => {
     setMode('code');
     dispatch({ type: 'OPEN_VIEW', viewType: 'code' });
   };
@@ -121,7 +121,7 @@ export function CodeProjectView({ workspaceId, onBack: externalOnBack }: CodePro
     if (sessionId) {
       void useCodeSessionStore.getState().sendMessageStream(sessionId, { text: trimmed });
     }
-    openCodeView();
+    openCodingView();
   };
 
   const handleNewThread = async () => {
@@ -132,12 +132,12 @@ export function CodeProjectView({ workspaceId, onBack: externalOnBack }: CodePro
     });
     useCodeSessionStore.getState().setActiveSession(sessionId);
     setActiveSession(sessionId);
-    openCodeView();
+    openCodingView();
   };
 
   const handleSessionSelect = (sessionId: string) => {
     setActiveSession(sessionId);
-    openCodeView();
+    openCodingView();
   };
 
   const handleArchive = () => {

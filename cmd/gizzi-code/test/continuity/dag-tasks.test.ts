@@ -6,7 +6,7 @@ import type { SessionContext, DAGTask } from "@/continuity/types"
 describe("DAG Tasks", () => {
   const baseContext: SessionContext = {
     session_id: "test-session",
-    source_tool: "opencode",
+    source_tool: "gizzi",
     workspace_path: "/tmp/test",
     time_start: Date.now(),
     objective: "Test DAG tasks",
@@ -131,7 +131,7 @@ describe("DAG Tasks", () => {
 describe("Allternit Conventions", () => {
   const baseContext: SessionContext = {
     session_id: "test-session",
-    source_tool: "opencode",
+    source_tool: "gizzi",
     workspace_path: "/tmp/test",
     time_start: Date.now(),
     objective: "Test conventions",

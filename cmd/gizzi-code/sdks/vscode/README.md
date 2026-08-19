@@ -11,8 +11,6 @@ This extension runs the local Gizzi Code CLI in an editor terminal and connects 
 - `Gizzi Code: Reconnect` replaces stale extension terminals with a fresh bridge.
 - Workspace-aware launch directories, remote-workspace support, logs, and `vscode://` deep links.
 
-The extension preserves the old `opencode.*` command identifiers as upgrade aliases, but new configuration and menus use `gizzi.*`.
-
 ## Prerequisite
 
 Install the `gizzi` CLI and authenticate it. If the executable is not on VS Code's PATH, set `gizzi.cliPath` to its absolute path.

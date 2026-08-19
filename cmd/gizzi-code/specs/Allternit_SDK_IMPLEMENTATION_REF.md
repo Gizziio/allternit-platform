@@ -11,7 +11,7 @@
 `@allternit/sdk` is the nervous system of the Allternit platform. It is the single typed interface through which all product surfaces (TUI, gizzi attach, Allternit Desktop, thin-client, browser extensions, shell UIs, ACP adapters) communicate with the gizzi-code brain.
 
 It is NOT:
-- A renamed OpenCode SDK
+- A renamed Gizzi Code SDK
 - A raw HTTP wrapper
 - An auto-generated client (no hey-api/openapi-ts codegen here)
 
@@ -986,7 +986,7 @@ for await (const event of stream) {
 
 | Module | Current State | Gap |
 |--------|--------------|-----|
-| Transport (HTTP + fetch injection) | ✅ OpencodeClient in `packages/sdk/dist` | needs rewrite: typed resources, not raw OpencodeClient |
+| Transport (HTTP + fetch injection) | ✅ AllternitClient in `packages/sdk/dist` | needs rewrite: typed resources, not raw AllternitClient |
 | Transport (RPC) | ✅ `Rpc` util in `src/shared/util/rpc.ts` | needs SDK wrapper |
 | `sdk.sessions` | ✅ Routes in `routes/session.ts` | SDK resource layer missing |
 | `sdk.agents` | ✅ Communication runtime + mention router | SDK resource layer missing |

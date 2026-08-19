@@ -75,5 +75,5 @@ Kimi uses individual skill files in a skills directory:
 4. `skill_format()` - Return Markdown format
 
 ## Notes
-- Similar structure to OpenCode
+- Similar structure to Gizzi Code
 - May need to handle Kimi-specific metadata

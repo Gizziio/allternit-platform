@@ -1,7 +1,7 @@
 # Install the WebObsidian Agent skill (copy-paste, no local clone needed)
 
 You do **not** need to clone this repo. Copy *everything* inside the box below and paste it
-into your coding agent (Claude Code, Codex, OpenCode, Cursor…). The agent will **download**
+into your coding agent (Claude Code, Codex, Gizzi Code, Cursor…). The agent will **download**
 the skill from GitHub into its own skills folder, ask you for your WebObsidian URL + API key,
 save them, and from then on be able to operate your vault remotely.
 
@@ -19,7 +19,7 @@ Do every step in order; do not skip the credential step.
 STEP 1 — Download the skill into your runtime's skills directory:
   - Claude Code: ~/.claude/skills/webobsidian/
   - Codex:       ~/.codex/skills/webobsidian/
-  - OpenCode:    ~/.opencode/skills/webobsidian/
+  - Gizzi Code:    ~/.gizzi/skills/webobsidian/
   - Otherwise use this runtime's documented skills directory.
   Run (substitute your SKILLS_DIR):
       SKILLS_DIR=~/.claude/skills        # change for your runtime

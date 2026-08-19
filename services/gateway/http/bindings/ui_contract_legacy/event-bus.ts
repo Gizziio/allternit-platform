@@ -6,7 +6,7 @@ export interface CanonicalEvent {
   properties?: Record<string, unknown>;
 }
 
-export interface OpenCodeStreamEvent {
+export interface AllternitStreamEvent {
   directory: string;
   payload: {
     type: string;
@@ -18,7 +18,7 @@ export interface CanonicalEventSource {
   onCanonicalEvent(listener: (event: CanonicalEvent) => void): () => void;
 }
 
-export function mapCanonicalEventToOpenCode(event: CanonicalEvent): OpenCodeStreamEvent {
+export function mapCanonicalEventToAllternit(event: CanonicalEvent): AllternitStreamEvent {
   return {
     directory: event.directory || "global",
     payload: {
@@ -28,7 +28,7 @@ export function mapCanonicalEventToOpenCode(event: CanonicalEvent): OpenCodeStre
   };
 }
 
-export class OpenCodeEventBus {
+export class AllternitEventBus {
   private readonly emitter = new EventEmitter();
   private readonly unsubscribeSource: () => void;
 
@@ -39,10 +39,10 @@ export class OpenCodeEventBus {
   }
 
   emitCanonical(event: CanonicalEvent): void {
-    this.emitter.emit("event", mapCanonicalEventToOpenCode(event));
+    this.emitter.emit("event", mapCanonicalEventToAllternit(event));
   }
 
-  subscribe(listener: (event: OpenCodeStreamEvent) => void): () => void {
+  subscribe(listener: (event: AllternitStreamEvent) => void): () => void {
     this.emitter.on("event", listener);
     return () => {
       this.emitter.off("event", listener);

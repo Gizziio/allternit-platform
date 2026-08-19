@@ -12,7 +12,7 @@
 that consumes it: TUI, Allternit Desktop, browser extensions, thin-client, plugins, and
 external agents via ACP.
 
-It is **not** a generated HTTP client wrapper. It is not a renamed OpenCode fork.
+It is **not** a generated HTTP client wrapper. It is not a renamed Gizzi Code fork.
 It is a first-class product deliverable — the API every surface codes against.
 
 The existing generated HTTP client (`sdk.gen.js`, the 881-line OpenAPI output) is

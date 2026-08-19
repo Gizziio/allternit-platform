@@ -153,7 +153,7 @@ Tiny modules that are:
 | Package | Version | Direct/Indirect | Used By | Category | Action | Notes |
 |---------|---------|-----------------|---------|----------|--------|-------|
 | `@openauthjs/openauth` | * | Direct | `runtime/auth/` | **D?** | Internalize? | Auth system - core to product? |
-| `@gitlab/opencode-gitlab-auth` | 1.3.3 | Direct | `runtime/auth/` | **C?** | Remove? | GitLab-specific auth needed? |
+| `@gitlab/gizzi-gitlab-auth` | 1.3.3 | Direct | `runtime/auth/` | **C?** | Remove? | GitLab-specific auth needed? |
 | `google-auth-library` | 10.5.0 | Direct | `runtime/auth/` | **B** | Wrap | Behind AuthStore |
 
 **Decision:** Is `@openauthjs/openauth` core to Gizzi's identity (Bucket D) or commodity (Bucket A)?

@@ -145,7 +145,7 @@ Task graph in human-readable markdown:
 # Allternit Brain - Task Graph
 
 **Session:** sess-abc-123  
-**Runner:** opencode  
+**Runner:** gizzi-code  
 **Updated:** 2026-02-24T10:00:00Z
 
 ## Current Focus
@@ -268,7 +268,7 @@ Replaces `config.json`:
   
   "session": {
     "session_id": "sess-uuid",
-    "runner": "opencode",
+    "runner": "gizzi-code",
     "started_at": 1704067200000,
     "parent_session": null
   },
