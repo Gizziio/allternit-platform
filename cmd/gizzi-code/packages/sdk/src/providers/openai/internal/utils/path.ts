@@ -20,7 +20,7 @@ export const createPathTagFunction = (pathEncoder = encodeURIPath) =>
     if (statics.length === 1) return statics[0]!;
 
     let postPath = false;
-    const invalidSegments = [];
+    const invalidSegments: Array<{ start: number; length: number; error: string }> = [];
     const path = statics.reduce((previousValue, currentValue, index) => {
       if (/[?#]/.test(currentValue)) {
         postPath = true;

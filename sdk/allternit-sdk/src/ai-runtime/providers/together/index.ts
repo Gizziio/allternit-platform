@@ -4,7 +4,7 @@
  * OpenAI-compatible API for open source models
  */
 
-import { Message, Tool, HarnessError, HarnessErrorCode, HarnessResponse } from '../../harness/types';
+import { Message, Tool, HarnessError, HarnessErrorCode, HarnessResponse, messageContentToString } from '../../harness/types';
 
 export interface TogetherConfig {
   apiKey: string;
@@ -160,7 +160,7 @@ export class AllternitTogether {
   private transformMessages(messages: Message[]): TogetherRequest['messages'] {
     return messages.map(msg => ({
       role: msg.role,
-      content: msg.content,
+      content: messageContentToString(msg.content),
       ...(msg.name && { name: msg.name }),
       ...(msg.tool_calls && {
         tool_calls: msg.tool_calls.map(tc => ({

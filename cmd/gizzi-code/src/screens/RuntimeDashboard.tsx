@@ -1,8 +1,8 @@
 import * as React from 'react';
 const { useState, useEffect, useCallback } = React;
 import { Box, Text, useInput } from 'ink';
-import { runtimeRegistry } from '../runtime/runtime-registry';
-import type { RegisteredRuntime } from '../runtime/runtime-registry';
+import { RuntimeService } from '../runtime/runtime-service';
+import type { RegisteredRuntime } from '../runtime/runtime-service';
 
 const STATUS_COLORS: Record<string, string> = {
   online: 'green',
@@ -18,15 +18,19 @@ interface Props {
 export function RuntimeDashboard({ onBack, refreshIntervalMs = 5000 }: Props) {
   const [runtimes, setRuntimes] = useState<RegisteredRuntime[]>([]);
   const [selectedIdx, setSelectedIdx] = useState(0);
-  const [tick, setTick] = useState(0);
 
   useEffect(() => {
-    setRuntimes(runtimeRegistry.list());
-    const id = setInterval(() => {
-      setTick((t) => t + 1);
-      setRuntimes(runtimeRegistry.list());
-    }, refreshIntervalMs);
-    return () => clearInterval(id);
+    let mounted = true;
+    const refresh = async () => {
+      const list = await RuntimeService.list();
+      if (mounted) setRuntimes(list);
+    };
+    refresh();
+    const id = setInterval(refresh, refreshIntervalMs);
+    return () => {
+      mounted = false;
+      clearInterval(id);
+    };
   }, [refreshIntervalMs]);
 
   const selected = runtimes[selectedIdx] ?? null;
@@ -41,7 +45,7 @@ export function RuntimeDashboard({ onBack, refreshIntervalMs = 5000 }: Props) {
     }
   });
 
-  const ageSec = useCallback((ts: number) => Math.round((Date.now() - ts) / 1000), []);
+  const ageSec = useCallback((ts?: number) => ts ? Math.round((Date.now() - ts) / 1000) : '—', []);
 
   return (
     <Box flexDirection="column" padding={1} gap={1}>
@@ -89,7 +93,7 @@ export function RuntimeDashboard({ onBack, refreshIntervalMs = 5000 }: Props) {
               <Text>
                 Status: <Text color={STATUS_COLORS[selected.status] ?? 'gray'}>{selected.status}</Text>
               </Text>
-              <Text color="gray">Heartbeat: {ageSec(selected.lastHeartbeat)}s ago</Text>
+              <Text color="gray">Heartbeat: {ageSec(selected.lastHeartbeatAt)}s ago</Text>
               <Text color="gray">Registered: {new Date(selected.registeredAt).toLocaleTimeString()}</Text>
 
               {selected.agentClis.length > 0 && (

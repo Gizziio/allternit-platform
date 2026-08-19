@@ -25,7 +25,7 @@ export class AgentRun extends EventEmitter {
     initialRequest: StreamRequest
   ) {
     super();
-    this.messages = [...initialRequest.messages];
+    this.messages = initialRequest.messages.map((m) => ({ ...m, content: m.content })) as RuntimeMessage[];
     this.currentRequest = { ...initialRequest };
     this.runState = new RunState();
 
@@ -133,18 +133,25 @@ export class AgentRun extends EventEmitter {
           if (block.type === 'tool_use') {
             return `[tool_use:${block.name}] ${JSON.stringify(block.input)}`;
           }
-          return `[tool_result:${block.tool_use_id}] ${block.content}`;
+          if (block.type === 'tool_result') {
+            return `[tool_result:${block.tool_use_id}] ${block.content}`;
+          }
+          return '';
         })
         .join('\n');
     }
 
-    return content.flatMap((block) => {
-      if (block.type === 'text') return [{ type: 'text' as const, text: block.text }];
-      if (block.type === 'vision' || block.type === 'vision_coordinates') return [block];
+    return content.flatMap<ContentBlock>((block) => {
+      if (block.type === 'text') return [{ type: 'text', text: block.text }];
+      if (block.type === 'vision') return [{ type: 'vision', source: block.source }];
+      if (block.type === 'vision_coordinates') return [{ type: 'vision_coordinates', x: block.x, y: block.y }];
       if (block.type === 'tool_use') {
-        return [{ type: 'text' as const, text: `[tool_use:${block.name}] ${JSON.stringify(block.input)}` }];
+        return [{ type: 'text', text: `[tool_use:${block.name}] ${JSON.stringify(block.input)}` }];
       }
-      return [{ type: 'text' as const, text: `[tool_result:${block.tool_use_id}] ${block.content}` }];
+      if (block.type === 'tool_result') {
+        return [{ type: 'text', text: `[tool_result:${block.tool_use_id}] ${block.content}` }];
+      }
+      return [];
     });
   }
 

@@ -6,8 +6,11 @@ import { readFile } from 'node:fs/promises';
 interface TextItem {
   str: string;
   hasEOL: boolean;
-  height?: number;
+  height: number;
   transform: number[];
+  dir: string;
+  width: number;
+  fontName: string;
 }
 
 export type PdfSourceType = 'base64' | 'url' | 'path';
@@ -258,7 +261,7 @@ export class PdfTool {
       const context = canvas.getContext('2d');
       context.fillStyle = '#ffffff';
       context.fillRect(0, 0, viewport.width, viewport.height);
-      await page.render({ canvasContext: context as any, viewport }).promise;
+      await page.render({ canvasContext: context as any, viewport, canvas: canvas as any }).promise;
       return canvas.toDataURL('image/png');
     } catch {
       return undefined;

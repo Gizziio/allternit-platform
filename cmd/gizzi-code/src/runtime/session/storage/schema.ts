@@ -27,3 +27,8 @@ export {
   MemoryEntityTable,
   MemoryRelationTable,
 } from "@/runtime/brain/memory.sql"
+export {
+  RuntimeTable,
+  RuntimeCliTable,
+  RuntimeExecutionLogTable,
+} from "@/runtime/runtime.sql"

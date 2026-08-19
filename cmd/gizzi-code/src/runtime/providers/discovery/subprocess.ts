@@ -12,12 +12,14 @@
 import { which } from "bun"
 import type { DiscoveredProvider, DiscoveredModel } from "./index"
 
-interface SubprocessSpec {
+export interface SubprocessSpec {
   /** Binary name to look for in PATH */
   bin: string
   /** Provider ID in gizzi's model list */
   id: string
   name: string
+  /** Icon asset key (maps to /icons/agent-clis/{icon}.svg) */
+  icon?: string
   /** Command template — {prompt} is replaced with the user's message */
   cmd: string
   /** Known models surfaced by this CLI */
@@ -29,12 +31,13 @@ interface SubprocessSpec {
   probe?: { args: string[]; expect: string | RegExp }
 }
 
-const SUBPROCESS_PROVIDERS: SubprocessSpec[] = [
+export const SUBPROCESS_PROVIDERS: SubprocessSpec[] = [
   // ── Anthropic ────────────────────────────────────────────────────────────
   {
     bin: "claude",
     id: "claude-cli",
     name: "Claude (CLI — subscription or Pro)",
+    icon: "claude",
     cmd: "claude -p",
     probe: { args: ["--version"], expect: /Claude Code/ },
     models: [
@@ -49,6 +52,7 @@ const SUBPROCESS_PROVIDERS: SubprocessSpec[] = [
     bin: "kimi",
     id: "kimi-cli",
     name: "Kimi (CLI — subscription)",
+    icon: "kimi",
     cmd: "kimi -p",
     probe: { args: ["--version"], expect: /kimi/i },
     models: [
@@ -63,6 +67,7 @@ const SUBPROCESS_PROVIDERS: SubprocessSpec[] = [
     bin: "qwen",
     id: "qwen-cli",
     name: "Qwen Code (CLI — subscription)",
+    icon: "qwen",
     cmd: "qwen -p",
     probe: { args: ["--version"], expect: /\d+\.\d+/ },
     models: [
@@ -78,6 +83,7 @@ const SUBPROCESS_PROVIDERS: SubprocessSpec[] = [
     bin: "codex",
     id: "codex-cli",
     name: "Codex CLI (OpenAI — subscription or API)",
+    icon: "codex",
     cmd: "codex",
     probe: { args: ["--version"], expect: /codex/i },
     models: [
@@ -93,6 +99,7 @@ const SUBPROCESS_PROVIDERS: SubprocessSpec[] = [
     bin: "gemini",
     id: "gemini-cli",
     name: "Gemini CLI (Google — subscription)",
+    icon: "gemini",
     cmd: "gemini -p",
     probe: { args: ["--version"], expect: /\d+\.\d+/ },
     models: [
@@ -107,6 +114,7 @@ const SUBPROCESS_PROVIDERS: SubprocessSpec[] = [
     bin: "agy",
     id: "antigravity",
     name: "Antigravity (agy CLI — subscription)",
+    icon: "agy",
     cmd: "agy -p",
     probe: { args: ["--version"], expect: /\d+\.\d+/ },
     models: [
@@ -119,6 +127,7 @@ const SUBPROCESS_PROVIDERS: SubprocessSpec[] = [
     bin: "gh",
     id: "copilot-cli",
     name: "GitHub Copilot (CLI — subscription)",
+    icon: "copilot",
     cmd: "gh copilot suggest -t shell",
     probe: { args: ["copilot", "--version"], expect: /copilot/i },
     models: [
@@ -132,6 +141,7 @@ const SUBPROCESS_PROVIDERS: SubprocessSpec[] = [
     bin: "llm",
     id: "llm-cli",
     name: "LLM (CLI — any configured backend)",
+    icon: "llm",
     cmd: "llm prompt",
     probe: { args: ["--version"], expect: /llm/ },
     models: [
@@ -144,6 +154,7 @@ const SUBPROCESS_PROVIDERS: SubprocessSpec[] = [
     bin: "aichat",
     id: "aichat-cli",
     name: "AIChat (CLI — any configured backend)",
+    icon: "aichat",
     cmd: "aichat",
     probe: { args: ["--version"], expect: /aichat/ },
     models: [
@@ -156,6 +167,7 @@ const SUBPROCESS_PROVIDERS: SubprocessSpec[] = [
     bin: "ollama",
     id: "ollama-cli",
     name: "Ollama (CLI)",
+    icon: "ollama",
     cmd: "ollama run",
     probe: { args: ["list"], expect: /NAME/ },
     models: [], // populated dynamically via probeOllamaModels()
@@ -166,6 +178,7 @@ const SUBPROCESS_PROVIDERS: SubprocessSpec[] = [
     bin: "fabric",
     id: "fabric-cli",
     name: "Fabric (CLI — any configured backend)",
+    icon: "fabric",
     cmd: "fabric",
     probe: { args: ["--version"], expect: /fabric/ },
     models: [
@@ -178,12 +191,189 @@ const SUBPROCESS_PROVIDERS: SubprocessSpec[] = [
     bin: "chatgpt",
     id: "chatgpt-cli",
     name: "ChatGPT (CLI — Plus/Pro subscription)",
+    icon: "chatgpt",
     cmd: "chatgpt",
     models: [
       { id: "gpt-4o",   name: "GPT-4o",   context: 128000, output: 16384  },
       { id: "o3",       name: "o3",       context: 200000, output: 100000 },
       { id: "o4-mini",  name: "o4-mini",  context: 200000, output: 100000 },
     ],
+  },
+
+  // ── Cursor Agent ─────────────────────────────────────────────────────────
+  {
+    bin: "cursor-agent",
+    id: "cursor-agent",
+    name: "Cursor Agent",
+    icon: "cursor",
+    cmd: "cursor-agent",
+    probe: { args: ["--version"], expect: /\d+\.\d+/ },
+    models: [{ id: "default", name: "Cursor Agent default", context: 200000, output: 64000 }],
+  },
+
+  // ── OpenCode ─────────────────────────────────────────────────────────────
+  {
+    bin: "opencode",
+    id: "opencode",
+    name: "OpenCode",
+    icon: "opencode",
+    cmd: "opencode",
+    probe: { args: ["--version"], expect: /\d+\.\d+/ },
+    models: [{ id: "default", name: "OpenCode default", context: 200000, output: 64000 }],
+  },
+
+  // ── OpenClaw ─────────────────────────────────────────────────────────────
+  {
+    bin: "openclaw",
+    id: "openclaw",
+    name: "OpenClaw",
+    icon: "openclaw",
+    cmd: "openclaw",
+    probe: { args: ["--version"], expect: /\d+\.\d+/ },
+    models: [{ id: "default", name: "OpenClaw default", context: 200000, output: 64000 }],
+  },
+
+  // ── Hermes ─────────────────────────────────────────────────────────────────
+  {
+    bin: "hermes",
+    id: "hermes",
+    name: "Hermes",
+    icon: "hermes",
+    cmd: "hermes",
+    probe: { args: ["--version"], expect: /\d+\.\d+/ },
+    models: [{ id: "default", name: "Hermes default", context: 200000, output: 64000 }],
+  },
+
+  // ── Pi ─────────────────────────────────────────────────────────────────────
+  {
+    bin: "pi",
+    id: "pi",
+    name: "Pi",
+    icon: "pi",
+    cmd: "pi -p --mode json",
+    probe: { args: ["--version"], expect: /\d+\.\d+/ },
+    models: [{ id: "default", name: "Pi default", context: 200000, output: 64000 }],
+  },
+
+  // ── CodeBuddy ──────────────────────────────────────────────────────────────
+  {
+    bin: "codebuddy",
+    id: "codebuddy",
+    name: "CodeBuddy",
+    icon: "codebuddy",
+    cmd: "codebuddy",
+    probe: { args: ["--version"], expect: /\d+\.\d+/ },
+    models: [{ id: "default", name: "CodeBuddy default", context: 200000, output: 64000 }],
+  },
+
+  // ── DevEco Code ────────────────────────────────────────────────────────────
+  {
+    bin: "deveco",
+    id: "deveco",
+    name: "DevEco Code",
+    icon: "deveco",
+    cmd: "deveco",
+    probe: { args: ["--version"], expect: /\d+\.\d+/ },
+    models: [{ id: "default", name: "DevEco Code default", context: 200000, output: 64000 }],
+  },
+
+  // ── Grok ───────────────────────────────────────────────────────────────────
+  {
+    bin: "grok",
+    id: "grok",
+    name: "Grok",
+    icon: "grok",
+    cmd: "grok",
+    probe: { args: ["--version"], expect: /\d+\.\d+/ },
+    models: [{ id: "default", name: "Grok default", context: 200000, output: 64000 }],
+  },
+
+  // ── Kiro CLI ───────────────────────────────────────────────────────────────
+  {
+    bin: "kiro-cli",
+    id: "kiro-cli",
+    name: "Kiro CLI",
+    icon: "kiro",
+    cmd: "kiro-cli",
+    probe: { args: ["--version"], expect: /\d+\.\d+/ },
+    models: [{ id: "default", name: "Kiro CLI default", context: 200000, output: 64000 }],
+  },
+
+  // ── Qoder CLI ──────────────────────────────────────────────────────────────
+  {
+    bin: "qodercli",
+    id: "qodercli",
+    name: "Qoder CLI",
+    icon: "qoder",
+    cmd: "qodercli",
+    probe: { args: ["--version"], expect: /\d+\.\d+/ },
+    models: [{ id: "default", name: "Qoder CLI default", context: 200000, output: 64000 }],
+  },
+
+  // ── Qoder CN ───────────────────────────────────────────────────────────────
+  {
+    bin: "qoderclicn",
+    id: "qoderclicn",
+    name: "Qoder CN",
+    icon: "qoder-cn",
+    cmd: "qoderclicn",
+    probe: { args: ["--version"], expect: /\d+\.\d+/ },
+    models: [{ id: "default", name: "Qoder CN default", context: 200000, output: 64000 }],
+  },
+
+  // ── QwenPaw ────────────────────────────────────────────────────────────────
+  {
+    bin: "qwenpaw",
+    id: "qwenpaw",
+    name: "QwenPaw",
+    icon: "qwenpaw",
+    cmd: "qwenpaw",
+    probe: { args: ["--version"], expect: /\d+\.\d+/ },
+    models: [{ id: "default", name: "QwenPaw default", context: 200000, output: 64000 }],
+  },
+
+  // ── Reasonix ───────────────────────────────────────────────────────────────
+  {
+    bin: "reasonix",
+    id: "reasonix",
+    name: "Reasonix",
+    icon: "reasonix",
+    cmd: "reasonix",
+    probe: { args: ["--version"], expect: /\d+\.\d+/ },
+    models: [{ id: "default", name: "Reasonix default", context: 200000, output: 64000 }],
+  },
+
+  // ── Trae CLI ─────────────────────────────────────────────────────────────────
+  {
+    bin: "traecli",
+    id: "traecli",
+    name: "Trae CLI",
+    icon: "trae",
+    cmd: "traecli",
+    probe: { args: ["--version"], expect: /\d+\.\d+/ },
+    models: [{ id: "default", name: "Trae CLI default", context: 200000, output: 64000 }],
+  },
+
+  // ── DeepSeek Harness ─────────────────────────────────────────────────────────
+  {
+    bin: "dsh",
+    id: "dsh",
+    name: "DeepSeek Harness",
+    icon: "dsh",
+    cmd: "dsh --profile multica --stdio",
+    probe: { args: ["--profile", "multica", "--probe"], expect: /"type":"probe"/ },
+    models: [{ id: "default", name: "DSH default", context: 200000, output: 64000 }],
+  },
+
+  // ── Oh-My-Pi ─────────────────────────────────────────────────────────────────
+  {
+    bin: "omp",
+    id: "omp",
+    name: "Oh-My-Pi",
+    icon: "omp",
+    cmd: "omp -p --mode json",
+    probe: { args: ["--version"], expect: /\d+\.\d+/ },
+    models: [{ id: "default", name: "Oh-My-Pi default", context: 200000, output: 64000 }],
   },
 ]
 

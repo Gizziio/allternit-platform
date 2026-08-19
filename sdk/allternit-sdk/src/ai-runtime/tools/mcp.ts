@@ -345,8 +345,8 @@ export async function loadMcpServerDirectory(host: McpDirectoryHost, options: Mc
   for (const [key, value] of Object.entries(entries)) {
     if (!value || typeof value !== 'object') continue;
     if (value.enabled === false) continue;
-    const serverId = value.serverId ?? key;
-    const namespace = value.namespace ?? serverId;
+    const serverId = typeof value.serverId === 'string' ? value.serverId : key;
+    const namespace = typeof value.namespace === 'string' ? value.namespace : serverId;
     const isRemote = value.type === 'remote' || typeof value.url === 'string';
     if (isRemote) {
       configs.push({

@@ -6,7 +6,7 @@
  * you need to configure AWS credentials separately.
  */
 
-import { Message, Tool, HarnessError, HarnessErrorCode, HarnessResponse } from '../../harness/types';
+import { Message, Tool, HarnessError, HarnessErrorCode, HarnessResponse, messageContentToString } from '../../harness/types';
 
 export interface BedrockConfig {
   region: string;
@@ -182,16 +182,27 @@ export class AllternitBedrock {
     for (const msg of messages) {
       if (msg.role === 'system') {
         if (!systemPrompts) systemPrompts = [];
-        systemPrompts.push({ text: msg.content });
+        systemPrompts.push({ text: messageContentToString(msg.content) });
         continue;
       }
 
       const role = msg.role === 'user' ? 'user' : 'assistant';
       const content: BedrockConverseRequest['messages'][0]['content'] = [];
 
-      // Add text content
-      if (msg.content) {
-        content.push({ text: msg.content });
+      // Map content blocks to Bedrock content items
+      const blocks = typeof msg.content === 'string' ? [{ type: 'text' as const, text: msg.content }] : msg.content;
+      for (const block of blocks) {
+        if (block.type === 'text') {
+          content.push({ text: block.text });
+        } else if (block.type === 'tool_result') {
+          content.push({
+            toolResult: {
+              toolUseId: block.tool_use_id,
+              content: [{ text: block.content }],
+            },
+          });
+        }
+        // Vision/image blocks are not supported by the current Bedrock request type.
       }
 
       // Add tool calls
@@ -207,9 +218,8 @@ export class AllternitBedrock {
         }
       }
 
-      // Add tool results
-      if (msg.tool_call_id && msg.content) {
-        // Tool results go in the next user message
+      // Legacy tool result handling: if a tool message has a string content, append it to the last user message.
+      if (msg.role === 'tool' && msg.tool_call_id && typeof msg.content === 'string' && msg.content) {
         const lastMsg = bedrockMessages[bedrockMessages.length - 1];
         if (lastMsg?.role === 'user') {
           lastMsg.content.push({

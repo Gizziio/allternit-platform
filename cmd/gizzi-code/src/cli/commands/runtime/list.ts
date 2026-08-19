@@ -1,7 +1,7 @@
-import { runtimeRegistry } from '../../../runtime/runtime-registry';
+import { RuntimeService } from '../../../runtime/runtime-service';
 
 export async function runtimeListCommand(): Promise<void> {
-  const runtimes = runtimeRegistry.list();
+  const runtimes = await RuntimeService.list();
 
   if (runtimes.length === 0) {
     process.stdout.write('No runtimes registered.\n');

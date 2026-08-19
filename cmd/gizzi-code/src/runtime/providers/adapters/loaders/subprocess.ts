@@ -1,400 +1,33 @@
-// @ts-nocheck
 /**
- * SubprocessLanguageModel — wraps a CLI subprocess (e.g. `claude`) as an AI SDK LanguageModelV2.
+ * SubprocessLanguageModel — thin AI SDK LanguageModelV2 wrapper over the runtime driver system.
  *
- * Uses a persistent warm process: one subprocess is kept alive using
- * --input-format stream-json. The process is spawned once and kept warm;
- * init events (system, rate_limit_info) are drained at startup. Subsequent
- * messages are written to stdin, responses read from stdout.
- *
- * Warm startup: ~18s first time, ~2-4s per subsequent request.
- *
- * Line dispatcher: a single continuous read loop decodes stdout and broadcasts
- * every complete line to all registered handlers. This eliminates the race
- * condition where drainInit() could consume bytes that runRequest() needs.
+ * The actual CLI execution lives in `runtime/drivers/local-cli-driver.ts` (and,
+ * in Phase 3, remote websocket/uds drivers). This file only:
+ *   1. Resolves the provider's CLI to a registered runtime.
+ *   2. Creates a driver task from the last user message.
+ *   3. Maps driver AgentEvents to LanguageModelV2StreamParts.
  */
 
 import type { LanguageModelV2, LanguageModelV2StreamPart } from "@ai-sdk/provider"
+import { RuntimeService } from "@/runtime/runtime-service"
+import { RuntimeDriverFactory } from "@/runtime/runtime-driver-factory"
 import { Log } from "@/shared/util/log"
 
 const log = Log.create({ service: "subprocess-lm" })
 const TEXT_ID = "text-1"
 
-type OneShotInvocation = {
-  argv: string[]
-  mode: "one-shot"
-}
-
-// ---------------------------------------------------------------------------
-// Persistent process manager
-// ---------------------------------------------------------------------------
-
-interface ManagedProcess {
-  proc: ReturnType<typeof Bun.spawn>
-  ready: boolean
-  readyPromise: Promise<void>
-  queue: Promise<void>
-  createdAt: number
-  lineHandlers: Set<(line: string) => void>
-  exited: boolean
-}
-
-const managed = new Map<string, ManagedProcess>()
-const PROCESS_MAX_AGE_MS = 15 * 60 * 1000
-
-function buildStreamArgs(baseCmd: string[]): string[] {
-  const stripped = baseCmd.filter(a => a !== "-p" && a !== "--print")
-  return [
-    ...stripped,
-    "--print",
-    "--input-format", "stream-json",
-    "--output-format", "stream-json",
-    "--verbose",
-  ]
-}
-
-/**
- * Continuous read loop — reads stdout forever and dispatches every complete
- * line to all currently registered handlers. Started at spawn and never
- * awaited; it runs until the process exits.
- */
-async function startReadLoop(mp: ManagedProcess): Promise<void> {
-  const reader = (mp.proc.stdout as ReadableStream<Uint8Array>).getReader()
-  const dec = new TextDecoder()
-  let buf = ""
-
-  try {
-    while (true) {
-      const { done, value } = await reader.read()
-      if (done) break
-
-      buf += dec.decode(value, { stream: true })
-      const lines = buf.split("\n")
-      buf = lines.pop() ?? ""
-
-      for (const line of lines) {
-        const trimmed = line.trim()
-        if (!trimmed) continue
-        for (const handler of mp.lineHandlers) {
-          try { handler(trimmed) } catch {}
-        }
-      }
-    }
-  } finally {
-    mp.exited = true
-    // Notify all waiting handlers that the process is done
-    for (const handler of mp.lineHandlers) {
-      try { handler("") } catch {}
-    }
-    reader.releaseLock()
-  }
-}
-
-/**
- * Mark the process ready immediately — the system event only arrives after
- * the first stdin write, so we can't wait for it before returning. The line
- * dispatcher already routes all events to whoever is listening, so the
- * system/rate_limit_info events are harmlessly ignored by runRequest.
- */
-function drainInit(mp: ManagedProcess): Promise<void> {
-  log.info("subprocess ready")
-  mp.ready = true
-  return Promise.resolve()
-}
-
-async function getOrSpawn(key: string, baseCmd: string[]): Promise<ManagedProcess> {
-  const existing = managed.get(key)
-  if (existing) {
-    const age = Date.now() - existing.createdAt
-    if (age < PROCESS_MAX_AGE_MS && !existing.exited && existing.proc.exitCode === null) {
-      await existing.readyPromise
-      return existing
-    }
-    try { existing.proc.kill() } catch {}
-    managed.delete(key)
-  }
-
-  log.info("spawning warm subprocess", { key })
-  const args = buildStreamArgs(baseCmd)
-  const proc = Bun.spawn(args, {
-    stdin: "pipe",
-    stdout: "pipe",
-    stderr: "ignore",
-  })
-
-  const mp: ManagedProcess = {
-    proc,
-    ready: false,
-    readyPromise: Promise.resolve(), // replaced below
-    queue: Promise.resolve(),
-    createdAt: Date.now(),
-    lineHandlers: new Set(),
-    exited: false,
-  }
-
-  // Start the continuous read loop (not awaited — runs for lifetime of process)
-  startReadLoop(mp)
-
-  mp.readyPromise = drainInit(mp)
-  managed.set(key, mp)
-
-  await mp.readyPromise
-  return mp
-}
-
-// ---------------------------------------------------------------------------
-// Per-request: send message to stdin, collect stdout lines until "result"
-// ---------------------------------------------------------------------------
-
-async function runRequest(
-  mp: ManagedProcess,
-  message: string,
-  controller: ReadableStreamDefaultController<LanguageModelV2StreamPart>,
-) {
-  const enc = new TextEncoder()
-  const blockLengths: Record<number, number> = {}
-  let textStarted = false
-
-  const inputMsg = JSON.stringify({
-    type: "user",
-    message: { role: "user", content: [{ type: "text", text: message }] },
-  }) + "\n"
-
-  return new Promise<void>((resolve, reject) => {
-    const handler = (line: string) => {
-      if (!line) {
-        // process exited unexpectedly
-        mp.lineHandlers.delete(handler)
-        if (textStarted) controller.enqueue({ type: "text-end", id: TEXT_ID })
-        controller.enqueue({ type: "finish", finishReason: "stop", usage: { inputTokens: 0, outputTokens: 0, totalTokens: 0 } })
-        resolve()
-        return
-      }
-
-      try {
-        const evt = JSON.parse(line)
-
-        if (evt.type === "assistant" && evt.message?.content) {
-          evt.message.content.forEach((part: any, idx: number) => {
-            if (part.type !== "text" || typeof part.text !== "string") return
-            const prev = blockLengths[idx] ?? 0
-            const delta = part.text.slice(prev)
-            if (delta) {
-              if (!textStarted) {
-                controller.enqueue({ type: "text-start", id: TEXT_ID })
-                textStarted = true
-              }
-              controller.enqueue({ type: "text-delta", id: TEXT_ID, delta })
-              blockLengths[idx] = part.text.length
-            }
-          })
-        }
-
-        if (evt.type === "result") {
-          mp.lineHandlers.delete(handler)
-          if (textStarted) controller.enqueue({ type: "text-end", id: TEXT_ID })
-          const usage = evt.usage ?? {}
-          controller.enqueue({
-            type: "finish",
-            finishReason: evt.is_error ? "error" : "stop",
-            usage: {
-              inputTokens: usage.input_tokens ?? 0,
-              outputTokens: usage.output_tokens ?? 0,
-              totalTokens: (usage.input_tokens ?? 0) + (usage.output_tokens ?? 0),
-            },
-          })
-          resolve()
-        }
-      } catch {
-        // malformed JSON — skip
-      }
-    }
-
-    mp.lineHandlers.add(handler)
-
-    // Write to stdin after registering the handler so we can't miss any bytes
-    mp.proc.stdin.write(enc.encode(inputMsg))
-    mp.proc.stdin.flush?.()
-  })
-}
-
-// ---------------------------------------------------------------------------
-// Helpers
-// ---------------------------------------------------------------------------
-
-function parseCmd(cmd: string): string[] {
-  return cmd.trim().split(/\s+/)
-}
-
-function binaryName(command: string): string {
-  return command.split("/").pop() ?? command
-}
-
-function stripFlags(args: string[], flags: string[]): string[] {
-  const removed = new Set(flags)
-  const result: string[] = []
-  for (let i = 0; i < args.length; i++) {
-    const arg = args[i]
-    if (!removed.has(arg)) {
-      result.push(arg)
-      continue
-    }
-
-    // Remove an attached value for flags that accept one.
-    if (
-      arg === "-p" ||
-      arg === "--prompt" ||
-      arg === "-m" ||
-      arg === "--model" ||
-      arg === "--output-format" ||
-      arg === "--input-format"
-    ) {
-      i += 1
-    }
-  }
-  return result
-}
-
-function buildOneShotInvocation(baseCmd: string[], message: string): OneShotInvocation | undefined {
-  const [command, ...args] = baseCmd
-  const name = binaryName(command)
-
-  if (name === "claude") {
-    const stripped = stripFlags(args, ["-p", "--print", "--output-format", "--input-format"])
-    return {
-      mode: "one-shot",
-      argv: [command, ...stripped, "--print", "--output-format", "text", message],
-    }
-  }
-
-  if (name === "kimi") {
-    const stripped = stripFlags(args, ["-p", "--prompt", "--print", "--output-format", "--input-format"])
-    return {
-      mode: "one-shot",
-      argv: [command, ...stripped, "--print", "--output-format", "text", "--final-message-only", "-p", message],
-    }
-  }
-
-  if (name === "codex") {
-    const stripped = stripFlags(args, ["-m", "--model"])
-    return {
-      mode: "one-shot",
-      argv: [command, "exec", "--skip-git-repo-check", ...stripped, message],
-    }
-  }
-
-  if (name === "agy") {
-    // Antigravity (agy) one-shot: `agy --print <msg>` returns plain text. Do not
-    // pass --model/--print-timeout here — agy mis-parses flags after --print and
-    // treats them as the prompt. It uses the session's active model by default.
-    const stripped = stripFlags(args, ["-p", "--print", "--prompt", "-m", "--model", "--print-timeout"])
-    return {
-      mode: "one-shot",
-      argv: [command, ...stripped, "--print", message],
-    }
-  }
-
-  if (name === "qwen") {
-    // Qwen Code (gemini-cli fork): positional prompt = one-shot, plain text output.
-    // The warm stream-json path speaks Claude Code's protocol, which qwen does not
-    // implement, so qwen must go one-shot here or it returns empty. Auth (e.g.
-    // --auth-type qwen-oauth) is taken from the provider's configured baseCmd.
-    const stripped = stripFlags(args, ["-m", "--model", "-o", "--output-format", "-p", "--prompt"])
-    return {
-      mode: "one-shot",
-      argv: [command, ...stripped, "--output-format", "text", message],
-    }
-  }
-
-  return undefined
-}
-
-async function readText(stream?: ReadableStream<Uint8Array> | null): Promise<string> {
-  if (!stream) return ""
-  const reader = stream.getReader()
-  const decoder = new TextDecoder()
-  let text = ""
-  try {
-    while (true) {
-      const { done, value } = await reader.read()
-      if (done) break
-      text += decoder.decode(value, { stream: true })
-    }
-    text += decoder.decode()
-  } finally {
-    reader.releaseLock()
-  }
-  return text
-}
-
-async function runOneShotRequest(
-  invocation: OneShotInvocation,
-  controller: ReadableStreamDefaultController<LanguageModelV2StreamPart>,
-) {
-  const proc = Bun.spawn(invocation.argv, {
-    stdin: "ignore",
-    stdout: "pipe",
-    stderr: "pipe",
-  })
-
-  const [stdout, stderr, exitCode] = await Promise.all([
-    readText(proc.stdout),
-    readText(proc.stderr),
-    proc.exited,
-  ])
-
-  if (exitCode !== 0) {
-    const detail = stderr.trim() || stdout.trim() || `subprocess exited with code ${exitCode}`
-    throw new Error(detail)
-  }
-
-  const text = stdout.trim()
-  if (text) {
-    controller.enqueue({ type: "text-start", id: TEXT_ID })
-    controller.enqueue({ type: "text-delta", id: TEXT_ID, delta: text })
-    controller.enqueue({ type: "text-end", id: TEXT_ID })
-  }
-
-  controller.enqueue({
-    type: "finish",
-    finishReason: "stop",
-    usage: {
-      inputTokens: 0,
-      outputTokens: 0,
-      totalTokens: 0,
-    },
-  })
-}
-
-function extractLastUserText(prompt: any[]): string {
-  let last = ""
-  for (const msg of prompt) {
-    if (msg.role !== "user") continue
-    const text = Array.isArray(msg.content)
-      ? msg.content.filter((p: any) => p.type === "text").map((p: any) => String(p.text ?? "")).join("")
-      : String(msg.content ?? "")
-    if (text) last = text
-  }
-  return last
-}
-
-// ---------------------------------------------------------------------------
-// Language model
-// ---------------------------------------------------------------------------
-
 export class SubprocessLanguageModel implements LanguageModelV2 {
   readonly specificationVersion = "v2" as const
   readonly provider = "subprocess"
   readonly defaultObjectGenerationMode = undefined
+  readonly supportedUrls: Record<string, RegExp[]> = {}
 
   readonly modelId: string
-  private readonly baseCmd: string[]
-  private readonly poolKey: string
+  private readonly providerID: string
 
-  constructor(subprocessCmd: string, modelId: string) {
-    this.baseCmd = parseCmd(subprocessCmd)
+  constructor(providerID: string, modelId: string) {
+    this.providerID = providerID
     this.modelId = modelId
-    this.poolKey = subprocessCmd
   }
 
   async doGenerate(options: any): Promise<any> {
@@ -422,63 +55,74 @@ export class SubprocessLanguageModel implements LanguageModelV2 {
     rawCall: { rawPrompt: unknown; rawSettings: Record<string, unknown> }
   }> {
     const message = extractLastUserText(options.prompt ?? [])
-    const poolKey = this.poolKey
-    const baseCmd = this.baseCmd
-
     if (!message) {
       return emptyStream(options.prompt)
     }
 
-    const oneShot = buildOneShotInvocation(baseCmd, message)
-    if (oneShot) {
-      const stream = new ReadableStream<LanguageModelV2StreamPart>({
-        async start(controller) {
-          controller.enqueue({ type: "stream-start", warnings: [] })
-          try {
-            await runOneShotRequest(oneShot, controller)
-          } catch (err) {
-            log.error("subprocess request failed", { error: err, argv: oneShot.argv })
-            controller.enqueue({ type: "error", error: err })
-            controller.enqueue({
-              type: "finish",
-              finishReason: "error",
-              usage: { inputTokens: 0, outputTokens: 0, totalTokens: 0 },
-            })
-          } finally {
-            controller.close()
-          }
-        },
-      })
-
-      return {
-        stream,
-        rawCall: { rawPrompt: message, rawSettings: { argv: oneShot.argv } },
-      }
-    }
-
-    const mp = await getOrSpawn(poolKey, baseCmd)
+    const { runtime, driver } = await RuntimeDriverFactory.resolveCli(this.providerID)
+    const task = await driver.assign({
+      taskId: generateTaskId(),
+      prompt: message,
+    })
 
     const stream = new ReadableStream<LanguageModelV2StreamPart>({
-      async start(controller) {
+      start: async (controller) => {
         controller.enqueue({ type: "stream-start", warnings: [] })
 
-        // Serialize concurrent requests through a promise chain
-        const prev = mp.queue
-        let myRelease!: () => void
-        const mySlot = new Promise<void>(r => { myRelease = r })
-        mp.queue = prev.then(() => mySlot)
+        let textStarted = false
+        let finished = false
 
-        await prev
+        const finish = (reason: string, usage?: { inputTokens: number; outputTokens: number; totalTokens: number }) => {
+          if (finished) return
+          finished = true
+          if (textStarted) {
+            controller.enqueue({ type: "text-end", id: TEXT_ID })
+          }
+          controller.enqueue({
+            type: "finish",
+            finishReason: reason as any,
+            usage: usage ?? { inputTokens: 0, outputTokens: 0, totalTokens: 0 },
+          })
+        }
 
         try {
-          await runRequest(mp, message, controller)
+          await RuntimeService.markBusy(runtime.id, true)
+
+          for await (const event of driver.stream(task)) {
+            if (event.type === "text_delta") {
+              if (!textStarted) {
+                controller.enqueue({ type: "text-start", id: TEXT_ID })
+                textStarted = true
+              }
+              controller.enqueue({ type: "text-delta", id: TEXT_ID, delta: event.delta })
+              continue
+            }
+
+            if (event.type === "error") {
+              const err = event.error instanceof Error ? event.error : new Error(String(event.error))
+              log.error("driver stream error", { error: err, taskId: task.taskId })
+              controller.enqueue({ type: "error", error: err })
+              finish("error")
+              continue
+            }
+
+            if (event.type === "finish") {
+              finish(event.finishReason, event.usage)
+            }
+
+            // status / tool_call / tool_result events are intentionally not
+            // forwarded to the AI SDK stream.
+          }
+
+          if (!finished) {
+            finish("stop")
+          }
         } catch (err) {
-          log.error("subprocess request failed", { error: err })
+          log.error("subprocess model stream failed", { error: err, taskId: task.taskId })
           controller.enqueue({ type: "error", error: err })
-          try { mp.proc.kill() } catch {}
-          managed.delete(poolKey)
+          finish("error")
         } finally {
-          myRelease()
+          await RuntimeService.markBusy(runtime.id, false)
           controller.close()
         }
       },
@@ -486,7 +130,7 @@ export class SubprocessLanguageModel implements LanguageModelV2 {
 
     return {
       stream,
-      rawCall: { rawPrompt: message, rawSettings: {} },
+      rawCall: { rawPrompt: message, rawSettings: { runtimeId: runtime.id, cliName: this.providerID } },
     }
   }
 }
@@ -495,11 +139,34 @@ function emptyStream(rawPrompt: unknown) {
   return {
     stream: new ReadableStream<LanguageModelV2StreamPart>({
       start(c) {
-        c.enqueue({ type: "stream-start", warnings: [] } as any)
-        c.enqueue({ type: "finish", finishReason: "stop", usage: { inputTokens: 0, outputTokens: 0, totalTokens: 0 } } as any)
+        c.enqueue({ type: "stream-start", warnings: [] })
+        c.enqueue({
+          type: "finish",
+          finishReason: "stop",
+          usage: { inputTokens: 0, outputTokens: 0, totalTokens: 0 },
+        })
         c.close()
       },
     }),
     rawCall: { rawPrompt, rawSettings: {} as Record<string, unknown> },
   }
+}
+
+function extractLastUserText(prompt: any[]): string {
+  let last = ""
+  for (const msg of prompt) {
+    if (msg.role !== "user") continue
+    const text = Array.isArray(msg.content)
+      ? msg.content
+          .filter((p: any) => p.type === "text")
+          .map((p: any) => String(p.text ?? ""))
+          .join("")
+      : String(msg.content ?? "")
+    if (text) last = text
+  }
+  return last
+}
+
+function generateTaskId(): string {
+  return `task-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`
 }

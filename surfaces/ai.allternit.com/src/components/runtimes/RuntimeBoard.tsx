@@ -10,6 +10,8 @@ import {
   Play,
   Square,
   Terminal,
+  Paperclip,
+  X,
 } from '@phosphor-icons/react';
 import { GlassSurface } from '@/design/GlassSurface';
 import { useToast } from '@/hooks/use-toast';
@@ -20,6 +22,7 @@ import {
   type ExecutionLog,
   type AgentEvent,
   type RuntimeClientOptions,
+  type AgentTask,
 } from '@allternit/sdk/runtime';
 
 export interface RuntimeBoardProps {
@@ -56,6 +59,8 @@ export function RuntimeBoard({ baseUrl, direct, getToken }: RuntimeBoardProps) {
   const [prompt, setPrompt] = useState('');
   const [running, setRunning] = useState(false);
   const [streamEvents, setStreamEvents] = useState<AgentEvent[]>([]);
+  const [attachments, setAttachments] = useState<File[]>([]);
+  const fileInputRef = React.useRef<HTMLInputElement>(null);
 
   const fetchRuntimes = useCallback(async () => {
     try {
@@ -99,14 +104,31 @@ export function RuntimeBoard({ baseUrl, direct, getToken }: RuntimeBoardProps) {
     void fetchLogs();
   }, [fetchLogs]);
 
+  async function fileToAttachment(file: File): Promise<{ filename: string; mimeType: string; content: string | Uint8Array }> {
+    const isText = file.type.startsWith('text/') || file.name.endsWith('.txt');
+    if (isText) {
+      const text = await file.text();
+      return { filename: file.name, mimeType: file.type || 'text/plain', content: text };
+    }
+    const buffer = await file.arrayBuffer();
+    return {
+      filename: file.name,
+      mimeType: file.type || 'application/octet-stream',
+      content: new Uint8Array(buffer),
+    };
+  }
+
   async function runTask(cliName: string) {
     if (!selectedRuntimeId || !prompt.trim()) return;
     setRunning(true);
     setStreamEvents([]);
     try {
+      const taskAttachments = attachments.length > 0 ? await Promise.all(attachments.map(fileToAttachment)) : undefined;
       const { handle } = await client.assignTask(selectedRuntimeId, cliName, {
         prompt: prompt.trim(),
+        attachments: taskAttachments,
       });
+      setAttachments([]);
       addToast({ title: 'Running', description: `Task ${handle.taskId.slice(0, 8)} started`, type: 'info' });
       for await (const event of client.streamTask(handle.runtimeId, handle.taskId)) {
         setStreamEvents((prev) => [...prev, event]);
@@ -282,6 +304,46 @@ export function RuntimeBoard({ baseUrl, direct, getToken }: RuntimeBoardProps) {
                     fontSize: '13px',
                   }}
                 />
+                <input
+                  ref={fileInputRef}
+                  aria-label="Attach files"
+                  type="file"
+                  multiple
+                  accept="text/*,image/*,.txt,.md,.json,.yaml,.yml"
+                  onChange={(e) => {
+                    if (e.currentTarget.files) {
+                      setAttachments((prev) => [...prev, ...Array.from(e.currentTarget.files!)]);
+                    }
+                    e.currentTarget.value = '';
+                  }}
+                  style={{ display: 'none' }}
+                />
+                <button
+                  type="button"
+                  disabled={running}
+                  onClick={() => fileInputRef.current?.click()}
+                  title="Attach files"
+                  style={{
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    gap: '6px',
+                    padding: '8px 12px',
+                    borderRadius: '6px',
+                    border: '1px solid var(--border-subtle)',
+                    backgroundColor: 'var(--bg-secondary)',
+                    color: 'var(--text-primary)',
+                    fontSize: '13px',
+                    fontWeight: 600,
+                    cursor: running ? 'not-allowed' : 'pointer',
+                    opacity: running ? 0.5 : 1,
+                  }}
+                >
+                  <Paperclip size={16} />
+                  {attachments.length > 0 && (
+                    <span style={{ fontSize: '11px', marginLeft: '2px' }}>{attachments.length}</span>
+                  )}
+                </button>
                 {selectedRuntime.agentClis.map((cli) => (
                   <button
                     key={cli.name}
@@ -308,6 +370,48 @@ export function RuntimeBoard({ baseUrl, direct, getToken }: RuntimeBoardProps) {
                   </button>
                 ))}
               </div>
+              {attachments.length > 0 && (
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px', marginTop: '8px' }}>
+                  {attachments.map((file, index) => (
+                    <div
+                      key={`${file.name}-${index}`}
+                      style={{
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        gap: '4px',
+                        padding: '4px 8px',
+                        borderRadius: '4px',
+                        backgroundColor: 'var(--bg-secondary)',
+                        border: '1px solid var(--border-subtle)',
+                        fontSize: '12px',
+                        color: 'var(--text-secondary)',
+                      }}
+                    >
+                      <Paperclip size={12} />
+                      <span style={{ maxWidth: 180, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                        {file.name}
+                      </span>
+                      <button
+                        type="button"
+                        onClick={() => setAttachments((prev) => prev.filter((_, i) => i !== index))}
+                        title="Remove attachment"
+                        style={{
+                          display: 'inline-flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          padding: '2px',
+                          border: 'none',
+                          background: 'transparent',
+                          color: 'var(--text-tertiary)',
+                          cursor: 'pointer',
+                        }}
+                      >
+                        <X size={12} />
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
           )}
 

@@ -52,8 +52,8 @@ export interface ProviderConfig {
 }
 
 // Provider metadata registry - 15 providers total
-export const PROVIDER_REGISTRY: Record<string, ProviderMetadata> = {
-  anthropic: {
+export const PROVIDER_REGISTRY: ProviderMetadata[] = [
+  {
     id: 'anthropic',
     name: 'Anthropic',
     description: 'Claude AI models by Anthropic',
@@ -75,7 +75,7 @@ export const PROVIDER_REGISTRY: Record<string, ProviderMetadata> = {
     maxContextWindow: 200000,
   },
   
-  openai: {
+  {
     id: 'openai',
     name: 'OpenAI',
     description: 'GPT models by OpenAI',
@@ -97,7 +97,7 @@ export const PROVIDER_REGISTRY: Record<string, ProviderMetadata> = {
     maxContextWindow: 128000,
   },
   
-  google: {
+  {
     id: 'google',
     name: 'Google AI',
     description: 'Gemini models by Google',
@@ -118,7 +118,7 @@ export const PROVIDER_REGISTRY: Record<string, ProviderMetadata> = {
     maxContextWindow: 1000000,
   },
   
-  ollama: {
+  {
     id: 'ollama',
     name: 'Ollama',
     description: 'Local LLM server',
@@ -140,7 +140,7 @@ export const PROVIDER_REGISTRY: Record<string, ProviderMetadata> = {
     maxContextWindow: 32768,
   },
   
-  mistral: {
+  {
     id: 'mistral',
     name: 'Mistral AI',
     description: 'Mistral language models',
@@ -162,7 +162,7 @@ export const PROVIDER_REGISTRY: Record<string, ProviderMetadata> = {
     maxContextWindow: 32000,
   },
   
-  cohere: {
+  {
     id: 'cohere',
     name: 'Cohere',
     description: 'Command models by Cohere',
@@ -184,7 +184,7 @@ export const PROVIDER_REGISTRY: Record<string, ProviderMetadata> = {
     maxContextWindow: 128000,
   },
   
-  groq: {
+  {
     id: 'groq',
     name: 'Groq',
     description: 'Fast inference for open models',
@@ -206,7 +206,7 @@ export const PROVIDER_REGISTRY: Record<string, ProviderMetadata> = {
     maxContextWindow: 32768,
   },
   
-  together: {
+  {
     id: 'together',
     name: 'Together AI',
     description: 'Inference for open source models',
@@ -227,7 +227,7 @@ export const PROVIDER_REGISTRY: Record<string, ProviderMetadata> = {
     maxContextWindow: 32768,
   },
   
-  azure: {
+  {
     id: 'azure',
     name: 'Azure OpenAI',
     description: 'OpenAI models on Azure',
@@ -248,7 +248,7 @@ export const PROVIDER_REGISTRY: Record<string, ProviderMetadata> = {
     maxContextWindow: 128000,
   },
   
-  bedrock: {
+  {
     id: 'bedrock',
     name: 'AWS Bedrock',
     description: 'Foundation models on AWS',
@@ -271,7 +271,7 @@ export const PROVIDER_REGISTRY: Record<string, ProviderMetadata> = {
   },
 
   // New Chinese/Global providers
-  kimi: {
+  {
     id: 'kimi',
     name: 'Kimi (Moonshot AI)',
     description: 'Moonshot AI\'s Kimi assistant',
@@ -292,7 +292,7 @@ export const PROVIDER_REGISTRY: Record<string, ProviderMetadata> = {
     maxContextWindow: 128000,
   },
 
-  qwen: {
+  {
     id: 'qwen',
     name: 'Qwen (Alibaba)',
     description: 'Alibaba Cloud\'s Qwen models',
@@ -314,7 +314,7 @@ export const PROVIDER_REGISTRY: Record<string, ProviderMetadata> = {
     maxContextWindow: 32000,
   },
 
-  minimax: {
+  {
     id: 'minimax',
     name: 'MiniMax',
     description: 'MiniMax AI models',
@@ -336,7 +336,7 @@ export const PROVIDER_REGISTRY: Record<string, ProviderMetadata> = {
     maxContextWindow: 32000,
   },
 
-  glm: {
+  {
     id: 'glm',
     name: 'ChatGLM (Zhipu AI)',
     description: 'Zhipu AI\'s ChatGLM models',
@@ -359,7 +359,7 @@ export const PROVIDER_REGISTRY: Record<string, ProviderMetadata> = {
     maxContextWindow: 128000,
   },
 
-  copilot: {
+  {
     id: 'copilot',
     name: 'GitHub Copilot',
     description: 'GitHub\'s AI pair programmer',
@@ -380,7 +380,7 @@ export const PROVIDER_REGISTRY: Record<string, ProviderMetadata> = {
   },
 
   // Mock provider for testing
-  mock: {
+  {
     id: 'mock',
     name: 'Mock (Testing)',
     description: 'Mock provider for testing without API keys',
@@ -400,7 +400,7 @@ export const PROVIDER_REGISTRY: Record<string, ProviderMetadata> = {
     ],
     maxContextWindow: 32000,
   },
-};
+];
 
 // Provider factory
 export function createProvider(id: string, config: ProviderConfig) {
@@ -461,38 +461,38 @@ export function createProvider(id: string, config: ProviderConfig) {
 
 // List all providers
 export function listProviders(): ProviderMetadata[] {
-  return Object.values(PROVIDER_REGISTRY);
+  return PROVIDER_REGISTRY;
 }
 
 // Get provider by ID
 export function getProvider(id: string): ProviderMetadata | undefined {
-  return PROVIDER_REGISTRY[id];
+  return PROVIDER_REGISTRY.find((p) => p.id === id);
 }
 
 // Find providers by feature
 export function findProvidersByFeature(
   feature: keyof ProviderMetadata['features']
 ): ProviderMetadata[] {
-  return listProviders().filter((p) => p.features[feature]);
+  return PROVIDER_REGISTRY.filter((p) => p.features[feature]);
 }
 
 // Check if provider exists
 export function hasProvider(id: string): boolean {
-  return id in PROVIDER_REGISTRY;
+  return PROVIDER_REGISTRY.some((p) => p.id === id);
 }
 
 // Get default model for provider
 export function getDefaultModel(providerId: string): string | undefined {
-  const provider = PROVIDER_REGISTRY[providerId];
+  const provider = PROVIDER_REGISTRY.find((p) => p.id === providerId);
   return provider?.defaultModels[0];
 }
 
 // Type guard for provider ID
-export function isValidProvider(id: string): id is keyof typeof PROVIDER_REGISTRY {
-  return id in PROVIDER_REGISTRY;
+export function isValidProvider(id: string): boolean {
+  return hasProvider(id);
 }
 
 // Get providers by auth type
 export function getProvidersByAuthType(authType: ProviderMetadata['authType']): ProviderMetadata[] {
-  return listProviders().filter((p) => p.authType === authType);
+  return PROVIDER_REGISTRY.filter((p) => p.authType === authType);
 }

@@ -91,19 +91,19 @@ function defaultCodeExecutionRunner(): CodeExecutionRunner {
       const flag = request.language.toLowerCase().startsWith('node') || request.language.toLowerCase() === 'javascript' ? '-e' : '-c';
       try {
         const { stdout, stderr } = await execFile('sh', ['-c', `${interpreter} ${flag} '${finalCode.replace(/'/g, "'\\''")}'`], {
-          timeout: request.timeout_seconds * 1000,
+          timeout: (request.timeout_seconds ?? 30) * 1000,
           killSignal: 'SIGTERM',
         });
         return {
-          stdout: stdout ?? '',
-          stderr: stderr ?? '',
+          stdout: stdout?.toString() ?? '',
+          stderr: stderr?.toString() ?? '',
           exit_code: 0,
           success: true,
         };
       } catch (error: any) {
         return {
-          stdout: error.stdout ?? '',
-          stderr: error.stderr ?? error.message ?? '',
+          stdout: error.stdout?.toString() ?? '',
+          stderr: error.stderr?.toString() ?? error.message ?? '',
           exit_code: typeof error.code === 'number' ? error.code : 1,
           success: false,
         };

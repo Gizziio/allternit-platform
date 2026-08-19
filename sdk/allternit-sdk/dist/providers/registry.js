@@ -12,230 +12,252 @@ import { AllternitGroq } from './groq/index.js';
 import { AllternitTogether } from './together/index.js';
 import { AllternitAzureOpenAI } from './azure/index.js';
 import { AllternitBedrock } from './bedrock/index.js';
+import { AllternitMLX } from './mlx/index.js';
 /**
  * Registry of all supported providers
  */
-export const PROVIDER_REGISTRY = new Map([
-    ['anthropic', {
+export const PROVIDER_REGISTRY = [
+    {
+        name: 'anthropic',
+        class: AllternitAI,
+        metadata: {
             name: 'anthropic',
-            class: AllternitAI,
-            metadata: {
-                name: 'anthropic',
-                displayName: 'Anthropic Claude',
-                description: 'Anthropic\'s Claude models with industry-leading context windows',
-                features: ['streaming', 'tools', 'vision', 'json-mode', 'system-prompt', 'multi-modal'],
-                defaultModel: 'claude-3-5-sonnet-20241022',
-                models: [
-                    'claude-3-5-sonnet-20241022',
-                    'claude-3-5-haiku-20241022',
-                    'claude-3-opus-20240229',
-                    'claude-3-sonnet-20240229',
-                    'claude-3-haiku-20240307',
-                ],
-                requiresApiKey: true,
-                supportsStreaming: true,
-                supportsTools: true,
-                supportsVision: true,
-            },
-        }],
-    ['openai', {
+            displayName: 'Anthropic Claude',
+            description: 'Anthropic\'s Claude models with industry-leading context windows',
+            features: ['streaming', 'tools', 'vision', 'json-mode', 'system-prompt', 'multi-modal'],
+            defaultModel: 'claude-3-5-sonnet-20241022',
+            models: [
+                'claude-3-5-sonnet-20241022',
+                'claude-3-5-haiku-20241022',
+                'claude-3-opus-20240229',
+                'claude-3-sonnet-20240229',
+                'claude-3-haiku-20240307',
+            ],
+            requiresApiKey: true,
+            supportsStreaming: true,
+            supportsTools: true,
+            supportsVision: true,
+        },
+    },
+    {
+        name: 'openai',
+        class: AllternitOpenAI,
+        metadata: {
             name: 'openai',
-            class: AllternitOpenAI,
-            metadata: {
-                name: 'openai',
-                displayName: 'OpenAI',
-                description: 'OpenAI GPT models including GPT-4 and GPT-3.5',
-                features: ['streaming', 'tools', 'vision', 'json-mode', 'function-calling', 'system-prompt', 'fine-tuning'],
-                defaultModel: 'gpt-4o',
-                models: [
-                    'gpt-4o',
-                    'gpt-4o-mini',
-                    'gpt-4-turbo',
-                    'gpt-4',
-                    'gpt-3.5-turbo',
-                ],
-                requiresApiKey: true,
-                supportsStreaming: true,
-                supportsTools: true,
-                supportsVision: true,
-            },
-        }],
-    ['google', {
+            displayName: 'OpenAI',
+            description: 'OpenAI GPT models including GPT-4 and GPT-3.5',
+            features: ['streaming', 'tools', 'vision', 'json-mode', 'function-calling', 'system-prompt', 'fine-tuning'],
+            defaultModel: 'gpt-4o',
+            models: [
+                'gpt-4o',
+                'gpt-4o-mini',
+                'gpt-4-turbo',
+                'gpt-4',
+                'gpt-3.5-turbo',
+            ],
+            requiresApiKey: true,
+            supportsStreaming: true,
+            supportsTools: true,
+            supportsVision: true,
+        },
+    },
+    {
+        name: 'google',
+        class: AllternitGoogleAI,
+        metadata: {
             name: 'google',
-            class: AllternitGoogleAI,
-            metadata: {
-                name: 'google',
-                displayName: 'Google AI',
-                description: 'Google Gemini models with native multi-modal capabilities',
-                features: ['streaming', 'tools', 'vision', 'json-mode', 'function-calling', 'system-prompt', 'multi-modal'],
-                defaultModel: 'gemini-1.5-pro',
-                models: [
-                    'gemini-1.5-pro',
-                    'gemini-1.5-flash',
-                    'gemini-1.5-flash-8b',
-                    'gemini-1.0-pro',
-                ],
-                requiresApiKey: true,
-                supportsStreaming: true,
-                supportsTools: true,
-                supportsVision: true,
-            },
-        }],
-    ['ollama', {
+            displayName: 'Google AI',
+            description: 'Google Gemini models with native multi-modal capabilities',
+            features: ['streaming', 'tools', 'vision', 'json-mode', 'function-calling', 'system-prompt', 'multi-modal'],
+            defaultModel: 'gemini-1.5-pro',
+            models: [
+                'gemini-1.5-pro',
+                'gemini-1.5-flash',
+                'gemini-1.5-flash-8b',
+                'gemini-1.0-pro',
+            ],
+            requiresApiKey: true,
+            supportsStreaming: true,
+            supportsTools: true,
+            supportsVision: true,
+        },
+    },
+    {
+        name: 'ollama',
+        class: AllternitOllama,
+        metadata: {
             name: 'ollama',
-            class: AllternitOllama,
-            metadata: {
-                name: 'ollama',
-                displayName: 'Ollama',
-                description: 'Local open-source models via Ollama',
-                features: ['streaming', 'tools', 'system-prompt'],
-                defaultModel: 'llama3.2',
-                models: [
-                    'llama3.2',
-                    'llama3.1',
-                    'llama3',
-                    'mistral',
-                    'mixtral',
-                    'codellama',
-                    'phi4',
-                    'qwen2.5',
-                ],
-                requiresApiKey: false,
-                supportsStreaming: true,
-                supportsTools: true,
-                supportsVision: false,
-            },
-        }],
-    ['mistral', {
+            displayName: 'Ollama',
+            description: 'Local open-source models via Ollama',
+            features: ['streaming', 'tools', 'system-prompt'],
+            defaultModel: 'llama3.2',
+            models: [
+                'llama3.2',
+                'llama3.1',
+                'llama3',
+                'mistral',
+                'mixtral',
+                'codellama',
+                'phi4',
+                'qwen2.5',
+            ],
+            requiresApiKey: false,
+            supportsStreaming: true,
+            supportsTools: true,
+            supportsVision: false,
+        },
+    },
+    {
+        name: 'mistral',
+        class: AllternitMistral,
+        metadata: {
             name: 'mistral',
-            class: AllternitMistral,
-            metadata: {
-                name: 'mistral',
-                displayName: 'Mistral AI',
-                description: 'Mistral AI models with high performance and efficiency',
-                features: ['streaming', 'tools', 'json-mode', 'function-calling', 'system-prompt'],
-                defaultModel: 'mistral-large-latest',
-                models: [
-                    'mistral-large-latest',
-                    'mistral-small-latest',
-                    'codestral-latest',
-                    'pixtral-large-latest',
-                    'ministral-3b-latest',
-                    'ministral-8b-latest',
-                ],
-                requiresApiKey: true,
-                supportsStreaming: true,
-                supportsTools: true,
-                supportsVision: false,
-            },
-        }],
-    ['cohere', {
+            displayName: 'Mistral AI',
+            description: 'Mistral AI models with high performance and efficiency',
+            features: ['streaming', 'tools', 'json-mode', 'function-calling', 'system-prompt'],
+            defaultModel: 'mistral-large-latest',
+            models: [
+                'mistral-large-latest',
+                'mistral-small-latest',
+                'codestral-latest',
+                'pixtral-large-latest',
+                'ministral-3b-latest',
+                'ministral-8b-latest',
+            ],
+            requiresApiKey: true,
+            supportsStreaming: true,
+            supportsTools: true,
+            supportsVision: false,
+        },
+    },
+    {
+        name: 'cohere',
+        class: AllternitCohere,
+        metadata: {
             name: 'cohere',
-            class: AllternitCohere,
-            metadata: {
-                name: 'cohere',
-                displayName: 'Cohere',
-                description: 'Cohere Command models with enterprise capabilities',
-                features: ['streaming', 'tools', 'json-mode', 'system-prompt'],
-                defaultModel: 'command-r-plus',
-                models: [
-                    'command-r-plus',
-                    'command-r',
-                    'command',
-                    'command-light',
-                ],
-                requiresApiKey: true,
-                supportsStreaming: true,
-                supportsTools: true,
-                supportsVision: false,
-            },
-        }],
-    ['groq', {
+            displayName: 'Cohere',
+            description: 'Cohere Command models with enterprise capabilities',
+            features: ['streaming', 'tools', 'json-mode', 'system-prompt'],
+            defaultModel: 'command-r-plus',
+            models: [
+                'command-r-plus',
+                'command-r',
+                'command',
+                'command-light',
+            ],
+            requiresApiKey: true,
+            supportsStreaming: true,
+            supportsTools: true,
+            supportsVision: false,
+        },
+    },
+    {
+        name: 'groq',
+        class: AllternitGroq,
+        metadata: {
             name: 'groq',
-            class: AllternitGroq,
-            metadata: {
-                name: 'groq',
-                displayName: 'Groq',
-                description: 'Ultra-fast inference with Groq LPU',
-                features: ['streaming', 'tools', 'json-mode', 'function-calling', 'system-prompt'],
-                defaultModel: 'llama-3.3-70b-versatile',
-                models: [
-                    'llama-3.3-70b-versatile',
-                    'llama-3.1-8b-instant',
-                    'mixtral-8x7b-32768',
-                    'gemma2-9b-it',
-                ],
-                requiresApiKey: true,
-                supportsStreaming: true,
-                supportsTools: true,
-                supportsVision: false,
-            },
-        }],
-    ['together', {
+            displayName: 'Groq',
+            description: 'Ultra-fast inference with Groq LPU',
+            features: ['streaming', 'tools', 'json-mode', 'function-calling', 'system-prompt'],
+            defaultModel: 'llama-3.3-70b-versatile',
+            models: [
+                'llama-3.3-70b-versatile',
+                'llama-3.1-8b-instant',
+                'mixtral-8x7b-32768',
+                'gemma2-9b-it',
+            ],
+            requiresApiKey: true,
+            supportsStreaming: true,
+            supportsTools: true,
+            supportsVision: false,
+        },
+    },
+    {
+        name: 'together',
+        class: AllternitTogether,
+        metadata: {
             name: 'together',
-            class: AllternitTogether,
-            metadata: {
-                name: 'together',
-                displayName: 'Together AI',
-                description: 'Open-source models hosted on Together AI',
-                features: ['streaming', 'tools', 'json-mode', 'function-calling', 'system-prompt'],
-                defaultModel: 'meta-llama/Llama-3.3-70B-Instruct-Turbo',
-                models: [
-                    'meta-llama/Llama-3.3-70B-Instruct-Turbo',
-                    'meta-llama/Llama-3.2-3B-Instruct-Turbo',
-                    'mistralai/Mixtral-8x7B-Instruct-v0.1',
-                    'Qwen/Qwen2.5-72B-Instruct-Turbo',
-                ],
-                requiresApiKey: true,
-                supportsStreaming: true,
-                supportsTools: true,
-                supportsVision: false,
-            },
-        }],
-    ['azure', {
+            displayName: 'Together AI',
+            description: 'Open-source models hosted on Together AI',
+            features: ['streaming', 'tools', 'json-mode', 'function-calling', 'system-prompt'],
+            defaultModel: 'meta-llama/Llama-3.3-70B-Instruct-Turbo',
+            models: [
+                'meta-llama/Llama-3.3-70B-Instruct-Turbo',
+                'meta-llama/Llama-3.2-3B-Instruct-Turbo',
+                'mistralai/Mixtral-8x7B-Instruct-v0.1',
+                'Qwen/Qwen2.5-72B-Instruct-Turbo',
+            ],
+            requiresApiKey: true,
+            supportsStreaming: true,
+            supportsTools: true,
+            supportsVision: false,
+        },
+    },
+    {
+        name: 'azure',
+        class: AllternitAzureOpenAI,
+        metadata: {
             name: 'azure',
-            class: AllternitAzureOpenAI,
-            metadata: {
-                name: 'azure',
-                displayName: 'Azure OpenAI',
-                description: 'Microsoft Azure OpenAI Service',
-                features: ['streaming', 'tools', 'vision', 'json-mode', 'function-calling', 'system-prompt'],
-                defaultModel: 'gpt-4o',
-                models: [
-                    'gpt-4o',
-                    'gpt-4o-mini',
-                    'gpt-4-turbo',
-                    'gpt-4',
-                    'gpt-35-turbo',
-                ],
-                requiresApiKey: true,
-                supportsStreaming: true,
-                supportsTools: true,
-                supportsVision: true,
-            },
-        }],
-    ['bedrock', {
+            displayName: 'Azure OpenAI',
+            description: 'Microsoft Azure OpenAI Service',
+            features: ['streaming', 'tools', 'vision', 'json-mode', 'function-calling', 'system-prompt'],
+            defaultModel: 'gpt-4o',
+            models: [
+                'gpt-4o',
+                'gpt-4o-mini',
+                'gpt-4-turbo',
+                'gpt-4',
+                'gpt-35-turbo',
+            ],
+            requiresApiKey: true,
+            supportsStreaming: true,
+            supportsTools: true,
+            supportsVision: true,
+        },
+    },
+    {
+        name: 'bedrock',
+        class: AllternitBedrock,
+        metadata: {
             name: 'bedrock',
-            class: AllternitBedrock,
-            metadata: {
-                name: 'bedrock',
-                displayName: 'AWS Bedrock',
-                description: 'Amazon Bedrock managed foundation models',
-                features: ['streaming', 'tools', 'vision', 'json-mode', 'function-calling', 'system-prompt'],
-                defaultModel: 'claude-3-5-sonnet',
-                models: [
-                    'claude-3-5-sonnet',
-                    'claude-3-haiku',
-                    'claude-3-opus',
-                    'claude-3-sonnet',
-                ],
-                requiresApiKey: true,
-                supportsStreaming: true,
-                supportsTools: true,
-                supportsVision: true,
-            },
-        }],
-]);
+            displayName: 'AWS Bedrock',
+            description: 'Amazon Bedrock managed foundation models',
+            features: ['streaming', 'tools', 'vision', 'json-mode', 'function-calling', 'system-prompt'],
+            defaultModel: 'claude-3-5-sonnet',
+            models: [
+                'claude-3-5-sonnet',
+                'claude-3-haiku',
+                'claude-3-opus',
+                'claude-3-sonnet',
+            ],
+            requiresApiKey: true,
+            supportsStreaming: true,
+            supportsTools: true,
+            supportsVision: true,
+        },
+    },
+    {
+        name: 'mlx',
+        class: AllternitMLX,
+        metadata: {
+            name: 'mlx',
+            displayName: 'Apple MLX',
+            description: 'Local on-device inference via Apple MLX',
+            features: ['streaming', 'system-prompt'],
+            defaultModel: 'default',
+            models: [
+                'default',
+                'mlx-community/Qwen2.5-7B-Instruct-4bit',
+                'mlx-community/Meta-Llama-3.1-8B-Instruct-4bit',
+                'mlx-community/Mistral-7B-Instruct-v0.3-4bit',
+            ],
+            requiresApiKey: false,
+            supportsStreaming: true,
+            supportsTools: false,
+            supportsVision: false,
+        },
+    },
+];
 /**
  * Create a provider instance
  * @param name - Provider name
@@ -243,7 +265,7 @@ export const PROVIDER_REGISTRY = new Map([
  * @returns Provider instance
  */
 export function createProvider(name, config) {
-    const entry = PROVIDER_REGISTRY.get(name.toLowerCase());
+    const entry = PROVIDER_REGISTRY.find(e => e.name === name.toLowerCase());
     if (!entry) {
         throw new Error(`Provider "${name}" not found. Available: ${listProviders().join(', ')}`);
     }
@@ -254,7 +276,7 @@ export function createProvider(name, config) {
  * @returns Array of provider names
  */
 export function listProviders() {
-    return Array.from(PROVIDER_REGISTRY.keys());
+    return PROVIDER_REGISTRY.map(entry => entry.name);
 }
 /**
  * Get provider metadata
@@ -262,7 +284,7 @@ export function listProviders() {
  * @returns Provider metadata or undefined if not found
  */
 export function getProvider(name) {
-    return PROVIDER_REGISTRY.get(name.toLowerCase())?.metadata;
+    return PROVIDER_REGISTRY.find(e => e.name === name.toLowerCase())?.metadata;
 }
 /**
  * Find providers that support specific features
@@ -270,7 +292,7 @@ export function getProvider(name) {
  * @returns Array of provider metadata matching all features
  */
 export function findProvidersByFeature(...features) {
-    return Array.from(PROVIDER_REGISTRY.values())
+    return PROVIDER_REGISTRY
         .filter(entry => features.every(f => entry.metadata.features.includes(f)))
         .map(entry => entry.metadata);
 }

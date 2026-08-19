@@ -263,7 +263,7 @@ export async function completeViaLocal(
     );
   }
 
-  const result: OllamaResponseChunk = await response.json();
+  const result = await response.json() as OllamaResponseChunk;
 
   return {
     content: result.message?.content || '',
@@ -303,7 +303,9 @@ export async function listLocalModels(
       );
     }
 
-    const data = await response.json();
+    const data = await response.json() as {
+      models?: Array<{ name: string; modified_at: string; size: number; digest: string }>;
+    };
     return data.models || [];
   } catch (error) {
     if (error instanceof APIError) throw error;
