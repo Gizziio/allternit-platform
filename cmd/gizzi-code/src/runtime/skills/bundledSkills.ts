@@ -1,4 +1,7 @@
 /** Built-in workflow skills. User and project skills intentionally override these. */
+import agentOrchestratorMd from "./bundled/agentOrchestrator.md"
+import steerParallelAgentMd from "./bundled/steerParallelAgent.md"
+
 export interface BundledSkillDefinition {
   name: string
   description: string
@@ -8,6 +11,18 @@ export interface BundledSkillDefinition {
 }
 
 export const BUNDLED_SKILLS: readonly BundledSkillDefinition[] = [
+  {
+    name: "agent-orchestrator",
+    description: "Orchestrate external CLI agents (kimi, codex, agy, claude) in their own tmux sessions — write the scope/plan, delegate execution, monitor or steer the session, then review the produced work, fix bugs, and iterate to the next phase.",
+    builtin: true,
+    content: agentOrchestratorMd,
+  },
+  {
+    name: "steer-parallel-agent",
+    description: "Steer an already-running parallel agent session working on the same project — discover it, read its context, write non-invasive steering docs, activate via pointer prompt, and verify the steering landed.",
+    builtin: true,
+    content: steerParallelAgentMd,
+  },
   {
     name: "import-from-claude-codex",
     description: "Preview and safely import selected Claude Code and Codex instructions, skills, and MCP declarations.",

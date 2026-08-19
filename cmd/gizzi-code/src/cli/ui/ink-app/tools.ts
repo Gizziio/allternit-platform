@@ -131,7 +131,7 @@ const SnipTool = feature('HISTORY_SNIP')
   ? safeRequire('./tools/SnipTool/SnipTool.js')?.SnipTool
   : null
 const ListPeersTool =
-  feature('UDS_INBOX') || isEnvTruthy(process.env.GIZZI_ENABLE_RAILS_PEER)
+  feature('UDS_INBOX') || !isEnvDefinedFalsy(process.env.GIZZI_ENABLE_RAILS_PEER)
     ? safeRequire('./tools/ListPeersTool/ListPeersTool.js')?.ListPeersTool
     : null
 const WorkflowTool = feature('WORKFLOW_SCRIPTS')
@@ -144,7 +144,7 @@ const WorkflowTool = feature('WORKFLOW_SCRIPTS')
 import type { ToolPermissionContext } from './Tool.js'
 import { getDenyRuleForTool } from './utils/permissions/permissions.js'
 import { hasEmbeddedSearchTools } from './utils/embeddedTools.js'
-import { isEnvTruthy } from './utils/envUtils.js'
+import { isEnvDefinedFalsy, isEnvTruthy } from './utils/envUtils.js'
 import { isPowerShellToolEnabled } from './utils/shell/shellToolUtils.js'
 import { isAgentSwarmsEnabled } from './utils/agentSwarmsEnabled.js'
 import { isWorktreeModeEnabled } from './utils/worktreeModeEnabled.js'

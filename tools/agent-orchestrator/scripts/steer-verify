@@ -1,0 +1,70 @@
+#!/usr/bin/env bash
+# steer-verify <session-id> <path-that-should-have-been-read> [--since <epoch_ms>]
+# Check a target session's wire.jsonl for evidence it Read the given steering
+# file. Exit 0 = steering landed, 1 = not yet, 2 = usage/session error.
+set -euo pipefail
+[ $# -ge 2 ] || { echo "usage: steer-verify <session-id> <path> [--since <epoch_ms>]" >&2; exit 2; }
+
+SID="$1"; TARGET="$2"; shift 2
+SINCE=0
+while [ $# -gt 0 ]; do
+  case "$1" in
+    --since) SINCE="$2"; shift 2 ;;
+    *) echo "unknown arg: $1" >&2; exit 2 ;;
+  esac
+done
+
+KIMI_DIR="${KIMI_SESSIONS_DIR:-$HOME/.kimi-code/sessions}"
+SDIR=$(find "$KIMI_DIR" -maxdepth 2 -type d -name "$SID" 2>/dev/null | head -1)
+[ -n "$SDIR" ] || { echo "error: session $SID not found" >&2; exit 2; }
+WIRE="$SDIR/agents/main/wire.jsonl"
+[ -f "$WIRE" ] || { echo "error: no wire.jsonl at $WIRE" >&2; exit 2; }
+
+python3 - "$WIRE" "$TARGET" "$SINCE" <<'PY'
+import json, os, sys
+
+wire, target, since = sys.argv[1], sys.argv[2], int(sys.argv[3])
+# Normalize: compare on the real path and also the basename
+target_real = os.path.realpath(target)
+target_base = os.path.basename(target)
+
+found_read = False
+found_ack = False
+last_evidence = ""
+
+with open(wire, "rb") as f:
+    f.seek(0, 2)
+    size = f.tell()
+    f.seek(max(0, size - 2_000_000))  # last ~2MB is plenty
+    lines = f.read().decode("utf-8", errors="replace").strip().splitlines()
+
+for line in lines:
+    try:
+        ev = json.loads(line)
+    except Exception:
+        continue
+    ts = ev.get("time", 0)
+    if since and ts < since:
+        continue
+    if ev.get("type") != "context.append_loop_event":
+        continue
+    e = ev.get("event", {})
+    if e.get("type") == "tool.call" and e.get("name") == "Read":
+        path = (e.get("args", {}) or {}).get("path", "")
+        if path == target or path == target_real or os.path.basename(path) == target_base:
+            found_read = True
+            last_evidence = f"Read tool call on {path} at ts {ts}"
+    if e.get("type") == "content.part":
+        part = e.get("part", {})
+        if part.get("type") == "think" and target_base in part.get("think", ""):
+            found_ack = True
+
+if found_read:
+    print(f"STEERED: {last_evidence}")
+    if found_ack:
+        print("ACKED: target mentioned the file in its thinking")
+    sys.exit(0)
+else:
+    print(f"NOT YET: no Read of {target_base} found in recent wire events")
+    sys.exit(1)
+PY

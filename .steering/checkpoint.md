@@ -528,3 +528,48 @@ Add native inbound webhook triggers to the Allternit platform and a day-of-week 
 ## Open questions
 
 - None.
+
+---
+
+## Goal (session/steering-packaging: ship orchestration + steering tooling with the platform)
+
+Move the desktop-local agent-orchestration/steering tooling into the repo so it ships with the platform and gizzi-code: steer-* scripts into `tools/agent-orchestrator/scripts/`, both skills into `.agents/skills/`, registration in gizzi-code `bundledSkills.ts`, Rails-first session discovery in `steer-discover`, default-on Rails peer registration, and install/Homebrew symlink updates.
+
+## Just did
+
+- Created linked worktree `allternit-platform-session-steering-packaging` on branch `session/steering-packaging`.
+- Discovered repo already packages ao-* as shims over `allternit-rails` (`tools/agent-orchestrator/scripts/`); desktop `~/.local/bin/ao-*` copies are the stale standalone versions. Direction: repo is canonical.
+- Confirmed `allternit-rails` binary comes from `rails/` crate (`[[bin]] name = "allternit-rails"`).
+
+## Next
+
+- Add steer-* scripts to `tools/agent-orchestrator/scripts/`.
+- Add `.agents/skills/agent-orchestrator/` + `.agents/skills/steer-parallel-agent/`.
+- Register both skills in `cmd/gizzi-code/src/skills/bundledSkills.ts`.
+- Rails-first discovery in `steer-discover` with filesystem fallback.
+- Flip `GIZZI_ENABLE_RAILS_PEER` to default-on.
+- Update Homebrew/install scripts to symlink the tools; update docs to repo-canonical.
+
+## Open questions
+
+- `allternit-rails` is not on PATH on the desktop, so the repo's ao-* shims currently fail there while the stale standalone copies work. Migration needs an install step (`cargo install --path rails` or packaged binary) — flagging so it is not missed.
+
+---
+
+## Checkpoint update (session/steering-packaging)
+
+Just did:
+- Added steer-* toolkit (steer, steer-discover, steer-context, steer-checkpoint, steer-prompt, steer-verify) to `tools/agent-orchestrator/scripts/`.
+- Added `.agents/skills/agent-orchestrator/` + `.agents/skills/steer-parallel-agent/` (auto-discovered by gizzi-code project skill scan).
+- Registered both skills in gizzi-code builtin catalog (`cmd/gizzi-code/src/runtime/skills/bundledSkills.ts` + Bun text-loaded markdown under `src/runtime/skills/bundled/`).
+- `steer-discover` now queries the Rails peer registry first (`ALLTERNIT_RAILS_URL`, default `http://127.0.0.1:8013`), filesystem scan as fallback.
+- Flipped `GIZZI_ENABLE_RAILS_PEER` to default-on (opt out via `=0`) in `railsPeer.ts`, `tools-registry-gizzi.ts`, `cli/ui/ink-app/tools.ts`.
+- Added `tools/agent-orchestrator/install.sh` (idempotent PATH installer + allternit-rails bootstrap) and ran it: 13 tools + the freshly built `allternit-rails` binary now on PATH; `ao-doctor` verified working through the shims.
+- Verification: `tsc --noEmit` in `cmd/gizzi-code` — zero errors in touched files; only 7 pre-existing errors in `packages/sdk/scripts/verify-sdk.ts` from missing `dist/` artifacts in the fresh worktree.
+
+Next:
+- Merge `session/steering-packaging` when approved, then re-run `tools/agent-orchestrator/install.sh` from the main checkout (current `~/.local/bin` symlinks point into this worktree).
+- Homebrew formula deferred until release tarballs exist.
+
+Open questions:
+- Should kimi/codex/claude session-start hooks also register Rails peers so `steer-discover`'s Rails section covers non-gizzi agents?

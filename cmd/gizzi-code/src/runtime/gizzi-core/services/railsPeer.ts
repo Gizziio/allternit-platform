@@ -17,7 +17,7 @@ import { getCwd } from 'src/shared/utils/cwd.js'
 import { errorMessage } from 'src/shared/utils/errors.js'
 import { generateRequestId } from 'src/shared/utils/agentId.js'
 import { enqueuePendingNotification } from 'src/shared/utils/messageQueueManager.js'
-import { isEnvTruthy } from 'src/shared/utils/envUtils.js'
+import { isEnvDefinedFalsy } from 'src/shared/utils/envUtils.js'
 import type { QueuedCommand } from 'src/shared/types/textInputTypes.js'
 import { Log } from 'src/shared/util/log.js'
 import {
@@ -46,7 +46,8 @@ export async function registerRailsPeer(
   sessionId: string,
 ): Promise<ApiPeerRegisterResponse | null> {
   // Gate is evaluated at runtime so the bundler cannot tree-shake the module.
-  if (!feature('UDS_INBOX') && !isEnvTruthy(process.env.GIZZI_ENABLE_RAILS_PEER)) {
+  // Rails peer registration is default-on; set GIZZI_ENABLE_RAILS_PEER=0 to opt out.
+  if (!feature('UDS_INBOX') && isEnvDefinedFalsy(process.env.GIZZI_ENABLE_RAILS_PEER)) {
     return null
   }
   try {

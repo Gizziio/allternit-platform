@@ -1,0 +1,85 @@
+#!/usr/bin/env bash
+# steer-context <session-id>
+# Dump a target session's current context: state.json summary, active plan,
+# and the last N meaningful wire events. Read-only — never writes anything.
+set -euo pipefail
+[ $# -eq 1 ] || { echo "usage: steer-context <session-id>" >&2; exit 2; }
+
+SID="$1"
+KIMI_DIR="${KIMI_SESSIONS_DIR:-$HOME/.kimi-code/sessions}"
+
+# Locate the session dir deterministically
+SDIR=$(find "$KIMI_DIR" -maxdepth 2 -type d -name "$SID" 2>/dev/null | head -1)
+[ -n "$SDIR" ] || { echo "error: session $SID not found under $KIMI_DIR" >&2; exit 1; }
+
+echo "=== state.json ==="
+python3 -c "
+import json
+s = json.load(open('$SDIR/state.json'))
+print('cwd:', s.get('cwd'))
+print('updated:', s.get('updatedAt'))
+for aid, meta in s.get('agents', {}).items():
+    if aid == 'main':
+        continue
+    labels = meta.get('labels', {})
+    print(f'subagent {aid}: {labels.get(\"swarmItem\", \"\")}')"
+
+echo
+echo "=== plans/ ==="
+if [ -d "$SDIR/agents/main/plans" ]; then
+  for f in "$SDIR/agents/main/plans/"*.md; do
+    [ -f "$f" ] || continue
+    echo "--- $f ---"
+    head -40 "$f"
+    echo "..."
+  done
+else
+  echo "(no plans)"
+fi
+
+echo
+echo "=== last 25 meaningful wire events ==="
+python3 - "$SDIR/agents/main/wire.jsonl" <<'PY'
+import json, sys
+
+path = sys.argv[1]
+try:
+    with open(path, "rb") as f:
+        f.seek(0, 2)
+        size = f.tell()
+        f.seek(max(0, size - 500_000))
+        lines = f.read().decode("utf-8", errors="replace").strip().splitlines()
+except Exception as e:
+    print(f"(cannot read wire: {e})")
+    sys.exit(0)
+
+events = []
+for line in lines:
+    try:
+        ev = json.loads(line)
+    except Exception:
+        continue
+    t = ev.get("type")
+    if t == "context.append_message":
+        msg = ev.get("message", {})
+        role = msg.get("role")
+        for part in msg.get("content", []):
+            txt = part.get("text", "")
+            if txt and not txt.startswith("<system-reminder>"):
+                events.append(f"[user] {txt[:200]}")
+    elif t == "context.append_loop_event":
+        e = ev.get("event", {})
+        et = e.get("type")
+        if et == "tool.call":
+            name = e.get("name", "")
+            args = e.get("args", {})
+            key = args.get("path") or args.get("command") or ""
+            events.append(f"[tool] {name} {str(key)[:140]}")
+        elif et == "content.part":
+            part = e.get("part", {})
+            if part.get("type") == "text":
+                events.append(f"[agent] {part.get('text', '')[:200]}")
+
+for line in events[-25:]:
+    print(line)
+PY
