@@ -126,7 +126,7 @@ export class AllternitGLM {
     });
 
     if (!response.ok) {
-      const error = await response.json().catch(() => ({ error: { message: 'Unknown error' } }));
+      const error = await response.json().catch(() => ({ error: { message: 'Unknown error' } })) as { error?: { message?: string } };
       throw new HarnessError(
         error.error?.message || `GLM API error: ${response.status}`,
         HarnessErrorCode.PROVIDER_ERROR,
@@ -160,7 +160,7 @@ export class AllternitGLM {
     });
 
     if (!response.ok) {
-      const error = await response.json().catch(() => ({ error: { message: 'Unknown error' } }));
+      const error = await response.json().catch(() => ({ error: { message: 'Unknown error' } })) as { error?: { message?: string } };
       throw new HarnessError(
         error.error?.message || `GLM API error: ${response.status}`,
         HarnessErrorCode.PROVIDER_ERROR,

@@ -61,7 +61,6 @@ import { getAgentModeSurfaceTheme } from '../views/chat/agentModeSurfaceTheme';
 import type { AgentModeSurface } from '../stores/agent-surface-mode.store';
 import { cn } from '@/lib/utils';
 import { BOT_TEMPLATES } from '@/lib/bots/bots.manifest';
-import { getBotIcon } from '@/lib/bots/bot-icons';
 import { useStartBotSession } from '@/lib/bots/useStartBotSession';
 import { useAgentStore } from '@/lib/agents/agent.store';
 import { useCommRailsUnreadCount } from '@/lib/bots/comrails-mail.store';
@@ -72,6 +71,7 @@ import {
   isBot,
 } from '@/lib/bots/bot-profile';
 import type { Agent } from '@/lib/agents/agent.types';
+import { BotAvatar } from '@/views/bots/BotAvatar';
 import { Popover, PopoverTrigger, PopoverContent } from '@/components/ui/popover';
 import { DeleteConfirmModal } from './DeleteConfirmModal';
 
@@ -1544,6 +1544,7 @@ function BotMailBadge({ botId }: { botId: string }): React.ReactNode | null {
 
 function BotRailItem({
   id,
+  bot,
   name,
   accentColor,
   isStarting,
@@ -1552,6 +1553,7 @@ function BotRailItem({
   onStart,
 }: {
   id: string;
+  bot: Agent;
   name: string;
   accentColor: string;
   isStarting: boolean;
@@ -1573,11 +1575,6 @@ function BotRailItem({
     shallow
   );
   const sessionSummary = useSessionSummary(sessionId);
-  const initials = name
-    .split(/\s+/)
-    .slice(0, 2)
-    .map((p) => p[0]?.toUpperCase())
-    .join('');
 
   const { lastMessage, lastMessageAt, isStreaming } = sessionSummary;
   const statusText = isStarting
@@ -1598,17 +1595,8 @@ function BotRailItem({
         onClick={onClick}
         className="flex flex-1 min-w-0 items-center gap-2.5 border-none bg-transparent p-0 text-left cursor-pointer font-medium text-[var(--shell-item-fg)] hover:text-[var(--accent-primary)] disabled:opacity-50"
       >
-        <div
-          className="flex shrink-0 items-center justify-center rounded-lg text-[10px] font-bold"
-          style={{
-            width: 24,
-            height: 24,
-            background: `color-mix(in srgb, ${accentColor} 20%, transparent)`,
-            color: accentColor,
-            border: `1.5px solid ${accentColor}40`,
-          }}
-        >
-          {initials}
+        <div className="flex shrink-0 items-center justify-center">
+          <BotAvatar bot={bot} size={24} className="rounded-lg" />
         </div>
         <div className="flex-1 min-w-0">
           <div className="flex items-center text-[12px] overflow-hidden text-ellipsis whitespace-nowrap">
@@ -1771,6 +1759,7 @@ function RecentsPanel({
                   <BotRailItem
                     key={bot.id}
                     id={bot.id}
+                    bot={bot}
                     name={displayName}
                     accentColor={accentColor}
                     isStarting={isStarting}

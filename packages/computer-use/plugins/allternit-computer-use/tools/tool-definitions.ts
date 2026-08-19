@@ -340,6 +340,53 @@ export const COMPUTER_USE_TOOLS: ComputerUseTool[] = [
   },
 
   // ──────────────────────────────────────────────────────────────
+  // COMPUTER HISTORY
+  // ──────────────────────────────────────────────────────────────
+  {
+    name: "history_status",
+    description:
+      "Check whether CUA Driver Computer History is supported, admitted, and enabled. " +
+      "Call this before history_query to verify history is available. Returns supported, admitted, enabled, paused, health.",
+    input_schema: {
+      type: "object",
+      properties: {
+        session_id: { type: "string", description: "Active session identifier" },
+      },
+      required: ["session_id"],
+    },
+  },
+
+  {
+    name: "history_query",
+    description:
+      "Query a bounded slice of CUA Driver Computer History metadata events. " +
+      "Returns metadata-only CloudEvents-style records for prior CUA-mediated actions. " +
+      "Use this for continuation or recent-work requests; continue without history if results are absent, denied, or empty.",
+    input_schema: {
+      type: "object",
+      properties: {
+        session_id: { type: "string", description: "Active session identifier" },
+        limit: {
+          type: "number",
+          description: "Maximum events to return (1-200). Default 50.",
+          default: 50,
+          minimum: 1,
+          maximum: 200,
+        },
+        since_sequence: {
+          type: "number",
+          description: "Optional inclusive lower sequence bound (>=1).",
+        },
+        until_sequence: {
+          type: "number",
+          description: "Optional inclusive upper sequence bound (>=1). Must be >= since_sequence.",
+        },
+      },
+      required: ["session_id"],
+    },
+  },
+
+  // ──────────────────────────────────────────────────────────────
   // PLANNING LOOP
   // ──────────────────────────────────────────────────────────────
   {

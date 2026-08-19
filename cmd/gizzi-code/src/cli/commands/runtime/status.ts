@@ -1,16 +1,16 @@
-import { runtimeRegistry } from '../../../runtime/runtime-registry';
+import { RuntimeService } from '../../../runtime/runtime-service';
 
 export async function runtimeStatusCommand(args: string[]): Promise<void> {
   const targetId = args[0];
 
   if (targetId) {
-    const rt = runtimeRegistry.getById(targetId);
+    const rt = await RuntimeService.get(targetId);
     if (!rt) {
       process.stderr.write(`Runtime not found: ${targetId}\n`);
       process.exit(1);
     }
 
-    const ago = Math.round((Date.now() - rt.lastHeartbeat) / 1000);
+    const ago = Math.round((Date.now() - (rt.lastHeartbeatAt ?? rt.registeredAt)) / 1000);
     process.stdout.write(`\nRuntime: ${rt.name} (${rt.id})\n`);
     process.stdout.write(`  Host:       ${rt.host}\n`);
     process.stdout.write(`  Status:     ${rt.status}\n`);
@@ -24,7 +24,7 @@ export async function runtimeStatusCommand(args: string[]): Promise<void> {
     return;
   }
 
-  const runtimes = runtimeRegistry.list();
+  const runtimes = await RuntimeService.list();
   const online = runtimes.filter((r) => r.status === 'online').length;
   const busy = runtimes.filter((r) => r.status === 'busy').length;
   const offline = runtimes.filter((r) => r.status === 'offline').length;

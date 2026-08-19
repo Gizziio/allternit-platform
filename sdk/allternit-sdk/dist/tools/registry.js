@@ -1,4 +1,13 @@
 import { EventEmitter } from 'events';
+import { toStrictJsonSchema, validateJsonSchema } from './schema.js';
+const NAMESPACE_PATTERN = /^[A-Za-z][A-Za-z0-9_-]*$/;
+export function qualifyToolName(namespace, name) {
+    if (!namespace)
+        return name;
+    if (!NAMESPACE_PATTERN.test(namespace))
+        throw new Error(`Invalid tool namespace: ${namespace}`);
+    return `${namespace}.${name}`;
+}
 export class ToolRegistry extends EventEmitter {
     tools = new Map();
     deferredTools = new Map();
@@ -11,10 +20,18 @@ export class ToolRegistry extends EventEmitter {
     /**
      * Global registration (Startup)
      */
-    registerTool(tool) {
-        this.tools.set(tool.name, tool);
-        this.activeTools.add(tool.name); // By default, registered tools are active
-        this.emit('event', { type: 'tool.registered', tool });
+    registerTool(tool, options = {}) {
+        const namespace = options.namespace ?? tool.namespace;
+        const name = qualifyToolName(namespace, tool.name);
+        const registered = {
+            ...tool,
+            name,
+            namespace,
+            input_schema: options.strict ? toStrictJsonSchema(tool.input_schema) : tool.input_schema,
+        };
+        this.tools.set(name, registered);
+        this.activeTools.add(name); // By default, registered tools are active
+        this.emit('event', { type: 'tool.registered', tool: registered });
     }
     registerDeferredTool(tool) {
         this.deferredTools.set(tool.id, tool);
@@ -47,6 +64,12 @@ export class ToolRegistry extends EventEmitter {
     }
     getTool(name) {
         return this.tools.get(name);
+    }
+    validateInput(toolName, input) {
+        const tool = this.tools.get(toolName);
+        if (!tool)
+            throw new Error(`Tool ${toolName} not found`);
+        return validateJsonSchema(tool.input_schema, input);
     }
     setPolicy(toolName, policy) {
         this.policies.set(toolName, policy);

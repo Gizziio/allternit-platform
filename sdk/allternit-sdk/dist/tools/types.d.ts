@@ -1,15 +1,31 @@
 import { z } from 'zod';
+export interface JsonSchema {
+    type?: 'object' | 'array' | 'string' | 'number' | 'integer' | 'boolean' | 'null' | 'image';
+    properties?: Record<string, JsonSchema>;
+    required?: string[];
+    additionalProperties?: boolean | JsonSchema;
+    items?: JsonSchema;
+    enum?: unknown[];
+    description?: string;
+    [keyword: string]: unknown;
+}
 /**
  * ToolDefinition - First-class contract for agent tools
  */
 export interface ToolDefinition {
     name: string;
+    /** Optional namespace. Registered names become `<namespace>.<name>`. */
+    namespace?: string;
     description: string;
-    input_schema: {
+    input_schema: JsonSchema & {
         type: 'object';
-        properties: Record<string, any>;
+        properties: Record<string, JsonSchema>;
         required?: string[];
     };
+    /** Require provider-side JSON Schema validation for tool arguments. */
+    strict?: boolean;
+    /** Mark this definition as a reusable prompt-cache boundary. */
+    cache?: boolean;
     /**
      * Execution hooks
      */
@@ -42,20 +58,48 @@ export interface DeferredToolDefinition extends Omit<ToolDefinition, 'execute' |
 export declare const QuestionSchema: z.ZodObject<{
     id: z.ZodString;
     question: z.ZodString;
-    type: z.ZodEnum<{
-        text: "text";
-        choice: "choice";
-        yesno: "yesno";
-    }>;
+    type: z.ZodEnum<["choice", "text", "yesno"]>;
     header: z.ZodString;
     options: z.ZodOptional<z.ZodArray<z.ZodObject<{
         label: z.ZodString;
         description: z.ZodString;
         preview: z.ZodOptional<z.ZodString>;
-    }, z.core.$strip>>>;
+    }, "strip", z.ZodTypeAny, {
+        description: string;
+        label: string;
+        preview?: string | undefined;
+    }, {
+        description: string;
+        label: string;
+        preview?: string | undefined;
+    }>, "many">>;
     multiSelect: z.ZodOptional<z.ZodBoolean>;
     placeholder: z.ZodOptional<z.ZodString>;
-}, z.core.$strip>;
+}, "strip", z.ZodTypeAny, {
+    type: "text" | "choice" | "yesno";
+    id: string;
+    question: string;
+    header: string;
+    options?: {
+        description: string;
+        label: string;
+        preview?: string | undefined;
+    }[] | undefined;
+    multiSelect?: boolean | undefined;
+    placeholder?: string | undefined;
+}, {
+    type: "text" | "choice" | "yesno";
+    id: string;
+    question: string;
+    header: string;
+    options?: {
+        description: string;
+        label: string;
+        preview?: string | undefined;
+    }[] | undefined;
+    multiSelect?: boolean | undefined;
+    placeholder?: string | undefined;
+}>;
 export type Question = z.infer<typeof QuestionSchema>;
 /**
  * ToolRegistrySnapshot - For session persistence/rehydration

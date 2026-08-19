@@ -10,14 +10,167 @@
  */
 
 import { which } from "bun"
+import { execFile } from "node:child_process"
+import { promisify } from "node:util"
+import { existsSync, statSync } from "node:fs"
+import path from "node:path"
 import type { DiscoveredProvider, DiscoveredModel } from "./index"
 
-interface SubprocessSpec {
+const execFileAsync = promisify(execFile)
+
+/**
+ * Per-provider environment overrides matching the Multica Go runtime.
+ *
+ * `MULTICA_<PROVIDER>_PATH` takes precedence over PATH lookup.
+ * `MULTICA_<PROVIDER>_MODEL` is available for adapters that accept a --model flag.
+ */
+export const PROVIDER_ENV_KEYS: Record<string, { path: string; model?: string }> = {
+  "claude-cli":   { path: "MULTICA_CLAUDE_PATH",       model: "MULTICA_CLAUDE_MODEL" },
+  "codex-cli":    { path: "MULTICA_CODEX_PATH",        model: "MULTICA_CODEX_MODEL" },
+  opencode:       { path: "MULTICA_OPENCODE_PATH",     model: "MULTICA_OPENCODE_MODEL" },
+  deveco:         { path: "MULTICA_DEVECO_PATH",       model: "MULTICA_DEVECO_MODEL" },
+  openclaw:       { path: "MULTICA_OPENCLAW_PATH",     model: "MULTICA_OPENCLAW_MODEL" },
+  hermes:         { path: "MULTICA_HERMES_PATH",       model: "MULTICA_HERMES_MODEL" },
+  pi:             { path: "MULTICA_PI_PATH",           model: "MULTICA_PI_MODEL" },
+  "cursor-agent": { path: "MULTICA_CURSOR_PATH",       model: "MULTICA_CURSOR_MODEL" },
+  "kimi-cli":     { path: "MULTICA_KIMI_PATH",         model: "MULTICA_KIMI_MODEL" },
+  reasonix:       { path: "MULTICA_REASONIX_PATH",     model: "MULTICA_REASONIX_MODEL" },
+  "kiro-cli":     { path: "MULTICA_KIRO_PATH",         model: "MULTICA_KIRO_MODEL" },
+  codebuddy:      { path: "MULTICA_CODEBUDDY_PATH",    model: "MULTICA_CODEBUDDY_MODEL" },
+  qodercli:       { path: "MULTICA_QODER_PATH",        model: "MULTICA_QODER_MODEL" },
+  qoderclicn:     { path: "MULTICA_QODERCLICN_PATH",   model: "MULTICA_QODERCLICN_MODEL" },
+  traecli:        { path: "MULTICA_TRAECLI_PATH",      model: "MULTICA_TRAECLI_MODEL" },
+  grok:           { path: "MULTICA_GROK_PATH",         model: "MULTICA_GROK_MODEL" },
+  "qwen-cli":     { path: "MULTICA_QWEN_PATH",         model: "MULTICA_QWEN_MODEL" },
+  qwenpaw:        { path: "MULTICA_QWENPAW_PATH" },
+  mcode:          { path: "MULTICA_MCODE_PATH" },
+  antigravity:    { path: "MULTICA_ANTIGRAVITY_PATH",  model: "MULTICA_ANTIGRAVITY_MODEL" },
+  omp:            { path: "MULTICA_OMP_PATH",          model: "MULTICA_OMP_MODEL" },
+}
+
+const SHELL_CACHE_TTL_MS = 30 * 60 * 1000
+
+let shellCacheKey = ""
+let shellCachePath: string | null = null
+let shellCacheExpires = 0
+
+function envCacheKey(name: string): string {
+  return `${name}:${process.env.PATH ?? ""}:${process.env.SHELL ?? ""}:${process.env.HOME ?? ""}`
+}
+
+async function resolveViaLoginShell(name: string): Promise<string | null> {
+  const key = envCacheKey(name)
+  const now = Date.now()
+  if (shellCacheKey === key && shellCachePath !== null && now < shellCacheExpires) {
+    if (existsSync(shellCachePath)) return shellCachePath
+  }
+
+  const shell = process.env.SHELL || "/bin/sh"
+  try {
+    const { stdout } = await execFileAsync(shell, ["-l", "-c", `command -v ${name}`], {
+      timeout: 5000,
+      env: process.env,
+    })
+    const candidates = stdout.trim().split("\n").map((s) => s.trim()).filter(Boolean)
+    const resolved = candidates[candidates.length - 1] ?? ""
+    if (resolved && existsSync(resolved)) {
+      shellCacheKey = key
+      shellCachePath = resolved
+      shellCacheExpires = now + SHELL_CACHE_TTL_MS
+      return resolved
+    }
+  } catch {
+    // fall through
+  }
+  return null
+}
+
+function isExecutable(filePath: string): boolean {
+  try {
+    const s = statSync(filePath)
+    return s.isFile() && (s.mode & 0o111) !== 0
+  } catch {
+    return false
+  }
+}
+
+function findInPath(name: string): string | null {
+  const pathEnv = process.env.PATH ?? ""
+  for (const dir of pathEnv.split(path.delimiter)) {
+    if (!dir) continue
+    const candidate = path.join(dir, name)
+    if (isExecutable(candidate)) return candidate
+  }
+  return null
+}
+
+async function resolveBinPath(name: string): Promise<string | null> {
+  // Walk PATH directly first so tests (and shell-specific PATH prefixes) can
+  // override cached resolutions from Bun's which().
+  const fromPath = findInPath(name)
+  if (fromPath) return fromPath
+
+  try {
+    const found = which(name)
+    if (found && existsSync(found)) return found
+  } catch {
+    // fall through
+  }
+
+  // Bare names are also resolved via the user's login shell so that tools
+  // installed by shell-specific package managers (e.g. mise, mise-like shims)
+  // are discoverable.
+  if (!name.includes("/") && !name.includes("\\")) {
+    const shellPath = await resolveViaLoginShell(name)
+    if (shellPath) return shellPath
+  }
+
+  return null
+}
+
+/**
+ * Resolve the absolute path for a subprocess provider spec.
+ *
+ * Resolution order:
+ *   1. `MULTICA_<PROVIDER>_PATH` env override.
+ *   2. Direct PATH walk + `bun:which`.
+ *   3. Login-shell PATH fallback (cached 30 minutes).
+ *   4. Codex macOS Desktop app bundle fallback.
+ */
+export async function resolveCliPath(spec: SubprocessSpec): Promise<string | null> {
+  const env = PROVIDER_ENV_KEYS[spec.id]
+
+  if (env?.path) {
+    const override = process.env[env.path]
+    if (override && existsSync(override)) return override
+  }
+
+  const fromPath = await resolveBinPath(spec.bin)
+  if (fromPath) return fromPath
+
+  // Codex is commonly installed as a macOS desktop app with a bundled CLI.
+  if (spec.id === "codex-cli" && process.platform === "darwin") {
+    const user = process.env.USER || ""
+    const candidates = [
+      "/Applications/Codex.app/Contents/MacOS/Codex",
+      `/Users/${user}/Applications/Codex.app/Contents/MacOS/Codex`,
+    ]
+    for (const candidate of candidates) {
+      if (existsSync(candidate)) return candidate
+    }
+  }
+
+  return null
+}
+
+export interface SubprocessSpec {
   /** Binary name to look for in PATH */
   bin: string
   /** Provider ID in gizzi's model list */
   id: string
   name: string
+  /** Icon asset key (maps to /icons/agent-clis/{icon}.svg) */
+  icon?: string
   /** Command template — {prompt} is replaced with the user's message */
   cmd: string
   /** Known models surfaced by this CLI */
@@ -29,12 +182,13 @@ interface SubprocessSpec {
   probe?: { args: string[]; expect: string | RegExp }
 }
 
-const SUBPROCESS_PROVIDERS: SubprocessSpec[] = [
+export const SUBPROCESS_PROVIDERS: SubprocessSpec[] = [
   // ── Anthropic ────────────────────────────────────────────────────────────
   {
     bin: "claude",
     id: "claude-cli",
     name: "Claude (CLI — subscription or Pro)",
+    icon: "claude",
     cmd: "claude -p",
     probe: { args: ["--version"], expect: /Claude Code/ },
     models: [
@@ -49,6 +203,7 @@ const SUBPROCESS_PROVIDERS: SubprocessSpec[] = [
     bin: "kimi",
     id: "kimi-cli",
     name: "Kimi (CLI — subscription)",
+    icon: "kimi",
     cmd: "kimi -p",
     probe: { args: ["--version"], expect: /kimi/i },
     models: [
@@ -63,6 +218,7 @@ const SUBPROCESS_PROVIDERS: SubprocessSpec[] = [
     bin: "qwen",
     id: "qwen-cli",
     name: "Qwen Code (CLI — subscription)",
+    icon: "qwen",
     cmd: "qwen -p",
     probe: { args: ["--version"], expect: /\d+\.\d+/ },
     models: [
@@ -78,6 +234,7 @@ const SUBPROCESS_PROVIDERS: SubprocessSpec[] = [
     bin: "codex",
     id: "codex-cli",
     name: "Codex CLI (OpenAI — subscription or API)",
+    icon: "codex",
     cmd: "codex",
     probe: { args: ["--version"], expect: /codex/i },
     models: [
@@ -93,6 +250,7 @@ const SUBPROCESS_PROVIDERS: SubprocessSpec[] = [
     bin: "gemini",
     id: "gemini-cli",
     name: "Gemini CLI (Google — subscription)",
+    icon: "gemini",
     cmd: "gemini -p",
     probe: { args: ["--version"], expect: /\d+\.\d+/ },
     models: [
@@ -107,6 +265,7 @@ const SUBPROCESS_PROVIDERS: SubprocessSpec[] = [
     bin: "agy",
     id: "antigravity",
     name: "Antigravity (agy CLI — subscription)",
+    icon: "agy",
     cmd: "agy -p",
     probe: { args: ["--version"], expect: /\d+\.\d+/ },
     models: [
@@ -119,6 +278,7 @@ const SUBPROCESS_PROVIDERS: SubprocessSpec[] = [
     bin: "gh",
     id: "copilot-cli",
     name: "GitHub Copilot (CLI — subscription)",
+    icon: "copilot",
     cmd: "gh copilot suggest -t shell",
     probe: { args: ["copilot", "--version"], expect: /copilot/i },
     models: [
@@ -132,6 +292,7 @@ const SUBPROCESS_PROVIDERS: SubprocessSpec[] = [
     bin: "llm",
     id: "llm-cli",
     name: "LLM (CLI — any configured backend)",
+    icon: "llm",
     cmd: "llm prompt",
     probe: { args: ["--version"], expect: /llm/ },
     models: [
@@ -144,6 +305,7 @@ const SUBPROCESS_PROVIDERS: SubprocessSpec[] = [
     bin: "aichat",
     id: "aichat-cli",
     name: "AIChat (CLI — any configured backend)",
+    icon: "aichat",
     cmd: "aichat",
     probe: { args: ["--version"], expect: /aichat/ },
     models: [
@@ -156,6 +318,7 @@ const SUBPROCESS_PROVIDERS: SubprocessSpec[] = [
     bin: "ollama",
     id: "ollama-cli",
     name: "Ollama (CLI)",
+    icon: "ollama",
     cmd: "ollama run",
     probe: { args: ["list"], expect: /NAME/ },
     models: [], // populated dynamically via probeOllamaModels()
@@ -166,6 +329,7 @@ const SUBPROCESS_PROVIDERS: SubprocessSpec[] = [
     bin: "fabric",
     id: "fabric-cli",
     name: "Fabric (CLI — any configured backend)",
+    icon: "fabric",
     cmd: "fabric",
     probe: { args: ["--version"], expect: /fabric/ },
     models: [
@@ -178,12 +342,200 @@ const SUBPROCESS_PROVIDERS: SubprocessSpec[] = [
     bin: "chatgpt",
     id: "chatgpt-cli",
     name: "ChatGPT (CLI — Plus/Pro subscription)",
+    icon: "chatgpt",
     cmd: "chatgpt",
     models: [
       { id: "gpt-4o",   name: "GPT-4o",   context: 128000, output: 16384  },
       { id: "o3",       name: "o3",       context: 200000, output: 100000 },
       { id: "o4-mini",  name: "o4-mini",  context: 200000, output: 100000 },
     ],
+  },
+
+  // ── Cursor Agent ─────────────────────────────────────────────────────────
+  {
+    bin: "cursor-agent",
+    id: "cursor-agent",
+    name: "Cursor Agent",
+    icon: "cursor",
+    cmd: "cursor-agent",
+    probe: { args: ["--version"], expect: /\d+\.\d+/ },
+    models: [{ id: "default", name: "Cursor Agent default", context: 200000, output: 64000 }],
+  },
+
+  // ── OpenCode ─────────────────────────────────────────────────────────────
+  {
+    bin: "opencode",
+    id: "opencode",
+    name: "OpenCode",
+    icon: "opencode",
+    cmd: "opencode",
+    probe: { args: ["--version"], expect: /\d+\.\d+/ },
+    models: [{ id: "default", name: "OpenCode default", context: 200000, output: 64000 }],
+  },
+
+  // ── OpenClaw ─────────────────────────────────────────────────────────────
+  {
+    bin: "openclaw",
+    id: "openclaw",
+    name: "OpenClaw",
+    icon: "openclaw",
+    cmd: "openclaw",
+    probe: { args: ["--version"], expect: /\d+\.\d+/ },
+    models: [{ id: "default", name: "OpenClaw default", context: 200000, output: 64000 }],
+  },
+
+  // ── Hermes ─────────────────────────────────────────────────────────────────
+  {
+    bin: "hermes",
+    id: "hermes",
+    name: "Hermes",
+    icon: "hermes",
+    cmd: "hermes",
+    probe: { args: ["--version"], expect: /\d+\.\d+/ },
+    models: [{ id: "default", name: "Hermes default", context: 200000, output: 64000 }],
+  },
+
+  // ── Pi ─────────────────────────────────────────────────────────────────────
+  {
+    bin: "pi",
+    id: "pi",
+    name: "Pi",
+    icon: "pi",
+    cmd: "pi -p --mode json",
+    probe: { args: ["--version"], expect: /\d+\.\d+/ },
+    models: [{ id: "default", name: "Pi default", context: 200000, output: 64000 }],
+  },
+
+  // ── CodeBuddy ──────────────────────────────────────────────────────────────
+  {
+    bin: "codebuddy",
+    id: "codebuddy",
+    name: "CodeBuddy",
+    icon: "codebuddy",
+    cmd: "codebuddy",
+    probe: { args: ["--version"], expect: /\d+\.\d+/ },
+    models: [{ id: "default", name: "CodeBuddy default", context: 200000, output: 64000 }],
+  },
+
+  // ── DevEco Code ────────────────────────────────────────────────────────────
+  {
+    bin: "deveco",
+    id: "deveco",
+    name: "DevEco Code",
+    icon: "deveco",
+    cmd: "deveco",
+    probe: { args: ["--version"], expect: /\d+\.\d+/ },
+    models: [{ id: "default", name: "DevEco Code default", context: 200000, output: 64000 }],
+  },
+
+  // ── Grok ───────────────────────────────────────────────────────────────────
+  {
+    bin: "grok",
+    id: "grok",
+    name: "Grok",
+    icon: "grok",
+    cmd: "grok",
+    probe: { args: ["--version"], expect: /\d+\.\d+/ },
+    models: [{ id: "default", name: "Grok default", context: 200000, output: 64000 }],
+  },
+
+  // ── Kiro CLI ───────────────────────────────────────────────────────────────
+  {
+    bin: "kiro-cli",
+    id: "kiro-cli",
+    name: "Kiro CLI",
+    icon: "kiro",
+    cmd: "kiro-cli",
+    probe: { args: ["--version"], expect: /\d+\.\d+/ },
+    models: [{ id: "default", name: "Kiro CLI default", context: 200000, output: 64000 }],
+  },
+
+  // ── Qoder CLI ──────────────────────────────────────────────────────────────
+  {
+    bin: "qodercli",
+    id: "qodercli",
+    name: "Qoder CLI",
+    icon: "qoder",
+    cmd: "qodercli",
+    probe: { args: ["--version"], expect: /\d+\.\d+/ },
+    models: [{ id: "default", name: "Qoder CLI default", context: 200000, output: 64000 }],
+  },
+
+  // ── Qoder CN ───────────────────────────────────────────────────────────────
+  {
+    bin: "qoderclicn",
+    id: "qoderclicn",
+    name: "Qoder CN",
+    icon: "qoder-cn",
+    cmd: "qoderclicn",
+    probe: { args: ["--version"], expect: /\d+\.\d+/ },
+    models: [{ id: "default", name: "Qoder CN default", context: 200000, output: 64000 }],
+  },
+
+  // ── QwenPaw ────────────────────────────────────────────────────────────────
+  {
+    bin: "qwenpaw",
+    id: "qwenpaw",
+    name: "QwenPaw",
+    icon: "qwenpaw",
+    cmd: "qwenpaw",
+    probe: { args: ["--version"], expect: /\d+\.\d+/ },
+    models: [{ id: "default", name: "QwenPaw default", context: 200000, output: 64000 }],
+  },
+
+  // ── Reasonix ───────────────────────────────────────────────────────────────
+  {
+    bin: "reasonix",
+    id: "reasonix",
+    name: "Reasonix",
+    icon: "reasonix",
+    cmd: "reasonix",
+    probe: { args: ["--version"], expect: /\d+\.\d+/ },
+    models: [{ id: "default", name: "Reasonix default", context: 200000, output: 64000 }],
+  },
+
+  // ── Trae CLI ─────────────────────────────────────────────────────────────────
+  {
+    bin: "traecli",
+    id: "traecli",
+    name: "Trae CLI",
+    icon: "trae",
+    cmd: "traecli",
+    probe: { args: ["--version"], expect: /\d+\.\d+/ },
+    models: [{ id: "default", name: "Trae CLI default", context: 200000, output: 64000 }],
+  },
+
+  // ── MiniMax Code ─────────────────────────────────────────────────────────────
+  {
+    bin: "mcode",
+    id: "mcode",
+    name: "MiniMax Code",
+    icon: "mcode",
+    cmd: "mcode acp",
+    probe: { args: ["--version"], expect: /\d+\.\d+/ },
+    models: [{ id: "default", name: "MiniMax Code default", context: 200000, output: 64000 }],
+  },
+
+  // ── DeepSeek Harness ─────────────────────────────────────────────────────────
+  {
+    bin: "dsh",
+    id: "dsh",
+    name: "DeepSeek Harness",
+    icon: "dsh",
+    cmd: "dsh --profile multica --stdio",
+    probe: { args: ["--profile", "multica", "--probe"], expect: /"type":"probe"/ },
+    models: [{ id: "default", name: "DSH default", context: 200000, output: 64000 }],
+  },
+
+  // ── Oh-My-Pi ─────────────────────────────────────────────────────────────────
+  {
+    bin: "omp",
+    id: "omp",
+    name: "Oh-My-Pi",
+    icon: "omp",
+    cmd: "omp -p --mode json",
+    probe: { args: ["--version"], expect: /\d+\.\d+/ },
+    models: [{ id: "default", name: "Oh-My-Pi default", context: 200000, output: 64000 }],
   },
 ]
 
@@ -221,12 +573,7 @@ export async function discoverSubprocessProviders(): Promise<DiscoveredProvider[
 
   await Promise.all(
     SUBPROCESS_PROVIDERS.map(async (spec) => {
-      let binPath: string | null = null
-      try {
-        binPath = which(spec.bin) ?? null
-      } catch {
-        return
-      }
+      const binPath = await resolveCliPath(spec)
       if (!binPath) return
 
       const alive = await runProbe(binPath, spec)

@@ -142,5 +142,20 @@ export type {
   CapabilitySearchResult,
 } from './plugins/index.js';
 
+// Runtime
+export {
+  RuntimeClient,
+  RuntimeApiError,
+  type RuntimeStatus,
+  type RuntimeTransport,
+  type DiscoveredCli,
+  type RegisteredRuntime,
+  type AgentTask,
+  type TaskHandle,
+  type AgentEvent,
+  type ExecutionLog,
+  type RuntimeClientOptions,
+} from './runtime/index.js';
+
 // Version
 export const VERSION = '1.0.0';

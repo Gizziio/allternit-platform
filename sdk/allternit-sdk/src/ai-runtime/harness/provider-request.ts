@@ -1,4 +1,4 @@
-import type { ContentBlock, HarnessStopReason, Message, StreamRequest, Tool, ToolResultContentBlock } from './types.js';
+import type { ContentBlock, HarnessStopReason, Message, StreamRequest, Tool, ToolParameter, ToolResultContentBlock } from './types.js';
 import { flattenPdfToText } from './pdf.js';
 
 /** Map a provider-specific stop/finish reason to the normalized taxonomy. */
@@ -44,7 +44,7 @@ const openAiToolChoice = (choice: StreamRequest['toolChoice']) =>
     ? { type: 'function', function: { name: choice.name } }
     : choice;
 
-const openAiFunction = (fn: { name: string; description: string; parameters: Record<string, unknown> }) => ({
+const openAiFunction = (fn: { name: string; description: string; parameters: ToolParameter }) => ({
   name: fn.name,
   description: fn.description,
   parameters: fn.parameters,

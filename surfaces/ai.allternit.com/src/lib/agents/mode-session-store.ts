@@ -538,13 +538,12 @@ async function sendMessageWithContext(
 
 /**
  * Resolve the provider/model string the kernel expects (`provider/modelId`).
- * Reads the composer's persisted model selection; falls back to the embedded
- * local model (sidecar, no API key required) so offline sends always work.
+ * Reads the composer's persisted model selection; falls back to the platform's
+ * configured default brain, then to the first local Ollama model.
  */
 const MODEL_SELECTION_STORAGE_KEY = 'allternit:model-selection';
-const EMBEDDED_FALLBACK_MODEL_ID = 'sidecar/qwen3.5:4b';
 
-function resolveRuntimeModelId(): string {
+function resolveRuntimeModelId(): string | null {
   try {
     const raw = typeof window !== 'undefined'
       ? window.localStorage.getItem(MODEL_SELECTION_STORAGE_KEY)
@@ -556,7 +555,37 @@ function resolveRuntimeModelId(): string {
       }
     }
   } catch { /* malformed or unavailable storage */ }
-  return EMBEDDED_FALLBACK_MODEL_ID;
+  return null;
+}
+
+async function resolveFallbackRuntimeModelId(): Promise<string | undefined> {
+  // Prefer the backend's configured default model. This matches what the
+  // composer/model picker shows by default and keeps bot sessions on a brain
+  // that actually works (e.g. the gizzi sidecar embedded model in dev).
+  try {
+    const res = await fetch('/api/onboarding/config');
+    if (res.ok) {
+      const data = await res.json() as { user?: { defaultModel?: string } };
+      const defaultModel = data.user?.defaultModel;
+      if (defaultModel && defaultModel.includes('/')) {
+        return defaultModel;
+      }
+    }
+  } catch { /* onboarding config unavailable */ }
+
+  // Last resort: use a locally-pulled Ollama model.
+  try {
+    const res = await fetch('/api/local-brain');
+    if (!res.ok) return undefined;
+    const data = await res.json() as { ollamaRunning?: boolean; modelId?: string; pulledModels?: string[] };
+    if (data.ollamaRunning && data.modelId) {
+      return `ollama/${data.modelId}`;
+    }
+    if (data.ollamaRunning && data.pulledModels?.length) {
+      return `ollama/${data.pulledModels[0]}`;
+    }
+  } catch { /* local brain unavailable */ }
+  return undefined;
 }
 
 /**
@@ -569,11 +598,15 @@ async function streamMessageWithContext(
   chatApi: ChatApi,
 ): Promise<void> {
   const { text, skipContext, callbacks } = options;
-  // The kernel splits runtimeModelId into provider/model — sending nothing
-  // makes gizzi reject with ProviderModelNotFoundError and the bridge returns
-  // an empty 200, so the message vanishes. Always resolve a model: explicit
-  // option → persisted composer selection → embedded local fallback.
-  const modelId = options.modelId ?? resolveRuntimeModelId();
+  // The kernel splits runtimeModelId into provider/model. Use an explicit
+  // option first, then the persisted composer selection, then ask the local
+  // brain for a pulled model. If nothing is available, omit the field so the
+  // runtime can fall back to its own default instead of sending an invalid
+  // hard-coded model.
+  let modelId = options.modelId ?? resolveRuntimeModelId();
+  if (!modelId) {
+    modelId = await resolveFallbackRuntimeModelId();
+  }
 
   if (
     session.metadata.executionPersistence === 'local' &&

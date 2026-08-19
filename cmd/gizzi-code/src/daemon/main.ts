@@ -19,6 +19,7 @@ import { loadSettings } from "@/vault/settings"
 import { listConnectorIds, getConnectorConfig } from "@/vault/connector"
 import { runSync, runAllSyncs } from "@/vault/sync"
 import { updateAllLiveNotes } from "@/vault/notes/live"
+import { RuntimeHeartbeat } from "@/runtime/runtime-heartbeat"
 import path from "path"
 
 const log = Log.create({ service: "daemon" })
@@ -48,6 +49,9 @@ export async function startDaemon(config?: { port?: number; dbPath?: string }): 
 
   await daemon.start()
 
+  // Keep local/remote runtime status fresh in the background.
+  RuntimeHeartbeat.start()
+
   // Register vault functions for cron "function" jobs (production-safe registry)
   registerFunction("vault-sync", runSync as (...args: unknown[]) => unknown)
   registerFunction("vault-sync-all", runAllSyncs as (...args: unknown[]) => unknown)
@@ -66,6 +70,7 @@ export async function stopDaemon(): Promise<void> {
   }
 
   log.info("Stopping Allternit daemon")
+  RuntimeHeartbeat.stop()
   await daemon.stop()
   daemon = null
   log.info("Allternit daemon stopped")

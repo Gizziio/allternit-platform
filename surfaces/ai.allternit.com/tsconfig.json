@@ -53,6 +53,12 @@
       ],
       "@allternit/page-agent/*": [
         "../../services/page-agent/src/*"
+      ],
+      "@allternit/sdk": [
+        "../../sdk/allternit-sdk/src/ai-runtime/index.ts"
+      ],
+      "@allternit/sdk/*": [
+        "../../sdk/allternit-sdk/src/ai-runtime/*"
       ]
     },
     "allowJs": true,

@@ -164,7 +164,9 @@ async function handleResponseNotOk(
   let message = "";
   let errorDetails;
   try {
-    const json = await response.json();
+    const json = await response.json() as {
+      error?: { message?: string; details?: unknown };
+    };
     message = json.error?.message || "";
     if (json.error?.details) {
       message += ` ${JSON.stringify(json.error.details)}`;

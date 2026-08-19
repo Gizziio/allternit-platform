@@ -1,5 +1,5 @@
 import type { Tool } from '../harness/types.js';
-import { AllternitClient } from '../../dist/gen/allternit-client.js';
+import { AllternitClient } from '../gen/allternit-client.js';
 
 export const COMPUTER_TOOL: Tool = {
   name: 'computer',
@@ -57,7 +57,7 @@ export class ComputerCapability {
         throw new Error(`Gateway error: ${response.statusText}`);
       }
 
-      const data = await response.json();
+      const data = await response.json() as { summary?: string };
       return data.summary || `Action ${args.action} completed.`;
     } catch (error) {
       return `Error executing computer action: ${error instanceof Error ? error.message : String(error)}`;

@@ -720,7 +720,7 @@ export namespace Provider {
 
     // Subprocess providers (claude-cli, llm, aichat, etc.) — bypass HTTP SDK entirely
     if (provider?.auth_type === "subprocess" && provider.subprocess_cmd) {
-      const language = new SubprocessLanguageModel(provider.subprocess_cmd, model.api.id) as unknown as LanguageModelV2
+      const language = new SubprocessLanguageModel(model.providerID, model.api.id) as unknown as LanguageModelV2
       s.models.set(key, language)
       return language
     }

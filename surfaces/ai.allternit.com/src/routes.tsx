@@ -58,6 +58,7 @@ const SessionsPage = lazy(() => import('./pages/SessionsPage'))
 const SignInPage = lazy(() => import('./pages/SignInPage'))
 const SignUpPage = lazy(() => import('./pages/SignUpPage'))
 const RuntimePairingPage = lazy(() => import('./pages/RuntimePairingPage'))
+const RuntimesPage = lazy(() => import('./pages/RuntimesPage'))
 const AuthorizePage = lazy(() => import('./pages/OAuthAuthorizePage'))
 const SelectAccountPage = lazy(() => import('./pages/OAuthSelectAccountPage'))
 const SuccessPage = lazy(() => import('./pages/OAuthSuccessPage'))
@@ -111,6 +112,7 @@ export default function AppRoutes() {
         <Route path="/sign-in" element={<SignInPage />} />
         <Route path="/sign-up" element={<SignUpPage />} />
         <Route path="/pair" element={<RuntimePairingPage />} />
+        <Route path="/runtimes" element={<RuntimesPage />} />
         <Route path="/oauth/authorize" element={<AuthorizePage />} />
         <Route path="/oauth/select-account" element={<SelectAccountPage />} />
         <Route path="/oauth/success" element={<SuccessPage />} />

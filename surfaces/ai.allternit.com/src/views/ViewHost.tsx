@@ -1,7 +1,8 @@
-import React, { useEffect, useMemo, Component } from "react";
+import React, { useEffect, useMemo, Component, Suspense } from "react";
 import type { ViewRegistry } from "./registry";
 import type { ViewContext } from "../nav/nav.types";
 import { assertSinglePrimaryView, assertNoDockingOutsideBrowser } from "../qa/invariants";
+import { ViewSkeleton } from "@/components/performance/ViewSkeleton";
 
 import { createModuleLogger } from '@/lib/logger';
 
@@ -66,7 +67,9 @@ export const ViewHost = React.memo(function ViewHost({ active, registry }: { act
     <div data-allternit-primary-root data-testid="view-host-wrapper" data-active-view={active.viewType} style={{ height: "100%", width: "100%", position: 'relative', display: 'flex', flex: 1 }}>
       <ViewRenderBoundary key={active.viewId} viewType={active.viewType}>
         <div style={{ width: '100%', height: '100%', flex: 1 }}>
-          <Cmp context={active} />
+          <Suspense fallback={<ViewSkeleton variant="full" />}>
+            <Cmp context={active} />
+          </Suspense>
         </div>
       </ViewRenderBoundary>
     </div>

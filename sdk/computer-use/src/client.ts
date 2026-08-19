@@ -52,6 +52,9 @@ import type {
   ComputerEnvironmentRecord,
   ComputerEnvironmentLease,
   ComputerEnvironmentProviderManifest,
+  ComputerHistoryQueryRequest,
+  ComputerHistoryQueryResponse,
+  ComputerHistoryStatusResponse,
   ComputerImageRecord,
   ComputerObservation,
   ComputerRootDiscovery,
@@ -250,6 +253,28 @@ export class AllternitComputerUseClient {
     });
     if (!response.ok) await handleApiError(response);
     return response.json() as Promise<Record<string, unknown>>;
+  }
+
+  /** Check whether CUA Driver Computer History is available and enabled. */
+  async canonicalHistoryStatus(): Promise<ComputerHistoryStatusResponse> {
+    const response = await fetch(`${this.endpoint}/computer-use/canonical/history/status`, {
+      method: 'POST',
+      headers: buildRequestHeaders(this.headers, this.apiKey),
+      body: JSON.stringify({}),
+    });
+    if (!response.ok) await handleApiError(response);
+    return response.json() as Promise<ComputerHistoryStatusResponse>;
+  }
+
+  /** Query a bounded slice of CUA Driver Computer History metadata events. */
+  async canonicalHistoryQuery(request: ComputerHistoryQueryRequest = {}): Promise<ComputerHistoryQueryResponse> {
+    const response = await fetch(`${this.endpoint}/computer-use/canonical/history/query`, {
+      method: 'POST',
+      headers: buildRequestHeaders(this.headers, this.apiKey),
+      body: JSON.stringify(request),
+    });
+    if (!response.ok) await handleApiError(response);
+    return response.json() as Promise<ComputerHistoryQueryResponse>;
   }
 
   private async canonicalPost(path: string, body: Record<string, unknown>): Promise<Record<string, unknown>> {

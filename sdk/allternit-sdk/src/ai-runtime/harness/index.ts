@@ -8,6 +8,8 @@ import {
   HarnessMode,
   StreamRequest,
   HarnessStreamChunk,
+  ToolCallChunk,
+  ToolCallCompleteChunk,
   HarnessError,
   HarnessErrorCode,
   Message,

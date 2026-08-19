@@ -8,7 +8,7 @@ import os
 import shutil
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any, Dict, Optional
+from typing import Any, Dict, List, Optional
 
 
 class CuaDriverUnavailableError(RuntimeError):
@@ -33,10 +33,24 @@ class CuaDriverInstallation:
         return str(value) if value else "unknown"
 
 
+# Verified, installed Cua Driver app bundle (macOS). This is the only context
+# that satisfies the driver's Computer History admission check, which requires
+# the exact executable inside the signed /Applications/CuaDriver.app bundle.
+_INSTALLED_CUA_DRIVER_APP = Path("/Applications/CuaDriver.app/Contents/MacOS/cua-driver")
+_DEFAULT_INSTALLED_CUA_SOCKET = Path.home() / "Library" / "Caches" / "cua-driver" / "cua-driver.sock"
+
+
+def _is_installed_cua_driver(executable: str) -> bool:
+    return Path(executable).resolve() == _INSTALLED_CUA_DRIVER_APP.resolve()
+
+
 def discover_cua_driver(explicit_path: Optional[str] = None) -> Optional[str]:
     candidates = [
         explicit_path,
         os.environ.get("ALLTERNIT_CUA_DRIVER_PATH"),
+        # Prefer the installed app bundle; it is the only configuration that
+        # supports Computer History on macOS.
+        str(_INSTALLED_CUA_DRIVER_APP),
         shutil.which("cua-driver"),
         shutil.which("cua-driver-rs"),
         str(Path.home() / ".local" / "bin" / "cua-driver"),
@@ -49,6 +63,13 @@ def discover_cua_driver(explicit_path: Optional[str] = None) -> Optional[str]:
         path = Path(candidate).expanduser()
         if path.is_file() and os.access(path, os.X_OK):
             return str(path.resolve())
+    return None
+
+
+def _default_socket_for_executable(executable: str) -> Optional[str]:
+    """Return the default daemon socket for a known installed Cua Driver app."""
+    if _is_installed_cua_driver(executable) and _DEFAULT_INSTALLED_CUA_SOCKET.exists():
+        return str(_DEFAULT_INSTALLED_CUA_SOCKET)
     return None
 
 
@@ -78,7 +99,9 @@ class CuaDriverTransport:
             raise CuaDriverUnavailableError(f"Cua Driver executable is unavailable: {path}")
         self.executable = str(path.resolve())
         self.timeout_seconds = timeout_seconds
-        self.socket_path = os.environ.get("ALLTERNIT_CUA_DRIVER_SOCKET")
+        self.socket_path = os.environ.get("ALLTERNIT_CUA_DRIVER_SOCKET") or _default_socket_for_executable(
+            self.executable
+        )
 
     @classmethod
     async def discover(
@@ -98,7 +121,7 @@ class CuaDriverTransport:
             "1", "true", "yes", "on",
         }
         routed_arguments = list(arguments)
-        if self.socket_path and arguments and arguments[0] in {"call", "status", "stop", "config", "recording"}:
+        if self.socket_path and arguments and arguments[0] in {"call", "status", "stop", "config", "recording", "history"}:
             routed_arguments.extend(("--socket", self.socket_path))
         process = await asyncio.create_subprocess_exec(
             self.executable,
@@ -140,6 +163,43 @@ class CuaDriverTransport:
 
     async def status(self) -> Dict[str, Any]:
         return await self._run("status")
+
+    async def history_status(self) -> Dict[str, Any]:
+        return await self._run("history", "status")
+
+    async def history_query(
+        self,
+        *,
+        limit: int = 50,
+        session_id: Optional[str] = None,
+        since_sequence: Optional[int] = None,
+        until_sequence: Optional[int] = None,
+    ) -> Dict[str, Any]:
+        if not isinstance(limit, int) or limit < 1 or limit > 200:
+            raise CuaDriverCallError("history_query", "limit must be an integer between 1 and 200")
+        if session_id is not None:
+            if not isinstance(session_id, str) or len(session_id) < 1 or len(session_id) > 128:
+                raise CuaDriverCallError("history_query", "session_id must be 1-128 characters")
+        if since_sequence is not None:
+            if not isinstance(since_sequence, int) or since_sequence < 1:
+                raise CuaDriverCallError("history_query", "since_sequence must be an integer >= 1")
+        if until_sequence is not None:
+            if not isinstance(until_sequence, int) or until_sequence < 1:
+                raise CuaDriverCallError("history_query", "until_sequence must be an integer >= 1")
+        if since_sequence is not None and until_sequence is not None and since_sequence > until_sequence:
+            raise CuaDriverCallError("history_query", "since_sequence must not exceed until_sequence")
+
+        # The nightly CLI exposes querying as `history list [limit]` with optional
+        # `--session`, `--since`, and `--until` flags. The response shape matches
+        # the RFC (events array + metadata_only flag).
+        command: List[str] = ["history", "list", str(limit)]
+        if session_id is not None:
+            command.extend(("--session", session_id))
+        if since_sequence is not None:
+            command.extend(("--since", str(since_sequence)))
+        if until_sequence is not None:
+            command.extend(("--until", str(until_sequence)))
+        return await self._run(*command)
 
     async def call(
         self,

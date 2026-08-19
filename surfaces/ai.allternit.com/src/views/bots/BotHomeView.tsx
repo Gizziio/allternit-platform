@@ -52,12 +52,14 @@ import { BotRuntimeConfigModal } from "./BotRuntimeConfigModal";
 import { BotDesktopView } from "./BotDesktopView";
 import { AutomationTasksView } from "@/views/cowork/AutomationTasksView";
 import { EditAgentForm } from "@/views/agent-view/components/EditAgentForm";
+import { BotConfigTab } from "./BotConfigTab";
+import { BotAvatar } from "./BotAvatar";
 
 interface BotHomeViewProps {
   botId: string;
 }
 
-type BotHomeTab = "home" | "tasks" | "artifacts" | "runtime" | "desktop" | "automation";
+type BotHomeTab = "home" | "tasks" | "artifacts" | "runtime" | "desktop" | "automation" | "config";
 
 function botInitials(name: string): string {
   return (name || "Bot")
@@ -305,6 +307,7 @@ export function BotHomeView({ botId }: BotHomeViewProps) {
     { id: "runtime" as const, label: "Runtime", icon: Lightning },
     { id: "desktop" as const, label: "Desktop", icon: Desktop },
     { id: "automation" as const, label: "Automation Tasks", icon: ClockCounterClockwise },
+    { id: "config" as const, label: "Config", icon: Gear },
   ];
 
   return (
@@ -317,25 +320,14 @@ export function BotHomeView({ botId }: BotHomeViewProps) {
           className="inline-flex items-center gap-1.5 text-[13px] text-[var(--text-secondary)] hover:text-[var(--text-primary)] transition-colors mb-4 w-fit"
         >
           <CaretLeft size={14} />
-          Agent Studio
+          Bot Hub
         </button>
 
         {/* Header */}
         <div className="flex flex-col gap-5">
           <div className="flex items-start justify-between gap-6">
             <div className="flex items-center gap-4">
-              <div
-                className="flex shrink-0 items-center justify-center rounded-2xl text-[20px] font-bold"
-                style={{
-                  width: 64,
-                  height: 64,
-                  background: `color-mix(in srgb, ${accentColor} 18%, transparent)`,
-                  color: accentColor,
-                  border: `2px solid ${accentColor}35`,
-                }}
-              >
-                {botInitials(displayName)}
-              </div>
+              <BotAvatar bot={bot} size={64} />
               <div>
                 <h1
                   className="text-3xl font-medium tracking-tight"
@@ -523,6 +515,9 @@ export function BotHomeView({ botId }: BotHomeViewProps) {
               accentColor={accentColor}
               onBack={() => setActiveTab("home")}
             />
+          )}
+          {activeTab === "config" && (
+            <BotConfigTab bot={bot} accentColor={accentColor} />
           )}
         </div>
       </div>

@@ -1,0 +1,1843 @@
+/**
+ * LocalCliDriver — executes agent tasks against a CLI installed on the same host.
+ *
+ * This driver aligns with the production Multica Go implementation: every adapter
+ * declares its binary/argv specifics and delegates to a shared protocol runner.
+ * All agent CLIs are spawned per-task; there is no warm-process pool.
+ *
+ * Supported protocols:
+ *   • stream-json   — Claude dialect NDJSON over stdio.
+ *   • acp           — Agent Client Protocol JSON-RPC over stdio.
+ *   • codex-app-server — OpenAI Codex JSON-RPC app-server over stdio.
+ *   • one-shot-json — single-shot CLI whose stdout is parsed as JSON.
+ *   • one-shot-text — single-shot CLI whose stdout is treated as plain text.
+ *
+ * It is the single place where a CLI is actually spawned; the rest of the
+ * codebase (LanguageModelV2 wrapper, remote runtime proxy, etc.) delegates here.
+ */
+
+import type {
+  AgentEvent,
+  AgentTask,
+  ExecutionLog,
+  RuntimeDriver,
+  TaskHandle,
+} from "@/runtime/runtime-driver"
+import { attachmentsToAcpContent } from "./attachments"
+import { RuntimeService, RuntimeNotFoundError, type RegisteredRuntime } from "@/runtime/runtime-service"
+import { ExecutionLogService } from "@/runtime/execution-log"
+import { Log } from "@/shared/util/log"
+import { PROVIDER_ENV_KEYS } from "@/runtime/runtime-discovery"
+import {
+  ClientSideConnection,
+  ndJsonStream,
+  PROTOCOL_VERSION,
+} from "@agentclientprotocol/sdk"
+import { spawn as nodeSpawn } from "node:child_process"
+import { Readable, Writable } from "node:stream"
+
+const log = Log.create({ service: "local-cli-driver" })
+
+export class LocalCliDriver implements RuntimeDriver {
+  private readonly runtimeId: string
+  private readonly cliName: string
+  private readonly abortedTasks = new Set<string>()
+  private readonly tasks = new Map<string, AgentTask>()
+  private runtimeCache?: RegisteredRuntime
+  private currentTaskId?: string
+  private currentProc?: ReturnType<typeof Bun.spawn> | ReturnType<typeof nodeSpawn>
+
+  constructor(runtimeId: string, cliName: string) {
+    this.runtimeId = runtimeId
+    this.cliName = cliName
+  }
+
+  // ---------------------------------------------------------------------------
+  // RuntimeDriver implementation
+  // ---------------------------------------------------------------------------
+
+  async assign(task: AgentTask): Promise<TaskHandle> {
+    const handle: TaskHandle = {
+      taskId: task.taskId || generateTaskId(),
+      runtimeId: this.runtimeId,
+      cliName: this.cliName,
+    }
+
+    this.tasks.set(handle.taskId, task)
+
+    await ExecutionLogService.create(handle)
+    await ExecutionLogService.appendEvent(handle.taskId, {
+      type: "status",
+      status: "queued",
+    })
+
+    log.info("task assigned", { taskId: handle.taskId, cli: this.cliName })
+    return handle
+  }
+
+  async *stream(handle: TaskHandle): AsyncIterable<AgentEvent> {
+    if (this.abortedTasks.has(handle.taskId)) {
+      this.abortedTasks.delete(handle.taskId)
+      const ev = { type: "status", status: "cancelled" } as AgentEvent
+      yield ev
+      await this.logEvent(handle.taskId, ev)
+      return
+    }
+
+    const runtime = await this.getRuntime()
+    const cli = runtime.agentClis.find((c) => c.name === this.cliName)
+    if (!cli) {
+      throw new Error(`CLI ${this.cliName} not found on runtime ${this.runtimeId}`)
+    }
+
+    const task = this.tasks.get(handle.taskId)
+    const message = task?.prompt ?? ""
+
+    yield { type: "status", status: "running" }
+    await this.logEvent(handle.taskId, { type: "status", status: "running" })
+
+    const baseCmd = parseCmd(`${cli.path} ${this.specArgs()}`)
+    const adapter = resolveAdapter(this.cliName)
+
+    if (task?.attachments && task.attachments.length > 0 && !adapter.supportsAttachments) {
+      throw new Error(
+        `CLI "${this.cliName}" does not support task attachments in its current adapter mode (${adapter.mode}).`,
+      )
+    }
+
+    const argv = adapter.buildArgv(baseCmd, message, {
+      cwd: task?.cwd,
+      taskId: handle.taskId,
+    })
+
+    let failed = false
+    try {
+      if (adapter.mode === "stream-json") {
+        yield* this.runStreamJson(handle, argv, {
+          prompt: message,
+          promptOnStdin: adapter.promptOnStdin ?? false,
+          cwd: task?.cwd,
+          env: task?.env,
+        })
+      } else if (adapter.mode === "openclaw-json") {
+        yield* this.runOpenclawJson(handle, argv, message, task?.cwd, task?.env)
+      } else if (adapter.mode === "acp") {
+        yield* this.runAcp(handle, argv, task?.cwd, task?.env)
+      } else if (adapter.mode === "codex-app-server") {
+        yield* this.runCodexAppServer(handle, argv, message, task?.cwd, task?.systemPrompt, task?.env)
+      } else if (adapter.mode === "one-shot-json") {
+        yield* this.runOneShotJson(handle, argv, { cwd: task?.cwd, env: task?.env })
+      } else if (adapter.mode === "one-shot-text") {
+        yield* this.runOneShotText(handle, argv, { cwd: task?.cwd, env: task?.env })
+      } else {
+        throw new Error(`CLI ${this.cliName} has an unsupported local-driver mode`)
+      }
+    } catch (err) {
+      failed = true
+      const errorEv = { type: "error", error: err } as AgentEvent
+      yield errorEv
+      await this.logEvent(handle.taskId, errorEv)
+      const failedEv = { type: "status", status: "failed" } as AgentEvent
+      yield failedEv
+      await this.logEvent(handle.taskId, failedEv)
+    }
+
+    if (!failed) {
+      const completedEv = { type: "status", status: "completed" } as AgentEvent
+      yield completedEv
+      await this.logEvent(handle.taskId, completedEv)
+    }
+  }
+
+  async abort(handle: TaskHandle): Promise<void> {
+    if (this.isCurrentTask(handle.taskId) && this.currentProc) {
+      try {
+        this.currentProc.kill()
+      } catch (err) {
+        log.warn("failed to kill current subprocess", { error: err, taskId: handle.taskId })
+      }
+    }
+    this.abortedTasks.add(handle.taskId)
+    await ExecutionLogService.appendEvent(handle.taskId, {
+      type: "status",
+      status: "cancelled",
+    })
+  }
+
+  async inspect(handle: TaskHandle): Promise<ExecutionLog> {
+    const logEntry = await ExecutionLogService.get(handle.taskId)
+    if (!logEntry) {
+      throw new Error(`No execution log found for task ${handle.taskId}`)
+    }
+    return logEntry
+  }
+
+  // ---------------------------------------------------------------------------
+  // Internal helpers
+  // ---------------------------------------------------------------------------
+
+  private async logEvent(taskId: string, event: AgentEvent): Promise<void> {
+    try {
+      await ExecutionLogService.appendEvent(taskId, event)
+    } catch (err) {
+      log.warn("failed to append execution log event", { error: err, taskId, eventType: event.type })
+    }
+  }
+
+  private isCurrentTask(taskId: string): boolean {
+    return this.currentTaskId === taskId
+  }
+
+  private async getRuntime(): Promise<RegisteredRuntime> {
+    if (this.runtimeCache) return this.runtimeCache
+    const runtime = await RuntimeService.get(this.runtimeId)
+    if (!runtime) throw new RuntimeNotFoundError({ runtimeId: this.runtimeId })
+    this.runtimeCache = runtime
+    return runtime
+  }
+
+  /**
+   * Legacy spec template tail. Adapters now fully own argv construction, so this
+   * returns an empty string for all migrated providers. It is kept only so the
+   * driver can reconstruct a `[path, ...tail]` base command for adapters that
+   * still want to inspect the resolved CLI path.
+   */
+  private specArgs(): string {
+    return ""
+  }
+
+  private resetCurrentTask(): void {
+    this.currentTaskId = undefined
+    this.currentProc = undefined
+  }
+
+  private async *runOneShotJson(
+    handle: TaskHandle,
+    argv: string[],
+    options: { cwd?: string; env?: Record<string, string> },
+  ): AsyncIterable<AgentEvent> {
+    log.info("spawning one-shot json subprocess", { taskId: handle.taskId, argv: argv.join(" ") })
+
+    const stderrTail = new StderrTail()
+    const proc = Bun.spawn(argv, {
+      stdin: "ignore",
+      stdout: "pipe",
+      stderr: "pipe",
+      cwd: options.cwd,
+      env: mergeEnv(process.env, options.env),
+    })
+    this.currentProc = proc
+    this.currentTaskId = handle.taskId
+
+    // Capture a bounded stderr tail for diagnostics without blocking exit handling.
+    ;(async () => {
+      try {
+        for await (const chunk of readStreamChunks(proc.stderr)) {
+          stderrTail.append(Buffer.from(chunk))
+        }
+      } catch {}
+    })()
+
+    try {
+      const [stdout, exitCode] = await Promise.all([readText(proc.stdout), proc.exited])
+
+      if (this.abortedTasks.has(handle.taskId)) {
+        this.abortedTasks.delete(handle.taskId)
+        const ev = { type: "status", status: "cancelled" } as AgentEvent
+        yield ev
+        await this.logEvent(handle.taskId, ev)
+        return
+      }
+
+      if (exitCode !== 0) {
+        const detail =
+          stderrTail.tail() || stdout.trim() || `subprocess exited with code ${exitCode}`
+        const errorEv = { type: "error", error: new Error(detail) } as AgentEvent
+        yield errorEv
+        await this.logEvent(handle.taskId, errorEv)
+        const finishEv = { type: "finish", finishReason: "error", usage: zeroUsage() } as AgentEvent
+        yield finishEv
+        await this.logEvent(handle.taskId, finishEv)
+        return
+      }
+
+      const text = extractOneShotOutput(stdout.trim())
+      if (text) {
+        const deltaEv = { type: "text_delta", delta: text } as AgentEvent
+        yield deltaEv
+        await this.logEvent(handle.taskId, deltaEv)
+      }
+
+      const finishEv = { type: "finish", finishReason: "stop", usage: zeroUsage() } as AgentEvent
+      yield finishEv
+      await this.logEvent(handle.taskId, finishEv)
+    } catch (err) {
+      log.error("one-shot json request failed", { error: err, taskId: handle.taskId })
+      const errorEv = { type: "error", error: err } as AgentEvent
+      yield errorEv
+      await this.logEvent(handle.taskId, errorEv)
+      const finishEv = { type: "finish", finishReason: "error", usage: zeroUsage() } as AgentEvent
+      yield finishEv
+      await this.logEvent(handle.taskId, finishEv)
+    } finally {
+      terminateProcessTree(proc)
+      this.resetCurrentTask()
+    }
+  }
+
+  private async *runOneShotText(
+    handle: TaskHandle,
+    argv: string[],
+    options: { cwd?: string; env?: Record<string, string> },
+  ): AsyncIterable<AgentEvent> {
+    log.info("spawning one-shot text subprocess", { taskId: handle.taskId, argv: argv.join(" ") })
+
+    const stderrTail = new StderrTail()
+    const proc = Bun.spawn(argv, {
+      stdin: "ignore",
+      stdout: "pipe",
+      stderr: "pipe",
+      cwd: options.cwd,
+      env: mergeEnv(process.env, options.env),
+    })
+    this.currentProc = proc
+    this.currentTaskId = handle.taskId
+
+    ;(async () => {
+      try {
+        for await (const chunk of readStreamChunks(proc.stderr)) {
+          stderrTail.append(Buffer.from(chunk))
+        }
+      } catch {}
+    })()
+
+    try {
+      const [stdout, exitCode] = await Promise.all([readText(proc.stdout), proc.exited])
+
+      if (this.abortedTasks.has(handle.taskId)) {
+        this.abortedTasks.delete(handle.taskId)
+        const ev = { type: "status", status: "cancelled" } as AgentEvent
+        yield ev
+        await this.logEvent(handle.taskId, ev)
+        return
+      }
+
+      if (exitCode !== 0) {
+        const detail =
+          stderrTail.tail() || stdout.trim() || `subprocess exited with code ${exitCode}`
+        const errorEv = { type: "error", error: new Error(detail) } as AgentEvent
+        yield errorEv
+        await this.logEvent(handle.taskId, errorEv)
+        const finishEv = { type: "finish", finishReason: "error", usage: zeroUsage() } as AgentEvent
+        yield finishEv
+        await this.logEvent(handle.taskId, finishEv)
+        return
+      }
+
+      const text = stdout.trim()
+      if (text) {
+        const deltaEv = { type: "text_delta", delta: text } as AgentEvent
+        yield deltaEv
+        await this.logEvent(handle.taskId, deltaEv)
+      }
+
+      const finishEv = { type: "finish", finishReason: "stop", usage: zeroUsage() } as AgentEvent
+      yield finishEv
+      await this.logEvent(handle.taskId, finishEv)
+    } catch (err) {
+      log.error("one-shot text request failed", { error: err, taskId: handle.taskId })
+      const errorEv = { type: "error", error: err } as AgentEvent
+      yield errorEv
+      await this.logEvent(handle.taskId, errorEv)
+      const finishEv = { type: "finish", finishReason: "error", usage: zeroUsage() } as AgentEvent
+      yield finishEv
+      await this.logEvent(handle.taskId, finishEv)
+    } finally {
+      terminateProcessTree(proc)
+      this.resetCurrentTask()
+    }
+  }
+
+  // ---------------------------------------------------------------------------
+  // Stream-json execution (Claude dialect)
+  // ---------------------------------------------------------------------------
+
+  private async *runStreamJson(
+    handle: TaskHandle,
+    argv: string[],
+    options: {
+      prompt: string
+      promptOnStdin: boolean
+      cwd?: string
+      env?: Record<string, string>
+    },
+  ): AsyncIterable<AgentEvent> {
+    log.info("spawning stream-json subprocess", {
+      taskId: handle.taskId,
+      argv: argv.join(" "),
+      cwd: options.cwd,
+    })
+
+    const stderrTail = new StderrTail()
+    const proc = Bun.spawn(argv, {
+      stdin: "pipe",
+      stdout: "pipe",
+      stderr: "pipe",
+      cwd: options.cwd,
+      env: mergeEnv(process.env, options.env),
+    })
+    this.currentProc = proc
+    this.currentTaskId = handle.taskId
+
+    // Capture a bounded stderr tail for diagnostics.
+    ;(async () => {
+      try {
+        for await (const chunk of readStreamChunks(proc.stderr)) {
+          stderrTail.append(Buffer.from(chunk))
+        }
+      } catch {}
+    })()
+
+    const stdin = proc.stdin
+    try {
+      if (options.promptOnStdin) {
+        await stdin.write(options.prompt + "\n")
+        await stdin.end()
+      } else {
+        // Claude/CodeBuddy expect the prompt as NDJSON and may send
+        // control_request frames mid-run; keep stdin open for responses.
+        await stdin.write(claudeStreamJsonInput(options.prompt))
+      }
+    } catch {
+      // stdin may already be closed by the agent.
+    }
+
+    let finished = false
+    const blockLengths: Record<number, number> = {}
+
+    try {
+      for await (const line of readLines(proc.stdout)) {
+        if (this.abortedTasks.has(handle.taskId)) {
+          this.abortedTasks.delete(handle.taskId)
+          const ev = { type: "status", status: "cancelled" } as AgentEvent
+          yield ev
+          await this.logEvent(handle.taskId, ev)
+          return
+        }
+
+        if (!line.trim()) continue
+
+        try {
+          const evt = JSON.parse(line) as StreamJsonEvent
+
+          if (evt.type === "system") {
+            if (evt.status) {
+              const statusEv = { type: "status", status: "running" } as AgentEvent
+              yield statusEv
+              await this.logEvent(handle.taskId, statusEv)
+            }
+            continue
+          }
+
+          if (evt.type === "assistant" && Array.isArray(evt.message?.content)) {
+            for (const [idx, part] of evt.message.content.entries()) {
+              if (!part || typeof part !== "object") continue
+              if (part.type === "text" && typeof part.text === "string") {
+                const prev = blockLengths[idx] ?? 0
+                const delta = part.text.slice(prev)
+                if (delta) {
+                  blockLengths[idx] = part.text.length
+                  const deltaEv = { type: "text_delta", delta } as AgentEvent
+                  yield deltaEv
+                  await this.logEvent(handle.taskId, deltaEv)
+                }
+              } else if (part.type === "tool_use") {
+                const toolCallEv = {
+                  type: "tool_call",
+                  id: String(part.id ?? `${handle.taskId}-tool-${idx}`),
+                  name: String(part.name ?? "tool"),
+                  arguments: part.input ?? {},
+                } as AgentEvent
+                yield toolCallEv
+                await this.logEvent(handle.taskId, toolCallEv)
+              }
+            }
+            continue
+          }
+
+          if (evt.type === "user" && Array.isArray(evt.content)) {
+            for (const [idx, part] of evt.content.entries()) {
+              if (!part || typeof part !== "object") continue
+              if (part.type === "tool_result") {
+                const toolResultEv = {
+                  type: "tool_result",
+                  id: String(part.tool_use_id ?? `${handle.taskId}-tool-${idx}`),
+                  content: extractTextContent(part.content),
+                  isError: Boolean(part.is_error),
+                } as AgentEvent
+                yield toolResultEv
+                await this.logEvent(handle.taskId, toolResultEv)
+              }
+            }
+            continue
+          }
+
+          if (evt.type === "control_request") {
+            const requestId = String(evt.request_id ?? "")
+            const input = evt.request?.input as Record<string, unknown> | undefined
+            if (requestId) {
+              writeControlResponse(stdin, requestId, input)
+            }
+            continue
+          }
+
+          if (evt.type === "result") {
+            finished = true
+            const usage = evt.usage ?? {}
+            const finishEv = {
+              type: "finish",
+              finishReason: evt.is_error ? "error" : "stop",
+              usage: {
+                inputTokens: usage.input_tokens ?? 0,
+                outputTokens: usage.output_tokens ?? 0,
+                totalTokens: (usage.input_tokens ?? 0) + (usage.output_tokens ?? 0),
+              },
+            } as AgentEvent
+            yield finishEv
+            await this.logEvent(handle.taskId, finishEv)
+            break
+          }
+        } catch {
+          // malformed JSON — skip
+        }
+      }
+
+      if (!finished) {
+        const finishEv = { type: "finish", finishReason: "stop", usage: zeroUsage() } as AgentEvent
+        yield finishEv
+        await this.logEvent(handle.taskId, finishEv)
+      }
+    } catch (err) {
+      log.error("stream-json request failed", { error: err, taskId: handle.taskId })
+      const detail = stderrTail.tail() || (err instanceof Error ? err.message : String(err))
+      const errorEv = { type: "error", error: new Error(detail) } as AgentEvent
+      yield errorEv
+      await this.logEvent(handle.taskId, errorEv)
+      const finishEv = { type: "finish", finishReason: "error", usage: zeroUsage() } as AgentEvent
+      yield finishEv
+      await this.logEvent(handle.taskId, finishEv)
+    } finally {
+      try {
+        await stdin.end()
+      } catch {}
+      terminateProcessTree(proc)
+      this.resetCurrentTask()
+    }
+  }
+
+  // ---------------------------------------------------------------------------
+  // OpenClaw simplified NDJSON / final-blob runner
+  // ---------------------------------------------------------------------------
+
+  private async *runOpenclawJson(
+    handle: TaskHandle,
+    argv: string[],
+    prompt: string,
+    cwd?: string,
+    env?: Record<string, string>,
+  ): AsyncIterable<AgentEvent> {
+    log.info("spawning openclaw subprocess", { taskId: handle.taskId, argv: argv.join(" "), cwd })
+
+    const stderrTail = new StderrTail()
+    const proc = Bun.spawn(argv, {
+      stdin: "pipe",
+      stdout: "pipe",
+      stderr: "pipe",
+      cwd,
+      env: mergeEnv(process.env, env),
+    })
+    this.currentProc = proc
+    this.currentTaskId = handle.taskId
+
+    ;(async () => {
+      try {
+        for await (const chunk of readStreamChunks(proc.stderr)) {
+          stderrTail.append(Buffer.from(chunk))
+        }
+      } catch {}
+    })()
+
+    const stdin = proc.stdin
+    try {
+      await stdin.write(prompt + "\n")
+      await stdin.end()
+    } catch {
+      // stdin may already be closed by the agent.
+    }
+
+    let finished = false
+    let stdoutBuf = ""
+
+    try {
+      for await (const line of readLines(proc.stdout)) {
+        if (this.abortedTasks.has(handle.taskId)) {
+          this.abortedTasks.delete(handle.taskId)
+          const ev = { type: "status", status: "cancelled" } as AgentEvent
+          yield ev
+          await this.logEvent(handle.taskId, ev)
+          return
+        }
+
+        stdoutBuf += line + "\n"
+        if (!line.trim()) continue
+
+        try {
+          const evt = JSON.parse(line) as OpenclawEvent
+
+          if (evt.type === "text" && typeof evt.text === "string") {
+            const deltaEv = { type: "text_delta", delta: evt.text } as AgentEvent
+            yield deltaEv
+            await this.logEvent(handle.taskId, deltaEv)
+          } else if (evt.type === "tool_use") {
+            const toolCallEv = {
+              type: "tool_call",
+              id: String(evt.id ?? `${handle.taskId}-tool-use`),
+              name: String(evt.name ?? "tool"),
+              arguments: evt.input ?? {},
+            } as AgentEvent
+            yield toolCallEv
+            await this.logEvent(handle.taskId, toolCallEv)
+          } else if (evt.type === "tool_result") {
+            const toolResultEv = {
+              type: "tool_result",
+              id: String(evt.id ?? `${handle.taskId}-tool-result`),
+              content: typeof evt.content === "string" ? evt.content : extractTextContent(evt.content),
+              isError: Boolean(evt.is_error),
+            } as AgentEvent
+            yield toolResultEv
+            await this.logEvent(handle.taskId, toolResultEv)
+          } else if (evt.type === "step_finish") {
+            finished = true
+            const usage = evt.usage ?? {}
+            const finishEv = {
+              type: "finish",
+              finishReason: evt.is_error ? "error" : "stop",
+              usage: {
+                inputTokens: usage.input_tokens ?? 0,
+                outputTokens: usage.output_tokens ?? 0,
+                totalTokens: (usage.input_tokens ?? 0) + (usage.output_tokens ?? 0),
+              },
+            } as AgentEvent
+            yield finishEv
+            await this.logEvent(handle.taskId, finishEv)
+            break
+          } else if (evt.type === "error") {
+            const detail = typeof evt.error === "string" ? evt.error : JSON.stringify(evt.error)
+            const errorEv = { type: "error", error: new Error(detail) } as AgentEvent
+            yield errorEv
+            await this.logEvent(handle.taskId, errorEv)
+          }
+        } catch {
+          // malformed JSON — could be the leading part of a final blob
+        }
+      }
+
+      // If the CLI emitted a single final-result blob instead of NDJSON events,
+      // parse the accumulated stdout now.
+      if (!finished) {
+        const result = parseOpenclawFinalBlob(stdoutBuf)
+        if (result.text) {
+          const deltaEv = { type: "text_delta", delta: result.text } as AgentEvent
+          yield deltaEv
+          await this.logEvent(handle.taskId, deltaEv)
+        }
+        const finishEv = {
+          type: "finish",
+          finishReason: "stop",
+          usage: result.usage ?? zeroUsage(),
+        } as AgentEvent
+        yield finishEv
+        await this.logEvent(handle.taskId, finishEv)
+      }
+    } catch (err) {
+      log.error("openclaw request failed", { error: err, taskId: handle.taskId })
+      const detail = stderrTail.tail() || (err instanceof Error ? err.message : String(err))
+      const errorEv = { type: "error", error: new Error(detail) } as AgentEvent
+      yield errorEv
+      await this.logEvent(handle.taskId, errorEv)
+      const finishEv = { type: "finish", finishReason: "error", usage: zeroUsage() } as AgentEvent
+      yield finishEv
+      await this.logEvent(handle.taskId, finishEv)
+    } finally {
+      terminateProcessTree(proc)
+      this.resetCurrentTask()
+    }
+  }
+
+  // ---------------------------------------------------------------------------
+  // ACP stdio execution (JSON-RPC over stdio via @agentclientprotocol/sdk)
+  // ---------------------------------------------------------------------------
+
+  private async *runAcp(
+    handle: TaskHandle,
+    argv: string[],
+    cwd?: string,
+    env?: Record<string, string>,
+  ): AsyncIterable<AgentEvent> {
+    const task = this.tasks.get(handle.taskId)
+    const taskCwd = cwd || task?.cwd || process.cwd()
+
+    if (this.cliName === "qwenpaw") {
+      argv = [...argv, "--workspace", taskCwd]
+    }
+
+    log.info("spawning acp subprocess", { taskId: handle.taskId, argv: argv.join(" "), cwd: taskCwd })
+
+    const stderrTail = new StderrTail()
+    const proc = nodeSpawn(argv[0], argv.slice(1), {
+      stdio: ["pipe", "pipe", "pipe"],
+      cwd: taskCwd,
+      env: mergeEnv(process.env, env),
+      detached: process.platform !== "win32",
+    })
+    this.currentProc = proc
+    this.currentTaskId = handle.taskId
+
+    proc.stderr?.on("data", (data: Buffer) => {
+      stderrTail.append(data)
+      log.warn("acp_agent_stderr", { taskId: handle.taskId, data: data.toString().slice(0, 500) })
+    })
+
+    const stream = ndJsonStream(
+      Writable.toWeb(proc.stdin!) as WritableStream<Uint8Array>,
+      Readable.toWeb(proc.stdout!) as unknown as ReadableStream<Uint8Array>,
+    )
+
+    const events: AgentEvent[] = []
+    let done = false
+    let notify = () => {}
+    let usage = zeroUsage()
+
+    proc.on("exit", (code) => {
+      if (code !== 0 && code !== null) {
+        log.warn("acp_agent_exited", { taskId: handle.taskId, code })
+      }
+      done = true
+      notify()
+    })
+
+    const pushEvent = (event: AgentEvent) => {
+      events.push(event)
+      notify()
+    }
+
+    const extractTextContent = (content: unknown): string => {
+      if (!content) return ""
+      if (typeof content === "string") return content
+      if (typeof (content as { text?: unknown }).text === "string")
+        return (content as { text: string }).text
+      if (Array.isArray(content)) {
+        return content
+          .map((part: unknown) => {
+            if (typeof part === "string") return part
+            const p = part as Record<string, unknown>
+            if (p?.type === "text") return String(p.text ?? "")
+            if (p?.type === "diff") {
+              return `\n--- ${String(p.path ?? "")}\n${String(p.oldText ?? "")}\n+++\n${String(p.newText ?? "")}`
+            }
+            if (p?.type === "terminal") return `[terminal ${String(p.terminalId ?? "")}]`
+            if (p?.content) return extractTextContent(p.content)
+            return ""
+          })
+          .join("")
+      }
+      const c = content as Record<string, unknown>
+      if (typeof c.content === "string") return c.content
+      return ""
+    }
+
+    const client = {
+      sessionUpdate: async (params: unknown) => {
+        if (this.abortedTasks.has(handle.taskId)) return
+        const notification = params as { sessionId?: string; update?: Record<string, unknown> } | undefined
+        const update = notification?.update
+        if (!update || !update.sessionUpdate) return
+
+        switch (update.sessionUpdate) {
+          case "agent_message_chunk":
+          case "agent_thought_chunk": {
+            const text = extractTextContent(update.content)
+            if (text) pushEvent({ type: "text_delta", delta: text })
+            break
+          }
+          case "tool_call": {
+            const toolCallId = String(update.toolCallId ?? "")
+            if (!toolCallId) break
+            pushEvent({
+              type: "tool_call",
+              id: toolCallId,
+              name: String(update.title ?? update.kind ?? "tool"),
+              arguments: update.rawInput ?? {},
+            })
+            break
+          }
+          case "tool_call_update": {
+            const toolCallId = String(update.toolCallId ?? "")
+            if (!toolCallId) break
+            const status = String(update.status ?? "")
+            if (status === "completed" || status === "failed") {
+              pushEvent({
+                type: "tool_result",
+                id: toolCallId,
+                content: extractTextContent(update.content),
+                isError: status === "failed",
+              })
+            }
+            break
+          }
+          case "usage_update": {
+            const used = typeof update.used === "number" ? update.used : 0
+            const size = typeof update.size === "number" ? update.size : 0
+            usage = {
+              inputTokens: Math.max(0, size - used),
+              outputTokens: Math.max(0, used),
+              totalTokens: Math.max(0, size),
+            }
+            break
+          }
+          default:
+            break
+        }
+      },
+      requestPermission: async (request: Record<string, unknown>) => {
+        const options = (request.options ?? []) as Array<Record<string, unknown>>
+        const option =
+          options.find((item) => item.kind === "allow_always") ??
+          options.find((item) => item.kind === "allow_once") ??
+          options.find((item) => !String(item.kind).includes("reject"))
+        return option
+          ? { outcome: { outcome: "selected" as const, optionId: option.optionId } }
+          : { outcome: { outcome: "cancelled" as const } }
+      },
+      readTextFile: async () => {
+        throw new Error("ACP file reads require an Allternit workspace grant")
+      },
+      writeTextFile: async () => {
+        throw new Error("ACP file writes require an Allternit workspace grant")
+      },
+    }
+
+    const acp = new ClientSideConnection(() => client as any, stream)
+
+    try {
+      await acp.initialize({
+        protocolVersion: PROTOCOL_VERSION,
+        clientCapabilities: { fs: { readTextFile: false, writeTextFile: false } },
+        clientInfo: { name: "Allternit", version: "1.0.0" },
+      })
+
+      const session = await acp.newSession({
+        cwd: taskCwd,
+        mcpServers: [],
+      })
+
+      const promptText = task?.prompt ?? ""
+      const attachmentBlocks = task?.attachments?.length
+        ? attachmentsToAcpContent(task.attachments)
+        : []
+      const promptPromise = acp.prompt({
+        sessionId: session.sessionId,
+        prompt: [{ type: "text", text: promptText }, ...attachmentBlocks],
+      })
+
+      // Yield events as they arrive while the prompt is in flight.
+      while (!done || events.length > 0) {
+        while (events.length > 0) {
+          const event = events.shift()!
+          yield event
+          await this.logEvent(handle.taskId, event)
+        }
+        if (!done) {
+          await Promise.race([
+            promptPromise.then(() => {
+              done = true
+            }),
+            new Promise<void>((r) => {
+              notify = r
+            }),
+          ])
+        }
+      }
+
+      const result = await promptPromise
+      const finishEv = {
+        type: "finish",
+        finishReason: result.stopReason ?? "stop",
+        usage,
+      } as AgentEvent
+      yield finishEv
+      await this.logEvent(handle.taskId, finishEv)
+    } catch (err) {
+      log.error("acp request failed", { error: err, taskId: handle.taskId })
+      const tail = stderrTail.tail()
+      const error =
+        tail && tail.trim()
+          ? new Error(`${err instanceof Error ? err.message : String(err)}\n\nagent stderr:\n${tail}`)
+          : err
+      const errorEv = { type: "error", error } as AgentEvent
+      yield errorEv
+      await this.logEvent(handle.taskId, errorEv)
+      const finishEv = { type: "finish", finishReason: "error", usage } as AgentEvent
+      yield finishEv
+      await this.logEvent(handle.taskId, finishEv)
+    } finally {
+      this.resetCurrentTask()
+      terminateProcessTree(proc)
+    }
+  }
+
+  // ---------------------------------------------------------------------------
+  // Codex app-server JSON-RPC runner
+  // ---------------------------------------------------------------------------
+
+  private async *runCodexAppServer(
+    handle: TaskHandle,
+    argv: string[],
+    prompt: string,
+    cwd?: string,
+    systemPrompt?: string,
+    env?: Record<string, string>,
+  ): AsyncIterable<AgentEvent> {
+    log.info("spawning codex app-server subprocess", {
+      taskId: handle.taskId,
+      argv: argv.join(" "),
+      cwd,
+    })
+
+    const stderrTail = new StderrTail()
+    const proc = Bun.spawn(argv, {
+      stdin: "pipe",
+      stdout: "pipe",
+      stderr: "pipe",
+      cwd,
+      env: mergeEnv(process.env, env),
+    })
+    this.currentProc = proc
+    this.currentTaskId = handle.taskId
+
+    const stdin = proc.stdin
+    const send = (msg: Record<string, unknown>) => {
+      writeToStdin(stdin, JSON.stringify(msg) + "\n")
+    }
+
+    let nextId = 1
+    const pending = new Map<
+      number,
+      { resolve: (value: unknown) => void; reject: (reason: unknown) => void }
+    >()
+
+    const request = async (method: string, params: unknown): Promise<unknown> => {
+      const id = nextId++
+      send({ jsonrpc: "2.0", id, method, params })
+      return new Promise((resolve, reject) => {
+        pending.set(id, { resolve, reject })
+      })
+    }
+
+    const notify = (method: string, params?: unknown) => {
+      send({ jsonrpc: "2.0", method, params })
+    }
+
+    const respond = (id: number, result: unknown) => {
+      send({ jsonrpc: "2.0", id, result })
+    }
+
+    const respondError = (id: number, code: number, message: string) => {
+      send({ jsonrpc: "2.0", id, error: { code, message } })
+    }
+
+    const events: AgentEvent[] = []
+    let done = false
+    let notifyYield = () => {}
+    let finished = false
+
+    const pushEvent = (event: AgentEvent) => {
+      events.push(event)
+      notifyYield()
+    }
+
+    const codexPermissionsApprovalResponse = (params: Record<string, unknown>): Record<string, unknown> => {
+      const permissions = (params.permissions ?? {}) as Record<string, unknown>
+      const granted: Record<string, unknown> = {}
+      for (const [key, value] of Object.entries(permissions)) {
+        if ((key === "network" || key === "fileSystem") && value != null) {
+          granted[key] = value
+        } else {
+          log.warn("codex: dropping unrecognized permission key", { key })
+        }
+      }
+      return { permissions: granted, scope: "turn" }
+    }
+
+    // Capture a bounded stderr tail for diagnostics.
+    ;(async () => {
+      try {
+        for await (const line of readLines(proc.stderr)) {
+          if (line.trim()) {
+            stderrTail.append(Buffer.from(line + "\n"))
+            log.warn("codex_app_server_stderr", { taskId: handle.taskId, data: line.slice(0, 500) })
+          }
+        }
+      } catch {}
+    })()
+
+    // Reader task
+    const readerPromise = (async () => {
+      try {
+        for await (const line of readLines(proc.stdout)) {
+          if (this.abortedTasks.has(handle.taskId)) return
+          if (!line.trim()) continue
+
+          try {
+            const msg = JSON.parse(line) as JsonRpcMessage
+            const hasId = typeof msg.id === "number"
+            const hasMethod = typeof msg.method === "string" && msg.method !== ""
+            const hasResult = "result" in msg
+            const hasError = "error" in msg
+
+            if (hasId) {
+              if (pending.has(msg.id!)) {
+                const p = pending.get(msg.id!)!
+                pending.delete(msg.id!)
+                if (hasError) {
+                  p.reject(msg.error)
+                } else {
+                  p.resolve(msg.result)
+                }
+                continue
+              }
+
+              if (hasMethod) {
+                // Server request (has both id and method) — auto-approve in autonomous mode.
+                switch (msg.method) {
+                  case "item/commandExecution/requestApproval":
+                  case "execCommandApproval":
+                    respond(msg.id!, { decision: "accept" })
+                    break
+                  case "item/fileChange/requestApproval":
+                  case "applyPatchApproval":
+                    respond(msg.id!, { decision: "accept" })
+                    break
+                  case "item/permissions/requestApproval":
+                    respond(msg.id!, codexPermissionsApprovalResponse(msg.params ?? {}))
+                    break
+                  case "mcpServer/elicitation/request":
+                    respond(msg.id!, { action: "accept", content: null, _meta: null })
+                    break
+                  default:
+                    log.warn("codex: unhandled server request", { method: msg.method, id: msg.id })
+                    respondError(msg.id!, -32601, `unsupported codex app-server request: ${msg.method}`)
+                }
+                continue
+              }
+
+              // Response to an unknown request — ignore.
+              continue
+            }
+
+            // Notification (no id, has method)
+            if (!hasMethod) continue
+            const method = msg.method
+            const params = (msg.params ?? {}) as Record<string, unknown>
+
+            if (method === "turn/started" || method === "codex/event") {
+              const event = params.event as Record<string, unknown> | undefined
+              if (method === "turn/started" || event?.type === "task_started") {
+                pushEvent({ type: "status", status: "running" })
+              }
+              continue
+            }
+
+            if (method === "item/completed") {
+              const agentMessage = params.agentMessage as Record<string, unknown> | undefined
+              if (agentMessage) {
+                const text = extractCodexText(agentMessage)
+                if (text) pushEvent({ type: "text_delta", delta: text })
+              }
+              continue
+            }
+
+            if (method === "item/commandExecution/started") {
+              pushEvent({
+                type: "tool_call",
+                id: String(params.id ?? `${handle.taskId}-command`),
+                name: "exec_command",
+                arguments: params,
+              })
+              continue
+            }
+
+            if (method === "item/commandExecution/completed") {
+              pushEvent({
+                type: "tool_result",
+                id: String(params.id ?? `${handle.taskId}-command`),
+                content: extractCodexText(params),
+                isError: Boolean(params.error),
+              })
+              continue
+            }
+
+            if (method === "item/fileChange/started") {
+              pushEvent({
+                type: "tool_call",
+                id: String(params.id ?? `${handle.taskId}-file-change`),
+                name: "patch_apply",
+                arguments: params,
+              })
+              continue
+            }
+
+            if (method === "item/fileChange/completed") {
+              pushEvent({
+                type: "tool_result",
+                id: String(params.id ?? `${handle.taskId}-file-change`),
+                content: extractCodexText(params),
+                isError: Boolean(params.error),
+              })
+              continue
+            }
+
+            if (method === "turn/completed") {
+              finished = true
+              done = true
+              pushEvent({ type: "finish", finishReason: "stop", usage: zeroUsage() })
+              continue
+            }
+          } catch {
+            // malformed JSON-RPC line — skip
+          }
+        }
+      } finally {
+        done = true
+        notifyYield()
+      }
+    })()
+
+    try {
+      await request("initialize", {
+        clientInfo: { name: "Allternit", version: "1.0.0" },
+        capabilities: { experimentalApi: true },
+      })
+
+      notify("initialized", {})
+
+      const thread = (await request("thread/start", {
+        cwd: cwd || process.cwd(),
+        developerInstructions: systemPrompt,
+      })) as { threadId?: string }
+      const threadId = thread.threadId
+      if (!threadId) throw new Error("codex app-server did not return a threadId")
+
+      await request("turn/start", {
+        threadId,
+        input: [{ type: "text", text: prompt }],
+      })
+
+      while (!done || events.length > 0) {
+        while (events.length > 0) {
+          const event = events.shift()!
+          yield event
+          await this.logEvent(handle.taskId, event)
+        }
+        if (!done) {
+          await new Promise<void>((r) => {
+            notifyYield = r
+          })
+        }
+      }
+
+      if (!finished) {
+        const finishEv = { type: "finish", finishReason: "stop", usage: zeroUsage() } as AgentEvent
+        yield finishEv
+        await this.logEvent(handle.taskId, finishEv)
+      }
+    } catch (err) {
+      log.error("codex app-server request failed", { error: err, taskId: handle.taskId })
+      const tail = stderrTail.tail()
+      const error =
+        tail && tail.trim()
+          ? new Error(`${err instanceof Error ? err.message : String(err)}\n\nagent stderr:\n${tail}`)
+          : err
+      const errorEv = { type: "error", error } as AgentEvent
+      yield errorEv
+      await this.logEvent(handle.taskId, errorEv)
+      const finishEv = { type: "finish", finishReason: "error", usage: zeroUsage() } as AgentEvent
+      yield finishEv
+      await this.logEvent(handle.taskId, finishEv)
+    } finally {
+      try {
+        await stdin.end()
+      } catch {}
+      await readerPromise.catch(() => {})
+      terminateProcessTree(proc)
+      this.resetCurrentTask()
+    }
+  }
+}
+
+// ---------------------------------------------------------------------------
+// CLI adapters
+// ---------------------------------------------------------------------------
+//
+// Each discovered CLI maps to an explicit adapter keyed by its provider id
+// (matching SUBPROCESS_PROVIDERS ids). There are no generic fallbacks.
+
+type AdapterMode =
+  | "stream-json"
+  | "openclaw-json"
+  | "acp"
+  | "codex-app-server"
+  | "one-shot-json"
+  | "one-shot-text"
+
+interface CliAdapter {
+  mode: AdapterMode
+  /** Whether this adapter can forward task attachments to the CLI. */
+  supportsAttachments?: boolean
+  /** For stream-json adapters: deliver the prompt as raw stdin text instead of NDJSON. */
+  promptOnStdin?: boolean
+  /** Build the final argv. */
+  buildArgv(
+    baseCmd: string[],
+    message: string,
+    ctx: { cwd?: string; taskId: string },
+  ): string[]
+}
+
+function claudeStreamJsonInput(message: string): string {
+  return (
+    JSON.stringify({
+      type: "user",
+      message: { role: "user", content: [{ type: "text", text: message }] },
+    }) + "\n"
+  )
+}
+
+function modelFlag(modelEnv?: string): string[] {
+  return modelEnv ? ["--model", modelEnv] : []
+}
+
+const CLI_ADAPTERS: Record<string, CliAdapter> = {
+  // Anthropic Claude Code — stream-json.
+  "claude-cli": {
+    mode: "stream-json",
+    buildArgv: ([command], _message, _ctx) => {
+      return [
+        command,
+        "-p",
+        "--output-format", "stream-json",
+        "--input-format", "stream-json",
+        "--verbose",
+        "--permission-mode", "bypassPermissions",
+        "--disallowedTools", "AskUserQuestion",
+        ...modelFlag(PROVIDER_ENV_KEYS["claude-cli"]?.model ? process.env[PROVIDER_ENV_KEYS["claude-cli"]!.model!] : undefined),
+      ]
+    },
+  },
+
+  // CodeBuddy — same stream-json dialect as Claude.
+  codebuddy: {
+    mode: "stream-json",
+    buildArgv: ([command]) => {
+      return [
+        command,
+        "-p",
+        "--output-format", "stream-json",
+        "--input-format", "stream-json",
+        "--verbose",
+        "--permission-mode", "bypassPermissions",
+        "--disallowedTools", "AskUserQuestion",
+        "--disallowedTools", "EnterPlanMode",
+        "--disallowedTools", "ExitPlanMode",
+        ...modelFlag(PROVIDER_ENV_KEYS["codebuddy"]?.model ? process.env[PROVIDER_ENV_KEYS["codebuddy"]!.model!] : undefined),
+      ]
+    },
+  },
+
+  // Cursor Agent — stream-json, prompt delivered on stdin.
+  "cursor-agent": {
+    mode: "stream-json",
+    promptOnStdin: true,
+    buildArgv: ([command], _message, ctx) => {
+      return [
+        command,
+        "-p",
+        "--output-format", "stream-json",
+        "--yolo",
+        "--workspace", ctx.cwd || process.cwd(),
+        ...modelFlag(PROVIDER_ENV_KEYS["cursor-agent"]?.model ? process.env[PROVIDER_ENV_KEYS["cursor-agent"]!.model!] : undefined),
+      ]
+    },
+  },
+
+  // OpenCode — stream-json, prompt delivered on stdin.
+  opencode: {
+    mode: "stream-json",
+    promptOnStdin: true,
+    buildArgv: ([command], _message, ctx) => {
+      return [
+        command,
+        "run",
+        "--format", "json",
+        "--dangerously-skip-permissions",
+        "--dir", ctx.cwd || process.cwd(),
+        ...modelFlag(PROVIDER_ENV_KEYS["opencode"]?.model ? process.env[PROVIDER_ENV_KEYS["opencode"]!.model!] : undefined),
+      ]
+    },
+  },
+
+  // DevEco Code — stream-json, prompt appended as positional arg.
+  deveco: {
+    mode: "stream-json",
+    buildArgv: ([command], message, ctx) => {
+      return [
+        command,
+        "run",
+        "--format", "json",
+        "--dangerously-skip-permissions",
+        "--dir", ctx.cwd || process.cwd(),
+        ...modelFlag(PROVIDER_ENV_KEYS["deveco"]?.model ? process.env[PROVIDER_ENV_KEYS["deveco"]!.model!] : undefined),
+        message,
+      ]
+    },
+  },
+
+  // OpenClaw — simplified NDJSON / final-blob runner.
+  openclaw: {
+    mode: "openclaw-json",
+    buildArgv: ([command], message, ctx) => {
+      const model = PROVIDER_ENV_KEYS["openclaw"]?.model
+        ? process.env[PROVIDER_ENV_KEYS["openclaw"]!.model!]
+        : undefined
+      const args = [
+        command,
+        "agent",
+        "--local",
+        "--json",
+        "--session-id", ctx.taskId,
+      ]
+      if (model) {
+        args.push("--agent", model)
+      }
+      args.push("--message", message)
+      return args
+    },
+  },
+
+  // Alibaba Qwen Code — stream-json.
+  "qwen-cli": {
+    mode: "stream-json",
+    buildArgv: ([command], message) => {
+      return [
+        command,
+        "-p", message,
+        "--output-format", "stream-json",
+        "--yolo",
+        ...modelFlag(PROVIDER_ENV_KEYS["qwen-cli"]?.model ? process.env[PROVIDER_ENV_KEYS["qwen-cli"]!.model!] : undefined),
+      ]
+    },
+  },
+
+  // OpenAI Codex — JSON-RPC app-server over stdio.
+  "codex-cli": {
+    mode: "codex-app-server",
+    buildArgv: ([command]) => {
+      return [command, "app-server", "--listen", "stdio://"]
+    },
+  },
+
+  // Moonshot Kimi — ACP.
+  "kimi-cli": {
+    mode: "acp",
+    supportsAttachments: true,
+    buildArgv: ([command]) => [command, "acp"],
+  },
+
+  // MiniMax Code — ACP.
+  mcode: {
+    mode: "acp",
+    supportsAttachments: true,
+    buildArgv: ([command]) => [command, "acp"],
+  },
+
+  // Pi — one-shot JSON.
+  pi: {
+    mode: "one-shot-json",
+    buildArgv: ([command], message) => [command, "-p", "--mode", "json", message],
+  },
+
+  // Oh-My-Pi — one-shot JSON.
+  omp: {
+    mode: "one-shot-json",
+    buildArgv: ([command], message) => [command, "-p", "--mode", "json", message],
+  },
+
+  // Antigravity (agy) — one-shot text.
+  antigravity: {
+    mode: "one-shot-text",
+    buildArgv: ([command], message) => [command, "--print", message],
+  },
+
+  // Hermes — ACP stdio.
+  hermes: {
+    mode: "acp",
+    supportsAttachments: true,
+    buildArgv: ([command]) => [command, "acp"],
+  },
+
+  // Grok Build — ACP stdio.
+  grok: {
+    mode: "acp",
+    supportsAttachments: true,
+    buildArgv: ([command]) => [command, "agent", "--always-approve", "stdio"],
+  },
+
+  // Kiro CLI — ACP stdio.
+  "kiro-cli": {
+    mode: "acp",
+    supportsAttachments: true,
+    buildArgv: ([command]) => [command, "acp"],
+  },
+
+  // Qoder CLI — ACP stdio.
+  qodercli: {
+    mode: "acp",
+    supportsAttachments: true,
+    buildArgv: ([command]) => [command, "--yolo", "--acp"],
+  },
+
+  // Qoder CN CLI — ACP stdio.
+  qoderclicn: {
+    mode: "acp",
+    supportsAttachments: true,
+    buildArgv: ([command]) => [command, "--yolo", "--acp"],
+  },
+
+  // QwenPaw — ACP stdio.
+  qwenpaw: {
+    mode: "acp",
+    supportsAttachments: true,
+    buildArgv: ([command]) => [command, "acp"],
+  },
+
+  // Reasonix — ACP stdio.
+  reasonix: {
+    mode: "acp",
+    supportsAttachments: true,
+    buildArgv: ([command]) => [command, "acp"],
+  },
+
+  // Trae CLI — ACP stdio.
+  traecli: {
+    mode: "acp",
+    supportsAttachments: true,
+    buildArgv: ([command]) => [command, "acp", "serve", "--yolo"],
+  },
+}
+
+function resolveAdapter(name: string): CliAdapter {
+  const adapter = CLI_ADAPTERS[name]
+  if (adapter) return adapter
+
+  const unsupportedByProtocol: Record<string, string> = {
+    dsh: "DSH multica stdio (private JSONL protocol)",
+    "copilot-cli": "Copilot suggest mode (not a verified agent chat protocol)",
+  }
+
+  const protocol = unsupportedByProtocol[name]
+  if (protocol) {
+    throw new Error(
+      `CLI "${name}" is installed but uses ${protocol}, which this local driver does not yet implement.`,
+    )
+  }
+
+  throw new Error(
+    `CLI "${name}" has no local driver adapter. Add it to CLI_ADAPTERS in local-cli-driver.ts or disable the CLI.`,
+  )
+}
+
+export interface CliAdapterInfo {
+  supported: boolean
+  mode?: AdapterMode
+  supportsAttachments?: boolean
+  reason?: string
+}
+
+export function getCliAdapterInfo(name: string): CliAdapterInfo {
+  const adapter = CLI_ADAPTERS[name]
+  if (adapter) {
+    // OpenClaw uses a dedicated runner but speaks a stream-json-style NDJSON wire.
+    const mode = adapter.mode === "openclaw-json" ? "stream-json" : adapter.mode
+    return { supported: true, mode, supportsAttachments: adapter.supportsAttachments ?? false }
+  }
+
+  const unsupportedByProtocol: Record<string, string> = {
+    dsh: "DSH multica stdio (private JSONL protocol)",
+    "copilot-cli": "Copilot suggest mode (not a verified agent chat protocol)",
+    copilot: "Copilot suggest mode (not a verified agent chat protocol)",
+  }
+
+  const protocol = unsupportedByProtocol[name]
+  if (protocol) {
+    return { supported: false, reason: `${protocol} is not implemented by the local driver yet` }
+  }
+
+  return { supported: false, reason: "No adapter registered for this CLI" }
+}
+
+// ---------------------------------------------------------------------------
+// Utilities
+// ---------------------------------------------------------------------------
+
+function parseCmd(cmd: string): string[] {
+  const trimmed = cmd.trim()
+  if (!trimmed) return []
+  return trimmed.split(/\s+/)
+}
+
+async function readText(stream?: ReadableStream<Uint8Array> | null): Promise<string> {
+  if (!stream) return ""
+  const reader = stream.getReader()
+  const decoder = new TextDecoder()
+  let text = ""
+  try {
+    while (true) {
+      const { done, value } = await reader.read()
+      if (done) break
+      text += decoder.decode(value, { stream: true })
+    }
+    text += decoder.decode()
+  } finally {
+    reader.releaseLock()
+  }
+  return text
+}
+
+async function* readLines(stream: ReadableStream<Uint8Array>): AsyncGenerator<string> {
+  const reader = stream.getReader()
+  const decoder = new TextDecoder()
+  let buf = ""
+  try {
+    while (true) {
+      const { done, value } = await reader.read()
+      if (done) {
+        if (buf.length > 0) yield buf
+        break
+      }
+      buf += decoder.decode(value, { stream: true })
+      const lines = buf.split("\n")
+      buf = lines.pop() ?? ""
+      for (const line of lines) yield line
+    }
+  } finally {
+    reader.releaseLock()
+  }
+}
+
+async function* readStreamChunks(stream: ReadableStream<Uint8Array>): AsyncGenerator<Uint8Array> {
+  const reader = stream.getReader()
+  try {
+    while (true) {
+      const { done, value } = await reader.read()
+      if (done) break
+      if (value) yield value
+    }
+  } finally {
+    reader.releaseLock()
+  }
+}
+
+function generateTaskId(): string {
+  return `task-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`
+}
+
+function zeroUsage() {
+  return { inputTokens: 0, outputTokens: 0, totalTokens: 0 }
+}
+
+function extractOneShotOutput(raw: string): string {
+  if (!raw) return raw
+
+  if (raw.startsWith("{") || raw.startsWith("[")) {
+    try {
+      const parsed = JSON.parse(raw)
+      const candidate =
+        parsed.text ??
+        parsed.content ??
+        parsed.response ??
+        parsed.message ??
+        parsed.answer ??
+        parsed.output
+      if (typeof candidate === "string") return candidate
+      if (Array.isArray(candidate)) {
+        return candidate
+          .map((part: unknown) => (typeof part === "string" ? part : (part as { text?: string })?.text ?? ""))
+          .join("")
+      }
+    } catch {
+      // Not valid JSON — fall back to raw output.
+    }
+  }
+
+  return raw
+}
+
+function extractTextContent(content: unknown): string {
+  if (!content) return ""
+  if (typeof content === "string") return content
+  if (Array.isArray(content)) {
+    return content
+      .map((part: unknown) => {
+        if (typeof part === "string") return part
+        const p = part as Record<string, unknown>
+        if (p?.type === "text" && typeof p.text === "string") return p.text
+        if (p?.type === "text") return String(p.text ?? "")
+        if (p?.text && typeof p.text === "string") return p.text
+        return ""
+      })
+      .join("")
+  }
+  const c = content as Record<string, unknown>
+  if (typeof c.text === "string") return c.text
+  return ""
+}
+
+function mergeEnv(base: NodeJS.ProcessEnv, extra?: Record<string, string>): NodeJS.ProcessEnv {
+  const env: NodeJS.ProcessEnv = {}
+  for (const [key, value] of Object.entries(base)) {
+    if (value === undefined) continue
+    if (isFilteredChildEnvKey(key)) continue
+    env[key] = value
+  }
+  if (extra) {
+    for (const [key, value] of Object.entries(extra)) {
+      env[key] = value
+    }
+  }
+  return env
+}
+
+/**
+ * isFilteredChildEnvKey mirrors Multica's child env filtering.
+ *
+ * Inherited MULTICA_* overrides are discovery-time configuration for the
+ * parent process and must not leak into agent CLIs (they can confuse nested
+ * sessions or expose internal path overrides). Claude Code internal runtime
+ * markers are also stripped; user-facing CLAUDE_CODE_* config vars are kept.
+ */
+function isFilteredChildEnvKey(key: string): boolean {
+  const up = key.toUpperCase()
+  if (up.startsWith("MULTICA_")) return true
+  switch (up) {
+    case "CLAUDECODE":
+    case "CLAUDE_CODE_ENTRYPOINT":
+    case "CLAUDE_CODE_EXECPATH":
+    case "CLAUDE_CODE_SESSION_ID":
+    case "CLAUDE_CODE_SSE_PORT":
+      return true
+  }
+  return up.startsWith("CLAUDECODE_")
+}
+
+function writeToStdin(sink: Bun.FileSink | WritableStream<Uint8Array>, text: string): void {
+  if (typeof (sink as WritableStream<Uint8Array>).getWriter === "function") {
+    const writer = (sink as WritableStream<Uint8Array>).getWriter()
+    writer.write(new TextEncoder().encode(text)).catch(() => {})
+    writer.releaseLock()
+    return
+  }
+  Promise.resolve((sink as Bun.FileSink).write(text)).catch(() => {})
+}
+
+function writeControlResponse(
+  stdin: Bun.FileSink | WritableStream<Uint8Array>,
+  requestId: string,
+  input?: Record<string, unknown> | string,
+): void {
+  let updatedInput: Record<string, unknown> | undefined
+  if (typeof input === "string") {
+    try {
+      updatedInput = JSON.parse(input) as Record<string, unknown>
+    } catch {
+      updatedInput = {}
+    }
+  } else if (input && typeof input === "object") {
+    updatedInput = { ...input }
+  } else {
+    updatedInput = {}
+  }
+
+  // Multica forces tools to run in the foreground so a cancelled task cannot
+  // leave a background subprocess spinning.
+  if (updatedInput.run_in_background === true) {
+    updatedInput.run_in_background = false
+  }
+
+  const response = {
+    type: "control_response",
+    response: {
+      subtype: "success",
+      request_id: requestId,
+      response: {
+        behavior: "allow",
+        updatedInput,
+      },
+    },
+  }
+  writeToStdin(stdin, JSON.stringify(response) + "\n")
+}
+
+// ---------------------------------------------------------------------------
+// Production process hygiene (matches Multica's Go helpers)
+// ---------------------------------------------------------------------------
+
+const STDERR_TAIL_BYTES = 2048
+
+class StderrTail {
+  private chunks: Buffer[] = []
+  private length = 0
+
+  append(data: Buffer): void {
+    this.chunks.push(data)
+    this.length += data.length
+    while (this.length > STDERR_TAIL_BYTES && this.chunks.length > 1) {
+      const first = this.chunks.shift()!
+      this.length -= first.length
+    }
+    // If a single chunk is still oversized, keep its trailing bytes.
+    if (this.length > STDERR_TAIL_BYTES && this.chunks.length === 1) {
+      const first = this.chunks[0]!
+      const trimmed = first.subarray(-STDERR_TAIL_BYTES)
+      this.chunks = [trimmed]
+      this.length = trimmed.length
+    }
+  }
+
+  tail(): string {
+    return Buffer.concat(this.chunks).toString("utf-8").slice(-STDERR_TAIL_BYTES)
+  }
+}
+
+interface KillableProcess {
+  pid?: number
+  kill: () => void
+}
+
+function terminateProcessTree(proc: KillableProcess, graceMs = 5000): void {
+  if (!proc.pid) {
+    safeKill(proc)
+    return
+  }
+
+  // On Unix, try a graceful process-group SIGTERM first, then SIGKILL.
+  if (process.platform !== "win32") {
+    try {
+      process.kill(-proc.pid, "SIGTERM")
+      const timer = setTimeout(() => {
+        try {
+          process.kill(-proc.pid, "SIGKILL")
+        } catch {}
+      }, graceMs)
+      timer.unref?.()
+      return
+    } catch {
+      // Fall back to killing the leader directly.
+    }
+  }
+
+  safeKill(proc)
+}
+
+function safeKill(proc: KillableProcess): void {
+  try {
+    proc.kill()
+  } catch {}
+}
+
+interface StreamJsonEvent {
+  type: string
+  status?: string
+  message?: { content?: Array<Record<string, unknown>> }
+  content?: Array<Record<string, unknown>> | Record<string, unknown> | string
+  usage?: { input_tokens?: number; output_tokens?: number }
+  is_error?: boolean
+  request_id?: string
+  request?: { input?: Record<string, unknown> | string }
+}
+
+interface OpenclawEvent {
+  type: string
+  text?: string
+  id?: string
+  name?: string
+  input?: unknown
+  content?: unknown
+  is_error?: boolean
+  usage?: { input_tokens?: number; output_tokens?: number }
+  error?: unknown
+}
+
+function parseOpenclawFinalBlob(
+  raw: string,
+): { text: string; usage?: { inputTokens: number; outputTokens: number; totalTokens: number } } {
+  const trimmed = raw.trim()
+  if (!trimmed) return { text: "" }
+
+  if (trimmed.startsWith("{")) {
+    try {
+      const parsed = JSON.parse(trimmed)
+      const payloads = parsed.payloads
+      if (Array.isArray(payloads)) {
+        const text = payloads
+          .map((p: Record<string, unknown>) => extractTextContent(p))
+          .join("")
+        const meta = parsed.meta as Record<string, unknown> | undefined
+        const agentMeta = meta?.agentMeta as Record<string, unknown> | undefined
+        const usage = agentMeta?.usage as Record<string, unknown> | undefined
+        return {
+          text,
+          usage: usage
+            ? {
+                inputTokens: Number(usage.input_tokens ?? 0),
+                outputTokens: Number(usage.output_tokens ?? 0),
+                totalTokens: Number(usage.total_tokens ?? 0),
+              }
+            : zeroUsage(),
+        }
+      }
+    } catch {
+      // not a JSON blob
+    }
+  }
+
+  return { text: trimmed }
+}
+
+interface JsonRpcMessage {
+  jsonrpc?: string
+  id?: number
+  method?: string
+  params?: Record<string, unknown>
+  result?: unknown
+  error?: unknown
+}
+
+function extractCodexText(params: Record<string, unknown>): string {
+  const text = params.text
+  if (typeof text === "string") return text
+  const content = params.content
+  if (content) return extractTextContent(content)
+  const data = params.data
+  if (data) return extractTextContent(data)
+  return ""
+}

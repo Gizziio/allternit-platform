@@ -41,7 +41,7 @@ export async function embedContent(
     JSON.stringify(formattedParams),
     requestOptions
   );
-  return response.json();
+  return response.json() as Promise<EmbedContentResponse>;
 }
 
 export async function batchEmbedContents(
@@ -62,5 +62,5 @@ export async function batchEmbedContents(
     JSON.stringify({ requests: requestsWithModel }),
     requestOptions
   );
-  return response.json();
+  return response.json() as Promise<BatchEmbedContentsResponse>;
 }

@@ -121,7 +121,7 @@ export class AllternitMiniMax {
     });
 
     if (!response.ok) {
-      const error = await response.json().catch(() => ({ base_resp: { status_msg: 'Unknown error' } }));
+      const error = await response.json().catch(() => ({ base_resp: { status_msg: 'Unknown error' } })) as { base_resp?: { status_msg?: string } };
       throw new HarnessError(
         error.base_resp?.status_msg || `MiniMax API error: ${response.status}`,
         HarnessErrorCode.PROVIDER_ERROR,
@@ -167,7 +167,7 @@ export class AllternitMiniMax {
     });
 
     if (!response.ok) {
-      const error = await response.json().catch(() => ({ base_resp: { status_msg: 'Unknown error' } }));
+      const error = await response.json().catch(() => ({ base_resp: { status_msg: 'Unknown error' } })) as { base_resp?: { status_msg?: string } };
       throw new HarnessError(
         error.base_resp?.status_msg || `MiniMax API error: ${response.status}`,
         HarnessErrorCode.PROVIDER_ERROR,

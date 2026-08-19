@@ -11,7 +11,7 @@ from pathlib import Path
 from typing import Any, Dict, Optional
 
 from fastapi import APIRouter, HTTPException
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, model_validator
 
 from contracts.codec import transaction_from_dict
 from core.canonical_runtime import CanonicalRuntimeError, StaleResourceStateError
@@ -235,6 +235,25 @@ class ShadowResultRequest(BaseModel):
 class TransactionRequest(BaseModel):
     provider_id: str = "browser.playwright.canonical"
     transaction: Dict[str, Any]
+
+
+class HistoryStatusRequest(BaseModel):
+    model_config = {"extra": "forbid"}
+
+
+class HistoryQueryRequest(BaseModel):
+    model_config = {"extra": "forbid"}
+    limit: int = Field(default=50, ge=1, le=200)
+    session_id: Optional[str] = Field(default=None, min_length=1, max_length=128)
+    since_sequence: Optional[int] = Field(default=None, ge=1)
+    until_sequence: Optional[int] = Field(default=None, ge=1)
+
+    @model_validator(mode="after")
+    def check_sequence_bounds(self):
+        if self.since_sequence is not None and self.until_sequence is not None:
+            if self.since_sequence > self.until_sequence:
+                raise ValueError("since_sequence must not exceed until_sequence")
+        return self
 
 
 class ApprovalGrantRequest(BaseModel):
@@ -998,6 +1017,39 @@ async def grant_operation_approval(body: OperationApprovalRequest) -> Dict[str, 
         raise _http_error(error) from error
 
 
+def _cua_provider() -> CuaDriverCanonicalProvider:
+    try:
+        provider = service.provider("desktop.cua-driver")
+    except ProviderNotFoundError as error:
+        raise ProviderNotFoundError("desktop.cua-driver") from error
+    if not isinstance(provider, CuaDriverCanonicalProvider):
+        raise ProviderNotFoundError("desktop.cua-driver")
+    return provider
+
+
+@router.post("/history/status")
+async def history_status(body: HistoryStatusRequest) -> Dict[str, Any]:
+    await ensure_initialized()
+    try:
+        return await _cua_provider().history_status()
+    except Exception as error:
+        raise _http_error(error) from error
+
+
+@router.post("/history/query")
+async def history_query(body: HistoryQueryRequest) -> Dict[str, Any]:
+    await ensure_initialized()
+    try:
+        return await _cua_provider().history_query(
+            limit=body.limit,
+            session_id=body.session_id,
+            since_sequence=body.since_sequence,
+            until_sequence=body.until_sequence,
+        )
+    except Exception as error:
+        raise _http_error(error) from error
+
+
 @router.post("/environments/{environment_id}/leases")
 async def acquire_environment_lease(environment_id: str, body: LeaseAcquireRequest) -> Dict[str, Any]:
     try:
@@ -1055,6 +1107,25 @@ async def clone_environment_snapshot(snapshot_id: str, body: SnapshotCloneReques
 @router.post("/environments/cleanup")
 async def cleanup_expired_environments() -> Dict[str, int]:
     return _environments.cleanup_expired()
+
+
+async def history_preflight_for_task(_task: str) -> Optional[Dict[str, Any]]:
+    """Deterministic history preflight: status then bounded query.
+
+    Returns a dict with `status` and `events`, or None when history is unavailable
+    or not useful. Swallows errors so the planning loop can continue without history.
+    """
+    await ensure_initialized()
+    try:
+        provider = _cua_provider()
+        status = await provider.history_status()
+        if not (status.get("supported") and status.get("admitted") and status.get("enabled")):
+            return None
+        query = await provider.history_query(limit=50)
+        return {"status": status, "events": query.get("events", [])}
+    except Exception as exc:
+        logger.debug("History preflight skipped: %s", exc)
+        return None
 
 
 async def shutdown_canonical_service() -> None:

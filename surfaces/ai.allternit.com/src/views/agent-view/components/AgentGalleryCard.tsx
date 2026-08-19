@@ -25,6 +25,7 @@ import { AgentAvatar } from "@/components/Avatar";
 import { MascotPreview } from "./AgentMascotPreview";
 import { ConfirmModal } from "@/components/ConfirmModal";
 import { cn } from "@/lib/utils";
+import { isBot } from "@/lib/bots/bot-profile";
 
 interface AgentGalleryCardProps {
   agent: Agent;
@@ -187,6 +188,7 @@ export function AgentGalleryCard({ agent, onClick, index = 0 }: AgentGalleryCard
     onClick();
   };
 
+  const isBotAgent = isBot(agent);
   const surfaces = useMemo(() => agent.allowedSurfaces?.slice(0, 4) || [], [agent.allowedSurfaces]);
   const capabilities = useMemo(() => agent.capabilities || [], [agent.capabilities]);
   const visibleCapabilities = capabilities.slice(0, 2);
@@ -201,7 +203,18 @@ export function AgentGalleryCard({ agent, onClick, index = 0 }: AgentGalleryCard
         initial={{ opacity: 0, y: 16 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: index * 0.04, duration: 0.3 }}
-        onClick={() => !menuOpen && onClick()}
+        onClick={() => {
+          if (menuOpen) return;
+          if (isBotAgent) {
+            window.dispatchEvent(
+              new CustomEvent("allternit:open-view", {
+                detail: { viewType: "bot-home", context: { botId: agent.id } },
+              })
+            );
+            return;
+          }
+          onClick();
+        }}
         onMouseEnter={() => setIsHovered(true)}
         onMouseLeave={() => { setIsHovered(false); setMenuOpen(false); }}
         className={cn(
@@ -289,8 +302,8 @@ export function AgentGalleryCard({ agent, onClick, index = 0 }: AgentGalleryCard
             </div>
           )}
 
-          {/* Surfaces */}
-          {surfaces.length > 0 && (
+          {/* Surfaces — only meaningful for non-bot agents */}
+          {!isBotAgent && surfaces.length > 0 && (
             <div className="mt-auto flex items-center gap-2">
               <span className="text-[10px] font-medium text-[var(--text-tertiary)]">Works in</span>
               <div className="flex items-center gap-1">

@@ -22,6 +22,7 @@ import { processStream } from "../stream-reader";
 import { formatGenerateContentInput } from "../content-helpers";
 import type {
   GenerateContentRequest,
+  GenerateContentResponse,
   GenerateContentResult,
   GenerateContentStreamResult,
   SingleRequestOptions,
@@ -58,7 +59,7 @@ export async function generateContent(
     JSON.stringify(params),
     requestOptions
   );
-  const responseJson = await response.json();
+  const responseJson = await response.json() as GenerateContentResponse;
   const enhancedResponse = addHelpers(responseJson);
   return {
     response: enhancedResponse,

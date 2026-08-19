@@ -14,14 +14,23 @@ export interface ComputerUseDriverStatus {
   error?: string;
 }
 
+const INSTALLED_CUA_DRIVER = '/Applications/CuaDriver.app/Contents/MacOS/cua-driver';
+const INSTALLED_CUA_SOCKET = path.join(os.homedir(), 'Library/Caches/cua-driver/cua-driver.sock');
+
+function isInstalledCuaDriver(executable: string): boolean {
+  return path.resolve(executable) === path.resolve(INSTALLED_CUA_DRIVER);
+}
+
 /**
- * Owns Allternit's embedded Cua Driver child process.
+ * Owns Allternit's Cua Driver backend on macOS.
  *
- * This process must be spawned directly by the signed Electron app. Moving the
- * spawn into allternit-api or a gateway breaks macOS's TCC responsibility chain
- * and produces a second privacy entry. Embedded mode prevents Cua Driver from
- * relaunching itself through LaunchServices, so Accessibility and Screen
- * Recording remain attributed to com.allternit.desktop.
+ * On macOS, Computer History admission requires the exact executable inside the
+ * verified, installed `/Applications/CuaDriver.app` bundle. A standalone
+ * embedded binary cannot satisfy that check. Therefore this manager prefers the
+ * installed app when present and connects to its daemon socket. If the app is
+ * not installed, it falls back to spawning the embedded binary directly so that
+ * regular computer-use actions still work (Accessibility/Screen Recording are
+ * then attributed to Allternit Desktop when it is signed).
  */
 class ComputerUseDriverManager {
   private child: ChildProcess | null = null;
@@ -31,9 +40,10 @@ class ComputerUseDriverManager {
   resolveExecutable(): string | null {
     const candidates = [
       process.env.ALLTERNIT_CUA_DRIVER_PATH,
+      // Prefer the installed app bundle; it is the only configuration that
+      // supports Computer History on macOS.
+      INSTALLED_CUA_DRIVER,
       path.join(process.resourcesPath ?? '', 'computer-use', 'cua-driver'),
-      // Development-only convenience; packaged builds always use the bundled copy.
-      !app.isPackaged ? '/Applications/CuaDriver.app/Contents/MacOS/cua-driver' : undefined,
       !app.isPackaged ? path.join(os.homedir(), '.local', 'bin', 'cua-driver') : undefined,
     ];
     for (const candidate of candidates) {
@@ -42,8 +52,21 @@ class ComputerUseDriverManager {
     return null;
   }
 
+  private async waitForSocket(deadlineMs: number, label: string): Promise<boolean> {
+    const deadline = Date.now() + deadlineMs;
+    while (Date.now() < deadline) {
+      if (this.child && this.child.exitCode !== null) break;
+      if (this.socketPath && fs.existsSync(this.socketPath)) {
+        this.lastError = undefined;
+        log.info(`[ComputerUseDriver] ${label} ready; socket=${this.socketPath}`);
+        return true;
+      }
+      await new Promise((resolve) => setTimeout(resolve, 100));
+    }
+    return false;
+  }
+
   async start(): Promise<ComputerUseDriverStatus> {
-    if (this.child && this.socketPath) return this.getStatus();
     if (process.platform !== 'darwin') {
       return { available: false, running: false, embedded: false, error: 'Embedded Cua Driver is currently packaged for macOS only.' };
     }
@@ -54,6 +77,35 @@ class ComputerUseDriverManager {
       return this.getStatus();
     }
 
+    // If the installed CuaDriver.app is present, use its daemon. History and
+    // all TCC attribution stay with the verified Cua Driver app bundle.
+    if (isInstalledCuaDriver(executable)) {
+      if (fs.existsSync(INSTALLED_CUA_SOCKET)) {
+        this.socketPath = INSTALLED_CUA_SOCKET;
+        this.lastError = undefined;
+        log.info('[ComputerUseDriver] using installed CuaDriver.app daemon');
+        return this.getStatus();
+      }
+
+      // No daemon is running. Try to launch it through LaunchServices so it
+      // receives the correct bundle identity and keychain entitlements.
+      log.info('[ComputerUseDriver] launching installed CuaDriver.app daemon');
+      const open = spawn('open', ['-n', '-g', '-a', 'CuaDriver', '--args', 'serve'], {
+        stdio: 'ignore',
+        windowsHide: true,
+      });
+      await new Promise<void>((resolve) => open.on('exit', () => resolve()));
+
+      this.socketPath = INSTALLED_CUA_SOCKET;
+      const ready = await this.waitForSocket(10_000, 'installed CuaDriver.app daemon');
+      if (!ready) {
+        this.lastError ??= 'Installed CuaDriver.app daemon did not become ready within 10 seconds.';
+      }
+      return this.getStatus();
+    }
+
+    // Fall back to the embedded binary. Computer History will not be available
+    // because the standalone executable fails the installed-app admission check.
     const runtimeDir = path.join(app.getPath('userData'), 'computer-use');
     fs.mkdirSync(runtimeDir, { recursive: true, mode: 0o700 });
     this.socketPath = path.join(runtimeDir, 'cua-driver.sock');
@@ -87,43 +139,45 @@ class ComputerUseDriverManager {
       log.info(`[ComputerUseDriver] stopped (code ${code ?? 'unknown'})`);
     });
 
-    const deadline = Date.now() + 10_000;
-    while (Date.now() < deadline) {
-      if (child.exitCode !== null) break;
-      if (fs.existsSync(this.socketPath)) {
-        this.lastError = undefined;
-        log.info('[ComputerUseDriver] embedded driver ready; TCC owner=com.allternit.desktop');
-        return this.getStatus();
-      }
-      await new Promise((resolve) => setTimeout(resolve, 100));
+    const ready = await this.waitForSocket(10_000, 'embedded driver');
+    if (!ready) {
+      this.lastError ??= 'Embedded driver did not become ready within 10 seconds.';
     }
-    this.lastError ??= 'Embedded driver did not become ready within 10 seconds.';
     return this.getStatus();
   }
 
   stop(): void {
     this.child?.kill('SIGTERM');
     this.child = null;
-    if (this.socketPath) fs.rmSync(this.socketPath, { force: true });
+    // Only remove sockets we created ourselves; never delete the installed app's socket.
+    if (this.socketPath && !this.socketPath.startsWith(INSTALLED_CUA_SOCKET)) {
+      fs.rmSync(this.socketPath, { force: true });
+    }
+    this.socketPath = null;
   }
 
   getLaunchEnvironment(): Record<string, string> {
     const executable = this.resolveExecutable();
     if (!executable || !this.socketPath) return {};
-    return {
+    const env: Record<string, string> = {
       ALLTERNIT_CUA_DRIVER_PATH: executable,
       ALLTERNIT_CUA_DRIVER_SOCKET: this.socketPath,
-      ALLTERNIT_CUA_DRIVER_EMBEDDED: 'true',
       CUA_DRIVER_RS_TELEMETRY_ENABLED: 'false',
       CUA_TELEMETRY_ENABLED: 'false',
     };
+    if (!isInstalledCuaDriver(executable)) {
+      env.ALLTERNIT_CUA_DRIVER_EMBEDDED = 'true';
+    }
+    return env;
   }
 
   getStatus(): ComputerUseDriverStatus {
     const executable = this.resolveExecutable();
+    const socketAlive = Boolean(this.socketPath && fs.existsSync(this.socketPath));
+    const childAlive = Boolean(this.child && this.child.exitCode === null);
     return {
       available: executable !== null,
-      running: Boolean(this.child && this.child.exitCode === null && this.socketPath && fs.existsSync(this.socketPath)),
+      running: socketAlive && (childAlive || isInstalledCuaDriver(executable ?? '')),
       embedded: Boolean(this.child),
       executable: executable ?? undefined,
       socket: this.socketPath ?? undefined,

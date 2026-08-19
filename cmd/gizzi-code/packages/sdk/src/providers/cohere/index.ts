@@ -124,7 +124,7 @@ export class AllternitCohere {
     });
 
     if (!response.ok) {
-      const error = await response.json().catch(() => ({ message: 'Unknown error' }));
+      const error = await response.json().catch(() => ({ message: 'Unknown error' })) as { message?: string };
       throw new HarnessError(
         error.message || `Cohere API error: ${response.status}`,
         HarnessErrorCode.PROVIDER_ERROR,
@@ -161,7 +161,7 @@ export class AllternitCohere {
     });
 
     if (!response.ok) {
-      const error = await response.json().catch(() => ({ message: 'Unknown error' }));
+      const error = await response.json().catch(() => ({ message: 'Unknown error' })) as { message?: string };
       throw new HarnessError(
         error.message || `Cohere API error: ${response.status}`,
         HarnessErrorCode.PROVIDER_ERROR,

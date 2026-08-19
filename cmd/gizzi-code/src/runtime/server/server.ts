@@ -79,6 +79,8 @@ import { CoworkRoutes } from "@/runtime/server/routes/cowork"
 import { AcpRoutes } from "@/runtime/server/routes/acp"
 import { PeerRoutes } from "@/runtime/server/routes/peers"
 import { OrchestratorRoutes } from "@/runtime/server/routes/orchestrator"
+import { RuntimeHeartbeat } from "@/runtime/runtime-heartbeat"
+import { RuntimeRoutes } from "@/runtime/server/routes/runtime"
 import { AgentCompatRoutes } from "@/runtime/server/routes/agent-compat"
 import { createHash, randomUUID } from "node:crypto"
 
@@ -396,6 +398,7 @@ export namespace Server {
         .route("/plugin", PluginRoutes())
         .route("/cowork", CoworkRoutes())
         .route("/acp", AcpRoutes())
+        .route("/runtime", RuntimeRoutes())
         .post(
           "/log",
           describeRoute({
@@ -497,6 +500,7 @@ export namespace Server {
             .route("/experimental", ExperimentalRoutes())
             .route("/tui", TuiRoutes())
             .route("/acp", AcpRoutes())
+            .route("/runtime", RuntimeRoutes())
             .route("/workspace", WorkspaceRoutes()) as unknown as Hono,
         )
         .all("/*", async (c) => {
@@ -663,6 +667,14 @@ export namespace Server {
       log.info("cron service initialized")
     } catch (err) {
       log.error("failed to initialize cron service", { error: err })
+    }
+
+    // Start runtime heartbeat to keep local/remote runtime status fresh.
+    try {
+      RuntimeHeartbeat.start()
+      log.info("runtime heartbeat started")
+    } catch (err) {
+      log.error("failed to start runtime heartbeat", { error: err })
     }
 
     const shouldPublishMDNS =

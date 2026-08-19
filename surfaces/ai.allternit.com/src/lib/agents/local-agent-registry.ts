@@ -236,6 +236,7 @@ function toAgent(input: CreateAgentInput): Agent {
     },
     isBot: input.isBot === true,
     botProfile: isRecord(input.botProfile) ? (input.botProfile as unknown as Agent["botProfile"]) : undefined,
+    brainId: input.brainId,
     connectorBindings: input.connectorBindings,
     secretRefs: input.secretRefs,
     messagingConfig: input.messagingConfig,
@@ -345,6 +346,7 @@ export function updateLocalAgent(
     characterLayer: updates.characterLayer !== undefined ? updates.characterLayer : current.characterLayer,
     isBot: updates.isBot !== undefined ? updates.isBot : current.isBot,
     botProfile: updates.botProfile !== undefined ? updates.botProfile : current.botProfile,
+    brainId: updates.brainId !== undefined ? updates.brainId : current.brainId,
     connectorBindings:
       updates.connectorBindings !== undefined
         ? updates.connectorBindings

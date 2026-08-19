@@ -19,6 +19,7 @@ export interface ComputerCapabilityManifest {
   actions: string[];
   observation_channels: string[];
   execution_modes: ComputerExecutionMode[];
+  tools: string[];
   strict_background: boolean;
   semantic_input: boolean;
   raw_input: boolean;
@@ -225,4 +226,69 @@ export interface ComputerEvent<TPayload extends Record<string, unknown> = Record
   transaction_id?: string | null;
   trace_id?: string | null;
   contract_version: typeof COMPUTER_USE_CONTRACT_VERSION;
+}
+
+export interface ComputerHistoryStatusResponse {
+  supported: boolean;
+  admitted: boolean;
+  enabled: boolean;
+  paused: boolean;
+  encrypted: boolean;
+  profile: string;
+  retention_days: number;
+  quota_bytes: number;
+  bytes_used: number;
+  dropped_events: number;
+  health: string;
+}
+
+export interface ComputerHistoryApplication {
+  bundle_id?: string;
+  display_name?: string;
+}
+
+export interface ComputerHistoryPayload {
+  kind: string;
+  effect?: string;
+  route?: string;
+  delivery?: string;
+  delivered_count?: number;
+  evidence_kinds?: string[];
+}
+
+export interface ComputerHistoryEventData {
+  session_id?: string;
+  action_id?: string;
+  sequence: number;
+  platform: string;
+  process_model?: string;
+  capability?: string;
+  caller_category?: string;
+  application?: ComputerHistoryApplication;
+  payload?: ComputerHistoryPayload;
+}
+
+export interface ComputerHistoryEvent {
+  specversion: string;
+  id: string;
+  source: string;
+  type: string;
+  subject?: string;
+  time: string;
+  datacontenttype?: string;
+  dataschema?: string;
+  data: ComputerHistoryEventData;
+}
+
+export interface ComputerHistoryQueryRequest {
+  limit?: number;
+  session_id?: string;
+  since_sequence?: number;
+  until_sequence?: number;
+}
+
+export interface ComputerHistoryQueryResponse {
+  events: ComputerHistoryEvent[];
+  metadata_only: boolean;
+  model_context_disclosure: boolean;
 }

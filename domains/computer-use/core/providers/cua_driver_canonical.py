@@ -97,6 +97,21 @@ class CuaDriverCanonicalProvider:
         self._version = version
         self._state_tokens: Dict[str, Dict[str, Dict[str, Any]]] = {}
         self._state_order: list[str] = []
+        self._history_tools: Optional[tuple[str, ...]] = None
+
+    async def _discover_history_tools(self) -> tuple[str, ...]:
+        if self._history_tools is not None:
+            return self._history_tools
+        try:
+            status = await self._transport.history_status()
+        except CuaDriverCallError:
+            self._history_tools = ()
+            return self._history_tools
+        if isinstance(status, dict) and status.get("supported") and status.get("admitted"):
+            self._history_tools = ("history_status", "history_query")
+        else:
+            self._history_tools = ()
+        return self._history_tools
 
     async def capabilities(self) -> CapabilityManifest:
         system = platform.system().lower()
@@ -106,6 +121,7 @@ class CuaDriverCanonicalProvider:
         # action-granular, advertise only the guarantee common to every action.
         strict = False
         modes = [ExecutionMode.FOREGROUND_ALLOWED.value]
+        history_tools = await self._discover_history_tools()
         return CapabilityManifest(
             provider_id=self.provider_id,
             provider_version=self._version,
@@ -117,6 +133,7 @@ class CuaDriverCanonicalProvider:
             ),
             observation_channels=("accessibility", "screenshot"),
             execution_modes=tuple(modes),
+            tools=history_tools,
             strict_background=strict,
             semantic_input=True,
             raw_input=True,
@@ -357,6 +374,12 @@ class CuaDriverCanonicalProvider:
                 error_code="cua_driver_call_failed",
                 message=str(error),
             )
+
+    async def history_status(self) -> Dict[str, Any]:
+        return await self._transport.history_status()
+
+    async def history_query(self, **kwargs: Any) -> Dict[str, Any]:
+        return await self._transport.history_query(**kwargs)
 
     async def close(self) -> None:
         return None

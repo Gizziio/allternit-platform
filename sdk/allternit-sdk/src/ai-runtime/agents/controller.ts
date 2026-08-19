@@ -198,7 +198,8 @@ export class AllternitAgent extends EventEmitter {
     }
     
     if (this.computer && name === this.computer.getTool().name) {
-      return this.computer.execute(args);
+      const result = await this.computer.execute(args);
+      return typeof result === 'string' ? result : JSON.stringify(result);
     }
 
     return `Tool ${name} handled by registry or capability module.`;

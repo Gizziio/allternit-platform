@@ -1,20 +1,29 @@
-/* Allternit Office — focused design token theme.
- * Adapted from surfaces/ai.allternit.com/src/design/theme.css.
- * No cross-surface import; this file contains only the tokens the office
- * surface shell needs.
+/* Allternit Office — design token theme.
+ * Aligned with surfaces/ai.allternit.com/src/design/theme.css and DESIGN.md.
  */
 
 :root {
   /* --------------------------------------------------------------------------
-     TYPOGRAPHY
+     TYPOGRAPHY — canonical Allternit token chain
      -------------------------------------------------------------------------- */
-  --font-sans: "Allternit Sans", Inter, ui-sans-serif, system-ui, -apple-system,
+  --font-allternit-sans: "Allternit Sans", Inter, ui-sans-serif, system-ui, -apple-system,
     BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
-  --font-serif: "Allternit Serif", Georgia, ui-serif, Cambria,
+  --font-allternit-serif: "Allternit Serif", Georgia, ui-serif, Cambria,
     "Times New Roman", Times, serif;
-  --font-mono: "Allternit Mono", "SFMono-Regular", Menlo, Monaco, Consolas,
+  --font-allternit-mono: "Allternit Mono", "SFMono-Regular", Menlo, Monaco, Consolas,
     "Liberation Mono", "Courier New", monospace;
 
+  /* Role aliases — use these in components */
+  --font-ui: var(--font-allternit-sans);
+  --font-research: var(--font-allternit-serif);
+  --font-code: var(--font-allternit-mono);
+
+  /* Legacy aliases (keep for compatibility) */
+  --font-sans: var(--font-ui);
+  --font-serif: var(--font-research);
+  --font-mono: var(--font-code);
+
+  /* Type size scale */
   --text-xs: 11px;
   --text-sm: 13px;
   --text-base: 14px;
@@ -23,6 +32,9 @@
   --text-xl: 18px;
   --text-2xl: 20px;
   --text-3xl: 24px;
+  --text-display-size: clamp(3rem, 7vw, 6.5rem);
+  --text-heading-size: clamp(2rem, 4vw, 4rem);
+  --text-subheading-size: clamp(1.25rem, 2vw, 2rem);
 
   --font-weight-normal: 400;
   --font-weight-medium: 500;
@@ -67,6 +79,7 @@
   --transition-fast: 150ms cubic-bezier(0.4, 0, 0.2, 1);
   --transition-base: 200ms cubic-bezier(0.4, 0, 0.2, 1);
   --transition-slow: 300ms cubic-bezier(0.4, 0, 0.2, 1);
+  --transition-spring: 400ms cubic-bezier(0.34, 1.56, 0.64, 1);
 
   /* --------------------------------------------------------------------------
      SAND / NUDE PALETTE
@@ -126,6 +139,7 @@
   --accent-secondary: var(--nude-400);
   --accent-chat: var(--sand-500);
 
+  /* Semantic UI surface contract (DESIGN.md) */
   --surface-canvas: var(--bg-primary);
   --surface-panel: var(--bg-secondary);
   --surface-panel-muted: var(--bg-tertiary);
@@ -255,11 +269,11 @@ body {
   min-height: 100dvh;
   height: 100%;
   overflow-y: auto;
-  background-color: var(--bg-primary);
+  background-color: var(--surface-canvas);
   background-image: var(--bg-grid), var(--bg-gradient);
   background-size: 40px 40px, 100% 100%;
-  color: var(--text-primary);
-  font-family: var(--font-sans);
+  color: var(--ui-text-primary);
+  font-family: var(--font-ui);
   font-size: var(--text-base);
   line-height: var(--line-height-normal);
   -webkit-font-smoothing: antialiased;
@@ -269,6 +283,149 @@ body {
 #root {
   width: 100%;
   height: 100%;
+}
+
+/* ==========================================================================
+   TYPOGRAPHY UTILITY CLASSES
+   ========================================================================== */
+.text-display {
+  font-family: var(--font-ui);
+  font-size: var(--text-display-size);
+  line-height: 0.95;
+  letter-spacing: -0.04em;
+  font-weight: 600;
+}
+
+.text-heading {
+  font-family: var(--font-ui);
+  font-size: var(--text-heading-size);
+  line-height: 1.05;
+  letter-spacing: -0.025em;
+  font-weight: 600;
+}
+
+.text-subheading {
+  font-family: var(--font-ui);
+  font-size: var(--text-subheading-size);
+  line-height: 1.15;
+  letter-spacing: -0.02em;
+  font-weight: 500;
+}
+
+.text-body {
+  font-family: var(--font-ui);
+  font-size: var(--text-base);
+  line-height: var(--line-height-normal);
+  font-weight: 400;
+}
+
+.text-caption {
+  font-family: var(--font-ui);
+  font-size: var(--text-sm);
+  line-height: 1.4;
+  letter-spacing: 0.01em;
+}
+
+.text-label {
+  font-family: var(--font-ui);
+  font-size: var(--text-xs);
+  line-height: 1.2;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  font-weight: 500;
+}
+
+.text-code {
+  font-family: var(--font-code);
+  font-size: var(--text-md);
+  line-height: 1.5;
+}
+
+/* ==========================================================================
+   COMPONENT PRIMITIVES
+   ========================================================================== */
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-2);
+  padding: var(--space-2) var(--space-4);
+  border-radius: var(--radius-md);
+  border: 1px solid transparent;
+  font-family: var(--font-ui);
+  font-size: var(--text-sm);
+  font-weight: var(--font-weight-semibold);
+  line-height: 1;
+  cursor: pointer;
+  transition: background var(--transition-fast), color var(--transition-fast),
+    border-color var(--transition-fast), opacity var(--transition-fast),
+    transform var(--transition-fast);
+}
+
+.btn:focus-visible {
+  outline: 2px solid var(--accent-primary);
+  outline-offset: 2px;
+}
+
+.btn-primary {
+  background: var(--accent-primary);
+  color: var(--ui-text-inverse);
+}
+
+.btn-primary:hover {
+  opacity: 0.92;
+  transform: translateY(-1px);
+}
+
+.btn-secondary {
+  background: transparent;
+  border-color: var(--ui-border-default);
+  color: var(--ui-text-primary);
+}
+
+.btn-secondary:hover {
+  background: var(--surface-active);
+  border-color: var(--border-hover);
+}
+
+.btn-ghost {
+  background: transparent;
+  color: var(--ui-text-secondary);
+}
+
+.btn-ghost:hover {
+  background: var(--surface-active);
+  color: var(--ui-text-primary);
+}
+
+.card {
+  background: var(--surface-panel);
+  border: 1px solid var(--ui-border-muted);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-sm);
+  transition: transform var(--transition-base), box-shadow var(--transition-base),
+    border-color var(--transition-base);
+}
+
+.card-elevated {
+  background: var(--surface-panel);
+  border: 1px solid var(--ui-border-muted);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-md);
+}
+
+.glass {
+  background: var(--glass-bg);
+  border: 1px solid var(--glass-border);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+}
+
+.glass-thick {
+  background: var(--glass-bg-thick);
+  border-bottom: 1px solid var(--glass-border);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
 }
 
 /* ==========================================================================
@@ -289,7 +446,7 @@ body {
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: var(--text-tertiary);
+  background: var(--ui-text-muted);
 }
 
 * {
@@ -312,7 +469,7 @@ body {
 
 ::selection {
   background: rgba(212, 176, 140, 0.35);
-  color: var(--text-primary);
+  color: var(--ui-text-primary);
 }
 
 [data-theme='dark'] ::selection {

@@ -9,12 +9,14 @@ import {
   type McpServerConfig,
 } from './mcp.js';
 import { TextEditorTool, type TextEditorOptions } from './text-editor.js';
-import { BashTool, type BashToolOptions } from './bash.js';
-import { CodeExecutionTool, type CodeExecutionOptions } from './code-execution.js';
+import { BashTool, type BashRunner, type BashToolOptions } from './bash.js';
+import { CodeExecutionTool, type CodeExecutionOptions, type CodeExecutionRunner } from './code-execution.js';
 import { MemoryTool, type MemoryToolOptions } from './memory.js';
 import { PdfTool, type PdfToolOptions } from './pdf.js';
 
-export interface NativeToolBeltOptions extends WebToolOptions, TextEditorOptions, BashToolOptions, CodeExecutionOptions, MemoryToolOptions, PdfToolOptions {
+export interface NativeToolBeltOptions extends WebToolOptions, TextEditorOptions, MemoryToolOptions, PdfToolOptions {
+  bashRunner?: BashRunner;
+  codeExecutionRunner?: CodeExecutionRunner;
   /** Override the default ~/.allternit/mcp-servers.json path. */
   mcpDirectoryPath?: string;
 }
@@ -75,8 +77,8 @@ export class NativeToolBelt {
       this.registry.registerTool(tool, { strict: true });
     }
     this.registry.registerTool(new TextEditorTool(options).definition(), { strict: true });
-    this.registry.registerTool(new BashTool(options).definition(), { strict: true });
-    this.registry.registerTool(new CodeExecutionTool(options).definition(), { strict: true });
+    this.registry.registerTool(new BashTool({ runner: options.bashRunner }).definition(), { strict: true });
+    this.registry.registerTool(new CodeExecutionTool({ runner: options.codeExecutionRunner }).definition(), { strict: true });
     this.registry.registerTool(new MemoryTool(options).definition(), { strict: true });
     this.registry.registerTool(new PdfTool(options).definition(), { strict: true });
 

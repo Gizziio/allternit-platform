@@ -618,7 +618,7 @@ export function mcpResourceToFile(result: MCPReadResourceResultLike): File {
   const name = new URL(resourceContents.uri).pathname.split('/').at(-1) || 'file';
   const type = resourceContents.mimeType;
   const data = bytesFromResource(resourceContents);
-  const file = new File([data as BlobPart], name, type ? { type } : undefined);
+  const file = new File([data as Uint8Array<ArrayBuffer>], name, type ? { type } : undefined);
   (file as any)[SDK_HELPER_SYMBOL] = 'mcpResourceToFile';
   return file;
 }

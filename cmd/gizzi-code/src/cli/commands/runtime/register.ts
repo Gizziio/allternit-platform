@@ -1,5 +1,5 @@
 import { discoverLocalRuntime, formatDiscoveryReport } from '../../../runtime/runtime-discovery';
-import { runtimeRegistry } from '../../../runtime/runtime-registry';
+import { RuntimeService } from '../../../runtime/runtime-service';
 
 export async function runtimeRegisterCommand(args: string[]): Promise<void> {
   const name = args[0] ?? 'local';
@@ -16,7 +16,7 @@ export async function runtimeRegisterCommand(args: string[]): Promise<void> {
     return;
   }
 
-  const entry = runtimeRegistry.upsertByHost(name, runtime);
+  const entry = await RuntimeService.upsertByHost(runtime, { name });
   process.stdout.write(
     `\n\x1b[32m✓\x1b[0m Registered runtime "${entry.name}" (id: ${entry.id})\n` +
     `  ${entry.agentClis.length} agent CLI${entry.agentClis.length !== 1 ? 's' : ''} available.\n`
