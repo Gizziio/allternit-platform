@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import asyncio
+import os
 import sys
 from pathlib import Path
 from typing import Any, Dict, List
@@ -178,6 +179,62 @@ def test_transport_history_query_validation() -> None:
         asyncio.run(transport.history_query(until_sequence=-1))
     with pytest.raises(CuaDriverCallError, match="since_sequence must not exceed"):
         asyncio.run(transport.history_query(since_sequence=5, until_sequence=1))
+
+
+def test_transport_prefers_installed_cua_driver_app(monkeypatch: pytest.MonkeyPatch) -> None:
+    # discover_cua_driver should prefer /Applications/CuaDriver.app when it exists.
+    # We cannot assume the real app is installed, so patch os.path checks.
+    from providers import cua_driver_transport as transport_mod
+
+    real_exists = Path.is_file
+    real_access = os.access
+
+    def fake_is_file(self: Path) -> bool:
+        if self.resolve() == Path("/Applications/CuaDriver.app/Contents/MacOS/cua-driver").resolve():
+            return True
+        return real_exists(self)
+
+    def fake_access(path: str, mode: int) -> bool:
+        if Path(path).resolve() == Path("/Applications/CuaDriver.app/Contents/MacOS/cua-driver").resolve():
+            return bool(mode & os.X_OK)
+        return real_access(path, mode)
+
+    monkeypatch.setattr(Path, "is_file", fake_is_file)
+    monkeypatch.setattr(os, "access", fake_access)
+    monkeypatch.delenv("ALLTERNIT_CUA_DRIVER_PATH", raising=False)
+
+    discovered = transport_mod.discover_cua_driver()
+    assert discovered == str(Path("/Applications/CuaDriver.app/Contents/MacOS/cua-driver").resolve())
+
+
+def test_transport_uses_default_socket_for_installed_app(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    from providers import cua_driver_transport as transport_mod
+
+    fake_socket = tmp_path / "cua-driver.sock"
+    fake_socket.write_bytes(b"")
+    monkeypatch.setattr(transport_mod, "_DEFAULT_INSTALLED_CUA_SOCKET", fake_socket)
+
+    transport = CuaDriverTransport.__new__(CuaDriverTransport)
+    transport.executable = str(Path("/Applications/CuaDriver.app/Contents/MacOS/cua-driver").resolve())
+    transport.timeout_seconds = 30.0
+    # __init__ computes socket_path from env or default; emulate that directly.
+    transport.socket_path = os.environ.get("ALLTERNIT_CUA_DRIVER_SOCKET") or transport_mod._default_socket_for_executable(
+        transport.executable
+    )
+    assert transport.socket_path == str(fake_socket)
+
+
+def test_transport_env_socket_overrides_default(monkeypatch: pytest.MonkeyPatch) -> None:
+    from providers import cua_driver_transport as transport_mod
+
+    monkeypatch.setenv("ALLTERNIT_CUA_DRIVER_SOCKET", "/custom/socket.sock")
+    transport = CuaDriverTransport.__new__(CuaDriverTransport)
+    transport.executable = "/fake/cua-driver"
+    transport.timeout_seconds = 30.0
+    transport.socket_path = os.environ.get("ALLTERNIT_CUA_DRIVER_SOCKET") or transport_mod._default_socket_for_executable(
+        transport.executable
+    )
+    assert transport.socket_path == "/custom/socket.sock"
 
 
 def test_manifest_has_tools_field() -> None:

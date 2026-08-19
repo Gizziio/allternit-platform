@@ -33,10 +33,24 @@ class CuaDriverInstallation:
         return str(value) if value else "unknown"
 
 
+# Verified, installed Cua Driver app bundle (macOS). This is the only context
+# that satisfies the driver's Computer History admission check, which requires
+# the exact executable inside the signed /Applications/CuaDriver.app bundle.
+_INSTALLED_CUA_DRIVER_APP = Path("/Applications/CuaDriver.app/Contents/MacOS/cua-driver")
+_DEFAULT_INSTALLED_CUA_SOCKET = Path.home() / "Library" / "Caches" / "cua-driver" / "cua-driver.sock"
+
+
+def _is_installed_cua_driver(executable: str) -> bool:
+    return Path(executable).resolve() == _INSTALLED_CUA_DRIVER_APP.resolve()
+
+
 def discover_cua_driver(explicit_path: Optional[str] = None) -> Optional[str]:
     candidates = [
         explicit_path,
         os.environ.get("ALLTERNIT_CUA_DRIVER_PATH"),
+        # Prefer the installed app bundle; it is the only configuration that
+        # supports Computer History on macOS.
+        str(_INSTALLED_CUA_DRIVER_APP),
         shutil.which("cua-driver"),
         shutil.which("cua-driver-rs"),
         str(Path.home() / ".local" / "bin" / "cua-driver"),
@@ -49,6 +63,13 @@ def discover_cua_driver(explicit_path: Optional[str] = None) -> Optional[str]:
         path = Path(candidate).expanduser()
         if path.is_file() and os.access(path, os.X_OK):
             return str(path.resolve())
+    return None
+
+
+def _default_socket_for_executable(executable: str) -> Optional[str]:
+    """Return the default daemon socket for a known installed Cua Driver app."""
+    if _is_installed_cua_driver(executable) and _DEFAULT_INSTALLED_CUA_SOCKET.exists():
+        return str(_DEFAULT_INSTALLED_CUA_SOCKET)
     return None
 
 
@@ -78,7 +99,9 @@ class CuaDriverTransport:
             raise CuaDriverUnavailableError(f"Cua Driver executable is unavailable: {path}")
         self.executable = str(path.resolve())
         self.timeout_seconds = timeout_seconds
-        self.socket_path = os.environ.get("ALLTERNIT_CUA_DRIVER_SOCKET")
+        self.socket_path = os.environ.get("ALLTERNIT_CUA_DRIVER_SOCKET") or _default_socket_for_executable(
+            self.executable
+        )
 
     @classmethod
     async def discover(
