@@ -451,3 +451,68 @@ Finish the remaining Wave 4 items: W4-005, W4-008, and W4-020–W4-028.
 ### Open questions
 
 - None blocking the next Wave 4 sub-slice.
+
+---
+
+## Office UI brand fix (2026-08-18)
+
+### Goal
+Fix `office.allternit.com` landing page and workspace shell to match the Allternit brand, design system, and typography.
+
+### Just did
+- Audited current `surfaces/office.allternit.com` against DESIGN.md and `surfaces/ai.allternit.com` design tokens.
+- Rewrote `src/theme.css` to use canonical Allternit typography tokens (`--font-allternit-sans`, `--font-ui`, etc.), semantic surface tokens (`--surface-canvas`, `--ui-text-primary`, `--ui-border-default`), and the sand/nude obsidian palette.
+- Added `src/fonts.css` (commented @font-face stubs aligned with ai surface).
+- Added `src/HomePage.css` to move landing-page styles out of inline styles.
+- Refactored `src/HomePage.tsx` and `src/App.tsx` to use the token system and shared `.btn`/`.card`/`.glass-thick` utility classes.
+- Fixed inverted primary button colors; primary CTAs now use `--accent-primary` with `--ui-text-inverse`.
+- Updated `index.html` to remove inline CSS and add theme-color meta tags.
+- Updated `src/main.tsx` to load `fonts.css`.
+
+### Verification
+- `tsc --noEmit` in `surfaces/office.allternit.com` reports no errors in surface source files (remaining errors are pre-existing issues in `packages/@allternit/office-slides-app`).
+- `pnpm build` succeeds in a fully-installed workspace (validated by copying changed files to the main checkout with complete `node_modules`).
+- `pnpm preview` serves the built bundle and returns the updated HTML.
+
+### Open questions
+- Whether to deploy the built `dist/` from this worktree or from CI.
+- Whether the workspace install in this worktree should be repaired so local `pnpm build` runs without copying to main.
+
+### Update — bidirectional platform links
+- Added `src/platformUrl.ts` with `VITE_ALLTERNIT_PLATFORM_URL` override (defaults to `https://ai.allternit.com`).
+- `HomePage` header brand now links back to the main Allternit platform.
+- `App` workspace nav includes a "Back to Allternit →" link.
+- `surfaces/ai.allternit.com/src/views/office/OfficeLauncherView.tsx` now has an "Open standalone office" external link to `https://office.allternit.com`.
+
+### Update — Sign PDF upload fix and platform URL correction
+- Changed default platform URL from `https://ai.allternit.com` to `https://allternit.com`.
+- Removed the "Back to Allternit" link from the workspace nav; the homepage header brand now links to the main site.
+- Fixed Sign PDF loading by initializing pdfjs-dist with the Vite-bundled worker URL in `src/main.tsx`.
+- Updated `initPdfWorker` in `packages/@allternit/allternit-office-suite/src/sign/pdf-signing.ts` to accept an optional `workerSrc` override.
+
+### Update — generated media integration
+- Copied generated assets into `surfaces/office.allternit.com/public/`:
+  - `hero-documents.png` — static hero image of the five document cards.
+  - `hero-cards.mp4` — animated floating document cards (used as the hero visual).
+  - `hero-glow.mp4` — warm golden glow (used as ambient hero background).
+  - `grid-beam.mp4` — subtle grid light beam (used as value-props background).
+  - `sign-signature.mp4` — kept in public for future Sign section use.
+- Replaced the SVG `HeroVisual` composition with a looping `<video>` using the PNG as poster/fallback.
+- Added autoplay/muted/loop background videos to the hero and value-props sections.
+- Updated `HomePage.css` with video positioning, opacity, and z-index layering.
+- Verified the build copies all media files to `dist/` and the preview serves them.
+
+### Update — clickable feature cards and persistent platform links
+- Added `AppTab` type (`docs` | `sheets` | `slides` | `pdf` | `sign`) and wired `HomePage` → `AppContent` so each feature card launches its matching office app tab.
+- Made feature cards keyboard-accessible (`role="button"`, `tabIndex={0}`, Enter/Space handlers) and styled them with `cursor: pointer`, hover lift, and focus rings.
+- Added an "Allternit" platform link in the homepage header next to the brand, plus a footer links row with the platform link and copyright.
+- Rebuilt the main checkout and restarted the preview server at `http://localhost:3019/`.
+
+### Update — full Allternit footer on office homepage
+- Created `src/Footer.tsx` that replicates the five-column footer from `www.allternit.com`:
+  - Research, Products, A://Labs, Developers, Company.
+  - All relative links rewritten as absolute `https://allternit.com/...` links.
+  - External links open in a new tab.
+- Replaced the minimal footer in `HomePage.tsx` with the new `<Footer />` component.
+- Added responsive `office-footer` styles to `HomePage.css` using the office design tokens.
+- Rebuilt and restarted the preview server at `http://localhost:3019/`.

@@ -14,8 +14,7 @@ import {
 import { createStandaloneAiClient } from './ai/createStandaloneAiClient'
 import { CLERK_PUBLISHABLE_KEY } from './clerkConfig'
 import { HomePage } from './HomePage'
-
-type AppTab = 'docs' | 'sheets' | 'slides' | 'pdf' | 'sign'
+import type { AppTab } from './types'
 
 interface OpenedDoc {
   name: string
@@ -51,9 +50,9 @@ function CloudPromptBanner() {
         flexShrink: 0,
         padding: 'var(--space-2) var(--space-3)',
         background: 'color-mix(in srgb, var(--accent-primary) 12%, transparent)',
-        borderBottom: '1px solid var(--border-default)',
+        borderBottom: '1px solid var(--ui-border-default)',
         fontSize: 'var(--text-sm)',
-        color: 'var(--text-primary)',
+        color: 'var(--ui-text-primary)',
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'space-between',
@@ -62,32 +61,12 @@ function CloudPromptBanner() {
     >
       <span>
         Running locally without sign-in.{' '}
-        <span style={{ color: 'var(--text-secondary)' }}>
+        <span style={{ color: 'var(--ui-text-secondary)' }}>
           Sign in to Allternit to use the AI assistant and cloud features.
         </span>
       </span>
       <SignInButton mode="modal">
-        <button
-          type="button"
-          style={{
-            flexShrink: 0,
-            padding: 'var(--space-1) var(--space-3)',
-            borderRadius: 'var(--radius-sm)',
-            border: 'none',
-            background: 'var(--accent-primary)',
-            color: 'var(--text-inverse)',
-            fontSize: 'var(--text-sm)',
-            fontWeight: 'var(--font-weight-semibold)',
-            cursor: 'pointer',
-            transition: 'filter var(--transition-fast)',
-          }}
-          onMouseEnter={(e) => {
-            e.currentTarget.style.filter = 'brightness(1.08)'
-          }}
-          onMouseLeave={(e) => {
-            e.currentTarget.style.filter = 'none'
-          }}
-        >
+        <button type="button" className="btn btn-primary">
           Sign in to Allternit
         </button>
       </SignInButton>
@@ -95,9 +74,15 @@ function CloudPromptBanner() {
   )
 }
 
-function OfficeWorkspace({ onBack }: { onBack: () => void }) {
+function OfficeWorkspace({
+  onBack,
+  initialTab = 'docs',
+}: {
+  onBack: () => void
+  initialTab?: AppTab
+}) {
   const { isSignedIn } = useAuth()
-  const [activeTab, setActiveTab] = useState<AppTab>('docs')
+  const [activeTab, setActiveTab] = useState<AppTab>(initialTab)
   const [documents, setDocuments] = useState<Partial<Record<AppTab, OpenedDoc>>>({})
   const [mountKey, setMountKey] = useState(0)
 
@@ -138,81 +123,45 @@ function OfficeWorkspace({ onBack }: { onBack: () => void }) {
             alignItems: 'center',
             gap: 'var(--space-1)',
             padding: '0 var(--space-3)',
-            borderBottom: '1px solid var(--border-default)',
+            borderBottom: '1px solid var(--ui-border-default)',
             background: 'var(--surface-panel)',
           }}
         >
           <button
             type="button"
             onClick={onBack}
+            className="btn btn-ghost"
             style={{
-              fontWeight: 'var(--font-weight-semibold)',
-              marginRight: 'var(--space-3)',
               color: 'var(--accent-primary)',
-              background: 'transparent',
-              border: 'none',
-              cursor: 'pointer',
-              fontSize: 'var(--text-base)',
-              transition: 'color var(--transition-fast)',
-            }}
-            onMouseEnter={(e) => {
-              e.currentTarget.style.color = 'var(--accent-secondary)'
-            }}
-            onMouseLeave={(e) => {
-              e.currentTarget.style.color = 'var(--accent-primary)'
+              marginRight: 'var(--space-3)',
+              fontWeight: 'var(--font-weight-semibold)',
             }}
           >
             Allternit Office
           </button>
-          {TABS.map((tab) => (
-            <button
-              key={tab.id}
-              type="button"
-              onClick={() => setActiveTab(tab.id)}
-              style={{
-                padding: 'var(--space-1) var(--space-3)',
-                borderRadius: 'var(--radius-sm)',
-                border: 'none',
-                background:
-                  activeTab === tab.id ? 'var(--accent-primary)' : 'transparent',
-                color:
-                  activeTab === tab.id
-                    ? 'var(--text-inverse)'
-                    : 'var(--text-primary)',
-                cursor: 'pointer',
-                fontSize: 'var(--text-sm)',
-                fontWeight: 'var(--font-weight-medium)',
-                transition:
-                  'background var(--transition-fast), color var(--transition-fast)',
-              }}
-            >
-              {tab.label}
-            </button>
-          ))}
+          {TABS.map((tab) => {
+            const isActive = activeTab === tab.id
+            return (
+              <button
+                key={tab.id}
+                type="button"
+                onClick={() => setActiveTab(tab.id)}
+                className={isActive ? 'btn btn-primary' : 'btn btn-ghost'}
+                style={{
+                  padding: 'var(--space-1) var(--space-3)',
+                  borderRadius: 'var(--radius-sm)',
+                }}
+              >
+                {tab.label}
+              </button>
+            )
+          })}
           <div style={{ flex: 1 }} />
           <button
             type="button"
             onClick={handleOpenFile}
-            style={{
-              padding: 'var(--space-1) var(--space-3)',
-              borderRadius: 'var(--radius-sm)',
-              border: '1px solid var(--border-default)',
-              background: 'var(--surface-panel)',
-              color: 'var(--text-primary)',
-              cursor: 'pointer',
-              fontSize: 'var(--text-sm)',
-              fontWeight: 'var(--font-weight-medium)',
-              transition:
-                'background var(--transition-fast), border-color var(--transition-fast)',
-            }}
-            onMouseEnter={(e) => {
-              e.currentTarget.style.background = 'var(--surface-hover)'
-              e.currentTarget.style.borderColor = 'var(--border-hover)'
-            }}
-            onMouseLeave={(e) => {
-              e.currentTarget.style.background = 'var(--surface-panel)'
-              e.currentTarget.style.borderColor = 'var(--border-default)'
-            }}
+            className="btn btn-secondary"
+            style={{ padding: 'var(--space-1) var(--space-3)' }}
           >
             Open file
           </button>
@@ -289,11 +238,22 @@ function OfficeWorkspace({ onBack }: { onBack: () => void }) {
 
 function AppContent() {
   const [showOffice, setShowOffice] = useState(false)
+  const [initialTab, setInitialTab] = useState<AppTab>('docs')
+
+  const handleLaunch = (tab?: AppTab) => {
+    if (tab) setInitialTab(tab)
+    setShowOffice(true)
+  }
+
+  const handleBack = () => {
+    setShowOffice(false)
+    setInitialTab('docs')
+  }
 
   if (!showOffice) {
     return (
       <HomePage
-        onLaunch={() => setShowOffice(true)}
+        onLaunch={handleLaunch}
         disclosure={
           <span>
             Allternit Office works locally in your browser with no account required.{' '}
@@ -304,7 +264,7 @@ function AppContent() {
     )
   }
 
-  return <OfficeWorkspace onBack={() => setShowOffice(false)} />
+  return <OfficeWorkspace onBack={handleBack} initialTab={initialTab} />
 }
 
 export function App() {

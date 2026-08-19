@@ -11,12 +11,10 @@ import { PDFDocument } from 'pdf-lib';
 
 let workerInitialized = false;
 
-export function initPdfWorker(): void {
+export function initPdfWorker(workerSrc?: string): void {
   if (workerInitialized || typeof window === 'undefined') return;
-  pdfjs.GlobalWorkerOptions.workerSrc = new URL(
-    'pdfjs-dist/build/pdf.worker.mjs',
-    import.meta.url,
-  ).href;
+  pdfjs.GlobalWorkerOptions.workerSrc =
+    workerSrc ?? new URL('pdfjs-dist/build/pdf.worker.mjs', import.meta.url).href;
   workerInitialized = true;
 }
 
