@@ -54,14 +54,14 @@ describe("AgentWorkspace", () => {
       const testDir = path.join(testWorkspace, "test-init")
       const paths = await AgentWorkspace.initialize(testDir, {
         sessionId: "test-session-123",
-        runner: "opencode",
+        runner: "gizzi",
       })
       
       // Check manifest exists
       const manifest = await AgentWorkspace.readManifest(testDir)
       expect(manifest).not.toBeNull()
       expect(manifest.session.session_id).toBe("test-session-123")
-      expect(manifest.session.runner).toBe("opencode")
+      expect(manifest.session.runner).toBe("gizzi")
       
       // Check all L1 directories exist
       expect(await Bun.file(paths.l1_state).exists()).toBe(true)

@@ -9,7 +9,6 @@ const AGENTS = [
   { id: 'cursor', name: 'Cursor', icon: '🖱️' },
   { id: 'gemini', name: 'Gemini CLI', icon: '♊' },
   { id: 'github-copilot-cli', name: 'Copilot CLI', icon: '✈️' },
-  { id: 'opencode', name: 'OpenCode', icon: '🔓' },
 ];
 
 interface H5iAgentHooksPanelProps {

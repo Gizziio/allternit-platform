@@ -114,7 +114,7 @@ All usage and guard events MUST be representable in OpenTelemetry metrics/spans 
 Tags/attributes (minimum):
 - `model`
 - `provider`
-- `runner` (claude_code|opencode|codex|copilot|etc.)
+- `runner` (claude_code|gizzi|codex|copilot|etc.)
 - `workspace`
 - `session_id`
 - `run_id`
@@ -138,7 +138,7 @@ Each event MUST include:
 
 ## 6) Usage collectors (pluggable)
 Implement `UsageCollector` interface with adapters for:
-- OpenCode stats/export (preferred if using OpenCode)
+- Gizzi Code stats/export (preferred if using Gizzi Code)
 - ccusage-based analyzers
 - openusage-based analyzers
 - tokscale (optional)
@@ -298,7 +298,7 @@ Add to `/spec/AcceptanceTests.md`:
 ## 13) Work items (DAG tasks)
 - MoX-Guard-001: Schemas (receipt + session-context)
 - MoX-Guard-002: Compaction emitter + latest pointer
-- MoX-Guard-003: Usage collector MVP (OpenCode or ccusage)
+- MoX-Guard-003: Usage collector MVP (Gizzi Code or ccusage)
 - MoX-Guard-004: OTel metrics + events
 - MoX-Guard-005: Guard policy engine + headless mode
 - MoX-Guard-006: TUI status + hotkeys
@@ -307,7 +307,7 @@ Add to `/spec/AcceptanceTests.md`:
 ---
 
 End.
-Yes — pairing a usage watcher (openusage/ccusage/tokscale/opencode stats) with cli-continues gives you a complete “don’t hit the wall” control loop:
+Yes — pairing a usage watcher (openusage/ccusage/tokscale/gizzi stats) with cli-continues gives you a complete “don’t hit the wall” control loop:
 	1.	measure usage continuously
 	2.	predict nearing limits (context window, rate-limit, spend, quota)
 	3.	trigger compaction (summarize/prune)
@@ -321,8 +321,8 @@ Below is a concrete automated setup that does exactly that.
 1) Components (minimal, composable)
 
 A) Usage collectors (choose one or run multiple)
-	•	OpenCode built-in: opencode stats + opencode export provide token/cost/session breakdown and JSON export.  ￼
-	•	ccusage family: ccusage (Claude Code), plus @ccusage/opencode (OpenCode usage analyzer) for consistent reporting.  ￼
+	•	Gizzi Code built-in: gizzi stats + gizzi export provide token/cost/session breakdown and JSON export.  ￼
+	•	ccusage family: ccusage (Claude Code), plus @ccusage/gizzi (Gizzi Code usage analyzer) for consistent reporting.  ￼
 	•	openusage: provider plugins (e.g., Copilot provider doc) — a generalized usage tracking approach across ecosystems.  ￼
 	•	tokscale: another multi-tool token tracker covering many agent CLIs.  ￼
 
@@ -359,7 +359,7 @@ Why: compaction can fail or be low-quality; at 92% you stop gambling and move to
 
 Threshold group 2: “Quota / spend / rate-limit” pressure (account-level)
 
-Use OpenCode/ccusage/openusage aggregated stats for:
+Use Gizzi Code/ccusage/openusage aggregated stats for:
 	•	tokens/day, tokens/week, spend/day, spend/month
 	•	provider error rate / throttling
 
@@ -463,7 +463,7 @@ That’s the whole point of the GenAI semantic conventions effort.  ￼
 
 Build 3 crates/modules:
 	1.	allternit-usage
-	•	ingests: opencode export, ccusage/openusage outputs
+	•	ingests: gizzi export, ccusage/openusage outputs
 	•	normalizes into OTel GenAI metrics/events
 	2.	allternit-observe
 	•	emits OTel spans/metrics; exposes local GET /health + GET /usage

@@ -99,6 +99,7 @@ const BROWSER_MODE_VIEW_TYPES = new Set<ViewType>([
   'sheets',
   'slides',
   'pdf',
+  'sign',
 ]);
 
 // Inner app component that uses mode context

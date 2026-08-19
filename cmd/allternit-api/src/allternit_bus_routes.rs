@@ -10,8 +10,6 @@ use axum::{
     routing::{get, post, put},
     Json, Router,
 };
-use ed25519_dalek::SigningKey;
-use rand::rngs::OsRng;
 use rusqlite::{params, OptionalExtension};
 use serde::{Deserialize, Serialize};
 use serde_json::{json, Value};
@@ -752,7 +750,7 @@ async fn provision_email(
             let id = uuid::Uuid::new_v4().to_string();
             conn.execute(
                 "INSERT INTO agent_identity_channels (id, agent_id, user_id, email_address, email_provider, email_send_enabled, email_receive_enabled, updated_at)
-                 VALUES (?1, ?2, ?3, ?4, 'custom', 1, 1, CURRENT_TIMESTAMP)
+                 VALUES (?1, ?2, ?3, ?4, 'commrails', 1, 1, CURRENT_TIMESTAMP)
                  ON CONFLICT(agent_id) DO UPDATE SET
                      email_address = excluded.email_address,
                      email_provider = excluded.email_provider,
@@ -768,7 +766,7 @@ async fn provision_email(
     .await
     .map_err(|e| internal(e))??;
 
-    Ok(Json(ProvisionEmailResponse { address, provider: "custom" }).into_response())
+    Ok(Json(ProvisionEmailResponse { address, provider: "commrails" }).into_response())
 }
 
 #[derive(Debug, Serialize)]
@@ -846,77 +844,6 @@ async fn provision_phone(
     .map_err(|e| internal(e))??;
 
     Ok(Json(ProvisionPhoneResponse { number, provider: "vapi" }).into_response())
-}
-
-#[derive(Debug, Serialize)]
-struct ProvisionWalletResponse {
-    address: String,
-    provider: &'static str,
-    chain_id: &'static str,
-}
-
-async fn provision_wallet(
-    State(state): State<Arc<AppState>>,
-    Extension(user): Extension<AuthUser>,
-    Path(agent_id): Path<String>,
-) -> Result<Response, ApiError> {
-    require_agent_owner(&state, &user, &agent_id)?;
-
-    let (address, vault_ref) = tokio::task::spawn_blocking({
-        let db = state.db.clone();
-        let agent_id = agent_id.clone();
-        let user_id = user.user_id.clone();
-        move || {
-            let conn = db.connect().map_err(internal)?;
-
-            // Check for an existing wallet to avoid rotating keys unexpectedly.
-            let existing: Option<String> = conn
-                .query_row(
-                    "SELECT wallet_address FROM agent_identity_channels WHERE agent_id = ?1",
-                    params![agent_id],
-                    |row| row.get(0),
-                )
-                .optional()
-                .map_err(internal)?;
-            if let Some(addr) = existing {
-                return Ok::<_, ApiError>((addr, None));
-            }
-
-            let signing_key = SigningKey::generate(&mut OsRng);
-            let verifying_key = signing_key.verifying_key();
-            let address = hex::encode(verifying_key.as_bytes());
-            let private_hex = hex::encode(signing_key.to_bytes());
-            let vault_ref = crate::token_crypto::seal(&private_hex);
-
-            let id = uuid::Uuid::new_v4().to_string();
-            conn.execute(
-                "INSERT INTO agent_identity_channels (id, agent_id, user_id, wallet_address, wallet_provider, wallet_chain_id, wallet_key_vault_ref, wallet_allowed_methods, updated_at)
-                 VALUES (?1, ?2, ?3, ?4, 'etrid', '1', ?5, 'receive,invoice', CURRENT_TIMESTAMP)
-                 ON CONFLICT(agent_id) DO UPDATE SET
-                     wallet_address = excluded.wallet_address,
-                     wallet_provider = excluded.wallet_provider,
-                     wallet_chain_id = excluded.wallet_chain_id,
-                     wallet_key_vault_ref = excluded.wallet_key_vault_ref,
-                     wallet_allowed_methods = excluded.wallet_allowed_methods,
-                     updated_at = CURRENT_TIMESTAMP",
-                params![id, agent_id, user_id, address, vault_ref],
-            )
-            .map_err(internal)?;
-            Ok::<_, ApiError>((address, Some(vault_ref)))
-        }
-    })
-    .await
-    .map_err(|e| internal(e))??;
-
-    // Do not return the vault ref to the client; the public address is enough.
-    let _ = vault_ref;
-
-    Ok(Json(ProvisionWalletResponse {
-        address,
-        provider: "etrid",
-        chain_id: "1",
-    })
-    .into_response())
 }
 
 fn sanitize_local_part(value: &str) -> String {

@@ -203,19 +203,6 @@ impl AcpAgentConfig {
         }
     }
 
-    /// Default OpenCode configuration (ACP mode)
-    /// Uses: opencode acp subcommand
-    pub fn opencode() -> Self {
-        Self {
-            id: "opencode".to_string(),
-            name: "OpenCode".to_string(),
-            command: "opencode".to_string(),
-            args: vec!["acp".to_string()],
-            env: HashMap::new(),
-            cwd: None,
-        }
-    }
-
     /// Default Gemini CLI configuration (ACP mode)
     /// Uses: gemini --experimental-acp flag
     pub fn gemini_cli() -> Self {
@@ -260,8 +247,6 @@ impl AcpAgentConfig {
         match provider_id {
             // Claude Code ACP - requires: npm install -g @zed-industries/claude-agent-acp
             "claude" | "claude-code" | "claude-acp" => Some(Self::claude_code()),
-            // OpenCode ACP - uses opencode acp subcommand
-            "opencode" | "opencode-acp" => Some(Self::opencode()),
             // Gemini CLI ACP - uses --experimental-acp flag
             "gemini" | "gemini-cli" | "gemini-acp" => Some(Self::gemini_cli()),
             // Kimi CLI - may not support ACP

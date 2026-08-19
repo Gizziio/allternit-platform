@@ -99,7 +99,7 @@ Gizzi-Code is a **Terminal UI (TUI) application** built as part of the Allternit
   "@actions/github": "6.0.1",
   "@octokit/graphql": "9.0.2",
   "@octokit/rest": "*",
-  "@gitlab/opencode-gitlab-auth": "1.3.3",
+  "@gitlab/allternit-gitlab-auth": "1.3.3",
   "vscode-languageserver-protocol": "^3.17.5"
 }
 ```

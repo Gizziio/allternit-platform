@@ -488,7 +488,7 @@ class AllternitApiClient {
   /**
    * Create a brain session for AI chat (kernel-managed)
    *
-   * @param brainProfileId - The brain profile ID (e.g., "opencode-acp", "claude-code")
+   * @param brainProfileId - The brain profile ID (e.g., "allternit-acp", "claude-code")
    * @param source - "chat" or "terminal"
    * @param runtimeOverrides - Optional model selection and config overrides
    * @param workspaceDir - Optional workspace directory
@@ -1336,12 +1336,10 @@ export function useModelDiscovery() {
     }
   }, []);
 
-  // Get provider by profile ID (e.g., "opencode-acp" -> "opencode")
+  // Get provider by profile ID (e.g., "claude-acp" -> "claude")
   const getProviderByProfileId = useCallback((profileId: string): ProviderAuthStatus | undefined => {
     // Map profile IDs to provider IDs
     const profileToProvider: Record<string, string> = {
-      'opencode-acp': 'opencode',
-      'opencode-auth': 'opencode',
       'gemini-acp': 'gemini',
       'gemini-cli': 'gemini',
       'gemini-auth': 'gemini',

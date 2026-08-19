@@ -1,7 +1,7 @@
 ---
 name: coding-agent
-description: Run Codex CLI, Claude Code, OpenCode, or Pi Coding Agent via background process for programmatic control.
-metadata: {"openclaw":{"emoji":"🧩","requires":{"anyBins":["claude","codex","opencode","pi"]}}}
+description: Run Codex CLI, Claude Code, Gizzi Code, or Pi Coding Agent via background process for programmatic control.
+metadata: {"openclaw":{"emoji":"🧩","requires":{"anyBins":["claude","codex","gizzi-code","pi"]}}}
 ---
 
 # Coding Agent (bash-first)
@@ -162,10 +162,10 @@ bash pty:true workdir:~/project background:true command:"claude 'Your task'"
 
 ---
 
-## OpenCode
+## Gizzi Code
 
 ```bash
-bash pty:true workdir:~/project command:"opencode run 'Your task'"
+bash pty:true workdir:~/project command:"gizzi-code 'Your task'"
 ```
 
 ---

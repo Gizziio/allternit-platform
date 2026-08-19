@@ -816,7 +816,7 @@ async function streamLocalCodeMessageThroughGizzi(
   }
 
   const separator = modelId.indexOf('/');
-  const providerID = separator > 0 ? modelId.slice(0, separator) : 'opencode';
+  const providerID = separator > 0 ? modelId.slice(0, separator) : 'allternit';
   const runtimeModelID = separator > 0 ? modelId.slice(separator + 1) : modelId;
   const response = await fetch(`${base}/v1/session/${encodeURIComponent(gizziSessionId)}/message`, {
     method: 'POST',

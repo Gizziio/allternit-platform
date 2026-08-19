@@ -6,7 +6,7 @@ Session discovery, context extraction, and handoff management for cross-tool AI 
 
 The continuity module enables seamless session handoffs between different AI coding tools by:
 
-1. **Discovering sessions** across tools (OpenCode, Claude Code, Codex, etc.)
+1. **Discovering sessions** across tools (Gizzi Code, Claude Code, Codex, etc.)
 2. **Extracting meaningful context** from sessions
 3. **Emitting standardized batons** for handoff
 4. **Validating batons** through CI gates
@@ -17,7 +17,7 @@ The continuity module enables seamless session handoffs between different AI cod
 ┌─────────────────────────────────────────────────────────────────┐
 │                        Session Sources                           │
 ├──────────┬──────────┬──────────┬──────────┬──────────┬──────────┤
-│ OpenCode │ Claude   │  Codex   │   Kimi   │   Qwen   │   GLM    │
+│ Gizzi Code │ Claude   │  Codex   │   Kimi   │   Qwen   │   GLM    │
 │  SQLite  │  JSONL   │  JSONL   │  Custom  │  Custom  │  Custom  │
 └────┬─────┴────┬─────┴────┬─────┴────┬─────┴────┬─────┴────┬────┘
      │          │          │          │          │          │
@@ -167,7 +167,7 @@ The handoff baton contains 13 sections:
 # Allternit Session Baton
 
 **Session:** sess-abc-123  
-**Tool:** opencode  
+**Tool:** gizzi-code  
 **Workspace:** /home/user/project  
 **Generated:** 2026-02-24T10:00:00Z  
 **Reason:** threshold
@@ -183,7 +183,7 @@ Implement session handoff feature with DAG task support
 ## DAG Tasks (Workflow)
 
 ### 🔴 Critical Path
-- **[IN_PROGRESS]** Implement core (opencode)
+- **[IN_PROGRESS]** Implement core (gizzi-code)
 
 ### 🟡 In Progress (1)
 - Implement: Build the feature
@@ -262,7 +262,7 @@ Validates the baton can be resumed:
 
 | Tool | Storage | Parser Status |
 |------|---------|---------------|
-| OpenCode | SQLite | Basic |
+| Gizzi Code | SQLite | Basic |
 | Claude Code | JSONL | Basic |
 | Codex | JSONL | Basic |
 | Copilot | Proprietary | Basic |
@@ -428,7 +428,7 @@ bun test test/continuity/gates.test.ts
 
 ## Future Work
 
-- [ ] Full SQLite parsers for OpenCode/Cursor
+- [ ] Full SQLite parsers for Gizzi Code/Cursor
 - [ ] Claude Code conversation parsing
 - [ ] Automatic session resumption in target tools
 - [ ] Cross-tool DAG task assignment

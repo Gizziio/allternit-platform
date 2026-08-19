@@ -20,7 +20,7 @@
 - `.git/`: git repository metadata. (.git/HEAD)
 - `.github/`: CI/CD workflows and automation. (.github/workflows/ci-cd.yml, .github/workflows/eval.yml)
 - `.codex/`: local Codex skill bundles and datasets. (.codex/skills/ui-ux-pro-max/SKILL.md)
-- `.opencode/`: opencode skill bundle mirror. (.opencode/skills/ui-ux-pro-max/SKILL.md)
+- `.gizzi/`: gizzi skill bundle mirror. (.gizzi/skills/ui-ux-pro-max/SKILL.md)
 - `.gemini/`: gemini skill bundle mirror. (.gemini/skills/ui-ux-pro-max/SKILL.md)
 - `.shared/`: shared skill datasets used by the bundled UI/UX skill. (.shared/ui-ux-pro-max/data/ui-reasoning.csv)
 - `.logs/`: log output directory referenced by startup scripts. (scripts/start-all.sh)
@@ -78917,7 +78917,7 @@ apps/shell/src/iconography
 apps/shell/src/iconography/CapsuleIconRegistry.tsx
 apps/shell/src/iconography/vendor
 apps/shell/src/iconography/vendor/claude-code.svg
-apps/shell/src/iconography/vendor/opencode.svg
+apps/shell/src/iconography/vendor/allternit.svg
 apps/shell/src/.DS_Store
 apps/shell/src/host
 apps/shell/src/host/browserActions.ts

@@ -25,6 +25,7 @@ import {
   BONSAI_WEBGPU_PROVIDER_PREFERENCE,
   bonsaiWebGpuProvider,
 } from '@/lib/local-models/providers/bonsai-webgpu';
+import { refreshCatalog, type RecommendationIntent } from '@/lib/model-lab/api';
 
 interface OllamaModel {
   name: string;
@@ -100,6 +101,13 @@ export function LocalModelManager() {
   const [hfSearchError, setHfSearchError] = useState<string | null>(null);
   const [hfSearched, setHfSearched] = useState(false);
   const [hfInstalls, setHfInstalls] = useState<Record<string, HfInstallStatus>>({});
+
+  const [autoPoll, setAutoPoll] = useState(() => sessionStorage.getItem('allternit.catalog.autoPoll') !== 'false');
+  const [cacheTtlHours, setCacheTtlHours] = useState(() => Number(sessionStorage.getItem('allternit.catalog.cacheTtlHours') ?? '24'));
+  const [defaultIntent, setDefaultIntent] = useState<RecommendationIntent>(() => (sessionStorage.getItem('allternit.catalog.defaultIntent') as RecommendationIntent) ?? 'balanced');
+  const [fallbackBackend, setFallbackBackend] = useState(() => sessionStorage.getItem('allternit.catalog.fallbackBackend') ?? 'llama_cpp');
+  const [refreshingCatalog, setRefreshingCatalog] = useState(false);
+  const [catalogMessage, setCatalogMessage] = useState<string | null>(null);
 
   const fetchStatus = useCallback(async () => {
     try {
@@ -543,6 +551,104 @@ export function LocalModelManager() {
             })}
           </div>
         )}
+      </div>
+
+      {/* ── Model catalog settings ── */}
+      <div>
+        <h4 className="text-sm font-semibold text-[var(--text-primary)] mb-1">Model catalog</h4>
+        <p className="text-xs text-[var(--text-tertiary)] mb-3">
+          The platform can poll Hugging Face for the newest/top GGUF models and estimate how each one fits this machine before you download.
+        </p>
+
+        <div className="space-y-3 p-4 rounded-xl border border-[var(--border-subtle)] bg-[var(--bg-secondary)]/30">
+          <label className="flex items-center gap-2 cursor-pointer">
+            <input
+              type="checkbox"
+              checked={autoPoll}
+              onChange={(e) => {
+                setAutoPoll(e.target.checked);
+                sessionStorage.setItem('allternit.catalog.autoPoll', String(e.target.checked));
+              }}
+              className="accent-[var(--accent-primary)]"
+            />
+            <span className="text-sm text-[var(--text-primary)]">Auto-poll Hugging Face catalog</span>
+          </label>
+
+          <div className="grid gap-3 sm:grid-cols-3">
+            <div>
+              <label className="block text-[11px] font-medium text-[var(--text-secondary)] mb-1">Cache TTL (hours)</label>
+              <input
+                type="number"
+                min={1}
+                max={168}
+                value={cacheTtlHours}
+                onChange={(e) => {
+                  const value = Number(e.target.value);
+                  setCacheTtlHours(value);
+                  sessionStorage.setItem('allternit.catalog.cacheTtlHours', String(value));
+                }}
+                className="w-full px-3 py-2 rounded-lg border border-[var(--border-subtle)] bg-[var(--bg-elevated)] text-sm text-[var(--text-primary)]"
+              />
+            </div>
+            <div>
+              <label className="block text-[11px] font-medium text-[var(--text-secondary)] mb-1">Default intent</label>
+              <select
+                value={defaultIntent}
+                onChange={(e) => {
+                  const value = e.target.value as RecommendationIntent;
+                  setDefaultIntent(value);
+                  sessionStorage.setItem('allternit.catalog.defaultIntent', value);
+                }}
+                className="w-full px-3 py-2 rounded-lg border border-[var(--border-subtle)] bg-[var(--bg-elevated)] text-sm text-[var(--text-primary)]"
+              >
+                <option value="balanced">Balanced</option>
+                <option value="smartest">Smartest</option>
+                <option value="fastest">Fastest</option>
+                <option value="lightweight">Lightweight</option>
+              </select>
+            </div>
+            <div>
+              <label className="block text-[11px] font-medium text-[var(--text-secondary)] mb-1">Fallback backend</label>
+              <select
+                value={fallbackBackend}
+                onChange={(e) => {
+                  const value = e.target.value;
+                  setFallbackBackend(value);
+                  sessionStorage.setItem('allternit.catalog.fallbackBackend', value);
+                }}
+                className="w-full px-3 py-2 rounded-lg border border-[var(--border-subtle)] bg-[var(--bg-elevated)] text-sm text-[var(--text-primary)]"
+              >
+                <option value="llama_cpp">llama.cpp</option>
+                <option value="mlx">MLX</option>
+              </select>
+            </div>
+          </div>
+
+          <button
+            type="button"
+            disabled={refreshingCatalog}
+            onClick={async () => {
+              setRefreshingCatalog(true);
+              setCatalogMessage(null);
+              try {
+                const result = await refreshCatalog();
+                setCatalogMessage(`Refreshed catalog (${result.count} models polled from Hugging Face).`);
+              } catch (err) {
+                setCatalogMessage(err instanceof Error ? err.message : 'Refresh failed');
+              } finally {
+                setRefreshingCatalog(false);
+              }
+            }}
+            className="inline-flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs font-bold bg-[var(--accent-primary)] text-[var(--text-inverse)] hover:opacity-90 transition-opacity disabled:opacity-50"
+          >
+            <ArrowsClockwise size={14} className={refreshingCatalog ? 'animate-spin' : ''} />
+            {refreshingCatalog ? 'Refreshing…' : 'Refresh now'}
+          </button>
+
+          {catalogMessage && (
+            <p className="text-[11px] text-[var(--text-tertiary)]">{catalogMessage}</p>
+          )}
+        </div>
       </div>
 
       {/* ── Bonsai Image companion card ── */}

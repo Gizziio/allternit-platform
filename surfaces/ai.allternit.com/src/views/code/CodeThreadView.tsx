@@ -6,7 +6,7 @@ import { CodeCanvas } from './CodeCanvas';
 import { CodeSessionSidePane } from './CodeSessionSidePane';
 import { CodeSessionLauncher, type CodePaneTarget } from './CodeSessionLauncher';
 import { useSurfaceAgentModeEnabled } from '@/lib/agents/surface-agent-context';
-import { openCodeSessionWindow } from '@/lib/open-code-session-window';
+import { launchCodeSessionWindow } from '@/lib/code-session-window';
 import { AgentModeBackdrop } from '../chat/agentModeSurfaceTheme';
 import { ChatIdProvider } from '@/providers/chat-id-provider';
 import { DataStreamProvider } from '@/providers/data-stream-provider';
@@ -72,7 +72,7 @@ export function CodeThreadView({ workspace }: CodeThreadViewProps) {
   const openIn = useCallback((target: 'window' | 'vscode' | 'terminal') => {
     if (target === 'window') {
       if (!activeCodeSessionId) return;
-      openCodeSessionWindow({
+      launchCodeSessionWindow({
         sessionId: activeCodeSessionId,
         workspaceId: workspace?.workspace_id,
         title: activeCodeSession?.name,

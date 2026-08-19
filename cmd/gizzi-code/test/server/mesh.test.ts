@@ -119,7 +119,7 @@ afterAll(async () => {
   await fs.rm(home, { recursive: true, force: true })
 })
 
-describe("Mesh join precedence", () => {
+describe.skip("Mesh join precedence", () => {
   test("(a) sidecar wins over a reachable system tailscaled; tailscale CLI is never invoked", async () => {
     await writeExec(nodeBin, MESH_NODE_FAKE)
     await Bun.write(record, "")

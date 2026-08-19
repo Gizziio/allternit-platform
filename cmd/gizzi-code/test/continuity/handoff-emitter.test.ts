@@ -6,7 +6,7 @@ import type { SessionContext } from "@/continuity/types"
 describe("HandoffEmitter", () => {
   const mockContext: SessionContext = {
     session_id: "test-session-123",
-    source_tool: "opencode",
+    source_tool: "gizzi",
     workspace_path: "/tmp/test-workspace",
     time_start: 1704067200000,
     time_end: 1704070800000,
@@ -68,7 +68,7 @@ describe("HandoffEmitter", () => {
       // Check header
       expect(markdown).toContain("# GIZZI Session Baton")
       expect(markdown).toContain("test-session-123")
-      expect(markdown).toContain("opencode")
+      expect(markdown).toContain("gizzi")
 
       // Check all 13 sections
       expect(markdown).toContain("## Objective")

@@ -1,4 +1,5 @@
 export {
+  addToTotalLinesChanged,
   addToTotalSessionCost,
   formatTotalCost,
   getStoredSessionCosts,

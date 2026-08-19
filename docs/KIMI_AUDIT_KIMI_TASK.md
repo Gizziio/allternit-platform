@@ -23,7 +23,7 @@ Your job is to **audit Allternit's platform capabilities** and compare them to K
 Kimi's docs cover:
 
 - **api** — chat completions, token estimation, file CRUD, batch jobs, models, errors, balance.
-- **guide** — quickstart, tool calling, JSON mode, response_format, context caching, web search, reasoning effort, thinking models, partial mode, multi-modal (image/video), file-based QA, batch API, org setup, playground, integrations (Claude Code, Codex CLI, Kimi Code CLI, OpenCode, Hermes Agent, OpenClaw).
+- **guide** — quickstart, tool calling, JSON mode, response_format, context caching, web search, reasoning effort, thinking models, partial mode, multi-modal (image/video), file-based QA, batch API, org setup, playground, integrations (Claude Code, Codex CLI, Kimi Code CLI, Gizzi Code, Hermes Agent, OpenClaw).
 - **pricing** — chat, batch, tools, limits.
 - **changelog** — model releases, research notes.
 - **agreement** — legal/privacy (N/A for platform parity).

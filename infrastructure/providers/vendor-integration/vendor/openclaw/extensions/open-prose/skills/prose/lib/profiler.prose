@@ -30,7 +30,7 @@
 #
 # Supported Tools:
 #   - Claude Code (~/.claude) - full support
-#   - OpenCode, Amp, Codex - may have different structures, will warn
+#   - Gizzi Code, Amp, Codex - may have different structures, will warn
 
 input run_path: "Path to run, or 'recent' for latest runs in .prose/runs/"
 input scope: "Scope: single (one run) | compare (multiple runs) | trend (over time)"
@@ -48,7 +48,7 @@ agent detector:
 
     Check for:
     1. ~/.claude/projects/ - Claude Code (full support)
-    2. ~/.opencode/ - OpenCode (may differ)
+    2. ~/.gizzi/ - Gizzi Code (may differ)
     3. ~/.amp/ - Amp (may differ)
     4. ~/.codex/ - Codex (may differ)
 
@@ -169,7 +169,7 @@ let tool_detection = session: detector
        - This is the primary data source
 
     4. If NOT found in ~/.claude:
-       - Check for opencode/amp/codex directories
+       - Check for gizzi/amp/codex directories
        - WARN: "Non-Claude Code tool detected. Token data structure may differ."
 
     5. If no tool data found:
@@ -178,7 +178,7 @@ let tool_detection = session: detector
 
     Return JSON:
     {
-      "tool": "claude-code" | "opencode" | "amp" | "codex" | "not-found",
+      "tool": "claude-code" | "gizzi-code" | "amp" | "codex" | "not-found",
       "session_path": "/path/to/session/" | null,
       "main_jsonl": "/path/to/session.jsonl" | null,
       "subagent_jsonls": [...] | [],
@@ -201,7 +201,7 @@ assert tool_detection.tool != "not-found":
   3. The run path does not correspond to an existing session
 
   Supported tools: Claude Code (~/.claude)
-  Partial support: OpenCode, Amp, Codex (structure may differ)
+  Partial support: Gizzi Code, Amp, Codex (structure may differ)
   """
 
 # ============================================================

@@ -3,9 +3,9 @@ import { describe, expect, test } from "bun:test"
 import { blockedModelReason, isModelBlocked } from "../../src/util/model-safety"
 
 describe("model-safety", () => {
-  test("blocks unstable nano tier on opencode provider", () => {
-    expect(isModelBlocked({ providerID: "opencode", modelID: "glm-4-nano" })).toBe(true)
-    expect(blockedModelReason({ providerID: "opencode", modelID: "glm-4-nano" })).toContain("nano")
+  test("blocks unstable nano tier on the provider", () => {
+    expect(isModelBlocked({ providerID: "gizzi", modelID: "glm-4-nano" })).toBe(true)
+    expect(blockedModelReason({ providerID: "gizzi", modelID: "glm-4-nano" })).toContain("nano")
   })
 
   test("blocks unsupported gpt-5.3-codex-spark path for openai accounts", () => {

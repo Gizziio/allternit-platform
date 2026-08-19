@@ -1140,22 +1140,33 @@ export async function getAgentInbox(agentId: string, limit: number = 50): Promis
   const messages = (response.messages || []) as unknown[];
   return messages.map((msg: unknown): AgentMailMessage => {
     const m = msg as Record<string, unknown>;
+    const toAgents = Array.isArray(m.to_agents) ? m.to_agents as string[] : [];
+    const requiresAck = Boolean(m.ack_required);
     return {
       id: String(m.message_id || m.id || ''),
       threadId: String(m.thread_id || 'default'),
       fromAgentId: String(m.from_agent || ''),
       fromAgentName: undefined,
-      toAgentId: typeof m.to_agent === 'string' ? m.to_agent : undefined,
+      toAgentId: toAgents[0] || (typeof m.to_agent === 'string' ? m.to_agent : undefined),
       subject: typeof m.subject === 'string' ? m.subject : 'Message',
       body: String(m.body || ''),
       bodyRef: typeof m.body_ref === 'string' ? m.body_ref : undefined,
-      status: m.acknowledged ? 'acknowledged' : 'unread',
-      priority: (m.priority as AgentMailMessage['priority']) ?? 'normal',
+      status: requiresAck ? 'unread' : 'read',
+      priority: mapMailPriority(m.priority ?? m.importance),
       timestamp: String(m.timestamp || new Date().toISOString()),
-      requiresAck: !m.acknowledged,
-      ackedAt: m.acknowledged ? String(m.timestamp) : undefined,
+      requiresAck,
     };
   });
+}
+
+function mapMailPriority(value: unknown): AgentMailMessage['priority'] {
+  if (typeof value !== 'string') return 'normal';
+  switch (value.toLowerCase()) {
+    case 'low': return 'low';
+    case 'high':
+    case 'urgent': return 'high';
+    default: return 'normal';
+  }
 }
 
 /**
@@ -1199,18 +1210,18 @@ export async function sendAgentMail(
   const participants = [fromAgentId, input.toAgentId].filter(Boolean) as string[];
   const thread = await railsApi.mail.ensureThread(input.subject, participants);
 
-  const bodyRef = `body-${Date.now()}`;
-  await railsApi.mail.send({
+  const result = await railsApi.mail.send({
     thread_id: thread.thread_id,
-    body_ref: bodyRef,
     body: input.body,
-    to_agent_id: input.toAgentId,
+    from_agent: fromAgentId,
+    to_agents: [input.toAgentId],
     subject: input.subject,
     priority: input.priority,
+    requires_ack: input.requiresAck,
     attachments: input.attachments?.map((a) => a.ref),
   });
 
-  return { sent: true, messageId: bodyRef };
+  return { sent: result.sent, messageId: result.message_id };
 }
 
 /**

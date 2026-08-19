@@ -1,5 +1,5 @@
 -- V14: industry-standard agent mode + designated primary (companion) + delegates.
--- mode mirrors the opencode/Claude Code agent frontmatter `mode`:
+-- mode mirrors the Claude Code agent frontmatter `mode`:
 --   primary | subagent | orchestrator | council
 -- is_primary marks the per-user always-on "Allternit Companion" agent.
 -- delegates is a JSON array of child agent ids an orchestrator routes to.

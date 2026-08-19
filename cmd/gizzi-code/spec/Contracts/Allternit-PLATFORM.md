@@ -61,7 +61,7 @@ workspace/
   },
   "session": {
     "session_id": "sess-uuid",
-    "runner": "opencode",
+    "runner": "gizzi-code",
     "started_at": 1704067200000
   },
   "thresholds": {
@@ -273,7 +273,7 @@ Contains 13 sections:
       "blocking": false,
       "estimated_tokens": 5000,
       "actual_tokens": 4500,
-      "assigned_to": "opencode"
+      "assigned_to": "gizzi-code"
     },
     {
       "id": "implement",
@@ -285,7 +285,7 @@ Contains 13 sections:
       "blocking": true,
       "estimated_tokens": 15000,
       "actual_tokens": 8000,
-      "assigned_to": "opencode"
+      "assigned_to": "gizzi-code"
     }
   ],
   "edges": [

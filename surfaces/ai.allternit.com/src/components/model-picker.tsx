@@ -50,8 +50,6 @@ interface ModelPickerProps {
 
 // Profile to provider mapping
 const PROFILE_TO_PROVIDER: Record<string, string> = {
-  "opencode-acp": "opencode",
-  "opencode-auth": "opencode",
   "gemini-acp": "gemini",
   "gemini-cli": "gemini",
   "gemini-auth": "gemini",
@@ -68,7 +66,6 @@ const PROFILE_TO_PROVIDER: Record<string, string> = {
 
 // Provider display names
 const PROVIDER_NAMES: Record<string, string> = {
-  opencode: "OpenCode",
   gemini: "Google Gemini",
   claude: "Claude",
   kimi: "Kimi",

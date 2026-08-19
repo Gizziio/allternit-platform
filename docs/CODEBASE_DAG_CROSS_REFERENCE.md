@@ -9,7 +9,7 @@
 - 🟤 PHASE 5: Security, Canon & Receipts (Deltas 0003 & 0004)
 - 🟢 PHASE 6: Memory Promotion Pipeline (Delta 0002)
 - 🔵 PHASE 7: Capsule Runtime & MCP Host (Delta 0005)
-- 🟣 PHASE 8: OpenCode TUI Fork Integration (Delta 0007)
+- 🟣 PHASE 8: Gizzi Code TUI Fork Integration (Delta 0007)
 - 🟤 PHASE 9: Embodiment & Robotics Control Plane (L8)
 - ⚪ PHASE 10: Glass UI Component Migration
 - 🟤 PHASE 11: MCP Apps Integration

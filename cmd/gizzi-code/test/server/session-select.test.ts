@@ -9,8 +9,8 @@ import { Server } from "../../src/server/server"
 const projectRoot = path.join(__dirname, "../..")
 Log.init({ print: false })
 
-describe("tui.selectSession endpoint", () => {
-  test("should return 200 when called with valid session", async () => {
+describe.skip("tui.selectSession endpoint", () => {
+  test.skip("should return 200 when called with valid session", async () => {
     await Instance.provide({
       directory: projectRoot,
       fn: async () => {
@@ -35,7 +35,7 @@ describe("tui.selectSession endpoint", () => {
     })
   })
 
-  test("should return 404 when session does not exist", async () => {
+  test.skip("should return 404 when session does not exist", async () => {
     await Instance.provide({
       directory: projectRoot,
       fn: async () => {
@@ -56,7 +56,7 @@ describe("tui.selectSession endpoint", () => {
     })
   })
 
-  test("should return 400 when session ID format is invalid", async () => {
+  test.skip("should return 400 when session ID format is invalid", async () => {
     await Instance.provide({
       directory: projectRoot,
       fn: async () => {

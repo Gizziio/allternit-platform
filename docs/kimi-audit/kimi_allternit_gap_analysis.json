@@ -1187,8 +1187,8 @@
     },
     {
       "category": "guide",
-      "kimi_feature": "在 OpenCode 中使用 Kimi 模型",
-      "kimi_page": "在 OpenCode 中使用 Kimi 模型",
+      "kimi_feature": "在 Gizzi Code 中使用 Kimi 模型",
+      "kimi_page": "在 Gizzi Code 中使用 Kimi 模型",
       "kimi_url": "https://platform.kimi.com/docs/guide/open-code.md",
       "kimi_snippet": "URL: https://platform.",
       "status": "not-applicable",

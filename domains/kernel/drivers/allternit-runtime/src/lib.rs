@@ -588,13 +588,13 @@ mod tests {
             PathBuf::from("/tmp"),
             SessionSource::Chat,
             EventMode::Acp,
-            "opencode".to_string(),
+            "claude-acp".to_string(),
         )
         .with_model("gpt-4")
         .with_warmup("Hello");
 
         assert_eq!(req.tenant_id, "tenant-1");
-        assert_eq!(req.profile_id, "opencode");
+        assert_eq!(req.profile_id, "claude-acp");
         assert_eq!(req.model_id, Some("gpt-4".to_string()));
         assert_eq!(req.warmup, Some("Hello".to_string()));
     }

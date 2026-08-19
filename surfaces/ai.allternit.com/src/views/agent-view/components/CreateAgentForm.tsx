@@ -335,8 +335,18 @@ export function CreateAgentForm({ onClose, onSuccess }: CreateAgentFormProps) {
   const isBotMode = formData.isBot === true;
   const flowSteps = isBotMode ? BOT_FLOW_STEPS : CREATE_FLOW_STEPS;
 
+  // If the user toggles "Package as Bot" mid-flow, the active step may no longer
+  // exist in the new flow (e.g. "vmOperator" disappears when switching to agent
+  // mode). Reset to the first step in that case to avoid out-of-bounds footers.
   const activeStepIndex = flowSteps.findIndex((s) => s.id === activeStep);
-  const currentStepDescription = flowSteps[activeStepIndex]?.description;
+  const safeActiveStepIndex = activeStepIndex >= 0 ? activeStepIndex : 0;
+  const currentStepDescription = flowSteps[safeActiveStepIndex]?.description;
+
+  useEffect(() => {
+    if (activeStepIndex < 0) {
+      setActiveStep(flowSteps[0].id);
+    }
+  }, [activeStepIndex, flowSteps]);
 
   // Derived calculations
   const projectedStats = useMemo(() => 
@@ -368,6 +378,7 @@ export function CreateAgentForm({ onClose, onSuccess }: CreateAgentFormProps) {
     runtime: true,
     connectors: true,
     identityChannels: true,
+    vmOperator: true,
     harness: Boolean(formData.harness?.mode) && (formData.allowedSurfaces || []).length > 0 && (!isBotMode || botProfileItem?.satisfied !== false),
     review: isReadyForCreate && (!isBotMode || botProfileItem?.satisfied === true),
   }) as Record<string, boolean>, [formData.name, formData.description, blueprint, formData.harness, formData.allowedSurfaces, isReadyForCreate, isBotMode, botProfileItem]);
@@ -375,7 +386,7 @@ export function CreateAgentForm({ onClose, onSuccess }: CreateAgentFormProps) {
   // Methods
   const canJumpToStep = (stepId: string) => {
     const idx = flowSteps.findIndex(s => s.id === stepId);
-    if (idx === 0) return true;
+    if (idx <= 0) return true;
     // Can jump if all previous steps are valid
     for (let i = 0; i < idx; i++) {
       if (!stepValidation[flowSteps[i].id as keyof typeof stepValidation]) return false;
@@ -476,7 +487,7 @@ export function CreateAgentForm({ onClose, onSuccess }: CreateAgentFormProps) {
       if (!stepValidation[activeStep]) {
         return;
       }
-      const nextStep = flowSteps[activeStepIndex + 1];
+      const nextStep = flowSteps[safeActiveStepIndex + 1];
       if (nextStep) {
         setActiveStep(nextStep.id);
       }
@@ -685,7 +696,7 @@ export function CreateAgentForm({ onClose, onSuccess }: CreateAgentFormProps) {
           <div className="grid grid-cols-[repeat(auto-fit,minmax(280px,1fr))] gap-3">
             {flowSteps.map((step, idx) => {
               const selected = step.id === activeStep;
-              const completed = idx < activeStepIndex && stepValidation[step.id];
+              const completed = idx < safeActiveStepIndex && stepValidation[step.id];
               const unlocked = canJumpToStep(step.id);
               return (
                 <button
@@ -715,7 +726,7 @@ export function CreateAgentForm({ onClose, onSuccess }: CreateAgentFormProps) {
             })}
           </div>
           <div className="mt-3 p-2.5 px-3.5 rounded-md border border-solid border-[var(--border-subtle)] text-[12px] text-[var(--text-secondary)]">
-            Step {activeStepIndex + 1} of {flowSteps.length}: {currentStepDescription}
+            Step {safeActiveStepIndex + 1} of {flowSteps.length}: {currentStepDescription}
           </div>
         </div>
 
@@ -812,14 +823,14 @@ export function CreateAgentForm({ onClose, onSuccess }: CreateAgentFormProps) {
         <div className="sticky bottom-0 z-10 flex items-center justify-between p-4 px-5 bg-[var(--bg-card)] rounded-xl border border-solid border-[var(--border-subtle)] mt-6 gap-3 shadow-lg">
           <button
             type="button"
-            onClick={activeStepIndex === 0 ? onClose : () => setActiveStep(flowSteps[activeStepIndex - 1].id)}
+            onClick={safeActiveStepIndex === 0 ? onClose : () => setActiveStep(flowSteps[safeActiveStepIndex - 1].id)}
             className="px-5 py-2.5 rounded-lg bg-transparent text-[var(--text-primary)] text-[14px] font-medium border border-solid border-[var(--border-subtle)] cursor-pointer hover:bg-[var(--surface-hover)] transition-colors"
           >
-            {activeStepIndex === 0 ? "Cancel" : "Previous"}
+            {safeActiveStepIndex === 0 ? "Cancel" : "Previous"}
           </button>
           
           <div className="flex gap-3">
-            {activeStepIndex < flowSteps.length - 1 ? (
+            {safeActiveStepIndex < flowSteps.length - 1 ? (
               <button
                 type="submit"
                 disabled={!stepValidation[activeStep]}

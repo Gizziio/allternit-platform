@@ -151,7 +151,7 @@ impl AcpClient {
                 }
 
                 // Check for initialize RESPONSE (id:1 with result containing protocolVersion)
-                // This is how opencode and many ACP agents signal initialization complete
+                // This is how many ACP agents signal initialization complete
                 if msg.get("id").and_then(|i| i.as_u64()) == Some(1) {
                     if let Some(result) = msg.get("result") {
                         if result.get("protocolVersion").is_some() {

@@ -174,7 +174,7 @@ bun test test/continuity/dag-tasks.test.ts
 
 | Tool | Status | Parser |
 |------|--------|--------|
-| OpenCode | ✅ Supported | Basic (SQLite ready) |
+| Gizzi Code | ✅ Supported | Basic (SQLite ready) |
 | Claude Code | ✅ Supported | JSONL parser |
 | Codex | ✅ Supported | JSONL parser |
 | Copilot | ✅ Supported | Basic |

@@ -85,7 +85,7 @@ def heuristic_status(category: str, title: str, snippet: str) -> tuple[str, str]
         return "partial", "API area not explicitly covered; likely partial or missing."
 
     if category == "guide":
-        if any(k in t for k in ["kimi k3", "kimi k2", "moonshot", "kimi code", "claude code", "codex", "opencode", "hermes", "openclaw", "moonpalace"]):
+        if any(k in t for k in ["kimi k3", "kimi k2", "moonshot", "kimi code", "claude code", "codex", "Gizzi Code", "hermes", "openclaw", "moonpalace"]):
             return "not-applicable", "Kimi-specific product or third-party integration guide."
         # Specific gaps surfaced by the audit.
         if any(k in t for k in ["batch api", "批量", "batch 状态", "batch 定价"]):

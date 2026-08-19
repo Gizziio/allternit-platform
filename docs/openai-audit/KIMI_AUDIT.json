@@ -446,7 +446,7 @@
             "cmd/gizzi-code/src/runtime/tools/builtins/skill.ts:88",
             "platform/sdk/allternit-skill-portability/src/lib.rs:1-10"
           ],
-          "notes": "Skill portability engine syncs skills across Claude Code, Codex, OpenCode, Kimi."
+          "notes": "Skill portability engine syncs skills across Claude Code, Codex, Gizzi Code, Kimi."
         },
         {
           "openai_feature": "Custom instructions with AGENTS.md",

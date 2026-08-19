@@ -135,7 +135,7 @@ fn test_terminal_event_detection_comprehensive() {
 #[test]
 fn test_violation_log_format() {
     let session_id = "sess_test_123";
-    let profile_id = "opencode-acp";
+    let profile_id = "claude-acp";
     let source = "chat";
     let event_mode = "acp";
     let event_type = "terminal_output";
@@ -148,7 +148,7 @@ fn test_violation_log_format() {
     
     assert!(violation.contains("VIOLATION:"));
     assert!(violation.contains("sess_test_123"));
-    assert!(violation.contains("opencode-acp"));
+    assert!(violation.contains("claude-acp"));
     assert!(violation.contains("chat"));
     assert!(violation.contains("acp"));
     assert!(violation.contains("terminal_output"));

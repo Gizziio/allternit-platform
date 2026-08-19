@@ -302,7 +302,7 @@
 
 .aos-sign-signer.selected {
   border-color: var(--aos-sign-accent);
-  background: rgba(196, 62, 28, 0.08);
+  background: color-mix(in srgb, var(--aos-sign-accent) 8%, transparent);
 }
 
 .aos-sign-signer-row {

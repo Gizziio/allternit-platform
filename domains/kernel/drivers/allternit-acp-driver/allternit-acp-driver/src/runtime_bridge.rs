@@ -40,10 +40,6 @@ impl AcpBrainRuntime {
         }
     }
 
-    pub fn opencode() -> Self {
-        Self::new("opencode", vec!["acp".to_string()])
-    }
-
     fn map_event_mode(mode: EventMode) -> AcpEventMode {
         match mode {
             EventMode::Acp => AcpEventMode::Acp,

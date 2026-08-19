@@ -1337,7 +1337,7 @@ export function createAllternitClient(config?: {
   if (config?.directory) {
     const isNonASCII = /[^\x00-\x7F]/.test(config.directory);
     const encodedDirectory = isNonASCII ? encodeURIComponent(config.directory) : config.directory;
-    config.headers = { ...config.headers, "x-opencode-directory": encodedDirectory };
+    config.headers = { ...config.headers, "x-allternit-directory": encodedDirectory };
   }
   const clientInstance = createClient(config);
   return new AllternitClient({ client: clientInstance });

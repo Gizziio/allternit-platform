@@ -2,7 +2,7 @@
 
 ## Overview
 
-This document maps the existing OpenCode/Allternit UI contracts to the Allternit Gateway Protocol v1, ensuring backward compatibility while establishing a clean transport-agnostic foundation.
+This document maps the existing Gizzi Code/Allternit UI contracts to the Allternit Gateway Protocol v1, ensuring backward compatibility while establishing a clean transport-agnostic foundation.
 
 **Version:** 1.0.0  
 **Date:** 2024-02-23
@@ -373,7 +373,7 @@ function legacyToCore(legacy: LegacyChatMessage, session_id: string): CoreMessag
 
 ### When to Use Compat Layer
 
-The compat layer (`/gateway/compat/opencode/`) is required if:
+The compat layer (`/gateway/compat/gizzi/`) is required if:
 
 1. **Existing UI code** directly calls legacy endpoint paths that differ from core paths
 2. **SSE event types** in UI don't match core event types
@@ -382,7 +382,7 @@ The compat layer (`/gateway/compat/opencode/`) is required if:
 ### Compat Layer Structure
 
 ```
-/gateway/compat/opencode/
+/gateway/compat/gizzi/
 ├── routes/
 │   ├── sessions.ts      # Legacy /api/v1/sessions/* routes
 │   ├── chat.ts          # Legacy /api/chat route

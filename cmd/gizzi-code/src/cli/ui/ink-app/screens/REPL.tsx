@@ -3462,7 +3462,7 @@ export function REPL({
     forceImmediate?: boolean;
   }) => {
     // Re-pin scroll to bottom on submit so the user always sees the new
-    // exchange (matches OpenCode's auto-scroll behavior).
+    // exchange (matches common agent auto-scroll behavior).
     repinScroll();
 
     // Resume loop mode if paused

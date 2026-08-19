@@ -227,7 +227,7 @@ contextBridge.exposeInMainWorld('allternitServices', {
 - Anthropic (Claude CLI, setup-token)
 - OpenAI (Codex CLI, API key)
 - Google (Gemini API key)
-- OpenCode/Zen (OAuth)
+- Gizzi Code/Zen (OAuth)
 - Ollama (local, no auth)
 - GitHub Copilot (token)
 - Venice (API key)

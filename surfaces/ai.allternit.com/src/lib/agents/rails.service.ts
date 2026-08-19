@@ -274,13 +274,19 @@ export interface MailMessage {
   thread_id: string;
   from_agent: string;
   to_agent?: string;
+  to_agents?: string[];
   body: string;
+  body_ref?: string;
+  body_path?: string;
   timestamp: string;
   acknowledged?: boolean;
+  ack_required?: boolean;
   /** Message subject/topic (mirrors MailSendRequest). */
   subject?: string;
   /** Message priority. */
   priority?: 'low' | 'normal' | 'high' | 'urgent';
+  /** Backend importance (low/normal/high). */
+  importance?: 'low' | 'normal' | 'high';
 }
 
 export interface MailShareResponse {
@@ -289,15 +295,21 @@ export interface MailShareResponse {
 
 export interface MailSendRequest {
   thread_id: string;
-  body_ref: string;
+  body_ref?: string;
   /** Message body (newer backends accept this directly). */
   body?: string;
-  /** Recipient agent id (newer backends accept this). */
+  /** Sender agent id (typed envelope path). */
+  from_agent?: string;
+  /** Recipients for typed envelope path. */
+  to_agents?: string[];
+  /** Single-recipient alias for typed envelope path. */
   to_agent_id?: string;
   /** Message subject/topic. */
   subject?: string;
-  /** Message priority. */
+  /** Message priority; maps to backend `importance`. */
   priority?: 'low' | 'normal' | 'high' | 'urgent';
+  /** Request read acknowledgement. */
+  requires_ack?: boolean;
   attachments?: string[];
 }
 
@@ -310,6 +322,13 @@ export interface MailThreadSummary {
 export interface MailInboxRequest {
   agent_id: string;
   limit?: number;
+}
+
+export interface MailAckRequest {
+  thread_id: string;
+  message_id: string;
+  agent_id?: string;
+  note?: string;
 }
 
 // Gate - Policy enforcement
@@ -562,13 +581,16 @@ export const railsApi = {
   
   mail: {
     /** Ensure/create thread */
-    ensureThread: (topic: string, participants?: string[]) => apiRequestWithError<{ thread_id: string }>(
-      `${RAILS_BASE}/mail/threads`,
-      { method: "POST", body: JSON.stringify({ topic, participants }) }
-    ),
+    ensureThread: (topic: string, _participants?: string[]) => {
+      const canonicalTopic = /^((dag|wih|mail):)/.test(topic) ? topic : `mail:${topic}`;
+      return apiRequestWithError<{ thread_id: string }>(
+        `${RAILS_BASE}/mail/threads`,
+        { method: "POST", body: JSON.stringify({ topic: canonicalTopic }) }
+      );
+    },
 
     /** Send message */
-    send: (req: MailSendRequest) => apiRequestWithError<{ sent: boolean }>(
+    send: (req: MailSendRequest) => apiRequestWithError<{ sent: boolean; thread_id?: string; message_id?: string }>(
       `${RAILS_BASE}/mail/send`,
       { method: "POST", body: JSON.stringify(req) }
     ),
@@ -597,6 +619,12 @@ export const railsApi = {
     ack: (threadId: string, messageId: string, note?: string) => apiRequestWithError<void>(
       `${RAILS_BASE}/mail/ack`,
       { method: "POST", body: JSON.stringify({ thread_id: threadId, message_id: messageId, note }) }
+    ),
+
+    /** Acknowledge message (explicit request object). */
+    ackMessage: (req: MailAckRequest) => apiRequestWithError<{ acknowledged: boolean }>(
+      `${RAILS_BASE}/mail/ack`,
+      { method: "POST", body: JSON.stringify(req) }
     ),
 
     /** Request review */

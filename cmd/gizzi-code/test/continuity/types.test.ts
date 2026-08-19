@@ -7,7 +7,7 @@ describe("Continuity Types", () => {
     it("should allow valid session source", () => {
       const source: SessionSource = {
         id: "test-session-123",
-        tool: "opencode",
+        tool: "gizzi",
         workspace_path: "/tmp/test",
         created_at: Date.now(),
         modified_at: Date.now(),
@@ -16,7 +16,7 @@ describe("Continuity Types", () => {
       }
       
       expect(source.id).toBe("test-session-123")
-      expect(source.tool).toBe("opencode")
+      expect(source.tool).toBe("gizzi")
       expect(source.title).toBe("Test Session")
     })
     
@@ -80,7 +80,7 @@ describe("Continuity Types", () => {
         version: "1.0.0",
         session_context: {
           session_id: "test-session",
-          source_tool: "opencode",
+          source_tool: "gizzi",
           workspace_path: "/tmp/test",
           time_start: Date.now(),
           objective: "Test",
@@ -110,7 +110,7 @@ describe("Continuity Types", () => {
         entries: [
           {
             session_id: "test-1",
-            tool: "opencode",
+            tool: "gizzi",
             workspace_path: "/tmp/test",
             modified_at: Date.now(),
             ttl_expires_at: Date.now() + 300000,
@@ -127,7 +127,7 @@ describe("Continuity Types", () => {
   
   describe("ToolType", () => {
     const allTools: ToolType[] = [
-      "opencode",
+      "gizzi",
       "claude_code",
       "codex",
       "copilot",

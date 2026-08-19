@@ -536,7 +536,7 @@
 ➖ **guide**: 在 Hermes Agent 中使用 Kimi K3
 ➖ **guide**: 在 Kimi Code CLI 中使用 Kimi API Platform
 ➖ **guide**: 在 OpenClaw 中连接 Kimi
-➖ **guide**: 在 OpenCode 中使用 Kimi 模型
+➖ **guide**: 在 Gizzi Code 中使用 Kimi 模型
 ➖ **guide**: 安装 Claude Code
 ➖ **guide**: 定义要使用的官方工具 Formula URI
 ➖ **guide**: 找不到 Moonshot 认证选项
