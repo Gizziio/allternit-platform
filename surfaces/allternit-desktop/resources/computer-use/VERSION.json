@@ -1,6 +1,6 @@
 {
-  "version": "0.8.2",
-  "asset": "cua-driver-rs-0.8.2-darwin-universal-binary.tar.gz",
-  "sha256": "50f907441f38c6f20f4218722cc4c874ba571f1e386ab73159c4a23244ea12db",
-  "source": "https://github.com/trycua/cua/releases/download/cua-driver-rs-v0.8.2/cua-driver-rs-0.8.2-darwin-universal-binary.tar.gz"
+  "version": "0.20.1-nightly.20260818.32173745999",
+  "asset": "cua-driver-rs-0.20.1-nightly.20260818.32173745999-darwin-universal-binary.tar.gz",
+  "sha256": "f57e7192da3c818b2cf9e30bacc2c32a9a254387e43612e9dc021debbc17ef93",
+  "source": "https://github.com/trycua/cua/releases/download/nightly-cua-driver-rs-v0.20.1-nightly.20260818.32173745999/cua-driver-rs-0.20.1-nightly.20260818.32173745999-darwin-universal-binary.tar.gz"
 }
