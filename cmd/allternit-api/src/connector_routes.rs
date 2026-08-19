@@ -97,6 +97,7 @@ pub fn connector_router() -> Router<Arc<AppState>> {
     // unauthenticated in main.rs) alongside the sidecar's `/oauth/callback`.
     Router::new()
         .route("/connectors", get(list_connectors))
+        .route("/connectors/setup-status", get(connectors_setup_status))
         .route("/connectors/mcp", post(mcp_proxy))
         .route("/connectors/:id", get(get_connector))
         .route("/connectors/:id/connect", post(connect_connector))
@@ -945,6 +946,78 @@ async fn list_connectors(
         "source": "allternit-owned",
         "standard": "mcp+owned-oauth+openapi",
         "sidecar": if sidecar_ok { "ok" } else { "unavailable" },
+    }))
+}
+
+/// Aggregate setup status for the three first-party connectors. This is
+/// deployment-level state (not per-user) so the UI can show a single
+/// "Finish setup" banner when any connector is not yet provisioned.
+async fn connectors_setup_status(
+    State(_state): State<Arc<AppState>>,
+    headers: axum::http::HeaderMap,
+) -> impl IntoResponse {
+    let _user_id = caller(&headers);
+
+    let mail_status = crate::agent_email_routes::agent_email_status_value().await;
+    let mail_configured = mail_status
+        .get("configured")
+        .and_then(|v| v.as_bool())
+        .unwrap_or(false);
+    let mail_reachable = mail_status
+        .get("reachable")
+        .and_then(|v| v.as_bool())
+        .unwrap_or(false);
+    let mail_domain = mail_status
+        .get("domain")
+        .and_then(|v| v.as_str())
+        .map(|s| s.to_string());
+
+    let sidecar_healthy = crate::open_connector_proxy::is_reachable().await;
+    let sidecar_url = crate::open_connector_proxy::sidecar_url();
+
+    let configured_oauth: std::collections::HashSet<String> =
+        match crate::open_connector_proxy::configured_oauth_services().await {
+            Ok(services) => services.into_iter().collect(),
+            Err(_) => std::collections::HashSet::new(),
+        };
+
+    let oauth_check = |service: &str| -> Value {
+        let configured = configured_oauth.contains(service);
+        json!({
+            "configured": configured,
+            "setup_hint": if configured {
+                Value::Null
+            } else {
+                json!(format!("Run ./scripts/install-connectors.sh to register the OAuth app for {service}."))
+            }
+        })
+    };
+
+    let all_ready = mail_configured && mail_reachable && sidecar_healthy
+        && configured_oauth.contains("gmail")
+        && configured_oauth.contains("googledrive");
+
+    Json(json!({
+        "ready": all_ready,
+        "checks": {
+            "allternit_mail": {
+                "configured": mail_configured,
+                "reachable": mail_reachable,
+                "domain": mail_domain,
+                "setup_hint": if mail_configured { Value::Null } else {
+                    json!("Run ./scripts/install-connectors.sh to deploy Allternit Mail to your Cloudflare account.")
+                }
+            },
+            "sidecar": {
+                "healthy": sidecar_healthy,
+                "url": sidecar_url,
+                "setup_hint": if sidecar_healthy { Value::Null } else {
+                    json!("Start the open-connector sidecar with ./dev/scripts/start-connector-sidecar.sh, or run ./scripts/install-connectors.sh.")
+                }
+            },
+            "gmail": oauth_check("gmail"),
+            "google_drive": oauth_check("googledrive"),
+        }
     }))
 }
 
@@ -2994,5 +3067,38 @@ mod tests {
         assert_eq!(mail["backend"], "allternit_native");
         assert_eq!(mail["via"], "agent_email");
         assert_eq!(mail["address"], "agent-1@agents.test");
+    }
+
+    #[tokio::test]
+    async fn connectors_setup_status_returns_shape_when_unconfigured() {
+        let temp = tempfile::tempdir().unwrap().keep();
+        let state = test_app_state(&temp).await;
+        let app = connector_router().with_state(state);
+
+        let resp = app
+            .oneshot(
+                Request::builder()
+                    .method("GET")
+                    .uri("/connectors/setup-status")
+                    .body(Body::empty())
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+        assert_eq!(resp.status(), StatusCode::OK);
+        let body = body_json(resp.into_body()).await;
+        assert_eq!(body["ready"], false);
+        let checks = body.get("checks").expect("checks object");
+        assert!(checks.get("allternit_mail").is_some());
+        assert!(checks.get("sidecar").is_some());
+        assert!(checks.get("gmail").is_some());
+        assert!(checks.get("google_drive").is_some());
+        // Allternit Mail is definitely unconfigured in this test (no env vars).
+        assert_eq!(checks["allternit_mail"]["configured"], false);
+        // Sidecar / OAuth state depends on the host environment; only assert shape.
+        assert!(checks["sidecar"]["healthy"].is_boolean());
+        assert!(checks["gmail"]["configured"].is_boolean());
+        assert!(checks["google_drive"]["configured"].is_boolean());
+        assert!(checks["gmail"]["setup_hint"].is_string());
     }
 }

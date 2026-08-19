@@ -6,8 +6,10 @@ import {
   listOwnedConnectors,
   connectOwned,
   disconnectOwned,
+  getConnectorSetupStatus,
   type OwnedConnector,
   type OwnedConnectStatus,
+  type ConnectorSetupStatus,
 } from "@/lib/design/owned-connector";
 import { getConnectorLogoUrl } from "@/lib/design/connector-logo";
 import { cn } from "@/lib/utils";
@@ -21,6 +23,7 @@ import {
   ArrowSquareOut,
   Spinner,
   CaretDown,
+  Warning,
 } from "@phosphor-icons/react";
 
 export interface ConnectorMarketplaceProps {
@@ -73,12 +76,18 @@ export function ConnectorMarketplace({
   const [note, setNote] = useState<Record<string, string>>({});
   const [apiKey, setApiKey] = useState<Record<string, string>>({});
   const [keyInputId, setKeyInputId] = useState<string | null>(null);
+  const [setupStatus, setSetupStatus] = useState<ConnectorSetupStatus | null>(null);
+  const [setupBannerDismissed, setSetupBannerDismissed] = useState(false);
 
   async function refresh() {
     setLoading(true);
     try {
-      const list = await listOwnedConnectors();
+      const [list, setup] = await Promise.all([
+        listOwnedConnectors(),
+        getConnectorSetupStatus(),
+      ]);
       setConnectors(list);
+      setSetupStatus(setup);
     } finally {
       setLoading(false);
     }
@@ -238,8 +247,92 @@ export function ConnectorMarketplace({
   const isConnected = (c: OwnedConnector) => c.connection?.status === "connected";
   const isBound = (c: OwnedConnector) => boundIds?.has(c.id) ?? false;
 
+  const missingSetup = useMemo(() => {
+    if (!setupStatus || setupStatus.ready) return [];
+    const checks = setupStatus.checks;
+    const items: { label: string; hint?: string }[] = [];
+    if (!checks.allternit_mail.configured) {
+      items.push({
+        label: "Allternit Mail",
+        hint: checks.allternit_mail.setup_hint ?? undefined,
+      });
+    }
+    if (!checks.sidecar.healthy) {
+      items.push({
+        label: "Connector sidecar",
+        hint: checks.sidecar.setup_hint ?? undefined,
+      });
+    }
+    if (!checks.gmail.configured) {
+      items.push({
+        label: "Gmail OAuth",
+        hint: checks.gmail.setup_hint ?? undefined,
+      });
+    }
+    if (!checks.google_drive.configured) {
+      items.push({
+        label: "Google Drive OAuth",
+        hint: checks.google_drive.setup_hint ?? undefined,
+      });
+    }
+    return items;
+  }, [setupStatus]);
+
   return (
     <div className={cn("flex flex-col gap-4", className)}>
+      {/* Setup banner */}
+      {!setupBannerDismissed && missingSetup.length > 0 && (
+        <div className="rounded-xl border border-[var(--border-subtle)] bg-[var(--accent-primary)]/5 p-4">
+          <div className="flex items-start gap-3">
+            <Warning size={18} className="text-[var(--accent-primary)] shrink-0 mt-0.5" />
+            <div className="flex-1 min-w-0">
+              <h4 className="text-[13px] font-semibold text-[var(--text-primary)]">
+                Finish connector setup
+              </h4>
+              <p className="text-[12px] text-[var(--text-secondary)] mt-1">
+                The following first-party connectors need a one-time provisioning step before users
+                can connect accounts:
+              </p>
+              <ul className="mt-2 space-y-1.5">
+                {missingSetup.map((item) => (
+                  <li
+                    key={item.label}
+                    className="text-[12px] text-[var(--text-secondary)] flex items-start gap-2"
+                  >
+                    <span className="text-[var(--accent-primary)]">•</span>
+                    <span>
+                      <span className="font-medium text-[var(--text-primary)]">{item.label}</span>
+                      {item.hint ? <span className="block text-[11px]">{item.hint}</span> : null}
+                    </span>
+                  </li>
+                ))}
+              </ul>
+              <div className="mt-3 flex flex-wrap items-center gap-2">
+                <code className="text-[11px] bg-[var(--bg-primary)] px-2 py-1 rounded border border-[var(--border-subtle)]">
+                  ./scripts/install-connectors.sh
+                </code>
+                <a
+                  href="/docs/CONNECTOR_SETUP.md"
+                  target="_blank"
+                  rel="noreferrer"
+                  className="text-[11px] text-[var(--accent-primary)] hover:underline"
+                >
+                  Setup guide →
+                </a>
+              </div>
+            </div>
+            <button
+              type="button"
+              onClick={() => setSetupBannerDismissed(true)}
+              className="p-1 rounded-md text-[var(--text-tertiary)] hover:text-[var(--text-primary)] hover:bg-[var(--surface-hover)]"
+              aria-label="Dismiss"
+            >
+              <X size={14} />
+            </button>
+          </div>
+        </div>
+      )}
+
       {/* Search + category filter */}
       <div className="flex flex-col sm:flex-row gap-3">
         <div className="relative flex-1">

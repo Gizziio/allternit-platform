@@ -79,3 +79,28 @@ export async function disconnectOwned(id: string): Promise<{ status: string }> {
   const res = await fetch(`${BASE}/${encodeURIComponent(id)}/disconnect`, { method: 'DELETE' });
   return res.json();
 }
+
+export interface ConnectorSetupStatusCheck {
+  configured?: boolean;
+  reachable?: boolean;
+  healthy?: boolean;
+  domain?: string | null;
+  url?: string;
+  setup_hint?: string | null;
+}
+
+export interface ConnectorSetupStatus {
+  ready: boolean;
+  checks: {
+    allternit_mail: ConnectorSetupStatusCheck;
+    sidecar: ConnectorSetupStatusCheck;
+    gmail: ConnectorSetupStatusCheck;
+    google_drive: ConnectorSetupStatusCheck;
+  };
+}
+
+export async function getConnectorSetupStatus(): Promise<ConnectorSetupStatus | null> {
+  const res = await fetch(`${BASE}/setup-status`);
+  if (!res.ok) return null;
+  return (await res.json()) as ConnectorSetupStatus;
+}

@@ -129,7 +129,7 @@ fn env_or_file(key: &str) -> Option<String> {
 
 /// Base URL of the sidecar. `dev-stack-watch.cjs` always sets this; the
 /// fallback matches its default port.
-fn sidecar_url() -> String {
+pub(crate) fn sidecar_url() -> String {
     env_or_file("ALLTERNIT_CONNECTOR_SIDECAR_URL")
         .filter(|s| !s.is_empty())
         .unwrap_or_else(|| "http://127.0.0.1:8014".to_string())
@@ -218,6 +218,28 @@ pub async fn is_reachable() -> bool {
         .await
         .map(|r| r.status().is_success())
         .unwrap_or(false)
+}
+
+/// Returns the list of services that have an OAuth client configured on the
+/// sidecar (`GET /api/oauth/configs`). Used by the connectors setup-status
+/// endpoint to tell the UI which first-party OAuth connectors are ready.
+pub(crate) async fn configured_oauth_services() -> Result<Vec<String>, ProxyError> {
+    let raw = admin_get("/api/oauth/configs").await?;
+    let list = raw.as_array().cloned().unwrap_or_default();
+    let mut services = Vec::new();
+    for entry in list {
+        let configured = entry
+            .get("configured")
+            .and_then(|v| v.as_bool())
+            .unwrap_or(false);
+        if !configured {
+            continue;
+        }
+        if let Some(service) = entry.get("service").and_then(|v| v.as_str()) {
+            services.push(service.to_string());
+        }
+    }
+    Ok(services)
 }
 
 /// Slim per-provider view used by the connector catalog merge. Deliberately
