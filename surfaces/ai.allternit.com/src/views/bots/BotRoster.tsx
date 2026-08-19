@@ -28,9 +28,11 @@ import {
 import { motion, AnimatePresence } from 'framer-motion';
 
 import { createModuleLogger } from '@/lib/logger';
-import { BOT_TEMPLATES } from '@/lib/bots/bots.manifest';
-import { cloneBot, type CloneBotResult } from '@/lib/bots/bot-clone.service';
-import { agentToBot } from '@/lib/bots/bot-profile';
+import { useAgentStore } from '@/lib/agents/agent.store';
+import { agentToCreateAgentInput } from '@/lib/bots/bot-profile';
+import { openBotCanonicalChat } from '@/lib/bots/bot-canonical-chat.service';
+import { resolveBotAvatar } from '@/lib/bots/bot-avatar.service';
+import { useUnifiedRoster, type UnifiedRosterBot } from '@/lib/bots/use-unified-roster';
 import {
   useBotRosterStore,
   type BotRosterSortBy,
@@ -65,18 +67,18 @@ const SORT_OPTIONS: { value: BotRosterSortBy; label: string }[] = [
 // Helpers
 // ============================================================================
 
-/** Build a BotRosterItemData record from a template. */
-function templateToItem(template: typeof BOT_TEMPLATES[number]): BotRosterItemData {
-  const agent = template.create();
+/** Build a BotRosterItemData record from a unified roster bot. */
+function botToItem(bot: UnifiedRosterBot): BotRosterItemData {
   return {
-    id: template.id,
-    displayName: agent.botProfile?.displayName ?? agent.name,
-    slug: template.id,
-    tagline: agent.botProfile?.tagline ?? agent.description,
-    accentColor: agent.botProfile?.accentColor ?? '#6b7280',
-    status: mapAgentStatus(agent.status),
+    id: bot.id,
+    displayName: bot.displayName,
+    slug: bot.handle,
+    tagline: bot.tagline,
+    accentColor: bot.accentColor ?? '#6b7280',
+    avatar: resolveBotAvatar(bot.id, bot.agent.botProfile?.avatar),
+    status: mapAgentStatus(bot.status),
     lastMessage: undefined, // Will be populated by commrails data in future
-    lastActiveAt: agent.updatedAt,
+    lastActiveAt: bot.updatedAt,
   };
 }
 
@@ -289,8 +291,12 @@ export interface BotRosterProps {
   onEditProfile?: (botId: string) => void;
   /** Callback when user wants to navigate (e.g. open agent hub) */
   onNavigate?: (view: string, params?: Record<string, string>) => void;
-  /** Callback when a bot is duplicated via the Wave 4 clone service. */
-  onDuplicate?: (sourceBotId: string, result: CloneBotResult) => void;
+  /** Callback when a bot is duplicated (after the creation draft is staged). */
+  onDuplicate?: (sourceBotId: string) => void;
+  /** Callback when a bot is archived. */
+  onArchive?: (botId: string) => void;
+  /** Callback when a bot is deleted. */
+  onDelete?: (botId: string) => void;
 }
 
 export function BotRoster({
@@ -299,7 +305,16 @@ export function BotRoster({
   onEditProfile,
   onNavigate,
   onDuplicate,
+  onArchive,
+  onDelete,
 }: BotRosterProps) {
+  // ── Agent store CRUD ──────────────────────────────────────────────────────
+  const deleteAgent = useAgentStore((s) => s.deleteAgent);
+  const updateAgent = useAgentStore((s) => s.updateAgent);
+  const setDraftAgent = useAgentStore((s) => s.setDraftAgent);
+  const setIsCreating = useAgentStore((s) => s.setIsCreating);
+  const setIsEditing = useAgentStore((s) => s.setIsEditing);
+
   // ── Store state ───────────────────────────────────────────────────────────
   const selectedBotId = useBotRosterStore((s) => s.selectedBotId);
   const searchQuery = useBotRosterStore((s) => s.searchQuery);
@@ -312,8 +327,9 @@ export function BotRoster({
   const showContextMenu = useBotRosterStore((s) => s.showContextMenu);
   const hideContextMenu = useBotRosterStore((s) => s.hideContextMenu);
 
-  // ── Build item data from templates ────────────────────────────────────────
-  const allItems = useMemo(() => BOT_TEMPLATES.map(templateToItem), []);
+  // ── Unified roster (native + stacked) ─────────────────────────────────────
+  const roster = useUnifiedRoster();
+  const allItems = useMemo(() => roster.map(botToItem), [roster]);
 
   // ── Filter ────────────────────────────────────────────────────────────────
   const filteredItems = useMemo(() => {
@@ -321,19 +337,19 @@ export function BotRoster({
 
     const q = searchQuery.toLowerCase();
     return allItems.filter((item) => {
-      // Find the corresponding template for tag access
-      const tmpl = BOT_TEMPLATES.find((t) => t.id === item.id);
-      const agent = tmpl?.create();
+      const bot = roster.find((b) => b.id === item.id);
+      const agent = bot?.agent;
 
       return (
         item.displayName.toLowerCase().includes(q) ||
         item.tagline.toLowerCase().includes(q) ||
         item.slug.toLowerCase().includes(q) ||
         (agent?.tags ?? []).some((tag: string) => tag.toLowerCase().includes(q)) ||
-        (agent?.description ?? '').toLowerCase().includes(q)
+        (agent?.description ?? '').toLowerCase().includes(q) ||
+        (bot?.providerId ?? '').toLowerCase().includes(q)
       );
     });
-  }, [allItems, searchQuery]);
+  }, [allItems, roster, searchQuery]);
 
   // ── Sort ──────────────────────────────────────────────────────────────────
   const sortedItems = useMemo(() => {
@@ -371,45 +387,66 @@ export function BotRoster({
   );
 
   const handleStartSession = useCallback(
-    (botId: string) => {
+    async (botId: string) => {
       logger.info(`Start session for bot: ${botId}`);
       selectBot(botId);
+
+      const item = sortedItems.find((i) => i.id === botId);
+      try {
+        await openBotCanonicalChat({
+          botId,
+          botName: item?.displayName ?? botId,
+          setActive: true,
+        });
+      } catch (err) {
+        logger.error({ err, botId }, 'Failed to open canonical bot chat');
+      }
+
       onStartSession?.(botId);
     },
-    [selectBot, onStartSession],
+    [selectBot, onStartSession, sortedItems],
   );
 
   const handleEditProfile = useCallback(
     (botId: string) => {
       logger.info(`Edit profile for bot: ${botId}`);
+      const bot = roster.find((b) => b.id === botId);
+      if (!bot) return;
+
+      setIsEditing(bot.agent.id);
       onEditProfile?.(botId);
-      onNavigate?.('agent-studio', { botId });
+      window.dispatchEvent(
+        new CustomEvent('allternit:open-view', { detail: { viewType: 'agent-hub' } }),
+      );
     },
-    [onEditProfile, onNavigate],
+    [onEditProfile, roster, setIsEditing],
   );
 
   const handleDuplicate = useCallback(
     (botId: string) => {
       logger.info(`Duplicate bot: ${botId}`);
-      const template = BOT_TEMPLATES.find((t) => t.id === botId);
-      if (!template) {
-        logger.warn(`No template found for bot: ${botId}`);
+      const bot = roster.find((b) => b.id === botId);
+      if (!bot) {
+        logger.warn(`No roster bot found for: ${botId}`);
         return;
       }
 
       try {
-        const sourceAgent = template.create();
-        const sourceBot = agentToBot(sourceAgent);
-        const result = cloneBot(sourceBot, {
-          reason: `Duplicated from template ${template.id}`,
-        });
+        const draft = agentToCreateAgentInput(bot.agent);
+        draft.name = `${draft.name ?? bot.displayName} (Copy)`;
+        draft.botProfile = {
+          ...(draft.botProfile ?? bot.agent.botProfile ?? {}),
+          displayName: `${bot.displayName} (Copy)`,
+          handle: undefined,
+          lifecycle: 'draft',
+        };
 
-        logger.info(
-          { sourceBotId: botId, newBotId: result.bot.id },
-          'Bot duplicated through clone service',
+        setDraftAgent(draft);
+        setIsCreating(true);
+        onDuplicate?.(botId);
+        window.dispatchEvent(
+          new CustomEvent('allternit:open-view', { detail: { viewType: 'agent-hub' } }),
         );
-
-        onDuplicate?.(botId, result);
       } catch (err) {
         logger.error(
           { botId, error: err instanceof Error ? err.message : String(err) },
@@ -419,7 +456,7 @@ export function BotRoster({
         hideContextMenu();
       }
     },
-    [onDuplicate, hideContextMenu],
+    [onDuplicate, hideContextMenu, roster, setDraftAgent, setIsCreating],
   );
 
   const handleAddToGroup = useCallback(
@@ -431,30 +468,72 @@ export function BotRoster({
   );
 
   const handleArchive = useCallback(
-    (botId: string) => {
+    async (botId: string) => {
+      const bot = roster.find((b) => b.id === botId);
+      if (!bot) return;
+
+      if (bot.source !== 'native') {
+        window.alert('External stacked bots cannot be archived from Allternit.');
+        return;
+      }
+
       const confirmed = window.confirm(
         `Archive this bot? It will be hidden from the roster but can be restored later.`,
       );
-      if (confirmed) {
+      if (!confirmed) return;
+
+      try {
+        await updateAgent(bot.agent.id, {
+          botProfile: {
+            displayName: bot.agent.botProfile?.displayName ?? bot.displayName,
+            ...bot.agent.botProfile,
+            lifecycle: 'archived',
+          },
+        });
         logger.info(`Archived bot: ${botId}`);
-        // Future: soft-delete in the agent store
+        onArchive?.(botId);
+      } catch (err) {
+        logger.error(
+          { botId, error: err instanceof Error ? err.message : String(err) },
+          'Failed to archive bot',
+        );
+      } finally {
+        hideContextMenu();
       }
     },
-    [],
+    [onArchive, hideContextMenu, roster, updateAgent],
   );
 
   const handleDelete = useCallback(
-    (botId: string) => {
+    async (botId: string) => {
+      const bot = roster.find((b) => b.id === botId);
+      if (!bot) return;
+
+      if (bot.source !== 'native') {
+        window.alert('External stacked bots cannot be deleted from Allternit.');
+        return;
+      }
+
       const confirmed = window.confirm(
         `Permanently delete this bot? This action cannot be undone.`,
       );
-      if (confirmed) {
+      if (!confirmed) return;
+
+      try {
+        await deleteAgent(bot.agent.id);
         logger.info(`Deleted bot: ${botId}`);
         if (selectedBotId === botId) selectBot(null);
-        // Future: hard-delete in the agent store
+        onDelete?.(botId);
+      } catch (err) {
+        logger.error(
+          { botId, error: err instanceof Error ? err.message : String(err) },
+          'Failed to delete bot',
+        );
+      } finally {
+        hideContextMenu();
       }
     },
-    [selectedBotId, selectBot],
+    [onDelete, deleteAgent, hideContextMenu, roster, selectedBotId, selectBot],
   );
 
   const handleSelect = useCallback(
@@ -650,8 +729,24 @@ export function BotRoster({
         <button
           onClick={() => {
             logger.info('New Bot clicked');
+            setDraftAgent({
+              isBot: true,
+              botProfile: {
+                displayName: '',
+                tagline: '',
+                welcomeMessage: '',
+                starterPrompts: [],
+                accentColor: '#6366f1',
+                groupChatEnabled: true,
+                botCategory: 'custom',
+                lifecycle: 'draft',
+              },
+            });
+            setIsCreating(true);
             onNewBot?.();
-            onNavigate?.('agent-hub');
+            window.dispatchEvent(
+              new CustomEvent('allternit:open-view', { detail: { viewType: 'agent-hub' } }),
+            );
           }}
           style={{
             display: 'flex',

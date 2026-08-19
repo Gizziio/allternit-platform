@@ -75,6 +75,8 @@ import {
   type OpenClawDiscoveredAgent,
 } from '@/lib/agents';
 import { getBotDisplayName } from '@/lib/bots/bot-profile';
+import { useMentionHandoff } from '@/lib/bots/use-mention-handoff';
+import { parseMentions } from '@/lib/bots/mention-handoff.service';
 import { useActiveChatSession } from './ChatSessionStore';
 import { useChatStore } from './ChatStore';
 import { AgentModeGizzi } from './AgentModeGizzi';
@@ -570,6 +572,7 @@ export function ChatComposer({
   );
   const setSwarmSubMode = useAgentSurfaceModeStore((state) => state.setSwarmSubMode);
   const agents = useAgentsWithSwarms();
+  const { isHandingOff, handoff: runMentionHandoff } = useMentionHandoff();
 
   const selectedMentionAgent = useMemo(() => {
     if (!selectedMentionAgentId) return null;
@@ -1121,7 +1124,7 @@ export function ChatComposer({
   const requiresAgentSelection = Boolean(
     agentModeSurface && agentModeEnabled && !isCanonicalAgentMode(selectedModeId),
   );
-  const canSubmit = Boolean(input.trim()) && !isLoading && (!requiresAgentSelection || Boolean(selectedSurfaceAgent));
+  const canSubmit = Boolean(input.trim()) && !isLoading && !isHandingOff && (!requiresAgentSelection || Boolean(selectedSurfaceAgent));
 
   const buildEnrichedInput = useCallback((baseInput: string) => {
     const parts: string[] = [];
@@ -1162,31 +1165,16 @@ export function ChatComposer({
       return;
     }
 
-    const enrichedInput = buildEnrichedInput(spokenInput);
-
-    if (selectedModeId === 'computer-use') {
-      useBrowserAgentStore.getState().runAcuTask(enrichedInput);
-    }
-    if (onAgentSend && agentModeSurface && (agentModeEnabled || isCanonicalAgentMode(selectedModeId))) {
-      onAgentSend(enrichedInput, selectedModeId ? { modeId: selectedModeId as CanonicalAgentModeId, templateTitle: selectedTemplateTitle } : undefined);
-    } else {
-      onSend(enrichedInput);
-    }
+    void submitMessage(spokenInput);
 
     setVoiceModeActive(false);
     clearVoiceTranscript();
   }, [
-    activeStyle,
-    agentModeEnabled,
-    agentModeSurface,
-    buildEnrichedInput,
     clearVoiceTranscript,
-    onAgentSend,
-    onSend,
     requiresAgentSelection,
-    selectedModeId,
     selectedSurfaceAgent,
     setInteractionMode,
+    submitMessage,
     voiceModeActive,
     voiceTranscript,
   ]);
@@ -1286,10 +1274,27 @@ export function ChatComposer({
     setSelectedSurfaceAgent,
   ]);
 
-  const handleSubmit = () => {
-    if (!canSubmit) return;
+  // Core send path shared by text submit and voice submit. Resolves inline
+  // @mentions, hands them off, and routes the enriched prompt to the right
+  // consumer (browser agent, MiroFish, agent-mode send, or plain chat).
+  const submitMessage = useCallback(async (rawText: string) => {
+    let messageText = rawText;
 
-    const enrichedInput = buildEnrichedInput(input);
+    // Inline @mention handoff: resolve, execute, and append replies before
+    // sending to the active agent.
+    const inlineMentions = parseMentions(messageText);
+    if (inlineMentions.length > 0) {
+      try {
+        const handoff = await runMentionHandoff(messageText, selectedSurfaceAgent ?? undefined);
+        messageText = `${handoff.cleanText}${handoff.handoffNote}`;
+      } catch (err) {
+        // If handoff fails, send the original text with a note so the user
+        // knows the mention could not be routed.
+        messageText = `${messageText}\n\n[@mention routing failed: ${err instanceof Error ? err.message : String(err)}]`;
+      }
+    }
+
+    const enrichedInput = buildEnrichedInput(messageText);
 
     if (selectedModeId === 'computer-use') {
       useBrowserAgentStore.getState().runAcuTask(enrichedInput);
@@ -1305,6 +1310,23 @@ export function ChatComposer({
     } else {
       onSend(enrichedInput);
     }
+  }, [
+    agentModeEnabled,
+    agentModeSurface,
+    buildEnrichedInput,
+    isCanonicalAgentMode,
+    onAgentSend,
+    onSend,
+    runMentionHandoff,
+    selectedModeId,
+    selectedSurfaceAgent,
+    selectedSwarmSubMode,
+    selectedTemplateTitle,
+  ]);
+
+  const handleSubmit = async () => {
+    if (!canSubmit) return;
+    await submitMessage(input);
 
     setInput('');
     setActiveCategory(null);
@@ -2052,7 +2074,19 @@ export function ChatComposer({
                     onClose={() => setShowProviderConnect(false)}
                   />
 
-                  {isLoading ? (
+                  {isHandingOff ? (
+                    <button
+                      disabled
+                      type="button"
+                      className={cn(
+                        'rounded-full bg-composer-soft border border-input-border text-accent flex items-center justify-center transition-all',
+                        isMobile ? 'size-11' : 'size-7'
+                      )}
+                      title="Routing @mentions..."
+                    >
+                      <CircleNotch size={14} className="animate-spin" />
+                    </button>
+                  ) : isLoading ? (
                     <button
                       onClick={onStop}
                       type="button"

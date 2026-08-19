@@ -34,6 +34,7 @@ import type { Agent } from '../lib/agents/agent.types';
 import { useAgentBootstrap } from '../lib/agents/useAgentBootstrap';
 import { isBot } from '@/lib/bots/bot-profile';
 import { useStartBotSession } from '@/lib/bots/useStartBotSession';
+import { useStackProviders } from '@/lib/bots/use-stack-providers';
 import { NativeAgentApiError } from '../lib/agents/native-agent-api';
 import { useChatSessionStore } from '../views/chat/ChatSessionStore';
 import { useCodeSessionStore } from '../views/code/CodeSessionStore';
@@ -118,6 +119,7 @@ function ShellAppInner(): React.ReactNode {
       dispatch({ type: 'OPEN_VIEW', viewType: 'chat-agent-session', context: { sessionId, originView: active.viewType } });
     }, [active.viewType])
   );
+  useStackProviders();
   const { mode: activeMode, setMode: setActiveMode, isLoaded: modeLoaded } = useMode();
 
   const handleStartBotSession = useCallback(async (agent: Agent) => {

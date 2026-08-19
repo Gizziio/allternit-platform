@@ -8,8 +8,10 @@
  * @module bot-profile
  */
 
-import type { Agent, BotProfile, BotCategory } from '../agents/agent.types';
-import { BotSchema, type Bot } from './orpc-contracts';
+import type { Agent, BotProfile, BotCategory, Bot as AgentBot, CreateAgentInput } from '../agents/agent.types';
+import { BotSchema, type Bot as CanonicalBot } from './orpc-contracts';
+import { packageAgentAsBot } from './bot-contract';
+import { generateBotAvatar } from './bot-avatar.service';
 import { createModuleLogger } from '@/lib/logger';
 
 const logger = createModuleLogger('BotProfile');
@@ -24,21 +26,21 @@ const logger = createModuleLogger('BotProfile');
  * This is a strict type guard: when it returns true, TypeScript knows the
  * agent has `isBot: true` and a required `botProfile` with `displayName`.
  */
-export function isBot(agent: Agent): agent is Bot {
+export function isBot(agent: Agent): agent is AgentBot {
   return agent.isBot === true && agent.botProfile !== undefined;
 }
 
 /**
  * Filter agents to only return bots.
  */
-export function getBots(agents: Agent[]): Bot[] {
+export function getBots(agents: Agent[]): AgentBot[] {
   return agents.filter(isBot);
 }
 
 /**
  * Filter bots by category.
  */
-export function getBotsByCategory(agents: Agent[], category: BotCategory): Bot[] {
+export function getBotsByCategory(agents: Agent[], category: BotCategory): AgentBot[] {
   return getBots(agents).filter(
     (agent) => agent.botProfile.botCategory === category
   );
@@ -47,7 +49,7 @@ export function getBotsByCategory(agents: Agent[], category: BotCategory): Bot[]
 /**
  * Search bots by name, description, or tags.
  */
-export function searchBots(agents: Agent[], query: string): Bot[] {
+export function searchBots(agents: Agent[], query: string): AgentBot[] {
   const q = query.trim().toLowerCase();
   if (!q) return getBots(agents);
 
@@ -120,11 +122,27 @@ export function getBotCategory(agent: Agent): BotCategory | undefined {
   return agent.botProfile?.botCategory;
 }
 
+/**
+ * Get a human-readable label for an external bot provider.
+ */
+export function getProviderLabel(providerId: string): string {
+  switch (providerId) {
+    case 'hermes':
+      return 'Hermes';
+    case 'openclaw':
+      return 'OpenClaw';
+    case 'grok':
+      return 'Grok';
+    default:
+      return providerId;
+  }
+}
+
 // ============================================================================
 // Bot Creation Helpers
 // ============================================================================
 
-const VALID_BOT_TYPES: Bot['type'][] = [
+const VALID_BOT_TYPES: AgentBot['type'][] = [
   'orchestrator',
   'sub-agent',
   'worker',
@@ -138,9 +156,9 @@ const VALID_BOT_TYPES: Bot['type'][] = [
  *
  * Drops agent-only fields that are not part of the Bot contract.
  */
-export function agentToBot(agent: Agent): Bot {
-  const botType = VALID_BOT_TYPES.includes(agent.type as Bot['type'])
-    ? (agent.type as Bot['type'])
+export function agentToBot(agent: Agent): CanonicalBot {
+  const botType = VALID_BOT_TYPES.includes(agent.type as AgentBot['type'])
+    ? (agent.type as AgentBot['type'])
     : 'specialist';
 
   return BotSchema.parse({
@@ -161,31 +179,92 @@ export function agentToBot(agent: Agent): Bot {
 }
 
 /**
+ * Convert an Agent into a CreateAgentInput draft suitable for duplication or
+ * templated creation. Runtime-only fields (id, status, timestamps, runs,
+ * ratings, etc.) are stripped, and secret values are redacted so the draft is
+ * safe to seed the creation wizard.
+ */
+export function agentToCreateAgentInput(agent: Agent): Partial<CreateAgentInput> {
+  const redactedSecrets = (agent.secretRefs ?? []).map((ref) => ({
+    ...ref,
+    value: undefined,
+  }));
+
+  return {
+    name: agent.name,
+    description: agent.description,
+    type: VALID_BOT_TYPES.includes(agent.type as AgentBot['type'])
+      ? (agent.type as AgentBot['type'])
+      : 'specialist',
+    model: agent.model,
+    provider: agent.provider,
+    capabilities: agent.capabilities,
+    systemPrompt: agent.systemPrompt,
+    tools: agent.tools,
+    maxIterations: agent.maxIterations,
+    temperature: agent.temperature,
+    voice: agent.voice,
+    config: agent.config,
+    avatar: agent.avatar,
+    source: agent.source,
+    characterLayer: agent.characterLayer,
+    trustTier: agent.trustTier,
+    harness: agent.harness,
+    allowedSurfaces: agent.allowedSurfaces,
+    allowedSkills: agent.allowedSkills,
+    allowedTools: agent.allowedTools,
+    category: agent.category,
+    tags: agent.tags,
+    dataClassification: agent.dataClassification,
+    writeScope: agent.writeScope,
+    isBot: agent.isBot,
+    botProfile: agent.botProfile,
+    connectorBindings: agent.connectorBindings,
+    secretRefs: redactedSecrets,
+    messagingConfig: agent.messagingConfig,
+    identityChannels: agent.identityChannels,
+    vmOperator: agent.vmOperator,
+  };
+}
+
+/**
  * Create a bot agent from a base agent configuration.
  * This is a factory function that adds bot-specific fields.
  */
 export function createBotAgent(
   baseAgent: Omit<Agent, 'isBot' | 'botProfile'>,
   botProfile: BotProfile
-): Agent {
+): AgentBot {
+  const botType = VALID_BOT_TYPES.includes(baseAgent.type as AgentBot['type'])
+    ? (baseAgent.type as AgentBot['type'])
+    : 'specialist';
+
+  const avatar = botProfile.avatar ?? generateBotAvatar(baseAgent.id ?? baseAgent.name);
+
   const withDefaults: Agent = {
     ...baseAgent,
-    type: baseAgent.type ?? 'specialist',
+    type: botType,
     status: baseAgent.status ?? 'idle',
     tools: baseAgent.tools ?? [],
     capabilities: baseAgent.capabilities ?? [],
   } as Agent;
 
-  return packageAgentAsBot({ agent: withDefaults, botProfile });
+  return packageAgentAsBot({
+    agent: withDefaults,
+    botProfile: {
+      ...botProfile,
+      avatar,
+    },
+  });
 }
 
 /**
  * Update a bot's profile while preserving the agent.
  */
 export function updateBotProfile(
-  agent: Bot,
+  agent: AgentBot,
   updates: Partial<BotProfile>
-): Bot {
+): AgentBot {
   return {
     ...agent,
     botProfile: {
