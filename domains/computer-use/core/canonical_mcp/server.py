@@ -76,6 +76,34 @@ def computer_trajectory(session_id: str) -> Dict[str, Any]:
     return _call("GET", f"/sessions/{quoted}/trajectory")
 
 
+@mcp.tool()
+def computer_history_status() -> Dict[str, Any]:
+    """Check whether CUA Driver Computer History is supported, admitted, and enabled."""
+    return _call("POST", "/history/status", {})
+
+
+@mcp.tool()
+def computer_history_query(
+    limit: int = 50,
+    session_id: Optional[str] = None,
+    since_sequence: Optional[int] = None,
+    until_sequence: Optional[int] = None,
+) -> Dict[str, Any]:
+    """Query a bounded slice of CUA Driver Computer History metadata events.
+
+    Returns metadata-only CloudEvents-style records. Results may enter model context.
+    Continue without history if the daemon reports absence, denial, or empty results.
+    """
+    body: Dict[str, Any] = {"limit": limit}
+    if session_id is not None:
+        body["session_id"] = session_id
+    if since_sequence is not None:
+        body["since_sequence"] = since_sequence
+    if until_sequence is not None:
+        body["until_sequence"] = until_sequence
+    return _call("POST", "/history/query", body)
+
+
 def main() -> None:
     mcp.run()
 

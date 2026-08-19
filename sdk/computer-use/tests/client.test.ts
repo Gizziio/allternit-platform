@@ -544,3 +544,88 @@ describe('Utils', () => {
     });
   });
 });
+
+describe('Computer History', () => {
+  let client: AllternitComputerUseClient;
+
+  beforeEach(() => {
+    client = new AllternitComputerUseClient({
+      endpoint: 'http://localhost:8080',
+      timeout: 60000,
+    });
+    mockedFetch.mockClear();
+  });
+
+  it('should call history/status', async () => {
+    const mockResponse = {
+      supported: true,
+      admitted: true,
+      enabled: true,
+      paused: false,
+      encrypted: true,
+      profile: 'cua-history-profile-v1/cbor-sequence+cose-encrypt0+cloudevents-json',
+      retention_days: 7,
+      quota_bytes: 104857600,
+      bytes_used: 0,
+      dropped_events: 0,
+      health: 'ready',
+    };
+
+    mockedFetch.mockResolvedValueOnce({
+      ok: true,
+      json: async () => mockResponse,
+    } as Response);
+
+    const result = await client.canonicalHistoryStatus();
+
+    expect(mockedFetch).toHaveBeenCalledWith(
+      'http://localhost:8080/v1/computer-use/canonical/history/status',
+      expect.objectContaining({
+        method: 'POST',
+        headers: expect.objectContaining({
+          'Content-Type': 'application/json',
+          Accept: 'application/json',
+        }),
+      })
+    );
+    expect(result.health).toBe('ready');
+  });
+
+  it('should call history/query with bounded filters', async () => {
+    const mockResponse = {
+      events: [
+        {
+          specversion: '1.0',
+          id: 'evt-1',
+          source: 'urn:cua-driver:history:sess-1',
+          type: 'cua-driver.history.action_completed.v0',
+          time: '2026-08-14T12:00:00Z',
+          data: { session_id: 'sess-1', action_id: 'act-1', sequence: 1, platform: 'macos' },
+        },
+      ],
+      metadata_only: true,
+      model_context_disclosure: true,
+    };
+
+    mockedFetch.mockResolvedValueOnce({
+      ok: true,
+      json: async () => mockResponse,
+    } as Response);
+
+    const result = await client.canonicalHistoryQuery({
+      limit: 20,
+      session_id: 'sess-1',
+      since_sequence: 5,
+    });
+
+    expect(mockedFetch).toHaveBeenCalledWith(
+      'http://localhost:8080/v1/computer-use/canonical/history/query',
+      expect.objectContaining({
+        method: 'POST',
+        body: JSON.stringify({ limit: 20, session_id: 'sess-1', since_sequence: 5 }),
+      })
+    );
+    expect(result.events).toHaveLength(1);
+    expect(result.metadata_only).toBe(true);
+  });
+});

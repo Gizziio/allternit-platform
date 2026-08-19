@@ -516,3 +516,46 @@ Fix `office.allternit.com` landing page and workspace shell to match the Alltern
 - Replaced the minimal footer in `HomePage.tsx` with the new `<Footer />` component.
 - Added responsive `office-footer` styles to `HomePage.css` using the office design tokens.
 - Rebuilt and restarted the preview server at `http://localhost:3019/`.
+
+----
+
+## CUA Driver Computer History Integration (2026-08-19)
+
+### Goal
+
+Integrate CUA Driver's encrypted Computer History preview (`history_status`, `history_query`) into Allternit's canonical computer-use stack across backend, SDKs, MCP, and plugin layers, with deterministic planning-loop consultation.
+
+### Just did
+
+- Created session worktree `allternit-session-94f633c4-8f25-427a-8c87-c6ba4b68a43c` and wrote an approved implementation plan.
+- Implemented the full stack:
+  - Python CUA transport: `history_status()` / `history_query()` with bounds validation.
+  - Canonical contract: added `tools` to `CapabilityManifest` and JSON schema.
+  - CUA provider: probes history admission and advertises tools only when supported & admitted.
+  - HTTP API: `POST /history/status` and `POST /history/query` with Pydantic validation.
+  - Canonical MCP server: `computer_history_status` and `computer_history_query` tools.
+  - TypeScript SDK: history types + `canonicalHistoryStatus` / `canonicalHistoryQuery`.
+  - Python SDK: `history_status` / `history_query` client methods.
+  - Plugin: tool definitions, HTTP adapter methods, and consultation policy in system prompt.
+- Made consultation deterministic by wiring a `history_preflight` callback into `PlanningLoop`; the callback uses the canonical CUA provider to call `history_status` then `history_query` for continuation/recent-work tasks.
+- Adjusted `history_query` transport to use the nightly CLI surface (`history list [limit] --session --since --until`) rather than the not-yet-available `history_query` tool, while preserving the same Python/SDK contract.
+- Added tests: `domains/computer-use/core/tests/test_cua_history.py` (9 passed) and SDK `client.test.ts` additions (37 passed total).
+- Reverted `pnpm-lock.yaml` to keep the diff scoped.
+
+### Verification
+
+- `python3 -m pytest domains/computer-use/core/tests/test_cua_history.py -v` → **9 passed**
+- `npm test -- --testPathPattern=client.test.ts` in `sdk/computer-use` → **37 passed**
+- Python syntax check on all modified `.py` files → OK
+- `canonical.schema.json` valid JSON → OK
+- **Real CUA Driver nightly test** (installed 0.20.1-nightly.20260818):
+  - `CuaDriverTransport.discover()` found `/Applications/CuaDriver.app/Contents/MacOS/cua-driver`
+  - `history_status()` returned `health: ready`, `enabled: true`, `admitted: true`
+  - `history_query(limit=3)` returned 3 CloudEvents-style metadata events
+  - `CuaDriverCanonicalProvider` advertised `history_status` and `history_query` in `manifest.tools`
+  - `gateway.canonical_router.history_preflight_for_task()` returned status + 23 events
+  - Legacy packaged binary (0.8.2) degrades gracefully with `CuaDriverCallError`
+
+### Next
+
+Await user confirmation to merge the session worktree into `main`.

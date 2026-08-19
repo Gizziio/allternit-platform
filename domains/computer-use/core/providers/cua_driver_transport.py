@@ -8,7 +8,7 @@ import os
 import shutil
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any, Dict, Optional
+from typing import Any, Dict, List, Optional
 
 
 class CuaDriverUnavailableError(RuntimeError):
@@ -98,7 +98,7 @@ class CuaDriverTransport:
             "1", "true", "yes", "on",
         }
         routed_arguments = list(arguments)
-        if self.socket_path and arguments and arguments[0] in {"call", "status", "stop", "config", "recording"}:
+        if self.socket_path and arguments and arguments[0] in {"call", "status", "stop", "config", "recording", "history"}:
             routed_arguments.extend(("--socket", self.socket_path))
         process = await asyncio.create_subprocess_exec(
             self.executable,
@@ -140,6 +140,43 @@ class CuaDriverTransport:
 
     async def status(self) -> Dict[str, Any]:
         return await self._run("status")
+
+    async def history_status(self) -> Dict[str, Any]:
+        return await self._run("history", "status")
+
+    async def history_query(
+        self,
+        *,
+        limit: int = 50,
+        session_id: Optional[str] = None,
+        since_sequence: Optional[int] = None,
+        until_sequence: Optional[int] = None,
+    ) -> Dict[str, Any]:
+        if not isinstance(limit, int) or limit < 1 or limit > 200:
+            raise CuaDriverCallError("history_query", "limit must be an integer between 1 and 200")
+        if session_id is not None:
+            if not isinstance(session_id, str) or len(session_id) < 1 or len(session_id) > 128:
+                raise CuaDriverCallError("history_query", "session_id must be 1-128 characters")
+        if since_sequence is not None:
+            if not isinstance(since_sequence, int) or since_sequence < 1:
+                raise CuaDriverCallError("history_query", "since_sequence must be an integer >= 1")
+        if until_sequence is not None:
+            if not isinstance(until_sequence, int) or until_sequence < 1:
+                raise CuaDriverCallError("history_query", "until_sequence must be an integer >= 1")
+        if since_sequence is not None and until_sequence is not None and since_sequence > until_sequence:
+            raise CuaDriverCallError("history_query", "since_sequence must not exceed until_sequence")
+
+        # The nightly CLI exposes querying as `history list [limit]` with optional
+        # `--session`, `--since`, and `--until` flags. The response shape matches
+        # the RFC (events array + metadata_only flag).
+        command: List[str] = ["history", "list", str(limit)]
+        if session_id is not None:
+            command.extend(("--session", session_id))
+        if since_sequence is not None:
+            command.extend(("--since", str(since_sequence)))
+        if until_sequence is not None:
+            command.extend(("--until", str(until_sequence)))
+        return await self._run(*command)
 
     async def call(
         self,

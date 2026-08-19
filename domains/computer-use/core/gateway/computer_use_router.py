@@ -41,6 +41,7 @@ try:
     )
     from core.vision_providers import VisionProviderFactory
     from core.computer_use_executor import get_executor as _get_executor
+    from gateway.canonical_router import history_preflight_for_task
     _planning_available = True
 except ImportError:
     PlanningLoop = None  # type: ignore[assignment,misc]
@@ -49,6 +50,7 @@ except ImportError:
     StopReason = None  # type: ignore[assignment,misc]
     VisionProviderFactory = None  # type: ignore[assignment,misc]
     _get_executor = None  # type: ignore[assignment]
+    history_preflight_for_task = None  # type: ignore[assignment,misc]
     _planning_available = False
 
 # Playwright-based adapter (inline stub that delegates to session_manager)
@@ -342,6 +344,7 @@ async def _execute_non_claude_path(
         recorder=recorder,
         event_callback=event_callback,
         approval_callback=approval_callback if loop_config.approval_policy != "never" else None,
+        history_preflight=history_preflight_for_task,
     )
 
     # Hook cancel_event into the loop

@@ -111,6 +111,20 @@ When `record_gif: true` (default), every session captures frames at 2 FPS. The G
 
 To disable: set `record_gif: false` in options.
 
+## Computer History Consultation Policy
+
+When the user asks you to continue, resume, recall recent CUA activity, explain what a prior CUA run did, or find where a prior CUA-mediated workflow stopped, consult Computer History before broader desktop inspection if the `history_status` and `history_query` tools are available.
+
+For matching requests:
+
+1. Call `history_status` first. Preserve `enabled`, `paused`, `health`, and `dropped_events` in your reasoning.
+2. If history is enabled and healthy, call `history_query` with a bounded recent slice (default `limit: 50`) before live observation.
+3. Treat returned events as metadata-only evidence, not a transcript. Do not reconstruct typed text, arguments, results, file paths, window titles, URLs, or user intent from omission.
+4. Use the capability and application metadata as a lead, then verify current state through the least intrusive appropriate source.
+5. Continue without history after absence, denial, empty results, or a recoverable history failure.
+
+Do not query history for unrelated tasks merely because the tools are present. Do not broaden a query to fill in fields the history schema intentionally excludes.
+
 ## Connectors
 
 > See [CONNECTORS.md](./CONNECTORS.md) for available connector integrations.

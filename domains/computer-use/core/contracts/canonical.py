@@ -60,6 +60,7 @@ class CapabilityManifest:
     actions: tuple[str, ...] = ()
     observation_channels: tuple[str, ...] = ()
     execution_modes: tuple[str, ...] = ()
+    tools: tuple[str, ...] = ()
     strict_background: bool = False
     semantic_input: bool = False
     raw_input: bool = False
