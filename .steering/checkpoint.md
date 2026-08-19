@@ -558,4 +558,46 @@ Integrate CUA Driver's encrypted Computer History preview (`history_status`, `hi
 
 ### Next
 
-Await user confirmation to merge the session worktree into `main`.
+Merged into `main` (2026-08-19).
+
+---
+
+## Runtime CLI adapter alignment with Multica production protocols
+
+### Goal
+Bring `cmd/gizzi-code/src/runtime/drivers/local-cli-driver.ts` and `cmd/gizzi-code/src/runtime/runtime-discovery.ts` into protocol parity with Multica's production Go implementation so every discovered agent CLI uses the same argv/wire/approval path Multica already ships.
+
+### Background
+Multica drives the same CLIs through stable protocol families: `stream-json` (Claude/CodeBuddy/Cursor/OpenCode/DevEco/OpenClaw/Qwen), `acp` (Hermes/Kimi/Kiro/Qoder/QwenPaw/Reasonix/TraeCLI/Grok/MCode), `codex app-server` JSON-RPC (Codex), and one-shot JSON/text (Pi/Oh-My-Pi/Antigravity). Allternit's current adapter map has several mismatches that will break in production (e.g. Codex uses `codex exec`, Cursor/OpenCode/DevEco/OpenClaw use ACP, Kimi/Qwen are one-shot). Discovery also only runs `which` and ignores `MULTICA_*_PATH` / `MULTICA_*_MODEL` overrides and login-shell PATH fallback that Multica uses.
+
+### Plan
+1. Refactor `local-cli-driver.ts` into shared protocol runners:
+   - `runStreamJson` for line-delimited `stream-json` agents.
+   - `runACP` (extend existing) for ACP stdio agents.
+   - `runCodexAppServer` for Codex JSON-RPC app-server protocol.
+   - `runOneShotJson` / `runOneShotText` for pi/omp/agy.
+2. Correct every adapter to match Multica argv:
+   - `codex`: `app-server --listen stdio://` JSON-RPC.
+   - `cursor-agent`: `-p --output-format stream-json --yolo`.
+   - `opencode`: `run --format json --dangerously-skip-permissions`.
+   - `deveco`: `run --format json` (stream-json).
+   - `openclaw`: `agent ... --output-format stream-json`.
+   - `kimi`: `acp` ACP.
+   - `qwen`: `-p <prompt> --output-format stream-json --yolo`.
+   - Add `mcode`: `acp` ACP.
+3. Update `SUBPROCESS_PROVIDERS` in `providers/discovery/subprocess.ts` to add `mcode` and align IDs where needed.
+4. Update `runtime-discovery.ts` to support `MULTICA_*_PATH` / `MULTICA_*_MODEL` env overrides and a login-shell PATH fallback with a 30-minute cache.
+5. Update tests and fixtures in `cmd/gizzi-code/test/runtime/` and `test/fixture/agent-clis/` to exercise the corrected protocols.
+6. Run `bun test test/runtime/` and `bun run typecheck` in `cmd/gizzi-code` and fix all errors.
+
+### Just did
+- Verified Multica production source for discovery (`agents_probe.go`), backend factory (`agent.go`), builtin runtime registry (`builtin_runtimes.go`), and per-provider backends (`codex.go`, `cursor.go`, `opencode.go`, `kimi.go`, `qwen.go`, `mcode.go`).
+- Audited current Allternit adapter map against Multica protocol families and documented mismatches.
+
+### Next
+- Refactor `local-cli-driver.ts` to split protocol runners from provider adapters, starting with the stream-json generalization.
+
+### Open questions
+- Do we want to keep `warm` pooling for stream-json agents, or switch to one-shot-per-task like Multica? Multica spawns per task, so parity suggests dropping pooling; keeping pooling is a performance optimization but risks protocol drift.
+- Should custom CLI args (`customArgs`) be filtered per-provider like Multica's `blockedArgs` maps? Production safety says yes.
+>>>>>>> Stashed changes
