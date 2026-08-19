@@ -321,6 +321,7 @@ async fn main() {
         .merge(cowork_preferences_router())
         .merge(allternit_api::rails::routes_cowork::cowork_routes())
         .merge(agent_router())
+        .merge(allternit_api::agent_email_routes::agent_email_router())
         .merge(agent_preferences_router())
         .merge(agent_workspace_router())
         .merge(agent_session_router())
@@ -464,6 +465,9 @@ async fn main() {
         // Photon.codes inbound-message webhook is also server-to-server and
         // carries no Clerk session; route it to the recipient bot's inbox.
         .merge(allternit_bus_webhook_router())
+        // mailflare inbound-email webhook is likewise server-to-server; it is
+        // HMAC-verified per handler (ALLTERNIT_MAILFLARE_WEBHOOK_SECRET).
+        .merge(allternit_api::agent_email_routes::agent_email_webhook_router())
         // OAuth provider redirect targets — the browser arrives from the
         // provider's consent screen with no Clerk JWT, so these must be
         // public: the curated-3 loopback callback (moved out of the protected

@@ -1,107 +1,53 @@
 # Steering checkpoint
 
-## Site APIs / Cross-surface HAR capture
+## Agent email rail (mailflare fork → services/mailflare) — COMPLETE (uncommitted)
 
 ### Goal
-Implement the cross-surface Site APIs / HAR-derived API capture redesign.
+Package the vendored mailflare fork as allternit's real-email provider for agents:
+per-agent mailboxes + scoped API keys, approval-gated outbound, inbound webhooks
+bridged into Rails Mail, per-user installer deploying to the installing user's own
+Cloudflare account. Approved plan, all 4 phases.
 
-### Just did
-- Added backend persistence, replay proxy, real client generation, and agent tools (`api_capture_record`, `api_capture_stop`, `api_capture_replay`).
-- Created frontend capture adapter (desktop → extension → upload) and migrated store to backend APIs.
-- Added extension capture fallback via `chrome.debugger`/`webRequest`.
-- **Fixed HAR camelCase bug**: backend extractor expected snake_case (`query_string`, `post_data`) but Electron/Chrome export camelCase (`queryString`, `postData`). Added `#[serde(rename_all = "camelCase")]` to HAR structs in `har_api_service.rs`.
-- Added headless smoke tests:
-  - `cmd/allternit-api/scripts/test-api-capture.mjs` — backend ingest → session → contract → replay → client.
-  - `surfaces/allternit-desktop/tests/api-capture-headless.spec.ts` — Electron desktop capture through the preload API without UI screenshots.
-- Both smoke tests pass.
+### Just did (phases 0–4 all landed in worktree, branch session/agent-email, NOT committed)
+- Phase 0: vendored into `services/mailflare/`, renamed `@allternit/mailflare` /
+  worker `allternit-agent-mail`, removed upstream self-updater + leftovers.
+- Phase 1: per-mailbox scoped API keys + revoke + `admin` scope; v1 message body +
+  attachment reads; approval-gated outbound via OUTBOUND_QUEUE (REQUIRE_SEND_APPROVAL
+  default true); Idempotency-Key; SEND_RATE_LIMIT 30/min; webhook retries (backoff ×5)
+  + management routes; mailbox DELETE; seed updates. Migration `0010_illegal_cloak.sql`.
+- Phase 2: `services/mailflare/setup.sh` (idempotent per-user CF installer, shellcheck
+  clean), `install_agent_email()` in `scripts/onboarding-setup.sh`, `.env.example`
+  vars, fork README rewrite.
+- Phase 3 backend: `mailflare_client.rs` + `agent_email_routes.rs` (provision_email
+  rewrite with rollback, HMAC inbound bridge → Rails Mail `mail:email-in-<agent>`,
+  gated send `mail:email-out-<uuid>`, decide wiring inside existing `mail_decide`,
+  mailbox revoke on agent delete, status endpoint). Migration `V92__agent_email.sql`.
+  Also fixed pre-existing broken lib test target (17 missing-field test inits).
+- Phase 3 frontend/runtime: `'mailflare'` provider in agent.types.ts, identity
+  channels UI + email-rail status in BotRuntimeConfigModal, external-email badges in
+  mail monitor/agent activity, `gizzi mail send-external` + `agent-email-client.ts`.
+- Phase 4: `docs/AGENT_EMAIL_RAIL.md` (architecture, reputation ops, signup
+  guardrails, limitations), allternit-bus.mdx + AUTONOMOUS_BOT_PRIMITIVES.md updates,
+  AGENTS.md section.
+- Fixed pnpm workspace ingesting services/mailflare (added `!services/mailflare`
+  exclusions like open-connector; restored pnpm-lock.yaml incidental drift).
 
-### Verification
-- `cargo check -p allternit-api` ✅
-- `cargo test -p allternit-api extract_endpoints` ✅
-- `cargo test -p allternit-api tool_routes` ✅ 21 passed
-- `pnpm exec tsc` in `surfaces/ai.allternit.com` ✅ no capture-file errors
-- `pnpm test` in `surfaces/allternit-desktop` ✅ 94 passed
-- `pnpm exec wxt build` in extension ✅
-- `node cmd/allternit-api/scripts/test-api-capture.mjs` ✅
-- `pnpm exec playwright test surfaces/allternit-desktop/tests/api-capture-headless.spec.ts` ✅
-
-### Commit / Push status
-- Worktree: `/Users/joe/Desktop/allternit-workspace/allternit-session-site-apis-capture`
-- Branch: `session/site-apis-capture`
-- Commit: `a68c49d7a`
-- Changes committed locally: backend HAR service fix, redesign plan, headless smoke tests, backend integration test, removal of flaky e2e spec.
-- **Steering consult blocked**: `ao-steer` (Claude Code reviewer session) is at a session limit dialog (`You've hit your session limit · resets 5am (America/Chicago)`) and cannot process the commit-gate request. `steer-stop.sh` returned `verdict=CONSULT_FAILED`.
-- Need explicit user approval (or `STEER_GUARD_OFF=1`) before `git push origin session/site-apis-capture` and PR/merge to `main`.
-
----
-
-## Wave 2 — Goal, plan, task, validation, and loop runtime (2026-08-17)
-
-### Goal
-
-Complete Wave 2 runtime for the packaged-bot work loop and keep Ralph
-deprecation on track per `OPENMAUSBOT_PHASE_2_IMPLEMENTATION_TODO.md`.
-
-### Just did
-
-- Expanded `ralph-deprecation.ts` with a complete inventory of 80+ Ralph-named
-  paths across TypeScript, Rust, DAK runners, docs, tests, and archive.
-- Kept legacy `RailsLoopIteration*` event prefix → canonical goal/task event map
-  and read-compatibility helpers.
-- Created `goal-task-contracts.ts` with canonical Zod schemas and types for
-  Goal (9 states), Plan, TaskGraph, Task (9 states), Attempt, ValidationResult,
-  BudgetPolicy/Usage, LoopPolicy/Strategy, and Delegation.
-- Implemented graph utilities (`detectCycle`, `validateDependencies`,
-  `topologicalOrder`), repeated-blocker audit, budget guard, retry backoff,
-  validation aggregator, and loop guard against unbounded iteration.
-- Added canonical event type enums and payload helpers for Goal/Plan/Task/
-  Attempt/Validation/Delegation events (W2-045).
-- Extended `orpc-contracts.ts` to re-export Wave 2 schemas/types and added REST
-  endpoints for goals, plans, tasks, attempts, validations, and delegations.
-- Added `goal-task-contracts.test.ts` with 22 focused unit tests; all pass.
-- Completed W2-003: scrubbed Ralph terminology from the web product surface.
-  - `bot-prompt-augmentation.ts` and `receiptService.ts` doc comments updated.
-  - `fileSystem.ts` slash commands renamed (`ralph-loop` → `agent-loop`,
-    `cancel-ralph` → `cancel-agent-loop`).
-  - `ralph-deprecation.ts` updated with a `resolvedWebSurface` registry.
-- Built `goal-loop-controller.ts`: state-machine runtime that materializes plans,
-  accepts plans, executes tasks in topological order, retries attempts, validates,
-  handles user input/approval pauses, cancels, enforces budgets, audits repeated
-  blockers, and guards against unbounded loops (W2-060–W2-072).
-- Added `goal-loop-controller.test.ts` with 10 lifecycle tests; all pass.
-- Created `bot-operational-projection.ts` to map `GoalLoopState` → partial
-  `BotOperationalState`.
-- Wired the loop controller into `bot-operational-state.store.ts` via a new
-  `applyGoalLoopState(botId, loopState)` action that merges the derived delta
-  while preserving server-sourced fields (`lastEventSequence`, `computerState`,
-  `nextRoutineRunAt`, `unreadMessagesCount`).
-- Added `bot-operational-state.store.test.ts` with 6 projection tests; all pass.
-- Built `bot-event-store.ts`: durable, append-only, localStorage-backed storage
-  for canonical goal/task events with SSR-safe memory fallback and test isolation.
-- Created `goal-loop-persistence.ts` with `GoalLoopRecorder` (records controller
-  events + emits `loop.snapshot` events), `rebuildGoalLoopState` (event-history
-  replay), and `resumeGoalLoopController` (rebuild + resume).
-- Added `goal-loop-persistence.test.ts` with 7 tests proving restart recovery,
-  approval-pause resumption, and full goal completion after simulated restart.
-- Checked `W2-GATE` in `OPENMAUSBOT_PHASE_2_IMPLEMENTATION_TODO.md`.
-
-### Verification
-
-- `vitest run src/lib/bots/goal-task-contracts.test.ts src/lib/bots/goal-loop-controller.test.ts src/lib/bots/bot-operational-state.store.test.ts src/lib/bots/goal-loop-persistence.test.ts` ✅ 45 passed.
-- `tsc --noEmit` across `surfaces/ai.allternit.com` reports no new errors in
-  Wave 2 files. Pre-existing errors remain in unrelated files
-  (`comrails-store.ts`, `bot-profile.ts`, `subagent-service.ts`).
-- Grep confirms no remaining Ralph-named product UI strings in
-  `surfaces/ai.allternit.com/src` outside the intentional deprecation registry.
+### Verification (all real, all green)
+- `npm run build` in services/mailflare: exit 0 (after pnpm exclusion + reinstall).
+- `cargo check -p allternit-api`: clean. `cargo test -p allternit-api --lib`: 418/418
+  (incl. new HMAC test). `cargo test -p allternit-agent-system-rails`: 96/96.
+- Surface + gizzi-code typechecks: zero errors in touched files.
+- Backend e2e smoke vs mock mailflare: 18/18 (provision, gated send, decide-approve,
+  inbound HMAC, revoke).
+- mailflare live local e2e (Phase 1): approval flow, idempotent replay, 403 scoping,
+  rate-limit 429, webhook backoff, key revoke.
 
 ### Next
-
-1. Stage W2-GATE evidence and consider W2-005 (delete obsolete Ralph execution
-   code now that replacement runtime parity exists).
-2. Build a React hook (`useGoalLoopController`) that instantiates the controller
-   for a bot session and subscribes the operational state store.
-3. Add WIH materialization when a structured plan is accepted (Wave 3).
-4. Implement durable activity/session APIs and event append protocol.
+- Commit via steering commit-gate (human/orchestrator decision; nothing committed yet).
+- One live installer run against a real Cloudflare account before production docs
+  claim it works end-to-end (offline-verified only).
+- Follow-up: admin-scope API-key revocation in mailflare (currently session-only;
+  mailbox delete is the v1 revocation path).
 
 ### Open questions
 
@@ -670,3 +616,10 @@ Multica drives the same CLIs through stable protocol families: `stream-json` (Cl
 ### Open questions
 - Do we want to keep `warm` pooling for stream-json agents, or switch to one-shot-per-task like Multica? Multica spawns per task, so parity suggests dropping pooling; keeping pooling is a performance optimization but risks protocol drift.
 - Should custom CLI args (`customArgs`) be filtered per-provider like Multica's `blockedArgs` maps? Production safety says yes.
+
+## Addendum — connectors feature (Claude-style) landed same branch
+- Chat "+" sheet Connectors now opens ConnectorMarketplaceDialog (featured: gmail, google_drive, allternit-mail); was miswired to ProviderGallery.
+- Backend: allternit-mail catalog entry (allternit_native), connect {agent_id?} → provision mailbox / rail status; disconnect removes marker row only; sidecar OAuth-missing → 400 oauth_app_not_configured + setup_hint; resolver additive `connections` markers (via mcp/agent_email); internal MCP tools allternit_mail.send/status. cargo test --lib 425/425.
+- Runtime: gizzi-code native send_agent_email/get_agent_email_status tools + dispatch-time hard-ban guard (email_send/external_communication block send tools incl. MCP gmail.send_email via execute_action). Env contract ALLTERNIT_AGENT_ID + ALLTERNIT_AGENT_HARD_BANS, now emitted by buildBotRuntimeEnv (3 callers wired). 16/16 guard tests.
+- bot-runtime-env tests 9/9; surface typecheck zero new errors.
+- OPS REMAINING (user): (1) edit CF token perms (email routing/sending groups) then bootstrap+smoke the live mailflare deploy; (2) one-time Google OAuth client for Gmail/Drive connect: Google Cloud Console → OAuth client, redirect {api origin}/oauth/callback, then sidecar PUT /api/oauth/configs/gmail + /googledrive.

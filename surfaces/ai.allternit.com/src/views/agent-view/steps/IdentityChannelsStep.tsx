@@ -174,13 +174,16 @@ export function IdentityChannelsStep({
     setConnectError((prev) => ({ ...prev, email: '' }));
     setConnectStatus((prev) => ({ ...prev, email: 'idle' }));
     try {
-      if (channels.email.provider === "commrails") {
+      if (channels.email.provider === "commrails" || channels.email.provider === "mailflare") {
+        // Platform-managed mailbox: the backend provisions a real mailflare
+        // mailbox when the mailflare rail is configured, otherwise falls back
+        // to the legacy mint-only commrails row. The response says which.
         const result = await provisionAgentEmail(agentId);
         updateChannels({
           email: {
             ...channels.email,
             address: result.address,
-            provider: 'commrails',
+            provider: result.provider,
             sendEnabled: true,
             receiveEnabled: true,
           },
@@ -520,6 +523,7 @@ export function IdentityChannelsStep({
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="commrails">CommRails (platform email)</SelectItem>
+                    <SelectItem value="mailflare">Agent Mail (mailflare)</SelectItem>
                     <SelectItem value="google_workspace">Gmail / Google Workspace</SelectItem>
                     <SelectItem value="microsoft_365">Outlook / Microsoft 365</SelectItem>
                     <SelectItem value="generic_imap">Generic IMAP/SMTP</SelectItem>
@@ -527,11 +531,14 @@ export function IdentityChannelsStep({
                   </SelectContent>
                 </Select>
               </div>
-              {channels.email.provider === "commrails" && (
+              {(channels.email.provider === "commrails" || channels.email.provider === "mailflare") && (
                 <div className="sm:col-span-2 rounded-lg border border-[var(--border-subtle)] bg-[var(--bg-elevated)] p-3">
                   <p className="text-[12px] text-[var(--text-secondary)]">
-                    CommRails provisions a platform-managed mailbox. The backend generates
-                    the address and credentials; click Connect to allocate one.
+                    Platform email provisions a platform-managed mailbox — a real Agent Mail
+                    (mailflare) mailbox when the mailflare rail is configured, otherwise the
+                    legacy CommRails mint. The backend generates the address and credentials;
+                    click Connect to allocate one. Outbound sends are approval-gated and appear
+                    as review cards in Agent Activity.
                   </p>
                 </div>
               )}
@@ -608,7 +615,7 @@ export function IdentityChannelsStep({
                 </>
               )}
               <div className="sm:col-span-2 flex justify-end">
-                {agentId && renderConnectButton('email', connectEmail, channels.email.provider === 'commrails' || channels.email.address.trim().length > 0)}
+                {agentId && renderConnectButton('email', connectEmail, channels.email.provider === 'commrails' || channels.email.provider === 'mailflare' || channels.email.address.trim().length > 0)}
               </div>
             </div>
           )}

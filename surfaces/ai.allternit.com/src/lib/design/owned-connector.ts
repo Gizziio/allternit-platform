@@ -46,7 +46,7 @@ export async function listOwnedConnectors(): Promise<OwnedConnector[]> {
 
 export async function connectOwned(
   id: string,
-  opts?: { via?: string; api_key?: string; values?: Record<string, string> },
+  opts?: { via?: string; api_key?: string; values?: Record<string, string>; agent_id?: string },
 ): Promise<OwnedConnectStatus> {
   const res = await fetch(`${BASE}/${encodeURIComponent(id)}/connect`, {
     method: 'POST',
@@ -55,12 +55,16 @@ export async function connectOwned(
   });
   const data = (await res.json()) as Record<string, unknown>;
   if (!res.ok) {
+    // OAuth sidecars without a configured Google/owned client return
+    // oauth_app_not_configured + a human setup_hint — surface the hint, not the code.
     const message =
-      typeof data.message === 'string'
-        ? data.message
-        : typeof data.error === 'string'
-          ? data.error
-          : `Connect failed (${res.status})`;
+      data.error === 'oauth_app_not_configured' && typeof data.setup_hint === 'string'
+        ? data.setup_hint
+        : typeof data.message === 'string'
+          ? data.message
+          : typeof data.error === 'string'
+            ? data.error
+            : `Connect failed (${res.status})`;
     throw new Error(message);
   }
   return data as OwnedConnectStatus;

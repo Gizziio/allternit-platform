@@ -9,7 +9,7 @@
  * resolved at session start and passed through session metadata.
  */
 
-import type { HarnessConfig, AgentVMOperatorConfig } from '@/lib/agents/agent.types';
+import type { HarnessConfig, AgentVMOperatorConfig, CharacterLayerConfig } from '@/lib/agents/agent.types';
 import type { ResolvedSecret } from '@/lib/agents/agent-secrets-resolver';
 import type { ResolvedConnectorCredential } from '@/lib/agents/agent-connectors-resolver';
 
@@ -18,6 +18,8 @@ export interface BotRuntimeEnvInput {
   resolvedSecrets?: ResolvedSecret[];
   resolvedConnectors?: ResolvedConnectorCredential[];
   vmOperator?: AgentVMOperatorConfig;
+  agentId?: string;
+  characterLayer?: CharacterLayerConfig;
 }
 
 export interface BotRuntimeEnv {
@@ -103,6 +105,20 @@ function vmOperatorToEnv(vmOperator?: AgentVMOperatorConfig): Record<string, str
 }
 
 /**
+ * Agent identity + policy env for the runtime. `ALLTERNIT_AGENT_ID` is the
+ * default sender identity for agent-email tools; `ALLTERNIT_AGENT_HARD_BANS`
+ * carries the character role-card hard bans so gizzi-code can enforce them at
+ * tool-dispatch time (e.g. blocking email-send tools for `email_send` bans).
+ */
+function agentPolicyToEnv(input: BotRuntimeEnvInput): Record<string, string> {
+  const env: Record<string, string> = {};
+  if (input.agentId) env.ALLTERNIT_AGENT_ID = input.agentId;
+  const hardBans = input.characterLayer?.roleCard?.hardBans;
+  if (hardBans?.length) env.ALLTERNIT_AGENT_HARD_BANS = JSON.stringify(hardBans);
+  return env;
+}
+
+/**
  * Build a runtime env/config bundle for a bot session.
  *
  * Priority (later overrides earlier):
@@ -110,6 +126,7 @@ function vmOperatorToEnv(vmOperator?: AgentVMOperatorConfig): Record<string, str
  * 2. VM operator config
  * 3. Resolved vault secrets
  * 4. Resolved connector credentials
+ * 5. Agent identity + policy (highest priority, never secret-derived)
  */
 export function buildBotRuntimeEnv(input: BotRuntimeEnvInput): BotRuntimeEnv {
   return {
@@ -118,6 +135,7 @@ export function buildBotRuntimeEnv(input: BotRuntimeEnvInput): BotRuntimeEnv {
       ...vmOperatorToEnv(input.vmOperator),
       ...secretsToEnv(input.resolvedSecrets),
       ...connectorsToEnv(input.resolvedConnectors),
+      ...agentPolicyToEnv(input),
     },
     config: {
       vmOperator: input.vmOperator,

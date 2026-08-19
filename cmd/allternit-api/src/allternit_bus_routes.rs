@@ -505,9 +505,27 @@ struct ResolvedConnectorCredential {
     source: &'static str,
 }
 
+/// Marker for a binding whose connection holds no unsealable token in
+/// `connector_connections`: sidecar-backed connectors (runtime access goes
+/// through the MCP proxy, `via: "mcp"`) and the `allternit-mail` connector
+/// (per-agent mailbox, key sealed in `agent_identity_channels`,
+/// `via: "agent_email"`). Additive alongside `credentials` — env-token
+/// resolution for rust_native rows is unchanged.
+#[derive(Debug, Serialize)]
+struct ResolvedConnectorConnection {
+    connector_id: String,
+    backend: String,
+    connected: bool,
+    via: &'static str,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    address: Option<String>,
+}
+
 #[derive(Debug, Serialize)]
 struct ResolveConnectorsResponse {
     credentials: Vec<ResolvedConnectorCredential>,
+    #[serde(default)]
+    connections: Vec<ResolvedConnectorConnection>,
     missing: Vec<String>,
     errors: Vec<String>,
 }
@@ -528,6 +546,7 @@ async fn resolve_agent_connectors(
         move || {
             let conn = db.connect().map_err(internal)?;
             let mut credentials = Vec::new();
+            let mut connections = Vec::new();
             let mut missing = Vec::new();
             let mut errors = Vec::new();
 
@@ -535,43 +554,80 @@ async fn resolve_agent_connectors(
                 let mut resolved = false;
 
                 // 1. Lookup owned connector connection.
-                let row: Option<(Option<String>, Option<String>)> = conn
+                let row: Option<(Option<String>, Option<String>, String)> = conn
                     .query_row(
-                        "SELECT access_token, refresh_token FROM connector_connections
+                        "SELECT access_token, refresh_token, COALESCE(backend, 'rust_native') FROM connector_connections
                          WHERE connector_id = ?1 AND user_id = ?2 AND status = 'connected'
                          ORDER BY updated_at DESC LIMIT 1",
                         params![b.connector_id, user_id],
-                        |row| Ok((row.get(0)?, row.get(1)?)),
+                        |row| Ok((row.get(0)?, row.get(1)?, row.get(2)?)),
                     )
                     .optional()
                     .map_err(internal)?;
 
-                if let Some((access_token, refresh_token)) = row {
-                    if let Some(token) = access_token {
-                        let plain = crate::token_crypto::open(&token);
-                        if !plain.is_empty() {
-                            credentials.push(ResolvedConnectorCredential {
-                                connector_id: b.connector_id.clone(),
-                                provider: b.provider.clone(),
-                                key: format!("{}_ACCESS_TOKEN", env_key(&b.provider)),
-                                value: plain,
-                                source: "connector_connections",
-                            });
-                            resolved = true;
+                match row {
+                    // Sidecar-backed index row: tokens are NULL by design (the
+                    // sidecar is the vault). Resolve to an explicit MCP marker
+                    // instead of silently falling through to `missing`.
+                    Some((_, _, ref backend)) if backend == "open_connector" => {
+                        connections.push(ResolvedConnectorConnection {
+                            connector_id: b.connector_id.clone(),
+                            backend: backend.clone(),
+                            connected: true,
+                            via: "mcp",
+                            address: None,
+                        });
+                        resolved = true;
+                    }
+                    // Allternit Mail: the secret is the per-agent mailflare key
+                    // sealed in agent_identity_channels, never a user token.
+                    Some((_, _, ref backend)) if backend == "allternit_native" => {
+                        let address: Option<String> = conn
+                            .query_row(
+                                "SELECT email_address FROM agent_identity_channels
+                                 WHERE agent_id = ?1 AND email_provider = 'mailflare'",
+                                params![agent_id],
+                                |row| row.get(0),
+                            )
+                            .optional()
+                            .map_err(internal)?;
+                        connections.push(ResolvedConnectorConnection {
+                            connector_id: b.connector_id.clone(),
+                            backend: backend.clone(),
+                            connected: true,
+                            via: "agent_email",
+                            address,
+                        });
+                        resolved = true;
+                    }
+                    Some((access_token, refresh_token, _)) => {
+                        if let Some(token) = access_token {
+                            let plain = crate::token_crypto::open(&token);
+                            if !plain.is_empty() {
+                                credentials.push(ResolvedConnectorCredential {
+                                    connector_id: b.connector_id.clone(),
+                                    provider: b.provider.clone(),
+                                    key: format!("{}_ACCESS_TOKEN", env_key(&b.provider)),
+                                    value: plain,
+                                    source: "connector_connections",
+                                });
+                                resolved = true;
+                            }
+                        }
+                        if let Some(token) = refresh_token {
+                            let plain = crate::token_crypto::open(&token);
+                            if !plain.is_empty() {
+                                credentials.push(ResolvedConnectorCredential {
+                                    connector_id: b.connector_id.clone(),
+                                    provider: b.provider.clone(),
+                                    key: format!("{}_REFRESH_TOKEN", env_key(&b.provider)),
+                                    value: plain,
+                                    source: "connector_connections",
+                                });
+                            }
                         }
                     }
-                    if let Some(token) = refresh_token {
-                        let plain = crate::token_crypto::open(&token);
-                        if !plain.is_empty() {
-                            credentials.push(ResolvedConnectorCredential {
-                                connector_id: b.connector_id.clone(),
-                                provider: b.provider.clone(),
-                                key: format!("{}_REFRESH_TOKEN", env_key(&b.provider)),
-                                value: plain,
-                                source: "connector_connections",
-                            });
-                        }
-                    }
+                    None => {}
                 }
 
                 // 2. Fallback to legacy allternit_vault_credentials.
@@ -611,6 +667,7 @@ async fn resolve_agent_connectors(
 
             Ok::<_, ApiError>(ResolveConnectorsResponse {
                 credentials,
+                connections,
                 missing,
                 errors,
             })
@@ -727,6 +784,14 @@ async fn provision_email(
 ) -> Result<Response, ApiError> {
     require_agent_owner(&state, &user, &agent_id)?;
 
+    // When mailflare is configured, provision a real mailbox + scoped API key.
+    // Otherwise fall back to the legacy mint-only behavior below.
+    if let Some(client) = crate::mailflare_client::MailflareClient::from_env() {
+        let address =
+            provision_email_mailflare(&state, &user.user_id, &agent_id, client).await?;
+        return Ok(Json(ProvisionEmailResponse { address, provider: "mailflare" }).into_response());
+    }
+
     let domain = std::env::var("ALLTERNIT_BOT_EMAIL_DOMAIN")
         .ok()
         .filter(|s| !s.is_empty())
@@ -767,6 +832,137 @@ async fn provision_email(
     .map_err(|e| internal(e))??;
 
     Ok(Json(ProvisionEmailResponse { address, provider: "commrails" }).into_response())
+}
+
+/// Provision a real mailflare mailbox for the agent: resolve the domain id,
+/// create the mailbox (+ Cloudflare routing rule), mint a mailbox-scoped
+/// send+read API key, seal it, and persist the channel row. On any failure no
+/// half-written channel row is left behind; a mailbox we created is deleted
+/// again best-effort. Returns the provisioned address. Shared by the
+/// `POST /agents/:id/identity/email` route and the `allternit-mail` connector
+/// connect path.
+pub(crate) async fn provision_email_mailflare(
+    state: &Arc<AppState>,
+    user_id: &str,
+    agent_id: &str,
+    client: crate::mailflare_client::MailflareClient,
+) -> Result<String, ApiError> {
+    // Idempotent re-provision: an existing, fully-configured mailflare channel
+    // is returned as-is.
+    let existing = {
+        let conn = state.db.connect().map_err(internal)?;
+        crate::agent_email_routes::lookup_email_channel(&conn, agent_id).map_err(internal)?
+    };
+    if let Some(channel) = existing {
+        if channel.mailbox_id.is_some() && channel.api_key_sealed.is_some() {
+            return Ok(channel.address);
+        }
+    }
+
+    let domain_id = client.resolve_domain_id().await.map_err(|e| {
+        err(
+            StatusCode::BAD_GATEWAY,
+            "mailflare_domain_unresolved",
+            e.to_string(),
+        )
+    })?;
+
+    let local_part = sanitize_local_part(agent_id);
+    let (mailbox_id, address, created_here) = match client
+        .create_mailbox(&domain_id, &local_part, Some(agent_id))
+        .await
+    {
+        Ok(mailbox) => (mailbox.id, mailbox.address, true),
+        Err(e) if e.status == Some(StatusCode::CONFLICT) => {
+            // The address already exists in mailflare (e.g. a previous
+            // provisioning whose channel row was lost) — adopt it.
+            let mailboxes = client.list_mailboxes().await.map_err(|e| {
+                err(StatusCode::BAD_GATEWAY, "mailflare_error", e.to_string())
+            })?;
+            let expected = format!("{}@{}", local_part, client.config().domain);
+            mailboxes
+                .into_iter()
+                .find(|m| m.address().eq_ignore_ascii_case(&expected))
+                .map(|m| (m.id.clone(), m.address(), false))
+                .ok_or_else(|| {
+                    err(
+                        StatusCode::CONFLICT,
+                        "mailflare_mailbox_conflict",
+                        format!("Mailbox {expected} already exists but could not be resolved."),
+                    )
+                })?
+        }
+        Err(e) => return Err(err(StatusCode::BAD_GATEWAY, "mailflare_error", e.to_string())),
+    };
+
+    // Mint the per-agent mailbox-scoped key; on failure roll back the mailbox
+    // we just created (the key itself cannot be revoked via the admin key, so
+    // a later DB failure leaves only an orphaned, mailbox-scoped key — noted
+    // in the audit log line below).
+    let key = match client
+        .create_scoped_key(
+            &format!("agent:{agent_id}"),
+            &["send", "read"],
+            std::slice::from_ref(&mailbox_id),
+        )
+        .await
+    {
+        Ok(key) => key,
+        Err(e) => {
+            if created_here {
+                if let Err(del) = client.delete_mailbox(&mailbox_id).await {
+                    warn!(error = %del, mailbox_id = %mailbox_id, "agent-email: rollback mailbox deletion failed");
+                }
+            }
+            return Err(err(
+                StatusCode::BAD_GATEWAY,
+                "mailflare_key_creation_failed",
+                e.to_string(),
+            ));
+        }
+    };
+    let sealed_key = crate::token_crypto::seal(&key.key);
+
+    let persisted = tokio::task::spawn_blocking({
+        let db = state.db.clone();
+        let agent_id = agent_id.to_string();
+        let user_id = user_id.to_string();
+        let address = address.clone();
+        let mailbox_id = mailbox_id.clone();
+        move || {
+            let conn = db.connect().map_err(internal)?;
+            let id = uuid::Uuid::new_v4().to_string();
+            conn.execute(
+                "INSERT INTO agent_identity_channels (id, agent_id, user_id, email_address, email_provider, email_send_enabled, email_receive_enabled, email_mailbox_id, email_api_key_sealed, updated_at)
+                 VALUES (?1, ?2, ?3, ?4, 'mailflare', 1, 1, ?5, ?6, CURRENT_TIMESTAMP)
+                 ON CONFLICT(agent_id) DO UPDATE SET
+                     email_address = excluded.email_address,
+                     email_provider = excluded.email_provider,
+                     email_send_enabled = excluded.email_send_enabled,
+                     email_receive_enabled = excluded.email_receive_enabled,
+                     email_mailbox_id = excluded.email_mailbox_id,
+                     email_api_key_sealed = excluded.email_api_key_sealed,
+                     updated_at = CURRENT_TIMESTAMP",
+                params![id, agent_id, user_id, address, mailbox_id, sealed_key],
+            )
+            .map_err(internal)?;
+            Ok::<_, ApiError>(())
+        }
+    })
+    .await
+    .map_err(|e| internal(e))?;
+
+    if let Err(e) = persisted {
+        if created_here {
+            if let Err(del) = client.delete_mailbox(&mailbox_id).await {
+                warn!(error = %del, mailbox_id = %mailbox_id, "agent-email: rollback mailbox deletion failed");
+            }
+        }
+        return Err(e);
+    }
+
+    info!(agent_id = %agent_id, address = %address, "agent-email: mailflare mailbox provisioned");
+    Ok(address)
 }
 
 #[derive(Debug, Serialize)]

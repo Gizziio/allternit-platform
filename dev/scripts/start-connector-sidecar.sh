@@ -33,6 +33,16 @@ if ! [ -f "$CONNECTORS_DIR/src/server/index.ts" ]; then
   exit 1
 fi
 
+# The open-connector directory is excluded from the root pnpm workspace and
+# manages its own npm dependencies. Make sure they are installed before starting.
+if ! [ -d "$CONNECTORS_DIR/node_modules" ] || ! [ -f "$CONNECTORS_DIR/node_modules/typescript/bin/tsc" ]; then
+  echo "[connector-sidecar] Installing open-connector dependencies..."
+  (cd "$CONNECTORS_DIR" && npm install) >> "$LOG_FILE" 2>&1 || {
+    echo "[connector-sidecar] npm install failed — see $LOG_FILE"
+    exit 1
+  }
+fi
+
 mkdir -p "$DATA_DIR"
 
 # Shared secrets between allternit-api and the sidecar.

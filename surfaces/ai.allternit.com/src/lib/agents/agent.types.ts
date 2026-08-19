@@ -452,7 +452,7 @@ export interface AgentIdentityChannels {
 
 export interface AgentEmailChannel {
   address: string;
-  provider: 'commrails' | 'custom' | 'google_workspace' | 'microsoft_365' | 'agent_mail' | 'generic_imap';
+  provider: 'commrails' | 'mailflare' | 'custom' | 'google_workspace' | 'microsoft_365' | 'agent_mail' | 'generic_imap';
   /** Whether the agent may send email autonomously */
   sendEnabled: boolean;
   /** Whether the agent may receive email */
@@ -555,7 +555,7 @@ export const agentMessagingConfigSchema = z.object({
 
 export const agentEmailChannelSchema = z.object({
   address: z.string().email(),
-  provider: z.enum(['commrails', 'custom', 'google_workspace', 'microsoft_365', 'agent_mail', 'generic_imap']),
+  provider: z.enum(['commrails', 'mailflare', 'custom', 'google_workspace', 'microsoft_365', 'agent_mail', 'generic_imap']),
   sendEnabled: z.boolean(),
   receiveEnabled: z.boolean(),
 });

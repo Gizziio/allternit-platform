@@ -648,6 +648,8 @@ async function streamMessageWithContext(
         resolvedSecrets: session.metadata.resolvedSecrets as import('@/lib/agents/agent-secrets-resolver').ResolvedSecret[] | undefined,
         resolvedConnectors: session.metadata.resolvedConnectors as import('@/lib/agents/agent-connectors-resolver').ResolvedConnectorCredential[] | undefined,
         vmOperator: (session.metadata.vmOperator as Agent['vmOperator']) ?? agent?.vmOperator,
+        agentId: agent?.id ?? (session.metadata.agentId as string | undefined),
+        characterLayer: agent?.characterLayer,
       });
       agentContext = {
         agentId: contextPack.agentId,

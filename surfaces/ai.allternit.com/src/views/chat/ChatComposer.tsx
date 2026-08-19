@@ -89,6 +89,7 @@ import { ModeDock, MODE_TABS, SURFACE_MODES } from './components/ModeDock';
 import { TemplateGallery } from './components/TemplateGallery';
 import { SwarmSubModeTabs } from './components/SwarmSubModeTabs';
 import { ComposerPlusSheet, type ToolAccessLevel, type ResponseStyle } from './components/ComposerPlusSheet';
+import { ConnectorMarketplaceDialog } from './components/ConnectorMarketplaceDialog';
 import { MiroFishPanel } from './panels/MiroFishPanel';
 import { useMiroFishRunStore } from '@/stores/mirofish-run.store';
 import { BottomDock } from './components/BottomDock';
@@ -451,6 +452,7 @@ export function ChatComposer({
   const [showModelMenu, setShowModelMenu] = useState(false);
   const [showModeSelectorMenu, setShowModeSelectorMenu] = useState(false);
   const [showProviderConnect, setShowProviderConnect] = useState(false);
+  const [showConnectorMarketplace, setShowConnectorMarketplace] = useState(false);
   const [showOpenClawImportDialog, setShowOpenClawImportDialog] = useState(false);
   const [openClawCandidates, setOpenClawCandidates] = useState<OpenClawDiscoveredAgent[]>([]);
   const [isLoadingOpenClawCandidates, setIsLoadingOpenClawCandidates] = useState(false);
@@ -2435,12 +2437,17 @@ export function ChatComposer({
                 activeProjectId={chatActiveProjectId}
                 setActiveProjectId={(id) => chatSetActiveProject(id)}
                 onCreateProject={() => { void chatCreateProject('New Project'); }}
-                onOpenConnectors={() => setShowProviderConnect(true)}
+                onOpenConnectors={() => setShowConnectorMarketplace(true)}
                 onOpenFormSurfaces={() => window.dispatchEvent(new CustomEvent('allternit:open-view', { detail: { viewType: 'form-surfaces' } }))}
                 onOpenBrainCapture={() => window.dispatchEvent(new CustomEvent('allternit:open-view', { detail: { viewType: 'brain' } }))}
                 onOpenCoworkTasks={() => window.dispatchEvent(new CustomEvent('allternit:open-view', { detail: { viewType: 'cowork-tasks' } }))}
                 onOpenAgentActivity={() => window.dispatchEvent(new CustomEvent('allternit:open-agent-activity'))}
                 onOpenPermissions={() => window.dispatchEvent(new CustomEvent('allternit:open-settings', { detail: { section: 'permissions' } }))}
+              />
+
+              <ConnectorMarketplaceDialog
+                open={showConnectorMarketplace}
+                onClose={() => setShowConnectorMarketplace(false)}
               />
             </div>
 

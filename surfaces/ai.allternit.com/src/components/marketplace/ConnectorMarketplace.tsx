@@ -37,7 +37,21 @@ export interface ConnectorMarketplaceProps {
   className?: string;
   /** Group connectors under category headings. */
   groupByCategory?: boolean;
+  /**
+   * Connector IDs promoted to a "Featured" section above the grid
+   * (e.g. ["gmail", "google_drive", "allternit-mail"] from the chat "+" sheet).
+   * Featured cards are excluded from the regular grid below.
+   */
+  featuredIds?: string[];
+  /**
+   * Agent/bot context for connectors that provision per-agent resources
+   * (allternit-mail provisions the agent mailbox when set).
+   */
+  agentId?: string;
 }
+
+/** Catalog id of the platform-native agent mailbox connector. */
+const ALLTERNIT_MAIL_CONNECTOR_ID = "allternit-mail";
 
 export function ConnectorMarketplace({
   onConnect,
@@ -48,6 +62,8 @@ export function ConnectorMarketplace({
   onUnbind,
   className,
   groupByCategory = true,
+  featuredIds,
+  agentId,
 }: ConnectorMarketplaceProps) {
   const [connectors, setConnectors] = useState<OwnedConnector[]>([]);
   const [loading, setLoading] = useState(true);
@@ -97,12 +113,68 @@ export function ConnectorMarketplace({
     });
   }, [connectors, query, selectedCategory]);
 
+  const featuredSet = useMemo(() => new Set(featuredIds ?? []), [featuredIds]);
+
+  const featured = useMemo(() => {
+    if (!featuredIds?.length) return [];
+    const order = new Map(featuredIds.map((id, i) => [id, i]));
+    return filtered
+      .filter((c) => featuredSet.has(c.id))
+      .sort((a, b) => (order.get(a.id) ?? 0) - (order.get(b.id) ?? 0));
+  }, [filtered, featuredIds, featuredSet]);
+
+  const gridConnectors = useMemo(
+    () => (featuredIds?.length ? filtered.filter((c) => !featuredSet.has(c.id)) : filtered),
+    [filtered, featuredIds, featuredSet],
+  );
+
   function setInline(id: string, msg: string) {
     setNote((prev) => ({ ...prev, [id]: msg }));
   }
 
+  // Platform-native agent mailbox: with an agent context the connect call
+  // provisions the mailbox and returns its address; without one it reports
+  // rail status ("available" | "unconfigured") for setup hints.
+  async function handleConnectAllternitMail(c: OwnedConnector) {
+    setBusyId(c.id);
+    try {
+      const r = await connectOwned(c.id, agentId ? { agent_id: agentId } : {});
+      if (r.status === "connected") {
+        const address = (r as { address?: string }).address;
+        setInline(c.id, address ? `Mailbox provisioned: ${address}` : "Mailbox provisioned.");
+        onConnect?.(c);
+        if (bindOnConnect) onBind?.(c);
+        await refresh();
+      } else if (r.status === "unconfigured") {
+        const hint =
+          (r as { setup_hint?: string }).setup_hint ?? (r as { message?: string }).message;
+        setInline(c.id, hint || "Allternit Mail is not configured on this installation yet.");
+      } else {
+        const msg = (r as { message?: string }).message;
+        setInline(
+          c.id,
+          msg || "Allternit Mail is available. Connect it from a bot's runtime config to provision a mailbox.",
+        );
+      }
+    } catch (e) {
+      setInline(c.id, e instanceof Error ? e.message : "connect failed");
+    } finally {
+      setBusyId(null);
+    }
+  }
+
+  const specialConnectHandlers: Record<string, (c: OwnedConnector) => Promise<void>> = {
+    [ALLTERNIT_MAIL_CONNECTOR_ID]: handleConnectAllternitMail,
+  };
+
   async function handleConnect(c: OwnedConnector) {
     setInline(c.id, "");
+
+    const special = specialConnectHandlers[c.id];
+    if (special) {
+      await special(c);
+      return;
+    }
 
     if (c.auth_type === "api_key" && !apiKey[c.id]?.trim()) {
       setKeyInputId(c.id);
@@ -236,40 +308,76 @@ export function ConnectorMarketplace({
             <Plugs size={40} className="mx-auto mb-3 text-[var(--text-tertiary)] opacity-40" />
             <p className="text-sm">No connectors match your search.</p>
           </div>
-        ) : groupByCategory && !query && !selectedCategory ? (
-          <GroupedConnectorGrid
-            connectors={filtered}
-            busyId={busyId}
-            notes={note}
-            keyInputId={keyInputId}
-            apiKey={apiKey}
-            setApiKey={setApiKey}
-            setKeyInputId={setKeyInputId}
-            onConnect={handleConnect}
-            onDisconnect={handleDisconnect}
-            onBind={onBind}
-            onUnbind={onUnbind}
-            isConnected={isConnected}
-            isBound={isBound}
-            bindOnConnect={bindOnConnect}
-          />
         ) : (
-          <ConnectorGrid
-            connectors={filtered}
-            busyId={busyId}
-            notes={note}
-            keyInputId={keyInputId}
-            apiKey={apiKey}
-            setApiKey={setApiKey}
-            setKeyInputId={setKeyInputId}
-            onConnect={handleConnect}
-            onDisconnect={handleDisconnect}
-            onBind={onBind}
-            onUnbind={onUnbind}
-            isConnected={isConnected}
-            isBound={isBound}
-            bindOnConnect={bindOnConnect}
-          />
+          <>
+            {featured.length > 0 && (
+              <section className="mb-6">
+                <h4 className="flex items-center gap-2 mb-3 px-1 py-1.5 text-[12px] font-semibold uppercase tracking-wider text-[var(--text-tertiary)]">
+                  Featured
+                  <span className="ml-auto text-[11px] normal-case opacity-80">{featured.length}</span>
+                </h4>
+                <div className="grid grid-cols-[repeat(auto-fill,minmax(280px,1fr))] gap-3">
+                  <AnimatePresence>
+                    {featured.map((c) => (
+                      <ConnectorCard
+                        key={c.id}
+                        connector={c}
+                        featured
+                        busyId={busyId}
+                        notes={note}
+                        keyInputId={keyInputId}
+                        apiKey={apiKey}
+                        setApiKey={setApiKey}
+                        setKeyInputId={setKeyInputId}
+                        onConnect={handleConnect}
+                        onDisconnect={handleDisconnect}
+                        onBind={onBind}
+                        onUnbind={onUnbind}
+                        isConnected={isConnected}
+                        isBound={isBound}
+                        bindOnConnect={bindOnConnect}
+                      />
+                    ))}
+                  </AnimatePresence>
+                </div>
+              </section>
+            )}
+            {groupByCategory && !query && !selectedCategory ? (
+              <GroupedConnectorGrid
+                connectors={gridConnectors}
+                busyId={busyId}
+                notes={note}
+                keyInputId={keyInputId}
+                apiKey={apiKey}
+                setApiKey={setApiKey}
+                setKeyInputId={setKeyInputId}
+                onConnect={handleConnect}
+                onDisconnect={handleDisconnect}
+                onBind={onBind}
+                onUnbind={onUnbind}
+                isConnected={isConnected}
+                isBound={isBound}
+                bindOnConnect={bindOnConnect}
+              />
+            ) : (
+              <ConnectorGrid
+                connectors={gridConnectors}
+                busyId={busyId}
+                notes={note}
+                keyInputId={keyInputId}
+                apiKey={apiKey}
+                setApiKey={setApiKey}
+                setKeyInputId={setKeyInputId}
+                onConnect={handleConnect}
+                onDisconnect={handleDisconnect}
+                onBind={onBind}
+                onUnbind={onUnbind}
+                isConnected={isConnected}
+                isBound={isBound}
+                bindOnConnect={bindOnConnect}
+              />
+            )}
+          </>
         )}
       </div>
     </div>
@@ -387,10 +495,13 @@ function GroupedConnectorGrid(props: ConnectorGridProps) {
 
 interface ConnectorCardProps extends Omit<ConnectorGridProps, "connectors"> {
   connector: OwnedConnector;
+  /** Larger toggle-style card used in the Featured section. */
+  featured?: boolean;
 }
 
 function ConnectorCard({
   connector: c,
+  featured,
   busyId,
   notes,
   keyInputId,
@@ -407,7 +518,7 @@ function ConnectorCard({
 }: ConnectorCardProps) {
   const connected = isConnected(c);
   const bound = isBound?.(c);
-  const { url: logo } = getConnectorLogoUrl(c.base_url, c.id, 32);
+  const { url: logo } = getConnectorLogoUrl(c.base_url, c.id, featured ? 48 : 32);
 
   return (
     <motion.div
@@ -416,7 +527,8 @@ function ConnectorCard({
       animate={{ opacity: 1, y: 0 }}
       exit={{ opacity: 0, scale: 0.95 }}
       className={cn(
-        "group rounded-xl border p-4 flex flex-col gap-3 transition-colors",
+        "group rounded-xl border flex flex-col gap-3 transition-colors",
+        featured ? "p-5" : "p-4",
         connected || bound
           ? "border-[var(--accent-primary)]/40 bg-[var(--accent-primary)]/5"
           : "border-[var(--border-subtle)] bg-[var(--bg-card)] hover:bg-[var(--surface-hover)]",
@@ -427,11 +539,17 @@ function ConnectorCard({
           <img
             src={logo}
             alt={c.name}
-            className="w-9 h-9 rounded-lg object-contain bg-[var(--bg-primary)] p-1"
+            className={cn(
+              "rounded-lg object-contain bg-[var(--bg-primary)] p-1",
+              featured ? "w-11 h-11" : "w-9 h-9",
+            )}
           />
         ) : (
           <div
-            className="w-9 h-9 rounded-lg flex items-center justify-center"
+            className={cn(
+              "rounded-lg flex items-center justify-center",
+              featured ? "w-11 h-11" : "w-9 h-9",
+            )}
             style={{ background: "color-mix(in srgb, var(--accent-primary) 14%, transparent)" }}
           >
             <span
@@ -457,7 +575,7 @@ function ConnectorCard({
         </div>
       </div>
 
-      <p className="text-[12px] text-[var(--text-secondary)] line-clamp-2 flex-1">
+      <p className={cn("text-[12px] text-[var(--text-secondary)] flex-1", featured ? "line-clamp-3" : "line-clamp-2")}>
         {c.description || `${c.name} connector`}
       </p>
 
