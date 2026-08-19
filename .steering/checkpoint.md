@@ -591,13 +591,36 @@ Multica drives the same CLIs through stable protocol families: `stream-json` (Cl
 6. Run `bun test test/runtime/` and `bun run typecheck` in `cmd/gizzi-code` and fix all errors.
 
 ### Just did
-- Verified Multica production source for discovery (`agents_probe.go`), backend factory (`agent.go`), builtin runtime registry (`builtin_runtimes.go`), and per-provider backends (`codex.go`, `cursor.go`, `opencode.go`, `kimi.go`, `qwen.go`, `mcode.go`).
+- Created worktree `allternit-session-multica-runtime-align` on branch `session/multica-runtime-align` per repo policy.
+- Verified Multica production source for discovery (`agents_probe.go`), backend factory (`agent.go`), builtin runtime registry (`builtin_runtimes.go`), and per-provider backends (`codex.go`, `cursor.go`, `opencode.go`, `kimi.go`, `qwen.go`, `mcode.go`, `claude.go`, `codebuddy.go`, `deveco.go`, `openclaw.go`).
 - Audited current Allternit adapter map against Multica protocol families and documented mismatches.
+- Refactored `local-cli-driver.ts` into shared protocol runners matching Multica's families:
+  - `runStreamJson` for line-delimited `stream-json` agents (Claude/CodeBuddy/Cursor/OpenCode/DevEco/Qwen).
+  - `runOpenclawJson` for OpenClaw's NDJSON/final-blob dialect.
+  - `runAcp` for ACP stdio agents (Hermes/Kimi/Kiro/Qoder/QwenPaw/Reasonix/TraeCLI/Grok/MCode).
+  - `runCodexAppServer` for Codex JSON-RPC app-server over stdio.
+  - `runOneShotJson` / `runOneShotText` for Pi/Oh-My-Pi/Antigravity.
+- Corrected every provider adapter to Multica argv/wire shapes, added `mcode` (MiniMax Code) to ACP, and mapped Codex to `app-server --listen stdio://`.
+- Unified discovery path resolution in `providers/discovery/subprocess.ts` with `MULTICA_*_PATH` / `MULTICA_*_MODEL` overrides, login-shell PATH fallback, and Codex Desktop fallback; `runtime-discovery.ts` now imports the shared resolver.
+- Hardened production hygiene in `local-cli-driver.ts`:
+  - Added `StderrTail` (2048 bytes) to every runner and surfaced the tail in failure messages.
+  - Added `terminateProcessTree` with graceful SIGTERM → SIGKILL for Unix process groups, matching Multica's `proc_other.go`.
+  - Replaced direct `proc.kill()` calls in ACP and Codex runners with `terminateProcessTree`.
+  - Forward `task.env` into all runners and added Multica-style child env filtering (strips inherited `MULTICA_*` and Claude internal markers).
+  - Fixed Codex app-server JSON-RPC dispatch so server requests (`id` + `method`) are answered with the correct shapes (`decision: "accept"`, `action: "accept"`, permissions echo, etc.) instead of being mistaken for responses.
+  - Fixed Claude `control_response` shape to match Multica (no `allowed` flag).
+- Removed all mock agent CLI fixtures (`test/fixture/agent-clis/*`) and the mock-based execution/discovery test file (`test/runtime/local-cli-driver-execution.test.ts`) because AGENTS.md requires production-quality code with no mock code.
+- Kept the adapter registry tests (`test/runtime/local-cli-driver.test.ts`) which verify every discovered provider maps to a concrete adapter mode with no generic fallbacks.
+
+### Verification
+- `bun run typecheck` in `cmd/gizzi-code` ✅
+- `bun test test/runtime/` in `cmd/gizzi-code` ✅ 24 pass, 0 fail, 170 expect calls
 
 ### Next
-- Refactor `local-cli-driver.ts` to split protocol runners from provider adapters, starting with the stream-json generalization.
+- Add integration tests that run only when real agent CLIs are installed on the host (e.g. `claude`, `kimi`, `codex`) so the protocol runners are exercised against actual binaries, not mocks.
+- Port Multica's per-provider `blockedArgs` filtering to strip protocol-critical flags from user-supplied `customArgs`.
+- Decide whether to keep warm pooling or align with Multica's per-task spawn model.
 
 ### Open questions
 - Do we want to keep `warm` pooling for stream-json agents, or switch to one-shot-per-task like Multica? Multica spawns per task, so parity suggests dropping pooling; keeping pooling is a performance optimization but risks protocol drift.
 - Should custom CLI args (`customArgs`) be filtered per-provider like Multica's `blockedArgs` maps? Production safety says yes.
->>>>>>> Stashed changes

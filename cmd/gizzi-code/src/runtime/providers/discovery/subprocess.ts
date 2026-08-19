@@ -10,7 +10,158 @@
  */
 
 import { which } from "bun"
+import { execFile } from "node:child_process"
+import { promisify } from "node:util"
+import { existsSync, statSync } from "node:fs"
+import path from "node:path"
 import type { DiscoveredProvider, DiscoveredModel } from "./index"
+
+const execFileAsync = promisify(execFile)
+
+/**
+ * Per-provider environment overrides matching the Multica Go runtime.
+ *
+ * `MULTICA_<PROVIDER>_PATH` takes precedence over PATH lookup.
+ * `MULTICA_<PROVIDER>_MODEL` is available for adapters that accept a --model flag.
+ */
+export const PROVIDER_ENV_KEYS: Record<string, { path: string; model?: string }> = {
+  "claude-cli":   { path: "MULTICA_CLAUDE_PATH",       model: "MULTICA_CLAUDE_MODEL" },
+  "codex-cli":    { path: "MULTICA_CODEX_PATH",        model: "MULTICA_CODEX_MODEL" },
+  opencode:       { path: "MULTICA_OPENCODE_PATH",     model: "MULTICA_OPENCODE_MODEL" },
+  deveco:         { path: "MULTICA_DEVECO_PATH",       model: "MULTICA_DEVECO_MODEL" },
+  openclaw:       { path: "MULTICA_OPENCLAW_PATH",     model: "MULTICA_OPENCLAW_MODEL" },
+  hermes:         { path: "MULTICA_HERMES_PATH",       model: "MULTICA_HERMES_MODEL" },
+  pi:             { path: "MULTICA_PI_PATH",           model: "MULTICA_PI_MODEL" },
+  "cursor-agent": { path: "MULTICA_CURSOR_PATH",       model: "MULTICA_CURSOR_MODEL" },
+  "kimi-cli":     { path: "MULTICA_KIMI_PATH",         model: "MULTICA_KIMI_MODEL" },
+  reasonix:       { path: "MULTICA_REASONIX_PATH",     model: "MULTICA_REASONIX_MODEL" },
+  "kiro-cli":     { path: "MULTICA_KIRO_PATH",         model: "MULTICA_KIRO_MODEL" },
+  codebuddy:      { path: "MULTICA_CODEBUDDY_PATH",    model: "MULTICA_CODEBUDDY_MODEL" },
+  qodercli:       { path: "MULTICA_QODER_PATH",        model: "MULTICA_QODER_MODEL" },
+  qoderclicn:     { path: "MULTICA_QODERCLICN_PATH",   model: "MULTICA_QODERCLICN_MODEL" },
+  traecli:        { path: "MULTICA_TRAECLI_PATH",      model: "MULTICA_TRAECLI_MODEL" },
+  grok:           { path: "MULTICA_GROK_PATH",         model: "MULTICA_GROK_MODEL" },
+  "qwen-cli":     { path: "MULTICA_QWEN_PATH",         model: "MULTICA_QWEN_MODEL" },
+  qwenpaw:        { path: "MULTICA_QWENPAW_PATH" },
+  mcode:          { path: "MULTICA_MCODE_PATH" },
+  antigravity:    { path: "MULTICA_ANTIGRAVITY_PATH",  model: "MULTICA_ANTIGRAVITY_MODEL" },
+  omp:            { path: "MULTICA_OMP_PATH",          model: "MULTICA_OMP_MODEL" },
+}
+
+const SHELL_CACHE_TTL_MS = 30 * 60 * 1000
+
+let shellCacheKey = ""
+let shellCachePath: string | null = null
+let shellCacheExpires = 0
+
+function envCacheKey(name: string): string {
+  return `${name}:${process.env.PATH ?? ""}:${process.env.SHELL ?? ""}:${process.env.HOME ?? ""}`
+}
+
+async function resolveViaLoginShell(name: string): Promise<string | null> {
+  const key = envCacheKey(name)
+  const now = Date.now()
+  if (shellCacheKey === key && shellCachePath !== null && now < shellCacheExpires) {
+    if (existsSync(shellCachePath)) return shellCachePath
+  }
+
+  const shell = process.env.SHELL || "/bin/sh"
+  try {
+    const { stdout } = await execFileAsync(shell, ["-l", "-c", `command -v ${name}`], {
+      timeout: 5000,
+      env: process.env,
+    })
+    const candidates = stdout.trim().split("\n").map((s) => s.trim()).filter(Boolean)
+    const resolved = candidates[candidates.length - 1] ?? ""
+    if (resolved && existsSync(resolved)) {
+      shellCacheKey = key
+      shellCachePath = resolved
+      shellCacheExpires = now + SHELL_CACHE_TTL_MS
+      return resolved
+    }
+  } catch {
+    // fall through
+  }
+  return null
+}
+
+function isExecutable(filePath: string): boolean {
+  try {
+    const s = statSync(filePath)
+    return s.isFile() && (s.mode & 0o111) !== 0
+  } catch {
+    return false
+  }
+}
+
+function findInPath(name: string): string | null {
+  const pathEnv = process.env.PATH ?? ""
+  for (const dir of pathEnv.split(path.delimiter)) {
+    if (!dir) continue
+    const candidate = path.join(dir, name)
+    if (isExecutable(candidate)) return candidate
+  }
+  return null
+}
+
+async function resolveBinPath(name: string): Promise<string | null> {
+  // Walk PATH directly first so tests (and shell-specific PATH prefixes) can
+  // override cached resolutions from Bun's which().
+  const fromPath = findInPath(name)
+  if (fromPath) return fromPath
+
+  try {
+    const found = which(name)
+    if (found && existsSync(found)) return found
+  } catch {
+    // fall through
+  }
+
+  // Bare names are also resolved via the user's login shell so that tools
+  // installed by shell-specific package managers (e.g. mise, mise-like shims)
+  // are discoverable.
+  if (!name.includes("/") && !name.includes("\\")) {
+    const shellPath = await resolveViaLoginShell(name)
+    if (shellPath) return shellPath
+  }
+
+  return null
+}
+
+/**
+ * Resolve the absolute path for a subprocess provider spec.
+ *
+ * Resolution order:
+ *   1. `MULTICA_<PROVIDER>_PATH` env override.
+ *   2. Direct PATH walk + `bun:which`.
+ *   3. Login-shell PATH fallback (cached 30 minutes).
+ *   4. Codex macOS Desktop app bundle fallback.
+ */
+export async function resolveCliPath(spec: SubprocessSpec): Promise<string | null> {
+  const env = PROVIDER_ENV_KEYS[spec.id]
+
+  if (env?.path) {
+    const override = process.env[env.path]
+    if (override && existsSync(override)) return override
+  }
+
+  const fromPath = await resolveBinPath(spec.bin)
+  if (fromPath) return fromPath
+
+  // Codex is commonly installed as a macOS desktop app with a bundled CLI.
+  if (spec.id === "codex-cli" && process.platform === "darwin") {
+    const user = process.env.USER || ""
+    const candidates = [
+      "/Applications/Codex.app/Contents/MacOS/Codex",
+      `/Users/${user}/Applications/Codex.app/Contents/MacOS/Codex`,
+    ]
+    for (const candidate of candidates) {
+      if (existsSync(candidate)) return candidate
+    }
+  }
+
+  return null
+}
 
 export interface SubprocessSpec {
   /** Binary name to look for in PATH */
@@ -354,6 +505,17 @@ export const SUBPROCESS_PROVIDERS: SubprocessSpec[] = [
     models: [{ id: "default", name: "Trae CLI default", context: 200000, output: 64000 }],
   },
 
+  // ── MiniMax Code ─────────────────────────────────────────────────────────────
+  {
+    bin: "mcode",
+    id: "mcode",
+    name: "MiniMax Code",
+    icon: "mcode",
+    cmd: "mcode acp",
+    probe: { args: ["--version"], expect: /\d+\.\d+/ },
+    models: [{ id: "default", name: "MiniMax Code default", context: 200000, output: 64000 }],
+  },
+
   // ── DeepSeek Harness ─────────────────────────────────────────────────────────
   {
     bin: "dsh",
@@ -411,12 +573,7 @@ export async function discoverSubprocessProviders(): Promise<DiscoveredProvider[
 
   await Promise.all(
     SUBPROCESS_PROVIDERS.map(async (spec) => {
-      let binPath: string | null = null
-      try {
-        binPath = which(spec.bin) ?? null
-      } catch {
-        return
-      }
+      const binPath = await resolveCliPath(spec)
       if (!binPath) return
 
       const alive = await runProbe(binPath, spec)
