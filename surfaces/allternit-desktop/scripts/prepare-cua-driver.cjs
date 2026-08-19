@@ -5,10 +5,10 @@ const os = require('node:os');
 const path = require('node:path');
 const { spawnSync } = require('node:child_process');
 
-const VERSION = '0.8.2';
+const VERSION = '0.20.1-nightly.20260818.32173745999';
 const ASSET = `cua-driver-rs-${VERSION}-darwin-universal-binary.tar.gz`;
-const SHA256 = '50f907441f38c6f20f4218722cc4c874ba571f1e386ab73159c4a23244ea12db';
-const URL = `https://github.com/trycua/cua/releases/download/cua-driver-rs-v${VERSION}/${ASSET}`;
+const SHA256 = 'f57e7192da3c818b2cf9e30bacc2c32a9a254387e43612e9dc021debbc17ef93';
+const URL = `https://github.com/trycua/cua/releases/download/nightly-cua-driver-rs-v${VERSION}/${ASSET}`;
 const outputDir = path.resolve(__dirname, '..', 'resources', 'computer-use');
 const output = path.join(outputDir, 'cua-driver');
 

@@ -29,6 +29,7 @@
         "actions": {"type": "array", "items": {"type": "string"}, "uniqueItems": true},
         "observation_channels": {"type": "array", "items": {"type": "string"}, "uniqueItems": true},
         "execution_modes": {"type": "array", "items": {"enum": ["background_strict", "foreground_allowed", "sandboxed"]}, "uniqueItems": true},
+        "tools": {"type": "array", "items": {"type": "string"}, "uniqueItems": true},
         "strict_background": {"type": "boolean", "default": false},
         "semantic_input": {"type": "boolean", "default": false},
         "raw_input": {"type": "boolean", "default": false},

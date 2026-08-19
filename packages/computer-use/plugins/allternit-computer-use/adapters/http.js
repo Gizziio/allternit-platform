@@ -143,6 +143,21 @@ class ComputerUseHttpAdapter {
     return this._get("/v1/computer-use/adapters");
   }
 
+  // ── Computer History ─────────────────────────────────────────────────────────
+
+  async historyStatus(sessionId) {
+    return this._post("/v1/computer-use/canonical/history/status", { session_id: sessionId });
+  }
+
+  async historyQuery(sessionId, params = {}) {
+    return this._post("/v1/computer-use/canonical/history/query", {
+      session_id: sessionId,
+      limit: params.limit ?? 50,
+      since_sequence: params.since_sequence,
+      until_sequence: params.until_sequence,
+    });
+  }
+
   // ── Health ─────────────────────────────────────────────────────────────────
 
   async health() {
