@@ -11,11 +11,9 @@ import { getCliAdapterInfo } from "@/runtime/drivers/local-cli-driver"
 import { SUBPROCESS_PROVIDERS } from "@/runtime/providers/discovery/subprocess"
 
 const EXPECTED_ACP_CLIS = [
-  "cursor-agent",
-  "opencode",
-  "openclaw",
+  "kimi-cli",
+  "mcode",
   "hermes",
-  "deveco",
   "grok",
   "kiro-cli",
   "qodercli",
@@ -23,6 +21,16 @@ const EXPECTED_ACP_CLIS = [
   "qwenpaw",
   "reasonix",
   "traecli",
+]
+
+const EXPECTED_STREAM_JSON_CLIS = [
+  "claude-cli",
+  "codebuddy",
+  "cursor-agent",
+  "opencode",
+  "deveco",
+  "openclaw",
+  "qwen-cli",
 ]
 
 const EXPECTED_UNSUPPORTED = ["dsh", "copilot"]
@@ -41,6 +49,14 @@ describe("LocalCliDriver adapter registry", () => {
       const info = getCliAdapterInfo(cli)
       expect(info.supported).toBe(true)
       expect(info.mode).toBe("acp")
+    }
+  })
+
+  test("stream-json CLIs are supported with mode 'stream-json'", () => {
+    for (const cli of EXPECTED_STREAM_JSON_CLIS) {
+      const info = getCliAdapterInfo(cli)
+      expect(info.supported).toBe(true)
+      expect(info.mode).toBe("stream-json")
     }
   })
 

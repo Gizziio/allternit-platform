@@ -1,9 +1,11 @@
 import { execFile } from 'node:child_process';
 import { promisify } from 'node:util';
 import { existsSync } from 'node:fs';
-import { SUBPROCESS_PROVIDERS, type SubprocessSpec } from '@/runtime/providers/discovery/subprocess';
+import { SUBPROCESS_PROVIDERS, type SubprocessSpec, resolveCliPath, PROVIDER_ENV_KEYS } from '@/runtime/providers/discovery/subprocess';
 
 const execFileAsync = promisify(execFile);
+
+export { PROVIDER_ENV_KEYS };
 
 export interface DiscoveredCli {
   name: string;
@@ -16,16 +18,6 @@ export interface DiscoveredRuntime {
   host: string;
   agentClis: DiscoveredCli[];
   discoveredAt: number;
-}
-
-async function resolveCliPath(name: string): Promise<string | null> {
-  try {
-    const { stdout } = await execFileAsync('which', [name], { timeout: 3000 });
-    const p = stdout.trim();
-    return p.length > 0 && existsSync(p) ? p : null;
-  } catch {
-    return null;
-  }
 }
 
 async function getCliVersion(path: string): Promise<string> {
@@ -58,7 +50,7 @@ export async function discoverLocalAgentClis(): Promise<DiscoveredCli[]> {
 
   await Promise.all(
     SUBPROCESS_PROVIDERS.map(async (spec) => {
-      const path = await resolveCliPath(spec.bin);
+      const path = await resolveCliPath(spec);
       if (!path) return;
       const alive = await runProbe(path, spec);
       if (!alive) return;
