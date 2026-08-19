@@ -1,0 +1,48 @@
+#!/usr/bin/env bun
+// Mock Claude CLI for warm/stream-json adapter tests.
+// Reads NDJSON from stdin and writes NDJSON to stdout.
+
+if (process.argv.includes("--version")) {
+  console.log("Claude Code mock 1.0.0")
+  process.exit(0)
+}
+
+const stdin = process.stdin
+const stdout = process.stdout
+
+let buf = ""
+
+function write(obj: unknown) {
+  stdout.write(JSON.stringify(obj) + "\n")
+}
+
+stdin.on("data", (chunk: Buffer) => {
+  buf += chunk.toString()
+  const lines = buf.split("\n")
+  buf = lines.pop() ?? ""
+  for (const line of lines) {
+    if (!line.trim()) continue
+    try {
+      const msg = JSON.parse(line)
+      if (msg.type === "user") {
+        const text = msg.message?.content?.[0]?.text ?? "hello"
+        write({
+          type: "assistant",
+          message: {
+            content: [{ type: "text", text: `Echo: ${text}` }],
+          },
+        })
+        write({
+          type: "result",
+          usage: { input_tokens: 10, output_tokens: 10 },
+        })
+      }
+    } catch {
+      // ignore malformed
+    }
+  }
+})
+
+stdin.on("end", () => {
+  // keep alive until process is killed
+})
