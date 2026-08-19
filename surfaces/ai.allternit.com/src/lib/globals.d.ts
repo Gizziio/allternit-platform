@@ -24,6 +24,23 @@ declare global {
     allternitSidecar?: {
       getStatus?: () => Promise<'stopped' | 'starting' | 'running' | 'error' | 'crashed'>;
       getApiUrl?: () => Promise<string | undefined>;
+      /** Local command execution bridge for external agent providers. */
+      stack?: {
+        executeCommand: (request: {
+          command: string;
+          args: string[];
+          cwd?: string;
+          env?: Record<string, string>;
+        }) => Promise<{ stdout: string; stderr: string; exitCode: number }>;
+        spawnCommand: (request: {
+          command: string;
+          args: string[];
+          cwd?: string;
+          env?: Record<string, string>;
+        }) => Promise<AsyncIterable<string>>;
+        readFile: (path: string) => Promise<string>;
+        listDirectory: (path: string) => Promise<string[]>;
+      };
     };
     allternit?: {
       auth?: {

@@ -28,6 +28,7 @@ import {
   agentIdentityChannelsSchema,
   agentVMOperatorConfigSchema,
 } from '@/lib/agents/agent.types';
+import { BotAvatarSchema } from './bot-avatar.service';
 import { createModuleLogger } from '@/lib/logger';
 
 const logger = createModuleLogger('BotContract');
@@ -71,6 +72,8 @@ export const botProfileSchema = z.object({
   defaultPresetId: z.string().optional(),
   /** Category used for filtering and discovery in the bot hub */
   botCategory: botCategorySchema.optional(),
+  /** Deterministic bot avatar stored in bot metadata. */
+  avatar: BotAvatarSchema.optional(),
 });
 
 // ============================================================================

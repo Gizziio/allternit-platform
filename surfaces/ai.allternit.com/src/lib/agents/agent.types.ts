@@ -12,6 +12,7 @@
 import { z } from 'zod';
 import type { AgentProfile } from '@allternit/sdk/ai-runtime';
 import type { AvatarConfig } from './character.types';
+import type { BotAvatar } from '../bots/bot-avatar.service';
 
 import { createModuleLogger } from '@/lib/logger';
 
@@ -414,6 +415,13 @@ export interface BotProfile {
   botCategory?: BotCategory;
   /** Lifecycle state: draft, active, archived, deprecated */
   lifecycle?: 'draft' | 'active' | 'archived' | 'deprecated';
+  /** Deterministic bot avatar stored in bot metadata. */
+  avatar?: BotAvatar;
+
+  /** External platform that owns this bot (e.g. 'hermes', 'openclaw', 'grok') */
+  providerId?: string;
+  /** Stable identifier within the external platform's namespace */
+  externalId?: string;
 }
 
 /**
@@ -667,6 +675,7 @@ export const agentSchema = z.object({
     defaultPresetId: z.string().optional(),
     botCategory: z.enum(['research', 'code', 'writing', 'data', 'sales', 'design', 'ops', 'custom']).optional(),
     lifecycle: z.enum(['draft', 'active', 'archived', 'deprecated']).optional(),
+    avatar: z.any().optional(),
   }).optional(),
   brainId: z.string().optional(),
   connectorBindings: z.array(agentConnectorBindingSchema).optional(),

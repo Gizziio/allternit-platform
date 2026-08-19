@@ -86,6 +86,7 @@ export const BotProfileSchema = z.object({
   defaultPresetId: z.string().optional(),
   botCategory: BotCategorySchema.optional(),
   lifecycle: BotLifecycleSchema.optional(),
+  avatar: z.any().optional(),
 });
 
 export const BotOperationalStatusSchema = z.enum([
