@@ -1,0 +1,26 @@
+<!doctype html>
+<!-- Allternit video end card — 1920x1080. Hold 2–3s at the end of launch clips.
+     Render: marketing/render-card.sh templates/video-endcard.html out.png 1920x1080 -->
+<html>
+<head><meta charset="utf-8"><style>
+  :root {
+    --cream: #F0EEE6;
+    --ink:   #141413;
+    --tan:   #D4B08C;
+    --coral: #D97757;
+  }
+  * { margin:0; padding:0; box-sizing:border-box; }
+  body { width:1920px; height:1080px; background:var(--ink);
+         display:flex; flex-direction:column; align-items:center; justify-content:center;
+         gap:48px; font-family:-apple-system, "Helvetica Neue", sans-serif; }
+  svg.mark { width:220px; height:220px; }
+  .headline { font-family:Georgia, "Times New Roman", serif; font-size:96px; color:var(--cream); }
+  .headline em { font-style:normal; color:var(--coral); }
+  .url { font-family:"JetBrains Mono", monospace; font-size:34px; color:var(--tan); opacity:.8; }
+</style></head>
+<body>
+  <svg class="mark" viewBox="0 0 100 100" shape-rendering="geometricPrecision"><g fill="#D4B08C"><rect x="43" y="7" width="14" height="14" rx="2"/><rect x="25" y="25" width="14" height="14" rx="2"/><rect x="61" y="25" width="14" height="14" rx="2"/><rect x="25" y="43" width="14" height="14" rx="2"/><rect x="43" y="43" width="14" height="14" rx="2" fill="#D97757"/><rect x="61" y="43" width="14" height="14" rx="2"/><rect x="25" y="61" width="14" height="14" rx="2"/><rect x="61" y="61" width="14" height="14" rx="2"/><rect x="25" y="79" width="14" height="14" rx="2"/><rect x="61" y="79" width="14" height="14" rx="2"/></g></svg>
+  <div class="headline">{Name} — <em>available today</em></div>
+  <div class="url">allternit.com</div>
+</body>
+</html>

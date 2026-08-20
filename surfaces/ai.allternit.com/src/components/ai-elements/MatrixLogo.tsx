@@ -58,13 +58,14 @@ export const MatrixLogo = memo(({
     mouseY.set(0);
   };
 
-  // The "A" construct with depth metadata
+  // The "A" construct with depth metadata — same pixel-A letterform as the
+  // brand construct mark: apex, shoulders, crossbar row, coral core, legs.
   const blocks = useMemo(() => [
     { x: -2, y: 2, z: 20 }, { x: -2, y: 1, z: 10 }, { x: -2, y: 0, z: 0 }, { x: -1, y: -1, z: 15 },
-    { x: 0, y: -2, z: 30 }, 
+    { x: 0, y: -2, z: 30 },
     { x: 1, y: -1, z: 15 }, { x: 2, y: 0, z: 0 }, { x: 2, y: 1, z: 10 }, { x: 2, y: 2, z: 20 },
     { x: -1, y: 0, z: 5 }, { x: 1, y: 0, z: 5 },
-    { x: 0, y: 1, z: 40, accent: true },
+    { x: 0, y: 0, z: 40, accent: true },
   ], []);
 
   // Structural extensions (Technical Rays)

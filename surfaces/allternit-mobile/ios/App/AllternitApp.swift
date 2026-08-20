@@ -29,6 +29,13 @@ struct AllternitApp: App {
         if CommandLine.arguments.contains("-reset-onboarding") {
             OnboardingStore.shared.reset()
         }
+        // `-auto-skip-auth` (DEBUG only): jump straight into the workspace
+        // for UI regression screenshots. Simctl has no tap injection, so the
+        // normal sign-in/onboarding gates would block automation.
+        if CommandLine.arguments.contains("-auto-skip-auth") {
+            AuthManager.shared.skipAuth()
+            OnboardingStore.shared.complete()
+        }
         #endif
     }
 
@@ -77,7 +84,7 @@ struct AllternitApp: App {
 
     @ViewBuilder
     private var gatedContent: some View {
-        if authManager.isSignedIn || Self.skipAuthForTesting {
+        if authManager.isSignedIn || authManager.isSkippingAuth || Self.skipAuthForTesting {
             // Phase 10: first-launch onboarding runs BEFORE the workspace
             // (root swap — it never covers LoginGateView). Completing or
             // skipping flips `isComplete` and swaps in the workspace.
@@ -154,7 +161,8 @@ struct LoginGateView: View {
         VStack(spacing: 32) {
             Spacer()
 
-            // Logo with ambient glow matching LaunchHeader
+            // Wordmark with ambient glow matching LaunchHeader.
+            // The ATernitWordmark asset has light/dark appearance variants.
             ZStack {
                 Circle()
                     .fill(Color("AccentPrimary").opacity(logoGlowing ? 0.12 : 0.04))
@@ -162,16 +170,10 @@ struct LoginGateView: View {
                     .blur(radius: 35)
                     .animation(.easeInOut(duration: 2.5).repeatForever(autoreverses: true), value: logoGlowing)
 
-                HStack(alignment: .firstTextBaseline, spacing: 6) {
-                    Text("A://")
-                        .foregroundColor(Color("AccentPrimary"))
-                        .font(.system(.title2, design: .monospaced))
-                        .bold()
-                    Text("LLTERNIT")
-                        .foregroundColor(Color("TextPrimary"))
-                        .font(.system(.title2, design: .serif))
-                        .tracking(4.0)
-                }
+                Image("ATernitWordmark")
+                    .resizable()
+                    .scaledToFit()
+                    .frame(height: 30)
             }
 
             Text("Your native workspace for autonomous AI execution.")
@@ -216,6 +218,12 @@ struct LoginGateView: View {
             .disabled(!auth.isClerkConfigured)
             .opacity(auth.isClerkConfigured ? 1 : 0.5)
             .padding(.horizontal, 32)
+
+            Button(action: auth.skipAuth) {
+                Text("Continue without signing in")
+                    .font(.subheadline)
+                    .foregroundColor(Color("TextSecondary"))
+            }
             .padding(.bottom, 48)
         }
         .background(Color("BgPrimary").edgesIgnoringSafeArea(.all))

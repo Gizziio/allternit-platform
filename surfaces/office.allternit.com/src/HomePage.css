@@ -23,6 +23,9 @@
 }
 
 .office-home__brand {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-3);
   font-weight: var(--font-weight-semibold);
   font-size: var(--text-lg);
   color: var(--ui-text-primary);

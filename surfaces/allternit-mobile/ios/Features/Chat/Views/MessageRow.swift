@@ -40,11 +40,11 @@ struct MessageRow: View {
             if message.role == "user" {
                 Spacer(minLength: 40)
             } else {
-                // Agent Avatar Icon
-                Text("A://")
-                    .font(.system(.caption, design: .monospaced))
-                    .bold()
-                    .foregroundColor(Color("AccentPrimary"))
+                // Agent Avatar Icon — A:// protocol mark (light/dark variants)
+                Image("AProtocol")
+                    .resizable()
+                    .scaledToFit()
+                    .frame(width: 18, height: 18)
                     .frame(width: 32, height: 32)
                     .background(Color("BgSecondary"))
                     .clipShape(Circle())

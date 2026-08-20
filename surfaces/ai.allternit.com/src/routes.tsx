@@ -1,6 +1,7 @@
 import { Suspense, lazy, useEffect } from 'react'
 import { Routes, Route, Navigate, useNavigate } from 'react-router-dom'
 import { installOfficeDesktopBridge } from './views/office/desktop-bridge'
+import { AProtocolWordmark } from './components/AProtocolWordmark'
 
 const AppLoader = () => (
   <div
@@ -19,10 +20,7 @@ const AppLoader = () => (
       gap: '28px',
     }}
   >
-    <div style={{ display: 'flex', alignItems: 'baseline', gap: '6px', userSelect: 'none' }}>
-      <span style={{ color: '#D97757', fontFamily: 'var(--font-mono)', fontSize: 22, fontWeight: 400, letterSpacing: '0.04em' }}>A://</span>
-      <span style={{ color: '#C8BDB4', fontFamily: 'var(--font-research)', fontSize: 22, fontWeight: 400, letterSpacing: '0.18em' }}>LLTERNIT</span>
-    </div>
+    <AProtocolWordmark theme="light" height={22} />
     <div style={{ width: '120px', height: '1px', background: 'rgba(200,168,140,0.12)', position: 'relative', overflow: 'hidden', borderRadius: '1px' }}>
       <div
         style={{

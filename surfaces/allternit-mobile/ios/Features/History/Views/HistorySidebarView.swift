@@ -22,17 +22,12 @@ struct HistorySidebarView: View {
     @State private var isSettingsPresented = false
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
-            // Wordmark
+            // Wordmark — ATernitWordmark asset (light/dark appearance variants)
             HStack {
-                Text("A://")
-                    .foregroundColor(Color("AccentPrimary"))
-                    .font(.system(.subheadline, design: .monospaced))
-                    .bold()
-                Text("LLTERNIT")
-                    .foregroundColor(Color("TextPrimary"))
-                    .font(.system(.subheadline, design: .serif))
-                    .tracking(1.5)
-                    .lineLimit(1)
+                Image("ATernitWordmark")
+                    .resizable()
+                    .scaledToFit()
+                    .frame(height: 15)
                 Spacer()
             }
             .padding(.horizontal, 20)
