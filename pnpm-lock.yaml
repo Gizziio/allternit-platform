@@ -2467,12 +2467,21 @@ importers:
       '@ai-sdk/xai':
         specifier: ^3.0.48
         version: 3.0.48(zod@3.25.76)
+      '@allternit/allternit-office-suite':
+        specifier: workspace:*
+        version: link:../../packages/@allternit/allternit-office-suite
       '@allternit/mcp-apps-adapter':
         specifier: workspace:*
         version: link:../../mcp/servers
       '@allternit/office-docs-app':
         specifier: workspace:*
         version: link:../../packages/@allternit/office-docs-app
+      '@allternit/office-docx-engine':
+        specifier: workspace:*
+        version: link:../../packages/@allternit/office-docx-engine
+      '@allternit/office-file-parse':
+        specifier: workspace:*
+        version: link:../../packages/@allternit/office-file-parse
       '@allternit/office-pdf-app':
         specifier: workspace:*
         version: link:../../packages/@allternit/office-pdf-app
