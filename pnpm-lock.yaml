@@ -1628,6 +1628,9 @@ importers:
       react-konva:
         specifier: ^18.2.11
         version: 18.2.16(@types/react@18.3.28)(konva@9.3.22)(react-dom@18.3.1(react@18.3.1))(react@18.3.1)
+      utif2:
+        specifier: ^4.1.0
+        version: 4.1.0
       zod:
         specifier: ^3.25.0
         version: 3.25.76
@@ -24193,6 +24196,9 @@ packages:
 
   utf8-byte-length@1.0.5:
     resolution: {integrity: sha512-Xn0w3MtiQ6zoz2vFyUVruaCL53O/DwUvkEeOvj+uulMm0BkUGYWmBYVyElqZaSLhY6ZD0ulfU3aBra2aVT4xfA==}
+
+  utif2@4.1.0:
+    resolution: {integrity: sha512-+oknB9FHrJ7oW7A2WZYajOcv4FcDR4CfoGB0dPNfxbi4GO05RRnFmt5oa23+9w32EanrYcSJWspUiJkLMs+37w==}
 
   util-deprecate@1.0.2:
     resolution: {integrity: sha512-EPD5q1uXyFxJpCrLnCc1nHnq3gOa6DZBocAIiI2TaSCA7VCJ1UJDMagCzIkXNsUYfD1daK//LTEQ8xiIbrHtcw==}
@@ -53374,6 +53380,10 @@ snapshots:
       react: 19.2.4
 
   utf8-byte-length@1.0.5: {}
+
+  utif2@4.1.0:
+    dependencies:
+      pako: 1.0.11
 
   util-deprecate@1.0.2: {}
 
