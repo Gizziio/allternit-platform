@@ -58,11 +58,13 @@ jobs:
           fi
 
       - name: Build static export
-        working-directory: surfaces/ai.allternit.com
+        # Build the full dependency graph (office-* engines, apps, etc.) so that
+        # packages whose `dist/` directories are not committed are available —
+        # same pattern as deploy-office-cloudflare.yml.
         # Vite SPA build — outputs dist/, which the deploy step below publishes.
         # NEXT_PUBLIC_ALLTERNIT_DESKTOP_AUTH enables the desktop session shim so
         # the startup wizard sign-in is the only login inside the desktop shell.
-        run: pnpm build
+        run: pnpm --filter "@allternit/ai..." build
         env:
           NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY: ${{ secrets.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY }}
           NEXT_PUBLIC_ALLTERNIT_DESKTOP_AUTH: 'true'
