@@ -1,5 +1,28 @@
 # Steering checkpoint
 
+## Cowork mode landing fix — COMPLETE (uncommitted)
+
+### Goal
+Fix Cowork mode so it opens on the cowork home view / launchpad instead of
+auto-entering the most recently active persisted cowork session.
+
+### Just did
+- Identified the bug in `surfaces/ai.allternit.com/src/views/cowork/CoworkRoot.tsx`.
+- The launchpad guard was `if (!coworkSessionId && !embeddedAgentSession?.isEmbedded)`,
+  which skipped the launchpad whenever `useCoworkSessionStore` had an active session.
+- Changed the guard to `if (!coworkSessionId)` so navigation to Cowork always lands
+  on the launchpad. The active persisted session remains available via
+  `RecentSessionsStrip` for resuming.
+- Verified with `tsc --project tsconfig.typecheck.json --noEmit`: zero errors in
+  `CoworkRoot.tsx`. (Pre-existing errors in unrelated packages remain.)
+
+### Next
+- Commit and push the change on branch `session/cowork-launchpad` via the steering
+  commit gate, pending approval.
+
+### Open questions
+- None.
+
 ## Agent email rail (mailflare fork → services/mailflare) — COMPLETE (uncommitted)
 
 ### Goal

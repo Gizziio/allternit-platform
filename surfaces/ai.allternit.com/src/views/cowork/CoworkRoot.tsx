@@ -349,7 +349,7 @@ function CoworkRootContent() {
 
   // Show launchpad whenever no session has been started in this mount lifecycle.
   // Ignores persisted `session` so navigating to Cowork always lands on the launchpad.
-  if (!coworkSessionId && !embeddedAgentSession?.isEmbedded) {
+  if (!coworkSessionId) {
     return (
       <div style={{ position: 'relative', height: '100%', isolation: 'isolate' }}>
         <CoworkAnimatedBackground />
