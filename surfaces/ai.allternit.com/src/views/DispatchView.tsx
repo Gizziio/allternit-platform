@@ -34,6 +34,7 @@ import {
   CodePermissionsDropdown,
   type CodePermissionOption,
 } from '@/components/dispatch/CodePermissionsDropdown';
+import { RemoteSessionPanel } from '@/components/dispatch/RemoteSessionPanel';
 
 // ─── token generation ────────────────────────────────────────────────────────
 function generateDispatchToken(): string {
@@ -356,6 +357,10 @@ export function DispatchView(): React.ReactNode {
   const [bannerDismissed, setBannerDismissed] = useState(false);
   const [qrPanelDismissed, setQrPanelDismissed] = useState(false);
 
+  // ── remote hub tabs ─────────────────────────────────────────────────────────
+  type RemoteTab = 'handoff' | 'sessions';
+  const [remoteTab, setRemoteTab] = useState<RemoteTab>('handoff');
+
   // ── composer ────────────────────────────────────────────────────────────────
   const [composerValue, setComposerValue] = useState('');
   const [messages, setMessages] = useState<Array<{ id: string; role: 'user'; text: string }>>([]);
@@ -671,7 +676,43 @@ export function DispatchView(): React.ReactNode {
           backgroundSize: '20px 20px',
         }}
       >
-        {/* Handoff banner */}
+        {/* Remote hub tabs */}
+        {handoffStatus?.runtimeId && (
+          <div className="mx-6 mt-6 flex items-center gap-2">
+            <button
+              type="button"
+              onClick={() => setRemoteTab('handoff')}
+              className={cn(
+                'px-4 py-2 rounded-xl text-[13px] font-medium transition-colors',
+                remoteTab === 'handoff'
+                  ? 'bg-[var(--bg-elevated)] text-[var(--text-primary)] border border-[var(--border-default)] shadow-sm'
+                  : 'text-[var(--text-tertiary)] hover:text-[var(--text-secondary)]'
+              )}
+            >
+              Handoff
+            </button>
+            <button
+              type="button"
+              onClick={() => setRemoteTab('sessions')}
+              className={cn(
+                'px-4 py-2 rounded-xl text-[13px] font-medium transition-colors',
+                remoteTab === 'sessions'
+                  ? 'bg-[var(--bg-elevated)] text-[var(--text-primary)] border border-[var(--border-default)] shadow-sm'
+                  : 'text-[var(--text-tertiary)] hover:text-[var(--text-secondary)]'
+              )}
+            >
+              Remote sessions
+            </button>
+          </div>
+        )}
+
+        {remoteTab === 'sessions' && handoffStatus?.runtimeId ? (
+          <div className="flex-1 overflow-hidden p-6">
+            <RemoteSessionPanel runtimeId={handoffStatus.runtimeId} getToken={getToken} />
+          </div>
+        ) : (
+          <>
+            {/* Handoff banner */}
         {!bannerDismissed && (
           <div className="mx-6 mt-6 p-4 pr-5 rounded-2xl bg-[var(--bg-elevated)] border border-solid border-[var(--border-default)] flex items-start gap-4 shadow-sm">
             <div className="size-9 rounded-xl bg-[var(--border-subtle)] flex items-center justify-center shrink-0 mt-0.5">
@@ -872,10 +913,12 @@ export function DispatchView(): React.ReactNode {
             </button>
           </div>
         </div>
-      </div>
-        </div>
+      </>
+        )}
       </div>
     </div>
+  </div>
+</div>
   );
 }
 
