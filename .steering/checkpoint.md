@@ -623,3 +623,28 @@ Multica drives the same CLIs through stable protocol families: `stream-json` (Cl
 - Runtime: gizzi-code native send_agent_email/get_agent_email_status tools + dispatch-time hard-ban guard (email_send/external_communication block send tools incl. MCP gmail.send_email via execute_action). Env contract ALLTERNIT_AGENT_ID + ALLTERNIT_AGENT_HARD_BANS, now emitted by buildBotRuntimeEnv (3 callers wired). 16/16 guard tests.
 - bot-runtime-env tests 9/9; surface typecheck zero new errors.
 - OPS REMAINING (user): (1) edit CF token perms (email routing/sending groups) then bootstrap+smoke the live mailflare deploy; (2) one-time Google OAuth client for Gmail/Drive connect: Google Cloud Console → OAuth client, redirect {api origin}/oauth/callback, then sidecar PUT /api/oauth/configs/gmail + /googledrive.
+
+---
+
+## Allternit Remote Control — Phase 3 start (2026-08-23)
+
+### Goal
+Implement the approved unified Remote Control plan: evolve Dispatch into a multi-machine, browser/PWA remote control with proactive push notifications, and establish a migration path off Fly.io for the relay layer.
+
+### Just did
+- Researched Google Antigravity Remote Control and Allternit's existing Dispatch + runtime pairing + cloud relay.
+- Wrote analysis to `docs/research/antigravity-remote-control-analysis.md`.
+- Merged the previous dedicated-PWA plan with the new Remote Control plan; saved to `/Users/joe/Desktop/allternit-pwa-plan.md`.
+- Got plan approval: unify Dispatch + Remote Control, keep Fly.io for compute VMs, move relay/push to Cloudflare.
+- Created linked worktree `allternit-session-remote-control` on branch `session/remote-control`.
+
+### Next
+1. Phase 3: expose runtime session-state endpoints in `cmd/gizzi-code`.
+2. Phase 3: add Clerk-protected mirror routes in `cmd/allternit-api`.
+3. Phase 3: add `runtime:remote_control` capability and extend SDK.
+4. Phase 2: scaffold Cloudflare push worker.
+5. Phase 0/4: begin unified Remote dashboard UI in `ai.allternit.com`.
+
+### Open questions
+- Should the runtime session API be a new `remote_control.ts` route file or added to existing `session.ts`?
+- Which existing session store/schema should be the source of truth for active sessions (gizzi-code runtime storage, allternit-api beta sessions, or both)?

@@ -41,6 +41,7 @@ const DEFAULT_CAPABILITIES: &[&str] = &[
     "runtime:execute",
     "runtime:files",
     "runtime:terminal",
+    "runtime:remote_control",
     "providers:connect",
     "providers:use",
 ];

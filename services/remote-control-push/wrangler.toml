@@ -1,0 +1,24 @@
+name = "allternit-remote-control-push"
+main = "src/index.ts"
+compatibility_date = "2025-01-01"
+
+# Durable Object that holds a runtime's outbound WebSocket and proxies
+# browser HTTP / WebSocket traffic to it.
+[[durable_objects.bindings]]
+name = "RUNTIME_RELAY"
+class_name = "RuntimeRelay"
+
+[[migrations]]
+tag = "v1"
+new_classes = ["RuntimeRelay"]
+
+[[kv_namespaces]]
+binding = "PUSH_SUBSCRIPTIONS"
+# id = "<production-kv-namespace-id>"
+# preview_id = "<preview-kv-namespace-id>"
+
+[vars]
+# VAPID keys for Web Push. Generate with: npx web-push generate-vapid-keys
+# VAPID_PUBLIC_KEY = "<base64url-public-key>"
+# VAPID_PRIVATE_KEY = "<base64url-private-key>"
+VAPID_SUBJECT = "mailto:remote-control@allternit.com"
