@@ -13,6 +13,7 @@ import {
   type RemoteControlEvent,
   type RemotePermissionRequest,
   type RemoteQuestionRequest,
+  type PushSubscriptionJSON,
 } from '@allternit/sdk/runtime';
 
 export type {
@@ -21,17 +22,23 @@ export type {
   RemoteControlEvent,
   RemotePermissionRequest,
   RemoteQuestionRequest,
+  PushSubscriptionJSON,
 };
 
 const CLOUD_API_BASE = (
   (import.meta as any).env?.NEXT_PUBLIC_ALLTERNIT_CLOUD_API_URL || 'https://allternit-cloud-api.fly.dev'
 ).replace(/\/$/, '');
 
+const PUSH_WORKER_BASE = (
+  (import.meta as any).env?.NEXT_PUBLIC_ALLTERNIT_PUSH_WORKER_URL || undefined
+)?.replace(/\/$/, '');
+
 export interface RemoteControlInit {
   runtimeId: string;
   getToken: () => Promise<string | null>;
   direct?: boolean;
   baseUrl?: string;
+  pushBaseUrl?: string;
 }
 
 export function createRemoteControlClient(init: RemoteControlInit): RemoteControlClient {
@@ -40,6 +47,7 @@ export function createRemoteControlClient(init: RemoteControlInit): RemoteContro
     runtimeId: init.direct ? undefined : init.runtimeId,
     direct: init.direct ?? false,
     getToken: init.getToken,
+    pushBaseUrl: init.pushBaseUrl ?? PUSH_WORKER_BASE,
   };
   return new RemoteControlClient(opts);
 }

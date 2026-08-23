@@ -91,6 +91,7 @@ use allternit_api::playground_routes::playground_router;
 use allternit_api::provider_routes::provider_router;
 use allternit_api::rate_limit::rate_limit_middleware;
 use allternit_api::rails::{rails_router, RailsState};
+use allternit_api::remote_control_routes::remote_control_router;
 use allternit_api::rails_client_impl::create_local_rails_client;
 use allternit_api::runtime_backend_routes::runtime_backend_router;
 use allternit_api::runtime_discover_routes::runtime_discover_router;
@@ -349,6 +350,7 @@ async fn main() {
         .merge(cowork_team_router())
         .merge(board_stream_router())
         .merge(runtime_backend_router())
+        .merge(remote_control_router())
         .merge(agents_v1_router())
         .merge(bot_desktop_router())
         .merge(allternit_api::connector_routes::connector_router())

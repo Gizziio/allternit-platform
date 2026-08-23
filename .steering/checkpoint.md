@@ -648,3 +648,89 @@ Implement the approved unified Remote Control plan: evolve Dispatch into a multi
 ### Open questions
 - Should the runtime session API be a new `remote_control.ts` route file or added to existing `session.ts`?
 - Which existing session store/schema should be the source of truth for active sessions (gizzi-code runtime storage, allternit-api beta sessions, or both)?
+
+---
+
+## Allternit Remote Control — Phase 3 merged into main (2026-08-23)
+
+### Goal
+Complete Phase 3 implementation of the unified Remote Control plan and merge into `main`, then continue with push-subscription UI, deployment, and end-to-end verification.
+
+### Just did
+- Implemented and committed in `session/remote-control` worktree:
+  - `cmd/gizzi-code/src/runtime/server/routes/remote_control.ts`: `GET /sessions`, `GET /sessions/:id`, `POST /sessions/:id/messages`, `POST /sessions/:id/abort`, `GET /sessions/:id/events` SSE.
+  - Mounted routes in `cmd/gizzi-code/src/runtime/server/server.ts` under `/v1/remote-control` and `/v1beta/remote-control`.
+  - Added `runtime:remote_control` capability in `cmd/agent-daemon/src/index.ts` and `cmd/allternit-cloud-api/src/routes/runtime_pairing.rs`.
+  - Updated cloud relay capability mapping in `cmd/allternit-cloud-api/src/routes/runtime_relay.rs`.
+  - Extended SDK `RemoteControlClient` in `sdk/allternit-sdk/src/ai-runtime/runtime/index.ts` with direct + relay modes, SSE/WebSocket streaming, and permission/question methods.
+  - Scaffolded Cloudflare worker `services/remote-control-push/` with Durable Object relay and push subscription endpoints.
+  - Built `RemoteSessionPanel.tsx` integrated into `surfaces/ai.allternit.com/src/views/DispatchView.tsx` with Handoff/Remote sessions tabs and pending action UI.
+  - Added PWA manifest, service worker, headers, and generated 192/512 icons to `surfaces/ai.allternit.com/public/`.
+- Verification before commit:
+  - `pnpm run build:runtime` in SDK: ✅
+  - `pnpm run typecheck` in `services/remote-control-push`: ✅
+  - `cargo check -p allternit-cloud-api`: ✅ (pre-existing warnings only)
+  - `sw.js` syntax check and `manifest.json` lint: ✅
+  - `bun run typecheck` in `cmd/gizzi-code`: blocked only by pre-existing `packages/sdk/scripts/verify-sdk.ts` missing dist artifacts.
+- Merged `session/remote-control` into `main` (merge commit `059d921c5`).
+
+### Merge note
+The shared main checkout had uncommitted `session/connector-installer` work. It was auto-stashed (`stash@{0}`: "Auto-stash before merging session/remote-control") so the merge could proceed. The stash pop failed because those changes conflict with `main`; the stash is preserved for manual restoration. The `session/remote-control` worktree was then fast-forwarded to `main`.
+
+### Next
+1. Add Clerk-protected remote-control mirror routes in `cmd/allternit-api`.
+2. Add push subscription registration UI in `RemoteSessionPanel`.
+3. Wire surface push registration to `services/remote-control-push` endpoints.
+4. Add Cloudflare Pages/Worker deployment config and documentation.
+5. Run end-to-end verification of remote control flow.
+
+### Open questions
+- Should the Clerk mirror routes proxy directly to the runtime, or should they read from the same session store the runtime will sync to?
+- Do we need VAPID keys for web push now, or can the first version use only the Cloudflare worker's internal push relay?
+
+---
+
+## Allternit Remote Control — Phase 3 continuation (2026-08-23)
+
+### Goal
+Add Clerk-protected mirror routes, Web Push subscription UI, Cloudflare deployment config, and verify the end-to-end remote control flow.
+
+### Just did
+- Added `cmd/allternit-api/src/remote_control_routes.rs` with Clerk-protected mirror routes under `/api/v1/remote-control/*`:
+  - `GET /remote-control/sessions`
+  - `GET /remote-control/sessions/:id`
+  - `POST /remote-control/sessions/:id/messages`
+  - `POST /remote-control/sessions/:id/abort`
+  - `GET /remote-control/sessions/:id/events` (SSE proxy)
+  - Thin proxy to the local paired Gizzi runtime at `/v1/remote-control/*`.
+- Wired the router into `cmd/allternit-api/src/main.rs` and `cmd/allternit-api/src/lib.rs`.
+- Made `agent_session_routes::gizzi_base` `pub(crate)` so the mirror can share the runtime URL resolution.
+- Extended SDK `RemoteControlClient` (`sdk/allternit-sdk/src/ai-runtime/runtime/index.ts`):
+  - Added `pushBaseUrl` option.
+  - Added `PushSubscriptionJSON` type export.
+  - Added `getVapidPublicKey()`, `subscribePush()`, and `unsubscribePush()`.
+- Updated surface `surfaces/ai.allternit.com/src/lib/dispatch/remote-control.ts`:
+  - Reads `NEXT_PUBLIC_ALLTERNIT_PUSH_WORKER_URL` and passes it to the SDK.
+  - Exports `PushSubscriptionJSON`.
+- Added `NEXT_PUBLIC_ALLTERNIT_PUSH_WORKER_URL` to `surfaces/ai.allternit.com/.env.example`.
+- Added a bell toggle to `RemoteSessionPanel` that registers `/sw.js`, subscribes to Web Push with the worker's VAPID key, and stores the subscription keyed by runtime.
+- Added `GET /push/vapid-public-key` to `services/remote-control-push/src/index.ts`.
+- Added `.github/workflows/deploy-remote-control-push.yml` for automated Cloudflare Worker deployments on `main`.
+- Added `services/remote-control-push/README.md` with routes, local dev, VAPID key setup, KV setup, and deploy instructions.
+
+### Verification
+- `cargo check -p allternit-api`: ✅ (33 pre-existing warnings, no new errors)
+- `pnpm run build:runtime` in SDK: ✅
+- `pnpm exec tsc --project tsconfig.typecheck.json --noEmit` in `surfaces/ai.allternit.com` (touched files): ✅
+- `pnpm run typecheck` in `services/remote-control-push`: ✅
+
+### Next
+1. Stage and commit the Phase 3 continuation changes in the `session/remote-control` worktree.
+2. Merge the follow-up commit into `main` when approved.
+3. Generate real VAPID keys and create/bind the production KV namespace.
+4. Deploy the worker and set `NEXT_PUBLIC_ALLTERNIT_PUSH_WORKER_URL` for the platform surface.
+5. End-to-end browser test: pair a runtime, open the remote panel, enable push, trigger a permission/question, and confirm the notification arrives.
+
+### Open questions
+- Should the platform API mirror also expose a `/push/notify` proxy so runtimes can trigger pushes through the existing cloud relay instead of calling the worker directly?
+- Do we want per-runtime push opt-in persisted in the platform DB, or is the browser's Push subscription + KV state sufficient?

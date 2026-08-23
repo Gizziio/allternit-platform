@@ -252,6 +252,15 @@ export interface RemoteSessionDetail {
   messages: RemoteMessage[];
 }
 
+export interface PushSubscriptionJSON {
+  endpoint: string;
+  expirationTime?: number | null;
+  keys?: {
+    p256dh?: string;
+    auth?: string;
+  };
+}
+
 export interface RemoteControlClientOptions {
   /** Base URL of the platform API or a direct gizzi-code runtime. */
   baseUrl: string;
@@ -266,6 +275,12 @@ export interface RemoteControlClientOptions {
    * prefixed with /v1 instead of /api/v1 and no runtime relay proxy is used.
    */
   direct?: boolean;
+  /**
+   * Optional base URL of the Cloudflare push worker. When provided the client
+   * can register Web Push subscriptions for proactive remote-control
+   * notifications.
+   */
+  pushBaseUrl?: string;
 }
 
 export type RemoteControlEvent =
@@ -304,12 +319,14 @@ export interface RemoteQuestionRequest {
 
 export class RemoteControlClient {
   private readonly baseUrl: string;
+  private readonly pushBaseUrl?: string;
   private readonly runtimeId?: string;
   private readonly getToken?: () => Promise<string | null | undefined>;
   private readonly direct: boolean;
 
   constructor(options: RemoteControlClientOptions) {
     this.baseUrl = options.baseUrl.replace(/\/$/, "");
+    this.pushBaseUrl = options.pushBaseUrl?.replace(/\/$/, "");
     this.runtimeId = options.runtimeId;
     this.getToken = options.getToken;
     this.direct = options.direct ?? false;
@@ -424,6 +441,45 @@ export class RemoteControlClient {
     return this.v1Json<boolean>(`/v1/question/${encodeURIComponent(requestID)}/reject`, {
       method: "POST",
     });
+  }
+
+  async getVapidPublicKey(): Promise<string> {
+    const url = `${this.pushBaseUrl ?? this.baseUrl}/push/vapid-public-key`;
+    const res = await fetch(url, { headers: await this.authHeaders() });
+    if (!res.ok) throw new RuntimeApiError("Failed to fetch VAPID public key", res.status, await res.text());
+    const data = (await res.json()) as { publicKey: string };
+    return data.publicKey;
+  }
+
+  async subscribePush(subscription: PushSubscriptionJSON): Promise<{ ok: boolean }> {
+    const runtimeId = this.assertRuntimeId();
+    const url = `${this.pushBaseUrl ?? this.baseUrl}/push/subscribe/${encodeURIComponent(runtimeId)}`;
+    const res = await fetch(url, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", ...(await this.authHeaders()) },
+      body: JSON.stringify(subscription),
+    });
+    if (!res.ok) throw new RuntimeApiError("Failed to subscribe push", res.status, await res.text());
+    return res.json() as Promise<{ ok: boolean }>;
+  }
+
+  async unsubscribePush(endpoint: string): Promise<{ ok: boolean }> {
+    const runtimeId = this.assertRuntimeId();
+    const url = `${this.pushBaseUrl ?? this.baseUrl}/push/unsubscribe/${encodeURIComponent(runtimeId)}`;
+    const res = await fetch(url, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", ...(await this.authHeaders()) },
+      body: JSON.stringify({ endpoint }),
+    });
+    if (!res.ok) throw new RuntimeApiError("Failed to unsubscribe push", res.status, await res.text());
+    return res.json() as Promise<{ ok: boolean }>;
+  }
+
+  private assertRuntimeId(): string {
+    if (!this.runtimeId) {
+      throw new Error("RemoteControlClient requires runtimeId for push subscription");
+    }
+    return this.runtimeId;
   }
 
   streamEvents(sessionID: string): AsyncIterable<RemoteControlEvent> {

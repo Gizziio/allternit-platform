@@ -196,6 +196,14 @@ export interface RemoteSessionDetail {
     status: RemoteSessionStatus;
     messages: RemoteMessage[];
 }
+export interface PushSubscriptionJSON {
+    endpoint: string;
+    expirationTime?: number | null;
+    keys?: {
+        p256dh?: string;
+        auth?: string;
+    };
+}
 export interface RemoteControlClientOptions {
     /** Base URL of the platform API or a direct gizzi-code runtime. */
     baseUrl: string;
@@ -210,6 +218,12 @@ export interface RemoteControlClientOptions {
      * prefixed with /v1 instead of /api/v1 and no runtime relay proxy is used.
      */
     direct?: boolean;
+    /**
+     * Optional base URL of the Cloudflare push worker. When provided the client
+     * can register Web Push subscriptions for proactive remote-control
+     * notifications.
+     */
+    pushBaseUrl?: string;
 }
 export type RemoteControlEvent = {
     type: "remote.connected";
@@ -285,6 +299,7 @@ export interface RemoteQuestionRequest {
 }
 export declare class RemoteControlClient {
     private readonly baseUrl;
+    private readonly pushBaseUrl?;
     private readonly runtimeId?;
     private readonly getToken?;
     private readonly direct;
@@ -314,6 +329,14 @@ export declare class RemoteControlClient {
     listPendingQuestions(): Promise<RemoteQuestionRequest[]>;
     replyQuestion(requestID: string, answers: string[][]): Promise<boolean>;
     rejectQuestion(requestID: string): Promise<boolean>;
+    getVapidPublicKey(): Promise<string>;
+    subscribePush(subscription: PushSubscriptionJSON): Promise<{
+        ok: boolean;
+    }>;
+    unsubscribePush(endpoint: string): Promise<{
+        ok: boolean;
+    }>;
+    private assertRuntimeId;
     streamEvents(sessionID: string): AsyncIterable<RemoteControlEvent>;
 }
 export declare class RuntimeApiError extends Error {

@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
-import { Spinner, PaperPlaneRight, Circle, Pause, Check, X } from '@phosphor-icons/react';
+import { Spinner, PaperPlaneRight, Circle, Pause, Check, X, Bell, BellSlash } from '@phosphor-icons/react';
 import { cn } from '@/lib/utils';
 import { useToast } from '@/hooks/use-toast';
 import {
@@ -11,6 +11,7 @@ import {
   type RemoteControlEvent,
   type RemotePermissionRequest,
   type RemoteQuestionRequest,
+  type PushSubscriptionJSON,
 } from '@/lib/dispatch/remote-control';
 
 export interface RemoteSessionPanelProps {
@@ -39,6 +40,9 @@ export function RemoteSessionPanel({ runtimeId, getToken, baseUrl, direct }: Rem
   const [pendingQuestions, setPendingQuestions] = useState<RemoteQuestionRequest[]>([]);
   const [permissionLoading, setPermissionLoading] = useState<Record<string, boolean>>({});
   const [questionAnswers, setQuestionAnswers] = useState<Record<string, string[][]>>({});
+  const [pushEnabled, setPushEnabled] = useState(false);
+  const [pushLoading, setPushLoading] = useState(false);
+  const pushSupported = typeof navigator !== 'undefined' && 'serviceWorker' in navigator && 'PushManager' in window;
 
   const fetchSessions = useCallback(async () => {
     try {
@@ -56,6 +60,15 @@ export function RemoteSessionPanel({ runtimeId, getToken, baseUrl, direct }: Rem
     const interval = setInterval(fetchSessions, 10000);
     return () => clearInterval(interval);
   }, [fetchSessions]);
+
+  useEffect(() => {
+    if (!pushSupported) return;
+    void navigator.serviceWorker.ready.then((registration) => {
+      void registration.pushManager.getSubscription().then((subscription) => {
+        setPushEnabled(!!subscription);
+      });
+    });
+  }, [pushSupported]);
 
   const fetchPendingActions = useCallback(async () => {
     try {
@@ -105,15 +118,17 @@ export function RemoteSessionPanel({ runtimeId, getToken, baseUrl, direct }: Rem
           if (!active) break;
           setEvents((prev) => [...prev, event]);
           if (event.type === 'permission.asked') {
+            const permission = event.properties as RemotePermissionRequest;
             setPendingPermissions((prev) => {
-              if (prev.some((p) => p.id === event.properties.id)) return prev;
-              return [...prev, event.properties];
+              if (prev.some((p) => p.id === permission.id)) return prev;
+              return [...prev, permission];
             });
           }
           if (event.type === 'question.asked') {
+            const question = event.properties as RemoteQuestionRequest;
             setPendingQuestions((prev) => {
-              if (prev.some((q) => q.id === event.properties.id)) return prev;
-              return [...prev, event.properties];
+              if (prev.some((q) => q.id === question.id)) return prev;
+              return [...prev, question];
             });
           }
         }
@@ -201,6 +216,45 @@ export function RemoteSessionPanel({ runtimeId, getToken, baseUrl, direct }: Rem
     [pendingQuestions, selectedSessionId]
   );
 
+  async function handlePushToggle() {
+    if (!pushSupported) {
+      addToast({ title: 'Not supported', description: 'Push notifications are not supported on this browser.', type: 'error' });
+      return;
+    }
+    setPushLoading(true);
+    try {
+      const registration = await navigator.serviceWorker.register('/sw.js');
+      await navigator.serviceWorker.ready;
+
+      if (pushEnabled) {
+        const subscription = await registration.pushManager.getSubscription();
+        if (subscription) {
+          await client.unsubscribePush(subscription.endpoint);
+          await subscription.unsubscribe();
+        }
+        setPushEnabled(false);
+        addToast({ title: 'Notifications off', description: 'Push notifications disabled for this runtime.', type: 'success' });
+      } else {
+        const vapidKey = await client.getVapidPublicKey().catch(() => null);
+        if (!vapidKey) {
+          addToast({ title: 'Not configured', description: 'Push worker is not configured.', type: 'error' });
+          return;
+        }
+        const subscription = await registration.pushManager.subscribe({
+          userVisibleOnly: true,
+          applicationServerKey: urlBase64ToUint8Array(vapidKey) as BufferSource,
+        });
+        await client.subscribePush(subscription.toJSON() as PushSubscriptionJSON);
+        setPushEnabled(true);
+        addToast({ title: 'Notifications on', description: 'You will receive push notifications for this runtime.', type: 'success' });
+      }
+    } catch (error) {
+      addToast({ title: 'Error', description: error instanceof Error ? error.message : 'Failed to toggle push notifications', type: 'error' });
+    } finally {
+      setPushLoading(false);
+    }
+  }
+
   if (loading) {
     return (
       <div className="flex items-center justify-center h-48 text-[var(--text-tertiary)]">
@@ -214,8 +268,30 @@ export function RemoteSessionPanel({ runtimeId, getToken, baseUrl, direct }: Rem
     <div className="flex h-full min-h-[400px] border border-[var(--border-default)] rounded-2xl overflow-hidden bg-[var(--bg-elevated)]">
       {/* Session list */}
       <div className="w-64 border-r border-[var(--border-default)] flex flex-col">
-        <div className="px-4 py-3 border-b border-[var(--border-default)] text-sm font-medium text-[var(--text-primary)]">
-          Active Sessions
+        <div className="px-4 py-3 border-b border-[var(--border-default)] flex items-center justify-between">
+          <span className="text-sm font-medium text-[var(--text-primary)]">Active Sessions</span>
+          {pushSupported && (
+            <button
+              type="button"
+              onClick={() => void handlePushToggle()}
+              disabled={pushLoading}
+              title={pushEnabled ? 'Disable push notifications' : 'Enable push notifications'}
+              className={cn(
+                'p-1.5 rounded-lg transition-colors disabled:opacity-40',
+                pushEnabled
+                  ? 'bg-blue-500/10 text-blue-500 hover:bg-blue-500/20'
+                  : 'text-[var(--text-tertiary)] hover:bg-[var(--surface-hover)] hover:text-[var(--text-primary)]'
+              )}
+            >
+              {pushLoading ? (
+                <Spinner className="animate-spin" size={16} />
+              ) : pushEnabled ? (
+                <Bell size={16} weight="fill" />
+              ) : (
+                <BellSlash size={16} />
+              )}
+            </button>
+          )}
         </div>
         <div className="flex-1 overflow-y-auto">
           {sessions.length === 0 && (
@@ -371,6 +447,13 @@ function StatusDot({ status }: { status: string }) {
       )}
     />
   );
+}
+
+function urlBase64ToUint8Array(base64String: string): Uint8Array {
+  const padding = '='.repeat((4 - (base64String.length % 4)) % 4);
+  const base64 = (base64String + padding).replace(/-/g, '+').replace(/_/g, '/');
+  const rawData = window.atob(base64);
+  return Uint8Array.from(rawData.split('').map((char) => char.charCodeAt(0)));
 }
 
 function PendingPermissionCard({
