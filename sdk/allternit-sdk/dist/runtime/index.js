@@ -92,11 +92,13 @@ export class RuntimeClient {
 }
 export class RemoteControlClient {
     baseUrl;
+    pushBaseUrl;
     runtimeId;
     getToken;
     direct;
     constructor(options) {
         this.baseUrl = options.baseUrl.replace(/\/$/, "");
+        this.pushBaseUrl = options.pushBaseUrl?.replace(/\/$/, "");
         this.runtimeId = options.runtimeId;
         this.getToken = options.getToken;
         this.direct = options.direct ?? false;
@@ -189,6 +191,44 @@ export class RemoteControlClient {
         return this.v1Json(`/v1/question/${encodeURIComponent(requestID)}/reject`, {
             method: "POST",
         });
+    }
+    async getVapidPublicKey() {
+        const url = `${this.pushBaseUrl ?? this.baseUrl}/push/vapid-public-key`;
+        const res = await fetch(url, { headers: await this.authHeaders() });
+        if (!res.ok)
+            throw new RuntimeApiError("Failed to fetch VAPID public key", res.status, await res.text());
+        const data = (await res.json());
+        return data.publicKey;
+    }
+    async subscribePush(subscription) {
+        const runtimeId = this.assertRuntimeId();
+        const url = `${this.pushBaseUrl ?? this.baseUrl}/push/subscribe/${encodeURIComponent(runtimeId)}`;
+        const res = await fetch(url, {
+            method: "POST",
+            headers: { "Content-Type": "application/json", ...(await this.authHeaders()) },
+            body: JSON.stringify(subscription),
+        });
+        if (!res.ok)
+            throw new RuntimeApiError("Failed to subscribe push", res.status, await res.text());
+        return res.json();
+    }
+    async unsubscribePush(endpoint) {
+        const runtimeId = this.assertRuntimeId();
+        const url = `${this.pushBaseUrl ?? this.baseUrl}/push/unsubscribe/${encodeURIComponent(runtimeId)}`;
+        const res = await fetch(url, {
+            method: "POST",
+            headers: { "Content-Type": "application/json", ...(await this.authHeaders()) },
+            body: JSON.stringify({ endpoint }),
+        });
+        if (!res.ok)
+            throw new RuntimeApiError("Failed to unsubscribe push", res.status, await res.text());
+        return res.json();
+    }
+    assertRuntimeId() {
+        if (!this.runtimeId) {
+            throw new Error("RemoteControlClient requires runtimeId for push subscription");
+        }
+        return this.runtimeId;
     }
     streamEvents(sessionID) {
         const path = `/sessions/${encodeURIComponent(sessionID)}/events`;

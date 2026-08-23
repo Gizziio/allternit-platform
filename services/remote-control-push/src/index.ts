@@ -64,6 +64,12 @@ app.get("/socket", async (c) => {
 
 // Push subscription management. Subscriptions are keyed by runtime so the
 // worker can fan out notifications when a runtime needs user attention.
+app.get("/push/vapid-public-key", async (c) => {
+  const key = c.env.VAPID_PUBLIC_KEY;
+  if (!key) return c.json({ error: "vapid_not_configured" }, 503);
+  return c.json({ publicKey: key });
+});
+
 app.post("/push/subscribe/:runtimeId", async (c) => {
   const runtimeId = c.req.param("runtimeId");
   const body = (await c.req.json()) as PushSubscriptionJSON;

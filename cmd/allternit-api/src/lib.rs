@@ -115,6 +115,7 @@ pub mod pricing;
 pub mod provider_routes;
 pub mod queue_routes;
 pub mod rails;
+pub mod remote_control_routes;
 pub mod rate_limit;
 pub mod rails_client_impl;
 pub mod rbac;
