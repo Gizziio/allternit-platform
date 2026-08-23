@@ -10,12 +10,11 @@ class_name = "RuntimeRelay"
 
 [[migrations]]
 tag = "v1"
-new_classes = ["RuntimeRelay"]
+new_sqlite_classes = ["RuntimeRelay"]
 
 [[kv_namespaces]]
 binding = "PUSH_SUBSCRIPTIONS"
-# id = "<production-kv-namespace-id>"
-# preview_id = "<preview-kv-namespace-id>"
+id = "7a159a562ff24a5f9e9a1fe04d00abda"
 
 [vars]
 # VAPID keys for Web Push. Generate with: npx web-push generate-vapid-keys
