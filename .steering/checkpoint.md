@@ -734,3 +734,39 @@ Add Clerk-protected mirror routes, Web Push subscription UI, Cloudflare deployme
 ### Open questions
 - Should the platform API mirror also expose a `/push/notify` proxy so runtimes can trigger pushes through the existing cloud relay instead of calling the worker directly?
 - Do we want per-runtime push opt-in persisted in the platform DB, or is the browser's Push subscription + KV state sufficient?
+
+---
+
+## Allternit Remote Control — real-world deployment steps (2026-08-23)
+
+### Goal
+Generate VAPID keys, create Cloudflare resources, deploy the push worker, configure the platform Pages project, and verify the endpoints.
+
+### Just did
+- Generated VAPID keys with `npx web-push generate-vapid-keys`.
+- Created Cloudflare KV namespace `allternit-remote-control-push-PUSH_SUBSCRIPTIONS` with id `7a159a562ff24a5f9e9a1fe04d00abda`.
+- Bound the KV namespace in `services/remote-control-push/wrangler.toml`.
+- Switched Durable Object migration from `new_classes` to `new_sqlite_classes` for free-plan compatibility.
+- Set worker secrets `VAPID_PUBLIC_KEY` and `VAPID_PRIVATE_KEY` via `wrangler secret put`.
+- Deployed the worker: `https://allternit-remote-control-push.allternitpbc.workers.dev`
+- Set `NEXT_PUBLIC_ALLTERNIT_PUSH_WORKER_URL=https://allternit-remote-control-push.allternitpbc.workers.dev` in the `ai-allternit` Pages project (production environment) via the Cloudflare API.
+- Verified worker endpoints with curl:
+  - `GET /push/vapid-public-key` → returns public key ✅
+  - `POST /push/subscribe/:runtimeId` → stores subscription ✅
+  - `POST /push/notify/:runtimeId` → attempts delivery, reports sent/failed ✅
+  - `POST /push/unsubscribe/:runtimeId` → removes subscription ✅
+- Committed the wrangler.toml changes and merged into `main`.
+
+### Verification
+- Worker live URL responds correctly ✅
+- KV namespace bound and writable ✅
+- VAPID key retrievable by browser clients ✅
+
+### Remaining
+1. Push `main` to GitHub so the Pages project rebuilds with the new env var.
+2. Run a live browser end-to-end test: pair a runtime, open the remote panel on a phone/PWA, enable push, trigger a permission/question, and confirm the notification arrives.
+
+### Important notes
+- VAPID private key lives only as a Cloudflare Worker secret; it is NOT in the repo.
+- The worker is on the Cloudflare free plan, which required the `new_sqlite_classes` Durable Object migration.
+- `main` is 6 commits ahead of `origin/main`.
