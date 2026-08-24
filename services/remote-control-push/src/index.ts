@@ -1,4 +1,5 @@
 import { Hono } from "hono";
+import { cors } from "hono/cors";
 import { DurableObject } from "cloudflare:workers";
 
 /**
@@ -26,6 +27,9 @@ export interface Env {
 }
 
 const app = new Hono<{ Bindings: Env }>();
+
+// Allow the dashboard / PWA to call the relay from any origin.
+app.use("/*", cors({ origin: "*", allowMethods: ["GET", "POST", "OPTIONS"], allowHeaders: ["Content-Type", "Authorization"] }));
 
 app.get("/connect/:runtimeId", async (c) => {
   const runtimeId = c.req.param("runtimeId");
@@ -112,7 +116,12 @@ app.post("/push/notify/:runtimeId", async (c) => {
       }
     })
   );
-  return c.json({ ok: true, sent: results.filter((r) => r.ok).length, failed: results.filter((r) => !r.ok).length });
+  return c.json({
+    ok: true,
+    sent: results.filter((r) => r.ok).length,
+    failed: results.filter((r) => !r.ok).length,
+    details: results,
+  });
 });
 
 export default app;
@@ -500,7 +509,7 @@ async function signVapidJWT(env: Env, audience: string): Promise<string> {
   const encodedPayload = btoa(JSON.stringify(payload)).replace(/=/g, "").replace(/\+/g, "-").replace(/\//g, "_");
   const signingInput = `${encodedHeader}.${encodedPayload}`;
 
-  const key = await importVapidPrivateKey(env.VAPID_PRIVATE_KEY);
+  const key = await importVapidPrivateKey(env.VAPID_PRIVATE_KEY, env.VAPID_PUBLIC_KEY);
   const signature = await crypto.subtle.sign(
     { name: "ECDSA", hash: "SHA-256" },
     key,
@@ -514,19 +523,29 @@ async function signVapidJWT(env: Env, audience: string): Promise<string> {
   return `${signingInput}.${encodedSignature}`;
 }
 
-async function importVapidPrivateKey(privateKeyBase64: string): Promise<CryptoKey> {
+async function importVapidPrivateKey(privateKeyBase64: string, publicKeyBase64: string): Promise<CryptoKey> {
   const privateKeyBytes = base64UrlToUint8Array(privateKeyBase64);
-  // VAPID private key is a 32-byte scalar for P-256.
-  // We derive the public key point from the private key using the Web Crypto
-  // subtle generateKey + export workaround is not straightforward, so we
-  // import as a raw ECDH private key which Workers supports for ECDSA signing.
+  const publicKeyBytes = base64UrlToUint8Array(publicKeyBase64);
+  // VAPID public key is an uncompressed P-256 point: 0x04 || x || y.
+  if (publicKeyBytes.length !== 65 || publicKeyBytes[0] !== 0x04) {
+    throw new Error("VAPID public key must be an uncompressed P-256 point");
+  }
+  const x = bytesToBase64Url(publicKeyBytes.slice(1, 33));
+  const y = bytesToBase64Url(publicKeyBytes.slice(33, 65));
+  const d = bytesToBase64Url(privateKeyBytes);
+
   return crypto.subtle.importKey(
-    "raw",
-    privateKeyBytes,
+    "jwk",
+    { kty: "EC", crv: "P-256", x, y, d, ext: false },
     { name: "ECDSA", namedCurve: "P-256" },
     false,
     ["sign"]
   );
+}
+
+function bytesToBase64Url(bytes: Uint8Array): string {
+  const binary = String.fromCharCode(...bytes);
+  return btoa(binary).replace(/=/g, "").replace(/\+/g, "-").replace(/\//g, "_");
 }
 
 function base64UrlToUint8Array(input: string): Uint8Array {
