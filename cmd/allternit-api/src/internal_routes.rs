@@ -29,6 +29,7 @@ pub fn internal_router() -> Router<Arc<AppState>> {
             post(resolve_credential),
         )
         .route("/internal/usage-events", post(ingest_usage_event))
+        .route("/internal/push/notify/:runtime_id", post(notify_push))
         // Headless MCP path for the local gizzi daemon's MCP client — see
         // connector_routes::mcp_proxy_internal for the trust model.
         .route(
@@ -193,5 +194,62 @@ async fn ingest_usage_event(
         Ok(Ok(())) => (StatusCode::CREATED, Json(json!({"computed_cost_cents": cost_cents}))).into_response(),
         Ok(Err((status, body))) => (status, Json(body)).into_response(),
         Err(_) => (StatusCode::INTERNAL_SERVER_ERROR, Json(json!({"error": "task_join_error"}))).into_response(),
+    }
+}
+
+#[derive(Debug, Deserialize)]
+struct PushNotifyRequest {
+    title: Option<String>,
+    body: Option<String>,
+    tag: Option<String>,
+    data: Option<Value>,
+}
+
+/// Proxies a push-notification request from a paired runtime to the Cloudflare
+/// Remote Control push worker. Runtimes present the internal service token
+/// instead of a Clerk JWT, so the request stays within the platform trust
+/// boundary rather than calling the worker directly.
+async fn notify_push(
+    State(state): State<Arc<AppState>>,
+    headers: HeaderMap,
+    Path(runtime_id): Path<String>,
+    Json(body): Json<PushNotifyRequest>,
+) -> impl IntoResponse {
+    if let Err(status) = require_internal_token(&headers, &state) {
+        return (status, Json(json!({"error": "unauthorized"}))).into_response();
+    }
+
+    let Some(worker_url) = state.config.push_worker_url() else {
+        return (
+            StatusCode::SERVICE_UNAVAILABLE,
+            Json(json!({"error": "push_worker_not_configured"})),
+        )
+            .into_response();
+    };
+
+    let url = format!("{}/push/notify/{}", worker_url.trim_end_matches('/'), runtime_id);
+    let payload = json!({
+        "title": body.title,
+        "body": body.body,
+        "tag": body.tag,
+        "data": body.data,
+    });
+
+    match reqwest::Client::new().post(url).json(&payload).send().await {
+        Ok(response) => {
+            let status = StatusCode::from_u16(response.status().as_u16())
+                .unwrap_or(StatusCode::BAD_GATEWAY);
+            let body = response.text().await.unwrap_or_else(|_| "{}".to_string());
+            let body_json: Value = serde_json::from_str(&body).unwrap_or(json!({"raw": body}));
+            (status, Json(body_json)).into_response()
+        }
+        Err(error) => {
+            warn!("push notify proxy failed: {}", error);
+            (
+                StatusCode::BAD_GATEWAY,
+                Json(json!({"error": format!("push worker request failed: {}", error)})),
+            )
+                .into_response()
+        }
     }
 }
