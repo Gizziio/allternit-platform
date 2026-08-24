@@ -1,0 +1,114 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Remote Control Push E2E Test</title>
+  <style>
+    body { font-family: system-ui, sans-serif; background: #0b0b0c; color: #e5e5e5; padding: 2rem; }
+    button { padding: 0.75rem 1.25rem; border-radius: 0.5rem; border: none; cursor: pointer; font-weight: 600; }
+    #subscribe { background: #3b82f6; color: white; }
+    #notify { background: #10b981; color: white; margin-left: 0.5rem; }
+    #log { margin-top: 1rem; padding: 1rem; background: #171717; border-radius: 0.5rem; font-family: monospace; white-space: pre-wrap; min-height: 200px; }
+    .error { color: #ef4444; }
+    .success { color: #22c55e; }
+  </style>
+</head>
+<body>
+  <h1>Allternit Remote Control — Push E2E Test</h1>
+  <p>Worker: <code id="worker-url">https://allternit-remote-control-push.allternitpbc.workers.dev</code></p>
+  <p>Runtime ID: <code>screen-record-test-runtime</code></p>
+  <button id="subscribe">1. Subscribe to push</button>
+  <button id="notify" disabled>2. Send test push</button>
+  <button id="clear" style="margin-left:0.5rem;background:#525252;color:white;">Clear log</button>
+  <div id="log"></div>
+
+  <script>
+    const workerUrl = document.getElementById('worker-url').textContent;
+    const runtimeId = 'screen-record-test-runtime';
+    const logEl = document.getElementById('log');
+    const subscribeBtn = document.getElementById('subscribe');
+    const notifyBtn = document.getElementById('notify');
+
+    function log(msg, type = '') {
+      const line = `[${new Date().toLocaleTimeString()}] ${msg}`;
+      const span = document.createElement('div');
+      span.className = type;
+      span.textContent = line;
+      logEl.appendChild(span);
+      console.log(line);
+    }
+
+    function urlBase64ToUint8Array(base64String) {
+      const padding = '='.repeat((4 - (base64String.length % 4)) % 4);
+      const base64 = (base64String + padding).replace(/-/g, '+').replace(/_/g, '/');
+      const raw = window.atob(base64);
+      return Uint8Array.from(raw.split('').map(c => c.charCodeAt(0)));
+    }
+
+    let subscription = null;
+
+    subscribeBtn.addEventListener('click', async () => {
+      try {
+        log('Registering service worker...');
+        const reg = await navigator.serviceWorker.register('./sw.js');
+        await navigator.serviceWorker.ready;
+        log('Service worker registered ✅');
+
+        log('Fetching VAPID public key...');
+        const vapidRes = await fetch(`${workerUrl}/push/vapid-public-key`);
+        if (!vapidRes.ok) throw new Error('Failed to fetch VAPID key');
+        const { publicKey } = await vapidRes.json();
+        log(`VAPID key received: ${publicKey.slice(0, 20)}... ✅`);
+
+        log('Requesting notification permission...');
+        const perm = await Notification.requestPermission();
+        log(`Notification permission: ${perm}`);
+        if (perm !== 'granted') throw new Error('Permission denied');
+
+        log('Subscribing to push...');
+        subscription = await reg.pushManager.subscribe({
+          userVisibleOnly: true,
+          applicationServerKey: urlBase64ToUint8Array(publicKey)
+        });
+        log(`Subscribed: ${subscription.endpoint.slice(0, 60)}... ✅`);
+
+        log('Sending subscription to worker...');
+        const subRes = await fetch(`${workerUrl}/push/subscribe/${runtimeId}`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(subscription.toJSON())
+        });
+        if (!subRes.ok) throw new Error('Subscribe failed: ' + await subRes.text());
+        log('Subscription stored on worker ✅');
+        notifyBtn.disabled = false;
+
+        if (new URLSearchParams(location.search).has('autorun')) {
+          log('Autorun enabled — sending test push in 1s...');
+          setTimeout(() => notifyBtn.click(), 1000);
+        }
+      } catch (err) {
+        log('Error: ' + err.message, 'error');
+        console.error(err);
+      }
+    });
+
+    notifyBtn.addEventListener('click', async () => {
+      try {
+        log('Sending notify request...');
+        const res = await fetch(`${workerUrl}/push/notify/${runtimeId}`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ title: 'Allternit Remote', body: 'Push notification works! 🎉' })
+        });
+        const data = await res.json();
+        log(`Notify response: ${JSON.stringify(data)} ✅`);
+      } catch (err) {
+        log('Notify error: ' + err.message, 'error');
+      }
+    });
+
+    document.getElementById('clear').addEventListener('click', () => logEl.innerHTML = '');
+  </script>
+</body>
+</html>
