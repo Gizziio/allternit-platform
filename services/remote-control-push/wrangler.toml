@@ -1,0 +1,23 @@
+name = "allternit-remote-control-push"
+main = "src/index.ts"
+compatibility_date = "2024-08-15"
+compatibility_flags = ["nodejs_compat"]
+
+# Custom domain for the push worker.
+[[routes]]
+pattern = "push.remotecontrol.allternit.com"
+custom_domain = true
+
+# KV namespace for push subscriptions and pending notification payloads.
+[[kv_namespaces]]
+binding = "REMOTE_CONTROL_PUSH_KV"
+id = "<your-kv-namespace-id>"
+
+[vars]
+# Set VAPID_JWK and VAPID_PUBLIC_KEY via `wrangler secret put` for production.
+# Example:
+#   wrangler secret put VAPID_JWK
+#   wrangler secret put VAPID_PUBLIC_KEY
+# Generate keys with:
+#   npx web-push generate-vapid-keys
+# Then format the private key as a JWK (d, x, y, crv=P-256, kty=EC).

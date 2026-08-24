@@ -670,3 +670,87 @@ Multica drives the same CLIs through stable protocol families: `stream-json` (Cl
 ### Open questions
 - Do we want to keep `warm` pooling for stream-json agents, or switch to one-shot-per-task like Multica? Multica spawns per task, so parity suggests dropping pooling; keeping pooling is a performance optimization but risks protocol drift.
 - Should custom CLI args (`customArgs`) be filtered per-provider like Multica's `blockedArgs` maps? Production safety says yes.
+
+---
+
+## Hybrid Remote Control dashboard and push notifications (2026-08-24)
+
+### Goal
+
+Ship a cross-surface remote-control experience for Allternit that matches the Antigravity remote-control pattern: a web-based dashboard for monitoring/managing agent runtimes across machines, proactive push notifications when a machine needs input, and a mobile-installable PWA.
+
+### Background
+
+Antigravity's remote-control feature (https://antigravity.google/blog/remote-control-for-antigravity) solves the problem of being tied to one workstation while agents run. It provides:
+- A browser-based remote-control interface connecting to machines running Antigravity.
+- Multi-instance management (laptops, servers, desktops).
+- Untethered productivity: start work, walk away, monitor/execute from anywhere.
+- Local context retained: no need to recreate the environment elsewhere.
+- Proactive push notifications on mobile when an agent needs user input.
+
+Allternit already has runtime pairing, a desktop bridge (`replBridge`/remote-control terminology in gizzi-code), and the platform surface. This feature builds a dedicated remote-control UI and push-delivery worker on top of that foundation.
+
+### Just did
+
+- Created `/remote-control` hub page inside `ai.allternit.com` (`surfaces/ai.allternit.com/src/pages/RemoteControlHubPage.tsx`) with runtime list, online counts, pending permissions, and pending questions.
+- Wired route `/remote-control` in `src/routes.tsx` and added a "Remote Control" rail item in `src/shell/ShellRail.tsx` using `DesktopTower`.
+- Added desktop detached window support:
+  - `shell:open-remote-control` IPC handler in `surfaces/allternit-desktop/src/main/unified-main.ts`.
+  - `remoteControlWindow` BrowserWindow with `setWindowOpenHandler` rule for `/remote-control.html`.
+  - Preload exposure `openRemoteControl` in `surfaces/allternit-desktop/src/preload/index.ts`.
+- Scaffolded standalone dashboard entry:
+  - `surfaces/ai.allternit.com/remote-control.html`
+  - `src/remote-control/main.tsx`, `App.tsx`, `pages/DashboardPage.tsx`, `types.ts`
+- Configured Vite multi-entry build in `surfaces/ai.allternit.com/vite.config.ts`.
+- Added PWA assets: `public/remote-control.webmanifest`, `public/remote-control-service-worker.js`, plus `_redirects` pass-throughs.
+- Created push worker service `services/remote-control-push/` (Hono + Wrangler + KV + VAPID signing) with `/vapid-public-key`, `/subscribe`, `/unsubscribe`, `/notify`, and `/pending` endpoints.
+- Added runtime push trigger `cmd/gizzi-code/src/runtime/integrations/remote-control-push.ts`, initialized in `cmd/gizzi-code/src/runtime/context/project/bootstrap.ts`.
+- Added deploy workflow `.github/workflows/deploy-remote-control-cloudflare.yml` for Pages + worker.
+
+### Verification
+
+- `cd services/remote-control-push && pnpm typecheck` ✅ clean.
+- `cd cmd/gizzi-code && bun run typecheck` ✅ only pre-existing `packages/sdk/scripts/verify-sdk.ts` errors; no remote-control-related errors.
+- `cd surfaces/ai.allternit.com && pnpm exec tsc --noEmit` ✅ only pre-existing office-package errors; no errors in touched remote-control files.
+- `pnpm install` succeeded and lockfile updated for the new service.
+
+### Open gaps
+
+- Production `pnpm build` is blocked by pre-existing missing PNG assets in office packages (`send-stop.png`, `attach-icon.png`, `send-enter-on.png`). The remote-control-specific build path has not been verified end-to-end.
+- Real Cloudflare Pages project `allternit-remote-control`, KV namespace, custom domain `remotecontrol.allternit.com`, and VAPID secrets still need to be created/set.
+- End-to-end screen recordings have not been produced yet.
+- Steering spec was just updated; this checkpoint needs steering review before commit/merge.
+
+### Update — dev verification completed (2026-08-24)
+
+- Fixed `surfaces/ai.allternit.com/vite.config.ts` `remoteControlRoutePlugin()` so `/remote-control` rewrites to `/index.html` and is processed by Vite's HTML transform pipeline. Previously it served raw `index.html`, which broke React Fast Refresh and left the hub page blank.
+- Fixed standalone dashboard dark-mode default:
+  - Added `src/remote-control/theme/RemoteControlThemeStore.ts` + `RemoteControlThemeProvider.tsx` with `dark` default and isolated storage key (`allternit-remote-control-theme-storage`).
+  - Updated `src/remote-control/main.tsx` to use the new provider.
+  - Updated `remote-control.html` inline script to seed dark mode and use the isolated storage key, so hydration no longer flashes light.
+- Verified in dev:
+  - `curl http://localhost:3013/remote-control` → 200, platform SPA shell renders.
+  - `curl http://localhost:3013/remote-control.html` → 200, standalone dashboard renders in dark mode.
+  - Chrome headless screenshot confirms dark theme.
+- Ran push worker locally (`services/remote-control-push` with `.dev.vars`) and verified all endpoints:
+  - `GET /health` → `{"ok":true}`
+  - `GET /vapid-public-key` → public key string
+  - `POST /subscribe` → `{"ok":true}`
+  - `POST /notify` → `{"ok":true,"delivered":0,"total":1}` (delivered 0 because endpoint is fake)
+  - `GET /pending?endpoint=...` → pending payload
+- Improved PWA/service-worker cross-origin support:
+  - `public/remote-control-service-worker.js` now accepts `SET_PUSH_WORKER_URL` message.
+  - `src/remote-control/App.tsx` sends the configured push-worker URL to the service worker after registration.
+  - `getPendingUrl()` uses the push-worker origin when available, fixing `/pending` fetches when dashboard and worker are on different subdomains.
+- Created `.steering/REMOTE_CONTROL_DEPLOYMENT.md` with step-by-step Cloudflare Pages project, KV namespace, custom domain, DNS, VAPID secret, and verification instructions.
+
+### Still blocked / needs real-world setup
+
+- Production Cloudflare Pages project `allternit-remote-control`, KV namespace, custom domains (`remotecontrol.allternit.com`, `push.remotecontrol.allternit.com`), and VAPID secrets require Cloudflare credentials and cannot be created from this dev environment.
+- End-to-end screen recordings are pending; will capture after documenting deployment steps.
+
+### Next
+
+1. Record end-to-end screen recordings of standalone dashboard, platform hub, push-worker endpoints, and PWA install prompt.
+2. Run steering consult on the spec + checkpoint.
+3. Commit and merge `session/remote-control-hybrid`.

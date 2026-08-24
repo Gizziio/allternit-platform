@@ -33,6 +33,7 @@ import {
   Check,
   Brain,
   Play,
+  DesktopTower,
 } from '@phosphor-icons/react';
 import { getPinnedMiniApps, unpinMiniApp, seedDefaultMiniApps } from '../views/aci/mini-app-registry';
 import type { InstalledMiniApp } from '../views/aci/mini-app.types';
@@ -946,6 +947,18 @@ export function ShellRail({
                 Beta
               </span>
             </div>
+            <RailItem
+              icon={DesktopTower}
+              label="Remote Control"
+              isActive={activeViewType === 'remote-control'}
+              onClick={() => {
+                if (typeof window !== 'undefined' && window.allternit?.shell?.openRemoteControl) {
+                  void window.allternit.shell.openRemoteControl();
+                  return;
+                }
+                window.open('/remote-control', '_blank', 'noopener,noreferrer');
+              }}
+            />
             <RailItem
               icon={SlidersHorizontal}
               label="Customize"
