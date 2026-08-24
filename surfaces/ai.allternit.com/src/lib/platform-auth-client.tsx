@@ -435,6 +435,7 @@ function ClerkPlatformAuthBridge({ children }: { children: ReactNode }) {
   const clerkAuth = useAuth()
   const clerkOrganization = useOrganization()
   const clerk = useClerkReact()
+  const { signIn, setActive } = useSignIn()
   const [sessions, setSessions] = useState<any[]>([])
 
   useEffect(() => {
@@ -444,6 +445,46 @@ function ClerkPlatformAuthBridge({ children }: { children: ReactNode }) {
     }
     setSessions([])
   }, [clerkAuth.isSignedIn, clerk.client])
+
+  // DEBUG-only seeded auto-login: if VITE_CLERK_SEED_EMAIL/PASSWORD are set,
+  // sign in automatically so dev/test runs don't sit at the sign-in page.
+  // Organizations are enabled on this Clerk instance; a seeded account with no
+  // memberships ends up in a pending session. We pick an existing membership or
+  // create a personal seed org and make it active so the JWT is active.
+  useEffect(() => {
+    if (!import.meta.env.DEV) return
+    if (!clerkAuth.isLoaded || clerkAuth.isSignedIn) return
+    if (!signIn || !setActive || !clerk) return
+    const email = import.meta.env.VITE_CLERK_SEED_EMAIL as string | undefined
+    const password = import.meta.env.VITE_CLERK_SEED_PASSWORD as string | undefined
+    if (!email || !password) return
+    let active = true
+    const run = async () => {
+      try {
+        const result = await signIn.create({ identifier: email, password })
+        if (!active) return
+        if (result.status === "complete" && result.createdSessionId) {
+          const memberships = clerk.user?.organizationMemberships
+          let orgId: string | undefined = memberships?.[0]?.organization.id
+          if (!orgId) {
+            try {
+              const org = await clerk.createOrganization({ name: "Allternit Seed" })
+              orgId = org.id
+            } catch (orgErr) {
+              console.warn("[SeedAuth] Failed to create seed organization:", orgErr)
+            }
+          }
+          await clerk.setActive({ session: result.createdSessionId, organization: orgId })
+        } else {
+          console.warn("[SeedAuth] Clerk sign-in requires extra steps:", result.status)
+        }
+      } catch (err) {
+        console.error("[SeedAuth] Auto sign-in failed:", err)
+      }
+    }
+    void run()
+    return () => { active = false }
+  }, [clerkAuth.isLoaded, clerkAuth.isSignedIn, signIn, setActive, clerk])
 
   // Sync Clerk's short-lived session JWT into the runtime API client. The
   // token is refreshed just before Clerk's ~60s TTL expires so local gizzi

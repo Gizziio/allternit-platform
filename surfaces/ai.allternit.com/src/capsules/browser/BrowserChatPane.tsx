@@ -39,7 +39,7 @@ function BrowserUnifiedAgentPanel(): React.ReactNode {
       copy={PLATFORM_SIDEPANEL_COPY}
       containerClassName="size-full min-h-0 p-0"
       testId="browser-extension-sidepanel-shell"
-      brandIcon={<MatrixLogo state="idle" size={72} className="opacity-90" />}
+      brandIcon={<img src="/brand/matrix/matrix-logo.svg" alt="Allternit" className="opacity-90" style={{ width: 72, height: 72 }} />}
       renderConfigView={({ onBack }) => (
         <BrowserExtensionConfigPanel
           config={adapter.config}

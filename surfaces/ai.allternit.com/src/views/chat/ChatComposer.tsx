@@ -1156,6 +1156,56 @@ export function ChatComposer({
     setInteractionMode('text');
   }, [isVoiceRecording, setInteractionMode, stopVoiceRecording]);
 
+  // Core send path shared by text submit and voice submit. Resolves inline
+  // @mentions, hands them off, and routes the enriched prompt to the right
+  // consumer (browser agent, MiroFish, agent-mode send, or plain chat).
+  const submitMessage = useCallback(async (rawText: string) => {
+    let messageText = rawText;
+
+    // Inline @mention handoff: resolve, execute, and append replies before
+    // sending to the active agent.
+    const inlineMentions = parseMentions(messageText);
+    if (inlineMentions.length > 0) {
+      try {
+        const handoff = await runMentionHandoff(messageText, selectedSurfaceAgent ?? undefined);
+        messageText = `${handoff.cleanText}${handoff.handoffNote}`;
+      } catch (err) {
+        // If handoff fails, send the original text with a note so the user
+        // knows the mention could not be routed.
+        messageText = `${messageText}\n\n[@mention routing failed: ${err instanceof Error ? err.message : String(err)}]`;
+      }
+    }
+
+    const enrichedInput = buildEnrichedInput(messageText);
+
+    if (selectedModeId === 'computer-use') {
+      useBrowserAgentStore.getState().runAcuTask(enrichedInput);
+    }
+
+    if (selectedModeId === 'swarms' && selectedSwarmSubMode === 'population-simulation') {
+      // MiroFish's single entry point is this composer: the prompt goes to
+      // the results-only panel below, which interprets and runs it — never
+      // through the normal agent-mode send.
+      useMiroFishRunStore.getState().requestRun(enrichedInput);
+    } else if (onAgentSend && agentModeSurface && (agentModeEnabled || isCanonicalAgentMode(selectedModeId))) {
+      onAgentSend(enrichedInput, selectedModeId ? { modeId: selectedModeId as CanonicalAgentModeId, templateTitle: selectedTemplateTitle } : undefined);
+    } else {
+      onSend(enrichedInput);
+    }
+  }, [
+    agentModeEnabled,
+    agentModeSurface,
+    buildEnrichedInput,
+    isCanonicalAgentMode,
+    onAgentSend,
+    onSend,
+    runMentionHandoff,
+    selectedModeId,
+    selectedSurfaceAgent,
+    selectedSwarmSubMode,
+    selectedTemplateTitle,
+  ]);
+
   useEffect(() => {
     if (!voiceModeActive || !voiceTranscript?.trim()) return;
     const spokenInput = voiceTranscript.trim();
@@ -1274,56 +1324,6 @@ export function ChatComposer({
     createAgent,
     loadCharacterLayer,
     setSelectedSurfaceAgent,
-  ]);
-
-  // Core send path shared by text submit and voice submit. Resolves inline
-  // @mentions, hands them off, and routes the enriched prompt to the right
-  // consumer (browser agent, MiroFish, agent-mode send, or plain chat).
-  const submitMessage = useCallback(async (rawText: string) => {
-    let messageText = rawText;
-
-    // Inline @mention handoff: resolve, execute, and append replies before
-    // sending to the active agent.
-    const inlineMentions = parseMentions(messageText);
-    if (inlineMentions.length > 0) {
-      try {
-        const handoff = await runMentionHandoff(messageText, selectedSurfaceAgent ?? undefined);
-        messageText = `${handoff.cleanText}${handoff.handoffNote}`;
-      } catch (err) {
-        // If handoff fails, send the original text with a note so the user
-        // knows the mention could not be routed.
-        messageText = `${messageText}\n\n[@mention routing failed: ${err instanceof Error ? err.message : String(err)}]`;
-      }
-    }
-
-    const enrichedInput = buildEnrichedInput(messageText);
-
-    if (selectedModeId === 'computer-use') {
-      useBrowserAgentStore.getState().runAcuTask(enrichedInput);
-    }
-
-    if (selectedModeId === 'swarms' && selectedSwarmSubMode === 'population-simulation') {
-      // MiroFish's single entry point is this composer: the prompt goes to
-      // the results-only panel below, which interprets and runs it — never
-      // through the normal agent-mode send.
-      useMiroFishRunStore.getState().requestRun(enrichedInput);
-    } else if (onAgentSend && agentModeSurface && (agentModeEnabled || isCanonicalAgentMode(selectedModeId))) {
-      onAgentSend(enrichedInput, selectedModeId ? { modeId: selectedModeId as CanonicalAgentModeId, templateTitle: selectedTemplateTitle } : undefined);
-    } else {
-      onSend(enrichedInput);
-    }
-  }, [
-    agentModeEnabled,
-    agentModeSurface,
-    buildEnrichedInput,
-    isCanonicalAgentMode,
-    onAgentSend,
-    onSend,
-    runMentionHandoff,
-    selectedModeId,
-    selectedSurfaceAgent,
-    selectedSwarmSubMode,
-    selectedTemplateTitle,
   ]);
 
   const handleSubmit = async () => {

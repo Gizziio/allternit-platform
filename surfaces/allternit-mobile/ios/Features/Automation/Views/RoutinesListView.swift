@@ -19,15 +19,49 @@ struct RoutinesListView: View {
     @StateObject private var routineStore = RoutineStore.shared
 
     @State private var searchText = ""
+    @State private var statusFilter: StatusFilter = .all
     /// Pushed detail (nil = list).
     @State private var detailRoutine: Routine? = nil
     @State private var isCreateSheetPresented = false
     @State private var actionError: String? = nil
 
+    private enum StatusFilter: String, CaseIterable {
+        case all = "All"
+        case running = "Running"
+        case completed = "Completed"
+        case failed = "Failed"
+    }
+
     private var visibleRoutines: [Routine] {
+        var routines = routineStore.routines
+        switch statusFilter {
+        case .all: break
+        case .running: routines = routines.filter { $0.state == "running" }
+        case .completed: routines = routines.filter { $0.state == "completed" }
+        case .failed: routines = routines.filter { $0.state == "failed" }
+        }
         let query = searchText.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !query.isEmpty else { return routineStore.routines }
-        return routineStore.routines.filter { $0.name.localizedCaseInsensitiveContains(query) }
+        guard !query.isEmpty else { return routines }
+        return routines.filter { $0.name.localizedCaseInsensitiveContains(query) }
+    }
+
+    private var filterMenu: some View {
+        Menu {
+            ForEach(StatusFilter.allCases, id: \.self) { filter in
+                Button(action: { statusFilter = filter }) {
+                    Label(filter.rawValue, systemImage: statusFilter == filter ? "checkmark" : "")
+                }
+            }
+        } label: {
+            Image(systemName: "line.3.horizontal.decrease")
+                .font(.system(size: 13, weight: .semibold))
+                .foregroundColor(Color("TextSecondary"))
+                .frame(width: 32, height: 32)
+                .background(Color("BgPanel"))
+                .clipShape(Circle())
+        }
+        .buttonStyle(.plain)
+        .accessibilityLabel("Filter routines")
     }
 
     var body: some View {
@@ -48,13 +82,32 @@ struct RoutinesListView: View {
                             .foregroundColor(Color("TextPrimary"))
                             .frame(width: 44, height: 44)
                     }
+                    .accessibilityLabel("Open sidebar")
 
-                    Text("Automation Tasks")
-                        .font(.system(.title3, design: .serif))
-                        .fontWeight(.medium)
-                        .foregroundColor(Color("TextPrimary"))
+                    Menu {
+                        ForEach(AutomationKind.allCases, id: \.self) { kind in
+                            Button(action: { modeStore.automationKind = kind }) {
+                                Label(
+                                    kind.rawValue,
+                                    systemImage: modeStore.automationKind == kind ? "checkmark" : ""
+                                )
+                            }
+                        }
+                    } label: {
+                        HStack(spacing: 4) {
+                            Text(modeStore.automationKind.rawValue)
+                                .font(.system(.title3, design: .serif))
+                                .fontWeight(.medium)
+                                .foregroundColor(Color("TextPrimary"))
+                            Image(systemName: "chevron.down")
+                                .font(.system(size: 10, weight: .bold))
+                                .foregroundColor(Color("TextSecondary"))
+                        }
+                    }
 
                     Spacer()
+
+                    filterMenu
 
                     Button(action: {
                         let generator = UIImpactFeedbackGenerator(style: .light)
@@ -74,17 +127,6 @@ struct RoutinesListView: View {
                 .background(Color("BgPrimary"))
 
                 Divider().background(Color("BorderSubtle"))
-
-                // Sibling entry point back into Cron — same tab as
-                // AutomationTasksListView's picker.
-                Picker("Automation kind", selection: $modeStore.automationKind) {
-                    ForEach(AutomationKind.allCases, id: \.self) { kind in
-                        Text(kind.rawValue).tag(kind)
-                    }
-                }
-                .pickerStyle(.segmented)
-                .padding(.horizontal, 20)
-                .padding(.top, 12)
 
                 content
             }

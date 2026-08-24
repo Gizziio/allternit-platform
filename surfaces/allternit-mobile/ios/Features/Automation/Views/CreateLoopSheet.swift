@@ -43,6 +43,7 @@ struct CreateLoopSheet: View {
                         .background(Color("BgPanel"))
                         .clipShape(Circle())
                 }
+                .accessibilityLabel("Close")
             }
             .padding(.horizontal, 20)
             .padding(.vertical, 14)

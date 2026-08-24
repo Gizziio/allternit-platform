@@ -61,6 +61,7 @@ struct RuntimeOperationsView: View {
                     .background(Color("BgPanel"))
                     .clipShape(Circle())
             }
+            .accessibilityLabel("Refresh")
 
             Button(action: { dismiss() }) {
                 Image(systemName: "xmark")
@@ -70,6 +71,7 @@ struct RuntimeOperationsView: View {
                     .background(Color("BgPanel"))
                     .clipShape(Circle())
             }
+            .accessibilityLabel("Close")
         }
         .padding(.horizontal, 20)
         .padding(.vertical, 14)

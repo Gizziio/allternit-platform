@@ -171,8 +171,14 @@ final class AgentModeStore: ObservableObject {
     /// nil clears the selection (the web dropdown's "clear" action — the
     /// backend then binds the session to its default agent).
     func selectAgent(_ agent: AgentRecord?, for mode: AppMode) {
-        agentIdByMode[mode] = agent?.id
-        defaults.set(agent?.id, forKey: Keys.agentId(mode))
+        selectAgentId(agent?.id, for: mode)
+    }
+
+    /// Selects an agent by id alone, used when only the identifier is
+    /// available (e.g. opening a bot's chat session from a deep-link).
+    func selectAgentId(_ agentId: String?, for mode: AppMode) {
+        agentIdByMode[mode] = agentId
+        defaults.set(agentId, forKey: Keys.agentId(mode))
     }
 
     /// Agents selectable on the given surface (BottomDock.tsx:231-234).
@@ -187,6 +193,7 @@ final class AgentModeStore: ObservableObject {
     /// (ModeDock.tsx:63-67).
     func selectedTile(for surface: AppMode) -> AgentModeTile {
         let visible = AgentModeTile.visibleTiles(for: surface)
+        guard !visible.isEmpty else { return .swarms }
         if let tile = tileByMode[surface], visible.contains(tile) {
             return tile
         }

@@ -19,13 +19,24 @@ struct AgentActivityListView: View {
     @Environment(\.dismiss) private var dismiss
 
     @State private var searchText = ""
+    @State private var tagFilter: ActivityTagFilter = .all
     /// Pushed detail (nil = list).
     @State private var detailThread: AgentActivityThreadSummary? = nil
 
     private var visibleThreads: [AgentActivityThreadSummary] {
         let query = searchText.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !query.isEmpty else { return store.threads }
-        return store.threads.filter { $0.threadId.localizedCaseInsensitiveContains(query) }
+        let tagFiltered = store.threads.filter { thread in
+            guard tagFilter != .all else { return true }
+            let state = store.state(for: thread.threadId)
+            switch tagFilter {
+            case .review: return state.hasPendingReview
+            case .guardActivity: return state.hasGuardActivity
+            case .reservation: return state.hasReservationActivity
+            case .all: return true
+            }
+        }
+        guard !query.isEmpty else { return tagFiltered }
+        return tagFiltered.filter { $0.threadId.localizedCaseInsensitiveContains(query) }
     }
 
     var body: some View {
@@ -40,6 +51,7 @@ struct AgentActivityListView: View {
                         .fontWeight(.medium)
                         .foregroundColor(Color("TextPrimary"))
                     Spacer()
+                    tagFilterMenu
                     Button(action: { dismiss() }) {
                         Image(systemName: "xmark")
                             .font(.system(size: 13, weight: .semibold))
@@ -48,6 +60,7 @@ struct AgentActivityListView: View {
                             .background(Color("BgPanel"))
                             .clipShape(Circle())
                     }
+                    .accessibilityLabel("Close")
                 }
                 .padding(.horizontal, 20)
                 .padding(.vertical, 14)
@@ -171,7 +184,7 @@ struct AgentActivityListView: View {
                     .padding(.top, 2)
                 VStack(alignment: .leading, spacing: 4) {
                     HStack(spacing: 6) {
-                        Text(thread.threadId)
+                        Text("Thread")
                             .font(.system(size: 14, weight: unread ? .bold : .medium))
                             .foregroundColor(Color("TextPrimary"))
                             .lineLimit(1)
@@ -179,6 +192,7 @@ struct AgentActivityListView: View {
                             Circle()
                                 .fill(Color("AccentPrimary"))
                                 .frame(width: 6, height: 6)
+                                .accessibilityLabel("Unread")
                         }
                         Spacer()
                         if let relativeText = Self.relativeText(thread.lastActivityAt) {
@@ -187,9 +201,10 @@ struct AgentActivityListView: View {
                                 .foregroundColor(Color("TextSecondary"))
                         }
                     }
-                    Text(thread.messageCount == 1 ? "1 message" : "\(thread.messageCount) messages")
+                    Text("\(Self.shortThreadId(thread.threadId)) · \(thread.messageCount == 1 ? "1 message" : "\(thread.messageCount) messages")")
                         .font(.caption)
                         .foregroundColor(Color("TextSecondary"))
+                        .lineLimit(1)
                     if state.hasPendingReview || state.hasGuardActivity || state.hasReservationActivity {
                         HStack(spacing: 6) {
                             if state.hasPendingReview {
@@ -233,6 +248,51 @@ struct AgentActivityListView: View {
             .clipShape(Capsule())
     }
 
+    private var tagFilterMenu: some View {
+        Menu {
+            ForEach(ActivityTagFilter.allCases) { filter in
+                Button(action: { tagFilter = filter }) {
+                    HStack {
+                        if tagFilter == filter {
+                            Image(systemName: "checkmark")
+                        }
+                        Text(filter.label)
+                    }
+                }
+            }
+        } label: {
+            HStack(spacing: 4) {
+                Image(systemName: "line.3.horizontal.decrease.circle")
+                    .font(.system(size: 15, weight: .semibold))
+                    .foregroundColor(tagFilter == .all ? Color("TextSecondary") : Color("AccentPrimary"))
+                if tagFilter != .all {
+                    Circle()
+                        .fill(Color("AccentPrimary"))
+                        .frame(width: 6, height: 6)
+                }
+            }
+            .frame(width: 32, height: 32)
+            .background(Color("BgPanel"))
+            .clipShape(Circle())
+        }
+        .accessibilityLabel("Filter by tag")
+    }
+
+    enum ActivityTagFilter: String, CaseIterable, Identifiable {
+        case all, review, guardActivity, reservation
+
+        var id: String { rawValue }
+
+        var label: String {
+            switch self {
+            case .all: return "All threads"
+            case .review: return "Needs review"
+            case .guardActivity: return "Guard activity"
+            case .reservation: return "Reservation"
+            }
+        }
+    }
+
     private var emptyState: some View {
         VStack(spacing: 16) {
             Image(systemName: "bubble.left.and.bubble.right")
@@ -270,5 +330,12 @@ struct AgentActivityListView: View {
         let formatter = RelativeDateTimeFormatter()
         formatter.unitsStyle = .abbreviated
         return formatter.localizedString(for: date, relativeTo: Date())
+    }
+
+    /// The backend has no human-readable thread subject yet, so the row shows
+    /// a fixed "Thread" title and uses the first 8 characters of the id as a
+    /// stable, scannable subtitle.
+    private static func shortThreadId(_ threadId: String) -> String {
+        String(threadId.prefix(8))
     }
 }

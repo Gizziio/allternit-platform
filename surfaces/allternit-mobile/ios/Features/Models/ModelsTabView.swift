@@ -29,6 +29,7 @@ struct ModelsTabView: View {
                             .foregroundColor(Color("TextPrimary"))
                             .frame(width: 44, height: 44)
                     }
+                    .accessibilityLabel("Open sidebar")
 
                     Text("Models")
                         .font(.system(.title3, design: .serif))
@@ -49,6 +50,7 @@ struct ModelsTabView: View {
                             .background(Color("BgPanel"))
                             .clipShape(Circle())
                     }
+                    .accessibilityLabel("Refresh")
                     .disabled(store.isLoading)
                 }
                 .padding(.horizontal, 8)

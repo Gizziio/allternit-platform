@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { ClerkProvider, SignIn, SignUp, useClerk } from '@clerk/clerk-react';
+import { ClerkProvider, SignIn, SignUp, useClerk, useSignIn, useUser } from '@clerk/clerk-react';
 import { loadClerkConfig } from './clerk-config.js';
 
 function AuthFlow() {
@@ -198,6 +198,59 @@ const clerkAppearance = {
 } as const;
 
 /**
+ * DEBUG-only seeded auto-login: if VITE_CLERK_SEED_EMAIL/PASSWORD are set,
+ * sign in automatically so the auth window doesn't block dev/test runs.
+ */
+function SeedAuth() {
+  const clerk = useClerk();
+  const { isLoaded, isSignedIn } = clerk;
+  const { user } = useUser();
+  const { signIn, setActive } = useSignIn();
+
+  useEffect(() => {
+    if (!import.meta.env.DEV) return;
+    if (!isLoaded || isSignedIn) return;
+    if (!signIn || !setActive) return;
+    const email = import.meta.env.VITE_CLERK_SEED_EMAIL as string | undefined;
+    const password = import.meta.env.VITE_CLERK_SEED_PASSWORD as string | undefined;
+    if (!email || !password) return;
+
+    let active = true;
+    const run = async () => {
+      try {
+        const result = await signIn.create({ identifier: email, password });
+        if (!active) return;
+        if (result.status === 'complete' && result.createdSessionId) {
+          // Organizations are enabled on this Clerk instance. A seeded account
+          // with no memberships ends up in a pending session; pick an existing
+          // membership or create a personal seed org so the session is active.
+          let orgId: string | undefined = user?.organizationMemberships?.[0]?.organization.id;
+          if (!orgId) {
+            try {
+              const org = await clerk.createOrganization({ name: 'Allternit Seed' });
+              orgId = org.id;
+            } catch (orgErr) {
+              console.warn('[SeedAuth] Failed to create seed organization:', orgErr);
+            }
+          }
+          await setActive({ session: result.createdSessionId, organization: orgId });
+        } else {
+          console.warn('[SeedAuth] Clerk sign-in requires extra steps:', result.status);
+        }
+      } catch (err) {
+        console.error('[SeedAuth] Auto sign-in failed:', err);
+      }
+    };
+    void run();
+    return () => {
+      active = false;
+    };
+  }, [clerk, isLoaded, isSignedIn, signIn, setActive, user]);
+
+  return null;
+}
+
+/**
  * Sends the Clerk session token to the Electron main process once the user is
  * signed in. The main process then completes the runtime pairing exchange.
  */
@@ -326,6 +379,7 @@ export default function AuthApp() {
           <AuthFlow />
         </div>
       </div>
+      <SeedAuth />
       <TokenBridge />
     </ClerkProvider>
   );

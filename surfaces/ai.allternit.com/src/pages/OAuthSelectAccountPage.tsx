@@ -5,7 +5,6 @@ import { useState, useEffect, Suspense } from 'react';
 import { useSearchParams, useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { useClerk, useAuth } from '@clerk/clerk-react';
-import { MatrixLogo } from '@/components/ai-elements/MatrixLogo';
 import { Check, Plus } from 'lucide-react';
 
 function initials(firstName?: string | null, lastName?: string | null, email?: string | null): string {
@@ -112,7 +111,7 @@ function SelectAccountContent() {
               transition={{ delay: 0.1, duration: 0.4, type: 'spring', stiffness: 200 }}
               style={{ display: 'inline-block', marginBottom: 20 }}
             >
-              <MatrixLogo state="idle" size={44} />
+              <img src="/brand/matrix/matrix-logo.svg" alt="Allternit" style={{ width: 44, height: 44 }} />
             </motion.div>
 
             <motion.h1

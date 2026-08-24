@@ -41,7 +41,6 @@ struct EnterpriseBYOCPanelView: View {
         VStack(spacing: 0) {
             header
             Divider().background(Color("BorderSubtle"))
-            tabBar
             content
         }
         .background(Color("BgPrimary").edgesIgnoringSafeArea(.all))
@@ -88,6 +87,8 @@ struct EnterpriseBYOCPanelView: View {
 
             Spacer()
 
+            tabMenu
+
             Button(action: { dismiss() }) {
                 Image(systemName: "xmark")
                     .font(.system(size: 13, weight: .semibold))
@@ -96,35 +97,43 @@ struct EnterpriseBYOCPanelView: View {
                     .background(Color("BgPanel"))
                     .clipShape(Circle())
             }
+            .accessibilityLabel("Close")
         }
         .padding(.horizontal, 20)
         .padding(.vertical, 14)
     }
 
-    // MARK: - Tab bar
-
-    private var tabBar: some View {
-        HStack(spacing: 4) {
+    private var tabMenu: some View {
+        Menu {
             ForEach(Tab.allCases) { tab in
                 Button(action: { selectedTab = tab }) {
-                    HStack(spacing: 6) {
+                    HStack {
+                        if selectedTab == tab { Image(systemName: "checkmark") }
                         Image(systemName: tab.icon)
-                            .font(.system(size: 12))
                         Text(tab.label)
-                            .font(.system(size: 12, weight: .semibold))
                     }
-                    .foregroundColor(selectedTab == tab ? Color("TextPrimary") : Color("TextSecondary"))
-                    .padding(.horizontal, 12)
-                    .padding(.vertical, 8)
-                    .background(selectedTab == tab ? Color("BgPanel") : Color.clear)
-                    .clipShape(RoundedRectangle(cornerRadius: Theme.radiusMD))
                 }
-                .buttonStyle(.plain)
             }
-            Spacer()
+        } label: {
+            HStack(spacing: 4) {
+                Image(systemName: selectedTab.icon)
+                    .font(.system(size: 11))
+                Text(selectedTab.label)
+                    .font(.system(size: 12, weight: .semibold))
+                Image(systemName: "chevron.down")
+                    .font(.system(size: 9, weight: .bold))
+            }
+            .foregroundColor(Color("TextPrimary"))
+            .padding(.horizontal, 10)
+            .frame(height: 28)
+            .background(Color("BgPanel"))
+            .clipShape(Capsule())
+            .overlay(
+                Capsule()
+                    .stroke(Theme.borderWarmDefault, lineWidth: 1)
+            )
         }
-        .padding(.horizontal, 16)
-        .padding(.vertical, 8)
+        .accessibilityLabel("Switch view")
     }
 
     // MARK: - Content
@@ -433,6 +442,7 @@ struct EnterpriseBYOCPanelView: View {
                     )
                 }
                 .buttonStyle(.plain)
+                .accessibilityLabel("Refresh")
                 .disabled(store.isLoadingUsage)
             }
 
@@ -583,7 +593,7 @@ struct BYOCCredentialCreateSheet: View {
                                 Text(provider.rawValue.uppercased()).tag(provider)
                             }
                         }
-                        .pickerStyle(.segmented)
+                        .pickerStyle(.menu)
                     }
 
                     formField("Label", text: $label, placeholder: "Production AWS")

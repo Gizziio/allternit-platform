@@ -113,6 +113,7 @@ struct HistorySidebarView: View {
                         .background(Color("TextSecondary"))
                         .clipShape(Circle())
                 }
+                .accessibilityLabel("Account menu")
 
                 // Settings hub (Phase 4) — gear row next to the avatar.
                 Button(action: {
@@ -129,6 +130,7 @@ struct HistorySidebarView: View {
                         .overlay(Circle().stroke(Color("BorderSubtle"), lineWidth: 1))
                 }
                 .buttonStyle(.plain)
+                .accessibilityLabel("Settings")
 
                 Spacer()
 

@@ -1,5 +1,35 @@
 # Steering checkpoint
 
+## Cross-surface seeded auth + iOS runtime pairing (2026-08-23)
+
+### Goal
+
+Get the seeded Clerk account (`seed@allternit.dev` / `rogtem-najXab-rizne7`) to auto-login on iOS, web, and desktop, complete runtime pairing so API calls authorize with a long-lived device token, and verify chats/conversations load.
+
+### Just did
+
+- Verified the workspace state on `session/connector-installer` in the main checkout.
+- Confirmed `cmd/allternit-cloud-api/migrations/023_ios_runtime_type.sql` is present and recreates `runtime_pairings`/`runtime_devices` with `'ios'` in the CHECK constraint.
+- Launched the iOS simulator build (`2CC27A61-C301-41C2-9B9E-76BF4DF3C84B`) with `-seed-auth` and seed credentials.
+  - Seed Clerk sign-in succeeded; JWT `sts: active` for `user_3IBvYk8VKt7EFS6lupIkNafkenk`.
+  - `RuntimePairing` POST to `https://allternit-cloud-api.fly.dev/api/v1/runtime-pairings` returned HTTP 500 `Database error` because the deployed Fly DB CHECK constraint still rejects `runtime_type = 'ios'`.
+  - Screenshot captured showing the main chat with the Matrix logo, the A://TERNIT wordmark, and the Gizzi mascot perched on the composer when agent mode is on.
+- Updated desktop seed auth (`surfaces/allternit-desktop/src/renderer/auth/AuthApp.tsx`) to mirror iOS/web: select an existing org membership or create an `Allternit Seed` org before `setActive`, so the session becomes active on Clerk instances with Organizations enabled.
+- `pnpm exec tsc --noEmit` in `surfaces/allternit-desktop` is clean; `surfaces/ai.allternit.com` still only shows pre-existing errors in `mode-session-store.ts`.
+- Local validation: ran `allternit-cloud-api` on `127.0.0.1:3020` with a fresh SQLite DB. `POST /api/v1/runtime-pairings` with `"runtimeType":"ios"` returned `201 Created`, proving the migration applies cleanly and the code path accepts iOS runtimes.
+
+### Next
+
+1. Apply/deploy `023_ios_runtime_type.sql` to the Fly `allternit-cloud-api` DB so iOS runtime pairing can create `runtime_type = 'ios'` rows.
+2. Re-launch iOS and confirm `[RuntimePairing] device credential received` in the logs.
+3. Verify the device token authorizes `https://api.allternit.com/api/v1/agent-sessions` and that chats/conversations load.
+4. Run the web surface with `VITE_CLERK_SEED_EMAIL`/`VITE_CLERK_SEED_PASSWORD` and verify the workspace loads.
+5. Run the desktop surface with seed env vars and verify auto-login + pairing.
+
+### Open questions
+
+- How should the Fly migration be applied? `flyctl deploy` requires auth; this shell has no `FLY_API_TOKEN`.
+
 ## Agent email rail (mailflare fork → services/mailflare) — COMPLETE (uncommitted)
 
 ### Goal

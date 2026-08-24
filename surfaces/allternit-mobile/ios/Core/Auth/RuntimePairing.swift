@@ -15,6 +15,12 @@ import UIKit
 final class RuntimePairing: ObservableObject {
     static let shared = RuntimePairing()
 
+    #if DEBUG
+    private func debugLog(_ message: String) {
+        NSLog("%@", "[RuntimePairing] " + message)
+    }
+    #endif
+
     /// Live pairing state surfaced by `LoginGateView` / the account row.
     @Published private(set) var state: PairingState = .idle
 
@@ -121,10 +127,14 @@ final class RuntimePairing: ObservableObject {
             request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
             let (_, response) = try await URLSession.shared.data(for: request)
             if let http = response as? HTTPURLResponse, http.statusCode >= 400, http.statusCode != 404 {
-                print("[RuntimePairing] revoke warning: \(http.statusCode)")
+                #if DEBUG
+                debugLog("revoke warning: \(http.statusCode)")
+                #endif
             }
         } catch {
-            print("[RuntimePairing] revoke error: \(error)")
+            #if DEBUG
+            debugLog("revoke error: \(error.localizedDescription)")
+            #endif
         }
         clearSession()
     }
@@ -140,7 +150,9 @@ final class RuntimePairing: ObservableObject {
             self.session = rotated
             saveSessionToKeychain(rotated)
         } catch {
-            print("[RuntimePairing] rotation deferred: \(error)")
+            #if DEBUG
+            debugLog("rotation deferred: \(error.localizedDescription)")
+            #endif
         }
     }
 
@@ -152,6 +164,9 @@ final class RuntimePairing: ObservableObject {
             guard let clerkToken = try await AuthManager.shared.getToken(), !clerkToken.isEmpty else {
                 throw PairingError.notSignedIn
             }
+            #if DEBUG
+            debugLog("performPairing starting with active Clerk token")
+            #endif
 
             // 1. Generate an Ed25519 keypair for this runtime.
             let privateKey = try Curve25519.Signing.PrivateKey()
@@ -159,28 +174,49 @@ final class RuntimePairing: ObservableObject {
             let publicKeyB64 = publicKeyRaw.base64URLEncodedString()
 
             // 2. Create the pairing.
+            #if DEBUG
+            debugLog("creating runtime pairing on cloud API")
+            #endif
             let pairing = try await createPairing(publicKey: publicKeyB64)
+            #if DEBUG
+            debugLog("pairing created: \(pairing.pairingId), userCode: \(pairing.userCode)")
+            #endif
 
             // 3. Approve it with the Clerk-authenticated user.
             state = .approving
+            #if DEBUG
+            debugLog("approving pairing with Clerk token")
+            #endif
             try await approvePairing(code: pairing.userCode, clerkToken: clerkToken)
+            #if DEBUG
+            debugLog("pairing approved")
+            #endif
 
             // 4. Exchange for the device credential.
             state = .exchanging
             let message = "allternit-runtime-pairing:\(pairing.pairingId):\(pairing.challenge)"
             let signature = try privateKey.signature(for: Data(message.utf8))
             let signatureB64 = signature.base64URLEncodedString()
+            #if DEBUG
+            debugLog("exchanging pairing for device credential")
+            #endif
             let session = try await exchangePairing(
                 pairingId: pairing.pairingId,
                 deviceCode: pairing.deviceCode,
                 signature: signatureB64
             )
+            #if DEBUG
+            debugLog("device credential received; runtimeId: \(session.runtimeId)")
+            #endif
 
             self.session = session
             saveSessionToKeychain(session)
             state = .success
             return session
         } catch {
+            #if DEBUG
+            debugLog("performPairing error: \(error.localizedDescription)")
+            #endif
             state = .failed(error.localizedDescription)
             throw error
         }
@@ -283,6 +319,10 @@ final class RuntimePairing: ObservableObject {
             if let object = try? JSONSerialization.jsonObject(with: data) as? [String: Any] {
                 message = (object["message"] as? String) ?? (object["error"] as? String)
             }
+            let bodyPreview = String(data: data, encoding: .utf8) ?? "<non-utf8>"
+            #if DEBUG
+            debugLog("server error \(http.statusCode): \(message ?? bodyPreview)")
+            #endif
             if http.statusCode == 410 {
                 throw PairingError.expired
             }

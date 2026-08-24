@@ -36,6 +36,7 @@ struct BrainCaptureSheet: View {
                         .background(Color("BgPanel"))
                         .clipShape(Circle())
                 }
+                .accessibilityLabel("Close")
             }
             .padding(.horizontal, 20)
             .padding(.vertical, 14)
@@ -43,12 +44,32 @@ struct BrainCaptureSheet: View {
             Divider().background(Color("BorderSubtle"))
 
             VStack(alignment: .leading, spacing: 16) {
-                Picker("Type", selection: $captureType) {
+                Menu {
                     ForEach(BrainCaptureType.allCases, id: \.self) { type in
-                        Text(type.label).tag(type)
+                        Button(action: { captureType = type }) {
+                            Label(type.label, systemImage: captureType == type ? "checkmark" : "")
+                        }
                     }
+                } label: {
+                    HStack(spacing: 8) {
+                        Text(captureType.label)
+                            .font(.subheadline)
+                            .foregroundColor(Color("TextPrimary"))
+                        Spacer()
+                        Image(systemName: "chevron.down")
+                            .font(.system(size: 10, weight: .bold))
+                            .foregroundColor(Color("TextSecondary"))
+                    }
+                    .padding(.horizontal, 12)
+                    .padding(.vertical, 10)
+                    .background(Color("BgPanel"))
+                    .clipShape(RoundedRectangle(cornerRadius: Theme.radiusMD))
+                    .overlay(
+                        RoundedRectangle(cornerRadius: Theme.radiusMD)
+                            .stroke(Theme.borderWarmDefault, lineWidth: 1)
+                    )
                 }
-                .pickerStyle(.segmented)
+                .buttonStyle(.plain)
 
                 // TextEditor has no placeholder — overlay one when empty.
                 ZStack(alignment: .topLeading) {

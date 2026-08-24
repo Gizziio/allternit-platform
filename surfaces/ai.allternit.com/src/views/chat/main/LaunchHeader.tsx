@@ -1,6 +1,4 @@
 import React, { useState } from "react";
-import { MatrixLogo } from "@/components/ai-elements/MatrixLogo";
-import { AllternitLogo } from "@/components/AllternitLogo";
 import { GizziMascot, type GizziAttention, type GizziEmotion } from "@/components/ai-elements/GizziMascot";
 import { TypingText, StaggeredReveal } from "./ChatViewAnimations";
 import { LAUNCH_HEADER_ZONE_HEIGHT, LAUNCH_SECTION_GAP } from "./launchScreenLayout";
@@ -40,10 +38,12 @@ export function LaunchHeader({
       <div className="relative group cursor-pointer mb-12 inline-flex items-center justify-center p-5 transition-all duration-[600ms] ease-[cubic-bezier(0.4,0,0.2,1)]">
         <div className="absolute inset-0 blur-3xl rounded-full opacity-0 group-hover:opacity-100 transition-opacity duration-700 bg-[color-mix(in_srgb,var(--accent-chat)_8%,transparent)]" />
         <div className="relative z-10 transition-transform duration-500 group-hover:scale-110">
-          {effectiveLogo === 'matrix' ? (
-            <MatrixLogo state="idle" size={84} />
-          ) : effectiveLogo === 'allternit' ? (
-            <AllternitLogo variant="icon-only" size="lg" />
+          {effectiveLogo === 'matrix' || effectiveLogo === 'allternit' ? (
+            <img
+              src="/brand/matrix/matrix-logo.svg"
+              alt="Allternit"
+              style={{ width: 84, height: 84 }}
+            />
           ) : (
             <GizziMascot size={76} emotion={mascotEmotion} attention={mascotAttention} />
           )}

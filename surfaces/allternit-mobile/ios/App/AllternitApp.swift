@@ -23,6 +23,7 @@ struct AllternitApp: App {
         // requires the handler in place before app launch completes.
         BackgroundRefreshManager.register()
         #if DEBUG
+        AuthManager.shared.seedSignInIfNeeded()
         // `-reset-onboarding` (DEBUG only): also clears the Phase-10
         // onboarding gate (the ChatView site clears the dictation/priming
         // flags). Clearing here means THIS launch lands on page 1.
@@ -137,6 +138,7 @@ struct AllternitApp: App {
             || args.contains("-open-agent-sheet")
             || args.contains("-open-agent-hub")
             || args.contains("-open-agent-detail")
+            || args.contains("-open-bot-home-demo")
             || args.contains("-open-avatar-editor")
             || args.contains("-open-new-workspace-file")
             || args.contains("-open-workspace-file")

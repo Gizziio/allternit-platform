@@ -14,6 +14,7 @@ import {
 } from '@phosphor-icons/react';
 
 import { ModeSwitcher } from './ModeSwitcher';
+import { AProtocolWordmark } from '@/components/AProtocolWordmark';
 import { cn } from '@/lib/utils';
 import { useNavigate } from 'react-router-dom';
 
@@ -106,9 +107,8 @@ export function ShellHeader({
           <SidebarSimple size={20} weight={isRailCollapsed ? "fill" : "regular"} />
         </button>
 
-        <div className="font-black text-[18px] tracking-tight flex items-center gap-2 ml-2" style={{ color: currentModeColor }}>
-          <div className="w-2.5 h-2.5 rounded-full" style={{ background: currentModeColor, boxShadow: `0 0 10px ${currentModeColor}` }} />
-          Allternit
+        <div className="flex items-center ml-2">
+          <AProtocolWordmark theme="adaptive" height={18} />
         </div>
       </div>
 

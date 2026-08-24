@@ -70,6 +70,7 @@ struct MiniAppsStoreView: View {
                         .background(Color("BgPanel"))
                         .clipShape(Circle())
                 }
+                .accessibilityLabel("Close")
             }
 
             HStack(spacing: 8) {

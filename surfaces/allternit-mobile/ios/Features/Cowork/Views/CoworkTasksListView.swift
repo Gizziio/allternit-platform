@@ -30,6 +30,25 @@ struct CoworkTasksListView: View {
         }
     }
 
+    private var filterMenu: some View {
+        Menu {
+            ForEach(Segment.allCases, id: \.self) { segment in
+                Button(action: { selectedSegment = segment }) {
+                    Label(segment.rawValue, systemImage: selectedSegment == segment ? "checkmark" : "")
+                }
+            }
+        } label: {
+            Image(systemName: "line.3.horizontal.decrease")
+                .font(.system(size: 13, weight: .semibold))
+                .foregroundColor(Color("TextSecondary"))
+                .frame(width: 32, height: 32)
+                .background(Color("BgPanel"))
+                .clipShape(Circle())
+        }
+        .buttonStyle(.plain)
+        .accessibilityLabel("Filter tasks")
+    }
+
     var body: some View {
         NavigationStack {
             VStack(spacing: 0) {
@@ -40,6 +59,9 @@ struct CoworkTasksListView: View {
                         .fontWeight(.medium)
                         .foregroundColor(Color("TextPrimary"))
                     Spacer()
+
+                    filterMenu
+
                     Button(action: {
                         let generator = UIImpactFeedbackGenerator(style: .light)
                         generator.impactOccurred()
@@ -60,6 +82,7 @@ struct CoworkTasksListView: View {
                             .background(Color("BgPanel"))
                             .clipShape(Circle())
                     }
+                    .accessibilityLabel("Close")
                 }
                 .padding(.horizontal, 20)
                 .padding(.vertical, 14)
@@ -91,15 +114,6 @@ struct CoworkTasksListView: View {
     @ViewBuilder
     private var content: some View {
         VStack(spacing: 0) {
-            Picker("Segment", selection: $selectedSegment) {
-                ForEach(Segment.allCases, id: \.self) { segment in
-                    Text(segment.rawValue).tag(segment)
-                }
-            }
-            .pickerStyle(.segmented)
-            .padding(.horizontal, 20)
-            .padding(.vertical, 12)
-
             if let actionError {
                 Text(actionError)
                     .font(.caption)
@@ -202,7 +216,7 @@ struct CoworkTasksListView: View {
                     .foregroundColor(Color("TextSecondary"))
             }
             .padding(.horizontal, 14)
-            .frame(height: 56)
+            .frame(minHeight: 64)
             .background(Color("BgPanel"))
             .clipShape(RoundedRectangle(cornerRadius: Theme.radiusMD))
             .overlay(
