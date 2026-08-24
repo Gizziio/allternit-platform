@@ -68,6 +68,7 @@ jobs:
         env:
           NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY: ${{ secrets.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY }}
           NEXT_PUBLIC_ALLTERNIT_DESKTOP_AUTH: 'true'
+          NEXT_PUBLIC_ALLTERNIT_PUSH_WORKER_URL: ${{ secrets.NEXT_PUBLIC_ALLTERNIT_PUSH_WORKER_URL }}
           ENCRYPTION_KEY: ${{ secrets.ENCRYPTION_KEY }}
 
       - name: Deploy to Cloudflare Pages
