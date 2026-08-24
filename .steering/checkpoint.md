@@ -770,3 +770,41 @@ Generate VAPID keys, create Cloudflare resources, deploy the push worker, config
 - VAPID private key lives only as a Cloudflare Worker secret; it is NOT in the repo.
 - The worker is on the Cloudflare free plan, which required the `new_sqlite_classes` Durable Object migration.
 - `main` is 6 commits ahead of `origin/main`.
+
+---
+
+## Allternit Remote Control — Pages build fix and final state (2026-08-24)
+
+### Goal
+Ensure the deployed PWA can register its service worker and manifest, and prepare the final manual end-to-end test.
+
+### Just did
+- Discovered the live deployment was returning `index.html` for `/manifest.json`, `/sw.js`, and `/icons/*` because `public/_redirects` lacked pass-through rules for PWA static files.
+- Updated `surfaces/ai.allternit.com/public/_redirects` to add `200` pass-through rules for `/manifest.json`, `/sw.js`, and `/icons/*`.
+- Committed the fix, merged into `main`, and pushed to GitHub.
+- Updated `.github/workflows/deploy-cloudflare-pages.yml` to pass `NEXT_PUBLIC_ALLTERNIT_PUSH_WORKER_URL` from a GitHub secret to the Vite build.
+- Set the GitHub repository secret `NEXT_PUBLIC_ALLTERNIT_PUSH_WORKER_URL=https://allternit-remote-control-push.allternitpbc.workers.dev`.
+- Pushed the workflow update; Pages build succeeded and deployed.
+- Verified live deployment:
+  - `https://ai.allternit.com/manifest.json` returns the manifest JSON ✅
+  - `https://ai.allternit.com/sw.js` returns the service worker JS ✅
+  - `https://ai.allternit.com/icons/icon-192x192.png` returns 200 ✅
+  - The main JS bundle contains `allternit-remote-control-push.allternitpbc.workers.dev` ✅
+- Attempted an automated Playwright browser push test; Chromium download timed out, so the final notification delivery test is deferred to manual verification.
+
+### Current state
+- Worker: `https://allternit-remote-control-push.allternitpbc.workers.dev` deployed and verified.
+- Platform: `https://ai.allternit.com` deployed with PWA files and push worker URL available.
+- `main` is in sync with `origin/main`.
+
+### Manual end-to-end test steps
+1. On a phone or desktop Chrome, open `https://ai.allternit.com` and sign in.
+2. Navigate to the Dispatch/Remote view and select a paired runtime.
+3. Click the bell icon in the Remote Session panel and allow notifications when prompted.
+4. In the browser DevTools, verify the service worker registered and a push subscription was created.
+5. Trigger a permission request or question on the runtime (e.g., ask the agent to run a command that requires approval).
+6. Confirm a push notification arrives with the Allternit icon and action buttons.
+7. (Optional) Send a test notify directly: `curl -X POST https://allternit-remote-control-push.allternitpbc.workers.dev/push/notify/<runtimeId> -H "Content-Type: application/json" -d '{"title":"Test","body":"Push works"}'` after subscribing.
+
+### Open questions
+- None blocking; the remaining work is the manual browser notification test.
