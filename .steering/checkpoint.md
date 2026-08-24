@@ -1,5 +1,35 @@
 # Steering checkpoint
 
+## Real `remotecontrol.allternit.com` dashboard — IN PROGRESS
+
+### Goal
+Ship a public, installable PWA at `remotecontrol.allternit.com` and expose the same
+dashboard as a detached Electron window from `ai.allternit.com`, matching the desktop
+`/design` window pattern. Follow `docs/research/antigravity-remote-control-analysis.md`
+and stay inside the Allternit visual system.
+
+### Just did
+- Approved hybrid plan: pair/list runtimes inside `ai.allternit.com`; open dashboard in
+  detached window everywhere; dashboard hosted at `remotecontrol.allternit.com`.
+
+### Next
+1. Add `/remote-control` hub page inside `ai.allternit.com`.
+2. Wire route + desktop IPC/window mirroring `/design`.
+3. Scaffold standalone `surfaces/remotecontrol.allternit.com/` surface.
+4. Build dashboard UI reusing Allternit design tokens/components.
+5. Add PWA manifest, service worker, _redirects/_headers, deploy workflow, domains.
+6. Add runtime-side push trigger when permissions/questions need input.
+7. End-to-end screen-record and commit evidence.
+
+### Open questions
+- Confirm `remotecontrol.allternit.com` and `push.remotecontrol.allternit.com` can be
+  added to the Cloudflare zone.
+- Confirm Clerk app allows the new domain as an authorized origin.
+- Decide whether to import `RemoteSessionPanel` from `ai.allternit.com` source paths or
+  duplicate into the new surface for the first pass.
+
+---
+
 ## Agent email rail (mailflare fork → services/mailflare) — COMPLETE (uncommitted)
 
 ### Goal
@@ -808,3 +838,46 @@ Ensure the deployed PWA can register its service worker and manifest, and prepar
 
 ### Open questions
 - None blocking; the remaining work is the manual browser notification test.
+
+---
+
+## Allternit Remote Control — production dashboard wiring (2026-08-24)
+
+### Goal
+Get the standalone remote-control dashboard at `remotecontrol.allternit.com` fully wired to the production cloud API and push worker, with correct sign-in redirects and CORS.
+
+### Just did
+- Re-deployed the push worker (`allternit-remote-control-push.allternitpbc.workers.dev`) after it had stopped serving requests (error 1042). Verified `/push/vapid-public-key` returns 200 with `access-control-allow-origin: *` from both `remotecontrol.allternit.com` and Pages preview origins.
+- Updated `surfaces/ai.allternit.com/.env.production`:
+  - Fixed the Clerk publishable key to the correct `pk_live_Y2xlcmsucGxhdGZvcm0uYWxsdGVybml0LmNvbSQ` value.
+  - Set `NEXT_PUBLIC_ALLTERNIT_CLOUD_API_URL=https://api.allternit.com`.
+  - Set `NEXT_PUBLIC_ALLTERNIT_GATEWAY_URL=https://api.allternit.com` and `VITE_ALLTERNIT_GATEWAY_URL=https://api.allternit.com`.
+  - Set `NEXT_PUBLIC_ALLTERNIT_PUSH_WORKER_URL=https://allternit-remote-control-push.allternitpbc.workers.dev`.
+  - Set Clerk after-sign-in/up redirects to `https://remotecontrol.allternit.com`.
+- Built the missing office-package `dist/` artifacts that were blocking the Vite build (`@allternit/office-docx-engine`, `@allternit/office-file-parse`, `@allternit/office-pptx-engine`, `@allternit/office-pptx-render`, `@allternit/office-xlsx-engine`).
+- Rebuilt and re-deployed the dashboard to the `allternit-remote-control` Pages project. New deployment: `https://a556c0c0.allternit-remote-control.pages.dev`.
+- Verified the custom domain `remotecontrol.allternit.com` resolves and serves the new deployment (HTTP 200, correct HTML title, manifest/sw.js pass-through in `_redirects`).
+- Configured production environment variables on the `allternit-remote-control` Pages project so future Git-triggered builds use the same endpoints.
+- Added `remotecontrol.platform.allternit.com` as an additional custom domain on the Pages project so it can be used as a Clerk-origin-safe fallback while the main domain is being allow-listed.
+
+### Verification
+- `curl -I https://remotecontrol.allternit.com/` → 200 ✅
+- `curl -I -H "Origin: https://remotecontrol.allternit.com" https://api.allternit.com/api/v1/runtime` → `access-control-allow-origin: https://remotecontrol.allternit.com` ✅
+- `curl -H "Origin: https://remotecontrol.allternit.com" https://allternit-remote-control-push.allternitpbc.workers.dev/push/vapid-public-key` → 200 with public key ✅
+- `curl https://api.allternit.com/api/v1/runtime` without auth → 401 (expected; auth enforced) ✅
+
+### Remaining blockers
+1. **Clerk origin allow-list.** `remotecontrol.allternit.com` is not authorized in the Clerk production app. Clerk rejects the origin with:
+   > Production Keys are only allowed for domain "platform.allternit.com". API Error: The Request HTTP Origin header must be equal to or a subdomain of the requesting URL.
+   - Fix: In the Clerk dashboard for the `platform.allternit.com` app, add `remotecontrol.allternit.com` as an authorized domain (Settings → Domains / Authorized domains).
+   - Fallback (no Clerk dashboard access): use `https://remotecontrol.platform.allternit.com`; I already added it to the Pages project and it will work as a subdomain of `platform.allternit.com` once you create the DNS record below.
+2. **DNS record for the platform subdomain (fallback only).** If using the fallback domain, add:
+   - Type: `CNAME`
+   - Name: `remotecontrol.platform`
+   - Target: `allternit-remote-control.pages.dev`
+   - Proxy status: orange-cloud (Proxied)
+3. **Real paired runtime for end-to-end demo.** No runtime is currently paired with the production cloud API, so the Remote Session panel will show "No active sessions". After the Clerk domain issue is resolved, pair a runtime (local agent-daemon, desktop app, or hosted VM) and approve it at `https://platform.allternit.com/pair?code=XXXX`.
+
+### Open questions
+- Do you want to keep the primary domain as `remotecontrol.allternit.com` and add it to Clerk, or switch primary to `remotecontrol.platform.allternit.com`?
+- Should I attempt to pair a local `agent-daemon` now using the platform sign-in flow (which works because `platform.allternit.com` is already Clerk-authorized), so a runtime exists for testing once the remote-control domain is fixed?
