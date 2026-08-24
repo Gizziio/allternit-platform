@@ -88,7 +88,7 @@
     "@ai-sdk/togetherai": "^2.0.31",
     "@ai-sdk/vercel": "^2.0.30",
     "@ai-sdk/xai": "^3.0.48",
-    "@allternit/allternit-office-suite": "workspace:*",
+    "@allternit/office-suite": "workspace:*",
     "@allternit/mcp-apps-adapter": "workspace:*",
     "@allternit/office-docs-app": "workspace:*",
     "@allternit/office-docx-engine": "workspace:*",
