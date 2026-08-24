@@ -31,6 +31,7 @@
     "typescript": "^5.9.3"
   },
   "scripts": {
+    "build": "tsc --noEmit",
     "typecheck": "tsc --noEmit"
   },
   "author": "Allternit"

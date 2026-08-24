@@ -8,7 +8,7 @@ import {
   PdfApp,
   SignApp,
   type OfficeHost,
-} from '@allternit/allternit-office-suite'
+} from '@allternit/office-suite'
 
 type AppTab = 'docs' | 'sheets' | 'slides' | 'pdf' | 'sign'
 

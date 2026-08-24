@@ -1,5 +1,5 @@
 {
-  "name": "@allternit/allternit-office-suite",
+  "name": "@allternit/office-suite",
   "version": "0.1.0",
   "license": "Apache-2.0",
   "private": true,
@@ -34,6 +34,7 @@
     "typescript": "^5.9.3"
   },
   "scripts": {
+    "build": "tsc --noEmit",
     "typecheck": "tsc --noEmit"
   },
   "author": "Allternit"
