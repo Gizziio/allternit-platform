@@ -6,7 +6,7 @@ import {
   OfficeHostProvider,
   createBrowserHost,
   type OfficeHost,
-} from "@allternit/allternit-office-suite";
+} from "@allternit/office-suite";
 import { createArtifact } from "@/services/artifacts-api";
 
 function toBase64(bytes: Uint8Array): string {
