@@ -27,6 +27,10 @@ import {
 const ENV_PUBLISHABLE_KEY = getBuildTimeClerkPublishableKey()
 const SIGN_IN_URL = env("NEXT_PUBLIC_CLERK_SIGN_IN_URL") ?? "/sign-in"
 const SIGN_UP_URL = env("NEXT_PUBLIC_CLERK_SIGN_UP_URL") ?? "/sign-up"
+// The mounted path for the embedded <SignIn>/<SignUp> components must be a
+// path, not a full URL. The full URL above is only for ClerkProvider redirects.
+const SIGN_IN_PATH = "/sign-in"
+const SIGN_UP_PATH = "/sign-up"
 const desktopAuthEnabled = isDesktopAuthEnabled()
 const clerkDisabledByEnv = isClerkDisabledByEnv()
 const DESKTOP_BROWSER_AUTH_PATH_PREFIXES = ["/sign-in", "/sign-up", "/pair", "/oauth", "/terminal/clerk", "/clerk_"]
@@ -694,10 +698,10 @@ export function PlatformSignIn(props: {
       <SignIn
         appearance={clerkAppearance}
         forceRedirectUrl={redirectUrl}
-        path={SIGN_IN_URL}
+        path={SIGN_IN_PATH}
         routing="path"
         signUpForceRedirectUrl={props.signUpForceRedirectUrl || redirectUrl}
-        signUpUrl={props.signUpUrl || "/sign-up"}
+        signUpUrl={props.signUpUrl || SIGN_UP_PATH}
       />
     </>
   )
@@ -738,10 +742,10 @@ export function PlatformSignUp(props: {
     <SignUp
       appearance={clerkAppearance}
       forceRedirectUrl={redirectUrl}
-      path={SIGN_UP_URL}
+      path={SIGN_UP_PATH}
       routing="path"
       signInForceRedirectUrl={props.signInForceRedirectUrl || redirectUrl}
-      signInUrl={props.signInUrl || "/sign-in"}
+      signInUrl={props.signInUrl || SIGN_IN_PATH}
     />
   )
 }

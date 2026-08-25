@@ -1,13 +1,26 @@
 import { useEffect, useState } from 'react';
-import { ClerkProvider, SignIn, SignUp, useClerk, useSignIn, useUser } from '@clerk/clerk-react';
+import {
+  ClerkProvider,
+  SignIn,
+  SignUp,
+  useAuth,
+  useClerk,
+  useSignIn,
+  useUser,
+} from '@clerk/clerk-react';
 import { loadClerkConfig } from './clerk-config.js';
 
 function AuthFlow() {
   // Local state only — Clerk rewrites the location hash for its own routing,
   // so deriving the mode from the hash would fight that and snap back.
   const [isSignUp, setIsSignUp] = useState(false);
+  const { isSignedIn } = useAuth();
 
   const toggle = () => setIsSignUp((current) => !current);
+
+  if (isSignedIn) {
+    return <SignedInView />;
+  }
 
   return (
     <>
@@ -15,14 +28,12 @@ function AuthFlow() {
         <SignUp
           appearance={clerkAppearance}
           routing="hash"
-          forceRedirectUrl={selfRedirectUrl}
           signInForceRedirectUrl={selfRedirectUrl}
         />
       ) : (
         <SignIn
           appearance={clerkAppearance}
           routing="hash"
-          forceRedirectUrl={selfRedirectUrl}
           signUpForceRedirectUrl={selfRedirectUrl}
         />
       )}
@@ -58,13 +69,54 @@ function AuthFlow() {
   );
 }
 
+function SignedInView() {
+  return (
+    <div
+      style={{
+        textAlign: 'center',
+        padding: '40px 0',
+        color: '#0D0C0A',
+      }}
+    >
+      <div
+        style={{
+          width: '48px',
+          height: '48px',
+          borderRadius: '50%',
+          background: '#1A1916',
+          color: '#FAF9F7',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          margin: '0 auto 20px',
+          fontSize: '24px',
+        }}
+      >
+        ✓
+      </div>
+      <h2
+        style={{
+          fontSize: '22px',
+          fontWeight: 700,
+          margin: '0 0 8px',
+        }}
+      >
+        Signed in
+      </h2>
+      <p style={{ fontSize: '14px', color: '#74716B', margin: 0 }}>
+        Completing runtime pairing…
+      </p>
+    </div>
+  );
+}
+
 /**
- * URL of the auth page itself (https://accounts.<instance>/__desktop_auth__/).
- * Clerk redirects to the instance's home_url after sign-in/sign-up (and after
- * session tasks like organization setup), which would navigate the auth
- * window away to the platform before the TokenBridge can hand the session
- * token to the main process. Forcing the redirect back to this page makes
- * Clerk reload the auth renderer instead; TokenBridge then fires on mount.
+ * URL of the auth page itself (https://accounts.<instance>/__desktop_auth__/). The
+ * top-level ClerkProvider uses this as the forced/fallback redirect target so Clerk
+ * never navigates the isolated auth window away to the platform website. The embedded
+ * <SignIn>/<SignUp> components use hash routing and do NOT set forceRedirectUrl,
+ * because that caused a redirect loop: after sign-in Clerk would reload the page, the
+ * component would remount, and immediately redirect again.
  */
 const selfRedirectUrl =
   typeof window !== 'undefined' ? window.location.origin + window.location.pathname : '/';
@@ -259,16 +311,18 @@ function SeedAuth() {
  * signed in. The main process then completes the runtime pairing exchange.
  */
 function TokenBridge() {
-  const { session, user, loaded } = useClerk();
+  const { isSignedIn, getToken } = useAuth();
+  const { user } = useUser();
   const [reported, setReported] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    if (!loaded || !session || reported) return;
+    if (!isSignedIn || !getToken || reported) return;
 
     let active = true;
     void (async () => {
       try {
-        const token = await session.getToken();
+        const token = await getToken();
         if (!active || !token) return;
         const email =
           user?.primaryEmailAddress?.emailAddress ??
@@ -277,16 +331,35 @@ function TokenBridge() {
         setReported(true);
         await window.allternitAuth?.onClerkToken?.({ token, userId: user?.id ?? '', email });
       } catch (err) {
-        await window.allternitAuth?.onClerkError?.(err instanceof Error ? err.message : 'Clerk session error');
+        const message = err instanceof Error ? err.message : 'Clerk session error';
+        setError(message);
+        await window.allternitAuth?.onClerkError?.(message);
       }
     })();
 
     return () => {
       active = false;
     };
-  }, [loaded, session, user, reported]);
+  }, [isSignedIn, getToken, user, reported]);
 
-  return null;
+  if (!error) return null;
+
+  return (
+    <div
+      style={{
+        marginTop: '16px',
+        padding: '12px 14px',
+        borderRadius: '12px',
+        background: 'rgba(248,113,113,0.12)',
+        border: '1px solid rgba(248,113,113,0.24)',
+        color: '#9c2a25',
+        fontSize: '13px',
+        textAlign: 'center',
+      }}
+    >
+      {error}
+    </div>
+  );
 }
 
 export default function AuthApp() {
@@ -381,10 +454,10 @@ export default function AuthApp() {
             Allternit
           </div>
           <AuthFlow />
+          <TokenBridge />
         </div>
       </div>
       <SeedAuth />
-      <TokenBridge />
     </ClerkProvider>
   );
 }
