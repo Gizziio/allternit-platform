@@ -698,8 +698,7 @@ export function PlatformSignIn(props: {
       <SignIn
         appearance={clerkAppearance}
         forceRedirectUrl={redirectUrl}
-        path={SIGN_IN_PATH}
-        routing="path"
+        routing="hash"
         signUpForceRedirectUrl={props.signUpForceRedirectUrl || redirectUrl}
         signUpUrl={props.signUpUrl || SIGN_UP_PATH}
       />
@@ -742,8 +741,7 @@ export function PlatformSignUp(props: {
     <SignUp
       appearance={clerkAppearance}
       forceRedirectUrl={redirectUrl}
-      path={SIGN_UP_PATH}
-      routing="path"
+      routing="hash"
       signInForceRedirectUrl={props.signInForceRedirectUrl || redirectUrl}
       signInUrl={props.signInUrl || SIGN_IN_PATH}
     />
