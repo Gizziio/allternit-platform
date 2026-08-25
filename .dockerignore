@@ -82,6 +82,20 @@ tests
 tools
 ui
 
+# Large session worktrees (not workspace members, not referenced by Rust build)
+allternit-session-*
+
+# Large non-workspace directories not needed for cloud API build
+cmd/gizzi-code
+services/open-notebook
+services/open-connector
+services/vault-viewer
+domains/computer-use
+infrastructure/allternit-cloud-providers
+infrastructure/mesh
+tmp
+output
+
 # Dev-tool / IDE state dirs, never needed for a compile
 .agents
 .beads

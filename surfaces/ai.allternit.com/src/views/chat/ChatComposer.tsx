@@ -89,6 +89,7 @@ import { ModeDock, MODE_TABS, SURFACE_MODES } from './components/ModeDock';
 import { TemplateGallery } from './components/TemplateGallery';
 import { SwarmSubModeTabs } from './components/SwarmSubModeTabs';
 import { ComposerPlusSheet, type ToolAccessLevel, type ResponseStyle } from './components/ComposerPlusSheet';
+import { ConnectorMarketplaceDialog } from './components/ConnectorMarketplaceDialog';
 import { MiroFishPanel } from './panels/MiroFishPanel';
 import { useMiroFishRunStore } from '@/stores/mirofish-run.store';
 import { BottomDock } from './components/BottomDock';
@@ -451,6 +452,7 @@ export function ChatComposer({
   const [showModelMenu, setShowModelMenu] = useState(false);
   const [showModeSelectorMenu, setShowModeSelectorMenu] = useState(false);
   const [showProviderConnect, setShowProviderConnect] = useState(false);
+  const [showConnectorMarketplace, setShowConnectorMarketplace] = useState(false);
   const [showOpenClawImportDialog, setShowOpenClawImportDialog] = useState(false);
   const [openClawCandidates, setOpenClawCandidates] = useState<OpenClawDiscoveredAgent[]>([]);
   const [isLoadingOpenClawCandidates, setIsLoadingOpenClawCandidates] = useState(false);
@@ -1154,6 +1156,56 @@ export function ChatComposer({
     setInteractionMode('text');
   }, [isVoiceRecording, setInteractionMode, stopVoiceRecording]);
 
+  // Core send path shared by text submit and voice submit. Resolves inline
+  // @mentions, hands them off, and routes the enriched prompt to the right
+  // consumer (browser agent, MiroFish, agent-mode send, or plain chat).
+  const submitMessage = useCallback(async (rawText: string) => {
+    let messageText = rawText;
+
+    // Inline @mention handoff: resolve, execute, and append replies before
+    // sending to the active agent.
+    const inlineMentions = parseMentions(messageText);
+    if (inlineMentions.length > 0) {
+      try {
+        const handoff = await runMentionHandoff(messageText, selectedSurfaceAgent ?? undefined);
+        messageText = `${handoff.cleanText}${handoff.handoffNote}`;
+      } catch (err) {
+        // If handoff fails, send the original text with a note so the user
+        // knows the mention could not be routed.
+        messageText = `${messageText}\n\n[@mention routing failed: ${err instanceof Error ? err.message : String(err)}]`;
+      }
+    }
+
+    const enrichedInput = buildEnrichedInput(messageText);
+
+    if (selectedModeId === 'computer-use') {
+      useBrowserAgentStore.getState().runAcuTask(enrichedInput);
+    }
+
+    if (selectedModeId === 'swarms' && selectedSwarmSubMode === 'population-simulation') {
+      // MiroFish's single entry point is this composer: the prompt goes to
+      // the results-only panel below, which interprets and runs it — never
+      // through the normal agent-mode send.
+      useMiroFishRunStore.getState().requestRun(enrichedInput);
+    } else if (onAgentSend && agentModeSurface && (agentModeEnabled || isCanonicalAgentMode(selectedModeId))) {
+      onAgentSend(enrichedInput, selectedModeId ? { modeId: selectedModeId as CanonicalAgentModeId, templateTitle: selectedTemplateTitle } : undefined);
+    } else {
+      onSend(enrichedInput);
+    }
+  }, [
+    agentModeEnabled,
+    agentModeSurface,
+    buildEnrichedInput,
+    isCanonicalAgentMode,
+    onAgentSend,
+    onSend,
+    runMentionHandoff,
+    selectedModeId,
+    selectedSurfaceAgent,
+    selectedSwarmSubMode,
+    selectedTemplateTitle,
+  ]);
+
   useEffect(() => {
     if (!voiceModeActive || !voiceTranscript?.trim()) return;
     const spokenInput = voiceTranscript.trim();
@@ -1272,56 +1324,6 @@ export function ChatComposer({
     createAgent,
     loadCharacterLayer,
     setSelectedSurfaceAgent,
-  ]);
-
-  // Core send path shared by text submit and voice submit. Resolves inline
-  // @mentions, hands them off, and routes the enriched prompt to the right
-  // consumer (browser agent, MiroFish, agent-mode send, or plain chat).
-  const submitMessage = useCallback(async (rawText: string) => {
-    let messageText = rawText;
-
-    // Inline @mention handoff: resolve, execute, and append replies before
-    // sending to the active agent.
-    const inlineMentions = parseMentions(messageText);
-    if (inlineMentions.length > 0) {
-      try {
-        const handoff = await runMentionHandoff(messageText, selectedSurfaceAgent ?? undefined);
-        messageText = `${handoff.cleanText}${handoff.handoffNote}`;
-      } catch (err) {
-        // If handoff fails, send the original text with a note so the user
-        // knows the mention could not be routed.
-        messageText = `${messageText}\n\n[@mention routing failed: ${err instanceof Error ? err.message : String(err)}]`;
-      }
-    }
-
-    const enrichedInput = buildEnrichedInput(messageText);
-
-    if (selectedModeId === 'computer-use') {
-      useBrowserAgentStore.getState().runAcuTask(enrichedInput);
-    }
-
-    if (selectedModeId === 'swarms' && selectedSwarmSubMode === 'population-simulation') {
-      // MiroFish's single entry point is this composer: the prompt goes to
-      // the results-only panel below, which interprets and runs it — never
-      // through the normal agent-mode send.
-      useMiroFishRunStore.getState().requestRun(enrichedInput);
-    } else if (onAgentSend && agentModeSurface && (agentModeEnabled || isCanonicalAgentMode(selectedModeId))) {
-      onAgentSend(enrichedInput, selectedModeId ? { modeId: selectedModeId as CanonicalAgentModeId, templateTitle: selectedTemplateTitle } : undefined);
-    } else {
-      onSend(enrichedInput);
-    }
-  }, [
-    agentModeEnabled,
-    agentModeSurface,
-    buildEnrichedInput,
-    isCanonicalAgentMode,
-    onAgentSend,
-    onSend,
-    runMentionHandoff,
-    selectedModeId,
-    selectedSurfaceAgent,
-    selectedSwarmSubMode,
-    selectedTemplateTitle,
   ]);
 
   const handleSubmit = async () => {
@@ -2435,12 +2437,17 @@ export function ChatComposer({
                 activeProjectId={chatActiveProjectId}
                 setActiveProjectId={(id) => chatSetActiveProject(id)}
                 onCreateProject={() => { void chatCreateProject('New Project'); }}
-                onOpenConnectors={() => setShowProviderConnect(true)}
+                onOpenConnectors={() => setShowConnectorMarketplace(true)}
                 onOpenFormSurfaces={() => window.dispatchEvent(new CustomEvent('allternit:open-view', { detail: { viewType: 'form-surfaces' } }))}
                 onOpenBrainCapture={() => window.dispatchEvent(new CustomEvent('allternit:open-view', { detail: { viewType: 'brain' } }))}
                 onOpenCoworkTasks={() => window.dispatchEvent(new CustomEvent('allternit:open-view', { detail: { viewType: 'cowork-tasks' } }))}
                 onOpenAgentActivity={() => window.dispatchEvent(new CustomEvent('allternit:open-agent-activity'))}
                 onOpenPermissions={() => window.dispatchEvent(new CustomEvent('allternit:open-settings', { detail: { section: 'permissions' } }))}
+              />
+
+              <ConnectorMarketplaceDialog
+                open={showConnectorMarketplace}
+                onClose={() => setShowConnectorMarketplace(false)}
               />
             </div>
 

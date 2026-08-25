@@ -48,7 +48,7 @@ class StackedAgentService {
   }
 
   getState(): StackedAgentSyncState {
-    return { ...this.state };
+    return this.state;
   }
 
   subscribe(listener: StackedAgentListener): () => void {

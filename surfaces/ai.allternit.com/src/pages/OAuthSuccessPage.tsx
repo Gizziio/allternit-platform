@@ -4,7 +4,6 @@
 import { useEffect, useRef, useState, Suspense } from 'react';
 import { useSearchParams, useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { MatrixLogo } from '@/components/ai-elements/MatrixLogo';
 
 // Light-mode Allternit brand palette (matches allternit.com)
 const COLORS = {
@@ -136,7 +135,7 @@ function SuccessContent() {
                   border: `1px solid rgba(31,122,58,0.12)`,
                 }}
               />
-              <MatrixLogo state="idle" size={52} />
+              <img src="/brand/matrix/matrix-logo.svg" alt="Allternit" style={{ width: 52, height: 52 }} />
 
               {/* Checkmark badge */}
               <motion.div

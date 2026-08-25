@@ -1,6 +1,7 @@
 "use client"
 
 import { useEffect, useRef, useState } from "react"
+import { AProtocolWordmark } from "../components/AProtocolWordmark"
 
 type ServiceStatus = "operational" | "degraded" | "outage"
 
@@ -94,9 +95,8 @@ export default function StatusPage() {
         alignItems: "center",
         justifyContent: "space-between",
       }}>
-        <a href="/" style={{ display: "flex", alignItems: "center", gap: 6, textDecoration: "none" }}>
-          <span style={{ fontFamily: "var(--font-mono)", fontSize: 18, color: "#D97757" }}>A://</span>
-          <span style={{ fontFamily: 'var(--font-research)', fontSize: 18, color: "#1A1612" }}>LLTERNIT</span>
+        <a href="/" style={{ display: "flex", alignItems: "center", gap: 6, textDecoration: "none" }} aria-label="Allternit">
+          <AProtocolWordmark theme="ink" height={16} />
         </a>
         <a href="https://allternit.com" style={{ fontSize: 13, color: "#9B9B9B", textDecoration: "none" }}>← allternit.com</a>
       </nav>

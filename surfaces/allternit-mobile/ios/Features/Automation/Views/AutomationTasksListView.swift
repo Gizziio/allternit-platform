@@ -42,6 +42,25 @@ struct AutomationTasksListView: View {
         return jobs.filter { $0.name.localizedCaseInsensitiveContains(query) }
     }
 
+    private var filterMenu: some View {
+        Menu {
+            ForEach(StatusFilter.allCases, id: \.self) { filter in
+                Button(action: { statusFilter = filter }) {
+                    Label(filter.rawValue, systemImage: statusFilter == filter ? "checkmark" : "")
+                }
+            }
+        } label: {
+            Image(systemName: "line.3.horizontal.decrease")
+                .font(.system(size: 13, weight: .semibold))
+                .foregroundColor(Color("TextSecondary"))
+                .frame(width: 32, height: 32)
+                .background(Color("BgPanel"))
+                .clipShape(Circle())
+        }
+        .buttonStyle(.plain)
+        .accessibilityLabel("Filter tasks")
+    }
+
     var body: some View {
         NavigationStack {
             VStack(spacing: 0) {
@@ -61,13 +80,32 @@ struct AutomationTasksListView: View {
                             .foregroundColor(Color("TextPrimary"))
                             .frame(width: 44, height: 44)
                     }
+                    .accessibilityLabel("Open sidebar")
 
-                    Text("Automation Tasks")
-                        .font(.system(.title3, design: .serif))
-                        .fontWeight(.medium)
-                        .foregroundColor(Color("TextPrimary"))
+                    Menu {
+                        ForEach(AutomationKind.allCases, id: \.self) { kind in
+                            Button(action: { modeStore.automationKind = kind }) {
+                                Label(
+                                    kind.rawValue,
+                                    systemImage: modeStore.automationKind == kind ? "checkmark" : ""
+                                )
+                            }
+                        }
+                    } label: {
+                        HStack(spacing: 4) {
+                            Text(modeStore.automationKind.rawValue)
+                                .font(.system(.title3, design: .serif))
+                                .fontWeight(.medium)
+                                .foregroundColor(Color("TextPrimary"))
+                            Image(systemName: "chevron.down")
+                                .font(.system(size: 10, weight: .bold))
+                                .foregroundColor(Color("TextSecondary"))
+                        }
+                    }
 
                     Spacer()
+
+                    filterMenu
 
                     Button(action: {
                         let generator = UIImpactFeedbackGenerator(style: .light)
@@ -88,18 +126,7 @@ struct AutomationTasksListView: View {
 
                 Divider().background(Color("BorderSubtle"))
 
-                // Sibling entry point into Routines (Phase 2) — same
-                // "Automation Tasks" tab, `modeStore.automationKind` picks
-                // which sub-surface ChatView renders (see ChatView.swift's
-                // `.automation` case).
-                Picker("Automation kind", selection: $modeStore.automationKind) {
-                    ForEach(AutomationKind.allCases, id: \.self) { kind in
-                        Text(kind.rawValue).tag(kind)
-                    }
-                }
-                .pickerStyle(.segmented)
-                .padding(.horizontal, 20)
-                .padding(.top, 12)
+
 
                 content
             }
@@ -124,15 +151,6 @@ struct AutomationTasksListView: View {
     @ViewBuilder
     private var content: some View {
         VStack(spacing: 0) {
-            Picker("Status", selection: $statusFilter) {
-                ForEach(StatusFilter.allCases, id: \.self) { filter in
-                    Text(filter.rawValue).tag(filter)
-                }
-            }
-            .pickerStyle(.segmented)
-            .padding(.horizontal, 20)
-            .padding(.vertical, 12)
-
             if jobStore.isLoading && jobStore.jobs.isEmpty {
                 Spacer()
                 ProgressView()

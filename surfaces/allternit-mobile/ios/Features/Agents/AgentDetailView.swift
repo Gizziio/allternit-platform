@@ -12,6 +12,7 @@ struct AgentDetailView: View {
 
     @StateObject private var hubStore = AgentHubStore.shared
     @StateObject private var modelStore = ModelStore.shared
+    @ObservedObject private var preferences = PreferencesStore.shared
     @EnvironmentObject private var agentModeStore: AgentModeStore
 
     @State private var workspaceFiles: [WorkspaceFileInfo] = []
@@ -228,7 +229,15 @@ struct AgentDetailView: View {
         } header: {
             Text("Identity")
         } footer: {
-            if !promptFiles.isEmpty && agent.systemPrompt?.isEmpty == false {
+            if let error = preferences.saveError {
+                Text("Couldn't sync preferences: \(error)")
+                    .font(.caption)
+                    .foregroundColor(.red)
+            } else if let lastSavedAt = preferences.lastSavedAt, Date().timeIntervalSince(lastSavedAt) < 2 {
+                Text("Saved")
+                    .font(.caption)
+                    .foregroundColor(.green)
+            } else if !promptFiles.isEmpty && agent.systemPrompt?.isEmpty == false {
                 Text("Both prompt sources are active: the platform layers the persona and instruction files with the system prompt — neither overrides the other.")
             }
         }
@@ -634,11 +643,12 @@ struct AgentDetailView: View {
 /// System-prompt editor sheet (Identity section) — a plain TextEditor whose
 /// Save PUTs `system_prompt` through the hub store (which re-fetches the
 /// row so the detail reflects the saved value).
-private struct SystemPromptEditorSheet: View {
+struct SystemPromptEditorSheet: View {
     let agentId: String
     let initialPrompt: String
 
     @StateObject private var hubStore = AgentHubStore.shared
+    @EnvironmentObject private var agentModeStore: AgentModeStore
     @Environment(\.dismiss) private var dismiss
 
     @State private var prompt: String
@@ -695,6 +705,7 @@ private struct SystemPromptEditorSheet: View {
         Task {
             do {
                 try await hubStore.updateAgent(id: agentId, systemPrompt: prompt)
+                agentModeStore.fetchAgentsIfNeeded(force: true)
                 dismiss()
             } catch {
                 saveError = error.localizedDescription
@@ -712,10 +723,11 @@ private struct SystemPromptEditorSheet: View {
 /// schema). Save sends the FULL merged config
 /// (`AgentRecord.configReplacing`) since the backend replaces `config`
 /// wholesale rather than merging it.
-private struct GreetingEditorSheet: View {
+struct GreetingEditorSheet: View {
     let agent: AgentRecord
 
     @StateObject private var hubStore = AgentHubStore.shared
+    @EnvironmentObject private var agentModeStore: AgentModeStore
     @Environment(\.dismiss) private var dismiss
 
     @State private var greeting: String
@@ -807,6 +819,7 @@ private struct GreetingEditorSheet: View {
             do {
                 let config = agent.configReplacing(greeting: greeting, suggestedPrompts: prompts)
                 try await hubStore.updateAgent(id: agent.id, config: config)
+                agentModeStore.fetchAgentsIfNeeded(force: true)
                 dismiss()
             } catch {
                 saveError = error.localizedDescription
@@ -824,7 +837,7 @@ private struct GreetingEditorSheet: View {
 /// glyph of your own, or Reset to the deterministic default. Save PUTs
 /// through the hub store, which re-fetches the row so every surface (hub,
 /// deck sheet, detail hero) repaints.
-private struct AgentAvatarEditorSheet: View {
+struct AgentAvatarEditorSheet: View {
     let agent: AgentRecord
 
     @StateObject private var hubStore = AgentHubStore.shared
@@ -1031,14 +1044,14 @@ private struct NewWorkspaceFileSheet: View {
 
     private let agentClient = AgentClient()
 
-    /// Sanitized document filename: uppercased, spaces to dashes, .md
+    /// Sanitized document filename: lowercased, spaces to dashes, .md
     /// suffix — the platform's doc-name convention.
     private var fileName: String {
         let base = name.trimmingCharacters(in: .whitespacesAndNewlines)
             .replacingOccurrences(of: " ", with: "-")
         guard !base.isEmpty else { return "" }
-        let upper = base.uppercased()
-        return upper.hasSuffix(".MD") ? upper : upper + ".MD"
+        let lower = base.lowercased()
+        return lower.hasSuffix(".md") ? lower : lower + ".md"
     }
 
     private var fullPath: String {
@@ -1082,7 +1095,7 @@ private struct NewWorkspaceFileSheet: View {
                         Text(fullPath)
                             .font(.system(.caption, design: .monospaced))
                     } else {
-                        Text("Saved as an uppercase .md name inside the category.")
+                        Text("Saved as a lowercase .md name inside the category.")
                     }
                 }
 

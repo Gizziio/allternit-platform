@@ -16,13 +16,14 @@
   "dependencies": {
     "@allternit/office-pptx-engine": "workspace:*",
     "@allternit/office-pptx-render": "workspace:*",
+    "buffer": "^6.0.3",
+    "harfbuzzjs": "^0.4.11",
+    "konva": "^9.3.20",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
-    "zod": "^3.25.0",
-    "buffer": "^6.0.3",
-    "konva": "^9.3.20",
     "react-konva": "^18.2.11",
-    "harfbuzzjs": "^0.4.11"
+    "utif2": "^4.1.0",
+    "zod": "^3.25.0"
   },
   "devDependencies": {
     "@types/react": "^18.3.28",
@@ -30,6 +31,7 @@
     "typescript": "^5.9.3"
   },
   "scripts": {
+    "build": "tsc --noEmit",
     "typecheck": "tsc --noEmit"
   },
   "author": "Allternit"

@@ -16,6 +16,7 @@ import {
   isThreadArchivedLocally,
   setThreadArchivedLocally,
   buildMonitorLink,
+  externalEmailThreadKind,
 } from "@/views/mail-monitor/monitor.helpers";
 
 export interface AgentActivityDetailViewProps {
@@ -39,12 +40,14 @@ export function AgentActivityDetailView({ threadId }: AgentActivityDetailViewPro
   const [archived, setArchived] = useState(() => isThreadArchivedLocally(threadId));
   const [shareLink, setShareLink] = useState<string | null>(null);
   const [sharing, setSharing] = useState(false);
+  const [emailDelivery, setEmailDelivery] = useState<string | null>(null);
   const [replyText, setReplyText] = useState("");
   const [sending, setSending] = useState(false);
   const [actionError, setActionError] = useState<string | null>(null);
 
   const thread = useMemo(() => mailThreads.find((t) => t.thread_id === threadId), [mailThreads, threadId]);
   const topic = thread?.topic || threadId;
+  const externalEmail = externalEmailThreadKind(threadId);
 
   const refresh = useCallback(async () => {
     if (!threadId) return;
@@ -85,8 +88,18 @@ export function AgentActivityDetailView({ threadId }: AgentActivityDetailViewPro
   const handleDecide = async (approve: boolean) => {
     setDecisionPending(true);
     setActionError(null);
+    setEmailDelivery(null);
     try {
-      await railsApi.mail.decide(threadId, approve, undefined);
+      const result = await railsApi.mail.decide(threadId, approve, undefined);
+      // Outbound agent-email threads report the provider-side outcome on the
+      // decide response (rails/mod.rs mail_decide) — surface it inline.
+      if (result?.email) {
+        setEmailDelivery(
+          result.email.actioned
+            ? `External email ${result.email.status === "sent" ? "sent to the provider" : "rejected at the provider"}.`
+            : `Decision recorded, but the email action failed: ${result.email.error ?? "unknown error"}`,
+        );
+      }
       await refresh();
     } catch (err) {
       setActionError(err instanceof Error ? err.message : "Failed to record decision");
@@ -148,7 +161,17 @@ export function AgentActivityDetailView({ threadId }: AgentActivityDetailViewPro
           <ArrowLeft size={18} />
         </Button>
         <div className="min-w-0 flex-1">
-          <h1 className="text-lg font-semibold m-0 truncate">{topic}</h1>
+          <div className="flex items-center gap-2 min-w-0">
+            <h1 className="text-lg font-semibold m-0 truncate">{topic}</h1>
+            {externalEmail && (
+              <span
+                className="shrink-0 inline-flex items-center rounded px-1.5 py-0.5 text-[10px] font-bold leading-none"
+                style={{ background: "var(--status-info-bg)", color: "var(--status-info)" }}
+              >
+                ✉ external email {externalEmail === "inbound" ? "· inbound" : "· outbound"}
+              </span>
+            )}
+          </div>
           <p className="text-xs font-mono text-[var(--text-tertiary)] m-0">{threadId}</p>
         </div>
         <div className="flex items-center gap-2 shrink-0">
@@ -180,6 +203,12 @@ export function AgentActivityDetailView({ threadId }: AgentActivityDetailViewPro
           {actionError && (
             <div className="text-xs rounded-lg border border-solid px-3 py-2" style={{ borderColor: "var(--status-error)", color: "var(--status-error)", background: "var(--status-error-bg)" }}>
               {actionError}
+            </div>
+          )}
+
+          {emailDelivery && (
+            <div className="text-xs rounded-lg border border-solid border-[var(--border-default)] bg-[var(--bg-elevated)] px-3 py-2 text-[var(--text-secondary)]">
+              {emailDelivery}
             </div>
           )}
 

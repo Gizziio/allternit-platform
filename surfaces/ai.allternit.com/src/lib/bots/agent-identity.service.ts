@@ -15,7 +15,8 @@ import { apiRequestWithError } from '@/lib/agents/api-config';
 
 export interface ProvisionAgentEmailResult {
   address: string;
-  provider: string;
+  /** 'mailflare' when the mailflare rail is configured; 'commrails' is the legacy mint-only fallback. */
+  provider: 'mailflare' | 'commrails';
 }
 
 export interface ProvisionAgentPhoneResult {
@@ -35,4 +36,18 @@ export async function provisionAgentPhone(agentId: string): Promise<ProvisionAge
     `/api/v1/agents/${encodeURIComponent(agentId)}/identity/phone`,
     { method: 'POST' },
   );
+}
+
+/** Shape of `GET /api/v1/agent-email/status` (agent_email_routes.rs). */
+export interface AgentEmailRailStatus {
+  configured: boolean;
+  /** Present only when configured. */
+  domain?: string;
+  baseUrl?: string;
+  webhookSecretSet?: boolean;
+  reachable?: boolean;
+}
+
+export async function getAgentEmailStatus(): Promise<AgentEmailRailStatus> {
+  return apiRequestWithError<AgentEmailRailStatus>('/api/v1/agent-email/status');
 }

@@ -1,0 +1,20 @@
+NEXTJS_ENV=development
+# Preferred: scoped API token.
+# This is an app runtime token, not the Cloudflare deploy/build token.
+CF_TOKEN=your_api_token_with_zone_email_permissions
+CF_ACCOUNT_ID=your_account_id
+CF_EMAIL_WORKER_NAME=allternit-agent-mail
+
+# Require human approval before outbound mail is actually sent (allternit fork default).
+REQUIRE_SEND_APPROVAL=true
+
+# Email transport: cloudflare (default, requires Workers Paid + Email Sending entitlement)
+# or resend (uses Resend.com API; free tier is 100 emails/day). When using resend,
+# CF_TOKEN only needs Zone Read / DNS Edit / Email Routing Rules Edit.
+EMAIL_TRANSPORT=cloudflare
+# RESEND_API_KEY=re_...
+# RESEND_API_BASE=https://api.resend.com
+
+# Legacy Global API Key alternative. Use this only instead of CF_TOKEN.
+# CF_EMAIL=you@example.com
+# CF_API_KEY=your_global_api_key

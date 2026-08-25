@@ -61,6 +61,10 @@ packages:
   # own pnpm-lock. Excluded so root pnpm does not ingest it as a package.
   - '!services/docmost'
   - '!services/docmost/**'
+  # Vendored mailflare fork (agent email rail) — own npm package-lock and
+  # OpenNext/Cloudflare build. Managed via plain npm, not pnpm.
+  - '!services/mailflare'
+  - '!services/mailflare/**'
 
 # pnpm 10 reads overrides from this file, not from package.json.
 overrides:

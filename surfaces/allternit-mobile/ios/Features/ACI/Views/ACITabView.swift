@@ -64,6 +64,7 @@ struct ACITabView: View {
                             .foregroundColor(Color("TextPrimary"))
                             .frame(width: 44, height: 44)
                     }
+                    .accessibilityLabel("Open sidebar")
 
                     Spacer()
 

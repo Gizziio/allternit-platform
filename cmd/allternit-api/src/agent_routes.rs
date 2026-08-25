@@ -1497,18 +1497,29 @@ async fn delete_agent(
     let db = state.db.clone();
     let user_id = user.user_id;
 
-    let result = tokio::task::spawn_blocking(move || {
-        let conn = db.connect()?;
-        conn.execute(
-            "DELETE FROM agents WHERE id = ?1 AND user_id = ?2",
-            params![id, user_id],
-        )?;
-        Ok::<_, rusqlite::Error>(())
+    let result = tokio::task::spawn_blocking({
+        let db = db.clone();
+        let id = id.clone();
+        let user_id = user_id.clone();
+        move || {
+            let conn = db.connect()?;
+            conn.execute(
+                "DELETE FROM agents WHERE id = ?1 AND user_id = ?2",
+                params![id, user_id],
+            )?;
+            Ok::<_, rusqlite::Error>(())
+        }
     })
     .await;
 
     match result {
-        Ok(Ok(())) => Json(json!({"success": true})).into_response(),
+        Ok(Ok(())) => {
+            // Best-effort mailflare teardown for the agent's email channel
+            // (deletes the mailbox + Cloudflare routing rule). Never fails the
+            // delete.
+            crate::agent_email_routes::revoke_agent_mailbox(&id, &db).await;
+            Json(json!({"success": true})).into_response()
+        }
         Ok(Err(e)) => {
             warn!("DB error deleting agent: {}", e);
             (

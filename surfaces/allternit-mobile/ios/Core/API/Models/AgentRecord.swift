@@ -42,6 +42,18 @@ struct AgentRecord: Decodable, Sendable, Identifiable, Equatable, Hashable {
     /// silently drop fields this client doesn't know about.
     let config: [String: JSONValue]?
 
+    /// Bot/runtime fields. The backend currently returns `harness_config`
+    /// top-level; the other fields may arrive top-level (future backend) or
+    /// nested inside `config` (current web parity path). Each has a computed
+    /// fallback to `config` so the UI can render them regardless of where the
+    /// server puts them.
+    let harnessConfig: HarnessConfig?
+    let topLevelBotProfile: BotProfile?
+    let topLevelConnectorBindings: [ConnectorBinding]?
+    let topLevelSecretRefs: [SecretRef]?
+    let topLevelIdentityChannels: IdentityChannels?
+    let topLevelVMOperator: VMOperatorConfig?
+
     enum CodingKeys: String, CodingKey {
         case id, name, description, type, model, provider, status, avatar, category, mode, config
         case parentAgentId = "parent_agent_id"
@@ -53,6 +65,12 @@ struct AgentRecord: Decodable, Sendable, Identifiable, Equatable, Hashable {
         case createdAt = "created_at"
         case updatedAt = "updated_at"
         case lastRunAt = "last_run_at"
+        case harnessConfig = "harness_config"
+        case topLevelBotProfile = "bot_profile"
+        case topLevelConnectorBindings = "connector_bindings"
+        case topLevelSecretRefs = "secret_refs"
+        case topLevelIdentityChannels = "identity_channels"
+        case topLevelVMOperator = "vm_operator"
     }
 
     /// Optional first-message greeting for a fresh chat with this agent
@@ -69,6 +87,82 @@ struct AgentRecord: Decodable, Sendable, Identifiable, Equatable, Hashable {
     var suggestedPrompts: [String] {
         guard case .array(let items)? = config?["suggested_prompts"] else { return [] }
         return items.compactMap { if case .string(let s) = $0 { return s } else { return nil } }
+    }
+
+    // MARK: - Bot / runtime fields (top-level or config fallback)
+
+    var botProfile: BotProfile? {
+        if let topLevelBotProfile { return topLevelBotProfile }
+        return configValue(for: "botProfile")
+    }
+
+    var connectorBindings: [ConnectorBinding] {
+        if let topLevelConnectorBindings { return topLevelConnectorBindings }
+        return configArray(for: "connectorBindings") ?? []
+    }
+
+    var secretRefs: [SecretRef] {
+        if let topLevelSecretRefs { return topLevelSecretRefs }
+        return configArray(for: "secretRefs") ?? []
+    }
+
+    var identityChannels: IdentityChannels? {
+        if let topLevelIdentityChannels { return topLevelIdentityChannels }
+        return configValue(for: "identityChannels")
+    }
+
+    var vmOperator: VMOperatorConfig? {
+        if let topLevelVMOperator { return topLevelVMOperator }
+        return configValue(for: "vmOperator")
+    }
+
+    var harness: HarnessConfig? {
+        if let harnessConfig { return harnessConfig }
+        return configValue(for: "harness")
+    }
+
+    /// True for packaged bots (openmausbot / Bot Home parity). Mirrors web
+    /// `isBot`: an agent is treated as a bot when it has a bot profile or
+    /// explicit `isBot` flag in config.
+    var isBot: Bool {
+        if botProfile != nil { return true }
+        if case .bool(let flag)? = config?["isBot"] { return flag }
+        if case .bool(let flag)? = config?["is_bot"] { return flag }
+        return false
+    }
+
+    var botDisplayName: String {
+        botProfile?.displayName?.isEmpty == false ? botProfile!.displayName! : name
+    }
+
+    var botTagline: String {
+        botProfile?.tagline?.isEmpty == false ? botProfile!.tagline! : (description ?? "@\(name)")
+    }
+
+    var botAccentColor: String? {
+        botProfile?.accentColor?.isEmpty == false ? botProfile!.accentColor : nil
+    }
+
+    private func configValue<T: Decodable>(for key: String) -> T? {
+        guard let value = config?[key] else { return nil }
+        do {
+            let data = try JSONEncoder().encode(value)
+            return try JSONDecoder().decode(T.self, from: data)
+        } catch {
+            return nil
+        }
+    }
+
+    private func configArray<T: Decodable>(for key: String) -> [T]? {
+        guard case .array(let items)? = config?[key] else { return nil }
+        return items.compactMap { item in
+            do {
+                let data = try JSONEncoder().encode(item)
+                return try JSONDecoder().decode(T.self, from: data)
+            } catch {
+                return nil
+            }
+        }
     }
 
     /// `[String: JSONValue]?` breaks synthesized `Hashable` (Dictionary
@@ -123,6 +217,13 @@ struct AgentRecord: Decodable, Sendable, Identifiable, Equatable, Hashable {
         // this decodes directly — no string-unwrapping fallback needed.
         config = try container.decodeIfPresent([String: JSONValue].self, forKey: .config)
 
+        harnessConfig = try container.decodeIfPresent(HarnessConfig.self, forKey: .harnessConfig)
+        topLevelBotProfile = try container.decodeIfPresent(BotProfile.self, forKey: .topLevelBotProfile)
+        topLevelConnectorBindings = try container.decodeIfPresent([ConnectorBinding].self, forKey: .topLevelConnectorBindings)
+        topLevelSecretRefs = try container.decodeIfPresent([SecretRef].self, forKey: .topLevelSecretRefs)
+        topLevelIdentityChannels = try container.decodeIfPresent(IdentityChannels.self, forKey: .topLevelIdentityChannels)
+        topLevelVMOperator = try container.decodeIfPresent(VMOperatorConfig.self, forKey: .topLevelVMOperator)
+
         if let modes = try? container.decode([String].self, forKey: .enabledModes) {
             enabledModes = modes
         } else if let raw = try? container.decode(String.self, forKey: .enabledModes),
@@ -166,7 +267,13 @@ struct AgentRecord: Decodable, Sendable, Identifiable, Equatable, Hashable {
          avatar: String? = nil, trustTier: String = "standard", enabledModes: [String] = ["chat"],
          category: String? = nil, mode: String = "primary", isPrimary: Bool = false,
          createdAt: String = "", updatedAt: String = "", lastRunAt: String? = nil,
-         config: [String: JSONValue]? = nil) {
+         config: [String: JSONValue]? = nil,
+         harnessConfig: HarnessConfig? = nil,
+         botProfile: BotProfile? = nil,
+         connectorBindings: [ConnectorBinding]? = nil,
+         secretRefs: [SecretRef]? = nil,
+         identityChannels: IdentityChannels? = nil,
+         vmOperator: VMOperatorConfig? = nil) {
         self.id = id
         self.name = name
         self.description = description
@@ -187,7 +294,76 @@ struct AgentRecord: Decodable, Sendable, Identifiable, Equatable, Hashable {
         self.config = config
         self.updatedAt = updatedAt
         self.lastRunAt = lastRunAt
+        self.harnessConfig = harnessConfig
+        self.topLevelBotProfile = botProfile
+        self.topLevelConnectorBindings = connectorBindings
+        self.topLevelSecretRefs = secretRefs
+        self.topLevelIdentityChannels = identityChannels
+        self.topLevelVMOperator = vmOperator
     }
+
+    #if DEBUG
+    /// Demo fixture for UI regression screenshots when running with
+    /// `-auto-skip-auth -open-bot-home-demo`. Populates enough bot fields
+    /// that `BotHomeView` renders every card with sample content.
+    static var demoBot: AgentRecord {
+        AgentRecord(
+            id: "demo-bot-home-001",
+            name: "OpenMausBot",
+            description: "A sample bot dashboard for offline smoke testing.",
+            type: "worker",
+            model: "gpt-4o",
+            provider: "openai",
+            systemPrompt: "You are a helpful assistant.",
+            status: "idle",
+            avatar: nil,
+            trustTier: "standard",
+            enabledModes: ["chat"],
+            category: "assistant",
+            mode: "primary",
+            isPrimary: true,
+            createdAt: "2026-08-20T00:00:00Z",
+            updatedAt: "2026-08-20T00:00:00Z",
+            lastRunAt: "2026-08-20T00:00:00Z",
+            config: [
+                "greeting": .string("Hello! I'm OpenMausBot. Pick a starter prompt or run a task."),
+                "suggested_prompts": .array([
+                    .string("Summarize my latest run"),
+                    .string("Open the desktop preview"),
+                    .string("Check webhook status")
+                ]),
+                "isBot": .bool(true)
+            ],
+            harnessConfig: HarnessConfig(
+                mode: "autonomous",
+                byok: [
+                    "openai": HarnessBYOKProvider(apiKey: "sk-demo")
+                ]
+            ),
+            botProfile: BotProfile(
+                displayName: "OpenMausBot",
+                tagline: "Autonomous execution, one tap away.",
+                botCategory: "assistant",
+                welcomeMessage: "Hello! I'm OpenMausBot. Pick a starter prompt or run a task.",
+                starterPrompts: [
+                    "Summarize my latest run",
+                    "Open the desktop preview",
+                    "Check webhook status"
+                ],
+                accentColor: "#E07A5F"
+            ),
+            vmOperator: VMOperatorConfig(
+                enabled: true,
+                provider: "docker",
+                image: "allternit/openmaus:latest",
+                vncEnabled: true,
+                vncUrl: "http://localhost:5900",
+                allowedActions: ["start", "stop", "restart"],
+                resources: VMResources(cpu: "2", memory: "4GB", disk: "20GB")
+            )
+        )
+    }
+    #endif
 }
 
 /// Envelope of the registry list (`{ "agents": [...] }`) decoded with full

@@ -6,7 +6,7 @@ import type { Agent, AgentConnectorBinding, AgentSecretRef, AgentWalletPaymentMe
 import { updateAgent } from "@/lib/agents/agent.service";
 import { sealAgentSecret } from "@/lib/agents/agent-secrets.service";
 import { createAgentWallet } from "@/lib/bots/agent-wallet-factory";
-import { provisionAgentEmail, provisionAgentPhone } from "@/lib/bots/agent-identity.service";
+import { provisionAgentEmail, provisionAgentPhone, getAgentEmailStatus, type AgentEmailRailStatus } from "@/lib/bots/agent-identity.service";
 import {
   getIdentityMappingForConnector,
   getConnectorAccountIdentifier,
@@ -32,6 +32,11 @@ interface BotRuntimeConfigModalProps {
 
 function connectorProviderSlug(name: string): string {
   return name.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "") || "connector";
+}
+
+/** Platform-managed email providers: the backend owns provisioning (mailflare when configured, commrails as the legacy fallback). */
+function isPlatformEmailProvider(provider: AgentEmailChannel["provider"]): boolean {
+  return provider === "commrails" || provider === "mailflare";
 }
 
 export function BotRuntimeConfigModal({ bot, isOpen, onClose, onSaved, initialSection = "connectors" }: BotRuntimeConfigModalProps) {
@@ -124,6 +129,27 @@ export function BotRuntimeConfigModal({ bot, isOpen, onClose, onSaved, initialSe
   const [walletConnectionStatus, setWalletConnectionStatus] = useState<"idle" | "connected" | "error">("idle");
 
   const [identityErrors, setIdentityErrors] = useState<{ email?: string; phone?: string; wallet?: string }>({});
+
+  const [emailRailStatus, setEmailRailStatus] = useState<AgentEmailRailStatus | null>(null);
+  const [emailRailStatusError, setEmailRailStatusError] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!isOpen || activeSection !== "identity") return;
+    let cancelled = false;
+    setEmailRailStatusError(null);
+    getAgentEmailStatus()
+      .then((status) => {
+        if (!cancelled) setEmailRailStatus(status);
+      })
+      .catch((err) => {
+        if (cancelled) return;
+        setEmailRailStatus(null);
+        setEmailRailStatusError(err instanceof Error ? err.message : "Failed to load email rail status");
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [isOpen, activeSection]);
 
   useEffect(() => {
     if (isOpen) {
@@ -281,12 +307,14 @@ export function BotRuntimeConfigModal({ bot, isOpen, onClose, onSaved, initialSe
     setIdentityErrors((prev) => ({ ...prev, email: undefined }));
     setEmailConnectionStatus("idle");
     try {
-      if (emailProvider === "commrails") {
-        // Platform-managed mailbox: backend provisions the address from
-        // ALLTERNIT_BOT_EMAIL_DOMAIN and owns the credentials.
+      if (emailProvider === "commrails" || emailProvider === "mailflare") {
+        // Platform-managed mailbox: the backend provisions a real mailflare
+        // mailbox (+ scoped key) when the mailflare rail is configured,
+        // otherwise falls back to the legacy mint-only commrails row. The
+        // response reports which provider was actually provisioned.
         const result = await provisionAgentEmail(bot.id);
         setEmailAddress(result.address);
-        setEmailProvider("commrails");
+        setEmailProvider(result.provider);
         setEmailSend(true);
         setEmailReceive(true);
         setEmailConnectionStatus("connected");
@@ -736,6 +764,7 @@ export function BotRuntimeConfigModal({ bot, isOpen, onClose, onSaved, initialSe
                 boundIds={boundIds}
                 onBind={bindConnector}
                 onUnbind={unbindConnector}
+                agentId={bot.id}
               />
             </section>
           )}
@@ -928,6 +957,26 @@ export function BotRuntimeConfigModal({ bot, isOpen, onClose, onSaved, initialSe
                 Bind real accounts the bot will use autonomously. Credentials are sealed in the vault and connected through the owned-connector stack.
               </p>
 
+              <div className="flex items-center gap-2 mb-4 text-[12px] text-[var(--text-tertiary)]">
+                <Cloud size={14} />
+                {emailRailStatusError ? (
+                  <span className="text-[var(--status-error)]">Email rail status unavailable: {emailRailStatusError}</span>
+                ) : emailRailStatus ? (
+                  emailRailStatus.configured ? (
+                    <span>
+                      Email rail: Agent Mail (mailflare){emailRailStatus.domain ? ` · ${emailRailStatus.domain}` : ""} ·{" "}
+                      <span className={emailRailStatus.reachable ? "text-[var(--status-success)]" : "text-[var(--status-error)]"}>
+                        {emailRailStatus.reachable ? "reachable" : "unreachable"}
+                      </span>
+                    </span>
+                  ) : (
+                    <span>Email rail: mailflare not configured — provisioning falls back to the CommRails mint</span>
+                  )
+                ) : (
+                  <span>Checking email rail…</span>
+                )}
+              </div>
+
               <div className="space-y-4">
                 {/* Email */}
                 <div className="rounded-xl border border-[var(--border-subtle)] bg-[var(--bg-card)] p-4">
@@ -981,17 +1030,21 @@ export function BotRuntimeConfigModal({ bot, isOpen, onClose, onSaved, initialSe
                         className="w-full h-9 rounded-md border border-[var(--border-subtle)] bg-[var(--bg-elevated)] text-[var(--text-primary)] text-[13px] px-2"
                       >
                         <option value="commrails">CommRails (platform email)</option>
+                        <option value="mailflare">Agent Mail (mailflare)</option>
                         <option value="google_workspace">Gmail / Google Workspace</option>
                         <option value="microsoft_365">Outlook / Microsoft 365</option>
                         <option value="generic_imap">Generic IMAP/SMTP</option>
                         <option value="custom">Custom</option>
                       </select>
                     </div>
-                    {emailProvider === "commrails" && (
+                    {(emailProvider === "commrails" || emailProvider === "mailflare") && (
                       <div className="sm:col-span-2 rounded-lg border border-[var(--border-subtle)] bg-[var(--bg-elevated)] p-3">
                         <p className="text-[12px] text-[var(--text-secondary)]">
-                          CommRails provisions a platform-managed mailbox. The backend generates
-                          the address and credentials; click Connect to allocate one.
+                          Platform email provisions a platform-managed mailbox — a real Agent Mail
+                          (mailflare) mailbox when the mailflare rail is configured, otherwise the
+                          legacy CommRails mint. The backend generates the address and credentials;
+                          click Connect to allocate one. Outbound sends are approval-gated and appear
+                          as review cards in Agent Activity.
                         </p>
                       </div>
                     )}
@@ -1091,15 +1144,15 @@ export function BotRuntimeConfigModal({ bot, isOpen, onClose, onSaved, initialSe
                       variant="outline"
                       size="sm"
                       onClick={() => void handleConnectEmail()}
-                      disabled={emailConnecting || (emailProvider !== "commrails" && !emailAddress.trim())}
+                      disabled={emailConnecting || (!isPlatformEmailProvider(emailProvider) && !emailAddress.trim())}
                       className="gap-1.5 shrink-0"
                     >
                       {emailConnecting
-                        ? emailProvider === "commrails"
+                        ? isPlatformEmailProvider(emailProvider)
                           ? "Provisioning…"
                           : "Connecting…"
-                        : emailProvider === "commrails"
-                          ? "Provision CommRails email"
+                        : isPlatformEmailProvider(emailProvider)
+                          ? "Provision platform email"
                           : "Connect email"}
                     </Button>
                   </div>

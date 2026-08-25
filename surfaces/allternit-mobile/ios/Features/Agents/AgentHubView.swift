@@ -18,6 +18,7 @@ struct AgentHubView: View {
     @State private var detailAgent: AgentRecord? = nil
     @State private var isTemplateSheetPresented = false
     @State private var isBotSelectionPresented = false
+    @State private var isMarketplacePresented = false
     @State private var agentPendingDeletion: AgentRecord? = nil
     @State private var isDeleteConfirmPresented = false
     @State private var actionError: String? = nil
@@ -57,14 +58,12 @@ struct AgentHubView: View {
             VStack(spacing: 0) {
                 headerBar
                 Divider().background(Color("BorderSubtle"))
-                hubTabs
-                Divider().background(Color("BorderSubtle"))
                 content
             }
             .background(Color("BgPrimary").edgesIgnoringSafeArea(.all))
             .toolbar(.hidden, for: .navigationBar)
             .navigationDestination(item: $detailAgent) { agent in
-                AgentDetailView(initialAgent: agent)
+                BotHomeView(initialAgent: agent)
             }
         }
         .sheet(isPresented: $isTemplateSheetPresented) {
@@ -72,6 +71,9 @@ struct AgentHubView: View {
         }
         .sheet(isPresented: $isBotSelectionPresented) {
             BotSelectionSheet()
+        }
+        .sheet(isPresented: $isMarketplacePresented) {
+            MarketplaceView()
         }
         .confirmationDialog(
             "Delete \(agentPendingDeletion?.name ?? "this agent")?",
@@ -88,6 +90,13 @@ struct AgentHubView: View {
             Text("This permanently deletes the agent. This can't be undone.")
         }
         .task {
+            #if DEBUG
+            if CommandLine.arguments.contains("-open-bot-home-demo"), !didApplyDebugArgs {
+                didApplyDebugArgs = true
+                detailAgent = .demoBot
+                return
+            }
+            #endif
             hubStore.fetchAgentsIfNeeded()
             hubStore.fetchTemplatesIfNeeded()
             await loadBotSessions()
@@ -129,11 +138,30 @@ struct AgentHubView: View {
                     .foregroundColor(Color("TextPrimary"))
                     .frame(width: 44, height: 44)
             }
+            .accessibilityLabel("Open sidebar")
+            .accessibilityHint("Shows the main navigation drawer")
 
-            Text("agent | bot hub")
-                .font(.system(.title3, design: .serif))
-                .fontWeight(.medium)
-                .foregroundColor(Color("TextPrimary"))
+            Menu {
+                ForEach(HubTab.allCases) { tab in
+                    Button(action: {
+                        let generator = UIImpactFeedbackGenerator(style: .light)
+                        generator.impactOccurred()
+                        selectedTab = tab
+                    }) {
+                        Label(tab.label, systemImage: selectedTab == tab ? "checkmark" : "")
+                    }
+                }
+            } label: {
+                HStack(spacing: 4) {
+                    Text(selectedTab.label)
+                        .font(.system(.title3, design: .serif))
+                        .fontWeight(.medium)
+                        .foregroundColor(Color("TextPrimary"))
+                    Image(systemName: "chevron.down")
+                        .font(.system(size: 10, weight: .bold))
+                        .foregroundColor(Color("TextSecondary"))
+                }
+            }
 
             Spacer()
 
@@ -159,35 +187,10 @@ struct AgentHubView: View {
                     .background(Color("BgPanel"))
                     .clipShape(Circle())
             }
+            .accessibilityLabel("Create agent")
         }
         .padding(.horizontal, 8)
         .padding(.vertical, 6)
-        .background(Color("BgPrimary"))
-    }
-
-    // MARK: - Tabs
-
-    private var hubTabs: some View {
-        HStack(spacing: 0) {
-            ForEach(HubTab.allCases) { tab in
-                Button(action: {
-                    let generator = UIImpactFeedbackGenerator(style: .light)
-                    generator.impactOccurred()
-                    selectedTab = tab
-                }) {
-                    VStack(spacing: 6) {
-                        Text(tab.label)
-                            .font(.system(size: 13, weight: selectedTab == tab ? .semibold : .medium))
-                            .foregroundColor(selectedTab == tab ? Color("TextPrimary") : Color("TextSecondary"))
-                        Rectangle()
-                            .fill(selectedTab == tab ? Color("AccentPrimary") : Color.clear)
-                            .frame(height: 2)
-                    }
-                }
-                .buttonStyle(.plain)
-            }
-        }
-        .padding(.horizontal, 12)
         .background(Color("BgPrimary"))
     }
 
@@ -542,35 +545,51 @@ struct AgentHubView: View {
     }
 
     private func sessionRow(_ session: AgentSession) -> some View {
-        HStack(spacing: 12) {
-            ZStack {
-                RoundedRectangle(cornerRadius: 12, style: .continuous)
-                    .fill(Color("AccentPrimary").opacity(0.12))
-                Image(systemName: "bubble.left")
-                    .font(.system(size: 15, weight: .medium))
-                    .foregroundColor(Color("AccentPrimary"))
-            }
-            .frame(width: 40, height: 40)
+        Button(action: {
+            let generator = UIImpactFeedbackGenerator(style: .light)
+            generator.impactOccurred()
+            NotificationCenter.default.post(
+                name: .openChatSession,
+                object: nil,
+                userInfo: ["sessionId": session.id, "agentId": session.agentId ?? ""]
+            )
+        }) {
+            HStack(spacing: 12) {
+                ZStack {
+                    RoundedRectangle(cornerRadius: 12, style: .continuous)
+                        .fill(Color("AccentPrimary").opacity(0.12))
+                    Image(systemName: "bubble.left")
+                        .font(.system(size: 15, weight: .medium))
+                        .foregroundColor(Color("AccentPrimary"))
+                }
+                .frame(width: 40, height: 40)
 
-            VStack(alignment: .leading, spacing: 2) {
-                Text(session.name ?? "Untitled Session")
-                    .font(.system(size: 14, weight: .semibold))
-                    .foregroundColor(Color("TextPrimary"))
-                    .lineLimit(1)
-                Text("\(session.messageCount) message\(session.messageCount == 1 ? "" : "s") · \(session.updatedAt.prefix(10))")
-                    .font(.caption)
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(session.name ?? "Untitled Session")
+                        .font(.system(size: 14, weight: .semibold))
+                        .foregroundColor(Color("TextPrimary"))
+                        .lineLimit(1)
+                    Text("\(session.messageCount) message\(session.messageCount == 1 ? "" : "s") · \(session.updatedAt.prefix(10))")
+                        .font(.caption)
+                        .foregroundColor(Color("TextSecondary"))
+                }
+
+                Spacer(minLength: 0)
+
+                Image(systemName: "chevron.right")
+                    .font(.system(size: 11, weight: .bold))
                     .foregroundColor(Color("TextSecondary"))
             }
-
-            Spacer(minLength: 0)
+            .padding(12)
+            .background(Color("BgPanel"))
+            .clipShape(RoundedRectangle(cornerRadius: Theme.radiusMD))
+            .overlay(
+                RoundedRectangle(cornerRadius: Theme.radiusMD)
+                    .stroke(Theme.borderWarmDefault, lineWidth: 1)
+            )
         }
-        .padding(12)
-        .background(Color("BgPanel"))
-        .clipShape(RoundedRectangle(cornerRadius: Theme.radiusMD))
-        .overlay(
-            RoundedRectangle(cornerRadius: Theme.radiusMD)
-                .stroke(Theme.borderWarmDefault, lineWidth: 1)
-        )
+        .buttonStyle(.plain)
+        .accessibilityLabel("Open \(session.name ?? "session")")
     }
 
     // MARK: - Workspace tab
@@ -649,16 +668,7 @@ struct AgentHubView: View {
                     title: "Discover agents | bots",
                     subtitle: "Browse the marketplace"
                 ) {
-                    // Marketplace is a navigation destination; the header link
-                    // handles it. Here we just open the detail if needed.
-                }
-
-                configCard(
-                    icon: "gearshape.2",
-                    title: "Response style",
-                    subtitle: PreferencesStore.shared.responseStyle.label
-                ) {
-                    // No-op: a future settings deep-link can go here.
+                    isMarketplacePresented = true
                 }
 
                 if let selected = agentModeStore.selectedAgent(for: .chat) {

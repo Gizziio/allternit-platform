@@ -168,6 +168,7 @@ struct CodeModeView: View {
                     .foregroundColor(Color("TextPrimary"))
                     .frame(width: 44, height: 44)
             }
+            .accessibilityLabel("Open sidebar")
 
             Text("Code")
                 .font(.system(.title3, design: .serif))
@@ -190,6 +191,7 @@ struct CodeModeView: View {
                     .foregroundColor(statusFilter == .all ? Color("TextPrimary") : theme.accent)
                     .frame(width: 44, height: 44)
             }
+            .accessibilityLabel("Filter")
 
             Button(action: {
                 let generator = UIImpactFeedbackGenerator(style: .light)
@@ -329,21 +331,22 @@ struct CodeModeView: View {
             VStack(spacing: 16) {
                 Image(systemName: theme.icon)
                     .font(.system(size: 24, weight: .medium))
-                    .foregroundColor(theme.accent)
+                    .foregroundColor(Color("TextSecondary"))
                     .frame(width: 56, height: 56)
-                    .background(theme.accentSoft)
+                    .background(Color("BgPanel"))
                     .clipShape(RoundedRectangle(cornerRadius: Theme.radiusLG))
                     .overlay(
                         RoundedRectangle(cornerRadius: Theme.radiusLG)
-                            .stroke(theme.accentGlow, lineWidth: 1)
+                            .stroke(Theme.borderWarmDefault, lineWidth: 1)
                     )
 
                 Text("No code sessions yet")
-                    .font(.subheadline)
+                    .font(.system(.title3, design: .serif))
+                    .fontWeight(.medium)
                     .foregroundColor(Color("TextPrimary"))
 
                 Text("Start a new thread and it will show up here.")
-                    .font(.caption)
+                    .font(.subheadline)
                     .foregroundColor(Color("TextSecondary"))
                     .multilineTextAlignment(.center)
 
@@ -1634,6 +1637,7 @@ private struct CodeUsageCard: View {
                     .background(Color("BgPanel").opacity(0.55))
                     .clipShape(Circle())
             }
+            .accessibilityLabel("Refresh")
             .buttonStyle(.plain)
             .disabled(usageStore.isLoading)
         }

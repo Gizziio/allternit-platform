@@ -91,6 +91,7 @@ use allternit_api::playground_routes::playground_router;
 use allternit_api::provider_routes::provider_router;
 use allternit_api::rate_limit::rate_limit_middleware;
 use allternit_api::rails::{rails_router, RailsState};
+use allternit_api::remote_control_routes::remote_control_router;
 use allternit_api::rails_client_impl::create_local_rails_client;
 use allternit_api::runtime_backend_routes::runtime_backend_router;
 use allternit_api::runtime_discover_routes::runtime_discover_router;
@@ -321,6 +322,7 @@ async fn main() {
         .merge(cowork_preferences_router())
         .merge(allternit_api::rails::routes_cowork::cowork_routes())
         .merge(agent_router())
+        .merge(allternit_api::agent_email_routes::agent_email_router())
         .merge(agent_preferences_router())
         .merge(agent_workspace_router())
         .merge(agent_session_router())
@@ -348,6 +350,7 @@ async fn main() {
         .merge(cowork_team_router())
         .merge(board_stream_router())
         .merge(runtime_backend_router())
+        .merge(remote_control_router())
         .merge(agents_v1_router())
         .merge(bot_desktop_router())
         .merge(allternit_api::connector_routes::connector_router())
@@ -464,6 +467,9 @@ async fn main() {
         // Photon.codes inbound-message webhook is also server-to-server and
         // carries no Clerk session; route it to the recipient bot's inbox.
         .merge(allternit_bus_webhook_router())
+        // mailflare inbound-email webhook is likewise server-to-server; it is
+        // HMAC-verified per handler (ALLTERNIT_MAILFLARE_WEBHOOK_SECRET).
+        .merge(allternit_api::agent_email_routes::agent_email_webhook_router())
         // OAuth provider redirect targets — the browser arrives from the
         // provider's consent screen with no Clerk JWT, so these must be
         // public: the curated-3 loopback callback (moved out of the protected

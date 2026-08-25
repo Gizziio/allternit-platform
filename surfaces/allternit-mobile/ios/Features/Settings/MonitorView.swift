@@ -71,6 +71,9 @@ struct MonitorView: View {
                     .background(Color("BgPanel"))
                     .clipShape(Circle())
             }
+            .accessibilityLabel("Refresh")
+
+            tabMenu
 
             Button(action: { dismiss() }) {
                 Image(systemName: "xmark")
@@ -80,6 +83,7 @@ struct MonitorView: View {
                     .background(Color("BgPanel"))
                     .clipShape(Circle())
             }
+            .accessibilityLabel("Close")
         }
         .padding(.horizontal, 20)
         .padding(.vertical, 14)
@@ -116,7 +120,6 @@ struct MonitorView: View {
                 VStack(spacing: 16) {
                     metricsRow
                     statsRow
-                    tabBar
 
                     switch activeTab {
                     case .agents:
@@ -222,25 +225,35 @@ struct MonitorView: View {
         )
     }
 
-    // MARK: - Tabs
-
-    private var tabBar: some View {
-        HStack(spacing: 0) {
+    private var tabMenu: some View {
+        Menu {
             ForEach(Tab.allCases, id: \.self) { tab in
                 Button(action: { activeTab = tab }) {
-                    VStack(spacing: 6) {
+                    HStack {
+                        if activeTab == tab { Image(systemName: "checkmark") }
                         Text(tab.rawValue)
-                            .font(.system(size: 14, weight: tab == activeTab ? .bold : .regular))
-                            .foregroundColor(tab == activeTab ? Color("TextPrimary") : Color("TextSecondary"))
-                        Rectangle()
-                            .fill(tab == activeTab ? Color("AccentChat") : Color.clear)
-                            .frame(height: 2)
                     }
                 }
-                .buttonStyle(.plain)
             }
+        } label: {
+            HStack(spacing: 4) {
+                Text(activeTab.rawValue)
+                    .font(.system(size: 12, weight: .semibold))
+                    .foregroundColor(Color("TextPrimary"))
+                Image(systemName: "chevron.down")
+                    .font(.system(size: 9, weight: .bold))
+                    .foregroundColor(Color("TextSecondary"))
+            }
+            .padding(.horizontal, 10)
+            .frame(height: 28)
+            .background(Color("BgPanel"))
+            .clipShape(Capsule())
+            .overlay(
+                Capsule()
+                    .stroke(Theme.borderWarmDefault, lineWidth: 1)
+            )
         }
-        .padding(.top, 8)
+        .accessibilityLabel("Switch view")
     }
 
     // MARK: - Agents tab

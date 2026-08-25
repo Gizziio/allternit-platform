@@ -506,8 +506,10 @@ export function ChatView({
       resolvedSecrets: (sessionMetadata?.resolvedSecrets as ResolvedSecret[] | undefined) ?? undefined,
       resolvedConnectors: (sessionMetadata?.resolvedConnectors as ResolvedConnectorCredential[] | undefined) ?? undefined,
       vmOperator: (sessionMetadata?.vmOperator as Agent['vmOperator']) ?? selectedAgent?.vmOperator,
+      agentId: selectedAgent?.id,
+      characterLayer: selectedAgent?.characterLayer,
     });
-  }, [isBotSession, sessionMetadata, selectedAgent?.harness, selectedAgent?.vmOperator]);
+  }, [isBotSession, sessionMetadata, selectedAgent?.harness, selectedAgent?.vmOperator, selectedAgent?.id, selectedAgent?.characterLayer]);
   const runtimeEnvEntries = useMemo(() => {
     if (!botRuntimeEnv) return undefined;
     return Object.entries(botRuntimeEnv.env).map(([key, value]) => ({

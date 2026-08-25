@@ -4,7 +4,7 @@ import {
   OfficeHostProvider,
   createBrowserHost,
   type OfficeHost,
-} from '@allternit/allternit-office-suite';
+} from '@allternit/office-suite';
 import { xlsxToText } from '@allternit/office-file-parse/xlsx';
 import { takeFile } from '@/views/office/file-handoff';
 import {

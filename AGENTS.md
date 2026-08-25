@@ -464,3 +464,12 @@ Load these into agent sessions to teach the Rails workflow:
 - `.allternit/context-packs/rails-product-update/inputs/templates/QUICKSTART.md` — copy-paste quickstart.
 
 See `docs/RAILS_UNIFIED_COMMUNICATION_PLAN.md` for the full roadmap.
+
+## Agent email rail (services/mailflare)
+
+`services/mailflare/` is a **vendored fork** of [hieunc229/mailflare](https://github.com/hieunc229/mailflare) that gives agents real internet email (inbound webhook → Rails Mail threads; outbound via the Rails Mail review gate). Conventions:
+
+- It is a plain **npm** project with its own `package-lock.json` and OpenNext/Cloudflare build — like `services/open-connector`, it is **excluded from the pnpm workspace** (`!services/mailflare` in `pnpm-workspace.yaml`). Never add it to the workspace; root `pnpm install` ingesting it breaks its Next.js build.
+- Verify changes with `npm run build` (lint has pre-existing upstream errors; don't add new ones). Type checking is `ignoreBuildErrors`-gated upstream, so run `npx tsc --noEmit` when touching TS.
+- Per-installation deploys go to the installing user's own Cloudflare account via `services/mailflare/setup.sh`.
+- Full architecture, ops, and reputation guidance: `docs/AGENT_EMAIL_RAIL.md`.

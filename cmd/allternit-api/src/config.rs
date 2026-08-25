@@ -60,6 +60,10 @@ pub struct CompanyConfig {
     #[serde(rename = "internalServiceToken")]
     pub internal_service_token: Option<String>,
 
+    /// Cloudflare Remote Control push worker URL. Optional.
+    #[serde(rename = "pushWorkerUrl")]
+    pub push_worker_url: Option<String>,
+
     /// Company branding / tenant marker.
     #[serde(rename = "tenantId")]
     pub tenant_id: Option<String>,
@@ -155,6 +159,11 @@ pub struct UserConfig {
     /// Etrid native agent wallet service URL.
     #[serde(rename = "etridUrl")]
     pub etrid_url: Option<String>,
+
+    /// Cloudflare Remote Control push worker URL. Optional: when unset,
+    /// runtime-triggered push notifications are unavailable.
+    #[serde(rename = "pushWorkerUrl")]
+    pub push_worker_url: Option<String>,
 
     /// First-start wizard tracking (OpenClaw-style versioning).
     #[serde(rename = "wizard")]
@@ -436,6 +445,15 @@ impl AppConfig {
             .unwrap_or_else(|| "http://127.0.0.1:8723".to_string())
     }
 
+    /// URL of the Cloudflare Remote Control push worker. Optional.
+    pub fn push_worker_url(&self) -> Option<String> {
+        std::env::var("ALLTERNIT_PUSH_WORKER_URL")
+            .ok()
+            .filter(|s| !s.is_empty())
+            .or_else(|| self.user.push_worker_url.clone())
+            .or_else(|| self.company.push_worker_url.clone())
+    }
+
     /// Rails workspace ID for this deployment.
     pub fn rails_workspace_id(&self) -> String {
         std::env::var("ALLTERNIT_RAILS_WORKSPACE_ID")
@@ -705,6 +723,11 @@ impl AppConfig {
                 self.user.etrid_url = Some(v);
             }
         }
+        if let Ok(v) = std::env::var("ALLTERNIT_PUSH_WORKER_URL") {
+            if !v.is_empty() {
+                self.user.push_worker_url = Some(v);
+            }
+        }
     }
 }
 
@@ -848,6 +871,7 @@ impl From<SaveUserConfigPayload> for UserConfig {
             agent_workdir: payload.agent_workdir,
             cron_daemon_url: payload.cron_daemon_url,
             etrid_url: payload.etrid_url,
+            push_worker_url: None,
             wizard: payload.wizard,
             permission_policies: None,
             active_permission_policy: None,

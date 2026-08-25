@@ -1,6 +1,7 @@
 'use client';
 
 import React, { lazy, Suspense } from 'react';
+import { AProtocolWordmark } from '../components/AProtocolWordmark';
 
 function AppLoader() {
   return (
@@ -21,10 +22,7 @@ function AppLoader() {
       }}
     >
       {/* Wordmark */}
-      <div style={{ display: 'flex', alignItems: 'baseline', gap: '6px', userSelect: 'none' }}>
-        <span style={{ color: '#D97757', fontFamily: 'var(--font-mono)', fontSize: 22, fontWeight: 400, letterSpacing: '0.04em' }}>A://</span>
-        <span style={{ color: '#C8BDB4', fontFamily: 'var(--font-research)', fontSize: 22, fontWeight: 400, letterSpacing: '0.18em' }}>LLTERNIT</span>
-      </div>
+      <AProtocolWordmark theme="light" height={22} />
 
       {/* Progress shimmer */}
       <div style={{ width: '120px', height: '1px', background: 'rgba(200,168,140,0.12)', position: 'relative', overflow: 'hidden', borderRadius: '1px' }}>

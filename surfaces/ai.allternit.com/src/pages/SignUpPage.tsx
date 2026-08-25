@@ -3,9 +3,9 @@
 import { Suspense, useEffect } from "react"
 import { useSearchParams } from "react-router-dom"
 import { PlatformSignUp, isDesktopShell } from "@/lib/platform-auth-client"
-import { MatrixLogo } from "@/components/ai-elements/MatrixLogo"
 import { AuthPreview } from "@/components/auth/AuthPreview"
 import { SiteFooter } from "@/components/auth/SiteFooter"
+import { AProtocolWordmark } from "@/components/AProtocolWordmark"
 
 function SignUpContent() {
   const [searchParams] = useSearchParams()
@@ -193,9 +193,8 @@ function SignUpContent() {
       <div className="signup-page">
         {/* Nav */}
         <nav className="signup-nav" style={desktopShell ? { paddingLeft: 88 } : undefined}>
-          <a href="/" className="signup-logo">
-            <MatrixLogo state="idle" size={28} />
-            <span className="signup-logo-text">Allternit</span>
+          <a href="/" className="signup-logo" aria-label="Allternit">
+            <AProtocolWordmark theme="adaptive" height={18} />
           </a>
           <a href="/sign-in" className="signup-nav-link">
             Already have an account? <span>Sign in</span>

@@ -5,7 +5,7 @@ import type { ReactNode } from "react";
 import { useNavigate } from "react-router-dom";
 import { cn } from "@/lib/utils";
 import { formatRelativeTime } from "@/lib/time";
-import { useMonitorThreads, type AgentActivityThreadSummary } from "@/views/mail-monitor/monitor.helpers";
+import { useMonitorThreads, externalEmailThreadKind, type AgentActivityThreadSummary } from "@/views/mail-monitor/monitor.helpers";
 
 export type AgentActivityTab = "all" | "review" | "archived";
 type ThreadStatus = "review" | "active" | "archived";
@@ -123,6 +123,7 @@ function AgentActivityRow({
   onOpen: () => void;
 }) {
   const status = statusOf(thread);
+  const externalEmail = externalEmailThreadKind(thread.threadId);
   const dotColor =
     status === "review" ? "var(--status-warning)" : status === "archived" ? "var(--ui-text-muted)" : "var(--status-info)";
 
@@ -150,8 +151,13 @@ function AgentActivityRow({
             </span>
           </span>
           <span className="block truncate text-[12px] text-[var(--text-secondary)] mt-0.5">{thread.preview}</span>
-          {(thread.review || thread.hasGuardActivity || thread.hasReservationActivity || thread.archived) && (
+          {(thread.review || thread.hasGuardActivity || thread.hasReservationActivity || thread.archived || externalEmail) && (
             <span className="flex flex-wrap gap-1 mt-1">
+              {externalEmail && (
+                <RowTag bg="var(--status-info-bg)" color="var(--status-info)">
+                  ✉ external email {externalEmail === "inbound" ? "· inbound" : "· outbound"}
+                </RowTag>
+              )}
               {thread.review && <RowTag bg="var(--status-warning-bg)" color="var(--status-warning)">Needs review</RowTag>}
               {thread.hasGuardActivity && (
                 <RowTag bg="var(--status-error-bg)" color="var(--status-error)">⛔ Guard activity</RowTag>

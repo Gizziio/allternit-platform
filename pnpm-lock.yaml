@@ -1628,6 +1628,9 @@ importers:
       react-konva:
         specifier: ^18.2.11
         version: 18.2.16(@types/react@18.3.28)(konva@9.3.22)(react-dom@18.3.1(react@18.3.1))(react@18.3.1)
+      utif2:
+        specifier: ^4.1.0
+        version: 4.1.0
       zod:
         specifier: ^3.25.0
         version: 3.25.76
@@ -2486,6 +2489,12 @@ importers:
       '@allternit/office-docs-app':
         specifier: workspace:*
         version: link:../../packages/@allternit/office-docs-app
+      '@allternit/office-docx-engine':
+        specifier: workspace:*
+        version: link:../../packages/@allternit/office-docx-engine
+      '@allternit/office-file-parse':
+        specifier: workspace:*
+        version: link:../../packages/@allternit/office-file-parse
       '@allternit/office-pdf-app':
         specifier: workspace:*
         version: link:../../packages/@allternit/office-pdf-app
@@ -2504,6 +2513,9 @@ importers:
       '@allternit/office-slides-editor':
         specifier: workspace:*
         version: link:../../packages/@allternit/office-slides-editor
+      '@allternit/office-suite':
+        specifier: workspace:*
+        version: link:../../packages/@allternit/allternit-office-suite
       '@allternit/page-agent':
         specifier: workspace:*
         version: link:../../services/page-agent
@@ -3634,12 +3646,12 @@ importers:
 
   surfaces/office.allternit.com:
     dependencies:
-      '@allternit/allternit-office-suite':
-        specifier: workspace:*
-        version: link:../../packages/@allternit/allternit-office-suite
       '@allternit/office-ai':
         specifier: workspace:*
         version: link:../../packages/@allternit/office-ai
+      '@allternit/office-suite':
+        specifier: workspace:*
+        version: link:../../packages/@allternit/allternit-office-suite
       '@clerk/clerk-react':
         specifier: ^5.30.0
         version: 5.61.4(react-dom@18.3.1(react@18.3.1))(react@18.3.1)
@@ -24213,6 +24225,9 @@ packages:
 
   utf8-byte-length@1.0.5:
     resolution: {integrity: sha512-Xn0w3MtiQ6zoz2vFyUVruaCL53O/DwUvkEeOvj+uulMm0BkUGYWmBYVyElqZaSLhY6ZD0ulfU3aBra2aVT4xfA==}
+
+  utif2@4.1.0:
+    resolution: {integrity: sha512-+oknB9FHrJ7oW7A2WZYajOcv4FcDR4CfoGB0dPNfxbi4GO05RRnFmt5oa23+9w32EanrYcSJWspUiJkLMs+37w==}
 
   util-deprecate@1.0.2:
     resolution: {integrity: sha512-EPD5q1uXyFxJpCrLnCc1nHnq3gOa6DZBocAIiI2TaSCA7VCJ1UJDMagCzIkXNsUYfD1daK//LTEQ8xiIbrHtcw==}
@@ -53399,6 +53414,10 @@ snapshots:
       react: 19.2.4
 
   utf8-byte-length@1.0.5: {}
+
+  utif2@4.1.0:
+    dependencies:
+      pako: 1.0.11
 
   util-deprecate@1.0.2: {}
 

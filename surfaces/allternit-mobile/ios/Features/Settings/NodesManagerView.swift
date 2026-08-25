@@ -82,6 +82,7 @@ struct NodesManagerView: View {
                     .background(Color("BgPanel"))
                     .clipShape(Circle())
             }
+            .accessibilityLabel("Close")
         }
         .padding(.horizontal, 20)
         .padding(.vertical, 14)
@@ -157,6 +158,7 @@ struct NodesManagerView: View {
                 )
             }
             .buttonStyle(.plain)
+            .accessibilityLabel("Refresh")
 
             Button(action: generateToken) {
                 HStack(spacing: 6) {

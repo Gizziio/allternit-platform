@@ -8,8 +8,16 @@ import SwiftUI
 /// Code | ACI] tab list lives in the sidebar header instead
 /// (HistorySidebarView). Cowork is NOT a tab destination; it's a
 /// composer-level toggle inside Chats (BottomDock.tsx ChatCoworkToggle).
+extension Notification.Name {
+    /// Posted by BotHomeView when the user taps a task row or starts a new
+    /// chat/task for a bot. MainWorkspaceView switches to the Chats tab,
+    /// selects the session, and mounts the bot in the composer.
+    static let openChatSession = Notification.Name("com.allternit.openChatSession")
+}
+
 struct MainWorkspaceView: View {
     @EnvironmentObject private var modeStore: AppModeStore
+    @EnvironmentObject private var agentModeStore: AgentModeStore
     @State private var isSidebarOpen = false
     @State private var dragOffset: CGFloat = 0
     @State private var selectedSessionId: String? = nil
@@ -166,6 +174,19 @@ struct MainWorkspaceView: View {
             }
             #endif
         }
+        .onReceive(NotificationCenter.default.publisher(for: .openChatSession)) { notification in
+            guard let sessionId = notification.userInfo?["sessionId"] as? String else { return }
+            if let agentId = notification.userInfo?["agentId"] as? String {
+                agentModeStore.setAgentEnabled(true, for: .chat)
+                agentModeStore.selectAgentId(agentId, for: .chat)
+                agentModeStore.fetchAgentsIfNeeded(force: true)
+            }
+            selectedSessionId = sessionId
+            modeStore.selectBarItem(.chats)
+            withAnimation(.spring(response: 0.35, dampingFraction: 0.86, blendDuration: 0)) {
+                isSidebarOpen = false
+            }
+        }
     }
 
     /// Drawer drag: swiping right from the left margin opens, dragging left
@@ -205,13 +226,13 @@ struct ModePlaceholderView: View {
         VStack(spacing: 16) {
             Image(systemName: mode.theme.icon)
                 .font(.system(size: 28, weight: .medium))
-                .foregroundColor(mode.theme.accent)
+                .foregroundColor(Color("TextSecondary"))
                 .frame(width: 64, height: 64)
-                .background(mode.theme.accentSoft)
+                .background(Color("BgPanel"))
                 .clipShape(RoundedRectangle(cornerRadius: Theme.radiusLG))
                 .overlay(
                     RoundedRectangle(cornerRadius: Theme.radiusLG)
-                        .stroke(mode.theme.accentGlow, lineWidth: 1)
+                        .stroke(Theme.borderWarmDefault, lineWidth: 1)
                 )
 
             Text("\(mode.label) mode — coming in UX-4")
@@ -224,7 +245,7 @@ struct ModePlaceholderView: View {
                 .foregroundColor(Color("TextSecondary"))
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
-        .background(Color("BgSecondary"))
+        .background(Color("BgPrimary"))
     }
 }
 
@@ -270,14 +291,14 @@ struct ChatView: View {
             VStack(spacing: 8) {
                 HStack(spacing: 8) {
                     if isInChat {
-                        floatingIcon("chevron.left") {
+                        floatingIcon("chevron.left", accessibilityLabel: "Back to new chat") {
                             selectedSessionId = nil
                             viewModel.startNewSession()
                             viewModel.isTemporaryChat = false
                         }
                     }
 
-                    floatingIcon("line.3.horizontal") {
+                    floatingIcon("line.3.horizontal", accessibilityLabel: "Open sidebar") {
                         isSidebarOpen.toggle()
                     }
 
@@ -286,14 +307,18 @@ struct ChatView: View {
                     // Incognito chat (Phase 6, Claude parity): starts an
                     // ephemeral session stamped `metadata.ephemeral` —
                     // excluded from history, purged on abort server-side.
-                    floatingIcon(Self.incognitoSymbolName, isActive: viewModel.isIncognito) {
+                    floatingIcon(
+                        Self.incognitoSymbolName,
+                        isActive: viewModel.isIncognito,
+                        accessibilityLabel: viewModel.isIncognito ? "Incognito chat active" : "Start incognito chat"
+                    ) {
                         selectedSessionId = nil
                         viewModel.startNewSession(ephemeral: true)
                     }
 
                     // Intelli-Schedule panel — only offered in Cowork mode.
                     if modeStore.mode == .cowork {
-                        floatingIcon("calendar.badge.clock") {
+                        floatingIcon("calendar.badge.clock", accessibilityLabel: "Open IntelliSchedule") {
                             isIntelliSchedulePresented = true
                         }
                     }
@@ -333,7 +358,12 @@ struct ChatView: View {
         #endif
     }
 
-    private func floatingIcon(_ systemName: String, isActive: Bool = false, action: @escaping () -> Void) -> some View {
+    private func floatingIcon(
+        _ systemName: String,
+        isActive: Bool = false,
+        accessibilityLabel: String? = nil,
+        action: @escaping () -> Void
+    ) -> some View {
         Button(action: {
             let generator = UIImpactFeedbackGenerator(style: .medium)
             generator.impactOccurred()
@@ -367,6 +397,7 @@ struct ChatView: View {
                 )
                 .shadow(color: isActive ? Color("AccentPrimary").opacity(0.25) : Color.black.opacity(0.10), radius: 10, y: 3)
         }
+        .accessibilityLabel(accessibilityLabel ?? systemName)
     }
 }
 
@@ -880,6 +911,7 @@ private enum DeckMotion {
 private func toolbarIconButton(
     _ systemName: String,
     tint: Color? = nil,
+    accessibilityLabel: String? = nil,
     action: @escaping () -> Void
 ) -> some View {
     Button(action: {
@@ -894,6 +926,7 @@ private func toolbarIconButton(
             .contentShape(Rectangle())
     }
     .buttonStyle(.plain)
+    .accessibilityLabel(accessibilityLabel ?? systemName)
 }
 
 /// The platform composer: one card holding the editor and a toolbar row,
@@ -1194,7 +1227,7 @@ struct ComposerView: View {
                 // Opens the "+" sheet (ComposerPlusSheet): attachments
                 // (camera/photos/files), tool toggles, tool access, and
                 // the Connectors entry — Claude iOS "Add to Chat" parity.
-                toolbarIconButton("plus") {
+                toolbarIconButton("plus", accessibilityLabel: "Add attachment") {
                     isPlusSheetPresented = true
                 }
 
@@ -1207,7 +1240,7 @@ struct ComposerView: View {
                 // Cowork workspace launchpad — opens the full workspace when
                 // in Cowork mode and no session is active.
                 if !hasActiveSession, mode == .cowork {
-                    toolbarIconButton("arrow.up.forward.square") {
+                    toolbarIconButton("arrow.up.forward.square", accessibilityLabel: "Open cowork workspace") {
                         isCoworkWorkspacePresented = true
                     }
                 }
@@ -1221,7 +1254,11 @@ struct ComposerView: View {
                 Spacer(minLength: 2)
 
                 // Dictation mic: plain icon, red while recording.
-                toolbarIconButton(dictation.isRecording ? "mic.fill" : "mic", tint: dictation.isRecording ? .red : nil) {
+                toolbarIconButton(
+                    dictation.isRecording ? "mic.fill" : "mic",
+                    tint: dictation.isRecording ? .red : nil,
+                    accessibilityLabel: dictation.isRecording ? "Stop dictation" : "Start dictation"
+                ) {
                     toggleDictation()
                 }
                 .symbolEffect(.pulse, isActive: dictation.isRecording)
@@ -1248,6 +1285,7 @@ struct ComposerView: View {
                     .frame(height: 26)
                     .frame(maxWidth: 78)
                 }
+                .accessibilityLabel("Select model")
 
                 if isStreaming {
                     Button(action: onStop) {
@@ -1265,6 +1303,7 @@ struct ComposerView: View {
                                 .clipShape(Circle())
                         }
                     }
+                    .accessibilityLabel("Stop generating")
                 } else if canSend {
                     Button(action: sendTapped) {
                         if isTerminal {
@@ -1282,6 +1321,7 @@ struct ComposerView: View {
                                 .clipShape(Circle())
                         }
                     }
+                    .accessibilityLabel("Send message")
                 }
             }
         }
@@ -1418,49 +1458,43 @@ struct ComposerView: View {
 
 // MARK: - Chat / Cowork toggle
 
-/// Icon-only 28pt segmented pair [Chat | Cowork] (BottomDock.tsx
-/// ChatCoworkToggle, lines 18-63). Cowork is a composer-level mode, not a
-/// tab: selecting it sets the app mode (accent turns purple, the top deck
-/// appears); selecting Chat returns. Pre-session only — the caller hides it
-/// once a session is active.
+/// Single capsule toggle for Chat/Cowork (BottomDock.tsx ChatCoworkToggle).
+/// Cowork is a composer-level mode, not a tab: tapping cycles between Chat
+/// and Cowork, the active mode gets the mode accent and soft fill, and the
+/// top deck appears for Cowork. Pre-session only — the caller hides it once
+/// a session is active.
 struct ChatCoworkToggle: View {
     @EnvironmentObject private var modeStore: AppModeStore
 
-    var body: some View {
-        HStack(spacing: 0) {
-            segment(mode: .chat, icon: "message", label: "Chat")
-            Rectangle()
-                .fill(Theme.borderWarmDefault)
-                .frame(width: 1, height: 14)
-            segment(mode: .cowork, icon: "person.3", label: "Cowork")
-        }
-        .frame(height: 26)
-        .clipShape(RoundedRectangle(cornerRadius: 7))
-        .overlay(
-            RoundedRectangle(cornerRadius: 7)
-                .stroke(Theme.borderWarmDefault, lineWidth: 1)
-        )
-    }
+    private var isCowork: Bool { modeStore.mode == .cowork }
+    private var activeMode: AppMode { isCowork ? .cowork : .chat }
 
-    private func segment(mode: AppMode, icon: String, label: String) -> some View {
-        let isActive = modeStore.mode == mode
-        return Button(action: {
-            let generator = UIImpactFeedbackGenerator(style: .light)
-            generator.impactOccurred()
-            modeStore.mode = mode
-        }) {
-            Image(systemName: icon)
-                .font(.system(size: 11, weight: .semibold))
-            // Active = soft bg + mode accent (web bg-composer-soft);
-            // inactive = muted.
-            .foregroundColor(isActive ? mode.theme.accent : Color("TextSecondary"))
+    var body: some View {
+        Button(action: toggle) {
+            HStack(spacing: 6) {
+                Image(systemName: isCowork ? "person.3" : "message")
+                    .font(.system(size: 11, weight: .semibold))
+                Text(isCowork ? "Cowork" : "Chat")
+                    .font(.system(size: 11, weight: .semibold))
+            }
+            .foregroundColor(isCowork ? activeMode.theme.accent : Color("TextSecondary"))
             .padding(.horizontal, 10)
             .frame(height: 26)
-            .background(isActive ? mode.theme.accentSoft : Color.clear)
-            .contentShape(Rectangle())
+            .background(isCowork ? activeMode.theme.accentSoft : Color.clear)
+            .clipShape(Capsule())
+            .overlay(
+                Capsule()
+                    .stroke(Theme.borderWarmDefault, lineWidth: 1)
+            )
         }
         .buttonStyle(.plain)
-        .accessibilityLabel(label)
+        .accessibilityLabel("Switch to \(isCowork ? "Chat" : "Cowork")")
+    }
+
+    private func toggle() {
+        let generator = UIImpactFeedbackGenerator(style: .light)
+        generator.impactOccurred()
+        modeStore.mode = isCowork ? .chat : .cowork
     }
 }
 
@@ -1491,13 +1525,11 @@ struct AgentBotChip: View {
         }) {
             HStack(spacing: 6) {
                 if agentOn {
-                    if let selectedAgent {
-                        AgentAvatarView(agent: selectedAgent, size: 18)
-                    } else {
-                        Image(systemName: "sparkles")
-                            .font(.system(size: 11, weight: .semibold))
-                            .foregroundColor(theme.accent)
-                    }
+                    Image("GizziMascot")
+                        .resizable()
+                        .scaledToFit()
+                        .frame(width: 18, height: 18)
+                        .clipShape(Circle())
                     Text("Bot on")
                         .font(.system(size: 11, weight: .semibold))
                         .foregroundColor(theme.accent)
@@ -1523,6 +1555,7 @@ struct AgentBotChip: View {
             )
         }
         .buttonStyle(.plain)
+        .layoutPriority(1)
         .accessibilityLabel(agentOn ? "Bot on" : "Bot off")
         .sheet(isPresented: $isSelectionSheetPresented) {
             AgentSelectionSheet()
@@ -2002,25 +2035,19 @@ struct AgentModeBottomDeck: View {
         .animation(DeckMotion.animation, value: expanded)
     }
 
-    /// Expanded: a horizontally scrolling row of mode tabs separated by a
-    /// pipe character, matching the original web mode selector.
+    /// Expanded: a wrapping grid of mode pills so every tile is reachable
+    /// without a horizontal tab strip.
     private var expandedTiles: some View {
-        ScrollView(.horizontal, showsIndicators: false) {
-            HStack(spacing: 0) {
-                let tiles = AgentModeTile.visibleTiles(for: surface)
-                ForEach(Array(tiles.enumerated()), id: \.element) { index, tile in
-                    modeTab(tile)
-                    if index < tiles.count - 1 {
-                        Text("|")
-                            .font(.system(size: 12, weight: .semibold))
-                            .foregroundColor(Color("BorderSubtle"))
-                            .padding(.horizontal, 8)
-                    }
-                }
+        let tiles = AgentModeTile.visibleTiles(for: surface)
+        return LazyVGrid(
+            columns: [GridItem(.adaptive(minimum: 80), spacing: 8)],
+            spacing: 8
+        ) {
+            ForEach(tiles, id: \.self) { tile in
+                modeTab(tile)
             }
-            .padding(.horizontal, 12)
         }
-        .frame(height: 38)
+        .padding(.horizontal, 12)
         .padding(.top, 16) // tucked portion hidden under the card
         .padding(.bottom, 10)
     }
@@ -2192,6 +2219,7 @@ struct EmptyChatStateView: View {
                     .resizable()
                     .scaledToFit()
                     .frame(width: 160, height: 160)
+                    .colorMultiply(Color("TextPrimary"))
                     .shadow(color: Color("AccentPrimary").opacity(0.15), radius: 12, y: 4)
             }
             .padding(.bottom, 24)

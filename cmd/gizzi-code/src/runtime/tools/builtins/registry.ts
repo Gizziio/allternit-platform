@@ -60,6 +60,7 @@ import {
   ScratchpadRemoveTool,
   ScratchpadWriteTool,
 } from "@/runtime/tools/builtins/scratchpad"
+import { GetAgentEmailStatusTool, SendAgentEmailTool } from "@/runtime/tools/builtins/agent-email"
 
 export namespace ToolRegistry {
   const log = Log.create({ service: "tool.registry" })
@@ -173,6 +174,8 @@ export namespace ToolRegistry {
       MemoryRecallTool,
       VaultQueryTool,
       VaultWriteTool,
+      SendAgentEmailTool,
+      GetAgentEmailStatusTool,
       ...(Flag.GIZZI_ENABLE_LSP_TOOL ? [LspTool] : []),
       ...(config.experimental?.batch_tool === true ? [BatchTool] : []),
       ...(Flag.GIZZI_CLIENT === "cli" ? [PlanExitTool, PlanEnterTool] : []),

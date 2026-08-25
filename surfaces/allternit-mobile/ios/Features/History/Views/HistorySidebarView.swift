@@ -22,17 +22,12 @@ struct HistorySidebarView: View {
     @State private var isSettingsPresented = false
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
-            // Wordmark
+            // Wordmark — ATernitWordmark asset (light/dark appearance variants)
             HStack {
-                Text("A://")
-                    .foregroundColor(Color("AccentPrimary"))
-                    .font(.system(.subheadline, design: .monospaced))
-                    .bold()
-                Text("LLTERNIT")
-                    .foregroundColor(Color("TextPrimary"))
-                    .font(.system(.subheadline, design: .serif))
-                    .tracking(1.5)
-                    .lineLimit(1)
+                Image("ATernitWordmark")
+                    .resizable()
+                    .scaledToFit()
+                    .frame(height: 15)
                 Spacer()
             }
             .padding(.horizontal, 20)
@@ -118,6 +113,7 @@ struct HistorySidebarView: View {
                         .background(Color("TextSecondary"))
                         .clipShape(Circle())
                 }
+                .accessibilityLabel("Account menu")
 
                 // Settings hub (Phase 4) — gear row next to the avatar.
                 Button(action: {
@@ -134,6 +130,7 @@ struct HistorySidebarView: View {
                         .overlay(Circle().stroke(Color("BorderSubtle"), lineWidth: 1))
                 }
                 .buttonStyle(.plain)
+                .accessibilityLabel("Settings")
 
                 Spacer()
 

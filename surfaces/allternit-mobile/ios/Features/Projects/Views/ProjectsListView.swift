@@ -21,6 +21,7 @@ struct ProjectsListView: View {
 
     @StateObject private var projectStore = ProjectStore.shared
     @Environment(\.dismiss) private var dismiss
+    @EnvironmentObject private var authManager: AuthManager
 
     @State private var searchText = ""
     @State private var selectedTab: ProjectTab = .all
@@ -42,11 +43,42 @@ struct ProjectsListView: View {
     }
 
     private var visibleProjects: [CoworkProject] {
-        let query = searchText.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !query.isEmpty else { return projectStore.projects }
-        return projectStore.projects.filter {
-            $0.title.localizedCaseInsensitiveContains(query)
+        var projects = projectStore.projects
+        switch selectedTab {
+        case .all:
+            break
+        case .created:
+            if let currentUserId = authManager.currentUserId {
+                projects = projects.filter { $0.userId == currentUserId }
+            }
+        case .shared:
+            // No sharing backend yet — honest empty state instead of
+            // echoing the user's own projects under a wrong label.
+            projects = []
         }
+
+        let query = searchText.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !query.isEmpty else { return projects }
+        return projects.filter { $0.title.localizedCaseInsensitiveContains(query) }
+    }
+
+    private var filterMenu: some View {
+        Menu {
+            ForEach(ProjectTab.allCases, id: \.self) { tab in
+                Button(action: { selectedTab = tab }) {
+                    Label(tab.rawValue, systemImage: selectedTab == tab ? "checkmark" : "")
+                }
+            }
+        } label: {
+            Image(systemName: "line.3.horizontal.decrease")
+                .font(.system(size: 13, weight: .semibold))
+                .foregroundColor(Color("TextSecondary"))
+                .frame(width: 32, height: 32)
+                .background(Color("BgPanel"))
+                .clipShape(Circle())
+        }
+        .buttonStyle(.plain)
+        .accessibilityLabel("Filter projects")
     }
 
     var body: some View {
@@ -66,12 +98,16 @@ struct ProjectsListView: View {
                                 .foregroundColor(Color("TextPrimary"))
                                 .frame(width: 44, height: 44)
                         }
+                        .accessibilityLabel("Open sidebar")
                     }
                     Text("Projects")
                         .font(.system(.title3, design: .serif))
                         .fontWeight(.medium)
                         .foregroundColor(Color("TextPrimary"))
                     Spacer()
+
+                    filterMenu
+
                     Button(action: {
                         let generator = UIImpactFeedbackGenerator(style: .light)
                         generator.impactOccurred()
@@ -93,6 +129,7 @@ struct ProjectsListView: View {
                                 .background(Color("BgPanel"))
                                 .clipShape(Circle())
                         }
+                        .accessibilityLabel("Close")
                     }
                 }
                 .padding(.horizontal, onOpenSidebar == nil ? 20 : 12)
@@ -143,16 +180,6 @@ struct ProjectsListView: View {
     @ViewBuilder
     private var content: some View {
         VStack(spacing: 0) {
-            // Ownership tabs (ChatGPT Projects parity).
-            Picker("Projects", selection: $selectedTab) {
-                ForEach(ProjectTab.allCases, id: \.self) { tab in
-                    Text(tab.rawValue).tag(tab)
-                }
-            }
-            .pickerStyle(.segmented)
-            .padding(.horizontal, 20)
-            .padding(.vertical, 12)
-
             if selectedTab == .shared {
                 // No sharing backend yet — honest empty state instead of
                 // echoing the user's own projects under a wrong label.

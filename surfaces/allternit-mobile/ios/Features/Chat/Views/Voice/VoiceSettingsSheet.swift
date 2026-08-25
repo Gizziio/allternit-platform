@@ -145,8 +145,7 @@ struct VoiceSettingsSheet: View {
             } label: {
                 EmptyView()
             }
-            .pickerStyle(.segmented)
-            .frame(width: 190)
+            .pickerStyle(.menu)
         }
     }
 
@@ -159,8 +158,7 @@ struct VoiceSettingsSheet: View {
             } label: {
                 EmptyView()
             }
-            .pickerStyle(.segmented)
-            .frame(width: 220)
+            .pickerStyle(.menu)
         }
     }
 
