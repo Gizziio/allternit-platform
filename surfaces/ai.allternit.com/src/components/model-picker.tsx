@@ -4,7 +4,7 @@ import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { Command } from "cmdk";
 import { useModelDiscovery } from "@/integration/api-client";
 import { useModelSelection } from "@/providers/model-selection-provider";
-import { getProviderMeta } from "@/lib/providers/provider-registry";
+import { getProviderMeta, getProviderName } from "@/lib/providers/provider-registry";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -30,9 +30,12 @@ import {
   MagnifyingGlass,
   Plus,
   CaretDown,
+  Flask,
+  Robot,
 } from "@phosphor-icons/react";
 import { cn } from "@/lib/utils";
 import type { ModelOption } from "@/components/prompt-kit/prompt-model-selector";
+import type { ProviderAuthStatus, ModelValidationResult } from "@/integration/api-client";
 
 export interface ModelSelection {
   providerId: string;
@@ -52,6 +55,8 @@ interface ModelPickerProps {
   onOpenChange?: (open: boolean) => void;
   /** Called when the user wants to connect a new provider */
   onOpenProviderConnect?: () => void;
+  /** Called when the user wants to open the Model Lab */
+  onOpenModelLab?: () => void;
 }
 
 function resolveProfileId(
@@ -65,6 +70,24 @@ function resolveProfileId(
 
 function ProviderIcon({ providerId }: { providerId: string }) {
   const meta = getProviderMeta(providerId);
+  const [error, setError] = useState(false);
+  const src = meta.icon ? `/assets/runtime-logos/${meta.icon}` : "";
+
+  if (!src || error) {
+    return (
+      <div
+        className="size-8 rounded-lg flex items-center justify-center shrink-0 text-xs font-bold"
+        style={{
+          background: `${meta.color}18`,
+          border: `1px solid ${meta.color}40`,
+          color: meta.color,
+        }}
+      >
+        {meta.name.charAt(0).toUpperCase()}
+      </div>
+    );
+  }
+
   return (
     <div
       className="size-8 rounded-lg flex items-center justify-center shrink-0"
@@ -74,12 +97,10 @@ function ProviderIcon({ providerId }: { providerId: string }) {
       }}
     >
       <img
-        src={`/assets/runtime-logos/${meta.icon}`}
+        src={src}
         alt=""
         className="size-4 object-contain"
-        onError={(e) => {
-          (e.target as HTMLImageElement).style.display = "none";
-        }}
+        onError={() => setError(true)}
       />
     </div>
   );
@@ -102,7 +123,6 @@ function ProviderRow({
   onToggle,
   modelCount,
 }: ProviderRowProps) {
-  const meta = getProviderMeta(providerId);
   return (
     <button
       type="button"
@@ -153,7 +173,29 @@ function ProviderRow({
   );
 }
 
-export function ModelPicker({
+function formatContextWindow(value: number | undefined): string | null {
+  if (!value || value <= 0) return null;
+  if (value >= 1_000_000) return `${(value / 1_000_000).toFixed(1)}M ctx`;
+  if (value >= 1_000) return `${(value / 1_000).toFixed(0)}k ctx`;
+  return `${value} ctx`;
+}
+
+export interface ModelPickerUIData {
+  availableModels: ModelOption[];
+  providers: ProviderAuthStatus[];
+  authenticatedProviders: ProviderAuthStatus[];
+  providersLoading: boolean;
+  providersError: Error | null;
+  validationResult: ModelValidationResult | null;
+  validationLoading: boolean;
+  validateModel: (providerId: string, modelId: string) => Promise<ModelValidationResult | null>;
+  selectedModelId: string | null;
+  initialExpandedProviders?: string[];
+}
+
+interface ModelPickerUIProps extends ModelPickerProps, ModelPickerUIData {}
+
+export function ModelPickerUI({
   onSelect,
   onCancel,
   defaultProfileId,
@@ -161,7 +203,18 @@ export function ModelPicker({
   open: controlledOpen,
   onOpenChange,
   onOpenProviderConnect,
-}: ModelPickerProps) {
+  onOpenModelLab,
+  availableModels,
+  providers,
+  authenticatedProviders,
+  providersLoading,
+  providersError,
+  validationResult,
+  validationLoading,
+  validateModel,
+  selectedModelId,
+  initialExpandedProviders,
+}: ModelPickerUIProps) {
   const [internalOpen, setInternalOpen] = useState(false);
   const isControlled = controlledOpen !== undefined;
   const open = isControlled ? controlledOpen : internalOpen;
@@ -175,39 +228,18 @@ export function ModelPicker({
   const [search, setSearch] = useState("");
   const [freeformInput, setFreeformInput] = useState("");
   const [customProviderId, setCustomProviderId] = useState<string>("");
+  const [customExpanded, setCustomExpanded] = useState(false);
   const [validationAttempted, setValidationAttempted] = useState(false);
-  const [expandedProviders, setExpandedProviders] = useState<Set<string>>(new Set());
-
-  const { availableModels, isLoading: modelsLoading, selection } = useModelSelection();
-
-  const {
-    providers,
-    authenticatedProviders,
-    providersLoading,
-    providersError,
-    fetchProviders,
-    validationResult,
-    validationLoading,
-    validateModel,
-  } = useModelDiscovery();
-
-  const [prevOpen, setPrevOpen] = useState(open);
-  if (open && !prevOpen) {
-    setPrevOpen(true);
-    fetchProviders();
-    if (defaultProfileId) {
-      const providerId = defaultProfileId.replace(/-(?:acp|cli|auth|default)$/, "");
-      if (providerId) setCustomProviderId(providerId);
-    }
-  } else if (!open && prevOpen) {
-    setPrevOpen(false);
-  }
+  const [expandedProviders, setExpandedProviders] = useState<Set<string>>(
+    new Set(initialExpandedProviders ?? [])
+  );
 
   useEffect(() => {
     if (!open) {
       setSearch("");
       setFreeformInput("");
       setValidationAttempted(false);
+      setCustomExpanded(false);
       setExpandedProviders(new Set());
     }
   }, [open]);
@@ -228,8 +260,6 @@ export function ModelPicker({
     }
   }, [authenticatedProviders, customProviderId, defaultProfileId]);
 
-  const selectedModelId = selection?.modelId ?? null;
-
   const isProviderAuthenticated = useCallback(
     (providerId: string) =>
       authenticatedProviders.some((p) => p.provider_id === providerId),
@@ -239,7 +269,7 @@ export function ModelPicker({
   const groupedModels = useMemo(() => {
     const map = new Map<string, ModelOption[]>();
     availableModels.forEach((model) => {
-      const key = model.providerName || "Models";
+      const key = model.providerName || getProviderName(model.providerId || model.provider);
       if (!map.has(key)) map.set(key, []);
       map.get(key)!.push(model);
     });
@@ -313,10 +343,8 @@ export function ModelPicker({
     validationResult,
   ]);
 
-  const isLoading = modelsLoading || providersLoading;
+  const isLoading = providersLoading;
   const hasModels = availableModels.length > 0;
-  const showCustomFallback =
-    (!hasModels || search.trim().length > 0) && authenticatedProviders.length > 0;
 
   const filteredGroups = useMemo(() => {
     const term = search.trim().toLowerCase();
@@ -438,19 +466,25 @@ export function ModelPicker({
                         <div className="grid gap-0.5 mt-1 pl-4 pr-1">
                           {providerModels.map((model) => {
                             const isSelected = selectedModelId === model.id;
+                            const ctx = formatContextWindow(
+                              typeof model.context_window === "number"
+                                ? model.context_window
+                                : undefined
+                            );
                             return (
                               <Command.Item
                                 key={model.id}
                                 value={`${model.id} ${model.name} ${providerName}`}
                                 onSelect={() => handleSelectModel(model)}
                                 className={cn(
-                                  "flex w-full items-center gap-3 px-3 py-2 rounded-lg text-left text-sm transition-colors",
-                                  "data-[selected=true]:bg-[var(--shell-item-active-bg)] data-[selected=true]:text-[var(--shell-item-active-fg)]",
-                                  "hover:bg-[var(--surface-hover)]"
+                                  "flex w-full items-center gap-3 px-3 py-2 rounded-lg text-left text-sm transition-colors border-l-2",
+                                  isSelected
+                                    ? "bg-[var(--surface-hover)] text-[var(--ui-text-primary)] border-l-[var(--accent-chat)]"
+                                    : "hover:bg-[var(--surface-hover)] text-[var(--ui-text-primary)] border-l-transparent"
                                 )}
                               >
                                 <div className="flex-1 min-w-0">
-                                  <div className="flex items-center gap-2">
+                                  <div className="flex items-center gap-2 flex-wrap">
                                     <span className="font-medium truncate">
                                       {model.name}
                                     </span>
@@ -464,11 +498,19 @@ export function ModelPicker({
                                       </Badge>
                                     ))}
                                   </div>
-                                  {model.description && (
-                                    <p className="text-xs text-[var(--ui-text-muted)] truncate">
-                                      {model.description}
-                                    </p>
-                                  )}
+                                  <div className="flex items-center gap-2 text-xs text-[var(--ui-text-muted)]">
+                                    {model.description && (
+                                      <span className="truncate">{model.description}</span>
+                                    )}
+                                    {ctx && (
+                                      <>
+                                        {model.description && (
+                                          <span className="opacity-40">·</span>
+                                        )}
+                                        <span>{ctx}</span>
+                                      </>
+                                    )}
+                                  </div>
                                 </div>
                                 {isSelected && (
                                   <Check
@@ -542,7 +584,7 @@ export function ModelPicker({
                     </p>
                     <p className="text-xs text-[var(--ui-text-muted)] mt-1">
                       {search
-                        ? "Try a different term or enter a custom model ID below."
+                        ? "Try a different term or enter a custom model ID."
                         : "Connect a provider to see available models, or enter a custom model ID."}
                     </p>
                   </Command.Empty>
@@ -551,115 +593,174 @@ export function ModelPicker({
             )}
           </Command.List>
 
-          {/* Custom model fallback */}
-          {showCustomFallback && (
-            <div className="border-t border-[var(--ui-border-default)] px-4 py-3 space-y-3">
-              <div className="flex items-center gap-2">
-                <Sparkle size={14} className="text-[var(--accent-chat)]" />
-                <Label className="text-[var(--ui-text-secondary)] text-sm font-medium">
-                  Custom model ID
-                </Label>
-                <Select
-                  value={customProviderId}
-                  onValueChange={setCustomProviderId}
-                >
-                  <SelectTrigger className="h-7 w-auto min-w-[140px] text-xs bg-[var(--surface-panel)] border-[var(--ui-border-default)] text-[var(--ui-text-primary)]">
-                    <SelectValue placeholder="Runtime" />
-                  </SelectTrigger>
-                  <SelectContent className="bg-[var(--shell-menu-bg)] border-[var(--shell-menu-border)]">
-                    {authenticatedProviders.map((p) => {
-                      const meta = getProviderMeta(p.provider_id);
-                      return (
-                        <SelectItem
-                          key={p.provider_id}
-                          value={p.provider_id}
-                          className="text-[var(--ui-text-primary)] focus:bg-[var(--surface-hover)]"
-                        >
-                          {meta.name}
-                        </SelectItem>
-                      );
-                    })}
-                  </SelectContent>
-                </Select>
-              </div>
-              <Input
-                placeholder="Enter model ID…"
-                value={freeformInput}
-                onChange={(e) => {
-                  setFreeformInput(e.target.value);
-                  setValidationAttempted(false);
-                }}
+          {/* Custom model section */}
+          {authenticatedProviders.length > 0 && (
+            <div className="border-t border-[var(--ui-border-default)] px-4 py-3">
+              <button
+                type="button"
+                onClick={() => setCustomExpanded((v) => !v)}
                 className={cn(
-                  "bg-[var(--surface-panel)] border-[var(--ui-border-default)] text-[var(--ui-text-primary)] placeholder:text-[var(--ui-text-muted)]",
-                  validationResult?.valid && "border-status-success",
-                  validationResult?.valid === false &&
-                    validationAttempted &&
-                    "border-status-error"
+                  "w-full flex items-center justify-between gap-3 px-3 py-2.5 rounded-xl text-left transition-colors",
+                  customExpanded
+                    ? "bg-[var(--surface-panel)]"
+                    : "hover:bg-[var(--surface-hover)]"
                 )}
-              />
-              {validationLoading && (
-                <div className="flex items-center gap-2 text-xs text-[var(--ui-text-muted)]">
-                  <CircleNotch className="size-3 animate-spin" />
-                  Validating…
-                </div>
-              )}
-              {validationAttempted && !validationLoading && validationResult && (
-                <div
-                  className={cn(
-                    "text-xs flex items-start gap-2",
-                    validationResult.valid
-                      ? "text-status-success"
-                      : "text-status-error"
-                  )}
-                >
-                  {validationResult.valid ? (
-                    <>
-                      <Check size={14} />
-                      <span>
-                        {validationResult.model?.description ||
-                          "Model ID valid"}
-                      </span>
-                    </>
-                  ) : (
-                    <>
-                      <Warning size={14} />
-                      <span>
-                        {validationResult.message || "Invalid model ID"}
-                      </span>
-                    </>
-                  )}
-                </div>
-              )}
-              {validationResult?.suggested &&
-                validationResult.suggested.length > 0 && (
-                  <div className="flex flex-wrap gap-1.5">
-                    {validationResult.suggested.slice(0, 5).map((suggestion) => (
-                      <Badge
-                        key={suggestion}
-                        variant="outline"
-                        className="cursor-pointer text-xs border-[var(--ui-border-default)] text-[var(--ui-text-secondary)] hover:bg-[var(--surface-hover)]"
-                        onClick={() => {
-                          setFreeformInput(suggestion);
-                          setValidationAttempted(false);
-                        }}
-                      >
-                        {suggestion}
-                      </Badge>
-                    ))}
-                  </div>
-                )}
-              <Button
-                onClick={handleConfirmCustom}
-                disabled={!validationResult?.valid || validationLoading}
-                className="w-full bg-[var(--accent-chat)] text-[var(--ui-text-inverse)] hover:opacity-90"
               >
-                Use Custom Model
-              </Button>
+                <div className="flex items-center gap-3 min-w-0">
+                  <div
+                    className="size-8 rounded-lg flex items-center justify-center shrink-0"
+                    style={{
+                      background: "var(--surface-panel-muted)",
+                      border: "1px solid var(--ui-border-default)",
+                    }}
+                  >
+                    <Robot size={18} className="text-[var(--ui-text-muted)]" />
+                  </div>
+                  <div className="flex flex-col min-w-0">
+                    <span className="font-semibold text-sm text-[var(--ui-text-primary)] truncate">
+                      Custom model
+                    </span>
+                    <span className="text-xs text-[var(--ui-text-muted)]">
+                      Enter a model ID manually
+                    </span>
+                  </div>
+                </div>
+                <CaretDown
+                  size={14}
+                  className={cn(
+                    "text-[var(--ui-text-muted)] transition-transform",
+                    customExpanded && "rotate-180"
+                  )}
+                />
+              </button>
+
+              {customExpanded && (
+                <div className="mt-2 pl-[52px] pr-1 space-y-3">
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <Sparkle size={14} className="text-[var(--accent-chat)]" />
+                    <Label className="text-[var(--ui-text-secondary)] text-sm font-medium">
+                      Runtime
+                    </Label>
+                    <Select
+                      value={customProviderId}
+                      onValueChange={setCustomProviderId}
+                    >
+                      <SelectTrigger className="h-8 w-auto min-w-[160px] text-xs bg-[var(--surface-panel)] border-[var(--ui-border-default)] text-[var(--ui-text-primary)]">
+                        <SelectValue placeholder="Select provider" />
+                      </SelectTrigger>
+                      <SelectContent className="bg-[var(--shell-menu-bg)] border-[var(--shell-menu-border)]">
+                        {authenticatedProviders.map((p) => {
+                          const meta = getProviderMeta(p.provider_id);
+                          return (
+                            <SelectItem
+                              key={p.provider_id}
+                              value={p.provider_id}
+                              className="text-[var(--ui-text-primary)] focus:bg-[var(--surface-hover)]"
+                            >
+                              {meta.name}
+                            </SelectItem>
+                          );
+                        })}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <Input
+                    placeholder="Enter model ID…"
+                    value={freeformInput}
+                    onChange={(e) => {
+                      setFreeformInput(e.target.value);
+                      setValidationAttempted(false);
+                    }}
+                    className={cn(
+                      "bg-[var(--surface-panel)] border-[var(--ui-border-default)] text-[var(--ui-text-primary)] placeholder:text-[var(--ui-text-muted)]",
+                      validationResult?.valid && "border-status-success",
+                      validationResult?.valid === false &&
+                        validationAttempted &&
+                        "border-status-error"
+                    )}
+                  />
+                  {validationLoading && (
+                    <div className="flex items-center gap-2 text-xs text-[var(--ui-text-muted)]">
+                      <CircleNotch className="size-3 animate-spin" />
+                      Validating…
+                    </div>
+                  )}
+                  {validationAttempted && !validationLoading && validationResult && (
+                    <div
+                      className={cn(
+                        "text-xs flex items-start gap-2",
+                        validationResult.valid
+                          ? "text-status-success"
+                          : "text-status-error"
+                      )}
+                    >
+                      {validationResult.valid ? (
+                        <>
+                          <Check size={14} />
+                          <span>
+                            {validationResult.model?.description ||
+                              "Model ID valid"}
+                          </span>
+                        </>
+                      ) : (
+                        <>
+                          <Warning size={14} />
+                          <span>
+                            {validationResult.message || "Invalid model ID"}
+                          </span>
+                        </>
+                      )}
+                    </div>
+                  )}
+                  {validationResult?.suggested &&
+                    validationResult.suggested.length > 0 && (
+                      <div className="flex flex-wrap gap-1.5">
+                        {validationResult.suggested.slice(0, 5).map((suggestion) => (
+                          <Badge
+                            key={suggestion}
+                            variant="outline"
+                            className="cursor-pointer text-xs border-[var(--ui-border-default)] text-[var(--ui-text-secondary)] hover:bg-[var(--surface-hover)]"
+                            onClick={() => {
+                              setFreeformInput(suggestion);
+                              setValidationAttempted(false);
+                            }}
+                          >
+                            {suggestion}
+                          </Badge>
+                        ))}
+                      </div>
+                    )}
+                  <Button
+                    onClick={handleConfirmCustom}
+                    disabled={!validationResult?.valid || validationLoading}
+                    style={{ background: "var(--accent-chat)", color: "var(--ui-text-inverse)" }}
+                    className="w-full hover:opacity-90"
+                  >
+                    Use Custom Model
+                  </Button>
+                </div>
+              )}
             </div>
           )}
 
           {/* Footer */}
-          <div className="flex items-center justify-end gap-3 border-t border-[var(--ui-border-default)] px-4 py-3">
+          <div className="flex items-center justify-between gap-3 border-t border-[var(--ui-border-default)] px-4 py-3">
+            {onOpenModelLab ? (
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => {
+                  setOpen(false);
+                  onOpenModelLab();
+                }}
+                className="gap-1.5 h-8 text-xs text-[var(--ui-text-muted)] hover:text-[var(--ui-text-primary)] hover:bg-[var(--surface-hover)]"
+              >
+                <Flask size={14} />
+                Model Lab
+              </Button>
+            ) : (
+              <span />
+            )}
             {onCancel && (
               <Button
                 variant="outline"
@@ -685,6 +786,59 @@ export function ModelPicker({
         </Command>
       </DialogContent>
     </Dialog>
+  );
+}
+
+export function ModelPicker({
+  onSelect,
+  onCancel,
+  defaultProfileId,
+  trigger,
+  open,
+  onOpenChange,
+  onOpenProviderConnect,
+  onOpenModelLab,
+}: ModelPickerProps) {
+  const { availableModels, selection } = useModelSelection();
+  const {
+    providers,
+    authenticatedProviders,
+    providersLoading,
+    providersError,
+    fetchProviders,
+    validationResult,
+    validationLoading,
+    validateModel,
+  } = useModelDiscovery();
+
+  const [prevOpen, setPrevOpen] = useState(open);
+  if (open && !prevOpen) {
+    setPrevOpen(true);
+    fetchProviders();
+  } else if (!open && prevOpen) {
+    setPrevOpen(false);
+  }
+
+  return (
+    <ModelPickerUI
+      onSelect={onSelect}
+      onCancel={onCancel}
+      defaultProfileId={defaultProfileId}
+      trigger={trigger}
+      open={open}
+      onOpenChange={onOpenChange}
+      onOpenProviderConnect={onOpenProviderConnect}
+      onOpenModelLab={onOpenModelLab}
+      availableModels={availableModels}
+      providers={providers}
+      authenticatedProviders={authenticatedProviders}
+      providersLoading={providersLoading}
+      providersError={providersError}
+      validationResult={validationResult}
+      validationLoading={validationLoading}
+      validateModel={validateModel}
+      selectedModelId={selection?.modelId ?? null}
+    />
   );
 }
 

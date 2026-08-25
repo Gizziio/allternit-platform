@@ -97,6 +97,7 @@ import { isCanonicalAgentMode, type CanonicalAgentModeId } from '@/lib/agents/ag
 import { CoworkTopDeck } from '@/views/cowork/CoworkTopDeck';
 import { ModelPicker } from '@/components/model-picker';
 import { ProviderGallery } from '@/components/chat/ProviderGallery';
+import { useNav } from '@/nav/useNav';
 
 const THEME = {
   bg: 'var(--surface-canvas)',
@@ -2404,6 +2405,7 @@ export function ChatComposer({
         onSelect={selectModel}
         onCancel={cancelModelSelection}
         onOpenProviderConnect={() => setShowProviderConnect(true)}
+        onOpenModelLab={() => useNav.getState().dispatch({ type: 'OPEN_VIEW', viewType: 'model-lab' })}
       />
 
       {/* Agent-mode bottom deck — tray tucked behind the card's bottom
