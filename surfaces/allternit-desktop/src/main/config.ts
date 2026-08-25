@@ -47,7 +47,7 @@ export const URLS = {
   /** Canonical Allternit control plane. Human Clerk sessions approve runtime pairing here. */
   CLOUD_API: 'https://allternit-cloud-api.fly.dev',
   /** Canonical browser experience. Pairing must never follow a local static UI URL. */
-  PLATFORM: 'https://platform.allternit.com',
+  PLATFORM: 'https://ai.allternit.com',
   PRODUCTION_UI: 'https://ai.allternit.com',
   /** Local static platform UI fallback served by the Rust API at the root path. */
   PLATFORM_STATIC: `http://${HOSTS.LOOPBACK}:${PORTS.API}`,
