@@ -44,7 +44,7 @@ export const PLATFORM_MANIFEST = {
     desktopFeedUrl: 'https://github.com/allternit/desktop/releases/latest',
 
     /** Backend version check */
-    backendVersionUrl: 'https://allternit-cloud-api.fly.dev/versions/latest',
+    backendVersionUrl: 'https://api.allternit.com/versions/latest',
   },
 } as const;
 

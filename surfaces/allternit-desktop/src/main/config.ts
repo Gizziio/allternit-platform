@@ -45,7 +45,7 @@ export const URLS = {
   CONNECTOR_SIDECAR: `http://${HOSTS.LOOPBACK}:${PORTS.CONNECTOR_SIDECAR}`,
   OFFICE_ENGINE: `http://${HOSTS.LOOPBACK}:${PORTS.OFFICE_ENGINE}`,
   /** Canonical Allternit control plane. Human Clerk sessions approve runtime pairing here. */
-  CLOUD_API: 'https://allternit-cloud-api.fly.dev',
+  CLOUD_API: 'https://api.allternit.com',
   /** Canonical browser experience. Pairing must never follow a local static UI URL. */
   PLATFORM: 'https://ai.allternit.com',
   PRODUCTION_UI: 'https://ai.allternit.com',
