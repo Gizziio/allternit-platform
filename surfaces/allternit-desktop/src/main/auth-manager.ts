@@ -533,48 +533,64 @@ export class DesktopAuthManager {
     await authSession.clearStorageData();
 
     // Intercept Clerk OAuth navigation so Google/GitHub sign-in opens in a modal
-    // popup instead of navigating away from the isolated auth renderer.
+    // popup instead of navigating away from the isolated auth renderer. Also
+    // block any other navigation away from the auth page (e.g. Clerk redirecting
+    // to the instance home_url after sign-in), and reload the auth renderer so
+    // TokenBridge can complete the handoff.
     window.webContents.on('will-navigate', (event, url) => {
-      if (!this.isOAuthProviderUrl(url)) return;
-      event.preventDefault();
+      if (this.isOAuthProviderUrl(url)) {
+        event.preventDefault();
 
-      // clerk-js retries the external verification navigation whenever the
-      // attempt stays pending — without this guard every retry opens another
-      // popup on top of the previous one.
-      if (this.oauthPopupInFlight) {
-        log.info('[Auth] OAuth popup already open; ignoring duplicate navigation to:', url);
+        // clerk-js retries the external verification navigation whenever the
+        // attempt stays pending — without this guard every retry opens another
+        // popup on top of the previous one.
+        if (this.oauthPopupInFlight) {
+          log.info('[Auth] OAuth popup already open; ignoring duplicate navigation to:', url);
+          return;
+        }
+        this.oauthPopupInFlight = true;
+        log.info('[Auth] Opening OAuth popup for:', url);
+        void openClerkOAuthPopup(url)
+          .then((callbackUrl) => {
+            if (!window.isDestroyed()) {
+              window.loadURL(callbackUrl).catch((err) => {
+                log.error('[Auth] Failed to load OAuth callback:', err);
+              });
+            }
+          })
+          .catch((err) => {
+            log.warn('[Auth] OAuth popup failed:', err);
+            // Don't fail the whole pairing when the user closes the popup.
+            // Reset the auth renderer to a clean client instead, so clerk-js
+            // abandons the pending external verification and stops
+            // re-navigating to the provider (which would reopen the popup).
+            if (!window.isDestroyed() && this.authWindowBaseUrl) {
+              const baseUrl = this.authWindowBaseUrl;
+              void authSession.clearStorageData().then(() => {
+                if (!window.isDestroyed()) {
+                  window.loadURL(baseUrl).catch((loadErr) => {
+                    log.error('[Auth] Failed to reset auth renderer:', loadErr);
+                  });
+                }
+              });
+            }
+          })
+          .finally(() => {
+            this.oauthPopupInFlight = false;
+          });
         return;
       }
-      this.oauthPopupInFlight = true;
-      log.info('[Auth] Opening OAuth popup for:', url);
-      void openClerkOAuthPopup(url)
-        .then((callbackUrl) => {
-          if (!window.isDestroyed()) {
-            window.loadURL(callbackUrl).catch((err) => {
-              log.error('[Auth] Failed to load OAuth callback:', err);
-            });
-          }
-        })
-        .catch((err) => {
-          log.warn('[Auth] OAuth popup failed:', err);
-          // Don't fail the whole pairing when the user closes the popup.
-          // Reset the auth renderer to a clean client instead, so clerk-js
-          // abandons the pending external verification and stops
-          // re-navigating to the provider (which would reopen the popup).
-          if (!window.isDestroyed() && this.authWindowBaseUrl) {
-            const baseUrl = this.authWindowBaseUrl;
-            void authSession.clearStorageData().then(() => {
-              if (!window.isDestroyed()) {
-                window.loadURL(baseUrl).catch((loadErr) => {
-                  log.error('[Auth] Failed to reset auth renderer:', loadErr);
-                });
-              }
-            });
-          }
-        })
-        .finally(() => {
-          this.oauthPopupInFlight = false;
-        });
+
+      const authBaseUrl = this.authWindowBaseUrl;
+      if (authBaseUrl && !url.startsWith(authBaseUrl)) {
+        event.preventDefault();
+        log.warn('[Auth] Blocking navigation away from auth renderer to:', url);
+        if (!window.isDestroyed()) {
+          window.loadURL(authBaseUrl).catch((err) => {
+            log.error('[Auth] Failed to reload auth renderer:', err);
+          });
+        }
+      }
     });
 
     window.loadURL(this.authWindowBaseUrl).catch((err) => {
