@@ -52,7 +52,7 @@ const STATUS_COLORS: Record<string, string> = {
 const CLOUD_API_BASE_URL = "https://api.allternit.com";
 const PUSH_WORKER_URL =
   env("VITE_REMOTE_CONTROL_PUSH_URL") ?? "https://push.remotecontrol.allternit.com";
-const PLATFORM_HUB_URL = env("VITE_ALLTERNIT_PLATFORM_URL") ?? "https://ai.allternit.com";
+const PLATFORM_HUB_URL = env("VITE_ALLTERNIT_PLATFORM_URL") ?? "https://platform.allternit.com";
 
 function urlBase64ToUint8Array(base64String: string): Uint8Array {
   const padding = "=".repeat((4 - (base64String.length % 4)) % 4);

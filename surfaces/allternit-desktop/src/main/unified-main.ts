@@ -175,7 +175,7 @@ let pushServiceState = () => {
 };
 let miniWindow: BrowserWindow | null = null;
 let tray: Tray | null = null;
-let activePlatformUrl: string = isDev ? URLS.DEV_UI : 'https://ai.allternit.com';
+let activePlatformUrl: string = isDev ? URLS.DEV_UI : 'https://platform.allternit.com';
 
 const QUICK_CHAT_HOTKEY = 'CommandOrControl+Shift+A';
 const MINI_WINDOW_WIDTH = 520;
