@@ -209,6 +209,46 @@ export function DashboardPage({ installPrompt, onInstallClick }: DashboardPagePr
 
   const onlineCount = runtimes.filter((r) => r.status === "online").length;
 
+  if (!auth.isLoaded) {
+    return (
+      <div
+        className="min-h-screen w-full flex items-center justify-center"
+        style={{ background: "var(--bg-primary)", color: "var(--text-primary)" }}
+      >
+        <div className="text-center">
+          <div
+            className="mb-4 h-8 w-8 animate-spin rounded-full border-2 border-[var(--accent-primary)] border-t-transparent mx-auto"
+          />
+          <div className="text-sm font-medium">Loading account…</div>
+        </div>
+      </div>
+    );
+  }
+
+  if (!auth.isSignedIn) {
+    return (
+      <div
+        className="min-h-screen w-full flex items-center justify-center px-5"
+        style={{ background: "var(--bg-primary)", color: "var(--text-primary)" }}
+      >
+        <GlassSurface className="max-w-md w-full p-8 text-center" intensity="base">
+          <DesktopTower size={48} style={{ opacity: 0.6 }} className="mx-auto mb-4" color="var(--accent-primary)" />
+          <h1 className="text-[22px] font-semibold mb-2">Sign in to Remote Control</h1>
+          <p className="text-[14px] text-[var(--text-secondary)] mb-6">
+            Monitor and manage your agents across machines from any device.
+          </p>
+          <a
+            href={`${PLATFORM_HUB_URL}/sign-in?redirect_url=${encodeURIComponent(window.location.href)}`}
+            className="inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl border-none text-[14px] font-semibold cursor-pointer transition-colors w-full"
+            style={{ background: "var(--accent-primary)", color: "var(--accent-on-primary)" }}
+          >
+            Sign in with Allternit
+          </a>
+        </GlassSurface>
+      </div>
+    );
+  }
+
   return (
     <div
       className="min-h-screen w-full"
