@@ -731,7 +731,7 @@ export function PlatformSignUp(props: {
   const selfHosted = companyConfig?.selfHosted ?? false
   const authDisabled = clerkDisabledByEnv || selfHosted || (!desktopAuthEnabled && !publishableKey)
 
-  if (desktopAuthEnabled && !browserAuthSurface) {
+  if (desktopAuthEnabled && isDesktopShell() && !browserAuthSurface) {
     return (
       <DisabledAuthCard
         title="Sign-up is handled on the hosted platform"
