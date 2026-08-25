@@ -87,7 +87,6 @@ interface ChatState {
 
   // ChatStore-owned state
   projects: ChatProject[];
-  sandboxMode: 'read-only' | 'full';
   activeProjectId: string | null;
   activeProjectLocalKey: string | null;
 
@@ -102,7 +101,6 @@ interface ChatState {
   renameThread: (id: string, title: string) => void;
   setThreadMode: (id: string, mode: ChatThreadMode, agentId?: string | null) => void;
   setActiveThread: (id: string | null) => void;
-  setSandboxMode: (mode: 'read-only' | 'full') => void;
 
   // Project ops
   createProject: (title: string) => Promise<string>;
@@ -138,7 +136,6 @@ export const useChatStore = create<ChatState>()(
 
       // Owned
       projects: [],
-      sandboxMode: 'read-only',
       activeProjectId: null,
       activeProjectLocalKey: null,
 
@@ -174,8 +171,6 @@ export const useChatStore = create<ChatState>()(
         useChatSessionStore.getState().setActiveSession(id);
         set({ activeProjectId: null, activeProjectLocalKey: null });
       },
-
-      setSandboxMode: (mode) => set({ sandboxMode: mode }),
 
       // Project ops
       createProject: async (title) => {
@@ -354,7 +349,6 @@ export const useChatStore = create<ChatState>()(
       partialize: (state) => ({
         projects: state.projects,
         // activeProjectId is intentionally NOT persisted - it's navigation state.
-        sandboxMode: state.sandboxMode,
       }),
     },
   ),
