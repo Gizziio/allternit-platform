@@ -1,9 +1,0 @@
-[install]
-# Use pnpm workspace configuration
-# Bun should auto-detect pnpm-workspace.yaml
-
-[install.scopes]
-"@allternit" = { url = "https://registry.npmjs.org/" }
-
-[test]
-preload = ["./test/preload.ts"]

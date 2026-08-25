@@ -41,7 +41,7 @@ type TokenGetter = () => Promise<string | null>;
 const HANDOFF_BASE = '/dispatch/handoff';
 
 const CLOUD_API_BASE = (
-  (import.meta as any).env?.NEXT_PUBLIC_ALLTERNIT_CLOUD_API_URL || 'https://allternit-cloud-api.fly.dev'
+  (import.meta as any).env?.NEXT_PUBLIC_ALLTERNIT_CLOUD_API_URL || 'https://api.allternit.com'
 ).replace(/\/$/, '');
 
 function hostedHandoffBase(): string {
