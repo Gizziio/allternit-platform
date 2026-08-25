@@ -15,11 +15,15 @@ function AuthFlow() {
         <SignUp
           appearance={clerkAppearance}
           routing="hash"
+          forceRedirectUrl={selfRedirectUrl}
+          signInForceRedirectUrl={selfRedirectUrl}
         />
       ) : (
         <SignIn
           appearance={clerkAppearance}
           routing="hash"
+          forceRedirectUrl={selfRedirectUrl}
+          signUpForceRedirectUrl={selfRedirectUrl}
         />
       )}
       <div
