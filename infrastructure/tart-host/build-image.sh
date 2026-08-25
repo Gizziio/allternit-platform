@@ -19,6 +19,9 @@ BASE_IMAGE="${BASE_IMAGE:-ghcr.io/cirruslabs/ubuntu:latest}"
 OUTPUT_IMAGE="${OUTPUT_IMAGE:-allternit-desktop-tart}"
 BUILD_VM="allternit-tart-builder-$$"
 
+LOCAL_DIR="$(mktemp -d)"
+trap 'rm -rf "${LOCAL_DIR}"; cleanup' EXIT
+
 tart() {
     "${TART_BIN}" "$@"
 }
@@ -33,7 +36,6 @@ cleanup() {
         tart delete "${BUILD_VM}" >/dev/null 2>&1 || true
     fi
 }
-trap cleanup EXIT
 
 if ! command -v "${TART_BIN}" >/dev/null 2>&1; then
     echo "ERROR: Tart not found at ${TART_BIN}" >&2
@@ -46,13 +48,55 @@ if [ "$(uname -m)" != "arm64" ]; then
 fi
 
 # ---------------------------------------------------------------------------
-# 1. Clone the base image.
+# 1. Prepare local files to copy into the VM.
+# ---------------------------------------------------------------------------
+cat >"${LOCAL_DIR}/run.sh" <<'EOF'
+#!/bin/bash
+export DISPLAY=:99
+export HOME=/home/admin
+LOG_DIR="/home/admin/.allternit-desktop/log"
+mkdir -p "${LOG_DIR}"
+
+Xvfb :99 -screen 0 1280x720x24 -ac +extension GLX +render -noreset \
+  >"${LOG_DIR}/xvfb.log" 2>&1 &
+sleep 2
+
+xfce4-session >"${LOG_DIR}/xfce.log" 2>&1 &
+
+x11vnc -display :99 -rfbport 5900 -forever -shared -nopw \
+  >"${LOG_DIR}/x11vnc.log" 2>&1 &
+
+wait
+EOF
+
+cat >"${LOCAL_DIR}/allternit-desktop.service" <<'EOF'
+[Unit]
+Description=Allternit agent desktop
+After=network.target systemd-user-sessions.service
+
+[Service]
+Type=simple
+User=admin
+Environment="DISPLAY=:99"
+Environment="HOME=/home/admin"
+ExecStart=/opt/allternit-desktop/run.sh
+ExecStop=/bin/kill -TERM $MAINPID
+KillMode=mixed
+Restart=on-failure
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target
+EOF
+
+# ---------------------------------------------------------------------------
+# 2. Clone the base image.
 # ---------------------------------------------------------------------------
 log "cloning ${BASE_IMAGE} -> ${BUILD_VM}"
 tart clone "${BASE_IMAGE}" "${BUILD_VM}"
 
 # ---------------------------------------------------------------------------
-# 2. Start the build VM and wait for SSH.
+# 3. Start the build VM and wait for SSH.
 # ---------------------------------------------------------------------------
 log "starting build VM"
 tart run "${BUILD_VM}" >/dev/null 2>&1 &
@@ -80,9 +124,10 @@ for i in $(seq 1 60); do
 done
 
 SSH="sshpass -p admin ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o LogLevel=ERROR admin@${IP}"
+SCP="sshpass -p admin scp -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o LogLevel=ERROR"
 
 # ---------------------------------------------------------------------------
-# 3. Install desktop packages.
+# 4. Install desktop packages.
 # ---------------------------------------------------------------------------
 log "updating package lists"
 ${SSH} sudo apt-get update -y
@@ -104,68 +149,49 @@ ${SSH} sudo apt-get install -y \
     apt-transport-https
 
 # ---------------------------------------------------------------------------
-# 4. Install startup service that brings up Xvfb + XFCE + VNC.
+# 5. Install the startup service and scripts.
 # ---------------------------------------------------------------------------
 log "installing desktop startup service"
-${SSH} 'sudo mkdir -p /opt/allternit-desktop && sudo tee /opt/allternit-desktop/run.sh >/dev/null <<EOF_RUN
-#!/bin/bash
-set -e
-export DISPLAY=:0
-export HOME=/home/admin
-mkdir -p /var/log/allternit-desktop
+${SSH} sudo mkdir -p /opt/allternit-desktop
+${SCP} "${LOCAL_DIR}/run.sh" "admin@${IP}:/tmp/run.sh"
+${SSH} sudo mv /tmp/run.sh /opt/allternit-desktop/run.sh
+${SSH} sudo chmod +x /opt/allternit-desktop/run.sh
 
-Xvfb :0 -screen 0 1280x720x24 -ac +extension GLX +render -noreset \\
-  >/var/log/allternit-desktop/xvfb.log 2>&1 &
-sleep 2
+${SCP} "${LOCAL_DIR}/allternit-desktop.service" "admin@${IP}:/tmp/allternit-desktop.service"
+${SSH} sudo mv /tmp/allternit-desktop.service /etc/systemd/system/allternit-desktop.service
+${SSH} sudo systemctl daemon-reload
+${SSH} sudo systemctl enable allternit-desktop.service
 
-xfce4-session >/var/log/allternit-desktop/xfce.log 2>&1 &
-
-x11vnc -display :0 -rfbport 5900 -forever -shared -nopw \\
-  >/var/log/allternit-desktop/x11vnc.log 2>&1 &
-
-wait
-EOF_RUN
-sudo chmod +x /opt/allternit-desktop/run.sh'
-
-${SSH} 'sudo tee /etc/systemd/system/allternit-desktop.service >/dev/null <<EOF_SVC
-[Unit]
-Description=Allternit agent desktop
-After=network.target systemd-user-sessions.service
-
-[Service]
-Type=simple
-User=admin
-Environment="DISPLAY=:0"
-Environment="HOME=/home/admin"
-ExecStart=/opt/allternit-desktop/run.sh
-ExecStop=/bin/kill -TERM \$MAINPID
-KillMode=mixed
-Restart=on-failure
-RestartSec=5
-
-[Install]
-WantedBy=multi-user.target
-EOF_SVC
-sudo systemctl daemon-reload
-sudo systemctl enable allternit-desktop.service'
+# Verify the service file is not empty/masked.
+if ${SSH} 'systemctl is-enabled allternit-desktop.service' >/dev/null 2>&1; then
+    log "service enabled successfully"
+else
+    echo "ERROR: allternit-desktop.service could not be enabled" >&2
+    exit 1
+fi
 
 # ---------------------------------------------------------------------------
-# 5. Clean up.
+# 6. Clean up.
 # ---------------------------------------------------------------------------
 log "cleaning package cache"
 ${SSH} sudo apt-get clean
 ${SSH} sudo rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
 
 # ---------------------------------------------------------------------------
-# 6. Stop and save the image.
+# 7. Stop and save the image.
 # ---------------------------------------------------------------------------
-log "stopping build VM"
-kill "${TART_PID}" 2>/dev/null || true
-wait "${TART_PID}" 2>/dev/null || true
+log "flushing disk and shutting down build VM cleanly"
+${SSH} sudo sync
+${SSH} sudo shutdown -h now || true
 
-# Give Tart a moment to release the VM.
-sleep 3
-tart stop "${BUILD_VM}" 2>/dev/null || true
+log "waiting for build VM to stop"
+for i in $(seq 1 60); do
+    state=$(tart list --format json 2>/dev/null | python3 -c "import sys,json; vms=json.load(sys.stdin); print(next((v.get('State','') for v in vms if v.get('Name')=='${BUILD_VM}'),''))" || true)
+    if [ "${state}" = "stopped" ]; then
+        break
+    fi
+    sleep 2
+done
 
 log "saving image as ${OUTPUT_IMAGE}"
 tart delete "${OUTPUT_IMAGE}" >/dev/null 2>&1 || true

@@ -34,6 +34,7 @@ import {
   CodePermissionsDropdown,
   type CodePermissionOption,
 } from '@/components/dispatch/CodePermissionsDropdown';
+import { openRemoteControlWindow } from '@/lib/open-remote-control-window';
 
 // ─── token generation ────────────────────────────────────────────────────────
 function generateDispatchToken(): string {
@@ -562,9 +563,9 @@ export function DispatchView(): React.ReactNode {
               className="text-3xl font-medium tracking-tight m-0"
               style={{ fontFamily: 'var(--font-serif)' }}
             >
-              Dispatch
+              Remote Control
             </h1>
-            <p className="m-0 mt-1 text-sm text-[var(--text-secondary)]">Work with Allternit, right on your computer</p>
+            <p className="m-0 mt-1 text-sm text-[var(--text-secondary)]">Monitor, hand off, and control your agents across machines.</p>
           </div>
 
           <div className="flex items-center gap-2 flex-shrink-0">
@@ -671,7 +672,33 @@ export function DispatchView(): React.ReactNode {
           backgroundSize: '20px 20px',
         }}
       >
-        {/* Handoff banner */}
+        {/* Remote hub tabs */}
+        {handoffStatus?.runtimeId && (
+          <div className="mx-6 mt-6 flex items-center gap-2">
+            <button
+              type="button"
+              className={cn(
+                'px-4 py-2 rounded-xl text-[13px] font-medium transition-colors',
+                'bg-[var(--bg-elevated)] text-[var(--text-primary)] border border-[var(--border-default)] shadow-sm'
+              )}
+            >
+              Handoff
+            </button>
+            <button
+              type="button"
+              onClick={() => openRemoteControlWindow()}
+              className={cn(
+                'px-4 py-2 rounded-xl text-[13px] font-medium transition-colors',
+                'text-[var(--text-tertiary)] hover:text-[var(--text-secondary)]'
+              )}
+            >
+              Remote sessions
+            </button>
+          </div>
+        )}
+
+        <>
+          {/* Handoff banner */}
         {!bannerDismissed && (
           <div className="mx-6 mt-6 p-4 pr-5 rounded-2xl bg-[var(--bg-elevated)] border border-solid border-[var(--border-default)] flex items-start gap-4 shadow-sm">
             <div className="size-9 rounded-xl bg-[var(--border-subtle)] flex items-center justify-center shrink-0 mt-0.5">
@@ -872,10 +899,11 @@ export function DispatchView(): React.ReactNode {
             </button>
           </div>
         </div>
-      </div>
-        </div>
+      </>
       </div>
     </div>
+  </div>
+</div>
   );
 }
 

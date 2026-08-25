@@ -307,6 +307,11 @@ impl Substrate for IncusSubstrate {
                 .unwrap_or_else(|| "simplestreams".to_string())
                 .into();
         }
+        let instance_type = if spec.os.eq_ignore_ascii_case("windows") {
+            "virtual-machine"
+        } else {
+            "container"
+        };
         let mut body = serde_json::json!({
             "name": spec.name,
             "source": source,
@@ -314,7 +319,7 @@ impl Substrate for IncusSubstrate {
                 "limits.cpu": spec.cpu_cores.to_string(),
                 "limits.memory": format!("{}MiB", spec.memory_mb),
             },
-            "type": "container",
+            "type": instance_type,
         });
         if !spec.profiles.is_empty() {
             body["profiles"] = serde_json::json!(spec.profiles);

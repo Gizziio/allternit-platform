@@ -90,6 +90,7 @@ const PdfPage = lazy(() => import('./pages/PdfPage'))
 const MarkdownPreviewPage = lazy(() => import('./pages/MarkdownPreviewPage'))
 const OfficeLauncherPage = lazy(() => import('./pages/OfficeLauncherPage'))
 const SignDocumentPage = lazy(() => import('./pages/SignDocumentPage'))
+const HudPage = lazy(() => import('./pages/HudPage'))
 
 export default function AppRoutes() {
   const navigate = useNavigate();
@@ -144,6 +145,7 @@ export default function AppRoutes() {
         <Route path="/markdown-preview" element={<MarkdownPreviewPage />} />
         <Route path="/office" element={<OfficeLauncherPage />} />
         <Route path="/sign" element={<SignDocumentPage />} />
+        <Route path="/hud" element={<HudPage />} />
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
     </Suspense>

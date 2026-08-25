@@ -158,6 +158,7 @@ const isMac = process.platform === 'darwin';
 
 let mainWindow: BrowserWindow | null = null;
 let designWindow: BrowserWindow | null = null;
+let remoteControlWindow: BrowserWindow | null = null;
 /** One office editor window per target (docs/sheets/slides/pdf/launcher). */
 const officeWindows = new Map<OfficeTarget, BrowserWindow>();
 let splashWindow: BrowserWindow | null = null;
@@ -174,10 +175,15 @@ let pushServiceState = () => {
   splashWindow?.webContents.send('services', serviceState);
 };
 let miniWindow: BrowserWindow | null = null;
+let hudWindow: BrowserWindow | null = null;
 let tray: Tray | null = null;
 let activePlatformUrl: string = isDev ? URLS.DEV_UI : 'https://ai.allternit.com';
 
 const QUICK_CHAT_HOTKEY = 'CommandOrControl+Shift+A';
+const HUD_HOTKEY_PRIMARY = 'CommandOrControl+Shift+H';
+const HUD_HOTKEY_ALT = 'Alt+Shift+H';
+const HUD_DEFAULT_WIDTH = 720;
+const HUD_DEFAULT_HEIGHT = 72;
 const MINI_WINDOW_WIDTH = 520;
 const MINI_WINDOW_HEIGHT = 600;
 /** Resolved backend URL — set once the app initializes. Used by sdk:get-backend-url IPC. */
@@ -359,6 +365,7 @@ async function getOfficeAddinManager(): Promise<OfficeAddinManager> {
 
 interface StoreSchema {
   windowBounds: { width: number; height: number; x?: number; y?: number };
+  hudBounds: { width: number; height: number; x?: number; y?: number };
   theme: 'light' | 'dark' | 'system';
   backend: {
     mode: 'bundled' | 'remote' | 'development';
@@ -383,6 +390,7 @@ interface StoreSchema {
 const store = new Store<StoreSchema>({
   defaults: {
     windowBounds: { width: 1400, height: 900 },
+    hudBounds: { width: HUD_DEFAULT_WIDTH, height: HUD_DEFAULT_HEIGHT },
     theme: 'system',
     backend: {
       mode: 'bundled',
@@ -436,14 +444,18 @@ function createMainWindow(): BrowserWindow {
     },
   });
 
-  // Redirect all /api/* requests from the platform URL to the allternit-api
-  // custom protocol. The protocol handler (registered globally) proxies to
-  // the local API URL and injects auth headers. This avoids mixed-content
-  // blocking without allowRunningInsecureContent.
+  // Redirect all /api/* requests from the platform URL (or the public gateway)
+  // to the allternit-api custom protocol. The protocol handler (registered
+  // globally) proxies to the local API URL and injects auth headers. This avoids
+  // mixed-content blocking without allowRunningInsecureContent.
   const platformOrigin = activePlatformUrl;
+  const publicApiOrigin = 'https://api.allternit.com';
   window.webContents.session.webRequest.onBeforeRequest((details, callback) => {
-    if (details.url.startsWith(`${platformOrigin}/api/`)) {
-      const redirectURL = details.url.replace(platformOrigin, `allternit-api://localhost:${PORTS.API}`);
+    const apiPrefixes = [`${platformOrigin}/api/`, `${publicApiOrigin}/api/`, `${publicApiOrigin}/api/v1/`];
+    const matchedPrefix = apiPrefixes.find((prefix) => details.url.startsWith(prefix));
+    if (matchedPrefix) {
+      const originToReplace = matchedPrefix.startsWith(publicApiOrigin) ? publicApiOrigin : platformOrigin;
+      const redirectURL = details.url.replace(originToReplace, `allternit-api://localhost:${PORTS.API}`);
       callback({ redirectURL });
       return;
     }
@@ -1326,6 +1338,109 @@ function toggleMiniWindow(): void {
 }
 
 // ============================================================================
+// Hermes Floating HUD
+// ============================================================================
+
+function createHudWindow(): BrowserWindow {
+  const saved = store.get('hudBounds');
+  const { workArea } = screen.getPrimaryDisplay();
+
+  let width = saved?.width ?? HUD_DEFAULT_WIDTH;
+  let height = saved?.height ?? HUD_DEFAULT_HEIGHT;
+  let x = saved?.x;
+  let y = saved?.y;
+
+  // Center on first launch
+  if (x === undefined || y === undefined) {
+    x = Math.round(workArea.x + (workArea.width - width) / 2);
+    y = Math.round(workArea.y + (workArea.height - height) / 3);
+  }
+
+  const win = new BrowserWindow({
+    width,
+    height,
+    x,
+    y,
+    minWidth: 360,
+    minHeight: HUD_DEFAULT_HEIGHT,
+    show: false,
+    frame: false,
+    resizable: false,
+    movable: true,
+    alwaysOnTop: true,
+    skipTaskbar: true,
+    fullscreenable: false,
+    maximizable: false,
+    transparent: true,
+    backgroundColor: '#00000000',
+    hasShadow: false,
+    ...(isMac ? { titleBarStyle: 'hidden', roundedCorners: false } : {}),
+    webPreferences: {
+      preload: join(__dirname, '../preload/index.js'),
+      contextIsolation: true,
+      nodeIntegration: false,
+      sandbox: true,
+    },
+  });
+
+  const hudUrl = isDev
+    ? devUiUrl('/hud')
+    : `${activePlatformUrl}/hud`;
+
+  void win.loadURL(hudUrl);
+
+  win.on('blur', () => {
+    if (!win.webContents.isDevToolsFocused()) {
+      win.hide();
+    }
+  });
+
+  win.on('close', (e) => {
+    e.preventDefault();
+    win.hide();
+  });
+
+  win.on('move', () => {
+    if (win && !win.isDestroyed()) {
+      store.set('hudBounds', { ...win.getBounds() });
+    }
+  });
+
+  return win;
+}
+
+function showHudWindow(): void {
+  if (!hudWindow || hudWindow.isDestroyed()) {
+    hudWindow = createHudWindow();
+    hudWindow.once('ready-to-show', () => {
+      hudWindow?.show();
+      hudWindow?.focus();
+    });
+    return;
+  }
+  hudWindow.show();
+  hudWindow.focus();
+}
+
+function hideHudWindow(): void {
+  if (hudWindow && !hudWindow.isDestroyed()) {
+    hudWindow.hide();
+  }
+}
+
+function toggleHudWindow(): void {
+  if (!hudWindow || hudWindow.isDestroyed()) {
+    showHudWindow();
+    return;
+  }
+  if (hudWindow.isVisible() && hudWindow.isFocused()) {
+    hideHudWindow();
+  } else {
+    showHudWindow();
+  }
+}
+
+// ============================================================================
 // Tray
 // ============================================================================
 
@@ -1414,6 +1529,7 @@ async function updateTrayMenu(): Promise<void> {
       ],
     },
     { label: 'Quick Chat', accelerator: QUICK_CHAT_HOTKEY, click: () => toggleMiniWindow() },
+    { label: 'Toggle HUD', accelerator: HUD_HOTKEY_PRIMARY, click: () => toggleHudWindow() },
     { type: 'separator' },
     { label: 'Quit', click: () => app.quit() },
   ] as any);
@@ -1734,6 +1850,16 @@ app.whenReady().then(async () => {
     log.warn(`[Main] Failed to register global hotkey: ${QUICK_CHAT_HOTKEY}`);
   }
 
+  // Global hotkeys: Cmd+Shift+H / Alt+Shift+H → Hermes HUD
+  const hudHotkeyRegistered = globalShortcut.register(HUD_HOTKEY_PRIMARY, toggleHudWindow);
+  if (!hudHotkeyRegistered) {
+    log.warn(`[Main] Failed to register global hotkey: ${HUD_HOTKEY_PRIMARY}`);
+  }
+  const hudAltHotkeyRegistered = globalShortcut.register(HUD_HOTKEY_ALT, toggleHudWindow);
+  if (!hudAltHotkeyRegistered) {
+    log.warn(`[Main] Failed to register global hotkey: ${HUD_HOTKEY_ALT}`);
+  }
+
   app.on('activate', () => {
     if (BrowserWindow.getAllWindows().length === 0) {
       initializeApp();
@@ -1864,6 +1990,8 @@ ipcMain.handle('app:get-info', () => ({
   manifest: PLATFORM_MANIFEST,
 }));
 
+ipcMain.handle('app:get-platform-url', () => activePlatformUrl);
+
   // Shell
 ipcMain.handle('shell:open-external', (_event, url: string) => {
   shell.openExternal(url);
@@ -1901,6 +2029,40 @@ ipcMain.handle('shell:open-design', () => {
   designWindow.once('ready-to-show', () => designWindow?.show());
   designWindow.on('closed', () => { designWindow = null; });
   void designWindow.loadURL(new URL('/design', activePlatformUrl).toString());
+});
+
+ipcMain.handle('shell:open-remote-control', () => {
+  if (remoteControlWindow && !remoteControlWindow.isDestroyed()) {
+    remoteControlWindow.show();
+    remoteControlWindow.focus();
+    return;
+  }
+
+  remoteControlWindow = new BrowserWindow({
+    width: 1280,
+    height: 840,
+    minWidth: 820,
+    minHeight: 560,
+    title: 'Allternit Remote Control',
+    titleBarStyle: isMac ? 'hiddenInset' : 'default',
+    trafficLightPosition: { x: 16, y: 16 },
+    show: false,
+    backgroundColor: '#0F0C0A',
+    webPreferences: {
+      preload: join(__dirname, '../preload/index.js'),
+      contextIsolation: true,
+      nodeIntegration: false,
+      sandbox: true,
+    },
+  });
+
+  remoteControlWindow.webContents.setWindowOpenHandler(({ url }) => {
+    void shell.openExternal(url);
+    return { action: 'deny' };
+  });
+  remoteControlWindow.once('ready-to-show', () => remoteControlWindow?.show());
+  remoteControlWindow.on('closed', () => { remoteControlWindow = null; });
+  void remoteControlWindow.loadURL('https://remotecontrol.allternit.com');
 });
 
 function resolveOfficeUrl(target: OfficeTarget, artifactId?: string): string {
@@ -2160,6 +2322,42 @@ ipcMain.handle('window:show', () => { mainWindow?.show(); });
 ipcMain.handle('window:minimize-to-tray', () => { mainWindow?.hide(); });
 ipcMain.on('mini-window:hide', () => { miniWindow?.hide(); });
 ipcMain.on('mini-window:toggle', () => toggleMiniWindow());
+
+// ============================================================================
+// IPC: Hermes HUD
+// ============================================================================
+
+ipcMain.handle('shell:move-hud', (_event, delta: { dx: number; dy: number }) => {
+  if (!hudWindow || hudWindow.isDestroyed()) return;
+  const bounds = hudWindow.getBounds();
+  hudWindow.setPosition(
+    Math.round(bounds.x + delta.dx),
+    Math.round(bounds.y + delta.dy),
+  );
+  store.set('hudBounds', { ...hudWindow.getBounds() });
+});
+
+ipcMain.handle('shell:resize-hud', (_event, size: { width?: number; height: number }) => {
+  if (!hudWindow || hudWindow.isDestroyed()) return;
+  const bounds = hudWindow.getBounds();
+  const width = size.width ?? bounds.width;
+  const height = size.height;
+  // Keep top-left fixed; Electron setBounds with x/y unchanged.
+  hudWindow.setBounds({ x: bounds.x, y: bounds.y, width, height });
+  store.set('hudBounds', { ...hudWindow.getBounds() });
+});
+
+ipcMain.handle('shell:close-hud', () => {
+  hideHudWindow();
+});
+
+ipcMain.handle('shell:toggle-hud', () => {
+  toggleHudWindow();
+});
+
+ipcMain.handle('shell:show-hud', () => {
+  showHudWindow();
+});
 
 // ============================================================================
 // IPC: Theme

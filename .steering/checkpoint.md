@@ -488,3 +488,31 @@ remotely against the production-hardened VPS deployment.
 5. Real billing/payments integration beyond usage-row cost computation.
 6. UI completeness: ensure screenshot/mouse/keyboard/shell/file endpoints are
    exposed cleanly in `DesktopCloudAdminView`.
+
+---
+
+# Steering checkpoint — Remote Control / Dispatch consolidation
+
+## Goal
+Finish the Remote Control feature: merge the `session/remote-control-finish` implementation into `session/desktop-cloud-mvp`, deploy the platform + dashboard + push worker, and verify a real end-to-end session handoff across desktop and mobile/PWA.
+
+## Current verified state
+- Working directory: `/Users/joe/Desktop/Allternit/allternit-platform/` (shared checkout on `session/desktop-cloud-mvp`). Note: this is the shared main checkout, not a session worktree, because the remote-control changes were already applied here.
+- `DispatchView.tsx` is rebranded to "Remote Control" and contains a "Remote sessions" tab that calls `openRemoteControlWindow()`.
+- `surfaces/ai.allternit.com/src/remote-control/` dashboard + PWA assets exist.
+- Desktop shell exposes `shell.openRemoteControl` and opens `https://remotecontrol.allternit.com` in a dedicated `BrowserWindow`.
+- Rust API has `remote_control_routes.rs` mounted; gizzi-code has `/v1/remote-control` routes + push integration; cloud API has capability mapping updates.
+- `services/remote-control-push/` worker + deployment workflow exist.
+- `surfaces/ai.allternit.com/dist/` has the main platform build but is missing a separate `remote-control.html` build output.
+
+## Blockers
+- Clerk production auth is still broken on desktop and web. The user explicitly asked to pause deep Clerk debugging and finish the remote-control build-out first, but this will block the final e2e sign-in verification.
+
+## Next steps
+1. Build the Remote Control dashboard entry (`vite.remote-control.config.ts`) and stage it for Pages deployment.
+2. Deploy `allternit-platform` and `allternit-remote-control` Cloudflare Pages projects.
+3. Deploy the `allternit-remote-control-push` Cloudflare Worker.
+4. Rebuild and redeploy the Rust API (`cmd/allternit-api`) and cloud API (`cmd/allternit-cloud-api`) to Fly.io.
+5. Rebuild the desktop shell so `shell.openRemoteControl` is live.
+6. Run a real end-to-end verification: sign in, pair runtime, open Remote Control, list sessions, open dashboard on another browser/phone, install PWA, test push.
+7. Package and code-sign the desktop DMG.

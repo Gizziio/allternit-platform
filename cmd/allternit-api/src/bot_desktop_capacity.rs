@@ -20,7 +20,7 @@ use tracing::{info, warn};
 
 use crate::AppState;
 
-static CAPACITY_MONITOR: once_cell::sync::OnceCell<Arc<CapacityMonitor>> =
+pub(crate) static CAPACITY_MONITOR: once_cell::sync::OnceCell<Arc<CapacityMonitor>> =
     once_cell::sync::OnceCell::new();
 
 pub fn router() -> Router<Arc<AppState>> {
@@ -98,6 +98,29 @@ impl CapacityMonitor {
             scale_up_recommended,
             scale_up_reason,
         }
+    }
+
+    /// Number of additional 2-CPU desktops the cluster can accept according to
+    /// the last capacity sample. Negative values mean the cluster is overcommitted.
+    pub async fn available_slots(&self) -> i64 {
+        let snaps = self.snapshots.read().await;
+        let mut total_cpu = 0u64;
+        let mut active = 0u32;
+        for s in snaps.values() {
+            total_cpu += s.total_cpu_millis as u64;
+            active += s.active_executions;
+        }
+        drop(snaps);
+        if total_cpu == 0 {
+            // No samples yet; be permissive so provisioning is not blocked.
+            return 1;
+        }
+        let max_vms = (total_cpu / 2000).max(1) as i64;
+        max_vms.saturating_sub(active as i64)
+    }
+
+    pub async fn is_at_capacity(&self) -> bool {
+        self.available_slots().await <= 0 || self.status().await.scale_up_recommended
     }
 }
 
