@@ -35,6 +35,7 @@ import {
   type CodePermissionOption,
 } from '@/components/dispatch/CodePermissionsDropdown';
 import { openRemoteControlWindow } from '@/lib/open-remote-control-window';
+import { RemoteSessionPanel } from '@/components/dispatch/RemoteSessionPanel';
 
 // ─── token generation ────────────────────────────────────────────────────────
 function generateDispatchToken(): string {
@@ -361,6 +362,9 @@ export function DispatchView(): React.ReactNode {
   const [composerValue, setComposerValue] = useState('');
   const [messages, setMessages] = useState<Array<{ id: string; role: 'user'; text: string }>>([]);
 
+  // ── remote hub tabs ─────────────────────────────────────────────────────────
+  const [activeHubTab, setActiveHubTab] = useState<'handoff' | 'active-sessions' | 'remote-sessions'>('handoff');
+
   // Build the QR URL. In development we ask the dev server for the LAN address
   // so a phone on the same network can actually reach this computer.
   useEffect(() => {
@@ -677,12 +681,27 @@ export function DispatchView(): React.ReactNode {
           <div className="mx-6 mt-6 flex items-center gap-2">
             <button
               type="button"
+              onClick={() => setActiveHubTab('handoff')}
               className={cn(
                 'px-4 py-2 rounded-xl text-[13px] font-medium transition-colors',
-                'bg-[var(--bg-elevated)] text-[var(--text-primary)] border border-[var(--border-default)] shadow-sm'
+                activeHubTab === 'handoff'
+                  ? 'bg-[var(--bg-elevated)] text-[var(--text-primary)] border border-[var(--border-default)] shadow-sm'
+                  : 'text-[var(--text-tertiary)] hover:text-[var(--text-secondary)]'
               )}
             >
               Handoff
+            </button>
+            <button
+              type="button"
+              onClick={() => setActiveHubTab('active-sessions')}
+              className={cn(
+                'px-4 py-2 rounded-xl text-[13px] font-medium transition-colors',
+                activeHubTab === 'active-sessions'
+                  ? 'bg-[var(--bg-elevated)] text-[var(--text-primary)] border border-[var(--border-default)] shadow-sm'
+                  : 'text-[var(--text-tertiary)] hover:text-[var(--text-secondary)]'
+              )}
+            >
+              Active sessions
             </button>
             <button
               type="button"
@@ -697,7 +716,7 @@ export function DispatchView(): React.ReactNode {
           </div>
         )}
 
-        <>
+        {activeHubTab === 'handoff' && (<>
           {/* Handoff banner */}
         {!bannerDismissed && (
           <div className="mx-6 mt-6 p-4 pr-5 rounded-2xl bg-[var(--bg-elevated)] border border-solid border-[var(--border-default)] flex items-start gap-4 shadow-sm">
@@ -899,7 +918,16 @@ export function DispatchView(): React.ReactNode {
             </button>
           </div>
         </div>
-      </>
+      </>)}
+
+      {activeHubTab === 'active-sessions' && handoffStatus?.runtimeId && (
+        <div className="flex-1 overflow-hidden mx-6 mt-6 mb-6">
+          <RemoteSessionPanel
+            runtimeId={handoffStatus.runtimeId}
+            getToken={getToken}
+          />
+        </div>
+      )}
       </div>
     </div>
   </div>
