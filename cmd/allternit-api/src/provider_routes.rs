@@ -317,12 +317,33 @@ static ENV_PROVIDER_SPECS: &[(&str, &str, &str, &[&str])] = &[
 /// Static specs for CLI/subprocess brains: (id, display name, binary, default model).
 /// IDs and default models must match what the gizzi runtime registers
 /// (cmd/gizzi-code src/runtime/providers/discovery/subprocess.ts).
+/// This list mirrors the agent-runtime surface used by Multica: the user brings
+/// their own installed + authenticated CLI tool, and Allternit routes to it.
 static CLI_PROVIDER_SPECS: &[(&str, &str, &str, &str)] = &[
     ("claude-cli", "Claude CLI", "claude", "claude-sonnet-4-6"),
     ("codex-cli", "Codex CLI", "codex", "codex-mini-latest"),
     ("qwen-cli", "Qwen CLI", "qwen", "qwen-plus"),
     ("kimi-cli", "Kimi CLI", "kimi", "kimi-k2"),
     ("antigravity", "Antigravity", "agy", "antigravity"),
+    ("cursor-agent", "Cursor Agent", "cursor-agent", "cursor-agent"),
+    ("copilot", "GitHub Copilot CLI", "copilot", "copilot"),
+    ("opencode", "OpenCode", "opencode", "opencode"),
+    ("openclaw", "OpenClaw", "openclaw", "openclaw"),
+    ("hermes", "Hermes", "hermes", "hermes"),
+    ("pi", "Pi", "pi", "pi"),
+    ("codebuddy", "CodeBuddy", "codebuddy", "codebuddy"),
+    ("deveco", "DevEco Code", "deveco", "deveco"),
+    ("grok", "Grok", "grok", "grok"),
+    ("kiro-cli", "Kiro CLI", "kiro-cli", "kiro-cli"),
+    ("qodercli", "Qoder CLI", "qodercli", "qodercli"),
+    ("qoderclicn", "Qoder CN", "qoderclicn", "qoderclicn"),
+    ("qwenpaw", "QwenPaw", "qwenpaw", "qwenpaw"),
+    ("reasonix", "Reasonix", "reasonix", "reasonix"),
+    ("traecli", "Trae CLI", "traecli", "traecli"),
+    ("dsh", "DeepSeek Harness", "dsh", "dsh"),
+    ("omp", "Oh-My-Pi", "omp", "omp"),
+    ("mcode", "MiniMax Code", "mcode", "mcode"),
+    ("dim", "Dim", "dim", "dim"),
 ];
 
 /// Per-model display metadata: (model id, description, tier, supports_effort).
@@ -1168,6 +1189,215 @@ fn subscription_provider(id: &str) -> Option<(&'static str, SubscriptionProvider
                 api_key_only: false,
             },
         )),
+        "cursor-agent" => Some((
+            "cursor-agent",
+            SubscriptionProvider {
+                id: "cursor-agent",
+                label: "Cursor Agent",
+                model: "cursor-agent",
+                login: &[],
+                page: "https://cursor.com/",
+                api_key_only: false,
+            },
+        )),
+        "copilot" => Some((
+            "copilot",
+            SubscriptionProvider {
+                id: "copilot",
+                label: "GitHub Copilot CLI",
+                model: "copilot",
+                login: &[],
+                page: "https://github.com/features/copilot",
+                api_key_only: false,
+            },
+        )),
+        "opencode" => Some((
+            "opencode",
+            SubscriptionProvider {
+                id: "opencode",
+                label: "OpenCode",
+                model: "opencode",
+                login: &[],
+                page: "https://opencode.ai/",
+                api_key_only: false,
+            },
+        )),
+        "openclaw" => Some((
+            "openclaw",
+            SubscriptionProvider {
+                id: "openclaw",
+                label: "OpenClaw",
+                model: "openclaw",
+                login: &[],
+                page: "https://github.com/ConlinJoe/ai-platform",
+                api_key_only: false,
+            },
+        )),
+        "hermes" => Some((
+            "hermes",
+            SubscriptionProvider {
+                id: "hermes",
+                label: "Hermes",
+                model: "hermes",
+                login: &[],
+                page: "https://hermes.cx/",
+                api_key_only: false,
+            },
+        )),
+        "pi" => Some((
+            "pi",
+            SubscriptionProvider {
+                id: "pi",
+                label: "Pi",
+                model: "pi",
+                login: &[],
+                page: "https://pi.ai/",
+                api_key_only: false,
+            },
+        )),
+        "codebuddy" => Some((
+            "codebuddy",
+            SubscriptionProvider {
+                id: "codebuddy",
+                label: "CodeBuddy",
+                model: "codebuddy",
+                login: &[],
+                page: "https://codebuddy.ai/",
+                api_key_only: false,
+            },
+        )),
+        "deveco" => Some((
+            "deveco",
+            SubscriptionProvider {
+                id: "deveco",
+                label: "DevEco Code",
+                model: "deveco",
+                login: &[],
+                page: "https://developer.huawei.com/",
+                api_key_only: false,
+            },
+        )),
+        "grok" => Some((
+            "grok",
+            SubscriptionProvider {
+                id: "grok",
+                label: "Grok",
+                model: "grok",
+                login: &[],
+                page: "https://grok.com/",
+                api_key_only: false,
+            },
+        )),
+        "kiro-cli" => Some((
+            "kiro-cli",
+            SubscriptionProvider {
+                id: "kiro-cli",
+                label: "Kiro CLI",
+                model: "kiro-cli",
+                login: &[],
+                page: "https://kiro.dev/",
+                api_key_only: false,
+            },
+        )),
+        "qodercli" => Some((
+            "qodercli",
+            SubscriptionProvider {
+                id: "qodercli",
+                label: "Qoder CLI",
+                model: "qodercli",
+                login: &[],
+                page: "https://qoder.ai/",
+                api_key_only: false,
+            },
+        )),
+        "qoderclicn" => Some((
+            "qoderclicn",
+            SubscriptionProvider {
+                id: "qoderclicn",
+                label: "Qoder CN",
+                model: "qoderclicn",
+                login: &[],
+                page: "https://qoder.ai/",
+                api_key_only: false,
+            },
+        )),
+        "qwenpaw" => Some((
+            "qwenpaw",
+            SubscriptionProvider {
+                id: "qwenpaw",
+                label: "QwenPaw",
+                model: "qwenpaw",
+                login: &[],
+                page: "https://qwen.ai/",
+                api_key_only: false,
+            },
+        )),
+        "reasonix" => Some((
+            "reasonix",
+            SubscriptionProvider {
+                id: "reasonix",
+                label: "Reasonix",
+                model: "reasonix",
+                login: &[],
+                page: "https://reasonix.ai/",
+                api_key_only: false,
+            },
+        )),
+        "traecli" => Some((
+            "traecli",
+            SubscriptionProvider {
+                id: "traecli",
+                label: "Trae CLI",
+                model: "traecli",
+                login: &[],
+                page: "https://trae.ai/",
+                api_key_only: false,
+            },
+        )),
+        "dsh" => Some((
+            "dsh",
+            SubscriptionProvider {
+                id: "dsh",
+                label: "DeepSeek Harness",
+                model: "dsh",
+                login: &[],
+                page: "https://deepseek.com/",
+                api_key_only: false,
+            },
+        )),
+        "omp" => Some((
+            "omp",
+            SubscriptionProvider {
+                id: "omp",
+                label: "Oh-My-Pi",
+                model: "omp",
+                login: &[],
+                page: "https://oh-my-pi.dev/",
+                api_key_only: false,
+            },
+        )),
+        "mcode" => Some((
+            "mcode",
+            SubscriptionProvider {
+                id: "mcode",
+                label: "MiniMax Code",
+                model: "mcode",
+                login: &[],
+                page: "https://minimaxi.com/",
+                api_key_only: false,
+            },
+        )),
+        "dim" => Some((
+            "dim",
+            SubscriptionProvider {
+                id: "dim",
+                label: "Dim",
+                model: "dim",
+                login: &[],
+                page: "https://dim.ai/",
+                api_key_only: false,
+            },
+        )),
         // Z.ai sells the GLM Coding Plan subscription, but today it has no public
         // OAuth/device-flow for third parties (Z.ai/ZCode OAuth is in progress).
         // The standard path is a console-created API key, so we treat it as key-based.
@@ -1255,7 +1485,13 @@ fn subscription_auth_check(id: &str, binary: &str) -> bool {
         "zai" | "z.ai" | "glm" => {
             std::env::var("ZAI_API_KEY").is_ok() || std::env::var("ZHIPU_API_KEY").is_ok()
         }
-        _ => false,
+        // Generic agent-runtime CLI: if the binary is on PATH and answers a
+        // version/help probe, assume the user has already installed and
+        // authenticated it locally. This matches the Multica model where users
+        // bring their own CLI tools.
+        _ => cli_alive(binary, &["--version"], None)
+            || cli_alive(binary, &["-v"], None)
+            || cli_alive(binary, &["--help"], None),
     }
 }
 
