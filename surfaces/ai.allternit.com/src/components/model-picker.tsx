@@ -380,10 +380,10 @@ export function ModelPickerUI({
     <Dialog open={open} onOpenChange={setOpen}>
       {trigger && <DialogTrigger asChild>{trigger}</DialogTrigger>}
       <DialogContent
-        className="sm:max-w-[720px] p-0 overflow-hidden border-[var(--shell-dialog-border)] bg-[var(--shell-dialog-bg)] text-[var(--ui-text-primary)]"
+        className="sm:max-w-[720px] p-0 overflow-hidden border-[var(--ui-border-default)] bg-[var(--surface-panel)] text-[var(--ui-text-primary)]"
         style={{
-          background: "var(--shell-dialog-bg)",
-          borderColor: "var(--shell-dialog-border)",
+          background: "var(--surface-panel)",
+          borderColor: "var(--ui-border-default)",
         }}
       >
         <DialogTitle className="sr-only">Select Model</DialogTitle>
