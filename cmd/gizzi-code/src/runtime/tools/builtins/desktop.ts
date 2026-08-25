@@ -89,7 +89,10 @@ export const DesktopTool = Tool.define("desktop", async () => {
   return {
     description: DESCRIPTION,
     parameters: z.object({
-      bot_id: z.string().describe("The bot id that owns the desktop sandbox."),
+      bot_id: z
+        .string()
+        .optional()
+        .describe("The bot id that owns the desktop sandbox. Defaults to ALLTERNIT_BOT_ID env var."),
       action: DesktopAction.describe("The desktop operation to perform."),
       os: z
         .enum(["linux", "windows", "macos"])
@@ -139,7 +142,13 @@ export const DesktopTool = Tool.define("desktop", async () => {
         .describe("Deprecated alias for keyboard_input when action=keyboard."),
     }),
     async execute(params, ctx): Promise<DesktopResult> {
-      const { bot_id, action, os, template_id, sandbox_id } = params
+      const bot_id = params.bot_id ?? process.env.ALLTERNIT_BOT_ID
+      if (!bot_id) {
+        throw new Error(
+          "desktop tool requires bot_id parameter or ALLTERNIT_BOT_ID environment variable.",
+        )
+      }
+      const { action, os, template_id, sandbox_id } = params
 
       if (action === "provision") {
         const query: Record<string, string> = {}
@@ -201,9 +210,9 @@ export const DesktopTool = Tool.define("desktop", async () => {
           metadata: { action, size_bytes: buffer.length },
           attachments: [
             {
-              type: "image",
+              type: "file",
               mime: "image/png",
-              content: base64,
+              url: `data:image/png;base64,${base64}`,
             } as any,
           ],
         }
@@ -231,7 +240,7 @@ export const DesktopTool = Tool.define("desktop", async () => {
             {
               type: "file",
               mime: "application/octet-stream",
-              content: base64,
+              url: `data:application/octet-stream;base64,${base64}`,
             } as any,
           ],
         }

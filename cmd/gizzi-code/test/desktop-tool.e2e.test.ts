@@ -103,8 +103,10 @@ describeE2E("desktop tool e2e", () => {
       ctx,
     )
     expect(screenshot.attachments).toHaveLength(1)
-    expect(screenshot.attachments![0].type).toBe("image")
-    expect(screenshot.attachments![0].content.length).toBeGreaterThan(1000)
+    expect(screenshot.attachments![0].type).toBe("file")
+    expect(screenshot.attachments![0].mime).toBe("image/png")
+    expect(screenshot.attachments![0].url.startsWith("data:image/png;base64,")).toBe(true)
+    expect(screenshot.attachments![0].url.length).toBeGreaterThan(1000)
 
     // 6. Mouse
     const mouse = await tool.execute(
@@ -159,7 +161,9 @@ describeE2E("desktop tool e2e", () => {
     )
     expect(download.attachments).toHaveLength(1)
     expect(download.attachments![0].type).toBe("file")
-    const decoded = Buffer.from(download.attachments![0].content, "base64").toString("utf-8")
+    const dataUrl = download.attachments![0].url
+    const base64 = dataUrl.split(",")[1]
+    const decoded = Buffer.from(base64, "base64").toString("utf-8")
     expect(decoded).toBe("hello from desktop cloud")
 
     // 10. Deprovision
