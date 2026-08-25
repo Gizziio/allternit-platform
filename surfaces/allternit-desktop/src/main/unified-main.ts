@@ -793,7 +793,7 @@ async function initializeBundledMode(): Promise<void> {
     //              the remote URL only when no local build is present.
     // Offline:    If remote URL is unreachable, fall back to local static files
     //              served by the Rust API at the local API URL.
-    let platformUrl: string = isDev ? URLS.DEV_UI : 'https://ai.allternit.com';
+    let platformUrl: string = isDev ? URLS.DEV_UI : 'https://platform.allternit.com';
 
     if (isDev && process.env.ALLTERNIT_DESKTOP_USE_STATIC_UI) {
       const localStaticPath = resolveLocalPlatformStaticPath();
