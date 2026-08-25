@@ -8,7 +8,7 @@
 use crate::mesh::MeshConfig;
 use async_trait::async_trait;
 use serde::Deserialize;
-use serde_json::json;
+use serde_json::{json, Value};
 use base64::{engine::general_purpose::STANDARD as BASE64, Engine as _};
 use std::collections::HashMap;
 use std::sync::atomic::{AtomicUsize, Ordering};
@@ -439,10 +439,22 @@ impl ExecutionDriver for TartDriver {
                 message: resp.text().await.unwrap_or_default(),
             });
         }
-        resp.bytes()
+        let bytes = resp
+            .bytes()
             .await
             .map(|b| b.to_vec())
-            .map_err(|e| DriverError::InternalError { message: e.to_string() })
+            .map_err(|e| DriverError::InternalError { message: e.to_string() })?;
+        // Older tart-host wrappers returned JSON {"content_base64":"..."} instead
+        // of raw bytes. Decode that form when present so the driver stays compatible
+        // with hosts that have not yet been upgraded.
+        if let Ok(json) = serde_json::from_slice::<Value>(&bytes) {
+            if let Some(b64) = json.get("content_base64").and_then(|v| v.as_str()) {
+                return BASE64.decode(b64).map_err(|e| DriverError::InternalError {
+                    message: format!("invalid base64 in file pull response: {}", e),
+                });
+            }
+        }
+        Ok(bytes)
     }
 
     async fn push_file(&self, handle: &ExecutionHandle, path: &str, content: Vec<u8>) -> Result<(), DriverError> {

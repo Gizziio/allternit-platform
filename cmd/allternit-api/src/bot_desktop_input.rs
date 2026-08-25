@@ -112,7 +112,7 @@ pub(crate) async fn send_desktop_mouse(
         }
     };
 
-    run_guest_command(&*driver, &record.sandbox_id, command, "mouse", &bot_id).await
+    run_guest_command(&*driver, &record.sandbox_id, &record.os, command, "mouse", &bot_id).await
 }
 
 fn build_mouse_command(input: &MouseInput) -> Result<Vec<String>, String> {
@@ -264,7 +264,7 @@ pub(crate) async fn send_desktop_keyboard(
         }
     };
 
-    run_guest_command(&*driver, &record.sandbox_id, command, "keyboard", &bot_id).await
+    run_guest_command(&*driver, &record.sandbox_id, &record.os, command, "keyboard", &bot_id).await
 }
 
 fn build_keyboard_command(input: &KeyboardInput) -> Result<Vec<String>, String> {
@@ -573,11 +573,12 @@ pub(crate) async fn upload_desktop_file(
 async fn run_guest_command(
     driver: &dyn allternit_driver_interface::ExecutionDriver,
     sandbox_id: &str,
+    os: &str,
     command: Vec<String>,
     command_kind: &str,
     bot_id: &str,
 ) -> axum::response::Response {
-    let handle = build_handle(sandbox_id, None);
+    let handle = build_handle(sandbox_id, Some(os));
     let mut env_vars = std::collections::HashMap::new();
     env_vars.insert("DISPLAY".to_string(), ":0".to_string());
     let cmd_spec = CommandSpec {
