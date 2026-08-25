@@ -713,7 +713,7 @@ export function PlatformSignIn(props: {
         routing="path"
         path={SIGN_IN_PATH}
         signUpForceRedirectUrl={props.signUpForceRedirectUrl || redirectUrl}
-        signUpUrl={props.signUpUrl || SIGN_UP_PATH}
+        signUpUrl={props.signUpUrl || SIGN_UP_URL}
       />
     </>
   )
@@ -757,7 +757,7 @@ export function PlatformSignUp(props: {
       routing="path"
       path={SIGN_UP_PATH}
       signInForceRedirectUrl={props.signInForceRedirectUrl || redirectUrl}
-      signInUrl={props.signInUrl || SIGN_IN_PATH}
+      signInUrl={props.signInUrl || SIGN_IN_URL}
     />
   )
 }
