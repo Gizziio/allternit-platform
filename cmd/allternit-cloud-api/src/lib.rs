@@ -381,6 +381,7 @@ pub fn create_router(state: Arc<ApiState>) -> Router {
                 header::ACCEPT,
                 header::ORIGIN,
                 header::HeaderName::from_static("x-requested-with"),
+                header::HeaderName::from_static("x-client-version"),
             ])
             .allow_credentials(true)
             .max_age(std::time::Duration::from_secs(3600))
