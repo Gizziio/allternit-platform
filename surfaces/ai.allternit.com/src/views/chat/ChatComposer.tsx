@@ -34,7 +34,7 @@ import {
 } from '@phosphor-icons/react';
 import { AttachmentButton } from '@/components/agent-elements/input/attachment-button';
 import { useVoice } from '@/providers/voice-provider';
-import { AttachmentPreview } from '@/components/chat/AttachmentPreview';
+import { FileAttachment } from '@/components/agent-elements/input/file-attachment';
 import { TextShimmer } from '@/components/agent-elements/text-shimmer';
 import { AgentMentionDropdown } from '@/components/chat/AgentMentionDropdown';
 import { AgentPill } from '@/components/chat/AgentPill';
@@ -97,6 +97,7 @@ import { isCanonicalAgentMode, type CanonicalAgentModeId } from '@/lib/agents/ag
 import { CoworkTopDeck } from '@/views/cowork/CoworkTopDeck';
 import { ModelPicker } from '@/components/model-picker';
 import { ProviderGallery } from '@/components/chat/ProviderGallery';
+import { useNav } from '@/nav/useNav';
 
 const THEME = {
   bg: 'var(--surface-canvas)',
@@ -768,15 +769,9 @@ export function ChatComposer({
 
   useEffect(() => {
     // Canonical built-in modes execute without binding an OpenClaw workspace.
-    // Packaged bots also don't use OpenClaw workspaces; skip discovery for them
-    // so the console isn't flooded with 501 responses.
-    if (
-      !agentModeSurface ||
-      !agentModeEnabled ||
-      isCanonicalAgentMode(selectedModeId) ||
-      selectedSurfaceAgent?.isBot ||
-      activeSession?.metadata?.isBot === true
-    ) {
+    // Discovery here previously retriggered after every failed request and
+    // flooded the gateway with hundreds of 501 responses.
+    if (!agentModeSurface || !agentModeEnabled || isCanonicalAgentMode(selectedModeId)) {
       return;
     }
 
@@ -924,7 +919,6 @@ export function ChatComposer({
     setInput(inputValue);
   }
 
-
   useEffect(() => {
     if (variant !== 'large') {
       const raf = window.requestAnimationFrame(() => {
@@ -1001,27 +995,17 @@ export function ChatComposer({
       useBrowserAgentStore.getState().runAcuTask(enrichedInput);
     }
 
-    const isGroupChatSession = Boolean(activeSession?.metadata?.isGroupChat);
-    const isBotSession = Boolean(activeSession?.metadata?.isBot);
-
     if (selectedModeId === 'swarms' && selectedSwarmSubMode === 'population-simulation') {
       // MiroFish's single entry point is this composer: the prompt goes to
       // the results-only panel below, which interprets and runs it — never
       // through the normal agent-mode send.
       useMiroFishRunStore.getState().requestRun(enrichedInput);
-    } else if (
-      !isGroupChatSession &&
-      !isBotSession &&
-      onAgentSend &&
-      agentModeSurface &&
-      (agentModeEnabled || isCanonicalAgentMode(selectedModeId))
-    ) {
+    } else if (onAgentSend && agentModeSurface && (agentModeEnabled || isCanonicalAgentMode(selectedModeId))) {
       onAgentSend(enrichedInput, selectedModeId ? { modeId: selectedModeId as CanonicalAgentModeId, templateTitle: selectedTemplateTitle } : undefined);
     } else {
       onSend(enrichedInput);
     }
   }, [
-    activeSession?.metadata?.isGroupChat,
     agentModeEnabled,
     agentModeSurface,
     buildEnrichedInput,
@@ -1035,9 +1019,6 @@ export function ChatComposer({
     selectedTemplateTitle,
   ]);
 
-  const submitMessageRef = useRef(submitMessage);
-  submitMessageRef.current = submitMessage;
-
   useEffect(() => {
     if (!voiceModeActive || !voiceTranscript?.trim()) return;
     const spokenInput = voiceTranscript.trim();
@@ -1049,7 +1030,7 @@ export function ChatComposer({
       return;
     }
 
-    void submitMessageRef.current(spokenInput);
+    void submitMessage(spokenInput);
 
     setVoiceModeActive(false);
     clearVoiceTranscript();
@@ -1058,10 +1039,10 @@ export function ChatComposer({
     requiresAgentSelection,
     selectedSurfaceAgent,
     setInteractionMode,
+    submitMessage,
     voiceModeActive,
     voiceTranscript,
   ]);
-
   const hasTopInfoBar = Boolean(topInfoBarContent);
   const hasQuestionBar = Boolean(questionBarContent);
   const agentWorkspaceSummary = selectedWorkspacePreview.artifactCount > 0
@@ -1384,7 +1365,6 @@ export function ChatComposer({
       onInteractionSignal?.(CATEGORY_EMOTIONS[activeCategory]?.hover ?? 'curious');
     }
   };
-
 
   const selectedModelData = useMemo(() => {
     return availableModels.find((m) => m.id === selectedModel);
@@ -1721,19 +1701,19 @@ export function ChatComposer({
           )}
 
           {attachments.length > 0 ? (
-            <AttachmentPreview
-              attachments={attachments.map((a) => ({
-                id: a.id,
-                name: a.name,
-                dataUrl: a.dataUrl,
-                type: a.type,
-                size: undefined,
-                extractedText: undefined,
-              }))}
-              onRemove={(id) => removeAttachment(id)}
-              variant="detailed"
-              maxHeight={140}
-            />
+            <div className="flex flex-wrap gap-2 p-3">
+              {attachments.map((attachment) => (
+                <FileAttachment
+                  key={attachment.id}
+                  id={attachment.id}
+                  filename={attachment.name}
+                  isImage={attachment.type === 'image' || attachment.type === 'screenshot' || attachment.type === 'gif'}
+                  url={attachment.dataUrl}
+                  onRemove={() => removeAttachment(attachment.id)}
+                  className="border border-composer-border bg-composer-soft"
+                />
+              ))}
+            </div>
           ) : null}
 
           {hasTopInfoBar && (
@@ -2425,6 +2405,7 @@ export function ChatComposer({
         onSelect={selectModel}
         onCancel={cancelModelSelection}
         onOpenProviderConnect={() => setShowProviderConnect(true)}
+        onOpenModelLab={() => useNav.getState().dispatch({ type: 'OPEN_VIEW', viewType: 'model-lab' })}
       />
 
       {/* Agent-mode bottom deck — tray tucked behind the card's bottom

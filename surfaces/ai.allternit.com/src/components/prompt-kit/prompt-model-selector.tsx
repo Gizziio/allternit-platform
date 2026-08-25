@@ -1,4 +1,5 @@
 import React, { useEffect, useMemo, useState } from "react";
+
 import * as Popover from "@radix-ui/react-popover";
 import * as ScrollArea from "@radix-ui/react-scroll-area";
 import {
@@ -6,20 +7,12 @@ import {
   Check,
   MagnifyingGlass,
   Gear,
-  Brain,
-  CloudArrowDown,
-  ArrowSquareOut,
-  Warning,
-  Lock,
-  LockOpen,
   Plus,
-  Cpu,
+  Warning,
   Cloud,
 } from "@phosphor-icons/react";
 import { cn } from "@/lib/utils";
-import { OpenAIIcon, AnthropicIcon } from "@/components/icons/ModelIcons";
-import { useChatStore } from "@/views/chat/ChatStore";
-import { useLocalBrainStatus } from "@/hooks/useLocalBrainStatus";
+import { getProviderMeta } from "@/lib/providers/provider-registry";
 
 export type ModelOption = {
   id: string;
@@ -28,6 +21,7 @@ export type ModelOption = {
   providerId?: string;
   providerName?: string;
   description?: string;
+  capabilities?: string[];
   [key: string]: unknown;
 };
 
@@ -44,23 +38,42 @@ interface PromptModelSelectorProps {
   className?: string;
 }
 
-const LOCAL_BRAIN_ID = "local-brain";
-
 function getProviderId(model: ModelOption): string {
-  return model.providerId || model.provider || (model.id.includes("/") ? model.id.split("/")[0] : "allternit");
+  return (
+    model.providerId ||
+    model.provider ||
+    (model.id.includes("/") ? model.id.split("/")[0] : "allternit")
+  );
 }
 
 function getProviderName(model: ModelOption): string {
-  return model.providerName || getProviderId(model);
+  return model.providerName || getProviderMeta(getProviderId(model)).name;
 }
 
 function ProviderIcon({ providerId }: { providerId: string }) {
-  const normalized = providerId.toLowerCase();
-  if (normalized === "openai" || normalized === "codex") return <OpenAIIcon className="size-4" />;
-  if (normalized === "anthropic" || normalized === "claude") return <AnthropicIcon className="size-4" />;
-  if (normalized === "local" || normalized === "ollama") return <Brain className="size-4" weight="fill" />;
-  if (normalized === "allternit" || normalized === "gizzi") return <Cpu className="size-4" weight="fill" />;
-  return <Cloud className="size-4" weight="fill" />;
+  const meta = getProviderMeta(providerId);
+  const [error, setError] = useState(false);
+  const src = meta.icon ? `/assets/runtime-logos/${meta.icon}` : "";
+
+  if (!src || error) {
+    return (
+      <span
+        className="size-3.5 flex items-center justify-center text-[8px] font-bold rounded"
+        style={{ color: meta.color }}
+      >
+        {meta.name.charAt(0).toUpperCase()}
+      </span>
+    );
+  }
+
+  return (
+    <img
+      src={src}
+      alt=""
+      className="size-3.5 object-contain"
+      onError={() => setError(true)}
+    />
+  );
 }
 
 export function PromptModelSelector({
@@ -76,32 +89,17 @@ export function PromptModelSelector({
 }: PromptModelSelectorProps): React.ReactNode {
   const [open, setOpen] = useState(false);
   const [search, setSearch] = useState("");
-  const { ollamaRunning, modelReady } = useLocalBrainStatus({ pollOnFocus: false });
-  const sandboxMode = useChatStore((state) => state.sandboxMode);
-  const setSandboxMode = useChatStore((state) => state.setSandboxMode);
 
   useEffect(() => {
     if (triggerless) setOpen(true);
   }, [triggerless]);
 
   const enrichedModels = useMemo<ModelOption[]>(() => {
-    const list = models.map((m) => ({
+    return models.map((m) => ({
       ...m,
       providerId: getProviderId(m),
       providerName: getProviderName(m),
     }));
-    // Keep Local Brain as a first-class option if it is not already in the registry list.
-    const hasLocalBrain = list.some((m) => m.id === LOCAL_BRAIN_ID);
-    if (!hasLocalBrain) {
-      list.unshift({
-        id: LOCAL_BRAIN_ID,
-        name: "Local Brain",
-        providerId: "local",
-        providerName: "Local",
-        description: "Offline · private",
-      });
-    }
-    return list;
   }, [models]);
 
   const filteredModels = useMemo(() => {
@@ -111,7 +109,8 @@ export function PromptModelSelector({
       (m) =>
         m.name.toLowerCase().includes(q) ||
         m.providerName?.toLowerCase().includes(q) ||
-        m.providerId?.toLowerCase().includes(q)
+        m.providerId?.toLowerCase().includes(q) ||
+        m.id.toLowerCase().includes(q)
     );
   }, [enrichedModels, search]);
 
@@ -122,17 +121,20 @@ export function PromptModelSelector({
       if (!map.has(key)) map.set(key, []);
       map.get(key)!.push(model);
     });
-    return Array.from(map.entries());
+    return Array.from(map.entries()).sort(([a], [b]) => a.localeCompare(b));
   }, [filteredModels]);
 
   const selected = useMemo(
-    () => enrichedModels.find((m) => m.id === selectedModel) || enrichedModels[0],
+    () => enrichedModels.find((m) => m.id === selectedModel),
     [enrichedModels, selectedModel]
   );
 
   const handleOpenChange = (nextOpen: boolean) => {
     setOpen(nextOpen);
-    if (!nextOpen) onClose?.();
+    if (!nextOpen) {
+      setSearch("");
+      onClose?.();
+    }
   };
 
   const handleSelect = (model: ModelOption) => {
@@ -141,11 +143,9 @@ export function PromptModelSelector({
     onClose?.();
   };
 
-  const handleLocalBrainClick = () => {
-    if (modelReady) {
-      handleSelect({ id: LOCAL_BRAIN_ID, name: "Local Brain", providerId: "local", providerName: "Local" });
-    }
-  };
+  const selectedProviderMeta = selected
+    ? getProviderMeta(getProviderId(selected))
+    : getProviderMeta("allternit");
 
   return (
     <Popover.Root open={open} onOpenChange={handleOpenChange}>
@@ -163,10 +163,18 @@ export function PromptModelSelector({
             )}
           >
             <span className="text-composer-muted">
-              <ProviderIcon providerId={getProviderId(selected)} />
+              <ProviderIcon providerId={getProviderId(selected || enrichedModels[0])} />
             </span>
-            <span className="text-secondary">{selected?.name || "Select model"}</span>
-            <CaretDown size={12} className={cn("text-composer-muted transition-transform", open && "rotate-180")} />
+            <span className="text-secondary">
+              {selected?.name || enrichedModels[0]?.name || "Select model"}
+            </span>
+            <CaretDown
+              size={12}
+              className={cn(
+                "text-composer-muted transition-transform",
+                open && "rotate-180"
+              )}
+            />
           </button>
         </Popover.Trigger>
       )}
@@ -178,18 +186,21 @@ export function PromptModelSelector({
           sideOffset={8}
           avoidCollisions
           collisionPadding={16}
-          className="w-[min(92vw,280px)] max-h-[min(420px,70vh)] rounded-xl bg-menu-bg backdrop-blur-[20px] border border-menu-border shadow-xl p-0 z-[200] flex flex-col overflow-hidden"
+          className="w-[min(92vw,300px)] max-h-[min(460px,70vh)] rounded-xl bg-[var(--shell-menu-bg)] backdrop-blur-[20px] border border-[var(--shell-menu-border)] shadow-xl p-0 z-[200] flex flex-col overflow-hidden"
         >
           {/* Search */}
-          <div className="flex-none p-2 border-b border-input-border flex items-center gap-2">
-            <MagnifyingGlass size={14} className="text-muted" />
+          <div className="flex-none p-2 border-b border-[var(--ui-border-default)] flex items-center gap-2">
+            <MagnifyingGlass
+              size={14}
+              className="text-[var(--ui-text-muted)]"
+            />
             <input
               aria-label="Search models"
               autoFocus
               placeholder="Search models…"
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              className="flex-1 bg-transparent border-none outline-none text-sm text-primary placeholder:text-muted"
+              className="flex-1 bg-transparent border-none outline-none text-sm text-[var(--ui-text-primary)] placeholder:text-[var(--ui-text-muted)]"
             />
           </div>
 
@@ -197,98 +208,101 @@ export function PromptModelSelector({
           <ScrollArea.Root className="flex-1 overflow-hidden">
             <ScrollArea.Viewport className="w-full h-full p-1.5">
               {grouped.length === 0 ? (
-                <div className="p-4 text-center text-muted text-sm">
-                  <Warning size={18} className="mx-auto mb-2 opacity-60" />
+                <div className="p-4 text-center text-[var(--ui-text-muted)] text-sm">
+                  <Warning
+                    size={18}
+                    className="mx-auto mb-2 opacity-60"
+                  />
                   <p>No models match your search.</p>
                 </div>
               ) : (
-                grouped.map(([providerName, providerModels]) => (
-                  <div key={providerName} className="mb-1">
-                    <div className="px-2 py-1 text-[11px] font-bold text-muted uppercase tracking-wider opacity-70">
-                      {providerName}
-                    </div>
-                    {providerModels.map((model) => {
-                      const isSelected = selectedModel === model.id;
-                      const isLocalBrain = model.id === LOCAL_BRAIN_ID;
-                      const lbReady = isLocalBrain && modelReady;
-                      const lbNoOllama = isLocalBrain && !ollamaRunning;
-
-                      return (
-                        <button
-                          key={model.id}
-                          type="button"
-                          onClick={() => (isLocalBrain ? handleLocalBrainClick() : handleSelect(model))}
-                          disabled={lbNoOllama}
-                          className={cn(
-                            "flex w-full items-center gap-3 px-2 py-1.5 rounded-lg text-sm text-left transition-colors",
-                            lbNoOllama
-                              ? "opacity-50 cursor-not-allowed"
-                              : "hover:bg-hover",
-                            isSelected && "bg-composer-soft"
-                          )}
+                grouped.map(([providerName, providerModels]) => {
+                  const meta = getProviderMeta(
+                    providerModels[0]?.providerId ||
+                      providerModels[0]?.provider ||
+                      providerName
+                  );
+                  return (
+                    <div key={providerName} className="mb-1">
+                      <div className="px-2 py-1 flex items-center gap-1.5">
+                        <div
+                          className="size-4 rounded flex items-center justify-center"
+                          style={{
+                            background: `${meta.color}18`,
+                            border: `1px solid ${meta.color}40`,
+                          }}
                         >
-                          <div
+                          <img
+                            src={`/assets/runtime-logos/${meta.icon}`}
+                            alt=""
+                            className="size-2.5 object-contain"
+                            onError={(e) => {
+                              (e.target as HTMLImageElement).style.display =
+                                "none";
+                            }}
+                          />
+                        </div>
+                        <span
+                          className="text-[10px] font-bold uppercase tracking-wider"
+                          style={{ color: meta.color }}
+                        >
+                          {providerName}
+                        </span>
+                      </div>
+                      {providerModels.map((model) => {
+                        const isSelected = selectedModel === model.id;
+                        return (
+                          <button
+                            key={model.id}
+                            type="button"
+                            onClick={() => handleSelect(model)}
                             className={cn(
-                              "flex items-center justify-center size-7 rounded-md bg-composer-soft text-muted",
-                              isSelected && "text-accent",
-                              lbReady && "text-status-success"
+                              "flex w-full items-center gap-3 px-2 py-1.5 rounded-lg text-sm text-left transition-colors",
+                              isSelected
+                                ? "bg-[var(--shell-item-active-bg)] text-[var(--shell-item-active-fg)]"
+                                : "hover:bg-[var(--surface-hover)] text-[var(--ui-text-primary)]"
                             )}
                           >
-                            <ProviderIcon providerId={getProviderId(model)} />
-                          </div>
-                          <div className="flex-1 min-w-0">
-                            <div className="flex items-center gap-1.5">
-                              <span className={cn("font-medium truncate", lbReady && "text-status-success")}>
+                            <div
+                              className={cn(
+                                "flex items-center justify-center size-7 rounded-md bg-[var(--chat-composer-soft)] text-[var(--ui-text-muted)]",
+                                isSelected && "text-[var(--accent-chat)]"
+                              )}
+                            >
+                              <ProviderIcon providerId={getProviderId(model)} />
+                            </div>
+                            <div className="flex-1 min-w-0">
+                              <span className="font-medium truncate">
                                 {model.name}
                               </span>
-                              {isLocalBrain && (
-                                <span
-                                  className={cn(
-                                    "text-[10px] font-bold px-1 py-0.5 rounded",
-                                    lbReady
-                                      ? "bg-status-success/10 text-status-success"
-                                      : lbNoOllama
-                                      ? "bg-status-warning/10 text-status-warning"
-                                      : "bg-accent/10 text-accent"
-                                  )}
-                                >
-                                  {lbReady ? "Ready" : lbNoOllama ? "Install Ollama" : "~2 GB"}
-                                </span>
-                              )}
+                              {model.description ? (
+                                <p className="text-xs text-[var(--ui-text-muted)] truncate">
+                                  {model.description}
+                                </p>
+                              ) : null}
                             </div>
-                            {model.description ? (
-                              <p className="text-xs text-muted truncate">{model.description}</p>
-                            ) : null}
-                          </div>
-                          {isSelected && !isLocalBrain && <Check size={14} weight="bold" className="text-accent" />}
-                          {isLocalBrain && lbReady && <Check size={14} weight="bold" className="text-status-success" />}
-                          {isLocalBrain && !lbReady && !lbNoOllama && (
-                            <CloudArrowDown size={14} className="text-accent" />
-                          )}
-                          {isLocalBrain && lbNoOllama && (
-                            <a
-                              href="https://ollama.com/download"
-                              target="_blank"
-                              rel="noreferrer"
-                              onClick={(e) => e.stopPropagation()}
-                              className="text-accent hover:underline"
-                              title="Download Ollama"
-                            >
-                              <ArrowSquareOut size={12} />
-                            </a>
-                          )}
-                        </button>
-                      );
-                    })}
-                  </div>
-                ))
+                            {isSelected && (
+                              <Check
+                                size={14}
+                                weight="bold"
+                                className="text-[var(--accent-chat)]"
+                              />
+                            )}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  );
+                })
               )}
 
               {!isTerminalModels && models.length === 0 && !search && (
-                <div className="p-4 text-center text-muted text-sm">
+                <div className="p-4 text-center text-[var(--ui-text-muted)] text-sm">
                   <Cloud size={18} className="mx-auto mb-2 opacity-60" />
                   <p>No providers discovered yet.</p>
-                  <p className="text-xs mt-1">Connect a provider to see available models.</p>
+                  <p className="text-xs mt-1">
+                    Connect a provider to see available models.
+                  </p>
                 </div>
               )}
             </ScrollArea.Viewport>
@@ -296,47 +310,19 @@ export function PromptModelSelector({
               className="flex select-none touch-none p-0.5 bg-transparent w-1.5"
               orientation="vertical"
             >
-              <ScrollArea.Thumb className="flex-1 bg-border-strong rounded-full opacity-30" />
+              <ScrollArea.Thumb className="flex-1 bg-[var(--ui-border-strong)] rounded-full opacity-30" />
             </ScrollArea.Scrollbar>
           </ScrollArea.Root>
 
-          {/* Governance footer */}
-          <div className="flex-none p-2 bg-composer-soft/50 border-t border-input-border flex items-center justify-between">
-            <div className="flex flex-col">
-              <span className="text-[10px] font-bold text-muted uppercase">Governance</span>
-              <span
-                className={cn(
-                  "text-xs font-bold tracking-tight",
-                  sandboxMode === "full" ? "text-status-error animate-pulse" : "text-status-success"
-                )}
-              >
-                {sandboxMode === "full" ? "FULL WRITE ACCESS" : "READ ONLY (PROTECTED)"}
-              </span>
-            </div>
-            <button
-              type="button"
-              onClick={() => setSandboxMode(sandboxMode === "full" ? "read-only" : "full")}
-              className={cn(
-                "px-2.5 py-1 rounded-lg flex items-center gap-1.5 transition-all text-xs font-bold border",
-                sandboxMode === "full"
-                  ? "bg-status-error/10 text-status-error border-status-error/20 hover:bg-status-error/20"
-                  : "bg-status-success/10 text-status-success border-status-success/20 hover:bg-status-success/20"
-              )}
-            >
-              {sandboxMode === "full" ? <LockOpen size={12} weight="bold" /> : <Lock size={12} weight="bold" />}
-              TOGGLE
-            </button>
-          </div>
-
           {/* Actions footer */}
-          <div className="flex-none p-1.5 bg-composer-soft/80 border-t border-input-border grid grid-cols-2 gap-1.5">
+          <div className="flex-none p-1.5 bg-[var(--chat-composer-soft)]/50 border-t border-[var(--ui-border-default)] grid grid-cols-2 gap-1.5">
             <button
               type="button"
               onClick={() => {
                 onBrowseAllModels?.();
                 setOpen(false);
               }}
-              className="flex items-center justify-center gap-1.5 py-1.5 rounded-md hover:bg-hover text-xs font-bold text-muted hover:text-primary transition-colors"
+              className="flex items-center justify-center gap-1.5 py-1.5 rounded-md hover:bg-[var(--surface-hover)] text-xs font-bold text-[var(--ui-text-muted)] hover:text-[var(--ui-text-primary)] transition-colors"
             >
               <Gear size={12} weight="fill" />
               Manage
@@ -347,7 +333,7 @@ export function PromptModelSelector({
                 onOpenProviderConnect?.();
                 setOpen(false);
               }}
-              className="flex items-center justify-center gap-1.5 py-1.5 rounded-md hover:bg-hover text-xs font-bold text-accent transition-colors"
+              className="flex items-center justify-center gap-1.5 py-1.5 rounded-md hover:bg-[var(--surface-hover)] text-xs font-bold text-[var(--accent-chat)] transition-colors"
             >
               <Plus size={12} weight="bold" />
               Connect

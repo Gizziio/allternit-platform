@@ -172,6 +172,9 @@ export function useAvailableBrainModels() {
                 name: modelData?.name || modelId,
                 providerId: provider.id,
                 providerName: provider.name || provider.id,
+                description: modelData?.description,
+                capabilities: modelData?.capabilities,
+                context_window: modelData?.context_window ?? modelData?.context,
               });
             });
           });
