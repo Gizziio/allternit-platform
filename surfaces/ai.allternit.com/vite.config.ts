@@ -26,31 +26,6 @@ const univerCore = path.dirname(path.dirname(path.dirname(univerCoreEntry)))
  * Production builds must replace this with a real backend implementation
  * (e.g. /api/v1/dispatch/claim and /api/v1/dispatch/status backed by Redis/SQLite).
  */
-/**
- * Dev-only: Vite's MPA server matches `/remote-control` to `remote-control.html`
- * because of the rollup input key. The platform route `/remote-control` must
- * serve `index.html` (the SPA shell) so the hub page renders, while
- * `/remote-control.html` continues to serve the standalone dashboard entry.
- */
-function remoteControlRoutePlugin(): Plugin {
-  return {
-    name: 'allternit-remote-control-route',
-    configureServer(server) {
-      server.middlewares.use('/remote-control', (req, res, next) => {
-        if (req.method !== 'GET') return next();
-        const url = req.url ?? '/';
-        // Only rewrite the exact hub path (with optional query string), not
-        // static assets under /remote-control/ or the standalone entrypoint.
-        if (url !== '/' && !url.startsWith('?')) return next();
-        // Rewrite to the platform SPA shell so Vite injects the React refresh
-        // preamble and processes the HTML transform pipeline.
-        req.url = '/index.html' + (url.startsWith('?') ? url : '');
-        next();
-      });
-    },
-  };
-}
-
 function dispatchHandoffPlugin(): Plugin {
   const claims = new Map<string, { claimedAt: number; device?: string }>();
 
@@ -124,7 +99,6 @@ function dispatchHandoffPlugin(): Plugin {
 export default defineConfig({
   plugins: [
     react(),
-    remoteControlRoutePlugin(),
     dispatchHandoffPlugin(),
     designSkillsPlugin(),
     process.env.ANALYZE === '1' && visualizer({
@@ -173,14 +147,16 @@ export default defineConfig({
     sourcemap: process.env.SOURCEMAP === '1',
     chunkSizeWarningLimit: 2000,
     rollupOptions: {
-      input: {
-        main: path.resolve(__dirname, 'index.html'),
-        'remote-control': path.resolve(__dirname, 'remote-control.html'),
-      },
       external: [
         /.*domains\/agent\/allternit-agent-workspace\/pkg.*/,
         'better-sqlite3',
         /^better-sqlite3(\/.+)?$/,
+        // The allternit-office-suite workspace package and its subpaths depend on
+        // office-app assets that are not yet bundled correctly into the platform
+        // surface. Keep them external so the platform shell, auth, and remote
+        // control builds deploy while the office integration is finished.
+        '@allternit/allternit-office-suite',
+        /^@allternit\/allternit-office-suite\/.+$/,
       ],
       output: {
         manualChunks(id) {

@@ -18,7 +18,7 @@ export default defineConfig((env) =>
       build: {
         rollupOptions: {
           input: {
-            'remote-control': path.resolve(__dirname, 'remote-control.html'),
+            index: path.resolve(__dirname, 'remote-control.html'),
           },
           external: [
             /.*domains\/agent\/allternit-agent-workspace\/pkg.*/,
