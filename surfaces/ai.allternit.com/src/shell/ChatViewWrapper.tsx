@@ -40,9 +40,11 @@ const ProjectView = lazy(() => import('../views/ProjectView'), 'ProjectView');
 export const ChatViewWrapper = React.memo(function ChatViewWrapper({
   onOpenAgentSession,
   onStartBotSession,
+  hideEmptyState = false,
 }: {
   onOpenAgentSession?: (text: string, surface: AppMode, execution?: { modeId: CanonicalAgentModeId; templateTitle?: string }) => void;
   onStartBotSession?: (agent: Agent) => void;
+  hideEmptyState?: boolean;
 }): React.ReactNode {
   const { activeProjectId, activeThreadId } = useChatStore();
   const embeddedChatSessionId = useChatSessionStore(
@@ -96,7 +98,7 @@ export const ChatViewWrapper = React.memo(function ChatViewWrapper({
               <ChatInputProvider>
                 <ChatModelsProvider>
                   <ModelSelectionProvider defaultSelection={defaultModelSelection}>
-                    <ChatView key={effectiveChatId} onOpenAgentSession={onOpenAgentSession} onStartBotSession={onStartBotSession} />
+                    <ChatView key={effectiveChatId} hideEmptyState={hideEmptyState} onOpenAgentSession={onOpenAgentSession} onStartBotSession={onStartBotSession} />
                   </ModelSelectionProvider>
                 </ChatModelsProvider>
               </ChatInputProvider>

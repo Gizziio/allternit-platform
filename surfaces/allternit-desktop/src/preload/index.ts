@@ -282,6 +282,11 @@ const meshAPI = {
 const shellAPI = {
   openExternal: (url: string): Promise<void> => ipcRenderer.invoke('shell:open-external', url),
   openDesign: (): Promise<void> => ipcRenderer.invoke('shell:open-design'),
+  openHud: (): Promise<void> => ipcRenderer.invoke('shell:open-hud'),
+  closeHud: (): Promise<void> => ipcRenderer.invoke('shell:close-hud'),
+  toggleHud: (): Promise<void> => ipcRenderer.invoke('shell:toggle-hud'),
+  moveHudBy: (delta: { x: number; y: number; width: number; height: number }): Promise<void> =>
+    ipcRenderer.invoke('shell:move-hud', delta),
   openDocs: (artifactId?: string): Promise<void> => ipcRenderer.invoke('shell:open-docs', artifactId),
   openOffice: (target?: string, artifactId?: string): Promise<void> =>
     ipcRenderer.invoke('shell:open-office', target, artifactId),

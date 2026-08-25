@@ -16,6 +16,7 @@ interface ChatActiveContentProps {
   messagesEndRef: React.RefObject<HTMLDivElement>;
   onSelectArtifact?: (artifact: any) => void;
   selectedArtifactTitle?: string;
+  hideEmptyState?: boolean;
 }
 
 export const ChatActiveContent: React.FC<ChatActiveContentProps> = ({
@@ -30,6 +31,7 @@ export const ChatActiveContent: React.FC<ChatActiveContentProps> = ({
   messagesEndRef,
   onSelectArtifact,
   selectedArtifactTitle,
+  hideEmptyState,
 }) => {
   return (
     <div className="w-full max-w-[760px] px-2 md:px-5 py-6 pb-[180px] box-border relative">
@@ -41,6 +43,7 @@ export const ChatActiveContent: React.FC<ChatActiveContentProps> = ({
         onRegenerate={handleRegenerate}
         onSelectArtifact={onSelectArtifact}
         selectedArtifactTitle={selectedArtifactTitle}
+        hideEmptyState={hideEmptyState}
       />
       
       {/* Jump to present button */}

@@ -619,6 +619,7 @@ export function ChatView({
               messagesEndRef={messagesEndRef}
               onSelectArtifact={setSelectedArtifact}
               selectedArtifactTitle={selectedArtifact?.title}
+              hideEmptyState={hideEmptyState}
             />
           )}
         </div>

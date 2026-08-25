@@ -43,6 +43,7 @@ import { useCoworkSessionStore } from '../views/cowork/CoworkSessionStore';
 import { useDesignSessionStore } from '../views/design/DesignSessionStore';
 // Modularized Shell Components
 import { getShellViewRegistry } from './ViewRegistry';
+import { ChatViewWrapper } from './ChatViewWrapper';
 
 import { useResolvedTheme, useThemeStore } from '../design/ThemeStore';
 import { usePanelLayout } from '../hooks/usePanelLayout';
@@ -111,6 +112,10 @@ function ShellAppInner(): React.ReactNode {
   const detachedSessionId = detachedParams.get('detachedSessionId');
   const detachedWorkspaceId = detachedParams.get('detachedWorkspaceId');
   const isDetachedCodeSession = detachedParams.get('detachedSurface') === 'code' && Boolean(detachedSessionId);
+  // The Electron desktop opens the HUD in a chrome-free floating BrowserWindow
+  // pointed at /hud.  In that window we strip the normal shell chrome (rail,
+  // header, rail controls) and render only the HUD view.
+  const isHudWindow = typeof window !== 'undefined' && window.location.pathname === '/hud';
   const [nav, dispatch] = useReducer(navReducer, undefined, createInitialNavState);
   const active = selectActiveView(nav)!;
 
@@ -221,6 +226,17 @@ function ShellAppInner(): React.ReactNode {
     document.body.setAttribute('data-theme', theme);
   }, [theme]);
 
+  // Make the page root transparent when running in the floating HUD window so
+  // the frameless transparent BrowserWindow shows the view content, not a solid
+  // themed rectangle behind it.  (Matches Hermes HUD's anti-white-flash trick.)
+  useEffect(() => {
+    if (!isHudWindow) return;
+    const style = document.createElement('style');
+    style.textContent = 'html,body,#root{background:transparent !important;}';
+    document.head.appendChild(style);
+    return () => style.remove();
+  }, [isHudWindow]);
+
   // Fetch agents on mount for agent mode selection
   useEffect(() => {
     let cancelled = false
@@ -238,6 +254,8 @@ function ShellAppInner(): React.ReactNode {
       cancelled = true
     }
   }, [])
+
+
 
   // One-time agent seeding bootstrap after auth loads
   useAgentBootstrap({ enabled: authLoaded && (isSignedIn || isPlatformAuthDisabled() || desktopSelfHosted) });
@@ -380,6 +398,10 @@ function ShellAppInner(): React.ReactNode {
       if (isMeta && event.key.toLowerCase() === "f" && window.allternit?.findInPage) {
         event.preventDefault();
         setIsFindInPageOpen(true);
+      }
+      if (isMeta && event.shiftKey && event.key.toLowerCase() === "h") {
+        event.preventDefault();
+        window.allternit?.shell?.toggleHud?.();
       }
     };
 
@@ -527,6 +549,7 @@ function ShellAppInner(): React.ReactNode {
   useEffect(() => {
     const handleOpenView = (e: Event): void => {
       const detail = (e as CustomEvent<{ viewType?: ViewType; allowNew?: boolean; context?: unknown }>).detail;
+      logger.info('[ShellApp] allternit:open-view received', { detail, isHudWindow });
       if (!detail?.viewType) return;
       if (detail.viewType === 'design') {
         openDesignWindow();
@@ -540,8 +563,16 @@ function ShellAppInner(): React.ReactNode {
       });
     };
     window.addEventListener('allternit:open-view', handleOpenView);
+    // If this renderer was loaded at /hud (the desktop's floating HUD window),
+    // dispatch the open event now that the listener is attached.  Doing this in
+    // the same effect guarantees we don't race the listener registration.
+    console.warn('[ShellApp] HUD listener attached', { isHudWindow, pathname: window.location.pathname });
+    if (isHudWindow) {
+      console.warn('[ShellApp] Dispatching hud open from /hud window');
+      window.dispatchEvent(new CustomEvent('allternit:open-view', { detail: { viewType: 'hud' } }));
+    }
     return () => window.removeEventListener('allternit:open-view', handleOpenView);
-  }, []);
+  }, [isHudWindow]);
 
   useEffect(() => {
     const handleOpenAgentActivity = (): void => {
@@ -604,6 +635,123 @@ function ShellAppInner(): React.ReactNode {
 
   const [session, setSession] = useState(null);
   useEffect(() => { void getSession().then(setSession); }, []);
+
+  // Drag state for the floating HUD handle.  We use renderer-side pointer
+  // deltas + a main-process move IPC so the whole bar is draggable on macOS
+  // without -webkit-app-region swallowing the close button clicks.
+  const hudDragRef = useRef<{ dragging: boolean; startX: number; startY: number } | null>(null);
+
+  useEffect(() => {
+    if (!isHudWindow) return;
+    let attempts = 0;
+    const id = setInterval(() => {
+      const ta = document.querySelector('textarea[aria-label="Text Area"]') as HTMLTextAreaElement | null;
+      if (ta) {
+        ta.focus();
+        clearInterval(id);
+      }
+      if (++attempts > 20) clearInterval(id);
+    }, 100);
+    return () => clearInterval(id);
+  }, [isHudWindow]);
+
+  const onHudDragDown = useCallback((e: React.PointerEvent<HTMLDivElement>) => {
+    if (!window.allternit?.shell?.moveHudBy) return;
+    e.currentTarget.setPointerCapture(e.pointerId);
+    hudDragRef.current = { dragging: false, startX: e.clientX, startY: e.clientY };
+  }, []);
+
+  const onHudDragMove = useCallback((e: React.PointerEvent<HTMLDivElement>) => {
+    const drag = hudDragRef.current;
+    if (!drag || !window.allternit?.shell?.moveHudBy) return;
+    const dx = e.clientX - drag.startX;
+    const dy = e.clientY - drag.startY;
+    if (!drag.dragging && Math.abs(dx) < 3 && Math.abs(dy) < 3) return;
+    drag.dragging = true;
+    void window.allternit.shell.moveHudBy({
+      x: dx,
+      y: dy,
+      width: window.outerWidth,
+      height: window.outerHeight,
+    });
+    drag.startX = e.clientX;
+    drag.startY = e.clientY;
+  }, []);
+
+  const onHudDragUp = useCallback((e: React.PointerEvent<HTMLDivElement>) => {
+    e.currentTarget.releasePointerCapture?.(e.pointerId);
+    hudDragRef.current = null;
+  }, []);
+
+  // Chrome-free floating HUD: a Hermes-style floating chat panel.  No shell
+  // rail, header, or rail-controls; just a draggable handle, a close button,
+  // and the live chat surface mounted inside a translucent sheet.
+  if (isHudWindow) {
+    return (
+      <TooltipProvider>
+        <VoiceProvider>
+          <SessionProvider session={session}>
+            <div
+              data-theme="dark"
+              data-hud-window
+              className="flex h-screen w-screen flex-col overflow-hidden rounded-2xl border border-white/10 bg-neutral-950/55 text-[var(--text-primary)] shadow-2xl backdrop-blur-xl"
+              style={
+                {
+                  WebkitAppRegion: 'no-drag',
+                  colorScheme: 'dark',
+                  '--view-chat-bg': 'transparent',
+                  '--surface-canvas': 'transparent',
+                  '--surface-floating': 'rgba(255,255,255,0.06)',
+                } as React.CSSProperties
+              }
+            >
+              {/* Draggable handle + close */}
+              <div
+                className="h-7 shrink-0 flex items-center justify-between px-2 select-none"
+                style={{ WebkitAppRegion: 'no-drag' } as React.CSSProperties}
+              >
+                <div
+                  className="flex items-center gap-1.5 text-white/50 cursor-grab active:cursor-grabbing hover:text-white/80"
+                  onPointerDown={onHudDragDown}
+                  onPointerMove={onHudDragMove}
+                  onPointerUp={onHudDragUp}
+                  onPointerCancel={onHudDragUp}
+                  style={{ WebkitAppRegion: 'no-drag' } as React.CSSProperties}
+                >
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor">
+                    <circle cx="5" cy="8" r="2" />
+                    <circle cx="12" cy="8" r="2" />
+                    <circle cx="19" cy="8" r="2" />
+                    <circle cx="5" cy="16" r="2" />
+                    <circle cx="12" cy="16" r="2" />
+                    <circle cx="19" cy="16" r="2" />
+                  </svg>
+                  <span className="text-[10px] font-semibold uppercase tracking-wide">HUD</span>
+                </div>
+                <div style={{ WebkitAppRegion: 'no-drag' } as React.CSSProperties}>
+                  <button
+                    type="button"
+                    onClick={() => window.allternit?.shell?.closeHud?.()}
+                    className="rounded p-1 text-white/50 hover:bg-white/10 hover:text-white"
+                    aria-label="Close HUD"
+                  >
+                    <svg width="10" height="10" viewBox="0 0 10 10" fill="currentColor">
+                      <path d="M1 1 L9 9 M9 1 L1 9" stroke="currentColor" strokeWidth="1.5" />
+                    </svg>
+                  </button>
+                </div>
+              </div>
+              {/* Chat surface — always show the active chat stream + composer,
+                  never the full-screen empty-state landing page. */}
+              <div className="min-h-0 flex-1 overflow-hidden">
+                <ChatViewWrapper hideEmptyState />
+              </div>
+            </div>
+          </SessionProvider>
+        </VoiceProvider>
+      </TooltipProvider>
+    );
+  }
 
   const [agentActivityPanelOpen, setAgentActivityPanelOpen] = useState(false);
   const { unreadCount: agentActivityUnreadCount } = useMonitorThreads();

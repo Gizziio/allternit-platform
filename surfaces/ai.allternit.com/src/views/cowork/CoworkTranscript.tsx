@@ -24,6 +24,8 @@ interface CoworkTranscriptProps {
   linkedSessionIds?: string[];
   onSelectArtifact?: (artifact: any) => void;
   selectedArtifactTitle?: string;
+  /** In floating HUD mode the transcript area should stay empty instead of showing a landing placeholder. */
+  hideEmptyState?: boolean;
 }
 
 // Derive the currently-running tool from messages so we can show it inline
@@ -130,6 +132,7 @@ export const CoworkTranscript = memo(function CoworkTranscript({
   linkedSessionIds,
   onSelectArtifact,
   selectedArtifactTitle,
+  hideEmptyState,
 }: CoworkTranscriptProps) {
   // When conversationId is provided, pull messages from the chat session store
   const storeSession = useChatSessionStore((state) =>
@@ -306,7 +309,7 @@ export const CoworkTranscript = memo(function CoworkTranscript({
         </div>
       )}
 
-      {timeline.length === 0 && !effectiveIsLoading && (
+      {timeline.length === 0 && !effectiveIsLoading && !hideEmptyState && (
         <div className="text-center py-12" style={{ color: 'var(--ui-text-muted)' }}>
           <p>Session started. Send a message to begin.</p>
         </div>

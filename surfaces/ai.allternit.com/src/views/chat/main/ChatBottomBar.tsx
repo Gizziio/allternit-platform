@@ -85,10 +85,12 @@ export const ChatBottomBar: React.FC<ChatBottomBarProps> = ({
           onAttentionChange={useMonolithLogo ? undefined : setLaunchMascotAttention}
         />
       </div>
-      {/* Disclaimer */}
-      <div className="mt-2 text-[12px] text-[var(--ui-text-muted)] text-center pointer-events-auto">
-        Allternit is AI and can make mistakes. Please double-check responses.
-      </div>
+      {/* Disclaimer — hidden in chrome-free floating HUD where vertical space is at a premium */}
+      {!hideEmptyState && (
+        <div className="mt-2 text-[12px] text-[var(--ui-text-muted)] text-center pointer-events-auto">
+          Allternit is AI and can make mistakes. Please double-check responses.
+        </div>
+      )}
     </div>
   );
 };

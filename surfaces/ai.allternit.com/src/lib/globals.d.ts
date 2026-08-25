@@ -138,6 +138,10 @@ declare global {
       shell?: {
         openExternal: (url: string) => Promise<void>;
         openDesign: () => Promise<void>;
+        openHud: () => Promise<void>;
+        closeHud: () => Promise<void>;
+        toggleHud: () => Promise<void>;
+        moveHudBy?: (delta: { x: number; y: number; width: number; height: number }) => Promise<void>;
         openSession: (options: { sessionId: string; workspaceId?: string; title?: string }) => Promise<void>;
         getOfficeHostStatus: () => Promise<Record<'word' | 'excel' | 'powerpoint', {
           installed: boolean;
