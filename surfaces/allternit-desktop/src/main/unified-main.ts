@@ -778,7 +778,12 @@ async function initializeBundledMode(): Promise<void> {
     //              the remote URL only when no local build is present.
     // Offline:    If remote URL is unreachable, fall back to local static files
     //              served by the Rust API at the local API URL.
-    let platformUrl: string = isDev ? URLS.DEV_UI : 'https://ai.allternit.com';
+    // Allow the platform URL to be overridden by the environment in both dev
+    // and bundled/production runs. This is what lets a dev-mode desktop build
+    // load the production platform surface (e.g. platform.allternit.com) for
+    // end-to-end verification instead of the local Vite dev server that lacks
+    // Clerk credentials and bypasses auth.
+    let platformUrl: string = process.env.ALLTERNIT_PLATFORM_URL || (isDev ? URLS.DEV_UI : 'https://ai.allternit.com');
 
     if (isDev && process.env.ALLTERNIT_DESKTOP_USE_STATIC_UI) {
       const localStaticPath = resolveLocalPlatformStaticPath();
@@ -793,8 +798,23 @@ async function initializeBundledMode(): Promise<void> {
     }
 
     if (!isDev) {
+      // If the operator explicitly set ALLTERNIT_PLATFORM_URL, honor it and
+      // skip the local static UI preference. Only fall back to the bundled
+      // static UI when no override is set, or when the override URL is
+      // unreachable.
+      const envPlatformUrl = process.env.ALLTERNIT_PLATFORM_URL;
       const localStaticPath = resolveLocalPlatformStaticPath();
-      if (localStaticPath) {
+      if (envPlatformUrl) {
+        const remoteReachable = await isUrlReachable(envPlatformUrl, 5000);
+        if (remoteReachable) {
+          log.info(`[Main] Using ALLTERNIT_PLATFORM_URL override: ${envPlatformUrl}`);
+          serviceState.platform = { status: 'up', detail: envPlatformUrl };
+        } else {
+          log.warn(`[Main] ALLTERNIT_PLATFORM_URL ${envPlatformUrl} is unreachable — falling back to local static UI`);
+          platformUrl = staticUiUrl();
+          serviceState.platform = { status: 'up', detail: 'Offline mode (local static)' };
+        }
+      } else if (localStaticPath) {
         log.info(`[Main] Using local platform static UI from ${localStaticPath}`);
         platformUrl = staticUiUrl();
         serviceState.platform = { status: 'up', detail: 'Local static UI' };
