@@ -849,8 +849,8 @@ async function initializeBundledMode(): Promise<void> {
       pushServiceState();
     }
 
-    activePlatformUrl = platformUrl;
-    log.info(`[Main] Platform URL: ${platformUrl}`);
+    activePlatformUrl = process.env.ALLTERNIT_PLATFORM_URL || platformUrl;
+    log.info(`[Main] Platform URL: ${activePlatformUrl}`);
     // Clerk authenticates the human in the browser. The desktop waits for the
     // separately scoped runtime pairing that was started alongside boot.
     if (showStartupWizard) {
@@ -894,7 +894,7 @@ async function initializeBundledMode(): Promise<void> {
       log.info('[Main] DOM ready');
     });
     
-    mainWindow.loadURL(platformUrl);
+    mainWindow.loadURL(activePlatformUrl);
 
     // First launch: used for permission onboarding gating below
     const isFirstLaunch = !store.get('onboardingComplete');
@@ -1096,7 +1096,9 @@ async function initializeDevelopmentMode(): Promise<void> {
   }
 
   mainWindow = createMainWindow();
-  mainWindow.loadURL(URLS.DEV_UI);
+  activePlatformUrl = process.env.ALLTERNIT_PLATFORM_URL || URLS.DEV_UI;
+  log.info(`[Main] Dev mode loading platform URL: ${activePlatformUrl}`);
+  mainWindow.loadURL(activePlatformUrl);
   mainWindow.webContents.openDevTools();
   mainWindow.show();
 }
