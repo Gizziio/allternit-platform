@@ -41,6 +41,8 @@ class StackedAgentService {
   };
   private listeners = new Set<StackedAgentListener>();
   private timer: ReturnType<typeof setInterval> | null = null;
+  private lastStateRef: StackedAgentSyncState | null = null;
+  private cachedSnapshot: StackedAgentSyncState | null = null;
 
   registerProviders(providers: AgentStackProvider[]): void {
     this.providers = providers;
@@ -48,7 +50,14 @@ class StackedAgentService {
   }
 
   getState(): StackedAgentSyncState {
-    return { ...this.state };
+    // Cache the snapshot so useSyncExternalStore sees a stable reference
+    // when the underlying state has not changed. React warns (and can loop)
+    // if getSnapshot returns a fresh object on every call.
+    if (this.cachedSnapshot === null || this.lastStateRef !== this.state) {
+      this.lastStateRef = this.state;
+      this.cachedSnapshot = { ...this.state };
+    }
+    return this.cachedSnapshot;
   }
 
   subscribe(listener: StackedAgentListener): () => void {

@@ -35,8 +35,19 @@ pub mod beta_deployment_routes;
 pub mod beta_memory_store_routes;
 pub mod beta_session_routes;
 pub mod beta_work_routes;
+pub mod bot_desktop_audit;
+pub mod bot_desktop_billing;
+pub mod bot_desktop_capacity;
+pub mod bot_desktop_input;
+pub mod bot_desktop_mesh;
+pub mod bot_desktop_mux;
+pub mod bot_desktop_quotas;
 pub mod bot_desktop_routes;
+pub mod bot_desktop_snapshots;
+pub mod bot_desktop_admin;
 pub mod bot_desktop_stream;
+pub mod bot_desktop_templates;
+pub mod bot_desktop_windows;
 pub mod user_profile_routes;
 pub mod billing;
 pub mod board_routes;
@@ -173,6 +184,13 @@ pub mod test_helpers {
     use std::path::Path;
 
     pub async fn app_state(temp: &Path) -> Arc<AppState> {
+        app_state_with_driver(temp, None).await
+    }
+
+    pub async fn app_state_with_driver(
+        temp: &Path,
+        vm_driver: Option<Arc<dyn allternit_driver_interface::ExecutionDriver>>,
+    ) -> Arc<AppState> {
         let config = AppConfig {
             company: config::CompanyConfig::default(),
             user: config::UserConfig::default(),
@@ -189,7 +207,7 @@ pub mod test_helpers {
             data_dir: temp.to_path_buf(),
             jwks,
             auth_config,
-            vm_driver: None,
+            vm_driver,
             bot_desktop_sessions: Arc::new(RwLock::new(HashMap::new())),
             rails,
             vm_sessions: vm_session_routes::new_vm_session_store(),
@@ -269,6 +287,7 @@ pub struct AppState {
     pub vm_driver: Option<Arc<dyn allternit_driver_interface::ExecutionDriver>>,
     /// Bot desktop take-over state: bot_id -> session metadata + control state.
     pub bot_desktop_sessions: Arc<RwLock<HashMap<String, BotDesktopSession>>>,
+
     /// Rails service state (Ledger, Gate, Leases, etc.)
     pub rails: RailsState,
     /// Persistent VM sessions — each gizzi-code session gets one VM that stays

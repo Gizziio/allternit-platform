@@ -92,6 +92,7 @@ const BudgetDashboardView    = lazy(() => import('../views/runtime/BudgetDashboa
 const ReplayManagerView      = lazy(() => import('../views/runtime/ReplayManagerView').then(m => ({ default: m.ReplayManagerView })));
 const PrewarmManagerView     = lazy(() => import('../views/runtime/PrewarmManagerView').then(m => ({ default: m.PrewarmManagerView })));
 const RuntimeOperationsView  = lazy(() => import('../views/runtime/RuntimeOperationsView').then(m => ({ default: m.RuntimeOperationsView })));
+const DesktopCloudAdminView  = lazy(() => import('../views/desktop-cloud/DesktopCloudAdminView').then(m => ({ default: m.DesktopCloudAdminView })));
 const HistoryView            = lazy(() => import('../views/HistoryView').then(m => ({ default: m.HistoryView })));
 const ArchivedView           = lazy(() => import('../views/ArchivedView').then(m => ({ default: m.ArchivedView })));
 const RecentsView            = lazy(() => import('../views/RecentsView').then(m => ({ default: m.RecentsView })));
@@ -639,6 +640,11 @@ export function getShellViewRegistry(handlers: {
     "prewarm-manager": ({ context }: { context?: ViewContext }) => (
       <ErrorBoundary fallback={<ErrorFallbackWrapper viewName="Prewarm Manager" />}>
         <PrewarmManagerView />
+      </ErrorBoundary>
+    ),
+    "desktop-cloud": ({ context }: { context?: ViewContext }) => (
+      <ErrorBoundary fallback={<ErrorFallbackWrapper viewName="Desktop Cloud" />}>
+        <DesktopCloudAdminView />
       </ErrorBoundary>
     ),
     history: ({ context }: { context?: ViewContext }) => (

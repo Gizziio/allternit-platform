@@ -32,6 +32,8 @@ import { getDefaultAgentModel } from "@/lib/agents/agent-models";
  */
 const DEFAULT_GATEWAY_URL = 'http://127.0.0.1:8013';
 
+const SELF_HOSTED_TOKEN = (import.meta as any).env?.VITE_ALLTERNIT_SELF_HOSTED_TOKEN;
+
 function stripTrailingSlash(value: string): string {
   return value.replace(/\/+$/g, '');
 }
@@ -356,6 +358,7 @@ class AllternitApiClient {
       'Accept': 'application/json',
       'X-Client-Version': '2.0.0',
       ...(this.token ? { 'Authorization': `Bearer ${this.token}` } : {}),
+      ...(SELF_HOSTED_TOKEN ? { 'X-Allternit-Self-Hosted-Token': String(SELF_HOSTED_TOKEN) } : {}),
       ...(options.headers as Record<string, string> || {}),
     };
 

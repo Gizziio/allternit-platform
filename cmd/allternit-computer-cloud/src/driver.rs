@@ -1,0 +1,694 @@
+//! Incus-backed `ExecutionDriver` for the Allternit platform.
+//!
+//! Implements the platform driver-interface so that `cmd/allternit-api` can
+//! provision bot desktops on an Incus host instead of (or alongside) Firecracker
+//! or OpenSandbox. The driver launches an Ubuntu cloud-image container/VM,
+//! starts the desktop services via cloud-init, and exposes x11vnc through an
+//! Incus proxy device.
+
+use std::collections::HashMap;
+use std::sync::atomic::{AtomicU32, Ordering};
+use std::sync::Arc;
+use std::time::Duration;
+
+use async_trait::async_trait;
+use tracing::{info, warn};
+
+use allternit_driver_interface::{
+    CommandSpec, DesktopEndpoint, DesktopProtocol, DriverCapabilities, DriverError, DriverFeatures,
+    DriverHealth, DriverType, EnvSpecType, ExecResult, ExecutionDriver, ExecutionHandle,
+    ExecutionId, IsolationLevel, Receipt, ResourceConsumption, ResourceSpec, SnapshotInfo,
+    SpawnSpec, TenantId,
+};
+
+use crate::incus_pool::{IncusHost, IncusHostPool};
+use crate::mesh::MeshConfig;
+use crate::substrate::{ComputerSpec, IncusSubstrate, Substrate, SubstrateError};
+
+const VNC_DEVICE: &str = "vnc";
+const VNC_CONTAINER_PORT: u16 = 5900;
+const PROXY_PORT_BASE: u32 = 30_000;
+
+/// Incus execution driver.
+#[derive(Debug)]
+pub struct IncusDriver {
+    pool: IncusHostPool,
+    /// Default VNC host for single-host pools or legacy handles.
+    vnc_host: String,
+    /// VNC password shared with the guest image.
+    vnc_password: String,
+    /// Next candidate host port for the VNC proxy.
+    next_port: AtomicU32,
+    /// In-memory map from Incus instance name to allocated VNC host port.
+    vnc_ports: std::sync::Mutex<HashMap<String, u16>>,
+    /// Optional mesh VPN configuration injected into every spawned desktop.
+    mesh: Option<MeshConfig>,
+}
+
+impl IncusDriver {
+    /// Create a driver from an existing Incus substrate.
+    pub fn new(substrate: Arc<IncusSubstrate>, vnc_host: impl Into<String>) -> Self {
+        Self::from_pool(IncusHostPool::single("legacy", substrate), vnc_host)
+    }
+
+    /// Build a driver from an explicit multi-host pool.
+    pub fn from_pool(pool: IncusHostPool, vnc_host: impl Into<String>) -> Self {
+        Self {
+            pool,
+            vnc_host: vnc_host.into(),
+            vnc_password: std::env::var("BOT_DESKTOP_VNC_PASSWORD")
+                .unwrap_or_else(|_| "allternit".to_string()),
+            next_port: AtomicU32::new(PROXY_PORT_BASE),
+            vnc_ports: std::sync::Mutex::new(HashMap::new()),
+            mesh: None,
+        }
+    }
+
+    /// Configure a mesh VPN provider for every desktop spawned by this driver.
+    pub fn with_mesh(mut self, mesh: MeshConfig) -> Self {
+        self.mesh = Some(mesh);
+        self
+    }
+
+    /// Convenience constructor that builds the substrate from an Incus base URL.
+    pub fn from_url(
+        base_url: impl Into<String>,
+        vnc_host: impl Into<String>,
+    ) -> Result<Self, SubstrateError> {
+        let substrate = Arc::new(IncusSubstrate::new(base_url)?);
+        Ok(Self::new(substrate, vnc_host))
+    }
+
+    /// Build a driver from a comma-separated list of Incus URLs.
+    pub fn from_urls(
+        urls: &[String],
+        fallback_vnc_host: impl Into<String>,
+    ) -> Result<Self, SubstrateError> {
+        let mut hosts = Vec::with_capacity(urls.len());
+        for url in urls {
+            let substrate = Arc::new(IncusSubstrate::new(url)?);
+            hosts.push(IncusHost::new(url, substrate));
+        }
+        Ok(Self::from_pool(IncusHostPool::new(hosts), fallback_vnc_host))
+    }
+
+    /// Scan every configured Incus host for existing VNC proxy ports and seed
+    /// the allocator so new spawns do not retry already-bound ports. This should
+    /// be called once at service startup before the driver accepts provision
+    /// requests.
+    pub async fn recover_ports(&self) {
+        let mut max_port: u16 = PROXY_PORT_BASE as u16;
+        let mut recovered = 0usize;
+        for host in self.pool.hosts() {
+            let names = match host.substrate.list_instance_names().await {
+                Ok(names) => names,
+                Err(e) => {
+                    warn!(host = %host.url, error = %e, "failed to list Incus instances for port recovery");
+                    continue;
+                }
+            };
+            for native_id in names {
+                match host.substrate.get_config(&native_id).await {
+                    Ok(config) => {
+                        if let Some(port) = parse_vnc_port_from_config(&config) {
+                            self.vnc_ports.lock().unwrap().insert(native_id, port);
+                            if port > max_port {
+                                max_port = port;
+                            }
+                            recovered += 1;
+                        }
+                    }
+                    Err(e) => {
+                        warn!(native_id, error = %e, "failed to read instance config during port recovery");
+                    }
+                }
+            }
+        }
+        if recovered > 0 {
+            // Start allocating just past the highest recovered port.
+            let next = (max_port as u32).saturating_add(1).max(PROXY_PORT_BASE);
+            self.next_port.store(next, Ordering::Relaxed);
+            info!(recovered, next_port = next, "recovered existing VNC proxy ports");
+        }
+    }
+
+    /// Access the underlying Incus substrate (used by examples/tests to pull files).
+    pub fn substrate(&self) -> &Arc<IncusSubstrate> {
+        &self.pool.hosts()[0].substrate
+    }
+
+    /// Allocate and configure a proxy device that forwards a host port to the
+    /// guest's x11vnc port.
+    async fn expose_vnc(
+        &self,
+        substrate: &Arc<IncusSubstrate>,
+        native_id: &str,
+    ) -> Result<u16, DriverError> {
+        for _ in 0..128 {
+            let port = self.next_port.fetch_add(1, Ordering::Relaxed) as u16;
+            let listen = format!("tcp:0.0.0.0:{}", port);
+            let connect = format!("tcp:127.0.0.1:{}", VNC_CONTAINER_PORT);
+
+            match substrate
+                .add_proxy_device(native_id, VNC_DEVICE, &listen, &connect)
+                .await
+            {
+                Ok(()) => {
+                    self.vnc_ports
+                        .lock()
+                        .unwrap()
+                        .insert(native_id.to_string(), port);
+                    return Ok(port);
+                }
+                Err(e) => {
+                    warn!(native_id, port, error = %e, "failed to add VNC proxy device, trying next port");
+                }
+            }
+        }
+        Err(DriverError::InternalError {
+            message: "could not allocate a VNC proxy port".to_string(),
+        })
+    }
+
+    fn port_for(&self, native_id: &str) -> Option<u16> {
+        self.vnc_ports.lock().unwrap().get(native_id).copied()
+    }
+
+    /// Allocate and configure a proxy device that forwards an arbitrary host
+    /// port to a guest port. Returns the allocated host port.
+    pub async fn expose_port(
+        &self,
+        native_id: &str,
+        device_name: &str,
+        guest_port: u16,
+    ) -> Result<u16, DriverError> {
+        // expose_port is called from outside the driver lifecycle where we do not
+        // know the owning host; default to the first host. Multi-host callers
+        // should route through the handle-aware APIs instead.
+        let substrate = &self.pool.hosts()[0].substrate;
+        for _ in 0..128 {
+            let port = self.next_port.fetch_add(1, Ordering::Relaxed) as u16;
+            let listen = format!("tcp:0.0.0.0:{}", port);
+            let connect = format!("tcp:127.0.0.1:{}", guest_port);
+
+            match substrate
+                .add_proxy_device(native_id, device_name, &listen, &connect)
+                .await
+            {
+                Ok(()) => return Ok(port),
+                Err(e) => {
+                    warn!(native_id, port, error = %e, "failed to add proxy device, trying next port");
+                }
+            }
+        }
+        Err(DriverError::InternalError {
+            message: format!(
+                "could not allocate a proxy port for {}:{}",
+                native_id, guest_port
+            ),
+        })
+    }
+
+    /// Poll the substrate until the instance reports `Running`.
+    async fn wait_for_running_state(
+        &self,
+        substrate: &Arc<IncusSubstrate>,
+        native_id: &str,
+    ) -> Result<(), DriverError> {
+        for attempt in 0..120 {
+            match substrate.get(native_id).await {
+                Ok(handle) if handle.state == crate::substrate::ComputerState::Running => {
+                    info!(native_id, attempt, "instance reached Running");
+                    return Ok(());
+                }
+                Ok(_) => {}
+                Err(e) => {
+                    warn!(native_id, attempt, error = %e, "waiting for instance state");
+                }
+            }
+            tokio::time::sleep(Duration::from_secs(1)).await;
+        }
+        Err(DriverError::InternalError {
+            message: format!("instance {} did not reach Running in time", native_id),
+        })
+    }
+
+    fn substrate_for(&self, handle: &ExecutionHandle) -> Arc<IncusSubstrate> {
+        self.pool.host_for_handle(handle).substrate.clone()
+    }
+
+    fn bot_id_from_tenant(tenant: &TenantId) -> String {
+        tenant
+            .0
+            .strip_prefix("bot-")
+            .unwrap_or(&tenant.0)
+            .to_string()
+    }
+
+    fn map_spec(&self, spec: &SpawnSpec, native_id: &str) -> ComputerSpec {
+        let mut env = spec.env.env_vars.clone();
+        env.insert(
+            "ALLTERNIT_BOT_ID".to_string(),
+            Self::bot_id_from_tenant(&spec.tenant),
+        );
+        if let Some(mesh) = &self.mesh {
+            for (k, v) in mesh.guest_env() {
+                env.insert(k, v);
+            }
+        }
+
+        let profiles: Vec<String> = std::env::var("INCUS_DESKTOP_PROFILES")
+            .unwrap_or_else(|_| "default".to_string())
+            .split(',')
+            .map(|s| s.trim().to_string())
+            .filter(|s| !s.is_empty())
+            .collect();
+
+        ComputerSpec {
+            name: native_id.to_string(),
+            os: "linux".to_string(),
+            image: normalize_image(&spec.env.image),
+            cpu_cores: (spec.resources.cpu_millis / 1000).max(1),
+            memory_mb: spec.resources.memory_mib.max(512),
+            disk_mb: spec.resources.disk_mib.unwrap_or(20_480),
+            env,
+            profiles,
+        }
+    }
+}
+
+fn normalize_image(image: &str) -> String {
+    match image {
+        "" | "ubuntu-24.04-desktop" | "ubuntu-24.04" => "local:allternit-desktop".to_string(),
+        "ubuntu/24.04/cloud" => "images:ubuntu/24.04/cloud".to_string(),
+        other if other.contains(':') => other.to_string(),
+        other => format!("local:{}", other),
+    }
+}
+
+fn map_error(e: SubstrateError) -> DriverError {
+    match e {
+        SubstrateError::NotFound(id) => DriverError::NotFound { id },
+        SubstrateError::Timeout => DriverError::ExecTimeout { timeout: 30 },
+        other => DriverError::InternalError {
+            message: other.to_string(),
+        },
+    }
+}
+
+#[async_trait]
+impl ExecutionDriver for IncusDriver {
+    fn capabilities(&self) -> DriverCapabilities {
+        DriverCapabilities {
+            driver_type: DriverType::Container,
+            isolation: IsolationLevel::Standard,
+            max_resources: ResourceSpec {
+                cpu_millis: 8000,
+                memory_mib: 32_768,
+                disk_mib: Some(200_000),
+                network_egress_kib: None,
+                gpu_count: None,
+            },
+            supported_env_specs: vec![EnvSpecType::Oci],
+            features: DriverFeatures {
+                snapshot: false,
+                live_restore: false,
+                gpu: false,
+                prewarm: false,
+            },
+        }
+    }
+
+    async fn spawn(&self, spec: SpawnSpec) -> Result<ExecutionHandle, DriverError> {
+        let bot_id = Self::bot_id_from_tenant(&spec.tenant);
+        // Incus instance names must be <= 63 chars. Prefix + uuid is 48 chars,
+        // leaving 15 for the bot id.
+        let bot_suffix = bot_id.chars().take(15).collect::<String>();
+        let native_id = format!("allternit-bot-{}-{}", bot_suffix, uuid::Uuid::new_v4().simple());
+        let computer_spec = self.map_spec(&spec, &native_id);
+
+        let host = self.pool.select_for_spawn().map_err(map_error)?;
+        let substrate = host.substrate.clone();
+        let host_url = host.url.clone();
+        let vnc_host = host.vnc_host.clone();
+
+        info!(bot_id, native_id, host = %host_url, image = %computer_spec.image, "provisioning Incus desktop");
+
+        let handle = substrate
+            .create(computer_spec.clone())
+            .await
+            .map_err(map_error)?;
+        let native_id = handle.native_id;
+
+        // Start the instance and wait until the guest reports Running.
+        let _ = substrate.start(&native_id).await.map_err(map_error)?;
+        self.wait_for_running_state(&substrate, &native_id).await?;
+
+        // Expose the in-guest x11vnc port on the Incus host.
+        let vnc_port = self.expose_vnc(&substrate, &native_id).await?;
+
+        let mut driver_info = HashMap::new();
+        driver_info.insert("native_id".to_string(), native_id.clone());
+        driver_info.insert("host".to_string(), vnc_host);
+        driver_info.insert("host_url".to_string(), host_url);
+        driver_info.insert("vnc_port".to_string(), vnc_port.to_string());
+        driver_info.insert("provider".to_string(), "incus".to_string());
+
+        Ok(ExecutionHandle {
+            id: ExecutionId::new(),
+            tenant: spec.tenant,
+            driver_info,
+            env_spec: spec.env,
+        })
+    }
+
+    async fn pause_vm(&self, handle: &ExecutionHandle) -> Result<(), DriverError> {
+        let native_id = native_id(handle)?;
+        let substrate = self.substrate_for(handle);
+        substrate
+            .stop(native_id)
+            .await
+            .map_err(map_error)
+            .map(|_| ())
+    }
+
+    async fn resume_vm(&self, handle: &ExecutionHandle) -> Result<(), DriverError> {
+        let native_id = native_id(handle)?;
+        let substrate = self.substrate_for(handle);
+        substrate
+            .start(native_id)
+            .await
+            .map_err(map_error)
+            .map(|_| ())
+    }
+
+    async fn exec(
+        &self,
+        handle: &ExecutionHandle,
+        cmd: CommandSpec,
+    ) -> Result<ExecResult, DriverError> {
+        let native_id = native_id(handle)?;
+        let substrate = self.substrate_for(handle);
+        let started = std::time::Instant::now();
+        let result = substrate
+            .exec(native_id, &cmd.command, &cmd.env_vars)
+            .await
+            .map_err(map_error)?;
+        Ok(ExecResult {
+            exit_code: result.exit_code,
+            stdout: Some(result.stdout.into_bytes()),
+            stderr: Some(result.stderr.into_bytes()),
+            duration_ms: started.elapsed().as_millis() as u64,
+            resource_usage: ResourceConsumption::default(),
+        })
+    }
+
+    async fn stream_logs(
+        &self,
+        _handle: &ExecutionHandle,
+    ) -> Result<Vec<allternit_driver_interface::LogEntry>, DriverError> {
+        Err(DriverError::NotSupported {
+            feature: "stream_logs".to_string(),
+        })
+    }
+
+    async fn get_artifacts(
+        &self,
+        _handle: &ExecutionHandle,
+    ) -> Result<Vec<allternit_driver_interface::Artifact>, DriverError> {
+        Ok(vec![])
+    }
+
+    async fn destroy(&self, handle: &ExecutionHandle) -> Result<(), DriverError> {
+        let native_id = native_id(handle)?;
+        let substrate = self.substrate_for(handle);
+        // Stop first; Incus refuses to delete a running container.
+        let _ = substrate.stop(native_id).await.map_err(map_error);
+        substrate.delete(native_id).await.map_err(map_error)?;
+        self.vnc_ports.lock().unwrap().remove(native_id);
+        Ok(())
+    }
+
+    async fn get_consumption(
+        &self,
+        _handle: &ExecutionHandle,
+    ) -> Result<ResourceConsumption, DriverError> {
+        Ok(ResourceConsumption::default())
+    }
+
+    async fn get_receipt(&self, _handle: &ExecutionHandle) -> Result<Option<Receipt>, DriverError> {
+        Ok(None)
+    }
+
+    async fn health_check(&self) -> Result<DriverHealth, DriverError> {
+        Ok(DriverHealth {
+            healthy: true,
+            message: Some(format!(
+                "Incus driver ready ({} host{})",
+                self.pool.len(),
+                if self.pool.len() == 1 { "" } else { "s" }
+            )),
+            active_executions: self.vnc_ports.lock().unwrap().len() as u32,
+            available_capacity: self.capabilities().max_resources,
+        })
+    }
+
+    fn supports_desktop(&self) -> bool {
+        true
+    }
+
+    async fn get_desktop_endpoint(
+        &self,
+        handle: &ExecutionHandle,
+    ) -> Result<Option<DesktopEndpoint>, DriverError> {
+        let native_id = native_id(handle)?;
+        let port = self
+            .port_for(native_id)
+            .ok_or_else(|| DriverError::InternalError {
+                message: format!("no VNC port allocated for {}", native_id),
+            })?;
+        let vnc_host = self
+            .pool
+            .host_for_handle(handle)
+            .vnc_host
+            .clone();
+        Ok(Some(DesktopEndpoint {
+            url: format!("tcp://{}:{}", vnc_host, port),
+            protocol: DesktopProtocol::Vnc,
+            token: Some(self.vnc_password.clone()),
+        }))
+    }
+
+    async fn get_desktop_endpoint_by_native_id(
+        &self,
+        sandbox_id: &str,
+    ) -> Result<Option<DesktopEndpoint>, DriverError> {
+        if let Some(port) = self.port_for(sandbox_id) {
+            return Ok(Some(DesktopEndpoint {
+                url: format!("tcp://{}:{}", self.vnc_host, port),
+                protocol: DesktopProtocol::Vnc,
+                token: Some(self.vnc_password.clone()),
+            }));
+        }
+        // Not in memory — try to recover by reading the instance config from Incus.
+        // We do not know which host owns the VM, so try the first host (best effort).
+        let substrate = &self.pool.hosts()[0].substrate;
+        match substrate.get_config(sandbox_id).await {
+            Ok(config) => {
+                if let Some(port) = parse_vnc_port_from_config(&config) {
+                    self.vnc_ports
+                        .lock()
+                        .unwrap()
+                        .insert(sandbox_id.to_string(), port);
+                    return Ok(Some(DesktopEndpoint {
+                        url: format!("tcp://{}:{}", self.vnc_host, port),
+                        protocol: DesktopProtocol::Vnc,
+                        token: Some(self.vnc_password.clone()),
+                    }));
+                }
+            }
+            Err(SubstrateError::NotFound(_)) => return Ok(None),
+            Err(e) => warn!(sandbox_id, error = %e, "failed to recover VNC port from Incus"),
+        }
+        Ok(None)
+    }
+
+    async fn register_native_sandbox(
+        &self,
+        native_id: &str,
+        _agent_id: &str,
+        host: &str,
+    ) -> Result<(), DriverError> {
+        // Recover the port from the remote Incus config on the host that owns this VM.
+        let host_url = self
+            .pool
+            .hosts()
+            .iter()
+            .find(|h| h.url == host || h.vnc_host == host)
+            .map(|h| h.url.clone())
+            .unwrap_or_else(|| self.pool.hosts()[0].url.clone());
+        let substrate = self
+            .pool
+            .hosts()
+            .iter()
+            .find(|h| h.url == host_url)
+            .map(|h| h.substrate.clone())
+            .unwrap_or_else(|| self.pool.hosts()[0].substrate.clone());
+        match substrate.get_config(native_id).await {
+            Ok(config) => {
+                if let Some(port) = parse_vnc_port_from_config(&config) {
+                    self.vnc_ports
+                        .lock()
+                        .unwrap()
+                        .insert(native_id.to_string(), port);
+                }
+            }
+            Err(e) => return Err(map_error(e)),
+        }
+        Ok(())
+    }
+
+    async fn pull_file(
+        &self,
+        handle: &ExecutionHandle,
+        path: &str,
+    ) -> Result<Vec<u8>, DriverError> {
+        let native_id = native_id(handle)?;
+        let substrate = self.substrate_for(handle);
+        substrate.pull_file(native_id, path).await.map_err(map_error)
+    }
+
+    async fn push_file(
+        &self,
+        handle: &ExecutionHandle,
+        path: &str,
+        content: Vec<u8>,
+    ) -> Result<(), DriverError> {
+        let native_id = native_id(handle)?;
+        let substrate = self.substrate_for(handle);
+        substrate
+            .push_file(native_id, path, content)
+            .await
+            .map_err(map_error)
+    }
+
+    async fn create_snapshot(
+        &self,
+        handle: &ExecutionHandle,
+        snapshot_id: &str,
+        stateful: bool,
+    ) -> Result<(), DriverError> {
+        let native_id = native_id(handle)?;
+        let substrate = self.substrate_for(handle);
+        substrate
+            .create_snapshot(native_id, snapshot_id, stateful)
+            .await
+            .map_err(map_error)
+    }
+
+    async fn restore_snapshot(
+        &self,
+        handle: &ExecutionHandle,
+        snapshot_id: &str,
+    ) -> Result<(), DriverError> {
+        let native_id = native_id(handle)?;
+        let substrate = self.substrate_for(handle);
+        substrate
+            .restore_snapshot(native_id, snapshot_id)
+            .await
+            .map_err(map_error)
+    }
+
+    async fn delete_snapshot(
+        &self,
+        handle: &ExecutionHandle,
+        snapshot_id: &str,
+    ) -> Result<(), DriverError> {
+        let native_id = native_id(handle)?;
+        let substrate = self.substrate_for(handle);
+        substrate
+            .delete_snapshot(native_id, snapshot_id)
+            .await
+            .map_err(map_error)
+    }
+
+    async fn list_snapshots(
+        &self,
+        handle: &ExecutionHandle,
+    ) -> Result<Vec<SnapshotInfo>, DriverError> {
+        let native_id = native_id(handle)?;
+        let substrate = self.substrate_for(handle);
+        substrate
+            .list_snapshots(native_id)
+            .await
+            .map_err(map_error)
+            .map(|v| {
+                v.into_iter()
+                    .map(|s| SnapshotInfo {
+                        id: s.id,
+                        created_at: s.created_at,
+                        stateful: s.stateful,
+                    })
+                    .collect()
+            })
+    }
+}
+
+fn native_id(handle: &ExecutionHandle) -> Result<&str, DriverError> {
+    handle
+        .driver_info
+        .get("native_id")
+        .map(|s| s.as_str())
+        .ok_or_else(|| DriverError::InternalError {
+            message: "missing native_id in execution handle".to_string(),
+        })
+}
+
+fn parse_vnc_port_from_config(config: &serde_json::Value) -> Option<u16> {
+    // Incus returns the instance config wrapped in either `metadata` or `data`.
+    let payload = config
+        .get("metadata")
+        .or_else(|| config.get("data"))
+        .or_else(|| Some(config));
+    let listen = payload
+        .and_then(|c| c.get("devices"))
+        .and_then(|d| d.get(VNC_DEVICE))
+        .and_then(|v| v.get("listen"))
+        .and_then(|l| l.as_str())?;
+    listen.rsplit(':').next()?.parse().ok()
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn normalize_image_maps_defaults() {
+        assert_eq!(normalize_image(""), "local:allternit-desktop");
+        assert_eq!(
+            normalize_image("ubuntu-24.04-desktop"),
+            "local:allternit-desktop"
+        );
+        assert_eq!(
+            normalize_image("ubuntu/24.04/cloud"),
+            "images:ubuntu/24.04/cloud"
+        );
+        assert_eq!(normalize_image("images:alpine/edge"), "images:alpine/edge");
+        assert_eq!(
+            normalize_image("allternit-desktop"),
+            "local:allternit-desktop"
+        );
+    }
+
+    #[test]
+    fn parse_vnc_port_extracts_last_colon_value() {
+        let config = serde_json::json!({
+            "data": {
+                "devices": {
+                    "vnc": { "listen": "tcp:0.0.0.0:35900" }
+                }
+            }
+        });
+        assert_eq!(parse_vnc_port_from_config(&config), Some(35900));
+    }
+}

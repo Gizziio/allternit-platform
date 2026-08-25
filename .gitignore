@@ -127,3 +127,9 @@ infrastructure/mesh/tsnet-ios/Harness/harness
 # Publication edition photos are pipeline artifacts and deploy with the site
 !surfaces/ai.allternit.com/public/images/editions/**/*.png
 .parity-reports-archive/
+
+# Desktop Cloud proof videos — keep markdown notes in git, store videos elsewhere
+# (they are multi-gigabyte screen recordings, not source code)
+docs/desktop-cloud-mvp/*.mp4
+docs/desktop-cloud-mvp/*.webm
+docs/desktop-cloud-mvp/*.mov

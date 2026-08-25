@@ -1,0 +1,21 @@
+[Unit]
+Description=Allternit API (Desktop Cloud)
+Documentation=https://docs.allternit.io
+After=network-online.target incus.service
+Wants=network-online.target
+
+[Service]
+Type=simple
+EnvironmentFile=/etc/allternit-api/api.env
+ExecStart=/opt/allternit-api/bin/allternit-api
+WorkingDirectory=/var/lib/allternit-api
+Restart=always
+RestartSec=5
+User=root
+Group=root
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=allternit-api
+
+[Install]
+WantedBy=multi-user.target

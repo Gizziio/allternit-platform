@@ -20,7 +20,7 @@ const logger = createModuleLogger('Agent');
 export type { AvatarConfig } from './character.types';
 
 // Agent Types
-export type AgentType = 'orchestrator' | 'sub-agent' | 'worker' | 'specialist' | 'reviewer';
+export type AgentType = 'orchestrator' | 'sub-agent' | 'worker' | 'specialist' | 'reviewer' | 'assistant';
 
 export type AppMode = 'chat' | 'cowork' | 'code' | 'design' | 'browser';
 
@@ -607,7 +607,7 @@ export const agentSchema = z.object({
   id: z.string().min(1),
   name: z.string().min(1).max(100),
   description: z.string(),
-  type: z.enum(['orchestrator', 'sub-agent', 'worker', 'specialist', 'reviewer']),
+  type: z.enum(['orchestrator', 'sub-agent', 'worker', 'specialist', 'reviewer', 'assistant']),
   parentAgentId: z.string().optional(),
   model: z.string().min(1),
   provider: z.enum(['openai', 'anthropic', 'google', 'local', 'custom']),
@@ -627,7 +627,7 @@ export const agentSchema = z.object({
   source: z.enum(['personal', 'vendor', 'organization']).optional(),
   avatar: z.any().optional(),
   characterLayer: z.any().optional(),
-  trustTier: z.enum(['safe', 'low', 'standard', 'elevated', 'admin', 'critical']).optional(),
+  trustTier: z.enum(['safe', 'low', 'standard', 'elevated', 'admin', 'critical', 'medium']).optional(),
   harness: harnessConfigSchema.optional(),
   allowedSurfaces: z.array(z.enum(['chat', 'cowork', 'code', 'design', 'browser'])).optional(),
   allowedSkills: z.array(z.string()).optional(),
@@ -789,7 +789,7 @@ export interface CreateAgentInput {
 const createAgentInputSchema = z.object({
   name: z.string().min(1).max(100),
   description: z.string(),
-  type: z.enum(['orchestrator', 'sub-agent', 'worker', 'specialist', 'reviewer']).optional(),
+  type: z.enum(['orchestrator', 'sub-agent', 'worker', 'specialist', 'reviewer', 'assistant']).optional(),
   parentAgentId: z.string().optional(),
   model: z.string().min(1),
   provider: z.enum(['openai', 'anthropic', 'google', 'local', 'custom']),
@@ -805,7 +805,7 @@ const createAgentInputSchema = z.object({
   source: z.enum(['personal', 'vendor', 'organization']).optional(),
   avatar: z.any().optional(),
   characterLayer: z.any().optional(),
-  trustTier: z.enum(['safe', 'low', 'standard', 'elevated', 'admin', 'critical']).optional(),
+  trustTier: z.enum(['safe', 'low', 'standard', 'elevated', 'admin', 'critical', 'medium']).optional(),
   harness: harnessConfigSchema.optional(),
   allowedSurfaces: z.array(z.enum(['chat', 'cowork', 'code', 'design', 'browser'])).optional(),
   allowedSkills: z.array(z.string()).optional(),

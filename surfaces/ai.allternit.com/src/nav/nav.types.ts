@@ -92,6 +92,8 @@ export type ViewType =
   | "budget-dashboard"
   | "replay-manager"
   | "prewarm-manager"
+  // Desktop-as-a-Service admin view
+  | "desktop-cloud"
   // Chat History views
   | "history"
   | "archived"

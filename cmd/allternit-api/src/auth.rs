@@ -44,6 +44,7 @@ use tracing::{error, info, warn};
 use crate::db::DbHandle;
 
 const DESKTOP_ACCESS_TOKEN_HEADER: &str = "x-allternit-desktop-access-token";
+const SELF_HOSTED_SETUP_TOKEN_HEADER: &str = "x-allternit-self-hosted-token";
 const USER_ID_HEADER: &str = "x-allternit-user-id";
 const USER_EMAIL_HEADER: &str = "x-allternit-user-email";
 const USER_NAME_HEADER: &str = "x-allternit-user-name";
@@ -687,6 +688,35 @@ fn extract_desktop_bootstrap_user(
     })
 }
 
+/// Self-hosted setup-token authentication. When a deployment has no Clerk
+/// tenant, the onboarding wizard proves it was bootstrapped by the operator by
+/// sending the one-time `ALLTERNIT_SELF_HOSTED_SETUP_TOKEN` in a header. This
+/// path is disabled unless both `self_hosted` is true and a setup token is
+/// configured.
+fn extract_self_hosted_setup_user(
+    headers: &HeaderMap,
+    config: &crate::config::AppConfig,
+) -> Option<AuthUser> {
+    if !config.self_hosted() {
+        return None;
+    }
+    let provided_token = extract_header_string(headers, SELF_HOSTED_SETUP_TOKEN_HEADER)?;
+    let expected_token = config.self_hosted_setup_token()?;
+    if !constant_time_eq(&provided_token, &expected_token) {
+        return None;
+    }
+    Some(AuthUser {
+        user_id: "self-hosted-admin".to_string(),
+        email: Some("admin@allternit.local".to_string()),
+        name: Some("Self-Hosted Admin".to_string()),
+        avatar_url: None,
+        tenant_id: Some(config.tenant_id()),
+        organization_id: None,
+        organization_role: None,
+        organization_slug: None,
+    })
+}
+
 /// Auth middleware — verifies Clerk JWT and adds user context to request headers.
 /// In local development, falls back to `x-allternit-user-id` header for testing.
 pub async fn auth_middleware(
@@ -707,7 +737,20 @@ pub async fn auth_middleware(
         return next.run(request).await;
     }
 
-    // 2. Cloud-issued runtime-device token (`Authorization: Bearer
+    // 2. Self-hosted setup token (onboarding wizard on a headless VPS).
+    if let Some(mut user) = extract_self_hosted_setup_user(request.headers(), &state.config) {
+        match ensure_user_in_db(&state.db, &user) {
+            Ok(organization_id) => user.organization_id = organization_id,
+            Err(e) => return e.into_response(),
+        }
+
+        let headers = request.headers_mut();
+        insert_user_headers(headers, &user);
+        request.extensions_mut().insert(user);
+        return next.run(request).await;
+    }
+
+    // 4. Cloud-issued runtime-device token (`Authorization: Bearer
     // allternit_runtime_…`), the same mechanism already proven for
     // `mcp_proxy_internal`/`/internal/*`. Introspected against
     // allternit-cloud-api; the token-derived user_id is the identity.
@@ -820,7 +863,7 @@ pub async fn auth_middleware(
         }
     }
 
-    // 4. Self-hosted / local-dev fallback: when the deployment is local and no
+    // 5. Self-hosted / local-dev fallback: when the deployment is local and no
     // cloud auth succeeded, trust the loopback origin as the default local user.
     // This keeps packaged apps and browser dev flows working without Clerk tokens.
     if (state.config.self_hosted() || state.config.local_dev_bypass())

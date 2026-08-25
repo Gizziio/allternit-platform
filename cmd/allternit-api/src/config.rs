@@ -364,6 +364,16 @@ impl AppConfig {
             .filter(|s| !s.is_empty())
     }
 
+    /// One-time setup token for self-hosted deployments. When configured, the
+    /// onboarding wizard can authenticate its save-config call by sending this
+    /// value in the `X-Allternit-Self-Hosted-Token` header, bypassing Clerk JWT
+    /// verification. `None` disables the path.
+    pub fn self_hosted_setup_token(&self) -> Option<String> {
+        std::env::var("ALLTERNIT_SELF_HOSTED_SETUP_TOKEN")
+            .ok()
+            .filter(|s| !s.is_empty())
+    }
+
     /// Secret used to sign enrollment tokens for user-profile consent URLs.
     /// Falls back to the platform encryption key so a packaged deployment has
     /// a stable secret without extra configuration; explicit value preferred.

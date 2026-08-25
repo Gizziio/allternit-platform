@@ -615,6 +615,97 @@ pub trait ExecutionDriver: Send + Sync + fmt::Debug {
             feature: "register native sandbox".to_string(),
         })
     }
+
+    /// Pull a file from the execution environment.
+    ///
+    /// Default implementation returns `NotSupported`; drivers with a guest file
+    /// API (Incus, Tart, etc.) should override this.
+    async fn pull_file(
+        &self,
+        _handle: &ExecutionHandle,
+        _path: &str,
+    ) -> std::result::Result<Vec<u8>, DriverError> {
+        Err(DriverError::NotSupported {
+            feature: "pull file".to_string(),
+        })
+    }
+
+    /// Push a file into the execution environment.
+    ///
+    /// Default implementation returns `NotSupported`; drivers with a guest file
+    /// API should override this.
+    async fn push_file(
+        &self,
+        _handle: &ExecutionHandle,
+        _path: &str,
+        _content: Vec<u8>,
+    ) -> std::result::Result<(), DriverError> {
+        Err(DriverError::NotSupported {
+            feature: "push file".to_string(),
+        })
+    }
+
+    /// Create a snapshot of the execution environment's disk state.
+    ///
+    /// Default implementation returns `NotSupported`.
+    async fn create_snapshot(
+        &self,
+        _handle: &ExecutionHandle,
+        _snapshot_id: &str,
+        _stateful: bool,
+    ) -> std::result::Result<(), DriverError> {
+        Err(DriverError::NotSupported {
+            feature: "snapshot".to_string(),
+        })
+    }
+
+    /// Restore the execution environment from a snapshot.
+    ///
+    /// Default implementation returns `NotSupported`.
+    async fn restore_snapshot(
+        &self,
+        _handle: &ExecutionHandle,
+        _snapshot_id: &str,
+    ) -> std::result::Result<(), DriverError> {
+        Err(DriverError::NotSupported {
+            feature: "snapshot restore".to_string(),
+        })
+    }
+
+    /// Delete a snapshot.
+    ///
+    /// Default implementation returns `NotSupported`.
+    async fn delete_snapshot(
+        &self,
+        _handle: &ExecutionHandle,
+        _snapshot_id: &str,
+    ) -> std::result::Result<(), DriverError> {
+        Err(DriverError::NotSupported {
+            feature: "snapshot delete".to_string(),
+        })
+    }
+
+    /// List snapshots of the execution environment.
+    ///
+    /// Default implementation returns `NotSupported`.
+    async fn list_snapshots(
+        &self,
+        _handle: &ExecutionHandle,
+    ) -> std::result::Result<Vec<SnapshotInfo>, DriverError> {
+        Err(DriverError::NotSupported {
+            feature: "snapshot list".to_string(),
+        })
+    }
+}
+
+/// Snapshot metadata for a desktop execution environment.
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+pub struct SnapshotInfo {
+    pub id: String,
+    #[serde(default)]
+    pub created_at: String,
+    #[serde(default)]
+    pub stateful: bool,
 }
 
 /// Protocol used for the remote desktop stream.

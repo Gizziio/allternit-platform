@@ -433,6 +433,9 @@ export function ChatComposer({
   const [composerFocused, setComposerFocused] = useState(false);
   const lastAgentFetchPulseRef = useRef<number | null>(null);
   const openClawDiscoveryRequestRef = useRef(0);
+  // Ref for the latest submitMessage so the voice-mode effect (declared
+  // lexically earlier) can call it without hitting the temporal dead zone.
+  const submitMessageRef = useRef<(rawText: string) => void>(() => {});
   const showAgentRailGuide = Boolean(
     agentModeSurface && agentModeSurface !== 'code',
   );
@@ -1167,7 +1170,7 @@ export function ChatComposer({
       return;
     }
 
-    void submitMessage(spokenInput);
+    submitMessageRef.current(spokenInput);
 
     setVoiceModeActive(false);
     clearVoiceTranscript();
@@ -1176,7 +1179,6 @@ export function ChatComposer({
     requiresAgentSelection,
     selectedSurfaceAgent,
     setInteractionMode,
-    submitMessage,
     voiceModeActive,
     voiceTranscript,
   ]);
@@ -1325,6 +1327,7 @@ export function ChatComposer({
     selectedSwarmSubMode,
     selectedTemplateTitle,
   ]);
+  submitMessageRef.current = submitMessage;
 
   const handleSubmit = async () => {
     if (!canSubmit) return;

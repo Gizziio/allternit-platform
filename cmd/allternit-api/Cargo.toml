@@ -34,9 +34,9 @@ allternit-gc-agents = { workspace = true }
 # Internal crates - Execution
 allternit-driver-interface = { path = "../../platform/contracts/driver-interface" }
 allternit-firecracker-driver = { path = "../../drivers/firecracker" }
-allternit-apple-vf-driver = { path = "../../drivers/apple-vf" }
 allternit-opensandbox-driver = { path = "../../drivers/opensandbox" }
 allternit-session-manager = { path = "../../services/session-manager" }
+allternit-computer-cloud = { path = "../../cmd/allternit-computer-cloud" }
 
 # WebSocket
 tokio-tungstenite = { workspace = true }
@@ -87,13 +87,12 @@ base64 = "0.22"
 # PDF Rendering dependencies
 printpdf = "0.6"
 
-[target.'cfg(target_os = "macos")'.dependencies]
-allternit-apple-vf-driver = { path = "../../drivers/apple-vf" }
-
 # Token counting
 tiktoken-rs = "0.12.0"
 
-# Testing
+[target.'cfg(target_os = "macos")'.dependencies]
+allternit-apple-vf-driver = { path = "../../drivers/apple-vf" }
+
 [dev-dependencies]
 axum-test = "14"
 tempfile = "3"

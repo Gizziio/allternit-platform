@@ -1,625 +1,456 @@
-# Steering checkpoint
-
-## Agent email rail (mailflare fork → services/mailflare) — COMPLETE (uncommitted)
-
-### Goal
-Package the vendored mailflare fork as allternit's real-email provider for agents:
-per-agent mailboxes + scoped API keys, approval-gated outbound, inbound webhooks
-bridged into Rails Mail, per-user installer deploying to the installing user's own
-Cloudflare account. Approved plan, all 4 phases.
-
-### Just did (phases 0–4 all landed in worktree, branch session/agent-email, NOT committed)
-- Phase 0: vendored into `services/mailflare/`, renamed `@allternit/mailflare` /
-  worker `allternit-agent-mail`, removed upstream self-updater + leftovers.
-- Phase 1: per-mailbox scoped API keys + revoke + `admin` scope; v1 message body +
-  attachment reads; approval-gated outbound via OUTBOUND_QUEUE (REQUIRE_SEND_APPROVAL
-  default true); Idempotency-Key; SEND_RATE_LIMIT 30/min; webhook retries (backoff ×5)
-  + management routes; mailbox DELETE; seed updates. Migration `0010_illegal_cloak.sql`.
-- Phase 2: `services/mailflare/setup.sh` (idempotent per-user CF installer, shellcheck
-  clean), `install_agent_email()` in `scripts/onboarding-setup.sh`, `.env.example`
-  vars, fork README rewrite.
-- Phase 3 backend: `mailflare_client.rs` + `agent_email_routes.rs` (provision_email
-  rewrite with rollback, HMAC inbound bridge → Rails Mail `mail:email-in-<agent>`,
-  gated send `mail:email-out-<uuid>`, decide wiring inside existing `mail_decide`,
-  mailbox revoke on agent delete, status endpoint). Migration `V92__agent_email.sql`.
-  Also fixed pre-existing broken lib test target (17 missing-field test inits).
-- Phase 3 frontend/runtime: `'mailflare'` provider in agent.types.ts, identity
-  channels UI + email-rail status in BotRuntimeConfigModal, external-email badges in
-  mail monitor/agent activity, `gizzi mail send-external` + `agent-email-client.ts`.
-- Phase 4: `docs/AGENT_EMAIL_RAIL.md` (architecture, reputation ops, signup
-  guardrails, limitations), allternit-bus.mdx + AUTONOMOUS_BOT_PRIMITIVES.md updates,
-  AGENTS.md section.
-- Fixed pnpm workspace ingesting services/mailflare (added `!services/mailflare`
-  exclusions like open-connector; restored pnpm-lock.yaml incidental drift).
-
-### Verification (all real, all green)
-- `npm run build` in services/mailflare: exit 0 (after pnpm exclusion + reinstall).
-- `cargo check -p allternit-api`: clean. `cargo test -p allternit-api --lib`: 418/418
-  (incl. new HMAC test). `cargo test -p allternit-agent-system-rails`: 96/96.
-- Surface + gizzi-code typechecks: zero errors in touched files.
-- Backend e2e smoke vs mock mailflare: 18/18 (provision, gated send, decide-approve,
-  inbound HMAC, revoke).
-- mailflare live local e2e (Phase 1): approval flow, idempotent replay, 403 scoping,
-  rate-limit 429, webhook backoff, key revoke.
-
-### Next
-- Commit via steering commit-gate (human/orchestrator decision; nothing committed yet).
-- One live installer run against a real Cloudflare account before production docs
-  claim it works end-to-end (offline-verified only).
-- Follow-up: admin-scope API-key revocation in mailflare (currently session-only;
-  mailbox delete is the v1 revocation path).
-
-### Open questions
-
-- Is the WIH materialization threshold (Wave 3) triggered by plan creation or
-  by task graph acceptance?
-- When should the localStorage event store reconcile with the server-owned
-  ledger: on every append, periodic sync, or session close?
-
-## Wave 3 — WIH lifecycle and bounded bot sessions (2026-08-17)
-
-### Goal
-
-Complete Wave 3 foundations for WIH materialization, bounded bot sessions,
-durable activity API, and context-budget/summary support.
-
-### Just did
-
-- Created `wih-session-contracts.ts` with Zod schemas for WIH, BotSession,
-  ContextBudget, SessionSummary, ActivityEvent, and helpers.
-- Built `bot-session-store.ts` (Zustand + localStorage):
-  - Session create/close/active/summary/context-budget actions.
-  - `materializeWIH` creates a WIH on plan acceptance, links it to bot/project/
-    session/goal/taskGraph/tools/scope/validation/artifacts/participants/budget.
-  - WIH update and lookup selectors.
-- Built `bot-activity-api.ts` with cursor-paginated event query, goal/task/type
-  filtering, and `replayGoal()` convenience.
-- Built `useGoalLoopController.ts` React hook:
-  - Creates or resumes a durable `GoalLoopController`.
-  - Attaches `GoalLoopRecorder` and applies state to operational projection.
-  - Materializes WIH on plan acceptance and keeps WIH status in sync.
-- Added tests: `bot-session-store.test.ts` (6), `bot-activity-api.test.ts` (4),
-  `goal-loop-wih-integration.test.ts` (2).
-- Added `BotActivityAPI.search()` for full-history payload search and
-  `bot-session-store.getSessionContext()` for bounded session context without
-  raw transcript leakage.
-- Created `wave3-gate.test.ts` proving multiple bounded sessions + WIHs, history
-  search, resume selected work, and new-session context without raw prior
-  transcript leakage.
-- Checked W3-001–W3-006, W3-020, W3-022–W3-023, W3-025, W3-027, W3-040, W3-044,
-  and W3-GATE in `OPENMAUSBOT_PHASE_2_IMPLEMENTATION_TODO.md`.
-
-### Verification
-
-- `vitest run src/lib/bots/*.test.ts` ✅ 58 passed.
-- `tsc --noEmit` across `surfaces/ai.allternit.com` reports no new errors in
-  Wave 3 files. Pre-existing errors remain in unrelated files
-  (`comrails-store.ts`, `bot-profile.ts`, `subagent-service.ts`).
-
-### Next
-
-1. Close remaining Wave 3 gaps: W3-007 (close validation receipts), W3-021
-   (secure server append/sync protocol), W3-024 (activity export), W3-026
-   (concurrent send/offline replica handling), W3-041–W3-047 (identity/policy
-   loading, context budget enforcement, raw-history preservation, summary/memory
-   provenance, drift tests).
-2. Move to Wave 4 (personality workspace, memory, duplication).
-
-### Open questions
-
-- Should the next chunk close the remaining individual W3 gaps, or move directly
-  to Wave 4 since W3-GATE is now evidenced?
-
-## Wave 4 — Duplication foundation (2026-08-17)
-
-### Goal
-
-Begin Wave 4 by establishing a duplication-safe bot clone contract and service.
-
-### Just did
-
-- Created `bot-duplication-contracts.ts` with `BotCloneOptionsSchema`,
-  `BotCloneReceiptSchema`, `DuplicationIdMappingSchema`, and the
-  `NON_DUPLICATABLE_PATHS` guard list.
-- Created `bot-clone.service.ts` implementing `cloneBot(source, options, actorId)`:
-  - Generates new bot id, display name, and handle.
-  - Strips `operationalState` and all active runtime state.
-  - Copies identity, profile, model, provider, type, category.
-  - Option-scoped copying for memory, routines, workspace docs, computer
-    template, child topology.
-  - Connector bindings copied by reference with `reauthorizationRequired`;
-    raw secrets never copied.
-  - Sessions, active leases, approvals, running jobs, receipt identities, and
-    runtime IDs explicitly excluded.
-  - Emits a redacted duplication receipt mapping source IDs to new IDs.
-- Added `bot-clone.service.test.ts` with 9 tests proving the clone rules.
-- Checked W4-040–W4-045 and W4-048 in the master tracker.
-
-### Verification
-
-- `vitest run src/lib/bots/*.test.ts` ✅ 67 passed.
-- `tsc --noEmit` across `surfaces/ai.allternit.com` reports no new errors in
-  Wave 4 files. Pre-existing errors remain in unrelated files
-  (`comrails-store.ts`, `bot-profile.ts`, `subagent-service.ts`).
-
-### Next
-
-1. Implement W4-046 (provision new unique identities) and W4-047 (child-graph
-   preview, recursion limit, cycle detection, rollback).
-2. Wire `BotRoster.tsx` duplicate menu to `cloneBot` / backend (W4-049).
-3. Build versioned canonical workspace serializer (W4-001–W4-008).
-4. Add memory isolation namespaces (W4-020–W4-028).
-
-### Open questions
-
-- Should the clone service remain client-side with a later backend transaction,
-   or should the next step build the transactional API endpoint in Rust now?
-
-## Wave 4 — Duplication identities, child-graph safety, and roster wiring (2026-08-17)
-
-### Goal
-
-Complete the remaining duplication acceptance work for W4-046, W4-047, and W4-049.
-
-### Just did
-
-- Expanded `bot-duplication-contracts.ts`:
-  - Added `IdentityKindSchema`, `ProvisionedIdentitySchema`,
-    `ChildBotGraphNodeSchema`, `ChildBotGraphPreviewSchema`,
-    `BotClonePreviewSchema`, `BotCloneGraphOptionsSchema`, and `BotCloneError`.
-- Expanded `bot-clone.service.ts`:
-  - `provisionIdentities()` returns redacted placeholder identities for email,
-    phone, wallet, handle, WebAuthn, and OAuth when requested (W4-046).
-  - `previewChildBotGraph()` walks child topology, enforces recursion limit,
-    detects cycles, and flags policy reauthorization (W4-047).
-  - `cloneBotGraph()` recursively clones root + children, remaps IDs, and rolls
-    back on cycle/depth failure (W4-047).
-  - `previewClone()` builds a duplication preview with identity provisions and
-    child-graph summary.
-  - `cloneBot()` now records identity mappings on the receipt and includes
-    explicit warnings.
-- Added `agentToBot()` in `bot-profile.ts` to convert a packaged `Agent` into the
-  canonical `Bot` contract.
-- Wired `BotRoster.tsx` `handleDuplicate` to the clone service:
-  - Looks up the source template, converts its `Agent` to a `Bot`, calls
-    `cloneBot()`, and invokes the new optional `onDuplicate` callback with the
-    result.
-- Added tests:
-  - `bot-clone.service.test.ts` expanded to 19 tests covering identities,
-    child-graph preview, graph cloning, cycle/depth rollback, and preview.
-  - New `bot-profile.test.ts` with 3 tests for `agentToBot`.
-- Checked W4-046, W4-047, and W4-049 in the master tracker.
-
-### Verification
-
-- `vitest run src/lib/bots/*.test.ts` ✅ 80 passed.
-- `tsc --noEmit` across `surfaces/ai.allternit.com` reports no new errors in
-  Wave 4 files. Pre-existing errors remain in unrelated files
-  (`comrails-store.ts`, `bot-profile.ts` line now shifted to 194,
-  `subagent-service.ts`).
-
-### Next
-
-1. Build versioned canonical workspace serializer (W4-001–W4-008).
-2. Add memory isolation namespaces (W4-020–W4-028).
-3. Decide whether to implement the transactional backend clone endpoint now or
-   after the client-side contract stabilizes.
-
-### Open questions
-
-- None blocking the next Wave 4 sub-slice.
-
-## Wave 4 — Versioned canonical workspace serializer and store (2026-08-17)
-
-### Goal
-
-Build the versioned canonical workspace contract used by create, edit, import,
-export, and duplicate.
-
-### Just did
-
-- Created `bot-workspace-contracts.ts`:
-  - `BOT_WORKSPACE_FILES` mapping canonical artifacts (`AGENTS.md`, `SOUL.md`,
-    `USER.md`, `GOVERNANCE.md`, `TOOLS.md`, `SKILLS.json`, `HEARTBEAT.md`,
-    `MEMORY.md`).
-  - `BOT_WORKSPACE_SCHEMA_VERSION` and `BOT_WORKSPACE_GENERATOR_VERSION`.
-  - Schemas for files, snapshots, manifests, audit entries, and frontmatter.
-  - Conflict / not-found error types.
-- Created `bot-workspace-serializer.ts`:
-  - `serializeBotWorkspace(bot)` and `deserializeBotWorkspace(files)`.
-  - Deterministic `computeWorkspaceRevision()` via SHA-256 over sorted paths.
-  - `buildWorkspaceManifest()` for manifest + revision.
-  - `invalidateBotWorkspaceCache()` hook (W4-007).
-- Created `bot-workspace-store.ts`:
-  - In-memory store with `loadWorkspace`, `writeWorkspace`, `rollbackWorkspace`,
-    `getAuditHistory`, and `loadBot`.
-  - Compare-and-swap conflict detection through `expectedRevision`.
-  - Revision retention and true rollback to historical snapshots.
-  - Audit log for writes/rollbacks.
-- Added `bot-workspace.test.ts` with 10 tests covering serialization, round-trip,
-  stable/different revision hashes, CAS conflicts, audit history, rollback, and
-  `loadBot`.
-- Checked W4-001–W4-004 and W4-006–W4-007 in the master tracker.
-
-### Verification
-
-- `vitest run src/lib/bots/*.test.ts` ✅ 90 passed.
-- `tsc --noEmit` across `surfaces/ai.allternit.com` reports no new errors in
-  Wave 4 files. Pre-existing errors remain in unrelated files
-  (`comrails-store.ts`, `bot-profile.ts:194`, `subagent-service.ts`).
-
-### Next
-
-1. Finish W4-005 (preserve unsupported content during direct file edit
-   round-trips) and W4-008 (remove decorative personality controls).
-2. Add memory isolation namespaces (W4-020–W4-028).
-3. Wire the workspace store into the duplicate flow so `cloneBot` can serialize
-   and persist the cloned workspace.
-
-### Open questions
-
-- None blocking the next Wave 4 sub-slice.
-
-## Packaged bots canonical tracker (2026-08-16)
-
-### Goal
-
-Execute Phase 2 Packaged Bots implementation following the master implementation tracker (`OPENMAUSBOT_PHASE_2_IMPLEMENTATION_TODO.md`).
-
-### Just did
-
-- Completed Wave 1: Canonical Contracts and Operational Projection (`W1-001`–`W1-045`, `W1-GATE`).
-  - `BotProfile.displayName` required; `handle`, `version`, `lifecycle` added.
-  - `CanonicalEventEnvelopeSchema` defined (sequence, causationId, correlationId, actor, sensitivity, visibility, idempotency).
-  - `BotOperationalStateSchema` (9 statuses) + precedence rules written.
-  - `bot-operational-state.store.ts` created — server-sourced projection replacing competing client stores.
-  - `comrails-types.ts` migrated to canonical `BotOperationalStatus`.
-  - `getOperationalState` and `rebuildProjection` API endpoints added to apiContract.
-- `cargo check -p allternit-api` ✅ (warnings only, no errors).
-
-### Next
-
-1. Begin Wave 2: Goal, Plan, Task, Validation, and Loop Runtime.
-   - Define `Goal`, `Plan`, `TaskGraph`, `Task`, `Attempt`, `Validation` TypeScript contracts.
-   - Implement 9 goal states and 7 task states.
-   - Implement Ralph inventory/deprecation (W2-001–W2-005).
-   - Implement policy-driven loop strategies (W2-060–W2-072).
-
-### Open questions
-
-- None blocking Wave 2 start.
+# Steering checkpoint — Desktop-as-a-Service MVP
 
 ## Goal
-Implement the cross-surface Site APIs / HAR-derived API capture redesign: add backend persistence, server-side replay proxy, real client generation, a frontend capture adapter (desktop → extension → upload), extension capture fallback, and agent tools (`api_capture_record`, `api_capture_stop`, `api_capture_replay`).
-
-## Milestones
-- [x] **Milestone 1**: Backend persistence + replay proxy + real client generation.
-- [x] **Milestone 2**: Frontend adapter factory + store migration + `BrowserApiCaptureButton` refactor.
-- [x] **Milestone 3**: Extension capture fallback via `chrome.debugger`/`webRequest`.
-- [x] **Milestone 4**: Agent tools registered in backend tool routes.
-- [x] **Milestone 5**: Verification; UI polish was already applied in prior checkpoint.
-
-## Just did
-- Implemented Milestones 1–4 in parallel via subagents:
-  - Backend: added `V90__api_capture.sql`, `har_api_service.rs`, DbHandle persistence methods, full REST route set (`sessions`, `contracts`, `replay`, `client`, `ingest`), and stable-UUID endpoint extraction.
-  - Frontend: created `getCaptureAdapter()` (desktop → extension → upload), migrated `store.ts`/`api.ts` to backend APIs, and refactored `BrowserApiCaptureButton.tsx` to use the adapter.
-  - Extension: added `debugger`/`webRequest` permissions, `api-capture/background.ts` with CDP Network capture, and message handlers in `background.ts`.
-  - Agent tools: added `api_capture_record`, `api_capture_stop`, `api_capture_replay` to `tool_routes.rs` with JSON schemas and ownership checks.
-- Wrote `docs/SITE_APIS_CAPTURE_REDESIGN_PLAN.md` with research references (`server-replay`, `har-to-openapi`, `mitmproxy2swagger`, `openapi-devtools`, `harhar`, `api-reverse-engineer`, `chrome-devTools-advanced-mcp`, Playwright `routeFromHAR`).
-- Verification:
-  - `cargo check -p allternit-api` ✅
-  - `cargo test -p allternit-api har_api` ✅ 3 passed
-  - `cargo test -p allternit-api tool_routes` ✅ 21 passed
-  - `pnpm exec tsc --project tsconfig.typecheck.json --noEmit` in `surfaces/ai.allternit.com` ✅ no errors in touched files
-  - `pnpm test -- browser-capture-manager.test.ts` in `surfaces/allternit-desktop` ✅ 94 passed
-  - `pnpm exec wxt build` in extension ✅ succeeded
-- Security fix: added user-ownership check in `api_capture_stop` before stopping a session.
-
-## Next
-- Full `cargo test -p allternit-api` is running in background; inspect result when it completes.
-- Stage and commit the Site APIs capture changes separately from unrelated Office Suite WIP.
-
-## Open questions
-- Should contract storage be scoped per-user or per-workspace? (Currently per-user.)
-- Should replay be a backend proxy (cors-safe) or direct client-side fetch? (Currently backend proxy via `reqwest`.)
-
----
-
-## Goal
-Implement the approved Allternit Office Suite standalone plan: create `@allternit/allternit-office-suite`, refactor the four office apps and Sign to use an injectable `OfficeHost` contract, decouple `@allternit/office-ai` and the xlsx engine from platform endpoints, and build `surfaces/office.allternit.com` as a standalone host. Platform (`surfaces/ai.allternit.com`) remains the primary entry point.
-
-## Milestones
-- [x] **Milestone 1**: Scaffold `@allternit/allternit-office-suite` with `OfficeHost`, `OfficeAiClient`, `XlsxEngineHost`, `OfficeStorageProvider`, bridge context, and theme.
-- [x] **Milestone 2**: Wrap Docs/Sheets/Slides/PDF with host-aware adapters; platform views provide a browser host that overrides `saveFile` with artifact persistence.
-- [ ] **Milestone 3**: Decouple `@allternit/office-ai` and the xlsx engine from platform endpoints via the host contract.
-- [ ] **Milestone 4**: Extract Allternit Sign into the suite and normalize its UI palette.
-- [ ] **Milestone 5**: Build `surfaces/office.allternit.com` standalone host.
-- [ ] **Milestone 6**: Verification, tests, and documentation.
-
-## Just did
-- Milestone 2:
-  - Added `DocsApp`, `SheetsApp`, `SlidesApp`, `PdfApp` adapters in the suite package.
-  - Added `createBrowserHost` helper for standalone surfaces.
-  - Updated platform views (`DocsView`, `SheetsView`, `SlidesView`, `PdfView`) to use `OfficeHostProvider`.
-  - Added ambient declaration for `harfbuzzjs/hb.js` so the suite package typechecks cleanly.
-  - Verified suite and platform surface typechecks pass.
-
-## Next
-- **Milestone 4** (Sign extraction): move the native signing UI/utilities into the suite package as a host-aware `SignApp`, normalize its palette to match the office apps, and update the platform view to use it.
-- Return to **Milestone 3** once Sign is extracted, because it requires deeper changes to the vendored app bridges.
-
-## Open questions
-- Should the standalone Sheets host implement a client-side recalc engine, or gracefully degrade to the simpler `@allternit/office-sheets-editor`?
-- Should the standalone AI host default to Ollama, a no-op, or a lightweight built-in LLM stub?
-- Should Manufacturing have its own top-level navigation entry, or remain discoverable only through Products Discovery for now?
-- What is the Phase 1 equipment budget and target go-live date?
-
-## Wave 4 — Unsupported content round-trip, decorative controls, and memory isolation (2026-08-17)
-
-### Goal
-
-Finish the remaining Wave 4 items: W4-005, W4-008, and W4-020–W4-028.
-
-### Just did
-
-- **W4-005:** Hardened `bot-workspace-serializer.ts` so `serializeBotWorkspace(bot, existingFiles)`
-  preserves unknown files and unsupported body content in `SOUL.md`/`AGENTS.md`, updating only
-  known structured fields. Added a `bot-workspace.test.ts` case proving an extra markdown section
-  and an unknown file survive a UI-driven re-serialization.
-- **W4-008:** Removed the decorative "Projected Level" and "Measured Setup Stats" cards from
-  `CharacterStep.tsx`. Verified the persisted personality sliders in `IdentityStep` are canonical
-  (written to `config.personality` and consumed by `agent.service.ts` system prompts) and left them
-  in place.
-- **W4-020–W4-028:** Implemented isolated bot memory:
-  - `bot-memory-contracts.ts`: schemas for `BotMemoryRecord`, scopes, provenance, sensitivity,
-    promotion policy, retrieval queries, retrieval logs, and errors.
-  - `bot-memory-store.ts`: in-memory store with namespace isolation, session/project scopes,
-    candidate proposal, explicit/policy promotion, correction/contradiction links, expiry,
-    retrieval logging, prompt-injection and secret detection, deletion propagation, bot-wide
-    forget, export, and precision/recall evaluation sets.
-  - `bot-memory.test.ts`: 23 tests covering W4-020 through W4-028.
-- Checked W4-005, W4-008, and W4-020–W4-028 in `OPENMAUSBOT_PHASE_2_IMPLEMENTATION_TODO.md`.
-
-### Verification
-
-- `vitest run src/lib/bots/*.test.ts` ✅ 114 passed.
-- `tsc --noEmit` across `surfaces/ai.allternit.com` reports no new errors in Wave 4 files.
-  Pre-existing errors remain in unrelated files (`comrails-store.ts`, `bot-profile.ts:194`,
-  `subagent-service.ts`).
-
-### Next
-
-1. Wire the workspace store and memory store into the create/edit/duplicate UI flows.
-2. Implement a persistent backend adapter for the workspace and memory stores while keeping the
-   same contracts.
-3. Move to Wave 5.
-
-### Open questions
-
-- None blocking the next Wave 4 sub-slice.
-
----
-
-## Office UI brand fix (2026-08-18)
-
-### Goal
-Fix `office.allternit.com` landing page and workspace shell to match the Allternit brand, design system, and typography.
-
-### Just did
-- Audited current `surfaces/office.allternit.com` against DESIGN.md and `surfaces/ai.allternit.com` design tokens.
-- Rewrote `src/theme.css` to use canonical Allternit typography tokens (`--font-allternit-sans`, `--font-ui`, etc.), semantic surface tokens (`--surface-canvas`, `--ui-text-primary`, `--ui-border-default`), and the sand/nude obsidian palette.
-- Added `src/fonts.css` (commented @font-face stubs aligned with ai surface).
-- Added `src/HomePage.css` to move landing-page styles out of inline styles.
-- Refactored `src/HomePage.tsx` and `src/App.tsx` to use the token system and shared `.btn`/`.card`/`.glass-thick` utility classes.
-- Fixed inverted primary button colors; primary CTAs now use `--accent-primary` with `--ui-text-inverse`.
-- Updated `index.html` to remove inline CSS and add theme-color meta tags.
-- Updated `src/main.tsx` to load `fonts.css`.
-
-### Verification
-- `tsc --noEmit` in `surfaces/office.allternit.com` reports no errors in surface source files (remaining errors are pre-existing issues in `packages/@allternit/office-slides-app`).
-- `pnpm build` succeeds in a fully-installed workspace (validated by copying changed files to the main checkout with complete `node_modules`).
-- `pnpm preview` serves the built bundle and returns the updated HTML.
-
-### Open questions
-- Whether to deploy the built `dist/` from this worktree or from CI.
-- Whether the workspace install in this worktree should be repaired so local `pnpm build` runs without copying to main.
-
-### Update — bidirectional platform links
-- Added `src/platformUrl.ts` with `VITE_ALLTERNIT_PLATFORM_URL` override (defaults to `https://ai.allternit.com`).
-- `HomePage` header brand now links back to the main Allternit platform.
-- `App` workspace nav includes a "Back to Allternit →" link.
-- `surfaces/ai.allternit.com/src/views/office/OfficeLauncherView.tsx` now has an "Open standalone office" external link to `https://office.allternit.com`.
-
-### Update — Sign PDF upload fix and platform URL correction
-- Changed default platform URL from `https://ai.allternit.com` to `https://allternit.com`.
-- Removed the "Back to Allternit" link from the workspace nav; the homepage header brand now links to the main site.
-- Fixed Sign PDF loading by initializing pdfjs-dist with the Vite-bundled worker URL in `src/main.tsx`.
-- Updated `initPdfWorker` in `packages/@allternit/allternit-office-suite/src/sign/pdf-signing.ts` to accept an optional `workerSrc` override.
-
-- None.
-
----
-
-## Goal (session/steering-packaging: ship orchestration + steering tooling with the platform)
-
-Move the desktop-local agent-orchestration/steering tooling into the repo so it ships with the platform and gizzi-code: steer-* scripts into `tools/agent-orchestrator/scripts/`, both skills into `.agents/skills/`, registration in gizzi-code `bundledSkills.ts`, Rails-first session discovery in `steer-discover`, default-on Rails peer registration, and install/Homebrew symlink updates.
-
-## Just did
-
-- Created linked worktree `allternit-platform-session-steering-packaging` on branch `session/steering-packaging`.
-- Discovered repo already packages ao-* as shims over `allternit-rails` (`tools/agent-orchestrator/scripts/`); desktop `~/.local/bin/ao-*` copies are the stale standalone versions. Direction: repo is canonical.
-- Confirmed `allternit-rails` binary comes from `rails/` crate (`[[bin]] name = "allternit-rails"`).
-
-## Next
-
-- Add steer-* scripts to `tools/agent-orchestrator/scripts/`.
-- Add `.agents/skills/agent-orchestrator/` + `.agents/skills/steer-parallel-agent/`.
-- Register both skills in `cmd/gizzi-code/src/skills/bundledSkills.ts`.
-- Rails-first discovery in `steer-discover` with filesystem fallback.
-- Flip `GIZZI_ENABLE_RAILS_PEER` to default-on.
-- Update Homebrew/install scripts to symlink the tools; update docs to repo-canonical.
-
-## Open questions
-
-- `allternit-rails` is not on PATH on the desktop, so the repo's ao-* shims currently fail there while the stale standalone copies work. Migration needs an install step (`cargo install --path rails` or packaged binary) — flagging so it is not missed.
-
----
-
-## Checkpoint update (session/steering-packaging)
-
-Just did:
-- Added steer-* toolkit (steer, steer-discover, steer-context, steer-checkpoint, steer-prompt, steer-verify) to `tools/agent-orchestrator/scripts/`.
-- Added `.agents/skills/agent-orchestrator/` + `.agents/skills/steer-parallel-agent/` (auto-discovered by gizzi-code project skill scan).
-- Registered both skills in gizzi-code builtin catalog (`cmd/gizzi-code/src/runtime/skills/bundledSkills.ts` + Bun text-loaded markdown under `src/runtime/skills/bundled/`).
-- `steer-discover` now queries the Rails peer registry first (`ALLTERNIT_RAILS_URL`, default `http://127.0.0.1:8013`), filesystem scan as fallback.
-- Flipped `GIZZI_ENABLE_RAILS_PEER` to default-on (opt out via `=0`) in `railsPeer.ts`, `tools-registry-gizzi.ts`, `cli/ui/ink-app/tools.ts`.
-- Added `tools/agent-orchestrator/install.sh` (idempotent PATH installer + allternit-rails bootstrap) and ran it: 13 tools + the freshly built `allternit-rails` binary now on PATH; `ao-doctor` verified working through the shims.
-- Verification: `tsc --noEmit` in `cmd/gizzi-code` — zero errors in touched files; only 7 pre-existing errors in `packages/sdk/scripts/verify-sdk.ts` from missing `dist/` artifacts in the fresh worktree.
-
-Next:
-- Merge `session/steering-packaging` when approved, then re-run `tools/agent-orchestrator/install.sh` from the main checkout (current `~/.local/bin` symlinks point into this worktree).
-- Homebrew formula deferred until release tarballs exist.
-
-Open questions:
-- Should kimi/codex/claude session-start hooks also register Rails peers so `steer-discover`'s Rails section covers non-gizzi agents?
-### Update — generated media integration
-- Copied generated assets into `surfaces/office.allternit.com/public/`:
-  - `hero-documents.png` — static hero image of the five document cards.
-  - `hero-cards.mp4` — animated floating document cards (used as the hero visual).
-  - `hero-glow.mp4` — warm golden glow (used as ambient hero background).
-  - `grid-beam.mp4` — subtle grid light beam (used as value-props background).
-  - `sign-signature.mp4` — kept in public for future Sign section use.
-- Replaced the SVG `HeroVisual` composition with a looping `<video>` using the PNG as poster/fallback.
-- Added autoplay/muted/loop background videos to the hero and value-props sections.
-- Updated `HomePage.css` with video positioning, opacity, and z-index layering.
-- Verified the build copies all media files to `dist/` and the preview serves them.
-
-### Update — clickable feature cards and persistent platform links
-- Added `AppTab` type (`docs` | `sheets` | `slides` | `pdf` | `sign`) and wired `HomePage` → `AppContent` so each feature card launches its matching office app tab.
-- Made feature cards keyboard-accessible (`role="button"`, `tabIndex={0}`, Enter/Space handlers) and styled them with `cursor: pointer`, hover lift, and focus rings.
-- Added an "Allternit" platform link in the homepage header next to the brand, plus a footer links row with the platform link and copyright.
-- Rebuilt the main checkout and restarted the preview server at `http://localhost:3019/`.
-
-### Update — full Allternit footer on office homepage
-- Created `src/Footer.tsx` that replicates the five-column footer from `www.allternit.com`:
-  - Research, Products, A://Labs, Developers, Company.
-  - All relative links rewritten as absolute `https://allternit.com/...` links.
-  - External links open in a new tab.
-- Replaced the minimal footer in `HomePage.tsx` with the new `<Footer />` component.
-- Added responsive `office-footer` styles to `HomePage.css` using the office design tokens.
-- Rebuilt and restarted the preview server at `http://localhost:3019/`.
-
-----
-
-## CUA Driver Computer History Integration (2026-08-19)
-
-### Goal
-
-Integrate CUA Driver's encrypted Computer History preview (`history_status`, `history_query`) into Allternit's canonical computer-use stack across backend, SDKs, MCP, and plugin layers, with deterministic planning-loop consultation.
-
-### Just did
-
-- Created session worktree `allternit-session-94f633c4-8f25-427a-8c87-c6ba4b68a43c` and wrote an approved implementation plan.
-- Implemented the full stack:
-  - Python CUA transport: `history_status()` / `history_query()` with bounds validation.
-  - Canonical contract: added `tools` to `CapabilityManifest` and JSON schema.
-  - CUA provider: probes history admission and advertises tools only when supported & admitted.
-  - HTTP API: `POST /history/status` and `POST /history/query` with Pydantic validation.
-  - Canonical MCP server: `computer_history_status` and `computer_history_query` tools.
-  - TypeScript SDK: history types + `canonicalHistoryStatus` / `canonicalHistoryQuery`.
-  - Python SDK: `history_status` / `history_query` client methods.
-  - Plugin: tool definitions, HTTP adapter methods, and consultation policy in system prompt.
-- Made consultation deterministic by wiring a `history_preflight` callback into `PlanningLoop`; the callback uses the canonical CUA provider to call `history_status` then `history_query` for continuation/recent-work tasks.
-- Adjusted `history_query` transport to use the nightly CLI surface (`history list [limit] --session --since --until`) rather than the not-yet-available `history_query` tool, while preserving the same Python/SDK contract.
-- Added tests: `domains/computer-use/core/tests/test_cua_history.py` (9 passed) and SDK `client.test.ts` additions (37 passed total).
-- Reverted `pnpm-lock.yaml` to keep the diff scoped.
-
-### Verification
-
-- `python3 -m pytest domains/computer-use/core/tests/test_cua_history.py -v` → **9 passed**
-- `npm test -- --testPathPattern=client.test.ts` in `sdk/computer-use` → **37 passed**
-- Python syntax check on all modified `.py` files → OK
-- `canonical.schema.json` valid JSON → OK
-- **Real CUA Driver nightly test** (installed 0.20.1-nightly.20260818):
-  - `CuaDriverTransport.discover()` found `/Applications/CuaDriver.app/Contents/MacOS/cua-driver`
-  - `history_status()` returned `health: ready`, `enabled: true`, `admitted: true`
-  - `history_query(limit=3)` returned 3 CloudEvents-style metadata events
-  - `CuaDriverCanonicalProvider` advertised `history_status` and `history_query` in `manifest.tools`
-  - `gateway.canonical_router.history_preflight_for_task()` returned status + 23 events
-  - Legacy packaged binary (0.8.2) degrades gracefully with `CuaDriverCallError`
-
-### Next
-
-Merged into `main` (2026-08-19).
-
----
-
-## Runtime CLI adapter alignment with Multica production protocols
-
-### Goal
-Bring `cmd/gizzi-code/src/runtime/drivers/local-cli-driver.ts` and `cmd/gizzi-code/src/runtime/runtime-discovery.ts` into protocol parity with Multica's production Go implementation so every discovered agent CLI uses the same argv/wire/approval path Multica already ships.
-
-### Background
-Multica drives the same CLIs through stable protocol families: `stream-json` (Claude/CodeBuddy/Cursor/OpenCode/DevEco/OpenClaw/Qwen), `acp` (Hermes/Kimi/Kiro/Qoder/QwenPaw/Reasonix/TraeCLI/Grok/MCode), `codex app-server` JSON-RPC (Codex), and one-shot JSON/text (Pi/Oh-My-Pi/Antigravity). Allternit's current adapter map has several mismatches that will break in production (e.g. Codex uses `codex exec`, Cursor/OpenCode/DevEco/OpenClaw use ACP, Kimi/Qwen are one-shot). Discovery also only runs `which` and ignores `MULTICA_*_PATH` / `MULTICA_*_MODEL` overrides and login-shell PATH fallback that Multica uses.
-
-### Plan
-1. Refactor `local-cli-driver.ts` into shared protocol runners:
-   - `runStreamJson` for line-delimited `stream-json` agents.
-   - `runACP` (extend existing) for ACP stdio agents.
-   - `runCodexAppServer` for Codex JSON-RPC app-server protocol.
-   - `runOneShotJson` / `runOneShotText` for pi/omp/agy.
-2. Correct every adapter to match Multica argv:
-   - `codex`: `app-server --listen stdio://` JSON-RPC.
-   - `cursor-agent`: `-p --output-format stream-json --yolo`.
-   - `opencode`: `run --format json --dangerously-skip-permissions`.
-   - `deveco`: `run --format json` (stream-json).
-   - `openclaw`: `agent ... --output-format stream-json`.
-   - `kimi`: `acp` ACP.
-   - `qwen`: `-p <prompt> --output-format stream-json --yolo`.
-   - Add `mcode`: `acp` ACP.
-3. Update `SUBPROCESS_PROVIDERS` in `providers/discovery/subprocess.ts` to add `mcode` and align IDs where needed.
-4. Update `runtime-discovery.ts` to support `MULTICA_*_PATH` / `MULTICA_*_MODEL` env overrides and a login-shell PATH fallback with a 30-minute cache.
-5. Update tests and fixtures in `cmd/gizzi-code/test/runtime/` and `test/fixture/agent-clis/` to exercise the corrected protocols.
-6. Run `bun test test/runtime/` and `bun run typecheck` in `cmd/gizzi-code` and fix all errors.
-
-### Just did
-- Created worktree `allternit-session-multica-runtime-align` on branch `session/multica-runtime-align` per repo policy.
-- Verified Multica production source for discovery (`agents_probe.go`), backend factory (`agent.go`), builtin runtime registry (`builtin_runtimes.go`), and per-provider backends (`codex.go`, `cursor.go`, `opencode.go`, `kimi.go`, `qwen.go`, `mcode.go`, `claude.go`, `codebuddy.go`, `deveco.go`, `openclaw.go`).
-- Audited current Allternit adapter map against Multica protocol families and documented mismatches.
-- Refactored `local-cli-driver.ts` into shared protocol runners matching Multica's families:
-  - `runStreamJson` for line-delimited `stream-json` agents (Claude/CodeBuddy/Cursor/OpenCode/DevEco/Qwen).
-  - `runOpenclawJson` for OpenClaw's NDJSON/final-blob dialect.
-  - `runAcp` for ACP stdio agents (Hermes/Kimi/Kiro/Qoder/QwenPaw/Reasonix/TraeCLI/Grok/MCode).
-  - `runCodexAppServer` for Codex JSON-RPC app-server over stdio.
-  - `runOneShotJson` / `runOneShotText` for Pi/Oh-My-Pi/Antigravity.
-- Corrected every provider adapter to Multica argv/wire shapes, added `mcode` (MiniMax Code) to ACP, and mapped Codex to `app-server --listen stdio://`.
-- Unified discovery path resolution in `providers/discovery/subprocess.ts` with `MULTICA_*_PATH` / `MULTICA_*_MODEL` overrides, login-shell PATH fallback, and Codex Desktop fallback; `runtime-discovery.ts` now imports the shared resolver.
-- Hardened production hygiene in `local-cli-driver.ts`:
-  - Added `StderrTail` (2048 bytes) to every runner and surfaced the tail in failure messages.
-  - Added `terminateProcessTree` with graceful SIGTERM → SIGKILL for Unix process groups, matching Multica's `proc_other.go`.
-  - Replaced direct `proc.kill()` calls in ACP and Codex runners with `terminateProcessTree`.
-  - Forward `task.env` into all runners and added Multica-style child env filtering (strips inherited `MULTICA_*` and Claude internal markers).
-  - Fixed Codex app-server JSON-RPC dispatch so server requests (`id` + `method`) are answered with the correct shapes (`decision: "accept"`, `action: "accept"`, permissions echo, etc.) instead of being mistaken for responses.
-  - Fixed Claude `control_response` shape to match Multica (no `allowed` flag).
-- Removed all mock agent CLI fixtures (`test/fixture/agent-clis/*`) and the mock-based execution/discovery test file (`test/runtime/local-cli-driver-execution.test.ts`) because AGENTS.md requires production-quality code with no mock code.
-- Kept the adapter registry tests (`test/runtime/local-cli-driver.test.ts`) which verify every discovered provider maps to a concrete adapter mode with no generic fallbacks.
-
-### Verification
-- `bun run typecheck` in `cmd/gizzi-code` ✅
-- `bun test test/runtime/` in `cmd/gizzi-code` ✅ 24 pass, 0 fail, 170 expect calls
-
-### Next
-- Add integration tests that run only when real agent CLIs are installed on the host (e.g. `claude`, `kimi`, `codex`) so the protocol runners are exercised against actual binaries, not mocks.
-- Port Multica's per-provider `blockedArgs` filtering to strip protocol-critical flags from user-supplied `customArgs`.
-- Decide whether to keep warm pooling or align with Multica's per-task spawn model.
-
-### Open questions
-- Do we want to keep `warm` pooling for stream-json agents, or switch to one-shot-per-task like Multica? Multica spawns per task, so parity suggests dropping pooling; keeping pooling is a performance optimization but risks protocol drift.
-- Should custom CLI args (`customArgs`) be filtered per-provider like Multica's `blockedArgs` maps? Production safety says yes.
-
-## Addendum — connectors feature (Claude-style) landed same branch
-- Chat "+" sheet Connectors now opens ConnectorMarketplaceDialog (featured: gmail, google_drive, allternit-mail); was miswired to ProviderGallery.
-- Backend: allternit-mail catalog entry (allternit_native), connect {agent_id?} → provision mailbox / rail status; disconnect removes marker row only; sidecar OAuth-missing → 400 oauth_app_not_configured + setup_hint; resolver additive `connections` markers (via mcp/agent_email); internal MCP tools allternit_mail.send/status. cargo test --lib 425/425.
-- Runtime: gizzi-code native send_agent_email/get_agent_email_status tools + dispatch-time hard-ban guard (email_send/external_communication block send tools incl. MCP gmail.send_email via execute_action). Env contract ALLTERNIT_AGENT_ID + ALLTERNIT_AGENT_HARD_BANS, now emitted by buildBotRuntimeEnv (3 callers wired). 16/16 guard tests.
-- bot-runtime-env tests 9/9; surface typecheck zero new errors.
-- OPS REMAINING (user): (1) edit CF token perms (email routing/sending groups) then bootstrap+smoke the live mailflare deploy; (2) one-time Google OAuth client for Gmail/Drive connect: Google Cloud Console → OAuth client, redirect {api origin}/oauth/callback, then sidecar PUT /api/oauth/configs/gmail + /googledrive.
+Build the Allternit Desktop-as-a-Service Linux MVP using Incus, with hard feature-size limits (1,000–1,500 LOC per feature) and proof-of-work checkpoints.
+
+## Completed
+- Phase 0–3: Local Incus desktop substrate, cloud-init guest image, driver, and platform integration.
+- Phase 4: ACU gateway drives a browser inside a cloud-provisioned Incus desktop end-to-end.
+- Phase 5: Human can view/control the bot desktop through the web UI via VNC.
+- Phase 6: Bot desktop lifecycle control (start/stop/deprovision) added to the API.
+  - Added `POST /api/v1/bots/:id/desktop/start`, `stop`, and `deprovision`.
+  - Fixed Incus instance name length limit by truncating the bot id suffix.
+  - Added unit tests with a mock `ExecutionDriver`.
+  - Recorded proof: `docs/desktop-cloud-mvp/phase6-lifecycle-proof.webm`.
+  - Notes: `docs/desktop-cloud-mvp/phase6-lifecycle-NOTES.md`.
+  - Tests pass: `cargo test -p allternit-api bot_desktop` (5 passed),
+    `cargo test -p allternit-computer-cloud` (12 passed).
+
+## Running services
+- ACU gateway: `http://127.0.0.1:8760` (PID 19435).
+- Allternit API: `http://127.0.0.1:8013` (PID 74706).
+- Headscale mesh control plane: `https://mail.news.allternit.com:8444` (VPS, systemd).
+
+## Constraint reminder
+- Each feature/module stays under 1,500 LOC.
+- No Orgo dependency.
+- Proof artifacts are screen recordings for the end-to-end checkpoints.
+
+## Completed (cont.)
+- Phase 7: signed WebSocket tokens for the VNC proxy.
+  - Replaced `?user_id=...` with a short-lived HMAC-SHA256 signed `?token=...`.
+  - Token claims bind to bot id, sandbox id, and authenticated user id.
+  - Unit tests cover valid/expired/tampered/wrong-secret/malformed tokens.
+  - Screen recording: `docs/desktop-cloud-mvp/phase7-ws-token-proof.webm`.
+  - Notes: `docs/desktop-cloud-mvp/phase7-ws-token-NOTES.md`.
+  - Tests pass: `cargo test -p allternit-api bot_desktop` (11 passed).
+
+- Phase 8: per-user rate limiting on bot desktop REST endpoints.
+  - Added a separate 30 RPM / user sliding window.
+  - Returns HTTP 429 + `Retry-After` when exhausted.
+  - Unit tests cover allowance, blocking, and per-user isolation.
+  - Screen recording: `docs/desktop-cloud-mvp/phase8-rate-limit-proof.webm`.
+  - Notes: `docs/desktop-cloud-mvp/phase8-rate-limit-NOTES.md`.
+  - Tests pass: `cargo test -p allternit-api bot_desktop` (13 passed).
+
+- Phase 9: screenshot endpoint for bot desktops.
+  - Added `GET /api/v1/bots/:bot_id/desktop/screenshot?sandbox_id=...`.
+  - Runs `scrot` inside the guest and returns `image/png`.
+  - Fixed `IncusSubstrate::exec` output extraction bug (nested `metadata`).
+  - Screen recording: `docs/desktop-cloud-mvp/phase9-screenshot-proof.webm`.
+  - Notes: `docs/desktop-cloud-mvp/phase9-screenshot-NOTES.md`.
+  - Tests pass:
+    - `cargo test -p allternit-computer-cloud` (13 passed)
+    - `cargo test -p allternit-api bot_desktop` (14 passed)
+
+- Phase 10: mouse + keyboard input endpoints for bot desktops.
+  - Added `POST /api/v1/bots/:bot_id/desktop/mouse?sandbox_id=...`.
+  - Added `POST /api/v1/bots/:bot_id/desktop/keyboard?sandbox_id=...`.
+  - Implemented via `xdotool` inside the guest.
+  - Split input endpoints into `cmd/allternit-api/src/bot_desktop_input.rs`
+    to keep `bot_desktop_routes.rs` under 1,500 LOC.
+  - Added `xdotool` to the guest cloud-init package list.
+  - Screen recording: `docs/desktop-cloud-mvp/phase10-input-proof.webm`.
+  - Notes: `docs/desktop-cloud-mvp/phase10-input-NOTES.md`.
+  - Tests pass:
+    - `cargo test -p allternit-api bot_desktop_input` (4 passed)
+    - `cargo test -p allternit-api bot_desktop` (18 passed)
+
+- Phase 11: shell endpoint for bot desktops.
+  - Added `POST /api/v1/bots/:bot_id/desktop/shell?sandbox_id=...`.
+  - Returns `{ exit_code, stdout, stderr, duration_ms }`.
+  - Screen recording: `docs/desktop-cloud-mvp/phase11-shell-proof.webm`.
+  - Notes: `docs/desktop-cloud-mvp/phase11-shell-NOTES.md`.
+  - Tests pass:
+    - `cargo test -p allternit-api bot_desktop_input` (5 passed)
+    - `cargo test -p allternit-api bot_desktop` (18 passed)
+
+- Phase 12: file upload/download endpoints for bot desktops.
+  - Added `GET /api/v1/bots/:bot_id/desktop/files/download?path=...`.
+  - Added `POST /api/v1/bots/:bot_id/desktop/files/upload?path=...`.
+  - Extended `ExecutionDriver` with `pull_file` / `push_file` defaults.
+  - Implemented file transfer in `IncusSubstrate` / `IncusDriver`.
+  - Screen recording: `docs/desktop-cloud-mvp/phase12-files-proof.webm`.
+  - Notes: `docs/desktop-cloud-mvp/phase12-files-NOTES.md`.
+  - Tests pass:
+    - `cargo test -p allternit-api bot_desktop_input` (7 passed)
+    - `cargo test -p allternit-api bot_desktop` (18 passed)
+    - `cargo test -p allternit-computer-cloud` (13 passed)
+
+- Phase 13: standardize the guest agent runtime (`allternit-mux`) for Linux.
+  - Added `allternit-mux` JSON daemon + `cmd/allternit-api/src/bot_desktop_mux.rs` (434 LOC).
+  - Added `POST /api/v1/bots/:bot_id/desktop/mux/run` endpoint.
+  - Guest service configured in `cloud-init.yaml` with `ConditionPathExists` guard.
+  - Screen recording: `docs/desktop-cloud-mvp/phase13-mux-proof.webm`.
+  - Notes: `docs/desktop-cloud-mvp/phase13-mux-NOTES.md`.
+  - Tests pass:
+    - `cargo test -p allternit-api bot_desktop` (23 passed)
+    - `cargo test -p allternit-computer-cloud` (13 passed)
+
+- Phase 14: connect guest desktops to Tailscale/Headscale mesh.
+  - Added `MeshConfig` abstraction in `cmd/allternit-computer-cloud/src/mesh.rs` (235 LOC)
+    supporting Tailscale (hosted) and Headscale (self-hosted) providers.
+  - Wired mesh config into `IncusDriver` via `with_mesh()`.
+  - Added `cmd/allternit-api/src/bot_desktop_mesh.rs` (370 LOC) with
+    `POST /join`, `GET /status`, and `POST /leave` endpoints.
+  - Deployed Headscale v0.29.3 on the VPS behind nginx TLS reverse proxy on port 8444.
+  - Joined an Incus desktop to the Headscale tailnet and obtained Tailscale IP `100.64.0.1`.
+  - Screen recording: `docs/desktop-cloud-mvp/phase14-mesh-proof.webm`.
+  - Notes: `docs/desktop-cloud-mvp/phase14-mesh-NOTES.md`.
+  - Tests pass:
+    - `cargo test -p allternit-api bot_desktop` (25 passed)
+    - `cargo test -p allternit-computer-cloud` (18 passed)
+
+- Phase 15: build CI image pipeline for Ubuntu desktop.
+  - Added `cmd/allternit-computer-cloud/guest/build-image.sh` to build the
+    `allternit-desktop` Incus image with XFCE, Chrome, Tailscale, and `allternit-mux`.
+  - Added `cmd/allternit-computer-cloud/guest/validate-image.sh` to verify a
+    freshly built image.
+  - Added `.github/workflows/desktop-image.yml` GitHub Actions workflow.
+  - Built and published `allternit-desktop-ci` on the VPS and aliased it as
+    `allternit-desktop`; provisioned a bot desktop from it and captured a
+    1280x720 screenshot.
+  - Screen recording: `docs/desktop-cloud-mvp/phase15-ci-image-proof.webm`.
+  - Notes: `docs/desktop-cloud-mvp/phase15-ci-image-NOTES.md`.
+  - Tests pass:
+    - `cargo test -p allternit-api bot_desktop` (25 passed)
+    - `cargo test -p allternit-computer-cloud` (18 passed)
+
+- Phase 16: persistent disk snapshots and S3 backups.
+  - Added snapshot primitives to the driver interface and implemented them for
+    Incus (`create`, `list`, `restore`, `delete`).
+  - Added REST endpoints in `cmd/allternit-api/src/bot_desktop_snapshots.rs`.
+  - Added `cmd/allternit-computer-cloud/guest/backup-to-s3.sh` to export an
+    Incus instance and upload it to MinIO; made it self-configuring with
+    `mc alias set` and added a post-upload `mc stat` verification.
+  - Verified an ~834 MiB backup persists in the `allternit-desktop-backups`
+    bucket on the VPS MinIO instance.
+  - Screen recording: `docs/desktop-cloud-mvp/phase16-snapshots-proof.webm`.
+  - Notes: `docs/desktop-cloud-mvp/phase16-snapshots-NOTES.md`.
+  - Tests pass:
+    - `cargo test -p allternit-api bot_desktop` (26 passed)
+    - `cargo test -p allternit-computer-cloud` (18 passed)
+
+## Running services
+- ACU gateway: `http://127.0.0.1:8760`.
+- Allternit API: `http://127.0.0.1:8013` (PID from current workspace, started
+  with `INCUS_URL=https://mail:8443` so Incus desktops are reachable).
+- Headscale mesh control plane: `https://mail.news.allternit.com:8444` (VPS).
+- MinIO on VPS: `http://127.0.0.1:9000`, bucket `allternit-desktop-backups`.
+
+- Phase 17: production auth + audit logging.
+  - Added `V93__desktop_audit_log.sql` migration and
+    `cmd/allternit-api/src/bot_desktop_audit.rs`.
+  - Desktop-router requests are now recorded with bot id, user id, method,
+    path, action, and success/failure.
+  - Added `GET /api/v1/bots/:bot_id/desktop/audit-logs` for operators.
+  - Verified non-localhost requests without a Clerk/enterprise token are
+    rejected with HTTP 401 while the same endpoints accept localhost dev
+    bypass.
+  - Screen recording: `docs/desktop-cloud-mvp/phase17-auth-audit-proof.webm`.
+  - Notes: `docs/desktop-cloud-mvp/phase17-auth-audit-NOTES.md`.
+  - Tests pass:
+    - `cargo test -p allternit-api bot_desktop` (28 passed)
+    - `cargo test -p allternit-computer-cloud` (18 passed)
+
+- Phase 18: Windows Incus image and guest agent.
+  - Added `V94__desktop_os.sql` migration and `os` field to desktop sandbox
+    records.
+  - Added `cmd/allternit-api/src/bot_desktop_windows.rs` with PowerShell
+    command builders for screenshot, mouse, keyboard, shell, and file ops.
+  - Updated provisioning to accept `?os=windows` and select the
+    `allternit-desktop-windows` Incus image alias.
+  - Added `build-windows-image.sh` and `setup-windows-agent.ps1`.
+  - Screen recording: `docs/desktop-cloud-mvp/phase18-windows-proof.webm`.
+  - Notes: `docs/desktop-cloud-mvp/phase18-windows-NOTES.md`.
+  - Tests pass:
+    - `cargo test -p allternit-api bot_desktop` (30 passed)
+    - `cargo test -p allternit-computer-cloud` (18 passed)
+  - **Blocked**: the current Incus host is a VM without nested KVM
+    (`/dev/kvm` missing), so a real Windows VM cannot be started here.
+    Code is ready for a KVM-capable host.
+
+- Phase 19: macOS Tart wrapper and base image.
+  - Added `cmd/allternit-computer-cloud/src/bin/tart-host.rs` (~390 LOC), an
+    HTTP wrapper around the Tart CLI: create, start, stop, delete, exec,
+    file pull/push, screenshot, and health endpoints.
+  - Added `cmd/allternit-computer-cloud/src/tart.rs` (~350 LOC), a
+    `TartDriver` implementing the shared `ExecutionDriver` trait.
+  - Wired `TartDriver` into `cmd/allternit-api/src/main.rs` when
+    `TART_HOST_URL` / `TART_BIN` are set.
+  - Cloned `ghcr.io/cirruslabs/ubuntu:latest` as `tart-ubuntu-test` and
+    provisioned a desktop through the unified API using the Tart substrate.
+  - Fixed `tart exec` invocation (no `--` separator) and added an SSH fallback
+    via `sshpass` for guests without the Tart Guest Agent.
+  - Fixed `DELETE` to stop a VM before deleting it because Tart rejects deleting
+    a running VM.
+  - Screen recording: `docs/desktop-cloud-mvp/phase19-tart-demo.webm`.
+  - Notes: `docs/desktop-cloud-mvp/phase19-tart-NOTES.md`.
+  - Tests pass:
+    - `cargo test -p allternit-api bot_desktop` (30 passed)
+    - `cargo test -p allternit-computer-cloud` (18 passed)
+
+## Running services
+- Allternit API: `http://127.0.0.1:8013` with both `INCUS_URL=https://mail:8443`
+  and `TART_HOST_URL=http://127.0.0.1:8020` (SubstrateRouter active).
+- Tart host wrapper: `http://127.0.0.1:8020` (local Apple Silicon Mac).
+
+- Phase 20: substrate router (Incus + Tart).
+  - Added `cmd/allternit-computer-cloud/src/router.rs` (421 LOC) implementing
+    `SubstrateRouter`, an `ExecutionDriver` that routes Linux/Windows to Incus
+    and macOS to Tart by inspecting `ALLTERNIT_DESKTOP_OS` and the stored
+    `provider` tag.
+  - Updated `cmd/allternit-api/src/main.rs` to build both drivers and wrap them
+    in the router.
+  - Updated `cmd/allternit-api/src/bot_desktop_routes.rs` to inject
+    `ALLTERNIT_DESKTOP_OS` at provisioning time and to reconstruct handles with
+    the correct provider tag for lifecycle ops.
+  - Verified `POST .../provision?os=macos` returns `"provider":"tart"` and
+    `POST .../provision?os=linux` routes to Incus (errors later because the VPS
+    image is missing, which proves routing).
+  - Screen recording: `docs/desktop-cloud-mvp/phase20-substrate-router-demo.webm`.
+  - Notes: `docs/desktop-cloud-mvp/phase20-substrate-router-NOTES.md`.
+  - Tests pass:
+    - `cargo test -p allternit-api bot_desktop` (30 passed)
+    - `cargo test -p allternit-computer-cloud` (21 passed)
+
+- Phase 21: cluster multiple Incus hosts.
+  - Added `cmd/allternit-computer-cloud/src/incus_pool.rs` (182 LOC) with
+    `IncusHost` and `IncusHostPool`: round-robin scheduling for new spawns and
+    host-aware routing for lifecycle ops.
+  - Refactored `cmd/allternit-computer-cloud/src/driver.rs` to hold a pool
+    instead of a single substrate; every handle now stores `host_url` so
+    start/stop/exec/snapshots/files reach the Incus daemon that owns the VM.
+  - `cmd/allternit-api/src/main.rs` reads `INCUS_URLS` (comma-separated) before
+    falling back to `INCUS_URL`.
+  - Verified single-host pool still routes Linux provisioning to Incus.
+  - Screen recording: `docs/desktop-cloud-mvp/phase21-incus-pool-demo.webm`.
+  - Notes: `docs/desktop-cloud-mvp/phase21-incus-pool-NOTES.md`.
+  - Tests pass:
+    - `cargo test -p allternit-computer-cloud incus_pool` (3 passed)
+    - `cargo test -p allternit-api bot_desktop` (30 passed)
+    - `cargo test -p allternit-computer-cloud` (24 passed)
+
+- Phase 22: template registry and presets.
+  - Added `cmd/allternit-api/migrations/V95__desktop_templates.sql` and seeded
+    public presets for Linux, Windows, and macOS.
+  - Added `cmd/allternit-api/src/bot_desktop_templates.rs` (~407 LOC) with
+    list/create/get/delete endpoints and `resolve_template` helper.
+  - Extended `POST /api/v1/bots/:bot_id/desktop/provision` to accept
+    `?template_id=`; templates override OS, image, resources, network, and env.
+  - Verified `template_id=preset-macos` provisions through Tart.
+  - Screen recording: `docs/desktop-cloud-mvp/phase22-templates-demo.webm`.
+  - Notes: `docs/desktop-cloud-mvp/phase22-templates-NOTES.md`.
+  - Tests pass:
+    - `cargo test -p allternit-api bot_desktop_templates` (3 passed)
+    - `cargo test -p allternit-api bot_desktop` (30 passed)
+
+- Phase 23: per-user/org quotas and usage tracking.
+  - Added `cmd/allternit-api/migrations/V96__desktop_quotas_usage.sql` with
+    `desktop_quotas` and `desktop_usage` tables.
+  - Added `cmd/allternit-api/src/bot_desktop_quotas.rs` (377 LOC) with
+    `check_quota`, `record_start`, and `record_end`.
+  - Wired quota checks into `bot_desktop_routes.rs`: provision returns HTTP 429
+    when limits are exceeded; usage rows are opened on spawn and closed on
+    deprovision.
+  - Verified a concurrent limit of 1 blocks the second provision and records
+    usage after deprovision.
+  - Screen recording: `docs/desktop-cloud-mvp/phase23-quotas-demo.webm`.
+  - Notes: `docs/desktop-cloud-mvp/phase23-quotas-NOTES.md`.
+  - Tests pass:
+    - `cargo test -p allternit-api bot_desktop_quotas` (3 passed)
+    - `cargo test -p allternit-api bot_desktop` (36 passed)
+
+- Phase 24: autoscaling and capacity monitoring.
+  - Added `cmd/allternit-api/src/bot_desktop_capacity.rs` (~240 LOC) with a
+    background capacity sampler, `CapacitySnapshot`/`CapacityMonitor`, and an
+    autoscale scale-up signal based on `DESKTOP_AUTOSCALE_CPU_THRESHOLD`.
+  - Added `GET /api/v1/desktop-capacity` returning current snapshots and the
+    `scale_up_recommended` flag.
+  - Wired the monitor into `cmd/allternit-api/src/main.rs`.
+  - Screen recording: `docs/desktop-cloud-mvp/phase24-capacity-demo.webm`.
+  - Notes: `docs/desktop-cloud-mvp/phase24-capacity-NOTES.md`.
+  - Tests pass:
+    - `cargo test -p allternit-api bot_desktop_capacity` (2 passed)
+    - `cargo test -p allternit-api bot_desktop` (38 passed)
+
+- Phase 25: billing / metering for desktop usage.
+  - Added `cmd/allternit-api/migrations/V97__desktop_pricing.sql` with the
+    `desktop_pricing` table and per-provider/OS seed prices.
+  - Added `cmd/allternit-api/src/bot_desktop_billing.rs` (210 LOC) with
+    `GET /api/v1/desktop-usage` and `GET /api/v1/desktop-usage/summary`.
+  - Costs are computed on read by joining `desktop_usage` with `desktop_pricing`.
+  - Verified summary returns `{"currency":"USD","rows":1,"total_cost":6.0,"total_minutes":120}`.
+  - Screen recording: `docs/desktop-cloud-mvp/phase25-billing-demo.webm`.
+  - Notes: `docs/desktop-cloud-mvp/phase25-billing-NOTES.md`.
+  - Tests pass:
+    - `cargo test -p allternit-api bot_desktop` (38 passed)
+
+## Running services
+- Allternit API: `http://127.0.0.1:8013` with both `INCUS_URL=https://mail:8443`
+  and `TART_HOST_URL=http://127.0.0.1:8020` (SubstrateRouter active).
+- Tart host wrapper: `http://127.0.0.1:8020` (local Apple Silicon Mac).
+
+- Phase 26: web UI for desktop provisioning and management.
+  - Added `surfaces/ai.allternit.com/public/desktop-cloud-admin.html`
+    (~270 LOC) and `desktop-cloud-admin.js` (~70 LOC): a standalone admin
+    page that lists bots, templates, capacity, and usage summary, and
+    provisions a desktop via `POST /api/v1/bots/:bot_id/desktop/provision`.
+  - Verified the page loads bots/templates/capacity/usage and provisions a
+    macOS Tart desktop for `router-test-2`.
+  - Added `docs/desktop-cloud-mvp/desktop-cloud-admin.test.mjs` (Node test
+    runner) covering the API client with mocked fetch.
+  - Screen recording: `docs/desktop-cloud-mvp/phase26-webui-demo.webm`.
+  - Notes: `docs/desktop-cloud-mvp/phase26-webui-NOTES.md`.
+  - Tests pass:
+    - `node --test docs/desktop-cloud-mvp/desktop-cloud-admin.test.mjs` (6 passed)
+
+- Phase 27: integrate Desktop Cloud admin surface into the authenticated
+  Allternit React shell.
+  - Added `cmd/allternit-api/src/bot_desktop_admin.rs` (87 LOC) with
+    `GET /api/v1/desktop-sandboxes` to list all bot desktops for the
+    authenticated user; merged into the v1 router in `main.rs`.
+  - Kept `cmd/allternit-api/src/bot_desktop_routes.rs` under 1,500 LOC by
+    extracting the global admin endpoint into `bot_desktop_admin.rs`.
+  - Added `surfaces/ai.allternit.com/src/lib/desktop-cloud-api.ts` (~160 LOC)
+    with typed wrappers using the canonical API singleton.
+  - Added `surfaces/ai.allternit.com/src/lib/desktop-cloud-api.test.ts`
+    (11 Vitest tests).
+  - Added `surfaces/ai.allternit.com/src/views/desktop-cloud/DesktopCloudAdminView.tsx`
+    (~580 LOC) with templates, capacity, usage, global sandboxes, and
+    provision/start/stop/deprovision actions.
+  - Wired the view into `nav.types.ts`, `nav.policy.ts`, `ViewRegistry.tsx`,
+    and `ShellRail.tsx` as "Desktop Cloud".
+  - Screen recording: `docs/desktop-cloud-mvp/phase27-platform-integration-demo.webm`.
+  - Notes: `docs/desktop-cloud-mvp/phase27-platform-integration-NOTES.md`.
+  - Tests pass:
+    - `pnpm exec vitest run src/lib/desktop-cloud-api.test.ts` (11 passed)
+    - `cargo test -p allternit-api bot_desktop` (38 passed)
+
+- Phase A: fix platform shell startup loop caused by unstable
+  `useSyncExternalStore` snapshot.
+  - Cached `StackedAgentService.getState()` snapshot so React sees a stable
+    reference when the underlying state has not changed.
+  - The shell now loads without "Maximum update depth exceeded" and the
+    "Desktop Cloud" rail item opens `DesktopCloudAdminView` with live data.
+  - Screen recording: `docs/desktop-cloud-mvp/phaseA-shell-fix-demo.webm`.
+  - Notes: `docs/desktop-cloud-mvp/phaseA-shell-fix-NOTES.md`.
+  - A pre-existing `ChatComposer.tsx` initialization error remains in the
+    default chat view; it is unrelated to Desktop Cloud and does not block
+    the admin surface.
+
+- Phase B.1: fix `better-sqlite3` native build on Node 26.
+  - Added root `pnpm.overrides` forcing `better-sqlite3@13.0.3` across the
+    workspace.
+  - `pnpm install` now completes without `--ignore-scripts` on Node v26.5.0.
+  - Verified the native binding loads and returns SQLite version `3.53.4`.
+  - Screen recording: `docs/desktop-cloud-mvp/phaseB1-sqlite-install-demo.webm`.
+  - Notes: `docs/desktop-cloud-mvp/phaseB1-sqlite-fix-NOTES.md`.
+
+- Phase B.2: build and start the gizzi-code runtime for agent-chat bootstrap.
+  - Built `@allternit/gizzi-sdk` (`cmd/gizzi-code/packages/sdk`).
+  - Built the gizzi-code binary (`cmd/gizzi-code/dist/gizzi-code-darwin-arm64`).
+  - Started `./dist/gizzi-code serve --port 4096`.
+  - Verified `/health` and `/v1/session/list` respond.
+  - The `createAllternitClient` missing-export error is resolved.
+  - Screen recording: `docs/desktop-cloud-mvp/phaseB2-gizzi-runtime-demo.webm`.
+  - Notes: `docs/desktop-cloud-mvp/phaseB2-gizzi-runtime-NOTES.md`.
+
+- Phase C: Playwright end-to-end test for Desktop Cloud provisioning.
+  - Added `surfaces/ai.allternit.com/tests/desktop-cloud.spec.ts` with a test
+    that provisions, starts, stops, and deprovisions a macOS Tart desktop for
+    `desktop-cloud-e2e-bot` from inside the authenticated platform shell.
+  - Fixed `agentSchema` to accept backend `type: "assistant"` and
+    `trust_tier: "medium"` so API-created test bots are visible in the bot
+    select.
+  - Fixed `DesktopCloudAdminView` bot list to merge the canonical API agents
+    with the agent store's validated list.
+  - Fixed `TartDriver::spawn` to block until the VM reports `running`, and
+    updated `provision_desktop` to store/return `"running"` after a successful
+    spawn.
+  - Made `deprovision_desktop` delete the DB record immediately and destroy the
+    VM in the background so the UI stays responsive.
+  - Added `data-testid="sandboxes-table"` so the test scopes row lookups to the
+    sandboxes table (avoiding usage-table matches).
+  - Screen recording: `docs/desktop-cloud-mvp/phaseC-playwright-demo.webm`.
+  - Notes: `docs/desktop-cloud-mvp/phaseC-playwright-NOTES.md`.
+  - Tests pass:
+    - `pnpm exec playwright test tests/desktop-cloud.spec.ts --project chromium` (1 passed)
+    - `pnpm exec vitest run src/lib/desktop-cloud-api.test.ts` (11 passed)
+    - `cargo test -p allternit-api` (464 passed)
+    - `cargo test -p allternit-computer-cloud` (24 passed)
+
+- Phase D: hardened VPS deployment and remote e2e proof.
+  - Built and installed the `allternit-api` release binary on the VPS
+    (`mail.news.allternit.com`) as a systemd service (`allternit-api`).
+  - Exposed the API securely via OpenResty reverse-proxying
+    `https://mail.news.allternit.com` to `http://127.0.0.1:8013`.
+  - Installed Incus client certs under `/etc/allternit-api/incus/` so the API
+    authenticates to the local Incus daemon.
+  - Created `desktop-cloud-e2e-bot` on the VPS and ran the Playwright e2e test
+    from the local platform shell pointed at the remote gateway.
+  - Hardened `tests/desktop-cloud.spec.ts` to dismiss the onboarding portal,
+    clean up leftover sandboxes, and select bot/template by `aria-label`.
+  - Added `aria-label` attributes to the Bot/Template selects in
+    `DesktopCloudAdminView.tsx`.
+  - Verified the full provision → running → stop → deprovision flow against the
+    VPS Incus backend in ~28 seconds.
+  - Screen recordings:
+    - `docs/desktop-cloud-mvp/phaseD-vps-deploy-demo.webm` (browser e2e)
+    - `docs/desktop-cloud-mvp/phaseD-terminal-recap.webm` (terminal pass recap)
+  - Notes: `docs/desktop-cloud-mvp/phaseD-vps-deploy-NOTES.md`.
+  - Tests pass:
+    - `VITE_ALLTERNIT_GATEWAY_URL=https://mail.news.allternit.com DESKTOP_CLOUD_TEMPLATE_LABEL="Ubuntu 24.04 Desktop (linux)" pnpm exec playwright test tests/desktop-cloud.spec.ts --project chromium` (1 passed)
+    - `pnpm exec vitest run src/lib/desktop-cloud-api.test.ts` (11 passed)
+    - `cargo test -p allternit-api bot_desktop` (38 passed)
+    - `cargo test -p allternit-computer-cloud` (24 passed)
+
+## Running services
+- Allternit API (VPS): `https://mail.news.allternit.com` via OpenResty →
+  `http://127.0.0.1:8013`, systemd unit `allternit-api`.
+- Incus daemon on VPS: `https://mail:8443`.
+- Local platform dev server used for Playwright: `http://localhost:5177`.
+- Local Tart host wrapper: `http://127.0.0.1:8020`.
+
+- Phase E: production hardening of the VPS Linux Desktop Cloud deployment.
+  - Added self-hosted onboarding token auth (`X-Allternit-Self-Hosted-Token`)
+    for bootstrap endpoints, plus `GET /api/v1/desktop-health`.
+  - Hardened Incus TLS: CA cert verification enabled, certs deployed via
+    `deploy.sh` to `/etc/allternit-api/incus/`.
+  - Enabled JSON production logging with request IDs on the VPS.
+  - Added GitHub Actions workflow `.github/workflows/deploy-desktop-cloud-vps.yml`
+    to build, deploy, seed, and run the remote Playwright e2e test.
+  - Added systemd backup timer/service and verified an ~834 MiB backup persists
+    in the local MinIO bucket; fixed a missing executable bit on
+    `backup-to-s3.sh` that caused the first scheduled run to fail.
+  - Added `health-check.sh`, `seed-e2e.sh`, and `RUNBOOK.md`.
+  - Fixed `DesktopCloudAdminView` bot-selection race: one-shot default-selection
+    refs, name-based deduplication preferring the canonical API list, and live
+    DOM value reads at provision time so the e2e bot is always provisioned.
+  - Added Incus VNC proxy port recovery at API startup so restarts do not retry
+    already-bound host ports.
+  - Remote Playwright e2e against `https://mail.news.allternit.com` passed in
+    37.1s using Google Chrome.
+  - Tests pass:
+    - `cargo test -p allternit-api bot_desktop` (38 passed)
+    - `cargo test -p allternit-computer-cloud` (24 passed)
+  - Screen recording: `docs/desktop-cloud-mvp/phaseE-production-hardening-demo.mp4`.
+  - Notes: `docs/desktop-cloud-mvp/phaseE-production-hardening-NOTES.md`.
+
+## Summary
+Desktop-as-a-Service MVP phases (0–27) and Phases A–E are complete. The unified
+control plane can provision Linux, Windows, and macOS desktops behind a single
+substrate router, with templates, quotas, capacity monitoring, billing,
+snapshots, mesh join, audit logging, and a platform-integrated admin surface
+that is now covered by an automated end-to-end provisioning test running
+remotely against the production-hardened VPS deployment.

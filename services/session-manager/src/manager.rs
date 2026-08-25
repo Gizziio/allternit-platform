@@ -145,10 +145,18 @@ impl SessionManager {
         
         // Initialize Firecracker driver if config provided (Linux)
         #[cfg(target_os = "linux")]
-        let firecracker_driver = config.firecracker_config.as_ref().map(|fc_config| {
-            Arc::new(FirecrackerDriver::with_config(fc_config.clone()))
-        });
-        
+        let firecracker_driver: Option<Arc<FirecrackerDriver>> = if let Some(fc_config) = &config.firecracker_config {
+            match FirecrackerDriver::with_config(fc_config.clone()).await {
+                Ok(driver) => Some(Arc::new(driver)),
+                Err(e) => {
+                    warn!("Failed to initialize Firecracker driver: {}", e);
+                    None
+                }
+            }
+        } else {
+            None
+        };
+
         #[cfg(not(target_os = "linux"))]
         let firecracker_driver: Option<Arc<FirecrackerDriver>> = None;
 

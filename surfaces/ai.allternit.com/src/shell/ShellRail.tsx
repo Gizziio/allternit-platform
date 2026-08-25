@@ -33,6 +33,7 @@ import {
   Check,
   Brain,
   Play,
+  Desktop,
 } from '@phosphor-icons/react';
 import { getPinnedMiniApps, unpinMiniApp, seedDefaultMiniApps } from '../views/aci/mini-app-registry';
 import type { InstalledMiniApp } from '../views/aci/mini-app.types';
@@ -928,6 +929,12 @@ export function ShellRail({
               label="Model Lab"
               isActive={activeViewType === 'model-lab'}
               onClick={() => onOpen?.('model-lab')}
+            />
+            <RailItem
+              icon={Desktop}
+              label="Desktop Cloud"
+              isActive={activeViewType === 'desktop-cloud'}
+              onClick={() => onOpen?.('desktop-cloud')}
             />
             <RailItem
               icon={Clock}
