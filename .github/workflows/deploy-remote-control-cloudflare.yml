@@ -43,7 +43,8 @@ jobs:
           NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY: ${{ secrets.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY }}
           NEXT_PUBLIC_ALLTERNIT_DESKTOP_AUTH: 'true'
           ENCRYPTION_KEY: ${{ secrets.ENCRYPTION_KEY }}
-          VITE_ALLTERNIT_API_URL: 'https://ai.allternit.com'
+          VITE_ALLTERNIT_API_URL: 'https://api.allternit.com'
+          VITE_ALLTERNIT_PLATFORM_URL: 'https://platform.allternit.com'
           VITE_REMOTE_CONTROL_PUSH_URL: 'https://push.remotecontrol.allternit.com'
 
       - name: Prepare remote control Pages artifact

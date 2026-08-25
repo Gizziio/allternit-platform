@@ -32,6 +32,7 @@ function getDashboardOrigin(c: Context<{ Bindings: WorkerEnv }>): string {
 
 function allowedOrigins(origin: string, dashboardOrigin: string): boolean {
   if (origin === dashboardOrigin) return true;
+  if (origin === "https://platform.allternit.com") return true;
   if (origin.startsWith("http://localhost:")) return true;
   if (origin.startsWith("http://127.0.0.1:")) return true;
   return false;
