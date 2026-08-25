@@ -39,9 +39,6 @@ const STATIC_ALLOWED_REDIRECT_ORIGINS = [
   "https://remotecontrol.allternit.com",
   "https://platform.allternit.com",
   "https://ai.allternit.com",
-  "http://localhost:3013",
-  "http://localhost:5173",
-  "http://localhost:4173",
 ]
 
 export function getAllowedRedirectOrigins(): string[] {
