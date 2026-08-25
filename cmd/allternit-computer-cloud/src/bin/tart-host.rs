@@ -1,16 +1,20 @@
 //! Minimal HTTP wrapper around the Tart CLI.
 //!
 //! Run on a macOS host that has Tart installed:
-//!   allternit-tart-host
+//!   TART_HOST_TOKEN=$(openssl rand -hex 16) allternit-tart-host
 //!
 //! The control-plane TartDriver talks to this wrapper over HTTP and gets the
 //! same lifecycle/exec/file operations that Incus provides on Linux.
+//!
+//! Authentication: all routes except `/health` require a valid
+//! `Authorization: Bearer <TART_HOST_TOKEN>` header when `TART_HOST_TOKEN` is set.
 
 use axum::{
-    extract::{Path, State},
+    extract::{Path, Request, State},
     http::StatusCode,
+    middleware::{self, Next},
     response::{IntoResponse, Response},
-    routing::{delete, get, post},
+    routing::{get, post},
     Json, Router,
 };
 use serde::{Deserialize, Serialize};
@@ -27,20 +31,30 @@ struct AppState {
     tart_bin: String,
     ssh_user: String,
     ssh_password: String,
+    token: Option<String>,
 }
 
 #[tokio::main]
 async fn main() {
     tracing_subscriber::fmt::init();
 
+    let token = std::env::var("TART_HOST_TOKEN").ok().filter(|s| !s.is_empty());
+    if token.is_none() {
+        warn!("TART_HOST_TOKEN is not set; tart-host will accept unauthenticated requests");
+    } else {
+        info!("tart-host authentication enabled");
+    }
+
     let state = AppState {
         tart_bin: std::env::var("TART_BIN").unwrap_or_else(|_| "tart".to_string()),
         ssh_user: std::env::var("TART_SSH_USER").unwrap_or_else(|_| "admin".to_string()),
         ssh_password: std::env::var("TART_SSH_PASSWORD").unwrap_or_else(|_| "admin".to_string()),
+        token,
     };
 
-    let app = Router::new()
-        .route("/health", get(health))
+    let state_arc = Arc::new(state);
+
+    let protected = Router::new()
         .route("/v1/vms/:name", get(get_vm).delete(delete_vm))
         .route("/v1/vms/:name/create", post(create_vm))
         .route("/v1/vms/:name/start", post(start_vm))
@@ -49,7 +63,12 @@ async fn main() {
         .route("/v1/vms/:name/files/pull", post(pull_file))
         .route("/v1/vms/:name/files/push", post(push_file))
         .route("/v1/vms/:name/screenshot", get(screenshot_vm))
-        .with_state(Arc::new(state));
+        .route_layer(middleware::from_fn_with_state(state_arc.clone(), auth_middleware))
+        .with_state(state_arc.clone());
+
+    let app = Router::new()
+        .route("/health", get(health))
+        .merge(protected);
 
     let addr: SocketAddr = std::env::var("TART_HOST_BIND")
         .ok()
@@ -59,6 +78,25 @@ async fn main() {
     info!(%addr, "Allternit Tart host wrapper starting");
     let listener = tokio::net::TcpListener::bind(addr).await.unwrap();
     axum::serve(listener, app).await.unwrap();
+}
+
+async fn auth_middleware(
+    State(state): State<Arc<AppState>>,
+    request: Request,
+    next: Next,
+) -> Response {
+    if let Some(expected) = &state.token {
+        let headers = request.headers();
+        let provided = headers
+            .get("authorization")
+            .and_then(|v| v.to_str().ok())
+            .and_then(|s| s.strip_prefix("Bearer "));
+        if provided != Some(expected.as_str()) {
+            warn!("rejected request with missing or invalid bearer token");
+            return (StatusCode::UNAUTHORIZED, Json(json!({"error": "unauthorized"}))).into_response();
+        }
+    }
+    next.run(request).await
 }
 
 async fn health() -> impl IntoResponse {
@@ -398,7 +436,10 @@ async fn run_tart(state: &AppState, args: &[impl AsRef<std::ffi::OsStr>]) -> Res
     Ok(())
 }
 
-async fn run_tart_output(state: &AppState, args: &[&str]) -> Result<String, TartError> {
+async fn run_tart_output(
+    state: &AppState,
+    args: &[impl AsRef<std::ffi::OsStr>],
+) -> Result<String, TartError> {
     let output = Command::new(&state.tart_bin)
         .args(args)
         .output()

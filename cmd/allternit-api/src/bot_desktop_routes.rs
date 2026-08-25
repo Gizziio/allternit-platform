@@ -1208,6 +1208,7 @@ mod tests {
                 message: Some("mock".to_string()),
                 active_executions: 0,
                 available_capacity: self.capabilities().max_resources,
+                capabilities: vec![],
             })
         }
     }

@@ -919,6 +919,7 @@ async fn initialize_vm_driver(
 
     let mut tart_driver = None;
     if std::env::var("TART_HOST_URL").is_ok()
+        || std::env::var("TART_HOST_URLS").is_ok()
         || std::env::var("TART_BIN").map_or(false, |s| !s.is_empty())
     {
         let mesh = build_mesh_config_from_env();

@@ -734,7 +734,7 @@ pub struct DesktopEndpoint {
 }
 
 /// Driver health status
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+#[derive(Debug, Clone, Default, Serialize, Deserialize, PartialEq)]
 pub struct DriverHealth {
     pub healthy: bool,
     #[serde(default)]
@@ -743,6 +743,9 @@ pub struct DriverHealth {
     pub active_executions: u32,
     #[serde(default)]
     pub available_capacity: ResourceSpec,
+    /// Substrate OS capabilities advertised by this driver (e.g. "linux", "macos", "windows").
+    #[serde(default)]
+    pub capabilities: Vec<String>,
 }
 
 /// Driver configuration for Shell UI (N3 → UI mapping)

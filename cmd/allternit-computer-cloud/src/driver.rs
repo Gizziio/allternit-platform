@@ -441,6 +441,10 @@ impl ExecutionDriver for IncusDriver {
     }
 
     async fn health_check(&self) -> Result<DriverHealth, DriverError> {
+        let mut capabilities = vec!["linux".to_string()];
+        if std::path::Path::new("/dev/kvm").exists() {
+            capabilities.push("windows".to_string());
+        }
         Ok(DriverHealth {
             healthy: true,
             message: Some(format!(
@@ -450,6 +454,7 @@ impl ExecutionDriver for IncusDriver {
             )),
             active_executions: self.vnc_ports.lock().unwrap().len() as u32,
             available_capacity: self.capabilities().max_resources,
+            capabilities,
         })
     }
 

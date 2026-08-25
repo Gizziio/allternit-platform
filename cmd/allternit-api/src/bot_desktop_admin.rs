@@ -112,6 +112,7 @@ async fn get_desktop_health(State(state): State<Arc<AppState>>) -> impl IntoResp
                 Json(json!({
                     "healthy": health.healthy,
                     "message": health.message,
+                    "capabilities": health.capabilities,
                 })),
             )
                 .into_response()

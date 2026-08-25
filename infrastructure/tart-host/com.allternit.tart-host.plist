@@ -1,0 +1,37 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<key>EnvironmentVariables</key>
+	<dict>
+		<key>TART_BIN</key>
+		<string>/opt/homebrew/bin/tart</string>
+		<key>TART_HOST_BIND</key>
+		<string>100.88.98.69:8020</string>
+		<key>TART_HOST_TOKEN</key>
+		<string>bdfae8460cd7a887362be50cd1e073e0abf9680c94bff13525faa36d751ba233</string>
+		<key>TART_SSH_PASSWORD</key>
+		<string>admin</string>
+		<key>TART_SSH_USER</key>
+		<string>admin</string>
+	</dict>
+	<key>KeepAlive</key>
+	<true/>
+	<key>Label</key>
+	<string>com.allternit.tart-host</string>
+	<key>ProcessType</key>
+	<string>Background</string>
+	<key>ProgramArguments</key>
+	<array>
+		<string>/usr/local/bin/allternit-tart-host</string>
+	</array>
+	<key>RunAtLoad</key>
+	<true/>
+	<key>StandardErrorPath</key>
+	<string>/Users/joe/Library/Logs/allternit/tart-host.log</string>
+	<key>StandardOutPath</key>
+	<string>/Users/joe/Library/Logs/allternit/tart-host.log</string>
+	<key>ThrottleInterval</key>
+	<integer>10</integer>
+</dict>
+</plist>

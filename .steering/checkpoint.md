@@ -454,3 +454,37 @@ substrate router, with templates, quotas, capacity monitoring, billing,
 snapshots, mesh join, audit logging, and a platform-integrated admin surface
 that is now covered by an automated end-to-end provisioning test running
 remotely against the production-hardened VPS deployment.
+
+- Phase F: heterogeneous fleet expansion (macOS remote + Windows readiness).
+  - Added `capabilities: Vec<String>` to `DriverHealth`; Incus reports
+    `["linux"]` (+ `"windows"` when `/dev/kvm` exists), Tart reports `["macos"]`,
+    and `GET /api/v1/desktop-health` exposes the aggregated list.
+  - Refactored `TartDriver` to support `TART_HOST_URLS`, authenticated requests
+    via `TART_HOST_TOKEN`, and round-robin across multiple Tart hosts.
+  - Added bearer-token auth to `tart-host` (all routes except `/health`).
+  - Added `x-allternit-internal-token` support to the API auth middleware so
+    service-to-service health probes work.
+  - Created `infrastructure/tart-host/{deploy.sh,com.allternit.tart-host.plist}`
+    to build, install, and run the Tart wrapper under launchd on the Mac.
+  - Deployed the Tart host on the local Mac (`100.88.98.69:8020`) and pointed
+    the VPS API at it via `TART_HOST_URLS` + `TART_HOST_TOKEN`.
+  - Verified full provision → stop → status → deprovision lifecycle through the
+    VPS control plane for a Tart VM; response showed `"provider":"tart"`,
+    `"host":"100.88.98.69"`.
+  - Windows capability is code-ready but hardware-blocked: the VPS lacks
+    `/dev/kvm`; a KVM-capable Incus host is needed to advertise `"windows"`.
+  - Tests pass:
+    - `cargo test -p allternit-api` (464 passed)
+    - `cargo test -p allternit-computer-cloud` (24 passed)
+  - Notes: `docs/desktop-cloud-mvp/phaseF-fleet-expansion-NOTES.md`.
+
+## Open questions / next gaps
+1. Bot runtime integration: an agent should be able to request, use, and release
+   a desktop automatically during a chat/session.
+2. Windows fleet: procure/deploy a KVM-capable Incus host and build/package the
+   Windows desktop image.
+3. Packaged macOS image: import or build a real `macos-base` Tart image.
+4. Fleet autoscaling / capacity-driven queueing beyond the current snapshot flag.
+5. Real billing/payments integration beyond usage-row cost computation.
+6. UI completeness: ensure screenshot/mouse/keyboard/shell/file endpoints are
+   exposed cleanly in `DesktopCloudAdminView`.

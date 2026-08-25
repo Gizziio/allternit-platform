@@ -217,6 +217,7 @@ impl ExecutionDriver for SubstrateRouter {
         let mut message_parts = Vec::new();
         let mut active = 0u32;
         let mut available_capacity = ResourceSpec::default();
+        let mut capabilities: Vec<String> = Vec::new();
 
         if let Some(d) = &self.incus {
             match d.health_check().await {
@@ -225,6 +226,7 @@ impl ExecutionDriver for SubstrateRouter {
                     active += h.active_executions;
                     available_capacity.cpu_millis = available_capacity.cpu_millis.max(h.available_capacity.cpu_millis);
                     available_capacity.memory_mib = available_capacity.memory_mib.max(h.available_capacity.memory_mib);
+                    capabilities.extend(h.capabilities);
                     if !h.healthy {
                         message_parts.push(format!("incus unhealthy: {:?}", h.message));
                     }
@@ -242,6 +244,7 @@ impl ExecutionDriver for SubstrateRouter {
                     active += h.active_executions;
                     available_capacity.cpu_millis = available_capacity.cpu_millis.max(h.available_capacity.cpu_millis);
                     available_capacity.memory_mib = available_capacity.memory_mib.max(h.available_capacity.memory_mib);
+                    capabilities.extend(h.capabilities);
                     if !h.healthy {
                         message_parts.push(format!("tart unhealthy: {:?}", h.message));
                     }
@@ -258,6 +261,10 @@ impl ExecutionDriver for SubstrateRouter {
             message_parts.push("no substrate configured".to_string());
         }
 
+        // Deduplicate while preserving order.
+        let mut seen = std::collections::HashSet::new();
+        capabilities.retain(|c| seen.insert(c.clone()));
+
         Ok(DriverHealth {
             healthy,
             message: if message_parts.is_empty() {
@@ -267,6 +274,7 @@ impl ExecutionDriver for SubstrateRouter {
             },
             active_executions: active,
             available_capacity,
+            capabilities,
         })
     }
 

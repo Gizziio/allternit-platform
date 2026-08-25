@@ -414,6 +414,7 @@ impl ExecutionDriver for OpenSandboxDriver {
             message: None,
             active_executions: self.sandboxes.lock().await.len() as u32,
             available_capacity: ResourceSpec::high_performance(),
+            capabilities: vec!["linux".to_string()],
         })
     }
 
