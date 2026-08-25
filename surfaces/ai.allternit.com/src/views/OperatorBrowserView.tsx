@@ -29,9 +29,7 @@ import { useDefaultModelSelection } from '@/hooks/use-default-model-selection';
 import { ChatIdProvider } from '@/providers/chat-id-provider';
 import { DataStreamProvider } from '@/providers/data-stream-provider';
 import { MessageTreeProvider } from '@/providers/message-tree-provider';
-import { ChatInputProvider } from '@/providers/chat-input-provider';
 import { PromptInputProvider } from '@/components/ai-elements/prompt-input';
-import { ChatModelsProvider } from '@/providers/chat-models-provider';
 import { ModelSelectionProvider } from '@/providers/model-selection-provider';
 import {
   Globe,
@@ -506,20 +504,16 @@ export function OperatorBrowserView() {
           >
             <DataStreamProvider>
               <MessageTreeProvider>
-                <ChatInputProvider>
-                  <PromptInputProvider>
-                    <ChatModelsProvider>
-                      <ModelSelectionProvider defaultSelection={defaultSelection}>
-                        <BrowserChatPanel
+                <PromptInputProvider>
+                  <ModelSelectionProvider defaultSelection={defaultSelection}>
+                    <BrowserChatPanel
                           activeSessionId={activeSessionId}
                           sendMessageStream={sendMessageStream}
                           isStreaming={isStreaming}
                           backendMessages={backendMessages}
                         />
-                      </ModelSelectionProvider>
-                    </ChatModelsProvider>
-                  </PromptInputProvider>
-                </ChatInputProvider>
+                  </ModelSelectionProvider>
+                </PromptInputProvider>
               </MessageTreeProvider>
             </DataStreamProvider>
           </ChatIdProvider>

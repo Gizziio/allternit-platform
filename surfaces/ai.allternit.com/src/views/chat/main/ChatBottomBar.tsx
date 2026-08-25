@@ -18,10 +18,6 @@ interface ChatBottomBarProps {
   setPluginMention: (target: PluginMentionTarget | null) => void;
   activeIsLoading: boolean;
   handleStop: () => void;
-  selectedModel: string;
-  modelSelection: any;
-  startSelection: () => void;
-  selectModel: (model: any) => void;
   composerTopInfoBar: React.ReactNode;
   composerQuestionBar: React.ReactNode;
   composerBottomInfoBar: React.ReactNode;
@@ -42,10 +38,6 @@ export const ChatBottomBar: React.FC<ChatBottomBarProps> = ({
   setPluginMention,
   activeIsLoading,
   handleStop,
-  selectedModel,
-  modelSelection,
-  startSelection,
-  selectModel,
   composerTopInfoBar,
   composerQuestionBar,
   composerBottomInfoBar,
@@ -70,10 +62,6 @@ export const ChatBottomBar: React.FC<ChatBottomBarProps> = ({
           onPluginMentionChange={setPluginMention}
           isLoading={activeIsLoading}
           onStop={handleStop}
-          selectedModel={selectedModel}
-          selectedModelDisplayName={modelSelection?.modelName || modelSelection?.modelId}
-          onOpenModelPicker={startSelection}
-          onSelectModel={selectModel}
           placeholder="Reply…"
           showTopActions={false}
           showModeToggle={false}

@@ -7,9 +7,7 @@ import { useChatSessionStore } from '../views/chat/ChatSessionStore';
 import { ChatIdProvider } from '../providers/chat-id-provider';
 import { DataStreamProvider } from '../providers/data-stream-provider';
 import { MessageTreeProvider } from '../providers/message-tree-provider';
-import { ChatInputProvider } from '../providers/chat-input-provider';
 import { PromptInputProvider } from '@/components/ai-elements/prompt-input';
-import { ChatModelsProvider } from '../providers/chat-models-provider';
 import { ModelSelectionProvider } from '../providers/model-selection-provider';
 import { ErrorBoundary } from '../components/error-boundary';
 import { ChatErrorFallback } from './ShellFallbacks';
@@ -93,13 +91,9 @@ export const ChatViewWrapper = React.memo(function ChatViewWrapper({
         <DataStreamProvider>
           <MessageTreeProvider>
             <PromptInputProvider>
-              <ChatInputProvider>
-                <ChatModelsProvider>
-                  <ModelSelectionProvider defaultSelection={defaultModelSelection}>
-                    <ChatView key={effectiveChatId} onOpenAgentSession={onOpenAgentSession} onStartBotSession={onStartBotSession} />
-                  </ModelSelectionProvider>
-                </ChatModelsProvider>
-              </ChatInputProvider>
+              <ModelSelectionProvider defaultSelection={defaultModelSelection}>
+                <ChatView key={effectiveChatId} onOpenAgentSession={onOpenAgentSession} onStartBotSession={onStartBotSession} />
+              </ModelSelectionProvider>
             </PromptInputProvider>
           </MessageTreeProvider>
         </DataStreamProvider>
