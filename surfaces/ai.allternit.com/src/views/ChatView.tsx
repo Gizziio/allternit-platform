@@ -46,7 +46,6 @@ import {
 import type { GizziAttention, GizziEmotion } from "@/components/ai-elements/GizziMascot";
 
 // Modularized ChatView components
-import { MODELS } from "./chat/main/ChatView.constants";
 import { ChatBackground } from "./chat/main/ChatBackground";
 import { ChatEmptyState } from "./chat/main/ChatEmptyState";
 import { ChatActiveContent } from "./chat/main/ChatActiveContent";
@@ -133,9 +132,9 @@ export function ChatView({
 
   useModeCanvasBridge({ surface: agentSurface });
 
-  const { selection: modelSelection, selectModel, startSelection, isSelecting, cancelSelection } = useModelSelection();
+  const { selection: modelSelection, selectModel, startSelection, isSelecting, cancelSelection, availableModels } = useModelSelection();
 
-  const selectedModel = modelSelection?.modelId ?? modelSelection?.profileId ?? MODELS[0].id;
+  const selectedModel = modelSelection?.modelId ?? modelSelection?.profileId ?? availableModels[0]?.id ?? '';
   const { ollamaRunning, modelReady } = useLocalBrainStatus();
   const isLocalBrainSelected = selectedModel === 'local-brain' || modelSelection?.profileId === 'ollama';
   
@@ -447,6 +446,7 @@ export function ChatView({
         useChatSessionStore.getState().setActiveSession(sessionId);
         await sendNativeMessageStream(sessionId, {
           text: text.trim(),
+          ...(modelSelection?.modelId ? { modelId: modelSelection.modelId } : {}),
           ...(pluginMention
             ? { pluginMention: { kind: pluginMention.kind, id: pluginMention.id, name: pluginMention.name } }
             : {}),
@@ -461,7 +461,7 @@ export function ChatView({
           : "Couldn't send that message. Please try again."
       );
     }
-  }, [mentionAgentId, pluginMention, chatId, embeddedAgentSession.sessionId, sendNativeMessageStream]);
+  }, [mentionAgentId, pluginMention, chatId, embeddedAgentSession.sessionId, sendNativeMessageStream, modelSelection?.modelId]);
 
   const handleStop = useCallback(() => {
     const activeSessionId = embeddedAgentSession.sessionId || chatId;
@@ -597,8 +597,6 @@ export function ChatView({
               mentionAgentId={mentionAgentId}
               setPluginMention={setPluginMention}
               activeIsLoading={activeIsLoading}
-              selectedModel={selectedModel}
-              selectModel={selectModel}
               showTopActions={showTopActions}
               pulseMascot={pulseMascot}
               setLaunchMascotAttention={setLaunchMascotAttention}
@@ -651,10 +649,6 @@ export function ChatView({
         setPluginMention={setPluginMention}
         activeIsLoading={activeIsLoading}
         handleStop={handleStop}
-        selectedModel={selectedModel}
-        modelSelection={modelSelection}
-        startSelection={startSelection}
-        selectModel={selectModel}
         composerTopInfoBar={composerTopInfoBar}
         composerQuestionBar={composerQuestionBar}
         composerBottomInfoBar={composerBottomInfoBar}
