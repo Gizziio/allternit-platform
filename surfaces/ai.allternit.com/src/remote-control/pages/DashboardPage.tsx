@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useCallback, useEffect, useMemo, useState } from "react";
+import React, { useCallback, useEffect, useState } from "react";
 import {
   DesktopTower,
   WifiHigh,
@@ -15,7 +15,6 @@ import { GlassSurface } from "@/design/GlassSurface";
 import { useToast } from "@/hooks/use-toast";
 import { usePlatformAuth } from "@/lib/platform-auth-client";
 import { env } from "@/lib/env";
-import { RuntimeClient, type RegisteredRuntime } from "@allternit/sdk/runtime";
 import type { BeforeInstallPromptEvent } from "../types";
 
 interface DashboardPageProps {
@@ -23,11 +22,37 @@ interface DashboardPageProps {
   onInstallClick: () => void;
 }
 
+interface CloudRuntimeDevice {
+  id: string;
+  name: string;
+  runtimeType: string;
+  hostname: string;
+  platform: string;
+  version: string;
+  capabilities: string[];
+  status: string;
+  lastSeenAt: string | null;
+}
+
+interface RuntimeViewModel {
+  id: string;
+  name: string;
+  host: string;
+  status: string;
+  lastHeartbeatAt?: number;
+  agentClis: { name: string; icon: string }[];
+}
+
 const STATUS_COLORS: Record<string, string> = {
   online: "var(--status-success)",
   busy: "var(--status-warning)",
   offline: "var(--ui-text-muted)",
 };
+
+const CLOUD_API_BASE_URL = "https://api.allternit.com";
+const PUSH_WORKER_URL =
+  env("VITE_REMOTE_CONTROL_PUSH_URL") ?? "https://push.remotecontrol.allternit.com";
+const PLATFORM_HUB_URL = env("VITE_ALLTERNIT_API_URL") ?? "https://ai.allternit.com";
 
 function urlBase64ToUint8Array(base64String: string): Uint8Array {
   const padding = "=".repeat((4 - (base64String.length % 4)) % 4);
@@ -40,38 +65,45 @@ function urlBase64ToUint8Array(base64String: string): Uint8Array {
   return outputArray;
 }
 
-const API_BASE_URL = env("VITE_ALLTERNIT_API_URL") ?? "";
-const PUSH_WORKER_URL =
-  env("VITE_REMOTE_CONTROL_PUSH_URL") ?? "https://push.remotecontrol.allternit.com";
+function deviceToViewModel(device: CloudRuntimeDevice): RuntimeViewModel {
+  return {
+    id: device.id,
+    name: device.name || device.hostname || "Unnamed machine",
+    host: `${device.platform} · ${device.hostname}`,
+    status: device.status === "online" ? "online" : "offline",
+    lastHeartbeatAt: device.lastSeenAt ? new Date(device.lastSeenAt).getTime() : undefined,
+    agentClis: (device.capabilities || []).map((cap) => ({ name: cap, icon: "" })),
+  };
+}
 
 export function DashboardPage({ installPrompt, onInstallClick }: DashboardPageProps): React.ReactNode {
   const { addToast } = useToast();
   const auth = usePlatformAuth();
-  const [runtimes, setRuntimes] = useState<RegisteredRuntime[]>([]);
+  const [runtimes, setRuntimes] = useState<RuntimeViewModel[]>([]);
   const [loading, setLoading] = useState(true);
-  const [pending, setPending] = useState<Record<string, { permissions: number; questions: number }>>({});
   const [pushByRuntime, setPushByRuntime] = useState<Record<string, boolean>>({});
   const [vapidKey, setVapidKey] = useState<string | null>(null);
 
-  const client = useMemo(
-    () =>
-      new RuntimeClient({
-        baseUrl: API_BASE_URL,
-        getToken: auth.getToken,
-      }),
-    [auth]
-  );
-
   const fetchRuntimes = useCallback(async () => {
     try {
-      const { runtimes: data } = await client.listRuntimes();
-      setRuntimes(data);
-    } catch {
-      addToast({ title: "Error", description: "Failed to load runtimes", type: "error" });
+      const token = await auth.getToken();
+      const res = await fetch(`${CLOUD_API_BASE_URL}/api/v1/runtime-devices`, {
+        headers: token ? { Authorization: `Bearer ${token}` } : {},
+      });
+      if (!res.ok) throw new Error(`Failed to load runtimes (${res.status})`);
+      const data = (await res.json()) as { devices?: CloudRuntimeDevice[] } | CloudRuntimeDevice[];
+      const devices = Array.isArray(data) ? data : data.devices ?? [];
+      setRuntimes(devices.map(deviceToViewModel));
+    } catch (err) {
+      addToast({
+        title: "Error",
+        description: err instanceof Error ? err.message : "Failed to load runtimes",
+        type: "error",
+      });
     } finally {
       setLoading(false);
     }
-  }, [client, addToast]);
+  }, [auth, addToast]);
 
   useEffect(() => {
     void fetchRuntimes();
@@ -85,37 +117,6 @@ export function DashboardPage({ installPrompt, onInstallClick }: DashboardPagePr
       .then((key) => setVapidKey(key))
       .catch(() => setVapidKey(null));
   }, []);
-
-  const fetchRuntimePending = useCallback(async (rt: RegisteredRuntime) => {
-    try {
-      const base = rt.host.replace(/\/$/, "");
-      const token = rt.metadata?.token;
-      const headers: Record<string, string> = { "Content-Type": "application/json" };
-      if (token) headers["X-Runtime-Token"] = token;
-      const [permissions, questions] = await Promise.all([
-        fetch(`${base}/v1/permission`, { headers }).then((r) => (r.ok ? r.json() : [])),
-        fetch(`${base}/v1/question`, { headers }).then((r) => (r.ok ? r.json() : [])),
-      ]);
-      setPending((prev) => ({
-        ...prev,
-        [rt.id]: {
-          permissions: Array.isArray(permissions) ? permissions.length : 0,
-          questions: Array.isArray(questions) ? questions.length : 0,
-        },
-      }));
-    } catch {
-      // Runtime may be offline or unreachable; leave counts empty.
-    }
-  }, []);
-
-  useEffect(() => {
-    if (runtimes.length === 0) return;
-    runtimes.forEach((rt) => void fetchRuntimePending(rt));
-    const interval = setInterval(() => {
-      runtimes.forEach((rt) => void fetchRuntimePending(rt));
-    }, 5000);
-    return () => clearInterval(interval);
-  }, [runtimes, fetchRuntimePending]);
 
   useEffect(() => {
     if (typeof window === "undefined" || !("serviceWorker" in navigator)) return;
@@ -139,13 +140,17 @@ export function DashboardPage({ installPrompt, onInstallClick }: DashboardPagePr
   }, [runtimes]);
 
   const togglePush = useCallback(
-    async (rt: RegisteredRuntime) => {
+    async (rt: RuntimeViewModel) => {
       if (!vapidKey) {
         addToast({ title: "Push unavailable", description: "Push worker is not configured.", type: "error" });
         return;
       }
       if (!("serviceWorker" in navigator)) {
-        addToast({ title: "Push unavailable", description: "Your browser does not support push notifications.", type: "error" });
+        addToast({
+          title: "Push unavailable",
+          description: "Your browser does not support push notifications.",
+          type: "error",
+        });
         return;
       }
 
@@ -203,8 +208,6 @@ export function DashboardPage({ installPrompt, onInstallClick }: DashboardPagePr
   );
 
   const onlineCount = runtimes.filter((r) => r.status === "online").length;
-  const totalPendingPermissions = Object.values(pending).reduce((sum, p) => sum + p.permissions, 0);
-  const totalPendingQuestions = Object.values(pending).reduce((sum, p) => sum + p.questions, 0);
 
   return (
     <div
@@ -235,7 +238,7 @@ export function DashboardPage({ installPrompt, onInstallClick }: DashboardPagePr
               </button>
             )}
             <a
-              href={API_BASE_URL ? `${API_BASE_URL}/remote-control` : "/remote-control"}
+              href={PLATFORM_HUB_URL ? `${PLATFORM_HUB_URL}/remote-control` : "/remote-control"}
               target="_blank"
               rel="noreferrer"
               className="inline-flex items-center gap-2 px-3.5 py-2 rounded-xl border-none text-[13px] font-semibold cursor-pointer transition-colors"
@@ -259,14 +262,14 @@ export function DashboardPage({ installPrompt, onInstallClick }: DashboardPagePr
             <div className="text-[12px] font-semibold uppercase tracking-wider text-[var(--text-tertiary)] mb-1">
               Pending Permissions
             </div>
-            <div className="text-[32px] font-bold">{totalPendingPermissions}</div>
+            <div className="text-[32px] font-bold">0</div>
             <div className="text-[12px] text-[var(--text-secondary)]">Need your approval</div>
           </GlassSurface>
           <GlassSurface className="p-4" intensity="base">
             <div className="text-[12px] font-semibold uppercase tracking-wider text-[var(--text-tertiary)] mb-1">
               Pending Questions
             </div>
-            <div className="text-[32px] font-bold">{totalPendingQuestions}</div>
+            <div className="text-[32px] font-bold">0</div>
             <div className="text-[12px] text-[var(--text-secondary)]">Awaiting answers</div>
           </GlassSurface>
         </div>
@@ -284,7 +287,6 @@ export function DashboardPage({ installPrompt, onInstallClick }: DashboardPagePr
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             {runtimes.map((rt) => {
-              const rtPending = pending[rt.id] ?? { permissions: 0, questions: 0 };
               const pushEnabled = Boolean(pushByRuntime[rt.id]);
               return (
                 <GlassSurface
@@ -328,32 +330,6 @@ export function DashboardPage({ installPrompt, onInstallClick }: DashboardPagePr
                       Last heartbeat {new Date(rt.lastHeartbeatAt).toLocaleString()}
                     </div>
                   )}
-                  <div className="flex flex-wrap gap-2 mt-1">
-                    {rtPending.permissions > 0 && (
-                      <span
-                        className="px-2 py-0.5 rounded-md text-[11px] font-semibold"
-                        style={{ background: "var(--status-warning-bg)", color: "var(--status-warning)" }}
-                      >
-                        {rtPending.permissions} permission{rtPending.permissions === 1 ? "" : "s"}
-                      </span>
-                    )}
-                    {rtPending.questions > 0 && (
-                      <span
-                        className="px-2 py-0.5 rounded-md text-[11px] font-semibold"
-                        style={{ background: "var(--status-info-bg)", color: "var(--status-info)" }}
-                      >
-                        {rtPending.questions} question{rtPending.questions === 1 ? "" : "s"}
-                      </span>
-                    )}
-                    {rtPending.permissions === 0 && rtPending.questions === 0 && (
-                      <span
-                        className="px-2 py-0.5 rounded-md text-[11px] font-medium"
-                        style={{ background: "var(--surface-hover)", color: "var(--text-tertiary)" }}
-                      >
-                        No pending input
-                      </span>
-                    )}
-                  </div>
                   {rt.agentClis.length > 0 && (
                     <div className="flex flex-wrap gap-1.5 mt-1">
                       {rt.agentClis.map((cli) => (

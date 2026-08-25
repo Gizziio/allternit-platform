@@ -38,7 +38,7 @@ jobs:
 
       - name: Build remote control dashboard
         working-directory: surfaces/ai.allternit.com
-        run: pnpm build
+        run: pnpm exec vite build --config vite.remote-control.config.ts
         env:
           NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY: ${{ secrets.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY }}
           NEXT_PUBLIC_ALLTERNIT_DESKTOP_AUTH: 'true'
