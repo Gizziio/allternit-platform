@@ -1,6 +1,6 @@
 import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
-import { initPdfWorker } from '@allternit/allternit-office-suite'
+import { initPdfWorker } from '@allternit/office-suite'
 import { App } from './App'
 import { ThemeProvider } from './ThemeProvider'
 import pdfjsWorkerUrl from 'pdfjs-dist/build/pdf.worker.mjs?url'

@@ -5,7 +5,7 @@
 
 import type { createUniver } from './create-univer'
 
-import { qualifierMatches } from '@allternit/allternit-office-suite/xlsx'
+import { qualifierMatches } from '@allternit/office-suite/xlsx'
 import { parseFormulaReferences } from './formula-closure'
 
 type UniverRuntime = ReturnType<typeof createUniver>
