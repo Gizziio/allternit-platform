@@ -34,7 +34,7 @@ import {
   CodePermissionsDropdown,
   type CodePermissionOption,
 } from '@/components/dispatch/CodePermissionsDropdown';
-import { RemoteSessionPanel } from '@/components/dispatch/RemoteSessionPanel';
+import { openRemoteControlWindow } from '@/lib/open-remote-control-window';
 
 // ─── token generation ────────────────────────────────────────────────────────
 function generateDispatchToken(): string {
@@ -357,10 +357,6 @@ export function DispatchView(): React.ReactNode {
   const [bannerDismissed, setBannerDismissed] = useState(false);
   const [qrPanelDismissed, setQrPanelDismissed] = useState(false);
 
-  // ── remote hub tabs ─────────────────────────────────────────────────────────
-  type RemoteTab = 'handoff' | 'sessions';
-  const [remoteTab, setRemoteTab] = useState<RemoteTab>('handoff');
-
   // ── composer ────────────────────────────────────────────────────────────────
   const [composerValue, setComposerValue] = useState('');
   const [messages, setMessages] = useState<Array<{ id: string; role: 'user'; text: string }>>([]);
@@ -567,9 +563,9 @@ export function DispatchView(): React.ReactNode {
               className="text-3xl font-medium tracking-tight m-0"
               style={{ fontFamily: 'var(--font-serif)' }}
             >
-              Dispatch
+              Remote Control
             </h1>
-            <p className="m-0 mt-1 text-sm text-[var(--text-secondary)]">Work with Allternit, right on your computer</p>
+            <p className="m-0 mt-1 text-sm text-[var(--text-secondary)]">Monitor, hand off, and control your agents across machines.</p>
           </div>
 
           <div className="flex items-center gap-2 flex-shrink-0">
@@ -681,24 +677,19 @@ export function DispatchView(): React.ReactNode {
           <div className="mx-6 mt-6 flex items-center gap-2">
             <button
               type="button"
-              onClick={() => setRemoteTab('handoff')}
               className={cn(
                 'px-4 py-2 rounded-xl text-[13px] font-medium transition-colors',
-                remoteTab === 'handoff'
-                  ? 'bg-[var(--bg-elevated)] text-[var(--text-primary)] border border-[var(--border-default)] shadow-sm'
-                  : 'text-[var(--text-tertiary)] hover:text-[var(--text-secondary)]'
+                'bg-[var(--bg-elevated)] text-[var(--text-primary)] border border-[var(--border-default)] shadow-sm'
               )}
             >
               Handoff
             </button>
             <button
               type="button"
-              onClick={() => setRemoteTab('sessions')}
+              onClick={() => openRemoteControlWindow()}
               className={cn(
                 'px-4 py-2 rounded-xl text-[13px] font-medium transition-colors',
-                remoteTab === 'sessions'
-                  ? 'bg-[var(--bg-elevated)] text-[var(--text-primary)] border border-[var(--border-default)] shadow-sm'
-                  : 'text-[var(--text-tertiary)] hover:text-[var(--text-secondary)]'
+                'text-[var(--text-tertiary)] hover:text-[var(--text-secondary)]'
               )}
             >
               Remote sessions
@@ -706,13 +697,8 @@ export function DispatchView(): React.ReactNode {
           </div>
         )}
 
-        {remoteTab === 'sessions' && handoffStatus?.runtimeId ? (
-          <div className="flex-1 overflow-hidden p-6">
-            <RemoteSessionPanel runtimeId={handoffStatus.runtimeId} getToken={getToken} />
-          </div>
-        ) : (
-          <>
-            {/* Handoff banner */}
+        <>
+          {/* Handoff banner */}
         {!bannerDismissed && (
           <div className="mx-6 mt-6 p-4 pr-5 rounded-2xl bg-[var(--bg-elevated)] border border-solid border-[var(--border-default)] flex items-start gap-4 shadow-sm">
             <div className="size-9 rounded-xl bg-[var(--border-subtle)] flex items-center justify-center shrink-0 mt-0.5">
@@ -914,7 +900,6 @@ export function DispatchView(): React.ReactNode {
           </div>
         </div>
       </>
-        )}
       </div>
     </div>
   </div>

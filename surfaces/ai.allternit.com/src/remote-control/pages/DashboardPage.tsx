@@ -52,7 +52,7 @@ const STATUS_COLORS: Record<string, string> = {
 const CLOUD_API_BASE_URL = "https://api.allternit.com";
 const PUSH_WORKER_URL =
   env("VITE_REMOTE_CONTROL_PUSH_URL") ?? "https://push.remotecontrol.allternit.com";
-const PLATFORM_HUB_URL = env("VITE_ALLTERNIT_API_URL") ?? "https://ai.allternit.com";
+const PLATFORM_HUB_URL = env("VITE_ALLTERNIT_PLATFORM_URL") ?? "https://ai.allternit.com";
 
 function urlBase64ToUint8Array(base64String: string): Uint8Array {
   const padding = "=".repeat((4 - (base64String.length % 4)) % 4);
@@ -94,8 +94,8 @@ export function DashboardPage({ installPrompt, onInstallClick }: DashboardPagePr
         if (res.status === 401) return;
         throw new Error(`Failed to load runtimes (${res.status})`);
       }
-      const data = (await res.json()) as { devices?: CloudRuntimeDevice[] } | CloudRuntimeDevice[];
-      const devices = Array.isArray(data) ? data : data.devices ?? [];
+      const data = (await res.json()) as { runtimes?: CloudRuntimeDevice[] } | CloudRuntimeDevice[];
+      const devices = Array.isArray(data) ? data : data.runtimes ?? [];
       setRuntimes(devices.map(deviceToViewModel));
     } catch (err) {
       addToast({
@@ -281,7 +281,7 @@ export function DashboardPage({ installPrompt, onInstallClick }: DashboardPagePr
               </button>
             )}
             <a
-              href={PLATFORM_HUB_URL ? `${PLATFORM_HUB_URL}/remote-control` : "/remote-control"}
+              href={PLATFORM_HUB_URL || "https://ai.allternit.com"}
               target="_blank"
               rel="noreferrer"
               className="inline-flex items-center gap-2 px-3.5 py-2 rounded-xl border-none text-[13px] font-semibold cursor-pointer transition-colors"

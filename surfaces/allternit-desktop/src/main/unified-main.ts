@@ -1933,7 +1933,9 @@ ipcMain.handle('shell:open-remote-control', () => {
   remoteControlWindow.on('closed', () => { remoteControlWindow = null; });
   const dashboardUrl = process.env.ALLTERNIT_REMOTE_CONTROL_URL
     ? new URL('/', process.env.ALLTERNIT_REMOTE_CONTROL_URL).toString()
-    : new URL('/remote-control.html', activePlatformUrl).toString();
+    : activePlatformUrl.includes('localhost') || activePlatformUrl.includes('127.0.0.1')
+      ? new URL('/remote-control.html', activePlatformUrl).toString()
+      : 'https://remotecontrol.allternit.com';
   void remoteControlWindow.loadURL(dashboardUrl);
 });
 

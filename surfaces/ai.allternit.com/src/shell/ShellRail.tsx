@@ -26,7 +26,6 @@ import {
   DownloadSimple,
   SlidersHorizontal,
   Plus,
-  Target,
   ArrowSquareOut,
   Trash,
   DotsThreeVertical,
@@ -936,28 +935,11 @@ export function ShellRail({
               isActive={activeViewType === 'goals-list' || activeViewType === 'cron' || activeViewType === 'cowork-cron'}
               onClick={() => onOpen?.('goals-list')}
             />
-            <div className="relative">
-              <RailItem
-                icon={Target}
-                label="Dispatch"
-                isActive={activeViewType === 'dispatch'}
-                onClick={() => onOpen?.('dispatch')}
-              />
-              <span className="absolute right-3 top-1/2 -translate-y-1/2 bg-[var(--surface-hover)] text-[var(--shell-item-muted)] text-[10px] px-1.5 py-0.5 rounded-full font-bold border border-solid border-[var(--border-subtle)]">
-                Beta
-              </span>
-            </div>
             <RailItem
               icon={DesktopTower}
               label="Remote Control"
-              isActive={activeViewType === 'remote-control'}
-              onClick={() => {
-                if (typeof window !== 'undefined' && window.allternit?.shell?.openRemoteControl) {
-                  void window.allternit.shell.openRemoteControl();
-                  return;
-                }
-                window.open('/remote-control', '_blank', 'noopener,noreferrer');
-              }}
+              isActive={activeViewType === 'dispatch'}
+              onClick={() => onOpen?.('dispatch')}
             />
             <RailItem
               icon={SlidersHorizontal}
