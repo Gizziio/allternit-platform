@@ -90,7 +90,10 @@ export function DashboardPage({ installPrompt, onInstallClick }: DashboardPagePr
       const res = await fetch(`${CLOUD_API_BASE_URL}/api/v1/runtime-devices`, {
         headers: token ? { Authorization: `Bearer ${token}` } : {},
       });
-      if (!res.ok) throw new Error(`Failed to load runtimes (${res.status})`);
+      if (!res.ok) {
+        if (res.status === 401) return;
+        throw new Error(`Failed to load runtimes (${res.status})`);
+      }
       const data = (await res.json()) as { devices?: CloudRuntimeDevice[] } | CloudRuntimeDevice[];
       const devices = Array.isArray(data) ? data : data.devices ?? [];
       setRuntimes(devices.map(deviceToViewModel));

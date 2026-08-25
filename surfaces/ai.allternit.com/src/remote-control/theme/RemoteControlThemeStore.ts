@@ -12,7 +12,7 @@ interface ThemeState {
 export const useRemoteControlThemeStore = create<ThemeState>()(
   persist(
     (set) => ({
-      theme: 'dark',
+      theme: 'system',
       setTheme: (theme) => set({ theme }),
     }),
     {
