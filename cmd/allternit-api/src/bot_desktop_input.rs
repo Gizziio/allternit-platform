@@ -171,7 +171,7 @@ fn build_mouse_command(input: &MouseInput) -> Result<Vec<String>, String> {
         other => return Err(format!("unsupported mouse action: {}", other)),
     };
 
-    Ok(vec!["xdotool".to_string()]
+    Ok(vec!["env".to_string(), "DISPLAY=:0".to_string(), "xdotool".to_string()]
         .into_iter()
         .chain(args)
         .collect())
@@ -276,6 +276,8 @@ fn build_keyboard_command(input: &KeyboardInput) -> Result<Vec<String>, String> 
                 .as_deref()
                 .ok_or_else(|| "text is required for action=type".to_string())?;
             Ok(vec![
+                "env".to_string(),
+                "DISPLAY=:0".to_string(),
                 "xdotool".to_string(),
                 "type".to_string(),
                 "--delay".to_string(),
@@ -288,7 +290,13 @@ fn build_keyboard_command(input: &KeyboardInput) -> Result<Vec<String>, String> 
                 .key
                 .as_deref()
                 .ok_or_else(|| "key is required for action=key".to_string())?;
-            Ok(vec!["xdotool".to_string(), "key".to_string(), key.to_string()])
+            Ok(vec![
+                "env".to_string(),
+                "DISPLAY=:0".to_string(),
+                "xdotool".to_string(),
+                "key".to_string(),
+                key.to_string(),
+            ])
         }
         other => Err(format!("unsupported keyboard action: {}", other)),
     }
@@ -381,8 +389,15 @@ pub(crate) async fn run_desktop_shell(
         let mut env_vars = HashMap::new();
         env_vars.insert("DISPLAY".to_string(), ":0".to_string());
         env_vars.extend(input.env);
+        // Inline DISPLAY (and any other env vars) into the command so the
+        // execution works even with drivers that do not transmit env_vars.
+        let mut command = vec!["env".to_string()];
+        for (k, v) in &env_vars {
+            command.push(format!("{}={}", k, v));
+        }
+        command.extend(input.command);
         CommandSpec {
-            command: input.command,
+            command,
             env_vars,
             working_dir: None,
             stdin_data: None,

@@ -251,10 +251,17 @@ async fn run_tart_exec(
     state: &AppState,
     name: &str,
     command: &[String],
-    _env: &std::collections::HashMap<String, String>,
+    env: &std::collections::HashMap<String, String>,
 ) -> Result<ExecResponse, TartError> {
     let mut args = vec!["exec".to_string(), name.to_string()];
-    args.extend(command.iter().cloned());
+    // Tart's native exec does not forward arbitrary environment variables, so
+    // wrap the command with `env` to set them inline.
+    let mut wrapped = vec!["env".to_string()];
+    for (k, v) in env {
+        wrapped.push(format!("{}={}", k, v));
+    }
+    wrapped.extend(command.iter().cloned());
+    args.extend(wrapped);
 
     let out = Command::new(&state.tart_bin)
         .args(&args)
@@ -270,7 +277,7 @@ async fn run_tart_exec(
     // macOS base images) may not have it running, so fall back to SSH over the
     // Tart VM's NAT IP when we detect the agent is missing.
     if exit_code != 0 && stderr.contains("Tart Guest Agent") {
-        return run_ssh_exec(state, name, command).await;
+        return run_ssh_exec(state, name, command, env).await;
     }
 
     Ok(ExecResponse {
@@ -284,6 +291,7 @@ async fn run_ssh_exec(
     state: &AppState,
     name: &str,
     command: &[String],
+    env: &std::collections::HashMap<String, String>,
 ) -> Result<ExecResponse, TartError> {
     let ip = run_tart_output(state, &["ip", name]).await?;
     let ip = ip.trim();
@@ -291,12 +299,20 @@ async fn run_ssh_exec(
         return Err(TartError::Internal("VM has no IP for SSH fallback".to_string()));
     }
 
+    // Prepend environment variables so they survive the SSH hop even when the
+    // guest agent path is not used.
+    let env_prefix = env
+        .iter()
+        .map(|(k, v)| format!("{}={}", k, shell_escape(v)))
+        .collect::<Vec<_>>()
+        .join(" ");
+
     // When the original command is `sh -c "<script>"`, run the script directly
     // on the remote host. Otherwise join the vector into one remote command.
     let remote_cmd = if command.len() == 3 && command[0] == "sh" && command[1] == "-c" {
-        command[2].clone()
+        format!("{} {}", env_prefix, command[2])
     } else {
-        command.join(" ")
+        format!("{} {}", env_prefix, command.join(" "))
     };
 
     let ssh_args = vec![
@@ -324,6 +340,17 @@ async fn run_ssh_exec(
         stdout: String::from_utf8_lossy(&out.stdout).to_string(),
         stderr: String::from_utf8_lossy(&out.stderr).to_string(),
     })
+}
+
+fn shell_escape(s: &str) -> String {
+    // Minimal shell escaping for env var values: wrap in single quotes and
+    // escape embedded single quotes by ending the quote, inserting an escaped
+    // quote, and starting a new quote.
+    if s.is_empty() || s.chars().any(|c| !c.is_alphanumeric() && c != '_' && c != '-' && c != ':' && c != '/' && c != '.') {
+        format!("'{}'", s.replace('\'', "'\"'\"'"))
+    } else {
+        s.to_string()
+    }
 }
 
 #[derive(Debug, Deserialize)]

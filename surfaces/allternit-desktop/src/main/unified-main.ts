@@ -56,6 +56,7 @@ import {
   getGuideStatus,
   waitForGuideDismissed,
   runPermissionOnboarding,
+  invalidatePermissionCache,
 } from './permission-guide.js';
 import { featureFlagManager } from './feature-flags.js';
 import { persistedState } from './persisted-state.js';
@@ -2469,6 +2470,7 @@ ipcMain.handle('permission-guide:dismiss', () => dismissGuide());
 ipcMain.handle('permission-guide:get-status', () => getGuideStatus());
 
 ipcMain.handle('permission-guide:request-check', async () => {
+  invalidatePermissionCache();
   const status = await checkPermissions();
   store.set('permissions.lastStatus', { ...status, checkedAt: new Date().toISOString() });
   mainWindow?.webContents.send('permission-guide:status', status);
@@ -2479,6 +2481,7 @@ ipcMain.handle('permission-guide:ready-for-check', async () => {
   // Called by the renderer's onboarding wizard when it reaches the permissions step.
   // This allows the platform UI to control exact timing instead of relying on a fixed delay.
   log.info('[Main] Renderer signaled ready for permission check');
+  invalidatePermissionCache();
   const status = await checkPermissions();
   store.set('permissions.lastStatus', { ...status, checkedAt: new Date().toISOString() });
   mainWindow?.webContents.send('permission-guide:status', status);

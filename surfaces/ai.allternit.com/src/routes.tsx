@@ -109,8 +109,8 @@ export default function AppRoutes() {
         <Route path="/shell/sessions" element={<SessionsPage />} />
         <Route path="/shell/recents" element={<ShellPage />} />
         <Route path="/shell/new" element={<Navigate to="/shell" replace />} />
-        <Route path="/sign-in" element={<SignInPage />} />
-        <Route path="/sign-up" element={<SignUpPage />} />
+        <Route path="/sign-in/*" element={<SignInPage />} />
+        <Route path="/sign-up/*" element={<SignUpPage />} />
         <Route path="/pair" element={<RuntimePairingPage />} />
         <Route path="/runtimes" element={<RuntimesPage />} />
         <Route path="/oauth/authorize" element={<AuthorizePage />} />

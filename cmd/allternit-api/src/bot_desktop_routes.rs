@@ -255,7 +255,7 @@ async fn get_desktop_screenshot(
             command: vec![
                 "sh".to_string(),
                 "-c".to_string(),
-                "scrot -z -o /tmp/allternit-screen.png && base64 -w0 /tmp/allternit-screen.png".to_string(),
+                "DISPLAY=:0 scrot -z -o /tmp/allternit-screen.png && base64 -w0 /tmp/allternit-screen.png".to_string(),
             ],
             env_vars,
             working_dir: None,
