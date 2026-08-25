@@ -76,4 +76,4 @@ jobs:
         with:
           apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-          command: pages deploy surfaces/ai.allternit.com/dist --project-name=ai-allternit --branch=main
+          command: pages deploy surfaces/ai.allternit.com/dist --project-name=allternit-platform --branch=main
