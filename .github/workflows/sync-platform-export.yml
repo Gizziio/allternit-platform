@@ -42,6 +42,7 @@ jobs:
       - name: Build workspace packages with dist entries
         run: |
           pnpm --filter @allternit/office-docx-engine run build
+          pnpm --filter @allternit/office-pptx-engine run build
           pnpm --filter @allternit/office-file-parse run build
 
       - name: Copy discovery feed to public
