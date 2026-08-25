@@ -35,6 +35,20 @@ const desktopAuthEnabled = isDesktopAuthEnabled()
 const clerkDisabledByEnv = isClerkDisabledByEnv()
 const DESKTOP_BROWSER_AUTH_PATH_PREFIXES = ["/sign-in", "/sign-up", "/pair", "/oauth", "/terminal/clerk", "/clerk_"]
 
+const STATIC_ALLOWED_REDIRECT_ORIGINS = [
+  "https://remotecontrol.allternit.com",
+  "https://platform.allternit.com",
+  "https://ai.allternit.com",
+  "http://localhost:3013",
+  "http://localhost:5173",
+  "http://localhost:4173",
+]
+
+export function getAllowedRedirectOrigins(): string[] {
+  const current = typeof window !== "undefined" ? window.location.origin : "https://platform.allternit.com"
+  return Array.from(new Set([current, ...STATIC_ALLOWED_REDIRECT_ORIGINS]))
+}
+
 type DesktopSession = {
   userId: string
   userEmail: string
@@ -270,6 +284,7 @@ export function PlatformAuthProvider({ children }: { children: ReactNode }) {
       appearance={clerkAppearance}
       signInUrl={SIGN_IN_URL}
       signUpUrl={SIGN_UP_URL}
+      allowedRedirectOrigins={getAllowedRedirectOrigins()}
     >
       <ClerkPlatformAuthBridge>{children}</ClerkPlatformAuthBridge>
     </ClerkProvider>
