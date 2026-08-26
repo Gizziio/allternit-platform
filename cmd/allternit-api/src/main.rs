@@ -28,8 +28,6 @@ use allternit_api::admin_mcp_tunnel_routes::router as admin_mcp_tunnel_router;
 use allternit_api::agent_operations_routes;
 use allternit_api::federation_routes::router as federation_router;
 use allternit_api::outcome_rubric_routes::router as outcome_rubric_router;
-use allternit_api::page_agent_routes::page_agent_router;
-use allternit_api::allternit_bus_routes::{allternit_bus_router, allternit_bus_webhook_router};
 use allternit_api::quickstart_routes::router as quickstart_router;
 use allternit_api::agent_preferences_routes::agent_preferences_router;
 use allternit_api::agent_routes::agent_router;
@@ -51,8 +49,6 @@ use allternit_api::automation_routes::automation_router;
 use allternit_api::backend_install_routes::backend_install_router;
 use allternit_api::board_routes::board_router;
 use allternit_api::board_stream_routes::board_stream_router;
-use allternit_api::bot_desktop_routes::bot_desktop_router;
-use allternit_api::bot_desktop_stream::bot_desktop_stream_router;
 use allternit_api::brain_routes::{brain_git_router, brain_router};
 use allternit_api::canvas_routes::canvas_router;
 use allternit_api::checkpoints_routes::checkpoints_router;
@@ -67,19 +63,16 @@ use allternit_api::design_connector_routes::{design_connector_router, DesignSkil
 use allternit_api::fallback_routes::fallback_router;
 use allternit_api::file_routes::file_router;
 use allternit_api::h5i_routes::h5i_router;
-use allternit_api::har_api_routes::har_api_router;
 use allternit_api::health::health_router;
 use allternit_api::idempotency::idempotency_middleware;
 use allternit_api::inbox_routes::inbox_router;
 use allternit_api::library_routes::library_router;
 use allternit_api::local_brain_routes::local_brain_router;
-use allternit_api::local_engine_routes::local_engine_router;
-use allternit_api::local_studio_routes::local_studio_router;
 use allternit_api::mcp_routes::mcp_router;
 use allternit_api::me_routes::me_router;
-use allternit_api::memory_reconstruction_routes::memory_reconstruction_router;
 use allternit_api::memory_routes::memory_router;
 use allternit_api::metrics::metrics_router;
+use allternit_api::model_training_routes::model_training_router;
 use allternit_api::oauth_routes::oauth_router;
 use allternit_api::office_cli_routes::office_cli_router;
 use allternit_api::office_engine_routes::{office_engine_router, office_engine_v1_router};
@@ -91,7 +84,6 @@ use allternit_api::playground_routes::playground_router;
 use allternit_api::provider_routes::provider_router;
 use allternit_api::rate_limit::rate_limit_middleware;
 use allternit_api::rails::{rails_router, RailsState};
-use allternit_api::remote_control_routes::remote_control_router;
 use allternit_api::rails_client_impl::create_local_rails_client;
 use allternit_api::runtime_backend_routes::runtime_backend_router;
 use allternit_api::runtime_discover_routes::runtime_discover_router;
@@ -101,7 +93,6 @@ use allternit_api::ssh_routes::ssh_router;
 use allternit_api::status_routes::status_router;
 use allternit_api::stream::stream_router;
 use allternit_api::swarm_routes::swarm_router;
-use allternit_api::tag_routes::tag_router;
 use allternit_api::task_routes;
 use allternit_api::team_skill_routes::team_skill_router;
 use allternit_api::terminal_routes::{terminal_router, TerminalSessionStore};
@@ -114,9 +105,6 @@ use allternit_api::vm_session_routes::{new_vm_session_store, vm_session_router};
 use allternit_api::web_proxy_routes::web_proxy_router;
 use allternit_api::webhook_routes::webhook_router;
 use allternit_api::webhook_subscription_routes::webhook_subscription_router;
-use allternit_api::webhook_trigger_routes::{
-    webhook_trigger_public_router, webhook_trigger_router,
-};
 use allternit_api::workflow_routes::workflow_router;
 use allternit_api::workspace_routes::workspace_router;
 use allternit_api::AppState;
@@ -255,7 +243,6 @@ async fn main() {
         jwks,
         auth_config,
         vm_driver,
-        bot_desktop_sessions: Arc::new(RwLock::new(HashMap::new())),
         rails,
         vm_sessions: new_vm_session_store(),
         cowork_scheduler,
@@ -314,6 +301,7 @@ async fn main() {
         .merge(memory_router())
         .merge(me_router())
         .merge(local_brain_router())
+        .merge(model_training_router())
         .merge(library_router())
         .merge(workflow_router())
         .merge(ssh_router())
@@ -323,7 +311,6 @@ async fn main() {
         .merge(cowork_preferences_router())
         .merge(allternit_api::rails::routes_cowork::cowork_routes())
         .merge(agent_router())
-        .merge(allternit_api::agent_email_routes::agent_email_router())
         .merge(agent_preferences_router())
         .merge(agent_workspace_router())
         .merge(agent_session_router())
@@ -331,15 +318,11 @@ async fn main() {
         .merge(beta_deployment_router())
         .merge(beta_work_router())
         .merge(webhook_subscription_router())
-        .merge(webhook_trigger_router())
         .merge(beta_memory_store_router())
-        .merge(memory_reconstruction_router())
         .merge(user_profile_router())
         .merge(canvas_router())
         .merge(v1_router())
-        .merge(allternit_bus_router())
         .merge(task_routes::task_router())
-        .merge(tag_router())
         .merge(agent_operations_routes::agent_operations_router())
         .merge(allternit_api::queue_routes::queue_router())
         .merge(audit_log_router())
@@ -352,9 +335,7 @@ async fn main() {
         .merge(cowork_team_router())
         .merge(board_stream_router())
         .merge(runtime_backend_router())
-        .merge(remote_control_router())
         .merge(agents_v1_router())
-        .merge(bot_desktop_router())
         .merge(allternit_api::connector_routes::connector_router())
         .merge(allternit_api::cloud_credentials_routes::cloud_credentials_router())
         .merge(allternit_api::usage_routes::usage_router())
@@ -376,7 +357,6 @@ async fn main() {
         .merge(allternit_api::admin_service_account_routes::router())
         .merge(allternit_api::admin_access_token_routes::router())
         .merge(allternit_api::admin_spend_limit_routes::router())
-        .merge(allternit_api::marketplace_routes::router())
         .merge(admin_mcp_tunnel_router())
         .merge(outcome_rubric_router())
         .merge(federation_router())
@@ -386,8 +366,6 @@ async fn main() {
         .merge(allternit_api::scim_routes::router())
         .merge(allternit_api::admin_audit_routes::router())
         .merge(allternit_api::compliance_routes::router())
-        .merge(allternit_api::data_residency_routes::router())
-        .merge(allternit_api::device_attestation_routes::router())
         .merge(workspace_router())
         .merge(artifact_router())
         .merge(conversation_router())
@@ -410,9 +388,7 @@ async fn main() {
         .nest("/api", agent_chat_router())
         .nest("/api", tool_routes::tool_router())
         .nest("/api", local_brain_router())
-        .nest("/api", local_engine_router())
-        .nest("/api", local_studio_router())
-        .nest("/api", har_api_router())
+        .nest("/api", model_training_router())
         // Feature routes
         .nest("/viz", viz_router())
         .nest("/sandbox", sandbox_router())
@@ -420,7 +396,6 @@ async fn main() {
         .nest("/rails", rails_router())
         .nest("/api/rails", rails_router())
         .nest("/stream", stream_router())
-        .nest("/ws/bots", bot_desktop_stream_router())
         .nest("/terminal", terminal_router())
         .nest(
             "/mcp",
@@ -431,7 +406,6 @@ async fn main() {
         .nest("/api", oauth_router())
         .nest("/api", onboarding_router())
         .nest("/api", aci_router())
-        .nest("/api", page_agent_router())
         .nest("/api", analytics_router())
         .nest("/api", playground_router())
         .nest("/api", checkpoints_router())
@@ -461,17 +435,10 @@ async fn main() {
         .nest("/beta", enrollment_router())
         .merge(status_router())
         .merge(webhook_router())
-        .merge(webhook_trigger_public_router())
         // Slack signs every request itself (`verify_slack_signature`), so
         // this is public the same way `webhook_router()` above is — no
         // Clerk session exists for a server-to-server call from Slack.
         .merge(allternit_api::slack_webhook_routes::slack_webhook_router())
-        // Photon.codes inbound-message webhook is also server-to-server and
-        // carries no Clerk session; route it to the recipient bot's inbox.
-        .merge(allternit_bus_webhook_router())
-        // mailflare inbound-email webhook is likewise server-to-server; it is
-        // HMAC-verified per handler (ALLTERNIT_MAILFLARE_WEBHOOK_SECRET).
-        .merge(allternit_api::agent_email_routes::agent_email_webhook_router())
         // OAuth provider redirect targets — the browser arrives from the
         // provider's consent screen with no Clerk JWT, so these must be
         // public: the curated-3 loopback callback (moved out of the protected
@@ -810,23 +777,6 @@ async fn initialize_cowork_scheduler(
 async fn initialize_vm_driver(
     app_config: &allternit_api::config::AppConfig,
 ) -> Option<Arc<dyn allternit_driver_interface::ExecutionDriver>> {
-    // If OpenSandbox is explicitly configured, prefer it over the local
-    // platform driver so bots can use a persistent cloud sandbox.
-    if let Ok(open_sandbox_url) = std::env::var("OPEN_SANDBOX_URL") {
-        use allternit_driver_interface::ExecutionDriver;
-        use allternit_opensandbox_driver::{OpenSandboxConfig, OpenSandboxDriver};
-        let config = OpenSandboxConfig::new(open_sandbox_url);
-        let driver = OpenSandboxDriver::new(config);
-        match driver.health_check().await {
-            Ok(health) if health.healthy => {
-                info!("OpenSandbox driver initialized from OPEN_SANDBOX_URL");
-                return Some(Arc::new(driver));
-            }
-            Ok(health) => warn!("OpenSandbox health check returned unhealthy: {:?}", health),
-            Err(e) => warn!("OpenSandbox health check failed: {}", e),
-        }
-    }
-
     // Get packaged VM directory from desktop app (if available)
     let vm_dir = app_config.vm_dir().map(|p| p.to_string_lossy().to_string());
     if let Some(ref dir) = vm_dir {

@@ -402,9 +402,11 @@ class AllternitApiClient {
     const pathNormalized = path.startsWith('/') ? path : `/${path}`;
     const candidateBases = this.candidateBaseUrls();
     
+    const isFormData = typeof FormData !== 'undefined' && body instanceof FormData;
+
     // Build headers
     const headers: Record<string, string> = {
-      'Content-Type': 'application/json',
+      ...(isFormData ? {} : { 'Content-Type': 'application/json' }),
       'Accept': 'application/json',
       'X-Client-Version': '2.0.0',
       ...(this.token ? { 'Authorization': `Bearer ${this.token}` } : {}),
@@ -419,7 +421,7 @@ class AllternitApiClient {
     };
 
     if (body && method !== 'GET') {
-      config.body = JSON.stringify(body);
+      config.body = isFormData ? body : JSON.stringify(body);
     }
 
     // Apply request interceptors
@@ -1065,6 +1067,52 @@ class AllternitApiClient {
   async gatewayHealth(): Promise<{ status: string; gateway: string }> {
     return this.get('/health');
   }
+
+  // ==========================================================================
+  // MODEL LAB (Unsloth training) API
+  // ==========================================================================
+
+  async listModelTrainingBaseModels(): Promise<Array<{ id: string; name: string; size: string }>> {
+    return this.get('/api/v1/model-training/base-models');
+  }
+
+  async uploadModelTrainingDataset(file: File): Promise<{
+    dataset_id: string;
+    path: string;
+    rows: number;
+    format: 'jsonl' | 'csv';
+  }> {
+    const formData = new FormData();
+    formData.append('file', file);
+    const response = await this.post('/api/v1/model-training/datasets', formData, {
+      headers: {},
+    });
+    return response as { dataset_id: string; path: string; rows: number; format: 'jsonl' | 'csv' };
+  }
+
+  async listModelTrainingJobs(): Promise<ModelTrainingJob[]> {
+    return this.get('/api/v1/model-training/jobs');
+  }
+
+  async getModelTrainingJob(jobId: string): Promise<ModelTrainingJob> {
+    return this.get(`/api/v1/model-training/jobs/${jobId}`);
+  }
+
+  async createModelTrainingJob(payload: ModelTrainingJobCreate): Promise<ModelTrainingJob> {
+    return this.post('/api/v1/model-training/jobs', payload);
+  }
+
+  async cancelModelTrainingJob(jobId: string): Promise<ModelTrainingJob> {
+    return this.post(`/api/v1/model-training/jobs/${jobId}/cancel`, {});
+  }
+
+  async listModelTrainingCheckpoints(jobId: string): Promise<{ checkpoints: ModelTrainingCheckpoint[] }> {
+    return this.get(`/api/v1/model-training/jobs/${jobId}/checkpoints`);
+  }
+
+  async exportModelTrainingJob(jobId: string, payload: ModelTrainingExportRequest): Promise<ModelTrainingExportInfo> {
+    return this.post(`/api/v1/model-training/jobs/${jobId}/export`, payload);
+  }
 }
 
 // =============================================================================
@@ -1352,6 +1400,90 @@ export interface ModelValidationResult {
   model?: DiscoveredModel;
   suggested?: string[];
   message?: string;
+}
+
+// =============================================================================
+// MODEL LAB TYPES
+// =============================================================================
+
+export interface ModelTrainingBaseModel {
+  id: string;
+  name: string;
+  size: string;
+}
+
+export interface ModelTrainingHyperparameters {
+  method: 'lora' | 'qlora' | 'full' | 'dpo';
+  r: number;
+  alpha: number;
+  target_modules: string[];
+  learning_rate: number;
+  epochs: number;
+  max_steps: number;
+  per_device_batch_size: number;
+  gradient_accumulation_steps: number;
+  warmup_steps: number;
+  weight_decay: number;
+  max_seq_length: number;
+  seed: number;
+}
+
+export interface ModelTrainingLossPoint {
+  step: number;
+  loss: number;
+  epoch: number;
+  timestamp: string;
+}
+
+export interface ModelTrainingCheckpoint {
+  checkpoint_id: string;
+  path: string;
+  step: number;
+  epoch: number;
+  created_at: string;
+}
+
+export interface ModelTrainingJob {
+  job_id: string;
+  name: string;
+  base_model_id: string;
+  dataset_id: string;
+  hyperparameters: ModelTrainingHyperparameters;
+  status: 'pending' | 'preparing' | 'running' | 'completed' | 'failed' | 'cancelled';
+  created_at: string;
+  updated_at: string;
+  progress_pct: number;
+  current_step: number;
+  total_steps: number;
+  current_loss: number | null;
+  loss_history: ModelTrainingLossPoint[];
+  error_message: string | null;
+  artifact_path: string | null;
+  checkpoints: ModelTrainingCheckpoint[];
+  metadata: Record<string, unknown>;
+}
+
+export interface ModelTrainingJobCreate {
+  base_model_id: string;
+  dataset_id: string;
+  name?: string;
+  hyperparameters: ModelTrainingHyperparameters;
+}
+
+export interface ModelTrainingExportRequest {
+  target: 'gguf' | 'mlx';
+  quantization?: string;
+}
+
+export interface ModelTrainingExportInfo {
+  export_id: string;
+  job_id: string;
+  target: 'gguf' | 'mlx';
+  status: 'pending' | 'preparing' | 'running' | 'completed' | 'failed' | 'cancelled';
+  output_path: string | null;
+  error_message: string | null;
+  created_at: string;
+  updated_at: string;
 }
 
 export function useModelDiscovery() {
