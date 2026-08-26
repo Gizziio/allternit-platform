@@ -1,5 +1,229 @@
 [
   {
+    "id": "feature-2026-w35",
+    "slug": "weekly-feature-2026-w35",
+    "type": "blog",
+    "contentType": "feature",
+    "status": "published",
+    "title": "Long-Horizon Agent Memory: From Context Windows to Working Memory",
+    "subtitle": "A://SUDO Reality · Weekly Magazine · August 26, 2026",
+    "abstract": "Long-horizon agents now operate with massive context windows, but retrieved history often fails to shape task execution, creating a costly 'history present but not operative' failure mode. New architectures such as Recuris address this by separating a working-memory layer that tracks task state from an experiential-memory layer of skills and execution traces, updating skill memory only when validated by structured evidence. Product moves like Anthropic’s Claude Cowork shared memory reinforce the broader shift: context windows are becoming transport layers, while working memory is becoming the reasoning layer for production agents.",
+    "authors": [
+      "A://SUDO Reality"
+    ],
+    "teams": [
+      "research"
+    ],
+    "tags": [
+      "agentic-ai",
+      "safety-governance",
+      "research-frontier",
+      "product-engineering"
+    ],
+    "keywords": [
+      "long-horizon agents",
+      "context windows",
+      "working memory",
+      "experiential memory",
+      "Recuris",
+      "retrieval-augmented generation",
+      "task state",
+      "skill memory",
+      "meta-agent",
+      "validation-gating"
+    ],
+    "createdAt": "2026-08-26T09:41:20.908Z",
+    "updatedAt": "2026-08-26T09:41:20.908Z",
+    "publishedAt": "2026-08-26T09:41:20.908Z",
+    "content": {
+      "markdown": "# Long-Horizon Agent Memory: From Context Windows to Working Memory\n\n## Cover Story\n\nLong-horizon agents are caught in a paradox: they have never been able to remember more, yet they have never been worse at using what they remember. Context windows now swallow 128,000 tokens or more, but new evidence from financial-analysis workflows shows that simply retrieving a risk disclosure from a long filing has almost no effect on an LLM's investment judgment, even when direct retrieval stays accurate. The history is present; it is not operative. That gap is why the architecture of agent memory is being redrawn. The latest work moves the field away from the brute-force model of \"read everything\" toward a structured working memory that tracks task state and selects skills grounded in the current need.\n\nThis is not an incremental tweak to retrieval-augmented generation. It is a response to a specific, expensive failure mode in production agents: as execution histories grow, the task state becomes obscure, and the agent starts invoking the wrong skills at the wrong time. A new recursive Experiential-Working Memory architecture, Recuris, tackles this by coupling a working-memory layer that monitors progress with an experiential-memory layer of skills and past execution traces. A fixed meta-agent then uses structured execution evidence to update only the memory component responsible for a failure, validation-gating each change. The result is an agent that can improve its own skill memory without retraining the underlying model.\n\nThe practical signal is already showing up in product form. Anthropic's Claude Cowork is introducing shared memory across chat and Cowork sessions so that users stop re-briefing the assistant. That solves the user-context problem, but the deeper engineering challenge is the same: separate what an agent can read from what it can act on. Recuris and related research point toward a production pattern in which context windows become a transport layer, not a reasoning layer. Working memory becomes the reasoning layer.\n\n> For production agents, the problem is no longer how much history the model can read, but how little of the right history it can act on.\n\nFor engineering teams, the stakes are clear. If your agent executes multi-step workflows over minutes or hours, the dominant failure mode is no longer \"I ran out of context.\" It is \"I lost the thread.\" Fixing that requires re-architecting memory around task state, not token count. The teams that get this right will build agents that are debuggable, improvable, and economically viable at long horizons. The teams that do not will keep paying for ever-larger context windows and still wonder why their agents make the same mistakes twice.\n\n## Technical Breakdown\n\n### How it works\n\nAt the center of Recuris is a separation of concerns borrowed from cognitive architecture. Instead of feeding the entire execution history into the LLM, the system maintains three memory components:\n\n1. **Experiential Memory** — a long-term store of prior trajectories, reusable skills, and raw execution traces.\n2. **Working Memory** — a compact representation that tracks current task progress and selects skills from Experiential Memory based on present need.\n3. **Skill Memory** — a validated, executable skill library that the agent actually invokes.\n\nDuring execution, the agent's Working Memory decides which skill to call. The full history is not re-read; the skill is grounded in the current task state. After each episode, execution traces are turned into structured evidence. A fixed meta-agent diagnoses failures and proposes targeted updates to Skill Memory — or to how Working Memory selects skills. Each proposed update is validation-gated before being committed. The cycle produces new execution evidence, and the process repeats. The result is recursive self-improvement localized to specific memory components.\n\nThis design directly addresses the long-context retrieval-integration gap shown by Liu and Liu. In their experiments, when total context grows from 2,000 to 128,000 tokens while focal-firm information is held fixed, direct retrieval of a risk disclosure remains accurate, but its influence on the model's investment judgment falls to the experimental noise floor. The model can read the document; it cannot keep the relevant fact active across the reasoning chain. Working memory is intended to solve exactly that: keep the task-relevant signal active while suppressing irrelevant context.\n\n### What problem it actually solves vs. what the marketing claims\n\nMarketing around long context often conflates \"can access\" with \"can use.\" Recuris does not magically expand the effective horizon of every LLM. It solves a structural problem in long-horizon agent harnesses: skill misalignment caused by history overload. It also provides a failure-attribution mechanism. Because updates are localized and validation-gated, engineers can trace a bad action to a specific memory component rather than debugging an opaque, monolithic prompt.\n\n### Limitations and edge cases\n\nThe architecture assumes a stable task structure and a reusable skill library. In open-ended domains where skills are not cleanly factorable, Working Memory may select poorly and updates can compound. Validation gating adds safety but can also reject valid updates, slowing learning. The latency cost of the meta-agent update loop is not specified in the available sources. The experiments cover multiple tasks, but real-world multi-hour workflows with human feedback loops remain unverified. There is also no evidence in the sources that Recuris reduces inference cost relative to simpler retrieval patterns; cost depends heavily on implementation and on whether memory maintenance runs synchronously or asynchronously.\n\n## Production Implications\n\n### When to adopt it, when to wait\n\nIf your agent runs tasks with many steps, repeated tool calls, and evolving state, start designing around a working-memory architecture now. If your agent is a single-turn classifier, a short chatbot, or a simple retrieval-and-summarize pipeline, this is overkill.\n\nThe immediate move for production teams is to stop treating the context window as a working-memory substitute. Build an explicit task-state object that the agent updates after each step. Add a skill registry with selection logic. Use retrieval to populate context, but separate the active reasoning state from the raw history. Recuris provides a pattern: a meta-agent loop that reviews failures and proposes memory updates only after validation. That adds components — a memory store, a skill registry, an evaluator/validator, and observability into which memory component failed — but it replaces the current regime of endlessly growing prompts and repeated mistakes.\n\n### Integration complexity and operational concerns\n\nIntegration complexity is high. You will need to instrument execution traces so failures can be localized to Working Memory, Skill Memory, or Experiential Memory. You will need a validation harness; otherwise the meta-agent will corrupt the skill library. Operational concerns include update drift, version control for skills, and latency from the meta-reasoning step. The tradeoff is compute spent on memory maintenance versus model calls saved by better skill selection. In high-frequency, low-latency workflows, the extra reasoning step may be unacceptable. In asynchronous, long-running tasks, it is likely worth it.\n\n### Cost and performance tradeoffs\n\nCost context is changing at the same time. Claude Code costs $20 to $200 per month depending on usage, while open-source alternatives like Goose target the same terminal-agent pattern without a subscription. Meanwhile, OpenAI's Jalapeño custom inference chip is promising faster, more power-efficient inference, which could lower the cost of the meta-agent loop. Anthropic's Claude Cowork shared memory is a consumer-facing signal of the same trend, but it solves user-context persistence, not task-state working memory.\n\n**The so what:** production AI teams should care because long-horizon reliability is the difference between a demo and a workflow. The winning design is not a bigger prompt; it is a memory architecture that knows what matters now.\n\n## This Week\n\n### ls -la — the full listing\n\n- **Conferences & robotics:** IEEE Spectrum flagged upcoming events including Humanoids Summit Seoul (22–23 September 2026, Seoul), IROS 2026 (27 September–1 October 2026, Pittsburgh), and CoRL 2026 (9–12 November 2026). These are worth calendar-marking for anyone building embodied or multi-step agents.\n- **Inference silicon:** OpenAI published first results for Jalapeño, its custom inference chip, which it describes as faster and more power-efficient for modern-model inference.\n- **Product memory:** Anthropic rolled out shared memory for Claude Cowork across chat and Cowork sessions, removing the need to repeatedly re-brief the assistant on projects and preferences.\n- **Platform & pricing:** OpenAI announced wider API availability and rollout across eligible ChatGPT Work and Codex-credits plans; Pro, Plus, and Business subscription usage remains unchanged. Separately, the market for terminal coding agents is heating up: Claude Code pricing runs $20–$200/month, while the open-source Goose project targets the same workflow without subscription fees.\n- **Community projects:** A new Rust ML framework, Millwright, is experimenting with end-to-end training workflows in Rust. On the model side, the Thomson 1.0 technical report discusses continual learning of frontier models for SovereignAI and releases open weights.\n\n### git push — trending GitHub projects worth a look\n\n- **AgriciDaniel/claude-obsidian** (13,039 stars) — a self-organizing \"AI second brain\" for Obsidian plus Claude Code that ingests sources and files them into a plain-Markdown knowledge graph. It is built on Andrej Karpathy's LLM Wiki pattern and is a useful reference for anyone thinking about structured, user-owned agent memory.\n- **anthropics/claude-plugins-community** (1,978 stars) — a read-only mirror of Anthropic's community plugin marketplace for Claude Cowork and Claude Code. Worth watching to see what skill-library conventions emerge.\n- **TauricResearch/TradingAgents** (100,579 stars) — a multi-agent LLM financial-trading framework. It sits squarely in the high-stakes, long-horizon domain where retrieval accuracy and judgment integration diverge, making it a good test case for working-memory ideas.\n\n### pwned — security\n\nRussian operators used ChatGPT to run an influence operation, according to OpenAI's findings reported this week. The actors used VPNs to bypass geographic restrictions, generated posts promoting the \"International Burke Institute,\" and distributed them across Substack, Telegram, X, Facebook, and LinkedIn. OpenAI banned the accounts after detecting the abuse. The incident is a reminder that API abuse monitoring and geo-restriction enforcement are production concerns, not just policy ones, especially as agents gain longer memories and more autonomous publishing capabilities.\n\n## What We're Watching\n\n1. **Open-source Recuris code and benchmarks.** The paper is currently arXiv-only; we are watching for a code release and for independent evaluations on long-horizon agent harnesses.\n2. **Claude Cowork shared memory in the wild.** Whether Anthropic exposes memory primitives to developers or keeps them internal will shape how product teams build persistent agent experiences.\n3. **Jalapeño production benchmarks.** OpenAI's first results are promising, but we want to see comparative cost and latency numbers against commodity GPU inference at scale.\n4. **Multi-agent finance frameworks.** TradingAgents and similar projects are high-stakes long-horizon tasks where the retrieval-judgment gap is dangerous; watch how they handle memory and skill selection.\n5. **Long-context judgment benchmarks.** We are tracking whether new model families close the retrieval-integration gap through architecture, or merely through larger windows.\n\n## Sources\n\n- Yu, Z., Wu, Y., Yin, Z., Chen, K., Zhao, Z., Wang, M., Yan, S., & Yang, L. (2026). *Recursive Experiential-Working Memory Evolution for Long-Horizon Agent Harnesses.* arXiv. http://arxiv.org/abs/2608.24876v1\n- Liu, M., & Liu, Z. (2026). *Reading Is Not Using: Retrieval, Judgment, and the Design of AI Financial Research Workflows.* arXiv. http://arxiv.org/abs/2608.24842v1\n- Huang, J., Zhang, J., & Chang, H.-H. (2026). *A Dual-Dimensional LLM Framework for Automated Item Incidental Content Similarity Analysis in Large-Scale Assessments.* arXiv. http://arxiv.org/abs/2608.24825v1\n- OpenAI. (2026). *Jalapeño’s first results show industry-leading speed and efficiency in AI inference.* https://openai.com/index/jalapeno-first-results\n- TechCrunch. (2026, August 25). *Claude Cowork finally remembers what you told the app in chat.* https://techcrunch.com/2026/08/25/claude-cowork-finally-remembers-what-you-told-the-app-in-chat/\n- VentureBeat. (2026). *Claude Code costs up to $200 a month. Goose does the same thing for free.* https://venturebeat.com/infrastructure/claude-code-costs-up-to-usd200-a-month-goose-does-the-same-thing-for-free\n- OpenAI [@OpenAI]. (2026). *Now available on the API and rolling out across eligible plans for ChatGPT Work and Codex credits.* X. https://x.com/OpenAI/status/2090885188897460249\n- The Hacker News [@TheHackersNews]. (2026). *Russian operators used ChatGPT to run an influence operation.* X. https://x.com/TheHackersNews/status/2092547335742230786\n- IEEE Spectrum. (2026). *Video Friday: Do We Need Superhuman Humanoid Robots?* https://spectrum.ieee.org/video-friday-unitree-superhuman\n- AgriciDaniel. (2026). *claude-obsidian* [GitHub repository]. https://github.com/AgriciDaniel/claude-obsidian\n- Anthropic. (2026). *claude-plugins-community* [GitHub repository]. https://github.com/anthropics/claude-plugins-community\n- TauricResearch. (2026). *TradingAgents* [GitHub repository]. https://github.com/TauricResearch/TradingAgents\n- /u/olty5000. (2026). *Millwright — experimenting with an end-to-end machine learning framework in Rust.* Reddit. https://www.reddit.com/r/MachineLearning/comments/1vyq7m9/millwright_experimenting_with_an_endtoend_machine/\n- /u/Forsaken_Scientist. (2026). *Continual Learning of Frontier Models for SovereignAI. Tech Report + Open Weights Model.* Reddit. https://www.reddit.com/r/MachineLearning/comments/1vxvzju/continual_learning_of_frontier_models_for/",
+      "sources": [
+        {
+          "source": "arxiv",
+          "title": "A Dual-Dimensional LLM Framework for Automated Item Incidental Content Similarity Analysis in Large-Scale Assessments",
+          "url": "http://arxiv.org/abs/2608.24825v1",
+          "engagement": {},
+          "relevanceScore": 0.6666666666666666,
+          "focusAreas": [
+            "infrastructure",
+            "safety-governance",
+            "product-engineering",
+            "robotics"
+          ]
+        },
+        {
+          "source": "github",
+          "title": "AgriciDaniel / claude-obsidian (Python)",
+          "url": "https://github.com/AgriciDaniel/claude-obsidian",
+          "engagement": {
+            "stars": 13039,
+            "forks": 1391
+          },
+          "relevanceScore": 0.5833333333333334,
+          "focusAreas": [
+            "local-inference"
+          ]
+        },
+        {
+          "source": "github",
+          "title": "anthropics / claude-plugins-community (Python)",
+          "url": "https://github.com/anthropics/claude-plugins-community",
+          "engagement": {
+            "stars": 1978,
+            "forks": 181
+          },
+          "relevanceScore": 0.5833333333333334,
+          "focusAreas": [
+            "product-engineering"
+          ]
+        },
+        {
+          "source": "reddit",
+          "title": "Millwright — experimenting with an end-to-end machine learning framework in Rust [P]",
+          "url": "https://www.reddit.com/r/MachineLearning/comments/1vyq7m9/millwright_experimenting_with_an_endtoend_machine/",
+          "engagement": {},
+          "relevanceScore": 0.5833333333333334,
+          "focusAreas": [
+            "agentic-ai",
+            "infrastructure",
+            "product-engineering",
+            "robotics"
+          ]
+        },
+        {
+          "source": "arxiv",
+          "title": "Reading Is Not Using: Retrieval, Judgment, and the Design of AI Financial Research Workflows",
+          "url": "http://arxiv.org/abs/2608.24842v1",
+          "engagement": {},
+          "relevanceScore": 0.5833333333333334,
+          "focusAreas": [
+            "agentic-ai",
+            "product-engineering",
+            "robotics"
+          ]
+        },
+        {
+          "source": "github",
+          "title": "TauricResearch / TradingAgents (Python)",
+          "url": "https://github.com/TauricResearch/TradingAgents",
+          "engagement": {
+            "stars": 100579,
+            "forks": 19396
+          },
+          "relevanceScore": 0.5,
+          "focusAreas": [
+            "agentic-ai"
+          ]
+        },
+        {
+          "source": "reddit",
+          "title": "Continual Learning of Frontier Models for SovereignAI. Tech Report + Open Weights Model [R]",
+          "url": "https://www.reddit.com/r/MachineLearning/comments/1vxvzju/continual_learning_of_frontier_models_for/",
+          "engagement": {},
+          "relevanceScore": 0.5,
+          "focusAreas": [
+            "agentic-ai",
+            "infrastructure",
+            "local-inference",
+            "safety-governance",
+            "robotics"
+          ]
+        },
+        {
+          "source": "arxiv",
+          "title": "Recursive Experiential-Working Memory Evolution for Long-Horizon Agent Harnesses",
+          "url": "http://arxiv.org/abs/2608.24876v1",
+          "engagement": {},
+          "relevanceScore": 0.5,
+          "focusAreas": [
+            "agentic-ai",
+            "robotics"
+          ]
+        },
+        {
+          "source": "venturebeat-ai",
+          "title": "Claude Code costs up to $200 a month. Goose does the same thing for free.",
+          "url": "https://venturebeat.com/infrastructure/claude-code-costs-up-to-usd200-a-month-goose-does-the-same-thing-for-free",
+          "engagement": {},
+          "relevanceScore": 0.5,
+          "focusAreas": [
+            "agentic-ai"
+          ]
+        },
+        {
+          "source": "x",
+          "title": "Now available on the API and rolling out across eligible plans for ChatGPT Work and Codex credits. Pro, Plus, and Business subscription usag…",
+          "url": "https://x.com/OpenAI/status/2090885188897460249",
+          "engagement": {
+            "score": 902
+          },
+          "relevanceScore": 0.4166666666666667,
+          "focusAreas": [
+            "product-engineering",
+            "robotics"
+          ]
+        },
+        {
+          "source": "x",
+          "title": "⚠️ Russian operators used ChatGPT to run an influence operation. OpenAI banned the accounts after finding they used VPNs to bypass restricti…",
+          "url": "https://x.com/TheHackersNews/status/2092547335742230786",
+          "engagement": {
+            "score": 4
+          },
+          "relevanceScore": 0.4166666666666667,
+          "focusAreas": [
+            "robotics"
+          ]
+        },
+        {
+          "source": "openai",
+          "title": "Jalapeño’s first results show industry-leading speed and efficiency in AI inference",
+          "url": "https://openai.com/index/jalapeno-first-results",
+          "engagement": {},
+          "relevanceScore": 0.4166666666666667,
+          "focusAreas": [
+            "infrastructure"
+          ]
+        },
+        {
+          "source": "techcrunch-ai",
+          "title": "Claude Cowork finally remembers what you told the app in chat",
+          "url": "https://techcrunch.com/2026/08/25/claude-cowork-finally-remembers-what-you-told-the-app-in-chat/",
+          "engagement": {},
+          "relevanceScore": 0.4166666666666667,
+          "focusAreas": [
+            "robotics"
+          ]
+        },
+        {
+          "source": "ieee-spectrum-robotics",
+          "title": "Video Friday: Do We Need Superhuman Humanoid Robots?",
+          "url": "https://spectrum.ieee.org/video-friday-unitree-superhuman",
+          "engagement": {},
+          "relevanceScore": 0.4166666666666667,
+          "focusAreas": [
+            "robotics"
+          ]
+        }
+      ]
+    },
+    "readingTime": 5,
+    "featured": true,
+    "series": "A://SUDO Reality",
+    "issueNumber": "2026-W35",
+    "metrics": {
+      "views": 906,
+      "uniqueVisitors": 0,
+      "downloads": 115596,
+      "citationCount": 0
+    },
+    "license": "CC BY 4.0",
+    "accessLevel": "public",
+    "imageUrl": "https://ai.allternit.com/images/discovery/weekly-feature-2026-w35.svg",
+    "artifactUrl": "https://ai.allternit.com/editions/weekly-feature-2026-w35.html",
+    "pdfUrl": "https://ai.allternit.com/editions/weekly-feature-2026-w35.pdf"
+  },
+  {
     "id": "blog-2026-w34",
     "slug": "builders-notebook-2026-w34",
     "type": "blog",
