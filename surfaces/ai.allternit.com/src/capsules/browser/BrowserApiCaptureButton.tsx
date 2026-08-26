@@ -13,6 +13,10 @@ import {
   CheckCircle,
 } from "@phosphor-icons/react";
 import { useApiCaptureStore } from "@/lib/api-capture/store";
+import {
+  getArmedBrowserCapture,
+  resolveBrowserCaptureArm,
+} from "@/lib/api-capture/arm";
 import { cn } from "@/lib/utils";
 
 interface BrowserApiCaptureButtonProps {
@@ -50,8 +54,10 @@ export function BrowserApiCaptureButton({ domain, disabled, onOpenSiteApis }: Br
   const buttonRef = useRef<HTMLButtonElement>(null);
   const menuRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const autoStartedRef = useRef(false);
   const { ingestHarFile } = useApiCaptureStore();
 
+  // Probe native capture availability once on mount.
   useEffect(() => {
     let cancelled = false;
     getCaptureAPI()
@@ -64,6 +70,33 @@ export function BrowserApiCaptureButton({ domain, disabled, onOpenSiteApis }: Br
       });
     return () => { cancelled = true; };
   }, []);
+
+  // Consume a pending "arm" signal from the Site APIs surface. If the armed
+  // domain matches the current tab (or no domain filter was set), auto-start
+  // capture so the user lands in a recording session. We skip the check while
+  // the active tab domain is still loading (undefined) when a domain filter
+  // was requested, so capture does not start unfiltered by accident.
+  useEffect(() => {
+    if (autoStartedRef.current || phase !== "idle") return;
+    const { arm } = getArmedBrowserCapture();
+    if (!arm) return;
+
+    const armDomain = arm.domain?.toLowerCase();
+    const currentDomain = domain?.toLowerCase();
+
+    if (armDomain && currentDomain === undefined) return;
+
+    const matches =
+      !armDomain ||
+      armDomain === currentDomain ||
+      (currentDomain !== undefined && currentDomain.endsWith(`.${armDomain}`));
+
+    if (matches) {
+      autoStartedRef.current = true;
+      resolveBrowserCaptureArm();
+      void handleStartCapture();
+    }
+  }, [domain, phase]);
 
   useEffect(() => {
     const handler = (e: MouseEvent) => {
@@ -91,26 +124,17 @@ export function BrowserApiCaptureButton({ domain, disabled, onOpenSiteApis }: Br
     setMenuPos({ top, right });
   }, []);
 
-  const openSiteApisFallback = useCallback(() => {
-    window.dispatchEvent(
-      new CustomEvent("allternit:open-view", {
-        detail: { viewType: "site-apis" },
-      })
-    );
-  }, []);
-
   const openSiteApis = useCallback(() => {
     if (onOpenSiteApis) {
       onOpenSiteApis();
     } else {
-      openSiteApisFallback();
+      window.dispatchEvent(
+        new CustomEvent("allternit:open-view", {
+          detail: { viewType: "site-apis" },
+        })
+      );
     }
-    window.dispatchEvent(
-      new CustomEvent("allternit:agent-pane-tab", {
-        detail: { tab: "site-apis" },
-      })
-    );
-  }, [onOpenSiteApis, openSiteApisFallback]);
+  }, [onOpenSiteApis]);
 
   const handleStartCapture = useCallback(async () => {
     setError(null);
@@ -212,7 +236,7 @@ export function BrowserApiCaptureButton({ domain, disabled, onOpenSiteApis }: Br
         <div className="mx-3 mt-2 p-2 rounded-md bg-[var(--status-warning)]/10 border border-solid border-[var(--status-warning)]/20 text-[11px] text-[var(--text-secondary)] flex items-start gap-2">
           <Warning size={14} className="shrink-0 mt-0.5 text-[var(--status-warning)]" />
           <span>
-            Live capture requires the desktop shell with native network recording. Restart Allternit Desktop to activate it.
+            Live capture requires the desktop shell with native network recording. Upload a HAR file instead.
           </span>
         </div>
       )}

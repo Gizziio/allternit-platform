@@ -22,6 +22,11 @@ import {
   setupHTMLToFigmaContextMenus,
   handleContextMenuClick 
 } from '@/html-to-figma'
+import {
+  startCapture,
+  stopCapture,
+  isCaptureAvailable,
+} from '@/api-capture/background'
 
 export default defineBackground(() => {
   console.log('[Allternit Extension] Background Service Worker started')
@@ -129,6 +134,31 @@ export default defineBackground(() => {
     if (message.type === 'PLATFORM_TASK_SUBSCRIBE') {
       sendResponse({ ok: true })
       return undefined
+    }
+    if (message.type === 'API_CAPTURE_AVAILABLE') {
+      sendResponse({ ok: true, available: isCaptureAvailable() })
+      return undefined
+    }
+    if (message.type === 'API_CAPTURE_START') {
+      const tabId = message.tabId ?? sender.tab?.id
+      if (!tabId) {
+        sendResponse({ ok: false, error: 'No tab provided' })
+        return undefined
+      }
+      startCapture(tabId, message.filterUrls)
+        .then((result) => sendResponse({ ok: true, sessionId: result.sessionId }))
+        .catch((error) => sendResponse({ ok: false, error: error instanceof Error ? error.message : String(error) }))
+      return true
+    }
+    if (message.type === 'API_CAPTURE_STOP') {
+      if (!message.sessionId) {
+        sendResponse({ ok: false, error: 'sessionId is required' })
+        return undefined
+      }
+      stopCapture(message.sessionId)
+        .then((result) => sendResponse({ ok: true, har: result.har }))
+        .catch((error) => sendResponse({ ok: false, error: error instanceof Error ? error.message : String(error) }))
+      return true
     }
     // Browser-agent content script messages are handled by browserAgentConnection
     if (message.type === 'BROWSER_ACTION' || message.type === 'CONTENT_READY') {

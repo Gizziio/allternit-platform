@@ -1,6 +1,9 @@
 "use client";
 
-import React from "react";
+import React, { useState } from "react";
+import { Robot, Plugs } from "@phosphor-icons/react";
+import { cn } from "@/lib/utils";
+import { ApiCaptureView } from "@/views/api-capture/ApiCaptureView";
 import {
   ExtensionSidepanelShell,
   useBrowserExtensionPaneAdapter,
@@ -72,12 +75,58 @@ function BrowserUnifiedAgentPanel(): React.ReactNode {
 }
 
 export function BrowserChatPane(): React.ReactNode {
+  const [activeTab, setActiveTab] = useState<"agent" | "apis">("agent");
+
   return (
-    <div className="flex flex-col h-full">
+    <div className="flex flex-col h-full bg-[var(--shell-view-bg)]">
+      <div className="shrink-0 flex items-center gap-1 px-3 py-2 border-b border-solid border-[var(--border-subtle)]">
+        <TabButton
+          active={activeTab === "agent"}
+          onClick={() => setActiveTab("agent")}
+          icon={<Robot size={14} />}
+          label="Agent"
+        />
+        <TabButton
+          active={activeTab === "apis"}
+          onClick={() => setActiveTab("apis")}
+          icon={<Plugs size={14} />}
+          label="APIs"
+        />
+      </div>
+
       <div className="flex-1 min-h-0 overflow-hidden">
-        <BrowserUnifiedAgentPanel />
+        {activeTab === "agent" ? (
+          <BrowserUnifiedAgentPanel />
+        ) : (
+          <ApiCaptureView compact />
+        )}
       </div>
     </div>
+  );
+}
+
+interface TabButtonProps {
+  active: boolean;
+  onClick: () => void;
+  icon: React.ReactNode;
+  label: string;
+}
+
+function TabButton({ active, onClick, icon, label }: TabButtonProps) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className={cn(
+        "flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[12px] font-semibold transition-colors border-none cursor-pointer",
+        active
+          ? "bg-[var(--accent-primary)]/10 text-[var(--accent-primary)]"
+          : "text-[var(--text-secondary)] hover:bg-[var(--surface-hover)] hover:text-[var(--text-primary)]"
+      )}
+    >
+      {icon}
+      {label}
+    </button>
   );
 }
 

@@ -586,6 +586,18 @@ const workerAPI = {
   list: (): Promise<string[]> => ipcRenderer.invoke('worker:list'),
 };
 
+// ─── Browser API Capture ─────────────────────────────────────────────────────
+// Records network traffic from the active Electron session and returns a HAR
+// archive that the platform renderer can ingest as a Site API contract.
+
+const browserCaptureAPI = {
+  isAvailable: (): Promise<boolean> => ipcRenderer.invoke('browser-capture:is-available'),
+  start: (options?: { filterUrls?: string[] }): Promise<{ success: boolean; sessionId?: string; error?: string }> =>
+    ipcRenderer.invoke('browser-capture:start', options),
+  stop: (sessionId: string): Promise<{ success: boolean; har?: string; error?: string }> =>
+    ipcRenderer.invoke('browser-capture:stop', sessionId),
+};
+
 // ─── HyperFrames ─────────────────────────────────────────────────────────────
 
 const hyperframesAPI = {
@@ -635,6 +647,7 @@ const allternitDesktopAPI = {
   worker: workerAPI,
   hyperframes: hyperframesAPI,
   miniApps: miniAppsAPI,
+  browserCapture: browserCaptureAPI,
 };
 
 contextBridge.exposeInMainWorld('allternit', allternitDesktopAPI);

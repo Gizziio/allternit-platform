@@ -192,6 +192,11 @@ declare global {
         remove: () => Promise<void>;
         onProgress: (handler: (progress: { stage: string; message: string }) => void) => () => void;
       };
+      browserCapture?: {
+        isAvailable: () => Promise<boolean>;
+        start: (options?: { filterUrls?: string[] }) => Promise<{ success: boolean; sessionId?: string; error?: string }>;
+        stop: (sessionId: string) => Promise<{ success: boolean; har?: string; error?: string }>;
+      };
     };
     allternitExtension?: any;
     electron?: {

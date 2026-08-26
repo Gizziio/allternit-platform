@@ -63,6 +63,7 @@ import { BrowserIframeSkeleton } from './BrowserIframeSkeleton';
 import { BrowserNewTabPage } from './BrowserNewTabPage';
 import { BrowserFindBar } from './BrowserFindBar';
 import { BrowserDownloadBar } from './BrowserDownloadBar';
+import { BrowserApiCaptureButton } from './BrowserApiCaptureButton';
 
 // ============================================================================
 // Types & Constants
@@ -1537,6 +1538,11 @@ export function BrowserCapsuleEnhanced({
             <NavBtn title="Extensions" onClick={() => setExtensionPopupOpen(!extensionPopupOpen)}><Puzzle className="size-4" /></NavBtn>
             <ExtensionManagerPopup open={extensionPopupOpen} onClose={() => setExtensionPopupOpen(false)} onNavigate={addTab} />
           </div>
+
+          <BrowserApiCaptureButton
+            domain={activeTab?.contentType === 'web' ? (() => { try { return new URL((activeTab as WebTab).url).hostname; } catch { return undefined; } })() : undefined}
+            onOpenSiteApis={() => window.dispatchEvent(new CustomEvent('allternit:open-view', { detail: { viewType: 'site-apis' } }))}
+          />
 
           <div className="relative">
             <NavBtn title="More" onClick={() => setMenuOpen(!menuOpen)}><DotsThreeVertical className="size-4" /></NavBtn>

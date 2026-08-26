@@ -236,6 +236,50 @@ Rename the web UI's "Brain" surface to "Second Brain", wire Clerk JWT sync into 
 
 ---
 
+## Goal (platform polish: Site APIs / HAR-derived API Capture audit & redesign plan)
+
+Audit the current Site APIs surface and HAR-derived API capture flow, research open-source patterns and GitHub projects that do the same workflow, identify the root causes of the spacing/wiring/cross-surface failures, write a research-backed redesign plan, and begin implementation of the highest-impact fixes.
+
+## Just did
+
+- Audited the full capture stack:
+  - Frontend: `ApiCaptureView.tsx`, `api-capture/store.ts`, `api-capture/api.ts`, `BrowserApiCaptureButton.tsx`, `BrowserChatPane.tsx`.
+  - Desktop: `browser-capture-manager.ts`, `unified-main.ts` IPC handlers, `preload/index.ts` bridge.
+  - Backend: `cmd/allternit-api/src/har_api_routes.rs`.
+  - Extension: `surfaces/allternit-extensions/allternit-extension/` manifest and sidepanel.
+- Found concrete bugs: desktop capture tore down all global `webRequest` listeners, response bodies were not captured, concurrent sessions raced, the "Open browser to capture" CTA opened the browser landing page, generated clients were stubs, and the extension had no capture permissions.
+- Researched GitHub projects: `neo`, `har-to-curl`, `reverse-api-engineer`, `zapi`, `vespasian`, `har-to-openapi`, `bluebox-sdk`, `har-capture`, `mitmproxy`, `apify/crawlee`, Chrome DevTools Protocol, and Vercel's `agent-browser derive-client` skill.
+- Documented capture options for Chrome extensions: `webRequest` (no bodies), `chrome.debugger` + CDP (full capture), DevTools panel, content-script interception.
+- Wrote `docs/SITE_APIS_CAPTURE_REDESIGN_PLAN.md` with root-cause table, proposed adapter-based cross-surface architecture, backend service outline, phased implementation plan, acceptance criteria, and open questions.
+- **Implemented Phase 1 & 2 fixes:**
+  - Hardened `browser-capture-manager.ts` with per-session dispatch, global listener lifecycle, concurrent-session guard, and request-body capture; added 8 passing unit tests.
+  - Created `src/lib/api-capture/arm.ts` so the Site APIs surface can arm the ACI browser capture button across components.
+  - Rewired `BrowserApiCaptureButton` into the ACI browser top row (`BrowserCapsuleEnhanced.tsx`); it now auto-starts capture when it receives an arm signal whose domain matches the active tab.
+  - Redesigned `ApiCaptureView.tsx` with a `CaptureLauncher` CTA, URL prompt, expandable endpoint cards, improved replay form, compact mode prop, and better Allternit spacing.
+  - Added an "APIs" tab to `BrowserChatPane` so Site APIs are usable in the compact ACI sidepanel without clipping.
+  - Wired the desktop `browserCapture` API end-to-end:
+    - Added `browser-capture:*` IPC handlers in `surfaces/allternit-desktop/src/main/unified-main.ts` backed by `browser-capture-manager.ts`.
+    - Exposed `window.allternit.browserCapture` in `surfaces/allternit-desktop/src/preload/index.ts`.
+    - Added the TypeScript contract to `surfaces/ai.allternit.com/src/lib/globals.d.ts`.
+- Verified health:
+  - `pnpm test -- browser-capture-manager.test.ts` in `surfaces/allternit-desktop` ✅ (8 tests)
+  - `pnpm run typecheck` in `surfaces/allternit-desktop` ✅
+  - `pnpm exec tsc --project tsconfig.typecheck.json --noEmit` in `surfaces/ai.allternit.com` reports no new errors in touched files (baseline pre-existing errors unchanged).
+
+## Next
+
+1. Build the `services/api-capture/` Rust backend (Phase 3): SQLite persistence, real client generation, server-side replay proxy.
+2. Spike the Chrome extension `chrome.debugger` capture adapter (Phase 4).
+3. Add agent-facing tools for `api_capture_record` / `api_capture_stop` / `api_capture_replay` (Phase 5).
+
+## Open questions
+
+- ~~The integration tracker claims `services/api-capture/` is done, but it is not present in this checkout. Should we recover that branch or re-implement?~~ **Answered:** `ao/p1-apitap-capture` does not exist locally or on `origin`. We are implementing from the current prototype.
+- Should the extension use `debugger` permission (full capture but Chrome warning bar) or a DevTools panel approach?
+- How should auth/cookie replay be handled safely in the server-side replay proxy?
+
+---
+
 ## Goal (parallel session: Allternit Manufacturing productization)
 
 Add Allternit Manufacturing as a platform offering: create a strategic master plan, add the product to the Products Discovery catalog and spotlight carousel, and build a dedicated Manufacturing view.

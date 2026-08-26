@@ -1,15 +1,17 @@
-//! HAR-derived API client routes.
+//! HAR-derived API capture routes.
 //!
-//! Accepts browser HAR archives, extracts repeatable API calls, and emits
-//! parameterized client specs that agents and scripts can replay.
+//! Accepts browser HAR archives, extracts repeatable API calls, persists them
+//! in SQLite, and exposes server-side replay + client generation so the Site
+//! APIs surface works across web, desktop, and extension contexts.
 
-use axum::extract::State;
-use axum::http::{HeaderMap, StatusCode};
+use axum::extract::{Path, State};
+use axum::http::{HeaderMap, HeaderName, StatusCode};
 use axum::response::{IntoResponse, Response};
-use axum::routing::post;
+use axum::routing::{delete, get, post};
 use axum::{Json, Router};
 use serde::{Deserialize, Serialize};
 use serde_json::{json, Value};
+use std::collections::HashMap;
 use std::sync::Arc;
 use tracing::{info, warn};
 
@@ -19,6 +21,10 @@ use crate::AppState;
 pub fn har_api_router() -> Router<Arc<AppState>> {
     Router::new()
         .route("/har-derived-api/ingest", post(ingest_har))
+        .route("/har-derived-api/contracts", get(list_contracts))
+        .route("/har-derived-api/contracts/:contract_id", get(get_contract))
+        .route("/har-derived-api/contracts/:contract_id", delete(delete_contract))
+        .route("/har-derived-api/contracts/:contract_id/replay/:endpoint_id", post(replay_endpoint))
         .route("/har-derived-api/client", post(generate_client))
 }
 
@@ -26,6 +32,14 @@ fn unauthorized() -> Response {
     (
         StatusCode::UNAUTHORIZED,
         Json(json!({ "error": "Unauthorized" })),
+    )
+        .into_response()
+}
+
+fn bad_request(message: &str) -> Response {
+    (
+        StatusCode::BAD_REQUEST,
+        Json(json!({ "error": message })),
     )
         .into_response()
 }
@@ -120,9 +134,11 @@ struct ApiEndpoint {
     status_code: u16,
     #[serde(skip_serializing_if = "Option::is_none")]
     response_sample: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    hit_count: Option<u32>,
 }
 
-#[derive(Debug, Serialize)]
+#[derive(Debug, Serialize, Deserialize, Clone)]
 struct TemplatedParam {
     name: String,
     value: String,
@@ -133,6 +149,8 @@ struct TemplatedParam {
 
 #[derive(Debug, Serialize)]
 struct IngestResponse {
+    contract_id: String,
+    domain: String,
     endpoints: Vec<ApiEndpoint>,
     stats: IngestStats,
 }
@@ -162,37 +180,105 @@ struct GenerateClientResponse {
 #[derive(Debug, Deserialize)]
 struct IngestHarRequest {
     har: String,
+    #[serde(default)]
+    source: String,
 }
 
-async fn ingest_har(State(_state): State<Arc<AppState>>, headers: HeaderMap, Json(req): Json<IngestHarRequest>) -> Response {
-    if get_user(&headers).is_none() {
-        return unauthorized();
-    }
+#[derive(Debug, Deserialize)]
+struct ReplayRequest {
+    #[serde(default)]
+    path_params: HashMap<String, String>,
+    #[serde(default)]
+    query_params: HashMap<String, String>,
+    #[serde(default)]
+    headers: Vec<HeaderInput>,
+    #[serde(default)]
+    body: Option<Value>,
+}
+
+#[derive(Debug, Deserialize)]
+struct HeaderInput {
+    name: String,
+    value: String,
+}
+
+#[derive(Debug, Serialize)]
+struct ReplayResponse {
+    status: u16,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    body: Option<Value>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    error: Option<String>,
+}
+
+async fn ingest_har(State(state): State<Arc<AppState>>, headers: HeaderMap, Json(req): Json<IngestHarRequest>) -> Response {
+    let user = match get_user(&headers) {
+        Some(u) => u,
+        None => return unauthorized(),
+    };
 
     let archive: HarArchive = match serde_json::from_str(&req.har) {
         Ok(a) => a,
         Err(err) => {
             warn!(error = %err, "Failed to parse HAR JSON");
-            return (
-                StatusCode::BAD_REQUEST,
-                Json(json!({ "error": "Invalid HAR JSON", "details": err.to_string() })),
-            )
-                .into_response();
+            return bad_request(&format!("Invalid HAR JSON: {}", err));
         }
     };
 
     let endpoints = extract_endpoints(&archive.log.entries);
     let hosts = collect_hosts(&endpoints);
+    let domain = hosts.first().cloned().unwrap_or_else(|| "unknown".to_string());
 
     info!(
         total = archive.log.entries.len(),
         extracted = endpoints.len(),
+        user_id = %user.user_id,
         "HAR-derived API ingest complete"
     );
+
+    let contract_id = format!("contract-{}", uuid::Uuid::new_v4());
+    let derived_at = chrono::Utc::now().to_rfc3339();
+    let source = if req.source.is_empty() { "upload".to_string() } else { req.source.clone() };
+
+    if let Err(err) = state.db.create_contract(&contract_id, &user.user_id, &domain, &source, &derived_at) {
+        warn!(error = %err, "Failed to create API capture contract");
+        return (
+            StatusCode::INTERNAL_SERVER_ERROR,
+            Json(json!({ "error": "Failed to persist contract" })),
+        )
+            .into_response();
+    }
+
+    for ep in &endpoints {
+        let endpoint_id = format!("endpoint-{}", uuid::Uuid::new_v4());
+        if let Err(err) = state.db.create_endpoint(
+            &endpoint_id,
+            &contract_id,
+            &ep.method,
+            &ep.url,
+            &ep.host,
+            &ep.path,
+            &ep.path_template,
+            ep.summary.as_deref(),
+            &serde_json::to_string(&ep.query_params).unwrap_or_else(|_| "[]".to_string()),
+            &serde_json::to_string(&ep.path_params).unwrap_or_else(|_| "[]".to_string()),
+            &serde_json::to_string(&ep.headers).unwrap_or_else(|_| "[]".to_string()),
+            ep.body_template.as_deref(),
+            ep.body_mime_type.as_deref(),
+            &serde_json::to_string(&ep.body_params).unwrap_or_else(|_| "[]".to_string()),
+            ep.status_code,
+            ep.response_sample.as_deref(),
+            ep.hit_count.unwrap_or(1),
+        ) {
+            warn!(error = %err, "Failed to create API capture endpoint");
+        }
+    }
 
     (
         StatusCode::OK,
         Json(IngestResponse {
+            contract_id,
+            domain,
             stats: IngestStats {
                 total_entries: archive.log.entries.len(),
                 api_entries: endpoints.len(),
@@ -204,33 +290,270 @@ async fn ingest_har(State(_state): State<Arc<AppState>>, headers: HeaderMap, Jso
         .into_response()
 }
 
-async fn generate_client(State(_state): State<Arc<AppState>>, headers: HeaderMap, Json(req): Json<GenerateClientRequest>) -> Response {
-    if get_user(&headers).is_none() {
-        return unauthorized();
-    }
+async fn list_contracts(State(state): State<Arc<AppState>>, headers: HeaderMap) -> Response {
+    let user = match get_user(&headers) {
+        Some(u) => u,
+        None => return unauthorized(),
+    };
 
-    let code = match req.language.as_str() {
-        "python" => generate_python_client(&req),
-        "typescript" => generate_typescript_client(&req),
-        "curl" => generate_curl_client(&req),
-        _ => {
+    match state.db.list_capture_contracts(&user.user_id) {
+        Ok(contracts) => (StatusCode::OK, Json(json!({ "contracts": contracts }))).into_response(),
+        Err(err) => {
+            warn!(error = %err, "Failed to list API capture contracts");
+            (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(json!({ "error": "Failed to list contracts" })),
+            )
+                .into_response()
+        }
+    }
+}
+
+async fn get_contract(
+    State(state): State<Arc<AppState>>,
+    headers: HeaderMap,
+    Path(contract_id): Path<String>,
+) -> Response {
+    let user = match get_user(&headers) {
+        Some(u) => u,
+        None => return unauthorized(),
+    };
+
+    match state.db.get_contract_with_endpoints(&contract_id, &user.user_id) {
+        Ok(Some(contract)) => (StatusCode::OK, Json(contract)).into_response(),
+        Ok(None) => (StatusCode::NOT_FOUND, Json(json!({ "error": "Contract not found" }))).into_response(),
+        Err(err) => {
+            warn!(error = %err, "Failed to get API capture contract");
+            (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(json!({ "error": "Failed to get contract" })),
+            )
+                .into_response()
+        }
+    }
+}
+
+async fn delete_contract(
+    State(state): State<Arc<AppState>>,
+    headers: HeaderMap,
+    Path(contract_id): Path<String>,
+) -> Response {
+    let user = match get_user(&headers) {
+        Some(u) => u,
+        None => return unauthorized(),
+    };
+
+    match state.db.delete_capture_contract(&contract_id, &user.user_id) {
+        Ok(true) => (StatusCode::NO_CONTENT, ()).into_response(),
+        Ok(false) => (StatusCode::NOT_FOUND, Json(json!({ "error": "Contract not found" }))).into_response(),
+        Err(err) => {
+            warn!(error = %err, "Failed to delete API capture contract");
+            (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(json!({ "error": "Failed to delete contract" })),
+            )
+                .into_response()
+        }
+    }
+}
+
+async fn replay_endpoint(
+    State(state): State<Arc<AppState>>,
+    headers: HeaderMap,
+    Path((contract_id, endpoint_id)): Path<(String, String)>,
+    Json(req): Json<ReplayRequest>,
+) -> Response {
+    let user = match get_user(&headers) {
+        Some(u) => u,
+        None => return unauthorized(),
+    };
+
+    // Verify the endpoint belongs to a contract owned by the user.
+    let endpoint = match state.db.get_endpoint_by_id(&endpoint_id, &user.user_id) {
+        Ok(Some(ep)) => ep,
+        Ok(None) => return (StatusCode::NOT_FOUND, Json(json!({ "error": "Endpoint not found" }))).into_response(),
+        Err(err) => {
+            warn!(error = %err, "Failed to get API capture endpoint");
             return (
-                StatusCode::BAD_REQUEST,
-                Json(json!({ "error": "Unsupported language" })),
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(json!({ "error": "Failed to get endpoint" })),
             )
                 .into_response();
         }
     };
+
+    if endpoint["contract_id"].as_str() != Some(&contract_id) {
+        return (StatusCode::NOT_FOUND, Json(json!({ "error": "Endpoint not found in contract" }))).into_response();
+    }
+
+    let method = endpoint["method"].as_str().unwrap_or("GET").to_uppercase();
+    let url = endpoint["url"].as_str().unwrap_or("");
+    let path_template = endpoint["path_template"].as_str().unwrap_or(url);
+
+    let mut path = path_template.to_string();
+    for (key, value) in &req.path_params {
+        path = path.replace(&format!("{{{}}}", key), &urlencoding::encode(value));
+    }
+
+    let base_url = match reqwest::Url::parse(url) {
+        Ok(u) => format!("{}://{}{}", u.scheme(), u.host_str().unwrap_or(""), u.port().map(|p| format!(":{}", p)).unwrap_or_default()),
+        Err(_) => return bad_request("Invalid endpoint URL"),
+    };
+
+    let mut replay_url = match reqwest::Url::parse(&format!("{}{}", base_url, path)) {
+        Ok(u) => u,
+        Err(err) => return bad_request(&format!("Invalid replay URL: {}", err)),
+    };
+
+    for (key, value) in &req.query_params {
+        replay_url.query_pairs_mut().append_pair(key, value);
+    }
+
+    let mut request_headers = reqwest::header::HeaderMap::new();
+    let mut content_type_set = false;
+
+    // Rebuild headers from the recorded endpoint, skipping templated/sensitive ones.
+    if let Some(headers) = endpoint["headers"].as_array() {
+        for h in headers {
+            if let (Some(name), Some(value)) = (h["name"].as_str(), h["value"].as_str()) {
+                let lower = name.to_ascii_lowercase();
+                if is_hop_by_hop_or_sensitive(name) || h["templated"].as_bool().unwrap_or(false) {
+                    continue;
+                }
+                if let Ok(header_name) = HeaderName::from_bytes(name.as_bytes()) {
+                    if lower == "content-type" {
+                        content_type_set = true;
+                    }
+                    if let Ok(header_value) = reqwest::header::HeaderValue::from_str(value) {
+                        request_headers.insert(header_name, header_value);
+                    }
+                }
+            }
+        }
+    }
+
+    // Apply user-supplied headers (can override recorded ones).
+    for h in &req.headers {
+        if let Ok(header_name) = HeaderName::from_bytes(h.name.as_bytes()) {
+            if let Ok(header_value) = reqwest::header::HeaderValue::from_str(&h.value) {
+                if h.name.to_ascii_lowercase() == "content-type" {
+                    content_type_set = true;
+                }
+                request_headers.insert(header_name, header_value);
+            }
+        }
+    }
+
+    let body_mime_type = endpoint["body_mime_type"].as_str().unwrap_or("application/json");
+    if !content_type_set && method != "GET" && method != "HEAD" {
+        if let Ok(ct) = reqwest::header::HeaderValue::from_str(body_mime_type) {
+            request_headers.insert(reqwest::header::CONTENT_TYPE, ct);
+        }
+    }
+
+    let body_text = if let Some(body) = &req.body {
+        match serde_json::to_string(body) {
+            Ok(text) => Some(text),
+            Err(err) => return bad_request(&format!("Invalid request body: {}", err)),
+        }
+    } else {
+        endpoint["body_template"].as_str().map(|s| s.to_string())
+    };
+
+    let client = reqwest::Client::builder()
+        .timeout(std::time::Duration::from_secs(30))
+        .build()
+        .unwrap_or_else(|_| reqwest::Client::new());
+
+    let mut request_builder = client.request(
+        reqwest::Method::from_bytes(method.as_bytes()).unwrap_or(reqwest::Method::GET),
+        replay_url,
+    );
+
+    if let Some(body) = body_text {
+        request_builder = request_builder.body(body);
+    }
+
+    match request_builder.headers(request_headers).send().await {
+        Ok(response) => {
+            let status = response.status().as_u16();
+            let body_text = match response.text().await {
+                Ok(text) => text,
+                Err(err) => {
+                    return (StatusCode::OK, Json(ReplayResponse {
+                        status,
+                        body: None,
+                        error: Some(format!("Response body read failed: {}", err)),
+                    })).into_response();
+                }
+            };
+
+            let body = if body_text.trim().is_empty() {
+                None
+            } else {
+                match serde_json::from_str(&body_text) {
+                    Ok(json) => Some(json),
+                    Err(_) => Some(Value::String(body_text)),
+                }
+            };
+
+            (StatusCode::OK, Json(ReplayResponse { status, body, error: None })).into_response()
+        }
+        Err(err) => {
+            warn!(error = %err, "API capture replay request failed");
+            (
+                StatusCode::BAD_GATEWAY,
+                Json(ReplayResponse {
+                    status: 0,
+                    body: None,
+                    error: Some(err.to_string()),
+                }),
+            )
+                .into_response()
+        }
+    }
+}
+
+async fn generate_client(State(state): State<Arc<AppState>>, headers: HeaderMap, Json(req): Json<GenerateClientRequest>) -> Response {
+    let user = match get_user(&headers) {
+        Some(u) => u,
+        None => return unauthorized(),
+    };
+
+    // Resolve the requested endpoints from persisted contracts.
+    let mut endpoints: Vec<Value> = Vec::new();
+    for endpoint_id in &req.endpoints {
+        match state.db.get_endpoint_by_id(endpoint_id, &user.user_id) {
+            Ok(Some(ep)) => endpoints.push(ep),
+            Ok(None) => {}
+            Err(err) => {
+                warn!(error = %err, endpoint_id, "Failed to resolve endpoint for client generation");
+            }
+        }
+    }
+
+    if endpoints.is_empty() {
+        return bad_request("No valid endpoints provided");
+    }
+
+    let code = match req.language.as_str() {
+        "python" => generate_python_client(&endpoints, req.include_auth),
+        "typescript" => generate_typescript_client(&endpoints, req.include_auth),
+        "curl" => generate_curl_client(&endpoints, req.include_auth),
+        _ => return bad_request("Unsupported language"),
+    };
+
+    let notes = vec![
+        "Review extracted parameters and secrets before committing.".to_string(),
+        "Replace hard-coded auth values with environment variables.".to_string(),
+    ];
 
     (
         StatusCode::OK,
         Json(GenerateClientResponse {
             language: req.language,
             code,
-            notes: vec![
-                "Review extracted parameters and secrets before committing.".to_string(),
-                "Replace hard-coded auth values with environment variables.".to_string(),
-            ],
+            notes,
         }),
     )
         .into_response()
@@ -331,6 +654,7 @@ fn extract_endpoints(entries: &[HarEntry]) -> Vec<ApiEndpoint> {
             body_params,
             status_code: entry.response.status,
             response_sample,
+            hit_count: Some(1),
         });
     }
 
@@ -481,63 +805,207 @@ fn truncate(s: &str, max_len: usize) -> String {
     }
 }
 
-fn generate_python_client(req: &GenerateClientRequest) -> String {
+fn generate_python_client(endpoints: &[Value], include_auth: bool) -> String {
     let mut lines = vec![
         "import os".to_string(),
         "import requests".to_string(),
+        "from urllib.parse import urlencode".to_string(),
         "".to_string(),
-        "class HarApiClient:".to_string(),
+        "class SiteApiClient:".to_string(),
         "    def __init__(self, base_url=None, api_key=None):".to_string(),
-        "        self.base_url = base_url or os.environ.get('API_BASE_URL', '')".to_string(),
-        "        self.api_key = api_key or os.environ.get('API_KEY')".to_string(),
-        "        self.session = requests.Session()".to_string(),
-        "        if self.api_key:".to_string(),
-        "            self.session.headers['Authorization'] = f'Bearer {self.api_key}'".to_string(),
-        "".to_string(),
+        "        self.base_url = (base_url or os.environ.get('API_BASE_URL', '')).rstrip('/')".to_string(),
     ];
 
-    for (i, _endpoint_id) in req.endpoints.iter().enumerate() {
-        lines.push(format!("    # Endpoint {}", i + 1));
-        lines.push(format!("    def call_{}(self, **kwargs):", i + 1));
-        lines.push(format!("        url = self.base_url + kwargs.get('path', '')"));
-        lines.push(format!("        return self.session.request(kwargs.get('method', 'GET'), url, json=kwargs.get('json')).json()"));
+    if include_auth {
+        lines.push("        self.api_key = api_key or os.environ.get('API_KEY')".to_string());
+        lines.push("        self.session = requests.Session()".to_string());
+        lines.push("        if self.api_key:".to_string());
+        lines.push("            self.session.headers['Authorization'] = f'Bearer {self.api_key}'".to_string());
+    } else {
+        lines.push("        self.session = requests.Session()".to_string());
+    }
+
+    lines.push("".to_string());
+
+    for ep in endpoints {
+        let method = ep["method"].as_str().unwrap_or("GET").to_lowercase();
+        let path_template = ep["path_template"].as_str().unwrap_or("");
+        let host = ep["host"].as_str().unwrap_or("");
+        let fn_name = sanitize_fn_name(&format!("{}_{}", method, path_template));
+
+        let path_params = extract_path_param_names(path_template);
+        let query_params: Vec<String> = ep["query_params"]
+            .as_array()
+            .map(|arr| arr.iter().filter_map(|p| p["name"].as_str().map(|s| s.to_string())).collect())
+            .unwrap_or_default();
+
+        let mut sig_parts = path_params.clone();
+        if !query_params.is_empty() {
+            sig_parts.push("params".to_string());
+        }
+        if method == "post" || method == "put" || method == "patch" {
+            sig_parts.push("body".to_string());
+        }
+
+        lines.push(format!("    def {}(self, {}):", fn_name, sig_parts.join(", ")));
+        lines.push(format!("        \"\"\"{} {}\"\"\"", ep["method"].as_str().unwrap_or("GET"), path_template));
+
+        // Build URL
+        let mut url_line = format!("        url = f'{}{}'", host, path_template);
+        for param in &path_params {
+            url_line = url_line.replace(&format!("{{{}}}", param), &format!("{{{{{}}}}}", param));
+        }
+        lines.push(url_line);
+
+        if !query_params.is_empty() {
+            lines.push("        if params:".to_string());
+            lines.push("            url += '?' + urlencode(params)".to_string());
+        }
+
+        let mut call_args = format!("url, method='{}'", method.to_uppercase());
+        if method == "post" || method == "put" || method == "patch" {
+            call_args.push_str(", json=body");
+        }
+
+        lines.push(format!("        return self.session.request({}).json()", call_args));
         lines.push("".to_string());
     }
 
     lines.join("\n")
 }
 
-fn generate_typescript_client(_req: &GenerateClientRequest) -> String {
-    r#"export class HarApiClient {
-  private baseUrl: string;
-  private apiKey?: string;
+fn generate_typescript_client(endpoints: &[Value], include_auth: bool) -> String {
+    let mut lines = vec![
+        "export class SiteApiClient {".to_string(),
+        "  private baseUrl: string;".to_string(),
+    ];
 
-  constructor(baseUrl = process.env.API_BASE_URL, apiKey = process.env.API_KEY) {
-    this.baseUrl = baseUrl || '';
-    this.apiKey = apiKey;
-  }
+    if include_auth {
+        lines.push("  private apiKey?: string;".to_string());
+        lines.push("".to_string());
+        lines.push("  constructor(baseUrl = process.env.API_BASE_URL, apiKey = process.env.API_KEY) {".to_string());
+        lines.push("    this.baseUrl = (baseUrl || '').replace(/\\/$/, '');".to_string());
+        lines.push("    this.apiKey = apiKey;".to_string());
+    } else {
+        lines.push("".to_string());
+        lines.push("  constructor(baseUrl = process.env.API_BASE_URL) {".to_string());
+        lines.push("    this.baseUrl = (baseUrl || '').replace(/\\/$/, '');".to_string());
+    }
 
-  private async request(path: string, init: RequestInit = {}) {
-    const headers: Record<string, string> = { 'Content-Type': 'application/json' };
-    if (this.apiKey) headers['Authorization'] = `Bearer ${this.apiKey}`;
-    const res = await fetch(`${this.baseUrl}${path}`, { ...init, headers });
-    if (!res.ok) throw new Error(`HTTP ${res.status}`);
-    return res.json();
-  }
+    lines.push("  }".to_string());
+    lines.push("".to_string());
+    lines.push("  private async request(path: string, init: RequestInit = {}) {".to_string());
+    lines.push("    const headers: Record<string, string> = { 'Content-Type': 'application/json' };".to_string());
+    if include_auth {
+        lines.push("    if (this.apiKey) headers['Authorization'] = `Bearer ${this.apiKey}`;".to_string());
+    }
+    lines.push("    const res = await fetch(`${this.baseUrl}${path}`, { ...init, headers });".to_string());
+    lines.push("    if (!res.ok) throw new Error(`HTTP ${res.status}`);".to_string());
+    lines.push("    return res.json();".to_string());
+    lines.push("  }".to_string());
+    lines.push("".to_string());
+
+    for ep in endpoints {
+        let method = ep["method"].as_str().unwrap_or("GET").to_lowercase();
+        let path_template = ep["path_template"].as_str().unwrap_or("");
+        let fn_name = sanitize_fn_name(&format!("{}_{}", method, path_template));
+
+        let path_params = extract_path_param_names(path_template);
+        let query_params: Vec<String> = ep["query_params"]
+            .as_array()
+            .map(|arr| arr.iter().filter_map(|p| p["name"].as_str().map(|s| s.to_string())).collect())
+            .unwrap_or_default();
+
+        let mut sig_parts: Vec<String> = path_params.iter().map(|p| format!("{}: string", p)).collect();
+        if !query_params.is_empty() {
+            sig_parts.push("params?: Record<string, string>".to_string());
+        }
+        if method == "post" || method == "put" || method == "patch" {
+            sig_parts.push("body?: unknown".to_string());
+        }
+
+        lines.push(format!("  async {}({}) {{", fn_name, sig_parts.join(", ")));
+
+        let mut path_expr = format!("`{}`", path_template);
+        for param in &path_params {
+            path_expr = path_expr.replace(&format!("{{{}}}", param), &format!("${{{}}}", param));
+        }
+
+        if !query_params.is_empty() {
+            lines.push(format!("    const query = params ? '?' + new URLSearchParams(params).toString() : '';"));
+            lines.push(format!("    return this.request(`${{{}}}${{query}}`, {{ method: '{}' }});", path_expr, method.to_uppercase()));
+        } else if method == "post" || method == "put" || method == "patch" {
+            lines.push(format!("    return this.request({}, {{ method: '{}', body: body ? JSON.stringify(body) : undefined }});", path_expr, method.to_uppercase()));
+        } else {
+            lines.push(format!("    return this.request({}, {{ method: '{}' }});", path_expr, method.to_uppercase()));
+        }
+
+        lines.push("  }".to_string());
+        lines.push("".to_string());
+    }
+
+    lines.push("}".to_string());
+    lines.join("\n")
 }
-"#
-    .to_string()
+
+fn generate_curl_client(endpoints: &[Value], include_auth: bool) -> String {
+    let mut lines = vec![
+        "# HAR-derived API replay templates".to_string(),
+        "# Set these in your environment before running:".to_string(),
+        "# export API_BASE_URL=\"...\"".to_string(),
+    ];
+
+    if include_auth {
+        lines.push("# export API_KEY=\"...\"".to_string());
+    }
+    lines.push("".to_string());
+
+    for ep in endpoints {
+        let method = ep["method"].as_str().unwrap_or("GET");
+        let path_template = ep["path_template"].as_str().unwrap_or("");
+        let host = ep["host"].as_str().unwrap_or("");
+
+        let mut cmd = format!("curl -s -X {} \"{}{}\"", method, host, path_template);
+
+        if include_auth {
+            cmd.push_str(" \\\n  -H \"Authorization: Bearer $API_KEY\"");
+        }
+
+        if let Some(body) = ep["body_template"].as_str() {
+            cmd.push_str(&format!(" \\\n  -H \"Content-Type: application/json\" \\\n  -d '{}'", body.replace('\\', "\\\\").replace('"', "\\\"")));
+        }
+
+        lines.push(cmd);
+        lines.push("".to_string());
+    }
+
+    lines.join("\n")
 }
 
-fn generate_curl_client(_req: &GenerateClientRequest) -> String {
-    r#"# HAR-derived API replay template
-# Set these in your environment before running:
-# export API_BASE_URL="..."
-# export API_KEY="..."
+fn sanitize_fn_name(name: &str) -> String {
+    name.to_lowercase()
+        .replace(|c: char| !c.is_alphanumeric(), "_")
+        .replace("__", "_")
+        .trim_matches('_')
+        .to_string()
+}
 
-curl -s "$API_BASE_URL/REPLACE_PATH" \\
-  -H "Authorization: Bearer $API_KEY" \\
-  -H "Content-Type: application/json"
-"#
-    .to_string()
+fn extract_path_param_names(path_template: &str) -> Vec<String> {
+    let mut names = Vec::new();
+    let mut chars = path_template.chars().peekable();
+    while let Some(c) = chars.next() {
+        if c == '{' {
+            let mut name = String::new();
+            while let Some(ch) = chars.next() {
+                if ch == '}' {
+                    break;
+                }
+                name.push(ch);
+            }
+            if !name.is_empty() {
+                names.push(name);
+            }
+        }
+    }
+    names
 }

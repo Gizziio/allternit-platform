@@ -76,6 +76,9 @@ export default defineConfig({
       'notifications',
       'downloads',
       'contextMenus',
+      // api-capture: full network recording via Chrome DevTools Protocol
+      'debugger',
+      'webRequest',
     ],
     commands: {
       'open-sidepanel': {
