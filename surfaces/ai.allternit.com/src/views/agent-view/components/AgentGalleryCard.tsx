@@ -25,6 +25,8 @@ import { AgentAvatar } from "@/components/Avatar";
 import { MascotPreview } from "./AgentMascotPreview";
 import { ConfirmModal } from "@/components/ConfirmModal";
 import { cn } from "@/lib/utils";
+import { TagCloud } from "@/components/tagging";
+import { useTagStore } from "@/lib/tags/tag.store";
 
 interface AgentGalleryCardProps {
   agent: Agent;
@@ -180,6 +182,7 @@ export function AgentGalleryCard({ agent, onClick, index = 0 }: AgentGalleryCard
   const capabilities = useMemo(() => agent.capabilities || [], [agent.capabilities]);
   const visibleCapabilities = capabilities.slice(0, 2);
   const hiddenCapabilityCount = Math.max(0, capabilities.length - visibleCapabilities.length);
+  const agentTags = useTagStore((state) => state.getTagsForTarget(agent.id, "agent"));
   const updatedAt = formatUpdatedAt(agent.updatedAt);
   const hasRuns = typeof agent.totalRuns === "number" && agent.totalRuns > 0;
   const hasRating = typeof agent.rating === "number" && agent.rating > 0;
@@ -275,6 +278,13 @@ export function AgentGalleryCard({ agent, onClick, index = 0 }: AgentGalleryCard
                   +{hiddenCapabilityCount}
                 </span>
               )}
+            </div>
+          )}
+
+          {/* Tags */}
+          {agentTags.length > 0 && (
+            <div className="flex flex-wrap items-center gap-1.5">
+              <TagCloud tags={agentTags} />
             </div>
           )}
 

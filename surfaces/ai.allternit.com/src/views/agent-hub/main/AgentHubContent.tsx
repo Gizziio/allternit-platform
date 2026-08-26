@@ -3,6 +3,7 @@ import { AgentView } from "../../AgentView";
 import { PerformanceAnalyticsView } from "@/components/agents/PerformanceAnalyticsView";
 import { AgentSessionsTab } from "./AgentSessionsTab";
 import { AgentWorkspacePanel } from "@/components/agent-workspace/AgentWorkspacePanel";
+import { TagManagerView } from "@/views/tags/TagManagerView";
 import type { AgentTab } from "./AgentHub.constants";
 
 interface AgentHubContentProps {
@@ -21,6 +22,12 @@ export const AgentHubContent: React.FC<AgentHubContentProps> = ({ activeTab }) =
       return (
         <div className="flex-1 overflow-hidden">
           <AgentSessionsTab />
+        </div>
+      );
+    case 'tags':
+      return (
+        <div className="flex-1 overflow-auto">
+          <TagManagerView />
         </div>
       );
     case 'analytics':

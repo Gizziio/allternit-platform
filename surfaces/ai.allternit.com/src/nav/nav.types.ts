@@ -16,6 +16,7 @@ export type ViewType =
   | "addin-ppt"
   // Agent views
   | "agent-hub"
+  | "tag-manager"
   | "native-agent"
   | "registry"
   | "memory"

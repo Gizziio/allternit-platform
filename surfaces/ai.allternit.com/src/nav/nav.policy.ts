@@ -22,7 +22,8 @@ export const DEFAULT_POLICIES: Record<ViewType, SpawnPolicy> = {
   memory: { singleton: true, maxInstances: 1, allowNew: false, surface: "view", ownsTabs: false },
   settings: { singleton: true, maxInstances: 1, allowNew: false, surface: "view", ownsTabs: false },
   "agent-hub": { singleton: true, maxInstances: 1, allowNew: false, surface: "view", ownsTabs: false },
-  
+  "tag-manager": { singleton: true, maxInstances: 1, allowNew: false, surface: "view", ownsTabs: false },
+
   // Mode-specific Agent Session views
   "chat-agent-session": { singleton: false, maxInstances: 10, allowNew: true, surface: "view", ownsTabs: false },
   "cowork-agent-session": { singleton: false, maxInstances: 10, allowNew: true, surface: "view", ownsTabs: false },
