@@ -262,6 +262,25 @@ struct ProviderRow {
     status: String,
 }
 
+/// Frontend-facing provider shape returned by `GET /api/v1/providers`.
+#[derive(Serialize, Clone)]
+struct ProviderInfo {
+    id: String,
+    name: String,
+    provider_type: String,
+    base_url: Option<String>,
+    api_key_set: bool,
+    models: Vec<ModelInfo>,
+    status: String,
+}
+
+/// Frontend-facing model shape returned by `GET /api/v1/providers`.
+#[derive(Serialize, Clone)]
+struct ModelInfo {
+    id: String,
+    name: String,
+}
+
 /// Static specs for ENV-key providers: (id, display name, api-key env var, models).
 /// Shared by env_provider_rows() and available_model_catalog() so the two never drift.
 static ENV_PROVIDER_SPECS: &[(&str, &str, &str, &[&str])] = &[
@@ -659,6 +678,119 @@ fn merge_provider_sources(sources: Vec<Vec<ProviderRow>>) -> Vec<ProviderRow> {
     map.into_values().collect()
 }
 
+/// Parse the `connected` array from a Gizzi `/provider` response.
+fn parse_connected(payload: &serde_json::Value) -> HashSet<String> {
+    payload
+        .get("connected")
+        .and_then(|value| value.as_array())
+        .into_iter()
+        .flatten()
+        .filter_map(|value| value.as_str().map(str::to_owned))
+        .collect()
+}
+
+/// Transform one Gizzi provider object into the frontend `ProviderInfo` shape.
+fn provider_info_from_gizzi(
+    provider: &serde_json::Value,
+    connected: &HashSet<String>,
+) -> Option<ProviderInfo> {
+    let id = provider.get("id")?.as_str()?.to_owned();
+    let name = provider
+        .get("name")
+        .and_then(|v| v.as_str())
+        .unwrap_or(&id)
+        .to_owned();
+    let auth_type = provider
+        .get("auth_type")
+        .and_then(|v| v.as_str())
+        .unwrap_or("api_key");
+
+    let provider_type = if auth_type == "subprocess" || provider.get("subprocess_cmd").is_some() {
+        "subprocess"
+    } else if auth_type == "none" {
+        "local"
+    } else {
+        "api"
+    }
+    .to_owned();
+
+    let base_url = provider
+        .get("options")
+        .and_then(|o| o.get("baseURL"))
+        .and_then(|v| v.as_str())
+        .map(|s| s.to_owned());
+
+    let api_key_set = connected.contains(&id) || auth_type == "none";
+
+    let models: Vec<ModelInfo> = provider
+        .get("models")
+        .and_then(|m| m.as_object())
+        .map(|m| {
+            m.values()
+                .filter_map(|model| {
+                    let obj = model.as_object()?;
+                    let model_id = obj.get("id")?.as_str()?.to_owned();
+                    let model_name = obj
+                        .get("name")
+                        .and_then(|v| v.as_str())
+                        .unwrap_or(&model_id)
+                        .to_owned();
+                    Some(ModelInfo {
+                        id: model_id,
+                        name: model_name,
+                    })
+                })
+                .collect()
+        })
+        .unwrap_or_default();
+
+    let status = if connected.contains(&id) || auth_type == "none" {
+        "active"
+    } else {
+        "unconfigured"
+    }
+    .to_owned();
+
+    Some(ProviderInfo {
+        id,
+        name,
+        provider_type,
+        base_url,
+        api_key_set,
+        models,
+        status,
+    })
+}
+
+/// Convert a legacy merged `ProviderRow` into the frontend `ProviderInfo` shape.
+fn provider_info_from_row(row: &ProviderRow) -> ProviderInfo {
+    let status = match row.status.as_str() {
+        "active" => "active",
+        "offline" => "offline",
+        "unknown" => "unknown",
+        "ready" | "ready_no_models" => "active",
+        _ => "unconfigured",
+    }
+    .to_owned();
+
+    ProviderInfo {
+        id: row.id.clone(),
+        name: row.name.clone(),
+        provider_type: row.provider_type.clone(),
+        base_url: row.base_url.clone(),
+        api_key_set: row.api_key_set,
+        models: row
+            .models
+            .iter()
+            .map(|m| ModelInfo {
+                id: m.clone(),
+                name: m.clone(),
+            })
+            .collect(),
+        status,
+    }
+}
+
 // ─── List providers ───────────────────────────────────────────────────────────
 
 async fn list_providers(State(state): State<Arc<AppState>>, headers: HeaderMap) -> Response {
@@ -666,6 +798,25 @@ async fn list_providers(State(state): State<Arc<AppState>>, headers: HeaderMap) 
         Some(u) => u,
         None => return unauthorized(),
     };
+
+    // Prefer live Gizzi-discovered providers; fall back to the static merge if
+    // the runtime is unreachable so the UI never renders an empty list.
+    match crate::gizzi_provider_auth::discover_providers().await {
+        Ok(payload) => {
+            let connected = parse_connected(&payload);
+            let providers: Vec<ProviderInfo> = payload
+                .get("all")
+                .and_then(|value| value.as_array())
+                .into_iter()
+                .flatten()
+                .filter_map(|provider| provider_info_from_gizzi(provider, &connected))
+                .collect();
+            return Json(json!({ "providers": providers, "all": providers })).into_response();
+        }
+        Err(error) => {
+            warn!("Gizzi provider discovery failed, falling back to static providers: {}", error);
+        }
+    }
 
     // Scoped so the !Send rusqlite handles drop before any `.await` below.
     let db_providers: Vec<ProviderRow> = {
@@ -718,6 +869,10 @@ async fn list_providers(State(state): State<Arc<AppState>>, headers: HeaderMap) 
         }
     }
 
+    let providers: Vec<ProviderInfo> = providers
+        .iter()
+        .map(provider_info_from_row)
+        .collect();
     Json(json!({ "providers": providers, "all": providers })).into_response()
 }
 

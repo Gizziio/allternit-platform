@@ -686,15 +686,41 @@ function ShellAppInner(): React.ReactNode {
   // Chrome-free floating HUD: a Hermes-style floating chat panel.  No shell
   // rail, header, or rail-controls; just a draggable handle, a close button,
   // and the live chat surface mounted inside a translucent sheet.
+  const hudRef = useRef<HTMLDivElement>(null);
+  const hudResizeFrame = useRef<number | null>(null);
+  const lastHudHeight = useRef<number | null>(null);
+
+  useEffect(() => {
+    if (!isHudWindow) return;
+    const resize = () => {
+      if (!hudRef.current || !window.allternit?.shell?.resizeHud) return;
+      const height = hudRef.current.scrollHeight;
+      if (lastHudHeight.current !== null && Math.abs(lastHudHeight.current - height) < 4) return;
+      lastHudHeight.current = height;
+      void window.allternit.shell.resizeHud({ height });
+    };
+    const observer = new ResizeObserver(() => {
+      if (hudResizeFrame.current) cancelAnimationFrame(hudResizeFrame.current);
+      hudResizeFrame.current = requestAnimationFrame(resize);
+    });
+    if (hudRef.current) observer.observe(hudRef.current);
+    resize();
+    return () => {
+      observer.disconnect();
+      if (hudResizeFrame.current) cancelAnimationFrame(hudResizeFrame.current);
+    };
+  }, [isHudWindow]);
+
   if (isHudWindow) {
     return (
       <TooltipProvider>
         <VoiceProvider>
           <SessionProvider session={session}>
             <div
+              ref={hudRef}
               data-theme="dark"
               data-hud-window
-              className="flex h-screen w-screen flex-col overflow-hidden rounded-2xl border border-white/10 bg-neutral-950/55 text-[var(--text-primary)] shadow-2xl backdrop-blur-xl"
+              className="flex w-screen flex-col rounded-2xl border border-white/10 bg-[rgba(18,26,52,0.72)] text-[var(--text-primary)] shadow-2xl backdrop-blur-xl"
               style={
                 {
                   WebkitAppRegion: 'no-drag',
@@ -702,6 +728,7 @@ function ShellAppInner(): React.ReactNode {
                   '--view-chat-bg': 'transparent',
                   '--surface-canvas': 'transparent',
                   '--surface-floating': 'rgba(255,255,255,0.06)',
+                  minHeight: 'auto',
                 } as React.CSSProperties
               }
             >
@@ -741,10 +768,10 @@ function ShellAppInner(): React.ReactNode {
                   </button>
                 </div>
               </div>
-              {/* Chat surface — always show the active chat stream + composer,
-                  never the full-screen empty-state landing page. */}
-              <div className="min-h-0 flex-1 overflow-hidden">
-                <ChatViewWrapper hideEmptyState />
+              {/* Chat surface — composer on top, transcript below, collapsing to
+                  a minimal bar when there are no messages. */}
+              <div className="flex flex-col min-h-0">
+                <ChatViewWrapper hudMode />
               </div>
             </div>
           </SessionProvider>

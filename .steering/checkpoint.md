@@ -882,3 +882,62 @@ Get the standalone remote-control dashboard at `remotecontrol.allternit.com` ful
 ### Open questions
 - Do you want to keep the primary domain as `remotecontrol.allternit.com` and add it to Clerk, or switch primary to `remotecontrol.platform.allternit.com`?
 - Should I attempt to pair a local `agent-daemon` now using the platform sign-in flow (which works because `platform.allternit.com` is already Clerk-authorized), so a runtime exists for testing once the remote-control domain is fixed?
+
+---
+
+## HUD mode — fix main renderer crash + HUD route wiring (2026-08-25)
+
+### Goal
+Fix the "Cannot read properties of null (reading 'useState')" crash in `ControlCenter` that blocks normal app launch on the `session/hud-mode` branch, and ensure `/hud` renders the floating chat HUD.
+
+### Root cause
+Two independent but complementary issues:
+1. **React instance mismatch.** The workspace root resolves React 19 (from `framer-motion` dev dependencies) while `surfaces/ai.allternit.com` pins React 18. Transitive workspace imports can pull in the root React instance alongside the surface's React 18, breaking the hook dispatcher and producing the `useState`/`useContext` null-dispatcher crash.
+2. **Service worker caching Vite dev modules.** `public/sw.js` was cache-first caching every GET request, including Vite's optimized dependency chunks (`/node_modules/.vite/...`, `/src/...`, `/@vite/...`). When Vite re-optimized dependencies and the browser loaded a mix of stale cached chunks and fresh chunks, React and React-DOM instances were mismatched, causing the same crash.
+3. **Missing `/hud` route wiring.** The HUD renderer code in `ShellApp.tsx` expected `window.location.pathname === '/hud'`, but `/hud` was not registered in `routes.tsx`, there was no `hud` `ViewType`, and no spawn policy. The catch-all redirect sent `/hud` to `/`.
+
+### Just did
+- Added explicit `resolve.alias` entries in `surfaces/ai.allternit.com/vite.config.ts` forcing every `react`, `react/jsx-runtime`, `react/jsx-dev-runtime`, `react-dom`, and `react-dom/client` import to the surface's React 18 copy.
+- Updated `surfaces/ai.allternit.com/public/sw.js` to bypass Vite development module URLs in its fetch handler, preventing stale/fresh chunk mismatches.
+- Added `/hud` route in `surfaces/ai.allternit.com/src/routes.tsx` mapping to `ShellPage`.
+- Added `"hud"` to `ViewType` in `surfaces/ai.allternit.com/src/nav/nav.types.ts`.
+- Added spawn policy for `hud` in `surfaces/ai.allternit.com/src/nav/nav.policy.ts`.
+
+### Verification
+- Reproduced the crash class in Playwright: `Cannot read properties of null (reading 'useContext')` in `AuthGate` with "Invalid hook call" warnings.
+- Confirmed workspace root resolves React 19 and platform surface resolves React 18.
+- Headless browser verification (with office workspace packages excluded from Vite eager scan for demo):
+  - `http://localhost:3017/` loads the main platform without the `ControlCenter` crash.
+  - `http://localhost:3017/hud` renders the floating chat HUD (dark frosted bar, drag handle, close button, composer at bottom).
+
+### Next
+1. Run a full end-to-end test in the actual Electron desktop app with `Cmd+Shift+H`.
+2. Verify drag handle and close button IPC still work.
+3. Address remaining HUD polish items from the original handoff (Hermes visual matching, click-through, resize).
+
+### Open questions
+- None blocking.
+
+
+## Brain selection contract fix (2026-08-26)
+
+### Goal
+Make the brain the user selects in the platform UI actually reach the Gizzi runtime instead of being overwritten by the backend default.
+
+### Just did
+- Added `model: Option<GizziModelRef>` to `CreateSessionBody` in `cmd/allternit-api/src/agent_session_routes.rs`.
+- `create_session` now uses the frontend-supplied model and only falls back to `AppConfig.default_model()` when none is sent.
+- Added `BrainRef` type in `surfaces/ai.allternit.com/src/lib/agents/native-agent-api.ts` and threaded it through `CreateNativeAgentSessionRequest` and `CreateModeSessionOptions`.
+- `ChatView.handleSend()` now passes the current `ModelSelection` as a `BrainRef` into `createSession` and as `providerID/modelID` into the message stream.
+- Removed the drifted `localStorage`-based model fallback from `mode-session-store.ts` and removed `getBrainSessionConfig` dead code from `model-selection-provider.tsx`.
+- Verified `cargo check -p allternit-api` and confirmed no new TypeScript errors in the touched files.
+
+### Next
+1. Proxy Gizzi live provider discovery (`GET /providers`, `/providers/auth`) through `/api/v1/providers*` so the picker shows real installed/authenticated brains.
+2. Update the model picker to consume the proxied discovery data instead of the static registry.
+3. Add a Gizzi session-level model pin so the selected brain persists across turns.
+4. Port `AuthPlan`/named auth-profile support to Gizzi.
+
+### Open questions
+- Should `/api/v1/providers` keep the existing `ProviderRow` shape for backwards compatibility, or can we expose Gizzi's raw provider objects?
+- Do we want to remove the static `ENV_PROVIDER_SPECS`/`CLI_PROVIDER_SPECS` tables entirely, or keep them as a fallback when Gizzi is unreachable?

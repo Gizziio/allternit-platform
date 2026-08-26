@@ -238,6 +238,8 @@ interface ChatComposerProps {
   bottomDockContent?: React.ReactNode;
   /** Show the Chat/Cowork mode toggle in the bottom dock. Pass false for in-session composers, which are locked to their session's mode. */
   showModeToggle?: boolean;
+  /** Floating HUD mode: single-row composer, no landing chrome, compact navy styling. */
+  hudMode?: boolean;
   /** Optional inline info bar rendered at the top of the composer shell. */
   topInfoBarContent?: React.ReactNode;
   /** Optional inline question bar rendered between info and textarea. */
@@ -409,6 +411,7 @@ export function ChatComposer({
   mentionAgentId: externalMentionAgentId,
   bottomDockContent,
   showModeToggle,
+  hudMode = false,
   topInfoBarContent,
   questionBarContent,
   topDeckContent,
@@ -1787,11 +1790,13 @@ export function ChatComposer({
         <div
           className={cn(
             'w-full rounded-2xl flex flex-col overflow-visible transition-shadow z-10 relative',
-            useGlassComposer
-              ? 'bg-composer-glass-bg border border-composer-glass-border backdrop-blur-xl backdrop-saturate-150 shadow-xl'
-              : 'bg-input-bg border border-input-border',
+            hudMode
+              ? 'bg-[rgba(23,33,64,0.85)] border border-white/10 backdrop-blur-xl shadow-xl'
+              : useGlassComposer
+                ? 'bg-composer-glass-bg border border-composer-glass-border backdrop-blur-xl backdrop-saturate-150 shadow-xl'
+                : 'bg-input-bg border border-input-border',
             agentModeEnabled && 'border-glow shadow-glow',
-            composerFocused && !agentModeEnabled && 'shadow-glow-accent'
+            composerFocused && !agentModeEnabled && !hudMode && 'shadow-glow-accent'
           )}
           onFocusCapture={() => setComposerFocused(true)}
           onBlurCapture={(event) => {
@@ -2008,6 +2013,20 @@ export function ChatComposer({
                   >
                     <Waveform size={17} weight="bold" />
                   </button>
+                  {hudMode && (
+                    <button
+                      type="button"
+                      onClick={handleCaptureScreenshot}
+                      aria-label="Capture screenshot"
+                      title="Capture screenshot"
+                      className={cn(
+                        'rounded-full border-none bg-transparent text-composer-muted hover:text-primary hover:bg-composer-soft transition-colors flex items-center justify-center cursor-pointer',
+                        isMobile ? 'size-11' : 'size-7'
+                      )}
+                    >
+                      <Camera size={17} weight="bold" />
+                    </button>
+                  )}
                   <button type="button"
                     onClick={() => setShowModelMenu(!showModelMenu)}
                     disabled={terminalModelsLoading && allModels.length === 0}

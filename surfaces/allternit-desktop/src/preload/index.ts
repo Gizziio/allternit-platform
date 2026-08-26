@@ -287,6 +287,8 @@ const shellAPI = {
   toggleHud: (): Promise<void> => ipcRenderer.invoke('shell:toggle-hud'),
   moveHudBy: (delta: { x: number; y: number; width: number; height: number }): Promise<void> =>
     ipcRenderer.invoke('shell:move-hud', delta),
+  resizeHud: (bounds: { height: number }): Promise<void> =>
+    ipcRenderer.invoke('shell:resize-hud', bounds),
   openDocs: (artifactId?: string): Promise<void> => ipcRenderer.invoke('shell:open-docs', artifactId),
   openOffice: (target?: string, artifactId?: string): Promise<void> =>
     ipcRenderer.invoke('shell:open-office', target, artifactId),

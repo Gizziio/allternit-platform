@@ -4,6 +4,7 @@ import React, { useCallback, useState, useRef, useEffect, useLayoutEffect, useMe
 import { useChatId } from "@/providers/chat-id-provider";
 import { useChatStore } from "@/views/chat/ChatStore";
 import { useModelSelection } from "@/providers/model-selection-provider";
+import { cn } from "@/lib/utils";
 import { ModelPicker } from "@/components/model-picker";
 import { AgentContextStrip } from "@/components/agents/AgentContextStrip";
 import type { AgentContextStripProps } from "@/components/agents/context-strip/context-strip.types";
@@ -20,7 +21,7 @@ import { useAdvancedAgentStore } from "@/lib/agents/agent-advanced.store";
 import { useChatSessionStore } from "@/views/chat/ChatSessionStore";
 import { useSurfaceAgentSelection } from "@/lib/agents/surface-agent-context";
 import { useThreadAgentSessionsStore } from "@/stores/thread-agent-sessions.store";
-import { NativeAgentApiError } from "@/lib/agents/native-agent-api";
+import { NativeAgentApiError, type BrainRef } from "@/lib/agents/native-agent-api";
 import {
   getAgentSessionDescriptor,
   getAgentSessionStatusLabel,
@@ -60,6 +61,7 @@ const logger = createModuleLogger('ChatView');
 
 export function ChatView({
   hideEmptyState = false,
+  hudMode = false,
   mode = 'chat',
   initialMessage,
   onInitialMessageSent,
@@ -67,6 +69,7 @@ export function ChatView({
   onStartBotSession,
 }: {
   hideEmptyState?: boolean,
+  hudMode?: boolean,
   mode?: 'chat' | 'cowork' | 'code',
   initialMessage?: string,
   onInitialMessageSent?: () => void,
@@ -434,12 +437,17 @@ export function ChatView({
     let sessionId = embeddedAgentSession.sessionId || chatId;
     const hasLiveSession = Boolean(sessionId && sessionId.startsWith('ses_'));
 
+    const brainRef: BrainRef | undefined = modelSelection
+      ? { providerID: modelSelection.providerId, modelID: modelSelection.modelId }
+      : undefined;
+
     setSendError(null);
     try {
       if (!hasLiveSession) {
         sessionId = await useChatSessionStore.getState().createSession({
           name: text.trim().slice(0, 60) || 'New Session',
           sessionMode: 'regular',
+          model: brainRef,
         });
       }
 
@@ -447,6 +455,7 @@ export function ChatView({
         useChatSessionStore.getState().setActiveSession(sessionId);
         await sendNativeMessageStream(sessionId, {
           text: text.trim(),
+          modelId: brainRef ? `${brainRef.providerID}/${brainRef.modelID}` : undefined,
           ...(pluginMention
             ? { pluginMention: { kind: pluginMention.kind, id: pluginMention.id, name: pluginMention.name } }
             : {}),
@@ -569,14 +578,45 @@ export function ChatView({
       mode={mode}
       effectiveAgentModeEnabled={effectiveAgentModeEnabled}
       agentSurface={agentSurface}
+      hudMode={hudMode}
     >
-      <div className="flex-1 flex flex-row overflow-hidden min-h-0">
+      {hudMode && (
+        <ChatBottomBar
+          mode={mode}
+          isChatEmpty={isChatEmpty}
+          hideEmptyState={hideEmptyState}
+          hudMode={hudMode}
+          handleSend={handleSend}
+          onOpenAgentSession={onOpenAgentSession}
+          agentSurface={agentSurface}
+          setMentionAgentId={setMentionAgentId}
+          mentionAgentId={mentionAgentId}
+          setPluginMention={setPluginMention}
+          activeIsLoading={activeIsLoading}
+          handleStop={handleStop}
+          selectedModel={selectedModel}
+          modelSelection={modelSelection}
+          startSelection={startSelection}
+          selectModel={selectModel}
+          composerTopInfoBar={composerTopInfoBar}
+          composerQuestionBar={composerQuestionBar}
+          composerBottomInfoBar={composerBottomInfoBar}
+          useMonolithLogo={useMonolithLogo}
+          pulseMascot={pulseMascot}
+          setLaunchMascotAttention={setLaunchMascotAttention}
+        />
+      )}
+
+      <div className={cn('flex flex-row', hudMode ? '' : 'flex-1 min-h-0 overflow-hidden')}>
         <div
           ref={scrollContainerRef}
           onScroll={handleScroll}
-          className="flex-1 overflow-y-auto w-full flex flex-col items-center min-h-0"
+          className={cn(
+            'w-full flex flex-col items-center',
+            hudMode ? 'flex-1' : 'flex-1 min-h-0 overflow-y-auto'
+          )}
         >
-          {isChatEmpty && !hideEmptyState ? (
+          {isChatEmpty && !hideEmptyState && !hudMode ? (
             <ChatEmptyState
               embeddedAgentStrip={embeddedAgentStrip}
               modelSelection={modelSelection}
@@ -620,6 +660,7 @@ export function ChatView({
               onSelectArtifact={setSelectedArtifact}
               selectedArtifactTitle={selectedArtifact?.title}
               hideEmptyState={hideEmptyState}
+              hudMode={hudMode}
             />
           )}
         </div>
@@ -640,29 +681,32 @@ export function ChatView({
 
       <SendErrorBanner message={sendError} onDismiss={() => setSendError(null)} />
 
-      <ChatBottomBar
-        mode={mode}
-        isChatEmpty={isChatEmpty}
-        hideEmptyState={hideEmptyState}
-        handleSend={handleSend}
-        onOpenAgentSession={onOpenAgentSession}
-        agentSurface={agentSurface}
-        setMentionAgentId={setMentionAgentId}
-        mentionAgentId={mentionAgentId}
-        setPluginMention={setPluginMention}
-        activeIsLoading={activeIsLoading}
-        handleStop={handleStop}
-        selectedModel={selectedModel}
-        modelSelection={modelSelection}
-        startSelection={startSelection}
-        selectModel={selectModel}
-        composerTopInfoBar={composerTopInfoBar}
-        composerQuestionBar={composerQuestionBar}
-        composerBottomInfoBar={composerBottomInfoBar}
-        useMonolithLogo={useMonolithLogo}
-        pulseMascot={pulseMascot}
-        setLaunchMascotAttention={setLaunchMascotAttention}
-      />
+      {!hudMode && (
+        <ChatBottomBar
+          mode={mode}
+          isChatEmpty={isChatEmpty}
+          hideEmptyState={hideEmptyState}
+          hudMode={hudMode}
+          handleSend={handleSend}
+          onOpenAgentSession={onOpenAgentSession}
+          agentSurface={agentSurface}
+          setMentionAgentId={setMentionAgentId}
+          mentionAgentId={mentionAgentId}
+          setPluginMention={setPluginMention}
+          activeIsLoading={activeIsLoading}
+          handleStop={handleStop}
+          selectedModel={selectedModel}
+          modelSelection={modelSelection}
+          startSelection={startSelection}
+          selectModel={selectModel}
+          composerTopInfoBar={composerTopInfoBar}
+          composerQuestionBar={composerQuestionBar}
+          composerBottomInfoBar={composerBottomInfoBar}
+          useMonolithLogo={useMonolithLogo}
+          pulseMascot={pulseMascot}
+          setLaunchMascotAttention={setLaunchMascotAttention}
+        />
+      )}
 
       <ModelPicker
         open={isSelecting}

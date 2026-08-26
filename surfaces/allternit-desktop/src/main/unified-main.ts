@@ -2072,6 +2072,24 @@ ipcMain.handle('shell:move-hud', (_event, delta: { x: number; y: number; width: 
     if (!wasResizable && !hudWindow.isDestroyed()) hudWindow.setResizable(false);
   }
 });
+ipcMain.handle('shell:resize-hud', (_event, bounds: { height: number }) => {
+  if (!hudWindow || hudWindow.isDestroyed()) return;
+  const requestedHeight = Math.max(160, Math.round(Number(bounds?.height ?? HUD_HEIGHT)));
+  const [x, y] = hudWindow.getPosition();
+  const [width] = hudWindow.getSize();
+  const currentBottom = y + hudWindow.getSize()[1];
+  // Keep the window's bottom edge anchored so it grows/collapses upward,
+  // mirroring the Hermes HUD expansion behavior.
+  const newY = Math.max(0, Math.round(currentBottom - requestedHeight));
+  const newHeight = Math.min(1000, Math.max(160, Math.round(currentBottom - newY)));
+  const wasResizable = hudWindow.isResizable();
+  if (!wasResizable) hudWindow.setResizable(true);
+  try {
+    hudWindow.setBounds({ x, y: newY, width, height: newHeight });
+  } finally {
+    if (!wasResizable && !hudWindow.isDestroyed()) hudWindow.setResizable(false);
+  }
+});
 
 function resolveOfficeUrl(target: OfficeTarget, artifactId?: string): string {
   // The office editors live on the platform surface (same pattern as the
