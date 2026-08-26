@@ -148,14 +148,6 @@ export interface EngineStatus {
   gpu?: EngineGpuInfo[];
   active_runtimes: number;
   cached_models: number;
-  hardware_id: string;
-  apple_chip?: string;
-  unified_memory: boolean;
-  backends: {
-    metal: boolean;
-    cuda: boolean;
-    cpu_fallback: boolean;
-  };
 }
 
 export interface EngineHealth {
@@ -364,7 +356,7 @@ export interface HuggingFaceModel {
   sizeBytes?: number;
 }
 
-export type HfSortOption = 'downloads' | 'likes' | 'recent' | 'recommended';
+export type HfSortOption = 'downloads' | 'likes' | 'recent';
 
 export async function searchHuggingFaceModels(
   query: string,
@@ -380,101 +372,6 @@ export async function installHuggingFaceModel(
   quantTag?: string,
 ): Promise<Response> {
   return setupApi.installLocalModel(repoId, quantTag);
-}
-
-// ============================================================================
-// Hardware-aware catalog / assessment / recommendation API (via local-engine)
-// ============================================================================
-
-export type ModelFit = 'fits' | 'tight' | 'no';
-
-export interface TokPerSecondEstimates {
-  context_4k: number;
-  context_8k: number;
-  context_16k: number;
-  context_32k: number;
-}
-
-export interface ModelAssessment {
-  repo_id: string;
-  fit: ModelFit;
-  fit_reason: string;
-  estimated_download_bytes: number;
-  estimated_loaded_bytes: number;
-  estimated_tok_per_second: TokPerSecondEstimates;
-  recommended_backend: 'llama_cpp' | 'mlx';
-  confidence: 'measured' | 'inferred' | 'guess';
-  quantization_bits: number;
-  hardware_id: string;
-}
-
-export interface CatalogModel {
-  repo_id: string;
-  downloads: number;
-  likes: number;
-  tags?: string[];
-  pipeline_tag?: string;
-  last_modified?: string;
-  source: 'polled' | 'seed';
-}
-
-export interface CatalogResponse {
-  models: CatalogModel[];
-  count: number;
-}
-
-export type RecommendationIntent = 'balanced' | 'smartest' | 'fastest' | 'lightweight';
-
-export interface Recommendation {
-  repo_id: string;
-  fit: ModelFit;
-  fit_reason: string;
-  estimated_download_bytes: number;
-  estimated_loaded_bytes: number;
-  estimated_tok_per_second: TokPerSecondEstimates;
-  recommended_backend: 'llama_cpp' | 'mlx';
-  confidence: 'measured' | 'inferred' | 'guess';
-  score: number;
-  explanation: string;
-  downloads: number;
-  likes: number;
-}
-
-export interface RecommendResponse {
-  recommendations: Recommendation[];
-  hardware_id: string;
-  timestamp: string;
-}
-
-export async function getCatalog(
-  source: 'polled' | 'seed' | 'all' = 'all',
-  limit = 50,
-): Promise<CatalogResponse> {
-  const qs = new URLSearchParams({ source, limit: String(limit) });
-  return api.get<CatalogResponse>(`/api/local-engine/catalog?${qs.toString()}`);
-}
-
-export async function refreshCatalog(): Promise<{ refreshed: boolean; count: number }> {
-  return api.post<{ refreshed: boolean; count: number }>('/api/local-engine/catalog/refresh', {});
-}
-
-export async function assessModel(
-  repoId: string,
-  quantization?: string,
-  contextLength?: number,
-): Promise<ModelAssessment> {
-  return api.post<ModelAssessment>('/api/local-engine/assess', {
-    repo_id: repoId,
-    quantization,
-    context_length: contextLength,
-  });
-}
-
-export async function recommendModels(
-  intent: RecommendationIntent = 'balanced',
-  limit = 5,
-): Promise<RecommendResponse> {
-  return api.post<RecommendResponse>('/api/local-engine/recommend', { intent, limit });
 }
 
 export interface HuggingFaceModelDetails {

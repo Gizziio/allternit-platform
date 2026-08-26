@@ -10,26 +10,23 @@ import {
   Sparkle,
   Wrench,
   X,
-  LockKey,
 } from "@phosphor-icons/react";
 
 import { useToolRegistryStore } from "@/lib/agents";
-import {
-  getSurfacePalette,
-  formatSurfaceLabel,
-  compactWorkspaceScope,
+import { 
+  getSurfacePalette, 
+  formatSurfaceLabel, 
+  compactWorkspaceScope 
 } from "./context-strip.utils";
-import type {
-  AgentContextStripProps,
-  AgentDrawerSection,
+import type { 
+  AgentContextStripProps, 
+  AgentDrawerSection 
 } from "./context-strip.types";
-import { TEXT } from "@/design/allternit.tokens";
 import { InfoChip } from "./InfoChip";
 import { ActionChip } from "./ActionChip";
 import { WorkspaceDrawer } from "./WorkspaceDrawer";
 import { ToolsDrawer } from "./ToolsDrawer";
 import { AutomationDrawer } from "./AutomationDrawer";
-import { RuntimeDrawer } from "./RuntimeDrawer";
 
 export function AgentContextStrip({
   surface,
@@ -44,39 +41,20 @@ export function AgentContextStrip({
   tags: rawTags = [],
   toolsEnabled = false,
   automationEnabled = false,
-  runtimeEnv,
-  runtimeEnvEntries,
-  connectorBindings,
-  secretRefs,
-  missingRuntimeKeys,
-  botId,
-  vmOperator,
-  vmSandbox,
-  accentColor: accentColorOverride,
   onDismiss,
-  onEditRuntime,
 }: AgentContextStripProps) {
   const [activeDrawer, setActiveDrawer] = useState<AgentDrawerSection>("workspace");
-  const basePalette = useMemo(() => getSurfacePalette(surface), [surface]);
-  const palette = useMemo(() => {
-    if (!accentColorOverride) return basePalette;
-    return {
-      accent: accentColorOverride,
-      glow: `color-mix(in srgb, ${accentColorOverride} 28%, transparent)`,
-      soft: `color-mix(in srgb, ${accentColorOverride} 14%, transparent)`,
-      border: `color-mix(in srgb, ${accentColorOverride} 16%, transparent)`,
-    };
-  }, [basePalette, accentColorOverride]);
-
+  const palette = useMemo(() => getSurfacePalette(surface), [surface]);
+  
   const tags = useMemo(() => {
     if (!Array.isArray(rawTags)) return [];
-    return rawTags.filter((t): t is string => typeof t === "string");
+    return rawTags.filter((t): t is string => typeof t === 'string');
   }, [rawTags]);
-
+  
   const tools = useToolRegistryStore((state) => Object.values(state.tools));
   const isLoadingTools = useToolRegistryStore((state) => state.isLoading);
   const fetchTools = useToolRegistryStore((state) => state.fetchKernelTools);
-
+  
   useEffect(() => {
     if (activeDrawer === "tools" && tools.length === 0 && !isLoadingTools) {
       void fetchTools();
@@ -86,15 +64,13 @@ export function AgentContextStrip({
   const drawerTitle = useMemo(() => {
     switch (activeDrawer) {
       case "workspace":
-        return "Workspace";
+        return "Workspace Lens";
       case "tools":
-        return "Tools";
+        return "Toolchain";
       case "automation":
-        return "Automation";
-      case "runtime":
-        return "Runtime";
+        return "Runs & Automation";
       default:
-        return "Workspace";
+        return "Workspace Lens";
     }
   }, [activeDrawer]);
 
@@ -104,91 +80,88 @@ export function AgentContextStrip({
 
   return (
     <div
-      className="relative z-[2] rounded-2xl border border-[var(--palette-border)] bg-[var(--surface-floating)] overflow-hidden"
+      className="mb-[18px] relative z-[2] rounded-[22px] border border-solid border-[var(--palette-border)] bg-[linear-gradient(180deg,var(--surface-floating)_0%,var(--surface-floating)_100%)] shadow-[inset_0_1px_0_var(--surface-hover),0_18px_44px_var(--surface-hover),0_0_0_1px_var(--palette-glow)] overflow-hidden"
       style={{
-        "--palette-border": palette.border,
-        "--palette-glow": palette.glow,
+        '--palette-border': palette.border,
+        '--palette-glow': palette.glow,
       } as React.CSSProperties}
     >
-      {/* Accent top edge */}
       <div
-        className="h-[2px] w-full"
-        style={{ background: palette.accent }}
+        className="h-[3px] bg-[linear-gradient(90deg,var(--palette-accent),rgba(255,255,255,0))]"
+        style={{ '--palette-accent': palette.accent } as React.CSSProperties}
       />
 
-      <div className="p-4">
-        {/* Header */}
-        <div className="flex items-start justify-between gap-4">
-          <div className="min-w-0 flex-1">
-            <div className="flex items-center gap-2 flex-wrap mb-1.5">
-              <span
-                className="inline-flex items-center gap-1.5 rounded-full border border-[var(--palette-border)] bg-[var(--palette-soft)] text-[var(--palette-accent)] px-2 py-1 text-[11px] font-bold tracking-wide uppercase"
-                style={{
-                  "--palette-border": palette.border,
-                  "--palette-soft": palette.soft,
-                  "--palette-accent": palette.accent,
-                } as React.CSSProperties}
-              >
-                <Sparkle size={11} weight="fill" />
-                {formatSurfaceLabel(surface)} Bot
-              </span>
-              <span className="rounded-full border border-[var(--border-subtle)] bg-[var(--surface-hover)] text-[var(--text-secondary)] px-2 py-1 text-[11px] font-semibold tracking-wide uppercase">
-                {statusLabel}
-              </span>
-            </div>
-
-            <div
-              className="text-[15px] font-semibold truncate"
-              style={{ color: TEXT.primary }}
+      <div
+        className="flex items-start justify-between gap-4 p-[14px_16px_12px] bg-[linear-gradient(110deg,var(--palette-soft),rgba(255,255,255,0.015)_56%,var(--surface-hover)_100%)]"
+        style={{ '--palette-soft': palette.soft } as React.CSSProperties}
+      >
+        <div className="min-w-0 flex-1">
+          <div className="flex items-center gap-2 flex-wrap mb-2.5">
+            <span
+              className="inline-flex items-center gap-1.5 rounded-full border border-solid border-[var(--palette-border)] bg-[var(--palette-soft)] text-[var(--palette-accent)] px-2 py-1 text-[12px] font-extrabold tracking-[0.08em] uppercase"
+              style={{
+                '--palette-border': palette.border,
+                '--palette-soft': palette.soft,
+                '--palette-accent': palette.accent,
+              } as React.CSSProperties}
             >
-              {sessionName}
-            </div>
-            <div className="mt-0.5 text-[12px] leading-relaxed text-[var(--text-secondary)] max-w-[760px]">
-              {sessionDescription?.trim() || fallbackDescription}
-            </div>
-
-            <div className="flex items-center gap-2 flex-wrap pt-2.5">
-              <InfoChip
-                icon={Cpu}
-                label={`${messageCount} message${messageCount === 1 ? "" : "s"}`}
-                palette={palette}
-              />
-              {agentName ? (
-                <InfoChip
-                  icon={ArrowsOutCardinal}
-                  label={agentName}
-                  palette={palette}
-                />
-              ) : null}
-              {harnessMode ? (
-                <InfoChip
-                  icon={Lightning}
-                  label={`Harness: ${harnessMode}`}
-                  palette={palette}
-                />
-              ) : null}
-              <InfoChip
-                icon={FolderSimple}
-                label={compactWorkspaceScope(workspaceScope)}
-                palette={palette}
-              />
-            </div>
+              <Sparkle size={12} weight="fill" />
+              {formatSurfaceLabel(surface)} Agent
+            </span>
+            <span className="rounded-full border border-solid border-[var(--ui-border-muted)] bg-white/5 backdrop-blur-sm text-[#d1c3b4] px-2 py-1 text-[12px] font-bold tracking-[0.08em] uppercase">
+              {statusLabel}
+            </span>
           </div>
 
-          {onDismiss ? (
-            <button
-              type="button"
-              onClick={onDismiss}
-              aria-label="Leave agent session"
-              className="size-8 inline-flex items-center justify-center rounded-lg border border-[var(--border-subtle)] bg-[var(--surface-hover)] text-[var(--text-tertiary)] cursor-pointer shrink-0 transition-colors hover:bg-[var(--surface-active)] hover:text-[var(--text-primary)]"
-            >
-              <X size={14} weight="bold" />
-            </button>
-          ) : null}
+          <div className="text-[16px] font-bold text-[#f6eee7] overflow-hidden text-ellipsis whitespace-nowrap">
+            {sessionName}
+          </div>
+          <div className="mt-1 text-[12px] leading-relaxed text-[#b3a395] max-w-[760px]">
+            {sessionDescription?.trim() || fallbackDescription}
+          </div>
+
+          <div className="flex items-center gap-2 flex-wrap pt-3">
+            <InfoChip
+              icon={Cpu}
+              label={`${messageCount} message${messageCount === 1 ? "" : "s"}`}
+              palette={palette}
+            />
+            {agentName ? (
+              <InfoChip
+                icon={ArrowsOutCardinal}
+                label={agentName}
+                palette={palette}
+              />
+            ) : null}
+            {harnessMode ? (
+              <InfoChip
+                icon={Lightning}
+                label={`Harness: ${harnessMode}`}
+                palette={palette}
+              />
+            ) : null}
+            <InfoChip
+              icon={FolderSimple}
+              label={compactWorkspaceScope(workspaceScope)}
+              palette={palette}
+            />
+          </div>
         </div>
 
-        {/* Drawer toggles */}
-        <div className="flex items-center gap-2 flex-wrap mt-4">
+        {onDismiss ? (
+          <button
+            type="button"
+            onClick={onDismiss}
+            aria-label="Leave agent session"
+            className="size-[34px] inline-flex items-center justify-center rounded-[11px] border border-solid border-[var(--ui-border-muted)] bg-[var(--surface-hover)] text-[#b6a89b] cursor-pointer shrink-0 transition-colors hover:bg-[var(--surface-active)]"
+          >
+            <X size={14} weight="bold" />
+          </button>
+        ) : null}
+      </div>
+
+      <div className="px-4 pb-4">
+        <div className="flex items-center gap-2 flex-wrap pt-3">
           <ActionChip
             active={activeDrawer === "workspace"}
             icon={FolderSimple}
@@ -210,26 +183,18 @@ export function AgentContextStrip({
             palette={palette}
             onClick={() => setActiveDrawer("automation")}
           />
-          <ActionChip
-            active={activeDrawer === "runtime"}
-            icon={LockKey}
-            label="Runtime"
-            palette={palette}
-            onClick={() => setActiveDrawer("runtime")}
-          />
         </div>
 
-        {/* Drawer panel */}
-        <div className="mt-3 rounded-xl border border-[var(--border-subtle)] bg-[var(--bg-card)] p-3.5 max-h-[min(460px,60vh)] overflow-y-auto">
+        <div className="mt-3 rounded-[18px] border border-solid border-[var(--surface-hover)] bg-[var(--surface-hover)] p-3.5">
           <div className="flex items-center justify-between gap-3 mb-2.5">
             <div
-              className="text-[11px] font-bold uppercase tracking-wider"
-              style={{ color: palette.accent }}
+              className="text-[12px] font-extrabold text-[var(--palette-accent)] uppercase tracking-[0.08em]"
+              style={{ '--palette-accent': palette.accent } as React.CSSProperties}
             >
               {drawerTitle}
             </div>
-            <div className="text-[11px] text-[var(--text-tertiary)] text-right">
-              Bound to live session
+            <div className="text-[12px] text-[#a8998c] text-right">
+              Bound to the live surface session
             </div>
           </div>
 
@@ -255,21 +220,6 @@ export function AgentContextStrip({
             <AutomationDrawer
               automationEnabled={automationEnabled}
               palette={palette}
-            />
-          ) : null}
-
-          {activeDrawer === "runtime" ? (
-            <RuntimeDrawer
-              runtimeEnv={runtimeEnv}
-              runtimeEnvEntries={runtimeEnvEntries}
-              connectorBindings={connectorBindings}
-              secretRefs={secretRefs}
-              missingRuntimeKeys={missingRuntimeKeys}
-              palette={palette}
-              botId={botId}
-              vmOperator={vmOperator}
-              vmSandbox={vmSandbox}
-              onEditRuntime={onEditRuntime}
             />
           ) : null}
         </div>

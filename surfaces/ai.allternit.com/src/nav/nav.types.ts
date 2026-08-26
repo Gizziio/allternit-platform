@@ -164,8 +164,12 @@ export type ViewType =
   | "pdf"
   // Markdown preview (anydoc conversion)
   | "markdown-preview"
+  // DocuSeal signing
+  | "sign"
   // Browser Extensions hub
-  | "browser-extensions";
+  | "browser-extensions"
+  // API capture / HAR-derived site API contracts
+  | "site-apis";
 
 export type ViewId = string;
 

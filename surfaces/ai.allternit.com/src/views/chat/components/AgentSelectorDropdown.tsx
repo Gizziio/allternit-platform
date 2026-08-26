@@ -1,5 +1,6 @@
 
 import React from 'react';
+import { cn } from '@/lib/utils';
 import type { Agent } from '@/lib/agents';
 
 const THEME = {
@@ -22,6 +23,7 @@ interface AgentSelectorDropdownProps {
   onSelect: (agent: Agent) => void;
   onClear?: () => void;
   onClose: () => void;
+  className?: string;
 }
 
 export function AgentSelectorDropdown({
@@ -35,12 +37,16 @@ export function AgentSelectorDropdown({
   onSelect,
   onClear,
   onClose,
+  className,
 }: AgentSelectorDropdownProps) {
   return (
     <>
       <div role="button" tabIndex={0} className="fixed inset-0 z-199" onClick={onClose} />
       <div
-        className="relative w-72 max-h-80 bg-menu-bg backdrop-blur-[20px] rounded-xl border border-menu-border shadow-xl z-200 flex flex-col overflow-hidden"
+        className={cn(
+          'absolute bottom-full left-0 w-72 max-h-80 bg-menu-bg backdrop-blur-[20px] rounded-xl border border-menu-border shadow-xl z-200 flex flex-col overflow-hidden',
+          className
+        )}
         style={{
           boxShadow: '0 10px 30px var(--shell-overlay-backdrop)',
         }}
@@ -71,10 +77,6 @@ export function AgentSelectorDropdown({
             </div>
           ) : error ? (
             <div className="p-4 text-center text-sm text-red-500">{error}</div>
-          ) : agents.length === 0 ? (
-            <div className="p-4 text-center text-sm text-muted">
-              No bots available for this surface.
-            </div>
           ) : (
             agents.map((agent) => {
               const artifacts = workspaceArtifacts[agent.id] || [];
@@ -89,14 +91,12 @@ export function AgentSelectorDropdown({
                   }`}
                 >
                   <div className="text-sm font-medium text-primary">
-                    {agent.botProfile?.displayName || agent.name}
+                    {agent.name}
                   </div>
                   <div className="text-xs text-muted">
-                    {agent.botProfile?.tagline || agent.description || (
-                      artifactCount > 0
-                        ? `${artifactCount} workspace files`
-                        : 'No workspace files'
-                    )}
+                    {artifactCount > 0
+                      ? `${artifactCount} workspace files`
+                      : 'No workspace files'}
                   </div>
                 </button>
               );

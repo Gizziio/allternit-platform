@@ -26,7 +26,6 @@ export interface ProvisionWalletResult {
   address: string;
   provider: AgentWalletChannel['provider'];
   chainId?: string | number;
-  keyVaultRef?: string;
 }
 
 function provisioningError(err: unknown): Error {
@@ -64,22 +63,10 @@ export async function provisionAgentPhone(agentId: string): Promise<ProvisionPho
 
 export async function provisionAgentWallet(agentId: string): Promise<ProvisionWalletResult> {
   try {
-    const response = await apiRequest<{
-      wallet: {
-        id: string;
-        address?: string;
-        keyVaultRef: string;
-        provider: string;
-      };
-    }>(`/api/v1/agents/${encodeURIComponent(agentId)}/identity/wallet`, { method: 'POST' });
-    if (!response.wallet?.address) {
-      throw new Error('Etrid did not return a wallet address.');
-    }
-    return {
-      address: response.wallet.address,
-      provider: response.wallet.provider as AgentWalletChannel['provider'],
-      keyVaultRef: response.wallet.keyVaultRef,
-    };
+    return await apiRequest<ProvisionWalletResult>(
+      `/api/v1/agents/${encodeURIComponent(agentId)}/identity/wallet`,
+      { method: 'POST' },
+    );
   } catch (err) {
     logger.error({ err, agentId }, 'Agent wallet provisioning failed');
     throw provisioningError(err);

@@ -2,7 +2,7 @@
  * HAR-derived API capture client.
  *
  * Mirrors the backend `/api/har-derived-api/*` routes and exposes
- * ingest + client generation for the Site APIs surface.
+ * ingest, persistence, replay, and client generation for the Site APIs surface.
  */
 
 import { api } from '@/integration/api-client';
@@ -36,6 +36,7 @@ export interface Param {
 export interface SiteApiContract {
   id: string;
   domain: string;
+  source: CaptureSession['source'];
   derived_at: string;
   endpoints: Endpoint[];
 }
@@ -63,6 +64,8 @@ export interface ReplayResult {
 }
 
 export interface IngestResponse {
+  contract_id: string;
+  domain: string;
   endpoints: Endpoint[];
   stats: {
     total_entries: number;
@@ -97,8 +100,31 @@ export interface ApiSkill {
   status: 'active' | 'inactive';
 }
 
-export async function ingestHar(harJson: string): Promise<IngestResponse> {
-  return api.post<IngestResponse>('/api/har-derived-api/ingest', { har: harJson });
+export async function ingestHar(
+  harJson: string,
+  source: CaptureSession['source'] = 'upload',
+): Promise<IngestResponse> {
+  return api.post<IngestResponse>('/api/har-derived-api/ingest', { har: harJson, source });
+}
+
+export async function listContracts(): Promise<SiteApiContract[]> {
+  const res = await api.get<{ contracts: SiteApiContract[] }>('/api/har-derived-api/contracts');
+  return res.contracts ?? [];
+}
+
+export async function getContract(contractId: string): Promise<SiteApiContract | null> {
+  try {
+    return await api.get<SiteApiContract>(`/api/har-derived-api/contracts/${contractId}`);
+  } catch (error) {
+    if (error instanceof Error && error.message.includes('404')) {
+      return null;
+    }
+    throw error;
+  }
+}
+
+export async function deleteContract(contractId: string): Promise<void> {
+  await api.delete(`/api/har-derived-api/contracts/${contractId}`);
 }
 
 export async function generateClient(
@@ -108,41 +134,20 @@ export async function generateClient(
   return api.post<GeneratedClient>('/api/har-derived-api/client', { endpoints: endpointIds, language });
 }
 
-/**
- * Try to load persisted contracts from the backend. Falls back to an empty list
- * when the endpoint is unavailable so the UI can merge with localStorage data.
- */
-export async function fetchPersistedContracts(): Promise<SiteApiContract[]> {
-  try {
-    return await api.get<SiteApiContract[]>('/api/har-derived-api/contracts');
-  } catch {
-    return [];
-  }
+export async function replayEndpoint(
+  contractId: string,
+  endpointId: string,
+  input: ReplayInput,
+): Promise<ReplayResult> {
+  return api.post<ReplayResult>(
+    `/api/har-derived-api/contracts/${contractId}/replay/${endpointId}`,
+    input,
+  );
 }
 
-// Placeholder: sessions/contracts are local-only until a persistent backend store exists.
-// We persist derived contracts in localStorage so they survive reloads.
-const CONTRACTS_KEY = 'allternit:har-derived-contracts';
+// API-captured skills are still local-only until a skill registry backend
+// surface exists for this origin type.
 const API_SKILLS_KEY = 'allternit:api-captured-skills';
-
-export function loadPersistedContracts(): SiteApiContract[] {
-  if (typeof window === 'undefined') return [];
-  try {
-    const raw = window.localStorage.getItem(CONTRACTS_KEY);
-    return raw ? (JSON.parse(raw) as SiteApiContract[]) : [];
-  } catch {
-    return [];
-  }
-}
-
-export function persistContracts(contracts: SiteApiContract[]): void {
-  if (typeof window === 'undefined') return;
-  try {
-    window.localStorage.setItem(CONTRACTS_KEY, JSON.stringify(contracts));
-  } catch {
-    // ignore quota errors
-  }
-}
 
 export function loadPersistedApiSkills(): ApiSkill[] {
   if (typeof window === 'undefined') return [];
@@ -176,7 +181,9 @@ export function createApiSkillFromContract(
   return {
     id: `api-skill-${contract.domain}-${Date.now()}`,
     name: name || `${contract.domain} API skill`,
-    description: description || `Reusable API workflow captured from ${contract.domain} with ${contract.endpoints.length} endpoint${contract.endpoints.length === 1 ? '' : 's'}.`,
+    description:
+      description ||
+      `Reusable API workflow captured from ${contract.domain} with ${contract.endpoints.length} endpoint${contract.endpoints.length === 1 ? '' : 's'}.`,
     domain: contract.domain,
     mode: 'API',
     origin: 'api-capture',
@@ -193,85 +200,14 @@ export function createApiSkillFromContract(
 }
 
 export function createContractFromHar(
-  endpoints: Endpoint[],
+  response: IngestResponse,
   source: CaptureSession['source'] = 'upload',
 ): SiteApiContract {
-  const hosts = Array.from(new Set(endpoints.map((e) => e.host))).filter(Boolean);
-  const domain = hosts[0] || 'unknown';
   return {
-    id: `${domain}-${Date.now()}`,
-    domain,
+    id: response.contract_id,
+    domain: response.domain,
+    source,
     derived_at: new Date().toISOString(),
-    endpoints,
+    endpoints: response.endpoints,
   };
-}
-
-export async function replayEndpoint(
-  endpoint: Endpoint,
-  input: ReplayInput,
-): Promise<ReplayResult> {
-  // Build URL from path_template so user-supplied path params are substituted safely.
-  let path = endpoint.path_template || endpoint.path;
-  path = path.replace(/\{(\w+)\}/g, (_match, key) => {
-    const value = input.path_params[key];
-    return value === undefined || value === '' ? _match : encodeURIComponent(value);
-  });
-
-  let url: string;
-  try {
-    const parsed = new URL(endpoint.url);
-    url = `${parsed.protocol}//${parsed.host}${path}`;
-  } catch {
-    url = `${endpoint.host}${path}`;
-  }
-
-  if (Object.keys(input.query_params).length > 0) {
-    const parsed = new URL(url);
-    for (const [key, value] of Object.entries(input.query_params)) {
-      parsed.searchParams.set(key, String(value));
-    }
-    url = parsed.toString();
-  }
-
-  const headers: Record<string, string> = {};
-  const contentType = endpoint.body_mime_type || 'application/json';
-  if (contentType !== 'multipart/form-data') {
-    headers['Content-Type'] = contentType;
-  }
-  for (const h of endpoint.headers) {
-    if (!h.templated && h.name.toLowerCase() !== 'content-type') {
-      headers[h.name] = h.value;
-    }
-  }
-  for (const h of input.headers) {
-    headers[h.name] = h.value;
-  }
-
-  let body: string | undefined;
-  if (input.body) {
-    body = JSON.stringify(input.body);
-  } else if (endpoint.body_template) {
-    body = endpoint.body_template;
-  }
-
-  try {
-    const response = await fetch(url, {
-      method: endpoint.method,
-      headers,
-      body,
-    });
-    const text = await response.text();
-    let json: unknown;
-    try {
-      json = JSON.parse(text);
-    } catch {
-      json = text;
-    }
-    return { status: response.status, body: json };
-  } catch (error) {
-    return {
-      status: 0,
-      error: error instanceof Error ? error.message : 'Replay request failed',
-    };
-  }
 }

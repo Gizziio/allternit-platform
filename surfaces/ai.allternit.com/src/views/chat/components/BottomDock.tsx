@@ -69,18 +69,11 @@ function ChatCoworkToggle() {
 interface AgentModePillProps {
   agentModeEnabled: boolean;
   agentModeTheme: { glow: string; soft: string; accent: string };
-  selectedSurfaceAgent: Agent | null;
+  selectedSurfaceAgent: { name: string } | null;
   selectedModeId: string | null;
   onToggle: () => void;
   onOpenMenu: () => void;
   showMenu: boolean;
-  disableToggle?: boolean;
-  onOpenModeMenu?: () => void;
-}
-
-function agentDisplayName(agent: Agent | null): string | null {
-  if (!agent) return null;
-  return agent.botProfile?.displayName || agent.name;
 }
 
 function AgentModePill({
@@ -91,8 +84,6 @@ function AgentModePill({
   onToggle,
   onOpenMenu,
   showMenu,
-  disableToggle,
-  onOpenModeMenu,
 }: AgentModePillProps) {
   const glowColor = agentModeEnabled ? agentModeTheme.glow : 'var(--chat-composer-border)';
   const softColor = agentModeEnabled ? agentModeTheme.soft : 'transparent';
@@ -100,16 +91,15 @@ function AgentModePill({
   const selectedModeLabel = selectedModeId
     ? MODE_TABS.find((m) => m.id === selectedModeId)?.label ?? null
     : null;
-  const displayName = agentDisplayName(selectedSurfaceAgent);
   const label = agentModeEnabled
-    ? displayName && selectedModeLabel
-      ? `${displayName} · ${selectedModeLabel}`
+    ? selectedSurfaceAgent && selectedModeLabel
+      ? `Bot | ${selectedModeLabel}`
       : selectedModeLabel
-        ? `Bot · ${selectedModeLabel}`
-        : displayName
-          ? displayName
-          : 'Bot'
-    : 'Bot';
+        ? `Bot | ${selectedModeLabel}`
+        : selectedSurfaceAgent
+          ? `Bot | ${selectedSurfaceAgent.name}`
+          : 'Bot On'
+    : 'Bot Off';
 
   return (
     <div
@@ -126,7 +116,7 @@ function AgentModePill({
     >
       <button
         type="button"
-        onClick={disableToggle ? onOpenModeMenu : onToggle}
+        onClick={onToggle}
         className="flex items-center gap-1.5 h-full bg-transparent border-none cursor-pointer"
         style={{ color: accentColor }}
       >
@@ -142,7 +132,7 @@ function AgentModePill({
               e.stopPropagation();
               onOpenMenu();
             }}
-            aria-label="Select bot"
+            aria-label="Select agent"
             className="flex items-center justify-center size-6 rounded-full bg-transparent border-none cursor-pointer transition-colors hover:bg-black/5"
             style={{ color: accentColor }}
           >
@@ -164,7 +154,7 @@ interface BottomDockProps {
   agentModeTheme: { glow: string; soft: string; accent: string };
   setShowAgentMenu: (show: boolean) => void;
   showAgentMenu: boolean;
-  selectedSurfaceAgent: Agent | null;
+  selectedSurfaceAgent: { name: string } | null;
   onToggleAgentMode?: () => void;
   customLeftContent?: React.ReactNode;
   // Agent menu data
@@ -181,9 +171,6 @@ interface BottomDockProps {
   showModeToggle?: boolean;
   /** Render as toolbar controls beside the composer's attachment button. */
   inline?: boolean;
-  /** When true, the bot pill toggles mode selection instead of turning agent mode off. */
-  sessionLocked?: boolean;
-  onOpenModeMenu?: () => void;
 }
 
 export function BottomDock({
@@ -207,8 +194,6 @@ export function BottomDock({
   onClearAgent,
   showModeToggle = true,
   inline = false,
-  sessionLocked = false,
-  onOpenModeMenu,
 }: BottomDockProps) {
   const borderColor = agentModeEnabled ? agentModeTheme.glow : THEME.inputBorder;
 
@@ -241,35 +226,32 @@ export function BottomDock({
           onToggle={onToggleAgentMode || (() => {})}
           onOpenMenu={() => setShowAgentMenu(true)}
           showMenu={showAgentMenu}
-          disableToggle={sessionLocked}
-          onOpenModeMenu={onOpenModeMenu}
         />
       )}
 
       {showAgentMenu && agentModeSurface && (
-        <div className="absolute bottom-[calc(100%+8px)] left-4 z-200">
-          <AgentSelectorDropdown
-            agents={agents.filter((a) => {
-              const allowedSurfaces = (a.allowedSurfaces as string[] | undefined) || [];
-              return a.isBot === true && allowedSurfaces.includes(agentModeSurface);
-            })}
-            isLoading={isLoadingAgents}
-            selectedAgent={selectedSurfaceAgentId}
-            workspaceArtifacts={workspaceArtifacts}
-            error={agentError}
-            openClawCandidatesCount={openClawCandidatesCount}
-            onOpenImportWizard={onOpenImportWizard}
-            onSelect={(agent) => {
-              onSelectAgent?.(agent);
-              setShowAgentMenu(false);
-            }}
-            onClear={() => {
-              onClearAgent?.();
-              setShowAgentMenu(false);
-            }}
-            onClose={() => setShowAgentMenu(false)}
-          />
-        </div>
+        <AgentSelectorDropdown
+          className="absolute bottom-full left-0 mb-2"
+          agents={agents.filter((a) => {
+            const allowedSurfaces = (a.allowedSurfaces as string[] | undefined) || [];
+            return allowedSurfaces.includes(agentModeSurface);
+          })}
+          isLoading={isLoadingAgents}
+          selectedAgent={selectedSurfaceAgentId}
+          workspaceArtifacts={workspaceArtifacts}
+          error={agentError}
+          openClawCandidatesCount={openClawCandidatesCount}
+          onOpenImportWizard={onOpenImportWizard}
+          onSelect={(agent) => {
+            onSelectAgent?.(agent);
+            setShowAgentMenu(false);
+          }}
+          onClear={() => {
+            onClearAgent?.();
+            setShowAgentMenu(false);
+          }}
+          onClose={() => setShowAgentMenu(false)}
+        />
       )}
     </div>
   );

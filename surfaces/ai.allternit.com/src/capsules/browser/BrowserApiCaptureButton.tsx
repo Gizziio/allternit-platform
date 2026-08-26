@@ -13,14 +13,28 @@ import {
   CheckCircle,
 } from "@phosphor-icons/react";
 import { useApiCaptureStore } from "@/lib/api-capture/store";
-import { getCaptureAdapter, type CaptureAdapter } from "@/lib/api-capture/adapter";
-import type { CaptureSession } from "@/lib/api-capture/api";
+import {
+  getArmedBrowserCapture,
+  resolveBrowserCaptureArm,
+} from "@/lib/api-capture/arm";
 import { cn } from "@/lib/utils";
 
 interface BrowserApiCaptureButtonProps {
   domain?: string;
   disabled?: boolean;
   onOpenSiteApis?: () => void;
+}
+
+interface ElectronCaptureAPI {
+  start?: (options?: { filterUrls?: string[] }) => Promise<{ sessionId: string; success: boolean; error?: string }>;
+  stop?: (sessionId: string) => Promise<{ success: boolean; har?: string; error?: string }>;
+  isAvailable?: () => Promise<boolean>;
+}
+
+function getCaptureAPI(): ElectronCaptureAPI | undefined {
+  if (typeof window === "undefined") return undefined;
+  const desktop = (window as any).allternit as { browserCapture?: ElectronCaptureAPI } | undefined;
+  return desktop?.browserCapture;
 }
 
 type CapturePhase = "idle" | "starting" | "capturing" | "stopping" | "derived";
@@ -30,33 +44,59 @@ interface MenuPosition {
   right: number;
 }
 
-function adapterSource(adapter: CaptureAdapter): CaptureSession["source"] {
-  switch (adapter.name) {
-    case "desktop":
-      return "aci";
-    case "extension":
-      return "browser";
-    default:
-      return "upload";
-  }
-}
-
 export function BrowserApiCaptureButton({ domain, disabled, onOpenSiteApis }: BrowserApiCaptureButtonProps) {
   const [phase, setPhase] = useState<CapturePhase>("idle");
   const [sessionId, setSessionId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [menuOpen, setMenuOpen] = useState(false);
-  const [adapterName, setAdapterName] = useState<string>("upload");
+  const [available, setAvailable] = useState(false);
   const [menuPos, setMenuPos] = useState<MenuPosition>({ top: 0, right: 0 });
   const buttonRef = useRef<HTMLButtonElement>(null);
   const menuRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const autoStartedRef = useRef(false);
   const { ingestHarFile } = useApiCaptureStore();
 
+  // Probe native capture availability once on mount.
   useEffect(() => {
-    const adapter = getCaptureAdapter();
-    setAdapterName(adapter.name);
+    let cancelled = false;
+    getCaptureAPI()
+      ?.isAvailable?.()
+      .then((ok) => {
+        if (!cancelled) setAvailable(ok);
+      })
+      .catch(() => {
+        if (!cancelled) setAvailable(false);
+      });
+    return () => { cancelled = true; };
   }, []);
+
+  // Consume a pending "arm" signal from the Site APIs surface. If the armed
+  // domain matches the current tab (or no domain filter was set), auto-start
+  // capture so the user lands in a recording session. We skip the check while
+  // the active tab domain is still loading (undefined) when a domain filter
+  // was requested, so capture does not start unfiltered by accident.
+  useEffect(() => {
+    if (autoStartedRef.current || phase !== "idle") return;
+    const { arm } = getArmedBrowserCapture();
+    if (!arm) return;
+
+    const armDomain = arm.domain?.toLowerCase();
+    const currentDomain = domain?.toLowerCase();
+
+    if (armDomain && currentDomain === undefined) return;
+
+    const matches =
+      !armDomain ||
+      armDomain === currentDomain ||
+      (currentDomain !== undefined && currentDomain.endsWith(`.${armDomain}`));
+
+    if (matches) {
+      autoStartedRef.current = true;
+      resolveBrowserCaptureArm();
+      void handleStartCapture();
+    }
+  }, [domain, phase]);
 
   useEffect(() => {
     const handler = (e: MouseEvent) => {
@@ -84,40 +124,29 @@ export function BrowserApiCaptureButton({ domain, disabled, onOpenSiteApis }: Br
     setMenuPos({ top, right });
   }, []);
 
-  const openSiteApisFallback = useCallback(() => {
-    window.dispatchEvent(
-      new CustomEvent("allternit:open-view", {
-        detail: { viewType: "site-apis" },
-      })
-    );
-  }, []);
-
   const openSiteApis = useCallback(() => {
     if (onOpenSiteApis) {
       onOpenSiteApis();
     } else {
-      openSiteApisFallback();
+      window.dispatchEvent(
+        new CustomEvent("allternit:open-view", {
+          detail: { viewType: "site-apis" },
+        })
+      );
     }
-    window.dispatchEvent(
-      new CustomEvent("allternit:agent-pane-tab", {
-        detail: { tab: "site-apis" },
-      })
-    );
-  }, [onOpenSiteApis, openSiteApisFallback]);
-
-  const isLiveAdapter = adapterName !== "upload";
+  }, [onOpenSiteApis]);
 
   const handleStartCapture = useCallback(async () => {
     setError(null);
     setPhase("starting");
     try {
-      const adapter = getCaptureAdapter();
-      if (adapter.name === "upload") {
-        throw new Error("Live capture requires the desktop app or browser extension. Upload a HAR file instead.");
+      const api = getCaptureAPI();
+      if (!api?.start) {
+        throw new Error("Native capture is not available in this build. Upload a HAR file instead.");
       }
-      const result = await adapter.start({ domain });
-      if (!result.sessionId) {
-        throw new Error("Failed to start capture");
+      const result = await api.start({ filterUrls: domain ? [`*://${domain}/*`] : undefined });
+      if (!result.success || !result.sessionId) {
+        throw new Error(result.error || "Failed to start capture");
       }
       setSessionId(result.sessionId);
       setPhase("capturing");
@@ -132,12 +161,15 @@ export function BrowserApiCaptureButton({ domain, disabled, onOpenSiteApis }: Br
     setPhase("stopping");
     setError(null);
     try {
-      const adapter = getCaptureAdapter();
-      const result = await adapter.stop(sessionId);
-      if (!result.har) {
-        throw new Error("Failed to stop capture");
+      const api = getCaptureAPI();
+      if (!api?.stop) {
+        throw new Error("Native capture is not available in this build.");
       }
-      await ingestHarFile(result.har, adapterSource(adapter));
+      const result = await api.stop(sessionId);
+      if (!result.success || !result.har) {
+        throw new Error(result.error || "Failed to stop capture");
+      }
+      await ingestHarFile(result.har, "aci");
       setPhase("derived");
       setTimeout(() => {
         openSiteApis();
@@ -200,16 +232,11 @@ export function BrowserApiCaptureButton({ domain, disabled, onOpenSiteApis }: Br
         </div>
       </div>
 
-      <div className="mx-3 mt-2 px-2 py-1 rounded-md bg-[var(--bg-tertiary)] text-[11px] text-[var(--text-secondary)] flex items-center gap-2">
-        <span className="capitalize">{adapterName}</span>
-        <span className="text-[var(--text-tertiary)]">capture source active</span>
-      </div>
-
-      {!isLiveAdapter && (
+      {!available && (
         <div className="mx-3 mt-2 p-2 rounded-md bg-[var(--status-warning)]/10 border border-solid border-[var(--status-warning)]/20 text-[11px] text-[var(--text-secondary)] flex items-start gap-2">
           <Warning size={14} className="shrink-0 mt-0.5 text-[var(--status-warning)]" />
           <span>
-            Live capture requires the desktop app or browser extension. Upload a HAR file instead.
+            Live capture requires the desktop shell with native network recording. Upload a HAR file instead.
           </span>
         </div>
       )}
@@ -220,7 +247,7 @@ export function BrowserApiCaptureButton({ domain, disabled, onOpenSiteApis }: Br
           setMenuOpen(false);
           void handleStartCapture();
         }}
-        disabled={isBusy || !isLiveAdapter}
+        disabled={isBusy}
         className="flex items-center gap-2 w-full px-3 py-2 border-none bg-transparent cursor-pointer text-[var(--text-secondary)] text-[13px] text-left hover:bg-[var(--bg-hover)] transition-colors disabled:opacity-50"
       >
         <Record size={16} weight="fill" className="text-[var(--status-error)]" />

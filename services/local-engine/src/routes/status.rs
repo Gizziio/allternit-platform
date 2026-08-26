@@ -55,14 +55,6 @@ pub struct DiskInfo {
     pub used_bytes: u64,
 }
 
-/// Backend capability flags.
-#[derive(Debug, Clone, Serialize)]
-pub struct BackendInfo {
-    pub metal: bool,
-    pub cuda: bool,
-    pub cpu_fallback: bool,
-}
-
 /// Overall service status response.
 #[derive(Debug, Clone, Serialize)]
 pub struct StatusResponse {
@@ -74,10 +66,6 @@ pub struct StatusResponse {
     pub ram: RamInfo,
     pub disk: DiskInfo,
     pub gpu: Option<Vec<GpuInfo>>,
-    pub hardware_id: String,
-    pub apple_chip: Option<String>,
-    pub unified_memory: bool,
-    pub backends: BackendInfo,
 }
 
 /// Create the status router.
@@ -103,8 +91,6 @@ async fn get_status(State(state): State<Arc<AppState>>) -> Json<StatusResponse> 
     let ram = ram_info(&sys);
     let gpu = detect_gpu(&ram);
 
-    let profile = &state.hardware_profile;
-
     Json(StatusResponse {
         status: "healthy".into(),
         active_runtimes: runtimes.len(),
@@ -114,14 +100,6 @@ async fn get_status(State(state): State<Arc<AppState>>) -> Json<StatusResponse> 
         ram,
         disk,
         gpu,
-        hardware_id: profile.hardware_id.clone(),
-        apple_chip: profile.apple_chip.clone(),
-        unified_memory: profile.unified_memory,
-        backends: BackendInfo {
-            metal: profile.backends.metal,
-            cuda: profile.backends.cuda,
-            cpu_fallback: profile.backends.cpu_fallback,
-        },
     })
 }
 

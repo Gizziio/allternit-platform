@@ -1,143 +1,129 @@
 /**
- * Cross-surface API capture adapter.
+ * Cross-surface API capture adapter interface.
  *
- * Picks the best available capture source for the current runtime:
- *   1. Electron desktop shell (`window.allternit.browserCapture`)
- *   2. Browser extension (`chrome.runtime.sendMessage`)
- *   3. Direct HAR upload (no-op live capture)
+ * Desktop, extension, and web surfaces each expose a different native capture
+ * capability (Electron webRequest, chrome.debugger, or none). The UI uses this
+ * adapter to start/stop capture without caring which host is available.
  */
 
 export interface CaptureAdapter {
-  name: string;
-  isAvailable(): boolean;
-  start(options?: CaptureStartOptions): Promise<{ sessionId: string }>;
+  readonly mode: 'desktop' | 'extension' | 'upload';
+  readonly canRecord: boolean;
+  isAvailable(): Promise<boolean>;
+  start(options?: { filterUrls?: string[] }): Promise<{ sessionId: string }>;
   stop(sessionId: string): Promise<{ har: string }>;
+  getHelpText(): string;
 }
 
-export interface CaptureStartOptions {
-  domain?: string;
-  filterUrls?: string[];
-  tabId?: number;
+export interface AdapterChoice {
+  adapter: CaptureAdapter;
+  fallback?: CaptureAdapter;
 }
 
-interface DesktopCaptureResult {
-  success?: boolean;
-  sessionId?: string;
-  har?: string;
-  error?: string;
-}
-
-interface DesktopCaptureAPI {
-  start?: (options?: { filterUrls?: string[] }) => Promise<DesktopCaptureResult>;
-  stop?: (sessionId: string) => Promise<DesktopCaptureResult>;
-  isAvailable?: () => Promise<boolean>;
-}
-
-interface ExtensionCaptureResult {
-  sessionId?: string;
-  har?: string;
-  error?: string;
-}
-
-function getDesktopAPI(): DesktopCaptureAPI | undefined {
+function getDesktopAdapter(): CaptureAdapter | undefined {
   if (typeof window === 'undefined') return undefined;
-  return ((window as any).allternit as { browserCapture?: DesktopCaptureAPI } | undefined)?.browserCapture;
-}
-
-function getExtensionRuntime(): { sendMessage: (message: unknown) => Promise<ExtensionCaptureResult> } | undefined {
-  if (typeof window === 'undefined') return undefined;
-  const chrome = (window as any).chrome as { runtime?: { sendMessage?: (message: unknown) => Promise<ExtensionCaptureResult> } } | undefined;
-  if (!chrome?.runtime?.sendMessage) return undefined;
-  return { sendMessage: chrome.runtime.sendMessage.bind(chrome.runtime) };
-}
-
-function getDesktopAdapter(): CaptureAdapter {
+  const desktop = (window as any).allternit as { browserCapture?: {
+    isAvailable: () => Promise<boolean>;
+    start: (options?: { filterUrls?: string[] }) => Promise<{ success: boolean; sessionId?: string; error?: string }>;
+    stop: (sessionId: string) => Promise<{ success: boolean; har?: string; error?: string }>;
+  } } | undefined;
+  if (!desktop?.browserCapture) return undefined;
+  const api = desktop.browserCapture;
   return {
-    name: 'desktop',
-    isAvailable() {
-      return !!getDesktopAPI();
-    },
-    async start(options) {
-      const api = getDesktopAPI();
-      if (!api?.start) {
-        throw new Error('Desktop capture API is not available');
-      }
-      const filterUrls = options?.domain ? [`*://${options.domain}/*`] : options?.filterUrls;
-      const result = await api.start({ filterUrls });
+    mode: 'desktop',
+    get canRecord() { return true; },
+    isAvailable: () => api.isAvailable(),
+    start: async (options) => {
+      const result = await api.start(options);
       if (!result.success || !result.sessionId) {
         throw new Error(result.error || 'Failed to start desktop capture');
       }
       return { sessionId: result.sessionId };
     },
-    async stop(sessionId) {
-      const api = getDesktopAPI();
-      if (!api?.stop) {
-        throw new Error('Desktop capture API is not available');
-      }
+    stop: async (sessionId) => {
       const result = await api.stop(sessionId);
       if (!result.success || !result.har) {
         throw new Error(result.error || 'Failed to stop desktop capture');
       }
       return { har: result.har };
     },
+    getHelpText: () => 'Desktop recording is active. Perform your workflow, then stop to derive the API contract.',
   };
 }
 
-function getExtensionAdapter(): CaptureAdapter {
+function getExtensionAdapter(): CaptureAdapter | undefined {
+  if (typeof window === 'undefined') return undefined;
+  if (typeof chrome === 'undefined' || !chrome.runtime?.sendMessage) return undefined;
+
+  const sendMessage = <T>(message: unknown): Promise<T> => new Promise((resolve, reject) => {
+    chrome.runtime.sendMessage(message, (response) => {
+      if (chrome.runtime.lastError) {
+        reject(new Error(chrome.runtime.lastError.message));
+      } else {
+        resolve(response as T);
+      }
+    });
+  });
+
   return {
-    name: 'extension',
-    isAvailable() {
-      return !!getExtensionRuntime();
-    },
-    async start(options) {
-      const runtime = getExtensionRuntime();
-      if (!runtime) {
-        throw new Error('Browser extension capture is not available');
+    mode: 'extension',
+    get canRecord() { return true; },
+    isAvailable: async () => {
+      try {
+        const res = await sendMessage<{ available: boolean }>({ type: 'API_CAPTURE_AVAILABLE' });
+        return res.available ?? false;
+      } catch {
+        return false;
       }
-      const result = await runtime.sendMessage({
-        type: 'API_CAPTURE_START',
-        tabId: options?.tabId,
-        filterUrls: options?.domain ? [`*://${options.domain}/*`] : options?.filterUrls,
+    },
+    start: async (options) => {
+      const activeTab = await new Promise<chrome.tabs.Tab | undefined>((resolve) => {
+        chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => resolve(tabs[0]));
       });
-      if (!result.sessionId) {
-        throw new Error(result.error || 'Failed to start extension capture');
+      const res = await sendMessage<{ ok: boolean; sessionId?: string; error?: string }>({
+        type: 'API_CAPTURE_START',
+        tabId: activeTab?.id,
+        filterUrls: options?.filterUrls,
+      });
+      if (!res.ok || !res.sessionId) {
+        throw new Error(res.error || 'Failed to start extension capture');
       }
-      return { sessionId: result.sessionId };
+      return { sessionId: res.sessionId };
     },
-    async stop(sessionId) {
-      const runtime = getExtensionRuntime();
-      if (!runtime) {
-        throw new Error('Browser extension capture is not available');
-      }
-      const result = await runtime.sendMessage({
+    stop: async (sessionId) => {
+      const res = await sendMessage<{ ok: boolean; har?: string; error?: string }>({
         type: 'API_CAPTURE_STOP',
         sessionId,
       });
-      if (!result.har) {
-        throw new Error(result.error || 'Failed to stop extension capture');
+      if (!res.ok || !res.har) {
+        throw new Error(res.error || 'Failed to stop extension capture');
       }
-      return { har: result.har };
+      return { har: res.har };
     },
+    getHelpText: () => 'Extension recording uses Chrome debugger. A "Remote debugging" bar will appear in the target tab.',
   };
 }
 
-function getUploadAdapter(): CaptureAdapter {
-  return {
-    name: 'upload',
-    isAvailable: () => true,
-    async start() {
-      return { sessionId: 'upload' };
-    },
-    async stop() {
-      throw new Error('Upload adapter does not record network traffic. Use the HAR file upload option.');
-    },
-  };
-}
+const uploadAdapter: CaptureAdapter = {
+  mode: 'upload',
+  canRecord: false,
+  isAvailable: async () => true,
+  start: async () => { throw new Error('Upload adapter cannot record live traffic'); },
+  stop: async () => { throw new Error('Upload adapter cannot record live traffic'); },
+  getHelpText: () => 'Upload a HAR file exported from browser DevTools to derive API contracts.',
+};
 
-export function getCaptureAdapter(): CaptureAdapter {
+/**
+ * Pick the best available capture adapter.
+ *
+ * Order: desktop shell > Chrome extension > upload-only fallback.
+ */
+export function getCaptureAdapter(): AdapterChoice {
   const desktop = getDesktopAdapter();
-  if (desktop.isAvailable()) return desktop;
+  if (desktop) return { adapter: desktop, fallback: getExtensionAdapter() ?? uploadAdapter };
+
   const extension = getExtensionAdapter();
-  if (extension.isAvailable()) return extension;
-  return getUploadAdapter();
+  if (extension) return { adapter: extension, fallback: uploadAdapter };
+
+  return { adapter: uploadAdapter };
 }

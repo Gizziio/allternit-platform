@@ -1,23 +1,16 @@
 "use client";
 
 import React, { useCallback, useEffect, useMemo, useState } from "react";
-import { X, Plugs, Key, Plus, Trash, Lightning, Robot, Envelope, Phone, Wallet, ComputerTower, Desktop, Globe, FileCode, Terminal, SquaresFour, Cloud } from "@phosphor-icons/react";
-import type { Agent, AgentConnectorBinding, AgentSecretRef, AgentWalletPaymentMethod, AgentEmailChannel, AgentPhoneChannel, AgentWalletChannel, AgentMessagingConfig, AgentVMAction, AgentVMProvider, AgentVMNetworkPolicy, AgentVMPersistence } from "@/lib/agents/agent.types";
+import { X, Plugs, Key, ShieldCheck, Plus, Trash, Lightning, Robot, Envelope, Phone, Wallet, ComputerTower, Desktop, Globe, FileCode, Terminal, SquaresFour } from "@phosphor-icons/react";
+import type { Agent, AgentConnectorBinding, AgentSecretRef, AgentWalletPaymentMethod, AgentVMAction, AgentVMProvider, AgentVMNetworkPolicy, AgentVMPersistence } from "@/lib/agents/agent.types";
 import { updateAgent } from "@/lib/agents/agent.service";
+import type { Connector } from "@/plugins/capability.types";
+import { useConnectors } from "@/plugins/useCapabilities";
 import { sealAgentSecret } from "@/lib/agents/agent-secrets.service";
-import { createAgentWallet } from "@/lib/bots/agent-wallet-factory";
-import { provisionAgentEmail, provisionAgentPhone, getAgentEmailStatus, type AgentEmailRailStatus } from "@/lib/bots/agent-identity.service";
-import {
-  getIdentityMappingForConnector,
-  getConnectorAccountIdentifier,
-  listIdentityConnectors,
-} from "@/lib/bots/identity-connector-map";
-import { connectOwned, listOwnedConnectors, type OwnedConnector } from "@/lib/design/owned-connector";
-import { ConnectorMarketplace } from "@/components/marketplace/ConnectorMarketplace";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-
+import { GlassSurface } from "@/design/GlassSurface";
 import { cn } from "@/lib/utils";
 
 type RuntimeSection = "connectors" | "secrets" | "harness" | "identity" | "vm";
@@ -30,20 +23,26 @@ interface BotRuntimeConfigModalProps {
   initialSection?: RuntimeSection;
 }
 
+const COMMON_CONNECTORS = [
+  { provider: "slack", label: "Slack", capabilities: ["chat", "notify"] },
+  { provider: "gmail", label: "Gmail", capabilities: ["email_send", "email_read"] },
+  { provider: "github", label: "GitHub", capabilities: ["code", "issues"] },
+  { provider: "linear", label: "Linear", capabilities: ["issues", "project"] },
+  { provider: "notion", label: "Notion", capabilities: ["docs", "knowledge"] },
+  { provider: "calendar", label: "Calendar", capabilities: ["calendar_read", "calendar_write"] },
+];
+
 function connectorProviderSlug(name: string): string {
   return name.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "") || "connector";
 }
 
-/** Platform-managed email providers: the backend owns provisioning (mailflare when configured, commrails as the legacy fallback). */
-function isPlatformEmailProvider(provider: AgentEmailChannel["provider"]): boolean {
-  return provider === "commrails" || provider === "mailflare";
-}
-
 export function BotRuntimeConfigModal({ bot, isOpen, onClose, onSaved, initialSection = "connectors" }: BotRuntimeConfigModalProps) {
+  const { connectors, enabledIds } = useConnectors();
+  const installedConnectors = useMemo(() => connectors.filter((c) => enabledIds.has(c.id)), [connectors, enabledIds]);
+
   const [activeSection, setActiveSection] = useState<RuntimeSection>(initialSection);
 
   const [bindings, setBindings] = useState<AgentConnectorBinding[]>(bot.connectorBindings ?? []);
-  const boundIds = useMemo(() => new Set(bindings.map((b) => b.connectorId)), [bindings]);
   const [secrets, setSecrets] = useState<AgentSecretRef[]>(bot.secretRefs ?? []);
   const [secretValues, setSecretValues] = useState<Record<number, string>>({});
 
@@ -66,14 +65,6 @@ export function BotRuntimeConfigModal({ bot, isOpen, onClose, onSaved, initialSe
   const [walletProvider, setWalletProvider] = useState(bot.identityChannels?.wallet?.provider || "etrid");
   const [walletChainId, setWalletChainId] = useState(String(bot.identityChannels?.wallet?.chainId || ""));
   const [walletMethods, setWalletMethods] = useState<string[]>(bot.identityChannels?.wallet?.allowedMethods || ["receive", "invoice"]);
-  const [walletKeyVaultRef, setWalletKeyVaultRef] = useState(bot.identityChannels?.wallet?.keyVaultRef || "");
-
-  const [messagingEnabled, setMessagingEnabled] = useState(bot.messagingConfig?.photonEnabled ?? false);
-  const [messagingEndpoint, setMessagingEndpoint] = useState(bot.messagingConfig?.photonEndpoint || "");
-  const [messagingCrossSurface, setMessagingCrossSurface] = useState(bot.messagingConfig?.crossSurfaceEnabled ?? false);
-  const [messagingSurfaces, setMessagingSurfaces] = useState<AgentMessagingConfig["allowedSurfaces"]>(
-    bot.messagingConfig?.allowedSurfaces ?? ["chat", "cowork", "code"]
-  );
 
   const [vmEnabled, setVMEnabled] = useState(bot.vmOperator?.enabled ?? false);
   const [vmProvider, setVMProvider] = useState<AgentVMProvider>(bot.vmOperator?.provider || "opensandbox");
@@ -90,70 +81,9 @@ export function BotRuntimeConfigModal({ bot, isOpen, onClose, onSaved, initialSe
 
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [ownedConnectors, setOwnedConnectors] = useState<OwnedConnector[]>([]);
-
-  const refreshOwnedConnectors = useCallback(async (): Promise<OwnedConnector[]> => {
-    try {
-      const list = await listOwnedConnectors();
-      setOwnedConnectors(list);
-      return list;
-    } catch {
-      setOwnedConnectors([]);
-      return [];
-    }
-  }, []);
-
-  // Identity channel credentials (never persisted in React state beyond this modal; sealed as secrets).
-  const [emailPassword, setEmailPassword] = useState("");
-  const [emailApiKey, setEmailApiKey] = useState("");
-  const [emailImapHost, setEmailImapHost] = useState("");
-  const [emailImapPort, setEmailImapPort] = useState("993");
-  const [emailSmtpHost, setEmailSmtpHost] = useState("");
-  const [emailSmtpPort, setEmailSmtpPort] = useState("587");
-  const [emailConnecting, setEmailConnecting] = useState(false);
-  const [emailConnectionStatus, setEmailConnectionStatus] = useState<"idle" | "connected" | "error">("idle");
-
-  const [phoneTwilioSid, setPhoneTwilioSid] = useState("");
-  const [phoneTwilioToken, setPhoneTwilioToken] = useState("");
-  const [phoneTelnyxKey, setPhoneTelnyxKey] = useState("");
-  const [phoneAndroidBaseUrl, setPhoneAndroidBaseUrl] = useState("");
-  const [phoneAndroidDeviceId, setPhoneAndroidDeviceId] = useState("");
-  const [phonePhotonProjectId, setPhonePhotonProjectId] = useState("");
-  const [phonePhotonProjectSecret, setPhonePhotonProjectSecret] = useState("");
-  const [phonePhotonLineId, setPhonePhotonLineId] = useState("");
-  const [phoneConnecting, setPhoneConnecting] = useState(false);
-  const [phoneConnectionStatus, setPhoneConnectionStatus] = useState<"idle" | "connected" | "error">("idle");
-
-  const [walletSeed, setWalletSeed] = useState("");
-  const [walletConnecting, setWalletConnecting] = useState(false);
-  const [walletConnectionStatus, setWalletConnectionStatus] = useState<"idle" | "connected" | "error">("idle");
-
-  const [identityErrors, setIdentityErrors] = useState<{ email?: string; phone?: string; wallet?: string }>({});
-
-  const [emailRailStatus, setEmailRailStatus] = useState<AgentEmailRailStatus | null>(null);
-  const [emailRailStatusError, setEmailRailStatusError] = useState<string | null>(null);
-
-  useEffect(() => {
-    if (!isOpen || activeSection !== "identity") return;
-    let cancelled = false;
-    setEmailRailStatusError(null);
-    getAgentEmailStatus()
-      .then((status) => {
-        if (!cancelled) setEmailRailStatus(status);
-      })
-      .catch((err) => {
-        if (cancelled) return;
-        setEmailRailStatus(null);
-        setEmailRailStatusError(err instanceof Error ? err.message : "Failed to load email rail status");
-      });
-    return () => {
-      cancelled = true;
-    };
-  }, [isOpen, activeSection]);
 
   useEffect(() => {
     if (isOpen) {
-      void refreshOwnedConnectors();
       setActiveSection(initialSection);
       setBindings(bot.connectorBindings ?? []);
       setSecrets(bot.secretRefs ?? []);
@@ -166,41 +96,14 @@ export function BotRuntimeConfigModal({ bot, isOpen, onClose, onSaved, initialSe
       setEmailProvider(bot.identityChannels?.email?.provider || "commrails");
       setEmailSend(bot.identityChannels?.email?.sendEnabled ?? true);
       setEmailReceive(bot.identityChannels?.email?.receiveEnabled ?? true);
-      setEmailPassword("");
-      setEmailApiKey("");
-      setEmailImapHost("");
-      setEmailImapPort("993");
-      setEmailSmtpHost("");
-      setEmailSmtpPort("587");
-      setEmailConnecting(false);
-      setEmailConnectionStatus("idle");
       setPhoneNumber(bot.identityChannels?.phone?.number || "");
       setPhoneProvider(bot.identityChannels?.phone?.provider || "vapi");
       setPhoneVoice(bot.identityChannels?.phone?.voiceEnabled ?? true);
       setPhoneSms(bot.identityChannels?.phone?.smsEnabled ?? true);
-      setPhoneTwilioSid("");
-      setPhoneTwilioToken("");
-      setPhoneTelnyxKey("");
-      setPhoneAndroidBaseUrl("");
-      setPhoneAndroidDeviceId("");
-      setPhonePhotonProjectId("");
-      setPhonePhotonProjectSecret("");
-      setPhonePhotonLineId("");
-      setPhoneConnecting(false);
-      setPhoneConnectionStatus("idle");
       setWalletAddress(bot.identityChannels?.wallet?.address || "");
       setWalletProvider(bot.identityChannels?.wallet?.provider || "etrid");
       setWalletChainId(String(bot.identityChannels?.wallet?.chainId || ""));
       setWalletMethods(bot.identityChannels?.wallet?.allowedMethods || ["receive", "invoice"]);
-      setWalletKeyVaultRef(bot.identityChannels?.wallet?.keyVaultRef || "");
-      setWalletSeed("");
-      setWalletConnecting(false);
-      setWalletConnectionStatus("idle");
-      setIdentityErrors({});
-      setMessagingEnabled(bot.messagingConfig?.photonEnabled ?? false);
-      setMessagingEndpoint(bot.messagingConfig?.photonEndpoint || "");
-      setMessagingCrossSurface(bot.messagingConfig?.crossSurfaceEnabled ?? false);
-      setMessagingSurfaces(bot.messagingConfig?.allowedSurfaces ?? ["chat", "cowork", "code"]);
       setVMEnabled(bot.vmOperator?.enabled ?? false);
       setVMProvider(bot.vmOperator?.provider || "opensandbox");
       setVMImage(bot.vmOperator?.image || "");
@@ -217,46 +120,37 @@ export function BotRuntimeConfigModal({ bot, isOpen, onClose, onSaved, initialSe
     }
   }, [isOpen, initialSection, bot]);
 
-  const applyConnectorToIdentity = useCallback((connector: OwnedConnector) => {
-    const mapping = getIdentityMappingForConnector(connector.id);
-    if (!mapping) return;
-
-    const account = getConnectorAccountIdentifier(connector);
-    if (mapping.kind === "email") {
-      setEmailProvider(mapping.provider as AgentEmailChannel["provider"]);
-      if (account) setEmailAddress(account);
-      setEmailSend(true);
-      setEmailReceive(true);
-      setEmailConnectionStatus(account ? "connected" : "idle");
-    } else if (mapping.kind === "phone") {
-      setPhoneProvider(mapping.provider as AgentPhoneChannel["provider"]);
-      if (account) setPhoneNumber(account);
-      setPhoneVoice(true);
-      setPhoneSms(true);
-      setPhoneConnectionStatus(account ? "connected" : "idle");
-    }
-  }, []);
-
-  const bindConnector = useCallback((connector: OwnedConnector) => {
+  const toggleInstalledBinding = useCallback((connector: Connector) => {
     setBindings((prev) => {
-      if (prev.some((b) => b.connectorId === connector.id)) return prev;
+      const existing = prev.find((b) => b.connectorId === connector.id);
+      if (existing) {
+        return prev.filter((b) => b.connectorId !== connector.id);
+      }
+      const provider = connectorProviderSlug(connector.appName || connector.name);
+      const actions = connector.actions || [];
       const next: AgentConnectorBinding = {
         connectorId: connector.id,
-        provider: connectorProviderSlug(connector.name),
-        label: connector.name,
-        capabilities: ["connect"],
+        provider,
+        label: connector.appName || connector.name,
+        capabilities: actions.length > 0 ? actions.map((a) => a.id || a.name) : ["read"],
         autonomous: true,
       };
       return [...prev, next];
     });
-    void refreshOwnedConnectors().then((list) => {
-      const fresh = list.find((c) => c.id === connector.id) || connector;
-      applyConnectorToIdentity(fresh);
-    });
-  }, [applyConnectorToIdentity, refreshOwnedConnectors]);
+  }, []);
 
-  const unbindConnector = useCallback((connector: OwnedConnector) => {
-    setBindings((prev) => prev.filter((b) => b.connectorId !== connector.id));
+  const addQuickBinding = useCallback((provider: string, label: string, capabilities: string[]) => {
+    setBindings((prev) => {
+      if (prev.some((b) => b.provider === provider)) return prev;
+      const next: AgentConnectorBinding = {
+        connectorId: `${provider}-${Date.now()}`,
+        provider,
+        label,
+        capabilities,
+        autonomous: true,
+      };
+      return [...prev, next];
+    });
   }, []);
 
   const removeBinding = useCallback((connectorId: string) => {
@@ -285,267 +179,6 @@ export function BotRuntimeConfigModal({ bot, isOpen, onClose, onSaved, initialSe
       prev.includes(method) ? prev.filter((m) => m !== method) : [...prev, method]
     );
   }, []);
-
-  const ensureConnectorBinding = useCallback((connectorId: string, label: string, provider: string) => {
-    setBindings((prev) => {
-      if (prev.some((b) => b.connectorId === connectorId)) return prev;
-      return [
-        ...prev,
-        {
-          connectorId,
-          provider,
-          label,
-          capabilities: ["send", "receive"],
-          autonomous: true,
-        },
-      ];
-    });
-  }, []);
-
-  const handleConnectEmail = useCallback(async () => {
-    setEmailConnecting(true);
-    setIdentityErrors((prev) => ({ ...prev, email: undefined }));
-    setEmailConnectionStatus("idle");
-    try {
-      if (emailProvider === "commrails" || emailProvider === "mailflare") {
-        // Platform-managed mailbox: the backend provisions a real mailflare
-        // mailbox (+ scoped key) when the mailflare rail is configured,
-        // otherwise falls back to the legacy mint-only commrails row. The
-        // response reports which provider was actually provisioned.
-        const result = await provisionAgentEmail(bot.id);
-        setEmailAddress(result.address);
-        setEmailProvider(result.provider);
-        setEmailSend(true);
-        setEmailReceive(true);
-        setEmailConnectionStatus("connected");
-        return;
-      }
-
-      const address = emailAddress.trim();
-      if (!address) throw new Error("Enter the email address to bind.");
-
-      if (emailProvider === "google_workspace") {
-        try {
-          const result = await connectOwned("gmail", { via: "oauth2" });
-          if (result.status === "connected") {
-            ensureConnectorBinding("gmail", "Gmail", "gmail");
-            setEmailConnectionStatus("connected");
-          } else if (result.status === "authorization_required") {
-            const url = (result as { authorize_url?: string }).authorize_url;
-            if (url) window.open(url, "_blank", "noopener,noreferrer");
-          } else {
-            throw new Error("Gmail connection did not complete.");
-          }
-        } catch (err) {
-          const msg = err instanceof Error ? err.message : String(err);
-          if (msg.includes("connector_not_found") || msg.includes("unknown_service")) {
-            throw new Error(
-              "The Gmail connector is not available in this workspace yet. Use Generic IMAP/SMTP or CommRails instead.",
-            );
-          }
-          throw err;
-        }
-      } else if (emailProvider === "microsoft_365") {
-        try {
-          const result = await connectOwned("outlook", { via: "oauth2" });
-          if (result.status === "connected") {
-            ensureConnectorBinding("outlook", "Outlook", "outlook");
-            setEmailConnectionStatus("connected");
-          } else if (result.status === "authorization_required") {
-            const url = (result as { authorize_url?: string }).authorize_url;
-            if (url) window.open(url, "_blank", "noopener,noreferrer");
-          } else {
-            throw new Error("Outlook connection did not complete.");
-          }
-        } catch (err) {
-          const msg = err instanceof Error ? err.message : String(err);
-          if (msg.includes("connector_not_found") || msg.includes("unknown_service")) {
-            throw new Error(
-              "The Outlook connector is not available in this workspace yet. Use Generic IMAP/SMTP or CommRails instead.",
-            );
-          }
-          throw err;
-        }
-      } else if (emailProvider === "generic_imap") {
-        const password = emailPassword.trim();
-        const imapHost = emailImapHost.trim();
-        const imapPort = emailImapPort.trim() || "993";
-        const smtpHost = emailSmtpHost.trim();
-        const smtpPort = emailSmtpPort.trim() || "587";
-        if (!password) throw new Error("Enter the email password so the bot can authenticate.");
-        if (!imapHost || !smtpHost) throw new Error("Enter the IMAP and SMTP server hosts.");
-        await sealAgentSecret({ agentId: bot.id, key: "BOT_EMAIL_ADDRESS", value: address });
-        await sealAgentSecret({ agentId: bot.id, key: "BOT_EMAIL_PASSWORD", value: password });
-        await sealAgentSecret({ agentId: bot.id, key: "BOT_EMAIL_IMAP_HOST", value: imapHost });
-        await sealAgentSecret({ agentId: bot.id, key: "BOT_EMAIL_IMAP_PORT", value: imapPort });
-        await sealAgentSecret({ agentId: bot.id, key: "BOT_EMAIL_SMTP_HOST", value: smtpHost });
-        await sealAgentSecret({ agentId: bot.id, key: "BOT_EMAIL_SMTP_PORT", value: smtpPort });
-        setEmailConnectionStatus("connected");
-      } else {
-        // custom / any other provider: seal address + password so the runtime can use them.
-        const password = emailPassword.trim();
-        if (!password) throw new Error("Enter the email password so the bot can authenticate.");
-        await sealAgentSecret({ agentId: bot.id, key: "BOT_EMAIL_ADDRESS", value: address });
-        await sealAgentSecret({ agentId: bot.id, key: "BOT_EMAIL_PASSWORD", value: password });
-        setEmailConnectionStatus("connected");
-      }
-    } catch (err) {
-      setEmailConnectionStatus("error");
-      setIdentityErrors((prev) => ({
-        ...prev,
-        email: err instanceof Error ? err.message : "Email connection failed",
-      }));
-    } finally {
-      setEmailConnecting(false);
-    }
-  }, [
-    bot.id,
-    emailAddress,
-    emailProvider,
-    emailPassword,
-    emailImapHost,
-    emailImapPort,
-    emailSmtpHost,
-    emailSmtpPort,
-    ensureConnectorBinding,
-  ]);
-
-  const handleConnectPhone = useCallback(async () => {
-    setPhoneConnecting(true);
-    setIdentityErrors((prev) => ({ ...prev, phone: undefined }));
-    setPhoneConnectionStatus("idle");
-    try {
-      if (phoneProvider === "vapi") {
-        // Platform-managed number: backend allocates from ALLTERNIT_BOT_PHONE_POOL.
-        const result = await provisionAgentPhone(bot.id);
-        setPhoneNumber(result.number);
-        setPhoneProvider("vapi");
-        setPhoneVoice(true);
-        setPhoneSms(true);
-        setPhoneConnectionStatus("connected");
-        return;
-      }
-
-      const number = phoneNumber.trim();
-      if (!number) throw new Error("Enter the phone number to bind.");
-
-      if (phoneProvider === "twilio") {
-        const accountSid = phoneTwilioSid.trim();
-        const authToken = phoneTwilioToken.trim();
-        if (!accountSid || !authToken) throw new Error("Enter your Twilio Account SID and Auth Token.");
-        const result = await connectOwned("twilio", {
-          via: "custom_credential",
-          values: { accountSid, authToken },
-        });
-        if (result.status === "connected") {
-          await sealAgentSecret({ agentId: bot.id, key: "TWILIO_ACCOUNT_SID", value: accountSid });
-          await sealAgentSecret({ agentId: bot.id, key: "TWILIO_AUTH_TOKEN", value: authToken });
-          await sealAgentSecret({ agentId: bot.id, key: "BOT_PHONE_NUMBER", value: number });
-          ensureConnectorBinding("twilio", "Twilio", "twilio");
-          setPhoneConnectionStatus("connected");
-        } else {
-          throw new Error("Twilio connection did not complete.");
-        }
-      } else if (phoneProvider === "telnyx") {
-        const key = phoneTelnyxKey.trim();
-        if (!key) throw new Error("Enter your Telnyx API key.");
-        const result = await connectOwned("telnyx", { via: "api_key", api_key: key });
-        if (result.status === "connected") {
-          await sealAgentSecret({ agentId: bot.id, key: "TELNYX_API_KEY", value: key });
-          await sealAgentSecret({ agentId: bot.id, key: "BOT_PHONE_NUMBER", value: number });
-          ensureConnectorBinding("telnyx", "Telnyx", "telnyx");
-          setPhoneConnectionStatus("connected");
-        } else {
-          throw new Error("Telnyx connection did not complete.");
-        }
-      } else if (phoneProvider === "android_bridge") {
-        const baseUrl = phoneAndroidBaseUrl.trim();
-        const deviceId = phoneAndroidDeviceId.trim();
-        if (!baseUrl) throw new Error("Enter the Android Bridge base URL.");
-        if (!deviceId) throw new Error("Enter the paired Android device ID.");
-        await sealAgentSecret({ agentId: bot.id, key: "BOT_PHONE_NUMBER", value: number });
-        await sealAgentSecret({ agentId: bot.id, key: "ANDROID_BRIDGE_BASE_URL", value: baseUrl });
-        await sealAgentSecret({ agentId: bot.id, key: "ANDROID_BRIDGE_DEVICE_ID", value: deviceId });
-        setPhoneConnectionStatus("connected");
-      } else if (phoneProvider === "photon") {
-        const projectId = phonePhotonProjectId.trim();
-        const projectSecret = phonePhotonProjectSecret.trim();
-        if (!projectId) throw new Error("Enter your Photon Project ID.");
-        if (!projectSecret) throw new Error("Enter your Photon Project Secret.");
-        await sealAgentSecret({ agentId: bot.id, key: "PHOTON_PROJECT_ID", value: projectId });
-        await sealAgentSecret({ agentId: bot.id, key: "PHOTON_PROJECT_SECRET", value: projectSecret });
-        await sealAgentSecret({ agentId: bot.id, key: "BOT_PHONE_NUMBER", value: number });
-        if (phonePhotonLineId.trim()) {
-          await sealAgentSecret({ agentId: bot.id, key: "PHOTON_LINE_ID", value: phonePhotonLineId.trim() });
-        }
-        setPhoneConnectionStatus("connected");
-      } else {
-        await sealAgentSecret({ agentId: bot.id, key: "BOT_PHONE_NUMBER", value: number });
-        setPhoneConnectionStatus("connected");
-      }
-    } catch (err) {
-      setPhoneConnectionStatus("error");
-      setIdentityErrors((prev) => ({
-        ...prev,
-        phone: err instanceof Error ? err.message : "Phone connection failed",
-      }));
-    } finally {
-      setPhoneConnecting(false);
-    }
-  }, [
-    bot.id,
-    phoneNumber,
-    phoneProvider,
-    phoneTwilioSid,
-    phoneTwilioToken,
-    phoneTelnyxKey,
-    phoneAndroidBaseUrl,
-    phoneAndroidDeviceId,
-    phonePhotonProjectId,
-    phonePhotonProjectSecret,
-    phonePhotonLineId,
-    ensureConnectorBinding,
-  ]);
-
-  const handleConnectWallet = useCallback(async () => {
-    setWalletConnecting(true);
-    setIdentityErrors((prev) => ({ ...prev, wallet: undefined }));
-    setWalletConnectionStatus("idle");
-    try {
-      if (walletProvider === "etrid") {
-        let address = walletAddress.trim();
-        let keyVaultRef: string | undefined = bot.identityChannels?.wallet?.keyVaultRef;
-        if (!address) {
-          const created = await createAgentWallet(bot.id, "etrid", {
-            chainId: walletChainId.trim() || undefined,
-            allowedMethods: walletMethods as Array<"send" | "receive" | "swap" | "stake" | "invoice">,
-          });
-          address = created.address || "";
-          keyVaultRef = created.keyVaultRef;
-          setWalletAddress(address);
-        }
-        if (!address) throw new Error("Etrid wallet creation did not return an address.");
-        if (keyVaultRef) setWalletKeyVaultRef(keyVaultRef);
-        setWalletConnectionStatus("connected");
-      } else {
-        const address = walletAddress.trim();
-        const seed = walletSeed.trim();
-        if (!address) throw new Error("Enter the wallet address.");
-        if (!seed) throw new Error("Enter the wallet seed / private key so the bot can sign transactions.");
-        await sealAgentSecret({ agentId: bot.id, key: "BOT_WALLET_ADDRESS", value: address });
-        await sealAgentSecret({ agentId: bot.id, key: "BOT_WALLET_SEED", value: seed });
-        setWalletConnectionStatus("connected");
-      }
-    } catch (err) {
-      setWalletConnectionStatus("error");
-      setIdentityErrors((prev) => ({
-        ...prev,
-        wallet: err instanceof Error ? err.message : "Wallet connection failed",
-      }));
-    } finally {
-      setWalletConnecting(false);
-    }
-  }, [bot.id, walletKeyVaultRef, walletProvider, walletAddress, walletChainId, walletMethods, walletSeed]);
 
   const handleSave = useCallback(async () => {
     setSaving(true);
@@ -590,19 +223,11 @@ export function BotRuntimeConfigModal({ bot, isOpen, onClose, onSaved, initialSe
               wallet: {
                 provider: walletProvider,
                 ...(walletAddress.trim() ? { address: walletAddress.trim() } : {}),
-                ...(walletKeyVaultRef.trim() ? { keyVaultRef: walletKeyVaultRef.trim() } : {}),
                 ...(walletChainId.trim() ? { chainId: walletChainId.trim() } : {}),
                 allowedMethods: walletMethods as AgentWalletPaymentMethod[],
               },
             }
           : {}),
-      };
-
-      const messagingConfig: AgentMessagingConfig = {
-        photonEnabled: messagingEnabled,
-        ...(messagingEndpoint.trim() ? { photonEndpoint: messagingEndpoint.trim() } : {}),
-        crossSurfaceEnabled: messagingCrossSurface,
-        ...(messagingSurfaces && messagingSurfaces.length > 0 ? { allowedSurfaces: messagingSurfaces } : {}),
       };
 
       const vmOperator = vmEnabled
@@ -629,7 +254,6 @@ export function BotRuntimeConfigModal({ bot, isOpen, onClose, onSaved, initialSe
         secretRefs: validSecrets,
         harness,
         identityChannels,
-        messagingConfig,
         vmOperator,
       });
 
@@ -672,11 +296,6 @@ export function BotRuntimeConfigModal({ bot, isOpen, onClose, onSaved, initialSe
     walletProvider,
     walletChainId,
     walletMethods,
-    walletKeyVaultRef,
-    messagingEnabled,
-    messagingEndpoint,
-    messagingCrossSurface,
-    messagingSurfaces,
     onClose,
     onSaved,
   ]);
@@ -693,12 +312,12 @@ export function BotRuntimeConfigModal({ bot, isOpen, onClose, onSaved, initialSe
 
   return (
     <div
-      className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-[var(--shell-overlay-backdrop)] backdrop-blur-sm"
+      className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm"
       onClick={(e) => {
         if (e.target === e.currentTarget) onClose();
       }}
     >
-      <div className="w-full max-w-3xl max-h-[85vh] flex flex-col rounded-2xl overflow-hidden bg-[var(--bg-elevated)] border border-[var(--border-subtle)] shadow-2xl">
+      <GlassSurface className="w-full max-w-3xl max-h-[85vh] flex flex-col rounded-2xl overflow-hidden">
         {/* Header */}
         <div className="flex items-center justify-between p-5 border-b border-[var(--border-subtle)] shrink-0">
           <div>
@@ -759,13 +378,110 @@ export function BotRuntimeConfigModal({ bot, isOpen, onClose, onSaved, initialSe
                 <h3 className="text-[15px] font-semibold text-[var(--text-primary)]">Connectors</h3>
               </div>
 
-              <ConnectorMarketplace
-                bindOnConnect
-                boundIds={boundIds}
-                onBind={bindConnector}
-                onUnbind={unbindConnector}
-                agentId={bot.id}
-              />
+              {installedConnectors.length > 0 && (
+                <div className="mb-4">
+                  <h4 className="text-[12px] font-semibold text-[var(--text-secondary)] mb-2">
+                    Installed connectors
+                  </h4>
+                  <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                    {installedConnectors.map((connector) => {
+                      const active = bindings.some((b) => b.connectorId === connector.id);
+                      return (
+                        <button
+                          key={connector.id}
+                          type="button"
+                          onClick={() => toggleInstalledBinding(connector)}
+                          className={cn(
+                            "flex items-start gap-2.5 rounded-xl border p-3 text-left transition-colors",
+                            active
+                              ? "border-[var(--accent-primary)] bg-[var(--accent-primary)]/10"
+                              : "border-[var(--border-subtle)] bg-transparent hover:bg-[var(--surface-hover)]"
+                          )}
+                        >
+                          {active ? (
+                            <ShieldCheck size={18} className="text-[var(--accent-primary)] shrink-0 mt-0.5" />
+                          ) : (
+                            <Plugs size={18} className="text-[var(--text-secondary)] shrink-0 mt-0.5" />
+                          )}
+                          <div>
+                            <div className="text-[13px] font-medium text-[var(--text-primary)]">
+                              {connector.appName || connector.name}
+                            </div>
+                            <div className="text-[11px] text-[var(--text-secondary)] capitalize">
+                              {connector.authType}
+                            </div>
+                          </div>
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
+
+              <h4 className="text-[12px] font-semibold text-[var(--text-secondary)] mb-2">
+                Quick-pick integrations
+              </h4>
+              <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                {COMMON_CONNECTORS.map((connector) => {
+                  const active = bindings.some((b) => b.provider === connector.provider);
+                  return (
+                    <button
+                      key={connector.provider}
+                      type="button"
+                      onClick={() =>
+                        active
+                          ? removeBinding(bindings.find((b) => b.provider === connector.provider)!.connectorId)
+                          : addQuickBinding(connector.provider, connector.label, connector.capabilities)
+                      }
+                      className={cn(
+                        "flex items-start gap-2.5 rounded-xl border p-3 text-left transition-colors",
+                        active
+                          ? "border-[var(--accent-primary)] bg-[var(--accent-primary)]/10"
+                          : "border-[var(--border-subtle)] bg-transparent hover:bg-[var(--surface-hover)]"
+                      )}
+                    >
+                      {active ? (
+                        <ShieldCheck size={18} className="text-[var(--accent-primary)] shrink-0 mt-0.5" />
+                      ) : (
+                        <Plugs size={18} className="text-[var(--text-secondary)] shrink-0 mt-0.5" />
+                      )}
+                      <div>
+                        <div className="text-[13px] font-medium text-[var(--text-primary)]">
+                          {connector.label}
+                        </div>
+                        <div className="text-[11px] text-[var(--text-secondary)] capitalize">
+                          {connector.capabilities.join(", ")}
+                        </div>
+                      </div>
+                    </button>
+                  );
+                })}
+              </div>
+
+              {bindings.length > 0 && (
+                <div className="mt-4">
+                  <h4 className="text-[12px] font-semibold text-[var(--text-secondary)] mb-2">
+                    Bound connectors
+                  </h4>
+                  <div className="flex flex-wrap gap-2">
+                    {bindings.map((binding) => (
+                      <span
+                        key={binding.connectorId}
+                        className="inline-flex items-center gap-1.5 rounded-full bg-[var(--bg-primary)] border border-[var(--border-subtle)] px-3 py-1 text-[12px] text-[var(--text-primary)]"
+                      >
+                        {binding.label || binding.provider}
+                        <button
+                          type="button"
+                          onClick={() => removeBinding(binding.connectorId)}
+                          className="text-[var(--text-tertiary)] hover:text-[var(--status-error)] transition-colors"
+                        >
+                          <X size={12} weight="bold" />
+                        </button>
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              )}
             </section>
           )}
 
@@ -953,29 +669,6 @@ export function BotRuntimeConfigModal({ bot, isOpen, onClose, onSaved, initialSe
                 <Robot size={18} className="text-[var(--accent-primary)]" />
                 <h3 className="text-[15px] font-semibold text-[var(--text-primary)]">Identity Channels</h3>
               </div>
-              <p className="text-[13px] text-[var(--text-secondary)] mb-4">
-                Bind real accounts the bot will use autonomously. Credentials are sealed in the vault and connected through the owned-connector stack.
-              </p>
-
-              <div className="flex items-center gap-2 mb-4 text-[12px] text-[var(--text-tertiary)]">
-                <Cloud size={14} />
-                {emailRailStatusError ? (
-                  <span className="text-[var(--status-error)]">Email rail status unavailable: {emailRailStatusError}</span>
-                ) : emailRailStatus ? (
-                  emailRailStatus.configured ? (
-                    <span>
-                      Email rail: Agent Mail (mailflare){emailRailStatus.domain ? ` · ${emailRailStatus.domain}` : ""} ·{" "}
-                      <span className={emailRailStatus.reachable ? "text-[var(--status-success)]" : "text-[var(--status-error)]"}>
-                        {emailRailStatus.reachable ? "reachable" : "unreachable"}
-                      </span>
-                    </span>
-                  ) : (
-                    <span>Email rail: mailflare not configured — provisioning falls back to the CommRails mint</span>
-                  )
-                ) : (
-                  <span>Checking email rail…</span>
-                )}
-              </div>
 
               <div className="space-y-4">
                 {/* Email */}
@@ -983,9 +676,6 @@ export function BotRuntimeConfigModal({ bot, isOpen, onClose, onSaved, initialSe
                   <div className="flex items-center gap-2 mb-3">
                     <Envelope size={16} className="text-[var(--accent-primary)]" />
                     <h4 className="text-[13px] font-semibold text-[var(--text-primary)]">Email</h4>
-                    {emailConnectionStatus === "connected" && (
-                      <span className="ml-auto text-[11px] px-2 py-0.5 rounded-full bg-[var(--status-success)]/10 text-[var(--status-success)]">Connected</span>
-                    )}
                   </div>
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-3">
                     <div className="space-y-1.5 sm:col-span-2">
@@ -997,57 +687,19 @@ export function BotRuntimeConfigModal({ bot, isOpen, onClose, onSaved, initialSe
                         className="h-9 bg-[var(--bg-elevated)] border-[var(--border-subtle)] text-[var(--text-primary)]"
                       />
                     </div>
-                    {listIdentityConnectors(ownedConnectors, "email").filter((c) => c.connection?.status === "connected").length > 0 && (
-                      <div className="space-y-1.5 sm:col-span-2">
-                        <Label className="text-[12px] text-[var(--text-secondary)]">Use connected email connector</Label>
-                        <select
-                          value=""
-                          onChange={(e) => {
-                            const connector = ownedConnectors.find((c) => c.id === e.target.value);
-                            if (connector) bindConnector(connector);
-                          }}
-                          className="w-full h-9 rounded-md border border-[var(--border-subtle)] bg-[var(--bg-elevated)] text-[var(--text-primary)] text-[13px] px-2"
-                        >
-                          <option value="">— select a connected connector —</option>
-                          {listIdentityConnectors(ownedConnectors, "email")
-                            .filter((c) => c.connection?.status === "connected")
-                            .map((c) => (
-                              <option key={c.id} value={c.id}>
-                                {c.name} {c.connection?.account ? `(${c.connection.account})` : ""}
-                              </option>
-                            ))}
-                        </select>
-                      </div>
-                    )}
                     <div className="space-y-1.5">
                       <Label className="text-[12px] text-[var(--text-secondary)]">Provider</Label>
                       <select
                         value={emailProvider}
-                        onChange={(e) => {
-                          setEmailProvider(e.target.value as AgentEmailChannel["provider"]);
-                          setEmailConnectionStatus("idle");
-                        }}
+                        onChange={(e) => setEmailProvider(e.target.value as any)}
                         className="w-full h-9 rounded-md border border-[var(--border-subtle)] bg-[var(--bg-elevated)] text-[var(--text-primary)] text-[13px] px-2"
                       >
-                        <option value="commrails">CommRails (platform email)</option>
-                        <option value="mailflare">Agent Mail (mailflare)</option>
-                        <option value="google_workspace">Gmail / Google Workspace</option>
-                        <option value="microsoft_365">Outlook / Microsoft 365</option>
-                        <option value="generic_imap">Generic IMAP/SMTP</option>
+                        <option value="commrails">CommRails</option>
+                        <option value="google_workspace">Google Workspace</option>
+                        <option value="microsoft_365">Microsoft 365</option>
                         <option value="custom">Custom</option>
                       </select>
                     </div>
-                    {(emailProvider === "commrails" || emailProvider === "mailflare") && (
-                      <div className="sm:col-span-2 rounded-lg border border-[var(--border-subtle)] bg-[var(--bg-elevated)] p-3">
-                        <p className="text-[12px] text-[var(--text-secondary)]">
-                          Platform email provisions a platform-managed mailbox — a real Agent Mail
-                          (mailflare) mailbox when the mailflare rail is configured, otherwise the
-                          legacy CommRails mint. The backend generates the address and credentials;
-                          click Connect to allocate one. Outbound sends are approval-gated and appear
-                          as review cards in Agent Activity.
-                        </p>
-                      </div>
-                    )}
                     <div className="flex items-center gap-4">
                       <label className="flex items-center gap-2 text-[13px] text-[var(--text-primary)] cursor-pointer">
                         <input
@@ -1068,97 +720,7 @@ export function BotRuntimeConfigModal({ bot, isOpen, onClose, onSaved, initialSe
                         Receive
                       </label>
                     </div>
-                    {emailProvider === "agent_mail" && (
-                      <div className="space-y-1.5 sm:col-span-2">
-                        <Label className="text-[12px] text-[var(--text-secondary)]">AgentMail API key</Label>
-                        <Input
-                          type="password"
-                          value={emailApiKey}
-                          onChange={(e) => setEmailApiKey(e.target.value)}
-                          placeholder="am_..."
-                          className="h-9 bg-[var(--bg-elevated)] border-[var(--border-subtle)] text-[var(--text-primary)]"
-                        />
-                      </div>
-                    )}
-                    {(emailProvider === "generic_imap" || emailProvider === "custom") && (
-                      <div className="space-y-1.5 sm:col-span-2">
-                        <Label className="text-[12px] text-[var(--text-secondary)]">Password</Label>
-                        <Input
-                          type="password"
-                          value={emailPassword}
-                          onChange={(e) => setEmailPassword(e.target.value)}
-                          placeholder="The bot needs this to sign in to the mailbox."
-                          className="h-9 bg-[var(--bg-elevated)] border-[var(--border-subtle)] text-[var(--text-primary)]"
-                        />
-                      </div>
-                    )}
-                    {emailProvider === "generic_imap" && (
-                      <>
-                        <div className="space-y-1.5 sm:col-span-2">
-                          <Label className="text-[12px] text-[var(--text-secondary)]">IMAP host</Label>
-                          <Input
-                            value={emailImapHost}
-                            onChange={(e) => setEmailImapHost(e.target.value)}
-                            placeholder="imap.example.com"
-                            className="h-9 bg-[var(--bg-elevated)] border-[var(--border-subtle)] text-[var(--text-primary)]"
-                          />
-                        </div>
-                        <div className="space-y-1.5">
-                          <Label className="text-[12px] text-[var(--text-secondary)]">IMAP port</Label>
-                          <Input
-                            value={emailImapPort}
-                            onChange={(e) => setEmailImapPort(e.target.value)}
-                            placeholder="993"
-                            className="h-9 bg-[var(--bg-elevated)] border-[var(--border-subtle)] text-[var(--text-primary)]"
-                          />
-                        </div>
-                        <div className="space-y-1.5">
-                          <Label className="text-[12px] text-[var(--text-secondary)]">SMTP host</Label>
-                          <Input
-                            value={emailSmtpHost}
-                            onChange={(e) => setEmailSmtpHost(e.target.value)}
-                            placeholder="smtp.example.com"
-                            className="h-9 bg-[var(--bg-elevated)] border-[var(--border-subtle)] text-[var(--text-primary)]"
-                          />
-                        </div>
-                        <div className="space-y-1.5">
-                          <Label className="text-[12px] text-[var(--text-secondary)]">SMTP port</Label>
-                          <Input
-                            value={emailSmtpPort}
-                            onChange={(e) => setEmailSmtpPort(e.target.value)}
-                            placeholder="587"
-                            className="h-9 bg-[var(--bg-elevated)] border-[var(--border-subtle)] text-[var(--text-primary)]"
-                          />
-                        </div>
-                      </>
-                    )}
                   </div>
-                  <div className="flex items-center justify-between gap-3 pt-1">
-                    <span className="text-[12px] text-[var(--text-tertiary)]">
-                      {emailAddress.trim()
-                        ? "Click Connect to bind this mailbox and seal its credentials."
-                        : "Enter the bot's email address, then connect it."}
-                    </span>
-                    <Button
-                      type="button"
-                      variant="outline"
-                      size="sm"
-                      onClick={() => void handleConnectEmail()}
-                      disabled={emailConnecting || (!isPlatformEmailProvider(emailProvider) && !emailAddress.trim())}
-                      className="gap-1.5 shrink-0"
-                    >
-                      {emailConnecting
-                        ? isPlatformEmailProvider(emailProvider)
-                          ? "Provisioning…"
-                          : "Connecting…"
-                        : isPlatformEmailProvider(emailProvider)
-                          ? "Provision platform email"
-                          : "Connect email"}
-                    </Button>
-                  </div>
-                  {identityErrors.email && (
-                    <div className="mt-2 text-[12px] text-[var(--status-error)]">{identityErrors.email}</div>
-                  )}
                 </div>
 
                 {/* Phone */}
@@ -1166,9 +728,6 @@ export function BotRuntimeConfigModal({ bot, isOpen, onClose, onSaved, initialSe
                   <div className="flex items-center gap-2 mb-3">
                     <Phone size={16} className="text-[var(--accent-primary)]" />
                     <h4 className="text-[13px] font-semibold text-[var(--text-primary)]">Phone</h4>
-                    {phoneConnectionStatus === "connected" && (
-                      <span className="ml-auto text-[11px] px-2 py-0.5 rounded-full bg-[var(--status-success)]/10 text-[var(--status-success)]">Connected</span>
-                    )}
                   </div>
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-3">
                     <div className="space-y-1.5 sm:col-span-2">
@@ -1180,53 +739,18 @@ export function BotRuntimeConfigModal({ bot, isOpen, onClose, onSaved, initialSe
                         className="h-9 bg-[var(--bg-elevated)] border-[var(--border-subtle)] text-[var(--text-primary)]"
                       />
                     </div>
-                    {listIdentityConnectors(ownedConnectors, "phone").filter((c) => c.connection?.status === "connected").length > 0 && (
-                      <div className="space-y-1.5 sm:col-span-2">
-                        <Label className="text-[12px] text-[var(--text-secondary)]">Use connected phone connector</Label>
-                        <select
-                          value=""
-                          onChange={(e) => {
-                            const connector = ownedConnectors.find((c) => c.id === e.target.value);
-                            if (connector) bindConnector(connector);
-                          }}
-                          className="w-full h-9 rounded-md border border-[var(--border-subtle)] bg-[var(--bg-elevated)] text-[var(--text-primary)] text-[13px] px-2"
-                        >
-                          <option value="">— select a connected connector —</option>
-                          {listIdentityConnectors(ownedConnectors, "phone")
-                            .filter((c) => c.connection?.status === "connected")
-                            .map((c) => (
-                              <option key={c.id} value={c.id}>
-                                {c.name} {c.connection?.account ? `(${c.connection.account})` : ""}
-                              </option>
-                            ))}
-                        </select>
-                      </div>
-                    )}
                     <div className="space-y-1.5">
                       <Label className="text-[12px] text-[var(--text-secondary)]">Provider</Label>
                       <select
                         value={phoneProvider}
-                        onChange={(e) => {
-                          setPhoneProvider(e.target.value as AgentPhoneChannel["provider"]);
-                          setPhoneConnectionStatus("idle");
-                        }}
+                        onChange={(e) => setPhoneProvider(e.target.value as any)}
                         className="w-full h-9 rounded-md border border-[var(--border-subtle)] bg-[var(--bg-elevated)] text-[var(--text-primary)] text-[13px] px-2"
                       >
-                        <option value="vapi">Vapi (platform number)</option>
+                        <option value="vapi">Vapi</option>
                         <option value="twilio">Twilio</option>
                         <option value="telnyx">Telnyx</option>
-                        <option value="android_bridge">Android Bridge (real device)</option>
-                        <option value="photon">Photon.codes</option>
                       </select>
                     </div>
-                    {phoneProvider === "vapi" && (
-                      <div className="sm:col-span-2 rounded-lg border border-[var(--border-subtle)] bg-[var(--bg-elevated)] p-3">
-                        <p className="text-[12px] text-[var(--text-secondary)]">
-                          Vapi provisions a platform-managed phone number from the pool. Click
-                          Connect to allocate one.
-                        </p>
-                      </div>
-                    )}
                     <div className="flex items-center gap-4">
                       <label className="flex items-center gap-2 text-[13px] text-[var(--text-primary)] cursor-pointer">
                         <input
@@ -1247,132 +771,7 @@ export function BotRuntimeConfigModal({ bot, isOpen, onClose, onSaved, initialSe
                         SMS
                       </label>
                     </div>
-                    {phoneProvider === "twilio" && (
-                      <>
-                        <div className="space-y-1.5 sm:col-span-2">
-                          <Label className="text-[12px] text-[var(--text-secondary)]">Twilio Account SID</Label>
-                          <Input
-                            value={phoneTwilioSid}
-                            onChange={(e) => setPhoneTwilioSid(e.target.value)}
-                            placeholder="AC..."
-                            className="h-9 bg-[var(--bg-elevated)] border-[var(--border-subtle)] text-[var(--text-primary)]"
-                          />
-                        </div>
-                        <div className="space-y-1.5 sm:col-span-2">
-                          <Label className="text-[12px] text-[var(--text-secondary)]">Twilio Auth Token</Label>
-                          <Input
-                            type="password"
-                            value={phoneTwilioToken}
-                            onChange={(e) => setPhoneTwilioToken(e.target.value)}
-                            placeholder="your_auth_token"
-                            className="h-9 bg-[var(--bg-elevated)] border-[var(--border-subtle)] text-[var(--text-primary)]"
-                          />
-                        </div>
-                      </>
-                    )}
-                    {phoneProvider === "telnyx" && (
-                      <div className="space-y-1.5 sm:col-span-2">
-                        <Label className="text-[12px] text-[var(--text-secondary)]">Telnyx API key</Label>
-                        <Input
-                          type="password"
-                          value={phoneTelnyxKey}
-                          onChange={(e) => setPhoneTelnyxKey(e.target.value)}
-                          placeholder="KEY..."
-                          className="h-9 bg-[var(--bg-elevated)] border-[var(--border-subtle)] text-[var(--text-primary)]"
-                        />
-                      </div>
-                    )}
-                    {phoneProvider === "android_bridge" && (
-                      <>
-                        <div className="space-y-1.5 sm:col-span-2">
-                          <Label className="text-[12px] text-[var(--text-secondary)]">Android Bridge base URL</Label>
-                          <Input
-                            value={phoneAndroidBaseUrl}
-                            onChange={(e) => setPhoneAndroidBaseUrl(e.target.value)}
-                            placeholder="http://127.0.0.1:8020"
-                            className="h-9 bg-[var(--bg-elevated)] border-[var(--border-subtle)] text-[var(--text-primary)]"
-                          />
-                        </div>
-                        <div className="space-y-1.5 sm:col-span-2">
-                          <Label className="text-[12px] text-[var(--text-secondary)]">Paired Android device ID</Label>
-                          <Input
-                            value={phoneAndroidDeviceId}
-                            onChange={(e) => setPhoneAndroidDeviceId(e.target.value)}
-                            placeholder="device-uuid-or-serial"
-                            className="h-9 bg-[var(--bg-elevated)] border-[var(--border-subtle)] text-[var(--text-primary)]"
-                          />
-                        </div>
-                      </>
-                    )}
-                    {phoneProvider === "photon" && (
-                      <>
-                        <div className="space-y-1.5 sm:col-span-2">
-                          <Label className="text-[12px] text-[var(--text-secondary)]">Photon Project ID</Label>
-                          <Input
-                            value={phonePhotonProjectId}
-                            onChange={(e) => setPhonePhotonProjectId(e.target.value)}
-                            placeholder="proj_..."
-                            className="h-9 bg-[var(--bg-elevated)] border-[var(--border-subtle)] text-[var(--text-primary)]"
-                          />
-                        </div>
-                        <div className="space-y-1.5 sm:col-span-2">
-                          <Label className="text-[12px] text-[var(--text-secondary)]">Photon Project Secret</Label>
-                          <Input
-                            type="password"
-                            value={phonePhotonProjectSecret}
-                            onChange={(e) => setPhonePhotonProjectSecret(e.target.value)}
-                            placeholder="your_project_secret"
-                            className="h-9 bg-[var(--bg-elevated)] border-[var(--border-subtle)] text-[var(--text-primary)]"
-                          />
-                        </div>
-                        <div className="space-y-1.5 sm:col-span-2">
-                          <Label className="text-[12px] text-[var(--text-secondary)]">
-                            Line ID <span className="text-[var(--text-tertiary)]">(optional)</span>
-                          </Label>
-                          <Input
-                            value={phonePhotonLineId}
-                            onChange={(e) => setPhonePhotonLineId(e.target.value)}
-                            placeholder="line_..."
-                            className="h-9 bg-[var(--bg-elevated)] border-[var(--border-subtle)] text-[var(--text-primary)]"
-                          />
-                        </div>
-                        <div className="sm:col-span-2 rounded-lg border border-[var(--border-subtle)] bg-[var(--bg-elevated)] p-3">
-                          <p className="text-[12px] font-medium text-[var(--text-primary)] mb-1">Photon.codes free tier</p>
-                          <ul className="text-[12px] text-[var(--text-secondary)] list-disc list-inside space-y-0.5">
-                            <li>Shared iMessage line on the free tier</li>
-                            <li>Rate limits apply</li>
-                            <li>Dedicated lines require an upgrade</li>
-                          </ul>
-                        </div>
-                      </>
-                    )}
                   </div>
-                  <div className="flex items-center justify-between gap-3 pt-1">
-                    <span className="text-[12px] text-[var(--text-tertiary)]">
-                      {phoneNumber.trim()
-                        ? "Click Connect to bind this number and seal its credentials."
-                        : "Enter the bot's phone number, then connect it."}
-                    </span>
-                    <Button
-                      type="button"
-                      variant="outline"
-                      size="sm"
-                      onClick={() => void handleConnectPhone()}
-                      disabled={phoneConnecting || (phoneProvider !== "vapi" && !phoneNumber.trim())}
-                      className="gap-1.5 shrink-0"
-                    >
-                      {phoneConnecting
-                        ? phoneProvider === "vapi"
-                          ? "Provisioning…"
-                          : "Connecting…"
-                        : phoneProvider === "vapi"
-                          ? "Provision Vapi number"
-                          : "Connect phone"}
-                    </Button>
-                  </div>
-                  {identityErrors.phone && (
-                    <div className="mt-2 text-[12px] text-[var(--status-error)]">{identityErrors.phone}</div>
-                  )}
                 </div>
 
                 {/* Wallet */}
@@ -1380,19 +779,13 @@ export function BotRuntimeConfigModal({ bot, isOpen, onClose, onSaved, initialSe
                   <div className="flex items-center gap-2 mb-3">
                     <Wallet size={16} className="text-[var(--accent-primary)]" />
                     <h4 className="text-[13px] font-semibold text-[var(--text-primary)]">Wallet</h4>
-                    {walletConnectionStatus === "connected" && (
-                      <span className="ml-auto text-[11px] px-2 py-0.5 rounded-full bg-[var(--status-success)]/10 text-[var(--status-success)]">Connected</span>
-                    )}
                   </div>
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-3">
                     <div className="space-y-1.5">
                       <Label className="text-[12px] text-[var(--text-secondary)]">Provider</Label>
                       <select
                         value={walletProvider}
-                        onChange={(e) => {
-                          setWalletProvider(e.target.value as AgentWalletChannel["provider"]);
-                          setWalletConnectionStatus("idle");
-                        }}
+                        onChange={(e) => setWalletProvider(e.target.value as any)}
                         className="w-full h-9 rounded-md border border-[var(--border-subtle)] bg-[var(--bg-elevated)] text-[var(--text-primary)] text-[13px] px-2"
                       >
                         <option value="etrid">Etrid (native)</option>
@@ -1417,27 +810,10 @@ export function BotRuntimeConfigModal({ bot, isOpen, onClose, onSaved, initialSe
                       <Input
                         value={walletAddress}
                         onChange={(e) => setWalletAddress(e.target.value)}
-                        placeholder={walletProvider === "etrid" ? "Enter the Etrid address" : "0x... or address"}
+                        placeholder="0x... or address"
                         className="h-9 bg-[var(--bg-elevated)] border-[var(--border-subtle)] text-[var(--text-primary)]"
                       />
                     </div>
-                    {walletProvider !== "etrid" && (
-                      <div className="space-y-1.5 sm:col-span-2">
-                        <Label className="text-[12px] text-[var(--text-secondary)]">Seed / private key</Label>
-                        <Input
-                          type="password"
-                          value={walletSeed}
-                          onChange={(e) => setWalletSeed(e.target.value)}
-                          placeholder="Sealed in the vault; used by the bot to sign transactions."
-                          className="h-9 bg-[var(--bg-elevated)] border-[var(--border-subtle)] text-[var(--text-primary)]"
-                        />
-                      </div>
-                    )}
-                    {walletProvider === "etrid" && (
-                      <div className="sm:col-span-2 text-[12px] text-[var(--text-tertiary)]">
-                        Etrid wallets are managed natively. Enter the address above; the private key stays in the Etrid vault.
-                      </div>
-                    )}
                     <div className="space-y-1.5 sm:col-span-2">
                       <Label className="text-[12px] text-[var(--text-secondary)]">Allowed Methods</Label>
                       <div className="flex flex-wrap gap-3">
@@ -1454,103 +830,6 @@ export function BotRuntimeConfigModal({ bot, isOpen, onClose, onSaved, initialSe
                         ))}
                       </div>
                     </div>
-                  </div>
-                  <div className="flex items-center justify-end pt-1">
-                    <Button
-                      type="button"
-                      variant="outline"
-                      size="sm"
-                      onClick={() => void handleConnectWallet()}
-                      disabled={walletConnecting || (walletProvider !== "etrid" && !walletAddress.trim())}
-                      className="gap-1.5 shrink-0"
-                    >
-                      {walletConnecting
-                        ? walletProvider === "etrid" && !walletAddress.trim()
-                          ? "Creating…"
-                          : "Connecting…"
-                        : walletProvider === "etrid" && !walletAddress.trim()
-                          ? "Create Etrid wallet"
-                          : "Connect wallet"}
-                    </Button>
-                  </div>
-                  {identityErrors.wallet && (
-                    <div className="mt-2 text-[12px] text-[var(--status-error)]">{identityErrors.wallet}</div>
-                  )}
-                </div>
-
-                {/* Photon / Cloud Messaging */}
-                <div className="rounded-xl border border-[var(--border-subtle)] bg-[var(--bg-card)] p-4">
-                  <div className="flex items-center gap-2 mb-3">
-                    <Cloud size={16} className="text-[var(--accent-primary)]" />
-                    <h4 className="text-[13px] font-semibold text-[var(--text-primary)]">Photon Cloud Messaging</h4>
-                    {messagingEnabled && (
-                      <span className="ml-auto text-[11px] px-2 py-0.5 rounded-full bg-[var(--status-success)]/10 text-[var(--status-success)]">Enabled</span>
-                    )}
-                  </div>
-                  <p className="text-[12px] text-[var(--text-secondary)] mb-3">
-                    Native orchestration bus for cross-surface sessions and cloud handoffs.
-                  </p>
-                  <div className="space-y-3 mb-3">
-                    <label className="flex items-center gap-2 text-[13px] text-[var(--text-primary)] cursor-pointer">
-                      <input
-                        type="checkbox"
-                        checked={messagingEnabled}
-                        onChange={(e) => setMessagingEnabled(e.target.checked)}
-                        className="rounded border-[var(--border-subtle)] bg-[var(--bg-elevated)]"
-                      />
-                      Enable Photon orchestration
-                    </label>
-                    {messagingEnabled && (
-                      <>
-                        <div className="space-y-1.5">
-                          <Label className="text-[12px] text-[var(--text-secondary)]">Photon endpoint / topic</Label>
-                          <Input
-                            value={messagingEndpoint}
-                            onChange={(e) => setMessagingEndpoint(e.target.value)}
-                            placeholder="photon://agents/{bot-id} or wss://photon.allternit.com/..."
-                            className="h-9 bg-[var(--bg-elevated)] border-[var(--border-subtle)] text-[var(--text-primary)]"
-                          />
-                        </div>
-                        <label className="flex items-center gap-2 text-[13px] text-[var(--text-primary)] cursor-pointer">
-                          <input
-                            type="checkbox"
-                            checked={messagingCrossSurface}
-                            onChange={(e) => setMessagingCrossSurface(e.target.checked)}
-                            className="rounded border-[var(--border-subtle)] bg-[var(--bg-elevated)]"
-                          />
-                          Cross-surface sessions
-                        </label>
-                        <div>
-                          <Label className="text-[12px] text-[var(--text-secondary)] mb-2 block">Allowed surfaces</Label>
-                          <div className="flex flex-wrap gap-3">
-                            {([
-                              { id: "chat" as const, label: "Chat" },
-                              { id: "cowork" as const, label: "CoWork" },
-                              { id: "code" as const, label: "Code" },
-                              { id: "design" as const, label: "Design" },
-                              { id: "browser" as const, label: "Browser" },
-                            ]).map((surface) => (
-                              <label key={surface.id} className="flex items-center gap-2 text-[13px] text-[var(--text-primary)] cursor-pointer">
-                                <input
-                                  type="checkbox"
-                                  checked={(messagingSurfaces ?? []).includes(surface.id)}
-                                  onChange={(e) => {
-                                    setMessagingSurfaces((prev) => {
-                                      const current = prev ?? [];
-                                      return e.target.checked
-                                        ? [...current, surface.id]
-                                        : current.filter((s) => s !== surface.id);
-                                    });
-                                  }}
-                                  className="rounded border-[var(--border-subtle)] bg-[var(--bg-elevated)]"
-                                />
-                                {surface.label}
-                              </label>
-                            ))}
-                          </div>
-                        </div>
-                      </>
-                    )}
                   </div>
                 </div>
               </div>
@@ -1754,7 +1033,7 @@ export function BotRuntimeConfigModal({ bot, isOpen, onClose, onSaved, initialSe
             {saving ? "Saving…" : "Save runtime config"}
           </Button>
         </div>
-      </div>
+      </GlassSurface>
     </div>
   );
 }

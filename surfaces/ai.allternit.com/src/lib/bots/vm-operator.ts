@@ -12,8 +12,6 @@
  */
 
 import type { AgentVMOperatorConfig } from '@/lib/agents/agent.types';
-import { API_BASE_URL } from '@/lib/agents/api-config';
-import { useChatSessionStore } from '@/views/chat/ChatSessionStore';
 import { createModuleLogger } from '@/lib/logger';
 
 const logger = createModuleLogger('VMOperator');
@@ -25,15 +23,6 @@ export interface Sandbox {
   provider: string;
   image?: string;
   vncUrl?: string;
-  persistence?: 'ephemeral' | 'session' | 'persistent';
-  createdAt: string;
-  lastActiveAt?: string;
-}
-
-export interface SandboxSnapshot {
-  id: string;
-  sandboxId: string;
-  label?: string;
   createdAt: string;
 }
 
@@ -122,122 +111,12 @@ export async function createSandbox(
 }
 
 /**
- * Find an existing sandbox owned by an agent.
- *
- * This is the key to the persistent workspace model: instead of creating a
- * fresh sandbox for every session, we reuse the agent's already-running
- * computer so state (installed tools, files, browser sessions, memory) survives.
- */
-export async function getSandboxForAgent(
-  agentId: string,
-): Promise<VMOperatorResult<Sandbox>> {
-  const baseURL = getSandboxBaseURL();
-  if (!baseURL) {
-    logger.debug({ agentId }, 'Sandbox runtime not configured; skipping getSandboxForAgent');
-    return notConfigured<Sandbox>();
-  }
-
-  try {
-    const res = await fetch(
-      `${baseURL}/sandboxes?agent_id=${encodeURIComponent(agentId)}`,
-    );
-
-    if (!res.ok) {
-      const text = await res.text();
-      throw new Error(`Sandbox server returned ${res.status}: ${text}`);
-    }
-
-    const list = (await res.json()) as Sandbox[];
-    const active = list
-      .filter((s) => s.agentId === agentId && (s.status === 'running' || s.status === 'creating'))
-      .sort(
-        (a, b) =>
-          new Date(b.lastActiveAt || b.createdAt).getTime() -
-          new Date(a.lastActiveAt || a.createdAt).getTime(),
-      )[0];
-
-    if (!active) {
-      return { ok: false, error: `No active sandbox found for agent ${agentId}` };
-    }
-
-    return { ok: true, data: active };
-  } catch (err) {
-    logger.error({ err, agentId }, 'Failed to find sandbox for agent');
-    return { ok: false, error: err instanceof Error ? err.message : 'Sandbox lookup failed' };
-  }
-}
-
-/**
- * Create a snapshot of a sandbox for rollback / reproducibility.
- */
-export async function snapshotSandbox(
-  sandboxId: string,
-  label?: string,
-): Promise<VMOperatorResult<SandboxSnapshot>> {
-  const baseURL = getSandboxBaseURL();
-  if (!baseURL) return notConfigured<SandboxSnapshot>();
-
-  try {
-    const res = await fetch(`${baseURL}/sandboxes/${encodeURIComponent(sandboxId)}/snapshots`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ label: label || `snapshot-${Date.now()}` }),
-    });
-
-    if (!res.ok) {
-      const text = await res.text();
-      throw new Error(`Sandbox server returned ${res.status}: ${text}`);
-    }
-
-    const data = (await res.json()) as SandboxSnapshot;
-    return { ok: true, data };
-  } catch (err) {
-    logger.error({ err, sandboxId }, 'Failed to snapshot sandbox');
-    return { ok: false, error: err instanceof Error ? err.message : 'Snapshot failed' };
-  }
-}
-
-/**
- * Restore a sandbox to a previous snapshot.
- */
-export async function restoreSandbox(
-  sandboxId: string,
-  snapshotId: string,
-): Promise<VMOperatorResult<Sandbox>> {
-  const baseURL = getSandboxBaseURL();
-  if (!baseURL) return notConfigured<Sandbox>();
-
-  try {
-    const res = await fetch(
-      `${baseURL}/sandboxes/${encodeURIComponent(sandboxId)}/snapshots/${encodeURIComponent(snapshotId)}/restore`,
-      { method: 'POST' },
-    );
-
-    if (!res.ok) {
-      const text = await res.text();
-      throw new Error(`Sandbox server returned ${res.status}: ${text}`);
-    }
-
-    const data = (await res.json()) as Sandbox;
-    return { ok: true, data };
-  } catch (err) {
-    logger.error({ err, sandboxId, snapshotId }, 'Failed to restore sandbox');
-    return { ok: false, error: err instanceof Error ? err.message : 'Restore failed' };
-  }
-}
-
-/**
  * Run a shell command inside a sandbox.
  */
 export async function runCommand(
   sandboxId: string,
   command: string,
-  agentId?: string,
 ): Promise<VMOperatorResult<CommandResult>> {
-  if (agentId && isBotDesktopPaused(agentId)) {
-    return pausedResult<CommandResult>();
-  }
-
   const baseURL = getSandboxBaseURL();
   if (!baseURL) return notConfigured<CommandResult>();
 
@@ -268,12 +147,7 @@ export async function runBrowserTask(
   sandboxId: string,
   url: string,
   instructions: string,
-  agentId?: string,
 ): Promise<VMOperatorResult<BrowserTaskResult>> {
-  if (agentId && isBotDesktopPaused(agentId)) {
-    return pausedResult<BrowserTaskResult>();
-  }
-
   const baseURL = getSandboxBaseURL();
   if (!baseURL) return notConfigured<BrowserTaskResult>();
 
@@ -335,156 +209,5 @@ export async function healthCheck(): Promise<VMOperatorResult<{ status: string }
   } catch (err) {
     logger.error({ err }, 'Sandbox health check failed');
     return { ok: false, error: err instanceof Error ? err.message : 'Health check failed' };
-  }
-}
-
-/**
- * Check whether the desktop for a given bot is currently under human control.
- * The source of truth is the bot's chat session metadata, which is updated by
- * the Desktop view when the user takes over or hands back.
- */
-export function isBotDesktopPaused(agentId: string): boolean {
-  if (typeof window === 'undefined') return false;
-  const sessions = useChatSessionStore.getState().sessions;
-  return sessions.some(
-    (s) =>
-      s.metadata?.agentId === agentId &&
-      s.metadata?.vmControlState === 'human_controls',
-  );
-}
-
-function pausedResult<T>(): VMOperatorResult<T> {
-  return {
-    ok: false,
-    error:
-      'Desktop is under human control. The bot will resume autonomous computer use after you hand the desktop back.',
-  };
-}
-
-export interface BotDesktopStatus {
-  status: 'running' | 'off' | 'error';
-  control_state: 'bot_controls' | 'human_controls' | 'human_observing';
-  ws_url?: string;
-  protocol: 'vnc' | 'novnc' | 'none';
-  sandbox_id: string;
-}
-
-export interface BotDesktopSandbox {
-  sandbox_id: string;
-  status: string;
-  provider: string;
-  host?: string;
-}
-
-function botDesktopUrl(botId: string, sandboxId: string) {
-  return `${API_BASE_URL}/bots/${encodeURIComponent(botId)}/desktop?sandbox_id=${encodeURIComponent(sandboxId)}`;
-}
-
-/**
- * Provision a persistent virtual computer for a bot.
- *
- * The sandbox is owned by the bot and survives across chat sessions.
- */
-export async function provisionBotDesktop(
-  botId: string,
-): Promise<VMOperatorResult<BotDesktopSandbox>> {
-  try {
-    const res = await fetch(`${API_BASE_URL}/bots/${encodeURIComponent(botId)}/desktop/provision`, {
-      method: 'POST',
-    });
-    if (!res.ok) {
-      const text = await res.text();
-      throw new Error(`Platform returned ${res.status}: ${text}`);
-    }
-    const data = (await res.json()) as BotDesktopSandbox;
-    return { ok: true, data };
-  } catch (err) {
-    logger.error({ err, botId }, 'Failed to provision bot desktop');
-    return { ok: false, error: err instanceof Error ? err.message : 'Desktop provisioning failed' };
-  }
-}
-
-/**
- * Get the desktop status for a bot's persistent sandbox.
- */
-export async function getBotDesktopStatus(
-  botId: string,
-  sandboxId: string,
-): Promise<VMOperatorResult<BotDesktopStatus>> {
-  try {
-    const res = await fetch(botDesktopUrl(botId, sandboxId));
-    if (!res.ok) {
-      const text = await res.text();
-      throw new Error(`Platform returned ${res.status}: ${text}`);
-    }
-    const data = (await res.json()) as BotDesktopStatus;
-    return { ok: true, data };
-  } catch (err) {
-    logger.error({ err, botId, sandboxId }, 'Failed to get bot desktop status');
-    return { ok: false, error: err instanceof Error ? err.message : 'Desktop status failed' };
-  }
-}
-
-/**
- * Human starts observing the bot's desktop without taking control.
- * Bot autonomous actions continue running; the human gets a read-only VNC view.
- */
-export async function observeBotDesktop(
-  botId: string,
-  sandboxId: string,
-): Promise<VMOperatorResult<{ control_state: string }>> {
-  try {
-    const res = await fetch(botDesktopUrl(botId, sandboxId) + '/observe', { method: 'POST' });
-    if (!res.ok) {
-      const text = await res.text();
-      throw new Error(`Platform returned ${res.status}: ${text}`);
-    }
-    const data = (await res.json()) as { control_state: string };
-    return { ok: true, data };
-  } catch (err) {
-    logger.error({ err, botId, sandboxId }, 'Failed to observe bot desktop');
-    return { ok: false, error: err instanceof Error ? err.message : 'Observe failed' };
-  }
-}
-
-/**
- * Human takes over the bot's desktop. Bot autonomous actions should pause.
- */
-export async function takeOverBotDesktop(
-  botId: string,
-  sandboxId: string,
-): Promise<VMOperatorResult<{ control_state: string }>> {
-  try {
-    const res = await fetch(botDesktopUrl(botId, sandboxId) + '/take-over', { method: 'POST' });
-    if (!res.ok) {
-      const text = await res.text();
-      throw new Error(`Platform returned ${res.status}: ${text}`);
-    }
-    const data = (await res.json()) as { control_state: string };
-    return { ok: true, data };
-  } catch (err) {
-    logger.error({ err, botId, sandboxId }, 'Failed to take over bot desktop');
-    return { ok: false, error: err instanceof Error ? err.message : 'Take over failed' };
-  }
-}
-
-/**
- * Human hands the desktop back to the bot. Autonomous actions may resume.
- */
-export async function handBackBotDesktop(
-  botId: string,
-  sandboxId: string,
-): Promise<VMOperatorResult<{ control_state: string }>> {
-  try {
-    const res = await fetch(botDesktopUrl(botId, sandboxId) + '/hand-back', { method: 'POST' });
-    if (!res.ok) {
-      const text = await res.text();
-      throw new Error(`Platform returned ${res.status}: ${text}`);
-    }
-    const data = (await res.json()) as { control_state: string };
-    return { ok: true, data };
-  } catch (err) {
-    logger.error({ err, botId, sandboxId }, 'Failed to hand back bot desktop');
-    return { ok: false, error: err instanceof Error ? err.message : 'Hand back failed' };
   }
 }

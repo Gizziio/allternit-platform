@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useCallback, useEffect, useMemo, useState } from "react";
+import React, { useCallback, useMemo, useState } from "react";
 import {
   Robot,
   Play,
@@ -30,7 +30,6 @@ import {
   SquaresFour,
   X,
   PaperPlaneTilt,
-  WebhooksLogo,
 } from "@phosphor-icons/react";
 import { useAgentStore } from "@/lib/agents/agent.store";
 import { useChatSessionStore } from "@/views/chat/ChatSessionStore";
@@ -43,23 +42,18 @@ import {
   isBot,
 } from "@/lib/bots/bot-profile";
 import { useStartBotSession } from "@/lib/bots/useStartBotSession";
-import { getConnectorLogoUrl } from "@/lib/design/connector-logo";
-import { listWebhookTriggers, type WebhookTrigger } from "@/lib/webhook-api";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { GlassSurface } from "@/design/GlassSurface";
 import { BotRuntimeConfigModal } from "./BotRuntimeConfigModal";
-import { BotDesktopView } from "./BotDesktopView";
 import { AutomationTasksView } from "@/views/cowork/AutomationTasksView";
 import { EditAgentForm } from "@/views/agent-view/components/EditAgentForm";
-import { BotConfigTab } from "./BotConfigTab";
-import { BotAvatar } from "./BotAvatar";
 
 interface BotHomeViewProps {
   botId: string;
 }
 
-type BotHomeTab = "home" | "tasks" | "artifacts" | "runtime" | "desktop" | "automation" | "config";
+type BotHomeTab = "home" | "tasks" | "artifacts" | "runtime" | "automation";
 
 function botInitials(name: string): string {
   return (name || "Bot")
@@ -305,9 +299,7 @@ export function BotHomeView({ botId }: BotHomeViewProps) {
     { id: "tasks" as const, label: "Tasks", icon: ChatTeardropText },
     { id: "artifacts" as const, label: "Artifacts", icon: FolderOpen },
     { id: "runtime" as const, label: "Runtime", icon: Lightning },
-    { id: "desktop" as const, label: "Desktop", icon: Desktop },
     { id: "automation" as const, label: "Automation Tasks", icon: ClockCounterClockwise },
-    { id: "config" as const, label: "Config", icon: Gear },
   ];
 
   return (
@@ -320,14 +312,25 @@ export function BotHomeView({ botId }: BotHomeViewProps) {
           className="inline-flex items-center gap-1.5 text-[13px] text-[var(--text-secondary)] hover:text-[var(--text-primary)] transition-colors mb-4 w-fit"
         >
           <CaretLeft size={14} />
-          Bot Hub
+          Agent Studio
         </button>
 
         {/* Header */}
         <div className="flex flex-col gap-5">
           <div className="flex items-start justify-between gap-6">
             <div className="flex items-center gap-4">
-              <BotAvatar bot={bot} size={64} />
+              <div
+                className="flex shrink-0 items-center justify-center rounded-2xl text-[20px] font-bold"
+                style={{
+                  width: 64,
+                  height: 64,
+                  background: `color-mix(in srgb, ${accentColor} 18%, transparent)`,
+                  color: accentColor,
+                  border: `2px solid ${accentColor}35`,
+                }}
+              >
+                {botInitials(displayName)}
+              </div>
               <div>
                 <h1
                   className="text-3xl font-medium tracking-tight"
@@ -501,23 +504,12 @@ export function BotHomeView({ botId }: BotHomeViewProps) {
               }}
             />
           )}
-          {activeTab === "desktop" && (
-            <BotDesktopView
-              bot={bot}
-              accentColor={accentColor}
-              activeVM={activeVM}
-              onBack={() => setActiveTab("home")}
-            />
-          )}
           {activeTab === "automation" && (
             <AutomationTasksTab
               bot={bot}
               accentColor={accentColor}
               onBack={() => setActiveTab("home")}
             />
-          )}
-          {activeTab === "config" && (
-            <BotConfigTab bot={bot} accentColor={accentColor} />
           )}
         </div>
       </div>
@@ -534,29 +526,29 @@ export function BotHomeView({ botId }: BotHomeViewProps) {
 
       {isEditModalOpen && (
         <div
-          className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-[var(--shell-overlay-backdrop)] backdrop-blur-sm"
+          className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm"
           onClick={(e) => {
             if (e.target === e.currentTarget) setIsEditModalOpen(false);
           }}
         >
-          <div className="w-full max-w-3xl max-h-[90vh] flex flex-col rounded-2xl overflow-hidden bg-[var(--bg-elevated)] border border-[var(--border-subtle)] shadow-2xl">
+          <GlassSurface className="w-full max-w-3xl max-h-[90vh] flex flex-col rounded-2xl overflow-hidden">
             <EditAgentForm
               agent={bot}
               onCancel={() => setIsEditModalOpen(false)}
               onSaved={() => setIsEditModalOpen(false)}
             />
-          </div>
+          </GlassSurface>
         </div>
       )}
 
       {isCloudModalOpen && (
         <div
-          className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-[var(--shell-overlay-backdrop)] backdrop-blur-sm"
+          className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm"
           onClick={(e) => {
             if (e.target === e.currentTarget) setIsCloudModalOpen(false);
           }}
         >
-          <div className="w-full max-w-lg rounded-2xl overflow-hidden p-6 bg-[var(--bg-elevated)] border border-[var(--border-subtle)] shadow-2xl">
+          <GlassSurface className="w-full max-w-lg rounded-2xl overflow-hidden p-6">
             <div className="flex items-start justify-between gap-4 mb-4">
               <div>
                 <h2 className="text-[18px] font-semibold text-[var(--text-primary)] flex items-center gap-2">
@@ -635,18 +627,18 @@ export function BotHomeView({ botId }: BotHomeViewProps) {
                 Open Runtime
               </Button>
             </div>
-          </div>
+          </GlassSurface>
         </div>
       )}
 
       {isTaskComposerOpen && (
         <div
-          className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-[var(--shell-overlay-backdrop)] backdrop-blur-sm"
+          className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm"
           onClick={(e) => {
             if (e.target === e.currentTarget) setIsTaskComposerOpen(false);
           }}
         >
-          <div className="w-full max-w-2xl rounded-2xl overflow-hidden flex flex-col bg-[var(--bg-elevated)] border border-[var(--border-subtle)] shadow-2xl">
+          <GlassSurface className="w-full max-w-2xl rounded-2xl overflow-hidden flex flex-col">
             <div className="p-5 border-b border-[var(--border-subtle)] flex items-start justify-between gap-4">
               <div>
                 <h2 className="text-[18px] font-semibold text-[var(--text-primary)] flex items-center gap-2">
@@ -720,7 +712,7 @@ export function BotHomeView({ botId }: BotHomeViewProps) {
                 </div>
               </div>
             </div>
-          </div>
+          </GlassSurface>
         </div>
       )}
     </div>
@@ -821,69 +813,6 @@ function TabHeader({
         {action && <div className="shrink-0">{action}</div>}
       </div>
     </div>
-  );
-}
-
-function WebhooksCard({
-  botId,
-  accentColor,
-}: {
-  botId: string;
-  accentColor: string;
-}) {
-  const [triggers, setTriggers] = useState<WebhookTrigger[]>([]);
-  const [loading, setLoading] = useState(false);
-
-  useEffect(() => {
-    setLoading(true);
-    listWebhookTriggers()
-      .then((rows) => setTriggers(rows.filter((t) => t.target_bot_id === botId)))
-      .catch(() => setTriggers([]))
-      .finally(() => setLoading(false));
-  }, [botId]);
-
-  const openSettings = () => {
-    window.dispatchEvent(
-      new CustomEvent("allternit:open-settings", { detail: { section: "webhooks" } })
-    );
-  };
-
-  return (
-    <GlassSurface className="p-5 rounded-xl">
-      <div className="flex items-center justify-between gap-4">
-        <div className="flex items-center gap-3">
-          <div
-            className="flex shrink-0 items-center justify-center rounded-xl"
-            style={{
-              width: 40,
-              height: 40,
-              background: `color-mix(in srgb, ${accentColor} 14%, transparent)`,
-            }}
-          >
-            <WebhooksLogo size={20} style={{ color: accentColor }} />
-          </div>
-          <div>
-            <h3 className="text-[14px] font-semibold text-[var(--text-primary)]">
-              Webhook triggers
-            </h3>
-            <p className="text-[13px] text-[var(--text-secondary)]">
-              {loading
-                ? "Loading…"
-                : triggers.length === 0
-                  ? "No triggers wake this bot yet"
-                  : `${triggers.length} trigger${triggers.length === 1 ? "" : "s"} wake this bot`}
-            </p>
-          </div>
-        </div>
-        <button
-          type="button"
-          onClick={openSettings}
-          className="text-[13px] font-medium text-[var(--text-primary)] hover:text-[var(--accent-primary)] transition-colors"
-        >
-          Configure webhooks →
-        </button>
-      </div>
-    </GlassSurface>
   );
 }
 
@@ -1010,9 +939,6 @@ function HomeTab({
           onClick={onViewRuntime}
         />
       </div>
-
-      {/* Webhooks */}
-      <WebhooksCard botId={bot.id} accentColor={accentColor} />
 
       {/* Recent session */}
       {latestSession && (
@@ -1390,88 +1316,28 @@ function RuntimeTab({
             </Button>
           </div>
           {bot.connectorBindings?.length ? (
-            <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
-              {bot.connectorBindings.map((binding, idx) => {
-                const { url: logo } = getConnectorLogoUrl(undefined, binding.provider, 32);
-                const displayName = binding.label || binding.provider;
-                const caps = binding.capabilities?.length ? binding.capabilities : ["autonomous"];
-                return (
-                  <div
-                    key={`${binding.provider}-${idx}`}
-                    className={cn(
-                      "group rounded-xl border p-3 flex flex-col gap-2 transition-colors",
-                      binding.autonomous
-                        ? "border-[var(--accent-primary)]/40 bg-[var(--accent-primary)]/5"
-                        : "border-[var(--border-subtle)] bg-[var(--bg-card)] hover:bg-[var(--surface-hover)]",
-                    )}
-                  >
-                    <div className="flex items-start gap-2.5">
-                      {logo ? (
-                        <img
-                          src={logo}
-                          alt={displayName}
-                          className="w-8 h-8 rounded-lg object-contain bg-[var(--bg-primary)] p-1 shrink-0"
-                        />
-                      ) : (
-                        <div
-                          className="w-8 h-8 rounded-lg flex items-center justify-center shrink-0"
-                          style={{ background: `color-mix(in srgb, ${accentColor} 14%, transparent)` }}
-                        >
-                          <span
-                            className="text-[12px] font-bold uppercase"
-                            style={{ color: accentColor }}
-                          >
-                            {displayName.charAt(0)}
-                          </span>
-                        </div>
-                      )}
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-1">
-                          <span className="text-[13px] font-semibold text-[var(--text-primary)] truncate">
-                            {displayName}
-                          </span>
-                          {binding.autonomous && (
-                            <CheckCircle size={13} className="text-[var(--accent-primary)] shrink-0" />
-                          )}
-                        </div>
-                        <div className="text-[11px] text-[var(--text-secondary)] capitalize truncate">
-                          {binding.provider}
-                        </div>
-                      </div>
+            <div className="space-y-3">
+              {bot.connectorBindings.map((binding, idx) => (
+                <div
+                  key={`${binding.provider}-${idx}`}
+                  className="flex items-center justify-between rounded-lg border border-[var(--border-subtle)] bg-[var(--bg-card)] p-3"
+                >
+                  <div>
+                    <div className="text-[13px] font-medium text-[var(--text-primary)]">
+                      {binding.label || binding.provider}
                     </div>
-
-                    <div className="flex flex-wrap gap-1">
-                      {caps.slice(0, 3).map((cap) => (
-                        <span
-                          key={cap}
-                          className="inline-flex items-center rounded-full bg-[var(--bg-primary)] border border-[var(--border-subtle)] px-1.5 py-0.5 text-[10px] text-[var(--text-secondary)] capitalize"
-                        >
-                          {cap}
-                        </span>
-                      ))}
-                      {caps.length > 3 && (
-                        <span className="inline-flex items-center rounded-full px-1.5 py-0.5 text-[10px] text-[var(--text-tertiary)]">
-                          +{caps.length - 3}
-                        </span>
-                      )}
+                    <div className="text-[11px] text-[var(--text-tertiary)]">
+                      {binding.capabilities?.join(", ") || "autonomous"}
                     </div>
                   </div>
-                );
-              })}
+                  {binding.autonomous ? (
+                    <CheckCircle size={16} className="text-[var(--status-success)]" />
+                  ) : null}
+                </div>
+              ))}
             </div>
           ) : (
-            <div className="rounded-xl border border-dashed border-[var(--border-subtle)] bg-[var(--bg-card)] p-6 text-center">
-              <Plugs size={24} className="mx-auto mb-2 text-[var(--text-tertiary)]" />
-              <p className="text-[13px] text-[var(--text-secondary)]">No connectors bound yet.</p>
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={onEditConnectors}
-                className="mt-2 text-[var(--accent-primary)] hover:bg-[var(--accent-primary)]/10"
-              >
-                Configure connectors
-              </Button>
-            </div>
+            <p className="text-[13px] text-[var(--text-tertiary)]">No connectors bound.</p>
           )}
         </GlassSurface>
 

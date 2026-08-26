@@ -12,17 +12,14 @@ import {
   Robot,
 } from '@phosphor-icons/react';
 import { useAgentStore } from '@/lib/agents/agent.store';
-import type { Agent } from '@/lib/agents/agent.types';
+import type { Agent, CreateAgentInput } from '@/lib/agents/agent.types';
 import {
-  agentToCreateAgentInput,
   getBotAccentColor,
   getBotDisplayName,
   getBotTagline,
   isBot,
 } from '@/lib/bots/bot-profile';
 import { useBotSession } from '@/lib/bots/useBotSession';
-import { useStackProviders } from '@/lib/bots/use-stack-providers';
-import { getProviderLabel } from '@/lib/bots/bot-profile';
 import { cn } from '@/lib/utils';
 
 const SIDEBAR_COLLAPSED_KEY = 'allternit:bot-roster-collapsed';
@@ -41,7 +38,6 @@ interface BotRosterSidebarProps {
 
 export function BotRosterSidebar({ className }: BotRosterSidebarProps) {
   const { agents, setDraftAgent, setIsCreating, setIsEditing } = useAgentStore();
-  const { stackedAgents } = useStackProviders();
   const { startSession, isStarting } = useBotSession();
   const [collapsed, setCollapsed] = useState(() => {
     if (typeof window === 'undefined') return false;
@@ -53,11 +49,7 @@ export function BotRosterSidebar({ className }: BotRosterSidebarProps) {
   });
   const [activeBotId, setActiveBotId] = useState<string | null>(null);
 
-  const bots = useMemo(() => {
-    const native = agents.filter(isBot);
-    const stacked = stackedAgents.map((s) => s.agent);
-    return [...native, ...stacked];
-  }, [agents, stackedAgents]);
+  const bots = useMemo(() => agents.filter(isBot), [agents]);
 
   useEffect(() => {
     try {
@@ -109,21 +101,19 @@ export function BotRosterSidebar({ className }: BotRosterSidebarProps) {
 
   const handleDuplicate = useCallback(
     (bot: Agent) => {
-      const duplicate = agentToCreateAgentInput(bot);
-      duplicate.name = `${duplicate.name ?? bot.name} (Copy)`;
-      duplicate.botProfile = {
-        ...(duplicate.botProfile ?? bot.botProfile ?? {}),
-        displayName: bot.botProfile
-          ? `${bot.botProfile.displayName} (Copy)`
-          : `${bot.name} (Copy)`,
-        handle: undefined,
-        lifecycle: 'draft',
+      const duplicate: Partial<CreateAgentInput> = {
+        ...bot,
+        name: `${bot.name}-copy`,
+        botProfile: bot.botProfile
+          ? {
+              ...bot.botProfile,
+              displayName: `${bot.botProfile.displayName} (Copy)`,
+            }
+          : undefined,
       };
+      delete (duplicate as Partial<Agent>).id;
       setDraftAgent(duplicate);
       setIsCreating(true);
-      window.dispatchEvent(
-        new CustomEvent('allternit:open-view', { detail: { viewType: 'agent-hub' } }),
-      );
     },
     [setDraftAgent, setIsCreating]
   );
@@ -208,21 +198,8 @@ export function BotRosterSidebar({ className }: BotRosterSidebarProps) {
                 </div>
                 {!collapsed && (
                   <div className="min-w-0 flex-1">
-                    <div className="flex items-center gap-1.5">
-                      <div className="truncate text-[13px] font-medium text-[var(--text-primary)]">
-                        {displayName}
-                      </div>
-                      {bot.botProfile?.providerId && (
-                        <span
-                          className="shrink-0 rounded px-1 py-0 text-[9px] font-semibold uppercase tracking-wide"
-                          style={{
-                            backgroundColor: `${bot.botProfile.accentColor ?? 'var(--accent-primary)'}20`,
-                            color: bot.botProfile.accentColor ?? 'var(--accent-primary)',
-                          }}
-                        >
-                          {getProviderLabel(bot.botProfile.providerId)}
-                        </span>
-                      )}
+                    <div className="truncate text-[13px] font-medium text-[var(--text-primary)]">
+                      {displayName}
                     </div>
                     <div className="truncate text-[11px] text-[var(--text-tertiary)]">
                       {isActive ? 'Starting…' : tagline || `@${bot.name}`}

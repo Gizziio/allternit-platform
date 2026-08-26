@@ -2,7 +2,12 @@
 
 import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { useAgentStore } from "@/lib/agents/agent.store";
-import { useCommRailsMailStore } from "@/lib/bots/comrails-mail.store";
+import {
+  getAgentInbox,
+  getAgentThreads,
+  sendAgentMail,
+  acknowledgeMail,
+} from "@/lib/agents/agent.service";
 import type { Agent, AgentMailMessage, AgentMailThread } from "@/lib/agents/agent.types";
 import { getBotAccentColor, getBotDisplayName, isBot } from "@/lib/bots/bot-profile";
 import {
@@ -52,49 +57,56 @@ function relativeTime(iso: string): string {
 export function BotInboxView({ botId }: BotInboxViewProps) {
   const { agents } = useAgentStore();
   const bot = useMemo(() => agents.find((a) => a.id === botId), [agents, botId]);
+  const [mail, setMail] = useState<AgentMailMessage[]>([]);
+  const [threads, setThreads] = useState<AgentMailThread[]>([]);
   const [selectedThreadId, setSelectedThreadId] = useState<string | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
-  const {
-    messages: mail,
-    threads,
-    isLoading: loading,
-    error,
-    refreshInbox,
-    sendMail,
-    acknowledgeMail,
-  } = useCommRailsMailStore();
-
-  const load = useCallback(() => {
+  const load = useCallback(async () => {
     if (!bot) return;
-    void refreshInbox(bot.id, 100);
-  }, [bot, refreshInbox]);
+    setLoading(true);
+    setError(null);
+    try {
+      const [messages, threadList] = await Promise.all([
+        getAgentInbox(bot.id, 100),
+        getAgentThreads(bot.id),
+      ]);
+      setMail(messages);
+      setThreads(threadList);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to load inbox");
+    } finally {
+      setLoading(false);
+    }
+  }, [bot]);
 
   useEffect(() => {
-    load();
+    void load();
   }, [load]);
 
   const handleSendMail = useCallback(
     async (fromAgentId: string, toAgentId: string, subject: string, body: string) => {
-      const result = await sendMail(fromAgentId, {
+      const result = await sendAgentMail(fromAgentId, {
         toAgentId,
         subject,
         body,
         priority: "normal",
       });
       if (result.sent) {
-        load();
+        void load();
       }
     },
-    [sendMail, load]
+    [load]
   );
 
   const handleAcknowledge = useCallback(
     async (_agentId: string, messageId: string) => {
       if (!bot) return;
       await acknowledgeMail(bot.id, messageId);
-      load();
+      void load();
     },
-    [bot, acknowledgeMail, load]
+    [bot, load]
   );
 
   const handleBackToBotHome = useCallback(() => {
@@ -160,7 +172,7 @@ export function BotInboxView({ botId }: BotInboxViewProps) {
           <Button
             variant="outline"
             size="sm"
-            onClick={load}
+            onClick={() => void load()}
             className="gap-1.5"
           >
             Refresh

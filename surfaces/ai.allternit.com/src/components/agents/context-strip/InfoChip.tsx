@@ -1,4 +1,4 @@
-import React from "react";
+import React from 'react';
 import type { SurfacePalette } from "./context-strip.types";
 
 export function InfoChip({
@@ -12,13 +12,13 @@ export function InfoChip({
 }) {
   return (
     <span
-      className="inline-flex items-center gap-1.5 rounded-full px-2 py-1 bg-[var(--surface-hover)] border border-[var(--palette-border)] text-[var(--text-secondary)] text-[11px] leading-none"
+      className="inline-flex items-center gap-1.5 rounded-full px-[9px] py-[5px] bg-white/5 backdrop-blur-sm border border-solid border-[var(--palette-border)] text-[#eadfd4] text-[12px] leading-none"
       style={{
-        "--palette-border": palette.border,
-        "--palette-accent": palette.accent,
+        '--palette-border': palette.border,
+        '--palette-accent': palette.accent,
       } as React.CSSProperties}
     >
-      <Icon size={11} weight="bold" className="text-[var(--palette-accent)]" />
+      <Icon size={12} weight="bold" className="text-[var(--palette-accent)]" />
       {label}
     </span>
   );

@@ -1,6 +1,5 @@
 import type { GizziEmotion } from '@/components/ai-elements/GizziMascot';
 import type { AgentModeSurface } from '@/stores/agent-surface-mode.store';
-import type { Agent } from '@/lib/agents/agent.types';
 
 export interface AgentModeGizziTheme {
   accent: string;
@@ -13,8 +12,8 @@ export interface AgentModeGizziProps {
   pulse: number;
   surface: AgentModeSurface;
   selectedAgentName?: string | null;
-  /** Selected bot/agent used to swap the mascot avatar */
-  selectedAgent?: Agent | null;
+  /** Optional avatar image URL to replace the default Gizzi mascot. */
+  selectedAgentAvatarUrl?: string | null;
   theme: AgentModeGizziTheme;
   hasActionPills?: boolean;
   /** Position the rail guide above the composer (default) or as a bottom-right companion */

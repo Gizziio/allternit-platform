@@ -28,7 +28,6 @@ import {
   agentIdentityChannelsSchema,
   agentVMOperatorConfigSchema,
 } from '@/lib/agents/agent.types';
-import { BotAvatarSchema } from './bot-avatar.service';
 import { createModuleLogger } from '@/lib/logger';
 
 const logger = createModuleLogger('BotContract');
@@ -72,8 +71,6 @@ export const botProfileSchema = z.object({
   defaultPresetId: z.string().optional(),
   /** Category used for filtering and discovery in the bot hub */
   botCategory: botCategorySchema.optional(),
-  /** Deterministic bot avatar stored in bot metadata. */
-  avatar: BotAvatarSchema.optional(),
 });
 
 // ============================================================================
@@ -114,11 +111,6 @@ export const botPackageSchema = z.object({
   // Required bot marker
   isBot: z.literal(true),
   botProfile: botProfileSchema,
-
-  // Optional presentation metadata
-  category: z.enum(['engineering', 'design', 'marketing', 'product', 'research', 'operations', 'creative', 'general']).optional(),
-  tags: z.array(z.string()).optional(),
-  config: z.record(z.unknown()).optional(),
 
   // Optional autonomous primitives
   harness: harnessConfigSchema.optional(),

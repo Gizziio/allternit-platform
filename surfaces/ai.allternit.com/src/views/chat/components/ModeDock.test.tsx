@@ -1,5 +1,5 @@
 import React from 'react';
-import { render, screen, fireEvent } from '@testing-library/react';
+import { render, screen, fireEvent, waitFor, within } from '@testing-library/react';
 import { describe, it, expect, vi } from 'vitest';
 import { ModeDock } from './ModeDock';
 
@@ -18,7 +18,7 @@ describe('ModeDock', () => {
     expect(screen.getByRole('button', { name: /Mode: Agent Swarm/i })).toBeInTheDocument();
   });
 
-  it('renders all visible modes as horizontal tabs separated by pipes', () => {
+  it('renders the selected mode as a compact pill', () => {
     render(
       <ModeDock
         selectedMode="docs"
@@ -28,20 +28,9 @@ describe('ModeDock', () => {
     );
 
     expect(screen.getByRole('button', { name: /Mode: Docs/i })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: /Mode: Agent Swarm/i })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: /Mode: Deep Research/i })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: /Mode: Websites/i })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: /Mode: Sheets/i })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: /Mode: Slides/i })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: /Mode: Image/i })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: /Mode: Video/i })).toBeInTheDocument();
-
-    // Eight modes → seven separators
-    const separators = screen.getAllByText('|');
-    expect(separators).toHaveLength(7);
   });
 
-  it('selects a mode when its tab is clicked', () => {
+  it('opens a compact popover with mode options and selects a mode', async () => {
     const onSelectMode = vi.fn();
     render(
       <ModeDock
@@ -51,11 +40,17 @@ describe('ModeDock', () => {
       />
     );
 
-    fireEvent.click(screen.getByRole('button', { name: /Mode: Deep Research/i }));
+    fireEvent.click(screen.getByRole('button', { name: /Mode: Image/i }));
+
+    await waitFor(() => {
+      expect(screen.getByText('Bot mode')).toBeInTheDocument();
+    });
+
+    fireEvent.click(screen.getByRole('button', { name: /Deep Research/i }));
     expect(onSelectMode).toHaveBeenCalledWith('research');
   });
 
-  it('does not render templates in the tabs', () => {
+  it('does not render templates in the popover', async () => {
     render(
       <ModeDock
         selectedMode="docs"
@@ -64,19 +59,28 @@ describe('ModeDock', () => {
       />
     );
 
+    fireEvent.click(screen.getByRole('button', { name: /Mode: Docs/i }));
+
+    await waitFor(() => {
+      expect(screen.getByText('Bot mode')).toBeInTheDocument();
+    });
+
     expect(screen.queryByText(/Featured Docs Cases/i)).not.toBeInTheDocument();
   });
 
-  it('only exposes the eight retained agent modes', () => {
+  it('exposes all nine canonical bot modes', async () => {
     render(<ModeDock selectedMode="swarms" onSelectMode={() => {}} agentModeSurface="chat" />);
+    fireEvent.click(screen.getByRole('button', { name: /Mode: Agent Swarm/i }));
 
-    expect(screen.getByRole('button', { name: /Mode: Agent Swarm/i })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: /Mode: Deep Research/i })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: /Mode: Websites/i })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: /Mode: Docs/i })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: /Mode: Sheets/i })).toBeInTheDocument();
-    expect(screen.queryByRole('button', { name: /^Mode: Code$/i })).not.toBeInTheDocument();
-    expect(screen.queryByRole('button', { name: /^Mode: Flow$/i })).not.toBeInTheDocument();
-    expect(screen.queryByRole('button', { name: /^Mode: Computer$/i })).not.toBeInTheDocument();
+    await waitFor(() => expect(screen.getByText('Bot mode')).toBeInTheDocument());
+    const popover = screen.getByRole('dialog');
+    expect(within(popover).getByRole('button', { name: /Agent Swarm/i })).toBeInTheDocument();
+    expect(within(popover).getByRole('button', { name: /Deep Research/i })).toBeInTheDocument();
+    expect(within(popover).getByRole('button', { name: /Websites/i })).toBeInTheDocument();
+    expect(within(popover).getByRole('button', { name: /Docs/i })).toBeInTheDocument();
+    expect(within(popover).getByRole('button', { name: /Sheets/i })).toBeInTheDocument();
+    expect(within(popover).getByRole('button', { name: /^Code$/i })).toBeInTheDocument();
+    expect(within(popover).queryByRole('button', { name: /^Flow$/i })).not.toBeInTheDocument();
+    expect(within(popover).queryByRole('button', { name: /^Computer$/i })).not.toBeInTheDocument();
   });
 });

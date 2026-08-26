@@ -2328,6 +2328,37 @@ ipcMain.handle('gizzi-daemon:uninstall', async () => {
 });
 
 // ============================================================================
+// IPC: Browser API Capture
+// Records network traffic from the default Electron session and returns a HAR
+// archive for ingestion by the Site APIs surface.
+// ============================================================================
+
+ipcMain.handle('browser-capture:is-available', () => isCaptureAvailable());
+
+ipcMain.handle('browser-capture:start', (_event, options?: { filterUrls?: string[] }) => {
+  try {
+    const { sessionId } = createCaptureSession(options);
+    return { success: true, sessionId };
+  } catch (err) {
+    log.error('[IPC] browser-capture:start failed:', err);
+    return { success: false, error: (err as Error).message };
+  }
+});
+
+ipcMain.handle('browser-capture:stop', (_event, sessionId: string) => {
+  try {
+    const result = stopCaptureSession(sessionId);
+    if (!result) {
+      return { success: false, error: 'Capture session not found' };
+    }
+    return { success: true, har: result.har };
+  } catch (err) {
+    log.error('[IPC] browser-capture:stop failed:', err);
+    return { success: false, error: (err as Error).message };
+  }
+});
+
+// ============================================================================
 // IPC: Connection settings
 // ============================================================================
 

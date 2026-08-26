@@ -53,6 +53,7 @@ use allternit_api::brain_routes::{brain_git_router, brain_router};
 use allternit_api::canvas_routes::canvas_router;
 use allternit_api::checkpoints_routes::checkpoints_router;
 use allternit_api::conversation_routes::conversation_router;
+use allternit_api::har_api_routes::har_api_router;
 use allternit_api::cowork::background_service::CoworkBackgroundService;
 use allternit_api::cowork::routes::{background_router, CoworkBgState};
 use allternit_api::cowork_preferences_routes::cowork_preferences_router;
@@ -407,6 +408,7 @@ async fn main() {
         .nest("/api", onboarding_router())
         .nest("/api", aci_router())
         .nest("/api", analytics_router())
+        .nest("/api", har_api_router())
         .nest("/api", playground_router())
         .nest("/api", checkpoints_router())
         .nest("/api", design_connector_router())

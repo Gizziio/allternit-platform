@@ -23,9 +23,9 @@ import {
   handleContextMenuClick 
 } from '@/html-to-figma'
 import {
+  startCapture,
+  stopCapture,
   isCaptureAvailable,
-  startCaptureSession,
-  stopCaptureSession,
 } from '@/api-capture/background'
 
 export default defineBackground(() => {
@@ -135,42 +135,31 @@ export default defineBackground(() => {
       sendResponse({ ok: true })
       return undefined
     }
-
-    // API capture messages
     if (message.type === 'API_CAPTURE_AVAILABLE') {
       sendResponse({ ok: true, available: isCaptureAvailable() })
       return undefined
     }
     if (message.type === 'API_CAPTURE_START') {
-      const tabId = typeof message.tabId === 'number' ? message.tabId : sender.tab?.id
-      if (typeof tabId !== 'number') {
-        sendResponse({ ok: false, error: 'tabId is required' })
+      const tabId = message.tabId ?? sender.tab?.id
+      if (!tabId) {
+        sendResponse({ ok: false, error: 'No tab provided' })
         return undefined
       }
-      const filterUrls = Array.isArray(message.filterUrls) ? message.filterUrls : undefined
-      startCaptureSession(tabId, filterUrls)
-        .then((sessionId) => sendResponse({ ok: true, sessionId }))
-        .catch((error) => sendResponse({
-          ok: false,
-          error: error instanceof Error ? error.message : String(error),
-        }))
+      startCapture(tabId, message.filterUrls)
+        .then((result) => sendResponse({ ok: true, sessionId: result.sessionId }))
+        .catch((error) => sendResponse({ ok: false, error: error instanceof Error ? error.message : String(error) }))
       return true
     }
     if (message.type === 'API_CAPTURE_STOP') {
-      const sessionId = typeof message.sessionId === 'string' ? message.sessionId : ''
-      if (!sessionId) {
+      if (!message.sessionId) {
         sendResponse({ ok: false, error: 'sessionId is required' })
         return undefined
       }
-      stopCaptureSession(sessionId)
-        .then((har) => sendResponse({ ok: true, har }))
-        .catch((error) => sendResponse({
-          ok: false,
-          error: error instanceof Error ? error.message : String(error),
-        }))
+      stopCapture(message.sessionId)
+        .then((result) => sendResponse({ ok: true, har: result.har }))
+        .catch((error) => sendResponse({ ok: false, error: error instanceof Error ? error.message : String(error) }))
       return true
     }
-
     // Browser-agent content script messages are handled by browserAgentConnection
     if (message.type === 'BROWSER_ACTION' || message.type === 'CONTENT_READY') {
       return browserAgentConnection.handleContentMessage(message, sender, sendResponse)

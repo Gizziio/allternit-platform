@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useCallback, useRef } from 'react';
-import { ChatTeardropText, PushPin, X, Terminal as TerminalIcon, RocketLaunch } from '@phosphor-icons/react';
+import { ChatTeardropText, PushPin, Rows, X } from '@phosphor-icons/react';
 import {
   useCodeModeStore,
   CANVAS_TILE_DEFAULT_SIZE,
@@ -14,6 +14,7 @@ import {
   CodeCanvasTileExecutor,
   executorBadgeFor,
 } from '@/components/canvas/CodeCanvasTileExecutor';
+import type { ExecutorSession } from '@/views/code/orchestrator.service';
 import {
   InfiniteCanvas,
   MAX_ZOOM,
@@ -71,15 +72,9 @@ export function CodeCanvasView({ workspace }: CodeCanvasViewProps) {
   const activeCodeSessionId = useCodeSessionStore((s) => s.activeSessionId);
 
   const rootRef = useRef<HTMLDivElement>(null);
-  const overlayOpenTimerRef = useRef<number | null>(null);
-  const overlayCloseTimerRef = useRef<number | null>(null);
-  const overlayHoveredRef = useRef(false);
   const [canvasSize, setCanvasSize] = React.useState({ width: 0, height: 0 });
   const [contextMenu, setContextMenu] = React.useState<{ x: number; y: number } | null>(null);
   const [activePanel, setActivePanel] = React.useState<CanvasPanel | null>(null);
-  const [hoveredOverlayTileId, setHoveredOverlayTileId] = React.useState<string | null>(null);
-  const [pinnedOverlayTileId, setPinnedOverlayTileId] = React.useState<string | null>(null);
-  const [terminalSessionsOpen, setTerminalSessionsOpen] = React.useState(false);
   const codeSessions = useCodeSessionStore((s) => s.sessions);
 
   // Multi-select / marquee
@@ -92,6 +87,15 @@ export function CodeCanvasView({ workspace }: CodeCanvasViewProps) {
     current: { x: number; y: number; w: number; h: number } | null;
   }>({ active: false, startX: 0, startY: 0, pointerId: null, current: null });
 
+  // Terminal-session hover/click overlay
+  const [hoveredOverlayTileId, setHoveredOverlayTileId] = React.useState<string | null>(null);
+  const [pinnedOverlayTileId, setPinnedOverlayTileId] = React.useState<string | null>(null);
+  const [terminalSessionsOpen, setTerminalSessionsOpen] = React.useState(false);
+  const overlayEnterTimerRef = useRef<number | null>(null);
+  const overlayLeaveTimerRef = useRef<number | null>(null);
+
+  const activeOverlayTileId = pinnedOverlayTileId ?? hoveredOverlayTileId;
+
   const tiles = workspace?.canvasTiles ?? [];
   const viewport = workspace?.canvasViewport ?? { x: 0, y: 0, zoom: 1 };
   const focusTileId = workspace?.canvasFocusTileId ?? null;
@@ -101,6 +105,51 @@ export function CodeCanvasView({ workspace }: CodeCanvasViewProps) {
   // h5i Tier 1: Track files touched for the active session (SSE)
   useFilesTouched(workspace?.root_path, activeLegacySessionId || undefined);
   const executors = useOrchestratorCanvasSync(workspaceId, workspace?.root_path);
+
+  const clearOverlayTimers = useCallback(() => {
+    if (overlayEnterTimerRef.current) {
+      window.clearTimeout(overlayEnterTimerRef.current);
+      overlayEnterTimerRef.current = null;
+    }
+    if (overlayLeaveTimerRef.current) {
+      window.clearTimeout(overlayLeaveTimerRef.current);
+      overlayLeaveTimerRef.current = null;
+    }
+  }, []);
+
+  const openOverlayHover = useCallback((tileId: string) => {
+    if (pinnedOverlayTileId) return;
+    clearOverlayTimers();
+    overlayEnterTimerRef.current = window.setTimeout(() => {
+      setHoveredOverlayTileId(tileId);
+    }, 250);
+  }, [pinnedOverlayTileId, clearOverlayTimers]);
+
+  const closeOverlayHover = useCallback(() => {
+    if (pinnedOverlayTileId) return;
+    clearOverlayTimers();
+    overlayLeaveTimerRef.current = window.setTimeout(() => {
+      setHoveredOverlayTileId(null);
+    }, 150);
+  }, [pinnedOverlayTileId, clearOverlayTimers]);
+
+  const pinOverlay = useCallback((tileId: string) => {
+    clearOverlayTimers();
+    setHoveredOverlayTileId(null);
+    setPinnedOverlayTileId(tileId);
+  }, [clearOverlayTimers]);
+
+  const unpinOverlay = useCallback(() => {
+    clearOverlayTimers();
+    setPinnedOverlayTileId(null);
+    setHoveredOverlayTileId(null);
+  }, [clearOverlayTimers]);
+
+  React.useEffect(() => {
+    return () => {
+      clearOverlayTimers();
+    };
+  }, [clearOverlayTimers]);
 
   React.useEffect(() => {
     const root = rootRef.current;
@@ -220,85 +269,6 @@ export function CodeCanvasView({ workspace }: CodeCanvasViewProps) {
     },
     [workspaceId, setCanvasFocusTile],
   );
-
-  const clearOverlayTimers = useCallback(() => {
-    if (overlayOpenTimerRef.current) {
-      window.clearTimeout(overlayOpenTimerRef.current);
-      overlayOpenTimerRef.current = null;
-    }
-    if (overlayCloseTimerRef.current) {
-      window.clearTimeout(overlayCloseTimerRef.current);
-      overlayCloseTimerRef.current = null;
-    }
-  }, []);
-
-  const openOverlay = useCallback((tileId: string) => {
-    clearOverlayTimers();
-    setHoveredOverlayTileId(tileId);
-  }, [clearOverlayTimers]);
-
-  const closeOverlay = useCallback(() => {
-    clearOverlayTimers();
-    setHoveredOverlayTileId(null);
-    setPinnedOverlayTileId(null);
-  }, [clearOverlayTimers]);
-
-  const handleTileMouseEnter = useCallback(
-    (tileId: string) => {
-      if (pinnedOverlayTileId) return;
-      clearOverlayTimers();
-      overlayOpenTimerRef.current = window.setTimeout(() => {
-        setHoveredOverlayTileId(tileId);
-      }, 250);
-    },
-    [pinnedOverlayTileId, clearOverlayTimers],
-  );
-
-  const handleTileMouseLeave = useCallback(() => {
-    if (pinnedOverlayTileId) return;
-    clearOverlayTimers();
-    overlayCloseTimerRef.current = window.setTimeout(() => {
-      if (!overlayHoveredRef.current) {
-        setHoveredOverlayTileId(null);
-      }
-    }, 150);
-  }, [pinnedOverlayTileId, clearOverlayTimers]);
-
-  const handleOverlayMouseEnter = useCallback(() => {
-    overlayHoveredRef.current = true;
-    clearOverlayTimers();
-  }, [clearOverlayTimers]);
-
-  const handleOverlayMouseLeave = useCallback(() => {
-    overlayHoveredRef.current = false;
-    if (pinnedOverlayTileId) return;
-    clearOverlayTimers();
-    overlayCloseTimerRef.current = window.setTimeout(() => {
-      if (!overlayHoveredRef.current) {
-        setHoveredOverlayTileId(null);
-      }
-    }, 150);
-  }, [pinnedOverlayTileId, clearOverlayTimers]);
-
-  const handlePinOverlay = useCallback(
-    (tileId: string) => {
-      clearOverlayTimers();
-      if (pinnedOverlayTileId === tileId) {
-        setPinnedOverlayTileId(null);
-        setHoveredOverlayTileId(null);
-      } else {
-        setPinnedOverlayTileId(tileId);
-        setHoveredOverlayTileId(null);
-      }
-    },
-    [pinnedOverlayTileId, clearOverlayTimers],
-  );
-
-  React.useEffect(() => {
-    return () => {
-      clearOverlayTimers();
-    };
-  }, [clearOverlayTimers]);
 
   // Terminal PTYs outlive tile unmounts (see UnifiedTerminal); closing the
   // tile itself is the point where they should actually die.
@@ -557,10 +527,14 @@ export function CodeCanvasView({ workspace }: CodeCanvasViewProps) {
       } else if (isMod && (e.key === '-' || e.key === 'Minus')) {
         e.preventDefault();
         handleViewportChange({ ...viewport, zoom: Math.max(MIN_ZOOM, viewport.zoom - 0.1) });
-      } else if (e.key === 'Escape' && (pinnedOverlayTileId || hoveredOverlayTileId)) {
-        closeOverlay();
-      } else if (e.key === 'Escape' && focusTileId) {
-        setCanvasFocusTile(workspaceId, null);
+      } else if (e.key === 'Escape') {
+        if (terminalSessionsOpen) {
+          setTerminalSessionsOpen(false);
+        } else if (pinnedOverlayTileId) {
+          unpinOverlay();
+        } else if (focusTileId) {
+          setCanvasFocusTile(workspaceId, null);
+        }
       } else if ((e.key === 'Delete' || e.key === 'Backspace') && selectedIds.length > 0 && !focusTileId) {
         e.preventDefault();
         selectedIds.forEach(disposeTileSessions);
@@ -569,7 +543,7 @@ export function CodeCanvasView({ workspace }: CodeCanvasViewProps) {
     };
     window.addEventListener('keydown', onKeyDown);
     return () => window.removeEventListener('keydown', onKeyDown);
-  }, [viewport, focusTileId, workspaceId, selectedIds, pinnedOverlayTileId, hoveredOverlayTileId, closeOverlay, handleViewportChange, setCanvasFocusTile, undoCanvas, redoCanvas, removeCanvasTiles, disposeTileSessions]);
+  }, [viewport, focusTileId, workspaceId, selectedIds, terminalSessionsOpen, pinnedOverlayTileId, handleViewportChange, setCanvasFocusTile, undoCanvas, redoCanvas, removeCanvasTiles, disposeTileSessions, unpinOverlay]);
 
   // Focus mode: render only the focused tile
   if (focusTileId && workspace) {
@@ -627,7 +601,7 @@ export function CodeCanvasView({ workspace }: CodeCanvasViewProps) {
         onMcp={workspace?.root_path ? () => setActivePanel('mcp') : undefined}
         onExport={tiles.length > 0 ? handleExport : undefined}
         onImport={handleImport}
-        onOpenTerminalSessions={() => setTerminalSessionsOpen((v) => !v)}
+        onOpenTerminalSessions={() => setTerminalSessionsOpen(true)}
       />
 
       {workspaceId && (
@@ -693,21 +667,21 @@ export function CodeCanvasView({ workspace }: CodeCanvasViewProps) {
             onBringToFront={() => handleBringToFront(tile.tileId)}
             onInteractionStart={handleInteractionStart}
             onSelect={(additive) => handleTileSelect(tile.tileId, additive)}
-            onMouseEnter={
-              tile.type === 'terminal' || tile.type === 'executor'
-                ? () => handleTileMouseEnter(tile.tileId)
-                : undefined
-            }
-            onMouseLeave={
-              tile.type === 'terminal' || tile.type === 'executor'
-                ? handleTileMouseLeave
-                : undefined
-            }
-            onClick={
-              tile.type === 'terminal' || tile.type === 'executor'
-                ? () => handlePinOverlay(tile.tileId)
-                : undefined
-            }
+            onMouseEnter={() => {
+              if (tile.type === 'terminal' || tile.type === 'executor') {
+                openOverlayHover(tile.tileId);
+              }
+            }}
+            onMouseLeave={() => {
+              if (tile.type === 'terminal' || tile.type === 'executor') {
+                closeOverlayHover();
+              }
+            }}
+            onClick={() => {
+              if (tile.type === 'terminal' || tile.type === 'executor') {
+                pinOverlay(tile.tileId);
+              }
+            }}
             badge={
               tile.type === 'executor'
                 ? executorBadgeFor(executors.get(tile.executorSlug ?? ''))
@@ -723,262 +697,6 @@ export function CodeCanvasView({ workspace }: CodeCanvasViewProps) {
         ))}
       </InfiniteCanvas>
 
-      {/* Terminal / executor hover & pin overlay */}
-      {(() => {
-        const overlayTileId = pinnedOverlayTileId || hoveredOverlayTileId;
-        const overlayTile = overlayTileId
-          ? tiles.find((t) => t.tileId === overlayTileId)
-          : undefined;
-        if (!overlayTile || (overlayTile.type !== 'terminal' && overlayTile.type !== 'executor')) {
-          return null;
-        }
-        return (
-          <div
-            onClick={(e) => {
-              if (e.target === e.currentTarget) closeOverlay();
-            }}
-            onMouseEnter={handleOverlayMouseEnter}
-            onMouseLeave={handleOverlayMouseLeave}
-            style={{
-              position: 'fixed',
-              inset: 0,
-              zIndex: 180,
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              padding: 24,
-              background: 'color-mix(in srgb, var(--shell-overlay-backdrop) 55%, transparent)',
-              backdropFilter: 'blur(2px)',
-            }}
-          >
-            <div
-              style={{
-                width: 'min(1000px, 90vw)',
-                height: 'min(720px, 80vh)',
-                display: 'flex',
-                flexDirection: 'column',
-                borderRadius: 14,
-                border: '1px solid var(--glass-border)',
-                background: 'var(--surface-floating)',
-                boxShadow: 'var(--shadow-xl)',
-                overflow: 'hidden',
-              }}
-            >
-              <div
-                style={{
-                  height: 42,
-                  flexShrink: 0,
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'space-between',
-                  padding: '0 12px 0 16px',
-                  borderBottom: '1px solid var(--border-subtle)',
-                  background: 'color-mix(in srgb, var(--accent-code) 8%, transparent)',
-                }}
-              >
-                <div
-                  style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: 8,
-                    fontSize: 13,
-                    fontWeight: 700,
-                    color: 'var(--text-primary)',
-                  }}
-                >
-                  {overlayTile.type === 'terminal' ? (
-                    <TerminalIcon size={15} />
-                  ) : (
-                    <RocketLaunch size={15} />
-                  )}
-                  {overlayTile.label || overlayTile.type}
-                </div>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
-                  <button
-                    type="button"
-                    aria-label={pinnedOverlayTileId ? 'Unpin overlay' : 'Pin overlay'}
-                    title={pinnedOverlayTileId ? 'Unpin' : 'Pin'}
-                    onClick={() => handlePinOverlay(overlayTile.tileId)}
-                    style={{
-                      width: 28,
-                      height: 28,
-                      display: 'grid',
-                      placeItems: 'center',
-                      border: '1px solid transparent',
-                      borderRadius: 7,
-                      background: 'transparent',
-                      color: 'var(--text-secondary)',
-                      cursor: 'pointer',
-                    }}
-                    className="hover:bg-[var(--surface-hover)] hover:text-[var(--text-primary)]"
-                  >
-                    <PushPin
-                      size={14}
-                      weight={pinnedOverlayTileId === overlayTile.tileId ? 'fill' : 'regular'}
-                    />
-                  </button>
-                  <button
-                    type="button"
-                    aria-label="Close overlay"
-                    title="Close"
-                    onClick={closeOverlay}
-                    style={{
-                      width: 28,
-                      height: 28,
-                      display: 'grid',
-                      placeItems: 'center',
-                      border: '1px solid transparent',
-                      borderRadius: 7,
-                      background: 'transparent',
-                      color: 'var(--text-secondary)',
-                      cursor: 'pointer',
-                    }}
-                    className="hover:bg-[var(--status-error-bg)] hover:text-[var(--status-error)]"
-                  >
-                    <X size={14} />
-                  </button>
-                </div>
-              </div>
-              <div style={{ flex: 1, minHeight: 0, overflow: 'hidden' }}>
-                <TileContent
-                  tile={overlayTile}
-                  workspaceId={workspaceId}
-                  workspacePath={workspace?.root_path}
-                />
-              </div>
-            </div>
-          </div>
-        );
-      })()}
-
-      {/* Terminal sessions side panel */}
-      {terminalSessionsOpen && (
-        <div
-          style={{
-            position: 'absolute',
-            top: 12,
-            right: 56,
-            bottom: 12,
-            width: 280,
-            zIndex: 110,
-            display: 'flex',
-            flexDirection: 'column',
-            borderRadius: 14,
-            border: '1px solid var(--glass-border)',
-            background: 'var(--surface-floating)',
-            backdropFilter: 'blur(20px)',
-            WebkitBackdropFilter: 'blur(20px)',
-            boxShadow: 'var(--shadow-lg)',
-            overflow: 'hidden',
-          }}
-        >
-          <div
-            style={{
-              height: 42,
-              flexShrink: 0,
-              display: 'flex',
-              alignItems: 'center',
-              gap: 8,
-              padding: '0 14px',
-              borderBottom: '1px solid var(--border-subtle)',
-            }}
-          >
-            <TerminalIcon size={15} color="var(--accent-code)" />
-            <span style={{ fontSize: 12, fontWeight: 700, color: 'var(--text-primary)' }}>
-              Terminal sessions
-            </span>
-            <button
-              type="button"
-              aria-label="Close terminal sessions panel"
-              title="Close"
-              onClick={() => setTerminalSessionsOpen(false)}
-              style={{
-                marginLeft: 'auto',
-                width: 26,
-                height: 26,
-                display: 'grid',
-                placeItems: 'center',
-                border: '1px solid transparent',
-                borderRadius: 6,
-                background: 'transparent',
-                color: 'var(--text-secondary)',
-                cursor: 'pointer',
-              }}
-              className="hover:bg-[var(--surface-hover)] hover:text-[var(--text-primary)]"
-            >
-              <X size={13} />
-            </button>
-          </div>
-          <div style={{ flex: 1, minHeight: 0, overflow: 'auto', padding: 8 }}>
-            {tiles.filter((t) => t.type === 'terminal' || t.type === 'executor').length === 0 ? (
-              <div
-                style={{
-                  padding: 16,
-                  color: 'var(--text-muted)',
-                  fontSize: 12,
-                  textAlign: 'center',
-                }}
-              >
-                No terminal sessions on the canvas.
-              </div>
-            ) : (
-              tiles
-                .filter((t) => t.type === 'terminal' || t.type === 'executor')
-                .map((tile) => (
-                  <button
-                    key={tile.tileId}
-                    type="button"
-                    onClick={() => {
-                      openOverlay(tile.tileId);
-                      handlePinOverlay(tile.tileId);
-                      setTerminalSessionsOpen(false);
-                    }}
-                    style={{
-                      width: '100%',
-                      textAlign: 'left',
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: 8,
-                      padding: '8px 10px',
-                      marginBottom: 4,
-                      borderRadius: 10,
-                      border: '1px solid transparent',
-                      background:
-                        pinnedOverlayTileId === tile.tileId
-                          ? 'var(--surface-active)'
-                          : 'transparent',
-                      color: 'var(--text-secondary)',
-                      cursor: 'pointer',
-                    }}
-                    className="hover:bg-[var(--surface-hover)] hover:text-[var(--text-primary)]"
-                  >
-                    {tile.type === 'terminal' ? (
-                      <TerminalIcon size={14} />
-                    ) : (
-                      <RocketLaunch size={14} />
-                    )}
-                    <span
-                      style={{
-                        flex: 1,
-                        minWidth: 0,
-                        overflow: 'hidden',
-                        textOverflow: 'ellipsis',
-                        whiteSpace: 'nowrap',
-                        fontSize: 12,
-                        fontWeight: 600,
-                      }}
-                    >
-                      {tile.label || tile.type}
-                    </span>
-                    {tile.type === 'executor' &&
-                      executorBadgeFor(executors.get(tile.executorSlug ?? ''))}
-                  </button>
-                ))
-            )}
-          </div>
-        </div>
-      )}
-
       {/* Marquee selection overlay */}
       {marquee && (
         <div
@@ -992,6 +710,45 @@ export function CodeCanvasView({ workspace }: CodeCanvasViewProps) {
             background: 'rgba(176, 141, 110, 0.1)',
             zIndex: 200,
             pointerEvents: 'none',
+          }}
+        />
+      )}
+
+      {/* Terminal / executor hover-click overlay */}
+      {activeOverlayTileId && (
+        <CanvasTileOverlay
+          tile={tiles.find((t) => t.tileId === activeOverlayTileId)}
+          workspaceId={workspaceId}
+          workspacePath={workspace?.root_path}
+          pinned={Boolean(pinnedOverlayTileId)}
+          executors={executors}
+          onMouseEnter={() => {
+            if (activeOverlayTileId) {
+              clearOverlayTimers();
+            }
+          }}
+          onMouseLeave={() => {
+            if (!pinnedOverlayTileId) {
+              closeOverlayHover();
+            }
+          }}
+          onPin={() => {
+            if (activeOverlayTileId) {
+              pinOverlay(activeOverlayTileId);
+            }
+          }}
+          onClose={unpinOverlay}
+        />
+      )}
+
+      {/* Terminal sessions panel */}
+      {terminalSessionsOpen && (
+        <TerminalSessionsPanel
+          tiles={tiles}
+          executors={executors}
+          onClose={() => setTerminalSessionsOpen(false)}
+          onSelectTile={(tileId) => {
+            pinOverlay(tileId);
           }}
         />
       )}
@@ -1164,3 +921,365 @@ function TileContent({
       );
   }
 }
+
+
+  function CanvasTileOverlay({
+    tile,
+    workspaceId,
+    workspacePath,
+    pinned,
+    executors,
+    onMouseEnter,
+    onMouseLeave,
+    onPin,
+    onClose,
+  }: {
+    tile: CodeCanvasTile | undefined;
+    workspaceId: string;
+    workspacePath?: string;
+    pinned: boolean;
+    executors: Map<string, ExecutorSession>;
+    onMouseEnter: () => void;
+    onMouseLeave: () => void;
+    onPin: () => void;
+    onClose: () => void;
+  }) {
+    if (!tile) return null;
+    const isTerminal = tile.type === 'terminal';
+    const isExecutor = tile.type === 'executor';
+
+    return (
+      <div
+        role="dialog"
+        aria-label={`${tile.label || tile.type} overlay`}
+        onPointerDown={(e) => {
+          if (e.target === e.currentTarget) onClose();
+        }}
+        onMouseEnter={onMouseEnter}
+        onMouseLeave={onMouseLeave}
+        style={{
+          position: 'fixed',
+          inset: 0,
+          zIndex: 180,
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          background: 'color-mix(in srgb, var(--shell-overlay-backdrop) 60%, transparent)',
+          backdropFilter: 'blur(4px)',
+          WebkitBackdropFilter: 'blur(4px)',
+        }}
+      >
+        <div
+          onClick={onPin}
+          style={{
+            width: 'min(92vw, 1100px)',
+            height: 'min(86vh, 760px)',
+            display: 'flex',
+            flexDirection: 'column',
+            borderRadius: 14,
+            border: '1px solid var(--glass-border)',
+            background: 'var(--surface-floating)',
+            backdropFilter: 'blur(24px) saturate(180%)',
+            WebkitBackdropFilter: 'blur(24px) saturate(180%)',
+            boxShadow: 'var(--shadow-xl), 0 0 40px color-mix(in srgb, var(--accent-code) 8%, transparent)',
+            overflow: 'hidden',
+          }}
+        >
+          {/* Overlay header */}
+          <div
+            style={{
+              flexShrink: 0,
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              gap: 12,
+              padding: '10px 14px',
+              borderBottom: '1px solid var(--border-subtle)',
+              background: 'color-mix(in srgb, var(--surface-floating) 80%, transparent)',
+            }}
+          >
+            <div style={{ display: 'flex', alignItems: 'center', gap: 10, minWidth: 0 }}>
+              <span
+                style={{
+                  width: 8,
+                  height: 8,
+                  borderRadius: '50%',
+                  background: isTerminal
+                    ? 'var(--accent-code)'
+                    : isExecutor
+                      ? 'var(--status-info)'
+                      : 'var(--text-muted)',
+                  boxShadow: `0 0 8px ${isTerminal ? 'var(--accent-code)' : isExecutor ? 'var(--status-info)' : 'var(--text-muted)'}`,
+                  flexShrink: 0,
+                }}
+              />
+              <span
+                style={{
+                  fontSize: 13,
+                  fontWeight: 700,
+                  color: 'var(--text-primary)',
+                  whiteSpace: 'nowrap',
+                  overflow: 'hidden',
+                  textOverflow: 'ellipsis',
+                }}
+              >
+                {tile.label || tile.type}
+              </span>
+              <span
+                style={{
+                  fontSize: 10,
+                  fontWeight: 700,
+                  textTransform: 'uppercase',
+                  letterSpacing: '0.06em',
+                  color: 'var(--accent-code)',
+                  padding: '2px 8px',
+                  borderRadius: 999,
+                  border: '1px solid color-mix(in srgb, var(--accent-code) 30%, transparent)',
+                  background: 'color-mix(in srgb, var(--accent-code) 10%, transparent)',
+                  flexShrink: 0,
+                }}
+              >
+                {tile.type}
+              </span>
+              {isExecutor && tile.executorSlug && (
+                <div style={{ flexShrink: 0 }}>
+                  {executorBadgeFor(executors.get(tile.executorSlug))}
+                </div>
+              )}
+            </div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexShrink: 0 }}>
+              <button
+                type="button"
+                aria-label={pinned ? 'Unpin overlay' : 'Pin overlay'}
+                title={pinned ? 'Pinned' : 'Pin overlay'}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onPin();
+                }}
+                style={{
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  width: 28,
+                  height: 28,
+                  border: `1px solid ${pinned ? 'var(--accent-code)' : 'var(--border-subtle)'}`,
+                  borderRadius: 8,
+                  background: pinned ? 'color-mix(in srgb, var(--accent-code) 12%, transparent)' : 'transparent',
+                  color: pinned ? 'var(--accent-code)' : 'var(--text-secondary)',
+                  cursor: 'pointer',
+                  transition: 'all 0.15s ease',
+                }}
+              >
+                <PushPin size={14} weight={pinned ? 'fill' : 'regular'} />
+              </button>
+              <button
+                type="button"
+                aria-label="Close overlay"
+                title="Close overlay"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onClose();
+                }}
+                style={{
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  width: 28,
+                  height: 28,
+                  border: '1px solid var(--border-subtle)',
+                  borderRadius: 8,
+                  background: 'transparent',
+                  color: 'var(--text-secondary)',
+                  cursor: 'pointer',
+                  transition: 'all 0.15s ease',
+                }}
+              >
+                <X size={14} />
+              </button>
+            </div>
+          </div>
+
+          {/* Overlay content — reuse the same tile renderer so terminal/executor PTYs reattach */}
+          <div style={{ flex: 1, minHeight: 0, overflow: 'hidden' }}>
+            <TileContent tile={tile} workspaceId={workspaceId} workspacePath={workspacePath} />
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  function TerminalSessionsPanel({
+    tiles,
+    executors,
+    onClose,
+    onSelectTile,
+  }: {
+    tiles: CodeCanvasTile[];
+    executors: Map<string, ExecutorSession>;
+    onClose: () => void;
+    onSelectTile: (tileId: string) => void;
+  }) {
+    const sessionTiles = tiles.filter(
+      (t): t is CodeCanvasTile & { type: 'terminal' | 'executor' } =>
+        t.type === 'terminal' || t.type === 'executor',
+    );
+
+    return (
+      <div
+        role="complementary"
+        aria-label="Terminal sessions"
+        style={{
+          position: 'fixed',
+          top: 0,
+          right: 0,
+          bottom: 0,
+          width: 320,
+          zIndex: 190,
+          display: 'flex',
+          flexDirection: 'column',
+          borderLeft: '1px solid var(--glass-border)',
+          background: 'var(--surface-floating)',
+          backdropFilter: 'blur(24px) saturate(180%)',
+          WebkitBackdropFilter: 'blur(24px) saturate(180%)',
+          boxShadow: 'var(--shadow-xl)',
+        }}
+      >
+        <div
+          style={{
+            flexShrink: 0,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            gap: 12,
+            padding: '12px 14px',
+            borderBottom: '1px solid var(--border-subtle)',
+          }}
+        >
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+            <Rows size={18} style={{ color: 'var(--accent-code)' }} />
+            <span style={{ fontSize: 14, fontWeight: 700, color: 'var(--text-primary)' }}>
+              Terminal sessions
+            </span>
+            <span
+              style={{
+                fontSize: 11,
+                fontWeight: 700,
+                color: 'var(--text-secondary)',
+                padding: '2px 8px',
+                borderRadius: 999,
+                background: 'var(--surface-panel)',
+              }}
+            >
+              {sessionTiles.length}
+            </span>
+          </div>
+          <button
+            type="button"
+            aria-label="Close terminal sessions panel"
+            title="Close panel"
+            onClick={onClose}
+            style={{
+              display: 'inline-flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              width: 28,
+              height: 28,
+              border: '1px solid var(--border-subtle)',
+              borderRadius: 8,
+              background: 'transparent',
+              color: 'var(--text-secondary)',
+              cursor: 'pointer',
+            }}
+          >
+            <X size={14} />
+          </button>
+        </div>
+
+        <div style={{ flex: 1, overflowY: 'auto', padding: 8 }}>
+          {sessionTiles.length === 0 ? (
+            <div
+              style={{
+                padding: 20,
+                textAlign: 'center',
+                color: 'var(--text-muted)',
+                fontSize: 13,
+              }}
+            >
+              No terminal or executor tiles on this canvas.
+            </div>
+          ) : (
+            sessionTiles.map((tile) => {
+              const isExecutor = tile.type === 'executor';
+              return (
+                <button
+                  key={tile.tileId}
+                  type="button"
+                  onClick={() => onSelectTile(tile.tileId)}
+                  style={{
+                    width: '100%',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                    gap: 10,
+                    padding: '10px 12px',
+                    marginBottom: 6,
+                    border: '1px solid var(--border-subtle)',
+                    borderRadius: 10,
+                    background: 'var(--surface-panel)',
+                    color: 'var(--text-primary)',
+                    cursor: 'pointer',
+                    textAlign: 'left',
+                    transition: 'background 0.15s ease, border-color 0.15s ease',
+                  }}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.background = 'var(--surface-hover)';
+                    e.currentTarget.style.borderColor = 'color-mix(in srgb, var(--accent-code) 40%, var(--border-subtle))';
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.background = 'var(--surface-panel)';
+                    e.currentTarget.style.borderColor = 'var(--border-subtle)';
+                  }}
+                >
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 4, minWidth: 0, flex: 1 }}>
+                    <span
+                      style={{
+                        fontSize: 13,
+                        fontWeight: 600,
+                        whiteSpace: 'nowrap',
+                        overflow: 'hidden',
+                        textOverflow: 'ellipsis',
+                      }}
+                    >
+                      {tile.label || tile.type}
+                    </span>
+                    <span style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
+                      <span
+                        style={{
+                          fontSize: 10,
+                          fontWeight: 700,
+                          textTransform: 'uppercase',
+                          letterSpacing: '0.05em',
+                          color: 'var(--accent-code)',
+                          padding: '1px 6px',
+                          borderRadius: 999,
+                          border: '1px solid color-mix(in srgb, var(--accent-code) 30%, transparent)',
+                          background: 'color-mix(in srgb, var(--accent-code) 10%, transparent)',
+                        }}
+                      >
+                        {tile.type}
+                      </span>
+                      {isExecutor && tile.executorSlug && (
+                        <span onClick={(e) => e.stopPropagation()}>
+                          {executorBadgeFor(executors.get(tile.executorSlug))}
+                        </span>
+                      )}
+                    </span>
+                  </div>
+                </button>
+              );
+            })
+          )}
+        </div>
+      </div>
+    );
+  }

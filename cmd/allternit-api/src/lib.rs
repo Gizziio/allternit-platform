@@ -75,6 +75,7 @@ pub mod file_routes;
 pub mod gizzi_chat_stream;
 pub mod gizzi_completion;
 pub mod gizzi_provider_auth;
+pub mod har_api_routes;
 pub mod h5i_routes;
 pub mod har_api_routes;
 pub mod har_api_service;

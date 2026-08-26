@@ -1546,6 +1546,11 @@ export function BrowserCapsuleEnhanced({
             <ExtensionManagerPopup open={extensionPopupOpen} onClose={() => setExtensionPopupOpen(false)} onNavigate={addTab} />
           </div>
 
+          <BrowserApiCaptureButton
+            domain={activeTab?.contentType === 'web' ? (() => { try { return new URL((activeTab as WebTab).url).hostname; } catch { return undefined; } })() : undefined}
+            onOpenSiteApis={() => window.dispatchEvent(new CustomEvent('allternit:open-view', { detail: { viewType: 'site-apis' } }))}
+          />
+
           <div className="relative">
             <NavBtn title="More" onClick={() => setMenuOpen(!menuOpen)}><DotsThreeVertical className="size-4" /></NavBtn>
             <ThreeDotMenu open={menuOpen} onClose={() => setMenuOpen(false)} onNewTab={() => addTab('about:blank')} onToggleChatPane={toggleChatPane} chatPaneOpen={chatPaneOpen} onCloseAllTabs={handleCloseAllTabs} onEnterFocusMode={toggleCompactMode} zoomLevel={zoomLevel} onZoomIn={() => setZoomLevel((z) => Math.min(z + 0.1, 3))} onZoomOut={() => setZoomLevel((z) => Math.max(z - 0.1, 0.3))} onZoomReset={() => setZoomLevel(1)} />

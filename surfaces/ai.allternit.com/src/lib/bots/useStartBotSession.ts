@@ -2,18 +2,12 @@ import { useCallback, useState } from 'react';
 import { useChatSessionStore } from '@/views/chat/ChatSessionStore';
 import { resolveAgentSecrets } from '@/lib/agents/agent-secrets-resolver';
 import { resolveAgentConnectors } from '@/lib/agents/agent-connectors-resolver';
-import {
-  createSandbox,
-  getSandboxForAgent,
-  isBotDesktopPaused,
-  type Sandbox,
-} from './vm-operator';
-import { useBotAllternitBusStore } from './bot-allternit-bus';
+import { createSandbox, type Sandbox } from './vm-operator';
 import type { Agent } from '../agents/agent.types';
 
 export interface UseStartBotSessionReturn {
-  startSession: (agent: Agent, options?: { modeId?: string }) => Promise<string | null>;
-  startTask: (agent: Agent, task: string, options?: { modeId?: string }) => Promise<string | null>;
+  startSession: (agent: Agent) => Promise<string | null>;
+  startTask: (agent: Agent, task: string) => Promise<string | null>;
   isStarting: boolean;
   error: string | null;
 }
@@ -22,7 +16,6 @@ interface BotSessionStartResult {
   sessionId: string;
   sandbox?: Sandbox;
   sandboxError?: string;
-  notice?: string;
 }
 
 function buildVMSystemPrompt(vmConfig: NonNullable<Agent['vmOperator']>, sandbox?: Sandbox): string {
@@ -68,7 +61,7 @@ export function useStartBotSession(
   const [isStarting, setIsStarting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const prepareBotSession = useCallback(async (agent: Agent, options?: { modeId?: string }): Promise<BotSessionStartResult | null> => {
+  const prepareBotSession = useCallback(async (agent: Agent): Promise<BotSessionStartResult | null> => {
     const displayName = agent.botProfile?.displayName ?? agent.name;
     const store = useChatSessionStore.getState();
 
@@ -91,44 +84,21 @@ export function useStartBotSession(
 
     let sandbox: Sandbox | undefined;
     let sandboxError: string | undefined;
-    let notice: string | undefined;
     const vmConfig = agent.vmOperator;
-    const isDesktopPaused = isBotDesktopPaused(agent.id);
-    const shouldStartSandbox =
-      vmConfig?.enabled === true && vmConfig?.autoStart !== false && !isDesktopPaused;
-
-    if (isDesktopPaused) {
-      notice =
-        'Desktop is under human control. The bot will resume autonomous computer use after you hand the desktop back.';
-    }
+    const shouldStartSandbox = vmConfig?.enabled === true && vmConfig?.autoStart !== false;
 
     if (shouldStartSandbox) {
-      // Prefer the bot's existing persistent computer so state (toolchain,
-      // files, browser sessions) survives across sessions. Only create a new
-      // sandbox if none exists yet.
-      const existing = await getSandboxForAgent(agent.id);
-      if (existing.ok && existing.data) {
-        sandbox = existing.data;
+      const result = await createSandbox(agent.id, vmConfig);
+      if (result.ok && result.data) {
+        sandbox = result.data;
       } else {
-        const result = await createSandbox(agent.id, vmConfig);
-        if (result.ok && result.data) {
-          sandbox = result.data;
-        } else {
-          sandboxError = result.error ?? 'Virtual computer failed to start';
-        }
+        sandboxError = result.error ?? 'Virtual computer failed to start';
       }
     }
 
     const vmPrompt = vmConfig?.enabled ? buildVMSystemPrompt(vmConfig, sandbox) : '';
-
-    // Connect AllternitBus cloud-orchestration messaging when configured
-    const allternitBusEnabled = agent.messagingConfig?.photonEnabled === true;
-    if (allternitBusEnabled) {
-      useBotAllternitBusStore.getState().connect(agent.id);
-    }
-
     const basePrompt = agent.systemPrompt ?? '';
-    const systemPrompt = [basePrompt, vmPrompt, notice].filter(Boolean).join('\n\n');
+    const systemPrompt = vmPrompt ? `${basePrompt}\n\n${vmPrompt}` : basePrompt;
 
     const sessionId = await store.createSession({
       name: displayName,
@@ -145,7 +115,6 @@ export function useStartBotSession(
         tags: agent.tags,
         category: agent.category,
         trustTier: agent.trustTier,
-        agentModeId: options?.modeId,
         originSurface: 'chat',
         connectorBindings: agent.connectorBindings,
         secretRefs: agent.secretRefs,
@@ -158,20 +127,19 @@ export function useStartBotSession(
         vmOperator: agent.vmOperator,
         vmSandbox: sandbox ? { id: sandbox.id, provider: sandbox.provider, status: sandbox.status, vncUrl: sandbox.vncUrl } : undefined,
         vmSandboxError: sandboxError,
-        vmControlNotice: notice,
       },
     });
 
-    return { sessionId, sandbox, sandboxError, notice };
+    return { sessionId, sandbox, sandboxError };
   }, []);
 
   const startSession = useCallback(
-    async (agent: Agent, options?: { modeId?: string }): Promise<string | null> => {
+    async (agent: Agent): Promise<string | null> => {
       setIsStarting(true);
       setError(null);
 
       try {
-        const result = await prepareBotSession(agent, options);
+        const result = await prepareBotSession(agent);
         if (!result) return null;
 
         const { sessionId, sandboxError } = result;
@@ -198,24 +166,19 @@ export function useStartBotSession(
   );
 
   const startTask = useCallback(
-    async (agent: Agent, task: string, options?: { modeId?: string }): Promise<string | null> => {
+    async (agent: Agent, task: string): Promise<string | null> => {
       if (!task.trim()) return null;
 
       setIsStarting(true);
       setError(null);
 
       try {
-        const result = await prepareBotSession(agent, options);
+        const result = await prepareBotSession(agent);
         if (!result) return null;
 
         const { sessionId, sandboxError } = result;
         const store = useChatSessionStore.getState();
         store.setActiveSession(sessionId);
-
-        // Open the chat surface immediately so the user sees the session and
-        // streaming indicator instead of a frozen "Starting..." modal while the
-        // local sidecar model loads on its first turn.
-        onSessionStarted?.(sessionId);
 
         // Send the task as the first message so the bot starts working immediately.
         // A small delay ensures the session is active before streaming begins.
@@ -229,6 +192,7 @@ export function useStartBotSession(
           setError(sandboxError);
         }
 
+        onSessionStarted?.(sessionId);
         return sessionId;
       } catch (err) {
         const message = err instanceof Error ? err.message : 'Failed to start bot task';

@@ -9,6 +9,7 @@ import {
   ChatTeardropText,
   SquaresFour,
   Terminal as TerminalIcon,
+  Rows,
   Shield,
   GitCommit,
   GitDiff,
@@ -22,7 +23,6 @@ import {
   CaretLeft,
   CaretRight,
   Rocket,
-  Rows,
 } from '@phosphor-icons/react';
 import { AGENT_VENDORS, type AgentVendor } from '@/components/canvas/agentVendors';
 import {
@@ -173,14 +173,14 @@ export function CanvasToolbar({
       <ToolbarButton label="Arrange tiles" onClick={() => autoArrange(workspaceId)} style={buttonStyle}>
         <SquaresFour size={16} />
       </ToolbarButton>
-      {onFitView && (
-        <ToolbarButton label="Fit all tiles" onClick={onFitView} style={buttonStyle}>
-          <ArrowsOutSimple size={16} />
-        </ToolbarButton>
-      )}
       {onOpenTerminalSessions && (
         <ToolbarButton label="Terminal sessions" onClick={onOpenTerminalSessions} style={buttonStyle}>
           <Rows size={16} />
+        </ToolbarButton>
+      )}
+      {onFitView && (
+        <ToolbarButton label="Fit all tiles" onClick={onFitView} style={buttonStyle}>
+          <ArrowsOutSimple size={16} />
         </ToolbarButton>
       )}
 

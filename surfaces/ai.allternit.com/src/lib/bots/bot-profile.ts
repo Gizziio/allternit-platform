@@ -8,10 +8,7 @@
  * @module bot-profile
  */
 
-import type { Agent, BotProfile, BotCategory, Bot as AgentBot, CreateAgentInput } from '../agents/agent.types';
-import { BotSchema, type Bot as CanonicalBot } from './orpc-contracts';
-import { packageAgentAsBot } from './bot-contract';
-import { generateBotAvatar } from './bot-avatar.service';
+import type { Agent, BotProfile, BotCategory, AvatarConfig } from '../agents/agent.types';
 import { createModuleLogger } from '@/lib/logger';
 
 const logger = createModuleLogger('BotProfile');
@@ -22,42 +19,39 @@ const logger = createModuleLogger('BotProfile');
 
 /**
  * Check if an agent is a packaged bot.
- *
- * This is a strict type guard: when it returns true, TypeScript knows the
- * agent has `isBot: true` and a required `botProfile` with `displayName`.
  */
-export function isBot(agent: Agent): agent is AgentBot {
+export function isBot(agent: Agent): boolean {
   return agent.isBot === true && agent.botProfile !== undefined;
 }
 
 /**
  * Filter agents to only return bots.
  */
-export function getBots(agents: Agent[]): AgentBot[] {
+export function getBots(agents: Agent[]): Agent[] {
   return agents.filter(isBot);
 }
 
 /**
  * Filter bots by category.
  */
-export function getBotsByCategory(agents: Agent[], category: BotCategory): AgentBot[] {
+export function getBotsByCategory(agents: Agent[], category: BotCategory): Agent[] {
   return getBots(agents).filter(
-    (agent) => agent.botProfile.botCategory === category
+    (agent) => agent.botProfile?.botCategory === category
   );
 }
 
 /**
  * Search bots by name, description, or tags.
  */
-export function searchBots(agents: Agent[], query: string): AgentBot[] {
+export function searchBots(agents: Agent[], query: string): Agent[] {
   const q = query.trim().toLowerCase();
   if (!q) return getBots(agents);
 
   return getBots(agents).filter((agent) => {
     const profile = agent.botProfile;
-    const name = profile.displayName.toLowerCase();
+    const name = (profile?.displayName ?? agent.name).toLowerCase();
     const description = agent.description.toLowerCase();
-    const tagline = (profile.tagline ?? '').toLowerCase();
+    const tagline = (profile?.tagline ?? '').toLowerCase();
     const tags = agent.tags ?? [];
 
     return (
@@ -123,109 +117,38 @@ export function getBotCategory(agent: Agent): BotCategory | undefined {
 }
 
 /**
- * Get a human-readable label for an external bot provider.
+ * Resolve a displayable avatar URL for an agent/bot.
+ * Checks the canonical avatar config, legacy string avatar, teammate profile,
+ * and config avatar in that order.
  */
-export function getProviderLabel(providerId: string): string {
-  switch (providerId) {
-    case 'hermes':
-      return 'Hermes';
-    case 'openclaw':
-      return 'OpenClaw';
-    case 'grok':
-      return 'Grok';
-    default:
-      return providerId;
+export function getBotAvatarUrl(agent: Agent | null | undefined): string | undefined {
+  if (!agent) return undefined;
+
+  const typedAvatar = agent.avatar as AvatarConfig | undefined;
+  if (typedAvatar?.type === 'image' && typedAvatar.uri) {
+    return typedAvatar.uri;
   }
+  if (typeof agent.avatar === 'string' && agent.avatar) {
+    return agent.avatar;
+  }
+  if (agent.teammateProfile?.avatar) {
+    return agent.teammateProfile.avatar;
+  }
+
+  const configAvatar = agent.config?.avatar as AvatarConfig | string | undefined;
+  if (typeof configAvatar === 'object' && configAvatar?.type === 'image' && configAvatar.uri) {
+    return configAvatar.uri;
+  }
+  if (typeof configAvatar === 'string' && configAvatar) {
+    return configAvatar;
+  }
+
+  return undefined;
 }
 
 // ============================================================================
 // Bot Creation Helpers
 // ============================================================================
-
-const VALID_BOT_TYPES: AgentBot['type'][] = [
-  'orchestrator',
-  'sub-agent',
-  'worker',
-  'specialist',
-  'reviewer',
-];
-
-/**
- * Convert an Agent that represents a packaged bot into the canonical Bot
- * contract used by the duplication and roster services.
- *
- * Drops agent-only fields that are not part of the Bot contract.
- */
-export function agentToBot(agent: Agent): CanonicalBot {
-  const botType = VALID_BOT_TYPES.includes(agent.type as AgentBot['type'])
-    ? (agent.type as AgentBot['type'])
-    : 'specialist';
-
-  return BotSchema.parse({
-    id: agent.id,
-    name: agent.name,
-    description: agent.description,
-    type: botType,
-    model: agent.model ?? 'default',
-    provider: agent.provider ?? 'custom',
-    avatar: undefined,
-    isBot: true,
-    botProfile: agent.botProfile,
-    operationalState: undefined,
-    parentBotId: undefined,
-    createdAt: agent.createdAt,
-    updatedAt: agent.updatedAt,
-  });
-}
-
-/**
- * Convert an Agent into a CreateAgentInput draft suitable for duplication or
- * templated creation. Runtime-only fields (id, status, timestamps, runs,
- * ratings, etc.) are stripped, and secret values are redacted so the draft is
- * safe to seed the creation wizard.
- */
-export function agentToCreateAgentInput(agent: Agent): Partial<CreateAgentInput> {
-  const redactedSecrets = (agent.secretRefs ?? []).map((ref) => ({
-    ...ref,
-    value: undefined,
-  }));
-
-  return {
-    name: agent.name,
-    description: agent.description,
-    type: VALID_BOT_TYPES.includes(agent.type as AgentBot['type'])
-      ? (agent.type as AgentBot['type'])
-      : 'specialist',
-    model: agent.model,
-    provider: agent.provider,
-    capabilities: agent.capabilities,
-    systemPrompt: agent.systemPrompt,
-    tools: agent.tools,
-    maxIterations: agent.maxIterations,
-    temperature: agent.temperature,
-    voice: agent.voice,
-    config: agent.config,
-    avatar: agent.avatar,
-    source: agent.source,
-    characterLayer: agent.characterLayer,
-    trustTier: agent.trustTier,
-    harness: agent.harness,
-    allowedSurfaces: agent.allowedSurfaces,
-    allowedSkills: agent.allowedSkills,
-    allowedTools: agent.allowedTools,
-    category: agent.category,
-    tags: agent.tags,
-    dataClassification: agent.dataClassification,
-    writeScope: agent.writeScope,
-    isBot: agent.isBot,
-    botProfile: agent.botProfile,
-    connectorBindings: agent.connectorBindings,
-    secretRefs: redactedSecrets,
-    messagingConfig: agent.messagingConfig,
-    identityChannels: agent.identityChannels,
-    vmOperator: agent.vmOperator,
-  };
-}
 
 /**
  * Create a bot agent from a base agent configuration.
@@ -234,37 +157,31 @@ export function agentToCreateAgentInput(agent: Agent): Partial<CreateAgentInput>
 export function createBotAgent(
   baseAgent: Omit<Agent, 'isBot' | 'botProfile'>,
   botProfile: BotProfile
-): AgentBot {
-  const botType = VALID_BOT_TYPES.includes(baseAgent.type as AgentBot['type'])
-    ? (baseAgent.type as AgentBot['type'])
-    : 'specialist';
-
-  const avatar = botProfile.avatar ?? generateBotAvatar(baseAgent.id ?? baseAgent.name);
-
-  const withDefaults: Agent = {
+): Agent {
+  return {
     ...baseAgent,
-    type: botType,
+    isBot: true,
+    botProfile,
+    // Ensure bot has sensible defaults
+    type: baseAgent.type ?? 'specialist',
     status: baseAgent.status ?? 'idle',
     tools: baseAgent.tools ?? [],
     capabilities: baseAgent.capabilities ?? [],
-  } as Agent;
-
-  return packageAgentAsBot({
-    agent: withDefaults,
-    botProfile: {
-      ...botProfile,
-      avatar,
-    },
-  });
+  };
 }
 
 /**
  * Update a bot's profile while preserving the agent.
  */
 export function updateBotProfile(
-  agent: AgentBot,
+  agent: Agent,
   updates: Partial<BotProfile>
-): AgentBot {
+): Agent {
+  if (!agent.isBot) {
+    logger.warn({ agentId: agent.id }, 'updateBotProfile called on non-bot agent');
+    return agent;
+  }
+
   return {
     ...agent,
     botProfile: {
