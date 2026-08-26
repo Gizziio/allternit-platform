@@ -126,6 +126,7 @@ pub fn router() -> Router<Arc<AppState>> {
         .route("/computers/:id/shell", post(computer_shell))
         .route("/computers/:id/files/upload", post(computer_upload_file))
         .route("/computers/:id/files/download", get(computer_download_file))
+        .route("/computers/admin/credits", post(admin_credit_org))
 }
 
 // ---------------------------------------------------------------------------
@@ -392,28 +393,45 @@ async fn create_cloud_desktop(
         return error_response(StatusCode::FORBIDDEN, "bot not found or access denied");
     }
 
+    // Resolve the requested spec early so we know the OS/memory for pricing
+    // and credit checks before asking the driver to spawn anything.
+    let provision_req = crate::bot_desktop_templates::ProvisionRequest {
+        os: req.os.clone(),
+        template_id: req.template_id.clone(),
+    };
+    let spec = match crate::bot_desktop_templates::resolve_provision_spec(&state, &user, &provision_req).await {
+        Ok(s) => s,
+        Err(resp) => return resp.into_response(),
+    };
+
     // Credit / spend-cap check.
     if let Some(ref org_id) = resolve_org_id(&user) {
         let org_id = org_id.clone();
         let db = state.db.clone();
+        let memory_mib = spec.memory_mib;
+        let os = spec.os.clone();
         let allowed = match tokio::task::spawn_blocking(move || {
             let conn = db.connect()?;
-            check_org_spend_limit(&conn, &org_id)
+            if !check_org_spend_limit(&conn, &org_id)? {
+                return Ok::<_, rusqlite::Error>(false);
+            }
+            let hourly = crate::pricing::estimate_hourly_cost_cents(Some(memory_mib as i64), Some(&os));
+            Ok(crate::credits::has_minimum_balance(&db, &org_id, hourly).unwrap_or(false))
         }).await {
             Ok(Ok(v)) => v,
             Ok(Err(e)) => {
-                warn!(error = %e, "failed to check org spend limit");
+                warn!(error = %e, "failed to check org spend/credit limit");
                 true
             }
             Err(e) => {
-                warn!(error = %e, "task panicked checking org spend limit");
+                warn!(error = %e, "task panicked checking org spend/credit limit");
                 true
             }
         };
         if !allowed {
             return error_response(
                 StatusCode::TOO_MANY_REQUESTS,
-                "Organization monthly spend limit reached. Add credits or request a limit increase.",
+                "Insufficient credits or monthly spend limit reached. Add credits or request a limit increase.",
             );
         }
     }
@@ -435,6 +453,8 @@ async fn create_cloud_desktop(
                 &resp.provider,
                 resp.host.as_deref(),
                 &resp.status,
+                Some(&spec.os),
+                Some(spec.memory_mib as i64),
                 req.session_id.as_deref(),
                 &persistence,
             ) {
@@ -468,20 +488,24 @@ fn sync_cloud_desktop_from_sandbox(
     provider: &str,
     host: Option<&str>,
     status: &str,
+    os: Option<&str>,
+    memory_mb: Option<i64>,
     session_id: Option<&str>,
     persistence: &Persistence,
 ) -> Result<(), rusqlite::Error> {
     let conn = db.connect()?;
     let name = format!("Bot desktop {}", sandbox_id);
     conn.execute(
-        "INSERT INTO computers (id, kind, provider, status, owner_type, owner_id, bot_id, session_id, name, host, native_id, billing_source) \
-         VALUES (?1, 'cloud_desktop', ?2, ?3, 'bot', ?4, ?4, ?5, ?6, ?7, ?8, 'credits') \
+        "INSERT INTO computers (id, kind, provider, status, owner_type, owner_id, bot_id, session_id, name, os, memory_mb, host, native_id, billing_source) \
+         VALUES (?1, 'cloud_desktop', ?2, ?3, 'bot', ?4, ?4, ?5, ?6, ?7, ?8, ?9, ?10, 'credits') \
          ON CONFLICT(id) DO UPDATE SET \
              status = excluded.status, \
              host = excluded.host, \
+             os = COALESCE(excluded.os, os), \
+             memory_mb = COALESCE(excluded.memory_mb, memory_mb), \
              session_id = COALESCE(excluded.session_id, session_id), \
              updated_at = CURRENT_TIMESTAMP",
-        rusqlite::params![sandbox_id, provider, status, session_id, name, host, sandbox_id],
+        rusqlite::params![sandbox_id, provider, status, session_id, name, os, memory_mb, host, sandbox_id],
     )?;
     conn.execute(
         "INSERT INTO computer_cloud_desktop (computer_id, sandbox_id, control_state, ws_url, protocol) \
@@ -1001,6 +1025,80 @@ fn mark_computer_deleted(db: &crate::DbHandle, id: &str) -> Result<(), rusqlite:
         rusqlite::params![id],
     )?;
     Ok(())
+}
+
+// ---------------------------------------------------------------------------
+// Admin credits top-up.
+// ---------------------------------------------------------------------------
+
+#[derive(Debug, Deserialize)]
+struct AdminCreditRequest {
+    org_id: String,
+    amount_cents: i64,
+    #[serde(default)]
+    description: Option<String>,
+}
+
+fn verify_internal_token(state: &AppState, headers: &axum::http::HeaderMap) -> bool {
+    let expected = match state.config.internal_service_token() {
+        Some(t) => t,
+        None => return false,
+    };
+    let provided = headers
+        .get("x-allternit-internal-token")
+        .and_then(|v| v.to_str().ok())
+        .unwrap_or("");
+    crate::auth::constant_time_eq(&expected, provided)
+}
+
+async fn admin_credit_org(
+    State(state): State<Arc<AppState>>,
+    headers: axum::http::HeaderMap,
+    Json(req): Json<AdminCreditRequest>,
+) -> impl IntoResponse {
+    if !verify_internal_token(&state, &headers) {
+        return error_response(StatusCode::UNAUTHORIZED, "invalid internal token");
+    }
+    if req.amount_cents <= 0 {
+        return error_response(StatusCode::BAD_REQUEST, "amount_cents must be positive");
+    }
+
+    let db = state.db.clone();
+    let amount = req.amount_cents;
+    let org_id = req.org_id;
+    let description = req.description.unwrap_or_else(|| "admin top-up".to_string());
+
+    match tokio::task::spawn_blocking(move || {
+        crate::credits::credit(
+            &db,
+            &org_id,
+            amount,
+            crate::credits::CreditTransactionKind::ManualGrant,
+            Some(&description),
+            None,
+        )
+    })
+    .await
+    {
+        Ok(Ok(balance)) => (
+            StatusCode::OK,
+            Json(json!({
+                "org_id": balance.org_id,
+                "balance_cents": balance.balance_cents,
+                "lifetime_purchased_cents": balance.lifetime_purchased_cents,
+                "lifetime_consumed_cents": balance.lifetime_consumed_cents,
+            })),
+        )
+            .into_response(),
+        Ok(Err(e)) => {
+            warn!(error = %e, "failed to credit org");
+            error_response(StatusCode::BAD_REQUEST, format!("credit failed: {}", e))
+        }
+        Err(e) => {
+            warn!(error = %e, "task panicked crediting org");
+            error_response(StatusCode::INTERNAL_SERVER_ERROR, "internal error")
+        }
+    }
 }
 
 // ---------------------------------------------------------------------------

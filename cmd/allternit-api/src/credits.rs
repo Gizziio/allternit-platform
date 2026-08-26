@@ -4,7 +4,7 @@
 //! top-ups, and manual grants add to it. The ledger is intentionally simple:
 //! one balance row per org plus an immutable transaction log.
 
-use rusqlite::{OptionalExtension, ToSql};
+use rusqlite::OptionalExtension;
 use std::sync::Arc;
 use tracing::{info, warn};
 
@@ -94,20 +94,20 @@ pub fn credit(
          ON CONFLICT(org_id) DO UPDATE SET \
              balance_cents = balance_cents + excluded.balance_cents, \
              lifetime_purchased_cents = lifetime_purchased_cents + excluded.lifetime_purchased_cents",
-        [org_id, amount_cents],
+        rusqlite::params![org_id, amount_cents],
     )?;
 
     let tx_id = uuid::Uuid::new_v4().to_string();
     tx.execute(
         "INSERT INTO credit_transactions (id, org_id, amount_cents, kind, description, reference_id) \
          VALUES (?1, ?2, ?3, ?4, ?5, ?6)",
-        [
-            tx_id.as_str() as &dyn ToSql,
+        rusqlite::params![
+            tx_id.as_str(),
             org_id,
-            &amount_cents,
-            &kind.as_str(),
-            &description.unwrap_or(""),
-            &reference_id.unwrap_or(""),
+            amount_cents,
+            kind.as_str(),
+            description.unwrap_or(""),
+            reference_id.unwrap_or(""),
         ],
     )?;
 
@@ -136,7 +136,7 @@ pub fn consume(
     // Ensure the org row exists with a zero balance so the UPDATE below is safe.
     tx.execute(
         "INSERT OR IGNORE INTO organization_credits (org_id, balance_cents) VALUES (?1, 0)",
-        [org_id],
+        rusqlite::params![org_id],
     )?;
 
     let updated = tx.execute(
@@ -144,7 +144,7 @@ pub fn consume(
          SET balance_cents = balance_cents - ?1, \
              lifetime_consumed_cents = lifetime_consumed_cents + ?1 \
          WHERE org_id = ?2 AND balance_cents >= ?1",
-        [amount_cents, org_id],
+        rusqlite::params![amount_cents, org_id],
     )?;
 
     if updated == 0 {
@@ -155,12 +155,12 @@ pub fn consume(
     tx.execute(
         "INSERT INTO credit_transactions (id, org_id, amount_cents, kind, description, reference_id) \
          VALUES (?1, ?2, ?3, 'usage', ?4, ?5)",
-        [
-            tx_id.as_str() as &dyn ToSql,
+        rusqlite::params![
+            tx_id.as_str(),
             org_id,
-            &(-amount_cents),
+            -amount_cents,
             description,
-            &reference_id.unwrap_or(""),
+            reference_id.unwrap_or(""),
         ],
     )?;
 
@@ -207,30 +207,14 @@ mod tests {
     use crate::db::DbHandle;
 
     fn in_memory_db() -> DbHandle {
-        DbHandle::new_memory()
+        DbHandle::new_memory().expect("in-memory db")
     }
 
     fn create_schema(db: &DbHandle) {
         let conn = db.connect().unwrap();
-        conn.execute_batch(
-            "CREATE TABLE organizations (id TEXT PRIMARY KEY); \
-             CREATE TABLE organization_credits ( \
-                 org_id TEXT PRIMARY KEY REFERENCES organizations(id), \
-                 balance_cents INTEGER NOT NULL DEFAULT 0, \
-                 lifetime_purchased_cents INTEGER NOT NULL DEFAULT 0, \
-                 lifetime_consumed_cents INTEGER NOT NULL DEFAULT 0, \
-                 updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP \
-             ); \
-             CREATE TABLE credit_transactions ( \
-                 id TEXT PRIMARY KEY, \
-                 org_id TEXT NOT NULL REFERENCES organizations(id), \
-                 amount_cents INTEGER NOT NULL, \
-                 kind TEXT NOT NULL, \
-                 description TEXT, \
-                 reference_id TEXT, \
-                 created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP \
-             ); \
-             INSERT INTO organizations (id) VALUES ('org-1');",
+        conn.execute(
+            "INSERT OR IGNORE INTO organizations (id, name) VALUES ('org-1', 'Test Org')",
+            [],
         )
         .unwrap();
     }

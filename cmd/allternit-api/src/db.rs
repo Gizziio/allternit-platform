@@ -27,10 +27,11 @@ impl DbHandle {
         Ok(Self { path })
     }
 
-    /// Open a shared in-memory database. Useful for unit tests that need the
-    /// full migration stack but do not require persistence.
+    /// Open an isolated temporary-file database. Useful for unit tests that need
+    /// the full migration stack and reliable multi-connection semantics.
     pub fn new_memory() -> SqlResult<Self> {
-        let path = PathBuf::from("file::memory:?cache=shared");
+        let name = uuid::Uuid::new_v4().to_string();
+        let path = std::env::temp_dir().join(format!("allternit-test-{name}.db"));
         Self::new(path)
     }
 

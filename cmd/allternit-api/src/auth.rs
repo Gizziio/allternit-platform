@@ -647,7 +647,7 @@ fn insert_user_headers(headers: &mut HeaderMap, user: &AuthUser) {
 /// Constant-time comparison — avoids leaking the secret's length/prefix via
 /// early-exit timing (same concern `internal_auth::require_internal_token`
 /// and `token_crypto`'s AEAD tag check handle for their own secrets).
-fn constant_time_eq(a: &str, b: &str) -> bool {
+pub(crate) fn constant_time_eq(a: &str, b: &str) -> bool {
     let (a, b) = (a.as_bytes(), b.as_bytes());
     if a.len() != b.len() {
         return false;

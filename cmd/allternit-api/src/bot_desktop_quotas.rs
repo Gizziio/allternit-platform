@@ -274,10 +274,19 @@ pub async fn record_end(state: &Arc<AppState>, bot_id: &str) {
                 rusqlite::params![ended_at.to_rfc3339(), minutes, id],
             )?;
 
+            // Look up the computer's memory so pricing can scale by size/OS.
+            let memory_mb: Option<i64> = conn
+                .query_row(
+                    "SELECT memory_mb FROM computers WHERE native_id = ?1 LIMIT 1",
+                    [&sandbox_id],
+                    |r| r.get(0),
+                )
+                .optional()?;
+
             // Emit a unified usage event for the credit ledger.
             if minutes > 0 {
                 if let Some(ref org) = org_id {
-                    let cost_cents = crate::pricing::compute_cost_cents("computer_minute", "minutes", minutes as f64);
+                    let cost_cents = crate::pricing::compute_computer_minute_cost_cents(memory_mb, Some(&os), minutes as f64);
                     let event_id = uuid::Uuid::new_v4().to_string();
                     let idempotency_key = format!("desktop:{}:{}", sandbox_id, started);
                     let _ = conn.execute(
@@ -296,6 +305,16 @@ pub async fn record_end(state: &Arc<AppState>, bot_id: &str) {
                             idempotency_key,
                         ],
                     );
+
+                    // Deduct the actual cost from the organization's pre-paid credits.
+                    // A failure here is logged but does not block the deprovision flow;
+                    // the usage_event remains the durable record.
+                    if cost_cents > 0 {
+                        let description = format!("desktop usage {} minutes ({} {} MB)", minutes, os, memory_mb.unwrap_or(4096));
+                        if let Err(e) = crate::credits::consume(&db, org, cost_cents, &description, Some(&idempotency_key)) {
+                            warn!(org_id = %org, error = %e, cost_cents, "failed to deduct credits for desktop usage");
+                        }
+                    }
                 }
             }
 
