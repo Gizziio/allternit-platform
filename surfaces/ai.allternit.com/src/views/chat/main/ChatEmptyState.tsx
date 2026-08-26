@@ -28,8 +28,6 @@ interface ChatEmptyStateProps {
   mentionAgentId: string | null;
   setPluginMention: (target: PluginMentionTarget | null) => void;
   activeIsLoading: boolean;
-  selectedModel: string;
-  selectModel: (model: any) => void;
   showTopActions: boolean;
   pulseMascot: (emotion: GizziEmotion) => void;
   setLaunchMascotAttention: (attention: GizziAttention | null) => void;
@@ -58,8 +56,6 @@ export const ChatEmptyState: React.FC<ChatEmptyStateProps> = ({
   mentionAgentId,
   setPluginMention,
   activeIsLoading,
-  selectedModel,
-  selectModel,
   showTopActions,
   pulseMascot,
   setLaunchMascotAttention,
@@ -122,10 +118,6 @@ export const ChatEmptyState: React.FC<ChatEmptyStateProps> = ({
           isLoading={activeIsLoading}
           placeholder="What's brewing today?"
           variant="large"
-          selectedModel={selectedModel}
-          selectedModelDisplayName={modelSelection?.modelName || modelSelection?.modelId}
-          onOpenModelPicker={startSelection}
-          onSelectModel={selectModel}
           showTopActions={showTopActions}
           onInteractionSignal={useMonolithLogo ? undefined : pulseMascot}
           onAttentionChange={useMonolithLogo ? undefined : setLaunchMascotAttention}

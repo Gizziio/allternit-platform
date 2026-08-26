@@ -38,12 +38,12 @@ The previous UI had **7 hard-coded bots** that were not backed by real agents. T
 
 We looked at the current market and aligned with the most common pattern: a **bot** is a named, packaged AI teammate users can summon, while **agent** is the underlying autonomous capability.
 
-- **Grok Bot** — a packaged AI teammate that runs on its own cloud computer, retains context, handles focused jobs, delegates to other bots, and learns routines. This is the canonical "named bot" pattern.
+- **Allternit Bot** — a packaged AI teammate that runs on its own cloud computer, retains context, handles focused jobs, delegates to other bots, and learns routines. This is the canonical "named bot" pattern.
 - **Cursor** — uses **Agent** for the autonomous coding mode (Cursor Agent / Composer) and **Bot** for background/async workers (e.g. Bug Bot). Cursor shows the split: Agent = autonomous mode; Bot = packaged worker identity.
 - **ChatGPT / OpenAI** — **Custom GPT** is a reactive specialized assistant packaged with identity and tools; **Agent** (in their API/platform sense) is a multi-step autonomous workflow that gathers context and delivers finished work.
 - **Claude / Anthropic / IBM** — **Assistant** = reactive; **Agent** = proactive, autonomous, multi-step, decision-making.
 
-Allternit’s model is closest to **Grok Bot** plus **Cursor Composer Agent**: the Agent is the autonomous engine, and the Bot is the packaged identity users interact with.
+Allternit’s model is closest to **Allternit Bot** plus **Cursor Composer Agent**: the Agent is the autonomous engine, and the Bot is the packaged identity users interact with.
 
 ## TypeScript schema
 

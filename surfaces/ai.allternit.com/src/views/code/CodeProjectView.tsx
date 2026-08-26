@@ -22,6 +22,8 @@ import { useMode } from '@/providers/mode-provider';
 import { useCodeModeStore, type CodeWorkspaceFile } from './CodeModeStore';
 import { useCodeSessionStore, createCodeSession } from './CodeSessionStore';
 import { ChatComposer } from '../chat/ChatComposer';
+import { ModelSelectionProvider } from '@/providers/model-selection-provider';
+import { useDefaultModelSelection } from '@/hooks/use-default-model-selection';
 import { ResourceUsageDashboard } from '@/components/usage/ResourceUsageDashboard';
 import {
   Terminal,
@@ -56,6 +58,7 @@ export function CodeProjectView({ workspaceId, onBack: externalOnBack }: CodePro
 
   const { dispatch } = useNav();
   const { setMode } = useMode();
+  const defaultSelection = useDefaultModelSelection();
 
   const [activeTab, setActiveTab] = useState('threads');
   const [composerInput, setComposerInput] = useState('');
@@ -242,13 +245,15 @@ export function CodeProjectView({ workspaceId, onBack: externalOnBack }: CodePro
   );
 
   const inputBar = (
-    <ChatComposer
-      onSend={handleSend}
-      placeholder={`Message ${workspace.display_name}`}
-      inputValue={composerInput}
-      showTopActions={false}
-      variant="default"
-    />
+    <ModelSelectionProvider defaultSelection={defaultSelection}>
+      <ChatComposer
+        onSend={handleSend}
+        placeholder={`Message ${workspace.display_name}`}
+        inputValue={composerInput}
+        showTopActions={false}
+        variant="default"
+      />
+    </ModelSelectionProvider>
   );
 
   const sidebarSectionsData = {

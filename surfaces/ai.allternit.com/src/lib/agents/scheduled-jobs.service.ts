@@ -378,10 +378,13 @@ export async function listScheduledJobs(): Promise<ScheduledJobConfig[]> {
       lastError: job.lastError,
     }));
   } catch (gatewayError) {
-    console.warn("[ScheduledJobs] Gateway list failed, falling back to REST:", gatewayError);
     try {
       return await listScheduledJobsViaRest();
     } catch (restError) {
+      console.warn(
+        "[ScheduledJobs] Gateway list failed and REST fallback failed:",
+        restError instanceof Error ? restError.message : String(restError)
+      );
       throw new Error(
         `[ScheduledJobs] Failed to list scheduled jobs via gateway or REST: ${
           restError instanceof Error ? restError.message : String(restError)

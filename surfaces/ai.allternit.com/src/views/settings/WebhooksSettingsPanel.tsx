@@ -15,6 +15,7 @@ import {
   Robot,
 } from '@phosphor-icons/react';
 import { useAgentStore } from '@/lib/agents/agent.store';
+import { usePlatformOrganization } from '@/lib/platform-auth-client';
 import { PanelHeader } from '@/components/settings/PanelHeader';
 import { SettingsTable, SettingsTableCell } from '@/components/settings/SettingsTable';
 import { SkeletonRow } from '@/components/settings/SkeletonRow';
@@ -50,8 +51,15 @@ export function WebhooksSettingsPanel(): React.ReactNode {
   const [deliveriesLoading, setDeliveriesLoading] = useState(false);
 
   const [copiedId, setCopiedId] = useState<string | null>(null);
+  const { organization } = usePlatformOrganization();
 
   const load = useCallback(async () => {
+    if (!organization?.id) {
+      setTriggers([]);
+      setError(null);
+      setLoading(false);
+      return;
+    }
     setLoading(true);
     setError(null);
     try {
@@ -62,7 +70,7 @@ export function WebhooksSettingsPanel(): React.ReactNode {
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [organization]);
 
   useEffect(() => {
     void load();

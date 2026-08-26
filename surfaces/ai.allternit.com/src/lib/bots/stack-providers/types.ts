@@ -1,7 +1,7 @@
 /**
  * Agent Stack Provider Types
  *
- * Defines the contract for bringing external agents (Hermes, OpenClaw, Grok, …)
+ * Defines the contract for bringing external agents (Hermes, OpenClaw, Kimi, …)
  * into Allternit as first-class bots. Each provider is responsible for discovery,
  * execution, and optional memory/usage sync.
  *
@@ -11,7 +11,7 @@
 export type StackProviderCapability = 'chat' | 'tools' | 'memory' | 'cron';
 
 export interface ExternalAgentReference {
-  /** Provider slug, e.g. 'hermes', 'openclaw', 'grok' */
+  /** Provider slug, e.g. 'hermes', 'openclaw', 'kimi' */
   providerId: string;
   /** Stable identifier within the provider's namespace */
   externalId: string;

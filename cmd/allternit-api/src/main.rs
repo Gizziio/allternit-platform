@@ -33,6 +33,7 @@ use allternit_api::allternit_bus_routes::{allternit_bus_router, allternit_bus_we
 use allternit_api::quickstart_routes::router as quickstart_router;
 use allternit_api::agent_preferences_routes::agent_preferences_router;
 use allternit_api::agent_routes::agent_router;
+use allternit_api::inference_router_routes::inference_router_router;
 use allternit_api::agent_runtime_routes::agent_runtime_router;
 use allternit_api::agent_session_routes::agent_session_router;
 use allternit_api::beta_deployment_routes::beta_deployment_router;
@@ -51,6 +52,7 @@ use allternit_api::automation_routes::automation_router;
 use allternit_api::backend_install_routes::backend_install_router;
 use allternit_api::board_routes::board_router;
 use allternit_api::board_stream_routes::board_stream_router;
+use allternit_api::bot_desktop_capacity;
 use allternit_api::bot_desktop_routes::bot_desktop_router;
 use allternit_api::bot_desktop_stream::bot_desktop_stream_router;
 use allternit_api::brain_routes::{brain_git_router, brain_router};
@@ -246,6 +248,13 @@ async fn main() {
         });
     }
 
+    let capacity_threshold = std::env::var("DESKTOP_AUTOSCALE_CPU_THRESHOLD")
+        .ok()
+        .and_then(|s| s.parse::<f64>().ok())
+        .unwrap_or(0.8)
+        .clamp(0.0, 1.0);
+    let _capacity_monitor = bot_desktop_capacity::init_capacity_monitor(capacity_threshold);
+
     // Create application state
     let state = Arc::new(AppState {
         config: app_config.clone(),
@@ -273,6 +282,17 @@ async fn main() {
 
     // Phase 5: start the in-process batch execution/polling worker.
     allternit_api::llm_gateway::batches::spawn_batch_worker(Arc::clone(&state));
+
+    // Desktop capacity monitor and autoscale signaler.
+    {
+        let period = std::time::Duration::from_secs(
+            std::env::var("DESKTOP_CAPACITY_MONITOR_INTERVAL_SECS")
+                .ok()
+                .and_then(|s| s.parse().ok())
+                .unwrap_or(30),
+        );
+        bot_desktop_capacity::spawn_capacity_monitor(Arc::clone(&state), period);
+    }
 
     // OfficeCLI idle reaper: evicts stale docs, closes idle resident sessions,
     // kills idle watch processes and MCP sessions.
@@ -324,6 +344,7 @@ async fn main() {
         .merge(agent_router())
         .merge(allternit_api::agent_email_routes::agent_email_router())
         .merge(agent_preferences_router())
+        .merge(inference_router_router())
         .merge(agent_workspace_router())
         .merge(agent_session_router())
         .merge(beta_session_router())
@@ -352,7 +373,13 @@ async fn main() {
         .merge(runtime_backend_router())
         .merge(remote_control_router())
         .merge(agents_v1_router())
-        .merge(bot_desktop_router())
+        .merge(
+            bot_desktop_router().layer(axum::middleware::from_fn_with_state(
+                state.clone(),
+                allternit_api::bot_desktop_audit::desktop_audit_middleware,
+            )),
+        )
+        .merge(allternit_api::bot_desktop_audit::bot_desktop_audit_router())
         .merge(allternit_api::connector_routes::connector_router())
         .merge(allternit_api::cloud_credentials_routes::cloud_credentials_router())
         .merge(allternit_api::usage_routes::usage_router())
@@ -369,6 +396,10 @@ async fn main() {
         .merge(allternit_api::prompt_leak_routes::router())
         .merge(allternit_api::server_tool_routes::router())
         .merge(allternit_api::sandbox_template_routes::router())
+        .merge(allternit_api::bot_desktop_templates::router())
+        .merge(allternit_api::bot_desktop_capacity::router())
+        .merge(allternit_api::bot_desktop_billing::router())
+        .merge(allternit_api::bot_desktop_admin::router())
         .merge(allternit_api::allternit_vault::router())
         .merge(allternit_api::admin_workspace_routes::router())
         .merge(allternit_api::admin_service_account_routes::router())
@@ -422,6 +453,10 @@ async fn main() {
         .nest("/terminal", terminal_router())
         .nest(
             "/mcp",
+            mcp_router().merge(allternit_api::mcp_server_routes::mcp_server_router()),
+        )
+        .nest(
+            "/api/v1/mcp",
             mcp_router().merge(allternit_api::mcp_server_routes::mcp_server_router()),
         )
         .nest("/metrics", metrics_router())
@@ -804,10 +839,119 @@ async fn initialize_cowork_scheduler(
     }
 }
 
+/// Build a mesh VPN config from environment variables, if any are set.
+fn build_mesh_config_from_env() -> Option<allternit_computer_cloud::MeshConfig> {
+    let provider = std::env::var("ALLTERNIT_MESH_PROVIDER").ok()?;
+    let auth_key = std::env::var("ALLTERNIT_MESH_AUTH_KEY").ok()?;
+    let tags: Vec<String> = std::env::var("ALLTERNIT_MESH_TAGS")
+        .unwrap_or_default()
+        .split(',')
+        .map(|s| s.trim().to_string())
+        .filter(|s| !s.is_empty())
+        .collect();
+    match provider.as_str() {
+        "tailscale" => Some(allternit_computer_cloud::MeshConfig::Tailscale { auth_key, tags }),
+        "headscale" => {
+            let server_url = std::env::var("ALLTERNIT_MESH_SERVER_URL").ok()?;
+            Some(allternit_computer_cloud::MeshConfig::Headscale {
+                server_url,
+                auth_key,
+                tags,
+            })
+        }
+        other => {
+            warn!(provider = %other, "Unknown ALLTERNIT_MESH_PROVIDER value");
+            None
+        }
+    }
+}
+
 /// Initialize the appropriate VM driver for the platform
 async fn initialize_vm_driver(
     app_config: &allternit_api::config::AppConfig,
 ) -> Option<Arc<dyn allternit_driver_interface::ExecutionDriver>> {
+    use allternit_driver_interface::ExecutionDriver;
+
+    // Build every configured substrate driver. The heterogeneous router hides
+    // Incus (Linux/Windows) and Tart (macOS) behind one ExecutionDriver handle.
+    let mut incus_driver = None;
+    let incus_urls: Vec<String> = std::env::var("INCUS_URLS")
+        .ok()
+        .filter(|s| !s.is_empty())
+        .map(|s| s.split(',').map(|u| u.trim().to_string()).collect())
+        .or_else(|| std::env::var("INCUS_URL").ok().map(|u| vec![u]))
+        .unwrap_or_default();
+    if !incus_urls.is_empty() {
+        let fallback_vnc_host =
+            std::env::var("INCUS_VNC_HOST").unwrap_or_else(|_| "localhost".to_string());
+        let mesh = build_mesh_config_from_env();
+        let driver_result = if incus_urls.len() == 1 {
+            allternit_computer_cloud::IncusDriver::from_url(
+                incus_urls.into_iter().next().unwrap(),
+                fallback_vnc_host,
+            )
+        } else {
+            allternit_computer_cloud::IncusDriver::from_urls(&incus_urls, fallback_vnc_host)
+        };
+        match driver_result {
+            Ok(driver) => {
+                let driver = if let Some(mesh) = mesh {
+                    driver.with_mesh(mesh)
+                } else {
+                    driver
+                };
+                match driver.health_check().await {
+                    Ok(health) => {
+                        if health.healthy {
+                            info!("Incus driver initialized from INCUS_URL");
+                        } else {
+                            warn!("Incus health check returned unhealthy: {:?}", health);
+                        }
+                        incus_driver = Some(Arc::new(driver));
+                    }
+                    Err(e) => warn!("Incus health check failed: {}", e),
+                }
+            }
+            Err(e) => warn!("Failed to initialize Incus driver: {}", e),
+        }
+    }
+
+    let mut tart_driver = None;
+    if std::env::var("TART_HOST_URL").is_ok()
+        || std::env::var("TART_BIN").map_or(false, |s| !s.is_empty())
+    {
+        let mesh = build_mesh_config_from_env();
+        match allternit_computer_cloud::TartDriver::from_env() {
+            Ok(driver) => {
+                let driver = if let Some(mesh) = mesh {
+                    driver.with_mesh(mesh)
+                } else {
+                    driver
+                };
+                match driver.health_check().await {
+                    Ok(health) => {
+                        if health.healthy {
+                            info!("Tart driver initialized");
+                        } else {
+                            warn!("Tart health check returned unhealthy: {:?}", health);
+                        }
+                        tart_driver = Some(Arc::new(driver));
+                    }
+                    Err(e) => warn!("Tart health check failed: {}", e),
+                }
+            }
+            Err(e) => warn!("Failed to initialize Tart driver: {}", e),
+        }
+    }
+
+    if incus_driver.is_some() || tart_driver.is_some() {
+        let router = allternit_computer_cloud::SubstrateRouter::new(incus_driver, tart_driver);
+        if router.has_any_driver() {
+            info!("Substrate router initialized");
+            return Some(Arc::new(router));
+        }
+    }
+
     // If OpenSandbox is explicitly configured, prefer it over the local
     // platform driver so bots can use a persistent cloud sandbox.
     if let Ok(open_sandbox_url) = std::env::var("OPEN_SANDBOX_URL") {

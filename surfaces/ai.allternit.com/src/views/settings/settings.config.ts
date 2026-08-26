@@ -39,6 +39,9 @@ import {
   ChatCircleText,
   Database,
   WebhooksLogo,
+  ArrowsLeftRight,
+  Desktop,
+  Plugs,
 } from '@phosphor-icons/react';
 
 export type SettingsGroup = 'account' | 'platform' | 'products' | 'infrastructure' | 'customize' | 'about';
@@ -59,6 +62,8 @@ export const SETTINGS_NAV_ITEMS: SettingsNavItem[] = [
   { id: 'general', label: 'General', icon: React.createElement(GearSix, { size: 18 }), group: 'platform' },
   { id: 'appearance', label: 'Appearance', icon: React.createElement(Palette, { size: 18 }), group: 'platform' },
   { id: 'models', label: 'Models', icon: React.createElement(Cpu, { size: 18 }), group: 'platform' },
+  { id: 'router', label: 'Router', icon: React.createElement(ArrowsLeftRight, { size: 18 }), group: 'platform' },
+  { id: 'mcp', label: 'MCP', icon: React.createElement(Plugs, { size: 18 }), group: 'platform' },
   { id: 'api-keys', label: 'API Keys', icon: React.createElement(Key, { size: 18 }), group: 'platform' },
   { id: 'shortcuts', label: 'Shortcuts', icon: React.createElement(Keyboard, { size: 18 }), group: 'platform' },
   { id: 'permissions', label: 'Permissions', icon: React.createElement(ShieldCheck, { size: 18 }), group: 'platform' },
@@ -66,6 +71,7 @@ export const SETTINGS_NAV_ITEMS: SettingsNavItem[] = [
   { id: 'devices', label: 'Devices', icon: React.createElement(Devices, { size: 18 }), group: 'platform' },
   { id: 'cloud-instances', label: 'Cloud instances', icon: React.createElement(CloudArrowUp, { size: 18 }), group: 'platform' },
   { id: 'diagnostics', label: 'Diagnostics', icon: React.createElement(Activity, { size: 18 }), group: 'platform' },
+  { id: 'bot-computer', label: 'Bot computer', icon: React.createElement(Desktop, { size: 18 }), group: 'infrastructure' },
   { id: 'gizziio-code', label: 'Gizziio Code', icon: React.createElement(Code, { size: 18 }), group: 'products' },
   { id: 'cowork', label: 'Cowork', icon: React.createElement(Briefcase, { size: 18 }), group: 'products' },
   { id: 'extensions', label: 'Extensions', icon: React.createElement(PuzzlePiece, { size: 18 }), group: 'products' },

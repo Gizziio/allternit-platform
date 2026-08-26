@@ -20,7 +20,7 @@ const logger = createModuleLogger('Agent');
 export type { AvatarConfig } from './character.types';
 
 // Agent Types
-export type AgentType = 'orchestrator' | 'sub-agent' | 'worker' | 'specialist' | 'reviewer';
+export type AgentType = 'orchestrator' | 'sub-agent' | 'worker' | 'specialist' | 'reviewer' | 'assistant' | 'bot';
 
 export type AppMode = 'chat' | 'cowork' | 'code' | 'design' | 'browser';
 
@@ -191,7 +191,7 @@ const voiceConfigSchema = z.object({
 export type AgentStatus = 'idle' | 'running' | 'paused' | 'error';
 
 // Agent Configuration
-type ModelProvider = 'openai' | 'anthropic' | 'google' | 'local' | 'custom';
+export type ModelProvider = 'openai' | 'anthropic' | 'google' | 'kimi' | 'local' | 'custom';
 
 /**
  * Bot packaging overlay on top of the Agent type.
@@ -249,7 +249,7 @@ export interface Agent {
   type: AgentType;
   parentAgentId?: string; // For sub-agents
   model: string;
-  provider: 'openai' | 'anthropic' | 'google' | 'local' | 'custom';
+  provider: ModelProvider;
   capabilities: string[];
   systemPrompt?: string;
   tools: string[];
@@ -324,7 +324,7 @@ export interface Agent {
   /** If this agent represents a swarm, the swarm ID */
   swarmId?: string;
 
-  // ── Packaged Bot fields (OpenMausBot / Grok Bot integration) ─────────────
+  // ── Packaged Bot fields (OpenMausBot / Allternit Bot integration) ─────────────
   /** Marks this agent as a packaged bot discoverable in the Bots hub and CommRails */
   isBot?: boolean;
   /** Bot-specific UX metadata (only present when isBot is true) */
@@ -418,7 +418,7 @@ export interface BotProfile {
   /** Deterministic bot avatar stored in bot metadata. */
   avatar?: BotAvatar;
 
-  /** External platform that owns this bot (e.g. 'hermes', 'openclaw', 'grok') */
+  /** External platform that owns this bot (e.g. 'hermes', 'openclaw', 'kimi') */
   providerId?: string;
   /** Stable identifier within the external platform's namespace */
   externalId?: string;
@@ -607,10 +607,10 @@ export const agentSchema = z.object({
   id: z.string().min(1),
   name: z.string().min(1).max(100),
   description: z.string(),
-  type: z.enum(['orchestrator', 'sub-agent', 'worker', 'specialist', 'reviewer']),
+  type: z.enum(['orchestrator', 'sub-agent', 'worker', 'specialist', 'reviewer', 'assistant', 'bot']),
   parentAgentId: z.string().optional(),
   model: z.string().min(1),
-  provider: z.enum(['openai', 'anthropic', 'google', 'local', 'custom']),
+  provider: z.enum(['openai', 'anthropic', 'google', 'kimi', 'local', 'custom']),
   capabilities: z.array(z.string()),
   systemPrompt: z.string().optional(),
   tools: z.array(z.string()),
@@ -627,7 +627,7 @@ export const agentSchema = z.object({
   source: z.enum(['personal', 'vendor', 'organization']).optional(),
   avatar: z.any().optional(),
   characterLayer: z.any().optional(),
-  trustTier: z.enum(['safe', 'low', 'standard', 'elevated', 'admin', 'critical']).optional(),
+  trustTier: z.enum(['safe', 'low', 'standard', 'elevated', 'admin', 'critical', 'medium']).optional(),
   harness: harnessConfigSchema.optional(),
   allowedSurfaces: z.array(z.enum(['chat', 'cowork', 'code', 'design', 'browser'])).optional(),
   allowedSkills: z.array(z.string()).optional(),
@@ -739,7 +739,7 @@ export interface CreateAgentInput {
   type?: AgentType;
   parentAgentId?: string;
   model: string;
-  provider: 'openai' | 'anthropic' | 'google' | 'local' | 'custom';
+  provider: ModelProvider;
   capabilities?: string[];
   systemPrompt?: string;
   tools?: string[];
@@ -789,10 +789,10 @@ export interface CreateAgentInput {
 const createAgentInputSchema = z.object({
   name: z.string().min(1).max(100),
   description: z.string(),
-  type: z.enum(['orchestrator', 'sub-agent', 'worker', 'specialist', 'reviewer']).optional(),
+  type: z.enum(['orchestrator', 'sub-agent', 'worker', 'specialist', 'reviewer', 'assistant', 'bot']).optional(),
   parentAgentId: z.string().optional(),
   model: z.string().min(1),
-  provider: z.enum(['openai', 'anthropic', 'google', 'local', 'custom']),
+  provider: z.enum(['openai', 'anthropic', 'google', 'kimi', 'local', 'custom']),
   capabilities: z.array(z.string()).optional(),
   systemPrompt: z.string().optional(),
   tools: z.array(z.string()).optional(),
@@ -805,7 +805,7 @@ const createAgentInputSchema = z.object({
   source: z.enum(['personal', 'vendor', 'organization']).optional(),
   avatar: z.any().optional(),
   characterLayer: z.any().optional(),
-  trustTier: z.enum(['safe', 'low', 'standard', 'elevated', 'admin', 'critical']).optional(),
+  trustTier: z.enum(['safe', 'low', 'standard', 'elevated', 'admin', 'critical', 'medium']).optional(),
   harness: harnessConfigSchema.optional(),
   allowedSurfaces: z.array(z.enum(['chat', 'cowork', 'code', 'design', 'browser'])).optional(),
   allowedSkills: z.array(z.string()).optional(),

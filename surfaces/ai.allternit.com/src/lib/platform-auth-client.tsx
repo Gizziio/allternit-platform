@@ -513,7 +513,14 @@ function ClerkPlatformAuthBridge({ children }: { children: ReactNode }) {
 function usePlatformAuthContext() {
   const context = useContext(PlatformAuthContext)
   if (!context) {
-    throw new Error("PlatformAuthProvider is missing")
+    // Defensive fallback: in self-hosted / desktop dev shells, HMR or a stale
+    // module can render a consumer before the provider has mounted its context.
+    // Returning the disabled-auth shape keeps the shell from crashing so the
+    // auth gate can still allow self-hosted sessions through.
+    if (import.meta.env.DEV) {
+      console.warn("[PlatformAuth] Provider context missing; using disabled-auth fallback.")
+    }
+    return buildDisabledAuthValue()
   }
   return context
 }

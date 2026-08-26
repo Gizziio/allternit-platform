@@ -42,7 +42,7 @@ This tracker is the single source of truth for status, scope, and next actions f
 | 2.4 | treg ToolProvider trait + gateway registration | ✅ Done | Agent swarm | `ao/p1-treg-2` | `TregToolProvider` implements `mcp::gateway_integration::ToolProvider`; `/api/agent-tools/*` routes. 12 tests passing. |
 | 2.5 | Model Studio cloud training | ✅ Done | Agent swarm | `ao/p1-model-studio` | Cloud training tab integrated into existing Unsloth Model Lab; backend stubs + proxy routes. `cargo check` clean; typecheck clean for touched files. |
 | 2.6 | OpenMausBot packaged bots | ✅ Done | Agent swarm | `ao/p1-openmausbot` | Bots tab in Agent Hub with 6 packaged bot templates + session launch. Typecheck clean for touched files. |
-| 2.7 | Grok Bot (x.ai/bot) | ✅ Done | Agent swarm | `ao/p3-grok-bot-audit` | Audit report: persistent bots, shared cloud computer, skills/routines, approval model, integration plan. |
+| 2.7 | Allternit Bot (x.ai/bot) | ✅ Done | Agent swarm | `ao/p3-allternit-bot-audit` | Audit report: persistent bots, shared cloud computer, skills/routines, approval model, integration plan. |
 | 2.8 | agency-agents personas | ✅ Done | Agent swarm | `ao/p1-agency-agents` | 8 curated personas added to Agent Hub with Personas tab + create-agent-from-persona flow. Typecheck clean for touched files. |
 | 2.9 | OpenManus patterns | ✅ Done | Agent swarm | `ao/p2-openmanus-audit` | Audit report: PlanningTool, ReAct loop, ToolCollection patterns vs Allternit. |
 | 2.10 | prime-agent dual-loop harness | ✅ Done | Agent swarm | `ao/p2-prime-agent-audit` | Audit report: RLM + Continual Harness dual-loop design vs DAK Runner. |
@@ -107,7 +107,7 @@ This tracker is the single source of truth for status, scope, and next actions f
 | 2026-08-13 | page-agent promotion | Shared `services/page-agent/` package + API routes + surface re-exports; `cargo check` and typecheck clean |
 | 2026-08-13 | SPAWN.md audit | Audit report: workflow tracks, conformance map, agent creation integration plan |
 | 2026-08-13 | GuppyLM audit | Audit report: 8.7M transformer, ONNX→WASM pipeline, Browser Training tab plan |
-| 2026-08-13 | Grok Bot (x.ai/bot) audit | Audit report: persistent bots, shared cloud computer, skills/routines, approval model, integration plan |
+| 2026-08-13 | Allternit Bot (x.ai/bot) audit | Audit report: persistent bots, shared cloud computer, skills/routines, approval model, integration plan |
 | 2026-08-13 | ApiTap research & unblock | Audited ApiTap and Hermes `har-derived-api-client`; promoted ApiTap from blocked to P1 |
 | 2026-08-13 | Allternit Local Engine | `services/local-engine/` + `/api/local-engine/*` proxy + Model Lab Engine/Playground tabs + Unsloth **Serve locally** action; `cargo check` clean; 15 tests passing |
 | 2026-08-13 | ApiTap / HAR-derived API Capture | `services/api-capture/` + `/api/api-capture/*` proxy + Site APIs surface panel; HAR ingest, contract derivation, replay; `cargo check` clean; 4 tests passing |

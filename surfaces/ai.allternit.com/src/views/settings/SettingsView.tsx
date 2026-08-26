@@ -15,7 +15,6 @@ import {
   DeviceMobile,
   HardDrives,
   Cloud,
-  X,
   CaretRight,
   CheckCircle,
   ArrowsClockwise,
@@ -41,7 +40,9 @@ import { ServiceUrlSettings } from './ServiceUrlSettings';
 import { EnvironmentSettings } from './EnvironmentSettings';
 import { listOwnedConnectors, connectOwned, disconnectOwned, type OwnedConnector, type OwnedConnectStatus } from '@/lib/design/owned-connector';
 import { getConnectorLogoUrl } from '@/lib/design/connector-logo';
-import { SETTINGS_NAV_ITEMS, SETTINGS_NAV_GROUPS, SETTINGS_SECTION_MAP, type SettingsSection } from './settings.config';
+import { SETTINGS_SECTION_MAP, type SettingsSection } from './settings.config';
+import { SettingsLayout } from './SettingsLayout';
+import { SECTION_COMPONENTS } from './settings-sections';
 import { SettingsRow } from '@/components/settings/SettingsRow';
 import { Toggle } from '@/components/settings/Toggle';
 import { SectionHeading } from '@/components/settings/SectionHeading';
@@ -97,25 +98,6 @@ const SHORTCUTS = [
 
 
 // ─── Sub-components (extracted to module scope) ───────────────────────────────
-
-const NavButton: React.FC<{ item: any; activeSection: SettingsSection; onClick: () => void }> = ({ item, activeSection, onClick }) => {
-  const isActive = activeSection === item.id;
-  return (
-    <button type="button"
-      onClick={onClick}
-      title={item.label}
-      className={cn(
-        "w-full flex items-center gap-2.5 px-3 py-2 border-none rounded-lg text-left cursor-pointer transition-colors duration-150",
-        isActive
-          ? "bg-[var(--bg-secondary)] text-[var(--text-primary)]"
-          : "bg-transparent text-[var(--text-secondary)] hover:bg-[var(--bg-secondary)] hover:text-[var(--text-primary)]"
-      )}
-    >
-      <span className="shrink-0 flex items-center">{item.icon}</span>
-      <span className="truncate text-[14px]">{item.label}</span>
-    </button>
-  );
-};
 
 const PermissionRow: React.FC<{
   label: string;
@@ -1377,6 +1359,10 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
   );
 
   const renderContent = () => {
+    const RegistryPanel = SECTION_COMPONENTS[activeSection];
+    if (RegistryPanel) {
+      return <RegistryPanel />;
+    }
     switch (activeSection) {
       case 'general': return renderGeneralPanel();
       case 'appearance': return renderAppearancePanel();
@@ -1413,13 +1399,6 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
     }
   };
 
-  const navigationItems = SETTINGS_NAV_ITEMS;
-
-  const navSearch = navQuery.trim().toLowerCase();
-  const filteredNavItems = navSearch
-    ? navigationItems.filter((item: any) => item.label.toLowerCase().includes(navSearch))
-    : navigationItems;
-
   const closeSettings = () => {
     window.dispatchEvent(new CustomEvent('allternit:close-settings'));
     onClose?.();
@@ -1427,86 +1406,23 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
 
   return (
     <>
-    <div
-      className="fixed inset-0 z-50 flex items-center justify-center p-6 bg-black/60 backdrop-blur-[2px] text-[var(--text-primary)] font-sans"
-      onClick={closeSettings}
-    >
-      <div
-        role="dialog"
-        aria-modal="true"
-        aria-label="Settings"
-        className={cn(
-          "flex w-full min-w-[600px] h-[80vh] rounded-2xl overflow-hidden shadow-2xl shadow-black/40 border border-solid border-white/10",
-          'max-w-[1000px]'
-        )}
-        style={{ backgroundColor: 'var(--view-settings-bg, var(--surface-canvas))' }}
-        onClick={(e) => e.stopPropagation()}
+      <SettingsLayout
+        activeSection={activeSection}
+        onSectionChange={setActiveSection}
+        navQuery={navQuery}
+        onNavQueryChange={setNavQuery}
+        onClose={closeSettings}
       >
-        {/* Sidebar Nav */}
-        <div className="w-[220px] min-w-[180px] h-full bg-transparent p-4 pb-8 overflow-y-auto shrink-0 no-scrollbar border-r border-solid border-white/[0.03]">
-          <div className="relative mb-5">
-            <MagnifyingGlass size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--text-tertiary)] pointer-events-none" />
-            <input
-              type="text"
-              value={navQuery}
-              onChange={(e) => setNavQuery(e.target.value)}
-              placeholder="Search settings"
-              aria-label="Search settings"
-              className="w-full pl-8 pr-3 py-2 rounded-full bg-[var(--bg-secondary)] border border-solid border-[var(--border-subtle)] text-[13px] text-[var(--text-primary)] placeholder:text-[var(--text-tertiary)] outline-none focus:border-[var(--accent-primary)]"
-            />
-          </div>
-
-          <nav className="flex flex-col">
-            {SETTINGS_NAV_GROUPS.map((g) => {
-              const groupItems = filteredNavItems.filter((i: any) => i.group === g.group);
-              if (groupItems.length === 0) return null;
-              return (
-                <div key={g.group} className="mb-4 last:mb-0">
-                  {g.label && (
-                    <div className="px-3 mb-1 text-[12px] font-medium text-[var(--text-tertiary)]">{g.label}</div>
-                  )}
-                  <div className="flex flex-col gap-0.5">
-                    {groupItems.map((item: any) => (
-                      <NavButton key={item.id} item={item} activeSection={activeSection} onClick={() => setActiveSection(item.id)} />
-                    ))}
-                  </div>
-                </div>
-              );
-            })}
-            {filteredNavItems.length === 0 && (
-              <div className="px-3 py-6 text-center text-[12px] text-[var(--text-tertiary)]">No matching settings</div>
-            )}
-          </nav>
-        </div>
-
-        {/* Content Area */}
-        <div className="flex-1 min-w-0 h-full relative bg-[radial-gradient(circle_at_top_right,rgba(212,176,140,0.03),transparent_600px)]">
-          <div className="h-full overflow-y-auto">
-            <div className="p-10 pb-32 w-full max-w-[740px]">
-              <h1 className="text-[16px] font-semibold text-[var(--text-primary)] m-0 mb-6">
-                {navigationItems.find((item: any) => item.id === activeSection)?.label}
-              </h1>
-              {renderContent()}
-            </div>
-          </div>
-          <button type="button"
-            onClick={closeSettings}
-            className="absolute top-4 right-4 z-[50] size-7 flex items-center justify-center rounded-lg bg-transparent border-none text-[var(--text-tertiary)] cursor-pointer hover:bg-[var(--bg-secondary)] hover:text-[var(--text-primary)] active:scale-95 transition-all"
-            aria-label="Close settings"
-          >
-            <X size={16} weight="bold" />
-          </button>
-        </div>
-      </div>
-    </div>
-    {fullManagerTab !== null && (
-      <PluginManager
-        isOpen
-        initialTab={fullManagerTab}
-        onClose={() => setFullManagerTab(null)}
-        onOpenSettings={() => setFullManagerTab(null)}
-      />
-    )}
+        {renderContent()}
+      </SettingsLayout>
+      {fullManagerTab !== null && (
+        <PluginManager
+          isOpen
+          initialTab={fullManagerTab}
+          onClose={() => setFullManagerTab(null)}
+          onOpenSettings={() => setFullManagerTab(null)}
+        />
+      )}
     </>
   );
 };

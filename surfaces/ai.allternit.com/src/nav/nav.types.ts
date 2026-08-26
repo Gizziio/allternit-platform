@@ -18,6 +18,7 @@ export type ViewType =
   | "agent-hub"
   | "bot-home"
   | "bot-inbox"
+  | "bot-group-chat"
   | "native-agent"
   | "registry"
   | "memory"
@@ -92,6 +93,8 @@ export type ViewType =
   | "budget-dashboard"
   | "replay-manager"
   | "prewarm-manager"
+  // Desktop-as-a-Service admin view
+  | "desktop-cloud"
   // Chat History views
   | "history"
   | "archived"

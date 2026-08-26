@@ -376,8 +376,16 @@ export interface BotDesktopSandbox {
   host?: string;
 }
 
+function botDesktopBaseUrl(botId: string) {
+  return `${API_BASE_URL}/bots/${encodeURIComponent(botId)}/desktop`;
+}
+
 function botDesktopUrl(botId: string, sandboxId: string) {
-  return `${API_BASE_URL}/bots/${encodeURIComponent(botId)}/desktop?sandbox_id=${encodeURIComponent(sandboxId)}`;
+  return `${botDesktopBaseUrl(botId)}?sandbox_id=${encodeURIComponent(sandboxId)}`;
+}
+
+function botDesktopActionUrl(botId: string, sandboxId: string, action: string) {
+  return `${botDesktopBaseUrl(botId)}/${action}?sandbox_id=${encodeURIComponent(sandboxId)}`;
 }
 
 /**
@@ -434,7 +442,7 @@ export async function observeBotDesktop(
   sandboxId: string,
 ): Promise<VMOperatorResult<{ control_state: string }>> {
   try {
-    const res = await fetch(botDesktopUrl(botId, sandboxId) + '/observe', { method: 'POST' });
+    const res = await fetch(botDesktopActionUrl(botId, sandboxId, 'observe'), { method: 'POST' });
     if (!res.ok) {
       const text = await res.text();
       throw new Error(`Platform returned ${res.status}: ${text}`);
@@ -455,7 +463,7 @@ export async function takeOverBotDesktop(
   sandboxId: string,
 ): Promise<VMOperatorResult<{ control_state: string }>> {
   try {
-    const res = await fetch(botDesktopUrl(botId, sandboxId) + '/take-over', { method: 'POST' });
+    const res = await fetch(botDesktopActionUrl(botId, sandboxId, 'take-over'), { method: 'POST' });
     if (!res.ok) {
       const text = await res.text();
       throw new Error(`Platform returned ${res.status}: ${text}`);
@@ -476,7 +484,7 @@ export async function handBackBotDesktop(
   sandboxId: string,
 ): Promise<VMOperatorResult<{ control_state: string }>> {
   try {
-    const res = await fetch(botDesktopUrl(botId, sandboxId) + '/hand-back', { method: 'POST' });
+    const res = await fetch(botDesktopActionUrl(botId, sandboxId, 'hand-back'), { method: 'POST' });
     if (!res.ok) {
       const text = await res.text();
       throw new Error(`Platform returned ${res.status}: ${text}`);
@@ -487,4 +495,16 @@ export async function handBackBotDesktop(
     logger.error({ err, botId, sandboxId }, 'Failed to hand back bot desktop');
     return { ok: false, error: err instanceof Error ? err.message : 'Hand back failed' };
   }
+}
+
+/**
+ * Build the screenshot URL for a bot's desktop. The returned URL returns an
+ * image (SVG placeholder when no live VM stream is available) that can be
+ * polled to implement a screenshot feed.
+ */
+export function getBotDesktopScreenshotUrl(botId: string, sandboxId: string, cacheBust?: number): string {
+  const url = botDesktopActionUrl(botId, sandboxId, 'screenshot');
+  if (cacheBust === undefined) return url;
+  const sep = url.includes('?') ? '&' : '?';
+  return `${url}${sep}ts=${cacheBust}`;
 }

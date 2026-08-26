@@ -176,6 +176,30 @@ pub struct UserConfig {
     /// Name of the active permission policy. Overrides the company-level default.
     #[serde(rename = "activePermissionPolicy", default)]
     pub active_permission_policy: Option<String>,
+
+    /// Inference router configuration: which local CLI provider handles turns.
+    #[serde(rename = "inferenceRouter", default)]
+    pub inference_router: Option<InferenceRouterConfig>,
+}
+
+/// Local CLI provider routing preferences.
+#[derive(Debug, Clone, Default, Deserialize, Serialize)]
+pub struct InferenceRouterConfig {
+    /// Active provider: codex, claude-code, cursor, openrouter.
+    #[serde(rename = "provider", default)]
+    pub provider: Option<String>,
+
+    /// Default model passed to the provider (e.g. "claude-sonnet-4-6").
+    #[serde(rename = "defaultModel", default)]
+    pub default_model: Option<String>,
+
+    /// Whether to route turns through a local sandbox instead of the provider.
+    #[serde(rename = "localSandbox", default)]
+    pub local_sandbox: Option<bool>,
+
+    /// Provider-specific extra options (e.g. OpenRouter API key reference).
+    #[serde(rename = "options", default)]
+    pub options: Option<serde_json::Map<String, serde_json::Value>>,
 }
 
 /// Tracks when the first-start / env wizard last ran so the app can prompt
@@ -875,6 +899,7 @@ impl From<SaveUserConfigPayload> for UserConfig {
             wizard: payload.wizard,
             permission_policies: None,
             active_permission_policy: None,
+            inference_router: None,
         }
     }
 }

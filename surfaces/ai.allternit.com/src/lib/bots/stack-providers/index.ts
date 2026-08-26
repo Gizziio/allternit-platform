@@ -9,5 +9,5 @@ export * from './registry';
 export * from './runtime-client';
 export * from './hermes-provider';
 export * from './openclaw-provider';
-export * from './grok-provider';
+export * from './kimi-provider';
 export * from './init';

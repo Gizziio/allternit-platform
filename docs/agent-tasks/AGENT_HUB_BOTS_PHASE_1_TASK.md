@@ -11,7 +11,7 @@
 3. **FoundationAgents/OpenManus** — identify Manus features usable in Allternit surfaces.
 4. **PrimeIntellect-ai/prime-agent** — harness with two-system architecture. Determine what to add to the Allternit harness.
 5. **milind-soni/OpenMausBot** — newer OpenManus-style bot with better UI/UX. Plan to fork/integrate as Agent Hub packaged bots in left-rail sessions.
-6. **x.ai/bot (Grok Bot)** — reverse-engineer the packaged-bot UX and fill gaps from OpenMausBot research.
+6. **x.ai/bot (Allternit Bot)** — reverse-engineer the packaged-bot UX and fill gaps from OpenMausBot research.
 7. **CopilotKit/OpenTag** — IMPORTANT: research whether this is actually composer tagging or a Slack/Teams triage app. If composer tagging is not provided, design and implement an Allternit-native tag system for agents/scripts/tools in the composer with a nice visual UI.
 
 ## Deliverables

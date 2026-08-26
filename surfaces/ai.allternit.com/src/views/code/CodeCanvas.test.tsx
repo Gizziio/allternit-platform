@@ -116,10 +116,15 @@ vi.mock('./CodeUsageDashboard', () => ({
 }));
 
 import { createCodeModeFixtureState, useCodeModeStore, type CodeWorkspaceRecord } from './CodeModeStore';
+import { ModelSelectionProvider } from '@/providers/model-selection-provider';
 import { CodeCanvas } from './CodeCanvas';
 
 function renderWithDropzone(ui: React.ReactElement) {
-  return render(<GlobalDropzoneProvider>{ui}</GlobalDropzoneProvider>);
+  return render(
+    <GlobalDropzoneProvider>
+      <ModelSelectionProvider>{ui}</ModelSelectionProvider>
+    </GlobalDropzoneProvider>
+  );
 }
 
 describe('CodeCanvas', () => {

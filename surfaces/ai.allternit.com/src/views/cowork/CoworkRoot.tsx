@@ -40,9 +40,7 @@ import { sessionLifecycleApi } from '@/lib/agents/native-agent-api';
 import { ChatIdProvider } from '@/providers/chat-id-provider';
 import { DataStreamProvider } from '@/providers/data-stream-provider';
 import { MessageTreeProvider } from '@/providers/message-tree-provider';
-import { ChatInputProvider } from '@/providers/chat-input-provider';
 import { PromptInputProvider } from '@/components/ai-elements/prompt-input';
-import { ChatModelsProvider } from '@/providers/chat-models-provider';
 import { ModelSelectionProvider } from '@/providers/model-selection-provider';
 import { useDefaultModelSelection } from '@/hooks/use-default-model-selection';
 import { useIsMobile } from '@/hooks/useMediaQuery';
@@ -375,11 +373,9 @@ function CoworkRootContent() {
         source="local"
       >
         <MessageTreeProvider>
-          <ChatInputProvider>
-            <PromptInputProvider>
-              <ChatModelsProvider>
-                <ModelSelectionProvider defaultSelection={defaultSelection}>
-                  <div style={{ position: 'relative', height: '100%', isolation: 'isolate' }}>
+          <PromptInputProvider>
+            <ModelSelectionProvider defaultSelection={defaultSelection}>
+              <div style={{ position: 'relative', height: '100%', isolation: 'isolate' }}>
                     <CoworkAnimatedBackground />
                     <AgentModeBackdrop
                       active={coworkAgentModeEnabled}
@@ -535,10 +531,8 @@ function CoworkRootContent() {
                       </div>
                     </div>
                   </div>
-                </ModelSelectionProvider>
-              </ChatModelsProvider>
-            </PromptInputProvider>
-          </ChatInputProvider>
+            </ModelSelectionProvider>
+          </PromptInputProvider>
         </MessageTreeProvider>
       </ChatIdProvider>
     </DataStreamProvider>
@@ -689,7 +683,7 @@ interface CoworkComposeEventDetail {
 function CoworkChat({ sessionId, initialMessage, onInitialMessageSent, onLiveUpdate }: CoworkChatProps) {
   const _defaultSelection = useDefaultModelSelection();
   const isMobile = useIsMobile();
-  const { selection: modelSelection, selectModel, startSelection } = useModelSelection();
+  const { selection: modelSelection } = useModelSelection();
   const { agentModeEnabled, selectedAgentId, selectedAgent } =
     useSurfaceAgentSelection('cowork');
   const embeddedSessionId = useCoworkSessionStore((s) => s.activeSessionId);
@@ -1196,10 +1190,6 @@ function CoworkChat({ sessionId, initialMessage, onInitialMessageSent, onLiveUpd
                 ? () => void abortNativeGeneration(embeddedAgentSession?.sessionId ?? '')
                 : stop
             }
-            selectedModel={selectedModel}
-            selectedModelDisplayName={modelSelection?.modelName || modelSelection?.modelId}
-            onOpenModelPicker={startSelection}
-            onSelectModel={selectModel}
             inputValue={composerInputValue}
             placeholder="Write a message…"
             showTopActions={false}

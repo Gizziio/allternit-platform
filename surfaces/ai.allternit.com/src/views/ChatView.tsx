@@ -29,7 +29,7 @@ import {
 import type { AgentModeSurface } from "@/stores/agent-surface-mode.store";
 import type { CanonicalAgentModeId } from "@/lib/agents/agent-mode-contracts";
 import { useUnifiedStore } from "@/lib/agents/unified.store";
-import { runAgentGroup } from '@/lib/agents/agent.service';
+import { runAgentGroup, startAgentRun } from '@/lib/agents/agent.service';
 import { useModeCanvasBridge } from "@/hooks/useModeCanvasBridge";
 import { useLocalBrainStatus } from "@/hooks/useLocalBrainStatus";
 import { buildBotRuntimeEnv } from "@/lib/bots/bot-runtime-env";
@@ -459,6 +459,45 @@ export function ChatView({
       return;
     }
 
+    // Local bot session: backend session creation is not implemented, so bot
+    // sessions are client-only. Send turns through the agent run endpoint and
+    // append the response locally so the bot's configured name appears.
+    const botSessionId = embeddedAgentSession.sessionId || chatId;
+    const isLocalBotSession = Boolean(
+      activeSession?.metadata?.isBot &&
+        activeSession?.metadata?.agentId &&
+        botSessionId &&
+        !botSessionId.startsWith('ses')
+    );
+    console.log('[ChatView.handleSend] botSessionId=', botSessionId, 'isBot=', activeSession?.metadata?.isBot, 'agentId=', activeSession?.metadata?.agentId, 'isLocalBotSession=', isLocalBotSession);
+    if (isLocalBotSession) {
+      setSendError(null);
+      const agentId = activeSession!.metadata.agentId as string;
+      const agentName = (activeSession!.metadata.agentName as string | undefined) ||
+        (activeSession!.metadata.botProfile as { displayName?: string } | undefined)?.displayName ||
+        'Bot';
+
+      const localSessionId = botSessionId as string;
+      try {
+        useChatSessionStore.getState().setActiveSession(localSessionId);
+        useChatSessionStore.getState().appendUserMessage(localSessionId, {
+          id: `user-${Date.now()}`,
+          content: text.trim(),
+        });
+
+        const run = await startAgentRun(agentId, text.trim());
+        useChatSessionStore.getState().appendAssistantMessage(localSessionId, {
+          id: `assistant-${agentId}-${Date.now()}`,
+          content: run.output || 'No response',
+          metadata: { agentId, agentName, isBotResponse: true },
+        });
+      } catch (error) {
+        logger.error({ err: error }, 'Failed to run local bot turn');
+        setSendError("Couldn't get a response from the bot. Please try again.");
+      }
+      return;
+    }
+
     // Routed CLI turn: bypass the normal backend stream and execute through the
     // local inference router instead.
     if (routedProvider) {
@@ -683,8 +722,6 @@ export function ChatView({
               composerTopInfoBar={composerTopInfoBar}
               composerQuestionBar={composerQuestionBar}
               composerBottomInfoBar={composerBottomInfoBar}
-              routedProvider={routedProvider}
-              onSelectRoutedProvider={setRoutedProvider}
             />
           ) : (
             <ChatActiveContent
@@ -737,8 +774,6 @@ export function ChatView({
         useMonolithLogo={useMonolithLogo}
         pulseMascot={pulseMascot}
         setLaunchMascotAttention={setLaunchMascotAttention}
-        routedProvider={routedProvider}
-        onSelectRoutedProvider={setRoutedProvider}
       />
 
       <ModelPicker

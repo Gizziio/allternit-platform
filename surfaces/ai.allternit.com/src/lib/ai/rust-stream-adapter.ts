@@ -197,6 +197,14 @@ interface ChatMessageMetadata {
   agentName?: string;
   /** @-mentioned plugin/connector this user message targeted (composer chip). */
   pluginMention?: { kind: 'plugin' | 'connector'; id: string; name: string };
+  /** Phase 1.5: routed CLI turn metadata */
+  routedTurn?: boolean;
+  provider?: string;
+  exitCode?: number | null;
+  error?: string | null;
+  routedStatus?: string;
+  /** Phase 5.2: per-message emoji reaction counts */
+  reactions?: Record<string, number>;
 }
 
 type ReasoningTraceStepType =

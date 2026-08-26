@@ -33,6 +33,7 @@ import {
   Check,
   Brain,
   Play,
+  Desktop,
 } from '@phosphor-icons/react';
 import { getPinnedMiniApps, unpinMiniApp, seedDefaultMiniApps } from '../views/aci/mini-app-registry';
 import type { InstalledMiniApp } from '../views/aci/mini-app.types';
@@ -72,6 +73,7 @@ import {
 } from '@/lib/bots/bot-profile';
 import type { Agent } from '@/lib/agents/agent.types';
 import { BotAvatar } from '@/views/bots/BotAvatar';
+import { GroupChatAvatar } from '@/views/bots/GroupChatAvatar';
 import { Popover, PopoverTrigger, PopoverContent } from '@/components/ui/popover';
 import { DeleteConfirmModal } from './DeleteConfirmModal';
 
@@ -277,14 +279,21 @@ export function ShellRail({
 
   const { startSession: startBotSession } = useStartBotSession(
     useCallback((sessionId: string) => {
-      // Open the bot session view so the rail entry is tied to a real session,
-      // not a generic home chat.
-      onOpen?.('chat-agent-session', { sessionId, originView: activeViewType ?? 'chat' });
+      // Bot sessions render in the standard chat surface so they match regular
+      // sessions and stay in the Bots section of the rail.
+      useChatSessionStore.getState().setActiveSession(sessionId);
+      onOpen?.('chat', { sessionId, originView: activeViewType ?? 'chat' });
     }, [onOpen, activeViewType])
   );
 
   const agents = useAgentStore((s) => s.agents);
   const bots = useMemo(() => agents.filter(isBot), [agents]);
+
+  const groupChatSessions = useMemo(() => {
+    return (chatSessions || [])
+      .filter((s) => s.metadata?.isGroupChat === true)
+      .sort((a, b) => new Date(b.updatedAt || 0).getTime() - new Date(a.updatedAt || 0).getTime());
+  }, [chatSessions]);
 
   const handleSelectBots = useCallback(() => {
     setBotsExpanded(true);
@@ -326,6 +335,15 @@ export function ShellRail({
     onOpen?.('bot-home', { botId: bot.id });
   }, [onOpen]);
 
+  const handleOpenGroupChat = useCallback((session: ModeSession) => {
+    useChatSessionStore.getState().setActiveSession(session.id);
+    onOpen?.('bot-group-chat', { sessionId: session.id });
+  }, [onOpen]);
+
+  const handleDeleteGroupChat = useCallback((session: ModeSession) => {
+    setDeleteTarget({ id: session.id, title: session.name || 'Group chat', kind: 'chat' });
+  }, []);
+
   const recentItems = useMemo(() => {
     const list: {
       id: string;
@@ -346,6 +364,7 @@ export function ShellRail({
       md?.isBot === true ||
       md?.agentId != null ||
       md?.agent_id != null ||
+      md?.isGroupChat === true ||
       (md?.agentName && botNames.has(String(md.agentName).toLowerCase()));
 
     // Chat sessions (agent/bot sessions live under the Bots panel or Agent | Bot Hub, not Recents)
@@ -930,6 +949,12 @@ export function ShellRail({
               onClick={() => onOpen?.('model-lab')}
             />
             <RailItem
+              icon={Desktop}
+              label="Desktop Cloud"
+              isActive={activeViewType === 'desktop-cloud'}
+              onClick={() => onOpen?.('desktop-cloud')}
+            />
+            <RailItem
               icon={Clock}
               label="Automation Tasks"
               isActive={activeViewType === 'goals-list' || activeViewType === 'cron' || activeViewType === 'cowork-cron'}
@@ -969,6 +994,9 @@ export function ShellRail({
             onStartBot={handleStartBot}
             onOpenBotHome={handleOpenBotHome}
             onCreateBot={handleCreateBot}
+            groups={groupChatSessions}
+            onOpenGroupChat={handleOpenGroupChat}
+            onDeleteGroupChat={handleDeleteGroupChat}
             filter={
               <Popover>
                 <PopoverTrigger asChild>
@@ -1628,6 +1656,57 @@ function BotRailItem({
   );
 }
 
+function GroupChatRailItem({
+  session,
+  onClick,
+  onDelete,
+}: {
+  session: ModeSession;
+  onClick: () => void;
+  onDelete: () => void;
+}): React.ReactNode {
+  const isActive = useChatSessionStore((state) => state.activeSessionId === session.id);
+  const sessionSummary = useSessionSummary(session.id);
+  const { lastMessage, lastMessageAt, isStreaming } = sessionSummary;
+  const timeText = lastMessageAt ? formatRelativeTime(lastMessageAt) : '';
+  const memberIds = (session.metadata?.memberIds as string[] | undefined) ?? [];
+  return (
+    <div
+      data-rail-item={session.id}
+      className={cn(
+        "group relative w-full flex items-center gap-2.5 py-2 px-3 max-md:min-h-11 rounded-xl cursor-pointer transition-all duration-200 font-medium",
+        isActive
+          ? "bg-[var(--shell-item-active-bg)] text-[var(--shell-item-active-fg)] font-semibold"
+          : "bg-transparent text-[var(--shell-item-fg)] hover:text-[var(--accent-primary)] hover:bg-[var(--shell-item-hover)]"
+      )}
+    >
+      <button
+        type="button"
+        onClick={onClick}
+        className="flex-1 min-w-0 flex flex-col gap-1 bg-transparent border-none p-0 text-left cursor-pointer font-medium"
+      >
+        <div className="text-[12px] overflow-hidden text-ellipsis whitespace-nowrap">
+          {session.name || 'Group chat'}
+        </div>
+        <div className="flex items-center">
+          <GroupChatAvatar memberIds={memberIds} size={22} />
+        </div>
+        <div className="flex items-center gap-1.5 text-[11px] text-[var(--shell-item-muted)] overflow-hidden">
+          {isStreaming && (
+            <span className="relative flex size-1.5">
+              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-[var(--accent-primary)] opacity-75" />
+              <span className="relative inline-flex rounded-full size-1.5 bg-[var(--accent-primary)]" />
+            </span>
+          )}
+          <span className="truncate flex-1">{isStreaming ? 'Working…' : lastMessage || `${memberIds.length} bots`}</span>
+          {timeText && <span className="shrink-0 text-[10px] opacity-60">{timeText}</span>}
+        </div>
+      </button>
+      <RecentItemMenu onDelete={onDelete} />
+    </div>
+  );
+}
+
 function RecentsPanel({
   expanded,
   onToggle,
@@ -1644,6 +1723,9 @@ function RecentsPanel({
   onStartBot,
   onOpenBotHome,
   onCreateBot,
+  groups,
+  onOpenGroupChat,
+  onDeleteGroupChat,
 }: {
   expanded: boolean;
   onToggle: () => void;
@@ -1660,6 +1742,9 @@ function RecentsPanel({
   onStartBot?: (bot: Agent) => void;
   onOpenBotHome?: (bot: Agent) => void;
   onCreateBot?: () => void;
+  groups?: ModeSession[];
+  onOpenGroupChat?: (session: ModeSession) => void;
+  onDeleteGroupChat?: (session: ModeSession) => void;
 }): React.ReactNode {
   const combined = botsExpanded !== undefined && onBotsToggle && bots && onStartBot && onOpenBotHome && onCreateBot;
   const listExpanded = expanded || (combined && botsExpanded);
@@ -1772,6 +1857,21 @@ function RecentsPanel({
                   />
                 );
               })}
+              {groups && groups.length > 0 && (
+                <>
+                  <div className="px-3 pt-3 pb-1 text-[10px] font-extrabold uppercase tracking-[0.08em] text-[var(--shell-item-muted)] select-none">
+                    Groups
+                  </div>
+                  {groups.map((session) => (
+                    <GroupChatRailItem
+                      key={session.id}
+                      session={session}
+                      onClick={() => onOpenGroupChat?.(session)}
+                      onDelete={() => onDeleteGroupChat?.(session)}
+                    />
+                  ))}
+                </>
+              )}
             </div>
           )}
           {expanded && <div className="flex flex-col gap-0.5">{children}</div>}

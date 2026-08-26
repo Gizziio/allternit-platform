@@ -30,6 +30,7 @@ import {
   ChatText,
 } from "@phosphor-icons/react";
 import { useAgentStore } from "@/lib/agents/agent.store";
+import { validateAgentCreationChecklist } from "@/lib/agents/agent-creation-checklist";
 import { getDefaultAgentModel, AGENT_MODELS } from "@/lib/agents/agent-models";
 import { STUDIO_THEME } from "@/views/agent-view/AgentView.constants";
 import type {
@@ -38,6 +39,11 @@ import type {
   BotCategory,
   MascotTemplate,
 } from "@/lib/agents/agent.types";
+import type {
+  CharacterLayerConfig as CanonicalCharacterLayerConfig,
+  CharacterStats,
+} from "@/lib/agents/character.types";
+import type { BotCharacterCreatorValue } from "@/views/agent-character/BotCharacterCreator";
 import { fetchBrains, type BrainSummary } from "@/services/brain-api";
 import {
   AgentAvatarPicker,
@@ -46,6 +52,7 @@ import {
 } from "@/views/agent-view/components/AgentAvatarPicker";
 import { GizziMascot, type GizziEmotion } from "@/components/ai-elements/GizziMascot";
 import { MascotPreview } from "@/views/agent-view/components/AgentMascotPreview";
+import { BotCharacterCreator } from "@/views/agent-character/BotCharacterCreator";
 import { BOT_CATEGORIES } from "@/lib/bots/bot-profile";
 import { api } from "@/integration/api-client";
 import { voiceService, type Voice } from "@/lib/agents/voice.service";
@@ -73,7 +80,7 @@ interface CreateBotFormProps {
   onClose: () => void;
 }
 
-type StepId = "identity" | "avatar" | "runtime" | "review";
+type StepId = "identity" | "character" | "avatar" | "runtime" | "review";
 
 interface StepInfo {
   id: StepId;
@@ -83,6 +90,7 @@ interface StepInfo {
 
 const STEPS: StepInfo[] = [
   { id: "identity", label: "Identity", description: "Name, tagline, and purpose" },
+  { id: "character", label: "Character", description: "Setup, specialties, and persona" },
   { id: "avatar", label: "Avatar", description: "Visual identity and mascot" },
   { id: "runtime", label: "Runtime", description: "Brain, model, and voice" },
   { id: "review", label: "Review", description: "Preview and launch" },
@@ -146,6 +154,7 @@ const PROVIDER_COLORS: Record<string, string> = {
   openai: "#10a37f",
   anthropic: "#d97757",
   google: "#4285f4",
+  kimi: "#D4956A",
   local: "#8b5cf6",
   custom: "#64748b",
 };
@@ -167,8 +176,58 @@ function shortId(id: string): string {
   return `${id.slice(0, 8)}…${id.slice(-8)}`;
 }
 
+/**
+ * Map the canonical character layer (character.types.ts) to the agent payload
+ * shape (agent.types.ts) expected by createAgent / normalizeCreateAgentInput.
+ */
+function mapCanonicalToAgentCharacterLayer(
+  canonical: CanonicalCharacterLayerConfig,
+): NonNullable<CreateAgentInput["characterLayer"]> {
+  return {
+    identity: {
+      setup: canonical.identity.setup,
+      className: canonical.identity.className,
+      specialtySkills: canonical.identity.specialtySkills,
+      temperament: canonical.identity.temperament,
+      personalityTraits: [],
+      backstory: "",
+    },
+    roleCard: {
+      domain: canonical.roleCard.domain,
+      inputs: canonical.roleCard.inputs,
+      outputs: canonical.roleCard.outputs,
+      definitionOfDone: canonical.roleCard.definitionOfDone,
+      hardBans: canonical.roleCard.hardBans.map((ban) => ({
+        category: ban.category,
+        description: ban.description,
+        severity: ban.severity === "critical" ? "fatal" : "warning",
+      })),
+      escalation: canonical.roleCard.escalation,
+      metrics: canonical.roleCard.metrics,
+    },
+    voice: {
+      style: canonical.voice.style,
+      rules: canonical.voice.rules,
+      microBans: canonical.voice.microBans,
+      tone: { formality: 0.5, enthusiasm: 0.5, empathy: 0.5, directness: 0.5 },
+    },
+    progression: {
+      class: canonical.progression.class,
+      relevantStats: canonical.progression.relevantStats,
+      level: canonical.progression.level,
+    },
+    avatar: {
+      type: canonical.avatar.type || "mascot",
+      uri: canonical.avatar.uri,
+      mascot: canonical.avatar.mascotTemplate
+        ? { template: canonical.avatar.mascotTemplate as MascotTemplate }
+        : undefined,
+    },
+  };
+}
+
 export function CreateBotForm({ isOpen, onClose }: CreateBotFormProps) {
-  const { createAgent, isCreating } = useAgentStore();
+  const { createAgent, isCreating, saveCharacterLayer, compileCharacterLayer } = useAgentStore();
   const [step, setStep] = useState(0);
   const [error, setError] = useState<string | null>(null);
 
@@ -203,6 +262,10 @@ export function CreateBotForm({ isOpen, onClose }: CreateBotFormProps) {
     },
     brainId: "",
   }));
+
+  const [characterValue, setCharacterValue] = useState<BotCharacterCreatorValue | undefined>();
+  const [characterLayer, setCharacterLayer] = useState<CanonicalCharacterLayerConfig | undefined>();
+  const [characterStats, setCharacterStats] = useState<CharacterStats | undefined>();
 
   const [avatarMode, setAvatarMode] = useState<"initials" | "gizzi" | "mascot" | "image" | "pet">("gizzi");
   const [avatarPicker, setAvatarPicker] = useState<AvatarPickerConfig>(() =>
@@ -389,6 +452,8 @@ export function CreateBotForm({ isOpen, onClose }: CreateBotFormProps) {
           (formData.botProfile?.displayName?.length || 0) >= 2 &&
           (formData.description?.length || 0) >= 3
         );
+      case "character":
+        return Boolean(characterValue?.blueprint.setup);
       case "avatar":
         return true;
       case "runtime":
@@ -396,11 +461,12 @@ export function CreateBotForm({ isOpen, onClose }: CreateBotFormProps) {
       case "review":
         return true;
     }
-  }, [stepId, formData]);
+  }, [stepId, formData, characterValue]);
 
   const stepValidation = useMemo(
     () => ({
       identity: canAdvance,
+      character: canAdvance,
       avatar: true,
       runtime: true,
       review: canAdvance,
@@ -440,10 +506,15 @@ export function CreateBotForm({ isOpen, onClose }: CreateBotFormProps) {
         ...(formData.config || {}),
         brainId: formData.brainId || undefined,
       },
+      characterLayer: characterLayer ? mapCanonicalToAgentCharacterLayer(characterLayer) : undefined,
     } as CreateAgentInput;
 
     try {
       const created = await createAgent(payload);
+      if (characterLayer) {
+        await saveCharacterLayer(created.id, characterLayer);
+        await compileCharacterLayer(created.id);
+      }
       onClose();
       window.dispatchEvent(
         new CustomEvent("allternit:open-view", {
@@ -608,6 +679,16 @@ export function CreateBotForm({ isOpen, onClose }: CreateBotFormProps) {
                       setFormData={setFormData}
                       updateBotProfile={updateBotProfile}
                       updateAccentColor={updateAccentColor}
+                    />
+                  )}
+                  {stepId === "character" && (
+                    <BotCharacterCreator
+                      agentName={formData.botProfile?.displayName || formData.name || "Bot"}
+                      onChange={(value, layer, stats) => {
+                        setCharacterValue(value);
+                        setCharacterLayer(layer);
+                        setCharacterStats(stats);
+                      }}
                     />
                   )}
                   {stepId === "avatar" && (

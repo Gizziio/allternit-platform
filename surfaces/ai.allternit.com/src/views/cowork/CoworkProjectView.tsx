@@ -10,6 +10,8 @@ import {
   ProjectEditDetailsModal,
 } from '../BaseProjectView';
 import { ChatComposer } from '../chat/ChatComposer';
+import { ModelSelectionProvider } from '@/providers/model-selection-provider';
+import { useDefaultModelSelection } from '@/hooks/use-default-model-selection';
 import { useCoworkStore } from './CoworkStore';
 import { useCoworkSessionStore, createCoworkSession } from './CoworkSessionStore';
 import { useNav } from '@/nav/useNav';
@@ -49,6 +51,7 @@ export function CoworkProjectView({ projectId, onBack: externalOnBack }: CoworkP
 
   const { dispatch } = useNav();
   const { setMode } = useMode();
+  const defaultSelection = useDefaultModelSelection();
 
   const currentProjectId = projectId || storeActiveProjectId;
   const project = useMemo(
@@ -192,14 +195,16 @@ export function CoworkProjectView({ projectId, onBack: externalOnBack }: CoworkP
   );
 
   const inputBar = (
-    <ChatComposer
-      onSend={handleSend}
-      placeholder={`Message ${project.title}`}
-      inputValue={composerInput}
-      showTopActions={false}
-      showModeToggle={false}
-      variant="default"
-    />
+    <ModelSelectionProvider defaultSelection={defaultSelection}>
+      <ChatComposer
+        onSend={handleSend}
+        placeholder={`Message ${project.title}`}
+        inputValue={composerInput}
+        showTopActions={false}
+        showModeToggle={false}
+        variant="default"
+      />
+    </ModelSelectionProvider>
   );
 
   const sidebarSectionsData = {

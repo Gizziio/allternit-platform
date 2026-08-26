@@ -1884,7 +1884,8 @@ class CapabilityScanner {
         }
       }));
     } catch (e) {
-      logger.error({ err: e, dirPath }, 'Failed to scan directory');
+      const msg = e instanceof Error ? e.message : String(e);
+      logger.warn(`Failed to scan directory ${String(dirPath)}: ${msg}`);
     }
   }
 }

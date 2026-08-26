@@ -57,6 +57,14 @@ import { setupApi } from '@/services/setup-api';
 import type { SaveProviderPayload } from '@/services/setup-api';
 import { buildWizardState } from '@/lib/wizard-check';
 import {
+  inferenceRouterApi,
+  INFERENCE_PROVIDERS,
+  PROVIDER_LABELS,
+  type CliProviderStatus,
+  type InferenceProvider,
+} from '@/lib/inference-router';
+import { healthCheck, type VMOperatorResult } from '@/lib/bots/vm-operator';
+import {
   testSSHConnection,
   installBackend,
   type SSHConnectionConfig,
@@ -79,16 +87,21 @@ interface WizardData {
   defaultModelId?: string;
   apiKeysConfigured?: boolean;
   configuredKeys?: Record<string, string>; // provider -> key
+  inferenceProvider?: InferenceProvider;
+  botComputerConfigured?: boolean;
+  sandboxStatus?: 'connected' | 'not-configured' | 'error';
 }
 
-type Screen = 'welcome' | 'infra' | 'appearance' | 'modes' | 'done';
+type Screen = 'welcome' | 'infra' | 'appearance' | 'modes' | 'router' | 'computer' | 'done';
 
-const SCREEN_ORDER: Screen[] = ['welcome', 'infra', 'appearance', 'modes', 'done'];
+const SCREEN_ORDER: Screen[] = ['welcome', 'infra', 'appearance', 'modes', 'router', 'computer', 'done'];
 
 const INNER_STEPS = [
   { key: 'infra' as const,      num: 1, label: 'Where it runs', hint: 'Your computer or a server' },
   { key: 'appearance' as const, num: 2, label: 'Style',         hint: 'Dark, light, or system' },
   { key: 'modes' as const,      num: 3, label: 'Your AI',       hint: 'Connect your brain' },
+  { key: 'router' as const,     num: 4, label: 'Router',        hint: 'Choose inference CLI' },
+  { key: 'computer' as const,   num: 5, label: 'Bot computer',  hint: 'Cloud computer status' },
 ];
 
 function screenIdx(s: Screen) { return SCREEN_ORDER.indexOf(s); }
@@ -186,8 +199,8 @@ function StepSidebar({ screen }: { screen: Screen }) {
 
       {/* Footer */}
       <div className="border-t border-ui-border-subtle pt-4 text-xs leading-relaxed text-ui-text-muted">
-        3 steps · takes<br />
-        <span className="font-semibold text-accent-primary">~90 seconds</span>
+        {INNER_STEPS.length} steps · takes<br />
+        <span className="font-semibold text-accent-primary">~2 minutes</span>
       </div>
     </div>
   );
@@ -273,6 +286,10 @@ function WelcomeScreen({ onNext }: { onNext: () => void }) {
           Style
           <span className="inline-block size-0.5 rounded-full bg-current" />
           Your AI
+          <span className="inline-block size-0.5 rounded-full bg-current" />
+          Router
+          <span className="inline-block size-0.5 rounded-full bg-current" />
+          Bot computer
         </div>
       </div>
 
@@ -2302,6 +2319,207 @@ function ModesStep({ data, onUpdate }: { data: WizardData; onUpdate: (d: Partial
   );
 }
 
+// ─── Inference router step ────────────────────────────────────────────────────
+
+function RouterStep({ data, onUpdate }: { data: WizardData; onUpdate: (d: Partial<WizardData>) => void }) {
+  const [cliStatus, setCliStatus] = useState<CliProviderStatus[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const [savedProvider, setSavedProvider] = useState<InferenceProvider | null>(null);
+  const [currentSettings, setCurrentSettings] = useState<{ localSandbox: boolean; options: Record<string, unknown> }>({ localSandbox: false, options: {} });
+
+  useEffect(() => {
+    let cancelled = false;
+    setLoading(true);
+    Promise.all([
+      inferenceRouterApi.getCliStatus(),
+      inferenceRouterApi.get().catch(() => ({ localSandbox: false, options: {} })),
+    ])
+      .then(([status, settings]) => {
+        if (!cancelled) {
+          setCliStatus(status);
+          setCurrentSettings({ localSandbox: settings.localSandbox ?? false, options: settings.options ?? {} });
+        }
+      })
+      .catch(() => {
+        if (!cancelled) setCliStatus([]);
+      })
+      .finally(() => {
+        if (!cancelled) setLoading(false);
+      });
+    return () => { cancelled = true; };
+  }, []);
+
+  const available = cliStatus.filter((s) => s.installed && s.authenticated);
+  const selected = data.inferenceProvider;
+
+  async function selectProvider(provider: InferenceProvider) {
+    onUpdate({ inferenceProvider: provider });
+    setSaving(true);
+    try {
+      await inferenceRouterApi.update({ provider, ...currentSettings });
+      setSavedProvider(provider);
+    } catch {
+      // Selection is already reflected in UI; persistence failures are recoverable in Settings.
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  return (
+    <div className="flex flex-col gap-3">
+      <HintBox>
+        The inference router decides which CLI or API runs agent turns. Choose one that is installed and signed in — you can change this anytime in Settings.
+      </HintBox>
+
+      {loading ? (
+        <div className="flex items-center gap-2.5 rounded-xl border border-ui-border-subtle bg-surface-panel px-3.5 py-3 text-xs text-ui-text-muted">
+          <ArrowClockwise size={16} className="animate-spin flex-shrink-0" />
+          Checking installed inference CLIs…
+        </div>
+      ) : available.length === 0 ? (
+        <div className="rounded-xl border border-ui-border-subtle bg-surface-panel px-3.5 py-3 text-xs text-ui-text-secondary">
+          No installed CLI providers detected. You can install Codex CLI, Claude Code, Cursor, or configure OpenRouter later in Settings.
+        </div>
+      ) : (
+        available.map((status) => {
+          const provider = status.provider as InferenceProvider;
+          const sel = selected === provider;
+          return (
+            <motion.button
+              key={provider}
+              onClick={() => selectProvider(provider)}
+              disabled={saving}
+              whileHover={{ scale: 1.01 }}
+              whileTap={{ scale: 0.99 }}
+              className={`flex items-center gap-3.5 rounded-2xl border-2 px-4 py-3.5 text-left transition-colors duration-150 ${sel ? 'border-accent-primary bg-[color-mix(in_srgb,var(--accent-primary)_8%,var(--surface-panel))]' : 'border-ui-border-subtle bg-surface-panel'}`}
+            >
+              <div className={`flex size-9 flex-shrink-0 items-center justify-center rounded-lg transition-colors duration-150 ${sel ? 'bg-[color-mix(in_srgb,var(--accent-primary)_16%,var(--surface-panel))] text-accent-primary' : 'bg-surface-panel-muted text-ui-text-muted'}`}>
+                {provider === 'codex' ? <Code size={18} /> : provider === 'claude-code' ? <ChatCircle size={18} /> : provider === 'cursor' ? <Monitor size={18} /> : <Globe size={18} />}
+              </div>
+
+              <div className="min-w-0 flex-1">
+                <div className="text-[13px] font-semibold leading-tight text-ui-text-primary">
+                  {PROVIDER_LABELS[provider] ?? provider}
+                </div>
+                <div className="mt-0.5 text-xs text-ui-text-muted">
+                  {status.version ? `Installed · ${status.version}` : 'Installed and authenticated'}
+                </div>
+              </div>
+
+              <motion.div
+                animate={{
+                  background: sel ? 'var(--accent-primary)' : 'transparent',
+                  borderColor: sel ? 'var(--accent-primary)' : 'var(--ui-border-default)',
+                }}
+                className="flex size-4.5 flex-shrink-0 items-center justify-center rounded-full border-2"
+              >
+                {sel && <Check weight="bold" size={12} className="text-text-inverse" />}
+              </motion.div>
+            </motion.button>
+          );
+        })
+      )}
+
+      {!loading && !selected && (
+        <div className="mt-0.5 text-center text-xs text-ui-text-muted">
+          Select a router above to continue — you can change it in Settings anytime.
+        </div>
+      )}
+
+      {savedProvider && (
+        <div className="flex items-center gap-2 rounded-xl bg-status-success-bg px-3 py-2 text-xs text-status-success">
+          <CheckCircle weight="fill" size={14} />
+          Saved {PROVIDER_LABELS[savedProvider] ?? savedProvider} as the active router.
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ─── Bot computer step ────────────────────────────────────────────────────────
+
+function BotComputerStep({ data, onUpdate }: { data: WizardData; onUpdate: (d: Partial<WizardData>) => void }) {
+  const [status, setStatus] = useState<VMOperatorResult<{ status: string }> | null>(null);
+  const [checking, setChecking] = useState(true);
+
+  useEffect(() => {
+    let cancelled = false;
+    setChecking(true);
+    healthCheck()
+      .then((result) => {
+        if (!cancelled) setStatus(result);
+      })
+      .finally(() => {
+        if (!cancelled) setChecking(false);
+      });
+    return () => { cancelled = true; };
+  }, []);
+
+  useEffect(() => {
+    if (checking) return;
+    if (!status) {
+      onUpdate({ botComputerConfigured: false, sandboxStatus: 'error' });
+      return;
+    }
+    if (!status.ok) {
+      onUpdate({ botComputerConfigured: false, sandboxStatus: 'not-configured' });
+      return;
+    }
+    onUpdate({ botComputerConfigured: true, sandboxStatus: 'connected' });
+  }, [checking, status, onUpdate]);
+
+  const state = checking
+    ? 'checking'
+    : !status || !status.ok
+      ? 'not-configured'
+      : 'connected';
+
+  return (
+    <div className="flex flex-col gap-3">
+      <HintBox>
+        Your bot can use a persistent cloud computer for code, browser tasks, and desktop automation. Provisioning is optional now — you can set it up later.
+      </HintBox>
+
+      <div className={`flex items-center gap-3.5 rounded-2xl border-2 px-4 py-3.5 transition-colors duration-150 ${state === 'connected' ? 'border-status-success bg-[color-mix(in_srgb,var(--status-success)_8%,var(--surface-panel))]' : 'border-ui-border-subtle bg-surface-panel'}`}>
+        <div className={`flex size-9 flex-shrink-0 items-center justify-center rounded-lg transition-colors duration-150 ${state === 'connected' ? 'bg-[color-mix(in_srgb,var(--status-success)_16%,var(--surface-panel))] text-status-success' : 'bg-surface-panel-muted text-ui-text-muted'}`}>
+          {checking ? <ArrowClockwise size={18} className="animate-spin" /> : <Desktop size={18} />}
+        </div>
+
+        <div className="min-w-0 flex-1">
+          <div className="text-[13px] font-semibold leading-tight text-ui-text-primary">
+            {state === 'checking' && 'Checking sandbox runtime…'}
+            {state === 'connected' && 'Sandbox runtime connected'}
+            {state === 'not-configured' && 'Sandbox runtime not configured'}
+          </div>
+          <div className="mt-0.5 text-xs text-ui-text-muted">
+            {state === 'checking' && 'Probing the configured sandbox server.'}
+            {state === 'connected' && 'Your bot computer backend is reachable.'}
+            {state === 'not-configured' && 'Set ALLTERNIT_SANDBOX_URL to connect OpenSandbox or your own driver.'}
+          </div>
+        </div>
+
+        {!checking && (
+          <div className={`flex size-5 flex-shrink-0 items-center justify-center rounded-full ${state === 'connected' ? 'bg-status-success' : 'bg-ui-text-muted'}`}>
+            {state === 'connected' ? (
+              <Check weight="bold" size={12} className="text-text-inverse" />
+            ) : (
+              <span className="text-[10px] font-bold text-text-inverse">!</span>
+            )}
+          </div>
+        )}
+      </div>
+
+      {state === 'not-configured' && status?.error && (
+        <div className="rounded-xl bg-surface-panel px-3.5 py-2.5 text-xs text-ui-text-muted">
+          <span className="font-semibold text-ui-text-secondary">Details:</span>{' '}
+          {status.error}
+        </div>
+      )}
+    </div>
+  );
+}
+
 // ─── Done screen — mode showcase ─────────────────────────────────────────────
 
 type ModeKey = 'chat' | 'code' | 'browser' | 'agents' | 'private';
@@ -2615,6 +2833,8 @@ function DoneScreen({ data, onFinish }: { data: WizardData; onFinish: () => void
   const infraLabel = data.infraType === 'local' ? 'This machine' : data.infraType === 'connect' ? 'Remote server' : data.infraType === 'purchase' ? 'New VPS' : 'Remote';
   const modelLabel = data.defaultModelId ?? data.defaultProvider ?? null;
   const keyCount = Object.keys(data.configuredKeys ?? {}).length;
+  const routerLabel = data.inferenceProvider ? (PROVIDER_LABELS[data.inferenceProvider] ?? data.inferenceProvider) : null;
+  const computerLabel = data.sandboxStatus === 'connected' ? 'Connected' : 'Not configured';
 
   return (
     <div className="flex h-full min-h-0 items-stretch gap-0">
@@ -2675,6 +2895,8 @@ function DoneScreen({ data, onFinish }: { data: WizardData; onFinish: () => void
             { label: 'API keys', value: keyCount > 0 ? `${keyCount} configured` : 'None — use local models' },
             { label: 'Workspace', value: data.workspacePath },
             { label: 'Modes',    value: `${data.selectedModes.length} enabled` },
+            ...(routerLabel ? [{ label: 'Router', value: routerLabel }] : []),
+            { label: 'Bot computer', value: computerLabel },
           ].map(({ label, value }) => (
             <div key={label} className="flex items-center justify-between text-xs">
               <span className="text-ui-text-muted">{label}</span>
@@ -2720,6 +2942,8 @@ const STEP_META: Record<Screen, { title: string; sub: string }> = {
   infra:      { title: 'Where should Allternit run?', sub: 'This is like choosing where to plug in the engine — don\'t worry, any option works great' },
   appearance: { title: 'Pick your style',             sub: 'Dark or light — just how the app looks, you can change this anytime' },
   modes:      { title: 'Connect your brain',            sub: 'Pick an AI model to power Allternit — we scanned your machine for anything already installed' },
+  router:     { title: 'Choose your inference router',  sub: 'Pick the CLI or API that runs agent turns — Codex, Claude Code, Cursor, or OpenRouter' },
+  computer:   { title: 'Bot computer',                  sub: 'Confirm connection to your bot\'s cloud computer sandbox — you can provision it later' },
   done:       { title: '',              sub: '' },
 };
 
@@ -2792,6 +3016,7 @@ export function OnboardingFlow() {
       apiKeysConfigured: data.apiKeysConfigured || Object.keys(data.configuredKeys ?? {}).length > 0,
       defaultWorkspacePath: data.workspacePath,
       preferredModes: data.selectedModes,
+      inferenceProvider: data.inferenceProvider,
     });
     // Notify the desktop shell that onboarding is complete so it can update its own store.
     if (typeof window !== 'undefined' && (window as any).allternit?.app?.completeOnboarding) {
@@ -2866,6 +3091,8 @@ export function OnboardingFlow() {
                 }} />}
                 {screen === 'appearance' && <AppearanceStep theme={data.theme} onChange={(t) => update({ theme: t })} />}
                 {screen === 'modes'   && <ModesStep data={data} onUpdate={update} />}
+                {screen === 'router'  && <RouterStep data={data} onUpdate={update} />}
+                {screen === 'computer' && <BotComputerStep data={data} onUpdate={update} />}
                 {screen === 'done'    && <DoneScreen data={data} onFinish={finish} />}
               </motion.div>
             </AnimatePresence>
@@ -2888,11 +3115,15 @@ export function OnboardingFlow() {
                   onClick={goNext}
                   whileHover={{ scale: 1.03 }}
                   whileTap={{ scale: 0.97 }}
-                  className={`flex cursor-pointer items-center gap-2 rounded-full px-5 py-2.5 text-[13px] font-bold shadow-sm transition-colors duration-200 ${screen === 'modes' && !data.defaultProvider ? 'border border-ui-border-default bg-surface-panel-muted text-ui-text-muted' : 'border-none bg-accent-primary text-text-inverse'}`}
+                  className={`flex cursor-pointer items-center gap-2 rounded-full px-5 py-2.5 text-[13px] font-bold shadow-sm transition-colors duration-200 ${screen === 'router' && !data.inferenceProvider ? 'border border-ui-border-default bg-surface-panel-muted text-ui-text-muted' : 'border-none bg-accent-primary text-text-inverse'}`}
                 >
-                  {screen === 'modes'
-                    ? data.defaultProvider ? 'Finish' : 'Skip for now'
-                    : 'Continue'}
+                  {screen === 'computer'
+                    ? 'Finish'
+                    : screen === 'router'
+                      ? data.inferenceProvider ? 'Continue' : 'Skip for now'
+                      : screen === 'modes'
+                        ? data.defaultProvider ? 'Continue' : 'Skip for now'
+                        : 'Continue'}
                   <CaretRight size={13} />
                 </motion.button>
               </div>

@@ -177,18 +177,25 @@ export const CoworkTranscript = memo(function CoworkTranscript({
           role: m.role as 'user' | 'assistant',
           content: parts as any,
           createdAt: m.timestamp ? new Date(m.timestamp) : new Date(),
+          metadata: m.metadata as ChatMessage['metadata'],
         };
       }
     }
     const pluginMention = m.metadata?.pluginMention as
       | { kind: 'plugin' | 'connector'; id: string; name: string }
       | undefined;
+    let metadata: ChatMessage['metadata'] = m.metadata
+      ? { ...(m.metadata as Record<string, unknown>) }
+      : undefined;
+    if (pluginMention) {
+      metadata = { ...metadata, pluginMention };
+    }
     return {
       id: m.id,
       role: m.role as 'user' | 'assistant',
       content: typeof m.content === 'string' ? m.content : '',
       createdAt: m.timestamp ? new Date(m.timestamp) : new Date(),
-      metadata: pluginMention ? { pluginMention } : undefined,
+      metadata,
     };
   });
 
@@ -284,6 +291,7 @@ export const CoworkTranscript = memo(function CoworkTranscript({
               viewMode={isStreamingThis ? 'verbose' : 'normal'}
               onSelectArtifact={onSelectArtifact}
               selectedArtifactTitle={selectedArtifactTitle}
+              conversationId={conversationId}
             />
           );
         }

@@ -3,6 +3,8 @@
 import React, { useCallback, useEffect, useMemo, useState } from "react";
 import {
   ArrowsClockwise,
+  ArrowsLeftRight,
+  Brain,
   CheckCircle,
   CircleNotch,
   Cloud,
@@ -26,6 +28,11 @@ import {
   type HostedRuntime,
   type HostedRuntimeEntitlement,
 } from "@/lib/hosted-compute";
+import {
+  inferenceRouterApi,
+  PROVIDER_LABELS,
+  type RoutedUsageEvent,
+} from "@/lib/inference-router";
 import { SectionHeading } from "@/components/settings/SectionHeading";
 import { EmptyState } from "@/components/settings/EmptyState";
 import { SkeletonRow } from "@/components/settings/SkeletonRow";
@@ -111,6 +118,105 @@ function ProductCard({
         </div>
       </div>
     </div>
+  );
+}
+
+function RoutedUsageCard() {
+  const [events, setEvents] = useState<RoutedUsageEvent[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  const load = useCallback(async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      const data = await inferenceRouterApi.getUsage(50);
+      setEvents(data);
+    } catch (failure) {
+      setError(failure instanceof Error ? failure.message : "Unable to load routed usage");
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    void load();
+  }, [load]);
+
+  const totals = useMemo(() => {
+    const byProvider = new Map<string, { input: number; output: number; cache: number; reasoning: number; count: number }>();
+    for (const e of events) {
+      const current = byProvider.get(e.provider) ?? { input: 0, output: 0, cache: 0, reasoning: 0, count: 0 };
+      current.input += e.promptTokens;
+      current.output += e.completionTokens;
+      current.cache += e.cachedTokens;
+      current.reasoning += e.reasoningTokens;
+      current.count += 1;
+      byProvider.set(e.provider, current);
+    }
+    return Array.from(byProvider.entries())
+      .map(([provider, t]) => ({ provider, ...t, total: t.input + t.output + t.cache + t.reasoning }))
+      .sort((a, b) => b.total - a.total);
+  }, [events]);
+
+  const recent = useMemo(() => events.slice(0, 5), [events]);
+
+  return (
+    <ProductCard
+      icon={<ArrowsLeftRight size={18} />}
+      eyebrow="Local CLI"
+      title="Routed inference"
+      description="Usage from local CLI providers such as Codex and Claude Code."
+    >
+      {loading ? (
+        <SkeletonRow lines={2} />
+      ) : error ? (
+        <div className="text-[11px] text-[var(--status-error)]">{error}</div>
+      ) : totals.length === 0 ? (
+        <div className="text-[11px] text-[var(--text-tertiary)]">No routed usage yet. Run a test turn in Router settings to see it here.</div>
+      ) : (
+        <div className="space-y-3">
+          <div className="flex flex-wrap gap-2">
+            {totals.map((t) => (
+              <div key={t.provider} className="inline-flex items-center gap-1.5 px-2 py-1 rounded-lg bg-[var(--bg-secondary)] border border-[var(--border-subtle)] text-[11px]">
+                <Brain size={12} className="text-[var(--accent-primary)]" />
+                <span className="font-medium text-[var(--text-primary)]">{PROVIDER_LABELS[t.provider as keyof typeof PROVIDER_LABELS] ?? t.provider}</span>
+                <span className="text-[var(--text-tertiary)]">{t.total.toLocaleString()} tokens · {t.count} turn{t.count === 1 ? "" : "s"}</span>
+              </div>
+            ))}
+          </div>
+
+          <div className="rounded-lg border border-solid border-[var(--border-subtle)] overflow-hidden">
+            <table className="w-full text-[10px]">
+              <thead className="bg-[var(--bg-secondary)] text-[var(--text-tertiary)]">
+                <tr>
+                  <th className="px-2 py-1.5 text-left font-medium">Provider</th>
+                  <th className="px-2 py-1.5 text-right font-medium">Tokens</th>
+                  <th className="px-2 py-1.5 text-right font-medium">Latency</th>
+                  <th className="px-2 py-1.5 text-right font-medium">Time</th>
+                </tr>
+              </thead>
+              <tbody>
+                {recent.map((e) => (
+                  <tr key={e.id} className="border-t border-[var(--border-subtle)]">
+                    <td className="px-2 py-1.5 text-[var(--text-primary)]">{PROVIDER_LABELS[e.provider as keyof typeof PROVIDER_LABELS] ?? e.provider}</td>
+                    <td className="px-2 py-1.5 text-right font-mono text-[var(--text-secondary)]">{(e.promptTokens + e.completionTokens + e.cachedTokens + e.reasoningTokens).toLocaleString()}</td>
+                    <td className="px-2 py-1.5 text-right font-mono text-[var(--text-secondary)]">{e.latencyMs}ms</td>
+                    <td className="px-2 py-1.5 text-right text-[var(--text-tertiary)]">{new Date(e.createdAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+
+          <div className="flex items-center justify-end">
+            <button type="button" className={QUIET_BUTTON_CLASS} onClick={() => void load()} disabled={loading}>
+              <ArrowsClockwise size={13} /> Refresh
+            </button>
+          </div>
+        </div>
+      )}
+    </ProductCard>
   );
 }
 
@@ -251,6 +357,8 @@ export function ComputeBillingPanel() {
             </button>
           </div>
         </ProductCard>
+
+        <RoutedUsageCard />
 
         <ProductCard
           icon={<HardDrives size={18} />}

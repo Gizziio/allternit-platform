@@ -42,6 +42,8 @@ const TYPE_META: Record<
   worker: { label: "Worker", icon: Code, accent: "var(--status-success)" },
   specialist: { label: "Specialist", icon: MagnifyingGlass, accent: "var(--status-warning)" },
   reviewer: { label: "Reviewer", icon: ShieldCheck, accent: "var(--status-error)" },
+  assistant: { label: "Assistant", icon: ChatTeardropText, accent: "var(--status-success)" },
+  bot: { label: "Bot", icon: Star, accent: "var(--accent-primary)" },
 };
 
 const SOURCE_LABEL: Record<string, string> = {

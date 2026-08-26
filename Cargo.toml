@@ -7,6 +7,7 @@ members = [
     "cmd/allternit-mux",
     "cmd/allternit-cloud-api",
     "cmd/allternit-cloud-wizard",
+    "cmd/allternit-computer-cloud",
     "cmd/launcher",
     "rails",
     "rails/cli",
@@ -203,6 +204,7 @@ allternit-tool-registry = { path = "services/orchestration/control-plane/unified
 allternit-scheduler = { path = "infrastructure/scheduler" }
 allternit-cron-parser = { path = "infrastructure/scheduler/cron-parser" }
 allternit-cloud-api = { path = "cmd/allternit-cloud-api" }
+allternit-computer-cloud = { path = "cmd/allternit-computer-cloud" }
 
 allternit-receipts-schema = { path = "domains/governance/evidence-management/receipts-schema" }
 allternit-evals = { path = "domains/governance/security-quality-assurance/evals" }

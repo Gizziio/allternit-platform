@@ -18,6 +18,7 @@ import {
 import { createViewRegistry } from '../views/registry';
 import type { ViewContext, ViewType } from '../nav/nav.types';
 import { useCoworkSessionStore } from '../views/cowork/CoworkSessionStore';
+import { useChatSessionStore } from '../views/chat/ChatSessionStore';
 import type { AppMode } from './ShellHeader';
 import type { CanonicalAgentModeId } from '@/lib/agents/agent-mode-contracts';
 import type { Agent } from '@/lib/agents/agent.types';
@@ -34,6 +35,7 @@ const CodeModeAgentSession = lazy(() => import('../views/agent-sessions/CodeMode
 const DesignModeAgentSession = lazy(() => import('../views/agent-sessions/DesignModeAgentSession').then(m => ({ default: m.DesignModeAgentSession })));
 const BotInboxView = lazy(() => import('../views/bots/BotInboxView').then(m => ({ default: m.BotInboxView })));
 const BotHomeView = lazy(() => import('../views/bots/BotHomeView').then(m => ({ default: m.BotHomeView })));
+const GroupChatView = lazy(() => import('../views/bots/GroupChatView').then(m => ({ default: m.GroupChatView })));
 const SwarmADE             = lazy(() => import('../views/swarm').then(m => ({ default: m.SwarmADE })));
 const AllternitCanvasView  = lazy(() => import('../views/AllternitCanvasView').then(m => ({ default: m.AllternitCanvasView })));
 const CoworkRoot           = lazy(() => import('../views/cowork/CoworkRoot').then(m => ({ default: m.CoworkRoot })));
@@ -92,6 +94,7 @@ const BudgetDashboardView    = lazy(() => import('../views/runtime/BudgetDashboa
 const ReplayManagerView      = lazy(() => import('../views/runtime/ReplayManagerView').then(m => ({ default: m.ReplayManagerView })));
 const PrewarmManagerView     = lazy(() => import('../views/runtime/PrewarmManagerView').then(m => ({ default: m.PrewarmManagerView })));
 const RuntimeOperationsView  = lazy(() => import('../views/runtime/RuntimeOperationsView').then(m => ({ default: m.RuntimeOperationsView })));
+const DesktopCloudAdminView  = lazy(() => import('../views/desktop-cloud/DesktopCloudAdminView').then(m => ({ default: m.DesktopCloudAdminView })));
 const HistoryView            = lazy(() => import('../views/HistoryView').then(m => ({ default: m.HistoryView })));
 const ArchivedView           = lazy(() => import('../views/ArchivedView').then(m => ({ default: m.ArchivedView })));
 const RecentsView            = lazy(() => import('../views/RecentsView').then(m => ({ default: m.RecentsView })));
@@ -301,7 +304,10 @@ export function getShellViewRegistry(handlers: {
     ),
     'agent-hub': ({ context }: { context?: ViewContext }) => (
       <ErrorBoundary fallback={<ErrorFallbackWrapper viewName="Agent | Bot Hub" />}>
-        <AgentHub onSessionStarted={(sessionId) => open('chat-agent-session', { sessionId })} />
+        <AgentHub onSessionStarted={(sessionId) => {
+          useChatSessionStore.getState().setActiveSession(sessionId);
+          open('chat', { sessionId });
+        }} />
       </ErrorBoundary>
     ),
     'bot-inbox': ({ context }: { context?: ViewContext }) => {
@@ -317,6 +323,15 @@ export function getShellViewRegistry(handlers: {
       return (
         <ErrorBoundary fallback={<ErrorFallbackWrapper viewName="Bot Home" />}>
           <BotHomeView botId={ctx?.botId ?? context?.viewId ?? ''} />
+        </ErrorBoundary>
+      );
+    },
+    'bot-group-chat': ({ context }: { context?: ViewContext }) => {
+      const ctx = context?.context as { sessionId?: string } | undefined;
+      const sessionId = ctx?.sessionId ?? context?.viewId ?? '';
+      return (
+        <ErrorBoundary fallback={<ErrorFallbackWrapper viewName="Group Chat" />}>
+          <GroupChatView sessionId={sessionId} onBack={() => open('agent-hub')} />
         </ErrorBoundary>
       );
     },
@@ -639,6 +654,11 @@ export function getShellViewRegistry(handlers: {
     "prewarm-manager": ({ context }: { context?: ViewContext }) => (
       <ErrorBoundary fallback={<ErrorFallbackWrapper viewName="Prewarm Manager" />}>
         <PrewarmManagerView />
+      </ErrorBoundary>
+    ),
+    "desktop-cloud": ({ context }: { context?: ViewContext }) => (
+      <ErrorBoundary fallback={<ErrorFallbackWrapper viewName="Desktop Cloud" />}>
+        <DesktopCloudAdminView />
       </ErrorBoundary>
     ),
     history: ({ context }: { context?: ViewContext }) => (

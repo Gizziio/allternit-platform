@@ -3,7 +3,7 @@
 import React from 'react';
 import { cn } from '@/lib/utils';
 
-type MockChatStyle = 'claude' | 'gpt' | 'grok' | 'gemini';
+type MockChatStyle = 'claude' | 'gpt' | 'kimi' | 'gemini';
 
 interface MockChatMessage {
   role: 'user' | 'assistant';
@@ -35,11 +35,11 @@ const styleConfig: Record<MockChatStyle, {
     userBubble: 'bg-green-500 text-white',
     label: 'ChatGPT',
   },
-  grok: {
+  kimi: {
     accentClass: 'bg-foreground',
     assistantBubble: 'bg-muted text-foreground',
     userBubble: 'bg-foreground text-background',
-    label: 'Grok',
+    label: 'Kimi',
   },
   gemini: {
     accentClass: 'bg-blue-500',

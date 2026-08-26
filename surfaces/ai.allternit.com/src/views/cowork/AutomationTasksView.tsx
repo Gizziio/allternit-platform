@@ -28,6 +28,7 @@ import {
 } from '@phosphor-icons/react';
 import GlassSurface from '@/design/GlassSurface';
 import { ModelPicker, type ModelSelection } from '@/components/model-picker';
+import { ModelSelectionProvider } from '@/providers/model-selection-provider';
 import { useAgentStore } from '@/lib/agents';
 import { HeartbeatScheduler } from '@/components/agent-workspace';
 import {
@@ -1480,12 +1481,14 @@ function AutomationWizardForm({
       </div>
 
       {showModelPicker && (
-        <ModelPicker
-          open={showModelPicker}
-          onOpenChange={setShowModelPicker}
-          onSelect={(sel) => { setFormData({ ...formData, modelSelection: sel }); setShowModelPicker(false); }}
-          onCancel={() => setShowModelPicker(false)}
-        />
+        <ModelSelectionProvider>
+          <ModelPicker
+            open={showModelPicker}
+            onOpenChange={setShowModelPicker}
+            onSelect={(sel) => { setFormData({ ...formData, modelSelection: sel }); setShowModelPicker(false); }}
+            onCancel={() => setShowModelPicker(false)}
+          />
+        </ModelSelectionProvider>
       )}
     </OverlayContainer>
   );

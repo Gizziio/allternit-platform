@@ -9,6 +9,12 @@ import { designSkillsPlugin } from './src/lib/design/design-skills-plugin'
 
 const require = createRequire(import.meta.url)
 const blocksuiteIconsLit = require.resolve('@blocksuite/icons/lit')
+
+/**
+ * Dev-only override for the allternit-api backend URL.
+ * Useful when another service already owns localhost:8013.
+ */
+const API_TARGET = process.env.ALLTERNIT_API_URL || 'http://127.0.0.1:8013'
 // Force Univer to use the same @univerjs/core that office-sheets-app depends
 // on. Without this, the platform surface's legacy design-mode editor pins
 // @univerjs/core@0.21.1, which conflicts with office-sheets-app's 0.25.x
@@ -177,50 +183,51 @@ export default defineConfig({
         changeOrigin: true,
         rewrite: (path) => path.replace(/^\/local-ai/, ''),
       },
-      // Chat streaming is handled by the local gizzi runtime in dev; the
-      // allternit-api backend does not yet implement /agent-chat.
+      // Chat streaming is now implemented by allternit-api's /api/agent-chat
+      // bridge. Route it to the backend in dev instead of the legacy local
+      // gizzi runtime on 4096.
       '/api/agent-chat': {
-        target: 'http://127.0.0.1:4096',
+        target: API_TARGET,
         changeOrigin: true,
       },
       '/api': {
-        target: 'http://127.0.0.1:8013',
+        target: API_TARGET,
         changeOrigin: true,
       },
       '/viz': {
-        target: 'http://127.0.0.1:8013',
+        target: API_TARGET,
         changeOrigin: true,
       },
       '/sandbox': {
-        target: 'http://127.0.0.1:8013',
+        target: API_TARGET,
         changeOrigin: true,
       },
       '/vm-session': {
-        target: 'http://127.0.0.1:8013',
+        target: API_TARGET,
         changeOrigin: true,
       },
       '/rails': {
-        target: 'http://127.0.0.1:8013',
+        target: API_TARGET,
         changeOrigin: true,
       },
       '/stream': {
-        target: 'http://127.0.0.1:8013',
+        target: API_TARGET,
         changeOrigin: true,
       },
       '/terminal': {
-        target: 'http://127.0.0.1:8013',
+        target: API_TARGET,
         changeOrigin: true,
       },
       '/mcp': {
-        target: 'http://127.0.0.1:8013',
+        target: API_TARGET,
         changeOrigin: true,
       },
       '/status': {
-        target: 'http://127.0.0.1:8013',
+        target: API_TARGET,
         changeOrigin: true,
       },
       '/health': {
-        target: 'http://127.0.0.1:8013',
+        target: API_TARGET,
         changeOrigin: true,
       },
     },

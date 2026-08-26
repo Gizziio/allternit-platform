@@ -40,6 +40,7 @@ import { executeAgentMode } from './agent-mode-executor';
 import { gizziBaseUrl } from './api-config';
 import { buildBotRuntimeEnv } from '@/lib/bots/bot-runtime-env';
 import { memoryClient } from './memory-client';
+import { inferenceRouterApi, type InferenceProvider } from '@/lib/inference-router';
 
 const logger = createModuleLogger('ModeSessionStore');
 import type {
@@ -76,6 +77,9 @@ export interface ModeSession {
     sessionMode?: 'regular' | 'agent';
     agentId?: string;
     agentName?: string;
+    // Group chat: multiple agent members in one session
+    isGroupChat?: boolean;
+    memberIds?: string[];
     originSurface: 'chat' | 'cowork' | 'code' | 'browser' | 'design';
     projectId?: string;
     taskId?: string;
@@ -134,6 +138,16 @@ export interface CreateModeSessionOptions {
   systemPrompt?: string;
   isolation?: 'worktree' | 'none';
   metadata?: Record<string, unknown>;
+  /**
+   * When true, keep the optimistic local session if backend creation fails.
+   * Used for routed CLI turns that do not require a live Gizzi session.
+   */
+  allowLocalFallback?: boolean;
+  /**
+   * When true, never create a backend session. The session is local-only.
+   * Used for group chats and other client-only session types.
+   */
+  skipBackend?: boolean;
 }
 
 export interface SendMessageOptions {
@@ -212,6 +226,22 @@ function mapBackendMessage(backend: BackendMessage): ModeSessionMessage {
     thinking: backend.thinking,
     timestamp: backend.timestamp,
     metadata: backend.metadata,
+  };
+}
+
+/**
+ * Build base metadata for assistant messages in bot sessions so the UI can
+ * render the bot's name and avatar. Group-chat replies override this with
+ * per-message agentId/agentName via appendAssistantMessage.
+ */
+function buildBotAssistantMetadata(session: ModeSession): Record<string, unknown> | undefined {
+  const agentId = session.metadata?.agentId;
+  const agentName = session.metadata?.agentName;
+  if (!agentId && !agentName) return undefined;
+  return {
+    agentId: agentId as string | undefined,
+    agentName: agentName as string | undefined,
+    isBotResponse: true,
   };
 }
 
@@ -543,7 +573,7 @@ async function sendMessageWithContext(
  */
 const MODEL_SELECTION_STORAGE_KEY = 'allternit:model-selection';
 
-function resolveRuntimeModelId(): string | null {
+function resolveRuntimeModelId(): string | undefined {
   try {
     const raw = typeof window !== 'undefined'
       ? window.localStorage.getItem(MODEL_SELECTION_STORAGE_KEY)
@@ -555,7 +585,7 @@ function resolveRuntimeModelId(): string | null {
       }
     }
   } catch { /* malformed or unavailable storage */ }
-  return null;
+  return undefined;
 }
 
 async function resolveFallbackRuntimeModelId(): Promise<string | undefined> {
@@ -895,7 +925,9 @@ export interface ModeSessionState {
   
   sendMessage: (sessionId: string, options: SendMessageOptions) => Promise<void>;
   sendMessageStream: (sessionId: string, options: SendMessageOptions) => Promise<void>;
+  sendRoutedTurn: (sessionId: string, provider: InferenceProvider, prompt: string) => Promise<void>;
   abortGeneration: (sessionId: string) => void;
+  setStreamingBySession: (sessionId: string, isStreaming: boolean) => void;
 
   // Session lifecycle (revert / compact / undo / redo)
   revertSession: (sessionId: string, messageId: string) => Promise<void>;
@@ -938,6 +970,7 @@ export interface ModeSessionState {
 
   // Agent mode integration
   appendOptimisticEvent: (sessionId: string, event: unknown) => void;
+  appendUserMessage: (sessionId: string, message: { id: string; content: string; metadata?: Record<string, unknown> }) => void;
   appendAssistantMessage: (sessionId: string, message: { id: string; content: string; metadata?: Record<string, unknown> }) => void;
   updateMessage: (sessionId: string, messageId: string, updates: Partial<ModeSessionMessage>) => void;
 }
@@ -996,6 +1029,21 @@ export function createModeSessionStore(config: StoreConfig) {
               sessions: [optimisticSession, ...state.sessions],
               activeSessionId: optimisticId,
             }));
+
+            // Client-only sessions (e.g. bot group chats) skip the backend entirely
+            // so custom metadata like memberIds survives.
+            if (options.skipBackend) {
+              set((state) => ({
+                isLoading: false,
+                sessions: state.sessions.map((s) =>
+                  s.id === optimisticId
+                    ? { ...s, metadata: { ...s.metadata, ...options.metadata } }
+                    : s
+                ),
+              }));
+              return optimisticId;
+            }
+
             
             try {
               // Load agent workspace if agent mode
@@ -1088,7 +1136,7 @@ export function createModeSessionStore(config: StoreConfig) {
               const canRunLocally = Boolean(localModeId) && (
                 options.sessionMode === 'agent' || config.originSurface === 'code'
               );
-              if (canRunLocally) {
+              if (canRunLocally || options.allowLocalFallback) {
                 logger.warn({ err: error }, `[${config.name}] Backend session unavailable; running built-in mode locally`);
                 set((state) => ({
                   error: null,
@@ -1101,6 +1149,7 @@ export function createModeSessionStore(config: StoreConfig) {
                             ...session.metadata,
                             agentModeId: localModeId as CanonicalAgentModeId,
                             executionPersistence: 'local',
+                            allowLocalFallback: true,
                           },
                         }
                       : session
@@ -1300,6 +1349,7 @@ export function createModeSessionStore(config: StoreConfig) {
             // single chunk, all set() calls land in one React render with
             // isStreaming=false, causing StreamingChatComposer to mount with
             // isActivelyStreaming=false and show the full text as a blob.
+            const botAssistantMeta = buildBotAssistantMetadata(session);
             set((state) => ({
               sessions: state.sessions.map((s) =>
                 s.id === sessionId
@@ -1308,6 +1358,7 @@ export function createModeSessionStore(config: StoreConfig) {
                       role: 'assistant' as const,
                       content: '',
                       timestamp: new Date().toISOString(),
+                      metadata: botAssistantMeta,
                     }] }
                   : s
               ),
@@ -1389,8 +1440,8 @@ export function createModeSessionStore(config: StoreConfig) {
                     content: assistantContent,
                     thinking: reasoningContent || undefined,
                     timestamp: new Date().toISOString(),
-                    metadata: assistantToolParts.length > 0
-                      ? { agentElementsParts: assistantToolParts }
+                    metadata: assistantToolParts.length > 0 || botAssistantMeta
+                      ? { ...(botAssistantMeta ?? {}), ...(assistantToolParts.length > 0 ? { agentElementsParts: assistantToolParts } : {}) }
                       : undefined,
                   };
                   const newMessages = existingMsgIndex >= 0
@@ -1541,8 +1592,8 @@ export function createModeSessionStore(config: StoreConfig) {
                           content: assistantContent,
                           thinking: reasoningContent || undefined,
                           timestamp: new Date().toISOString(),
-                          metadata: assistantToolParts.length > 0
-                            ? { agentElementsParts: assistantToolParts }
+                          metadata: assistantToolParts.length > 0 || botAssistantMeta
+                            ? { ...(botAssistantMeta ?? {}), ...(assistantToolParts.length > 0 ? { agentElementsParts: assistantToolParts } : {}) }
                             : undefined,
                         };
                         const newMessages = existingMsgIndex >= 0
@@ -1662,6 +1713,148 @@ export function createModeSessionStore(config: StoreConfig) {
             }
           },
 
+          sendRoutedTurn: async (sessionId: string, provider: InferenceProvider, prompt: string) => {
+            const session = get().sessions.find((s) => s.id === sessionId);
+            if (!session) throw new Error('Session not found');
+            // Routed turns can run against local fallback sessions when the Gizzi
+            // runtime is unavailable; persistence is handled by the local store.
+            if (!isBackendSessionId(sessionId) && !session.metadata.allowLocalFallback) {
+              throw new Error(`Cannot send a routed turn before a live session exists: ${sessionId}`);
+            }
+
+            const trimmed = prompt.trim();
+            if (!trimmed) return;
+
+            // For bot sessions, make sure the routed CLI brain knows the bot's
+            // identity and system prompt instead of answering as the raw CLI.
+            const botProfile = session.metadata?.botProfile as { displayName?: string; tagline?: string; welcomeMessage?: string } | undefined;
+            const routedAgentId = session.metadata?.agentId as string | undefined;
+            const routedAgentName =
+              botProfile?.displayName ||
+              (session.metadata?.agentName as string | undefined) ||
+              'Bot';
+            const personaParts: string[] = [];
+            if (routedAgentName) {
+              personaParts.push(`You are ${routedAgentName}.`);
+            }
+            if (botProfile?.tagline) personaParts.push(botProfile.tagline);
+            if (botProfile?.welcomeMessage) personaParts.push(botProfile.welcomeMessage);
+            if (session.metadata?.systemPrompt) personaParts.push(session.metadata.systemPrompt as string);
+            const routedSystemPrompt = personaParts.length > 0 ? personaParts.join('\n\n') : undefined;
+
+            const userMessageId = `temp-${Date.now()}`;
+            const assistantMessageId = `assistant-${Date.now()}`;
+
+            // Mark session as streaming and add optimistic user + placeholder assistant messages.
+            set((state) => ({
+              streamingBySession: {
+                ...state.streamingBySession,
+                [sessionId]: { isStreaming: true, error: null, abortController: null },
+              },
+              sessions: state.sessions.map((s) =>
+                s.id === sessionId
+                  ? {
+                      ...s,
+                      messages: [
+                        ...s.messages,
+                        {
+                          id: userMessageId,
+                          role: 'user' as const,
+                          content: trimmed,
+                          timestamp: new Date().toISOString(),
+                        },
+                        {
+                          id: assistantMessageId,
+                          role: 'assistant' as const,
+                          content: '',
+                          timestamp: new Date().toISOString(),
+                          metadata: {
+                            routedTurn: true,
+                            provider,
+                            routedStatus: 'running',
+                            agentId: routedAgentId,
+                            agentName: routedAgentName,
+                          },
+                        },
+                      ],
+                      messageCount: s.messageCount + 1,
+                    }
+                  : s
+              ),
+            }));
+
+            // Yield so React renders the placeholder while isStreaming=true.
+            await new Promise<void>((resolve) => setTimeout(resolve, 0));
+
+            try {
+              const result = await inferenceRouterApi.execute(provider, trimmed, {
+                systemPrompt: routedSystemPrompt,
+              });
+              const output = result.output || result.error || '';
+              set((state) => ({
+                sessions: state.sessions.map((s) =>
+                  s.id === sessionId
+                    ? {
+                        ...s,
+                        messages: s.messages.map((m) =>
+                          m.id === assistantMessageId
+                            ? {
+                                ...m,
+                                content: output,
+                                metadata: {
+                                  routedTurn: true,
+                                  provider,
+                                  exitCode: result.exitCode ?? null,
+                                  error: result.error ?? null,
+                                  routedStatus: result.error ? 'error' : 'complete',
+                                  agentId: routedAgentId,
+                                  agentName: routedAgentName,
+                                },
+                              }
+                            : m
+                        ),
+                      }
+                    : s
+                ),
+              }));
+            } catch (err) {
+              const message = err instanceof Error ? err.message : String(err);
+              set((state) => ({
+                sessions: state.sessions.map((s) =>
+                  s.id === sessionId
+                    ? {
+                        ...s,
+                        messages: s.messages.map((m) =>
+                          m.id === assistantMessageId
+                            ? {
+                                ...m,
+                                content: `Routing error: ${message}`,
+                                metadata: {
+                                  routedTurn: true,
+                                  provider,
+                                  routedStatus: 'error',
+                                  agentId: routedAgentId,
+                                  agentName: routedAgentName,
+                                },
+                              }
+                            : m
+                        ),
+                      }
+                    : s
+                ),
+              }));
+            } finally {
+              set((state) => ({
+                streamingBySession: {
+                  ...state.streamingBySession,
+                  [sessionId]: state.streamingBySession[sessionId]
+                    ? { ...state.streamingBySession[sessionId], isStreaming: false }
+                    : { isStreaming: false, error: null, abortController: null },
+                },
+              }));
+            }
+          },
+
           abortGeneration: async (sessionId: string) => {
             if (!isBackendSessionId(sessionId)) {
               set((state) => ({
@@ -1687,6 +1880,17 @@ export function createModeSessionStore(config: StoreConfig) {
               streamingBySession: {
                 ...state.streamingBySession,
                 [sessionId]: { isStreaming: false, error: null, abortController: null },
+              },
+            }));
+          },
+
+          setStreamingBySession: (sessionId: string, isStreaming: boolean) => {
+            set((state) => ({
+              streamingBySession: {
+                ...state.streamingBySession,
+                [sessionId]: state.streamingBySession[sessionId]
+                  ? { ...state.streamingBySession[sessionId], isStreaming }
+                  : { isStreaming, error: null, abortController: null },
               },
             }));
           },
@@ -1874,13 +2078,49 @@ export function createModeSessionStore(config: StoreConfig) {
             }));
           },
 
+          appendUserMessage: (sessionId: string, message) => {
+            const userMsg: ModeSessionMessage = {
+              id: message.id,
+              role: 'user',
+              content: message.content,
+              timestamp: new Date().toISOString(),
+              metadata: message.metadata,
+            };
+            set((state) => ({
+              sessions: state.sessions.map((s) =>
+                s.id === sessionId
+                  ? { ...s, messages: [...s.messages, userMsg], messageCount: s.messageCount + 1 }
+                  : s
+              ),
+            }));
+          },
+
           appendAssistantMessage: (sessionId: string, message) => {
+            const session = get().sessions.find((s) => s.id === sessionId);
+            const isBotSession = Boolean(session?.metadata?.isBot) || Boolean(session?.metadata?.isGroupChat);
+            // Prefer identity supplied per-message (group replies pass their own
+            // agentId/agentName). Fall back to session-level bot metadata.
+            const sessionBotMeta = isBotSession
+              ? {
+                  agentId: session?.metadata?.agentId as string | undefined,
+                  agentName:
+                    (session?.metadata?.agentName as string | undefined) ||
+                    (session?.metadata?.botProfile &&
+                      (session.metadata.botProfile as { displayName?: string }).displayName) ||
+                    'Bot',
+                }
+              : {};
             const assistantMsg: ModeSessionMessage = {
               id: message.id,
               role: 'assistant',
               content: message.content,
               timestamp: new Date().toISOString(),
-              metadata: message.metadata,
+              metadata: {
+                ...sessionBotMeta,
+                ...message.metadata,
+                agentId: (message.metadata?.agentId as string | undefined) ?? sessionBotMeta.agentId,
+                agentName: (message.metadata?.agentName as string | undefined) ?? sessionBotMeta.agentName,
+              },
             };
             set((state) => ({
               sessions: state.sessions.map((s) =>

@@ -1,12 +1,13 @@
 "use client";
 
 import React, { useMemo, useState } from "react";
-import { MagnifyingGlass, Plus, Robot } from "@phosphor-icons/react";
+import { MagnifyingGlass, Plus, Robot, Users } from "@phosphor-icons/react";
 import { useAgentStore } from "@/lib/agents/agent.store";
 import { useChatSessionStore } from "@/views/chat/ChatSessionStore";
 import { getBots, BOT_CATEGORIES } from "@/lib/bots/bot-profile";
 import type { BotCategory } from "@/lib/agents/agent.types";
 import { BotHubCard } from "./BotHubCard";
+import { CreateBotGroupChatModal } from "./CreateBotGroupChatModal";
 import { cn } from "@/lib/utils";
 
 interface BotHubHomeTabProps {
@@ -18,6 +19,7 @@ export function BotHubHomeTab({ onCreate }: BotHubHomeTabProps) {
   const chatSessions = useChatSessionStore((s) => s.sessions ?? []);
   const [searchQuery, setSearchQuery] = useState("");
   const [categoryFilter, setCategoryFilter] = useState<BotCategory | "all">("all");
+  const [isGroupChatModalOpen, setIsGroupChatModalOpen] = useState(false);
 
   const bots = useMemo(() => getBots(agents), [agents]);
 
@@ -80,14 +82,24 @@ export function BotHubHomeTab({ onCreate }: BotHubHomeTabProps) {
                 className="flex-1 border-none bg-transparent text-[15px] text-[var(--text-primary)] outline-none placeholder:text-[var(--text-tertiary)]"
               />
             </div>
-            <button
-              type="button"
-              onClick={onCreate}
-              className="inline-flex h-11 items-center justify-center gap-1.5 rounded-lg bg-[var(--text-primary)] px-4 text-[13px] font-medium text-[var(--bg-elevated)] transition-opacity hover:opacity-90 sm:hidden"
-            >
-              <Plus size={16} />
-              Create bot
-            </button>
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                onClick={() => setIsGroupChatModalOpen(true)}
+                className="inline-flex h-11 items-center justify-center gap-1.5 rounded-lg border border-[var(--border-default)] bg-[var(--bg-elevated)] px-4 text-[13px] font-medium text-[var(--text-primary)] transition-colors hover:bg-[var(--surface-hover)]"
+              >
+                <Users size={16} />
+                Group chat
+              </button>
+              <button
+                type="button"
+                onClick={onCreate}
+                className="inline-flex h-11 items-center justify-center gap-1.5 rounded-lg bg-[var(--text-primary)] px-4 text-[13px] font-medium text-[var(--bg-elevated)] transition-opacity hover:opacity-90"
+              >
+                <Plus size={16} />
+                Create bot
+              </button>
+            </div>
           </div>
 
           <div className="flex flex-wrap items-center gap-2">
@@ -149,6 +161,11 @@ export function BotHubHomeTab({ onCreate }: BotHubHomeTabProps) {
           </div>
         )}
       </div>
+
+      <CreateBotGroupChatModal
+        isOpen={isGroupChatModalOpen}
+        onClose={() => setIsGroupChatModalOpen(false)}
+      />
     </div>
   );
 }

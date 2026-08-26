@@ -12,6 +12,8 @@ import {
   ProjectEditDetailsModal,
 } from '@/views/BaseProjectView';
 import { ChatComposer } from '@/views/chat/ChatComposer';
+import { ModelSelectionProvider } from '@/providers/model-selection-provider';
+import { useDefaultModelSelection } from '@/hooks/use-default-model-selection';
 import { ConfirmModal } from '@/components/ConfirmModal';
 import {
   Palette,
@@ -47,6 +49,7 @@ export function DesignProjectView({ projectId, onBack }: DesignProjectViewProps)
   const designTabStore = useDesignTabStore();
   const { dispatch } = useNav();
   const { setMode } = useMode();
+  const defaultSelection = useDefaultModelSelection();
 
   const project = useMemo(
     () => projects.find((p) => p.id === projectId),
@@ -148,13 +151,15 @@ export function DesignProjectView({ projectId, onBack }: DesignProjectViewProps)
   );
 
   const inputBar = (
-    <ChatComposer
-      onSend={handleOpenInDesignMode}
-      placeholder={`Describe what you want to design for ${project.name}`}
-      showTopActions={false}
-      showModeToggle={false}
-      variant="default"
-    />
+    <ModelSelectionProvider defaultSelection={defaultSelection}>
+      <ChatComposer
+        onSend={handleOpenInDesignMode}
+        placeholder={`Describe what you want to design for ${project.name}`}
+        showTopActions={false}
+        showModeToggle={false}
+        variant="default"
+      />
+    </ModelSelectionProvider>
   );
 
   return (

@@ -244,6 +244,7 @@ dependencies = [
  "aes-gcm 0.10.3",
  "allternit-agent-system-rails",
  "allternit-apple-vf-driver",
+ "allternit-computer-cloud",
  "allternit-cowork-runtime",
  "allternit-cowork-scheduler",
  "allternit-driver-interface",
@@ -571,6 +572,30 @@ dependencies = [
  "tokio",
  "tokio-test",
  "tracing",
+ "uuid",
+]
+
+[[package]]
+name = "allternit-computer-cloud"
+version = "0.1.0"
+dependencies = [
+ "allternit-driver-interface",
+ "async-trait",
+ "axum",
+ "base64 0.22.1",
+ "chrono",
+ "http 1.4.2",
+ "http-body-util",
+ "reqwest",
+ "serde",
+ "serde_json",
+ "thiserror 1.0.69",
+ "tokio",
+ "tokio-test",
+ "tower 0.5.3",
+ "tracing",
+ "tracing-subscriber",
+ "urlencoding",
  "uuid",
 ]
 

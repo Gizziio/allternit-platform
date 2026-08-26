@@ -114,6 +114,9 @@ export const DEFAULT_POLICIES: Record<ViewType, SpawnPolicy> = {
   'budget-dashboard': { singleton: true, maxInstances: 1, allowNew: false, surface: 'view', ownsTabs: false },
   'replay-manager': { singleton: true, maxInstances: 1, allowNew: false, surface: 'view', ownsTabs: false },
   'prewarm-manager': { singleton: true, maxInstances: 1, allowNew: false, surface: 'view', ownsTabs: false },
+
+  // Desktop-as-a-Service admin view
+  'desktop-cloud': { singleton: true, maxInstances: 1, allowNew: false, surface: 'view', ownsTabs: false },
   // Chat History views
   history: { singleton: true, maxInstances: 1, allowNew: false, surface: 'view', ownsTabs: false },
   archived: { singleton: true, maxInstances: 1, allowNew: false, surface: 'view', ownsTabs: false },

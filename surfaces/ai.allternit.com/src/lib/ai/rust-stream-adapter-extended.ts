@@ -533,7 +533,7 @@ interface MockChatMessage {
 interface MockChatUIPart {
   type: "mock-chat";
   chatId: string;
-  style?: "claude" | "gpt" | "grok" | "gemini";
+  style?: "claude" | "gpt" | "kimi" | "gemini";
   messages: MockChatMessage[];
 }
 

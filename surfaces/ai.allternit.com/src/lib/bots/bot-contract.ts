@@ -101,7 +101,7 @@ export const botPackageSchema = z.object({
   description: z.string().max(2000),
   type: z.enum(['orchestrator', 'sub-agent', 'worker', 'specialist', 'reviewer']),
   model: z.string().min(1),
-  provider: z.enum(['openai', 'anthropic', 'google', 'local', 'custom']),
+  provider: z.enum(['openai', 'anthropic', 'google', 'kimi', 'local', 'custom']),
   capabilities: z.array(z.string()),
   systemPrompt: z.string().max(50000).optional(),
   tools: z.array(z.string()),

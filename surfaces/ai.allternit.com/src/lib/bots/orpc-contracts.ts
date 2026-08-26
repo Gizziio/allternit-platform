@@ -123,7 +123,7 @@ export const BotSchema = z.object({
   description: z.string(),
   type: z.enum(['orchestrator', 'sub-agent', 'worker', 'specialist', 'reviewer']).default('specialist'),
   model: z.string().default('default'),
-  provider: z.enum(['openai', 'anthropic', 'google', 'local', 'custom']).default('custom'),
+  provider: z.enum(['openai', 'anthropic', 'google', 'kimi', 'local', 'custom']).default('custom'),
   avatar: AvatarSchema.optional(),
   isBot: z.literal(true).default(true),
   botProfile: BotProfileSchema,
@@ -139,7 +139,7 @@ export const CreateBotSchema = z.object({
   botProfile: BotProfileSchema,
   avatar: AvatarSchema.optional(),
   model: z.string().optional(),
-  provider: z.enum(['openai', 'anthropic', 'google', 'local', 'custom']).optional(),
+  provider: z.enum(['openai', 'anthropic', 'google', 'kimi', 'local', 'custom']).optional(),
   parentBotId: z.string().optional(),
 });
 

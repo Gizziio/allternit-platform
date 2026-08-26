@@ -3,21 +3,25 @@
 import React from "react";
 import { createContext, useContext, useState, useCallback, ReactNode, useMemo, useRef, useEffect } from "react";
 import type { ModelSelection } from "@/components/model-picker";
+import type { ModelOption } from "@/components/prompt-kit/prompt-model-selector";
 import { usePendingChatModelStore } from "@/stores/pending-chat-model.store";
 
 interface ModelSelectionContextType {
   // Current selection
   selection: ModelSelection | null;
-  
+
   // Selection state
   isSelecting: boolean;
-  
+
   // Actions
   selectModel: (selection: ModelSelection) => void;
   clearSelection: () => void;
   startSelection: () => void;
   cancelSelection: () => void;
-  
+
+  // Available models from the current discovery source
+  availableModels: ModelOption[];
+
   // Helper to create a brain session with current selection
   getBrainSessionConfig: () => {
     brain_profile_id: string;
@@ -112,6 +116,7 @@ export function ModelSelectionProvider({
     clearSelection,
     startSelection,
     cancelSelection,
+    availableModels: [] as ModelOption[],
     getBrainSessionConfig,
   }), [
     selection,

@@ -45,11 +45,12 @@ function normalizeGatewayCandidate(value: string): string {
 }
 
 function configuredGatewayUrl(): string {
+  // In Vite-based dev/builds, a VITE_ env var is the explicit operator intent
+  // and must win over a stale runtime-backend snapshot stored in localStorage.
+  const viteUrl = (import.meta as any).env?.VITE_ALLTERNIT_GATEWAY_URL;
   // SSR-safe: check for window existence before accessing
   const windowUrl = typeof window !== 'undefined' ? (window as any).__ALLTERNIT_GATEWAY_URL__ : undefined;
-  const configured = windowUrl
-    || (import.meta as any).env?.VITE_ALLTERNIT_GATEWAY_URL
-    || DEFAULT_GATEWAY_URL;
+  const configured = viteUrl || windowUrl || DEFAULT_GATEWAY_URL;
 
   const normalized = normalizeGatewayCandidate(String(configured).trim());
 
@@ -69,7 +70,7 @@ const API_BASE = `${gatewayUrl()}/api`;
 // Export for debugging
 export const GATEWAY_BASE_URL = gatewayUrl();
 export const GATEWAY_URL = GATEWAY_BASE_URL; // Consistent export
-console.debug('[Allternit API Client] Using gateway URL:', GATEWAY_BASE_URL);
+console.log('[Allternit API Client] Using gateway URL:', GATEWAY_BASE_URL, 'VITE env:', (import.meta as any).env?.VITE_ALLTERNIT_GATEWAY_URL);
 
 // Legacy alias for backward compatibility
 export const ALLTERNIT_BASE_URL = GATEWAY_BASE_URL;
@@ -137,10 +138,10 @@ export interface Agent {
   id: string;
   name: string;
   description: string;
-  type?: 'orchestrator' | 'sub-agent' | 'worker' | 'specialist' | 'reviewer';
+  type?: 'orchestrator' | 'sub-agent' | 'worker' | 'specialist' | 'reviewer' | 'assistant';
   parentAgentId?: string;
   model: string;
-  provider: 'openai' | 'anthropic' | 'google' | 'local' | 'custom';
+  provider: 'openai' | 'anthropic' | 'google' | 'kimi' | 'local' | 'custom';
   capabilities: string[];
   systemPrompt?: string;
   tools: string[];
@@ -154,7 +155,7 @@ export interface Agent {
   workspaceId?: string;
   avatar?: unknown;
   characterLayer?: unknown;
-  trustTier?: 'safe' | 'low' | 'standard' | 'elevated' | 'admin' | 'critical';
+  trustTier?: 'safe' | 'low' | 'standard' | 'elevated' | 'admin' | 'critical' | 'medium';
   harness?: unknown;
   allowedSurfaces?: Array<'chat' | 'cowork' | 'code' | 'design' | 'browser'>;
   allowedSkills?: string[];
@@ -762,6 +763,10 @@ class AllternitApiClient {
 
   async listAgents(): Promise<{ agents: Agent[]; total: number }> {
     return this.get('/api/v1/agents');
+  }
+
+  async ensureCompanion(): Promise<{ agent: Agent; created: boolean }> {
+    return this.post('/api/v1/agents/companion/ensure', {});
   }
 
   async discoverOpenClawAgents(): Promise<{

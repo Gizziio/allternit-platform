@@ -1,5 +1,6 @@
 import { useCallback, useState } from 'react';
 import { useChatSessionStore } from '@/views/chat/ChatSessionStore';
+import { startAgentRun } from '@/lib/agents/agent.service';
 import { resolveAgentSecrets } from '@/lib/agents/agent-secrets-resolver';
 import { resolveAgentConnectors } from '@/lib/agents/agent-connectors-resolver';
 import {
@@ -135,8 +136,9 @@ export function useStartBotSession(
       description: agent.botProfile?.welcomeMessage ?? agent.description,
       sessionMode: 'agent',
       agentId: agent.id,
-      agentName: agent.name,
+      agentName: displayName,
       systemPrompt,
+      skipBackend: true,
       metadata: {
         isBot: agent.isBot === true,
         botProfile: agent.botProfile,
@@ -159,6 +161,7 @@ export function useStartBotSession(
         vmSandbox: sandbox ? { id: sandbox.id, provider: sandbox.provider, status: sandbox.status, vncUrl: sandbox.vncUrl } : undefined,
         vmSandboxError: sandboxError,
         vmControlNotice: notice,
+        executionPersistence: 'local',
       },
     });
 
@@ -218,12 +221,28 @@ export function useStartBotSession(
         onSessionStarted?.(sessionId);
 
         // Send the task as the first message so the bot starts working immediately.
-        // A small delay ensures the session is active before streaming begins.
+        // Bot sessions are local-only, so append locally and run through the agent
+        // run endpoint instead of the backend chat stream.
         await new Promise((resolve) => window.setTimeout(resolve, 50));
         const taskPrefix = agent.vmOperator?.enabled
           ? `[Task] ${task.trim()}\n\nIf this task requires a computer, browser, file system, or code execution, use your virtual computer.`
           : task.trim();
-        await store.sendMessageStream(sessionId, { text: taskPrefix });
+
+        store.appendUserMessage(sessionId, {
+          id: `user-${Date.now()}`,
+          content: taskPrefix,
+        });
+        const run = await startAgentRun(agent.id, taskPrefix);
+        const displayName = agent.botProfile?.displayName ?? agent.name;
+        store.appendAssistantMessage(sessionId, {
+          id: `assistant-${agent.id}-${Date.now()}`,
+          content: run.output || 'No response',
+          metadata: {
+            agentId: agent.id,
+            agentName: displayName,
+            isBotResponse: true,
+          },
+        });
 
         if (sandboxError) {
           setError(sandboxError);
