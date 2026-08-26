@@ -397,6 +397,71 @@ describe('AllternitComputerUseClient', () => {
       expect(result.decision).toBe('approve');
     });
   });
+
+  describe('canonical history', () => {
+    it('should POST history/status with provider_id', async () => {
+      const mockResponse = {
+        supported: true,
+        admitted: true,
+        enabled: true,
+        paused: false,
+        encrypted: true,
+        profile: 'cua-history-profile-v1/cbor-sequence+cose-encrypt0+cloudevents-json',
+        retention_days: 7,
+        quota_bytes: 104857600,
+        bytes_used: 48291,
+        dropped_events: 0,
+        health: 'ready',
+      };
+
+      mockedFetch.mockResolvedValueOnce({
+        ok: true,
+        json: async () => mockResponse,
+      } as Response);
+
+      const result = await client.canonicalHistoryStatus('desktop.cua-driver');
+
+      expect(mockedFetch).toHaveBeenCalledWith(
+        'http://localhost:8080/v1/computer-use/canonical/history/status',
+        expect.objectContaining({
+          method: 'POST',
+          body: JSON.stringify({ provider_id: 'desktop.cua-driver' }),
+        })
+      );
+      expect(result.health).toBe('ready');
+    });
+
+    it('should POST history/query with bounded args', async () => {
+      const mockResponse = {
+        events: [{ sequence: 42 }],
+        metadata_only: true,
+        model_context_disclosure: true,
+      };
+
+      mockedFetch.mockResolvedValueOnce({
+        ok: true,
+        json: async () => mockResponse,
+      } as Response);
+
+      const result = await client.canonicalHistoryQuery(
+        { limit: 20, since_sequence: 40 },
+        'desktop.cua-driver'
+      );
+
+      const requestBody = JSON.parse(
+        (mockedFetch.mock.calls[0][1] as { body: string }).body
+      );
+
+      expect(mockedFetch).toHaveBeenCalledWith(
+        'http://localhost:8080/v1/computer-use/canonical/history/query',
+        expect.objectContaining({ method: 'POST' })
+      );
+      expect(requestBody.provider_id).toBe('desktop.cua-driver');
+      expect(requestBody.limit).toBe(20);
+      expect(requestBody.since_sequence).toBe(40);
+      expect(result.events).toHaveLength(1);
+    });
+  });
 });
 
 describe('ApprovalPredicates', () => {

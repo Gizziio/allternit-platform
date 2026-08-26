@@ -11,7 +11,7 @@ from pathlib import Path
 from typing import Any, Dict, Optional
 
 from fastapi import APIRouter, HTTPException
-from pydantic import BaseModel, Field, model_validator
+from pydantic import BaseModel, Field
 
 from contracts.codec import transaction_from_dict
 from core.canonical_runtime import CanonicalRuntimeError, StaleResourceStateError
@@ -237,25 +237,6 @@ class TransactionRequest(BaseModel):
     transaction: Dict[str, Any]
 
 
-class HistoryStatusRequest(BaseModel):
-    model_config = {"extra": "forbid"}
-
-
-class HistoryQueryRequest(BaseModel):
-    model_config = {"extra": "forbid"}
-    limit: int = Field(default=50, ge=1, le=200)
-    session_id: Optional[str] = Field(default=None, min_length=1, max_length=128)
-    since_sequence: Optional[int] = Field(default=None, ge=1)
-    until_sequence: Optional[int] = Field(default=None, ge=1)
-
-    @model_validator(mode="after")
-    def check_sequence_bounds(self):
-        if self.since_sequence is not None and self.until_sequence is not None:
-            if self.since_sequence > self.until_sequence:
-                raise ValueError("since_sequence must not exceed until_sequence")
-        return self
-
-
 class ApprovalGrantRequest(BaseModel):
     transaction: Dict[str, Any]
     approved_by: str
@@ -406,6 +387,18 @@ class StreamNegotiationRequest(BaseModel):
 
 class NativePermissionPlanRequest(BaseModel):
     permission: str
+
+
+class HistoryStatusRequest(BaseModel):
+    provider_id: str = "desktop.cua-driver"
+
+
+class HistoryQueryRequest(BaseModel):
+    provider_id: str = "desktop.cua-driver"
+    limit: Optional[int] = Field(default=None, ge=1, le=200)
+    session_id: Optional[str] = Field(default=None, min_length=1, max_length=128)
+    since_sequence: Optional[int] = Field(default=None, ge=1)
+    until_sequence: Optional[int] = Field(default=None, ge=1)
 
 
 def _http_error(error: Exception) -> HTTPException:
@@ -1017,39 +1010,6 @@ async def grant_operation_approval(body: OperationApprovalRequest) -> Dict[str, 
         raise _http_error(error) from error
 
 
-def _cua_provider() -> CuaDriverCanonicalProvider:
-    try:
-        provider = service.provider("desktop.cua-driver")
-    except ProviderNotFoundError as error:
-        raise ProviderNotFoundError("desktop.cua-driver") from error
-    if not isinstance(provider, CuaDriverCanonicalProvider):
-        raise ProviderNotFoundError("desktop.cua-driver")
-    return provider
-
-
-@router.post("/history/status")
-async def history_status(body: HistoryStatusRequest) -> Dict[str, Any]:
-    await ensure_initialized()
-    try:
-        return await _cua_provider().history_status()
-    except Exception as error:
-        raise _http_error(error) from error
-
-
-@router.post("/history/query")
-async def history_query(body: HistoryQueryRequest) -> Dict[str, Any]:
-    await ensure_initialized()
-    try:
-        return await _cua_provider().history_query(
-            limit=body.limit,
-            session_id=body.session_id,
-            since_sequence=body.since_sequence,
-            until_sequence=body.until_sequence,
-        )
-    except Exception as error:
-        raise _http_error(error) from error
-
-
 @router.post("/environments/{environment_id}/leases")
 async def acquire_environment_lease(environment_id: str, body: LeaseAcquireRequest) -> Dict[str, Any]:
     try:
@@ -1109,23 +1069,61 @@ async def cleanup_expired_environments() -> Dict[str, int]:
     return _environments.cleanup_expired()
 
 
-async def history_preflight_for_task(_task: str) -> Optional[Dict[str, Any]]:
-    """Deterministic history preflight: status then bounded query.
+def _cua_history_provider(provider_id: str) -> CuaDriverCanonicalProvider:
+    """Return a CUA driver provider if it advertises history tools."""
+    try:
+        provider = service.provider(provider_id)
+    except ProviderNotFoundError as error:
+        raise _http_error(error) from error
+    manifest = next((m for m in service.capabilities() if m.provider_id == provider_id), None)
+    if manifest is None or "history_status" not in manifest.tools or "history_query" not in manifest.tools:
+        raise HTTPException(
+            status_code=404,
+            detail={
+                "code": "history_not_available",
+                "message": "CUA Driver Computer History is not available or not admitted for this provider",
+                "provider_id": provider_id,
+            },
+        )
+    if not isinstance(provider, CuaDriverCanonicalProvider):
+        raise HTTPException(
+            status_code=400,
+            detail={
+                "code": "provider_not_cua_driver",
+                "message": "History is only supported by the CUA driver provider",
+                "provider_id": provider_id,
+            },
+        )
+    return provider
 
-    Returns a dict with `status` and `events`, or None when history is unavailable
-    or not useful. Swallows errors so the planning loop can continue without history.
-    """
+
+@router.post("/history/status")
+async def history_status(body: HistoryStatusRequest) -> Dict[str, Any]:
     await ensure_initialized()
     try:
-        provider = _cua_provider()
-        status = await provider.history_status()
-        if not (status.get("supported") and status.get("admitted") and status.get("enabled")):
-            return None
-        query = await provider.history_query(limit=50)
-        return {"status": status, "events": query.get("events", [])}
-    except Exception as exc:
-        logger.debug("History preflight skipped: %s", exc)
-        return None
+        provider = _cua_history_provider(body.provider_id)
+        return await provider.history_status()
+    except HTTPException:
+        raise
+    except Exception as error:
+        raise _http_error(error) from error
+
+
+@router.post("/history/query")
+async def history_query(body: HistoryQueryRequest) -> Dict[str, Any]:
+    await ensure_initialized()
+    try:
+        provider = _cua_history_provider(body.provider_id)
+        return await provider.history_query(
+            limit=body.limit,
+            session_id=body.session_id,
+            since_sequence=body.since_sequence,
+            until_sequence=body.until_sequence,
+        )
+    except HTTPException:
+        raise
+    except Exception as error:
+        raise _http_error(error) from error
 
 
 async def shutdown_canonical_service() -> None:

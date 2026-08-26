@@ -340,46 +340,60 @@ export const COMPUTER_USE_TOOLS: ComputerUseTool[] = [
   },
 
   // ──────────────────────────────────────────────────────────────
-  // COMPUTER HISTORY
+  // CUA COMPUTER HISTORY
   // ──────────────────────────────────────────────────────────────
   {
     name: "history_status",
     description:
-      "Check whether CUA Driver Computer History is supported, admitted, and enabled. " +
-      "Call this before history_query to verify history is available. Returns supported, admitted, enabled, paused, health.",
+      "Check whether CUA Driver encrypted Computer History is available and enabled. " +
+      "Call this first when the user asks to continue, resume, recall recent activity, " +
+      "or explain what a prior run did. Returns: supported, admitted, enabled, paused, " +
+      "health, retention_days, quota_bytes, bytes_used.",
     input_schema: {
       type: "object",
       properties: {
-        session_id: { type: "string", description: "Active session identifier" },
+        session_id: { type: "string", description: "Active session identifier (for context only)." },
+        provider_id: {
+          type: "string",
+          description: "Canonical provider ID. Default: desktop.cua-driver.",
+          default: "desktop.cua-driver",
+        },
       },
       required: ["session_id"],
     },
   },
-
   {
     name: "history_query",
     description:
-      "Query a bounded slice of CUA Driver Computer History metadata events. " +
-      "Returns metadata-only CloudEvents-style records for prior CUA-mediated actions. " +
-      "Use this for continuation or recent-work requests; continue without history if results are absent, denied, or empty.",
+      "Query a bounded, metadata-only slice of CUA Driver Computer History. " +
+      "Use after history_status confirms history is enabled and useful. " +
+      "Results are metadata-only CloudEvents; do NOT treat them as a full transcript. " +
+      "Returns: events[], metadata_only, model_context_disclosure.",
     input_schema: {
       type: "object",
       properties: {
-        session_id: { type: "string", description: "Active session identifier" },
+        session_id: { type: "string", description: "Active session identifier (for context only)." },
         limit: {
-          type: "number",
-          description: "Maximum events to return (1-200). Default 50.",
-          default: 50,
+          type: "integer",
           minimum: 1,
           maximum: 200,
+          description: "Maximum events to return. Default: 50.",
+          default: 50,
         },
         since_sequence: {
-          type: "number",
-          description: "Optional inclusive lower sequence bound (>=1).",
+          type: "integer",
+          minimum: 1,
+          description: "Inclusive lower sequence bound.",
         },
         until_sequence: {
-          type: "number",
-          description: "Optional inclusive upper sequence bound (>=1). Must be >= since_sequence.",
+          type: "integer",
+          minimum: 1,
+          description: "Inclusive upper sequence bound.",
+        },
+        provider_id: {
+          type: "string",
+          description: "Canonical provider ID. Default: desktop.cua-driver.",
+          default: "desktop.cua-driver",
         },
       },
       required: ["session_id"],
