@@ -175,7 +175,9 @@ export type ViewType =
   // Model Lab
   | "model-lab"
   // Allternit Sign (native client-side PDF signing)
-  | "sign";
+  | "sign"
+  // Floating chat HUD
+  | "hud";
 
 export type ViewId = string;
 

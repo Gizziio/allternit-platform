@@ -7,7 +7,7 @@
  * - Version-locked: Desktop 1.2.3 = Backend 1.2.3
  */
 
-import { app, BrowserWindow, ipcMain, nativeTheme, safeStorage, shell, Tray, Menu, dialog, globalShortcut, screen, protocol, systemPreferences } from 'electron';
+import { app, BrowserWindow, ipcMain, nativeTheme, safeStorage, shell, Tray, Menu, dialog, globalShortcut, screen, protocol } from 'electron';
 import { fileURLToPath } from 'node:url';
 import { dirname, join, resolve, basename } from 'node:path';
 import * as fs from 'node:fs';
@@ -68,23 +68,6 @@ import {
   stopCaptureSession,
   isCaptureAvailable,
 } from './browser-capture-manager.js';
-import { snapHudBounds } from './hud-snap.js';
-import {
-  applyHudResetBounds,
-  debounce,
-  defaultHudBounds,
-  HUD_HEIGHT,
-  HUD_MAX_HEIGHT,
-  HUD_MIN_HEIGHT,
-  HUD_MIN_WIDTH,
-  HUD_WIDTH,
-  normalizeHudResizeBounds,
-  type HudWorkArea,
-} from './hud-geometry.js';
-import { hudWindowingView, resolveHudWindowing } from './hud-windowing.js';
-import { cursorPointInWindow } from './hud-cursor.js';
-import { enumerateWindowsFrontToBack, enumerationFailed } from './window-below.js';
-import { startHudGameOverlayWatch, INACTIVE_GAME_OVERLAY, type GameOverlayState } from './hud-game-overlay.js';
 
 // Fix PATH for macOS
 fixPath();
@@ -175,12 +158,6 @@ const isMac = process.platform === 'darwin';
 let mainWindow: BrowserWindow | null = null;
 let designWindow: BrowserWindow | null = null;
 let hudWindow: BrowserWindow | null = null;
-/** Tracks whether the global HUD snap shortcut (⌘/Ctrl+Shift+G) is registered. */
-let hudSnapShortcutRegistered = false;
-/** Session id the HUD renderer last reported; broadcast on close for handoff. */
-let hudSessionId: string | null = null;
-/** Whether the main window was visible when the HUD opened; restored on close. */
-let hudRestoreMainWindow = false;
 /** One office editor window per target (docs/sheets/slides/pdf/launcher). */
 const officeWindows = new Map<OfficeTarget, BrowserWindow>();
 let splashWindow: BrowserWindow | null = null;
@@ -206,9 +183,6 @@ const QUICK_CHAT_HOTKEY = 'CommandOrControl+Shift+A';
 // muscle memory expects it.
 const HUD_HOTKEY = 'CommandOrControl+Shift+H';
 const HUD_HOTKEY_FALLBACK = 'Alt+Shift+H';
-// Global shortcut to snap the floating HUD bar under the OS cursor.
-const HUD_SNAP_SHORTCUT = 'CommandOrControl+Shift+G';
-const HUD_SNAP_ANCHOR_Y = 48;
 const MINI_WINDOW_WIDTH = 520;
 const MINI_WINDOW_HEIGHT = 600;
 /** Resolved backend URL — set once the app initializes. Used by sdk:get-backend-url IPC. */
@@ -1941,198 +1915,29 @@ ipcMain.handle('shell:open-design', () => {
   void designWindow.loadURL(new URL('/design', activePlatformUrl).toString());
 });
 
-// HUD mode — a chrome-free floating panel anchored near the bottom of the
-// active display. Geometry constants live in ./hud-geometry.js; the platform
-// capability profile lives in ./hud-windowing.js.
+// HUD mode defaults — a chrome-free floating panel anchored near the bottom
+// of the primary display, inspired by Hermes Desktop's HUD windowing profile.
+// The default shape is a wide, short bar so the composer dominates, matching
+// Hermes' 620×320 bottom-band layout.
+const HUD_WIDTH = 720;
+const HUD_HEIGHT = 220;
+const HUD_BOTTOM_MARGIN = 72;
 
-const HUD_STATE_PATH = join(app.getPath('userData'), 'hud-state.json');
-
-function readHudState(): { x: number; y: number; width: number; height: number } | null {
-  try {
-    const raw = JSON.parse(fs.readFileSync(HUD_STATE_PATH, 'utf8'));
-    if (
-      [raw?.x, raw?.y, raw?.width, raw?.height].every((v) => Number.isFinite(v)) &&
-      raw.width >= HUD_MIN_WIDTH &&
-      raw.height >= HUD_MIN_HEIGHT
-    ) {
-      return raw;
-    }
-  } catch {
-    // First run / unreadable — fall through to defaults.
-  }
-  return null;
-}
-
-function persistHudState(): void {
-  if (!hudWindow || hudWindow.isDestroyed()) {
-    return;
-  }
-  try {
-    const { x, y, width, height } = hudWindow.getBounds();
-    fs.mkdirSync(dirname(HUD_STATE_PATH), { recursive: true });
-    fs.writeFileSync(HUD_STATE_PATH, JSON.stringify({ x, y, width, height }, null, 2));
-  } catch (err) {
-    log.warn('[HUD] persistHudState failed:', err);
-  }
-}
-
-const schedulePersistHudState = debounce(persistHudState, 250);
-
-function resetHudLayout(): boolean {
-  if (!hudWindow || hudWindow.isDestroyed()) {
-    return false;
-  }
-  const display = screen.getDisplayNearestPoint(screen.getCursorScreenPoint());
-  const bounds = defaultHudBounds(display?.workArea as HudWorkArea | undefined);
-  if (!applyHudResetBounds(hudWindow, bounds)) {
-    log.warn('[HUD] reset layout failed while applying native bounds');
-    return false;
-  }
-  persistHudState();
-  return true;
-}
-
-function hudWindowing() {
-  return resolveHudWindowing(process.platform, process.env, process.argv);
-}
-
-function broadcastHudState(open: boolean): void {
-  const payload = { open, sessionId: hudSessionId };
-  for (const win of BrowserWindow.getAllWindows()) {
-    if (!win.isDestroyed()) {
-      win.webContents.send('shell:hud:state', payload);
-    }
-  }
-}
-
-function restoreMainWindowFromHud(): void {
-  if (!hudRestoreMainWindow) {
-    return;
-  }
-  hudRestoreMainWindow = false;
-  if (mainWindow && !mainWindow.isDestroyed()) {
-    mainWindow.show();
-  }
-}
-
-const HUD_CURSOR_POLL_MS = 60;
-
-function startHudCursorFeed(win: BrowserWindow): void {
-  const windowing = hudWindowing();
-  if (!windowing.cursorFeed) {
-    if (!windowing.ignoreMouse) {
-      try {
-        win.setIgnoreMouseEvents(false);
-      } catch {
-        // best effort
-      }
-    }
-    return;
-  }
-  let last: string | null = null;
-  const timer = setInterval(() => {
-    if (win.isDestroyed() || !win.isVisible()) {
-      return;
-    }
-    const point = cursorPointInWindow(
-      screen.getCursorScreenPoint(),
-      win.getBounds(),
-      win.webContents.getZoomFactor()
-    );
-    const key = point ? `${Math.round(point.x)},${Math.round(point.y)}` : 'out';
-    if (key === last) {
-      return;
-    }
-    last = key;
-    win.webContents.send('shell:hud:cursor', point);
-  }, HUD_CURSOR_POLL_MS);
-  win.on('closed', () => clearInterval(timer));
-}
-
-function startHudGameOverlayFeed(win: BrowserWindow): void {
-  const titlesAvailable = isMac ? systemPreferences.getMediaAccessStatus?.('screen') === 'granted' : true;
-
-  let last: GameOverlayState = INACTIVE_GAME_OVERLAY;
-
-  const push = (state: GameOverlayState) => {
-    if (!win.isDestroyed()) {
-      win.webContents.send('shell:hud:game-overlay', state);
-    }
-  };
-
-  // Replay the latest state to every load of this window so a HUD opened over
-  // an already-fullscreen app does not miss the one and only change event.
-  win.webContents.on('did-finish-load', () => push(last));
-
-  let reported = false;
-
-  const enumerate = async () => {
-    const windows = await enumerateWindowsFrontToBack(process.pid, titlesAvailable);
-
-    if (!enumerationFailed(windows)) {
-      return windows;
-    }
-
-    if (!reported) {
-      reported = true;
-      log.warn(`[HUD] Cannot enumerate windows for game overlay: ${windows.reason}`);
-    }
-
-    return null;
-  };
-
-  const dispose = startHudGameOverlayWatch({
-    enumerate,
-    displayBounds: () => screen.getDisplayMatching(win.getBounds()).bounds,
-    selfPid: process.pid,
-    send: (state) => {
-      last = state;
-      push(state);
-    },
-  });
-
-  win.on('closed', dispose);
-}
-
-function hudBounds(): { x: number; y: number; width: number; height: number } {
-  const saved = readHudState();
-  if (saved) {
-    const onScreen = screen.getAllDisplays().some((d) => {
-      const a = d.workArea;
-      return (
-        saved.x < a.x + a.width - 40 &&
-        saved.x + saved.width > a.x + 40 &&
-        saved.y < a.y + a.height - 40 &&
-        saved.y + saved.height > a.y + 40
-      );
-    });
-    if (onScreen) {
-      return saved;
-    }
-  }
-  const display = screen.getDisplayNearestPoint(screen.getCursorScreenPoint());
-  const area = display?.workArea;
-  const bounds = defaultHudBounds(area as HudWorkArea | undefined);
+function computeHudBounds() {
+  const { width: screenW, height: screenH } = screen.getPrimaryDisplay().workAreaSize;
   return {
-    x: bounds.x ?? 0,
-    y: bounds.y ?? 0,
-    width: bounds.width,
-    height: bounds.height,
+    width: Math.min(HUD_WIDTH, screenW),
+    height: Math.min(HUD_HEIGHT, screenH),
+    x: Math.round((screenW - Math.min(HUD_WIDTH, screenW)) / 2),
+    y: Math.round(Math.max(0, screenH - Math.min(HUD_HEIGHT, screenH) - HUD_BOTTOM_MARGIN)),
   };
-}
-
-function bindHudGeometryPersistence(win: BrowserWindow): void {
-  const schedule = () => schedulePersistHudState();
-  win.on('move', schedule);
-  win.on('resize', schedule);
-  win.on('close', () => schedulePersistHudState.flush());
 }
 
 function createHudWindow(): BrowserWindow {
   const win = new BrowserWindow({
-    ...hudBounds(),
-    minWidth: HUD_MIN_WIDTH,
-    minHeight: HUD_MIN_HEIGHT,
+    ...computeHudBounds(),
+    minWidth: 380,
+    minHeight: 160,
     maxWidth: 1600,
     maxHeight: 1000,
     title: 'Allternit HUD',
@@ -2175,68 +1980,7 @@ function createHudWindow(): BrowserWindow {
     // Best effort — not supported on every platform/configuration.
   }
 
-  bindHudGeometryPersistence(win);
-  startHudCursorFeed(win);
-  startHudGameOverlayFeed(win);
-
   return win;
-}
-
-function applyHudSnapToPointer(): void {
-  if (!hudWindow || hudWindow.isDestroyed() || !hudWindowing().clientPlacement) {
-    return;
-  }
-
-  const cursor = screen.getCursorScreenPoint();
-  const bounds = hudWindow.getBounds();
-  const display = screen.getDisplayNearestPoint(cursor);
-  const workArea = display?.workArea ?? bounds;
-  const anchor = { x: Math.round(bounds.width / 2), y: HUD_SNAP_ANCHOR_Y };
-
-  const origin = snapHudBounds(
-    cursor,
-    anchor,
-    { width: bounds.width, height: bounds.height },
-    hudWindow.webContents.getZoomFactor(),
-    workArea
-  );
-
-  // setBounds — not setPosition alone — keeps a transparent frameless window
-  // from drifting on Windows (see shell:move-hud handler).
-  const wasResizable = hudWindow.isResizable();
-  if (!wasResizable) hudWindow.setResizable(true);
-  try {
-    hudWindow.setBounds({
-      x: origin.x,
-      y: origin.y,
-      width: bounds.width,
-      height: bounds.height,
-    });
-  } finally {
-    if (!wasResizable && !hudWindow.isDestroyed()) hudWindow.setResizable(false);
-  }
-}
-
-function registerHudSnapShortcut(): void {
-  if (hudSnapShortcutRegistered) return;
-  // Don't steal the shortcut if another app already owns it.
-  if (globalShortcut.isRegistered(HUD_SNAP_SHORTCUT)) {
-    log.warn(`[Main] Global HUD snap shortcut ${HUD_SNAP_SHORTCUT} is already owned by another app`);
-    return;
-  }
-  hudSnapShortcutRegistered = globalShortcut.register(HUD_SNAP_SHORTCUT, applyHudSnapToPointer);
-  if (hudSnapShortcutRegistered) {
-    log.info(`[Main] Registered global HUD snap shortcut: ${HUD_SNAP_SHORTCUT}`);
-  } else {
-    log.warn(`[Main] Failed to register global HUD snap shortcut: ${HUD_SNAP_SHORTCUT}`);
-  }
-}
-
-function disposeHudSnapShortcut(): void {
-  if (!hudSnapShortcutRegistered) return;
-  globalShortcut.unregister(HUD_SNAP_SHORTCUT);
-  hudSnapShortcutRegistered = false;
-  log.info(`[Main] Unregistered global HUD snap shortcut: ${HUD_SNAP_SHORTCUT}`);
 }
 
 function openHudWindow(): void {
@@ -2248,12 +1992,10 @@ function openHudWindow(): void {
     hudWindow.show();
     hudWindow.focus();
     hudWindow.moveTop();
-    registerHudSnapShortcut();
     return;
   }
 
   log.info('[HUD] Creating new floating HUD window');
-  hudRestoreMainWindow = Boolean(mainWindow && !mainWindow.isDestroyed() && mainWindow.isVisible());
   hudWindow = createHudWindow();
 
   log.info('[HUD] HUD window created', { id: hudWindow.id, bounds: hudWindow.getBounds(), visible: hudWindow.isVisible() });
@@ -2276,20 +2018,8 @@ function openHudWindow(): void {
     hudWindow?.show();
     hudWindow?.focus();
     hudWindow?.moveTop();
-    registerHudSnapShortcut();
-    // Step the main window aside now that the HUD is actually visible.
-    if (hudRestoreMainWindow && mainWindow && !mainWindow.isDestroyed()) {
-      mainWindow.hide();
-    }
-    broadcastHudState(true);
   });
-  hudWindow.on('closed', () => {
-    log.info('[HUD] HUD window closed');
-    disposeHudSnapShortcut();
-    hudWindow = null;
-    restoreMainWindowFromHud();
-    broadcastHudState(false);
-  });
+  hudWindow.on('closed', () => { log.info('[HUD] HUD window closed'); hudWindow = null; });
   const hudUrl = new URL('/hud', activePlatformUrl).toString();
   log.info('[HUD] Loading HUD window URL:', hudUrl);
   void hudWindow.loadURL(hudUrl);
@@ -2300,7 +2030,6 @@ function toggleHudWindow(): void {
   if (hudWindow && !hudWindow.isDestroyed()) {
     if (hudWindow.isVisible() && hudWindow.isFocused()) {
       log.info('[HUD] HUD is visible and focused — closing');
-      disposeHudSnapShortcut();
       hudWindow.close();
       return;
     }
@@ -2316,7 +2045,6 @@ function toggleHudWindow(): void {
 ipcMain.handle('shell:open-hud', openHudWindow);
 ipcMain.handle('shell:close-hud', () => {
   if (hudWindow && !hudWindow.isDestroyed()) {
-    disposeHudSnapShortcut();
     hudWindow.close();
   }
 });
@@ -2328,7 +2056,6 @@ ipcMain.handle('shell:move-hud', (_event, delta: { x: number; y: number; width: 
   const width = Number(delta?.width ?? HUD_WIDTH);
   const height = Number(delta?.height ?? HUD_HEIGHT);
   if (![dx, dy, width, height].every(Number.isFinite)) return;
-  if (!hudWindowing().clientPlacement) return;
   const [x, y] = hudWindow.getPosition();
   // setBounds (not setPosition) keeps a transparent frameless window from
   // drifting on Windows per Electron frameless-transparent quirks.
@@ -2338,121 +2065,29 @@ ipcMain.handle('shell:move-hud', (_event, delta: { x: number; y: number; width: 
     hudWindow.setBounds({
       x: Math.round(x + dx),
       y: Math.round(y + dy),
-      width: Math.max(HUD_MIN_WIDTH, Math.round(width)),
-      height: Math.max(HUD_MIN_HEIGHT, Math.round(height)),
+      width: Math.max(380, Math.round(width)),
+      height: Math.max(160, Math.round(height)),
     });
   } finally {
     if (!wasResizable && !hudWindow.isDestroyed()) hudWindow.setResizable(false);
   }
 });
-ipcMain.handle('shell:set-hud-bounds', (_event, bounds: { x?: number; y?: number; width?: number; height?: number }) => {
+ipcMain.handle('shell:resize-hud', (_event, bounds: { height: number }) => {
   if (!hudWindow || hudWindow.isDestroyed()) return;
-  const currentBounds = hudWindow.getBounds();
-  const targetWidth = Number.isFinite(bounds?.width ?? NaN)
-    ? Math.max(HUD_MIN_WIDTH, Math.round(bounds.width!))
-    : currentBounds.width;
-  const targetHeight = Number.isFinite(bounds?.height ?? NaN)
-    ? Math.min(HUD_MAX_HEIGHT, Math.max(HUD_MIN_HEIGHT, Math.round(bounds.height!)))
-    : currentBounds.height;
-  if (![targetWidth, targetHeight].every(Number.isFinite)) return;
-  // Keep the window anchored to the bottom edge of the screen when growing or
-  // shrinking, so the composer bar stays in the same place.
-  const newX = Number.isFinite(bounds?.x ?? NaN) ? Math.round(bounds.x!) : currentBounds.x;
-  const newY = Number.isFinite(bounds?.y ?? NaN)
-    ? Math.round(bounds.y!)
-    : Math.round(currentBounds.y + currentBounds.height - targetHeight);
-  const nextBounds = normalizeHudResizeBounds({
-    x: newX,
-    y: newY,
-    width: targetWidth,
-    height: targetHeight,
-  });
-  if (!nextBounds) return;
-  const win = hudWindow;
-  const { width, height } = nextBounds;
-  const [curW, curH] = win.getSize();
-  const resizing = width !== curW || height !== curH;
-  const restoreResizeLock = resizing && !win.isResizable();
+  const requestedHeight = Math.max(160, Math.round(Number(bounds?.height ?? HUD_HEIGHT)));
+  const [x, y] = hudWindow.getPosition();
+  const [width] = hudWindow.getSize();
+  const currentBottom = y + hudWindow.getSize()[1];
+  // Keep the window's bottom edge anchored so it grows/collapses upward,
+  // mirroring the Hermes HUD expansion behavior.
+  const newY = Math.max(0, Math.round(currentBottom - requestedHeight));
+  const newHeight = Math.min(1000, Math.max(160, Math.round(currentBottom - newY)));
+  const wasResizable = hudWindow.isResizable();
+  if (!wasResizable) hudWindow.setResizable(true);
   try {
-    if (restoreResizeLock) {
-      win.setResizable(true);
-    }
-    win.setBounds(nextBounds);
-  } catch {
-    // The window may disappear between validation and the native call.
+    hudWindow.setBounds({ x, y: newY, width, height: newHeight });
   } finally {
-    if (restoreResizeLock && !win.isDestroyed()) {
-      win.setResizable(false);
-    }
-  }
-});
-
-// Let clicks pass through transparent HUD regions to the window below.
-ipcMain.on('shell:hud:ignore-mouse', (_event, ignore: boolean) => {
-  const win = hudWindow;
-  if (!win || win.isDestroyed()) return;
-  // On X11 ignore-mouse is a one-way door; veto the request there so the HUD
-  // stays a normal solid window.
-  if (Boolean(ignore) && !hudWindowing().ignoreMouse) {
-    return;
-  }
-  try {
-    win.setIgnoreMouseEvents(Boolean(ignore), { forward: true });
-  } catch {
-    // Best effort — unsupported on some platforms/configurations.
-  }
-});
-
-// Reset the HUD to its default position and size.
-ipcMain.handle('shell:hud:reset-layout', () => ({ ok: resetHudLayout() }));
-
-// Toggle native frost behind the HUD band (macOS vibrancy; best-effort elsewhere).
-let hudFrostShowing = false;
-ipcMain.handle('shell:hud:frost', (_event, showing: boolean) => {
-  hudFrostShowing = Boolean(showing);
-  const win = hudWindow;
-  if (!win || win.isDestroyed()) {
-    return { ok: false };
-  }
-  try {
-    if (isMac && typeof win.setVibrancy === 'function') {
-      win.setVibrancy(hudFrostShowing ? 'hud' : null);
-    }
-  } catch {
-    // Best effort — vibrancy may not be available.
-  }
-  return { ok: true };
-});
-
-// Linux workspace transfer: temporarily show the HUD on all desktops while the
-// user drags it across workspaces with a modifier key held.
-ipcMain.on('shell:hud:workspace-transfer', (event, transferring: boolean) => {
-  if (!hudWindow || hudWindow.isDestroyed() || event.sender !== hudWindow.webContents) return;
-  if (!hudWindowing().workspaceTransfer) return;
-  try {
-    hudWindow.setVisibleOnAllWorkspaces(Boolean(transferring));
-  } catch {
-    // Best effort — workspace APIs are window-manager capabilities.
-  }
-});
-
-// Expose the platform windowing profile so the renderer can choose the right
-// drag/resize/input strategy (e.g. native drag on Wayland, Ctrl-drag on X11).
-// These are synchronous sendSync answers because the renderer needs them before
-// first paint to avoid installing the wrong drag region.
-ipcMain.on('shell:hud:windowing', (event) => {
-  event.returnValue = hudWindowingView(hudWindowing());
-});
-ipcMain.on('shell:hud:native-drag', (event) => {
-  event.returnValue = hudWindowing().move === 'native-drag';
-});
-
-// The HUD renderer reports which session it is on so the close broadcast can
-// hand it back to the app window.
-ipcMain.on('shell:hud:session', (event, sessionId: unknown) => {
-  if (hudWindow && !hudWindow.isDestroyed() && event.sender === hudWindow.webContents) {
-    hudSessionId = typeof sessionId === 'string' && sessionId ? sessionId : null;
-    broadcastHudState(true);
+    if (!wasResizable && !hudWindow.isDestroyed()) hudWindow.setResizable(false);
   }
 });
 

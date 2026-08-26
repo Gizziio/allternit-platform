@@ -147,6 +147,7 @@ struct CreateSessionBody {
     /// string "true") for clients that only carry a metadata bag.
     ephemeral: Option<bool>,
     metadata: Option<serde_json::Value>,
+    model: Option<GizziModelRef>,
 }
 
 #[derive(Debug, Deserialize)]
@@ -165,7 +166,7 @@ struct SendMessageBody {
     metadata: Option<serde_json::Value>,
 }
 
-#[derive(Debug, Serialize)]
+#[derive(Debug, Deserialize, Serialize)]
 struct GizziModelRef {
     #[serde(rename = "providerID")]
     provider_id: String,
@@ -678,16 +679,16 @@ async fn create_session(
                 v.as_bool().unwrap_or(false) || v.as_str() == Some("true")
             });
 
-    // Always set the platform default model so Gizzi sessions know which brain
-    // to use, even when the frontend doesn't send an explicit model.
-    let (default_provider, default_model_id) = AppConfig::load().default_model();
-    payload.insert(
-        "model".to_string(),
-        json!(GizziModelRef {
+    // Use the client-supplied model if present; otherwise fall back to the
+    // platform default so Gizzi sessions always know which brain to use.
+    let model_ref = body.model.unwrap_or_else(|| {
+        let (default_provider, default_model_id) = AppConfig::load().default_model();
+        GizziModelRef {
             provider_id: default_provider,
             model_id: default_model_id,
-        }),
-    );
+        }
+    });
+    payload.insert("model".to_string(), json!(model_ref));
 
     // Resolve platform agent harness config and forward it into the gizzi session.
     if let Some(ref agent_id) = body.agent_id {

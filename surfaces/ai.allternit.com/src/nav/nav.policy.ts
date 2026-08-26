@@ -109,6 +109,9 @@ export const DEFAULT_POLICIES: Record<ViewType, SpawnPolicy> = {
   // Verification view
   verification: { singleton: true, maxInstances: 1, allowNew: false, surface: 'view', ownsTabs: false },
 
+  // HUD view
+  hud: { singleton: true, maxInstances: 1, allowNew: false, surface: 'view', ownsTabs: false },
+
   // AllternitOS view
   'allternit-os': { singleton: true, maxInstances: 1, allowNew: false, surface: 'view', ownsTabs: false },
 

@@ -4,6 +4,7 @@
  */
 
 import React, { memo, useEffect, useMemo, useState } from 'react';
+import { cn } from '@/lib/utils';
 import { StreamingChatComposer } from '@/components/chat/StreamingChatComposer';
 import { CoworkWorkBlock } from './CoworkWorkBlock';
 import { useChatSessionStore } from '@/views/chat/ChatSessionStore';
@@ -26,8 +27,8 @@ interface CoworkTranscriptProps {
   selectedArtifactTitle?: string;
   /** In floating HUD mode the transcript area should stay empty instead of showing a landing placeholder. */
   hideEmptyState?: boolean;
-  /** When false, user/author messages are omitted from the transcript (Hermes-style HUD only shows assistant responses below the composer). */
-  showUserMessages?: boolean;
+  /** Compact HUD layout: minimal spacing and no empty-state padding. */
+  hudMode?: boolean;
 }
 
 // Derive the currently-running tool from messages so we can show it inline
@@ -135,7 +136,7 @@ export const CoworkTranscript = memo(function CoworkTranscript({
   onSelectArtifact,
   selectedArtifactTitle,
   hideEmptyState,
-  showUserMessages = true,
+  hudMode = false,
 }: CoworkTranscriptProps) {
   // When conversationId is provided, pull messages from the chat session store
   const storeSession = useChatSessionStore((state) =>
@@ -246,10 +247,7 @@ export const CoworkTranscript = memo(function CoworkTranscript({
   // Legacy cowork events are no longer stored in CoworkStore.
   // Events come from the active session in CoworkSessionStore or are empty.
   const events: AnyCoworkEvent[] = [];
-  const timeline = mergeTimeline(messages, events).filter((item) => {
-    if (showUserMessages) return true;
-    return item.type !== 'message' || (item.data as ChatMessage).role !== 'user';
-  });
+  const timeline = mergeTimeline(messages, events);
 
   // Native streaming parts come from mode-session-store, not CoworkStore.
   const nativePartsByMessage: Record<string, Record<string, unknown>[]> = {};
@@ -268,7 +266,7 @@ export const CoworkTranscript = memo(function CoworkTranscript({
   const effectiveIsLoading = isLoading || isTransitioning;
 
   return (
-    <div className="space-y-4 relative">
+    <div className={cn('relative', hudMode ? 'space-y-2' : 'space-y-4')}>
       {isTransitioning && (
         <div className="absolute inset-0 z-10 flex items-center justify-center bg-background/60 backdrop-blur-sm rounded-lg">
           <div className="flex items-center gap-2 text-sm text-muted-foreground">
@@ -315,7 +313,7 @@ export const CoworkTranscript = memo(function CoworkTranscript({
         </div>
       )}
 
-      {timeline.length === 0 && !effectiveIsLoading && !hideEmptyState && (
+      {timeline.length === 0 && !effectiveIsLoading && !hideEmptyState && !hudMode && (
         <div className="text-center py-12" style={{ color: 'var(--ui-text-muted)' }}>
           <p>Session started. Send a message to begin.</p>
         </div>

@@ -18,12 +18,6 @@ interface ModelSelectionContextType {
   startSelection: () => void;
   cancelSelection: () => void;
   
-  // Helper to create a brain session with current selection
-  getBrainSessionConfig: () => {
-    brain_profile_id: string;
-    source: "chat";
-    runtime_overrides?: { model_id: string };
-  } | null;
 }
 
 const ModelSelectionContext = createContext<ModelSelectionContextType | undefined>(undefined);
@@ -68,16 +62,6 @@ export function ModelSelectionProvider({
     return () => unsubscribe();
   }, []);
 
-  // Persist the selection so non-React code (e.g. the session store building
-  // the agent-chat payload) can resolve the current provider/model.
-  useEffect(() => {
-    try {
-      if (selection) {
-        window.localStorage.setItem('allternit:model-selection', JSON.stringify(selection));
-      }
-    } catch { /* storage unavailable */ }
-  }, [selection]);
-
   const selectModel = useCallback((newSelection: ModelSelection) => {
     setSelection(newSelection);
     setIsSelecting(false);
@@ -95,16 +79,6 @@ export function ModelSelectionProvider({
     setIsSelecting(false);
   }, []);
 
-  const getBrainSessionConfig = useCallback(() => {
-    if (!selection) return null;
-
-    return {
-      brain_profile_id: selection.profileId,
-      source: "chat" as const,
-      runtime_overrides: selection.modelId ? { model_id: selection.modelId } : undefined,
-    };
-  }, [selection]);
-
   const value = useMemo(() => ({
     selection,
     isSelecting,
@@ -112,7 +86,6 @@ export function ModelSelectionProvider({
     clearSelection,
     startSelection,
     cancelSelection,
-    getBrainSessionConfig,
   }), [
     selection,
     isSelecting,
@@ -120,7 +93,6 @@ export function ModelSelectionProvider({
     clearSelection,
     startSelection,
     cancelSelection,
-    getBrainSessionConfig,
   ]);
 
   return (

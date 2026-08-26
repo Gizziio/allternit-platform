@@ -114,3 +114,38 @@ surfaces/allternit-desktop/src/preload/index.ts
 - Desktop HUD window logic: `surfaces/allternit-desktop/src/main/unified-main.ts` (search `createHudWindow`, `toggleHudWindow`, `shell:move-hud`).
 - HUD renderer UI: `surfaces/ai.allternit.com/src/shell/ShellApp.tsx` — `if (isHudWindow)` block.
 - Hermes reference implementation: `NousResearch/hermes-agent` → `apps/desktop/electron/main.ts` (`spawnHudWindow`), `hud-geometry.ts`, `hud-ipc.ts`, `hud-windowing.ts`.
+
+---
+
+## Update — main renderer crash fixed + HUD route wired
+
+**Branch:** `session/hud-mode-crash-fix` (new worktree)  
+**Agent:** continued from HUD handoff; fixed the `ControlCenter` launch crash and the missing `/hud` route wiring.
+
+### What changed
+
+| File | Change |
+|------|--------|
+| `surfaces/ai.allternit.com/vite.config.ts` | Added explicit `resolve.alias` entries for `react`, `react/jsx-runtime`, `react/jsx-dev-runtime`, `react-dom`, and `react-dom/client` so every import resolves to the platform surface's React 18 copy. The workspace root can resolve React 19 (e.g. from `framer-motion` dev deps), and transitive workspace imports were pulling in that root instance alongside React 18, breaking the hook dispatcher. |
+| `surfaces/ai.allternit.com/public/sw.js` | Service worker no longer cache-firsts Vite development module URLs (`/node_modules/.vite/`, `/src/`, `/@fs/`, `/@vite/`). Mixing stale cached chunks with fresh re-optimized chunks was producing mismatched React/React-DOM instances and the same `useState`/`useContext` null-dispatcher crash. |
+| `surfaces/ai.allternit.com/src/routes.tsx` | Added `<Route path="/hud" element={<ShellPage />} />` so the desktop HUD window can load `/hud` instead of being redirected to `/` by the catch-all. |
+| `surfaces/ai.allternit.com/src/nav/nav.types.ts` | Added `"hud"` to the `ViewType` union. |
+| `surfaces/ai.allternit.com/src/nav/nav.policy.ts` | Added spawn policy for the `hud` view type. |
+
+### Verification status
+
+- Reproduced the crash class in a Playwright headless run against the Vite dev server: `Cannot read properties of null (reading 'useContext')` in `AuthGate` (`ShellApp.tsx`), preceded by "Invalid hook call" warnings about multiple React copies.
+- Confirmed the workspace root resolves React 19 while the platform surface resolves React 18.
+- Verified in a headless browser (with workspace office packages excluded from Vite's eager optimization scan for the demo):
+  - Main platform home loads without the `ControlCenter` crash.
+  - `http://localhost:3017/hud` renders the floating chat HUD (dark frosted bar, drag handle, close button, composer at the bottom).
+
+### Remaining TODOs from original handoff
+
+1. ~~Main app renderer crash on launch~~ — fixed via React aliases + service worker fix.
+2. ~~HUD route wiring~~ — `/hud` now maps to `ShellPage` and the HUD view renders.
+3. Visual polish vs. Hermes — still needs a real Hermes screenshot/video.
+4. Global shortcut manual verification — still needs physical `Cmd+Shift+H` test.
+5. Click-through / ignore-mouse-events — next feature step.
+6. Resize affordance — next feature step.
+7. Voice service fails to start — pre-existing, unrelated.

@@ -79,7 +79,6 @@ import { useMentionHandoff } from '@/lib/bots/use-mention-handoff';
 import { parseMentions } from '@/lib/bots/mention-handoff.service';
 import { useActiveChatSession } from './ChatSessionStore';
 import { useChatStore } from './ChatStore';
-import { ALL_MODELS } from '@/lib/ai/models';
 import { AgentModeGizzi } from './AgentModeGizzi';
 import { getAgentModeSurfaceTheme } from './agentModeSurfaceTheme';
 import { useRecordingStore } from '@/stores/recording.store';
@@ -209,8 +208,6 @@ interface ChatComposerProps {
   showTopActions?: boolean;
   /** Compact input bar (narrower vertical padding) for terminal-style surfaces like Code Mode. */
   compact?: boolean;
-  /** Floating HUD mode: force a minimal placeholder and tight chrome. */
-  hudMode?: boolean;
   inputValue?: string;
   onInteractionSignal?: (emotion: GizziEmotion) => void;
   onAttentionChange?: (attention: GizziAttention | null) => void;
@@ -241,6 +238,8 @@ interface ChatComposerProps {
   bottomDockContent?: React.ReactNode;
   /** Show the Chat/Cowork mode toggle in the bottom dock. Pass false for in-session composers, which are locked to their session's mode. */
   showModeToggle?: boolean;
+  /** Floating HUD mode: single-row composer, no landing chrome, compact navy styling. */
+  hudMode?: boolean;
   /** Optional inline info bar rendered at the top of the composer shell. */
   topInfoBarContent?: React.ReactNode;
   /** Optional inline question bar rendered between info and textarea. */
@@ -398,7 +397,6 @@ export function ChatComposer({
   variant = 'default',
   showTopActions = true,
   compact = false,
-  hudMode = false,
   inputValue = '',
   onInteractionSignal,
   onAttentionChange,
@@ -413,13 +411,13 @@ export function ChatComposer({
   mentionAgentId: externalMentionAgentId,
   bottomDockContent,
   showModeToggle,
+  hudMode = false,
   topInfoBarContent,
   questionBarContent,
   topDeckContent,
   onStartBotSession,
 }: ChatComposerProps) {
   const [input, setInput] = useState(inputValue);
-  const effectivePlaceholder = placeholder;
   const isMobile = useIsMobile();
   const {
     isRecording: isVoiceRecording,
@@ -1082,19 +1080,6 @@ export function ChatComposer({
       modelMap.set(model.id, model);
     });
 
-    // 4) Local CLI agents (Kimi CLI, Claude Code, Codex, etc.) so the HUD and
-    // inline composer can route messages to installed subprocess brains.
-    ALL_MODELS.filter((m) => m.runtimeType === 'cli').forEach((model) => {
-      if (modelMap.has(model.id)) return;
-      modelMap.set(model.id, {
-        id: model.id,
-        name: model.name,
-        providerId: model.provider,
-        providerName: model.provider,
-        runtimeType: model.runtimeType,
-      });
-    });
-
     return Array.from(modelMap.values());
   }, [discoveryResult, realModels, terminalModels]);
 
@@ -1105,13 +1090,10 @@ export function ChatComposer({
 
   const handleModelSelect = useCallback((model: any) => {
     if (onSelectModel) {
-      const isCli = model.runtimeType === 'cli';
       const providerId = model.providerId || 'allternit';
       onSelectModel({
         providerId,
-        // CLI agents use their own id as the profile (e.g. "kimi-cli") so the
-        // backend and Gizzi runtime can route to the right subprocess adapter.
-        profileId: isCli ? model.id : `${providerId}-acp`,
+        profileId: `${providerId}-acp`,
         modelId: model.id,
         modelName: model.name,
       });
@@ -1789,9 +1771,8 @@ export function ChatComposer({
 
       <div
         className={cn(
-          'w-full relative overflow-visible z-14',
-          !hudMode && 'max-w-[600px] lg:max-w-[760px]',
-          variant === 'large' && !hudMode && 'lg:max-w-[760px]'
+          'w-full max-w-[600px] lg:max-w-[760px] relative overflow-visible z-14',
+          variant === 'large' && 'lg:max-w-[760px]'
         )}
       >
         {showAgentRailGuide ? (
@@ -1809,11 +1790,13 @@ export function ChatComposer({
         <div
           className={cn(
             'w-full rounded-2xl flex flex-col overflow-visible transition-shadow z-10 relative',
-            useGlassComposer
-              ? 'bg-composer-glass-bg border border-composer-glass-border backdrop-blur-xl backdrop-saturate-150 shadow-xl'
-              : 'bg-input-bg border border-input-border',
-            !hudMode && agentModeEnabled && 'border-glow shadow-glow',
-            !hudMode && composerFocused && !agentModeEnabled && 'shadow-glow-accent'
+            hudMode
+              ? 'bg-[rgba(23,33,64,0.85)] border border-white/10 backdrop-blur-xl shadow-xl'
+              : useGlassComposer
+                ? 'bg-composer-glass-bg border border-composer-glass-border backdrop-blur-xl backdrop-saturate-150 shadow-xl'
+                : 'bg-input-bg border border-input-border',
+            agentModeEnabled && 'border-glow shadow-glow',
+            composerFocused && !agentModeEnabled && !hudMode && 'shadow-glow-accent'
           )}
           onFocusCapture={() => setComposerFocused(true)}
           onBlurCapture={(event) => {
@@ -2010,7 +1993,7 @@ export function ChatComposer({
                     parseMention(val);
                   }}
                   onKeyDown={handleTextareaKeyDown}
-                  placeholder={effectivePlaceholder}
+                  placeholder={placeholder}
                   rows={1}
                   onFocus={() => setTrackingAttention(0, 0.34, 'locked-on')}
                   className={cn(
@@ -2030,6 +2013,20 @@ export function ChatComposer({
                   >
                     <Waveform size={17} weight="bold" />
                   </button>
+                  {hudMode && (
+                    <button
+                      type="button"
+                      onClick={handleCaptureScreenshot}
+                      aria-label="Capture screenshot"
+                      title="Capture screenshot"
+                      className={cn(
+                        'rounded-full border-none bg-transparent text-composer-muted hover:text-primary hover:bg-composer-soft transition-colors flex items-center justify-center cursor-pointer',
+                        isMobile ? 'size-11' : 'size-7'
+                      )}
+                    >
+                      <Camera size={17} weight="bold" />
+                    </button>
+                  )}
                   <button type="button"
                     onClick={() => setShowModelMenu(!showModelMenu)}
                     disabled={terminalModelsLoading && allModels.length === 0}
@@ -2214,7 +2211,7 @@ export function ChatComposer({
                   parseMention(val);
                 }}
                 onKeyDown={handleTextareaKeyDown}
-                placeholder={effectivePlaceholder}
+                placeholder={placeholder}
                 rows={1}
                 onFocus={() => setTrackingAttention(0, 0.34, 'locked-on')}
                 className={cn(
@@ -2638,7 +2635,7 @@ export function ChatComposer({
           edge (z-0 under the composer card's z-10), sliding down from behind
           with the same deck-rise/fall motion as the top deck. */}
       {agentModeSurface && agentModeEnabled && selectedSurfaceAgent && !voiceModeActive && (
-        <div className={cn('w-full flex flex-col items-center', !hudMode && 'max-w-[600px] lg:max-w-[760px]')}>
+        <div className="w-full max-w-[600px] lg:max-w-[760px] flex flex-col items-center">
           <div className="relative z-0 w-full h-[60px] -mt-3 box-border bg-input-bg border-b border-r border-l border-input-border rounded-b-2xl px-4 pt-4 flex items-start gap-3 animate-deck-fall">
             <ModeDock
               selectedMode={selectedModeId}

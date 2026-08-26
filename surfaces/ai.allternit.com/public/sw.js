@@ -35,6 +35,18 @@ self.addEventListener('fetch', (event) => {
   if (request.url.includes('/api/')) return;
   if (request.url.includes('/dispatch/')) return;
 
+  // Never cache Vite's development module graph. Vite's URLs include
+  // cache-busting query parameters (e.g. ?v=...) that change whenever
+  // dependencies are re-optimized. Caching them cache-first has led to
+  // mismatched React/React-DOM chunks and "Cannot read properties of null
+  // (reading 'useState' / 'useContext')" crashes when stale and fresh chunks
+  // are served together.
+  const url = new URL(request.url);
+  if (url.pathname.startsWith('/node_modules/.vite/')) return;
+  if (url.pathname.startsWith('/src/')) return;
+  if (url.pathname.startsWith('/@fs/')) return;
+  if (url.pathname.startsWith('/@vite/')) return;
+
   event.respondWith(
     caches.match(request).then((cached) => {
       const fetchPromise = fetch(request)

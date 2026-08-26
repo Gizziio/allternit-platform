@@ -4,6 +4,7 @@ import React, { useCallback, useState, useRef, useEffect, useLayoutEffect, useMe
 import { useChatId } from "@/providers/chat-id-provider";
 import { useChatStore } from "@/views/chat/ChatStore";
 import { useModelSelection } from "@/providers/model-selection-provider";
+import { cn } from "@/lib/utils";
 import { ModelPicker } from "@/components/model-picker";
 import { AgentContextStrip } from "@/components/agents/AgentContextStrip";
 import type { AgentContextStripProps } from "@/components/agents/context-strip/context-strip.types";
@@ -20,7 +21,7 @@ import { useAdvancedAgentStore } from "@/lib/agents/agent-advanced.store";
 import { useChatSessionStore } from "@/views/chat/ChatSessionStore";
 import { useSurfaceAgentSelection } from "@/lib/agents/surface-agent-context";
 import { useThreadAgentSessionsStore } from "@/stores/thread-agent-sessions.store";
-import { NativeAgentApiError } from "@/lib/agents/native-agent-api";
+import { NativeAgentApiError, type BrainRef } from "@/lib/agents/native-agent-api";
 import {
   getAgentSessionDescriptor,
   getAgentSessionStatusLabel,
@@ -406,13 +407,6 @@ export function ChatView({
     }, 640);
   }, []);
 
-  const runtimeModelId = useMemo(() => {
-    if (!selectedModel) return undefined;
-    if (selectedModel.includes('/')) return selectedModel;
-    if (selectedModel.endsWith('-cli')) return `${selectedModel}/default`;
-    return selectedModel;
-  }, [selectedModel]);
-
   const handleSend = useCallback(async (text: string, _context?: unknown) => {
     if (!text.trim()) return;
 
@@ -443,12 +437,17 @@ export function ChatView({
     let sessionId = embeddedAgentSession.sessionId || chatId;
     const hasLiveSession = Boolean(sessionId && sessionId.startsWith('ses_'));
 
+    const brainRef: BrainRef | undefined = modelSelection
+      ? { providerID: modelSelection.providerId, modelID: modelSelection.modelId }
+      : undefined;
+
     setSendError(null);
     try {
       if (!hasLiveSession) {
         sessionId = await useChatSessionStore.getState().createSession({
           name: text.trim().slice(0, 60) || 'New Session',
           sessionMode: 'regular',
+          model: brainRef,
         });
       }
 
@@ -456,7 +455,7 @@ export function ChatView({
         useChatSessionStore.getState().setActiveSession(sessionId);
         await sendNativeMessageStream(sessionId, {
           text: text.trim(),
-          modelId: runtimeModelId,
+          modelId: brainRef ? `${brainRef.providerID}/${brainRef.modelID}` : undefined,
           ...(pluginMention
             ? { pluginMention: { kind: pluginMention.kind, id: pluginMention.id, name: pluginMention.name } }
             : {}),
@@ -471,7 +470,7 @@ export function ChatView({
           : "Couldn't send that message. Please try again."
       );
     }
-  }, [mentionAgentId, pluginMention, chatId, embeddedAgentSession.sessionId, sendNativeMessageStream, runtimeModelId]);
+  }, [mentionAgentId, pluginMention, chatId, embeddedAgentSession.sessionId, sendNativeMessageStream]);
 
   const handleStop = useCallback(() => {
     const activeSessionId = embeddedAgentSession.sessionId || chatId;
@@ -573,96 +572,51 @@ export function ChatView({
     />
   ) : null;
 
-  const composerBar = (
-    <ChatBottomBar
-      mode={mode}
-      isChatEmpty={isChatEmpty}
-      hideEmptyState={hideEmptyState}
-      hudMode={hudMode}
-      handleSend={handleSend}
-      onOpenAgentSession={onOpenAgentSession}
-      agentSurface={agentSurface}
-      setMentionAgentId={setMentionAgentId}
-      mentionAgentId={mentionAgentId}
-      setPluginMention={setPluginMention}
-      activeIsLoading={activeIsLoading}
-      handleStop={handleStop}
-      selectedModel={selectedModel}
-      modelSelection={modelSelection}
-      startSelection={startSelection}
-      selectModel={selectModel}
-      composerTopInfoBar={composerTopInfoBar}
-      composerQuestionBar={composerQuestionBar}
-      composerBottomInfoBar={composerBottomInfoBar}
-      useMonolithLogo={useMonolithLogo}
-      pulseMascot={pulseMascot}
-      setLaunchMascotAttention={setLaunchMascotAttention}
-    />
-  );
-
-  const transcriptContent = isChatEmpty && !hideEmptyState ? null : (
-    <ChatActiveContent
-      embeddedAgentStrip={embeddedAgentStrip}
-      isAgentSessionEmbedded={isAgentSessionEmbedded}
-      chatId={chatId}
-      linkedAgentSessionIds={linkedAgentSessionIds}
-      handleRegenerate={handleRegenerate}
-      showJumpToBottom={showJumpToBottom}
-      setShouldAutoScroll={setShouldAutoScroll}
-      scrollToBottom={scrollToBottom}
-      messagesEndRef={messagesEndRef}
-      onSelectArtifact={setSelectedArtifact}
-      selectedArtifactTitle={selectedArtifact?.title}
-      hideEmptyState={hideEmptyState}
-      hudMode={hudMode}
-    />
-  );
-
-  if (hudMode) {
-    return (
-      <div className="flex w-full flex-col">
-        {composerBar}
-        <div
-          ref={scrollContainerRef}
-          onScroll={handleScroll}
-          className="w-full flex flex-col max-h-[320px] overflow-y-auto min-h-0"
-        >
-          {transcriptContent}
-        </div>
-        <SendErrorBanner message={sendError} onDismiss={() => setSendError(null)} />
-        <ModelPicker
-          open={isSelecting}
-          onOpenChange={(open) => { if (!open) cancelSelection(); }}
-          onSelect={selectModel}
-          onCancel={cancelSelection}
-          trigger={<div className="hidden" />}
-        />
-        {isBotSession && selectedAgent && (
-          <BotRuntimeConfigModal
-            bot={selectedAgent}
-            isOpen={isRuntimeModalOpen}
-            onClose={() => setIsRuntimeModalOpen(false)}
-            onSaved={() => setIsRuntimeModalOpen(false)}
-          />
-        )}
-      </div>
-    );
-  }
-
   return (
     <ChatBackground
       isAgentSessionEmbedded={isAgentSessionEmbedded}
       mode={mode}
       effectiveAgentModeEnabled={effectiveAgentModeEnabled}
       agentSurface={agentSurface}
+      hudMode={hudMode}
     >
-      <div className="flex-1 flex flex-row overflow-hidden min-h-0">
+      {hudMode && (
+        <ChatBottomBar
+          mode={mode}
+          isChatEmpty={isChatEmpty}
+          hideEmptyState={hideEmptyState}
+          hudMode={hudMode}
+          handleSend={handleSend}
+          onOpenAgentSession={onOpenAgentSession}
+          agentSurface={agentSurface}
+          setMentionAgentId={setMentionAgentId}
+          mentionAgentId={mentionAgentId}
+          setPluginMention={setPluginMention}
+          activeIsLoading={activeIsLoading}
+          handleStop={handleStop}
+          selectedModel={selectedModel}
+          modelSelection={modelSelection}
+          startSelection={startSelection}
+          selectModel={selectModel}
+          composerTopInfoBar={composerTopInfoBar}
+          composerQuestionBar={composerQuestionBar}
+          composerBottomInfoBar={composerBottomInfoBar}
+          useMonolithLogo={useMonolithLogo}
+          pulseMascot={pulseMascot}
+          setLaunchMascotAttention={setLaunchMascotAttention}
+        />
+      )}
+
+      <div className={cn('flex flex-row', hudMode ? '' : 'flex-1 min-h-0 overflow-hidden')}>
         <div
           ref={scrollContainerRef}
           onScroll={handleScroll}
-          className="flex-1 overflow-y-auto w-full flex flex-col items-center min-h-0"
+          className={cn(
+            'w-full flex flex-col items-center',
+            hudMode ? 'flex-1' : 'flex-1 min-h-0 overflow-y-auto'
+          )}
         >
-          {isChatEmpty && !hideEmptyState ? (
+          {isChatEmpty && !hideEmptyState && !hudMode ? (
             <ChatEmptyState
               embeddedAgentStrip={embeddedAgentStrip}
               modelSelection={modelSelection}
@@ -693,7 +647,21 @@ export function ChatView({
               composerBottomInfoBar={composerBottomInfoBar}
             />
           ) : (
-            transcriptContent
+            <ChatActiveContent
+              embeddedAgentStrip={embeddedAgentStrip}
+              isAgentSessionEmbedded={isAgentSessionEmbedded}
+              chatId={chatId}
+              linkedAgentSessionIds={linkedAgentSessionIds}
+              handleRegenerate={handleRegenerate}
+              showJumpToBottom={showJumpToBottom}
+              setShouldAutoScroll={setShouldAutoScroll}
+              scrollToBottom={scrollToBottom}
+              messagesEndRef={messagesEndRef}
+              onSelectArtifact={setSelectedArtifact}
+              selectedArtifactTitle={selectedArtifact?.title}
+              hideEmptyState={hideEmptyState}
+              hudMode={hudMode}
+            />
           )}
         </div>
 
@@ -713,7 +681,32 @@ export function ChatView({
 
       <SendErrorBanner message={sendError} onDismiss={() => setSendError(null)} />
 
-      {composerBar}
+      {!hudMode && (
+        <ChatBottomBar
+          mode={mode}
+          isChatEmpty={isChatEmpty}
+          hideEmptyState={hideEmptyState}
+          hudMode={hudMode}
+          handleSend={handleSend}
+          onOpenAgentSession={onOpenAgentSession}
+          agentSurface={agentSurface}
+          setMentionAgentId={setMentionAgentId}
+          mentionAgentId={mentionAgentId}
+          setPluginMention={setPluginMention}
+          activeIsLoading={activeIsLoading}
+          handleStop={handleStop}
+          selectedModel={selectedModel}
+          modelSelection={modelSelection}
+          startSelection={startSelection}
+          selectModel={selectModel}
+          composerTopInfoBar={composerTopInfoBar}
+          composerQuestionBar={composerQuestionBar}
+          composerBottomInfoBar={composerBottomInfoBar}
+          useMonolithLogo={useMonolithLogo}
+          pulseMascot={pulseMascot}
+          setLaunchMascotAttention={setLaunchMascotAttention}
+        />
+      )}
 
       <ModelPicker
         open={isSelecting}
