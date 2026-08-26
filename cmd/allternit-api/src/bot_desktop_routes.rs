@@ -7,6 +7,12 @@
 //! Each bot may own one persistent desktop sandbox. The mapping is stored in
 //! `bot_desktop_sandboxes` so the computer survives API restarts and chat
 //! session boundaries.
+//!
+//! DEPRECATION NOTICE: These `/bots/:bot_id/desktop/*` routes are kept for
+//! backward compatibility. New code should prefer the unified
+//! `/api/v1/computers/*` surface in `computer_routes.rs`. The bot-desktop
+//! routes are expected to be removed in a future release after a deprecation
+//! window.
 
 use axum::extract::{Extension, Path, Query, State};
 use axum::http::{header, StatusCode};
@@ -33,6 +39,8 @@ use allternit_driver_interface::{
     ExecutionId, NetworkPolicy, PolicySpec, ResourceSpec, SpawnSpec, TenantId,
 };
 
+/// Deprecated: prefer `crate::computer_routes::router()` for new code.
+/// This router remains mounted for backward compatibility.
 pub fn bot_desktop_router() -> Router<Arc<AppState>> {
     Router::new()
         .route("/bots/:bot_id/desktop", get(get_desktop_status))

@@ -142,6 +142,22 @@ curl -s -X POST \
    ssh root@mail.news.allternit.com "incus image import /tmp/allternit-desktop.tar.gz --alias allternit-desktop"
    ```
 
+## Unified API and deprecation
+
+The platform now exposes a single compute domain at `/api/v1/computers/*` that
+covers local, BYO-VPS, managed, BYOC, and cloud-desktop resources. For cloud
+desktops this unified surface proxies to the same Incus/Tart substrate that
+powers the legacy bot-desktop routes.
+
+- New integrations should call `/api/v1/computers` (list/create),
+  `/api/v1/computers/:id/start|stop|delete`, and the control endpoints
+  `/api/v1/computers/:id/screenshot|shell|mouse|keyboard|files/*`.
+- Legacy `/bots/:bot_id/desktop/*` routes are deprecated and retained only for
+  backward compatibility. They will be removed in a future release after the
+  deprecation window.
+- Existing `bot_desktop_sandboxes` rows are automatically mirrored into the
+  `computers` table on migration so the unified API can list historical desktops.
+
 ## Known limitations
 
 - Windows desktops require a host with nested KVM (`/dev/kvm` present). The
