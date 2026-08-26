@@ -34,6 +34,7 @@ import {
   CodePermissionsDropdown,
   type CodePermissionOption,
 } from '@/components/dispatch/CodePermissionsDropdown';
+import { MachinesPanel } from '@/components/dispatch/MachinesPanel';
 import { openRemoteControlWindow } from '@/lib/open-remote-control-window';
 
 // ─── token generation ────────────────────────────────────────────────────────
@@ -324,6 +325,7 @@ export function DispatchView(): React.ReactNode {
 
   // ── QR / session ────────────────────────────────────────────────────────────
   const [token, setToken] = useState<string>(() => generateDispatchToken());
+  const [selectedRuntimeId, setSelectedRuntimeId] = useState<string | null>(null);
   const { getToken } = usePlatformAuth();
 
   // Hosted handoff (allternit-cloud-api /dispatch/handoff/mint): bind the QR
@@ -334,7 +336,7 @@ export function DispatchView(): React.ReactNode {
   // random token + dev endpoints keep the old flow.
   useEffect(() => {
     let cancelled = false;
-    mintDispatchToken(getToken)
+    mintDispatchToken(getToken, selectedRuntimeId ?? undefined)
       .then((minted) => {
         if (!cancelled) setToken(minted.token);
       })
@@ -343,7 +345,7 @@ export function DispatchView(): React.ReactNode {
       cancelled = true;
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [selectedRuntimeId]);
   const [qrUrl, setQrUrl] = useState<string>('');
   const [copied, setCopied] = useState(false);
   const [showQR, setShowQR] = useState(false);
@@ -638,6 +640,15 @@ export function DispatchView(): React.ReactNode {
               </p>
             </div>
           </div>
+        </div>
+
+        {/* Machines panel */}
+        <div className="border-b border-solid border-[var(--border-subtle)]">
+          <div className="flex items-center justify-between px-4 py-3">
+            <span className="text-[13px] font-semibold text-[var(--text-primary)]">Machines</span>
+            <CaretDown size={14} className="text-[var(--text-tertiary)]" />
+          </div>
+          <MachinesPanel selectedRuntimeId={selectedRuntimeId} onSelectRuntime={setSelectedRuntimeId} />
         </div>
 
         {/* Bridge hint card */}
