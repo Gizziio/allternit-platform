@@ -246,7 +246,7 @@ async fn get_desktop_screenshot(
         }
     };
 
-    let handle = build_handle(&record.sandbox_id, Some(&record.os));
+    let handle = build_handle(&record.sandbox_id, Some(&record.os), Some(&record.provider));
     let capture_cmd = if record.os == "windows" {
         bot_desktop_windows::screenshot_command()
     } else {
@@ -583,7 +583,7 @@ async fn start_desktop(
         Err(resp) => return resp,
     };
 
-    let handle = build_handle(&record.sandbox_id, Some(&record.os));
+    let handle = build_handle(&record.sandbox_id, Some(&record.os), Some(&record.provider));
     match driver.resume_vm(&handle).await {
         Ok(()) => {
             let _ = update_bot_sandbox_status(&state.db, &bot_id, "running");
@@ -641,7 +641,7 @@ async fn stop_desktop(
         Err(resp) => return resp,
     };
 
-    let handle = build_handle(&record.sandbox_id, Some(&record.os));
+    let handle = build_handle(&record.sandbox_id, Some(&record.os), Some(&record.provider));
     match driver.pause_vm(&handle).await {
         Ok(()) => {
             let _ = update_bot_sandbox_status(&state.db, &bot_id, "stopped");
@@ -708,7 +708,7 @@ async fn deprovision_desktop(
     }
 
     let sandbox_id = record.sandbox_id.clone();
-    let handle = build_handle(&record.sandbox_id, Some(&record.os));
+    let handle = build_handle(&record.sandbox_id, Some(&record.os), Some(&record.provider));
     tokio::spawn(async move {
         match driver.destroy(&handle).await {
             Ok(()) => info!(bot_id, sandbox_id, "Bot desktop sandbox destroyed"),
@@ -902,18 +902,22 @@ async fn require_driver(state: &AppState) -> Result<Arc<dyn allternit_driver_int
     }
 }
 
-pub(crate) fn build_handle(native_id: &str, os: Option<&str>) -> ExecutionHandle {
+pub(crate) fn build_handle(
+    native_id: &str,
+    os: Option<&str>,
+    provider: Option<&str>,
+) -> ExecutionHandle {
     let mut driver_info = std::collections::HashMap::new();
     driver_info.insert("native_id".to_string(), native_id.to_string());
 
     let mut env_vars = std::collections::HashMap::new();
     if let Some(os) = os {
         env_vars.insert("ALLTERNIT_DESKTOP_OS".to_string(), os.to_string());
-        let provider = match os {
-            "macos" => "tart",
-            _ => "incus",
-        };
-        driver_info.insert("provider".to_string(), provider.to_string());
+        let provider = provider.map(|s| s.to_string()).unwrap_or_else(|| match os {
+            "macos" => "tart".to_string(),
+            _ => "incus".to_string(),
+        });
+        driver_info.insert("provider".to_string(), provider);
     }
 
     ExecutionHandle {

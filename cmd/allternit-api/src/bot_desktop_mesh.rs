@@ -99,7 +99,7 @@ pub async fn join_desktop_mesh(
         Err(resp) => return resp,
     };
 
-    let handle = build_handle(&sandbox_id, None);
+    let handle = build_handle(&sandbox_id, None, None);
     let cmd = CommandSpec {
         command: vec!["bash".to_string(), "-c".to_string(), script],
         env_vars: HashMap::new(),
@@ -227,7 +227,7 @@ pub async fn leave_desktop_mesh(
         }
     };
 
-    let handle = build_handle(&sandbox_id, None);
+    let handle = build_handle(&sandbox_id, None, None);
     let cmd = CommandSpec {
         command: vec!["tailscale".to_string(), "down".to_string()],
         env_vars: HashMap::new(),
@@ -254,7 +254,7 @@ pub async fn leave_desktop_mesh(
 }
 
 async fn fetch_mesh_status(driver: &dyn allternit_driver_interface::ExecutionDriver, sandbox_id: &str) -> MeshStatusResponse {
-    let handle = build_handle(sandbox_id, None);
+    let handle = build_handle(sandbox_id, None, None);
     let cmd = CommandSpec {
         command: vec![
             "tailscale".to_string(),

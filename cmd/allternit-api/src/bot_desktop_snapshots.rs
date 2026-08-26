@@ -239,7 +239,7 @@ async fn resolve_driver_and_handle(
         }
     };
 
-    let handle = crate::bot_desktop_routes::build_handle(&record.sandbox_id, Some(&record.os));
+    let handle = crate::bot_desktop_routes::build_handle(&record.sandbox_id, Some(&record.os), Some(&record.provider));
     Ok((driver, handle))
 }
 

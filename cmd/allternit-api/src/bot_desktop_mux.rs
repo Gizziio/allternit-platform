@@ -116,7 +116,7 @@ python3 -c 'import json,sys; print(json.dumps({{"session_id":sys.argv[1],"pane_i
         command_b64 = command_b64,
     );
 
-    let handle = build_handle(&query.sandbox_id, None);
+    let handle = build_handle(&query.sandbox_id, None, None);
     let mut env_vars = std::collections::HashMap::new();
     env_vars.insert("DISPLAY".to_string(), ":0".to_string());
     let cmd_spec = CommandSpec {

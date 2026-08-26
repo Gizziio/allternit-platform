@@ -119,7 +119,16 @@ pub(crate) async fn send_desktop_mouse(
         }
     };
 
-    run_guest_command(&*driver, &record.sandbox_id, &record.os, command, "mouse", &bot_id).await
+    run_guest_command(
+        &*driver,
+        &record.sandbox_id,
+        &record.os,
+        &record.provider,
+        command,
+        "mouse",
+        &bot_id,
+    )
+    .await
 }
 
 fn build_mouse_command(input: &MouseInput, display: &str) -> Result<Vec<String>, String> {
@@ -271,7 +280,16 @@ pub(crate) async fn send_desktop_keyboard(
         }
     };
 
-    run_guest_command(&*driver, &record.sandbox_id, &record.os, command, "keyboard", &bot_id).await
+    run_guest_command(
+        &*driver,
+        &record.sandbox_id,
+        &record.os,
+        &record.provider,
+        command,
+        "keyboard",
+        &bot_id,
+    )
+    .await
 }
 
 fn build_keyboard_command(input: &KeyboardInput, display: &str) -> Result<Vec<String>, String> {
@@ -389,7 +407,7 @@ pub(crate) async fn run_desktop_shell(
         }
     };
 
-    let handle = build_handle(&record.sandbox_id, Some(&record.os));
+    let handle = build_handle(&record.sandbox_id, Some(&record.os), Some(&record.provider));
     let cmd_spec = if record.os == "windows" {
         bot_desktop_windows::shell_command(&input.command.join(" "))
     } else {
@@ -490,7 +508,7 @@ pub(crate) async fn download_desktop_file(
         }
     };
 
-    let handle = build_handle(&query.sandbox_id, Some(&record.os));
+    let handle = build_handle(&query.sandbox_id, Some(&record.os), Some(&record.provider));
     match driver.pull_file(&handle, &file_query.path).await {
         Ok(bytes) => (
             StatusCode::OK,
@@ -563,7 +581,7 @@ pub(crate) async fn upload_desktop_file(
         }
     };
 
-    let handle = build_handle(&query.sandbox_id, Some(&record.os));
+    let handle = build_handle(&query.sandbox_id, Some(&record.os), Some(&record.provider));
     match driver.push_file(&handle, &file_query.path, body.to_vec()).await {
         Ok(()) => (StatusCode::OK, Json(json!({"success": true}))).into_response(),
         Err(e) => {
@@ -581,11 +599,12 @@ async fn run_guest_command(
     driver: &dyn allternit_driver_interface::ExecutionDriver,
     sandbox_id: &str,
     os: &str,
+    provider: &str,
     command: Vec<String>,
     command_kind: &str,
     bot_id: &str,
 ) -> axum::response::Response {
-    let handle = build_handle(sandbox_id, Some(os));
+    let handle = build_handle(sandbox_id, Some(os), Some(provider));
     let mut env_vars = std::collections::HashMap::new();
     env_vars.insert("DISPLAY".to_string(), ":0".to_string());
     let cmd_spec = CommandSpec {
