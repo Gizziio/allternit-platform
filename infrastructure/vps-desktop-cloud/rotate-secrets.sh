@@ -50,10 +50,25 @@ chmod 600 ${ENV_FILE}
 # ---------------------------------------------------------------------------
 if [ -n "${TART_HOSTS}" ]; then
   new_tart_token=$(new_hex)
+  local_ip=""
+  if command -v tailscale >/dev/null 2>&1; then
+    local_ip=$(tailscale ip -4 2>/dev/null || true)
+  fi
   for host in ${TART_HOSTS//,/ }; do
     host=$(echo "${host}" | sed 's|http://||; s|https://||; s|:.*||')
     log "rotating Tart host token on ${host}"
-    ssh "admin@${host}" "
+    if [ "${host}" = "${local_ip}" ]; then
+      # Local Tart host: update file and restart launchd directly.
+      mkdir -p "$(dirname ${TART_ENV_FILE})"
+      if [ -f "${TART_ENV_FILE}" ]; then
+        cp "${TART_ENV_FILE}" "${TART_ENV_FILE}.${TS}"
+      fi
+      echo "TART_HOST_TOKEN=${new_tart_token}" > "${TART_ENV_FILE}"
+      chmod 600 "${TART_ENV_FILE}"
+      launchctl bootout gui/$(id -u)/com.allternit.tart-host >/dev/null 2>&1 || true
+      launchctl bootstrap gui/$(id -u) "${HOME}/Library/LaunchAgents/com.allternit.tart-host.plist"
+    else
+      ssh "${host}" "
 set -e
 mkdir -p \$(dirname ${TART_ENV_FILE})
 if [ -f ${TART_ENV_FILE} ]; then
@@ -62,8 +77,9 @@ fi
 echo 'TART_HOST_TOKEN=${new_tart_token}' > ${TART_ENV_FILE}
 chmod 600 ${TART_ENV_FILE}
 launchctl bootout gui/\$(id -u)/com.allternit.tart-host >/dev/null 2>&1 || true
-launchctl bootstrap gui/\$(id -u) ${HOME}/Library/LaunchAgents/com.allternit.tart-host.plist
+launchctl bootstrap gui/\$(id -u) \${HOME}/Library/LaunchAgents/com.allternit.tart-host.plist
 "
+    fi
   done
 
   log "updating API env with new Tart token"

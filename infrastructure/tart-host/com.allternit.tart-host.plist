@@ -8,8 +8,6 @@
 		<string>/opt/homebrew/bin/tart</string>
 		<key>TART_HOST_BIND</key>
 		<string>__TART_HOST_BIND__</string>
-		<key>TART_HOST_TOKEN</key>
-		<string>__TART_HOST_TOKEN__</string>
 		<key>TART_SSH_PASSWORD</key>
 		<string>admin</string>
 		<key>TART_SSH_USER</key>

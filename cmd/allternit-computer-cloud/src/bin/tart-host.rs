@@ -38,11 +38,30 @@ struct AppState {
 async fn main() {
     tracing_subscriber::fmt::init();
 
-    let token = std::env::var("TART_HOST_TOKEN").ok().filter(|s| !s.is_empty());
+    let token = std::env::var("TART_HOST_TOKEN")
+        .ok()
+        .filter(|s| !s.is_empty())
+        .or_else(|| load_token_from_env_file());
     if token.is_none() {
         warn!("TART_HOST_TOKEN is not set; tart-host will accept unauthenticated requests");
     } else {
         info!("tart-host authentication enabled");
+    }
+
+    fn load_token_from_env_file() -> Option<String> {
+        let home = std::env::var("HOME").ok()?;
+        let path = std::path::PathBuf::from(home).join(".allternit").join("tart-host.env");
+        let contents = std::fs::read_to_string(&path).ok()?;
+        for line in contents.lines() {
+            let line = line.trim();
+            if line.starts_with("TART_HOST_TOKEN=") {
+                let value = line.strip_prefix("TART_HOST_TOKEN=").unwrap_or("").trim();
+                if !value.is_empty() {
+                    return Some(value.to_string());
+                }
+            }
+        }
+        None
     }
 
     let state = AppState {

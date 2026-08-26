@@ -66,7 +66,6 @@ PLIST_TMP="$(mktemp)"
 trap 'rm -f "$PLIST_TMP"' EXIT
 sed \
     -e "s|__TART_HOST_BIND__|${TART_HOST_BIND}|g" \
-    -e "s|__TART_HOST_TOKEN__|${TART_HOST_TOKEN}|g" \
     -e "s|__HOME__|${HOME}|g" \
     "$PLIST_SRC" > "$PLIST_TMP"
 cp "$PLIST_TMP" "$PLIST_DST"
