@@ -21,6 +21,7 @@ use std::sync::Arc;
 use tracing::{debug, info, warn};
 
 use crate::auth::AuthUser;
+use crate::bot_desktop_input::desktop_display;
 use crate::bot_desktop_stream::{desktop_ws_secret, sign_desktop_token};
 use crate::bot_desktop_templates::ProvisionRequest;
 use crate::bot_desktop_windows;
@@ -249,13 +250,14 @@ async fn get_desktop_screenshot(
     let capture_cmd = if record.os == "windows" {
         bot_desktop_windows::screenshot_command()
     } else {
+        let display = desktop_display(&record.provider);
         let mut env_vars = std::collections::HashMap::new();
-        env_vars.insert("DISPLAY".to_string(), ":0".to_string());
+        env_vars.insert("DISPLAY".to_string(), display.to_string());
         CommandSpec {
             command: vec![
                 "sh".to_string(),
                 "-c".to_string(),
-                "DISPLAY=:0 scrot -z -o /tmp/allternit-screen.png && base64 -w0 /tmp/allternit-screen.png".to_string(),
+                format!("DISPLAY={} scrot -z -o /tmp/allternit-screen.png && base64 -w0 /tmp/allternit-screen.png", display),
             ],
             env_vars,
             working_dir: None,

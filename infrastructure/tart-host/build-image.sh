@@ -52,18 +52,18 @@ fi
 # ---------------------------------------------------------------------------
 cat >"${LOCAL_DIR}/run.sh" <<'EOF'
 #!/bin/bash
-export DISPLAY=:0
+export DISPLAY=:99
 export HOME=/home/admin
 LOG_DIR="/home/admin/.allternit-desktop/log"
 mkdir -p "${LOG_DIR}"
 
-Xvfb :0 -screen 0 1280x720x24 -ac +extension GLX +render -noreset \
+Xvfb :99 -screen 0 1280x720x24 -ac +extension GLX +render -noreset \
   >"${LOG_DIR}/xvfb.log" 2>&1 &
 sleep 2
 
 xfce4-session >"${LOG_DIR}/xfce.log" 2>&1 &
 
-x11vnc -display :0 -rfbport 5900 -forever -shared -nopw \
+x11vnc -display :99 -rfbport 5900 -forever -shared -nopw \
   >"${LOG_DIR}/x11vnc.log" 2>&1 &
 
 wait
@@ -77,7 +77,7 @@ After=network.target systemd-user-sessions.service
 [Service]
 Type=simple
 User=admin
-Environment="DISPLAY=:0"
+Environment="DISPLAY=:99"
 Environment="HOME=/home/admin"
 ExecStart=/opt/allternit-desktop/run.sh
 ExecStop=/bin/kill -TERM $MAINPID
