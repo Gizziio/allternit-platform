@@ -19,6 +19,7 @@ use std::sync::Arc;
 use tracing::{info, warn};
 
 const OS_ENV_KEY: &str = "ALLTERNIT_DESKTOP_OS";
+const PROVIDER_ENV_KEY: &str = "ALLTERNIT_DESKTOP_PROVIDER";
 const PROVIDER_INCUS: &str = "incus";
 const PROVIDER_TART: &str = "tart";
 
@@ -49,6 +50,16 @@ impl SubstrateRouter {
 
     fn choose_spawn_driver(&self, spec: &SpawnSpec) -> Result<Arc<dyn ExecutionDriver>, DriverError> {
         let os = spec.env.env_vars.get(OS_ENV_KEY).map(|s| s.as_str());
+        let preferred = spec
+            .env
+            .env_vars
+            .get(PROVIDER_ENV_KEY)
+            .map(|s| s.as_str());
+
+        if let Some(provider) = preferred {
+            return self.choose_provider(provider, os);
+        }
+
         match os {
             Some("macos") => self
                 .tart
@@ -77,6 +88,41 @@ impl SubstrateRouter {
                     })
                 }
             }
+        }
+    }
+
+    fn provider_supports_os(provider: &str, os: Option<&str>) -> bool {
+        match (provider, os) {
+            (PROVIDER_TART, Some("macos")) | (PROVIDER_TART, Some("linux")) => true,
+            (PROVIDER_INCUS, Some("linux")) | (PROVIDER_INCUS, Some("windows")) => true,
+            _ => false,
+        }
+    }
+
+    fn choose_provider(
+        &self,
+        provider: &str,
+        os: Option<&str>,
+    ) -> Result<Arc<dyn ExecutionDriver>, DriverError> {
+        if !Self::provider_supports_os(provider, os) {
+            return Err(DriverError::NotSupported {
+                feature: format!("provider '{}' does not support os {:?}", provider, os),
+            });
+        }
+        match provider {
+            PROVIDER_INCUS => self.incus.clone().map(|d| d as Arc<dyn ExecutionDriver>).ok_or_else(
+                || DriverError::NotSupported {
+                    feature: "Incus substrate".to_string(),
+                },
+            ),
+            PROVIDER_TART => self.tart.clone().map(|d| d as Arc<dyn ExecutionDriver>).ok_or_else(
+                || DriverError::NotSupported {
+                    feature: "Tart substrate".to_string(),
+                },
+            ),
+            _ => Err(DriverError::NotSupported {
+                feature: format!("unknown provider '{}'", provider),
+            }),
         }
     }
 
@@ -453,6 +499,53 @@ mod tests {
                 DriverError::NotSupported { feature } => assert!(feature.contains("Incus")),
                 _ => panic!("expected NotSupported for Incus"),
             }
+        }
+    }
+
+    fn dummy_spec_with_provider(os: &str, provider: &str) -> SpawnSpec {
+        let mut env = EnvironmentSpec::default();
+        env.env_vars.insert(OS_ENV_KEY.to_string(), os.to_string());
+        env.env_vars.insert(PROVIDER_ENV_KEY.to_string(), provider.to_string());
+        SpawnSpec {
+            tenant: TenantId::new("test").unwrap(),
+            env,
+            policy: PolicySpec::default_permissive(),
+            resources: ResourceSpec::default(),
+            project: None,
+            workspace: None,
+            run_id: None,
+            envelope: None,
+            prewarm_pool: None,
+        }
+    }
+
+    #[test]
+    fn router_provider_override_can_send_linux_to_tart() {
+        let router = SubstrateRouter::new(None, None);
+        let err = router
+            .choose_spawn_driver(&dummy_spec_with_provider("linux", "tart"))
+            .unwrap_err();
+        match err {
+            DriverError::NotSupported { feature } => assert!(feature.contains("Tart")),
+            _ => panic!("expected NotSupported for Tart"),
+        }
+    }
+
+    #[test]
+    fn router_provider_override_can_send_macos_to_incus_is_invalid() {
+        let router = SubstrateRouter::new(None, None);
+        let err = router
+            .choose_spawn_driver(&dummy_spec_with_provider("macos", "incus"))
+            .unwrap_err();
+        match err {
+            DriverError::NotSupported { feature } => {
+                assert!(
+                    feature.to_lowercase().contains("incus") && feature.to_lowercase().contains("macos"),
+                    "unexpected feature: {}",
+                    feature
+                );
+            }
+            _ => panic!("expected NotSupported for invalid provider/os pair"),
         }
     }
 }

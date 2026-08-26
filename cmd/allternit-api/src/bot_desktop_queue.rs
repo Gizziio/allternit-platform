@@ -73,9 +73,9 @@ pub async fn is_fleet_at_capacity() -> bool {
 }
 
 /// True when the substrate for the requested OS has no available room.
-pub async fn is_os_at_capacity(os: Option<&str>) -> bool {
+pub async fn is_os_at_capacity(os: Option<&str>, provider: Option<&str>) -> bool {
     match CAPACITY_MONITOR.get() {
-        Some(m) => m.is_os_at_capacity(os).await,
+        Some(m) => m.is_os_at_capacity(os, provider).await,
         None => false,
     }
 }
@@ -105,6 +105,7 @@ pub async fn enqueue(
     let bot_id = bot_id.to_string();
     let os = query.os.clone();
     let template_id = query.template_id.clone();
+    let provider = query.provider.clone();
     let id = format!("dpq-{}", uuid::Uuid::new_v4().simple());
 
     let result = tokio::task::spawn_blocking(move || {
@@ -123,9 +124,9 @@ pub async fn enqueue(
 
         conn.execute(
             "INSERT INTO desktop_provision_queue \
-             (id, user_id, org_id, bot_id, os, template_id, status) \
-             VALUES (?1, ?2, ?3, ?4, ?5, ?6, 'pending')",
-            rusqlite::params![&id, &user_id, &org_id, &bot_id, &os, &template_id],
+             (id, user_id, org_id, bot_id, os, template_id, provider, status) \
+             VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, 'pending')",
+            rusqlite::params![&id, &user_id, &org_id, &bot_id, &os, &template_id, &provider],
         )?;
         Ok(id)
     })
@@ -449,7 +450,10 @@ pub fn spawn_provision_queue_worker(state: Arc<AppState>, period: Duration) {
             for entry in entries {
                 // Skip entries whose substrate is still full; later entries for
                 // other OSes may still be able to run on a different host.
-                if monitor.is_os_at_capacity(entry.os.as_deref()).await {
+                if monitor
+                    .is_os_at_capacity(entry.os.as_deref(), entry.provider.as_deref())
+                    .await
+                {
                     continue;
                 }
                 processed += 1;
@@ -466,6 +470,7 @@ pub fn spawn_provision_queue_worker(state: Arc<AppState>, period: Duration) {
                 let query = ProvisionDesktopQuery {
                     os: entry.os.clone(),
                     template_id: entry.template_id.clone(),
+                    provider: entry.provider.clone(),
                 };
                 match provision_desktop_internal(&state, &user, &entry.bot_id, &query).await {
                     Ok(resp) => {

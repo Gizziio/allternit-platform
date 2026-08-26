@@ -938,7 +938,7 @@ mod tests {
             y: Some(0),
             button: None,
         };
-        assert!(build_mouse_command(&input).is_err());
+        assert!(build_mouse_command(&input, ":0").is_err());
     }
 
     #[tokio::test]
@@ -948,7 +948,7 @@ mod tests {
             text: None,
             key: None,
         };
-        assert!(build_keyboard_command(&input).is_err());
+        assert!(build_keyboard_command(&input, ":0").is_err());
     }
 
     #[tokio::test]

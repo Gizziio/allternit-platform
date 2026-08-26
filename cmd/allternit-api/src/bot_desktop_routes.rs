@@ -319,6 +319,8 @@ async fn get_desktop_screenshot(
 pub(crate) struct ProvisionDesktopQuery {
     pub os: Option<String>,
     pub template_id: Option<String>,
+    /// Force a specific substrate provider, e.g. "incus" or "tart".
+    pub provider: Option<String>,
 }
 
 /// Internal provision path used both by the HTTP handler and the capacity-driven
@@ -394,6 +396,9 @@ pub(crate) async fn provision_desktop_internal(
     env_vars.insert("ALLTERNIT_BOT_ID".to_string(), bot_id.to_string());
     env_vars.insert("ALLTERNIT_USER_ID".to_string(), user.user_id.clone());
     env_vars.insert("ALLTERNIT_DESKTOP_OS".to_string(), spec.os.clone());
+    if let Some(ref provider) = query.provider {
+        env_vars.insert("ALLTERNIT_DESKTOP_PROVIDER".to_string(), provider.clone());
+    }
 
     let env = EnvironmentSpec {
         spec_type: allternit_driver_interface::EnvSpecType::Oci,
@@ -512,7 +517,7 @@ async fn provision_desktop(
     }
 
     // When the target substrate is full, queue the request instead of failing.
-    if crate::bot_desktop_queue::is_os_at_capacity(query.os.as_deref()).await {
+    if crate::bot_desktop_queue::is_os_at_capacity(query.os.as_deref(), query.provider.as_deref()).await {
         match crate::bot_desktop_queue::enqueue(&state, &user, &bot_id, &query).await {
             Ok((entry, position)) => {
                 return (

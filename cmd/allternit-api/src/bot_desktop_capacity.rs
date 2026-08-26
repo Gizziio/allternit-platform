@@ -121,12 +121,15 @@ impl CapacityMonitor {
     /// True when the substrate that would host `os` has no available slots.
     /// Falls back to the global fleet view when the OS is unknown or when no
     /// matching substrate has been sampled yet.
-    pub async fn is_os_at_capacity(&self, os: Option<&str>) -> bool {
+    pub async fn is_os_at_capacity(&self, os: Option<&str>, provider: Option<&str>) -> bool {
         if let Some(os) = os {
             let snaps = self.snapshots.read().await;
             let matching: Vec<_> = snaps
                 .values()
-                .filter(|s| provider_supports_os(&s.provider, os))
+                .filter(|s| {
+                    provider_supports_os(&s.provider, os)
+                        && provider.map_or(true, |p| s.provider == p)
+                })
                 .cloned()
                 .collect();
             drop(snaps);
@@ -236,7 +239,7 @@ async fn sample_capacity(state: &Arc<AppState>, monitor: &CapacityMonitor) {
 
 fn provider_supports_os(provider: &str, os: &str) -> bool {
     match (provider, os) {
-        ("tart", "macos") => true,
+        ("tart", "macos") | ("tart", "linux") => true,
         ("incus", "linux") | ("incus", "windows") => true,
         _ => false,
     }
@@ -293,5 +296,47 @@ mod tests {
         }
         let status = monitor.status().await;
         assert!(!status.scale_up_recommended);
+    }
+
+    #[tokio::test]
+    async fn is_os_at_capacity_filters_by_provider() {
+        let monitor = CapacityMonitor::new(0.9);
+        {
+            let mut snaps = monitor.snapshots.write().await;
+            snaps.insert(
+                "incus:host1".to_string(),
+                CapacitySnapshot {
+                    provider: "incus".to_string(),
+                    host: "host1".to_string(),
+                    healthy: true,
+                    active_executions: 4,
+                    total_cpu_millis: 8000,
+                    total_memory_mib: 32768,
+                    available_cpu_millis: 0,
+                    available_memory_mib: 0,
+                    scaled_at: chrono::Utc::now().to_rfc3339(),
+                },
+            );
+            snaps.insert(
+                "tart:host2".to_string(),
+                CapacitySnapshot {
+                    provider: "tart".to_string(),
+                    host: "host2".to_string(),
+                    healthy: true,
+                    active_executions: 0,
+                    total_cpu_millis: 8000,
+                    total_memory_mib: 32768,
+                    available_cpu_millis: 8000,
+                    available_memory_mib: 32768,
+                    scaled_at: chrono::Utc::now().to_rfc3339(),
+                },
+            );
+        }
+        // Incus linux is at capacity.
+        assert!(monitor.is_os_at_capacity(Some("linux"), Some("incus")).await);
+        // Tart linux still has room.
+        assert!(!monitor.is_os_at_capacity(Some("linux"), Some("tart")).await);
+        // Overall linux capacity has room because Tart is available.
+        assert!(!monitor.is_os_at_capacity(Some("linux"), None).await);
     }
 }
