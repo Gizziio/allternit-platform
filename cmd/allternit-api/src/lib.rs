@@ -133,6 +133,7 @@ pub mod ssh_routes;
 pub mod status_routes;
 pub mod stream;
 pub mod swarm_routes;
+pub mod tag_routes;
 pub mod task_routes;
 pub mod team_skill_routes;
 pub mod terminal_routes;

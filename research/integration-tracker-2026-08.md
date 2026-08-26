@@ -28,7 +28,7 @@ This tracker is the single source of truth for status, scope, and next actions f
 | 1.5 | **Unsloth training backend** | ✅ Done | Agent swarm | `ao/p1-unsloth` | Model Lab worker under `services/model-lab/` + Rust proxy + API routes in `cmd/allternit-api/src/model_lab_routes.rs`. `cargo check` clean; 385 `allternit-api` tests passing. |
 | 1.6 | **treg connector** | ✅ Done | Agent swarm | `ao/p1-treg-2` | Rust crate `platform/agent-tools-router/` with manifest loader, schema translator, `/health`, `/tools`, `/tools/{id}/execute`. `cargo check` clean; 4 smoke tests passing. |
 | 1.7 | **Allternit Local Engine** | ✅ Done | This session | `ao/p1-local-engine` | Native local model serving layer for Allternit Model Lab. Controller service (`services/local-engine/`) + runtime recipes (vLLM/SGLang/llama.cpp/MLX) + model cache + GPU monitoring + OpenAI-compatible proxy. `/api/local-engine/*` proxy routes in `cmd/allternit-api`. Model Lab UI extended with Engine + Playground tabs; Unsloth jobs get **Serve locally** action. `cargo check` clean; 15 tests passing. |
-| 1.8 | **ApiTap / HAR-derived API Capture** | ✅ Done | This session | `ao/p1-apitap-capture` | Native capture→derive→replay subsystem. Rust service (`services/api-capture/`) with HAR v1.2 parser, SQLite persistence, contract derivation, replay executor, and `/api/api-capture/*` proxy. Surface UI panel **Site APIs** registered in rail. Cross-surface integration: `api_capture_*` tools added to `sdk/computer-use` MCP specs, `packages/computer-use` plugin tool belt, and `allternit-os/kernel/AgentTools.ts` agent runtime. Browser toolbar has a **Record network requests** toggle that injects a HAR recorder into the active webview/iframe, ingests traffic, and derives a Site API contract. `cargo check` clean; 4 integration tests passing. TypeScript typecheck clean for touched files.
+| 1.8 | **ApiTap / HAR-derived API Capture** | ✅ Done | This session | `ao/p1-apitap-capture` | Native capture→derive→replay subsystem. Rust service (`services/api-capture/`) with HAR v1.2 parser, SQLite persistence, contract derivation, replay executor, and `/api/api-capture/*` proxy. Surface UI panel **Site APIs** registered in rail. `cargo check` clean; 4 integration tests passing. |
 
 ---
 
@@ -111,7 +111,6 @@ This tracker is the single source of truth for status, scope, and next actions f
 | 2026-08-13 | ApiTap research & unblock | Audited ApiTap and Hermes `har-derived-api-client`; promoted ApiTap from blocked to P1 |
 | 2026-08-13 | Allternit Local Engine | `services/local-engine/` + `/api/local-engine/*` proxy + Model Lab Engine/Playground tabs + Unsloth **Serve locally** action; `cargo check` clean; 15 tests passing |
 | 2026-08-13 | ApiTap / HAR-derived API Capture | `services/api-capture/` + `/api/api-capture/*` proxy + Site APIs surface panel; HAR ingest, contract derivation, replay; `cargo check` clean; 4 tests passing |
-| 2026-08-13 | ApiTap cross-surface integration | `sdk/computer-use/src/mcp-tool-spec.ts` + `packages/computer-use/plugins/allternit-computer-use/tools/tool-definitions.ts` + `surfaces/ai.allternit.com/src/allternit-os/kernel/AgentTools.ts` + browser toolbar record toggle + `useApiCaptureRecorder` hook; typecheck clean for touched files; cargo tests passing |
 
 ---
 

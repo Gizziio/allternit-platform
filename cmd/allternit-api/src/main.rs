@@ -101,6 +101,7 @@ use allternit_api::ssh_routes::ssh_router;
 use allternit_api::status_routes::status_router;
 use allternit_api::stream::stream_router;
 use allternit_api::swarm_routes::swarm_router;
+use allternit_api::tag_routes::tag_router;
 use allternit_api::task_routes;
 use allternit_api::team_skill_routes::team_skill_router;
 use allternit_api::terminal_routes::{terminal_router, TerminalSessionStore};
@@ -338,6 +339,7 @@ async fn main() {
         .merge(v1_router())
         .merge(allternit_bus_router())
         .merge(task_routes::task_router())
+        .merge(tag_router())
         .merge(agent_operations_routes::agent_operations_router())
         .merge(allternit_api::queue_routes::queue_router())
         .merge(audit_log_router())

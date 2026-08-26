@@ -16,8 +16,7 @@ export type ViewType =
   | "addin-ppt"
   // Agent views
   | "agent-hub"
-  | "bot-home"
-  | "bot-inbox"
+  | "tag-manager"
   | "native-agent"
   | "registry"
   | "memory"
@@ -73,9 +72,6 @@ export type ViewType =
   | "context-control"
   | "memory-kernel"
   | "acf"
-  // Agents Sessions & Memory views
-  | "allternit-playground"
-  | "agent-studio"
   // AllternitOS View
   | "allternit-os"
   // Other views
@@ -169,13 +165,7 @@ export type ViewType =
   // Markdown preview (anydoc conversion)
   | "markdown-preview"
   // Browser Extensions hub
-  | "browser-extensions"
-  // API Capture / Site APIs
-  | "site-apis"
-  // Model Lab
-  | "model-lab"
-  // Allternit Sign (native client-side PDF signing)
-  | "sign";
+  | "browser-extensions";
 
 export type ViewId = string;
 

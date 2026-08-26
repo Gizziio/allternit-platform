@@ -25,7 +25,8 @@ import { AgentAvatar } from "@/components/Avatar";
 import { MascotPreview } from "./AgentMascotPreview";
 import { ConfirmModal } from "@/components/ConfirmModal";
 import { cn } from "@/lib/utils";
-import { isBot } from "@/lib/bots/bot-profile";
+import { TagCloud } from "@/components/tagging";
+import { useTagStore } from "@/lib/tags/tag.store";
 
 interface AgentGalleryCardProps {
   agent: Agent;
@@ -151,17 +152,6 @@ export function AgentGalleryCard({ agent, onClick, index = 0 }: AgentGalleryCard
       maxIterations: agent.maxIterations,
       temperature: agent.temperature,
       source: "personal",
-      isBot: agent.isBot,
-      botProfile: agent.botProfile
-        ? {
-            ...agent.botProfile,
-            displayName: `${agent.botProfile.displayName} (Copy)`,
-          }
-        : undefined,
-      connectorBindings: agent.connectorBindings,
-      secretRefs: agent.secretRefs,
-      messagingConfig: agent.messagingConfig,
-      identityChannels: agent.identityChannels,
     });
     setIsCreating(true);
   };
@@ -188,11 +178,11 @@ export function AgentGalleryCard({ agent, onClick, index = 0 }: AgentGalleryCard
     onClick();
   };
 
-  const isBotAgent = isBot(agent);
   const surfaces = useMemo(() => agent.allowedSurfaces?.slice(0, 4) || [], [agent.allowedSurfaces]);
   const capabilities = useMemo(() => agent.capabilities || [], [agent.capabilities]);
   const visibleCapabilities = capabilities.slice(0, 2);
   const hiddenCapabilityCount = Math.max(0, capabilities.length - visibleCapabilities.length);
+  const agentTags = useTagStore((state) => state.getTagsForTarget(agent.id, "agent"));
   const updatedAt = formatUpdatedAt(agent.updatedAt);
   const hasRuns = typeof agent.totalRuns === "number" && agent.totalRuns > 0;
   const hasRating = typeof agent.rating === "number" && agent.rating > 0;
@@ -203,18 +193,7 @@ export function AgentGalleryCard({ agent, onClick, index = 0 }: AgentGalleryCard
         initial={{ opacity: 0, y: 16 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: index * 0.04, duration: 0.3 }}
-        onClick={() => {
-          if (menuOpen) return;
-          if (isBotAgent) {
-            window.dispatchEvent(
-              new CustomEvent("allternit:open-view", {
-                detail: { viewType: "bot-home", context: { botId: agent.id } },
-              })
-            );
-            return;
-          }
-          onClick();
-        }}
+        onClick={() => !menuOpen && onClick()}
         onMouseEnter={() => setIsHovered(true)}
         onMouseLeave={() => { setIsHovered(false); setMenuOpen(false); }}
         className={cn(
@@ -302,8 +281,15 @@ export function AgentGalleryCard({ agent, onClick, index = 0 }: AgentGalleryCard
             </div>
           )}
 
-          {/* Surfaces — only meaningful for non-bot agents */}
-          {!isBotAgent && surfaces.length > 0 && (
+          {/* Tags */}
+          {agentTags.length > 0 && (
+            <div className="flex flex-wrap items-center gap-1.5">
+              <TagCloud tags={agentTags} />
+            </div>
+          )}
+
+          {/* Surfaces */}
+          {surfaces.length > 0 && (
             <div className="mt-auto flex items-center gap-2">
               <span className="text-[10px] font-medium text-[var(--text-tertiary)]">Works in</span>
               <div className="flex items-center gap-1">

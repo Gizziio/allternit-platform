@@ -22,6 +22,7 @@ import type { AvatarConfig } from "@/lib/agents/character.types";
 import { createDefaultAvatarConfig } from "@/lib/agents/character.types";
 import { AgentAvatar } from "@/components/Avatar";
 import { AgentDashboard } from "@/components/AgentDashboard";
+import { TagCloud, TagPicker } from "@/components/tagging";
 
 // Platform theme tokens
 const STUDIO_THEME = {
@@ -319,6 +320,20 @@ export function AgentDetailView({ agentId }: { agentId: string }) {
             }}>
               {agent.description}
             </p>
+
+            {/* Tags */}
+            <div style={{ marginBottom: '20px' }}>
+              <div style={{
+                fontSize: '12px',
+                color: STUDIO_THEME.textMuted,
+                textTransform: 'uppercase',
+                letterSpacing: '0.05em',
+                marginBottom: '10px',
+              }}>
+                Tags
+              </div>
+              <TagPicker targetId={agent.id} targetType="agent" scope="agent" />
+            </div>
 
             {/* Key Info */}
             <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', marginBottom: '20px' }}>
