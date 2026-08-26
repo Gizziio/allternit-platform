@@ -1,5 +1,7 @@
 import React, { useEffect, useState } from 'react';
+import { Routes, Route, Navigate } from 'react-router-dom';
 import { DashboardPage } from './pages/DashboardPage';
+import { PlatformSignIn, PlatformSignUp } from '@/lib/platform-auth-client';
 import type { BeforeInstallPromptEvent } from './types';
 
 export function RemoteControlApp(): React.ReactNode {
@@ -51,8 +53,31 @@ export function RemoteControlApp(): React.ReactNode {
   };
 
   return (
-    <>
-      <DashboardPage installPrompt={installPrompt} onInstallClick={handleInstall} />
-    </>
+    <Routes>
+      <Route
+        path="/sign-in"
+        element={
+          <div
+            className="min-h-screen w-full flex items-center justify-center px-5"
+            style={{ background: 'var(--bg-primary)', color: 'var(--text-primary)' }}
+          >
+            <PlatformSignIn forceRedirectUrl="/" signUpForceRedirectUrl="/" />
+          </div>
+        }
+      />
+      <Route
+        path="/sign-up"
+        element={
+          <div
+            className="min-h-screen w-full flex items-center justify-center px-5"
+            style={{ background: 'var(--bg-primary)', color: 'var(--text-primary)' }}
+          >
+            <PlatformSignUp forceRedirectUrl="/" signInForceRedirectUrl="/" />
+          </div>
+        }
+      />
+      <Route path="/" element={<DashboardPage installPrompt={installPrompt} onInstallClick={handleInstall} />} />
+      <Route path="*" element={<Navigate to="/" replace />} />
+    </Routes>
   );
 }
