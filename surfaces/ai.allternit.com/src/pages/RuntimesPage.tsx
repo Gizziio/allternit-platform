@@ -1,12 +1,7 @@
 'use client';
 
-import { ToastProvider } from '@/hooks/use-toast';
-import { RemoteControlDashboard } from '@/components/remote-control/RemoteControlDashboard';
+import { RemoteControlHub } from '@/components/dispatch/RemoteControlHub';
 
 export default function RuntimesPage() {
-  return (
-    <ToastProvider>
-      <RemoteControlDashboard />
-    </ToastProvider>
-  );
+  return <RemoteControlHub />;
 }

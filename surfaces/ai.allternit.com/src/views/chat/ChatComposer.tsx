@@ -95,7 +95,7 @@ import { useMiroFishRunStore } from '@/stores/mirofish-run.store';
 import { BottomDock } from './components/BottomDock';
 import { isCanonicalAgentMode, type CanonicalAgentModeId } from '@/lib/agents/agent-mode-contracts';
 import { CoworkTopDeck } from '@/views/cowork/CoworkTopDeck';
-import { ModelPicker } from '@/components/model-picker';
+import { ModelPicker, type ModelSelection } from '@/components/model-picker';
 import { ProviderGallery } from '@/components/chat/ProviderGallery';
 import { useNav } from '@/nav/useNav';
 
@@ -178,6 +178,14 @@ interface ChatComposerProps {
   bottomInfoBarContent?: React.ReactNode;
   /** Optional top deck content rendered inside the composer card, above the input area. */
   topDeckContent?: React.ReactNode;
+  /** Optional externally-controlled selected model ID. When provided, the composer uses this instead of the global model selection. */
+  selectedModel?: string;
+  /** Optional externally-controlled selected model display name. */
+  selectedModelDisplayName?: string;
+  /** Called when the user picks a model from the composer's model picker. When provided alongside onOpenModelPicker, external model selection mode is active. */
+  onSelectModel?: (selection: ModelSelection) => void;
+  /** Called when the user clicks the model selector pill. Enables external model selection mode when provided. */
+  onOpenModelPicker?: () => void;
 }
 
 const CATEGORY_EMOTIONS: Record<string, { hover: GizziEmotion; select: GizziEmotion }> = {
@@ -341,19 +349,47 @@ export function ChatComposer({
   questionBarContent,
   topDeckContent,
   onStartBotSession,
+  selectedModel: externalSelectedModel,
+  selectedModelDisplayName: externalSelectedModelDisplayName,
+  onSelectModel: externalOnSelectModel,
+  onOpenModelPicker: externalOnOpenModelPicker,
 }: ChatComposerProps) {
   const {
     selection: modelSelection,
     availableModels,
     isLoading: modelsLoading,
-    isSelecting: isModelSelecting,
-    selectModel,
-    startSelection: startModelSelection,
-    cancelSelection: cancelModelSelection,
+    isSelecting: internalIsModelSelecting,
+    selectModel: internalSelectModel,
+    startSelection: internalStartModelSelection,
+    cancelSelection: internalCancelModelSelection,
   } = useModelSelection();
 
-  const selectedModel = modelSelection?.modelId ?? null;
-  const selectedModelDisplayName = modelSelection?.modelName || modelSelection?.modelId || null;
+  const isExternalModelSelection = Boolean(externalOnOpenModelPicker);
+  const selectedModel = externalSelectedModel ?? modelSelection?.modelId ?? null;
+  const selectedModelDisplayName = externalSelectedModelDisplayName ?? modelSelection?.modelName ?? modelSelection?.modelId ?? null;
+  const isModelSelecting = isExternalModelSelection ? false : internalIsModelSelecting;
+
+  const startModelSelection = useCallback(() => {
+    if (isExternalModelSelection) {
+      externalOnOpenModelPicker?.();
+    } else {
+      internalStartModelSelection();
+    }
+  }, [isExternalModelSelection, externalOnOpenModelPicker, internalStartModelSelection]);
+
+  const cancelModelSelection = useCallback(() => {
+    if (!isExternalModelSelection) {
+      internalCancelModelSelection();
+    }
+  }, [isExternalModelSelection, internalCancelModelSelection]);
+
+  const selectModel = useCallback((selection: ModelSelection) => {
+    if (isExternalModelSelection) {
+      externalOnSelectModel?.(selection);
+    } else {
+      internalSelectModel(selection);
+    }
+  }, [isExternalModelSelection, externalOnSelectModel, internalSelectModel]);
 
   const [input, setInput] = useState(inputValue);
   const isMobile = useIsMobile();
@@ -2397,16 +2433,18 @@ export function ChatComposer({
         </div>
       </div>
 
-      <ModelPicker
-        open={isModelSelecting}
-        onOpenChange={(open) => {
-          if (!open) cancelModelSelection();
-        }}
-        onSelect={selectModel}
-        onCancel={cancelModelSelection}
-        onOpenProviderConnect={() => setShowProviderConnect(true)}
-        onOpenModelLab={() => useNav.getState().dispatch({ type: 'OPEN_VIEW', viewType: 'model-lab' })}
-      />
+      {!isExternalModelSelection && (
+        <ModelPicker
+          open={isModelSelecting}
+          onOpenChange={(open) => {
+            if (!open) cancelModelSelection();
+          }}
+          onSelect={selectModel}
+          onCancel={cancelModelSelection}
+          onOpenProviderConnect={() => setShowProviderConnect(true)}
+          onOpenModelLab={() => useNav.getState().dispatch({ type: 'OPEN_VIEW', viewType: 'model-lab' })}
+        />
+      )}
 
       {/* Agent-mode bottom deck — tray tucked behind the card's bottom
           edge (z-0 under the composer card's z-10), sliding down from behind
