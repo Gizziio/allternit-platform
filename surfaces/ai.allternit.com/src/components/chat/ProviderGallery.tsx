@@ -1,6 +1,6 @@
-import React, { useEffect, useRef, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import { useModelDiscovery } from "@/integration/api-client";
-import { getProviderMeta } from "@/lib/providers/provider-registry";
+import { getProviderMeta, PROVIDER_REGISTRY, type ProviderKind } from "@/lib/providers/provider-registry";
 import {
   Check,
   Shield,
@@ -11,6 +11,8 @@ import {
   Plus as PlusIcon,
   ArrowSquareOut,
   Download,
+  Terminal,
+  Copy,
 } from "@phosphor-icons/react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
@@ -28,7 +30,9 @@ interface ProviderCardProps {
   name: string;
   icon: string;
   color: string;
+  kind: ProviderKind;
   authenticated: boolean;
+  status: string;
   onClick: () => void;
 }
 
@@ -37,9 +41,13 @@ const ProviderCard: React.FC<ProviderCardProps> = ({
   name,
   icon,
   color,
+  kind,
   authenticated,
+  status,
   onClick,
 }) => {
+  const src = icon ? `/assets/runtime-logos/${icon}` : "";
+
   return (
     <button
       type="button"
@@ -70,18 +78,18 @@ const ProviderCard: React.FC<ProviderCardProps> = ({
           border: `1px solid ${color}30`,
         }}
       >
-        <img
-          src={`/assets/runtime-logos/${icon}`}
-          alt={name}
-          className="size-10 object-contain"
-          onError={(e) => {
-            (e.target as HTMLImageElement).style.display = "none";
-            const parent = (e.target as HTMLImageElement).parentElement;
-            if (parent) {
-              parent.innerHTML = `<div class="text-2xl font-bold" style="color: ${color}">${name[0]}</div>`;
-            }
-          }}
-        />
+        {src ? (
+          <img
+            src={src}
+            alt={name}
+            className="size-10 object-contain"
+            onError={(e) => {
+              (e.target as HTMLImageElement).style.display = "none";
+            }}
+          />
+        ) : (
+          <Terminal size={32} style={{ color }} />
+        )}
 
         {authenticated && (
           <div className="absolute -top-2 -right-2 size-6 rounded-full bg-status-success flex items-center justify-center border-2 border-[var(--surface-canvas)]">
@@ -95,7 +103,13 @@ const ProviderCard: React.FC<ProviderCardProps> = ({
           {name}
         </h3>
         <p className="text-xs text-[var(--ui-text-muted)] mt-0.5">
-          {authenticated ? "Connected" : "Not connected"}
+          {authenticated
+            ? "Connected"
+            : kind === "cli"
+            ? status === "offline"
+              ? "Not installed"
+              : "Sign in"
+            : "Not connected"}
         </p>
       </div>
 
@@ -115,6 +129,8 @@ type ConnectPhase =
   | { phase: "not_installed"; label: string; page?: string; binary?: string }
   | { phase: "api_key" }
   | { phase: "error"; message: string };
+
+type ConnectTab = "cli" | "api";
 
 async function api<T>(path: string, init?: RequestInit): Promise<T> {
   const res = await fetch(path, { cache: "no-store", ...init });
@@ -140,13 +156,27 @@ export const ProviderGallery: React.FC<ProviderGalleryProps> = ({
   const [selectedProvider, setSelectedProvider] = useState<string | null>(null);
   const [apiKey, setApiKey] = useState("");
   const [phase, setPhase] = useState<ConnectPhase>({ phase: "idle" });
+  const [connectTab, setConnectTab] = useState<ConnectTab>("cli");
   const [isSaving, setIsSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [copied, setCopied] = useState(false);
+  const [copiedCommand, setCopiedCommand] = useState<string | null>(null);
   const pollTimers = useRef<Record<string, ReturnType<typeof setInterval>>>({});
 
   const currentMeta = selectedProvider
     ? getProviderMeta(selectedProvider)
     : null;
+
+  // If the backend is unreachable, still show the registry so the user can
+  // see which CLI/API providers are supported and connect them.
+  const displayProviders = useMemo(() => {
+    if (providers.length > 0) return providers;
+    return Object.values(PROVIDER_REGISTRY).map((meta) => ({
+      provider_id: meta.id,
+      authenticated: false,
+      status: meta.kind === "cli" ? "offline" : "unconfigured",
+    }));
+  }, [providers]);
 
   useEffect(() => {
     if (isOpen) {
@@ -160,6 +190,9 @@ export const ProviderGallery: React.FC<ProviderGalleryProps> = ({
       setApiKey("");
       setError(null);
       setPhase({ phase: "idle" });
+      setConnectTab("cli");
+      setCopied(false);
+      setCopiedCommand(null);
       Object.values(pollTimers.current).forEach(clearInterval);
       pollTimers.current = {};
     }
@@ -199,10 +232,14 @@ export const ProviderGallery: React.FC<ProviderGalleryProps> = ({
   };
 
   const handleSelectProvider = (id: string) => {
+    const meta = getProviderMeta(id);
     setSelectedProvider(id);
+    setConnectTab(meta.kind === "cli" ? "cli" : "api");
     setApiKey("");
     setError(null);
     setPhase({ phase: "idle" });
+    setCopied(false);
+    setCopiedCommand(null);
   };
 
   const handleConnect = async (id: string) => {
@@ -230,6 +267,7 @@ export const ProviderGallery: React.FC<ProviderGalleryProps> = ({
           });
           break;
         case "needs_api_key":
+          setConnectTab("api");
           setPhase({ phase: "needs_key", label: r.label ?? id, page: r.page });
           break;
         default:
@@ -240,6 +278,9 @@ export const ProviderGallery: React.FC<ProviderGalleryProps> = ({
     } catch (e: any) {
       // 404 unknown_provider => not a subscription/CLI brain; it uses an API key instead.
       if (e?.status === 404) {
+        if (currentMeta?.kind === "cli") {
+          setConnectTab("api");
+        }
         setPhase({ phase: "api_key" });
       } else {
         setPhase({
@@ -287,6 +328,7 @@ export const ProviderGallery: React.FC<ProviderGalleryProps> = ({
       setApiKey("");
       setSelectedProvider(null);
       setPhase({ phase: "idle" });
+      setConnectTab("cli");
       await fetchProviders();
     } catch (failure: any) {
       setPhase({
@@ -306,25 +348,166 @@ export const ProviderGallery: React.FC<ProviderGalleryProps> = ({
     setApiKey("");
     setError(null);
     setPhase({ phase: "idle" });
+    setConnectTab("cli");
+    setCopied(false);
+    setCopiedCommand(null);
   };
+
+  const copyCommand = (text: string, label: string) => {
+    navigator.clipboard.writeText(text).then(() => {
+      setCopiedCommand(label);
+      setCopied(true);
+      setTimeout(() => {
+        setCopied(false);
+        setCopiedCommand(null);
+      }, 1500);
+    });
+  };
+
+  const renderCliInstructions = () => {
+    if (!currentMeta || currentMeta.kind !== "cli") return null;
+    const { cliCommand, installCommand, authCommand, homepage, description } =
+      currentMeta;
+
+    const authCmd = authCommand || cliCommand;
+
+    return (
+      <div className="space-y-4">
+        {description && (
+          <p className="text-sm text-[var(--ui-text-secondary)]">{description}</p>
+        )}
+
+        <div className="rounded-xl border border-[var(--ui-border-default)] bg-[var(--surface-panel)] p-3 space-y-2">
+          <div className="flex items-center justify-between">
+            <span className="text-xs font-semibold text-[var(--ui-text-muted)] uppercase tracking-wide">
+              Install
+            </span>
+            {installCommand && (
+              <button
+                type="button"
+                onClick={() => copyCommand(installCommand, "install")}
+                className="flex items-center gap-1 text-xs text-[var(--accent-chat)] hover:underline"
+              >
+                {copied && copiedCommand === "install" ? <Check size={12} /> : <Copy size={12} />}
+                {copied && copiedCommand === "install" ? "Copied" : "Copy"}
+              </button>
+            )}
+          </div>
+          {installCommand ? (
+            <code className="block text-xs font-mono text-[var(--ui-text-primary)] break-all">
+              {installCommand}
+            </code>
+          ) : (
+            <p className="text-xs text-[var(--ui-text-muted)]">
+              This CLI is bundled with its host application. Install the app and make sure{" "}
+              <code className="font-mono">{cliCommand}</code> is on your PATH.
+            </p>
+          )}
+        </div>
+
+        <div className="rounded-xl border border-[var(--ui-border-default)] bg-[var(--surface-panel)] p-3 space-y-2">
+          <div className="flex items-center justify-between">
+            <span className="text-xs font-semibold text-[var(--ui-text-muted)] uppercase tracking-wide">
+              Authenticate
+            </span>
+            {authCmd && (
+              <button
+                type="button"
+                onClick={() => copyCommand(authCmd, "auth")}
+                className="flex items-center gap-1 text-xs text-[var(--accent-chat)] hover:underline"
+              >
+                {copied && copiedCommand === "auth" ? <Check size={12} /> : <Copy size={12} />}
+                {copied && copiedCommand === "auth" ? "Copied" : "Copy"}
+              </button>
+            )}
+          </div>
+          <p className="text-sm text-[var(--ui-text-secondary)]">
+            Run this in your terminal to sign in with your existing subscription:
+          </p>
+          <code className="block text-xs font-mono text-[var(--ui-text-primary)] break-all">
+            {authCmd}
+          </code>
+        </div>
+
+        {homepage && (
+          <a
+            href={homepage}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="flex items-center justify-center gap-2 w-full py-2.5 rounded-lg border border-[var(--ui-border-default)] text-sm text-[var(--ui-text-primary)] hover:bg-[var(--surface-hover)] transition-colors"
+          >
+            <ArrowSquareOut className="size-4" />
+            Visit {currentMeta.name}
+          </a>
+        )}
+      </div>
+    );
+  };
+
+  const renderApiKeyForm = () => {
+    if (!currentMeta) return null;
+    const page = phase.phase === "needs_key" ? phase.page : undefined;
+
+    return (
+      <div className="space-y-3">
+        {page && (
+          <p className="text-sm text-[var(--ui-text-secondary)]">
+            Get an API key from{" "}
+            <a
+              href={page}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center gap-1 text-[var(--accent-chat)] hover:underline"
+            >
+              {currentMeta.name}
+              <ArrowSquareOut className="size-3" />
+            </a>
+            .
+          </p>
+        )}
+        <div className="space-y-2">
+          <div className="text-sm font-medium text-[var(--ui-text-secondary)] flex items-center gap-2">
+            <Key className="size-3.5" />
+            API Key
+          </div>
+          <input
+            aria-label={`Enter your ${currentMeta.name}`}
+            type="password"
+            placeholder={`Enter your ${currentMeta.name} API key…`}
+            value={apiKey}
+            onChange={(e) => setApiKey(e.target.value)}
+            className="w-full bg-[var(--surface-panel)] border border-[var(--ui-border-default)] rounded-xl px-4 py-3 text-sm text-[var(--ui-text-primary)] placeholder:text-[var(--ui-text-muted)] outline-none focus:border-[var(--accent-chat)]/50 transition-all"
+          />
+          <p className="text-[12px] text-[var(--ui-text-muted)] flex items-center gap-1.5 mt-1.5 px-1">
+            <Shield size={12} />
+            Your key is stored locally and never sent to our servers.
+          </p>
+        </div>
+      </div>
+    );
+  };
+
+  const isCliProvider = currentMeta?.kind === "cli";
+  const showCliTab = isCliProvider && connectTab === "cli";
+  const showApiTab = (isCliProvider && connectTab === "api") || !isCliProvider;
 
   return (
     <Dialog open={isOpen} onOpenChange={(open) => !open && onClose?.()}>
       <DialogContent
-        className="sm:max-w-3xl border-[var(--shell-dialog-border)] bg-[var(--shell-dialog-bg)] text-[var(--ui-text-primary)] p-0 overflow-hidden"
+        className="sm:max-w-3xl border-[var(--ui-border-default)] bg-[var(--bg-elevated)] text-[var(--ui-text-primary)] p-0 overflow-hidden"
         style={{
-          background: "var(--shell-dialog-bg)",
-          borderColor: "var(--shell-dialog-border)",
+          background: "var(--bg-elevated)",
+          borderColor: "var(--ui-border-default)",
         }}
       >
         <div className="flex items-start justify-between gap-4 border-b border-[var(--ui-border-default)] px-6 py-5">
           <div>
-            <h2 className="text-xl font-bold text-[var(--shell-dialog-title)] mb-1">
+            <h2 className="text-xl font-bold text-[var(--ui-text-primary)] mb-1">
               Connect Providers
             </h2>
-            <p className="text-[var(--shell-dialog-text)] text-sm">
-              Select an AI provider to enable their models. API-key providers and
-              pre-authenticated CLI tools are both supported.
+            <p className="text-[var(--ui-text-muted)] text-sm">
+              Bring your own CLI tools and API keys. Allternit routes to the
+              runtimes you already have installed and authenticated.
             </p>
           </div>
         </div>
@@ -339,7 +522,7 @@ export const ProviderGallery: React.FC<ProviderGalleryProps> = ({
             </div>
           ) : (
             <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
-              {providers.map((p) => {
+              {displayProviders.map((p) => {
                 const meta = getProviderMeta(p.provider_id);
                 return (
                   <ProviderCard
@@ -348,7 +531,9 @@ export const ProviderGallery: React.FC<ProviderGalleryProps> = ({
                     name={meta.name}
                     icon={meta.icon}
                     color={meta.color}
+                    kind={meta.kind}
                     authenticated={p.authenticated}
+                    status={p.status}
                     onClick={() => handleSelectProvider(p.provider_id)}
                   />
                 );
@@ -378,10 +563,10 @@ export const ProviderGallery: React.FC<ProviderGalleryProps> = ({
         onOpenChange={(open) => !open && closeConnectDialog()}
       >
         <DialogContent
-          className="sm:max-w-md border-[var(--shell-dialog-border)] bg-[var(--shell-dialog-bg)] text-[var(--ui-text-primary)] p-0 overflow-hidden rounded-2xl"
+          className="sm:max-w-md border-[var(--ui-border-default)] bg-[var(--bg-elevated)] text-[var(--ui-text-primary)] p-0 overflow-hidden rounded-2xl"
           style={{
-            background: "var(--shell-dialog-bg)",
-            borderColor: "var(--shell-dialog-border)",
+            background: "var(--bg-elevated)",
+            borderColor: "var(--ui-border-default)",
           }}
         >
           {currentMeta && selectedProvider && (
@@ -395,29 +580,119 @@ export const ProviderGallery: React.FC<ProviderGalleryProps> = ({
                       border: `1px solid ${currentMeta.color}40`,
                     }}
                   >
-                    <img
-                      src={`/assets/runtime-logos/${currentMeta.icon}`}
-                      alt=""
-                      className="size-8 object-contain"
-                      onError={(e) => {
-                        (e.target as HTMLImageElement).style.display = "none";
-                      }}
-                    />
+                    {currentMeta.icon ? (
+                      <img
+                        src={`/assets/runtime-logos/${currentMeta.icon}`}
+                        alt=""
+                        className="size-8 object-contain"
+                        onError={(e) => {
+                          (e.target as HTMLImageElement).style.display = "none";
+                        }}
+                      />
+                    ) : (
+                      <Terminal size={28} style={{ color: currentMeta.color }} />
+                    )}
                   </div>
                   <div>
-                    <DialogTitle className="text-lg text-[var(--shell-dialog-title)]">
+                    <DialogTitle className="text-lg text-[var(--ui-text-primary)]">
                       Connect {currentMeta.name}
                     </DialogTitle>
-                    <DialogDescription className="text-[var(--shell-dialog-text)]">
-                      {phase.phase === "api_key" || phase.phase === "needs_key"
-                        ? `Configure your ${currentMeta.name} credentials`
-                        : `Link your ${currentMeta.name} account or CLI tool`}
+                    <DialogDescription className="text-[var(--ui-text-muted)]">
+                      {isCliProvider
+                        ? "Install the CLI, sign in with your subscription, and it appears here."
+                        : "Add your API key to start routing requests."}
                     </DialogDescription>
                   </div>
                 </div>
               </DialogHeader>
 
               <div className="p-6 space-y-4">
+                {/* CLI providers: CLI-first tabs */}
+                {isCliProvider &&
+                  phase.phase !== "busy" &&
+                  phase.phase !== "polling" &&
+                  phase.phase !== "error" && (
+                    <div className="flex p-1 rounded-xl bg-[var(--surface-panel)] border border-[var(--ui-border-default)]">
+                      <button
+                        type="button"
+                        onClick={() => setConnectTab("cli")}
+                        className={cn(
+                          "flex-1 py-1.5 text-xs font-medium rounded-lg transition-colors flex items-center justify-center gap-1.5",
+                          connectTab === "cli"
+                            ? "bg-[var(--bg-elevated)] text-[var(--ui-text-primary)] shadow-sm"
+                            : "text-[var(--ui-text-muted)] hover:text-[var(--ui-text-secondary)]"
+                        )}
+                      >
+                        <Terminal className="size-3.5" />
+                        CLI
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setConnectTab("api")}
+                        className={cn(
+                          "flex-1 py-1.5 text-xs font-medium rounded-lg transition-colors flex items-center justify-center gap-1.5",
+                          connectTab === "api"
+                            ? "bg-[var(--bg-elevated)] text-[var(--ui-text-primary)] shadow-sm"
+                            : "text-[var(--ui-text-muted)] hover:text-[var(--ui-text-secondary)]"
+                        )}
+                      >
+                        <Key className="size-3.5" />
+                        API Key
+                      </button>
+                    </div>
+                  )}
+
+                {/* CLI instructions tab */}
+                {showCliTab && (
+                  <>
+                    {(phase.phase === "idle" ||
+                      phase.phase === "confirm" ||
+                      phase.phase === "not_installed") &&
+                      renderCliInstructions()}
+
+                    {phase.phase === "confirm" && (
+                      <div className="space-y-3">
+                        <p className="text-sm text-[var(--ui-text-secondary)]">
+                          If you have finished signing in to {currentMeta.name}, confirm
+                          below to enable it.
+                        </p>
+                        <Button
+                          onClick={() => handleConfirm(selectedProvider)}
+                          className="w-full"
+                          style={{
+                            background: "var(--accent-chat)",
+                            color: "var(--ui-text-inverse)",
+                          }}
+                        >
+                          <Check className="size-4 mr-2" />
+                          I&apos;ve signed in
+                        </Button>
+                      </div>
+                    )}
+
+                    {phase.phase === "not_installed" && (
+                      <div className="flex items-start gap-3 rounded-xl border border-status-warning/20 bg-status-warning-bg p-3">
+                        <Warning className="size-5 text-status-warning shrink-0 mt-0.5" />
+                        <div className="text-sm text-[var(--ui-text-secondary)]">
+                          <p className="font-medium text-[var(--ui-text-primary)]">
+                            {phase.binary ?? phase.label} is not installed
+                          </p>
+                          <p className="mt-1">
+                            Install the CLI tool and make sure it is on your PATH.
+                          </p>
+                        </div>
+                      </div>
+                    )}
+                  </>
+                )}
+
+                {/* API key tab / non-CLI providers */}
+                {showApiTab &&
+                  (phase.phase === "idle" ||
+                    phase.phase === "api_key" ||
+                    phase.phase === "needs_key") &&
+                  renderApiKeyForm()}
+
                 {/* Polling / busy */}
                 {(phase.phase === "busy" || phase.phase === "polling") && (
                   <div className="flex flex-col items-center justify-center py-6 gap-3">
@@ -428,97 +703,8 @@ export const ProviderGallery: React.FC<ProviderGalleryProps> = ({
                         : "Starting connection…"}
                     </p>
                     <p className="text-xs text-[var(--ui-text-muted)] text-center max-w-[260px]">
-                      Complete the sign-in in your browser or terminal. This dialog will update automatically.
+                      Complete the sign-in in your terminal. This dialog will update automatically.
                     </p>
-                  </div>
-                )}
-
-                {/* Confirm step */}
-                {phase.phase === "confirm" && (
-                  <div className="space-y-3">
-                    <p className="text-sm text-[var(--ui-text-secondary)]">
-                      If you have finished signing in to {currentMeta.name}, confirm
-                      below to enable it.
-                    </p>
-                    <Button
-                      onClick={() => handleConfirm(selectedProvider)}
-                      className="w-full"
-                      style={{
-                        background: "var(--accent-chat)",
-                        color: "var(--ui-text-inverse)",
-                      }}
-                    >
-                      <Check className="size-4 mr-2" />
-                      I&apos;ve signed in
-                    </Button>
-                  </div>
-                )}
-
-                {/* Not installed */}
-                {phase.phase === "not_installed" && (
-                  <div className="space-y-3">
-                    <div className="flex items-start gap-3 rounded-xl border border-status-warning/20 bg-status-warning-bg p-3">
-                      <Warning className="size-5 text-status-warning shrink-0 mt-0.5" />
-                      <div className="text-sm text-[var(--ui-text-secondary)]">
-                        <p className="font-medium text-[var(--ui-text-primary)]">
-                          {phase.binary ?? phase.label} is not installed
-                        </p>
-                        <p className="mt-1">
-                          Install the CLI tool and make sure it is on your PATH.
-                        </p>
-                      </div>
-                    </div>
-                    {phase.page && (
-                      <a
-                        href={phase.page}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="flex items-center justify-center gap-2 w-full py-2.5 rounded-lg border border-[var(--ui-border-default)] text-sm text-[var(--ui-text-primary)] hover:bg-[var(--surface-hover)] transition-colors"
-                      >
-                        <Download className="size-4" />
-                        Download {currentMeta.name}
-                        <ArrowSquareOut className="size-3.5" />
-                      </a>
-                    )}
-                  </div>
-                )}
-
-                {/* API key input */}
-                {(phase.phase === "api_key" || phase.phase === "needs_key") && (
-                  <div className="space-y-3">
-                    {phase.phase === "needs_key" && phase.page && (
-                      <p className="text-sm text-[var(--ui-text-secondary)]">
-                        Get an API key from{" "}
-                        <a
-                          href={phase.page}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="inline-flex items-center gap-1 text-[var(--accent-chat)] hover:underline"
-                        >
-                          {currentMeta.name}
-                          <ArrowSquareOut className="size-3" />
-                        </a>
-                        .
-                      </p>
-                    )}
-                    <div className="space-y-2">
-                      <div className="text-sm font-medium text-[var(--ui-text-secondary)] flex items-center gap-2">
-                        <Key className="size-3.5" />
-                        API Key
-                      </div>
-                      <input
-                        aria-label={`Enter your ${currentMeta.name}`}
-                        type="password"
-                        placeholder={`Enter your ${currentMeta.name} API key…`}
-                        value={apiKey}
-                        onChange={(e) => setApiKey(e.target.value)}
-                        className="w-full bg-[var(--surface-panel)] border border-[var(--ui-border-default)] rounded-xl px-4 py-3 text-sm text-[var(--ui-text-primary)] placeholder:text-[var(--ui-text-muted)] outline-none focus:border-[var(--accent-chat)]/50 transition-all"
-                      />
-                      <p className="text-[12px] text-[var(--ui-text-muted)] flex items-center gap-1.5 mt-1.5 px-1">
-                        <Shield size={12} />
-                        Your key is stored locally and never sent to our servers.
-                      </p>
-                    </div>
                   </div>
                 )}
 
@@ -541,36 +727,46 @@ export const ProviderGallery: React.FC<ProviderGalleryProps> = ({
                 >
                   Cancel
                 </Button>
-                {(phase.phase === "api_key" || phase.phase === "needs_key") && (
-                  <Button
-                    onClick={() => saveApiKey(selectedProvider)}
-                    disabled={!apiKey || isSaving}
-                    className="flex-1 rounded-xl h-11 font-semibold transition-all text-[var(--ui-text-inverse)]"
-                    style={{
-                      background: currentMeta.color,
-                    }}
-                  >
-                    {isSaving ? (
-                      <div className="flex items-center gap-2">
-                        <CircleNotch className="size-4 animate-spin" />
-                        Connecting…
-                      </div>
-                    ) : (
-                      "Connect Account"
-                    )}
-                  </Button>
-                )}
-                {phase.phase === "idle" && (
-                  <Button
-                    onClick={() => handleConnect(selectedProvider)}
-                    className="flex-1 rounded-xl h-11 font-semibold transition-all text-[var(--ui-text-inverse)]"
-                    style={{
-                      background: currentMeta.color,
-                    }}
-                  >
-                    Connect
-                  </Button>
-                )}
+
+                {/* CLI tab primary action */}
+                {showCliTab &&
+                  (phase.phase === "idle" || phase.phase === "not_installed") &&
+                  selectedProvider && (
+                    <Button
+                      onClick={() => handleConnect(selectedProvider)}
+                      className="flex-1 rounded-xl h-11 font-semibold transition-all text-[var(--ui-text-inverse)]"
+                      style={{
+                        background: currentMeta.color,
+                      }}
+                    >
+                      I&apos;ve installed & signed in
+                    </Button>
+                  )}
+
+                {/* API key action */}
+                {showApiTab &&
+                  (phase.phase === "idle" ||
+                    phase.phase === "api_key" ||
+                    phase.phase === "needs_key") &&
+                  selectedProvider && (
+                    <Button
+                      onClick={() => saveApiKey(selectedProvider)}
+                      disabled={!apiKey || isSaving}
+                      className="flex-1 rounded-xl h-11 font-semibold transition-all text-[var(--ui-text-inverse)]"
+                      style={{
+                        background: currentMeta.color,
+                      }}
+                    >
+                      {isSaving ? (
+                        <div className="flex items-center gap-2">
+                          <CircleNotch className="size-4 animate-spin" />
+                          Connecting…
+                        </div>
+                      ) : (
+                        "Connect Account"
+                      )}
+                    </Button>
+                  )}
               </DialogFooter>
             </>
           )}

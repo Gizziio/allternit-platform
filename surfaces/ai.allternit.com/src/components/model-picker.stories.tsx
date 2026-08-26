@@ -200,3 +200,13 @@ export const Expanded: Story = {
     initialExpandedProviders: ["Claude"],
   },
 };
+
+export const MultiSelect: Story = {
+  args: {
+    availableModels: mockModels,
+    providers: mockProviders,
+    authenticatedProviders: mockProviders.filter((p) => p.authenticated),
+    multiSelect: true,
+    onSelectMultiple: (selections) => console.log("selected providers", selections),
+  },
+};

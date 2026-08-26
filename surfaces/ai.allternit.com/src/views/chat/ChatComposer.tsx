@@ -1421,6 +1421,23 @@ export function ChatComposer({
 
     return getProviderMeta('allternit');
   }, [selectedModel, selectedModelData]);
+
+  // Real provider logo from the registry. When the registry has no icon — or
+  // the file fails to load — the pill renders no image at all (no fallback
+  // box) and keeps the real provider name as text. Failure is tracked per
+  // logo src so switching providers resets it.
+  const [failedProviderLogo, setFailedProviderLogo] = useState<string | null>(null);
+  const providerLogoSrc = selectedProviderMeta.icon
+    ? `/assets/runtime-logos/${selectedProviderMeta.icon}`
+    : null;
+  const showProviderLogo = providerLogoSrc !== null && failedProviderLogo !== providerLogoSrc;
+
+  const modelPillLabel = useMemo(() => {
+    if (displayModelName.toLowerCase().startsWith(selectedProviderMeta.name.toLowerCase())) {
+      return displayModelName;
+    }
+    return `${selectedProviderMeta.name} · ${displayModelName}`;
+  }, [displayModelName, selectedProviderMeta]);
   
   const setTrackingAttention = useCallback((x: number, y: number, state: GizziAttention['state'] = 'tracking') => {
     onAttentionChange?.({
@@ -1856,6 +1873,7 @@ export function ChatComposer({
                     <Waveform size={17} weight="bold" />
                   </button>
                   <button type="button"
+                    data-testid="model-picker-trigger"
                     onClick={() => startModelSelection()}
                     disabled={modelsLoading && availableModels.length === 0}
                     className={cn(
@@ -1886,20 +1904,23 @@ export function ChatComposer({
                       </span>
                     ) : (
                       <>
-                        <div
-                          className="size-4 rounded-md flex items-center justify-center flex-shrink-0 overflow-hidden"
-                          style={{
-                            background: `${selectedProviderMeta.color}18`,
-                            border: `1px solid ${selectedProviderMeta.color}40`,
-                          }}
-                        >
-                          <img
-                            src={`/assets/runtime-logos/${selectedProviderMeta.icon}`}
-                            alt={selectedProviderMeta.name}
-                            className="w-3 h-3 object-contain"
-                          />
-                        </div>
-                        <span className="font-medium hidden sm:inline">{displayModelName}</span>
+                        {showProviderLogo && providerLogoSrc ? (
+                          <div
+                            className="size-4 rounded-md flex items-center justify-center flex-shrink-0 overflow-hidden"
+                            style={{
+                              background: `${selectedProviderMeta.color}18`,
+                              border: `1px solid ${selectedProviderMeta.color}40`,
+                            }}
+                          >
+                            <img
+                              src={providerLogoSrc}
+                              alt=""
+                              className="w-3 h-3 object-contain"
+                              onError={() => setFailedProviderLogo(providerLogoSrc)}
+                            />
+                          </div>
+                        ) : null}
+                        <span className="font-medium hidden sm:inline">{modelPillLabel}</span>
                       </>
                     )}
                     <CaretDown size={11} className={cn('transition-transform opacity-80', isModelSelecting && 'rotate-180')} />
@@ -2316,6 +2337,7 @@ export function ChatComposer({
                 <Waveform size={17} weight="bold" />
               </button>
               <button type="button"
+                data-testid="model-picker-trigger"
                 onClick={() => startModelSelection()}
                 disabled={modelsLoading && availableModels.length === 0}
                 className={cn(
@@ -2347,20 +2369,23 @@ export function ChatComposer({
                   </span>
                 ) : (
                   <>
-                    <div
-                      className="size-5 rounded-md flex items-center justify-center flex-shrink-0 overflow-hidden"
-                      style={{
-                        background: `${selectedProviderMeta.color}18`,
-                        border: `1px solid ${selectedProviderMeta.color}40`,
-                      }}
-                    >
-                      <img
-                        src={`/assets/runtime-logos/${selectedProviderMeta.icon}`}
-                        alt={selectedProviderMeta.name}
-                        className="w-3.5 h-3.5 object-contain"
-                      />
-                    </div>
-                    <span className="font-medium">{displayModelName}</span>
+                    {showProviderLogo && providerLogoSrc ? (
+                      <div
+                        className="size-5 rounded-md flex items-center justify-center flex-shrink-0 overflow-hidden"
+                        style={{
+                          background: `${selectedProviderMeta.color}18`,
+                          border: `1px solid ${selectedProviderMeta.color}40`,
+                        }}
+                      >
+                        <img
+                          src={providerLogoSrc}
+                          alt=""
+                          className="w-3.5 h-3.5 object-contain"
+                          onError={() => setFailedProviderLogo(providerLogoSrc)}
+                        />
+                      </div>
+                    ) : null}
+                    <span className="font-medium">{modelPillLabel}</span>
                   </>
                 )}
                 <CaretDown size={12} className={cn('transition-transform opacity-80', isModelSelecting && 'rotate-180')} />
