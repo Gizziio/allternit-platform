@@ -73,6 +73,16 @@ desktop = [
     "asyncvnc>=1.1.0",
 ]
 
+# iOS mobile automation dependencies (phone-harness primary, pymobiledevice3 / idb fallback)
+mobile = [
+    "pymobiledevice3>=4.0",
+    "pyobjc>=10.0; platform_system=='Darwin'",
+    "pyobjc-framework-Quartz>=10.0; platform_system=='Darwin'",
+    "pyobjc-framework-Vision>=10.0; platform_system=='Darwin'",
+    "pyobjc-framework-AppKit>=10.0; platform_system=='Darwin'",
+    "pyobjc-framework-ApplicationServices>=10.0; platform_system=='Darwin'",
+]
+
 desktop-macos = [
     "allternit-computer-use[desktop]",
     "pyobjc>=10.0",
