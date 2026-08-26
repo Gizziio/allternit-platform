@@ -27,6 +27,13 @@ impl DbHandle {
         Ok(Self { path })
     }
 
+    /// Open a shared in-memory database. Useful for unit tests that need the
+    /// full migration stack but do not require persistence.
+    pub fn new_memory() -> SqlResult<Self> {
+        let path = PathBuf::from("file::memory:?cache=shared");
+        Self::new(path)
+    }
+
     pub fn connect(&self) -> SqlResult<Connection> {
         Connection::open(&self.path)
     }

@@ -66,6 +66,7 @@ pub mod device_attestation_routes;
 pub mod config;
 pub mod connector_routes;
 pub mod conversation_routes;
+pub mod credits;
 pub mod cowork;
 pub mod cowork_preferences_routes;
 pub mod cowork_routes;
