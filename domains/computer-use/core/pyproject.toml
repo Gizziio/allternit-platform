@@ -57,6 +57,11 @@ mcp = [
     "mcp>=1.0.0",
 ]
 
+# DroidRun mobile harness integration (Android via mobilerun_core)
+droidrun = [
+    "mobilerun-core[local]>=0.1.0",
+]
+
 # Desktop automation dependencies
 desktop = [
     "pyautogui>=0.9.54",
