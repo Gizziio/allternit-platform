@@ -27,6 +27,34 @@ interface CloudRuntimeDevice {
 
 const API_BASE_URL = env('VITE_ALLTERNIT_API_URL') ?? 'https://api.allternit.com';
 
+// DEV BYPASS: mock runtimes for local UI iteration when Clerk is disabled.
+const MOCK_RUNTIMES: RuntimeViewModel[] = [
+  {
+    id: 'dev-runtime-macbook',
+    name: 'Joe’s MacBook Pro',
+    host: 'macOS · joe-macbook-pro',
+    status: 'online',
+    lastHeartbeatAt: Date.now(),
+    capabilities: ['shell', 'browser', 'computer-use', 'file-system'],
+  },
+  {
+    id: 'dev-runtime-studio',
+    name: 'Allternit Studio',
+    host: 'Linux · allternit-studio',
+    status: 'busy',
+    lastHeartbeatAt: Date.now() - 120_000,
+    capabilities: ['shell', 'browser', 'code-execution'],
+  },
+  {
+    id: 'dev-runtime-windows',
+    name: 'Windows Host',
+    host: 'Windows · allternit-win-host',
+    status: 'offline',
+    lastHeartbeatAt: Date.now() - 3_600_000,
+    capabilities: ['shell', 'browser'],
+  },
+];
+
 function deviceToViewModel(device: CloudRuntimeDevice): RuntimeViewModel {
   return {
     id: device.id,
@@ -54,6 +82,13 @@ export function useRuntimes(): UseRuntimesResult {
   const fetchRuntimes = useCallback(async () => {
     try {
       const token = await auth.getToken();
+      // DEV BYPASS: serve mock runtimes when Clerk is disabled in local dev.
+      if (token === 'dev-token') {
+        setRuntimes(MOCK_RUNTIMES);
+        setError(null);
+        setLoading(false);
+        return;
+      }
       const res = await fetch(`${API_BASE_URL}/api/v1/runtime-devices`, {
         headers: token ? { Authorization: `Bearer ${token}` } : {},
       });

@@ -138,7 +138,7 @@ declare global {
       shell?: {
         openExternal: (url: string) => Promise<void>;
         openDesign: () => Promise<void>;
-        openRemoteControl: () => Promise<void>;
+        openRemoteControl: (runtimeId?: string) => Promise<void>;
         openSession: (options: { sessionId: string; workspaceId?: string; title?: string }) => Promise<void>;
         getOfficeHostStatus: () => Promise<Record<'word' | 'excel' | 'powerpoint', {
           installed: boolean;
