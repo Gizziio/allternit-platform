@@ -66,7 +66,7 @@
   - Move HUD-specific logic into a new `HudShell` component under `src/shell/hud/HudShell.tsx`
   - Import and use `useHudClickThrough`, `useHudComposerDrag`, `useHudResizeHandle`, `useHudGlass`, `useHudGameOverlay`, `useHudThreadFocus`, `useHudHandoff`
   - Keep existing `isHudWindow` detection
-- [ ] Add CSS for HUD shell
+- [x] Add CSS for HUD shell
   - Transparent html/body/#root
   - Band/sheet fade timings
   - Resize handle cursors

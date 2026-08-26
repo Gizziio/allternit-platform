@@ -43,7 +43,8 @@ import { useCoworkSessionStore } from '../views/cowork/CoworkSessionStore';
 import { useDesignSessionStore } from '../views/design/DesignSessionStore';
 // Modularized Shell Components
 import { getShellViewRegistry } from './ViewRegistry';
-import { ChatViewWrapper } from './ChatViewWrapper';
+import { HudShell } from './hud/HudShell';
+import { useHudHandoff } from './hud/handoff';
 
 import { useResolvedTheme, useThemeStore } from '../design/ThemeStore';
 import { usePanelLayout } from '../hooks/usePanelLayout';
@@ -125,6 +126,8 @@ function ShellAppInner(): React.ReactNode {
     }, [active.viewType])
   );
   useStackProviders();
+  // When the HUD window closes, resume its active session in the main window.
+  useHudHandoff();
   const { mode: activeMode, setMode: setActiveMode, isLoaded: modeLoaded } = useMode();
 
   const handleStartBotSession = useCallback(async (agent: Agent) => {
@@ -225,21 +228,6 @@ function ShellAppInner(): React.ReactNode {
     document.documentElement.setAttribute('data-theme', theme);
     document.body.setAttribute('data-theme', theme);
   }, [theme]);
-
-  // Make the page root transparent when running in the floating HUD window so
-  // the frameless transparent BrowserWindow shows the view content, not a solid
-  // themed rectangle behind it.  (Matches Hermes HUD's anti-white-flash trick.)
-  useEffect(() => {
-    if (!isHudWindow) return;
-    const style = document.createElement('style');
-    style.textContent = `
-      html,body,#root{background:transparent !important;}
-      [data-hud-window] textarea { color: var(--ui-text-primary) !important; caret-color: var(--ui-text-primary) !important; }
-      [data-hud-window] textarea::placeholder { color: var(--chat-composer-muted) !important; }
-    `;
-    document.head.appendChild(style);
-    return () => style.remove();
-  }, [isHudWindow]);
 
   // Fetch agents on mount for agent mode selection
   useEffect(() => {
