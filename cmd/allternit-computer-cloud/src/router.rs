@@ -16,7 +16,7 @@ use allternit_driver_interface::{
 };
 use async_trait::async_trait;
 use std::sync::Arc;
-use tracing::info;
+use tracing::{info, warn};
 
 const OS_ENV_KEY: &str = "ALLTERNIT_DESKTOP_OS";
 const PROVIDER_INCUS: &str = "incus";
