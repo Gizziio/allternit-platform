@@ -10,12 +10,15 @@ const DASHBOARD_ORIGIN =
  * - In a normal browser it opens a new tab so the dashboard can be installed as
  *   a PWA on mobile.
  */
-export function openRemoteControlWindow(): void {
+export function openRemoteControlWindow(runtimeId?: string): void {
   if (window.allternit?.shell?.openRemoteControl) {
-    void window.allternit.shell.openRemoteControl();
+    void window.allternit.shell.openRemoteControl(runtimeId);
     return;
   }
 
-  const url = new URL("/", DASHBOARD_ORIGIN).toString();
-  window.open(url, "_blank", "noopener,noreferrer");
+  const url = new URL("/", DASHBOARD_ORIGIN);
+  if (runtimeId) {
+    url.searchParams.set("runtime", runtimeId);
+  }
+  window.open(url.toString(), "_blank", "noopener,noreferrer");
 }
