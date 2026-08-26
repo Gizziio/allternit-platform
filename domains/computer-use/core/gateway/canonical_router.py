@@ -45,6 +45,7 @@ from providers.cua_driver_canonical import CuaDriverCanonicalProvider
 from providers.cua_driver_transport import CuaDriverTransport
 from providers.cdp_canonical import CDPCanonicalProvider
 from providers.extension_canonical import ExtensionCanonicalProvider
+from providers.droidrun_canonical import DroidRunCanonicalProvider
 try:
     from .session_manager import session_manager
 except ImportError:  # Legacy direct-script gateway launch.
@@ -198,6 +199,20 @@ async def _initialize_providers() -> None:
         _provider_diagnostics["desktop.cua-driver"] = {
             "available": False,
             "reason": "cua_driver_discovery_failed",
+            "message": str(error),
+        }
+    try:
+        droidrun_provider = DroidRunCanonicalProvider()
+        await service.register(droidrun_provider)
+        _environment_backends.register(droidrun_provider)
+        _provider_diagnostics["mobile.droidrun.canonical"] = {
+            "available": True,
+            "note": "registration succeeded; operational only when mobilerun_core and adb are available",
+        }
+    except Exception as error:
+        _provider_diagnostics["mobile.droidrun.canonical"] = {
+            "available": False,
+            "reason": "droidrun_registration_failed",
             "message": str(error),
         }
 
