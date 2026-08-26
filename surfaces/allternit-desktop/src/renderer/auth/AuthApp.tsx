@@ -28,13 +28,11 @@ function AuthFlow() {
         <SignUp
           appearance={clerkAppearance}
           routing="hash"
-          signInForceRedirectUrl={selfRedirectUrl}
         />
       ) : (
         <SignIn
           appearance={clerkAppearance}
           routing="hash"
-          signUpForceRedirectUrl={selfRedirectUrl}
         />
       )}
       <div
@@ -112,8 +110,8 @@ function SignedInView() {
 
 /**
  * URL of the auth page itself (https://accounts.<instance>/__desktop_auth__/). The
- * top-level ClerkProvider uses this as the forced/fallback redirect target so Clerk
- * never navigates the isolated auth window away to the platform website. The embedded
+ * top-level ClerkProvider uses this as the fallback redirect target so Clerk never
+ * navigates the isolated auth window away to the platform website. The embedded
  * <SignIn>/<SignUp> components use hash routing and do NOT set forceRedirectUrl,
  * because that caused a redirect loop: after sign-in Clerk would reload the page, the
  * component would remount, and immediately redirect again.
@@ -422,8 +420,6 @@ export default function AuthApp() {
       publishableKey={config.publishableKey}
       appearance={clerkAppearance}
       localization={clerkLocalization}
-      signInForceRedirectUrl={selfRedirectUrl}
-      signUpForceRedirectUrl={selfRedirectUrl}
       signInFallbackRedirectUrl={selfRedirectUrl}
       signUpFallbackRedirectUrl={selfRedirectUrl}
     >
