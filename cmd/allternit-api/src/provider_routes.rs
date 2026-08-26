@@ -1079,6 +1079,92 @@ fn auth_status_from_row(row: &ProviderRow) -> ProviderAuthStatusRow {
     }
 }
 
+/// Transform a Gizzi provider object into the frontend auth-status row shape.
+fn auth_status_from_gizzi_provider(
+    provider: &serde_json::Value,
+    connected: &HashSet<String>,
+) -> Option<ProviderAuthStatusRow> {
+    let id = provider.get("id")?.as_str()?.to_owned();
+    let auth_type = provider
+        .get("auth_type")
+        .and_then(|v| v.as_str())
+        .unwrap_or("api_key");
+
+    let provider_type = if auth_type == "subprocess" || provider.get("subprocess_cmd").is_some() {
+        "subprocess"
+    } else if auth_type == "none" {
+        "local"
+    } else {
+        "api"
+    }
+    .to_owned();
+
+    let model_count = provider
+        .get("models")
+        .and_then(|m| m.as_object())
+        .map(|m| m.len())
+        .unwrap_or(0);
+
+    let auth_required = auth_type != "none";
+    let authenticated = connected.contains(&id)
+        || auth_type == "none"
+        || (auth_type == "subprocess" && provider.get("subprocess_cmd").is_some());
+
+    let status = if !auth_required {
+        "not_required"
+    } else if authenticated {
+        "ok"
+    } else {
+        "missing"
+    }
+    .to_owned();
+
+    Some(ProviderAuthStatusRow {
+        provider_id: id,
+        status,
+        authenticated,
+        auth_required,
+        auth_profile_id: None,
+        chat_profile_ids: Vec::new(),
+        details: Some(json!({
+            "provider_type": provider_type,
+            "model_count": model_count,
+        })),
+    })
+}
+
+/// Convert a legacy merged `ProviderRow` into the live auth-status row shape.
+fn auth_status_live_from_row(row: &ProviderRow) -> ProviderAuthStatusRow {
+    let is_local = row.provider_type == "local";
+    let auth_required = !is_local;
+
+    let status = match row.status.as_str() {
+        "active" => "ok",
+        "missing_key" => "missing",
+        "offline" => "unknown",
+        "ready_no_models" => "not_required",
+        _ if is_local => "not_required",
+        _ if row.api_key_set => "ok",
+        _ => "missing",
+    }
+    .to_string();
+
+    let authenticated = status == "ok" || status == "not_required";
+
+    ProviderAuthStatusRow {
+        provider_id: row.id.clone(),
+        status,
+        authenticated,
+        auth_required,
+        auth_profile_id: None,
+        chat_profile_ids: Vec::new(),
+        details: Some(json!({
+            "provider_type": row.provider_type.clone(),
+            "model_count": row.models.len(),
+        })),
+    }
+}
+
 async fn list_provider_auth_status(
     State(state): State<Arc<AppState>>,
     headers: HeaderMap,
@@ -1087,6 +1173,40 @@ async fn list_provider_auth_status(
         Some(u) => u,
         None => return unauthorized(),
     };
+
+    // Prefer live Gizzi auth metadata; fall back to the static merge if either
+    // Gizzi call fails so the auth-status panel never goes blank.
+    match (
+        crate::gizzi_provider_auth::discover_providers().await,
+        crate::gizzi_provider_auth::provider_auth_methods().await,
+    ) {
+        (Ok(providers_payload), Ok(_auth_methods_payload)) => {
+            let connected = parse_connected(&providers_payload);
+            let providers: Vec<ProviderAuthStatusRow> = providers_payload
+                .get("all")
+                .and_then(|value| value.as_array())
+                .into_iter()
+                .flatten()
+                .filter_map(|provider| auth_status_from_gizzi_provider(provider, &connected))
+                .collect();
+            return Json(json!({ "providers": providers })).into_response();
+        }
+        (discover_result, auth_result) => {
+            if let Err(error) = discover_result {
+                warn!(
+                    "Gizzi provider discovery failed, falling back to static auth status: {}",
+                    error
+                );
+            }
+            if let Err(error) = auth_result {
+                warn!(
+                    "Gizzi provider auth methods failed, falling back to static auth status: {}",
+                    error
+                );
+            }
+        }
+    }
+
     let connected = crate::gizzi_provider_auth::connected_provider_ids().await;
 
     let conn = match state.db.connect() {
@@ -1119,7 +1239,7 @@ async fn list_provider_auth_status(
         vec![ollama_provider_row(state.config.ollama_url())],
     ]);
 
-    let providers: Vec<ProviderAuthStatusRow> = all.iter().map(auth_status_from_row).collect();
+    let providers: Vec<ProviderAuthStatusRow> = all.iter().map(auth_status_live_from_row).collect();
 
     Json(json!({ "providers": providers })).into_response()
 }

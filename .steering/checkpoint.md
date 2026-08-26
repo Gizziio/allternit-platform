@@ -941,3 +941,25 @@ Make the brain the user selects in the platform UI actually reach the Gizzi runt
 ### Open questions
 - Should `/api/v1/providers` keep the existing `ProviderRow` shape for backwards compatibility, or can we expose Gizzi's raw provider objects?
 - Do we want to remove the static `ENV_PROVIDER_SPECS`/`CLI_PROVIDER_SPECS` tables entirely, or keep them as a fallback when Gizzi is unreachable?
+
+
+## Proxy Gizzi provider discovery to `/api/v1/providers*` (2026-08-26)
+
+### Goal
+Make `GET /api/v1/providers` and `GET /api/v1/providers/auth/status` return live Gizzi-discovered providers instead of the static env/CLI tables.
+
+### Just did
+- Added `discover_providers()` and `provider_auth_methods()` to `cmd/allternit-api/src/gizzi_provider_auth.rs`, following the existing `client()`/`base_url()` pattern.
+- Added `ProviderInfo` and `ModelInfo` serde structs to `cmd/allternit-api/src/provider_routes.rs` for the frontend-facing provider shape.
+- Rewrote `list_providers` to call Gizzi `/provider`, transform each entry into `ProviderInfo`, and return `{providers, all}`. Falls back to the existing static merge (converted into `ProviderInfo`) if Gizzi is unreachable.
+- Rewrote `list_provider_auth_status` to call Gizzi `/provider` and `/provider/auth`, transform entries into `ProviderAuthStatusRow` with `auth_profile_id: None` and `chat_profile_ids: []`, and fall back to the static merge if either Gizzi call fails.
+- Kept `ENV_PROVIDER_SPECS`/`CLI_PROVIDER_SPECS` and the existing merge helpers for the fallback path.
+- Ran `cargo check -p allternit-api`; no new warnings (33 pre-existing warnings remain).
+
+### Next
+1. Update the frontend model picker to consume the proxied discovery response instead of the static registry.
+2. Add a Gizzi session-level model pin so the selected brain persists across turns.
+3. Port `AuthPlan`/named auth-profile support to Gizzi.
+
+### Open questions
+- Should the fallback path continue returning `ProviderInfo` forever, or do we eventually want to drop the static tables when Gizzi is mandatory?
