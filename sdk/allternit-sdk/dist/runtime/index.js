@@ -90,6 +90,171 @@ export class RuntimeClient {
         return streamEvents(url, this.getToken);
     }
 }
+export class RemoteControlClient {
+    baseUrl;
+    pushBaseUrl;
+    runtimeId;
+    getToken;
+    direct;
+    constructor(options) {
+        this.baseUrl = options.baseUrl.replace(/\/$/, "");
+        this.pushBaseUrl = options.pushBaseUrl?.replace(/\/$/, "");
+        this.runtimeId = options.runtimeId;
+        this.getToken = options.getToken;
+        this.direct = options.direct ?? false;
+    }
+    async authHeaders() {
+        const headers = { "Content-Type": "application/json" };
+        const token = this.getToken ? await this.getToken() : undefined;
+        if (token)
+            headers["Authorization"] = `Bearer ${token}`;
+        return headers;
+    }
+    runtimePath(path) {
+        return `/v1/remote-control${path}`;
+    }
+    async request(path, init = {}) {
+        return this.v1Raw(this.runtimePath(path), init);
+    }
+    async v1Raw(path, init = {}) {
+        const headers = await this.authHeaders();
+        if (this.direct) {
+            const url = `${this.baseUrl}${path}`;
+            return fetch(url, { ...init, headers: { ...headers, ...(init.headers ?? {}) } });
+        }
+        if (!this.runtimeId) {
+            throw new Error("RemoteControlClient requires runtimeId in platform relay mode");
+        }
+        const body = init.body ? init.body : "";
+        const payload = {
+            method: init.method ?? "GET",
+            path,
+            headers,
+            body: typeof body === "string" ? body : JSON.stringify(body),
+            body_encoding: "utf8",
+        };
+        const url = `${this.baseUrl}/api/v1/runtime-devices/${encodeURIComponent(this.runtimeId)}/proxy`;
+        return fetch(url, {
+            method: "POST",
+            headers: { "Content-Type": "application/json", ...headers },
+            body: JSON.stringify(payload),
+        });
+    }
+    async json(path, init = {}) {
+        const res = await this.request(path, init);
+        const text = await res.text();
+        if (!res.ok)
+            throw new RuntimeApiError(`Remote control request failed`, res.status, text);
+        return JSON.parse(text);
+    }
+    async v1Json(path, init = {}) {
+        const res = await this.v1Raw(path, init);
+        const text = await res.text();
+        if (!res.ok)
+            throw new RuntimeApiError(`Runtime v1 request failed`, res.status, text);
+        return JSON.parse(text);
+    }
+    async listSessions() {
+        return this.json("/sessions");
+    }
+    async getSession(sessionID) {
+        return this.json(`/sessions/${encodeURIComponent(sessionID)}`);
+    }
+    async sendMessage(sessionID, input) {
+        return this.json(`/sessions/${encodeURIComponent(sessionID)}/messages`, {
+            method: "POST",
+            body: JSON.stringify(input),
+        });
+    }
+    async abortSession(sessionID) {
+        return this.json(`/sessions/${encodeURIComponent(sessionID)}/abort`, { method: "POST" });
+    }
+    async listPendingPermissions() {
+        return this.v1Json("/v1/permission");
+    }
+    async replyPermission(requestID, reply, message) {
+        return this.v1Json(`/v1/permission/${encodeURIComponent(requestID)}/reply`, {
+            method: "POST",
+            body: JSON.stringify({ reply, message }),
+        });
+    }
+    async listPendingQuestions() {
+        return this.v1Json("/v1/question");
+    }
+    async replyQuestion(requestID, answers) {
+        return this.v1Json(`/v1/question/${encodeURIComponent(requestID)}/reply`, {
+            method: "POST",
+            body: JSON.stringify({ answers }),
+        });
+    }
+    async rejectQuestion(requestID) {
+        return this.v1Json(`/v1/question/${encodeURIComponent(requestID)}/reject`, {
+            method: "POST",
+        });
+    }
+    async getVapidPublicKey() {
+        const url = `${this.pushBaseUrl ?? this.baseUrl}/push/vapid-public-key`;
+        const res = await fetch(url, { headers: await this.authHeaders() });
+        if (!res.ok)
+            throw new RuntimeApiError("Failed to fetch VAPID public key", res.status, await res.text());
+        const data = (await res.json());
+        return data.publicKey;
+    }
+    async subscribePush(subscription) {
+        const runtimeId = this.assertRuntimeId();
+        const url = `${this.pushBaseUrl ?? this.baseUrl}/push/subscribe/${encodeURIComponent(runtimeId)}`;
+        const res = await fetch(url, {
+            method: "POST",
+            headers: { "Content-Type": "application/json", ...(await this.authHeaders()) },
+            body: JSON.stringify(subscription),
+        });
+        if (!res.ok)
+            throw new RuntimeApiError("Failed to subscribe push", res.status, await res.text());
+        return res.json();
+    }
+    async unsubscribePush(endpoint) {
+        const runtimeId = this.assertRuntimeId();
+        const url = `${this.pushBaseUrl ?? this.baseUrl}/push/unsubscribe/${encodeURIComponent(runtimeId)}`;
+        const res = await fetch(url, {
+            method: "POST",
+            headers: { "Content-Type": "application/json", ...(await this.authHeaders()) },
+            body: JSON.stringify({ endpoint }),
+        });
+        if (!res.ok)
+            throw new RuntimeApiError("Failed to unsubscribe push", res.status, await res.text());
+        return res.json();
+    }
+    assertRuntimeId() {
+        if (!this.runtimeId) {
+            throw new Error("RemoteControlClient requires runtimeId for push subscription");
+        }
+        return this.runtimeId;
+    }
+    streamEvents(sessionID) {
+        const path = `/sessions/${encodeURIComponent(sessionID)}/events`;
+        if (this.direct) {
+            const url = `${this.baseUrl}${this.runtimePath(path)}`;
+            return streamEventsAs(url, this.getToken);
+        }
+        if (!this.runtimeId) {
+            throw new Error("RemoteControlClient requires runtimeId in platform relay mode");
+        }
+        const ticketUrl = `${this.baseUrl}/api/v1/runtime-devices/${encodeURIComponent(this.runtimeId)}/socket-ticket`;
+        const socketUrlBase = `${this.baseUrl}/api/v1/runtime-devices/${encodeURIComponent(this.runtimeId)}/socket`;
+        const fullPath = this.runtimePath(path);
+        const getToken = this.getToken;
+        return {
+            [Symbol.asyncIterator]() {
+                return createRelayEventStreamIterator({
+                    ticketUrl,
+                    socketUrlBase,
+                    path: fullPath,
+                    getToken,
+                });
+            },
+        };
+    }
+}
 export class RuntimeApiError extends Error {
     status;
     body;
@@ -101,6 +266,9 @@ export class RuntimeApiError extends Error {
     }
 }
 function streamEvents(url, getToken) {
+    return streamEventsAs(url, getToken);
+}
+function streamEventsAs(url, getToken) {
     return {
         [Symbol.asyncIterator]() {
             return createEventStreamIterator(url, getToken);
@@ -157,6 +325,80 @@ function createEventStreamIterator(url, getToken) {
         },
         async return() {
             es?.close();
+            done = true;
+            return { value: undefined, done: true };
+        },
+    };
+}
+function createRelayEventStreamIterator(options) {
+    let ws;
+    let done = false;
+    let error;
+    const buffer = [];
+    let notify = () => { };
+    const start = async () => {
+        try {
+            const headers = { "Content-Type": "application/json" };
+            const token = options.getToken ? await options.getToken() : undefined;
+            if (token)
+                headers["Authorization"] = `Bearer ${token}`;
+            const ticketRes = await fetch(options.ticketUrl, {
+                method: "POST",
+                headers,
+                body: JSON.stringify({ path: options.path }),
+            });
+            if (!ticketRes.ok) {
+                const text = await ticketRes.text();
+                throw new RuntimeApiError("Failed to create relay socket ticket", ticketRes.status, text);
+            }
+            const { ticket } = (await ticketRes.json());
+            const socketUrl = `${options.socketUrlBase}?ticket=${encodeURIComponent(ticket)}`;
+            ws = new WebSocket(socketUrl);
+            ws.onmessage = (event) => {
+                try {
+                    const parsed = JSON.parse(event.data);
+                    buffer.push(parsed);
+                }
+                catch {
+                    // Ignore malformed events.
+                }
+                notify();
+            };
+            ws.onerror = (event) => {
+                if (!done) {
+                    done = true;
+                    error = error ?? new Error("WebSocket error");
+                }
+                notify();
+            };
+            ws.onclose = () => {
+                done = true;
+                notify();
+            };
+        }
+        catch (err) {
+            done = true;
+            error = err instanceof Error ? err : new Error(String(err));
+            notify();
+        }
+    };
+    start();
+    return {
+        async next() {
+            while (!done || buffer.length > 0) {
+                if (buffer.length > 0) {
+                    return { value: buffer.shift(), done: false };
+                }
+                await new Promise((r) => {
+                    notify = r;
+                });
+            }
+            if (error)
+                throw error;
+            return { value: undefined, done: true };
+        },
+        async return() {
+            ws?.close();
             done = true;
             return { value: undefined, done: true };
         },

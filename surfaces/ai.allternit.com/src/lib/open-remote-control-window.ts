@@ -9,13 +9,19 @@ const DASHBOARD_ORIGIN =
  * - Inside the Allternit Desktop shell this opens a dedicated BrowserWindow.
  * - In a normal browser it opens a new tab so the dashboard can be installed as
  *   a PWA on mobile.
+ *
+ * @param runtimeId Optional runtime to pre-select on the dashboard.
  */
-export function openRemoteControlWindow(): void {
+export function openRemoteControlWindow(runtimeId?: string): void {
+  const url = new URL("/", DASHBOARD_ORIGIN);
+  if (runtimeId) {
+    url.searchParams.set("runtime", runtimeId);
+  }
+
   if (window.allternit?.shell?.openRemoteControl) {
     void window.allternit.shell.openRemoteControl();
     return;
   }
 
-  const url = new URL("/", DASHBOARD_ORIGIN).toString();
-  window.open(url, "_blank", "noopener,noreferrer");
+  window.open(url.toString(), "_blank", "noopener,noreferrer");
 }

@@ -15,12 +15,12 @@
           var s = localStorage.getItem(key);
           var parsed = s ? JSON.parse(s) : null;
           var t = parsed && parsed.state && parsed.state.theme;
-          // Remote Control defaults to the Allternit dark brand; the user can
-          // override via the theme toggle once the app hydrates.
-          var r = t === 'dark' ? 'dark' : t === 'light' ? 'light' : 'dark';
+          // Default to the system color scheme so the PWA matches the user's
+          // platform. The React theme provider takes over once hydrated.
+          var systemDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
+          var r = t === 'dark' ? 'dark' : t === 'light' ? 'light' : systemDark ? 'dark' : 'light';
           if (!t) {
-            // Seed the persisted store so React hydration stays in dark mode.
-            localStorage.setItem(key, JSON.stringify({ state: { theme: 'dark' }, version: 0 }));
+            localStorage.setItem(key, JSON.stringify({ state: { theme: 'system' }, version: 0 }));
           }
           document.documentElement.setAttribute('data-theme', r);
           document.documentElement.style.colorScheme = r;

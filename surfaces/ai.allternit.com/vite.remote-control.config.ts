@@ -16,6 +16,7 @@ export default defineConfig((env) =>
     typeof baseConfig === 'function' ? baseConfig(env) : baseConfig,
     {
       build: {
+        outDir: 'dist-remote-control',
         rollupOptions: {
           input: {
             index: path.resolve(__dirname, 'remote-control.html'),
