@@ -21,3 +21,11 @@ Append newest entries to the top of the `## Entries` section.
 
 ## Entries
 
+### 2026-08-26 10:13 — agent — Unified Compute & Desktop Cloud MVP
+
+- **Session ID / Branch:** `session/desktop-cloud-mvp`
+- **Commit:** `6295201ec` — Merge local desktop-cloud MVP state with unified compute work
+- **How it works:** Introduces a unified `computers` domain with `/api/v1/computers` API, consolidates compute settings UI, wires cloud-desktop provisioning into bot session lifecycle, and backfills legacy bot desktop sandboxes.
+- **Outstanding work:** Not merged to `main`; deprecated routes retained for backward compatibility; live VM end-to-end provisioning not fully verified; `computer_minute` pricing is a placeholder; old platform worktrees may still exist.
+- **Summary file:** [summaries/2026-08-26-1013-desktop-cloud-mvp-agent-unified-compute-desktop-cloud.md](./summaries/2026-08-26-1013-desktop-cloud-mvp-agent-unified-compute-desktop-cloud.md)
+
