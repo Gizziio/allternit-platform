@@ -1,0 +1,21 @@
+{
+  "file": "alabs-generated-courses/media/src/core-fluency-m3-skill-format-excerpt.md",
+  "language": "markdown",
+  "steps": [
+    {
+      "title": "Required frontmatter",
+      "lines": [1, 2, 3, 4, 5, 6, 7, 8, 9, 10],
+      "note": "A SKILL.md manifest must declare name, version, description, tools, and entrypoint. The registry rejects any skill missing these fields."
+    },
+    {
+      "title": "Progressive disclosure",
+      "lines": [11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23],
+      "note": "The skill can surface only create_presentation initially and reveal add_slide once the user wants to edit an existing deck. This limits blast radius for new skills."
+    },
+    {
+      "title": "Instruction body",
+      "lines": [25, 26, 27, 28],
+      "note": "The markdown body explains expected inputs, outputs, and behavior. Treat it as the system prompt for the skill: concrete, scoped, and reviewable."
+    }
+  ]
+}

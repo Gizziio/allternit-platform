@@ -1,0 +1,11 @@
+{"version": 2, "width": 80, "height": 18, "timestamp": 1700000000, "env": {"SHELL": "/bin/bash", "TERM": "xterm-256color"}}
+[0.0, "o", "\u001b[1;32m$\u001b[0m tsx scripts/eval-support-triage.ts --dataset fixtures/tickets.jsonl\r\n"]
+[0.8, "o", "\u001b[90m→\u001b[0m Loaded 42 labeled tickets\r\n"]
+[1.4, "o", "\u001b[90m→\u001b[0m Running prompt v3 against openai/gpt-4o-mini\r\n"]
+[2.2, "o", "\u001b[90m→\u001b[0m Category accuracy: 0.93 (target 0.90)\r\n"]
+[2.8, "o", "\u001b[90m→\u001b[0m Escalation recall: 0.88 (target 0.95) \u001b[33m⚠\u001b[0m\r\n"]
+[3.6, "o", "\u001b[90m→\u001b[0m 3 false negatives: 'legal' mentioned in body but not flagged\r\n"]
+[4.4, "o", "\u001b[90m→\u001b[0m Updating prompt to include body scan for banned terms\r\n"]
+[5.2, "o", "\u001b[1;32m✓\u001b[0m Prompt v4 passes all gates — snapshot saved to prompts/support-triage-v4.json\r\n"]
+[6.0, "o", "\u001b[90m→\u001b[0m Registering as agent support-triage-prod via agent.service.ts\r\n"]
+[6.8, "o", "\u001b[1;32m✓\u001b[0m Deployment record: agent_01PROMPTEVAL\r\n"]

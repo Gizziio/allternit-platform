@@ -1,0 +1,2275 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Module 10: Engineering: Graph — A://Labs</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+  <style>
+    /* ================================================================
+       A://Labs Module Template — Shared Styles
+       ================================================================ */
+
+    :root {
+      --bg: #0b0b0c;
+      --surface: #151517;
+      --surface-raised: #1c1c1f;
+      --border: #27272a;
+      --border-light: #3f3f46;
+      --text: #e5e5e5;
+      --text-secondary: #a1a1aa;
+      --text-muted: #71717a;
+      --accent: #ec4899;
+      --accent-dim: rgba(236,72,153,0.15);
+      --accent-glow: rgba(236,72,153,0.4);
+      --success: #22c55e;
+      --error: #ef4444;
+      --info: #3b82f6;
+      --code-bg: #0f0f11;
+    }
+
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    html {
+      scroll-behavior: smooth;
+      scroll-padding-top: 80px;
+    }
+
+    body {
+      font-family: 'Inter', system-ui, -apple-system, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      line-height: 1.6;
+      overflow-x: hidden;
+    }
+
+    /* Progress Bar */
+    #progress-container {
+      position: fixed;
+      top: 0; left: 0; right: 0;
+      height: 3px;
+      background: var(--surface);
+      z-index: 1000;
+    }
+    #progress-bar {
+      height: 100%;
+      width: 0%;
+      background: linear-gradient(90deg, var(--accent), #f472b6);
+      box-shadow: 0 0 12px var(--accent-glow);
+      transition: width 0.2s ease;
+    }
+
+    /* Navigation */
+    nav {
+      position: fixed;
+      top: 3px; left: 0; right: 0;
+      background: rgba(11, 11, 12, 0.92);
+      backdrop-filter: blur(16px);
+      border-bottom: 1px solid var(--border);
+      z-index: 999;
+      padding: 0 24px;
+    }
+    .nav-inner {
+      max-width: 1200px;
+      margin: 0 auto;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      height: 56px;
+    }
+    .nav-logo {
+      font-weight: 800;
+      font-size: 0.9rem;
+      letter-spacing: -0.02em;
+      color: var(--text);
+    }
+    .nav-logo span {
+      color: var(--accent);
+    }
+    .nav-links {
+      display: flex;
+      gap: 6px;
+      list-style: none;
+    }
+    .nav-links a {
+      color: var(--text-secondary);
+      text-decoration: none;
+      font-size: 0.78rem;
+      font-weight: 500;
+      padding: 6px 12px;
+      border-radius: 6px;
+      transition: all 0.2s;
+      white-space: nowrap;
+    }
+    .nav-links a:hover, .nav-links a.active {
+      color: var(--accent);
+      background: var(--accent-dim);
+    }
+    .nav-tier {
+      font-size: 0.65rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: var(--accent);
+      border: 1px solid var(--accent);
+      padding: 3px 8px;
+      border-radius: 4px;
+    }
+    .nav-toggle {
+      display: none;
+      background: none;
+      border: none;
+      color: var(--text);
+      font-size: 1.4rem;
+      cursor: pointer;
+    }
+    @media (max-width: 768px) {
+      .nav-links { display: none; position: absolute; top: 56px; left: 0; right: 0; background: var(--surface); flex-direction: column; padding: 12px; gap: 4px; border-bottom: 1px solid var(--border); }
+      .nav-links.open { display: flex; }
+      .nav-toggle { display: block; }
+    }
+
+    /* Sections */
+    section {
+      padding: 80px 24px;
+      max-width: 860px;
+      margin: 0 auto;
+      position: relative;
+    }
+
+    /* Hero */
+    .hero {
+      min-height: 90vh;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: flex-start;
+      padding-top: 100px;
+    }
+    .hero-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 0.7rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+      color: var(--accent);
+      background: var(--accent-dim);
+      border: 1px solid rgba(236,72,153,0.25);
+      padding: 6px 14px;
+      border-radius: 100px;
+      margin-bottom: 24px;
+    }
+    .hero-badge::before {
+      content: '';
+      width: 6px; height: 6px;
+      background: var(--accent);
+      border-radius: 50%;
+      box-shadow: 0 0 8px var(--accent);
+      animation: pulse 2s ease-in-out infinite;
+    }
+    @keyframes pulse {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.4; }
+    }
+    .hero h1 {
+      font-size: clamp(2.2rem, 5vw, 3.8rem);
+      font-weight: 900;
+      line-height: 1.1;
+      letter-spacing: -0.03em;
+      margin-bottom: 20px;
+    }
+    .hero h1 em {
+      color: var(--accent);
+      font-style: normal;
+    }
+    .hero p {
+      font-size: 1.15rem;
+      color: var(--text-secondary);
+      max-width: 600px;
+      margin-bottom: 32px;
+      line-height: 1.7;
+    }
+    .hero-meta {
+      display: flex;
+      gap: 24px;
+      font-size: 0.8rem;
+      color: var(--text-muted);
+    }
+
+    /* Content Typography */
+    h2 {
+      font-size: 1.6rem;
+      font-weight: 700;
+      margin-bottom: 20px;
+      color: var(--text);
+      letter-spacing: -0.01em;
+    }
+    h3 {
+      font-size: 1.15rem;
+      font-weight: 600;
+      margin: 32px 0 12px;
+      color: var(--text);
+    }
+    h4 {
+      font-size: 0.95rem;
+      font-weight: 600;
+      margin: 24px 0 8px;
+      color: var(--text-secondary);
+    }
+    p {
+      margin-bottom: 16px;
+      color: var(--text-secondary);
+      font-size: 0.95rem;
+      line-height: 1.7;
+    }
+    ul, ol {
+      margin: 16px 0;
+      padding-left: 24px;
+      color: var(--text-secondary);
+    }
+    li {
+      margin-bottom: 8px;
+      font-size: 0.95rem;
+      line-height: 1.6;
+    }
+    a {
+      color: var(--accent);
+      text-decoration: none;
+    }
+    a:hover { text-decoration: underline; }
+    strong { color: var(--text); font-weight: 600; }
+    em { color: var(--accent); font-style: normal; }
+
+    /* Code Blocks */
+    .code-block {
+      background: var(--code-bg);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      overflow: hidden;
+      margin: 20px 0;
+    }
+    .code-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 10px 16px;
+      background: rgba(255,255,255,0.03);
+      border-bottom: 1px solid var(--border);
+    }
+    .code-lang {
+      font-size: 0.7rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      color: var(--text-muted);
+    }
+    .code-copy {
+      font-size: 0.7rem;
+      color: var(--text-muted);
+      background: none;
+      border: 1px solid var(--border);
+      padding: 4px 10px;
+      border-radius: 4px;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    .code-copy:hover {
+      color: var(--accent);
+      border-color: var(--accent);
+    }
+    pre {
+      padding: 16px 20px;
+      overflow-x: auto;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.82rem;
+      line-height: 1.6;
+      color: var(--text);
+    }
+    code {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.85em;
+      color: var(--accent);
+      background: rgba(245,158,11,0.08);
+      padding: 2px 5px;
+      border-radius: 3px;
+    }
+    pre code {
+      background: none;
+      padding: 0;
+      color: inherit;
+      font-size: inherit;
+    }
+    .token-keyword { color: #c678dd; }
+    .token-string { color: #98c379; }
+    .token-number { color: #d19a66; }
+    .token-comment { color: #5c6370; font-style: italic; }
+    .token-function { color: #61afef; }
+    .token-type { color: #e5c07b; }
+    .token-operator { color: #56b6c2; }
+
+    /* Callouts */
+    .callout {
+      padding: 16px 20px;
+      border-radius: 8px;
+      border-left: 3px solid var(--accent);
+      background: var(--accent-dim);
+      margin: 20px 0;
+    }
+    .callout.info {
+      border-left-color: var(--info);
+      background: rgba(59,130,246,0.08);
+    }
+    .callout.success {
+      border-left-color: var(--success);
+      background: rgba(34,197,94,0.08);
+    }
+    .callout.error {
+      border-left-color: var(--error);
+      background: rgba(239,68,68,0.08);
+    }
+    .callout p { margin: 0; color: var(--text-secondary); }
+    .callout strong { color: var(--text); }
+
+    /* Tables */
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin: 20px 0;
+      font-size: 0.88rem;
+    }
+    th, td {
+      padding: 10px 14px;
+      text-align: left;
+      border-bottom: 1px solid var(--border);
+    }
+    th {
+      font-weight: 600;
+      color: var(--text);
+      background: var(--surface);
+    }
+    td { color: var(--text-secondary); }
+    tr:hover td { background: rgba(255,255,255,0.02); }
+
+    /* Divider */
+    .divider {
+      height: 1px;
+      background: linear-gradient(90deg, transparent, var(--border), transparent);
+      margin: 60px 0;
+      border: none;
+    }
+
+    /* Scroll Reveal */
+    .reveal {
+      opacity: 0;
+      transform: translateY(24px);
+      transition: opacity 0.6s ease, transform 0.6s ease;
+    }
+    .reveal.visible {
+      opacity: 1;
+      transform: translateY(0);
+    }
+
+    /* Quiz */
+    .quiz {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 24px;
+      margin: 24px 0;
+    }
+    .quiz-header {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 16px;
+    }
+    .quiz-num {
+      width: 32px;
+      height: 32px;
+      border-radius: 50%;
+      background: var(--accent-dim);
+      color: var(--accent);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: 700;
+      font-size: 0.85rem;
+      flex-shrink: 0;
+    }
+    .quiz h3 { margin: 0; font-size: 1rem; }
+    .quiz-options {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+    .quiz-option {
+      padding: 12px 16px;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      cursor: pointer;
+      transition: all 0.2s;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      font-size: 0.9rem;
+      color: var(--text-secondary);
+    }
+    .quiz-option:hover { border-color: var(--border-light); }
+    .quiz-option.selected { border-color: var(--accent); background: var(--accent-dim); color: var(--text); }
+    .quiz-option.correct { border-color: var(--success); background: rgba(34,197,94,0.1); }
+    .quiz-option.wrong { border-color: var(--error); background: rgba(239,68,68,0.1); }
+    .quiz-option .radio {
+      width: 18px;
+      height: 18px;
+      border: 2px solid var(--border-light);
+      border-radius: 50%;
+      flex-shrink: 0;
+      transition: all 0.2s;
+    }
+    .quiz-option.selected .radio { border-color: var(--accent); }
+    .quiz-option.correct .radio { border-color: var(--success); background: var(--success); }
+    .quiz-option.wrong .radio { border-color: var(--error); background: var(--error); }
+    .quiz-feedback {
+      display: none;
+      margin-top: 12px;
+      padding: 12px 16px;
+      border-radius: 8px;
+      font-size: 0.9rem;
+      line-height: 1.5;
+    }
+    .quiz-feedback.show { display: block; }
+    .quiz-feedback.correct { background: rgba(34,197,94,0.1); color: #86efac; border: 1px solid rgba(34,197,94,0.3); }
+    .quiz-feedback.wrong { background: rgba(239,68,68,0.1); color: #fca5a5; border: 1px solid rgba(239,68,68,0.3); }
+    .quiz-retry {
+      margin-top: 12px;
+      padding: 8px 16px;
+      background: var(--surface-raised);
+      border: 1px solid var(--border);
+      color: var(--text-secondary);
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 0.85rem;
+      display: none;
+    }
+    .quiz-retry.show { display: inline-block; }
+    .quiz-retry:hover { border-color: var(--accent); color: var(--accent); }
+
+    /* Capstone */
+    .capstone {
+      background: linear-gradient(135deg, var(--surface) 0%, var(--surface-raised) 100%);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 40px;
+      margin: 40px 0;
+    }
+    .capstone h2 { margin-top: 0; }
+    .capstone-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+      gap: 16px;
+      margin-top: 24px;
+    }
+    .capstone-item {
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 16px;
+    }
+    .capstone-item h4 {
+      color: var(--accent);
+      margin-top: 0;
+      font-size: 0.85rem;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+    .capstone-item p { font-size: 0.85rem; margin: 0; }
+
+    /* Footer */
+    footer {
+      text-align: center;
+      padding: 40px 24px;
+      border-top: 1px solid var(--border);
+      color: var(--text-muted);
+      font-size: 0.85rem;
+    }
+    footer code {
+      background: none;
+      color: var(--text-muted);
+    }
+
+    /* Media assets */
+    .alabs-media {
+      margin: 24px 0;
+      border-radius: 12px;
+      overflow: hidden;
+      border: 1px solid var(--border);
+      background: var(--surface);
+    }
+    .mermaid {
+      padding: 24px;
+      display: flex;
+      justify-content: center;
+      min-height: 120px;
+    }
+    .mermaid svg {
+      max-width: 100%;
+      height: auto;
+    }
+    .asciinema-wrapper {
+      padding: 0;
+      background: var(--code-bg);
+    }
+    .asciinema-wrapper .asciinema-player {
+      width: 100%;
+    }
+
+    /* Walkthrough (Code-Hike-style) */
+    .walkthrough-container {
+      margin: 24px 0;
+    }
+    .walkthrough-controls {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      margin-bottom: 16px;
+      padding: 12px 16px;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+    }
+    .walkthrough-controls button {
+      background: var(--accent-dim);
+      color: var(--accent);
+      border: 1px solid var(--accent);
+      padding: 8px 16px;
+      border-radius: 6px;
+      cursor: pointer;
+      font-weight: 600;
+      font-size: 0.85rem;
+    }
+    .walkthrough-controls button:hover {
+      background: var(--accent);
+      color: var(--bg);
+    }
+    .walkthrough-controls button:disabled {
+      opacity: 0.4;
+      cursor: not-allowed;
+    }
+    .walkthrough-counter {
+      color: var(--text-muted);
+      font-size: 0.85rem;
+      font-variant-numeric: tabular-nums;
+    }
+    .walkthrough-step {
+      display: none;
+      padding: 24px;
+    }
+    .walkthrough-step.active {
+      display: block;
+    }
+    .walkthrough-header {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 16px;
+    }
+    .walkthrough-step-num {
+      font-size: 0.7rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: var(--accent);
+      border: 1px solid var(--accent);
+      padding: 3px 10px;
+      border-radius: 100px;
+    }
+    .walkthrough-header h4 {
+      margin: 0;
+      font-size: 1.1rem;
+      color: var(--text);
+    }
+    .walkthrough-note {
+      background: var(--accent-dim);
+      border-left: 3px solid var(--accent);
+      padding: 16px 20px;
+      border-radius: 0 8px 8px 0;
+      margin-bottom: 20px;
+    }
+    .walkthrough-note p {
+      margin: 0;
+      color: var(--text-secondary);
+    }
+    .walkthrough-code pre {
+      counter-reset: none;
+      padding: 0;
+      background: transparent;
+    }
+    .walkthrough-line {
+      display: flex;
+      padding: 2px 16px;
+      transition: background 0.2s;
+    }
+    .walkthrough-line.dim {
+      opacity: 0.35;
+    }
+    .walkthrough-line.highlight {
+      background: rgba(236, 72, 153, 0.12);
+      border-left: 3px solid var(--accent);
+      margin-left: -3px;
+    }
+    .walkthrough-line .line-no {
+      color: var(--text-muted);
+      font-size: 0.75rem;
+      width: 40px;
+      flex-shrink: 0;
+      text-align: right;
+      padding-right: 16px;
+      user-select: none;
+    }
+    .walkthrough-line .line-code {
+      white-space: pre;
+    }
+    .walkthrough-line.ellipsis {
+      opacity: 0.5;
+      padding: 4px 16px;
+    }
+    .walkthrough-line.ellipsis .line-code {
+      color: var(--text-muted);
+    }
+
+    /* Module-specific styles injection point */
+    
+.hero { position: relative; overflow: hidden; }
+#graphNetworkCanvas { position: absolute; top: 0; left: 0; width: 100%; height: 100%; z-index: -1; opacity: 0.35; pointer-events: none; }
+.quiz-option code { background: rgba(236,72,153,0.12); color: #f472b6; }
+
+  </style>
+
+  <script type="module">
+    import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.esm.min.mjs';
+    mermaid.initialize({ startOnLoad: true, theme: 'dark', themeVariables: { primaryColor: '#ec4899', primaryTextColor: '#e5e5e5', primaryBorderColor: '#ec4899', lineColor: '#a1a1aa', secondaryColor: '#151517', tertiaryColor: '#0b0b0c', fontFamily: 'Inter, system-ui, sans-serif' }});
+  </script>
+
+  <link rel="stylesheet" type="text/css" href="https://cdn.jsdelivr.net/npm/asciinema-player@3/dist/bundle/asciinema-player.css" />
+  <script src="https://cdn.jsdelivr.net/npm/asciinema-player@3/dist/bundle/asciinema-player.min.js"></script>
+</head>
+<body>
+  <div id="progress-container"><div id="progress-bar"></div></div>
+
+  <nav>
+    <div class="nav-inner">
+      <div class="nav-logo">A://<span>Labs</span></div>
+      <ul class="nav-links" id="navLinks">
+        <li><a href="#overview" data-section="overview">Overview</a></li>
+        <li><a href="#patterns" data-section="patterns">Patterns</a></li>
+        <li><a href="#workflow" data-section="workflow">Workflow</a></li>
+        <li><a href="#orchestrator" data-section="orchestrator">Orchestrator</a></li>
+        <li><a href="#advanced" data-section="advanced">Advanced</a></li>
+        <li><a href="#quizzes" data-section="quizzes">Quizzes</a></li>
+        <li><a href="#capstone" data-section="capstone">Capstone</a></li>
+      </ul>
+      <span class="nav-tier">AGENTS</span>
+      <button class="nav-toggle" onclick="document.getElementById('navLinks').classList.toggle('open')">☰</button>
+    </div>
+  </nav>
+
+  
+<section id="overview" class="hero reveal">
+  <canvas id="graphNetworkCanvas"></canvas>
+  <span class="hero-badge">AGENTS Tier</span>
+  <h1>Module 10: <em>Engineering: Graph</em></h1>
+  <p>Learn how Allternit structures agent behavior as graphs: routing decisions, chained steps, parallel branches, and stateful execution across the workflow engine and orchestrator.</p>
+  <div class="hero-meta">
+    <span><strong>6 lessons</strong> · ~45 minutes</span>
+    <span>Source: <code>packages/@allternit/workflow-engine</code></span>
+  </div>
+</section>
+
+<section id="patterns" class="reveal">
+  <h2>Agent graphs: routing, chaining, and parallelization</h2>
+  <p>A single model call is rarely enough for production tasks. Useful agents decompose work into smaller steps and decide what to do next. The three fundamental graph patterns are:</p>
+  <ul>
+    <li><strong>Routing.</strong> A classifier node inspects input and dispatches to a specialist branch. The support triage playbook classifies a ticket as Billing, Technical, Account, or Feature Request, then routes accordingly.</li>
+    <li><strong>Chaining.</strong> Output from one node feeds directly into the next. A research agent may search, summarize, cite, and then format a final answer as a sequence of dependent nodes.</li>
+    <li><strong>Parallelization.</strong> Independent branches run at the same time and their results merge. A code-review agent can run style, security, and correctness checks in parallel before aggregating findings.</li>
+  </ul>
+
+  <pre class="mermaid alabs-media" data-media-id="agents-api-m10-graph-routing">flowchart TB
+    Start([User prompt]) --&gt; Classify{Router node&lt;br/&gt;condition:if}
+
+    Classify --&gt;|billing| Billing[Billing branch]
+    Classify --&gt;|technical| Technical[Technical branch]
+    Classify --&gt;|general| General[General branch]
+
+    Billing --&gt; B1[Extract account id]
+    Technical --&gt; T1[Retrieve relevant docs]
+    General --&gt; G1[Draft answer]
+
+    B1 --&gt; B2[Lookup invoice]
+    T1 --&gt; T2[Run code diagnostic]
+
+    B2 --&gt; Merge
+    T2 --&gt; Merge
+    G1 --&gt; Merge
+
+    Merge[Merge results] --&gt; Review{Human review?}
+    Review --&gt;|auto| Output[Return result]
+    Review --&gt;|manual| Queue[Escalation queue]
+
+    style Start fill:#151517,stroke:#ec4899,stroke-width:2px
+    style Output fill:#151517,stroke:#ec4899,stroke-width:2px
+    style Classify fill:#1c1c1f,stroke:#ec4899
+    style Merge fill:#1c1c1f,stroke:#ec4899</pre>
+
+  <div class="callout info">
+    <p><strong>Graphs are state machines.</strong> Every node reads from an execution context, produces a result, and triggers downstream nodes only when its dependencies are satisfied.</p>
+  </div>
+
+  <h3>When to use each pattern</h3>
+  <table>
+    <thead>
+      <tr><th>Pattern</th><th>Best for</th><th>Allternit primitive</th></tr>
+    </thead>
+    <tbody>
+      <tr><td>Routing</td><td>Classify-then-act pipelines</td><td><code>condition:if</code> node</td></tr>
+      <tr><td>Chaining</td><td>Sequential dependencies</td><td>Connected DAG edges</td></tr>
+      <tr><td>Parallelization</td><td>Independent checks or map steps</td><td><code>loop:for-each</code> or fork-join</td></tr>
+      <tr><td>Stateful execution</td><td>Multi-turn runs with resume/pause</td><td><code>WorkflowExecution</code> context</td></tr>
+    </tbody>
+  </table>
+</section>
+
+<section id="workflow" class="reveal">
+  <h2>The Allternit Workflow Engine</h2>
+  <p><code>packages/@allternit/workflow-engine/src/engine/workflow-engine.ts</code> implements a DAG-based execution engine. A workflow is a list of nodes and connections; an execution is a stateful run of that workflow with its own context.</p>
+
+  <h3>Core concepts</h3>
+  <ul>
+    <li><code>Workflow</code> — a declarative graph: nodes, connections, inputs/outputs schema, and triggers.</li>
+    <li><code>WorkflowNode</code> — an instance of a node type with configuration and mappings.</li>
+    <li><code>Connection</code> — a directed edge from a source node to a target node, optionally guarded by a condition.</li>
+    <li><code>ExecutionState</code> — live state: active nodes, completed nodes, failed nodes, and node results.</li>
+  </ul>
+
+  <div class="code-block">
+    <div class="code-header">
+      <span class="code-lang">typescript</span>
+      <button class="code-copy">Copy</button>
+    </div>
+    <pre><code>import { createWorkflowEngine } from '@allternit/workflow-engine';
+
+const engine = createWorkflowEngine();
+
+engine.registerWorkflow({
+  id: 'research-and-summarize',
+  name: 'Research and summarize',
+  version: '1.0.0',
+  nodes: [
+    { id: 'trigger', type: 'trigger:manual', name: 'Start' },
+    { id: 'search', type: 'http:request', name: 'Search',
+      config: { method: 'GET' } },
+    { id: 'summarize', type: 'transform:map', name: 'Summarize',
+      config: { expression: 'data.results.map((r) => r.snippet).join(String.fromCharCode(10))' } },
+    { id: 'output', type: 'output:result', name: 'Result' },
+  ],
+  connections: [
+    { id: 'c1', source: 'trigger', target: 'search' },
+    { id: 'c2', source: 'search', target: 'summarize' },
+    { id: 'c3', source: 'summarize', target: 'output' },
+  ],
+});
+
+const run = await engine.execute('research-and-summarize', { query: 'Allternit harness' });
+console.log(run.status, run.outputs);</code></pre>
+  </div>
+
+  <h3>Walkthrough: executing a node</h3>
+  <p>The walkthrough below highlights how the engine initializes, registers built-in node types, starts a workflow, and executes individual nodes while tracking state.</p>
+
+  <div class="walkthrough-container" data-walkthrough-container="agents-api-m10-graph-walkthrough">
+  <div class="walkthrough-controls" data-walkthrough-controls="agents-api-m10-graph-walkthrough">
+  <button class="walkthrough-prev" onclick="Walkthrough.step('agents-api-m10-graph-walkthrough', -1)">← Previous</button>
+  <span class="walkthrough-counter"><span class="current">1</span> / 4</span>
+  <button class="walkthrough-next" onclick="Walkthrough.step('agents-api-m10-graph-walkthrough', 1)">Next →</button>
+</div>
+  <div class="walkthrough-steps">
+    <div class="walkthrough-step alabs-media" id="agents-api-m10-graph-walkthrough-step-0" data-walkthrough="agents-api-m10-graph-walkthrough" data-step="0">
+  <div class="walkthrough-header">
+    <span class="walkthrough-step-num">Step 1</span>
+    <h4>Create the engine</h4>
+  </div>
+  <div class="walkthrough-note">
+    <p>createWorkflowEngine initializes the workflow registry, execution registry, node-type registry, and active-execution tracking. Configurable limits include max concurrent executions and default timeout.</p>
+  </div>
+  <div class="code-block walkthrough-code">
+    <div class="code-header">
+      <span class="code-lang">typescript</span>
+      <span class="code-path">packages/@allternit/workflow-engine/src/engine/workflow-engine.ts</span>
+    </div>
+    <pre><div class="walkthrough-line dim" data-line="48">
+        <span class="line-no"> 48</span>
+        <span class="line-code"> * Create workflow engine</span>
+      </div>
+<div class="walkthrough-line dim" data-line="49">
+        <span class="line-no"> 49</span>
+        <span class="line-code"> */</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="50">
+        <span class="line-no"> 50</span>
+        <span class="line-code"><span class=<span class="token-string">"token-keyword"</span>>export</span> <span class=<span class="token-string">"token-keyword"</span>>function</span> createWorkflowEngine(config: WorkflowEngineConfig = {}): WorkflowEngine {</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="51">
+        <span class="line-no"> 51</span>
+        <span class="line-code">  <span class=<span class="token-string">"token-keyword"</span>>const</span> workflows = <span class=<span class="token-string">"token-keyword"</span>>new</span> Map&lt;string, Workflow&gt;();</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="52">
+        <span class="line-no"> 52</span>
+        <span class="line-code">  <span class=<span class="token-string">"token-keyword"</span>>const</span> executions = <span class=<span class="token-string">"token-keyword"</span>>new</span> Map&lt;string, WorkflowExecution&gt;();</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="53">
+        <span class="line-no"> 53</span>
+        <span class="line-code">  <span class=<span class="token-string">"token-keyword"</span>>const</span> nodeTypes = <span class=<span class="token-string">"token-keyword"</span>>new</span> Map&lt;string, NodeType&gt;();</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="54">
+        <span class="line-no"> 54</span>
+        <span class="line-code">  <span class=<span class="token-string">"token-keyword"</span>>const</span> activeExecutions = <span class=<span class="token-string">"token-keyword"</span>>new</span> Set&lt;string&gt;();</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="55">
+        <span class="line-no"> 55</span>
+        <span class="line-code">&nbsp;</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="56">
+        <span class="line-no"> 56</span>
+        <span class="line-code">  <span class=<span class="token-string">"token-keyword"</span>>const</span> {</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="57">
+        <span class="line-no"> 57</span>
+        <span class="line-code">    maxConcurrentExecutions = <span class="token-number">10</span>,</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="58">
+        <span class="line-no"> 58</span>
+        <span class="line-code">    defaultTimeout = <span class="token-number">300000</span>, <span class="token-comment">// <span class="token-number">5</span> minutes</span></span>
+      </div>
+<div class="walkthrough-line highlight" data-line="59">
+        <span class="line-no"> 59</span>
+        <span class="line-code">    enableHistory = <span class=<span class="token-string">"token-keyword"</span>>true</span>,</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="60">
+        <span class="line-no"> 60</span>
+        <span class="line-code">    hooks = {},</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="61">
+        <span class="line-no"> 61</span>
+        <span class="line-code">  } = config;</span>
+      </div>
+<div class="walkthrough-line dim" data-line="62">
+        <span class="line-no"> 62</span>
+        <span class="line-code">&nbsp;</span>
+      </div>
+<div class="walkthrough-line dim" data-line="63">
+        <span class="line-no"> 63</span>
+        <span class="line-code">  /**</span>
+      </div></pre>
+  </div>
+</div>
+<div class="walkthrough-step alabs-media" id="agents-api-m10-graph-walkthrough-step-1" data-walkthrough="agents-api-m10-graph-walkthrough" data-step="1">
+  <div class="walkthrough-header">
+    <span class="walkthrough-step-num">Step 2</span>
+    <h4>Register built-in node types</h4>
+  </div>
+  <div class="walkthrough-note">
+    <p>Built-in node types cover triggers (manual, schedule, webhook), transforms (map, filter), conditions (if), loops (for-each), delays, HTTP requests, and outputs. Each declares input/output ports and an executor.</p>
+  </div>
+  <div class="code-block walkthrough-code">
+    <div class="code-header">
+      <span class="code-lang">typescript</span>
+      <span class="code-path">packages/@allternit/workflow-engine/src/engine/workflow-engine.ts</span>
+    </div>
+    <pre><div class="walkthrough-line dim" data-line="64">
+        <span class="line-no"> 64</span>
+        <span class="line-code">   * Register built-in node types</span>
+      </div>
+<div class="walkthrough-line dim" data-line="65">
+        <span class="line-no"> 65</span>
+        <span class="line-code">   */</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="66">
+        <span class="line-no"> 66</span>
+        <span class="line-code">  <span class=<span class="token-string">"token-keyword"</span>>function</span> registerBuiltInNodeTypes(): void {</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="67">
+        <span class="line-no"> 67</span>
+        <span class="line-code">    <span class="token-comment">// Input nodes</span></span>
+      </div>
+<div class="walkthrough-line highlight" data-line="68">
+        <span class="line-no"> 68</span>
+        <span class="line-code">    registerNodeType({</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="69">
+        <span class="line-no"> 69</span>
+        <span class="line-code">      <span class=<span class="token-string">"token-keyword"</span>>type</span>: <span class="token-string">'trigger:manual'</span>,</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="70">
+        <span class="line-no"> 70</span>
+        <span class="line-code">      category: <span class="token-string">'input'</span>,</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="71">
+        <span class="line-no"> 71</span>
+        <span class="line-code">      displayName: <span class="token-string">'Manual Trigger'</span>,</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="72">
+        <span class="line-no"> 72</span>
+        <span class="line-code">      description: <span class="token-string">'Triggered manually or via API'</span>,</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="73">
+        <span class="line-no"> 73</span>
+        <span class="line-code">      outputs: [{ name: <span class="token-string">'data'</span>, <span class=<span class="token-string">"token-keyword"</span>>type</span>: <span class="token-string">'any'</span> }],</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="74">
+        <span class="line-no"> 74</span>
+        <span class="line-code">      executor: <span class=<span class="token-string">"token-keyword"</span>>async</span> (_, __, inputs) =&gt; inputs,</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="75">
+        <span class="line-no"> 75</span>
+        <span class="line-code">    });</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="76">
+        <span class="line-no"> 76</span>
+        <span class="line-code">&nbsp;</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="77">
+        <span class="line-no"> 77</span>
+        <span class="line-code">    registerNodeType({</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="78">
+        <span class="line-no"> 78</span>
+        <span class="line-code">      <span class=<span class="token-string">"token-keyword"</span>>type</span>: <span class="token-string">'trigger:schedule'</span>,</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="79">
+        <span class="line-no"> 79</span>
+        <span class="line-code">      category: <span class="token-string">'input'</span>,</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="80">
+        <span class="line-no"> 80</span>
+        <span class="line-code">      displayName: <span class="token-string">'Schedule Trigger'</span>,</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="81">
+        <span class="line-no"> 81</span>
+        <span class="line-code">      description: <span class="token-string">'Triggered on a schedule'</span>,</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="82">
+        <span class="line-no"> 82</span>
+        <span class="line-code">      outputs: [{ name: <span class="token-string">'timestamp'</span>, <span class=<span class="token-string">"token-keyword"</span>>type</span>: <span class="token-string">'string'</span> }],</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="83">
+        <span class="line-no"> 83</span>
+        <span class="line-code">      executor: <span class=<span class="token-string">"token-keyword"</span>>async</span> (_, __, inputs) =&gt; inputs,</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="84">
+        <span class="line-no"> 84</span>
+        <span class="line-code">    });</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="85">
+        <span class="line-no"> 85</span>
+        <span class="line-code">&nbsp;</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="86">
+        <span class="line-no"> 86</span>
+        <span class="line-code">    registerNodeType({</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="87">
+        <span class="line-no"> 87</span>
+        <span class="line-code">      <span class=<span class="token-string">"token-keyword"</span>>type</span>: <span class="token-string">'trigger:webhook'</span>,</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="88">
+        <span class="line-no"> 88</span>
+        <span class="line-code">      category: <span class="token-string">'input'</span>,</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="89">
+        <span class="line-no"> 89</span>
+        <span class="line-code">      displayName: <span class="token-string">'Webhook Trigger'</span>,</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="90">
+        <span class="line-no"> 90</span>
+        <span class="line-code">      description: <span class="token-string">'Triggered by HTTP webhook'</span>,</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="91">
+        <span class="line-no"> 91</span>
+        <span class="line-code">      outputs: [{ name: <span class="token-string">'body'</span>, <span class=<span class="token-string">"token-keyword"</span>>type</span>: <span class="token-string">'any'</span> }, { name: <span class="token-string">'headers'</span>, <span class=<span class="token-string">"token-keyword"</span>>type</span>: <span class="token-string">'object'</span> }],</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="92">
+        <span class="line-no"> 92</span>
+        <span class="line-code">      executor: <span class=<span class="token-string">"token-keyword"</span>>async</span> (_, __, inputs) =&gt; inputs,</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="93">
+        <span class="line-no"> 93</span>
+        <span class="line-code">    });</span>
+      </div>
+<div class="walkthrough-line dim" data-line="94">
+        <span class="line-no"> 94</span>
+        <span class="line-code">&nbsp;</span>
+      </div>
+<div class="walkthrough-line dim" data-line="95">
+        <span class="line-no"> 95</span>
+        <span class="line-code">    <span class="token-comment">// Transform nodes</span></span>
+      </div></pre>
+  </div>
+</div>
+<div class="walkthrough-step alabs-media" id="agents-api-m10-graph-walkthrough-step-2" data-walkthrough="agents-api-m10-graph-walkthrough" data-step="2">
+  <div class="walkthrough-header">
+    <span class="walkthrough-step-num">Step 3</span>
+    <h4>Execute a workflow</h4>
+  </div>
+  <div class="walkthrough-note">
+    <p>execute() builds the DAG, seeds the execution context, and starts every node that has no incoming connections. Completed output nodes are collected into execution.outputs.</p>
+  </div>
+  <div class="code-block walkthrough-code">
+    <div class="code-header">
+      <span class="code-lang">typescript</span>
+      <span class="code-path">packages/@allternit/workflow-engine/src/engine/workflow-engine.ts</span>
+    </div>
+    <pre><div class="walkthrough-line dim" data-line="309">
+        <span class="line-no">309</span>
+        <span class="line-code">   * Execute workflow</span>
+      </div>
+<div class="walkthrough-line dim" data-line="310">
+        <span class="line-no">310</span>
+        <span class="line-code">   */</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="311">
+        <span class="line-no">311</span>
+        <span class="line-code">  <span class=<span class="token-string">"token-keyword"</span>>async</span> <span class=<span class="token-string">"token-keyword"</span>>function</span> execute(</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="312">
+        <span class="line-no">312</span>
+        <span class="line-code">    workflowId: string,</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="313">
+        <span class="line-no">313</span>
+        <span class="line-code">    inputs: Record&lt;string, unknown&gt; = {}</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="314">
+        <span class="line-no">314</span>
+        <span class="line-code">  ): Promise&lt;WorkflowExecution&gt; {</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="315">
+        <span class="line-no">315</span>
+        <span class="line-code">    <span class=<span class="token-string">"token-keyword"</span>>const</span> workflow = workflows.get(workflowId);</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="316">
+        <span class="line-no">316</span>
+        <span class="line-code">    <span class=<span class="token-string">"token-keyword"</span>>if</span> (!workflow) {</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="317">
+        <span class="line-no">317</span>
+        <span class="line-code">      <span class=<span class="token-string">"token-keyword"</span>>throw</span> <span class=<span class="token-string">"token-keyword"</span>>new</span> Error(`Workflow not found: ${workflowId}`);</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="318">
+        <span class="line-no">318</span>
+        <span class="line-code">    }</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="319">
+        <span class="line-no">319</span>
+        <span class="line-code">&nbsp;</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="320">
+        <span class="line-no">320</span>
+        <span class="line-code">    <span class="token-comment">// Check concurrent execution limit</span></span>
+      </div>
+<div class="walkthrough-line highlight" data-line="321">
+        <span class="line-no">321</span>
+        <span class="line-code">    <span class=<span class="token-string">"token-keyword"</span>>if</span> (activeExecutions.size &gt;= maxConcurrentExecutions) {</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="322">
+        <span class="line-no">322</span>
+        <span class="line-code">      <span class=<span class="token-string">"token-keyword"</span>>throw</span> <span class=<span class="token-string">"token-keyword"</span>>new</span> Error(<span class="token-string">'Max concurrent executions reached'</span>);</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="323">
+        <span class="line-no">323</span>
+        <span class="line-code">    }</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="324">
+        <span class="line-no">324</span>
+        <span class="line-code">&nbsp;</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="325">
+        <span class="line-no">325</span>
+        <span class="line-code">    <span class=<span class="token-string">"token-keyword"</span>>const</span> executionId = uuidv4();</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="326">
+        <span class="line-no">326</span>
+        <span class="line-code">    </span>
+      </div>
+<div class="walkthrough-line highlight" data-line="327">
+        <span class="line-no">327</span>
+        <span class="line-code">    <span class="token-comment">// Build DAG</span></span>
+      </div>
+<div class="walkthrough-line highlight" data-line="328">
+        <span class="line-no">328</span>
+        <span class="line-code">    <span class=<span class="token-string">"token-keyword"</span>>const</span> dag = buildDAG(workflow);</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="329">
+        <span class="line-no">329</span>
+        <span class="line-code">    </span>
+      </div>
+<div class="walkthrough-line highlight" data-line="330">
+        <span class="line-no">330</span>
+        <span class="line-code">    <span class="token-comment">// Initialize execution</span></span>
+      </div>
+<div class="walkthrough-line highlight" data-line="331">
+        <span class="line-no">331</span>
+        <span class="line-code">    <span class=<span class="token-string">"token-keyword"</span>>const</span> execution: WorkflowExecution = {</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="332">
+        <span class="line-no">332</span>
+        <span class="line-code">      id: executionId,</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="333">
+        <span class="line-no">333</span>
+        <span class="line-code">      workflowId,</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="334">
+        <span class="line-no">334</span>
+        <span class="line-code">      status: <span class="token-string">'pending'</span>,</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="335">
+        <span class="line-no">335</span>
+        <span class="line-code">      inputs,</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="336">
+        <span class="line-no">336</span>
+        <span class="line-code">      context: {</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="337">
+        <span class="line-no">337</span>
+        <span class="line-code">        variables: { ...inputs },</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="338">
+        <span class="line-no">338</span>
+        <span class="line-code">        state: {</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="339">
+        <span class="line-no">339</span>
+        <span class="line-code">          activeNodes: [],</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="340">
+        <span class="line-no">340</span>
+        <span class="line-code">          completedNodes: [],</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="341">
+        <span class="line-no">341</span>
+        <span class="line-code">          failedNodes: [],</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="342">
+        <span class="line-no">342</span>
+        <span class="line-code">          nodeResults: {},</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="343">
+        <span class="line-no">343</span>
+        <span class="line-code">          executionPath: [],</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="344">
+        <span class="line-no">344</span>
+        <span class="line-code">        },</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="345">
+        <span class="line-no">345</span>
+        <span class="line-code">      },</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="346">
+        <span class="line-no">346</span>
+        <span class="line-code">      nodeExecutions: [],</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="347">
+        <span class="line-no">347</span>
+        <span class="line-code">      startedAt: <span class=<span class="token-string">"token-keyword"</span>>new</span> Date().toISOString(),</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="348">
+        <span class="line-no">348</span>
+        <span class="line-code">    };</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="349">
+        <span class="line-no">349</span>
+        <span class="line-code">&nbsp;</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="350">
+        <span class="line-no">350</span>
+        <span class="line-code">    executions.set(executionId, execution);</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="351">
+        <span class="line-no">351</span>
+        <span class="line-code">    activeExecutions.add(executionId);</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="352">
+        <span class="line-no">352</span>
+        <span class="line-code">&nbsp;</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="353">
+        <span class="line-no">353</span>
+        <span class="line-code">    <span class="token-comment">// Trigger before execute hook</span></span>
+      </div>
+<div class="walkthrough-line highlight" data-line="354">
+        <span class="line-no">354</span>
+        <span class="line-code">    <span class=<span class="token-string">"token-keyword"</span>>await</span> hooks.beforeExecute?.(execution);</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="355">
+        <span class="line-no">355</span>
+        <span class="line-code">&nbsp;</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="356">
+        <span class="line-no">356</span>
+        <span class="line-code">    <span class="token-comment">// Start execution</span></span>
+      </div>
+<div class="walkthrough-line highlight" data-line="357">
+        <span class="line-no">357</span>
+        <span class="line-code">    execution.status = <span class="token-string">'running'</span>;</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="358">
+        <span class="line-no">358</span>
+        <span class="line-code">    </span>
+      </div>
+<div class="walkthrough-line highlight" data-line="359">
+        <span class="line-no">359</span>
+        <span class="line-code">    <span class=<span class="token-string">"token-keyword"</span>>try</span> {</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="360">
+        <span class="line-no">360</span>
+        <span class="line-code">      <span class="token-comment">// Execute starting nodes (no incoming connections)</span></span>
+      </div>
+<div class="walkthrough-line highlight" data-line="361">
+        <span class="line-no">361</span>
+        <span class="line-code">      <span class=<span class="token-string">"token-keyword"</span>>const</span> startNodes = dag.nodes.filter(n =&gt; </span>
+      </div>
+<div class="walkthrough-line highlight" data-line="362">
+        <span class="line-no">362</span>
+        <span class="line-code">        !dag.connections.some(c =&gt; c.target === n.id)</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="363">
+        <span class="line-no">363</span>
+        <span class="line-code">      );</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="364">
+        <span class="line-no">364</span>
+        <span class="line-code">&nbsp;</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="365">
+        <span class="line-no">365</span>
+        <span class="line-code">      <span class=<span class="token-string">"token-keyword"</span>>await</span> Promise.all(startNodes.map(node =&gt; executeNode(node, execution, dag)));</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="366">
+        <span class="line-no">366</span>
+        <span class="line-code">&nbsp;</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="367">
+        <span class="line-no">367</span>
+        <span class="line-code">      execution.status = <span class="token-string">'completed'</span>;</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="368">
+        <span class="line-no">368</span>
+        <span class="line-code">      execution.completedAt = <span class=<span class="token-string">"token-keyword"</span>>new</span> Date().toISOString();</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="369">
+        <span class="line-no">369</span>
+        <span class="line-code">      </span>
+      </div>
+<div class="walkthrough-line highlight" data-line="370">
+        <span class="line-no">370</span>
+        <span class="line-code">      <span class="token-comment">// Collect outputs</span></span>
+      </div>
+<div class="walkthrough-line highlight" data-line="371">
+        <span class="line-no">371</span>
+        <span class="line-code">      <span class=<span class="token-string">"token-keyword"</span>>const</span> outputNodes = workflow.nodes.filter(n =&gt; n.<span class=<span class="token-string">"token-keyword"</span>>type</span> === <span class="token-string">'output:result'</span>);</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="372">
+        <span class="line-no">372</span>
+        <span class="line-code">      execution.outputs = {};</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="373">
+        <span class="line-no">373</span>
+        <span class="line-code">      <span class=<span class="token-string">"token-keyword"</span>>for</span> (<span class=<span class="token-string">"token-keyword"</span>>const</span> node of outputNodes) {</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="374">
+        <span class="line-no">374</span>
+        <span class="line-code">        <span class=<span class="token-string">"token-keyword"</span>>const</span> result = execution.context?.state.nodeResults[node.id];</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="375">
+        <span class="line-no">375</span>
+        <span class="line-code">        <span class=<span class="token-string">"token-keyword"</span>>if</span> (result) {</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="376">
+        <span class="line-no">376</span>
+        <span class="line-code">          Object.assign(execution.outputs, result);</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="377">
+        <span class="line-no">377</span>
+        <span class="line-code">        }</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="378">
+        <span class="line-no">378</span>
+        <span class="line-code">      }</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="379">
+        <span class="line-no">379</span>
+        <span class="line-code">&nbsp;</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="380">
+        <span class="line-no">380</span>
+        <span class="line-code">    } <span class=<span class="token-string">"token-keyword"</span>>catch</span> (error) {</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="381">
+        <span class="line-no">381</span>
+        <span class="line-code">      execution.status = <span class="token-string">'failed'</span>;</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="382">
+        <span class="line-no">382</span>
+        <span class="line-code">      execution.error = {</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="383">
+        <span class="line-no">383</span>
+        <span class="line-code">        code: <span class="token-string">'EXECUTION_ERROR'</span>,</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="384">
+        <span class="line-no">384</span>
+        <span class="line-code">        message: error instanceof Error ? error.message : String(error),</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="385">
+        <span class="line-no">385</span>
+        <span class="line-code">      };</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="386">
+        <span class="line-no">386</span>
+        <span class="line-code">      <span class=<span class="token-string">"token-keyword"</span>>await</span> hooks.onError?.(execution.error, execution.context!);</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="387">
+        <span class="line-no">387</span>
+        <span class="line-code">    } finally {</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="388">
+        <span class="line-no">388</span>
+        <span class="line-code">      activeExecutions.delete(executionId);</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="389">
+        <span class="line-no">389</span>
+        <span class="line-code">      <span class=<span class="token-string">"token-keyword"</span>>await</span> hooks.afterExecute?.(execution);</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="390">
+        <span class="line-no">390</span>
+        <span class="line-code">    }</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="391">
+        <span class="line-no">391</span>
+        <span class="line-code">&nbsp;</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="392">
+        <span class="line-no">392</span>
+        <span class="line-code">    <span class=<span class="token-string">"token-keyword"</span>>return</span> execution;</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="393">
+        <span class="line-no">393</span>
+        <span class="line-code">  }</span>
+      </div>
+<div class="walkthrough-line dim" data-line="394">
+        <span class="line-no">394</span>
+        <span class="line-code">&nbsp;</span>
+      </div>
+<div class="walkthrough-line dim" data-line="395">
+        <span class="line-no">395</span>
+        <span class="line-code">  /**</span>
+      </div></pre>
+  </div>
+</div>
+<div class="walkthrough-step alabs-media" id="agents-api-m10-graph-walkthrough-step-3" data-walkthrough="agents-api-m10-graph-walkthrough" data-step="3">
+  <div class="walkthrough-header">
+    <span class="walkthrough-step-num">Step 4</span>
+    <h4>Execute a single node</h4>
+  </div>
+  <div class="walkthrough-note">
+    <p>executeNode() waits until all dependency nodes have results, runs the node executor, stores the result in execution.context.state.nodeResults, and recursively executes downstream nodes that pass any connection condition.</p>
+  </div>
+  <div class="code-block walkthrough-code">
+    <div class="code-header">
+      <span class="code-lang">typescript</span>
+      <span class="code-path">packages/@allternit/workflow-engine/src/engine/workflow-engine.ts</span>
+    </div>
+    <pre><div class="walkthrough-line dim" data-line="406">
+        <span class="line-no">406</span>
+        <span class="line-code">   * Execute a node</span>
+      </div>
+<div class="walkthrough-line dim" data-line="407">
+        <span class="line-no">407</span>
+        <span class="line-code">   */</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="408">
+        <span class="line-no">408</span>
+        <span class="line-code">  <span class=<span class="token-string">"token-keyword"</span>>async</span> <span class=<span class="token-string">"token-keyword"</span>>function</span> executeNode(</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="409">
+        <span class="line-no">409</span>
+        <span class="line-code">    node: WorkflowNode,</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="410">
+        <span class="line-no">410</span>
+        <span class="line-code">    execution: WorkflowExecution,</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="411">
+        <span class="line-no">411</span>
+        <span class="line-code">    dag: { nodes: WorkflowNode[]; connections: Connection[] }</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="412">
+        <span class="line-no">412</span>
+        <span class="line-code">  ): Promise&lt;void&gt; {</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="413">
+        <span class="line-no">413</span>
+        <span class="line-code">    <span class=<span class="token-string">"token-keyword"</span>>if</span> (!execution.context) <span class=<span class="token-string">"token-keyword"</span>>return</span>;</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="414">
+        <span class="line-no">414</span>
+        <span class="line-code">&nbsp;</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="415">
+        <span class="line-no">415</span>
+        <span class="line-code">    <span class=<span class="token-string">"token-keyword"</span>>const</span> nodeType = nodeTypes.get(node.<span class=<span class="token-string">"token-keyword"</span>>type</span>);</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="416">
+        <span class="line-no">416</span>
+        <span class="line-code">    <span class=<span class="token-string">"token-keyword"</span>>if</span> (!nodeType) {</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="417">
+        <span class="line-no">417</span>
+        <span class="line-code">      <span class=<span class="token-string">"token-keyword"</span>>throw</span> <span class=<span class="token-string">"token-keyword"</span>>new</span> Error(`Unknown node <span class=<span class="token-string">"token-keyword"</span>>type</span>: ${node.<span class=<span class="token-string">"token-keyword"</span>>type</span>}`);</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="418">
+        <span class="line-no">418</span>
+        <span class="line-code">    }</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="419">
+        <span class="line-no">419</span>
+        <span class="line-code">&nbsp;</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="420">
+        <span class="line-no">420</span>
+        <span class="line-code">    <span class="token-comment">// Check <span class=<span class="token-string">"token-keyword"</span>>if</span> already executed</span></span>
+      </div>
+<div class="walkthrough-line highlight" data-line="421">
+        <span class="line-no">421</span>
+        <span class="line-code">    <span class=<span class="token-string">"token-keyword"</span>>if</span> (execution.context.state.completedNodes.includes(node.id)) {</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="422">
+        <span class="line-no">422</span>
+        <span class="line-code">      <span class=<span class="token-string">"token-keyword"</span>>return</span>;</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="423">
+        <span class="line-no">423</span>
+        <span class="line-code">    }</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="424">
+        <span class="line-no">424</span>
+        <span class="line-code">&nbsp;</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="425">
+        <span class="line-no">425</span>
+        <span class="line-code">    <span class="token-comment">// Check dependencies</span></span>
+      </div>
+<div class="walkthrough-line highlight" data-line="426">
+        <span class="line-no">426</span>
+        <span class="line-code">    <span class=<span class="token-string">"token-keyword"</span>>const</span> incomingConnections = dag.connections.filter(c =&gt; c.target === node.id);</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="427">
+        <span class="line-no">427</span>
+        <span class="line-code">    <span class=<span class="token-string">"token-keyword"</span>>const</span> dependenciesMet = incomingConnections.every(c =&gt; </span>
+      </div>
+<div class="walkthrough-line highlight" data-line="428">
+        <span class="line-no">428</span>
+        <span class="line-code">      execution.context!.state.completedNodes.includes(c.source) ||</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="429">
+        <span class="line-no">429</span>
+        <span class="line-code">      execution.context!.state.nodeResults[c.source] !== <span class=<span class="token-string">"token-keyword"</span>>undefined</span></span>
+      </div>
+<div class="walkthrough-line highlight" data-line="430">
+        <span class="line-no">430</span>
+        <span class="line-code">    );</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="431">
+        <span class="line-no">431</span>
+        <span class="line-code">&nbsp;</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="432">
+        <span class="line-no">432</span>
+        <span class="line-code">    <span class=<span class="token-string">"token-keyword"</span>>if</span> (!dependenciesMet) {</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="433">
+        <span class="line-no">433</span>
+        <span class="line-code">      <span class=<span class="token-string">"token-keyword"</span>>return</span>; <span class="token-comment">// Will be executed when dependencies complete</span></span>
+      </div>
+<div class="walkthrough-line highlight" data-line="434">
+        <span class="line-no">434</span>
+        <span class="line-code">    }</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="435">
+        <span class="line-no">435</span>
+        <span class="line-code">&nbsp;</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="436">
+        <span class="line-no">436</span>
+        <span class="line-code">    <span class="token-comment">// Mark as active</span></span>
+      </div>
+<div class="walkthrough-line highlight" data-line="437">
+        <span class="line-no">437</span>
+        <span class="line-code">    execution.context.state.activeNodes.push(node.id);</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="438">
+        <span class="line-no">438</span>
+        <span class="line-code">    execution.context.state.executionPath.push(node.id);</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="439">
+        <span class="line-no">439</span>
+        <span class="line-code">&nbsp;</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="440">
+        <span class="line-no">440</span>
+        <span class="line-code">    <span class="token-comment">// Prepare inputs</span></span>
+      </div>
+<div class="walkthrough-line highlight" data-line="441">
+        <span class="line-no">441</span>
+        <span class="line-code">    <span class=<span class="token-string">"token-keyword"</span>>const</span> inputs: Record&lt;string, unknown&gt; = {};</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="442">
+        <span class="line-no">442</span>
+        <span class="line-code">    </span>
+      </div>
+<div class="walkthrough-line highlight" data-line="443">
+        <span class="line-no">443</span>
+        <span class="line-code">    <span class="token-comment">// Get inputs <span class=<span class="token-string">"token-keyword"</span>>from</span> connections</span></span>
+      </div>
+<div class="walkthrough-line highlight" data-line="444">
+        <span class="line-no">444</span>
+        <span class="line-code">    incomingConnections.forEach(conn =&gt; {</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="445">
+        <span class="line-no">445</span>
+        <span class="line-code">      <span class=<span class="token-string">"token-keyword"</span>>const</span> sourceResult = execution.context!.state.nodeResults[conn.source];</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="446">
+        <span class="line-no">446</span>
+        <span class="line-code">      <span class=<span class="token-string">"token-keyword"</span>>if</span> (sourceResult) {</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="447">
+        <span class="line-no">447</span>
+        <span class="line-code">        <span class=<span class="token-string">"token-keyword"</span>>const</span> portName = conn.sourcePort || <span class="token-string">'data'</span>;</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="448">
+        <span class="line-no">448</span>
+        <span class="line-code">        inputs[portName] = sourceResult;</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="449">
+        <span class="line-no">449</span>
+        <span class="line-code">      }</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="450">
+        <span class="line-no">450</span>
+        <span class="line-code">    });</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="451">
+        <span class="line-no">451</span>
+        <span class="line-code">&nbsp;</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="452">
+        <span class="line-no">452</span>
+        <span class="line-code">    <span class="token-comment">// Apply input mappings</span></span>
+      </div>
+<div class="walkthrough-line highlight" data-line="453">
+        <span class="line-no">453</span>
+        <span class="line-code">    node.inputs?.forEach(mapping =&gt; {</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="454">
+        <span class="line-no">454</span>
+        <span class="line-code">      <span class=<span class="token-string">"token-keyword"</span>>const</span> value = evaluateMapping(mapping.source, execution.context!);</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="455">
+        <span class="line-no">455</span>
+        <span class="line-code">      <span class=<span class="token-string">"token-keyword"</span>>if</span> (value !== <span class=<span class="token-string">"token-keyword"</span>>undefined</span> || mapping.default !== <span class=<span class="token-string">"token-keyword"</span>>undefined</span>) {</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="456">
+        <span class="line-no">456</span>
+        <span class="line-code">        inputs[mapping.target] = value ?? mapping.default;</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="457">
+        <span class="line-no">457</span>
+        <span class="line-code">      }</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="458">
+        <span class="line-no">458</span>
+        <span class="line-code">    });</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="459">
+        <span class="line-no">459</span>
+        <span class="line-code">&nbsp;</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="460">
+        <span class="line-no">460</span>
+        <span class="line-code">    <span class="token-comment">// Create node execution</span></span>
+      </div>
+<div class="walkthrough-line highlight" data-line="461">
+        <span class="line-no">461</span>
+        <span class="line-code">    <span class=<span class="token-string">"token-keyword"</span>>const</span> nodeExecution: NodeExecution = {</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="462">
+        <span class="line-no">462</span>
+        <span class="line-code">      nodeId: node.id,</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="463">
+        <span class="line-no">463</span>
+        <span class="line-code">      status: <span class="token-string">'running'</span>,</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="464">
+        <span class="line-no">464</span>
+        <span class="line-code">      inputs,</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="465">
+        <span class="line-no">465</span>
+        <span class="line-code">      startedAt: <span class=<span class="token-string">"token-keyword"</span>>new</span> Date().toISOString(),</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="466">
+        <span class="line-no">466</span>
+        <span class="line-code">    };</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="467">
+        <span class="line-no">467</span>
+        <span class="line-code">    execution.nodeExecutions = execution.nodeExecutions || [];</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="468">
+        <span class="line-no">468</span>
+        <span class="line-code">    execution.nodeExecutions.push(nodeExecution);</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="469">
+        <span class="line-no">469</span>
+        <span class="line-code">&nbsp;</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="470">
+        <span class="line-no">470</span>
+        <span class="line-code">    <span class="token-comment">// Trigger before node execute hook</span></span>
+      </div>
+<div class="walkthrough-line highlight" data-line="471">
+        <span class="line-no">471</span>
+        <span class="line-code">    <span class=<span class="token-string">"token-keyword"</span>>await</span> hooks.beforeNodeExecute?.(node, execution.context);</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="472">
+        <span class="line-no">472</span>
+        <span class="line-code">&nbsp;</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="473">
+        <span class="line-no">473</span>
+        <span class="line-code">    <span class=<span class="token-string">"token-keyword"</span>>try</span> {</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="474">
+        <span class="line-no">474</span>
+        <span class="line-code">      <span class="token-comment">// Execute node</span></span>
+      </div>
+<div class="walkthrough-line highlight" data-line="475">
+        <span class="line-no">475</span>
+        <span class="line-code">      <span class=<span class="token-string">"token-keyword"</span>>const</span> executor = nodeType.executor;</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="476">
+        <span class="line-no">476</span>
+        <span class="line-code">      <span class=<span class="token-string">"token-keyword"</span>>if</span> (!executor) {</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="477">
+        <span class="line-no">477</span>
+        <span class="line-code">        <span class=<span class="token-string">"token-keyword"</span>>throw</span> <span class=<span class="token-string">"token-keyword"</span>>new</span> Error(`No executor <span class=<span class="token-string">"token-keyword"</span>>for</span> node <span class=<span class="token-string">"token-keyword"</span>>type</span>: ${node.<span class=<span class="token-string">"token-keyword"</span>>type</span>}`);</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="478">
+        <span class="line-no">478</span>
+        <span class="line-code">      }</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="479">
+        <span class="line-no">479</span>
+        <span class="line-code">&nbsp;</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="480">
+        <span class="line-no">480</span>
+        <span class="line-code">      <span class=<span class="token-string">"token-keyword"</span>>const</span> result = <span class=<span class="token-string">"token-keyword"</span>>await</span> executor(node, execution.context, inputs);</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="481">
+        <span class="line-no">481</span>
+        <span class="line-code">&nbsp;</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="482">
+        <span class="line-no">482</span>
+        <span class="line-code">      <span class="token-comment">// Store result</span></span>
+      </div>
+<div class="walkthrough-line highlight" data-line="483">
+        <span class="line-no">483</span>
+        <span class="line-code">      execution.context.state.nodeResults[node.id] = result;</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="484">
+        <span class="line-no">484</span>
+        <span class="line-code">      execution.context.state.completedNodes.push(node.id);</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="485">
+        <span class="line-no">485</span>
+        <span class="line-code">      </span>
+      </div>
+<div class="walkthrough-line highlight" data-line="486">
+        <span class="line-no">486</span>
+        <span class="line-code">      <span class="token-comment">// Update node execution</span></span>
+      </div>
+<div class="walkthrough-line highlight" data-line="487">
+        <span class="line-no">487</span>
+        <span class="line-code">      nodeExecution.status = <span class="token-string">'completed'</span>;</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="488">
+        <span class="line-no">488</span>
+        <span class="line-code">      nodeExecution.outputs = result;</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="489">
+        <span class="line-no">489</span>
+        <span class="line-code">      nodeExecution.completedAt = <span class=<span class="token-string">"token-keyword"</span>>new</span> Date().toISOString();</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="490">
+        <span class="line-no">490</span>
+        <span class="line-code">&nbsp;</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="491">
+        <span class="line-no">491</span>
+        <span class="line-code">      <span class="token-comment">// Trigger after node execute hook</span></span>
+      </div>
+<div class="walkthrough-line highlight" data-line="492">
+        <span class="line-no">492</span>
+        <span class="line-code">      <span class=<span class="token-string">"token-keyword"</span>>await</span> hooks.afterNodeExecute?.(node, execution.context, result);</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="493">
+        <span class="line-no">493</span>
+        <span class="line-code">&nbsp;</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="494">
+        <span class="line-no">494</span>
+        <span class="line-code">      <span class="token-comment">// Execute next nodes</span></span>
+      </div>
+<div class="walkthrough-line highlight" data-line="495">
+        <span class="line-no">495</span>
+        <span class="line-code">      <span class=<span class="token-string">"token-keyword"</span>>const</span> outgoingConnections = dag.connections.filter(c =&gt; c.source === node.id);</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="496">
+        <span class="line-no">496</span>
+        <span class="line-code">      </span>
+      </div>
+<div class="walkthrough-line highlight" data-line="497">
+        <span class="line-no">497</span>
+        <span class="line-code">      <span class=<span class="token-string">"token-keyword"</span>>for</span> (<span class=<span class="token-string">"token-keyword"</span>>const</span> conn of outgoingConnections) {</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="498">
+        <span class="line-no">498</span>
+        <span class="line-code">        <span class="token-comment">// Check condition</span></span>
+      </div>
+<div class="walkthrough-line highlight" data-line="499">
+        <span class="line-no">499</span>
+        <span class="line-code">        <span class=<span class="token-string">"token-keyword"</span>>if</span> (conn.condition) {</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="500">
+        <span class="line-no">500</span>
+        <span class="line-code">          <span class=<span class="token-string">"token-keyword"</span>>const</span> conditionMet = evaluateCondition(conn.condition, result, execution.context);</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="501">
+        <span class="line-no">501</span>
+        <span class="line-code">          <span class=<span class="token-string">"token-keyword"</span>>if</span> (!conditionMet) continue;</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="502">
+        <span class="line-no">502</span>
+        <span class="line-code">        }</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="503">
+        <span class="line-no">503</span>
+        <span class="line-code">&nbsp;</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="504">
+        <span class="line-no">504</span>
+        <span class="line-code">        <span class=<span class="token-string">"token-keyword"</span>>const</span> nextNode = dag.nodes.find(n =&gt; n.id === conn.target);</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="505">
+        <span class="line-no">505</span>
+        <span class="line-code">        <span class=<span class="token-string">"token-keyword"</span>>if</span> (nextNode) {</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="506">
+        <span class="line-no">506</span>
+        <span class="line-code">          <span class=<span class="token-string">"token-keyword"</span>>await</span> executeNode(nextNode, execution, dag);</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="507">
+        <span class="line-no">507</span>
+        <span class="line-code">        }</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="508">
+        <span class="line-no">508</span>
+        <span class="line-code">      }</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="509">
+        <span class="line-no">509</span>
+        <span class="line-code">&nbsp;</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="510">
+        <span class="line-no">510</span>
+        <span class="line-code">    } <span class=<span class="token-string">"token-keyword"</span>>catch</span> (error) {</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="511">
+        <span class="line-no">511</span>
+        <span class="line-code">      nodeExecution.status = <span class="token-string">'failed'</span>;</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="512">
+        <span class="line-no">512</span>
+        <span class="line-code">      nodeExecution.error = {</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="513">
+        <span class="line-no">513</span>
+        <span class="line-code">        code: <span class="token-string">'NODE_EXECUTION_ERROR'</span>,</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="514">
+        <span class="line-no">514</span>
+        <span class="line-code">        message: error instanceof Error ? error.message : String(error),</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="515">
+        <span class="line-no">515</span>
+        <span class="line-code">        nodeId: node.id,</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="516">
+        <span class="line-no">516</span>
+        <span class="line-code">      };</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="517">
+        <span class="line-no">517</span>
+        <span class="line-code">      execution.context.state.failedNodes.push(node.id);</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="518">
+        <span class="line-no">518</span>
+        <span class="line-code">      <span class=<span class="token-string">"token-keyword"</span>>throw</span> error;</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="519">
+        <span class="line-no">519</span>
+        <span class="line-code">    } finally {</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="520">
+        <span class="line-no">520</span>
+        <span class="line-code">      <span class="token-comment">// Remove <span class=<span class="token-string">"token-keyword"</span>>from</span> active</span></span>
+      </div>
+<div class="walkthrough-line highlight" data-line="521">
+        <span class="line-no">521</span>
+        <span class="line-code">      execution.context.state.activeNodes = execution.context.state.activeNodes.filter(</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="522">
+        <span class="line-no">522</span>
+        <span class="line-code">        id =&gt; id !== node.id</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="523">
+        <span class="line-no">523</span>
+        <span class="line-code">      );</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="524">
+        <span class="line-no">524</span>
+        <span class="line-code">    }</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="525">
+        <span class="line-no">525</span>
+        <span class="line-code">  }</span>
+      </div>
+<div class="walkthrough-line dim" data-line="526">
+        <span class="line-no">526</span>
+        <span class="line-code">&nbsp;</span>
+      </div>
+<div class="walkthrough-line dim" data-line="527">
+        <span class="line-no">527</span>
+        <span class="line-code">  /**</span>
+      </div></pre>
+  </div>
+</div>
+  </div>
+</div>
+</section>
+
+<section id="orchestrator" class="reveal">
+  <h2>The orchestrator layer</h2>
+  <p>While the workflow engine runs deterministic graphs in-process, the orchestrator package (<code>packages/@allternit/orchestrator</code>) manages long-lived agent sessions across backends: local terminal, multiplexer, kernel, cloud, and delegated executors.</p>
+
+  <h3>Session lifecycle</h3>
+  <ul>
+    <li>A <code>SessionSpec</code> defines the agent vendor, launch command, working directory, isolation strategy, task file, and completion sentinel.</li>
+    <li>An <code>ExecutorBackend</code> spawns the session, sends prompts, tails output, watches for completion, and kills the session.</li>
+    <li><code>SessionRegistry</code> tracks active sessions and emits <code>session.spawned</code>, <code>session.prompted</code>, <code>session.done</code>, and related events.</li>
+    <li>The completion contract is a YAML-frontmatter notes file; its existence is the only completion signal.</li>
+  </ul>
+
+  <div class="code-block">
+    <div class="code-header">
+      <span class="code-lang">typescript</span>
+      <button class="code-copy">Copy</button>
+    </div>
+    <pre><code>import { LocalTerminalBackend } from '@allternit/orchestrator';
+
+const backend = new LocalTerminalBackend();
+
+const session = await backend.spawn({
+  slug: 'refactor-payment-service',
+  workdir: '/workspace',
+  vendor: 'kimi',
+  mode: 'headless',
+  launchCommand: 'gizzi --mode headless',
+  notesFile: '.allternit/notes.yaml',
+  timeoutMs: 600_000,
+});
+
+await backend.send(session, 'Refactor the payment service to use the new harness.');
+const outcome = await backend.watch(session, session.spec);
+console.log(outcome.kind); // 'done' | 'dead' | 'timeout'</code></pre>
+  </div>
+
+  <div class="callout success">
+    <p><strong>Verified send.</strong> The orchestrator pastes a prompt, reads it back, and submits only when the pasted text matches, preventing partial or corrupted instructions.</p>
+  </div>
+</section>
+
+<section id="advanced" class="reveal">
+  <h2>Advanced agent store</h2>
+  <p>The platform surface in <code>surfaces/ai.allternit.com/src/lib/agents/agent-advanced.store.ts</code> exposes graph concepts through a Zustand store: subagents, swarms, workflows, templates, and advanced configuration. These map to the orchestrator and workflow engine underneath.</p>
+
+  <h3>Subagents</h3>
+  <p>A parent agent can spawn subagents with scoped configs. The store fetches, creates, updates, and deletes subagents under a parent agent id and exposes a <code>spawnSubagent</code> action that returns a run id.</p>
+
+  <h3>Swarms</h3>
+  <p>Swarms are multi-agent runs. The store supports creating a swarm, joining agents with roles, starting a run, and exchanging messages. Swarm events update the store reactively.</p>
+
+  <h3>Workflows</h3>
+  <p>Workflows are scoped per agent. <code>executeWorkflow</code> posts to <code>/api/v1/agents/:agentId/workflows/:workflowId/execute</code> and stores the resulting execution state keyed by run id. Pause and resume actions map to the workflow engine's lifecycle.</p>
+
+  <div class="code-block">
+    <div class="code-header">
+      <span class="code-lang">typescript</span>
+      <button class="code-copy">Copy</button>
+    </div>
+    <pre><code>const runId = await useAdvancedAgentStore.getState().executeWorkflow(
+  agentId,
+  workflowId,
+  { ticketId: 'T-1234', sentiment: 'negative' }
+);
+
+const execution = useAdvancedAgentStore.getState().workflowExecutions[runId];
+console.log(execution.status); // pending | running | completed | failed</code></pre>
+  </div>
+
+  <div class="asciinema-wrapper alabs-media" data-media-id="agents-api-m10-graph-demo">
+  <asciinema-player src="data:application/json;base64,eyJ2ZXJzaW9uIjogMiwgIndpZHRoIjogODAsICJoZWlnaHQiOiAyNCwgInRpbWVzdGFtcCI6IDE3NTg0NTEwMDAsICJlbnYiOiB7IlNIRUxMIjogIi9iaW4venNoIiwgIlRFUk0iOiAieHRlcm0tMjU2Y29sb3IifX0KWzAuMDAwMDAwLCAibyIsICIkIGNhdCBydW4tc3VwcG9ydC13b3JrZmxvdy50c1xyXG4iXQpbMC44MDAwMDAsICJvIiwgImltcG9ydCB7IGNyZWF0ZVdvcmtmbG93RW5naW5lIH0gZnJvbSAnQGFsbHRlcm5pdC93b3JrZmxvdy1lbmdpbmUnO1xyXG5cclxuIl0KWzEuMjAwMDAwLCAibyIsICJjb25zdCBlbmdpbmUgPSBjcmVhdGVXb3JrZmxvd0VuZ2luZSgpO1xyXG5cclxuIl0KWzEuNTAwMDAwLCAibyIsICJlbmdpbmUucmVnaXN0ZXJXb3JrZmxvdyh7XHJcbiJdClsxLjcwMDAwMCwgIm8iLCAiICBpZDogJ3N1cHBvcnQtdHJpYWdlJyxcclxuIl0KWzEuOTAwMDAwLCAibyIsICIgIG5hbWU6ICdTdXBwb3J0IHRpY2tldCB0cmlhZ2UnLFxyXG4iXQpbMi4xMDAwMDAsICJvIiwgIiAgdmVyc2lvbjogJzEuMC4wJyxcclxuIl0KWzIuMzAwMDAwLCAibyIsICIgIG5vZGVzOiBbXHJcbiJdClsyLjUwMDAwMCwgIm8iLCAiICAgIHsgaWQ6ICd0cmlnZ2VyJywgdHlwZTogJ3RyaWdnZXI6bWFudWFsJywgbmFtZTogJ1N0YXJ0JyB9LFxyXG4iXQpbMi43MDAwMDAsICJvIiwgIiAgICB7IGlkOiAnY2xhc3NpZnknLCB0eXBlOiAnY29uZGl0aW9uOmlmJywgbmFtZTogJ0NsYXNzaWZ5JyxcclxuIl0KWzIuOTAwMDAwLCAibyIsICIgICAgICBjb25maWc6IHsgY29uZGl0aW9uOiAnZGF0YS5zZW50aW1lbnQgPT09IFwibmVnYXRpdmVcIicgfSB9LFxyXG4iXQpbMy4xMDAwMDAsICJvIiwgIiAgICB7IGlkOiAnZHJhZnQnLCB0eXBlOiAnb3V0cHV0OnJlc3VsdCcsIG5hbWU6ICdEcmFmdCByZXBseScgfSxcclxuIl0KWzMuMzAwMDAwLCAibyIsICIgICAgeyBpZDogJ2VzY2FsYXRlJywgdHlwZTogJ291dHB1dDpyZXN1bHQnLCBuYW1lOiAnRXNjYWxhdGUnIH0sXHJcbiJdClszLjUwMDAwMCwgIm8iLCAiICBdLFxyXG4iXQpbMy43MDAwMDAsICJvIiwgIiAgY29ubmVjdGlvbnM6IFtcclxuIl0KWzMuOTAwMDAwLCAibyIsICIgICAgeyBpZDogJ2MxJywgc291cmNlOiAndHJpZ2dlcicsIHRhcmdldDogJ2NsYXNzaWZ5JyB9LFxyXG4iXQpbNC4xMDAwMDAsICJvIiwgIiAgICB7IGlkOiAnYzInLCBzb3VyY2U6ICdjbGFzc2lmeScsIHNvdXJjZVBvcnQ6ICd0cnVlJywgdGFyZ2V0OiAnZXNjYWxhdGUnIH0sXHJcbiJdCls0LjMwMDAwMCwgIm8iLCAiICAgIHsgaWQ6ICdjMycsIHNvdXJjZTogJ2NsYXNzaWZ5Jywgc291cmNlUG9ydDogJ2ZhbHNlJywgdGFyZ2V0OiAnZHJhZnQnIH0sXHJcbiJdCls0LjUwMDAwMCwgIm8iLCAiICBdLFxyXG4iXQpbNC43MDAwMDAsICJvIiwgIn0pO1xyXG5cclxuIl0KWzUuMjAwMDAwLCAibyIsICJjb25zdCByZXN1bHQgPSBhd2FpdCBlbmdpbmUuZXhlY3V0ZSgnc3VwcG9ydC10cmlhZ2UnLCB7XHJcbiJdCls1LjQwMDAwMCwgIm8iLCAiICBzZW50aW1lbnQ6ICduZWdhdGl2ZScsXHJcbiJdCls1LjYwMDAwMCwgIm8iLCAiICBib2R5OiAnRGFzaGJvYXJkIGtlZXBzIHRpbWluZyBvdXQuJ1xyXG4iXQpbNS44MDAwMDAsICJvIiwgIn0pO1xyXG5cclxuIl0KWzYuMjAwMDAwLCAibyIsICJjb25zb2xlLmxvZyhyZXN1bHQuc3RhdHVzLCByZXN1bHQub3V0cHV0cyk7XHJcbiJdCls3LjAwMDAwMCwgIm8iLCAiJCBucHggdHN4IHJ1bi1zdXBwb3J0LXdvcmtmbG93LnRzXHJcbiJdCls4LjAwMDAwMCwgIm8iLCAicnVubmluZ1xyXG4iXQpbOC41MDAwMDAsICJvIiwgImNvbXBsZXRlZFxyXG4iXQpbOS4wMDAwMDAsICJvIiwgInsgJ291dHB1dDpyZXN1bHQnOiB7IG1lc3NhZ2U6ICdFc2NhbGF0ZScgfSB9XHJcbiJdClsxMC4wMDAwMDAsICJvIiwgIiQgIiBd" theme="monokai" speed="1.2" cols="80" rows="24"></asciinema-player>
+</div>
+</section>
+
+<section id="quizzes" class="reveal">
+  <h2>Check your understanding</h2>
+
+  <div class="quiz" id="quiz1">
+    <div class="quiz-header">
+      <span class="quiz-num">1</span>
+      <h3>Which workflow node type is used to route execution down one of several branches?</h3>
+    </div>
+    <div class="quiz-options">
+      <div class="quiz-option" onclick="selectOption(this, 1, 0)">
+        <span class="radio"></span>
+        <code>loop:for-each</code>
+      </div>
+      <div class="quiz-option" onclick="selectOption(this, 1, 1)">
+        <span class="radio"></span>
+        <code>condition:if</code>
+      </div>
+      <div class="quiz-option" onclick="selectOption(this, 1, 2)">
+        <span class="radio"></span>
+        <code>transform:map</code>
+      </div>
+    </div>
+    <div class="quiz-feedback" id="feedback1"></div>
+    <button class="quiz-retry" id="retry1" onclick="QuizEngine.reset(1)">Retry</button>
+  </div>
+
+  <div class="quiz" id="quiz2">
+    <div class="quiz-header">
+      <span class="quiz-num">2</span>
+      <h3>What makes the orchestrator's <code>send()</code> call "verified"?</h3>
+    </div>
+    <div class="quiz-options">
+      <div class="quiz-option" onclick="selectOption(this, 2, 0)">
+        <span class="radio"></span>
+        It retries until the session acknowledges the prompt
+      </div>
+      <div class="quiz-option" onclick="selectOption(this, 2, 1)">
+        <span class="radio"></span>
+        It pastes the prompt, reads it back, and submits only on match
+      </div>
+      <div class="quiz-option" onclick="selectOption(this, 2, 2)">
+        <span class="radio"></span>
+        It signs the prompt with the session's virtual key
+      </div>
+    </div>
+    <div class="quiz-feedback" id="feedback2"></div>
+    <button class="quiz-retry" id="retry2" onclick="QuizEngine.reset(2)">Retry</button>
+  </div>
+
+  <div class="quiz" id="quiz3">
+    <div class="quiz-header">
+      <span class="quiz-num">3</span>
+      <h3>In the workflow engine, when does a node execute?</h3>
+    </div>
+    <div class="quiz-options">
+      <div class="quiz-option" onclick="selectOption(this, 3, 0)">
+        <span class="radio"></span>
+        Immediately when the workflow starts
+      </div>
+      <div class="quiz-option" onclick="selectOption(this, 3, 1)">
+        <span class="radio"></span>
+        When all upstream dependency nodes have produced results
+      </div>
+      <div class="quiz-option" onclick="selectOption(this, 3, 2)">
+        <span class="radio"></span>
+        Only after the orchestrator sends an explicit signal
+      </div>
+    </div>
+    <div class="quiz-feedback" id="feedback3"></div>
+    <button class="quiz-retry" id="retry3" onclick="QuizEngine.reset(3)">Retry</button>
+  </div>
+</section>
+
+<section id="capstone" class="reveal">
+  <div class="capstone">
+    <h2>Capstone: design a support-triage graph</h2>
+    <p>Build a workflow in the Allternit Workflow Engine that triages incoming support tickets. Your graph must demonstrate routing, chaining, and parallelization:</p>
+    <div class="capstone-grid">
+      <div class="capstone-item">
+        <h4>1. Route</h4>
+        <p>Use a <code>condition:if</code> node to branch negative-sentiment tickets to escalation and others to drafting.</p>
+      </div>
+      <div class="capstone-item">
+        <h4>2. Chain</h4>
+        <p>On the drafting branch, chain a lookup node to a response-generation node before returning a result.</p>
+      </div>
+      <div class="capstone-item">
+        <h4>3. Parallelize</h4>
+        <p>On the escalation branch, run a sentiment analysis and an urgency check in parallel, then merge.</p>
+      </div>
+      <div class="capstone-item">
+        <h4>4. Integrate</h4>
+        <p>Wire the workflow into the advanced agent store so it can be triggered from the platform UI.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+
+  <footer>
+    <p>A://Labs — AGENTS Tier — Module 10: Engineering: Graph</p>
+    <p style="margin-top:4px;">Generated from <code>packages/@allternit/workflow-engine</code> · Allternit Internal</p>
+  </footer>
+
+  <script>
+    // ========================
+    // Shared: Scroll Progress & Nav
+    // ========================
+    const progressBar = document.getElementById('progress-bar');
+    const navLinks = document.querySelectorAll('.nav-links a');
+    const sections = document.querySelectorAll('section[id], section[class*="reveal"]');
+
+    function updateProgress() {
+      const scrollTop = window.scrollY;
+      const docHeight = document.documentElement.scrollHeight - window.innerHeight;
+      const pct = (scrollTop / docHeight) * 100;
+      progressBar.style.width = pct + '%';
+
+      let current = '';
+      sections.forEach(sec => {
+        const top = sec.offsetTop - 100;
+        if (scrollTop >= top) {
+          current = sec.getAttribute('id') || '';
+        }
+      });
+      navLinks.forEach(link => {
+        link.classList.toggle('active', link.dataset.section === current);
+      });
+    }
+    window.addEventListener('scroll', updateProgress, { passive: true });
+    updateProgress();
+
+    // ========================
+    // Shared: Scroll Reveal
+    // ========================
+    const revealObserver = new IntersectionObserver((entries) => {
+      entries.forEach(e => { if (e.isIntersecting) e.target.classList.add('visible'); });
+    }, { threshold: 0.08 });
+    document.querySelectorAll('.reveal').forEach(el => revealObserver.observe(el));
+
+    // ========================
+    // Shared: Quiz Engine
+    // ========================
+    window.QuizEngine = {
+      answers: {},
+      feedback: {},
+
+      init(answers, feedback) {
+        this.answers = answers;
+        this.feedback = feedback;
+      },
+
+      selectOption(el, quizNum, optionIdx) {
+        const quizEl = document.getElementById('quiz' + quizNum);
+        const options = quizEl.querySelectorAll('.quiz-option');
+        const feedback = document.getElementById('feedback' + quizNum);
+        const retryBtn = document.getElementById('retry' + quizNum);
+
+        // Disable all options
+        options.forEach(opt => {
+          opt.style.pointerEvents = 'none';
+          opt.classList.remove('selected');
+        });
+        el.classList.add('selected');
+
+        const correct = this.answers[quizNum] === optionIdx;
+        if (correct) {
+          el.classList.add('correct');
+          feedback.className = 'quiz-feedback show correct';
+          feedback.textContent = this.feedback[quizNum].correct;
+        } else {
+          el.classList.add('wrong');
+          options[this.answers[quizNum]].classList.add('correct');
+          feedback.className = 'quiz-feedback show wrong';
+          feedback.textContent = this.feedback[quizNum].wrong;
+          if (retryBtn) retryBtn.classList.add('show');
+        }
+      },
+
+      reset(quizNum) {
+        const quizEl = document.getElementById('quiz' + quizNum);
+        const options = quizEl.querySelectorAll('.quiz-option');
+        const feedback = document.getElementById('feedback' + quizNum);
+        const retryBtn = document.getElementById('retry' + quizNum);
+
+        options.forEach(opt => {
+          opt.style.pointerEvents = '';
+          opt.classList.remove('selected', 'correct', 'wrong');
+        });
+        feedback.className = 'quiz-feedback';
+        feedback.textContent = '';
+        if (retryBtn) retryBtn.classList.remove('show');
+      }
+    };
+
+    // Alias for backward compatibility
+    function selectOption(el, quizNum, optionIdx) {
+      window.QuizEngine.selectOption(el, quizNum, optionIdx);
+    }
+
+    // ========================
+    // Shared: Code Copy
+    // ========================
+    document.querySelectorAll('.code-copy').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const pre = btn.closest('.code-block').querySelector('pre');
+        navigator.clipboard.writeText(pre.textContent).then(() => {
+          btn.textContent = 'Copied!';
+          setTimeout(() => btn.textContent = 'Copy', 1500);
+        });
+      });
+    });
+
+    // ========================
+    // Shared: Walkthrough Engine
+    // ========================
+    window.Walkthrough = {
+      init(id) {
+        const container = document.querySelector(`[data-walkthrough-container="${id}"]`);
+        if (!container) return;
+        const steps = container.querySelectorAll(`[data-walkthrough="${id}"]`);
+        if (steps.length === 0) return;
+        steps.forEach((step, idx) => { step.classList.toggle('active', idx === 0); });
+        this.updateControls(id, 0);
+      },
+
+      step(id, delta) {
+        const container = document.querySelector(`[data-walkthrough-container="${id}"]`);
+        if (!container) return;
+        const steps = Array.from(container.querySelectorAll(`[data-walkthrough="${id}"]`));
+        const current = steps.findIndex(s => s.classList.contains('active'));
+        const next = Math.max(0, Math.min(steps.length - 1, current + delta));
+        steps.forEach((step, idx) => { step.classList.toggle('active', idx === next); });
+        this.updateControls(id, next);
+      },
+
+      updateControls(id, activeIndex) {
+        const controls = document.querySelector(`[data-walkthrough-controls="${id}"]`);
+        if (!controls) return;
+        const steps = controls.closest('.walkthrough-container').querySelectorAll(`[data-walkthrough="${id}"]`);
+        const currentSpan = controls.querySelector('.current');
+        const prevBtn = controls.querySelector('.walkthrough-prev');
+        const nextBtn = controls.querySelector('.walkthrough-next');
+        if (currentSpan) currentSpan.textContent = activeIndex + 1;
+        if (prevBtn) prevBtn.disabled = activeIndex === 0;
+        if (nextBtn) nextBtn.disabled = activeIndex === steps.length - 1;
+      }
+    };
+
+    document.querySelectorAll('[data-walkthrough-container]').forEach(container => {
+      const id = container.getAttribute('data-walkthrough-container');
+      if (id) window.Walkthrough.init(id);
+    });
+
+    // ========================
+    // Module-specific JS injection point
+    // ========================
+    // Initialize quiz engine
+    window.QuizEngine.init({"1":1,"2":1,"3":1}, {"1":{"correct":"Correct. condition:if evaluates a boolean expression and routes data to either the true or false output port.","wrong":"Not quite. loop:for-each iterates arrays and transform:map applies an expression. condition:if is the routing primitive."},"2":{"correct":"Correct. The ExecutorBackend sends by pasting the prompt, reading it back, and submitting only when the pasted text matches, preventing partial instructions.","wrong":"Not quite. Verified send is about paste/read-back matching, not retries or cryptographic signing."},"3":{"correct":"Correct. executeNode() checks incoming connections and waits until every dependency node has a completed result before running.","wrong":"Not quite. Nodes do not run immediately or wait for external orchestrator signals; they run once their dependency graph is satisfied."}});
+
+    
+const canvas = document.getElementById('graphNetworkCanvas');
+if (canvas) {
+  const ctx = canvas.getContext('2d');
+  function resize() {
+    canvas.width = canvas.offsetWidth;
+    canvas.height = canvas.offsetHeight;
+  }
+  window.addEventListener('resize', resize);
+  resize();
+  const nodes = Array.from({ length: 24 }, () => ({
+    x: Math.random() * canvas.width,
+    y: Math.random() * canvas.height,
+    vx: (Math.random() - 0.5) * 0.6,
+    vy: (Math.random() - 0.5) * 0.6,
+  }));
+  function draw() {
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    ctx.fillStyle = '#ec4899';
+    nodes.forEach((n) => {
+      n.x += n.vx;
+      n.y += n.vy;
+      if (n.x < 0 || n.x > canvas.width) n.vx *= -1;
+      if (n.y < 0 || n.y > canvas.height) n.vy *= -1;
+      ctx.beginPath();
+      ctx.arc(n.x, n.y, 2, 0, Math.PI * 2);
+      ctx.fill();
+    });
+    ctx.strokeStyle = 'rgba(236,72,153,0.12)';
+    for (let i = 0; i < nodes.length; i++) {
+      for (let j = i + 1; j < nodes.length; j++) {
+        const dx = nodes[i].x - nodes[j].x;
+        const dy = nodes[i].y - nodes[j].y;
+        const d = Math.sqrt(dx * dx + dy * dy);
+        if (d < 120) {
+          ctx.beginPath();
+          ctx.moveTo(nodes[i].x, nodes[i].y);
+          ctx.lineTo(nodes[j].x, nodes[j].y);
+          ctx.stroke();
+        }
+      }
+    }
+    requestAnimationFrame(draw);
+  }
+  draw();
+}
+  </script>
+</body>
+</html>

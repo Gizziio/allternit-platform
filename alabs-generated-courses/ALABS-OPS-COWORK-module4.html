@@ -1,0 +1,1377 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Module 4: Scaling Cowork Across a Team — A://Labs</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+  <style>
+    /* ================================================================
+       A://Labs Module Template — Shared Styles
+       ================================================================ */
+
+    :root {
+      --bg: #0b0b0c;
+      --surface: #151517;
+      --surface-raised: #1c1c1f;
+      --border: #27272a;
+      --border-light: #3f3f46;
+      --text: #e5e5e5;
+      --text-secondary: #a1a1aa;
+      --text-muted: #71717a;
+      --accent: #8b5cf6;
+      --accent-dim: rgba(139,92,246,0.15);
+      --accent-glow: rgba(139,92,246,0.4);
+      --success: #22c55e;
+      --error: #ef4444;
+      --info: #3b82f6;
+      --code-bg: #0f0f11;
+    }
+
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    html {
+      scroll-behavior: smooth;
+      scroll-padding-top: 80px;
+    }
+
+    body {
+      font-family: 'Inter', system-ui, -apple-system, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      line-height: 1.6;
+      overflow-x: hidden;
+    }
+
+    /* Progress Bar */
+    #progress-container {
+      position: fixed;
+      top: 0; left: 0; right: 0;
+      height: 3px;
+      background: var(--surface);
+      z-index: 1000;
+    }
+    #progress-bar {
+      height: 100%;
+      width: 0%;
+      background: linear-gradient(90deg, var(--accent), #a78bfa);
+      box-shadow: 0 0 12px var(--accent-glow);
+      transition: width 0.2s ease;
+    }
+
+    /* Navigation */
+    nav {
+      position: fixed;
+      top: 3px; left: 0; right: 0;
+      background: rgba(11, 11, 12, 0.92);
+      backdrop-filter: blur(16px);
+      border-bottom: 1px solid var(--border);
+      z-index: 999;
+      padding: 0 24px;
+    }
+    .nav-inner {
+      max-width: 1200px;
+      margin: 0 auto;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      height: 56px;
+    }
+    .nav-logo {
+      font-weight: 800;
+      font-size: 0.9rem;
+      letter-spacing: -0.02em;
+      color: var(--text);
+    }
+    .nav-logo span {
+      color: var(--accent);
+    }
+    .nav-links {
+      display: flex;
+      gap: 6px;
+      list-style: none;
+    }
+    .nav-links a {
+      color: var(--text-secondary);
+      text-decoration: none;
+      font-size: 0.78rem;
+      font-weight: 500;
+      padding: 6px 12px;
+      border-radius: 6px;
+      transition: all 0.2s;
+      white-space: nowrap;
+    }
+    .nav-links a:hover, .nav-links a.active {
+      color: var(--accent);
+      background: var(--accent-dim);
+    }
+    .nav-tier {
+      font-size: 0.65rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: var(--accent);
+      border: 1px solid var(--accent);
+      padding: 3px 8px;
+      border-radius: 4px;
+    }
+    .nav-toggle {
+      display: none;
+      background: none;
+      border: none;
+      color: var(--text);
+      font-size: 1.4rem;
+      cursor: pointer;
+    }
+    @media (max-width: 768px) {
+      .nav-links { display: none; position: absolute; top: 56px; left: 0; right: 0; background: var(--surface); flex-direction: column; padding: 12px; gap: 4px; border-bottom: 1px solid var(--border); }
+      .nav-links.open { display: flex; }
+      .nav-toggle { display: block; }
+    }
+
+    /* Sections */
+    section {
+      padding: 80px 24px;
+      max-width: 860px;
+      margin: 0 auto;
+      position: relative;
+    }
+
+    /* Hero */
+    .hero {
+      min-height: 90vh;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: flex-start;
+      padding-top: 100px;
+    }
+    .hero-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 0.7rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+      color: var(--accent);
+      background: var(--accent-dim);
+      border: 1px solid rgba(139,92,246,0.25);
+      padding: 6px 14px;
+      border-radius: 100px;
+      margin-bottom: 24px;
+    }
+    .hero-badge::before {
+      content: '';
+      width: 6px; height: 6px;
+      background: var(--accent);
+      border-radius: 50%;
+      box-shadow: 0 0 8px var(--accent);
+      animation: pulse 2s ease-in-out infinite;
+    }
+    @keyframes pulse {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.4; }
+    }
+    .hero h1 {
+      font-size: clamp(2.2rem, 5vw, 3.8rem);
+      font-weight: 900;
+      line-height: 1.1;
+      letter-spacing: -0.03em;
+      margin-bottom: 20px;
+    }
+    .hero h1 em {
+      color: var(--accent);
+      font-style: normal;
+    }
+    .hero p {
+      font-size: 1.15rem;
+      color: var(--text-secondary);
+      max-width: 600px;
+      margin-bottom: 32px;
+      line-height: 1.7;
+    }
+    .hero-meta {
+      display: flex;
+      gap: 24px;
+      font-size: 0.8rem;
+      color: var(--text-muted);
+    }
+
+    /* Content Typography */
+    h2 {
+      font-size: 1.6rem;
+      font-weight: 700;
+      margin-bottom: 20px;
+      color: var(--text);
+      letter-spacing: -0.01em;
+    }
+    h3 {
+      font-size: 1.15rem;
+      font-weight: 600;
+      margin: 32px 0 12px;
+      color: var(--text);
+    }
+    h4 {
+      font-size: 0.95rem;
+      font-weight: 600;
+      margin: 24px 0 8px;
+      color: var(--text-secondary);
+    }
+    p {
+      margin-bottom: 16px;
+      color: var(--text-secondary);
+      font-size: 0.95rem;
+      line-height: 1.7;
+    }
+    ul, ol {
+      margin: 16px 0;
+      padding-left: 24px;
+      color: var(--text-secondary);
+    }
+    li {
+      margin-bottom: 8px;
+      font-size: 0.95rem;
+      line-height: 1.6;
+    }
+    a {
+      color: var(--accent);
+      text-decoration: none;
+    }
+    a:hover { text-decoration: underline; }
+    strong { color: var(--text); font-weight: 600; }
+    em { color: var(--accent); font-style: normal; }
+
+    /* Code Blocks */
+    .code-block {
+      background: var(--code-bg);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      overflow: hidden;
+      margin: 20px 0;
+    }
+    .code-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 10px 16px;
+      background: rgba(255,255,255,0.03);
+      border-bottom: 1px solid var(--border);
+    }
+    .code-lang {
+      font-size: 0.7rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      color: var(--text-muted);
+    }
+    .code-copy {
+      font-size: 0.7rem;
+      color: var(--text-muted);
+      background: none;
+      border: 1px solid var(--border);
+      padding: 4px 10px;
+      border-radius: 4px;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    .code-copy:hover {
+      color: var(--accent);
+      border-color: var(--accent);
+    }
+    pre {
+      padding: 16px 20px;
+      overflow-x: auto;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.82rem;
+      line-height: 1.6;
+      color: var(--text);
+    }
+    code {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.85em;
+      color: var(--accent);
+      background: rgba(245,158,11,0.08);
+      padding: 2px 5px;
+      border-radius: 3px;
+    }
+    pre code {
+      background: none;
+      padding: 0;
+      color: inherit;
+      font-size: inherit;
+    }
+    .token-keyword { color: #c678dd; }
+    .token-string { color: #98c379; }
+    .token-number { color: #d19a66; }
+    .token-comment { color: #5c6370; font-style: italic; }
+    .token-function { color: #61afef; }
+    .token-type { color: #e5c07b; }
+    .token-operator { color: #56b6c2; }
+
+    /* Callouts */
+    .callout {
+      padding: 16px 20px;
+      border-radius: 8px;
+      border-left: 3px solid var(--accent);
+      background: var(--accent-dim);
+      margin: 20px 0;
+    }
+    .callout.info {
+      border-left-color: var(--info);
+      background: rgba(59,130,246,0.08);
+    }
+    .callout.success {
+      border-left-color: var(--success);
+      background: rgba(34,197,94,0.08);
+    }
+    .callout.error {
+      border-left-color: var(--error);
+      background: rgba(239,68,68,0.08);
+    }
+    .callout p { margin: 0; color: var(--text-secondary); }
+    .callout strong { color: var(--text); }
+
+    /* Tables */
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin: 20px 0;
+      font-size: 0.88rem;
+    }
+    th, td {
+      padding: 10px 14px;
+      text-align: left;
+      border-bottom: 1px solid var(--border);
+    }
+    th {
+      font-weight: 600;
+      color: var(--text);
+      background: var(--surface);
+    }
+    td { color: var(--text-secondary); }
+    tr:hover td { background: rgba(255,255,255,0.02); }
+
+    /* Divider */
+    .divider {
+      height: 1px;
+      background: linear-gradient(90deg, transparent, var(--border), transparent);
+      margin: 60px 0;
+      border: none;
+    }
+
+    /* Scroll Reveal */
+    .reveal {
+      opacity: 0;
+      transform: translateY(24px);
+      transition: opacity 0.6s ease, transform 0.6s ease;
+    }
+    .reveal.visible {
+      opacity: 1;
+      transform: translateY(0);
+    }
+
+    /* Quiz */
+    .quiz {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 24px;
+      margin: 24px 0;
+    }
+    .quiz-header {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 16px;
+    }
+    .quiz-num {
+      width: 32px;
+      height: 32px;
+      border-radius: 50%;
+      background: var(--accent-dim);
+      color: var(--accent);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: 700;
+      font-size: 0.85rem;
+      flex-shrink: 0;
+    }
+    .quiz h3 { margin: 0; font-size: 1rem; }
+    .quiz-options {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+    .quiz-option {
+      padding: 12px 16px;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      cursor: pointer;
+      transition: all 0.2s;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      font-size: 0.9rem;
+      color: var(--text-secondary);
+    }
+    .quiz-option:hover { border-color: var(--border-light); }
+    .quiz-option.selected { border-color: var(--accent); background: var(--accent-dim); color: var(--text); }
+    .quiz-option.correct { border-color: var(--success); background: rgba(34,197,94,0.1); }
+    .quiz-option.wrong { border-color: var(--error); background: rgba(239,68,68,0.1); }
+    .quiz-option .radio {
+      width: 18px;
+      height: 18px;
+      border: 2px solid var(--border-light);
+      border-radius: 50%;
+      flex-shrink: 0;
+      transition: all 0.2s;
+    }
+    .quiz-option.selected .radio { border-color: var(--accent); }
+    .quiz-option.correct .radio { border-color: var(--success); background: var(--success); }
+    .quiz-option.wrong .radio { border-color: var(--error); background: var(--error); }
+    .quiz-feedback {
+      display: none;
+      margin-top: 12px;
+      padding: 12px 16px;
+      border-radius: 8px;
+      font-size: 0.9rem;
+      line-height: 1.5;
+    }
+    .quiz-feedback.show { display: block; }
+    .quiz-feedback.correct { background: rgba(34,197,94,0.1); color: #86efac; border: 1px solid rgba(34,197,94,0.3); }
+    .quiz-feedback.wrong { background: rgba(239,68,68,0.1); color: #fca5a5; border: 1px solid rgba(239,68,68,0.3); }
+    .quiz-retry {
+      margin-top: 12px;
+      padding: 8px 16px;
+      background: var(--surface-raised);
+      border: 1px solid var(--border);
+      color: var(--text-secondary);
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 0.85rem;
+      display: none;
+    }
+    .quiz-retry.show { display: inline-block; }
+    .quiz-retry:hover { border-color: var(--accent); color: var(--accent); }
+
+    /* Capstone */
+    .capstone {
+      background: linear-gradient(135deg, var(--surface) 0%, var(--surface-raised) 100%);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 40px;
+      margin: 40px 0;
+    }
+    .capstone h2 { margin-top: 0; }
+    .capstone-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+      gap: 16px;
+      margin-top: 24px;
+    }
+    .capstone-item {
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 16px;
+    }
+    .capstone-item h4 {
+      color: var(--accent);
+      margin-top: 0;
+      font-size: 0.85rem;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+    .capstone-item p { font-size: 0.85rem; margin: 0; }
+
+    /* Footer */
+    footer {
+      text-align: center;
+      padding: 40px 24px;
+      border-top: 1px solid var(--border);
+      color: var(--text-muted);
+      font-size: 0.85rem;
+    }
+    footer code {
+      background: none;
+      color: var(--text-muted);
+    }
+
+    /* Media assets */
+    .alabs-media {
+      margin: 24px 0;
+      border-radius: 12px;
+      overflow: hidden;
+      border: 1px solid var(--border);
+      background: var(--surface);
+    }
+    .mermaid {
+      padding: 24px;
+      display: flex;
+      justify-content: center;
+      min-height: 120px;
+    }
+    .mermaid svg {
+      max-width: 100%;
+      height: auto;
+    }
+    .asciinema-wrapper {
+      padding: 0;
+      background: var(--code-bg);
+    }
+    .asciinema-wrapper .asciinema-player {
+      width: 100%;
+    }
+
+    /* Walkthrough (Code-Hike-style) */
+    .walkthrough-container {
+      margin: 24px 0;
+    }
+    .walkthrough-controls {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      margin-bottom: 16px;
+      padding: 12px 16px;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+    }
+    .walkthrough-controls button {
+      background: var(--accent-dim);
+      color: var(--accent);
+      border: 1px solid var(--accent);
+      padding: 8px 16px;
+      border-radius: 6px;
+      cursor: pointer;
+      font-weight: 600;
+      font-size: 0.85rem;
+    }
+    .walkthrough-controls button:hover {
+      background: var(--accent);
+      color: var(--bg);
+    }
+    .walkthrough-controls button:disabled {
+      opacity: 0.4;
+      cursor: not-allowed;
+    }
+    .walkthrough-counter {
+      color: var(--text-muted);
+      font-size: 0.85rem;
+      font-variant-numeric: tabular-nums;
+    }
+    .walkthrough-step {
+      display: none;
+      padding: 24px;
+    }
+    .walkthrough-step.active {
+      display: block;
+    }
+    .walkthrough-header {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 16px;
+    }
+    .walkthrough-step-num {
+      font-size: 0.7rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: var(--accent);
+      border: 1px solid var(--accent);
+      padding: 3px 10px;
+      border-radius: 100px;
+    }
+    .walkthrough-header h4 {
+      margin: 0;
+      font-size: 1.1rem;
+      color: var(--text);
+    }
+    .walkthrough-note {
+      background: var(--accent-dim);
+      border-left: 3px solid var(--accent);
+      padding: 16px 20px;
+      border-radius: 0 8px 8px 0;
+      margin-bottom: 20px;
+    }
+    .walkthrough-note p {
+      margin: 0;
+      color: var(--text-secondary);
+    }
+    .walkthrough-code pre {
+      counter-reset: none;
+      padding: 0;
+      background: transparent;
+    }
+    .walkthrough-line {
+      display: flex;
+      padding: 2px 16px;
+      transition: background 0.2s;
+    }
+    .walkthrough-line.dim {
+      opacity: 0.35;
+    }
+    .walkthrough-line.highlight {
+      background: rgba(236, 72, 153, 0.12);
+      border-left: 3px solid var(--accent);
+      margin-left: -3px;
+    }
+    .walkthrough-line .line-no {
+      color: var(--text-muted);
+      font-size: 0.75rem;
+      width: 40px;
+      flex-shrink: 0;
+      text-align: right;
+      padding-right: 16px;
+      user-select: none;
+    }
+    .walkthrough-line .line-code {
+      white-space: pre;
+    }
+    .walkthrough-line.ellipsis {
+      opacity: 0.5;
+      padding: 4px 16px;
+    }
+    .walkthrough-line.ellipsis .line-code {
+      color: var(--text-muted);
+    }
+
+    /* Module-specific styles injection point */
+    
+.hero { position: relative; overflow: hidden; }
+#moduleCanvas { position: absolute; top: 0; left: 0; width: 100%; height: 100%; z-index: -1; opacity: 0.35; pointer-events: none; }
+.quiz-option code { background: rgba(139,92,246,0.12); color: #8b5cf6; }
+
+  </style>
+
+  <script type="module">
+    import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.esm.min.mjs';
+    mermaid.initialize({ startOnLoad: true, theme: 'dark', themeVariables: { primaryColor: '#8b5cf6', primaryTextColor: '#e5e5e5', primaryBorderColor: '#8b5cf6', lineColor: '#a1a1aa', secondaryColor: '#151517', tertiaryColor: '#0b0b0c', fontFamily: 'Inter, system-ui, sans-serif' }});
+  </script>
+
+  <link rel="stylesheet" type="text/css" href="https://cdn.jsdelivr.net/npm/asciinema-player@3/dist/bundle/asciinema-player.css" />
+  <script src="https://cdn.jsdelivr.net/npm/asciinema-player@3/dist/bundle/asciinema-player.min.js"></script>
+</head>
+<body>
+  <div id="progress-container"><div id="progress-bar"></div></div>
+
+  <nav>
+    <div class="nav-inner">
+      <div class="nav-logo">A://<span>Labs</span></div>
+      <ul class="nav-links" id="navLinks">
+        <li><a href="#overview" data-section="overview">Overview</a></li>
+        <li><a href="#rbac" data-section="rbac">RBAC</a></li>
+        <li><a href="#profiles" data-section="profiles">Profiles</a></li>
+        <li><a href="#governance" data-section="governance">Governance</a></li>
+        <li><a href="#rollout" data-section="rollout">Rollout</a></li>
+        <li><a href="#quizzes" data-section="quizzes">Quizzes</a></li>
+        <li><a href="#capstone" data-section="capstone">Capstone</a></li>
+      </ul>
+      <span class="nav-tier">OPS</span>
+      <button class="nav-toggle" onclick="document.getElementById('navLinks').classList.toggle('open')">☰</button>
+    </div>
+  </nav>
+
+  <section id="overview" class="hero reveal">
+  <canvas id="moduleCanvas"></canvas>
+  <span class="hero-badge">OPS Tier</span>
+  <h1>Module 4: <em>Scaling Cowork Across a Team</em></h1>
+  <p>
+    Cowork is powerful for one person, but it becomes a platform when an entire team shares workspaces, personas, and governance.
+    This module shows how Allternit uses RBAC, workspace isolation, permission profiles, and approval gates to roll out Cowork safely.
+  </p>
+  <div class="hero-meta">
+    <span><strong>5 lessons</strong> · ~40 minutes</span>
+    <span>Source: <code>packages/@allternit/cowork-engine</code></span>
+  </div>
+</section>
+
+<section id="rbac" class="reveal">
+  <h2>RBAC and workspace isolation</h2>
+  <p>
+    Allternit's security model scopes every resource — agents, sessions, files, memory — to an <strong>organization</strong> and, where applicable, to an individual user.
+    Organization owners and admins manage workspaces, keys, budgets, DLP rules, and analytics. Members operate inside the workspaces they are assigned.
+  </p>
+  <p>
+    Cowork workspaces follow the same boundary. A workspace is not just a folder; it is a container for shared memory, personas, projects, and audit context.
+    Creating a workspace is an admin action recorded in the audit feed under <code>workspace.create</code>.
+  </p>
+  <table>
+    <thead>
+      <tr><th>Role</th><th>Can manage workspaces</th><th>Can manage keys/budgets</th><th>Can approve high-risk actions</th></tr>
+    </thead>
+    <tbody>
+      <tr><td>Owner</td><td>Yes</td><td>Yes</td><td>Yes</td></tr>
+      <tr><td>Admin</td><td>Yes</td><td>Yes</td><td>Yes</td></tr>
+      <tr><td>Member</td><td>No</td><td>No</td><td>Only if explicitly assigned</td></tr>
+    </tbody>
+  </table>
+  <div class="callout info">
+    <p>
+      <strong>Isolation principle:</strong> every Cowork memory entry is keyed by <code>userId</code> and can be narrowed with <code>projectId</code> or <code>sessionId</code>.
+      Shared workspace context lives at the project or workspace level; personal preferences stay at the user level.
+    </p>
+  </div>
+</section>
+
+<section id="profiles" class="reveal">
+  <h2>Permission profiles as presets</h2>
+  <p>
+    The <code>gizzi-code</code> CLI ships with named permission profiles that bundle sandbox boundaries, network access, tool approvals, and writable roots.
+    Profiles let a team move quickly between restrictive and permissive modes without editing <code>config.toml</code> by hand.
+  </p>
+  <table>
+    <thead>
+      <tr><th>Profile</th><th>Sandbox</th><th>Network</th><th>Best for</th></tr>
+    </thead>
+    <tbody>
+      <tr><td><code>restricted</code></td><td>blocked</td><td>off</td><td>Untrusted code or sensitive repos</td></tr>
+      <tr><td><code>workspace-write</code></td><td>workspace only</td><td>off by default</td><td>Day-to-day engineering tasks</td></tr>
+      <tr><td><code>trusted-review</code></td><td>workspace</td><td>approval required</td><td>Code review in known repositories</td></tr>
+      <tr><td><code>danger-full-access</code></td><td>disabled</td><td>on</td><td>Only when the environment already isolates processes</td></tr>
+    </tbody>
+  </table>
+  <p>
+    Custom profiles live in <code>~/.gizzi/profiles/&lt;name&gt;.toml</code>. The CLI loads configuration in this order:
+    user defaults → named profile → project overrides → CLI flags.
+    Because the profile is a layer above your base config, it only needs to contain the values that differ.
+  </p>
+  <div class="code-block">
+    <div class="code-header"><span class="code-lang">toml</span><button class="code-copy">Copy</button></div>
+    <pre><code># ~/.gizzi/profiles/team-review.toml
+[permissions]
+approval_policy = "on-request"
+sandbox_mode = "workspace-write"
+network_access = true
+allow_login_shell = false
+
+[permissions.sandbox_workspace_write]
+writable_roots = ["/path/to/workspace"]
+
+[permissions.tools]
+allow_bash = true
+allow_filesystem_write = false
+allow_subagents = "on-request"</code></pre>
+  </div>
+  <div class="asciinema-wrapper alabs-media" data-media-id="ops-cowork-m4-permission-demo">
+  <asciinema-player src="data:application/json;base64,eyJ2ZXJzaW9uIjogMiwgIndpZHRoIjogODAsICJoZWlnaHQiOiAxOCwgInRpbWVzdGFtcCI6IDE3MDAwMDAwMDAsICJlbnYiOiB7IlNIRUxMIjogIi9iaW4vYmFzaCIsICJURVJNIjogInh0ZXJtLTI1NmNvbG9yIn19ClswLjAsICJvIiwgIlx1MDAxYlsxOzMybSRcdTAwMWJbMG0gZ2l6emkgY29uZmlnIHBlcm1pc3Npb24tcHJvZmlsZXMgbGlzdFxyXG4iXQpbMC42LCAibyIsICJyZXN0cmljdGVkXHJcbndvcmtzcGFjZS13cml0ZVxyXG50cnVzdGVkLXJldmlld1xyXG5kYW5nZXItZnVsbC1hY2Nlc3NcclxuIl0KWzEuMiwgIm8iLCAiXHUwMDFiWzE7MzJtJFx1MDAxYlswbSBnaXp6aSBjb25maWcgcGVybWlzc2lvbi1wcm9maWxlcyBzaG93IHJlc3RyaWN0ZWRcclxuIl0KWzEuOCwgIm8iLCAiW3Blcm1pc3Npb25zXVxyXG5hcHByb3ZhbF9wb2xpY3kgPSBcInVudHJ1c3RlZFwiXHJcbnNhbmRib3hfbW9kZSA9IFwicmVzdHJpY3RlZFwiXHJcbm5ldHdvcmtfYWNjZXNzID0gZmFsc2VcclxuYWxsb3dfbG9naW5fc2hlbGwgPSBmYWxzZVxyXG4iXQpbMi44LCAibyIsICJcdTAwMWJbMTszMm0kXHUwMDFiWzBtIGdpenppIC0tcHJvZmlsZSB3b3Jrc3BhY2Utd3JpdGUgYWRtaW4gd29ya3NwYWNlcyBjcmVhdGUgLS1uYW1lIEVuZ2luZWVyaW5nIC0tc2x1ZyBlbmdcclxuIl0KWzMuNiwgIm8iLCAiXHUwMDFiWzkwbeKGklx1MDAxYlswbSBDcmVhdGVkIHdvcmtzcGFjZSB3c19lbmdfMDFKOFouLi5cclxuIl0KWzQuMiwgIm8iLCAiXHUwMDFiWzE7MzJtJFx1MDAxYlswbSBnaXp6aSBhZG1pbiB3b3Jrc3BhY2VzIGxpc3RcclxuIl0KWzQuOCwgIm8iLCAiTkFNRSAgICAgICAgU0xVRyAgIE1FTUJFUlNcclxuRW5naW5lZXJpbmcgZW5nICAgIDFcclxuIl0KWzUuNSwgIm8iLCAiXHUwMDFiWzE7MzJtJFx1MDAxYlswbSBnaXp6aSAtLXByb2ZpbGUgcmVzdHJpY3RlZCBjb3dvcmsgcnVuIFwiTGlzdCB0b3Agb3BlbiBQUnNcIlxyXG4iXQpbNi4yLCAibyIsICJcdTAwMWJbOTBt4oaSXHUwMDFiWzBtIEFwcHJvdmFsIHJlcXVpcmVkOiBnaXRodWIubGlzdF9wdWxsX3JlcXVlc3RzXHJcbiJdCls3LjAsICJvIiwgIlx1MDAxYlsxOzMzbT9cdTAwMWJbMG0gQWxsb3cgdGhpcyB0b29sIGNhbGw/ICh5L04pIFxyXG4iXQ==" theme="monokai" speed="1.2" cols="80" rows="24"></asciinema-player>
+</div>
+</section>
+
+<section id="governance" class="reveal">
+  <h2>Governance with approval gates</h2>
+  <p>
+    Even with the right profile, some actions are too risky to run unattended. The Cowork engine's <code>ApprovalGate</code> class turns risky actions into explicit requests.
+  </p>
+  <p>
+    Each pending approval carries a <code>riskLevel</code> of <code>low</code>, <code>medium</code>, <code>high</code>, or <code>critical</code>, plus a summary, action type, target, arguments, and consequence.
+    Auto-rules can approve low-risk actions instantly; everything else waits for a human.
+  </p>
+  <div class="code-block">
+    <div class="code-header"><span class="code-lang">typescript</span><button class="code-copy">Copy</button></div>
+    <pre><code>const gate = new ApprovalGate({
+  defaultTimeoutMs: 120_000,
+  autoRules: ApprovalGate.buildDefaultRules(),
+  onRequest: (approval) => ui.showApprovalCard(approval),
+  onResult: (result) => audit.recordDecision(result),
+});
+
+const result = await gate.request({
+  actionId: 'write-package-json',
+  sessionId: session.id,
+  riskLevel: 'high',
+  summary: 'Modify package manifest',
+  details: {
+    actionType: 'filesystem.write',
+    target: 'package.json',
+    args: { content: '...' },
+    consequence: 'Changes project dependencies',
+  },
+});</code></pre>
+  </div>
+  <div class="walkthrough-container" data-walkthrough-container="ops-cowork-m4-approval-gate-walkthrough">
+  <div class="walkthrough-controls" data-walkthrough-controls="ops-cowork-m4-approval-gate-walkthrough">
+  <button class="walkthrough-prev" onclick="Walkthrough.step('ops-cowork-m4-approval-gate-walkthrough', -1)">← Previous</button>
+  <span class="walkthrough-counter"><span class="current">1</span> / 4</span>
+  <button class="walkthrough-next" onclick="Walkthrough.step('ops-cowork-m4-approval-gate-walkthrough', 1)">Next →</button>
+</div>
+  <div class="walkthrough-steps">
+    <div class="walkthrough-step alabs-media" id="ops-cowork-m4-approval-gate-walkthrough-step-0" data-walkthrough="ops-cowork-m4-approval-gate-walkthrough" data-step="0">
+  <div class="walkthrough-header">
+    <span class="walkthrough-step-num">Step 1</span>
+    <h4>ApprovalGate options and rules</h4>
+  </div>
+  <div class="walkthrough-note">
+    <p>The gate is initialized with auto-rules, a default timeout of 120s, and optional callbacks for request/result events. These hooks are how the Cowork UI surfaces approval requests to operators.</p>
+  </div>
+  <div class="code-block walkthrough-code">
+    <div class="code-header">
+      <span class="code-lang">typescript</span>
+      <span class="code-path">packages/@allternit/cowork-engine/src/approval/gate.ts</span>
+    </div>
+    <pre><div class="walkthrough-line dim" data-line="13">
+        <span class="line-no"> 13</span>
+        <span class="line-code">}</span>
+      </div>
+<div class="walkthrough-line dim" data-line="14">
+        <span class="line-no"> 14</span>
+        <span class="line-code">&nbsp;</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="15">
+        <span class="line-no"> 15</span>
+        <span class="line-code"><span class=<span class="token-string">"token-keyword"</span>>export</span> <span class=<span class="token-string">"token-keyword"</span>>interface</span> ApprovalGateOptions {</span>
+      </div>
+<div class="walkthrough-line dim" data-line="16">
+        <span class="line-no"> 16</span>
+        <span class="line-code">  defaultTimeoutMs?: number;</span>
+      </div>
+<div class="walkthrough-line dim" data-line="17">
+        <span class="line-no"> 17</span>
+        <span class="line-code">  autoRules?: ApprovalRule[];</span>
+      </div>
+<div class="walkthrough-line ellipsis"><span class="line-no"></span><span class="line-code">⋮</span></div><div class="walkthrough-line dim" data-line="41">
+        <span class="line-no"> 41</span>
+        <span class="line-code">    <span class=<span class="token-string">"token-keyword"</span>>this</span>.onRequest = opts.onRequest;</span>
+      </div>
+<div class="walkthrough-line dim" data-line="42">
+        <span class="line-no"> 42</span>
+        <span class="line-code">    <span class=<span class="token-string">"token-keyword"</span>>this</span>.onResult = opts.onResult;</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="43">
+        <span class="line-no"> 43</span>
+        <span class="line-code">  }</span>
+      </div>
+<div class="walkthrough-line dim" data-line="44">
+        <span class="line-no"> 44</span>
+        <span class="line-code">&nbsp;</span>
+      </div>
+<div class="walkthrough-line dim" data-line="45">
+        <span class="line-no"> 45</span>
+        <span class="line-code">  <span class=<span class="token-string">"token-keyword"</span>>async</span> request(approval: PendingApproval): Promise&lt;ApprovalResult&gt; {</span>
+      </div></pre>
+  </div>
+</div>
+<div class="walkthrough-step alabs-media" id="ops-cowork-m4-approval-gate-walkthrough-step-1" data-walkthrough="ops-cowork-m4-approval-gate-walkthrough" data-step="1">
+  <div class="walkthrough-header">
+    <span class="walkthrough-step-num">Step 2</span>
+    <h4>Requesting an approval</h4>
+  </div>
+  <div class="walkthrough-note">
+    <p>When a tool call arrives, request() first checks auto-rules. If no rule matches, it stores a pending promise with a timer and notifies the UI via onRequest. Timeouts resolve to a 'timeout' decision so the agent cannot hang forever.</p>
+  </div>
+  <div class="code-block walkthrough-code">
+    <div class="code-header">
+      <span class="code-lang">typescript</span>
+      <span class="code-path">packages/@allternit/cowork-engine/src/approval/gate.ts</span>
+    </div>
+    <pre><div class="walkthrough-line dim" data-line="43">
+        <span class="line-no"> 43</span>
+        <span class="line-code">  }</span>
+      </div>
+<div class="walkthrough-line dim" data-line="44">
+        <span class="line-no"> 44</span>
+        <span class="line-code">&nbsp;</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="45">
+        <span class="line-no"> 45</span>
+        <span class="line-code">  <span class=<span class="token-string">"token-keyword"</span>>async</span> request(approval: PendingApproval): Promise&lt;ApprovalResult&gt; {</span>
+      </div>
+<div class="walkthrough-line dim" data-line="46">
+        <span class="line-no"> 46</span>
+        <span class="line-code">    <span class=<span class="token-string">"token-keyword"</span>>const</span> auto = <span class=<span class="token-string">"token-keyword"</span>>this</span>.matchAutoRule(approval);</span>
+      </div>
+<div class="walkthrough-line dim" data-line="47">
+        <span class="line-no"> 47</span>
+        <span class="line-code">    <span class=<span class="token-string">"token-keyword"</span>>if</span> (auto) {</span>
+      </div>
+<div class="walkthrough-line ellipsis"><span class="line-no"></span><span class="line-code">⋮</span></div><div class="walkthrough-line dim" data-line="77">
+        <span class="line-no"> 77</span>
+        <span class="line-code">      <span class=<span class="token-string">"token-keyword"</span>>this</span>.onRequest?.(approval);</span>
+      </div>
+<div class="walkthrough-line dim" data-line="78">
+        <span class="line-no"> 78</span>
+        <span class="line-code">    });</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="79">
+        <span class="line-no"> 79</span>
+        <span class="line-code">  }</span>
+      </div>
+<div class="walkthrough-line dim" data-line="80">
+        <span class="line-no"> 80</span>
+        <span class="line-code">&nbsp;</span>
+      </div>
+<div class="walkthrough-line dim" data-line="81">
+        <span class="line-no"> 81</span>
+        <span class="line-code">  respond(actionId: string, decision: <span class="token-string">'approved'</span> | <span class="token-string">'rejected'</span>, userNote?: string): boolean {</span>
+      </div></pre>
+  </div>
+</div>
+<div class="walkthrough-step alabs-media" id="ops-cowork-m4-approval-gate-walkthrough-step-2" data-walkthrough="ops-cowork-m4-approval-gate-walkthrough" data-step="2">
+  <div class="walkthrough-header">
+    <span class="walkthrough-step-num">Step 3</span>
+    <h4>Human response and result propagation</h4>
+  </div>
+  <div class="walkthrough-note">
+    <p>respond() lets an operator approve or reject a pending action. It clears the timer, removes the entry, and calls onResult so the audit layer can record the decision.</p>
+  </div>
+  <div class="code-block walkthrough-code">
+    <div class="code-header">
+      <span class="code-lang">typescript</span>
+      <span class="code-path">packages/@allternit/cowork-engine/src/approval/gate.ts</span>
+    </div>
+    <pre><div class="walkthrough-line dim" data-line="79">
+        <span class="line-no"> 79</span>
+        <span class="line-code">  }</span>
+      </div>
+<div class="walkthrough-line dim" data-line="80">
+        <span class="line-no"> 80</span>
+        <span class="line-code">&nbsp;</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="81">
+        <span class="line-no"> 81</span>
+        <span class="line-code">  respond(actionId: string, decision: <span class="token-string">'approved'</span> | <span class="token-string">'rejected'</span>, userNote?: string): boolean {</span>
+      </div>
+<div class="walkthrough-line dim" data-line="82">
+        <span class="line-no"> 82</span>
+        <span class="line-code">    <span class=<span class="token-string">"token-keyword"</span>>const</span> entry = <span class=<span class="token-string">"token-keyword"</span>>this</span>.pending.get(actionId);</span>
+      </div>
+<div class="walkthrough-line dim" data-line="83">
+        <span class="line-no"> 83</span>
+        <span class="line-code">    <span class=<span class="token-string">"token-keyword"</span>>if</span> (!entry) <span class=<span class="token-string">"token-keyword"</span>>return</span> <span class=<span class="token-string">"token-keyword"</span>>false</span>;</span>
+      </div>
+<div class="walkthrough-line ellipsis"><span class="line-no"></span><span class="line-code">⋮</span></div><div class="walkthrough-line dim" data-line="95">
+        <span class="line-no"> 95</span>
+        <span class="line-code">    entry.resolve(result);</span>
+      </div>
+<div class="walkthrough-line dim" data-line="96">
+        <span class="line-no"> 96</span>
+        <span class="line-code">    <span class=<span class="token-string">"token-keyword"</span>>return</span> <span class=<span class="token-string">"token-keyword"</span>>true</span>;</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="97">
+        <span class="line-no"> 97</span>
+        <span class="line-code">  }</span>
+      </div>
+<div class="walkthrough-line dim" data-line="98">
+        <span class="line-no"> 98</span>
+        <span class="line-code">&nbsp;</span>
+      </div>
+<div class="walkthrough-line dim" data-line="99">
+        <span class="line-no"> 99</span>
+        <span class="line-code">  getPending(): PendingApproval[] {</span>
+      </div></pre>
+  </div>
+</div>
+<div class="walkthrough-step alabs-media" id="ops-cowork-m4-approval-gate-walkthrough-step-3" data-walkthrough="ops-cowork-m4-approval-gate-walkthrough" data-step="3">
+  <div class="walkthrough-header">
+    <span class="walkthrough-step-num">Step 4</span>
+    <h4>Default low-risk auto-approval</h4>
+  </div>
+  <div class="walkthrough-note">
+    <p>buildDefaultRules() auto-approves low-risk actions. Teams can extend this with org-specific rules, but high-risk actions like file writes outside the workspace or network calls always escalate to humans.</p>
+  </div>
+  <div class="code-block walkthrough-code">
+    <div class="code-header">
+      <span class="code-lang">typescript</span>
+      <span class="code-path">packages/@allternit/cowork-engine/src/approval/gate.ts</span>
+    </div>
+    <pre><div class="walkthrough-line dim" data-line="145">
+        <span class="line-no">145</span>
+        <span class="line-code">  }</span>
+      </div>
+<div class="walkthrough-line dim" data-line="146">
+        <span class="line-no">146</span>
+        <span class="line-code">&nbsp;</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="147">
+        <span class="line-no">147</span>
+        <span class="line-code">  static buildDefaultRules(): ApprovalRule[] {</span>
+      </div>
+<div class="walkthrough-line dim" data-line="148">
+        <span class="line-no">148</span>
+        <span class="line-code">    <span class=<span class="token-string">"token-keyword"</span>>return</span> [</span>
+      </div>
+<div class="walkthrough-line dim" data-line="149">
+        <span class="line-no">149</span>
+        <span class="line-code">      { riskLevel: [<span class="token-string">'low'</span>], decision: <span class="token-string">'approve'</span>, reason: <span class="token-string">'low-risk auto-approve'</span> },</span>
+      </div>
+<div class="walkthrough-line dim" data-line="150">
+        <span class="line-no">150</span>
+        <span class="line-code">    ];</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="151">
+        <span class="line-no">151</span>
+        <span class="line-code">  }</span>
+      </div>
+<div class="walkthrough-line dim" data-line="152">
+        <span class="line-no">152</span>
+        <span class="line-code">&nbsp;</span>
+      </div>
+<div class="walkthrough-line dim" data-line="153">
+        <span class="line-no">153</span>
+        <span class="line-code">  static riskScore(level: ApprovalRiskLevel): number {</span>
+      </div></pre>
+  </div>
+</div>
+  </div>
+</div>
+</section>
+
+<section id="rollout" class="reveal">
+  <h2>Team rollout flow</h2>
+  <p>
+    A safe rollout follows four phases: provision, profile, pilot, and monitor. The diagram below shows how admin actions, permission decisions, and audit logging fit together.
+  </p>
+  <pre class="mermaid alabs-media" data-media-id="ops-cowork-m4-team-rollout">flowchart LR
+    A[Org Admin] --&gt; B[Create Workspace]
+    B --&gt; C[Assign Members]
+    C --&gt; D[Permission Profile]
+    D --&gt; E{Approval Gate}
+    E --&gt;|low risk| F[Auto-approve]
+    E --&gt;|medium+| G[Human Review]
+    F --&gt; H[Execute Action]
+    G --&gt; I[Approve / Reject / Timeout]
+    I --&gt; H
+    H --&gt; J[Audit Log]
+    J --&gt; K[Compliance Export]
+
+    style A fill:#8b5cf6,stroke:#a78bfa,color:#fff
+    style E fill:#8b5cf6,stroke:#a78bfa,color:#fff
+    style G fill:#f59e0b,stroke:#fbbf24,color:#000
+    style J fill:#22c55e,stroke:#86efac,color:#000</pre>
+  <h3>Phase 1 — Provision</h3>
+  <p>
+    Admins create workspaces that match team boundaries. Use the <code>allternit admin workspaces</code> command group or the admin API.
+    Every create/update/delete call is recorded in the audit feed.
+  </p>
+  <h3>Phase 2 — Profile</h3>
+  <p>
+    Choose or define permission profiles for each workspace's risk level. Start restrictive and relax only after the team demonstrates good review habits.
+    Avoid <code>danger-full-access</code> unless the host environment already isolates processes.
+  </p>
+  <h3>Phase 3 — Pilot</h3>
+  <p>
+    Run a small group through real tasks. Watch approval gate metrics: timeout rate, rejection rate, and average time-to-decision.
+    High timeout rates usually mean the approval UI is interrupting flow too often; tighten auto-rules or split tasks into smaller steps.
+  </p>
+  <h3>Phase 4 — Monitor</h3>
+  <p>
+    Use audit logs and usage events to review who created workspaces, changed roles, and approved risky actions.
+    Compliance endpoints can export or delete workspace data when required.
+  </p>
+</section>
+
+<section id="quizzes" class="reveal">
+  <h2>Check your understanding</h2>
+  <div class="quiz" id="quiz1">
+  <div class="quiz-header">
+    <span class="quiz-num">1</span>
+    <h3>Which permission profile blocks filesystem and network access and requires approval for every tool use?</h3>
+  </div>
+  <div class="quiz-options">
+      <div class="quiz-option" onclick="selectOption(this, 1, 0)">
+        <span class="radio"></span>
+        <span>workspace-write</span>
+      </div>
+      <div class="quiz-option" onclick="selectOption(this, 1, 1)">
+        <span class="radio"></span>
+        <span>restricted</span>
+      </div>
+      <div class="quiz-option" onclick="selectOption(this, 1, 2)">
+        <span class="radio"></span>
+        <span>trusted-review</span>
+      </div>
+      <div class="quiz-option" onclick="selectOption(this, 1, 3)">
+        <span class="radio"></span>
+        <span>danger-full-access</span>
+      </div>
+  </div>
+  <div class="quiz-feedback" id="feedback1"></div>
+  <button class="quiz-retry" id="retry1" onclick="QuizEngine.reset(1)">Try again</button>
+</div>
+
+<div class="quiz" id="quiz2">
+  <div class="quiz-header">
+    <span class="quiz-num">2</span>
+    <h3>What happens when an ApprovalGate request has no matching auto-rule and the operator does not respond?</h3>
+  </div>
+  <div class="quiz-options">
+      <div class="quiz-option" onclick="selectOption(this, 2, 0)">
+        <span class="radio"></span>
+        <span>It is silently approved</span>
+      </div>
+      <div class="quiz-option" onclick="selectOption(this, 2, 1)">
+        <span class="radio"></span>
+        <span>It resolves to 'timeout' after the default 120s</span>
+      </div>
+      <div class="quiz-option" onclick="selectOption(this, 2, 2)">
+        <span class="radio"></span>
+        <span>It retries indefinitely</span>
+      </div>
+      <div class="quiz-option" onclick="selectOption(this, 2, 3)">
+        <span class="radio"></span>
+        <span>It rejects immediately</span>
+      </div>
+  </div>
+  <div class="quiz-feedback" id="feedback2"></div>
+  <button class="quiz-retry" id="retry2" onclick="QuizEngine.reset(2)">Try again</button>
+</div>
+
+<div class="quiz" id="quiz3">
+  <div class="quiz-header">
+    <span class="quiz-num">3</span>
+    <h3>Which audit action would you query to list workspace lifecycle events?</h3>
+  </div>
+  <div class="quiz-options">
+      <div class="quiz-option" onclick="selectOption(this, 3, 0)">
+        <span class="radio"></span>
+        <span>rbac_role.update</span>
+      </div>
+      <div class="quiz-option" onclick="selectOption(this, 3, 1)">
+        <span class="radio"></span>
+        <span>workspace.create</span>
+      </div>
+      <div class="quiz-option" onclick="selectOption(this, 3, 2)">
+        <span class="radio"></span>
+        <span>external_key.validate</span>
+      </div>
+      <div class="quiz-option" onclick="selectOption(this, 3, 3)">
+        <span class="radio"></span>
+        <span>vault.credential.revoke</span>
+      </div>
+  </div>
+  <div class="quiz-feedback" id="feedback3"></div>
+  <button class="quiz-retry" id="retry3" onclick="QuizEngine.reset(3)">Try again</button>
+</div>
+</section>
+
+<section id="capstone" class="reveal">
+  <div class="capstone">
+    <h2>Capstone: Design a team Cowork policy</h2>
+    <p>
+      Choose one team in your organization and design a Cowork rollout plan. Define the workspace boundaries, pick permission profiles for different roles,
+      list three actions that must go through the approval gate, and describe how you will review audit logs weekly.
+    </p>
+    <div class="capstone-grid">
+      <div class="capstone-item"><h4>Workspace</h4><p>Name, slug, and member roles for the pilot workspace.</p></div>
+      <div class="capstone-item"><h4>Profiles</h4><p>Which built-in or custom profile applies to each role.</p></div>
+      <div class="capstone-item"><h4>Approval gate rules</h4><p>Three action types or risk levels that require human review.</p></div>
+      <div class="capstone-item"><h4>Audit review</h4><p>Queries and cadence for checking workspace and approval events.</p></div>
+    </div>
+  </div>
+</section>
+
+  <footer>
+    <p>A://Labs — OPS Tier — Module 4: Scaling Cowork Across a Team</p>
+    <p style="margin-top:4px;">Generated from <code>packages/@allternit/cowork-engine</code> · Allternit Internal</p>
+  </footer>
+
+  <script>
+    // ========================
+    // Shared: Scroll Progress & Nav
+    // ========================
+    const progressBar = document.getElementById('progress-bar');
+    const navLinks = document.querySelectorAll('.nav-links a');
+    const sections = document.querySelectorAll('section[id], section[class*="reveal"]');
+
+    function updateProgress() {
+      const scrollTop = window.scrollY;
+      const docHeight = document.documentElement.scrollHeight - window.innerHeight;
+      const pct = (scrollTop / docHeight) * 100;
+      progressBar.style.width = pct + '%';
+
+      let current = '';
+      sections.forEach(sec => {
+        const top = sec.offsetTop - 100;
+        if (scrollTop >= top) {
+          current = sec.getAttribute('id') || '';
+        }
+      });
+      navLinks.forEach(link => {
+        link.classList.toggle('active', link.dataset.section === current);
+      });
+    }
+    window.addEventListener('scroll', updateProgress, { passive: true });
+    updateProgress();
+
+    // ========================
+    // Shared: Scroll Reveal
+    // ========================
+    const revealObserver = new IntersectionObserver((entries) => {
+      entries.forEach(e => { if (e.isIntersecting) e.target.classList.add('visible'); });
+    }, { threshold: 0.08 });
+    document.querySelectorAll('.reveal').forEach(el => revealObserver.observe(el));
+
+    // ========================
+    // Shared: Quiz Engine
+    // ========================
+    window.QuizEngine = {
+      answers: {},
+      feedback: {},
+
+      init(answers, feedback) {
+        this.answers = answers;
+        this.feedback = feedback;
+      },
+
+      selectOption(el, quizNum, optionIdx) {
+        const quizEl = document.getElementById('quiz' + quizNum);
+        const options = quizEl.querySelectorAll('.quiz-option');
+        const feedback = document.getElementById('feedback' + quizNum);
+        const retryBtn = document.getElementById('retry' + quizNum);
+
+        // Disable all options
+        options.forEach(opt => {
+          opt.style.pointerEvents = 'none';
+          opt.classList.remove('selected');
+        });
+        el.classList.add('selected');
+
+        const correct = this.answers[quizNum] === optionIdx;
+        if (correct) {
+          el.classList.add('correct');
+          feedback.className = 'quiz-feedback show correct';
+          feedback.textContent = this.feedback[quizNum].correct;
+        } else {
+          el.classList.add('wrong');
+          options[this.answers[quizNum]].classList.add('correct');
+          feedback.className = 'quiz-feedback show wrong';
+          feedback.textContent = this.feedback[quizNum].wrong;
+          if (retryBtn) retryBtn.classList.add('show');
+        }
+      },
+
+      reset(quizNum) {
+        const quizEl = document.getElementById('quiz' + quizNum);
+        const options = quizEl.querySelectorAll('.quiz-option');
+        const feedback = document.getElementById('feedback' + quizNum);
+        const retryBtn = document.getElementById('retry' + quizNum);
+
+        options.forEach(opt => {
+          opt.style.pointerEvents = '';
+          opt.classList.remove('selected', 'correct', 'wrong');
+        });
+        feedback.className = 'quiz-feedback';
+        feedback.textContent = '';
+        if (retryBtn) retryBtn.classList.remove('show');
+      }
+    };
+
+    // Alias for backward compatibility
+    function selectOption(el, quizNum, optionIdx) {
+      window.QuizEngine.selectOption(el, quizNum, optionIdx);
+    }
+
+    // ========================
+    // Shared: Code Copy
+    // ========================
+    document.querySelectorAll('.code-copy').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const pre = btn.closest('.code-block').querySelector('pre');
+        navigator.clipboard.writeText(pre.textContent).then(() => {
+          btn.textContent = 'Copied!';
+          setTimeout(() => btn.textContent = 'Copy', 1500);
+        });
+      });
+    });
+
+    // ========================
+    // Shared: Walkthrough Engine
+    // ========================
+    window.Walkthrough = {
+      init(id) {
+        const container = document.querySelector(`[data-walkthrough-container="${id}"]`);
+        if (!container) return;
+        const steps = container.querySelectorAll(`[data-walkthrough="${id}"]`);
+        if (steps.length === 0) return;
+        steps.forEach((step, idx) => { step.classList.toggle('active', idx === 0); });
+        this.updateControls(id, 0);
+      },
+
+      step(id, delta) {
+        const container = document.querySelector(`[data-walkthrough-container="${id}"]`);
+        if (!container) return;
+        const steps = Array.from(container.querySelectorAll(`[data-walkthrough="${id}"]`));
+        const current = steps.findIndex(s => s.classList.contains('active'));
+        const next = Math.max(0, Math.min(steps.length - 1, current + delta));
+        steps.forEach((step, idx) => { step.classList.toggle('active', idx === next); });
+        this.updateControls(id, next);
+      },
+
+      updateControls(id, activeIndex) {
+        const controls = document.querySelector(`[data-walkthrough-controls="${id}"]`);
+        if (!controls) return;
+        const steps = controls.closest('.walkthrough-container').querySelectorAll(`[data-walkthrough="${id}"]`);
+        const currentSpan = controls.querySelector('.current');
+        const prevBtn = controls.querySelector('.walkthrough-prev');
+        const nextBtn = controls.querySelector('.walkthrough-next');
+        if (currentSpan) currentSpan.textContent = activeIndex + 1;
+        if (prevBtn) prevBtn.disabled = activeIndex === 0;
+        if (nextBtn) nextBtn.disabled = activeIndex === steps.length - 1;
+      }
+    };
+
+    document.querySelectorAll('[data-walkthrough-container]').forEach(container => {
+      const id = container.getAttribute('data-walkthrough-container');
+      if (id) window.Walkthrough.init(id);
+    });
+
+    // ========================
+    // Module-specific JS injection point
+    // ========================
+    // Initialize quiz engine
+    window.QuizEngine.init({"1":1,"2":1,"3":1}, {"1":{"correct":"Correct. The restricted profile blocks filesystem and network access and requires approval for every tool use.","wrong":"Not quite. workspace-write allows workspace writes; trusted-review allows selected tools without prompting; danger-full-access disables sandboxing. restricted is the most locked-down profile."},"2":{"correct":"Correct. The gate stores a pending promise with a timer; if the timeout expires, the promise resolves to a 'timeout' decision.","wrong":"Not quite. ApprovalGate.request sets a timer equal to defaultTimeoutMs (120s by default) and resolves to 'timeout' if no one responds."},"3":{"correct":"Correct. workspace.create / workspace.delete are the audit actions for workspace lifecycle events.","wrong":"Not quite. rbac_role.update tracks permission changes, external_key.validate tracks KMS key validation, and vault.credential.revoke tracks secret revocation."}});
+
+    const canvas = document.getElementById('moduleCanvas');
+if (canvas) {
+  const ctx = canvas.getContext('2d');
+  function resize() {
+    canvas.width = canvas.offsetWidth;
+    canvas.height = canvas.offsetHeight;
+  }
+  window.addEventListener('resize', resize);
+  resize();
+  const nodes = Array.from({ length: 24 }, () => ({
+    x: Math.random() * canvas.width,
+    y: Math.random() * canvas.height,
+    vx: (Math.random() - 0.5) * 0.6,
+    vy: (Math.random() - 0.5) * 0.6,
+  }));
+  function draw() {
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    ctx.fillStyle = '#8b5cf6';
+    nodes.forEach((n) => {
+      n.x += n.vx;
+      n.y += n.vy;
+      if (n.x < 0 || n.x > canvas.width) n.vx *= -1;
+      if (n.y < 0 || n.y > canvas.height) n.vy *= -1;
+      ctx.beginPath();
+      ctx.arc(n.x, n.y, 2, 0, Math.PI * 2);
+      ctx.fill();
+    });
+    ctx.strokeStyle = 'rgba(139,92,246,0.12)';
+    for (let i = 0; i < nodes.length; i++) {
+      for (let j = i + 1; j < nodes.length; j++) {
+        const dx = nodes[i].x - nodes[j].x;
+        const dy = nodes[i].y - nodes[j].y;
+        const d = Math.sqrt(dx * dx + dy * dy);
+        if (d < 120) {
+          ctx.beginPath();
+          ctx.moveTo(nodes[i].x, nodes[i].y);
+          ctx.lineTo(nodes[j].x, nodes[j].y);
+          ctx.stroke();
+        }
+      }
+    }
+    requestAnimationFrame(draw);
+  }
+  draw();
+}
+  </script>
+</body>
+</html>

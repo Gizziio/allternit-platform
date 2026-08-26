@@ -1,0 +1,17 @@
+flowchart TD
+    A[User Request] --> B{Cowork Planner}
+    B -->|Research| C[Plugin / MCP Tool]
+    B -->|Browser| D[OperatorBrowserView]
+    B -->|Document| E[office-file-parse]
+    C --> F[Tool Registry]
+    D --> G[@allternit/browser-tools]
+    E --> H[ParsedFile]
+    F --> I[Agent Loop]
+    G --> I
+    H --> I
+    I --> J[Artifact / Answer]
+
+    style D fill:#8b5cf6,stroke:#a78bfa,color:#fff
+    style G fill:#8b5cf6,stroke:#a78bfa,color:#fff
+    style E fill:#8b5cf6,stroke:#a78bfa,color:#fff
+    style J fill:#151517,stroke:#3f3f46,color:#e5e5e5

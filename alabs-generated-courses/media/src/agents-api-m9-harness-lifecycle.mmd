@@ -1,0 +1,38 @@
+flowchart TB
+    subgraph Client["AllternitHarness client"]
+        A[Caller code] --> B([stream / complete / run])
+    end
+
+    B --> C{Validate request}
+    C -->|messages, provider, model| D[Apply middleware<br/>beforeRequest]
+
+    D --> E[Inject Allternit system prompt]
+    E --> F[Inject provider prompt]
+    F --> G[Model registry fallback<br/>maxOutputTokens]
+
+    G --> H{Config mode}
+    H -->|byok| I[BYOK provider route]
+    H -->|cloud| J[Allternit Cloud]
+    H -->|local| K[Local model server]
+    H -->|subprocess| L[Custom subprocess]
+
+    I --> M[Provider API<br/>SSE stream]
+    J --> M
+    K --> M
+    L --> M
+
+    M --> N[Normalize chunks]
+    N --> O{text / tool_call /<br/>citation / done}
+
+    O -->|success| P[Apply middleware<br/>afterResponse]
+    O -->|retryable error| Q[Retry middleware<br/>exponential backoff]
+    O -->|refusal| R[Refusal fallback<br/>next model]
+
+    Q --> M
+    R --> M
+
+    P --> S[Return response]
+    S --> T[(llm_usage_events)]
+
+    style Client fill:#151517,stroke:#ec4899,stroke-width:2px
+    style T fill:#151517,stroke:#ec4899,stroke-width:2px

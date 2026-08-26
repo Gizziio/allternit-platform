@@ -1,0 +1,12 @@
+{"version": 2, "width": 80, "height": 18, "timestamp": 1700000000, "env": {"SHELL": "/bin/bash", "TERM": "xterm-256color"}}
+[0.0, "o", "\u001b[1;32m$\u001b[0m gizzi config permission-profiles list\r\n"]
+[0.6, "o", "restricted\r\nworkspace-write\r\ntrusted-review\r\ndanger-full-access\r\n"]
+[1.2, "o", "\u001b[1;32m$\u001b[0m gizzi config permission-profiles show restricted\r\n"]
+[1.8, "o", "[permissions]\r\napproval_policy = \"untrusted\"\r\nsandbox_mode = \"restricted\"\r\nnetwork_access = false\r\nallow_login_shell = false\r\n"]
+[2.8, "o", "\u001b[1;32m$\u001b[0m gizzi --profile workspace-write admin workspaces create --name Engineering --slug eng\r\n"]
+[3.6, "o", "\u001b[90m→\u001b[0m Created workspace ws_eng_01J8Z...\r\n"]
+[4.2, "o", "\u001b[1;32m$\u001b[0m gizzi admin workspaces list\r\n"]
+[4.8, "o", "NAME        SLUG   MEMBERS\r\nEngineering eng    1\r\n"]
+[5.5, "o", "\u001b[1;32m$\u001b[0m gizzi --profile restricted cowork run \"List top open PRs\"\r\n"]
+[6.2, "o", "\u001b[90m→\u001b[0m Approval required: github.list_pull_requests\r\n"]
+[7.0, "o", "\u001b[1;33m?\u001b[0m Allow this tool call? (y/N) \r\n"]

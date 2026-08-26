@@ -1,0 +1,1628 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Module 2: Delegation: Scoping Work for Agents — A://Labs</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+  <style>
+    /* ================================================================
+       A://Labs Module Template — Shared Styles
+       ================================================================ */
+
+    :root {
+      --bg: #0b0b0c;
+      --surface: #151517;
+      --surface-raised: #1c1c1f;
+      --border: #27272a;
+      --border-light: #3f3f46;
+      --text: #e5e5e5;
+      --text-secondary: #a1a1aa;
+      --text-muted: #71717a;
+      --accent: #3b82f6;
+      --accent-dim: rgba(59,130,246,0.15);
+      --accent-glow: rgba(59,130,246,0.4);
+      --success: #22c55e;
+      --error: #ef4444;
+      --info: #3b82f6;
+      --code-bg: #0f0f11;
+    }
+
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    html {
+      scroll-behavior: smooth;
+      scroll-padding-top: 80px;
+    }
+
+    body {
+      font-family: 'Inter', system-ui, -apple-system, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      line-height: 1.6;
+      overflow-x: hidden;
+    }
+
+    /* Progress Bar */
+    #progress-container {
+      position: fixed;
+      top: 0; left: 0; right: 0;
+      height: 3px;
+      background: var(--surface);
+      z-index: 1000;
+    }
+    #progress-bar {
+      height: 100%;
+      width: 0%;
+      background: linear-gradient(90deg, var(--accent), #60a5fa);
+      box-shadow: 0 0 12px var(--accent-glow);
+      transition: width 0.2s ease;
+    }
+
+    /* Navigation */
+    nav {
+      position: fixed;
+      top: 3px; left: 0; right: 0;
+      background: rgba(11, 11, 12, 0.92);
+      backdrop-filter: blur(16px);
+      border-bottom: 1px solid var(--border);
+      z-index: 999;
+      padding: 0 24px;
+    }
+    .nav-inner {
+      max-width: 1200px;
+      margin: 0 auto;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      height: 56px;
+    }
+    .nav-logo {
+      font-weight: 800;
+      font-size: 0.9rem;
+      letter-spacing: -0.02em;
+      color: var(--text);
+    }
+    .nav-logo span {
+      color: var(--accent);
+    }
+    .nav-links {
+      display: flex;
+      gap: 6px;
+      list-style: none;
+    }
+    .nav-links a {
+      color: var(--text-secondary);
+      text-decoration: none;
+      font-size: 0.78rem;
+      font-weight: 500;
+      padding: 6px 12px;
+      border-radius: 6px;
+      transition: all 0.2s;
+      white-space: nowrap;
+    }
+    .nav-links a:hover, .nav-links a.active {
+      color: var(--accent);
+      background: var(--accent-dim);
+    }
+    .nav-tier {
+      font-size: 0.65rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: var(--accent);
+      border: 1px solid var(--accent);
+      padding: 3px 8px;
+      border-radius: 4px;
+    }
+    .nav-toggle {
+      display: none;
+      background: none;
+      border: none;
+      color: var(--text);
+      font-size: 1.4rem;
+      cursor: pointer;
+    }
+    @media (max-width: 768px) {
+      .nav-links { display: none; position: absolute; top: 56px; left: 0; right: 0; background: var(--surface); flex-direction: column; padding: 12px; gap: 4px; border-bottom: 1px solid var(--border); }
+      .nav-links.open { display: flex; }
+      .nav-toggle { display: block; }
+    }
+
+    /* Sections */
+    section {
+      padding: 80px 24px;
+      max-width: 860px;
+      margin: 0 auto;
+      position: relative;
+    }
+
+    /* Hero */
+    .hero {
+      min-height: 90vh;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: flex-start;
+      padding-top: 100px;
+    }
+    .hero-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 0.7rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+      color: var(--accent);
+      background: var(--accent-dim);
+      border: 1px solid rgba(59,130,246,0.25);
+      padding: 6px 14px;
+      border-radius: 100px;
+      margin-bottom: 24px;
+    }
+    .hero-badge::before {
+      content: '';
+      width: 6px; height: 6px;
+      background: var(--accent);
+      border-radius: 50%;
+      box-shadow: 0 0 8px var(--accent);
+      animation: pulse 2s ease-in-out infinite;
+    }
+    @keyframes pulse {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.4; }
+    }
+    .hero h1 {
+      font-size: clamp(2.2rem, 5vw, 3.8rem);
+      font-weight: 900;
+      line-height: 1.1;
+      letter-spacing: -0.03em;
+      margin-bottom: 20px;
+    }
+    .hero h1 em {
+      color: var(--accent);
+      font-style: normal;
+    }
+    .hero p {
+      font-size: 1.15rem;
+      color: var(--text-secondary);
+      max-width: 600px;
+      margin-bottom: 32px;
+      line-height: 1.7;
+    }
+    .hero-meta {
+      display: flex;
+      gap: 24px;
+      font-size: 0.8rem;
+      color: var(--text-muted);
+    }
+
+    /* Content Typography */
+    h2 {
+      font-size: 1.6rem;
+      font-weight: 700;
+      margin-bottom: 20px;
+      color: var(--text);
+      letter-spacing: -0.01em;
+    }
+    h3 {
+      font-size: 1.15rem;
+      font-weight: 600;
+      margin: 32px 0 12px;
+      color: var(--text);
+    }
+    h4 {
+      font-size: 0.95rem;
+      font-weight: 600;
+      margin: 24px 0 8px;
+      color: var(--text-secondary);
+    }
+    p {
+      margin-bottom: 16px;
+      color: var(--text-secondary);
+      font-size: 0.95rem;
+      line-height: 1.7;
+    }
+    ul, ol {
+      margin: 16px 0;
+      padding-left: 24px;
+      color: var(--text-secondary);
+    }
+    li {
+      margin-bottom: 8px;
+      font-size: 0.95rem;
+      line-height: 1.6;
+    }
+    a {
+      color: var(--accent);
+      text-decoration: none;
+    }
+    a:hover { text-decoration: underline; }
+    strong { color: var(--text); font-weight: 600; }
+    em { color: var(--accent); font-style: normal; }
+
+    /* Code Blocks */
+    .code-block {
+      background: var(--code-bg);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      overflow: hidden;
+      margin: 20px 0;
+    }
+    .code-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 10px 16px;
+      background: rgba(255,255,255,0.03);
+      border-bottom: 1px solid var(--border);
+    }
+    .code-lang {
+      font-size: 0.7rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      color: var(--text-muted);
+    }
+    .code-copy {
+      font-size: 0.7rem;
+      color: var(--text-muted);
+      background: none;
+      border: 1px solid var(--border);
+      padding: 4px 10px;
+      border-radius: 4px;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    .code-copy:hover {
+      color: var(--accent);
+      border-color: var(--accent);
+    }
+    pre {
+      padding: 16px 20px;
+      overflow-x: auto;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.82rem;
+      line-height: 1.6;
+      color: var(--text);
+    }
+    code {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.85em;
+      color: var(--accent);
+      background: rgba(245,158,11,0.08);
+      padding: 2px 5px;
+      border-radius: 3px;
+    }
+    pre code {
+      background: none;
+      padding: 0;
+      color: inherit;
+      font-size: inherit;
+    }
+    .token-keyword { color: #c678dd; }
+    .token-string { color: #98c379; }
+    .token-number { color: #d19a66; }
+    .token-comment { color: #5c6370; font-style: italic; }
+    .token-function { color: #61afef; }
+    .token-type { color: #e5c07b; }
+    .token-operator { color: #56b6c2; }
+
+    /* Callouts */
+    .callout {
+      padding: 16px 20px;
+      border-radius: 8px;
+      border-left: 3px solid var(--accent);
+      background: var(--accent-dim);
+      margin: 20px 0;
+    }
+    .callout.info {
+      border-left-color: var(--info);
+      background: rgba(59,130,246,0.08);
+    }
+    .callout.success {
+      border-left-color: var(--success);
+      background: rgba(34,197,94,0.08);
+    }
+    .callout.error {
+      border-left-color: var(--error);
+      background: rgba(239,68,68,0.08);
+    }
+    .callout p { margin: 0; color: var(--text-secondary); }
+    .callout strong { color: var(--text); }
+
+    /* Tables */
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin: 20px 0;
+      font-size: 0.88rem;
+    }
+    th, td {
+      padding: 10px 14px;
+      text-align: left;
+      border-bottom: 1px solid var(--border);
+    }
+    th {
+      font-weight: 600;
+      color: var(--text);
+      background: var(--surface);
+    }
+    td { color: var(--text-secondary); }
+    tr:hover td { background: rgba(255,255,255,0.02); }
+
+    /* Divider */
+    .divider {
+      height: 1px;
+      background: linear-gradient(90deg, transparent, var(--border), transparent);
+      margin: 60px 0;
+      border: none;
+    }
+
+    /* Scroll Reveal */
+    .reveal {
+      opacity: 0;
+      transform: translateY(24px);
+      transition: opacity 0.6s ease, transform 0.6s ease;
+    }
+    .reveal.visible {
+      opacity: 1;
+      transform: translateY(0);
+    }
+
+    /* Quiz */
+    .quiz {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 24px;
+      margin: 24px 0;
+    }
+    .quiz-header {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 16px;
+    }
+    .quiz-num {
+      width: 32px;
+      height: 32px;
+      border-radius: 50%;
+      background: var(--accent-dim);
+      color: var(--accent);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: 700;
+      font-size: 0.85rem;
+      flex-shrink: 0;
+    }
+    .quiz h3 { margin: 0; font-size: 1rem; }
+    .quiz-options {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+    .quiz-option {
+      padding: 12px 16px;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      cursor: pointer;
+      transition: all 0.2s;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      font-size: 0.9rem;
+      color: var(--text-secondary);
+    }
+    .quiz-option:hover { border-color: var(--border-light); }
+    .quiz-option.selected { border-color: var(--accent); background: var(--accent-dim); color: var(--text); }
+    .quiz-option.correct { border-color: var(--success); background: rgba(34,197,94,0.1); }
+    .quiz-option.wrong { border-color: var(--error); background: rgba(239,68,68,0.1); }
+    .quiz-option .radio {
+      width: 18px;
+      height: 18px;
+      border: 2px solid var(--border-light);
+      border-radius: 50%;
+      flex-shrink: 0;
+      transition: all 0.2s;
+    }
+    .quiz-option.selected .radio { border-color: var(--accent); }
+    .quiz-option.correct .radio { border-color: var(--success); background: var(--success); }
+    .quiz-option.wrong .radio { border-color: var(--error); background: var(--error); }
+    .quiz-feedback {
+      display: none;
+      margin-top: 12px;
+      padding: 12px 16px;
+      border-radius: 8px;
+      font-size: 0.9rem;
+      line-height: 1.5;
+    }
+    .quiz-feedback.show { display: block; }
+    .quiz-feedback.correct { background: rgba(34,197,94,0.1); color: #86efac; border: 1px solid rgba(34,197,94,0.3); }
+    .quiz-feedback.wrong { background: rgba(239,68,68,0.1); color: #fca5a5; border: 1px solid rgba(239,68,68,0.3); }
+    .quiz-retry {
+      margin-top: 12px;
+      padding: 8px 16px;
+      background: var(--surface-raised);
+      border: 1px solid var(--border);
+      color: var(--text-secondary);
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 0.85rem;
+      display: none;
+    }
+    .quiz-retry.show { display: inline-block; }
+    .quiz-retry:hover { border-color: var(--accent); color: var(--accent); }
+
+    /* Capstone */
+    .capstone {
+      background: linear-gradient(135deg, var(--surface) 0%, var(--surface-raised) 100%);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 40px;
+      margin: 40px 0;
+    }
+    .capstone h2 { margin-top: 0; }
+    .capstone-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+      gap: 16px;
+      margin-top: 24px;
+    }
+    .capstone-item {
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 16px;
+    }
+    .capstone-item h4 {
+      color: var(--accent);
+      margin-top: 0;
+      font-size: 0.85rem;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+    .capstone-item p { font-size: 0.85rem; margin: 0; }
+
+    /* Footer */
+    footer {
+      text-align: center;
+      padding: 40px 24px;
+      border-top: 1px solid var(--border);
+      color: var(--text-muted);
+      font-size: 0.85rem;
+    }
+    footer code {
+      background: none;
+      color: var(--text-muted);
+    }
+
+    /* Media assets */
+    .alabs-media {
+      margin: 24px 0;
+      border-radius: 12px;
+      overflow: hidden;
+      border: 1px solid var(--border);
+      background: var(--surface);
+    }
+    .mermaid {
+      padding: 24px;
+      display: flex;
+      justify-content: center;
+      min-height: 120px;
+    }
+    .mermaid svg {
+      max-width: 100%;
+      height: auto;
+    }
+    .asciinema-wrapper {
+      padding: 0;
+      background: var(--code-bg);
+    }
+    .asciinema-wrapper .asciinema-player {
+      width: 100%;
+    }
+
+    /* Walkthrough (Code-Hike-style) */
+    .walkthrough-container {
+      margin: 24px 0;
+    }
+    .walkthrough-controls {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      margin-bottom: 16px;
+      padding: 12px 16px;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+    }
+    .walkthrough-controls button {
+      background: var(--accent-dim);
+      color: var(--accent);
+      border: 1px solid var(--accent);
+      padding: 8px 16px;
+      border-radius: 6px;
+      cursor: pointer;
+      font-weight: 600;
+      font-size: 0.85rem;
+    }
+    .walkthrough-controls button:hover {
+      background: var(--accent);
+      color: var(--bg);
+    }
+    .walkthrough-controls button:disabled {
+      opacity: 0.4;
+      cursor: not-allowed;
+    }
+    .walkthrough-counter {
+      color: var(--text-muted);
+      font-size: 0.85rem;
+      font-variant-numeric: tabular-nums;
+    }
+    .walkthrough-step {
+      display: none;
+      padding: 24px;
+    }
+    .walkthrough-step.active {
+      display: block;
+    }
+    .walkthrough-header {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 16px;
+    }
+    .walkthrough-step-num {
+      font-size: 0.7rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: var(--accent);
+      border: 1px solid var(--accent);
+      padding: 3px 10px;
+      border-radius: 100px;
+    }
+    .walkthrough-header h4 {
+      margin: 0;
+      font-size: 1.1rem;
+      color: var(--text);
+    }
+    .walkthrough-note {
+      background: var(--accent-dim);
+      border-left: 3px solid var(--accent);
+      padding: 16px 20px;
+      border-radius: 0 8px 8px 0;
+      margin-bottom: 20px;
+    }
+    .walkthrough-note p {
+      margin: 0;
+      color: var(--text-secondary);
+    }
+    .walkthrough-code pre {
+      counter-reset: none;
+      padding: 0;
+      background: transparent;
+    }
+    .walkthrough-line {
+      display: flex;
+      padding: 2px 16px;
+      transition: background 0.2s;
+    }
+    .walkthrough-line.dim {
+      opacity: 0.35;
+    }
+    .walkthrough-line.highlight {
+      background: rgba(236, 72, 153, 0.12);
+      border-left: 3px solid var(--accent);
+      margin-left: -3px;
+    }
+    .walkthrough-line .line-no {
+      color: var(--text-muted);
+      font-size: 0.75rem;
+      width: 40px;
+      flex-shrink: 0;
+      text-align: right;
+      padding-right: 16px;
+      user-select: none;
+    }
+    .walkthrough-line .line-code {
+      white-space: pre;
+    }
+    .walkthrough-line.ellipsis {
+      opacity: 0.5;
+      padding: 4px 16px;
+    }
+    .walkthrough-line.ellipsis .line-code {
+      color: var(--text-muted);
+    }
+
+    /* Module-specific styles injection point */
+    
+.hero { position: relative; overflow: hidden; }
+#delegationCanvas { position: absolute; top: 0; left: 0; width: 100%; height: 100%; z-index: -1; opacity: 0.35; pointer-events: none; }
+.quiz-option code { background: rgba(59,130,246,0.12); color: #60a5fa; }
+
+  </style>
+
+  <script type="module">
+    import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.esm.min.mjs';
+    mermaid.initialize({ startOnLoad: true, theme: 'dark', themeVariables: { primaryColor: '#3b82f6', primaryTextColor: '#e5e5e5', primaryBorderColor: '#3b82f6', lineColor: '#a1a1aa', secondaryColor: '#151517', tertiaryColor: '#0b0b0c', fontFamily: 'Inter, system-ui, sans-serif' }});
+  </script>
+
+  <link rel="stylesheet" type="text/css" href="https://cdn.jsdelivr.net/npm/asciinema-player@3/dist/bundle/asciinema-player.css" />
+  <script src="https://cdn.jsdelivr.net/npm/asciinema-player@3/dist/bundle/asciinema-player.min.js"></script>
+</head>
+<body>
+  <div id="progress-container"><div id="progress-bar"></div></div>
+
+  <nav>
+    <div class="nav-inner">
+      <div class="nav-logo">A://<span>Labs</span></div>
+      <ul class="nav-links" id="navLinks">
+        <li><a href="#overview" data-section="overview">Overview</a></li>
+        <li><a href="#framework" data-section="framework">4D Framework</a></li>
+        <li><a href="#scoping" data-section="scoping">Scoping</a></li>
+        <li><a href="#agents" data-section="agents">Agents</a></li>
+        <li><a href="#quizzes" data-section="quizzes">Quizzes</a></li>
+        <li><a href="#capstone" data-section="capstone">Capstone</a></li>
+      </ul>
+      <span class="nav-tier">CORE</span>
+      <button class="nav-toggle" onclick="document.getElementById('navLinks').classList.toggle('open')">☰</button>
+    </div>
+  </nav>
+
+  
+<section id="overview" class="hero reveal">
+  <canvas id="delegationCanvas"></canvas>
+  <span class="hero-badge">CORE Tier</span>
+  <h1>Module 2: <em>Delegation: Scoping Work for Agents</em></h1>
+  <p>Learn when to hand work to an agent, how to write a task spec that an executor can actually follow, and how Allternit's agent-definition and orchestration layers keep humans in control.</p>
+  <div class="hero-meta">
+    <span><strong>5 lessons</strong> · ~35 minutes</span>
+    <span>Source: <code>.agents/skills/agent-orchestrator</code></span>
+  </div>
+</section>
+
+<section id="framework" class="reveal">
+  <h2>The 4D framework</h2>
+  <p>AI fluency is not about using the biggest model for everything. It is about matching the right surface to the right task. Allternit's curriculum organizes fluency around four Ds:</p>
+  <ul>
+    <li><strong>Decide</strong> — Should a human do this, or can an agent help?</li>
+    <li><strong>Delegate</strong> — If an agent should help, which surface and what scope?</li>
+    <li><strong>Describe</strong> — Write the prompt or task spec so the agent can succeed.</li>
+    <li><strong>Discern</strong> — Review the output before accepting it as truth.</li>
+  </ul>
+  <p>This module focuses on <strong>Delegate</strong>. Delegation fails when the task is either too vague or too risky to verify. The goal is to scope work so the human stays in control while the agent does the mechanical part.</p>
+
+  <div class="callout info">
+    <p><strong>Delegation rule:</strong> Only delegate what you can verify. If you cannot check the result, keep the human in the loop.</p>
+  </div>
+
+  <pre class="mermaid alabs-media" data-media-id="core-fluency-m2-delegation-flow">flowchart TD
+    T[New task] --&gt; Q1{Can I verify the output?}
+    Q1 --&gt;|No| K[Keep human in the loop]
+    Q1 --&gt;|Yes| Q2{Is it multi-file or long-running?}
+    Q2 --&gt;|No| D1[Use chat surface]
+    Q2 --&gt;|Yes| Q3{Can I scope it precisely?}
+    Q3 --&gt;|No| K
+    Q3 --&gt;|Yes| D2[Delegate via orchestrator]
+    D2 --&gt; S[Write task spec + sentinel]
+    S --&gt; E[Spawn isolated executor]
+    E --&gt; M[Monitor + steer]
+    M --&gt; R[Review true footprint]
+    R --&gt; P{Pass review?}
+    P --&gt;|No| S
+    P --&gt;|Yes| A[Accept / merge]
+    K --&gt; L[Learn and try again]
+
+    style D2 fill:#3b82f6,stroke:#60a5fa,color:#fff
+    style R fill:#22c55e,stroke:#4ade80,color:#fff</pre>
+</section>
+
+<section id="scoping" class="reveal">
+  <h2>Scoping a delegated task</h2>
+  <p>The CLI Agent Orchestrator skill breaks delegation into six phases. The first two—Scope and Plan—are the human's job. The executor does the work, but the human must define success before any code is written.</p>
+  <ol>
+    <li><strong>Detect</strong> — Confirm that at least one executor CLI and tmux are available.</li>
+    <li><strong>Scope and Plan</strong> — Do the analysis yourself, write a spec/map doc, and write a one-phase task spec with exact file paths and constraints.</li>
+    <li><strong>Spawn</strong> — Create an isolated worktree and start the executor in its own session.</li>
+    <li><strong>Send and Monitor</strong> — Give the executor the task file and watch for a sentinel file.</li>
+    <li><strong>Review</strong> — Check the true footprint, verify claims in code, run a cheap syntax gate, and send failures back.</li>
+    <li><strong>Iterate</strong> — Write the next phase's spec and repeat until done.</li>
+  </ol>
+
+  <div class="code-block">
+    <div class="code-header">
+      <span class="code-lang">markdown</span>
+      <button class="code-copy">Copy</button>
+    </div>
+    <pre><code>## Phase 1 — Extract payment hook
+
+### Scope
+- Refactor `src/features/payment/usePayment.ts` so card-token logic lives in a new `useCardToken.ts` hook.
+- Update callers in `Checkout.tsx` and `PaymentModal.tsx`.
+- Do NOT touch server routes or database models.
+
+### Constraints
+- No builds or dev servers.
+- Match existing hook idioms and error handling.
+- Keep the diff under 150 lines.
+
+### Deliverable sentinel
+When finished, write `docs/PAYMENT_HOOK_PHASE_1_NOTES.md` starting with YAML frontmatter:
+- status: done|blocked
+- files_changed: [list]
+- deviations: [what + why]</code></pre>
+  </div>
+
+  <h3>Task scoping checklist</h3>
+  <p>Before spawning an executor, answer these questions:</p>
+  <ul>
+    <li>Can I state the desired outcome in one sentence?</li>
+    <li>Do I know which files should change and which must not?</li>
+    <li>Can I verify the result without running a full production system?</li>
+    <li>Is the work small enough to review in a few file reads?</li>
+    <li>Do I have a sentinel that proves the task is complete?</li>
+  </ul>
+
+  <div class="callout success">
+    <p><strong>Good spec:</strong> "Refactor the payment hook, update two callers, keep under 150 lines, and write a NOTES file." A bad spec is "make the payment flow better."</p>
+  </div>
+</section>
+
+<section id="agents" class="reveal">
+  <h2>Defining the agent</h2>
+  <p>Delegation is not only about external executors. Inside the Allternit platform, agents are defined through <code>agent-definition.ts</code>. The <code>defineAgent</code> factory turns a compact declarative definition into a validated <code>CreateAgentInput</code>.</p>
+
+  <div class="code-block">
+    <div class="code-header">
+      <span class="code-lang">typescript</span>
+      <button class="code-copy">Copy</button>
+    </div>
+    <pre><code>import { defineAgent } from '@/lib/agents/agent-definition';
+
+const paymentRefactorAgent = defineAgent({
+  name: 'payment-refactor-agent',
+  description: 'Refactors payment hooks while preserving existing callers.',
+  instructions: 'You are a senior frontend engineer. Prefer small, testable hooks. Never change server routes.',
+  capabilities: ['file_write', 'code_execution'],
+  character: {
+    specialtySkills: ['react', 'refactoring'],
+    temperament: 'balanced',
+  },
+});
+
+console.log(paymentRefactorAgent.characterLayer.roleCard.outputs);
+// => []</code></pre>
+  </div>
+
+  <p>The factory fills in canonical defaults for model, provider, harness, surfaces, trust tier, and write scope. It then validates the result with Zod and, by default, enforces the agent creation checklist. This means any agent created programmatically satisfies the same bar as one created through the UI form.</p>
+
+  <h3>Walkthrough: from definition to checklist</h3>
+  <p>The walkthrough below shows how <code>agent-definition.ts</code> builds a character layer and validates a declarative agent.</p>
+
+  <div class="walkthrough-container" data-walkthrough-container="core-fluency-m2-agent-definition-walkthrough">
+  <div class="walkthrough-controls" data-walkthrough-controls="core-fluency-m2-agent-definition-walkthrough">
+  <button class="walkthrough-prev" onclick="Walkthrough.step('core-fluency-m2-agent-definition-walkthrough', -1)">← Previous</button>
+  <span class="walkthrough-counter"><span class="current">1</span> / 3</span>
+  <button class="walkthrough-next" onclick="Walkthrough.step('core-fluency-m2-agent-definition-walkthrough', 1)">Next →</button>
+</div>
+  <div class="walkthrough-steps">
+    <div class="walkthrough-step alabs-media" id="core-fluency-m2-agent-definition-walkthrough-step-0" data-walkthrough="core-fluency-m2-agent-definition-walkthrough" data-step="0">
+  <div class="walkthrough-header">
+    <span class="walkthrough-step-num">Step 1</span>
+    <h4>Build a character layer</h4>
+  </div>
+  <div class="walkthrough-note">
+    <p>buildCharacterLayer expands a compact spec into the full character layer used by CreateAgentInput. It defines identity, role card, voice, progression, and avatar.</p>
+  </div>
+  <div class="code-block walkthrough-code">
+    <div class="code-header">
+      <span class="code-lang">typescript</span>
+      <span class="code-path">surfaces/ai.allternit.com/src/lib/agents/agent-definition.ts</span>
+    </div>
+    <pre><div class="walkthrough-line dim" data-line="55">
+        <span class="line-no"> 55</span>
+        <span class="line-code"> * Mirrors the shape produced by CreateAgentForm.</span>
+      </div>
+<div class="walkthrough-line dim" data-line="56">
+        <span class="line-no"> 56</span>
+        <span class="line-code"> */</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="57">
+        <span class="line-no"> 57</span>
+        <span class="line-code"><span class=<span class="token-string">"token-keyword"</span>>export</span> <span class=<span class="token-string">"token-keyword"</span>>function</span> buildCharacterLayer(spec: CharacterLayerSpec = {}): CharacterLayerConfig {</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="58">
+        <span class="line-no"> 58</span>
+        <span class="line-code">  <span class=<span class="token-string">"token-keyword"</span>>const</span> className = spec.className ?? <span class="token-string">'Specialist'</span>;</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="59">
+        <span class="line-no"> 59</span>
+        <span class="line-code">  <span class=<span class="token-string">"token-keyword"</span>>const</span> skills = spec.specialtySkills ?? [];</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="60">
+        <span class="line-no"> 60</span>
+        <span class="line-code">  <span class=<span class="token-string">"token-keyword"</span>>return</span> {</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="61">
+        <span class="line-no"> 61</span>
+        <span class="line-code">    identity: {</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="62">
+        <span class="line-no"> 62</span>
+        <span class="line-code">      setup: spec.setup ?? <span class="token-string">'generalist'</span>,</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="63">
+        <span class="line-no"> 63</span>
+        <span class="line-code">      className,</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="64">
+        <span class="line-no"> 64</span>
+        <span class="line-code">      specialtySkills: skills,</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="65">
+        <span class="line-no"> 65</span>
+        <span class="line-code">      temperament: spec.temperament ?? <span class="token-string">'balanced'</span>,</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="66">
+        <span class="line-no"> 66</span>
+        <span class="line-code">      personalityTraits: spec.personalityTraits ?? [],</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="67">
+        <span class="line-no"> 67</span>
+        <span class="line-code">      backstory: spec.backstory ?? <span class="token-string">''</span>,</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="68">
+        <span class="line-no"> 68</span>
+        <span class="line-code">    },</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="69">
+        <span class="line-no"> 69</span>
+        <span class="line-code">    roleCard: {</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="70">
+        <span class="line-no"> 70</span>
+        <span class="line-code">      domain: spec.domain ?? (skills.length &gt; <span class="token-number">0</span> ? skills.join(<span class="token-string">', '</span>) : <span class="token-string">'general assistance'</span>),</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="71">
+        <span class="line-no"> 71</span>
+        <span class="line-code">      inputs: spec.inputs ?? [],</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="72">
+        <span class="line-no"> 72</span>
+        <span class="line-code">      outputs: spec.outputs ?? [],</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="73">
+        <span class="line-no"> 73</span>
+        <span class="line-code">      definitionOfDone: [],</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="74">
+        <span class="line-no"> 74</span>
+        <span class="line-code">      hardBans: [],</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="75">
+        <span class="line-no"> 75</span>
+        <span class="line-code">      escalation: [],</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="76">
+        <span class="line-no"> 76</span>
+        <span class="line-code">      metrics: [],</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="77">
+        <span class="line-no"> 77</span>
+        <span class="line-code">    },</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="78">
+        <span class="line-no"> 78</span>
+        <span class="line-code">    voice: {</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="79">
+        <span class="line-no"> 79</span>
+        <span class="line-code">      style: spec.voiceStyle ?? <span class="token-string">''</span>,</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="80">
+        <span class="line-no"> 80</span>
+        <span class="line-code">      rules: [],</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="81">
+        <span class="line-no"> 81</span>
+        <span class="line-code">      microBans: [],</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="82">
+        <span class="line-no"> 82</span>
+        <span class="line-code">      tone: { formality: <span class="token-number">0.5</span>, enthusiasm: <span class="token-number">0.5</span>, empathy: <span class="token-number">0.5</span>, directness: <span class="token-number">0.5</span> },</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="83">
+        <span class="line-no"> 83</span>
+        <span class="line-code">    },</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="84">
+        <span class="line-no"> 84</span>
+        <span class="line-code">    progression: {</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="85">
+        <span class="line-no"> 85</span>
+        <span class="line-code">      <span class=<span class="token-string">"token-keyword"</span>>class</span>: className,</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="86">
+        <span class="line-no"> 86</span>
+        <span class="line-code">      relevantStats: [],</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="87">
+        <span class="line-no"> 87</span>
+        <span class="line-code">      level: { maxLevel: <span class="token-number">99</span>, xpFormula: <span class="token-string">'linear'</span> },</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="88">
+        <span class="line-no"> 88</span>
+        <span class="line-code">    },</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="89">
+        <span class="line-no"> 89</span>
+        <span class="line-code">    avatar: {</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="90">
+        <span class="line-no"> 90</span>
+        <span class="line-code">      <span class=<span class="token-string">"token-keyword"</span>>type</span>: <span class="token-string">'mascot'</span>,</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="91">
+        <span class="line-no"> 91</span>
+        <span class="line-code">      mascot: { template: spec.mascot ?? <span class="token-string">'bot'</span> },</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="92">
+        <span class="line-no"> 92</span>
+        <span class="line-code">      style: { primaryColor: spec.primaryColor ?? <span class="token-string">'#6366f1'</span>, accentColor: <span class="token-string">'#1e1c1a'</span> },</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="93">
+        <span class="line-no"> 93</span>
+        <span class="line-code">    },</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="94">
+        <span class="line-no"> 94</span>
+        <span class="line-code">  };</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="95">
+        <span class="line-no"> 95</span>
+        <span class="line-code">}</span>
+      </div>
+<div class="walkthrough-line dim" data-line="96">
+        <span class="line-no"> 96</span>
+        <span class="line-code">&nbsp;</span>
+      </div>
+<div class="walkthrough-line dim" data-line="97">
+        <span class="line-no"> 97</span>
+        <span class="line-code">/**</span>
+      </div></pre>
+  </div>
+</div>
+<div class="walkthrough-step alabs-media" id="core-fluency-m2-agent-definition-walkthrough-step-1" data-walkthrough="core-fluency-m2-agent-definition-walkthrough" data-step="1">
+  <div class="walkthrough-header">
+    <span class="walkthrough-step-num">Step 2</span>
+    <h4>Declarative agent definition</h4>
+  </div>
+  <div class="walkthrough-note">
+    <p>The AgentDefinition interface lets callers supply name, description, instructions, capabilities, and a compact character spec. It mirrors the shape produced by CreateAgentForm.</p>
+  </div>
+  <div class="code-block walkthrough-code">
+    <div class="code-header">
+      <span class="code-lang">typescript</span>
+      <span class="code-path">surfaces/ai.allternit.com/src/lib/agents/agent-definition.ts</span>
+    </div>
+    <pre><div class="walkthrough-line dim" data-line="100">
+        <span class="line-no">100</span>
+        <span class="line-code"> * `CreateAgentInput` fields can be passed as overrides.</span>
+      </div>
+<div class="walkthrough-line dim" data-line="101">
+        <span class="line-no">101</span>
+        <span class="line-code"> */</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="102">
+        <span class="line-no">102</span>
+        <span class="line-code"><span class=<span class="token-string">"token-keyword"</span>>export</span> <span class=<span class="token-string">"token-keyword"</span>>interface</span> AgentDefinition</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="103">
+        <span class="line-no">103</span>
+        <span class="line-code">  extends Omit&lt;Partial&lt;CreateAgentInput&gt;, <span class="token-string">'name'</span> | <span class="token-string">'description'</span> | <span class="token-string">'characterLayer'</span>&gt; {</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="104">
+        <span class="line-no">104</span>
+        <span class="line-code">  name: string;</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="105">
+        <span class="line-no">105</span>
+        <span class="line-code">  description: string;</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="106">
+        <span class="line-no">106</span>
+        <span class="line-code">  /** System prompt. Alias <span class=<span class="token-string">"token-keyword"</span>>for</span> `systemPrompt`; wins <span class=<span class="token-string">"token-keyword"</span>>if</span> both are set. */</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="107">
+        <span class="line-no">107</span>
+        <span class="line-code">  instructions?: string;</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="108">
+        <span class="line-no">108</span>
+        <span class="line-code">  /** Compact character spec, expanded via buildCharacterLayer. */</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="109">
+        <span class="line-no">109</span>
+        <span class="line-code">  character?: CharacterLayerSpec;</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="110">
+        <span class="line-no">110</span>
+        <span class="line-code">  /** Full character layer override; takes precedence over `character`. */</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="111">
+        <span class="line-no">111</span>
+        <span class="line-code">  characterLayer?: CharacterLayerConfig;</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="112">
+        <span class="line-no">112</span>
+        <span class="line-code">}</span>
+      </div>
+<div class="walkthrough-line dim" data-line="113">
+        <span class="line-no">113</span>
+        <span class="line-code">&nbsp;</span>
+      </div>
+<div class="walkthrough-line dim" data-line="114">
+        <span class="line-no">114</span>
+        <span class="line-code"><span class=<span class="token-string">"token-keyword"</span>>export</span> <span class=<span class="token-string">"token-keyword"</span>>interface</span> DefineAgentOptions {</span>
+      </div></pre>
+  </div>
+</div>
+<div class="walkthrough-step alabs-media" id="core-fluency-m2-agent-definition-walkthrough-step-2" data-walkthrough="core-fluency-m2-agent-definition-walkthrough" data-step="2">
+  <div class="walkthrough-header">
+    <span class="walkthrough-step-num">Step 3</span>
+    <h4>Define and validate</h4>
+  </div>
+  <div class="walkthrough-note">
+    <p>defineAgent fills in canonical defaults, validates against the Zod schema, and optionally enforces the agent creation checklist. This is the single path for programmatic agent creation.</p>
+  </div>
+  <div class="code-block walkthrough-code">
+    <div class="code-header">
+      <span class="code-lang">typescript</span>
+      <span class="code-path">surfaces/ai.allternit.com/src/lib/agents/agent-definition.ts</span>
+    </div>
+    <pre><div class="walkthrough-line dim" data-line="122">
+        <span class="line-no">122</span>
+        <span class="line-code"> * unsatisfied required checklist items.</span>
+      </div>
+<div class="walkthrough-line dim" data-line="123">
+        <span class="line-no">123</span>
+        <span class="line-code"> */</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="124">
+        <span class="line-no">124</span>
+        <span class="line-code"><span class=<span class="token-string">"token-keyword"</span>>export</span> <span class=<span class="token-string">"token-keyword"</span>>function</span> defineAgent(</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="125">
+        <span class="line-no">125</span>
+        <span class="line-code">  definition: AgentDefinition,</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="126">
+        <span class="line-no">126</span>
+        <span class="line-code">  options: DefineAgentOptions = {},</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="127">
+        <span class="line-no">127</span>
+        <span class="line-code">): CreateAgentInput {</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="128">
+        <span class="line-no">128</span>
+        <span class="line-code">  <span class=<span class="token-string">"token-keyword"</span>>const</span> {</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="129">
+        <span class="line-no">129</span>
+        <span class="line-code">    instructions,</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="130">
+        <span class="line-no">130</span>
+        <span class="line-code">    character,</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="131">
+        <span class="line-no">131</span>
+        <span class="line-code">    characterLayer,</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="132">
+        <span class="line-no">132</span>
+        <span class="line-code">    ...overrides</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="133">
+        <span class="line-no">133</span>
+        <span class="line-code">  } = definition;</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="134">
+        <span class="line-no">134</span>
+        <span class="line-code">&nbsp;</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="135">
+        <span class="line-no">135</span>
+        <span class="line-code">  <span class=<span class="token-string">"token-keyword"</span>>const</span> <span class=<span class="token-string">"token-keyword"</span>>type</span>: AgentType = overrides.<span class=<span class="token-string">"token-keyword"</span>>type</span> ?? <span class="token-string">'worker'</span>;</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="136">
+        <span class="line-no">136</span>
+        <span class="line-code">  <span class=<span class="token-string">"token-keyword"</span>>const</span> capabilities = overrides.capabilities ?? [];</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="137">
+        <span class="line-no">137</span>
+        <span class="line-code">&nbsp;</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="138">
+        <span class="line-no">138</span>
+        <span class="line-code">  <span class=<span class="token-string">"token-keyword"</span>>const</span> input: CreateAgentInput = {</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="139">
+        <span class="line-no">139</span>
+        <span class="line-code">    model: DEFAULT_AGENT_MODEL,</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="140">
+        <span class="line-no">140</span>
+        <span class="line-code">    provider: DEFAULT_AGENT_PROVIDER,</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="141">
+        <span class="line-no">141</span>
+        <span class="line-code">    ...overrides,</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="142">
+        <span class="line-no">142</span>
+        <span class="line-code">    name: definition.name,</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="143">
+        <span class="line-no">143</span>
+        <span class="line-code">    description: definition.description,</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="144">
+        <span class="line-no">144</span>
+        <span class="line-code">    <span class=<span class="token-string">"token-keyword"</span>>type</span>,</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="145">
+        <span class="line-no">145</span>
+        <span class="line-code">    capabilities,</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="146">
+        <span class="line-no">146</span>
+        <span class="line-code">    systemPrompt: instructions ?? overrides.systemPrompt,</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="147">
+        <span class="line-no">147</span>
+        <span class="line-code">    tools: overrides.tools ?? [],</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="148">
+        <span class="line-no">148</span>
+        <span class="line-code">    maxIterations: overrides.maxIterations ?? <span class="token-number">10</span>,</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="149">
+        <span class="line-no">149</span>
+        <span class="line-code">    temperature: overrides.temperature ?? <span class="token-number">0.7</span>,</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="150">
+        <span class="line-no">150</span>
+        <span class="line-code">    harness: overrides.harness ?? DEFAULT_AGENT_HARNESS,</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="151">
+        <span class="line-no">151</span>
+        <span class="line-code">    allowedSurfaces: overrides.allowedSurfaces ?? DEFAULT_AGENT_SURFACES,</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="152">
+        <span class="line-no">152</span>
+        <span class="line-code">    trustTier: overrides.trustTier ?? <span class="token-string">'standard'</span>,</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="153">
+        <span class="line-no">153</span>
+        <span class="line-code">    writeScope: overrides.writeScope ?? <span class="token-string">'workspace'</span>,</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="154">
+        <span class="line-no">154</span>
+        <span class="line-code">    characterLayer:</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="155">
+        <span class="line-no">155</span>
+        <span class="line-code">      characterLayer ??</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="156">
+        <span class="line-no">156</span>
+        <span class="line-code">      buildCharacterLayer({</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="157">
+        <span class="line-no">157</span>
+        <span class="line-code">        specialtySkills: capabilities,</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="158">
+        <span class="line-no">158</span>
+        <span class="line-code">        ...character,</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="159">
+        <span class="line-no">159</span>
+        <span class="line-code">      }),</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="160">
+        <span class="line-no">160</span>
+        <span class="line-code">  };</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="161">
+        <span class="line-no">161</span>
+        <span class="line-code">&nbsp;</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="162">
+        <span class="line-no">162</span>
+        <span class="line-code">  <span class=<span class="token-string">"token-keyword"</span>>const</span> validated = validateCreateAgentInput(input);</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="163">
+        <span class="line-no">163</span>
+        <span class="line-code">&nbsp;</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="164">
+        <span class="line-no">164</span>
+        <span class="line-code">  <span class=<span class="token-string">"token-keyword"</span>>if</span> (options.enforceChecklist !== <span class=<span class="token-string">"token-keyword"</span>>false</span>) {</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="165">
+        <span class="line-no">165</span>
+        <span class="line-code">    <span class=<span class="token-string">"token-keyword"</span>>const</span> checklist = validateAgentCreationChecklist(validated);</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="166">
+        <span class="line-no">166</span>
+        <span class="line-code">    <span class=<span class="token-string">"token-keyword"</span>>if</span> (!checklist.isValid) {</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="167">
+        <span class="line-no">167</span>
+        <span class="line-code">      <span class=<span class="token-string">"token-keyword"</span>>const</span> missing = checklist.items</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="168">
+        <span class="line-no">168</span>
+        <span class="line-code">        .filter((item) =&gt; item.required &amp;&amp; !item.satisfied)</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="169">
+        <span class="line-no">169</span>
+        <span class="line-code">        .map((item) =&gt; item.id)</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="170">
+        <span class="line-no">170</span>
+        <span class="line-code">        .join(<span class="token-string">', '</span>);</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="171">
+        <span class="line-no">171</span>
+        <span class="line-code">      <span class=<span class="token-string">"token-keyword"</span>>throw</span> <span class=<span class="token-string">"token-keyword"</span>>new</span> Error(`Agent definition <span class="token-string">"${definition.name}"</span> fails creation checklist: ${missing}`);</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="172">
+        <span class="line-no">172</span>
+        <span class="line-code">    }</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="173">
+        <span class="line-no">173</span>
+        <span class="line-code">  }</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="174">
+        <span class="line-no">174</span>
+        <span class="line-code">&nbsp;</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="175">
+        <span class="line-no">175</span>
+        <span class="line-code">  <span class=<span class="token-string">"token-keyword"</span>>return</span> validated;</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="176">
+        <span class="line-no">176</span>
+        <span class="line-code">}</span>
+      </div>
+<div class="walkthrough-line dim" data-line="177">
+        <span class="line-no">177</span>
+        <span class="line-code">&nbsp;</span>
+      </div></pre>
+  </div>
+</div>
+  </div>
+</div>
+
+  <h3>Lifecycle and deployment</h3>
+  <p>Once an agent is defined, the lifecycle guide shows how to create it, bind it to a session with a budget, stream events, interrupt if needed, and deploy on a cron schedule. The budget fields—<code>max_tokens</code>, <code>max_turns</code>, and <code>max_tool_calls</code>—are the guardrails that keep a delegated task from running away.</p>
+
+  <div class="code-block">
+    <div class="code-header">
+      <span class="code-lang">bash</span>
+      <button class="code-copy">Copy</button>
+    </div>
+    <pre><code>curl -s -X POST http://localhost:8013/api/v1/beta/sessions \
+  -H "Authorization: Bearer $CLERK_JWT" \
+  -H "Content-Type: application/json" \
+  -d "{\"agent_id\":\"$AGENT_ID\",\"name\":\"payment-refactor-7\",\"budget\":{\"max_tokens\":10000,\"max_turns\":20,\"max_tool_calls\":50}}"</code></pre>
+  </div>
+
+  <h3>Terminal demo: delegation end-to-end</h3>
+  <p>The recording below shows a task being checked against the delegation checklist, scoped, spawned in an isolated worktree, and accepted after review.</p>
+
+  <div class="asciinema-wrapper alabs-media" data-media-id="core-fluency-m2-delegation-demo">
+  <asciinema-player src="data:application/json;base64,eyJ2ZXJzaW9uIjogMiwgIndpZHRoIjogODAsICJoZWlnaHQiOiAxOCwgInRpbWVzdGFtcCI6IDE3MDAwMDAwMDAsICJlbnYiOiB7IlNIRUxMIjogIi9iaW4vYmFzaCIsICJURVJNIjogInh0ZXJtLTI1NmNvbG9yIn19ClswLjAsICJvIiwgIlx1MDAxYlsxOzMybSRcdTAwMWJbMG0gdHN4IHNjcmlwdHMvZGVsZWdhdGUtdGFzay50cyAtLW1vZGUgcmVmYWN0b3IgLS1zY29wZSBcIkV4dHJhY3QgcGF5bWVudCBob29rXCJcclxuIl0KWzAuOCwgIm8iLCAiXHUwMDFiWzkwbeKGklx1MDAxYlswbSBDaGVja2luZyB0YXNrIGFnYWluc3QgNEQgZGVsZWdhdGlvbiBjaGVja2xpc3RcclxuIl0KWzEuNCwgIm8iLCAiXHUwMDFiWzkwbeKGklx1MDAxYlswbSBWZXJpZmlhYmxlOiB5ZXMgfCBNdWx0aS1maWxlOiB5ZXMgfCBTY29wZWQ6IHllc1xyXG4iXQpbMi4wLCAibyIsICJcdTAwMWJbOTBt4oaSXHUwMDFiWzBtIFdyaXRpbmcgZG9jcy9QQVlNRU5UX0hPT0tfUEhBU0VfMV9UQVNLLm1kXHJcbiJdClsyLjgsICJvIiwgIlx1MDAxYls5MG3ihpJcdTAwMWJbMG0gU3Bhd25pbmcgaXNvbGF0ZWQgZXhlY3V0b3Igd29ya3RyZWVcclxuIl0KWzMuNiwgIm8iLCAiXHUwMDFiWzkwbeKGklx1MDAxYlswbSBhby13YXRjaDogZXhlY3V0b3IgYWN0aXZlLCBpbnB1dCBib3ggaWRsZVxyXG4iXQpbNS4yLCAibyIsICJcdTAwMWJbOTBt4oaSXHUwMDFiWzBtIEV4ZWN1dG9yIHdyb3RlIGRvY3MvUEFZTUVOVF9IT09LX1BIQVNFXzFfTk9URVMubWRcclxuIl0KWzYuMCwgIm8iLCAiXHUwMDFiWzkwbeKGklx1MDAxYlswbSBSZXZpZXc6IDQgZmlsZXMgY2hhbmdlZCwgc2NvcGUgbWF0Y2hlcyBzcGVjXHJcbiJdCls2LjgsICJvIiwgIlx1MDAxYls5MG3ihpJcdTAwMWJbMG0gU3ludGF4IGdhdGUgcGFzc2VkIGZvciBjaGFuZ2VkIC50cyBmaWxlc1xyXG4iXQpbNy42LCAibyIsICJcdTAwMWJbMTszMm3inJNcdTAwMWJbMG0gUGhhc2UgMSBhY2NlcHRlZCDigJQgbWVyZ2luZyB3b3JrdHJlZVxyXG4iXQ==" theme="monokai" speed="1.2" cols="80" rows="24"></asciinema-player>
+</div>
+</section>
+
+<section id="quizzes" class="reveal">
+  <h2>Check Your Understanding</h2>
+
+  <div class="quiz" id="quiz1">
+    <div class="quiz-header">
+      <div class="quiz-num">1</div>
+      <h3>Which orchestrator phase is responsible for verifying the executor's true footprint and code claims?</h3>
+    </div>
+    <div class="quiz-options">
+      <div class="quiz-option" onclick="selectOption(this, 1, 0)"><div class="radio"></div><span>Phase 1 — Scope and Plan</span></div>
+      <div class="quiz-option" onclick="selectOption(this, 1, 1)"><div class="radio"></div><span>Phase 2 — Spawn</span></div>
+      <div class="quiz-option" onclick="selectOption(this, 1, 2)"><div class="radio"></div><span>Phase 4 — Monitor</span></div>
+      <div class="quiz-option" onclick="selectOption(this, 1, 3)"><div class="radio"></div><span>Phase 5 — Review</span></div>
+    </div>
+    <div class="quiz-feedback" id="feedback1"></div>
+    <button class="quiz-retry" id="retry1" onclick="window.QuizEngine.reset(1)">Retry</button>
+  </div>
+
+  <div class="quiz" id="quiz2">
+    <div class="quiz-header">
+      <div class="quiz-num">2</div>
+      <h3>What does <code>defineAgent</code> enforce by default?</h3>
+    </div>
+    <div class="quiz-options">
+      <div class="quiz-option" onclick="selectOption(this, 2, 0)"><div class="radio"></div><span>No validation</span></div>
+      <div class="quiz-option" onclick="selectOption(this, 2, 1)"><div class="radio"></div><span>Only TypeScript type checks</span></div>
+      <div class="quiz-option" onclick="selectOption(this, 2, 2)"><div class="radio"></div><span>The agent creation checklist</span></div>
+      <div class="quiz-option" onclick="selectOption(this, 2, 3)"><div class="radio"></div><span>A production deployment schedule</span></div>
+    </div>
+    <div class="quiz-feedback" id="feedback2"></div>
+    <button class="quiz-retry" id="retry2" onclick="window.QuizEngine.reset(2)">Retry</button>
+  </div>
+
+  <div class="quiz" id="quiz3">
+    <div class="quiz-header">
+      <div class="quiz-num">3</div>
+      <h3>Which session budget field limits how many tool calls a delegated run can make?</h3>
+    </div>
+    <div class="quiz-options">
+      <div class="quiz-option" onclick="selectOption(this, 3, 0)"><div class="radio"></div><span><code>max_tokens</code></span></div>
+      <div class="quiz-option" onclick="selectOption(this, 3, 1)"><div class="radio"></div><span><code>max_turns</code></span></div>
+      <div class="quiz-option" onclick="selectOption(this, 3, 2)"><div class="radio"></div><span><code>max_tool_calls</code></span></div>
+      <div class="quiz-option" onclick="selectOption(this, 3, 3)"><div class="radio"></div><span><code>cron</code></span></div>
+    </div>
+    <div class="quiz-feedback" id="feedback3"></div>
+    <button class="quiz-retry" id="retry3" onclick="window.QuizEngine.reset(3)">Retry</button>
+  </div>
+</section>
+
+<section id="capstone" class="reveal capstone">
+  <h2>Capstone: Scope a real task for delegation</h2>
+  <p>Pick a small change in a codebase you know and walk it through the full delegation pipeline. The deliverable is a task spec plus a short reflection.</p>
+  <div class="capstone-grid">
+    <div class="capstone-item">
+      <h4>Decide</h4>
+      <p>State the task in one sentence and explain why it is a good candidate for delegation.</p>
+    </div>
+    <div class="capstone-item">
+      <h4>Scope</h4>
+      <p>List the files that should change, the files that must not, and the success sentinel.</p>
+    </div>
+    <div class="capstone-item">
+      <h4>Define the agent</h4>
+      <p>Write a <code>defineAgent</code> call with the right capabilities, instructions, and character for the task.</p>
+    </div>
+    <div class="capstone-item">
+      <h4>Plan verification</h4>
+      <p>List three concrete checks you would perform in the Review phase before accepting the work.</p>
+    </div>
+  </div>
+  <div class="callout success" style="margin-top: 24px;">
+    <p><strong>Deliverable:</strong> A markdown task spec file and a short TypeScript snippet defining the agent. Include your 4D reflection: why delegate, what you kept human, and how you will verify the result.</p>
+  </div>
+</section>
+
+
+  <footer>
+    <p>A://Labs — CORE Tier — Module 2: Delegation: Scoping Work for Agents</p>
+    <p style="margin-top:4px;">Generated from <code>.agents/skills/agent-orchestrator</code> · Allternit Internal</p>
+  </footer>
+
+  <script>
+    // ========================
+    // Shared: Scroll Progress & Nav
+    // ========================
+    const progressBar = document.getElementById('progress-bar');
+    const navLinks = document.querySelectorAll('.nav-links a');
+    const sections = document.querySelectorAll('section[id], section[class*="reveal"]');
+
+    function updateProgress() {
+      const scrollTop = window.scrollY;
+      const docHeight = document.documentElement.scrollHeight - window.innerHeight;
+      const pct = (scrollTop / docHeight) * 100;
+      progressBar.style.width = pct + '%';
+
+      let current = '';
+      sections.forEach(sec => {
+        const top = sec.offsetTop - 100;
+        if (scrollTop >= top) {
+          current = sec.getAttribute('id') || '';
+        }
+      });
+      navLinks.forEach(link => {
+        link.classList.toggle('active', link.dataset.section === current);
+      });
+    }
+    window.addEventListener('scroll', updateProgress, { passive: true });
+    updateProgress();
+
+    // ========================
+    // Shared: Scroll Reveal
+    // ========================
+    const revealObserver = new IntersectionObserver((entries) => {
+      entries.forEach(e => { if (e.isIntersecting) e.target.classList.add('visible'); });
+    }, { threshold: 0.08 });
+    document.querySelectorAll('.reveal').forEach(el => revealObserver.observe(el));
+
+    // ========================
+    // Shared: Quiz Engine
+    // ========================
+    window.QuizEngine = {
+      answers: {},
+      feedback: {},
+
+      init(answers, feedback) {
+        this.answers = answers;
+        this.feedback = feedback;
+      },
+
+      selectOption(el, quizNum, optionIdx) {
+        const quizEl = document.getElementById('quiz' + quizNum);
+        const options = quizEl.querySelectorAll('.quiz-option');
+        const feedback = document.getElementById('feedback' + quizNum);
+        const retryBtn = document.getElementById('retry' + quizNum);
+
+        // Disable all options
+        options.forEach(opt => {
+          opt.style.pointerEvents = 'none';
+          opt.classList.remove('selected');
+        });
+        el.classList.add('selected');
+
+        const correct = this.answers[quizNum] === optionIdx;
+        if (correct) {
+          el.classList.add('correct');
+          feedback.className = 'quiz-feedback show correct';
+          feedback.textContent = this.feedback[quizNum].correct;
+        } else {
+          el.classList.add('wrong');
+          options[this.answers[quizNum]].classList.add('correct');
+          feedback.className = 'quiz-feedback show wrong';
+          feedback.textContent = this.feedback[quizNum].wrong;
+          if (retryBtn) retryBtn.classList.add('show');
+        }
+      },
+
+      reset(quizNum) {
+        const quizEl = document.getElementById('quiz' + quizNum);
+        const options = quizEl.querySelectorAll('.quiz-option');
+        const feedback = document.getElementById('feedback' + quizNum);
+        const retryBtn = document.getElementById('retry' + quizNum);
+
+        options.forEach(opt => {
+          opt.style.pointerEvents = '';
+          opt.classList.remove('selected', 'correct', 'wrong');
+        });
+        feedback.className = 'quiz-feedback';
+        feedback.textContent = '';
+        if (retryBtn) retryBtn.classList.remove('show');
+      }
+    };
+
+    // Alias for backward compatibility
+    function selectOption(el, quizNum, optionIdx) {
+      window.QuizEngine.selectOption(el, quizNum, optionIdx);
+    }
+
+    // ========================
+    // Shared: Code Copy
+    // ========================
+    document.querySelectorAll('.code-copy').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const pre = btn.closest('.code-block').querySelector('pre');
+        navigator.clipboard.writeText(pre.textContent).then(() => {
+          btn.textContent = 'Copied!';
+          setTimeout(() => btn.textContent = 'Copy', 1500);
+        });
+      });
+    });
+
+    // ========================
+    // Shared: Walkthrough Engine
+    // ========================
+    window.Walkthrough = {
+      init(id) {
+        const container = document.querySelector(`[data-walkthrough-container="${id}"]`);
+        if (!container) return;
+        const steps = container.querySelectorAll(`[data-walkthrough="${id}"]`);
+        if (steps.length === 0) return;
+        steps.forEach((step, idx) => { step.classList.toggle('active', idx === 0); });
+        this.updateControls(id, 0);
+      },
+
+      step(id, delta) {
+        const container = document.querySelector(`[data-walkthrough-container="${id}"]`);
+        if (!container) return;
+        const steps = Array.from(container.querySelectorAll(`[data-walkthrough="${id}"]`));
+        const current = steps.findIndex(s => s.classList.contains('active'));
+        const next = Math.max(0, Math.min(steps.length - 1, current + delta));
+        steps.forEach((step, idx) => { step.classList.toggle('active', idx === next); });
+        this.updateControls(id, next);
+      },
+
+      updateControls(id, activeIndex) {
+        const controls = document.querySelector(`[data-walkthrough-controls="${id}"]`);
+        if (!controls) return;
+        const steps = controls.closest('.walkthrough-container').querySelectorAll(`[data-walkthrough="${id}"]`);
+        const currentSpan = controls.querySelector('.current');
+        const prevBtn = controls.querySelector('.walkthrough-prev');
+        const nextBtn = controls.querySelector('.walkthrough-next');
+        if (currentSpan) currentSpan.textContent = activeIndex + 1;
+        if (prevBtn) prevBtn.disabled = activeIndex === 0;
+        if (nextBtn) nextBtn.disabled = activeIndex === steps.length - 1;
+      }
+    };
+
+    document.querySelectorAll('[data-walkthrough-container]').forEach(container => {
+      const id = container.getAttribute('data-walkthrough-container');
+      if (id) window.Walkthrough.init(id);
+    });
+
+    // ========================
+    // Module-specific JS injection point
+    // ========================
+    // Initialize quiz engine
+    window.QuizEngine.init({"1":3,"2":2,"3":2}, {"1":{"correct":"Correct. Phase 5 — Review checks the true footprint, scope, and verifies every code claim before accepting the work.","wrong":"Not quite. Scope and Plan happens before execution; Spawn and Monitor happen during execution. Review is the non-negotiable verification phase."},"2":{"correct":"Correct. defineAgent validates against the Zod schema and, by default, enforces the agent creation checklist.","wrong":"Not quite. The factory does more than type checks; it enforces the checklist unless enforceChecklist is set to false."},"3":{"correct":"Correct. max_tool_calls limits how many tool calls a session can make, preventing runaway loops.","wrong":"Not quite. max_tokens limits tokens, max_turns limits conversation turns, and cron schedules deployments. max_tool_calls is the tool-call guardrail."}});
+
+    
+const canvas = document.getElementById('delegationCanvas');
+if (canvas) {
+  const ctx = canvas.getContext('2d');
+  function resize() {
+    canvas.width = canvas.offsetWidth;
+    canvas.height = canvas.offsetHeight;
+  }
+  window.addEventListener('resize', resize);
+  resize();
+  const nodes = Array.from({ length: 24 }, () => ({
+    x: Math.random() * canvas.width,
+    y: Math.random() * canvas.height,
+    vx: (Math.random() - 0.5) * 0.6,
+    vy: (Math.random() - 0.5) * 0.6,
+  }));
+  function draw() {
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    ctx.fillStyle = '#3b82f6';
+    nodes.forEach((n) => {
+      n.x += n.vx;
+      n.y += n.vy;
+      if (n.x < 0 || n.x > canvas.width) n.vx *= -1;
+      if (n.y < 0 || n.y > canvas.height) n.vy *= -1;
+      ctx.beginPath();
+      ctx.arc(n.x, n.y, 2, 0, Math.PI * 2);
+      ctx.fill();
+    });
+    ctx.strokeStyle = 'rgba(59,130,246,0.12)';
+    for (let i = 0; i < nodes.length; i++) {
+      for (let j = i + 1; j < nodes.length; j++) {
+        const dx = nodes[i].x - nodes[j].x;
+        const dy = nodes[i].y - nodes[j].y;
+        const d = Math.sqrt(dx * dx + dy * dy);
+        if (d < 120) {
+          ctx.beginPath();
+          ctx.moveTo(nodes[i].x, nodes[i].y);
+          ctx.lineTo(nodes[j].x, nodes[j].y);
+          ctx.stroke();
+        }
+      }
+    }
+    requestAnimationFrame(draw);
+  }
+  draw();
+}
+  </script>
+</body>
+</html>

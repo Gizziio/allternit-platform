@@ -1,0 +1,27 @@
+{
+  "file": "packages/@allternit/cowork-engine/src/approval/gate.ts",
+  "language": "typescript",
+  "contextLines": 2,
+  "steps": [
+    {
+      "title": "ApprovalGate options and rules",
+      "lines": [15, 43],
+      "note": "The gate is initialized with auto-rules, a default timeout of 120s, and optional callbacks for request/result events. These hooks are how the Cowork UI surfaces approval requests to operators."
+    },
+    {
+      "title": "Requesting an approval",
+      "lines": [45, 79],
+      "note": "When a tool call arrives, request() first checks auto-rules. If no rule matches, it stores a pending promise with a timer and notifies the UI via onRequest. Timeouts resolve to a 'timeout' decision so the agent cannot hang forever."
+    },
+    {
+      "title": "Human response and result propagation",
+      "lines": [81, 97],
+      "note": "respond() lets an operator approve or reject a pending action. It clears the timer, removes the entry, and calls onResult so the audit layer can record the decision."
+    },
+    {
+      "title": "Default low-risk auto-approval",
+      "lines": [147, 151],
+      "note": "buildDefaultRules() auto-approves low-risk actions. Teams can extend this with org-specific rules, but high-risk actions like file writes outside the workspace or network calls always escalate to humans."
+    }
+  ]
+}

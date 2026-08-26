@@ -1,0 +1,1709 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Module 6: Autonomous Coding & Computer Use — A://Labs</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+  <style>
+    /* ================================================================
+       A://Labs Module Template — Shared Styles
+       ================================================================ */
+
+    :root {
+      --bg: #0b0b0c;
+      --surface: #151517;
+      --surface-raised: #1c1c1f;
+      --border: #27272a;
+      --border-light: #3f3f46;
+      --text: #e5e5e5;
+      --text-secondary: #a1a1aa;
+      --text-muted: #71717a;
+      --accent: #ec4899;
+      --accent-dim: rgba(236,72,153,0.15);
+      --accent-glow: rgba(236,72,153,0.4);
+      --success: #22c55e;
+      --error: #ef4444;
+      --info: #3b82f6;
+      --code-bg: #0f0f11;
+    }
+
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    html {
+      scroll-behavior: smooth;
+      scroll-padding-top: 80px;
+    }
+
+    body {
+      font-family: 'Inter', system-ui, -apple-system, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      line-height: 1.6;
+      overflow-x: hidden;
+    }
+
+    /* Progress Bar */
+    #progress-container {
+      position: fixed;
+      top: 0; left: 0; right: 0;
+      height: 3px;
+      background: var(--surface);
+      z-index: 1000;
+    }
+    #progress-bar {
+      height: 100%;
+      width: 0%;
+      background: linear-gradient(90deg, var(--accent), #f472b6);
+      box-shadow: 0 0 12px var(--accent-glow);
+      transition: width 0.2s ease;
+    }
+
+    /* Navigation */
+    nav {
+      position: fixed;
+      top: 3px; left: 0; right: 0;
+      background: rgba(11, 11, 12, 0.92);
+      backdrop-filter: blur(16px);
+      border-bottom: 1px solid var(--border);
+      z-index: 999;
+      padding: 0 24px;
+    }
+    .nav-inner {
+      max-width: 1200px;
+      margin: 0 auto;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      height: 56px;
+    }
+    .nav-logo {
+      font-weight: 800;
+      font-size: 0.9rem;
+      letter-spacing: -0.02em;
+      color: var(--text);
+    }
+    .nav-logo span {
+      color: var(--accent);
+    }
+    .nav-links {
+      display: flex;
+      gap: 6px;
+      list-style: none;
+    }
+    .nav-links a {
+      color: var(--text-secondary);
+      text-decoration: none;
+      font-size: 0.78rem;
+      font-weight: 500;
+      padding: 6px 12px;
+      border-radius: 6px;
+      transition: all 0.2s;
+      white-space: nowrap;
+    }
+    .nav-links a:hover, .nav-links a.active {
+      color: var(--accent);
+      background: var(--accent-dim);
+    }
+    .nav-tier {
+      font-size: 0.65rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: var(--accent);
+      border: 1px solid var(--accent);
+      padding: 3px 8px;
+      border-radius: 4px;
+    }
+    .nav-toggle {
+      display: none;
+      background: none;
+      border: none;
+      color: var(--text);
+      font-size: 1.4rem;
+      cursor: pointer;
+    }
+    @media (max-width: 768px) {
+      .nav-links { display: none; position: absolute; top: 56px; left: 0; right: 0; background: var(--surface); flex-direction: column; padding: 12px; gap: 4px; border-bottom: 1px solid var(--border); }
+      .nav-links.open { display: flex; }
+      .nav-toggle { display: block; }
+    }
+
+    /* Sections */
+    section {
+      padding: 80px 24px;
+      max-width: 860px;
+      margin: 0 auto;
+      position: relative;
+    }
+
+    /* Hero */
+    .hero {
+      min-height: 90vh;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: flex-start;
+      padding-top: 100px;
+    }
+    .hero-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 0.7rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+      color: var(--accent);
+      background: var(--accent-dim);
+      border: 1px solid rgba(236,72,153,0.25);
+      padding: 6px 14px;
+      border-radius: 100px;
+      margin-bottom: 24px;
+    }
+    .hero-badge::before {
+      content: '';
+      width: 6px; height: 6px;
+      background: var(--accent);
+      border-radius: 50%;
+      box-shadow: 0 0 8px var(--accent);
+      animation: pulse 2s ease-in-out infinite;
+    }
+    @keyframes pulse {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.4; }
+    }
+    .hero h1 {
+      font-size: clamp(2.2rem, 5vw, 3.8rem);
+      font-weight: 900;
+      line-height: 1.1;
+      letter-spacing: -0.03em;
+      margin-bottom: 20px;
+    }
+    .hero h1 em {
+      color: var(--accent);
+      font-style: normal;
+    }
+    .hero p {
+      font-size: 1.15rem;
+      color: var(--text-secondary);
+      max-width: 600px;
+      margin-bottom: 32px;
+      line-height: 1.7;
+    }
+    .hero-meta {
+      display: flex;
+      gap: 24px;
+      font-size: 0.8rem;
+      color: var(--text-muted);
+    }
+
+    /* Content Typography */
+    h2 {
+      font-size: 1.6rem;
+      font-weight: 700;
+      margin-bottom: 20px;
+      color: var(--text);
+      letter-spacing: -0.01em;
+    }
+    h3 {
+      font-size: 1.15rem;
+      font-weight: 600;
+      margin: 32px 0 12px;
+      color: var(--text);
+    }
+    h4 {
+      font-size: 0.95rem;
+      font-weight: 600;
+      margin: 24px 0 8px;
+      color: var(--text-secondary);
+    }
+    p {
+      margin-bottom: 16px;
+      color: var(--text-secondary);
+      font-size: 0.95rem;
+      line-height: 1.7;
+    }
+    ul, ol {
+      margin: 16px 0;
+      padding-left: 24px;
+      color: var(--text-secondary);
+    }
+    li {
+      margin-bottom: 8px;
+      font-size: 0.95rem;
+      line-height: 1.6;
+    }
+    a {
+      color: var(--accent);
+      text-decoration: none;
+    }
+    a:hover { text-decoration: underline; }
+    strong { color: var(--text); font-weight: 600; }
+    em { color: var(--accent); font-style: normal; }
+
+    /* Code Blocks */
+    .code-block {
+      background: var(--code-bg);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      overflow: hidden;
+      margin: 20px 0;
+    }
+    .code-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 10px 16px;
+      background: rgba(255,255,255,0.03);
+      border-bottom: 1px solid var(--border);
+    }
+    .code-lang {
+      font-size: 0.7rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      color: var(--text-muted);
+    }
+    .code-copy {
+      font-size: 0.7rem;
+      color: var(--text-muted);
+      background: none;
+      border: 1px solid var(--border);
+      padding: 4px 10px;
+      border-radius: 4px;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    .code-copy:hover {
+      color: var(--accent);
+      border-color: var(--accent);
+    }
+    pre {
+      padding: 16px 20px;
+      overflow-x: auto;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.82rem;
+      line-height: 1.6;
+      color: var(--text);
+    }
+    code {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.85em;
+      color: var(--accent);
+      background: rgba(245,158,11,0.08);
+      padding: 2px 5px;
+      border-radius: 3px;
+    }
+    pre code {
+      background: none;
+      padding: 0;
+      color: inherit;
+      font-size: inherit;
+    }
+    .token-keyword { color: #c678dd; }
+    .token-string { color: #98c379; }
+    .token-number { color: #d19a66; }
+    .token-comment { color: #5c6370; font-style: italic; }
+    .token-function { color: #61afef; }
+    .token-type { color: #e5c07b; }
+    .token-operator { color: #56b6c2; }
+
+    /* Callouts */
+    .callout {
+      padding: 16px 20px;
+      border-radius: 8px;
+      border-left: 3px solid var(--accent);
+      background: var(--accent-dim);
+      margin: 20px 0;
+    }
+    .callout.info {
+      border-left-color: var(--info);
+      background: rgba(59,130,246,0.08);
+    }
+    .callout.success {
+      border-left-color: var(--success);
+      background: rgba(34,197,94,0.08);
+    }
+    .callout.error {
+      border-left-color: var(--error);
+      background: rgba(239,68,68,0.08);
+    }
+    .callout p { margin: 0; color: var(--text-secondary); }
+    .callout strong { color: var(--text); }
+
+    /* Tables */
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin: 20px 0;
+      font-size: 0.88rem;
+    }
+    th, td {
+      padding: 10px 14px;
+      text-align: left;
+      border-bottom: 1px solid var(--border);
+    }
+    th {
+      font-weight: 600;
+      color: var(--text);
+      background: var(--surface);
+    }
+    td { color: var(--text-secondary); }
+    tr:hover td { background: rgba(255,255,255,0.02); }
+
+    /* Divider */
+    .divider {
+      height: 1px;
+      background: linear-gradient(90deg, transparent, var(--border), transparent);
+      margin: 60px 0;
+      border: none;
+    }
+
+    /* Scroll Reveal */
+    .reveal {
+      opacity: 0;
+      transform: translateY(24px);
+      transition: opacity 0.6s ease, transform 0.6s ease;
+    }
+    .reveal.visible {
+      opacity: 1;
+      transform: translateY(0);
+    }
+
+    /* Quiz */
+    .quiz {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 24px;
+      margin: 24px 0;
+    }
+    .quiz-header {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 16px;
+    }
+    .quiz-num {
+      width: 32px;
+      height: 32px;
+      border-radius: 50%;
+      background: var(--accent-dim);
+      color: var(--accent);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: 700;
+      font-size: 0.85rem;
+      flex-shrink: 0;
+    }
+    .quiz h3 { margin: 0; font-size: 1rem; }
+    .quiz-options {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+    .quiz-option {
+      padding: 12px 16px;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      cursor: pointer;
+      transition: all 0.2s;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      font-size: 0.9rem;
+      color: var(--text-secondary);
+    }
+    .quiz-option:hover { border-color: var(--border-light); }
+    .quiz-option.selected { border-color: var(--accent); background: var(--accent-dim); color: var(--text); }
+    .quiz-option.correct { border-color: var(--success); background: rgba(34,197,94,0.1); }
+    .quiz-option.wrong { border-color: var(--error); background: rgba(239,68,68,0.1); }
+    .quiz-option .radio {
+      width: 18px;
+      height: 18px;
+      border: 2px solid var(--border-light);
+      border-radius: 50%;
+      flex-shrink: 0;
+      transition: all 0.2s;
+    }
+    .quiz-option.selected .radio { border-color: var(--accent); }
+    .quiz-option.correct .radio { border-color: var(--success); background: var(--success); }
+    .quiz-option.wrong .radio { border-color: var(--error); background: var(--error); }
+    .quiz-feedback {
+      display: none;
+      margin-top: 12px;
+      padding: 12px 16px;
+      border-radius: 8px;
+      font-size: 0.9rem;
+      line-height: 1.5;
+    }
+    .quiz-feedback.show { display: block; }
+    .quiz-feedback.correct { background: rgba(34,197,94,0.1); color: #86efac; border: 1px solid rgba(34,197,94,0.3); }
+    .quiz-feedback.wrong { background: rgba(239,68,68,0.1); color: #fca5a5; border: 1px solid rgba(239,68,68,0.3); }
+    .quiz-retry {
+      margin-top: 12px;
+      padding: 8px 16px;
+      background: var(--surface-raised);
+      border: 1px solid var(--border);
+      color: var(--text-secondary);
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 0.85rem;
+      display: none;
+    }
+    .quiz-retry.show { display: inline-block; }
+    .quiz-retry:hover { border-color: var(--accent); color: var(--accent); }
+
+    /* Capstone */
+    .capstone {
+      background: linear-gradient(135deg, var(--surface) 0%, var(--surface-raised) 100%);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 40px;
+      margin: 40px 0;
+    }
+    .capstone h2 { margin-top: 0; }
+    .capstone-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+      gap: 16px;
+      margin-top: 24px;
+    }
+    .capstone-item {
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 16px;
+    }
+    .capstone-item h4 {
+      color: var(--accent);
+      margin-top: 0;
+      font-size: 0.85rem;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+    .capstone-item p { font-size: 0.85rem; margin: 0; }
+
+    /* Footer */
+    footer {
+      text-align: center;
+      padding: 40px 24px;
+      border-top: 1px solid var(--border);
+      color: var(--text-muted);
+      font-size: 0.85rem;
+    }
+    footer code {
+      background: none;
+      color: var(--text-muted);
+    }
+
+    /* Media assets */
+    .alabs-media {
+      margin: 24px 0;
+      border-radius: 12px;
+      overflow: hidden;
+      border: 1px solid var(--border);
+      background: var(--surface);
+    }
+    .mermaid {
+      padding: 24px;
+      display: flex;
+      justify-content: center;
+      min-height: 120px;
+    }
+    .mermaid svg {
+      max-width: 100%;
+      height: auto;
+    }
+    .asciinema-wrapper {
+      padding: 0;
+      background: var(--code-bg);
+    }
+    .asciinema-wrapper .asciinema-player {
+      width: 100%;
+    }
+
+    /* Walkthrough (Code-Hike-style) */
+    .walkthrough-container {
+      margin: 24px 0;
+    }
+    .walkthrough-controls {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      margin-bottom: 16px;
+      padding: 12px 16px;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+    }
+    .walkthrough-controls button {
+      background: var(--accent-dim);
+      color: var(--accent);
+      border: 1px solid var(--accent);
+      padding: 8px 16px;
+      border-radius: 6px;
+      cursor: pointer;
+      font-weight: 600;
+      font-size: 0.85rem;
+    }
+    .walkthrough-controls button:hover {
+      background: var(--accent);
+      color: var(--bg);
+    }
+    .walkthrough-controls button:disabled {
+      opacity: 0.4;
+      cursor: not-allowed;
+    }
+    .walkthrough-counter {
+      color: var(--text-muted);
+      font-size: 0.85rem;
+      font-variant-numeric: tabular-nums;
+    }
+    .walkthrough-step {
+      display: none;
+      padding: 24px;
+    }
+    .walkthrough-step.active {
+      display: block;
+    }
+    .walkthrough-header {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 16px;
+    }
+    .walkthrough-step-num {
+      font-size: 0.7rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: var(--accent);
+      border: 1px solid var(--accent);
+      padding: 3px 10px;
+      border-radius: 100px;
+    }
+    .walkthrough-header h4 {
+      margin: 0;
+      font-size: 1.1rem;
+      color: var(--text);
+    }
+    .walkthrough-note {
+      background: var(--accent-dim);
+      border-left: 3px solid var(--accent);
+      padding: 16px 20px;
+      border-radius: 0 8px 8px 0;
+      margin-bottom: 20px;
+    }
+    .walkthrough-note p {
+      margin: 0;
+      color: var(--text-secondary);
+    }
+    .walkthrough-code pre {
+      counter-reset: none;
+      padding: 0;
+      background: transparent;
+    }
+    .walkthrough-line {
+      display: flex;
+      padding: 2px 16px;
+      transition: background 0.2s;
+    }
+    .walkthrough-line.dim {
+      opacity: 0.35;
+    }
+    .walkthrough-line.highlight {
+      background: rgba(236, 72, 153, 0.12);
+      border-left: 3px solid var(--accent);
+      margin-left: -3px;
+    }
+    .walkthrough-line .line-no {
+      color: var(--text-muted);
+      font-size: 0.75rem;
+      width: 40px;
+      flex-shrink: 0;
+      text-align: right;
+      padding-right: 16px;
+      user-select: none;
+    }
+    .walkthrough-line .line-code {
+      white-space: pre;
+    }
+    .walkthrough-line.ellipsis {
+      opacity: 0.5;
+      padding: 4px 16px;
+    }
+    .walkthrough-line.ellipsis .line-code {
+      color: var(--text-muted);
+    }
+
+    /* Module-specific styles injection point */
+    
+.hero { position: relative; overflow: hidden; }
+#aciNetworkCanvas { position: absolute; top: 0; left: 0; width: 100%; height: 100%; z-index: -1; opacity: 0.35; pointer-events: none; }
+.quiz-option code { background: rgba(236,72,153,0.12); color: #f472b6; }
+
+  </style>
+
+  <script type="module">
+    import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.esm.min.mjs';
+    mermaid.initialize({ startOnLoad: true, theme: 'dark', themeVariables: { primaryColor: '#ec4899', primaryTextColor: '#e5e5e5', primaryBorderColor: '#ec4899', lineColor: '#a1a1aa', secondaryColor: '#151517', tertiaryColor: '#0b0b0c', fontFamily: 'Inter, system-ui, sans-serif' }});
+  </script>
+
+  <link rel="stylesheet" type="text/css" href="https://cdn.jsdelivr.net/npm/asciinema-player@3/dist/bundle/asciinema-player.css" />
+  <script src="https://cdn.jsdelivr.net/npm/asciinema-player@3/dist/bundle/asciinema-player.min.js"></script>
+</head>
+<body>
+  <div id="progress-container"><div id="progress-bar"></div></div>
+
+  <nav>
+    <div class="nav-inner">
+      <div class="nav-logo">A://<span>Labs</span></div>
+      <ul class="nav-links" id="navLinks">
+        <li><a href="#overview" data-section="overview">Overview</a></li>
+        <li><a href="#aci" data-section="aci">ACI</a></li>
+        <li><a href="#protocol" data-section="protocol">Protocol</a></li>
+        <li><a href="#headless" data-section="headless">Headless</a></li>
+        <li><a href="#factory" data-section="factory">Factory</a></li>
+        <li><a href="#quizzes" data-section="quizzes">Quizzes</a></li>
+        <li><a href="#capstone" data-section="capstone">Capstone</a></li>
+      </ul>
+      <span class="nav-tier">AGENTS</span>
+      <button class="nav-toggle" onclick="document.getElementById('navLinks').classList.toggle('open')">☰</button>
+    </div>
+  </nav>
+
+  
+<section id="overview" class="hero reveal">
+  <canvas id="aciNetworkCanvas"></canvas>
+  <span class="hero-badge">AGENTS Tier</span>
+  <h1>Module 6: <em>Autonomous Coding & Computer Use</em></h1>
+  <p>Learn how Allternit agents control browsers and desktops through the Computer Interface, coordinate across surfaces, and run autonomous code factories with evidence-bound governance.</p>
+  <div class="hero-meta">
+    <span><strong>6 lessons</strong> · ~50 minutes</span>
+    <span>Source: <code>packages/@allternit/computer-use-protocol</code></span>
+  </div>
+</section>
+
+<section id="aci" class="reveal">
+  <h2>Allternit Computer Interface (ACI)</h2>
+  <p>The Allternit Computer Interface lets an agent observe and control a computer through a live screenshot stream, mouse and keyboard actions, and human-in-the-loop approvals. Unlike managed cloud sandboxes, ACI can run on the user's own machine, a private VPS, or a self-managed WebVM. Screenshots, credentials, and code stay on infrastructure the customer controls.</p>
+  <p>ACI routes requests through the Allternit Computer Use gateway and surfaces run state to web, desktop, iOS, and API clients. A browser run starts with a natural-language goal and streams events over SSE at <code>/api/aci/stream/{sessionId}</code>.</p>
+  <ul>
+    <li><strong>Self-hosted or private.</strong> Data residency stays with the operator; the agent operates on the same network as the host.</li>
+    <li><strong>Approval-first actions.</strong> Destructive or high-risk actions pause for human approval before execution.</li>
+    <li><strong>Cross-surface handoff.</strong> A run can start on a desktop surface and continue on a paired mobile or browser extension surface.</li>
+  </ul>
+
+  <div class="callout info">
+    <p><strong>Design principle:</strong> ACI is for users who want agentic browser automation on infrastructure they control, with the same identity and session model as the rest of the platform.</p>
+  </div>
+
+  <h3>Browser automation endpoints</h3>
+  <table>
+    <thead>
+      <tr><th>Method</th><th>Path</th><th>Purpose</th></tr>
+    </thead>
+    <tbody>
+      <tr><td>POST</td><td><code>/api/aci/run</code></td><td>Start a browser automation run</td></tr>
+      <tr><td>GET</td><td><code>/api/aci/stream/{id}</code></td><td>SSE stream of run events</td></tr>
+      <tr><td>POST</td><td><code>/api/aci/stop/{id}</code></td><td>Cancel a run</td></tr>
+      <tr><td>POST</td><td><code>/api/aci/approve/{id}</code></td><td>Approve or deny a pending action</td></tr>
+    </tbody>
+  </table>
+
+  <h3>Vision coordinates</h3>
+  <p>ACI uses absolute pixel coordinates for mouse actions. The capability metadata advertises display size, and the UI overlays action bounding boxes scaled from the natural screenshot resolution to the viewport. A coordinate of <code>{ x: 640, y: 360 }</code> always points to the center of a 1280x720 display regardless of how the image is rendered.</p>
+
+  <pre class="mermaid alabs-media" data-media-id="agents-api-m6-aci-flow">flowchart TB
+    subgraph User["Operator surface"]
+        A[Web / Desktop / iOS]
+    end
+
+    A --&gt;|POST /api/aci/run| B[ACU gateway]
+    B --&gt; C[Browser provider]
+    C --&gt; D{Screenshot + DOM}
+    D --&gt; E[Planner model]
+    E --&gt; F[ActionIntent]
+    F --&gt; G{Policy check}
+    G --&gt;|allow| H[Execute action]
+    G --&gt;|require_approval| I[Approval prompt]
+    I --&gt;|approved| H
+    H --&gt; J[BrowserObservation]
+    J --&gt; D
+
+    B --&gt;|SSE /api/aci/stream| A
+
+    style A fill:#151517,stroke:#ec4899,stroke-width:2px
+    style B fill:#151517,stroke:#ec4899,stroke-width:2px
+    style E fill:#1c1c1f,stroke:#ec4899</pre>
+</section>
+
+<section id="protocol" class="reveal">
+  <h2>The computer-use protocol</h2>
+  <p>Every ACI run is governed by a typed protocol in <code>@allternit/computer-use-protocol</code>. The schemas define sessions, devices, observations, actions, approvals, and events so that web surfaces, desktop agents, and headless runners can interoperate without vendor lock-in.</p>
+  <p>Key abstractions include:</p>
+  <ul>
+    <li><strong>SessionSpec.</strong> Identifies the run's session, account, conversation, surface, and provider.</li>
+    <li><strong>BrowserRun.</strong> Tracks the objective, state, provider, and sequence counters for a run.</li>
+    <li><strong>BrowserObservation.</strong> Captures the DOM, accessibility tree, screenshot, or hybrid view of a page with artifact refs and redactions.</li>
+    <li><strong>ActionIntent.</strong> A planned action such as <code>navigate</code>, <code>click</code>, <code>type</code>, or <code>screenshot</code> with a reason and optional target ref.</li>
+  </ul>
+
+  <div class="code-block">
+    <div class="code-header">
+      <span class="code-lang">typescript</span>
+      <button class="code-copy">Copy</button>
+    </div>
+    <pre><code>const action: ActionIntent = {
+  schemaVersion: COMPUTER_USE_PROTOCOL_VERSION,
+  actionId: 'act_01J4...',
+  runId: 'run_01J4...',
+  sessionId: 'sess_01J4...',
+  kind: 'click',
+  reason: 'Submit the login form',
+  targetRef: 'ref-login-button',
+  input: {},
+};
+
+const observation = await provider.observe(sessionId);
+const events = await provider.execute(action);</code></pre>
+  </div>
+
+  <h3>Run states and action states</h3>
+  <p>A run moves through <code>queued → running → approval_pending → completed/failed/cancelled</code>. Each action has its own lifecycle: <code>planned → resolved → policy_checked → approval_pending → executing → observed → verified → committed</code>. The policy engine can <code>allow</code>, <code>deny</code>, or <code>require_approval</code> based on action kind and risk.</p>
+
+  <div class="callout info">
+    <p><strong>Safety first:</strong> The <code>requiresApprovalFor</code> list in a workflow spec explicitly names action kinds that must stop for human review.</p>
+  </div>
+
+  <div class="walkthrough-container" data-walkthrough-container="agents-api-m6-protocol-walkthrough">
+  <div class="walkthrough-controls" data-walkthrough-controls="agents-api-m6-protocol-walkthrough">
+  <button class="walkthrough-prev" onclick="Walkthrough.step('agents-api-m6-protocol-walkthrough', -1)">← Previous</button>
+  <span class="walkthrough-counter"><span class="current">1</span> / 6</span>
+  <button class="walkthrough-next" onclick="Walkthrough.step('agents-api-m6-protocol-walkthrough', 1)">Next →</button>
+</div>
+  <div class="walkthrough-steps">
+    <div class="walkthrough-step alabs-media" id="agents-api-m6-protocol-walkthrough-step-0" data-walkthrough="agents-api-m6-protocol-walkthrough" data-step="0">
+  <div class="walkthrough-header">
+    <span class="walkthrough-step-num">Step 1</span>
+    <h4>Protocol version and surface schema</h4>
+  </div>
+  <div class="walkthrough-note">
+    <p>The protocol declares its schema version and the surfaces that can participate in a run: platform-web, desktop, gizzi, extension, and api.</p>
+  </div>
+  <div class="code-block walkthrough-code">
+    <div class="code-header">
+      <span class="code-lang">typescript</span>
+      <span class="code-path">packages/@allternit/computer-use-protocol/src/index.ts</span>
+    </div>
+    <pre><div class="walkthrough-line highlight" data-line="1">
+        <span class="line-no">  1</span>
+        <span class="line-code"><span class=<span class="token-string">"token-keyword"</span>>import</span> { z } <span class=<span class="token-string">"token-keyword"</span>>from</span> <span class="token-string">"zod"</span>;</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="2">
+        <span class="line-no">  2</span>
+        <span class="line-code">&nbsp;</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="3">
+        <span class="line-no">  3</span>
+        <span class="line-code"><span class=<span class="token-string">"token-keyword"</span>>export</span> <span class=<span class="token-string">"token-keyword"</span>>const</span> COMPUTER_USE_PROTOCOL_VERSION = <span class="token-string">"<span class="token-number">1.0</span>"</span> as <span class=<span class="token-string">"token-keyword"</span>>const</span>;</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="4">
+        <span class="line-no">  4</span>
+        <span class="line-code">&nbsp;</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="5">
+        <span class="line-no">  5</span>
+        <span class="line-code"><span class=<span class="token-string">"token-keyword"</span>>export</span> <span class=<span class="token-string">"token-keyword"</span>>const</span> SurfaceSchema = z.enum([</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="6">
+        <span class="line-no">  6</span>
+        <span class="line-code">  <span class="token-string">"platform-web"</span>,</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="7">
+        <span class="line-no">  7</span>
+        <span class="line-code">  <span class="token-string">"desktop"</span>,</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="8">
+        <span class="line-no">  8</span>
+        <span class="line-code">  <span class="token-string">"gizzi"</span>,</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="9">
+        <span class="line-no">  9</span>
+        <span class="line-code">  <span class="token-string">"extension"</span>,</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="10">
+        <span class="line-no"> 10</span>
+        <span class="line-code">  <span class="token-string">"api"</span>,</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="11">
+        <span class="line-no"> 11</span>
+        <span class="line-code">]);</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="12">
+        <span class="line-no"> 12</span>
+        <span class="line-code">&nbsp;</span>
+      </div>
+<div class="walkthrough-line dim" data-line="13">
+        <span class="line-no"> 13</span>
+        <span class="line-code"><span class=<span class="token-string">"token-keyword"</span>>export</span> <span class=<span class="token-string">"token-keyword"</span>>const</span> ProviderKindSchema = z.enum([</span>
+      </div>
+<div class="walkthrough-line dim" data-line="14">
+        <span class="line-no"> 14</span>
+        <span class="line-code">  <span class="token-string">"local-playwright"</span>,</span>
+      </div></pre>
+  </div>
+</div>
+<div class="walkthrough-step alabs-media" id="agents-api-m6-protocol-walkthrough-step-1" data-walkthrough="agents-api-m6-protocol-walkthrough" data-step="1">
+  <div class="walkthrough-header">
+    <span class="walkthrough-step-num">Step 2</span>
+    <h4>Run states</h4>
+  </div>
+  <div class="walkthrough-note">
+    <p>BrowserRun.state uses a strict union: queued, running, approval_pending, paused, recovering, completed, failed, or cancelled.</p>
+  </div>
+  <div class="code-block walkthrough-code">
+    <div class="code-header">
+      <span class="code-lang">typescript</span>
+      <span class="code-path">packages/@allternit/computer-use-protocol/src/index.ts</span>
+    </div>
+    <pre><div class="walkthrough-line dim" data-line="87">
+        <span class="line-no"> 87</span>
+        <span class="line-code">});</span>
+      </div>
+<div class="walkthrough-line dim" data-line="88">
+        <span class="line-no"> 88</span>
+        <span class="line-code">&nbsp;</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="89">
+        <span class="line-no"> 89</span>
+        <span class="line-code"><span class=<span class="token-string">"token-keyword"</span>>export</span> <span class=<span class="token-string">"token-keyword"</span>>const</span> RunStateSchema = z.enum([</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="90">
+        <span class="line-no"> 90</span>
+        <span class="line-code">  <span class="token-string">"queued"</span>, <span class="token-string">"running"</span>, <span class="token-string">"approval_pending"</span>, <span class="token-string">"paused"</span>, <span class="token-string">"recovering"</span>,</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="91">
+        <span class="line-no"> 91</span>
+        <span class="line-code">  <span class="token-string">"completed"</span>, <span class="token-string">"failed"</span>, <span class="token-string">"cancelled"</span>,</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="92">
+        <span class="line-no"> 92</span>
+        <span class="line-code">]);</span>
+      </div>
+<div class="walkthrough-line dim" data-line="93">
+        <span class="line-no"> 93</span>
+        <span class="line-code">&nbsp;</span>
+      </div>
+<div class="walkthrough-line dim" data-line="94">
+        <span class="line-no"> 94</span>
+        <span class="line-code"><span class=<span class="token-string">"token-keyword"</span>>export</span> <span class=<span class="token-string">"token-keyword"</span>>const</span> BrowserRunSchema = z.object({</span>
+      </div></pre>
+  </div>
+</div>
+<div class="walkthrough-step alabs-media" id="agents-api-m6-protocol-walkthrough-step-2" data-walkthrough="agents-api-m6-protocol-walkthrough" data-step="2">
+  <div class="walkthrough-header">
+    <span class="walkthrough-step-num">Step 3</span>
+    <h4>Action kinds</h4>
+  </div>
+  <div class="walkthrough-note">
+    <p>ActionKind enumerates everything from navigate and click to tab.open, dialog.accept, and screenshot. Each maps to a concrete browser operation.</p>
+  </div>
+  <div class="code-block walkthrough-code">
+    <div class="code-header">
+      <span class="code-lang">typescript</span>
+      <span class="code-path">packages/@allternit/computer-use-protocol/src/index.ts</span>
+    </div>
+    <pre><div class="walkthrough-line dim" data-line="168">
+        <span class="line-no">168</span>
+        <span class="line-code">});</span>
+      </div>
+<div class="walkthrough-line dim" data-line="169">
+        <span class="line-no">169</span>
+        <span class="line-code">&nbsp;</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="170">
+        <span class="line-no">170</span>
+        <span class="line-code"><span class=<span class="token-string">"token-keyword"</span>>export</span> <span class=<span class="token-string">"token-keyword"</span>>const</span> ActionKindSchema = z.enum([</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="171">
+        <span class="line-no">171</span>
+        <span class="line-code">  <span class="token-string">"navigate"</span>,</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="172">
+        <span class="line-no">172</span>
+        <span class="line-code">  <span class="token-string">"click"</span>,</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="173">
+        <span class="line-no">173</span>
+        <span class="line-code">  <span class="token-string">"<span class="</span>token-keyword<span class="token-string">">type</span>"</span>,</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="174">
+        <span class="line-no">174</span>
+        <span class="line-code">  <span class="token-string">"press"</span>,</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="175">
+        <span class="line-no">175</span>
+        <span class="line-code">  <span class="token-string">"scroll"</span>,</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="176">
+        <span class="line-no">176</span>
+        <span class="line-code">  <span class="token-string">"select"</span>,</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="177">
+        <span class="line-no">177</span>
+        <span class="line-code">  <span class="token-string">"hover"</span>,</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="178">
+        <span class="line-no">178</span>
+        <span class="line-code">  <span class="token-string">"wait"</span>,</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="179">
+        <span class="line-no">179</span>
+        <span class="line-code">  <span class="token-string">"tab.open"</span>,</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="180">
+        <span class="line-no">180</span>
+        <span class="line-code">  <span class="token-string">"tab.focus"</span>,</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="181">
+        <span class="line-no">181</span>
+        <span class="line-code">  <span class="token-string">"tab.close"</span>,</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="182">
+        <span class="line-no">182</span>
+        <span class="line-code">  <span class="token-string">"dialog.accept"</span>,</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="183">
+        <span class="line-no">183</span>
+        <span class="line-code">  <span class="token-string">"dialog.dismiss"</span>,</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="184">
+        <span class="line-no">184</span>
+        <span class="line-code">  <span class="token-string">"file.upload"</span>,</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="185">
+        <span class="line-no">185</span>
+        <span class="line-code">  <span class="token-string">"download"</span>,</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="186">
+        <span class="line-no">186</span>
+        <span class="line-code">  <span class="token-string">"extract"</span>,</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="187">
+        <span class="line-no">187</span>
+        <span class="line-code">  <span class="token-string">"screenshot"</span>,</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="188">
+        <span class="line-no">188</span>
+        <span class="line-code">]);</span>
+      </div>
+<div class="walkthrough-line dim" data-line="189">
+        <span class="line-no">189</span>
+        <span class="line-code">&nbsp;</span>
+      </div>
+<div class="walkthrough-line dim" data-line="190">
+        <span class="line-no">190</span>
+        <span class="line-code"><span class=<span class="token-string">"token-keyword"</span>>export</span> <span class=<span class="token-string">"token-keyword"</span>>const</span> ActionIntentSchema = z.object({</span>
+      </div></pre>
+  </div>
+</div>
+<div class="walkthrough-step alabs-media" id="agents-api-m6-protocol-walkthrough-step-3" data-walkthrough="agents-api-m6-protocol-walkthrough" data-step="3">
+  <div class="walkthrough-header">
+    <span class="walkthrough-step-num">Step 4</span>
+    <h4>Action intent structure</h4>
+  </div>
+  <div class="walkthrough-note">
+    <p>An ActionIntent carries the run and session ids, the action kind, a human-readable reason, an optional target ref, and arbitrary input.</p>
+  </div>
+  <div class="code-block walkthrough-code">
+    <div class="code-header">
+      <span class="code-lang">typescript</span>
+      <span class="code-path">packages/@allternit/computer-use-protocol/src/index.ts</span>
+    </div>
+    <pre><div class="walkthrough-line dim" data-line="188">
+        <span class="line-no">188</span>
+        <span class="line-code">]);</span>
+      </div>
+<div class="walkthrough-line dim" data-line="189">
+        <span class="line-no">189</span>
+        <span class="line-code">&nbsp;</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="190">
+        <span class="line-no">190</span>
+        <span class="line-code"><span class=<span class="token-string">"token-keyword"</span>>export</span> <span class=<span class="token-string">"token-keyword"</span>>const</span> ActionIntentSchema = z.object({</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="191">
+        <span class="line-no">191</span>
+        <span class="line-code">  schemaVersion: z.literal(COMPUTER_USE_PROTOCOL_VERSION),</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="192">
+        <span class="line-no">192</span>
+        <span class="line-code">  actionId: z.string().min(<span class="token-number">1</span>),</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="193">
+        <span class="line-no">193</span>
+        <span class="line-code">  runId: z.string().min(<span class="token-number">1</span>),</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="194">
+        <span class="line-no">194</span>
+        <span class="line-code">  sessionId: z.string().min(<span class="token-number">1</span>),</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="195">
+        <span class="line-no">195</span>
+        <span class="line-code">  kind: ActionKindSchema,</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="196">
+        <span class="line-no">196</span>
+        <span class="line-code">  reason: z.string().min(<span class="token-number">1</span>),</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="197">
+        <span class="line-no">197</span>
+        <span class="line-code">  targetRef: z.string().min(<span class="token-number">1</span>).optional(),</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="198">
+        <span class="line-no">198</span>
+        <span class="line-code">  targetDescription: z.string().min(<span class="token-number">1</span>).optional(),</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="199">
+        <span class="line-no">199</span>
+        <span class="line-code">  input: z.record(z.string(), z.unknown()).default({}),</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="200">
+        <span class="line-no">200</span>
+        <span class="line-code">  idempotencyKey: z.string().min(<span class="token-number">1</span>).optional(),</span>
+      </div>
+<div class="walkthrough-line dim" data-line="201">
+        <span class="line-no">201</span>
+        <span class="line-code">});</span>
+      </div>
+<div class="walkthrough-line dim" data-line="202">
+        <span class="line-no">202</span>
+        <span class="line-code">&nbsp;</span>
+      </div></pre>
+  </div>
+</div>
+<div class="walkthrough-step alabs-media" id="agents-api-m6-protocol-walkthrough-step-4" data-walkthrough="agents-api-m6-protocol-walkthrough" data-step="4">
+  <div class="walkthrough-header">
+    <span class="walkthrough-step-num">Step 5</span>
+    <h4>Browser observations</h4>
+  </div>
+  <div class="walkthrough-note">
+    <p>BrowserObservation captures the URL, title, format, text, element refs, artifacts, and redactions at a point in time.</p>
+  </div>
+  <div class="code-block walkthrough-code">
+    <div class="code-header">
+      <span class="code-lang">typescript</span>
+      <span class="code-path">packages/@allternit/computer-use-protocol/src/index.ts</span>
+    </div>
+    <pre><div class="walkthrough-line dim" data-line="153">
+        <span class="line-no">153</span>
+        <span class="line-code">});</span>
+      </div>
+<div class="walkthrough-line dim" data-line="154">
+        <span class="line-no">154</span>
+        <span class="line-code">&nbsp;</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="155">
+        <span class="line-no">155</span>
+        <span class="line-code"><span class=<span class="token-string">"token-keyword"</span>>export</span> <span class=<span class="token-string">"token-keyword"</span>>const</span> BrowserObservationSchema = z.object({</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="156">
+        <span class="line-no">156</span>
+        <span class="line-code">  schemaVersion: z.literal(COMPUTER_USE_PROTOCOL_VERSION),</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="157">
+        <span class="line-no">157</span>
+        <span class="line-code">  observationId: z.string().min(<span class="token-number">1</span>),</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="158">
+        <span class="line-no">158</span>
+        <span class="line-code">  sessionId: z.string().min(<span class="token-number">1</span>),</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="159">
+        <span class="line-no">159</span>
+        <span class="line-code">  url: z.string().url(),</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="160">
+        <span class="line-no">160</span>
+        <span class="line-code">  title: z.string(),</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="161">
+        <span class="line-no">161</span>
+        <span class="line-code">  capturedAt: z.string().datetime(),</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="162">
+        <span class="line-no">162</span>
+        <span class="line-code">  format: z.enum([<span class="token-string">"accessibility"</span>, <span class="token-string">"dom"</span>, <span class="token-string">"screenshot"</span>, <span class="token-string">"hybrid"</span>]),</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="163">
+        <span class="line-no">163</span>
+        <span class="line-code">  text: z.string().optional(),</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="164">
+        <span class="line-no">164</span>
+        <span class="line-code">  refs: z.array(ObservationRefSchema).default([]),</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="165">
+        <span class="line-no">165</span>
+        <span class="line-code">  artifacts: z.array(ArtifactRefSchema).default([]),</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="166">
+        <span class="line-no">166</span>
+        <span class="line-code">  truncated: z.boolean().default(<span class=<span class="token-string">"token-keyword"</span>>false</span>),</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="167">
+        <span class="line-no">167</span>
+        <span class="line-code">  redactions: z.array(z.string()).default([]),</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="168">
+        <span class="line-no">168</span>
+        <span class="line-code">});</span>
+      </div>
+<div class="walkthrough-line dim" data-line="169">
+        <span class="line-no">169</span>
+        <span class="line-code">&nbsp;</span>
+      </div>
+<div class="walkthrough-line dim" data-line="170">
+        <span class="line-no">170</span>
+        <span class="line-code"><span class=<span class="token-string">"token-keyword"</span>>export</span> <span class=<span class="token-string">"token-keyword"</span>>const</span> ActionKindSchema = z.enum([</span>
+      </div></pre>
+  </div>
+</div>
+<div class="walkthrough-step alabs-media" id="agents-api-m6-protocol-walkthrough-step-5" data-walkthrough="agents-api-m6-protocol-walkthrough" data-step="5">
+  <div class="walkthrough-header">
+    <span class="walkthrough-step-num">Step 6</span>
+    <h4>Browser event vocabulary</h4>
+  </div>
+  <div class="walkthrough-note">
+    <p>BrowserEvent is the cross-surface event vocabulary: run lifecycle, action state changes, observations, approvals, artifacts, receipts, and handoffs.</p>
+  </div>
+  <div class="code-block walkthrough-code">
+    <div class="code-header">
+      <span class="code-lang">typescript</span>
+      <span class="code-path">packages/@allternit/computer-use-protocol/src/index.ts</span>
+    </div>
+    <pre><div class="walkthrough-line dim" data-line="242">
+        <span class="line-no">242</span>
+        <span class="line-code">});</span>
+      </div>
+<div class="walkthrough-line dim" data-line="243">
+        <span class="line-no">243</span>
+        <span class="line-code">&nbsp;</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="244">
+        <span class="line-no">244</span>
+        <span class="line-code"><span class=<span class="token-string">"token-keyword"</span>>export</span> <span class=<span class="token-string">"token-keyword"</span>>const</span> BrowserEventSchema = z.object({</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="245">
+        <span class="line-no">245</span>
+        <span class="line-code">  schemaVersion: z.literal(COMPUTER_USE_PROTOCOL_VERSION),</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="246">
+        <span class="line-no">246</span>
+        <span class="line-code">  eventId: z.string().min(<span class="token-number">1</span>),</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="247">
+        <span class="line-no">247</span>
+        <span class="line-code">  runId: z.string().min(<span class="token-number">1</span>),</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="248">
+        <span class="line-no">248</span>
+        <span class="line-code">  sessionId: z.string().min(<span class="token-number">1</span>),</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="249">
+        <span class="line-no">249</span>
+        <span class="line-code">  sequence: z.number().int().nonnegative(),</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="250">
+        <span class="line-no">250</span>
+        <span class="line-code">  emittedAt: z.string().datetime(),</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="251">
+        <span class="line-no">251</span>
+        <span class="line-code">  sourceSurface: SurfaceSchema.optional(),</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="252">
+        <span class="line-no">252</span>
+        <span class="line-code">  <span class=<span class="token-string">"token-keyword"</span>>type</span>: z.enum([</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="253">
+        <span class="line-no">253</span>
+        <span class="line-code">    <span class="token-string">"run.started"</span>,</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="254">
+        <span class="line-no">254</span>
+        <span class="line-code">    <span class="token-string">"run.paused"</span>,</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="255">
+        <span class="line-no">255</span>
+        <span class="line-code">    <span class="token-string">"run.resumed"</span>,</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="256">
+        <span class="line-no">256</span>
+        <span class="line-code">    <span class="token-string">"run.completed"</span>,</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="257">
+        <span class="line-no">257</span>
+        <span class="line-code">    <span class="token-string">"run.failed"</span>,</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="258">
+        <span class="line-no">258</span>
+        <span class="line-code">    <span class="token-string">"run.cancelled"</span>,</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="259">
+        <span class="line-no">259</span>
+        <span class="line-code">    <span class="token-string">"action.state_changed"</span>,</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="260">
+        <span class="line-no">260</span>
+        <span class="line-code">    <span class="token-string">"observation.created"</span>,</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="261">
+        <span class="line-no">261</span>
+        <span class="line-code">    <span class="token-string">"approval.required"</span>,</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="262">
+        <span class="line-no">262</span>
+        <span class="line-code">    <span class="token-string">"approval.resolved"</span>,</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="263">
+        <span class="line-no">263</span>
+        <span class="line-code">    <span class="token-string">"artifact.created"</span>,</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="264">
+        <span class="line-no">264</span>
+        <span class="line-code">    <span class="token-string">"receipt.issued"</span>,</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="265">
+        <span class="line-no">265</span>
+        <span class="line-code">    <span class="token-string">"handoff.requested"</span>,</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="266">
+        <span class="line-no">266</span>
+        <span class="line-code">    <span class="token-string">"handoff.completed"</span>,</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="267">
+        <span class="line-no">267</span>
+        <span class="line-code">  ]),</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="268">
+        <span class="line-no">268</span>
+        <span class="line-code">  payload: z.record(z.string(), z.unknown()).default({}),</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="269">
+        <span class="line-no">269</span>
+        <span class="line-code">});</span>
+      </div>
+<div class="walkthrough-line dim" data-line="270">
+        <span class="line-no">270</span>
+        <span class="line-code">&nbsp;</span>
+      </div>
+<div class="walkthrough-line dim" data-line="271">
+        <span class="line-no">271</span>
+        <span class="line-code"><span class=<span class="token-string">"token-keyword"</span>>export</span> <span class=<span class="token-string">"token-keyword"</span>>const</span> BrowserTrajectoryStepSchema = z.object({</span>
+      </div></pre>
+  </div>
+</div>
+  </div>
+</div>
+</section>
+
+<section id="headless" class="reveal">
+  <h2>Headless execution with gizzi-code</h2>
+  <p>Not every automation task needs a browser. The gizzi-code CLI provides a headless execution context for local files, shell commands, and repository operations. <code>gizzi exec</code> is a pipe-safe alias for <code>gizzi run</code> that prints the response and exits without launching the TUI.</p>
+  <p>Headless mode is ideal for CI scripts, pre-commit hooks, and autonomous agents that need deterministic output:</p>
+  <ul>
+    <li><code>gizzi exec "Summarize README.md"</code> runs a single prompt and returns text.</li>
+    <li><code>git diff | gizzi exec</code> pipes a diff into the agent for review.</li>
+    <li><code>gizzi exec --output-format stream-json</code> emits a JSON event stream for automation.</li>
+  </ul>
+
+  <div class="code-block">
+    <div class="code-header">
+      <span class="code-lang">bash</span>
+      <button class="code-copy">Copy</button>
+    </div>
+    <pre><code># Headless commit-message generation
+git diff --cached | gizzi exec \
+  "Write a conventional commit message for the staged changes"
+
+# JSON event stream for a downstream parser
+gizzi exec --output-format stream-json \
+  "List the top three risks in this API spec"</code></pre>
+  </div>
+
+  <p>Under the hood, <code>exec</code> sets <code>--print</code>, defaults output format to <code>text</code>, and uses the <code>dontAsk</code> permission mode so it can run unattended. Permission profiles in <code>config.toml</code> can still enforce rules such as <code>bash=ask</code> or <code>edit=ask</code> when needed.</p>
+
+  <div class="asciinema-wrapper alabs-media" data-media-id="agents-api-m6-agent-run-demo">
+  <asciinema-player src="data:application/json;base64,eyJ2ZXJzaW9uIjogMiwgIndpZHRoIjogODAsICJoZWlnaHQiOiAyNCwgInRpbWVzdGFtcCI6IDE3NTg0NTAwMDAsICJlbnYiOiB7IlNIRUxMIjogIi9iaW4venNoIiwgIlRFUk0iOiAieHRlcm0tMjU2Y29sb3IifX0KWzAuMDAwMDAwLCAibyIsICIkIGdpenppIGV4ZWMgXCJSZXZpZXcgdGhlIHN0YWdlZCBkaWZmIGFuZCBzdWdnZXN0IHRlc3RzXCJcclxuIl0KWzEuMjAwMDAwLCAibyIsICJUaGUgZGlmZiBhZGRzIGEgcmV0cnkgcG9saWN5IHRvIGNtZC9hbGx0ZXJuaXQtYXBpL3NyYy9sbG1fZ2F0ZXdheS9mYWlsb3Zlci5ycy5cclxuIl0KWzIuNTAwMDAwLCAibyIsICJTdWdnZXN0ZWQgdGVzdHM6XHJcbiJdClszLjAwMDAwMCwgIm8iLCAiICAxLiBzaG91bGRfcmV0cnkgcmVzcGVjdHMgbWF4X3JldHJpZXNcclxuIl0KWzMuNDAwMDAwLCAibyIsICIgIDIuIG5leHRfYmFja29mZl9tcyBzdGF5cyB3aXRoaW4gbWF4X2RlbGF5X21zXHJcbiJdClszLjkwMDAwMCwgIm8iLCAiICAzLiBzZWxlY3RfZmFsbGJhY2sgdXNlcyBwcmltYXJ5IHRoZW4gY2hhaW5cclxuIl0KWzUuMDAwMDAwLCAibyIsICIkIGN1cmwgLXMgLVggUE9TVCBodHRwOi8vMTI3LjAuMC4xOjgwMTMvYXBpL2FjaS9ydW4gXFxcclxuIl0KWzUuNDAwMDAwLCAibyIsICIgICAgLUggXCJDb250ZW50LVR5cGU6IGFwcGxpY2F0aW9uL2pzb25cIiBcXFxyXG4iXQpbNS44MDAwMDAsICJvIiwgIiAgICAtZCAne1wiZ29hbFwiOlwiT3BlbiB0aGUgUFIgZm9yIHRoZSByZXRyeSBwb2xpY3lcIixcImFsbG93ZWRTaXRlc1wiOltcImdpdGh1Yi5jb21cIl19J1xyXG4iXQpbNy4wMDAwMDAsICJvIiwgIntcInNlc3Npb25JZFwiOlwic2Vzc18wMUo0Li4uXCIsXCJhZGFwdGVySWRcIjpcImJyb3dzZXJcIn1cclxuIl0KWzguMDAwMDAwLCAibyIsICIkIGN1cmwgLU4gaHR0cDovLzEyNy4wLjAuMTo4MDEzL2FwaS9hY2kvc3RyZWFtL3Nlc3NfMDFKNC4uLlxyXG4iXQpbOS41MDAwMDAsICJvIiwgImV2ZW50OiB0cmFjZSB8IE5hdmlnYXRpbmcgdG8gZ2l0aHViLmNvbS9hbGx0ZXJuaXQvYWxsdGVybml0XHJcbiJdClsxMS4wMDAwMDAsICJvIiwgImV2ZW50OiBzdGF0ZSAgfCBhcHByb3ZhbF9wZW5kaW5nOiBjbGljayBzdWJtaXQtcmV2aWV3XHJcbiJdClsxMy4wMDAwMDAsICJvIiwgImV2ZW50OiB0cmFjZSAgfCBIdW1hbiBhcHByb3ZlZDsgY2xpY2tpbmcgc3VibWl0LXJldmlld1xyXG4iXQpbMTQuNTAwMDAwLCAibyIsICJldmVudDogZG9uZSAgIHwgUnVuIGNvbXBsZXRlZDogUFIgb3BlbmVkXHJcbiJdClsxNS41MDAwMDAsICJvIiwgIiQgIl0=" theme="monokai" speed="1.2" cols="80" rows="24"></asciinema-player>
+</div>
+</section>
+
+<section id="factory" class="reveal">
+  <h2>Autonomous Code Factory</h2>
+  <p>The Autonomous Code Factory view in the platform surfaces four governance pillars that turn raw code generation into a self-improving, reviewable pipeline:</p>
+  <ul>
+    <li><strong>RiskPolicy.</strong> Classifies every proposed change by risk tier so that low-risk fixes can flow quickly and high-risk changes get mandatory review.</li>
+    <li><strong>Evidence Validation.</strong> Binds artifacts to SHA-bound evidence so the factory can prove what code was produced, what tests ran, and what changed.</li>
+    <li><strong>Merge Governance.</strong> Applies risk-tiered auto-merge rules: green CI plus low risk may merge automatically, while medium or high risk requires human sign-off.</li>
+    <li><strong>Remediation Loop.</strong> Applies deterministic patches, reruns validation, and escalates only when the loop cannot resolve a failure.</li>
+  </ul>
+
+  <div class="callout info">
+    <p><strong>Factory contract:</strong> Every autonomous change must carry a risk classification, evidence artifacts, and a merge decision before it reaches the main branch.</p>
+  </div>
+
+  <h3>When to combine ACI and the factory</h3>
+  <p>Autonomous coding does not stop at file edits. An agent may need to open a browser to read API docs, file a pull request, or verify a deployed service. ACI gives the factory eyes and hands; the factory gives ACI governance and reproducibility. Together they form a closed loop: observe, plan, act, validate, merge.</p>
+
+  <div class="code-block">
+    <div class="code-header">
+      <span class="code-lang">typescript</span>
+      <button class="code-copy">Copy</button>
+    </div>
+    <pre><code>// Simplified autonomous change flow
+const proposal = await factory.plan({
+  objective: 'Add retry middleware to the LLM gateway',
+  sourceFiles: ['cmd/allternit-api/src/llm_gateway/proxy.rs'],
+});
+
+const risk = await riskPolicy.classify(proposal);
+const evidence = await validation.run(proposal.tests);
+const decision = await mergeGovernance.decide(risk, evidence);
+
+if (decision === 'auto_merge') {
+  await proposal.apply();
+} else {
+  await reviewQueue.submit(proposal, risk, evidence);
+}</code></pre>
+  </div>
+</section>
+
+<section id="quizzes" class="reveal">
+  <h2>Check your understanding</h2>
+
+  <div class="quiz" id="quiz1">
+    <div class="quiz-header">
+      <span class="quiz-num">1</span>
+      <h3>Which ACI action kind requires absolute pixel coordinates?</h3>
+    </div>
+    <div class="quiz-options">
+      <div class="quiz-option" onclick="selectOption(this, 1, 0)">
+        <span class="radio"></span>
+        <code>type</code> — keyboard input always needs a cursor location
+      </div>
+      <div class="quiz-option" onclick="selectOption(this, 1, 1)">
+        <span class="radio"></span>
+        <code>click</code> — the target element is addressed by coordinates
+      </div>
+      <div class="quiz-option" onclick="selectOption(this, 1, 2)">
+        <span class="radio"></span>
+        <code>screenshot</code> — it captures the region under the cursor
+      </div>
+      <div class="quiz-option" onclick="selectOption(this, 1, 3)">
+        <span class="radio"></span>
+        <code>wait</code> — it pauses at the current mouse position
+      </div>
+    </div>
+    <div class="quiz-feedback" id="feedback1"></div>
+    <button class="quiz-retry" id="retry1" onclick="QuizEngine.reset(1)">Try again</button>
+  </div>
+
+  <div class="quiz" id="quiz2">
+    <div class="quiz-header">
+      <span class="quiz-num">2</span>
+      <h3>What is the purpose of the <code>ActionState</code> <code>policy_checked</code>?</h3>
+    </div>
+    <div class="quiz-options">
+      <div class="quiz-option" onclick="selectOption(this, 2, 0)">
+        <span class="radio"></span>
+        It means the action has already been executed by the provider
+      </div>
+      <div class="quiz-option" onclick="selectOption(this, 2, 1)">
+        <span class="radio"></span>
+        It indicates the policy engine has evaluated allow/deny/require_approval
+      </div>
+      <div class="quiz-option" onclick="selectOption(this, 2, 2)">
+        <span class="radio"></span>
+        It signals the human operator approved the action
+      </div>
+      <div class="quiz-option" onclick="selectOption(this, 2, 3)">
+        <span class="radio"></span>
+        It confirms the screenshot matched the expected UI state
+      </div>
+    </div>
+    <div class="quiz-feedback" id="feedback2"></div>
+    <button class="quiz-retry" id="retry2" onclick="QuizEngine.reset(2)">Try again</button>
+  </div>
+
+  <div class="quiz" id="quiz3">
+    <div class="quiz-header">
+      <span class="quiz-num">3</span>
+      <h3>In the Autonomous Code Factory, which pillar decides whether a low-risk change can merge automatically?</h3>
+    </div>
+    <div class="quiz-options">
+      <div class="quiz-option" onclick="selectOption(this, 3, 0)">
+        <span class="radio"></span>
+        Evidence Validation — it re-runs tests until they pass
+      </div>
+      <div class="quiz-option" onclick="selectOption(this, 3, 1)">
+        <span class="radio"></span>
+        RiskPolicy — it only classifies risk, not merge rules
+      </div>
+      <div class="quiz-option" onclick="selectOption(this, 3, 2)">
+        <span class="radio"></span>
+        Merge Governance — it maps risk tier and evidence to a merge decision
+      </div>
+      <div class="quiz-option" onclick="selectOption(this, 3, 3)">
+        <span class="radio"></span>
+        Remediation Loop — it bypasses review for deterministic patches
+      </div>
+    </div>
+    <div class="quiz-feedback" id="feedback3"></div>
+    <button class="quiz-retry" id="retry3" onclick="QuizEngine.reset(3)">Try again</button>
+  </div>
+</section>
+
+<section id="capstone" class="reveal">
+  <div class="capstone">
+    <h2>Capstone: Build a supervised browser-to-code workflow</h2>
+    <p>Combine ACI, the computer-use protocol, and the Autonomous Code Factory in a single end-to-end task.</p>
+    <div class="capstone-grid">
+      <div class="capstone-item">
+        <h4>Goal</h4>
+        <p>Use ACI to navigate an internal API docs page, extract an endpoint schema, then generate a typed client function.</p>
+      </div>
+      <div class="capstone-item">
+        <h4>Constraints</h4>
+        <p>Require approval for <code>navigate</code> and <code>download</code>. Cap the run at 50 turns. Run validation tests before merge.</p>
+      </div>
+      <div class="capstone-item">
+        <h4>Deliverable</h4>
+        <p>A BrowserWorkflowSpec JSON, the generated client code, and a risk/evidence report produced by the factory.</p>
+      </div>
+      <div class="capstone-item">
+        <h4>Stretch</h4>
+        <p>Wire the workflow to a <code>gizzi exec</code> invocation that replays the extracted schema into a headless code-generation prompt.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+
+  <footer>
+    <p>A://Labs — AGENTS Tier — Module 6: Autonomous Coding & Computer Use</p>
+    <p style="margin-top:4px;">Generated from <code>packages/@allternit/computer-use-protocol</code> · Allternit Internal</p>
+  </footer>
+
+  <script>
+    // ========================
+    // Shared: Scroll Progress & Nav
+    // ========================
+    const progressBar = document.getElementById('progress-bar');
+    const navLinks = document.querySelectorAll('.nav-links a');
+    const sections = document.querySelectorAll('section[id], section[class*="reveal"]');
+
+    function updateProgress() {
+      const scrollTop = window.scrollY;
+      const docHeight = document.documentElement.scrollHeight - window.innerHeight;
+      const pct = (scrollTop / docHeight) * 100;
+      progressBar.style.width = pct + '%';
+
+      let current = '';
+      sections.forEach(sec => {
+        const top = sec.offsetTop - 100;
+        if (scrollTop >= top) {
+          current = sec.getAttribute('id') || '';
+        }
+      });
+      navLinks.forEach(link => {
+        link.classList.toggle('active', link.dataset.section === current);
+      });
+    }
+    window.addEventListener('scroll', updateProgress, { passive: true });
+    updateProgress();
+
+    // ========================
+    // Shared: Scroll Reveal
+    // ========================
+    const revealObserver = new IntersectionObserver((entries) => {
+      entries.forEach(e => { if (e.isIntersecting) e.target.classList.add('visible'); });
+    }, { threshold: 0.08 });
+    document.querySelectorAll('.reveal').forEach(el => revealObserver.observe(el));
+
+    // ========================
+    // Shared: Quiz Engine
+    // ========================
+    window.QuizEngine = {
+      answers: {},
+      feedback: {},
+
+      init(answers, feedback) {
+        this.answers = answers;
+        this.feedback = feedback;
+      },
+
+      selectOption(el, quizNum, optionIdx) {
+        const quizEl = document.getElementById('quiz' + quizNum);
+        const options = quizEl.querySelectorAll('.quiz-option');
+        const feedback = document.getElementById('feedback' + quizNum);
+        const retryBtn = document.getElementById('retry' + quizNum);
+
+        // Disable all options
+        options.forEach(opt => {
+          opt.style.pointerEvents = 'none';
+          opt.classList.remove('selected');
+        });
+        el.classList.add('selected');
+
+        const correct = this.answers[quizNum] === optionIdx;
+        if (correct) {
+          el.classList.add('correct');
+          feedback.className = 'quiz-feedback show correct';
+          feedback.textContent = this.feedback[quizNum].correct;
+        } else {
+          el.classList.add('wrong');
+          options[this.answers[quizNum]].classList.add('correct');
+          feedback.className = 'quiz-feedback show wrong';
+          feedback.textContent = this.feedback[quizNum].wrong;
+          if (retryBtn) retryBtn.classList.add('show');
+        }
+      },
+
+      reset(quizNum) {
+        const quizEl = document.getElementById('quiz' + quizNum);
+        const options = quizEl.querySelectorAll('.quiz-option');
+        const feedback = document.getElementById('feedback' + quizNum);
+        const retryBtn = document.getElementById('retry' + quizNum);
+
+        options.forEach(opt => {
+          opt.style.pointerEvents = '';
+          opt.classList.remove('selected', 'correct', 'wrong');
+        });
+        feedback.className = 'quiz-feedback';
+        feedback.textContent = '';
+        if (retryBtn) retryBtn.classList.remove('show');
+      }
+    };
+
+    // Alias for backward compatibility
+    function selectOption(el, quizNum, optionIdx) {
+      window.QuizEngine.selectOption(el, quizNum, optionIdx);
+    }
+
+    // ========================
+    // Shared: Code Copy
+    // ========================
+    document.querySelectorAll('.code-copy').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const pre = btn.closest('.code-block').querySelector('pre');
+        navigator.clipboard.writeText(pre.textContent).then(() => {
+          btn.textContent = 'Copied!';
+          setTimeout(() => btn.textContent = 'Copy', 1500);
+        });
+      });
+    });
+
+    // ========================
+    // Shared: Walkthrough Engine
+    // ========================
+    window.Walkthrough = {
+      init(id) {
+        const container = document.querySelector(`[data-walkthrough-container="${id}"]`);
+        if (!container) return;
+        const steps = container.querySelectorAll(`[data-walkthrough="${id}"]`);
+        if (steps.length === 0) return;
+        steps.forEach((step, idx) => { step.classList.toggle('active', idx === 0); });
+        this.updateControls(id, 0);
+      },
+
+      step(id, delta) {
+        const container = document.querySelector(`[data-walkthrough-container="${id}"]`);
+        if (!container) return;
+        const steps = Array.from(container.querySelectorAll(`[data-walkthrough="${id}"]`));
+        const current = steps.findIndex(s => s.classList.contains('active'));
+        const next = Math.max(0, Math.min(steps.length - 1, current + delta));
+        steps.forEach((step, idx) => { step.classList.toggle('active', idx === next); });
+        this.updateControls(id, next);
+      },
+
+      updateControls(id, activeIndex) {
+        const controls = document.querySelector(`[data-walkthrough-controls="${id}"]`);
+        if (!controls) return;
+        const steps = controls.closest('.walkthrough-container').querySelectorAll(`[data-walkthrough="${id}"]`);
+        const currentSpan = controls.querySelector('.current');
+        const prevBtn = controls.querySelector('.walkthrough-prev');
+        const nextBtn = controls.querySelector('.walkthrough-next');
+        if (currentSpan) currentSpan.textContent = activeIndex + 1;
+        if (prevBtn) prevBtn.disabled = activeIndex === 0;
+        if (nextBtn) nextBtn.disabled = activeIndex === steps.length - 1;
+      }
+    };
+
+    document.querySelectorAll('[data-walkthrough-container]').forEach(container => {
+      const id = container.getAttribute('data-walkthrough-container');
+      if (id) window.Walkthrough.init(id);
+    });
+
+    // ========================
+    // Module-specific JS injection point
+    // ========================
+    // Initialize quiz engine
+    window.QuizEngine.init({"1":1,"2":1,"3":2}, {"1":{"correct":"Correct. Pointer actions such as click, mouse_move, and left_click_drag use absolute pixel coordinates to address elements on the screenshot.","wrong":"Not quite. type, screenshot, and wait do not require coordinates. Pointer interactions including click rely on absolute pixel coordinates."},"2":{"correct":"Correct. policy_checked means the policy engine has produced a decision of allow, deny, or require_approval before the action executes.","wrong":"Not quite. executing and observed come later; approval_pending waits for a human; verified checks the result. policy_checked is the policy evaluation step."},"3":{"correct":"Correct. Merge Governance combines risk tier and evidence to decide whether a change can auto-merge or requires human review.","wrong":"Not quite. RiskPolicy classifies, Evidence Validation produces proof, and Remediation Loop fixes failures. The merge decision itself belongs to Merge Governance."}});
+
+    
+const canvas = document.getElementById('aciNetworkCanvas');
+if (canvas) {
+  const ctx = canvas.getContext('2d');
+  function resize() {
+    canvas.width = canvas.offsetWidth;
+    canvas.height = canvas.offsetHeight;
+  }
+  window.addEventListener('resize', resize);
+  resize();
+  const nodes = Array.from({ length: 24 }, () => ({
+    x: Math.random() * canvas.width,
+    y: Math.random() * canvas.height,
+    vx: (Math.random() - 0.5) * 0.6,
+    vy: (Math.random() - 0.5) * 0.6,
+  }));
+  function draw() {
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    ctx.fillStyle = '#ec4899';
+    nodes.forEach((n) => {
+      n.x += n.vx;
+      n.y += n.vy;
+      if (n.x < 0 || n.x > canvas.width) n.vx *= -1;
+      if (n.y < 0 || n.y > canvas.height) n.vy *= -1;
+      ctx.beginPath();
+      ctx.arc(n.x, n.y, 2, 0, Math.PI * 2);
+      ctx.fill();
+    });
+    ctx.strokeStyle = 'rgba(236,72,153,0.12)';
+    for (let i = 0; i < nodes.length; i++) {
+      for (let j = i + 1; j < nodes.length; j++) {
+        const dx = nodes[i].x - nodes[j].x;
+        const dy = nodes[i].y - nodes[j].y;
+        const d = Math.sqrt(dx * dx + dy * dy);
+        if (d < 120) {
+          ctx.beginPath();
+          ctx.moveTo(nodes[i].x, nodes[i].y);
+          ctx.lineTo(nodes[j].x, nodes[j].y);
+          ctx.stroke();
+        }
+      }
+    }
+    requestAnimationFrame(draw);
+  }
+  draw();
+}
+  </script>
+</body>
+</html>

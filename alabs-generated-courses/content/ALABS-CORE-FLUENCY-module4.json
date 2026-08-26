@@ -1,0 +1,71 @@
+{
+  "title": "Module 4: Discernment: Evaluating Agent Outputs",
+  "tier": "CORE",
+  "sourcePackage": "surfaces/ai.allternit.com/src/lib/agents/agent-review.ts",
+  "accentColor": "#3b82f6",
+  "navLinks": [
+    {
+      "label": "Overview",
+      "section": "overview"
+    },
+    {
+      "label": "Evaluation",
+      "section": "evaluation"
+    },
+    {
+      "label": "Checklists",
+      "section": "checklists"
+    },
+    {
+      "label": "Review",
+      "section": "review"
+    },
+    {
+      "label": "Quizzes",
+      "section": "quizzes"
+    },
+    {
+      "label": "Capstone",
+      "section": "capstone"
+    }
+  ],
+  "moduleCss": "\n.hero { position: relative; overflow: hidden; }\n#moduleCanvas { position: absolute; top: 0; left: 0; width: 100%; height: 100%; z-index: -1; opacity: 0.35; pointer-events: none; }\n.quiz-option code { background: rgba(59,130,246,0.12); color: #3b82f6; }\n",
+  "moduleContent": "<section id=\"overview\" class=\"hero reveal\">\n  <canvas id=\"moduleCanvas\"></canvas>\n  <span class=\"hero-badge\">CORE Tier</span>\n  <h1>Module 4: <em>Discernment: Evaluating Agent Outputs</em></h1>\n  <p>\n    Discernment is the third D of AI fluency: the discipline of reviewing agent outputs before accepting them as truth.\n    This module grounds evaluation in Allternit's agent-review engine and use-case playbooks.\n  </p>\n  <div class=\"hero-meta\">\n    <span><strong>5 lessons</strong> · ~40 minutes</span>\n    <span>Source: <code>surfaces/ai.allternit.com/src/lib/agents/agent-review.ts</code></span>\n  </div>\n</section>\n\n<section id=\"evaluation\" class=\"reveal\">\n  <h2>Why evaluation is non-negotiable</h2>\n  <p>\n    Agents can produce fluent, plausible, and wrong outputs. Discernment is not about distrust; it is about verification.\n    The Allternit agent-review engine codifies this by refusing to act on outputs that lack evidence, conflict with other agents, or touch sensitive domains.\n  </p>\n  <p>\n    At the heart of the engine is the <code>buildTeamAlignment</code> function. It receives checkpoints from active bots, groups them by task, detects conflicts,\n    flags missing evidence, and escalates sensitive work to a human owner.\n  </p>\n  <div class=\"callout info\">\n    <p>\n      <strong>Discernment rule:</strong> never ship an agent output you cannot verify. Evidence can be a URL, file path, commit hash, or explicit verification statement.\n    </p>\n  </div>\n</section>\n\n<section id=\"checklists\" class=\"reveal\">\n  <h2>Evaluation checklists from the playbooks</h2>\n  <p>\n    The use-case playbooks in <code>docs/public/guides/use-case-playbooks.md</code> give concrete checklists for common tasks.\n    Apply them every time you delegate work to an agent.\n  </p>\n  <h3>Customer support triage</h3>\n  <ul>\n    <li>Category accuracy on a labeled test set.</li>\n    <li>No drafted response when <code>escalate</code> is true.</li>\n    <li>Response tone matches brand guidelines.</li>\n  </ul>\n  <h3>Legal document summarization</h3>\n  <ul>\n    <li>Summary covers scope, term, and payment.</li>\n    <li>Risk flags include supporting quotes.</li>\n    <li>No hallucinated clauses.</li>\n  </ul>\n  <h3>Code review assistant</h3>\n  <ul>\n    <li>Catches the seeded security issue.</li>\n    <li>Does not flag false positives on style-only changes.</li>\n    <li>Suggested fixes compile or are syntactically plausible.</li>\n  </ul>\n  <h3>RAG Q&A</h3>\n  <ul>\n    <li>Answers are grounded in retrieved passages.</li>\n    <li>Citations are accurate.</li>\n    <li>Refuses appropriately when context is insufficient.</li>\n  </ul>\n</section>\n\n<section id=\"review\" class=\"reveal\">\n  <h2>The evaluation loop</h2>\n  <p>\n    A complete evaluation loop has four stages: structure, citations, verification, and acceptance.\n    If any stage fails, reject the output and iterate the prompt or the task spec.\n  </p>\n  {{MEDIA:core-fluency-m4-evaluation-loop}}\n  <p>\n    The agent-review engine automates parts of this loop. It flags missing evidence, conflicting owners, conflicting statuses, and conflicting conclusions.\n    It also maintains a prohibited-actions list covering payment, credentials, deploy, production, client messages, and publishing.\n  </p>\n  {{MEDIA:core-fluency-m4-review-demo}}\n  {{MEDIA:core-fluency-m4-agent-review-walkthrough}}\n</section>\n\n<section id=\"quizzes\" class=\"reveal\">\n  <h2>Check your understanding</h2>\n  <div class=\"quiz\" id=\"quiz1\">\n  <div class=\"quiz-header\">\n    <span class=\"quiz-num\">1</span>\n    <h3>What does the agent-review engine flag when a checkpoint is marked completed without evidence?</h3>\n  </div>\n  <div class=\"quiz-options\">\n      <div class=\"quiz-option\" onclick=\"selectOption(this, 1, 0)\">\n        <span class=\"radio\"></span>\n        <span>sensitive_domain</span>\n      </div>\n      <div class=\"quiz-option\" onclick=\"selectOption(this, 1, 1)\">\n        <span class=\"radio\"></span>\n        <span>different_owners</span>\n      </div>\n      <div class=\"quiz-option\" onclick=\"selectOption(this, 1, 2)\">\n        <span class=\"radio\"></span>\n        <span>missing_evidence</span>\n      </div>\n      <div class=\"quiz-option\" onclick=\"selectOption(this, 1, 3)\">\n        <span class=\"radio\"></span>\n        <span>different_status</span>\n      </div>\n  </div>\n  <div class=\"quiz-feedback\" id=\"feedback1\"></div>\n  <button class=\"quiz-retry\" id=\"retry1\" onclick=\"QuizEngine.reset(1)\">Try again</button>\n</div>\n\n<div class=\"quiz\" id=\"quiz2\">\n  <div class=\"quiz-header\">\n    <span class=\"quiz-num\">2</span>\n    <h3>Which of the following counts as evidence for the agent-review engine?</h3>\n  </div>\n  <div class=\"quiz-options\">\n      <div class=\"quiz-option\" onclick=\"selectOption(this, 2, 0)\">\n        <span class=\"radio\"></span>\n        <span>A plain 'Done' string</span>\n      </div>\n      <div class=\"quiz-option\" onclick=\"selectOption(this, 2, 1)\">\n        <span class=\"radio\"></span>\n        <span>A URL, file path, commit hash, or explicit verification statement</span>\n      </div>\n      <div class=\"quiz-option\" onclick=\"selectOption(this, 2, 2)\">\n        <span class=\"radio\"></span>\n        <span>A promise to verify later</span>\n      </div>\n      <div class=\"quiz-option\" onclick=\"selectOption(this, 2, 3)\">\n        <span class=\"radio\"></span>\n        <span>A list of tools used</span>\n      </div>\n  </div>\n  <div class=\"quiz-feedback\" id=\"feedback2\"></div>\n  <button class=\"quiz-retry\" id=\"retry2\" onclick=\"QuizEngine.reset(2)\">Try again</button>\n</div>\n\n<div class=\"quiz\" id=\"quiz3\">\n  <div class=\"quiz-header\">\n    <span class=\"quiz-num\">3</span>\n    <h3>In the support triage playbook, what must happen when escalate is true?</h3>\n  </div>\n  <div class=\"quiz-options\">\n      <div class=\"quiz-option\" onclick=\"selectOption(this, 3, 0)\">\n        <span class=\"radio\"></span>\n        <span>Draft a brief empathetic response</span>\n      </div>\n      <div class=\"quiz-option\" onclick=\"selectOption(this, 3, 1)\">\n        <span class=\"radio\"></span>\n        <span>Do not draft a response</span>\n      </div>\n      <div class=\"quiz-option\" onclick=\"selectOption(this, 3, 2)\">\n        <span class=\"radio\"></span>\n        <span>Ask the user for more context</span>\n      </div>\n      <div class=\"quiz-option\" onclick=\"selectOption(this, 3, 3)\">\n        <span class=\"radio\"></span>\n        <span>Set category to Technical</span>\n      </div>\n  </div>\n  <div class=\"quiz-feedback\" id=\"feedback3\"></div>\n  <button class=\"quiz-retry\" id=\"retry3\" onclick=\"QuizEngine.reset(3)\">Try again</button>\n</div>\n</section>\n\n<section id=\"capstone\" class=\"reveal\">\n  <div class=\"capstone\">\n    <h2>Capstone: Evaluate three agent outputs</h2>\n    <p>\n      Choose three recent agent outputs from your work. For each one, run the four-stage evaluation loop: structure, citations, verification, and acceptance.\n      Document what evidence was present, what was missing, and what you changed before accepting or rejecting the output.\n    </p>\n    <div class=\"capstone-grid\">\n      <div class=\"capstone-item\"><h4>Output 1</h4><p>Task, claimed result, and evidence found.</p></div>\n      <div class=\"capstone-item\"><h4>Output 2</h4><p>Task, claimed result, and evidence found.</p></div>\n      <div class=\"capstone-item\"><h4>Output 3</h4><p>Task, claimed result, and evidence found.</p></div>\n      <div class=\"capstone-item\"><h4>Improvement</h4><p>One prompt or process change to improve evidence quality.</p></div>\n    </div>\n  </div>\n</section>",
+  "moduleJs": "const canvas = document.getElementById('moduleCanvas');\nif (canvas) {\n  const ctx = canvas.getContext('2d');\n  function resize() {\n    canvas.width = canvas.offsetWidth;\n    canvas.height = canvas.offsetHeight;\n  }\n  window.addEventListener('resize', resize);\n  resize();\n  const nodes = Array.from({ length: 24 }, () => ({\n    x: Math.random() * canvas.width,\n    y: Math.random() * canvas.height,\n    vx: (Math.random() - 0.5) * 0.6,\n    vy: (Math.random() - 0.5) * 0.6,\n  }));\n  function draw() {\n    ctx.clearRect(0, 0, canvas.width, canvas.height);\n    ctx.fillStyle = '#3b82f6';\n    nodes.forEach((n) => {\n      n.x += n.vx;\n      n.y += n.vy;\n      if (n.x < 0 || n.x > canvas.width) n.vx *= -1;\n      if (n.y < 0 || n.y > canvas.height) n.vy *= -1;\n      ctx.beginPath();\n      ctx.arc(n.x, n.y, 2, 0, Math.PI * 2);\n      ctx.fill();\n    });\n    ctx.strokeStyle = 'rgba(59,130,246,0.12)';\n    for (let i = 0; i < nodes.length; i++) {\n      for (let j = i + 1; j < nodes.length; j++) {\n        const dx = nodes[i].x - nodes[j].x;\n        const dy = nodes[i].y - nodes[j].y;\n        const d = Math.sqrt(dx * dx + dy * dy);\n        if (d < 120) {\n          ctx.beginPath();\n          ctx.moveTo(nodes[i].x, nodes[i].y);\n          ctx.lineTo(nodes[j].x, nodes[j].y);\n          ctx.stroke();\n        }\n      }\n    }\n    requestAnimationFrame(draw);\n  }\n  draw();\n}",
+  "quizAnswers": {
+    "1": 2,
+    "2": 1,
+    "3": 1
+  },
+  "quizFeedback": {
+    "1": {
+      "correct": "Correct. A completed checkpoint without evidence is flagged with reason 'missing_evidence'.",
+      "wrong": "Not quite. sensitive_domain is for prohibited actions, different_owners for conflicting owners, and different_status for conflicting statuses."
+    },
+    "2": {
+      "correct": "Correct. hasEvidence accepts URLs, file paths, commit hashes, or explicit verification statements.",
+      "wrong": "Not quite. A plain 'Done' string does not count; the engine requires verifiable evidence."
+    },
+    "3": {
+      "correct": "Correct. The playbook explicitly forbids drafting a response when escalate is true.",
+      "wrong": "Not quite. When sentiment is strongly negative or legal terms appear, the model must set escalate: true and not draft a response."
+    }
+  },
+  "mediaAssets": [
+    {
+      "id": "core-fluency-m4-evaluation-loop",
+      "type": "mermaid",
+      "src": "alabs-generated-courses/media/src/core-fluency-m4-evaluation-loop.mmd"
+    },
+    {
+      "id": "core-fluency-m4-review-demo",
+      "type": "asciinema",
+      "src": "alabs-generated-courses/media/src/core-fluency-m4-review-demo.cast"
+    },
+    {
+      "id": "core-fluency-m4-agent-review-walkthrough",
+      "type": "walkthrough",
+      "src": "alabs-generated-courses/media/src/core-fluency-m4-agent-review-walkthrough.json"
+    }
+  ]
+}

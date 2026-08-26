@@ -1,0 +1,22 @@
+{
+  "file": "docs/public/security/audit.md",
+  "language": "markdown",
+  "contextLines": 2,
+  "steps": [
+    {
+      "title": "Audit feed endpoints",
+      "lines": [1, 15],
+      "note": "The audit feed exposes POST /api/v1/admin/audit to write events and GET /api/v1/admin/audit to list them. Both endpoints require organization owner or admin role."
+    },
+    {
+      "title": "Event schema",
+      "lines": [16, 27],
+      "note": "Every event records actor_id, action, resource_type, resource_id, metadata, and timestamp. This schema maps directly to Cowork approval gate results and workspace lifecycle hooks."
+    },
+    {
+      "title": "Cursor pagination",
+      "lines": [73, 83],
+      "note": "Events are ordered by created_at ASC, id ASC with a cursor of created_at|id. The cap is 100 events per page, which matters when streaming high-volume tool approval logs."
+    }
+  ]
+}

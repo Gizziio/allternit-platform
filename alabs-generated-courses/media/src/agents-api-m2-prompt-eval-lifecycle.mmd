@@ -1,0 +1,14 @@
+flowchart LR
+    A[Business task] --> B[Draft system prompt]
+    B --> C[Add schema + examples]
+    C --> D[Run against test set]
+    D --> E{Pass evaluation?}
+    E -->|No| F[Identify failure mode]
+    F --> B
+    E -->|Yes| G[Register agent / deploy]
+    G --> H[Monitor production events]
+    H --> F
+
+    style A fill:#151517,stroke:#3f3f46,color:#e5e5e5
+    style E fill:#ec4899,stroke:#f472b6,color:#fff
+    style G fill:#22c55e,stroke:#4ade80,color:#fff

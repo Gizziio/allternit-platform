@@ -1,0 +1,71 @@
+{
+  "title": "Module 5: Bridge: Admin Runbooks",
+  "tier": "OPS",
+  "sourcePackage": "packages/@allternit/cowork-engine",
+  "accentColor": "#8b5cf6",
+  "navLinks": [
+    {
+      "label": "Overview",
+      "section": "overview"
+    },
+    {
+      "label": "Diagnostics",
+      "section": "diagnostics"
+    },
+    {
+      "label": "Runbooks",
+      "section": "runbooks"
+    },
+    {
+      "label": "Audit",
+      "section": "audit"
+    },
+    {
+      "label": "Quizzes",
+      "section": "quizzes"
+    },
+    {
+      "label": "Capstone",
+      "section": "capstone"
+    }
+  ],
+  "moduleCss": "\n.hero { position: relative; overflow: hidden; }\n#moduleCanvas { position: absolute; top: 0; left: 0; width: 100%; height: 100%; z-index: -1; opacity: 0.35; pointer-events: none; }\n.quiz-option code { background: rgba(139,92,246,0.12); color: #8b5cf6; }\n",
+  "moduleContent": "<section id=\"overview\" class=\"hero reveal\">\n  <canvas id=\"moduleCanvas\"></canvas>\n  <span class=\"hero-badge\">OPS Tier</span>\n  <h1>Module 5: <em>Bridge: Admin Runbooks</em></h1>\n  <p>\n    This bridge module ties together everything from the Cowork course into repeatable admin runbooks.\n    You will learn how to diagnose the <code>gizzi-code</code> CLI, inspect configuration and auth state, read metrics and logs, and use audit and compliance endpoints.\n  </p>\n  <div class=\"hero-meta\">\n    <span><strong>5 lessons</strong> · ~45 minutes</span>\n    <span>Source: <code>packages/@allternit/cowork-engine</code>, <code>cmd/gizzi-code</code></span>\n  </div>\n</section>\n\n<section id=\"diagnostics\" class=\"reveal\">\n  <h2>The diagnostics funnel</h2>\n  <p>\n    Most production issues fall into three buckets: authentication, configuration, or observability. The CLI exposes a small set of commands that narrow the bucket quickly.\n  </p>\n  <table>\n    <thead>\n      <tr><th>Symptom</th><th>Command</th><th>What it reveals</th></tr>\n    </thead>\n    <tbody>\n      <tr><td>Cannot connect</td><td><code>gizzi auth status</code></td><td>OAuth, API key, or unauthenticated</td></tr>\n      <tr><td>Wrong settings</td><td><code>gizzi config show</code></td><td>Merged effective config</td></tr>\n      <tr><td>Setting ignored</td><td><code>gizzi config list --sources</code></td><td>Which files were loaded and in what order</td></tr>\n      <tr><td>Slow or failing requests</td><td><code>gizzi metrics</code></td><td>Request counts, latency, tool approvals, timeouts</td></tr>\n      <tr><td>Crash or odd behavior</td><td><code>~/.gizzi/logs/gizzi-*.log</code></td><td>Structured runtime logs and crash reports</td></tr>\n    </tbody>\n  </table>\n  <div class=\"callout info\">\n    <p>\n      <strong>Config precedence:</strong> user defaults → named profile → project overrides → CLI flags.\n      If a setting looks wrong, always check which sources contributed to it before editing files.\n    </p>\n  </div>\n  {{MEDIA:ops-cowork-m5-diagnostics-demo}}\n</section>\n\n<section id=\"runbooks\" class=\"reveal\">\n  <h2>Runbook flow</h2>\n  <p>\n    A good runbook starts with the symptom, asks one binary question at a time, and ends with either a fix or a support handoff.\n    The Mermaid diagram below shows the standard flow for Cowork and gizzi-code incidents.\n  </p>\n  {{MEDIA:ops-cowork-m5-runbook-flow}}\n  <h3>Auth runbook</h3>\n  <ol>\n    <li>Run <code>gizzi auth status</code>. If unauthenticated, re-run <code>gizzi auth login</code> or pre-seed an API-key profile for headless use.</li>\n    <li>Verify the active profile with <code>gizzi auth profile list</code>.</li>\n    <li>For CI, prefer API-key auth and store the key in a secret manager, never in the repository.</li>\n  </ol>\n  <h3>Config runbook</h3>\n  <ol>\n    <li>Run <code>gizzi config path</code> to see the resolved user data root.</li>\n    <li>Run <code>gizzi config show</code> for the merged effective config.</li>\n    <li>Run <code>gizzi config list --sources</code> to confirm which files were loaded.</li>\n    <li>Compare the active profile with <code>gizzi config permission-profiles active</code>.</li>\n  </ol>\n  <h3>Observability runbook</h3>\n  <ol>\n    <li>Check metrics with <code>gizzi metrics --last-hour</code> for request volume, latency, and timeout rate.</li>\n    <li>Enable OpenTelemetry spans via <code>experimental.openTelemetry = true</code> or <code>GIZZI_EXPERIMENTAL_OPEN_TELEMETRY=true</code>.</li>\n    <li>Inspect structured logs under <code>~/.gizzi/logs/</code> or the XDG state path on Linux.</li>\n    <li>Disable telemetry in regulated environments with <code>DISABLE_TELEMETRY=1</code>.</li>\n  </ol>\n</section>\n\n<section id=\"audit\" class=\"reveal\">\n  <h2>Audit and compliance for admins</h2>\n  <p>\n    The audit feed is an append-only log of organization-scoped events. Admins can write events explicitly and list events with cursor-based pagination.\n    Compliance endpoints let admins export or delete workspace, chat, and artifact data.\n  </p>\n  <div class=\"code-block\">\n    <div class=\"code-header\"><span class=\"code-lang\">bash</span><button class=\"code-copy\">Copy</button></div>\n    <pre><code>curl -s \"${ALLTERNIT_API_URL}/api/v1/admin/audit?limit=50\" \\\n  -H \"Authorization: Bearer ${CLERK_JWT}\"</code></pre>\n  </div>\n  <p>\n    Common admin actions to monitor include <code>user.login</code>, <code>workspace.create</code>, <code>rbac_role.update</code>, <code>external_key.validate</code>,\n    <code>vault.credential.revoke</code>, and <code>compliance.request.create</code>.\n  </p>\n  {{MEDIA:ops-cowork-m5-audit-walkthrough}}\n</section>\n\n<section id=\"quizzes\" class=\"reveal\">\n  <h2>Check your understanding</h2>\n  <div class=\"quiz\" id=\"quiz1\">\n  <div class=\"quiz-header\">\n    <span class=\"quiz-num\">1</span>\n    <h3>Which command shows the merged effective configuration?</h3>\n  </div>\n  <div class=\"quiz-options\">\n      <div class=\"quiz-option\" onclick=\"selectOption(this, 1, 0)\">\n        <span class=\"radio\"></span>\n        <span>gizzi config path</span>\n      </div>\n      <div class=\"quiz-option\" onclick=\"selectOption(this, 1, 1)\">\n        <span class=\"radio\"></span>\n        <span>gizzi config show</span>\n      </div>\n      <div class=\"quiz-option\" onclick=\"selectOption(this, 1, 2)\">\n        <span class=\"radio\"></span>\n        <span>gizzi config list --sources</span>\n      </div>\n      <div class=\"quiz-option\" onclick=\"selectOption(this, 1, 3)\">\n        <span class=\"radio\"></span>\n        <span>gizzi auth status</span>\n      </div>\n  </div>\n  <div class=\"quiz-feedback\" id=\"feedback1\"></div>\n  <button class=\"quiz-retry\" id=\"retry1\" onclick=\"QuizEngine.reset(1)\">Try again</button>\n</div>\n\n<div class=\"quiz\" id=\"quiz2\">\n  <div class=\"quiz-header\">\n    <span class=\"quiz-num\">2</span>\n    <h3>What is the default timeout for an ApprovalGate request?</h3>\n  </div>\n  <div class=\"quiz-options\">\n      <div class=\"quiz-option\" onclick=\"selectOption(this, 2, 0)\">\n        <span class=\"radio\"></span>\n        <span>30 seconds</span>\n      </div>\n      <div class=\"quiz-option\" onclick=\"selectOption(this, 2, 1)\">\n        <span class=\"radio\"></span>\n        <span>60 seconds</span>\n      </div>\n      <div class=\"quiz-option\" onclick=\"selectOption(this, 2, 2)\">\n        <span class=\"radio\"></span>\n        <span>120 seconds</span>\n      </div>\n      <div class=\"quiz-option\" onclick=\"selectOption(this, 2, 3)\">\n        <span class=\"radio\"></span>\n        <span>300 seconds</span>\n      </div>\n  </div>\n  <div class=\"quiz-feedback\" id=\"feedback2\"></div>\n  <button class=\"quiz-retry\" id=\"retry2\" onclick=\"QuizEngine.reset(2)\">Try again</button>\n</div>\n\n<div class=\"quiz\" id=\"quiz3\">\n  <div class=\"quiz-header\">\n    <span class=\"quiz-num\">3</span>\n    <h3>Which environment variable disables anonymous metrics collection in gizzi-code?</h3>\n  </div>\n  <div class=\"quiz-options\">\n      <div class=\"quiz-option\" onclick=\"selectOption(this, 3, 0)\">\n        <span class=\"radio\"></span>\n        <span>GIZZI_EXPERIMENTAL_OPEN_TELEMETRY</span>\n      </div>\n      <div class=\"quiz-option\" onclick=\"selectOption(this, 3, 1)\">\n        <span class=\"radio\"></span>\n        <span>DISABLE_TELEMETRY</span>\n      </div>\n      <div class=\"quiz-option\" onclick=\"selectOption(this, 3, 2)\">\n        <span class=\"radio\"></span>\n        <span>OTEL_SERVICE_NAME</span>\n      </div>\n      <div class=\"quiz-option\" onclick=\"selectOption(this, 3, 3)\">\n        <span class=\"radio\"></span>\n        <span>GIZZI_CONFIG</span>\n      </div>\n  </div>\n  <div class=\"quiz-feedback\" id=\"feedback3\"></div>\n  <button class=\"quiz-retry\" id=\"retry3\" onclick=\"QuizEngine.reset(3)\">Try again</button>\n</div>\n</section>\n\n<section id=\"capstone\" class=\"reveal\">\n  <div class=\"capstone\">\n    <h2>Capstone: Write a Cowork incident runbook</h2>\n    <p>\n      Pick the three most common support tickets your team expects (for example: \"Cowork cannot write files\", \"requests are timing out\", \"wrong model is selected\").\n      For each ticket, write a short runbook with the exact <code>gizzi</code> or <code>allternit admin</code> commands, the expected output, and the escalation path.\n    </p>\n    <div class=\"capstone-grid\">\n      <div class=\"capstone-item\"><h4>Symptom</h4><p>One sentence describing the user-visible problem.</p></div>\n      <div class=\"capstone-item\"><h4>Commands</h4><p>Exact diagnostics commands and flags.</p></div>\n      <div class=\"capstone-item\"><h4>Expected output</h4><p>What you expect to see when healthy.</p></div>\n      <div class=\"capstone-item\"><h4>Escalation</h4><p>When to hand off and what data to attach.</p></div>\n    </div>\n  </div>\n</section>",
+  "moduleJs": "const canvas = document.getElementById('moduleCanvas');\nif (canvas) {\n  const ctx = canvas.getContext('2d');\n  function resize() {\n    canvas.width = canvas.offsetWidth;\n    canvas.height = canvas.offsetHeight;\n  }\n  window.addEventListener('resize', resize);\n  resize();\n  const nodes = Array.from({ length: 24 }, () => ({\n    x: Math.random() * canvas.width,\n    y: Math.random() * canvas.height,\n    vx: (Math.random() - 0.5) * 0.6,\n    vy: (Math.random() - 0.5) * 0.6,\n  }));\n  function draw() {\n    ctx.clearRect(0, 0, canvas.width, canvas.height);\n    ctx.fillStyle = '#8b5cf6';\n    nodes.forEach((n) => {\n      n.x += n.vx;\n      n.y += n.vy;\n      if (n.x < 0 || n.x > canvas.width) n.vx *= -1;\n      if (n.y < 0 || n.y > canvas.height) n.vy *= -1;\n      ctx.beginPath();\n      ctx.arc(n.x, n.y, 2, 0, Math.PI * 2);\n      ctx.fill();\n    });\n    ctx.strokeStyle = 'rgba(139,92,246,0.12)';\n    for (let i = 0; i < nodes.length; i++) {\n      for (let j = i + 1; j < nodes.length; j++) {\n        const dx = nodes[i].x - nodes[j].x;\n        const dy = nodes[i].y - nodes[j].y;\n        const d = Math.sqrt(dx * dx + dy * dy);\n        if (d < 120) {\n          ctx.beginPath();\n          ctx.moveTo(nodes[i].x, nodes[i].y);\n          ctx.lineTo(nodes[j].x, nodes[j].y);\n          ctx.stroke();\n        }\n      }\n    }\n    requestAnimationFrame(draw);\n  }\n  draw();\n}",
+  "quizAnswers": {
+    "1": 1,
+    "2": 2,
+    "3": 1
+  },
+  "quizFeedback": {
+    "1": {
+      "correct": "Correct. gizzi config show prints the merged effective configuration after all layers are applied.",
+      "wrong": "Not quite. config path shows the resolved root; config list --sources shows which files were loaded; auth status shows authentication state."
+    },
+    "2": {
+      "correct": "Correct. ApprovalGate defaults to 120_000 ms (2 minutes) when no timeoutMs is provided.",
+      "wrong": "Not quite. The constructor sets defaultTimeoutMs to 120_000 ms."
+    },
+    "3": {
+      "correct": "Correct. DISABLE_TELEMETRY=1 disables anonymous metrics collection across gizzi-code.",
+      "wrong": "Not quite. GIZZI_EXPERIMENTAL_OPEN_TELEMETRY enables OpenTelemetry spans; OTEL_SERVICE_NAME names the service; GIZZI_CONFIG points to a config file."
+    }
+  },
+  "mediaAssets": [
+    {
+      "id": "ops-cowork-m5-runbook-flow",
+      "type": "mermaid",
+      "src": "alabs-generated-courses/media/src/ops-cowork-m5-runbook-flow.mmd"
+    },
+    {
+      "id": "ops-cowork-m5-diagnostics-demo",
+      "type": "asciinema",
+      "src": "alabs-generated-courses/media/src/ops-cowork-m5-diagnostics-demo.cast"
+    },
+    {
+      "id": "ops-cowork-m5-audit-walkthrough",
+      "type": "walkthrough",
+      "src": "alabs-generated-courses/media/src/ops-cowork-m5-audit-walkthrough.json"
+    }
+  ]
+}

@@ -1,0 +1,19 @@
+flowchart TD
+    A[Operator sees issue] --> B{Is it auth?}
+    B -->|Yes| C[gizzi auth status]
+    B -->|No| D{Is it config?}
+    D -->|Yes| E[gizzi config show]
+    D -->|No| F{Is it performance?}
+    F -->|Yes| G[gizzi metrics / otel]
+    F -->|No| H[Collect logs]
+    C --> I{Resolved?}
+    E --> I
+    G --> I
+    H --> J[Open support ticket]
+    I -->|Yes| K[Document fix]
+    I -->|No| H
+    K --> L[Update runbook]
+
+    style A fill:#8b5cf6,stroke:#a78bfa,color:#fff
+    style I fill:#f59e0b,stroke:#fbbf24,color:#000
+    style K fill:#22c55e,stroke:#86efac,color:#000

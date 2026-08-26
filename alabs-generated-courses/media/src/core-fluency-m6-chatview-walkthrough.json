@@ -1,0 +1,22 @@
+{
+  "file": "surfaces/ai.allternit.com/src/views/ChatView.tsx",
+  "language": "typescript",
+  "contextLines": 2,
+  "steps": [
+    {
+      "title": "Mode surfaces",
+      "lines": [61, 78],
+      "note": "ChatView accepts a mode prop of 'chat', 'cowork', or 'code' and maps it to an AgentModeSurface. This is where the 4D framework meets the UI: different modes expose different agent capabilities and review surfaces."
+    },
+    {
+      "title": "Embedded native sessions",
+      "lines": [82, 109],
+      "note": "Active native sessions are embedded via activeNativeSessionId. The UI fetches messages and canvases so the operator can inspect every turn and artifact before approving the next action."
+    },
+    {
+      "title": "Pending permissions and questions",
+      "lines": [146, 154],
+      "note": "usePendingPermissions and usePendingQuestions render info bars in the composer. These are the human-in-the-loop hooks that turn delegation into a gated conversation rather than a black box."
+    }
+  ]
+}

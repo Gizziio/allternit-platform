@@ -1,0 +1,13 @@
+{"version": 2, "width": 80, "height": 16, "timestamp": 1700000000, "env": {"SHELL": "/bin/bash", "TERM": "xterm-256color"}}
+[0.0, "o", "\u001b[1;32m$\u001b[0m gizzi mcp list\r\n"]
+[0.8, "o", "NAME                 STATUS      TYPE     TOOLS\r\n"]
+[1.0, "o", "sequential-thinking  connected   bundled  1\r\n"]
+[1.2, "o", "context7             connected   npm      2\r\n"]
+[1.4, "o", "allternit-tools      connected   remote   8\r\n"]
+[2.0, "o", "\u001b[1;32m$\u001b[0m gizzi mcp tools allternit-tools\r\n"]
+[2.8, "o", "\u001b[90m→\u001b[0m allternit-tools.file.read\r\n"]
+[3.0, "o", "\u001b[90m→\u001b[0m allternit-tools.file.write\r\n"]
+[3.2, "o", "\u001b[90m→\u001b[0m allternit-tools.bash.exec\r\n"]
+[4.0, "o", "\u001b[1;32m$\u001b[0m gizzi mcp call allternit-tools file.read '{\"path\":\"README.md\"}'\r\n"]
+[5.0, "o", "\u001b[90m→\u001b[0m Calling tool via MCP transport\r\n"]
+[6.0, "o", "\u001b[1;32m✓\u001b[0m Read 42 lines from README.md\r\n"]

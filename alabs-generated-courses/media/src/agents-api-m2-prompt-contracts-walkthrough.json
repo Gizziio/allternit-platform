@@ -1,0 +1,26 @@
+{
+  "file": "surfaces/ai.allternit.com/src/lib/agents/agent-mode-contracts.ts",
+  "language": "typescript",
+  "steps": [
+    {
+      "title": "Contract shape",
+      "lines": [25, 26, 27, 28, 29, 30, 31, 32],
+      "note": "Each agent mode declares an id, label, artifact kind, required capabilities, required evidence, and a system prompt. This is the schema that every mode-specific prompt must satisfy."
+    },
+    {
+      "title": "Completion law",
+      "lines": [45, 46, 47, 48, 49, 50, 51, 52],
+      "note": "The COMPLETION_LAW is injected into every mode prompt. It forbids the model from claiming completion from prose alone and mandates the required artifact, capabilities, and success markers."
+    },
+    {
+      "title": "Research mode prompt",
+      "lines": [60, 61, 62, 63, 64, 65],
+      "note": "The research mode system prompt demands authoritative sources, citations, and reconciliation of conflicting evidence. The prompt itself is the evaluation rubric."
+    },
+    {
+      "title": "Validate execution evidence",
+      "lines": [122, 123, 124, 125, 126, 127, 128, 129, 130, 131, 132, 133, 134, 135, 136, 137, 138, 139, 140, 141, 142, 143, 144, 145, 146, 147, 148, 149, 150, 151, 152],
+      "note": "After a run, validateAgentModeExecution checks for the required completion marker, tool calls, artifacts, citations, and swarm evidence. A prompt is only as good as the evidence it produces."
+    }
+  ]
+}

@@ -1,0 +1,17 @@
+flowchart LR
+    A[Org Admin] --> B[Create Workspace]
+    B --> C[Assign Members]
+    C --> D[Permission Profile]
+    D --> E{Approval Gate}
+    E -->|low risk| F[Auto-approve]
+    E -->|medium+| G[Human Review]
+    F --> H[Execute Action]
+    G --> I[Approve / Reject / Timeout]
+    I --> H
+    H --> J[Audit Log]
+    J --> K[Compliance Export]
+
+    style A fill:#8b5cf6,stroke:#a78bfa,color:#fff
+    style E fill:#8b5cf6,stroke:#a78bfa,color:#fff
+    style G fill:#f59e0b,stroke:#fbbf24,color:#000
+    style J fill:#22c55e,stroke:#86efac,color:#000

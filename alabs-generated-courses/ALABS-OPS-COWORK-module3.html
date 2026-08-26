@@ -1,0 +1,1763 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Module 3: Plugins, Browser, and Document Tasks — A://Labs</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+  <style>
+    /* ================================================================
+       A://Labs Module Template — Shared Styles
+       ================================================================ */
+
+    :root {
+      --bg: #0b0b0c;
+      --surface: #151517;
+      --surface-raised: #1c1c1f;
+      --border: #27272a;
+      --border-light: #3f3f46;
+      --text: #e5e5e5;
+      --text-secondary: #a1a1aa;
+      --text-muted: #71717a;
+      --accent: #8b5cf6;
+      --accent-dim: rgba(139,92,246,0.15);
+      --accent-glow: rgba(139,92,246,0.4);
+      --success: #22c55e;
+      --error: #ef4444;
+      --info: #3b82f6;
+      --code-bg: #0f0f11;
+    }
+
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    html {
+      scroll-behavior: smooth;
+      scroll-padding-top: 80px;
+    }
+
+    body {
+      font-family: 'Inter', system-ui, -apple-system, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      line-height: 1.6;
+      overflow-x: hidden;
+    }
+
+    /* Progress Bar */
+    #progress-container {
+      position: fixed;
+      top: 0; left: 0; right: 0;
+      height: 3px;
+      background: var(--surface);
+      z-index: 1000;
+    }
+    #progress-bar {
+      height: 100%;
+      width: 0%;
+      background: linear-gradient(90deg, var(--accent), #a78bfa);
+      box-shadow: 0 0 12px var(--accent-glow);
+      transition: width 0.2s ease;
+    }
+
+    /* Navigation */
+    nav {
+      position: fixed;
+      top: 3px; left: 0; right: 0;
+      background: rgba(11, 11, 12, 0.92);
+      backdrop-filter: blur(16px);
+      border-bottom: 1px solid var(--border);
+      z-index: 999;
+      padding: 0 24px;
+    }
+    .nav-inner {
+      max-width: 1200px;
+      margin: 0 auto;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      height: 56px;
+    }
+    .nav-logo {
+      font-weight: 800;
+      font-size: 0.9rem;
+      letter-spacing: -0.02em;
+      color: var(--text);
+    }
+    .nav-logo span {
+      color: var(--accent);
+    }
+    .nav-links {
+      display: flex;
+      gap: 6px;
+      list-style: none;
+    }
+    .nav-links a {
+      color: var(--text-secondary);
+      text-decoration: none;
+      font-size: 0.78rem;
+      font-weight: 500;
+      padding: 6px 12px;
+      border-radius: 6px;
+      transition: all 0.2s;
+      white-space: nowrap;
+    }
+    .nav-links a:hover, .nav-links a.active {
+      color: var(--accent);
+      background: var(--accent-dim);
+    }
+    .nav-tier {
+      font-size: 0.65rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: var(--accent);
+      border: 1px solid var(--accent);
+      padding: 3px 8px;
+      border-radius: 4px;
+    }
+    .nav-toggle {
+      display: none;
+      background: none;
+      border: none;
+      color: var(--text);
+      font-size: 1.4rem;
+      cursor: pointer;
+    }
+    @media (max-width: 768px) {
+      .nav-links { display: none; position: absolute; top: 56px; left: 0; right: 0; background: var(--surface); flex-direction: column; padding: 12px; gap: 4px; border-bottom: 1px solid var(--border); }
+      .nav-links.open { display: flex; }
+      .nav-toggle { display: block; }
+    }
+
+    /* Sections */
+    section {
+      padding: 80px 24px;
+      max-width: 860px;
+      margin: 0 auto;
+      position: relative;
+    }
+
+    /* Hero */
+    .hero {
+      min-height: 90vh;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: flex-start;
+      padding-top: 100px;
+    }
+    .hero-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 0.7rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+      color: var(--accent);
+      background: var(--accent-dim);
+      border: 1px solid rgba(139,92,246,0.25);
+      padding: 6px 14px;
+      border-radius: 100px;
+      margin-bottom: 24px;
+    }
+    .hero-badge::before {
+      content: '';
+      width: 6px; height: 6px;
+      background: var(--accent);
+      border-radius: 50%;
+      box-shadow: 0 0 8px var(--accent);
+      animation: pulse 2s ease-in-out infinite;
+    }
+    @keyframes pulse {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.4; }
+    }
+    .hero h1 {
+      font-size: clamp(2.2rem, 5vw, 3.8rem);
+      font-weight: 900;
+      line-height: 1.1;
+      letter-spacing: -0.03em;
+      margin-bottom: 20px;
+    }
+    .hero h1 em {
+      color: var(--accent);
+      font-style: normal;
+    }
+    .hero p {
+      font-size: 1.15rem;
+      color: var(--text-secondary);
+      max-width: 600px;
+      margin-bottom: 32px;
+      line-height: 1.7;
+    }
+    .hero-meta {
+      display: flex;
+      gap: 24px;
+      font-size: 0.8rem;
+      color: var(--text-muted);
+    }
+
+    /* Content Typography */
+    h2 {
+      font-size: 1.6rem;
+      font-weight: 700;
+      margin-bottom: 20px;
+      color: var(--text);
+      letter-spacing: -0.01em;
+    }
+    h3 {
+      font-size: 1.15rem;
+      font-weight: 600;
+      margin: 32px 0 12px;
+      color: var(--text);
+    }
+    h4 {
+      font-size: 0.95rem;
+      font-weight: 600;
+      margin: 24px 0 8px;
+      color: var(--text-secondary);
+    }
+    p {
+      margin-bottom: 16px;
+      color: var(--text-secondary);
+      font-size: 0.95rem;
+      line-height: 1.7;
+    }
+    ul, ol {
+      margin: 16px 0;
+      padding-left: 24px;
+      color: var(--text-secondary);
+    }
+    li {
+      margin-bottom: 8px;
+      font-size: 0.95rem;
+      line-height: 1.6;
+    }
+    a {
+      color: var(--accent);
+      text-decoration: none;
+    }
+    a:hover { text-decoration: underline; }
+    strong { color: var(--text); font-weight: 600; }
+    em { color: var(--accent); font-style: normal; }
+
+    /* Code Blocks */
+    .code-block {
+      background: var(--code-bg);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      overflow: hidden;
+      margin: 20px 0;
+    }
+    .code-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 10px 16px;
+      background: rgba(255,255,255,0.03);
+      border-bottom: 1px solid var(--border);
+    }
+    .code-lang {
+      font-size: 0.7rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      color: var(--text-muted);
+    }
+    .code-copy {
+      font-size: 0.7rem;
+      color: var(--text-muted);
+      background: none;
+      border: 1px solid var(--border);
+      padding: 4px 10px;
+      border-radius: 4px;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    .code-copy:hover {
+      color: var(--accent);
+      border-color: var(--accent);
+    }
+    pre {
+      padding: 16px 20px;
+      overflow-x: auto;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.82rem;
+      line-height: 1.6;
+      color: var(--text);
+    }
+    code {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.85em;
+      color: var(--accent);
+      background: rgba(245,158,11,0.08);
+      padding: 2px 5px;
+      border-radius: 3px;
+    }
+    pre code {
+      background: none;
+      padding: 0;
+      color: inherit;
+      font-size: inherit;
+    }
+    .token-keyword { color: #c678dd; }
+    .token-string { color: #98c379; }
+    .token-number { color: #d19a66; }
+    .token-comment { color: #5c6370; font-style: italic; }
+    .token-function { color: #61afef; }
+    .token-type { color: #e5c07b; }
+    .token-operator { color: #56b6c2; }
+
+    /* Callouts */
+    .callout {
+      padding: 16px 20px;
+      border-radius: 8px;
+      border-left: 3px solid var(--accent);
+      background: var(--accent-dim);
+      margin: 20px 0;
+    }
+    .callout.info {
+      border-left-color: var(--info);
+      background: rgba(59,130,246,0.08);
+    }
+    .callout.success {
+      border-left-color: var(--success);
+      background: rgba(34,197,94,0.08);
+    }
+    .callout.error {
+      border-left-color: var(--error);
+      background: rgba(239,68,68,0.08);
+    }
+    .callout p { margin: 0; color: var(--text-secondary); }
+    .callout strong { color: var(--text); }
+
+    /* Tables */
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin: 20px 0;
+      font-size: 0.88rem;
+    }
+    th, td {
+      padding: 10px 14px;
+      text-align: left;
+      border-bottom: 1px solid var(--border);
+    }
+    th {
+      font-weight: 600;
+      color: var(--text);
+      background: var(--surface);
+    }
+    td { color: var(--text-secondary); }
+    tr:hover td { background: rgba(255,255,255,0.02); }
+
+    /* Divider */
+    .divider {
+      height: 1px;
+      background: linear-gradient(90deg, transparent, var(--border), transparent);
+      margin: 60px 0;
+      border: none;
+    }
+
+    /* Scroll Reveal */
+    .reveal {
+      opacity: 0;
+      transform: translateY(24px);
+      transition: opacity 0.6s ease, transform 0.6s ease;
+    }
+    .reveal.visible {
+      opacity: 1;
+      transform: translateY(0);
+    }
+
+    /* Quiz */
+    .quiz {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 24px;
+      margin: 24px 0;
+    }
+    .quiz-header {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 16px;
+    }
+    .quiz-num {
+      width: 32px;
+      height: 32px;
+      border-radius: 50%;
+      background: var(--accent-dim);
+      color: var(--accent);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: 700;
+      font-size: 0.85rem;
+      flex-shrink: 0;
+    }
+    .quiz h3 { margin: 0; font-size: 1rem; }
+    .quiz-options {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+    .quiz-option {
+      padding: 12px 16px;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      cursor: pointer;
+      transition: all 0.2s;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      font-size: 0.9rem;
+      color: var(--text-secondary);
+    }
+    .quiz-option:hover { border-color: var(--border-light); }
+    .quiz-option.selected { border-color: var(--accent); background: var(--accent-dim); color: var(--text); }
+    .quiz-option.correct { border-color: var(--success); background: rgba(34,197,94,0.1); }
+    .quiz-option.wrong { border-color: var(--error); background: rgba(239,68,68,0.1); }
+    .quiz-option .radio {
+      width: 18px;
+      height: 18px;
+      border: 2px solid var(--border-light);
+      border-radius: 50%;
+      flex-shrink: 0;
+      transition: all 0.2s;
+    }
+    .quiz-option.selected .radio { border-color: var(--accent); }
+    .quiz-option.correct .radio { border-color: var(--success); background: var(--success); }
+    .quiz-option.wrong .radio { border-color: var(--error); background: var(--error); }
+    .quiz-feedback {
+      display: none;
+      margin-top: 12px;
+      padding: 12px 16px;
+      border-radius: 8px;
+      font-size: 0.9rem;
+      line-height: 1.5;
+    }
+    .quiz-feedback.show { display: block; }
+    .quiz-feedback.correct { background: rgba(34,197,94,0.1); color: #86efac; border: 1px solid rgba(34,197,94,0.3); }
+    .quiz-feedback.wrong { background: rgba(239,68,68,0.1); color: #fca5a5; border: 1px solid rgba(239,68,68,0.3); }
+    .quiz-retry {
+      margin-top: 12px;
+      padding: 8px 16px;
+      background: var(--surface-raised);
+      border: 1px solid var(--border);
+      color: var(--text-secondary);
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 0.85rem;
+      display: none;
+    }
+    .quiz-retry.show { display: inline-block; }
+    .quiz-retry:hover { border-color: var(--accent); color: var(--accent); }
+
+    /* Capstone */
+    .capstone {
+      background: linear-gradient(135deg, var(--surface) 0%, var(--surface-raised) 100%);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 40px;
+      margin: 40px 0;
+    }
+    .capstone h2 { margin-top: 0; }
+    .capstone-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+      gap: 16px;
+      margin-top: 24px;
+    }
+    .capstone-item {
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 16px;
+    }
+    .capstone-item h4 {
+      color: var(--accent);
+      margin-top: 0;
+      font-size: 0.85rem;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+    .capstone-item p { font-size: 0.85rem; margin: 0; }
+
+    /* Footer */
+    footer {
+      text-align: center;
+      padding: 40px 24px;
+      border-top: 1px solid var(--border);
+      color: var(--text-muted);
+      font-size: 0.85rem;
+    }
+    footer code {
+      background: none;
+      color: var(--text-muted);
+    }
+
+    /* Media assets */
+    .alabs-media {
+      margin: 24px 0;
+      border-radius: 12px;
+      overflow: hidden;
+      border: 1px solid var(--border);
+      background: var(--surface);
+    }
+    .mermaid {
+      padding: 24px;
+      display: flex;
+      justify-content: center;
+      min-height: 120px;
+    }
+    .mermaid svg {
+      max-width: 100%;
+      height: auto;
+    }
+    .asciinema-wrapper {
+      padding: 0;
+      background: var(--code-bg);
+    }
+    .asciinema-wrapper .asciinema-player {
+      width: 100%;
+    }
+
+    /* Walkthrough (Code-Hike-style) */
+    .walkthrough-container {
+      margin: 24px 0;
+    }
+    .walkthrough-controls {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      margin-bottom: 16px;
+      padding: 12px 16px;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+    }
+    .walkthrough-controls button {
+      background: var(--accent-dim);
+      color: var(--accent);
+      border: 1px solid var(--accent);
+      padding: 8px 16px;
+      border-radius: 6px;
+      cursor: pointer;
+      font-weight: 600;
+      font-size: 0.85rem;
+    }
+    .walkthrough-controls button:hover {
+      background: var(--accent);
+      color: var(--bg);
+    }
+    .walkthrough-controls button:disabled {
+      opacity: 0.4;
+      cursor: not-allowed;
+    }
+    .walkthrough-counter {
+      color: var(--text-muted);
+      font-size: 0.85rem;
+      font-variant-numeric: tabular-nums;
+    }
+    .walkthrough-step {
+      display: none;
+      padding: 24px;
+    }
+    .walkthrough-step.active {
+      display: block;
+    }
+    .walkthrough-header {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 16px;
+    }
+    .walkthrough-step-num {
+      font-size: 0.7rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: var(--accent);
+      border: 1px solid var(--accent);
+      padding: 3px 10px;
+      border-radius: 100px;
+    }
+    .walkthrough-header h4 {
+      margin: 0;
+      font-size: 1.1rem;
+      color: var(--text);
+    }
+    .walkthrough-note {
+      background: var(--accent-dim);
+      border-left: 3px solid var(--accent);
+      padding: 16px 20px;
+      border-radius: 0 8px 8px 0;
+      margin-bottom: 20px;
+    }
+    .walkthrough-note p {
+      margin: 0;
+      color: var(--text-secondary);
+    }
+    .walkthrough-code pre {
+      counter-reset: none;
+      padding: 0;
+      background: transparent;
+    }
+    .walkthrough-line {
+      display: flex;
+      padding: 2px 16px;
+      transition: background 0.2s;
+    }
+    .walkthrough-line.dim {
+      opacity: 0.35;
+    }
+    .walkthrough-line.highlight {
+      background: rgba(236, 72, 153, 0.12);
+      border-left: 3px solid var(--accent);
+      margin-left: -3px;
+    }
+    .walkthrough-line .line-no {
+      color: var(--text-muted);
+      font-size: 0.75rem;
+      width: 40px;
+      flex-shrink: 0;
+      text-align: right;
+      padding-right: 16px;
+      user-select: none;
+    }
+    .walkthrough-line .line-code {
+      white-space: pre;
+    }
+    .walkthrough-line.ellipsis {
+      opacity: 0.5;
+      padding: 4px 16px;
+    }
+    .walkthrough-line.ellipsis .line-code {
+      color: var(--text-muted);
+    }
+
+    /* Module-specific styles injection point */
+    
+.hero { position: relative; overflow: hidden; }
+#coworkNetworkCanvas { position: absolute; top: 0; left: 0; width: 100%; height: 100%; z-index: -1; opacity: 0.35; pointer-events: none; }
+.quiz-option code { background: rgba(139,92,246,0.12); color: #a78bfa; }
+
+  </style>
+
+  <script type="module">
+    import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.esm.min.mjs';
+    mermaid.initialize({ startOnLoad: true, theme: 'dark', themeVariables: { primaryColor: '#8b5cf6', primaryTextColor: '#e5e5e5', primaryBorderColor: '#8b5cf6', lineColor: '#a1a1aa', secondaryColor: '#151517', tertiaryColor: '#0b0b0c', fontFamily: 'Inter, system-ui, sans-serif' }});
+  </script>
+
+  <link rel="stylesheet" type="text/css" href="https://cdn.jsdelivr.net/npm/asciinema-player@3/dist/bundle/asciinema-player.css" />
+  <script src="https://cdn.jsdelivr.net/npm/asciinema-player@3/dist/bundle/asciinema-player.min.js"></script>
+</head>
+<body>
+  <div id="progress-container"><div id="progress-bar"></div></div>
+
+  <nav>
+    <div class="nav-inner">
+      <div class="nav-logo">A://<span>Labs</span></div>
+      <ul class="nav-links" id="navLinks">
+        <li><a href="#overview" data-section="overview">Overview</a></li>
+        <li><a href="#plugins" data-section="plugins">Plugins</a></li>
+        <li><a href="#browser" data-section="browser">Browser</a></li>
+        <li><a href="#documents" data-section="documents">Documents</a></li>
+        <li><a href="#quizzes" data-section="quizzes">Quizzes</a></li>
+        <li><a href="#capstone" data-section="capstone">Capstone</a></li>
+      </ul>
+      <span class="nav-tier">OPS</span>
+      <button class="nav-toggle" onclick="document.getElementById('navLinks').classList.toggle('open')">☰</button>
+    </div>
+  </nav>
+
+  
+<section id="overview" class="hero reveal">
+  <canvas id="coworkNetworkCanvas"></canvas>
+  <span class="hero-badge">OPS Tier</span>
+  <h1>Module 3: <em>Plugins, Browser, and Document Tasks</em></h1>
+  <p>Learn how Allternit Cowork delegates multi-step work to plugins, browser automation, and document parsers—while keeping the human in control through the Operator surface.</p>
+  <div class="hero-meta">
+    <span><strong>5 lessons</strong> · ~45 minutes</span>
+    <span>Source: <code>@allternit/browser-tools</code></span>
+  </div>
+</section>
+
+<section id="plugins" class="reveal">
+  <h2>Plugins and skills as task primitives</h2>
+  <p>Cowork does not do everything itself. It delegates to specialized capabilities called <strong>plugins</strong> and <strong>skills</strong>. A plugin is usually a code-level integration that exposes one or more tools; a skill is a prompt-and-tool package declared in a <code>SKILL.md</code> manifest.</p>
+  <p>The SKILL.md format used by Allternit skills lives under <code>~/.allternit/skills/</code>. Each skill directory contains a manifest and an entrypoint. The skill registry validates required frontmatter fields—name, version, description, tools, and entrypoint—and refuses malformed packages at load time. gizzi-code discovers local skills from <code>~/.config/gizzi/skills/</code>, <code>.gizzi/skills/</code>, and any paths configured in <code>config.toml</code>.</p>
+
+  <div class="code-block">
+    <div class="code-header">
+      <span class="code-lang">markdown</span>
+      <button class="code-copy">Copy</button>
+    </div>
+    <pre><code>---
+name: allternit/powerpoint
+version: 0.1.0
+description: Generate and edit .pptx presentations
+tools:
+  - create_presentation
+  - add_slide
+entrypoint: powerpoint.ts
+---
+
+## Progressive disclosure
+
+- **basic**: create_presentation when the user asks for a new deck.
+- **full**: add_slide when the user wants to extend an existing deck.</code></pre>
+  </div>
+
+  <ul>
+    <li><strong>Least-privilege tool sets.</strong> Declare only the tools a skill needs.</li>
+    <li><strong>Progressive disclosure.</strong> Reveal advanced tools only after trust or context grows.</li>
+    <li><strong>Version pinning.</strong> Bump the version when behavior changes so Cowork can warn about drift.</li>
+  </ul>
+</section>
+
+<section id="browser" class="reveal">
+  <h2>Browser automation with OperatorBrowserView</h2>
+  <p>The Allternit Computer Interface (ACI) lets agents observe and control a browser through screenshots, mouse/keyboard actions, and human-in-the-loop approvals. The web surface for this is <code>OperatorBrowserView.tsx</code>, which creates tasks against <code>/api/v1/operator/browser/tasks</code> and monitors their status.</p>
+  <p>Under the hood, <code>@allternit/browser-tools</code> provides type-safe browser control. It exposes session management, navigation, DOM extraction, and action tools. Each function returns a <code>ToolResult</code> so the Cowork loop can recover from failures instead of crashing. Safety checks block <code>file://</code> URLs and other dangerous schemes before navigation.</p>
+
+  <table>
+    <thead>
+      <tr><th>Tool category</th><th>Examples</th><th>Purpose</th></tr>
+    </thead>
+    <tbody>
+      <tr><td>Session</td><td><code>browser.create_session</code>, <code>browser.close_session</code></td><td>Lifecycle and viewport</td></tr>
+      <tr><td>Navigation</td><td><code>browser.navigate</code>, <code>browser.reload</code></td><td>Load and refresh pages</td></tr>
+      <tr><td>Action</td><td><code>browser.click</code>, <code>browser.type</code>, <code>browser.select</code></td><td>Interact with elements</td></tr>
+      <tr><td>Extraction</td><td><code>browser.extract_content</code>, <code>browser.screenshot</code></td><td>Pull data or images out</td></tr>
+    </tbody>
+  </table>
+
+  <h3>Plugin / browser / document flow</h3>
+  <p>The diagram below shows how Cowork routes a request to the right capability and feeds the results back into the agent loop.</p>
+
+  <pre class="mermaid alabs-media" data-media-id="ops-cowork-m3-plugin-browser-doc-flow">flowchart TD
+    A[User Request] --&gt; B{Cowork Planner}
+    B --&gt;|Research| C[Plugin / MCP Tool]
+    B --&gt;|Browser| D[OperatorBrowserView]
+    B --&gt;|Document| E[office-file-parse]
+    C --&gt; F[Tool Registry]
+    D --&gt; G[@allternit/browser-tools]
+    E --&gt; H[ParsedFile]
+    F --&gt; I[Agent Loop]
+    G --&gt; I
+    H --&gt; I
+    I --&gt; J[Artifact / Answer]
+
+    style D fill:#8b5cf6,stroke:#a78bfa,color:#fff
+    style G fill:#8b5cf6,stroke:#a78bfa,color:#fff
+    style E fill:#8b5cf6,stroke:#a78bfa,color:#fff
+    style J fill:#151517,stroke:#3f3f46,color:#e5e5e5</pre>
+</section>
+
+<section id="documents" class="reveal">
+  <h2>Document parsing and Office tasks</h2>
+  <p>Document tasks use the same <code>@allternit/office-file-parse</code> package covered in the AGENTS-API RAG module. Cowork calls <code>parseFileToText</code> to turn Word, PowerPoint, Excel, and PDF files into plain text, then reasons over the result.</p>
+  <p>The combination is powerful: a single Cowork task can parse a quarterly report PDF, extract totals, open the company expense portal in the browser, fill the form with the parsed numbers, and save both a summary and a receipt. The task is broken into phases by the Cowork planner, each phase invoking the right plugin or browser tool.</p>
+
+  <div class="callout info">
+    <p><strong>Human-in-the-loop:</strong> Destructive actions and navigation to new sites pause for approval. Cowork is autonomous on known steps, not reckless.</p>
+  </div>
+
+  <h3>Demo: a multi-step Cowork task</h3>
+  <p>The terminal demo shows a Cowork run that parses a document, extracts numbers, opens a browser form, fills it, and saves the artifacts.</p>
+
+  <div class="asciinema-wrapper alabs-media" data-media-id="ops-cowork-m3-cowork-task-demo">
+  <asciinema-player src="data:application/json;base64,eyJ2ZXJzaW9uIjogMiwgIndpZHRoIjogODAsICJoZWlnaHQiOiAxNiwgInRpbWVzdGFtcCI6IDE3MDAwMDAwMDAsICJlbnYiOiB7IlNIRUxMIjogIi9iaW4vYmFzaCIsICJURVJNIjogInh0ZXJtLTI1NmNvbG9yIn19ClswLjAsICJvIiwgIlx1MDAxYlsxOzMybSRcdTAwMWJbMG0gZ2l6emkgY293b3JrIHJ1biBcIlN1bW1hcml6ZSBRMyByZXBvcnQgYW5kIGZpbGUgZXhwZW5zZSBmb3JtXCJcclxuIl0KWzAuOCwgIm8iLCAiXHUwMDFiWzkwbeKGklx1MDAxYlswbSBXb3Jrc3BhY2UgbG9hZGVkOiBwcm9qZWN0SWQ9cTMtY2xvc2VvdXRcclxuIl0KWzEuNCwgIm8iLCAiXHUwMDFiWzkwbeKGklx1MDAxYlswbSBQbGFuOiAxKSBwYXJzZSByZXBvcnQucGRmIDIpIGV4dHJhY3QgdG90YWxzIDMpIG9wZW4gZXhwZW5zZSBwb3J0YWwgNCkgZmlsbCBmb3JtXHJcbiJdClsyLjIsICJvIiwgIlx1MDAxYls5MG3ihpJcdTAwMWJbMG0gQ2FsbGluZyBAYWxsdGVybml0L29mZmljZS1maWxlLXBhcnNlIG9uIHJlcG9ydC5wZGZcclxuIl0KWzMuNSwgIm8iLCAiXHUwMDFiWzkwbeKGklx1MDAxYlswbSBFeHRyYWN0ZWQgMTIgdGFibGVzLCB0b3RhbD0kNDIsMzE5LjQ3XHJcbiJdCls0LjUsICJvIiwgIlx1MDAxYls5MG3ihpJcdTAwMWJbMG0gT3BlbmluZyBleHBlbnNlIHBvcnRhbCB3aXRoIE9wZXJhdG9yQnJvd3NlclZpZXdcclxuIl0KWzYuMCwgIm8iLCAiXHUwMDFiWzkwbeKGklx1MDAxYlswbSBOYXZpZ2F0ZWQgdG8gaHR0cHM6Ly9leHBlbnNlcy5pbnRlcm5hbC9uZXdcclxuIl0KWzcuNSwgIm8iLCAiXHUwMDFiWzkwbeKGklx1MDAxYlswbSBGaWxsZWQgYW1vdW50LCBjYXRlZ29yeSwgcHJvamVjdCBjb2RlIHZpYSBicm93c2VyIHRvb2xzXHJcbiJdCls4LjUsICJvIiwgIlx1MDAxYlsxOzMybeKck1x1MDAxYlswbSBUYXNrIGNvbXBsZXRlOiBzdW1tYXJ5Lm1kICsgZXhwZW5zZSByZWNlaXB0IHNhdmVkXHJcbiJd" theme="monokai" speed="1.2" cols="80" rows="24"></asciinema-player>
+</div>
+
+  <h3>Walkthrough: browser control tools</h3>
+  <p>The walkthrough below steps through session creation, safe navigation, and the tool registry in <code>packages/@allternit/browser-tools/src/tools/browser_control.ts</code>.</p>
+
+  <div class="walkthrough-container" data-walkthrough-container="ops-cowork-m3-browser-tools-walkthrough">
+  <div class="walkthrough-controls" data-walkthrough-controls="ops-cowork-m3-browser-tools-walkthrough">
+  <button class="walkthrough-prev" onclick="Walkthrough.step('ops-cowork-m3-browser-tools-walkthrough', -1)">← Previous</button>
+  <span class="walkthrough-counter"><span class="current">1</span> / 3</span>
+  <button class="walkthrough-next" onclick="Walkthrough.step('ops-cowork-m3-browser-tools-walkthrough', 1)">Next →</button>
+</div>
+  <div class="walkthrough-steps">
+    <div class="walkthrough-step alabs-media" id="ops-cowork-m3-browser-tools-walkthrough-step-0" data-walkthrough="ops-cowork-m3-browser-tools-walkthrough" data-step="0">
+  <div class="walkthrough-header">
+    <span class="walkthrough-step-num">Step 1</span>
+    <h4>Session creation</h4>
+  </div>
+  <div class="walkthrough-note">
+    <p>createSession builds a BrowserSession with a generated id, viewport, and status. ToolResult wraps success, data, and metadata so failures can be handled gracefully.</p>
+  </div>
+  <div class="code-block walkthrough-code">
+    <div class="code-header">
+      <span class="code-lang">typescript</span>
+      <span class="code-path">packages/@allternit/browser-tools/src/tools/browser_control.ts</span>
+    </div>
+    <pre><div class="walkthrough-line dim" data-line="19">
+        <span class="line-no"> 19</span>
+        <span class="line-code"><span class="token-comment">// ============================================================================</span></span>
+      </div>
+<div class="walkthrough-line dim" data-line="20">
+        <span class="line-no"> 20</span>
+        <span class="line-code">&nbsp;</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="21">
+        <span class="line-no"> 21</span>
+        <span class="line-code"><span class=<span class="token-string">"token-keyword"</span>>export</span> <span class=<span class="token-string">"token-keyword"</span>>interface</span> CreateSessionParams {</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="22">
+        <span class="line-no"> 22</span>
+        <span class="line-code">  viewport?: Partial&lt;Viewport&gt;;</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="23">
+        <span class="line-no"> 23</span>
+        <span class="line-code">  headless?: boolean;</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="24">
+        <span class="line-no"> 24</span>
+        <span class="line-code">  incognito?: boolean;</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="25">
+        <span class="line-no"> 25</span>
+        <span class="line-code">  userAgent?: string;</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="26">
+        <span class="line-no"> 26</span>
+        <span class="line-code">  locale?: string;</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="27">
+        <span class="line-no"> 27</span>
+        <span class="line-code">  timezone?: string;</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="28">
+        <span class="line-no"> 28</span>
+        <span class="line-code">}</span>
+      </div>
+<div class="walkthrough-line dim" data-line="29">
+        <span class="line-no"> 29</span>
+        <span class="line-code">&nbsp;</span>
+      </div>
+<div class="walkthrough-line dim" data-line="30">
+        <span class="line-no"> 30</span>
+        <span class="line-code">/**</span>
+      </div>
+<div class="walkthrough-line dim" data-line="31">
+        <span class="line-no"> 31</span>
+        <span class="line-code"> * Create a <span class=<span class="token-string">"token-keyword"</span>>new</span> browser session</span>
+      </div>
+<div class="walkthrough-line dim" data-line="32">
+        <span class="line-no"> 32</span>
+        <span class="line-code"> */</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="33">
+        <span class="line-no"> 33</span>
+        <span class="line-code"><span class=<span class="token-string">"token-keyword"</span>>export</span> <span class=<span class="token-string">"token-keyword"</span>>async</span> <span class=<span class="token-string">"token-keyword"</span>>function</span> createSession(</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="34">
+        <span class="line-no"> 34</span>
+        <span class="line-code">  params: CreateSessionParams = {}</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="35">
+        <span class="line-no"> 35</span>
+        <span class="line-code">): Promise&lt;ToolResult&lt;BrowserSession&gt;&gt; {</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="36">
+        <span class="line-no"> 36</span>
+        <span class="line-code">  <span class=<span class="token-string">"token-keyword"</span>>const</span> startTime = Date.now();</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="37">
+        <span class="line-no"> 37</span>
+        <span class="line-code">  </span>
+      </div>
+<div class="walkthrough-line highlight" data-line="38">
+        <span class="line-no"> 38</span>
+        <span class="line-code">  <span class=<span class="token-string">"token-keyword"</span>>try</span> {</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="39">
+        <span class="line-no"> 39</span>
+        <span class="line-code">    <span class="token-comment">// Implementation will integrate with Playwright</span></span>
+      </div>
+<div class="walkthrough-line highlight" data-line="40">
+        <span class="line-no"> 40</span>
+        <span class="line-code">    <span class=<span class="token-string">"token-keyword"</span>>const</span> session: BrowserSession = {</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="41">
+        <span class="line-no"> 41</span>
+        <span class="line-code">      id: generateSessionId(),</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="42">
+        <span class="line-no"> 42</span>
+        <span class="line-code">      status: <span class="token-string">'connecting'</span>,</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="43">
+        <span class="line-no"> 43</span>
+        <span class="line-code">      viewport: {</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="44">
+        <span class="line-no"> 44</span>
+        <span class="line-code">        width: params.viewport?.width || <span class="token-number">1280</span>,</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="45">
+        <span class="line-no"> 45</span>
+        <span class="line-code">        height: params.viewport?.height || <span class="token-number">720</span>,</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="46">
+        <span class="line-no"> 46</span>
+        <span class="line-code">        deviceScaleFactor: params.viewport?.deviceScaleFactor || <span class="token-number">1</span>,</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="47">
+        <span class="line-no"> 47</span>
+        <span class="line-code">        isMobile: params.viewport?.isMobile || <span class=<span class="token-string">"token-keyword"</span>>false</span>,</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="48">
+        <span class="line-no"> 48</span>
+        <span class="line-code">      },</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="49">
+        <span class="line-no"> 49</span>
+        <span class="line-code">      createdAt: <span class=<span class="token-string">"token-keyword"</span>>new</span> Date(),</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="50">
+        <span class="line-no"> 50</span>
+        <span class="line-code">      lastActivity: <span class=<span class="token-string">"token-keyword"</span>>new</span> Date(),</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="51">
+        <span class="line-no"> 51</span>
+        <span class="line-code">    };</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="52">
+        <span class="line-no"> 52</span>
+        <span class="line-code">&nbsp;</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="53">
+        <span class="line-no"> 53</span>
+        <span class="line-code">    <span class=<span class="token-string">"token-keyword"</span>>return</span> {</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="54">
+        <span class="line-no"> 54</span>
+        <span class="line-code">      success: <span class=<span class="token-string">"token-keyword"</span>>true</span>,</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="55">
+        <span class="line-no"> 55</span>
+        <span class="line-code">      data: session,</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="56">
+        <span class="line-no"> 56</span>
+        <span class="line-code">      metadata: {</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="57">
+        <span class="line-no"> 57</span>
+        <span class="line-code">        duration: Date.now() - startTime,</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="58">
+        <span class="line-no"> 58</span>
+        <span class="line-code">        timestamp: <span class=<span class="token-string">"token-keyword"</span>>new</span> Date(),</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="59">
+        <span class="line-no"> 59</span>
+        <span class="line-code">        sessionId: session.id,</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="60">
+        <span class="line-no"> 60</span>
+        <span class="line-code">      },</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="61">
+        <span class="line-no"> 61</span>
+        <span class="line-code">    };</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="62">
+        <span class="line-no"> 62</span>
+        <span class="line-code">  } <span class=<span class="token-string">"token-keyword"</span>>catch</span> (error) {</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="63">
+        <span class="line-no"> 63</span>
+        <span class="line-code">    <span class=<span class="token-string">"token-keyword"</span>>return</span> {</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="64">
+        <span class="line-no"> 64</span>
+        <span class="line-code">      success: <span class=<span class="token-string">"token-keyword"</span>>false</span>,</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="65">
+        <span class="line-no"> 65</span>
+        <span class="line-code">      error: {</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="66">
+        <span class="line-no"> 66</span>
+        <span class="line-code">        code: <span class="token-string">'SESSION_CREATE_FAILED'</span>,</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="67">
+        <span class="line-no"> 67</span>
+        <span class="line-code">        message: error instanceof Error ? error.message : <span class="token-string">'Unknown error'</span>,</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="68">
+        <span class="line-no"> 68</span>
+        <span class="line-code">      },</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="69">
+        <span class="line-no"> 69</span>
+        <span class="line-code">      metadata: {</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="70">
+        <span class="line-no"> 70</span>
+        <span class="line-code">        duration: Date.now() - startTime,</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="71">
+        <span class="line-no"> 71</span>
+        <span class="line-code">        timestamp: <span class=<span class="token-string">"token-keyword"</span>>new</span> Date(),</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="72">
+        <span class="line-no"> 72</span>
+        <span class="line-code">        sessionId: <span class="token-string">''</span>,</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="73">
+        <span class="line-no"> 73</span>
+        <span class="line-code">      },</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="74">
+        <span class="line-no"> 74</span>
+        <span class="line-code">    };</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="75">
+        <span class="line-no"> 75</span>
+        <span class="line-code">  }</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="76">
+        <span class="line-no"> 76</span>
+        <span class="line-code">}</span>
+      </div>
+<div class="walkthrough-line dim" data-line="77">
+        <span class="line-no"> 77</span>
+        <span class="line-code">&nbsp;</span>
+      </div>
+<div class="walkthrough-line dim" data-line="78">
+        <span class="line-no"> 78</span>
+        <span class="line-code">/**</span>
+      </div></pre>
+  </div>
+</div>
+<div class="walkthrough-step alabs-media" id="ops-cowork-m3-browser-tools-walkthrough-step-1" data-walkthrough="ops-cowork-m3-browser-tools-walkthrough" data-step="1">
+  <div class="walkthrough-header">
+    <span class="walkthrough-step-num">Step 2</span>
+    <h4>Safe navigation</h4>
+  </div>
+  <div class="walkthrough-note">
+    <p>navigate validates the URL against isUrlAllowed before loading the page. Blocked URLs return a ToolResult error instead of throwing, keeping the Cowork loop stable.</p>
+  </div>
+  <div class="code-block walkthrough-code">
+    <div class="code-header">
+      <span class="code-lang">typescript</span>
+      <span class="code-path">packages/@allternit/browser-tools/src/tools/browser_control.ts</span>
+    </div>
+    <pre><div class="walkthrough-line dim" data-line="165">
+        <span class="line-no">165</span>
+        <span class="line-code"><span class="token-comment">// ============================================================================</span></span>
+      </div>
+<div class="walkthrough-line dim" data-line="166">
+        <span class="line-no">166</span>
+        <span class="line-code">&nbsp;</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="167">
+        <span class="line-no">167</span>
+        <span class="line-code"><span class=<span class="token-string">"token-keyword"</span>>export</span> <span class=<span class="token-string">"token-keyword"</span>>interface</span> NavigateParams {</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="168">
+        <span class="line-no">168</span>
+        <span class="line-code">  url: string;</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="169">
+        <span class="line-no">169</span>
+        <span class="line-code">  waitUntil?: <span class="token-string">'load'</span> | <span class="token-string">'domcontentloaded'</span> | <span class="token-string">'networkidle'</span>;</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="170">
+        <span class="line-no">170</span>
+        <span class="line-code">  timeout?: number;</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="171">
+        <span class="line-no">171</span>
+        <span class="line-code">  referer?: string;</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="172">
+        <span class="line-no">172</span>
+        <span class="line-code">}</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="173">
+        <span class="line-no">173</span>
+        <span class="line-code">&nbsp;</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="174">
+        <span class="line-no">174</span>
+        <span class="line-code">/**</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="175">
+        <span class="line-no">175</span>
+        <span class="line-code"> * Navigate to a URL</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="176">
+        <span class="line-no">176</span>
+        <span class="line-code"> */</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="177">
+        <span class="line-no">177</span>
+        <span class="line-code"><span class=<span class="token-string">"token-keyword"</span>>export</span> <span class=<span class="token-string">"token-keyword"</span>>async</span> <span class=<span class="token-string">"token-keyword"</span>>function</span> navigate(</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="178">
+        <span class="line-no">178</span>
+        <span class="line-code">  sessionId: string,</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="179">
+        <span class="line-no">179</span>
+        <span class="line-code">  params: NavigateParams</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="180">
+        <span class="line-no">180</span>
+        <span class="line-code">): Promise&lt;ToolResult&lt;NavigationResult&gt;&gt; {</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="181">
+        <span class="line-no">181</span>
+        <span class="line-code">  <span class=<span class="token-string">"token-keyword"</span>>const</span> startTime = Date.now();</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="182">
+        <span class="line-no">182</span>
+        <span class="line-code">  </span>
+      </div>
+<div class="walkthrough-line highlight" data-line="183">
+        <span class="line-no">183</span>
+        <span class="line-code">  <span class=<span class="token-string">"token-keyword"</span>>try</span> {</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="184">
+        <span class="line-no">184</span>
+        <span class="line-code">    <span class="token-comment">// Validate URL against safety policy</span></span>
+      </div>
+<div class="walkthrough-line highlight" data-line="185">
+        <span class="line-no">185</span>
+        <span class="line-code">    <span class=<span class="token-string">"token-keyword"</span>>if</span> (!isUrlAllowed(params.url)) {</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="186">
+        <span class="line-no">186</span>
+        <span class="line-code">      <span class=<span class="token-string">"token-keyword"</span>>return</span> {</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="187">
+        <span class="line-no">187</span>
+        <span class="line-code">        success: <span class=<span class="token-string">"token-keyword"</span>>false</span>,</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="188">
+        <span class="line-no">188</span>
+        <span class="line-code">        error: {</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="189">
+        <span class="line-no">189</span>
+        <span class="line-code">          code: <span class="token-string">'NAVIGATION_BLOCKED'</span>,</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="190">
+        <span class="line-no">190</span>
+        <span class="line-code">          message: `URL blocked by safety policy: ${params.url}`,</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="191">
+        <span class="line-no">191</span>
+        <span class="line-code">        },</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="192">
+        <span class="line-no">192</span>
+        <span class="line-code">        metadata: {</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="193">
+        <span class="line-no">193</span>
+        <span class="line-code">          duration: Date.now() - startTime,</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="194">
+        <span class="line-no">194</span>
+        <span class="line-code">          timestamp: <span class=<span class="token-string">"token-keyword"</span>>new</span> Date(),</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="195">
+        <span class="line-no">195</span>
+        <span class="line-code">          sessionId,</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="196">
+        <span class="line-no">196</span>
+        <span class="line-code">        },</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="197">
+        <span class="line-no">197</span>
+        <span class="line-code">      };</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="198">
+        <span class="line-no">198</span>
+        <span class="line-code">    }</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="199">
+        <span class="line-no">199</span>
+        <span class="line-code">&nbsp;</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="200">
+        <span class="line-no">200</span>
+        <span class="line-code">    <span class="token-comment">// Implementation: Playwright page.goto()</span></span>
+      </div>
+<div class="walkthrough-line highlight" data-line="201">
+        <span class="line-no">201</span>
+        <span class="line-code">    <span class=<span class="token-string">"token-keyword"</span>>const</span> result: NavigationResult = {</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="202">
+        <span class="line-no">202</span>
+        <span class="line-code">      url: params.url,</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="203">
+        <span class="line-no">203</span>
+        <span class="line-code">      title: <span class="token-string">'Page Title'</span>,</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="204">
+        <span class="line-no">204</span>
+        <span class="line-code">      loadTime: <span class="token-number">1200</span>,</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="205">
+        <span class="line-no">205</span>
+        <span class="line-code">      status: <span class="token-number">200</span>,</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="206">
+        <span class="line-no">206</span>
+        <span class="line-code">    };</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="207">
+        <span class="line-no">207</span>
+        <span class="line-code">&nbsp;</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="208">
+        <span class="line-no">208</span>
+        <span class="line-code">    <span class=<span class="token-string">"token-keyword"</span>>return</span> {</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="209">
+        <span class="line-no">209</span>
+        <span class="line-code">      success: <span class=<span class="token-string">"token-keyword"</span>>true</span>,</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="210">
+        <span class="line-no">210</span>
+        <span class="line-code">      data: result,</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="211">
+        <span class="line-no">211</span>
+        <span class="line-code">      metadata: {</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="212">
+        <span class="line-no">212</span>
+        <span class="line-code">        duration: Date.now() - startTime,</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="213">
+        <span class="line-no">213</span>
+        <span class="line-code">        timestamp: <span class=<span class="token-string">"token-keyword"</span>>new</span> Date(),</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="214">
+        <span class="line-no">214</span>
+        <span class="line-code">        sessionId,</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="215">
+        <span class="line-no">215</span>
+        <span class="line-code">      },</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="216">
+        <span class="line-no">216</span>
+        <span class="line-code">    };</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="217">
+        <span class="line-no">217</span>
+        <span class="line-code">  } <span class=<span class="token-string">"token-keyword"</span>>catch</span> (error) {</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="218">
+        <span class="line-no">218</span>
+        <span class="line-code">    <span class=<span class="token-string">"token-keyword"</span>>return</span> {</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="219">
+        <span class="line-no">219</span>
+        <span class="line-code">      success: <span class=<span class="token-string">"token-keyword"</span>>false</span>,</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="220">
+        <span class="line-no">220</span>
+        <span class="line-code">      error: {</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="221">
+        <span class="line-no">221</span>
+        <span class="line-code">        code: <span class="token-string">'NAVIGATION_FAILED'</span>,</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="222">
+        <span class="line-no">222</span>
+        <span class="line-code">        message: error instanceof Error ? error.message : <span class="token-string">'Unknown error'</span>,</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="223">
+        <span class="line-no">223</span>
+        <span class="line-code">      },</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="224">
+        <span class="line-no">224</span>
+        <span class="line-code">      metadata: {</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="225">
+        <span class="line-no">225</span>
+        <span class="line-code">        duration: Date.now() - startTime,</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="226">
+        <span class="line-no">226</span>
+        <span class="line-code">        timestamp: <span class=<span class="token-string">"token-keyword"</span>>new</span> Date(),</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="227">
+        <span class="line-no">227</span>
+        <span class="line-code">        sessionId,</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="228">
+        <span class="line-no">228</span>
+        <span class="line-code">      },</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="229">
+        <span class="line-no">229</span>
+        <span class="line-code">    };</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="230">
+        <span class="line-no">230</span>
+        <span class="line-code">  }</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="231">
+        <span class="line-no">231</span>
+        <span class="line-code">}</span>
+      </div>
+<div class="walkthrough-line dim" data-line="232">
+        <span class="line-no">232</span>
+        <span class="line-code">&nbsp;</span>
+      </div>
+<div class="walkthrough-line dim" data-line="233">
+        <span class="line-no">233</span>
+        <span class="line-code">/**</span>
+      </div></pre>
+  </div>
+</div>
+<div class="walkthrough-step alabs-media" id="ops-cowork-m3-browser-tools-walkthrough-step-2" data-walkthrough="ops-cowork-m3-browser-tools-walkthrough" data-step="2">
+  <div class="walkthrough-header">
+    <span class="walkthrough-step-num">Step 3</span>
+    <h4>Tool registry</h4>
+  </div>
+  <div class="walkthrough-note">
+    <p>browserControlTools maps stable tool names to functions. Cowork and OperatorBrowserView use these names to invoke session, navigation, screenshot, and viewport actions.</p>
+  </div>
+  <div class="code-block walkthrough-code">
+    <div class="code-header">
+      <span class="code-lang">typescript</span>
+      <span class="code-path">packages/@allternit/browser-tools/src/tools/browser_control.ts</span>
+    </div>
+    <pre><div class="walkthrough-line dim" data-line="486">
+        <span class="line-no">486</span>
+        <span class="line-code"><span class="token-comment">// ============================================================================</span></span>
+      </div>
+<div class="walkthrough-line dim" data-line="487">
+        <span class="line-no">487</span>
+        <span class="line-code">&nbsp;</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="488">
+        <span class="line-no">488</span>
+        <span class="line-code"><span class=<span class="token-string">"token-keyword"</span>>export</span> <span class=<span class="token-string">"token-keyword"</span>>const</span> browserControlTools = {</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="489">
+        <span class="line-no">489</span>
+        <span class="line-code">  <span class="token-comment">// Session management</span></span>
+      </div>
+<div class="walkthrough-line highlight" data-line="490">
+        <span class="line-no">490</span>
+        <span class="line-code">  <span class="token-string">'browser.create_session'</span>: createSession,</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="491">
+        <span class="line-no">491</span>
+        <span class="line-code">  <span class="token-string">'browser.close_session'</span>: closeSession,</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="492">
+        <span class="line-no">492</span>
+        <span class="line-code">  <span class="token-string">'browser.get_session_info'</span>: getSessionInfo,</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="493">
+        <span class="line-no">493</span>
+        <span class="line-code">  </span>
+      </div>
+<div class="walkthrough-line highlight" data-line="494">
+        <span class="line-no">494</span>
+        <span class="line-code">  <span class="token-comment">// Navigation</span></span>
+      </div>
+<div class="walkthrough-line highlight" data-line="495">
+        <span class="line-no">495</span>
+        <span class="line-code">  <span class="token-string">'browser.navigate'</span>: navigate,</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="496">
+        <span class="line-no">496</span>
+        <span class="line-code">  <span class="token-string">'browser.go_back'</span>: goBack,</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="497">
+        <span class="line-no">497</span>
+        <span class="line-code">  <span class="token-string">'browser.go_forward'</span>: goForward,</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="498">
+        <span class="line-no">498</span>
+        <span class="line-code">  <span class="token-string">'browser.reload'</span>: reload,</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="499">
+        <span class="line-no">499</span>
+        <span class="line-code">  </span>
+      </div>
+<div class="walkthrough-line highlight" data-line="500">
+        <span class="line-no">500</span>
+        <span class="line-code">  <span class="token-comment">// Screenshot</span></span>
+      </div>
+<div class="walkthrough-line highlight" data-line="501">
+        <span class="line-no">501</span>
+        <span class="line-code">  <span class="token-string">'browser.screenshot'</span>: takeScreenshot,</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="502">
+        <span class="line-no">502</span>
+        <span class="line-code">  </span>
+      </div>
+<div class="walkthrough-line highlight" data-line="503">
+        <span class="line-no">503</span>
+        <span class="line-code">  <span class="token-comment">// Viewport</span></span>
+      </div>
+<div class="walkthrough-line highlight" data-line="504">
+        <span class="line-no">504</span>
+        <span class="line-code">  <span class="token-string">'browser.set_viewport'</span>: setViewport,</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="505">
+        <span class="line-no">505</span>
+        <span class="line-code">};</span>
+      </div>
+<div class="walkthrough-line dim" data-line="506">
+        <span class="line-no">506</span>
+        <span class="line-code">&nbsp;</span>
+      </div>
+<div class="walkthrough-line dim" data-line="507">
+        <span class="line-no">507</span>
+        <span class="line-code"><span class=<span class="token-string">"token-keyword"</span>>export</span> default browserControlTools;</span>
+      </div></pre>
+  </div>
+</div>
+  </div>
+</div>
+</section>
+
+<section id="quizzes" class="reveal">
+  <h2>Check your understanding</h2>
+
+  <div class="quiz" id="quiz1">
+    <div class="quiz-header">
+      <span class="quiz-num">1</span>
+      <h3>What does the <code>navigate</code> tool in <code>@allternit/browser-tools</code> do before loading a URL?</h3>
+    </div>
+    <div class="quiz-options">
+      <div class="quiz-option" onclick="selectOption(this, 1, 0)">
+        <span class="radio"></span>
+        <span>It waits for the page to finish loading</span>
+      </div>
+      <div class="quiz-option" onclick="selectOption(this, 1, 1)">
+        <span class="radio"></span>
+        <span>It validates the URL against a safety policy and blocks <code>file://</code> schemes</span>
+      </div>
+      <div class="quiz-option" onclick="selectOption(this, 1, 2)">
+        <span class="radio"></span>
+        <span>It asks the user to type the URL again</span>
+      </div>
+      <div class="quiz-option" onclick="selectOption(this, 1, 3)">
+        <span class="radio"></span>
+        <span>It converts the URL to a base64 string</span>
+      </div>
+    </div>
+    <div class="quiz-feedback" id="feedback1"></div>
+    <button class="quiz-retry" id="retry1" onclick="window.QuizEngine.reset(1)">Retry</button>
+  </div>
+
+  <div class="quiz" id="quiz2">
+    <div class="quiz-header">
+      <span class="quiz-num">2</span>
+      <h3>Which field is required in the SKILL.md frontmatter?</h3>
+    </div>
+    <div class="quiz-options">
+      <div class="quiz-option" onclick="selectOption(this, 2, 0)">
+        <span class="radio"></span>
+        <span><code>author</code></span>
+      </div>
+      <div class="quiz-option" onclick="selectOption(this, 2, 1)">
+        <span class="radio"></span>
+        <span><code>tags</code></span>
+      </div>
+      <div class="quiz-option" onclick="selectOption(this, 2, 2)">
+        <span class="radio"></span>
+        <span><code>entrypoint</code></span>
+      </div>
+      <div class="quiz-option" onclick="selectOption(this, 2, 3)">
+        <span class="radio"></span>
+        <span><code>progressive_disclosure</code></span>
+      </div>
+    </div>
+    <div class="quiz-feedback" id="feedback2"></div>
+    <button class="quiz-retry" id="retry2" onclick="window.QuizEngine.reset(2)">Retry</button>
+  </div>
+
+  <div class="quiz" id="quiz3">
+    <div class="quiz-header">
+      <span class="quiz-num">3</span>
+      <h3>What is the role of <code>OperatorBrowserView</code> in Cowork?</h3>
+    </div>
+    <div class="quiz-options">
+      <div class="quiz-option" onclick="selectOption(this, 3, 0)">
+        <span class="radio"></span>
+        <span>It renders a chat-only interface with no browser controls</span>
+      </div>
+      <div class="quiz-option" onclick="selectOption(this, 3, 1)">
+        <span class="radio"></span>
+        <span>It provides a UI for creating and monitoring browser automation tasks</span>
+      </div>
+      <div class="quiz-option" onclick="selectOption(this, 3, 2)">
+        <span class="radio"></span>
+        <span>It trains new browser automation models</span>
+      </div>
+      <div class="quiz-option" onclick="selectOption(this, 3, 3)">
+        <span class="radio"></span>
+        <span>It stores Cowork memory entries in the database</span>
+      </div>
+    </div>
+    <div class="quiz-feedback" id="feedback3"></div>
+    <button class="quiz-retry" id="retry3" onclick="window.QuizEngine.reset(3)">Retry</button>
+  </div>
+</section>
+
+<section id="capstone" class="reveal">
+  <div class="capstone">
+    <h2>Capstone: Build a Cowork research-to-report agent</h2>
+    <p>Create a multi-step Cowork task that combines plugins, browser tools, and document parsing.</p>
+    <div class="capstone-grid">
+      <div class="capstone-item">
+        <h4>Research</h4>
+        <p>Use a plugin or MCP tool to search an internal wiki for a topic.</p>
+      </div>
+      <div class="capstone-item">
+        <h4>Document</h4>
+        <p>Parse a related PDF with <code>parseFileToText</code> and extract three key findings.</p>
+      </div>
+      <div class="capstone-item">
+        <h4>Browser</h4>
+        <p>Open a web form in OperatorBrowserView and fill it with the extracted findings.</p>
+      </div>
+      <div class="capstone-item">
+        <h4>Deliver</h4>
+        <p>Save a summary markdown file and the browser screenshot as artifacts.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+
+  <footer>
+    <p>A://Labs — OPS Tier — Module 3: Plugins, Browser, and Document Tasks</p>
+    <p style="margin-top:4px;">Generated from <code>packages/@allternit/browser-tools</code> · Allternit Internal</p>
+  </footer>
+
+  <script>
+    // ========================
+    // Shared: Scroll Progress & Nav
+    // ========================
+    const progressBar = document.getElementById('progress-bar');
+    const navLinks = document.querySelectorAll('.nav-links a');
+    const sections = document.querySelectorAll('section[id], section[class*="reveal"]');
+
+    function updateProgress() {
+      const scrollTop = window.scrollY;
+      const docHeight = document.documentElement.scrollHeight - window.innerHeight;
+      const pct = (scrollTop / docHeight) * 100;
+      progressBar.style.width = pct + '%';
+
+      let current = '';
+      sections.forEach(sec => {
+        const top = sec.offsetTop - 100;
+        if (scrollTop >= top) {
+          current = sec.getAttribute('id') || '';
+        }
+      });
+      navLinks.forEach(link => {
+        link.classList.toggle('active', link.dataset.section === current);
+      });
+    }
+    window.addEventListener('scroll', updateProgress, { passive: true });
+    updateProgress();
+
+    // ========================
+    // Shared: Scroll Reveal
+    // ========================
+    const revealObserver = new IntersectionObserver((entries) => {
+      entries.forEach(e => { if (e.isIntersecting) e.target.classList.add('visible'); });
+    }, { threshold: 0.08 });
+    document.querySelectorAll('.reveal').forEach(el => revealObserver.observe(el));
+
+    // ========================
+    // Shared: Quiz Engine
+    // ========================
+    window.QuizEngine = {
+      answers: {},
+      feedback: {},
+
+      init(answers, feedback) {
+        this.answers = answers;
+        this.feedback = feedback;
+      },
+
+      selectOption(el, quizNum, optionIdx) {
+        const quizEl = document.getElementById('quiz' + quizNum);
+        const options = quizEl.querySelectorAll('.quiz-option');
+        const feedback = document.getElementById('feedback' + quizNum);
+        const retryBtn = document.getElementById('retry' + quizNum);
+
+        // Disable all options
+        options.forEach(opt => {
+          opt.style.pointerEvents = 'none';
+          opt.classList.remove('selected');
+        });
+        el.classList.add('selected');
+
+        const correct = this.answers[quizNum] === optionIdx;
+        if (correct) {
+          el.classList.add('correct');
+          feedback.className = 'quiz-feedback show correct';
+          feedback.textContent = this.feedback[quizNum].correct;
+        } else {
+          el.classList.add('wrong');
+          options[this.answers[quizNum]].classList.add('correct');
+          feedback.className = 'quiz-feedback show wrong';
+          feedback.textContent = this.feedback[quizNum].wrong;
+          if (retryBtn) retryBtn.classList.add('show');
+        }
+      },
+
+      reset(quizNum) {
+        const quizEl = document.getElementById('quiz' + quizNum);
+        const options = quizEl.querySelectorAll('.quiz-option');
+        const feedback = document.getElementById('feedback' + quizNum);
+        const retryBtn = document.getElementById('retry' + quizNum);
+
+        options.forEach(opt => {
+          opt.style.pointerEvents = '';
+          opt.classList.remove('selected', 'correct', 'wrong');
+        });
+        feedback.className = 'quiz-feedback';
+        feedback.textContent = '';
+        if (retryBtn) retryBtn.classList.remove('show');
+      }
+    };
+
+    // Alias for backward compatibility
+    function selectOption(el, quizNum, optionIdx) {
+      window.QuizEngine.selectOption(el, quizNum, optionIdx);
+    }
+
+    // ========================
+    // Shared: Code Copy
+    // ========================
+    document.querySelectorAll('.code-copy').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const pre = btn.closest('.code-block').querySelector('pre');
+        navigator.clipboard.writeText(pre.textContent).then(() => {
+          btn.textContent = 'Copied!';
+          setTimeout(() => btn.textContent = 'Copy', 1500);
+        });
+      });
+    });
+
+    // ========================
+    // Shared: Walkthrough Engine
+    // ========================
+    window.Walkthrough = {
+      init(id) {
+        const container = document.querySelector(`[data-walkthrough-container="${id}"]`);
+        if (!container) return;
+        const steps = container.querySelectorAll(`[data-walkthrough="${id}"]`);
+        if (steps.length === 0) return;
+        steps.forEach((step, idx) => { step.classList.toggle('active', idx === 0); });
+        this.updateControls(id, 0);
+      },
+
+      step(id, delta) {
+        const container = document.querySelector(`[data-walkthrough-container="${id}"]`);
+        if (!container) return;
+        const steps = Array.from(container.querySelectorAll(`[data-walkthrough="${id}"]`));
+        const current = steps.findIndex(s => s.classList.contains('active'));
+        const next = Math.max(0, Math.min(steps.length - 1, current + delta));
+        steps.forEach((step, idx) => { step.classList.toggle('active', idx === next); });
+        this.updateControls(id, next);
+      },
+
+      updateControls(id, activeIndex) {
+        const controls = document.querySelector(`[data-walkthrough-controls="${id}"]`);
+        if (!controls) return;
+        const steps = controls.closest('.walkthrough-container').querySelectorAll(`[data-walkthrough="${id}"]`);
+        const currentSpan = controls.querySelector('.current');
+        const prevBtn = controls.querySelector('.walkthrough-prev');
+        const nextBtn = controls.querySelector('.walkthrough-next');
+        if (currentSpan) currentSpan.textContent = activeIndex + 1;
+        if (prevBtn) prevBtn.disabled = activeIndex === 0;
+        if (nextBtn) nextBtn.disabled = activeIndex === steps.length - 1;
+      }
+    };
+
+    document.querySelectorAll('[data-walkthrough-container]').forEach(container => {
+      const id = container.getAttribute('data-walkthrough-container');
+      if (id) window.Walkthrough.init(id);
+    });
+
+    // ========================
+    // Module-specific JS injection point
+    // ========================
+    // Initialize quiz engine
+    window.QuizEngine.init({"1":1,"2":2,"3":1}, {"1":{"correct":"Correct. navigate calls isUrlAllowed to block non-http/https schemes such as file:// before attempting to load the page.","wrong":"Not quite. The safety check happens before page load, validating the URL scheme against the allowed policy."},"2":{"correct":"Correct. entrypoint is one of the required frontmatter fields in the Allternit SKILL.md format, alongside name, version, description, and tools.","wrong":"Not quite. author, tags, and progressive_disclosure are optional; entrypoint is required."},"3":{"correct":"Correct. OperatorBrowserView is the UI surface for creating and monitoring browser automation tasks backed by @allternit/browser-tools.","wrong":"Not quite. OperatorBrowserView is specifically the browser automation control view, not chat-only, model training, or memory storage."}});
+
+    
+const canvas = document.getElementById('coworkNetworkCanvas');
+if (canvas) {
+  const ctx = canvas.getContext('2d');
+  function resize() {
+    canvas.width = canvas.offsetWidth;
+    canvas.height = canvas.offsetHeight;
+  }
+  window.addEventListener('resize', resize);
+  resize();
+  const nodes = Array.from({ length: 24 }, () => ({
+    x: Math.random() * canvas.width,
+    y: Math.random() * canvas.height,
+    vx: (Math.random() - 0.5) * 0.6,
+    vy: (Math.random() - 0.5) * 0.6,
+  }));
+  function draw() {
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    ctx.fillStyle = '#8b5cf6';
+    nodes.forEach((n) => {
+      n.x += n.vx;
+      n.y += n.vy;
+      if (n.x < 0 || n.x > canvas.width) n.vx *= -1;
+      if (n.y < 0 || n.y > canvas.height) n.vy *= -1;
+      ctx.beginPath();
+      ctx.arc(n.x, n.y, 2, 0, Math.PI * 2);
+      ctx.fill();
+    });
+    ctx.strokeStyle = 'rgba(139,92,246,0.12)';
+    for (let i = 0; i < nodes.length; i++) {
+      for (let j = i + 1; j < nodes.length; j++) {
+        const dx = nodes[i].x - nodes[j].x;
+        const dy = nodes[i].y - nodes[j].y;
+        const d = Math.sqrt(dx * dx + dy * dy);
+        if (d < 120) {
+          ctx.beginPath();
+          ctx.moveTo(nodes[i].x, nodes[i].y);
+          ctx.lineTo(nodes[j].x, nodes[j].y);
+          ctx.stroke();
+        }
+      }
+    }
+    requestAnimationFrame(draw);
+  }
+  draw();
+}
+  </script>
+</body>
+</html>

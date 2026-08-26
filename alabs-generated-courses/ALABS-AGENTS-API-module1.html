@@ -1,0 +1,1416 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Module 1: Messages, Streaming, and Provider Adapters — A://Labs</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+  <style>
+    /* ================================================================
+       A://Labs Module Template — Shared Styles
+       ================================================================ */
+
+    :root {
+      --bg: #0b0b0c;
+      --surface: #151517;
+      --surface-raised: #1c1c1f;
+      --border: #27272a;
+      --border-light: #3f3f46;
+      --text: #e5e5e5;
+      --text-secondary: #a1a1aa;
+      --text-muted: #71717a;
+      --accent: #ec4899;
+      --accent-dim: rgba(236,72,153,0.15);
+      --accent-glow: rgba(236,72,153,0.4);
+      --success: #22c55e;
+      --error: #ef4444;
+      --info: #3b82f6;
+      --code-bg: #0f0f11;
+    }
+
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    html {
+      scroll-behavior: smooth;
+      scroll-padding-top: 80px;
+    }
+
+    body {
+      font-family: 'Inter', system-ui, -apple-system, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      line-height: 1.6;
+      overflow-x: hidden;
+    }
+
+    /* Progress Bar */
+    #progress-container {
+      position: fixed;
+      top: 0; left: 0; right: 0;
+      height: 3px;
+      background: var(--surface);
+      z-index: 1000;
+    }
+    #progress-bar {
+      height: 100%;
+      width: 0%;
+      background: linear-gradient(90deg, var(--accent), #f472b6);
+      box-shadow: 0 0 12px var(--accent-glow);
+      transition: width 0.2s ease;
+    }
+
+    /* Navigation */
+    nav {
+      position: fixed;
+      top: 3px; left: 0; right: 0;
+      background: rgba(11, 11, 12, 0.92);
+      backdrop-filter: blur(16px);
+      border-bottom: 1px solid var(--border);
+      z-index: 999;
+      padding: 0 24px;
+    }
+    .nav-inner {
+      max-width: 1200px;
+      margin: 0 auto;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      height: 56px;
+    }
+    .nav-logo {
+      font-weight: 800;
+      font-size: 0.9rem;
+      letter-spacing: -0.02em;
+      color: var(--text);
+    }
+    .nav-logo span {
+      color: var(--accent);
+    }
+    .nav-links {
+      display: flex;
+      gap: 6px;
+      list-style: none;
+    }
+    .nav-links a {
+      color: var(--text-secondary);
+      text-decoration: none;
+      font-size: 0.78rem;
+      font-weight: 500;
+      padding: 6px 12px;
+      border-radius: 6px;
+      transition: all 0.2s;
+      white-space: nowrap;
+    }
+    .nav-links a:hover, .nav-links a.active {
+      color: var(--accent);
+      background: var(--accent-dim);
+    }
+    .nav-tier {
+      font-size: 0.65rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: var(--accent);
+      border: 1px solid var(--accent);
+      padding: 3px 8px;
+      border-radius: 4px;
+    }
+    .nav-toggle {
+      display: none;
+      background: none;
+      border: none;
+      color: var(--text);
+      font-size: 1.4rem;
+      cursor: pointer;
+    }
+    @media (max-width: 768px) {
+      .nav-links { display: none; position: absolute; top: 56px; left: 0; right: 0; background: var(--surface); flex-direction: column; padding: 12px; gap: 4px; border-bottom: 1px solid var(--border); }
+      .nav-links.open { display: flex; }
+      .nav-toggle { display: block; }
+    }
+
+    /* Sections */
+    section {
+      padding: 80px 24px;
+      max-width: 860px;
+      margin: 0 auto;
+      position: relative;
+    }
+
+    /* Hero */
+    .hero {
+      min-height: 90vh;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: flex-start;
+      padding-top: 100px;
+    }
+    .hero-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 0.7rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+      color: var(--accent);
+      background: var(--accent-dim);
+      border: 1px solid rgba(236,72,153,0.25);
+      padding: 6px 14px;
+      border-radius: 100px;
+      margin-bottom: 24px;
+    }
+    .hero-badge::before {
+      content: '';
+      width: 6px; height: 6px;
+      background: var(--accent);
+      border-radius: 50%;
+      box-shadow: 0 0 8px var(--accent);
+      animation: pulse 2s ease-in-out infinite;
+    }
+    @keyframes pulse {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.4; }
+    }
+    .hero h1 {
+      font-size: clamp(2.2rem, 5vw, 3.8rem);
+      font-weight: 900;
+      line-height: 1.1;
+      letter-spacing: -0.03em;
+      margin-bottom: 20px;
+    }
+    .hero h1 em {
+      color: var(--accent);
+      font-style: normal;
+    }
+    .hero p {
+      font-size: 1.15rem;
+      color: var(--text-secondary);
+      max-width: 600px;
+      margin-bottom: 32px;
+      line-height: 1.7;
+    }
+    .hero-meta {
+      display: flex;
+      gap: 24px;
+      font-size: 0.8rem;
+      color: var(--text-muted);
+    }
+
+    /* Content Typography */
+    h2 {
+      font-size: 1.6rem;
+      font-weight: 700;
+      margin-bottom: 20px;
+      color: var(--text);
+      letter-spacing: -0.01em;
+    }
+    h3 {
+      font-size: 1.15rem;
+      font-weight: 600;
+      margin: 32px 0 12px;
+      color: var(--text);
+    }
+    h4 {
+      font-size: 0.95rem;
+      font-weight: 600;
+      margin: 24px 0 8px;
+      color: var(--text-secondary);
+    }
+    p {
+      margin-bottom: 16px;
+      color: var(--text-secondary);
+      font-size: 0.95rem;
+      line-height: 1.7;
+    }
+    ul, ol {
+      margin: 16px 0;
+      padding-left: 24px;
+      color: var(--text-secondary);
+    }
+    li {
+      margin-bottom: 8px;
+      font-size: 0.95rem;
+      line-height: 1.6;
+    }
+    a {
+      color: var(--accent);
+      text-decoration: none;
+    }
+    a:hover { text-decoration: underline; }
+    strong { color: var(--text); font-weight: 600; }
+    em { color: var(--accent); font-style: normal; }
+
+    /* Code Blocks */
+    .code-block {
+      background: var(--code-bg);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      overflow: hidden;
+      margin: 20px 0;
+    }
+    .code-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 10px 16px;
+      background: rgba(255,255,255,0.03);
+      border-bottom: 1px solid var(--border);
+    }
+    .code-lang {
+      font-size: 0.7rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      color: var(--text-muted);
+    }
+    .code-copy {
+      font-size: 0.7rem;
+      color: var(--text-muted);
+      background: none;
+      border: 1px solid var(--border);
+      padding: 4px 10px;
+      border-radius: 4px;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    .code-copy:hover {
+      color: var(--accent);
+      border-color: var(--accent);
+    }
+    pre {
+      padding: 16px 20px;
+      overflow-x: auto;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.82rem;
+      line-height: 1.6;
+      color: var(--text);
+    }
+    code {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.85em;
+      color: var(--accent);
+      background: rgba(245,158,11,0.08);
+      padding: 2px 5px;
+      border-radius: 3px;
+    }
+    pre code {
+      background: none;
+      padding: 0;
+      color: inherit;
+      font-size: inherit;
+    }
+    .token-keyword { color: #c678dd; }
+    .token-string { color: #98c379; }
+    .token-number { color: #d19a66; }
+    .token-comment { color: #5c6370; font-style: italic; }
+    .token-function { color: #61afef; }
+    .token-type { color: #e5c07b; }
+    .token-operator { color: #56b6c2; }
+
+    /* Callouts */
+    .callout {
+      padding: 16px 20px;
+      border-radius: 8px;
+      border-left: 3px solid var(--accent);
+      background: var(--accent-dim);
+      margin: 20px 0;
+    }
+    .callout.info {
+      border-left-color: var(--info);
+      background: rgba(59,130,246,0.08);
+    }
+    .callout.success {
+      border-left-color: var(--success);
+      background: rgba(34,197,94,0.08);
+    }
+    .callout.error {
+      border-left-color: var(--error);
+      background: rgba(239,68,68,0.08);
+    }
+    .callout p { margin: 0; color: var(--text-secondary); }
+    .callout strong { color: var(--text); }
+
+    /* Tables */
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin: 20px 0;
+      font-size: 0.88rem;
+    }
+    th, td {
+      padding: 10px 14px;
+      text-align: left;
+      border-bottom: 1px solid var(--border);
+    }
+    th {
+      font-weight: 600;
+      color: var(--text);
+      background: var(--surface);
+    }
+    td { color: var(--text-secondary); }
+    tr:hover td { background: rgba(255,255,255,0.02); }
+
+    /* Divider */
+    .divider {
+      height: 1px;
+      background: linear-gradient(90deg, transparent, var(--border), transparent);
+      margin: 60px 0;
+      border: none;
+    }
+
+    /* Scroll Reveal */
+    .reveal {
+      opacity: 0;
+      transform: translateY(24px);
+      transition: opacity 0.6s ease, transform 0.6s ease;
+    }
+    .reveal.visible {
+      opacity: 1;
+      transform: translateY(0);
+    }
+
+    /* Quiz */
+    .quiz {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 24px;
+      margin: 24px 0;
+    }
+    .quiz-header {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 16px;
+    }
+    .quiz-num {
+      width: 32px;
+      height: 32px;
+      border-radius: 50%;
+      background: var(--accent-dim);
+      color: var(--accent);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: 700;
+      font-size: 0.85rem;
+      flex-shrink: 0;
+    }
+    .quiz h3 { margin: 0; font-size: 1rem; }
+    .quiz-options {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+    .quiz-option {
+      padding: 12px 16px;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      cursor: pointer;
+      transition: all 0.2s;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      font-size: 0.9rem;
+      color: var(--text-secondary);
+    }
+    .quiz-option:hover { border-color: var(--border-light); }
+    .quiz-option.selected { border-color: var(--accent); background: var(--accent-dim); color: var(--text); }
+    .quiz-option.correct { border-color: var(--success); background: rgba(34,197,94,0.1); }
+    .quiz-option.wrong { border-color: var(--error); background: rgba(239,68,68,0.1); }
+    .quiz-option .radio {
+      width: 18px;
+      height: 18px;
+      border: 2px solid var(--border-light);
+      border-radius: 50%;
+      flex-shrink: 0;
+      transition: all 0.2s;
+    }
+    .quiz-option.selected .radio { border-color: var(--accent); }
+    .quiz-option.correct .radio { border-color: var(--success); background: var(--success); }
+    .quiz-option.wrong .radio { border-color: var(--error); background: var(--error); }
+    .quiz-feedback {
+      display: none;
+      margin-top: 12px;
+      padding: 12px 16px;
+      border-radius: 8px;
+      font-size: 0.9rem;
+      line-height: 1.5;
+    }
+    .quiz-feedback.show { display: block; }
+    .quiz-feedback.correct { background: rgba(34,197,94,0.1); color: #86efac; border: 1px solid rgba(34,197,94,0.3); }
+    .quiz-feedback.wrong { background: rgba(239,68,68,0.1); color: #fca5a5; border: 1px solid rgba(239,68,68,0.3); }
+    .quiz-retry {
+      margin-top: 12px;
+      padding: 8px 16px;
+      background: var(--surface-raised);
+      border: 1px solid var(--border);
+      color: var(--text-secondary);
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 0.85rem;
+      display: none;
+    }
+    .quiz-retry.show { display: inline-block; }
+    .quiz-retry:hover { border-color: var(--accent); color: var(--accent); }
+
+    /* Capstone */
+    .capstone {
+      background: linear-gradient(135deg, var(--surface) 0%, var(--surface-raised) 100%);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 40px;
+      margin: 40px 0;
+    }
+    .capstone h2 { margin-top: 0; }
+    .capstone-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+      gap: 16px;
+      margin-top: 24px;
+    }
+    .capstone-item {
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 16px;
+    }
+    .capstone-item h4 {
+      color: var(--accent);
+      margin-top: 0;
+      font-size: 0.85rem;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+    .capstone-item p { font-size: 0.85rem; margin: 0; }
+
+    /* Footer */
+    footer {
+      text-align: center;
+      padding: 40px 24px;
+      border-top: 1px solid var(--border);
+      color: var(--text-muted);
+      font-size: 0.85rem;
+    }
+    footer code {
+      background: none;
+      color: var(--text-muted);
+    }
+
+    /* Media assets */
+    .alabs-media {
+      margin: 24px 0;
+      border-radius: 12px;
+      overflow: hidden;
+      border: 1px solid var(--border);
+      background: var(--surface);
+    }
+    .mermaid {
+      padding: 24px;
+      display: flex;
+      justify-content: center;
+      min-height: 120px;
+    }
+    .mermaid svg {
+      max-width: 100%;
+      height: auto;
+    }
+    .asciinema-wrapper {
+      padding: 0;
+      background: var(--code-bg);
+    }
+    .asciinema-wrapper .asciinema-player {
+      width: 100%;
+    }
+
+    /* Walkthrough (Code-Hike-style) */
+    .walkthrough-container {
+      margin: 24px 0;
+    }
+    .walkthrough-controls {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      margin-bottom: 16px;
+      padding: 12px 16px;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+    }
+    .walkthrough-controls button {
+      background: var(--accent-dim);
+      color: var(--accent);
+      border: 1px solid var(--accent);
+      padding: 8px 16px;
+      border-radius: 6px;
+      cursor: pointer;
+      font-weight: 600;
+      font-size: 0.85rem;
+    }
+    .walkthrough-controls button:hover {
+      background: var(--accent);
+      color: var(--bg);
+    }
+    .walkthrough-controls button:disabled {
+      opacity: 0.4;
+      cursor: not-allowed;
+    }
+    .walkthrough-counter {
+      color: var(--text-muted);
+      font-size: 0.85rem;
+      font-variant-numeric: tabular-nums;
+    }
+    .walkthrough-step {
+      display: none;
+      padding: 24px;
+    }
+    .walkthrough-step.active {
+      display: block;
+    }
+    .walkthrough-header {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 16px;
+    }
+    .walkthrough-step-num {
+      font-size: 0.7rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: var(--accent);
+      border: 1px solid var(--accent);
+      padding: 3px 10px;
+      border-radius: 100px;
+    }
+    .walkthrough-header h4 {
+      margin: 0;
+      font-size: 1.1rem;
+      color: var(--text);
+    }
+    .walkthrough-note {
+      background: var(--accent-dim);
+      border-left: 3px solid var(--accent);
+      padding: 16px 20px;
+      border-radius: 0 8px 8px 0;
+      margin-bottom: 20px;
+    }
+    .walkthrough-note p {
+      margin: 0;
+      color: var(--text-secondary);
+    }
+    .walkthrough-code pre {
+      counter-reset: none;
+      padding: 0;
+      background: transparent;
+    }
+    .walkthrough-line {
+      display: flex;
+      padding: 2px 16px;
+      transition: background 0.2s;
+    }
+    .walkthrough-line.dim {
+      opacity: 0.35;
+    }
+    .walkthrough-line.highlight {
+      background: rgba(236, 72, 153, 0.12);
+      border-left: 3px solid var(--accent);
+      margin-left: -3px;
+    }
+    .walkthrough-line .line-no {
+      color: var(--text-muted);
+      font-size: 0.75rem;
+      width: 40px;
+      flex-shrink: 0;
+      text-align: right;
+      padding-right: 16px;
+      user-select: none;
+    }
+    .walkthrough-line .line-code {
+      white-space: pre;
+    }
+    .walkthrough-line.ellipsis {
+      opacity: 0.5;
+      padding: 4px 16px;
+    }
+    .walkthrough-line.ellipsis .line-code {
+      color: var(--text-muted);
+    }
+
+    /* Module-specific styles injection point */
+    
+.hero { position: relative; overflow: hidden; }
+#networkCanvas { position: absolute; top: 0; left: 0; width: 100%; height: 100%; z-index: -1; opacity: 0.35; pointer-events: none; }
+.quiz-option code { background: rgba(236,72,153,0.12); color: #f472b6; }
+
+  </style>
+
+  <script type="module">
+    import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.esm.min.mjs';
+    mermaid.initialize({ startOnLoad: true, theme: 'dark', themeVariables: { primaryColor: '#ec4899', primaryTextColor: '#e5e5e5', primaryBorderColor: '#ec4899', lineColor: '#a1a1aa', secondaryColor: '#151517', tertiaryColor: '#0b0b0c', fontFamily: 'Inter, system-ui, sans-serif' }});
+  </script>
+
+  <link rel="stylesheet" type="text/css" href="https://cdn.jsdelivr.net/npm/asciinema-player@3/dist/bundle/asciinema-player.css" />
+  <script src="https://cdn.jsdelivr.net/npm/asciinema-player@3/dist/bundle/asciinema-player.min.js"></script>
+</head>
+<body>
+  <div id="progress-container"><div id="progress-bar"></div></div>
+
+  <nav>
+    <div class="nav-inner">
+      <div class="nav-logo">A://<span>Labs</span></div>
+      <ul class="nav-links" id="navLinks">
+        <li><a href="#overview" data-section="overview">Overview</a></li>
+        <li><a href="#adapters" data-section="adapters">Adapters</a></li>
+        <li><a href="#first-request" data-section="first-request">First request</a></li>
+        <li><a href="#streaming" data-section="streaming">Streaming</a></li>
+        <li><a href="#models" data-section="models">Models</a></li>
+        <li><a href="#quizzes" data-section="quizzes">Quizzes</a></li>
+        <li><a href="#capstone" data-section="capstone">Capstone</a></li>
+      </ul>
+      <span class="nav-tier">AGENTS</span>
+      <button class="nav-toggle" onclick="document.getElementById('navLinks').classList.toggle('open')">☰</button>
+    </div>
+  </nav>
+
+  
+<section id="overview" class="hero reveal">
+  <canvas id="networkCanvas"></canvas>
+  <span class="hero-badge">AGENTS Tier</span>
+  <h1>Module 1: <em>Messages, Streaming, and Provider Adapters</em></h1>
+  <p>Learn how Allternit turns any AI SDK provider stream into a single, predictable event vocabulary using the provider-adapter layer.</p>
+  <div class="hero-meta">
+    <span><strong>6 lessons</strong> · ~45 minutes</span>
+    <span>Source: <code>@allternit/provider-adapters</code></span>
+  </div>
+</section>
+
+<section id="adapters" class="reveal">
+  <h2>Why provider adapters?</h2>
+  <p>Every AI provider speaks a slightly different dialect. Different AI providers and local models all return streaming responses, but the shape of each chunk, the lifecycle events, and the error payloads differ. The Allternit platform does not hard-code against any one provider. Instead, it normalizes every stream into a single <em>ReplyEvent</em> contract.</p>
+  <p>That normalization lives in <code>@allternit/provider-adapters</code>. The <code>AiSdkReplyAdapter</code> consumes the AI SDK's <code>fullStream</code> and emits canonical events such as <code>reply.started</code>, <code>reply.item.added</code>, <code>reply.text.delta</code>, and <code>reply.completed</code>. Downstream surfaces—chat transcripts, agent runners, and canvas artifacts—only need to understand one schema.</p>
+  <ul>
+    <li><strong>Swap providers without rewriting UI code.</strong> The adapter hides provider-specific chunk shapes.</li>
+    <li><strong>Get streaming, reasoning, tool calls, and citations</strong> through one async iterator.</li>
+    <li><strong>Route failures consistently.</strong> Provider errors and aborts become <code>reply.failed</code> events.</li>
+  </ul>
+  <div class="callout info">
+    <p><strong>Adapter pattern:</strong> one canonical event contract, many providers. The adapter is the bridge between the AI SDK and the rest of Allternit.</p>
+  </div>
+
+  <h3>Adapter flow</h3>
+  <p>The diagram below shows how a single provider stream is normalized into the canonical <em>ReplyEvent</em> contract that every Allternit surface consumes.</p>
+  <pre class="mermaid alabs-media" data-media-id="agents-api-m1-adapter-flow">flowchart LR
+    A[User Prompt] --&gt; B[streamText]
+    B --&gt; C{AI SDK Provider}
+    C --&gt;|fullStream| D[AiSdkReplyAdapter]
+    D --&gt; E[reply.started]
+    D --&gt; F[reply.item.added]
+    D --&gt; G[reply.text.delta]
+    D --&gt; H[reply.completed]
+    E &amp; F &amp; G &amp; H --&gt; I[Allternit Surfaces]
+
+    style D fill:#ec4899,stroke:#f472b6,color:#fff
+    style I fill:#151517,stroke:#3f3f46,color:#e5e5e5</pre>
+
+<h3>Inside the adapter</h3>
+<p>Use the step-by-step walkthrough below to see how <code>AiSdkReplyAdapter</code> turns provider-specific stream parts into canonical ReplyEvents.</p>
+<div class="walkthrough-container" data-walkthrough-container="agents-api-m1-adapter-walkthrough">
+  <div class="walkthrough-controls" data-walkthrough-controls="agents-api-m1-adapter-walkthrough">
+  <button class="walkthrough-prev" onclick="Walkthrough.step('agents-api-m1-adapter-walkthrough', -1)">← Previous</button>
+  <span class="walkthrough-counter"><span class="current">1</span> / 4</span>
+  <button class="walkthrough-next" onclick="Walkthrough.step('agents-api-m1-adapter-walkthrough', 1)">Next →</button>
+</div>
+  <div class="walkthrough-steps">
+    <div class="walkthrough-step alabs-media" id="agents-api-m1-adapter-walkthrough-step-0" data-walkthrough="agents-api-m1-adapter-walkthrough" data-step="0">
+  <div class="walkthrough-header">
+    <span class="walkthrough-step-num">Step 1</span>
+    <h4>Adapter options</h4>
+  </div>
+  <div class="walkthrough-note">
+    <p>Every adapter needs a replyId, runId, and an onEvent callback. The callback receives canonical ReplyEvents that the rest of Allternit understands.</p>
+  </div>
+  <div class="code-block walkthrough-code">
+    <div class="code-header">
+      <span class="code-lang">typescript</span>
+      <span class="code-path">alabs-generated-courses/media/src/agents-api-m1-adapter-excerpt.ts</span>
+    </div>
+    <pre><div class="walkthrough-line dim" data-line="2">
+        <span class="line-no">  2</span>
+        <span class="line-code">  | { <span class=<span class="token-string">"token-keyword"</span>>type</span>: <span class="token-string">"raw"</span> };</span>
+      </div>
+<div class="walkthrough-line dim" data-line="3">
+        <span class="line-no">  3</span>
+        <span class="line-code">&nbsp;</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="4">
+        <span class="line-no">  4</span>
+        <span class="line-code"><span class=<span class="token-string">"token-keyword"</span>>export</span> <span class=<span class="token-string">"token-keyword"</span>>interface</span> AiSdkReplyAdapterOptions {</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="5">
+        <span class="line-no">  5</span>
+        <span class="line-code">  replyId: string;</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="6">
+        <span class="line-no">  6</span>
+        <span class="line-code">  runId: string;</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="7">
+        <span class="line-no">  7</span>
+        <span class="line-code">  conversationId?: string;</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="8">
+        <span class="line-no">  8</span>
+        <span class="line-code">  onEvent: (event: ReplyEvent) =&gt; void;</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="9">
+        <span class="line-no">  9</span>
+        <span class="line-code">}</span>
+      </div>
+<div class="walkthrough-line dim" data-line="10">
+        <span class="line-no"> 10</span>
+        <span class="line-code">&nbsp;</span>
+      </div>
+<div class="walkthrough-line dim" data-line="11">
+        <span class="line-no"> 11</span>
+        <span class="line-code"><span class=<span class="token-string">"token-keyword"</span>>export</span> <span class=<span class="token-string">"token-keyword"</span>>class</span> AiSdkReplyAdapter {</span>
+      </div></pre>
+  </div>
+</div>
+<div class="walkthrough-step alabs-media" id="agents-api-m1-adapter-walkthrough-step-1" data-walkthrough="agents-api-m1-adapter-walkthrough" data-step="1">
+  <div class="walkthrough-header">
+    <span class="walkthrough-step-num">Step 2</span>
+    <h4>Stream lifecycle</h4>
+  </div>
+  <div class="walkthrough-note">
+    <p>When the AI SDK emits a 'start' part, the adapter ensures the reply has started by emitting reply.started. This guarantees downstream surfaces see a consistent lifecycle.</p>
+  </div>
+  <div class="code-block walkthrough-code">
+    <div class="code-header">
+      <span class="code-lang">typescript</span>
+      <span class="code-path">alabs-generated-courses/media/src/agents-api-m1-adapter-excerpt.ts</span>
+    </div>
+    <pre><div class="walkthrough-line dim" data-line="56">
+        <span class="line-no"> 56</span>
+        <span class="line-code">  }</span>
+      </div>
+<div class="walkthrough-line dim" data-line="57">
+        <span class="line-no"> 57</span>
+        <span class="line-code">&nbsp;</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="58">
+        <span class="line-no"> 58</span>
+        <span class="line-code">  process(part: AiSdkStreamPart): void {</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="59">
+        <span class="line-no"> 59</span>
+        <span class="line-code">    <span class=<span class="token-string">"token-keyword"</span>>switch</span> (part.<span class=<span class="token-string">"token-keyword"</span>>type</span>) {</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="60">
+        <span class="line-no"> 60</span>
+        <span class="line-code">      <span class="token-comment">// -----------------------------------------------------------------------</span></span>
+      </div>
+<div class="walkthrough-line highlight" data-line="61">
+        <span class="line-no"> 61</span>
+        <span class="line-code">      <span class="token-comment">// Stream lifecycle</span></span>
+      </div>
+<div class="walkthrough-line highlight" data-line="62">
+        <span class="line-no"> 62</span>
+        <span class="line-code">      <span class="token-comment">// -----------------------------------------------------------------------</span></span>
+      </div>
+<div class="walkthrough-line highlight" data-line="63">
+        <span class="line-no"> 63</span>
+        <span class="line-code">      <span class=<span class="token-string">"token-keyword"</span>>case</span> <span class="token-string">"start"</span>: {</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="64">
+        <span class="line-no"> 64</span>
+        <span class="line-code">        <span class=<span class="token-string">"token-keyword"</span>>this</span>.ensureStarted();</span>
+      </div>
+<div class="walkthrough-line dim" data-line="65">
+        <span class="line-no"> 65</span>
+        <span class="line-code">        <span class=<span class="token-string">"token-keyword"</span>>break</span>;</span>
+      </div>
+<div class="walkthrough-line dim" data-line="66">
+        <span class="line-no"> 66</span>
+        <span class="line-code">      }</span>
+      </div></pre>
+  </div>
+</div>
+<div class="walkthrough-step alabs-media" id="agents-api-m1-adapter-walkthrough-step-2" data-walkthrough="agents-api-m1-adapter-walkthrough" data-step="2">
+  <div class="walkthrough-header">
+    <span class="walkthrough-step-num">Step 3</span>
+    <h4>Text deltas</h4>
+  </div>
+  <div class="walkthrough-note">
+    <p>For each text-delta, the adapter opens a text item if needed and emits reply.text.delta. Downstream UI components can append the delta to the transcript.</p>
+  </div>
+  <div class="code-block walkthrough-code">
+    <div class="code-header">
+      <span class="code-lang">typescript</span>
+      <span class="code-path">alabs-generated-courses/media/src/agents-api-m1-adapter-excerpt.ts</span>
+    </div>
+    <pre><div class="walkthrough-line dim" data-line="85">
+        <span class="line-no"> 85</span>
+        <span class="line-code">      }</span>
+      </div>
+<div class="walkthrough-line dim" data-line="86">
+        <span class="line-no"> 86</span>
+        <span class="line-code">&nbsp;</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="87">
+        <span class="line-no"> 87</span>
+        <span class="line-code">      <span class=<span class="token-string">"token-keyword"</span>>case</span> <span class="token-string">"text-delta"</span>: {</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="88">
+        <span class="line-no"> 88</span>
+        <span class="line-code">        <span class=<span class="token-string">"token-keyword"</span>>this</span>.ensureStarted();</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="89">
+        <span class="line-no"> 89</span>
+        <span class="line-code">        <span class="token-comment">// Guard: <span class=<span class="token-string">"token-keyword"</span>>if</span> no text-start was emitted (some providers skip it), open now</span></span>
+      </div>
+<div class="walkthrough-line highlight" data-line="90">
+        <span class="line-no"> 90</span>
+        <span class="line-code">        <span class=<span class="token-string">"token-keyword"</span>>if</span> (!<span class=<span class="token-string">"token-keyword"</span>>this</span>.openedTextIds.has(part.id)) {</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="91">
+        <span class="line-no"> 91</span>
+        <span class="line-code">          <span class=<span class="token-string">"token-keyword"</span>>this</span>.openedTextIds.add(part.id);</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="92">
+        <span class="line-no"> 92</span>
+        <span class="line-code">          <span class=<span class="token-string">"token-keyword"</span>>this</span>.emit({</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="93">
+        <span class="line-no"> 93</span>
+        <span class="line-code">            <span class=<span class="token-string">"token-keyword"</span>>type</span>: <span class="token-string">"reply.item.added"</span>,</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="94">
+        <span class="line-no"> 94</span>
+        <span class="line-code">            replyId: <span class=<span class="token-string">"token-keyword"</span>>this</span>.replyId,</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="95">
+        <span class="line-no"> 95</span>
+        <span class="line-code">            runId: <span class=<span class="token-string">"token-keyword"</span>>this</span>.runId,</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="96">
+        <span class="line-no"> 96</span>
+        <span class="line-code">            itemId: part.id,</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="97">
+        <span class="line-no"> 97</span>
+        <span class="line-code">            kind: <span class="token-string">"text"</span>,</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="98">
+        <span class="line-no"> 98</span>
+        <span class="line-code">            ts: <span class=<span class="token-string">"token-keyword"</span>>this</span>.ts(),</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="99">
+        <span class="line-no"> 99</span>
+        <span class="line-code">          });</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="100">
+        <span class="line-no">100</span>
+        <span class="line-code">        }</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="101">
+        <span class="line-no">101</span>
+        <span class="line-code">        <span class=<span class="token-string">"token-keyword"</span>>if</span> (part.text) {</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="102">
+        <span class="line-no">102</span>
+        <span class="line-code">          <span class="token-comment">// Buffer <span class=<span class="token-string">"token-keyword"</span>>for</span> post-processing on text-end</span></span>
+      </div>
+<div class="walkthrough-line highlight" data-line="103">
+        <span class="line-no">103</span>
+        <span class="line-code">          <span class=<span class="token-string">"token-keyword"</span>>this</span>.textBuffers.set(part.id, (<span class=<span class="token-string">"token-keyword"</span>>this</span>.textBuffers.get(part.id) ?? <span class="token-string">""</span>) + part.text);</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="104">
+        <span class="line-no">104</span>
+        <span class="line-code">          <span class=<span class="token-string">"token-keyword"</span>>this</span>.emit({</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="105">
+        <span class="line-no">105</span>
+        <span class="line-code">            <span class=<span class="token-string">"token-keyword"</span>>type</span>: <span class="token-string">"reply.text.delta"</span>,</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="106">
+        <span class="line-no">106</span>
+        <span class="line-code">            replyId: <span class=<span class="token-string">"token-keyword"</span>>this</span>.replyId,</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="107">
+        <span class="line-no">107</span>
+        <span class="line-code">            runId: <span class=<span class="token-string">"token-keyword"</span>>this</span>.runId,</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="108">
+        <span class="line-no">108</span>
+        <span class="line-code">            itemId: part.id,</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="109">
+        <span class="line-no">109</span>
+        <span class="line-code">            delta: part.text,</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="110">
+        <span class="line-no">110</span>
+        <span class="line-code">            ts: <span class=<span class="token-string">"token-keyword"</span>>this</span>.ts(),</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="111">
+        <span class="line-no">111</span>
+        <span class="line-code">          });</span>
+      </div>
+<div class="walkthrough-line dim" data-line="112">
+        <span class="line-no">112</span>
+        <span class="line-code">        }</span>
+      </div>
+<div class="walkthrough-line dim" data-line="113">
+        <span class="line-no">113</span>
+        <span class="line-code">        <span class=<span class="token-string">"token-keyword"</span>>break</span>;</span>
+      </div></pre>
+  </div>
+</div>
+<div class="walkthrough-step alabs-media" id="agents-api-m1-adapter-walkthrough-step-3" data-walkthrough="agents-api-m1-adapter-walkthrough" data-step="3">
+  <div class="walkthrough-header">
+    <span class="walkthrough-step-num">Step 4</span>
+    <h4>Context management</h4>
+  </div>
+  <div class="walkthrough-note">
+    <p>The adapter tracks opened text items, pending tools, and text buffers so it can reconstruct the full reply state without leaking provider-specific ids into the rest of the platform.</p>
+  </div>
+  <div class="code-block walkthrough-code">
+    <div class="code-header">
+      <span class="code-lang">typescript</span>
+      <span class="code-path">alabs-generated-courses/media/src/agents-api-m1-adapter-excerpt.ts</span>
+    </div>
+    <pre><div class="walkthrough-line dim" data-line="9">
+        <span class="line-no">  9</span>
+        <span class="line-code">}</span>
+      </div>
+<div class="walkthrough-line dim" data-line="10">
+        <span class="line-no"> 10</span>
+        <span class="line-code">&nbsp;</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="11">
+        <span class="line-no"> 11</span>
+        <span class="line-code"><span class=<span class="token-string">"token-keyword"</span>>export</span> <span class=<span class="token-string">"token-keyword"</span>>class</span> AiSdkReplyAdapter {</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="12">
+        <span class="line-no"> 12</span>
+        <span class="line-code">  private readonly replyId: string;</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="13">
+        <span class="line-no"> 13</span>
+        <span class="line-code">  private readonly runId: string;</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="14">
+        <span class="line-no"> 14</span>
+        <span class="line-code">  private readonly conversationId: string | <span class=<span class="token-string">"token-keyword"</span>>undefined</span>;</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="15">
+        <span class="line-no"> 15</span>
+        <span class="line-code">  private readonly onEvent: (event: ReplyEvent) =&gt; void;</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="16">
+        <span class="line-no"> 16</span>
+        <span class="line-code">&nbsp;</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="17">
+        <span class="line-no"> 17</span>
+        <span class="line-code">  <span class="token-comment">// Track opened items to avoid duplicate reply.item.added</span></span>
+      </div>
+<div class="walkthrough-line highlight" data-line="18">
+        <span class="line-no"> 18</span>
+        <span class="line-code">  private readonly openedTextIds = <span class=<span class="token-string">"token-keyword"</span>>new</span> Set&lt;string&gt;();</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="19">
+        <span class="line-no"> 19</span>
+        <span class="line-code">  private readonly openedReasoningIds = <span class=<span class="token-string">"token-keyword"</span>>new</span> Set&lt;string&gt;();</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="20">
+        <span class="line-no"> 20</span>
+        <span class="line-code">  <span class="token-comment">// tool-input-start id → toolName (<span class=<span class="token-string">"token-keyword"</span>>for</span> tool-call dedup)</span></span>
+      </div>
+<div class="walkthrough-line highlight" data-line="21">
+        <span class="line-no"> 21</span>
+        <span class="line-code">  private readonly pendingTools = <span class=<span class="token-string">"token-keyword"</span>>new</span> Map&lt;string, { toolName: string; title?: string }&gt;();</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="22">
+        <span class="line-no"> 22</span>
+        <span class="line-code">  <span class="token-comment">// toolCallId → itemId (<span class=<span class="token-string">"token-keyword"</span>>for</span> result/error routing)</span></span>
+      </div>
+<div class="walkthrough-line highlight" data-line="23">
+        <span class="line-no"> 23</span>
+        <span class="line-code">  private readonly toolCallIdToItemId = <span class=<span class="token-string">"token-keyword"</span>>new</span> Map&lt;string, string&gt;();</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="24">
+        <span class="line-no"> 24</span>
+        <span class="line-code">  private started = <span class=<span class="token-string">"token-keyword"</span>>false</span>;</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="25">
+        <span class="line-no"> 25</span>
+        <span class="line-code">  <span class="token-comment">// Text buffers <span class=<span class="token-string">"token-keyword"</span>>for</span> post-text-end structured extraction</span></span>
+      </div>
+<div class="walkthrough-line highlight" data-line="26">
+        <span class="line-no"> 26</span>
+        <span class="line-code">  private readonly textBuffers = <span class=<span class="token-string">"token-keyword"</span>>new</span> Map&lt;string, string&gt;();</span>
+      </div>
+<div class="walkthrough-line dim" data-line="27">
+        <span class="line-no"> 27</span>
+        <span class="line-code">  <span class="token-comment">// Guard: <span class=<span class="token-string">"token-keyword"</span>>if</span> the provider already sent native reasoning events, skip text extraction</span></span>
+      </div>
+<div class="walkthrough-line dim" data-line="28">
+        <span class="line-no"> 28</span>
+        <span class="line-code">  private hasNativeReasoning = <span class=<span class="token-string">"token-keyword"</span>>false</span>;</span>
+      </div></pre>
+  </div>
+</div>
+  </div>
+</div>
+</section>
+
+<section id="first-request" class="reveal">
+  <h2>Your first request</h2>
+  <p>Start with a plain AI SDK <code>streamText</code> call, then wrap it with <code>AiSdkReplyAdapter</code>. The adapter needs a <code>replyId</code>, a <code>runId</code>, and an <code>onEvent</code> callback. Every event it emits carries those IDs so the rest of the platform can correlate it with the right conversation and run.</p>
+  <div class="code-block">
+    <div class="code-header"><span class="code-lang">typescript</span><button class="code-copy">Copy</button></div>
+    <pre><code><span class="token-keyword">import</span> { streamText } <span class="token-keyword">from</span> <span class="token-string">"ai"</span>;
+<span class="token-keyword">import</span> { AiSdkReplyAdapter } <span class="token-keyword">from</span> <span class="token-string">"@allternit/provider-adapters"</span>;
+
+<span class="token-comment">// aiSdkProvider = any AI SDK-compatible model factory you configure</span>
+<span class="token-keyword">const</span> result = <span class="token-function">streamText</span>({
+  model: aiSdkProvider(<span class="token-string">"model-id"</span>),
+  messages: [{ role: <span class="token-string">"user"</span>, content: <span class="token-string">"Explain provider adapters in one paragraph."</span> }],
+});
+
+<span class="token-keyword">const</span> adapter = <span class="token-keyword">new</span> <span class="token-function">AiSdkReplyAdapter</span>({
+  replyId: <span class="token-string">"msg_01"</span>,
+  runId: <span class="token-string">"run_01"</span>,
+  onEvent: (event) => console.<span class="token-function">log</span>(event.type, event),
+});
+
+<span class="token-keyword">await</span> adapter.<span class="token-function">consume</span>(result.fullStream);</code></pre>
+  </div>
+  <p>The <code>consume</code> method loops over every part in <code>fullStream</code>, calls <code>process(part)</code>, and catches uncaught errors so they surface as <code>reply.failed</code> instead of crashing the runner.</p>
+</section>
+
+<section id="streaming" class="reveal">
+  <h2>Streaming responses</h2>
+<p>Watch a recorded terminal session that shows the adapter emitting lifecycle events as a real agent run completes.</p>
+<div class="asciinema-wrapper alabs-media" data-media-id="agents-api-m1-terminal-demo">
+  <asciinema-player src="data:application/json;base64,eyJ2ZXJzaW9uIjogMiwgIndpZHRoIjogODAsICJoZWlnaHQiOiAxNiwgInRpbWVzdGFtcCI6IDE3MDAwMDAwMDAsICJlbnYiOiB7IlNIRUxMIjogIi9iaW4vYmFzaCIsICJURVJNIjogInh0ZXJtLTI1NmNvbG9yIn19ClswLjAsICJvIiwgIlx1MDAxYlsxOzMybSRcdTAwMWJbMG0gdHN4IHNjcmlwdHMvcnVuLWFnZW50LnRzIFwic3VtbWFyaXplIHRoaXMgY29kZWJhc2VcIlxyXG4iXQpbMC44LCAibyIsICJcdTAwMWJbOTBt4oaSXHUwMDFiWzBtIEluaXRpYWxpemluZyBBaVNka1JlcGx5QWRhcHRlciB3aXRoIHJ1bklkPXJ1bl9hYmMxMjNcclxuIl0KWzEuNiwgIm8iLCAiXHUwMDFiWzkwbeKGklx1MDAxYlswbSBTdHJlYW0gc3RhcnRlZDogcHJvdmlkZXI9b3BlbmFpIG1vZGVsPWdwdC00b1xyXG4iXQpbMi40LCAibyIsICJcdTAwMWJbOTBt4oaSXHUwMDFiWzBtIEVtaXR0aW5nIHJlcGx5LnN0YXJ0ZWRcclxuIl0KWzMuMiwgIm8iLCAiXHUwMDFiWzkwbeKGklx1MDAxYlswbSByZXBseS5pdGVtLmFkZGVkIGtpbmQ9dGV4dCBpZD10ZXh0XzAwMVxyXG4iXQpbNC4wLCAibyIsICJUaGlzIGNvZGViYXNlIHVzZXMgYSBwcm92aWRlci1hZGFwdGVyIGxheWVyIHRvIG5vcm1hbGl6ZSBzdHJlYW1zLi4uIl0KWzUuNSwgIm8iLCAiIFRoZSBhZGFwdGVyIGNvbnZlcnRzIEFJIFNESyBldmVudHMgaW50byBjYW5vbmljYWwgUmVwbHlFdmVudHMuIl0KWzcuMCwgIm8iLCAiXHJcbiJdCls3LjUsICJvIiwgIlx1MDAxYls5MG3ihpJcdTAwMWJbMG0gcmVwbHkuY29tcGxldGVkIHVzYWdlPXtwcm9tcHQ6NDIgY29tcGxldGlvbjoxMjh9XHJcbiJdCls4LjIsICJvIiwgIlx1MDAxYlsxOzMybeKck1x1MDAxYlswbSBBZ2VudCBydW4gZmluaXNoZWQgaW4gMS4yNHNcclxuIl0=" theme="monokai" speed="1.2" cols="80" rows="24"></asciinema-player>
+</div>
+  <p>As the model generates tokens, the adapter emits a strict lifecycle. Learn these four events and you can render any streaming reply in Allternit.</p>
+  <table>
+    <thead>
+      <tr><th>Event</th><th>When it fires</th><th>What to render</th></tr>
+    </thead>
+    <tbody>
+      <tr><td><code>reply.started</code></td><td>First stream part arrives</td><td>Show the assistant message shell and a typing indicator.</td></tr>
+      <tr><td><code>reply.item.added</code></td><td>A new text, reasoning, tool-call, or artifact item opens</td><td>Allocate a slot in the transcript for that item kind.</td></tr>
+      <tr><td><code>reply.text.delta</code></td><td>Each text token arrives</td><td>Append the token to the active text item.</td></tr>
+      <tr><td><code>reply.completed</code></td><td>Stream finishes cleanly</td><td>Hide the indicator and mark the reply done.</td></tr>
+    </tbody>
+  </table>
+  <p>Beyond text, the same lifecycle covers reasoning blocks (<code>reply.reasoning.delta</code>), tool calls (<code>tool_call.started</code>, <code>tool_call.progress</code>, <code>tool_call.completed</code>), file artifacts (<code>artifact.created</code>), and citations (<code>citation.added</code>). The adapter also extracts <code>&lt;thinking&gt;</code> tags from providers that do not emit native reasoning events.</p>
+  <div class="callout success">
+    <p><strong>Key takeaway:</strong> Write your UI against <code>reply.*</code> events, not against provider SDK shapes. A new provider only needs a new adapter instance.</p>
+  </div>
+</section>
+
+<section id="models" class="reveal">
+  <h2>Choosing a model</h2>
+  <p>Allternit can route the same request to many models through the AI SDK. Picking the right model is a trade-off between latency, cost, and capability. The adapter makes these swaps one-line changes.</p>
+  <table>
+    <thead>
+      <tr><th>Profile</th><th>Typical use case</th><th>Characteristics</th></tr>
+    </thead>
+    <tbody>
+      <tr><td><strong>Fast / cheap</strong></td><td>Classification, routing, summaries</td><td>Low latency, lower cost, acceptable for narrow tasks.</td></tr>
+      <tr><td><strong>Balanced</strong></td><td>General chat, multi-turn context</td><td>Good reasoning and instruction following at moderate cost.</td></tr>
+      <tr><td><strong>Capable / expensive</strong></td><td>Complex reasoning, coding, analysis</td><td>Highest quality, slower, priced per token.</td></tr>
+      <tr><td><strong>Tool-capable</strong></td><td>Agent loops with function calling</td><td>Reliable structured JSON and parallel tool calls.</td></tr>
+    </tbody>
+  </table>
+  <p>Because the adapter is provider-agnostic, you can run an experiment across providers simply by changing the model argument in <code>streamText</code>. The transcript, token accounting, and error handling stay the same.</p>
+</section>
+
+<section id="quizzes" class="reveal">
+  <h2>Check your understanding</h2>
+
+  <div class="quiz" id="quiz1">
+    <div class="quiz-header"><div class="quiz-num">1</div><h3>What should you pass to <code>AiSdkReplyAdapter.consume()</code>?</h3></div>
+    <div class="quiz-options">
+      <div class="quiz-option" onclick="selectOption(this, 1, 0)"><div class="radio"></div><span><code>result.text</code></span></div>
+      <div class="quiz-option" onclick="selectOption(this, 1, 1)"><div class="radio"></div><span><code>result.fullStream</code></span></div>
+      <div class="quiz-option" onclick="selectOption(this, 1, 2)"><div class="radio"></div><span><code>result.toAIStream()</code></span></div>
+      <div class="quiz-option" onclick="selectOption(this, 1, 3)"><div class="radio"></div><span>The raw provider HTTP response</span></div>
+    </div>
+    <div class="quiz-feedback" id="feedback1"></div>
+    <button class="quiz-retry" id="retry1" onclick="QuizEngine.reset(1)">Try again</button>
+  </div>
+
+  <div class="quiz" id="quiz2">
+    <div class="quiz-header"><div class="quiz-num">2</div><h3>Which canonical event fires when the model first begins generating?</h3></div>
+    <div class="quiz-options">
+      <div class="quiz-option" onclick="selectOption(this, 2, 0)"><div class="radio"></div><span><code>reply.started</code></span></div>
+      <div class="quiz-option" onclick="selectOption(this, 2, 1)"><div class="radio"></div><span><code>reply.text.delta</code></span></div>
+      <div class="quiz-option" onclick="selectOption(this, 2, 2)"><div class="radio"></div><span><code>reply.item.added</code></span></div>
+      <div class="quiz-option" onclick="selectOption(this, 2, 3)"><div class="radio"></div><span><code>reply.completed</code></span></div>
+    </div>
+    <div class="quiz-feedback" id="feedback2"></div>
+    <button class="quiz-retry" id="retry2" onclick="QuizEngine.reset(2)">Try again</button>
+  </div>
+
+  <div class="quiz" id="quiz3">
+    <div class="quiz-header"><div class="quiz-num">3</div><h3>You need the lowest latency for a classification task. Which strategy is usually best?</h3></div>
+    <div class="quiz-options">
+      <div class="quiz-option" onclick="selectOption(this, 3, 0)"><div class="radio"></div><span>Always use the largest frontier model</span></div>
+      <div class="quiz-option" onclick="selectOption(this, 3, 1)"><div class="radio"></div><span>Use a small, fast model and verify accuracy</span></div>
+      <div class="quiz-option" onclick="selectOption(this, 3, 2)"><div class="radio"></div><span>Disable streaming and wait for the full response</span></div>
+      <div class="quiz-option" onclick="selectOption(this, 3, 3)"><div class="radio"></div><span>Call the provider REST API directly</span></div>
+    </div>
+    <div class="quiz-feedback" id="feedback3"></div>
+    <button class="quiz-retry" id="retry3" onclick="QuizEngine.reset(3)">Try again</button>
+  </div>
+</section>
+
+<section id="capstone" class="reveal">
+  <div class="capstone">
+    <h2>Capstone: Build a provider-agnostic chat runner</h2>
+    <p>Put the module into practice. Create a tiny TypeScript runner that accepts a provider name and a user message, calls <code>streamText</code> with the matching model, and pipes the result through <code>AiSdkReplyAdapter</code>.</p>
+    <div class="capstone-grid">
+      <div class="capstone-item">
+        <h4>Step 1 — Wire the model</h4>
+        <p>Map a provider argument (<code>provider-a</code>, <code>provider-b</code>, <code>local</code>) to an AI SDK model factory and a model identifier.</p>
+      </div>
+      <div class="capstone-item">
+        <h4>Step 2 — Stream through the adapter</h4>
+        <p>Instantiate <code>AiSdkReplyAdapter</code> with a fresh <code>replyId</code> and <code>runId</code>, then call <code>consume(result.fullStream)</code>.</p>
+      </div>
+      <div class="capstone-item">
+        <h4>Step 3 — Render events</h4>
+        <p>Print each canonical event type as it arrives. Show <code>reply.started</code>, buffer <code>reply.text.delta</code> tokens, and print <code>reply.completed</code>.</p>
+      </div>
+      <div class="capstone-item">
+        <h4>Stretch goal</h4>
+        <p>Switch providers mid-conversation and confirm the event stream shape stays identical. Try enabling a tool and observe <code>tool_call.started</code> events.</p>
+      </div>
+    </div>
+    <p style="margin-top: 20px;">Save your runner as <code>src/runners/provider-agnostic.ts</code> and run it with <code>npx tsx</code> against two different providers. If the transcript events match, your adapter integration is working.</p>
+  </div>
+</section>
+
+
+  <footer>
+    <p>A://Labs — AGENTS Tier — Module 1: Messages, Streaming, and Provider Adapters</p>
+    <p style="margin-top:4px;">Generated from <code>packages/@allternit/provider-adapters</code> · Allternit Internal</p>
+  </footer>
+
+  <script>
+    // ========================
+    // Shared: Scroll Progress & Nav
+    // ========================
+    const progressBar = document.getElementById('progress-bar');
+    const navLinks = document.querySelectorAll('.nav-links a');
+    const sections = document.querySelectorAll('section[id], section[class*="reveal"]');
+
+    function updateProgress() {
+      const scrollTop = window.scrollY;
+      const docHeight = document.documentElement.scrollHeight - window.innerHeight;
+      const pct = (scrollTop / docHeight) * 100;
+      progressBar.style.width = pct + '%';
+
+      let current = '';
+      sections.forEach(sec => {
+        const top = sec.offsetTop - 100;
+        if (scrollTop >= top) {
+          current = sec.getAttribute('id') || '';
+        }
+      });
+      navLinks.forEach(link => {
+        link.classList.toggle('active', link.dataset.section === current);
+      });
+    }
+    window.addEventListener('scroll', updateProgress, { passive: true });
+    updateProgress();
+
+    // ========================
+    // Shared: Scroll Reveal
+    // ========================
+    const revealObserver = new IntersectionObserver((entries) => {
+      entries.forEach(e => { if (e.isIntersecting) e.target.classList.add('visible'); });
+    }, { threshold: 0.08 });
+    document.querySelectorAll('.reveal').forEach(el => revealObserver.observe(el));
+
+    // ========================
+    // Shared: Quiz Engine
+    // ========================
+    window.QuizEngine = {
+      answers: {},
+      feedback: {},
+
+      init(answers, feedback) {
+        this.answers = answers;
+        this.feedback = feedback;
+      },
+
+      selectOption(el, quizNum, optionIdx) {
+        const quizEl = document.getElementById('quiz' + quizNum);
+        const options = quizEl.querySelectorAll('.quiz-option');
+        const feedback = document.getElementById('feedback' + quizNum);
+        const retryBtn = document.getElementById('retry' + quizNum);
+
+        // Disable all options
+        options.forEach(opt => {
+          opt.style.pointerEvents = 'none';
+          opt.classList.remove('selected');
+        });
+        el.classList.add('selected');
+
+        const correct = this.answers[quizNum] === optionIdx;
+        if (correct) {
+          el.classList.add('correct');
+          feedback.className = 'quiz-feedback show correct';
+          feedback.textContent = this.feedback[quizNum].correct;
+        } else {
+          el.classList.add('wrong');
+          options[this.answers[quizNum]].classList.add('correct');
+          feedback.className = 'quiz-feedback show wrong';
+          feedback.textContent = this.feedback[quizNum].wrong;
+          if (retryBtn) retryBtn.classList.add('show');
+        }
+      },
+
+      reset(quizNum) {
+        const quizEl = document.getElementById('quiz' + quizNum);
+        const options = quizEl.querySelectorAll('.quiz-option');
+        const feedback = document.getElementById('feedback' + quizNum);
+        const retryBtn = document.getElementById('retry' + quizNum);
+
+        options.forEach(opt => {
+          opt.style.pointerEvents = '';
+          opt.classList.remove('selected', 'correct', 'wrong');
+        });
+        feedback.className = 'quiz-feedback';
+        feedback.textContent = '';
+        if (retryBtn) retryBtn.classList.remove('show');
+      }
+    };
+
+    // Alias for backward compatibility
+    function selectOption(el, quizNum, optionIdx) {
+      window.QuizEngine.selectOption(el, quizNum, optionIdx);
+    }
+
+    // ========================
+    // Shared: Code Copy
+    // ========================
+    document.querySelectorAll('.code-copy').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const pre = btn.closest('.code-block').querySelector('pre');
+        navigator.clipboard.writeText(pre.textContent).then(() => {
+          btn.textContent = 'Copied!';
+          setTimeout(() => btn.textContent = 'Copy', 1500);
+        });
+      });
+    });
+
+    // ========================
+    // Shared: Walkthrough Engine
+    // ========================
+    window.Walkthrough = {
+      init(id) {
+        const container = document.querySelector(`[data-walkthrough-container="${id}"]`);
+        if (!container) return;
+        const steps = container.querySelectorAll(`[data-walkthrough="${id}"]`);
+        if (steps.length === 0) return;
+        steps.forEach((step, idx) => { step.classList.toggle('active', idx === 0); });
+        this.updateControls(id, 0);
+      },
+
+      step(id, delta) {
+        const container = document.querySelector(`[data-walkthrough-container="${id}"]`);
+        if (!container) return;
+        const steps = Array.from(container.querySelectorAll(`[data-walkthrough="${id}"]`));
+        const current = steps.findIndex(s => s.classList.contains('active'));
+        const next = Math.max(0, Math.min(steps.length - 1, current + delta));
+        steps.forEach((step, idx) => { step.classList.toggle('active', idx === next); });
+        this.updateControls(id, next);
+      },
+
+      updateControls(id, activeIndex) {
+        const controls = document.querySelector(`[data-walkthrough-controls="${id}"]`);
+        if (!controls) return;
+        const steps = controls.closest('.walkthrough-container').querySelectorAll(`[data-walkthrough="${id}"]`);
+        const currentSpan = controls.querySelector('.current');
+        const prevBtn = controls.querySelector('.walkthrough-prev');
+        const nextBtn = controls.querySelector('.walkthrough-next');
+        if (currentSpan) currentSpan.textContent = activeIndex + 1;
+        if (prevBtn) prevBtn.disabled = activeIndex === 0;
+        if (nextBtn) nextBtn.disabled = activeIndex === steps.length - 1;
+      }
+    };
+
+    document.querySelectorAll('[data-walkthrough-container]').forEach(container => {
+      const id = container.getAttribute('data-walkthrough-container');
+      if (id) window.Walkthrough.init(id);
+    });
+
+    // ========================
+    // Module-specific JS injection point
+    // ========================
+    // Initialize quiz engine
+    window.QuizEngine.init({"1":1,"2":0,"3":1}, {"1":{"correct":"Correct! result.fullStream is the AsyncIterable of TextStreamPart events that the adapter consumes.","wrong":"Not quite. The adapter expects result.fullStream, the AI SDK async iterable of stream parts, not a string or raw HTTP response."},"2":{"correct":"Correct! reply.started fires once when the first stream part arrives, before any text deltas.","wrong":"Not quite. reply.text.delta and reply.item.added arrive after generation has begun. reply.completed signals the end. The first lifecycle event is reply.started."},"3":{"correct":"Correct! A small, fast model is usually best for narrow tasks like classification; verify accuracy before scaling.","wrong":"Not quite. Large frontier models are powerful but slower and costlier. Disabling streaming or bypassing the adapter does not reduce model latency."}});
+
+    
+const canvas = document.getElementById('networkCanvas');
+if (canvas) {
+  const ctx = canvas.getContext('2d');
+  function resize() {
+    canvas.width = canvas.offsetWidth;
+    canvas.height = canvas.offsetHeight;
+  }
+  window.addEventListener('resize', resize);
+  resize();
+  const nodes = Array.from({ length: 24 }, () => ({
+    x: Math.random() * canvas.width,
+    y: Math.random() * canvas.height,
+    vx: (Math.random() - 0.5) * 0.6,
+    vy: (Math.random() - 0.5) * 0.6,
+  }));
+  function draw() {
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    ctx.fillStyle = '#ec4899';
+    nodes.forEach((n) => {
+      n.x += n.vx;
+      n.y += n.vy;
+      if (n.x < 0 || n.x > canvas.width) n.vx *= -1;
+      if (n.y < 0 || n.y > canvas.height) n.vy *= -1;
+      ctx.beginPath();
+      ctx.arc(n.x, n.y, 2, 0, Math.PI * 2);
+      ctx.fill();
+    });
+    ctx.strokeStyle = 'rgba(236,72,153,0.12)';
+    for (let i = 0; i < nodes.length; i++) {
+      for (let j = i + 1; j < nodes.length; j++) {
+        const dx = nodes[i].x - nodes[j].x;
+        const dy = nodes[i].y - nodes[j].y;
+        const d = Math.sqrt(dx * dx + dy * dy);
+        if (d < 120) {
+          ctx.beginPath();
+          ctx.moveTo(nodes[i].x, nodes[i].y);
+          ctx.lineTo(nodes[j].x, nodes[j].y);
+          ctx.stroke();
+        }
+      }
+    }
+    requestAnimationFrame(draw);
+  }
+  draw();
+}
+  </script>
+</body>
+</html>

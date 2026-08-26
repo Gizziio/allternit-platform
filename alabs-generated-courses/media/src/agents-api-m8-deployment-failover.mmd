@@ -1,0 +1,26 @@
+flowchart LR
+    subgraph Client["Client"]
+        A[Bearer ak-...]
+    end
+
+    A --> B[Idempotency check]
+    B --> C[Virtual-key auth]
+    C --> D[Rate limit]
+    D --> E[DLP scan]
+    E --> F[Budget pre-check]
+    F --> G[Model resolution]
+    G --> H{Primary provider}
+
+    H -->|success| I[Collect response]
+    H -->|refusal/error| J[Retry policy]
+    J --> K{Fallback available?}
+    K -->|yes| L[Next provider]
+    K -->|no| M[Return error]
+    L --> H
+
+    I --> N[(llm_usage_events)]
+
+    style A fill:#151517,stroke:#ec4899,stroke-width:2px
+    style N fill:#151517,stroke:#ec4899,stroke-width:2px
+    style H fill:#1c1c1f,stroke:#ec4899
+    style L fill:#1c1c1f,stroke:#ec4899

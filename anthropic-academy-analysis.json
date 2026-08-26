@@ -1,0 +1,834 @@
+{
+  "collections": {
+    "build-with-claude": {
+      "url": "https://academy.claude.com/collections/build-with-claude",
+      "title": "Build with Claude",
+      "description": "Courses, guides, and best practices for developing Claude-powered applications, from your first API call to production agents."
+    },
+    "claude-for-work": {
+      "url": "https://academy.claude.com/collections/claude-for-work",
+      "title": "Claude for work",
+      "description": "Bring Claude into your team&#x27;s day-to-day: get everyone started, find the workflows that fit each function, and roll it out well."
+    },
+    "ai-fluency": {
+      "url": "https://academy.claude.com/collections/ai-fluency",
+      "title": "AI Fluency",
+      "description": "Learn what AI is good at, where it breaks down, and how to work with it effectively."
+    }
+  },
+  "courses": {
+    "building-with-the-claude-api": {
+      "url": "https://academy.claude.com/courses/building-with-the-claude-api",
+      "title": "Building with the Claude API",
+      "description": "The full spectrum of working with Anthropic models using the Claude API: prompting, tool use, RAG, agents, MCP, and production patterns.",
+      "counts": {},
+      "learning_objectives": [
+        "By the end of this course, you\u2019ll be able to",
+        "Set up and authenticate with the Anthropic API, including API key management and request configuration",
+        "Implement single and multi-turn conversations with proper message formatting and context handling",
+        "Configure system prompts and control model behavior using temperature, response streaming, and structured output formats",
+        "Design and execute prompt evaluation workflows with test dataset generation and automated grading systems",
+        "Apply prompt engineering techniques including XML tag structuring, example-based learning, and clear directive formulation",
+        "Integrate Claude&#x27;s tool use capabilities to extend functionality with custom tools, batch operations, and web search",
+        "Build retrieval-augmented generation (RAG) systems with text chunking, embeddings, BM25 search, and contextual retrieval",
+        "Utilize Claude&#x27;s extended features including extended thinking mode, image analysis, PDF processing, and citation generation",
+        "Implement prompt caching strategies to optimize API usage and reduce latency",
+        "Develop Model Context Protocol (MCP) servers and clients for standardized tool and resource integration",
+        "Deploy Anthropic Apps including Claude Code for automated development tasks and Computer Use for UI automation",
+        "Architect agent-based systems with parallelization, chaining, and routing workflows"
+      ],
+      "audience": "Software engineers who need to integrate Claude into production applications. Whether you&#x27;re building chatbots, automation tools, or AI-powered features, this course covers the implementation patterns you&#x27;ll need.",
+      "prerequisites": [
+        "Proficiency in Python programming Basic knowledge of handling JSON data Access to an Anthropic API key This course provides comprehensive coverage of the Claude API, from basic usage through advanced agent architectures. You&#x27;ll learn to integrate Claude into applications, implement tool calling, build RAG pipelines, and design both deterministic workflows and flexible agent systems."
+      ],
+      "sections": [
+        {
+          "title": "API",
+          "lessons": 9,
+          "description": "Start here for the fundamentals. Covers API authentication, basic requests, conversation management, system prompts, and structured output generation.",
+          "lessonTitles": []
+        },
+        {
+          "title": "Prompt engineering techniques",
+          "lessons": 6,
+          "description": "Learn to write prompts that actually work. Focuses on prompting strategies, evaluation frameworks, and systematic testing approaches.",
+          "lessonTitles": []
+        },
+        {
+          "title": "Claude",
+          "lessons": 13,
+          "description": "Extend Claude with custom tools and functions. Build apps with function calling, multi-turn tool interactions, batch tool calling, and leverage built-in utilities.",
+          "lessonTitles": []
+        },
+        {
+          "title": "Search",
+          "lessons": 7,
+          "description": "Implementation guide for production RAG systems. Covers text chunking, embeddings, hybrid search with BM25, multi-index architectures, reranking, and contextual retrieval.",
+          "lessonTitles": []
+        },
+        {
+          "title": "Protocol",
+          "lessons": 11,
+          "description": "The protocol for building modular AI applications. Define custom tools and resources, implement MCP servers and clients, handle the full integration lifecycle.",
+          "lessonTitles": []
+        },
+        {
+          "title": "Code and computer use",
+          "lessons": 4,
+          "description": "Two powerful Anthropic tools in action. Claude Code accelerates development workflows, Computer Use automates UI interactions. Includes MCP integration patterns.",
+          "lessonTitles": []
+        },
+        {
+          "title": "Agents and workflows",
+          "lessons": 8,
+          "description": "Architecture patterns for autonomous AI systems. Understand parallel execution, operation chaining, conditional routing, and effective debugging strategies. Accessing Claude with the API Accessing the API Getting an API key Making a request Multi-Turn conversations System prompts Temperature Response streaming Structured data Quiz on accessing Claude with the API \ue03f Quiz Prompt evaluation Prompt ev",
+          "lessonTitles": []
+        }
+      ]
+    },
+    "claude-code-101": {
+      "url": "https://academy.claude.com/courses/claude-code-101",
+      "title": "Claude Code 101",
+      "description": "An agentic coding tool that lives in your terminal. Learn what Claude Code is, how it works, and the core workflows for getting real work done with it.",
+      "counts": {},
+      "learning_objectives": [
+        "By the end of this course, you\u2019ll be able to",
+        "Explain what an AI coding agent is and how Claude Code differs from chat-based AI tools",
+        "Understand how the agentic loop, context window, tools, and permissions work together",
+        "Install and set up Claude Code in the terminal, VS Code, JetBrains, Claude Desktop, or on the web",
+        "Write effective prompts using manual mode, auto-accept, and Plan Mode",
+        "Follow the Explore \u2192 Plan \u2192 Code \u2192 Commit workflow for any feature or task",
+        "Manage your context window with /compact, /clear, and /context to stay productive",
+        "Create and maintain a CLAUDE.md file to give Claude persistent project memory",
+        "Build custom subagents to delegate tasks and keep your main context clean",
+        "Connect external tools and data sources using MCP servers",
+        "Write hooks for deterministic control over formatting, command blocking, and notifications AI coding agents are changing what it means to write software. Tasks that used to take an afternoon \u2014 tracing a bug across a large codebase, scaffolding a new service, reviewing a stack of pull requests \u2014 can now happen in a single focused session, with an agent that reads your code, runs your commands, and edits files alongside you. But getting real value from an agent requires more than installing it and typing a request. It requires understanding how the agent thinks, what context it has access to, and how to steer it when it heads in the wrong direction. This course teaches developers how to use Claude Code (opens in new tab) effectively, whether you&#x27;re new to software engineering or an experienced engineer who hasn&#x27;t yet worked with AI coding agents. We start from first principles \u2014 what an agentic loop actually is, how the context window shapes what Claude can see, how tools and permissions determine what it can do \u2014 so that the techniques later in the course make sense rather than feeling like a list of tricks to memorize. You&#x27;ll learn how to install Claude Code across multiple environments (terminal, VS Code, JetBrains, Claude Desktop, and the web), and how to write prompts that get good results on the first try using approval mode, auto-accept, and Plan Mode. The core of the course is the Explore \u2192 Plan \u2192 Code \u2192 Commit workflow: a repeatable rhythm for breaking down a task, letting Claude propose an approach, reviewing the work as it happens, and landing it cleanly. We also cover code review with Claude Code and the context-management commands ( /compact , /clear , /context ) that keep long sessions productive. The final section is about making Claude Code your own. You&#x27;ll write a CLAUDE.md file so Claude remembers your project&#x27;s conventions across sessions, build custom subagents and skills for tasks you repeat often, connect external systems through MCP servers, and write hooks that add deterministic guardrails around what Claude is allowed to do. By the end, you&#x27;ll have a setup tailored to how you actually work \u2014 not a generic install. Recommended prerequisites Basic familiarity with a code editor and the command line. You&#x27;ll also need a Claude account (Pro, Max, or Enterprise) or an API key. No prior experience with AI tools is assumed. Who this is for New developers entering software engineering who want AI-assisted workflows from the start, and experienced engineers curious about coding agents but who haven&#x27;t taken the plunge yet. If you&#x27;ve tried a coding assistant before and found the results underwhelming, this course is designed to show you what changes when you work with an agent rather than against it."
+      ],
+      "audience": "",
+      "prerequisites": [],
+      "sections": [
+        {
+          "title": "Your first prompt",
+          "lessons": 2,
+          "description": "Get Claude Code running wherever you already work \u2014 in the terminal, inside VS Code or JetBrains, in Claude Desktop, or on the web. Then write your first prompt and see how approval mode, auto-accept, and Plan Mode change the way Claude responds, so you can pick the right level of oversight for the task in front of you.",
+          "lessonTitles": []
+        },
+        {
+          "title": "Daily workflows",
+          "lessons": 3,
+          "description": "This is where Claude Code becomes part of how you ship. Learn the Explore \u2192 Plan \u2192 Code \u2192 Commit rhythm for tackling real tasks, use the context-management commands to keep long sessions fast and focused, and put Claude to work reviewing code \u2014 your own and your teammates&#x27; \u2014 before it lands.",
+          "lessonTitles": []
+        },
+        {
+          "title": "Code",
+          "lessons": 5,
+          "description": "Out of the box, Claude Code is general-purpose. This section shows you how to make it yours: write a CLAUDE.md file so it remembers your project&#x27;s conventions, build subagents and skills for the workflows you repeat, wire in external systems through MCP servers, and add hooks for deterministic guardrails. By the end you&#x27;ll have a setup tuned to the way your team actually works. What is C",
+          "lessonTitles": []
+        }
+      ]
+    },
+    "claude-code-in-action": {
+      "url": "https://academy.claude.com/courses/claude-code-in-action",
+      "title": "Claude Code in Action",
+      "description": "Run long, hands-off Claude Code sessions you can trust: steer, configure, automate, and verify",
+      "counts": {},
+      "learning_objectives": [
+        "By the end of this course, you\u2019ll be able to",
+        "Steer the work: scope work with plan mode, direct compaction so summaries keep what matters, use the rewind menu to course-correct, and choose between hands-on steering and autonomous goal and loop runs",
+        "Configure Claude: write a lean CLAUDE.md Claude actually follows, package repeated procedures as skills, pick the right permission mode for each job, and enforce the non-negotiable rules with hooks",
+        "Automate repeat work: schedule prompts as routines on Anthropic infrastructure, drop to headless mode when a job needs your own pipeline, and wire Claude into pull requests with managed code review and the GitHub action",
+        "Verify and share: verify unsupervised runs in proportion to how little you watched them, gate turns on real test results with hooks, and package a setup you trust as a plugin your whole team can install"
+      ],
+      "audience": "Developers who already use Claude Code for single prompts and want to move to longer, less supervised, team-wide workflows.",
+      "prerequisites": [
+        "You already use Claude Code for single prompts Basic familiarity with Git and the command line Claude Code in Action teaches you to run Claude Code (opens in new tab) past the quick task and trust the result. You will scope and steer long sessions, write instructions Claude actually follows, enforce the rules that cannot be skipped, hand off work to hands-off and scheduled runs, and verify what came back when no one was watching. By the end you can point Claude at hours of work, walk away, and check what it did with confidence. Steer the work Steering long sessions Configure Claude A CLAUDE.md that follows Verification skills Permission modes Hooks Automate repeat work Routines and headless GitHub Actions and Code Review Verify and share Trust it: Verifying unsupervised runs Plugins Quiz Course quiz \ue03f Quiz Completion badge \u00a9 2026 Anthropic PBC Privacy choices Privacy policy Usage policy \ue0b0"
+      ],
+      "sections": []
+    },
+    "claude-platform-101": {
+      "url": "https://academy.claude.com/courses/claude-platform-101",
+      "title": "Claude Platform 101",
+      "description": "This course teaches developers to build on the Claude Platform from the ground up, whether you&#x27;ve made a few API calls or have only used Claude through a chat window.",
+      "counts": {},
+      "learning_objectives": [
+        "By the end of this course, you\u2019ll be able to",
+        "Send your first API request with messages.create and read the structured response",
+        "Choose the right model for a job (Opus, Sonnet, or Haiku) by running a simple evaluation and weighing cost and latency",
+        "Build the agent loop by hand, then collapse it with the SDK&#x27;s Tool Runner once you understand what it does for you",
+        "Give Claude reach through tool use and let it reason through hard problems with extended thinking",
+        "Extend an agent with Anthropic&#x27;s built-in tools (web search, code execution, web fetch), Skills, and MCP servers",
+        "Keep a long-running agent inside the context window and affordable with the four context-management patterns",
+        "Build a managed agent end to end, consuming the event stream as Anthropic runs the loop and reports back",
+        "Build with the API using Claude Code itself, and review the code an agent writes for you There&#x27;s a wide gap between chatting with Claude in a browser tab and building Claude into something you ship. A chat answers a question and the thread ends there. An application sends Claude structured requests, hands it tools, lets it act on real systems, and runs that loop for one user or a million. The Claude Platform exists to close that gap, and it&#x27;s a different skill from prompting. Getting value out of it means understanding what&#x27;s in a request, how an agent decides what to do, and where the costs and limits live. This course teaches developers to build on the Claude Platform from the ground up, whether you&#x27;ve made a few API calls or have only used Claude through a chat window. We start from first principles: what an API request contains, what an agent loop is, how the context window bounds what Claude can see, and how tools and permissions decide what it can do. The techniques later in the course then land as understanding instead of a list of calls to copy. You&#x27;ll send your first request and read the response, then choose the right model for a job (Opus, Sonnet, or Haiku) and weigh the cost-and-latency trade-off on your own examples instead of guessing. From there you&#x27;ll build the agent loop by hand to see how Claude acts, observes, and decides, then collapse that hand-written loop with the SDK&#x27;s Tool Runner once you understand what it does for you. You&#x27;ll give Claude reach through tool use, let it reason through hard problems with extended thinking, and keep spend predictable with workspaces, limits, and the Console Workbench. The middle of the course extends an agent beyond your own code: Anthropic&#x27;s built-in tools (web search, code execution, web fetch) that run on Anthropic&#x27;s infrastructure, Skills that package a procedure once and reuse it across calls, MCP servers that connect Claude to third-party tools without writing a schema, and the context-management patterns that keep a long-running agent inside the window and affordable past turn ten. The final section hands work off. You&#x27;ll learn when to run your own loop and when to let Anthropic run a sandboxed, managed agent for you, then build one end to end, consuming the event stream as Anthropic runs the loop and reports back. A standalone lesson shows you how to build with the API using Claude Code itself, which is also why the rest of the course matters: you need to know what good code looks like to review what an agent writes for you. Every lesson ends with a runnable demo, so you finish each one with working code. Recommended prerequisites Comfort reading and writing code in at least one language, plus basic command-line familiarity. The demos use the TypeScript SDK ( @anthropic-ai/sdk ) with Node and npm. You don&#x27;t need to be a TypeScript expert, but you should be able to follow along and run a script. (The platform also offers a Python SDK; the course examples are in TypeScript.) You&#x27;ll need an Anthropic Console account and an API key from platform.claude.com, plus a small amount of prepaid credit to run the examples. You don&#x27;t need prior experience building with LLMs. Who this is for Developers who&#x27;ve used Claude in a chat window and want to build it into their own applications, whether you&#x27;re adding AI features to an existing product or prototyping an agent from scratch. If you&#x27;ve sent a handful of API calls but stalled at &quot;how do I make this act on its own&quot; or &quot;how do I connect it to my real systems,&quot; this course is the bridge from a single request to a production agent. You don&#x27;t need prior agent experience; each lesson builds on the one before it. What is the Claude Platform? What is the Claude Platform? Your first API call Choosing the right model Teaching your agent The agent loop explained What is tool use? What is thinking? Extending your agent Built-in tools Skills MCP Context management Managed Agents What are managed agents? Building your first managed agent Building with Claude Code Building with Claude Code Quiz Claude Platform 101 quiz \ue03f Quiz Completion badge \u00a9 2026 Anthropic PBC Privacy choices Privacy policy Usage policy \ue0b0"
+      ],
+      "audience": "",
+      "prerequisites": [],
+      "sections": []
+    },
+    "claude-with-amazon-bedrock": {
+      "url": "https://academy.claude.com/courses/claude-with-amazon-bedrock",
+      "title": "Claude with Amazon Bedrock",
+      "description": "Integrating and deploying Claude through Amazon Bedrock: API implementation, tool use, RAG pipelines, agents, and production-ready applications on AWS.",
+      "counts": {},
+      "learning_objectives": [
+        "By the end of this course, you\u2019ll be able to",
+        "Utilize Anthropic models on Amazon Bedrock for multi-turn conversations and system prompt configuration",
+        "Build and evaluate prompts using structured approaches",
+        "Design and integrate custom tools using JSON Schema for function calling and batch processing",
+        "Develop RAG pipelines with text chunking, embeddings, BM25 search, and contextual retrieval techniques",
+        "Configure and optimize Claude&#x27;s advanced features including extended thinking, vision capabilities, and prompt caching",
+        "Leverage Claude Code for automated debugging and task execution",
+        "Implement Model Context Protocol (MCP) for defining tools, resources, and prompts in client applications",
+        "Optimize inference through streaming, temperature control, and structured data extraction",
+        "Build evaluation frameworks for prompts using model-based and code-based grading approaches"
+      ],
+      "audience": "Devs who want to add AI features to their apps",
+      "prerequisites": [
+        "Proficiency in Python programming Basic knowledge of handling JSON data AWS account with Bedrock access This course covers using Claude models through AWS Bedrock API, from basic requests through advanced agent implementations. You&#x27;ll learn to make API calls, implement tool use, build RAG pipelines, work with MCP servers, and leverage features like Claude Code and computer use for automation."
+      ],
+      "sections": [
+        {
+          "title": "API",
+          "lessons": 9,
+          "description": "Covers API authentication, basic requests, conversation management, system prompts, and structured output generation.",
+          "lessonTitles": []
+        },
+        {
+          "title": "Prompt engineering",
+          "lessons": 6,
+          "description": "Learn to write prompts that actually work. Focuses on prompting strategies, evaluation frameworks, and systematic testing approaches.",
+          "lessonTitles": []
+        },
+        {
+          "title": "Tool use",
+          "lessons": 13,
+          "description": "Extend Claude with custom tools and functions. Build apps with function calling, multi-turn tool interactions, batch tool calling, and leverage built-in utilities.",
+          "lessonTitles": []
+        },
+        {
+          "title": "Generation",
+          "lessons": 10,
+          "description": "Implementation guide for production RAG systems. Covers text chunking, embeddings, hybrid search with BM25, multi-index architectures, reranking, and contextual retrieval.",
+          "lessonTitles": []
+        },
+        {
+          "title": "Protocol",
+          "lessons": 12,
+          "description": "The protocol for building modular AI applications. Define custom tools and resources, implement MCP servers and clients, handle the full integration lifecycle.",
+          "lessonTitles": []
+        },
+        {
+          "title": "Agents",
+          "lessons": 7,
+          "description": "Two powerful Anthropic tools in action. Claude Code accelerates development workflows, Computer Use automates UI interactions. Includes MCP integration patterns. Course introduction Overview of Claude Models Working with the API Accessing the API Making a request Multi-Turn conversations System prompts Temperature Streaming Controlling model output Structured data Quiz on working with the API \ue03f Qu",
+          "lessonTitles": []
+        }
+      ]
+    },
+    "claude-with-google-cloud-s-vertex-ai": {
+      "url": "https://academy.claude.com/courses/claude-with-google-cloud-s-vertex-ai",
+      "title": "Claude with Google Cloud&#x27;s Vertex AI",
+      "description": "Working with Anthropic models through Google Cloud&#x27;s Vertex AI: setup, prompting, tool use, RAG, agents, and production deployment patterns.",
+      "counts": {},
+      "learning_objectives": [
+        "By the end of this course, you\u2019ll be able to",
+        "Set up and configure Claude models through Google Cloud&#x27;s Vertex AI",
+        "Implement multi-turn conversations with proper message handling and context management",
+        "Design and evaluate prompts using systematic testing workflows and automated grading techniques",
+        "Apply prompt engineering principles including XML tag structuring, example-based learning, and output control",
+        "Build tool-use implementations enabling Claude to interact with external functions and APIs",
+        "Develop RAG pipelines using text chunking, embeddings, BM25 search, and contextual retrieval techniques",
+        "Utilize advanced Claude features including vision capabilities, PDF processing, citation generation, and prompt caching",
+        "Implement the Model Context Protocol for creating custom tools, resources, and prompt templates",
+        "Configure and deploy Anthropic Apps including Claude Code for automated development tasks and Computer Use for UI automation",
+        "Design agent-based workflows with parallelization, chaining, and routing patterns for complex AI systems"
+      ],
+      "audience": "Devs who want to add AI features to their apps",
+      "prerequisites": [
+        "Proficiency in Python programming Basic knowledge of handling JSON data A Google Cloud account with Vertex AI access This course covers using Claude models on Google Cloud. You&#x27;ll implement core API features like streaming and tool use, build systematic prompt evaluation pipelines, understand RAG systems, and investigate agent architectures."
+      ],
+      "sections": [
+        {
+          "title": "API",
+          "lessons": 10,
+          "description": "Start here for the fundamentals. Covers API authentication, basic requests, conversation management, system prompts, and structured output generation.",
+          "lessonTitles": []
+        },
+        {
+          "title": "Prompt engineering techniques",
+          "lessons": 6,
+          "description": "Learn to write prompts that actually work. Focuses on prompting strategies, evaluation frameworks, and systematic testing approaches.",
+          "lessonTitles": []
+        },
+        {
+          "title": "Claude",
+          "lessons": 14,
+          "description": "Extend Claude with custom tools and functions. Build apps with function calling, multi-turn tool interactions, batch tool calling, and leverage built-in utilities.",
+          "lessonTitles": []
+        },
+        {
+          "title": "Generation",
+          "lessons": 10,
+          "description": "Implementation guide for production RAG systems. Covers text chunking, embeddings, hybrid search with BM25, multi-index architectures, reranking, and contextual retrieval.",
+          "lessonTitles": []
+        },
+        {
+          "title": "Protocol",
+          "lessons": 12,
+          "description": "The protocol for building modular AI applications. Define custom tools and resources, implement MCP servers and clients, handle the full integration lifecycle.",
+          "lessonTitles": []
+        },
+        {
+          "title": "Agents and workflows",
+          "lessons": 8,
+          "description": "Architecture patterns for autonomous AI systems. Understand parallel execution, operation chaining, conditional routing, and effective debugging strategies. Accessing Claude with the API Accessing the API Vertex AI Setup Making a request Multi-turn conversations System prompts Temperature Response streaming Controlling model output Structured data Quiz on accessing Claude with the API \ue03f Quiz Promp",
+          "lessonTitles": []
+        }
+      ]
+    },
+    "introduction-to-agent-skills": {
+      "url": "https://academy.claude.com/courses/introduction-to-agent-skills",
+      "title": "Introduction to agent skills",
+      "description": "Build, configure, and share skills in Claude Code \u2014 reusable markdown instructions that Claude applies automatically to matching tasks. Covers creating your first skill through team distribution and troubleshooting.",
+      "counts": {},
+      "learning_objectives": [
+        "By the end of this course, you\u2019ll be able to",
+        "Explain what skills are, where they live, and how Claude Code matches them to requests",
+        "Create a skill from scratch with valid SKILL.md frontmatter and verify it loads",
+        "Write effective skill descriptions and restrict tool access with allowed-tools",
+        "Organize larger skills using progressive disclosure, reference files, and executable scripts",
+        "Choose between skills, CLAUDE.md, subagents, hooks, and MCP servers for a given use case",
+        "Share skills through project repositories, plugins, enterprise managed settings, and custom subagents",
+        "Diagnose triggering, loading, priority-conflict, and runtime issues with the skills validator and claude --debug Skills let you stop repeating yourself and start teaching Claude once. Instead of pasting the same guidance into every prompt, you write it down in a place Claude Code reads automatically when a request matches, and it applies consistently every time. This course takes you from your first SKILL.md to a full skills-based workflow that keeps Claude consistent, context-efficient, and aligned with your team&#x27;s standards. Lessons What are skills? Creating your first skill Configuration and multi-file skills Skills vs. other Claude Code features Sharing skills Troubleshooting skills \ue071 Course complete \u00a9 2026 Anthropic PBC Privacy choices Privacy policy Usage policy \ue0b0"
+      ],
+      "audience": "",
+      "prerequisites": [],
+      "sections": []
+    },
+    "introduction-to-model-context-protocol": {
+      "url": "https://academy.claude.com/courses/introduction-to-model-context-protocol",
+      "title": "Introduction to Model Context Protocol",
+      "description": "Build MCP servers and clients from scratch with the Python SDK, covering the three core primitives\u2014tools, resources, and prompts\u2014that connect Claude to external services.",
+      "counts": {},
+      "learning_objectives": [
+        "By the end of this course, you\u2019ll be able to",
+        "Understand MCP architecture and how it shifts tool definition and execution burden from your server to specialized MCP servers",
+        "Learn about MCP&#x27;s transport-agnostic communication system and the message types used between clients and servers",
+        "Explore the complete request-response flow from user queries through MCP clients to external services and back to Claude",
+        "Build MCP servers using the Python SDK with decorators to define tools instead of writing JSON schemas manually",
+        "Implement document management functionality with tools for reading and editing documents using Field descriptions and type hints",
+        "Use the built-in MCP Server Inspector to test and debug your server functionality in a browser-based interface",
+        "Define resources for exposing read-only data, including both direct resources with static URIs and templated resources with parameters",
+        "Implement resource reading functionality in clients with proper MIME type handling for JSON and text content",
+        "Build prompts that provide pre-crafted, high-quality instructions for common workflows like document formatting",
+        "Understand when to use each MCP primitive: tools (model-controlled), resources (app-controlled), and prompts (user-controlled)",
+        "Examine practical integration patterns including autocomplete functionality and context injection for AI conversations"
+      ],
+      "audience": "Engineers who want to integrate Claude with external tools and services without writing tons of boilerplate integration code",
+      "prerequisites": [
+        "Basic Python programming experience Understanding of async/await patterns Familiarity with API concepts This course covers MCP, a protocol for connecting Claude to external services and data sources without manually writing tool schemas. You&#x27;ll learn to build both MCP servers that expose tools, resources, and prompts, and MCP clients that consume them. The course includes a hands-on project where you implement a document management system using MCP."
+      ],
+      "sections": [
+        {
+          "title": "Introduction",
+          "lessons": 2,
+          "description": "Start with understanding MCP&#x27;s architecture and why it exists.",
+          "lessonTitles": []
+        },
+        {
+          "title": "MCP servers",
+          "lessons": 2,
+          "description": "Build your first MCP server with tools using the Python SDK, then test it with the built-in inspector.",
+          "lessonTitles": []
+        },
+        {
+          "title": "MCP clients",
+          "lessons": 5,
+          "description": "Build the client side to communicate with MCP servers. Implement resources for direct data access and prompts for pre-built instructions. See how everything connects in a complete application flow. Introduction Introducing MCP MCP clients Hands-on with MCP servers Defining tools with MCP The server inspector Connecting with MCP clients Implementing a client Defining resources Accessing resources D",
+          "lessonTitles": []
+        }
+      ]
+    },
+    "introduction-to-subagents": {
+      "url": "https://academy.claude.com/courses/introduction-to-subagents",
+      "title": "Introduction to subagents",
+      "description": "Decompose complex tasks across parallel Claude subagents and orchestrate them deterministically.",
+      "counts": {},
+      "learning_objectives": [
+        "By the end of this course, you\u2019ll be able to",
+        "Explain how subagents work: how Claude Code spins up a separate context window, how inputs flow in, and how summaries come back",
+        "Create custom subagents with the /agents command for workflows like code review and documentation generation",
+        "Design reliable subagents with structured output formats, obstacle reporting, and limited tool access",
+        "Decide when subagents help most and recognize the common anti-patterns to avoid Subagents are one of the most practical ways to get more out of longer Claude Code sessions. They let you delegate tasks to isolated assistants that do their work separately and return just the information you need \u2014 keeping your main context window clean and your conversations focused. Lessons What are subagents? Creating a subagent Designing effective subagents Using subagents effectively \ue071 Course complete \u00a9 2026 Anthropic PBC Privacy choices Privacy policy Usage policy \ue0b0"
+      ],
+      "audience": "",
+      "prerequisites": [],
+      "sections": []
+    },
+    "model-context-protocol-advanced-topics": {
+      "url": "https://academy.claude.com/courses/model-context-protocol-advanced-topics",
+      "title": "Model Context Protocol: Advanced Topics",
+      "description": "Go beyond MCP basics: sampling, notifications, and roots, with interactive walkthroughs of each protocol flow.",
+      "counts": {},
+      "learning_objectives": [
+        "By the end of this course, you\u2019ll be able to",
+        "Understand how MCP servers can request language model calls through connected clients via sampling, shifting AI costs and complexity from server to client",
+        "Implement real-time feedback using context objects, logging callbacks, and progress reporting for long-running operations",
+        "Use roots to grant MCP servers access to specific directories with security boundaries and user-friendly file discovery",
+        "Distinguish between request-result pairs and notification messages in the MCP message specification, and understand bidirectional communication patterns",
+        "Understand how MCP clients and servers communicate over standard input/output streams, including the required initialization handshake sequence",
+        "Explain how Server-Sent Events (SSE) enable server-to-client communication over HTTP, including session management and dual-connection architectures",
+        "Recognize how configuration flags affect functionality, particularly server-initiated requests and streaming capabilities",
+        "Decide when to use stateless HTTP for horizontal scaling with load balancers, weighing the trade-offs between stateful and stateless server configurations",
+        "Choose appropriate transport methods based on deployment requirements, functionality needs, and scaling constraints"
+      ],
+      "audience": "Engineers building production MCP servers who need to understand the protocol&#x27;s advanced capabilities",
+      "prerequisites": [
+        "Basic understanding of MCP servers and clients Familiarity with async programming patterns This course covers the technical implementation of MCP servers and clients, from basic message passing to production deployment strategies. You&#x27;ll learn how MCP enables language models like Claude to interact with external tools and data sources through standardized protocols, transports, and message formats."
+      ],
+      "sections": [
+        {
+          "title": "MCP features",
+          "lessons": 6,
+          "description": "Learn the advanced features that make MCP servers more powerful. Covers sampling to offload AI costs to clients, implementing progress notifications for better UX, and using roots to safely handle file access.",
+          "lessonTitles": []
+        },
+        {
+          "title": "Transports and communication",
+          "lessons": 5,
+          "description": "Understand how MCP messages flow between clients and servers. Explores the JSON message protocol, STDIO transport for local development, and the complexities of StreamableHTTP including when to sacrifice features for scalability. Core MCP features Sampling Sampling walkthrough Log and progress notifications Notifications walkthrough Roots Roots walkthrough Transports and communication JSON message",
+          "lessonTitles": []
+        }
+      ]
+    },
+    "claude-101": {
+      "url": "https://academy.claude.com/courses/claude-101",
+      "title": "Claude 101",
+      "description": "Learn to use Claude for everyday work, from your first conversation and effective prompting to projects, artifacts, skills, and connected tools.",
+      "counts": {},
+      "learning_objectives": [
+        "By the end of this course, you\u2019ll be able to",
+        "Explain what Claude is and have an effective first conversation with it",
+        "Write clear prompts, refine them when results miss, and apply the AI Fluency framework to get better outcomes",
+        "Distinguish the three shapes of work in the Claude desktop app \u2014 working turn by turn, handing work off, and building software \u2014 and recognize which one a task calls for",
+        "Use Projects, Artifacts, and Skills to organize your work and give Claude reusable context",
+        "Connect your tools, company knowledge, and the web with Connectors, Enterprise Search, and Research",
+        "Apply Claude to tasks across common roles and explore Claude Code, @Claude, Claude Design, Claude for Microsoft 365, and Claude in Chrome Claude 101 is the starting point for anyone bringing Claude into their everyday work. You&#x27;ll go from your first conversation and the basics of effective prompting through to Projects, Artifacts, and Skills, then on to Connectors, Enterprise Search, and Research for working with your tools, your company&#x27;s knowledge, and the web. Along the way you&#x27;ll see how Chat, Cowork, and Code in the desktop app fit different kinds of tasks, and you&#x27;ll finish with role-based use cases and a tour of Claude Code, @Claude, Claude Design, Claude for Microsoft 365, and Claude in Chrome."
+      ],
+      "audience": "",
+      "prerequisites": [
+        "A Claude account on any plan (Free, Pro, Max, Team, or Enterprise) No prior experience with Claude or other AI assistants needed A few features covered here (Cowork, Enterprise Search) require a paid or Team/Enterprise plan to try hands-on. Each lesson notes where this applies. Who this course is for Anyone getting started with Claude at work. New users who want a guided path from first message to confident daily use, and existing users who want a structured tour of Projects, Artifacts, Skills, Connectors, Enterprise Search, and Research. Meet Claude What is Claude? Your first conversation with Claude Getting better results How you&#x27;ll work with Claude on your desktop Organizing your work and knowledge Introduction to projects Creating with artifacts Working with skills Expanding Claude&#x27;s reach Connecting your tools Enterprise search Research for deep dives Putting it all together Claude in action: use-cases by role Other ways to work with Claude Conclusion &amp; badge What&#x27;s next? Course quiz \ue03f Quiz Completion badge \u00a9 2026 Anthropic PBC Privacy choices Privacy policy Usage policy \ue0b0"
+      ],
+      "sections": []
+    },
+    "introduction-to-claude-cowork": {
+      "url": "https://academy.claude.com/courses/introduction-to-claude-cowork",
+      "title": "Introduction to Claude Cowork",
+      "description": "Delegate multi-step work to Claude in Cowork: set up workspaces, give context, run task loops, and use plugins for research, documents, and browser tasks.",
+      "counts": {},
+      "learning_objectives": [
+        "By the end of this course, you\u2019ll be able to",
+        "Explain what Claude Cowork is and when to reach for it instead of Chat or Code",
+        "Set up a working folder, connectors, and permission mode, and apply safe-working habits as Cowork acts on your behalf",
+        "Delegate a multi-step task end to end: write the prompt, answer clarifying questions, steer mid-task, and review the deliverable",
+        "Run recurring work with scheduled tasks and run Cowork in the cloud to start tasks from your phone or any browser",
+        "Give Cowork standing context through global instructions and projects",
+        "Build skills for your recurring processes and install, customize, or bundle them into plugins",
+        "Extend Cowork to browser-based tools with Claude in Chrome and to Office documents with Claude for Microsoft 365",
+        "Validate a skill with evals and share team plugins through your organization&#x27;s marketplace"
+      ],
+      "audience": "Knowledge workers whose day is spent moving information between files, apps, and tools and want Claude to take on real, multi-step work.",
+      "prerequisites": [
+        "A paid Claude plan (Pro, Max, Team, or Enterprise) with access to the Claude desktop app Comfort with everyday desktop apps \u2014 no coding or command-line experience needed Cowork is Claude working directly with your files, folders, and apps \u2014 reading, editing, and producing real outputs on your machine. Where Chat is a conversation, Cowork is a working session: you describe the task, Claude plans and executes it, and you steer along the way. This course gets you from first launch to confident daily use. You&#x27;ll run your first end-to-end task, give Claude standing context with projects, skills, and plugins, bring Claude into Chrome, Word, Excel, PowerPoint, and Outlook, and learn the habits that keep multi-step work safe to share with your team."
+      ],
+      "sections": [
+        {
+          "title": "Cowork",
+          "lessons": 4,
+          "description": "What Cowork is and how it differs from Chat, how to set it up, and your first end-to-end task: describe it, watch Claude plan and execute, and steer along the way.",
+          "lessonTitles": []
+        },
+        {
+          "title": "Cowork yours",
+          "lessons": 4,
+          "description": "Give Claude standing context with global instructions and projects, then build skills and install plugins so Claude knows your vocabulary, your steps, and the outputs you expect.",
+          "lessonTitles": []
+        },
+        {
+          "title": "Claude wherever you work",
+          "lessons": 2,
+          "description": "Drive web apps with Claude in Chrome, and work inside Word, Excel, PowerPoint, and Outlook with the Claude add-ins for each.",
+          "lessonTitles": []
+        },
+        {
+          "title": "Cowork",
+          "lessons": 4,
+          "description": "Work safely by reviewing plans and outputs, validate skills before you rely on them, and share plugins and workflows with your team. Meet Claude Cowork What is Claude Cowork Setting up Claude Cowork What Claude Cowork can do for you Hand Claude Cowork your first task Make Claude Cowork yours Get better results faster Standing context: Global instructions and projects Skills: Teach Claude Cowork yo",
+          "lessonTitles": []
+        }
+      ]
+    },
+    "ai-capabilities-and-limitations": {
+      "url": "https://academy.claude.com/courses/ai-capabilities-and-limitations",
+      "title": "AI Capabilities and Limitations",
+      "description": "Build an accurate mental model of what large language models can and cannot do: next-token prediction, knowledge, working memory, steerability, and context limits.",
+      "counts": {},
+      "learning_objectives": [
+        "By the end of this course, you\u2019ll be able to",
+        "Distinguish generative AI from classification and prediction AI, and frame its four core properties as capability-to-limitation continuums",
+        "Explain the two-stage training process (pretraining and fine-tuning) and recognize the behavioral fingerprints it leaves: sycophancy, verbosity, over-caution, and loose confidence calibration",
+        "Explain Next Token Prediction as the core generative mechanism and identify where fabrication concentrates",
+        "Describe how the knowledge cutoff and uneven training coverage shape what a model knows, and recognize when web search, retrieval, or tool use is the fix",
+        "Explain the context window as a hard-edged limit and apply context-placement strategies like front-loading, chunking, and re-supplying critical information",
+        "Predict where instruction-following is tight versus loose, and recognize reasoning drift and letter-over-spirit as steerability failures",
+        "Diagnose real-world AI failures by naming which properties are colliding and choose a targeted fix",
+        "Connect the four properties to the 4D Framework and practice calibrated trust by locating tasks on each continuum Most people&#x27;s first experience with a generative AI system is a mix of delight and confusion. It produces a polished summary of a dense report in seconds, then confidently invents a citation that doesn&#x27;t exist. It follows a detailed instruction perfectly, then ignores a simple one in the very next message. Without a mental model of what&#x27;s happening underneath, these moments feel random \u2014 and it&#x27;s hard to know whether to trust the next output, or how to fix the last one. This course gives learners that mental model. It&#x27;s the companion to AI Fluency: Framework &amp; Foundations (opens in new tab) : where that course teaches the human competencies (Delegation, Description, Discernment, Diligence), this one teaches the machine properties those competencies are responding to. The two are designed to be taken in either order, and together they form a complete picture of effective human-AI collaboration. We organize the course around four properties that shape what an AI system can and can&#x27;t do for you: Next Token Prediction (where AI answers come from), Knowledge (what the model actually knows, and why it can be confidently wrong), Working Memory (what it&#x27;s paying attention to right now, and what falls off the edge), and Steerability (how much control your instructions really give you). Each property sits on a spectrum from capability to limitation, and each section pairs a short explanation with a hands-on exercise so you can feel where the edges are rather than just read about them. The final section looks at what happens when these properties collide \u2014 because in real use, they always do. A long document pushes against working memory while also straying into knowledge the model doesn&#x27;t have; a vague instruction tests steerability at the same moment next-token prediction is reaching for whatever sounds most plausible. We close with a practical diagnostic: how to look at an unexpected output, recognize which kind of unexpected it is, locate roughly where on the capability-to-limitation continuum your task landed, and respond with a targeted fix instead of a generic retry. Recommended prerequisites None. This course assumes no technical background and no prior experience with AI tools. If you&#x27;ve already completed AI Fluency: Framework &amp; Foundations, you&#x27;ll recognize where each property connects to the 4Ds \u2014 but it&#x27;s not required. Who this is for Anyone who uses, or is about to start using, generative AI in their work or studies and wants to understand why it behaves the way it does. Educators, students, knowledge workers, and team leads will all find the same core model useful, because the properties it describes don&#x27;t change across use cases."
+      ],
+      "audience": "",
+      "prerequisites": [],
+      "sections": [
+        {
+          "title": "Getting started",
+          "lessons": 3,
+          "description": "The word &#x27;AI&#x27; covers a lot of ground. This section narrows it to the kind of system you&#x27;ll actually be working with \u2014 large language models \u2014 and explains how two training stages, pretraining and fine-tuning, turn a raw text predictor into the helpful assistant you interact with. Along the way you&#x27;ll meet the four-property framework that organizes the rest of the course.",
+          "lessonTitles": []
+        },
+        {
+          "title": "Prediction",
+          "lessons": 2,
+          "description": "Every answer an AI gives is built one token at a time, by predicting what should come next. This section shows what that means in practice: why the model is excellent at well-worn paths like summarizing or reformatting, why it can produce things that sound true but aren&#x27;t, and how to recognize when a task is pushing into territory where prediction alone isn&#x27;t enough.",
+          "lessonTitles": []
+        },
+        {
+          "title": "Knowledge",
+          "lessons": 2,
+          "description": "A model knows what was in its training data \u2014 frequently, recently, and consistently. This section unpacks what that implies: it&#x27;s strong on mainstream topics and popular languages, weaker on anything rare, recent, niche, or contested. You&#x27;ll practice judging where a question sits on that spectrum, so you know when to trust the answer and when to bring your own sources.",
+          "lessonTitles": []
+        },
+        {
+          "title": "Memory",
+          "lessons": 2,
+          "description": "The context window is the model&#x27;s working memory: everything it can pay attention to right now, and nothing else. This section covers what fits, what quietly falls off the edge, why attention isn&#x27;t uniform across a long document, and why a fresh session doesn&#x27;t remember the last one. You&#x27;ll learn to size up a task against the window before you start, instead of discovering the ",
+          "lessonTitles": []
+        },
+        {
+          "title": "Steerability",
+          "lessons": 2,
+          "description": "Your instructions are how you steer \u2014 but not all instructions land equally. Short, concrete, verifiable asks (&#x27;respond as a table&#x27;, &#x27;under 100 words&#x27;) work reliably; long reasoning chains, abstract requests, and demands for native precision are where steering starts to slip. This section helps you tell the difference and rewrite a wobbly instruction into one the model can actu",
+          "lessonTitles": []
+        },
+        {
+          "title": "Putting it all together and next steps",
+          "lessons": 3,
+          "description": "Real tasks rarely test one property at a time. A long contract review strains working memory while reaching past the model&#x27;s knowledge; a vague creative brief tests steerability right where next-token prediction wants to fill in something plausible. This section shows you how the four properties collide, and gives you a diagnostic for any unexpected output: name which property is in play, pla",
+          "lessonTitles": []
+        }
+      ]
+    },
+    "ai-fluency-for-builders": {
+      "url": "https://academy.claude.com/courses/ai-fluency-for-builders",
+      "title": "AI Fluency for Builders",
+      "description": "This course empowers builders to develop AI fluency \u2014 increasing impact and efficiency while staying true to what it means to own the full arc from problem to shipped solution.",
+      "counts": {},
+      "learning_objectives": [
+        "By the end of this course, you\u2019ll be able to",
+        "Define AI Fluency and the 4D Framework (Delegation, Description, Discernment, Diligence) and explain how each applies to your role as a builder",
+        "Identify what current AI does well and where it reliably falls short, so you can set clear-eyed expectations for builder tasks",
+        "Decompose a customer problem across the builder&#x27;s toolkit and decide what role AI plays at each stage",
+        "Write acceptance tests that define done before a single line of code exists",
+        "Translate a user need to precise AI instruction using the Description Chain",
+        "Evaluate AI-generated work across five lenses: correctness, quality, fit, experience, and responsibility",
+        "Critique AI-generated designs using feedback specific enough to act on",
+        "Take full ownership of what you ship and make the call: ship it, fix it, or stop it At Anthropic, we believe that empowering people with AI, and ensuring that AI makes safe contributions to society, requires engaging with a wide range of human perspectives and experiences. Builders \u2014 product people, engineers, and makers \u2014 are uniquely positioned to leverage AI to amplify what they create\u2014but only if they can approach it intentionally, with clear judgment and purpose. This course helps builders develop practical AI collaboration skills through the 4D Framework (Delegation, Description, Discernment, and Diligence). In this course, we\u2019ll explore how the framework applies to real builder tasks\u2014from framing a customer problem to shipping a product\u2014and consider what it means to integrate AI responsibly across the full arc of building. This course is built in partnership with CodePath, drawing on research with engineers and product builders about their actual needs, concerns, and aspirations for AI adoption. The work builds on our AI Fluency: Framework &amp; Foundations course, adapted specifically for the builder context where speed of implementation and the human role in judgment create unique considerations for AI collaboration. Recommended prerequisites This course lightly covers the foundational AI Fluency concepts. However, for deeper understanding, participants should complete AI Fluency: Framework &amp; Foundations before beginning this builder-focused curriculum. It is also recommended that learners have access to an AI tool for hands-on practice. Examples in this course will use Claude.ai (opens in new tab) , but any AI assistant will work. About the partners This course was created in partnership between Anthropic and CodePath. Anthropic is a frontier AI safety company and the maker of Claude. CodePath (opens in new tab) is a nonprofit reprogramming computer science education to create the first AI-native generation of builders."
+      ],
+      "audience": "",
+      "prerequisites": [],
+      "sections": [
+        {
+          "title": "Fluency framework",
+          "lessons": 2,
+          "description": "Define AI Fluency and meet the four interconnected competencies, Delegation, Description, Discernment, and Diligence, that ground every productive AI collaboration in a builder&#x27;s work. You&#x27;ll build a reusable brief that hands AI your values, constraints, and context, learn to tell the inner loop from the outer loop, and map your current work to the 4Ds to find your biggest opportunity. H",
+          "lessonTitles": []
+        },
+        {
+          "title": "The 4D framework for builders",
+          "lessons": 2,
+          "description": "Put Delegation and Description to work on real builder tasks: decide what to hand to AI and what judgment to keep yours, write acceptance tests that define done before a single line of code exists, and follow the Description Chain from a messy user need to a precise instruction AI can act on.",
+          "lessonTitles": []
+        },
+        {
+          "title": "Discernment for builders",
+          "lessons": 2,
+          "description": "Apply Discernment to everything AI produces. You&#x27;ll evaluate AI-generated code across five lenses and critique AI-built user experiences with feedback specific enough to act on, so &quot;it works&quot; stops being the bar and your taste becomes the differentiator. Tying it all together 1 lesson Bring Diligence full circle by owning what you ship, from whether it should exist to whether it&#x2",
+          "lessonTitles": []
+        },
+        {
+          "title": "Wrapping up",
+          "lessons": 2,
+          "description": "Bring all four dimensions of the 4D Framework together, gather resources to keep building your AI fluency after the course, share what you&#x27;ve learned with colleagues, and complete the final course quiz to earn your completion badge. Introduction and AI Fluency framework Welcome to AI Fluency for builders The 4D Framework How AI works AI capabilities &amp; limitations The 4D framework for buil",
+          "lessonTitles": []
+        }
+      ]
+    },
+    "ai-fluency-for-educators": {
+      "url": "https://academy.claude.com/courses/ai-fluency-for-educators",
+      "title": "AI Fluency for educators",
+      "description": "Helps faculty, instructional designers, and education leaders apply the 4D AI Fluency framework to course design, learning materials, and teaching practice.",
+      "counts": {},
+      "learning_objectives": [
+        "By the end of this course, you\u2019ll be able to",
+        "Explain how the 4Ds of the AI Fluency Framework (Delegation, Description, Discernment, Diligence) apply to teaching practice",
+        "Build a reusable teaching context document that captures your pedagogical values, constraints, and student profile",
+        "Apply the 4Ds to identify essential course content, map the learning journey, and articulate measurable learning objectives",
+        "Create lecture slides, study guides, in-class exercises, and assessments through AI collaboration grounded in your established context",
+        "Use the Description-Discernment loop to evaluate and refine AI-generated materials against your students&#x27; needs",
+        "Practice Diligence by verifying accuracy, documenting AI&#x27;s role, and maintaining academic integrity in AI-assisted course development At Anthropic, we believe that empowering people with AI, and ensuring that AI makes safe contributions to society, requires engaging with a wide range of human perspectives and experiences. Responsible AI development and engagement isn&#x27;t something any single discipline or viewpoint can fully address. It demands collaborative approaches that span a wide range of technical, creative, business, scientific, and educational domains. That&#x27;s why we partnered with educators who bring complementary expertise to create this course on AI collaboration for educators. This course empowers faculty, instructional designers, and educational leaders to apply the 4D Framework to their own educational practice. Participants will learn to apply the 4D Framework to their own teaching practice, using AI as a thinking partner to enhance course design, create coherent learning materials, and develop authentic assessments while modeling responsible AI collaboration for their students. This course is the result of a long partnership between Anthropic and professors Rick Dakan from Ringling College of Art and Design and Joseph Feller from University College Cork. It builds on their experiences in training fellow educators and teaching the AI Fluency Framework to their students, and on feedback and questions that arose from our earlier course: AI Fluency: Framework &amp; Foundations This course answers the question: how can I apply this framework to my personal teaching practice? The work was supported in part by the Higher Education Authority (Ireland) through the National Forum for the Enhancement of Teaching and Learning. Recommended prerequisites This course lightly covers the foundational AI Fluency concepts. However, for deeper understanding, participants should complete AI Fluency: Framework &amp; Foundations before beginning this educator-focused curriculum. It is also recommended that learners have active teaching or curriculum development responsibilities as well as access to an AI chat tool for hands-on practice. Examples in this course will use Claude.ai, but any chatbot will work."
+      ],
+      "audience": "",
+      "prerequisites": [],
+      "sections": [
+        {
+          "title": "Framework",
+          "lessons": 2,
+          "description": "",
+          "lessonTitles": [
+            "A summary of Delegation, Description, Discernment, and"
+          ]
+        },
+        {
+          "title": "Fluency applications for educators",
+          "lessons": 2,
+          "description": "Applying the 4D framework to course design and learning materials. Introduction and AI Fluency Framework Introduction to AI Fluency for Educators AI Fluency Framework review AI Fluency applications for educators Applying AI Fluency to course design and learning outcomes Applying AI Fluency to learning materials and assignments Conclusion &amp; badge Course quiz \ue03f Quiz Completion badge \u00a9 2026 Anthr",
+          "lessonTitles": []
+        }
+      ]
+    },
+    "ai-fluency-for-k-12-educators": {
+      "url": "https://academy.claude.com/courses/ai-fluency-for-k-12-educators",
+      "title": "AI Fluency for pK\u201312 Educators",
+      "description": "Helps pK-12 educators build practical AI fluency through the 4D Framework, supporting student learning while staying true to their mission and values. Created in partnership with Teach For America.",
+      "counts": {},
+      "learning_objectives": [
+        "By the end of this course, you\u2019ll be able to",
+        "Define AI Fluency and explain how the 4D Framework (Delegation, Description, Discernment, Diligence) applies to your teaching practice",
+        "Build a reusable context document that captures your role, students, and goals for future AI collaborations",
+        "Recognize the capabilities and limitations of generative AI, including hallucinations and knowledge cutoffs",
+        "Use the Description-Discernment loop to create and evaluate differentiated instructional materials",
+        "Apply the Delegation-Diligence loop to protect student data and navigate ethical gray areas in your practice",
+        "Draft personal ethical commitments and an AI value document grounded in your own values",
+        "Run a complete end-to-end 4D workflow on a real task from your own work This course is the result of a partnership between Anthropic and Teach For America, drawing on research with pK\u201312 educators about their actual needs, concerns, and aspirations for AI adoption. We believe that empowering people with skills to wield AI responsibly, and ensuring that AI makes safe contributions to society, requires engaging with a wide range of human perspectives and experiences. Educators are uniquely positioned to leverage AI for social good. This course helps pK\u201312 educators and staff build practical AI collaboration skills through the 4D Framework (Delegation, Description, Discernment, and Diligence) in a human-centered way. In this course, we&#x27;ll explore how the framework applies to common tasks in education. This course builds on Anthropic\u2019s AI Fluency: Framework &amp; Foundations course, adapted specifically for the pK\u201312 educator context where limited resources, multiple stakeholder accountabilities, and mission-driven work create unique considerations for AI collaboration. It also builds on the course Teach For America has produced for its constituents since 2023, as well as their ongoing practice since 2022 working to build AI fluency with and for educators across the United States. Recommended prerequisites This course lightly covers the foundational AI Fluency concepts. However, for deeper understanding, participants may wish to complete AI Fluency: Framework &amp; Foundations and AI Capabilities and Limitations before beginning this educator-focused curriculum. It is also recommended that learners have access to an AI tool for hands-on practice. Examples in this course will use Claude.ai (opens in new tab) , but any AI tool will work. About the partners This course was created in partnership between Anthropic and Teach For America. Anthropic is a frontier AI safety company and the maker of Claude. Teach For America is a leadership development organization for those who want to co-create a more just world alongside young people in their communities. Today they are a network of more than 72,000 leaders who started in the classroom and remain in lifelong pursuit of the vision that one day, all children will have the opportunity to attain an excellent education. AI diligence statement In the development of this course, we engaged in extensive collaboration with Claude from Anthropic. The base content for this course came from: The AI Fluency Framework Practical Summary Document by Rick Dakan (at Ringling College of Art and Design) and Joseph Feller (at University College Cork) and related working documents and research notes. Technical and practical content provided by Anthropic. Knowledge about AI in pK\u201312 education came from Teach For America, drawing on the course they have produced for their constituents since 2023 and their ongoing work since 2022 building AI fluency with and for educators across the United States. Throughout this process, Claude assisted one or more of the human authors with structural development, resource and exercise design, and content drafting, critiquing, editing and rewriting. The human authors wrote, designed, edited and provided continual vision, expertise, critical judgment, and domain knowledge and made all final decisions about both content and approach. All AI-generated and co-created content underwent thorough validation, editing, and curation by the human authors. The final materials accurately reflect the human authors&#x27; understanding, expertise, and intended pedagogical approach. While AI assistance was instrumental in producing these materials, the human authors maintain responsibility for the content. This disclosure is made in the spirit of transparency advocated by the AI Fluency Framework and to acknowledge the evolving role of AI in educational content development and other creative and intellectual work."
+      ],
+      "audience": "",
+      "prerequisites": [],
+      "sections": [
+        {
+          "title": "Fluency framework",
+          "lessons": 3,
+          "description": "Define AI Fluency and learn the four interconnected competencies\u2014Delegation, Description, Discernment, and Diligence\u2014that ground every productive AI collaboration as an educator. You&#x27;ll articulate your values, goals, and constraints so every future AI interaction starts from the right context. How AI works 1 lesson Build a working mental model of what today&#x27;s AI can and can&#x27;t do rel",
+          "lessonTitles": []
+        },
+        {
+          "title": "AI responsibly",
+          "lessons": 3,
+          "description": "Apply the Description-Discernment loop to creating high quality outputs and the Delegation-Diligence loop to working ethically with AI\u2014practicing context-rich prompting, critical evaluation, and responsible data handling on the kinds of tasks you face every day. Putting it all together 1 lesson Bring all four dimensions of the 4D Framework together and apply it to a real task from your own work\u2014th",
+          "lessonTitles": []
+        }
+      ]
+    },
+    "ai-fluency-for-nonprofits": {
+      "url": "https://academy.claude.com/courses/ai-fluency-for-nonprofits",
+      "title": "AI Fluency for nonprofits",
+      "description": "Build practical AI collaboration skills for nonprofit work using the 4D Framework: Delegation, Description, Discernment, and Diligence. Covers research, writing, data analysis, and organization-wide AI adoption while staying true to your mission and values.",
+      "counts": {},
+      "learning_objectives": [
+        "By the end of this course, you\u2019ll be able to",
+        "Define AI Fluency and explain how the 4D Framework (Delegation, Description, Discernment, Diligence) applies to nonprofit work",
+        "Apply the Description-Discernment loop to research policy landscapes, funding opportunities, and grant prospects relevant to your mission",
+        "Use Description and Discernment to draft and refine grant proposals and communications that reflect your organization&#x27;s authentic voice",
+        "Evaluate AI tools&#x27; data handling policies and practice data hygiene to protect sensitive and personally identifiable information",
+        "Validate AI-assisted data analysis by testing against data you already understand before applying it to new questions",
+        "Combine all four competencies to design a repeatable AI-assisted workflow with appropriate human review",
+        "Draft an organizational AI policy that keeps humans in the loop and aligns AI use with your mission and values At Anthropic, we believe that empowering people with AI, and ensuring that AI makes safe contributions to society, requires engaging with a wide range of human perspectives and experiences. Nonprofit professionals are uniquely positioned to leverage AI for social good\u2014but only if they can approach it intentionally, with resilience and clear purpose. This course helps nonprofit staff\u2014whether in fundraising, communications, program delivery, operations, or leadership\u2014build practical AI collaboration skills through the 4D Framework (Delegation, Description, Discernment, and Diligence). In this course, we\u2019ll explore how the framework applies to common non-profit tasks, and consider what it means to implement AI across a nonprofit organization. This course is the result of a partnership between Anthropic and GivingTuesday, drawing on research with nonprofit professionals about their actual needs, concerns, and aspirations for AI adoption. The work builds on our AI Fluency: Framework &amp; Foundations course, adapted specifically for the nonprofit context where limited resources, multiple stakeholder accountabilities, and mission-driven work create unique considerations for AI collaboration. Recommended prerequisites This course lightly covers the foundational AI Fluency concepts. However, for deeper understanding, participants should complete AI Fluency: Framework &amp; Foundations before beginning this nonprofit-focused curriculum. It is also recommended that learners have access to an AI chat tool for hands-on practice. Examples in this course will use Claude.ai (opens in new tab) , but any chatbot will work."
+      ],
+      "audience": "",
+      "prerequisites": [],
+      "sections": [
+        {
+          "title": "Fluency framework",
+          "lessons": 2,
+          "description": "Define AI Fluency and learn the four interconnected competencies\u2014Delegation, Description, Discernment, and Diligence\u2014that form the foundation of this course.",
+          "lessonTitles": []
+        },
+        {
+          "title": "Discernment loop",
+          "lessons": 2,
+          "description": "Practice crafting context-rich prompts and critically evaluating AI outputs through research and writing examples.",
+          "lessonTitles": []
+        },
+        {
+          "title": "Diligence loop",
+          "lessons": 2,
+          "description": "Make thoughtful decisions about what tasks to delegate to AI while taking responsibility for high-stakes considerations like data privacy and analytical accuracy.",
+          "lessonTitles": []
+        },
+        {
+          "title": "Putting it all together",
+          "lessons": 2,
+          "description": "Apply all four dimensions of the 4D Framework to automate workflows and integrate AI thoughtfully into your organization. Introduction and AI Fluency framework Welcome to AI Fluency for nonprofits The 4D Framework The Description-Discernment loop Researching with AI Writing with AI The Delegation-Diligence loop Understanding privacy and data Data analysis with AI Putting it all together Workflow a",
+          "lessonTitles": []
+        }
+      ]
+    },
+    "ai-fluency-for-pk-12-train-the-trainer": {
+      "url": "https://academy.claude.com/courses/ai-fluency-for-pk-12-train-the-trainer",
+      "title": "AI Fluency for pK-12 Train the Trainer",
+      "description": "This course empowers pK\u201312 educators to lead AI fluency training for their colleagues \u2014 equipping them with a ready-to-run workshop kit grounded in the 4D Framework, while staying true to educators&#x27; mission and values.",
+      "counts": {},
+      "learning_objectives": [
+        "By the end of this course, you\u2019ll be able to",
+        "See how this Train the Trainer kit connects to AI Fluency for pK-12 Educators",
+        "Understand why educator voice belongs at the center of AI decisions",
+        "Know what&#x27;s in the kit and how to use it to run your own session This course is the result of a partnership between Anthropic and the American Federation of Teachers (AFT), built by educators, for educators. At Anthropic, we believe that empowering people with skills to wield AI responsibly, and ensuring that AI makes safe contributions to society, requires engaging with a wide range of human perspectives and experiences. Educators are uniquely positioned to leverage AI for social good\u2014and to lead their colleagues in doing the same. This Train the Trainer course prepares pK\u201312 educators to facilitate AI fluency learning for other educators. It gives you everything you need to run your own workshop\u2014the deck, the facilitator guide, and grade-band exercises\u2014built around the 4D Framework (Delegation, Description, Discernment, and Diligence). In this course, we&#x27;ll explore how to bring the framework to a room full of teachers, from opening an honest conversation about AI to committing to a real task. The work builds on AI Fluency for pK\u201312 Educators , adapted into a train-the-trainer format so educators can lead this transition in their own schools and districts, on their own terms. Recommended prerequisites Before facilitating, we recommend completing AI Fluency for pK\u201312 Educators yourself, so you&#x27;ve built your own fluency with the 4D Framework before guiding others through it. For deeper foundational understanding, participants may also wish to complete AI Fluency: Framework &amp; Foundations . It is also recommended that learners have access to an AI tool for hands-on practice. Examples in this course will use Claude.ai (opens in new tab) , but any AI tool will work. About the partners This course was created in partnership between Anthropic and the American Federation of Teachers (AFT), built by educators, for educators. Anthropic is a frontier AI safety company and the maker of Claude. The AFT is a union of professionals in education, healthcare, and public service."
+      ],
+      "audience": "",
+      "prerequisites": [],
+      "sections": [
+        {
+          "title": "Kit",
+          "lessons": 3,
+          "description": "Everything you need to run the workshop: how to use the kit, the slide deck with its facilitator guide, and the learner workbook with grade-band exercises built around the 4D Framework. Welcome Introduction: From learner to trainer pK-12 Train the Trainer Kit How to use the kit Deck and facilitator guide Learner workbook \ue071 Course complete \u00a9 2026 Anthropic PBC Privacy choices Privacy policy Usage p",
+          "lessonTitles": []
+        }
+      ]
+    },
+    "ai-fluency-for-small-businesses": {
+      "url": "https://academy.claude.com/courses/ai-fluency-for-small-businesses",
+      "title": "AI Fluency for Small Businesses",
+      "description": "Helps small business owners and staff build practical AI collaboration skills using the 4D Framework: Delegation, Description, Discernment, and Diligence. Applies the framework to everyday business tasks like research, customer data, and operations while staying true to your mission and values.",
+      "counts": {},
+      "learning_objectives": [
+        "By the end of this course, you\u2019ll be able to",
+        "Define AI Fluency and the 4D Framework (Delegation, Description, Discernment, Diligence) and explain how each competency applies to small business work",
+        "Recognize the capabilities and limitations of generative AI, including hallucinations and knowledge cutoffs, to set realistic expectations for business use",
+        "Apply the Description-Discernment loop to craft effective prompts and critically evaluate AI-generated research before acting on it",
+        "Practice data hygiene and privacy safeguards when sharing sensitive business information with AI tools",
+        "Decide which repetitive business tasks are good candidates for AI automation and which should stay human-led",
+        "Build a repeatable AI-augmented workflow using Product, Process, and Performance Descriptions and plan for Diligence at every stage",
+        "Draft an AI use policy for your business that addresses transparency, accountability, and concerns about AI dependency",
+        "Apply the full 4D Framework to a real task from your own business operations At Anthropic, we believe that empowering people with AI, and ensuring that AI makes safe contributions to society, requires engaging with a wide range of human perspectives and experiences. Small businesses are uniquely positioned to leverage AI to advance their mission\u2014but only if they can approach it intentionally, with resilience and clear purpose. This course helps small business staff\u2014whether in customer interactions, back-office management, supply chain operations, or leadership\u2014build practical AI collaboration skills through the 4D Framework (Delegation, Description, Discernment, and Diligence). In this course, we\u2019ll explore how the framework applies to common small business tasks, and consider what it means to implement AI across a small business. This course is the result of a partnership between Anthropic, PayPal, Prospect Butcher, and MAKS Enterprises TIPM Rebuilders, drawing on research with small business professionals about their actual needs, concerns, and aspirations for AI adoption. The work builds on our AI Fluency: Framework &amp; Foundations course, adapted specifically for the small business context where limited resources, business accountabilities, and customer experience create unique considerations for AI collaboration. Recommended prerequisites This course lightly covers the foundational AI Fluency concepts. However, for deeper understanding, participants should complete AI Fluency: Framework &amp; Foundations before beginning this small business-focused curriculum. It is also recommended that learners have access to an AI chat tool for hands-on practice. Examples in this course will use Claude.ai (opens in new tab) , but any chatbot will work. About the partners This course was created in partnership between Anthropic, PayPal, Prospect Butcher Company, and MAKS TIPM Rebuilders. Anthropic is a frontier AI safety company and the maker of Claude. PayPal is a platform that helps businesses of all sizes make selling and shopping simple and secure. Prospect Butcher Company and MAKS TIPM Rebuilders are the two small businesses featured throughout the course \u2014 a Brooklyn butcher shop and an automotive power-module rebuilder, each using AI to grow. AI diligence statement In the development of the AI Fluency: Framework and Foundations course, we engaged in extensive collaboration with Claude from Anthropic. The base content for this course came from: The AI Fluency Framework Practical Summary Document by Rick Dakan (at Ringling College of Art and Design) and Joseph Feller (at University College Cork) and related working documents and research notes. Technical/practical content provided by Kristen Swanson and Kyra Atekwana (Anthropic). Knowledge about AI in the small business setting came from Mak Cabessa (MAKS TIPM Rebuilders), Corey Hammond (Prospect Butcher Company), and Jordan Medina (PayPal). Throughout this process, Claude assisted one or more of the human authors with structural development, resource and exercise design, and content drafting, critiquing, editing and rewriting. The human authors wrote, designed, edited and provided continual vision, expertise, critical judgment, and domain knowledge and made all final decisions about both content and approach. All AI-generated and co-created content underwent thorough validation, editing, and curation by the human authors. The final materials accurately reflect the human authors&#x27; understanding, expertise, and intended pedagogical approach. While AI assistance was instrumental in producing these materials, the human authors maintain responsibility for the content. This disclosure is made in the spirit of transparency advocated by the AI Fluency Framework and to acknowledge the evolving role of AI in educational content development and other creative and intellectual work."
+      ],
+      "audience": "",
+      "prerequisites": [],
+      "sections": [
+        {
+          "title": "Fluency framework",
+          "lessons": 2,
+          "description": "Define AI Fluency and learn the four interconnected competencies\u2014Delegation, Description, Discernment, and Diligence\u2014that ground every productive AI collaboration in your business. You&#x27;ll articulate your values, goals, and constraints so every future AI interaction starts from the right context.",
+          "lessonTitles": []
+        },
+        {
+          "title": "AI works",
+          "lessons": 2,
+          "description": "Build a working mental model of what today&#x27;s AI can and can&#x27;t do reliably, and explore hands-on with an interactive next-token simulator so you understand why those limits matter for how you put it to work in your business. The Description-Discernment loop 1 lesson Apply the Description-Discernment loop to real research and the Delegation-Diligence loop to working with customer data\u2014prac",
+          "lessonTitles": []
+        },
+        {
+          "title": "Putting it all together",
+          "lessons": 2,
+          "description": "Bring all four dimensions of the 4D Framework together to build a repeatable AI-augmented workflow and a short, honest AI use policy that fits your business and your team\u2014then plan your next steps and earn your completion badge. Introduction and AI Fluency framework AI Fluency for small businesses The 4D Framework How AI works AI capabilities and limitations Explore! The Description-Discernment lo",
+          "lessonTitles": []
+        }
+      ]
+    },
+    "ai-fluency-for-students": {
+      "url": "https://academy.claude.com/courses/ai-fluency-for-students",
+      "title": "AI Fluency for students",
+      "description": "Helps students build AI fluency skills for learning, career planning, and academic success through responsible AI collaboration. Applies the 4D framework (delegation, description, discernment, diligence) to student life.",
+      "counts": {},
+      "learning_objectives": [
+        "By the end of this course, you\u2019ll be able to",
+        "Explain what AI Fluency means and why it matters for your academic and professional future",
+        "Apply the 4D Framework (Delegation, Description, Discernment, Diligence) to your AI interactions as a student",
+        "Distinguish between using AI to do work for you and using AI to genuinely learn",
+        "Configure an AI learning partner and living learning journal that enhance rather than replace your learning",
+        "Use AI for career exploration, CV/resume improvement, and interview practice while maintaining your authentic voice",
+        "Create a personal AI collaboration policy and maintain your role as &quot;the human in the loop&quot; You&#x27;ve probably tried AI\u2014maybe to help with an essay, solve a problem, or just explore what it can do. But there&#x27;s a difference between using AI and being fluent with it. This course teaches students how to collaborate with AI effectively, efficiently, ethically, and safely across learning and career contexts. Rather than focusing on shortcuts or prompt tricks, this course develops lasting skills through the 4D Framework (Delegation, Description, Discernment, and Diligence). Students learn to use AI as a thinking partner that enhances their learning and career development rather than replacing their own critical thinking and creativity. Through practical applications in academic work and career planning, students discover how to leverage AI to understand concepts more deeply, develop professional skills, and prepare for a future where AI Fluency is essential. The course emphasizes being &#x27;the human in the loop&#x27;\u2014 maintaining agency, judgment, and responsibility while working thoughtfully with AI systems. This course is the result of a long partnership between Anthropic and professors Rick Dakan from Ringling College of Art and Design and Joseph Feller from University College Cork. It addresses the fundamental question students face: how can I use AI to genuinely enhance my learning and career success without compromising my own growth and integrity? The work was supported in part by the Higher Education Authority (Ireland) through the National Forum for the Enhancement of Teaching and Learning. Recommended prerequisites This course lightly covers the foundational AI Fluency concepts. However, for deeper understanding, participants should complete AI Fluency: Framework &amp; Foundations before beginning this student-focused curriculum. It is also recommended that learners have access to an AI chat tool for hands-on practice. Examples in this course will use Claude.ai, but any chatbot will work."
+      ],
+      "audience": "",
+      "prerequisites": [],
+      "sections": [
+        {
+          "title": "Framework",
+          "lessons": 2,
+          "description": "",
+          "lessonTitles": [
+            "A summary of Delegation, Description, Discernment, and"
+          ]
+        },
+        {
+          "title": "Framework applications for students",
+          "lessons": 2,
+          "description": "Applying the 4D framework to learning and career planning. Conclusion &amp; badge 2 lessons Developing personal commitments for responsible AI collaboration and maintaining agency. Introduction and AI Fluency Framework Welcome to AI Fluency for students AI Fluency Framework AI Fluency Framework applications for students AI as a learning partner AI in career planning Conclusion &amp; badge Being th",
+          "lessonTitles": []
+        }
+      ]
+    },
+    "ai-fluency-framework-foundations": {
+      "url": "https://academy.claude.com/courses/ai-fluency-framework-foundations",
+      "title": "AI Fluency: Framework &amp; Foundations",
+      "description": "Learn to collaborate with AI effectively, efficiently, ethically, and safely using the 4D framework: Delegation, Description, Discernment, and Diligence.",
+      "counts": {},
+      "learning_objectives": [
+        "By the end of this course, you\u2019ll be able to",
+        "Explain what AI Fluency means and why it matters for collaborating with AI effectively, efficiently, ethically, and safely",
+        "Apply the 4D framework of Delegation, Description, Discernment, and Diligence to your AI interactions",
+        "Distinguish Automation, Augmentation, and Agency as three ways of engaging with AI",
+        "Describe how generative AI and large language models work, including their key capabilities and limitations",
+        "Make strategic Delegation decisions using Problem Awareness, Platform Awareness, and Task Delegation",
+        "Communicate clearly with AI through Product, Process, and Performance Description and foundational prompting techniques",
+        "Evaluate AI outputs, processes, and behavior critically and refine results through the Description-Discernment loop",
+        "Practice Creation, Transparency, and Deployment Diligence to take responsibility for AI-assisted work At Anthropic, we believe that empowering people with AI, and ensuring that AI makes safe contributions to society, requires engaging with a wide range of human perspectives and experiences. Responsible AI development and engagement isn&#x27;t something any single discipline or viewpoint can fully address. It demands collaborative approaches that span a wide range of technical, creative, business, scientific, and educational domains. That&#x27;s why we partnered with educators who bring complementary expertise to create this foundational course on AI collaboration. This course is the result of a long partnership between Anthropic and professors Rick Dakan from Ringling College of Art and Design and Joseph Feller from University College Cork. Rick and Joe developed the AI Fluency Framework in 2023-2024, based on their research exploring how AI tools like Claude were transforming creative and business processes. When we saw the framework, we immediately recognized a shared vision: helping people interact with AI effectively and responsibly, beyond just \u201ccool prompts.\u201d Their framework offered exactly the kind of multidisciplinary perspective we believe is essential for navigating AI\u2019s impact on society. The AI Fluency Framework they created \u2014 four interconnected competencies (Delegation, Description, Discernment, and Diligence) \u2014 enables more effective, efficient, ethical, and safe human-AI collaboration, regardless of which new AI models or tools emerge. We collaborated to develop this course based on their framework, bringing together our collective expertise in AI systems, education, creativity, and business innovation. The work was supported in part by the Higher Education Authority (Ireland) through the National Forum for the Enhancement of Teaching and Learning. This framework has already informed undergraduate and postgraduate courses at both Ringling College and University College Cork, as well as staff training initiatives and community outreach events. Now, we\u2019re excited to share these insights more broadly through this open online course. Our goal is to make AI Fluency accessible and useful to everyone, no matter what stage of AI expertise you find yourself at. We hope you find it valuable in navigating the evolving landscape of AI collaboration."
+      ],
+      "audience": "",
+      "prerequisites": [],
+      "sections": []
+    },
+    "teaching-ai-fluency": {
+      "url": "https://academy.claude.com/courses/teaching-ai-fluency",
+      "title": "Teaching AI Fluency",
+      "description": "Equips academic faculty and instructional designers to teach and assess AI fluency in instructor-led settings. Builds on the 4D AI Fluency Framework with strategies for assessment, assignment design, and discipline-specific application.",
+      "counts": {},
+      "learning_objectives": [
+        "By the end of this course, you\u2019ll be able to",
+        "Select and adapt a linear, non-linear, focused, or loop-based approach to teaching the AI Fluency Framework for your students and context",
+        "Teach the Delegation-Diligence and Description-Discernment loops as connected strategic and tactical processes",
+        "Apply outcome, process, and reflection-based assessment strategies to evaluate the 4D competencies",
+        "Design authentic, iterative assignments that develop AI Fluency while keeping grading manageable",
+        "Analyze AI&#x27;s impact on curriculum, pedagogy, and assessment in your discipline",
+        "Create discipline-specific applications of the 4Ds in collaboration with colleagues At Anthropic, we believe that empowering people with AI, and ensuring that AI makes safe contributions to society, requires engaging with a wide range of human perspectives and experiences. Responsible AI development and engagement isn&#x27;t something any single discipline or viewpoint can fully address. It demands collaborative approaches that span a wide range of technical, creative, business, scientific, and educational domains. That&#x27;s why we partnered with educators who bring complementary expertise to create this course on AI collaboration for educators. This course empowers faculty, instructional designers, and educational leaders to apply the 4D Framework to their own educational practice. Participants will learn to apply the 4D Framework to their own teaching practice, using AI as a thinking partner to enhance course design, create coherent learning materials, and develop authentic assessments while modeling responsible AI collaboration for their students. This course is the result of a long partnership between Anthropic and professors Rick Dakan from Ringling College of Art and Design and Joseph Feller from University College Cork. It builds on their experiences in training fellow educators and teaching the AI Fluency Framework to their students, and on feedback and questions that arose from our earlier course: AI Fluency: Framework &amp; Foundations This course answers the question: how can I apply this framework to my personal teaching practice? The work was supported in part by the Higher Education Authority (Ireland) through the National Forum for the Enhancement of Teaching and Learning. Recommended prerequisites This course lightly covers the foundational AI Fluency concepts. However, for deeper understanding, participants should complete AI Fluency: Framework &amp; Foundations before beginning this educator-focused curriculum. It is also recommended that learners have active teaching or curriculum development responsibilities as well as access to an AI chat tool for hands-on practice. Examples in this course will use Claude.ai, but any chatbot will work."
+      ],
+      "audience": "",
+      "prerequisites": [],
+      "sections": [
+        {
+          "title": "Fluency",
+          "lessons": 3,
+          "description": "Scaffolding student AI Fluency through the 4D Framework.",
+          "lessonTitles": []
+        },
+        {
+          "title": "Fluency",
+          "lessons": 2,
+          "description": "Designing assessments and assignments that develop and measure student AI Fluency alongside disciplinary expertise. AI&#x27;s",
+          "lessonTitles": []
+        },
+        {
+          "title": "Impact on disciplinary content",
+          "lessons": 2,
+          "description": "Building institutional capacity for responsible and meaningful AI integration in pedagogy, assessment, and curricula across disciplines. Introduction and approaches to teaching AI Fluency Welcome &amp; approaches to teaching AI Fluency The Delegation-Diligence loop The Description-Discernment loop Assessing AI Fluency How do we assess the 4Ds? Designing assignments for AI Fluency AI&#x27;s Impact ",
+          "lessonTitles": []
+        }
+      ]
+    }
+  }
+}

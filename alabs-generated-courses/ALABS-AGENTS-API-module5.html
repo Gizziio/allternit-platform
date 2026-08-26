@@ -1,0 +1,1738 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Module 5: Model Context Protocol — A://Labs</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+  <style>
+    /* ================================================================
+       A://Labs Module Template — Shared Styles
+       ================================================================ */
+
+    :root {
+      --bg: #0b0b0c;
+      --surface: #151517;
+      --surface-raised: #1c1c1f;
+      --border: #27272a;
+      --border-light: #3f3f46;
+      --text: #e5e5e5;
+      --text-secondary: #a1a1aa;
+      --text-muted: #71717a;
+      --accent: #ec4899;
+      --accent-dim: rgba(236,72,153,0.15);
+      --accent-glow: rgba(236,72,153,0.4);
+      --success: #22c55e;
+      --error: #ef4444;
+      --info: #3b82f6;
+      --code-bg: #0f0f11;
+    }
+
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    html {
+      scroll-behavior: smooth;
+      scroll-padding-top: 80px;
+    }
+
+    body {
+      font-family: 'Inter', system-ui, -apple-system, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      line-height: 1.6;
+      overflow-x: hidden;
+    }
+
+    /* Progress Bar */
+    #progress-container {
+      position: fixed;
+      top: 0; left: 0; right: 0;
+      height: 3px;
+      background: var(--surface);
+      z-index: 1000;
+    }
+    #progress-bar {
+      height: 100%;
+      width: 0%;
+      background: linear-gradient(90deg, var(--accent), #f472b6);
+      box-shadow: 0 0 12px var(--accent-glow);
+      transition: width 0.2s ease;
+    }
+
+    /* Navigation */
+    nav {
+      position: fixed;
+      top: 3px; left: 0; right: 0;
+      background: rgba(11, 11, 12, 0.92);
+      backdrop-filter: blur(16px);
+      border-bottom: 1px solid var(--border);
+      z-index: 999;
+      padding: 0 24px;
+    }
+    .nav-inner {
+      max-width: 1200px;
+      margin: 0 auto;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      height: 56px;
+    }
+    .nav-logo {
+      font-weight: 800;
+      font-size: 0.9rem;
+      letter-spacing: -0.02em;
+      color: var(--text);
+    }
+    .nav-logo span {
+      color: var(--accent);
+    }
+    .nav-links {
+      display: flex;
+      gap: 6px;
+      list-style: none;
+    }
+    .nav-links a {
+      color: var(--text-secondary);
+      text-decoration: none;
+      font-size: 0.78rem;
+      font-weight: 500;
+      padding: 6px 12px;
+      border-radius: 6px;
+      transition: all 0.2s;
+      white-space: nowrap;
+    }
+    .nav-links a:hover, .nav-links a.active {
+      color: var(--accent);
+      background: var(--accent-dim);
+    }
+    .nav-tier {
+      font-size: 0.65rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: var(--accent);
+      border: 1px solid var(--accent);
+      padding: 3px 8px;
+      border-radius: 4px;
+    }
+    .nav-toggle {
+      display: none;
+      background: none;
+      border: none;
+      color: var(--text);
+      font-size: 1.4rem;
+      cursor: pointer;
+    }
+    @media (max-width: 768px) {
+      .nav-links { display: none; position: absolute; top: 56px; left: 0; right: 0; background: var(--surface); flex-direction: column; padding: 12px; gap: 4px; border-bottom: 1px solid var(--border); }
+      .nav-links.open { display: flex; }
+      .nav-toggle { display: block; }
+    }
+
+    /* Sections */
+    section {
+      padding: 80px 24px;
+      max-width: 860px;
+      margin: 0 auto;
+      position: relative;
+    }
+
+    /* Hero */
+    .hero {
+      min-height: 90vh;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: flex-start;
+      padding-top: 100px;
+    }
+    .hero-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 0.7rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+      color: var(--accent);
+      background: var(--accent-dim);
+      border: 1px solid rgba(236,72,153,0.25);
+      padding: 6px 14px;
+      border-radius: 100px;
+      margin-bottom: 24px;
+    }
+    .hero-badge::before {
+      content: '';
+      width: 6px; height: 6px;
+      background: var(--accent);
+      border-radius: 50%;
+      box-shadow: 0 0 8px var(--accent);
+      animation: pulse 2s ease-in-out infinite;
+    }
+    @keyframes pulse {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.4; }
+    }
+    .hero h1 {
+      font-size: clamp(2.2rem, 5vw, 3.8rem);
+      font-weight: 900;
+      line-height: 1.1;
+      letter-spacing: -0.03em;
+      margin-bottom: 20px;
+    }
+    .hero h1 em {
+      color: var(--accent);
+      font-style: normal;
+    }
+    .hero p {
+      font-size: 1.15rem;
+      color: var(--text-secondary);
+      max-width: 600px;
+      margin-bottom: 32px;
+      line-height: 1.7;
+    }
+    .hero-meta {
+      display: flex;
+      gap: 24px;
+      font-size: 0.8rem;
+      color: var(--text-muted);
+    }
+
+    /* Content Typography */
+    h2 {
+      font-size: 1.6rem;
+      font-weight: 700;
+      margin-bottom: 20px;
+      color: var(--text);
+      letter-spacing: -0.01em;
+    }
+    h3 {
+      font-size: 1.15rem;
+      font-weight: 600;
+      margin: 32px 0 12px;
+      color: var(--text);
+    }
+    h4 {
+      font-size: 0.95rem;
+      font-weight: 600;
+      margin: 24px 0 8px;
+      color: var(--text-secondary);
+    }
+    p {
+      margin-bottom: 16px;
+      color: var(--text-secondary);
+      font-size: 0.95rem;
+      line-height: 1.7;
+    }
+    ul, ol {
+      margin: 16px 0;
+      padding-left: 24px;
+      color: var(--text-secondary);
+    }
+    li {
+      margin-bottom: 8px;
+      font-size: 0.95rem;
+      line-height: 1.6;
+    }
+    a {
+      color: var(--accent);
+      text-decoration: none;
+    }
+    a:hover { text-decoration: underline; }
+    strong { color: var(--text); font-weight: 600; }
+    em { color: var(--accent); font-style: normal; }
+
+    /* Code Blocks */
+    .code-block {
+      background: var(--code-bg);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      overflow: hidden;
+      margin: 20px 0;
+    }
+    .code-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 10px 16px;
+      background: rgba(255,255,255,0.03);
+      border-bottom: 1px solid var(--border);
+    }
+    .code-lang {
+      font-size: 0.7rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      color: var(--text-muted);
+    }
+    .code-copy {
+      font-size: 0.7rem;
+      color: var(--text-muted);
+      background: none;
+      border: 1px solid var(--border);
+      padding: 4px 10px;
+      border-radius: 4px;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    .code-copy:hover {
+      color: var(--accent);
+      border-color: var(--accent);
+    }
+    pre {
+      padding: 16px 20px;
+      overflow-x: auto;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.82rem;
+      line-height: 1.6;
+      color: var(--text);
+    }
+    code {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.85em;
+      color: var(--accent);
+      background: rgba(245,158,11,0.08);
+      padding: 2px 5px;
+      border-radius: 3px;
+    }
+    pre code {
+      background: none;
+      padding: 0;
+      color: inherit;
+      font-size: inherit;
+    }
+    .token-keyword { color: #c678dd; }
+    .token-string { color: #98c379; }
+    .token-number { color: #d19a66; }
+    .token-comment { color: #5c6370; font-style: italic; }
+    .token-function { color: #61afef; }
+    .token-type { color: #e5c07b; }
+    .token-operator { color: #56b6c2; }
+
+    /* Callouts */
+    .callout {
+      padding: 16px 20px;
+      border-radius: 8px;
+      border-left: 3px solid var(--accent);
+      background: var(--accent-dim);
+      margin: 20px 0;
+    }
+    .callout.info {
+      border-left-color: var(--info);
+      background: rgba(59,130,246,0.08);
+    }
+    .callout.success {
+      border-left-color: var(--success);
+      background: rgba(34,197,94,0.08);
+    }
+    .callout.error {
+      border-left-color: var(--error);
+      background: rgba(239,68,68,0.08);
+    }
+    .callout p { margin: 0; color: var(--text-secondary); }
+    .callout strong { color: var(--text); }
+
+    /* Tables */
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin: 20px 0;
+      font-size: 0.88rem;
+    }
+    th, td {
+      padding: 10px 14px;
+      text-align: left;
+      border-bottom: 1px solid var(--border);
+    }
+    th {
+      font-weight: 600;
+      color: var(--text);
+      background: var(--surface);
+    }
+    td { color: var(--text-secondary); }
+    tr:hover td { background: rgba(255,255,255,0.02); }
+
+    /* Divider */
+    .divider {
+      height: 1px;
+      background: linear-gradient(90deg, transparent, var(--border), transparent);
+      margin: 60px 0;
+      border: none;
+    }
+
+    /* Scroll Reveal */
+    .reveal {
+      opacity: 0;
+      transform: translateY(24px);
+      transition: opacity 0.6s ease, transform 0.6s ease;
+    }
+    .reveal.visible {
+      opacity: 1;
+      transform: translateY(0);
+    }
+
+    /* Quiz */
+    .quiz {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 24px;
+      margin: 24px 0;
+    }
+    .quiz-header {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 16px;
+    }
+    .quiz-num {
+      width: 32px;
+      height: 32px;
+      border-radius: 50%;
+      background: var(--accent-dim);
+      color: var(--accent);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: 700;
+      font-size: 0.85rem;
+      flex-shrink: 0;
+    }
+    .quiz h3 { margin: 0; font-size: 1rem; }
+    .quiz-options {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+    .quiz-option {
+      padding: 12px 16px;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      cursor: pointer;
+      transition: all 0.2s;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      font-size: 0.9rem;
+      color: var(--text-secondary);
+    }
+    .quiz-option:hover { border-color: var(--border-light); }
+    .quiz-option.selected { border-color: var(--accent); background: var(--accent-dim); color: var(--text); }
+    .quiz-option.correct { border-color: var(--success); background: rgba(34,197,94,0.1); }
+    .quiz-option.wrong { border-color: var(--error); background: rgba(239,68,68,0.1); }
+    .quiz-option .radio {
+      width: 18px;
+      height: 18px;
+      border: 2px solid var(--border-light);
+      border-radius: 50%;
+      flex-shrink: 0;
+      transition: all 0.2s;
+    }
+    .quiz-option.selected .radio { border-color: var(--accent); }
+    .quiz-option.correct .radio { border-color: var(--success); background: var(--success); }
+    .quiz-option.wrong .radio { border-color: var(--error); background: var(--error); }
+    .quiz-feedback {
+      display: none;
+      margin-top: 12px;
+      padding: 12px 16px;
+      border-radius: 8px;
+      font-size: 0.9rem;
+      line-height: 1.5;
+    }
+    .quiz-feedback.show { display: block; }
+    .quiz-feedback.correct { background: rgba(34,197,94,0.1); color: #86efac; border: 1px solid rgba(34,197,94,0.3); }
+    .quiz-feedback.wrong { background: rgba(239,68,68,0.1); color: #fca5a5; border: 1px solid rgba(239,68,68,0.3); }
+    .quiz-retry {
+      margin-top: 12px;
+      padding: 8px 16px;
+      background: var(--surface-raised);
+      border: 1px solid var(--border);
+      color: var(--text-secondary);
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 0.85rem;
+      display: none;
+    }
+    .quiz-retry.show { display: inline-block; }
+    .quiz-retry:hover { border-color: var(--accent); color: var(--accent); }
+
+    /* Capstone */
+    .capstone {
+      background: linear-gradient(135deg, var(--surface) 0%, var(--surface-raised) 100%);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 40px;
+      margin: 40px 0;
+    }
+    .capstone h2 { margin-top: 0; }
+    .capstone-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+      gap: 16px;
+      margin-top: 24px;
+    }
+    .capstone-item {
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 16px;
+    }
+    .capstone-item h4 {
+      color: var(--accent);
+      margin-top: 0;
+      font-size: 0.85rem;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+    .capstone-item p { font-size: 0.85rem; margin: 0; }
+
+    /* Footer */
+    footer {
+      text-align: center;
+      padding: 40px 24px;
+      border-top: 1px solid var(--border);
+      color: var(--text-muted);
+      font-size: 0.85rem;
+    }
+    footer code {
+      background: none;
+      color: var(--text-muted);
+    }
+
+    /* Media assets */
+    .alabs-media {
+      margin: 24px 0;
+      border-radius: 12px;
+      overflow: hidden;
+      border: 1px solid var(--border);
+      background: var(--surface);
+    }
+    .mermaid {
+      padding: 24px;
+      display: flex;
+      justify-content: center;
+      min-height: 120px;
+    }
+    .mermaid svg {
+      max-width: 100%;
+      height: auto;
+    }
+    .asciinema-wrapper {
+      padding: 0;
+      background: var(--code-bg);
+    }
+    .asciinema-wrapper .asciinema-player {
+      width: 100%;
+    }
+
+    /* Walkthrough (Code-Hike-style) */
+    .walkthrough-container {
+      margin: 24px 0;
+    }
+    .walkthrough-controls {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      margin-bottom: 16px;
+      padding: 12px 16px;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+    }
+    .walkthrough-controls button {
+      background: var(--accent-dim);
+      color: var(--accent);
+      border: 1px solid var(--accent);
+      padding: 8px 16px;
+      border-radius: 6px;
+      cursor: pointer;
+      font-weight: 600;
+      font-size: 0.85rem;
+    }
+    .walkthrough-controls button:hover {
+      background: var(--accent);
+      color: var(--bg);
+    }
+    .walkthrough-controls button:disabled {
+      opacity: 0.4;
+      cursor: not-allowed;
+    }
+    .walkthrough-counter {
+      color: var(--text-muted);
+      font-size: 0.85rem;
+      font-variant-numeric: tabular-nums;
+    }
+    .walkthrough-step {
+      display: none;
+      padding: 24px;
+    }
+    .walkthrough-step.active {
+      display: block;
+    }
+    .walkthrough-header {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 16px;
+    }
+    .walkthrough-step-num {
+      font-size: 0.7rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: var(--accent);
+      border: 1px solid var(--accent);
+      padding: 3px 10px;
+      border-radius: 100px;
+    }
+    .walkthrough-header h4 {
+      margin: 0;
+      font-size: 1.1rem;
+      color: var(--text);
+    }
+    .walkthrough-note {
+      background: var(--accent-dim);
+      border-left: 3px solid var(--accent);
+      padding: 16px 20px;
+      border-radius: 0 8px 8px 0;
+      margin-bottom: 20px;
+    }
+    .walkthrough-note p {
+      margin: 0;
+      color: var(--text-secondary);
+    }
+    .walkthrough-code pre {
+      counter-reset: none;
+      padding: 0;
+      background: transparent;
+    }
+    .walkthrough-line {
+      display: flex;
+      padding: 2px 16px;
+      transition: background 0.2s;
+    }
+    .walkthrough-line.dim {
+      opacity: 0.35;
+    }
+    .walkthrough-line.highlight {
+      background: rgba(236, 72, 153, 0.12);
+      border-left: 3px solid var(--accent);
+      margin-left: -3px;
+    }
+    .walkthrough-line .line-no {
+      color: var(--text-muted);
+      font-size: 0.75rem;
+      width: 40px;
+      flex-shrink: 0;
+      text-align: right;
+      padding-right: 16px;
+      user-select: none;
+    }
+    .walkthrough-line .line-code {
+      white-space: pre;
+    }
+    .walkthrough-line.ellipsis {
+      opacity: 0.5;
+      padding: 4px 16px;
+    }
+    .walkthrough-line.ellipsis .line-code {
+      color: var(--text-muted);
+    }
+
+    /* Module-specific styles injection point */
+    
+.hero { position: relative; overflow: hidden; }
+#mcpNetworkCanvas { position: absolute; top: 0; left: 0; width: 100%; height: 100%; z-index: -1; opacity: 0.35; pointer-events: none; }
+.quiz-option code { background: rgba(236,72,153,0.12); color: #f472b6; }
+
+  </style>
+
+  <script type="module">
+    import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.esm.min.mjs';
+    mermaid.initialize({ startOnLoad: true, theme: 'dark', themeVariables: { primaryColor: '#ec4899', primaryTextColor: '#e5e5e5', primaryBorderColor: '#ec4899', lineColor: '#a1a1aa', secondaryColor: '#151517', tertiaryColor: '#0b0b0c', fontFamily: 'Inter, system-ui, sans-serif' }});
+  </script>
+
+  <link rel="stylesheet" type="text/css" href="https://cdn.jsdelivr.net/npm/asciinema-player@3/dist/bundle/asciinema-player.css" />
+  <script src="https://cdn.jsdelivr.net/npm/asciinema-player@3/dist/bundle/asciinema-player.min.js"></script>
+</head>
+<body>
+  <div id="progress-container"><div id="progress-bar"></div></div>
+
+  <nav>
+    <div class="nav-inner">
+      <div class="nav-logo">A://<span>Labs</span></div>
+      <ul class="nav-links" id="navLinks">
+        <li><a href="#overview" data-section="overview">Overview</a></li>
+        <li><a href="#client" data-section="client">Client</a></li>
+        <li><a href="#server" data-section="server">Server</a></li>
+        <li><a href="#security" data-section="security">Security</a></li>
+        <li><a href="#quizzes" data-section="quizzes">Quizzes</a></li>
+        <li><a href="#capstone" data-section="capstone">Capstone</a></li>
+      </ul>
+      <span class="nav-tier">AGENTS</span>
+      <button class="nav-toggle" onclick="document.getElementById('navLinks').classList.toggle('open')">☰</button>
+    </div>
+  </nav>
+
+  
+<section id="overview" class="hero reveal">
+  <canvas id="mcpNetworkCanvas"></canvas>
+  <span class="hero-badge">AGENTS Tier</span>
+  <h1>Module 5: <em>Model Context Protocol</em></h1>
+  <p>Learn how Allternit attaches external MCP servers to the Tool Belt, exposes its own registry as an MCP server, and secures remote connections with OAuth and tunnel auth.</p>
+  <div class="hero-meta">
+    <span><strong>5 lessons</strong> · ~45 minutes</span>
+    <span>Source: <code>cmd/gizzi-code/src/runtime/tools/mcp</code></span>
+  </div>
+</section>
+
+<section id="client" class="reveal">
+  <h2>Allternit as an MCP client</h2>
+  <p>The Model Context Protocol (MCP) is an open standard for connecting agents to external data sources and tools. Allternit can act as an MCP client through the SDK's <code>NativeToolBelt.attachMcpServer()</code>. The method discovers an MCP server's tools and registers each one as a namespaced tool in the active <code>ToolRegistry</code>.</p>
+  <p>Inside gizzi-code, the canonical implementation lives in <code>cmd/gizzi-code/src/runtime/tools/mcp/index.ts</code>. It loads configured servers, connects via HTTP/SSE or stdio, lists tools, and converts each MCP tool definition into an AI SDK <code>dynamicTool</code>. The result is that a tool like <code>read</code> on the <code>docs</code> server becomes <code>docs.read</code> in the agent's tool registry.</p>
+
+  <div class="code-block">
+    <div class="code-header">
+      <span class="code-lang">typescript</span>
+      <button class="code-copy">Copy</button>
+    </div>
+    <pre><code>import { ToolRegistry } from '@allternit/sdk/ai-runtime/tools';
+import { NativeToolBelt } from '@allternit/sdk/ai-runtime/tools/search';
+
+const registry = new ToolRegistry();
+const belt = new NativeToolBelt(registry);
+
+const names = await belt.attachMcpServer({
+  serverId: 'docs',
+  listTools: async () => [
+    {
+      name: 'read',
+      description: 'Read a document',
+      inputSchema: {
+        type: 'object',
+        properties: { id: { type: 'string' } },
+        required: ['id'],
+      },
+    },
+  ],
+  callTool: async (name, args) => {
+    return { content: `Read ${name} with ${JSON.stringify(args)}` };
+  },
+});
+
+console.log(names); // => ['docs.read']
+const tool = registry.getTool('docs.read');
+console.log(tool?.input_schema.additionalProperties); // => false</code></pre>
+  </div>
+
+  <ul>
+    <li><strong>Namespace isolation.</strong> Every tool is prefixed with its server id to avoid collisions.</li>
+    <li><strong>Strict schemas.</strong> Attached tools set <code>additionalProperties: false</code> so the model cannot invent parameters.</li>
+    <li><strong>Execution proxy.</strong> The registry forwards calls to the server's <code>callTool</code> method.</li>
+  </ul>
+</section>
+
+<section id="server" class="reveal">
+  <h2>Allternit as an MCP server</h2>
+  <p>The platform can also expose its own tool registry as an MCP server. The API surface at <code>cmd/allternit-api</code> mounts an MCP endpoint at <code>/mcp/server</code> that speaks JSON-RPC 2.0 and supports <code>initialize</code>, <code>ping</code>, <code>tools/list</code>, and <code>tools/call</code>.</p>
+  <p>gizzi-code ships a bundled MCP catalog in <code>cmd/gizzi-code/src/runtime/tools/mcp/bundled.ts</code>. Bundled servers such as <code>sequential-thinking</code>, <code>context7</code>, and <code>superpowers</code> are merged with user-defined config at startup, and user config overrides any bundled entry with the same key. The routes in <code>cmd/gizzi-code/src/runtime/server/routes/mcp.ts</code> expose status, list, connect, disconnect, add, remove, and OAuth helpers for managing servers.</p>
+
+  <div class="callout info">
+    <p><strong>Both directions, one definition:</strong> A capability is documented once as an MCP tool and consumed either by Allternit agents or by external MCP clients.</p>
+  </div>
+
+  <h3>MCP client/server sequence</h3>
+  <p>The diagram below shows the full attach-and-call flow between an Allternit agent, the NativeToolBelt, an MCP client, an MCP server, and the ToolRegistry.</p>
+
+  <pre class="mermaid alabs-media" data-media-id="agents-api-m5-mcp-sequence">sequenceDiagram
+    participant Agent as Allternit Agent
+    participant Belt as NativeToolBelt
+    participant Client as MCP Client
+    participant Server as MCP Server
+    participant Registry as ToolRegistry
+
+    Agent-&gt;&gt;Belt: attachMcpServer({ serverId, listTools, callTool })
+    Belt-&gt;&gt;Client: Connect transport
+    Client-&gt;&gt;Server: initialize
+    Server--&gt;&gt;Client: capabilities
+    Client-&gt;&gt;Server: tools/list
+    Server--&gt;&gt;Client: tool definitions
+    Belt-&gt;&gt;Registry: register('docs.read', strict schema)
+    Agent-&gt;&gt;Registry: invoke('docs.read', args)
+    Registry-&gt;&gt;Client: callTool(name, args)
+    Client-&gt;&gt;Server: tools/call
+    Server--&gt;&gt;Client: result
+    Client--&gt;&gt;Registry: result
+    Registry--&gt;&gt;Agent: formatted result</pre>
+</section>
+
+<section id="security" class="reveal">
+  <h2>Tunnel security and OAuth</h2>
+  <p>Remote MCP servers can be fronted by an MCP tunnel with optional mTLS and OAuth checks. The policy is stored in <code>mcp_tunnel_auth</code> and is fail-open when no row exists, fail-closed once a row exists. Headers consumed by the Rust route include <code>x-allternit-tunnel-id</code>, <code>x-allternit-client-cert-thumbprint</code>, <code>x-allternit-oauth-issuer</code>, and <code>x-allternit-oauth-audience</code>.</p>
+  <p>OAuth is enabled by default for remote servers unless explicitly disabled with <code>oauth: false</code>. The flow uses PKCE or dynamic registration. If a server requires authentication, gizzi-code surfaces a toast instructing the user to run <code>gizzi mcp auth &lt;name&gt;</code>, opens the browser, waits for the callback, and finishes the token exchange.</p>
+
+  <table>
+    <thead>
+      <tr><th>Transport</th><th>Use case</th><th>Config</th></tr>
+    </thead>
+    <tbody>
+      <tr><td><code>remote</code></td><td>External HTTP/SSE server</td><td><code>url</code>, optional headers, OAuth</td></tr>
+      <tr><td><code>local</code></td><td>Local stdio command</td><td><code>command</code>, args, environment</td></tr>
+      <tr><td><code>bundled</code></td><td>Shipped with gizzi-code</td><td>merged from bundled catalog</td></tr>
+    </tbody>
+  </table>
+
+  <h3>Demo: connecting and calling an MCP server</h3>
+  <p>The terminal demo shows listing configured servers, inspecting tools, and calling a tool through the MCP transport.</p>
+
+  <div class="asciinema-wrapper alabs-media" data-media-id="agents-api-m5-mcp-demo">
+  <asciinema-player src="data:application/json;base64,eyJ2ZXJzaW9uIjogMiwgIndpZHRoIjogODAsICJoZWlnaHQiOiAxNiwgInRpbWVzdGFtcCI6IDE3MDAwMDAwMDAsICJlbnYiOiB7IlNIRUxMIjogIi9iaW4vYmFzaCIsICJURVJNIjogInh0ZXJtLTI1NmNvbG9yIn19ClswLjAsICJvIiwgIlx1MDAxYlsxOzMybSRcdTAwMWJbMG0gZ2l6emkgbWNwIGxpc3RcclxuIl0KWzAuOCwgIm8iLCAiTkFNRSAgICAgICAgICAgICAgICAgU1RBVFVTICAgICAgVFlQRSAgICAgVE9PTFNcclxuIl0KWzEuMCwgIm8iLCAic2VxdWVudGlhbC10aGlua2luZyAgY29ubmVjdGVkICAgYnVuZGxlZCAgMVxyXG4iXQpbMS4yLCAibyIsICJjb250ZXh0NyAgICAgICAgICAgICBjb25uZWN0ZWQgICBucG0gICAgICAyXHJcbiJdClsxLjQsICJvIiwgImFsbHRlcm5pdC10b29scyAgICAgIGNvbm5lY3RlZCAgIHJlbW90ZSAgIDhcclxuIl0KWzIuMCwgIm8iLCAiXHUwMDFiWzE7MzJtJFx1MDAxYlswbSBnaXp6aSBtY3AgdG9vbHMgYWxsdGVybml0LXRvb2xzXHJcbiJdClsyLjgsICJvIiwgIlx1MDAxYls5MG3ihpJcdTAwMWJbMG0gYWxsdGVybml0LXRvb2xzLmZpbGUucmVhZFxyXG4iXQpbMy4wLCAibyIsICJcdTAwMWJbOTBt4oaSXHUwMDFiWzBtIGFsbHRlcm5pdC10b29scy5maWxlLndyaXRlXHJcbiJdClszLjIsICJvIiwgIlx1MDAxYls5MG3ihpJcdTAwMWJbMG0gYWxsdGVybml0LXRvb2xzLmJhc2guZXhlY1xyXG4iXQpbNC4wLCAibyIsICJcdTAwMWJbMTszMm0kXHUwMDFiWzBtIGdpenppIG1jcCBjYWxsIGFsbHRlcm5pdC10b29scyBmaWxlLnJlYWQgJ3tcInBhdGhcIjpcIlJFQURNRS5tZFwifSdcclxuIl0KWzUuMCwgIm8iLCAiXHUwMDFiWzkwbeKGklx1MDAxYlswbSBDYWxsaW5nIHRvb2wgdmlhIE1DUCB0cmFuc3BvcnRcclxuIl0KWzYuMCwgIm8iLCAiXHUwMDFiWzE7MzJt4pyTXHUwMDFiWzBtIFJlYWQgNDIgbGluZXMgZnJvbSBSRUFETUUubWRcclxuIl0=" theme="monokai" speed="1.2" cols="80" rows="24"></asciinema-player>
+</div>
+
+  <h3>Walkthrough: inside the MCP implementation</h3>
+  <p>The walkthrough below highlights the conversion of an MCP tool definition, the creation of remote transports, and the construction of a qualified tool catalog.</p>
+
+  <div class="walkthrough-container" data-walkthrough-container="agents-api-m5-mcp-server-walkthrough">
+  <div class="walkthrough-controls" data-walkthrough-controls="agents-api-m5-mcp-server-walkthrough">
+  <button class="walkthrough-prev" onclick="Walkthrough.step('agents-api-m5-mcp-server-walkthrough', -1)">← Previous</button>
+  <span class="walkthrough-counter"><span class="current">1</span> / 3</span>
+  <button class="walkthrough-next" onclick="Walkthrough.step('agents-api-m5-mcp-server-walkthrough', 1)">Next →</button>
+</div>
+  <div class="walkthrough-steps">
+    <div class="walkthrough-step alabs-media" id="agents-api-m5-mcp-server-walkthrough-step-0" data-walkthrough="agents-api-m5-mcp-server-walkthrough" data-step="0">
+  <div class="walkthrough-header">
+    <span class="walkthrough-step-num">Step 1</span>
+    <h4>Tool conversion</h4>
+  </div>
+  <div class="walkthrough-note">
+    <p>convertMcpTool takes an MCP tool definition and wraps it as an AI SDK dynamicTool. The input schema is forced to type object with additionalProperties: false so the model cannot pass extra keys.</p>
+  </div>
+  <div class="code-block walkthrough-code">
+    <div class="code-header">
+      <span class="code-lang">typescript</span>
+      <span class="code-path">cmd/gizzi-code/src/runtime/tools/mcp/index.ts</span>
+    </div>
+    <pre><div class="walkthrough-line dim" data-line="106">
+        <span class="line-no"> 106</span>
+        <span class="line-code">&nbsp;</span>
+      </div>
+<div class="walkthrough-line dim" data-line="107">
+        <span class="line-no"> 107</span>
+        <span class="line-code">  <span class="token-comment">// Convert MCP tool definition to AI SDK Tool <span class=<span class="token-string">"token-keyword"</span>>type</span></span></span>
+      </div>
+<div class="walkthrough-line highlight" data-line="108">
+        <span class="line-no"> 108</span>
+        <span class="line-code">  <span class=<span class="token-string">"token-keyword"</span>>async</span> <span class=<span class="token-string">"token-keyword"</span>>function</span> convertMcpTool(mcpTool: MCPToolDef, client: MCPClient, timeout?: number): Promise&lt;Tool&gt; {</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="109">
+        <span class="line-no"> 109</span>
+        <span class="line-code">    <span class=<span class="token-string">"token-keyword"</span>>const</span> inputSchema = mcpTool.inputSchema</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="110">
+        <span class="line-no"> 110</span>
+        <span class="line-code">&nbsp;</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="111">
+        <span class="line-no"> 111</span>
+        <span class="line-code">    <span class="token-comment">// Spread first, then override <span class=<span class="token-string">"token-keyword"</span>>type</span> to ensure it's always <span class="token-string">"object"</span></span></span>
+      </div>
+<div class="walkthrough-line highlight" data-line="112">
+        <span class="line-no"> 112</span>
+        <span class="line-code">    <span class=<span class="token-string">"token-keyword"</span>>const</span> schema: JSONSchema7 = {</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="113">
+        <span class="line-no"> 113</span>
+        <span class="line-code">      ...(inputSchema as JSONSchema7),</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="114">
+        <span class="line-no"> 114</span>
+        <span class="line-code">      <span class=<span class="token-string">"token-keyword"</span>>type</span>: <span class="token-string">"object"</span>,</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="115">
+        <span class="line-no"> 115</span>
+        <span class="line-code">      properties: (inputSchema.properties ?? {}) as JSONSchema7[<span class="token-string">"properties"</span>],</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="116">
+        <span class="line-no"> 116</span>
+        <span class="line-code">      additionalProperties: <span class=<span class="token-string">"token-keyword"</span>>false</span>,</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="117">
+        <span class="line-no"> 117</span>
+        <span class="line-code">    }</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="118">
+        <span class="line-no"> 118</span>
+        <span class="line-code">&nbsp;</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="119">
+        <span class="line-no"> 119</span>
+        <span class="line-code">    <span class=<span class="token-string">"token-keyword"</span>>return</span> dynamicTool({</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="120">
+        <span class="line-no"> 120</span>
+        <span class="line-code">      description: mcpTool.description ?? <span class="token-string">""</span>,</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="121">
+        <span class="line-no"> 121</span>
+        <span class="line-code">      inputSchema: jsonSchema(schema),</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="122">
+        <span class="line-no"> 122</span>
+        <span class="line-code">      execute: <span class=<span class="token-string">"token-keyword"</span>>async</span> (args: unknown) =&gt; {</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="123">
+        <span class="line-no"> 123</span>
+        <span class="line-code">        <span class=<span class="token-string">"token-keyword"</span>>return</span> client.callTool(</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="124">
+        <span class="line-no"> 124</span>
+        <span class="line-code">          {</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="125">
+        <span class="line-no"> 125</span>
+        <span class="line-code">            name: mcpTool.name,</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="126">
+        <span class="line-no"> 126</span>
+        <span class="line-code">            arguments: (args || {}) as Record&lt;string, unknown&gt;,</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="127">
+        <span class="line-no"> 127</span>
+        <span class="line-code">          },</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="128">
+        <span class="line-no"> 128</span>
+        <span class="line-code">          CallToolResultSchema,</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="129">
+        <span class="line-no"> 129</span>
+        <span class="line-code">          {</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="130">
+        <span class="line-no"> 130</span>
+        <span class="line-code">            resetTimeoutOnProgress: <span class=<span class="token-string">"token-keyword"</span>>true</span>,</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="131">
+        <span class="line-no"> 131</span>
+        <span class="line-code">            timeout,</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="132">
+        <span class="line-no"> 132</span>
+        <span class="line-code">          },</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="133">
+        <span class="line-no"> 133</span>
+        <span class="line-code">        )</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="134">
+        <span class="line-no"> 134</span>
+        <span class="line-code">      },</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="135">
+        <span class="line-no"> 135</span>
+        <span class="line-code">    })</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="136">
+        <span class="line-no"> 136</span>
+        <span class="line-code">  }</span>
+      </div>
+<div class="walkthrough-line dim" data-line="137">
+        <span class="line-no"> 137</span>
+        <span class="line-code">&nbsp;</span>
+      </div>
+<div class="walkthrough-line dim" data-line="138">
+        <span class="line-no"> 138</span>
+        <span class="line-code">  <span class="token-comment">// Store transports <span class=<span class="token-string">"token-keyword"</span>>for</span> OAuth servers to allow finishing auth</span></span>
+      </div></pre>
+  </div>
+</div>
+<div class="walkthrough-step alabs-media" id="agents-api-m5-mcp-server-walkthrough-step-1" data-walkthrough="agents-api-m5-mcp-server-walkthrough" data-step="1">
+  <div class="walkthrough-header">
+    <span class="walkthrough-step-num">Step 2</span>
+    <h4>Transport creation</h4>
+  </div>
+  <div class="walkthrough-note">
+    <p>Remote MCP servers try StreamableHTTP first, then SSE. OAuth is enabled by default unless explicitly disabled. The first successful transport becomes the active connection.</p>
+  </div>
+  <div class="code-block walkthrough-code">
+    <div class="code-header">
+      <span class="code-lang">typescript</span>
+      <span class="code-path">cmd/gizzi-code/src/runtime/tools/mcp/index.ts</span>
+    </div>
+    <pre><div class="walkthrough-line dim" data-line="321">
+        <span class="line-no"> 321</span>
+        <span class="line-code">    <span class=<span class="token-string">"token-keyword"</span>>let</span> status: Status | <span class=<span class="token-string">"token-keyword"</span>>undefined</span> = <span class=<span class="token-string">"token-keyword"</span>>undefined</span></span>
+      </div>
+<div class="walkthrough-line dim" data-line="322">
+        <span class="line-no"> 322</span>
+        <span class="line-code">&nbsp;</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="323">
+        <span class="line-no"> 323</span>
+        <span class="line-code">    <span class=<span class="token-string">"token-keyword"</span>>if</span> (mcp.<span class=<span class="token-string">"token-keyword"</span>>type</span> === <span class="token-string">"remote"</span>) {</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="324">
+        <span class="line-no"> 324</span>
+        <span class="line-code">      <span class="token-comment">// OAuth is enabled by default <span class=<span class="token-string">"token-keyword"</span>>for</span> remote servers unless explicitly disabled with oauth: <span class=<span class="token-string">"token-keyword"</span>>false</span></span></span>
+      </div>
+<div class="walkthrough-line highlight" data-line="325">
+        <span class="line-no"> 325</span>
+        <span class="line-code">      <span class=<span class="token-string">"token-keyword"</span>>const</span> oauthDisabled = mcp.oauth === <span class=<span class="token-string">"token-keyword"</span>>false</span></span>
+      </div>
+<div class="walkthrough-line highlight" data-line="326">
+        <span class="line-no"> 326</span>
+        <span class="line-code">      <span class=<span class="token-string">"token-keyword"</span>>const</span> oauthConfig = typeof mcp.oauth === <span class="token-string">"object"</span> ? mcp.oauth : <span class=<span class="token-string">"token-keyword"</span>>undefined</span></span>
+      </div>
+<div class="walkthrough-line highlight" data-line="327">
+        <span class="line-no"> 327</span>
+        <span class="line-code">      <span class=<span class="token-string">"token-keyword"</span>>let</span> authProvider: McpOAuthProvider | <span class=<span class="token-string">"token-keyword"</span>>undefined</span></span>
+      </div>
+<div class="walkthrough-line highlight" data-line="328">
+        <span class="line-no"> 328</span>
+        <span class="line-code">&nbsp;</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="329">
+        <span class="line-no"> 329</span>
+        <span class="line-code">      <span class=<span class="token-string">"token-keyword"</span>>if</span> (!oauthDisabled) {</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="330">
+        <span class="line-no"> 330</span>
+        <span class="line-code">        authProvider = <span class=<span class="token-string">"token-keyword"</span>>new</span> McpOAuthProvider(</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="331">
+        <span class="line-no"> 331</span>
+        <span class="line-code">          key,</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="332">
+        <span class="line-no"> 332</span>
+        <span class="line-code">          mcp.url,</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="333">
+        <span class="line-no"> 333</span>
+        <span class="line-code">          {</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="334">
+        <span class="line-no"> 334</span>
+        <span class="line-code">            clientId: oauthConfig?.clientId,</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="335">
+        <span class="line-no"> 335</span>
+        <span class="line-code">            clientSecret: oauthConfig?.clientSecret,</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="336">
+        <span class="line-no"> 336</span>
+        <span class="line-code">            scope: oauthConfig?.scope,</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="337">
+        <span class="line-no"> 337</span>
+        <span class="line-code">          },</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="338">
+        <span class="line-no"> 338</span>
+        <span class="line-code">          {</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="339">
+        <span class="line-no"> 339</span>
+        <span class="line-code">            onRedirect: <span class=<span class="token-string">"token-keyword"</span>>async</span> (url) =&gt; {</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="340">
+        <span class="line-no"> 340</span>
+        <span class="line-code">              log.info(<span class="token-string">"oauth redirect requested"</span>, { key, url: url.toString() })</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="341">
+        <span class="line-no"> 341</span>
+        <span class="line-code">              <span class="token-comment">// Store the URL - actual browser opening is handled by startAuth</span></span>
+      </div>
+<div class="walkthrough-line highlight" data-line="342">
+        <span class="line-no"> 342</span>
+        <span class="line-code">            },</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="343">
+        <span class="line-no"> 343</span>
+        <span class="line-code">          },</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="344">
+        <span class="line-no"> 344</span>
+        <span class="line-code">        )</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="345">
+        <span class="line-no"> 345</span>
+        <span class="line-code">      }</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="346">
+        <span class="line-no"> 346</span>
+        <span class="line-code">&nbsp;</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="347">
+        <span class="line-no"> 347</span>
+        <span class="line-code">      <span class=<span class="token-string">"token-keyword"</span>>const</span> transports: Array&lt;{ name: string; transport: TransportWithAuth }&gt; = [</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="348">
+        <span class="line-no"> 348</span>
+        <span class="line-code">        {</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="349">
+        <span class="line-no"> 349</span>
+        <span class="line-code">          name: <span class="token-string">"StreamableHTTP"</span>,</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="350">
+        <span class="line-no"> 350</span>
+        <span class="line-code">          transport: <span class=<span class="token-string">"token-keyword"</span>>new</span> StreamableHTTPClientTransport(<span class=<span class="token-string">"token-keyword"</span>>new</span> URL(mcp.url), {</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="351">
+        <span class="line-no"> 351</span>
+        <span class="line-code">            authProvider,</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="352">
+        <span class="line-no"> 352</span>
+        <span class="line-code">            requestInit: mcp.headers ? { headers: mcp.headers } : <span class=<span class="token-string">"token-keyword"</span>>undefined</span>,</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="353">
+        <span class="line-no"> 353</span>
+        <span class="line-code">          }),</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="354">
+        <span class="line-no"> 354</span>
+        <span class="line-code">        },</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="355">
+        <span class="line-no"> 355</span>
+        <span class="line-code">        {</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="356">
+        <span class="line-no"> 356</span>
+        <span class="line-code">          name: <span class="token-string">"SSE"</span>,</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="357">
+        <span class="line-no"> 357</span>
+        <span class="line-code">          transport: <span class=<span class="token-string">"token-keyword"</span>>new</span> SSEClientTransport(<span class=<span class="token-string">"token-keyword"</span>>new</span> URL(mcp.url), {</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="358">
+        <span class="line-no"> 358</span>
+        <span class="line-code">            authProvider,</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="359">
+        <span class="line-no"> 359</span>
+        <span class="line-code">            requestInit: mcp.headers ? { headers: mcp.headers } : <span class=<span class="token-string">"token-keyword"</span>>undefined</span>,</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="360">
+        <span class="line-no"> 360</span>
+        <span class="line-code">          }),</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="361">
+        <span class="line-no"> 361</span>
+        <span class="line-code">        },</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="362">
+        <span class="line-no"> 362</span>
+        <span class="line-code">      ]</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="363">
+        <span class="line-no"> 363</span>
+        <span class="line-code">&nbsp;</span>
+      </div>
+<div class="walkthrough-line dim" data-line="364">
+        <span class="line-no"> 364</span>
+        <span class="line-code">      <span class=<span class="token-string">"token-keyword"</span>>let</span> lastError: Error | <span class=<span class="token-string">"token-keyword"</span>>undefined</span></span>
+      </div>
+<div class="walkthrough-line dim" data-line="365">
+        <span class="line-no"> 365</span>
+        <span class="line-code">      <span class=<span class="token-string">"token-keyword"</span>>const</span> connectTimeout = mcp.timeout ?? DEFAULT_TIMEOUT</span>
+      </div></pre>
+  </div>
+</div>
+<div class="walkthrough-step alabs-media" id="agents-api-m5-mcp-server-walkthrough-step-2" data-walkthrough="agents-api-m5-mcp-server-walkthrough" data-step="2">
+  <div class="walkthrough-header">
+    <span class="walkthrough-step-num">Step 3</span>
+    <h4>Tool catalog and collisions</h4>
+  </div>
+  <div class="walkthrough-note">
+    <p>toolCatalog lists tools from every connected MCP client, builds qualified names like allternit-tools.file.read, and resolves collisions by appending a deterministic suffix.</p>
+  </div>
+  <div class="code-block walkthrough-code">
+    <div class="code-header">
+      <span class="code-lang">typescript</span>
+      <span class="code-path">cmd/gizzi-code/src/runtime/tools/mcp/index.ts</span>
+    </div>
+    <pre><div class="walkthrough-line dim" data-line="599">
+        <span class="line-no"> 599</span>
+        <span class="line-code">  }</span>
+      </div>
+<div class="walkthrough-line dim" data-line="600">
+        <span class="line-no"> 600</span>
+        <span class="line-code">&nbsp;</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="601">
+        <span class="line-no"> 601</span>
+        <span class="line-code">  <span class=<span class="token-string">"token-keyword"</span>>export</span> <span class=<span class="token-string">"token-keyword"</span>>async</span> <span class=<span class="token-string">"token-keyword"</span>>function</span> toolCatalog() {</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="602">
+        <span class="line-no"> 602</span>
+        <span class="line-code">    <span class=<span class="token-string">"token-keyword"</span>>const</span> result: Record&lt;string, Tool&gt; = {}</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="603">
+        <span class="line-no"> 603</span>
+        <span class="line-code">    <span class=<span class="token-string">"token-keyword"</span>>const</span> descriptors: Record&lt;string, ToolDescriptor&gt; = {}</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="604">
+        <span class="line-no"> 604</span>
+        <span class="line-code">    <span class=<span class="token-string">"token-keyword"</span>>const</span> collisions: Array&lt;{ qualifiedName: string; existing: ToolDescriptor; incoming: Omit&lt;ToolDescriptor, <span class="token-string">"qualifiedName"</span> | <span class="token-string">"collision"</span>&gt; }&gt; = []</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="605">
+        <span class="line-no"> 605</span>
+        <span class="line-code">    <span class=<span class="token-string">"token-keyword"</span>>const</span> s = <span class=<span class="token-string">"token-keyword"</span>>await</span> state()</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="606">
+        <span class="line-no"> 606</span>
+        <span class="line-code">    <span class=<span class="token-string">"token-keyword"</span>>const</span> cfg = <span class=<span class="token-string">"token-keyword"</span>>await</span> Config.get()</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="607">
+        <span class="line-no"> 607</span>
+        <span class="line-code">    <span class=<span class="token-string">"token-keyword"</span>>const</span> config = withBundledMcpServers(cfg.mcp ?? {})</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="608">
+        <span class="line-no"> 608</span>
+        <span class="line-code">    <span class=<span class="token-string">"token-keyword"</span>>const</span> clientsSnapshot = <span class=<span class="token-string">"token-keyword"</span>>await</span> clients()</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="609">
+        <span class="line-no"> 609</span>
+        <span class="line-code">    <span class=<span class="token-string">"token-keyword"</span>>const</span> defaultTimeout = cfg.experimental?.mcp_timeout</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="610">
+        <span class="line-no"> 610</span>
+        <span class="line-code">&nbsp;</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="611">
+        <span class="line-no"> 611</span>
+        <span class="line-code">    <span class=<span class="token-string">"token-keyword"</span>>const</span> connectedClients = Object.entries(clientsSnapshot).filter(</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="612">
+        <span class="line-no"> 612</span>
+        <span class="line-code">      ([clientName]) =&gt; s.status[clientName]?.status === <span class="token-string">"connected"</span>,</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="613">
+        <span class="line-no"> 613</span>
+        <span class="line-code">    )</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="614">
+        <span class="line-no"> 614</span>
+        <span class="line-code">&nbsp;</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="615">
+        <span class="line-no"> 615</span>
+        <span class="line-code">    <span class=<span class="token-string">"token-keyword"</span>>const</span> toolsResults = <span class=<span class="token-string">"token-keyword"</span>>await</span> Promise.all(</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="616">
+        <span class="line-no"> 616</span>
+        <span class="line-code">      connectedClients.map(<span class=<span class="token-string">"token-keyword"</span>>async</span> ([clientName, client]) =&gt; {</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="617">
+        <span class="line-no"> 617</span>
+        <span class="line-code">        <span class=<span class="token-string">"token-keyword"</span>>const</span> toolsResult = <span class=<span class="token-string">"token-keyword"</span>>await</span> client.listTools().<span class=<span class="token-string">"token-keyword"</span>>catch</span>((e) =&gt; {</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="618">
+        <span class="line-no"> 618</span>
+        <span class="line-code">          log.error(<span class="token-string">"failed to get tools"</span>, { clientName, error: e.message })</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="619">
+        <span class="line-no"> 619</span>
+        <span class="line-code">          <span class=<span class="token-string">"token-keyword"</span>>const</span> failedStatus = {</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="620">
+        <span class="line-no"> 620</span>
+        <span class="line-code">            status: <span class="token-string">"failed"</span> as <span class=<span class="token-string">"token-keyword"</span>>const</span>,</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="621">
+        <span class="line-no"> 621</span>
+        <span class="line-code">            error: e instanceof Error ? e.message : String(e),</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="622">
+        <span class="line-no"> 622</span>
+        <span class="line-code">          }</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="623">
+        <span class="line-no"> 623</span>
+        <span class="line-code">          s.status[clientName] = failedStatus</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="624">
+        <span class="line-no"> 624</span>
+        <span class="line-code">          delete s.clients[clientName]</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="625">
+        <span class="line-no"> 625</span>
+        <span class="line-code">          <span class=<span class="token-string">"token-keyword"</span>>return</span> <span class=<span class="token-string">"token-keyword"</span>>undefined</span></span>
+      </div>
+<div class="walkthrough-line highlight" data-line="626">
+        <span class="line-no"> 626</span>
+        <span class="line-code">        })</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="627">
+        <span class="line-no"> 627</span>
+        <span class="line-code">        <span class=<span class="token-string">"token-keyword"</span>>return</span> { clientName, client, toolsResult }</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="628">
+        <span class="line-no"> 628</span>
+        <span class="line-code">      }),</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="629">
+        <span class="line-no"> 629</span>
+        <span class="line-code">    )</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="630">
+        <span class="line-no"> 630</span>
+        <span class="line-code">&nbsp;</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="631">
+        <span class="line-no"> 631</span>
+        <span class="line-code">    <span class=<span class="token-string">"token-keyword"</span>>for</span> (<span class=<span class="token-string">"token-keyword"</span>>const</span> { clientName, client, toolsResult } of toolsResults) {</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="632">
+        <span class="line-no"> 632</span>
+        <span class="line-code">      <span class=<span class="token-string">"token-keyword"</span>>if</span> (!toolsResult) continue</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="633">
+        <span class="line-no"> 633</span>
+        <span class="line-code">      <span class=<span class="token-string">"token-keyword"</span>>const</span> mcpConfig = config[clientName]</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="634">
+        <span class="line-no"> 634</span>
+        <span class="line-code">      <span class=<span class="token-string">"token-keyword"</span>>const</span> entry = isMcpConfigured(mcpConfig) ? mcpConfig : <span class=<span class="token-string">"token-keyword"</span>>undefined</span></span>
+      </div>
+<div class="walkthrough-line highlight" data-line="635">
+        <span class="line-no"> 635</span>
+        <span class="line-code">      <span class=<span class="token-string">"token-keyword"</span>>const</span> timeout = entry?.timeout ?? defaultTimeout</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="636">
+        <span class="line-no"> 636</span>
+        <span class="line-code">      <span class=<span class="token-string">"token-keyword"</span>>for</span> (<span class=<span class="token-string">"token-keyword"</span>>const</span> mcpTool of toolsResult.tools) {</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="637">
+        <span class="line-no"> 637</span>
+        <span class="line-code">        <span class=<span class="token-string">"token-keyword"</span>>const</span> identity = `${clientName}\<span class="token-number">0</span>${mcpTool.name}`</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="638">
+        <span class="line-no"> 638</span>
+        <span class="line-code">        <span class=<span class="token-string">"token-keyword"</span>>const</span> normalizedBase = qualifiedToolName(clientName, mcpTool.name)</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="639">
+        <span class="line-no"> 639</span>
+        <span class="line-code">        <span class=<span class="token-string">"token-keyword"</span>>const</span> incoming = { serverName: clientName, originalName: mcpTool.name, normalizedBase }</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="640">
+        <span class="line-no"> 640</span>
+        <span class="line-code">        <span class=<span class="token-string">"token-keyword"</span>>let</span> qualifiedName = normalizedBase</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="641">
+        <span class="line-no"> 641</span>
+        <span class="line-code">        <span class=<span class="token-string">"token-keyword"</span>>const</span> existing = descriptors[qualifiedName]</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="642">
+        <span class="line-no"> 642</span>
+        <span class="line-code">        <span class=<span class="token-string">"token-keyword"</span>>if</span> (existing) {</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="643">
+        <span class="line-no"> 643</span>
+        <span class="line-code">          collisions.push({ qualifiedName, existing, incoming })</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="644">
+        <span class="line-no"> 644</span>
+        <span class="line-code">          qualifiedName = withToolSuffix(normalizedBase, createHash(<span class="token-string">"sha256"</span>).update(identity).digest(<span class="token-string">"hex"</span>).slice(<span class="token-number">0</span>, <span class="token-number">8</span>))</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="645">
+        <span class="line-no"> 645</span>
+        <span class="line-code">          <span class=<span class="token-string">"token-keyword"</span>>let</span> counter = <span class="token-number">2</span></span>
+      </div>
+<div class="walkthrough-line highlight" data-line="646">
+        <span class="line-no"> 646</span>
+        <span class="line-code">          <span class=<span class="token-string">"token-keyword"</span>>while</span> (descriptors[qualifiedName]) qualifiedName = withToolSuffix(normalizedBase, String(counter++))</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="647">
+        <span class="line-no"> 647</span>
+        <span class="line-code">        }</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="648">
+        <span class="line-no"> 648</span>
+        <span class="line-code">        result[qualifiedName] = <span class=<span class="token-string">"token-keyword"</span>>await</span> convertMcpTool(mcpTool, client, timeout)</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="649">
+        <span class="line-no"> 649</span>
+        <span class="line-code">        descriptors[qualifiedName] = { qualifiedName, ...incoming, collision: Boolean(existing) }</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="650">
+        <span class="line-no"> 650</span>
+        <span class="line-code">      }</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="651">
+        <span class="line-no"> 651</span>
+        <span class="line-code">    }</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="652">
+        <span class="line-no"> 652</span>
+        <span class="line-code">    <span class=<span class="token-string">"token-keyword"</span>>if</span> (collisions.length) {</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="653">
+        <span class="line-no"> 653</span>
+        <span class="line-code">      RuntimeTelemetry.track(<span class="token-string">"mcp_tool_collision"</span>, {</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="654">
+        <span class="line-no"> 654</span>
+        <span class="line-code">        count: collisions.length,</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="655">
+        <span class="line-no"> 655</span>
+        <span class="line-code">        servers: connectedClients.length,</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="656">
+        <span class="line-no"> 656</span>
+        <span class="line-code">      })</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="657">
+        <span class="line-no"> 657</span>
+        <span class="line-code">    }</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="658">
+        <span class="line-no"> 658</span>
+        <span class="line-code">    <span class=<span class="token-string">"token-keyword"</span>>return</span> { tools: result, descriptors, collisions }</span>
+      </div>
+<div class="walkthrough-line highlight" data-line="659">
+        <span class="line-no"> 659</span>
+        <span class="line-code">  }</span>
+      </div>
+<div class="walkthrough-line dim" data-line="660">
+        <span class="line-no"> 660</span>
+        <span class="line-code">&nbsp;</span>
+      </div>
+<div class="walkthrough-line dim" data-line="661">
+        <span class="line-no"> 661</span>
+        <span class="line-code">  <span class=<span class="token-string">"token-keyword"</span>>export</span> <span class=<span class="token-string">"token-keyword"</span>>async</span> <span class=<span class="token-string">"token-keyword"</span>>function</span> tools() {</span>
+      </div></pre>
+  </div>
+</div>
+  </div>
+</div>
+</section>
+
+<section id="quizzes" class="reveal">
+  <h2>Check your understanding</h2>
+
+  <div class="quiz" id="quiz1">
+    <div class="quiz-header">
+      <span class="quiz-num">1</span>
+      <h3>What happens when <code>NativeToolBelt.attachMcpServer</code> discovers a tool named <code>read</code> on a server named <code>docs</code>?</h3>
+    </div>
+    <div class="quiz-options">
+      <div class="quiz-option" onclick="selectOption(this, 1, 0)">
+        <span class="radio"></span>
+        <span>It replaces any existing <code>read</code> tool in the registry</span>
+      </div>
+      <div class="quiz-option" onclick="selectOption(this, 1, 1)">
+        <span class="radio"></span>
+        <span>It registers the tool as <code>docs.read</code> with a strict closed schema</span>
+      </div>
+      <div class="quiz-option" onclick="selectOption(this, 1, 2)">
+        <span class="radio"></span>
+        <span>It sends the tool definition to a remote model provider</span>
+      </div>
+      <div class="quiz-option" onclick="selectOption(this, 1, 3)">
+        <span class="radio"></span>
+        <span>It requires the user to rewrite the tool in TypeScript</span>
+      </div>
+    </div>
+    <div class="quiz-feedback" id="feedback1"></div>
+    <button class="quiz-retry" id="retry1" onclick="window.QuizEngine.reset(1)">Retry</button>
+  </div>
+
+  <div class="quiz" id="quiz2">
+    <div class="quiz-header">
+      <span class="quiz-num">2</span>
+      <h3>Which JSON-RPC methods does the Allternit MCP server endpoint support?</h3>
+    </div>
+    <div class="quiz-options">
+      <div class="quiz-option" onclick="selectOption(this, 2, 0)">
+        <span class="radio"></span>
+        <span><code>initialize</code>, <code>ping</code>, <code>tools/list</code>, <code>tools/call</code></span>
+      </div>
+      <div class="quiz-option" onclick="selectOption(this, 2, 1)">
+        <span class="radio"></span>
+        <span><code>chat/completions</code>, <code>embeddings</code>, <code>files</code></span>
+      </div>
+      <div class="quiz-option" onclick="selectOption(this, 2, 2)">
+        <span class="radio"></span>
+        <span><code>agents/create</code>, <code>sessions/open</code>, <code>deploy</code></span>
+      </div>
+      <div class="quiz-option" onclick="selectOption(this, 2, 3)">
+        <span class="radio"></span>
+        <span><code>oauth/authorize</code>, <code>oauth/token</code>, <code>oauth/refresh</code></span>
+      </div>
+    </div>
+    <div class="quiz-feedback" id="feedback2"></div>
+    <button class="quiz-retry" id="retry2" onclick="window.QuizEngine.reset(2)">Retry</button>
+  </div>
+
+  <div class="quiz" id="quiz3">
+    <div class="quiz-header">
+      <span class="quiz-num">3</span>
+      <h3>What is the default OAuth behavior for a remote MCP server in gizzi-code?</h3>
+    </div>
+    <div class="quiz-options">
+      <div class="quiz-option" onclick="selectOption(this, 3, 0)">
+        <span class="radio"></span>
+        <span>OAuth is disabled unless the user passes <code>oauth: true</code></span>
+      </div>
+      <div class="quiz-option" onclick="selectOption(this, 3, 1)">
+        <span class="radio"></span>
+        <span>OAuth is enabled by default and can be disabled with <code>oauth: false</code></span>
+      </div>
+      <div class="quiz-option" onclick="selectOption(this, 3, 2)">
+        <span class="radio"></span>
+        <span>OAuth is ignored because MCP servers do not support authentication</span>
+      </div>
+      <div class="quiz-option" onclick="selectOption(this, 3, 3)">
+        <span class="radio"></span>
+        <span>OAuth requires a paid Allternit Cloud subscription</span>
+      </div>
+    </div>
+    <div class="quiz-feedback" id="feedback3"></div>
+    <button class="quiz-retry" id="retry3" onclick="window.QuizEngine.reset(3)">Retry</button>
+  </div>
+</section>
+
+<section id="capstone" class="reveal">
+  <div class="capstone">
+    <h2>Capstone: Add a custom MCP server</h2>
+    <p>Build and connect an MCP server that exposes a capability Allternit agents can use.</p>
+    <div class="capstone-grid">
+      <div class="capstone-item">
+        <h4>Define the server</h4>
+        <p>Create a local stdio MCP server that exposes one tool, e.g. <code>weather.get_forecast</code>, with a strict input schema.</p>
+      </div>
+      <div class="capstone-item">
+        <h4>Configure gizzi-code</h4>
+        <p>Add the server to gizzi-code config under <code>mcpServers</code> with <code>type: 'local'</code>, command, and args.</p>
+      </div>
+      <div class="capstone-item">
+        <h4>Verify attachment</h4>
+        <p>Run <code>gizzi mcp list</code> and <code>gizzi mcp tools &lt;name&gt;</code> to confirm the tool appears namespaced in the registry.</p>
+      </div>
+      <div class="capstone-item">
+        <h4>Use in an agent</h4>
+        <p>Ask an Allternit agent to invoke the tool and observe the MCP transport call the local server.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+
+  <footer>
+    <p>A://Labs — AGENTS Tier — Module 5: Model Context Protocol</p>
+    <p style="margin-top:4px;">Generated from <code>cmd/gizzi-code/src/runtime/tools/mcp</code> · Allternit Internal</p>
+  </footer>
+
+  <script>
+    // ========================
+    // Shared: Scroll Progress & Nav
+    // ========================
+    const progressBar = document.getElementById('progress-bar');
+    const navLinks = document.querySelectorAll('.nav-links a');
+    const sections = document.querySelectorAll('section[id], section[class*="reveal"]');
+
+    function updateProgress() {
+      const scrollTop = window.scrollY;
+      const docHeight = document.documentElement.scrollHeight - window.innerHeight;
+      const pct = (scrollTop / docHeight) * 100;
+      progressBar.style.width = pct + '%';
+
+      let current = '';
+      sections.forEach(sec => {
+        const top = sec.offsetTop - 100;
+        if (scrollTop >= top) {
+          current = sec.getAttribute('id') || '';
+        }
+      });
+      navLinks.forEach(link => {
+        link.classList.toggle('active', link.dataset.section === current);
+      });
+    }
+    window.addEventListener('scroll', updateProgress, { passive: true });
+    updateProgress();
+
+    // ========================
+    // Shared: Scroll Reveal
+    // ========================
+    const revealObserver = new IntersectionObserver((entries) => {
+      entries.forEach(e => { if (e.isIntersecting) e.target.classList.add('visible'); });
+    }, { threshold: 0.08 });
+    document.querySelectorAll('.reveal').forEach(el => revealObserver.observe(el));
+
+    // ========================
+    // Shared: Quiz Engine
+    // ========================
+    window.QuizEngine = {
+      answers: {},
+      feedback: {},
+
+      init(answers, feedback) {
+        this.answers = answers;
+        this.feedback = feedback;
+      },
+
+      selectOption(el, quizNum, optionIdx) {
+        const quizEl = document.getElementById('quiz' + quizNum);
+        const options = quizEl.querySelectorAll('.quiz-option');
+        const feedback = document.getElementById('feedback' + quizNum);
+        const retryBtn = document.getElementById('retry' + quizNum);
+
+        // Disable all options
+        options.forEach(opt => {
+          opt.style.pointerEvents = 'none';
+          opt.classList.remove('selected');
+        });
+        el.classList.add('selected');
+
+        const correct = this.answers[quizNum] === optionIdx;
+        if (correct) {
+          el.classList.add('correct');
+          feedback.className = 'quiz-feedback show correct';
+          feedback.textContent = this.feedback[quizNum].correct;
+        } else {
+          el.classList.add('wrong');
+          options[this.answers[quizNum]].classList.add('correct');
+          feedback.className = 'quiz-feedback show wrong';
+          feedback.textContent = this.feedback[quizNum].wrong;
+          if (retryBtn) retryBtn.classList.add('show');
+        }
+      },
+
+      reset(quizNum) {
+        const quizEl = document.getElementById('quiz' + quizNum);
+        const options = quizEl.querySelectorAll('.quiz-option');
+        const feedback = document.getElementById('feedback' + quizNum);
+        const retryBtn = document.getElementById('retry' + quizNum);
+
+        options.forEach(opt => {
+          opt.style.pointerEvents = '';
+          opt.classList.remove('selected', 'correct', 'wrong');
+        });
+        feedback.className = 'quiz-feedback';
+        feedback.textContent = '';
+        if (retryBtn) retryBtn.classList.remove('show');
+      }
+    };
+
+    // Alias for backward compatibility
+    function selectOption(el, quizNum, optionIdx) {
+      window.QuizEngine.selectOption(el, quizNum, optionIdx);
+    }
+
+    // ========================
+    // Shared: Code Copy
+    // ========================
+    document.querySelectorAll('.code-copy').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const pre = btn.closest('.code-block').querySelector('pre');
+        navigator.clipboard.writeText(pre.textContent).then(() => {
+          btn.textContent = 'Copied!';
+          setTimeout(() => btn.textContent = 'Copy', 1500);
+        });
+      });
+    });
+
+    // ========================
+    // Shared: Walkthrough Engine
+    // ========================
+    window.Walkthrough = {
+      init(id) {
+        const container = document.querySelector(`[data-walkthrough-container="${id}"]`);
+        if (!container) return;
+        const steps = container.querySelectorAll(`[data-walkthrough="${id}"]`);
+        if (steps.length === 0) return;
+        steps.forEach((step, idx) => { step.classList.toggle('active', idx === 0); });
+        this.updateControls(id, 0);
+      },
+
+      step(id, delta) {
+        const container = document.querySelector(`[data-walkthrough-container="${id}"]`);
+        if (!container) return;
+        const steps = Array.from(container.querySelectorAll(`[data-walkthrough="${id}"]`));
+        const current = steps.findIndex(s => s.classList.contains('active'));
+        const next = Math.max(0, Math.min(steps.length - 1, current + delta));
+        steps.forEach((step, idx) => { step.classList.toggle('active', idx === next); });
+        this.updateControls(id, next);
+      },
+
+      updateControls(id, activeIndex) {
+        const controls = document.querySelector(`[data-walkthrough-controls="${id}"]`);
+        if (!controls) return;
+        const steps = controls.closest('.walkthrough-container').querySelectorAll(`[data-walkthrough="${id}"]`);
+        const currentSpan = controls.querySelector('.current');
+        const prevBtn = controls.querySelector('.walkthrough-prev');
+        const nextBtn = controls.querySelector('.walkthrough-next');
+        if (currentSpan) currentSpan.textContent = activeIndex + 1;
+        if (prevBtn) prevBtn.disabled = activeIndex === 0;
+        if (nextBtn) nextBtn.disabled = activeIndex === steps.length - 1;
+      }
+    };
+
+    document.querySelectorAll('[data-walkthrough-container]').forEach(container => {
+      const id = container.getAttribute('data-walkthrough-container');
+      if (id) window.Walkthrough.init(id);
+    });
+
+    // ========================
+    // Module-specific JS injection point
+    // ========================
+    // Initialize quiz engine
+    window.QuizEngine.init({"1":1,"2":0,"3":1}, {"1":{"correct":"Correct. The tool is registered under the server namespace as docs.read, and the schema is closed with additionalProperties: false.","wrong":"Not quite. NativeToolBelt namespaces tools as <serverId>.<toolName> and enforces strict schema validation."},"2":{"correct":"Correct. The Allternit MCP server endpoint supports initialize, ping, tools/list, and tools/call.","wrong":"Not quite. The MCP server exposes tool lifecycle methods, not chat completions, agent CRUD, or OAuth endpoints."},"3":{"correct":"Correct. Remote servers default to OAuth enabled; set oauth: false to disable it.","wrong":"Not quite. The default for remote MCP servers in gizzi-code is OAuth enabled unless explicitly disabled."}});
+
+    
+const canvas = document.getElementById('mcpNetworkCanvas');
+if (canvas) {
+  const ctx = canvas.getContext('2d');
+  function resize() {
+    canvas.width = canvas.offsetWidth;
+    canvas.height = canvas.offsetHeight;
+  }
+  window.addEventListener('resize', resize);
+  resize();
+  const nodes = Array.from({ length: 24 }, () => ({
+    x: Math.random() * canvas.width,
+    y: Math.random() * canvas.height,
+    vx: (Math.random() - 0.5) * 0.6,
+    vy: (Math.random() - 0.5) * 0.6,
+  }));
+  function draw() {
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    ctx.fillStyle = '#ec4899';
+    nodes.forEach((n) => {
+      n.x += n.vx;
+      n.y += n.vy;
+      if (n.x < 0 || n.x > canvas.width) n.vx *= -1;
+      if (n.y < 0 || n.y > canvas.height) n.vy *= -1;
+      ctx.beginPath();
+      ctx.arc(n.x, n.y, 2, 0, Math.PI * 2);
+      ctx.fill();
+    });
+    ctx.strokeStyle = 'rgba(236,72,153,0.12)';
+    for (let i = 0; i < nodes.length; i++) {
+      for (let j = i + 1; j < nodes.length; j++) {
+        const dx = nodes[i].x - nodes[j].x;
+        const dy = nodes[i].y - nodes[j].y;
+        const d = Math.sqrt(dx * dx + dy * dy);
+        if (d < 120) {
+          ctx.beginPath();
+          ctx.moveTo(nodes[i].x, nodes[i].y);
+          ctx.lineTo(nodes[j].x, nodes[j].y);
+          ctx.stroke();
+        }
+      }
+    }
+    requestAnimationFrame(draw);
+  }
+  draw();
+}
+  </script>
+</body>
+</html>

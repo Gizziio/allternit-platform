@@ -1,0 +1,19 @@
+flowchart TD
+    A[User Prompt] --> B[DLP Scan]
+    B -->|secret/PII| C[Warn / Redact / Block]
+    B -->|clean| D{Permission Profile}
+    D --> E[Approval Gate]
+    E -->|low risk| F[Auto-approve]
+    E -->|medium+| G[Human Review]
+    G --> H[Approved]
+    H --> I[Vault Credentials]
+    I --> J[Upstream Provider]
+    F --> J
+    C --> K[Audit Log]
+    E --> K
+    J --> K
+
+    style A fill:#3b82f6,stroke:#60a5fa,color:#fff
+    style B fill:#f59e0b,stroke:#fbbf24,color:#000
+    style E fill:#8b5cf6,stroke:#a78bfa,color:#fff
+    style K fill:#22c55e,stroke:#86efac,color:#000

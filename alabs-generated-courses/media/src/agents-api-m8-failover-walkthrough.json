@@ -1,0 +1,31 @@
+{
+  "file": "cmd/allternit-api/src/llm_gateway/failover.rs",
+  "language": "rust",
+  "steps": [
+    {
+      "title": "Retry policy struct",
+      "lines": [18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40, 41, 42, 43, 44],
+      "note": "RetryPolicy defines the knobs: enabled, max_retries, retryable statuses and errors, base and max delay, and whether the fallback chain is enabled."
+    },
+    {
+      "title": "Load organization policy",
+      "lines": [62, 63, 64, 65, 66, 67, 68, 69, 70, 71, 72, 73, 74, 75, 76, 77, 78, 79, 80, 81, 82, 83, 84, 85, 86, 87, 88, 89, 90, 91, 92, 93, 94, 95, 96, 97, 98, 99],
+      "note": "load_policy reads the organization's fallback_retry_policies row from SQLite, returning the default policy when no row exists."
+    },
+    {
+      "title": "Decide whether to retry",
+      "lines": [102, 103, 104, 105, 106, 107, 108, 109, 110, 111, 112, 113, 114, 115, 116, 117, 118, 119, 120, 121],
+      "note": "should_retry checks that the policy is enabled, the attempt is within max_retries, the status is retryable, and either the error wildcard matches or the error type is in the allowlist."
+    },
+    {
+      "title": "Compute backoff delay",
+      "lines": [125, 126, 127, 128, 129, 130, 131, 132],
+      "note": "next_backoff_ms uses exponential backoff capped at max_delay_ms and applies full jitter so retries do not thunder against the upstream."
+    },
+    {
+      "title": "Select primary or fallback model",
+      "lines": [149, 150, 151, 152, 153, 154, 155, 156, 157, 158, 159, 160, 161, 162, 163],
+      "note": "select_fallback returns the primary model on attempt 1 and walks the fallback chain on subsequent attempts. If the chain is disabled, it always returns the primary."
+    }
+  ]
+}

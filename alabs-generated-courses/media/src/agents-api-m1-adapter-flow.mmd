@@ -1,0 +1,12 @@
+flowchart LR
+    A[User Prompt] --> B[streamText]
+    B --> C{AI SDK Provider}
+    C -->|fullStream| D[AiSdkReplyAdapter]
+    D --> E[reply.started]
+    D --> F[reply.item.added]
+    D --> G[reply.text.delta]
+    D --> H[reply.completed]
+    E & F & G & H --> I[Allternit Surfaces]
+
+    style D fill:#ec4899,stroke:#f472b6,color:#fff
+    style I fill:#151517,stroke:#3f3f46,color:#e5e5e5

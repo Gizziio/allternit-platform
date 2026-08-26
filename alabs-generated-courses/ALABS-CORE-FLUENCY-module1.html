@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>{{MODULE_TITLE}} — A://Labs</title>
+  <title>Module 1: Introduction to AI Fluency — A://Labs</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
@@ -21,9 +21,9 @@
       --text: #e5e5e5;
       --text-secondary: #a1a1aa;
       --text-muted: #71717a;
-      --accent: {{ACCENT_COLOR}};
-      --accent-dim: {{ACCENT_DIM}};
-      --accent-glow: {{ACCENT_GLOW}};
+      --accent: #3b82f6;
+      --accent-dim: rgba(59,130,246,0.15);
+      --accent-glow: rgba(59,130,246,0.4);
       --success: #22c55e;
       --error: #ef4444;
       --info: #3b82f6;
@@ -56,7 +56,7 @@
     #progress-bar {
       height: 100%;
       width: 0%;
-      background: linear-gradient(90deg, var(--accent), {{ACCENT_LIGHT}});
+      background: linear-gradient(90deg, var(--accent), #60a5fa);
       box-shadow: 0 0 12px var(--accent-glow);
       transition: width 0.2s ease;
     }
@@ -158,7 +158,7 @@
       letter-spacing: 0.1em;
       color: var(--accent);
       background: var(--accent-dim);
-      border: 1px solid {{ACCENT_BADGE_BORDER}};
+      border: 1px solid rgba(59,130,246,0.25);
       padding: 6px 14px;
       border-radius: 100px;
       margin-bottom: 24px;
@@ -643,7 +643,11 @@
     }
 
     /* Module-specific styles injection point */
-    {{MODULE_CSS}}
+    
+.hero { position: relative; overflow: hidden; }
+#fluencyCanvas { position: absolute; top: 0; left: 0; width: 100%; height: 100%; z-index: -1; opacity: 0.35; pointer-events: none; }
+.quiz-option code { background: rgba(59,130,246,0.12); color: #60a5fa; }
+
   </style>
 </head>
 <body>
@@ -653,18 +657,246 @@
     <div class="nav-inner">
       <div class="nav-logo">A://<span>Labs</span></div>
       <ul class="nav-links" id="navLinks">
-        {{NAV_LINKS}}
+        <li><a href="#overview" data-section="overview">Overview</a></li>
+        <li><a href="#concepts" data-section="concepts">Concepts</a></li>
+        <li><a href="#walkthrough" data-section="walkthrough">Walkthrough</a></li>
+        <li><a href="#quizzes" data-section="quizzes">Quizzes</a></li>
+        <li><a href="#capstone" data-section="capstone">Capstone</a></li>
       </ul>
-      <span class="nav-tier">{{TIER}}</span>
+      <span class="nav-tier">CORE</span>
       <button class="nav-toggle" onclick="document.getElementById('navLinks').classList.toggle('open')">☰</button>
     </div>
   </nav>
 
-  {{MODULE_CONTENT}}
+  
+<section id="overview" class="hero reveal">
+  <canvas id="fluencyCanvas"></canvas>
+  <span class="hero-badge">CORE Tier</span>
+  <h1>Module 1: <em>Introduction to AI Fluency</em></h1>
+  <p>Learn to read, steer, and verify AI systems using Allternit's own chat surface and agent-orchestration workflow. Fluency is not magic—it is a set of concrete practices you can apply today.</p>
+  <div class="hero-meta">
+    <span><strong>~5 lessons</strong> · ~30 minutes</span>
+    <span>Source: <code>surfaces/ai.allternit.com/src/views/ChatView.tsx</code></span>
+  </div>
+</section>
+
+<section id="concepts" class="reveal">
+  <h2>What is AI fluency?</h2>
+  <p>AI fluency is the practical skill of collaborating with AI systems: picking the right model, writing clear prompts, knowing when to delegate, and—most importantly—reviewing every output before treating it as truth. Inside Allternit, that fluency is exercised through two primary surfaces.</p>
+  <ul>
+    <li><strong>ChatView</strong> — the main human-AI collaboration UI where users chat, select models, embed agent sessions, and inspect artifacts.</li>
+    <li><strong>CLI Agent Orchestrator</strong> — the delegation layer that scopes work, spawns external CLI agents in isolated tmux sessions, monitors progress, and enforces a non-negotiable review phase.</li>
+  </ul>
+  <p>Both surfaces share the same discipline: <em>the human stays in the loop</em>. Whether you are sending one message or delegating a multi-file refactor, you define the goal, inspect the result, and decide what ships.</p>
+  <div class="callout info">
+    <p><strong>Fluency principle:</strong> An AI tool is only as useful as the operator's ability to verify its work. The Allternit codebase encodes that principle in error handling, session lifecycle, and orchestrator review.</p>
+  </div>
+</section>
+
+<section id="walkthrough" class="reveal">
+  <h2>Inside ChatView: modes, models, and sessions</h2>
+  <p><code>ChatView.tsx</code> is the React component behind Allternit's chat experience. It supports three modes—<code>chat</code>, <code>cowork</code>, and <code>code</code>—and translates the chosen mode into an <code>AgentModeSurface</code> that controls which agent context is active.</p>
+
+  <div class="code-block">
+    <div class="code-header">
+      <span class="code-lang">tsx</span>
+      <button class="code-copy">Copy</button>
+    </div>
+    <pre><code><span class="token-keyword">export function</span> <span class="token-function">ChatView</span>({ hideEmptyState <span class="token-operator">=</span> <span class="token-keyword">false</span>, mode <span class="token-operator">=</span> <span class="token-string">'chat'</span>, ... }) {
+  <span class="token-keyword">const</span> agentSurface: AgentModeSurface <span class="token-operator">=</span>
+    mode <span class="token-operator">===</span> <span class="token-string">'cowork'</span> ? <span class="token-string">'cowork'</span>
+    : mode <span class="token-operator">===</span> <span class="token-string">'code'</span> ? <span class="token-string">'code'</span>
+    : <span class="token-string">'chat'</span>;
+
+  <span class="token-keyword">const</span> { agentModeEnabled, selectedAgent } <span class="token-operator">=</span>
+    <span class="token-function">useSurfaceAgentSelection</span>(agentSurface);
+}</code></pre>
+  </div>
+
+  <p>The component then decides whether the conversation is a plain chat or an embedded agent session. That distinction determines which store holds the messages, how streaming is tracked, and whether the agent context strip is rendered.</p>
+
+  <div class="code-block">
+    <div class="code-header">
+      <span class="code-lang">tsx</span>
+      <button class="code-copy">Copy</button>
+    </div>
+    <pre><code><span class="token-keyword">const</span> activeIsLoading <span class="token-operator">=</span> isAgentSessionEmbedded
+  ? nativeStreaming.isStreaming
+  : chatStreaming;
+
+<span class="token-keyword">const</span> isChatEmpty <span class="token-operator">=</span> !isAgentSessionEmbedded <span class="token-operator">&&</span> nativeMessages.length <span class="token-operator">===</span> <span class="token-number">0</span>;
+
+<span class="token-comment">// Only sessions bound to an agent render the context strip.</span>
+<span class="token-keyword">const</span> hasAgentBinding <span class="token-operator">=</span> <span class="token-function">Boolean</span>(
+  embeddedAgentDescriptor.agentId <span class="token-operator">||</span> embeddedAgentDescriptor.agentName,
+);</code></pre>
+  </div>
+
+  <h3>Sending a message</h3>
+  <p>When the user presses send, <code>handleSend</code> resolves the correct session ID, creates a new backend session if needed, and streams the message through <code>sendNativeMessageStream</code>. Errors are caught and surfaced as actionable banners rather than silent failures.</p>
+
+  <div class="code-block">
+    <div class="code-header">
+      <span class="code-lang">tsx</span>
+      <button class="code-copy">Copy</button>
+    </div>
+    <pre><code><span class="token-keyword">let</span> sessionId <span class="token-operator">=</span> embeddedAgentSession.sessionId <span class="token-operator">||</span> chatId;
+<span class="token-keyword">const</span> hasLiveSession <span class="token-operator">=</span> <span class="token-function">Boolean</span>(sessionId <span class="token-operator">&&</span> sessionId.<span class="token-function">startsWith</span>(<span class="token-string">'ses_'</span>));
+
+<span class="token-keyword">if</span> (!hasLiveSession) {
+  sessionId <span class="token-operator">=</span> <span class="token-keyword">await</span> useChatSessionStore.
+    <span class="token-function">getState</span>().<span class="token-function">createSession</span>({
+      name: text.<span class="token-function">trim</span>().<span class="token-function">slice</span>(<span class="token-number">0</span>, <span class="token-number">60</span>) <span class="token-operator">||</span> <span class="token-string">'New Session'</span>,
+      sessionMode: <span class="token-string">'regular'</span>,
+    });
+}
+
+<span class="token-keyword">if</span> (sessionId) {
+  useChatSessionStore.<span class="token-function">getState</span>().<span class="token-function">setActiveSession</span>(sessionId);
+  <span class="token-keyword">await</span> <span class="token-function">sendNativeMessageStream</span>(sessionId, { text: text.<span class="token-function">trim</span>() });
+}</code></pre>
+  </div>
+
+  <p>Notice the guard: a valid live session ID starts with <code>ses_</code>. Without that prefix, ChatView creates a fresh session. This is a small but important example of state discipline in human-AI interfaces.</p>
+</section>
+
+<section id="orchestration" class="reveal">
+  <h2>When chat is not enough: delegate with review</h2>
+  <p>Some tasks span multiple files, builds, or test runs. For those, Allternit uses the <strong>CLI Agent Orchestrator</strong>. The orchestrator does not replace the human; it extends the human's reach by running an external CLI agent in its own tmux session and then requiring the orchestrator to review the result.</p>
+
+  <table>
+    <thead>
+      <tr><th>Phase</th><th>What happens</th><th>Fluency skill</th></tr>
+    </thead>
+    <tbody>
+      <tr><td>Detect</td><td><code>ao-doctor</code> checks tmux, scripts, and every executor CLI.</td><td>Know your tooling.</td></tr>
+      <tr><td>Scope & Plan</td><td>Write a map doc and a one-phase task spec with a deliverable sentinel.</td><td>Define the goal precisely.</td></tr>
+      <tr><td>Spawn</td><td><code>ao-spawn</code> creates an isolated worktree and tmux session.</td><td>Isolate risk.</td></tr>
+      <tr><td>Send</td><td><code>ao-send</code> pastes the prompt only after verifying it landed correctly.</td><td>Confirm instructions.</td></tr>
+      <tr><td>Monitor</td><td><code>ao-watch</code> waits for a sentinel file, not a spinner.</td><td>Trust signals, not noise.</td></tr>
+      <tr><td>Review</td><td>Check the true footprint, scope, and code claims.</td><td>Verify everything.</td></tr>
+    </tbody>
+  </table>
+
+  <div class="callout success">
+    <p><strong>Core takeaway:</strong> Delegation without review is not fluency. The orchestrator's Phase 5 review is non-negotiable because the human operator must verify the executor's footprint and claims before the work is accepted.</p>
+  </div>
+</section>
+
+<section id="quizzes" class="reveal">
+  <h2>Check your understanding</h2>
+
+  <div class="quiz" id="quiz1">
+    <div class="quiz-header">
+      <div class="quiz-num">1</div>
+      <h3>In ChatView, what value does <code>agentSurface</code> take when <code>mode</code> is <code>'cowork'</code>?</h3>
+    </div>
+    <div class="quiz-options">
+      <div class="quiz-option" onclick="selectOption(this, 1, 0)">
+        <div class="radio"></div>
+        <span><code>'chat'</code></span>
+      </div>
+      <div class="quiz-option" onclick="selectOption(this, 1, 1)">
+        <div class="radio"></div>
+        <span><code>'cowork'</code></span>
+      </div>
+      <div class="quiz-option" onclick="selectOption(this, 1, 2)">
+        <div class="radio"></div>
+        <span><code>'code'</code></span>
+      </div>
+      <div class="quiz-option" onclick="selectOption(this, 1, 3)">
+        <div class="radio"></div>
+        <span><code>'default'</code></span>
+      </div>
+    </div>
+    <div class="quiz-feedback" id="feedback1"></div>
+    <button class="quiz-retry" id="retry1" onclick="QuizEngine.reset(1)">Try again</button>
+  </div>
+
+  <div class="quiz" id="quiz2">
+    <div class="quiz-header">
+      <div class="quiz-num">2</div>
+      <h3>Which orchestrator phase is responsible for verifying the executor's true footprint and code claims?</h3>
+    </div>
+    <div class="quiz-options">
+      <div class="quiz-option" onclick="selectOption(this, 2, 0)">
+        <div class="radio"></div>
+        <span>Phase 1 — Scope and Plan</span>
+      </div>
+      <div class="quiz-option" onclick="selectOption(this, 2, 1)">
+        <div class="radio"></div>
+        <span>Phase 2 — Spawn</span>
+      </div>
+      <div class="quiz-option" onclick="selectOption(this, 2, 2)">
+        <div class="radio"></div>
+        <span>Phase 4 — Monitor</span>
+      </div>
+      <div class="quiz-option" onclick="selectOption(this, 2, 3)">
+        <div class="radio"></div>
+        <span>Phase 5 — Review</span>
+      </div>
+    </div>
+    <div class="quiz-feedback" id="feedback2"></div>
+    <button class="quiz-retry" id="retry2" onclick="QuizEngine.reset(2)">Try again</button>
+  </div>
+
+  <div class="quiz" id="quiz3">
+    <div class="quiz-header">
+      <div class="quiz-num">3</div>
+      <h3>Why does <code>handleSend</code> create a new session when <code>sessionId</code> does not start with <code>'ses_'</code>?</h3>
+    </div>
+    <div class="quiz-options">
+      <div class="quiz-option" onclick="selectOption(this, 3, 0)">
+        <div class="radio"></div>
+        <span>To reset the conversation history automatically.</span>
+      </div>
+      <div class="quiz-option" onclick="selectOption(this, 3, 1)">
+        <div class="radio"></div>
+        <span>To ensure a real backend session exists before streaming.</span>
+      </div>
+      <div class="quiz-option" onclick="selectOption(this, 3, 2)">
+        <div class="radio"></div>
+        <span>To switch from cowork mode back to chat mode.</span>
+      </div>
+      <div class="quiz-option" onclick="selectOption(this, 3, 3)">
+        <div class="radio"></div>
+        <span>To disable the agent context strip.</span>
+      </div>
+    </div>
+    <div class="quiz-feedback" id="feedback3"></div>
+    <button class="quiz-retry" id="retry3" onclick="QuizEngine.reset(3)">Try again</button>
+  </div>
+</section>
+
+<section id="capstone" class="reveal">
+  <div class="capstone">
+    <h2>Capstone: Design your AI-fluent workflow</h2>
+    <p>Apply what you learned by mapping a real task through the Allternit surfaces. Pick a small change you might ask an AI to help with—such as adding a validation rule, renaming a component, or writing a test.</p>
+    <div class="capstone-grid">
+      <div class="capstone-item">
+        <h4>1. Choose the surface</h4>
+        <p>Would this task be faster in ChatView, or does it need the orchestrator's isolated worktree? Justify your choice.</p>
+      </div>
+      <div class="capstone-item">
+        <h4>2. Write the prompt</h4>
+        <p>Draft the exact message or task spec you would send. Include scope, constraints, and a deliverable sentinel.</p>
+      </div>
+      <div class="capstone-item">
+        <h4>3. Plan verification</h4>
+        <p>List three concrete things you would check before accepting the AI's output. Reference ChatView's error handling or the orchestrator's review phase.</p>
+      </div>
+      <div class="capstone-item">
+        <h4>4. Document trade-offs</h4>
+        <p>Note one risk of full automation and one safeguard from the codebase that mitigates it.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
 
   <footer>
-    <p>A://Labs — {{TIER}} Tier — {{MODULE_TITLE}}</p>
-    <p style="margin-top:4px;">Generated from <code>{{SOURCE_PACKAGE}}</code> · Allternit Internal</p>
+    <p>A://Labs — CORE Tier — Module 1: Introduction to AI Fluency</p>
+    <p style="margin-top:4px;">Generated from <code>surfaces/ai.allternit.com/src/views/ChatView.tsx</code> · Allternit Internal</p>
   </footer>
 
   <script>
@@ -820,7 +1052,55 @@
     // ========================
     // Module-specific JS injection point
     // ========================
-    {{MODULE_JS}}
+    // Initialize quiz engine
+    window.QuizEngine.init({"1":1,"2":3,"3":1}, {"1":{"correct":"Correct! The ternary maps mode 'cowork' directly to the 'cowork' AgentModeSurface.","wrong":"Not quite. Re-read the mode-to-surface ternary: 'cowork' is the first branch, so agentSurface becomes 'cowork'."},"2":{"correct":"Correct! Phase 5 — Review checks the true footprint, scope, and verifies every code claim before accepting the work.","wrong":"Not quite. Scope and Plan happens before execution; Spawn and Monitor happen during execution. Review is the non-negotiable verification phase."},"3":{"correct":"Correct! hasLiveSession checks for the 'ses_' prefix to confirm a real backend session exists; otherwise ChatView creates one before streaming.","wrong":"Not quite. The guard is about session validity, not history reset or UI state. A missing 'ses_' prefix means there is no live backend session to stream into."}});
+
+    
+const canvas = document.getElementById('fluencyCanvas');
+if (canvas) {
+  const ctx = canvas.getContext('2d');
+  function resize() {
+    canvas.width = canvas.offsetWidth;
+    canvas.height = canvas.offsetHeight;
+  }
+  window.addEventListener('resize', resize);
+  resize();
+  const nodes = Array.from({ length: 24 }, () => ({
+    x: Math.random() * canvas.width,
+    y: Math.random() * canvas.height,
+    vx: (Math.random() - 0.5) * 0.6,
+    vy: (Math.random() - 0.5) * 0.6,
+  }));
+  function draw() {
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    ctx.fillStyle = '#3b82f6';
+    nodes.forEach((n) => {
+      n.x += n.vx;
+      n.y += n.vy;
+      if (n.x < 0 || n.x > canvas.width) n.vx *= -1;
+      if (n.y < 0 || n.y > canvas.height) n.vy *= -1;
+      ctx.beginPath();
+      ctx.arc(n.x, n.y, 2, 0, Math.PI * 2);
+      ctx.fill();
+    });
+    ctx.strokeStyle = 'rgba(59,130,246,0.12)';
+    for (let i = 0; i < nodes.length; i++) {
+      for (let j = i + 1; j < nodes.length; j++) {
+        const dx = nodes[i].x - nodes[j].x;
+        const dy = nodes[i].y - nodes[j].y;
+        const d = Math.sqrt(dx * dx + dy * dy);
+        if (d < 120) {
+          ctx.beginPath();
+          ctx.moveTo(nodes[i].x, nodes[i].y);
+          ctx.lineTo(nodes[j].x, nodes[j].y);
+          ctx.stroke();
+        }
+      }
+    }
+    requestAnimationFrame(draw);
+  }
+  draw();
+}
   </script>
 </body>
 </html>

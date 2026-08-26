@@ -1,0 +1,18 @@
+flowchart TD
+    A[Real Task] --> B[Decide: human or agent?]
+    B --> C[Delegate: which surface?]
+    C --> D[Describe: prompt/spec]
+    D --> E[Agent Executes]
+    E --> F[Discern: review output]
+    F -->|needs revision| D
+    F -->|accepted| G[Diligence: safety/privacy check]
+    G -->|issue found| H[Escalate / revise]
+    G -->|clean| I[Ship]
+    H --> D
+    I --> J[Reflect and record]
+    J --> A
+
+    style A fill:#3b82f6,stroke:#60a5fa,color:#fff
+    style F fill:#f59e0b,stroke:#fbbf24,color:#000
+    style G fill:#8b5cf6,stroke:#a78bfa,color:#fff
+    style I fill:#22c55e,stroke:#86efac,color:#000

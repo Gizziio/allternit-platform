@@ -1,0 +1,11 @@
+{"version": 2, "width": 80, "height": 18, "timestamp": 1700000000, "env": {"SHELL": "/bin/bash", "TERM": "xterm-256color"}}
+[0.0, "o", "\u001b[1;32m$\u001b[0m tsx scripts/init-cowork-workspace.ts --user u_01 --project proj_42\r\n"]
+[0.8, "o", "\u001b[90m→\u001b[0m Ensuring built-in personas: Researcher, Engineer, Analyst\r\n"]
+[1.6, "o", "\u001b[90m→\u001b[0m Default persona selected: Engineer\r\n"]
+[2.4, "o", "\u001b[90m→\u001b[0m Seeding user preference: output-format=markdown\r\n"]
+[3.2, "o", "\u001b[90m→\u001b[0m Seeding project fact: stack=Next.js + tRPC\r\n"]
+[4.0, "o", "\u001b[90m→\u001b[0m Adding session context: current task = refactor auth hook\r\n"]
+[4.8, "o", "\u001b[1;32m✓\u001b[0m Workspace ready\r\n"]
+[5.6, "o", "\u001b[90m→\u001b[0m Recall preference: markdown\r\n"]
+[6.4, "o", "\u001b[90m→\u001b[0m Recall project fact: Next.js + tRPC\r\n"]
+[7.2, "o", "\u001b[90m→\u001b[0m Recall session context: refactor auth hook\r\n"]

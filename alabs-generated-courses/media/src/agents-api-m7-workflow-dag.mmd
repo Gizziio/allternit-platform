@@ -1,0 +1,22 @@
+flowchart TB
+    Start([User prompt]) --> Classify{Router node<br/>condition:if}
+
+    Classify -->|needs_code| Code[Code search branch]
+    Classify -->|needs_docs| Docs[Docs search branch]
+
+    Code --> C1[Search repository]
+    Docs --> D1[Search memory store]
+
+    C1 --> C2[Extract snippets]
+    D1 --> D2[Retrieve passages]
+
+    C2 --> Merge
+    D2 --> Merge
+
+    Merge[Merge results] --> Synthesize[Synthesize answer]
+    Synthesize --> Output[Return cited result]
+
+    style Start fill:#151517,stroke:#ec4899,stroke-width:2px
+    style Output fill:#151517,stroke:#ec4899,stroke-width:2px
+    style Classify fill:#1c1c1f,stroke:#ec4899
+    style Merge fill:#1c1c1f,stroke:#ec4899

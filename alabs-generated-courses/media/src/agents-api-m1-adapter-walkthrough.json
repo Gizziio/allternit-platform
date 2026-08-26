@@ -1,0 +1,26 @@
+{
+  "file": "alabs-generated-courses/media/src/agents-api-m1-adapter-excerpt.ts",
+  "language": "typescript",
+  "steps": [
+    {
+      "title": "Adapter options",
+      "lines": [4, 5, 6, 7, 8, 9],
+      "note": "Every adapter needs a replyId, runId, and an onEvent callback. The callback receives canonical ReplyEvents that the rest of Allternit understands."
+    },
+    {
+      "title": "Stream lifecycle",
+      "lines": [58, 59, 60, 61, 62, 63, 64],
+      "note": "When the AI SDK emits a 'start' part, the adapter ensures the reply has started by emitting reply.started. This guarantees downstream surfaces see a consistent lifecycle."
+    },
+    {
+      "title": "Text deltas",
+      "lines": [87, 88, 89, 90, 91, 92, 93, 94, 95, 96, 97, 98, 99, 100, 101, 102, 103, 104, 105, 106, 107, 108, 109, 110, 111],
+      "note": "For each text-delta, the adapter opens a text item if needed and emits reply.text.delta. Downstream UI components can append the delta to the transcript."
+    },
+    {
+      "title": "Context management",
+      "lines": [11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26],
+      "note": "The adapter tracks opened text items, pending tools, and text buffers so it can reconstruct the full reply state without leaking provider-specific ids into the rest of the platform."
+    }
+  ]
+}

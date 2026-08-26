@@ -1,0 +1,31 @@
+{
+  "file": "surfaces/ai.allternit.com/src/lib/agents/agent-mode-executor.ts",
+  "language": "typescript",
+  "steps": [
+    {
+      "title": "Mode-to-plugin mapping",
+      "lines": [14, 15, 16, 17, 18],
+      "note": "The executor maps canonical modes like research, code, and data to plugin IDs. If no plugin is mapped, the executor falls back to inline handlers such as docs or data."
+    },
+    {
+      "title": "Mode-to-artifact kind",
+      "lines": [19, 20, 21, 22, 23],
+      "note": "Each mode declares the artifact kind it produces. This lets downstream UI components render the result with the correct viewer: document, spreadsheet, website, image, video, or code."
+    },
+    {
+      "title": "Execute agent mode",
+      "lines": [118, 119, 120, 121, 122, 123, 124],
+      "note": "executeAgentMode receives the mode id, prompt, optional template title, and callbacks. It emits a tool-call event so the rest of the surface can observe the run."
+    },
+    {
+      "title": "Dispatch to plugin or inline handler",
+      "lines": [134, 135, 136, 137, 138, 139, 140, 141, 142, 143, 144, 145, 146, 147, 148, 149, 150, 151, 152, 153, 154],
+      "note": "The executor selects the plugin instance, wires abort handling, and runs the plugin. Docs and sheets use dedicated prompts, while other modes delegate to the plugin runtime."
+    },
+    {
+      "title": "Emit result and artifact",
+      "lines": [156, 157, 158, 159, 160, 161, 162, 163, 164, 165, 166, 167, 168, 169, 170, 171, 172],
+      "note": "After the plugin succeeds, the executor emits the tool result and builds an ArtifactUIPart with the primary content. The MODE_EXECUTION_COMPLETE marker is sent through the chunk callback."
+    }
+  ]
+}
