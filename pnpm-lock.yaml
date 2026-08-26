@@ -2131,6 +2131,9 @@ importers:
       hono:
         specifier: ^4.12.27
         version: 4.13.4
+      jose:
+        specifier: ^5.9.6
+        version: 5.9.6
     devDependencies:
       '@cloudflare/workers-types':
         specifier: ^4.20240815.0
@@ -3094,8 +3097,6 @@ importers:
         specifier: ^3.90.0
         version: 3.114.17(@cloudflare/workers-types@4.20260120.0)
 
-  surfaces/ai.allternit.com/src/generated/prisma: {}
-
   surfaces/allternit-desktop:
     dependencies:
       '@clerk/clerk-react':
@@ -3165,8 +3166,6 @@ importers:
       wait-on:
         specifier: ^8.0.2
         version: 8.0.5
-
-  surfaces/allternit-desktop/resources/office-engine: {}
 
   surfaces/allternit-docs:
     dependencies:
