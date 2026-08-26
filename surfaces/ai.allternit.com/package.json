@@ -89,6 +89,7 @@
     "@ai-sdk/vercel": "^2.0.30",
     "@ai-sdk/xai": "^3.0.48",
     "@allternit/mcp-apps-adapter": "workspace:*",
+    "@allternit/allternit-office-suite": "workspace:*",
     "@allternit/office-docs-app": "workspace:*",
     "@allternit/office-pdf-app": "workspace:*",
     "@allternit/office-pdf-viewer": "workspace:*",

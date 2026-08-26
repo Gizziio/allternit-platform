@@ -477,6 +477,54 @@ class AllternitApiClient {
     return this.request<T>('DELETE', path, undefined, options);
   }
 
+  /**
+   * Make a request and return the raw Response so the caller can handle
+   * binary payloads (screenshots, file downloads) manually.
+   */
+  async raw(path: string, options: RequestInit = {}): Promise<Response> {
+    const pathNormalized = path.startsWith('/') ? path : `/${path}`;
+    const candidateBases = this.candidateBaseUrls();
+
+    const headers: Record<string, string> = {
+      'X-Client-Version': '2.0.0',
+      ...(this.token ? { 'Authorization': `Bearer ${this.token}` } : {}),
+      ...(SELF_HOSTED_TOKEN ? { 'X-Allternit-Self-Hosted-Token': String(SELF_HOSTED_TOKEN) } : {}),
+      ...(options.headers as Record<string, string> || {}),
+    };
+
+    let config: RequestInit = {
+      ...options,
+      headers,
+    };
+
+    for (const interceptor of this.requestInterceptors) {
+      config = interceptor(config);
+    }
+
+    let lastNetworkError: unknown = null;
+    for (const base of candidateBases) {
+      const url = `${base}${pathNormalized}`;
+      try {
+        const response = await this.fetchWithRetry(url, config);
+        if (response.ok) {
+          if (base !== this.baseUrl) {
+            this.baseUrl = base;
+          }
+          return response;
+        }
+        return response;
+      } catch (err) {
+        lastNetworkError = err;
+      }
+    }
+
+    throw new AllternitApiError(
+      `Network error - unable to reach API after multiple attempts`,
+      0,
+      'NETWORK_ERROR'
+    );
+  }
+
   // ==========================================================================
   // SESSIONS API
   // ==========================================================================

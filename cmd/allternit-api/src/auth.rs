@@ -45,6 +45,7 @@ use crate::db::DbHandle;
 
 const DESKTOP_ACCESS_TOKEN_HEADER: &str = "x-allternit-desktop-access-token";
 const SELF_HOSTED_SETUP_TOKEN_HEADER: &str = "x-allternit-self-hosted-token";
+const INTERNAL_SERVICE_TOKEN_HEADER: &str = "x-allternit-internal-token";
 const USER_ID_HEADER: &str = "x-allternit-user-id";
 const USER_EMAIL_HEADER: &str = "x-allternit-user-email";
 const USER_NAME_HEADER: &str = "x-allternit-user-name";
@@ -54,8 +55,8 @@ const ORGANIZATION_SLUG_HEADER: &str = "x-allternit-organization-slug";
 
 // ─── Configuration ──────────────────────────────────────────────────────────
 
-const DEFAULT_CLERK_JWKS_URL: &str = "https://clerk.platform.allternit.com/.well-known/jwks.json";
-const DEFAULT_CLERK_ISSUER: &str = "https://clerk.platform.allternit.com";
+const DEFAULT_CLERK_JWKS_URL: &str = "https://clerk.allternit.com/.well-known/jwks.json";
+const DEFAULT_CLERK_ISSUER: &str = "https://clerk.allternit.com";
 
 /// How long to cache JWKS before refreshing
 const JWKS_CACHE_TTL: Duration = Duration::from_secs(3600);
@@ -717,6 +718,29 @@ fn extract_self_hosted_setup_user(
     })
 }
 
+/// Internal service-token authentication. Peer services and health probes prove
+/// identity with the shared `ALLTERNIT_INTERNAL_SERVICE_TOKEN`.
+fn extract_internal_service_user(
+    headers: &HeaderMap,
+    config: &crate::config::AppConfig,
+) -> Option<AuthUser> {
+    let provided_token = extract_header_string(headers, INTERNAL_SERVICE_TOKEN_HEADER)?;
+    let expected_token = config.internal_service_token()?;
+    if !constant_time_eq(&provided_token, &expected_token) {
+        return None;
+    }
+    Some(AuthUser {
+        user_id: "internal-service".to_string(),
+        email: Some("internal@allternit.local".to_string()),
+        name: Some("Internal Service".to_string()),
+        avatar_url: None,
+        tenant_id: Some(config.tenant_id()),
+        organization_id: None,
+        organization_role: None,
+        organization_slug: None,
+    })
+}
+
 /// Auth middleware — verifies Clerk JWT and adds user context to request headers.
 /// In local development, falls back to `x-allternit-user-id` header for testing.
 pub async fn auth_middleware(
@@ -739,6 +763,19 @@ pub async fn auth_middleware(
 
     // 2. Self-hosted setup token (onboarding wizard on a headless VPS).
     if let Some(mut user) = extract_self_hosted_setup_user(request.headers(), &state.config) {
+        match ensure_user_in_db(&state.db, &user) {
+            Ok(organization_id) => user.organization_id = organization_id,
+            Err(e) => return e.into_response(),
+        }
+
+        let headers = request.headers_mut();
+        insert_user_headers(headers, &user);
+        request.extensions_mut().insert(user);
+        return next.run(request).await;
+    }
+
+    // 2b. Internal service token (service-to-service calls, e.g. health probes).
+    if let Some(mut user) = extract_internal_service_user(request.headers(), &state.config) {
         match ensure_user_in_db(&state.db, &user) {
             Ok(organization_id) => user.organization_id = organization_id,
             Err(e) => return e.into_response(),

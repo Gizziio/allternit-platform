@@ -21,6 +21,7 @@ use std::sync::Arc;
 use tracing::{debug, info, warn};
 
 use crate::auth::AuthUser;
+use crate::bot_desktop_input::desktop_display;
 use crate::bot_desktop_stream::{desktop_ws_secret, sign_desktop_token};
 use crate::bot_desktop_templates::ProvisionRequest;
 use crate::bot_desktop_windows;
@@ -249,13 +250,14 @@ async fn get_desktop_screenshot(
     let capture_cmd = if record.os == "windows" {
         bot_desktop_windows::screenshot_command()
     } else {
+        let display = desktop_display(&record.provider);
         let mut env_vars = std::collections::HashMap::new();
-        env_vars.insert("DISPLAY".to_string(), ":0".to_string());
+        env_vars.insert("DISPLAY".to_string(), display.to_string());
         CommandSpec {
             command: vec![
                 "sh".to_string(),
                 "-c".to_string(),
-                "scrot -z -o /tmp/allternit-screen.png && base64 -w0 /tmp/allternit-screen.png".to_string(),
+                format!("DISPLAY={} scrot -z -o /tmp/allternit-screen.png && base64 -w0 /tmp/allternit-screen.png", display),
             ],
             env_vars,
             working_dir: None,
@@ -319,69 +321,51 @@ pub(crate) struct ProvisionDesktopQuery {
     pub template_id: Option<String>,
 }
 
-async fn provision_desktop(
-    State(state): State<Arc<AppState>>,
-    Extension(user): Extension<AuthUser>,
-    Path(bot_id): Path<String>,
-    Query(query): Query<ProvisionDesktopQuery>,
-) -> impl IntoResponse {
-    if !verify_bot_ownership(&state, &user.user_id, &bot_id).await {
-        return (
-            StatusCode::FORBIDDEN,
-            Json(json!({"error": "bot not found or access denied"})),
-        )
-            .into_response();
-    }
-
-    // Idempotent: if the bot already has an active sandbox, return it.
-    if let Ok(Some(record)) = read_bot_sandbox(&state.db, &bot_id) {
-        if record.status == "running" || record.status == "creating" {
-            return Json(ProvisionDesktopResponse {
-                sandbox_id: record.sandbox_id,
-                status: record.status,
-                provider: record.provider,
-                host: record.host,
-            })
-            .into_response();
-        }
-    }
-
+/// Internal provision path used both by the HTTP handler and the capacity-driven
+/// queue worker. Returns `Ok` on success or `Err(response)` on any failure that
+/// should be surfaced to the caller.
+pub(crate) async fn provision_desktop_internal(
+    state: &Arc<AppState>,
+    user: &AuthUser,
+    bot_id: &str,
+    query: &ProvisionDesktopQuery,
+) -> Result<ProvisionDesktopResponse, axum::response::Response> {
     let driver = match &state.vm_driver {
         Some(d) => d.clone(),
         None => {
-            return (
+            return Err((
                 StatusCode::SERVICE_UNAVAILABLE,
                 Json(json!({"error": "No VM driver is configured on this host"})),
             )
-                .into_response();
+                .into_response());
         }
     };
 
     if !driver.supports_desktop() {
-        return (
+        return Err((
             StatusCode::SERVICE_UNAVAILABLE,
             Json(json!({
                 "error": "The configured VM driver does not expose a remote desktop stream. \
                           Set OPEN_SANDBOX_URL to use OpenSandbox for bot desktops."
             })),
         )
-            .into_response();
+            .into_response());
     }
 
-    match crate::bot_desktop_quotas::check_quota(&state, &user).await {
+    match crate::bot_desktop_quotas::check_quota(state, user).await {
         Ok(check) if !check.allowed => {
-            return (
+            return Err((
                 StatusCode::TOO_MANY_REQUESTS,
                 Json(json!({"error": check.reason.unwrap_or_else(|| "quota exceeded".to_string())})),
             )
-                .into_response();
+                .into_response());
         }
         Err(e) => {
-            return (
+            return Err((
                 StatusCode::TOO_MANY_REQUESTS,
                 Json(json!({"error": e.to_string()})),
             )
-                .into_response();
+                .into_response());
         }
         _ => {}
     }
@@ -390,24 +374,24 @@ async fn provision_desktop(
         os: query.os.clone(),
         template_id: query.template_id.clone(),
     };
-    let spec = match crate::bot_desktop_templates::resolve_provision_spec(&state, &user, &req).await {
+    let spec = match crate::bot_desktop_templates::resolve_provision_spec(state, user, &req).await {
         Ok(s) => s,
-        Err(resp) => return resp.into_response(),
+        Err(resp) => return Err(resp.into_response()),
     };
 
     let tenant_id = match TenantId::new(format!("bot-{}", bot_id)) {
         Ok(t) => t,
         Err(e) => {
-            return (
+            return Err((
                 StatusCode::BAD_REQUEST,
                 Json(json!({"error": format!("invalid bot tenant id: {}", e)})),
             )
-                .into_response();
+                .into_response());
         }
     };
 
     let mut env_vars = spec.env.clone();
-    env_vars.insert("ALLTERNIT_BOT_ID".to_string(), bot_id.clone());
+    env_vars.insert("ALLTERNIT_BOT_ID".to_string(), bot_id.to_string());
     env_vars.insert("ALLTERNIT_USER_ID".to_string(), user.user_id.clone());
     env_vars.insert("ALLTERNIT_DESKTOP_OS".to_string(), spec.os.clone());
 
@@ -455,11 +439,11 @@ async fn provision_desktop(
         Ok(h) => h,
         Err(e) => {
             warn!(bot_id, error = %e, "Failed to spawn bot desktop sandbox");
-            return (
+            return Err((
                 StatusCode::SERVICE_UNAVAILABLE,
                 Json(json!({"error": format!("failed to provision desktop sandbox: {}", e)})),
             )
-                .into_response();
+                .into_response());
         }
     };
 
@@ -478,7 +462,7 @@ async fn provision_desktop(
     // Running/running, so we can truthfully store the sandbox as active.
     if let Err(e) = upsert_bot_sandbox(
         &state.db,
-        &bot_id,
+        bot_id,
         &sandbox_id,
         &provider,
         host.as_deref(),
@@ -488,17 +472,73 @@ async fn provision_desktop(
         warn!(bot_id, sandbox_id, error = %e, "Failed to persist bot desktop sandbox");
     }
 
-    crate::bot_desktop_quotas::record_start(&state, &user, &bot_id, &sandbox_id, &provider, &spec.os).await;
+    crate::bot_desktop_quotas::record_start(state, user, bot_id, &sandbox_id, &provider, &spec.os).await;
 
     info!(bot_id, sandbox_id, provider, "Bot desktop sandbox provisioned");
 
-    Json(ProvisionDesktopResponse {
+    Ok(ProvisionDesktopResponse {
         sandbox_id,
         status: "running".to_string(),
         provider,
         host,
     })
-    .into_response()
+}
+
+async fn provision_desktop(
+    State(state): State<Arc<AppState>>,
+    Extension(user): Extension<AuthUser>,
+    Path(bot_id): Path<String>,
+    Query(query): Query<ProvisionDesktopQuery>,
+) -> impl IntoResponse {
+    if !verify_bot_ownership(&state, &user.user_id, &bot_id).await {
+        return (
+            StatusCode::FORBIDDEN,
+            Json(json!({"error": "bot not found or access denied"})),
+        )
+            .into_response();
+    }
+
+    // Idempotent: if the bot already has an active sandbox, return it.
+    if let Ok(Some(record)) = read_bot_sandbox(&state.db, &bot_id) {
+        if record.status == "running" || record.status == "creating" {
+            return Json(ProvisionDesktopResponse {
+                sandbox_id: record.sandbox_id,
+                status: record.status,
+                provider: record.provider,
+                host: record.host,
+            })
+            .into_response();
+        }
+    }
+
+    // When the target substrate is full, queue the request instead of failing.
+    if crate::bot_desktop_queue::is_os_at_capacity(query.os.as_deref()).await {
+        match crate::bot_desktop_queue::enqueue(&state, &user, &bot_id, &query).await {
+            Ok((entry, position)) => {
+                return (
+                    StatusCode::ACCEPTED,
+                    Json(json!({
+                        "status": "queued",
+                        "queue_id": entry.id,
+                        "position": position,
+                    })),
+                )
+                    .into_response();
+            }
+            Err(reason) => {
+                return (
+                    StatusCode::TOO_MANY_REQUESTS,
+                    Json(json!({"error": reason})),
+                )
+                    .into_response();
+            }
+        }
+    }
+
+    match provision_desktop_internal(&state, &user, &bot_id, &query).await {
+        Ok(resp) => Json(resp).into_response(),
+        Err(resp) => resp,
+    }
 }
 
 async fn start_desktop(
@@ -1208,6 +1248,7 @@ mod tests {
                 message: Some("mock".to_string()),
                 active_executions: 0,
                 available_capacity: self.capabilities().max_resources,
+                capabilities: vec![],
             })
         }
     }

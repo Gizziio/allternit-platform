@@ -24,7 +24,7 @@ use crate::config::{read_gizzi_default_harness, AppConfig};
 use crate::db::DbHandle;
 use crate::AppState;
 
-fn gizzi_base() -> String {
+pub fn gizzi_base() -> String {
     // Reload from disk each time so runtime URL changes (wizard, settings) take
     // effect without an API restart.
     AppConfig::load()

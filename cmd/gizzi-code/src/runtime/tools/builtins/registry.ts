@@ -30,6 +30,7 @@ import { Flag } from "@/runtime/context/flag/flag"
 import { Log } from "@/shared/util/log"
 import { LspTool } from "@/runtime/tools/builtins/lsp"
 import { BrowserTool } from "@/runtime/tools/builtins/browser"
+import { DesktopTool } from "@/runtime/tools/builtins/desktop"
 import { Truncate } from "@/runtime/tools/builtins/truncation"
 import { PlanExitTool, PlanEnterTool } from "@/runtime/tools/builtins/plan"
 import { ApplyPatchTool } from "@/runtime/tools/builtins/apply_patch"
@@ -180,6 +181,7 @@ export namespace ToolRegistry {
       ...(config.experimental?.batch_tool === true ? [BatchTool] : []),
       ...(Flag.GIZZI_CLIENT === "cli" ? [PlanExitTool, PlanEnterTool] : []),
       ...(Flag.GIZZI_ENABLE_BROWSER_TOOL ? [BrowserTool] : []),
+      ...(Flag.GIZZI_ENABLE_DESKTOP_TOOL ? [DesktopTool] : []),
       ...custom,
     ]
   }
