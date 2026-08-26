@@ -603,7 +603,7 @@ async function streamMessageWithContext(
   // brain for a pulled model. If nothing is available, omit the field so the
   // runtime can fall back to its own default instead of sending an invalid
   // hard-coded model.
-  let modelId = options.modelId ?? resolveRuntimeModelId();
+  let modelId: string | undefined = options.modelId ?? resolveRuntimeModelId() ?? undefined;
   if (!modelId) {
     modelId = await resolveFallbackRuntimeModelId();
   }

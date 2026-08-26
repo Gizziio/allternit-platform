@@ -3166,6 +3166,8 @@ importers:
         specifier: ^8.0.2
         version: 8.0.5
 
+  surfaces/allternit-desktop/resources/office-engine: {}
+
   surfaces/allternit-docs:
     dependencies:
       '@allternit/office-docs-app':

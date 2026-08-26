@@ -19,7 +19,7 @@ export function openRemoteControlWindow(runtimeId?: string): void {
   }
 
   if (window.allternit?.shell?.openRemoteControl) {
-    void window.allternit.shell.openRemoteControl();
+    void window.allternit.shell.openRemoteControl(runtimeId);
     return;
   }
 
