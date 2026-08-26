@@ -17,6 +17,7 @@ import { MachinesPanel } from "@/components/dispatch/MachinesPanel";
 import { RemoteSessionPanel } from "@/components/dispatch/RemoteSessionPanel";
 import { useRuntimes, type RuntimeViewModel } from "@/components/dispatch/useRuntimes";
 import { useRuntimeSelection } from "@/components/dispatch/useRuntimeSelection";
+import { useRemotePendingCounts } from "@/components/dispatch/useRemotePendingCounts";
 import {
   useRemoteControlThemeStore,
   type Theme,
@@ -88,6 +89,7 @@ export function DashboardPage({ installPrompt, onInstallClick }: DashboardPagePr
   const [selectedId, setSelectedId] = useRuntimeSelection();
   const selected = runtimes.find((r) => r.id === selectedId);
   const onlineCount = runtimes.filter((r) => r.status === "online").length;
+  const { permissions: pendingPermissions, questions: pendingQuestions } = useRemotePendingCounts(runtimes, auth.getToken);
 
   const vapidKey = useVapidKey();
   const { pushByRuntime, setPushByRuntime } = usePushByRuntime(runtimes);
@@ -294,7 +296,7 @@ export function DashboardPage({ installPrompt, onInstallClick }: DashboardPagePr
             <div className="text-[12px] font-semibold uppercase tracking-wider text-[var(--text-tertiary)] mb-1">
               Pending Permissions
             </div>
-            <div className="text-[32px] font-bold">0</div>
+            <div className="text-[32px] font-bold">{pendingPermissions}</div>
             <div className="text-[12px] text-[var(--text-secondary)]">Need your approval</div>
           </div>
           <div
@@ -304,7 +306,7 @@ export function DashboardPage({ installPrompt, onInstallClick }: DashboardPagePr
             <div className="text-[12px] font-semibold uppercase tracking-wider text-[var(--text-tertiary)] mb-1">
               Pending Questions
             </div>
-            <div className="text-[32px] font-bold">0</div>
+            <div className="text-[32px] font-bold">{pendingQuestions}</div>
             <div className="text-[12px] text-[var(--text-secondary)]">Awaiting answers</div>
           </div>
         </div>

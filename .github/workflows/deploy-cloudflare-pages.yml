@@ -71,7 +71,7 @@ jobs:
           NEXT_PUBLIC_CLERK_SIGN_UP_URL: 'https://platform.allternit.com/sign-up'
           NEXT_PUBLIC_ALLTERNIT_DESKTOP_AUTH: 'true'
           NEXT_PUBLIC_ALLTERNIT_CLOUD_API_URL: 'https://api.allternit.com'
-          NEXT_PUBLIC_ALLTERNIT_PUSH_WORKER_URL: ${{ secrets.NEXT_PUBLIC_ALLTERNIT_PUSH_WORKER_URL }}
+          VITE_REMOTE_CONTROL_PUSH_URL: ${{ secrets.VITE_REMOTE_CONTROL_PUSH_URL }}
           ENCRYPTION_KEY: ${{ secrets.ENCRYPTION_KEY }}
 
       - name: Deploy to Cloudflare Pages

@@ -754,3 +754,49 @@ Allternit already has runtime pairing, a desktop bridge (`replBridge`/remote-con
 1. Record end-to-end screen recordings of standalone dashboard, platform hub, push-worker endpoints, and PWA install prompt.
 2. Run steering consult on the spec + checkpoint.
 3. Commit and merge `session/remote-control-hybrid`.
+
+---
+
+## Remote Control gap fix (session/remote-control-gap-fix) — 2026-08-26
+
+### Goal
+
+Close the critical gaps left by the previous remote-control implementation:
+1. Rename internal `dispatch` surface to `remote-control` and add `/remote` route.
+2. Fix push worker route prefix mismatch between worker, SDK, dashboard, and README.
+3. Align permission/question API paths between SDK and gizzi-code `remote_control.ts`.
+4. Make the Dispatch/Remote Control composer actually send messages to a runtime.
+
+### Just did
+
+- Created fresh linked worktree `allternit-session-remote-control-gap-fix` from `main`.
+- Wrote consolidated gap analysis to `/Users/joe/Desktop/allternit-remote-control-gap-analysis.md`.
+- Created `TODO-remote-control-gap-fix.md` task tracker.
+
+### Just did (continued)
+
+- Renamed internal `dispatch` view type to `remote-control` and added `/remote` route alias.
+- Aligned push worker contract: worker uses no `/push` prefix; SDK, e2e test, README, and env vars updated.
+- Verified `/v1/permission` and `/v1/question` routes already exist in gizzi-code and match SDK calls.
+- Made DispatchView composer real: creates a remote session and sends the message via `RemoteControlClient`.
+- Added `createSession` to SDK `RemoteControlClient`.
+- Gated dev mock runtimes behind `ALLTERNIT_LOCAL_DEV_BYPASS`.
+- Implemented live pending permission/question counters in `RemoteControlHub` and `DashboardPage`.
+- Committed changes to `session/remote-control-gap-fix`.
+
+### Verification
+
+- `pnpm typecheck:fast` in `surfaces/ai.allternit.com` passes for touched files; pre-existing errors remain in unrelated packages.
+- `pnpm typecheck` in `services/remote-control-push` ✅.
+- SDK `runtime/index.ts` typechecks cleanly.
+- `vite build --config vite.remote-control.config.ts` still fails on pre-existing top-level-await in a vendored dependency, unrelated to changes.
+
+### Next
+
+- Remove session worktree after user review (branch `session/remote-control-gap-fix` is committed and preserved).
+- Remaining gaps for follow-up: push worker auth, subscription TTL/GC, PWA offline shell, native OS permission requests, iOS APNs backend endpoint.
+
+### Open questions
+
+- Should push worker add authentication now (Clerk bearer + device-token-signed `/notify`), or defer until after merge?
+- Should `/runtimes` redirect to `/remote`, or keep both as aliases?

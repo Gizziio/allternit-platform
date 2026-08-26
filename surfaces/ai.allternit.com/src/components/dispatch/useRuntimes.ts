@@ -82,8 +82,8 @@ export function useRuntimes(): UseRuntimesResult {
   const fetchRuntimes = useCallback(async () => {
     try {
       const token = await auth.getToken();
-      // DEV BYPASS: serve mock runtimes when Clerk is disabled in local dev.
-      if (token === 'dev-token') {
+      // DEV BYPASS: serve mock runtimes only when explicitly enabled in local dev.
+      if (token === 'dev-token' && env('ALLTERNIT_LOCAL_DEV_BYPASS') === 'true') {
         setRuntimes(MOCK_RUNTIMES);
         setError(null);
         setLoading(false);
