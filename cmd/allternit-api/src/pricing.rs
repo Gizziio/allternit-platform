@@ -17,6 +17,8 @@ fn default_rates() -> HashMap<&'static str, f64> {
     m.insert("sandbox_runtime:seconds", 0.02);
     m.insert("vcpu_seconds:seconds", 0.01);
     m.insert("gpu_seconds:seconds", 0.5);
+    // Desktop Cloud minute pricing (placeholder pending business decision).
+    m.insert("computer_minute:minutes", 0.5);
     m
 }
 

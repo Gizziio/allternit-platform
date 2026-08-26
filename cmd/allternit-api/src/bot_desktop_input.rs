@@ -131,7 +131,7 @@ pub(crate) async fn send_desktop_mouse(
     .await
 }
 
-fn build_mouse_command(input: &MouseInput, display: &str) -> Result<Vec<String>, String> {
+pub(crate) fn build_mouse_command(input: &MouseInput, display: &str) -> Result<Vec<String>, String> {
     let action = input.action.to_lowercase();
     let button_num = match input.button.as_deref().unwrap_or("left").to_lowercase().as_str() {
         "left" => "1",
@@ -193,7 +193,7 @@ fn build_mouse_command(input: &MouseInput, display: &str) -> Result<Vec<String>,
         .collect())
 }
 
-fn build_windows_mouse_command(input: &MouseInput) -> Result<Vec<String>, String> {
+pub(crate) fn build_windows_mouse_command(input: &MouseInput) -> Result<Vec<String>, String> {
     let action = input.action.to_lowercase();
     let x = input.x.unwrap_or(0);
     let y = input.y.unwrap_or(0);
@@ -292,7 +292,7 @@ pub(crate) async fn send_desktop_keyboard(
     .await
 }
 
-fn build_keyboard_command(input: &KeyboardInput, display: &str) -> Result<Vec<String>, String> {
+pub(crate) fn build_keyboard_command(input: &KeyboardInput, display: &str) -> Result<Vec<String>, String> {
     let action = input.action.to_lowercase();
     match action.as_str() {
         "type" => {
@@ -327,7 +327,7 @@ fn build_keyboard_command(input: &KeyboardInput, display: &str) -> Result<Vec<St
     }
 }
 
-fn build_windows_keyboard_command(input: &KeyboardInput) -> Result<Vec<String>, String> {
+pub(crate) fn build_windows_keyboard_command(input: &KeyboardInput) -> Result<Vec<String>, String> {
     let action = input.action.to_lowercase();
     match action.as_str() {
         "type" => {

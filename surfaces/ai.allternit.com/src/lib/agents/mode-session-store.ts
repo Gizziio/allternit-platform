@@ -39,6 +39,7 @@ import { getAgentModeContract, validateAgentModeExecution } from './agent-mode-c
 import { executeAgentMode } from './agent-mode-executor';
 import { gizziBaseUrl } from './api-config';
 import { buildBotRuntimeEnv } from '@/lib/bots/bot-runtime-env';
+import { deleteComputer } from '@/lib/computers-api';
 import { memoryClient } from './memory-client';
 
 const logger = createModuleLogger('ModeSessionStore');
@@ -605,7 +606,7 @@ async function streamMessageWithContext(
   // hard-coded model.
   let modelId = options.modelId ?? resolveRuntimeModelId();
   if (!modelId) {
-    modelId = await resolveFallbackRuntimeModelId();
+    modelId = (await resolveFallbackRuntimeModelId()) ?? null;
   }
 
   if (
@@ -737,7 +738,7 @@ async function streamMessageWithContext(
   await chatApi.streamChat(
     session.id,
     text,
-    modelId,
+    modelId ?? undefined,
     {
       onChunk: (chunk) => {
         callbacks?.onChunk?.(chunk.chunk);
@@ -1137,6 +1138,22 @@ export function createModeSessionStore(config: StoreConfig) {
                 coworkIntegration.cleanupAgent(session.metadata.agentId);
               } catch {
                 // Non-fatal cleanup errors don't block deletion
+              }
+            }
+
+            // Destroy ephemeral cloud desktops tied to this session.
+            const vmOperator = session?.metadata.vmOperator as
+              | { persistence?: 'ephemeral' | 'session' | 'persistent' }
+              | undefined;
+            const vmComputerId = session?.metadata.vmComputerId as string | undefined;
+            if (vmOperator?.persistence === 'ephemeral' && vmComputerId) {
+              try {
+                await deleteComputer(vmComputerId);
+              } catch (error) {
+                logger.error(
+                  { err: error, computerId: vmComputerId },
+                  `Failed to delete ephemeral computer for session ${sessionId}`,
+                );
               }
             }
 

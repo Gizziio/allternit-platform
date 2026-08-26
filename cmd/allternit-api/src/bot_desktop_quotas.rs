@@ -235,8 +235,10 @@ pub async fn record_start(
     }
 }
 
-/// Record that a desktop ended and compute minutes used. When Stripe is
-/// configured, emit a usage record for the consumed minutes.
+/// Record that a desktop ended and compute minutes used. Writes a unified
+/// `usage_events` row for the credit ledger while keeping the legacy
+/// `desktop_usage` row for backward compatibility. When Stripe is configured,
+/// emit a usage record for the consumed minutes.
 pub async fn record_end(state: &Arc<AppState>, bot_id: &str) {
     let db = state.db.clone();
     let bot_id = bot_id.to_string();
@@ -245,21 +247,24 @@ pub async fn record_end(state: &Arc<AppState>, bot_id: &str) {
     let result = tokio::task::spawn_blocking(move || {
         let conn = db.connect()?;
         // Find the active usage row for this bot.
-        let row: Option<(i64, String, String, String)> = conn
+        let row: Option<(i64, String, String, String, Option<String>, String)> = conn
             .query_row(
-                "SELECT id, started_at, provider, os FROM desktop_usage WHERE bot_id = ?1 AND ended_at IS NULL ORDER BY id DESC LIMIT 1",
+                "SELECT id, started_at, provider, os, org_id, sandbox_id \
+                 FROM desktop_usage WHERE bot_id = ?1 AND ended_at IS NULL ORDER BY id DESC LIMIT 1",
                 rusqlite::params![bot_id],
                 |row| {
                     let id: i64 = row.get(0)?;
                     let started: String = row.get(1)?;
                     let provider: String = row.get(2)?;
                     let os: String = row.get(3)?;
-                    Ok((id, started, provider, os))
+                    let org_id: Option<String> = row.get(4)?;
+                    let sandbox_id: String = row.get(5)?;
+                    Ok((id, started, provider, os, org_id, sandbox_id))
                 },
             )
             .optional()?;
 
-        if let Some((id, started, provider, os)) = row {
+        if let Some((id, started, provider, os, org_id, sandbox_id)) = row {
             let started_at = DateTime::parse_from_rfc3339(&started)
                 .map(|dt| dt.with_timezone(&Utc))
                 .unwrap_or_else(|_| ended_at);
@@ -268,6 +273,32 @@ pub async fn record_end(state: &Arc<AppState>, bot_id: &str) {
                 "UPDATE desktop_usage SET ended_at = ?1, minutes = ?2 WHERE id = ?3",
                 rusqlite::params![ended_at.to_rfc3339(), minutes, id],
             )?;
+
+            // Emit a unified usage event for the credit ledger.
+            if minutes > 0 {
+                if let Some(ref org) = org_id {
+                    let cost_cents = crate::pricing::compute_cost_cents("computer_minute", "minutes", minutes as f64);
+                    let event_id = uuid::Uuid::new_v4().to_string();
+                    let idempotency_key = format!("desktop:{}:{}", sandbox_id, started);
+                    let _ = conn.execute(
+                        "INSERT OR IGNORE INTO usage_events \
+                         (id, organization_id, environment_id, resource_type, quantity, unit, provider, started_at, ended_at, computed_cost_cents, idempotency_key) \
+                         VALUES (?1, ?2, ?3, 'computer_minute', ?4, 'minutes', ?5, ?6, ?7, ?8, ?9)",
+                        rusqlite::params![
+                            event_id,
+                            org,
+                            sandbox_id,
+                            minutes as f64,
+                            provider,
+                            started_at.to_rfc3339(),
+                            ended_at.to_rfc3339(),
+                            cost_cents,
+                            idempotency_key,
+                        ],
+                    );
+                }
+            }
+
             Ok::<_, rusqlite::Error>(Some((minutes, provider, os)))
         } else {
             Ok(None)

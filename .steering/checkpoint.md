@@ -516,3 +516,66 @@ Finish the Remote Control feature: merge the `session/remote-control-finish` imp
 5. Rebuild the desktop shell so `shell.openRemoteControl` is live.
 6. Run a real end-to-end verification: sign in, pair runtime, open Remote Control, list sessions, open dashboard on another browser/phone, install PWA, test push.
 7. Package and code-sign the desktop DMG.
+
+
+---
+
+# Steering checkpoint — Unified Compute phases 3-4 (lifecycle + credits)
+
+## Goal
+Implement the "phases-3-4-lifecycle-credits" work package from the unified compute plan: bot session lifecycle integration and a unified credit ledger for Desktop Cloud usage.
+
+## Just did
+- Read the approved plan and all relevant existing code: `computer_routes.rs`, `bot_desktop_quotas.rs`, `bot_desktop_billing.rs`, `fallback_credit_routes.rs`, `admin_spend_limit_routes.rs`, `pricing.rs`, `usage_events` schema, `vm-operator.ts`, `useStartBotSession.ts`, `mode-session-store.ts`, `ComputeBillingPanel.tsx`.
+- Confirmed branch `session/desktop-cloud-mvp` is clean and toolchain versions are available.
+
+## Next
+1. Backend: extend `computer_routes.rs` with session_id/persistence, credit/spend check, and session-end handling.
+2. Backend: emit `usage_events` rows from `bot_desktop_quotas.rs` on desktop end, add `computer_minute` pricing, and include usage_events in org spend calculations.
+3. Frontend: extend `AgentVMOperatorConfig` with `computerKind`/`templateId`; update `vm-operator.ts` to call `/api/v1/computers`; update `bot-runtime-env.ts`; add session teardown hook; update tests.
+4. Frontend: add Desktop Cloud usage summary to `ComputeBillingPanel.tsx`.
+5. Run `cargo test -p allternit-api` and `pnpm --filter ai.allternit.com typecheck`.
+
+## Open questions
+- The plan references `ComputeBillingPanel` "Usage & Credits tab", but the current panel has no tabs (Phase 2 `ComputeSettings.tsx` is not in this branch). I will add a minimal usage/credits section to the existing panel instead of creating the full tabbed settings view.
+- Session teardown will be implemented client-side in `deleteSession` for ephemeral computers; a server-side lifecycle hook can be added later.
+
+---
+
+# Steering checkpoint — Unified Compute Phase 2 (settings UI)
+
+## Goal
+Consolidate the four compute-related settings sections into a single "Compute & Cloud Desktops" settings panel.
+
+## Just did
+- Created `surfaces/ai.allternit.com/src/views/settings/ComputeSettings.tsx` (~85 LOC) with tabs:
+  Overview, My Computers, Add Computer, Templates, and Usage & Credits.
+- Reused existing panels inside the tabs:
+  `ComputeBillingPanel`, `VPSConnectionsPanel`, `CloudInstancesPanel`,
+  `DesktopCloudAdminView`, and `EnterpriseByocPanel`.
+- Updated `surfaces/ai.allternit.com/src/views/settings/settings.config.ts`:
+  - Added `compute` under Infrastructure.
+  - Removed legacy `vps`, `cloud-instances`, and `cloud-credentials` nav items.
+  - Added `SETTINGS_LEGACY_REDIRECTS` and `normalizeSettingsSection()` so old
+    deep-links route to the new `compute` section.
+- Updated `surfaces/ai.allternit.com/src/views/settings/SettingsView.tsx`:
+  - Imports and renders `<ComputeSettings />` for the `compute` section.
+  - Uses `normalizeSettingsSection()` for `initialSection` and navigation events.
+  - Removed direct render cases for the legacy compute sections.
+- Ran targeted Vitest tests:
+  - `SettingsView.test.tsx`, `ComputeBillingPanel.test.tsx`,
+    `EnterpriseByocPanel.test.tsx`, `CloudInstancesPanel.test.tsx`.
+  - Result: 4 test files, 6 tests passed.
+
+## Next
+- Phase 3–4 work package can now extend the "Usage & Credits" tab with the
+  unified `usage_events` ledger and wire bot session lifecycle creation into
+  the "My Computers" / "Add Computer" tabs.
+
+## Open questions / notes
+- `pnpm --filter @allternit/ai typecheck` still fails on pre-existing errors in
+  `src/lib/agents/agent.service.ts`, `src/lib/agents/mode-session-store.ts`,
+  and `src/views/agent-view/components/AgentGalleryCard.tsx`. No new type
+  errors were introduced by the Phase 2 files.
+- No screen/video proof was requested for this checkpoint; add a recording if
+  the orchestrator wants visual verification of the new settings section.

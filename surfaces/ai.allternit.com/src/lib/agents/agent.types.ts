@@ -491,11 +491,22 @@ export type AgentWalletPaymentMethod = 'send' | 'receive' | 'swap' | 'stake' | '
  * dispatch to OpenSandbox, Docker, Kubernetes, or a local runner based on the
  * provider field.
  */
+export type AgentVMComputerKind =
+  | 'local'
+  | 'byo_vps'
+  | 'managed'
+  | 'byoc'
+  | 'cloud_desktop';
+
 export interface AgentVMOperatorConfig {
   /** Whether the bot may use a virtual computer to execute tasks */
   enabled: boolean;
   /** Runtime provider that provisions and manages the sandbox */
   provider: 'opensandbox' | 'docker' | 'kubernetes' | 'local' | 'custom';
+  /** Unified computer kind used by the control plane (defaults to cloud_desktop) */
+  computerKind?: AgentVMComputerKind;
+  /** Desktop Cloud template id to use when provisioning */
+  templateId?: string;
   /** Sandbox image / environment (e.g. opensandbox/desktop:v1.0.0) */
   image?: string;
   /** Resource limits for the sandbox */
@@ -524,6 +535,7 @@ export interface AgentVMOperatorConfig {
 
 export type AgentVMAction = NonNullable<AgentVMOperatorConfig['allowedActions']>[number];
 export type AgentVMProvider = AgentVMOperatorConfig['provider'];
+export type AgentVMComputerKindType = NonNullable<AgentVMOperatorConfig['computerKind']>;
 export type AgentVMNetworkPolicy = NonNullable<AgentVMOperatorConfig['networkPolicy']>;
 export type AgentVMPersistence = NonNullable<AgentVMOperatorConfig['persistence']>;
 
@@ -586,6 +598,8 @@ export const agentIdentityChannelsSchema = z.object({
 export const agentVMOperatorConfigSchema = z.object({
   enabled: z.boolean(),
   provider: z.enum(['opensandbox', 'docker', 'kubernetes', 'local', 'custom']),
+  computerKind: z.enum(['local', 'byo_vps', 'managed', 'byoc', 'cloud_desktop']).optional(),
+  templateId: z.string().optional(),
   image: z.string().optional(),
   resources: z.object({
     cpu: z.string().optional(),

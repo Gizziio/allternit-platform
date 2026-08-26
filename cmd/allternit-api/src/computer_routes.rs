@@ -7,19 +7,28 @@
 //! substrates.
 
 use axum::{
+    body::Bytes,
     extract::{Extension, Path, Query, State},
-    http::StatusCode,
+    http::{header, StatusCode},
     response::{IntoResponse, Response},
     routing::{get, post},
     Json, Router,
 };
+use base64::{engine::general_purpose::STANDARD as BASE64_STANDARD, Engine as _};
 use serde::{Deserialize, Serialize};
-use serde_json::json;
+use serde_json::{json, Value};
 use std::sync::Arc;
 use tracing::{info, warn};
 
 use crate::auth::AuthUser;
+use crate::bot_desktop_input::{
+    build_keyboard_command, build_mouse_command, desktop_display, FilePathQuery, KeyboardInput,
+    MouseInput, ShellInput,
+};
+use crate::bot_desktop_routes::DesktopQuery;
 use crate::AppState;
+use allternit_driver_interface::CommandSpec;
+use rusqlite::OptionalExtension;
 
 // ---------------------------------------------------------------------------
 // Domain types.
@@ -69,6 +78,14 @@ pub struct ComputerResponse {
     pub updated_at: String,
 }
 
+#[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq)]
+#[serde(rename_all = "snake_case")]
+pub enum Persistence {
+    Ephemeral,
+    Session,
+    Persistent,
+}
+
 #[derive(Debug, Deserialize)]
 pub struct CreateComputerRequest {
     pub kind: ComputerKind,
@@ -76,6 +93,8 @@ pub struct CreateComputerRequest {
     pub name: Option<String>,
     pub os: Option<String>,
     pub template_id: Option<String>,
+    pub session_id: Option<String>,
+    pub persistence: Option<Persistence>,
 }
 
 #[derive(Debug, Deserialize)]
@@ -100,13 +119,20 @@ pub fn router() -> Router<Arc<AppState>> {
         .route("/computers/:id/start", post(start_computer))
         .route("/computers/:id/stop", post(stop_computer))
         .route("/computers/:id/delete", post(delete_computer))
+        .route("/computers/:id/session-end", post(session_end_computer))
+        .route("/computers/:id/screenshot", get(computer_screenshot))
+        .route("/computers/:id/mouse", post(computer_mouse))
+        .route("/computers/:id/keyboard", post(computer_keyboard))
+        .route("/computers/:id/shell", post(computer_shell))
+        .route("/computers/:id/files/upload", post(computer_upload_file))
+        .route("/computers/:id/files/download", get(computer_download_file))
 }
 
 // ---------------------------------------------------------------------------
 // Helpers.
 // ---------------------------------------------------------------------------
 
-fn status_from_str(s: &str) -> ComputerStatus {
+pub(crate) fn status_from_str(s: &str) -> ComputerStatus {
     match s {
         "running" => ComputerStatus::Running,
         "stopped" => ComputerStatus::Stopped,
@@ -126,7 +152,7 @@ fn kind_to_str(k: &ComputerKind) -> &'static str {
     }
 }
 
-fn error_response(status: StatusCode, message: impl Into<String>) -> Response {
+pub(crate) fn error_response(status: StatusCode, message: impl Into<String>) -> Response {
     (status, Json(json!({ "error": message.into() }))).into_response()
 }
 
@@ -138,6 +164,34 @@ fn require_driver(state: &AppState) -> Result<Arc<dyn allternit_driver_interface
             "No VM driver is configured on this host",
         )),
     }
+}
+
+fn resolve_org_id(user: &AuthUser) -> Option<String> {
+    user.organization_id
+        .clone()
+        .or_else(|| user.tenant_id.clone())
+        .filter(|s| !s.is_empty())
+}
+
+/// Check whether the user's organization has remaining spend capacity for a new
+/// computer. This unifies LLM and computer usage under the org spend cap.
+fn check_org_spend_limit(conn: &rusqlite::Connection, org_id: &str) -> Result<bool, rusqlite::Error> {
+    let cap: Option<i64> = conn
+        .query_row(
+            "SELECT monthly_usd_cap FROM spend_limits WHERE org_id = ?1",
+            [org_id],
+            |r| r.get(0),
+        )
+        .optional()?;
+    let Some(cap_cents) = cap else {
+        return Ok(true);
+    };
+    if cap_cents <= 0 {
+        return Ok(true);
+    }
+    let spent_micro = crate::admin_spend_limit_routes::org_month_spend_microdollars(conn, org_id)?;
+    let spent_cents = spent_micro / 10_000;
+    Ok(spent_cents < cap_cents)
 }
 
 // ---------------------------------------------------------------------------
@@ -162,7 +216,8 @@ async fn list_computers(
              c.region, c.host, c.native_id, c.template_id, c.billing_source, \
              c.created_at, c.updated_at \
              FROM computers c \
-             WHERE c.owner_id = ?1 AND c.status != 'deleted'"
+             LEFT JOIN agents a ON a.id = c.bot_id \
+             WHERE (c.owner_id = ?1 OR (c.kind = 'cloud_desktop' AND a.user_id = ?1)) AND c.status != 'deleted'"
         );
         let mut params: Vec<Box<dyn rusqlite::ToSql>> = vec![Box::new(user_id)];
         if let Some(bot_id) = bot_id_filter {
@@ -258,7 +313,8 @@ async fn fetch_computer(
              c.region, c.host, c.native_id, c.template_id, c.billing_source, \
              c.created_at, c.updated_at \
              FROM computers c \
-             WHERE c.id = ?1 AND c.owner_id = ?2 AND c.status != 'deleted'"
+             LEFT JOIN agents a ON a.id = c.bot_id \
+             WHERE c.id = ?1 AND (c.owner_id = ?2 OR (c.kind = 'cloud_desktop' AND a.user_id = ?2)) AND c.status != 'deleted'"
         )?;
         let row = stmt.query_row(rusqlite::params![id_owned, user_id], |row| {
             Ok(ComputerResponse {
@@ -336,15 +392,52 @@ async fn create_cloud_desktop(
         return error_response(StatusCode::FORBIDDEN, "bot not found or access denied");
     }
 
+    // Credit / spend-cap check.
+    if let Some(ref org_id) = resolve_org_id(&user) {
+        let org_id = org_id.clone();
+        let db = state.db.clone();
+        let allowed = match tokio::task::spawn_blocking(move || {
+            let conn = db.connect()?;
+            check_org_spend_limit(&conn, &org_id)
+        }).await {
+            Ok(Ok(v)) => v,
+            Ok(Err(e)) => {
+                warn!(error = %e, "failed to check org spend limit");
+                true
+            }
+            Err(e) => {
+                warn!(error = %e, "task panicked checking org spend limit");
+                true
+            }
+        };
+        if !allowed {
+            return error_response(
+                StatusCode::TOO_MANY_REQUESTS,
+                "Organization monthly spend limit reached. Add credits or request a limit increase.",
+            );
+        }
+    }
+
     let query = crate::bot_desktop_routes::ProvisionDesktopQuery {
         os: req.os,
         template_id: req.template_id,
+        provider: None,
     };
 
     match crate::bot_desktop_routes::provision_desktop_internal(&state, &user, &bot_id, &query).await {
         Ok(resp) => {
             // Sync the new/updated sandbox into computers table.
-            if let Err(e) = sync_cloud_desktop_from_sandbox(&state.db, &bot_id, &resp.sandbox_id, &resp.provider, resp.host.as_deref(), &resp.status) {
+            let persistence = req.persistence.unwrap_or(Persistence::Session);
+            if let Err(e) = sync_cloud_desktop_from_sandbox(
+                &state.db,
+                &bot_id,
+                &resp.sandbox_id,
+                &resp.provider,
+                resp.host.as_deref(),
+                &resp.status,
+                req.session_id.as_deref(),
+                &persistence,
+            ) {
                 warn!(bot_id, error = %e, "failed to sync computer record after provision");
             }
             (StatusCode::CREATED, Json(json!({
@@ -353,9 +446,18 @@ async fn create_cloud_desktop(
                 "status": resp.status,
                 "provider": resp.provider,
                 "host": resp.host,
+                "persistence": serde_json::to_value(&persistence).unwrap_or(json!(null)),
             }))).into_response()
         }
         Err(resp) => resp,
+    }
+}
+
+fn persistence_to_str(p: &Persistence) -> &'static str {
+    match p {
+        Persistence::Ephemeral => "ephemeral",
+        Persistence::Session => "session",
+        Persistence::Persistent => "persistent",
     }
 }
 
@@ -366,26 +468,280 @@ fn sync_cloud_desktop_from_sandbox(
     provider: &str,
     host: Option<&str>,
     status: &str,
+    session_id: Option<&str>,
+    persistence: &Persistence,
 ) -> Result<(), rusqlite::Error> {
     let conn = db.connect()?;
     let name = format!("Bot desktop {}", sandbox_id);
     conn.execute(
-        "INSERT INTO computers (id, kind, provider, status, owner_type, owner_id, bot_id, name, host, native_id, billing_source) \
-         VALUES (?1, 'cloud_desktop', ?2, ?3, 'bot', ?4, ?4, ?5, ?6, ?7, 'credits') \
+        "INSERT INTO computers (id, kind, provider, status, owner_type, owner_id, bot_id, session_id, name, host, native_id, billing_source) \
+         VALUES (?1, 'cloud_desktop', ?2, ?3, 'bot', ?4, ?4, ?5, ?6, ?7, ?8, 'credits') \
          ON CONFLICT(id) DO UPDATE SET \
              status = excluded.status, \
              host = excluded.host, \
+             session_id = COALESCE(excluded.session_id, session_id), \
              updated_at = CURRENT_TIMESTAMP",
-        rusqlite::params![sandbox_id, provider, status, bot_id, name, host, sandbox_id],
+        rusqlite::params![sandbox_id, provider, status, session_id, name, host, sandbox_id],
     )?;
     conn.execute(
-        "INSERT INTO computer_cloud_desktop (computer_id, sandbox_id, control_state) \
-         VALUES (?1, ?2, 'bot_controls') \
+        "INSERT INTO computer_cloud_desktop (computer_id, sandbox_id, control_state, ws_url, protocol) \
+         VALUES (?1, ?2, 'bot_controls', ?3, 'vnc') \
          ON CONFLICT(computer_id) DO UPDATE SET \
              sandbox_id = excluded.sandbox_id",
-        rusqlite::params![sandbox_id, sandbox_id],
+        rusqlite::params![sandbox_id, sandbox_id, format!("/ws/bots/{}/desktop/vnc?sandbox_id={}", bot_id, urlencoding::encode(sandbox_id))],
+    )?;
+    // Persist lifecycle policy in side-table metadata (non-schema storage).
+    conn.execute(
+        "UPDATE computer_cloud_desktop SET protocol = ?1 WHERE computer_id = ?2",
+        rusqlite::params![persistence_to_str(persistence), sandbox_id],
     )?;
     Ok(())
+}
+
+async fn computer_screenshot(
+    State(state): State<Arc<AppState>>,
+    Extension(user): Extension<AuthUser>,
+    Path(id): Path<String>,
+) -> impl IntoResponse {
+    let computer = match fetch_computer(&state, &user.user_id, &id).await {
+        Ok(Some(c)) => c,
+        Ok(None) => return error_response(StatusCode::NOT_FOUND, "computer not found"),
+        Err(resp) => return resp,
+    };
+    let bot_id = match computer.bot_id {
+        Some(id) => id,
+        None => return error_response(StatusCode::BAD_REQUEST, "computer has no bot_id"),
+    };
+    let sandbox_id = match computer.native_id {
+        Some(id) => id,
+        None => return error_response(StatusCode::BAD_REQUEST, "computer has no native_id"),
+    };
+
+    let driver = match require_driver(&state) {
+        Ok(d) => d,
+        Err(resp) => return resp,
+    };
+
+    let record = match crate::bot_desktop_routes::read_bot_sandbox(&state.db, &bot_id) {
+        Ok(Some(r)) => r,
+        Ok(None) => return error_response(StatusCode::NOT_FOUND, "bot has no desktop sandbox"),
+        Err(e) => {
+            warn!(bot_id, error = %e, "failed to read bot sandbox for screenshot");
+            return error_response(StatusCode::INTERNAL_SERVER_ERROR, "database error");
+        }
+    };
+
+    let handle = crate::bot_desktop_routes::build_handle(&record.sandbox_id, Some(&record.os), Some(&record.provider));
+    let capture_cmd = if record.os == "windows" {
+        crate::bot_desktop_windows::screenshot_command()
+    } else {
+        let display = desktop_display(&record.provider);
+        let mut env_vars = std::collections::HashMap::new();
+        env_vars.insert("DISPLAY".to_string(), display.to_string());
+        CommandSpec {
+            command: vec![
+                "sh".to_string(),
+                "-c".to_string(),
+                format!("DISPLAY={} scrot -z -o /tmp/allternit-screen.png && base64 -w0 /tmp/allternit-screen.png", display),
+            ],
+            env_vars,
+            working_dir: None,
+            stdin_data: None,
+            capture_stdout: true,
+            capture_stderr: true,
+        }
+    };
+
+    let exec_result = match driver.exec(&handle, capture_cmd).await {
+        Ok(r) => r,
+        Err(e) => {
+            warn!(bot_id, sandbox_id = %sandbox_id, error = %e, "failed to capture computer screenshot");
+            return error_response(StatusCode::SERVICE_UNAVAILABLE, format!("failed to capture screenshot: {}", e));
+        }
+    };
+
+    let stdout = exec_result.stdout.as_deref().unwrap_or(&[]);
+    let stdout_str = String::from_utf8_lossy(stdout);
+    let stdout_trimmed = stdout_str.trim();
+    if stdout_trimmed.is_empty() {
+        let stderr = String::from_utf8_lossy(exec_result.stderr.as_deref().unwrap_or(&[]));
+        return (
+            StatusCode::SERVICE_UNAVAILABLE,
+            Json(json!({
+                "error": "screenshot command produced no output",
+                "exit_code": exec_result.exit_code,
+                "stderr": stderr.trim(),
+            })),
+        )
+            .into_response();
+    }
+
+    let png = match BASE64_STANDARD.decode(stdout_trimmed) {
+        Ok(bytes) => bytes,
+        Err(e) => {
+            warn!(bot_id, sandbox_id = %sandbox_id, error = %e, "screenshot output was not valid base64");
+            return error_response(StatusCode::SERVICE_UNAVAILABLE, format!("invalid screenshot output: {}", e));
+        }
+    };
+
+    (
+        StatusCode::OK,
+        [(header::CONTENT_TYPE, "image/png")],
+        Bytes::from(png),
+    )
+        .into_response()
+}
+
+async fn computer_mouse(
+    State(state): State<Arc<AppState>>,
+    Extension(user): Extension<AuthUser>,
+    Path(id): Path<String>,
+    Json(input): Json<MouseInput>,
+) -> Response {
+    let computer = match fetch_computer(&state, &user.user_id, &id).await {
+        Ok(Some(c)) => c,
+        Ok(None) => return error_response(StatusCode::NOT_FOUND, "computer not found"),
+        Err(resp) => return resp,
+    };
+    let bot_id = match computer.bot_id {
+        Some(id) => id,
+        None => return error_response(StatusCode::BAD_REQUEST, "computer has no bot_id"),
+    };
+    let sandbox_id = match computer.native_id {
+        Some(id) => id,
+        None => return error_response(StatusCode::BAD_REQUEST, "computer has no native_id"),
+    };
+    crate::bot_desktop_input::send_desktop_mouse(
+        State(state),
+        Extension(user),
+        Path(bot_id),
+        Query(DesktopQuery { sandbox_id }),
+        Json(input),
+    )
+    .await
+    .into_response()
+}
+
+async fn computer_keyboard(
+    State(state): State<Arc<AppState>>,
+    Extension(user): Extension<AuthUser>,
+    Path(id): Path<String>,
+    Json(input): Json<KeyboardInput>,
+) -> Response {
+    let computer = match fetch_computer(&state, &user.user_id, &id).await {
+        Ok(Some(c)) => c,
+        Ok(None) => return error_response(StatusCode::NOT_FOUND, "computer not found"),
+        Err(resp) => return resp,
+    };
+    let bot_id = match computer.bot_id {
+        Some(id) => id,
+        None => return error_response(StatusCode::BAD_REQUEST, "computer has no bot_id"),
+    };
+    let sandbox_id = match computer.native_id {
+        Some(id) => id,
+        None => return error_response(StatusCode::BAD_REQUEST, "computer has no native_id"),
+    };
+    crate::bot_desktop_input::send_desktop_keyboard(
+        State(state),
+        Extension(user),
+        Path(bot_id),
+        Query(DesktopQuery { sandbox_id }),
+        Json(input),
+    )
+    .await
+    .into_response()
+}
+
+async fn computer_shell(
+    State(state): State<Arc<AppState>>,
+    Extension(user): Extension<AuthUser>,
+    Path(id): Path<String>,
+    Json(input): Json<ShellInput>,
+) -> Response {
+    let computer = match fetch_computer(&state, &user.user_id, &id).await {
+        Ok(Some(c)) => c,
+        Ok(None) => return error_response(StatusCode::NOT_FOUND, "computer not found"),
+        Err(resp) => return resp,
+    };
+    let bot_id = match computer.bot_id {
+        Some(id) => id,
+        None => return error_response(StatusCode::BAD_REQUEST, "computer has no bot_id"),
+    };
+    let sandbox_id = match computer.native_id {
+        Some(id) => id,
+        None => return error_response(StatusCode::BAD_REQUEST, "computer has no native_id"),
+    };
+    crate::bot_desktop_input::run_desktop_shell(
+        State(state),
+        Extension(user),
+        Path(bot_id),
+        Query(DesktopQuery { sandbox_id }),
+        Json(input),
+    )
+    .await
+    .into_response()
+}
+
+async fn computer_upload_file(
+    State(state): State<Arc<AppState>>,
+    Extension(user): Extension<AuthUser>,
+    Path(id): Path<String>,
+    Query(file_query): Query<FilePathQuery>,
+    body: Bytes,
+) -> Response {
+    let computer = match fetch_computer(&state, &user.user_id, &id).await {
+        Ok(Some(c)) => c,
+        Ok(None) => return error_response(StatusCode::NOT_FOUND, "computer not found"),
+        Err(resp) => return resp,
+    };
+    let bot_id = match computer.bot_id {
+        Some(id) => id,
+        None => return error_response(StatusCode::BAD_REQUEST, "computer has no bot_id"),
+    };
+    let sandbox_id = match computer.native_id {
+        Some(id) => id,
+        None => return error_response(StatusCode::BAD_REQUEST, "computer has no native_id"),
+    };
+    crate::bot_desktop_input::upload_desktop_file(
+        State(state),
+        Extension(user),
+        Path(bot_id),
+        Query(DesktopQuery { sandbox_id }),
+        Query(file_query),
+        body,
+    )
+    .await
+    .into_response()
+}
+
+async fn computer_download_file(
+    State(state): State<Arc<AppState>>,
+    Extension(user): Extension<AuthUser>,
+    Path(id): Path<String>,
+    Query(file_query): Query<FilePathQuery>,
+) -> Response {
+    let computer = match fetch_computer(&state, &user.user_id, &id).await {
+        Ok(Some(c)) => c,
+        Ok(None) => return error_response(StatusCode::NOT_FOUND, "computer not found"),
+        Err(resp) => return resp,
+    };
+    let bot_id = match computer.bot_id {
+        Some(id) => id,
+        None => return error_response(StatusCode::BAD_REQUEST, "computer has no bot_id"),
+    };
+    let sandbox_id = match computer.native_id {
+        Some(id) => id,
+        None => return error_response(StatusCode::BAD_REQUEST, "computer has no native_id"),
+    };
+    crate::bot_desktop_input::download_desktop_file(
+        State(state),
+        Extension(user),
+        Path(bot_id),
+        Query(DesktopQuery { sandbox_id }),
+        Query(file_query),
+    )
+    .await
+    .into_response()
 }
 
 async fn start_computer(
@@ -425,7 +781,7 @@ async fn start_cloud_desktop(state: &Arc<AppState>, computer: &ComputerResponse)
         Err(resp) => return resp,
     };
 
-    let handle = crate::bot_desktop_routes::build_handle(&record.sandbox_id, Some(&record.os));
+    let handle = crate::bot_desktop_routes::build_handle(&record.sandbox_id, Some(&record.os), Some(&record.provider));
     match driver.resume_vm(&handle).await {
         Ok(()) => {
             let _ = update_computer_status(&state.db, &computer.id, "running");
@@ -480,7 +836,7 @@ async fn stop_cloud_desktop(state: &Arc<AppState>, computer: &ComputerResponse) 
         Err(resp) => return resp,
     };
 
-    let handle = crate::bot_desktop_routes::build_handle(&record.sandbox_id, Some(&record.os));
+    let handle = crate::bot_desktop_routes::build_handle(&record.sandbox_id, Some(&record.os), Some(&record.provider));
     match driver.pause_vm(&handle).await {
         Ok(()) => {
             let _ = update_computer_status(&state.db, &computer.id, "stopped");
@@ -545,7 +901,7 @@ async fn delete_cloud_desktop(state: &Arc<AppState>, computer: &ComputerResponse
         .map(|_| delete_bot_sandbox_and_computer(state.clone(), &bot_id, &computer.id));
 
     let sandbox_id = record.sandbox_id.clone();
-    let handle = crate::bot_desktop_routes::build_handle(&record.sandbox_id, Some(&record.os));
+    let handle = crate::bot_desktop_routes::build_handle(&record.sandbox_id, Some(&record.os), Some(&record.provider));
     tokio::spawn(async move {
         match driver.destroy(&handle).await {
             Ok(()) => info!(bot_id, sandbox_id, "cloud desktop destroyed"),
@@ -572,6 +928,61 @@ fn delete_bot_sandbox_and_computer(state: Arc<AppState>, bot_id: &str, computer_
         let mut sessions = state.bot_desktop_sessions.write().await;
         sessions.remove(&bot_id);
     });
+}
+
+async fn session_end_computer(
+    State(state): State<Arc<AppState>>,
+    Extension(user): Extension<AuthUser>,
+    Path(id): Path<String>,
+) -> impl IntoResponse {
+    let computer = match fetch_computer(&state, &user.user_id, &id).await {
+        Ok(Some(c)) => c,
+        Ok(None) => return StatusCode::NO_CONTENT.into_response(),
+        Err(resp) => return resp,
+    };
+
+    match computer.kind {
+        ComputerKind::CloudDesktop => session_end_cloud_desktop(&state, &computer).await,
+        _ => error_response(StatusCode::NO_CONTENT, ""),
+    }
+}
+
+async fn session_end_cloud_desktop(state: &Arc<AppState>, computer: &ComputerResponse) -> Response {
+    let bot_id = match computer.bot_id.as_ref() {
+        Some(id) => id.clone(),
+        None => return StatusCode::NO_CONTENT.into_response(),
+    };
+
+    // Look up the persisted persistence policy for this computer.
+    let policy = {
+        let db = state.db.clone();
+        let computer_id = computer.id.clone();
+        match tokio::task::spawn_blocking(move || {
+            let conn = db.connect()?;
+            let row: Option<String> = conn
+                .query_row(
+                    "SELECT protocol FROM computer_cloud_desktop WHERE computer_id = ?1",
+                    [&computer_id],
+                    |r| r.get(0),
+                )
+                .optional()?;
+            Ok::<_, rusqlite::Error>(row)
+        })
+        .await
+        {
+            Ok(Ok(v)) => v,
+            _ => None,
+        }
+    };
+
+    match policy.as_deref() {
+        Some("ephemeral") => delete_cloud_desktop(state, computer).await,
+        Some("session") => stop_cloud_desktop(state, computer).await,
+        _ => {
+            // Default to session-scoped stop for unknown/missing policies.
+            stop_cloud_desktop(state, computer).await
+        }
+    }
 }
 
 fn update_computer_status(db: &crate::DbHandle, id: &str, status: &str) -> Result<(), rusqlite::Error> {
@@ -616,5 +1027,39 @@ mod tests {
         assert_eq!(kind_to_str(&ComputerKind::Managed), "managed");
         assert_eq!(kind_to_str(&ComputerKind::Byoc), "byoc");
         assert_eq!(kind_to_str(&ComputerKind::CloudDesktop), "cloud_desktop");
+    }
+
+    #[test]
+    fn persistence_to_str_matches_db_values() {
+        assert_eq!(persistence_to_str(&Persistence::Ephemeral), "ephemeral");
+        assert_eq!(persistence_to_str(&Persistence::Session), "session");
+        assert_eq!(persistence_to_str(&Persistence::Persistent), "persistent");
+    }
+
+    #[test]
+    fn check_org_spend_limit_allows_when_under_cap() {
+        let conn = rusqlite::Connection::open_in_memory().unwrap();
+        conn.execute_batch(
+            "CREATE TABLE spend_limits (org_id TEXT PRIMARY KEY, monthly_usd_cap INTEGER NOT NULL DEFAULT 0, current_month_spend INTEGER NOT NULL DEFAULT 0);
+             CREATE TABLE llm_usage_events (id TEXT PRIMARY KEY, tenant_id TEXT, cost_microdollars INTEGER NOT NULL DEFAULT 0, created_at DATETIME DEFAULT CURRENT_TIMESTAMP);
+             CREATE TABLE usage_events (id TEXT PRIMARY KEY, organization_id TEXT NOT NULL, environment_id TEXT NOT NULL, resource_type TEXT NOT NULL, quantity REAL NOT NULL, unit TEXT NOT NULL, computed_cost_cents INTEGER NOT NULL DEFAULT 0, started_at DATETIME NOT NULL, ended_at DATETIME NOT NULL);
+             INSERT INTO spend_limits (org_id, monthly_usd_cap, current_month_spend) VALUES ('org-1', 10000, 0);",
+        )
+        .unwrap();
+        assert!(check_org_spend_limit(&conn, "org-1").unwrap());
+    }
+
+    #[test]
+    fn check_org_spend_limit_blocks_when_over_cap() {
+        let conn = rusqlite::Connection::open_in_memory().unwrap();
+        conn.execute_batch(
+            "CREATE TABLE spend_limits (org_id TEXT PRIMARY KEY, monthly_usd_cap INTEGER NOT NULL DEFAULT 0, current_month_spend INTEGER NOT NULL DEFAULT 0);
+             CREATE TABLE llm_usage_events (id TEXT PRIMARY KEY, tenant_id TEXT, cost_microdollars INTEGER NOT NULL DEFAULT 0, created_at DATETIME DEFAULT CURRENT_TIMESTAMP);
+             CREATE TABLE usage_events (id TEXT PRIMARY KEY, organization_id TEXT NOT NULL, environment_id TEXT NOT NULL, resource_type TEXT NOT NULL, quantity REAL NOT NULL, unit TEXT NOT NULL, computed_cost_cents INTEGER NOT NULL DEFAULT 0, started_at DATETIME NOT NULL, ended_at DATETIME NOT NULL);
+             INSERT INTO spend_limits (org_id, monthly_usd_cap, current_month_spend) VALUES ('org-1', 100, 0);
+             INSERT INTO usage_events (id, organization_id, environment_id, resource_type, quantity, unit, computed_cost_cents, started_at, ended_at) VALUES ('evt-1', 'org-1', 'env-1', 'computer_minute', 10, 'minutes', 500, datetime('now'), datetime('now'));",
+        )
+        .unwrap();
+        assert!(!check_org_spend_limit(&conn, "org-1").unwrap());
     }
 }

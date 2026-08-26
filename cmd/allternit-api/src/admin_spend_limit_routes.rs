@@ -137,6 +137,37 @@ fn user_org(user: &AuthUser) -> Result<String, ApiError> {
         })
 }
 
+/// Current-calendar-month spend for one organization, in microdollars.
+/// Includes LLM usage events and unified computer usage events so the spend
+/// cap covers both model inference and Desktop Cloud runtime.
+pub fn org_month_spend_microdollars(
+    conn: &rusqlite::Connection,
+    org_id: &str,
+) -> Result<i64, rusqlite::Error> {
+    let llm_spend: i64 = conn
+        .query_row(
+            "SELECT COALESCE(SUM(COALESCE(recomputed_cost_microdollars, cost_microdollars)), 0)
+             FROM llm_usage_events
+             WHERE tenant_id = ?1
+               AND created_at >= strftime('%Y-%m-01 00:00:00', 'now')",
+            [org_id],
+            |r| r.get(0),
+        )
+        .unwrap_or(0);
+    let computer_spend_cents: i64 = conn
+        .query_row(
+            "SELECT COALESCE(SUM(computed_cost_cents), 0)
+             FROM usage_events
+             WHERE organization_id = ?1
+               AND started_at >= strftime('%Y-%m-01 00:00:00', 'now')",
+            [org_id],
+            |r| r.get(0),
+        )
+        .unwrap_or(0);
+    // 1 cent = 10_000 microdollars.
+    Ok(llm_spend + computer_spend_cents.saturating_mul(10_000))
+}
+
 fn get_balance_for_org(conn: &rusqlite::Connection, org: &str) -> Result<Value, ApiError> {
     let row: Option<(i64, i64)> = conn
         .query_row(
@@ -146,8 +177,13 @@ fn get_balance_for_org(conn: &rusqlite::Connection, org: &str) -> Result<Value, 
         )
         .optional()
         .map_err(internal)?;
-    let (cap, spend) = row.unwrap_or((0, 0));
-    let available = cap.saturating_sub(spend);
+    let (cap, credit_adjustment) = row.unwrap_or((0, 0));
+    // `current_month_spend` is decremented when fallback credits are applied,
+    // so treat it as a credit offset against real usage spend.
+    let actual_spend_micro = org_month_spend_microdollars(conn, org).map_err(internal)?;
+    let actual_spend_cents = actual_spend_micro / 10_000;
+    let net_spend = actual_spend_cents.saturating_add(credit_adjustment);
+    let available = cap.saturating_sub(net_spend);
     Ok(json!({
         "object": "balance",
         "available_balance": available,

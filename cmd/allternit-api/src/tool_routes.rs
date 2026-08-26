@@ -16,6 +16,8 @@ use std::sync::Arc;
 use tracing::{info, warn};
 
 use crate::auth::AuthUser;
+use crate::bot_desktop_input::{KeyboardInput, MouseInput, ShellInput};
+use crate::computer_control::{execute_computer_tool, ComputerControlAction};
 use crate::permission_policy::{evaluate, PermissionAction};
 use crate::AppState;
 
@@ -305,6 +307,14 @@ pub(crate) async fn execute_tool_internal(
         "api_capture_stop" => api_capture_stop(state, request, user_id).await,
         "api_capture_replay" => api_capture_replay(state, request, user_id).await,
 
+        // ── Computer / Desktop Cloud control ─────────────────────────────────
+        "computer_screenshot" => computer_screenshot_tool(state, user_id, &request.args).await,
+        "computer_mouse" => computer_mouse_tool(state, user_id, &request.args).await,
+        "computer_keyboard" => computer_keyboard_tool(state, user_id, &request.args).await,
+        "computer_shell" => computer_shell_tool(state, user_id, &request.args).await,
+        "computer_file_read" => computer_file_read_tool(state, user_id, &request.args).await,
+        "computer_file_write" => computer_file_write_tool(state, user_id, &request.args).await,
+
         // ── Unknown ──────────────────────────────────────────────────────────
         _ => {
             if request.tool.starts_with("mcp:") {
@@ -317,6 +327,119 @@ pub(crate) async fn execute_tool_internal(
             }
         }
     }
+}
+
+// ── Computer control tools ──────────────────────────────────────────────────
+
+fn require_computer_id(args: &Value) -> Result<String, String> {
+    args.get("computer_id")
+        .and_then(|v| v.as_str())
+        .map(|s| s.to_string())
+        .ok_or_else(|| "Missing 'computer_id' argument".to_string())
+}
+
+async fn computer_screenshot_tool(
+    state: &AppState,
+    user_id: &str,
+    args: &Value,
+) -> Result<Value, String> {
+    let computer_id = require_computer_id(args)?;
+    execute_computer_tool(&state, user_id, &computer_id, ComputerControlAction::Screenshot)
+        .await
+        .map_err(|(_, msg)| msg)
+}
+
+async fn computer_mouse_tool(
+    state: &AppState,
+    user_id: &str,
+    args: &Value,
+) -> Result<Value, String> {
+    let computer_id = require_computer_id(args)?;
+    let input: MouseInput = serde_json::from_value(args.clone())
+        .map_err(|e| format!("invalid mouse input: {}", e))?;
+    execute_computer_tool(&state, user_id, &computer_id, ComputerControlAction::Mouse(input))
+        .await
+        .map_err(|(_, msg)| msg)
+}
+
+async fn computer_keyboard_tool(
+    state: &AppState,
+    user_id: &str,
+    args: &Value,
+) -> Result<Value, String> {
+    let computer_id = require_computer_id(args)?;
+    let input: KeyboardInput = serde_json::from_value(args.clone())
+        .map_err(|e| format!("invalid keyboard input: {}", e))?;
+    execute_computer_tool(
+        &state,
+        user_id,
+        &computer_id,
+        ComputerControlAction::Keyboard(input),
+    )
+    .await
+    .map_err(|(_, msg)| msg)
+}
+
+async fn computer_shell_tool(
+    state: &AppState,
+    user_id: &str,
+    args: &Value,
+) -> Result<Value, String> {
+    let computer_id = require_computer_id(args)?;
+    let input: ShellInput = serde_json::from_value(args.clone())
+        .map_err(|e| format!("invalid shell input: {}", e))?;
+    execute_computer_tool(&state, user_id, &computer_id, ComputerControlAction::Shell(input))
+        .await
+        .map_err(|(_, msg)| msg)
+}
+
+async fn computer_file_read_tool(
+    state: &AppState,
+    user_id: &str,
+    args: &Value,
+) -> Result<Value, String> {
+    let computer_id = require_computer_id(args)?;
+    let path = args
+        .get("path")
+        .and_then(|v| v.as_str())
+        .ok_or_else(|| "Missing 'path' argument".to_string())?;
+    execute_computer_tool(
+        &state,
+        user_id,
+        &computer_id,
+        ComputerControlAction::FileRead {
+            path: path.to_string(),
+        },
+    )
+    .await
+    .map_err(|(_, msg)| msg)
+}
+
+async fn computer_file_write_tool(
+    state: &AppState,
+    user_id: &str,
+    args: &Value,
+) -> Result<Value, String> {
+    let computer_id = require_computer_id(args)?;
+    let path = args
+        .get("path")
+        .and_then(|v| v.as_str())
+        .ok_or_else(|| "Missing 'path' argument".to_string())?;
+    let content_base64 = args
+        .get("content")
+        .and_then(|v| v.as_str())
+        .ok_or_else(|| "Missing 'content' argument (base64)".to_string())?;
+    execute_computer_tool(
+        &state,
+        user_id,
+        &computer_id,
+        ComputerControlAction::FileWrite {
+            path: path.to_string(),
+            content_base64: content_base64.to_string(),
+        },
+    )
+    .await
+    .map_err(|(_, msg)| msg)
 }
 
 // ── Shell ───────────────────────────────────────────────────────────────────
@@ -1020,6 +1143,91 @@ async fn list_tools() -> impl IntoResponse {
                     "body": { "type": "object", "description": "Request body JSON" }
                 },
                 "required": ["contract_id", "endpoint_id"]
+            }
+        }),
+        json!({
+            "id": "computer_screenshot",
+            "name": "Computer Screenshot",
+            "description": "Capture a PNG screenshot of the bot's cloud desktop computer.",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "computer_id": { "type": "string", "description": "ID of the computer to screenshot" }
+                },
+                "required": ["computer_id"]
+            }
+        }),
+        json!({
+            "id": "computer_mouse",
+            "name": "Computer Mouse",
+            "description": "Move or click the mouse on the bot's cloud desktop computer.",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "computer_id": { "type": "string", "description": "ID of the computer to control" },
+                    "action": { "type": "string", "enum": ["move", "click", "rightclick", "doubleclick", "mousedown", "mouseup"], "description": "Mouse action" },
+                    "x": { "type": "integer", "description": "X coordinate" },
+                    "y": { "type": "integer", "description": "Y coordinate" },
+                    "button": { "type": "string", "enum": ["left", "middle", "right"], "description": "Mouse button" }
+                },
+                "required": ["computer_id", "action"]
+            }
+        }),
+        json!({
+            "id": "computer_keyboard",
+            "name": "Computer Keyboard",
+            "description": "Type text or press a key on the bot's cloud desktop computer.",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "computer_id": { "type": "string", "description": "ID of the computer to control" },
+                    "action": { "type": "string", "enum": ["type", "key"], "description": "Keyboard action" },
+                    "text": { "type": "string", "description": "Text to type when action is type" },
+                    "key": { "type": "string", "description": "Key to press when action is key (e.g. Return, Control_L, F5)" }
+                },
+                "required": ["computer_id", "action"]
+            }
+        }),
+        json!({
+            "id": "computer_shell",
+            "name": "Computer Shell",
+            "description": "Run a shell command inside the bot's cloud desktop computer.",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "computer_id": { "type": "string", "description": "ID of the computer" },
+                    "command": { "type": "array", "items": { "type": "string" }, "description": "Command and arguments" },
+                    "env": { "type": "object", "description": "Additional environment variables" },
+                    "timeout": { "type": "integer", "description": "Timeout in seconds" }
+                },
+                "required": ["computer_id", "command"]
+            }
+        }),
+        json!({
+            "id": "computer_file_read",
+            "name": "Computer File Read",
+            "description": "Read a file from the bot's cloud desktop computer (returned as base64).",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "computer_id": { "type": "string", "description": "ID of the computer" },
+                    "path": { "type": "string", "description": "Absolute guest path to the file" }
+                },
+                "required": ["computer_id", "path"]
+            }
+        }),
+        json!({
+            "id": "computer_file_write",
+            "name": "Computer File Write",
+            "description": "Write a file to the bot's cloud desktop computer (content must be base64).",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "computer_id": { "type": "string", "description": "ID of the computer" },
+                    "path": { "type": "string", "description": "Absolute guest path to write" },
+                    "content": { "type": "string", "description": "Base64-encoded file content" }
+                },
+                "required": ["computer_id", "path", "content"]
             }
         }),
     ];

@@ -88,6 +88,8 @@ function vmOperatorToEnv(vmOperator?: AgentVMOperatorConfig): Record<string, str
   env.ALLTERNIT_VM_OPERATOR_ENABLED = vmOperator.enabled ? 'true' : 'false';
   if (vmOperator.enabled) {
     env.ALLTERNIT_VM_PROVIDER = vmOperator.provider;
+    if (vmOperator.computerKind) env.ALLTERNIT_VM_COMPUTER_KIND = vmOperator.computerKind;
+    if (vmOperator.templateId) env.ALLTERNIT_VM_TEMPLATE_ID = vmOperator.templateId;
     if (vmOperator.image) env.ALLTERNIT_VM_IMAGE = vmOperator.image;
     if (vmOperator.allowedActions?.length) {
       env.ALLTERNIT_VM_ALLOWED_ACTIONS = vmOperator.allowedActions.join(',');

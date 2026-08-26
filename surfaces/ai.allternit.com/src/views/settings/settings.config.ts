@@ -39,6 +39,7 @@ import {
   ChatCircleText,
   Database,
   WebhooksLogo,
+  Desktop,
 } from '@phosphor-icons/react';
 
 export type SettingsGroup = 'account' | 'platform' | 'products' | 'infrastructure' | 'customize' | 'about';
@@ -64,14 +65,12 @@ export const SETTINGS_NAV_ITEMS: SettingsNavItem[] = [
   { id: 'permissions', label: 'Permissions', icon: React.createElement(ShieldCheck, { size: 18 }), group: 'platform' },
   { id: 'dispatch', label: 'Dispatch', icon: React.createElement(DeviceMobile, { size: 18 }), group: 'platform' },
   { id: 'devices', label: 'Devices', icon: React.createElement(Devices, { size: 18 }), group: 'platform' },
-  { id: 'cloud-instances', label: 'Cloud instances', icon: React.createElement(CloudArrowUp, { size: 18 }), group: 'platform' },
   { id: 'diagnostics', label: 'Diagnostics', icon: React.createElement(Activity, { size: 18 }), group: 'platform' },
   { id: 'gizziio-code', label: 'Gizziio Code', icon: React.createElement(Code, { size: 18 }), group: 'products' },
   { id: 'cowork', label: 'Cowork', icon: React.createElement(Briefcase, { size: 18 }), group: 'products' },
   { id: 'extensions', label: 'Extensions', icon: React.createElement(PuzzlePiece, { size: 18 }), group: 'products' },
   { id: 'infrastructure', label: 'Infrastructure', icon: React.createElement(Cloud, { size: 18 }), group: 'infrastructure' },
-  { id: 'vps', label: 'VPS & servers', icon: React.createElement(HardDrives, { size: 18 }), group: 'infrastructure' },
-  { id: 'cloud-credentials', label: 'Enterprise BYOC', icon: React.createElement(Cloud, { size: 18 }), group: 'infrastructure' },
+  { id: 'compute', label: 'Compute & Cloud Desktops', icon: React.createElement(Desktop, { size: 18 }), group: 'infrastructure' },
   { id: 'environment', label: 'Environment', icon: React.createElement(SlidersHorizontal, { size: 18 }), group: 'infrastructure' },
   { id: 'security', label: 'Security', icon: React.createElement(Shield, { size: 18 }), group: 'infrastructure' },
   { id: 'agents', label: 'Agents', icon: React.createElement(Robot, { size: 18 }), group: 'infrastructure' },
@@ -122,3 +121,26 @@ const SETTINGS_SECTION_IDS: Set<string> = new Set(
  */
 export const SETTINGS_SECTION_MAP: Record<string, SettingsSection> =
   Object.fromEntries(SETTINGS_NAV_ITEMS.map((i) => [i.id, i.id]));
+
+/**
+ * Backward-compatible redirects for compute-related settings sections that
+ * were consolidated into the single "Compute & Cloud Desktops" section.
+ */
+export const SETTINGS_LEGACY_REDIRECTS: Record<string, SettingsSection> = {
+  vps: 'compute',
+  'cloud-instances': 'compute',
+  'cloud-credentials': 'compute',
+};
+
+/**
+ * Resolve a section id to the current canonical section, applying legacy
+ * redirects. Returns undefined for unknown ids.
+ */
+export function normalizeSettingsSection(
+  id?: string,
+): SettingsSection | undefined {
+  if (!id) return undefined;
+  const redirected = SETTINGS_LEGACY_REDIRECTS[id];
+  if (redirected) return redirected;
+  return SETTINGS_SECTION_MAP[id];
+}

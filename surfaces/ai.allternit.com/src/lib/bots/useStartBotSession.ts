@@ -157,6 +157,7 @@ export function useStartBotSession(
         identityChannels: agent.identityChannels,
         vmOperator: agent.vmOperator,
         vmSandbox: sandbox ? { id: sandbox.id, provider: sandbox.provider, status: sandbox.status, vncUrl: sandbox.vncUrl } : undefined,
+        vmComputerId: sandbox?.id,
         vmSandboxError: sandboxError,
         vmControlNotice: notice,
       },

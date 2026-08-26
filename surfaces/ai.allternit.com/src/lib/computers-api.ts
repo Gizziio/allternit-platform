@@ -51,6 +51,8 @@ export interface CreateComputerInput {
   name?: string;
   os?: string;
   template_id?: string;
+  session_id?: string;
+  persistence?: 'ephemeral' | 'session' | 'persistent';
 }
 
 export interface CreateComputerResponse {
@@ -59,6 +61,7 @@ export interface CreateComputerResponse {
   status: string;
   provider?: string;
   host?: string | null;
+  persistence?: 'ephemeral' | 'session' | 'persistent';
 }
 
 export interface ComputerLifecycleResponse {
@@ -69,6 +72,13 @@ export interface ComputerLifecycleResponse {
 
 export interface ListComputersResponse {
   computers: Computer[];
+}
+
+export interface DesktopUsageSummary {
+  total_minutes: number;
+  total_cost: number;
+  currency: string;
+  rows: number;
 }
 
 export async function listComputers(filters?: {
@@ -105,4 +115,8 @@ export async function stopComputer(id: string): Promise<ComputerLifecycleRespons
 
 export async function deleteComputer(id: string): Promise<void> {
   await api.post<void>(`/api/v1/computers/${id}/delete`);
+}
+
+export async function getDesktopUsageSummary(): Promise<DesktopUsageSummary> {
+  return api.get<DesktopUsageSummary>('/api/v1/desktop-usage/summary');
 }

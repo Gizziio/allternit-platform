@@ -25,11 +25,9 @@ import {
   PuzzlePiece,
   Trash,
 } from '@phosphor-icons/react';
-import { VPSConnectionsPanel } from './VPSConnectionsPanel';
 import { DevicePairingPanel } from './DevicePairingPanel';
-import { CloudInstancesPanel } from './CloudInstancesPanel';
+import { ComputeSettings } from './ComputeSettings';
 import { ComputeBillingPanel } from '@/components/settings/ComputeBillingPanel';
-import { EnterpriseByocPanel } from '@/components/settings/EnterpriseByocPanel';
 import { OrganizationAccessPanel } from '@/components/settings/OrganizationAccessPanel';
 import { ToastProvider } from '@/components/ui/toast-provider';
 import { usePlatformAuth, usePlatformUser, usePlatformSignOut, usePlatformHardSignOut, usePlatformSessions, PlatformSignIn, isPlatformAuthDisabled } from '@/lib/platform-auth-client';
@@ -41,7 +39,7 @@ import { ServiceUrlSettings } from './ServiceUrlSettings';
 import { EnvironmentSettings } from './EnvironmentSettings';
 import { listOwnedConnectors, connectOwned, disconnectOwned, type OwnedConnector, type OwnedConnectStatus } from '@/lib/design/owned-connector';
 import { getConnectorLogoUrl } from '@/lib/design/connector-logo';
-import { SETTINGS_NAV_ITEMS, SETTINGS_NAV_GROUPS, SETTINGS_SECTION_MAP, type SettingsSection } from './settings.config';
+import { SETTINGS_NAV_ITEMS, SETTINGS_NAV_GROUPS, normalizeSettingsSection, type SettingsSection } from './settings.config';
 import { SettingsRow } from '@/components/settings/SettingsRow';
 import { Toggle } from '@/components/settings/Toggle';
 import { SectionHeading } from '@/components/settings/SectionHeading';
@@ -656,8 +654,9 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
   initialTab,
   onClose,
 }) => {
-  // Guard against unknown section ids arriving via event detail
-  const safeInitialSection: SettingsSection = SETTINGS_SECTION_MAP[initialSection ?? ''] ?? 'signin';
+  // Guard against unknown section ids arriving via event detail. Legacy compute
+  // section ids are redirected to the consolidated "compute" section.
+  const safeInitialSection: SettingsSection = normalizeSettingsSection(initialSection) ?? 'signin';
   const [activeSection, setActiveSection] = useState<SettingsSection>(safeInitialSection);
   const [navQuery, setNavQuery] = useState('');
   const [infrastructureTab, setInfrastructureTab] = useState<string | undefined>(initialTab);
@@ -687,9 +686,10 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
 
   React.useEffect(() => {
     const handleNavigateSettings = (event: CustomEvent<{ section: string; tab?: string }>) => {
-      if (event.detail?.section && SETTINGS_SECTION_MAP[event.detail.section]) {
-        setActiveSection(SETTINGS_SECTION_MAP[event.detail.section]);
-        if (event.detail?.tab && SETTINGS_SECTION_MAP[event.detail.section] === 'infrastructure') {
+      const section = normalizeSettingsSection(event.detail?.section);
+      if (section) {
+        setActiveSection(section);
+        if (event.detail?.tab && section === 'infrastructure') {
           setInfrastructureTab(event.detail.tab);
         }
       }
@@ -1393,6 +1393,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
       case 'usage': return renderUsagePanel();
       case 'diagnostics': return <DiagnosticsPanel />;
       case 'infrastructure': return <ToastProvider><InfrastructureSettings initialTab={infrastructureTab as any} /></ToastProvider>;
+      case 'compute': return <ComputeSettings />;
       case 'environment': return <ToastProvider><EnvironmentSettings /></ToastProvider>;
       case 'security': return <SecurityPanel />;
       case 'agents': return <AgentOpsPanel />;
@@ -1405,10 +1406,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
       case 'connectors': return renderConnectorsPanel();
       case 'lens': return <LensSettingsPanel />;
       case 'plugins': return renderPluginsPanel();
-      case 'vps': return <ToastProvider><VPSConnectionsPanel /></ToastProvider>;
       case 'devices': return <DevicePairingPanel />;
-      case 'cloud-instances': return <CloudInstancesPanel />;
-      case 'cloud-credentials': return <EnterpriseByocPanel />;
       default: return null;
     }
   };

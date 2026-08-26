@@ -286,7 +286,7 @@ export async function createAgent(input: CreateAgentInput): Promise<Agent> {
     for (let attempt = 0; attempt < maxRetries; attempt++) {
       try {
         logger.debug(`API call attempt ${attempt + 1}/${maxRetries}`);
-        const response = await api.createAgent(apiInput as Omit<Agent, 'id'>);
+        const response = await api.createAgent(apiInput as Parameters<typeof api.createAgent>[0]);
         logger.debug(`Agent created in ${Date.now() - startTime}ms`);
         // allternit-api's create response only carries { agent: { id } } — no
         // other fields — so merge the generated id over what we already sent
