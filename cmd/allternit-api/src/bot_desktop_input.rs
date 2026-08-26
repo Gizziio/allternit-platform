@@ -51,7 +51,7 @@ pub struct MouseInput {
     pub button: Option<String>,
 }
 
-fn desktop_display(provider: &str) -> &'static str {
+pub(crate) fn desktop_display(provider: &str) -> &'static str {
     match provider {
         "tart" => ":99",
         _ => ":0",
