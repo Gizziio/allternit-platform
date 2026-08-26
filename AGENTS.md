@@ -26,6 +26,7 @@ Clean as you go, but never discard work that might be needed to resume.
 Final cleanup happens only after the change is safely in the canonical codebase.
 
 - **Merge first, then clean up.** Push and merge the change to the GitHub codebase, then merge it into the local `main` checkout, before doing any cleanup.
+- **Write the session attestation.** Before deleting the worktree, record what was done, how it works, the commit SHA, and any unfinished work. Create a dated summary file in `agent-ledger/summaries/` using the naming convention `YYYY-MM-DD-HHMM-<session-id>-<agent-family>-<brief-topic>.md`. Append a short entry to `agent-ledger/LEDGER.md` that links to the summary file. Treat this as a signed ledger: be honest about what was actually completed versus what was deferred or left unfinished.
 - **Delete the session worktree.** Once the work is merged and no longer needed, remove the `<repo>-session-<id>` worktree directory and delete the `session/<id>` branch. Do not leave stale session worktrees on the machine.
 - **Remove scratch artifacts.** Delete local logs, temporary scripts, build outputs, downloaded dependencies, and debug files that are not intended to be committed.
 - **Restore the original branch.** Return to the branch you started from unless the task explicitly required switching branches.
