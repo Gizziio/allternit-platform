@@ -289,6 +289,47 @@ const shellAPI = {
     ipcRenderer.invoke('shell:move-hud', delta),
   setHudBounds: (bounds: { x?: number; y?: number; width?: number; height?: number }): Promise<void> =>
     ipcRenderer.invoke('shell:set-hud-bounds', bounds),
+  // HUD mode: chrome-free floating composer. These mirror the Hermes Desktop
+  // HUD bridge but are namespaced under `window.allternit.shell.hud` and use
+  // `shell:*` / `shell:hud:*` IPC channels.
+  hud: {
+    open: (): Promise<void> => ipcRenderer.invoke('shell:open-hud'),
+    close: (): Promise<void> => ipcRenderer.invoke('shell:close-hud'),
+    toggle: (): Promise<void> => ipcRenderer.invoke('shell:toggle-hud'),
+    setIgnoreMouse: (ignore: boolean): void => ipcRenderer.send('shell:hud:ignore-mouse', ignore),
+    moveBy: (delta: { x: number; y: number; width: number; height: number }): Promise<void> =>
+      ipcRenderer.invoke('shell:move-hud', delta),
+    setBounds: (bounds: { x?: number; y?: number; width?: number; height?: number }): Promise<void> =>
+      ipcRenderer.invoke('shell:set-hud-bounds', bounds),
+    resetLayout: (): Promise<{ ok: boolean }> => ipcRenderer.invoke('shell:hud:reset-layout'),
+    setFrost: (showing: boolean): Promise<{ ok: boolean }> => ipcRenderer.invoke('shell:hud:frost', showing),
+    setWorkspaceTransfer: (transferring: boolean): void =>
+      ipcRenderer.send('shell:hud:workspace-transfer', transferring),
+    reportSession: (sessionId: string | null): void =>
+      ipcRenderer.send('shell:hud:session', sessionId),
+    onCursor: (callback: (point: { x: number; y: number } | null) => void): (() => void) => {
+      const listener = (_: IpcRendererEvent, point: unknown) =>
+        callback(point as { x: number; y: number } | null);
+      ipcRenderer.on('shell:hud:cursor', listener);
+      return () => ipcRenderer.removeListener('shell:hud:cursor', listener);
+    },
+    onGameOverlay: (callback: (state: unknown) => void): (() => void) => {
+      const listener = (_: IpcRendererEvent, state: unknown) => callback(state);
+      ipcRenderer.on('shell:hud:game-overlay', listener);
+      return () => ipcRenderer.removeListener('shell:hud:game-overlay', listener);
+    },
+    onGoto: (callback: (sessionId: string) => void): (() => void) => {
+      const listener = (_: IpcRendererEvent, sessionId: string) => callback(sessionId);
+      ipcRenderer.on('shell:hud:goto', listener);
+      return () => ipcRenderer.removeListener('shell:hud:goto', listener);
+    },
+    onChanged: (callback: (state: { open: boolean; sessionId: string | null }) => void): (() => void) => {
+      const listener = (_: IpcRendererEvent, state: unknown) =>
+        callback(state as { open: boolean; sessionId: string | null });
+      ipcRenderer.on('shell:hud:state', listener);
+      return () => ipcRenderer.removeListener('shell:hud:state', listener);
+    },
+  },
   openDocs: (artifactId?: string): Promise<void> => ipcRenderer.invoke('shell:open-docs', artifactId),
   openOffice: (target?: string, artifactId?: string): Promise<void> =>
     ipcRenderer.invoke('shell:open-office', target, artifactId),
