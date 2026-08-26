@@ -2,7 +2,7 @@
 import { describe, expect, test } from "bun:test"
 import path from "path"
 import type { Tool } from "../../src/runtime/tools/builtins/tool"
-import { Instance } from "../../src/project/instance"
+import { Instance } from "../../src/runtime/context/project/instance"
 import { assertExternalDirectory } from "../../src/runtime/tools/builtins/external-directory"
 import type { PermissionNext } from "../../src/permission/next"
 

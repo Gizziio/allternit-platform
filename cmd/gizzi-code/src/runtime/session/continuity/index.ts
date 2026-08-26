@@ -54,6 +54,9 @@ const TOOL_PATHS: Record<ToolType, string[]> = {
   gizzi_shell: [
     "~/.gizzi/cache/sessions",
   ],
+  opencode: [
+    "~/.opencode/sessions",
+  ],
   qwen: [
     "~/.qwen/sessions",
     "~/.local/share/qwen",

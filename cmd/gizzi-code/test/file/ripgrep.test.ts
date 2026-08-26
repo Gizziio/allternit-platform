@@ -3,7 +3,7 @@ import { describe, expect, test } from "bun:test"
 import fs from "fs/promises"
 import path from "path"
 import { tmpdir } from "../fixture/fixture"
-import { Ripgrep } from "../../src/file/ripgrep"
+import { Ripgrep } from "../../src/shared/file/ripgrep"
 
 describe("file.ripgrep", () => {
   test("defaults to include hidden", async () => {

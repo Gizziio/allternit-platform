@@ -2,7 +2,7 @@
 import { test, expect } from "bun:test"
 import path from "path"
 import { tmpdir } from "../fixture/fixture"
-import { Instance } from "../../src/project/instance"
+import { Instance } from "../../src/runtime/context/project/instance"
 import { Agent } from "../../src/runtime/loop/agent"
 import { PermissionNext } from "../../src/permission/next"
 

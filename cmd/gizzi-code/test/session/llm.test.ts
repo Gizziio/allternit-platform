@@ -2,16 +2,16 @@
 import { afterAll, beforeAll, beforeEach, describe, expect, test } from "bun:test"
 import path from "path"
 import type { ModelMessage } from "ai"
-import { LLM } from "../../src/session/llm"
-import { Global } from "../../src/global"
-import { Instance } from "../../src/project/instance"
-import { Provider } from "../../src/provider/provider"
-import { ProviderTransform } from "../../src/provider/transform"
-import { ModelsDev } from "../../src/provider/models"
+import { LLM } from "../../src/runtime/session/llm"
+import { Global } from "../../src/runtime/context/global/index"
+import { Instance } from "../../src/runtime/context/project/instance"
+import { Provider } from "../../src/runtime/providers/provider"
+import { ProviderTransform } from "../../src/runtime/providers/adapters/transform"
+import { ModelsDev } from "../../src/runtime/providers/adapters/models"
 import { Filesystem } from "../../src/util/filesystem"
 import { tmpdir } from "../fixture/fixture"
-import type { Agent } from "../../src/agent/agent"
-import type { MessageV2 } from "../../src/session/message-v2"
+import type { Agent } from "../../src/runtime/loop/agent"
+import type { MessageV2 } from "../../src/runtime/session/message-v2"
 
 describe("session.llm.hasToolCalls", () => {
   test("returns false for empty messages array", () => {
@@ -245,7 +245,7 @@ describe("session.llm.stream", () => {
     await using tmp = await tmpdir({
       init: async (dir) => {
         await Bun.write(
-          path.join(dir, "opencode.json"),
+          path.join(dir, "gizzi.json"),
           JSON.stringify({
             $schema: "https://opencode.ai/config.json",
             enabled_providers: [providerID],
@@ -368,7 +368,7 @@ describe("session.llm.stream", () => {
     await using tmp = await tmpdir({
       init: async (dir) => {
         await Bun.write(
-          path.join(dir, "opencode.json"),
+          path.join(dir, "gizzi.json"),
           JSON.stringify({
             $schema: "https://opencode.ai/config.json",
             enabled_providers: ["openai"],
@@ -497,7 +497,7 @@ describe("session.llm.stream", () => {
     await using tmp = await tmpdir({
       init: async (dir) => {
         await Bun.write(
-          path.join(dir, "opencode.json"),
+          path.join(dir, "gizzi.json"),
           JSON.stringify({
             $schema: "https://opencode.ai/config.json",
             enabled_providers: [providerID],
@@ -598,7 +598,7 @@ describe("session.llm.stream", () => {
     await using tmp = await tmpdir({
       init: async (dir) => {
         await Bun.write(
-          path.join(dir, "opencode.json"),
+          path.join(dir, "gizzi.json"),
           JSON.stringify({
             $schema: "https://opencode.ai/config.json",
             enabled_providers: [providerID],

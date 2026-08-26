@@ -360,7 +360,7 @@ export namespace MessageV2 {
     error: z
       .object({
         name: z.string(),
-        message: z.string(),
+        message: z.string().optional(),
         data: z.any().optional(),
         retries: z.number().optional(),
         statusCode: z.number().optional(),
@@ -766,27 +766,43 @@ export namespace MessageV2 {
     return result
   }
 
+  function cleanErrorObject(obj: Record<string, unknown>): Record<string, unknown> {
+    const result: Record<string, unknown> = {}
+    for (const [key, value] of Object.entries(obj)) {
+      if (value === undefined) continue
+      if (value && typeof value === "object" && !Array.isArray(value)) {
+        result[key] = cleanErrorObject(value as Record<string, unknown>)
+      } else {
+        result[key] = value
+      }
+    }
+    return result
+  }
+
   export function fromError(e: unknown, ctx: { providerID: string }) {
+    let errorObject: Record<string, unknown>
     switch (true) {
       case e instanceof DOMException && e.name === "AbortError":
-        return new MessageV2.AbortedError(
+        errorObject = new MessageV2.AbortedError(
           { message: e.message },
           {
             cause: e,
           },
         ).toObject()
+        break
       case MessageV2.OutputLengthError.isInstance(e):
         return e
       case LoadAPIKeyError.isInstance(e):
-        return new MessageV2.AuthError(
+        errorObject = new MessageV2.AuthError(
           {
             providerID: ctx.providerID,
             message: e.message,
           },
           { cause: e },
         ).toObject()
+        break
       case (e as SystemError)?.code === "ECONNRESET":
-        return new MessageV2.APIError(
+        errorObject = new MessageV2.APIError(
           {
             message: "Connection reset by server",
             isRetryable: true,
@@ -798,38 +814,40 @@ export namespace MessageV2 {
           },
           { cause: e },
         ).toObject()
+        break
       case APICallError.isInstance(e):
         const parsed = ProviderError.parseAPICallError({
           providerID: ctx.providerID,
           error: e,
         })
         if (parsed.type === "context_overflow") {
-          return new MessageV2.ContextOverflowError(
+          errorObject = new MessageV2.ContextOverflowError(
             {
               message: parsed.message,
               responseBody: parsed.responseBody,
             },
             { cause: e },
           ).toObject()
+        } else {
+          errorObject = new MessageV2.APIError(
+            {
+              message: parsed.message,
+              statusCode: parsed.statusCode,
+              isRetryable: parsed.isRetryable,
+              responseHeaders: parsed.responseHeaders,
+              responseBody: parsed.responseBody,
+              metadata: parsed.metadata,
+            },
+            { cause: e },
+          ).toObject()
         }
-
-        return new MessageV2.APIError(
-          {
-            message: parsed.message,
-            statusCode: parsed.statusCode,
-            isRetryable: parsed.isRetryable,
-            responseHeaders: parsed.responseHeaders,
-            responseBody: parsed.responseBody,
-            metadata: parsed.metadata,
-          },
-          { cause: e },
-        ).toObject()
+        break
       case e instanceof Error:
         const genericParsed = ProviderError.parseUnknownProviderError({
           providerID: ctx.providerID,
           error: e,
         })
-        return new MessageV2.APIError(
+        errorObject = new MessageV2.APIError(
           {
             message: genericParsed.message,
             statusCode: genericParsed.statusCode,
@@ -839,29 +857,32 @@ export namespace MessageV2 {
           },
           { cause: e },
         ).toObject()
+        break
       default:
         try {
           const parsed = ProviderError.parseStreamError(e)
           if (parsed) {
             if (parsed.type === "context_overflow") {
-              return new MessageV2.ContextOverflowError(
+              errorObject = new MessageV2.ContextOverflowError(
                 {
                   message: parsed.message,
                   responseBody: parsed.responseBody,
                 },
                 { cause: e },
               ).toObject()
+            } else {
+              errorObject = new MessageV2.APIError(
+                {
+                  message: parsed.message,
+                  isRetryable: parsed.isRetryable,
+                  responseBody: parsed.responseBody,
+                },
+                {
+                  cause: e,
+                },
+              ).toObject()
             }
-            return new MessageV2.APIError(
-              {
-                message: parsed.message,
-                isRetryable: parsed.isRetryable,
-                responseBody: parsed.responseBody,
-              },
-              {
-                cause: e,
-              },
-            ).toObject()
+            break
           }
         } catch {}
         if (typeof e === "object" && e !== null) {
@@ -869,7 +890,7 @@ export namespace MessageV2 {
             providerID: ctx.providerID,
             error: e,
           })
-          return new MessageV2.APIError(
+          errorObject = new MessageV2.APIError(
             {
               message: parsed.message,
               statusCode: parsed.statusCode,
@@ -879,11 +900,15 @@ export namespace MessageV2 {
             },
             { cause: e },
           ).toObject()
+        } else {
+          errorObject = new MessageV2.UnknownError(
+            { message: String(e) },
+            { cause: e },
+          ).toObject()
         }
-        return new MessageV2.UnknownError(
-          { message: String(e) },
-          { cause: e },
-        ).toObject()
     }
+    // Strip the runtime Error.message field; callers use data.message.
+    delete errorObject!.message
+    return cleanErrorObject(errorObject!)
   }
 }

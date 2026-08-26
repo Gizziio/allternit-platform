@@ -38,7 +38,7 @@ export namespace Auth {
   export type Info = z.infer<typeof Info>
 
   const filepath = path.join(Global.Path.data, "auth.json")
-  const legacyFilepath = path.join(xdgData ?? path.join(Global.Path.home, ".local/share"), "gizzi", "auth.json")
+  const legacyFilepath = path.join(xdgData ?? path.join(Global.Path.home(), ".local/share"), "gizzi", "auth.json")
 
   export async function get(providerID: string) {
     const auth = await all()

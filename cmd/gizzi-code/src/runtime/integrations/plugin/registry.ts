@@ -61,15 +61,6 @@ const CURATED: RegistryEntry[] = [
 
   // ── MCP servers ──────────────────────────────────────────────────────────
   {
-    name: "@gizzi/plugin-mcp-superpowers",
-    label: "Superpowers MCP",
-    description: "Bundles the Superpowers MCP server — adds filesystem, browser, and memory tools beyond the built-ins.",
-    category: "mcp",
-    author: "allternit",
-    verified: true,
-    keywords: ["mcp", "superpowers", "tools"],
-  },
-  {
     name: "@gizzi/plugin-mcp-git",
     label: "Git MCP",
     description: "Exposes full git operations (blame, log, stash, rebase, bisect) as MCP tools.",

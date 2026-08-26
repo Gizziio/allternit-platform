@@ -1,20 +1,21 @@
 // @ts-nocheck
 import { test, expect, describe } from "bun:test"
 import path from "path"
-import { unlink } from "fs/promises"
+
 
 import { tmpdir } from "../fixture/fixture"
-import { Instance } from "../../src/project/instance"
-import { Provider } from "../../src/provider/provider"
-import { Env } from "../../src/env"
-import { Global } from "../../src/global"
+import { Instance } from "../../src/runtime/context/project/instance"
+import { Provider } from "../../src/runtime/providers/provider"
+import { Env } from "../../src/runtime/context/env/env"
+import { Global } from "../../src/runtime/context/global/index"
 import { Filesystem } from "../../src/util/filesystem"
+import { Auth } from "../../src/runtime/integrations/auth"
 
 test("Bedrock: config region takes precedence over AWS_REGION env var", async () => {
   await using tmp = await tmpdir({
     init: async (dir) => {
       await Filesystem.write(
-        path.join(dir, "opencode.json"),
+        path.join(dir, "gizzi.json"),
         JSON.stringify({
           $schema: "https://opencode.ai/config.json",
           provider: {
@@ -46,7 +47,7 @@ test("Bedrock: falls back to AWS_REGION env var when no config region", async ()
   await using tmp = await tmpdir({
     init: async (dir) => {
       await Filesystem.write(
-        path.join(dir, "opencode.json"),
+        path.join(dir, "gizzi.json"),
         JSON.stringify({
           $schema: "https://opencode.ai/config.json",
         }),
@@ -71,7 +72,7 @@ test("Bedrock: loads when bearer token from auth.json is present", async () => {
   await using tmp = await tmpdir({
     init: async (dir) => {
       await Filesystem.write(
-        path.join(dir, "opencode.json"),
+        path.join(dir, "gizzi.json"),
         JSON.stringify({
           $schema: "https://opencode.ai/config.json",
           provider: {
@@ -86,60 +87,31 @@ test("Bedrock: loads when bearer token from auth.json is present", async () => {
     },
   })
 
-  const authPath = path.join(Global.Path.data, "auth.json")
+  await Auth.set("amazon-bedrock", {
+    type: "api",
+    key: "test-bearer-token",
+  })
 
-  // Save original auth.json if it exists
-  let originalAuth: string | undefined
-  try {
-    originalAuth = await Filesystem.readText(authPath)
-  } catch {
-    // File doesn't exist, that's fine
-  }
-
-  try {
-    // Write test auth.json
-    await Filesystem.write(
-      authPath,
-      JSON.stringify({
-        "amazon-bedrock": {
-          type: "api",
-          key: "test-bearer-token",
-        },
-      }),
-    )
-
-    await Instance.provide({
-      directory: tmp.path,
-      init: async () => {
-        Env.set("AWS_PROFILE", "")
-        Env.set("AWS_ACCESS_KEY_ID", "")
-        Env.set("AWS_BEARER_TOKEN_BEDROCK", "")
-      },
-      fn: async () => {
-        const providers = await Provider.list()
-        expect(providers["amazon-bedrock"]).toBeDefined()
-        expect(providers["amazon-bedrock"].options?.region).toBe("eu-west-1")
-      },
-    })
-  } finally {
-    // Restore original or delete
-    if (originalAuth !== undefined) {
-      await Filesystem.write(authPath, originalAuth)
-    } else {
-      try {
-        await unlink(authPath)
-      } catch {
-        // Ignore errors if file doesn't exist
-      }
-    }
-  }
+  await Instance.provide({
+    directory: tmp.path,
+    init: async () => {
+      Env.set("AWS_PROFILE", "")
+      Env.set("AWS_ACCESS_KEY_ID", "")
+      Env.set("AWS_BEARER_TOKEN_BEDROCK", "")
+    },
+    fn: async () => {
+      const providers = await Provider.list()
+      expect(providers["amazon-bedrock"]).toBeDefined()
+      expect(providers["amazon-bedrock"].options?.region).toBe("eu-west-1")
+    },
+  })
 })
 
 test("Bedrock: config profile takes precedence over AWS_PROFILE env var", async () => {
   await using tmp = await tmpdir({
     init: async (dir) => {
       await Filesystem.write(
-        path.join(dir, "opencode.json"),
+        path.join(dir, "gizzi.json"),
         JSON.stringify({
           $schema: "https://opencode.ai/config.json",
           provider: {
@@ -172,7 +144,7 @@ test("Bedrock: includes custom endpoint in options when specified", async () => 
   await using tmp = await tmpdir({
     init: async (dir) => {
       await Filesystem.write(
-        path.join(dir, "opencode.json"),
+        path.join(dir, "gizzi.json"),
         JSON.stringify({
           $schema: "https://opencode.ai/config.json",
           provider: {
@@ -205,7 +177,7 @@ test("Bedrock: autoloads when AWS_WEB_IDENTITY_TOKEN_FILE is present", async () 
   await using tmp = await tmpdir({
     init: async (dir) => {
       await Filesystem.write(
-        path.join(dir, "opencode.json"),
+        path.join(dir, "gizzi.json"),
         JSON.stringify({
           $schema: "https://opencode.ai/config.json",
           provider: {
@@ -243,7 +215,7 @@ test("Bedrock: model with us. prefix should not be double-prefixed", async () =>
   await using tmp = await tmpdir({
     init: async (dir) => {
       await Filesystem.write(
-        path.join(dir, "opencode.json"),
+        path.join(dir, "gizzi.json"),
         JSON.stringify({
           $schema: "https://opencode.ai/config.json",
           provider: {
@@ -280,7 +252,7 @@ test("Bedrock: model with global. prefix should not be prefixed", async () => {
   await using tmp = await tmpdir({
     init: async (dir) => {
       await Filesystem.write(
-        path.join(dir, "opencode.json"),
+        path.join(dir, "gizzi.json"),
         JSON.stringify({
           $schema: "https://opencode.ai/config.json",
           provider: {
@@ -316,7 +288,7 @@ test("Bedrock: model with eu. prefix should not be double-prefixed", async () =>
   await using tmp = await tmpdir({
     init: async (dir) => {
       await Filesystem.write(
-        path.join(dir, "opencode.json"),
+        path.join(dir, "gizzi.json"),
         JSON.stringify({
           $schema: "https://opencode.ai/config.json",
           provider: {
@@ -352,7 +324,7 @@ test("Bedrock: model without prefix in US region should get us. prefix added", a
   await using tmp = await tmpdir({
     init: async (dir) => {
       await Filesystem.write(
-        path.join(dir, "opencode.json"),
+        path.join(dir, "gizzi.json"),
         JSON.stringify({
           $schema: "https://opencode.ai/config.json",
           provider: {

@@ -1,11 +1,11 @@
 // @ts-nocheck
 import { describe, expect, test } from "bun:test"
 import path from "path"
-import { Session } from "../../src/session"
-import { SessionPrompt } from "../../src/session/prompt"
-import { Log } from "../../src/util/log"
-import { Instance } from "../../src/project/instance"
-import { MessageV2 } from "../../src/session/message-v2"
+import { Session } from "../../src/runtime/session/index"
+import { SessionPrompt } from "../../src/runtime/session/prompt"
+import { Log } from "../../src/shared/util/log"
+import { Instance } from "../../src/runtime/context/project/instance"
+import { MessageV2 } from "../../src/runtime/session/message-v2"
 
 const projectRoot = path.join(__dirname, "../..")
 Log.init({ print: false })

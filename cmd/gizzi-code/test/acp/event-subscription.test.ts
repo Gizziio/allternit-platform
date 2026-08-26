@@ -1,9 +1,9 @@
 // @ts-nocheck
 import { describe, expect, test } from "bun:test"
-import { ACP } from "../../src/acp/agent"
+import { ACP } from "../../src/runtime/integrations/acp/agent"
 import type { AgentSideConnection } from "@agentclientprotocol/sdk"
 import type { Event } from "@allternit/sdk"
-import { Instance } from "../../src/project/instance"
+import { Instance } from "../../src/runtime/context/project/instance"
 import { tmpdir } from "../fixture/fixture"
 
 type SessionUpdateParams = Parameters<AgentSideConnection["sessionUpdate"]>[0]
@@ -96,11 +96,11 @@ function createFakeAgent() {
   }
 
   const sdk = {
-    global: {
-      event: async (opts?: { signal?: AbortSignal }) => {
-        calls.eventSubscribe++
-        return { stream: stream(opts?.signal) }
-      },
+    globalEvents: async function* (opts?: { signal?: AbortSignal }) {
+      calls.eventSubscribe++
+      for await (const envelope of stream(opts?.signal)) {
+        yield envelope?.payload
+      }
     },
     session: {
       create: async (_params?: any) => {
@@ -163,14 +163,15 @@ function createFakeAgent() {
         }
       },
     },
-    app: {
-      agents: async () => {
+    agent: {
+      list: async () => {
         return {
           data: [
             {
               name: "build",
               description: "build",
               mode: "agent",
+              hidden: false,
             },
           ],
         }
@@ -368,7 +369,7 @@ describe("acp.agent event subscription", () => {
         let permissionCalls = 0
         connection.requestPermission = async (params: RequestPermissionParams) => {
           permissionCalls++
-          if (params.sessionId.endsWith("1")) {
+          if (params.sessionId === sessionA) {
             await permissionABlocking
           }
           return originalRequestPermission(params)

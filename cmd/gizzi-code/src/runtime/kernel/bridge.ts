@@ -212,7 +212,7 @@ export async function detectWorkspace(
 ): Promise<DetectedWorkspace | null> {
   const gizziCandidates = [
     path.join(dir, ".gizzi"),
-    path.join(Global.Path.home, ".gizzi"),
+    path.join(Global.Path.home(), ".gizzi"),
   ]
 
   for (const gizziDir of gizziCandidates) {

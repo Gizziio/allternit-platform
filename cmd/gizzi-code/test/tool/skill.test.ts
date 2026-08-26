@@ -4,7 +4,7 @@ import path from "path"
 import { pathToFileURL } from "url"
 import type { PermissionNext } from "../../src/permission/next"
 import type { Tool } from "../../src/runtime/tools/builtins/tool"
-import { Instance } from "../../src/project/instance"
+import { Instance } from "../../src/runtime/context/project/instance"
 import { SkillTool } from "../../src/runtime/tools/builtins/skill"
 import { tmpdir } from "../fixture/fixture"
 

@@ -54,7 +54,7 @@ export const MainScreen: React.FC<MainScreenProps> = ({
   const [spinnerFrame, setSpinnerFrame] = useState(0);
   const spinners = ['◐', '◓', '◑', '◒'];
 
-  // Register commands (ported from OpenTUI)
+  // Register commands (ported from legacy TUI)
   useEffect(() => {
     const unregister = register(() => [
       // Session commands

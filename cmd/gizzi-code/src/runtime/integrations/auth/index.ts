@@ -36,8 +36,11 @@ export namespace Auth {
   export const Info = z.discriminatedUnion("type", [Oauth, Api, WellKnown])
   export type Info = z.infer<typeof Info>
 
-  const filepath = path.join(GlobalPaths.data, "auth.json")
-  const legacyFilepath = path.join(xdgData ?? path.join(GlobalPaths.home, ".local/share"), "gizzi", "auth.json")
+  const testAuthPath = process.env.GIZZI_TEST_AUTH_PATH
+  const filepath = testAuthPath ?? path.join(GlobalPaths.data, "auth.json")
+  const legacyFilepath = testAuthPath
+    ? "" // tests use a single isolated auth file
+    : path.join(xdgData ?? path.join(GlobalPaths.home(), ".local/share"), "gizzi", "auth.json")
 
   export async function get(providerID: string) {
     const auth = await all()
@@ -45,6 +48,7 @@ export namespace Auth {
   }
 
   async function loadAuthFile(file: string): Promise<Record<string, Info>> {
+    if (!file) return {}
     const data = await Filesystem.readJson<Record<string, unknown>>(file).catch(() => ({}))
     return Object.entries(data).reduce(
       (acc, [key, value]) => {
@@ -58,6 +62,9 @@ export namespace Auth {
   }
 
   export async function all(): Promise<Record<string, Info>> {
+    if (process.env.GIZZI_TEST_ISOLATED_AUTH) {
+      return {}
+    }
     const [legacy, current] = await Promise.all([loadAuthFile(legacyFilepath), loadAuthFile(filepath)])
     return { ...legacy, ...current }
   }

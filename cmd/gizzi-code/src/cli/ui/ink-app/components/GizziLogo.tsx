@@ -2,8 +2,8 @@
 /**
  * Gizzi brand logo for the ink welcome screen.
  *
- * Ports the opentui setup's branding (GIZZIBanner + mascot) to React/ink so
- * the ink TUI shows the same identity as the old opentui build.
+ * Ports the legacy TUI branding (GIZZIBanner + mascot) to React/ink so
+ * the ink TUI shows the same identity as the previous build.
  * ASCII art and palette per src/cli/ui/components/gizzi/BRAND.md.
  */
 import React from 'react'

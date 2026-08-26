@@ -24,7 +24,8 @@ const LoginCommand = cmd({
     yargs
       .option("api-key", { type: "string", describe: "API key" })
       .option("provider", { type: "string", describe: "provider id", default: "anthropic" })
-      .option("profile", { type: "string", describe: "profile name", default: "default" }),
+      .option("profile", { type: "string", describe: "profile name", default: "default" })
+      .option("base-url", { type: "string", describe: "provider base URL" }),
   async handler(args) {
     let apiKey = args.apiKey
     if (!apiKey) {
@@ -38,6 +39,7 @@ const LoginCommand = cmd({
     const result = await loginApiKey(configPath(), apiKey, {
       provider: args.provider,
       profile: args.profile,
+      baseURL: args.baseUrl,
     })
     UI.println(`Signed in with API key (${result.method}): ${result.profile}`)
   },

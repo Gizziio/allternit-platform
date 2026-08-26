@@ -19,6 +19,7 @@
 
 import { discoverSubprocessProviders } from "./subprocess"
 import { discoverLocalProviders } from "./local"
+import { Flag } from "@/runtime/context/flag/flag"
 
 export interface DiscoveredProvider {
   /** Unique provider ID — shown in /model list */
@@ -74,6 +75,8 @@ export const Discovery = {
    * Results are deduplicated by provider ID — first discovery wins.
    */
   async run(): Promise<DiscoveredProvider[]> {
+    if (Flag.GIZZI_DISABLE_PROVIDER_DISCOVERY) return []
+
     const results = await Promise.allSettled([
       discoverSubprocessProviders(),
       discoverLocalProviders(),

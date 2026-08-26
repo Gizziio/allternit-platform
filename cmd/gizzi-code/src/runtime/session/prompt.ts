@@ -1523,13 +1523,12 @@ const message = await createUserMessage(input)
 
                 await ReadTool.init()
                   .then(async (t) => {
-                    const model = await Provider.getModel(info.model.providerID, info.model.modelID)
                     const readCtx: Tool.Context = {
                       sessionID: input.sessionID,
                       abort: new AbortController().signal,
                       agent: input.agent!,
                       messageID: info.id,
-                      extra: { bypassCwdCheck: true, model },
+                      extra: { bypassCwdCheck: true },
                       messages: [],
                       metadata: async () => {},
                       ask: async () => {},

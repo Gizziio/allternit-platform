@@ -153,6 +153,7 @@ export async function loginApiKey(
   options: {
     profile?: string
     provider?: string
+    baseURL?: string
     credentialStore?: CredentialStore
     writer?: CredentialWriter
   } = {},
@@ -166,7 +167,7 @@ export async function loginApiKey(
   const profile: AuthProfile = {
     provider: options.provider ?? existing?.provider ?? "anthropic",
     api_key_env: existing?.api_key_env,
-    base_url: existing?.base_url,
+    base_url: options.baseURL ?? existing?.base_url,
   }
 
   let storedIn: "file" | "keyring" = "file"

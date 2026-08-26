@@ -1,7 +1,11 @@
 // @ts-nocheck
-import { describe, expect, mock, test } from "bun:test"
+import { afterAll, describe, expect, mock, test } from "bun:test"
 import { Project } from "../../src/runtime/context/project/project"
 import { Log } from "../../src/shared/util/log"
+
+afterAll(() => {
+  mock.restore()
+})
 import { $ } from "bun"
 import path from "path"
 import { tmpdir } from "../fixture/fixture"
@@ -79,8 +83,8 @@ describe("Project.fromDirectory", () => {
     expect(project.vcs).toBe("git")
     expect(project.worktree).toBe(tmp.path)
 
-    const opencodeFile = path.join(tmp.path, ".git", "opencode")
-    const fileExists = await Filesystem.exists(opencodeFile)
+    const gizziFile = path.join(tmp.path, ".git", "gizzi")
+    const fileExists = await Filesystem.exists(gizziFile)
     expect(fileExists).toBe(false)
   })
 
@@ -95,8 +99,8 @@ describe("Project.fromDirectory", () => {
     expect(project.vcs).toBe("git")
     expect(project.worktree).toBe(tmp.path)
 
-    const opencodeFile = path.join(tmp.path, ".git", "opencode")
-    const fileExists = await Filesystem.exists(opencodeFile)
+    const gizziFile = path.join(tmp.path, ".git", "gizzi")
+    const fileExists = await Filesystem.exists(gizziFile)
     expect(fileExists).toBe(true)
   })
 

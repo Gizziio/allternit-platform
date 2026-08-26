@@ -2,7 +2,7 @@
 import { describe, expect, test } from "bun:test"
 import path from "path"
 import { BashTool } from "../../src/runtime/tools/builtins/bash"
-import { Instance } from "../../src/project/instance"
+import { Instance } from "../../src/runtime/context/project/instance"
 import { Filesystem } from "../../src/util/filesystem"
 import { tmpdir } from "../fixture/fixture"
 import type { PermissionNext } from "../../src/permission/next"

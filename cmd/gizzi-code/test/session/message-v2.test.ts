@@ -1,8 +1,8 @@
 // @ts-nocheck
 import { describe, expect, test } from "bun:test"
 import { APICallError } from "ai"
-import { MessageV2 } from "../../src/session/message-v2"
-import type { Provider } from "../../src/provider/provider"
+import { MessageV2 } from "../../src/runtime/session/message-v2"
+import type { Provider } from "../../src/runtime/providers/provider"
 
 const sessionID = "session"
 const model: Provider.Model = {

@@ -1,5 +1,9 @@
 // @ts-nocheck
-import { test, expect, mock, beforeEach } from "bun:test"
+import { test, expect, mock, beforeEach, afterAll } from "bun:test"
+
+afterAll(() => {
+  mock.restore()
+})
 import { EventEmitter } from "events"
 
 // Track open() calls and control failure behavior

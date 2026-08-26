@@ -17,7 +17,8 @@ process.env["XDG_DATA_HOME"] = path.join(dir, "share")
 process.env["XDG_CACHE_HOME"] = path.join(dir, "cache")
 process.env["XDG_CONFIG_HOME"] = path.join(dir, "config")
 process.env["XDG_STATE_HOME"] = path.join(dir, "state")
-process.env["OPENCODE_MODELS_PATH"] = path.join(import.meta.dir, "tool", "fixtures", "models-api.json")
+process.env["GIZZI_MODELS_PATH"] = path.join(import.meta.dir, "tool", "fixtures", "models-api.json")
+process.env["OPENCODE_MODELS_PATH"] = process.env["GIZZI_MODELS_PATH"]
 
 // Pre-create log directory to prevent ENOENT when starting logger
 const logDir = path.join(dir, "share", "gizzi-code", "log")

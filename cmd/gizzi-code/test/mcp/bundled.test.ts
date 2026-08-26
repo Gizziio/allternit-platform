@@ -34,15 +34,6 @@ describe("bundled MCP discovery", () => {
     }
   })
 
-  test("resolves the repository Superpowers server independently of cwd", () => {
-    const superpowers = bundledMcpServers({ cwd: "/tmp" }).superpowers
-    expect(superpowers?.type).toBe("local")
-    if (superpowers?.type === "local") {
-      expect(superpowers.command[0]).toBe(process.execPath)
-      expect(superpowers.command[1]).toEndWith("tools/mcp-servers/superpowers/superpowers-mcp.js")
-    }
-  })
-
   test("registers the connector MCP only with the internal token configured", () => {
     delete process.env.ALLTERNIT_INTERNAL_SERVICE_TOKEN
     expect(bundledMcpServers()["allternit-connectors"]).toBeUndefined()

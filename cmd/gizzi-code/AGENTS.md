@@ -1,5 +1,24 @@
 # gizzi-code Agent Guide
 
+> **Current state (cleanup in progress)**
+>
+> This package is the production `gizzi` CLI. The interactive TUI lives in `src/cli/ui/ink-app` and is built with React/Ink. The headless server and ACP integration live under `src/runtime/server` and `src/runtime/integrations/acp`.
+>
+> Verified workflows:
+> - `bun test` — isolated test harness via `script/test.sh`
+> - `bun run build` — cross-platform `bun build --compile` pipeline producing `dist/gizzi-code-*`
+> - Core commands registered in `src/cli/main.ts`
+>
+> Recently removed stale code and closed doc gaps:
+> - Legacy OpenTUI/Solid TUI code, build stubs, and dependencies; production TUI is React/Ink in `src/cli/ui/ink-app`
+> - Unused `superpowers` bundled MCP server stub
+> - Dead command files referencing missing packages (`allternit-capsules`, `allternit-vms`, `allternit-plugins`, `allternit-sessions`, `commit-claude`)
+> - Duplicate Vitest-only verification tests under `src/runtime/verification/__tests__/`
+> - Added `gizzi auth login --base-url`
+> - Added `gizzi exec --permission-profile <name>`
+>
+> Sections below describe subsystem architecture. Some subsystems are gated by flags or still experimental; verify behavior against the canonical Bun tests in `test/` before treating a description as production-ready.
+
 ## Agent creation checklist
 
 When spinning up a new agent or agent type in the Allternit platform, follow the canonical checklist at [`../AGENT_CREATION_CHECKLIST.md`](../AGENT_CREATION_CHECKLIST.md). It covers schema, registry contract, harness config, workspace artifacts, mode surface wiring, routines/loops/goals, and verification.
@@ -154,12 +173,15 @@ gizzi daemon status     # Show status
 | Verification | Disabled | `GIZZI_VERIFICATION_ENABLED` |
 | MCP | Enabled | `GIZZI_MCP_ENABLED` |
 
-## Tests
+## Tests and build
 
-| Suite | Command | Status |
-|-------|---------|--------|
-| Vault E2E | `bun test/vault/e2e.ts` | 46/46 passing |
-| Build | `bun run build` | ✅ darwin-arm64 binary |
+| Suite | Command | Notes |
+|-------|---------|-------|
+| Unit / integration | `bun test` | Runs `script/test.sh` with isolated XDG dirs and `GIZZI_TEST_ISOLATED_CONFIG=1` |
+| Type-check | `bun run typecheck` | `tsc --noEmit` |
+| Build | `bun run build` | Produces `dist/gizzi-code-<platform>-<arch>`; use `--all` for every platform |
+
+Run the binary with `./dist/gizzi-code --help` after a successful build.
 
 ---
 

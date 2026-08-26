@@ -1,9 +1,9 @@
 // @ts-nocheck
 import { describe, expect, test } from "bun:test"
 import path from "path"
-import { Instance } from "../../src/project/instance"
-import { Session } from "../../src/session"
-import { Log } from "../../src/util/log"
+import { Instance } from "../../src/runtime/context/project/instance"
+import { Session } from "../../src/runtime/session/index"
+import { Log } from "../../src/shared/util/log"
 
 const projectRoot = path.join(__dirname, "../..")
 Log.init({ print: false })

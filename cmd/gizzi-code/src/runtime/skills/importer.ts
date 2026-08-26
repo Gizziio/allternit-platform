@@ -63,8 +63,8 @@ export namespace SkillImporter {
   async function instructionOperations(): Promise<Operation[]> {
     const project = Instance.worktree
     const candidates = [
-      ...instructionCandidates(path.join(Global.Path.home, ".claude"), path.join(Global.Path.config, "AGENTS.md"), "claude", "user"),
-      ...instructionCandidates(path.join(Global.Path.home, ".codex"), path.join(Global.Path.config, "AGENTS.md"), "codex", "user"),
+      ...instructionCandidates(path.join(Global.Path.home(), ".claude"), path.join(Global.Path.config, "AGENTS.md"), "claude", "user"),
+      ...instructionCandidates(path.join(Global.Path.home(), ".codex"), path.join(Global.Path.config, "AGENTS.md"), "codex", "user"),
       ...instructionCandidates(path.join(project, ".claude"), path.join(project, ".gizzi", "AGENTS.md"), "claude", "project"),
       ...instructionCandidates(path.join(project, ".codex"), path.join(project, ".gizzi", "AGENTS.md"), "codex", "project"),
     ] as Array<Omit<Operation, "digest" | "status" | "warnings">>
@@ -100,8 +100,8 @@ export namespace SkillImporter {
     const roots = [
       { root: path.join(Instance.worktree, ".claude", "skills"), origin: "claude" as const, scope: "project" as const },
       { root: path.join(Instance.worktree, ".codex", "skills"), origin: "codex" as const, scope: "project" as const },
-      { root: path.join(Global.Path.home, ".claude", "skills"), origin: "claude" as const, scope: "user" as const },
-      { root: path.join(Global.Path.home, ".codex", "skills"), origin: "codex" as const, scope: "user" as const },
+      { root: path.join(Global.Path.home(), ".claude", "skills"), origin: "claude" as const, scope: "user" as const },
+      { root: path.join(Global.Path.home(), ".codex", "skills"), origin: "codex" as const, scope: "user" as const },
     ]
     const claimed = new Set<string>()
     const operations: Operation[] = []
@@ -132,8 +132,8 @@ export namespace SkillImporter {
 
   async function mcpOperations(): Promise<Operation[]> {
     const candidates = [
-      { source: path.join(Global.Path.home, ".claude.json"), origin: "claude" as const, scope: "user" as const },
-      { source: path.join(Global.Path.home, ".codex", "config.toml"), origin: "codex" as const, scope: "user" as const },
+      { source: path.join(Global.Path.home(), ".claude.json"), origin: "claude" as const, scope: "user" as const },
+      { source: path.join(Global.Path.home(), ".codex", "config.toml"), origin: "codex" as const, scope: "user" as const },
       { source: path.join(Instance.worktree, ".codex", "config.toml"), origin: "codex" as const, scope: "project" as const },
     ]
     const result: Operation[] = []

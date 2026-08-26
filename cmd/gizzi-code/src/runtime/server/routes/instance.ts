@@ -141,7 +141,7 @@ export function InstanceRoutes() {
           formatter,
           vcs: vcs ? { branch: vcs } : undefined,
           path: {
-            home: Global.Path.home,
+            home: Global.Path.home(),
             state: Global.Path.state,
             config: Global.Path.config,
             worktree: Instance.worktree,

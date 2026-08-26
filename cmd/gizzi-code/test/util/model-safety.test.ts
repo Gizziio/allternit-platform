@@ -1,6 +1,6 @@
 // @ts-nocheck
 import { describe, expect, test } from "bun:test"
-import { blockedModelReason, isModelBlocked } from "../../src/util/model-safety"
+import { blockedModelReason, isModelBlocked } from "../../src/shared/util/model-safety"
 
 describe("model-safety", () => {
   test("blocks unstable nano tier on opencode provider", () => {

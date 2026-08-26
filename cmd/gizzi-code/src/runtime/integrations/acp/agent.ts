@@ -537,42 +537,28 @@ export namespace ACP {
           if (!session) return
           const sessionId = session.id
 
-          const message = await this.sdk.session
-            .messages({
-              path: { sessionID: props.sessionID },
-              query: { directory: session.cwd },
-              throwOnError: true,
-            })
-            .then((x: any) => x.data?.[0])
-            .catch((error: unknown) => {
-              log.error("unexpected error when fetching message", { error })
-              return undefined
-            })
-
-          if (!message || message.info.role !== "assistant") return
-
-          const part = message.parts.find((p: any) => p.id === props.partID)
-          if (!part) return
-
-          if (part.type === "text" && props.field === "text" && part.ignored !== true) {
-            await this.connection
-              .sessionUpdate({
-                sessionId,
-                update: {
-                  sessionUpdate: "agent_message_chunk",
-                  content: {
-                    type: "text",
-                    text: props.delta,
-                  },
-                },
+          // Best-effort lookup of the message and part so we can distinguish
+          // reasoning from normal text. If the lookup fails (e.g. the message
+          // has not been persisted yet or the SDK does not expose it), fall
+          // back to forwarding the delta as the requested field type.
+          let partType: string | undefined
+          try {
+            const message = await this.sdk.session
+              .messages({
+                path: { sessionID: props.sessionID },
+                query: { directory: session.cwd },
+                throwOnError: true,
               })
-              .catch((error: unknown) => {
-                log.error("failed to send text delta to ACP", { error })
-              })
-            return
+              .then((x: any) => x.data?.[0])
+            const part = message?.parts?.find((p: any) => p.id === props.partID)
+            if (message?.info?.role === "assistant") {
+              partType = part?.type
+            }
+          } catch (error: unknown) {
+            log.debug("could not resolve part type for delta", { error, partID: props.partID })
           }
 
-          if (part.type === "reasoning" && props.field === "text") {
+          if (partType === "reasoning" && props.field === "text") {
             await this.connection
               .sessionUpdate({
                 sessionId,
@@ -586,6 +572,24 @@ export namespace ACP {
               })
               .catch((error: unknown) => {
                 log.error("failed to send reasoning delta to ACP", { error })
+              })
+            return
+          }
+
+          if (props.field === "text") {
+            await this.connection
+              .sessionUpdate({
+                sessionId,
+                update: {
+                  sessionUpdate: "agent_message_chunk",
+                  content: {
+                    type: "text",
+                    text: props.delta,
+                  },
+                },
+              })
+              .catch((error: unknown) => {
+                log.error("failed to send text delta to ACP", { error })
               })
           }
           return

@@ -44,7 +44,8 @@ describe("pty", () => {
 
           // Output from a must never show up in b.
           Pty.write(a.id, "AAA\n")
-          await Bun.sleep(100)
+          // Use a generous sleep so the assertion is stable under a loaded test suite.
+          await Bun.sleep(500)
 
           expect(outB.join("")).not.toContain("AAA")
         } finally {
@@ -89,7 +90,7 @@ describe("pty", () => {
           }
 
           Pty.write(a.id, "AAA\n")
-          await Bun.sleep(100)
+          await Bun.sleep(500)
 
           expect(outB.join("")).not.toContain("AAA")
         } finally {
@@ -133,7 +134,7 @@ describe("pty", () => {
           }
 
           Pty.write(a.id, "AAA\n")
-          await Bun.sleep(100)
+          await Bun.sleep(500)
 
           expect(outB.join("")).not.toContain("AAA")
         } finally {

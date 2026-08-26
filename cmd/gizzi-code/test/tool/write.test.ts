@@ -3,7 +3,7 @@ import { describe, test, expect } from "bun:test"
 import path from "path"
 import fs from "fs/promises"
 import { WriteTool } from "../../src/runtime/tools/builtins/write"
-import { Instance } from "../../src/project/instance"
+import { Instance } from "../../src/runtime/context/project/instance"
 import { tmpdir } from "../fixture/fixture"
 
 const ctx = {

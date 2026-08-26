@@ -1,7 +1,7 @@
 // @ts-nocheck
 import { describe, test, expect } from "bun:test"
 import path from "path"
-import { Instance } from "../../src/project/instance"
+import { Instance } from "../../src/runtime/context/project/instance"
 import { WebFetchTool } from "../../src/tool/webfetch"
 
 const projectRoot = path.join(__dirname, "../..")

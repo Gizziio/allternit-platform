@@ -1,5 +1,5 @@
 // @ts-nocheck
-import { beforeEach, describe, expect, mock, test } from "bun:test"
+import { beforeEach, describe, expect, test } from "bun:test"
 import path from "path"
 import { APICallError } from "ai"
 import { Instance } from "../../src/runtime/context/project/instance"
@@ -17,41 +17,34 @@ Log.init({ print: false })
 const streamCalls: { providerID: string; modelID: string }[] = []
 let streamScript: Array<{ throw?: unknown; events?: unknown[] }> = []
 
-mock.module("../../src/runtime/session/llm", () => ({
-  LLM: {
-    stream: async (input: any) => {
-      streamCalls.push({ providerID: input.model.providerID, modelID: input.model.id })
-      const step = streamScript.shift()
-      if (!step) throw new Error("unexpected LLM.stream call")
-      if (step.throw) throw step.throw
-      const events = step.events ?? []
-      return {
-        fullStream: (async function* () {
-          for (const event of events) yield event
-        })(),
-      }
-    },
-  },
-}))
+async function fakeStream(input: any) {
+  streamCalls.push({ providerID: input.model.providerID, modelID: input.model.id })
+  const step = streamScript.shift()
+  if (!step) throw new Error("unexpected LLM.stream call")
+  if (step.throw) throw step.throw
+  const events = step.events ?? []
+  return {
+    fullStream: (async function* () {
+      for (const event of events) yield event
+    })(),
+  }
+}
 
 // Provider stub: resolves every model to a fake Provider.Model unless the model was
 // marked unavailable (used to exercise "fallback model unavailable, skipping").
 const unavailableModels = new Set<string>()
 
-mock.module("../../src/runtime/providers/provider", () => ({
-  Provider: {
-    parseModel: (model: string) => {
-      const [providerID, ...rest] = model.split("/")
-      return { providerID, modelID: rest.join("/") }
-    },
-    getModel: async (providerID: string, modelID: string) => {
-      if (unavailableModels.has(`${providerID}/${modelID}`)) {
-        throw new Error(`Model not found: ${providerID}/${modelID}`)
-      }
-      return fakeModel(providerID, modelID)
-    },
-  },
-}))
+function fakeParseModel(model: string) {
+  const [providerID, ...rest] = model.split("/")
+  return { providerID, modelID: rest.join("/") }
+}
+
+async function fakeGetModel(providerID: string, modelID: string) {
+  if (unavailableModels.has(`${providerID}/${modelID}`)) {
+    throw new Error(`Model not found: ${providerID}/${modelID}`)
+  }
+  return fakeModel(providerID, modelID)
+}
 
 function fakeModel(providerID: string, modelID: string) {
   return {
@@ -109,7 +102,7 @@ function baseConfig(extra?: Record<string, unknown>) {
 async function withTmpdir<T>(config: Record<string, unknown>, fn: (tmp: { path: string }) => Promise<T>): Promise<T> {
   const tmp = await tmpdir({
     git: true,
-    // NOTE: the config loader reads gizzi.json{,c} (not opencode.json), so write it directly
+    // NOTE: the config loader reads gizzi.json{,c} (not gizzi.json), so write it directly
     init: async (dir) => {
       await Bun.write(path.join(dir, "gizzi.json"), JSON.stringify(config))
     },
@@ -161,6 +154,11 @@ async function runProcessor(
     model,
     abort: abort.signal,
     fallbackModels: options?.fallbackModels,
+    deps: {
+      stream: fakeStream,
+      getModel: fakeGetModel,
+      parseModel: fakeParseModel,
+    },
   })
   const events = { fallback: [] as any[], error: [] as any[] }
   const unsubFallback = Bus.subscribe(Session.Event.ModelFallback, (event: any) => events.fallback.push(event.properties))

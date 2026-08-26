@@ -48,6 +48,8 @@ import { BashTool } from "@/runtime/tools/builtins/bash"
 import { TodoWriteTool } from "@/runtime/tools/builtins/todo"
 import { Locale } from "@/shared/util/locale"
 import { Config } from "@/runtime/context/config/config"
+import { Global } from "@/runtime/context/global"
+import { readPermissionProfiles } from "@/runtime/context/config/permission-profiles"
 
 type ToolProps<T extends Tool.Info> = {
   input: Tool.InferParameters<T>
@@ -340,6 +342,10 @@ export const RunCommand = cmd({
         describe: "permission mode for tool execution",
         choices: ["default", "acceptEdits", "plan", "dontAsk", "bypassPermissions"] as const,
       })
+      .option("permission-profile", {
+        type: "string",
+        describe: "named permission profile to merge into the session ruleset",
+      })
       .option("dangerously-skip-permissions", {
         type: "boolean",
         describe: "skip all permission checks (use in sandboxed environments only)",
@@ -506,6 +512,20 @@ export const RunCommand = cmd({
         pattern: "*",
       },
     ]
+
+    // Merge named permission profile rules into the session ruleset.
+    if (args.permissionProfile) {
+      const configPath = path.join(Global.Path.config, "config.toml")
+      const profiles = await readPermissionProfiles(configPath)
+      const profile = profiles.profiles[args.permissionProfile]
+      if (!profile) {
+        UI.error(`Permission profile not found: ${args.permissionProfile}`)
+        process.exit(1)
+      }
+      for (const [tool, action] of Object.entries(profile.rules)) {
+        rules.push({ permission: tool, action, pattern: "*" })
+      }
+    }
 
     // Tool filtering via --allowedTools / --disallowedTools
     if (args.allowedTools?.length) {

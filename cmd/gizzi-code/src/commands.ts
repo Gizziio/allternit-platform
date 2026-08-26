@@ -25,3 +25,8 @@ export type {
 } from './types/command.js'
 
 export * from './cli/ui/ink-app/commands.js'
+export {
+  clearCommandPrefixCaches,
+  extractOutputRedirections,
+  splitCommandWithOperators,
+} from './cli/ui/ink-app/utils/bash/commands.js'

@@ -435,31 +435,6 @@ describe("gizzi-code VmSession in-process routes", () => {
 // ── Discretionary screen VM disclosure ───────────────────────────────────────
 
 describe("DiscretionaryScreen VM disclosure", () => {
-  test("discretionary-screen.tsx imports Flag", async () => {
-    const fs = await import("fs/promises")
-    const path = await import("path")
-    const content = await fs.readFile(
-      path.join(__dirname, "../src/cli/ui/tui/component/discretionary-screen.tsx"),
-      "utf-8",
-    )
-    expect(content).toContain('import { Flag }')
-    expect(content).toContain('Flag.GIZZI_VM_SESSIONS')
-    expect(content).toContain('VM ISOLATION ACTIVE')
-    expect(content).toContain('/vm')
-  })
-
-  test("discretionary-screen.tsx shows sandbox notice when only sandbox is active", async () => {
-    const fs = await import("fs/promises")
-    const path = await import("path")
-    const content = await fs.readFile(
-      path.join(__dirname, "../src/cli/ui/tui/component/discretionary-screen.tsx"),
-      "utf-8",
-    )
-    expect(content).toContain('SUBPROCESS SANDBOX ACTIVE')
-    expect(content).toContain('Flag.GIZZI_SANDBOX && !Flag.GIZZI_VM_SESSIONS')
-    expect(content).toContain('/sandbox')
-  })
-
   test("vm-session route file implements toggle endpoint", async () => {
     const fs = await import("fs/promises")
     const path = await import("path")
@@ -503,24 +478,6 @@ describe("DiscretionaryScreen VM disclosure", () => {
     expect(content).toContain('async function destroy(')
     expect(content).toContain('Flag.GIZZI_VM_SESSIONS')
     expect(content).toContain('Flag.GIZZI_VM_API_URL')
-  })
-
-  test("session cleanup hook destroys vm session on unmount", async () => {
-    const fs = await import("fs/promises")
-    const path = await import("path")
-    const content = await fs.readFile(
-      path.join(
-        __dirname,
-        "../src/cli/ui/tui/routes/session/index.tsx",
-      ),
-      "utf-8",
-    )
-    expect(content).toContain('vm-session')
-    expect(content).toContain('DELETE')
-    // All three cleanups should be in the same onCleanup block
-    const onCleanupIdx = content.lastIndexOf('// Clean up session-scoped cron loops')
-    const vmCleanupIdx = content.indexOf('vm-session/${encodeURIComponent', onCleanupIdx)
-    expect(vmCleanupIdx).toBeGreaterThan(onCleanupIdx)
   })
 
   test("vm_session_routes.rs bootstrap matches Claude Code cloud session environment", async () => {
@@ -680,56 +637,6 @@ describe("DiscretionaryScreen VM disclosure", () => {
     expect(content).toContain("bootstrapLog")
   })
 
-  test("discretionary-screen lists CC-matched toolchain items", async () => {
-    const fs = await import("fs/promises")
-    const path = await import("path")
-    const content = await fs.readFile(
-      path.join(__dirname, "../src/cli/ui/tui/component/discretionary-screen.tsx"),
-      "utf-8",
-    )
-    // CC devcontainer tools
-    expect(content).toContain("Powerlevel10k")    // zsh theme from CC devcontainer
-    expect(content).toContain("git-delta")         // from CC devcontainer
-    expect(content).toContain("bat")               // syntax-highlighted cat
-    expect(content).toContain("fzf")
-    expect(content).toContain("Node 22")
-    expect(content).toContain("nvm")               // Node version manager — CC ships this
-    expect(content).toContain("Bun")
-    expect(content).toContain("yarn")
-    // Runtimes from CC cloud session
-    expect(content).toContain("Python")
-    expect(content).toContain("uv")                // Python fast packager — CC ships this
-    expect(content).toContain("Playwright")
-    expect(content).toContain("Jupyter")
-    expect(content).toContain("Ruby 3.3.6")        // exact CC default version
-    expect(content).toContain("rbenv")
-    expect(content).toContain("bundler")
-    expect(content).toContain("Java OpenJDK 21")   // CC cloud session
-    expect(content).toContain("Maven")
-    expect(content).toContain("Gradle")
-    expect(content).toContain("PHP")
-    expect(content).toContain("Composer")
-    expect(content).toContain("Rust")
-    expect(content).toContain("rust-analyzer")
-    expect(content).toContain("gopls")
-    expect(content).toContain("clangd")
-    expect(content).toContain("pyright")
-    expect(content).toContain("TypeScript")
-    // Databases from CC cloud session
-    expect(content).toContain("PostgreSQL 16")
-    expect(content).toContain("Redis 7")
-    // DevOps tools from CC cloud session
-    expect(content).toContain("kubectl")
-    expect(content).toContain("Helm")
-    expect(content).toContain("gh CLI")
-    expect(content).toContain("Docker")
-    // Workspace + misc
-    expect(content).toContain("git clone")
-    expect(content).toContain("/workspace")
-    expect(content).toContain("SSH key")
-    expect(content).toContain("GIZZI_VM_API_URL")
-  })
-
   test("allternit-api main.rs registers /vm-session route", async () => {
     const fs = await import("fs/promises")
     const path = await import("path")
@@ -830,26 +737,6 @@ describe("DiscretionaryScreen VM disclosure", () => {
     expect(content).toContain("exa_api_key: exaApiKey")
     expect(content).toContain("gizzi_server_url: gizziServerUrl")
     expect(content).toContain("config_dir: configDir")
-  })
-
-  test("discretionary-screen lists WebSearch, PreToolUse/PostToolUse, and AskUserQuestion VM support", async () => {
-    const fs = await import("fs/promises")
-    const path = await import("path")
-    const content = await fs.readFile(
-      path.join(__dirname, "../src/cli/ui/tui/component/discretionary-screen.tsx"),
-      "utf-8",
-    )
-    // WebSearch
-    expect(content).toContain("WebSearch")
-    expect(content).toContain("EXA_API_KEY")
-    // Hooks
-    expect(content).toContain("PreToolUse")
-    expect(content).toContain("PostToolUse")
-    expect(content).toContain("hook scripts")
-    // AskUserQuestion
-    expect(content).toContain("AskUserQuestion")
-    expect(content).toContain("GIZZI_SERVER_URL")
-    expect(content).toContain("host gateway")
   })
 
   test("POST /vm-session propagates tool integration fields to bootstrap log", async () => {

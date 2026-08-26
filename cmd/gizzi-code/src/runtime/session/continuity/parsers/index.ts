@@ -24,7 +24,7 @@ export namespace ToolParsers {
 
     const source: SessionSource = {
       id,
-      tool: "unknown",
+      tool: "opencode",
       workspace_path: sessionPath,
       created_at: Date.now(),
       modified_at: Date.now(),

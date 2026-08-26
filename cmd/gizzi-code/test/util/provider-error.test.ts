@@ -10,7 +10,7 @@ import {
   providerErrorLabel,
   providerErrorHint,
   retryLimitNote,
-} from "../../src/util/provider-error"
+} from "../../src/shared/util/provider-error"
 
 describe("provider-error", () => {
   test("extracts nested message from embedded JSON", () => {

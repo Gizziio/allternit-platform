@@ -8,12 +8,14 @@
 import type { ProviderLoader } from "../../types"
 import { anthropicLoader } from "./anthropic"
 import { openaiLoader } from "./openai"
+import { bedrockLoader } from "./bedrock"
 import { gizziLoader, gizziioLoader } from "./misc"
 import { localLoader } from "./local"
 
 export const CUSTOM_LOADERS: Record<string, ProviderLoader> = {
   "anthropic": anthropicLoader,
   "openai": openaiLoader,
+  "amazon-bedrock": bedrockLoader,
   "gizzi": gizziLoader,
   "gizziio": gizziioLoader,
   "local-mlx": localLoader,

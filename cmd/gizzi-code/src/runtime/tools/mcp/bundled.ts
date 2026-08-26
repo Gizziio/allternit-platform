@@ -8,7 +8,6 @@
  * Bundled servers:
  *   - sequential-thinking  (@modelcontextprotocol/server-sequential-thinking)
  *   - context7             (@upstash/context7-mcp)
- *   - superpowers          (tools/mcp-servers/superpowers)
  *   - allternit-connectors (Rust API internal route — per-user connector
  *                           actions on connected apps; only when
  *                           ALLTERNIT_INTERNAL_SERVICE_TOKEN is configured)
@@ -21,24 +20,9 @@
  */
 
 import type { Config } from "@/runtime/context/config/config"
-import { existsSync } from "fs"
 import { createRequire } from "module"
-import path from "path"
 
 const require = createRequire(import.meta.url)
-
-/**
- * Resolve the superpowers MCP server path relative to the allternit
- * monorepo root. Works whether gizzi is run from the repo root or from
- * cmd/gizzi-code/.
- */
-function resolveSuperpowersPath(cwd: string): string | undefined {
-  const candidates = [
-    path.resolve(cwd, "tools/mcp-servers/superpowers/superpowers-mcp.js"),
-    path.resolve(import.meta.dir, "../../../../../../tools/mcp-servers/superpowers/superpowers-mcp.js"),
-  ]
-  return candidates.find((candidate) => existsSync(candidate))
-}
 
 function resolveInstalledEntrypoint(specifier: string): string | undefined {
   try {
@@ -117,17 +101,15 @@ function allternitToolsServer(): Config.Mcp | undefined {
   }
 }
 
-export function bundledMcpServers(options: { cwd?: string } = {}): Record<string, Config.Mcp> {
+export function bundledMcpServers(_options: { cwd?: string } = {}): Record<string, Config.Mcp> {
   const result: Record<string, Config.Mcp> = {}
   const sequentialThinking = localServer(
     resolveInstalledEntrypoint("@modelcontextprotocol/server-sequential-thinking/dist/index.js"),
   )
   const context7 = localServer(resolveInstalledEntrypoint("@upstash/context7-mcp/dist/index.js"))
-  const superpowers = localServer(resolveSuperpowersPath(options.cwd ?? process.cwd()))
 
   if (sequentialThinking) result["sequential-thinking"] = sequentialThinking
   if (context7) result.context7 = context7
-  if (superpowers) result.superpowers = superpowers
 
   const connectors = allternitConnectorsServer()
   if (connectors) result["allternit-connectors"] = connectors

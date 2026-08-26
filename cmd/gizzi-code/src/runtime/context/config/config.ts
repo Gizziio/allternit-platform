@@ -108,7 +108,12 @@ export namespace Config {
     }
 
     // Global user config overrides remote config.
-    result = merge(result, await global())
+    // Tests can opt out of global/user config so user machine state doesn't leak.
+    if (!process.env.GIZZI_TEST_ISOLATED_CONFIG) {
+      result = merge(result, await global())
+    } else {
+      log.debug("skipping global config due to GIZZI_TEST_ISOLATED_CONFIG")
+    }
 
     // Custom config path overrides global config.
     if (Flag.GIZZI_CONFIG) {
@@ -131,7 +136,8 @@ export namespace Config {
     result.plugin = result.plugin || []
 
     const directories = [
-      Global.Path.config,
+      // Tests can opt out of user/global config directories to avoid machine state leaking.
+      ...(process.env.GIZZI_TEST_ISOLATED_CONFIG ? [] : [Global.Path.config]),
       // Only scan project .gizzi/ directories when project discovery is enabled
       ...(!Flag.GIZZI_DISABLE_PROJECT_CONFIG
         ? await Array.fromAsync(
@@ -142,14 +148,16 @@ export namespace Config {
             }),
           )
         : []),
-      // Always scan ~/.gizzi/ (user home directory)
-      ...(await Array.fromAsync(
-        Filesystem.up({
-          targets: [".gizzi"],
-          start: Global.Path.home,
-          stop: Global.Path.home,
-        }),
-      )),
+      // Always scan ~/.gizzi/ (user home directory) unless tests are isolated
+      ...(process.env.GIZZI_TEST_ISOLATED_CONFIG
+        ? []
+        : await Array.fromAsync(
+            Filesystem.up({
+              targets: [".gizzi"],
+              start: Global.Path.home(),
+              stop: Global.Path.home(),
+            }),
+          )),
     ]
 
     // .gizzi directory config overrides (project and global) config sources.
@@ -221,7 +229,13 @@ export namespace Config {
     // Kept separate from directories array to avoid write operations when installing plugins
     // which would fail on system directories requiring elevated permissions
     // This way it only loads config file and not skills/plugins/commands
-    if (existsSync(managedConfigDir)) {
+    // In test mode GIZZI_TEST_MANAGED_CONFIG_DIR is explicitly provided and must
+    // still be honored even when GIZZI_TEST_ISOLATED_CONFIG is active. In
+    // production we only load the real system managed directory when isolation
+    // is off.
+    const shouldLoadManagedConfig =
+      process.env.GIZZI_TEST_MANAGED_CONFIG_DIR || !process.env.GIZZI_TEST_ISOLATED_CONFIG
+    if (shouldLoadManagedConfig && existsSync(managedConfigDir)) {
       for (const file of ["gizzi.jsonc", "gizzi.json"]) {
         result = merge(result, await loadFile(path.join(managedConfigDir, file)))
       }

@@ -448,6 +448,12 @@ export namespace Sidecar {
     options: Record<string, unknown>
     models: Record<string, unknown>
   } | null> {
+    // Re-read at call time so tests and late config changes can disable the sidecar.
+    const disabled = process.env["ALLTERNIT_SIDECAR_DISABLED"] === "1" || process.env["ALLTERNIT_SIDECAR_DISABLED"] === "true"
+    if (disabled) {
+      log.info("providerConfig: sidecar disabled via ALLTERNIT_SIDECAR_DISABLED")
+      return null
+    }
     const installed = await listInstalledModels()
     const models: Record<string, unknown> = {
       [EMBEDDED_MODEL.id]: {

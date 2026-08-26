@@ -2,7 +2,7 @@
 import { test, expect } from "bun:test"
 import os from "os"
 import { PermissionNext } from "../../src/permission/next"
-import { Instance } from "../../src/project/instance"
+import { Instance } from "../../src/runtime/context/project/instance"
 import { tmpdir } from "../fixture/fixture"
 
 // fromConfig tests

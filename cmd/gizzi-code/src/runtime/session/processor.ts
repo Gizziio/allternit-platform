@@ -36,6 +36,11 @@ export namespace SessionProcessor {
     model: Provider.Model
     abort: AbortSignal
     fallbackModels?: { providerID: string; modelID: string }[]
+    deps?: {
+      stream?: (input: LLM.StreamInput) => Promise<LLM.StreamOutput>
+      getModel?: (providerID: string, modelID: string) => Promise<Provider.Model>
+      parseModel?: (model: string) => { providerID: string; modelID: string }
+    }
   }) {
     const toolcalls: Record<string, MessageV2.ToolPart> = {}
     const toolCallOrder: Record<string, number> = {}
@@ -45,6 +50,10 @@ export namespace SessionProcessor {
     let attempt = 0
     let needsCompaction = false
     let mediaRecovery: "none" | "degraded" | "stripped" = "none"
+
+    const streamFn = input.deps?.stream ?? LLM.stream
+    const getModelFn = input.deps?.getModel ?? Provider.getModel
+    const parseModelFn = input.deps?.parseModel ?? Provider.parseModel
 
     const result = {
       get message() {
@@ -64,7 +73,7 @@ export namespace SessionProcessor {
         // global routing.fallbacks config; when neither is set the chain is empty and error
         // handling behaves exactly as before.
         const fallbackChain: { providerID: string; modelID: string }[] =
-          input.fallbackModels ?? (cfg.routing?.fallbacks ?? []).map((entry: string) => Provider.parseModel(entry))
+          input.fallbackModels ?? (cfg.routing?.fallbacks ?? []).map((entry: string) => parseModelFn(entry))
         const tried = new Set<string>([`${input.model.providerID}/${input.model.id}`])
         let fallbackIndex = 0
         // Provider error categories that are never worth retrying on the same model (mirrors
@@ -85,7 +94,7 @@ export namespace SessionProcessor {
             const key = `${candidate.providerID}/${candidate.modelID}`
             if (tried.has(key)) continue
             tried.add(key)
-            const next = await Provider.getModel(candidate.providerID, candidate.modelID).catch((e: unknown) => {
+            const next = await getModelFn(candidate.providerID, candidate.modelID).catch((e: unknown) => {
               log.warn("fallback model unavailable, skipping", {
                 providerID: candidate.providerID,
                 modelID: candidate.modelID,
@@ -121,7 +130,7 @@ export namespace SessionProcessor {
             let currentText: MessageV2.TextPart | undefined
             let currentReasoning: MessageV2.ReasoningPart | undefined
             let reasoningMap: Record<string, MessageV2.ReasoningPart> = {}
-            const stream = await LLM.stream(streamInput)
+            const stream = await streamFn(streamInput)
 
             // State machine for splitting <think> tags
             let mode: "text" | "thinking" = "text"

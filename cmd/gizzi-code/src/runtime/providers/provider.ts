@@ -378,13 +378,18 @@ export namespace Provider {
       })
     }
 
-    // load apikeys
+    // load apikeys (and OAuth access tokens)
     for (const [providerID, provider] of Object.entries(await Auth.all())) {
       if (disabled.has(providerID)) continue
       if (provider.type === "api") {
         mergeProvider(providerID, {
           source: "api",
           key: provider.key,
+        })
+      } else if (provider.type === "oauth") {
+        mergeProvider(providerID, {
+          source: "api",
+          key: provider.access,
         })
       }
     }
@@ -698,7 +703,9 @@ export namespace Provider {
       const availableProviders = Object.keys(s.providers)
       const matches = fuzzysort.go(providerID, availableProviders, { limit: 3, threshold: -10000 })
       const suggestions = matches.map((m) => m.target)
-      throw new ModelNotFoundError({ providerID, modelID, suggestions })
+      const message = `Model not found: provider "${providerID}" is not available.` +
+        (suggestions?.length ? ` Did you mean: ${suggestions.join(", ")}?` : "")
+      throw new ModelNotFoundError({ providerID, modelID, suggestions }, { message })
     }
 
     const info = provider.models[modelID]
@@ -706,7 +713,9 @@ export namespace Provider {
       const availableModels = Object.keys(provider.models)
       const matches = fuzzysort.go(modelID, availableModels, { limit: 3, threshold: -10000 })
       const suggestions = matches.map((m) => m.target)
-      throw new ModelNotFoundError({ providerID, modelID, suggestions })
+      const message = `Model not found: "${modelID}" is not available for provider "${providerID}".` +
+        (suggestions?.length ? ` Did you mean: ${suggestions.join(", ")}?` : "")
+      throw new ModelNotFoundError({ providerID, modelID, suggestions }, { message })
     }
     return info
   }
