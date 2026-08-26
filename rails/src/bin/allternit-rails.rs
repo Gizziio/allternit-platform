@@ -28,9 +28,11 @@ use allternit_agent_system_rails::work::graph::{has_cycle_edges, ready_nodes};
 use allternit_agent_system_rails::work::projection::project_dag;
 use allternit_agent_system_rails::work::types::DagState;
 use allternit_agent_system_rails::{
-    AllternitEvent, Actor, ActorType, DagMutation, EventScope, Gate, Index, IndexOptions, LeaseRequest,
-    Leases, Ledger, LedgerQuery, Mail, MailOptions, ReceiptStore, ReceiptStoreOptions, Vault,
-    VaultOptions, WorkOps,
+    send_to_peer, AllternitEvent, Actor, ActorType, DagMutation, EventScope, ExecutorSpec,
+    ExecutorState, Gate, Index, IndexOptions, LeaseRequest, Leases, Ledger, LedgerQuery, Mail,
+    MailOptions, Orchestrator, OrchestratorOptions, PeerAddress, PeerInboxOptions, PeerInboxServer,
+    PeerKind, PeerRegistry, PeerRegistryOptions, ReceiptStore, ReceiptStoreOptions, Steering,
+    SteeringOptions, Vault, VaultOptions, WorkOps,
 };
 use tokio::io::{AsyncReadExt, AsyncWriteExt, BufReader};
 use tokio::net::UnixStream;
@@ -82,6 +84,12 @@ enum Commands {
     Ticket(TicketCmd),
     #[command(subcommand)]
     Graph(GraphCmd),
+    #[command(subcommand)]
+    Peer(PeerCmd),
+    #[command(subcommand)]
+    Steer(SteerCmd),
+    #[command(subcommand)]
+    Orchestrator(OrchestratorCmd),
 }
 
 #[derive(Subcommand)]
@@ -96,6 +104,106 @@ enum GraphCmd {
     Impact {
         ticket_id: String,
     },
+}
+
+#[derive(Subcommand)]
+enum PeerCmd {
+    /// List discovered and registered peers.
+    List,
+    /// Show a single peer.
+    Show { peer_id: String },
+    /// Register a peer explicitly.
+    Register {
+        peer_id: String,
+        session_id: String,
+        display_name: String,
+        #[arg(long)]
+        socket: Option<String>,
+        #[arg(long)]
+        bridge: Option<String>,
+        #[arg(long)]
+        mail_agent: Option<String>,
+        #[arg(long, default_value = "")]
+        cwd: String,
+        #[arg(long, default_value = "unknown")]
+        vendor: String,
+        #[arg(long, default_value = "other")]
+        kind: String,
+    },
+    /// Start the UDS inbox server for this session.
+    Inbox {
+        #[arg(long)]
+        socket: Option<String>,
+    },
+    /// Send a message to a peer via the Bus UDS transport.
+    Send {
+        from_peer: String,
+        to_peer: String,
+        kind: String,
+        payload: String,
+    },
+}
+
+#[derive(Subcommand)]
+enum SteerCmd {
+    /// Load and record the current steering checkpoint.
+    Checkpoint,
+    /// Request a steering consult.
+    Consult,
+    /// Run the steering commit gate.
+    CommitGate,
+}
+
+#[derive(Subcommand)]
+enum OrchestratorCmd {
+    /// Spawn a new executor session via allternit-mux.
+    Spawn {
+        slug: String,
+        /// Working directory / repository for the executor.
+        repo: String,
+        /// Launch command and arguments.
+        command: Vec<String>,
+        #[arg(long, default_value = "unknown")]
+        vendor: String,
+        #[arg(long, default_value = "shared")]
+        mode: String,
+        #[arg(long)]
+        task_file: Option<PathBuf>,
+        #[arg(long)]
+        notes_sentinel: Option<PathBuf>,
+    },
+    /// Send a prompt to a running executor pane.
+    Send { slug: String, data: String },
+    /// Watch an executor until it finishes or the timeout elapses.
+    Watch {
+        slug: String,
+        #[arg(long, default_value_t = 300)]
+        timeout_seconds: u64,
+    },
+    /// Show the current executor session state.
+    Status { slug: String },
+    /// Read the executor pane scrollback.
+    Tail {
+        slug: String,
+        #[arg(long, default_value_t = 50)]
+        lines: usize,
+    },
+    /// Close the executor pane and mark it killed.
+    Kill { slug: String },
+    /// Request, accept, or reject a review for an executor.
+    Review {
+        slug: String,
+        #[arg(long)]
+        request: bool,
+        #[arg(long)]
+        accept: bool,
+        #[arg(long)]
+        reject: bool,
+        #[arg(long)]
+        notes_ref: Option<String>,
+    },
+    /// Health-check the orchestrator environment.
+    Doctor,
 }
 
 #[derive(Subcommand)]
@@ -370,6 +478,7 @@ enum BusCmd {
         #[arg(long)]
         watch: bool,
     },
+    UdsRunner,
 }
 
 #[derive(Subcommand)]
@@ -1045,6 +1154,10 @@ async fn main() -> Result<()> {
                 )
                 .await?;
             }
+            BusCmd::UdsRunner => {
+                let bus = stores.bus().await?;
+                bus.run_uds_transport().await?;
+            }
         },
         Commands::Transport(cmd) => match cmd {
             TransportCmd::TmuxInspect { session } => {
@@ -1115,9 +1228,228 @@ async fn main() -> Result<()> {
                 }
             }
         }
+        Commands::Peer(cmd) => {
+            let registry = stores.peer_registry().await?;
+            match cmd {
+                PeerCmd::List => {
+                    let peers = registry.list().await?;
+                    println!("{}", serde_json::to_string_pretty(&peers)?);
+                }
+                PeerCmd::Show { peer_id } => {
+                    match registry.get(&peer_id).await? {
+                        Some(peer) => println!("{}", serde_json::to_string_pretty(&peer)?),
+                        None => println!("peer not found"),
+                    }
+                }
+                PeerCmd::Register {
+                    peer_id,
+                    session_id,
+                    display_name,
+                    socket,
+                    bridge,
+                    mail_agent,
+                    cwd,
+                    vendor,
+                    kind,
+                } => {
+                    let address = if let Some(endpoint) = bridge {
+                        PeerAddress::Bridge { endpoint }
+                    } else if let Some(agent_id) = mail_agent {
+                        PeerAddress::Mail { agent_id }
+                    } else {
+                        let socket_path = socket.map(PathBuf::from).unwrap_or_else(|| {
+                            root.join(".allternit")
+                                .join("peer")
+                                .join("inbox")
+                                .join(format!("{}.sock", peer_id))
+                        });
+                        PeerAddress::Uds { socket_path }
+                    };
+                    let kind = parse_peer_kind(&kind);
+                    registry.register(allternit_agent_system_rails::Peer {
+                        peer_id,
+                        session_id,
+                        display_name,
+                        address,
+                        cwd,
+                        vendor,
+                        kind,
+                    }).await?;
+                    println!("registered");
+                }
+                PeerCmd::Inbox { socket } => {
+                    let socket_path = socket.map(PathBuf::from).unwrap_or_else(|| {
+                        root.join(".allternit")
+                            .join("peer")
+                            .join("inbox")
+                            .join(format!("{}.sock", "self"))
+                    });
+                    let inbox = PeerInboxServer::new(PeerInboxOptions {
+                        socket_path,
+                        ledger: ledger.clone(),
+                        actor_id: Some("peer-inbox".to_string()),
+                    });
+                    println!("starting peer inbox on {:?}", inbox.socket_path());
+                    inbox.run().await?;
+                }
+                PeerCmd::Send {
+                    from_peer,
+                    to_peer,
+                    kind,
+                    payload,
+                } => {
+                    let registry = stores.peer_registry().await?;
+                    let bus = stores.bus().await?;
+                    let payload_value: Value =
+                        serde_json::from_str(&payload).unwrap_or_else(|_| json!({ "text": payload }));
+                    let message_id = send_to_peer(
+                        &registry,
+                        &bus,
+                        &from_peer,
+                        &to_peer,
+                        &kind,
+                        payload_value,
+                    )
+                    .await?;
+                    println!("message_id: {message_id}");
+                }
+            }
+        }
+        Commands::Steer(cmd) => {
+            let steering = stores.steering().await?;
+            match cmd {
+                SteerCmd::Checkpoint => {
+                    let checkpoint = steering.checkpoint().await?;
+                    println!("{}", serde_json::to_string_pretty(&checkpoint)?);
+                }
+                SteerCmd::Consult => {
+                    let consult = steering.request_consult().await?;
+                    println!("{}", serde_json::to_string_pretty(&consult)?);
+                }
+                SteerCmd::CommitGate => {
+                    let result = steering.commit_gate().await?;
+                    println!("{}", serde_json::to_string_pretty(&result)?);
+                    if !result.allowed {
+                        std::process::exit(1);
+                    }
+                }
+            }
+        }
+        Commands::Orchestrator(cmd) => {
+            let orchestrator = stores.orchestrator().await?;
+            match cmd {
+                OrchestratorCmd::Spawn {
+                    slug,
+                    repo,
+                    command,
+                    vendor,
+                    mode,
+                    task_file,
+                    notes_sentinel,
+                } => {
+                    if command.is_empty() {
+                        bail!("spawn requires a command");
+                    }
+                    let workdir = PathBuf::from(&repo);
+                    let workdir = if workdir.is_absolute() {
+                        workdir
+                    } else {
+                        root.join(workdir)
+                    };
+                    let notes_sentinel = notes_sentinel.unwrap_or_else(|| {
+                        workdir
+                            .join(".allternit")
+                            .join("executor")
+                            .join(&slug)
+                            .join("notes.sentinel")
+                    });
+                    let spec = ExecutorSpec {
+                        slug,
+                        vendor,
+                        mode,
+                        command,
+                        workdir,
+                        isolation: "workspace".to_string(),
+                        task_file,
+                        notes_sentinel,
+                    };
+                    let session = orchestrator.spawn(spec).await?;
+                    println!("{}", serde_json::to_string_pretty(&session)?);
+                }
+                OrchestratorCmd::Send { slug, data } => {
+                    orchestrator.send(&slug, &data).await?;
+                    println!("sent");
+                }
+                OrchestratorCmd::Watch {
+                    slug,
+                    timeout_seconds,
+                } => {
+                    let (session, timed_out) = orchestrator
+                        .watch(&slug, std::time::Duration::from_secs(timeout_seconds))
+                        .await?;
+                    println!("{}", serde_json::to_string_pretty(&session)?);
+                    if timed_out {
+                        std::process::exit(4);
+                    }
+                    match session.state {
+                        ExecutorState::Dead => std::process::exit(3),
+                        ExecutorState::Done | ExecutorState::Killed => {}
+                        _ => {}
+                    }
+                }
+                OrchestratorCmd::Status { slug } => {
+                    let session = orchestrator.status(&slug).await?;
+                    println!("{}", serde_json::to_string_pretty(&session)?);
+                }
+                OrchestratorCmd::Tail { slug, lines } => {
+                    let output = orchestrator.tail(&slug, Some(lines)).await?;
+                    println!("{}", output);
+                }
+                OrchestratorCmd::Kill { slug } => {
+                    let session = orchestrator.kill(&slug).await?;
+                    println!("{}", serde_json::to_string_pretty(&session)?);
+                }
+                OrchestratorCmd::Review {
+                    slug,
+                    request,
+                    accept,
+                    reject,
+                    notes_ref,
+                } => {
+                    if request && !accept && !reject {
+                        orchestrator.review_request(&slug, notes_ref.as_deref()).await?;
+                        println!("review requested");
+                    } else if accept && !request && !reject {
+                        orchestrator.review_decide(&slug, true, notes_ref.as_deref()).await?;
+                        println!("review accepted");
+                    } else if reject && !request && !accept {
+                        orchestrator.review_decide(&slug, false, notes_ref.as_deref()).await?;
+                        println!("review rejected");
+                    } else {
+                        bail!("specify exactly one of --request, --accept, --reject");
+                    }
+                }
+                OrchestratorCmd::Doctor => {
+                    let report = orchestrator.doctor().await?;
+                    println!("{}", serde_json::to_string_pretty(&report)?);
+                }
+            }
+        }
     }
 
     Ok(())
+}
+
+fn parse_peer_kind(s: &str) -> PeerKind {
+    match s.to_lowercase().as_str() {
+        "gizzi" => PeerKind::Gizzi,
+        "claude" => PeerKind::Claude,
+        "codex" => PeerKind::Codex,
+        "kimi" => PeerKind::Kimi,
+        "mux" => PeerKind::Mux,
+        "human" => PeerKind::Human,
+        _ => PeerKind::Other,
+    }
 }
 
 /// Lazy store registry for the CLI. Each accessor builds its store on first
@@ -1135,6 +1467,9 @@ struct Stores {
     gate: OnceCell<Arc<Gate>>,
     bus: OnceCell<Arc<Bus>>,
     work_ops: OnceCell<Arc<WorkOps>>,
+    peer_registry: OnceCell<Arc<PeerRegistry>>,
+    steering: OnceCell<Arc<Steering>>,
+    orchestrator: OnceCell<Arc<Orchestrator>>,
 }
 
 impl Stores {
@@ -1149,6 +1484,9 @@ impl Stores {
             gate: OnceCell::new(),
             bus: OnceCell::new(),
             work_ops: OnceCell::new(),
+            peer_registry: OnceCell::new(),
+            steering: OnceCell::new(),
+            orchestrator: OnceCell::new(),
         }
     }
 
@@ -1271,6 +1609,51 @@ impl Stores {
             .await
             .clone())
     }
+
+    async fn peer_registry(&self) -> Result<Arc<PeerRegistry>> {
+        Ok(self
+            .peer_registry
+            .get_or_init(|| async {
+                Arc::new(PeerRegistry::new(PeerRegistryOptions {
+                    root_dir: Some(self.root.clone()),
+                    mux_root: None,
+                    ledger: self.ledger.clone(),
+                    actor_id: Some("peer-registry".to_string()),
+                }))
+            })
+            .await
+            .clone())
+    }
+
+    async fn steering(&self) -> Result<Arc<Steering>> {
+        Ok(self
+            .steering
+            .get_or_init(|| async {
+                Arc::new(Steering::new(SteeringOptions {
+                    root_dir: self.root.clone(),
+                    ledger: self.ledger.clone(),
+                    actor_id: Some("steering".to_string()),
+                }))
+            })
+            .await
+            .clone())
+    }
+
+    async fn orchestrator(&self) -> Result<Arc<Orchestrator>> {
+        Ok(self
+            .orchestrator
+            .get_or_try_init(|| async {
+                Ok::<_, anyhow::Error>(Arc::new(Orchestrator::new(OrchestratorOptions {
+                    root_dir: self.root.clone(),
+                    ledger: self.ledger.clone(),
+                    peer_registry: self.peer_registry().await?,
+                    actor_id: Some("orchestrator".to_string()),
+                    mux_socket: None,
+                })))
+            })
+            .await?
+            .clone())
+    }
 }
 
 fn read_spec(name: &str) -> Option<String> {
@@ -1298,6 +1681,8 @@ async fn init_system(
         ".allternit/wih",
         ".allternit/transports/tmux",
         ".allternit/transports/socket",
+        ".allternit/peer/inbox",
+        ".allternit/orchestrator",
     ];
     for rel in dirs {
         ensure_dir(&root.join(rel))?;

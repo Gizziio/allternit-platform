@@ -22,10 +22,12 @@ use crate::core::types::EventScope;
 use crate::leases::leases::LeasesOptions;
 use crate::ledger::ledger::LedgerOptions;
 use crate::{
+    bus::{Bus, BusOptions},
     context::{ContextPackStore, ContextPackStoreOptions},
-    policy, ActorType, DagMutation, Gate, GateOptions, Index, IndexOptions, LeaseRequest, Leases,
-    Ledger, LedgerQuery, Mail, MailOptions, ReceiptStore, ReceiptStoreOptions, Vault, VaultOptions,
-    WihPickupOptions, WorkOps,
+    policy, send_to_peer, ActorType, DagMutation, ExecutorSpec, Gate, GateOptions, Index,
+    IndexOptions, LeaseRequest, Leases, Ledger, LedgerQuery, Mail, MailOptions, Orchestrator,
+    OrchestratorOptions, PeerRegistry, PeerRegistryOptions, ReceiptStore, ReceiptStoreOptions,
+    Steering, SteeringOptions, Vault, VaultOptions, WihPickupOptions, WorkOps,
 };
 
 /// Service state shared across handlers
@@ -41,6 +43,10 @@ pub struct ServiceState {
     pub receipts: Arc<ReceiptStore>,
     pub work_ops: Arc<WorkOps>,
     pub context_packs: Arc<ContextPackStore>,
+    pub peer_registry: Arc<PeerRegistry>,
+    pub steering: Arc<Steering>,
+    pub bus: Arc<Bus>,
+    pub orchestrator: Arc<Orchestrator>,
     pub root_dir: PathBuf,
 }
 
@@ -120,6 +126,37 @@ impl ServiceState {
             mail_index: None,
         }));
 
+        let peer_registry = Arc::new(PeerRegistry::new(PeerRegistryOptions {
+            root_dir: Some(root_dir.clone()),
+            mux_root: None,
+            ledger: ledger.clone(),
+            actor_id: Some("peer-registry".to_string()),
+        }));
+
+        let orchestrator = Arc::new(Orchestrator::new(OrchestratorOptions {
+            root_dir: root_dir.clone(),
+            ledger: ledger.clone(),
+            peer_registry: peer_registry.clone(),
+            actor_id: Some("orchestrator".to_string()),
+            mux_socket: None,
+        }));
+
+        let steering = Arc::new(Steering::new(SteeringOptions {
+            root_dir: root_dir.clone(),
+            ledger: ledger.clone(),
+            actor_id: Some("steering".to_string()),
+        }));
+
+        let bus = Arc::new(
+            Bus::new(BusOptions {
+                root_dir: root_dir.clone(),
+                ledger: ledger.clone(),
+                actor_id: Some("bus".to_string()),
+                actor_type: Some(ActorType::Gate),
+            })
+            .await?,
+        );
+
         Ok(Self {
             ledger,
             gate,
@@ -131,6 +168,10 @@ impl ServiceState {
             receipts,
             work_ops,
             context_packs,
+            peer_registry,
+            steering,
+            bus,
+            orchestrator,
             root_dir,
         })
     }
@@ -2434,6 +2475,353 @@ async fn receipts_summary(
 }
 
 // ============================================================================
+// PEER endpoints
+// ============================================================================
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct PeerRegisterRequest {
+    pub peer_id: String,
+    pub session_id: String,
+    pub display_name: String,
+    pub address: crate::peer::types::PeerAddress,
+    pub cwd: String,
+    pub vendor: String,
+    pub kind: crate::peer::types::PeerKind,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct PeerListResponse {
+    pub peers: Vec<crate::peer::types::Peer>,
+}
+
+async fn peer_list(State(state): State<Arc<ServiceState>>) -> impl IntoResponse {
+    match state.peer_registry.list().await {
+        Ok(peers) => Json(PeerListResponse { peers }).into_response(),
+        Err(e) => {
+            tracing::error!("Failed to list peers: {}", e);
+            (StatusCode::INTERNAL_SERVER_ERROR, format!("Peer list failed: {}", e)).into_response()
+        }
+    }
+}
+
+async fn peer_get(
+    State(state): State<Arc<ServiceState>>,
+    Path(peer_id): Path<String>,
+) -> impl IntoResponse {
+    match state.peer_registry.get(&peer_id).await {
+        Ok(Some(peer)) => Json(peer).into_response(),
+        Ok(None) => (StatusCode::NOT_FOUND, "peer not found".to_string()).into_response(),
+        Err(e) => {
+            tracing::error!("Failed to get peer: {}", e);
+            (StatusCode::INTERNAL_SERVER_ERROR, format!("Peer get failed: {}", e)).into_response()
+        }
+    }
+}
+
+async fn peer_register(
+    State(state): State<Arc<ServiceState>>,
+    Json(req): Json<PeerRegisterRequest>,
+) -> impl IntoResponse {
+    let peer = crate::peer::types::Peer {
+        peer_id: req.peer_id,
+        session_id: req.session_id,
+        display_name: req.display_name,
+        address: req.address,
+        cwd: req.cwd,
+        vendor: req.vendor,
+        kind: req.kind,
+    };
+    match state.peer_registry.register(peer).await {
+        Ok(()) => (StatusCode::OK, Json(json!({"status": "registered"}))).into_response(),
+        Err(e) => {
+            tracing::error!("Failed to register peer: {}", e);
+            (StatusCode::INTERNAL_SERVER_ERROR, format!("Peer register failed: {}", e)).into_response()
+        }
+    }
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct PeerSendRequest {
+    pub from_peer: String,
+    pub to_peer: String,
+    pub kind: String,
+    pub payload: serde_json::Value,
+}
+
+async fn peer_send(
+    State(state): State<Arc<ServiceState>>,
+    Json(req): Json<PeerSendRequest>,
+) -> impl IntoResponse {
+    match send_to_peer(
+        &state.peer_registry,
+        &state.bus,
+        &req.from_peer,
+        &req.to_peer,
+        &req.kind,
+        req.payload,
+    )
+    .await
+    {
+        Ok(message_id) => (StatusCode::OK, Json(json!({"message_id": message_id}))).into_response(),
+        Err(e) => {
+            tracing::error!("Failed to send peer message: {}", e);
+            (StatusCode::INTERNAL_SERVER_ERROR, format!("Peer send failed: {}", e)).into_response()
+        }
+    }
+}
+
+// ============================================================================
+// STEER endpoints
+// ============================================================================
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct SteerCheckpointResponse {
+    pub checkpoint: crate::steer::types::SteeringCheckpoint,
+    pub consult_id: Option<String>,
+}
+
+async fn steer_checkpoint(State(state): State<Arc<ServiceState>>) -> impl IntoResponse {
+    match state.steering.checkpoint().await {
+        Ok(checkpoint) => Json(SteerCheckpointResponse { checkpoint, consult_id: None }).into_response(),
+        Err(e) => {
+            tracing::error!("Failed to load steering checkpoint: {}", e);
+            (StatusCode::INTERNAL_SERVER_ERROR, format!("Steering checkpoint failed: {}", e)).into_response()
+        }
+    }
+}
+
+async fn steer_consult(State(state): State<Arc<ServiceState>>) -> impl IntoResponse {
+    match state.steering.request_consult().await {
+        Ok(consult) => Json(consult).into_response(),
+        Err(e) => {
+            tracing::error!("Failed to request steering consult: {}", e);
+            (StatusCode::INTERNAL_SERVER_ERROR, format!("Steering consult failed: {}", e)).into_response()
+        }
+    }
+}
+
+async fn steer_commit_gate(State(state): State<Arc<ServiceState>>) -> impl IntoResponse {
+    match state.steering.commit_gate().await {
+        Ok(result) => Json(result).into_response(),
+        Err(e) => {
+            tracing::error!("Failed to run steering commit gate: {}", e);
+            (StatusCode::INTERNAL_SERVER_ERROR, format!("Steering gate failed: {}", e)).into_response()
+        }
+    }
+}
+
+// ============================================================================
+// ORCHESTRATOR endpoints
+// ============================================================================
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct OrchestratorSpawnRequest {
+    pub slug: String,
+    pub vendor: String,
+    pub mode: String,
+    pub command: Vec<String>,
+    pub workdir: PathBuf,
+    #[serde(default)]
+    pub isolation: String,
+    #[serde(default)]
+    pub task_file: Option<PathBuf>,
+    pub notes_sentinel: PathBuf,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct OrchestratorSlugRequest {
+    pub slug: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct OrchestratorSendRequest {
+    pub slug: String,
+    pub data: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct OrchestratorWatchRequest {
+    pub slug: String,
+    #[serde(default = "default_watch_timeout_seconds")]
+    pub timeout_seconds: u64,
+}
+
+fn default_watch_timeout_seconds() -> u64 {
+    300
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct OrchestratorReviewRequest {
+    pub slug: String,
+    pub action: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub notes_ref: Option<String>,
+}
+
+async fn orchestrator_spawn(
+    State(state): State<Arc<ServiceState>>,
+    Json(request): Json<OrchestratorSpawnRequest>,
+) -> impl IntoResponse {
+    let spec = ExecutorSpec {
+        slug: request.slug,
+        vendor: request.vendor,
+        mode: request.mode,
+        command: request.command,
+        workdir: request.workdir,
+        isolation: request.isolation,
+        task_file: request.task_file,
+        notes_sentinel: request.notes_sentinel,
+    };
+    match state.orchestrator.spawn(spec).await {
+        Ok(session) => (StatusCode::CREATED, Json(session)).into_response(),
+        Err(e) => {
+            tracing::error!("orchestrator spawn failed: {}", e);
+            (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(json!({ "error": e.to_string() })),
+            )
+                .into_response()
+        }
+    }
+}
+
+async fn orchestrator_send(
+    State(state): State<Arc<ServiceState>>,
+    Json(request): Json<OrchestratorSendRequest>,
+) -> impl IntoResponse {
+    match state.orchestrator.send(&request.slug, &request.data).await {
+        Ok(_) => (StatusCode::OK, Json(json!({ "sent": true }))).into_response(),
+        Err(e) => {
+            tracing::error!("orchestrator send failed: {}", e);
+            (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(json!({ "error": e.to_string() })),
+            )
+                .into_response()
+        }
+    }
+}
+
+async fn orchestrator_status(
+    State(state): State<Arc<ServiceState>>,
+    Path(slug): Path<String>,
+) -> impl IntoResponse {
+    match state.orchestrator.status(&slug).await {
+        Ok(session) => (StatusCode::OK, Json(session)).into_response(),
+        Err(e) => {
+            tracing::error!("orchestrator status failed: {}", e);
+            (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(json!({ "error": e.to_string() })),
+            )
+                .into_response()
+        }
+    }
+}
+
+async fn orchestrator_tail(
+    State(state): State<Arc<ServiceState>>,
+    Path(slug): Path<String>,
+    Query(params): Query<HashMap<String, String>>,
+) -> impl IntoResponse {
+    let lines = params.get("lines").and_then(|s| s.parse().ok());
+    match state.orchestrator.tail(&slug, lines).await {
+        Ok(output) => (StatusCode::OK, Json(json!({ "output": output }))).into_response(),
+        Err(e) => {
+            tracing::error!("orchestrator tail failed: {}", e);
+            (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(json!({ "error": e.to_string() })),
+            )
+                .into_response()
+        }
+    }
+}
+
+async fn orchestrator_watch(
+    State(state): State<Arc<ServiceState>>,
+    Json(request): Json<OrchestratorWatchRequest>,
+) -> impl IntoResponse {
+    let timeout = std::time::Duration::from_secs(request.timeout_seconds);
+    match state.orchestrator.watch(&request.slug, timeout).await {
+        Ok((session, timed_out)) => {
+            let status = if timed_out {
+                408
+            } else {
+                200
+            };
+            (
+                StatusCode::from_u16(status).unwrap_or(StatusCode::OK),
+                Json(json!({ "session": session, "timed_out": timed_out })),
+            )
+                .into_response()
+        }
+        Err(e) => {
+            tracing::error!("orchestrator watch failed: {}", e);
+            (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(json!({ "error": e.to_string() })),
+            )
+                .into_response()
+        }
+    }
+}
+
+async fn orchestrator_kill(
+    State(state): State<Arc<ServiceState>>,
+    Json(request): Json<OrchestratorSlugRequest>,
+) -> impl IntoResponse {
+    match state.orchestrator.kill(&request.slug).await {
+        Ok(session) => (StatusCode::OK, Json(session)).into_response(),
+        Err(e) => {
+            tracing::error!("orchestrator kill failed: {}", e);
+            (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(json!({ "error": e.to_string() })),
+            )
+                .into_response()
+        }
+    }
+}
+
+async fn orchestrator_review(
+    State(state): State<Arc<ServiceState>>,
+    Json(request): Json<OrchestratorReviewRequest>,
+) -> impl IntoResponse {
+    let result = match request.action.as_str() {
+        "request" => state.orchestrator.review_request(&request.slug, request.notes_ref.as_deref()).await,
+        "accept" => state.orchestrator.review_decide(&request.slug, true, request.notes_ref.as_deref()).await,
+        "reject" => state.orchestrator.review_decide(&request.slug, false, request.notes_ref.as_deref()).await,
+        other => Err(anyhow::anyhow!("invalid review action: {}", other)),
+    };
+    match result {
+        Ok(_) => (StatusCode::OK, Json(json!({ "decided": true }))).into_response(),
+        Err(e) => {
+            tracing::error!("orchestrator review failed: {}", e);
+            (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(json!({ "error": e.to_string() })),
+            )
+                .into_response()
+        }
+    }
+}
+
+async fn orchestrator_doctor(State(state): State<Arc<ServiceState>>) -> impl IntoResponse {
+    match state.orchestrator.doctor().await {
+        Ok(report) => (StatusCode::OK, Json(report)).into_response(),
+        Err(e) => {
+            tracing::error!("orchestrator doctor failed: {}", e);
+            (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(json!({ "error": e.to_string() })),
+            )
+                .into_response()
+        }
+    }
+}
+
+// ============================================================================
 // Router
 // ============================================================================
 
@@ -2509,6 +2897,24 @@ pub fn create_router(state: Arc<ServiceState>) -> Router {
         .route("/v1/receipts/summary", post(receipts_summary))
         // INIT
         .route("/v1/init", post(init_system))
+        // PEER
+        .route("/v1/peers", get(peer_list))
+        .route("/v1/peers", post(peer_register))
+        .route("/v1/peers/:peer_id", get(peer_get))
+        .route("/v1/peers/send", post(peer_send))
+        // STEER
+        .route("/v1/steer/checkpoint", get(steer_checkpoint))
+        .route("/v1/steer/consult", post(steer_consult))
+        .route("/v1/steer/commit-gate", get(steer_commit_gate))
+        // ORCHESTRATOR
+        .route("/v1/orchestrator/spawn", post(orchestrator_spawn))
+        .route("/v1/orchestrator/send", post(orchestrator_send))
+        .route("/v1/orchestrator/status/:slug", get(orchestrator_status))
+        .route("/v1/orchestrator/tail/:slug", get(orchestrator_tail))
+        .route("/v1/orchestrator/watch", post(orchestrator_watch))
+        .route("/v1/orchestrator/kill", post(orchestrator_kill))
+        .route("/v1/orchestrator/review", post(orchestrator_review))
+        .route("/v1/orchestrator/doctor", get(orchestrator_doctor))
         .with_state(state)
 }
 
@@ -2544,6 +2950,8 @@ async fn init_stores(root: &PathBuf) -> anyhow::Result<()> {
         ".allternit/vault",
         ".allternit/work/dags",
         ".allternit/wih",
+        ".allternit/peer/inbox",
+        ".allternit/orchestrator",
     ];
 
     for rel in dirs {

@@ -94,6 +94,10 @@ export async function setup(
     // and $GIZZI_MESSAGING_SOCKET is exported before any hook
     // (SessionStart in particular) can spawn and snapshot process.env.
     if (feature('UDS_INBOX')) {
+      const sessionId = getSessionId()
+      if (sessionId) {
+        process.env.GIZZI_SESSION_ID = sessionId
+      }
       const m = await import('src/shared/utils/udsMessaging.js')
       await m.startUdsMessaging(
         messagingSocketPath ?? m.getDefaultUdsSocketPath(),

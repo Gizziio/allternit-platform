@@ -2,54 +2,83 @@
 
 ## Goal
 
-Finish the Allternit Desktop auth/onboarding handoff: review fixes 1–13, implement the two remaining items (#14 Sidecar-backed Local Brain model routes + ModesStep rework, #15 `gizzi init` wiring), then build/test/package and commit scoped changes.
+Implement Rails as the unified agent communication and coordination system: consolidate cross-session messaging, agent orchestration, and steering under the existing Allternit Agent System Rails (`rails/`). Deliver Phase 1 (peer registry + steering foundation) through Phase 7 (documentation and packaging).
 
 ## Just did
 
-- Implemented #14 end-to-end:
-  - Added `cmd/gizzi-code/src/runtime/server/routes/sidecar.ts` exposing `/sidecar/models` (list), `/sidecar/models/search` (HF GGUF search), `/sidecar/models/install` (SSE install progress), `/sidecar/models/:tag/remove`.
-  - Registered the route in `cmd/gizzi-code/src/runtime/server/server.ts` under both unversioned `/sidecar` and `/v1/sidecar`.
-  - Added proxy routes in `cmd/allternit-api/src/local_brain_routes.rs` under `/api/local-brain/models/*` forwarding to gizzi-code.
-  - Added `setupApi.listLocalModels` / `searchLocalModels` / `installLocalModel` / `removeLocalModel` in `surfaces/ai.allternit.com/src/services/setup-api.ts`.
-  - Reworked the `ModesStep` Local Brain UI to list installed sidecar models, search HuggingFace, install with SSE progress, remove, and select as the default brain.
-- Implemented #15 end-to-end:
-  - Extracted reusable `initializeProject()` into `cmd/gizzi-code/src/runtime/project/init.ts`.
-  - Refactored `cmd/gizzi-code/src/cli/commands/init.ts` to call the shared function (no CLI behavior change).
-  - Added `POST /v1/project/init` route in `cmd/gizzi-code/src/runtime/server/routes/project.ts`.
-  - Added `POST /api/onboarding/init-project` proxy in `cmd/allternit-api/src/onboarding_routes.rs`.
-  - Added `setupApi.initProject()` and wired it into the wizard `finish()` handler using `data.workspacePath`.
-  - Added workspace path to the Done screen summary.
-- Verified code health:
-  - `cargo check -p allternit-api` ✅
-  - `cargo build --release -p allternit-api` ✅; copied fresh binary into `surfaces/allternit-desktop/resources/bin/allternit-api`.
-  - `bun run typecheck` in `cmd/gizzi-code` ✅
-  - `pnpm exec tsc --noEmit` in `surfaces/ai.allternit.com` ✅
-  - `pnpm test` in `surfaces/allternit-desktop` ✅ (94 passed)
-  - Desktop main/preload typecheck ✅
-- Started full DMG build (`npm run build:electron:dmg` with live Clerk key) — currently running in background task `bash-z0fskqnw`.
+- Created session worktree `allternit-session-e0669b29-9550-4a8e-af12-3f0d9e66f3c5` on branch `session/e0669b29-9550-4a8e-af12-3f0d9e66f3c5`.
+- Phase 1 (peer registry + steering foundation):
+  - Implemented `rails/src/peer/` module (`types.rs`, `registry.rs`, `inbox.rs`, `mod.rs`).
+  - Implemented `rails/src/steer/` module (`types.rs`, `checkpoint.rs`, `consult.rs`, `mod.rs`).
+  - Wired peer and steer into `rails/src/lib.rs`, `rails/src/service.rs`, and `rails/src/bin/allternit-rails.rs`.
+  - Added `/api/rails/peers/*` and `/api/rails/steer/*` proxy routes in `cmd/allternit-api/src/rails/mod.rs`.
+- Phase 2 (cross-session messaging via Bus):
+  - Extended `rails/src/mail/types.rs` with peer address support.
+  - Added `run_uds_transport` and UDS delivery to `rails/src/bus/mod.rs`.
+  - Added `PeerInboundPolicy` gating in `rails/src/gate/gate.rs`.
+  - Added `/v1/peers/send` and `/v1/peers` HTTP routes in `rails/src/service.rs`.
+- Phase 3 (native orchestrator):
+  - Implemented `rails/src/orchestrator/` module (`spec.rs`, `session.rs`, `runner.rs`, `review.rs`, `mod.rs`).
+  - Added `/v1/orchestrator/*` HTTP routes and `allternit rails orchestrator ...` CLI commands.
+  - Added `/api/rails/orchestrator/*` proxy routes in `cmd/allternit-api/src/rails/mod.rs`.
+- Phase 4 (gizzi-code wiring):
+  - Implemented `cmd/gizzi-code/src/cli/ui/ink-app/tools/ListPeersTool/` (tool, prompt, UI, constants).
+  - Replaced `udsMessaging.ts` and `udsClient.ts` stubs in both `src/cli/ui/ink-app/utils/` and `src/shared/utils/` with Rails peer-registry clients.
+  - Updated `src/cli/ui/ink-app/setup.ts` and `src/runtime/gizzi-core/setup.ts` to export the session id before starting UDS messaging.
+  - Updated `src/runtime/tools-registry-gizzi.ts` to register `ListPeersTool` from the ink-app tool.
+  - `SendMessageTool` UDS branch now routes through Rails `/v1/peers/send` via `sendToUdsSocket()`.
+- Verified:
+  - `cargo test -p allternit-agent-system-rails` ✅ (85 passed + 5 invariants + 1 doc test)
+  - `cargo build -p allternit-api` ✅
+  - gizzi-code TypeScript has no errors in changed files (full `tsc --noEmit` is blocked by pre-existing missing `@allternit/gizzi-sdk/dist` artifacts in this worktree).
 
 ## Next
 
-1. Wait for DMG build to finish; inspect result.
-2. Stage and commit the scoped set of files touched for this handoff, avoiding unrelated WIP.
-3. Update this checkpoint once commits are ready for steering approval.
+1. Phase 5: rewrite `tools/agent-orchestrator/scripts/ao-*` as thin `allternit rails orchestrator ...` / `allternit rails steer ...` shims.
+2. Phase 6: replace `.steering/bin/*.sh` hooks with `allternit rails steer ...` calls.
+3. Phase 7: update `rails/README.md`, `docs/Core_System/01-Reality/SPEC-Reality-Rails-Control-Plane.md`, `docs/ALLTERNIT_MUX_PLAN.md`, and relevant `AGENTS.md` files.
 
 ## Open questions
 
-- Worktree policy: AGENTS.md requires sessions to use linked worktrees, but the entire handoff state (fixes 1–13) is in the main checkout. Working in main checkout to avoid losing/cherry-picking 194 files of WIP; commit guard will be triggered for approval.
+- Should the UDS runner be started automatically by the Rails service, or exposed as a separate `allternit-rails bus uds-runner` command?
+- How should the orchestrator module authenticate to the `allternit-mux` UDS API when running inside the Rails service?
+- Do we keep the existing `@allternit/orchestrator` package API surface unchanged while redirecting internals to Rails, or do we publish a breaking change?
+- Should gizzi-code automatically start the Rails service if it is not running, or fail closed with a clear error?
 
 ## Files changed / to commit
 
 New:
-- `cmd/gizzi-code/src/runtime/server/routes/sidecar.ts`
-- `cmd/gizzi-code/src/runtime/project/init.ts`
+- `rails/src/peer/types.rs`
+- `rails/src/peer/registry.rs`
+- `rails/src/peer/inbox.rs`
+- `rails/src/peer/mod.rs`
+- `rails/src/steer/types.rs`
+- `rails/src/steer/checkpoint.rs`
+- `rails/src/steer/consult.rs`
+- `rails/src/steer/mod.rs`
+- `rails/src/orchestrator/spec.rs`
+- `rails/src/orchestrator/session.rs`
+- `rails/src/orchestrator/runner.rs`
+- `rails/src/orchestrator/review.rs`
+- `rails/src/orchestrator/mod.rs`
+- `cmd/gizzi-code/src/cli/ui/ink-app/tools/ListPeersTool/ListPeersTool.ts`
+- `cmd/gizzi-code/src/cli/ui/ink-app/tools/ListPeersTool/constants.ts`
+- `cmd/gizzi-code/src/cli/ui/ink-app/tools/ListPeersTool/prompt.ts`
+- `cmd/gizzi-code/src/cli/ui/ink-app/tools/ListPeersTool/UI.tsx`
 
 Modified:
-- `cmd/gizzi-code/src/runtime/server/server.ts`
-- `cmd/gizzi-code/src/runtime/server/routes/project.ts`
-- `cmd/gizzi-code/src/cli/commands/init.ts`
-- `cmd/allternit-api/src/local_brain_routes.rs`
-- `cmd/allternit-api/src/onboarding_routes.rs`
-- `surfaces/ai.allternit.com/src/services/setup-api.ts`
-- `surfaces/ai.allternit.com/src/components/onboarding/OnboardingFlow.tsx`
-- `surfaces/allternit-desktop/resources/bin/allternit-api` (binary refresh)
+- `rails/src/lib.rs`
+- `rails/src/service.rs`
+- `rails/src/bus/mod.rs`
+- `rails/src/mail/types.rs`
+- `rails/src/gate/gate.rs`
+- `rails/src/bin/allternit-rails.rs`
+- `cmd/allternit-api/src/rails/mod.rs`
+- `cmd/gizzi-code/src/cli/ui/ink-app/utils/udsMessaging.ts`
+- `cmd/gizzi-code/src/cli/ui/ink-app/utils/udsClient.ts`
+- `cmd/gizzi-code/src/shared/utils/udsMessaging.ts`
+- `cmd/gizzi-code/src/shared/utils/udsClient.ts`
+- `cmd/gizzi-code/src/cli/ui/ink-app/setup.ts`
+- `cmd/gizzi-code/src/runtime/gizzi-core/setup.ts`
+- `cmd/gizzi-code/src/runtime/tools-registry-gizzi.ts`
+- `.steering/checkpoint.md`

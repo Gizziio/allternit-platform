@@ -32,10 +32,13 @@ use allternit_agent_system_rails::tickets::{
 };
 use allternit_agent_system_rails::wait_gates::WaitGateStore;
 use allternit_agent_system_rails::{
-    project_dag, resolve_thread_id, ContextPackSeal, ContextPackStore, ContextPackStoreOptions,
-    DagMutation, Gate, GateOptions, Index, IndexOptions, Leases, LeasesOptions, Ledger,
-    LedgerOptions, LedgerQuery, Mail, MailImportance, MailIndex, MailIndexOptions, MailOptions,
-    ReceiptRecord, ReceiptStore, ReceiptStoreOptions, TypedMessage, Vault, VaultOptions, WorkOps,
+    bus::{Bus, BusOptions},
+    project_dag, resolve_thread_id, send_to_peer, ActorType, ContextPackSeal, ContextPackStore,
+    ContextPackStoreOptions, DagMutation, ExecutorSpec, Gate, GateOptions, Index, IndexOptions,
+    Leases, LeasesOptions, Ledger, LedgerOptions, LedgerQuery, Mail, MailImportance, MailIndex,
+    MailIndexOptions, MailOptions, Orchestrator, OrchestratorOptions, Peer, PeerAddress, PeerKind,
+    PeerRegistry, PeerRegistryOptions, ReceiptRecord, ReceiptStore, ReceiptStoreOptions, Steering,
+    SteeringOptions, TypedMessage, Vault, VaultOptions, WorkOps,
 };
 
 // ============================================================================
@@ -55,6 +58,10 @@ pub struct RailsState {
     pub receipts: Arc<ReceiptStore>,
     pub work_ops: Arc<WorkOps>,
     pub context_packs: Arc<ContextPackStore>,
+    pub peer_registry: Arc<PeerRegistry>,
+    pub steering: Arc<Steering>,
+    pub bus: Arc<Bus>,
+    pub orchestrator: Arc<Orchestrator>,
     /// Shared graph analytics engine (content-hash cache) for the B2 robot
     /// surface under `/graph/*`.
     pub graph_analytics: Arc<GraphAnalytics>,
@@ -147,6 +154,41 @@ impl RailsState {
         // Initialize WorkOps
         let work_ops = Arc::new(WorkOps::new(ledger.clone(), Some("api".to_string()), None));
 
+        // Initialize Peer Registry
+        let peer_registry = Arc::new(PeerRegistry::new(PeerRegistryOptions {
+            root_dir: Some(root_dir.clone()),
+            mux_root: None,
+            ledger: ledger.clone(),
+            actor_id: Some("api".to_string()),
+        }));
+
+        // Initialize Orchestrator
+        let orchestrator = Arc::new(Orchestrator::new(OrchestratorOptions {
+            root_dir: root_dir.clone(),
+            ledger: ledger.clone(),
+            peer_registry: peer_registry.clone(),
+            actor_id: Some("api".to_string()),
+            mux_socket: None,
+        }));
+
+        // Initialize Steering
+        let steering = Arc::new(Steering::new(SteeringOptions {
+            root_dir: root_dir.clone(),
+            ledger: ledger.clone(),
+            actor_id: Some("api".to_string()),
+        }));
+
+        // Initialize Bus
+        let bus = Arc::new(
+            Bus::new(BusOptions {
+                root_dir: root_dir.clone(),
+                ledger: ledger.clone(),
+                actor_id: Some("api".to_string()),
+                actor_type: Some(ActorType::Gate),
+            })
+            .await?,
+        );
+
         info!("Rails service state initialized successfully");
 
         Ok(Self {
@@ -160,6 +202,10 @@ impl RailsState {
             receipts,
             work_ops,
             context_packs,
+            peer_registry,
+            steering,
+            bus,
+            orchestrator,
             graph_analytics: Arc::new(GraphAnalytics::new()),
         })
     }
@@ -238,6 +284,24 @@ pub fn rails_router() -> Router<Arc<AppState>> {
         // Vault
         .route("/vault/status", get(vault_status))
         .route("/vault/archive", post(vault_archive))
+        // Peer
+        .route("/peers", get(list_peers))
+        .route("/peers", post(register_peer))
+        .route("/peers/:peer_id", get(get_peer))
+        .route("/peers/send", post(send_peer_message))
+        // Steer
+        .route("/steer/checkpoint", get(steer_checkpoint))
+        .route("/steer/consult", post(steer_consult))
+        .route("/steer/commit-gate", get(steer_commit_gate))
+        // Orchestrator
+        .route("/orchestrator/spawn", post(orchestrator_spawn))
+        .route("/orchestrator/send", post(orchestrator_send))
+        .route("/orchestrator/status/:slug", get(orchestrator_status))
+        .route("/orchestrator/tail/:slug", get(orchestrator_tail))
+        .route("/orchestrator/watch", post(orchestrator_watch))
+        .route("/orchestrator/kill", post(orchestrator_kill))
+        .route("/orchestrator/review", post(orchestrator_review))
+        .route("/orchestrator/doctor", get(orchestrator_doctor))
 }
 
 // ============================================================================
@@ -581,6 +645,8 @@ struct MailWriteRequest {
     subject: Option<String>,
     importance: Option<MailImportance>,
     ack_required: Option<bool>,
+    #[serde(flatten)]
+    peer_address: Option<PeerAddress>,
 }
 
 async fn ensure_mail_thread(state: &AppState, topic: &str) -> Result<String, axum::response::Response> {
@@ -635,6 +701,7 @@ async fn mail_send(
             importance: req.importance.unwrap_or_default(),
             ack_required: req.ack_required.unwrap_or(false),
             body,
+            peer_address: req.peer_address,
         };
         return match state.rails.mail.send_typed_message(&thread_id, message).await {
             Ok(message_id) => (
@@ -2215,6 +2282,391 @@ async fn remove_ticket_dependency(
         Err(e) => {
             error!(error = %e, "tickets: remove dependency failed");
             ticket_error(StatusCode::INTERNAL_SERVER_ERROR, e.to_string())
+        }
+    }
+}
+
+// ============================================================================
+// Peer handlers
+// ============================================================================
+
+#[derive(Debug, Deserialize)]
+struct RegisterPeerRequest {
+    peer_id: String,
+    session_id: String,
+    display_name: String,
+    #[serde(flatten)]
+    address: PeerAddress,
+    #[serde(default)]
+    cwd: String,
+    #[serde(default = "default_vendor")]
+    vendor: String,
+    #[serde(default)]
+    kind: PeerKind,
+}
+
+fn default_vendor() -> String {
+    "unknown".to_string()
+}
+
+async fn list_peers(State(state): State<Arc<AppState>>) -> impl IntoResponse {
+    match state.rails.peer_registry.list().await {
+        Ok(peers) => (StatusCode::OK, Json(json!({ "peers": peers }))).into_response(),
+        Err(e) => {
+            error!(error = %e, "Failed to list peers");
+            (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(json!({ "error": e.to_string() })),
+            )
+                .into_response()
+        }
+    }
+}
+
+async fn get_peer(
+    State(state): State<Arc<AppState>>,
+    Path(peer_id): Path<String>,
+) -> impl IntoResponse {
+    match state.rails.peer_registry.get(&peer_id).await {
+        Ok(Some(peer)) => (StatusCode::OK, Json(peer)).into_response(),
+        Ok(None) => (StatusCode::NOT_FOUND, Json(json!({ "error": "peer not found" }))).into_response(),
+        Err(e) => {
+            error!(error = %e, "Failed to get peer");
+            (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(json!({ "error": e.to_string() })),
+            )
+                .into_response()
+        }
+    }
+}
+
+async fn register_peer(
+    State(state): State<Arc<AppState>>,
+    Json(req): Json<RegisterPeerRequest>,
+) -> impl IntoResponse {
+    let peer = Peer {
+        peer_id: req.peer_id,
+        session_id: req.session_id,
+        display_name: req.display_name,
+        address: req.address,
+        cwd: req.cwd,
+        vendor: req.vendor,
+        kind: req.kind,
+    };
+    match state.rails.peer_registry.register(peer).await {
+        Ok(()) => (StatusCode::OK, Json(json!({ "status": "registered" }))).into_response(),
+        Err(e) => {
+            error!(error = %e, "Failed to register peer");
+            (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(json!({ "error": e.to_string() })),
+            )
+                .into_response()
+        }
+    }
+}
+
+#[derive(Debug, Deserialize)]
+struct PeerSendRequest {
+    from_peer: String,
+    to_peer: String,
+    kind: String,
+    payload: serde_json::Value,
+}
+
+async fn send_peer_message(
+    State(state): State<Arc<AppState>>,
+    Json(req): Json<PeerSendRequest>,
+) -> impl IntoResponse {
+    match send_to_peer(
+        &state.rails.peer_registry,
+        &state.rails.bus,
+        &req.from_peer,
+        &req.to_peer,
+        &req.kind,
+        req.payload,
+    )
+    .await
+    {
+        Ok(message_id) => (
+            StatusCode::OK,
+            Json(json!({ "sent": true, "message_id": message_id })),
+        )
+            .into_response(),
+        Err(e) => {
+            error!(error = %e, "Failed to send peer message");
+            (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(json!({ "error": e.to_string() })),
+            )
+                .into_response()
+        }
+    }
+}
+
+// ============================================================================
+// Steer handlers
+// ============================================================================
+
+async fn steer_checkpoint(State(state): State<Arc<AppState>>) -> impl IntoResponse {
+    match state.rails.steering.checkpoint().await {
+        Ok(checkpoint) => (StatusCode::OK, Json(checkpoint)).into_response(),
+        Err(e) => {
+            error!(error = %e, "Failed to load steering checkpoint");
+            (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(json!({ "error": e.to_string() })),
+            )
+                .into_response()
+        }
+    }
+}
+
+async fn steer_consult(State(state): State<Arc<AppState>>) -> impl IntoResponse {
+    match state.rails.steering.request_consult().await {
+        Ok(consult) => (StatusCode::OK, Json(consult)).into_response(),
+        Err(e) => {
+            error!(error = %e, "Failed to request steering consult");
+            (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(json!({ "error": e.to_string() })),
+            )
+                .into_response()
+        }
+    }
+}
+
+async fn steer_commit_gate(State(state): State<Arc<AppState>>) -> impl IntoResponse {
+    match state.rails.steering.commit_gate().await {
+        Ok(result) => (StatusCode::OK, Json(result)).into_response(),
+        Err(e) => {
+            error!(error = %e, "Failed to run steering commit gate");
+            (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(json!({ "error": e.to_string() })),
+            )
+                .into_response()
+        }
+    }
+}
+
+// ============================================================================
+// Orchestrator handlers
+// ============================================================================
+
+#[derive(Debug, Deserialize)]
+struct OrchestratorSpawnRequest {
+    slug: String,
+    #[serde(default = "default_orchestrator_vendor")]
+    vendor: String,
+    #[serde(default = "default_orchestrator_mode")]
+    mode: String,
+    command: Vec<String>,
+    workdir: std::path::PathBuf,
+    #[serde(default)]
+    isolation: String,
+    #[serde(default)]
+    task_file: Option<std::path::PathBuf>,
+    notes_sentinel: std::path::PathBuf,
+}
+
+fn default_orchestrator_vendor() -> String {
+    "unknown".to_string()
+}
+
+fn default_orchestrator_mode() -> String {
+    "shared".to_string()
+}
+
+#[derive(Debug, Deserialize)]
+struct OrchestratorSendRequest {
+    slug: String,
+    data: String,
+}
+
+#[derive(Debug, Deserialize)]
+struct OrchestratorSlugRequest {
+    slug: String,
+}
+
+#[derive(Debug, Deserialize)]
+struct OrchestratorWatchRequest {
+    slug: String,
+    #[serde(default = "default_orchestrator_watch_timeout")]
+    timeout_seconds: u64,
+}
+
+fn default_orchestrator_watch_timeout() -> u64 {
+    300
+}
+
+#[derive(Debug, Deserialize)]
+struct OrchestratorReviewRequest {
+    slug: String,
+    action: String,
+    notes_ref: Option<String>,
+}
+
+async fn orchestrator_spawn(
+    State(state): State<Arc<AppState>>,
+    Json(req): Json<OrchestratorSpawnRequest>,
+) -> impl IntoResponse {
+    let spec = ExecutorSpec {
+        slug: req.slug,
+        vendor: req.vendor,
+        mode: req.mode,
+        command: req.command,
+        workdir: req.workdir,
+        isolation: req.isolation,
+        task_file: req.task_file,
+        notes_sentinel: req.notes_sentinel,
+    };
+    match state.rails.orchestrator.spawn(spec).await {
+        Ok(session) => (StatusCode::CREATED, Json(session)).into_response(),
+        Err(e) => {
+            error!(error = %e, "orchestrator spawn failed");
+            (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(json!({ "error": e.to_string() })),
+            )
+                .into_response()
+        }
+    }
+}
+
+async fn orchestrator_send(
+    State(state): State<Arc<AppState>>,
+    Json(req): Json<OrchestratorSendRequest>,
+) -> impl IntoResponse {
+    match state.rails.orchestrator.send(&req.slug, &req.data).await {
+        Ok(_) => (StatusCode::OK, Json(json!({ "sent": true }))).into_response(),
+        Err(e) => {
+            error!(error = %e, "orchestrator send failed");
+            (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(json!({ "error": e.to_string() })),
+            )
+                .into_response()
+        }
+    }
+}
+
+async fn orchestrator_status(
+    State(state): State<Arc<AppState>>,
+    Path(slug): Path<String>,
+) -> impl IntoResponse {
+    match state.rails.orchestrator.status(&slug).await {
+        Ok(session) => (StatusCode::OK, Json(session)).into_response(),
+        Err(e) => {
+            error!(error = %e, "orchestrator status failed");
+            (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(json!({ "error": e.to_string() })),
+            )
+                .into_response()
+        }
+    }
+}
+
+async fn orchestrator_tail(
+    State(state): State<Arc<AppState>>,
+    Path(slug): Path<String>,
+    Query(params): Query<std::collections::HashMap<String, String>>,
+) -> impl IntoResponse {
+    let lines = params.get("lines").and_then(|s| s.parse().ok());
+    match state.rails.orchestrator.tail(&slug, lines).await {
+        Ok(output) => (StatusCode::OK, Json(json!({ "output": output }))).into_response(),
+        Err(e) => {
+            error!(error = %e, "orchestrator tail failed");
+            (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(json!({ "error": e.to_string() })),
+            )
+                .into_response()
+        }
+    }
+}
+
+async fn orchestrator_watch(
+    State(state): State<Arc<AppState>>,
+    Json(req): Json<OrchestratorWatchRequest>,
+) -> impl IntoResponse {
+    let timeout = std::time::Duration::from_secs(req.timeout_seconds);
+    match state.rails.orchestrator.watch(&req.slug, timeout).await {
+        Ok((session, timed_out)) => {
+            let status = if timed_out {
+                StatusCode::REQUEST_TIMEOUT
+            } else {
+                StatusCode::OK
+            };
+            (
+                status,
+                Json(json!({ "session": session, "timed_out": timed_out })),
+            )
+                .into_response()
+        }
+        Err(e) => {
+            error!(error = %e, "orchestrator watch failed");
+            (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(json!({ "error": e.to_string() })),
+            )
+                .into_response()
+        }
+    }
+}
+
+async fn orchestrator_kill(
+    State(state): State<Arc<AppState>>,
+    Json(req): Json<OrchestratorSlugRequest>,
+) -> impl IntoResponse {
+    match state.rails.orchestrator.kill(&req.slug).await {
+        Ok(session) => (StatusCode::OK, Json(session)).into_response(),
+        Err(e) => {
+            error!(error = %e, "orchestrator kill failed");
+            (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(json!({ "error": e.to_string() })),
+            )
+                .into_response()
+        }
+    }
+}
+
+async fn orchestrator_review(
+    State(state): State<Arc<AppState>>,
+    Json(req): Json<OrchestratorReviewRequest>,
+) -> impl IntoResponse {
+    let result = match req.action.as_str() {
+        "request" => state.rails.orchestrator.review_request(&req.slug, req.notes_ref.as_deref()).await,
+        "accept" => state.rails.orchestrator.review_decide(&req.slug, true, req.notes_ref.as_deref()).await,
+        "reject" => state.rails.orchestrator.review_decide(&req.slug, false, req.notes_ref.as_deref()).await,
+        other => Err(anyhow::anyhow!("invalid review action: {}", other)),
+    };
+    match result {
+        Ok(_) => (StatusCode::OK, Json(json!({ "decided": true }))).into_response(),
+        Err(e) => {
+            error!(error = %e, "orchestrator review failed");
+            (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(json!({ "error": e.to_string() })),
+            )
+                .into_response()
+        }
+    }
+}
+
+async fn orchestrator_doctor(State(state): State<Arc<AppState>>) -> impl IntoResponse {
+    match state.rails.orchestrator.doctor().await {
+        Ok(report) => (StatusCode::OK, Json(report)).into_response(),
+        Err(e) => {
+            error!(error = %e, "orchestrator doctor failed");
+            (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(json!({ "error": e.to_string() })),
+            )
+                .into_response()
         }
     }
 }
