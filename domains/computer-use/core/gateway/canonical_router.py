@@ -45,6 +45,7 @@ from providers.cua_driver_canonical import CuaDriverCanonicalProvider
 from providers.cua_driver_transport import CuaDriverTransport
 from providers.cdp_canonical import CDPCanonicalProvider
 from providers.extension_canonical import ExtensionCanonicalProvider
+from providers.phone_harness_canonical import PhoneHarnessCanonicalProvider
 try:
     from .session_manager import session_manager
 except ImportError:  # Legacy direct-script gateway launch.
@@ -168,6 +169,26 @@ async def _initialize_providers() -> None:
         _provider_diagnostics["browser.extension.canonical"] = {
             "available": False,
             "reason": "extension_discovery_failed",
+            "message": str(error),
+        }
+    try:
+        phone_harness_provider = PhoneHarnessCanonicalProvider(_state_dir / "artifacts")
+        if await phone_harness_provider._driver.health_check():
+            await service.register(phone_harness_provider)
+            _provider_diagnostics["mobile.phone.canonical"] = {"available": True, "driver": phone_harness_provider._driver.name}
+        else:
+            # Register the provider anyway so the manifest is visible, but mark it
+            # as waiting on a connected iOS device / macOS mirroring session.
+            await service.register(phone_harness_provider)
+            _provider_diagnostics["mobile.phone.canonical"] = {
+                "available": False,
+                "reason": "ios_device_or_macos_mirroring_unavailable",
+                "driver": phone_harness_provider._driver.name,
+            }
+    except Exception as error:
+        _provider_diagnostics["mobile.phone.canonical"] = {
+            "available": False,
+            "reason": "phone_harness_registration_failed",
             "message": str(error),
         }
     try:
@@ -969,16 +990,21 @@ async def execute_mobile_action(environment_id: str, body: MobileActionRequest) 
     try:
         _require_agent_lease(environment_id, body.lease_id, body.holder_id)
         environment = _environments.get_environment(environment_id)
-        if environment.os != "android":
-            raise ValueError("Mobile actions require an Android environment")
         operation_approvals.consume(
             body.approval_id, environment_id=environment_id, holder_id=body.holder_id,
             operation=f"mobile.{body.action}", payload=body.arguments,
         )
-        await _environment_backends.provider_operation(
-            environment_id, "mobile_action", body.action, body.arguments,
-        )
-        return {"action": body.action, "delivered": True, "verified": False}
+        if environment.os == "android":
+            await _environment_backends.provider_operation(
+                environment_id, "mobile_action", body.action, body.arguments,
+            )
+            return {"action": body.action, "delivered": True, "verified": False}
+        if environment.os == "ios":
+            await ensure_initialized()
+            phone_provider = service.provider("mobile.phone.canonical")
+            result = await phone_provider.mobile_action(body.action, body.arguments)
+            return {"action": body.action, "delivered": True, "verified": False, **result}
+        raise ValueError(f"Mobile actions not supported for environment os={environment.os!r}")
     except Exception as error:
         raise _http_error(error) from error
 
