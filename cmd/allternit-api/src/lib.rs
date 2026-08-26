@@ -169,6 +169,7 @@ pub mod memory_routes;
 pub mod memory_kernel_service;
 pub mod metrics;
 pub mod monitor_routes;
+pub mod model_training_routes;
 pub mod oauth_routes;
 pub mod passkey_routes;
 pub mod office_cli_mcp;
