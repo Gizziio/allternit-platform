@@ -532,7 +532,6 @@ export const AgentCompatRoutes = () =>
         (typeof body.modelId === "string" && body.modelId) ||
         undefined
       let modelRef: { providerID: string; modelID: string } | undefined
-      let modelLabel: string
       if (rawModel) {
         const normalized = rawModel.replaceAll("::", "/")
         const slash = normalized.indexOf("/")
@@ -540,11 +539,46 @@ export const AgentCompatRoutes = () =>
           slash > 0
             ? { providerID: normalized.slice(0, slash), modelID: normalized.slice(slash + 1) }
             : undefined
-        modelLabel = normalized
-      } else {
-        const fallback = await Provider.defaultModel().catch(() => undefined)
-        modelLabel = fallback ? `${fallback.providerID}/${fallback.modelID}` : "auto/auto"
       }
+
+      // Resolve to a concrete, available model. If the client didn't send one,
+      // or sent a model that isn't currently loaded, fall back to the runtime's
+      // first available concrete model so agent-chat never hard-fails in
+      // self-hosted / dev setups where the UI's persisted selection can be stale.
+      //
+      // Prefer the embedded sidecar model first: it is always present in local
+      // dev and does not depend on external provider servers being reachable.
+      async function sidecarEmbeddedModel(): Promise<{ providerID: string; modelID: string } | undefined> {
+        const providers = await Provider.list().catch(() => undefined)
+        const sidecar = providers?.["sidecar"]
+        if (!sidecar) return undefined
+        const modelID = Object.keys(sidecar.models)[0]
+        if (!modelID) return undefined
+        return { providerID: "sidecar", modelID }
+      }
+
+      async function resolveConcreteModel(): Promise<{ providerID: string; modelID: string }> {
+        if (modelRef) {
+          const valid = await Provider.getModel(modelRef.providerID, modelRef.modelID)
+            .then(() => true)
+            .catch((e) => {
+              if (Provider.ModelNotFoundError.isInstance(e)) return false
+              throw e
+            })
+          if (valid) return modelRef
+        }
+        const sidecar = await sidecarEmbeddedModel()
+        if (sidecar) return sidecar
+        const concrete = await Provider.defaultModelConcrete().catch(() => undefined)
+        if (concrete) return concrete
+        const auto = await Provider.defaultModel().catch(() => undefined)
+        if (auto) return auto
+        throw new Error("No models available")
+      }
+
+      const resolvedModel = await resolveConcreteModel()
+      modelRef = resolvedModel
+      const modelLabel = `${resolvedModel.providerID}/${resolvedModel.modelID}`
 
       // get_or_create_gizzi_session (v1_routes.rs:33-88): ses_* chat ids are
       // already gizzi session ids (created via /api/v1/agent-sessions); other
