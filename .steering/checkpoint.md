@@ -1,5 +1,67 @@
 # Steering checkpoint
 
+## Hermes-style HUD mode for Allternit (2026-08-25)
+
+### Goal
+
+Port the Hermes HUD "collector + dashboard" pattern into the Allternit platform as a native view (`hud`) inside the web shell, and make it first-class in the Electron desktop app, so a user can open a live operational dashboard that surfaces the local computer-use gateway, Rails peers, recent recordings, and platform health.
+
+### Just did
+
+- Analyzed the Hermes HUD architecture from the upstream repo: TUI + Web UI both read from `~/.hermes/`, collectors aggregate registry + runtime + gateway state, and a FastAPI/React stack pushes live updates.
+- Chose a native Allternit implementation rather than embedding Hermes:
+  - Backend: new read-only `/api/v1/hud/*` routes in `cmd/allternit-api/src/hud_routes.rs`.
+  - Frontend: new `hud` view under `surfaces/ai.allternit.com/src/views/hud/`.
+- Backend endpoints:
+  - `GET /api/v1/hud/summary` — gateway health/sessions, peers, recordings, local runtime.
+  - `GET /api/v1/hud/peers` — reads `~/.allternit/peers/registry.json`.
+  - `GET /api/v1/hud/recordings` — scans `~/.allternit/recordings/*.jsonl`.
+  - `GET /api/v1/hud/health` — platform + gateway health.
+- Wired `hud_router()` into the v1 protected router in `cmd/allternit-api/src/main.rs` and re-exported the module from `cmd/allternit-api/src/lib.rs`.
+- Frontend pieces:
+  - `HudView.tsx` tabbed dashboard (Overview / Computer Use / Peers / Recordings / Health).
+  - `useHudData.ts` hooks the four endpoints and refreshes every 5s.
+  - Panel components: `ExecutiveSummaryPanel`, `ComputerUsePanel`, `PeersPanel`, `RecordingsPanel`, `HealthPanel`.
+  - Added `"hud"` to `ViewType` in `src/nav/nav.types.ts`, lazy-registered the view in `src/shell/ViewRegistry.tsx`, added a "HUD" link in `src/views/runtime/RuntimeConfigurationPanel.tsx`, and bound `Ctrl+Shift+H` in `src/shell/ShellApp.tsx`.
+- Desktop integration in `surfaces/allternit-desktop/src/main/unified-main.ts`:
+  - Added a dedicated HUD window (`shell:open-hud` IPC handler), global `Alt+Shift+H` hotkey, "Open HUD" tray menu item, and `allternit://hud` / `allternit://open/hud` deep-link handling.
+  - Changed the global hotkey from `Cmd/Ctrl+Shift+H` to `Alt+Shift+H` to avoid colliding with the in-shell shortcut and macOS system shortcuts; added debug logging for registration success/failure and window load errors.
+
+### Verification
+
+- `cargo check -p allternit-api`: clean for HUD code (only pre-existing warnings remain).
+- `cargo build -p allternit-api`: succeeded.
+- Live smoke test (local dev bypass, temp data dir with sample peer registry + recording):
+  - `GET /api/v1/hud/health` returned platform/gateway health.
+  - `GET /api/v1/hud/peers` returned the seeded peer.
+  - `GET /api/v1/hud/recordings` returned the seeded recording.
+  - `GET /api/v1/hud/summary` returned the full aggregate payload.
+- `pnpm exec tsc --noEmit` in `surfaces/ai.allternit.com`: zero errors in HUD files, ViewRegistry, nav.types, RuntimeConfigurationPanel, ShellApp. Remaining errors are pre-existing missing `@allternit/office-*` engine packages and two `mode-session-store.ts` mismatches.
+- `npm run typecheck` in `surfaces/allternit-desktop`: clean (main + preload). HUD hotkey/tray/deep-link code typechecks.
+- `pnpm build` is blocked by the same pre-existing missing office engine dependency (`better-sqlite3` native build fails under Node 26; repo `.nvmrc` wants Node 20). This is unrelated to the HUD change.
+
+### Running in the open desktop
+
+The Electron app currently on screen is loading the platform UI from `http://localhost:3013`, which is served by a different checkout (`/Users/joe/Desktop/Allternit/allternit-platform`). That checkout does not contain the HUD code, and the running binary does not include the new `Cmd/Ctrl+Shift+H` hotkey or tray item. To run the HUD safely without closing the active desktop/recording session:
+
+1. Build and serve the HUD-enabled platform UI from this worktree (port 3013 or a static export).
+2. Run the HUD-enabled API from this worktree on port 8013.
+3. Restart the desktop from this worktree (or reload it pointing at the new platform URL) so it picks up the new main-process hotkey/tray/deep-link code.
+
+Until then, the HUD is reachable in any browser at the platform URL `/hud` once the backend and frontend are running from this branch.
+
+### Next
+
+1. Get the frontend to a Node 20 / fully-installed state and run `pnpm build` to confirm the HUD view bundles cleanly.
+2. Restart the desktop from this worktree and verify `Cmd/Ctrl+Shift+H`, tray "Open HUD", and `allternit://hud` deep link open the HUD.
+3. Decide whether to keep polling or upgrade to WebSocket/SSE for live gateway sessions.
+4. Steering commit-gate review for the branch `session/hud-mode`.
+
+### Open questions
+
+- Should the HUD be a top-level rail icon instead of (or in addition to) the Runtime Configuration link?
+- Should we expose an admin-only HUD route, or is the current Clerk-protected route sufficient for the logged-in local user?
+
 ## Cross-surface seeded auth + iOS runtime pairing (2026-08-23)
 
 ### Goal

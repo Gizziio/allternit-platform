@@ -103,6 +103,9 @@ export const DEFAULT_POLICIES: Record<ViewType, SpawnPolicy> = {
   'memory-kernel': { singleton: true, maxInstances: 1, allowNew: false, surface: 'view', ownsTabs: false },
   acf: { singleton: true, maxInstances: 1, allowNew: false, surface: 'view', ownsTabs: false },
 
+  // HUD view
+  hud: { singleton: true, maxInstances: 1, allowNew: false, surface: 'view', ownsTabs: false },
+
   // Verification view
   verification: { singleton: true, maxInstances: 1, allowNew: false, surface: 'view', ownsTabs: false },
 

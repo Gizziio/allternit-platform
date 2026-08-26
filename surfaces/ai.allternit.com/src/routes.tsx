@@ -103,6 +103,7 @@ export default function AppRoutes() {
       <Routes>
         <Route path="/" element={<HomePage />} />
         <Route path="/shell" element={<ShellPage />} />
+        <Route path="/hud" element={<ShellPage />} />
         <Route path="/settings-preview" element={<SettingsPreviewPage />} />
         <Route path="/shell/sessions" element={<SessionsPage />} />
         <Route path="/shell/recents" element={<ShellPage />} />

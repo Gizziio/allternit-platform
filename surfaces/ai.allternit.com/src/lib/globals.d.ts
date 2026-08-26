@@ -142,6 +142,7 @@ declare global {
         closeHud: () => Promise<void>;
         toggleHud: () => Promise<void>;
         moveHudBy?: (delta: { x: number; y: number; width: number; height: number }) => Promise<void>;
+        setHudBounds?: (bounds: { x?: number; y?: number; width?: number; height?: number }) => Promise<void>;
         openSession: (options: { sessionId: string; workspaceId?: string; title?: string }) => Promise<void>;
         getOfficeHostStatus: () => Promise<Record<'word' | 'excel' | 'powerpoint', {
           installed: boolean;

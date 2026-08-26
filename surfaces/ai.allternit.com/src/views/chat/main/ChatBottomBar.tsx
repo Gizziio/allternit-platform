@@ -10,6 +10,7 @@ interface ChatBottomBarProps {
   mode: 'chat' | 'cowork' | 'code';
   isChatEmpty: boolean;
   hideEmptyState: boolean;
+  hudMode?: boolean;
   handleSend: (text: string) => void;
   onOpenAgentSession?: (text: string, surface: AgentModeSurface, execution?: { modeId: CanonicalAgentModeId; templateTitle?: string }) => void;
   agentSurface: AgentModeSurface;
@@ -34,6 +35,7 @@ export const ChatBottomBar: React.FC<ChatBottomBarProps> = ({
   mode,
   isChatEmpty,
   hideEmptyState,
+  hudMode = false,
   handleSend,
   onOpenAgentSession,
   agentSurface,
@@ -53,15 +55,18 @@ export const ChatBottomBar: React.FC<ChatBottomBarProps> = ({
   pulseMascot,
   setLaunchMascotAttention,
 }) => {
-  if (!(mode === 'cowork' || !isChatEmpty || hideEmptyState)) return null;
+  if (!hudMode && !(mode === 'cowork' || !isChatEmpty || hideEmptyState)) return null;
 
   return (
-    <div className="absolute bottom-0 left-0 right-0 w-full flex flex-col items-center pointer-events-none pb-[calc(0.75rem_+_env(safe-area-inset-bottom,0px))] z-40"
+    <div className={hudMode
+      ? "w-full shrink-0 z-40"
+      : "absolute bottom-0 left-0 right-0 w-full flex flex-col items-center pointer-events-none pb-[calc(0.75rem_+_env(safe-area-inset-bottom,0px))] z-40"
+    }
       style={{
-        background: hideEmptyState || mode === 'cowork' || mode === 'chat' ? 'transparent' : THEME.bgGradient,
+        background: hudMode || hideEmptyState || mode === 'cowork' || mode === 'chat' ? 'transparent' : THEME.bgGradient,
       }}
     >
-      <div className="w-full max-w-[760px] pointer-events-auto px-2 md:px-5 box-border">
+      <div className={hudMode ? "w-full pointer-events-auto box-border" : "w-full max-w-[760px] pointer-events-auto px-2 md:px-5 box-border"}>
         <ChatComposer
           onSend={handleSend}
           onAgentSend={onOpenAgentSession ? (text, execution) => onOpenAgentSession(text, agentSurface, execution) : undefined}
@@ -74,9 +79,11 @@ export const ChatBottomBar: React.FC<ChatBottomBarProps> = ({
           selectedModelDisplayName={modelSelection?.modelName || modelSelection?.modelId}
           onOpenModelPicker={startSelection}
           onSelectModel={selectModel}
-          placeholder="Reply…"
+          placeholder={hudMode ? "" : "Reply…"}
           showTopActions={false}
           showModeToggle={false}
+          compact={hudMode}
+          hudMode={hudMode}
           agentModeSurface={agentSurface}
           topInfoBarContent={composerTopInfoBar}
           questionBarContent={composerQuestionBar}
@@ -86,7 +93,7 @@ export const ChatBottomBar: React.FC<ChatBottomBarProps> = ({
         />
       </div>
       {/* Disclaimer — hidden in chrome-free floating HUD where vertical space is at a premium */}
-      {!hideEmptyState && (
+      {!hudMode && !hideEmptyState && (
         <div className="mt-2 text-[12px] text-[var(--ui-text-muted)] text-center pointer-events-auto">
           Allternit is AI and can make mistakes. Please double-check responses.
         </div>

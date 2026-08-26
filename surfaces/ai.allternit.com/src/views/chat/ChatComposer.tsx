@@ -79,6 +79,7 @@ import { useMentionHandoff } from '@/lib/bots/use-mention-handoff';
 import { parseMentions } from '@/lib/bots/mention-handoff.service';
 import { useActiveChatSession } from './ChatSessionStore';
 import { useChatStore } from './ChatStore';
+import { ALL_MODELS } from '@/lib/ai/models';
 import { AgentModeGizzi } from './AgentModeGizzi';
 import { getAgentModeSurfaceTheme } from './agentModeSurfaceTheme';
 import { useRecordingStore } from '@/stores/recording.store';
@@ -208,6 +209,8 @@ interface ChatComposerProps {
   showTopActions?: boolean;
   /** Compact input bar (narrower vertical padding) for terminal-style surfaces like Code Mode. */
   compact?: boolean;
+  /** Floating HUD mode: force a minimal placeholder and tight chrome. */
+  hudMode?: boolean;
   inputValue?: string;
   onInteractionSignal?: (emotion: GizziEmotion) => void;
   onAttentionChange?: (attention: GizziAttention | null) => void;
@@ -395,6 +398,7 @@ export function ChatComposer({
   variant = 'default',
   showTopActions = true,
   compact = false,
+  hudMode = false,
   inputValue = '',
   onInteractionSignal,
   onAttentionChange,
@@ -415,6 +419,7 @@ export function ChatComposer({
   onStartBotSession,
 }: ChatComposerProps) {
   const [input, setInput] = useState(inputValue);
+  const effectivePlaceholder = placeholder;
   const isMobile = useIsMobile();
   const {
     isRecording: isVoiceRecording,
@@ -1077,6 +1082,19 @@ export function ChatComposer({
       modelMap.set(model.id, model);
     });
 
+    // 4) Local CLI agents (Kimi CLI, Claude Code, Codex, etc.) so the HUD and
+    // inline composer can route messages to installed subprocess brains.
+    ALL_MODELS.filter((m) => m.runtimeType === 'cli').forEach((model) => {
+      if (modelMap.has(model.id)) return;
+      modelMap.set(model.id, {
+        id: model.id,
+        name: model.name,
+        providerId: model.provider,
+        providerName: model.provider,
+        runtimeType: model.runtimeType,
+      });
+    });
+
     return Array.from(modelMap.values());
   }, [discoveryResult, realModels, terminalModels]);
 
@@ -1087,10 +1105,13 @@ export function ChatComposer({
 
   const handleModelSelect = useCallback((model: any) => {
     if (onSelectModel) {
+      const isCli = model.runtimeType === 'cli';
       const providerId = model.providerId || 'allternit';
       onSelectModel({
         providerId,
-        profileId: `${providerId}-acp`,
+        // CLI agents use their own id as the profile (e.g. "kimi-cli") so the
+        // backend and Gizzi runtime can route to the right subprocess adapter.
+        profileId: isCli ? model.id : `${providerId}-acp`,
         modelId: model.id,
         modelName: model.name,
       });
@@ -1768,8 +1789,9 @@ export function ChatComposer({
 
       <div
         className={cn(
-          'w-full max-w-[600px] lg:max-w-[760px] relative overflow-visible z-14',
-          variant === 'large' && 'lg:max-w-[760px]'
+          'w-full relative overflow-visible z-14',
+          !hudMode && 'max-w-[600px] lg:max-w-[760px]',
+          variant === 'large' && !hudMode && 'lg:max-w-[760px]'
         )}
       >
         {showAgentRailGuide ? (
@@ -1790,8 +1812,8 @@ export function ChatComposer({
             useGlassComposer
               ? 'bg-composer-glass-bg border border-composer-glass-border backdrop-blur-xl backdrop-saturate-150 shadow-xl'
               : 'bg-input-bg border border-input-border',
-            agentModeEnabled && 'border-glow shadow-glow',
-            composerFocused && !agentModeEnabled && 'shadow-glow-accent'
+            !hudMode && agentModeEnabled && 'border-glow shadow-glow',
+            !hudMode && composerFocused && !agentModeEnabled && 'shadow-glow-accent'
           )}
           onFocusCapture={() => setComposerFocused(true)}
           onBlurCapture={(event) => {
@@ -1988,7 +2010,7 @@ export function ChatComposer({
                     parseMention(val);
                   }}
                   onKeyDown={handleTextareaKeyDown}
-                  placeholder={placeholder}
+                  placeholder={effectivePlaceholder}
                   rows={1}
                   onFocus={() => setTrackingAttention(0, 0.34, 'locked-on')}
                   className={cn(
@@ -2192,7 +2214,7 @@ export function ChatComposer({
                   parseMention(val);
                 }}
                 onKeyDown={handleTextareaKeyDown}
-                placeholder={placeholder}
+                placeholder={effectivePlaceholder}
                 rows={1}
                 onFocus={() => setTrackingAttention(0, 0.34, 'locked-on')}
                 className={cn(
@@ -2616,7 +2638,7 @@ export function ChatComposer({
           edge (z-0 under the composer card's z-10), sliding down from behind
           with the same deck-rise/fall motion as the top deck. */}
       {agentModeSurface && agentModeEnabled && selectedSurfaceAgent && !voiceModeActive && (
-        <div className="w-full max-w-[600px] lg:max-w-[760px] flex flex-col items-center">
+        <div className={cn('w-full flex flex-col items-center', !hudMode && 'max-w-[600px] lg:max-w-[760px]')}>
           <div className="relative z-0 w-full h-[60px] -mt-3 box-border bg-input-bg border-b border-r border-l border-input-border rounded-b-2xl px-4 pt-4 flex items-start gap-3 animate-deck-fall">
             <ModeDock
               selectedMode={selectedModeId}

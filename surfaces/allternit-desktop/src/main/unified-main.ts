@@ -1917,10 +1917,11 @@ ipcMain.handle('shell:open-design', () => {
 
 // HUD mode defaults — a chrome-free floating panel anchored near the bottom
 // of the primary display, inspired by Hermes Desktop's HUD windowing profile.
-// The default shape is a wide, short bar so the composer dominates, matching
-// Hermes' 620×320 bottom-band layout.
+// The default shape is a compact bar (just the composer + a slim drag strip);
+// the renderer asks us to grow vertically when streamed responses arrive.
 const HUD_WIDTH = 720;
-const HUD_HEIGHT = 220;
+const HUD_HEIGHT = 96;
+const HUD_MAX_HEIGHT = 520;
 const HUD_BOTTOM_MARGIN = 72;
 
 function computeHudBounds() {
@@ -1937,7 +1938,7 @@ function createHudWindow(): BrowserWindow {
   const win = new BrowserWindow({
     ...computeHudBounds(),
     minWidth: 380,
-    minHeight: 160,
+    minHeight: 80,
     maxWidth: 1600,
     maxHeight: 1000,
     title: 'Allternit HUD',
@@ -2066,7 +2067,32 @@ ipcMain.handle('shell:move-hud', (_event, delta: { x: number; y: number; width: 
       x: Math.round(x + dx),
       y: Math.round(y + dy),
       width: Math.max(380, Math.round(width)),
-      height: Math.max(160, Math.round(height)),
+      height: Math.max(120, Math.round(height)),
+    });
+  } finally {
+    if (!wasResizable && !hudWindow.isDestroyed()) hudWindow.setResizable(false);
+  }
+});
+ipcMain.handle('shell:set-hud-bounds', (_event, bounds: { x?: number; y?: number; width?: number; height?: number }) => {
+  if (!hudWindow || hudWindow.isDestroyed()) return;
+  const targetWidth = Number(bounds?.width ?? HUD_WIDTH);
+  const targetHeight = Math.min(HUD_MAX_HEIGHT, Math.max(80, Number(bounds?.height ?? HUD_HEIGHT)));
+  if (![targetWidth, targetHeight].every(Number.isFinite)) return;
+  const currentBounds = hudWindow.getBounds();
+  // Keep the window anchored to the bottom edge of the screen when growing or
+  // shrinking, so the composer bar stays in the same place.
+  const newX = Number.isFinite(bounds?.x ?? NaN) ? Math.round(bounds.x!) : currentBounds.x;
+  const newY = Number.isFinite(bounds?.y ?? NaN)
+    ? Math.round(bounds.y!)
+    : Math.round(currentBounds.y + currentBounds.height - targetHeight);
+  const wasResizable = hudWindow.isResizable();
+  if (!wasResizable) hudWindow.setResizable(true);
+  try {
+    hudWindow.setBounds({
+      x: newX,
+      y: newY,
+      width: Math.max(380, Math.round(targetWidth)),
+      height: Math.round(targetHeight),
     });
   } finally {
     if (!wasResizable && !hudWindow.isDestroyed()) hudWindow.setResizable(false);

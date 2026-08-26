@@ -26,6 +26,8 @@ interface CoworkTranscriptProps {
   selectedArtifactTitle?: string;
   /** In floating HUD mode the transcript area should stay empty instead of showing a landing placeholder. */
   hideEmptyState?: boolean;
+  /** When false, user/author messages are omitted from the transcript (Hermes-style HUD only shows assistant responses below the composer). */
+  showUserMessages?: boolean;
 }
 
 // Derive the currently-running tool from messages so we can show it inline
@@ -133,6 +135,7 @@ export const CoworkTranscript = memo(function CoworkTranscript({
   onSelectArtifact,
   selectedArtifactTitle,
   hideEmptyState,
+  showUserMessages = true,
 }: CoworkTranscriptProps) {
   // When conversationId is provided, pull messages from the chat session store
   const storeSession = useChatSessionStore((state) =>
@@ -243,7 +246,10 @@ export const CoworkTranscript = memo(function CoworkTranscript({
   // Legacy cowork events are no longer stored in CoworkStore.
   // Events come from the active session in CoworkSessionStore or are empty.
   const events: AnyCoworkEvent[] = [];
-  const timeline = mergeTimeline(messages, events);
+  const timeline = mergeTimeline(messages, events).filter((item) => {
+    if (showUserMessages) return true;
+    return item.type !== 'message' || (item.data as ChatMessage).role !== 'user';
+  });
 
   // Native streaming parts come from mode-session-store, not CoworkStore.
   const nativePartsByMessage: Record<string, Record<string, unknown>[]> = {};

@@ -2,6 +2,7 @@ import React from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { ArrowDown } from "lucide-react";
 import { CoworkTranscript } from "../../cowork/CoworkTranscript";
+import { useChatSessionStore } from "@/views/chat/ChatSessionStore";
 import { THEME } from "./ChatView.constants";
 
 interface ChatActiveContentProps {
@@ -17,6 +18,7 @@ interface ChatActiveContentProps {
   onSelectArtifact?: (artifact: any) => void;
   selectedArtifactTitle?: string;
   hideEmptyState?: boolean;
+  hudMode?: boolean;
 }
 
 export const ChatActiveContent: React.FC<ChatActiveContentProps> = ({
@@ -32,19 +34,53 @@ export const ChatActiveContent: React.FC<ChatActiveContentProps> = ({
   onSelectArtifact,
   selectedArtifactTitle,
   hideEmptyState,
+  hudMode = false,
 }) => {
+  const effectiveConversationId = isAgentSessionEmbedded ? (chatId || "") : (chatId ?? "");
+  const { hasAssistantMessages, isStreaming } = useChatSessionStore((state) => {
+    const session = effectiveConversationId ? state.sessions.find((s) => s.id === effectiveConversationId) : null;
+    return {
+      hasAssistantMessages: (session?.messages ?? []).some((m) => m.role === 'assistant'),
+      isStreaming: state.streamingBySession[effectiveConversationId]?.isStreaming ?? false,
+    };
+  });
+
   return (
-    <div className="w-full max-w-[760px] px-2 md:px-5 py-6 pb-[180px] box-border relative">
+    <div className={hudMode
+      ? "w-full pt-1 pb-1 box-border relative"
+      : "w-full max-w-[760px] px-2 md:px-5 py-6 pb-[180px] box-border relative"
+    }>
       {embeddedAgentStrip}
-      
-      <CoworkTranscript
-        conversationId={isAgentSessionEmbedded ? (chatId || "") : (chatId ?? "")}
-        linkedSessionIds={linkedAgentSessionIds}
-        onRegenerate={handleRegenerate}
-        onSelectArtifact={onSelectArtifact}
-        selectedArtifactTitle={selectedArtifactTitle}
-        hideEmptyState={hideEmptyState}
-      />
+
+      {hudMode ? (
+        <div className="[&_.assistant-message-group]:py-1 [&_.assistant-message-group]:first:pt-0 [&_.assistant-message-group]:last:pb-0 [&_.assistant-message-group]:max-w-none">
+          {isStreaming && !hasAssistantMessages && (
+            <div className="flex items-center gap-2 py-2 px-3 text-[13px] text-white/70">
+              <span className="inline-block size-3.5 rounded-full border-2 border-white/30 border-t-white animate-spin shrink-0" />
+              <span>Thinking…</span>
+            </div>
+          )}
+          <CoworkTranscript
+            conversationId={effectiveConversationId}
+            linkedSessionIds={linkedAgentSessionIds}
+            onRegenerate={handleRegenerate}
+            onSelectArtifact={onSelectArtifact}
+            selectedArtifactTitle={selectedArtifactTitle}
+            hideEmptyState={hideEmptyState}
+            showUserMessages={false}
+          />
+        </div>
+      ) : (
+        <CoworkTranscript
+          conversationId={effectiveConversationId}
+          linkedAgentSessionIds={linkedAgentSessionIds}
+          onRegenerate={handleRegenerate}
+          onSelectArtifact={onSelectArtifact}
+          selectedArtifactTitle={selectedArtifactTitle}
+          hideEmptyState={hideEmptyState}
+          showUserMessages
+        />
+      )}
       
       {/* Jump to present button */}
       <AnimatePresence>

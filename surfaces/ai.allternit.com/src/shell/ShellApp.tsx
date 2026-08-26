@@ -232,7 +232,11 @@ function ShellAppInner(): React.ReactNode {
   useEffect(() => {
     if (!isHudWindow) return;
     const style = document.createElement('style');
-    style.textContent = 'html,body,#root{background:transparent !important;}';
+    style.textContent = `
+      html,body,#root{background:transparent !important;}
+      [data-hud-window] textarea { color: var(--ui-text-primary) !important; caret-color: var(--ui-text-primary) !important; }
+      [data-hud-window] textarea::placeholder { color: var(--chat-composer-muted) !important; }
+    `;
     document.head.appendChild(style);
     return () => style.remove();
   }, [isHudWindow]);
@@ -684,58 +688,95 @@ function ShellAppInner(): React.ReactNode {
   }, []);
 
   // Chrome-free floating HUD: a Hermes-style floating chat panel.  No shell
-  // rail, header, or rail-controls; just a draggable handle, a close button,
-  // and the live chat surface mounted inside a translucent sheet.
+  // rail, header, or rail-controls; just a slim drag strip, a close button,
+  // and the live chat surface mounted inside a translucent sheet that grows
+  // downward as streamed responses arrive.
+  const hudContainerRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!isHudWindow) return;
+    const el = hudContainerRef.current;
+    if (!el || !window.allternit?.shell?.setHudBounds) return;
+
+    let frame: number | null = null;
+    let lastHeight = 0;
+    const updateBounds = () => {
+      const height = Math.round(el.scrollHeight);
+      if (height === lastHeight || height === 0) return;
+      lastHeight = height;
+      void window.allternit.shell.setHudBounds?.({ height });
+    };
+
+    const ro = new ResizeObserver(() => {
+      if (frame) cancelAnimationFrame(frame);
+      frame = requestAnimationFrame(updateBounds);
+    });
+    ro.observe(el);
+    updateBounds();
+
+    return () => {
+      ro.disconnect();
+      if (frame) cancelAnimationFrame(frame);
+    };
+  }, [isHudWindow]);
+
   if (isHudWindow) {
     return (
       <TooltipProvider>
         <VoiceProvider>
           <SessionProvider session={session}>
             <div
+              ref={hudContainerRef}
               data-theme="dark"
               data-hud-window
-              className="flex h-screen w-screen flex-col overflow-hidden rounded-2xl border border-white/10 bg-neutral-950/55 text-[var(--text-primary)] shadow-2xl backdrop-blur-xl"
+              className="flex w-full flex-col overflow-visible rounded-2xl border border-white/[0.08] bg-[rgba(18,18,18,0.28)] text-[var(--text-primary)] shadow-xl backdrop-blur-xl"
               style={
                 {
                   WebkitAppRegion: 'no-drag',
                   colorScheme: 'dark',
                   '--view-chat-bg': 'transparent',
                   '--surface-canvas': 'transparent',
-                  '--surface-floating': 'rgba(255,255,255,0.06)',
+                  '--surface-floating': 'rgba(255,255,255,0.04)',
+                  '--chat-composer-bg': 'rgba(28,28,28,0.22)',
+                  '--chat-composer-border': 'rgba(255, 255, 255, 0.09)',
+                  '--chat-composer-glass-bg': 'rgba(28,28,28,0.22)',
+                  '--chat-composer-glass-border': 'rgba(255, 255, 255, 0.09)',
+                  '--chat-composer-muted': 'rgba(255,255,255,0.50)',
+                  '--ui-text-primary': '#f2f2f7',
+                  '--ui-text-secondary': '#a1a1aa',
                 } as React.CSSProperties
               }
             >
-              {/* Draggable handle + close */}
+              {/* Slim draggable strip + close */}
               <div
-                className="h-7 shrink-0 flex items-center justify-between px-2 select-none"
+                className="h-[10px] shrink-0 flex items-center justify-between px-2 select-none bg-transparent"
                 style={{ WebkitAppRegion: 'no-drag' } as React.CSSProperties}
               >
                 <div
-                  className="flex items-center gap-1.5 text-white/50 cursor-grab active:cursor-grabbing hover:text-white/80"
+                  className="flex items-center gap-1 text-white/40 cursor-grab active:cursor-grabbing hover:text-white/70"
                   onPointerDown={onHudDragDown}
                   onPointerMove={onHudDragMove}
                   onPointerUp={onHudDragUp}
                   onPointerCancel={onHudDragUp}
                   style={{ WebkitAppRegion: 'no-drag' } as React.CSSProperties}
                 >
-                  <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor">
-                    <circle cx="5" cy="8" r="2" />
-                    <circle cx="12" cy="8" r="2" />
-                    <circle cx="19" cy="8" r="2" />
-                    <circle cx="5" cy="16" r="2" />
-                    <circle cx="12" cy="16" r="2" />
-                    <circle cx="19" cy="16" r="2" />
+                  <svg width="10" height="10" viewBox="0 0 24 24" fill="currentColor">
+                    <circle cx="5" cy="8" r="1.5" />
+                    <circle cx="12" cy="8" r="1.5" />
+                    <circle cx="19" cy="8" r="1.5" />
+                    <circle cx="5" cy="16" r="1.5" />
+                    <circle cx="12" cy="16" r="1.5" />
+                    <circle cx="19" cy="16" r="1.5" />
                   </svg>
-                  <span className="text-[10px] font-semibold uppercase tracking-wide">HUD</span>
                 </div>
                 <div style={{ WebkitAppRegion: 'no-drag' } as React.CSSProperties}>
                   <button
                     type="button"
                     onClick={() => window.allternit?.shell?.closeHud?.()}
-                    className="rounded p-1 text-white/50 hover:bg-white/10 hover:text-white"
+                    className="rounded p-0.5 text-white/40 hover:bg-white/10 hover:text-white"
                     aria-label="Close HUD"
                   >
-                    <svg width="10" height="10" viewBox="0 0 10 10" fill="currentColor">
+                    <svg width="8" height="8" viewBox="0 0 10 10" fill="currentColor">
                       <path d="M1 1 L9 9 M9 1 L1 9" stroke="currentColor" strokeWidth="1.5" />
                     </svg>
                   </button>
@@ -743,9 +784,7 @@ function ShellAppInner(): React.ReactNode {
               </div>
               {/* Chat surface — always show the active chat stream + composer,
                   never the full-screen empty-state landing page. */}
-              <div className="min-h-0 flex-1 overflow-hidden">
-                <ChatViewWrapper hideEmptyState />
-              </div>
+              <ChatViewWrapper hideEmptyState hudMode />
             </div>
           </SessionProvider>
         </VoiceProvider>
@@ -967,12 +1006,14 @@ function ShellAppInner(): React.ReactNode {
           open={agentActivityPanelOpen}
           onClose={() => setAgentActivityPanelOpen(false)}
         />
-        <ControlCenter
-          isOpen={isControlCenterOpen}
-          onClose={() => setIsControlCenterOpen(false)}
-          isDevMode={process.env.NODE_ENV === 'development'}
-          onOpenView={open as (viewType: string) => void}
-        />
+        <React.Suspense fallback={null}>
+          <ControlCenter
+            isOpen={isControlCenterOpen}
+            onClose={() => setIsControlCenterOpen(false)}
+            isDevMode={process.env.NODE_ENV === 'development'}
+            onOpenView={open as (viewType: string) => void}
+          />
+        </React.Suspense>
         {settingsOpen && (
           <React.Suspense fallback={null}>
             {/* Settings now renders PluginManager as its own nested overlay
