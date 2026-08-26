@@ -2127,6 +2127,22 @@ importers:
         specifier: ^5.0.0
         version: 5.9.3
 
+  services/remote-control-push:
+    dependencies:
+      hono:
+        specifier: ^4.12.27
+        version: 4.13.5
+    devDependencies:
+      '@cloudflare/workers-types':
+        specifier: ^4.20240815.0
+        version: 4.20260120.0
+      typescript:
+        specifier: ^5.5.4
+        version: 5.9.3
+      wrangler:
+        specifier: ^3.72.0
+        version: 3.114.17(@cloudflare/workers-types@4.20260120.0)
+
   services/runtime/adapter/allternit-runtime:
     dependencies:
       '@allternit/engine':
@@ -17425,6 +17441,10 @@ packages:
     resolution: {integrity: sha512-U7tt8JsyrxSRKspfhtLET79pU8K+tInj5QZXs1jSugO1Vq5dFj3kmZsRldo29mTBfcjDRVRXrEZ6LS63Cog9ZA==}
     engines: {node: '>=16.9.0'}
 
+  hono@4.13.5:
+    resolution: {integrity: sha512-O6+/eCYRkzzzy0rPWwKLiGBR1nFuUPZynnwjxN1MBA62NNqbT0wQEzQyK2gSO5yDIDB336sXQleAhOHrzlYyKw==}
+    engines: {node: '>=16.9.0'}
+
   hookable@6.1.0:
     resolution: {integrity: sha512-ZoKZSJgu8voGK2geJS+6YtYjvIzu9AOM/KZXsBxr83uhLL++e9pEv/dlgwgy3dvHg06kTz6JOh1hk3C8Ceiymw==}
 
@@ -28014,8 +28034,7 @@ snapshots:
   '@cloudflare/workerd-windows-64@1.20250718.0':
     optional: true
 
-  '@cloudflare/workers-types@4.20260120.0':
-    optional: true
+  '@cloudflare/workers-types@4.20260120.0': {}
 
   '@codemirror/autocomplete@6.20.3':
     dependencies:
@@ -30102,6 +30121,10 @@ snapshots:
     dependencies:
       hono: 4.11.4
 
+  '@hono/node-server@1.19.9(hono@4.13.5)':
+    dependencies:
+      hono: 4.13.5
+
   '@hono/standard-validator@0.1.5(@standard-schema/spec@1.0.0)(hono@4.11.4)':
     dependencies:
       '@standard-schema/spec': 1.0.0
@@ -31821,7 +31844,7 @@ snapshots:
 
   '@modelcontextprotocol/sdk@1.29.0(@cfworker/json-schema@4.1.1)(zod@3.25.76)':
     dependencies:
-      '@hono/node-server': 1.19.9(hono@4.11.4)
+      '@hono/node-server': 1.19.9(hono@4.13.5)
       ajv: 8.18.0
       ajv-formats: 3.0.1(ajv@8.18.0)
       content-type: 1.0.5
@@ -31831,7 +31854,7 @@ snapshots:
       eventsource-parser: 3.0.6
       express: 5.2.1
       express-rate-limit: 8.2.1(express@5.2.1)
-      hono: 4.11.4
+      hono: 4.13.5
       jose: 6.2.2
       json-schema-typed: 8.0.2
       pkce-challenge: 5.0.1
@@ -31845,7 +31868,7 @@ snapshots:
 
   '@modelcontextprotocol/sdk@1.29.0(@cfworker/json-schema@4.1.1)(zod@4.3.6)':
     dependencies:
-      '@hono/node-server': 1.19.9(hono@4.11.4)
+      '@hono/node-server': 1.19.9(hono@4.13.5)
       ajv: 8.18.0
       ajv-formats: 3.0.1(ajv@8.18.0)
       content-type: 1.0.5
@@ -31855,7 +31878,7 @@ snapshots:
       eventsource-parser: 3.0.6
       express: 5.2.1
       express-rate-limit: 8.2.1(express@5.2.1)
-      hono: 4.11.4
+      hono: 4.13.5
       jose: 6.2.2
       json-schema-typed: 8.0.2
       pkce-challenge: 5.0.1
@@ -44638,6 +44661,8 @@ snapshots:
       hono: 4.11.4
 
   hono@4.11.4: {}
+
+  hono@4.13.5: {}
 
   hookable@6.1.0: {}
 

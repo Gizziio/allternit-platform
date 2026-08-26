@@ -59,6 +59,8 @@ function formatHudTimestamp(timestamp?: string): string {
   if (!timestamp) return 'now';
   const date = new Date(timestamp);
   if (Number.isNaN(date.getTime())) return 'now';
+  const diffMs = Date.now() - date.getTime();
+  if (diffMs < 60_000) return 'now';
   return date.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
 }
 
@@ -85,7 +87,7 @@ export const HudTranscript = memo(function HudTranscript({
   if (!hasContent && !isStreaming && !error) return null;
 
   return (
-    <div className="mt-2 w-full rounded-2xl border border-white/10 bg-[rgba(22,33,68,0.78)] backdrop-blur-md shadow-2xl overflow-hidden">
+    <div data-testid="hud-transcript" className="mt-2 w-full rounded-2xl border border-white/10 bg-[rgba(22,33,68,0.78)] backdrop-blur-md shadow-2xl overflow-hidden">
       <div className="px-4 py-3 space-y-3">
         {/* Reasoning / thinking */}
         {latestAssistant?.thinking ? (

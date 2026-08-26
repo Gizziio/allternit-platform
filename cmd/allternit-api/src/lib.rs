@@ -59,6 +59,7 @@ pub mod chat_routes;
 pub mod checkpoints_routes;
 pub mod cloud_credentials_routes;
 pub mod compliance_routes;
+pub mod computer_routes;
 pub mod data_residency_routes;
 pub mod device_attestation_routes;
 pub mod config;

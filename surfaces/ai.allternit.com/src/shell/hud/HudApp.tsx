@@ -1,8 +1,9 @@
 'use client';
 
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { Plus, Mic, VolumeX, ScanEye, ArrowUp, X } from 'lucide-react';
+import { X } from 'lucide-react';
 import { useChatSessionStore } from '@/views/chat/ChatSessionStore';
+import { ChatComposer } from '@/views/chat/ChatComposer';
 import { HudTranscript } from './HudTranscript';
 
 const HUD_SESSION_NAME = 'HUD Session';
@@ -14,10 +15,8 @@ function isElectronShell(): boolean {
 
 export function HudApp(): React.ReactNode {
   const [sessionId, setSessionId] = useState<string | null>(null);
-  const [inputValue, setInputValue] = useState('');
   const [isDragging, setIsDragging] = useState(false);
 
-  const sessions = useChatSessionStore((state) => state.sessions);
   const createSession = useChatSessionStore((state) => state.createSession);
   const setActiveSession = useChatSessionStore((state) => state.setActiveSession);
   const sendMessageStream = useChatSessionStore((state) => state.sendMessageStream);
@@ -27,25 +26,24 @@ export function HudApp(): React.ReactNode {
   const session = useChatSessionStore((state) =>
     sessionId ? state.sessions.find((s) => s.id === sessionId) ?? null : null,
   );
-  const appendAssistantMessage = useChatSessionStore((state) => state.appendAssistantMessage);
-  const updateMessage = useChatSessionStore((state) => state.updateMessage);
 
-  const inputRef = useRef<HTMLInputElement>(null);
   const rootRef = useRef<HTMLDivElement>(null);
   const composerRef = useRef<HTMLDivElement>(null);
   const lastHeightRef = useRef<number | null>(null);
 
-  // Create or load the dedicated HUD chat session
+  // Create or load the dedicated HUD chat session.
+  // This effect intentionally does NOT depend on `sessions` so that the
+  // optimistic-session update does not cancel the backend creation promise.
   useEffect(() => {
     if (sessionId) return;
 
     let cancelled = false;
-    const existing = sessions.find((s) => s.metadata?.isHudSession === true);
+    const existing = useChatSessionStore
+      .getState()
+      .sessions.find((s) => s.metadata?.isHudSession === true);
     if (existing) {
-      if (!cancelled) {
-        setSessionId(existing.id);
-        setActiveSession(existing.id);
-      }
+      setSessionId(existing.id);
+      setActiveSession(existing.id);
       return;
     }
 
@@ -67,62 +65,28 @@ export function HudApp(): React.ReactNode {
     return () => {
       cancelled = true;
     };
-  }, [sessionId, sessions, createSession, setActiveSession]);
+  }, [sessionId, createSession, setActiveSession]);
 
-  // Auto-focus the input on mount
-  useEffect(() => {
-    inputRef.current?.focus();
-  }, []);
-
-  // DEMO: inject a fake assistant response when ?hud-demo=1 is present
-  useEffect(() => {
-    if (!sessionId || !window.location.search.includes('hud-demo=1')) return;
-    if (!session) return;
-
-    const msgId = 'hud-demo-msg-1';
-    const timer = setTimeout(() => {
-      appendAssistantMessage(sessionId, {
-        id: msgId,
-        content: '',
-      });
-
-      // Simulate streaming with a brief "thinking" phase then the final answer.
-      const thinkingTimer = setTimeout(() => {
-        updateMessage(sessionId, msgId, {
-          thinking: 'The user is asking about the app underneath the HUD. I can see Chrome with an X post.',
-        });
-      }, 200);
-
-      const contentTimer = setTimeout(() => {
-        updateMessage(sessionId, msgId, {
-          content:
-            'Underneath the HUD is Google Chrome, open to an X post by Brooklyn! (@imbabybrooklyn).\n\n**Summary**\n\n- Hermes becomes an overlay on top of the app you\'re working in, rather than a separate window you must switch to.\n- It can also remain available as a small "buddy agent."\n- You can ask it spontaneous questions and drag it wherever you want.',
-        });
-      }, 600);
-
-      return () => {
-        clearTimeout(thinkingTimer);
-        clearTimeout(contentTimer);
-      };
-    }, 300);
-
-    return () => clearTimeout(timer);
-  }, [sessionId, session, appendAssistantMessage, updateMessage]);
-
-  // Make the page body transparent so the desktop shows through
+  // Make the page body transparent so the desktop shows through, and force
+  // dark theme so the real ChatComposer renders with the HUD's frosted navy
+  // look instead of the platform's default light theme.
   useEffect(() => {
     const prevBodyBg = document.body.style.backgroundColor;
     const prevHtmlBg = document.documentElement.style.backgroundColor;
     const prevRootBg = document.getElementById('root')?.style.backgroundColor;
+    const prevTheme = document.documentElement.getAttribute('data-theme');
 
     document.body.style.backgroundColor = 'transparent';
     document.documentElement.style.backgroundColor = 'transparent';
+    document.documentElement.setAttribute('data-theme', 'dark');
     const root = document.getElementById('root');
     if (root) root.style.backgroundColor = 'transparent';
 
     return () => {
       document.body.style.backgroundColor = prevBodyBg;
       document.documentElement.style.backgroundColor = prevHtmlBg;
+      if (prevTheme) document.documentElement.setAttribute('data-theme', prevTheme);
+      else document.documentElement.removeAttribute('data-theme');
       if (root) root.style.backgroundColor = prevRootBg ?? '';
     };
   }, []);
@@ -156,26 +120,24 @@ export function HudApp(): React.ReactNode {
     [streamingState],
   );
 
-  const handleSend = useCallback(async () => {
-    const text = inputValue.trim();
-    if (!text || !sessionId || isStreaming) return;
-    setInputValue('');
-    try {
-      await sendMessageStream(sessionId, { text });
-    } catch (error) {
-      console.error('[HudApp] Failed to send message:', error);
-    }
-  }, [inputValue, sessionId, isStreaming, sendMessageStream]);
-
-  const handleKeyDown = useCallback(
-    (e: React.KeyboardEvent<HTMLInputElement>) => {
-      if (e.key === 'Enter' && !e.shiftKey) {
-        e.preventDefault();
-        void handleSend();
+  const handleSend = useCallback(
+    async (text: string) => {
+      if (!text.trim() || !sessionId || isStreaming) return;
+      try {
+        await sendMessageStream(sessionId, { text: text.trim() });
+      } catch (error) {
+        console.error('[HudApp] Failed to send message:', error);
       }
     },
-    [handleSend],
+    [sessionId, isStreaming, sendMessageStream],
   );
+
+  const handleStop = useCallback(() => {
+    const controller = streamingState?.abortController;
+    if (controller) {
+      controller.abort();
+    }
+  }, [streamingState]);
 
   const handleClose = useCallback(() => {
     window.allternit?.shell?.closeHud?.();
@@ -249,63 +211,19 @@ export function HudApp(): React.ReactNode {
           onPointerUp={handlePointerUp}
           onPointerCancel={handlePointerUp}
           className={`
-            flex items-center gap-2 w-full px-3 py-2
-            bg-[rgba(22,33,68,0.78)] backdrop-blur-md
-            border border-white/10 rounded-2xl shadow-2xl
+            w-full rounded-2xl shadow-2xl overflow-hidden
             ${isDragging ? 'cursor-grabbing' : isElectron ? 'cursor-grab' : 'cursor-default'}
           `}
         >
-          <button
-            type="button"
-            aria-label="Add attachment"
-            className="flex-shrink-0 p-1.5 rounded-full text-white/60 hover:text-white hover:bg-white/10 transition-colors"
-          >
-            <Plus size={18} />
-          </button>
-
-          <input
-            ref={inputRef}
-            value={inputValue}
-            onChange={(e) => setInputValue(e.target.value)}
-            onKeyDown={handleKeyDown}
+          <ChatComposer
+            onSend={handleSend}
+            isLoading={isStreaming}
+            onStop={handleStop}
             placeholder="Push it further"
-            disabled={isStreaming}
-            className="flex-1 min-w-0 bg-transparent border-none outline-none text-sm text-white placeholder:text-white/40 disabled:opacity-60"
+            compact
+            showTopActions={false}
+            showModeToggle={false}
           />
-
-          <button
-            type="button"
-            aria-label="Voice input"
-            className="flex-shrink-0 p-1.5 rounded-full text-white/60 hover:text-white hover:bg-white/10 transition-colors"
-          >
-            <Mic size={18} />
-          </button>
-
-          <button
-            type="button"
-            aria-label="Mute"
-            className="flex-shrink-0 p-1.5 rounded-full text-white/60 hover:text-white hover:bg-white/10 transition-colors"
-          >
-            <VolumeX size={18} />
-          </button>
-
-          <button
-            type="button"
-            aria-label="Screenshot"
-            className="flex-shrink-0 p-1.5 rounded-full text-white/60 hover:text-white hover:bg-white/10 transition-colors"
-          >
-            <ScanEye size={18} />
-          </button>
-
-          <button
-            type="button"
-            onClick={() => void handleSend()}
-            disabled={!inputValue.trim() || isStreaming}
-            aria-label="Send"
-            className="flex-shrink-0 flex items-center justify-center size-9 rounded-full bg-white/15 hover:bg-white/25 text-white disabled:opacity-40 disabled:hover:bg-white/15 transition-colors"
-          >
-            <ArrowUp size={18} strokeWidth={2.5} />
-          </button>
         </div>
 
         {/* Transcript panel */}

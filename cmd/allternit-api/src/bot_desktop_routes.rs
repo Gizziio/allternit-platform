@@ -1046,7 +1046,7 @@ fn upsert_bot_sandbox(
     Ok(())
 }
 
-fn update_bot_sandbox_status(
+pub(crate) fn update_bot_sandbox_status(
     db: &crate::db::DbHandle,
     bot_id: &str,
     status: &str,
@@ -1059,7 +1059,7 @@ fn update_bot_sandbox_status(
     Ok(())
 }
 
-fn delete_bot_sandbox(
+pub(crate) fn delete_bot_sandbox(
     db: &crate::db::DbHandle,
     bot_id: &str,
 ) -> Result<(), rusqlite::Error> {

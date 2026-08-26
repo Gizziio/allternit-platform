@@ -418,6 +418,7 @@ async fn main() {
         .merge(allternit_api::bot_desktop_queue::router())
         .merge(allternit_api::bot_desktop_billing::router())
         .merge(allternit_api::bot_desktop_admin::router())
+        .merge(allternit_api::computer_routes::router())
         .merge(allternit_api::allternit_vault::router())
         .merge(allternit_api::admin_workspace_routes::router())
         .merge(allternit_api::admin_service_account_routes::router())

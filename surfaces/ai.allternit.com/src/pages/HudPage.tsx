@@ -1,6 +1,12 @@
 'use client';
 
-import React, { lazy, Suspense } from 'react';
+import React, { lazy, Suspense, useEffect, useState } from 'react';
+import { TooltipProvider } from '@/components/ui/tooltip';
+import { GlobalDropzoneProvider } from '@/components/GlobalDropzone';
+import { getSession, type Session } from '@/lib/auth-browser';
+import { SessionProvider } from '@/providers/session-provider';
+import { VoiceProvider } from '@/providers/voice-provider';
+import { ModeProvider } from '@/providers/mode-provider';
 
 const HudApp = lazy(
   () => import('../shell/hud/HudApp').then((mod) => ({ default: mod.HudApp })),
@@ -15,9 +21,25 @@ function HudLoader() {
 }
 
 export default function HudPage() {
+  const [session, setSession] = useState<Session | null>(null);
+
+  useEffect(() => {
+    void getSession().then(setSession);
+  }, []);
+
   return (
     <Suspense fallback={<HudLoader />}>
-      <HudApp />
+      <TooltipProvider>
+        <VoiceProvider>
+          <ModeProvider defaultMode="chat">
+            <SessionProvider session={session}>
+              <GlobalDropzoneProvider>
+                <HudApp />
+              </GlobalDropzoneProvider>
+            </SessionProvider>
+          </ModeProvider>
+        </VoiceProvider>
+      </TooltipProvider>
     </Suspense>
   );
 }
