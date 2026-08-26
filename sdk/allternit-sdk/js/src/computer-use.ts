@@ -27,6 +27,34 @@ export interface CanonicalComputerCapabilityManifest {
   mobile: boolean
   max_concurrency: number
   limitations: string[]
+  tools?: string[]
+}
+
+export interface HistoryStatusResponse {
+  supported: boolean
+  admitted: boolean
+  enabled: boolean
+  paused: boolean
+  encrypted: boolean
+  profile: string
+  retention_days: number
+  quota_bytes: number
+  bytes_used: number
+  dropped_events: number
+  health: string
+}
+
+export interface HistoryQueryRequest {
+  limit?: number
+  session_id?: string
+  since_sequence?: number
+  until_sequence?: number
+}
+
+export interface HistoryQueryResponse {
+  events: Record<string, unknown>[]
+  metadata_only: boolean
+  model_context_disclosure: boolean
 }
 
 export interface CanonicalProviderDiagnostic {
@@ -345,6 +373,29 @@ export class AllternitComputerUseClient {
       body: JSON.stringify({ transaction, approved_by: approvedBy, ttl_seconds: ttlSeconds }),
     })
     if (!response.ok) throw new Error(`Canonical approval failed: ${response.status} ${response.statusText}`)
+    return response.json()
+  }
+
+  async canonicalHistoryStatus(providerId = "desktop.cua-driver"): Promise<HistoryStatusResponse> {
+    const response = await this.fetch(`${this.baseUrl}/v1/computer-use/canonical/history/status`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", ...this.headers },
+      body: JSON.stringify({ provider_id: providerId }),
+    })
+    if (!response.ok) throw new Error(`Canonical history status failed: ${response.status} ${response.statusText}`)
+    return response.json()
+  }
+
+  async canonicalHistoryQuery(
+    request: HistoryQueryRequest,
+    providerId = "desktop.cua-driver",
+  ): Promise<HistoryQueryResponse> {
+    const response = await this.fetch(`${this.baseUrl}/v1/computer-use/canonical/history/query`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", ...this.headers },
+      body: JSON.stringify({ provider_id: providerId, ...request }),
+    })
+    if (!response.ok) throw new Error(`Canonical history query failed: ${response.status} ${response.statusText}`)
     return response.json()
   }
 
