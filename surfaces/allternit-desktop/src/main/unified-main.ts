@@ -393,7 +393,9 @@ const store = new Store<StoreSchema>({
     hudBounds: { width: HUD_DEFAULT_WIDTH, height: HUD_DEFAULT_HEIGHT },
     theme: 'system',
     backend: {
-      mode: 'bundled',
+      // Dev builds should default to development mode so a fresh profile opens
+      // the local platform without the bundled-mode onboarding wizard.
+      mode: isDev ? 'development' : 'bundled',
     },
     onboardingComplete: false,
     startupWizardCompleted: false,
@@ -642,11 +644,14 @@ async function initializeApp(): Promise<void> {
   
   const backendConfig = store.get('backend');
   
-  // Determine which mode to use
-  if (backendConfig.mode === 'development') {
+  // Determine which mode to use. In dev, default to development mode when no
+  // backend preference has been set so a fresh profile can open the platform
+  // without going through the bundled-mode onboarding wizard.
+  const effectiveMode = backendConfig?.mode ?? (isDev ? 'development' : 'bundled');
+  if (effectiveMode === 'development') {
     // Development mode - connect to the local Gizzi runtime
     await initializeDevelopmentMode();
-  } else if (backendConfig.mode === 'remote' && backendConfig.remoteUrl) {
+  } else if (effectiveMode === 'remote' && backendConfig?.remoteUrl) {
     // Remote mode - connect to user VPS
     await initializeRemoteMode(backendConfig.remoteUrl);
   } else {
@@ -1100,22 +1105,24 @@ async function initializeDevelopmentMode(): Promise<void> {
   log.info('[Main] Development mode');
   activeBackendUrl = URLS.DEV_UI;
 
+  // Show the platform window immediately so the UI is usable while optional
+  // runtime services start in the background.
+  mainWindow = createMainWindow();
+  mainWindow.loadURL(URLS.DEV_UI);
+  mainWindow.show();
+
   // Adopt or start the local Gizzi runtime so the sidecar can broker
   // credential-injected requests via the allternit-gizzi custom protocol.
   // In dev this is best-effort: if no runtime is available the rest of the
   // app still loads.
-  try {
-    const gizziUrl = await startGizziRuntime();
-    updateSidecarConfig(gizziUrl);
-    log.info('[Main] Gizzi runtime ready in development mode:', gizziUrl);
-  } catch (error) {
-    log.warn('[Main] No adoptable Gizzi runtime in development mode; continuing without brokered AI runtime:', error);
-  }
-
-  mainWindow = createMainWindow();
-  mainWindow.loadURL(URLS.DEV_UI);
-  mainWindow.webContents.openDevTools();
-  mainWindow.show();
+  startGizziRuntime()
+    .then((gizziUrl) => {
+      updateSidecarConfig(gizziUrl);
+      log.info('[Main] Gizzi runtime ready in development mode:', gizziUrl);
+    })
+    .catch((error) => {
+      log.warn('[Main] No adoptable Gizzi runtime in development mode; continuing without brokered AI runtime:', error);
+    });
 }
 
 // ============================================================================

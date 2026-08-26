@@ -142,6 +142,8 @@ struct CreateSessionBody {
     #[allow(dead_code)]
     agent_name: Option<String>,
     origin_surface: Option<String>,
+    #[serde(rename = "session_mode")]
+    session_mode: Option<String>,
     /// Incognito chat: an ephemeral session excluded from list responses and
     /// purged on abort. Also accepted as `metadata.ephemeral` (bool or the
     /// string "true") for clients that only carry a metadata bag.
@@ -163,6 +165,8 @@ struct SendMessageBody {
     role: Option<String>,
     thinking: Option<String>,
     metadata: Option<serde_json::Value>,
+    #[serde(rename = "runtimeEnv")]
+    runtime_env: Option<HashMap<String, String>>,
 }
 
 #[derive(Debug, Serialize)]
@@ -284,6 +288,44 @@ fn transform_session(info: GizziSessionInfo, db: &DbHandle) -> serde_json::Value
         .or_else(|| info.surface.clone())
         .unwrap_or_default();
 
+    // Merge any frontend metadata bag we persisted locally.
+    let stored_metadata = db
+        .get_session_metadata(&info.id)
+        .ok()
+        .flatten()
+        .unwrap_or_else(|| json!({}));
+
+    let session_mode = stored_metadata
+        .get("sessionMode")
+        .or_else(|| stored_metadata.get("session_mode"))
+        .cloned()
+        .or_else(|| info.agent_id.as_ref().map(|_| json!("agent")))
+        .unwrap_or_else(|| json!("regular"));
+
+    let mut metadata = json!({
+        "project_id": info.project_id,
+        "directory": info.directory,
+        "version": info.version,
+        "agent_id": info.agent_id,
+        "surface": info.surface,
+        "originSurface": origin_surface,
+        "permission": info.permission,
+        // Incognito chats (Phase 6): surfaced so clients can filter
+        // defensively even against list responses that predate the
+        // server-side exclusion.
+        "ephemeral": db.is_session_ephemeral(&info.id).unwrap_or(false),
+        "sessionMode": session_mode,
+    });
+
+    if let Some(obj) = metadata.as_object_mut() {
+        if let Some(stored_obj) = stored_metadata.as_object() {
+            for (k, v) in stored_obj {
+                // Stored metadata wins over derived defaults.
+                obj.insert(k.clone(), v.clone());
+            }
+        }
+    }
+
     json!({
         "id": info.id,
         "name": info.title,
@@ -294,19 +336,7 @@ fn transform_session(info: GizziSessionInfo, db: &DbHandle) -> serde_json::Value
         "message_count": 0,
         "active": info.time.as_ref().and_then(|t| t.archived).is_none(),
         "tags": Vec::<String>::new(),
-        "metadata": {
-            "project_id": info.project_id,
-            "directory": info.directory,
-            "version": info.version,
-            "agent_id": info.agent_id,
-            "surface": info.surface,
-            "originSurface": origin_surface,
-            "permission": info.permission,
-            // Incognito chats (Phase 6): surfaced so clients can filter
-            // defensively even against list responses that predate the
-            // server-side exclusion.
-            "ephemeral": db.is_session_ephemeral(&info.id).unwrap_or(false),
-        }
+        "metadata": metadata,
     })
 }
 
@@ -729,6 +759,29 @@ async fn create_session(
         let _ = state.db.set_session_ephemeral(&session.id);
     }
 
+    // Persist the frontend metadata bag (session mode, bot flags, etc.) so
+    // subsequent list/get responses can reconstruct the original session type.
+    let mut metadata = body.metadata.clone().unwrap_or_else(|| json!({}));
+    if let Some(ref mode) = body.session_mode {
+        if let Some(obj) = metadata.as_object_mut() {
+            obj.insert("sessionMode".to_string(), json!(mode));
+        }
+    }
+    if let Some(ref name) = body.agent_name {
+        if let Some(obj) = metadata.as_object_mut() {
+            obj.insert("agentName".to_string(), json!(name));
+        }
+    }
+    if let Some(ref id) = body.agent_id {
+        if let Some(obj) = metadata.as_object_mut() {
+            obj.insert("agentId".to_string(), json!(id));
+            obj.insert("sessionMode".to_string(), json!("agent"));
+        }
+    }
+    if !metadata.as_object().map(|o| o.is_empty()).unwrap_or(true) {
+        let _ = state.db.set_session_metadata(&session.id, &metadata);
+    }
+
     (
         StatusCode::CREATED,
         Json(transform_session(session, &state.db)),
@@ -833,6 +886,7 @@ async fn list_messages(headers: HeaderMap, Path(session_id): Path<String>) -> im
 }
 
 async fn send_message(
+    State(state): State<Arc<AppState>>,
     headers: HeaderMap,
     Path(session_id): Path<String>,
     Json(body): Json<SendMessageBody>,
@@ -851,8 +905,38 @@ async fn send_message(
     }
 
     let client = gizzi_client(&headers);
+
+    // Resolve the session's agent harness so non-cloud providers and per-turn
+    // runtime env (e.g. ALLTERNIT_VM_*) reach the Gizzi runtime. Non-agent
+    // sessions simply resolve to None and are unaffected.
+    let session_path = format!("/v1/session/{}", urlencoding::encode(&session_id));
+    let harness = match gizzi_json::<GizziSessionInfo>(
+        &client,
+        reqwest::Method::GET,
+        &session_path,
+        None,
+    )
+    .await
+    {
+        Ok(info) => {
+            if let Some(agent_id) = info.agent_id.as_deref() {
+                resolve_agent_harness(&state.db, agent_id).await
+            } else {
+                None
+            }
+        }
+        Err(response) => return response,
+    };
+
+    let runtime_env = body.runtime_env.clone().or_else(|| {
+        body.metadata
+            .as_ref()
+            .and_then(|m| m.get("runtimeEnv"))
+            .and_then(|v| serde_json::from_value::<HashMap<String, String>>(v.clone()).ok())
+    });
+
     let path = format!("/v1/session/{}/message", urlencoding::encode(&session_id));
-    let payload = json!({
+    let mut payload = json!({
         "parts": [
             {
                 "type": "text",
@@ -861,6 +945,17 @@ async fn send_message(
         ],
         "model": select_model(body.metadata.as_ref()),
     });
+    if let Some(harness) = harness {
+        payload["harness"] = harness;
+    }
+    if let Some(runtime_env) = runtime_env {
+        payload["runtimeEnv"] = serde_json::Value::Object(
+            runtime_env
+                .into_iter()
+                .map(|(k, v)| (k, serde_json::Value::String(v)))
+                .collect(),
+        );
+    }
 
     match gizzi_json::<GizziMessage>(&client, reqwest::Method::POST, &path, Some(payload)).await {
         Ok(message) => Json(transform_message(message)).into_response(),

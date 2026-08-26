@@ -52,6 +52,11 @@ function getGatewayOrigin(): string {
 
 const getApiV1Base = () => `${getGatewayOrigin()}/api/v1`;
 const getAgentSessionBase = () => `${getApiV1Base()}/agent-sessions`;
+
+// Cache the backend agent-sessions availability so we stop probing an
+// unimplemented endpoint after the first failure.
+let agentSessionsUnavailable = false;
+let listSessionsPromise: Promise<BackendSession[]> | null = null;
 const getToolsBase = () => getApiV1Base();
 const getRuntimeBase = () => getApiV1Base();
 // chat: local desktop uses Next.js /api/agent-chat; tunnel rewrites /api/v1/agent-chat → /agent-chat on allternit-api
@@ -162,6 +167,8 @@ export interface CreateNativeAgentSessionRequest {
     tools?: boolean;
     automation?: boolean;
   };
+  /** Ephemeral sessions are excluded from lists and purged on abort. */
+  ephemeral?: boolean;
 }
 
 export interface SessionCreatedEvent extends BackendSessionSnapshot {
@@ -438,9 +445,27 @@ export const sessionApi = {
    * GET /api/v1/agent-sessions
    */
   async listSessions(): Promise<BackendSession[]> {
-    const response = await fetch(getAgentSessionBase());
-    const data = await handleResponse<BackendSessionListResponse>(response);
-    return data.sessions.map(normalizeSessionPayload);
+    if (agentSessionsUnavailable) {
+      return [];
+    }
+    if (listSessionsPromise) {
+      return listSessionsPromise;
+    }
+    listSessionsPromise = (async () => {
+      try {
+        const response = await fetch(getAgentSessionBase());
+        const data = await handleResponse<BackendSessionListResponse>(response);
+        return data.sessions.map(normalizeSessionPayload);
+      } catch (error) {
+        if (error instanceof NativeAgentApiError && [501, 502, 503].includes(error.statusCode)) {
+          agentSessionsUnavailable = true;
+        }
+        throw error;
+      } finally {
+        listSessionsPromise = null;
+      }
+    })();
+    return listSessionsPromise;
   },
 
   /**

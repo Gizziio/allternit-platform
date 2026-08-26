@@ -516,3 +516,26 @@ Finish the Remote Control feature: merge the `session/remote-control-finish` imp
 5. Rebuild the desktop shell so `shell.openRemoteControl` is live.
 6. Run a real end-to-end verification: sign in, pair runtime, open Remote Control, list sessions, open dashboard on another browser/phone, install PWA, test push.
 7. Package and code-sign the desktop DMG.
+
+---
+
+# Steering checkpoint — frontend-ui bot group chat polish
+
+## Goal
+Fix the bot group-chat UI so it matches the rest of the platform and clearly shows multiple bots.
+
+## Just did
+- `surfaces/ai.allternit.com/src/shell/ShellRail.tsx`: `GroupChatRailItem` now renders real `BotAvatar` components for each member (pulled from `useAgentStore` via `metadata.botIds`), with a `botProfiles` initials fallback for legacy sessions. Layout uses negative overlap spacing and keeps the group name on top.
+- `surfaces/ai.allternit.com/src/views/bots/GroupChatSessionView.tsx`: Rewrote the session view to match the single-bot `ChatModeAgentSession` UX — same dark chat container, mode wash, message bubble styling, composer, and a right-hand `CanvasPanel` listing group members. Bot message clusters still show the bot name + avatar.
+- `surfaces/ai.allternit.com/src/views/agent-sessions/AgentSessionLayout.tsx`: Added `min-w-0` and `truncate` to the header title area so the group avatar stack doesn't clip the session name.
+- `surfaces/ai.allternit.com/src/views/agent-sessions/ChatModeAgentSession.tsx`: Removed a stray debug `console.log`.
+
+## Verification
+- `pnpm run typecheck` in `surfaces/ai.allternit.com` passes.
+- `pnpm run build` in `surfaces/ai.allternit.com` completes successfully (pre-existing warnings only).
+
+## Next
+- Coordinate with the verification-area agent (or parent) to confirm packaged bots appear in Bot Hub and that single-bot + group-chat flows render correctly in the browser at http://localhost:3014.
+
+## Open questions
+- None from frontend-ui; ready for integration verification.

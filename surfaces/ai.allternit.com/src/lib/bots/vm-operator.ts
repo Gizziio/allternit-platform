@@ -80,10 +80,47 @@ function notConfigured<T>(): VMOperatorResult<T> {
  * sandbox server. Until then it returns a deterministic "not configured"
  * result.
  */
+async function provisionCloudDesktop(
+  botId: string,
+  config: AgentVMOperatorConfig,
+): Promise<VMOperatorResult<Sandbox>> {
+  const provision = await provisionBotDesktop(botId);
+  if (!provision.ok || !provision.data) {
+    return {
+      ok: false,
+      error: provision.error ?? 'Cloud desktop provisioning failed',
+    };
+  }
+
+  const { sandbox_id, provider, status } = provision.data;
+  let vncUrl: string | undefined;
+  const statusRes = await getBotDesktopStatus(botId, sandbox_id);
+  if (statusRes.ok && statusRes.data?.ws_url) {
+    vncUrl = statusRes.data.ws_url;
+  }
+
+  return {
+    ok: true,
+    data: {
+      id: sandbox_id,
+      agentId: botId,
+      status: status === 'running' ? 'running' : 'creating',
+      provider: provider || 'cloud-desktop',
+      vncUrl,
+      persistence: config.persistence ?? 'session',
+      createdAt: new Date().toISOString(),
+    },
+  };
+}
+
 export async function createSandbox(
   agentId: string,
   config: AgentVMOperatorConfig,
 ): Promise<VMOperatorResult<Sandbox>> {
+  if (config.provider === 'cloud-desktop') {
+    return provisionCloudDesktop(agentId, config);
+  }
+
   const baseURL = getSandboxBaseURL();
   if (!baseURL) {
     logger.debug({ agentId }, 'Sandbox runtime not configured; skipping createSandbox');
@@ -130,7 +167,14 @@ export async function createSandbox(
  */
 export async function getSandboxForAgent(
   agentId: string,
+  config?: AgentVMOperatorConfig,
 ): Promise<VMOperatorResult<Sandbox>> {
+  if (config?.provider === 'cloud-desktop') {
+    // Idempotent: the platform's bot-desktop provision endpoint returns the
+    // existing sandbox when one is already active.
+    return provisionCloudDesktop(agentId, config);
+  }
+
   const baseURL = getSandboxBaseURL();
   if (!baseURL) {
     logger.debug({ agentId }, 'Sandbox runtime not configured; skipping getSandboxForAgent');

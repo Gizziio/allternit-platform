@@ -34,6 +34,7 @@ const CodeModeAgentSession = lazy(() => import('../views/agent-sessions/CodeMode
 const DesignModeAgentSession = lazy(() => import('../views/agent-sessions/DesignModeAgentSession').then(m => ({ default: m.DesignModeAgentSession })));
 const BotInboxView = lazy(() => import('../views/bots/BotInboxView').then(m => ({ default: m.BotInboxView })));
 const BotHomeView = lazy(() => import('../views/bots/BotHomeView').then(m => ({ default: m.BotHomeView })));
+const GroupChatSessionView = lazy(() => import('../views/bots/GroupChatSessionView').then(m => ({ default: m.GroupChatSessionView })));
 const SwarmADE             = lazy(() => import('../views/swarm').then(m => ({ default: m.SwarmADE })));
 const AllternitCanvasView  = lazy(() => import('../views/AllternitCanvasView').then(m => ({ default: m.AllternitCanvasView })));
 const CoworkRoot           = lazy(() => import('../views/cowork/CoworkRoot').then(m => ({ default: m.CoworkRoot })));
@@ -813,6 +814,17 @@ export function getShellViewRegistry(handlers: {
           context={typeof window !== 'undefined' ? window.sessionStorage.getItem('allternit-pending-agent-message') || undefined : undefined}
           onClose={() => open(ctx?.originView ?? 'chat')}
         />
+      );
+    },
+    'chat-group-session': ({ context }: { context?: ViewContext }) => {
+      const ctx = context?.context as { sessionId?: string; originView?: ViewType } | undefined;
+      return (
+        <ErrorBoundary fallback={<ErrorFallbackWrapper viewName="Group Chat" />}>
+          <GroupChatSessionView
+            sessionId={ctx?.sessionId ?? context!.viewId}
+            onClose={() => open(ctx?.originView ?? 'chat')}
+          />
+        </ErrorBoundary>
       );
     },
     'cowork-agent-session': ({ context }: { context?: ViewContext }) => {

@@ -1,12 +1,14 @@
 "use client";
 
 import React, { useMemo, useState } from "react";
-import { MagnifyingGlass, Plus, Robot } from "@phosphor-icons/react";
+import { MagnifyingGlass, Plus, Robot, Users } from "@phosphor-icons/react";
 import { useAgentStore } from "@/lib/agents/agent.store";
 import { useChatSessionStore } from "@/views/chat/ChatSessionStore";
 import { getBots, BOT_CATEGORIES } from "@/lib/bots/bot-profile";
-import type { BotCategory } from "@/lib/agents/agent.types";
+import type { BotCategory, Agent } from "@/lib/agents/agent.types";
 import { BotHubCard } from "./BotHubCard";
+import { BotGroupChatModal } from "./BotGroupChatModal";
+import { startBotGroupChat } from "@/lib/bots/startBotGroupChat";
 import { cn } from "@/lib/utils";
 
 interface BotHubHomeTabProps {
@@ -18,6 +20,7 @@ export function BotHubHomeTab({ onCreate }: BotHubHomeTabProps) {
   const chatSessions = useChatSessionStore((s) => s.sessions ?? []);
   const [searchQuery, setSearchQuery] = useState("");
   const [categoryFilter, setCategoryFilter] = useState<BotCategory | "all">("all");
+  const [groupChatOpen, setGroupChatOpen] = useState(false);
 
   const bots = useMemo(() => getBots(agents), [agents]);
 
@@ -25,6 +28,7 @@ export function BotHubHomeTab({ onCreate }: BotHubHomeTabProps) {
     const map = new Map<string, number>();
     for (const session of chatSessions) {
       if (session.metadata?.sessionMode !== "agent") continue;
+      if (session.metadata?.isGroupChat === true) continue;
       const id = (session.metadata?.agentId as string | undefined) ?? (session.metadata?.agentName as string | undefined) ?? "unknown";
       map.set(id, (map.get(id) ?? 0) + 1);
     }
@@ -57,6 +61,20 @@ export function BotHubHomeTab({ onCreate }: BotHubHomeTabProps) {
     );
   };
 
+  const handleStartGroupChat = async (selectedBots: Agent[], name: string) => {
+    const result = await startBotGroupChat({ bots: selectedBots, name });
+    if (result?.sessionId) {
+      window.dispatchEvent(
+        new CustomEvent("allternit:open-view", {
+          detail: {
+            viewType: "chat-group-session",
+            context: { sessionId: result.sessionId },
+          },
+        })
+      );
+    }
+  };
+
   return (
     <div className="h-full w-full overflow-auto">
       <div className="mx-auto flex w-full max-w-6xl flex-col px-8 pb-12 pt-6">
@@ -82,8 +100,16 @@ export function BotHubHomeTab({ onCreate }: BotHubHomeTabProps) {
             </div>
             <button
               type="button"
+              onClick={() => setGroupChatOpen(true)}
+              className="hidden h-11 items-center justify-center gap-1.5 rounded-lg border border-[var(--border-default)] bg-transparent px-4 text-[13px] font-medium text-[var(--text-secondary)] transition-colors hover:border-[var(--accent-primary)] hover:text-[var(--accent-primary)] sm:inline-flex"
+            >
+              <Users size={16} />
+              New group chat
+            </button>
+            <button
+              type="button"
               onClick={onCreate}
-              className="inline-flex h-11 items-center justify-center gap-1.5 rounded-lg bg-[var(--text-primary)] px-4 text-[13px] font-medium text-[var(--bg-elevated)] transition-opacity hover:opacity-90 sm:hidden"
+              className="inline-flex h-11 items-center justify-center gap-1.5 rounded-lg bg-[var(--text-primary)] px-4 text-[13px] font-medium text-[var(--bg-elevated)] transition-opacity hover:opacity-90"
             >
               <Plus size={16} />
               Create bot
@@ -149,6 +175,13 @@ export function BotHubHomeTab({ onCreate }: BotHubHomeTabProps) {
           </div>
         )}
       </div>
+
+      <BotGroupChatModal
+        isOpen={groupChatOpen}
+        bots={bots}
+        onClose={() => setGroupChatOpen(false)}
+        onStart={handleStartGroupChat}
+      />
     </div>
   );
 }

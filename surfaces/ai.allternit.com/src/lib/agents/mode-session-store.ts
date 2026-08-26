@@ -38,7 +38,7 @@ import type { AgentArtifactKind, CanonicalAgentModeId } from './agent-mode-contr
 import { getAgentModeContract, validateAgentModeExecution } from './agent-mode-contracts';
 import { executeAgentMode } from './agent-mode-executor';
 import { gizziBaseUrl } from './api-config';
-import { buildBotRuntimeEnv } from '@/lib/bots/bot-runtime-env';
+import { buildBotRuntimeEnv, resolveModelRef } from '@/lib/bots/bot-runtime-env';
 import { memoryClient } from './memory-client';
 
 const logger = createModuleLogger('ModeSessionStore');
@@ -558,10 +558,15 @@ function resolveRuntimeModelId(): string | null {
   return null;
 }
 
-async function resolveFallbackRuntimeModelId(): Promise<string | undefined> {
-  // Prefer the backend's configured default model. This matches what the
-  // composer/model picker shows by default and keeps bot sessions on a brain
-  // that actually works (e.g. the gizzi sidecar embedded model in dev).
+async function resolveFallbackRuntimeModelId(agent?: Agent): Promise<string | null> {
+  // Agent sessions: respect the agent's harness/provider/model selection.
+  // The brain stays harness-selected; cloud-desktop only changes the VM target.
+  const harnessRef = await resolveModelRef(agent);
+  if (harnessRef) {
+    return harnessRef;
+  }
+
+  // Non-agent sessions: prefer the backend's configured default model.
   try {
     const res = await fetch('/api/onboarding/config');
     if (res.ok) {
@@ -573,10 +578,10 @@ async function resolveFallbackRuntimeModelId(): Promise<string | undefined> {
     }
   } catch { /* onboarding config unavailable */ }
 
-  // Last resort: use a locally-pulled Ollama model.
+  // Last resort for non-agent sessions: use a locally-pulled Ollama model.
   try {
     const res = await fetch('/api/local-brain');
-    if (!res.ok) return undefined;
+    if (!res.ok) return null;
     const data = await res.json() as { ollamaRunning?: boolean; modelId?: string; pulledModels?: string[] };
     if (data.ollamaRunning && data.modelId) {
       return `ollama/${data.modelId}`;
@@ -585,7 +590,7 @@ async function resolveFallbackRuntimeModelId(): Promise<string | undefined> {
       return `ollama/${data.pulledModels[0]}`;
     }
   } catch { /* local brain unavailable */ }
-  return undefined;
+  return null;
 }
 
 /**
@@ -599,13 +604,15 @@ async function streamMessageWithContext(
 ): Promise<void> {
   const { text, skipContext, callbacks } = options;
   // The kernel splits runtimeModelId into provider/model. Use an explicit
-  // option first, then the persisted composer selection, then ask the local
-  // brain for a pulled model. If nothing is available, omit the field so the
-  // runtime can fall back to its own default instead of sending an invalid
-  // hard-coded model.
+  // option first, then the persisted composer selection, then the agent's
+  // harness/provider/model. Only fall back to the local Ollama brain when no
+  // harness is configured, so the brain stays harness-selected for bots.
+  const agent = session.metadata.agentId
+    ? useAgentStore.getState().agents.find((a) => a.id === session.metadata.agentId)
+    : undefined;
   let modelId = options.modelId ?? resolveRuntimeModelId();
   if (!modelId) {
-    modelId = await resolveFallbackRuntimeModelId();
+    modelId = await resolveFallbackRuntimeModelId(agent);
   }
 
   if (
@@ -638,10 +645,6 @@ async function streamMessageWithContext(
     const contextPack = session._contextPack || await buildContextPackForSession(session);
     if (contextPack) {
       session._contextPack = contextPack;
-      // Look up agent runtime/harness config
-      const agent = session.metadata.agentId
-        ? useAgentStore.getState().agents.find((a) => a.id === session.metadata.agentId)
-        : undefined;
       // Convert to API context format
       const runtimeEnv = buildBotRuntimeEnv({
         harness: agent?.harness,
@@ -737,7 +740,7 @@ async function streamMessageWithContext(
   await chatApi.streamChat(
     session.id,
     text,
-    modelId,
+    modelId ?? undefined,
     {
       onChunk: (chunk) => {
         callbacks?.onChunk?.(chunk.chunk);
@@ -896,6 +899,7 @@ export interface ModeSessionState {
   sendMessage: (sessionId: string, options: SendMessageOptions) => Promise<void>;
   sendMessageStream: (sessionId: string, options: SendMessageOptions) => Promise<void>;
   abortGeneration: (sessionId: string) => void;
+  setStreamingBySession: (sessionId: string, isStreaming: boolean) => void;
 
   // Session lifecycle (revert / compact / undo / redo)
   revertSession: (sessionId: string, messageId: string) => Promise<void>;
@@ -938,6 +942,7 @@ export interface ModeSessionState {
 
   // Agent mode integration
   appendOptimisticEvent: (sessionId: string, event: unknown) => void;
+  appendUserMessage: (sessionId: string, message: { id: string; content: string; metadata?: Record<string, unknown> }) => void;
   appendAssistantMessage: (sessionId: string, message: { id: string; content: string; metadata?: Record<string, unknown> }) => void;
   updateMessage: (sessionId: string, messageId: string, updates: Partial<ModeSessionMessage>) => void;
 }
@@ -996,7 +1001,7 @@ export function createModeSessionStore(config: StoreConfig) {
               sessions: [optimisticSession, ...state.sessions],
               activeSessionId: optimisticId,
             }));
-            
+
             try {
               // Load agent workspace if agent mode
               let workspace: AgentWorkspace | null = null;
@@ -1012,9 +1017,15 @@ export function createModeSessionStore(config: StoreConfig) {
 
               // Build system prompt from workspace
               const workspaceSystemPrompt = workspace ? buildSystemPrompt(workspace) : undefined;
-              const systemPrompt = [workspaceSystemPrompt, options.systemPrompt]
+              let systemPrompt = [workspaceSystemPrompt, options.systemPrompt]
                 .filter(Boolean)
                 .join('\n\n') || undefined;
+
+              // Force bot/agent identity to the top so replies never identify as Kimi/GPT/Claude.
+              if (options.agentName && systemPrompt) {
+                const identityClause = `You are ${options.agentName}. You must ALWAYS identify yourself as ${options.agentName}. NEVER say you are Kimi, GPT, Claude, an AI assistant created by another company, or any name other than ${options.agentName}.`;
+                systemPrompt = `${identityClause}\n\n${systemPrompt}`;
+              }
 
               // Create backend session
               const backendSession = await sessionApiClient.createSession({
@@ -1099,7 +1110,7 @@ export function createModeSessionStore(config: StoreConfig) {
                           ...session,
                           metadata: {
                             ...session.metadata,
-                            agentModeId: localModeId as CanonicalAgentModeId,
+                            agentModeId: (localModeId ?? session.metadata?.agentModeId) as CanonicalAgentModeId | undefined,
                             executionPersistence: 'local',
                           },
                         }
@@ -1691,6 +1702,15 @@ export function createModeSessionStore(config: StoreConfig) {
             }));
           },
 
+          setStreamingBySession: (sessionId: string, isStreaming: boolean) => {
+            set((state) => ({
+              streamingBySession: {
+                ...state.streamingBySession,
+                [sessionId]: { isStreaming, error: null, abortController: null },
+              },
+            }));
+          },
+
           revertSession: async (sessionId: string, messageId: string) => {
             set({ isLoading: true, error: null });
             try {
@@ -1874,6 +1894,23 @@ export function createModeSessionStore(config: StoreConfig) {
             }));
           },
 
+          appendUserMessage: (sessionId: string, message) => {
+            const userMsg: ModeSessionMessage = {
+              id: message.id,
+              role: 'user',
+              content: message.content,
+              timestamp: new Date().toISOString(),
+              metadata: message.metadata,
+            };
+            set((state) => ({
+              sessions: state.sessions.map((s) =>
+                s.id === sessionId
+                  ? { ...s, messages: [...s.messages, userMsg], updatedAt: new Date().toISOString() }
+                  : s
+              ),
+            }));
+          },
+
           appendAssistantMessage: (sessionId: string, message) => {
             const assistantMsg: ModeSessionMessage = {
               id: message.id,
@@ -1885,7 +1922,7 @@ export function createModeSessionStore(config: StoreConfig) {
             set((state) => ({
               sessions: state.sessions.map((s) =>
                 s.id === sessionId
-                  ? { ...s, messages: [...s.messages, assistantMsg] }
+                  ? { ...s, messages: [...s.messages, assistantMsg], updatedAt: new Date().toISOString() }
                   : s
               ),
             }));
@@ -1945,8 +1982,14 @@ export function createModeSessionStore(config: StoreConfig) {
               const newActiveId = merged.some(s => s.id === currentActiveId) ? currentActiveId : null;
               set({ sessions: merged, activeSessionId: newActiveId, isLoading: false });
             } catch (error) {
-              const message = error instanceof Error ? error.message : 'Failed to load sessions';
-              set({ error: message, isLoading: false });
+              const isUnavailable = error instanceof Error && 'statusCode' in error && [501, 502, 503].includes((error as any).statusCode);
+              if (isUnavailable) {
+                // Backend agent-sessions endpoint is not implemented yet; keep in-memory sessions.
+                set({ isLoading: false, error: null });
+              } else {
+                const message = error instanceof Error ? error.message : 'Failed to load sessions';
+                set({ error: message, isLoading: false });
+              }
             }
           },
 
@@ -2180,7 +2223,12 @@ export function createModeSessionStore(config: StoreConfig) {
 	                    });
 	                    return;
 	                  }
-	                  set({ isSyncConnected: false, syncError: 'Sync unavailable — retrying…' });
+                  const isUnavailable = error instanceof NativeAgentApiError && [501, 502, 503].includes(error.statusCode);
+                  if (isUnavailable) {
+                    set({ isSyncConnected: false, syncError: 'Agent session sync unavailable in this environment.' });
+                    return;
+                  }
+                  set({ isSyncConnected: false, syncError: 'Sync unavailable — retrying…' });
 	                  if (!cancelled) {
 	                    setTimeout(() => {
 	                      retryDelay = Math.min(retryDelay * 1.5, MAX_RETRY_DELAY);

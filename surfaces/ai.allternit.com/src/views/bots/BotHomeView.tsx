@@ -122,9 +122,9 @@ export function BotHomeView({ botId }: BotHomeViewProps) {
     isStarting: isStartingBot,
     error: botSessionError,
   } = useStartBotSession(
-    useCallback((_sessionId: string) => {
+    useCallback((sessionId: string) => {
       window.dispatchEvent(
-        new CustomEvent("allternit:open-view", { detail: { viewType: "chat" } })
+        new CustomEvent("allternit:open-view", { detail: { viewType: "chat-agent-session", context: { sessionId } } })
       );
     }, [])
   );
@@ -148,6 +148,7 @@ export function BotHomeView({ botId }: BotHomeViewProps) {
       .filter(
         (s) =>
           s.metadata?.sessionMode === "agent" &&
+          s.metadata?.isGroupChat !== true &&
           (s.metadata?.agentId === botId ||
             (s.metadata as Record<string, unknown>)?.agent_id === botId ||
             (bot?.name && String(s.metadata?.agentName).toLowerCase() === bot.name.toLowerCase()) ||
@@ -224,7 +225,7 @@ export function BotHomeView({ botId }: BotHomeViewProps) {
       });
       setActiveChatSession(sessionId);
       window.dispatchEvent(
-        new CustomEvent("allternit:open-view", { detail: { viewType: "chat" } })
+        new CustomEvent("allternit:open-view", { detail: { viewType: "chat-agent-session", context: { sessionId } } })
       );
     },
     [bot, createChatSession, setActiveChatSession]
@@ -245,7 +246,7 @@ export function BotHomeView({ botId }: BotHomeViewProps) {
   const handleOpenSession = useCallback((sessionId: string) => {
     setActiveChatSession(sessionId);
     window.dispatchEvent(
-      new CustomEvent("allternit:open-view", { detail: { viewType: "chat" } })
+      new CustomEvent("allternit:open-view", { detail: { viewType: "chat-agent-session", context: { sessionId } } })
     );
   }, [setActiveChatSession]);
 

@@ -73,6 +73,7 @@ export function BotHubSessionsTab({ onSessionStarted }: BotHubSessionsTabProps) 
 
     for (const session of chatSessions) {
       if (session.metadata?.sessionMode !== "agent") continue;
+      if (session.metadata?.isGroupChat === true) continue;
       const botId = (session.metadata?.agentId as string | undefined) ?? "unknown";
       const list = byBotId.get(botId) ?? [];
       list.push(session);
@@ -127,10 +128,11 @@ export function BotHubSessionsTab({ onSessionStarted }: BotHubSessionsTabProps) 
   const openSession = (session: ModeSession) => {
     setActiveChatSession(session.id);
     onSessionStarted?.(session.id);
+    const isGroupChat = session.metadata?.isGroupChat === true;
     window.dispatchEvent(
       new CustomEvent("allternit:open-view", {
         detail: {
-          viewType: "chat-agent-session",
+          viewType: isGroupChat ? "chat-group-session" : "chat-agent-session",
           context: { sessionId: session.id, originView: "chat" },
         },
       })

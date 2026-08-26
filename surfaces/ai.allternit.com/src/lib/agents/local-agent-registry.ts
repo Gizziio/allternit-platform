@@ -241,6 +241,7 @@ function toAgent(input: CreateAgentInput): Agent {
     secretRefs: input.secretRefs,
     messagingConfig: input.messagingConfig,
     identityChannels: input.identityChannels,
+    vmOperator: input.vmOperator,
     config: {
       ...(isRecord(input.config) ? input.config : {}),
       localRegistry: {
@@ -361,6 +362,10 @@ export function updateLocalAgent(
       updates.identityChannels !== undefined
         ? updates.identityChannels
         : current.identityChannels,
+    vmOperator:
+      updates.vmOperator !== undefined
+        ? updates.vmOperator
+        : current.vmOperator,
     updatedAt: new Date().toISOString(),
   };
 
