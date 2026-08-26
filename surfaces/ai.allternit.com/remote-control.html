@@ -15,11 +15,12 @@
           var s = localStorage.getItem(key);
           var parsed = s ? JSON.parse(s) : null;
           var t = parsed && parsed.state && parsed.state.theme;
-          // Default to the system color scheme so the PWA matches the user's
-          // platform. The React theme provider takes over once hydrated.
-          var systemDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
-          var r = t === 'dark' ? 'dark' : t === 'light' ? 'light' : systemDark ? 'dark' : 'light';
-          if (!t) {
+          var r;
+          if (t === 'dark' || t === 'light') {
+            r = t;
+          } else {
+            // Default to the platform/system color mode, not an arbitrary brand preset.
+            r = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
             localStorage.setItem(key, JSON.stringify({ state: { theme: 'system' }, version: 0 }));
           }
           document.documentElement.setAttribute('data-theme', r);

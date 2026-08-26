@@ -2492,12 +2492,6 @@ importers:
       '@allternit/office-docs-app':
         specifier: workspace:*
         version: link:../../packages/@allternit/office-docs-app
-      '@allternit/office-docx-engine':
-        specifier: workspace:*
-        version: link:../../packages/@allternit/office-docx-engine
-      '@allternit/office-file-parse':
-        specifier: workspace:*
-        version: link:../../packages/@allternit/office-file-parse
       '@allternit/office-pdf-app':
         specifier: workspace:*
         version: link:../../packages/@allternit/office-pdf-app
@@ -2516,9 +2510,6 @@ importers:
       '@allternit/office-slides-editor':
         specifier: workspace:*
         version: link:../../packages/@allternit/office-slides-editor
-      '@allternit/office-suite':
-        specifier: workspace:*
-        version: link:../../packages/@allternit/allternit-office-suite
       '@allternit/page-agent':
         specifier: workspace:*
         version: link:../../services/page-agent

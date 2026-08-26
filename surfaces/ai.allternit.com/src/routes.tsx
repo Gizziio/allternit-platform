@@ -1,7 +1,6 @@
 import { Suspense, lazy, useEffect } from 'react'
 import { Routes, Route, Navigate, useNavigate } from 'react-router-dom'
 import { installOfficeDesktopBridge } from './views/office/desktop-bridge'
-import { AProtocolWordmark } from './components/AProtocolWordmark'
 
 const AppLoader = () => (
   <div
@@ -20,7 +19,10 @@ const AppLoader = () => (
       gap: '28px',
     }}
   >
-    <AProtocolWordmark theme="light" height={22} />
+    <div style={{ display: 'flex', alignItems: 'baseline', gap: '6px', userSelect: 'none' }}>
+      <span style={{ color: '#D97757', fontFamily: 'var(--font-mono)', fontSize: 22, fontWeight: 400, letterSpacing: '0.04em' }}>A://</span>
+      <span style={{ color: '#C8BDB4', fontFamily: 'var(--font-research)', fontSize: 22, fontWeight: 400, letterSpacing: '0.18em' }}>LLTERNIT</span>
+    </div>
     <div style={{ width: '120px', height: '1px', background: 'rgba(200,168,140,0.12)', position: 'relative', overflow: 'hidden', borderRadius: '1px' }}>
       <div
         style={{
@@ -55,7 +57,6 @@ const SettingsPreviewPage = lazy(() =>
 const SessionsPage = lazy(() => import('./pages/SessionsPage'))
 const SignInPage = lazy(() => import('./pages/SignInPage'))
 const SignUpPage = lazy(() => import('./pages/SignUpPage'))
-const SignOutPage = lazy(() => import('./pages/SignOutPage'))
 const RuntimePairingPage = lazy(() => import('./pages/RuntimePairingPage'))
 const RuntimesPage = lazy(() => import('./pages/RuntimesPage'))
 const AuthorizePage = lazy(() => import('./pages/OAuthAuthorizePage'))
@@ -108,9 +109,8 @@ export default function AppRoutes() {
         <Route path="/shell/sessions" element={<SessionsPage />} />
         <Route path="/shell/recents" element={<ShellPage />} />
         <Route path="/shell/new" element={<Navigate to="/shell" replace />} />
-        <Route path="/sign-in" element={<SignInPage />} />
-        <Route path="/sign-up" element={<SignUpPage />} />
-        <Route path="/sign-out" element={<SignOutPage />} />
+        <Route path="/sign-in/*" element={<SignInPage />} />
+        <Route path="/sign-up/*" element={<SignUpPage />} />
         <Route path="/pair" element={<RuntimePairingPage />} />
         <Route path="/runtimes" element={<RuntimesPage />} />
         <Route path="/remote" element={<RuntimesPage />} />

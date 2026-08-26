@@ -2,26 +2,19 @@
 
 import React, { useCallback, useEffect, useState } from "react";
 import {
-  ArrowSquareOut,
+  DesktopTower,
+  WifiHigh,
+  WifiSlash,
+  Circle,
   Bell,
   BellSlash,
-  DesktopTower,
+  ArrowSquareOut,
   DownloadSimple,
-  Moon,
-  Sun,
 } from "@phosphor-icons/react";
+import { GlassSurface } from "@/design/GlassSurface";
+import { useToast } from "@/hooks/use-toast";
 import { usePlatformAuth } from "@/lib/platform-auth-client";
 import { env } from "@/lib/env";
-import { useToast } from "@/hooks/use-toast";
-import { MachinesPanel } from "@/components/dispatch/MachinesPanel";
-import { RemoteSessionPanel } from "@/components/dispatch/RemoteSessionPanel";
-import { useRuntimes, type RuntimeViewModel } from "@/components/dispatch/useRuntimes";
-import { useRuntimeSelection } from "@/components/dispatch/useRuntimeSelection";
-import { useRemotePendingCounts } from "@/components/dispatch/useRemotePendingCounts";
-import {
-  useRemoteControlThemeStore,
-  type Theme,
-} from "@/remote-control/theme/RemoteControlThemeStore";
 import type { BeforeInstallPromptEvent } from "../types";
 
 interface DashboardPageProps {
@@ -29,7 +22,36 @@ interface DashboardPageProps {
   onInstallClick: () => void;
 }
 
-const PUSH_WORKER_URL = env("VITE_REMOTE_CONTROL_PUSH_URL") ?? "https://push.remotecontrol.allternit.com";
+interface CloudRuntimeDevice {
+  id: string;
+  name: string;
+  runtimeType: string;
+  hostname: string;
+  platform: string;
+  version: string;
+  capabilities: string[];
+  status: string;
+  lastSeenAt: string | null;
+}
+
+interface RuntimeViewModel {
+  id: string;
+  name: string;
+  host: string;
+  status: string;
+  lastHeartbeatAt?: number;
+  agentClis: { name: string; icon: string }[];
+}
+
+const STATUS_COLORS: Record<string, string> = {
+  online: "var(--status-success)",
+  busy: "var(--status-warning)",
+  offline: "var(--ui-text-muted)",
+};
+
+const CLOUD_API_BASE_URL = "https://api.allternit.com";
+const PUSH_WORKER_URL =
+  env("VITE_REMOTE_CONTROL_PUSH_URL") ?? "https://push.remotecontrol.allternit.com";
 const PLATFORM_HUB_URL = env("VITE_ALLTERNIT_PLATFORM_URL") ?? "https://platform.allternit.com";
 
 function urlBase64ToUint8Array(base64String: string): Uint8Array {
@@ -43,19 +65,62 @@ function urlBase64ToUint8Array(base64String: string): Uint8Array {
   return outputArray;
 }
 
-function useVapidKey() {
+function deviceToViewModel(device: CloudRuntimeDevice): RuntimeViewModel {
+  return {
+    id: device.id,
+    name: device.name || device.hostname || "Unnamed machine",
+    host: `${device.platform} · ${device.hostname}`,
+    status: device.status === "online" ? "online" : "offline",
+    lastHeartbeatAt: device.lastSeenAt ? new Date(device.lastSeenAt).getTime() : undefined,
+    agentClis: (device.capabilities || []).map((cap) => ({ name: cap, icon: "" })),
+  };
+}
+
+export function DashboardPage({ installPrompt, onInstallClick }: DashboardPageProps): React.ReactNode {
+  const { addToast } = useToast();
+  const auth = usePlatformAuth();
+  const [runtimes, setRuntimes] = useState<RuntimeViewModel[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [pushByRuntime, setPushByRuntime] = useState<Record<string, boolean>>({});
   const [vapidKey, setVapidKey] = useState<string | null>(null);
+
+  const fetchRuntimes = useCallback(async () => {
+    try {
+      const token = await auth.getToken();
+      const res = await fetch(`${CLOUD_API_BASE_URL}/api/v1/runtime-devices`, {
+        headers: token ? { Authorization: `Bearer ${token}` } : {},
+      });
+      if (!res.ok) {
+        if (res.status === 401) return;
+        throw new Error(`Failed to load runtimes (${res.status})`);
+      }
+      const data = (await res.json()) as { runtimes?: CloudRuntimeDevice[] } | CloudRuntimeDevice[];
+      const devices = Array.isArray(data) ? data : data.runtimes ?? [];
+      setRuntimes(devices.map(deviceToViewModel));
+    } catch (err) {
+      addToast({
+        title: "Error",
+        description: err instanceof Error ? err.message : "Failed to load runtimes",
+        type: "error",
+      });
+    } finally {
+      setLoading(false);
+    }
+  }, [auth, addToast]);
+
+  useEffect(() => {
+    void fetchRuntimes();
+    const interval = setInterval(fetchRuntimes, 10000);
+    return () => clearInterval(interval);
+  }, [fetchRuntimes]);
+
   useEffect(() => {
     fetch(`${PUSH_WORKER_URL}/vapid-public-key`)
       .then((r) => (r.ok ? r.text() : null))
       .then((key) => setVapidKey(key))
       .catch(() => setVapidKey(null));
   }, []);
-  return vapidKey;
-}
 
-function usePushByRuntime(runtimes: RuntimeViewModel[]) {
-  const [pushByRuntime, setPushByRuntime] = useState<Record<string, boolean>>({});
   useEffect(() => {
     if (typeof window === "undefined" || !("serviceWorker" in navigator)) return;
     navigator.serviceWorker.ready
@@ -76,23 +141,6 @@ function usePushByRuntime(runtimes: RuntimeViewModel[]) {
       })
       .catch(() => {});
   }, [runtimes]);
-  return { pushByRuntime, setPushByRuntime };
-}
-
-export function DashboardPage({ installPrompt, onInstallClick }: DashboardPageProps): React.ReactNode {
-  const { addToast } = useToast();
-  const auth = usePlatformAuth();
-  const theme = useRemoteControlThemeStore((state) => state.theme);
-  const setTheme = useRemoteControlThemeStore((state) => state.setTheme);
-
-  const { runtimes, loading } = useRuntimes();
-  const [selectedId, setSelectedId] = useRuntimeSelection();
-  const selected = runtimes.find((r) => r.id === selectedId);
-  const onlineCount = runtimes.filter((r) => r.status === "online").length;
-  const { permissions: pendingPermissions, questions: pendingQuestions } = useRemotePendingCounts(runtimes, auth.getToken);
-
-  const vapidKey = useVapidKey();
-  const { pushByRuntime, setPushByRuntime } = usePushByRuntime(runtimes);
 
   const togglePush = useCallback(
     async (rt: RuntimeViewModel) => {
@@ -159,35 +207,10 @@ export function DashboardPage({ installPrompt, onInstallClick }: DashboardPagePr
         });
       }
     },
-    [addToast, pushByRuntime, setPushByRuntime, vapidKey]
+    [addToast, pushByRuntime, vapidKey]
   );
 
-  const pushAction = useCallback(
-    (rt: RuntimeViewModel) => (
-      <button
-        type="button"
-        onClick={(e) => {
-          e.stopPropagation();
-          void togglePush(rt);
-        }}
-        className="p-1.5 rounded-lg border-none bg-transparent cursor-pointer transition-colors"
-        title={pushByRuntime[rt.id] ? "Disable push notifications" : "Enable push notifications"}
-      >
-        {pushByRuntime[rt.id] ? (
-          <Bell size={18} color="var(--status-success)" />
-        ) : (
-          <BellSlash size={18} color="var(--ui-text-muted)" />
-        )}
-      </button>
-    ),
-    [pushByRuntime, togglePush]
-  );
-
-  const cycleTheme = () => {
-    const order: Theme[] = ["system", "light", "dark"];
-    const next = order[(order.indexOf(theme) + 1) % order.length];
-    setTheme(next);
-  };
+  const onlineCount = runtimes.filter((r) => r.status === "online").length;
 
   if (!auth.isLoaded) {
     return (
@@ -196,7 +219,9 @@ export function DashboardPage({ installPrompt, onInstallClick }: DashboardPagePr
         style={{ background: "var(--bg-primary)", color: "var(--text-primary)" }}
       >
         <div className="text-center">
-          <div className="mb-4 h-8 w-8 animate-spin rounded-full border-2 border-[var(--accent-primary)] border-t-transparent mx-auto" />
+          <div
+            className="mb-4 h-8 w-8 animate-spin rounded-full border-2 border-[var(--accent-primary)] border-t-transparent mx-auto"
+          />
           <div className="text-sm font-medium">Loading account…</div>
         </div>
       </div>
@@ -204,27 +229,8 @@ export function DashboardPage({ installPrompt, onInstallClick }: DashboardPagePr
   }
 
   if (!auth.isSignedIn) {
-    return (
-      <div
-        className="min-h-screen w-full flex items-center justify-center px-5"
-        style={{ background: "var(--bg-primary)", color: "var(--text-primary)" }}
-      >
-        <div className="max-w-md w-full p-8 text-center rounded-2xl border border-solid border-[var(--border-default)] bg-[var(--bg-elevated)]">
-          <DesktopTower size={48} style={{ opacity: 0.6 }} className="mx-auto mb-4" color="var(--accent-primary)" />
-          <h1 className="text-[22px] font-semibold mb-2">Sign in to Remote Control</h1>
-          <p className="text-[14px] text-[var(--text-secondary)] mb-6">
-            Monitor and manage your agents across machines from any device.
-          </p>
-          <a
-            href={`${PLATFORM_HUB_URL}/sign-in?redirect_url=${encodeURIComponent(window.location.href)}`}
-            className="inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl border-none text-[14px] font-semibold cursor-pointer transition-colors w-full"
-            style={{ background: "var(--accent-primary)", color: "var(--accent-on-primary)" }}
-          >
-            Sign in with Allternit
-          </a>
-        </div>
-      </div>
-    );
+    window.location.replace('/sign-in');
+    return null;
   }
 
   return (
@@ -244,16 +250,6 @@ export function DashboardPage({ installPrompt, onInstallClick }: DashboardPagePr
             </div>
           </div>
           <div className="flex items-center gap-2">
-            <button
-              type="button"
-              onClick={cycleTheme}
-              className="inline-flex items-center gap-2 px-3 py-2 rounded-xl border-none text-[13px] font-semibold cursor-pointer transition-colors"
-              style={{ background: "var(--surface-hover)", color: "var(--text-primary)" }}
-              title="Toggle theme"
-            >
-              {theme === "dark" ? <Moon size={16} /> : theme === "light" ? <Sun size={16} /> : <Sun size={16} />}
-              <span className="capitalize">{theme}</span>
-            </button>
             {installPrompt && (
               <button
                 type="button"
@@ -266,63 +262,117 @@ export function DashboardPage({ installPrompt, onInstallClick }: DashboardPagePr
               </button>
             )}
             <a
-              href={`${PLATFORM_HUB_URL}/shell`}
+              href={PLATFORM_HUB_URL || "https://ai.allternit.com"}
               target="_blank"
               rel="noreferrer"
               className="inline-flex items-center gap-2 px-3.5 py-2 rounded-xl border-none text-[13px] font-semibold cursor-pointer transition-colors"
               style={{ background: "var(--surface-hover)", color: "var(--text-primary)" }}
             >
               <ArrowSquareOut size={16} weight="bold" />
-              Open in Allternit
+              Platform Hub
             </a>
           </div>
         </header>
 
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-8">
-          <div
-            className="rounded-2xl border border-solid border-[var(--border-default)] p-4"
-            style={{ background: "var(--bg-elevated)" }}
-          >
+          <GlassSurface className="p-4" intensity="base">
             <div className="text-[12px] font-semibold uppercase tracking-wider text-[var(--text-tertiary)] mb-1">
               Online Machines
             </div>
             <div className="text-[32px] font-bold">{onlineCount}</div>
             <div className="text-[12px] text-[var(--text-secondary)]">of {runtimes.length} paired</div>
-          </div>
-          <div
-            className="rounded-2xl border border-solid border-[var(--border-default)] p-4"
-            style={{ background: "var(--bg-elevated)" }}
-          >
+          </GlassSurface>
+          <GlassSurface className="p-4" intensity="base">
             <div className="text-[12px] font-semibold uppercase tracking-wider text-[var(--text-tertiary)] mb-1">
               Pending Permissions
             </div>
-            <div className="text-[32px] font-bold">{pendingPermissions}</div>
+            <div className="text-[32px] font-bold">0</div>
             <div className="text-[12px] text-[var(--text-secondary)]">Need your approval</div>
-          </div>
-          <div
-            className="rounded-2xl border border-solid border-[var(--border-default)] p-4"
-            style={{ background: "var(--bg-elevated)" }}
-          >
+          </GlassSurface>
+          <GlassSurface className="p-4" intensity="base">
             <div className="text-[12px] font-semibold uppercase tracking-wider text-[var(--text-tertiary)] mb-1">
               Pending Questions
             </div>
-            <div className="text-[32px] font-bold">{pendingQuestions}</div>
+            <div className="text-[32px] font-bold">0</div>
             <div className="text-[12px] text-[var(--text-secondary)]">Awaiting answers</div>
-          </div>
+          </GlassSurface>
         </div>
 
         <h2 className="text-[16px] font-semibold mb-3">Machines</h2>
-        <MachinesPanel
-          runtimes={runtimes}
-          loading={loading}
-          selectedId={selectedId}
-          onSelect={setSelectedId}
-          action={pushAction}
-        />
-
-        {selected && (
-          <div className="mt-6 rounded-2xl border border-[var(--border-default)] bg-[var(--bg-elevated)] overflow-hidden h-[600px]">
-            <RemoteSessionPanel runtimeId={selected.id} getToken={auth.getToken} />
+        {loading ? (
+          <div className="text-[14px] text-[var(--text-secondary)] py-8 text-center">Loading runtimes…</div>
+        ) : runtimes.length === 0 ? (
+          <GlassSurface className="p-8 text-center" intensity="base">
+            <DesktopTower size={48} style={{ opacity: 0.3 }} className="mx-auto mb-3" />
+            <p className="text-[14px] text-[var(--text-secondary)] m-0">
+              No runtimes paired yet. Pair a machine from the Allternit desktop app to get started.
+            </p>
+          </GlassSurface>
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {runtimes.map((rt) => {
+              const pushEnabled = Boolean(pushByRuntime[rt.id]);
+              return (
+                <GlassSurface
+                  key={rt.id}
+                  className="p-4 flex flex-col gap-3"
+                  intensity="base"
+                  hover="lift"
+                >
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2.5">
+                      <Circle
+                        size={10}
+                        weight="fill"
+                        color={STATUS_COLORS[rt.status] ?? STATUS_COLORS.offline}
+                      />
+                      <span className="text-[15px] font-semibold">{rt.name}</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      {rt.status === "online" ? (
+                        <WifiHigh size={18} color="var(--status-success)" />
+                      ) : (
+                        <WifiSlash size={18} color="var(--ui-text-muted)" />
+                      )}
+                      <button
+                        type="button"
+                        onClick={() => void togglePush(rt)}
+                        className="p-1.5 rounded-lg border-none bg-transparent cursor-pointer transition-colors"
+                        title={pushEnabled ? "Disable push notifications" : "Enable push notifications"}
+                      >
+                        {pushEnabled ? (
+                          <Bell size={18} color="var(--status-success)" />
+                        ) : (
+                          <BellSlash size={18} color="var(--ui-text-muted)" />
+                        )}
+                      </button>
+                    </div>
+                  </div>
+                  <div className="text-[13px] text-[var(--text-secondary)]">{rt.host}</div>
+                  {rt.lastHeartbeatAt && (
+                    <div className="text-[12px] text-[var(--text-tertiary)]">
+                      Last heartbeat {new Date(rt.lastHeartbeatAt).toLocaleString()}
+                    </div>
+                  )}
+                  {rt.agentClis.length > 0 && (
+                    <div className="flex flex-wrap gap-1.5 mt-1">
+                      {rt.agentClis.map((cli) => (
+                        <span
+                          key={cli.name}
+                          className="px-2 py-0.5 rounded-md text-[11px] font-medium"
+                          style={{
+                            background: "var(--surface-hover)",
+                            color: "var(--text-secondary)",
+                          }}
+                        >
+                          {cli.name}
+                        </span>
+                      ))}
+                    </div>
+                  )}
+                </GlassSurface>
+              );
+            })}
           </div>
         )}
       </div>
