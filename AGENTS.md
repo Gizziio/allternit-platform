@@ -8,9 +8,43 @@
 
 Every agent session in this repo works in its OWN linked worktree — never in the shared main checkout. On your first prompt (or SessionStart), a hook injects the ritual: create-or-reuse `<repo>-session-<id>` on branch `session/<id>` and `cd` into it. A PreToolUse guard blocks `git commit/checkout/switch/merge/push/rebase/reset` and `branch -d` in the shared checkout (escape for human/orchestrator merges: `STEER_GUARD_OFF=1`). Rationale: concurrent sessions sharing one HEAD collide on branches, commits, and dirty files. gizzi-code additionally has native `--worktree` support (`src/shared/utils/worktree.ts`); making it default-on is tracked as phase W2. Linked worktrees pass all guards automatically (detected via the git dir path).
 
+## Session landing — worktree cleanup
+
+A session's worktree is temporary scaffolding, not a permanent workspace. Clean up so the machine does not accumulate orphaned worktrees, branches, or scratch files.
+
+### Ongoing hygiene
+
+Clean as you go, but never discard work that might be needed to resume.
+
+- **Checkpoint frequently.** Commit meaningful progress and push the `session/<id>` branch to origin often so an interrupted session does not lose work.
+- **Clean only disposable scratch.** During the session, delete temporary logs, debug dumps, and downloaded artifacts as soon as they are no longer needed.
+- **Protect active work.** Do not delete a worktree, branch, or uncommitted changes that contain unfinished but viable work. If you are unsure whether something is still needed, leave it and document its purpose in `.steering/checkpoint.md` or the session summary.
+- **Leave resumable state.** If the session stops for any reason, another agent (or a resumed session) should be able to inspect `git status`, `git branch`, and `git worktree list` and understand what was in progress.
+
+### Final cleanup
+
+Final cleanup happens only after the change is safely in the canonical codebase.
+
+- **Merge first, then clean up.** Push and merge the change to the GitHub codebase, then merge it into the local `main` checkout, before doing any cleanup.
+- **Delete the session worktree.** Once the work is merged and no longer needed, remove the `<repo>-session-<id>` worktree directory and delete the `session/<id>` branch. Do not leave stale session worktrees on the machine.
+- **Remove scratch artifacts.** Delete local logs, temporary scripts, build outputs, downloaded dependencies, and debug files that are not intended to be committed.
+- **Restore the original branch.** Return to the branch you started from unless the task explicitly required switching branches.
+- **Verify the final state.** Before ending the session, run a quick status check (`git status`, `git worktree list`) and confirm nothing unexpected remains.
+- **No local technical debt.** The machine should be left in the same clean state it was in before the task started, with no orphaned branches, worktrees, or leftover files.
+
 ## Steering checkpoints
 
 This repo is wired for hook-based steering: when an agent session working here ends a turn, a `Stop` hook consults a **separate steering agent** (a different model family, run via the agent-orchestrator tmux tooling) — but only if `.steering/checkpoint.md` changed since the last review. So at every meaningful checkpoint (subtask finished, design decision made, before a risky change), update `.steering/checkpoint.md`: `Goal`, `Just did`, `Next`, `Open questions`. The steering agent's answers/guidance come back injected as a `[steering]` message — treat them as authoritative and act on them before continuing. Additionally, `git commit`/`git push` pass through a hard gate: they only execute after the steering agent approves. See `.steering/README.md`. Kill switch: `touch .steering/off`.
+
+## Planning and task tracking
+
+Use a written plan as the source of truth for the session.
+
+- **Create a plan file.** After scoping the feature or fix with the user, use plan mode to produce a plan file with detailed, checkable todos.
+- **Make todos concrete.** Each todo should describe a single deliverable or verification step that can be clearly marked done.
+- **Check off as you finish.** Update the plan file as work is completed. Checked items should coincide with commits, checkpoints in `.steering/checkpoint.md`, and cleanup milestones.
+- **Use the plan to verify work.** Before calling a task complete, review the plan and ensure every todo is either done or explicitly deferred with a reason.
+- **Clean up the plan file.** Remove or archive the plan file once the work is merged and the session is finished, unless the project requires keeping it.
 
 ## Agent creation checklist
 
