@@ -30,6 +30,7 @@ export const DEFAULT_POLICIES: Record<ViewType, SpawnPolicy> = {
   "group-chat": { singleton: false, maxInstances: 10, allowNew: true, surface: "view", ownsTabs: false },
   "groups-list": { singleton: true, maxInstances: 1, allowNew: false, surface: "view", ownsTabs: false },
   "bot-chat-session": { singleton: false, maxInstances: 10, allowNew: true, surface: "view", ownsTabs: false },
+  "tag-manager": { singleton: true, maxInstances: 1, allowNew: false, surface: "view", ownsTabs: false },
 
   // Mode-specific Agent Session views
   // "chat-agent-session" is a deprecated alias to the cowork workspace now that

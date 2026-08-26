@@ -52,6 +52,7 @@ const PluginRegistryView   = lazy(() => import('../views/cowork/PluginRegistryVi
 const TerminalView         = lazy(() => import('../views/TerminalView').then(m => ({ default: m.TerminalView })));
 const CodeRoot             = lazy(() => import('../views/code/CodeRoot').then(m => ({ default: m.CodeRoot })));
 const AgentHub             = lazy(() => import('../views/AgentHub').then(m => ({ default: m.AgentHub })));
+const TagManagerView       = lazy(() => import('../views/tags/TagManagerView').then(m => ({ default: m.TagManagerView })));
 const NativeAgentView      = lazy(() => import('../views/NativeAgentView').then(m => ({ default: m.NativeAgentView })));
 const BrowserCapsuleEnhanced = lazy(() => import('../capsules/browser/BrowserCapsuleEnhanced').then(m => ({ default: m.BrowserCapsuleEnhanced })));
 const AciMiniAppsView = lazy(() => import('../views/aci/AciMiniAppsView').then(m => ({ default: m.AciMiniAppsView })));
@@ -488,6 +489,11 @@ export function getShellViewRegistry(handlers: {
         </ErrorBoundary>
       );
     },
+    'tag-manager': ({ context }: { context?: ViewContext }) => (
+      <ErrorBoundary fallback={<ErrorFallbackWrapper viewName="Tags" />}>
+        <TagManagerView />
+      </ErrorBoundary>
+    ),
     "native-agent": ({ context }: { context?: ViewContext }) => (
       <ErrorBoundary fallback={<ErrorFallbackWrapper viewName="Native Agent" />}>
         <NativeAgentView onOpenRuntimeOps={() => open("runtime-ops")} />
