@@ -55,6 +55,7 @@ async fn main() {
     let state_arc = Arc::new(state);
 
     let protected = Router::new()
+        .route("/v1/vms", get(list_vms))
         .route("/v1/vms/:name", get(get_vm).delete(delete_vm))
         .route("/v1/vms/:name/create", post(create_vm))
         .route("/v1/vms/:name/start", post(start_vm))
@@ -184,6 +185,37 @@ async fn get_vm(State(state): State<Arc<AppState>>, Path(name): Path<String>) ->
         Ok(info) => Json(info).into_response(),
         Err(e) => e.into_response(),
     }
+}
+
+async fn list_vms(State(state): State<Arc<AppState>>) -> Response {
+    match vm_list(&state).await {
+        Ok(vms) => Json(vms).into_response(),
+        Err(e) => e.into_response(),
+    }
+}
+
+async fn vm_list(state: &AppState) -> Result<Vec<VmInfo>, TartError> {
+    let list = run_tart_output(state, &["list", "--format", "json"]).await?;
+    let vms: Vec<serde_json::Value> = serde_json::from_str(&list).unwrap_or_default();
+    let mut out = Vec::new();
+    for vm in vms {
+        let name = vm
+            .get("Name")
+            .and_then(|n| n.as_str())
+            .unwrap_or("unknown")
+            .to_string();
+        let running = vm
+            .get("State")
+            .and_then(|s| s.as_str())
+            .map(|s| s == "running")
+            .unwrap_or(false);
+        out.push(VmInfo {
+            name,
+            status: if running { "running".to_string() } else { "stopped".to_string() },
+            ip: None,
+        });
+    }
+    Ok(out)
 }
 
 async fn vm_status(state: &AppState, name: &str) -> Result<VmInfo, TartError> {

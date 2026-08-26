@@ -348,6 +348,7 @@ impl ExecutionDriver for TartDriver {
     async fn health_check(&self) -> Result<DriverHealth, DriverError> {
         let mut healthy = false;
         let mut errors = Vec::new();
+        let mut active = 0u32;
         for host in &self.hosts {
             match self
                 .request(reqwest::Method::GET, host, "/health")
@@ -361,6 +362,38 @@ impl ExecutionDriver for TartDriver {
                 Err(e) => errors.push(format!("{} unreachable: {}", host.url, e)),
             }
         }
+
+        if healthy {
+            for host in &self.hosts {
+                match self
+                    .request(reqwest::Method::GET, host, "/v1/vms")
+                    .send()
+                    .await
+                {
+                    Ok(resp) if resp.status().is_success() => {
+                        if let Ok(body) = resp.json::<Vec<serde_json::Value>>().await {
+                            active += body
+                                .iter()
+                                .filter(|v| {
+                                    v.get("status")
+                                        .and_then(|s| s.as_str())
+                                        .map(|s| s == "running")
+                                        .unwrap_or(false)
+                                })
+                                .count() as u32;
+                        }
+                    }
+                    Ok(resp) => errors.push(format!("{} list returned {}", host.url, resp.status())),
+                    Err(e) => errors.push(format!("{} list unreachable: {}", host.url, e)),
+                }
+            }
+        }
+
+        let caps = self.capabilities();
+        let total_cpu = caps.max_resources.cpu_millis;
+        let total_mem = caps.max_resources.memory_mib;
+        let used_cpu = active.saturating_mul(2000);
+        let used_mem = active.saturating_mul(4096);
         Ok(DriverHealth {
             healthy,
             message: if errors.is_empty() {
@@ -368,8 +401,14 @@ impl ExecutionDriver for TartDriver {
             } else {
                 Some(errors.join("; "))
             },
-            active_executions: 0,
-            available_capacity: ResourceSpec::default(),
+            active_executions: active,
+            available_capacity: ResourceSpec {
+                cpu_millis: total_cpu.saturating_sub(used_cpu),
+                memory_mib: total_mem.saturating_sub(used_mem),
+                disk_mib: None,
+                network_egress_kib: None,
+                gpu_count: None,
+            },
             capabilities: vec!["macos".to_string()],
         })
     }
