@@ -343,6 +343,9 @@ export function createStartupWindow(options: StartupWindowOptions): BrowserWindo
 
   window.webContents.on('console-message', (event) => {
     log.info(`[Startup] ${event.message} (${event.sourceId}:${event.lineNumber})`);
+  // Log startup window console messages
+  window.webContents.on('console-message', (_event, _level, message, line, sourceId) => {
+    log.info(`[Startup] ${message} (${sourceId}:${line})`);
   });
 
   window.webContents.setWindowOpenHandler(({ url }) => {
