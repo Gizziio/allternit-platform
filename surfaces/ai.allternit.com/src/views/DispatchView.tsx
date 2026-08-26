@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useState, useCallback } from 'react';
+import React, { useEffect, useState, useCallback, useMemo } from 'react';
 import * as QRCodeModule from 'react-qr-code';
 const QRCode = (QRCodeModule as any).default?.QRCode ?? (QRCodeModule as any).default ?? QRCodeModule;
 import {
@@ -41,6 +41,8 @@ import { RemoteSessionPanel } from '@/components/dispatch/RemoteSessionPanel';
 import { MachinesPanel } from '@/components/dispatch/MachinesPanel';
 import { useRuntimes } from '@/components/dispatch/useRuntimes';
 import { useRuntimeSelection } from '@/components/dispatch/useRuntimeSelection';
+import { createRemoteControlClient } from '@/lib/dispatch/remote-control';
+import { useToast } from '@/hooks/use-toast';
 
 // ─── token generation ────────────────────────────────────────────────────────
 function generateDispatchToken(): string {
@@ -364,8 +366,10 @@ export function DispatchView(): React.ReactNode {
   const [qrPanelDismissed, setQrPanelDismissed] = useState(false);
 
   // ── composer ────────────────────────────────────────────────────────────────
+  const { addToast } = useToast();
   const [composerValue, setComposerValue] = useState('');
   const [messages, setMessages] = useState<Array<{ id: string; role: 'user'; text: string }>>([]);
+  const [sending, setSending] = useState(false);
 
   // ── remote hub tabs ─────────────────────────────────────────────────────────
   const [activeHubTab, setActiveHubTab] = useState<'handoff' | 'active-sessions' | 'remote-sessions'>('handoff');
@@ -374,6 +378,13 @@ export function DispatchView(): React.ReactNode {
   const { runtimes, loading: runtimesLoading } = useRuntimes();
   const [selectedRuntimeId, setSelectedRuntimeId] = useRuntimeSelection();
   const selectedRuntime = runtimes.find((r) => r.id === selectedRuntimeId);
+
+  // ── remote control client ────────────────────────────────────────────────────
+  const remoteClient = useMemo(() => {
+    const runtimeId = handoffStatus?.runtimeId ?? selectedRuntimeId;
+    if (!runtimeId) return null;
+    return createRemoteControlClient({ runtimeId, getToken });
+  }, [handoffStatus?.runtimeId, selectedRuntimeId, getToken]);
 
   // Build the QR URL. In development we ask the dev server for the LAN address
   // so a phone on the same network can actually reach this computer.
@@ -455,12 +466,30 @@ export function DispatchView(): React.ReactNode {
     }
   };
 
-  const handleSendMessage = useCallback(() => {
+  const handleSendMessage = useCallback(async () => {
     const text = composerValue.trim();
-    if (!text) return;
-    setMessages((prev) => [...prev, { id: `${Date.now()}-${Math.random().toString(36).slice(2, 7)}`, role: 'user', text }]);
-    setComposerValue('');
-  }, [composerValue]);
+    if (!text || sending) return;
+    if (!remoteClient) {
+      addToast({ title: 'No machine connected', description: 'Pair or select a runtime before sending.', type: 'error' });
+      return;
+    }
+    setSending(true);
+    try {
+      const session = await remoteClient.createSession({ title: 'Remote Control', surface: 'remote-control' });
+      await remoteClient.sendMessage(session.id, { text });
+      setMessages((prev) => [...prev, { id: `${Date.now()}-${Math.random().toString(36).slice(2, 7)}`, role: 'user', text }]);
+      setComposerValue('');
+      addToast({ title: 'Dispatched', description: 'Message sent to your machine.', type: 'success' });
+    } catch (err) {
+      addToast({
+        title: 'Dispatch failed',
+        description: err instanceof Error ? err.message : 'Could not send message to runtime.',
+        type: 'error',
+      });
+    } finally {
+      setSending(false);
+    }
+  }, [composerValue, sending, remoteClient, addToast]);
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
     if (e.key === 'Enter' && !e.shiftKey) {
@@ -489,7 +518,7 @@ export function DispatchView(): React.ReactNode {
             <button
               type="button"
               className="text-blue-500 underline bg-transparent border-none cursor-pointer p-0 text-[14px]"
-              onClick={() => window.dispatchEvent(new CustomEvent('allternit:open-settings', { detail: { section: 'dispatch' } }))}
+              onClick={() => window.dispatchEvent(new CustomEvent('allternit:open-settings', { detail: { section: 'remote-control' } }))}
             >
               Settings
             </button>
@@ -624,7 +653,7 @@ export function DispatchView(): React.ReactNode {
                   )}
                   <button
                     type="button"
-                    onClick={() => window.dispatchEvent(new CustomEvent('allternit:open-settings', { detail: { section: 'dispatch' } }))}
+                    onClick={() => window.dispatchEvent(new CustomEvent('allternit:open-settings', { detail: { section: 'remote-control' } }))}
                     className="text-[12px] text-[var(--text-primary)] border border-solid border-[var(--border-default)] rounded-lg px-2.5 py-1 bg-transparent cursor-pointer hover:bg-[var(--surface-hover)] transition-colors"
                   >
                     Open settings
@@ -799,13 +828,17 @@ export function DispatchView(): React.ReactNode {
                     <button
                       type="button"
                       onClick={handleSendMessage}
-                      disabled={!composerValue.trim()}
+                      disabled={!composerValue.trim() || sending}
                       className="size-8 flex items-center justify-center text-[var(--text-tertiary)] hover:text-[var(--text-secondary)] disabled:opacity-40 bg-transparent border-none cursor-pointer"
                       aria-label="Send message"
                     >
-                      <svg viewBox="0 0 24 24" fill="currentColor" width="18" height="18">
-                        <path d="M3.5 13.09L20.5 4.5L12 20.5L10 14L3.5 13.09Z" />
-                      </svg>
+                      {sending ? (
+                        <Spinner size={18} className="animate-spin" />
+                      ) : (
+                        <svg viewBox="0 0 24 24" fill="currentColor" width="18" height="18">
+                          <path d="M3.5 13.09L20.5 4.5L12 20.5L10 14L3.5 13.09Z" />
+                        </svg>
+                      )}
                     </button>
                     <button
                       type="button"

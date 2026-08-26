@@ -15,6 +15,7 @@ import {
   type RemoteQuestionRequest,
   type PushSubscriptionJSON,
 } from '@allternit/sdk/runtime';
+import { env } from '@/lib/env';
 
 export type {
   RemoteSessionWithStatus,
@@ -25,12 +26,13 @@ export type {
   PushSubscriptionJSON,
 };
 
-const CLOUD_API_BASE = (
-  (import.meta as any).env?.NEXT_PUBLIC_ALLTERNIT_CLOUD_API_URL || 'https://api.allternit.com'
-).replace(/\/$/, '');
+const CLOUD_API_BASE = env(
+  'NEXT_PUBLIC_ALLTERNIT_CLOUD_API_URL',
+  'https://api.allternit.com'
+)!.replace(/\/$/, '');
 
 const PUSH_WORKER_BASE = (
-  (import.meta as any).env?.NEXT_PUBLIC_ALLTERNIT_PUSH_WORKER_URL || undefined
+  env('VITE_REMOTE_CONTROL_PUSH_URL') || env('NEXT_PUBLIC_ALLTERNIT_PUSH_WORKER_URL')
 )?.replace(/\/$/, '');
 
 export interface RemoteControlInit {

@@ -29,6 +29,7 @@ import { MachinesPanel } from './MachinesPanel';
 import { RemoteSessionPanel } from './RemoteSessionPanel';
 import { useRuntimeSelection } from './useRuntimeSelection';
 import { useRuntimes } from './useRuntimes';
+import { useRemotePendingCounts } from './useRemotePendingCounts';
 
 function generateDispatchToken(): string {
   const arr = new Uint8Array(24);
@@ -238,6 +239,7 @@ export function RemoteControlHub(): React.ReactNode {
   const [selectedId, setSelectedId] = useRuntimeSelection();
   const selected = runtimes.find((r) => r.id === selectedId);
   const onlineCount = runtimes.filter((r) => r.status === 'online').length;
+  const { permissions: pendingPermissions, questions: pendingQuestions } = useRemotePendingCounts(runtimes, auth.getToken);
 
   const handleOpenDashboard = useCallback(() => {
     openRemoteControlWindow(selectedId ?? undefined);
@@ -271,8 +273,8 @@ export function RemoteControlHub(): React.ReactNode {
 
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
             <StatCard label="Online Machines" value={onlineCount} sub={`of ${runtimes.length} paired`} />
-            <StatCard label="Pending Permissions" value={0} sub="Need your approval" />
-            <StatCard label="Pending Questions" value={0} sub="Awaiting answers" />
+            <StatCard label="Pending Permissions" value={pendingPermissions} sub="Need your approval" />
+            <StatCard label="Pending Questions" value={pendingQuestions} sub="Awaiting answers" />
           </div>
 
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">

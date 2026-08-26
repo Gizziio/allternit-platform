@@ -938,8 +938,8 @@ export function ShellRail({
             <RailItem
               icon={DesktopTower}
               label="Remote Control"
-              isActive={activeViewType === 'dispatch'}
-              onClick={() => onOpen?.('dispatch')}
+              isActive={activeViewType === 'remote-control'}
+              onClick={() => onOpen?.('remote-control')}
             />
             <RailItem
               icon={SlidersHorizontal}

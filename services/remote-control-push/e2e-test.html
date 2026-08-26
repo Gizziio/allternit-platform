@@ -56,7 +56,7 @@
         log('Service worker registered ✅');
 
         log('Fetching VAPID public key...');
-        const vapidRes = await fetch(`${workerUrl}/push/vapid-public-key`);
+        const vapidRes = await fetch(`${workerUrl}/vapid-public-key`);
         if (!vapidRes.ok) throw new Error('Failed to fetch VAPID key');
         const { publicKey } = await vapidRes.json();
         log(`VAPID key received: ${publicKey.slice(0, 20)}... ✅`);
@@ -74,10 +74,10 @@
         log(`Subscribed: ${subscription.endpoint.slice(0, 60)}... ✅`);
 
         log('Sending subscription to worker...');
-        const subRes = await fetch(`${workerUrl}/push/subscribe/${runtimeId}`, {
+        const subRes = await fetch(`${workerUrl}/subscribe`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(subscription.toJSON())
+          body: JSON.stringify({ runtimeId, ...subscription.toJSON() })
         });
         if (!subRes.ok) throw new Error('Subscribe failed: ' + await subRes.text());
         log('Subscription stored on worker ✅');
@@ -96,10 +96,10 @@
     notifyBtn.addEventListener('click', async () => {
       try {
         log('Sending notify request...');
-        const res = await fetch(`${workerUrl}/push/notify/${runtimeId}`, {
+        const res = await fetch(`${workerUrl}/notify`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ title: 'Allternit Remote', body: 'Push notification works! 🎉' })
+          body: JSON.stringify({ runtimeId, title: 'Allternit Remote', body: 'Push notification works! 🎉' })
         });
         const data = await res.json();
         log(`Notify response: ${JSON.stringify(data)} ✅`);

@@ -20,10 +20,13 @@ binding = "REMOTE_CONTROL_PUSH_KV"
 id = "81d4bf1cc2c14cc1a0ba7bec8aad9392"
 
 [vars]
-# Set VAPID_JWK and VAPID_PUBLIC_KEY via `wrangler secret put` for production.
+# Set VAPID_JWK, VAPID_PUBLIC_KEY, NOTIFY_SECRET, and CLERK_JWKS_URL via
+# `wrangler secret put` for production.
 # Example:
 #   wrangler secret put VAPID_JWK
 #   wrangler secret put VAPID_PUBLIC_KEY
+#   wrangler secret put NOTIFY_SECRET
+#   wrangler secret put CLERK_JWKS_URL
 # Generate keys with:
 #   npx web-push generate-vapid-keys
 # Then format the private key as a JWK (d, x, y, crv=P-256, kty=EC).

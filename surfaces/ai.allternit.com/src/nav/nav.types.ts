@@ -109,6 +109,7 @@ export type ViewType =
   | "loops-list"
   | "cron"
   | "dispatch"
+  | "remote-control"
   // Code views
   | "new-file"
   | "code-project"

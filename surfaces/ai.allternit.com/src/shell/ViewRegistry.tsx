@@ -887,7 +887,12 @@ export function getShellViewRegistry(handlers: {
       </ErrorBoundary>
     ),
     'dispatch': ({ context }: { context?: ViewContext }) => (
-      <ErrorBoundary fallback={<ErrorFallbackWrapper viewName="Dispatch" />}>
+      <ErrorBoundary fallback={<ErrorFallbackWrapper viewName="Remote Control" />}>
+        <DispatchView />
+      </ErrorBoundary>
+    ),
+    'remote-control': ({ context }: { context?: ViewContext }) => (
+      <ErrorBoundary fallback={<ErrorFallbackWrapper viewName="Remote Control" />}>
         <DispatchView />
       </ErrorBoundary>
     ),

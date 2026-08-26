@@ -113,6 +113,7 @@ export default function AppRoutes() {
         <Route path="/sign-out" element={<SignOutPage />} />
         <Route path="/pair" element={<RuntimePairingPage />} />
         <Route path="/runtimes" element={<RuntimesPage />} />
+        <Route path="/remote" element={<RuntimesPage />} />
         <Route path="/oauth/authorize" element={<AuthorizePage />} />
         <Route path="/oauth/select-account" element={<SelectAccountPage />} />
         <Route path="/oauth/success" element={<SuccessPage />} />

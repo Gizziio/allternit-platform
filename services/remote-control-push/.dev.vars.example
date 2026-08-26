@@ -1,2 +1,4 @@
 VAPID_JWK={"kty":"EC","crv":"P-256","x":"...","y":"...","d":"..."}
 VAPID_PUBLIC_KEY=...
+NOTIFY_SECRET=dev-notify-secret
+CLERK_JWKS_URL=https://your-domain.clerk.accounts.dev/.well-known/jwks.json

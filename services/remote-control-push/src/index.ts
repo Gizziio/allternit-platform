@@ -1,6 +1,7 @@
 import { Hono } from "hono";
 import { cors } from "hono/cors";
 import type { Context, Env } from "hono";
+import { jwtVerify, createRemoteJWKSet, type JWTPayload } from "jose";
 
 interface PushSubscriptionRecord {
   runtimeId: string;
@@ -23,8 +24,14 @@ interface WorkerEnv {
   REMOTE_CONTROL_PUSH_KV: KVNamespace;
   VAPID_JWK: string;
   VAPID_PUBLIC_KEY: string;
+  NOTIFY_SECRET: string;
+  CLERK_JWKS_URL?: string;
   REMOTE_CONTROL_DASHBOARD_ORIGIN?: string;
 }
+
+const SUBSCRIPTION_TTL_SECONDS = 90 * 24 * 60 * 60; // 90 days
+const RATE_LIMIT_WINDOW_SECONDS = 60;
+const RATE_LIMIT_MAX_PER_RUNTIME = 30;
 
 function getDashboardOrigin(c: Context<{ Bindings: WorkerEnv }>): string {
   return c.env.REMOTE_CONTROL_DASHBOARD_ORIGIN ?? "https://remotecontrol.allternit.com";
@@ -45,6 +52,62 @@ async function hashEndpoint(endpoint: string): Promise<string> {
     .map((b) => b.toString(16).padStart(2, "0"))
     .join("")
     .slice(0, 32);
+}
+
+let jwksCache: ReturnType<typeof createRemoteJWKSet> | null = null;
+let jwksUrlCache: string | null = null;
+
+function getJWKS(jwksUrl: string) {
+  if (jwksCache && jwksUrlCache === jwksUrl) return jwksCache;
+  jwksUrlCache = jwksUrl;
+  jwksCache = createRemoteJWKSet(new URL(jwksUrl), {
+    cooldownDuration: 300_000, // 5 min
+    cacheMaxAge: 86_400_000, // 24 hours
+  });
+  return jwksCache;
+}
+
+async function verifyClerkSessionToken(
+  c: Context<{ Bindings: WorkerEnv }>,
+  token: string
+): Promise<JWTPayload | null> {
+  const jwksUrl = c.env.CLERK_JWKS_URL;
+  if (!jwksUrl) return null;
+  try {
+    const { payload } = await jwtVerify(token, getJWKS(jwksUrl), {
+      issuer: undefined, // Clerk session tokens may use varying issuers; rely on signature + expiry
+      audience: undefined,
+      clockTolerance: 30,
+    });
+    return payload;
+  } catch (err) {
+    console.error("Clerk JWT verification failed", err);
+    return null;
+  }
+}
+
+function getBearerToken(c: Context<{ Bindings: WorkerEnv }>): string | null {
+  const auth = c.req.header("Authorization") ?? "";
+  const match = auth.match(/^Bearer\s+(.+)$/i);
+  return match?.[1] ?? null;
+}
+
+async function checkNotifyRateLimit(
+  kv: KVNamespace,
+  runtimeId: string
+): Promise<boolean> {
+  const key = `ratelimit:notify:${runtimeId}`;
+  const now = Math.floor(Date.now() / 1000);
+  const windowStart = Math.floor(now / RATE_LIMIT_WINDOW_SECONDS) * RATE_LIMIT_WINDOW_SECONDS;
+  const windowKey = `${key}:${windowStart}`;
+
+  const current = await kv.get(windowKey);
+  const count = current ? parseInt(current, 10) : 0;
+  if (count >= RATE_LIMIT_MAX_PER_RUNTIME) {
+    return false;
+  }
+  await kv.put(windowKey, String(count + 1), { expirationTtl: RATE_LIMIT_WINDOW_SECONDS + 1 });
+  return true;
 }
 
 async function importVapidPrivateKey(jwkJson: string): Promise<CryptoKey> {
@@ -86,12 +149,8 @@ async function signVapidJWT(
     iat: now,
   };
 
-  const encodedHeader = base64UrlEncode(
-    new TextEncoder().encode(JSON.stringify(header))
-  );
-  const encodedPayload = base64UrlEncode(
-    new TextEncoder().encode(JSON.stringify(payload))
-  );
+  const encodedHeader = base64UrlEncode(new TextEncoder().encode(JSON.stringify(header)));
+  const encodedPayload = base64UrlEncode(new TextEncoder().encode(JSON.stringify(payload)));
   const signingInput = `${encodedHeader}.${encodedPayload}`;
 
   const signature = await crypto.subtle.sign(
@@ -107,7 +166,8 @@ async function signVapidJWT(
 async function sendPushNotification(
   subscription: PushSubscriptionRecord,
   privateKey: CryptoKey,
-  publicKey: string
+  publicKey: string,
+  payload: PendingNotification
 ): Promise<Response> {
   const audience = new URL(subscription.endpoint).origin;
   const jwt = await signVapidJWT(
@@ -117,14 +177,22 @@ async function sendPushNotification(
     "mailto:remote-control@allternit.com"
   );
 
+  const body = JSON.stringify({
+    title: payload.title,
+    body: payload.body,
+    tag: payload.tag,
+    data: { runtimeId: subscription.runtimeId },
+  });
+
   return fetch(subscription.endpoint, {
     method: "POST",
     headers: {
-      "Content-Type": "application/octet-stream",
+      "Content-Type": "application/json",
       TTL: "60",
       Urgency: "high",
       Authorization: `vapid t=${jwt}, k=${publicKey}`,
     },
+    body,
   });
 }
 
@@ -135,7 +203,7 @@ app.use("*", async (c, next) => {
   return cors({
     origin: (origin) => (allowedOrigins(origin, dashboardOrigin) ? origin : null),
     allowMethods: ["GET", "POST", "OPTIONS"],
-    allowHeaders: ["Content-Type"],
+    allowHeaders: ["Content-Type", "Authorization"],
     credentials: true,
   })(c, next);
 });
@@ -149,6 +217,15 @@ app.get("/vapid-public-key", async (c) => {
 });
 
 app.post("/subscribe", async (c) => {
+  const token = getBearerToken(c);
+  if (!token) {
+    return c.json({ error: "Authorization required" }, 401);
+  }
+  const claims = await verifyClerkSessionToken(c, token);
+  if (!claims) {
+    return c.json({ error: "Invalid or expired session token" }, 401);
+  }
+
   const body = await c.req.json<PushSubscriptionRecord>();
   if (!body.runtimeId || !body.endpoint || !body.keys?.p256dh || !body.keys?.auth) {
     return c.json({ error: "Missing required subscription fields" }, 400);
@@ -165,9 +242,10 @@ app.post("/subscribe", async (c) => {
   const keyHash = await hashEndpoint(body.endpoint);
   await c.env.REMOTE_CONTROL_PUSH_KV.put(
     `sub:${body.runtimeId}:${keyHash}`,
-    JSON.stringify(record)
+    JSON.stringify(record),
+    { expirationTtl: SUBSCRIPTION_TTL_SECONDS }
   );
-  return c.json({ ok: true });
+  return c.json({ ok: true, userId: claims.sub });
 });
 
 app.post("/unsubscribe", async (c) => {
@@ -182,14 +260,25 @@ app.post("/unsubscribe", async (c) => {
 });
 
 app.post("/notify", async (c) => {
+  const token = getBearerToken(c);
+  if (!token || token !== c.env.NOTIFY_SECRET) {
+    return c.json({ error: "Unauthorized" }, 401);
+  }
+
   const body = await c.req.json<{
     runtimeId?: string;
     title?: string;
     body?: string;
     tag?: string;
+    sessionId?: string;
   }>();
   if (!body.runtimeId) {
     return c.json({ error: "runtimeId is required" }, 400);
+  }
+
+  const allowed = await checkNotifyRateLimit(c.env.REMOTE_CONTROL_PUSH_KV, body.runtimeId);
+  if (!allowed) {
+    return c.json({ error: "Rate limit exceeded" }, 429);
   }
 
   const vapidJwk = c.env.VAPID_JWK;
@@ -202,7 +291,7 @@ app.post("/notify", async (c) => {
   const pending: PendingNotification = {
     title: body.title ?? "Allternit Remote Control",
     body: body.body ?? "One of your machines needs input.",
-    tag: body.tag ?? "remote-control",
+    tag: body.tag ?? `remote-control:${body.sessionId ?? body.runtimeId}`,
   };
 
   const prefix = `sub:${body.runtimeId}:`;
@@ -220,11 +309,7 @@ app.post("/notify", async (c) => {
       );
 
       try {
-        const response = await sendPushNotification(
-          subscription,
-          privateKey,
-          vapidPublicKey
-        );
+        const response = await sendPushNotification(subscription, privateKey, vapidPublicKey, pending);
         if (response.status === 404 || response.status === 410) {
           await c.env.REMOTE_CONTROL_PUSH_KV.delete(key.name);
           return { ok: false, status: response.status };
