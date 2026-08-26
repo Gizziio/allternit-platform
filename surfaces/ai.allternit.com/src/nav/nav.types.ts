@@ -134,6 +134,7 @@ export type ViewType =
   | "cowork-new-task"
   // Agent Session Views (full-screen agent experiences)
   | "chat-agent-session"
+  | "chat-group-session"
   | "cowork-agent-session"
   | "code-agent-session"
   | "design-agent-session"

@@ -78,6 +78,7 @@ export function useStartBotSession(
     const existingSession = store.sessions.find(
       (s) =>
         s.metadata?.isBot === true &&
+        s.id.startsWith('ses') &&
         (s.metadata?.agentId === agent.id || s.metadata?.agentName === agent.name),
     );
     if (existingSession) {
@@ -106,7 +107,7 @@ export function useStartBotSession(
       // Prefer the bot's existing persistent computer so state (toolchain,
       // files, browser sessions) survives across sessions. Only create a new
       // sandbox if none exists yet.
-      const existing = await getSandboxForAgent(agent.id);
+      const existing = await getSandboxForAgent(agent.id, vmConfig);
       if (existing.ok && existing.data) {
         sandbox = existing.data;
       } else {
@@ -128,14 +129,15 @@ export function useStartBotSession(
     }
 
     const basePrompt = agent.systemPrompt ?? '';
-    const systemPrompt = [basePrompt, vmPrompt, notice].filter(Boolean).join('\n\n');
+    const identityPrompt = `You are ${displayName}. You must ALWAYS identify yourself as ${displayName}. NEVER say you are Kimi, GPT, Claude, an AI assistant created by another company, or any name other than ${displayName}.`;
+    const systemPrompt = [identityPrompt, basePrompt, vmPrompt, notice].filter(Boolean).join('\n\n');
 
     const sessionId = await store.createSession({
       name: displayName,
       description: agent.botProfile?.welcomeMessage ?? agent.description,
       sessionMode: 'agent',
       agentId: agent.id,
-      agentName: agent.name,
+      agentName: displayName,
       systemPrompt,
       metadata: {
         isBot: agent.isBot === true,

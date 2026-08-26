@@ -418,7 +418,7 @@ export interface BotProfile {
   /** Deterministic bot avatar stored in bot metadata. */
   avatar?: BotAvatar;
 
-  /** External platform that owns this bot (e.g. 'hermes', 'openclaw', 'grok') */
+  /** External platform that owns this bot (e.g. 'hermes', 'openclaw') */
   providerId?: string;
   /** Stable identifier within the external platform's namespace */
   externalId?: string;
@@ -502,11 +502,13 @@ export interface AgentVMOperatorConfig {
   /** Whether the bot may use a virtual computer to execute tasks */
   enabled: boolean;
   /** Runtime provider that provisions and manages the sandbox */
-  provider: 'opensandbox' | 'docker' | 'kubernetes' | 'local' | 'custom';
+  provider: 'opensandbox' | 'docker' | 'kubernetes' | 'local' | 'custom' | 'cloud-desktop';
   /** Unified computer kind used by the control plane (defaults to cloud_desktop) */
   computerKind?: AgentVMComputerKind;
   /** Desktop Cloud template id to use when provisioning */
   templateId?: string;
+  /** Cloud desktop control-plane URL (only used when provider is 'cloud-desktop') */
+  endpoint?: string;
   /** Sandbox image / environment (e.g. opensandbox/desktop:v1.0.0) */
   image?: string;
   /** Resource limits for the sandbox */
@@ -597,9 +599,10 @@ export const agentIdentityChannelsSchema = z.object({
 
 export const agentVMOperatorConfigSchema = z.object({
   enabled: z.boolean(),
-  provider: z.enum(['opensandbox', 'docker', 'kubernetes', 'local', 'custom']),
+  provider: z.enum(['opensandbox', 'docker', 'kubernetes', 'local', 'custom', 'cloud-desktop']),
   computerKind: z.enum(['local', 'byo_vps', 'managed', 'byoc', 'cloud_desktop']).optional(),
   templateId: z.string().optional(),
+  endpoint: z.string().optional(),
   image: z.string().optional(),
   resources: z.object({
     cpu: z.string().optional(),
@@ -696,6 +699,7 @@ export const agentSchema = z.object({
   secretRefs: z.array(agentSecretRefSchema).optional(),
   messagingConfig: agentMessagingConfigSchema.optional(),
   identityChannels: agentIdentityChannelsSchema.optional(),
+  vmOperator: agentVMOperatorConfigSchema.optional(),
 });
 
 // Schema for validating array of agents (API response)

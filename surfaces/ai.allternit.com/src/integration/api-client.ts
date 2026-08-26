@@ -139,7 +139,7 @@ export interface Agent {
   id: string;
   name: string;
   description: string;
-  type?: 'orchestrator' | 'sub-agent' | 'worker' | 'specialist' | 'reviewer';
+  type?: 'orchestrator' | 'sub-agent' | 'worker' | 'specialist' | 'reviewer' | 'assistant';
   parentAgentId?: string;
   model: string;
   provider: 'openai' | 'anthropic' | 'google' | 'local' | 'custom';

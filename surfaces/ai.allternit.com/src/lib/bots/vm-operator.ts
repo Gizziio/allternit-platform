@@ -127,10 +127,53 @@ function mapCreateResponseToSandbox(
  * Provisions through the unified `/api/v1/computers` control plane so cloud
  * desktops are owned by the bot and tracked in the org credit ledger.
  */
+async function provisionCloudDesktop(
+  botId: string,
+  config: AgentVMOperatorConfig,
+): Promise<VMOperatorResult<Sandbox>> {
+  const provision = await provisionBotDesktop(botId);
+  if (!provision.ok || !provision.data) {
+    return {
+      ok: false,
+      error: provision.error ?? 'Cloud desktop provisioning failed',
+    };
+  }
+
+  const { sandbox_id, provider, status } = provision.data;
+  let vncUrl: string | undefined;
+  const statusRes = await getBotDesktopStatus(botId, sandbox_id);
+  if (statusRes.ok && statusRes.data?.ws_url) {
+    vncUrl = statusRes.data.ws_url;
+  }
+
+  return {
+    ok: true,
+    data: {
+      id: sandbox_id,
+      agentId: botId,
+      status: status === 'running' ? 'running' : 'creating',
+      provider: provider || 'cloud-desktop',
+      vncUrl,
+      persistence: config.persistence ?? 'session',
+      createdAt: new Date().toISOString(),
+    },
+  };
+}
+
 export async function createSandbox(
   agentId: string,
   config: AgentVMOperatorConfig,
 ): Promise<VMOperatorResult<Sandbox>> {
+  if (config.provider !== 'cloud-desktop') {
+    const baseURL = getSandboxBaseURL();
+    if (!baseURL) {
+      logger.debug({ agentId }, 'Sandbox runtime not configured; skipping createSandbox');
+      return notConfigured<Sandbox>();
+    }
+    // Non-cloud-desktop providers are not yet supported through the unified API.
+    return notConfigured<Sandbox>();
+  }
+
   try {
     const response = await createComputer({
       kind: config.computerKind ?? 'cloud_desktop',
@@ -155,7 +198,18 @@ export async function createSandbox(
  */
 export async function getSandboxForAgent(
   agentId: string,
+  config?: AgentVMOperatorConfig,
 ): Promise<VMOperatorResult<Sandbox>> {
+  if (config && config.provider !== 'cloud-desktop') {
+    const baseURL = getSandboxBaseURL();
+    if (!baseURL) {
+      logger.debug({ agentId }, 'Sandbox runtime not configured; skipping getSandboxForAgent');
+      return notConfigured<Sandbox>();
+    }
+    // Non-cloud-desktop providers are not yet supported through the unified API.
+    return notConfigured<Sandbox>();
+  }
+
   try {
     const computers = await listComputers({ bot_id: agentId, kind: 'cloud_desktop' });
     const active = computers

@@ -10,8 +10,8 @@ export const PORTS = {
   API: 8013,
   /** Gizzi Code AI runtime terminal server */
   GIZZI: 4096,
-  /** Local development Next.js UI server */
-  DEV_UI: 3013,
+  /** Local development Vite UI server */
+  DEV_UI: 3014,
   /** Rails backend (when running locally) */
   RAILS: 3021,
   /** Chrome extension native-messaging bridge */

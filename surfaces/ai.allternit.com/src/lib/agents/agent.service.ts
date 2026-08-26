@@ -245,6 +245,7 @@ export async function createAgent(input: CreateAgentInput): Promise<Agent> {
     secret_refs: input.secretRefs,
     messaging_config: input.messagingConfig,
     identity_channels: input.identityChannels,
+    vm_operator: input.vmOperator,
   };
 
   // Persist bot metadata in config as a fallback for backends that don't have
@@ -265,7 +266,8 @@ export async function createAgent(input: CreateAgentInput): Promise<Agent> {
     input.connectorBindings ||
     input.secretRefs ||
     input.messagingConfig ||
-    input.identityChannels
+    input.identityChannels ||
+    input.vmOperator
   ) {
     apiInput.config = {
       ...(apiInput.config as Record<string, unknown> || {}),
@@ -273,6 +275,7 @@ export async function createAgent(input: CreateAgentInput): Promise<Agent> {
       ...(input.secretRefs ? { secretRefs: input.secretRefs } : {}),
       ...(input.messagingConfig ? { messagingConfig: input.messagingConfig } : {}),
       ...(input.identityChannels ? { identityChannels: input.identityChannels } : {}),
+      ...(input.vmOperator ? { vmOperator: input.vmOperator } : {}),
     };
   }
 
@@ -413,6 +416,11 @@ export function transformAgentFromApi(apiAgent: unknown): Agent {
       a.identityChannels as Agent['identityChannels'],
       config.identityChannels as Agent['identityChannels'],
     ),
+    vmOperator: pick<Agent['vmOperator']>(
+      a.vm_operator as Agent['vmOperator'],
+      a.vmOperator as Agent['vmOperator'],
+      config.vmOperator as Agent['vmOperator'],
+    ),
   };
 }
 
@@ -471,6 +479,7 @@ export async function updateAgent(
   if (updates.secretRefs !== undefined) apiUpdates.secret_refs = updates.secretRefs;
   if (updates.messagingConfig !== undefined) apiUpdates.messaging_config = updates.messagingConfig;
   if (updates.identityChannels !== undefined) apiUpdates.identity_channels = updates.identityChannels;
+  if (updates.vmOperator !== undefined) apiUpdates.vm_operator = updates.vmOperator;
 
   // Mirror bot metadata and autonomous primitives into config so backends
   // without dedicated columns still round-trip them.
@@ -480,7 +489,8 @@ export async function updateAgent(
     updates.connectorBindings !== undefined ||
     updates.secretRefs !== undefined ||
     updates.messagingConfig !== undefined ||
-    updates.identityChannels !== undefined
+    updates.identityChannels !== undefined ||
+    updates.vmOperator !== undefined
   ) {
     apiUpdates.config = {
       ...((apiUpdates.config as Record<string, unknown>) || {}),
@@ -490,6 +500,7 @@ export async function updateAgent(
       ...(updates.secretRefs !== undefined ? { secretRefs: updates.secretRefs } : {}),
       ...(updates.messagingConfig !== undefined ? { messagingConfig: updates.messagingConfig } : {}),
       ...(updates.identityChannels !== undefined ? { identityChannels: updates.identityChannels } : {}),
+      ...(updates.vmOperator !== undefined ? { vmOperator: updates.vmOperator } : {}),
     };
   }
 

@@ -70,12 +70,12 @@ export function AgentSessionLayout({
           borderColor: 'var(--surface-hover)',
         }}
       >
-        <div className="flex items-center gap-3">
-          <div className="flex flex-col">
+        <div className="flex items-center gap-3 min-w-0">
+          <div className="flex flex-col min-w-0">
             <h1 className="text-xs font-bold uppercase tracking-wider" style={{ color: modeColors.accent }}>
               {mode} Session
             </h1>
-            <span className="text-xs" style={{ color: TEXT.tertiary }}>{agentName || title}</span>
+            <span className="text-xs truncate" style={{ color: TEXT.tertiary }}>{agentName || title}</span>
           </div>
         </div>
 

@@ -27,6 +27,7 @@ export const DEFAULT_POLICIES: Record<ViewType, SpawnPolicy> = {
 
   // Mode-specific Agent Session views
   "chat-agent-session": { singleton: false, maxInstances: 10, allowNew: true, surface: "view", ownsTabs: false },
+  "chat-group-session": { singleton: false, maxInstances: 10, allowNew: true, surface: "view", ownsTabs: false },
   "cowork-agent-session": { singleton: false, maxInstances: 10, allowNew: true, surface: "view", ownsTabs: false },
   "code-agent-session": { singleton: false, maxInstances: 10, allowNew: true, surface: "view", ownsTabs: false },
   "design-agent-session": { singleton: false, maxInstances: 10, allowNew: true, surface: "view", ownsTabs: false },

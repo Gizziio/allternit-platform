@@ -555,6 +555,16 @@ impl AppConfig {
         parsed.unwrap_or(26400..=26419)
     }
 
+    /// Cloud desktop control-plane URL. Used by the `cloud-desktop` vmOperator
+    /// provider to provision a remote virtual computer without changing the
+    /// agent's selected brain.
+    pub fn cloud_desktop_url(&self) -> String {
+        std::env::var("ALLTERNIT_CLOUD_DESKTOP_URL")
+            .ok()
+            .filter(|s| !s.is_empty())
+            .unwrap_or_else(|| "http://localhost:57110".to_string())
+    }
+
     /// Ollama base URL.
     pub fn ollama_url(&self) -> String {
         std::env::var("OLLAMA_URL")
