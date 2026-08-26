@@ -76,6 +76,9 @@ export type {
   ComputerRootDiscovery,
   ComputerStepOutcome,
   ComputerTransactionOutcome,
+  HistoryQueryRequest,
+  HistoryQueryResponse,
+  HistoryStatusResponse,
 } from './canonical';
 
 export type {

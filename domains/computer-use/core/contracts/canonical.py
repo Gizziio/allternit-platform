@@ -71,6 +71,7 @@ class CapabilityManifest:
     mobile: bool = False
     max_concurrency: int = 1
     limitations: tuple[str, ...] = ()
+    tools: tuple[str, ...] = ()
 
 
 @dataclass(frozen=True)

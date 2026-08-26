@@ -1,6 +1,32 @@
 # Steering checkpoint
 
-## Goal
+## Goal (current)
+
+Integrate CUA Driver's encrypted Computer History (`history_status`, `history_query`) into the Allternit canonical computer-use stack: Python transport/provider, canonical HTTP routes, TypeScript SDKs, MCP server, plugin tool definitions, and system-prompt consultation policy.
+
+## Just did
+
+- Added `history_status()`/`history_query()` helpers to `CuaDriverTransport` with input validation (limit 1-200, sequence bounds).
+- Extended `CapabilityManifest` with `tools` and taught `CuaDriverCanonicalProvider` to probe and advertise `history_status`/`history_query` only when CUA Driver admits the preview.
+- Added canonical HTTP routes: `POST /v1/computer-use/canonical/history/status` and `POST /v1/computer-use/canonical/history/query`.
+- Updated TypeScript SDKs (`sdk/computer-use` and `sdk/allternit-sdk/js`) with `canonicalHistoryStatus`/`canonicalHistoryQuery` and history types.
+- Added `history_status`/`history_query` MCP tools in `acu_mcp/server.py`.
+- Added the two tools to the plugin tool definitions and a Computer History consultation policy to the system prompt.
+- Added Python unit tests (`tests/test_cua_history.py`, 14 passed) and TypeScript SDK client tests (37 passed).
+
+## Next
+
+- Stage and commit the scoped changes for steering approval.
+- Optional: wire the consultation policy into the planning loop / agent runtime so history consultation is deterministic rather than prompt-only.
+
+## Open questions
+
+- Should history capability detection be refreshed on every `capabilities()` call instead of cached at provider init? Currently cached for simplicity.
+- Do we need an explicit Allternit approval gate for the new canonical history routes beyond CUA's own capability manifest? Currently deferred to CUA's built-in authorization.
+
+---
+
+## Goal (previous)
 
 Finish the Allternit Desktop auth/onboarding handoff: review fixes 1–13, implement the two remaining items (#14 Sidecar-backed Local Brain model routes + ModesStep rework, #15 `gizzi init` wiring), then build/test/package and commit scoped changes.
 

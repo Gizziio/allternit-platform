@@ -389,6 +389,18 @@ class NativePermissionPlanRequest(BaseModel):
     permission: str
 
 
+class HistoryStatusRequest(BaseModel):
+    provider_id: str = "desktop.cua-driver"
+
+
+class HistoryQueryRequest(BaseModel):
+    provider_id: str = "desktop.cua-driver"
+    limit: Optional[int] = Field(default=None, ge=1, le=200)
+    session_id: Optional[str] = Field(default=None, min_length=1, max_length=128)
+    since_sequence: Optional[int] = Field(default=None, ge=1)
+    until_sequence: Optional[int] = Field(default=None, ge=1)
+
+
 def _http_error(error: Exception) -> HTTPException:
     if isinstance(error, ProviderNotFoundError):
         return HTTPException(status_code=404, detail={"code": "provider_not_found", "message": str(error)})
@@ -1055,6 +1067,63 @@ async def clone_environment_snapshot(snapshot_id: str, body: SnapshotCloneReques
 @router.post("/environments/cleanup")
 async def cleanup_expired_environments() -> Dict[str, int]:
     return _environments.cleanup_expired()
+
+
+def _cua_history_provider(provider_id: str) -> CuaDriverCanonicalProvider:
+    """Return a CUA driver provider if it advertises history tools."""
+    try:
+        provider = service.provider(provider_id)
+    except ProviderNotFoundError as error:
+        raise _http_error(error) from error
+    manifest = next((m for m in service.capabilities() if m.provider_id == provider_id), None)
+    if manifest is None or "history_status" not in manifest.tools or "history_query" not in manifest.tools:
+        raise HTTPException(
+            status_code=404,
+            detail={
+                "code": "history_not_available",
+                "message": "CUA Driver Computer History is not available or not admitted for this provider",
+                "provider_id": provider_id,
+            },
+        )
+    if not isinstance(provider, CuaDriverCanonicalProvider):
+        raise HTTPException(
+            status_code=400,
+            detail={
+                "code": "provider_not_cua_driver",
+                "message": "History is only supported by the CUA driver provider",
+                "provider_id": provider_id,
+            },
+        )
+    return provider
+
+
+@router.post("/history/status")
+async def history_status(body: HistoryStatusRequest) -> Dict[str, Any]:
+    await ensure_initialized()
+    try:
+        provider = _cua_history_provider(body.provider_id)
+        return await provider.history_status()
+    except HTTPException:
+        raise
+    except Exception as error:
+        raise _http_error(error) from error
+
+
+@router.post("/history/query")
+async def history_query(body: HistoryQueryRequest) -> Dict[str, Any]:
+    await ensure_initialized()
+    try:
+        provider = _cua_history_provider(body.provider_id)
+        return await provider.history_query(
+            limit=body.limit,
+            session_id=body.session_id,
+            since_sequence=body.since_sequence,
+            until_sequence=body.until_sequence,
+        )
+    except HTTPException:
+        raise
+    except Exception as error:
+        raise _http_error(error) from error
 
 
 async def shutdown_canonical_service() -> None:
