@@ -42,9 +42,7 @@ ensure_src() {
 install_binary() {
   log_info "Installing allternit-api binary..."
   ssh_cmd "systemctl stop allternit-api || true"
-  ssh_cmd "mkdir -p ${API_DIR}/bin/backups ${DATA_DIR} ${ETC_DIR} ${LOG_DIR}"
-  # Keep a timestamped binary backup so rollback.sh can restore it.
-  ssh_cmd "cp ${API_DIR}/bin/allternit-api ${API_DIR}/bin/backups/allternit-api.$(date +%Y%m%d-%H%M%S) || true"
+  ssh_cmd "mkdir -p ${API_DIR}/bin ${DATA_DIR} ${ETC_DIR} ${LOG_DIR}"
   if [ -f "${SRC_DIR}/target/release/allternit-api" ]; then
     scp_cmd "${SRC_DIR}/target/release/allternit-api" "${API_DIR}/bin/allternit-api"
   else

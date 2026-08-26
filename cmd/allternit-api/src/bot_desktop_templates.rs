@@ -300,7 +300,6 @@ pub async fn resolve_provision_spec(
         .filter(|s| !s.is_empty())
         .unwrap_or_else(|| match os.as_str() {
             "windows" => "allternit-desktop-windows".to_string(),
-            "macos" => "tart-ubuntu-test".to_string(),
             _ => "allternit-desktop".to_string(),
         });
     let mut cpu_millis = 2000;

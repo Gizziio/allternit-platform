@@ -1,4 +1,0 @@
--- Migration 023: add 'ios' to runtime type enums
--- This migration extends the runtime_type CHECK constraints on
--- runtime_pairings and runtime_devices to include 'ios'.
--- It was previously applied to the production database.

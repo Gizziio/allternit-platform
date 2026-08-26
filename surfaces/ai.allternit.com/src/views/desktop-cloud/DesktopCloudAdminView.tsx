@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { Desktop, Plus, Play, Stop, Trash, Spinner, ArrowsClockwise, Warning, Gear } from "@phosphor-icons/react";
+import { Desktop, Plus, Play, Stop, Trash, Spinner, ArrowsClockwise, Warning } from "@phosphor-icons/react";
 import { useAgentStore } from "@/lib/agents/agent.store";
 import type { Agent } from "@/lib/agents/agent.types";
 import { Button } from "@/components/ui/button";
@@ -25,7 +25,6 @@ import {
   type DesktopSandboxSummary,
   type DesktopCloudApiError,
 } from "@/lib/desktop-cloud-api";
-import { SandboxControlPanel } from "./SandboxControlPanel";
 
 interface Loadable<T> {
   data: T;
@@ -86,7 +85,6 @@ export function DesktopCloudAdminView(): React.ReactNode {
 
   // Actions
   const [actingBotId, setActingBotId] = useState<string | null>(null);
-  const [controlledSandboxId, setControlledSandboxId] = useState<string | null>(null);
 
   const bots = useMemo(() => {
     // The agent store merges API agents with a local fallback catalog, which
@@ -360,75 +358,49 @@ export function DesktopCloudAdminView(): React.ReactNode {
                 </thead>
                 <tbody className="divide-y divide-[var(--border-subtle)]">
                   {sandboxes.data.map((sb) => (
-                    <React.Fragment key={sb.sandbox_id}>
-                      <tr className="group">
-                        <td className="py-3 font-medium">{bots.find((b) => b.id === sb.bot_id)?.name ?? sb.bot_id}</td>
-                        <td className="py-3 font-mono text-xs text-[var(--ui-text-muted)]">{sb.sandbox_id}</td>
-                        <td className="py-3 capitalize">{sb.provider}</td>
-                        <td className="py-3 capitalize">{sb.os}</td>
-                        <td className="py-3">
-                          <StatusBadge status={mapStatus(sb.status)} text={sb.status} />
-                        </td>
-                        <td className="py-3 text-right">
-                          <div className="flex items-center justify-end gap-2">
-                            {sb.status.toLowerCase() === "running" && (
-                              <Button
-                                variant="outline"
-                                size="sm"
-                                onClick={() =>
-                                  setControlledSandboxId(controlledSandboxId === sb.sandbox_id ? null : sb.sandbox_id)
-                                }
-                              >
-                                <Gear size={14} />
-                                Control
-                              </Button>
-                            )}
-                            {sb.status.toLowerCase() !== "running" ? (
-                              <Button
-                                variant="outline"
-                                size="sm"
-                                onClick={() => handleStart(sb.bot_id)}
-                                disabled={actingBotId === sb.bot_id}
-                              >
-                                {actingBotId === sb.bot_id ? <Spinner size={14} className="animate-spin" /> : <Play size={14} />}
-                                Start
-                              </Button>
-                            ) : (
-                              <Button
-                                variant="outline"
-                                size="sm"
-                                onClick={() => handleStop(sb.bot_id)}
-                                disabled={actingBotId === sb.bot_id}
-                              >
-                                {actingBotId === sb.bot_id ? <Spinner size={14} className="animate-spin" /> : <Stop size={14} />}
-                                Stop
-                              </Button>
-                            )}
+                    <tr key={sb.sandbox_id} className="group">
+                      <td className="py-3 font-medium">{bots.find((b) => b.id === sb.bot_id)?.name ?? sb.bot_id}</td>
+                      <td className="py-3 font-mono text-xs text-[var(--ui-text-muted)]">{sb.sandbox_id}</td>
+                      <td className="py-3 capitalize">{sb.provider}</td>
+                      <td className="py-3 capitalize">{sb.os}</td>
+                      <td className="py-3">
+                        <StatusBadge status={mapStatus(sb.status)} text={sb.status} />
+                      </td>
+                      <td className="py-3 text-right">
+                        <div className="flex items-center justify-end gap-2">
+                          {sb.status.toLowerCase() !== "running" ? (
                             <Button
-                              variant="destructive"
+                              variant="outline"
                               size="sm"
-                              onClick={() => handleDeprovision(sb.bot_id)}
+                              onClick={() => handleStart(sb.bot_id)}
                               disabled={actingBotId === sb.bot_id}
                             >
-                              {actingBotId === sb.bot_id ? <Spinner size={14} className="animate-spin" /> : <Trash size={14} />}
-                              Deprovision
+                              {actingBotId === sb.bot_id ? <Spinner size={14} className="animate-spin" /> : <Play size={14} />}
+                              Start
                             </Button>
-                          </div>
-                        </td>
-                      </tr>
-                      {controlledSandboxId === sb.sandbox_id && (
-                        <tr>
-                          <td colSpan={6} className="px-0 py-0">
-                            <SandboxControlPanel
-                              botId={sb.bot_id}
-                              sandboxId={sb.sandbox_id}
-                              os={sb.os}
-                              onClose={() => setControlledSandboxId(null)}
-                            />
-                          </td>
-                        </tr>
-                      )}
-                    </React.Fragment>
+                          ) : (
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => handleStop(sb.bot_id)}
+                              disabled={actingBotId === sb.bot_id}
+                            >
+                              {actingBotId === sb.bot_id ? <Spinner size={14} className="animate-spin" /> : <Stop size={14} />}
+                              Stop
+                            </Button>
+                          )}
+                          <Button
+                            variant="destructive"
+                            size="sm"
+                            onClick={() => handleDeprovision(sb.bot_id)}
+                            disabled={actingBotId === sb.bot_id}
+                          >
+                            {actingBotId === sb.bot_id ? <Spinner size={14} className="animate-spin" /> : <Trash size={14} />}
+                            Deprovision
+                          </Button>
+                        </div>
+                      </td>
+                    </tr>
                   ))}
                 </tbody>
               </table>

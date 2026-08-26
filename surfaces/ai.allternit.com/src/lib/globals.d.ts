@@ -138,19 +138,12 @@ declare global {
       shell?: {
         openExternal: (url: string) => Promise<void>;
         openDesign: () => Promise<void>;
-        openRemoteControl: () => Promise<void>;
         openSession: (options: { sessionId: string; workspaceId?: string; title?: string }) => Promise<void>;
         getOfficeHostStatus: () => Promise<Record<'word' | 'excel' | 'powerpoint', {
           installed: boolean;
           running: boolean;
           bundlePath: string | null;
         }>>;
-        /** Hermes floating HUD controls (Electron only). */
-        moveHud?: (delta: { dx: number; dy: number }) => Promise<void>;
-        resizeHud?: (size: { width?: number; height: number }) => Promise<void>;
-        closeHud?: () => Promise<void>;
-        toggleHud?: () => Promise<void>;
-        showHud?: () => Promise<void>;
       };
       officeAddins?: {
         getStatus: () => Promise<Record<'word' | 'excel' | 'powerpoint', {

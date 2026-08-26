@@ -81,7 +81,6 @@ import { PeerRoutes } from "@/runtime/server/routes/peers"
 import { OrchestratorRoutes } from "@/runtime/server/routes/orchestrator"
 import { RuntimeHeartbeat } from "@/runtime/runtime-heartbeat"
 import { RuntimeRoutes } from "@/runtime/server/routes/runtime"
-import { RemoteControlRoutes } from "@/runtime/server/routes/remote_control"
 import { AgentCompatRoutes } from "@/runtime/server/routes/agent-compat"
 import { createHash, randomUUID } from "node:crypto"
 
@@ -457,7 +456,6 @@ export namespace Server {
         // /api/agent-chat) — lets any gizzi instance serve as the app's
         // agent brain without allternit-api in the middle.
         .route("/api", AgentCompatRoutes())
-        .route("/v1beta/remote-control", RemoteControlRoutes())
         // /v1/ — versioned API surface (same handlers, new path prefix)
         .route(
           "/v1",
@@ -503,7 +501,6 @@ export namespace Server {
             .route("/tui", TuiRoutes())
             .route("/acp", AcpRoutes())
             .route("/runtime", RuntimeRoutes())
-            .route("/remote-control", RemoteControlRoutes())
             .route("/workspace", WorkspaceRoutes()) as unknown as Hono,
         )
         .all("/*", async (c) => {

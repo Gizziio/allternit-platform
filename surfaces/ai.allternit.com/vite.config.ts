@@ -151,12 +151,6 @@ export default defineConfig({
         /.*domains\/agent\/allternit-agent-workspace\/pkg.*/,
         'better-sqlite3',
         /^better-sqlite3(\/.+)?$/,
-        // The allternit-office-suite workspace package and its subpaths depend on
-        // office-app assets that are not yet bundled correctly into the platform
-        // surface. Keep them external so the platform shell, auth, and remote
-        // control builds deploy while the office integration is finished.
-        '@allternit/allternit-office-suite',
-        /^@allternit\/allternit-office-suite\/.+$/,
       ],
       output: {
         manualChunks(id) {

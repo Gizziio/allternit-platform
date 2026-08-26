@@ -51,13 +51,6 @@ pub struct MouseInput {
     pub button: Option<String>,
 }
 
-pub(crate) fn desktop_display(provider: &str) -> &'static str {
-    match provider {
-        "tart" => ":99",
-        _ => ":0",
-    }
-}
-
 pub(crate) async fn send_desktop_mouse(
     State(state): State<Arc<AppState>>,
     Extension(user): Extension<AuthUser>,
@@ -111,7 +104,7 @@ pub(crate) async fn send_desktop_mouse(
             }
         }
     } else {
-        match build_mouse_command(&input, desktop_display(&record.provider)) {
+        match build_mouse_command(&input) {
             Ok(cmd) => cmd,
             Err(err) => {
                 return (StatusCode::BAD_REQUEST, Json(json!({"error": err}))).into_response();
@@ -119,10 +112,10 @@ pub(crate) async fn send_desktop_mouse(
         }
     };
 
-    run_guest_command(&*driver, &record.sandbox_id, &record.os, command, "mouse", &bot_id).await
+    run_guest_command(&*driver, &record.sandbox_id, command, "mouse", &bot_id).await
 }
 
-fn build_mouse_command(input: &MouseInput, display: &str) -> Result<Vec<String>, String> {
+fn build_mouse_command(input: &MouseInput) -> Result<Vec<String>, String> {
     let action = input.action.to_lowercase();
     let button_num = match input.button.as_deref().unwrap_or("left").to_lowercase().as_str() {
         "left" => "1",
@@ -178,7 +171,7 @@ fn build_mouse_command(input: &MouseInput, display: &str) -> Result<Vec<String>,
         other => return Err(format!("unsupported mouse action: {}", other)),
     };
 
-    Ok(vec!["env".to_string(), format!("DISPLAY={}", display), "xdotool".to_string()]
+    Ok(vec!["xdotool".to_string()]
         .into_iter()
         .chain(args)
         .collect())
@@ -263,7 +256,7 @@ pub(crate) async fn send_desktop_keyboard(
             }
         }
     } else {
-        match build_keyboard_command(&input, desktop_display(&record.provider)) {
+        match build_keyboard_command(&input) {
             Ok(cmd) => cmd,
             Err(err) => {
                 return (StatusCode::BAD_REQUEST, Json(json!({"error": err}))).into_response();
@@ -271,10 +264,10 @@ pub(crate) async fn send_desktop_keyboard(
         }
     };
 
-    run_guest_command(&*driver, &record.sandbox_id, &record.os, command, "keyboard", &bot_id).await
+    run_guest_command(&*driver, &record.sandbox_id, command, "keyboard", &bot_id).await
 }
 
-fn build_keyboard_command(input: &KeyboardInput, display: &str) -> Result<Vec<String>, String> {
+fn build_keyboard_command(input: &KeyboardInput) -> Result<Vec<String>, String> {
     let action = input.action.to_lowercase();
     match action.as_str() {
         "type" => {
@@ -283,8 +276,6 @@ fn build_keyboard_command(input: &KeyboardInput, display: &str) -> Result<Vec<St
                 .as_deref()
                 .ok_or_else(|| "text is required for action=type".to_string())?;
             Ok(vec![
-                "env".to_string(),
-                format!("DISPLAY={}", display),
                 "xdotool".to_string(),
                 "type".to_string(),
                 "--delay".to_string(),
@@ -297,13 +288,7 @@ fn build_keyboard_command(input: &KeyboardInput, display: &str) -> Result<Vec<St
                 .key
                 .as_deref()
                 .ok_or_else(|| "key is required for action=key".to_string())?;
-            Ok(vec![
-                "env".to_string(),
-                format!("DISPLAY={}", display),
-                "xdotool".to_string(),
-                "key".to_string(),
-                key.to_string(),
-            ])
+            Ok(vec!["xdotool".to_string(), "key".to_string(), key.to_string()])
         }
         other => Err(format!("unsupported keyboard action: {}", other)),
     }
@@ -394,17 +379,10 @@ pub(crate) async fn run_desktop_shell(
         bot_desktop_windows::shell_command(&input.command.join(" "))
     } else {
         let mut env_vars = HashMap::new();
-        env_vars.insert("DISPLAY".to_string(), desktop_display(&record.provider).to_string());
+        env_vars.insert("DISPLAY".to_string(), ":0".to_string());
         env_vars.extend(input.env);
-        // Inline DISPLAY (and any other env vars) into the command so the
-        // execution works even with drivers that do not transmit env_vars.
-        let mut command = vec!["env".to_string()];
-        for (k, v) in &env_vars {
-            command.push(format!("{}={}", k, v));
-        }
-        command.extend(input.command);
         CommandSpec {
-            command,
+            command: input.command,
             env_vars,
             working_dir: None,
             stdin_data: None,
@@ -580,12 +558,11 @@ pub(crate) async fn upload_desktop_file(
 async fn run_guest_command(
     driver: &dyn allternit_driver_interface::ExecutionDriver,
     sandbox_id: &str,
-    os: &str,
     command: Vec<String>,
     command_kind: &str,
     bot_id: &str,
 ) -> axum::response::Response {
-    let handle = build_handle(sandbox_id, Some(os));
+    let handle = build_handle(sandbox_id, None);
     let mut env_vars = std::collections::HashMap::new();
     env_vars.insert("DISPLAY".to_string(), ":0".to_string());
     let cmd_spec = CommandSpec {
@@ -822,7 +799,6 @@ mod tests {
                 message: Some("mock".to_string()),
                 active_executions: 0,
                 available_capacity: self.capabilities().max_resources,
-                capabilities: vec![],
             })
         }
     }

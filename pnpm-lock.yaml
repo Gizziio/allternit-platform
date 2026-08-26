@@ -2468,9 +2468,6 @@ importers:
       '@ai-sdk/xai':
         specifier: ^3.0.48
         version: 3.0.48(zod@3.25.76)
-      '@allternit/allternit-office-suite':
-        specifier: workspace:*
-        version: link:../../packages/@allternit/allternit-office-suite
       '@allternit/mcp-apps-adapter':
         specifier: workspace:*
         version: link:../../mcp/servers
@@ -3145,8 +3142,6 @@ importers:
         specifier: ^8.0.2
         version: 8.0.5
 
-  surfaces/allternit-desktop/resources/office-engine: {}
-
   surfaces/allternit-docs:
     dependencies:
       '@allternit/office-docs-app':
@@ -3225,7 +3220,7 @@ importers:
         version: 1.2.8(@types/react-dom@18.3.7(@types/react@18.3.28))(@types/react@18.3.28)(react-dom@19.2.4(react@19.2.4))(react@19.2.4)
       '@tailwindcss/vite':
         specifier: ^4.0.0
-        version: 4.2.2(vite@8.0.12(@types/node@25.6.2)(esbuild@0.27.3)(jiti@2.6.1)(sass@1.51.0)(sugarss@5.0.1(postcss@8.5.14))(terser@5.47.1)(tsx@4.21.0)(yaml@2.8.4))
+        version: 4.2.2(vite@8.0.12(@types/node@25.6.2)(esbuild@0.28.0)(jiti@2.6.1)(sass@1.51.0)(sugarss@5.0.1(postcss@8.5.14))(terser@5.47.1)(tsx@4.21.0)(yaml@2.8.4))
       '@types/chrome':
         specifier: ^0.1.37
         version: 0.1.39
@@ -3237,7 +3232,7 @@ importers:
         version: 18.3.7(@types/react@18.3.28)
       '@wxt-dev/module-react':
         specifier: ^1.2.2
-        version: 1.2.2(vite@8.0.12(@types/node@25.6.2)(esbuild@0.27.3)(jiti@2.6.1)(sass@1.51.0)(sugarss@5.0.1(postcss@8.5.14))(terser@5.47.1)(tsx@4.21.0)(yaml@2.8.4))(wxt@0.20.20(@types/node@25.6.2)(canvas@3.2.1)(eslint@9.39.4(jiti@2.6.1))(jiti@2.6.1)(rollup@4.55.1)(sass@1.51.0)(sugarss@5.0.1(postcss@8.5.14))(terser@5.47.1)(tsx@4.21.0)(yaml@2.8.4))
+        version: 1.2.2(vite@8.0.12(@types/node@25.6.2)(esbuild@0.28.0)(jiti@2.6.1)(sass@1.51.0)(sugarss@5.0.1(postcss@8.5.14))(terser@5.47.1)(tsx@4.21.0)(yaml@2.8.4))(wxt@0.20.20(@types/node@25.6.2)(canvas@3.2.1)(eslint@9.39.4(jiti@2.6.1))(jiti@2.6.1)(rollup@4.55.1)(sass@1.51.0)(sugarss@5.0.1(postcss@8.5.14))(terser@5.47.1)(tsx@4.21.0)(yaml@2.8.4))
       ai-motion:
         specifier: ^0.4.8
         version: 0.4.8
@@ -3356,7 +3351,7 @@ importers:
         version: 18.3.7(@types/react@18.3.28)
       '@wxt-dev/module-react':
         specifier: ^1.2.2
-        version: 1.2.2(vite@8.0.12(@types/node@25.6.2)(esbuild@0.28.0)(jiti@2.6.1)(sass@1.51.0)(sugarss@5.0.1(postcss@8.5.14))(terser@5.47.1)(tsx@4.21.0)(yaml@2.8.4))(wxt@0.20.20(@types/node@25.6.2)(canvas@3.2.1)(eslint@9.39.4(jiti@2.6.1))(jiti@2.6.1)(rollup@4.55.1)(sass@1.51.0)(sugarss@5.0.1(postcss@8.5.14))(terser@5.47.1)(tsx@4.21.0)(yaml@2.8.4))
+        version: 1.2.2(vite@8.0.12(@types/node@25.6.2)(esbuild@0.27.3)(jiti@2.6.1)(sass@1.51.0)(sugarss@5.0.1(postcss@8.5.14))(terser@5.47.1)(tsx@4.21.0)(yaml@2.8.4))(wxt@0.20.20(@types/node@25.6.2)(canvas@3.2.1)(eslint@9.39.4(jiti@2.6.1))(jiti@2.6.1)(rollup@4.55.1)(sass@1.51.0)(sugarss@5.0.1(postcss@8.5.14))(terser@5.47.1)(tsx@4.21.0)(yaml@2.8.4))
       class-variance-authority:
         specifier: ^0.7.1
         version: 0.7.1
@@ -35577,12 +35572,12 @@ snapshots:
       tailwindcss: 4.2.2
       vite: 6.4.1(@types/node@25.6.2)(jiti@2.6.1)(lightningcss@1.32.0)(sass@1.51.0)(sugarss@5.0.1(postcss@8.5.14))(terser@5.47.1)(tsx@4.21.0)(yaml@2.8.4)
 
-  '@tailwindcss/vite@4.2.2(vite@8.0.12(@types/node@25.6.2)(esbuild@0.27.3)(jiti@2.6.1)(sass@1.51.0)(sugarss@5.0.1(postcss@8.5.14))(terser@5.47.1)(tsx@4.21.0)(yaml@2.8.4))':
+  '@tailwindcss/vite@4.2.2(vite@8.0.12(@types/node@25.6.2)(esbuild@0.28.0)(jiti@2.6.1)(sass@1.51.0)(sugarss@5.0.1(postcss@8.5.14))(terser@5.47.1)(tsx@4.21.0)(yaml@2.8.4))':
     dependencies:
       '@tailwindcss/node': 4.2.2
       '@tailwindcss/oxide': 4.2.2
       tailwindcss: 4.2.2
-      vite: 8.0.12(@types/node@25.6.2)(esbuild@0.27.3)(jiti@2.6.1)(sass@1.51.0)(sugarss@5.0.1(postcss@8.5.14))(terser@5.47.1)(tsx@4.21.0)(yaml@2.8.4)
+      vite: 8.0.12(@types/node@25.6.2)(esbuild@0.28.0)(jiti@2.6.1)(sass@1.51.0)(sugarss@5.0.1(postcss@8.5.14))(terser@5.47.1)(tsx@4.21.0)(yaml@2.8.4)
 
   '@tanstack/query-core@5.99.2': {}
 

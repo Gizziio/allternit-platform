@@ -19,8 +19,8 @@ import { Log } from "@/shared/util/log"
 export namespace ClerkAuth {
   const log = Log.create({ service: "clerk-auth" })
 
-  export const DEFAULT_JWKS_URL = "https://clerk.allternit.com/.well-known/jwks.json"
-  export const DEFAULT_ISSUER = "https://clerk.allternit.com"
+  export const DEFAULT_JWKS_URL = "https://clerk.platform.allternit.com/.well-known/jwks.json"
+  export const DEFAULT_ISSUER = "https://clerk.platform.allternit.com"
 
   export function jwksUrl(): string {
     return Flag.GIZZI_CLERK_JWKS_URL ?? DEFAULT_JWKS_URL

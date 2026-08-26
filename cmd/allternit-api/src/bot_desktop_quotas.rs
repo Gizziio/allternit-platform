@@ -6,7 +6,7 @@ use chrono::{DateTime, Datelike, Utc};
 use rusqlite::OptionalExtension;
 use serde::Serialize;
 use std::sync::Arc;
-use tracing::{info, warn};
+use tracing::warn;
 
 use crate::auth::AuthUser;
 use crate::AppState;
@@ -235,8 +235,7 @@ pub async fn record_start(
     }
 }
 
-/// Record that a desktop ended and compute minutes used. When Stripe is
-/// configured, emit a usage record for the consumed minutes.
+/// Record that a desktop ended and compute minutes used.
 pub async fn record_end(state: &Arc<AppState>, bot_id: &str) {
     let db = state.db.clone();
     let bot_id = bot_id.to_string();
@@ -245,21 +244,19 @@ pub async fn record_end(state: &Arc<AppState>, bot_id: &str) {
     let result = tokio::task::spawn_blocking(move || {
         let conn = db.connect()?;
         // Find the active usage row for this bot.
-        let row: Option<(i64, String, String, String)> = conn
+        let row: Option<(i64, String)> = conn
             .query_row(
-                "SELECT id, started_at, provider, os FROM desktop_usage WHERE bot_id = ?1 AND ended_at IS NULL ORDER BY id DESC LIMIT 1",
+                "SELECT id, started_at FROM desktop_usage WHERE bot_id = ?1 AND ended_at IS NULL ORDER BY id DESC LIMIT 1",
                 rusqlite::params![bot_id],
                 |row| {
                     let id: i64 = row.get(0)?;
                     let started: String = row.get(1)?;
-                    let provider: String = row.get(2)?;
-                    let os: String = row.get(3)?;
-                    Ok((id, started, provider, os))
+                    Ok((id, started))
                 },
             )
             .optional()?;
 
-        if let Some((id, started, provider, os)) = row {
+        if let Some((id, started)) = row {
             let started_at = DateTime::parse_from_rfc3339(&started)
                 .map(|dt| dt.with_timezone(&Utc))
                 .unwrap_or_else(|_| ended_at);
@@ -268,61 +265,15 @@ pub async fn record_end(state: &Arc<AppState>, bot_id: &str) {
                 "UPDATE desktop_usage SET ended_at = ?1, minutes = ?2 WHERE id = ?3",
                 rusqlite::params![ended_at.to_rfc3339(), minutes, id],
             )?;
-            Ok::<_, rusqlite::Error>(Some((minutes, provider, os)))
-        } else {
-            Ok(None)
         }
+        Ok::<_, rusqlite::Error>(())
     })
     .await;
 
     match result {
         Err(e) => warn!(error = %e, "task panicked recording desktop usage end"),
         Ok(Err(e)) => warn!(error = %e, "failed to record desktop usage end"),
-        Ok(Ok(Some((minutes, provider, os)))) => {
-            emit_stripe_usage_record(minutes, &provider, &os).await;
-        }
-        Ok(Ok(None)) => {}
-    }
-}
-
-async fn emit_stripe_usage_record(minutes: i64, provider: &str, os: &str) {
-    let secret = match std::env::var("STRIPE_SECRET_KEY").ok().filter(|s| !s.is_empty()) {
-        Some(s) => s,
-        None => return,
-    };
-    let item = match std::env::var("STRIPE_DESKTOP_USAGE_SUBSCRIPTION_ITEM")
-        .ok()
-        .filter(|s| !s.is_empty())
-    {
-        Some(s) => s,
-        None => return,
-    };
-
-    let client = reqwest::Client::new();
-    let params = [
-        ("quantity", minutes.to_string()),
-        ("timestamp", Utc::now().timestamp().to_string()),
-        ("action", "increment".to_string()),
-    ];
-    match client
-        .post(&format!(
-            "https://api.stripe.com/v1/subscription_items/{}/usage_records",
-            item
-        ))
-        .basic_auth(&secret, Some(""))
-        .form(&params)
-        .send()
-        .await
-    {
-        Ok(resp) if resp.status().is_success() => {
-            info!(minutes, provider, os, "Stripe desktop usage record created");
-        }
-        Ok(resp) => {
-            let status = resp.status();
-            let body = resp.text().await.unwrap_or_default();
-            warn!(status = %status, body = %body, "Stripe desktop usage record failed");
-        }
-        Err(e) => warn!(error = %e, "Stripe desktop usage record request failed"),
+        Ok(Ok(())) => {}
     }
 }
 

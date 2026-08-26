@@ -520,7 +520,6 @@ impl ExecutionDriver for AppleVFDriver {
             )),
             active_executions: active_vms,
             available_capacity: self.capabilities().max_resources,
-            capabilities: vec!["macos".to_string()],
         })
     }
 }

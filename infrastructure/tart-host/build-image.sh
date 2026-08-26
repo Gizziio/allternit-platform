@@ -132,13 +132,32 @@ SCP="sshpass -p admin scp -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev
 log "waiting for background apt processes to finish"
 ${SSH} sudo systemctl stop unattended-upgrades.service 2>/dev/null || true
 ${SSH} sudo pkill -9 unattended-upgr 2>/dev/null || true
-for i in $(seq 1 120); do
-    if ${SSH} 'test -f /var/lib/dpkg/lock-frontend || test -f /var/lib/apt/lists/lock || pgrep -x unattended-upgr >/dev/null 2>&1' >/dev/null 2>&1; then
-        sleep 5
-    else
-        break
-    fi
-done
+${SSH} sudo pkill -9 unattended-upgrade 2>/dev/null || true
+
+apt_busy() {
+    ${SSH} '
+        test -f /var/lib/dpkg/lock-frontend || \
+        test -f /var/lib/apt/lists/lock || \
+        test -f /var/cache/apt/archives/lock || \
+        test -f /var/lib/dpkg/lock || \
+        pgrep -x unattended-upgr >/dev/null 2>&1 || \
+        pgrep -x unattended-upgrade >/dev/null 2>&1
+    ' >/dev/null 2>&1
+}
+
+ waited=0
+ for i in $(seq 1 120); do
+     if ! apt_busy; then
+         waited=1
+         break
+     fi
+     log "apt lock still held, waiting (attempt ${i}/120)"
+     sleep 5
+ done
+ if [ "${waited}" -ne 1 ]; then
+     echo "ERROR: apt lock still held after 120 attempts" >&2
+ fi
+
 ${SSH} sudo rm -f /var/lib/dpkg/lock-frontend /var/lib/apt/lists/lock /var/cache/apt/archives/lock /var/lib/dpkg/lock 2>/dev/null || true
 ${SSH} sudo dpkg --configure -a 2>/dev/null || true
 

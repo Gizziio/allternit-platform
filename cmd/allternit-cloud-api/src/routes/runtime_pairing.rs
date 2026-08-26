@@ -41,7 +41,6 @@ const DEFAULT_CAPABILITIES: &[&str] = &[
     "runtime:execute",
     "runtime:files",
     "runtime:terminal",
-    "runtime:remote_control",
     "providers:connect",
     "providers:use",
 ];
@@ -364,9 +363,17 @@ async fn approve_pairing(
         ));
     }
 
-    // Persist the Clerk-authenticated user before quota checks so that the
-    // user_runtime_quotas foreign key (REFERENCES users(id)) is satisfied when
-    // ensure_quota lazily creates the quota row.
+    // Ensure the user has a quota row and enforce guardrails before approval.
+    let quota = state.quota_service.ensure_quota(&user.id).await?;
+    state
+        .quota_service
+        .check_spend_cap(&user.id, &quota)
+        .await?;
+    state
+        .quota_service
+        .record_pairing_approved(&user.id)
+        .await?;
+
     let email = user
         .email
         .clone()
@@ -392,17 +399,6 @@ async fn approve_pairing(
     .bind(image_url)
     .execute(&state.db)
     .await?;
-
-    // Ensure the user has a quota row and enforce guardrails before approval.
-    let quota = state.quota_service.ensure_quota(&user.id).await?;
-    state
-        .quota_service
-        .check_spend_cap(&user.id, &quota)
-        .await?;
-    state
-        .quota_service
-        .record_pairing_approved(&user.id)
-        .await?;
 
     sqlx::query(
         r#"

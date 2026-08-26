@@ -569,17 +569,6 @@ pub trait ExecutionDriver: Send + Sync + fmt::Debug {
     /// Health check
     async fn health_check(&self) -> std::result::Result<DriverHealth, DriverError>;
 
-    /// Per-substrate capacity snapshots for heterogeneous drivers.
-    ///
-    /// Drivers that wrap more than one backend (e.g. Incus + Tart) return one
-    /// entry per substrate so the capacity monitor can gate provisioning by OS.
-    /// The default empty vector falls back to `health_check`/`capabilities`.
-    async fn substrate_capacities(
-        &self,
-    ) -> std::result::Result<Vec<(String, DriverHealth, DriverCapabilities)>, DriverError> {
-        Ok(Vec::new())
-    }
-
     /// Resolve the desktop endpoint (VNC / noVNC) for an execution handle.
     ///
     /// Default implementation returns `NotSupported` so drivers can opt-in
@@ -745,7 +734,7 @@ pub struct DesktopEndpoint {
 }
 
 /// Driver health status
-#[derive(Debug, Clone, Default, Serialize, Deserialize, PartialEq)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct DriverHealth {
     pub healthy: bool,
     #[serde(default)]
@@ -754,9 +743,6 @@ pub struct DriverHealth {
     pub active_executions: u32,
     #[serde(default)]
     pub available_capacity: ResourceSpec,
-    /// Substrate OS capabilities advertised by this driver (e.g. "linux", "macos", "windows").
-    #[serde(default)]
-    pub capabilities: Vec<String>,
 }
 
 /// Driver configuration for Shell UI (N3 → UI mapping)

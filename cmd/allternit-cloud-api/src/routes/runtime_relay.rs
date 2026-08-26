@@ -897,9 +897,6 @@ fn required_capability(path: &str, method: &str) -> &'static str {
     {
         return "runtime:files";
     }
-    if normalized.contains("remote-control") {
-        return "runtime:remote_control";
-    }
     "runtime:execute"
 }
 

@@ -44,57 +44,39 @@ let activePanel: PermissionPanel | null = null;
 let activeOverlayWindow: BrowserWindow | null = null;
 let overlayTrackingInterval: ReturnType<typeof setInterval> | null = null;
 
-// In-memory cache so repeated callers (renderer hooks, tray refresh) don't
-// hammer the system APIs / desktopCapturer every few seconds. The cache is
-// intentionally short; permission changes are rare and detected on the next
-// real user action or app activation.
-let cachedStatus: PermissionStatus | null = null;
-let cachedAt = 0;
-const CACHE_TTL_MS = 30000;
-
-export function invalidatePermissionCache(): void {
-  cachedStatus = null;
-  cachedAt = 0;
-}
-
 // ─── Detection ───────────────────────────────────────────────────────────────
 
 export async function checkPermissions(): Promise<PermissionStatus> {
-  const now = Date.now();
-  if (cachedStatus && now - cachedAt < CACHE_TTL_MS) {
-    log.debug('[PermissionGuide] Returning cached permission status:', cachedStatus);
-    return cachedStatus;
-  }
-
   log.info('[PermissionGuide] Checking permissions...');
 
-  let status: PermissionStatus;
   // --- macOS ---
   if (isMac) {
-    status = await checkMacOSPermissions();
-  }
-  // --- Windows ---
-  else if (isWin) {
-    status = await checkWindowsPermissions();
-  }
-  // --- Linux ---
-  else if (isLinux) {
-    status = await checkLinuxPermissions();
-  }
-  // Unknown platform
-  else {
-    log.warn('[PermissionGuide] Unknown platform:', platform);
-    status = { accessibility: 'not-applicable', screenRecording: 'not-applicable' };
+    return checkMacOSPermissions();
   }
 
-  cachedStatus = status;
-  cachedAt = now;
-  return status;
+  // --- Windows ---
+  if (isWin) {
+    return checkWindowsPermissions();
+  }
+
+  // --- Linux ---
+  if (isLinux) {
+    return checkLinuxPermissions();
+  }
+
+  // Unknown platform
+  log.warn('[PermissionGuide] Unknown platform:', platform);
+  return { accessibility: 'not-applicable', screenRecording: 'not-applicable' };
 }
 
 async function checkMacOSPermissions(): Promise<PermissionStatus> {
+  log.info('[PermissionGuide] Checking Accessibility...');
   const accessibilityGranted = systemPreferences.isTrustedAccessibilityClient(false);
+  log.info(`[PermissionGuide] Accessibility raw result: ${accessibilityGranted}`);
+
+  log.info('[PermissionGuide] Checking Screen Recording...');
   const screenApiStatus = systemPreferences.getMediaAccessStatus('screen');
+  log.info(`[PermissionGuide] Screen Recording API status: ${screenApiStatus}`);
   let screenGranted = screenApiStatus === 'granted';
 
   if (!screenGranted) {
@@ -110,6 +92,7 @@ async function checkMacOSPermissions(): Promise<PermissionStatus> {
 async function checkWindowsPermissions(): Promise<PermissionStatus> {
   // Windows has no system-level Accessibility permission gate.
   // Screen recording works via desktopCapturer; some enterprise configs may block it.
+  log.info('[PermissionGuide] Windows — Accessibility: not-applicable (no system gate)');
   const screenGranted = await testScreenCapture();
   return {
     accessibility: 'not-applicable',
@@ -120,6 +103,7 @@ async function checkWindowsPermissions(): Promise<PermissionStatus> {
 async function checkLinuxPermissions(): Promise<PermissionStatus> {
   // Linux has no system-level Accessibility permission gate (AT-SPI2 is open).
   // Wayland may block screen capture via xdg-desktop-portal until user approves.
+  log.info('[PermissionGuide] Linux — Accessibility: not-applicable (no system gate)');
   const screenGranted = await testScreenCapture();
   return {
     accessibility: 'not-applicable',
@@ -132,11 +116,13 @@ async function checkLinuxPermissions(): Promise<PermissionStatus> {
  * Works on macOS, Windows, and Linux (X11 + Wayland with portal).
  */
 async function testScreenCapture(): Promise<boolean> {
+  log.info('[PermissionGuide] Running real screen-capture test...');
   try {
     const sources = await desktopCapturer.getSources({
       types: ['screen'],
       thumbnailSize: { width: 100, height: 100 },
     });
+    log.info(`[PermissionGuide] desktopCapturer returned ${sources.length} source(s)`);
 
     if (sources.length === 0) {
       log.warn('[PermissionGuide] desktopCapturer returned zero sources');
@@ -145,6 +131,7 @@ async function testScreenCapture(): Promise<boolean> {
 
     const thumb = sources[0].thumbnail;
     const size = thumb.getSize();
+    log.info(`[PermissionGuide] Thumbnail size: ${size.width}x${size.height}`);
 
     if (size.width === 0 || size.height === 0) {
       log.warn('[PermissionGuide] Thumbnail has zero dimensions');
@@ -159,6 +146,7 @@ async function testScreenCapture(): Promise<boolean> {
         break;
       }
     }
+    log.info(`[PermissionGuide] Thumbnail hasRGBContent: ${hasRGBContent}`);
     return hasRGBContent;
   } catch (err) {
     log.warn('[PermissionGuide] desktopCapturer test failed:', err);

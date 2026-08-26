@@ -52,7 +52,6 @@ use allternit_api::backend_install_routes::backend_install_router;
 use allternit_api::board_routes::board_router;
 use allternit_api::board_stream_routes::board_stream_router;
 use allternit_api::bot_desktop_capacity;
-use allternit_api::bot_desktop_queue;
 use allternit_api::bot_desktop_routes::bot_desktop_router;
 use allternit_api::bot_desktop_stream::bot_desktop_stream_router;
 use allternit_api::brain_routes::{brain_git_router, brain_router};
@@ -94,7 +93,6 @@ use allternit_api::provider_routes::provider_router;
 use allternit_api::rate_limit::rate_limit_middleware;
 use allternit_api::rails::{rails_router, RailsState};
 use allternit_api::rails_client_impl::create_local_rails_client;
-use allternit_api::remote_control_routes::remote_control_router;
 use allternit_api::runtime_backend_routes::runtime_backend_router;
 use allternit_api::runtime_discover_routes::runtime_discover_router;
 use allternit_api::sandbox_routes::sandbox_router;
@@ -301,17 +299,6 @@ async fn main() {
         bot_desktop_capacity::spawn_capacity_monitor(Arc::clone(&state), period);
     }
 
-    // Desktop provision queue worker: drains queued requests when capacity frees up.
-    {
-        let period = std::time::Duration::from_secs(
-            std::env::var("DESKTOP_QUEUE_WORKER_INTERVAL_SECS")
-                .ok()
-                .and_then(|s| s.parse().ok())
-                .unwrap_or(10),
-        );
-        bot_desktop_queue::spawn_provision_queue_worker(Arc::clone(&state), period);
-    }
-
     // OfficeCLI idle reaper: evicts stale docs, closes idle resident sessions,
     // kills idle watch processes and MCP sessions.
     {
@@ -388,7 +375,6 @@ async fn main() {
         .merge(cowork_team_router())
         .merge(board_stream_router())
         .merge(runtime_backend_router())
-        .merge(remote_control_router())
         .merge(agents_v1_router())
         .merge(
             bot_desktop_router().layer(axum::middleware::from_fn_with_state(
@@ -415,7 +401,6 @@ async fn main() {
         .merge(allternit_api::sandbox_template_routes::router())
         .merge(allternit_api::bot_desktop_templates::router())
         .merge(allternit_api::bot_desktop_capacity::router())
-        .merge(allternit_api::bot_desktop_queue::router())
         .merge(allternit_api::bot_desktop_billing::router())
         .merge(allternit_api::bot_desktop_admin::router())
         .merge(allternit_api::allternit_vault::router())
@@ -934,7 +919,6 @@ async fn initialize_vm_driver(
 
     let mut tart_driver = None;
     if std::env::var("TART_HOST_URL").is_ok()
-        || std::env::var("TART_HOST_URLS").is_ok()
         || std::env::var("TART_BIN").map_or(false, |s| !s.is_empty())
     {
         let mesh = build_mesh_config_from_env();

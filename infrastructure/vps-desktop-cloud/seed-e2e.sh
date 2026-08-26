@@ -47,22 +47,4 @@ curl -s -X POST "${API_BASE_URL}/api/v1/desktop-templates" \
     "public": true
   }' | python3 -m json.tool 2>/dev/null || true
 
-curl -s -X POST "${API_BASE_URL}/api/v1/desktop-templates" \
-  -H "${AUTH_HEADER}" \
-  -H "Content-Type: application/json" \
-  -d '{
-    "name": "Allternit Desktop (Tart)",
-    "description": "Ubuntu 24.04 desktop on Apple Silicon Tart with XFCE, VNC, and automation tools",
-    "os": "macos",
-    "image": "allternit-desktop-tart",
-    "cpu_millis": 2000,
-    "memory_mib": 4096,
-    "disk_mib": 20480,
-    "network_enabled": true,
-    "env": {},
-    "packages": [],
-    "tags": ["tart", "e2e"],
-    "public": true
-  }' | python3 -m json.tool 2>/dev/null || true
-
 echo "Seed complete."
