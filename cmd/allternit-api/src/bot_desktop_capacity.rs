@@ -104,23 +104,41 @@ impl CapacityMonitor {
     /// the last capacity sample. Negative values mean the cluster is overcommitted.
     pub async fn available_slots(&self) -> i64 {
         let snaps = self.snapshots.read().await;
-        let mut total_cpu = 0u64;
-        let mut active = 0u32;
-        for s in snaps.values() {
-            total_cpu += s.total_cpu_millis as u64;
-            active += s.active_executions;
-        }
-        drop(snaps);
-        if total_cpu == 0 {
+        if snaps.is_empty() {
             // No samples yet; be permissive so provisioning is not blocked.
             return 1;
         }
-        let max_vms = (total_cpu / 2000).max(1) as i64;
-        max_vms.saturating_sub(active as i64)
+        snaps
+            .values()
+            .map(|s| (s.available_cpu_millis as i64 / 2000).max(0))
+            .sum()
     }
 
     pub async fn is_at_capacity(&self) -> bool {
-        self.available_slots().await <= 0 || self.status().await.scale_up_recommended
+        self.available_slots().await <= 0
+    }
+
+    /// True when the substrate that would host `os` has no available slots.
+    /// Falls back to the global fleet view when the OS is unknown or when no
+    /// matching substrate has been sampled yet.
+    pub async fn is_os_at_capacity(&self, os: Option<&str>) -> bool {
+        if let Some(os) = os {
+            let snaps = self.snapshots.read().await;
+            let matching: Vec<_> = snaps
+                .values()
+                .filter(|s| provider_supports_os(&s.provider, os))
+                .cloned()
+                .collect();
+            drop(snaps);
+            if !matching.is_empty() {
+                let slots: i64 = matching
+                    .iter()
+                    .map(|s| (s.available_cpu_millis as i64 / 2000).max(0))
+                    .sum();
+                return slots <= 0;
+            }
+        }
+        self.is_at_capacity().await
     }
 }
 
@@ -166,54 +184,61 @@ async fn sample_capacity(state: &Arc<AppState>, monitor: &CapacityMonitor) {
         None => return,
     };
 
-    let health = match driver.health_check().await {
-        Ok(h) => h,
-        Err(e) => {
-            warn!(error = %e, "capacity monitor health check failed");
-            return;
+    // Heterogeneous drivers (e.g. SubstrateRouter) expose per-substrate health.
+    // Fall back to a single aggregate snapshot for homogeneous drivers.
+    let substrates = match driver.substrate_capacities().await {
+        Ok(s) if !s.is_empty() => s,
+        Ok(_) | Err(_) => {
+            let health = match driver.health_check().await {
+                Ok(h) => h,
+                Err(e) => {
+                    warn!(error = %e, "capacity monitor health check failed");
+                    return;
+                }
+            };
+            let caps = driver.capabilities();
+            vec![(
+                format!("{:?}", caps.driver_type).to_lowercase(),
+                health,
+                caps,
+            )]
         }
     };
 
-    let caps = driver.capabilities();
-    let active = health.active_executions;
-    let total_cpu = caps.max_resources.cpu_millis;
-    let total_mem = caps.max_resources.memory_mib;
-
-    // Estimate available capacity as total minus an equal share per active VM.
-    // This is a coarse approximation until the drivers report host-level stats.
-    let used_cpu = active.saturating_mul(2000);
-    let used_mem = active.saturating_mul(4096);
-    let available_cpu = total_cpu.saturating_sub(used_cpu);
-    let available_mem = total_mem.saturating_sub(used_mem);
-
-    let snapshot = CapacitySnapshot {
-        provider: format!("{:?}", caps.driver_type).to_lowercase(),
-        host: health.message.unwrap_or_else(|| "default".to_string()),
-        healthy: health.healthy,
-        active_executions: active,
-        total_cpu_millis: total_cpu,
-        total_memory_mib: total_mem,
-        available_cpu_millis: available_cpu,
-        available_memory_mib: available_mem,
-        scaled_at: chrono::Utc::now().to_rfc3339(),
-    };
-
-    let key = format!("{}:{}", snapshot.provider, snapshot.host);
     {
         let mut snaps = monitor.snapshots.write().await;
-        snaps.insert(key, snapshot.clone());
+        snaps.clear();
+        for (provider, health, caps) in substrates {
+            let snapshot = CapacitySnapshot {
+                provider,
+                host: health.message.clone().unwrap_or_else(|| "default".to_string()),
+                healthy: health.healthy,
+                active_executions: health.active_executions,
+                total_cpu_millis: caps.max_resources.cpu_millis,
+                total_memory_mib: caps.max_resources.memory_mib,
+                available_cpu_millis: health.available_capacity.cpu_millis,
+                available_memory_mib: health.available_capacity.memory_mib,
+                scaled_at: chrono::Utc::now().to_rfc3339(),
+            };
+            let key = format!("{}:{}", snapshot.provider, snapshot.host);
+            snaps.insert(key, snapshot);
+        }
     }
 
     let status = monitor.status().await;
     if status.scale_up_recommended {
         warn!(reason = ?status.scale_up_reason, "autoscale: scale-up recommended");
     } else {
-        info!(
-            active,
-            total_cpu,
-            available_cpu,
-            "capacity monitor sample recorded"
-        );
+        let slots = monitor.available_slots().await;
+        info!(slots, "capacity monitor sample recorded");
+    }
+}
+
+fn provider_supports_os(provider: &str, os: &str) -> bool {
+    match (provider, os) {
+        ("tart", "macos") => true,
+        ("incus", "linux") | ("incus", "windows") => true,
+        _ => false,
     }
 }
 

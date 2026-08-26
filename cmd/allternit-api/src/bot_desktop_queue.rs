@@ -72,6 +72,14 @@ pub async fn is_fleet_at_capacity() -> bool {
     }
 }
 
+/// True when the substrate for the requested OS has no available room.
+pub async fn is_os_at_capacity(os: Option<&str>) -> bool {
+    match CAPACITY_MONITOR.get() {
+        Some(m) => m.is_os_at_capacity(os).await,
+        None => false,
+    }
+}
+
 /// Insert a provision request into the queue. Returns the queue entry and its
 /// position among pending items. Fails immediately if the caller is already
 /// over quota.
@@ -163,6 +171,36 @@ pub async fn next_pending(state: &Arc<AppState>) -> Option<QueueEntry> {
         Err(e) => {
             warn!(error = %e, "task panicked reading next pending queue entry");
             None
+        }
+    }
+}
+
+/// Fetch all pending queue entries in creation order.
+pub async fn pending_entries(state: &Arc<AppState>) -> Vec<QueueEntry> {
+    let db = state.db.clone();
+    let result = tokio::task::spawn_blocking(move || {
+        let conn = db.connect()?;
+        let mut stmt = conn.prepare(
+            "SELECT id, user_id, org_id, bot_id, os, template_id, status, \
+             sandbox_id, provider, host, error, created_at, updated_at \
+             FROM desktop_provision_queue \
+             WHERE status = 'pending' \
+             ORDER BY created_at ASC",
+        )?;
+        let rows = stmt.query_map([], row_to_entry)?.collect::<Result<Vec<_>, _>>()?;
+        Ok::<_, rusqlite::Error>(rows)
+    })
+    .await;
+
+    match result {
+        Ok(Ok(entries)) => entries,
+        Ok(Err(e)) => {
+            warn!(error = %e, "failed to read pending queue entries");
+            Vec::new()
+        }
+        Err(e) => {
+            warn!(error = %e, "task panicked reading pending queue entries");
+            Vec::new()
         }
     }
 }
@@ -406,13 +444,15 @@ pub fn spawn_provision_queue_worker(state: Arc<AppState>, period: Duration) {
                 Some(m) => m.clone(),
                 None => continue,
             };
-            let mut slots = monitor.available_slots().await.max(0i64) as usize;
-            while slots > 0 {
-                let entry = match next_pending(&state).await {
-                    Some(e) => e,
-                    None => break,
-                };
-                slots = slots.saturating_sub(1);
+            let entries = pending_entries(&state).await;
+            let mut processed = 0usize;
+            for entry in entries {
+                // Skip entries whose substrate is still full; later entries for
+                // other OSes may still be able to run on a different host.
+                if monitor.is_os_at_capacity(entry.os.as_deref()).await {
+                    continue;
+                }
+                processed += 1;
                 let user = AuthUser {
                     user_id: entry.user_id.clone(),
                     email: None,
@@ -458,6 +498,9 @@ pub fn spawn_provision_queue_worker(state: Arc<AppState>, period: Duration) {
                         mark_failed(&state, &entry.id, &msg).await;
                     }
                 }
+            }
+            if processed > 0 {
+                info!(processed, "provision queue worker tick completed");
             }
         }
     });

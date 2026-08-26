@@ -569,6 +569,17 @@ pub trait ExecutionDriver: Send + Sync + fmt::Debug {
     /// Health check
     async fn health_check(&self) -> std::result::Result<DriverHealth, DriverError>;
 
+    /// Per-substrate capacity snapshots for heterogeneous drivers.
+    ///
+    /// Drivers that wrap more than one backend (e.g. Incus + Tart) return one
+    /// entry per substrate so the capacity monitor can gate provisioning by OS.
+    /// The default empty vector falls back to `health_check`/`capabilities`.
+    async fn substrate_capacities(
+        &self,
+    ) -> std::result::Result<Vec<(String, DriverHealth, DriverCapabilities)>, DriverError> {
+        Ok(Vec::new())
+    }
+
     /// Resolve the desktop endpoint (VNC / noVNC) for an execution handle.
     ///
     /// Default implementation returns `NotSupported` so drivers can opt-in

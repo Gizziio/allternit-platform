@@ -509,8 +509,8 @@ async fn provision_desktop(
         }
     }
 
-    // When the fleet is full, queue the request instead of failing.
-    if crate::bot_desktop_queue::is_fleet_at_capacity().await {
+    // When the target substrate is full, queue the request instead of failing.
+    if crate::bot_desktop_queue::is_os_at_capacity(query.os.as_deref()).await {
         match crate::bot_desktop_queue::enqueue(&state, &user, &bot_id, &query).await {
             Ok((entry, position)) => {
                 return (

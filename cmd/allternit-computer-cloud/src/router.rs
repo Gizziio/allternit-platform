@@ -278,6 +278,35 @@ impl ExecutionDriver for SubstrateRouter {
         })
     }
 
+    async fn substrate_capacities(
+        &self,
+    ) -> Result<Vec<(String, DriverHealth, DriverCapabilities)>, DriverError> {
+        let mut out = Vec::new();
+        if let Some(d) = &self.incus {
+            match d.health_check().await {
+                Ok(health) => {
+                    let caps = d.capabilities();
+                    out.push(("incus".to_string(), health, caps));
+                }
+                Err(e) => {
+                    warn!(error = %e, "Incus substrate capacity check failed");
+                }
+            }
+        }
+        if let Some(d) = &self.tart {
+            match d.health_check().await {
+                Ok(health) => {
+                    let caps = d.capabilities();
+                    out.push(("tart".to_string(), health, caps));
+                }
+                Err(e) => {
+                    warn!(error = %e, "Tart substrate capacity check failed");
+                }
+            }
+        }
+        Ok(out)
+    }
+
     async fn get_desktop_endpoint(
         &self,
         handle: &ExecutionHandle,
