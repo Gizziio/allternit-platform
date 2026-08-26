@@ -2,41 +2,27 @@
 
 ## Goal
 
-Consolidate merged session work on main: MLX provider switch and serialization
-for the memory agent, plus the bulk/fast ingest mode.
+Integrate Firecrawl `anydoc` into the Allternit platform and all five surfaces so users can open supported document files as Markdown from the Office launcher/action surface.
 
 ## Just did
 
-- Merged PRs #63–#80 into main, including:
-  - Agent-orchestrator triage branches for surface audit closure.
-  - Memory agent MLX/OpenAI-compatible provider (`ao/mlxmem`).
-  - MLX generation-call serialization fix (`fix/mlx-serialize`).
-  - Memory bulk/fast ingest mode (`ao/build-memory-bulk-fast-ingest`).
-  - Gizzi-code DAG commands: `/ontology`, `/directive`, `/gc`, `/multimodal`,
-    `/purpose`, `/receipts`, `/security`.
-  - Surface-audit tracker sync (`docs/surface-audit-progress`).
-- Fixed merge artifacts from union-resolution conflicts in:
-  - `cmd/gizzi-code/src/cli/ui/ink-app/commands.ts`
-  - `services/memory/agent/src/ingest-agent.ts`
-  - `services/memory/agent/src/ingest-agent.test.ts`
-  - `services/memory/agent/src/models/local-model.ts`
-  - `services/memory/agent/src/models/local-model.test.ts`
-  - `.steering/spec.md`
-  - `.steering/checkpoint.md`
+- Fetched `https://github.com/firecrawl/anydoc` to confirm capabilities: Word, PowerPoint, Excel, OpenDocument, RTF, EPUB, CSV, PDF → GitHub-Flavored Markdown via Node/Rust/Python/WASM bindings.
+- Confirmed the Allternit codebase lives in the session worktree and that `services/office-engine` already exposes `/parse`, `/extract`, `/pptx/parse`, `/xlsx/parse`, etc.
+- Confirmed `OfficeLauncherView` / `OfficeSuiteSection` currently live only in `surfaces/ai.allternit.com` and support `.docx`, `.xlsx`, `.pptx`, `.pdf`.
 
-## Files changed
+## Next
 
-- `services/memory/agent/src/models/local-model.ts`
-- `services/memory/agent/src/models/local-model.test.ts`
-- `services/memory/agent/src/ingest-agent.ts`
-- `services/memory/agent/src/ingest-agent.test.ts`
-- `cmd/gizzi-code/src/cli/ui/ink-app/commands.ts`
-- `.steering/spec.md`
-- `.steering/checkpoint.md`
+- Enter plan mode and produce a concrete implementation plan covering:
+  1. Backend: add an `anydoc`-powered `/markdown` (or `/to-markdown`) endpoint to `services/office-engine`.
+  2. Web surface: extend `OfficeSuiteSection` with an "Open as Markdown" action for any supported file type.
+  3. Desktop surface: expose the same capability through the existing `office-engine-manager`.
+  4. Extensions surface: add an "Open as Markdown" option in the Office add-in / extension sidepanel.
+  5. Mobile surface: add Swift API call + UI affordance.
+  6. Docs surface: document the new capability.
+- Get plan approval, then implement and verify.
 
-## Known follow-ups
+## Open questions
 
-- Run full typecheck/build passes on gizzi-code and memory agent surfaces.
-- The other agent's uncommitted working-tree changes (desktop dependency
-  bumps, `surfaces/allternit-desktop/src/main/unified-main.ts`, and new
-  directories) remain untouched per the "don't overwrite" instruction.
+- Should the conversion run in `office-engine` directly (add `@firecrawl/anydoc` npm dependency) or as a separate microservice?
+- Which exact formats should be surfaced in the UI? (anydoc supports 14 extensions; current launcher only advertises 4.)
+- Should converted Markdown be shown in a new read-only view, streamed into the chat composer, or saved as an artifact?
