@@ -10,19 +10,24 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import { createBrowserJSONStorage } from '@/lib/zustand-browser-storage';
-import type { GroupChat, GroupChatMember, GroupChatMessage } from './group-chat.types';
+import type { GroupChat, GroupChatMember, GroupChatMessage, GroupChatMetadata } from './group-chat.types';
 
 export interface GroupChatState {
   groups: Record<string, GroupChat>;
   activeGroupId: string | null;
+  /** Per-group ISO timestamp of the last time the user read the channel. */
+  lastReadAt: Record<string, string>;
 
-  createGroup: (name: string, members: GroupChatMember[]) => string;
+  createGroup: (name: string, members: GroupChatMember[], metadata?: GroupChatMetadata) => string;
   deleteGroup: (groupId: string) => void;
   renameGroup: (groupId: string, name: string) => void;
+  updateGroup: (groupId: string, updates: Partial<Pick<GroupChat, 'name' | 'members' | 'image'>> & { metadata?: GroupChatMetadata }) => void;
   setActiveGroup: (groupId: string | null) => void;
   addMessage: (groupId: string, message: Omit<GroupChat['log'][number], 'id' | 'timestamp'>) => void;
   appendLog: (groupId: string, messages: GroupChat['log']) => void;
   getGroup: (groupId: string) => GroupChat | undefined;
+  markGroupRead: (groupId: string) => void;
+  getUnreadCount: (groupId: string) => number;
 }
 
 function slugify(name: string): string {
@@ -49,8 +54,9 @@ export const useGroupChatStore = create<GroupChatState>()(
     (set, get) => ({
       groups: {},
       activeGroupId: null,
+      lastReadAt: {},
 
-      createGroup: (name, members) => {
+      createGroup: (name, members, metadata) => {
         const id = uniqueGroupId(name, get().groups);
         const now = new Date().toISOString();
         const group: GroupChat = {
@@ -58,23 +64,28 @@ export const useGroupChatStore = create<GroupChatState>()(
           name,
           members,
           log: [],
+          metadata,
           createdAt: now,
           updatedAt: now,
         };
         set((state) => ({
           groups: { ...state.groups, [id]: group },
           activeGroupId: id,
+          lastReadAt: { ...state.lastReadAt, [id]: now },
         }));
         return id;
       },
 
       deleteGroup: (groupId) => {
         set((state) => {
-          const next = { ...state.groups };
-          delete next[groupId];
+          const nextGroups = { ...state.groups };
+          delete nextGroups[groupId];
+          const nextLastRead = { ...state.lastReadAt };
+          delete nextLastRead[groupId];
           return {
-            groups: next,
+            groups: nextGroups,
             activeGroupId: state.activeGroupId === groupId ? null : state.activeGroupId,
+            lastReadAt: nextLastRead,
           };
         });
       },
@@ -87,6 +98,27 @@ export const useGroupChatStore = create<GroupChatState>()(
             groups: {
               ...state.groups,
               [groupId]: { ...group, name, updatedAt: new Date().toISOString() },
+            },
+          };
+        });
+      },
+
+      updateGroup: (groupId, updates) => {
+        const now = new Date().toISOString();
+        set((state) => {
+          const group = state.groups[groupId];
+          if (!group) return state;
+          return {
+            groups: {
+              ...state.groups,
+              [groupId]: {
+                ...group,
+                ...(updates.name !== undefined && { name: updates.name }),
+                ...(updates.members !== undefined && { members: updates.members }),
+                ...(updates.image !== undefined && { image: updates.image }),
+                ...(updates.metadata !== undefined && { metadata: { ...group.metadata, ...updates.metadata } }),
+                updatedAt: now,
+              },
             },
           };
         });
@@ -136,11 +168,27 @@ export const useGroupChatStore = create<GroupChatState>()(
       },
 
       getGroup: (groupId) => get().groups[groupId],
+
+      markGroupRead: (groupId) => {
+        const now = new Date().toISOString();
+        set((state) => ({
+          lastReadAt: { ...state.lastReadAt, [groupId]: now },
+        }));
+      },
+
+      getUnreadCount: (groupId) => {
+        const group = get().groups[groupId];
+        if (!group) return 0;
+        const lastRead = get().lastReadAt[groupId];
+        if (!lastRead) return group.log.length;
+        const lastReadTime = new Date(lastRead).getTime();
+        return group.log.filter((m) => new Date(m.timestamp).getTime() > lastReadTime).length;
+      },
     }),
     {
       name: 'allternit-group-chats',
       storage: createBrowserJSONStorage(),
-      partialize: (state) => ({ groups: state.groups }),
+      partialize: (state) => ({ groups: state.groups, lastReadAt: state.lastReadAt }),
     },
   ),
 );
