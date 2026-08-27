@@ -159,6 +159,8 @@ let mainWindow: BrowserWindow | null = null;
 let designWindow: BrowserWindow | null = null;
 let hudWindow: BrowserWindow | null = null;
 let remoteControlWindow: BrowserWindow | null = null;
+/** Active session id reported by the HUD renderer for app-window handoff. */
+let hudSessionId: string | null = null;
 /** One office editor window per target (docs/sheets/slides/pdf/launcher). */
 const officeWindows = new Map<OfficeTarget, BrowserWindow>();
 let splashWindow: BrowserWindow | null = null;
@@ -1958,6 +1960,14 @@ function computeHudBounds() {
   };
 }
 
+/** Broadcast the HUD's open/closed state and active session to the main window. */
+function pushHudState() {
+  const open = hudWindow !== null && !hudWindow.isDestroyed() && hudWindow.isVisible();
+  if (mainWindow && !mainWindow.isDestroyed()) {
+    mainWindow.webContents.send('shell:hud:state', { open, sessionId: hudSessionId });
+  }
+}
+
 function createHudWindow(): BrowserWindow {
   const win = new BrowserWindow({
     ...computeHudBounds(),
@@ -2021,6 +2031,7 @@ function openHudWindow(): void {
     hudWindow.show();
     hudWindow.focus();
     hudWindow.moveTop();
+    pushHudState();
     return;
   }
 
@@ -2046,8 +2057,13 @@ function openHudWindow(): void {
     hudWindow?.show();
     hudWindow?.focus();
     hudWindow?.moveTop();
+    pushHudState();
   });
-  hudWindow.on('closed', () => { log.info('[HUD] HUD window closed'); hudWindow = null; });
+  hudWindow.on('closed', () => {
+    log.info('[HUD] HUD window closed');
+    hudWindow = null;
+    pushHudState();
+  });
   const hudUrl = new URL('/hud', activePlatformUrl).toString();
   log.info('[HUD] Loading HUD window URL:', hudUrl);
   void hudWindow.loadURL(hudUrl);
@@ -2065,6 +2081,7 @@ function toggleHudWindow(): void {
     hudWindow.show();
     hudWindow.focus();
     hudWindow.moveTop();
+    pushHudState();
     return;
   }
   openHudWindow();
@@ -2117,6 +2134,83 @@ ipcMain.handle('shell:resize-hud', (_event, bounds: { height: number }) => {
   } finally {
     if (!wasResizable && !hudWindow.isDestroyed()) hudWindow.setResizable(false);
   }
+});
+
+ipcMain.handle('shell:set-hud-bounds', (_event, bounds: { x?: number; y?: number; width?: number; height?: number }) => {
+  if (!hudWindow || hudWindow.isDestroyed()) return;
+  const current = hudWindow.getBounds();
+  const next = {
+    x: Number.isFinite(bounds?.x) ? Math.round(bounds.x!) : current.x,
+    y: Number.isFinite(bounds?.y) ? Math.round(bounds.y!) : current.y,
+    width: Number.isFinite(bounds?.width) ? Math.max(380, Math.round(bounds.width!)) : current.width,
+    height: Number.isFinite(bounds?.height) ? Math.max(160, Math.min(1000, Math.round(bounds.height!))) : current.height,
+  };
+  const wasResizable = hudWindow.isResizable();
+  if (!wasResizable) hudWindow.setResizable(true);
+  try {
+    hudWindow.setBounds(next);
+  } finally {
+    if (!wasResizable && !hudWindow.isDestroyed()) hudWindow.setResizable(false);
+  }
+});
+
+ipcMain.handle('shell:hud:frost', (_event, showing: boolean) => {
+  if (!hudWindow || hudWindow.isDestroyed()) return { ok: true };
+  try {
+    if (process.platform === 'darwin') {
+      hudWindow.setVibrancy(showing ? 'hud' : null);
+    }
+    // Windows/Linux: no native vibrancy equivalent exposed here; the CSS scrim
+    // in the renderer still provides the visual treatment.
+    return { ok: true };
+  } catch (error) {
+    log.warn('[HUD] Failed to set frost:', error);
+    return { ok: false };
+  }
+});
+
+ipcMain.handle('shell:hud:reset-layout', () => {
+  if (!hudWindow || hudWindow.isDestroyed()) return { ok: true };
+  const wasResizable = hudWindow.isResizable();
+  if (!wasResizable) hudWindow.setResizable(true);
+  try {
+    hudWindow.setBounds(computeHudBounds());
+  } finally {
+    if (!wasResizable && !hudWindow.isDestroyed()) hudWindow.setResizable(false);
+  }
+  return { ok: true };
+});
+
+ipcMain.on('shell:hud:ignore-mouse', (_event, ignore: boolean) => {
+  if (!hudWindow || hudWindow.isDestroyed()) return;
+  try {
+    hudWindow.setIgnoreMouseEvents(Boolean(ignore), { forward: true });
+  } catch (error) {
+    log.warn('[HUD] Failed to set ignore mouse events:', error);
+  }
+});
+
+ipcMain.on('shell:hud:workspace-transfer', (_event, transferring: boolean) => {
+  if (!hudWindow || hudWindow.isDestroyed()) return;
+  try {
+    hudWindow.setVisibleOnAllWorkspaces?.(Boolean(transferring), { visibleOnFullScreen: true, skipTransformProcessType: true });
+  } catch (error) {
+    log.warn('[HUD] Failed to set workspace transfer:', error);
+  }
+});
+
+ipcMain.on('shell:hud:session', (_event, sessionId: string | null) => {
+  hudSessionId = typeof sessionId === 'string' ? sessionId : null;
+  pushHudState();
+});
+
+ipcMain.on('shell:hud:windowing', (event) => {
+  event.returnValue = {
+    clientPlacement: true,
+    controlDrag: false,
+    nativeDrag: false,
+    workspaceTransfer: false,
+  };
 });
 
 ipcMain.handle('shell:open-remote-control', () => {
