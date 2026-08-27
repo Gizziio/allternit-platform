@@ -11,6 +11,8 @@ import { useChatSessionStore } from '@/views/chat/ChatSessionStore';
 import { coworkTransitionController } from '@/lib/agents/session-transition-controller';
 import type { ChatMessage } from '@/lib/ai/rust-stream-adapter';
 import type { AnyCoworkEvent } from './cowork.types';
+import { ChatThreadInlineGate } from '@/views/chat/components/ChatThreadInlineGate';
+import type { AgentModeSurface } from '@/stores/agent-surface-mode.store';
 
 interface CoworkTranscriptProps {
   /** Legacy: explicit messages array (CoworkRoot) */
@@ -29,6 +31,8 @@ interface CoworkTranscriptProps {
   hideEmptyState?: boolean;
   /** Compact HUD layout: minimal spacing and no empty-state padding. */
   hudMode?: boolean;
+  /** Surface context for inline approval/question gate polling. */
+  surface?: AgentModeSurface;
 }
 
 // Derive the currently-running tool from messages so we can show it inline
@@ -137,6 +141,7 @@ export const CoworkTranscript = memo(function CoworkTranscript({
   selectedArtifactTitle,
   hideEmptyState,
   hudMode = false,
+  surface = 'chat',
 }: CoworkTranscriptProps) {
   // When conversationId is provided, pull messages from the chat session store
   const storeSession = useChatSessionStore((state) =>
@@ -311,6 +316,17 @@ export const CoworkTranscript = memo(function CoworkTranscript({
         <div style={{ paddingLeft: 4 }}>
           <LiveToolBadge toolName={currentRunningTool} />
         </div>
+      )}
+
+      {/* Inline approval/question cards rendered inside the thread.
+          Only mounted for chat-session-backed transcripts (conversationId).
+          CoworkRoot already runs its own approval gate poller for cowork sessions. */}
+      {!effectiveIsLoading && conversationId && (
+        <ChatThreadInlineGate
+          sessionId={conversationId}
+          surface={surface}
+          className={hudMode ? 'px-1' : 'px-2 md:px-5'}
+        />
       )}
 
       {timeline.length === 0 && !effectiveIsLoading && !hideEmptyState && !hudMode && (
