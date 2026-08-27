@@ -263,7 +263,9 @@
         "Contents/Resources/computer-use/cua-driver"
       ],
       "extendInfo": {
-        "NSAppleEventsUsageDescription": "Allternit uses automation to carry out computer-use actions you approve."
+        "NSAppleEventsUsageDescription": "Allternit uses automation to carry out computer-use actions you approve.",
+        "NSMicrophoneUsageDescription": "Allternit uses the microphone for voice calls and on-device dictation.",
+        "NSSpeechRecognitionUsageDescription": "Allternit uses speech recognition to transcribe your voice during calls."
       }
     },
     "dmg": {

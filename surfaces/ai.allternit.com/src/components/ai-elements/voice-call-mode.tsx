@@ -3,10 +3,11 @@
 /**
  * VoiceCallMode — full-screen voice conversation surface.
  *
- * macOS-first: when running inside the Allternit Desktop shell, dictation is
- * delegated to the native `NSSpeechRecognizer` helper via IPC so it works
- * on-device. On web or non-macOS shells, it falls back to the browser's
- * Web Speech API through the existing `useSTT()` hook.
+ * macOS-first: when running inside the Allternit Desktop shell, dictation can
+ * be delegated to the native `DictationHelper` (SFSpeechRecognizer) via IPC.
+ * Native dictation is optional; if the helper is not staged, the user declines
+ * permissions, or the platform is not macOS, the surface falls back to the
+ * browser's Web Speech API through the existing `useSTT()` hook.
  */
 
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
@@ -61,8 +62,8 @@ export function VoiceCallMode({
   } = useSTT();
 
   const [muted, setMuted] = useState(false);
-  const [nativeDictation, setNativeDictation] = useState(false);
   const [nativeAvailable, setNativeAvailable] = useState(false);
+  const [nativeDictation, setNativeDictation] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [localTranscript, setLocalTranscript] = useState<string>("");
   const committedRef = useRef(false);
@@ -75,6 +76,7 @@ export function VoiceCallMode({
           startDictation?: () => Promise<{ success: boolean; error?: string }>;
           stopDictation?: () => Promise<void>;
           isAvailable?: () => Promise<boolean>;
+          onTranscript?: (callback: (event: { text: string; isFinal: boolean }) => void) => (() => void);
         };
       };
     };
@@ -85,9 +87,21 @@ export function VoiceCallMode({
   useEffect(() => {
     if (!desktop?.voice?.isAvailable) {
       setNativeAvailable(false);
+      setNativeDictation(false);
       return;
     }
-    desktop.voice.isAvailable().then(setNativeAvailable).catch(() => setNativeAvailable(false));
+    desktop.voice
+      .isAvailable()
+      .then((available) => {
+        setNativeAvailable(available);
+        // Default to native dictation when it is available; the user can toggle
+        // back to Web Speech from the call controls.
+        setNativeDictation(available);
+      })
+      .catch(() => {
+        setNativeAvailable(false);
+        setNativeDictation(false);
+      });
   }, [desktop]);
 
   // Start listening when the call opens.
@@ -99,8 +113,7 @@ export function VoiceCallMode({
     committedRef.current = false;
 
     const start = async () => {
-      if (nativeAvailable && desktop?.voice?.startDictation) {
-        setNativeDictation(true);
+      if (nativeDictation && desktop?.voice?.startDictation) {
         const result = await desktop.voice.startDictation();
         if (!result.success) {
           setError(result.error ?? "Native dictation failed to start.");
@@ -128,7 +141,23 @@ export function VoiceCallMode({
       stopRecording();
       stopAudio();
     };
-  }, [open, nativeAvailable, desktop, sttSupported, startRecording, stopRecording, stopAudio, clearTranscript, nativeDictation]);
+  }, [open, nativeDictation, desktop, sttSupported, startRecording, stopRecording, stopAudio, clearTranscript]);
+
+  // Subscribe to native transcript events from the desktop helper.
+  useEffect(() => {
+    if (!open || !nativeDictation || !desktop?.voice?.onTranscript) return;
+
+    const unsubscribe = desktop.voice.onTranscript((event) => {
+      setLocalTranscript((prev) => {
+        const next = event.isFinal ? event.text : `${prev} ${event.text}`.trim();
+        return next;
+      });
+    });
+
+    return () => {
+      unsubscribe?.();
+    };
+  }, [open, nativeDictation, desktop]);
 
   // Commit finalized transcript to the callback.
   useEffect(() => {
@@ -158,6 +187,27 @@ export function VoiceCallMode({
       }
     }
   }, [desktop, isRecording, muted, nativeDictation, startRecording, stopRecording]);
+
+  const handleToggleDictation = useCallback(() => {
+    const next = !nativeDictation;
+    setNativeDictation(next);
+    setError(null);
+
+    if (next) {
+      // Switching to native: stop Web Speech and start the helper.
+      stopRecording();
+      desktop?.voice?.startDictation?.().catch((err) => {
+        setError(err instanceof Error ? err.message : "Native dictation unavailable");
+        setNativeDictation(false);
+      });
+    } else {
+      // Switching to Web Speech: stop native helper and start browser STT.
+      desktop?.voice?.stopDictation?.().catch(() => {});
+      if (sttSupported && !isRecording) {
+        void startRecording();
+      }
+    }
+  }, [desktop, isRecording, nativeDictation, startRecording, stopRecording, sttSupported]);
 
   const handleEndCall = useCallback(() => {
     if (nativeDictation) {
@@ -295,6 +345,19 @@ export function VoiceCallMode({
                 >
                   <PhoneDisconnect size={24} weight="fill" />
                 </Button>
+
+                {nativeAvailable && (
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={handleToggleDictation}
+                    className="rounded-full border-[var(--border-subtle)] text-[var(--text-secondary)]"
+                    aria-label={nativeDictation ? "Switch to Web Speech" : "Switch to native dictation"}
+                  >
+                    {nativeDictation ? "Native" : "Web Speech"}
+                  </Button>
+                )}
               </div>
             </GlassSurface>
           </motion.div>

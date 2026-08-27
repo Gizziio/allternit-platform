@@ -163,7 +163,9 @@ export interface TeamImportResult {
   bots: CreatedBotResult[];
   routines: { botId: string; title: string }[];
   connectorBindings: { botId: string; provider: string; label: string }[];
+  channels?: SimpleTeamChannelDefinition[];
   warnings: string[];
+  errors: string[];
   error?: string;
 }
 
@@ -173,13 +175,85 @@ export interface TeamImportPreview {
   description?: string;
   kind?: 'team' | 'package';
   memberCount?: number;
+  botCount?: number;
   chiefOfStaff?: string;
   roomCount?: number;
   playbookCount?: number;
   routineCount?: number;
   appCount?: number;
+  connectorCount?: number;
+  channelCount?: number;
   errors: string[];
   warnings: string[];
+}
+
+// ============================================================================
+// Simple YAML frontmatter (legacy bot-team-import format)
+//
+// The older bot-team-import module accepted Markdown files with a looser YAML
+// frontmatter shape (bots/agents/team arrays, per-bot connectors, channels,
+// and routines). The integration now canonicalises on the BotMRR package
+// shape, but we keep a parser for these legacy files so existing team files
+// still import without manual migration.
+// ============================================================================
+
+export interface SimpleTeamBotDefinition {
+  id?: string;
+  name: string;
+  description?: string;
+  type?: CreateAgentInput['type'];
+  model?: string;
+  provider?: CreateAgentInput['provider'];
+  systemPrompt?: string;
+  displayName: string;
+  tagline?: string;
+  welcomeMessage?: string;
+  starterPrompts?: string[];
+  accentColor?: string;
+  botCategory?:
+    | 'research'
+    | 'code'
+    | 'writing'
+    | 'data'
+    | 'sales'
+    | 'design'
+    | 'ops'
+    | 'custom';
+  capabilities?: string[];
+  tools?: string[];
+  maxIterations?: number;
+  temperature?: number;
+  connectorBindings?: AgentConnectorBinding[];
+  identityChannels?: Record<string, unknown>;
+  secretRefs?: Array<{
+    name: string;
+    key: string;
+    description?: string;
+    required?: boolean;
+  }>;
+}
+
+export interface SimpleTeamChannelDefinition {
+  botName: string;
+  type: 'email' | 'phone' | 'wallet';
+  config: Record<string, unknown>;
+}
+
+export interface SimpleTeamRoutineDefinition {
+  botName: string;
+  title: string;
+  instruction: string;
+  frequency: CreateBotRoutineInput['frequency'];
+}
+
+export interface SimpleTeamManifest {
+  name: string;
+  description?: string;
+  version?: string;
+  source?: string;
+  bots: SimpleTeamBotDefinition[];
+  channels?: SimpleTeamChannelDefinition[];
+  routines?: SimpleTeamRoutineDefinition[];
 }
 
 // ============================================================================
@@ -451,6 +525,329 @@ function normalizeManifestToPackage(manifest: TeamManifestInput): TeamManifestPa
 }
 
 // ============================================================================
+// Simple YAML frontmatter parser (legacy bot-team-import format)
+// ============================================================================
+
+const FRONTMATTER_DELIMITER = '---';
+
+function parseSimpleYamlManifest(content: string): SimpleTeamManifest {
+  const trimmed = content.replace(/^\uFEFF/, '').trimStart();
+
+  let frontmatterText = '';
+  let body = trimmed;
+
+  if (trimmed.startsWith(FRONTMATTER_DELIMITER)) {
+    const endIndex = trimmed.indexOf(FRONTMATTER_DELIMITER, FRONTMATTER_DELIMITER.length);
+    if (endIndex !== -1) {
+      frontmatterText = trimmed.slice(FRONTMATTER_DELIMITER.length, endIndex).trim();
+      body = trimmed.slice(endIndex + FRONTMATTER_DELIMITER.length).trimStart();
+    }
+  }
+
+  const parsed = frontmatterText
+    ? (parseYaml(frontmatterText) as Record<string, unknown>)
+    : (parseYaml(trimmed) as Record<string, unknown>);
+
+  if (!parsed || typeof parsed !== 'object') {
+    throw new Error('Team file frontmatter is not an object');
+  }
+
+  return normalizeSimpleYamlManifest(parsed);
+}
+
+function normalizeSimpleYamlManifest(raw: Record<string, unknown>): SimpleTeamManifest {
+  const bots: SimpleTeamBotDefinition[] = [];
+  const rawBots = raw.bots ?? raw.agents ?? raw.team ?? [];
+  if (!Array.isArray(rawBots)) {
+    throw new Error('Team file must contain a bots/agents/team array');
+  }
+
+  for (const rawBot of rawBots) {
+    if (typeof rawBot !== 'object' || rawBot === null) {
+      throw new Error('Each bot entry must be an object');
+    }
+    bots.push(normalizeSimpleYamlBot(rawBot as Record<string, unknown>));
+  }
+
+  if (bots.length === 0) {
+    throw new Error('Team file must contain at least one bot');
+  }
+
+  const channels = normalizeSimpleYamlChannels(raw.channels);
+  const routines = normalizeSimpleYamlRoutines(raw.routines);
+
+  return {
+    name: String(raw.name ?? 'Imported Team'),
+    description: raw.description ? String(raw.description) : undefined,
+    version: raw.version ? String(raw.version) : undefined,
+    source: raw.source ? String(raw.source) : undefined,
+    bots,
+    channels,
+    routines,
+  };
+}
+
+function normalizeSimpleYamlBot(raw: Record<string, unknown>): SimpleTeamBotDefinition {
+  const bot: SimpleTeamBotDefinition = {
+    name: String(raw.name ?? raw.display_name ?? 'Unnamed Bot'),
+    displayName: String(raw.displayName ?? raw.display_name ?? raw.name ?? 'Unnamed Bot'),
+    description: raw.description ? String(raw.description) : undefined,
+    type: normalizeSimpleYamlAgentType(raw.type),
+    model: raw.model ? String(raw.model) : undefined,
+    provider: normalizeSimpleYamlProvider(raw.provider),
+    systemPrompt: raw.systemPrompt ? String(raw.systemPrompt) : undefined,
+    tagline: raw.tagline ? String(raw.tagline) : undefined,
+    welcomeMessage: raw.welcomeMessage ? String(raw.welcomeMessage) : undefined,
+    starterPrompts: normalizeSimpleYamlStringArray(raw.starterPrompts ?? raw.starter_prompts),
+    accentColor: raw.accentColor ? String(raw.accentColor) : undefined,
+    botCategory: normalizeSimpleYamlBotCategory(raw.botCategory ?? raw.category),
+    capabilities: normalizeSimpleYamlStringArray(raw.capabilities),
+    tools: normalizeSimpleYamlStringArray(raw.tools),
+    maxIterations: raw.maxIterations ? Number(raw.maxIterations) : undefined,
+    temperature: raw.temperature ? Number(raw.temperature) : undefined,
+    connectorBindings: normalizeSimpleYamlConnectorBindings(raw.connectorBindings ?? raw.connectors),
+    identityChannels: normalizeSimpleYamlIdentityChannels(raw.identityChannels ?? raw.channels),
+    secretRefs: normalizeSimpleYamlSecretRefs(raw.secretRefs ?? raw.secrets),
+  };
+
+  if (!bot.displayName.trim()) {
+    throw new Error('Every bot must have a displayName');
+  }
+
+  return bot;
+}
+
+function normalizeSimpleYamlAgentType(value: unknown): SimpleTeamBotDefinition['type'] {
+  const valid: SimpleTeamBotDefinition['type'][] = [
+    'orchestrator',
+    'sub-agent',
+    'worker',
+    'specialist',
+    'reviewer',
+  ];
+  if (typeof value === 'string' && valid.includes(value as SimpleTeamBotDefinition['type'])) {
+    return value as SimpleTeamBotDefinition['type'];
+  }
+  return 'specialist';
+}
+
+function normalizeSimpleYamlProvider(value: unknown): SimpleTeamBotDefinition['provider'] {
+  const valid: SimpleTeamBotDefinition['provider'][] = [
+    'openai',
+    'anthropic',
+    'google',
+    'local',
+    'custom',
+  ];
+  if (typeof value === 'string' && valid.includes(value as SimpleTeamBotDefinition['provider'])) {
+    return value as SimpleTeamBotDefinition['provider'];
+  }
+  return 'custom';
+}
+
+function normalizeSimpleYamlBotCategory(value: unknown): SimpleTeamBotDefinition['botCategory'] {
+  const valid: SimpleTeamBotDefinition['botCategory'][] = [
+    'research',
+    'code',
+    'writing',
+    'data',
+    'sales',
+    'design',
+    'ops',
+    'custom',
+  ];
+  if (typeof value === 'string' && valid.includes(value as SimpleTeamBotDefinition['botCategory'])) {
+    return value as SimpleTeamBotDefinition['botCategory'];
+  }
+  return 'custom';
+}
+
+function normalizeSimpleYamlStringArray(value: unknown): string[] | undefined {
+  if (!value) return undefined;
+  if (Array.isArray(value)) {
+    return value.map((v) => String(v)).filter(Boolean);
+  }
+  if (typeof value === 'string') {
+    return value.split(',').map((s) => s.trim()).filter(Boolean);
+  }
+  return undefined;
+}
+
+function normalizeSimpleYamlConnectorBindings(value: unknown): AgentConnectorBinding[] | undefined {
+  if (!Array.isArray(value)) return undefined;
+  return value
+    .map((item): AgentConnectorBinding | null => {
+      if (typeof item !== 'object' || item === null) return null;
+      const raw = item as Record<string, unknown>;
+      if (!raw.provider && !raw.connectorId) return null;
+      return {
+        connectorId: String(raw.connectorId ?? `${raw.provider}-${uuidv4().slice(0, 6)}`),
+        provider: String(raw.provider ?? 'unknown'),
+        label: raw.label ? String(raw.label) : undefined,
+        capabilities: normalizeSimpleYamlStringArray(raw.capabilities) ?? [],
+        autonomous: Boolean(raw.autonomous ?? false),
+        allowedActions: normalizeSimpleYamlStringArray(raw.allowedActions),
+      };
+    })
+    .filter((b): b is AgentConnectorBinding => b !== null);
+}
+
+function normalizeSimpleYamlIdentityChannels(value: unknown): Record<string, unknown> | undefined {
+  if (typeof value !== 'object' || value === null || Array.isArray(value)) return undefined;
+  return value as Record<string, unknown>;
+}
+
+function normalizeSimpleYamlSecretRefs(
+  value: unknown,
+): Array<{ name: string; key: string; description?: string; required?: boolean }> | undefined {
+  if (!Array.isArray(value)) return undefined;
+  return value
+    .map((item) => {
+      if (typeof item !== 'object' || item === null) return null;
+      const raw = item as Record<string, unknown>;
+      if (!raw.name || !raw.key) return null;
+      return {
+        name: String(raw.name),
+        key: String(raw.key),
+        description: raw.description ? String(raw.description) : undefined,
+        required: Boolean(raw.required ?? false),
+      };
+    })
+    .filter((s): s is NonNullable<typeof s> => s !== null);
+}
+
+function normalizeSimpleYamlChannels(value: unknown): SimpleTeamChannelDefinition[] | undefined {
+  if (!Array.isArray(value)) return undefined;
+  return value
+    .map((item): SimpleTeamChannelDefinition | null => {
+      if (typeof item !== 'object' || item === null) return null;
+      const raw = item as Record<string, unknown>;
+      if (!raw.botName || !raw.type) return null;
+      return {
+        botName: String(raw.botName),
+        type: String(raw.type) as SimpleTeamChannelDefinition['type'],
+        config: (raw.config ?? {}) as Record<string, unknown>,
+      };
+    })
+    .filter((c): c is SimpleTeamChannelDefinition => c !== null);
+}
+
+function normalizeSimpleYamlRoutines(value: unknown): SimpleTeamRoutineDefinition[] | undefined {
+  if (!Array.isArray(value)) return undefined;
+  return value
+    .map((item): SimpleTeamRoutineDefinition | null => {
+      if (typeof item !== 'object' || item === null) return null;
+      const raw = item as Record<string, unknown>;
+      if (!raw.botName || !raw.title || !raw.instruction) return null;
+      return {
+        botName: String(raw.botName),
+        title: String(raw.title),
+        instruction: String(raw.instruction),
+        frequency: String(raw.frequency ?? 'daily') as CreateBotRoutineInput['frequency'],
+      };
+    })
+    .filter((r): r is SimpleTeamRoutineDefinition => r !== null);
+}
+
+function isSimpleYamlFormat(content: string): boolean {
+  const trimmed = content.replace(/^\uFEFF/, '').trimStart();
+  let yamlText = trimmed;
+
+  if (trimmed.startsWith(FRONTMATTER_DELIMITER)) {
+    const endIndex = trimmed.indexOf(FRONTMATTER_DELIMITER, FRONTMATTER_DELIMITER.length);
+    if (endIndex !== -1) {
+      yamlText = trimmed.slice(FRONTMATTER_DELIMITER.length, endIndex).trim();
+    }
+  }
+
+  try {
+    const parsed = parseYaml(yamlText) as Record<string, unknown> | null;
+    if (!parsed || typeof parsed !== 'object') return false;
+    return (
+      !('botmrr' in parsed) &&
+      !('format' in parsed) &&
+      (Array.isArray(parsed.bots) || Array.isArray(parsed.agents) || Array.isArray(parsed.team))
+    );
+  } catch {
+    return false;
+  }
+}
+
+function simpleYamlToPendingImport(manifest: SimpleTeamManifest): PendingTeamImport {
+  return {
+    manifest: normalizeManifestToPackage({
+      format: TEAM_MANIFEST_FORMAT,
+      version: 2,
+      team: {
+        name: manifest.name,
+        description: manifest.description,
+        members: manifest.bots.map((bot) => ({
+          key: bot.id ?? bot.name,
+          name: bot.displayName,
+          title: bot.tagline,
+          description: bot.description ?? bot.systemPrompt,
+          appearance: {
+            color: bot.accentColor,
+          },
+        })),
+      },
+    } as TeamManifestV2),
+    kind: 'package',
+    name: manifest.name,
+    description: manifest.description ?? '',
+    members: manifest.bots.map((bot) => ({
+      key: bot.id ?? bot.name,
+      name: bot.displayName,
+      title: bot.tagline ?? '',
+      description: bot.description ?? bot.systemPrompt,
+      color: bot.accentColor,
+    })),
+    rooms: [],
+    playbooks: [],
+    routines:
+      manifest.routines?.map((routine) => ({
+        name: routine.title,
+        instruction: routine.instruction,
+        frequency: routine.frequency,
+      })) ?? [],
+    apps: [],
+  };
+}
+
+function previewSimpleYamlManifest(manifest: SimpleTeamManifest): TeamImportPreview {
+  const connectorCount = manifest.bots.reduce(
+    (sum, bot) => sum + (bot.connectorBindings?.length ?? 0),
+    0,
+  );
+  const warnings: string[] = [];
+
+  if (manifest.bots.some((bot) => !bot.description && !bot.systemPrompt)) {
+    warnings.push('Some bots have neither description nor systemPrompt');
+  }
+
+  if ((manifest.channels?.length ?? 0) > 0 && !manifest.bots.some((b) => b.identityChannels)) {
+    warnings.push('Channels are defined but no bots declare identityChannels');
+  }
+
+  return {
+    valid: true,
+    name: manifest.name,
+    description: manifest.description,
+    kind: 'package',
+    memberCount: manifest.bots.length,
+    botCount: manifest.bots.length,
+    roomCount: 0,
+    playbookCount: 0,
+    routineCount: manifest.routines?.length ?? 0,
+    appCount: 0,
+    connectorCount,
+    channelCount: manifest.channels?.length ?? 0,
+    errors: [],
+    warnings,
+  };
+}
+
+// ============================================================================
 // Public parser
 // ============================================================================
 
@@ -467,6 +864,9 @@ export function teamImportPreview(manifest: unknown): PendingTeamImport {
       } catch {
         throw new Error('Invalid JSON team file.');
       }
+    } else if (isSimpleYamlFormat(trimmed)) {
+      const simpleManifest = parseSimpleYamlManifest(trimmed);
+      return simpleYamlToPendingImport(simpleManifest);
     } else {
       manifest = markdownPackage(manifest);
     }
@@ -507,6 +907,17 @@ export function previewTeamImport(file: File | string): Promise<TeamImportPrevie
     const warnings: string[] = [];
 
     const finish = (text: string) => {
+      if (isSimpleYamlFormat(text)) {
+        try {
+          const manifest = parseSimpleYamlManifest(text);
+          resolve(previewSimpleYamlManifest(manifest));
+        } catch (err) {
+          errors.push(err instanceof Error ? err.message : String(err));
+          resolve({ valid: false, errors, warnings });
+        }
+        return;
+      }
+
       try {
         const preview = teamImportPreview(text);
         resolve({
@@ -515,11 +926,14 @@ export function previewTeamImport(file: File | string): Promise<TeamImportPrevie
           description: preview.description,
           kind: preview.kind,
           memberCount: preview.members.length,
+          botCount: preview.members.length,
           chiefOfStaff: preview.chiefOfStaff,
           roomCount: preview.rooms.length,
           playbookCount: preview.playbooks.length,
           routineCount: preview.routines.length,
           appCount: preview.apps.length,
+          connectorCount: preview.apps.length,
+          channelCount: 0,
           errors,
           warnings,
         });
@@ -644,6 +1058,153 @@ function buildConnectorBindings(apps: TeamImportApp[]): AgentConnectorBinding[] 
 }
 
 // ============================================================================
+// Simple YAML frontmatter import (legacy bot-team-import format)
+// ============================================================================
+
+function buildCreateAgentInputFromSimpleBot(
+  bot: SimpleTeamBotDefinition,
+  options: TeamImportOptions,
+): CreateAgentInput {
+  const now = new Date().toISOString();
+  const importPrompt = options.importPrompt?.trim();
+
+  let systemPrompt = bot.systemPrompt ?? '';
+  if (importPrompt) {
+    systemPrompt = `${systemPrompt}\n\n## Import Adaptation Prompt\n${importPrompt}`.trim();
+  }
+
+  return {
+    name: bot.name,
+    description: bot.description ?? `Imported bot: ${bot.displayName}`,
+    type: bot.type,
+    model: bot.model ?? 'default',
+    provider: bot.provider ?? 'custom',
+    capabilities: bot.capabilities ?? [],
+    systemPrompt,
+    tools: bot.tools ?? [],
+    maxIterations: bot.maxIterations ?? 50,
+    temperature: bot.temperature ?? 0.7,
+    isBot: true,
+    botProfile: {
+      displayName: bot.displayName,
+      tagline: bot.tagline,
+      welcomeMessage: bot.welcomeMessage,
+      starterPrompts: bot.starterPrompts,
+      accentColor: bot.accentColor,
+      botCategory: bot.botCategory,
+    },
+    connectorBindings: bot.connectorBindings,
+    identityChannels: bot.identityChannels,
+    secretRefs: bot.secretRefs?.map((ref) => ({
+      name: ref.name,
+      key: ref.key,
+      description: ref.description,
+      required: ref.required ?? false,
+    })),
+    allowedSurfaces: ['chat', 'cowork', 'code', 'design', 'browser'],
+    trustTier: 'standard',
+    source: 'organization',
+    category: bot.botCategory === 'code' ? 'engineering' : 'general',
+    tags: ['imported', 'team', bot.botCategory ?? 'custom'],
+    config: {
+      importedAt: now,
+      importedFrom: 'team-file',
+    },
+  };
+}
+
+async function importSimpleYamlManifest(
+  manifest: SimpleTeamManifest,
+  options: TeamImportOptions = {},
+): Promise<TeamImportResult> {
+  const result: TeamImportResult = {
+    success: false,
+    teamName: options.teamName ?? manifest.name,
+    bots: [],
+    routines: [],
+    connectorBindings: [],
+    warnings: [],
+    errors: [],
+  };
+
+  const createdAgents = new Map<string, Agent>();
+
+  try {
+    for (const botDef of manifest.bots) {
+      try {
+        const input = buildCreateAgentInputFromSimpleBot(botDef, options);
+        const agent = await createAgent(input);
+        createdAgents.set(botDef.name, agent);
+        result.bots.push({ member: simpleBotToMember(botDef), agent });
+        for (const binding of input.connectorBindings ?? []) {
+          result.connectorBindings.push({
+            botId: agent.id,
+            provider: binding.provider,
+            label: binding.label ?? binding.provider,
+          });
+        }
+      } catch (err) {
+        const message = err instanceof Error ? err.message : String(err);
+        result.errors.push(`Failed to create bot "${botDef.name}": ${message}`);
+      }
+    }
+
+    if (result.bots.length === 0) {
+      result.errors.push('No bots were created; aborting team import');
+      return result;
+    }
+
+    for (const routineDef of manifest.routines ?? []) {
+      const agent = createdAgents.get(routineDef.botName);
+      if (!agent) {
+        result.warnings.push(
+          `Skipping routine "${routineDef.title}": bot "${routineDef.botName}" not found`,
+        );
+        continue;
+      }
+      try {
+        const routine = createBotRoutine({
+          botId: agent.id,
+          botName: agent.botProfile?.displayName ?? agent.name,
+          title: routineDef.title,
+          instruction: routineDef.instruction,
+          frequency: routineDef.frequency,
+        });
+        result.routines.push({ botId: agent.id, title: routineDef.title });
+      } catch (err) {
+        const message = err instanceof Error ? err.message : String(err);
+        result.warnings.push(
+          `Failed to create routine "${routineDef.title}" for "${routineDef.botName}": ${message}`,
+        );
+      }
+    }
+
+    result.channels = manifest.channels ?? [];
+    result.success = result.errors.length === 0;
+
+    logger.info(
+      { teamName: result.teamName, bots: result.bots.length, routines: result.routines.length },
+      'Imported simple YAML team',
+    );
+  } catch (err) {
+    const message = err instanceof Error ? err.message : String(err);
+    result.errors.push(`Unexpected team import error: ${message}`);
+  }
+
+  return result;
+}
+
+function simpleBotToMember(bot: SimpleTeamBotDefinition): TeamImportMember {
+  return {
+    key: bot.id ?? bot.name,
+    name: bot.displayName,
+    title: bot.tagline ?? '',
+    description: bot.description ?? bot.systemPrompt,
+    color: bot.accentColor,
+  };
+}
+
+// ============================================================================
 // Public import API
 // ============================================================================
 
@@ -675,11 +1236,20 @@ export async function importTeamFromGitHubUrl(
 
 /**
  * Import a team/package from a raw Markdown/JSON string.
+ *
+ * This is the canonical entry point; `importTeamFromContent` is kept as a
+ * compatibility alias for callers that came from the older bot-team-import
+ * module.
  */
 export async function importTeamFromText(
   text: string,
   options: TeamImportOptions = {},
 ): Promise<TeamImportResult> {
+  if (isSimpleYamlFormat(text)) {
+    const manifest = parseSimpleYamlManifest(text);
+    return importSimpleYamlManifest(manifest, options);
+  }
+
   const warnings: string[] = [];
 
   try {
@@ -734,6 +1304,7 @@ export async function importTeamFromText(
       routines,
       connectorBindings,
       warnings,
+      errors: [],
     };
   } catch (err) {
     const message = err instanceof Error ? err.message : String(err);
@@ -745,7 +1316,54 @@ export async function importTeamFromText(
       routines: [],
       connectorBindings: [],
       warnings,
+      errors: [message],
       error: message,
     };
   }
+}
+
+// ============================================================================
+// Compatibility aliases for the previous bot-team-import module
+// ============================================================================
+
+/**
+ * Fetch a team file from a public raw URL.
+ *
+ * @deprecated Use `importTeamFromText` with a pre-fetched string, or fetch
+ * directly. Kept for callers that were importing from `bot-team-import`.
+ */
+export async function fetchTeamFileFromUrl(url: string): Promise<string> {
+  const response = await fetch(url, { method: 'GET' });
+  if (!response.ok) {
+    throw new Error(`Failed to fetch team file: ${response.status} ${response.statusText}`);
+  }
+  return response.text();
+}
+
+/**
+ * Read a team file from a browser File object.
+ *
+ * @deprecated Use `importTeamFromFile`. Kept for callers that were importing
+ * from `bot-team-import`.
+ */
+export async function readTeamFileFromDisk(file: File): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(String(reader.result ?? ''));
+    reader.onerror = () => reject(new Error('Failed to read team file'));
+    reader.readAsText(file);
+  });
+}
+
+/**
+ * Parse and import from raw file content.
+ *
+ * @deprecated Use `importTeamFromText`. Kept for callers that were importing
+ * from `bot-team-import`.
+ */
+export async function importTeamFromContent(
+  content: string,
+  options?: TeamImportOptions,
+): Promise<TeamImportResult> {
+  return importTeamFromText(content, options);
 }

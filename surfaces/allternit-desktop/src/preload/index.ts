@@ -657,6 +657,11 @@ const voiceAPI = {
   startDictation: (): Promise<{ success: boolean; error?: string }> =>
     ipcRenderer.invoke('voice:start-dictation'),
   stopDictation: (): Promise<void> => ipcRenderer.invoke('voice:stop-dictation'),
+  onTranscript: (callback: (event: { text: string; isFinal: boolean }) => void): (() => void) => {
+    const handler = (_: IpcRendererEvent, event: { text: string; isFinal: boolean }) => callback(event);
+    ipcRenderer.on('voice:transcript', handler);
+    return () => ipcRenderer.off('voice:transcript', handler);
+  },
 };
 
 // ─── Worker Bus (renderer → main → worker round-trip) ────────────────────────

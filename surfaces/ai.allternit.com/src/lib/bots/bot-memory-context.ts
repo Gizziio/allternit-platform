@@ -13,6 +13,7 @@ import {
   resetDefaultBotMemoryStore,
   type BotMemoryStore,
 } from './bot-memory-store';
+import type { BotMemoryRecord } from './bot-memory-contracts';
 import type { Agent } from '@/lib/agents/agent.types';
 
 const logger = createModuleLogger('BotMemoryContext');
@@ -146,4 +147,70 @@ export function proposeBotMemory(
     sensitivity: 'internal',
     status: 'candidate',
   });
+}
+
+// ============================================================================
+// Recall API (moved from bot-memory-injection.ts)
+// ============================================================================
+
+export interface RecallBotMemoriesOptions {
+  tenantId: string;
+  botId: string;
+  query?: string;
+  limit?: number;
+}
+
+export interface RecallBotMemoriesResult {
+  memories: BotMemoryRecord[];
+  contextBlock: string;
+}
+
+function formatConfidence(confidence: number): string {
+  return `${Math.round(confidence * 100)}%`;
+}
+
+/**
+ * Format a list of memory records into a compact context block suitable for
+ * injection into a system prompt.
+ */
+export function formatMemoryContext(memories: BotMemoryRecord[]): string {
+  if (memories.length === 0) {
+    return '';
+  }
+
+  const lines = memories.map((memory) => {
+    const scope = memory.scope ?? 'bot';
+    const sensitivity = memory.sensitivity ?? 'internal';
+    const confidence = formatConfidence(memory.confidence ?? 0.8);
+    const sessionTag = memory.sessionId ? `:${memory.sessionId.slice(-6)}` : '';
+    const projectTag = memory.projectId ? `:${memory.projectId.slice(-6)}` : '';
+    return `- [${scope}${sessionTag}${projectTag}] ${memory.content} (confidence: ${confidence}, sensitivity: ${sensitivity})`;
+  });
+
+  return `Bot Memory (learned facts & preferences):\n${lines.join('\n')}`;
+}
+
+/**
+ * Recall promoted/pinned memories for a bot and return both the raw records and
+ * a formatted context block. Uses the canonical singleton memory store shared
+ * across the surface.
+ */
+export function recallBotMemories(
+  options: RecallBotMemoriesOptions,
+): RecallBotMemoriesResult {
+  const { tenantId, botId, query, limit = 5 } = options;
+
+  const memories = getBotMemoryStore().queryMemories({
+    tenantId,
+    botId,
+    contains: query,
+    status: ['promoted', 'pinned'],
+    limit,
+    includeExpired: false,
+  });
+
+  return {
+    memories,
+    contextBlock: formatMemoryContext(memories),
+  };
 }

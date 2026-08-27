@@ -3,6 +3,7 @@ import {
   teamImportPreview,
   previewTeamImport,
   importTeamFromText,
+  importTeamFromContent,
   type TeamManifestV1,
   type TeamManifestV2,
   type TeamManifestPackage,
@@ -220,5 +221,136 @@ describe('team import execution', () => {
     expect(result.success).toBe(false);
     expect(result.error).toBeDefined();
     expect(result.bots).toHaveLength(0);
+  });
+});
+
+describe('simple yaml frontmatter (legacy bot-team-import format)', () => {
+  beforeEach(() => {
+    mockCreateAgent.mockClear();
+    mockCreateBotRoutine.mockClear();
+  });
+
+  it('parses markdown with YAML frontmatter', () => {
+    const preview = teamImportPreview(`---
+name: Support Team
+bots:
+  - name: triage
+    displayName: Triage Bot
+    systemPrompt: Route incoming tickets
+---
+
+# Support Team
+`);
+    expect(preview.name).toBe('Support Team');
+    expect(preview.members).toHaveLength(1);
+    expect(preview.members[0].name).toBe('Triage Bot');
+  });
+
+  it('parses plain YAML without frontmatter delimiters', () => {
+    const preview = teamImportPreview(`
+name: Plain Team
+bots:
+  - name: helper
+    displayName: Helper
+`);
+    expect(preview.name).toBe('Plain Team');
+    expect(preview.members).toHaveLength(1);
+  });
+
+  it('normalizes connector bindings and identity channels in preview', async () => {
+    const markdown = `---
+name: App Team
+bots:
+  - name: sales
+    displayName: Sales Bot
+    connectors:
+      - provider: slack
+        capabilities:
+          - notify
+    channels:
+      email:
+        address: sales@example.com
+---
+`;
+    const preview = await previewTeamImport(markdown);
+    expect(preview.valid).toBe(true);
+    expect(preview.memberCount).toBe(1);
+    expect(preview.connectorCount).toBe(1);
+    expect(preview.channelCount).toBe(0);
+  });
+
+  it('throws when bots array is empty', () => {
+    expect(() => teamImportPreview('name: Empty\nbots: []')).toThrow('at least one bot');
+  });
+
+  it('returns valid preview for a team with bots, channels, routines, and connectors', async () => {
+    const markdown = `---
+name: Full Team
+bots:
+  - name: scout
+    displayName: Scout
+channels:
+  - botName: scout
+    type: email
+    config:
+      address: scout@example.com
+routines:
+  - botName: scout
+    title: Daily sweep
+    instruction: Check for leads
+    frequency: daily
+---
+`;
+    const preview = await previewTeamImport(markdown);
+    expect(preview.valid).toBe(true);
+    expect(preview.name).toBe('Full Team');
+    expect(preview.memberCount).toBe(1);
+    expect(preview.channelCount).toBe(1);
+    expect(preview.routineCount).toBe(1);
+  });
+
+  it('imports bots and routines from simple YAML content', async () => {
+    const markdown = `---
+name: Import Test
+bots:
+  - name: scout
+    displayName: Scout
+    description: Finds leads
+routines:
+  - botName: scout
+    title: Daily sweep
+    instruction: Check for leads
+    frequency: daily
+---
+`;
+    const result = await importTeamFromContent(markdown);
+
+    expect(result.success).toBe(true);
+    expect(result.teamName).toBe('Import Test');
+    expect(result.bots).toHaveLength(1);
+    expect(result.bots[0].agent.name).toBe('scout');
+    expect(result.routines).toHaveLength(1);
+    expect(mockCreateAgent).toHaveBeenCalledTimes(1);
+    expect(mockCreateBotRoutine).toHaveBeenCalledTimes(1);
+  });
+
+  it('applies import options and appends adaptation prompt for simple YAML', async () => {
+    const markdown = `---
+name: Adapted Team
+bots:
+  - name: writer
+    displayName: Writer
+    systemPrompt: Write copy
+---
+`;
+    const result = await importTeamFromContent(markdown, {
+      teamName: 'Renamed Team',
+      importPrompt: 'Always use British English.',
+    });
+
+    expect(result.teamName).toBe('Renamed Team');
+    const createInput = mockCreateAgent.mock.calls[0][0] as Record<string, unknown>;
+    expect(createInput.systemPrompt).toContain('Write copy');
+    expect(createInput.systemPrompt).toContain('Always use British English.');
   });
 });

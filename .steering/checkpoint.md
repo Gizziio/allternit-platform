@@ -1174,3 +1174,40 @@ Complete Phase 6 hardening for the OMB integration: fix TypeScript errors in tou
 
 ### Open questions / blockers
 - None remaining for this slice.
+
+## OMB integration follow-up fixes — consolidation + native dictation (2026-08-27)
+
+### Goal
+Consolidate duplicate parser/memory modules and implement a native macOS dictation helper for call mode, keeping tests passing and external behavior unchanged.
+
+### Just did
+- Consolidated bot-memory-context / bot-memory-injection:
+  - Moved `formatMemoryContext` and `recallBotMemories` into `surfaces/ai.allternit.com/src/lib/bots/bot-memory-context.ts`.
+  - Updated `surfaces/ai.allternit.com/src/lib/agents/mode-session-store.ts` to import from the canonical module.
+  - Deleted `bot-memory-injection.ts` and `bot-memory-injection.test.ts`.
+- Consolidated team-import / bot-team-import:
+  - Kept `surfaces/ai.allternit.com/src/lib/bots/team-import.ts` as canonical.
+  - Added `errors` array to `TeamImportResult` and populated it from `importTeamFromText`.
+  - Updated `surfaces/ai.allternit.com/src/views/bots/BotTeamImportWizard.tsx` to import from `team-import.ts` and use canonical preview fields.
+  - Deleted `bot-team-import.ts` and `bot-team-import.test.ts`.
+- Implemented native macOS dictation helper:
+  - Added `surfaces/allternit-desktop/native/dictation-helper/DictationHelper.swift` using `SFSpeechRecognizer` with on-device preference.
+  - Updated `surfaces/allternit-desktop/src/main/voice-manager.ts` to compile/run the helper and stream `voice:transcript` IPC events to the renderer.
+  - Added `voiceAPI.onTranscript` to `surfaces/allternit-desktop/src/preload/index.ts`.
+  - Updated `surfaces/ai.allternit.com/src/components/ai-elements/voice-call-mode.tsx` to subscribe to native transcript events and toggle between native dictation and Web Speech.
+
+### Verification
+- `cargo check -p allternit-api`: clean (32 pre-existing warnings).
+- `pnpm run typecheck` in `surfaces/allternit-desktop`: clean.
+- `pnpm run build:main` and `pnpm run build:preload` in `surfaces/allternit-desktop`: clean.
+- `pnpm run typecheck:fast` in `surfaces/ai.allternit.com`: no errors in changed files.
+- esbuild transpile of all changed TS/TSX files: clean.
+- `vitest run src/lib/bots/team-import.test.ts src/lib/bots/bot-memory-context.test.ts`: 27 tests pass.
+- Note: `pnpm run build` in `surfaces/ai.allternit.com` fails at bundle resolution for pre-existing missing `@allternit/office-file-parse/xlsx` in `SheetsView.tsx`; this is unrelated to the changes above.
+
+### Next
+1. Commit the changes with a descriptive message.
+2. Push the `session/omb-integration-phase0` branch.
+
+### Open questions
+- None.

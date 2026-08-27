@@ -506,6 +506,13 @@ export interface MiniAppRuntimeRegistration {
   oauth?: Record<string, unknown>;
 }
 
+export interface VoiceAPI {
+  isAvailable(): Promise<boolean>;
+  startDictation(): Promise<{ success: boolean; error?: string }>;
+  stopDictation(): Promise<void>;
+  onTranscript(handler: (event: { text: string; isFinal: boolean }) => void): () => void;
+}
+
 export interface AllternitDesktopAPI {
   sdk: { getBackendUrl(): Promise<string> };
   connection: ConnectionAPI;
@@ -535,6 +542,7 @@ export interface AllternitDesktopAPI {
   worker: WorkerAPI;
   hyperframes: HyperframesAPI;
   miniApps: MiniAppsAPI;
+  voice: VoiceAPI;
 }
 
 declare global {

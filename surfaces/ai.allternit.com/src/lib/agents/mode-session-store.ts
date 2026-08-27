@@ -41,7 +41,7 @@ import { executeAgentMode } from './agent-mode-executor';
 import { gizziBaseUrl } from './api-config';
 import { buildBotRuntimeEnv } from '@/lib/bots/bot-runtime-env';
 import { memoryClient } from './memory-client';
-import { recallBotMemories } from '@/lib/bots/bot-memory-injection';
+import { recallBotMemories } from '@/lib/bots/bot-memory-context';
 
 const logger = createModuleLogger('ModeSessionStore');
 import type {

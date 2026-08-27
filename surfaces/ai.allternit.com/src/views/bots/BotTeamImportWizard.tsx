@@ -24,7 +24,7 @@ import {
   readTeamFileFromDisk,
   type TeamImportPreview,
   type TeamImportResult,
-} from "@/lib/bots/bot-team-import";
+} from "@/lib/bots/team-import";
 import { createModuleLogger } from "@/lib/logger";
 
 const logger = createModuleLogger('BotTeamImportWizard');
@@ -117,7 +117,7 @@ export function BotTeamImportWizard({ onClose, onImported }: BotTeamImportWizard
 
     try {
       const importResult = await importTeamFromContent(content, {
-        teamName: preview?.teamName,
+        teamName: preview?.name,
       });
       setResult(importResult);
       setStep('result');
@@ -244,13 +244,13 @@ export function BotTeamImportWizard({ onClose, onImported }: BotTeamImportWizard
             <div className="space-y-4">
               <div className="p-4 rounded-xl bg-[var(--bg-elevated)] border border-[var(--border-subtle)]">
                 <h3 className="text-[14px] font-semibold text-[var(--text-primary)] mb-3">
-                  Review: {preview.teamName}
+                  Review: {preview.name}
                 </h3>
                 <div className="grid grid-cols-2 gap-3">
-                  <StatCard icon={Robot} label="Bots" value={preview.botCount} />
-                  <StatCard icon={Plugs} label="Connectors" value={preview.connectorCount} />
-                  <StatCard icon={FileText} label="Channels" value={preview.channelCount} />
-                  <StatCard icon={Clock} label="Routines" value={preview.routineCount} />
+                  <StatCard icon={Robot} label="Bots" value={preview.memberCount ?? 0} />
+                  <StatCard icon={Plugs} label="Apps" value={preview.appCount ?? 0} />
+                  <StatCard icon={FileText} label="Rooms" value={preview.roomCount ?? 0} />
+                  <StatCard icon={Clock} label="Routines" value={preview.routineCount ?? 0} />
                 </div>
               </div>
 

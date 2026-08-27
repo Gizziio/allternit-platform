@@ -13,6 +13,8 @@ import {
   getBotMemoryStore,
   proposeBotMemory,
   resetBotMemoryStore,
+  formatMemoryContext,
+  recallBotMemories,
 } from './bot-memory-context';
 
 describe('bot-memory-context', () => {
@@ -164,5 +166,110 @@ describe('bot-memory-context', () => {
     });
     expect(candidates).toHaveLength(1);
     expect(candidates[0].content).toBe('Learned preference');
+  });
+
+  describe('formatMemoryContext', () => {
+    it('returns empty string for no memories', () => {
+      expect(formatMemoryContext([])).toBe('');
+    });
+
+    it('formats promoted memories with scope, confidence, and sensitivity', () => {
+      const store = getBotMemoryStore();
+      store.proposeMemory({
+        tenantId: 'default',
+        botId: 'bot_fmt',
+        scope: 'bot',
+        content: 'Ada prefers concise answers',
+        provenance: { sourceType: 'assistant' },
+        confidence: 0.92,
+        sensitivity: 'internal',
+        status: 'promoted',
+      });
+
+      const context = formatMemoryContext(
+        store.queryMemories({ tenantId: 'default', botId: 'bot_fmt' }),
+      );
+      expect(context).toContain('Bot Memory');
+      expect(context).toContain('Ada prefers concise answers');
+      expect(context).toContain('confidence: 92%');
+      expect(context).toContain('sensitivity: internal');
+    });
+
+    it('includes session and project short ids when present', () => {
+      const store = getBotMemoryStore();
+      store.proposeMemory({
+        tenantId: 'default',
+        botId: 'bot_tags',
+        scope: 'session',
+        sessionId: 'sess_abcdef123456',
+        content: 'Discussed roadmap',
+        provenance: { sourceType: 'assistant' },
+        confidence: 0.8,
+        sensitivity: 'internal',
+        status: 'promoted',
+      });
+      store.proposeMemory({
+        tenantId: 'default',
+        botId: 'bot_tags',
+        scope: 'project',
+        projectId: 'proj_xyz789uvw',
+        content: 'Q3 goals',
+        provenance: { sourceType: 'assistant' },
+        confidence: 0.8,
+        sensitivity: 'internal',
+        status: 'promoted',
+      });
+
+      const context = formatMemoryContext(
+        store.queryMemories({ tenantId: 'default', botId: 'bot_tags' }),
+      );
+      expect(context).toContain('[session:123456]');
+      expect(context).toContain('[project:789uvw]');
+    });
+  });
+
+  describe('recallBotMemories', () => {
+    it('queries the bot memory store with promoted/pinned status and returns context', () => {
+      const store = getBotMemoryStore();
+      store.proposeMemory({
+        tenantId: 'tenant_1',
+        botId: 'bot_1',
+        scope: 'bot',
+        content: 'Ada prefers concise answers',
+        provenance: { sourceType: 'assistant' },
+        confidence: 0.92,
+        sensitivity: 'internal',
+        status: 'promoted',
+      });
+
+      const result = recallBotMemories({
+        tenantId: 'tenant_1',
+        botId: 'bot_1',
+        query: 'prefers',
+        limit: 3,
+      });
+
+      expect(result.memories).toHaveLength(1);
+      expect(result.contextBlock).toContain('Ada prefers concise answers');
+    });
+
+    it('falls back to default limit when omitted', () => {
+      const store = getBotMemoryStore();
+      for (let i = 0; i < 10; i++) {
+        store.proposeMemory({
+          tenantId: 'tenant_default',
+          botId: 'bot_default',
+          scope: 'bot',
+          content: `Memory ${i}`,
+          provenance: { sourceType: 'assistant' },
+          confidence: 0.9,
+          sensitivity: 'internal',
+          status: 'promoted',
+        });
+      }
+
+      const result = recallBotMemories({ tenantId: 'tenant_default', botId: 'bot_default' });
+      expect(result.memories).toHaveLength(5);
+    });
   });
 });
