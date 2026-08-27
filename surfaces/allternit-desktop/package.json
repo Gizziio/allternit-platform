@@ -105,6 +105,13 @@
         ]
       },
       {
+        "from": "native/dictation-helper/",
+        "to": "native/dictation-helper/",
+        "filter": [
+          "DictationHelper"
+        ]
+      },
+      {
         "from": "resources/platform/",
         "to": "platform/",
         "filter": [

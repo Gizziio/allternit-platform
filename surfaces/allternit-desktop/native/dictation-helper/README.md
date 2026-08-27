@@ -11,17 +11,17 @@ cd surfaces/allternit-desktop/native/dictation-helper
 swiftc -O DictationHelper.swift -o DictationHelper
 ```
 
-Copy the resulting binary into the packaged resources so the desktop build can
-find it:
+Build the binary directly in the source directory so electron-builder can
+stage it:
 
 ```bash
-mkdir -p surfaces/allternit-desktop/resources/bin
-cp surfaces/allternit-desktop/native/dictation-helper/DictationHelper \
-   surfaces/allternit-desktop/resources/bin/
+cd surfaces/allternit-desktop/native/dictation-helper
+swiftc -O DictationHelper.swift -o DictationHelper
 ```
 
-The Electron build's `extraResources` already copies `resources/bin/` into the
-app bundle.
+`surfaces/allternit-desktop/package.json` already includes an `extraResources`
+entry that copies `native/dictation-helper/DictationHelper` into the app
+bundle at `Contents/Resources/native/dictation-helper/DictationHelper`.
 
 ## Runtime
 
