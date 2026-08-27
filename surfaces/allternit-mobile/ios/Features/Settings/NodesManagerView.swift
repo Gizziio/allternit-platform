@@ -152,6 +152,7 @@ struct NodesManagerView: View {
                 )
             }
             .buttonStyle(.plain)
+            .accessibilityLabel("Refresh")
 
             Button(action: generateToken) {
                 HStack(spacing: 6) {

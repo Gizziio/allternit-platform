@@ -50,6 +50,7 @@ struct ModelsTabView: View {
                             .background(Color("BgPanel"))
                             .clipShape(Circle())
                     }
+                    .accessibilityLabel("Refresh")
                     .disabled(store.isLoading)
                     .accessibilityLabel("Refresh models")
                 }

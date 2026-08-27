@@ -1,6 +1,6 @@
 import React, { useEffect, useRef, useState, useCallback } from 'react'
-import { useOfficeAi, type OfficeAgentLoop } from '@allternit/allternit-office-suite/bridge'
-import { type OfficeModelOption } from '@allternit/allternit-office-suite/ai'
+import { useOfficeAi, type OfficeAgentLoop } from '@allternit/office-suite/bridge'
+import { type OfficeModelOption } from '@allternit/office-suite/ai'
 import {
   composeSkills,
   type AgentImage,

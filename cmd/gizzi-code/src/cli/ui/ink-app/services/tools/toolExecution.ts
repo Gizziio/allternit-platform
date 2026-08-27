@@ -68,6 +68,10 @@ import {
   ShellError,
   TelemetrySafeError_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
 } from '../../utils/errors.js'
+import {
+  checkToolHardBan,
+  formatHardBanDenial,
+} from '@/shared/utils/agentHardBans.js'
 import { executePermissionDeniedHooks } from '../../utils/hooks.js'
 import { logError } from '../../utils/log.js'
 import {
@@ -413,6 +417,32 @@ export async function* runToolUse(
 
   const toolInput = toolUse.input as { [key: string]: string }
   try {
+    // Dispatch-time hard-ban guard: block email-sending tools/actions when the
+    // active agent's character card hard-bans them (ALLTERNIT_AGENT_HARD_BANS).
+    // See src/shared/utils/agentHardBans.ts.
+    const banViolation = checkToolHardBan(tool.name, toolUse.input)
+    if (banViolation) {
+      const denial = formatHardBanDenial(banViolation)
+      logForDebugging(
+        `${tool.name} blocked by agent hard ban: ${banViolation.category}`,
+      )
+      yield {
+        message: createUserMessage({
+          content: [
+            {
+              type: 'tool_result',
+              content: `<tool_use_error>${denial}</tool_use_error>`,
+              is_error: true,
+              tool_use_id: toolUse.id,
+            },
+          ],
+          toolUseResult: denial,
+          sourceToolAssistantUUID: assistantMessage.uuid as any,
+        }),
+      }
+      return
+    }
+
     if (toolUseContext.abortController.signal.aborted) {
       logEvent('tengu_tool_use_cancelled', {
         toolName: sanitizeToolNameForAnalytics(tool.name),

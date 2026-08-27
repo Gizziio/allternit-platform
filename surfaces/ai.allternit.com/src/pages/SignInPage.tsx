@@ -2,10 +2,20 @@
 
 import { Suspense, useEffect } from "react"
 import { useSearchParams } from "react-router-dom"
-import { PlatformSignIn, isDesktopShell } from "@/lib/platform-auth-client"
-import { MatrixLogo } from "@/components/ai-elements/MatrixLogo"
+import { PlatformSignIn, getAllowedRedirectOrigins, isDesktopShell } from "@/lib/platform-auth-client"
 import { AuthPreview } from "@/components/auth/AuthPreview"
 import { SiteFooter } from "@/components/auth/SiteFooter"
+import { AProtocolWordmark } from "@/components/AProtocolWordmark"
+
+function isAllowedRedirectUrl(url: string | null): url is string {
+  if (!url) return false
+  if (url.startsWith("/")) return true
+  try {
+    return getAllowedRedirectOrigins().some((origin) => url === origin || url.startsWith(`${origin}/`))
+  } catch {
+    return false
+  }
+}
 
 function SignInContent() {
   const [searchParams] = useSearchParams()
@@ -31,10 +41,9 @@ function SignInContent() {
   }, [])
 
   const requestedRedirect = searchParams.get("redirect_url")
-  const redirectUrl =
-    requestedRedirect && requestedRedirect.startsWith("/")
-      ? requestedRedirect
-      : "/shell"
+  const redirectUrl = isAllowedRedirectUrl(requestedRedirect)
+    ? requestedRedirect
+    : "/shell"
   const signUpUrl = requestedRedirect
     ? `/sign-up?redirect_url=${encodeURIComponent(redirectUrl)}`
     : "/sign-up"
@@ -203,9 +212,8 @@ function SignInContent() {
       <div className="signin-page">
         {/* Nav */}
         <nav className="signin-nav" style={desktopShell ? { paddingLeft: 88 } : undefined}>
-          <a href="/" className="signin-logo">
-            <MatrixLogo state="idle" size={28} />
-            <span className="signin-logo-text">Allternit</span>
+          <a href="/" className="signin-logo" aria-label="Allternit">
+            <AProtocolWordmark theme="adaptive" height={18} />
           </a>
           <a href="/sign-up" className="signin-nav-link">
             New here? <span>Create an account</span>

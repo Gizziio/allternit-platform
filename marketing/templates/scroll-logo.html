@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<!--
+  Allternit scroll-expanding logo — dependency-free version for static sites.
+  Full A://TERNIT wordmark at the top of the page; collapses to the A:// mark
+  once scrolled past 24px. Same model as Anthropic's logotype→logomark Lottie,
+  but pure SVG + CSS transitions (no animation runtime).
+
+  Usage: copy the <style> block, the <span class="apw">…</span> markup, and the
+  <script> block into any page. Add ?collapsed to the URL to preview the
+  collapsed state.
+-->
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>A://TERNIT — scroll logo demo</title>
+<style>
+  body { margin: 0; background: #F0EEE6; font-family: ui-monospace, monospace; }
+  .site-header {
+    position: sticky; top: 0; display: flex; align-items: center;
+    padding: 18px 28px; background: #F0EEE6;
+    border-bottom: 1px solid rgba(20,20,19,.08);
+  }
+  .apw { display: inline-block; overflow: hidden; height: 20px;
+         transition: width 500ms cubic-bezier(0.4, 0, 0.2, 1); vertical-align: middle; }
+  .apw svg { display: block; }
+  .apw-letter { transition: opacity 240ms cubic-bezier(0.4,0,0.2,1),
+                            transform 400ms cubic-bezier(0.4,0,0.2,1); }
+  .apw.collapsed .apw-letter { opacity: 0; transform: translateX(-12px); }
+  main { padding: 40px 28px; color: #141413; max-width: 640px; }
+  p { line-height: 1.7; opacity: .7; }
+</style>
+</head>
+<body>
+<header class="site-header">
+  <!-- A://TERNIT wordmark: 10-unit cells, 8.5 blocks, viewBox 510x50 -->
+  <span class="apw" id="apw" role="img" aria-label="Allternit">
+    <svg viewBox="0 0 510 50" width="204" height="20" shape-rendering="geometricPrecision">
+      <g fill="#141413" id="apw-mark"></g>
+      <rect x="20.75" y="20.75" width="8.5" height="8.5" rx="1.5" fill="#D97757"/>
+      <g fill="#141413" id="apw-letters"></g>
+    </svg>
+  </span>
+</header>
+<main>
+  <p>Scroll down — the wordmark collapses to the A:// protocol mark. Scroll back to the top and TERNIT cascades back in.</p>
+  <p id="filler"></p>
+</main>
+<script>
+(function () {
+  var CELL = 10, OFF = 0.75, BLOCK = 8.5;
+  var MARK = [[2,0],[1,1],[3,1],[0,2],[1,2],[3,2],[4,2],[0,3],[4,3],[0,4],[4,4],
+              [6,1],[6,3],[8,3],[8,4],[9,2],[10,0],[10,1],[12,3],[12,4],[13,2],[14,0],[14,1]];
+  var LETTERS = [
+    [[0,0],[1,0],[2,0],[3,0],[4,0],[2,1],[2,2],[2,3],[2,4]],                                              // T
+    [[0,0],[1,0],[2,0],[3,0],[4,0],[0,1],[0,2],[1,2],[2,2],[3,2],[0,3],[0,4],[1,4],[2,4],[3,4],[4,4]],      // E
+    [[0,0],[1,0],[2,0],[3,0],[0,1],[4,1],[0,2],[1,2],[2,2],[3,2],[0,3],[2,3],[0,4],[3,4],[4,4]],            // R
+    [[0,0],[0,1],[1,1],[0,2],[2,2],[0,3],[3,3],[0,4],[4,0],[4,1],[4,2],[4,3],[4,4]],                        // N
+    [[1,0],[2,0],[3,0],[2,1],[2,2],[2,3],[1,4],[2,4],[3,4]],                                              // I
+    [[0,0],[1,0],[2,0],[3,0],[4,0],[2,1],[2,2],[2,3],[2,4]]                                               // T
+  ];
+  var NS = 'http://www.w3.org/2000/svg';
+  function rect(x, y) {
+    var r = document.createElementNS(NS, 'rect');
+    r.setAttribute('x', x * CELL + OFF); r.setAttribute('y', y * CELL + OFF);
+    r.setAttribute('width', BLOCK); r.setAttribute('height', BLOCK);
+    r.setAttribute('rx', 1.5);
+    return r;
+  }
+  var mark = document.getElementById('apw-mark');
+  MARK.forEach(function (c) { mark.appendChild(rect(c[0], c[1])); });
+  var lettersWrap = document.getElementById('apw-letters');
+  LETTERS.forEach(function (cells, i) {
+    var g = document.createElementNS(NS, 'g');
+    g.setAttribute('class', 'apw-letter');
+    cells.forEach(function (c) { g.appendChild(rect(16 + i * 6 + c[0], c[1])); });
+    lettersWrap.appendChild(g);
+  });
+
+  var apw = document.getElementById('apw');
+  var letters = lettersWrap.children;
+  var FULL_W = 204, MARK_W = 60; // 20px tall: 510/50*20 and 150/50*20
+  function apply(collapsed) {
+    apw.classList.toggle('collapsed', collapsed);
+    apw.style.width = (collapsed ? MARK_W : FULL_W) + 'px';
+    for (var i = 0; i < letters.length; i++) {
+      letters[i].style.transitionDelay = collapsed
+        ? ((letters.length - 1 - i) * 30) + 'ms'
+        : (120 + i * 45) + 'ms';
+    }
+  }
+  apply(location.search.indexOf('collapsed') !== -1);
+  if (location.search.indexOf('collapsed') === -1) {
+    window.addEventListener('scroll', function () { apply(window.scrollY > 24); }, { passive: true });
+  }
+
+  document.getElementById('filler').textContent = 'Scroll filler — '.repeat(400);
+})();
+</script>
+</body>
+</html>

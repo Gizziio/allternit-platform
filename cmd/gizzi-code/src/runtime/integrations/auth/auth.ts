@@ -73,4 +73,81 @@ export namespace Auth {
     delete data[key]
     await Filesystem.writeJson(filepath, data, 0o600)
   }
+
+  // ── Named auth profiles store (separate from legacy provider-key auth) ─────
+
+  export const Profile = z.object({
+    id: z.string(),
+    providerID: z.string(),
+    name: z.string().optional(),
+    type: z.enum(["api", "oauth", "token"]),
+    apiKey: z.string().optional(),
+    token: z.string().optional(),
+    extraHeaders: z.record(z.string(), z.string()).optional(),
+    order: z.number().optional(),
+  })
+  export type Profile = z.infer<typeof Profile>
+
+  export type ProfileStore = {
+    profiles: Record<string, Profile>
+    order?: string[]
+  }
+
+  const profileFilepath = path.join(Global.Path.data, "auth-profiles.json")
+
+  async function loadProfiles(): Promise<ProfileStore> {
+    const data = await Filesystem.readJson<ProfileStore>(profileFilepath).catch(() => ({}))
+    return {
+      profiles: data.profiles ?? {},
+      order: data.order,
+    }
+  }
+
+  async function saveProfiles(store: ProfileStore) {
+    await Filesystem.writeJson(profileFilepath, store, 0o600)
+  }
+
+  export async function getProfile(profileId: string): Promise<Profile | undefined> {
+    const store = await loadProfiles()
+    return store.profiles[profileId]
+  }
+
+  export async function profilesForProvider(providerID: string): Promise<Profile[]> {
+    const store = await loadProfiles()
+    const profiles = Object.values(store.profiles).filter((p) => p.providerID === providerID)
+    const order = store.order ?? []
+    return profiles.sort((a, b) => {
+      const ai = order.indexOf(a.id)
+      const bi = order.indexOf(b.id)
+      if (ai !== -1 && bi !== -1) return ai - bi
+      if (ai !== -1) return -1
+      if (bi !== -1) return 1
+      return (a.order ?? 0) - (b.order ?? 0)
+    })
+  }
+
+  export async function setProfile(profile: Profile) {
+    const store = await loadProfiles()
+    store.profiles[profile.id] = profile
+    await saveProfiles(store)
+  }
+
+  export async function removeProfile(profileId: string) {
+    const store = await loadProfiles()
+    delete store.profiles[profileId]
+    store.order = store.order?.filter((id) => id !== profileId)
+    await saveProfiles(store)
+  }
+
+  export async function setOrder(profileIds: string[]) {
+    const store = await loadProfiles()
+    store.order = profileIds
+    await saveProfiles(store)
+  }
+
+  /** Active/default profile for a provider, respecting configured order. */
+  export async function activeProfile(providerID: string): Promise<Profile | undefined> {
+    const profiles = await profilesForProvider(providerID)
+    return profiles[0]
+  }
 }

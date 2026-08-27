@@ -1,5 +1,6 @@
 import type { ReactNode } from 'react'
 import { OfficeAppLogo, type OfficeProduct } from './components/OfficeAppLogo'
+import { AProtocolWordmark, useScrollCollapse } from './components/AProtocolWordmark'
 import { ALLTERNIT_PLATFORM_URL } from './platformUrl'
 import type { AppTab } from './types'
 import { Footer } from './Footer'
@@ -85,18 +86,14 @@ function HeroVisual() {
 }
 
 export function HomePage({ onLaunch, disclosure }: HomePageProps) {
+  const brandCollapsed = useScrollCollapse()
   return (
     <div className="office-home">
       <header className="office-home__header">
         <div className="office-home__header-left">
           <a href={ALLTERNIT_PLATFORM_URL} className="office-home__brand">
-            Allternit Office
+            <AProtocolWordmark collapsed={brandCollapsed} height={18} theme="adaptive" suffix="OFFICE" />
           </a>
-          <nav className="office-home__header-nav" aria-label="Platform links">
-            <a href={ALLTERNIT_PLATFORM_URL} className="office-home__header-link">
-              Allternit
-            </a>
-          </nav>
         </div>
         <button type="button" onClick={() => onLaunch()} className="btn btn-primary">
           Open Office

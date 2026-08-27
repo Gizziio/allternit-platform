@@ -4,7 +4,7 @@ import {
   OfficeHostProvider,
   createBrowserHost,
   type OfficeHost,
-} from '@allternit/allternit-office-suite';
+} from '@allternit/office-suite';
 import { buildBlankDocx, parseDocx, saveDocx } from '@allternit/office-docx-engine';
 import { takeFile } from '@/views/office/file-handoff';
 import {

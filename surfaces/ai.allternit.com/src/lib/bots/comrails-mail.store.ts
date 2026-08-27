@@ -188,6 +188,7 @@ export const useCommRailsMailStore = createWithEqualityFn<CommRailsMailState & C
 function transformRailsMessage(m: MailMessage): AgentMailMessage {
   const toAgents = Array.isArray(m.to_agents) ? m.to_agents : [];
   const requiresAck = Boolean(m.ack_required);
+  const isAcknowledged = m.acknowledged === true;
   return {
     id: String(m.message_id || m.timestamp),
     threadId: String(m.thread_id || 'default'),
@@ -197,7 +198,7 @@ function transformRailsMessage(m: MailMessage): AgentMailMessage {
     subject: typeof m.subject === 'string' ? m.subject : 'Message',
     body: String(m.body || ''),
     bodyRef: typeof m.body_ref === 'string' ? m.body_ref : undefined,
-    status: requiresAck ? 'unread' : 'read',
+    status: isAcknowledged ? 'read' : 'unread',
     priority: mapRailsPriority(m.priority ?? m.importance),
     timestamp: String(m.timestamp || new Date().toISOString()),
     requiresAck,

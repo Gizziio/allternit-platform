@@ -26,6 +26,31 @@ const univerCore = path.dirname(path.dirname(path.dirname(univerCoreEntry)))
  * Production builds must replace this with a real backend implementation
  * (e.g. /api/v1/dispatch/claim and /api/v1/dispatch/status backed by Redis/SQLite).
  */
+/**
+ * Dev-only: Vite's MPA server matches `/remote-control` to `remote-control.html`
+ * because of the rollup input key. The platform route `/remote-control` must
+ * serve `index.html` (the SPA shell) so the hub page renders, while
+ * `/remote-control.html` continues to serve the standalone dashboard entry.
+ */
+function remoteControlRoutePlugin(): Plugin {
+  return {
+    name: 'allternit-remote-control-route',
+    configureServer(server) {
+      server.middlewares.use('/remote-control', (req, res, next) => {
+        if (req.method !== 'GET') return next();
+        const url = req.url ?? '/';
+        // Only rewrite the exact hub path (with optional query string), not
+        // static assets under /remote-control/ or the standalone entrypoint.
+        if (url !== '/' && !url.startsWith('?')) return next();
+        // Rewrite to the platform SPA shell so Vite injects the React refresh
+        // preamble and processes the HTML transform pipeline.
+        req.url = '/index.html' + (url.startsWith('?') ? url : '');
+        next();
+      });
+    },
+  };
+}
+
 function dispatchHandoffPlugin(): Plugin {
   const claims = new Map<string, { claimedAt: number; device?: string }>();
 
@@ -99,6 +124,7 @@ function dispatchHandoffPlugin(): Plugin {
 export default defineConfig({
   plugins: [
     react(),
+    remoteControlRoutePlugin(),
     dispatchHandoffPlugin(),
     designSkillsPlugin(),
     process.env.ANALYZE === '1' && visualizer({
@@ -119,6 +145,18 @@ export default defineConfig({
   resolve: {
     alias: [
       { find: '@', replacement: path.resolve(__dirname, './src') },
+      // The workspace root can resolve React 19 (e.g. from framer-motion dev
+      // dependencies) while this surface pins React 18. Without explicit
+      // aliases, transitive workspace imports can pull in the root React
+      // instance alongside the surface's React 18, which breaks the hook
+      // dispatcher and produces "Cannot read properties of null (reading
+      // 'useState' / 'useContext')" crashes. Force every react/react-dom
+      // import to this surface's copy.
+      { find: /^react$/, replacement: path.resolve(__dirname, './node_modules/react/index.js') },
+      { find: /^react\/jsx-runtime$/, replacement: path.resolve(__dirname, './node_modules/react/jsx-runtime.js') },
+      { find: /^react\/jsx-dev-runtime$/, replacement: path.resolve(__dirname, './node_modules/react/jsx-dev-runtime.js') },
+      { find: /^react-dom$/, replacement: path.resolve(__dirname, './node_modules/react-dom/index.js') },
+      { find: /^react-dom\/client$/, replacement: path.resolve(__dirname, './node_modules/react-dom/client.js') },
       // Force Univer to use the same @univerjs/core@0.25.1 that
       // office-sheets-app depends on. The bare import and every subpath
       // (e.g. @univerjs/core/facade, @univerjs/core/lib/facade) must be
@@ -147,6 +185,10 @@ export default defineConfig({
     sourcemap: process.env.SOURCEMAP === '1',
     chunkSizeWarningLimit: 2000,
     rollupOptions: {
+      input: {
+        main: path.resolve(__dirname, 'index.html'),
+        'remote-control': path.resolve(__dirname, 'remote-control.html'),
+      },
       external: [
         /.*domains\/agent\/allternit-agent-workspace\/pkg.*/,
         'better-sqlite3',

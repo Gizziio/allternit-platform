@@ -51,6 +51,8 @@ final class PreferencesStore: ObservableObject {
     @Published private(set) var isSaving = false
     /// Fetch/save failures surface in Settings as plain text (never silent).
     @Published var saveError: String? = nil
+    /// Set on every successful save so views can flash a brief confirmation.
+    @Published private(set) var lastSavedAt: Date? = nil
 
     private let client: PreferencesClient
     private var fetchTask: Task<Void, Never>? = nil
@@ -97,6 +99,7 @@ final class PreferencesStore: ObservableObject {
             defer { self.isSaving = false }
             do {
                 try await self.client.put(responseStyle: style.rawValue, customInstructions: instructions)
+                self.lastSavedAt = Date()
             } catch is CancellationError {
                 // A newer save superseded this one — leave state alone.
             } catch {

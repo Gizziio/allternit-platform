@@ -156,3 +156,29 @@ pub async fn connected_provider_ids() -> HashSet<String> {
         .filter_map(|value| value.as_str().map(str::to_owned))
         .collect()
 }
+
+/// Ask Gizzi for the full live provider discovery payload.
+pub async fn discover_providers() -> Result<serde_json::Value, String> {
+    let response = client()?
+        .get(format!("{}/provider", base_url()))
+        .send()
+        .await
+        .map_err(|error| format!("Could not reach Gizzi provider discovery: {error}"))?;
+    response
+        .json::<serde_json::Value>()
+        .await
+        .map_err(|error| format!("Gizzi returned an invalid provider discovery response: {error}"))
+}
+
+/// Ask Gizzi for provider authentication-method metadata.
+pub async fn provider_auth_methods() -> Result<serde_json::Value, String> {
+    let response = client()?
+        .get(format!("{}/provider/auth", base_url()))
+        .send()
+        .await
+        .map_err(|error| format!("Could not reach Gizzi provider auth methods: {error}"))?;
+    response
+        .json::<serde_json::Value>()
+        .await
+        .map_err(|error| format!("Gizzi returned an invalid provider auth methods response: {error}"))
+}

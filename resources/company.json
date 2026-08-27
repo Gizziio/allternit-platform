@@ -8,9 +8,9 @@
   "railsWorkspaceId": "default",
   "cronDaemonUrl": "http://127.0.0.1:4096/cron",
   "vmDir": "",
-  "clerkPublishableKey": "pk_live_Y2xlcmsucGxhdGZvcm0uYWxsdGVybml0bSQ",
+  "clerkPublishableKey": "pk_live_Y2xlcmsuYWxsdGVybml0LmNvbSQ",
   "clerkJwksUrl": "",
-  "clerkIssuer": "",
+  "clerkIssuer": "https://clerk.platform.allternit.com",
   "clerkWebhookSecret": "",
   "selfHosted": false,
   "encryptionKey": ""

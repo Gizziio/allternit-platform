@@ -157,6 +157,8 @@ const isMac = process.platform === 'darwin';
 
 let mainWindow: BrowserWindow | null = null;
 let designWindow: BrowserWindow | null = null;
+let hudWindow: BrowserWindow | null = null;
+let remoteControlWindow: BrowserWindow | null = null;
 /** One office editor window per target (docs/sheets/slides/pdf/launcher). */
 const officeWindows = new Map<OfficeTarget, BrowserWindow>();
 let splashWindow: BrowserWindow | null = null;
@@ -174,9 +176,14 @@ let pushServiceState = () => {
 };
 let miniWindow: BrowserWindow | null = null;
 let tray: Tray | null = null;
-let activePlatformUrl: string = isDev ? URLS.DEV_UI : 'https://ai.allternit.com';
+let activePlatformUrl: string = isDev ? URLS.DEV_UI : 'https://platform.allternit.com';
 
 const QUICK_CHAT_HOTKEY = 'CommandOrControl+Shift+A';
+// Hermes Desktop uses ⌘/Ctrl+Shift+H for its global HUD toggle.  Register that
+// as the primary shortcut and keep Alt+Shift+H as a fallback for users whose
+// muscle memory expects it.
+const HUD_HOTKEY = 'CommandOrControl+Shift+H';
+const HUD_HOTKEY_FALLBACK = 'Alt+Shift+H';
 const MINI_WINDOW_WIDTH = 520;
 const MINI_WINDOW_HEIGHT = 600;
 /** Resolved backend URL — set once the app initializes. Used by sdk:get-backend-url IPC. */
@@ -537,6 +544,21 @@ function createMainWindow(): BrowserWindow {
         };
       }
 
+      if (requestedUrl.pathname === '/remote-control.html') {
+        return {
+          action: 'allow',
+          overrideBrowserWindowOptions: {
+            width: 1280,
+            height: 840,
+            minWidth: 820,
+            minHeight: 560,
+            backgroundColor: '#0F0C0A',
+            autoHideMenuBar: true,
+            title: 'Allternit Remote Control',
+          },
+        };
+      }
+
       if (
         (requestedUrl.pathname === '/platform' || requestedUrl.pathname === '/shell') &&
         requestedUrl.searchParams.get('detachedSurface') === 'code'
@@ -777,7 +799,11 @@ async function initializeBundledMode(): Promise<void> {
     //              the remote URL only when no local build is present.
     // Offline:    If remote URL is unreachable, fall back to local static files
     //              served by the Rust API at the local API URL.
-    let platformUrl: string = isDev ? URLS.DEV_UI : 'https://ai.allternit.com';
+    // Allow ALLTERNIT_PLATFORM_URL to override the platform URL in dev/bundled
+    // mode so local worktree UI builds (e.g. Vite on a non-default port) can be
+    // tested without repackaging the desktop.
+    let platformUrl: string = process.env.ALLTERNIT_PLATFORM_URL?.trim()
+      || (isDev ? URLS.DEV_UI : 'https://platform.allternit.com');
 
     if (isDev && process.env.ALLTERNIT_DESKTOP_USE_STATIC_UI) {
       const localStaticPath = resolveLocalPlatformStaticPath();
@@ -833,8 +859,8 @@ async function initializeBundledMode(): Promise<void> {
       pushServiceState();
     }
 
-    activePlatformUrl = platformUrl;
-    log.info(`[Main] Platform URL: ${platformUrl}`);
+    activePlatformUrl = process.env.ALLTERNIT_PLATFORM_URL || platformUrl;
+    log.info(`[Main] Platform URL: ${activePlatformUrl}`);
     // Clerk authenticates the human in the browser. The desktop waits for the
     // separately scoped runtime pairing that was started alongside boot.
     if (showStartupWizard) {
@@ -878,7 +904,7 @@ async function initializeBundledMode(): Promise<void> {
       log.info('[Main] DOM ready');
     });
     
-    mainWindow.loadURL(platformUrl);
+    mainWindow.loadURL(activePlatformUrl);
 
     // First launch: used for permission onboarding gating below
     const isFirstLaunch = !store.get('onboardingComplete');
@@ -1064,7 +1090,9 @@ async function initializeRemoteMode(remoteUrl: string): Promise<void> {
 }
 
 async function initializeDevelopmentMode(): Promise<void> {
-  log.info('[Main] Development mode');
+  const platformUrl = process.env.ALLTERNIT_PLATFORM_URL?.trim() || URLS.DEV_UI;
+  activePlatformUrl = platformUrl;
+  log.info('[Main] Development mode', { platformUrl });
   activeBackendUrl = URLS.DEV_UI;
 
   // Adopt or start the local Gizzi runtime so the sidecar can broker
@@ -1080,7 +1108,9 @@ async function initializeDevelopmentMode(): Promise<void> {
   }
 
   mainWindow = createMainWindow();
-  mainWindow.loadURL(URLS.DEV_UI);
+  activePlatformUrl = process.env.ALLTERNIT_PLATFORM_URL || platformUrl;
+  log.info(`[Main] Dev mode loading platform URL: ${activePlatformUrl}`);
+  mainWindow.loadURL(activePlatformUrl);
   mainWindow.webContents.openDevTools();
   mainWindow.show();
 }
@@ -1393,6 +1423,7 @@ async function updateTrayMenu(): Promise<void> {
       ],
     },
     { label: 'Quick Chat', accelerator: QUICK_CHAT_HOTKEY, click: () => toggleMiniWindow() },
+    { label: 'Toggle HUD', accelerator: HUD_HOTKEY, click: () => toggleHudWindow() },
     { type: 'separator' },
     { label: 'Quit', click: () => app.quit() },
   ] as any);
@@ -1442,6 +1473,12 @@ let authManagerReady = false;
 async function handleProtocolCallback(url: string | null): Promise<void> {
   if (!url) return;
   log.info('[Main] handleProtocolCallback:', url);
+
+  // Platform deep links handled directly by the desktop shell.
+  if (url === 'allternit://hud' || url === 'allternit://open/hud') {
+    toggleHudWindow();
+    return;
+  }
 
   // Buffer if auth manager hasn't initialized yet — will be flushed after initialize()
   if (!authManagerReady) {
@@ -1713,6 +1750,20 @@ app.whenReady().then(async () => {
     log.warn(`[Main] Failed to register global hotkey: ${QUICK_CHAT_HOTKEY}`);
   }
 
+  // Global hotkey: ⌘/Ctrl+Shift+H (Hermes-style) → toggle floating HUD window
+  const hudHotkeyRegistered = globalShortcut.register(HUD_HOTKEY, toggleHudWindow);
+  if (hudHotkeyRegistered) {
+    log.info(`[Main] Registered global HUD hotkey: ${HUD_HOTKEY}`);
+  } else {
+    log.warn(`[Main] Failed to register global hotkey: ${HUD_HOTKEY}. On macOS this usually means Allternit needs Accessibility permission in System Settings > Privacy & Security > Accessibility.`);
+  }
+
+  // Fallback global hotkey for users who expect the earlier Alt+Shift+H binding.
+  const hudHotkeyFallbackRegistered = globalShortcut.register(HUD_HOTKEY_FALLBACK, toggleHudWindow);
+  if (hudHotkeyFallbackRegistered) {
+    log.info(`[Main] Registered fallback global HUD hotkey: ${HUD_HOTKEY_FALLBACK}`);
+  }
+
   app.on('activate', () => {
     if (BrowserWindow.getAllWindows().length === 0) {
       initializeApp();
@@ -1880,6 +1931,221 @@ ipcMain.handle('shell:open-design', () => {
   designWindow.once('ready-to-show', () => designWindow?.show());
   designWindow.on('closed', () => { designWindow = null; });
   void designWindow.loadURL(new URL('/design', activePlatformUrl).toString());
+});
+
+// HUD mode defaults — a chrome-free floating panel anchored near the bottom
+// of the primary display, inspired by Hermes Desktop's HUD windowing profile.
+// The default shape is a wide, short bar so the composer dominates, matching
+// Hermes' 620×320 bottom-band layout.
+const HUD_WIDTH = 720;
+const HUD_HEIGHT = 220;
+const HUD_BOTTOM_MARGIN = 72;
+
+function computeHudBounds() {
+  const { width: screenW, height: screenH } = screen.getPrimaryDisplay().workAreaSize;
+  return {
+    width: Math.min(HUD_WIDTH, screenW),
+    height: Math.min(HUD_HEIGHT, screenH),
+    x: Math.round((screenW - Math.min(HUD_WIDTH, screenW)) / 2),
+    y: Math.round(Math.max(0, screenH - Math.min(HUD_HEIGHT, screenH) - HUD_BOTTOM_MARGIN)),
+  };
+}
+
+function createHudWindow(): BrowserWindow {
+  const win = new BrowserWindow({
+    ...computeHudBounds(),
+    minWidth: 380,
+    minHeight: 160,
+    maxWidth: 1600,
+    maxHeight: 1000,
+    title: 'Allternit HUD',
+    frame: false,
+    transparent: true,
+    // Keep resizable false so a transparent frameless window does not expose a
+    // system-level edge-resize hot-zone (Windows grows a few px per drag when
+    // this is true).  Resizing is done by the renderer's corner handles if we
+    // add them later; dragging is handled by the renderer drag handle + IPC.
+    resizable: false,
+    movable: true,
+    minimizable: false,
+    maximizable: false,
+    fullscreenable: false,
+    skipTaskbar: !isMac,
+    hasShadow: false,
+    alwaysOnTop: true,
+    // NSPanel on macOS keeps the HUD out of the cmd-tab anchor and lets it
+    // float above fullscreen apps like Hermes' HUD.
+    type: isMac ? 'panel' : undefined,
+    roundedCorners: true,
+    visualEffectState: 'active',
+    hiddenInMissionControl: isMac,
+    show: false,
+    backgroundColor: '#00000000',
+    webPreferences: {
+      preload: join(__dirname, '../preload/index.js'),
+      contextIsolation: true,
+      nodeIntegration: false,
+      sandbox: true,
+    },
+  });
+
+  // Ensure the panel floats above normal windows and appears on all macOS
+  // Spaces while fullscreen apps are running.
+  win.setAlwaysOnTop(true, isMac ? 'floating' : 'screen-saver');
+  try {
+    win.setVisibleOnAllWorkspaces?.(true, { visibleOnFullScreen: true, skipTransformProcessType: true });
+  } catch {
+    // Best effort — not supported on every platform/configuration.
+  }
+
+  return win;
+}
+
+function openHudWindow(): void {
+  log.info('[HUD] openHudWindow called', { activePlatformUrl });
+  if (hudWindow && !hudWindow.isDestroyed()) {
+    const url = new URL('/hud', activePlatformUrl).toString();
+    log.info('[HUD] Reusing existing HUD window:', url);
+    void hudWindow.loadURL(url);
+    hudWindow.show();
+    hudWindow.focus();
+    hudWindow.moveTop();
+    return;
+  }
+
+  log.info('[HUD] Creating new floating HUD window');
+  hudWindow = createHudWindow();
+
+  log.info('[HUD] HUD window created', { id: hudWindow.id, bounds: hudWindow.getBounds(), visible: hudWindow.isVisible() });
+
+  hudWindow.webContents.setWindowOpenHandler(({ url }) => {
+    void shell.openExternal(url);
+    return { action: 'deny' };
+  });
+  hudWindow.webContents.on('did-fail-load', (_event, errorCode, errorDescription) => {
+    log.error('[HUD] Failed to load HUD window:', errorCode, errorDescription);
+  });
+  hudWindow.webContents.on('did-finish-load', () => {
+    log.info('[HUD] HUD window finished loading', { url: hudWindow?.webContents.getURL(), title: hudWindow?.getTitle() });
+  });
+  hudWindow.webContents.on('did-navigate', (_event, url) => {
+    log.info('[HUD] HUD window did-navigate:', url);
+  });
+  hudWindow.once('ready-to-show', () => {
+    log.info('[HUD] HUD window ready-to-show');
+    hudWindow?.show();
+    hudWindow?.focus();
+    hudWindow?.moveTop();
+  });
+  hudWindow.on('closed', () => { log.info('[HUD] HUD window closed'); hudWindow = null; });
+  const hudUrl = new URL('/hud', activePlatformUrl).toString();
+  log.info('[HUD] Loading HUD window URL:', hudUrl);
+  void hudWindow.loadURL(hudUrl);
+}
+
+function toggleHudWindow(): void {
+  log.info('[HUD] toggleHudWindow called');
+  if (hudWindow && !hudWindow.isDestroyed()) {
+    if (hudWindow.isVisible() && hudWindow.isFocused()) {
+      log.info('[HUD] HUD is visible and focused — closing');
+      hudWindow.close();
+      return;
+    }
+    log.info('[HUD] HUD exists — showing and focusing');
+    hudWindow.show();
+    hudWindow.focus();
+    hudWindow.moveTop();
+    return;
+  }
+  openHudWindow();
+}
+
+ipcMain.handle('shell:open-hud', openHudWindow);
+ipcMain.handle('shell:close-hud', () => {
+  if (hudWindow && !hudWindow.isDestroyed()) {
+    hudWindow.close();
+  }
+});
+ipcMain.handle('shell:toggle-hud', toggleHudWindow);
+ipcMain.handle('shell:move-hud', (_event, delta: { x: number; y: number; width: number; height: number }) => {
+  if (!hudWindow || hudWindow.isDestroyed()) return;
+  const dx = Number(delta?.x ?? 0);
+  const dy = Number(delta?.y ?? 0);
+  const width = Number(delta?.width ?? HUD_WIDTH);
+  const height = Number(delta?.height ?? HUD_HEIGHT);
+  if (![dx, dy, width, height].every(Number.isFinite)) return;
+  const [x, y] = hudWindow.getPosition();
+  // setBounds (not setPosition) keeps a transparent frameless window from
+  // drifting on Windows per Electron frameless-transparent quirks.
+  const wasResizable = hudWindow.isResizable();
+  if (!wasResizable) hudWindow.setResizable(true);
+  try {
+    hudWindow.setBounds({
+      x: Math.round(x + dx),
+      y: Math.round(y + dy),
+      width: Math.max(380, Math.round(width)),
+      height: Math.max(160, Math.round(height)),
+    });
+  } finally {
+    if (!wasResizable && !hudWindow.isDestroyed()) hudWindow.setResizable(false);
+  }
+});
+ipcMain.handle('shell:resize-hud', (_event, bounds: { height: number }) => {
+  if (!hudWindow || hudWindow.isDestroyed()) return;
+  const requestedHeight = Math.max(160, Math.round(Number(bounds?.height ?? HUD_HEIGHT)));
+  const [x, y] = hudWindow.getPosition();
+  const [width] = hudWindow.getSize();
+  const currentBottom = y + hudWindow.getSize()[1];
+  // Keep the window's bottom edge anchored so it grows/collapses upward,
+  // mirroring the Hermes HUD expansion behavior.
+  const newY = Math.max(0, Math.round(currentBottom - requestedHeight));
+  const newHeight = Math.min(1000, Math.max(160, Math.round(currentBottom - newY)));
+  const wasResizable = hudWindow.isResizable();
+  if (!wasResizable) hudWindow.setResizable(true);
+  try {
+    hudWindow.setBounds({ x, y: newY, width, height: newHeight });
+  } finally {
+    if (!wasResizable && !hudWindow.isDestroyed()) hudWindow.setResizable(false);
+  }
+});
+
+ipcMain.handle('shell:open-remote-control', () => {
+  if (remoteControlWindow && !remoteControlWindow.isDestroyed()) {
+    remoteControlWindow.show();
+    remoteControlWindow.focus();
+    return;
+  }
+
+  remoteControlWindow = new BrowserWindow({
+    width: 1280,
+    height: 840,
+    minWidth: 820,
+    minHeight: 560,
+    title: 'Allternit Remote Control',
+    titleBarStyle: isMac ? 'hiddenInset' : 'default',
+    trafficLightPosition: { x: 16, y: 16 },
+    show: false,
+    backgroundColor: '#0F0C0A',
+    webPreferences: {
+      preload: join(__dirname, '../preload/index.js'),
+      contextIsolation: true,
+      nodeIntegration: false,
+      sandbox: true,
+    },
+  });
+
+  remoteControlWindow.webContents.setWindowOpenHandler(({ url }) => {
+    void shell.openExternal(url);
+    return { action: 'deny' };
+  });
+  remoteControlWindow.once('ready-to-show', () => remoteControlWindow?.show());
+  remoteControlWindow.on('closed', () => { remoteControlWindow = null; });
+  const dashboardUrl = process.env.ALLTERNIT_REMOTE_CONTROL_URL
+    ? new URL('/', process.env.ALLTERNIT_REMOTE_CONTROL_URL).toString()
+    : activePlatformUrl.includes('localhost') || activePlatformUrl.includes('127.0.0.1')
+      ? new URL('/remote-control.html', activePlatformUrl).toString()
+      : 'https://remotecontrol.allternit.com';
+  void remoteControlWindow.loadURL(dashboardUrl);
 });
 
 function resolveOfficeUrl(target: OfficeTarget, artifactId?: string): string {

@@ -18,9 +18,43 @@ struct ArtifactsLibraryView: View {
     @StateObject private var store = ArtifactLibraryStore.shared
     @State private var activeArtifact: ArtifactRecord? = nil
     @State private var showingOfficeDocuments = false
+    @State private var searchText = ""
     #if DEBUG
     @State private var debugOfficeDocumentId: IdentifiableString? = nil
     #endif
+
+    private var visibleArtifacts: [SavedArtifact] {
+        let query = searchText.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !query.isEmpty else { return store.artifacts }
+        return store.artifacts.filter {
+            $0.record.title.localizedCaseInsensitiveContains(query)
+                || $0.record.fileType.localizedCaseInsensitiveContains(query)
+        }
+    }
+
+    private var searchBar: some View {
+        HStack(spacing: 8) {
+            Image(systemName: "magnifyingglass")
+                .font(.subheadline)
+                .foregroundColor(Color("TextSecondary"))
+            TextField("Search artifacts", text: $searchText)
+                .font(.subheadline)
+                .foregroundColor(Color("TextPrimary"))
+                .textInputAutocapitalization(.never)
+                .autocorrectionDisabled()
+            if !searchText.isEmpty {
+                Button(action: { searchText = "" }) {
+                    Image(systemName: "xmark.circle.fill")
+                        .font(.subheadline)
+                        .foregroundColor(Color("TextSecondary"))
+                }
+            }
+        }
+        .padding(.horizontal, 12)
+        .padding(.vertical, 9)
+        .background(Color("BgSecondary"))
+        .cornerRadius(10)
+    }
 
     var body: some View {
         VStack(spacing: 0) {
@@ -63,6 +97,10 @@ struct ArtifactsLibraryView: View {
 
             Divider().background(Color("BorderSubtle"))
 
+            searchBar
+                .padding(.horizontal, 20)
+                .padding(.vertical, 12)
+
             if store.artifacts.isEmpty {
                 if store.isRefreshing {
                     VStack {
@@ -78,8 +116,19 @@ struct ArtifactsLibraryView: View {
             } else {
                 ScrollView {
                     LazyVStack(spacing: 8) {
-                        ForEach(store.artifacts) { saved in
+                        ForEach(visibleArtifacts) { saved in
                             artifactRow(saved)
+                        }
+                        if visibleArtifacts.isEmpty {
+                            VStack(spacing: 10) {
+                                Image(systemName: "magnifyingglass")
+                                    .font(.system(size: 20, weight: .medium))
+                                    .foregroundColor(Color("TextSecondary"))
+                                Text("No artifacts match.")
+                                    .font(.subheadline)
+                                    .foregroundColor(Color("TextSecondary"))
+                            }
+                            .padding(.top, 24)
                         }
                     }
                     .padding(.horizontal, 20)
@@ -133,7 +182,7 @@ struct ArtifactsLibraryView: View {
             message: "Artifacts created in your chats are saved here."
         )
         .frame(maxWidth: .infinity, maxHeight: .infinity)
-        .background(Color("BgSecondary"))
+        .background(Color("BgPrimary"))
     }
 
     private func artifactRow(_ saved: SavedArtifact) -> some View {

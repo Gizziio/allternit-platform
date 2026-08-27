@@ -26,13 +26,13 @@ import {
   DownloadSimple,
   SlidersHorizontal,
   Plus,
-  Target,
   ArrowSquareOut,
   Trash,
   DotsThreeVertical,
   Check,
   Brain,
   Play,
+  DesktopTower,
 } from '@phosphor-icons/react';
 import { getPinnedMiniApps, unpinMiniApp, seedDefaultMiniApps } from '../views/aci/mini-app-registry';
 import type { InstalledMiniApp } from '../views/aci/mini-app.types';
@@ -935,17 +935,12 @@ export function ShellRail({
               isActive={activeViewType === 'goals-list' || activeViewType === 'cron' || activeViewType === 'cowork-cron'}
               onClick={() => onOpen?.('goals-list')}
             />
-            <div className="relative">
-              <RailItem
-                icon={Target}
-                label="Dispatch"
-                isActive={activeViewType === 'dispatch'}
-                onClick={() => onOpen?.('dispatch')}
-              />
-              <span className="absolute right-3 top-1/2 -translate-y-1/2 bg-[var(--surface-hover)] text-[var(--shell-item-muted)] text-[10px] px-1.5 py-0.5 rounded-full font-bold border border-solid border-[var(--border-subtle)]">
-                Beta
-              </span>
-            </div>
+            <RailItem
+              icon={DesktopTower}
+              label="Remote Control"
+              isActive={activeViewType === 'remote-control'}
+              onClick={() => onOpen?.('remote-control')}
+            />
             <RailItem
               icon={SlidersHorizontal}
               label="Customize"

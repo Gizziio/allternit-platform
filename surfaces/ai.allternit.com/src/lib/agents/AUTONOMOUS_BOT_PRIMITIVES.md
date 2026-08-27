@@ -228,7 +228,7 @@ interface AgentWalletChannel {
 }
 ```
 
-- Email maps to CommRails email routing or a custom domain.
+- Email maps to CommRails email routing or a custom domain. With the mailflare rail configured (`ALLTERNIT_MAILFLARE_*`), email maps to a **real mailbox** on the installation's own mailflare worker: agents receive internet email (bridged into Rails Mail threads) and send it through a human approval gate. See `docs/AGENT_EMAIL_RAIL.md`.
 - Phone maps to the telephony program (Vapi/Twilio).
 - Wallet defaults to **Etrid** as the native Allternit agent wallet. Etrid does not exist yet; this schema reserves the integration point.
 
@@ -272,9 +272,15 @@ Etrid is proposed as the Allternit-native agent wallet:
 - Photon inbox persistence in SQLite (`agent_photon_inbox`).
 
 ### Phase 5 — Identity channels ✅ (core backend)
-- Agent email provisioning endpoint (requires operator email domain config).
+- Agent email provisioning endpoint (requires operator email domain config). With the mailflare rail configured this provisions a real mailbox + mailbox-scoped sealed API key (provider `"mailflare"`); otherwise it mints an address record only (provider `"commrails"`).
 - Phone provisioning endpoint (requires operator phone pool config).
 - Wallet key generation and vault sealing is production-ready.
+
+### Phase 5.6 — Real email transport ✅ (mailflare rail)
+- Vendored mailflare fork in `services/mailflare/` (per-installation Cloudflare worker; see `docs/AGENT_EMAIL_RAIL.md`).
+- Inbound internet email → HMAC webhook → Rails Mail threads (`mail:email-in-<agent>`), visible in Mail Monitor / agent activity.
+- Outbound email held as `pending_approval` and released by the existing Rails Mail review gate (`POST /api/rails/mail/decide`).
+- Per-installation setup via `services/mailflare/setup.sh` (deploys to the installing user's own Cloudflare account).
 
 ### Phase 5.5 — VM Operator ✅ (frontend contract + integration point)
 - `vmOperator` schema added to `Agent` / `CreateAgentInput`.

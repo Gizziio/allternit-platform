@@ -140,12 +140,18 @@ interface BackendSessionListResponse {
   count: number;
 }
 
+export interface BrainRef {
+  providerID: string;
+  modelID: string;
+  authProfileId?: string;
+}
+
 export interface CreateNativeAgentSessionRequest {
   name?: string;
   description?: string;
   agentId?: string;
   agentName?: string;
-  model?: string;
+  model?: BrainRef;
   tags?: string[];
   metadata?: Record<string, unknown>;
   /** Origin surface (chat, cowork, code, browser) */

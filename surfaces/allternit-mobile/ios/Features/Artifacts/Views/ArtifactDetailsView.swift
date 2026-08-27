@@ -112,14 +112,31 @@ struct ArtifactDetailsView: View {
     var body: some View {
         NavigationStack {
             VStack(spacing: 0) {
-                // Segmented picker if preview is supported
+                // Preview/Code selector if preview is supported.
                 if artifact.isPreviewable {
-                    Picker("", selection: $selectedTab) {
-                        Text("Preview").tag(0)
-                        Text("Code").tag(1)
+                    Menu {
+                        Button("Preview") { selectedTab = 0 }
+                        Button("Code") { selectedTab = 1 }
+                    } label: {
+                        HStack(spacing: 4) {
+                            Text(selectedTab == 0 ? "Preview" : "Code")
+                                .font(.subheadline.weight(.semibold))
+                            Image(systemName: "chevron.down")
+                                .font(.system(size: 10, weight: .bold))
+                        }
+                        .foregroundColor(Color("TextPrimary"))
+                        .padding(.horizontal, 12)
+                        .padding(.vertical, 6)
+                        .background(Color("BgPanel"))
+                        .clipShape(Capsule())
+                        .overlay(
+                            Capsule()
+                                .stroke(Theme.borderWarmDefault, lineWidth: 1)
+                        )
                     }
-                    .pickerStyle(SegmentedPickerStyle())
-                    .padding()
+                    .buttonStyle(.plain)
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 10)
                     .background(Color("BgPrimary"))
                 }
 

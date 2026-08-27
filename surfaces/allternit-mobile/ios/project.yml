@@ -92,7 +92,9 @@ targets:
         ALLTERNIT_MESH_CONTROL_URL: https://allternit-headscale.fly.dev
       configs:
         debug:
-          ALLTERNIT_API_BASE_URL: http://127.0.0.1:8013/api/v1
+          # Point Debug simulator builds at the hosted gateway so chats work
+          # out-of-the-box; local dev can override via the `api-url` default.
+          ALLTERNIT_API_BASE_URL: https://api.allternit.com/api/v1
           ALLTERNIT_GIZZI_CODE_URL: http://127.0.0.1:4096
           # Xcode 16's debug dylib is intermittently unsigned when installed via
           # simctl, causing launch crashes. Disable it for Debug simulator builds;

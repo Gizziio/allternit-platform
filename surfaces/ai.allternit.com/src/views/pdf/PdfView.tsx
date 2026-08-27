@@ -4,7 +4,7 @@ import {
   OfficeHostProvider,
   createBrowserHost,
   type OfficeHost,
-} from '@allternit/allternit-office-suite';
+} from '@allternit/office-suite';
 import { takeFile } from '@/views/office/file-handoff';
 import { fetchArtifactById, type ArtifactDto } from '@/services/artifacts-api';
 

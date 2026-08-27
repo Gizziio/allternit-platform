@@ -1538,7 +1538,32 @@ async fn mail_decide(
         .decide_review(&thread_id, &decision, req.notes_ref)
         .await
     {
-        Ok(_) => (StatusCode::OK, Json(json!({ "decided": true, "thread_id": thread_id }))).into_response(),
+        Ok(_) => {
+            // When the thread belongs to a pending outbound agent email, action
+            // the mailflare side (approve/reject). No-op for ordinary threads.
+            let approved = matches!(decision.as_str(), "accepted" | "approved" | "approve" | "accept");
+            let email_outcome = crate::agent_email_routes::decide_outbound_for_thread(
+                &state, &thread_id, approved,
+            )
+            .await;
+            let mut body = json!({ "decided": true, "thread_id": thread_id });
+            match email_outcome {
+                crate::agent_email_routes::EmailDecisionOutcome::NotEmailThread => {}
+                crate::agent_email_routes::EmailDecisionOutcome::Applied => {
+                    body["email"] = json!({
+                        "actioned": true,
+                        "status": if approved { "sent" } else { "rejected" },
+                    });
+                }
+                crate::agent_email_routes::EmailDecisionOutcome::Failed(message) => {
+                    // The review decision stands (already in the ledger); the
+                    // provider-side action failed and is recorded on the
+                    // outbound row's error column.
+                    body["email"] = json!({ "actioned": false, "error": message });
+                }
+            }
+            (StatusCode::OK, Json(body)).into_response()
+        }
         Err(e) => {
             error!(error = %e, "mail: decide_review failed");
             (

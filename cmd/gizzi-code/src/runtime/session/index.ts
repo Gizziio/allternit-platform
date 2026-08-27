@@ -76,6 +76,14 @@ export namespace Session {
       agentID: (row as any).agent_id ?? undefined,
       surface: ((row as any).surface as Info["surface"]) ?? undefined,
       harness: (row as any).harness ?? undefined,
+      defaultModel: row.default_model
+        ? {
+            providerID: row.default_model.providerID,
+            modelID: row.default_model.modelID,
+            authProfileId: row.default_model.authProfileId,
+          }
+        : undefined,
+      defaultModelSource: row.default_model?.source ?? (row.default_model ? "user" : undefined),
       time: {
         created: row.time_created,
         updated: row.time_updated,
@@ -104,6 +112,12 @@ export namespace Session {
       agent_id: info.agentID,
       surface: info.surface ?? null,
       harness: info.harness ?? null,
+      default_model: info.defaultModel
+        ? {
+            ...info.defaultModel,
+            source: info.defaultModelSource ?? "user",
+          }
+        : null,
       time_created: info.time.created,
       time_updated: info.time.updated,
       time_compacting: info.time.compacting,
@@ -160,6 +174,14 @@ export namespace Session {
         .optional(),
       agentID: z.string().optional(),
       surface: z.enum(["chat", "cowork", "code", "browser", "design"]).optional(),
+      defaultModel: z
+        .object({
+          providerID: z.string(),
+          modelID: z.string(),
+          authProfileId: z.string().optional(),
+        })
+        .optional(),
+      defaultModelSource: z.enum(["user", "auto"]).optional(),
       harness: z
         .object({
           mode: z.enum(["byok", "cloud", "local", "subprocess"]),
@@ -276,6 +298,8 @@ export namespace Session {
         agentID: z.string().optional(),
         surface: Info.shape.surface,
         harness: Info.shape.harness,
+        defaultModel: Info.shape.defaultModel,
+        defaultModelSource: Info.shape.defaultModelSource,
       })
       .optional(),
     async (input) => {
@@ -287,6 +311,8 @@ export namespace Session {
         agentID: input?.agentID,
         surface: input?.surface,
         harness: input?.harness,
+        defaultModel: input?.defaultModel,
+        defaultModelSource: input?.defaultModelSource,
       })
     },
   )
@@ -357,6 +383,8 @@ export namespace Session {
     agentID?: string
     surface?: Info["surface"]
     harness?: Info["harness"]
+    defaultModel?: Info["defaultModel"]
+    defaultModelSource?: Info["defaultModelSource"]
   }) {
     const result: Info = {
       id: Identifier.descending("session", input.id),
@@ -370,6 +398,8 @@ export namespace Session {
       agentID: input.agentID,
       surface: input.surface,
       harness: input.harness,
+      defaultModel: input.defaultModel,
+      defaultModelSource: input.defaultModelSource,
       time: {
         created: Date.now(),
         updated: Date.now(),

@@ -53,6 +53,8 @@ function buildRuntimeEnvEntries(agent?: Agent, sessionMetadata?: Record<string, 
     resolvedSecrets: resolvedSecrets as import('@/lib/agents/agent-secrets-resolver').ResolvedSecret[],
     resolvedConnectors: resolvedConnectors as import('@/lib/agents/agent-connectors-resolver').ResolvedConnectorCredential[],
     vmOperator: sessionMetadata?.vmOperator as Agent['vmOperator'] | undefined,
+    agentId: agent?.id,
+    characterLayer: agent?.characterLayer,
   }).env;
 
   const entries: ResolvedEnvEntry[] = [];

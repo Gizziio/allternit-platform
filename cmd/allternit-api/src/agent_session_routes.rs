@@ -24,7 +24,7 @@ use crate::config::{read_gizzi_default_harness, AppConfig};
 use crate::db::DbHandle;
 use crate::AppState;
 
-fn gizzi_base() -> String {
+pub(crate) fn gizzi_base() -> String {
     // Reload from disk each time so runtime URL changes (wizard, settings) take
     // effect without an API restart.
     AppConfig::load()
@@ -147,6 +147,7 @@ struct CreateSessionBody {
     /// string "true") for clients that only carry a metadata bag.
     ephemeral: Option<bool>,
     metadata: Option<serde_json::Value>,
+    model: Option<GizziModelRef>,
 }
 
 #[derive(Debug, Deserialize)]
@@ -165,12 +166,14 @@ struct SendMessageBody {
     metadata: Option<serde_json::Value>,
 }
 
-#[derive(Debug, Serialize)]
+#[derive(Debug, Deserialize, Serialize)]
 struct GizziModelRef {
     #[serde(rename = "providerID")]
     provider_id: String,
     #[serde(rename = "modelID")]
     model_id: String,
+    #[serde(rename = "authProfileId", skip_serializing_if = "Option::is_none")]
+    auth_profile_id: Option<String>,
 }
 
 #[derive(Debug, Deserialize)]
@@ -415,26 +418,36 @@ fn select_model(metadata: Option<&serde_json::Value>) -> serde_json::Value {
             return json!(GizziModelRef {
                 provider_id: provider_id.to_string(),
                 model_id: model_id.to_string(),
+                auth_profile_id: model
+                    .get("authProfileId")
+                    .and_then(|value| value.as_str())
+                    .map(|s| s.to_string()),
             });
         }
     }
 
-    if let Some((provider_id, model_id)) = metadata.and_then(|value| {
+    if let Some((provider_id, model_id, auth_profile_id)) = metadata.and_then(|value| {
         Some((
             value.get("providerID")?.as_str()?,
             value.get("modelID")?.as_str()?,
+            value
+                .get("authProfileId")
+                .and_then(|v| v.as_str())
+                .map(|s| s.to_string()),
         ))
     }) {
         return json!(GizziModelRef {
             provider_id: provider_id.to_string(),
             model_id: model_id.to_string(),
+            auth_profile_id,
         });
     }
 
     let (provider_id, model_id) = AppConfig::load().default_model();
     json!(GizziModelRef {
         provider_id,
-        model_id
+        model_id,
+        auth_profile_id: None,
     })
 }
 
@@ -678,16 +691,17 @@ async fn create_session(
                 v.as_bool().unwrap_or(false) || v.as_str() == Some("true")
             });
 
-    // Always set the platform default model so Gizzi sessions know which brain
-    // to use, even when the frontend doesn't send an explicit model.
-    let (default_provider, default_model_id) = AppConfig::load().default_model();
-    payload.insert(
-        "model".to_string(),
-        json!(GizziModelRef {
+    // Use the client-supplied model if present; otherwise fall back to the
+    // platform default so Gizzi sessions always know which brain to use.
+    let model_ref = body.model.unwrap_or_else(|| {
+        let (default_provider, default_model_id) = AppConfig::load().default_model();
+        GizziModelRef {
             provider_id: default_provider,
             model_id: default_model_id,
-        }),
-    );
+            auth_profile_id: None,
+        }
+    });
+    payload.insert("model".to_string(), json!(model_ref));
 
     // Resolve platform agent harness config and forward it into the gizzi session.
     if let Some(ref agent_id) = body.agent_id {

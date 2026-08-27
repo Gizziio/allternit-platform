@@ -58,14 +58,20 @@ jobs:
           fi
 
       - name: Build static export
-        working-directory: surfaces/ai.allternit.com
+        # Build the full dependency graph (office-* engines, apps, etc.) so that
+        # packages whose `dist/` directories are not committed are available —
+        # same pattern as deploy-office-cloudflare.yml.
         # Vite SPA build — outputs dist/, which the deploy step below publishes.
         # NEXT_PUBLIC_ALLTERNIT_DESKTOP_AUTH enables the desktop session shim so
         # the startup wizard sign-in is the only login inside the desktop shell.
-        run: pnpm build
+        run: pnpm --filter "@allternit/ai..." build
         env:
           NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY: ${{ secrets.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY }}
+          NEXT_PUBLIC_CLERK_SIGN_IN_URL: 'https://platform.allternit.com/sign-in'
+          NEXT_PUBLIC_CLERK_SIGN_UP_URL: 'https://platform.allternit.com/sign-up'
           NEXT_PUBLIC_ALLTERNIT_DESKTOP_AUTH: 'true'
+          NEXT_PUBLIC_ALLTERNIT_CLOUD_API_URL: 'https://api.allternit.com'
+          VITE_REMOTE_CONTROL_PUSH_URL: ${{ secrets.VITE_REMOTE_CONTROL_PUSH_URL }}
           ENCRYPTION_KEY: ${{ secrets.ENCRYPTION_KEY }}
 
       - name: Deploy to Cloudflare Pages
@@ -73,4 +79,4 @@ jobs:
         with:
           apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-          command: pages deploy surfaces/ai.allternit.com/dist --project-name=ai-allternit --branch=main
+          command: pages deploy surfaces/ai.allternit.com/dist --project-name=allternit-platform --branch=main

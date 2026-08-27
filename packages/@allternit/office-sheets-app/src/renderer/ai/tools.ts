@@ -1,19 +1,19 @@
 import { z } from 'zod'
 import type { AgentToolCall, AgentToolDef } from './agent-stub'
-import { workbookOperationSchema, type WorkbookOperation } from '@allternit/allternit-office-suite/xlsx'
+import { workbookOperationSchema, type WorkbookOperation } from '@allternit/office-suite/xlsx'
 import {
   columnLabel,
   parseRange,
   rangeCellCount,
   formatAddress,
   type RangeBounds,
-} from '@allternit/allternit-office-suite/xlsx'
+} from '@allternit/office-suite/xlsx'
 import type {
   ApplyOutcome,
   CellFormatState,
   CellScalar,
   ChangePlan,
-} from '@allternit/allternit-office-suite/xlsx'
+} from '@allternit/office-suite/xlsx'
 import { t } from '../i18n/locale'
 import { guideCatalogSummary, loadGuides } from './guides'
 

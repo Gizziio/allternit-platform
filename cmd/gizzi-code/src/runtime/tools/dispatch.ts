@@ -1,6 +1,7 @@
 import { Tool } from "./builtins/tool";
 import { HookDispatcher } from "@/runtime/hooks/dispatcher";
 import { Log } from "@/shared/util/log";
+import { checkToolHardBan, formatHardBanDenial } from "@/shared/utils/agentHardBans";
 
 export namespace ToolDispatcher {
   const log = Log.create({ service: "tool.dispatcher" });
@@ -21,6 +22,27 @@ export namespace ToolDispatcher {
     execute: (args: any, ctx: Tool.Context) => Promise<T>,
   ): Promise<T> {
     const sessionId = ctx.sessionID;
+
+    // 0. Dispatch-time hard-ban guard: the active agent's character-card hard
+    // bans (ALLTERNIT_AGENT_HARD_BANS) block banned tool calls (e.g.
+    // email_send → send_agent_email, gmail.send_email, allternit_mail.send)
+    // before hooks or execution. See src/shared/utils/agentHardBans.ts.
+    const banViolation = checkToolHardBan(toolID, args)
+    if (banViolation) {
+      log.warn("Tool call blocked by agent hard ban", { toolId: toolID, category: banViolation.category, matched: banViolation.matched });
+      const denied = {
+        title: "Blocked by agent policy",
+        output: formatHardBanDenial(banViolation),
+        metadata: { denied: true, policyViolation: banViolation }
+      } as T;
+      await HookDispatcher.emit({
+        name: "PostToolUseFailure",
+        timestamp: Date.now(),
+        sessionId,
+        payload: { tool: toolID, args, reason: banViolation.reason, blocked: true },
+      })
+      return denied
+    }
 
     // 1. Emit PreToolUse Hook
     const hookRes = await HookDispatcher.emit({

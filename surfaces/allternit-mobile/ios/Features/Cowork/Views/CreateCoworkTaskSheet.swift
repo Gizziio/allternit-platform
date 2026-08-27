@@ -76,11 +76,38 @@ struct CreateCoworkTaskSheet: View {
                         .font(.caption)
                         .fontWeight(.semibold)
                         .foregroundColor(Color("TextSecondary"))
-                    Picker("Assignee", selection: $assigneeType) {
-                        Text("Human").tag(CoworkAssigneeType.human)
-                        Text("Agent").tag(CoworkAssigneeType.agent)
+                    Menu {
+                        Button(action: { assigneeType = .human }) {
+                            HStack {
+                                if assigneeType == .human { Image(systemName: "checkmark") }
+                                Text("Human")
+                            }
+                        }
+                        Button(action: { assigneeType = .agent }) {
+                            HStack {
+                                if assigneeType == .agent { Image(systemName: "checkmark") }
+                                Text("Agent")
+                            }
+                        }
+                    } label: {
+                        HStack {
+                            Text(assigneeType == .human ? "Human" : "Agent")
+                                .font(.subheadline)
+                                .foregroundColor(Color("TextPrimary"))
+                            Spacer()
+                            Image(systemName: "chevron.up.chevron.down")
+                                .font(.caption)
+                                .foregroundColor(Color("TextSecondary"))
+                        }
+                        .padding(.horizontal, 14)
+                        .padding(.vertical, 12)
+                        .background(Color("BgPanel"))
+                        .clipShape(RoundedRectangle(cornerRadius: Theme.radiusMD))
+                        .overlay(
+                            RoundedRectangle(cornerRadius: Theme.radiusMD)
+                                .stroke(Theme.borderWarmDefault, lineWidth: 1)
+                        )
                     }
-                    .pickerStyle(.segmented)
                 }
 
                 Button(action: create) {

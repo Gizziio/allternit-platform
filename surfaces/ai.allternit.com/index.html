@@ -6,6 +6,10 @@
     <title>Allternit Platform</title>
     <meta name="description" content="AI-powered autonomous coding platform" />
     <link rel="icon" href="/favicon.svg" />
+    <link rel="manifest" href="/manifest.json" />
+    <meta name="theme-color" content="#0f0f11" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
     <script>
       (function () {
         try {
@@ -25,6 +29,22 @@
         window.onunhandledrejection = function (e) {
           console.error('[UNHANDLED REJECTION]', e.reason);
         };
+      })();
+    </script>
+    <script>
+      (function () {
+        if ('serviceWorker' in navigator) {
+          window.addEventListener('load', function () {
+            navigator.serviceWorker
+              .register('/sw.js')
+              .then(function (registration) {
+                console.log('[SW] registered:', registration.scope);
+              })
+              .catch(function (err) {
+                console.error('[SW] registration failed:', err);
+              });
+          });
+        }
       })();
     </script>
   </head>

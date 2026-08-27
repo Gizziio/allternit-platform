@@ -23,6 +23,7 @@ import { DESIGN_DIRECTIONS, type DesignDirection } from '../../lib/design/direct
 import { DESIGN_SYSTEMS_LIBRARY, type DesignSystemEntry } from '../../lib/design/design-systems-library';
 import type { SkillRecord } from '../../lib/design/skill-registry';
 import { useDesignProjectStore, type DesignProject } from '@/views/project/design/design-project.store';
+import { AProtocolWordmark } from '@/components/AProtocolWordmark';
 import './new-project-screen.css';
 
 const CREATION_TYPES = [
@@ -111,8 +112,8 @@ export function NewProjectScreen({
     <div className="ad-launch">
       <header className="ad-launch__header">
         <div className="ad-launch__brand">
-          <span className="ad-launch__mark">A://</span>
-          <span>LLTERNIT DESIGN</span>
+          <AProtocolWordmark theme="adaptive" height={13} />
+          <span>DESIGN</span>
           <span className="ad-launch__beta">BETA</span>
         </div>
         <button type="button" className="ad-launch__quiet">What’s new</button>

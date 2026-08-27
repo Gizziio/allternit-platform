@@ -1,6 +1,6 @@
 import { useState } from 'react'
 
-import { transposeChartSeries, type ChartVisualState } from '@allternit/allternit-office-suite/xlsx'
+import { transposeChartSeries, type ChartVisualState } from '@allternit/office-suite/xlsx'
 import { useI18n, type StringKey, type TFunc } from './i18n/locale'
 import type { ChartEditData, ChartElementRef, ChartVectorRead } from './WorkbookVisuals'
 

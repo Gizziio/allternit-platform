@@ -1,5 +1,7 @@
-import { RuntimeBoard } from '@/components/runtimes/RuntimeBoard';
+'use client';
+
+import { RemoteControlHub } from '@/components/dispatch/RemoteControlHub';
 
 export default function RuntimesPage() {
-  return <RuntimeBoard />;
+  return <RemoteControlHub />;
 }

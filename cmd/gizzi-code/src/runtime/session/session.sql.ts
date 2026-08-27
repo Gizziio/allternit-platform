@@ -42,6 +42,7 @@ export const SessionTable = sqliteTable(
       subprocess?: { command: string; cwd?: string; env?: Record<string, string> }
     }>(),
     pinned: integer(),
+    default_model: text({ mode: "json" }).$type<{ providerID: string; modelID: string; authProfileId?: string; source?: "user" | "auto" }>(),
     ...Timestamps,
     time_compacting: integer(),
     time_archived: integer(),

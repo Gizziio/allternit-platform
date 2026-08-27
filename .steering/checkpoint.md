@@ -1,5 +1,95 @@
 # Steering checkpoint
 
+## Hermes floating chat HUD port — completion (2026-08-26)
+
+### Goal
+Finish porting the Hermes Desktop floating chat HUD into the Allternit `session/hud-mode` worktree without redoing work the previous agent already landed.
+
+### Just did
+- Verified the existing `allternit-session-hud-mode` worktree already contains the bulk of the port (commits `8bc131d73` and `2f8d763cc`).
+- Fixed a HUD-related TypeScript prop mismatch in `surfaces/ai.allternit.com/src/views/chat/main/ChatActiveContent.tsx` (`linkedAgentSessionIds` → `linkedSessionIds`).
+- Refined `data-hud-grabbing` placement in `HudShell.tsx` so composer-drag and resize handles correctly veto click-through.
+- Updated `scratch/HERMES_HUD_PORT_PLAN.md` and `scratch/HERMES_HUD_GAP_ANALYSIS.md` to reflect the current state.
+
+### Verification
+- `npm run typecheck` in `surfaces/allternit-desktop`: clean.
+- `npm run build` in `surfaces/allternit-desktop`: clean (auth renderer + main + preload).
+- `pnpm exec vitest run src/shell/hud` in `surfaces/ai.allternit.com`: 8 tests pass.
+- `pnpm exec tsc --noEmit` in `surfaces/ai.allternit.com`: no HUD-related errors; remaining errors are pre-existing office-suite package issues.
+
+### Next
+1. Steering commit-gate review for the uncommitted HUD refinements.
+2. Merge `session/hud-mode` into the local main checkout.
+3. Runtime smoke-test: global hotkey, click-through, drag, resize, session handoff.
+
+### Open questions
+- Should the orphaned `/api/v1/hud/*` collector endpoints be removed or rebuilt into a dashboard UI?
+- Does the user want the branch merged to main now, or left in the session worktree for further polish?
+
+## Hermes-style HUD mode for Allternit (2026-08-25)
+
+### Goal
+
+Port the Hermes HUD "collector + dashboard" pattern into the Allternit platform as a native view (`hud`) inside the web shell, and make it first-class in the Electron desktop app, so a user can open a live operational dashboard that surfaces the local computer-use gateway, Rails peers, recent recordings, and platform health.
+
+### Just did
+
+- Analyzed the Hermes HUD architecture from the upstream repo: TUI + Web UI both read from `~/.hermes/`, collectors aggregate registry + runtime + gateway state, and a FastAPI/React stack pushes live updates.
+- Chose a native Allternit implementation rather than embedding Hermes:
+  - Backend: new read-only `/api/v1/hud/*` routes in `cmd/allternit-api/src/hud_routes.rs`.
+  - Frontend: new `hud` view under `surfaces/ai.allternit.com/src/views/hud/`.
+- Backend endpoints:
+  - `GET /api/v1/hud/summary` — gateway health/sessions, peers, recordings, local runtime.
+  - `GET /api/v1/hud/peers` — reads `~/.allternit/peers/registry.json`.
+  - `GET /api/v1/hud/recordings` — scans `~/.allternit/recordings/*.jsonl`.
+  - `GET /api/v1/hud/health` — platform + gateway health.
+- Wired `hud_router()` into the v1 protected router in `cmd/allternit-api/src/main.rs` and re-exported the module from `cmd/allternit-api/src/lib.rs`.
+- Frontend pieces:
+  - `HudView.tsx` tabbed dashboard (Overview / Computer Use / Peers / Recordings / Health).
+  - `useHudData.ts` hooks the four endpoints and refreshes every 5s.
+  - Panel components: `ExecutiveSummaryPanel`, `ComputerUsePanel`, `PeersPanel`, `RecordingsPanel`, `HealthPanel`.
+  - Added `"hud"` to `ViewType` in `src/nav/nav.types.ts`, lazy-registered the view in `src/shell/ViewRegistry.tsx`, added a "HUD" link in `src/views/runtime/RuntimeConfigurationPanel.tsx`, and bound `Ctrl+Shift+H` in `src/shell/ShellApp.tsx`.
+- Desktop integration in `surfaces/allternit-desktop/src/main/unified-main.ts`:
+  - Added a dedicated HUD window (`shell:open-hud` IPC handler), global `Alt+Shift+H` hotkey, "Open HUD" tray menu item, and `allternit://hud` / `allternit://open/hud` deep-link handling.
+  - Changed the global hotkey from `Cmd/Ctrl+Shift+H` to `Alt+Shift+H` to avoid colliding with the in-shell shortcut and macOS system shortcuts; added debug logging for registration success/failure and window load errors.
+
+### Verification
+
+- `cargo check -p allternit-api`: clean for HUD code (only pre-existing warnings remain).
+- `cargo build -p allternit-api`: succeeded.
+- Live smoke test (local dev bypass, temp data dir with sample peer registry + recording):
+  - `GET /api/v1/hud/health` returned platform/gateway health.
+  - `GET /api/v1/hud/peers` returned the seeded peer.
+  - `GET /api/v1/hud/recordings` returned the seeded recording.
+  - `GET /api/v1/hud/summary` returned the full aggregate payload.
+- `pnpm exec tsc --noEmit` in `surfaces/ai.allternit.com`: zero errors in HUD files, ViewRegistry, nav.types, RuntimeConfigurationPanel, ShellApp. Remaining errors are pre-existing missing `@allternit/office-*` engine packages and two `mode-session-store.ts` mismatches.
+- `npm run typecheck` in `surfaces/allternit-desktop`: clean (main + preload). HUD hotkey/tray/deep-link code typechecks.
+- `pnpm build` is blocked by the same pre-existing missing office engine dependency (`better-sqlite3` native build fails under Node 26; repo `.nvmrc` wants Node 20). This is unrelated to the HUD change.
+
+### Running in the open desktop
+
+The Electron app currently on screen is loading the platform UI from `http://localhost:3013`, which is served by a different checkout (`/Users/joe/Desktop/Allternit/allternit-platform`). That checkout does not contain the HUD code, and the running binary does not include the new `Cmd/Ctrl+Shift+H` hotkey or tray item. To run the HUD safely without closing the active desktop/recording session:
+
+1. Build and serve the HUD-enabled platform UI from this worktree (port 3013 or a static export).
+2. Run the HUD-enabled API from this worktree on port 8013.
+3. Restart the desktop from this worktree (or reload it pointing at the new platform URL) so it picks up the new main-process hotkey/tray/deep-link code.
+
+Until then, the HUD is reachable in any browser at the platform URL `/hud` once the backend and frontend are running from this branch.
+
+### Next
+
+1. Get the frontend to a Node 20 / fully-installed state and run `pnpm build` to confirm the HUD view bundles cleanly.
+2. Restart the desktop from this worktree and verify `Cmd/Ctrl+Shift+H`, tray "Open HUD", and `allternit://hud` deep link open the HUD.
+3. Decide whether to keep polling or upgrade to WebSocket/SSE for live gateway sessions.
+4. Steering commit-gate review for the branch `session/hud-mode`.
+
+### Open questions
+
+- Should the HUD be a top-level rail icon instead of (or in addition to) the Runtime Configuration link?
+- Should we expose an admin-only HUD route, or is the current Clerk-protected route sufficient for the logged-in local user?
+
+## Cross-surface seeded auth + iOS runtime pairing (2026-08-23)
+
 ## Site APIs / Cross-surface HAR capture
 
 ### Goal
@@ -490,6 +580,52 @@ Fix `office.allternit.com` landing page and workspace shell to match the Alltern
 - Fixed Sign PDF loading by initializing pdfjs-dist with the Vite-bundled worker URL in `src/main.tsx`.
 - Updated `initPdfWorker` in `packages/@allternit/allternit-office-suite/src/sign/pdf-signing.ts` to accept an optional `workerSrc` override.
 
+- None.
+
+---
+
+## Goal (session/steering-packaging: ship orchestration + steering tooling with the platform)
+
+Move the desktop-local agent-orchestration/steering tooling into the repo so it ships with the platform and gizzi-code: steer-* scripts into `tools/agent-orchestrator/scripts/`, both skills into `.agents/skills/`, registration in gizzi-code `bundledSkills.ts`, Rails-first session discovery in `steer-discover`, default-on Rails peer registration, and install/Homebrew symlink updates.
+
+## Just did
+
+- Created linked worktree `allternit-platform-session-steering-packaging` on branch `session/steering-packaging`.
+- Discovered repo already packages ao-* as shims over `allternit-rails` (`tools/agent-orchestrator/scripts/`); desktop `~/.local/bin/ao-*` copies are the stale standalone versions. Direction: repo is canonical.
+- Confirmed `allternit-rails` binary comes from `rails/` crate (`[[bin]] name = "allternit-rails"`).
+
+## Next
+
+- Add steer-* scripts to `tools/agent-orchestrator/scripts/`.
+- Add `.agents/skills/agent-orchestrator/` + `.agents/skills/steer-parallel-agent/`.
+- Register both skills in `cmd/gizzi-code/src/skills/bundledSkills.ts`.
+- Rails-first discovery in `steer-discover` with filesystem fallback.
+- Flip `GIZZI_ENABLE_RAILS_PEER` to default-on.
+- Update Homebrew/install scripts to symlink the tools; update docs to repo-canonical.
+
+## Open questions
+
+- `allternit-rails` is not on PATH on the desktop, so the repo's ao-* shims currently fail there while the stale standalone copies work. Migration needs an install step (`cargo install --path rails` or packaged binary) — flagging so it is not missed.
+
+---
+
+## Checkpoint update (session/steering-packaging)
+
+Just did:
+- Added steer-* toolkit (steer, steer-discover, steer-context, steer-checkpoint, steer-prompt, steer-verify) to `tools/agent-orchestrator/scripts/`.
+- Added `.agents/skills/agent-orchestrator/` + `.agents/skills/steer-parallel-agent/` (auto-discovered by gizzi-code project skill scan).
+- Registered both skills in gizzi-code builtin catalog (`cmd/gizzi-code/src/runtime/skills/bundledSkills.ts` + Bun text-loaded markdown under `src/runtime/skills/bundled/`).
+- `steer-discover` now queries the Rails peer registry first (`ALLTERNIT_RAILS_URL`, default `http://127.0.0.1:8013`), filesystem scan as fallback.
+- Flipped `GIZZI_ENABLE_RAILS_PEER` to default-on (opt out via `=0`) in `railsPeer.ts`, `tools-registry-gizzi.ts`, `cli/ui/ink-app/tools.ts`.
+- Added `tools/agent-orchestrator/install.sh` (idempotent PATH installer + allternit-rails bootstrap) and ran it: 13 tools + the freshly built `allternit-rails` binary now on PATH; `ao-doctor` verified working through the shims.
+- Verification: `tsc --noEmit` in `cmd/gizzi-code` — zero errors in touched files; only 7 pre-existing errors in `packages/sdk/scripts/verify-sdk.ts` from missing `dist/` artifacts in the fresh worktree.
+
+Next:
+- Merge `session/steering-packaging` when approved, then re-run `tools/agent-orchestrator/install.sh` from the main checkout (current `~/.local/bin` symlinks point into this worktree).
+- Homebrew formula deferred until release tarballs exist.
+
+Open questions:
+- Should kimi/codex/claude session-start hooks also register Rails peers so `steer-discover`'s Rails section covers non-gizzi agents?
 ### Update — generated media integration
 - Copied generated assets into `surfaces/office.allternit.com/public/`:
   - `hero-documents.png` — static hero image of the five document cards.
@@ -624,3 +760,400 @@ Multica drives the same CLIs through stable protocol families: `stream-json` (Cl
 ### Open questions
 - Do we want to keep `warm` pooling for stream-json agents, or switch to one-shot-per-task like Multica? Multica spawns per task, so parity suggests dropping pooling; keeping pooling is a performance optimization but risks protocol drift.
 - Should custom CLI args (`customArgs`) be filtered per-provider like Multica's `blockedArgs` maps? Production safety says yes.
+
+---
+
+## Hybrid Remote Control dashboard and push notifications (2026-08-24)
+
+### Goal
+
+Ship a cross-surface remote-control experience for Allternit that matches the Antigravity remote-control pattern: a web-based dashboard for monitoring/managing agent runtimes across machines, proactive push notifications when a machine needs input, and a mobile-installable PWA.
+
+### Background
+
+Antigravity's remote-control feature (https://antigravity.google/blog/remote-control-for-antigravity) solves the problem of being tied to one workstation while agents run. It provides:
+- A browser-based remote-control interface connecting to machines running Antigravity.
+- Multi-instance management (laptops, servers, desktops).
+- Untethered productivity: start work, walk away, monitor/execute from anywhere.
+- Local context retained: no need to recreate the environment elsewhere.
+- Proactive push notifications on mobile when an agent needs user input.
+
+Allternit already has runtime pairing, a desktop bridge (`replBridge`/remote-control terminology in gizzi-code), and the platform surface. This feature builds a dedicated remote-control UI and push-delivery worker on top of that foundation.
+
+### Just did
+
+- Created `/remote-control` hub page inside `ai.allternit.com` (`surfaces/ai.allternit.com/src/pages/RemoteControlHubPage.tsx`) with runtime list, online counts, pending permissions, and pending questions.
+- Wired route `/remote-control` in `src/routes.tsx` and added a "Remote Control" rail item in `src/shell/ShellRail.tsx` using `DesktopTower`.
+- Added desktop detached window support:
+  - `shell:open-remote-control` IPC handler in `surfaces/allternit-desktop/src/main/unified-main.ts`.
+  - `remoteControlWindow` BrowserWindow with `setWindowOpenHandler` rule for `/remote-control.html`.
+  - Preload exposure `openRemoteControl` in `surfaces/allternit-desktop/src/preload/index.ts`.
+- Scaffolded standalone dashboard entry:
+  - `surfaces/ai.allternit.com/remote-control.html`
+  - `src/remote-control/main.tsx`, `App.tsx`, `pages/DashboardPage.tsx`, `types.ts`
+- Configured Vite multi-entry build in `surfaces/ai.allternit.com/vite.config.ts`.
+- Added PWA assets: `public/remote-control.webmanifest`, `public/remote-control-service-worker.js`, plus `_redirects` pass-throughs.
+- Created push worker service `services/remote-control-push/` (Hono + Wrangler + KV + VAPID signing) with `/vapid-public-key`, `/subscribe`, `/unsubscribe`, `/notify`, and `/pending` endpoints.
+- Added runtime push trigger `cmd/gizzi-code/src/runtime/integrations/remote-control-push.ts`, initialized in `cmd/gizzi-code/src/runtime/context/project/bootstrap.ts`.
+- Added deploy workflow `.github/workflows/deploy-remote-control-cloudflare.yml` for Pages + worker.
+
+### Verification
+
+- `cd services/remote-control-push && pnpm typecheck` ✅ clean.
+- `cd cmd/gizzi-code && bun run typecheck` ✅ only pre-existing `packages/sdk/scripts/verify-sdk.ts` errors; no remote-control-related errors.
+- `cd surfaces/ai.allternit.com && pnpm exec tsc --noEmit` ✅ only pre-existing office-package errors; no errors in touched remote-control files.
+- `pnpm install` succeeded and lockfile updated for the new service.
+
+### Open gaps
+
+- Production `pnpm build` is blocked by pre-existing missing PNG assets in office packages (`send-stop.png`, `attach-icon.png`, `send-enter-on.png`). The remote-control-specific build path has not been verified end-to-end.
+- Real Cloudflare Pages project `allternit-remote-control`, KV namespace, custom domain `remotecontrol.allternit.com`, and VAPID secrets still need to be created/set.
+- End-to-end screen recordings have not been produced yet.
+- Steering spec was just updated; this checkpoint needs steering review before commit/merge.
+
+### Update — dev verification completed (2026-08-24)
+
+- Fixed `surfaces/ai.allternit.com/vite.config.ts` `remoteControlRoutePlugin()` so `/remote-control` rewrites to `/index.html` and is processed by Vite's HTML transform pipeline. Previously it served raw `index.html`, which broke React Fast Refresh and left the hub page blank.
+- Fixed standalone dashboard dark-mode default:
+  - Added `src/remote-control/theme/RemoteControlThemeStore.ts` + `RemoteControlThemeProvider.tsx` with `dark` default and isolated storage key (`allternit-remote-control-theme-storage`).
+  - Updated `src/remote-control/main.tsx` to use the new provider.
+  - Updated `remote-control.html` inline script to seed dark mode and use the isolated storage key, so hydration no longer flashes light.
+- Verified in dev:
+  - `curl http://localhost:3013/remote-control` → 200, platform SPA shell renders.
+  - `curl http://localhost:3013/remote-control.html` → 200, standalone dashboard renders in dark mode.
+  - Chrome headless screenshot confirms dark theme.
+- Ran push worker locally (`services/remote-control-push` with `.dev.vars`) and verified all endpoints:
+  - `GET /health` → `{"ok":true}`
+  - `GET /vapid-public-key` → public key string
+  - `POST /subscribe` → `{"ok":true}`
+  - `POST /notify` → `{"ok":true,"delivered":0,"total":1}` (delivered 0 because endpoint is fake)
+  - `GET /pending?endpoint=...` → pending payload
+- Improved PWA/service-worker cross-origin support:
+  - `public/remote-control-service-worker.js` now accepts `SET_PUSH_WORKER_URL` message.
+  - `src/remote-control/App.tsx` sends the configured push-worker URL to the service worker after registration.
+  - `getPendingUrl()` uses the push-worker origin when available, fixing `/pending` fetches when dashboard and worker are on different subdomains.
+- Created `.steering/REMOTE_CONTROL_DEPLOYMENT.md` with step-by-step Cloudflare Pages project, KV namespace, custom domain, DNS, VAPID secret, and verification instructions.
+
+### Still blocked / needs real-world setup
+
+- Production Cloudflare Pages project `allternit-remote-control`, KV namespace, custom domains (`remotecontrol.allternit.com`, `push.remotecontrol.allternit.com`), and VAPID secrets require Cloudflare credentials and cannot be created from this dev environment.
+- End-to-end screen recordings are pending; will capture after documenting deployment steps.
+
+### Next
+
+1. Record end-to-end screen recordings of standalone dashboard, platform hub, push-worker endpoints, and PWA install prompt.
+2. Run steering consult on the spec + checkpoint.
+3. Commit and merge `session/remote-control-hybrid`.
+
+---
+
+### Open questions
+- Should the platform API mirror also expose a `/push/notify` proxy so runtimes can trigger pushes through the existing cloud relay instead of calling the worker directly?
+- Do we want per-runtime push opt-in persisted in the platform DB, or is the browser's Push subscription + KV state sufficient?
+
+---
+
+## Allternit Remote Control — real-world deployment steps (2026-08-23)
+
+### Goal
+Generate VAPID keys, create Cloudflare resources, deploy the push worker, configure the platform Pages project, and verify the endpoints.
+
+### Just did
+- Generated VAPID keys with `npx web-push generate-vapid-keys`.
+- Created Cloudflare KV namespace `allternit-remote-control-push-PUSH_SUBSCRIPTIONS` with id `7a159a562ff24a5f9e9a1fe04d00abda`.
+- Bound the KV namespace in `services/remote-control-push/wrangler.toml`.
+- Switched Durable Object migration from `new_classes` to `new_sqlite_classes` for free-plan compatibility.
+- Set worker secrets `VAPID_PUBLIC_KEY` and `VAPID_PRIVATE_KEY` via `wrangler secret put`.
+- Deployed the worker: `https://allternit-remote-control-push.allternitpbc.workers.dev`
+- Set `NEXT_PUBLIC_ALLTERNIT_PUSH_WORKER_URL=https://allternit-remote-control-push.allternitpbc.workers.dev` in the `ai-allternit` Pages project (production environment) via the Cloudflare API.
+- Verified worker endpoints with curl:
+  - `GET /push/vapid-public-key` → returns public key ✅
+  - `POST /push/subscribe/:runtimeId` → stores subscription ✅
+  - `POST /push/notify/:runtimeId` → attempts delivery, reports sent/failed ✅
+  - `POST /push/unsubscribe/:runtimeId` → removes subscription ✅
+- Committed the wrangler.toml changes and merged into `main`.
+
+### Verification
+- Worker live URL responds correctly ✅
+- KV namespace bound and writable ✅
+- VAPID key retrievable by browser clients ✅
+
+### Remaining
+1. Push `main` to GitHub so the Pages project rebuilds with the new env var.
+2. Run a live browser end-to-end test: pair a runtime, open the remote panel on a phone/PWA, enable push, trigger a permission/question, and confirm the notification arrives.
+
+### Important notes
+- VAPID private key lives only as a Cloudflare Worker secret; it is NOT in the repo.
+- The worker is on the Cloudflare free plan, which required the `new_sqlite_classes` Durable Object migration.
+- `main` is 6 commits ahead of `origin/main`.
+
+---
+
+## Allternit Remote Control — Pages build fix and final state (2026-08-24)
+
+### Goal
+Ensure the deployed PWA can register its service worker and manifest, and prepare the final manual end-to-end test.
+
+### Just did
+- Discovered the live deployment was returning `index.html` for `/manifest.json`, `/sw.js`, and `/icons/*` because `public/_redirects` lacked pass-through rules for PWA static files.
+- Updated `surfaces/ai.allternit.com/public/_redirects` to add `200` pass-through rules for `/manifest.json`, `/sw.js`, and `/icons/*`.
+- Committed the fix, merged into `main`, and pushed to GitHub.
+- Updated `.github/workflows/deploy-cloudflare-pages.yml` to pass `NEXT_PUBLIC_ALLTERNIT_PUSH_WORKER_URL` from a GitHub secret to the Vite build.
+- Set the GitHub repository secret `NEXT_PUBLIC_ALLTERNIT_PUSH_WORKER_URL=https://allternit-remote-control-push.allternitpbc.workers.dev`.
+- Pushed the workflow update; Pages build succeeded and deployed.
+- Verified live deployment:
+  - `https://ai.allternit.com/manifest.json` returns the manifest JSON ✅
+  - `https://ai.allternit.com/sw.js` returns the service worker JS ✅
+  - `https://ai.allternit.com/icons/icon-192x192.png` returns 200 ✅
+  - The main JS bundle contains `allternit-remote-control-push.allternitpbc.workers.dev` ✅
+- Attempted an automated Playwright browser push test; Chromium download timed out, so the final notification delivery test is deferred to manual verification.
+
+### Current state
+- Worker: `https://allternit-remote-control-push.allternitpbc.workers.dev` deployed and verified.
+- Platform: `https://ai.allternit.com` deployed with PWA files and push worker URL available.
+- `main` is in sync with `origin/main`.
+
+### Manual end-to-end test steps
+1. On a phone or desktop Chrome, open `https://ai.allternit.com` and sign in.
+2. Navigate to the Dispatch/Remote view and select a paired runtime.
+3. Click the bell icon in the Remote Session panel and allow notifications when prompted.
+4. In the browser DevTools, verify the service worker registered and a push subscription was created.
+5. Trigger a permission request or question on the runtime (e.g., ask the agent to run a command that requires approval).
+6. Confirm a push notification arrives with the Allternit icon and action buttons.
+7. (Optional) Send a test notify directly: `curl -X POST https://allternit-remote-control-push.allternitpbc.workers.dev/push/notify/<runtimeId> -H "Content-Type: application/json" -d '{"title":"Test","body":"Push works"}'` after subscribing.
+
+### Open questions
+- None blocking; the remaining work is the manual browser notification test.
+
+---
+
+## Allternit Remote Control — production dashboard wiring (2026-08-24)
+
+### Goal
+Get the standalone remote-control dashboard at `remotecontrol.allternit.com` fully wired to the production cloud API and push worker, with correct sign-in redirects and CORS.
+
+### Just did
+- Re-deployed the push worker (`allternit-remote-control-push.allternitpbc.workers.dev`) after it had stopped serving requests (error 1042). Verified `/push/vapid-public-key` returns 200 with `access-control-allow-origin: *` from both `remotecontrol.allternit.com` and Pages preview origins.
+- Updated `surfaces/ai.allternit.com/.env.production`:
+  - Fixed the Clerk publishable key to the correct `pk_live_Y2xlcmsucGxhdGZvcm0uYWxsdGVybml0LmNvbSQ` value.
+  - Set `NEXT_PUBLIC_ALLTERNIT_CLOUD_API_URL=https://api.allternit.com`.
+  - Set `NEXT_PUBLIC_ALLTERNIT_GATEWAY_URL=https://api.allternit.com` and `VITE_ALLTERNIT_GATEWAY_URL=https://api.allternit.com`.
+  - Set `NEXT_PUBLIC_ALLTERNIT_PUSH_WORKER_URL=https://allternit-remote-control-push.allternitpbc.workers.dev`.
+  - Set Clerk after-sign-in/up redirects to `https://remotecontrol.allternit.com`.
+- Built the missing office-package `dist/` artifacts that were blocking the Vite build (`@allternit/office-docx-engine`, `@allternit/office-file-parse`, `@allternit/office-pptx-engine`, `@allternit/office-pptx-render`, `@allternit/office-xlsx-engine`).
+- Rebuilt and re-deployed the dashboard to the `allternit-remote-control` Pages project. New deployment: `https://a556c0c0.allternit-remote-control.pages.dev`.
+- Verified the custom domain `remotecontrol.allternit.com` resolves and serves the new deployment (HTTP 200, correct HTML title, manifest/sw.js pass-through in `_redirects`).
+- Configured production environment variables on the `allternit-remote-control` Pages project so future Git-triggered builds use the same endpoints.
+- Added `remotecontrol.platform.allternit.com` as an additional custom domain on the Pages project so it can be used as a Clerk-origin-safe fallback while the main domain is being allow-listed.
+
+### Verification
+- `curl -I https://remotecontrol.allternit.com/` → 200 ✅
+- `curl -I -H "Origin: https://remotecontrol.allternit.com" https://api.allternit.com/api/v1/runtime` → `access-control-allow-origin: https://remotecontrol.allternit.com` ✅
+- `curl -H "Origin: https://remotecontrol.allternit.com" https://allternit-remote-control-push.allternitpbc.workers.dev/push/vapid-public-key` → 200 with public key ✅
+- `curl https://api.allternit.com/api/v1/runtime` without auth → 401 (expected; auth enforced) ✅
+
+### Remaining blockers
+1. **Clerk origin allow-list.** `remotecontrol.allternit.com` is not authorized in the Clerk production app. Clerk rejects the origin with:
+   > Production Keys are only allowed for domain "platform.allternit.com". API Error: The Request HTTP Origin header must be equal to or a subdomain of the requesting URL.
+   - Fix: In the Clerk dashboard for the `platform.allternit.com` app, add `remotecontrol.allternit.com` as an authorized domain (Settings → Domains / Authorized domains).
+   - Fallback (no Clerk dashboard access): use `https://remotecontrol.platform.allternit.com`; I already added it to the Pages project and it will work as a subdomain of `platform.allternit.com` once you create the DNS record below.
+2. **DNS record for the platform subdomain (fallback only).** If using the fallback domain, add:
+   - Type: `CNAME`
+   - Name: `remotecontrol.platform`
+   - Target: `allternit-remote-control.pages.dev`
+   - Proxy status: orange-cloud (Proxied)
+3. **Real paired runtime for end-to-end demo.** No runtime is currently paired with the production cloud API, so the Remote Session panel will show "No active sessions". After the Clerk domain issue is resolved, pair a runtime (local agent-daemon, desktop app, or hosted VM) and approve it at `https://platform.allternit.com/pair?code=XXXX`.
+
+### Open questions
+- Do you want to keep the primary domain as `remotecontrol.allternit.com` and add it to Clerk, or switch primary to `remotecontrol.platform.allternit.com`?
+- Should I attempt to pair a local `agent-daemon` now using the platform sign-in flow (which works because `platform.allternit.com` is already Clerk-authorized), so a runtime exists for testing once the remote-control domain is fixed?
+
+---
+
+## HUD mode — fix main renderer crash + HUD route wiring (2026-08-25)
+
+### Goal
+Fix the "Cannot read properties of null (reading 'useState')" crash in `ControlCenter` that blocks normal app launch on the `session/hud-mode` branch, and ensure `/hud` renders the floating chat HUD.
+
+### Root cause
+Two independent but complementary issues:
+1. **React instance mismatch.** The workspace root resolves React 19 (from `framer-motion` dev dependencies) while `surfaces/ai.allternit.com` pins React 18. Transitive workspace imports can pull in the root React instance alongside the surface's React 18, breaking the hook dispatcher and producing the `useState`/`useContext` null-dispatcher crash.
+2. **Service worker caching Vite dev modules.** `public/sw.js` was cache-first caching every GET request, including Vite's optimized dependency chunks (`/node_modules/.vite/...`, `/src/...`, `/@vite/...`). When Vite re-optimized dependencies and the browser loaded a mix of stale cached chunks and fresh chunks, React and React-DOM instances were mismatched, causing the same crash.
+3. **Missing `/hud` route wiring.** The HUD renderer code in `ShellApp.tsx` expected `window.location.pathname === '/hud'`, but `/hud` was not registered in `routes.tsx`, there was no `hud` `ViewType`, and no spawn policy. The catch-all redirect sent `/hud` to `/`.
+
+### Just did
+- Added explicit `resolve.alias` entries in `surfaces/ai.allternit.com/vite.config.ts` forcing every `react`, `react/jsx-runtime`, `react/jsx-dev-runtime`, `react-dom`, and `react-dom/client` import to the surface's React 18 copy.
+- Updated `surfaces/ai.allternit.com/public/sw.js` to bypass Vite development module URLs in its fetch handler, preventing stale/fresh chunk mismatches.
+- Added `/hud` route in `surfaces/ai.allternit.com/src/routes.tsx` mapping to `ShellPage`.
+- Added `"hud"` to `ViewType` in `surfaces/ai.allternit.com/src/nav/nav.types.ts`.
+- Added spawn policy for `hud` in `surfaces/ai.allternit.com/src/nav/nav.policy.ts`.
+
+### Verification
+- Reproduced the crash class in Playwright: `Cannot read properties of null (reading 'useContext')` in `AuthGate` with "Invalid hook call" warnings.
+- Confirmed workspace root resolves React 19 and platform surface resolves React 18.
+- Headless browser verification (with office workspace packages excluded from Vite eager scan for demo):
+  - `http://localhost:3017/` loads the main platform without the `ControlCenter` crash.
+  - `http://localhost:3017/hud` renders the floating chat HUD (dark frosted bar, drag handle, close button, composer at bottom).
+
+### Next
+1. Run a full end-to-end test in the actual Electron desktop app with `Cmd+Shift+H`.
+2. Verify drag handle and close button IPC still work.
+3. Address remaining HUD polish items from the original handoff (Hermes visual matching, click-through, resize).
+
+### Open questions
+- None blocking.
+
+
+## Brain selection contract fix (2026-08-26)
+
+### Goal
+Make the brain the user selects in the platform UI actually reach the Gizzi runtime instead of being overwritten by the backend default.
+
+### Just did
+- Added `model: Option<GizziModelRef>` to `CreateSessionBody` in `cmd/allternit-api/src/agent_session_routes.rs`.
+- `create_session` now uses the frontend-supplied model and only falls back to `AppConfig.default_model()` when none is sent.
+- Added `BrainRef` type in `surfaces/ai.allternit.com/src/lib/agents/native-agent-api.ts` and threaded it through `CreateNativeAgentSessionRequest` and `CreateModeSessionOptions`.
+- `ChatView.handleSend()` now passes the current `ModelSelection` as a `BrainRef` into `createSession` and as `providerID/modelID` into the message stream.
+- Removed the drifted `localStorage`-based model fallback from `mode-session-store.ts` and removed `getBrainSessionConfig` dead code from `model-selection-provider.tsx`.
+- Verified `cargo check -p allternit-api` and confirmed no new TypeScript errors in the touched files.
+
+### Next
+1. Proxy Gizzi live provider discovery (`GET /providers`, `/providers/auth`) through `/api/v1/providers*` so the picker shows real installed/authenticated brains.
+2. Update the model picker to consume the proxied discovery data instead of the static registry.
+3. Add a Gizzi session-level model pin so the selected brain persists across turns.
+4. Port `AuthPlan`/named auth-profile support to Gizzi.
+
+### Open questions
+- Should `/api/v1/providers` keep the existing `ProviderRow` shape for backwards compatibility, or can we expose Gizzi's raw provider objects?
+- Do we want to remove the static `ENV_PROVIDER_SPECS`/`CLI_PROVIDER_SPECS` tables entirely, or keep them as a fallback when Gizzi is unreachable?
+
+
+## Proxy Gizzi provider discovery to `/api/v1/providers*` (2026-08-26)
+
+### Goal
+Make `GET /api/v1/providers` and `GET /api/v1/providers/auth/status` return live Gizzi-discovered providers instead of the static env/CLI tables.
+
+### Just did
+- Added `discover_providers()` and `provider_auth_methods()` to `cmd/allternit-api/src/gizzi_provider_auth.rs`, following the existing `client()`/`base_url()` pattern.
+- Added `ProviderInfo` and `ModelInfo` serde structs to `cmd/allternit-api/src/provider_routes.rs` for the frontend-facing provider shape.
+- Rewrote `list_providers` to call Gizzi `/provider`, transform each entry into `ProviderInfo`, and return `{providers, all}`. Falls back to the existing static merge (converted into `ProviderInfo`) if Gizzi is unreachable.
+- Rewrote `list_provider_auth_status` to call Gizzi `/provider` and `/provider/auth`, transform entries into `ProviderAuthStatusRow` with `auth_profile_id: None` and `chat_profile_ids: []`, and fall back to the static merge if either Gizzi call fails.
+- Kept `ENV_PROVIDER_SPECS`/`CLI_PROVIDER_SPECS` and the existing merge helpers for the fallback path.
+- Ran `cargo check -p allternit-api`; no new warnings (33 pre-existing warnings remain).
+
+### Next
+1. Update the frontend model picker to consume the proxied discovery response instead of the static registry.
+2. Add a Gizzi session-level model pin so the selected brain persists across turns.
+3. Port `AuthPlan`/named auth-profile support to Gizzi.
+
+### Open questions
+- Should the fallback path continue returning `ProviderInfo` forever, or do we eventually want to drop the static tables when Gizzi is mandatory?
+
+---
+
+## Brain selection handoff — AuthPlan + session pin (2026-08-26)
+
+### Goal
+Re-implement slices 1–6 of the brain-selection handoff so the frontend-selected brain reaches Gizzi sessions and auth resolution is explicit.
+
+### Just did
+- Added named auth profiles store (`Auth.Profile`, `~/.gizzi/auth-profiles.json`) in `cmd/gizzi-code/src/runtime/integrations/auth/auth.ts`.
+- Added `ModelRef`, `AuthPlan`, `prepareAuth`, `RuntimePolicy`, `resolveRuntimePolicy`, and `rotateAuth` in `cmd/gizzi-code/src/runtime/providers/provider.ts`.
+- Wired `AuthPlan` through `getLanguage`, `LLM.stream`, `SessionPrompt`, and `SessionProcessor`.
+- Added session-level `default_model` pin with Drizzle migration in `cmd/gizzi-code/src/runtime/session/*`.
+- Added `runtime` enum to `Config.Provider` and per-model config.
+- Forwarded `authProfileId` from the Allternit API into the Gizzi session payload in `cmd/allternit-api/src/agent_session_routes.rs`.
+
+### Verification
+- `cargo check -p allternit-api`: ✅ passes.
+- `cd cmd/gizzi-code && bun run typecheck`: ✅ no errors in touched files; pre-existing missing `packages/sdk/dist/*` artifacts remain.
+
+### Next
+1. Slice 7: add E2E test that selected model reaches Gizzi session + message.
+2. Slice 8: final typecheck/build sweep and clean up any regressions.
+## Remote Control gap fix (session/remote-control-gap-fix) — 2026-08-26
+
+### Goal
+
+Close the critical gaps left by the previous remote-control implementation:
+1. Rename internal `dispatch` surface to `remote-control` and add `/remote` route.
+2. Fix push worker route prefix mismatch between worker, SDK, dashboard, and README.
+3. Align permission/question API paths between SDK and gizzi-code `remote_control.ts`.
+4. Make the Dispatch/Remote Control composer actually send messages to a runtime.
+
+### Just did
+
+- Created fresh linked worktree `allternit-session-remote-control-gap-fix` from `main`.
+- Wrote consolidated gap analysis to `/Users/joe/Desktop/allternit-remote-control-gap-analysis.md`.
+- Created `TODO-remote-control-gap-fix.md` task tracker.
+
+### Just did (continued)
+
+- Renamed internal `dispatch` view type to `remote-control` and added `/remote` route alias.
+- Aligned push worker contract: worker uses no `/push` prefix; SDK, e2e test, README, and env vars updated.
+- Verified `/v1/permission` and `/v1/question` routes already exist in gizzi-code and match SDK calls.
+- Made DispatchView composer real: creates a remote session and sends the message via `RemoteControlClient`.
+- Added `createSession` to SDK `RemoteControlClient`.
+- Gated dev mock runtimes behind `ALLTERNIT_LOCAL_DEV_BYPASS`.
+- Implemented live pending permission/question counters in `RemoteControlHub` and `DashboardPage`.
+- Committed changes to `session/remote-control-gap-fix`.
+
+### Verification
+
+- `pnpm typecheck:fast` in `surfaces/ai.allternit.com` passes for touched files; pre-existing errors remain in unrelated packages.
+- `pnpm typecheck` in `services/remote-control-push` ✅.
+- SDK `runtime/index.ts` typechecks cleanly.
+- `vite build --config vite.remote-control.config.ts` still fails on pre-existing top-level-await in a vendored dependency, unrelated to changes.
+
+### Next
+
+- Remove session worktree after user review (branch `session/remote-control-gap-fix` is committed and preserved).
+- Remaining gaps for follow-up: push worker auth, subscription TTL/GC, PWA offline shell, native OS permission requests, iOS APNs backend endpoint.
+
+### Open questions
+
+- Should push worker add authentication now (Clerk bearer + device-token-signed `/notify`), or defer until after merge?
+- Should `/runtimes` redirect to `/remote`, or keep both as aliases?
+
+---
+
+## Remote Control Gap Fix (security, PWA, UX polish)
+
+### Goal
+Close the remaining production gaps in Remote Control: secure push notifications, PWA hardening, and honest setup UX.
+
+### Just did
+
+- **Push worker security (Phase 4)**
+  - `/subscribe` now requires a valid Clerk bearer token and verifies the user owns the requested `runtimeId`.
+  - `/notify` accepts either the service secret (cloud → worker) or a paired runtime device token (gizzi → worker), and enforces runtime-id matching for device tokens.
+  - Added KV TTL for subscriptions (90 days), pending-payload TTL (5 min), and dead-subscription cleanup on 404/410 push responses.
+  - Added per-runtime rate limiting on `/notify` (30/min).
+  - Rewrote `cmd/gizzi-code/src/runtime/integrations/remote-control-push.ts` to scope notifications to the cloud-paired `runtimeId`, include typed payloads (permission/question/completed/error), and subscribe to `Session.Event.Error`.
+  - Added notification-type toggles in settings.
+
+- **PWA hardening (Phase 5)**
+  - Updated `remote-control.webmanifest` with stable `id`, correct `start_url`, `scope`, and PNG icon references.
+  - Added iOS meta tags and `apple-touch-icon` / `apple-touch-startup-image` to `remote-control.html`.
+  - Rewrote `remote-control-service-worker.js` with precaching, offline app-shell fallback, and deep-link `notificationclick` handling.
+  - Generated placeholder PNG icons/splash (to be replaced by real design assets before launch).
+  - Added `Notification.requestPermission()` gate and per-runtime push state in `DashboardPage.tsx`.
+  - Added push-worker `/subscriptions` endpoint so the dashboard shows accurate per-runtime subscription state instead of a global guess.
+  - Fixed missing `Authorization` headers on `/subscribe` and `/unsubscribe` dashboard calls.
+
+- **UX cleanup (Phase 6)**
+  - Replaced fake macOS permission toggles with honest copy + "Open System Settings" deep-links in `DispatchView.tsx` and `DispatchSettingsPanel.tsx`.
+  - Added mock-runtime banner (`MockRuntimesBanner.tsx`), loading/status states in `RemoteControlHub.tsx`, and empty-state CTAs across `MachinesPanel.tsx`, `RemoteSessionPanel.tsx`, and `RemoteControlHub.tsx`.
+
+### Verification
+
+- `pnpm typecheck` in `services/remote-control-push` ✅.
+- `pnpm typecheck:fast` in `surfaces/ai.allternit.com` shows no new errors in touched `remote-control` / `dispatch` files; pre-existing errors remain in unrelated office-suite packages.
+- `bun run typecheck` in `cmd/gizzi-code` shows no errors in touched `remote-control-push.ts` / `pairing.ts`; pre-existing SDK `dist/` import errors remain.
+
+### Next
+
+- Replace placeholder PWA icons/splash with final design assets.
+- Build the remote-control entry to confirm bundling (pre-existing top-level-await blocker in a vendored dep is unrelated).
+- Run full manual E2E: pair runtime → open PWA → trigger permission/question → receive push → approve/respond.
+- Merged to `main` at `2c21d67e3`.

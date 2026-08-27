@@ -109,6 +109,7 @@ export type ViewType =
   | "loops-list"
   | "cron"
   | "dispatch"
+  | "remote-control"
   // Code views
   | "new-file"
   | "code-project"
@@ -175,7 +176,9 @@ export type ViewType =
   // Model Lab
   | "model-lab"
   // Allternit Sign (native client-side PDF signing)
-  | "sign";
+  | "sign"
+  // Floating chat HUD
+  | "hud";
 
 export type ViewId = string;
 

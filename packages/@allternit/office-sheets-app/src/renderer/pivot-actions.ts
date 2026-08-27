@@ -3,9 +3,9 @@
  * Extracted from App.tsx; the App component passes a PivotActionContext built
  * fresh per call so refs and state never go stale.
  */
-import { columnLabel, parseRange } from '@allternit/allternit-office-suite/xlsx'
-import { applyPivotSlicer, growPivotDefinition, recomputePivotData } from '@allternit/allternit-office-suite/xlsx'
-import type { WorkbookFile, WorkbookPivotDefinition } from '@allternit/allternit-office-suite/xlsx'
+import { columnLabel, parseRange } from '@allternit/office-suite/xlsx'
+import { applyPivotSlicer, growPivotDefinition, recomputePivotData } from '@allternit/office-suite/xlsx'
+import type { WorkbookFile, WorkbookPivotDefinition } from '@allternit/office-suite/xlsx'
 import { journalSize, recordPivotCacheRefresh, recordPivotRefreshUpdate } from './edit-journal'
 import { t } from './i18n/locale'
 import type { OoXmlPivotConfig, PivotEditSeed, PivotField } from './PivotDialog'

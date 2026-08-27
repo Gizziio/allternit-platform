@@ -12,17 +12,17 @@ import type {
   AddTableRowOperation,
   DeleteTableColumnOperation,
   DeleteTableRowOperation,
-} from '@allternit/allternit-office-suite/xlsx'
-import { columnLabel, parseAddress, parseRange } from '@allternit/allternit-office-suite/xlsx'
-import { renameRefSheet } from '@allternit/allternit-office-suite/xlsx'
+} from '@allternit/office-suite/xlsx'
+import { columnLabel, parseAddress, parseRange } from '@allternit/office-suite/xlsx'
+import { renameRefSheet } from '@allternit/office-suite/xlsx'
 import {
   allowedByValueFilter,
   matchesLabelFilter,
   type PivotFilterDef,
-} from '@allternit/allternit-office-suite/xlsx'
-import { evaluatePivotFormula, parsePivotFormula } from '@allternit/allternit-office-suite/xlsx'
-import { groupValue, type PivotFieldGrouping } from '@allternit/allternit-office-suite/xlsx'
-import type { WorkbookVisualObject } from '@allternit/allternit-office-suite/xlsx'
+} from '@allternit/office-suite/xlsx'
+import { evaluatePivotFormula, parsePivotFormula } from '@allternit/office-suite/xlsx'
+import { groupValue, type PivotFieldGrouping } from '@allternit/office-suite/xlsx'
+import type { WorkbookVisualObject } from '@allternit/office-suite/xlsx'
 import {
   recordPivotAdd,
   recordPivotCacheRefresh,
@@ -32,7 +32,7 @@ import {
 } from './edit-journal'
 import { t } from './i18n/locale'
 import type { OoXmlPivotConfig, PivotField } from './PivotDialog'
-import type { PivotDefinition } from '@allternit/allternit-office-suite/xlsx'
+import type { PivotDefinition } from '@allternit/office-suite/xlsx'
 import {
   AGG_CAPTIONS,
   applyFormatPatchToRange,

@@ -12,7 +12,7 @@ import type {
   MenuAction,
   WorkbookFile,
   WorkbookSaveRequest,
-} from '@allternit/allternit-office-suite/xlsx'
+} from '@allternit/office-suite/xlsx'
 
 export interface SheetsInitialDocument {
   name: string

@@ -1,0 +1,377 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Long-Horizon Agent Memory: From Context Windows to Working Memory — A://SUDO Reality</title>
+<meta name="description" content="Long-horizon agents now operate with massive context windows, but retrieved history often fails to shape task execution, creating a costly &#39;history present but not operative&#39; failure mode. New architectures such as Recuris address this by separating a working-memory layer that tracks task state from an experiential-memory layer of skills and execution traces, updating skill memory only when validated by structured evidence. Product moves like Anthropic’s Claude Cowork shared memory reinforce the broader shift: context windows are becoming transport layers, while working memory is becoming the reasoning layer for production agents.">
+<meta name="generator" content="Allternit publications pipeline">
+<link rel="canonical" href="https://ai.allternit.com/editions/weekly-feature-2026-w35.html">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Newsreader:ital,opsz,wght@0,6..72,400;0,6..72,700;1,6..72,400;1,6..72,700&amp;display=swap" rel="stylesheet">
+<style>
+  :root { color-scheme: light; }
+  * { box-sizing: border-box; }
+  html { -webkit-text-size-adjust: 100%; }
+  body {
+    margin: 0;
+    background: #F5F3EF;
+    color: #1A1A1A;
+    font-family: 'Newsreader', Georgia, 'Times New Roman', serif;
+    font-size: 19px;
+    line-height: 1.62;
+    padding-bottom: 96px; /* clear the fixed action bar */
+  }
+  article.edition {
+    max-width: 1120px;
+    margin: 0 auto;
+    padding: 48px 40px 64px;
+  }
+
+  /* Masthead — publication name in black serif, edition line, hairline */
+  .masthead-row {
+    display: flex;
+    align-items: baseline;
+    gap: 18px;
+  }
+  .masthead-tick {
+    flex: 0 0 auto;
+    width: 14px;
+    height: 14px;
+    background: var(--accent);
+    transform: translateY(1px);
+  }
+  .nameplate {
+    font-weight: 700;
+    font-size: 30px;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: #1A1A1A;
+  }
+  .edition-line {
+    margin-left: auto;
+    font-family: 'Courier New', Courier, monospace;
+    font-size: 14px;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: #6B6B6B;
+  }
+  .hairline {
+    position: relative;
+    border-top: 1px solid #1A1A1A;
+    margin: 14px 0 0;
+  }
+  .hairline .lead {
+    position: absolute;
+    left: 0;
+    top: -2px;
+    width: 168px;
+    border-top: 3px solid var(--accent);
+  }
+
+  /* Cover banner */
+  figure.cover {
+    margin: 36px 0 0;
+    break-inside: avoid;
+  }
+  figure.cover svg {
+    display: block;
+    width: 100%;
+    height: auto;
+    border: 1px solid rgba(26, 26, 26, 0.22);
+  }
+
+  /* Title block */
+  .titleblock { margin: 44px 0 0; }
+  .kicker {
+    margin: 0 0 14px;
+    font-family: 'Courier New', Courier, monospace;
+    font-size: 14px;
+    letter-spacing: 0.22em;
+    text-transform: uppercase;
+    color: var(--accent);
+  }
+  h1.display {
+    margin: 0;
+    font-size: clamp(42px, 6.4vw, 76px);
+    font-weight: 700;
+    line-height: 1.04;
+    letter-spacing: -0.015em;
+  }
+  .deck {
+    margin: 22px 0 0;
+    max-width: 46em;
+    font-style: italic;
+    font-size: 23px;
+    line-height: 1.45;
+    color: #1A1A1A;
+  }
+  .byline, .dateline {
+    margin: 26px 0 0;
+    font-variant-caps: small-caps;
+    letter-spacing: 0.08em;
+    font-size: 17px;
+  }
+  .byline { color: #1A1A1A; }
+  .dateline { margin-top: 6px; color: #6B6B6B; }
+
+  /* Body — justified multi-column with hairline rules */
+  .columns {
+    margin-top: 40px;
+    column-width: 320px;
+    column-gap: 44px;
+    column-rule: 1px solid rgba(26, 26, 26, 0.18);
+    text-align: justify;
+    hyphens: auto;
+  }
+  .columns p { margin: 0 0 1em; break-inside: avoid; }
+  .columns h2, .columns h3, .columns h4 {
+    break-after: avoid;
+    line-height: 1.2;
+  }
+  .columns h2 {
+    margin: 1.1em 0 0.55em;
+    font-size: 27px;
+    font-weight: 700;
+  }
+  .columns h2::before {
+    content: '';
+    display: inline-block;
+    width: 10px;
+    height: 10px;
+    margin-right: 10px;
+    background: var(--accent);
+  }
+  .columns h2.department { margin-top: 1.3em; }
+  .columns h2.department::before { content: none; }
+  .columns h2 .chip {
+    display: inline-block;
+    padding: 6px 14px 7px;
+    border: 1px solid #1A1A1A;
+    font-family: 'Courier New', Courier, monospace;
+    font-size: 19px;
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: #1A1A1A;
+    background: transparent;
+  }
+  .columns h3 { margin: 1.1em 0 0.4em; font-size: 21px; font-weight: 700; }
+  .columns h4 { margin: 1em 0 0.4em; font-size: 18px; font-weight: 700; }
+  .columns ul, .columns ol { margin: 0 0 1em; padding-left: 1.25em; }
+  .columns li { margin-bottom: 0.45em; }
+  .columns a { color: var(--accent); text-decoration-thickness: 1px; text-underline-offset: 2px; }
+  .columns code {
+    font-family: 'Courier New', Courier, monospace;
+    font-size: 0.86em;
+    background: rgba(26, 26, 26, 0.06);
+    padding: 0.08em 0.3em;
+  }
+
+  /* Blockquotes → oversized serif pull quotes with hairline rules */
+  .columns blockquote {
+    margin: 1.6em 0;
+    padding: 20px 4px;
+    border-top: 1px solid #1A1A1A;
+    border-bottom: 1px solid #1A1A1A;
+    break-inside: avoid;
+  }
+  .columns blockquote p {
+    margin: 0;
+    font-size: 27px;
+    line-height: 1.35;
+    text-align: left;
+  }
+  .columns blockquote p::before {
+    content: '\201C';
+    color: var(--accent);
+    margin-right: 2px;
+  }
+
+  hr.rule {
+    border: none;
+    border-top: 1px solid rgba(26, 26, 26, 0.35);
+    margin: 1.8em 0;
+  }
+
+  /* Footer / colophon */
+  footer.colophon { margin-top: 56px; }
+  footer.colophon .hairline { margin-bottom: 22px; }
+  footer.colophon p {
+    margin: 0 0 6px;
+    font-family: 'Courier New', Courier, monospace;
+    font-size: 13px;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: #6B6B6B;
+  }
+  footer.colophon a { color: var(--accent); }
+
+  /* Fixed action bar — the only JS on the page */
+  .action-bar {
+    position: fixed;
+    left: 50%;
+    bottom: 20px;
+    transform: translateX(-50%);
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 10px 14px;
+    background: #1A1A1A;
+    color: #F5F3EF;
+    font-family: 'Courier New', Courier, monospace;
+    font-size: 13px;
+    letter-spacing: 0.06em;
+    box-shadow: 0 6px 24px rgba(26, 26, 26, 0.28);
+    z-index: 10;
+  }
+  .action-bar .bar-title {
+    padding-right: 6px;
+    border-right: 1px solid rgba(245, 243, 239, 0.35);
+    text-transform: uppercase;
+  }
+  .action-bar button {
+    appearance: none;
+    border: 1px solid #F5F3EF;
+    background: transparent;
+    color: #F5F3EF;
+    font: inherit;
+    padding: 7px 14px;
+    cursor: pointer;
+    text-transform: uppercase;
+  }
+  .action-bar button:hover, .action-bar button:focus-visible {
+    background: var(--accent);
+    border-color: var(--accent);
+    color: #1A1A1A;
+    outline: none;
+  }
+
+  @media (max-width: 640px) {
+    article.edition { padding: 32px 20px 56px; }
+    .nameplate { font-size: 22px; }
+    .masthead-row { flex-wrap: wrap; }
+    .edition-line { margin-left: 0; width: 100%; }
+  }
+
+  @media print {
+    @page { margin: 18mm 16mm; }
+    body { padding-bottom: 0; }
+    .action-bar { display: none !important; }
+    figure.cover, .columns blockquote { break-inside: avoid; }
+    /* Each ## department heading starts a fresh page — except the first
+       block of the body, which would leave the title page blank. */
+    .columns > h2 { break-before: page; }
+    .columns > h2:first-child { break-before: auto; }
+    a { color: #1A1A1A; }
+  }
+</style>
+</head>
+<body>
+<article class="edition" style="--accent: #4F46E5;">
+  <header class="masthead">
+    <div class="masthead-row">
+      <span class="masthead-tick" aria-hidden="true"></span>
+      <span class="nameplate">A://SUDO Reality</span>
+      <span class="edition-line">Edition 2026-W35</span>
+    </div>
+    <div class="hairline" aria-hidden="true"><span class="lead"></span></div>
+  </header>
+
+  <figure class="cover">
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="630" viewBox="0 0 1200 630">
+<title>Long-Horizon Agent Memory: From Context Windows to Working Memory</title>
+<rect width="1200" height="630" fill="#F5F3EF"/>
+<rect x="0" y="0" width="12" height="630" fill="#4F46E5"/>
+<rect x="80" y="62" width="16" height="16" fill="#4F46E5"/>
+<text x="108" y="77" font-family="'Courier New', Courier, monospace" font-size="21" letter-spacing="5" fill="#1A1A1A">A://SUDO REALITY</text>
+<text x="1120" y="77" text-anchor="end" font-family="'Courier New', Courier, monospace" font-size="17" letter-spacing="2" fill="#6B6B6B">EDITION 2026-W35</text>
+<line x1="80" y1="96" x2="1120" y2="96" stroke="#1A1A1A" stroke-width="1"/>
+<line x1="80" y1="96" x2="248" y2="96" stroke="#4F46E5" stroke-width="3"/>
+<text x="80" y="250" font-family="Georgia, 'Times New Roman', serif" font-size="64" font-weight="bold" fill="#1A1A1A">Long-Horizon Agent Memory:</text>
+<text x="80" y="326" font-family="Georgia, 'Times New Roman', serif" font-size="64" font-weight="bold" fill="#1A1A1A">From Context Windows to</text>
+<text x="80" y="402" font-family="Georgia, 'Times New Roman', serif" font-size="64" font-weight="bold" fill="#1A1A1A">Working Memory</text>
+<line x1="80" y1="580" x2="1120" y2="580" stroke="#1A1A1A" stroke-width="1"/>
+<text x="80" y="608" font-family="'Courier New', Courier, monospace" font-size="15" letter-spacing="2" fill="#6B6B6B">AI.ALLTERNIT.COM · DISCOVERY</text>
+<text x="1120" y="608" text-anchor="end" font-family="'Courier New', Courier, monospace" font-size="15" letter-spacing="2" fill="#6B6B6B">5 MIN READ</text>
+</svg>
+  </figure>
+
+  <header class="titleblock">
+    <p class="kicker">Cover Story</p>
+    <h1 class="display">Long-Horizon Agent Memory: From Context Windows to Working Memory</h1>
+    <p class="deck">A://SUDO Reality · Weekly Magazine · August 26, 2026</p>
+    <p class="byline">By A://SUDO Reality · research desk</p>
+    <p class="dateline">August 26, 2026 · 5 min read</p>
+    <div class="hairline" aria-hidden="true"></div>
+  </header>
+
+  <div class="columns">
+<h2>Cover Story</h2>
+<p>Long-horizon agents are caught in a paradox: they have never been able to remember more, yet they have never been worse at using what they remember. Context windows now swallow 128,000 tokens or more, but new evidence from financial-analysis workflows shows that simply retrieving a risk disclosure from a long filing has almost no effect on an LLM&#39;s investment judgment, even when direct retrieval stays accurate. The history is present; it is not operative. That gap is why the architecture of agent memory is being redrawn. The latest work moves the field away from the brute-force model of &quot;read everything&quot; toward a structured working memory that tracks task state and selects skills grounded in the current need.</p>
+<p>This is not an incremental tweak to retrieval-augmented generation. It is a response to a specific, expensive failure mode in production agents: as execution histories grow, the task state becomes obscure, and the agent starts invoking the wrong skills at the wrong time. A new recursive Experiential-Working Memory architecture, Recuris, tackles this by coupling a working-memory layer that monitors progress with an experiential-memory layer of skills and past execution traces. A fixed meta-agent then uses structured execution evidence to update only the memory component responsible for a failure, validation-gating each change. The result is an agent that can improve its own skill memory without retraining the underlying model.</p>
+<p>The practical signal is already showing up in product form. Anthropic&#39;s Claude Cowork is introducing shared memory across chat and Cowork sessions so that users stop re-briefing the assistant. That solves the user-context problem, but the deeper engineering challenge is the same: separate what an agent can read from what it can act on. Recuris and related research point toward a production pattern in which context windows become a transport layer, not a reasoning layer. Working memory becomes the reasoning layer.</p>
+<blockquote><p>For production agents, the problem is no longer how much history the model can read, but how little of the right history it can act on.</p></blockquote>
+<p>For engineering teams, the stakes are clear. If your agent executes multi-step workflows over minutes or hours, the dominant failure mode is no longer &quot;I ran out of context.&quot; It is &quot;I lost the thread.&quot; Fixing that requires re-architecting memory around task state, not token count. The teams that get this right will build agents that are debuggable, improvable, and economically viable at long horizons. The teams that do not will keep paying for ever-larger context windows and still wonder why their agents make the same mistakes twice.</p>
+<h2>Technical Breakdown</h2>
+<h3>How it works</h3>
+<p>At the center of Recuris is a separation of concerns borrowed from cognitive architecture. Instead of feeding the entire execution history into the LLM, the system maintains three memory components:</p>
+<ol><li><strong>Experiential Memory</strong> — a long-term store of prior trajectories, reusable skills, and raw execution traces.</li><li><strong>Working Memory</strong> — a compact representation that tracks current task progress and selects skills from Experiential Memory based on present need.</li><li><strong>Skill Memory</strong> — a validated, executable skill library that the agent actually invokes.</li></ol>
+<p>During execution, the agent&#39;s Working Memory decides which skill to call. The full history is not re-read; the skill is grounded in the current task state. After each episode, execution traces are turned into structured evidence. A fixed meta-agent diagnoses failures and proposes targeted updates to Skill Memory — or to how Working Memory selects skills. Each proposed update is validation-gated before being committed. The cycle produces new execution evidence, and the process repeats. The result is recursive self-improvement localized to specific memory components.</p>
+<p>This design directly addresses the long-context retrieval-integration gap shown by Liu and Liu. In their experiments, when total context grows from 2,000 to 128,000 tokens while focal-firm information is held fixed, direct retrieval of a risk disclosure remains accurate, but its influence on the model&#39;s investment judgment falls to the experimental noise floor. The model can read the document; it cannot keep the relevant fact active across the reasoning chain. Working memory is intended to solve exactly that: keep the task-relevant signal active while suppressing irrelevant context.</p>
+<h3>What problem it actually solves vs. what the marketing claims</h3>
+<p>Marketing around long context often conflates &quot;can access&quot; with &quot;can use.&quot; Recuris does not magically expand the effective horizon of every LLM. It solves a structural problem in long-horizon agent harnesses: skill misalignment caused by history overload. It also provides a failure-attribution mechanism. Because updates are localized and validation-gated, engineers can trace a bad action to a specific memory component rather than debugging an opaque, monolithic prompt.</p>
+<h3>Limitations and edge cases</h3>
+<p>The architecture assumes a stable task structure and a reusable skill library. In open-ended domains where skills are not cleanly factorable, Working Memory may select poorly and updates can compound. Validation gating adds safety but can also reject valid updates, slowing learning. The latency cost of the meta-agent update loop is not specified in the available sources. The experiments cover multiple tasks, but real-world multi-hour workflows with human feedback loops remain unverified. There is also no evidence in the sources that Recuris reduces inference cost relative to simpler retrieval patterns; cost depends heavily on implementation and on whether memory maintenance runs synchronously or asynchronously.</p>
+<h2>Production Implications</h2>
+<h3>When to adopt it, when to wait</h3>
+<p>If your agent runs tasks with many steps, repeated tool calls, and evolving state, start designing around a working-memory architecture now. If your agent is a single-turn classifier, a short chatbot, or a simple retrieval-and-summarize pipeline, this is overkill.</p>
+<p>The immediate move for production teams is to stop treating the context window as a working-memory substitute. Build an explicit task-state object that the agent updates after each step. Add a skill registry with selection logic. Use retrieval to populate context, but separate the active reasoning state from the raw history. Recuris provides a pattern: a meta-agent loop that reviews failures and proposes memory updates only after validation. That adds components — a memory store, a skill registry, an evaluator/validator, and observability into which memory component failed — but it replaces the current regime of endlessly growing prompts and repeated mistakes.</p>
+<h3>Integration complexity and operational concerns</h3>
+<p>Integration complexity is high. You will need to instrument execution traces so failures can be localized to Working Memory, Skill Memory, or Experiential Memory. You will need a validation harness; otherwise the meta-agent will corrupt the skill library. Operational concerns include update drift, version control for skills, and latency from the meta-reasoning step. The tradeoff is compute spent on memory maintenance versus model calls saved by better skill selection. In high-frequency, low-latency workflows, the extra reasoning step may be unacceptable. In asynchronous, long-running tasks, it is likely worth it.</p>
+<h3>Cost and performance tradeoffs</h3>
+<p>Cost context is changing at the same time. Claude Code costs $20 to $200 per month depending on usage, while open-source alternatives like Goose target the same terminal-agent pattern without a subscription. Meanwhile, OpenAI&#39;s Jalapeño custom inference chip is promising faster, more power-efficient inference, which could lower the cost of the meta-agent loop. Anthropic&#39;s Claude Cowork shared memory is a consumer-facing signal of the same trend, but it solves user-context persistence, not task-state working memory.</p>
+<p><strong>The so what:</strong> production AI teams should care because long-horizon reliability is the difference between a demo and a workflow. The winning design is not a bigger prompt; it is a memory architecture that knows what matters now.</p>
+<h2>This Week</h2>
+<h3>ls -la — the full listing</h3>
+<ul><li><strong>Conferences &amp; robotics:</strong> IEEE Spectrum flagged upcoming events including Humanoids Summit Seoul (22–23 September 2026, Seoul), IROS 2026 (27 September–1 October 2026, Pittsburgh), and CoRL 2026 (9–12 November 2026). These are worth calendar-marking for anyone building embodied or multi-step agents.</li><li><strong>Inference silicon:</strong> OpenAI published first results for Jalapeño, its custom inference chip, which it describes as faster and more power-efficient for modern-model inference.</li><li><strong>Product memory:</strong> Anthropic rolled out shared memory for Claude Cowork across chat and Cowork sessions, removing the need to repeatedly re-brief the assistant on projects and preferences.</li><li><strong>Platform &amp; pricing:</strong> OpenAI announced wider API availability and rollout across eligible ChatGPT Work and Codex-credits plans; Pro, Plus, and Business subscription usage remains unchanged. Separately, the market for terminal coding agents is heating up: Claude Code pricing runs $20–$200/month, while the open-source Goose project targets the same workflow without subscription fees.</li><li><strong>Community projects:</strong> A new Rust ML framework, Millwright, is experimenting with end-to-end training workflows in Rust. On the model side, the Thomson 1.0 technical report discusses continual learning of frontier models for SovereignAI and releases open weights.</li></ul>
+<h3>git push — trending GitHub projects worth a look</h3>
+<ul><li><strong>AgriciDaniel/claude-obsidian</strong> (13,039 stars) — a self-organizing &quot;AI second brain&quot; for Obsidian plus Claude Code that ingests sources and files them into a plain-Markdown knowledge graph. It is built on Andrej Karpathy&#39;s LLM Wiki pattern and is a useful reference for anyone thinking about structured, user-owned agent memory.</li><li><strong>anthropics/claude-plugins-community</strong> (1,978 stars) — a read-only mirror of Anthropic&#39;s community plugin marketplace for Claude Cowork and Claude Code. Worth watching to see what skill-library conventions emerge.</li><li><strong>TauricResearch/TradingAgents</strong> (100,579 stars) — a multi-agent LLM financial-trading framework. It sits squarely in the high-stakes, long-horizon domain where retrieval accuracy and judgment integration diverge, making it a good test case for working-memory ideas.</li></ul>
+<h3>pwned — security</h3>
+<p>Russian operators used ChatGPT to run an influence operation, according to OpenAI&#39;s findings reported this week. The actors used VPNs to bypass geographic restrictions, generated posts promoting the &quot;International Burke Institute,&quot; and distributed them across Substack, Telegram, X, Facebook, and LinkedIn. OpenAI banned the accounts after detecting the abuse. The incident is a reminder that API abuse monitoring and geo-restriction enforcement are production concerns, not just policy ones, especially as agents gain longer memories and more autonomous publishing capabilities.</p>
+<h2>What We&#39;re Watching</h2>
+<ol><li><strong>Open-source Recuris code and benchmarks.</strong> The paper is currently arXiv-only; we are watching for a code release and for independent evaluations on long-horizon agent harnesses.</li><li><strong>Claude Cowork shared memory in the wild.</strong> Whether Anthropic exposes memory primitives to developers or keeps them internal will shape how product teams build persistent agent experiences.</li><li><strong>Jalapeño production benchmarks.</strong> OpenAI&#39;s first results are promising, but we want to see comparative cost and latency numbers against commodity GPU inference at scale.</li><li><strong>Multi-agent finance frameworks.</strong> TradingAgents and similar projects are high-stakes long-horizon tasks where the retrieval-judgment gap is dangerous; watch how they handle memory and skill selection.</li><li><strong>Long-context judgment benchmarks.</strong> We are tracking whether new model families close the retrieval-integration gap through architecture, or merely through larger windows.</li></ol>
+<h2>Sources</h2>
+<ul><li>Yu, Z., Wu, Y., Yin, Z., Chen, K., Zhao, Z., Wang, M., Yan, S., &amp; Yang, L. (2026). <em>Recursive Experiential-Working Memory Evolution for Long-Horizon Agent Harnesses.</em> arXiv. http://arxiv.org/abs/2608.24876v1</li><li>Liu, M., &amp; Liu, Z. (2026). <em>Reading Is Not Using: Retrieval, Judgment, and the Design of AI Financial Research Workflows.</em> arXiv. http://arxiv.org/abs/2608.24842v1</li><li>Huang, J., Zhang, J., &amp; Chang, H.-H. (2026). <em>A Dual-Dimensional LLM Framework for Automated Item Incidental Content Similarity Analysis in Large-Scale Assessments.</em> arXiv. http://arxiv.org/abs/2608.24825v1</li><li>OpenAI. (2026). <em>Jalapeño’s first results show industry-leading speed and efficiency in AI inference.</em> https://openai.com/index/jalapeno-first-results</li><li>TechCrunch. (2026, August 25). <em>Claude Cowork finally remembers what you told the app in chat.</em> https://techcrunch.com/2026/08/25/claude-cowork-finally-remembers-what-you-told-the-app-in-chat/</li><li>VentureBeat. (2026). <em>Claude Code costs up to $200 a month. Goose does the same thing for free.</em> https://venturebeat.com/infrastructure/claude-code-costs-up-to-usd200-a-month-goose-does-the-same-thing-for-free</li><li>OpenAI [@OpenAI]. (2026). <em>Now available on the API and rolling out across eligible plans for ChatGPT Work and Codex credits.</em> X. https://x.com/OpenAI/status/2090885188897460249</li><li>The Hacker News [@TheHackersNews]. (2026). <em>Russian operators used ChatGPT to run an influence operation.</em> X. https://x.com/TheHackersNews/status/2092547335742230786</li><li>IEEE Spectrum. (2026). <em>Video Friday: Do We Need Superhuman Humanoid Robots?</em> https://spectrum.ieee.org/video-friday-unitree-superhuman</li><li>AgriciDaniel. (2026). <em>claude-obsidian</em> [GitHub repository]. https://github.com/AgriciDaniel/claude-obsidian</li><li>Anthropic. (2026). <em>claude-plugins-community</em> [GitHub repository]. https://github.com/anthropics/claude-plugins-community</li><li>TauricResearch. (2026). <em>TradingAgents</em> [GitHub repository]. https://github.com/TauricResearch/TradingAgents</li><li>/u/olty5000. (2026). <em>Millwright — experimenting with an end-to-end machine learning framework in Rust.</em> Reddit. https://www.reddit.com/r/MachineLearning/comments/1vyq7m9/millwright_experimenting_with_an_endtoend_machine/</li><li>/u/Forsaken_Scientist. (2026). <em>Continual Learning of Frontier Models for SovereignAI. Tech Report + Open Weights Model.</em> Reddit. https://www.reddit.com/r/MachineLearning/comments/1vxvzju/continual_learning_of_frontier_models_for/</li></ul>
+  </div>
+
+  <footer class="colophon">
+    <div class="hairline" aria-hidden="true"><span class="lead"></span></div>
+    <p>Canonical: <a href="https://allternit.com/features">allternit.com/features</a></p>
+    <p>Generated by the Allternit publications pipeline</p>
+  </footer>
+</article>
+
+<div class="action-bar" role="toolbar" aria-label="Edition actions" style="--accent: #4F46E5;">
+  <span class="bar-title">A://SUDO Reality</span>
+  <button type="button" id="save-pdf">Save as PDF</button>
+  <button type="button" id="download-html">Download HTML</button>
+</div>
+<script>(function () {
+  var slug = "weekly-feature-2026-w35";
+  document.getElementById('save-pdf').addEventListener('click', function () {
+    window.print();
+  });
+  document.getElementById('download-html').addEventListener('click', function () {
+    var html = '<!DOCTYPE html>\n' + document.documentElement.outerHTML;
+    var a = document.createElement('a');
+    a.href = 'data:text/html;charset=utf-8,' + encodeURIComponent(html);
+    a.download = slug + '.html';
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+  });
+})();</script>
+</body>
+</html>

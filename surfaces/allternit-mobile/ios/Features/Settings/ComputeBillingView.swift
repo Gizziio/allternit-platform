@@ -170,6 +170,10 @@ struct ComputeBillingView: View {
             .buttonStyle(.plain)
         } header: {
             Text("Actions")
+        } footer: {
+            Text("Billing is handled on allternit.com for now. In-app purchases will be available in a future update.")
+                .font(.caption)
+                .foregroundColor(Color("TextSecondary"))
         }
     }
 }

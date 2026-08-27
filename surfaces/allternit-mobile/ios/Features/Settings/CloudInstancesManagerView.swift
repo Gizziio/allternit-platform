@@ -120,6 +120,7 @@ struct CloudInstancesManagerView: View {
                 )
             }
             .buttonStyle(.plain)
+            .accessibilityLabel("Refresh")
 
             Button(action: { isCreateSheetPresented = true }) {
                 HStack(spacing: 6) {
@@ -558,7 +559,7 @@ struct CloudInstancesCreateSheet: View {
                             Text("SSH Key").tag("key")
                             Text("Password").tag("password")
                         }
-                        .pickerStyle(.segmented)
+                        .pickerStyle(.menu)
                     }
 
                     if authType == "key" {

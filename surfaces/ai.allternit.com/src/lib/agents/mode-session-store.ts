@@ -27,6 +27,7 @@ import {
   type BackendSession,
   type BackendMessage,
   type AgentContext,
+  type BrainRef,
 } from './native-agent-api';
 import { useAgentStore } from './agent.store';
 import type { Agent, HarnessConfig } from './agent.types';
@@ -127,6 +128,7 @@ export interface CreateModeSessionOptions {
   sessionMode?: 'regular' | 'agent';
   agentId?: string;
   agentName?: string;
+  model?: BrainRef;
   projectId?: string;
   taskId?: string;
   workspaceId?: string;
@@ -536,28 +538,6 @@ async function sendMessageWithContext(
   });
 }
 
-/**
- * Resolve the provider/model string the kernel expects (`provider/modelId`).
- * Reads the composer's persisted model selection; falls back to the platform's
- * configured default brain, then to the first local Ollama model.
- */
-const MODEL_SELECTION_STORAGE_KEY = 'allternit:model-selection';
-
-function resolveRuntimeModelId(): string | null {
-  try {
-    const raw = typeof window !== 'undefined'
-      ? window.localStorage.getItem(MODEL_SELECTION_STORAGE_KEY)
-      : null;
-    if (raw) {
-      const parsed = JSON.parse(raw) as { providerId?: string; modelId?: string } | null;
-      if (parsed?.providerId && parsed?.modelId) {
-        return `${parsed.providerId}/${parsed.modelId}`;
-      }
-    }
-  } catch { /* malformed or unavailable storage */ }
-  return null;
-}
-
 async function resolveFallbackRuntimeModelId(): Promise<string | undefined> {
   // Prefer the backend's configured default model. This matches what the
   // composer/model picker shows by default and keeps bot sessions on a brain
@@ -599,11 +579,10 @@ async function streamMessageWithContext(
 ): Promise<void> {
   const { text, skipContext, callbacks } = options;
   // The kernel splits runtimeModelId into provider/model. Use an explicit
-  // option first, then the persisted composer selection, then ask the local
-  // brain for a pulled model. If nothing is available, omit the field so the
-  // runtime can fall back to its own default instead of sending an invalid
-  // hard-coded model.
-  let modelId = options.modelId ?? resolveRuntimeModelId();
+  // option first, then fall back to the backend-configured default / local
+  // brain. If nothing is available, omit the field so the runtime can fall
+  // back to its own default instead of sending an invalid hard-coded model.
+  let modelId = options.modelId;
   if (!modelId) {
     modelId = await resolveFallbackRuntimeModelId();
   }
@@ -648,6 +627,8 @@ async function streamMessageWithContext(
         resolvedSecrets: session.metadata.resolvedSecrets as import('@/lib/agents/agent-secrets-resolver').ResolvedSecret[] | undefined,
         resolvedConnectors: session.metadata.resolvedConnectors as import('@/lib/agents/agent-connectors-resolver').ResolvedConnectorCredential[] | undefined,
         vmOperator: (session.metadata.vmOperator as Agent['vmOperator']) ?? agent?.vmOperator,
+        agentId: agent?.id ?? (session.metadata.agentId as string | undefined),
+        characterLayer: agent?.characterLayer,
       });
       agentContext = {
         agentId: contextPack.agentId,
@@ -1022,6 +1003,7 @@ export function createModeSessionStore(config: StoreConfig) {
                 session_mode: options.sessionMode || 'regular',
                 agentId: options.agentId,
                 agentName: options.agentName,
+                model: options.model,
                 project_id: options.projectId,
                 metadata: {
                   ...options.metadata,

@@ -19,15 +19,49 @@ struct LoopsListView: View {
     @StateObject private var loopStore = LoopStore.shared
 
     @State private var searchText = ""
+    @State private var statusFilter: StatusFilter = .all
     /// Pushed detail (nil = list).
     @State private var detailLoop: Loop? = nil
     @State private var isCreateSheetPresented = false
     @State private var actionError: String? = nil
 
+    private enum StatusFilter: String, CaseIterable {
+        case all = "All"
+        case running = "Running"
+        case succeeded = "Succeeded"
+        case exhausted = "Max iterations"
+    }
+
     private var visibleLoops: [Loop] {
+        var loops = loopStore.loops
+        switch statusFilter {
+        case .all: break
+        case .running: loops = loops.filter { $0.state == "running" }
+        case .succeeded: loops = loops.filter { $0.state == "succeeded" }
+        case .exhausted: loops = loops.filter { $0.state == "max_iterations" }
+        }
         let query = searchText.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !query.isEmpty else { return loopStore.loops }
-        return loopStore.loops.filter { $0.command.localizedCaseInsensitiveContains(query) }
+        guard !query.isEmpty else { return loops }
+        return loops.filter { $0.command.localizedCaseInsensitiveContains(query) }
+    }
+
+    private var filterMenu: some View {
+        Menu {
+            ForEach(StatusFilter.allCases, id: \.self) { filter in
+                Button(action: { statusFilter = filter }) {
+                    Label(filter.rawValue, systemImage: statusFilter == filter ? "checkmark" : "")
+                }
+            }
+        } label: {
+            Image(systemName: "line.3.horizontal.decrease")
+                .font(.system(size: 13, weight: .semibold))
+                .foregroundColor(Color("TextSecondary"))
+                .frame(width: 32, height: 32)
+                .background(Color("BgPanel"))
+                .clipShape(Circle())
+        }
+        .buttonStyle(.plain)
+        .accessibilityLabel("Filter loops")
     }
 
     var body: some View {
@@ -50,12 +84,30 @@ struct LoopsListView: View {
                     }
                     .accessibilityLabel("Open sidebar")
 
-                    Text("Automation Tasks")
-                        .font(.system(.title3, design: .serif))
-                        .fontWeight(.medium)
-                        .foregroundColor(Color("TextPrimary"))
+                    Menu {
+                        ForEach(AutomationKind.allCases, id: \.self) { kind in
+                            Button(action: { modeStore.automationKind = kind }) {
+                                Label(
+                                    kind.rawValue,
+                                    systemImage: modeStore.automationKind == kind ? "checkmark" : ""
+                                )
+                            }
+                        }
+                    } label: {
+                        HStack(spacing: 4) {
+                            Text(modeStore.automationKind.rawValue)
+                                .font(.system(.title3, design: .serif))
+                                .fontWeight(.medium)
+                                .foregroundColor(Color("TextPrimary"))
+                            Image(systemName: "chevron.down")
+                                .font(.system(size: 10, weight: .bold))
+                                .foregroundColor(Color("TextSecondary"))
+                        }
+                    }
 
                     Spacer()
+
+                    filterMenu
 
                     Button(action: {
                         let generator = UIImpactFeedbackGenerator(style: .light)
@@ -76,17 +128,6 @@ struct LoopsListView: View {
                 .background(Color("BgPrimary"))
 
                 Divider().background(Color("BorderSubtle"))
-
-                // Sibling entry point into Cron/Routines — same tab as the
-                // other two list views' pickers.
-                Picker("Automation kind", selection: $modeStore.automationKind) {
-                    ForEach(AutomationKind.allCases, id: \.self) { kind in
-                        Text(kind.rawValue).tag(kind)
-                    }
-                }
-                .pickerStyle(.segmented)
-                .padding(.horizontal, 20)
-                .padding(.top, 12)
 
                 content
             }

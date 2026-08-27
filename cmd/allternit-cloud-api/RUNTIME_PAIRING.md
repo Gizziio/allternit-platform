@@ -184,6 +184,7 @@ The ticket is valid for 30 seconds and scoped to a single path.
 | `runtime:execute` | Generic API execution |
 | `runtime:files` | File/workspace endpoints |
 | `runtime:terminal` | Terminal/PTY endpoints |
+| `runtime:remote_control` | Remote Control session endpoints (chat, approvals, events) |
 | `providers:connect` | Write provider credentials |
 | `providers:use` | Read/use provider connections |
 

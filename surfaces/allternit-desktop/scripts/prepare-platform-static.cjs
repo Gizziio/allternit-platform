@@ -121,6 +121,9 @@ function main() {
   const buildEnv = {
     CLOUDFLARE_PAGES: '1',
     NEXT_PUBLIC_ALLTERNIT_DESKTOP_AUTH: '1',
+    NEXT_PUBLIC_ALLTERNIT_CLOUD_API_URL: 'https://api.allternit.com',
+    NEXT_PUBLIC_CLERK_SIGN_IN_URL: 'https://platform.allternit.com/sign-in',
+    NEXT_PUBLIC_CLERK_SIGN_UP_URL: 'https://platform.allternit.com/sign-up',
   };
   if (clerkKey) {
     buildEnv.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY = clerkKey;

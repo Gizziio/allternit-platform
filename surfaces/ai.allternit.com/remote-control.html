@@ -1,0 +1,40 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+    <title>Allternit Remote Control</title>
+    <meta name="description" content="Carry your Allternit agents with you across machines." />
+    <link rel="icon" href="/favicon.svg" />
+    <link rel="manifest" href="/remote-control.webmanifest" />
+    <meta name="theme-color" content="#0F0C0A" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <meta name="apple-mobile-web-app-title" content="Remote Control" />
+    <link rel="apple-touch-icon" href="/remote-control-icon-192.png" />
+    <link rel="apple-touch-startup-image" href="/remote-control-splash-1170x2532.png" media="(device-width: 390px) and (device-height: 844px) and (-webkit-device-pixel-ratio: 3)" />
+    <script>
+      (function () {
+        try {
+          var key = 'allternit-remote-control-theme-storage';
+          var s = localStorage.getItem(key);
+          var parsed = s ? JSON.parse(s) : null;
+          var t = parsed && parsed.state && parsed.state.theme;
+          // Default to the system color scheme so the PWA matches the user's
+          // platform. The React theme provider takes over once hydrated.
+          var systemDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
+          var r = t === 'dark' ? 'dark' : t === 'light' ? 'light' : systemDark ? 'dark' : 'light';
+          if (!t) {
+            localStorage.setItem(key, JSON.stringify({ state: { theme: 'system' }, version: 0 }));
+          }
+          document.documentElement.setAttribute('data-theme', r);
+          document.documentElement.style.colorScheme = r;
+        } catch (e) {}
+      })();
+    </script>
+  </head>
+  <body class="m-0 font-sans">
+    <div id="root"></div>
+    <script type="module" src="/src/remote-control/main.tsx"></script>
+  </body>
+</html>

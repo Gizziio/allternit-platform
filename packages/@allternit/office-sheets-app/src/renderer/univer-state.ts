@@ -6,7 +6,7 @@
  */
 import { BorderType, type IRange } from '@univerjs/core'
 
-import type { WorkbookFile, WorkbookPivotDefinition } from '@allternit/allternit-office-suite/xlsx'
+import type { WorkbookFile, WorkbookPivotDefinition } from '@allternit/office-suite/xlsx'
 import type { createUniver } from './create-univer'
 import type { EditJournal } from './edit-journal'
 

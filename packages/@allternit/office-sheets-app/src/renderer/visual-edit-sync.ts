@@ -4,7 +4,7 @@
  * the App component passes a VisualSyncContext built fresh per call so refs
  * and state never go stale.
  */
-import { parseRange } from '@allternit/allternit-office-suite/xlsx'
+import { parseRange } from '@allternit/office-suite/xlsx'
 import {
   applyChartStateEdit,
   refIntersects,
@@ -12,9 +12,9 @@ import {
   type CellBounds,
   type ChartVisualState,
   type SheetVisual,
-} from '@allternit/allternit-office-suite/xlsx'
-import type { InMemoryWorkbookAdapter } from '@allternit/allternit-office-suite/xlsx'
-import type { WorkbookVisualObject } from '@allternit/allternit-office-suite/xlsx'
+} from '@allternit/office-suite/xlsx'
+import type { InMemoryWorkbookAdapter } from '@allternit/office-suite/xlsx'
+import type { WorkbookVisualObject } from '@allternit/office-suite/xlsx'
 import {
   recordChartEdit,
   recordVisualEdit,

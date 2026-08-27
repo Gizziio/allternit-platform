@@ -1,0 +1,120 @@
+#!/usr/bin/env bash
+# steer-discover [--project <substr>] [--self <session-id>]
+# Deterministically find parallel agent sessions on this machine, newest first.
+# Queries the Rails peer registry first (vendor-neutral, cross-CLI), then falls
+# back to a filesystem scan of the kimi-code sessions directory.
+# Prints a table: session_id, age, cwd, subagents, current activity hint.
+set -euo pipefail
+
+PROJECT=""
+SELF=""
+RAILS_URL="${ALLTERNIT_RAILS_URL:-http://127.0.0.1:8013}"
+while [ $# -gt 0 ]; do
+  case "$1" in
+    --project) PROJECT="$2"; shift 2 ;;
+    --self) SELF="$2"; shift 2 ;;
+    *) echo "usage: steer-discover [--project <substr>] [--self <session-id>]" >&2; exit 2 ;;
+  esac
+done
+
+KIMI_DIR="${KIMI_SESSIONS_DIR:-$HOME/.kimi-code/sessions}"
+
+python3 - "$KIMI_DIR" "$PROJECT" "$SELF" "$RAILS_URL" <<'PY'
+import json, os, sys, time, glob, urllib.request
+
+sessions_dir, project, self_id, rails_url = sys.argv[1], sys.argv[2], sys.argv[3], sys.argv[4]
+now = time.time()
+
+# --- Rails peer registry (vendor-neutral; works across kimi/claude/codex/gizzi) ---
+peers = []
+try:
+    with urllib.request.urlopen(f"{rails_url}/api/rails/peers", timeout=3) as r:
+        peers = json.load(r).get("peers", [])
+except Exception:
+    pass
+
+if peers:
+    print("=== Rails peers (registered) ===")
+    print(f"{'NAME':<40} {'VENDOR':<10} {'STATUS':<8} CWD")
+    for p in sorted(peers, key=lambda x: x.get("last_heartbeat_at", ""), reverse=True):
+        name = p.get("name", "?")
+        if self_id and self_id in name:
+            continue
+        if project and project.lower() not in (p.get("cwd", "") + name).lower():
+            continue
+        print(f"{name:<40} {p.get('vendor','?'):<10} {p.get('status','?'):<8} {p.get('cwd','')}")
+    print()
+
+# --- Filesystem scan (kimi-code session layout) ---
+rows = []
+if os.path.isdir(sessions_dir):
+    for state_path in glob.glob(os.path.join(sessions_dir, "wd_*", "session_*", "state.json")):
+        session_id = os.path.basename(os.path.dirname(state_path))
+        if self_id and session_id == self_id:
+            continue
+        try:
+            with open(state_path) as f:
+                state = json.load(f)
+        except Exception:
+            continue
+        cwd = state.get("cwd", "")
+        try:
+            updated = float(state.get("updatedAt", 0)) / 1000.0
+        except (TypeError, ValueError):
+            updated = 0.0
+        age_min = (now - updated) / 60.0
+        agents = state.get("agents", {})
+        subagents = []       # display names (basename)
+        subagent_paths = []  # full paths, used for --project filtering
+        for aid, meta in agents.items():
+            if aid == "main":
+                continue
+            labels = meta.get("labels", {})
+            item = labels.get("swarmItem", "")
+            subagents.append(os.path.basename(item) if item else aid)
+            if item:
+                subagent_paths.append(item)
+
+        # Activity hint: last user message text in wire.jsonl
+        wire = os.path.join(os.path.dirname(state_path), "agents", "main", "wire.jsonl")
+        hint = ""
+        if os.path.exists(wire):
+            try:
+                with open(wire, "rb") as f:
+                    f.seek(0, os.SEEK_END)
+                    size = f.tell()
+                    f.seek(max(0, size - 200_000))
+                    tail = f.read().decode("utf-8", errors="replace")
+                for line in reversed(tail.strip().splitlines()):
+                    try:
+                        ev = json.loads(line)
+                    except Exception:
+                        continue
+                    if ev.get("type") == "context.append_message":
+                        msg = ev.get("message", {})
+                        if msg.get("role") == "user":
+                            for part in msg.get("content", []):
+                                t = part.get("text", "")
+                                if t and not t.startswith("<system-reminder>"):
+                                    hint = t.replace("\n", " ")[:90]
+                                    break
+                            if hint:
+                                break
+            except Exception:
+                pass
+
+        if project and project.lower() not in (cwd + hint + " ".join(subagent_paths)).lower():
+            continue
+        rows.append((updated, session_id, age_min, cwd, len(subagents), ", ".join(subagents[:4]), hint))
+
+rows.sort(reverse=True)
+print(f"{'SESSION_ID':<46} {'AGE':>7} {'SUBS':>4}  CWD / ACTIVITY")
+for updated, sid, age, cwd, nsubs, subs, hint in rows:
+    age_s = f"{age:.0f}m" if age < 120 else f"{age/60:.1f}h"
+    print(f"{sid:<46} {age_s:>7} {nsubs:>4}  {cwd}")
+    if subs:
+        print(f"{'':<46} {'':>7} {'':>4}  subagents: {subs}")
+    if hint:
+        print(f"{'':<46} {'':>7} {'':>4}  last user msg: {hint}")
+    print()
+PY

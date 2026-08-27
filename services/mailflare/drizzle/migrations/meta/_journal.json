@@ -1,0 +1,83 @@
+{
+  "version": "7",
+  "dialect": "sqlite",
+  "entries": [
+    {
+      "idx": 0,
+      "version": "6",
+      "when": 1779256253875,
+      "tag": "0000_flowery_smasher",
+      "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "6",
+      "when": 1779256253876,
+      "tag": "0001_add_reset_email",
+      "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "6",
+      "when": 1779256253877,
+      "tag": "0002_add_message_read",
+      "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "6",
+      "when": 1779256253878,
+      "tag": "0003_add_contacts",
+      "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "6",
+      "when": 1779256253879,
+      "tag": "0004_add_accounts",
+      "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "6",
+      "when": 1779256253880,
+      "tag": "0005_add_folders",
+      "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "6",
+      "when": 1779256253881,
+      "tag": "0006_add_rule_conditions",
+      "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "6",
+      "when": 1779256253882,
+      "tag": "0007_add_shared_mailboxes",
+      "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "6",
+      "when": 1781053200000,
+      "tag": "0008_add_message_attachments",
+      "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "6",
+      "when": 1781312400000,
+      "tag": "0009_add_backups",
+      "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "6",
+      "when": 1787115893071,
+      "tag": "0010_illegal_cloak",
+      "breakpoints": true
+    }
+  ]
+}

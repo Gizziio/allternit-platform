@@ -67,7 +67,7 @@ export namespace Provider {
     return sem
   }
 
-  function loadBaseURL(model: Model, options: Record<string, any>) {
+  export function loadBaseURL(model: Model, options: Record<string, any>) {
     const raw = options["baseURL"] ?? model.api.url
     if (typeof raw !== "string") return raw
     return raw.replace(/\$\{([^}]+)\}/g, (match, key) => {
@@ -167,6 +167,26 @@ export namespace Provider {
     })
 
   export type Info = z.infer<typeof Info>
+
+  export type ModelRef = {
+    providerID: string
+    modelID: string
+    authProfileId?: string
+  }
+
+  export type AuthPlan = {
+    providerID: string
+    modelID: string
+    baseURL: string
+    apiKey?: string
+    token?: string
+    authType: "api_key" | "none" | "bearer" | "subprocess"
+    extraHeaders: Record<string, string>
+    source: "profile" | "config" | "env" | "plugin" | "subprocess" | "none"
+    profileId?: string
+  }
+
+  export type RuntimePolicy = "sdk" | "subprocess" | "auto"
 
   function fromModelsDevModel(provider: ModelsDev.Provider, model: ModelsDev.Model): Model {
     const m: Model = {
@@ -577,22 +597,38 @@ export namespace Provider {
     return state().then((state) => state.providers)
   }
 
-  async function getSDK(model: Model) {
+  async function getSDK(model: Model, plan?: AuthPlan) {
     try {
       using _ = log.time("getSDK", {
         providerID: model.providerID,
       })
       const s = await state()
       const provider = s.providers[model.providerID]
-      const options = { ...provider.options }
+      const options = { ...provider?.options }
 
       if (model.api.npm.includes("@ai-sdk/openai-compatible") && options["includeUsage"] !== false) {
         options["includeUsage"] = true
       }
 
-      const baseURL = loadBaseURL(model, options)
-      if (baseURL !== undefined) options["baseURL"] = baseURL
-      if (options["apiKey"] === undefined && provider.key) options["apiKey"] = provider.key
+      if (plan) {
+        if (plan.baseURL !== undefined) options["baseURL"] = plan.baseURL
+        if (plan.apiKey !== undefined) options["apiKey"] = plan.apiKey
+        if (plan.token !== undefined) {
+          options["token"] = plan.token
+          options["headers"] = {
+            ...options["headers"],
+            Authorization: `Bearer ${plan.token}`,
+          }
+        }
+        options["headers"] = {
+          ...options["headers"],
+          ...plan.extraHeaders,
+        }
+      } else {
+        const baseURL = loadBaseURL(model, options)
+        if (baseURL !== undefined) options["baseURL"] = baseURL
+        if (options["apiKey"] === undefined && provider?.key) options["apiKey"] = provider.key
+      }
       if (model.headers)
         options["headers"] = {
           ...options["headers"],
@@ -711,7 +747,7 @@ export namespace Provider {
     return info
   }
 
-  export async function getLanguage(model: Model): Promise<LanguageModelV2> {
+  export async function getLanguage(model: Model, plan?: AuthPlan): Promise<LanguageModelV2> {
     const s = await state()
     const key = `${model.providerID}/${model.id}`
     if (s.models.has(key)) return s.models.get(key)!
@@ -719,17 +755,18 @@ export namespace Provider {
     const provider = s.providers[model.providerID]
 
     // Subprocess providers (claude-cli, llm, aichat, etc.) — bypass HTTP SDK entirely
-    if (provider?.auth_type === "subprocess" && provider.subprocess_cmd) {
+    const policy = await resolveRuntimePolicy({ providerID: model.providerID, modelID: model.id })
+    if (policy === "subprocess" || plan?.authType === "subprocess") {
       const language = new SubprocessLanguageModel(model.providerID, model.api.id) as unknown as LanguageModelV2
       s.models.set(key, language)
       return language
     }
 
-    const sdk = await getSDK(model)
+    const sdk = await getSDK(model, plan)
 
     try {
       const language = s.modelLoaders[model.providerID]
-        ? await s.modelLoaders[model.providerID](sdk, model.api.id, provider.options)
+        ? await s.modelLoaders[model.providerID](sdk, model.api.id, provider?.options ?? {})
         : sdk.languageModel(model.api.id)
       s.models.set(key, language)
       return language
@@ -744,6 +781,183 @@ export namespace Provider {
         )
       throw e
     }
+  }
+
+  export async function prepareAuth(ref: ModelRef): Promise<AuthPlan> {
+    const [provider, model, cfg] = await Promise.all([
+      getProvider(ref.providerID),
+      getModel(ref.providerID, ref.modelID).catch(() => undefined),
+      Config.get(),
+    ])
+    const configProvider = cfg.provider?.[ref.providerID]
+    const options = { ...provider?.options, ...(configProvider?.options ?? {}) }
+
+    const plan: Partial<AuthPlan> = {
+      providerID: ref.providerID,
+      modelID: ref.modelID,
+      authType: provider?.auth_type ?? "api_key",
+      extraHeaders: {},
+    }
+
+    const applyProfile = (profile: Auth.Profile) => {
+      plan.profileId = profile.id
+      if (profile.type === "api") {
+        plan.authType = "api_key"
+        if (profile.apiKey) plan.apiKey = profile.apiKey
+      } else if (profile.type === "token") {
+        plan.authType = "bearer"
+        if (profile.token) plan.token = profile.token
+      } else if (profile.type === "oauth") {
+        plan.authType = "bearer"
+        if (profile.token) plan.token = profile.token
+      }
+      if (profile.extraHeaders) plan.extraHeaders = { ...profile.extraHeaders }
+    }
+
+    // 1. Explicit authProfileId on the ref
+    if (ref.authProfileId) {
+      const profile = await Auth.getProfile(ref.authProfileId)
+      if (profile) {
+        plan.source = "profile"
+        applyProfile(profile)
+      }
+    }
+
+    // 2. Config provider block
+    if (!plan.source && configProvider) {
+      const opts = configProvider.options ?? {}
+      if (opts.apiKey) {
+        plan.source = "config"
+        plan.apiKey = opts.apiKey
+      } else if (configProvider.token) {
+        plan.source = "config"
+        plan.token = configProvider.token
+        plan.authType = "bearer"
+      } else if (configProvider.subprocess_cmd) {
+        plan.source = "subprocess"
+        plan.authType = "subprocess"
+      }
+    }
+
+    // 3. Environment variables
+    if (!plan.source && provider?.env?.length) {
+      const env = Env.all()
+      const apiKey = provider.env.map((item) => env[item]).find(Boolean)
+      if (apiKey) {
+        plan.source = "env"
+        plan.apiKey = apiKey
+      }
+    }
+
+    // 4. Auth-store profiles, in configured order
+    if (!plan.source) {
+      const profiles = await Auth.profilesForProvider(ref.providerID)
+      const profile = profiles[0]
+      if (profile) {
+        plan.source = "profile"
+        applyProfile(profile)
+      }
+    }
+
+    // 5. Plugin OAuth loaders
+    if (!plan.source && provider) {
+      for (const plugin of await Plugin.list()) {
+        if (!plugin.auth || plugin.auth.provider !== ref.providerID) continue
+        if (!plugin.auth.loader) continue
+        const auth = await Auth.get(ref.providerID)
+        if (!auth) continue
+        const loaded = await plugin.auth.loader(() => Auth.get(ref.providerID) as any, provider)
+        if (loaded?.apiKey || loaded?.token) {
+          plan.source = "plugin"
+          if (loaded.apiKey) plan.apiKey = loaded.apiKey
+          if (loaded.token) {
+            plan.token = loaded.token
+            plan.authType = "bearer"
+          }
+          if (loaded.authType) plan.authType = loaded.authType
+          break
+        }
+      }
+    }
+
+    // 6. subprocess / none auth types
+    if (!plan.source) {
+      if (provider?.auth_type === "subprocess" || provider?.subprocess_cmd) {
+        plan.source = "subprocess"
+        plan.authType = "subprocess"
+      } else if (provider?.auth_type === "none") {
+        plan.source = "none"
+        plan.authType = "none"
+      }
+    }
+
+    // Fallback when nothing resolved
+    if (!plan.source) {
+      plan.source = "none"
+    }
+
+    const baseURL = model ? loadBaseURL(model, options) : options["baseURL"]
+
+    return {
+      providerID: ref.providerID,
+      modelID: ref.modelID,
+      baseURL: baseURL ?? model?.api.url ?? "",
+      authType: plan.authType ?? "api_key",
+      extraHeaders: plan.extraHeaders ?? {},
+      source: plan.source,
+      ...(plan.apiKey !== undefined && { apiKey: plan.apiKey }),
+      ...(plan.token !== undefined && { token: plan.token }),
+      ...(plan.profileId !== undefined && { profileId: plan.profileId }),
+    }
+  }
+
+  export async function resolveRuntimePolicy(ref: ModelRef): Promise<RuntimePolicy> {
+    const [provider, model, cfg] = await Promise.all([
+      getProvider(ref.providerID),
+      getModel(ref.providerID, ref.modelID).catch(() => undefined),
+      Config.get(),
+    ])
+    const configProvider = cfg.provider?.[ref.providerID]
+
+    // 1. Per-model runtime config
+    const modelRuntime = model?.options?.["runtime"] ?? configProvider?.models?.[ref.modelID]?.runtime
+    if (modelRuntime === "sdk" || modelRuntime === "subprocess") return modelRuntime
+
+    // 2. Per-provider runtime config
+    const providerRuntime = configProvider?.runtime ?? provider?.options?.["runtime"]
+    if (providerRuntime === "sdk" || providerRuntime === "subprocess") return providerRuntime
+
+    // 3. auth_type/subprocess_cmd implies subprocess
+    if (
+      provider?.auth_type === "subprocess" ||
+      provider?.subprocess_cmd ||
+      configProvider?.auth_type === "subprocess" ||
+      configProvider?.subprocess_cmd
+    ) {
+      return "subprocess"
+    }
+
+    // 4. Default to SDK
+    return "sdk"
+  }
+
+  export type RotationState = {
+    triedProfileIds: Set<string>
+  }
+
+  export function createRotationState(): RotationState {
+    return { triedProfileIds: new Set() }
+  }
+
+  export async function rotateAuth(
+    ref: ModelRef,
+    state?: RotationState,
+  ): Promise<AuthPlan | undefined> {
+    const profiles = await Auth.profilesForProvider(ref.providerID)
+    const next = profiles.find((p) => !state?.triedProfileIds.has(p.id))
+    if (!next) return undefined
+    state?.triedProfileIds.add(next.id)
+    return prepareAuth({ ...ref, authProfileId: next.id })
   }
 
   export async function closest(providerID: string, query: string[]) {
@@ -895,7 +1109,7 @@ export namespace Provider {
     "auto": "auto/auto",
   }
 
-  export function parseModel(model: string) {
+  export function parseModel(model: string): ModelRef {
     const aliased = MODEL_ALIASES[model.toLowerCase()]
     if (aliased) model = aliased
 

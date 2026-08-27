@@ -34,6 +34,7 @@ import type { Agent } from '../lib/agents/agent.types';
 import { useAgentBootstrap } from '../lib/agents/useAgentBootstrap';
 import { isBot } from '@/lib/bots/bot-profile';
 import { useStartBotSession } from '@/lib/bots/useStartBotSession';
+import { useStackProviders } from '@/lib/bots/use-stack-providers';
 import { NativeAgentApiError } from '../lib/agents/native-agent-api';
 import { useChatSessionStore } from '../views/chat/ChatSessionStore';
 import { useCodeSessionStore } from '../views/code/CodeSessionStore';
@@ -42,6 +43,8 @@ import { useCoworkSessionStore } from '../views/cowork/CoworkSessionStore';
 import { useDesignSessionStore } from '../views/design/DesignSessionStore';
 // Modularized Shell Components
 import { getShellViewRegistry } from './ViewRegistry';
+import { HudShell } from './hud/HudShell';
+import { useHudHandoff } from './hud/handoff';
 
 import { useResolvedTheme, useThemeStore } from '../design/ThemeStore';
 import { usePanelLayout } from '../hooks/usePanelLayout';
@@ -110,6 +113,10 @@ function ShellAppInner(): React.ReactNode {
   const detachedSessionId = detachedParams.get('detachedSessionId');
   const detachedWorkspaceId = detachedParams.get('detachedWorkspaceId');
   const isDetachedCodeSession = detachedParams.get('detachedSurface') === 'code' && Boolean(detachedSessionId);
+  // The Electron desktop opens the HUD in a chrome-free floating BrowserWindow
+  // pointed at /hud.  In that window we strip the normal shell chrome (rail,
+  // header, rail controls) and render only the HUD view.
+  const isHudWindow = typeof window !== 'undefined' && window.location.pathname === '/hud';
   const [nav, dispatch] = useReducer(navReducer, undefined, createInitialNavState);
   const active = selectActiveView(nav)!;
 
@@ -118,6 +125,9 @@ function ShellAppInner(): React.ReactNode {
       dispatch({ type: 'OPEN_VIEW', viewType: 'chat-agent-session', context: { sessionId, originView: active.viewType } });
     }, [active.viewType])
   );
+  useStackProviders();
+  // When the HUD window closes, resume its active session in the main window.
+  useHudHandoff();
   const { mode: activeMode, setMode: setActiveMode, isLoaded: modeLoaded } = useMode();
 
   const handleStartBotSession = useCallback(async (agent: Agent) => {
@@ -236,6 +246,8 @@ function ShellAppInner(): React.ReactNode {
       cancelled = true
     }
   }, [])
+
+
 
   // One-time agent seeding bootstrap after auth loads
   useAgentBootstrap({ enabled: authLoaded && (isSignedIn || isPlatformAuthDisabled() || desktopSelfHosted) });
@@ -378,6 +390,10 @@ function ShellAppInner(): React.ReactNode {
       if (isMeta && event.key.toLowerCase() === "f" && window.allternit?.findInPage) {
         event.preventDefault();
         setIsFindInPageOpen(true);
+      }
+      if (isMeta && event.shiftKey && event.key.toLowerCase() === "h") {
+        event.preventDefault();
+        window.allternit?.shell?.toggleHud?.();
       }
     };
 
@@ -525,6 +541,7 @@ function ShellAppInner(): React.ReactNode {
   useEffect(() => {
     const handleOpenView = (e: Event): void => {
       const detail = (e as CustomEvent<{ viewType?: ViewType; allowNew?: boolean; context?: unknown }>).detail;
+      logger.info('[ShellApp] allternit:open-view received', { detail, isHudWindow });
       if (!detail?.viewType) return;
       if (detail.viewType === 'design') {
         openDesignWindow();
@@ -538,8 +555,16 @@ function ShellAppInner(): React.ReactNode {
       });
     };
     window.addEventListener('allternit:open-view', handleOpenView);
+    // If this renderer was loaded at /hud (the desktop's floating HUD window),
+    // dispatch the open event now that the listener is attached.  Doing this in
+    // the same effect guarantees we don't race the listener registration.
+    console.warn('[ShellApp] HUD listener attached', { isHudWindow, pathname: window.location.pathname });
+    if (isHudWindow) {
+      console.warn('[ShellApp] Dispatching hud open from /hud window');
+      window.dispatchEvent(new CustomEvent('allternit:open-view', { detail: { viewType: 'hud' } }));
+    }
     return () => window.removeEventListener('allternit:open-view', handleOpenView);
-  }, []);
+  }, [isHudWindow]);
 
   useEffect(() => {
     const handleOpenAgentActivity = (): void => {
@@ -602,6 +627,18 @@ function ShellAppInner(): React.ReactNode {
 
   const [session, setSession] = useState(null);
   useEffect(() => { void getSession().then(setSession); }, []);
+
+  if (isHudWindow) {
+    return (
+      <TooltipProvider>
+        <VoiceProvider>
+          <SessionProvider session={session}>
+            <HudShell />
+          </SessionProvider>
+        </VoiceProvider>
+      </TooltipProvider>
+    );
+  }
 
   const [agentActivityPanelOpen, setAgentActivityPanelOpen] = useState(false);
   const { unreadCount: agentActivityUnreadCount } = useMonitorThreads();
@@ -817,12 +854,14 @@ function ShellAppInner(): React.ReactNode {
           open={agentActivityPanelOpen}
           onClose={() => setAgentActivityPanelOpen(false)}
         />
-        <ControlCenter
-          isOpen={isControlCenterOpen}
-          onClose={() => setIsControlCenterOpen(false)}
-          isDevMode={process.env.NODE_ENV === 'development'}
-          onOpenView={open as (viewType: string) => void}
-        />
+        <React.Suspense fallback={null}>
+          <ControlCenter
+            isOpen={isControlCenterOpen}
+            onClose={() => setIsControlCenterOpen(false)}
+            isDevMode={process.env.NODE_ENV === 'development'}
+            onOpenView={open as (viewType: string) => void}
+          />
+        </React.Suspense>
         {settingsOpen && (
           <React.Suspense fallback={null}>
             {/* Settings now renders PluginManager as its own nested overlay

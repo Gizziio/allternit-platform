@@ -120,7 +120,7 @@ function StepSidebar({ screen }: { screen: Screen }) {
     <div className="flex w-[196px] flex-shrink-0 flex-col gap-0 border-r border-ui-border-subtle bg-surface-panel px-5 py-7">
       {/* Logo + brand */}
       <div className="mb-8 flex items-center gap-2.5">
-        <MatrixLogo state="idle" size={36} />
+        <img src="/brand/matrix/matrix-logo.svg" alt="Allternit" style={{ width: 36, height: 36 }} />
         <div>
           <div className="text-[13px] font-bold tracking-[-0.01em] text-ui-text-primary">
             Allternit
@@ -2620,7 +2620,7 @@ function DoneScreen({ data, onFinish }: { data: WizardData; onFinish: () => void
     <div className="flex h-full min-h-0 items-stretch gap-0">
       {/* Left — celebration + summary + CTA */}
       <div className="flex w-80 flex-shrink-0 flex-col items-center justify-center border-r border-ui-border-subtle px-8 pb-9 pt-10 text-center">
-        {/* MatrixLogo with success ring */}
+        {/* Matrix brand mark with success ring */}
         <motion.div
           initial={{ scale: 0.5, opacity: 0 }}
           animate={{ scale: 1, opacity: 1 }}
@@ -2632,7 +2632,7 @@ function DoneScreen({ data, onFinish }: { data: WizardData; onFinish: () => void
             transition={{ duration: 2.5, repeat: Infinity, ease: 'easeInOut' }}
             className="pointer-events-none absolute inset-[-14px] rounded-full border border-solid border-[color-mix(in_srgb,var(--accent-primary)_35%,transparent)]"
           />
-          <MatrixLogo state="idle" size={52} />
+          <img src="/brand/matrix/matrix-logo.svg" alt="Allternit" style={{ width: 52, height: 52 }} />
           <motion.div
             initial={{ scale: 0 }}
             animate={{ scale: 1 }}

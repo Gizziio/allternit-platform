@@ -103,8 +103,14 @@ export const DEFAULT_POLICIES: Record<ViewType, SpawnPolicy> = {
   'memory-kernel': { singleton: true, maxInstances: 1, allowNew: false, surface: 'view', ownsTabs: false },
   acf: { singleton: true, maxInstances: 1, allowNew: false, surface: 'view', ownsTabs: false },
 
+  // HUD view
+  hud: { singleton: true, maxInstances: 1, allowNew: false, surface: 'view', ownsTabs: false },
+
   // Verification view
   verification: { singleton: true, maxInstances: 1, allowNew: false, surface: 'view', ownsTabs: false },
+
+  // HUD view
+  hud: { singleton: true, maxInstances: 1, allowNew: false, surface: 'view', ownsTabs: false },
 
   // AllternitOS view
   'allternit-os': { singleton: true, maxInstances: 1, allowNew: false, surface: 'view', ownsTabs: false },
@@ -133,6 +139,7 @@ export const DEFAULT_POLICIES: Record<ViewType, SpawnPolicy> = {
   'loops-list': { singleton: true, maxInstances: 1, allowNew: false, surface: 'view', ownsTabs: false },
   'cron': { singleton: true, maxInstances: 1, allowNew: false, surface: 'view', ownsTabs: false },
   'dispatch': { singleton: true, maxInstances: 1, allowNew: false, surface: 'view', ownsTabs: false },
+  'remote-control': { singleton: true, maxInstances: 1, allowNew: false, surface: 'view', ownsTabs: false },
 
   // Code views
   'new-file': { singleton: false, maxInstances: 20, allowNew: true, surface: 'view', ownsTabs: false },

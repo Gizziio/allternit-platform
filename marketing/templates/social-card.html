@@ -1,0 +1,43 @@
+<!doctype html>
+<!-- Allternit social card — 1200x675 (X/OG). Edit the tokens and the three content
+     fields below, then render:
+       marketing/render-card.sh templates/social-card.html out.png 1200x675 -->
+<html>
+<head><meta charset="utf-8"><style>
+  :root {
+    --cream: #F0EEE6;
+    --ink:   #141413;
+    --tan:   #D4B08C;
+    --coral: #D97757;
+  }
+  * { margin:0; padding:0; box-sizing:border-box; }
+  body { width:1200px; height:675px; background:var(--cream); color:var(--ink);
+         font-family:-apple-system, "Helvetica Neue", sans-serif;
+         display:flex; flex-direction:column; justify-content:space-between;
+         padding:72px 80px; position:relative; }
+  .top { display:flex; align-items:center; gap:20px; }
+  .top svg { width:56px; height:56px; }
+  .brand { font-size:22px; letter-spacing:.18em; text-transform:uppercase; opacity:.6; }
+  .headline { font-family:Georgia, "Times New Roman", serif; font-size:88px;
+              line-height:1.05; max-width:900px; }
+  .headline em { font-style:normal; color:var(--coral); }
+  .bottom { display:flex; justify-content:space-between; align-items:flex-end; }
+  .meta { font-size:24px; opacity:.6; }
+  .meta .tag { color:var(--coral); opacity:1; }
+  .url { font-family:"JetBrains Mono", monospace; font-size:24px; opacity:.6; }
+  .accent { position:absolute; top:0; left:0; width:100%; height:10px; background:var(--coral); }
+</style></head>
+<body>
+  <div class="accent"></div>
+  <div class="top">
+    <!-- Matrix mark (mono, inherits ink) -->
+    <svg viewBox="0 0 100 100" shape-rendering="geometricPrecision"><g fill="currentColor"><rect x="43" y="7" width="14" height="14" rx="2"/><rect x="25" y="25" width="14" height="14" rx="2"/><rect x="61" y="25" width="14" height="14" rx="2"/><rect x="25" y="43" width="14" height="14" rx="2"/><rect x="43" y="43" width="14" height="14" rx="2" fill="#D97757"/><rect x="61" y="43" width="14" height="14" rx="2"/><rect x="25" y="61" width="14" height="14" rx="2"/><rect x="61" y="61" width="14" height="14" rx="2"/><rect x="25" y="79" width="14" height="14" rx="2"/><rect x="61" y="79" width="14" height="14" rx="2"/></g></svg>
+    <div class="brand">Allternit</div>
+  </div>
+  <div class="headline">Introducing <em>{Name}</em>. {short hook}.</div>
+  <div class="bottom">
+    <div class="meta"><span class="tag">{Product}</span> · {Date}</div>
+    <div class="url">allternit.com</div>
+  </div>
+</body>
+</html>

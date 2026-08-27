@@ -5,7 +5,6 @@ import React, { Suspense, useEffect, useState } from 'react';
 import { useSearchParams, useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { usePlatformAuth } from '@/lib/platform-auth-client';
-import { MatrixLogo } from '@/components/ai-elements/MatrixLogo';
 import { Check } from 'lucide-react';
 import { OAUTH_APPS } from '@/config/oauth-apps';
 import { OAuthAppIcons, DefaultAppIcon } from '@/config/oauth-app-icons';
@@ -176,7 +175,7 @@ function AuthorizeContent() {
                   <ConnectionBridge />
                 </motion.div>
                 <motion.div initial={{ opacity: 0, x: 12 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: 0.15, duration: 0.4 }}>
-                  <MatrixLogo state="idle" size={40} />
+                  <img src="/brand/matrix/matrix-logo.svg" alt="Allternit" style={{ width: 40, height: 40 }} />
                 </motion.div>
               </div>
 

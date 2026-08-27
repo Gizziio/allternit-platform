@@ -293,6 +293,20 @@ export interface MailShareResponse {
   share_id: string;
 }
 
+/** Response of POST /mail/decide. `email` is present only when the thread
+ * belongs to a pending outbound agent email (`mail:email-out-*`). */
+export interface MailDecideResponse {
+  decided: boolean;
+  thread_id: string;
+  email?: {
+    actioned: boolean;
+    /** Present when actioned: the resulting outbound status. */
+    status?: 'sent' | 'rejected';
+    /** Present when the provider-side action failed (decision still stands). */
+    error?: string;
+  };
+}
+
 export interface MailSendRequest {
   thread_id: string;
   body_ref?: string;
@@ -633,8 +647,9 @@ export const railsApi = {
       { method: "POST", body: JSON.stringify({ thread_id: threadId, wih_id: wihId, diff_ref: diffRef }) }
     ),
 
-    /** Decide on review */
-    decide: (threadId: string, approve: boolean, notesRef?: string) => apiRequestWithError<void>(
+    /** Decide on review. For `mail:email-out-*` threads the response carries an
+     * `email` object with the provider-side outcome (rails/mod.rs mail_decide). */
+    decide: (threadId: string, approve: boolean, notesRef?: string) => apiRequestWithError<MailDecideResponse>(
       `${RAILS_BASE}/mail/decide`,
       { method: "POST", body: JSON.stringify({ thread_id: threadId, approve, notes_ref: notesRef }) }
     ),

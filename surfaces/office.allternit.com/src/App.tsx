@@ -10,7 +10,7 @@ import {
   SignApp,
   type OfficeHost,
   type OpenOptions,
-} from '@allternit/allternit-office-suite'
+} from '@allternit/office-suite'
 import { createStandaloneAiClient } from './ai/createStandaloneAiClient'
 import { CLERK_PUBLISHABLE_KEY } from './clerkConfig'
 import { HomePage } from './HomePage'

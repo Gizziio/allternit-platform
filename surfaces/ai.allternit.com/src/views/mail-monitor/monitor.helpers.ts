@@ -30,6 +30,18 @@ export function filterEventsForThread(events: LedgerEvent[], threadId: string): 
   });
 }
 
+// External agent email (agent_email_routes.rs) is bridged into Rails Mail
+// under reserved thread-id prefixes: inbound mail lands on
+// `mail:email-in-<agent>`, outbound approval-gated sends on
+// `mail:email-out-<uuid>`. Anything else is internal agent-to-agent mail.
+export type ExternalEmailThreadKind = "inbound" | "outbound";
+
+export function externalEmailThreadKind(threadId: string): ExternalEmailThreadKind | null {
+  if (threadId.startsWith("mail:email-in-")) return "inbound";
+  if (threadId.startsWith("mail:email-out-")) return "outbound";
+  return null;
+}
+
 // The backend emits `ReviewDecision` for an approve/reject resolution
 // (rails/src/mail/mail.rs:decide_review). It contains the substring
 // "review", so a naive /review/i match misclassifies it as a request.

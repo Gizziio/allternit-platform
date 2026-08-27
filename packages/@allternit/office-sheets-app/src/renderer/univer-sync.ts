@@ -26,18 +26,18 @@ import type {
   CellFormatPatch,
   SetDataValidationOperation,
   SetHyperlinkOperation,
-} from '@allternit/allternit-office-suite/xlsx'
+} from '@allternit/office-suite/xlsx'
 import {
   columnIndex,
   columnLabel,
   parseAddress,
   parseRange,
   rangeCellCount,
-} from '@allternit/allternit-office-suite/xlsx'
-import { splitSheetRef, type CellBounds } from '@allternit/allternit-office-suite/xlsx'
-import { InMemoryWorkbookAdapter } from '@allternit/allternit-office-suite/xlsx'
-import { WORST_FIRST_ICON_SETS } from '@allternit/allternit-office-suite/xlsx'
-import type { CellFormatState, CellState, WorkbookSnapshot } from '@allternit/allternit-office-suite/xlsx'
+} from '@allternit/office-suite/xlsx'
+import { splitSheetRef, type CellBounds } from '@allternit/office-suite/xlsx'
+import { InMemoryWorkbookAdapter } from '@allternit/office-suite/xlsx'
+import { WORST_FIRST_ICON_SETS } from '@allternit/office-suite/xlsx'
+import type { CellFormatState, CellState, WorkbookSnapshot } from '@allternit/office-suite/xlsx'
 import type {
   WorkbookCellStyle,
   WorkbookCfState,
@@ -49,7 +49,7 @@ import type {
   WorkbookRangeResult,
   WorkbookRichRun,
   WorkbookVisualObject,
-} from '@allternit/allternit-office-suite/xlsx'
+} from '@allternit/office-suite/xlsx'
 import {
   fromNeutralStyle,
   isSheetRemoved,

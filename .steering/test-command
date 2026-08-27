@@ -1,0 +1,7 @@
+#!/usr/bin/env bash
+set -euo pipefail
+cd "$(dirname "$0")/.."
+rm -rf packages/@allternit/office-pptx-render/dist
+pnpm --filter '@allternit/office*' build
+pnpm --filter '@allternit/office*' typecheck
+pnpm --filter '@allternit/office*' test

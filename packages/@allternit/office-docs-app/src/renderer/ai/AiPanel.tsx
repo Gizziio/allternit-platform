@@ -6,8 +6,8 @@ import type { AiSettings } from '../../shared/ipc'
 import { type NumIds } from './protocol'
 import { useI18n } from '../i18n/locale'
 import { GensparkMark, IconNewChat, IconSidebarCollapse } from '../components/icons'
-import { useOfficeAi, type OfficeAgentLoop } from '@allternit/allternit-office-suite/bridge'
-import { type OfficeModelOption } from '@allternit/allternit-office-suite/ai'
+import { useOfficeAi, type OfficeAgentLoop } from '@allternit/office-suite/bridge'
+import { type OfficeModelOption } from '@allternit/office-suite/ai'
 
 const PANEL_WIDTH_KEY = 'docs-ai-panel-width'
 const PANEL_WIDTH_DEFAULT = 360

@@ -22,6 +22,7 @@ struct ModelManagementView: View {
                         Image(systemName: "arrow.clockwise")
                             .font(.subheadline)
                     }
+                    .accessibilityLabel("Refresh")
                     .disabled(store.isLoading)
                 }
             }
