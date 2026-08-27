@@ -36,6 +36,8 @@ import { usePlatformAuth, usePlatformUser, usePlatformSignOut, usePlatformHardSi
 import { env } from '@/lib/env';
 import { useThemeStore } from '@/design/ThemeStore';
 import { LocalModelManager } from '@/components/models/LocalModelManager';
+import { ImageProvidersPanel } from '@/components/settings/ImageProvidersPanel';
+import { VideoProvidersPanel } from '@/components/settings/VideoProvidersPanel';
 import { InfrastructureSettings } from './InfrastructureSettings';
 import { ServiceUrlSettings } from './ServiceUrlSettings';
 import { EnvironmentSettings } from './EnvironmentSettings';
@@ -1379,6 +1381,8 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
       case 'general': return renderGeneralPanel();
       case 'appearance': return renderAppearancePanel();
       case 'models': return renderModelsPanel();
+      case 'image-providers': return <ImageProvidersPanel />;
+      case 'video-providers': return <VideoProvidersPanel />;
       case 'api-keys': return renderApiKeysPanel();
       case 'shortcuts': return renderShortcutsPanel();
       case 'permissions': return <PermissionsPanel />;

@@ -38,6 +38,8 @@ import {
   Buildings,
   ChatCircleText,
   Database,
+  Image,
+  FilmStrip,
 } from '@phosphor-icons/react';
 
 export type SettingsGroup = 'account' | 'platform' | 'products' | 'infrastructure' | 'customize' | 'about';
@@ -58,6 +60,8 @@ export const SETTINGS_NAV_ITEMS: SettingsNavItem[] = [
   { id: 'general', label: 'General', icon: React.createElement(GearSix, { size: 18 }), group: 'platform' },
   { id: 'appearance', label: 'Appearance', icon: React.createElement(Palette, { size: 18 }), group: 'platform' },
   { id: 'models', label: 'Models', icon: React.createElement(Cpu, { size: 18 }), group: 'platform' },
+  { id: 'image-providers', label: 'Image providers', icon: React.createElement(Image, { size: 18 }), group: 'platform' },
+  { id: 'video-providers', label: 'Video providers', icon: React.createElement(FilmStrip, { size: 18 }), group: 'platform' },
   { id: 'api-keys', label: 'API Keys', icon: React.createElement(Key, { size: 18 }), group: 'platform' },
   { id: 'shortcuts', label: 'Shortcuts', icon: React.createElement(Keyboard, { size: 18 }), group: 'platform' },
   { id: 'permissions', label: 'Permissions', icon: React.createElement(ShieldCheck, { size: 18 }), group: 'platform' },
