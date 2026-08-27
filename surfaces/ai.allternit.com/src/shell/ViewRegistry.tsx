@@ -35,6 +35,8 @@ const CodeModeAgentSession = lazy(() => import('../views/agent-sessions/CodeMode
 const DesignModeAgentSession = lazy(() => import('../views/agent-sessions/DesignModeAgentSession').then(m => ({ default: m.DesignModeAgentSession })));
 const BotInboxView = lazy(() => import('../views/bots/BotInboxView').then(m => ({ default: m.BotInboxView })));
 const BotHomeView = lazy(() => import('../views/bots/BotHomeView').then(m => ({ default: m.BotHomeView })));
+import { BotRoster } from '../views/bots/BotRoster';
+import { GroupChatView } from '../views/bots/GroupChatView';
 const SwarmADE             = lazy(() => import('../views/swarm').then(m => ({ default: m.SwarmADE })));
 const AllternitCanvasView  = lazy(() => import('../views/AllternitCanvasView').then(m => ({ default: m.AllternitCanvasView })));
 const CoworkRoot           = lazy(() => import('../views/cowork/CoworkRoot').then(m => ({ default: m.CoworkRoot })));
@@ -318,6 +320,33 @@ export function getShellViewRegistry(handlers: {
       return (
         <ErrorBoundary fallback={<ErrorFallbackWrapper viewName="Bot Home" />}>
           <BotHomeView botId={ctx?.botId ?? context?.viewId ?? ''} />
+        </ErrorBoundary>
+      );
+    },
+    'bot-roster': () => (
+      <ErrorBoundary fallback={<ErrorFallbackWrapper viewName="Bot Roster" />}>
+        <BotRoster
+          onNewBot={() => open('agent-hub')}
+          onStartSession={(_botId, sessionId) =>
+            open(sessionId ? 'chat-agent-session' : 'chat', sessionId ? { sessionId } : undefined)
+          }
+          onEditProfile={(botId) => open('bot-home', { botId })}
+          onNavigate={(view) => {
+            if (view === 'agent-hub') open('agent-hub');
+          }}
+          onSelectGroup={(groupId) => open('group-chat', { groupId })}
+          onNewGroup={(groupId) => open('group-chat', { groupId })}
+        />
+      </ErrorBoundary>
+    ),
+    'group-chat': ({ context }: { context?: ViewContext }) => {
+      const ctx = context?.context as { groupId?: string } | undefined;
+      return (
+        <ErrorBoundary fallback={<ErrorFallbackWrapper viewName="Group Chat" />}>
+          <GroupChatView
+            groupId={ctx?.groupId ?? context?.viewId ?? ''}
+            onBack={() => open('bot-roster')}
+          />
         </ErrorBoundary>
       );
     },

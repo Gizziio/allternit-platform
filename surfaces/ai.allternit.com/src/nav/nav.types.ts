@@ -18,6 +18,8 @@ export type ViewType =
   | "agent-hub"
   | "bot-home"
   | "bot-inbox"
+  | "bot-roster"
+  | "group-chat"
   | "native-agent"
   | "registry"
   | "memory"

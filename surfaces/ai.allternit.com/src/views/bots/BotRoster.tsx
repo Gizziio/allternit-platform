@@ -294,7 +294,7 @@ export interface BotRosterProps {
   /** Callback when user clicks "+ New Bot" */
   onNewBot?: () => void;
   /** Callback when user starts a session with a bot */
-  onStartSession?: (botId: string) => void;
+  onStartSession?: (botId: string, sessionId?: string) => void;
   /** Callback when user wants to edit a bot profile */
   onEditProfile?: (botId: string) => void;
   /** Callback when user wants to navigate (e.g. open agent hub) */
@@ -436,8 +436,9 @@ export function BotRoster({
       selectBot(botId);
 
       const item = sortedItems.find((i) => i.id === botId);
+      let sessionId: string | undefined;
       try {
-        await openBotCanonicalChat({
+        sessionId = await openBotCanonicalChat({
           botId,
           botName: item?.displayName ?? botId,
           setActive: true,
@@ -446,7 +447,7 @@ export function BotRoster({
         logger.error({ err, botId }, 'Failed to open canonical bot chat');
       }
 
-      onStartSession?.(botId);
+      onStartSession?.(botId, sessionId);
     },
     [selectBot, onStartSession, sortedItems],
   );
@@ -633,6 +634,32 @@ export function BotRoster({
     [createGroup, onNewGroup, handleSelectGroup],
   );
 
+  const handleCreateDemoGroup = useCallback(() => {
+    const members = roster.slice(0, 3).map((bot) => ({
+      botId: bot.id,
+      displayName: bot.displayName,
+      handle: bot.handle,
+      source: bot.source,
+      providerId: bot.providerId,
+    }));
+    if (members.length < 2) {
+      logger.warn('Not enough bots to create a demo group');
+      return;
+    }
+    const groupId = createGroup('OpenMausBot Squad', members, {
+      bulletin: 'Demo group chat for the OpenMausBot squad.',
+    });
+    logger.info(`Created demo group: ${groupId}`);
+    onSelectGroup?.(groupId);
+    if (!onSelectGroup) {
+      window.dispatchEvent(
+        new CustomEvent('allternit:open-view', {
+          detail: { viewType: 'group-chat', context: { groupId } },
+        }),
+      );
+    }
+  }, [roster, createGroup, onSelectGroup]);
+
   const contextMenuBotId = contextMenuTarget?.botId;
   const contextMenuIsPinned = contextMenuBotId ? pinnedBotIds.includes(contextMenuBotId) : false;
   const contextMenuIsHidden = contextMenuBotId ? hiddenBotIds.includes(contextMenuBotId) : false;
@@ -809,7 +836,7 @@ export function BotRoster({
       </div>
 
       {/* ── Channels ────────────────────────────────────────────────────────── */}
-      {Object.keys(groupChats).length > 0 && (
+      {Object.keys(groupChats).length > 0 ? (
         <div
           style={{
             padding: '8px 8px 6px',
@@ -877,6 +904,50 @@ export function BotRoster({
               ))}
             </AnimatePresence>
           </motion.div>
+        </div>
+      ) : (
+        <div
+          style={{
+            padding: '8px 12px 6px',
+            borderBottom: `1px solid ${BORDER.subtle}`,
+          }}
+        >
+          <button
+            type="button"
+            onClick={() => setShowGroupDialog(true)}
+            disabled={roster.length < 2}
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              gap: 8,
+              width: '100%',
+              padding: '8px 12px',
+              border: `1px dashed ${BORDER.default}`,
+              borderRadius: RADIUS.sm,
+              background: 'transparent',
+              color: roster.length < 2 ? TEXT.tertiary : TEXT.secondary,
+              fontSize: TYPOGRAPHY.size.xs,
+              fontWeight: TYPOGRAPHY.weight.medium,
+              cursor: roster.length < 2 ? 'not-allowed' : 'pointer',
+              transition: `all ${ANIMATION.base}`,
+            }}
+            onMouseEnter={(e) => {
+              if (roster.length < 2) return;
+              e.currentTarget.style.borderColor = SAND[500];
+              e.currentTarget.style.color = SAND[500];
+              e.currentTarget.style.background = `${SAND[500]}08`;
+            }}
+            onMouseLeave={(e) => {
+              if (roster.length < 2) return;
+              e.currentTarget.style.borderColor = BORDER.default;
+              e.currentTarget.style.color = TEXT.secondary;
+              e.currentTarget.style.background = 'transparent';
+            }}
+          >
+            <Users size={14} />
+            {isCompact ? 'Group' : 'New group'}
+          </button>
         </div>
       )}
 
