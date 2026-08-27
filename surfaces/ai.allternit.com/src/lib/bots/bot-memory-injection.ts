@@ -53,6 +53,7 @@ export function recallBotMemories(
     contains: query,
     status: ['promoted', 'pinned'],
     limit,
+    includeExpired: false,
   });
 
   return {

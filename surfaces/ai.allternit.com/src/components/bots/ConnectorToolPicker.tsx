@@ -40,6 +40,11 @@ export function ConnectorToolPicker({ bot }: ConnectorToolPickerProps) {
     () => new Set(bot.allowedTools ?? bot.tools ?? []),
   );
 
+  // Keep local selection in sync when the parent re-fetches the bot.
+  useEffect(() => {
+    setSelected(new Set(bot.allowedTools ?? bot.tools ?? []));
+  }, [bot.id, bot.allowedTools, bot.tools]);
+
   useEffect(() => {
     let cancelled = false;
 

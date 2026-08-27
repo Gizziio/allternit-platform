@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useCallback, useMemo, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { Plugs, Warning } from "@phosphor-icons/react";
 import type { Agent, AgentConnectorBinding } from "@/lib/agents/agent.types";
 import { updateAgent } from "@/lib/agents/agent.service";
@@ -17,6 +17,11 @@ export function BotConnectedAppsPanel({ bot }: BotConnectedAppsPanelProps) {
   );
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  // Keep local bindings in sync when the parent re-fetches the bot.
+  useEffect(() => {
+    setBindings(bot.connectorBindings ?? []);
+  }, [bot.id, bot.connectorBindings]);
 
   const boundIds = useMemo(
     () => new Set(bindings.map((b) => b.connectorId)),
