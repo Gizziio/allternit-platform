@@ -570,10 +570,12 @@ async fn main() {
 
     // Start server — port from config (env override supported), default 8013
     let port = app_config.api_port();
+    let webhook_receiver_port = app_config.webhook_receiver_port();
     let listener = tokio::net::TcpListener::bind(format!("0.0.0.0:{port}"))
         .await
         .unwrap();
     info!("Server listening on {}", listener.local_addr().unwrap());
+    info!("Webhook receiver port configured to {}", webhook_receiver_port);
     info!("API Documentation:");
     info!("  - Health:         GET /health");
     info!("  - Status:         GET /status");

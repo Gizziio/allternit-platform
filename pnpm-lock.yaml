@@ -2858,6 +2858,9 @@ importers:
       xterm-addon-web-links:
         specifier: ^0.9.0
         version: 0.9.0(xterm@5.3.0)
+      yaml:
+        specifier: ^2.7.1
+        version: 2.8.4
       zod:
         specifier: ^3.25.76
         version: 3.25.76
@@ -3090,8 +3093,6 @@ importers:
       wrangler:
         specifier: ^3.90.0
         version: 3.114.17(@cloudflare/workers-types@4.20260120.0)
-
-  surfaces/ai.allternit.com/src/generated/prisma: {}
 
   surfaces/allternit-desktop:
     dependencies:

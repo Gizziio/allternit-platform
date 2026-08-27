@@ -18,7 +18,7 @@ import { fileURLToPath } from 'node:url';
 import { dirname } from 'node:path';
 import log from 'electron-log';
 import { getBackendDownloadUrl, getBackendChecksum } from './manifest.js';
-import { PORTS, URLS } from './config.js';
+import { PORTS, URLS, webhookReceiverUrl } from './config.js';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 
@@ -129,6 +129,8 @@ export class BackendManager {
       ALLTERNIT_DATA_DIR: dataDir,
       ALLTERNIT_VM_DIR: fs.existsSync(vmDir) ? vmDir : '',
       ALLTERNIT_PLATFORM_STATIC: platformStatic ?? '',
+      ALLTERNIT_WEBHOOK_RECEIVER_PORT: process.env.ALLTERNIT_WEBHOOK_RECEIVER_PORT ?? String(PORTS.WEBHOOK_RECEIVER),
+      ALLTERNIT_WEBHOOK_RECEIVER_URL: process.env.ALLTERNIT_WEBHOOK_RECEIVER_URL ?? webhookReceiverUrl(),
       TERMINAL_SERVER_URL: config.gizziUrl ?? process.env.TERMINAL_SERVER_URL ?? URLS.GIZZI,
       GIZZI_USERNAME: config.gizziUsername ?? process.env.GIZZI_USERNAME ?? 'gizzi',
       GIZZI_PASSWORD: config.gizziPassword ?? process.env.GIZZI_PASSWORD ?? '',

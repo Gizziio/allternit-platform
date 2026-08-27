@@ -1,12 +1,13 @@
 "use client";
 
 import React, { useState } from "react";
-import { Folder, PencilSimple, Brain, Robot, Sparkle, Plugs, Wrench } from "@phosphor-icons/react";
+import { Folder, PencilSimple, Brain, Robot, Sparkle, Plugs, Wrench, SpeakerHigh } from "@phosphor-icons/react";
 import type { Agent } from "@/lib/agents/agent.types";
 import { BotWorkspaceEditor } from "./BotWorkspaceEditor";
 import { PersonalityWorkspacePanel } from "@/components/bots/PersonalityWorkspacePanel";
 import { BotConnectedAppsPanel } from "@/components/bots/BotConnectedAppsPanel";
 import { ConnectorToolPicker } from "@/components/bots/ConnectorToolPicker";
+import { BotVoiceSettingsPanel } from "@/components/bots/BotVoiceSettingsPanel";
 import { TeamImportButton } from "@/components/bots/TeamImportButton";
 import { EditAgentForm } from "@/views/agent-view/components/EditAgentForm";
 import { getBotDisplayName } from "@/lib/bots/bot-profile";
@@ -17,11 +18,12 @@ interface BotConfigTabProps {
   accentColor: string;
 }
 
-type ConfigTab = "workspace" | "personality" | "apps" | "tools";
+type ConfigTab = "workspace" | "personality" | "voice" | "apps" | "tools";
 
 const TABS: { id: ConfigTab; label: string; icon: React.ElementType }[] = [
   { id: "workspace", label: "Workspace", icon: Folder },
   { id: "personality", label: "Personality", icon: Sparkle },
+  { id: "voice", label: "Voice", icon: SpeakerHigh },
   { id: "apps", label: "Connected Apps", icon: Plugs },
   { id: "tools", label: "Tools", icon: Wrench },
 ];
@@ -105,6 +107,8 @@ export function BotConfigTab({ bot, accentColor }: BotConfigTabProps) {
           {activeTab === "personality" && (
             <PersonalityWorkspacePanel botId={bot.id} accentColor={accentColor} />
           )}
+
+          {activeTab === "voice" && <BotVoiceSettingsPanel bot={bot} accentColor={accentColor} />}
 
           {activeTab === "apps" && <BotConnectedAppsPanel bot={bot} />}
 

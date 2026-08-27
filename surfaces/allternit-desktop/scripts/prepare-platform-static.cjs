@@ -91,6 +91,14 @@ function checkRequiredBinaries() {
     process.exit(1);
   }
   log(`voice service present at ${voiceBin}`);
+
+  const apiBin = path.join(resourcesBin, process.platform === 'win32' ? 'allternit-api.exe' : 'allternit-api');
+  if (!fs.existsSync(apiBin)) {
+    log('ERROR: resources/bin/allternit-api is missing — the packaged app would ship without the Rust API backend.');
+    log('Build it first via the canonical pipeline: ../../scripts/build-desktop.sh');
+    process.exit(1);
+  }
+  log(`allternit-api present at ${apiBin}`);
 }
 
 function loadCompanyClerkKey() {

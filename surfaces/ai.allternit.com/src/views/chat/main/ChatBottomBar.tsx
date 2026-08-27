@@ -9,6 +9,7 @@ import type { PluginMentionTarget } from "@/lib/mentions/use-mention-targets";
 import type { ModelSelection } from "@/components/model-picker";
 import type { Agent } from "@/lib/agents/agent.types";
 import { ModelPicker as BotModelPicker } from "@/views/chat/components/ModelPicker";
+import { VoiceCallButton } from "@/components/ai-elements/voice-call-button";
 
 interface ChatBottomBarProps {
   mode: 'chat' | 'cowork' | 'code';
@@ -78,6 +79,11 @@ export const ChatBottomBar: React.FC<ChatBottomBarProps> = ({
       <div className={cn('w-full pointer-events-auto box-border', hudMode ? 'max-w-none' : 'max-w-[760px] px-2 md:px-5')}>
         {agent && (
           <div className="mb-2 flex items-center justify-end gap-2">
+            <VoiceCallButton
+              agent={agent}
+              accentColor={agent?.botProfile?.accentColor}
+              onTranscript={handleSend}
+            />
             <BotModelPicker agent={agent} />
           </div>
         )}

@@ -22,6 +22,8 @@ export const PORTS = {
   NOTEBOOK: 5055,
   /** Local speech-to-text and text-to-speech service */
   VOICE: 8001,
+  /** Dedicated inbound webhook receiver (bot-owned triggers) */
+  WEBHOOK_RECEIVER: 8080,
   /** open-connector connector sidecar (see services/open-connector) */
   CONNECTOR_SIDECAR: 8014,
   /** Office engine sidecar (services/office-engine) backing /api/office/* */
@@ -42,6 +44,7 @@ export const URLS = {
   ACU_RELAY: `http://${HOSTS.LOOPBACK}:${PORTS.ACU_RELAY}`,
   NOTEBOOK: `http://${HOSTS.LOOPBACK}:${PORTS.NOTEBOOK}`,
   VOICE: `http://${HOSTS.LOOPBACK}:${PORTS.VOICE}`,
+  WEBHOOK_RECEIVER: `http://${HOSTS.LOOPBACK}:${PORTS.WEBHOOK_RECEIVER}`,
   CONNECTOR_SIDECAR: `http://${HOSTS.LOOPBACK}:${PORTS.CONNECTOR_SIDECAR}`,
   OFFICE_ENGINE: `http://${HOSTS.LOOPBACK}:${PORTS.OFFICE_ENGINE}`,
   /** Canonical Allternit control plane. Human Clerk sessions approve runtime pairing here. */
@@ -66,6 +69,11 @@ export function gizziUrl(path?: string): string {
 /** Build a URL for the local static platform UI fallback served by the Rust API. */
 export function staticUiUrl(path?: string): string {
   return path ? `${URLS.PLATFORM_STATIC}${path}` : URLS.PLATFORM_STATIC;
+}
+
+/** Build a URL for the dedicated inbound webhook receiver. */
+export function webhookReceiverUrl(path?: string): string {
+  return path ? `${URLS.WEBHOOK_RECEIVER}${path}` : URLS.WEBHOOK_RECEIVER;
 }
 
 /** Build a URL for the development UI server with an optional path. */

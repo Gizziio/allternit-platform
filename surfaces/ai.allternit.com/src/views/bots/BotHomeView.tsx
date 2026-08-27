@@ -51,6 +51,7 @@ import { GlassSurface } from "@/design/GlassSurface";
 import { BotRuntimeConfigModal } from "./BotRuntimeConfigModal";
 import { BotDesktopView } from "./BotDesktopView";
 import { AutomationTasksView } from "@/views/cowork/AutomationTasksView";
+import { BotWebhookTriggersPanel } from "./BotWebhookTriggersPanel";
 import { EditAgentForm } from "@/views/agent-view/components/EditAgentForm";
 import { BotConfigTab } from "./BotConfigTab";
 import { BotAvatar } from "./BotAvatar";
@@ -59,7 +60,7 @@ interface BotHomeViewProps {
   botId: string;
 }
 
-type BotHomeTab = "home" | "tasks" | "artifacts" | "runtime" | "desktop" | "automation" | "config";
+type BotHomeTab = "home" | "tasks" | "artifacts" | "runtime" | "desktop" | "automation" | "webhooks" | "config";
 
 function botInitials(name: string): string {
   return (name || "Bot")
@@ -307,6 +308,7 @@ export function BotHomeView({ botId }: BotHomeViewProps) {
     { id: "runtime" as const, label: "Runtime", icon: Lightning },
     { id: "desktop" as const, label: "Desktop", icon: Desktop },
     { id: "automation" as const, label: "Automation Tasks", icon: ClockCounterClockwise },
+    { id: "webhooks" as const, label: "Webhooks", icon: WebhooksLogo },
     { id: "config" as const, label: "Config", icon: Gear },
   ];
 
@@ -515,6 +517,9 @@ export function BotHomeView({ botId }: BotHomeViewProps) {
               accentColor={accentColor}
               onBack={() => setActiveTab("home")}
             />
+          )}
+          {activeTab === "webhooks" && (
+            <BotWebhookTriggersPanel bot={bot} accentColor={accentColor} />
           )}
           {activeTab === "config" && (
             <BotConfigTab bot={bot} accentColor={accentColor} />

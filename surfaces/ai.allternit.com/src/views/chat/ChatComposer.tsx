@@ -34,6 +34,7 @@ import {
 } from '@phosphor-icons/react';
 import { AttachmentButton } from '@/components/agent-elements/input/attachment-button';
 import { useVoice } from '@/providers/voice-provider';
+import { speechToText } from '@/services/voice';
 import { FileAttachment } from '@/components/agent-elements/input/file-attachment';
 import { TextShimmer } from '@/components/agent-elements/text-shimmer';
 import { AgentMentionDropdown } from '@/components/chat/AgentMentionDropdown';
@@ -995,12 +996,21 @@ export function ChatComposer({
     clearVoiceTranscript();
     setInteractionMode('voice');
     setVoiceModeActive(true);
+
+    // Call mode: prefer the browser's native on-device dictation when this
+    // session belongs to a bot that has call mode enabled.
+    const sessionAgentId = activeSession?.metadata?.agentId as string | undefined;
+    const sessionAgent = sessionAgentId
+      ? agents.find((a) => a.id === sessionAgentId)
+      : undefined;
+    speechToText.setPreferNative(Boolean(sessionAgent?.config?.voiceCallMode));
+
     const started = await startVoiceRecording();
     if (!started) {
       setVoiceModeActive(false);
       setInteractionMode('text');
     }
-  }, [clearVoiceTranscript, setInteractionMode, startVoiceRecording]);
+  }, [activeSession, agents, clearVoiceTranscript, setInteractionMode, startVoiceRecording]);
 
   const leaveVoiceMode = useCallback(() => {
     if (isVoiceRecording) stopVoiceRecording();

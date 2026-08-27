@@ -1888,6 +1888,9 @@ app.on('before-quit', async () => {
 // SDK — exposes the resolved backend URL so the renderer can init createAllternitClient()
 ipcMain.handle('sdk:get-backend-url', () => activeBackendUrl);
 
+// Voice call-mode native dictation bridge
+voiceManager.registerIpcHandlers();
+
 // Backend management
 ipcMain.handle('backend:get-status', () => backendManager.getStatus());
 ipcMain.handle('backend:restart', async () => {

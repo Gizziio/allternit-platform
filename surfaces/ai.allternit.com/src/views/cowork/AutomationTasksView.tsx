@@ -45,6 +45,7 @@ import {
   updateLoop,
   deleteLoop,
   runLoop,
+  listRoutineRuns,
 } from '@/lib/automation-api';
 import {
   listScheduledJobs,
@@ -1550,6 +1551,9 @@ function TaskDetailOverlay({
   onEdit: () => void;
 }) {
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [runs, setRuns] = useState<any[]>([]);
+  const [runsLoading, setRunsLoading] = useState(false);
+  const [runsError, setRunsError] = useState<string | null>(null);
 
   const getTypeName = () => {
     switch (task.type) {
@@ -1566,6 +1570,27 @@ function TaskDetailOverlay({
     }
     return task.executorName || 'Default Model';
   };
+
+  useEffect(() => {
+    if (task.type !== 'routine' && task.type !== 'loop') {
+      setRuns([]);
+      return;
+    }
+    let cancelled = false;
+    setRunsLoading(true);
+    setRunsError(null);
+    listRoutineRuns(task.id)
+      .then((rows) => {
+        if (!cancelled) setRuns(rows);
+      })
+      .catch((err) => {
+        if (!cancelled) setRunsError(err instanceof Error ? err.message : 'Failed to load run history');
+      })
+      .finally(() => {
+        if (!cancelled) setRunsLoading(false);
+      });
+    return () => { cancelled = true; };
+  }, [task.id, task.type]);
 
   return (
     <OverlayContainer onClose={onClose}>
@@ -1611,6 +1636,51 @@ function TaskDetailOverlay({
             {task.type !== 'goal' && <DetailItem label="Frequency" value={task.frequency} />}
             {task.type !== 'goal' && task.schedule_expression && <DetailItem label="Expression" value={task.schedule_expression} />}
           </div>
+
+          {/* Run history (routines & loops) */}
+          {(task.type === 'routine' || task.type === 'loop') && (
+            <div className="pt-4 border-t border-solid border-[var(--border-subtle)]">
+              <h4 className="text-[13px] font-semibold text-[var(--text-primary)] mb-3 flex items-center gap-1.5">
+                <Clock size={14} /> Run history
+              </h4>
+              {runsError && (
+                <p className="text-[12px] text-[var(--status-error)] mb-2">{runsError}</p>
+              )}
+              {runsLoading ? (
+                <div className="flex items-center justify-center py-4">
+                  <CircleNotch size={16} className="animate-spin text-[var(--text-tertiary)]" />
+                </div>
+              ) : runs.length === 0 ? (
+                <p className="text-[12px] text-[var(--text-secondary)]">No runs recorded yet.</p>
+              ) : (
+                <div className="flex flex-col gap-2 max-h-60 overflow-y-auto pr-1">
+                  {runs.map((run) => (
+                    <div key={run.id} className="rounded-lg bg-[var(--bg-card)] border border-solid border-[var(--border-default)] p-3 text-[12px]">
+                      <div className="flex items-center justify-between gap-2 mb-1">
+                        <span className={cn(
+                          "px-1.5 py-0.5 rounded text-[10px] font-semibold uppercase",
+                          run.status === 'completed' ? "bg-emerald-500/10 text-emerald-500" :
+                          run.status === 'failed' ? "bg-red-500/10 text-red-500" :
+                          "bg-amber-500/10 text-amber-500"
+                        )}>
+                          {run.status}
+                        </span>
+                        <span className="text-[var(--text-tertiary)]">
+                          {run.triggered_by}
+                        </span>
+                      </div>
+                      <div className="text-[var(--text-secondary)]">
+                        {run.started_at ? new Date(run.started_at).toLocaleString() : new Date(run.scheduled_at).toLocaleString()}
+                      </div>
+                      {run.error && (
+                        <p className="text-[var(--status-error)] truncate mt-1">{run.error}</p>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
         </div>
       </div>
 

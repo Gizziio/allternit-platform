@@ -1,4 +1,4 @@
-import { app } from 'electron';
+import { app, ipcMain } from 'electron';
 import { spawn, type ChildProcess } from 'node:child_process';
 import * as fs from 'node:fs';
 import * as path from 'node:path';
@@ -90,6 +90,43 @@ class VoiceManager {
     return fs.existsSync(launcher)
       ? { file: process.env.PYTHON ?? 'python3', args: [launcher, '--port', String(PORTS.VOICE)] }
       : null;
+  }
+
+  /**
+   * Returns whether a native on-device dictation helper is available.
+   * Currently macOS-only; non-macOS platforms return false so the renderer
+   * falls back to Web Speech.
+   */
+  isNativeDictationAvailable(): boolean {
+    if (process.platform !== 'darwin') return false;
+    const helper = path.join(process.resourcesPath ?? '', 'OpenMausBot Speech.app');
+    return fs.existsSync(helper);
+  }
+
+  /**
+   * Start native dictation. This is a placeholder for the OpenMausBot-style
+   * NSSpeechRecognizer helper integration. When the helper is staged, this
+   * method should spawn it and stream transcripts back to the renderer via
+   * `webContents.send('voice:transcript', ...)`. Until then, it reports
+   * unavailability so the renderer falls back to Web Speech.
+   */
+  async startNativeDictation(): Promise<{ success: boolean; error?: string }> {
+    if (!this.isNativeDictationAvailable()) {
+      return { success: false, error: 'native-dictation-not-available' };
+    }
+    log.info('[VoiceManager] Native dictation helper not yet wired; falling back to Web Speech.');
+    return { success: false, error: 'native-dictation-not-wired' };
+  }
+
+  async stopNativeDictation(): Promise<void> {
+    // No-op until the native helper is wired.
+    log.info('[VoiceManager] stopNativeDictation: no native session active.');
+  }
+
+  registerIpcHandlers(): void {
+    ipcMain.handle('voice:is-available', () => this.isNativeDictationAvailable());
+    ipcMain.handle('voice:start-dictation', () => this.startNativeDictation());
+    ipcMain.handle('voice:stop-dictation', () => this.stopNativeDictation());
   }
 }
 

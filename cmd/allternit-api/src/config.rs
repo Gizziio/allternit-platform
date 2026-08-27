@@ -233,6 +233,14 @@ impl AppConfig {
             .unwrap_or(8013)
     }
 
+    /// Port the dedicated inbound webhook receiver listens on.
+    pub fn webhook_receiver_port(&self) -> u16 {
+        std::env::var("ALLTERNIT_WEBHOOK_RECEIVER_PORT")
+            .ok()
+            .and_then(|p| p.parse().ok())
+            .unwrap_or(8080)
+    }
+
     /// URL the API uses to reach the Gizzi runtime.
     pub fn terminal_server_url(&self) -> String {
         std::env::var("TERMINAL_SERVER_URL")
