@@ -23,14 +23,16 @@
     "build:preload": "tsc -p src/preload/tsconfig.json",
     "download:lima": "node scripts/download-lima.cjs",
     "config:company": "cd ../.. && pnpm run config:company:write",
-    "build:electron": "npm run config:company && npm run prepare:platform-static && npm run prepare:office-addins && npm run prepare:cua-driver && npm run download:lima && npm run prepare:mesh-node && npm run prepare:office-engine && npm run build && electron-builder --mac",
-    "build:electron:dmg": "npm run config:company && npm run prepare:platform-static && npm run prepare:office-addins && npm run prepare:cua-driver && npm run download:lima && npm run prepare:mesh-node && npm run prepare:office-engine && npm run build && electron-builder --mac dmg",
+    "build:electron": "npm run config:company && npm run prepare:platform-static && npm run prepare:office-addins && npm run prepare:cua-driver && npm run download:lima && npm run prepare:mesh-node && npm run prepare:office-engine && npm run build && npm run verify:packaged-resources && electron-builder --mac",
+    "build:electron:dmg": "npm run config:company && npm run prepare:platform-static && npm run prepare:office-addins && npm run prepare:cua-driver && npm run download:lima && npm run prepare:mesh-node && npm run prepare:office-engine && npm run build && npm run verify:packaged-resources && electron-builder --mac dmg",
     "start": "electron .",
     "test": "vitest run",
     "typecheck": "tsc --noEmit -p src/main/tsconfig.json && tsc --noEmit -p src/preload/tsconfig.json",
     "test:e2e": "pnpm run build && playwright test",
-    "pack": "npm run prepare:platform-static && npm run prepare:office-addins && npm run prepare:cua-driver && npm run prepare:mesh-node && npm run prepare:office-engine && electron-builder --dir",
-    "dist": "npm run prepare:platform-static && npm run prepare:office-addins && npm run prepare:cua-driver && npm run prepare:mesh-node && npm run prepare:office-engine && npm run build && electron-builder"
+    "pack": "npm run prepare:platform-static && npm run prepare:office-addins && npm run prepare:cua-driver && npm run prepare:mesh-node && npm run prepare:office-engine && npm run verify:packaged-resources && electron-builder --dir",
+    "dist": "npm run prepare:platform-static && npm run prepare:office-addins && npm run prepare:cua-driver && npm run prepare:mesh-node && npm run prepare:office-engine && npm run build && npm run verify:packaged-resources && electron-builder",
+    "verify:packaged-resources": "node scripts/verify-packaged-resources.cjs",
+    "stage:api-binary": "node scripts/stage-api-binary.cjs"
   },
   "dependencies": {
     "@clerk/clerk-react": "^5.30.0",
@@ -70,6 +72,7 @@
   "build": {
     "appId": "com.allternit.desktop",
     "productName": "Allternit Desktop",
+    "asar": true,
     "protocols": [
       {
         "name": "Allternit Protocol",
@@ -172,11 +175,19 @@
         "filter": [
           "*.xml"
         ]
+      },
+      {
+        "from": "../../LICENSE",
+        "to": "licenses/LICENSE.txt"
+      },
+      {
+        "from": "../../THIRD_PARTY_NOTICES.md",
+        "to": "licenses/THIRD_PARTY_NOTICES.md"
       }
     ],
     "asarUnpack": [
-      "resources/bin/**",
-      "resources/lima/**"
+      "bin/**",
+      "lima/**"
     ],
     "fileAssociations": [
       {
@@ -252,6 +263,7 @@
       }
     },
     "dmg": {
+      "sign": true,
       "title": "Allternit ${version}",
       "icon": "build/icon.icns",
       "background": "build/dmg-background.png",
@@ -281,8 +293,19 @@
       ],
       "icon": "build/icon.png",
       "category": "Development",
+      "executableName": "allternit",
       "synopsis": "Your AI Platform",
-      "description": "Allternit Desktop — fully offline AI platform with local VM execution."
+      "description": "Allternit Desktop — fully offline AI platform with local VM execution.",
+      "maintainer": "Allternit <support@allternit.com>",
+      "vendor": "Allternit",
+      "syncDesktopName": true,
+      "desktop": {
+        "entry": {
+          "Name": "Allternit Desktop",
+          "Comment": "Fully offline AI platform with local VM execution",
+          "Keywords": "AI;Agents;Chat;Productivity;"
+        }
+      }
     },
     "appImage": {
       "artifactName": "Allternit-${version}.AppImage"
@@ -305,8 +328,7 @@
       "signtoolOptions": {
         "signingHashAlgorithms": [
           "sha256"
-        ],
-        "publisherName": "Allternit"
+        ]
       }
     },
     "nsis": {
@@ -332,12 +354,13 @@
     "publish": [
       {
         "provider": "github",
-        "owner": "Gizziio",
+        "owner": "allternit",
         "repo": "desktop",
         "releaseType": "release"
       }
     ],
     "afterSign": "scripts/notarize.cjs",
+    "notarize": false,
     "artifactName": "Allternit-Desktop-${version}-${arch}.${ext}"
   }
 }

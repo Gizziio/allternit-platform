@@ -138,10 +138,20 @@ export interface AppInfo {
   manifest: unknown;
 }
 
+export type UpdateStatus =
+  | { state: 'checking' }
+  | { state: 'available' }
+  | { state: 'up-to-date' }
+  | { state: 'downloaded'; version?: string; releaseNotes?: string; updateURL?: string }
+  | { state: 'error'; message: string };
+
 export interface AppAPI {
   getInfo(): Promise<AppInfo>;
   isFirstLaunch(): Promise<boolean>;
   completeOnboarding(): Promise<boolean>;
+  checkForUpdates(): Promise<{ ok: boolean; reason?: string; message?: string }>;
+  installUpdate(): Promise<void>;
+  onUpdateStatus(handler: (status: UpdateStatus) => void): () => void;
 }
 
 export interface AuthAccount {
