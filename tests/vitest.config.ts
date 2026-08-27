@@ -22,7 +22,6 @@ export default defineConfig({
     exclude: [
       'node_modules',
       'dist',
-      'upstream',
     ],
     testTimeout: 30000,
     hookTimeout: 10000,
@@ -32,7 +31,6 @@ export default defineConfig({
       exclude: [
         'node_modules/',
         'dist/',
-        'upstream/',
         'tests/',
         '**/*.config.ts',
       ],

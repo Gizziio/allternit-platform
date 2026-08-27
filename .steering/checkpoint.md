@@ -1,5 +1,33 @@
 # Steering checkpoint
 
+## Repo hygiene & root-level reorganization (2026-08-27)
+
+### Goal
+Audit the `allternit` monorepo, remove working-tree noise and improperly-linked nested worktrees, and consolidate root-level drift (`marketing/`, `upstream/`, `remix-content/`, ad-hoc scripts/docs) into documented homes under `docs/` and `scripts/`.
+
+### Just did
+- Created session worktree `allternit-session-repo-hygiene` on branch `session/repo-hygiene`.
+- Removed improperly-linked nested worktrees `allternit-session-grok-bot-0-18-integration` and `allternit-session-multica-runtime-align` from the git index.
+- Deleted ignored scratch from the main checkout: `.cache/`, `.references/`, `.pytest_cache/`, `.tmp-anthropic-skills-src/`, `.tmp-ui-skills-src/`, `.tmp-skill-test/`, `surfaces/allternit-desktop/test-results/`.
+- Moved `marketing/` → `docs/marketing/`, `upstream/sources.yaml` → `docs/upstream/sources.yaml`, `remix-content/` → `docs/learning/remix-content/`.
+- Moved ad-hoc root scripts `audit-ai-platform.cjs` and `inspect-model-lab.cjs` → `scripts/audit/`.
+- Moved ephemeral project docs `TODO-remote-control-gap-fix.md` and `PORTING_PROVEN_PATTERNS_INTO_GIZZI.md` → `docs/projects/`.
+- Updated `REPO_STRUCTURE.md`, `tests/vitest.config.ts`, `docs/GENOFFICE_PHASE5_DECISION.md`, `docs/marketing/README.md`, `docs/marketing/templates/*.html`, and `.steering/checkpoint.md` to reflect new paths.
+
+### Verification
+- `git worktree list` shows no nested worktrees inside the main checkout.
+- `git status --short` shows only intended deletions, renames, and metadata updates.
+- `cargo check -p allternit-api`: passes (pre-existing warnings only).
+
+### Next
+1. Commit the reorganization on `session/repo-hygiene`.
+2. Merge `session/repo-hygiene` into the local `main` checkout.
+3. Clean up the session worktree and branch.
+
+### Open questions
+- Should the historical references in `docs/archive/` and `docs/Future_Blueprints/` to old `upstream/` / `marketing/` concepts be left as-is, or should they carry a deprecation note?
+- The `.parity-reports/allternit-audit.md` file is untracked in the main checkout; should it be committed under `docs/audit/` or kept as a working artifact?
+
 ## Hermes floating chat HUD port — completion (2026-08-26)
 
 ### Goal
@@ -1085,7 +1113,7 @@ Close the critical gaps left by the previous remote-control implementation:
 
 - Created fresh linked worktree `allternit-session-remote-control-gap-fix` from `main`.
 - Wrote consolidated gap analysis to `/Users/joe/Desktop/allternit-remote-control-gap-analysis.md`.
-- Created `TODO-remote-control-gap-fix.md` task tracker.
+- Created `docs/projects/remote-control-gap-fix/TODO.md` task tracker.
 
 ### Just did (continued)
 

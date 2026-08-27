@@ -20,7 +20,7 @@ stack a small team can actually run.
 
 Live marks: `surfaces/ai.allternit.com/src/components/AProtocolWordmark.tsx` is the
 React expanding wordmark (Anthropic-style scroll collapse, `useScrollCollapse`
-hook); `marketing/templates/scroll-logo.html` is the dependency-free version for
+hook); `docs/marketing/templates/scroll-logo.html` is the dependency-free version for
 static sites. Office header (`office.allternit.com/src/HomePage.tsx`) and the app
 loader (`ai.allternit.com/src/pages/HomePage.tsx`) already use it.
 

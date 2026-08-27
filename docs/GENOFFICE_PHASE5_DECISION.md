@@ -38,7 +38,7 @@ which require OS program status.
 ## What is already in place (would feed a future program package)
 
 - Engines: `packages/@allternit/office-{docx,pptx,pptx-render,file-parse,xlsx}-engine`
-  (Apache-2.0 attribution, upstream pinned in `upstream/sources.yaml`).
+  (Apache-2.0 attribution, upstream pinned in `docs/upstream/sources.yaml`).
 - Backend: `services/office-engine` behind the gateway at `/api/office/*` and
   `/api/v1/office/engines/*`; desktop-managed sidecar lifecycle.
 - Surfaces: `/docs`, `/sheets`, `/slides`, `/pdf`, `/office` on the platform;
