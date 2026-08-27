@@ -135,6 +135,13 @@ interface BotOperationalStateStoreState {
   /** Mark a bot's subscription as connected */
   markConnected: (botId: string) => void;
 
+  /**
+   * Mark a bot's thread as read locally. This updates the projection's
+   * unread message count; the server re-asserts the authoritative value on
+   * the next snapshot/delta.
+   */
+  markRead: (botId: string) => void;
+
   /** Update the resume cursor for a bot */
   setCursor: (botId: string, cursor: ProjectionCursor) => void;
 
@@ -339,6 +346,28 @@ export const useBotOperationalStateStore = create<BotOperationalStateStoreState>
           false,
           'markConnected',
         );
+      },
+
+      markRead: (botId) => {
+        set(
+          (store) => {
+            const existing = store.projections[botId] ?? defaultEntry(botId);
+            return {
+              projections: {
+                ...store.projections,
+                [botId]: {
+                  ...existing,
+                  state: { ...existing.state, unreadMessagesCount: 0 },
+                  subscriptionState: 'connected',
+                  lastFetchedAt: new Date().toISOString(),
+                },
+              },
+            };
+          },
+          false,
+          'markRead',
+        );
+        logger.debug({ botId }, 'Bot marked read locally');
       },
 
       setCursor: (botId, cursor) => {
