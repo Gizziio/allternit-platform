@@ -651,6 +651,13 @@ async function initializeApp(): Promise<void> {
   
   const backendConfig = store.get('backend');
   
+  // Local smoke-test convenience: force development mode to skip bundled backend boot.
+  if (process.env.ALLTERNIT_FORCE_DEV_MODE === '1') {
+    log.info('[Main] ALLTERNIT_FORCE_DEV_MODE=1 — forcing development mode');
+    await initializeDevelopmentMode();
+    return;
+  }
+
   // Determine which mode to use
   if (backendConfig.mode === 'development') {
     // Development mode - connect to the local Gizzi runtime
@@ -1979,7 +1986,11 @@ function createHudWindow(): BrowserWindow {
     roundedCorners: true,
     visualEffectState: 'active',
     hiddenInMissionControl: isMac,
-    show: false,
+    // Show immediately so the panel gains a rendering surface. When hidden,
+    // ready-to-show can be delayed (especially under Playwright), leaving the
+    // HUD inaccessible to automation. The transparent background keeps any
+    // pre-content flash invisible.
+    show: true,
     backgroundColor: '#00000000',
     webPreferences: {
       preload: join(__dirname, '../preload/index.js'),
