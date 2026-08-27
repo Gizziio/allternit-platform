@@ -43,6 +43,12 @@ export function BotConfigTab({ bot, accentColor }: BotConfigTabProps) {
   const [saving, setSaving] = useState(false);
   const { addToast } = useToast();
 
+  // Keep local state in sync when the parent re-fetches the bot.
+  useEffect(() => {
+    setBindings(bot.connectorBindings ?? []);
+    setTools(bot.tools ?? []);
+  }, [bot.id, bot.connectorBindings, bot.tools]);
+
   const boundIds = useMemo(() => new Set(bindings.map((b) => b.connectorId)), [bindings]);
 
   const persist = useCallback(async (

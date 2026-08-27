@@ -1136,3 +1136,17 @@ Wire bot memory reads into chat/session context injection; expose personality wo
 1. Run TypeScript and syntax checks; fix any errors.
 2. Commit changes with descriptive message.
 3. Report files changed and blockers.
+
+### Verification (completed)
+- `bun build --target=browser --no-bundle` syntax check on all modified/new TSX/TS files: clean.
+- `bun test src/lib/bots/bot-memory-context.test.ts`: 7/7 pass.
+- `bun test src/lib/bots/team-import.test.ts`: test runner incompatibility (`vi.hoisted` is vitest-only, not bun test); the module itself parses cleanly and existing team-import tests are written for vitest.
+- Full `tsc --noEmit` could not run because `typescript`/`tsc` are not installed in the current node_modules; the project relies on workspace tooling not present in this environment.
+- No Rust files touched; `cargo check -p allternit-api` skipped.
+
+### Commit
+- `e3b056f6f` — Phase 4: OpenMausBot → Allternit bot memory, personality workspace, team import, and marketplace wiring (20 files changed, 4250 insertions, 23 deletions).
+
+### Open questions / blockers
+- `tsc --noEmit` and `vitest run` require workspace dependencies to be installed/resolvable (typescript, vitest). Syntax checks passed via `bun`.
+- The existing `team-import.ts` and `team-import.test.ts` use vitest APIs not supported by `bun test`; running them requires `pnpm exec vitest run` in a fully installed workspace.
